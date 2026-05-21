@@ -72,7 +72,7 @@ const __skl_folder_topbar = function (ui) {
     uiHandler: ui,
   });
 
-  const uploadBtn = canUpload
+  let uploadBtn = canUpload
     ? Skeletons.Button.Label({
       className: `${cnFolder}__upload-btn`,
       label: LOCALE.UPLOAD,
@@ -82,7 +82,7 @@ const __skl_folder_topbar = function (ui) {
     })
     : "";
 
-  const addNew = canUpload
+  let addNew = canUpload
     ? Skeletons.Box.X({
       className: `${cnFolder}__add-new-wrapper`,
       kids: [newFileMenu(ui, { triggerIco: "plus-header" })],
@@ -119,7 +119,9 @@ const __skl_folder_topbar = function (ui) {
 
   let controls = require("window/skeleton/topbar/control")(ui, "c");
   if (ui.mget(_a.headless)) {
-    controls = ""
+    controls = "";
+    uploadBtn = "";
+    addNew = "";
   } else {
     controls = require("window/skeleton/topbar/control")(ui, "c");
   }

@@ -237,7 +237,6 @@ class __window_manager extends push {
    */
   loadWorkspace(workspace) {
     const data = workspace.model ? workspace.model.toJSON() : (workspace || {});
-    this.debug("AAA:240", data)
     const hub_id = data.hub_id || data.id;
     let nid = data.actual_home_id || data.home_id || data.nid;
     data.nid = nid;
@@ -290,10 +289,9 @@ class __window_manager extends push {
     this.mset({ hub_id, nid, nodeId: nid, area: data.area, ownpath: '/', home_id: nid });
 
 
-    // Fall back to fetching the hub's attributes to get its root nid.
+    // Data provided by the triggeer may not be reliable ennoug. Get fresh one
     this.fetchService(SERVICE.media.attributes, { hub_id, nid }).then((attrs) => {
       const resolved = attrs && (attrs.actual_home_id || attrs.home_id || attrs.nid);
-      this.debug("AAA:298", data)
       if (!resolved) {
         this.warn("loadWorkspace: cannot resolve workspace root", { hub_id, attrs });
         return;
@@ -366,6 +364,19 @@ class __window_manager extends push {
     if (window.Desk && _.isFunction(window.Desk._closeMainPanels)) {
       window.Desk._closeMainPanels();
     }
+    // Data provided by the triggeer may not be reliable ennoug. Get fresh one
+    this.fetchService(SERVICE.media.attributes, { hub_id, nid }).then((attrs) => {
+      const resolved = attrs && (attrs.actual_home_id || attrs.home_id || attrs.nid);
+      if (!resolved) {
+        this.warn("loadWorkspace: cannot resolve workspace root", { hub_id, attrs });
+        return;
+      }
+      let currentFolder = this.windowsLayer.children.last()
+      currentFolder.refreshContent(attrs)
+      this.debug("AAA:374", currentFolder, attrs)
+    }).catch((e) => this.warn("loadWorkspace: get_attributes failed", e));
+
+    return
 
     const area = data.area || data.workspace_area;
     // Subfolder ownpath comes from show_node_by (sidebar feeds workspace_item
