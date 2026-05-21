@@ -100,9 +100,11 @@
     }
 
     &[data-type="trial"]::after {
-      @include drumee.typo($size: 36px,
+      @include drumee.typo(
+        $size: 36px,
         $line: 42px,
-        $color: var(--default-text-title));
+        $color: var(--default-text-title)
+      );
       transform: none;
       bottom: 0;
       width: 100%;
@@ -138,16 +140,17 @@
     }
   }
 
-
   &__create-folder-dialog {
-    background: #f2f2f7;
+    background: var(--normal-bg);
     box-shadow: 0 1px 11px rgba(0, 0, 0, 0.13);
+    border-radius: 8px;
+    border: 1px solid var(--border-default);
     width: 360px;
   }
 
   &__create-folder-header {
     align-items: flex-start;
-    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+    border-bottom: 1px solid var(--border-default);
     justify-content: space-between;
     padding: 24px 24px 25px;
   }
@@ -157,15 +160,25 @@
   }
 
   &__create-folder-title {
-    @include drumee.typo($size: 18px, $line: 24px, $weight: 600, $color: #0b0a21);
+    @include drumee.typo(
+      $size: 18px,
+      $line: 24px,
+      $weight: 600,
+      $color: var(--normal-fg)
+    );
   }
 
   &__create-folder-subtitle {
-    @include drumee.typo($size: 12px, $line: 17px, $weight: 400, $color: #65656c);
+    @include drumee.typo(
+      $size: 12px,
+      $line: 17px,
+      $weight: 400,
+      $color: #65656c
+    );
   }
 
   &__create-folder-close {
-    color: #0b0a21;
+    color: var(--normal-fg);
     height: 24px;
     padding: 0;
     width: 14px;
@@ -177,15 +190,25 @@
   }
 
   &__create-folder-label {
-    @include drumee.typo($size: 12px, $line: 14px, $weight: 600, $color: #0b0a21);
+    @include drumee.typo(
+      $size: 12px,
+      $line: 14px,
+      $weight: 600,
+      $color: var(--normal-fg)
+    );
   }
 
   &__create-folder-entry {
     width: 100%;
 
     input {
-      @include drumee.typo($size: 12px, $line: 17px, $weight: 400, $color: #65656c);
-      background: #ffffff;
+      @include drumee.typo(
+        $size: 12px,
+        $line: 17px,
+        $weight: 400,
+        $color: var(--normal-fg)
+      );
+      background: var(--normal-bg-elevated);
       border: 0;
       border-radius: 8px;
       min-height: 41px;
@@ -198,7 +221,12 @@
   }
 
   &__create-folder-button {
-    @include drumee.typo($size: 14px, $line: 20px, $weight: 600, $color: #ffffff);
+    @include drumee.typo(
+      $size: 14px,
+      $line: 20px,
+      $weight: 600,
+      $color: #ffffff
+    );
     align-items: center;
     border-radius: 4px;
     cursor: pointer;
@@ -271,9 +299,11 @@
     align-items: center;
     cursor: pointer;
     text-align: center;
-    @include drumee.typo($size: 14px,
+    @include drumee.typo(
+      $size: 14px,
       $line: 15px,
-      $color: var(--default-text-reverse)); //$size: 13px,
+      $color: var(--default-text-reverse)
+    ); //$size: 13px,
   }
 
   b {
@@ -667,20 +697,21 @@
   }
 }
 
-.window-manager__icons-scroll.smart-container>.media-grid__ui {
+.window-manager__icons-scroll.smart-container > .media-grid__ui {
   flex: 0 0 auto;
   height: var(--grid-cell-h-file);
   width: var(--grid-cell-w);
 }
 
-.window-manager__icons-scroll.smart-container[data-partitioning="1"]>.media-grid__ui {
+.window-manager__icons-scroll.smart-container[data-partitioning="1"]
+  > .media-grid__ui {
   visibility: hidden;
 }
 
-.window-manager__icons-scroll.smart-container>.workspace-section,
-.window-manager__icons-scroll.smart-container>.folder-section,
-.window-manager__icons-scroll.smart-container>.file-section {
-  >.media-grid__ui {
+.window-manager__icons-scroll.smart-container > .workspace-section,
+.window-manager__icons-scroll.smart-container > .folder-section,
+.window-manager__icons-scroll.smart-container > .file-section {
+  > .media-grid__ui {
     visibility: visible;
   }
 }
@@ -720,7 +751,6 @@
 
 // ── Responsive ──
 @media (max-width: 1024px) {
-
   .workspace-section,
   .folder-section,
   .file-section {
@@ -751,7 +781,6 @@
 }
 
 @media (max-width: 767px) {
-
   .workspace-section,
   .folder-section,
   .file-section {
@@ -782,7 +811,6 @@
 }
 
 @media (max-width: 480px) {
-
   .workspace-section,
   .folder-section,
   .file-section {

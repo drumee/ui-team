@@ -73,8 +73,10 @@
     transform: rotate(-90deg);
     transition: transform 0.16s ease;
     width: 14px;
-    -webkit-mask: url('data:image/svg+xml;utf8,<svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M7 7.69967L4.31667 5.01634L3.5 5.83301L7 9.33301L10.5 5.83301L9.68333 5.01634L7 7.69967Z" fill="%231D1B20"/></svg>') center / 14px 14px no-repeat;
-    mask: url('data:image/svg+xml;utf8,<svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M7 7.69967L4.31667 5.01634L3.5 5.83301L7 9.33301L10.5 5.83301L9.68333 5.01634L7 7.69967Z" fill="%231D1B20"/></svg>') center / 14px 14px no-repeat;
+    -webkit-mask: url('data:image/svg+xml;utf8,<svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M7 7.69967L4.31667 5.01634L3.5 5.83301L7 9.33301L10.5 5.83301L9.68333 5.01634L7 7.69967Z" fill="%231D1B20"/></svg>')
+      center / 14px 14px no-repeat;
+    mask: url('data:image/svg+xml;utf8,<svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M7 7.69967L4.31667 5.01634L3.5 5.83301L7 9.33301L10.5 5.83301L9.68333 5.01634L7 7.69967Z" fill="%231D1B20"/></svg>')
+      center / 14px 14px no-repeat;
   }
 
   &__icon {
@@ -122,14 +124,14 @@
     }
 
     .badge {
-      bottom: 2px;
+      bottom: -3px;
       color: var(--grid-color-folder-badge);
       fill: currentColor;
       filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.3));
-      height: 6px;
-      left: 4px;
+      height: 16px !important;
+      left: -3px;
       position: absolute;
-      width: 6px;
+      width: 16px !important;
     }
 
     &.file {
