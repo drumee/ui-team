@@ -831,6 +831,8 @@
   "STOP_SHARING": "Stop sharing",
   "RAISE_HAND": "Raise hand",
   "LOWER_HAND": "Lower hand",
+  "HAND_RAISED": "Hand raised",
+  "SHARING_SCREEN": "Sharing screen",
   "COMPANY_LOGIN": "Private access",
   "LOGIN_DRUMEE_ACCOUNT": "Login to your Drumee account",
   "DRUMEE_THANKS": "Thanks for using Drumee",

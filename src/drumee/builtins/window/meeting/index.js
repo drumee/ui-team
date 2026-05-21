@@ -33,6 +33,17 @@ class __window_meeting extends __room {
     };
     this.state = "initialize";
     this._memberCallStates = new Map();
+    // Maps drumate uid → 1 for participants whose hand is raised or who
+    // are currently presenting. Populated by hand-raise broadcasts and the
+    // screen-share lifecycle hooks below. The dashboard / attendees cards
+    // read these via `_meetingUi` to render badges and the self-actions.
+    this._memberHandRaised = new Map();
+    this._memberPresenting = new Map();
+    // presenterId is participant_id (jitsi), but the dashboard cards are
+    // keyed by drumate uid. Remember the presenter's uid separately so we
+    // can clear `_memberPresenting` on STOP_REMOTE_SCREEN, by which time
+    // `presenterId` has already been nulled by the base class.
+    this._currentPresenterUid = null;
 
     if (this.mget("_meeting_standalone") && typeof this._setSize === "function") {
       this._setSize({
@@ -324,9 +335,44 @@ class __window_meeting extends __room {
         this._toggleHandRaise(cmd);
         break;
 
+      case "lower-hand-self":
+        this._lowerOwnHand();
+        break;
+
+      case "stop-share-self":
+        this._stopOwnPresentation();
+        break;
+
       default:
         super.onUiEvent(cmd, args);
     }
+  }
+
+  // participant_id (jitsi) -> drumate uid. The dashboard cards are keyed
+  // by uid, and HAND_RAISE/screen-share events carry participant_id, so
+  // every state map update goes through this. Returns null for the local
+  // user's own participant id (we don't store ourselves in this.endpoints).
+  _uidForParticipant(pid) {
+    if (!pid || !this.endpoints) return null;
+    const ep = this.endpoints[pid];
+    if (!ep || ep.isDestroyed()) return null;
+    return ep.mget && ep.mget(_a.uid);
+  }
+
+  _setMemberHandRaised(uid, on) {
+    if (!uid) return;
+    const key = String(uid);
+    if (on) this._memberHandRaised.set(key, 1);
+    else this._memberHandRaised.delete(key);
+    this._refreshDashboard();
+  }
+
+  _setMemberPresenting(uid, on) {
+    if (!uid) return;
+    const key = String(uid);
+    if (on) this._memberPresenting.set(key, 1);
+    else this._memberPresenting.delete(key);
+    this._refreshDashboard();
   }
 
   _applyRemoteHandRaise(data) {
@@ -336,6 +382,8 @@ class __window_meeting extends __room {
     const endpoint = this.endpoints[pid];
     if (!endpoint || endpoint.isDestroyed() || !endpoint.el) return;
     endpoint.el.dataset.raised = data.state ? 1 : 0;
+    const uid = (data.uid != null) ? data.uid : this._uidForParticipant(pid);
+    this._setMemberHandRaised(uid, !!data.state);
   }
 
   _toggleHandRaise(cmd) {
@@ -344,6 +392,9 @@ class __window_meeting extends __room {
     if (cmd.el) {
       cmd.el.setAttribute("title", raised ? (LOCALE.LOWER_HAND || "Lower hand") : (LOCALE.RAISE_HAND || "Raise hand"));
     }
+    // Mirror the new state for the local user on the dashboard card. The
+    // broadcast below tells other peers; this updates our own UI.
+    this._setMemberHandRaised(Visitor.id, !!raised);
     try {
       this.sendRoomSignaling(SERVICE.conference.broadcast, {
         event: "HAND_RAISE",
@@ -357,6 +408,63 @@ class __window_meeting extends __room {
     } catch (e) {
       if (this.warn) this.warn("hand-raise broadcast failed", e);
     }
+  }
+
+  // Triggered from a member card's "Lower hand" action. The local
+  // raise-hand button lives in __ctrlHandRaise (the top-bar control); we
+  // toggle through it so its dataset and the broadcast payload stay in
+  // sync with `_toggleHandRaise` above.
+  _lowerOwnHand() {
+    const cmd = this.__ctrlHandRaise;
+    if (!cmd || !cmd.el) {
+      this._setMemberHandRaised(Visitor.id, false);
+      return;
+    }
+    if (cmd.el.dataset.raised !== "1") return;
+    this._toggleHandRaise(cmd);
+  }
+
+  // Triggered from the local member card's "Stop sharing" action. Defers
+  // to the inherited stopPresentation() which already publishes the
+  // STOP_REMOTE_SCREEN broadcast.
+  _stopOwnPresentation() {
+    if (typeof this.stopPresentation === "function") {
+      try { this.stopPresentation(); } catch (e) { if (this.warn) this.warn(e); }
+    }
+    this._setMemberPresenting(Visitor.id, false);
+  }
+
+  // Override: remote user just started screen sharing. The base impl
+  // sets `this.presenterId = data.id` before invoking this; we capture
+  // the corresponding uid so STOP_REMOTE_SCREEN (which nulls presenterId
+  // before calling onRemoteScreenStop) can still clear the right entry.
+  prepareRemoteScreen(args) {
+    if (super.prepareRemoteScreen) super.prepareRemoteScreen(args);
+    const uid = (args && args.uid) || this._uidForParticipant(args && args.id);
+    if (uid) {
+      this._currentPresenterUid = String(uid);
+      this._setMemberPresenting(uid, true);
+    }
+  }
+
+  onRemoteScreenStop() {
+    if (super.onRemoteScreenStop) super.onRemoteScreenStop();
+    if (this._currentPresenterUid) {
+      this._setMemberPresenting(this._currentPresenterUid, false);
+      this._currentPresenterUid = null;
+    }
+  }
+
+  // Local desktop track mute/unmute is the only signal we get for our own
+  // share lifecycle (we don't receive our own START/STOP broadcast). Hook
+  // it to mirror the same uid-keyed state the dashboard reads.
+  onTrackMuteChange(track) {
+    if (super.onTrackMuteChange) super.onTrackMuteChange(track);
+    if (!track || typeof track.getType !== "function") return;
+    if (track.getType() !== _a.video) return;
+    if (typeof track.getVideoType !== "function") return;
+    if (track.getVideoType() !== _a.desktop) return;
+    this._setMemberPresenting(Visitor.id, !track.isMuted());
   }
 
   async _toggleDashboard() {
