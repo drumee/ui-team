@@ -91,14 +91,15 @@ class __push_manager extends winman {
         return;
 
       case SERVICE.conference.leave:
-        // Other party left the call. Close every open call window bound to
-        // the same room_id so the receiver's connect/meeting window doesn't
-        // stay stuck waiting on Jitsi USER_LEFT (which races with the local
-        // goodbye and is unreliable post-pickup).
+        // Other party left the call. Close P2P call windows only (window_connect).
+        // Team meeting windows (window_folder) stay open — only the host ending
+        // the meeting should close them.
         Visitor.muteSound();
         for (let c of this.getItemsByAttr(_a.room_id, data.room_id)) {
           if (c && (typeof c.isDestroyed !== 'function' || !c.isDestroyed())) {
-            c.goodbye();
+            if (c.mget && c.mget(_a.kind) === 'window_connect') {
+              c.goodbye();
+            }
           }
         }
         return;

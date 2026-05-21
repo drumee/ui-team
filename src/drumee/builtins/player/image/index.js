@@ -77,9 +77,19 @@ class __player_image extends __core {
   }
 
   /**
-   * 
+   * Player skeleton rebuild. We gate this against the rotation window
+   * because `restart()` gets invoked through several paths we don't
+   * control — most notably a parent widget's base-class `updateContent`
+   * iterating its children via `getItemsByAttr(nid)` and calling
+   * `player.restart()` directly. During/just-after a rotate, the CSS
+   * transform already shows the new orientation; rebuilding the skeleton
+   * tears down and reloads the <img>, which is the user-visible glitch.
    */
   restart() {
+    const recentMs = this._lastRotateAt
+      ? performance.now() - this._lastRotateAt
+      : Infinity;
+    if (this._rotateInflight || recentMs < 3000) return;
     this.feed(require('./skeleton')(this));
     this.loadSiblings().then((r) => {
       this.siblingsData = r;
@@ -96,6 +106,52 @@ class __player_image extends __core {
   */
   onDestroy() {
     RADIO_KBD.off(_e.keyup, this._keyup_bind);
+  }
+
+
+  /**
+   * Override the base-class `updateContent` so a WS-broadcast rotate
+   * doesn't rebuild this player's <img>. Sibling items still get
+   * refreshed via the child path; both paths apply the md5Hash patch
+   * (see `_mergeMd5IntoMetadata`) so cache-bust URLs reflect the new
+   * content without losing the rest of each item's metadata blob.
+   */
+  updateContent(args = {}) {
+    const ourNid = this.mget(_a.nid);
+    const isOurNode = ourNid != null && ourNid == args.nid;
+    this.getItemsByAttr(_a.nid, args.nid).filter((c) => {
+      if (!c || c === this) return false;
+      c.mset(args);
+      this._mergeMd5IntoMetadata(c, args && args.md5Hash);
+      if (c.restart) c.restart();
+    });
+    if (isOurNode) {
+      this.mset(args);
+      this._mergeMd5IntoMetadata(this, args && args.md5Hash);
+    }
+  }
+
+  /**
+   * Merge a new md5Hash into a view's existing metadata blob (preserving
+   * any other fields it held). After a rotate/replace, `restart()` calls
+   * `metadata()` which re-reads md5Hash from this blob and overwrites
+   * the top-level value — so without merging, the stale hash from the
+   * pre-rotate metadata clobbers the new one and the cache-bust URL
+   * never changes.
+   */
+  _mergeMd5IntoMetadata(view, md5Hash) {
+    if (!view || !md5Hash || typeof view.mget !== 'function') return;
+    let md = view.mget(_a.metadata);
+    let wasString = false;
+    if (md == null) {
+      md = {};
+    } else if (typeof md === 'string') {
+      wasString = true;
+      try { md = JSON.parse(md); } catch (e) { md = {}; }
+    }
+    if (md.md5Hash === md5Hash) return;
+    md.md5Hash = md5Hash;
+    view.mset({ metadata: wasString ? JSON.stringify(md) : md });
   }
 
   /**
@@ -116,8 +172,19 @@ class __player_image extends __core {
       case _a.fullscreen:
         return this.__sliderWrapper.el.requestFullscreen();
 
-      case _e.rotate:
-        return this._rotate()
+      case _e.rotate: {
+        // Buttons set `value: 90` or `value: -90` in the skeleton. Fall
+        // back to the className (`rotate-left` / `rotate-right`) if the
+        // value didn't make it onto the model for any reason.
+        const className = (cmd.el && cmd.el.className) || '';
+        const fromClass = /rotate-left/.test(className) ? -90
+          : /rotate-right/.test(className) ? 90 : null;
+        const resolved = cmd.mget(_a.value) ?? cmd.mget('angle') ?? fromClass ?? 90;
+        return this._rotate(resolved);
+      }
+
+      case "save-rotation":
+        return this._saveRotation();
 
       case 'info':
         return this._showInfo();
@@ -146,32 +213,192 @@ class __player_image extends __core {
   }
 
   /**
-   * 
-  */
-  _rotate() {
+   * Rotate purely client-side for instant feedback, then persist to the
+   * server in the background. The visible image is never re-fetched —
+   * a CSS rotate (plus a scale-to-fit so the rotated bbox stays inside
+   * the player container) is enough. Server response only updates
+   * metadata and refreshes sidebar thumbnails; the next time the player
+   * opens this image fresh, it will load already correctly oriented.
+   */
+  _rotate(angle) {
+    angle = parseInt(angle, 10) || 90;
+    const now = (typeof performance !== 'undefined' ? performance.now() : Date.now());
+
+    // Dedup framework/touch double-fires that arrive within a few ms.
+    if (this._lastRotateAt && angle === this._lastRotateAngle && (now - this._lastRotateAt) < 250) {
+      return;
+    }
+    this._lastRotateAt = now;
+    this._lastRotateAngle = angle;
+
+    this._displayRotation = (this._displayRotation || 0) + angle;
+    this._pendingRotation = (this._pendingRotation || 0) + angle;
+    this._animateRotation(this._displayRotation);
+  }
+
+  /**
+   * Persist the accumulated rotation server-side. No-op if nothing
+   * actually changed (e.g., four 90° clicks brought us back to 0°).
+   */
+  _saveRotation() {
+    if (!this._hasPendingRotation()) return;
+    this._flushRotate();
+  }
+
+  /**
+   * Has the user rotated since the last save? Normalize cumulative angle
+   * to a 0/90/180/270 bucket; 0 means nothing to save.
+   */
+  _hasPendingRotation() {
+    const norm = ((this._pendingRotation || 0) % 360 + 360) % 360;
+    return norm !== 0;
+  }
+
+  /**
+   * rAF-driven rotation animation. Each frame we recompute both the
+   * angle (eased from `_animFromDeg` to `targetDeg`) AND the scale that
+   * keeps the rotated bbox inside the parent box. Doing it per-frame
+   * matters because the correct scale-to-fit value is non-linear in the
+   * angle (peaks at 45°), so the alternative — a CSS `transition: transform`
+   * linearly interpolating between two scale values — clips the image
+   * mid-rotation and looks like a separate second motion. If a new click
+   * arrives mid-animation, we retarget seamlessly from the current angle.
+   */
+  _animateRotation(targetDeg) {
+    if (this._rotAnimId) cancelAnimationFrame(this._rotAnimId);
+    const slider = this.__sliderContent;
+    if (!slider || !slider.el) return;
+
+    const fromDeg = this._currentAnimatedRotation || 0;
+    const startTime = (typeof performance !== 'undefined' ? performance.now() : Date.now());
+    const duration = 320;
+    // Cubic ease-out — same shape as cubic-bezier(0.22, 1, 0.36, 1).
+    const ease = (t) => 1 - Math.pow(1 - t, 3);
+
+    const tick = (now) => {
+      const t = Math.min((now - startTime) / duration, 1);
+      const deg = fromDeg + (targetDeg - fromDeg) * ease(t);
+      this._currentAnimatedRotation = deg;
+      this._writeRotationStyles(deg);
+      if (t < 1) {
+        this._rotAnimId = requestAnimationFrame(tick);
+      } else {
+        this._rotAnimId = null;
+      }
+    };
+    this._rotAnimId = requestAnimationFrame(tick);
+  }
+
+  /**
+   * Write transform + scale-to-fit for a given angle. Called every frame
+   * by `_animateRotation` and directly by `_resetRotationStyles`.
+   */
+  _writeRotationStyles(deg) {
+    const slider = this.__sliderContent;
+    if (!slider || !slider.el) return;
+    const target = slider.el;
+
+    let scale = 1;
+    if (deg) {
+      // clientWidth/Height ignore transforms — that's what we want here.
+      const w = target.clientWidth;
+      const h = target.clientHeight;
+      const parent = target.parentElement;
+      const pw = parent ? parent.clientWidth : w;
+      const ph = parent ? parent.clientHeight : h;
+      if (w && h && pw && ph) {
+        const rad = (deg * Math.PI) / 180;
+        const c = Math.abs(Math.cos(rad));
+        const s = Math.abs(Math.sin(rad));
+        const rotW = w * c + h * s;
+        const rotH = w * s + h * c;
+        scale = Math.min(pw / rotW, ph / rotH, 1);
+      }
+    }
+
+    target.style.transformOrigin = 'center center';
+    target.style.willChange = 'transform';
+    target.style.transition = 'none'; // we drive every frame ourselves
+    target.style.transform = deg ? `rotate(${deg}deg) scale(${scale})` : '';
+  }
+
+  /**
+   * Strip rotation-only inline styles when navigating to a new slide so
+   * the next image starts from a clean transform state.
+   */
+  _resetRotationStyles() {
+    if (this._rotAnimId) {
+      cancelAnimationFrame(this._rotAnimId);
+      this._rotAnimId = null;
+    }
+    this._currentAnimatedRotation = 0;
+    const slider = this.__sliderContent;
+    if (!slider || !slider.el) return;
+    const s = slider.el.style;
+    s.transformOrigin = '';
+    s.willChange = '';
+    s.transition = '';
+    s.transform = '';
+  }
+
+  /**
+   * Persist the accumulated rotation server-side. We never reload the
+   * slider image — the CSS rotation already represents the new
+   * orientation. Sidebar items get a deferred refresh so their
+   * thumbnails reflect the new orientation without blocking the player.
+   */
+  _flushRotate() {
+    // Normalize the cumulative angle to a positive 0..360 range. The
+    // server expects a non-negative angle (sending -90 was being
+    // silently rejected, which is why the rotation didn't persist).
+    // 0 means "back to original" — skip the request entirely.
+    const angle = ((this._pendingRotation || 0) % 360 + 360) % 360;
+    if (angle === 0) {
+      this._pendingRotation = 0;
+      return;
+    }
+    this._pendingRotation = 0;
+    this._rotateInflight = true;
     const { nid, hub_id } = this.actualNode();
-    this.showSpinner()
     this.postService({
       service: SERVICE.media.rotate,
       nid,
       hub_id,
+      angle,
+      echoId: this.mget('echoId'),
     }).then((data) => {
+      if (data && data.mtime != null && data.ptime == null) data.ptime = data.mtime;
       this.mset(data);
-      this.mset({ service: _e.raise });
-      let urls = this.getImageUrls();
+      this._mergeMd5IntoMetadata(this, data && data.md5Hash);
       if (this.siblingsData[this._currentSlide]) {
         this.siblingsData[this._currentSlide] = data;
-        urls = this.getImageUrls(data);
       }
-      this.__sliderContent.reload(urls);
-      this.hideSpinner();
-      let items = Wm.selectItems(data, _a.nid);
-      for (let item of items) {
-        item.mset(data);
-        if (item.isRegularFile()) {
-          item.restart();
+      requestAnimationFrame(() => {
+        // Refresh every visible widget pointing at this nid. Home-grid
+        // tiles don't subscribe to WS_EVENT (only __window_mfs widgets
+        // do), so without this loop a reopen from the home grid would
+        // read a stale md5Hash off the still-cached tile. Skip self —
+        // the CSS rotation already shows the new orientation.
+        const matches = (Wm.getItemsByAttr ? Wm.getItemsByAttr(_a.nid, data.nid) : []) || [];
+        for (const item of matches) {
+          if (!item || item === this) continue;
+          if (!(item.isMfs || item.isFolder)) continue;
+          item.mset(data);
+          // Same md5Hash → metadata patch we apply to ourselves;
+          // without it, restart() will re-read md5Hash from the stale
+          // metadata blob and clobber the new top-level value.
+          this._mergeMd5IntoMetadata(item, data && data.md5Hash);
+          if (item.isRegularFile && item.isRegularFile()) item.restart();
         }
-      }
+      });
+      this._rotateInflight = false;
+      if (this._pendingRotation) this._flushRotate();
+    }).catch((err) => {
+      console.warn('[rotate] server request failed, rolling back', err);
+      this._displayRotation = (this._displayRotation || 0) - angle;
+      this._pendingRotation = (this._pendingRotation || 0) + angle;
+      this._animateRotation(this._displayRotation);
+      this._rotateInflight = false;
     });
   }
 
@@ -297,6 +524,10 @@ class __player_image extends __core {
     this.__playerTitle.set({ content: filename })
     let urls = this.getImageUrls(data);
     this._isPlaying = 1;
+    // Switching slides — drop any leftover rotation state from the previous image.
+    this._displayRotation = 0;
+    this._consumeRotationOnNextLoad = 0;
+    this._resetRotationStyles();
     this.__sliderContent.reload(urls);
   }
 
@@ -402,63 +633,51 @@ class __player_image extends __core {
   }
 
   /**
-   * 
+   * Size the player window as a stable square canvas big enough to
+   * contain the image at any rotation. The canvas side is the image's
+   * longest natural dimension, capped to the viewport. The image fills
+   * this canvas with `object-fit: contain` (see player-image skin),
+   * so landscape and portrait orientations both fit naturally and
+   * rotation needs no window resize — only a transform on the <img>.
    */
   display(image) {
-    let el = image.el;
-    let width = el.naturalWidth;
-    let height = el.naturalHeight;
-    const slide_size = 1024;
-    setTimeout(() => {
-    }, 1000)
-    let r = 1;
-    if (width > height) {
-      r = width / slide_size;
-    } else if (height == width) {
-      r = 1;
-    } else {
-      r = height / slide_size;
-    }
-    width = width * r;
-    height = height * r;
-    let left = 0;
-    let top = 0;
-    let max_w = window.innerWidth - 100;
-    let max_h = window.innerHeight - 100;
+    const el = image.el;
+    const naturalW = el.naturalWidth;
+    const naturalH = el.naturalHeight;
+    if (!naturalW || !naturalH) return;
+
+    // Reserve vertical space for the player chrome (topbar + bottom controls).
+    const CHROME_H = 132;
+    const max_w = window.innerWidth - 100;
+    const max_h = window.innerHeight - 100 - CHROME_H;
+
+    let width, height, top, left;
 
     if (Visitor.isMobile()) {
       width = window.innerWidth;
       height = window.innerHeight;
+      top = 0;
+      left = 0;
     } else {
-      left = 50 + (max_w - width) / 2;
-      top = 50 + (max_h - height) / 2;
-      if (top < 20) {
-        top = 20;
-      }
-      if (left < 20) {
-        left = 20;
-      }
+      // Square canvas keyed to the longest dim — both orientations fit.
+      const naturalMax = Math.max(naturalW, naturalH);
+      const canvasSide = Math.min(naturalMax, max_w, max_h);
+      width = canvasSide;
+      height = canvasSide + CHROME_H;
+      left = Math.max(20, (window.innerWidth - width) / 2);
+      top = Math.max(20, (window.innerHeight - height) / 2);
     }
 
-    if (width > max_w || height > max_h) {
-      this.size = fitBoxes(
-        { width: max_w, height: max_h },
-        { width, height },
-      );
-      width = this.size.width;
-      height = this.size.height;
-    } else {
-      this.size = { width, height };
-    }
+    this.size = { width, height };
     this._pos = { top, left };
     this.anti_overlap(this._pos);
+
     if (this._isPlaying) {
-      TweenMax.to(this.$el, 1.5, { width, height })
+      TweenMax.to(this.$el, 1.5, { width, height });
     } else {
       this.$el.css({ width, height, ...this._pos });
-      TweenMax.to(this.$el, 0.5, { alpha: 1 })
+      TweenMax.to(this.$el, 0.5, { alpha: 1 });
     }
-
   }
 
   /**

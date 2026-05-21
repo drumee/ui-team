@@ -138,6 +138,29 @@
     width: 45px;
   }
 
+  &__join {
+    align-items: center;
+    background: #28a745;
+    border-radius: 50%;
+    color: #fff;
+    cursor: pointer;
+    display: flex;
+    flex-shrink: 0;
+    height: 20px;
+    justify-content: center;
+    transition: background-color 0.15s ease;
+    width: 20px;
+
+    svg {
+      height: 12px;
+      width: 12px;
+    }
+
+    &:hover {
+      background: #218838;
+    }
+  }
+
   &__bookmark,
   &__trash {
     height: 20px;

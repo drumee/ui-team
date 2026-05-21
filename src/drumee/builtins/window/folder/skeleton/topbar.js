@@ -30,6 +30,13 @@ const __skl_folder_topbar = function (ui) {
     content: filename,
   });
 
+  const breadcrumbPath = Skeletons.Box.X({
+    className: `${cnFolder}__breadcrumb-path`,
+    sys_pn: "folder-breadcrumb-path",
+    partHandler: ui,
+    dataset: { state: 0 },
+  });
+
   const badgeLabel = getAreaLabel(area);
   const badge =
     area && badgeLabel
@@ -47,7 +54,7 @@ const __skl_folder_topbar = function (ui) {
 
   const heading = Skeletons.Box.X({
     className: `${cnFolder}__heading`,
-    kids: [title, badge],
+    kids: [breadcrumbPath, title, badge],
   });
 
   const leftCluster = Skeletons.Box.X({

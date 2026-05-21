@@ -37,6 +37,7 @@ class __panel_activity extends LetcBox {
     this._currentPayload = {};
     this._unreadsOnly = 1;
     this._dismissedKeys = new Set();
+    this._meetingItems = [];
     this.details = {};
     this.onVisibilityChange = this.onVisibilityChange.bind(this)
     document.addEventListener("visibilitychange", this.onVisibilityChange);
@@ -208,6 +209,36 @@ class __panel_activity extends LetcBox {
       case 'clear-all':
         return this._clearAll();
 
+      case 'join-meeting': {
+        const item = this._findActivityItem(cmd);
+        const hub_id = (args && args.hub_id) || (item && item.mget && item.mget('hub_id'));
+        const details = (item && item.mget && item.mget('details')) || {};
+        const room_id = (item && item.mget && item.mget('room_id')) || details.nid;
+        const room_type = (item && item.mget && item.mget('room_type')) || 'meeting';
+        if (hub_id && typeof Wm !== 'undefined' && Wm.addWindow) {
+          const folderNid = details.nid || details.actual_home_id || room_id;
+          try {
+            Wm.addWindow({
+              kind: 'window_folder',
+              hub_id,
+              nid: folderNid,
+              filename: details.filename || details.user_filename || '',
+              area: details.area,
+              activeTab: 'meeting',
+              room_id,
+              room_type,
+            });
+          } catch (e) { this.warn('join-meeting: addWindow failed', e); }
+        }
+        const item_key = item && item.mget && item.mget('item_key');
+        if (item_key) {
+          this._meetingItems = (this._meetingItems || []).filter(m => m.item_key !== item_key);
+          this.refreshActivity(0);
+        }
+        this.activityState = 0;
+        this.setState(0);
+        return;
+      }
     }
   }
 
@@ -632,10 +663,13 @@ class __panel_activity extends LetcBox {
       e.logicalParent = this;
       list.push(e);
     }
+    const dismissed = this._dismissedKeys || new Set();
+    const meetingItems = (this._meetingItems || []).filter(m => !dismissed.has(m.item_key));
+    const combined = [...meetingItems, ...list];
     this.ensurePart('priority').then((p) => {
       if (!p) return;
-      p.feed(list);
-      if (this.el && this.el.dataset) this.el.dataset.hasPriority = list.length ? '1' : '0';
+      p.feed(combined);
+      if (this.el && this.el.dataset) this.el.dataset.hasPriority = combined.length ? '1' : '0';
     });
   }
 
@@ -662,6 +696,9 @@ class __panel_activity extends LetcBox {
       data = [data]
     }
     switch (options.service) {
+      case "conference.start":
+        this._addMeetingNotification(data[0] || data);
+        break;
       case "contact.invite":
       case "hub.invite_received":
         this.refreshActivity()
@@ -812,7 +849,32 @@ class __panel_activity extends LetcBox {
 
   }
   /**
-   * 
+   *
+   */
+  _addMeetingNotification(data) {
+    if (!data) return;
+    const hub_id = data.hub_id;
+    if (!hub_id) return;
+    const key = `meeting:${hub_id}`;
+    this._meetingItems = (this._meetingItems || []).filter(m => m.item_key !== key);
+    this._meetingItems.unshift({
+      ...data,
+      kind: 'activity_item',
+      category: 'meeting',
+      type: 'meeting',
+      event_type: 'meeting',
+      item_type: 'meeting',
+      item_key: key,
+      service: 'join-meeting',
+      timestamp: Math.floor(Date.now() / 1000),
+      uiHandler: this,
+      logicalParent: this,
+    });
+    this.refreshActivity(0);
+  }
+
+  /**
+   *
    */
   _notify(data = {}) {
     if (!window.Notification) return;

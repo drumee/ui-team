@@ -714,7 +714,7 @@ class desk_module extends LetcBox {
   /**
    *
    */
-  togglePanel(kind, pn) {
+  togglePanel(kind, pn, openOnly) {
     if (!this._pendingKinds) this._pendingKinds = {};
     if (!this._closeTimers) this._closeTimers = {};
 
@@ -745,6 +745,9 @@ class desk_module extends LetcBox {
         const child = p.children.last();
         const isOpen = child && child.el && child.el.dataset.anim === "in";
         if (isOpen) {
+          // Open-only callers (e.g. sidebar Settings / Profile) opt out of
+          // the close-on-second-click toggle behaviour.
+          if (openOnly) return;
           this._hidePanel(p);
         } else {
           this.closeOtherSidebarPanels(pn);
@@ -755,6 +758,7 @@ class desk_module extends LetcBox {
 
       // Slot has no slide-out CSS — fall back to animate-then-destroy.
       if (sameKindMounted && !keepAlive) {
+        if (openOnly) return;
         const child = p.children.last();
         if (child && child.el) child.el.dataset.anim = "out";
         this._closeTimers[pn] = setTimeout(() => {
@@ -906,7 +910,10 @@ class desk_module extends LetcBox {
         RADIO_BROADCAST.trigger("breadcrumb:context", {
           filename: LOCALE.SETTINGS,
         });
-        return this.togglePanel("settings_main", "settings-main-slot");
+        // Open-only — clicking Settings (sidebar) or the bottom Profile
+        // item never closes the panel; the close icon inside Settings
+        // handles closing.
+        return this.togglePanel("settings_main", "settings-main-slot", true);
 
       case "toggle-apps":
         RADIO_BROADCAST.trigger("breadcrumb:context", {

@@ -141,7 +141,7 @@
       border: 1px solid var(--default-entry-border-bottom);
       overflow: hidden;
       resize: none;
-      background-color: var(--default-bg);
+      background-color: var(--rename-input-bg, var(--default-bg));
       @include drumee.typo(
         $line: 12px,
         $size: 11px,
@@ -160,12 +160,26 @@
     }
 
     .input-details {
-      background: var(--default-bg);
+      background: var(--rename-input-bg, var(--default-bg));
       color: #ff4578;
       position: absolute;
       bottom: auto;
       top: 112%;
       padding: 3px;
+    }
+  }
+}
+
+html[data-theme="dark"] .media-grid {
+  &__input {
+    textarea {
+      background-color: var(--normal-bg-elevated);
+      border-color: var(--border-default);
+      color: var(--default-text-color);
+    }
+
+    .input-details {
+      background: var(--normal-bg-elevated);
     }
   }
 }
