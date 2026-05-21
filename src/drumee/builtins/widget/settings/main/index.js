@@ -126,7 +126,12 @@ class settings_main extends LetcBox {
    *
    */
   toggleEmailNotifications(cmd) {
-    const next = cmd.mget(_a.state) ? 0 : 1;
+    // Read from the canonical Visitor settings (NOT cmd.mget(_a.state)).
+    // With radiotoggle:1 the widget has already flipped its model state
+    // by the time onUiEvent fires — reading cmd state would re-flip back
+    // to the old value. Same pattern as toggleTwoFactor.
+    const cur = (Visitor.settings() || {}).email_notifications ? 1 : 0;
+    const next = cur ? 0 : 1;
     cmd.setState(next);
     const settings = { ...(Visitor.settings() || {}), email_notifications: next };
     this.postService({
