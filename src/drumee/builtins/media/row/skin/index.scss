@@ -90,7 +90,7 @@
 
     textarea {
       border: 1px solid var(--egrey-e8); //var(--egrey-b6); //#B6BFCA;
-      background-color: var(--default-bg);
+      background-color: var(--rename-input-bg, var(--default-bg));
       min-height: 22px;
       height: auto;
       overflow: hidden;
@@ -287,5 +287,13 @@
     &-type {
       min-width: 62px;
     }
+  }
+}
+
+html[data-theme="dark"] .media-row {
+  &__input textarea {
+    background-color: var(--normal-bg-elevated);
+    border-color: var(--border-default);
+    color: var(--default-text-color);
   }
 }

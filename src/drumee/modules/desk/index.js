@@ -93,6 +93,22 @@ class desk_module extends LetcBox {
   }
 
   /**
+   * 
+   * @param {*} args 
+   * @returns 
+   */
+  openP2Pchat(args = {}) {
+    const { drumate_id, message_id } = args;
+    if (!drumate_id) return;
+    this.togglePanel('chat_p2p', 'chat-panel').then(() => {
+      this.ensurePart('chat-panel').then(p => {
+        const widget = p && p.children && p.children.last && p.children.last();
+        if (widget && widget.openChatByPeerId) widget.openChatByPeerId(drumate_id, message_id);
+      });
+    });
+  }
+
+  /**
    *
    */
   async onDomRefresh() {

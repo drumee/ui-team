@@ -45,7 +45,7 @@
     padding-right: 2px;
     border-radius: 8px;
     scrollbar-width: thin;
-    scrollbar-color: rgba(0, 0, 0, 0.15) transparent;
+    scrollbar-color: var(--border-strong, rgba(0, 0, 0, 0.15)) transparent;
     transition:
       background-color 0.15s,
       outline-color 0.15s;
@@ -56,13 +56,13 @@
       width: 4px;
     }
     &::-webkit-scrollbar-thumb {
-      background-color: rgba(0, 0, 0, 0.15);
+      background-color: var(--border-strong, rgba(0, 0, 0, 0.15));
       border-radius: 4px;
     }
 
     &.is-drop-target {
-      background-color: rgba(67, 60, 197, 0.06);
-      outline-color: rgba(67, 60, 197, 0.4);
+      background-color: var(--hover-bg-40, rgba(67, 60, 197, 0.06));
+      outline-color: var(--active-border, rgba(67, 60, 197, 0.4));
     }
   }
 
@@ -104,7 +104,7 @@
     min-width: 22px;
     padding: 0 8px;
     border-radius: 100px;
-    background-color: rgba(0, 0, 0, 0.06);
+    background-color: var(--overlay-bg-05, rgba(0, 0, 0, 0.06));
   }
 
   &__column-count-text {
@@ -121,10 +121,10 @@
     align-items: stretch;
     gap: 8px;
     padding: 12px;
-    border: 1px solid rgba(11, 10, 33, 0.06);
+    border: 1px solid var(--border-default, rgba(11, 10, 33, 0.06));
     border-radius: 8px;
-    background-color: #ffffff;
-    box-shadow: 0 1px 0 rgba(9, 30, 66, 0.08);
+    background-color: var(--normal-bg-elevated, #ffffff);
+    box-shadow: var(--shadow-top-tiny, 0 1px 0 rgba(9, 30, 66, 0.08));
     cursor: pointer;
     transition:
       box-shadow 0.15s,
@@ -133,7 +133,7 @@
     user-select: none;
 
     &:hover {
-      border-color: rgba(11, 10, 33, 0.12);
+      border-color: var(--border-strong, rgba(11, 10, 33, 0.12));
       box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
 
       .tasks-panel__task-remove {
@@ -161,7 +161,7 @@
       $size: 14px,
       $weight: 600,
       $line: 20px,
-      $color: #0b0a21
+      $color: var(--normal-fg-10, #0b0a21)
     );
     flex: 1 1 auto;
     min-width: 0;
@@ -190,8 +190,8 @@
     margin-top: 2px;
     padding: 6px 8px;
     border-radius: 6px;
-    background: #f7f7fa;
-    border: 1px solid rgba(11, 10, 33, 0.04);
+    background: var(--normal-bg-90, #f7f7fa);
+    border: 1px solid var(--border-muted, rgba(11, 10, 33, 0.04));
   }
 
   &__task-file {
@@ -204,7 +204,7 @@
     width: 12px;
     height: 12px;
     flex-shrink: 0;
-    color: #84848c;
+    color: var(--normal-fg-50, #84848c);
 
     svg {
       width: 100%;
@@ -218,7 +218,7 @@
       $size: 12px,
       $weight: 500,
       $line: 16px,
-      $color: #0b0a21
+      $color: var(--normal-fg-10, #0b0a21)
     );
     overflow: hidden;
     text-overflow: ellipsis;
@@ -232,7 +232,7 @@
       $size: 11px,
       $weight: 500,
       $line: 14px,
-      $color: #65656c
+      $color: var(--normal-fg-50, #65656c)
     );
   }
 
@@ -274,7 +274,7 @@
     );
     padding: 2px 8px;
     border-radius: 100px;
-    background: rgba(0, 0, 0, 0.05);
+    background: var(--overlay-bg-05, rgba(0, 0, 0, 0.05));
 
     &[data-overdue="1"] {
       color: #fff;
@@ -289,7 +289,7 @@
     gap: 4px;
     padding: 8px;
     margin-top: 8px;
-    border: 1px dashed rgba(11, 10, 33, 0.2);
+    border: 1px dashed var(--border-default, rgba(11, 10, 33, 0.2));
     border-radius: 8px;
     background-color: transparent;
     cursor: pointer;
@@ -300,8 +300,8 @@
       color 0.15s;
 
     &:hover {
-      background-color: rgba(0, 0, 0, 0.03);
-      border-color: rgba(11, 10, 33, 0.4);
+      background-color: var(--overlay-bg-05, rgba(0, 0, 0, 0.03));
+      border-color: var(--border-strong, rgba(11, 10, 33, 0.4));
 
       .tasks-panel__add-label {
         color: var(--normal-fg-10, #0b0a21);
@@ -333,7 +333,7 @@
   &__create-backdrop {
     position: absolute;
     inset: 0;
-    background: rgba(11, 10, 33, 0.4);
+    background: var(--overlay-bg, rgba(11, 10, 33, 0.4));
     backdrop-filter: blur(2px);
     align-items: center;
     justify-content: center;
@@ -343,8 +343,8 @@
     width: 380px;
     max-width: 92%;
     max-height: 50vh;
-    background: #f2f2f7;
-    border: 1px solid rgba(0, 0, 0, 0.05);
+    background: var(--normal-bg-90, #f2f2f7);
+    border: 1px solid var(--border-default, rgba(0, 0, 0, 0.05));
     border-radius: 12px;
     box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
     overflow: hidden;
@@ -375,7 +375,7 @@
     font-weight: 700;
     font-size: 18px;
     line-height: 24px;
-    color: #0b0a21;
+    color: var(--normal-fg-10, #0b0a21);
   }
 
   &__create-close {
@@ -400,7 +400,7 @@
 
     &:hover {
       color: var(--normal-fg-10, #0b0a21);
-      background: rgba(0, 0, 0, 0.06);
+      background: var(--overlay-bg-05, rgba(0, 0, 0, 0.06));
     }
   }
 
@@ -413,7 +413,7 @@
       $size: 12px,
       $weight: 500,
       $line: 16px,
-      $color: #65656c
+      $color: var(--normal-fg-20, #65656c)
     );
   }
 
@@ -426,28 +426,28 @@
     input {
       width: 100%;
       padding: 8px 10px;
-      border: 1px solid rgba(0, 0, 0, 0.08);
+      border: 1px solid var(--border-default, rgba(0, 0, 0, 0.08));
       border-radius: 6px;
       outline: none;
-      background: #ffffff;
+      background: var(--normal-bg-elevated, #ffffff);
       box-sizing: border-box;
       @include drumee.typo(
         $size: 13px,
         $weight: 500,
         $line: 18px,
-        $color: #0b0a21
+        $color: var(--normal-fg-10, #0b0a21)
       );
       transition:
         border-color 0.15s,
         box-shadow 0.15s;
 
       &:focus {
-        border-color: #433cc5;
+        border-color: var(--active-border, #433cc5);
         box-shadow: 0 0 0 3px rgba(67, 60, 197, 0.12);
       }
 
       &::placeholder {
-        color: #aeaeb2;
+        color: var(--placeholder-fg, #aeaeb2);
         font-weight: 400;
       }
 
@@ -458,39 +458,6 @@
       }
     }
 
-    .flatpickr-calendar {
-      position: fixed;
-      top: 100px !important;
-      left: 40px !important;
-      border-radius: 10px;
-      border: 1px solid rgba(0, 0, 0, 0.06);
-      box-shadow: 0 10px 30px -8px rgba(0, 0, 0, 0.18);
-      font-family: Manrope, system-ui, sans-serif;
-
-      &.arrowTop::before,
-      &.arrowTop::after {
-        display: none;
-      }
-
-      .flatpickr-day {
-        border-radius: 6px;
-
-        &.selected,
-        &.selected:hover {
-          background: #433cc5;
-          border-color: #433cc5;
-        }
-
-        &.today {
-          border-color: #433cc5;
-
-          &:hover {
-            background: rgba(67, 60, 197, 0.08);
-            color: #433cc5;
-          }
-        }
-      }
-    }
   }
 
   &__create-status {
@@ -503,12 +470,12 @@
       $size: 14px,
       $weight: 600,
       $line: 20px,
-      $color: #65656c
+      $color: var(--normal-fg-50, #65656c)
     );
     padding: 5px 12px;
-    border: 1px solid rgba(0, 0, 0, 0.08);
+    border: 1px solid var(--border-default, rgba(0, 0, 0, 0.08));
     border-radius: 100px;
-    background: #ffffff;
+    background: var(--normal-bg-elevated, #ffffff);
     cursor: pointer;
     user-select: none;
     transition:
@@ -517,12 +484,12 @@
       background 0.15s;
 
     &:hover {
-      background: #f2f2f7;
+      background: var(--normal-bg-90, #f2f2f7);
     }
 
     &[data-active="1"] {
-      background: #ffffff;
-      color: #0b0a21;
+      background: var(--normal-bg-elevated, #ffffff);
+      color: var(--normal-fg-10, #0b0a21);
     }
   }
 
@@ -538,7 +505,7 @@
       $size: 14px,
       $weight: 600,
       $line: 20px,
-      $color: #65656c
+      $color: var(--normal-fg-50, #65656c)
     );
     padding: 8px 16px;
     border-radius: 4px;
@@ -549,8 +516,8 @@
       color 0.15s;
 
     &:hover {
-      background: rgba(0, 0, 0, 0.05);
-      color: #0b0a21;
+      background: var(--overlay-bg-05, rgba(0, 0, 0, 0.05));
+      color: var(--normal-fg-10, #0b0a21);
     }
   }
 
@@ -586,7 +553,7 @@
     max-width: 100%;
     background: var(--normal-bg-90, #fff);
     border-left: 1px solid var(--border-default, #e5e5e5);
-    box-shadow: -8px 0 24px rgba(0, 0, 0, 0.06);
+    box-shadow: var(--shadow-left-big, -8px 0 24px rgba(0, 0, 0, 0.06));
     z-index: 5;
 
     &[data-state="closed"],
@@ -638,11 +605,11 @@
         border-color 0.15s;
 
       &:hover {
-        background: rgba(0, 0, 0, 0.03);
+        background: var(--overlay-bg-05, rgba(0, 0, 0, 0.03));
       }
       &:focus {
-        background: #ffffff;
-        border-color: #433cc5;
+        background: var(--normal-bg-elevated, #ffffff);
+        border-color: var(--active-border, #433cc5);
         box-shadow: 0 0 0 3px rgba(67, 60, 197, 0.12);
       }
     }
@@ -670,7 +637,7 @@
 
     &:hover {
       color: var(--normal-fg-10, #0b0a21);
-      background: rgba(0, 0, 0, 0.06);
+      background: var(--overlay-bg-05, rgba(0, 0, 0, 0.06));
     }
   }
 
@@ -708,7 +675,7 @@
       background 0.15s;
 
     &:hover {
-      background: rgba(0, 0, 0, 0.03);
+      background: var(--overlay-bg-05, rgba(0, 0, 0, 0.03));
     }
 
     &[data-active="1"] {
@@ -735,6 +702,7 @@
       border-radius: 6px;
       outline: none;
       box-sizing: border-box;
+      background: var(--normal-bg-elevated, transparent);
       @include drumee.typo(
         $size: 13px,
         $weight: 500,
@@ -754,39 +722,6 @@
       }
     }
 
-    .flatpickr-calendar {
-      position: fixed;
-      top: 300px !important;
-      left: 800px !important;
-      border-radius: 10px;
-      border: 1px solid rgba(0, 0, 0, 0.06);
-      box-shadow: 0 10px 30px -8px rgba(0, 0, 0, 0.18);
-      font-family: Manrope, system-ui, sans-serif;
-
-      &.arrowTop::before,
-      &.arrowTop::after {
-        display: none;
-      }
-
-      .flatpickr-day {
-        border-radius: 6px;
-
-        &.selected,
-        &.selected:hover {
-          background: #fa8540;
-          border-color: #fa8540;
-        }
-
-        &.today {
-          border-color: #fa8540;
-
-          &:hover {
-            background: rgba(250, 133, 64, 0.08);
-            color: #fa8540;
-          }
-        }
-      }
-    }
   }
 
   &__attachments {
@@ -864,7 +799,7 @@
       $size: 12px,
       $weight: 400,
       $line: 16px,
-      $color: var(--normal-fg-50, #aeaeb2)
+      $color: var(--placeholder-fg, #aeaeb2)
     );
     font-style: italic;
   }
@@ -905,10 +840,10 @@
       $size: 12px,
       $weight: 500,
       $line: 16px,
-      $color: var(--normal-fg-30, #84848c)
+      $color: var(--normal-fg-50, #84848c)
     );
     padding: 4px 10px;
-    border: 1px solid var(--normal-fg-70, #d6d6dc);
+    border: 1px solid var(--border-default, #d6d6dc);
     border-radius: 12px;
     cursor: pointer;
     transition:
@@ -939,33 +874,33 @@
       width: 100%;
       min-height: 64px;
       padding: 8px 10px;
-      border: 1px solid rgba(0, 0, 0, 0.08);
+      border: 1px solid var(--border-default, rgba(0, 0, 0, 0.08));
       border-radius: 6px;
       outline: none;
-      background: #ffffff;
+      background: var(--normal-bg-elevated, #ffffff);
       box-sizing: border-box;
       resize: vertical;
       @include drumee.typo(
         $size: 13px,
         $weight: 400,
         $line: 18px,
-        $color: #0b0a21
+        $color: var(--normal-fg-10, #0b0a21)
       );
       transition:
         border-color 0.15s,
         box-shadow 0.15s;
 
       &::placeholder {
-        color: #aeaeb2;
+        color: var(--placeholder-fg, #aeaeb2);
         font-weight: 400;
       }
 
       &:hover {
-        border-color: rgba(0, 0, 0, 0.16);
+        border-color: var(--border-strong, rgba(0, 0, 0, 0.16));
       }
 
       &:focus {
-        border-color: #433cc5;
+        border-color: var(--active-border, #433cc5);
         box-shadow: 0 0 0 3px rgba(67, 60, 197, 0.12);
       }
     }
@@ -976,7 +911,7 @@
     align-items: center;
     gap: 8px;
     padding: 6px 10px;
-    border: 1px solid var(--normal-fg-70, #d6d6dc);
+    border: 1px solid var(--border-default, #d6d6dc);
     border-radius: 6px;
     cursor: pointer;
     transition: border-color 0.15s;
@@ -1025,9 +960,9 @@
     margin-top: 6px;
     max-height: 180px;
     overflow-y: auto;
-    border: 1px solid var(--normal-fg-70, #d6d6dc);
+    border: 1px solid var(--border-default, #d6d6dc);
     border-radius: 6px;
-    background: var(--normal-bg-90, #fff);
+    background: var(--normal-bg-elevated, #fff);
   }
 
   &__member-row {
@@ -1038,10 +973,10 @@
     transition: background 0.15s;
 
     &:hover {
-      background: var(--normal-bg-80, rgba(0, 0, 0, 0.04));
+      background: var(--hover-bg-40, rgba(0, 0, 0, 0.04));
     }
     &[data-active="1"] {
-      background: rgba(250, 133, 64, 0.1);
+      background: var(--active-item-bg, rgba(250, 133, 64, 0.1));
     }
   }
 
@@ -1090,7 +1025,7 @@
       $size: 12px,
       $weight: 400,
       $line: 16px,
-      $color: var(--normal-fg-50, #aeaeb2)
+      $color: var(--placeholder-fg, #aeaeb2)
     );
     font-style: italic;
   }
@@ -1104,33 +1039,33 @@
       width: 100%;
       min-height: 64px;
       padding: 8px 10px;
-      border: 1px solid rgba(0, 0, 0, 0.08);
+      border: 1px solid var(--border-default, rgba(0, 0, 0, 0.08));
       border-radius: 6px;
       outline: none;
-      background: #ffffff;
+      background: var(--normal-bg-elevated, #ffffff);
       box-sizing: border-box;
       resize: vertical;
       @include drumee.typo(
         $size: 13px,
         $weight: 400,
         $line: 18px,
-        $color: #0b0a21
+        $color: var(--normal-fg-10, #0b0a21)
       );
       transition:
         border-color 0.15s,
         box-shadow 0.15s;
 
       &::placeholder {
-        color: #aeaeb2;
+        color: var(--placeholder-fg, #aeaeb2);
         font-weight: 400;
       }
 
       &:hover {
-        border-color: rgba(0, 0, 0, 0.16);
+        border-color: var(--border-strong, rgba(0, 0, 0, 0.16));
       }
 
       &:focus {
-        border-color: #433cc5;
+        border-color: var(--active-border, #433cc5);
         box-shadow: 0 0 0 3px rgba(67, 60, 197, 0.12);
       }
     }
@@ -1147,6 +1082,18 @@
     position: relative;
     align-items: stretch;
     width: 100%;
+
+    &:not([data-search-focused="1"]) .tasks-panel__file-search-dropdown {
+      display: none;
+    }
+  }
+
+  &__file-search-dropdown[data-empty="1"] {
+    display: none;
+  }
+
+  &__member-picker:not([data-open="1"]) {
+    display: none;
   }
 
   &__file-search-bar {
@@ -1159,9 +1106,10 @@
     flex: 1 1 auto;
     min-width: 0;
     padding: 8px 12px;
-    border: 1px solid rgba(0, 0, 0, 0.08);
+    border: 1px solid var(--border-default, rgba(0, 0, 0, 0.08));
     border-radius: 8px;
-    background: #ffffff;
+    background: var(--normal-bg-elevated, #ffffff);
+    color: var(--normal-fg-10, #0b0a21);
     font: inherit;
     box-sizing: border-box;
     transition:
@@ -1173,10 +1121,15 @@
       border: none;
       outline: none;
       background: transparent;
+      color: inherit;
       font: inherit;
+
+      &::placeholder {
+        color: var(--placeholder-fg, #aeaeb2);
+      }
     }
     &:focus-within {
-      border-color: #433cc5;
+      border-color: var(--active-border, #433cc5);
       box-shadow: 0 0 0 3px rgba(67, 60, 197, 0.12);
     }
   }
@@ -1229,8 +1182,8 @@
     left: 0;
     right: 0;
     z-index: 20;
-    background: #ffffff;
-    border: 1px solid rgba(0, 0, 0, 0.08);
+    background: var(--normal-bg-elevated, #ffffff);
+    border: 1px solid var(--border-default, rgba(0, 0, 0, 0.08));
     border-radius: 8px;
     box-shadow: 0 12px 32px rgba(0, 0, 0, 0.12);
     overflow: hidden;
@@ -1248,7 +1201,7 @@
     align-items: center;
     gap: 10px;
     padding: 8px 12px;
-    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+    border-bottom: 1px solid var(--border-muted, rgba(0, 0, 0, 0.05));
     cursor: pointer;
     user-select: none;
     transition: background 0.15s;
@@ -1257,15 +1210,15 @@
       border-bottom: none;
     }
     &:hover {
-      background: #f3f1ff;
+      background: var(--hover-bg-40, #f3f1ff);
     }
     &[data-linked="1"] {
-      background: #f7f7fa;
+      background: var(--normal-bg-90, #f7f7fa);
       cursor: default;
       opacity: 0.7;
 
       &:hover {
-        background: #f7f7fa;
+        background: var(--normal-bg-90, #f7f7fa);
       }
     }
   }
@@ -1274,7 +1227,7 @@
     width: 14px;
     height: 14px;
     flex-shrink: 0;
-    color: #84848c;
+    color: var(--normal-fg-50, #84848c);
 
     svg {
       width: 100%;
@@ -1289,7 +1242,7 @@
       $size: 13px,
       $weight: 500,
       $line: 18px,
-      $color: #0b0a21
+      $color: var(--normal-fg-10, #0b0a21)
     );
     flex: 1 1 auto;
     min-width: 0;
@@ -1303,12 +1256,12 @@
       $size: 11px,
       $weight: 600,
       $line: 14px,
-      $color: #65656c
+      $color: var(--normal-fg-20, #65656c)
     );
     flex-shrink: 0;
     padding: 2px 8px;
     border-radius: 100px;
-    background: #ebebeb;
+    background: var(--normal-bg-80, #ebebeb);
     text-transform: uppercase;
     letter-spacing: 0.04em;
   }
@@ -1318,7 +1271,7 @@
       $size: 12px,
       $weight: 400,
       $line: 16px,
-      $color: #aeaeb2
+      $color: var(--placeholder-fg, #aeaeb2)
     );
     font-style: italic;
     padding: 10px 12px;
@@ -1336,14 +1289,15 @@
     gap: 8px;
     padding: 8px 8px 8px 12px;
     border-radius: 8px;
-    background: #ffffff;
+    background: var(--normal-bg-elevated, #ffffff);
+    border: 1px solid var(--border-muted, transparent);
 
     .tasks-panel__file-result-name {
       @include drumee.typo(
         $size: 12px,
         $weight: 600,
         $line: 16px,
-        $color: #0b0a21
+        $color: var(--normal-fg-10, #0b0a21)
       );
     }
 
@@ -1373,7 +1327,7 @@
     gap: 8px;
     margin-top: 8px;
     padding-top: 10px;
-    border-top: 1px solid rgba(0, 0, 0, 0.06);
+    border-top: 1px solid var(--border-muted, rgba(0, 0, 0, 0.06));
   }
 
   &__detail-cancel {
@@ -1381,7 +1335,7 @@
       $size: 14px,
       $weight: 600,
       $line: 20px,
-      $color: #65656c
+      $color: var(--normal-fg-50, #65656c)
     );
     padding: 8px 16px;
     border-radius: 4px;
@@ -1392,8 +1346,8 @@
       color 0.15s;
 
     &:hover {
-      background: rgba(0, 0, 0, 0.05);
-      color: #0b0a21;
+      background: var(--overlay-bg-05, rgba(0, 0, 0, 0.05));
+      color: var(--normal-fg-10, #0b0a21);
     }
   }
 
@@ -1416,6 +1370,181 @@
     &:hover {
       background: #322a9b;
       box-shadow: 0 4px 12px rgba(67, 60, 197, 0.3);
+    }
+  }
+}
+
+html[data-theme="dark"] .tasks-panel {
+  &__task-card {
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+
+    &:hover {
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+    }
+  }
+
+  &__column-body.is-drop-target {
+    background-color: rgba(89, 80, 255, 0.12);
+    outline-color: var(--active-border, #5950ff);
+  }
+
+  &__create-modal {
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.6);
+  }
+
+  &__file-search-dropdown {
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
+  }
+
+  &__file-result-row {
+    &:hover {
+      background: var(--hover-bg-40, rgba(89, 80, 255, 0.15));
+    }
+    &[data-linked="1"],
+    &[data-linked="1"]:hover {
+      background: var(--normal-bg-80, #333042);
+    }
+  }
+
+  &__priority-pill {
+    border-color: var(--border-strong, #4642a9);
+  }
+
+  &__task-label-pill {
+    opacity: 0.9;
+  }
+
+  &__detail-title input:focus {
+    background: var(--normal-bg-elevated, #333042);
+  }
+
+  &__task-due {
+    background: rgba(255, 255, 255, 0.06);
+  }
+}
+
+// Calendar lives in document.body (see date_picker `appendTo`), so it's
+// targeted by its onReady-tagged class rather than nested under .tasks-panel.
+.tasks-panel__flatpickr.flatpickr-calendar {
+  border-radius: 10px;
+  border: 1px solid var(--border-default, rgba(0, 0, 0, 0.06));
+  box-shadow: 0 10px 30px -8px rgba(0, 0, 0, 0.18);
+  font-family: Manrope, system-ui, sans-serif;
+
+  .flatpickr-day {
+    border-radius: 6px;
+
+    &.selected,
+    &.selected:hover,
+    &.startRange,
+    &.endRange {
+      background: #433cc5;
+      border-color: #433cc5;
+    }
+
+    &.today {
+      border-color: #433cc5;
+
+      &:hover {
+        background: rgba(67, 60, 197, 0.08);
+        color: #433cc5;
+      }
+    }
+  }
+}
+
+html[data-theme="dark"] .tasks-panel__flatpickr.flatpickr-calendar {
+  background: var(--normal-bg-elevated, #282538);
+  border-color: var(--border-default, rgba(71, 69, 84, 0.4));
+  box-shadow: 0 10px 30px -8px rgba(0, 0, 0, 0.6);
+  color: var(--normal-fg-10, #e4e3ff);
+
+  &.arrowTop::before    { border-bottom-color: var(--border-default, rgba(71, 69, 84, 0.4)); }
+  &.arrowTop::after     { border-bottom-color: var(--normal-bg-elevated, #282538); }
+  &.arrowBottom::before { border-top-color: var(--border-default, rgba(71, 69, 84, 0.4)); }
+  &.arrowBottom::after  { border-top-color: var(--normal-bg-elevated, #282538); }
+
+  .flatpickr-months,
+  .flatpickr-month {
+    background: transparent;
+    color: var(--normal-fg-10, #e4e3ff);
+    fill: var(--normal-fg-10, #e4e3ff);
+  }
+
+  .flatpickr-current-month {
+    color: var(--normal-fg-10, #e4e3ff);
+
+    input.cur-year,
+    .flatpickr-monthDropdown-months {
+      color: var(--normal-fg-10, #e4e3ff);
+      background: transparent;
+    }
+
+    .flatpickr-monthDropdown-months .flatpickr-monthDropdown-month {
+      background: var(--normal-bg-elevated, #282538);
+      color: var(--normal-fg-10, #e4e3ff);
+    }
+
+    .numInputWrapper span {
+      border-color: rgba(255, 255, 255, 0.15);
+      &.arrowUp::after   { border-bottom-color: var(--normal-fg-10, #e4e3ff); }
+      &.arrowDown::after { border-top-color: var(--normal-fg-10, #e4e3ff); }
+    }
+  }
+
+  .flatpickr-prev-month,
+  .flatpickr-next-month {
+    color: var(--normal-fg-10, #e4e3ff);
+    fill: var(--normal-fg-10, #e4e3ff);
+
+    svg { fill: currentColor; }
+    &:hover svg { fill: var(--normal-fg-20, #b1adff); }
+  }
+
+  .flatpickr-weekdays,
+  span.flatpickr-weekday {
+    background: transparent;
+    color: var(--normal-fg-50, #84848c);
+  }
+
+  .flatpickr-days,
+  .dayContainer {
+    background: transparent;
+  }
+
+  .flatpickr-day {
+    color: var(--normal-fg-10, #e4e3ff);
+    background: transparent;
+    border-color: transparent;
+
+    &:hover,
+    &.prevMonthDay:hover,
+    &.nextMonthDay:hover {
+      background: var(--hover-bg-40, rgba(89, 80, 255, 0.15));
+      border-color: transparent;
+    }
+
+    &.today {
+      border-color: var(--active-border, #5950ff);
+      &:hover {
+        background: rgba(89, 80, 255, 0.15);
+        color: var(--normal-fg-10, #e4e3ff);
+      }
+    }
+
+    &.selected,
+    &.selected:hover,
+    &.startRange,
+    &.endRange {
+      background: var(--active-border, #5950ff);
+      border-color: var(--active-border, #5950ff);
+      color: #ffffff;
+    }
+
+    &.flatpickr-disabled,
+    &.prevMonthDay,
+    &.nextMonthDay {
+      color: rgba(228, 227, 255, 0.35);
     }
   }
 }

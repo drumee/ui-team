@@ -41,7 +41,7 @@
     border-radius: 3px;
     fill: var(--ewhite);
     background-color: var(--sharebox-main);
-    padding:2.5px;
+    padding: 2.5px;
 
     .media-form__input input {
       background-color: #dd820b;
@@ -67,7 +67,7 @@
   }
 
   &.private {
-    height: 20px !important;
+    // height: 20px !important;
     border-bottom-left-radius: 3px;
     border-bottom-right-radius: 3px;
     border-radius: 3px;
@@ -109,7 +109,7 @@
     &.private {
       .filename {
         color: var(--default-text-color);
-        background-color: #d5a3dd;
+        // background-color: #d5a3dd;
       }
 
       .media-form__input input {
@@ -123,7 +123,6 @@
 
     &.public,
     &.private {
-
       .filename,
       .media-form__input input {
         background-color: transparent;

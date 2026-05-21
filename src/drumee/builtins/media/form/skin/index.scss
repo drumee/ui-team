@@ -79,7 +79,7 @@
   /* ── Text input ──────────────────────────────────────────── */
   &__input {
     width: 100%;
-    background-color: var(--white);
+    background-color: var(--normal-bg-elevated);
     border-radius: var(--corner-radius-2);
     padding: 12px;
     @include drumee.typo($size: 12px, $weight: 400, $line: 17px);

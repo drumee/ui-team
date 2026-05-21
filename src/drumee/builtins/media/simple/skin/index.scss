@@ -117,6 +117,7 @@
       height: 22px;
       overflow: hidden;
       resize: none;
+      background-color: var(--rename-input-bg, var(--default-bg));
       @include drumee.typo($line: 21px, $size: 14px, $weight: 300, $color: var(--default-text-color)); //var(--egrey-2f));
     }
 
@@ -158,5 +159,13 @@
     .name {
       margin-left: 0px;
     }
+  }
+}
+
+html[data-theme="dark"] .media-simple {
+  &__input textarea {
+    background-color: var(--normal-bg-elevated);
+    border-color: var(--border-default);
+    color: var(--default-text-color);
   }
 }

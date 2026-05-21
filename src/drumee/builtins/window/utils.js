@@ -10,6 +10,27 @@ const ViewMode = new Map();
 const DEFAULT = 'default';
 ViewMode.set(DEFAULT, _a.icon);
 
+/**
+ * Sync `md5Hash` into a view's existing `metadata` blob without
+ * dropping any other fields it already had (dataType, geometry, etc.).
+ * Used after a rotate/replace WS broadcast so cache-bust URLs reflect
+ * the new content — see `updateContent` for the full reasoning.
+ */
+function __mergeMd5IntoMetadata(view, md5Hash) {
+  if (!view || !md5Hash || typeof view.mget !== 'function') return;
+  let md = view.mget(_a.metadata);
+  let wasString = false;
+  if (md == null) {
+    md = {};
+  } else if (typeof md === 'string') {
+    wasString = true;
+    try { md = JSON.parse(md); } catch (e) { md = {}; }
+  }
+  if (md.md5Hash === md5Hash) return;
+  md.md5Hash = md5Hash;
+  view.mset({ metadata: wasString ? JSON.stringify(md) : md });
+}
+
 class __window_mfs extends DrumeeMFS {
   constructor(...args) {
     super(...args);
@@ -654,11 +675,19 @@ class __window_mfs extends DrumeeMFS {
     this.getItemsByAttr(_a.nid, nid).filter((c) => {
       if (!c) return false;
       c.mset(args);
+      // Cache-bust fix: actualNode()'s `?v=` prefers md5Hash > (mtime - ctime).
+      // After a media.rotate/replace the server sends a new top-level
+      // `md5Hash` but doesn't update the `metadata` blob; restart() then
+      // calls metadata() which re-reads md5Hash from that stale blob and
+      // clobbers the new top-level value. Merge the new md5Hash into the
+      // child's existing metadata so both code paths agree.
+      __mergeMd5IntoMetadata(c, args && args.md5Hash);
       if (c.restart) {
         c.restart();
       }
     });
     if (this.mget(_a.nid) == nid) {
+      __mergeMd5IntoMetadata(this, args && args.md5Hash);
       if (this.restart) {
         this.restart();
       }
@@ -932,52 +961,86 @@ class __window_mfs extends DrumeeMFS {
   /**
    *
   */
-  async openFileLocation(cmd) {
-    let found = Wm.getItemsByAttr(_a.nid, cmd.mget(_a.nid)).filter((e) => {
-      return e.cid != cmd.cid
-    })
-    if (found[0] && found[0].el) {
-      found[0].el.click()
-      return;
+  async openFileLocation(source) {
+    let data;
+    let media;
+    let cid;
+    if (source.model) {
+      data = source.model.toJSON()
+      media = source;
+      cid = source.cid;
+    } else {
+      data = source;
+    }
+    let { nid, hub_id, role, pid, filetype, area } = data;
+    this.debug("AAA:9876", data)
+    let opt = require('window/configs/application')(filetype, data)
+
+    /** Direct open from the Wm if if possible */
+    let found = Wm.getItemsByAttr(_a.nid, nid)[0]
+    if (found) {
+      found.triggerHandlers({ service: "open-node" })
+      return
     }
 
-    found = Wm.getItemsByAttr(_a.nid, cmd.mget(_a.pid)).filter((e) => {
-      return e.cid != cmd.cid
-    })
-    if (found[0] && found[0].el) {
-      found[0].el.click()
-      return;
+    /** Open the player if applicable */
+    if (opt.kind) {
+      let node = await this.fetchService({
+        service: SERVICE.media.attributes,
+        nid,
+        hub_id,
+      }, { async: 1 });
+      this.debug("AAA:952", { ...opt, ...node })
+      if (!node || !node.nid) {
+        return Wm.alert(LOCALE.FILE_NOT_FOUND)
+      }
+      return Wm.launch({ ...opt, ...node }, { explicit: 1 });
     }
 
+    /** Open the parent folder if not player found */
     let parent = await this.fetchService({
       service: SERVICE.media.attributes,
-      nid: cmd.mget(_a.pid),
-      hub_id: cmd.mget(_a.hub_id),
+      nid: pid,
+      hub_id,
     }, { async: 1 });
-    let { kind } = require('window/configs/application')(parent.area, '');
-
-    let trigger = cmd;
-    for (let c of Wm.__list.children.toArray()) {
-      let re = new RegExp(c.mget(_a.filepath))
-      if (re.test(parent.filepath)) {
-        trigger = c;
-        break;
-      }
+    if (!parent || !parent.nid) {
+      return Wm.alert(LOCALE.FILE_NOT_FOUND)
     }
-    let opt = {
-      trigger,
-      ...parent,
-      kind: kind || 'window_folder',
-      style: cmd.$el.offset()
-    }
+    return Wm.launch({ ...opt, ...parent, kind: "window_folder" }, { explicit: 1 });
 
-    // to open the folder/hub directly when tries to open via url
-    if (cmd.mget(_a.role) == _a.url) {
-      opt.nid = cmd.mget(_a.nid);
-      opt.style = { top: 120, left: 250 };
-    }
+    // // to open the folder/hub directly when tries to open via url
+    // if (role == _a.url) {
+    //   opt.nid = nid;
+    //   opt.style = { top: 120, left: 250 };
+    // }
 
-    return Wm.launch(opt, { explicit: 1 });
+    // return Wm.launch(opt, { explicit: 1 });
+
+    // let found = Wm.getItemsByAttr(_a.nid, cmd.mget(_a.nid)).filter((e) => {
+    //   return e.cid != cmd.cid
+    // })
+    // if (found[0] && found[0].el) {
+    //   found[0].el.click()
+    //   return;
+    // }
+
+    // found = Wm.getItemsByAttr(_a.nid, cmd.mget(_a.pid)).filter((e) => {
+    //   return e.cid != cmd.cid
+    // })
+    // if (found[0] && found[0].el) {
+    //   found[0].el.click()
+    //   return;
+    // }
+
+
+    // let trigger = cmd;
+    // for (let c of Wm.__list.children.toArray()) {
+    //   let re = new RegExp(c.mget(_a.filepath))
+    //   if (re.test(parent.filepath)) {
+    //     trigger = c;
+    //     break;
+    //   }
+    // }
   }
 
   /**

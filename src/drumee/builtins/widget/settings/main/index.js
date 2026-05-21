@@ -82,9 +82,26 @@ class settings_main extends LetcBox {
   async saveProfile() {
     const data = this.getData();
     const current = Visitor.profile() || {};
+    // Split a single "Display Name" input into firstname / lastname on the
+    // first space so chat sender (`${firstname} ${lastname}`) reflects the
+    // typed value exactly — otherwise lastname kept its previous value and
+    // the bubble label showed "newFirstname oldLastname".
+    let firstname = current.firstname;
+    let lastname = current.lastname;
+    if (typeof data.display_name === 'string') {
+      const raw = data.display_name.trim();
+      const idx = raw.indexOf(' ');
+      if (idx === -1) {
+        firstname = raw;
+        lastname = '';
+      } else {
+        firstname = raw.slice(0, idx);
+        lastname = raw.slice(idx + 1).trim();
+      }
+    }
     const profile = {
-      firstname: data.display_name || current.firstname,
-      lastname: current.lastname,
+      firstname,
+      lastname,
       username: data.username,
       bio: data.bio,
     };
@@ -95,7 +112,13 @@ class settings_main extends LetcBox {
       profile,
     });
     if (!res || res.error) return;
-    Visitor.set({ profile: { ...current, ...res } });
+    // Server returns the full updated profile object. Fall back to the
+    // request payload if the response is an unexpected scalar/array so
+    // Visitor.profile() reads fresh firstname/lastname either way.
+    const nextProfile = (res && typeof res === 'object' && !Array.isArray(res))
+      ? { ...current, ...res }
+      : { ...current, ...profile };
+    Visitor.set({ profile: nextProfile });
     this.feed(require("./skeleton").default(this));
   }
 

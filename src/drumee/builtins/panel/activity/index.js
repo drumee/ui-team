@@ -153,13 +153,7 @@ class __panel_activity extends LetcBox {
         this._dismissFromOpen(cmd, args);
         this.activityState = 0;
         this.setState(0);
-        Desk.togglePanel('chat_p2p', 'chat-panel').then(() => {
-          if (!drumate_id) return;
-          Desk.ensurePart('chat-panel').then(p => {
-            const widget = p && p.children && p.children.last && p.children.last();
-            if (widget && widget.openChatByPeerId) widget.openChatByPeerId(drumate_id, message_id);
-          });
-        });
+        Desk.openP2Pchat(args)
         return;
       }
 
@@ -210,10 +204,30 @@ class __panel_activity extends LetcBox {
         return this._clearAll();
 
       case 'join-meeting': {
-        const hub_id = args && args.hub_id;
-        if (hub_id && typeof Wm !== 'undefined' && Wm.loadWorkspace) {
-          try { Wm.loadWorkspace({ hub_id, activeTab: 'meeting' }); }
-          catch (e) { this.warn('loadWorkspace failed', e); }
+        const item = this._findActivityItem(cmd);
+        const hub_id = (args && args.hub_id) || (item && item.mget && item.mget('hub_id'));
+        const details = (item && item.mget && item.mget('details')) || {};
+        const room_id = (item && item.mget && item.mget('room_id')) || details.nid;
+        const room_type = (item && item.mget && item.mget('room_type')) || 'meeting';
+        if (hub_id && typeof Wm !== 'undefined' && Wm.addWindow) {
+          const folderNid = details.nid || details.actual_home_id || room_id;
+          try {
+            Wm.addWindow({
+              kind: 'window_folder',
+              hub_id,
+              nid: folderNid,
+              filename: details.filename || details.user_filename || '',
+              area: details.area,
+              activeTab: 'meeting',
+              room_id,
+              room_type,
+            });
+          } catch (e) { this.warn('join-meeting: addWindow failed', e); }
+        }
+        const item_key = item && item.mget && item.mget('item_key');
+        if (item_key) {
+          this._meetingItems = (this._meetingItems || []).filter(m => m.item_key !== item_key);
+          this.refreshActivity(0);
         }
         this.activityState = 0;
         this.setState(0);
@@ -846,6 +860,7 @@ class __panel_activity extends LetcBox {
       item_type: 'meeting',
       item_key: key,
       service: 'join-meeting',
+      timestamp: Math.floor(Date.now() / 1000),
       uiHandler: this,
       logicalParent: this,
     });
@@ -859,27 +874,33 @@ class __panel_activity extends LetcBox {
     if (!window.Notification) return;
     let opt = data[0] || data;
     let meeting;
-    let meetingHash;
     const now = Date.now();
     this.debug("AAA:766", data)
-    if (/MEETING:/.test(opt.message)) {
-      if (/MEETING:end/.test(opt.message)) return;
-      meeting = opt.message.replace(/(^\[\[MEETING:(start):)|(\]\]$)/, '')
-      meeting = meeting.replace(/(\]\]$)/, '')
-      try {
-        meeting = JSON.parse(meeting)
-        opt.message = LOCALE.X_JOINED_MEETING_X.format(meeting.by, meeting.filename)
-        const { hub_id, nid } = meeting;
-        if (hub_id) {
-          meetingHash = nid
-            ? `#/desk/wm/meeting?nid=${hub_id}&ts=${now}`
-            : `#/desk/wm/meeting?nid=${hub_id}&ts=${now}`;
+    let url = `#/desk/wm`;
+    const { message_id, hub_id, nid, message, peer_id } = opt;
+    switch (data.service) {
+      case SERVICE.chat.post:
+        url = `${url}/chat/?message_id=${message_id}&drumate_id=${peer_id}&ts=${now}`
+        break;
+      case SERVICE.channel.post:
+        if (/MEETING:end/.test(opt.message)) return;
+        if (/MEETING:start/.test(opt.message)) {
+          meeting = opt.message.replace(/(^\[\[MEETING:(start):)|(\]\]$)/, '')
+          meeting = meeting.replace(/(\]\]$)/, '')
+          try {
+            meeting = JSON.parse(meeting)
+            opt.message = LOCALE.X_JOINED_MEETING_X.format(meeting.by, meeting.filename)
+            const { hub_id, nid } = meeting;
+            if (hub_id) {
+              url = `${url}/meeting/?nid=${hub_id}&ts=${now}`
+            }
+          } catch (e) {
+            this.warn("Failed to parse", meeting)
+          }
+        } else {
+          url = `${url}/channel/?hub_id=${hub_id}&pid=${nid}&ts=${now}`
         }
-      } catch (e) {
-        this.warn("Failed to parse", meeting)
-      }
-    }else if(opt.hasOwnProperty('mention_ids')){
-      
+        break;
     }
     if (Notification.permission === "denied") return;
     if (Notification.permission === "default" && this._permission_asked) return;
@@ -895,13 +916,11 @@ class __panel_activity extends LetcBox {
 
     const fire = () => {
       const n = new Notification(title, notif);
-      if (meetingHash) {
-        n.onclick = () => {
-          window.focus();
-          this.debug("AAA:www", meetingHash)
-          location.hash = meetingHash;
-        };
-      }
+      n.onclick = () => {
+        window.focus();
+        this.debug("AAA:www", url)
+        location.hash = url
+      };
       Visitor.playSound(_K.notifications.drip, 0);
     };
 
@@ -948,10 +967,11 @@ class __panel_activity extends LetcBox {
       notif.title = title;
       return notif;
     }
+    this.debug("AAA:911", options)
     if (_.isArray(data)) {
-      this._notify(data[0])
+      this._notify({ ...data[0], service: options.service })
     } else {
-      this._notify(data)
+      this._notify({ ...data, service: options.service })
     }
   }
 

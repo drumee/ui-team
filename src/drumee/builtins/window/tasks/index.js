@@ -30,16 +30,19 @@ class __tasks_panel extends LetcBox {
     this._pickerOpen = null;
     this._fileSearch = { query: "", results: [], scope: null };
     this._fileSearchTimer = null;
+    this._fileSearchBlurTimer = null;
     this.bindEvent(_a.live);
   }
 
   onBeforeDestroy() {
     this.unbindEvent(_a.live);
     if (this._fileSearchTimer) clearTimeout(this._fileSearchTimer);
+    if (this._fileSearchBlurTimer) clearTimeout(this._fileSearchBlurTimer);
   }
 
   async onDomRefresh() {
     this._installDnd();
+    this._installFileSearchFocus();
     await Promise.all([
       this._loadTasks(),
       this._loadMembers(),
@@ -187,22 +190,29 @@ class __tasks_panel extends LetcBox {
 
       case "create-status":
         if (this._createDefaults) {
-          this._createDefaults.status = trigger.mget("taskStatus");
+          const next = trigger.mget("taskStatus");
+          this._createDefaults.status = next;
+          this._updateStatusPills(".tasks-panel__create-modal",
+                                  ".tasks-panel__create-status-pill", next);
         }
-        return this._render();
+        return;
 
       case "create-priority":
         if (this._createDefaults) {
-          this._createDefaults.priority = trigger.mget("taskPriority");
+          const next = trigger.mget("taskPriority");
+          this._createDefaults.priority = next;
+          this._updatePriorityPills(".tasks-panel__create-modal", next);
         }
-        return this._render();
+        return;
 
       case "create-assignee":
         if (this._createDefaults) {
-          this._createDefaults.assignee_uid = trigger.mget("memberUid") || null;
+          const uid = trigger.mget("memberUid") || null;
+          this._createDefaults.assignee_uid = uid;
           this._pickerOpen = null;
+          this._applyAssigneeChange("create-assignee", uid);
         }
-        return this._render();
+        return;
 
       case "create-toggle-label":
         if (this._createDefaults) {
@@ -210,38 +220,51 @@ class __tasks_panel extends LetcBox {
           const set = new Set(this._createDefaults.labels);
           if (set.has(id)) set.delete(id); else set.add(id);
           this._createDefaults.labels = Array.from(set);
+          this._updateLabelOptions(".tasks-panel__create-modal",
+                                   this._createDefaults.labels);
         }
-        return this._render();
+        return;
 
-      case "toggle-picker":
-        this._pickerOpen = this._pickerOpen === trigger.mget("pickerKind")
-          ? null
-          : trigger.mget("pickerKind");
-        return this._render();
+      case "toggle-picker": {
+        const kind = trigger.mget("pickerKind");
+        this._pickerOpen = this._pickerOpen === kind ? null : kind;
+        this._applyPickerOpen(kind, this._pickerOpen === kind);
+        return;
+      }
 
       case "remove-task":
         return this._removeTask(trigger);
 
       case "commit-description":
       case "commit-due-date":
-        // Detail-panel text inputs commit into the local draft only; the
-        // server update happens when "Update" is clicked.
-        return this._render();
+        // Drafts stay in sync via the `task-input-changed` watch.
+        return;
 
       case "set-status":
-        if (this._detailDraft) this._detailDraft.status = trigger.mget("taskStatus");
-        return this._render();
+        if (this._detailDraft) {
+          const next = trigger.mget("taskStatus");
+          this._detailDraft.status = next;
+          this._updateStatusPills(".tasks-panel__detail-panel",
+                                  ".tasks-panel__detail-status-pill", next);
+        }
+        return;
 
       case "set-priority":
-        if (this._detailDraft) this._detailDraft.priority = trigger.mget("taskPriority");
-        return this._render();
+        if (this._detailDraft) {
+          const next = trigger.mget("taskPriority");
+          this._detailDraft.priority = next;
+          this._updatePriorityPills(".tasks-panel__detail-panel", next);
+        }
+        return;
 
       case "set-assignee":
         if (this._detailDraft) {
-          this._detailDraft.assignee_uid = trigger.mget("memberUid") || null;
+          const uid = trigger.mget("memberUid") || null;
+          this._detailDraft.assignee_uid = uid;
           this._pickerOpen = null;
+          this._applyAssigneeChange("detail-assignee", uid);
         }
-        return this._render();
+        return;
 
       case "toggle-task-label":
         if (this._detailDraft) {
@@ -249,8 +272,10 @@ class __tasks_panel extends LetcBox {
           const set = new Set(this._detailDraft.labels || []);
           if (set.has(id)) set.delete(id); else set.add(id);
           this._detailDraft.labels = Array.from(set);
+          this._updateLabelOptions(".tasks-panel__detail-panel",
+                                   this._detailDraft.labels);
         }
-        return this._render();
+        return;
 
       case "commit-detail":
         return this._commitDetail();
@@ -292,6 +317,43 @@ class __tasks_panel extends LetcBox {
       return;
     }
     if (super.onPartReady) super.onPartReady(child, pn);
+  }
+
+  // Delegated focusin/focusout on the persistent root: the search input is
+  // rebuilt on every _render(), so per-input listeners would race the focus
+  // restoration. The 200ms blur deferral lets a click on a result row fire
+  // before the dropdown is hidden.
+  _installFileSearchFocus() {
+    if (this._fileSearchFocusInstalled || !this.el) return;
+    this._fileSearchFocusInstalled = true;
+
+    const isSearchInput = (t) =>
+      t && t.matches && t.matches('input[name^="file-search-"]');
+    const fieldOf = (t) => t.closest(".tasks-panel__file-search-field");
+
+    this.el.addEventListener("focusin", (e) => {
+      if (!isSearchInput(e.target)) return;
+      const field = fieldOf(e.target);
+      if (!field) return;
+      if (this._fileSearchBlurTimer) {
+        clearTimeout(this._fileSearchBlurTimer);
+        this._fileSearchBlurTimer = null;
+      }
+      field.dataset.searchFocused = "1";
+    });
+
+    this.el.addEventListener("focusout", (e) => {
+      if (!isSearchInput(e.target)) return;
+      const field = fieldOf(e.target);
+      if (!field) return;
+      if (this._fileSearchBlurTimer) clearTimeout(this._fileSearchBlurTimer);
+      this._fileSearchBlurTimer = setTimeout(() => {
+        this._fileSearchBlurTimer = null;
+        const active = (typeof document !== "undefined") ? document.activeElement : null;
+        if (isSearchInput(active)) return;
+        if (field.isConnected) field.dataset.searchFocused = "0";
+      }, 200);
+    });
   }
 
   onWsMessage(svc, data, options = {}) {
@@ -698,6 +760,10 @@ class __tasks_panel extends LetcBox {
       clearTimeout(this._fileSearchTimer);
       this._fileSearchTimer = null;
     }
+    if (this._fileSearchBlurTimer) {
+      clearTimeout(this._fileSearchBlurTimer);
+      this._fileSearchBlurTimer = null;
+    }
     this._fileSearch = { query: "", results: [], scope: null };
   }
 
@@ -712,7 +778,7 @@ class __tasks_panel extends LetcBox {
     if (query.length < 2) {
       const hadResults = (this._fileSearch.results || []).length > 0;
       this._fileSearch.results = [];
-      if (hadResults) this._render();
+      if (hadResults) this._refreshFileSearchDropdown(scope);
       return;
     }
     this._fileSearchTimer = setTimeout(() => {
@@ -735,7 +801,22 @@ class __tasks_panel extends LetcBox {
     } catch (err) {
       this._fileSearch.results = [];
     }
-    this._render();
+    this._refreshFileSearchDropdown(scope);
+  }
+
+  _refreshFileSearchDropdown(scope) {
+    if (!scope) return;
+    const partName = `file-search-dropdown-${scope}`;
+    this.ensurePart(partName).then((dropdown) => {
+      if (!dropdown || dropdown.isDestroyed?.()) return;
+      const ctx = scope === "create"
+        ? { pendingFiles: (this._createDefaults && this._createDefaults.pending_files) || [] }
+        : { existingFiles: (this._detailId && this._attachments[this._detailId]) || [] };
+      const skel = require("./skeleton");
+      const content = skel.buildFileSearchDropdownContent(this, scope, ctx);
+      dropdown.feed(content);
+      if (dropdown.el) dropdown.el.dataset.empty = content.length ? "0" : "1";
+    }).catch(() => { /* part not mounted yet */ });
   }
 
   async _linkSearchResult(trigger) {
@@ -785,6 +866,124 @@ class __tasks_panel extends LetcBox {
     this._render();
   }
 
+  _updateStatusPills(modalSel, pillSel, newStatus) {
+    const root = this.el && this.el.querySelector(modalSel);
+    if (!root) return;
+    const cols = this.getColumns();
+    const colorByKey = {};
+    cols.forEach((c) => { colorByKey[c.key] = c.color; });
+    root.querySelectorAll(pillSel).forEach((pill) => {
+      const status = pill.dataset.status;
+      const active = status === newStatus;
+      pill.dataset.active = active ? "1" : "0";
+      if (active) {
+        const color = colorByKey[status];
+        pill.style.borderColor = color || "";
+        pill.style.color = color || "";
+      } else {
+        pill.style.borderColor = "";
+        pill.style.color = "";
+      }
+    });
+  }
+
+  _updatePriorityPills(modalSel, newPriority) {
+    const root = this.el && this.el.querySelector(modalSel);
+    if (!root) return;
+    const pris = this.getPriorities();
+    const colorByKey = {};
+    pris.forEach((p) => { colorByKey[p.key] = p.color; });
+    root.querySelectorAll(".tasks-panel__priority-pill").forEach((pill) => {
+      const pri = pill.dataset.priority;
+      const active = pri === newPriority;
+      pill.dataset.active = active ? "1" : "0";
+      if (active) {
+        const color = colorByKey[pri];
+        pill.style.borderColor = color || "";
+        pill.style.color = color || "";
+      } else {
+        pill.style.borderColor = "";
+        pill.style.color = "";
+      }
+    });
+  }
+
+  _updateLabelOptions(modalSel, selectedLabelIds) {
+    const root = this.el && this.el.querySelector(modalSel);
+    if (!root) return;
+    const labels = this.getLabels();
+    const colorById = {};
+    labels.forEach((l) => { colorById[l.id] = l.color; });
+    const selectedSet = new Set((selectedLabelIds || []).map(String));
+    root.querySelectorAll(".tasks-panel__label-option").forEach((opt) => {
+      const id = opt.dataset.labelId;
+      const color = colorById[id] || "";
+      const selected = selectedSet.has(String(id));
+      opt.dataset.selected = selected ? "1" : "0";
+      if (selected) {
+        opt.style.background = color;
+        opt.style.borderColor = color;
+        opt.style.color = "";
+      } else {
+        opt.style.background = "";
+        opt.style.borderColor = color;
+        opt.style.color = color;
+      }
+    });
+  }
+
+  _applyAssigneeChange(kind, uid) {
+    if (!this.el) return;
+    this._setPickerOpenInDom(kind, false);
+    const picker = this._findPickerEl(kind);
+    if (picker) {
+      const target = String(uid || "");
+      picker.querySelectorAll(".tasks-panel__member-row").forEach((row) => {
+        row.dataset.active = row.getAttribute("data-member-uid") === target ? "1" : "0";
+      });
+    }
+    this.ensurePart(`${kind}-button`).then((btn) => {
+      if (!btn || btn.isDestroyed?.()) return;
+      btn.feed(require("./skeleton").buildAssigneeButtonContent(this, uid));
+      if (btn.el) btn.el.dataset.open = "0";
+    }).catch(() => { /* not mounted yet */ });
+  }
+
+  _applyPickerOpen(kind, isOpen) {
+    if (!this.el || !kind) return;
+    this._setPickerOpenInDom(kind, isOpen);
+  }
+
+  _setPickerOpenInDom(kind, isOpen) {
+    const btn = this.el.querySelector(`.tasks-panel__assignee-button[data-picker-kind="${kind}"]`);
+    if (btn) btn.dataset.open = isOpen ? "1" : "0";
+    const picker = this._findPickerEl(kind);
+    if (picker) picker.dataset.open = isOpen ? "1" : "0";
+  }
+
+  _findPickerEl(kind) {
+    if (!this.el || !kind) return null;
+    return this.el.querySelector(`.tasks-panel__member-picker[data-picker-kind="${kind}"]`);
+  }
+
+  _prepopulateInputs() {
+    if (!this.el) return;
+    const setVal = (sel, val) => {
+      const el = this.el.querySelector(sel);
+      if (el && (val || "") !== el.value) el.value = val || "";
+    };
+    if (this._creating && this._createDefaults) {
+      const d = this._createDefaults;
+      setVal('.tasks-panel__create-modal input[name="title"]', d.title);
+      setVal('.tasks-panel__create-modal textarea[name="description"]', d.description);
+    }
+    if (this._detailDraft) {
+      const d = this._detailDraft;
+      setVal('.tasks-panel__detail-panel input[name="title"]', d.title);
+      setVal('.tasks-panel__detail-panel textarea[name="description"]', d.description);
+    }
+  }
+
   _mergeTask(row) {
     if (!row || !row.id) return;
     const normalized = this._normalizeTask(row);
@@ -816,6 +1015,13 @@ class __tasks_panel extends LetcBox {
     }
 
     this.feed(require("./skeleton")(this));
+    // ui-core sets <input> values through a 200ms `waitElement` poll, so
+    // the title/description start empty after each feed; pre-populate them
+    // (sync + next frame as a safety net for late-mount children).
+    this._prepopulateInputs();
+    if (typeof requestAnimationFrame === "function") {
+      requestAnimationFrame(() => this._prepopulateInputs());
+    }
 
     if (focusName && typeof requestAnimationFrame === "function") {
       requestAnimationFrame(() => {

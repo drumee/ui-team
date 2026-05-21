@@ -1,4 +1,63 @@
-module.exports = function (ui) {
+function buildFileSearchDropdownContent(ui, scope, ctx = {}) {
+  const pfx = ui.fig.family;
+  const fileSearch = ui.getFileSearch();
+  const isActiveScope = fileSearch && fileSearch.scope === scope;
+  const query = isActiveScope ? fileSearch.query || "" : "";
+  const results = isActiveScope ? fileSearch.results || [] : [];
+  const { pendingFiles = [], existingFiles = [] } = ctx;
+  const linkedNids = new Set([
+    ...pendingFiles.map((f) => f.nid),
+    ...existingFiles.map((f) => f.file_nid || f.nid),
+  ]);
+
+  const resultRow = (r) => {
+    const linked = linkedNids.has(r.nid);
+    return Skeletons.Box.X({
+      className: `${pfx}__file-result-row`,
+      dataset: { linked: linked ? 1 : 0 },
+      bubble: 0,
+      service: linked ? null : "link-search-result",
+      uiHandler: linked ? null : [ui],
+      fileNid: r.nid,
+      fileName: r.filename,
+      fileExt: r.ext,
+      searchScope: scope,
+      kids: [
+        Skeletons.Image.Svg({ ico: "attachment", className: `${pfx}__file-result-ico` }),
+        Skeletons.Note({
+          className: `${pfx}__file-result-name`,
+          content: `${r.filename || ""}${r.ext ? "." + r.ext : ""}`,
+        }),
+        linked
+          ? Skeletons.Note({
+              className: `${pfx}__file-result-status`,
+              content: LOCALE.LINKED,
+            })
+          : null,
+      ].filter(Boolean),
+    });
+  };
+
+  if (results.length) {
+    return [
+      Skeletons.Box.Y({
+        className: `${pfx}__file-search-results`,
+        kids: results.map(resultRow),
+      }),
+    ];
+  }
+  if (query.length >= 2) {
+    return [
+      Skeletons.Note({
+        className: `${pfx}__file-search-empty`,
+        content: LOCALE.NO_FILE_RESULTS,
+      }),
+    ];
+  }
+  return [];
+}
+
+const make = function (ui) {
   const pfx = ui.fig.family;
   const state = ui.getState();
   const creating = ui.isCreating();
@@ -274,11 +333,13 @@ module.exports = function (ui) {
       ),
     });
 
+  // Always rendered; CSS hides via data-open. data-member-uid lets the JS
+  // re-target data-active after an assignee selection.
   const memberPicker = (selectedUid, serviceName, extra = {}) => {
     const items = [
       Skeletons.Box.X({
         className: `${pfx}__member-row`,
-        dataset: { active: !selectedUid ? 1 : 0 },
+        dataset: { active: !selectedUid ? 1 : 0, "member-uid": "" },
         bubble: 0,
         service: serviceName,
         uiHandler: [ui],
@@ -294,7 +355,10 @@ module.exports = function (ui) {
       ...members.map((m) =>
         Skeletons.Box.X({
           className: `${pfx}__member-row`,
-          dataset: { active: selectedUid === (m.id || m.uid) ? 1 : 0 },
+          dataset: {
+            active: selectedUid === (m.id || m.uid) ? 1 : 0,
+            "member-uid": m.id || m.uid,
+          },
           bubble: 0,
           service: serviceName,
           uiHandler: [ui],
@@ -317,8 +381,13 @@ module.exports = function (ui) {
         }),
       ),
     ];
+    const kind = extra.pickerKind || null;
     return Skeletons.Box.Y({
       className: `${pfx}__member-picker`,
+      dataset: {
+        "picker-kind": kind || "",
+        open: kind && pickerOpen === kind ? 1 : 0,
+      },
       kids: items,
     });
   };
@@ -328,7 +397,9 @@ module.exports = function (ui) {
     const label = m ? fullName(m) : LOCALE.UNASSIGNED;
     return Skeletons.Box.X({
       className: `${pfx}__assignee-button`,
-      dataset: { open: pickerOpen === kind ? 1 : 0 },
+      sys_pn: `${kind}-button`,
+      partHandler: ui,
+      dataset: { open: pickerOpen === kind ? 1 : 0, "picker-kind": kind },
       bubble: 0,
       service: "toggle-picker",
       uiHandler: [ui],
@@ -353,6 +424,26 @@ module.exports = function (ui) {
         }),
       ],
     });
+  };
+
+  const buildDropdownContent = (results, query, resultRow) => {
+    if (results && results.length) {
+      return [
+        Skeletons.Box.Y({
+          className: `${pfx}__file-search-results`,
+          kids: results.map(resultRow),
+        }),
+      ];
+    }
+    if (query && query.length >= 2) {
+      return [
+        Skeletons.Note({
+          className: `${pfx}__file-search-empty`,
+          content: LOCALE.NO_FILE_RESULTS,
+        }),
+      ];
+    }
+    return [];
   };
 
   // ── File picker (search bar + result rows + Link button) ─────
@@ -419,11 +510,11 @@ module.exports = function (ui) {
         ],
       });
 
-    // Search field + floating dropdown live in their own positioned wrapper
-    // so the suggestions drop down on top of whatever follows in the form,
-    // mirroring the workspace search bar's UX.
+    // data-search-focused is flipped by the focusin/focusout handlers in
+    // index.js so toggling the dropdown does not re-render the panel.
     const searchField = Skeletons.Box.Y({
       className: `${pfx}__file-search-field`,
+      dataset: { "search-focused": 0 },
       kids: [
         Skeletons.Box.X({
           className: `${pfx}__file-search-bar`,
@@ -468,25 +559,19 @@ module.exports = function (ui) {
             // }),
           ],
         }),
-        // Dropdown only renders when there's something to show; otherwise it
-        // collapses to nothing and gives the rest of the form its space back.
-        results.length || query.length >= 2
-          ? Skeletons.Box.Y({
-              className: `${pfx}__file-search-dropdown`,
-              kids: [
-                results.length
-                  ? Skeletons.Box.Y({
-                      className: `${pfx}__file-search-results`,
-                      kids: results.map(resultRow),
-                    })
-                  : Skeletons.Note({
-                      className: `${pfx}__file-search-empty`,
-                      content: LOCALE.NO_FILE_RESULTS,
-                    }),
-              ],
-            })
-          : null,
-      ].filter(Boolean),
+        // sys_pn lets index.js re-feed only the dropdown on search results;
+        // CSS hides via data-empty / data-search-focused.
+        (() => {
+          const content = buildDropdownContent(results, query, resultRow);
+          return Skeletons.Box.Y({
+            className: `${pfx}__file-search-dropdown`,
+            sys_pn: `file-search-dropdown-${scope}`,
+            partHandler: ui,
+            dataset: { empty: content.length ? 0 : 1 },
+            kids: content,
+          });
+        })(),
+      ],
     });
 
     return Skeletons.Box.Y({
@@ -553,7 +638,7 @@ module.exports = function (ui) {
         Skeletons.Note({
           className: `${pfx}__detail-status-pill`,
           content: LOCALE[c.label] || c.key,
-          dataset: { active: dStatus === c.key ? 1 : 0 },
+          dataset: { active: dStatus === c.key ? 1 : 0, status: c.key },
           styleOpt:
             dStatus === c.key ? { borderColor: c.color, color: c.color } : null,
           bubble: 0,
@@ -606,10 +691,8 @@ module.exports = function (ui) {
           content: LOCALE.ASSIGNEE,
         }),
         assigneeButton({ assignee_uid: dAssignee }, "detail-assignee"),
-        pickerOpen === "detail-assignee"
-          ? memberPicker(dAssignee, "set-assignee")
-          : null,
-      ].filter(Boolean),
+        memberPicker(dAssignee, "set-assignee", { pickerKind: "detail-assignee" }),
+      ],
     });
 
     // Detail-scope label chooser uses the draft's labels, not the task's.
@@ -626,7 +709,7 @@ module.exports = function (ui) {
           Skeletons.Note({
             className: `${pfx}__label-option`,
             content: l.name,
-            dataset: { selected: dLabelSet.has(l.id) ? 1 : 0 },
+            dataset: { selected: dLabelSet.has(l.id) ? 1 : 0, "label-id": l.id },
             styleOpt: dLabelSet.has(l.id)
               ? { background: l.color, borderColor: l.color }
               : { borderColor: l.color, color: l.color },
@@ -665,7 +748,19 @@ module.exports = function (ui) {
           value: dDraft.due_date || "",
           service: "task-input-changed",
           uiHandler: [ui],
-          vendorOpt: { dateFormat: "Y-m-d", minDate: "today" },
+          // appendTo: body escapes the panel's overflow clip; onReady tags
+          // the calendar so it can be themed without bleeding into other
+          // date_picker usages.
+          vendorOpt: {
+            dateFormat: "Y-m-d",
+            minDate: "today",
+            appendTo: document.body,
+            onReady: (_d, _s, instance) => {
+              if (instance && instance.calendarContainer) {
+                instance.calendarContainer.classList.add("tasks-panel__flatpickr");
+              }
+            },
+          },
         },
       ],
     });
@@ -802,7 +897,9 @@ module.exports = function (ui) {
         Skeletons.Note({
           className: `${pfx}__create-status-pill`,
           content: LOCALE[c.label] || c.key,
-          dataset: { active: selectedStatus === c.key ? 1 : 0 },
+          // `data-status` lets the JS update pills via DOM without
+          // re-rendering (see _updateStatusPills).
+          dataset: { active: selectedStatus === c.key ? 1 : 0, status: c.key },
           styleOpt:
             selectedStatus === c.key
               ? { borderColor: c.color, color: c.color }
@@ -822,7 +919,7 @@ module.exports = function (ui) {
             Skeletons.Note({
               className: `${pfx}__label-option`,
               content: l.name,
-              dataset: { selected: selectedLabels.has(l.id) ? 1 : 0 },
+              dataset: { selected: selectedLabels.has(l.id) ? 1 : 0, "label-id": l.id },
               styleOpt: selectedLabels.has(l.id)
                 ? { background: l.color, borderColor: l.color }
                 : { borderColor: l.color, color: l.color },
@@ -960,10 +1057,8 @@ module.exports = function (ui) {
               content: LOCALE.ASSIGNEE,
             }),
             assigneeButtonNode,
-            pickerOpen === "create-assignee"
-              ? memberPicker(selectedAssignee, "create-assignee")
-              : null,
-          ].filter(Boolean),
+            memberPicker(selectedAssignee, "create-assignee", { pickerKind: "create-assignee" }),
+          ],
         }),
         Skeletons.Box.Y({
           className: `${pfx}__create-field`,
@@ -990,7 +1085,16 @@ module.exports = function (ui) {
               value: draft?.due_date || "",
               service: "task-input-changed",
               uiHandler: [ui],
-              vendorOpt: { dateFormat: "Y-m-d", minDate: "today" },
+              vendorOpt: {
+                dateFormat: "Y-m-d",
+                minDate: "today",
+                appendTo: document.body,
+                onReady: (_d, _s, instance) => {
+                  if (instance && instance.calendarContainer) {
+                    instance.calendarContainer.classList.add("tasks-panel__flatpickr");
+                  }
+                },
+              },
             },
           ],
         }),
@@ -1065,3 +1169,34 @@ module.exports = function (ui) {
     ],
   });
 };
+
+function buildAssigneeButtonContent(ui, assigneeUid) {
+  const pfx = ui.fig.family;
+  const m = assigneeUid ? ui.getMember(assigneeUid) : null;
+  const label = m
+    ? [m.firstname, m.lastname].filter(Boolean).join(" ").trim() || m.email || ""
+    : LOCALE.UNASSIGNED;
+  return [
+    m
+      ? Skeletons.UserProfile({
+          className: `${pfx}__assignee-button-avatar`,
+          id: m.id || m.uid,
+          firstname: m.firstname,
+          lastname: m.lastname,
+          auto_color: 1,
+          live_status: 0,
+        })
+      : Skeletons.Note({
+          className: `${pfx}__assignee-button-placeholder`,
+          content: "?",
+        }),
+    Skeletons.Note({
+      className: `${pfx}__assignee-button-label`,
+      content: label,
+    }),
+  ];
+}
+
+make.buildFileSearchDropdownContent = buildFileSearchDropdownContent;
+make.buildAssigneeButtonContent = buildAssigneeButtonContent;
+module.exports = make;
