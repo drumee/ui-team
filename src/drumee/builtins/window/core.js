@@ -424,7 +424,7 @@ class __window_core extends __utils {
   refreshContent(attrs) {
     this.mset(attrs)
     this.loadContent();
-    this.updateBreadcrumb({ ...this.model.toJSON(), event: _a.browse }, this);
+    this.updateTopbar(this);
   }
 
   /**
