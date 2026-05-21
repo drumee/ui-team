@@ -103,33 +103,44 @@ class __window_meeting extends __room {
     if (this.el) this.el.dataset.ready = "0";
     this.feed(require("./skeleton/init")(this));
     this.stateMachine("initializing");
-    let room = await this.join();
-    if (!room || !room.user) {
-      if (this.el) this.el.dataset.ready = "1";
-      this.stateMachine("permissionDenied");
-      return;
-    }
-    // sendRoomInfo doesn't forward the host record to non-host clients;
-    // the host self-announces via HOST_HELLO below.
-    this._isHost = !!(room.user && room.user.role === "host");
-    if (this._isHost) {
-      this._hostName = (Visitor.fullname && Visitor.fullname())
-        || `${(Visitor.firstname && Visitor.firstname()) || ""} ${(Visitor.lastname && Visitor.lastname()) || ""}`.trim()
-        || "";
-    }
+    // Any rejection from join() / prepareConference() (privilege denial that
+    // surfaces as a thrown error, device permission denial, network/socket
+    // failure, conference bind failure) must still flip data-ready to "1" —
+    // otherwise __main stays opacity:0 and the user sees an infinite spinner
+    // with no reachable close button.
+    let room;
+    try {
+      room = await this.join();
+      if (!room || !room.user) {
+        this.stateMachine("permissionDenied");
+        return;
+      }
+      // sendRoomInfo doesn't forward the host record to non-host clients;
+      // the host self-announces via HOST_HELLO below.
+      this._isHost = !!(room.user && room.user.role === "host");
+      if (this._isHost) {
+        this._hostName = (Visitor.fullname && Visitor.fullname())
+          || `${(Visitor.firstname && Visitor.firstname()) || ""} ${(Visitor.lastname && Visitor.lastname()) || ""}`.trim()
+          || "";
+      }
 
-    this.feed(require("./skeleton")(this, room.user));
-    await this.prepareConference(room);
-    this.responsive();
-    this.ensurePart("commands").then((p) => {
-      p.el.show();
-    });
-    this._renderHostLabel();
-    this._announceHostIfNeeded();
-    if (this.el) this.el.dataset.ready = "1";
-    this._meetingStartedAt = Date.now();
-    this._maxParticipants = 1;
-    this._postMeetingSystemMessage("meeting.start");
+      this.feed(require("./skeleton")(this, room.user));
+      await this.prepareConference(room);
+      this.responsive();
+      this.ensurePart("commands").then((p) => {
+        p.el.show();
+      });
+      this._renderHostLabel();
+      this._announceHostIfNeeded();
+      this._meetingStartedAt = Date.now();
+      this._maxParticipants = 1;
+      this._postMeetingSystemMessage("meeting.start");
+    } catch (e) {
+      if (this.warn) this.warn("meeting onDomRefresh failed", e);
+      this.stateMachine("permissionDenied");
+    } finally {
+      if (this.el) this.el.dataset.ready = "1";
+    }
   }
 
   _announceHostIfNeeded() {
@@ -710,6 +721,40 @@ class __window_meeting extends __room {
       return super.stateMessage(s, timeout);
     }
     const message = this.statusMessages[s] || s;
+    // permissionDenied is terminal — the conference never bound, so the
+    // real local-user webrtc widget can't render. Build a static "solo
+    // call" preview (Visitor avatar + name) and overlay the denial text,
+    // matching the look of a normal 1-participant call. A small icon-only
+    // X in the corner exits back to the widget_meeting panel.
+    if (s === "permissionDenied") {
+      const fullname = (Visitor.fullname && Visitor.fullname())
+        || `${Visitor.get(_a.firstname) || ""} ${Visitor.get(_a.lastname) || ""}`.trim()
+        || Visitor.get(_a.username) || "";
+      // Flag the widget for the solo-preview layout so SCSS can expand the
+      // message-container to fill the body (avatar centered, denial text
+      // beneath) instead of the small floating tooltip used by other states.
+      if (this.el) this.el.dataset.denied = "1";
+      this.ensurePart("message-container").then((c) => {
+        c.feed([
+          Skeletons.Button.Svg({
+            ico: "cross",
+            className: "message-close-x",
+            service: "leave-meeting",
+            uiHandler: [this],
+          }),
+          Skeletons.UserProfile({
+            className: "message-avatar",
+            id: Visitor.id,
+            fullname,
+            live_status: 0,
+            auto_color: 1,
+          }),
+          Skeletons.Note({ className: "message-name", content: fullname }),
+          Skeletons.Note({ className: "message-text", content: message }),
+        ]);
+      });
+      return;
+    }
     this.ensurePart("message-container").then((c) => {
       c.feed([
         Skeletons.Note({ className: "message-text", content: message }),
