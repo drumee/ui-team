@@ -814,6 +814,7 @@ class desk_module extends LetcBox {
    */
   onWorkspaceClosed() {
     this.ensurePart("breadcrumb").then((p) => { p.loadDefault(0) })
+    this.ensurePart("workspace-main").then((p) => { p.onDomRefresh() })
   }
 
   /**
