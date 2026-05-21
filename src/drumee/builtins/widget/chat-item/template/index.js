@@ -30,6 +30,8 @@ module.exports = function (ui) {
     body = require('./conversation')(m);
     // Show the author label above every share-area bubble; folder skin hides
     // avatars, so dropping it on "me" makes the layout asymmetric.
+    // eslint-disable-next-line no-console
+    console.log('[chat-sender] m.type=', m.type, 'expected=', _a.share, 'match=', m.type == _a.share, 'author=', m.author, 'author_id=', m.author_id, 'area=', m.area);
     if (m.type == _a.share) {
       let uname = require('./username')(m);
       body = `${uname}${body}`;
