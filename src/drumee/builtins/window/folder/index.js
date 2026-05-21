@@ -68,10 +68,6 @@ class __window_folder extends mfsInteract {
         privilege: this.mget(_a.trigger).mget(_a.privilege),
       });
     }
-    if (opt.headless) {
-      this.style.set({ width: "100%", height: "100%" })
-      return;
-    }
     if (!Visitor.isMobile()) {
       const bounds = this._defaultBounds();
       this.size = {
@@ -422,6 +418,7 @@ class __window_folder extends mfsInteract {
 
   onUiEvent(cmd, args = {}) {
     const service = args.service || cmd.service || cmd.mget(_a.service);
+    this.debug("AAA:421", service)
     switch (service) {
       case _a.info:
         return this.showInfo();

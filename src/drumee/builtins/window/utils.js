@@ -1008,39 +1008,6 @@ class __window_mfs extends DrumeeMFS {
     }
     return Wm.launch({ ...opt, ...parent, kind: "window_folder" }, { explicit: 1 });
 
-    // // to open the folder/hub directly when tries to open via url
-    // if (role == _a.url) {
-    //   opt.nid = nid;
-    //   opt.style = { top: 120, left: 250 };
-    // }
-
-    // return Wm.launch(opt, { explicit: 1 });
-
-    // let found = Wm.getItemsByAttr(_a.nid, cmd.mget(_a.nid)).filter((e) => {
-    //   return e.cid != cmd.cid
-    // })
-    // if (found[0] && found[0].el) {
-    //   found[0].el.click()
-    //   return;
-    // }
-
-    // found = Wm.getItemsByAttr(_a.nid, cmd.mget(_a.pid)).filter((e) => {
-    //   return e.cid != cmd.cid
-    // })
-    // if (found[0] && found[0].el) {
-    //   found[0].el.click()
-    //   return;
-    // }
-
-
-    // let trigger = cmd;
-    // for (let c of Wm.__list.children.toArray()) {
-    //   let re = new RegExp(c.mget(_a.filepath))
-    //   if (re.test(parent.filepath)) {
-    //     trigger = c;
-    //     break;
-    //   }
-    // }
   }
 
   /**
