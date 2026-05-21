@@ -235,6 +235,29 @@
         min-width: 0;
         flex-shrink: 0;
       }
+
+      // Pinned tile gets the spotlight: it stays in the participants
+      // sidebar column but expands to fill the column width and pushes
+      // siblings into a row below it. The visual cue (purple outline)
+      // is shared with all modes; here we also make it physically
+      // larger so the user reads it as the focused tile.
+      .endpoint-local[data-pinned="1"],
+      .remote-user[data-pinned="1"] {
+        max-width: 100%;
+        width: 100%;
+        aspect-ratio: 16 / 9;
+        order: -1;
+      }
+    }
+  }
+
+  // When ANY tile is pinned, force presenter (sidebar) mode regardless
+  // of screen-share state so the pinned tile is the visual focus.
+  &__ui[data-pinned-mode="1"] {
+    .participants-manager__ui {
+      // Reuse the existing presenter-mode grid (200px sidebar). The
+      // .endpoint-local[data-pinned="1"] / .remote-user[data-pinned="1"]
+      // rules above expand the pinned tile to fill that column at 16:9.
     }
   }
 

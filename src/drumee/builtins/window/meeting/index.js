@@ -343,6 +343,10 @@ class __window_meeting extends __room {
         this._stopOwnPresentation();
         break;
 
+      case "pin-tile":
+        this._togglePinnedTile(args);
+        break;
+
       default:
         super.onUiEvent(cmd, args);
     }
@@ -364,6 +368,7 @@ class __window_meeting extends __room {
     const key = String(uid);
     if (on) this._memberHandRaised.set(key, 1);
     else this._memberHandRaised.delete(key);
+    this._applyTileDataset(uid, "raised", on);
     this._refreshDashboard();
   }
 
@@ -372,7 +377,90 @@ class __window_meeting extends __room {
     const key = String(uid);
     if (on) this._memberPresenting.set(key, 1);
     else this._memberPresenting.delete(key);
+    this._applyTileDataset(uid, "presenting", on);
     this._refreshDashboard();
+  }
+
+  // Flip a data-attr on the video tile so the tile skin shows the
+  // corresponding badge. Handles both local (own visitor id) and remote
+  // tiles. Safe to call before the tile exists — the next render reads
+  // the same state maps and applies the attr.
+  _applyTileDataset(uid, attr, on) {
+    if (!uid || !attr) return;
+    const value = on ? 1 : 0;
+    if (String(uid) === String(Visitor.id)) {
+      if (typeof this.getLocalParts !== "function") return;
+      this.getLocalParts().then((parts) => {
+        if (parts && parts.local && parts.local.el && !parts.local.isDestroyed()) {
+          parts.local.el.dataset[attr] = value;
+        }
+      }).catch(() => { /* local tile not ready yet — next render will pick up */ });
+      return;
+    }
+    if (!this.endpoints) return;
+    for (const pid of Object.keys(this.endpoints)) {
+      const ep = this.endpoints[pid];
+      if (!ep || ep.isDestroyed()) continue;
+      if (String(ep.mget(_a.uid)) !== String(uid)) continue;
+      if (ep.el) ep.el.dataset[attr] = value;
+      break;
+    }
+  }
+
+  // Toggle pin on a participant's tile. Only one pinned tile at a time —
+  // clicking pin on a different participant moves the spotlight; clicking
+  // again on the same one un-pins. The visible effect is driven by
+  // CSS rules keyed on data-pinned (on the tile root) and data-pinned-mode
+  // (on the meeting window root), which scale the pinned tile up and
+  // switch __endpoints into presenter mode so __participants becomes a
+  // sidebar — even when no one is sharing screen.
+  _togglePinnedTile(args) {
+    const pid = args && args.participant_id;
+    if (!pid) return;
+    const wasSame = this._pinnedParticipantId === pid;
+    // Clear previous pin (if any) before setting the new one.
+    if (this._pinnedParticipantId) {
+      const prev = this._tileForPin(this._pinnedParticipantId, this._pinnedIsLocal);
+      if (prev && prev.el) prev.el.dataset.pinned = 0;
+    }
+    if (wasSame) {
+      this._pinnedParticipantId = null;
+      this._pinnedIsLocal = false;
+      if (this.el) this.el.dataset["pinned-mode"] = 0;
+      // Drop back to whatever mode the screen-share state would dictate.
+      if (this.responsive) this.responsive(this.isScreenShare ? "presenter" : "normal");
+      return;
+    }
+    this._pinnedParticipantId = pid;
+    this._pinnedIsLocal = !!(args && args.isLocal);
+    const tile = this._tileForPin(pid, this._pinnedIsLocal);
+    if (tile && tile.el) tile.el.dataset.pinned = 1;
+    if (this.el) this.el.dataset["pinned-mode"] = 1;
+    // Force presenter mode so the participants column shrinks to a sidebar
+    // even if no screen-share is active.
+    if (this.responsive) this.responsive("presenter");
+  }
+
+  // Resolve a tile widget for the pin highlight. Local tile lives in
+  // __participants alongside remote tiles; remote tiles are indexed by
+  // participant_id in `this.endpoints`. Local has no entry there so we
+  // walk the children to find the endpoint_local kind.
+  _tileForPin(pid, isLocal) {
+    if (!isLocal && this.endpoints && this.endpoints[pid]) {
+      const ep = this.endpoints[pid];
+      if (ep && !ep.isDestroyed()) return ep;
+    }
+    if (this.__participants && this.__participants.children) {
+      const list = this.__participants.children.toArray
+        ? this.__participants.children.toArray()
+        : [];
+      for (const c of list) {
+        if (c.isDestroyed && c.isDestroyed()) continue;
+        if (isLocal && c.kind === "endpoint_local") return c;
+        if (!isLocal && c.mget && c.mget("participant_id") === pid) return c;
+      }
+    }
+    return null;
   }
 
   _applyRemoteHandRaise(data) {
