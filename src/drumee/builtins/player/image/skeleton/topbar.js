@@ -34,6 +34,14 @@ module.exports = function (ui, size) {
     uiHandler: ui,
   });
 
+  const saveRotationIcon = Skeletons.Button.Svg({
+    ico: "checked-circle",
+    sys_pn: "save-rotation-button",
+    className: "icon save-rotation",
+    service: "save-rotation",
+    uiHandler: ui,
+  });
+
   let actionIcons = "";
   if (ui.canDownload()) {
     actionIcons = Skeletons.Box.X({
@@ -43,7 +51,7 @@ module.exports = function (ui, size) {
   }
 
   if (ui.canUpload() && ui.media && ui.media.imgCapable()) {
-    actionIcons.kids.push(rotateLeftIcon, rotateRightIcon);
+    actionIcons.kids.push(rotateLeftIcon, rotateRightIcon, saveRotationIcon);
   }
   actionIcons.kids.push(require("../../skeleton/control")(ui));
 

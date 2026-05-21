@@ -10,6 +10,27 @@ const ViewMode = new Map();
 const DEFAULT = 'default';
 ViewMode.set(DEFAULT, _a.icon);
 
+/**
+ * Sync `md5Hash` into a view's existing `metadata` blob without
+ * dropping any other fields it already had (dataType, geometry, etc.).
+ * Used after a rotate/replace WS broadcast so cache-bust URLs reflect
+ * the new content — see `updateContent` for the full reasoning.
+ */
+function __mergeMd5IntoMetadata(view, md5Hash) {
+  if (!view || !md5Hash || typeof view.mget !== 'function') return;
+  let md = view.mget(_a.metadata);
+  let wasString = false;
+  if (md == null) {
+    md = {};
+  } else if (typeof md === 'string') {
+    wasString = true;
+    try { md = JSON.parse(md); } catch (e) { md = {}; }
+  }
+  if (md.md5Hash === md5Hash) return;
+  md.md5Hash = md5Hash;
+  view.mset({ metadata: wasString ? JSON.stringify(md) : md });
+}
+
 class __window_mfs extends DrumeeMFS {
   constructor(...args) {
     super(...args);
@@ -654,11 +675,19 @@ class __window_mfs extends DrumeeMFS {
     this.getItemsByAttr(_a.nid, nid).filter((c) => {
       if (!c) return false;
       c.mset(args);
+      // Cache-bust fix: actualNode()'s `?v=` prefers md5Hash > (mtime - ctime).
+      // After a media.rotate/replace the server sends a new top-level
+      // `md5Hash` but doesn't update the `metadata` blob; restart() then
+      // calls metadata() which re-reads md5Hash from that stale blob and
+      // clobbers the new top-level value. Merge the new md5Hash into the
+      // child's existing metadata so both code paths agree.
+      __mergeMd5IntoMetadata(c, args && args.md5Hash);
       if (c.restart) {
         c.restart();
       }
     });
     if (this.mget(_a.nid) == nid) {
+      __mergeMd5IntoMetadata(this, args && args.md5Hash);
       if (this.restart) {
         this.restart();
       }
