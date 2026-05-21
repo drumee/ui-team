@@ -347,9 +347,36 @@ class __window_meeting extends __room {
         this._togglePinnedTile(args);
         break;
 
+      case "togglefullscreen":
+        // The base webrtc room handler calls `document.body.requestFullscreen()`,
+        // which puts the entire host page into fullscreen — including the
+        // folder window's file list and chrome. For embedded meetings we
+        // only want the screen-share widget itself to expand, so target
+        // the `webrtc_remote_display` widget element directly.
+        this._toggleScreenShareFullscreen();
+        break;
+
       default:
         super.onUiEvent(cmd, args);
     }
+  }
+
+  _toggleScreenShareFullscreen() {
+    if (document.fullscreenElement) {
+      document.exitFullscreen().catch(() => {});
+      return;
+    }
+    if (!this.__presenter || this.__presenter.isEmpty()) {
+      // Nothing is being presented — clicking fullscreen on an empty slot
+      // would maximize a black void. Bail.
+      return;
+    }
+    const child = this.__presenter.children && this.__presenter.children.last();
+    if (!child || child.isDestroyed() || !child.el) return;
+    if (typeof child.el.requestFullscreen !== "function") return;
+    child.el.requestFullscreen().catch((e) => {
+      if (this.warn) this.warn("requestFullscreen failed", e);
+    });
   }
 
   // participant_id (jitsi) -> drumate uid. The dashboard cards are keyed
@@ -427,8 +454,6 @@ class __window_meeting extends __room {
       this._pinnedParticipantId = null;
       this._pinnedIsLocal = false;
       if (this.el) this.el.dataset["pinned-mode"] = 0;
-      // Drop back to whatever mode the screen-share state would dictate.
-      if (this.responsive) this.responsive(this.isScreenShare ? "presenter" : "normal");
       return;
     }
     this._pinnedParticipantId = pid;
@@ -436,9 +461,11 @@ class __window_meeting extends __room {
     const tile = this._tileForPin(pid, this._pinnedIsLocal);
     if (tile && tile.el) tile.el.dataset.pinned = 1;
     if (this.el) this.el.dataset["pinned-mode"] = 1;
-    // Force presenter mode so the participants column shrinks to a sidebar
-    // even if no screen-share is active.
-    if (this.responsive) this.responsive("presenter");
+    // NOTE: do NOT call responsive("presenter") here. Forcing presenter
+    // mode when no one is actually sharing leaves the __presenter slot
+    // visible but empty — rendering as a huge black rectangle. The pin
+    // is now purely a visual highlight on the existing grid; participants
+    // sizing follows the natural mode (normal / presenter on real share).
   }
 
   // Resolve a tile widget for the pin highlight. Local tile lives in
