@@ -18,7 +18,6 @@
 
   &__slider-main {
     align-items: center;
-    background: var(--neutral-900);
     border-radius: 0 0 var(--spacer-6) var(--spacer-6);
     height: 100%;
     justify-content: center;
@@ -29,8 +28,6 @@
     align-items: center;
     align-content: center;
     justify-content: center;
-    height: calc(100% - 132px);
-    background-color: var(--neutra-900);
   }
 
   &__slider-buttons {

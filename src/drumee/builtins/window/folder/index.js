@@ -111,6 +111,19 @@ class __window_folder extends mfsInteract {
       width: this.size.width,
       height: this.size.height,
     });
+
+  if (this.mget(_a.headless)) {
+      this.listenTo(this.model, `change:${_a.state}`, this._syncWorkspaceFocus);
+    }
+  }
+
+
+  _syncWorkspaceFocus() {
+    if (!this.mget(_a.headless)) return;
+    if (this.isDestroyed && this.isDestroyed()) return;
+    if (this.mget(_a.state) != 1) return;
+    if (!window.Wm || !_.isFunction(window.Wm.onWorkspaceRaised)) return;
+    window.Wm.onWorkspaceRaised(this);
   }
 
   buildContent(child) {
@@ -572,7 +585,25 @@ class __window_folder extends mfsInteract {
 
       case "close":
         if (this.mget(_a.headless)) {
-          Desk.onWorkspaceClosed();
+          // Multi-tab: only fall back to the "no workspace open" UI when
+          // this is the last open workspace tab. With other tabs still
+          // alive, the generic destroy handler in window/manager.js raises
+          // the next-topmost window and our _syncWorkspaceFocus rewires
+          // globals; resetting workspace-main would clear the sidebar
+          // highlight that the surviving tab is about to claim.
+          let remaining = 0;
+          if (Wm && Wm.windowsLayer && Wm.windowsLayer.children) {
+            for (const c of Wm.windowsLayer.children.toArray()) {
+              if (!c || c === this || c.isDestroyed()) continue;
+              if (c.mget(_a.kind) !== 'window_folder') continue;
+              if (!c.mget(_a.headless)) continue;
+              remaining++;
+              break;
+            }
+          }
+          if (!remaining) {
+            Desk.onWorkspaceClosed();
+          }
         }
         return super.onUiEvent(cmd, args);
 
@@ -778,7 +809,10 @@ class __window_folder extends mfsInteract {
             return view.append({
               kind: "tasks_panel",
               hub_id: this.mget(_a.hub_id),
-              nid: this.mget(_a.nid),
+              // Match the meeting/upload destination resolution: for a
+              // hub-level window the working nid is actual_home_id, not the
+              // hub_id itself. Without this, media.upload returns 403.
+              nid: this.mget(_a.actual_home_id) || this.mget(_a.nid),
               uiHandler: [this],
             });
           }
