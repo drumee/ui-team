@@ -176,7 +176,7 @@ class __window_manager extends push {
           return this.alert(LOCALE[hub.error] || hub.reason || hub.error);
         }
         this.closeCreateFolderDialog();
-        RADIO_BROADCAST.trigger("workspace:refresh");
+        // Sidebar appends via live `media.new` broadcast — no refetch needed.
       }).catch((e) => {
         this.warn("Failed to create private folder", e);
         this.alert(e.reason || e.error || LOCALE.TRY_AGAIN);
