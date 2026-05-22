@@ -30,9 +30,29 @@ class __window_folder extends mfsInteract {
       Math.max(580, workspaceHeight - 150),
       workspaceHeight - 96,
     );
+
+    // Cascade: shift each new popup 30px down-right per existing
+    // non-headless sibling so back-to-back "Open in Window" actions don't
+    // stack popups on top of each other. Headless workspace pane is
+    // excluded (it's full-area, not a sibling popup). Sibling count is
+    // computed at mount time — already-open popups don't move.
+    const siblings = (window.Wm && typeof window.Wm.getItemsByKind === "function")
+      ? window.Wm.getItemsByKind("window_folder").filter(
+          (w) => w !== this && !w.isDestroyed() && !w.mget(_a.headless)
+        ).length
+      : 0;
+    const cascadeStep = 30;
+    const maxSteps = Math.max(0, Math.floor((workspaceWidth - width - 48) / cascadeStep));
+    const cascade = (siblings % (maxSteps + 1)) * cascadeStep;
+
+    let left = Math.round((workspaceWidth - width) / 2) + cascade;
+    let top = Math.max(24, Math.round((workspaceHeight - height) / 2)) + cascade;
+    left = Math.min(left, Math.max(0, workspaceWidth - width - 24));
+    top = Math.min(top, Math.max(24, workspaceHeight - height - 24));
+
     return {
-      left: Math.round((workspaceWidth - width) / 2),
-      top: Math.max(24, Math.round((workspaceHeight - height) / 2)),
+      left,
+      top,
       width,
       height,
       minWidth: 760,
