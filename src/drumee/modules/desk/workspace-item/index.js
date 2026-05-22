@@ -196,6 +196,7 @@ class __workspace_item extends LetcBox {
 
   _onFolderRemoved(data) {
     if (!this._childrenLoaded) return;
+    if (!this._isFolderPayload(data)) return;
     const nid = data.nid || data.id;
     if (!nid) return;
     this.ensurePart("children").then((p) => {
@@ -207,6 +208,7 @@ class __workspace_item extends LetcBox {
   _onFolderRenamed(data) {
     if (!this._childrenLoaded) return;
     const args = (data && data.args && data.args.dest) || data;
+    if (!this._isFolderPayload(args)) return;
     const nid = args.nid || args.id;
     if (!nid) return;
     this.ensurePart("children").then((p) => {
