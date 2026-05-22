@@ -19,24 +19,6 @@ class __workspace_item extends LetcBox {
     this._expanded = 0;
     this._childrenLoaded = 0;
     this._loadingChildren = 0;
-    this.bindEvent(_a.live);
-    // Re-render when filename/name change so live `media.rename` /
-    // `hub.update_name` updates from the parent list reach the DOM.
-    // Debounce via microtask: a single rename sets both attrs and would
-    // otherwise re-render twice.
-    this._renderQueued = 0;
-    this.listenTo(this.model, "change:filename change:name", () => {
-      if (this._renderQueued || !this.el) return;
-      this._renderQueued = 1;
-      Promise.resolve().then(() => {
-        this._renderQueued = 0;
-        if (this.el) this.feed(require("./skeleton")(this));
-      });
-    });
-  }
-
-  onBeforeDestroy() {
-    this.unbindEvent(_a.live);
   }
 
   /**
@@ -143,78 +125,6 @@ class __workspace_item extends LetcBox {
       return this.toggleTree();
     }
     this.triggerHandlers({ service: this.mget(_a.service) })
-  }
-
-  // Live sidebar refresh — folder add / remove / rename inside this node.
-  // Only items whose parent_id matches this node's id are this level's
-  // direct children; deeper descendants are handled by their own listener.
-  onWsMessage(svc, data, options = {}) {
-    const { service } = options || svc;
-    if (!data) {
-      if (super.onWsMessage) super.onWsMessage(svc, data, options);
-      return;
-    }
-    switch (service) {
-      case "media.new":
-        this._onFolderCreated(data);
-        break;
-      case "media.remove":
-        this._onFolderRemoved(data);
-        break;
-      case "media.rename":
-        this._onFolderRenamed(data);
-        break;
-      default:
-        if (super.onWsMessage) super.onWsMessage(svc, data, options);
-    }
-  }
-
-  _isFolderPayload(data) {
-    const t = data && (data.filetype || data.type || data.category);
-    return t === _a.folder;
-  }
-
-  _findChild(part, nid) {
-    if (!part || !nid) return null;
-    const col = part.collection;
-    if (col && col.find) {
-      return col.find((m) => m.get(_a.nid) === nid || m.get(_a.id) === nid);
-    }
-    return null;
-  }
-
-  _onFolderCreated(data) {
-    if (!this._childrenLoaded) return;
-    if (!this._isFolderPayload(data)) return;
-    const parentId = data.parent_id || data.pid;
-    if (!parentId || parentId !== this.getNodeId()) return;
-    this.ensurePart("children").then((p) => {
-      if (this._findChild(p, data.nid || data.id)) return;
-      p.append(this.normalizeFolder(data));
-    });
-  }
-
-  _onFolderRemoved(data) {
-    if (!this._childrenLoaded) return;
-    const nid = data.nid || data.id;
-    if (!nid) return;
-    this.ensurePart("children").then((p) => {
-      const model = this._findChild(p, nid);
-      if (model && p.collection) p.collection.remove(model);
-    });
-  }
-
-  _onFolderRenamed(data) {
-    if (!this._childrenLoaded) return;
-    const args = (data && data.args && data.args.dest) || data;
-    const nid = args.nid || args.id;
-    if (!nid) return;
-    this.ensurePart("children").then((p) => {
-      const model = this._findChild(p, nid);
-      if (!model) return;
-      if (args.filename) model.set(_a.filename, args.filename);
-      if (args.name) model.set(_a.name, args.name);
-    });
   }
 }
 

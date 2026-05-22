@@ -90,12 +90,14 @@ class __desk_workspace extends LetcBox {
   onWsMessage(svc, data, options = {}) {
     const { service } = options || svc;
 
+    // Handle before the data/list guard — refreshList() uses ensurePart and
+    // is safe regardless of data or this.__list state.
     if (service === "hub.invite_received") {
       this.refreshList();
       return;
     }
 
-    if (!data) {
+    if (!data || !this.__list) {
       if (super.onWsMessage) super.onWsMessage(svc, data, options);
       return;
     }
@@ -126,18 +128,8 @@ class __desk_workspace extends LetcBox {
     }
   }
 
-  // List.Smart accessor — the skeleton sets sys_pn: _a.list but no
-  // partHandler, so we resolve via ensurePart on demand instead of
-  // stashing on this.__list during onPartReady.
-  _withList(fn) {
-    return this.ensurePart(_a.list).then((list) => {
-      if (!list) return;
-      return fn(list);
-    });
-  }
-
-  _findHubModel(list, data) {
-    const col = list && list.collection;
+  _findHubModel(data) {
+    const col = this.__list && this.__list.collection;
     if (!col) return null;
     const hubId = data.hub_id || data.nid || data.id;
     return col.find((m) => {
@@ -148,36 +140,25 @@ class __desk_workspace extends LetcBox {
   }
 
   _addHub(data) {
+    if (this._findHubModel(data)) return;
     // Mirror the skeleton's skip filter — `private` is the UX "restricted".
     const area = data && data.area;
     if (area !== _a.share && area !== _a.private && area !== _a.restricted) return;
-    this._withList((list) => {
-      if (this._findHubModel(list, data)) return;
-      list.append(data);
-    });
+    this.__list.append(data);
   }
 
   _removeHub(data) {
-    this._withList((list) => {
-      const model = this._findHubModel(list, data);
-      if (model) list.collection.remove(model);
-    });
+    const model = this._findHubModel(data);
+    if (model) this.__list.collection.remove(model);
   }
 
   _renameHub(data) {
     const args = (data && data.args && data.args.dest) || data;
     if (!args) return;
-    this._withList((list) => {
-      const model = this._findHubModel(list, args);
-      if (!model) return;
-      // Server emits the new name in either `filename` or `name`/`hubname`
-      // (depending on hub.update_name vs media.rename path).
-      const filename = args.filename || args.name || args.hubname;
-      if (filename) {
-        model.set(_a.filename, filename);
-        model.set(_a.name, filename);
-      }
-    });
+    const model = this._findHubModel(args);
+    if (!model) return;
+    if (args.filename) model.set(_a.filename, args.filename);
+    if (args.name) model.set(_a.name, args.name);
   }
 }
 
