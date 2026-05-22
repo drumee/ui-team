@@ -173,7 +173,7 @@
     &__wrapper {
       .menu-topic-items {
         border-radius: var(--corner-radius-2);
-        background-color: var(--normal-bg-100);
+        background-color: var(--normal-bg-elevated);
         width: 200px;
         padding: var(--spacer-4);
         border: 1px solid var(--border-default);
@@ -203,16 +203,7 @@
       gap: var(--spacer-5);
 
       &:hover {
-        background-color: var(--primary-50);
-        color: var(--white);
-
-        .window-button__dropdown-menu__name {
-          color: var(--white);
-        }
-
-        svg {
-          fill: var(--white);
-        }
+        background-color: var(--normal-bg-90);
       }
     }
 
@@ -221,7 +212,24 @@
       height: 20px;
 
       svg {
-        fill: var(--normal-fg-10);
+        fill: var(--white);
+      }
+
+      &[data-area="personal"] svg {
+        color: var(--area-personal);
+      }
+
+      &[data-area="private"] svg {
+        color: var(--area-private);
+      }
+
+      &[data-area="share"] svg,
+      &[data-area="dmz"] svg {
+        color: var(--area-share);
+      }
+
+      &[data-area="public"] svg {
+        color: var(--area-public);
       }
     }
 

@@ -9,7 +9,6 @@ const AREA_LABELS = {
   public: LOCALE.PUBLIC,
 };
 
-
 export function breadcrumbs(ui, opt) {
   return Skeletons.Wrapper.X({
     debug: __filename,
@@ -48,39 +47,59 @@ export function tabBar(ui, opt = {}) {
         }),
       ],
     });
-  const kids = isFolder ? [
-    folderTab({ icon: "📄", label: LOCALE.FILES, service: "tab-files", state: 1, tab: "files" }),
-    folderTab({ icon: "💬", label: LOCALE.CHAT, service: "tab-chat", state: 0, tab: _a.chat }),
-    folderTab({ icon: "📋", label: "Tasks", service: "tab-task", state: 0, tab: _a.task }),
-  ] : [
-    Skeletons.Button.Label({
-      className: `${cnRoot}-item ${ui.fig.family}__tab-bar-item`,
-      label: LOCALE.FILES,
-      ico: "desktop_docfile",
-      service: "tab-files",
-      state: 1,
-      dataset: { tab: "files" },
-      uiHandler: [ui],
-    }),
-    Skeletons.Button.Label({
-      className: `${cnRoot}-item ${ui.fig.family}__tab-bar-item`,
-      label: LOCALE.CHAT,
-      ico: "tchat",
-      service: "tab-chat",
-      state: 0,
-      dataset: { tab: _a.chat },
-      uiHandler: [ui],
-    }),
-    Skeletons.Button.Label({
-      className: `${cnRoot}-item ${ui.fig.family}__tab-bar-item`,
-      label: LOCALE.TASK,
-      ico: "list",
-      service: "tab-task",
-      state: 0,
-      dataset: { tab: _a.task },
-      uiHandler: [ui],
-    }),
-  ];
+  const kids = isFolder
+    ? [
+        folderTab({
+          icon: "📄",
+          label: LOCALE.FILES,
+          service: "tab-files",
+          state: 1,
+          tab: "files",
+        }),
+        folderTab({
+          icon: "💬",
+          label: LOCALE.CHAT,
+          service: "tab-chat",
+          state: 0,
+          tab: _a.chat,
+        }),
+        folderTab({
+          icon: "📋",
+          label: "Tasks",
+          service: "tab-task",
+          state: 0,
+          tab: _a.task,
+        }),
+      ]
+    : [
+        Skeletons.Button.Label({
+          className: `${cnRoot}-item ${ui.fig.family}__tab-bar-item`,
+          label: LOCALE.FILES,
+          ico: "desktop_docfile",
+          service: "tab-files",
+          state: 1,
+          dataset: { tab: "files" },
+          uiHandler: [ui],
+        }),
+        Skeletons.Button.Label({
+          className: `${cnRoot}-item ${ui.fig.family}__tab-bar-item`,
+          label: LOCALE.CHAT,
+          ico: "tchat",
+          service: "tab-chat",
+          state: 0,
+          dataset: { tab: _a.chat },
+          uiHandler: [ui],
+        }),
+        Skeletons.Button.Label({
+          className: `${cnRoot}-item ${ui.fig.family}__tab-bar-item`,
+          label: LOCALE.TASK,
+          ico: "list",
+          service: "tab-task",
+          state: 0,
+          dataset: { tab: _a.task },
+          uiHandler: [ui],
+        }),
+      ];
 
   if (opt.meeting) {
     kids.push(
@@ -92,7 +111,7 @@ export function tabBar(ui, opt = {}) {
         state: 0,
         dataset: { tab: "meeting" },
         uiHandler: [ui],
-      })
+      }),
     );
   }
 
@@ -194,7 +213,7 @@ export function dropdownMenuButton(ui, opt = {}) {
 
   const itemsNode = Skeletons.Box.Y({
     className: `${cnDropdown}__items`,
-    kids: menuItems.map(({ service, ico, content, ...extra }) =>
+    kids: menuItems.map(({ service, ico, content, area, ...extra }) =>
       Skeletons.Box.X({
         className: `${cnDropdown}__item`,
         uiHandler: [ui],
@@ -209,6 +228,7 @@ export function dropdownMenuButton(ui, opt = {}) {
             ico,
             active: 0,
             className: `${cnDropdown}__icon`,
+            dataset: area ? { area } : undefined,
           }),
           Skeletons.Note({
             content,
@@ -235,12 +255,11 @@ export function dropdownMenuButton(ui, opt = {}) {
   };
 }
 
-
 function getChatLabel(ui) {
   if (ui.fig.family === "window-folder") {
     return LOCALE.FOLDER_SCOPED_CHAT || LOCALE.CHAT;
   }
-  const name = ui.mget(_a.filename) || ui.mget(_a.name) || '';
+  const name = ui.mget(_a.filename) || ui.mget(_a.name) || "";
   return name ? `${name} - ${LOCALE.CHAT}` : LOCALE.CHAT;
 }
 
@@ -251,18 +270,18 @@ function getChatLabel(ui) {
  */
 export function chatPanel(ui) {
   const chat = {
-    kind: 'widget_chat',
+    kind: "widget_chat",
     className: `${ui.fig.group}__chat-widget`,
     type: ui.mget(_a.area),
     area: ui.mget(_a.area),
-    view: 'quickChat',
+    view: "quickChat",
     hub_id: ui.mget(_a.hub_id),
     nid: ui.mget(_a.nid),
-    placeholder: LOCALE.TYPE_MESSAGE + '...',
+    placeholder: LOCALE.TYPE_MESSAGE + "...",
     no_emoji: true,
-    send_icon: 'raw-send-chat',
-    attach_icon: 'chat-link-simple',
-    sys_pn: 'folder-chat',
+    send_icon: "raw-send-chat",
+    attach_icon: "chat-link-simple",
+    sys_pn: "folder-chat",
   };
 
   if (ui.fig.family === "window-folder") {
@@ -277,8 +296,9 @@ export function chatPanel(ui) {
 
   return Skeletons.Box.Y({
     className: `${ui.fig.group}__chat-panel`,
-    sys_pn: 'chat-panel',
-    dataset: ui.fig.family === "window-folder" ? { area: ui.mget(_a.area) } : {},
+    sys_pn: "chat-panel",
+    dataset:
+      ui.fig.family === "window-folder" ? { area: ui.mget(_a.area) } : {},
     kids: [
       Skeletons.Note({
         className: `${ui.fig.group}__chat-label`,
@@ -287,7 +307,6 @@ export function chatPanel(ui) {
       chat,
     ],
   });
-
 }
 
 /**
@@ -341,9 +360,10 @@ export function folderFilesRowContainer(ui) {
 }
 
 export function folderFilesView(ui) {
-  const files = ui.getViewMode && ui.getViewMode() === _a.row
-    ? folderFilesRowContainer(ui)
-    : filesContainer(ui);
+  const files =
+    ui.getViewMode && ui.getViewMode() === _a.row
+      ? folderFilesRowContainer(ui)
+      : filesContainer(ui);
   return [files, chatPanel(ui)];
 }
 
@@ -352,7 +372,6 @@ export function folderChatView(ui) {
   panel.className = `${panel.className} ${ui.fig.family}__chat-panel-full`;
   return panel;
 }
-
 
 /**
  *
@@ -369,7 +388,6 @@ export function splitBody(ui) {
   });
 }
 
-
 /**
  *
  * @param {*} ui
@@ -385,9 +403,7 @@ export function windowHeader(ui, topbar) {
       uiHandler: [ui],
     },
     service: _e.raise,
-    kids: [
-      topbar
-    ],
+    kids: [topbar],
   });
 }
 
@@ -403,7 +419,7 @@ export function newFileMenu(ui, opt = {}) {
   const allItems = [
     {
       service: "add-folder",
-      ico: "dock-folder",
+      ico: "folder-header",
       content: LOCALE.FOLDER,
       area: ui.mget(_a.area) || _a.personal,
       filename: LOCALE.NEW_FOLDER,
@@ -453,8 +469,8 @@ export function newFileMenu(ui, opt = {}) {
 
         menuItems,
       }),
-    ]
-  })
+    ],
+  });
 }
 
 /**
@@ -464,7 +480,7 @@ export function newFileMenu(ui, opt = {}) {
 export function visioMenu(ui, opt = {}) {
   const cnWindowButton = `${ui.fig.group}-button`;
   const triggerIco = opt.triggerIco || "desktop_confcalls";
-  if (!Visitor.canUseVisio() || ui.mget(_a.area) == _a.personal) return '';
+  if (!Visitor.canUseVisio() || ui.mget(_a.area) == _a.personal) return "";
   return dropdownMenuButton(ui, {
     className: cnWindowButton,
 
@@ -493,7 +509,7 @@ export function visioMenu(ui, opt = {}) {
         content: LOCALE.DRUMEE_CALL,
       },
     ],
-  })
+  });
 }
 
 /**
@@ -502,5 +518,5 @@ export function visioMenu(ui, opt = {}) {
  * @returns
  */
 export function getAreaLabel(area) {
-  return AREA_LABELS[area] || ''
+  return AREA_LABELS[area] || "";
 }
