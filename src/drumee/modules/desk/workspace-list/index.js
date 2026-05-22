@@ -14,13 +14,32 @@ class __desk_workspace extends LetcBox {
     this.declareHandlers();
     this._openWorkspaceKey = null;
     this._openWorkspaceItem = null;
+    this._onWorkspaceFocus = this._onWorkspaceFocus.bind(this);
     RADIO_BROADCAST.on("workspace:refresh", this.refreshList, this);
+    RADIO_BROADCAST.on("workspace:focus", this._onWorkspaceFocus);
     this.bindEvent(_a.live);
   }
 
   onBeforeDestroy() {
     RADIO_BROADCAST.off("workspace:refresh", this.refreshList, this);
+    RADIO_BROADCAST.off("workspace:focus", this._onWorkspaceFocus);
     this.unbindEvent(_a.live);
+  }
+
+  /**
+   * Multi-tab: a different workspace tab gained focus (via tab click, drag
+   * start, programmatic raise, …). Sync the sidebar highlight to match so
+   * the user always sees which tab is on top. Same one-source-of-truth
+   * principle as the sidebar-driven flow — `_openWorkspaceItem` stays the
+   * single highlight, we just move it.
+   */
+  _onWorkspaceFocus({ hub_id } = {}) {
+    if (!hub_id || hub_id == this._openWorkspaceKey) return;
+    const list = this.__list;
+    if (!list || !list.children) return;
+    const item = list.children.find((c) => this.getWorkspaceKey(c) == hub_id);
+    if (!item) return;
+    this.openWorkspace(item);
   }
 
   refreshList() {

@@ -116,7 +116,15 @@ class __window_manager extends push {
       const params = Visitor.parseModuleArgs();
       if (params.hub_id) {
         Kind.waitFor('window_folder').then(() => {
-          this.launch({ kind: 'window_folder', hub_id: params.hub_id, nid: params.nid }, { explicit: 1 });
+         const existing = this._findWorkspaceWindow(params.hub_id);
+          if (existing) {
+            existing.raise();
+            return;
+          }
+          this.launch(
+            { kind: 'window_folder', hub_id: params.hub_id, nid: params.nid },
+            { explicit: 1 }
+          );
         });
       }
     }
@@ -230,9 +238,33 @@ class __window_manager extends push {
   }
 
   /**
+   * Find a headless workspace window already open for the given hub_id.
+   * Returns null if none is open or all are mid-destroy.
+   */
+  _findWorkspaceWindow(hub_id) {
+    if (!hub_id || !this.windowsLayer || !this.windowsLayer.children) return null;
+    for (const c of this.windowsLayer.children.toArray()) {
+      if (!c || c.isDestroyed()) continue;
+      if (c.mget(_a.kind) !== 'window_folder') continue;
+      if (!c.mget(_a.headless)) continue;
+      if (c.mget(_a.hub_id) == hub_id) return c;
+    }
+    return null;
+  }
+
+  /**
    * Switch the main grid to show the contents of `workspace` (a hub).
    * Accepts any of actual_home_id / home_id / nid / id as the root
    * directory id; falls back to hub.get_attributes when none is set.
+   *
+   * Multi-tab model: if a headless workspace window already exists for this
+   * hub_id, raise it (preserving its in-window state) instead of creating
+   * another. Raising fires `change:state` on the window's model, which the
+   * folder widget routes to `Wm.onWorkspaceRaised(this)` — that's where
+   * `_curWorkspace`, `Wm.mset(...)`, the sidebar highlight, and the
+   * breadcrumb get re-synced. Keeping the global-context writes in one
+   * place (the raise path) is what makes every existing consumer of
+   * `_curWorkspace` / `Wm.mget(home_id)` work unchanged.
    */
   loadWorkspace(workspace) {
     const data = workspace.model ? workspace.model.toJSON() : (workspace || {});
@@ -244,15 +276,30 @@ class __window_manager extends push {
       return;
     }
 
-    if (this._curWorkspace
-      && this._curWorkspace.hub_id == hub_id
-      && this._curWorkspace.nid == nid) {
+    // If this workspace is already open, raise it. Skip panel cleanup so a
+    // settings/admin overlay opened over another tab stays put when the user
+    // flips between tabs.
+    const existing = this._findWorkspaceWindow(hub_id);
+    if (existing) {
+      // Same workspace, same node → pure raise.
+      if (this._curWorkspace
+        && this._curWorkspace.hub_id == hub_id
+        && this._curWorkspace.nid == nid) {
+        existing.raise();
+        return;
+      }
+      // Same workspace, different node → raise then refresh the in-window
+      // navigation. The window's own model stores its current location; let
+      // the raise hook resync globals first, then drive the in-window list.
+      existing.raise();
       return;
     }
 
     // Close any settings/admin/apps panel that would occlude the workspace
     // grid. Sidebar workspace items dispatch directly to Wm.loadWorkspace
-    // (not through desk.onUiEvent), so cleanup must live here too.
+    // (not through desk.onUiEvent), so cleanup must live here too. Only
+    // close when actually opening a NEW workspace (not when raising an
+    // existing tab) — otherwise switching tabs would close shared panels.
     if (window.Desk && _.isFunction(window.Desk._closeMainPanels)) {
       window.Desk._closeMainPanels();
     }
@@ -298,6 +345,44 @@ class __window_manager extends push {
       try { workspace.model && workspace.model.set(attrs); } catch (e) { }
       apply(attrs);
     }).catch((e) => this.warn("loadWorkspace: get_attributes failed", e));
+  }
+
+  /**
+   * Called by a headless `window_folder` when it gains focus (state→1).
+   * Mirrors the window's stored context into the globals every other
+   * subsystem reads from (`_curWorkspace`, `Wm.mset`, sidebar highlight,
+   * breadcrumb) so all existing consumers keep working as today — they
+   * just now reflect whichever workspace tab is on top.
+   */
+  onWorkspaceRaised(win) {
+    if (!win || win.isDestroyed()) return;
+    if (win.mget(_a.kind) !== 'window_folder' || !win.mget(_a.headless)) return;
+
+    const hub_id = win.mget(_a.hub_id);
+    if (!hub_id) return;
+
+    const nid = win.mget(_a.nid) || win.mget(_a.actual_home_id) || win.mget(_a.home_id);
+    const area = win.mget(_a.area);
+    const ownpath = win.mget(_a.ownpath) || '/';
+    const home_id = win.mget(_a.actual_home_id) || win.mget(_a.home_id) || nid;
+
+    // Idempotent: skip the broadcast if globals already reflect this window.
+    const cur = this._curWorkspace;
+    const sameContext = cur && cur.hub_id == hub_id && cur.nid == nid && cur.area == area;
+
+    this._curWorkspace = { hub_id, nid, area };
+    this.mset({ hub_id, nid, nodeId: nid, area, ownpath, home_id });
+
+    if (!sameContext) {
+      RADIO_BROADCAST.trigger("workspace:focus", { hub_id, nid, area });
+      this.updateBreadcrumb({
+        hub_id,
+        nid,
+        area,
+        filename: win.mget(_a.filename) || win.mget(_a.name),
+        service: "change-workspace",
+      }, this);
+    }
   }
 
   /**
@@ -417,7 +502,16 @@ class __window_manager extends push {
       const item = this.getWindowPreset(media);
       item.kind = "window_folder";
       item.wm_unique_id = `window_folder-${item.hub_id}`;
-      return this.launch(item, { explicit: 1, singleton: 1 });
+      // Multi-tab: raise the existing tab for this hub_id if any (scoped
+      // to top-level windows). `launch({unique})` cannot be used here —
+      // its getItemsByAttr walks the full descendant tree and would match
+      // a media item with the same hub_id, returning a non-window object.
+      const existing = this._findWorkspaceWindow(item.hub_id);
+      if (existing) {
+        existing.raise();
+        return false;
+      }
+      return this.launch(item, { explicit: 1 });
     }
     return super.openContent(media, args);
   }
