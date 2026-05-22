@@ -180,7 +180,7 @@ export function dialog(ui) {
 }
 
 /**
- * @typedef {{ service: string, ico: string, content: string }} MenuItem
+ * @typedef {{ service: string, ico: string, content: string, className?: string }} MenuItem
  * @typedef {{
  *   menuItems?: MenuItem[],
  *   triggerIco?: string,
@@ -213,9 +213,11 @@ export function dropdownMenuButton(ui, opt = {}) {
 
   const itemsNode = Skeletons.Box.Y({
     className: `${cnDropdown}__items`,
-    kids: menuItems.map(({ service, ico, content, area, ...extra }) =>
+    kids: menuItems.map(({ service, ico, content, area, className, ...extra }) =>
       Skeletons.Box.X({
-        className: `${cnDropdown}__item`,
+        className: className
+          ? `${cnDropdown}__item ${className}`
+          : `${cnDropdown}__item`,
         uiHandler: [ui],
         service,
         // active:0 on every child so a click on the icon/label passes
@@ -416,6 +418,7 @@ export function newFileMenu(ui, opt = {}) {
   const cnWindowButton = `${ui.fig.group}-button`;
   const cnWindowBody = `${ui.fig.group}-split-body`;
   const triggerIco = opt.triggerIco || "editbox_list-plus";
+  const cnItem = `${cnWindowButton}__menu-item`;
   const allItems = [
     {
       service: "add-folder",
@@ -423,29 +426,34 @@ export function newFileMenu(ui, opt = {}) {
       content: LOCALE.FOLDER,
       area: ui.mget(_a.area) || _a.personal,
       filename: LOCALE.NEW_FOLDER,
+      className: `${cnItem} ${cnItem}--add-folder`,
     },
     {
       service: "add-note",
       ico: "raw-note",
       content: LOCALE.NOTE,
+      className: `${cnItem} ${cnItem}--add-note white`,
     },
     {
       service: "new-document",
       name: "document.docx",
       ico: "raw-documents_word",
       content: LOCALE.DOCUMENT,
+      className: `${cnItem} ${cnItem}--document white`,
     },
     {
       service: "new-document",
       name: "spreadsheet.xlsx",
       ico: "raw-documents_excel",
       content: LOCALE.SPREADSHEET,
+      className: `${cnItem} ${cnItem}--spreadsheet white`,
     },
     {
       service: "new-document",
       name: "presentation.pptx",
       ico: "raw-documents_powerpoint",
       content: LOCALE.PRESENTATION,
+      className: `${cnItem} ${cnItem}--presentation white`,
     },
   ];
   // opt.items — optional whitelist of service names. When set, only those
