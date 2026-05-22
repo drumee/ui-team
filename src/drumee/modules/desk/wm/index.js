@@ -37,6 +37,8 @@ class __window_manager extends push {
     ];
     this._handelKbdEvents = this._handelKbdEvents.bind(this);
     RADIO_KBD.on(_e.keyup, this._handelKbdEvents)
+    /** Preload some most used widget. Do not use await to avoid blocking */
+    Kind.waitFor('window_folder')
   }
 
   /**
@@ -263,12 +265,12 @@ class __window_manager extends push {
     // nid often arrives later via the get_attributes fetch below.
     this._wsGeneration = (this._wsGeneration || 0) + 1;
     const gen = this._wsGeneration;
-    if (this._currentWorkspace && !this._currentWorkspace.isDestroyed()) this._currentWorkspace.suppress()
+    let previous = this._curWorkspace?.widget
+    if (previous && !previous.isDestroyed()) previous.suppress()
     const apply = (data) => {
       if (gen !== this._wsGeneration) return;
       this._curWorkspace = { hub_id, nid: data.nid, area: data.area };
       this.mset(data);
-
       this.windowsLayer.append({
         kind: 'window_folder',
         hub_id,
@@ -276,11 +278,23 @@ class __window_manager extends push {
         headless: 1,
         filename: data.filename || data.name,
         wm_unique_id: `window_folder-${hub_id}`,
+        style: {
+          left: 0,
+          top: -49,
+          minWidth: 760,
+          minHeight: 480,
+          width: 956,
+          height: 1014,
+        }
       });
       this.windowsLayer.el.dataset.headless = "1";
       this.ensurePart("wrapper-modal").then((p) => p.clear());
       this.updateBreadcrumb({ ...data, hub_id, service: "change-workspace" }, this);
       this._curWorkspace.widget = this.windowsLayer.children.last()
+      this._curWorkspace.widget.once(_a.destroy, () => {
+        this._curWorkspace = null;
+        this.windowsLayer.el.dataset.headless = "0"
+      })
     };
 
     // nid often arrives later via the media.attributes fetch below. The

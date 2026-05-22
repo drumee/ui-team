@@ -82,6 +82,7 @@ class __window_interact extends windowCore {
         this.style.set({ top: top + offset });
       }
     }
+
   }
 
   /**

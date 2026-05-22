@@ -30,6 +30,16 @@ class __window_folder extends mfsInteract {
       Math.max(580, workspaceHeight - 150),
       workspaceHeight - 96,
     );
+
+    if (this.mget(_a.headless)) {
+      return {
+        left: 0,
+        top: -49,
+        width: workspaceWidth,
+        height: workspaceHeight + 49,
+      };
+    }
+
     return {
       left: Math.round((workspaceWidth - width) / 2),
       top: Math.max(24, Math.round((workspaceHeight - height) / 2)),
@@ -92,6 +102,7 @@ class __window_folder extends mfsInteract {
       height: this.size.height,
     });
   }
+
 
   buildContent(child) {
     this.__content = child;
@@ -418,7 +429,6 @@ class __window_folder extends mfsInteract {
 
   onUiEvent(cmd, args = {}) {
     const service = args.service || cmd.service || cmd.mget(_a.service);
-    this.debug("AAA:421", service)
     switch (service) {
       case _a.info:
         return this.showInfo();
