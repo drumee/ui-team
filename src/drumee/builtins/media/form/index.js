@@ -67,7 +67,8 @@ class __form_folder extends LetcBox {
       pid: target ? target.getCurrentNid() : Visitor.id,
     })
       .then((res) => {
-        RADIO_BROADCAST.trigger("workspace:refresh");
+        // Sidebar appends the new hub via the live `media.new` /
+        // `desk.create_hub` broadcast — no full list refetch needed.
         const hub = _.isArray(res) ? res[0] : res;
         const closeForm = () => {
           if (this.parent && _.isFunction(this.parent.clear)) {
