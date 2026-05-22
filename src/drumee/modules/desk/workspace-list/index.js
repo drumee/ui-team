@@ -103,10 +103,6 @@ class __desk_workspace extends LetcBox {
     // Match literal service names rather than SERVICE.* lookups —
     // safer if a namespace happens to be missing (would otherwise
     // throw on the case expression itself before matching).
-    // media.* events fire for ANY node (files, folders, hubs). Without a
-    // filetype===hub gate, a file delete inside a workspace would match
-    // the workspace via shared hub_id and remove the workspace itself.
-    // hub.* / desk.* events are hub-scoped by definition — no gate needed.
     switch (service) {
       case "media.new":
       case "desk.create_hub":
@@ -115,16 +111,12 @@ class __desk_workspace extends LetcBox {
         break;
 
       case "media.remove":
-        if (data.filetype === _a.hub) this._removeHub(data);
-        break;
       case "hub.delete_hub":
       case "desk.leave_hub":
         this._removeHub(data);
         break;
 
       case "media.rename":
-        if (data.filetype === _a.hub) this._renameHub(data);
-        break;
       case "hub.update_name":
         this._renameHub(data);
         break;
