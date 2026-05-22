@@ -262,9 +262,9 @@ class __window_manager extends push {
     // nid often arrives later via the get_attributes fetch below.
     this._wsGeneration = (this._wsGeneration || 0) + 1;
     const gen = this._wsGeneration;
-    if (this._currentWorkspace && !this._currentWorkspace.isDestroyed()) this._currentWorkspace.suppress()
     const apply = (data) => {
       if (gen !== this._wsGeneration) return;
+      if (this._currentWorkspace && !this._currentWorkspace.isDestroyed()) this._currentWorkspace.suppress()
       this._curWorkspace = { hub_id, nid: data.nid, area: data.area };
       this.mset(data);
 
