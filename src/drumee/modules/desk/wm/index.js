@@ -88,7 +88,7 @@ class __window_manager extends push {
   route(l) {
     let args = Visitor.parseModuleArgs() || {};
     let path = Visitor.parseModule() || [];
-    this.debug("AAA:100", args)
+    this.debug("AAA:100", args);
     switch (path[2]) {
       case _a.meeting:
         let media = this.getItemsByAttr(_a.nid, args.nid)[0];
@@ -1513,7 +1513,7 @@ class __window_manager extends push {
   async onUiEvent(cmd, args = {}) {
     const service =
       args.service || cmd.service || cmd.status || cmd.mget(_a.service);
-    this.verbose("Wm.onUiEvent[1471]", service)
+    this.verbose("Wm.onUiEvent[1471]", service);
 
     switch (service) {
       case "open-manager":
