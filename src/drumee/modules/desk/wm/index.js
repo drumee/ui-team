@@ -275,7 +275,11 @@ class __window_manager extends push {
         ...data,
         headless: 1,
         filename: data.filename || data.name,
-        wm_unique_id: `window_folder-${hub_id}`,
+        // Headless workspace lives in its own singleton pool, separate
+        // from the right-click "Open in Window" popup (which keeps the
+        // `window_folder-${hub_id}` prefix). See
+        // docs/superpowers/specs/2026-05-22-multi-folder-windows-design.md.
+        wm_unique_id: `workspace-${hub_id}`,
       });
       this.windowsLayer.el.dataset.headless = "1";
       this.ensurePart("wrapper-modal").then((p) => p.clear());
