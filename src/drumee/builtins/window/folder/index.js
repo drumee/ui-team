@@ -518,6 +518,7 @@ class __window_folder extends mfsInteract {
 
       case "leave-meeting":
       case "close-call-panel":
+        this.mset("activeTab", "files");
         return this.showFolderTab("files");
 
       case "start-meeting":
@@ -548,6 +549,12 @@ class __window_folder extends mfsInteract {
 
       case "close-overlay":
         return this.closeForwardDialog();
+
+      case "close":
+        if (this.mget(_a.headless)) {
+          Desk.onWorkspaceClosed();
+        }
+        return super.onUiEvent(cmd, args);
 
       default:
         super.onUiEvent(cmd, args);

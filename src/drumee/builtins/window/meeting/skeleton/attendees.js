@@ -11,9 +11,14 @@ const __window_webinar_attendees = function(_ui_) {
       }),
       Skeletons.List.Smart({
         className   : `${_ui_.fig.family}__attendees-list`,
-        itemsOpt    : { 
-          kind      : 'webrtc_attendee',
-          uiHandler : _ui_
+        itemsOpt    : {
+          kind       : 'webrtc_attendee',
+          uiHandler  : _ui_,
+          // Pass the meeting window so the attendee card can render
+          // hand-raised / sharing-screen badges from the same state
+          // maps the dashboard reads. Other consumers (schedule,
+          // connect) don't pass this — the skeleton no-ops badges then.
+          _meetingUi : _ui_,
         },
         sys_pn      : "attendees",
         state       : 1,

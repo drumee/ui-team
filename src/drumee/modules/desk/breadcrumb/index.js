@@ -115,7 +115,7 @@ class __desk_breadcrumb extends LetcBox {
   /**
    * Reset to the Home anchor (no path items, context highlighted).
    */
-  _loadDefault() {
+  loadDefault(reload = 1) {
     this._buildContent();
     this.ensurePart(_a.context).then((p) => {
       p.mset({
@@ -129,7 +129,7 @@ class __desk_breadcrumb extends LetcBox {
       p.set({ content: LOCALE.HOME });
       p.el.dataset.current = 1;
     });
-    Desk.loadHome()
+    if (reload) Desk.loadHome()
   }
 
   /**
@@ -137,7 +137,7 @@ class __desk_breadcrumb extends LetcBox {
    */
   onDomRefresh() {
     this.feed(require("./skeleton")(this))
-    this._loadDefault()
+    this.loadDefault()
   }
 
   /**
@@ -161,7 +161,7 @@ class __desk_breadcrumb extends LetcBox {
   _onWindowClosed() {
     let w = Wm.getActiveWindow()
     if (w === Wm) {
-      this._loadDefault()
+      this.loadDefault()
       return;
     }
 
@@ -198,7 +198,7 @@ class __desk_breadcrumb extends LetcBox {
       case _a.closed:
         return;
       case _a.home:
-        return this._loadDefault();
+        return this.loadDefault();
     }
     // Only follow navigation broadcasts that came from the desk container
     // (Wm) or its in-place loadWorkspaceNode flow. Ignore broadcasts that
@@ -238,7 +238,7 @@ class __desk_breadcrumb extends LetcBox {
   _updateContext(data) {
     this._context = this._normalizeData(data)[0];
     const filename = this._context && (this._context.filename || this._context.name);
-    if (!filename) return this._loadDefault();
+    if (!filename) return this.loadDefault();
     this._buildContent([{ ...this._context, filename }]);
   }
 
@@ -300,7 +300,7 @@ class __desk_breadcrumb extends LetcBox {
         // In-place reset: reload Wm's main grid back to the user's home
         // workspace WITHOUT rebuilding the skeleton, so any open folder
         // windows are preserved per breadcrumb spec.
-        this._loadDefault();
+        this.loadDefault();
         if (Wm) {
           const hub_id = Visitor.id;
           const nid = Visitor.get(_a.home_id);

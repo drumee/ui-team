@@ -98,7 +98,6 @@ class __window_manager extends push {
         Desk.openP2Pchat(args)
         return;
       case _a.channel:
-        // this.openFileLocation(args)
         this.loadWorkspace(args)
         return;
     }
@@ -265,10 +264,11 @@ class __window_manager extends push {
     const gen = this._wsGeneration;
     const apply = (data) => {
       if (gen !== this._wsGeneration) return;
+      if (this._currentWorkspace && !this._currentWorkspace.isDestroyed()) this._currentWorkspace.suppress()
       this._curWorkspace = { hub_id, nid: data.nid, area: data.area };
       this.mset(data);
 
-      this.windowsLayer.feed({
+      this.windowsLayer.append({
         kind: 'window_folder',
         hub_id,
         ...data,
@@ -277,9 +277,9 @@ class __window_manager extends push {
         wm_unique_id: `window_folder-${hub_id}`,
       });
       this.windowsLayer.el.dataset.headless = "1";
-      this.iconsList.clear()
       this.ensurePart("wrapper-modal").then((p) => p.clear());
       this.updateBreadcrumb({ ...data, hub_id, service: "change-workspace" }, this);
+      this._currentWorkspace = this.windowsLayer.children.last()
     };
 
     // nid often arrives later via the media.attributes fetch below. The
