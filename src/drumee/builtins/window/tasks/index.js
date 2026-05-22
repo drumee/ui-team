@@ -1,3 +1,5 @@
+const { uploadFile } = require("@drumee/ui-essentials");
+
 const COLUMNS = [
   { key: "todo",        label: "STATUS_TODO",        color: "#AEAEB2" },
   { key: "in_progress", label: "STATUS_IN_PROGRESS", color: "#65D0EA" },
@@ -18,7 +20,12 @@ class __tasks_panel extends LetcBox {
     require("./skin");
     super.initialize(opt);
     this.declareHandlers();
+    // LetcBox auto-binds fetchService/postService but not uploadFile.
+    this.uploadFile = uploadFile.bind(this);
     this._hubId = this.mget(_a.hub_id) || Host.get(_a.id);
+    // Upload destination — must be a real folder/home node, not the hub_id.
+    // The folder window passes `actual_home_id || nid` when launching us.
+    this._destNid = this.mget(_a.actual_home_id) || this.mget(_a.nid) || 0;
     this._tasks = [];
     this._members = [];
     this._labels = [];
@@ -175,6 +182,9 @@ class __tasks_panel extends LetcBox {
           labels: [],
           pending_files: [],
         };
+        // Force a fresh fetch on first attachment pick so name-collision
+        // preview reflects whatever the folder body holds right now.
+        this._folderFilenames = null;
         this._resetFileSearch();
         return this._render();
 
@@ -300,8 +310,9 @@ class __tasks_panel extends LetcBox {
       case "remove-pending-file":
         return this._removePendingFile(trigger);
 
+      case _e.upload:
       case "pick-attachment":
-        return this._pickAttachment();
+        return this._pickAttachment(trigger);
 
       case "unlink-attachment":
         return this._unlinkAttachment(trigger);
@@ -312,7 +323,7 @@ class __tasks_panel extends LetcBox {
   }
 
   onPartReady(child, pn) {
-    if (pn === "task-fileselector") {
+    if (pn === "fileselector") {
       child.el.onchange = (e) => this._onAttachmentPicked(e);
       return;
     }
@@ -550,6 +561,29 @@ class __tasks_panel extends LetcBox {
       });
       const row = Array.isArray(raw) ? raw[0] : raw;
       if (row && row.id) {
+        // For each pending entry: search-picked files already have `nid`;
+        // newly-picked uploads carry a File object and need to be sent to the
+        // folder body now. Either way, the resolved nid is link_file'd to
+        // the new task.
+        const linkPending = async (pf) => {
+          let nid = pf.nid;
+          if (!nid && pf.file) {
+            try {
+              const result = await this._uploadPendingFile(pf);
+              nid = result.nid;
+            } catch (err) {
+              console.error("[tasks_panel] pending file upload failed:", err);
+              return;
+            }
+          }
+          if (!nid) return;
+          await this.postService({
+            service: SERVICE.task.link_file,
+            hub_id: this._hubId,
+            task_id: row.id,
+            file_nid: nid,
+          }).catch(() => null);
+        };
         await Promise.all([
           ...labels.map((labelId) =>
             this.postService({
@@ -559,14 +593,7 @@ class __tasks_panel extends LetcBox {
               label_id: labelId,
             }).catch(() => null)
           ),
-          ...pendingFiles.map((f) =>
-            this.postService({
-              service: SERVICE.task.link_file,
-              hub_id: this._hubId,
-              task_id: row.id,
-              file_nid: f.nid,
-            }).catch(() => null)
-          ),
+          ...pendingFiles.map(linkPending),
         ]);
       }
       // Tear down the form only after a successful create — failures keep
@@ -707,22 +734,162 @@ class __tasks_panel extends LetcBox {
     });
   }
 
-  _pickAttachment() {
-    return this.ensurePart("task-fileselector").then((sel) => {
+  _pickAttachment(trigger) {
+    // Scope decides where the uploaded file lands after onUploadResponse:
+    //   "create" → stashed onto _createDefaults.pending_files (linked on commit)
+    //   "detail" (default) → linked to the open task via SERVICE.task.link_file
+    const scope = trigger?.mget?.("searchScope");
+    this._pendingUploadScope = scope === "create" ? "create" : "detail";
+    // FileSelector hardcodes sys_pn to "fileselector".
+    return this.ensurePart("fileselector").then((sel) => {
+      // sel.open() rebinds onchange every call (overrides the one set in
+      // onPartReady), so use sel.el's input directly to preserve our handler.
       const input = sel.el.querySelector?.("input[type='file']") || sel.el;
       input.click?.();
     });
   }
 
-  _onAttachmentPicked(e) {
+  async _onAttachmentPicked(e) {
     const file = e.target?.files?.[0];
-    if (!file || !this._detailId) return;
+    if (!file) return;
     e.target.value = "";
+    const scope = this._pendingUploadScope || "detail";
+
+    if (scope === "create") {
+      // No server hit yet — stash the File object on the draft. _commitTask
+      // uploads to the folder and link_files it to the new task on submit.
+      this._pendingUploadScope = null;
+      if (!this._createDefaults) return;
+      // Preview the name the server would assign on collision (a → a(1)) by
+      // comparing against the folder body's current filenames plus other
+      // entries already in this pending list.
+      await this._ensureFolderFilenames();
+      const { filename, extension } = this._resolveAvailableName(file.name);
+      const localKey = `local:${Date.now()}:${file.name}`;
+      const pending = (this._createDefaults.pending_files || []).slice();
+      pending.push({ localKey, file, filename, extension });
+      this._createDefaults.pending_files = pending;
+      return this._refreshPendingList("create");
+    }
+
+    // detail scope: upload immediately, onUploadResponse links to the open task
+    if (!this._detailId) {
+      this._pendingUploadScope = null;
+      return;
+    }
     this._pendingLinkTaskId = this._detailId;
-    this.uploadFile(file, { hub_id: this._hubId, nid: this._hubId });
+    this.uploadFile(file, { hub_id: this._hubId, nid: this._destNid });
+  }
+
+  _splitFilename(name) {
+    const safe = String(name || "");
+    const dot = safe.lastIndexOf(".");
+    if (dot <= 0 || dot === safe.length - 1) {
+      return { filename: safe, extension: "" };
+    }
+    return { filename: safe.slice(0, dot), extension: safe.slice(dot + 1) };
+  }
+
+  // Fetches the folder body's current filenames into a lowercase Set, used
+  // by _resolveAvailableName. Cleared whenever the create modal reopens
+  // (see "add-task" handler) so we re-fetch after each session.
+  async _ensureFolderFilenames() {
+    if (this._folderFilenames) return this._folderFilenames;
+    this._folderFilenames = new Set();
+    try {
+      const rows = await this.fetchService({
+        service: SERVICE.media.show_node_by,
+        hub_id: this._hubId,
+        nid: this._destNid,
+        type: "all",
+        page: 1,
+        order: _K.order.descending,
+      });
+      const list = Array.isArray(rows) ? rows : (rows && rows.rows) || [];
+      for (const r of list) {
+        const base = r.filename || r.name || "";
+        const ext = r.ext || r.extension || "";
+        const full = ext ? `${base}.${ext}` : base;
+        if (full) this._folderFilenames.add(full.toLowerCase());
+      }
+    } catch (err) {
+      // Best-effort: empty cache means we only dedupe against pending entries.
+    }
+    return this._folderFilenames;
+  }
+
+  // Returns { filename, extension } for the next available name. "a.png" with
+  // an existing "a.png" yields { filename: "a(1)", extension: "png" }.
+  _resolveAvailableName(originalName) {
+    const { filename: base, extension } = this._splitFilename(originalName);
+    const ext = extension ? `.${extension}` : "";
+
+    const taken = new Set();
+    if (this._folderFilenames) {
+      for (const n of this._folderFilenames) taken.add(n);
+    }
+    for (const f of (this._createDefaults?.pending_files || [])) {
+      const fullExt = f.extension ? `.${f.extension}` : "";
+      const n = `${f.filename || ""}${fullExt}`.toLowerCase();
+      if (n) taken.add(n);
+    }
+
+    if (!taken.has(`${base}${ext}`.toLowerCase())) {
+      return { filename: base, extension };
+    }
+    let i = 1;
+    while (taken.has(`${base}(${i})${ext}`.toLowerCase())) i++;
+    return { filename: `${base}(${i})`, extension };
+  }
+
+  // Promise-wrapped uploadFile used by _commitTask. Tags scope so the global
+  // onUploadResponse skips this xhr (we resolve via the xhr readystate listener).
+  // Accepts the full pending entry so the resolved name (e.g. "a(1).png") is
+  // sent as the upload filename instead of the original `file.name`.
+  _uploadPendingFile(pf) {
+    return new Promise((resolve, reject) => {
+      this._pendingUploadScope = "_commit";
+      const params = { hub_id: this._hubId, nid: this._destNid };
+      const fullName = pf.extension ? `${pf.filename}.${pf.extension}` : pf.filename;
+      if (fullName && fullName !== pf.file?.name) {
+        params.filename = encodeURI(fullName);
+      }
+      let xhr;
+      try {
+        xhr = this.uploadFile(pf.file, params);
+      } catch (e) {
+        this._pendingUploadScope = null;
+        return reject(e);
+      }
+      if (!xhr) {
+        this._pendingUploadScope = null;
+        return reject(new Error("upload failed to start"));
+      }
+      xhr.addEventListener("readystatechange", () => {
+        if (xhr.readyState !== 4) return;
+        this._pendingUploadScope = null;
+        if (xhr.status >= 200 && xhr.status < 300) {
+          try {
+            const { data } = JSON.parse(xhr.responseText);
+            const nid = data?.nid || data?.id;
+            if (!nid) return reject(new Error("no nid in upload response"));
+            resolve({ nid, data });
+          } catch (err) {
+            reject(err);
+          }
+        } else {
+          reject(new Error(`upload http ${xhr.status}`));
+        }
+      });
+    });
   }
 
   async onUploadResponse(data) {
+    // _commit scope is resolved directly in _uploadPendingFile via the xhr
+    // listener — skip the global handler so we don't double-link.
+    if (this._pendingUploadScope === "_commit") return;
+    this._pendingUploadScope = null;
+
     const taskId = this._pendingLinkTaskId;
     if (!taskId) return;
     this._pendingLinkTaskId = null;
@@ -804,6 +971,21 @@ class __tasks_panel extends LetcBox {
     this._refreshFileSearchDropdown(scope);
   }
 
+  // Surgical update of the file-pending-list part — avoids a full _render()
+  // that would steal focus from the title/description inputs.
+  _refreshPendingList(scope = "create") {
+    const pendingFiles = scope === "create"
+      ? (this._createDefaults && this._createDefaults.pending_files) || []
+      : [];
+    const partName = `file-pending-list-${scope}`;
+    this.ensurePart(partName).then((list) => {
+      if (!list || list.isDestroyed?.()) return;
+      const skel = require("./skeleton");
+      list.feed(skel.buildPendingListContent(this, pendingFiles));
+      if (list.el) list.el.dataset.empty = pendingFiles.length ? "0" : "1";
+    }).catch(() => { /* part not mounted yet */ });
+  }
+
   _refreshFileSearchDropdown(scope) {
     if (!scope) return;
     const partName = `file-search-dropdown-${scope}`;
@@ -835,9 +1017,14 @@ class __tasks_panel extends LetcBox {
         set.set(nid, { nid, filename, extension: ext });
         this._createDefaults.pending_files = Array.from(set.values());
       }
-      // Close the suggestion dropdown after a pick.
+      // Close the suggestion dropdown after a pick. We no longer full-render,
+      // so clear the search input value in the DOM directly.
       this._resetFileSearch();
-      return this._render();
+      const inputEl = this.el?.querySelector(`input[name="file-search-${scope}"]`);
+      if (inputEl) inputEl.value = "";
+      this._refreshPendingList("create");
+      this._refreshFileSearchDropdown(scope);
+      return;
     }
 
     const taskId = this._detailId;
@@ -861,9 +1048,17 @@ class __tasks_panel extends LetcBox {
   _removePendingFile(trigger) {
     if (!this._createDefaults) return;
     const nid = trigger.mget("fileNid");
+    const localKey = trigger.mget("localKey");
     this._createDefaults.pending_files = (this._createDefaults.pending_files || [])
-      .filter((f) => f.nid !== nid);
-    this._render();
+      .filter((f) => {
+        if (localKey) return f.localKey !== localKey;
+        if (nid) return f.nid !== nid;
+        return true;
+      });
+    // Removed item may have been the only match for an open search — refresh
+    // the dropdown so "Linked" badges drop off.
+    this._refreshPendingList("create");
+    this._refreshFileSearchDropdown("create");
   }
 
   _updateStatusPills(modalSel, pillSel, newStatus) {

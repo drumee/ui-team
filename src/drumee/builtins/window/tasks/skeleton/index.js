@@ -505,7 +505,10 @@ const make = function (ui) {
             bubble: 0,
             service: "remove-pending-file",
             uiHandler: [ui],
+            // Newly-picked uploads carry localKey (no nid yet); search-picked
+            // entries carry nid. _removePendingFile matches on either.
             fileNid: f.nid,
+            localKey: f.localKey,
           }),
         ],
       });
@@ -532,6 +535,16 @@ const make = function (ui) {
               interactive: 1,
               bubble: 0,
               service: "file-search-input",
+              uiHandler: [ui],
+              searchScope: scope,
+              taskId,
+            }),
+            Skeletons.Button.Label({
+              className: `${pfx}__file-search-upload-btn`,
+              label: LOCALE.UPLOAD,
+              ico: "desktop_upload",
+              bubble: 0,
+              service: _e.upload,
               uiHandler: [ui],
               searchScope: scope,
               taskId,
@@ -574,17 +587,21 @@ const make = function (ui) {
       ],
     });
 
+    // Always mount the pending list with a sys_pn so add/remove can refeed
+    // just this part via ensurePart — full _render() would blow away the
+    // title/description inputs' focus and scroll position.
     return Skeletons.Box.Y({
       className: `${pfx}__file-picker`,
       kids: [
         searchField,
-        pendingFiles.length
-          ? Skeletons.Box.Y({
-              className: `${pfx}__file-pending-list`,
-              kids: pendingFiles.map(pendingRow),
-            })
-          : null,
-      ].filter(Boolean),
+        Skeletons.Box.Y({
+          className: `${pfx}__file-pending-list`,
+          sys_pn: `file-pending-list-${scope}`,
+          partHandler: ui,
+          dataset: { empty: pendingFiles.length ? 0 : 1 },
+          kids: pendingFiles.map(pendingRow),
+        }),
+      ],
     });
   };
 
@@ -872,13 +889,6 @@ const make = function (ui) {
         dueRow,
         attachmentsList,
         actions,
-        Skeletons.FileSelector({
-          sys_pn: "task-fileselector",
-          accept: "*/*",
-          partHandler: ui,
-          uiHandler: [ui],
-          bubble: 0,
-        }),
       ],
     });
   };
@@ -935,36 +945,14 @@ const make = function (ui) {
           content: LOCALE.NO_LABELS,
         });
 
-    const assigneeButtonNode = (() => {
-      const m = selectedAssignee ? ui.getMember(selectedAssignee) : null;
-      return Skeletons.Box.X({
-        className: `${pfx}__assignee-button`,
-        dataset: { open: pickerOpen === "create-assignee" ? 1 : 0 },
-        bubble: 0,
-        service: "toggle-picker",
-        uiHandler: [ui],
-        pickerKind: "create-assignee",
-        kids: [
-          m
-            ? Skeletons.UserProfile({
-                className: `${pfx}__assignee-button-avatar`,
-                id: m.id || m.uid,
-                firstname: m.firstname,
-                lastname: m.lastname,
-                auto_color: 1,
-                live_status: 0,
-              })
-            : Skeletons.Note({
-                className: `${pfx}__assignee-button-placeholder`,
-                content: "?",
-              }),
-          Skeletons.Note({
-            className: `${pfx}__assignee-button-label`,
-            content: m ? fullName(m) : LOCALE.UNASSIGNED,
-          }),
-        ],
-      });
-    })();
+    // Use the shared factory so the create-modal button registers
+    // sys_pn:"create-assignee-button" + partHandler:ui — without that,
+    // _applyAssigneeChange's ensurePart(...) never resolves and the button
+    // stays blank until the next full render.
+    const assigneeButtonNode = assigneeButton(
+      { assignee_uid: selectedAssignee },
+      "create-assignee",
+    );
 
     const form = Skeletons.Box.Y({
       className: `${pfx}__create-form`,
@@ -1166,6 +1154,14 @@ const make = function (ui) {
         partHandler: ui,
         kids: creating ? [createModal()] : [],
       }),
+      // sys_pn is hardcoded to "fileselector" by Skeletons.FileSelector;
+      // ensurePart("fileselector") + onPartReady("fileselector") match it.
+      Skeletons.FileSelector({
+        accept: "*/*",
+        partHandler: ui,
+        uiHandler: [ui],
+        bubble: 0,
+      }),
     ],
   });
 };
@@ -1197,6 +1193,31 @@ function buildAssigneeButtonContent(ui, assigneeUid) {
   ];
 }
 
+function buildPendingListContent(ui, pendingFiles) {
+  const pfx = ui.fig.family;
+  return (pendingFiles || []).map((f) =>
+    Skeletons.Box.X({
+      className: `${pfx}__file-pending-row`,
+      kids: [
+        Skeletons.Note({
+          className: `${pfx}__file-result-name`,
+          content: `${f.filename || ""}${f.extension ? "." + f.extension : ""}`,
+        }),
+        Skeletons.Button.Svg({
+          className: `${pfx}__attachment-unlink`,
+          ico: "cross",
+          bubble: 0,
+          service: "remove-pending-file",
+          uiHandler: [ui],
+          fileNid: f.nid,
+          localKey: f.localKey,
+        }),
+      ],
+    }),
+  );
+}
+
 make.buildFileSearchDropdownContent = buildFileSearchDropdownContent;
 make.buildAssigneeButtonContent = buildAssigneeButtonContent;
+make.buildPendingListContent = buildPendingListContent;
 module.exports = make;

@@ -809,7 +809,10 @@ class __window_folder extends mfsInteract {
             return view.append({
               kind: "tasks_panel",
               hub_id: this.mget(_a.hub_id),
-              nid: this.mget(_a.nid),
+              // Match the meeting/upload destination resolution: for a
+              // hub-level window the working nid is actual_home_id, not the
+              // hub_id itself. Without this, media.upload returns 403.
+              nid: this.mget(_a.actual_home_id) || this.mget(_a.nid),
               uiHandler: [this],
             });
           }
