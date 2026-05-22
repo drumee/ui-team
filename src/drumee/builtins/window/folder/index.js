@@ -604,7 +604,25 @@ class __window_folder extends mfsInteract {
 
       case "close":
         if (this.mget(_a.headless)) {
-          Desk.onWorkspaceClosed();
+          // Multi-tab: only fall back to the "no workspace open" UI when
+          // this is the last open workspace tab. With other tabs still
+          // alive, the generic destroy handler in window/manager.js raises
+          // the next-topmost window and our _syncWorkspaceFocus rewires
+          // globals; resetting workspace-main would clear the sidebar
+          // highlight that the surviving tab is about to claim.
+          let remaining = 0;
+          if (Wm && Wm.windowsLayer && Wm.windowsLayer.children) {
+            for (const c of Wm.windowsLayer.children.toArray()) {
+              if (!c || c === this || c.isDestroyed()) continue;
+              if (c.mget(_a.kind) !== "window_folder") continue;
+              if (!c.mget(_a.headless)) continue;
+              remaining++;
+              break;
+            }
+          }
+          if (!remaining) {
+            Desk.onWorkspaceClosed();
+          }
         }
         return super.onUiEvent(cmd, args);
 
