@@ -246,6 +246,7 @@ class __window_manager extends push {
 
     if (this._curWorkspace
       && this._curWorkspace.hub_id == hub_id
+      && !this._curWorkspace.widget?.isDestroyed()
       && this._curWorkspace.nid == nid) {
       return;
     }
@@ -262,9 +263,9 @@ class __window_manager extends push {
     // nid often arrives later via the get_attributes fetch below.
     this._wsGeneration = (this._wsGeneration || 0) + 1;
     const gen = this._wsGeneration;
+    if (this._currentWorkspace && !this._currentWorkspace.isDestroyed()) this._currentWorkspace.suppress()
     const apply = (data) => {
       if (gen !== this._wsGeneration) return;
-      if (this._currentWorkspace && !this._currentWorkspace.isDestroyed()) this._currentWorkspace.suppress()
       this._curWorkspace = { hub_id, nid: data.nid, area: data.area };
       this.mset(data);
 
@@ -279,7 +280,7 @@ class __window_manager extends push {
       this.windowsLayer.el.dataset.headless = "1";
       this.ensurePart("wrapper-modal").then((p) => p.clear());
       this.updateBreadcrumb({ ...data, hub_id, service: "change-workspace" }, this);
-      this._currentWorkspace = this.windowsLayer.children.last()
+      this._curWorkspace.widget = this.windowsLayer.children.last()
     };
 
     // nid often arrives later via the media.attributes fetch below. The
