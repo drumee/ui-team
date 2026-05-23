@@ -189,6 +189,7 @@ class __tasks_panel extends LetcBox {
         return this._render();
 
       case "commit-task":
+        if (this._submitting) return;
         return this._commitTask();
 
       case "cancel-add":
@@ -288,6 +289,7 @@ class __tasks_panel extends LetcBox {
         return;
 
       case "commit-detail":
+        if (this._submitting) return;
         return this._commitDetail();
 
       case "cancel-detail":
@@ -545,6 +547,8 @@ class __tasks_panel extends LetcBox {
 
     if (!title) return this._render();
 
+    this._setSubmitting(".tasks-panel__create-submit", true);
+
     const labels = Array.isArray(draft.labels) ? draft.labels.slice() : [];
     const pendingFiles = Array.isArray(draft.pending_files) ? draft.pending_files.slice() : [];
 
@@ -606,6 +610,7 @@ class __tasks_panel extends LetcBox {
     } catch (err) {
       console.error("[tasks_panel] task.create failed:", err);
     }
+    this._setSubmitting(".tasks-panel__create-submit", false);
     this._render();
   }
 
@@ -637,6 +642,8 @@ class __tasks_panel extends LetcBox {
     const draft = this._detailDraft;
     const task = this._tasks.find((t) => t.id === id);
     if (!task) return;
+
+    this._setSubmitting(".tasks-panel__detail-submit", true);
 
     const calls = [];
 
@@ -703,6 +710,32 @@ class __tasks_panel extends LetcBox {
       }
     }
 
+    // Pending attachments — same flow as _commitTask: search-picked entries
+    // already have nid; uploaded entries carry the File and need to land in
+    // the folder body first.
+    const pendingFiles = Array.isArray(draft.pending_files) ? draft.pending_files.slice() : [];
+    for (const pf of pendingFiles) {
+      calls.push((async () => {
+        let nid = pf.nid;
+        if (!nid && pf.file) {
+          try {
+            const result = await this._uploadPendingFile(pf);
+            nid = result.nid;
+          } catch (err) {
+            console.error("[tasks_panel] pending file upload failed:", err);
+            return;
+          }
+        }
+        if (!nid) return;
+        await this.postService({
+          service: SERVICE.task.link_file,
+          hub_id: this._hubId,
+          task_id: id,
+          file_nid: nid,
+        }).catch(() => null);
+      })());
+    }
+
     if (calls.length) await Promise.all(calls);
 
     await this._loadTasks();
@@ -710,6 +743,7 @@ class __tasks_panel extends LetcBox {
     this._detailDraft = null;
     this._pickerOpen = null;
     this._resetFileSearch();
+    this._setSubmitting(".tasks-panel__detail-submit", false);
     this._render();
   }
 
@@ -727,10 +761,20 @@ class __tasks_panel extends LetcBox {
       priority: task.priority || "medium",
       assignee_uid: task.assignee_uid || null,
       labels: Array.isArray(task.label_ids) ? task.label_ids.slice() : [],
+      // Files picked but not yet uploaded/linked — _commitDetail processes
+      // these (upload missing nids, then link_file) on Update.
+      pending_files: [],
     } : null;
+    // Re-fetch folder filenames so collision preview (a → a(1)) reflects
+    // the folder's current state.
+    this._folderFilenames = null;
     this._render();
     this._refreshAttachments(id).then(() => {
-      if (this._detailId === id) this._render();
+      if (this._detailId !== id) return;
+      // Initial fetch came back — refeed just the rows, don't touch the
+      // form fields the user may have already started editing.
+      this._refreshAttachmentsList();
+      this._refreshFileSearchDropdown("detail");
     });
   }
 
@@ -754,31 +798,21 @@ class __tasks_panel extends LetcBox {
     if (!file) return;
     e.target.value = "";
     const scope = this._pendingUploadScope || "detail";
+    this._pendingUploadScope = null;
 
-    if (scope === "create") {
-      // No server hit yet — stash the File object on the draft. _commitTask
-      // uploads to the folder and link_files it to the new task on submit.
-      this._pendingUploadScope = null;
-      if (!this._createDefaults) return;
-      // Preview the name the server would assign on collision (a → a(1)) by
-      // comparing against the folder body's current filenames plus other
-      // entries already in this pending list.
-      await this._ensureFolderFilenames();
-      const { filename, extension } = this._resolveAvailableName(file.name);
-      const localKey = `local:${Date.now()}:${file.name}`;
-      const pending = (this._createDefaults.pending_files || []).slice();
-      pending.push({ localKey, file, filename, extension });
-      this._createDefaults.pending_files = pending;
-      return this._refreshPendingList("create");
-    }
+    // Both create and detail use the same deferred-pending flow: stash the
+    // File on the active draft and let _commitTask / _commitDetail do the
+    // upload + link_file on submit.
+    const draft = scope === "create" ? this._createDefaults : this._detailDraft;
+    if (!draft) return;
 
-    // detail scope: upload immediately, onUploadResponse links to the open task
-    if (!this._detailId) {
-      this._pendingUploadScope = null;
-      return;
-    }
-    this._pendingLinkTaskId = this._detailId;
-    this.uploadFile(file, { hub_id: this._hubId, nid: this._destNid });
+    await this._ensureFolderFilenames();
+    const { filename, extension } = this._resolveAvailableName(file.name);
+    const localKey = `local:${Date.now()}:${file.name}`;
+    const pending = (draft.pending_files || []).slice();
+    pending.push({ localKey, file, filename, extension });
+    draft.pending_files = pending;
+    return this._refreshPendingList(scope);
   }
 
   _splitFilename(name) {
@@ -825,13 +859,28 @@ class __tasks_panel extends LetcBox {
     const ext = extension ? `.${extension}` : "";
 
     const taken = new Set();
+    const addName = (raw, e) => {
+      const dotExt = e ? `.${e}` : "";
+      const n = `${raw || ""}${dotExt}`.toLowerCase();
+      if (n) taken.add(n);
+    };
+
+    // Folder body filenames
     if (this._folderFilenames) {
       for (const n of this._folderFilenames) taken.add(n);
     }
+    // Pending entries on whichever draft is active
     for (const f of (this._createDefaults?.pending_files || [])) {
-      const fullExt = f.extension ? `.${f.extension}` : "";
-      const n = `${f.filename || ""}${fullExt}`.toLowerCase();
-      if (n) taken.add(n);
+      addName(f.filename, f.extension);
+    }
+    for (const f of (this._detailDraft?.pending_files || [])) {
+      addName(f.filename, f.extension);
+    }
+    // Already-linked attachments on the open detail task
+    if (this._detailId) {
+      for (const f of (this._attachments[this._detailId] || [])) {
+        addName(f.filename, f.extension || f.ext);
+      }
     }
 
     if (!taken.has(`${base}${ext}`.toLowerCase())) {
@@ -918,7 +967,40 @@ class __tasks_panel extends LetcBox {
     });
     this._attachments[taskId] = (this._attachments[taskId] || [])
       .filter((f) => f.file_nid !== fileNid);
-    this._render();
+    // Surgical update — full _render() would blow away any unsaved
+    // title/description/etc. the user is currently editing.
+    this._refreshAttachmentsList();
+    // Search dropdown's "Linked" badges depend on the attachments set.
+    this._refreshFileSearchDropdown("detail");
+  }
+
+  // Marks the submit button as loading and blocks re-entry in onUiEvent.
+  // Surgical DOM tweak — avoids a re-render that would steal input focus.
+  _setSubmitting(selector, loading) {
+    this._submitting = !!loading;
+    const btn = this.el?.querySelector(selector);
+    if (!btn) return;
+    if (loading) {
+      btn.dataset.loading = "1";
+      btn.dataset.label = btn.textContent || "";
+      btn.textContent = LOCALE.LOADING || "Loading…";
+    } else {
+      btn.dataset.loading = "0";
+      if (btn.dataset.label) btn.textContent = btn.dataset.label;
+    }
+  }
+
+  // Re-feeds just the attachment-rows part of the detail panel.
+  _refreshAttachmentsList() {
+    const taskId = this._detailId;
+    if (!taskId) return;
+    const attachments = this._attachments[taskId] || [];
+    this.ensurePart("attachment-rows").then((rows) => {
+      if (!rows || rows.isDestroyed?.()) return;
+      const skel = require("./skeleton");
+      rows.feed(skel.buildAttachmentRowsContent(this, attachments, taskId));
+      if (rows.el) rows.el.dataset.empty = attachments.length ? "0" : "1";
+    }).catch(() => { /* part not mounted yet */ });
   }
 
   // ── File picker (search-and-link) ─────────────────────────────
@@ -974,9 +1056,8 @@ class __tasks_panel extends LetcBox {
   // Surgical update of the file-pending-list part — avoids a full _render()
   // that would steal focus from the title/description inputs.
   _refreshPendingList(scope = "create") {
-    const pendingFiles = scope === "create"
-      ? (this._createDefaults && this._createDefaults.pending_files) || []
-      : [];
+    const draft = scope === "create" ? this._createDefaults : this._detailDraft;
+    const pendingFiles = (draft && draft.pending_files) || [];
     const partName = `file-pending-list-${scope}`;
     this.ensurePart(partName).then((list) => {
       if (!list || list.isDestroyed?.()) return;
@@ -993,7 +1074,11 @@ class __tasks_panel extends LetcBox {
       if (!dropdown || dropdown.isDestroyed?.()) return;
       const ctx = scope === "create"
         ? { pendingFiles: (this._createDefaults && this._createDefaults.pending_files) || [] }
-        : { existingFiles: (this._detailId && this._attachments[this._detailId]) || [] };
+        : {
+            existingFiles: (this._detailId && this._attachments[this._detailId]) || [],
+            // Detail also has a pending list now — mark those linked too.
+            pendingFiles: (this._detailDraft && this._detailDraft.pending_files) || [],
+          };
       const skel = require("./skeleton");
       const content = skel.buildFileSearchDropdownContent(this, scope, ctx);
       dropdown.feed(content);
@@ -1008,57 +1093,49 @@ class __tasks_panel extends LetcBox {
     const scope = trigger.mget("searchScope");
     if (!nid) return;
 
-    if (scope === "create" && this._createDefaults) {
-      // Stash on the draft — the actual link_file fires after task.create.
-      const set = new Map(
-        (this._createDefaults.pending_files || []).map((f) => [f.nid, f])
-      );
-      if (!set.has(nid)) {
-        set.set(nid, { nid, filename, extension: ext });
-        this._createDefaults.pending_files = Array.from(set.values());
-      }
-      // Close the suggestion dropdown after a pick. We no longer full-render,
-      // so clear the search input value in the DOM directly.
-      this._resetFileSearch();
-      const inputEl = this.el?.querySelector(`input[name="file-search-${scope}"]`);
-      if (inputEl) inputEl.value = "";
-      this._refreshPendingList("create");
-      this._refreshFileSearchDropdown(scope);
-      return;
-    }
+    // Both create and detail stash the pick on the active draft — the actual
+    // link_file fires from _commitTask / _commitDetail on submit.
+    const draft = scope === "create" ? this._createDefaults : this._detailDraft;
+    if (!draft) return;
 
-    const taskId = this._detailId;
-    if (!taskId) return;
-    try {
-      const links = await this.postService({
-        service: SERVICE.task.link_file,
-        hub_id: this._hubId,
-        task_id: taskId,
-        file_nid: nid,
-      });
-      this._attachments[taskId] = Array.isArray(links) ? links : [];
-      await this._loadTasks();
-    } catch (err) {
-      console.error("[tasks_panel] task.link_file failed:", err);
+    const set = new Map(
+      (draft.pending_files || []).map((f) => [f.nid || f.localKey, f])
+    );
+    if (!set.has(nid)) {
+      set.set(nid, { nid, filename, extension: ext });
+      draft.pending_files = Array.from(set.values());
     }
+    // Close the suggestion dropdown after a pick. We no longer full-render,
+    // so clear the search input value in the DOM directly.
     this._resetFileSearch();
-    this._render();
+    const inputEl = this.el?.querySelector(`input[name="file-search-${scope}"]`);
+    if (inputEl) inputEl.value = "";
+    this._refreshPendingList(scope);
+    this._refreshFileSearchDropdown(scope);
   }
 
   _removePendingFile(trigger) {
-    if (!this._createDefaults) return;
     const nid = trigger.mget("fileNid");
     const localKey = trigger.mget("localKey");
-    this._createDefaults.pending_files = (this._createDefaults.pending_files || [])
-      .filter((f) => {
-        if (localKey) return f.localKey !== localKey;
-        if (nid) return f.nid !== nid;
-        return true;
-      });
-    // Removed item may have been the only match for an open search — refresh
-    // the dropdown so "Linked" badges drop off.
+    const keep = (f) => {
+      if (localKey) return f.localKey !== localKey;
+      if (nid) return f.nid !== nid;
+      return true;
+    };
+    // Same row template renders in both scopes; filter both drafts and let
+    // the surgical refresh skip whichever isn't mounted.
+    if (this._createDefaults?.pending_files) {
+      this._createDefaults.pending_files = this._createDefaults.pending_files.filter(keep);
+    }
+    if (this._detailDraft?.pending_files) {
+      this._detailDraft.pending_files = this._detailDraft.pending_files.filter(keep);
+    }
     this._refreshPendingList("create");
+    this._refreshPendingList("detail");
+    // "Linked" badges in the search dropdown depend on the pending set —
+    // refresh both; ensurePart silently no-ops if the part isn't mounted.
     this._refreshFileSearchDropdown("create");
+    this._refreshFileSearchDropdown("detail");
   }
 
   _updateStatusPills(modalSel, pillSel, newStatus) {
