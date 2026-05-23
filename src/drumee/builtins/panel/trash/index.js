@@ -18,6 +18,25 @@ class __panel_trash extends mfsInteract {
     this.mset(data);
     window.Trash = this;
     this._refreshStorageUsed = _.debounce(this._refreshStorageUsed.bind(this), 3000, { leading: true, trailing: false });
+    this._onOutsideClick = this._onOutsideClick.bind(this);
+
+  }
+
+  /**
+   * 
+   * @param {*} e 
+   */
+  _onOutsideClick(e) {
+    if (this.el.dataset.anim === "in" && !this.el.contains(e.target)) {
+      Desk.closeAllPanels()
+    }
+  }
+
+  /**
+   * 
+   */
+  onDestroy() {
+    RADIO_BROADCAST.off(_e.click, this._onOutsideClick);
   }
 
   _refreshStorageUsed() {
@@ -71,6 +90,8 @@ class __panel_trash extends mfsInteract {
     requestAnimationFrame(() => {
       if (this.el) this.el.dataset.anim = "in";
     });
+    RADIO_CLICK.on(_e.click, this._onOutsideClick)
+
   }
 
   /**

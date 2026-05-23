@@ -1644,10 +1644,6 @@ class __window_manager extends push {
           return;
         }
         this.unselect(1);
-        if (this.el.contains(lastClick.target)) {
-          Desk.closeMainPanels();
-          Desk.closeOtherSidebarPanels();
-        }
         return this.warn("AAA:471", WARNING.method.unprocessed.format(service));
     }
   }

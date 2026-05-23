@@ -50,10 +50,14 @@ class __address_book extends LetcBox {
     this._toast = null;
     this._toastTimer = null;
     this.bindEvent(_a.live);
+    this._onOutsideClick = this._onOutsideClick.bind(this);
+
   }
 
   onBeforeDestroy() {
     this.unbindEvent(_a.live);
+    RADIO_BROADCAST.off(_e.click, this._onOutsideClick);
+
   }
 
   async onDomRefresh() {
@@ -66,15 +70,29 @@ class __address_book extends LetcBox {
     ]);
     this._refreshList();
     this.el.dataset.anim = "in";
+    RADIO_CLICK.on(_e.click, this._onOutsideClick)
+
+  }
+
+  /**
+ * 
+ * @param {*} e 
+ */
+  _onOutsideClick(e) {
+    this.debug("AAA:%443", this.el.dataset.anim, this);
+
+    if (this.el.dataset.anim === "in" && !this.el.contains(e.target)) {
+      Desk.closeAllPanels()
+    }
   }
 
   onUiEvent(trigger, args = {}) {
     const service = args.service || trigger.get(_a.service);
     switch (service) {
-      case "tab-all":      return this._switchTab("all");
-      case "tab-pending":  return this._switchTab("pending");
+      case "tab-all": return this._switchTab("all");
+      case "tab-pending": return this._switchTab("pending");
       case "tab-archived": return this._switchTab("archived");
-      case "tab-blocked":  return this._switchTab("blocked");
+      case "tab-blocked": return this._switchTab("blocked");
 
       case "filter-tag":
         this._selectedTagId = trigger.mget("tagId") || null;
@@ -112,13 +130,13 @@ class __address_book extends LetcBox {
       case "google-sync":
         return this._googleSync();
 
-      case "accept-invitation":  return this._acceptInvitation(trigger);
-      case "refuse-invitation":  return this._refuseInvitation(trigger);
-      case "delete-contact":     return this._deleteContact(trigger);
-      case "archive-contact":    return this._setStatus(trigger, "archived");
-      case "restore-contact":    return this._setStatus(trigger, "active");
-      case "block-contact":      return this._block(trigger);
-      case "unblock-contact":    return this._unblock(trigger);
+      case "accept-invitation": return this._acceptInvitation(trigger);
+      case "refuse-invitation": return this._refuseInvitation(trigger);
+      case "delete-contact": return this._deleteContact(trigger);
+      case "archive-contact": return this._setStatus(trigger, "archived");
+      case "restore-contact": return this._setStatus(trigger, "active");
+      case "block-contact": return this._block(trigger);
+      case "unblock-contact": return this._unblock(trigger);
 
       case "edit-contact":
         return this._beginEdit();
@@ -416,15 +434,15 @@ class __address_book extends LetcBox {
 
   _inviteErrorMessage(status) {
     switch (status) {
-      case "INVALID_DATA":       return LOCALE.INVALID_EMAIL_FORMAT;
+      case "INVALID_DATA": return LOCALE.INVALID_EMAIL_FORMAT;
       case "SAME_DOMAIN":
       case "ALREADY_IN_CONTACT": return LOCALE.ALREADY_CONTACT_LIST;
-      case "INVITE_RECEIVED":    return LOCALE.INVITE_AWAITING_FOR_YOUR_RESPONSE;
-      case "EMAIL_NOT_SENT":     return LOCALE.MESSAGE_NOT_SENT_RETRY;
-      case "SELF_CONTACT":       return LOCALE.CANNOT_ADD_SELF_AS_CONTACT;
-      case "NO_DEFAULT_MAIL":    return LOCALE.AT_LEAST_ONE_DEFAULT_EMAIL || "Mark one email as default";
+      case "INVITE_RECEIVED": return LOCALE.INVITE_AWAITING_FOR_YOUR_RESPONSE;
+      case "EMAIL_NOT_SENT": return LOCALE.MESSAGE_NOT_SENT_RETRY;
+      case "SELF_CONTACT": return LOCALE.CANNOT_ADD_SELF_AS_CONTACT;
+      case "NO_DEFAULT_MAIL": return LOCALE.AT_LEAST_ONE_DEFAULT_EMAIL || "Mark one email as default";
       case "MANY_DEFAULT_EMAIL": return LOCALE.ONLY_ONE_DEFAULT_EMAIL || "Only one email can be default";
-      default:                   return null;
+      default: return null;
     }
   }
 
@@ -574,8 +592,8 @@ class __address_book extends LetcBox {
     // instead of the entity UID.
     const primaryEmail = looksLikeEmail(full.email) ? full.email
       : looksLikeEmail(full.email_default) ? full.email_default
-      : looksLikeEmail(full.entity) ? full.entity
-      : "";
+        : looksLikeEmail(full.entity) ? full.entity
+          : "";
     this._editEmails = (Array.isArray(full.email) && full.email.length
       ? full.email.map((e) => ({ email: e.email || "", category: e.category || "priv", is_default: e.is_default || 0 }))
       : [{ email: primaryEmail, category: "priv", is_default: 1 }]);
@@ -603,15 +621,15 @@ class __address_book extends LetcBox {
       const inputs = row.querySelectorAll("input");
       return {
         areacode: inputs[0]?.value?.trim() || "",
-        phone:    inputs[1]?.value?.trim() || "",
+        phone: inputs[1]?.value?.trim() || "",
         category: row.dataset.category || "priv",
       };
     });
 
     return {
       firstname: root.querySelector("[data-field='firstname'] input")?.value?.trim() || "",
-      lastname:  root.querySelector("[data-field='lastname']  input")?.value?.trim() || "",
-      comment:   root.querySelector("[data-field='comment'] textarea, [data-field='comment'] input")?.value?.trim() || "",
+      lastname: root.querySelector("[data-field='lastname']  input")?.value?.trim() || "",
+      comment: root.querySelector("[data-field='comment'] textarea, [data-field='comment'] input")?.value?.trim() || "",
       email: emails,
       mobile,
     };
@@ -649,8 +667,8 @@ class __address_book extends LetcBox {
     const dom = this._readEditFields() || {};
 
     const firstname = String(dom.firstname || "").trim();
-    const lastname  = String(dom.lastname  || "").trim();
-    const comment   = String(dom.comment   || "").trim();
+    const lastname = String(dom.lastname || "").trim();
+    const comment = String(dom.comment || "").trim();
 
     // Persist what the user typed so a validation-failure re-render keeps
     // their values instead of reverting to the original contact data.
@@ -666,7 +684,7 @@ class __address_book extends LetcBox {
       ...p,
     }));
 
-    const emails = (dom.email  || []).filter((e) => e.email && e.email.trim());
+    const emails = (dom.email || []).filter((e) => e.email && e.email.trim());
     const mobile = (dom.mobile || []).filter((p) => p.phone && p.phone.trim());
     if (emails.length && !emails.some((e) => e.is_default === 1)) {
       emails[0].is_default = 1;
@@ -857,13 +875,13 @@ class __address_book extends LetcBox {
   _editErrorMessage(status) {
     switch (status) {
       case "CONACT_NOT_EXIST":
-      case "CONTACT_NOT_EXIST":  return LOCALE.SOMETHING_WENT_WRONG;
-      case "EMPTY_FIRSTNAME":    return LOCALE.FIRST_NAME_REQUIRED;
-      case "EMPTY_LASTNAME":     return LOCALE.LASTNAME_REQUIRED;
+      case "CONTACT_NOT_EXIST": return LOCALE.SOMETHING_WENT_WRONG;
+      case "EMPTY_FIRSTNAME": return LOCALE.FIRST_NAME_REQUIRED;
+      case "EMPTY_LASTNAME": return LOCALE.LASTNAME_REQUIRED;
       case "MANY_DEFAULT_EMAIL": return LOCALE.ONLY_ONE_DEFAULT_EMAIL;
-      case "NO_DEFAULT_MAIL":    return LOCALE.AT_LEAST_ONE_DEFAULT_EMAIL;
-      case "SERVICE_ERROR":      return LOCALE.SOMETHING_WENT_WRONG;
-      default:                   return null;
+      case "NO_DEFAULT_MAIL": return LOCALE.AT_LEAST_ONE_DEFAULT_EMAIL;
+      case "SERVICE_ERROR": return LOCALE.SOMETHING_WENT_WRONG;
+      default: return null;
     }
   }
 
@@ -1131,10 +1149,10 @@ class __address_book extends LetcBox {
   getEditError() { return this._editError; }
   getEditEmails() { return this._editEmails || []; }
   getEditPhones() { return this._editPhones || []; }
-  getEditTags()   { return this._editTags || []; }
+  getEditTags() { return this._editTags || []; }
   getEditFirstname() { return this._editFirstname || ""; }
-  getEditLastname()  { return this._editLastname || ""; }
-  getEditComment()   { return this._editComment || ""; }
+  getEditLastname() { return this._editLastname || ""; }
+  getEditComment() { return this._editComment || ""; }
   isEditSubmitting() { return this._editSubmitting === true; }
 
   getImportError() { return this._importError; }

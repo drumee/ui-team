@@ -31,8 +31,7 @@ class __panel_activity extends LetcBox {
 
     window.ActivityHandler = this;
 
-
-    // RADIO_CLICK.on(_e.click, this._onOutsideClick)
+    this._onOutsideClick = this._onOutsideClick.bind(this);
     this._currentCount = 0;
     this._currentPayload = {};
     this._unreadsOnly = 1;
@@ -45,13 +44,21 @@ class __panel_activity extends LetcBox {
     this._last_notified = 0;
   }
 
-
+  /**
+   * 
+   * @param {*} e 
+   */
+  _onOutsideClick(e) {
+    if (this.activityState && !this.el.contains(e.target)) {
+      Desk.closeAllPanels()
+    }
+  }
 
   /**
    * 
    */
   onDestroy() {
-    // RADIO_BROADCAST.off(_e.click, this._onOutsideClick);
+    RADIO_BROADCAST.off(_e.click, this._onOutsideClick);
     RADIO_BROADCAST.off('activity:request', this.updateSubactivityCount);
     RADIO_BROADCAST.off('activity:notify', this._notify);
     document.removeEventListener("visibilitychange", this.onVisibilityChange);
@@ -77,6 +84,7 @@ class __panel_activity extends LetcBox {
     RADIO_BROADCAST.on('activity:request', this.updateSubactivityCount);
     RADIO_BROADCAST.on('activity:notify', this._notify);
     RADIO_NETWORK.on(_e.online, this.refreshActivity);
+    RADIO_CLICK.on(_e.click, this._onOutsideClick)
     this.visible = !document.hidden;
     this.feed(require('./skeleton')(this));
     this.ensurePart(_a.list).then((p) => {

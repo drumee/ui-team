@@ -43,6 +43,15 @@ class __desk_workspace extends LetcBox {
     });
   }
 
+  /**
+   * 
+   */
+  collapseTree() {
+    if (!this._openWorkspaceItem || this._openWorkspaceItem.isDestroyed()) return
+    this._openWorkspaceItem.collapseTree();
+  }
+
+
   refreshList() {
     this._openWorkspaceKey = null;
     this._openWorkspaceItem = null;

@@ -813,7 +813,7 @@ class desk_module extends LetcBox {
    */
   onWorkspaceClosed() {
     this.ensurePart("breadcrumb").then((p) => { p.loadDefault(0) })
-    this.ensurePart("workspace-main").then((p) => { p.onDomRefresh() })
+    this.ensurePart("workspace-main").then((p) => { p.collapseTree() })
   }
 
   /**
@@ -1317,7 +1317,7 @@ class desk_module extends LetcBox {
    *
    */
   lazyClasses() {
-    for (var k of ["window_confirm", "media_uploader"]) {
+    for (var k of ["window_confirm", "media_uploader", "panel_trash", "panel_activity", "chat_p2p", "address_book", "apps_main", "settings_main"]) {
       Kind.waitFor(k);
     }
   }

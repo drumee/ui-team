@@ -97,9 +97,15 @@ class __window_mfs extends DrumeeMFS {
    * Try tu refresh by looking into changelog
    */
   _checkChangelog() {
+    if (this.mget(_a.kind) == 'window_meeting') return;
+
     let pid = this.getCurrentNid();
     let cur_hub_id = this.mget(_a.hub_id);
-    let args = { hub_id: this.mget(_a.hub_id) };
+    let nid = pid;
+    if (this.mget(_a.filepath) == '/') {
+      nid = this.mget(_a.home_id)
+    }
+    let args = { hub_id: cur_hub_id, nid };
     if (this._changelog_id) {
       args.id = this._changelog_id;
     } else {
