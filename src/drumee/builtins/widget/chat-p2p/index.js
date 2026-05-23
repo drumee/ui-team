@@ -16,11 +16,25 @@ class __chat_p2p extends LetcBox {
     this._radioId = `peer-${this.mget(_a.widgetId)}`;
     this._filter = _a.contact;
     this.bindEvent(_a.live);
+    this._onOutsideClick = this._onOutsideClick.bind(this);
+
+  }
+
+  /**
+   * 
+   * @param {*} e 
+   */
+  _onOutsideClick(e) {
+    if (this.el.dataset.anim === "in" && !this.el.contains(e.target)) {
+      Desk.closeAllPanels()
+    }
   }
 
   onBeforeDestroy() {
     this.unbindEvent(_a.live);
     document.removeEventListener("mousedown", this._onDocClick);
+    RADIO_BROADCAST.off(_e.click, this._onOutsideClick);
+
   }
 
   /**
@@ -58,6 +72,7 @@ class __chat_p2p extends LetcBox {
 
   onDomRefresh() {
     this.feed(require('./skeleton')(this));
+    RADIO_CLICK.on(_e.click, this._onOutsideClick)
   }
 
   /**

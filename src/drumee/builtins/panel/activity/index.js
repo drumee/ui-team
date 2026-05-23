@@ -31,8 +31,7 @@ class __panel_activity extends LetcBox {
 
     window.ActivityHandler = this;
 
-
-    // RADIO_CLICK.on(_e.click, this._onOutsideClick)
+    this._onOutsideClick = this._onOutsideClick.bind(this);
     this._currentCount = 0;
     this._currentPayload = {};
     this._unreadsOnly = 1;
@@ -45,13 +44,21 @@ class __panel_activity extends LetcBox {
     this._last_notified = 0;
   }
 
-
+  /**
+   * 
+   * @param {*} e 
+   */
+  _onOutsideClick(e) {
+    if (this.activityState && !this.el.contains(e.target)) {
+      Desk.closeAllPanels()
+    }
+  }
 
   /**
    * 
    */
   onDestroy() {
-    // RADIO_BROADCAST.off(_e.click, this._onOutsideClick);
+    RADIO_BROADCAST.off(_e.click, this._onOutsideClick);
     RADIO_BROADCAST.off('activity:request', this.updateSubactivityCount);
     RADIO_BROADCAST.off('activity:notify', this._notify);
     document.removeEventListener("visibilitychange", this.onVisibilityChange);
@@ -77,6 +84,7 @@ class __panel_activity extends LetcBox {
     RADIO_BROADCAST.on('activity:request', this.updateSubactivityCount);
     RADIO_BROADCAST.on('activity:notify', this._notify);
     RADIO_NETWORK.on(_e.online, this.refreshActivity);
+    RADIO_CLICK.on(_e.click, this._onOutsideClick)
     this.visible = !document.hidden;
     this.feed(require('./skeleton')(this));
     this.ensurePart(_a.list).then((p) => {
@@ -574,7 +582,12 @@ class __panel_activity extends LetcBox {
       }
       return true;
     });
-    const unread_count = live.reduce((acc, it) => acc + (parseInt(it.cnt, 10) || 0), 0);
+    // Badge reflects the number of distinct notification rows the user
+    // sees (one per grouped category × peer × hub), NOT the total event
+    // count `cnt` accumulated inside each group. Otherwise "Tran sent 3
+    // messages" + "Snake invited you" would render as 1 list row with
+    // badge=4 — confusing. Matches Gmail/Slack convention.
+    const unread_count = live.length;
     RADIO_BROADCAST.trigger('activity-update', { unread_count });
     this.updatePriorityListUnified(live);
     if (!this.mget(_a.state)) return;
