@@ -996,6 +996,7 @@
   "MEETING_ENDED": "Meeting Ended",
   "MEETING_ENDED_BY_HOST": "The host ended the meeting",
   "HOSTED_BY": "Hosted by {0}",
+  "PARTICIPANT": "Participant",
   "PARTICIPANTS": "Participants",
   "HOW_WAS_THE_MEETING": "How was the meeting?",
   "ANY_COMMENTS_OPTIONAL": "Any comments? (Optional)",
