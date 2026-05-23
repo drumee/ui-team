@@ -19,6 +19,11 @@ class __workspace_item extends LetcBox {
     this._expanded = 0;
     this._childrenLoaded = 0;
     this._loadingChildren = 0;
+    this.bindEvent(_a.live);
+  }
+
+  onBeforeDestroy() {
+    this.unbindEvent(_a.live);
   }
 
   /**
@@ -125,6 +130,108 @@ class __workspace_item extends LetcBox {
       return this.toggleTree();
     }
     this.triggerHandlers({ service: this.mget(_a.service) })
+  }
+
+  /**
+   * Folder mutations under THIS node — re-fetch and re-feed children.
+   * Strict gating: filetype === folder AND parent_id matches own id.
+   * No model attribute mutation (a previous attempt listened to
+   * change:filename and corrupted the label on click).
+   * Skip when tree is collapsed or not yet loaded — next expand will
+   * fetch fresh anyway.
+   */
+  /**
+   * Incremental folder-tree updates — add/remove on the children
+   * collection, single-item re-feed on rename. No listenTo on the
+   * model itself (a prior attempt caused the workspace label to clear
+   * on click). Each level subscribes for its own direct children only
+   * (parent_id === own nodeId); deeper folders are handled by their
+   * own listener.
+   */
+  onWsMessage(svc, data, options = {}) {
+    const { service } = options || svc;
+    if (!data) {
+      if (super.onWsMessage) super.onWsMessage(svc, data, options);
+      return;
+    }
+    if (
+      service !== "media.new" &&
+      service !== "media.remove" &&
+      service !== "media.rename"
+    ) {
+      if (super.onWsMessage) super.onWsMessage(svc, data, options);
+      return;
+    }
+    const args = (data.args && data.args.dest) || data;
+    const filetype = args.filetype || data.filetype;
+    if (filetype !== _a.folder) return;
+    if (!this._expanded || !this._childrenLoaded) return;
+    switch (service) {
+      case "media.new":
+        return this._addFolder(data);
+      case "media.remove":
+        return this._removeFolder(data);
+      case "media.rename":
+        return this._renameFolder(data);
+    }
+  }
+
+  // Re-render this single item's skeleton — used by the parent
+  // workspace-list when a hub is renamed, to refresh the label without
+  // restarting the whole list.
+  refresh() {
+    if (!this.el) return;
+    this.feed(require("./skeleton")(this));
+  }
+
+  _withChildrenPart(fn) {
+    return this.ensurePart("children").then((p) => {
+      if (!p) return;
+      return fn(p);
+    });
+  }
+
+  _findChildModel(part, nid) {
+    if (!part || !nid || !part.collection) return null;
+    return part.collection.find(
+      (m) => m.get(_a.nid) === nid || m.get(_a.id) === nid,
+    );
+  }
+
+  _addFolder(data) {
+    const parentId = data.parent_id || data.pid;
+    if (parentId !== this.getNodeId()) return;
+    this._withChildrenPart((p) => {
+      const nid = data.nid || data.id;
+      if (this._findChildModel(p, nid)) return;
+      p.append(this.normalizeFolder(data));
+    });
+  }
+
+  _removeFolder(data) {
+    const nid = data.nid || data.id;
+    if (!nid) return;
+    this._withChildrenPart((p) => {
+      const model = this._findChildModel(p, nid);
+      if (model) p.collection.remove(model);
+    });
+  }
+
+  _renameFolder(data) {
+    const args = (data && data.args && data.args.dest) || data;
+    const nid = args.nid || args.id;
+    if (!nid) return;
+    const filename = args.filename || args.name;
+    if (!filename) return;
+    this._withChildrenPart((p) => {
+      const model = this._findChildModel(p, nid);
+      if (!model) return;
+      model.set(_a.filename, filename);
+      model.set(_a.name, filename);
+      const itemView = p.children && p.children.find &&
+        p.children.find((c) => c.model === model);
+      if (itemView && typeof itemView.refresh === "function") itemView.refresh();
+    });
   }
 }
 

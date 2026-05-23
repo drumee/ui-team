@@ -422,7 +422,6 @@ class desk_module extends LetcBox {
       return;
     }
     let args = Visitor.parseModuleArgs()
-    this.debug("AAA:3335", args)
     if (args.hasOwnProperty('wm') && window.Wm) {
       return window.Wm.route()
     }

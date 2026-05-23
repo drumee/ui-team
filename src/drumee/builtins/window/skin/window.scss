@@ -23,14 +23,6 @@
       min-width: 300px;
     }
 
-    &[data-headless="1"] {
-      width: 100% !important;
-      height: 100vh !important;
-      top: -49px !important;
-      left: 6px !important;
-      border-radius: 0;
-    }
-
     // `.window__ui` is shared with window_manager (both have fig.group="window"),
     // so this active-window lift would otherwise hoist the entire home content
     // above the settings/apps slot (z 1500). Scope to actual window instances.

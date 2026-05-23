@@ -31,6 +31,14 @@ class __window_folder extends mfsInteract {
       workspaceHeight - 96,
     );
 
+    if (this.mget(_a.headless)) {
+      return {
+        left: 0,
+        top: -49,
+        width: workspaceWidth,
+        height: workspaceHeight + 49,
+      };
+    }
     // Cascade: shift each new popup 30px down-right per existing
     // non-headless sibling so back-to-back "Open in Window" actions don't
     // stack popups on top of each other. Headless workspace pane is
@@ -38,8 +46,8 @@ class __window_folder extends mfsInteract {
     // computed at mount time — already-open popups don't move.
     const siblings = (window.Wm && typeof window.Wm.getItemsByKind === "function")
       ? window.Wm.getItemsByKind("window_folder").filter(
-          (w) => w !== this && !w.isDestroyed() && !w.mget(_a.headless)
-        ).length
+        (w) => w !== this && !w.isDestroyed() && !w.mget(_a.headless)
+      ).length
       : 0;
     const cascadeStep = 30;
     const maxSteps = Math.max(0, Math.floor((workspaceWidth - width - 48) / cascadeStep));
@@ -112,7 +120,7 @@ class __window_folder extends mfsInteract {
       height: this.size.height,
     });
 
-  if (this.mget(_a.headless)) {
+    if (this.mget(_a.headless)) {
       this.listenTo(this.model, `change:${_a.state}`, this._syncWorkspaceFocus);
     }
   }
@@ -125,6 +133,7 @@ class __window_folder extends mfsInteract {
     if (!window.Wm || !_.isFunction(window.Wm.onWorkspaceRaised)) return;
     window.Wm.onWorkspaceRaised(this);
   }
+
 
   buildContent(child) {
     this.__content = child;
@@ -390,10 +399,13 @@ class __window_folder extends mfsInteract {
     } finally {
       this._navRestoring = 0;
     }
-    this._refreshBreadcrumbsUI();
+    this.refreshBreadcrumbsUI();
   }
 
-  _refreshBreadcrumbsUI() {
+  refreshBreadcrumbsUI(stack) {
+    if (stack && _.isArray(stack)) {
+      this._navStack = stack
+    }
     const depth = this._navStack.length;
     this.ensurePart("folder-breadcrumb-path").then((box) => {
       if (!box || (box.isDestroyed && box.isDestroyed())) return;
@@ -451,7 +463,6 @@ class __window_folder extends mfsInteract {
 
   onUiEvent(cmd, args = {}) {
     const service = args.service || cmd.service || cmd.mget(_a.service);
-    this.debug("AAA:421", service)
     switch (service) {
       case _a.info:
         return this.showInfo();
@@ -777,7 +788,7 @@ class __window_folder extends mfsInteract {
     }
     super.updateTopbar(m);
     this.scopeChatToFolder(this.mget(_a.nid));
-    this._refreshBreadcrumbsUI();
+    this.refreshBreadcrumbsUI();
   }
 
   showFolderTab(tab) {

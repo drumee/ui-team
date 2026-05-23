@@ -35,11 +35,12 @@ class __desk_workspace extends LetcBox {
    */
   _onWorkspaceFocus({ hub_id } = {}) {
     if (!hub_id || hub_id == this._openWorkspaceKey) return;
-    const list = this.__list;
-    if (!list || !list.children) return;
-    const item = list.children.find((c) => this.getWorkspaceKey(c) == hub_id);
-    if (!item) return;
-    this.openWorkspace(item);
+    this.ensurePart(_a.list).then((list) => {
+      if (!list || !list.children) return;
+      const item = list.children.find((c) => this.getWorkspaceKey(c) == hub_id);
+      if (!item) return;
+      this.openWorkspace(item);
+    });
   }
 
   refreshList() {
@@ -103,81 +104,109 @@ class __desk_workspace extends LetcBox {
   }
 
   /**
-   * Live updates so the sidebar reflects hub adds / removes / renames
-   * without a refetch (originated locally or from another device).
+   * Incremental sidebar updates — append/remove on the live collection,
+   * single-item re-feed on rename. media.* fires for every node type;
+   * gate strictly by `filetype === hub` so a file mutation inside a
+   * workspace can't churn the sidebar. NO listenTo on model attribute
+   * change (a prior attempt did and the workspace label cleared on click).
+   * list.restart() is reserved for hub.invite_received where we don't
+   * know the precise delta.
    */
   onWsMessage(svc, data, options = {}) {
     const { service } = options || svc;
 
-    // Handle before the data/list guard — refreshList() uses ensurePart and
-    // is safe regardless of data or this.__list state.
     if (service === "hub.invite_received") {
       this.refreshList();
       return;
     }
 
-    if (!data || !this.__list) {
+    if (!data) {
       if (super.onWsMessage) super.onWsMessage(svc, data, options);
       return;
     }
 
-    // Match literal service names rather than SERVICE.* lookups —
-    // safer if a namespace happens to be missing (would otherwise
-    // throw on the case expression itself before matching).
+    const args = (data.args && data.args.dest) || data;
+    const filetype = args.filetype || data.filetype;
+    const isMediaEvent =
+      service === "media.new" ||
+      service === "media.remove" ||
+      service === "media.rename";
+    if (isMediaEvent && filetype !== _a.hub) {
+      if (super.onWsMessage) super.onWsMessage(svc, data, options);
+      return;
+    }
+
     switch (service) {
       case "media.new":
       case "desk.create_hub":
       case "hub.add_contributors":
-        if (data.filetype === _a.hub) this._addHub(data);
-        break;
-
+        this._addHub(data);
+        return;
       case "media.remove":
       case "hub.delete_hub":
       case "desk.leave_hub":
         this._removeHub(data);
-        break;
-
+        return;
       case "media.rename":
       case "hub.update_name":
         this._renameHub(data);
-        break;
-
+        return;
       default:
         if (super.onWsMessage) super.onWsMessage(svc, data, options);
     }
   }
 
-  _findHubModel(data) {
-    const col = this.__list && this.__list.collection;
-    if (!col) return null;
-    const hubId = data.hub_id || data.nid || data.id;
-    return col.find((m) => {
-      return m.get(_a.hub_id) === hubId
-        || m.get(_a.nid) === hubId
-        || m.get(_a.id) === hubId;
+  _withList(fn) {
+    return this.ensurePart(_a.list).then((list) => {
+      if (!list) return;
+      return fn(list);
     });
   }
 
+  // Match strictly by hub_id / home_id only — files and folders share
+  // `nid` with their parent hub which would cause false-positive matches
+  // (a file delete inside workspace would remove the workspace itself).
+  _findHubModel(list, data) {
+    const col = list && list.collection;
+    if (!col) return null;
+    const hubId = data.hub_id || data.home_id;
+    if (!hubId) return null;
+    return col.find((m) =>
+      m.get(_a.hub_id) === hubId ||
+      m.get(_a.home_id) === hubId ||
+      m.get(_a.actual_home_id) === hubId,
+    );
+  }
+
   _addHub(data) {
-    if (this._findHubModel(data)) return;
-    // Mirror the skeleton's skip filter — `private` is the UX "restricted".
     const area = data && data.area;
     if (area !== _a.share && area !== _a.private && area !== _a.restricted) return;
-    this.__list.append(data);
+    this._withList((list) => {
+      if (this._findHubModel(list, data)) return;
+      list.append(data);
+    });
   }
 
   _removeHub(data) {
-    const model = this._findHubModel(data);
-    if (model) this.__list.collection.remove(model);
+    this._withList((list) => {
+      const model = this._findHubModel(list, data);
+      if (model && list.collection) list.collection.remove(model);
+    });
   }
 
   _renameHub(data) {
     const args = (data && data.args && data.args.dest) || data;
-    if (!args) return;
-    const model = this._findHubModel(args);
-    if (!model) return;
-    if (args.filename) model.set(_a.filename, args.filename);
-    if (args.name) model.set(_a.name, args.name);
+    const filename = args && (args.filename || args.name || args.hubname);
+    if (!filename) return;
+    this._withList((list) => {
+      const model = this._findHubModel(list, args);
+      if (!model) return;
+      model.set(_a.filename, filename);
+      model.set(_a.name, filename);
+      const item = list.children && list.children.find &&
+        list.children.find((c) => c.model === model);
+      if (item && typeof item.refresh === "function") item.refresh();
+    });
   }
 }
 

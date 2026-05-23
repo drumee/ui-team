@@ -35,7 +35,9 @@ class __window_manager extends push {
       _a.preferences,
     ];
     this._handelKbdEvents = this._handelKbdEvents.bind(this);
-    RADIO_KBD.on(_e.keyup, this._handelKbdEvents);
+    RADIO_KBD.on(_e.keyup, this._handelKbdEvents)
+    /** Preload some most used widget. Do not use await to avoid blocking */
+    Kind.waitFor('window_folder')
   }
 
   /**
@@ -289,6 +291,7 @@ class __window_manager extends push {
     const hub_id = data.hub_id || data.id;
     let nid = data.actual_home_id || data.home_id || data.nid;
     data.nid = nid;
+
     if (!hub_id) {
       this.warn("loadWorkspace: missing hub_id", data);
       return;
@@ -323,7 +326,6 @@ class __window_manager extends push {
       if (gen !== this._wsGeneration) return;
       this._curWorkspace = { hub_id, nid: data.nid, area: data.area };
       this.mset(data);
-
       this.windowsLayer.append({
         kind: "window_folder",
         hub_id,
@@ -334,15 +336,21 @@ class __window_manager extends push {
         // from the right-click "Open in Window" popup (which keeps the
         // `window_folder-${hub_id}` prefix). See
         // docs/superpowers/specs/2026-05-22-multi-folder-windows-design.md.
-        wm_unique_id: `workspace-${hub_id}`,
+        wm_unique_id: `window_folder-${hub_id}`,
       });
       this.windowsLayer.el.dataset.headless = "1";
       this.ensurePart("wrapper-modal").then((p) => p.clear());
-      this.updateBreadcrumb(
-        { ...data, hub_id, service: "change-workspace" },
-        this,
-      );
-      this._curWorkspace.widget = this.windowsLayer.children.last();
+      // this.updateBreadcrumb({ ...data, hub_id, service: "change-workspace" }, this);
+      let cur = this.windowsLayer.children.last()
+      cur.once(_a.destroy, () => {
+        this._curWorkspace = null;
+        this.windowsLayer.el.dataset.headless = "0"
+      })
+      this.fetchService(SERVICE.media.get_path, { nid, hub_id }).then((data) => {
+        if (_.isEmpty(data)) return;
+        cur.refreshBreadcrumbsUI(data)
+      })
+      this._curWorkspace.widget = cur;
     };
 
     // nid often arrives later via the media.attributes fetch below. The
@@ -354,7 +362,7 @@ class __window_manager extends push {
       nid,
       nodeId: nid,
       area: data.area,
-      ownpath: "/",
+      ownpath: data.ownpath, // "/",
       home_id: nid,
     });
 
@@ -372,7 +380,7 @@ class __window_manager extends push {
         }
         try {
           workspace.model && workspace.model.set(attrs);
-        } catch (e) {}
+        } catch (e) { }
         apply(attrs);
       })
       .catch((e) => this.warn("loadWorkspace: get_attributes failed", e));
@@ -441,10 +449,10 @@ class __window_manager extends push {
     const home_id = isWorkspace
       ? nid
       : data.actual_home_id ||
-        data.home_id ||
-        data.workspace_nid ||
-        this.mget(_a.home_id) ||
-        nid;
+      data.home_id ||
+      data.workspace_nid ||
+      this.mget(_a.home_id) ||
+      nid;
     this._curWorkspace = { hub_id, nid, area: data.area };
     this.mset({ hub_id, nid, nodeId: nid, area: data.area, ownpath, home_id });
     this.ensurePart(_a.list).then((l) => {
@@ -776,7 +784,7 @@ class __window_manager extends push {
   /**
    * To do : allow copy/paste/supp through keyboard short cut
    */
-  _handelKbdEvents(e) {}
+  _handelKbdEvents(e) { }
 
   /**
    * Home-grid filter — drop hub-symlinks for non-collaborative areas
@@ -881,7 +889,7 @@ class __window_manager extends push {
   /**
    *
    */
-  _openDefault() {}
+  _openDefault() { }
 
   /**
    *
@@ -1063,7 +1071,7 @@ class __window_manager extends push {
     this.windowsLayer.children.each(function (c) {
       try {
         return c.reload();
-      } catch (error) {}
+      } catch (error) { }
     });
   }
 
@@ -1143,7 +1151,7 @@ class __window_manager extends push {
       nodes,
       hub_id: nodes[0].hub_id,
     })
-      .then((data) => {})
+      .then((data) => { })
       .catch((e) => {
         this.warn("Failed to delete nodes", nodes, e);
       });
@@ -1210,7 +1218,7 @@ class __window_manager extends push {
           });
           p.clear();
         })
-        .catch(() => {});
+        .catch(() => { });
     });
   }
 
@@ -1265,7 +1273,7 @@ class __window_manager extends push {
           }
           p.clear();
         })
-        .catch(() => {});
+        .catch(() => { });
     });
   }
 
@@ -1483,10 +1491,10 @@ class __window_manager extends push {
           const skel =
             this._curWorkspace && this._curWorkspace.hub_id
               ? {
-                  kind: "folder_form",
-                  hub_id: this._curWorkspace.hub_id,
-                  nid: this._curWorkspace.nid,
-                }
+                kind: "folder_form",
+                hub_id: this._curWorkspace.hub_id,
+                nid: this._curWorkspace.nid,
+              }
               : { kind: "media_form" };
           p.feed(skel);
           // Reset the wrapper only when the whole dialog chain is gone.
@@ -1731,7 +1739,7 @@ class __window_manager extends push {
       this.iconsList.children.each((c) => {
         try {
           return c.unselect();
-        } catch (error) {}
+        } catch (error) { }
       });
     }
 
@@ -1739,7 +1747,7 @@ class __window_manager extends push {
       if (t !== c) {
         try {
           return c.unselect();
-        } catch (error) {}
+        } catch (error) { }
       }
     });
   }
