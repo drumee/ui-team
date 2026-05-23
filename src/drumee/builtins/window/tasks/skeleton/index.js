@@ -590,10 +590,13 @@ const make = function (ui) {
     // Always mount the pending list with a sys_pn so add/remove can refeed
     // just this part via ensurePart — full _render() would blow away the
     // title/description inputs' focus and scroll position.
+    //
+    // Pending list sits ABOVE the search/upload bar so it stacks naturally
+    // with the existing attachments above (detail panel) or with the form
+    // fields above (create modal) — all "file rows" land together.
     return Skeletons.Box.Y({
       className: `${pfx}__file-picker`,
       kids: [
-        searchField,
         Skeletons.Box.Y({
           className: `${pfx}__file-pending-list`,
           sys_pn: `file-pending-list-${scope}`,
@@ -601,6 +604,7 @@ const make = function (ui) {
           dataset: { empty: pendingFiles.length ? 0 : 1 },
           kids: pendingFiles.map(pendingRow),
         }),
+        searchField,
       ],
     });
   };
@@ -802,6 +806,24 @@ const make = function (ui) {
         ],
       });
 
+    // Rows live in a stable sub-part so unlink can re-feed just this list
+    // without re-rendering the whole detail panel (which would steal focus
+    // and wipe any unsaved title/description edits).
+    const attachmentRowsContainer = Skeletons.Box.Y({
+      className: `${pfx}__attachment-rows`,
+      sys_pn: "attachment-rows",
+      partHandler: ui,
+      dataset: { empty: attachments.length ? 0 : 1 },
+      kids: attachments.length
+        ? attachments.map(attachmentRow)
+        : [
+            Skeletons.Note({
+              className: `${pfx}__attachments-empty`,
+              content: LOCALE.NO_ATTACHMENTS,
+            }),
+          ],
+    });
+
     const attachmentsList = Skeletons.Box.Y({
       className: `${pfx}__attachments`,
       kids: [
@@ -812,26 +834,14 @@ const make = function (ui) {
               className: `${pfx}__detail-label`,
               content: LOCALE.ATTACHMENTS,
             }),
-            // Skeletons.Note({
-            //   className: `${pfx}__attachment-add`,
-            //   content: `+ ${LOCALE.ATTACH_FILE}`,
-            //   bubble: 0,
-            //   service: "pick-attachment",
-            //   uiHandler: [ui],
-            // }),
           ],
         }),
-        ...(attachments.length
-          ? attachments.map(attachmentRow)
-          : [
-              Skeletons.Note({
-                className: `${pfx}__attachments-empty`,
-                content: LOCALE.NO_ATTACHMENTS,
-              }),
-            ]),
+        attachmentRowsContainer,
         filePickerBlock("detail", {
           taskId: detail.id,
           existingFiles: attachments,
+          // Detail pending list — files queued for upload/link on Update.
+          pendingFiles: dDraft.pending_files || [],
         }),
       ],
     });
@@ -1217,7 +1227,40 @@ function buildPendingListContent(ui, pendingFiles) {
   );
 }
 
+function buildAttachmentRowsContent(ui, attachments, taskId) {
+  const pfx = ui.fig.family;
+  if (!attachments || !attachments.length) {
+    return [
+      Skeletons.Note({
+        className: `${pfx}__attachments-empty`,
+        content: LOCALE.NO_ATTACHMENTS,
+      }),
+    ];
+  }
+  return attachments.map((f) =>
+    Skeletons.Box.X({
+      className: `${pfx}__attachment-row`,
+      kids: [
+        Skeletons.Note({
+          className: `${pfx}__attachment-name`,
+          content: `${f.filename || ""}${f.extension ? "." + f.extension : ""}`,
+        }),
+        Skeletons.Button.Svg({
+          className: `${pfx}__attachment-unlink`,
+          ico: "cross",
+          bubble: 0,
+          service: "unlink-attachment",
+          uiHandler: [ui],
+          taskId,
+          fileNid: f.file_nid,
+        }),
+      ],
+    }),
+  );
+}
+
 make.buildFileSearchDropdownContent = buildFileSearchDropdownContent;
 make.buildAssigneeButtonContent = buildAssigneeButtonContent;
 make.buildPendingListContent = buildPendingListContent;
+make.buildAttachmentRowsContent = buildAttachmentRowsContent;
 module.exports = make;
