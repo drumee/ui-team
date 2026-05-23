@@ -1102,7 +1102,31 @@ class __window_folder extends mfsInteract {
         Wm.alert(res.reason || res.error || LOCALE.TRY_AGAIN);
         return;
       }
-      await this._refreshFolderMembers();
+      // Trust the POST: mutate the cached row in place and redraw from
+      // local state (hub.get_members_by_type can return stale data on
+      // immediate read-after-write).
+      raw.privilege = nextRole.privilege;
+      if (this.dialogWrapper) {
+        // The initial mount in switchShowFolderSettings attaches a
+        // once(destroy) handler on the panel that flips isShowSettings
+        // to false. An in-place re-feed destroys that old child and
+        // would trip the handler — detach it first, then re-attach an
+        // identical handler to the freshly mounted child so the close
+        // button keeps working.
+        const oldChild = this.dialogWrapper.children?.last?.();
+        if (oldChild) oldChild.off(_e.destroy);
+        this.dialogWrapper.feed(
+          require("./skeleton/settings-action-panel")(this),
+        );
+        this.isShowSettings = true;
+        const newChild = this.dialogWrapper.children?.last?.();
+        if (newChild) {
+          newChild.once(_e.destroy, () => {
+            this.isShowSettings = false;
+            this.unselect();
+          });
+        }
+      }
       Wm.alert(LOCALE.ROLE_UPDATED_SUCCESSFULLY || "Role updated.");
     } catch (e) {
       Wm.alert(e?.reason || e?.error || LOCALE.TRY_AGAIN);
