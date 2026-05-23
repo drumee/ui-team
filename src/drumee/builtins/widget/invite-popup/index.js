@@ -31,9 +31,12 @@ class __invite_popup extends LetcBox {
     super.initialize(opt);
     this.declareHandlers();
     this._invitees = [];
+    // Don't seed hub_id from opt: the workspace input renders empty, so a
+    // pre-seeded id would make the Send button look enabled while the user
+    // sees an empty placeholder. Force an explicit pick.
     this._workspaces = [
       {
-        hub_id: opt.hub_id || null,
+        hub_id: null,
         name: "",
         roleIds: DEFAULT_ROLE_IDS.slice(),
       },
@@ -135,6 +138,25 @@ class __invite_popup extends LetcBox {
     });
   }
 
+  _setError(ref, message) {
+    if (!ref) return;
+    if (message) {
+      ref.set({ content: message });
+      ref.el.dataset.state = 1;
+    } else {
+      ref.set({ content: "" });
+      ref.el.dataset.state = 0;
+    }
+  }
+
+  _setEmailError(message) {
+    this._setError(this._emailError, message);
+  }
+
+  _setWorkspaceError(message) {
+    this._setError(this._workspaceError, message);
+  }
+
   _closePopup() {
     if (this.parent && _.isFunction(this.parent.clear)) {
       this.parent.clear();
@@ -160,6 +182,10 @@ class __invite_popup extends LetcBox {
       }
     } else if (pn === "suggestions") {
       this._suggestionsBox = child;
+    } else if (pn === "email-error") {
+      this._emailError = child;
+    } else if (pn === "workspace-error") {
+      this._workspaceError = child;
     } else if (pn === "send-btn") {
       this._sendBtn = child;
     } else if (pn === "workspaces") {
@@ -206,6 +232,7 @@ class __invite_popup extends LetcBox {
   /* ── Email autocomplete ───────────────────────────────────── */
 
   _onSearchInput(e) {
+    this._setEmailError(null);
     const value = (e.target.value || "").trim();
     if (!value) {
       this._hideSuggestions();
@@ -267,9 +294,16 @@ class __invite_popup extends LetcBox {
   _addInvitee(data, opt) {
     if (!data || !data.email) return;
     const ownEmail = (Visitor.profile() || {}).email;
-    if (ownEmail && data.email.toLowerCase() === ownEmail.toLowerCase()) return;
-    if (this._invitees.find((i) => i.email === data.email)) return;
+    if (ownEmail && data.email.toLowerCase() === ownEmail.toLowerCase()) {
+      this._setEmailError(LOCALE.INVITE_EMAIL_SELF || "You cannot invite yourself.");
+      return;
+    }
+    if (this._invitees.find((i) => i.email === data.email)) {
+      this._setEmailError(LOCALE.INVITE_EMAIL_DUPLICATE || "This email is already in the list.");
+      return;
+    }
     this._invitees.push(data);
+    this._setEmailError(null);
     this._renderChips();
     this._refreshSendState();
     if (opt && opt.clearInput && this._emailInput) {
@@ -317,7 +351,8 @@ class __invite_popup extends LetcBox {
     const hasInvitee = this._invitees.length > 0;
     const inputVal = this._emailInput?.el.querySelector("input")?.value?.trim();
     const hasPendingEmail = inputVal && __invite_popup._splitEmails(inputVal).length > 0;
-    this._sendBtn.el.dataset.state = hasInvitee || hasPendingEmail ? 1 : 0;
+    const hasWorkspace = Object.values(this._workspaces).some((w) => w && w.hub_id);
+    this._sendBtn.el.dataset.state = (hasInvitee || hasPendingEmail) && hasWorkspace ? 1 : 0;
   }
 
   _addPendingEmailFromInput() {
@@ -335,6 +370,9 @@ class __invite_popup extends LetcBox {
       }
     }
     if (inputEl) inputEl.value = leftovers.join(" ");
+    if (leftovers.length) {
+      this._setEmailError(LOCALE.INVITE_EMAIL_INVALID || "Please enter a valid email address.");
+    }
   }
 
   /* ── Workspace search ─────────────────────────────────────── */
@@ -473,7 +511,9 @@ class __invite_popup extends LetcBox {
     const wsIdx = this._workspaceIdxByRowIdx(idx);
     if (wsIdx == null) return;
     if (this._pickedHubIds(wsIdx).has(String(hub_id))) {
-      Wm.alert(
+      // Inline error, not Wm.alert: Wm.alert replaces __wrapperModal's
+      // content with a window_info dialog, which destroys this popup.
+      this._setWorkspaceError(
         LOCALE.INVITE_WORKSPACE_ALREADY_SELECTED
         || "This workspace is already selected.",
       );
@@ -485,6 +525,8 @@ class __invite_popup extends LetcBox {
     const inputEl = this._partRefs.workspaceInputs[idx]?.el?.querySelector("input");
     if (inputEl) inputEl.value = name;
     this._hideWorkspaceSuggestions(idx);
+    this._setWorkspaceError(null);
+    this._refreshSendState();
   }
 
   _workspaceIdxByRowIdx(rowIdx) {
@@ -497,7 +539,9 @@ class __invite_popup extends LetcBox {
       (w) => w && !w.hub_id,
     );
     if (hasEmpty) {
-      Wm.alert(
+      // Inline error, not Wm.alert: Wm.alert replaces __wrapperModal's
+      // content with a window_info dialog, which destroys this popup.
+      this._setWorkspaceError(
         LOCALE.INVITE_WORKSPACE_PICK_FIRST
         || "Please pick a workspace before adding another.",
       );
@@ -536,24 +580,28 @@ class __invite_popup extends LetcBox {
     delete this._partRefs.roleLabels[idx];
     delete this._partRefs.roleOptions[idx];
     delete this._workspaces[idx];
+    this._refreshSendState();
   }
 
   _sendInvitation() {
     this._addPendingEmailFromInput();
-    if (!this._invitees.length) return;
+    if (!this._invitees.length) {
+      this._setEmailError(LOCALE.INVITE_EMAIL_INVALID || "Please enter a valid email address.");
+      return;
+    }
 
     const emails = this._invitees.map((i) => i.email || i.id || i.uid);
-    const assignments = this._workspaces
+    const assignments = Object.values(this._workspaces)
       .filter((w) => w && w.hub_id)
       .map((w) => ({
         hub_id: w.hub_id,
         permission: computePrivilege(w.roleIds || DEFAULT_ROLE_IDS),
       }));
     if (!assignments.length) {
-      assignments.push({
-        hub_id: this.mget("hub_id") || Visitor.id,
-        permission: computePrivilege(this._workspaces[0]?.roleIds || DEFAULT_ROLE_IDS),
-      });
+      this._setWorkspaceError(
+        LOCALE.INVITE_WORKSPACE_REQUIRED || "Please select at least one workspace.",
+      );
+      return;
     }
     // Show the in-button loading spinner while hub.invite is in flight
     // (data-loading also disables pointer events — prevents double submit).

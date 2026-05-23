@@ -1238,6 +1238,7 @@
   "INVITE_TEAM_HINT": "Invitees receive an email to join your workspace. Manage permissions anytime from settings.",
   "INVITE_EMAIL_LABEL": "Invite member via email",
   "INVITE_WORKSPACE_PLACEHOLDER": "Search workspace to add",
+  "INVITE_WORKSPACE_PICK_FIRST": "请先选择一个工作区，然后再添加另一个。",
   "ROLE_ADMIN": "Admin",
   "ROLE_VIEW_EDIT": "View & Edit",
   "ROLE_VIEW_CHAT": "View & Chat",
