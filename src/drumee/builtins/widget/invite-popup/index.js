@@ -178,6 +178,25 @@ class __invite_popup extends LetcBox {
     this._setError(this._workspaceError, message);
   }
 
+  _setError(ref, message) {
+    if (!ref) return;
+    if (message) {
+      ref.set({ content: message });
+      ref.el.dataset.state = 1;
+    } else {
+      ref.set({ content: "" });
+      ref.el.dataset.state = 0;
+    }
+  }
+
+  _setEmailError(message) {
+    this._setError(this._emailError, message);
+  }
+
+  _setWorkspaceError(message) {
+    this._setError(this._workspaceError, message);
+  }
+
   _closePopup() {
     if (this.parent && _.isFunction(this.parent.clear)) {
       this.parent.clear();

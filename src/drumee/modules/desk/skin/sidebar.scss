@@ -136,7 +136,7 @@
   }
 
   &__logo {
-    align-items: start;
+    align-items: center;
     gap: 8px;
     padding: 0 24px;
 
@@ -343,7 +343,6 @@ html[data-theme="dark"] .desk-module-sidebar {
   }
 
   &__footer-user-menu-item {
-
     // Light-mode :hover fallback (#f5f5fa) bleeds through; re-anchor.
     &:hover {
       background-color: var(--normal-bg-80);
@@ -351,7 +350,6 @@ html[data-theme="dark"] .desk-module-sidebar {
   }
 
   &__footer-user-btn {
-
     // Bottom profile row's hover. The base rule uses --default-bg-hover
     // which resolves to --neutral-200 (#ebecf0, light gray) and has no
     // dark override — leaving a near-white hover smear on the dark
