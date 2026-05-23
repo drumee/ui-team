@@ -190,9 +190,14 @@
   &__logo-row {
     display: flex;
     flex-direction: row;
-    justify-content: space-between;
+    justify-content: center;
     align-items: flex-start;
     width: 100%;
+  }
+
+  &__logo {
+    align-items: center;
+    gap: 8px;
     padding: 0 24px;
     box-sizing: border-box;
   }
