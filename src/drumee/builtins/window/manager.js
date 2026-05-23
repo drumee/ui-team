@@ -1085,11 +1085,22 @@ class __window_manager extends mfsInteract {
     this.debug("AAAA:112", arg, o)
 
     if (o.singleton) {
-      let w = this.getItemsByKind(arg.kind)[0];
-      if (w && o.unique) {
-        w = this.getItemsByAttr(o.unique.key, o.unique.value)[0];
+      // Derive the "is this already open?" key in priority order:
+      //   1. explicit o.unique (legacy callers, e.g. window/team)
+      //   2. arg.wm_unique_id (most callers — folder, chat-item, dock)
+      //   3. fall back to first window of this kind (kind-only singletons
+      //      like support-ticket and pricing)
+      const uniqueKey = o.unique
+        ? o.unique
+        : (arg && arg.wm_unique_id
+            ? { key: 'wm_unique_id', value: arg.wm_unique_id }
+            : null);
+      let w;
+      if (uniqueKey) {
+        w = this.getItemsByAttr(uniqueKey.key, uniqueKey.value)[0];
+      } else {
+        w = this.getItemsByKind(arg.kind)[0];
       }
-
       if (w && !w.isDestroyed()) {
         const f = () => {
           if (_.isFunction(w.wake) && w.mget(_a.minimize)) {

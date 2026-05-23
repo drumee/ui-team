@@ -1059,9 +1059,23 @@ class __window_mfs extends DrumeeMFS {
  * 
  */
   setContainment() {
-    let minX = 0.75 * this.$el.width();
-    if (minX < 150) minX = Math.min(150, this.$el.width());
-    const containment = [-minX, 0, window.innerWidth * .9, window.innerHeight * .9];
+    const w = this.$el.outerWidth();
+    const h = this.$el.outerHeight();
+    // Clamp to the workspace rect (.window-manager__ui) in page coords so
+    // the dragged window can never leave the desk body on any side.
+    // jQuery UI's array containment constrains the element's TOP-LEFT
+    // corner, so subtract the window's own size from the bottom/right
+    // bounds to keep its bottom-right corner inside the workspace.
+    const $wm = Wm.$el;
+    const offset = $wm.offset();
+    const wmW = $wm.outerWidth();
+    const wmH = $wm.outerHeight();
+    const containment = [
+      offset.left,
+      offset.top,
+      offset.left + wmW - w,
+      offset.top + wmH - h,
+    ];
     this.$el.draggable("option", { containment });
   }
 

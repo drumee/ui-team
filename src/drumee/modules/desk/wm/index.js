@@ -1,6 +1,5 @@
-
 require("./skin");
-const { copyToClipboard } = require("@drumee/ui-essentials")
+const { copyToClipboard } = require("@drumee/ui-essentials");
 const { TweenLite, TimelineMax } = require("@drumee/ui-core/vendor");
 let lastClickTime = new Date().getTime();
 const push = require("./push");
@@ -73,12 +72,12 @@ class __window_manager extends push {
   }
 
   /**
-   * 
+   *
    */
   changeModalState(s) {
-    this.ensurePart('wrapper-modal').then((p) => {
-      p.el.dataset.state = s
-    })
+    this.ensurePart("wrapper-modal").then((p) => {
+      p.el.dataset.state = s;
+    });
   }
 
   /**
@@ -88,19 +87,19 @@ class __window_manager extends push {
    */
   route(l) {
     let args = Visitor.parseModuleArgs() || {};
-    let path = Visitor.parseModule() || []
+    let path = Visitor.parseModule() || [];
     switch (path[2]) {
       case _a.meeting:
-        let media = this.getItemsByAttr(_a.nid, args.nid)[0]
+        let media = this.getItemsByAttr(_a.nid, args.nid)[0];
         if (media && media.triggerHandlers) {
-          media.triggerHandlers({ service: "open-node", start_meeting: 1 })
-          return
+          media.triggerHandlers({ service: "open-node", start_meeting: 1 });
+          return;
         }
       case _a.chat:
-        Desk.openP2Pchat(args)
+        Desk.openP2Pchat(args);
         return;
       case _a.channel:
-        this.loadWorkspace(args)
+        this.loadWorkspace(args);
         return;
     }
     const loc = JSON.parse(localStorage.getItem("locationOnStart")); //"locationOnStart";
@@ -114,31 +113,43 @@ class __window_manager extends push {
     }
     // Direct folder URL deep link: #@desk/folder?hub_id=HUB_ID[&nid=NID]
     const pathArgs = Visitor.parseModule();
-    if (pathArgs[1] === 'folder') {
+    if (pathArgs[1] === "folder") {
       const params = Visitor.parseModuleArgs();
       if (params.hub_id) {
-        Kind.waitFor('window_folder').then(() => {
-          this.launch({ kind: 'window_folder', hub_id: params.hub_id, nid: params.nid }, { explicit: 1 });
+        Kind.waitFor("window_folder").then(() => {
+          const existing = this._findWorkspaceWindow(params.hub_id);
+          if (existing) {
+            existing.raise();
+            return;
+          }
+          this.launch(
+            { kind: "window_folder", hub_id: params.hub_id, nid: params.nid },
+            { explicit: 1 },
+          );
         });
       }
     }
   }
 
   /**
-   * 
+   *
    */
   openAccountSettings() {
     this.ensurePart("wrapper-modal").then((p) => {
-      p.feed({ kind: "settings_account" })
-    })
+      p.feed({ kind: "settings_account" });
+    });
   }
 
   openCreateFolderDialog() {
     this.ensurePart("wrapper-modal").then((p) => {
-      p.feed(require("builtins/window/folder/skeleton/create-folder-dialog")(this));
+      p.feed(
+        require("builtins/window/folder/skeleton/create-folder-dialog")(this),
+      );
       p.el.dataset.mode = "create-folder";
     });
-    this.ensurePart("create-folder-name").then((entry) => entry.focus && entry.focus());
+    this.ensurePart("create-folder-name").then(
+      (entry) => entry.focus && entry.focus(),
+    );
   }
 
   closeCreateFolderDialog() {
@@ -153,7 +164,10 @@ class __window_manager extends push {
     if (this._creatingFolder) return;
     this._creatingFolder = 1;
     const entry = this.getPart("create-folder-name");
-    const value = (cmd.getValue && cmd.getValue()) || (entry && entry.getValue && entry.getValue()) || LOCALE.NEW_FOLDER;
+    const value =
+      (cmd.getValue && cmd.getValue()) ||
+      (entry && entry.getValue && entry.getValue()) ||
+      LOCALE.NEW_FOLDER;
     const filename = String(value).trim() || LOCALE.NEW_FOLDER;
     if (/^(\.+|.+\/.+| +|\-{1,1})$/.test(filename)) {
       this._creatingFolder = 0;
@@ -170,19 +184,22 @@ class __window_manager extends push {
         filename,
         hub_id: Visitor.id,
         pid: Visitor.id,
-      }).then((res) => {
-        const hub = Array.isArray(res) ? res[0] : res;
-        if (hub && (hub.error || hub.error_code)) {
-          return this.alert(LOCALE[hub.error] || hub.reason || hub.error);
-        }
-        this.closeCreateFolderDialog();
-        // Sidebar appends via live `media.new` broadcast — no refetch needed.
-      }).catch((e) => {
-        this.warn("Failed to create private folder", e);
-        this.alert(e.reason || e.error || LOCALE.TRY_AGAIN);
-      }).finally(() => {
-        this._creatingFolder = 0;
-      });
+      })
+        .then((res) => {
+          const hub = Array.isArray(res) ? res[0] : res;
+          if (hub && (hub.error || hub.error_code)) {
+            return this.alert(LOCALE[hub.error] || hub.reason || hub.error);
+          }
+          this.closeCreateFolderDialog();
+          RADIO_BROADCAST.trigger("workspace:refresh");
+        })
+        .catch((e) => {
+          this.warn("Failed to create private folder", e);
+          this.alert(e.reason || e.error || LOCALE.TRY_AGAIN);
+        })
+        .finally(() => {
+          this._creatingFolder = 0;
+        });
     }
 
     const onHome = !this._curWorkspace;
@@ -201,61 +218,99 @@ class __window_manager extends push {
       notify: 1,
       socket_id: Visitor.get(_a.socket_id),
       seeding: 1,
-      echoId: this.mget('echoId'),
+      echoId: this.mget("echoId"),
       area,
-    }).then((data) => {
-      if (data && data.error) {
-        return this.alert(LOCALE[data.error] || data.error);
-      }
-      this.closeCreateFolderDialog();
-      this.ensurePart(_a.list).then((list) => {
-        if (!list || (list.isDestroyed && list.isDestroyed()) || !data) return;
-        const curHubId = this._curWorkspace ? this._curWorkspace.hub_id : Visitor.id;
-        const curNid = this._curWorkspace ? this._curWorkspace.nid : Visitor.get(_a.home_id);
-        if (curHubId != hub_id || curNid != nid) return;
-        if (data.pid && data.pid != nid) return;
-        data.kind = this._getKind();
-        data.service = "open-node";
-        data.uiHandler = [this];
-        if (data.position >= 0) list.append(data, data.position);
-        else list.append(data);
-        if (this.getViewMode && this.getViewMode() !== _a.row) {
-          this._partitionFoldersAndFiles(list);
+    })
+      .then((data) => {
+        if (data && data.error) {
+          return this.alert(LOCALE[data.error] || data.error);
         }
+        this.closeCreateFolderDialog();
+        this.ensurePart(_a.list).then((list) => {
+          if (!list || (list.isDestroyed && list.isDestroyed()) || !data)
+            return;
+          const curHubId = this._curWorkspace
+            ? this._curWorkspace.hub_id
+            : Visitor.id;
+          const curNid = this._curWorkspace
+            ? this._curWorkspace.nid
+            : Visitor.get(_a.home_id);
+          if (curHubId != hub_id || curNid != nid) return;
+          if (data.pid && data.pid != nid) return;
+          data.kind = this._getKind();
+          data.service = "open-node";
+          data.uiHandler = [this];
+          if (data.position >= 0) list.append(data, data.position);
+          else list.append(data);
+          if (this.getViewMode && this.getViewMode() !== _a.row) {
+            this._partitionFoldersAndFiles(list);
+          }
+        });
+      })
+      .catch((e) => {
+        this.warn("Failed to create folder", e);
+        this.alert(e.reason || e.error || LOCALE.TRY_AGAIN);
+      })
+      .finally(() => {
+        this._creatingFolder = 0;
       });
-    }).catch((e) => {
-      this.warn("Failed to create folder", e);
-      this.alert(e.reason || e.error || LOCALE.TRY_AGAIN);
-    }).finally(() => {
-      this._creatingFolder = 0;
-    });
+  }
+
+  /**
+   * Find a headless workspace window already open for the given hub_id.
+   * Returns null if none is open or all are mid-destroy.
+   */
+  _findWorkspaceWindow(hub_id) {
+    if (!hub_id || !this.windowsLayer || !this.windowsLayer.children)
+      return null;
+    for (const c of this.windowsLayer.children.toArray()) {
+      if (!c || c.isDestroyed()) continue;
+      if (c.mget(_a.kind) !== "window_folder") continue;
+      if (!c.mget(_a.headless)) continue;
+      if (c.mget(_a.hub_id) == hub_id) return c;
+    }
+    return null;
   }
 
   /**
    * Switch the main grid to show the contents of `workspace` (a hub).
    * Accepts any of actual_home_id / home_id / nid / id as the root
    * directory id; falls back to hub.get_attributes when none is set.
+   *
+   * Multi-tab model: if a headless workspace window already exists for this
+   * hub_id, raise it (preserving its in-window state) instead of creating
+   * another. Raising fires `change:state` on the window's model, which the
+   * folder widget routes to `Wm.onWorkspaceRaised(this)` — that's where
+   * `_curWorkspace`, `Wm.mset(...)`, the sidebar highlight, and the
+   * breadcrumb get re-synced. Keeping the global-context writes in one
+   * place (the raise path) is what makes every existing consumer of
+   * `_curWorkspace` / `Wm.mget(home_id)` work unchanged.
    */
   loadWorkspace(workspace) {
-    const data = workspace.model ? workspace.model.toJSON() : (workspace || {});
+    const data = workspace.model ? workspace.model.toJSON() : workspace || {};
     const hub_id = data.hub_id || data.id;
     let nid = data.actual_home_id || data.home_id || data.nid;
     data.nid = nid;
+
     if (!hub_id) {
       this.warn("loadWorkspace: missing hub_id", data);
       return;
     }
 
-    if (this._curWorkspace
-      && this._curWorkspace.hub_id == hub_id
-      && !this._curWorkspace.widget?.isDestroyed()
-      && this._curWorkspace.nid == nid) {
+    if (
+      this._curWorkspace &&
+      this._curWorkspace.hub_id == hub_id &&
+      !this._curWorkspace.widget?.isDestroyed() &&
+      this._curWorkspace.nid == nid
+    ) {
       return;
     }
 
     // Close any settings/admin/apps panel that would occlude the workspace
     // grid. Sidebar workspace items dispatch directly to Wm.loadWorkspace
-    // (not through desk.onUiEvent), so cleanup must live here too.
+    // (not through desk.onUiEvent), so cleanup must live here too. Only
+    // close when actually opening a NEW workspace (not when raising an
+    // existing tab) — otherwise switching tabs would close shared panels.
     if (window.Desk && _.isFunction(window.Desk._closeMainPanels)) {
       window.Desk._closeMainPanels();
     }
@@ -265,55 +320,113 @@ class __window_manager extends push {
     // nid often arrives later via the get_attributes fetch below.
     this._wsGeneration = (this._wsGeneration || 0) + 1;
     const gen = this._wsGeneration;
-    let previous = this._curWorkspace?.widget
-    if (previous && !previous.isDestroyed()) previous.suppress()
+    if (this._currentWorkspace && !this._currentWorkspace.isDestroyed())
+      this._currentWorkspace.suppress();
     const apply = (data) => {
       if (gen !== this._wsGeneration) return;
       this._curWorkspace = { hub_id, nid: data.nid, area: data.area };
       this.mset(data);
       this.windowsLayer.append({
-        kind: 'window_folder',
+        kind: "window_folder",
         hub_id,
         ...data,
         headless: 1,
         filename: data.filename || data.name,
+        // Headless workspace lives in its own singleton pool, separate
+        // from the right-click "Open in Window" popup (which keeps the
+        // `window_folder-${hub_id}` prefix). See
+        // docs/superpowers/specs/2026-05-22-multi-folder-windows-design.md.
         wm_unique_id: `window_folder-${hub_id}`,
-        style: {
-          left: 0,
-          top: -49,
-          minWidth: 760,
-          minHeight: 480,
-          width: 956,
-          height: 1014,
-        }
       });
       this.windowsLayer.el.dataset.headless = "1";
       this.ensurePart("wrapper-modal").then((p) => p.clear());
-      this.updateBreadcrumb({ ...data, hub_id, service: "change-workspace" }, this);
-      this._curWorkspace.widget = this.windowsLayer.children.last()
-      this._curWorkspace.widget.once(_a.destroy, () => {
+      // this.updateBreadcrumb({ ...data, hub_id, service: "change-workspace" }, this);
+      let cur = this.windowsLayer.children.last()
+      cur.once(_a.destroy, () => {
         this._curWorkspace = null;
         this.windowsLayer.el.dataset.headless = "0"
       })
+      this.fetchService(SERVICE.media.get_path, { nid, hub_id }).then((data) => {
+        if (_.isEmpty(data)) return;
+        cur.refreshBreadcrumbsUI(data)
+      })
+      this._curWorkspace.widget = cur;
     };
 
     // nid often arrives later via the media.attributes fetch below. The
     // topbar's "+ Add new" check only needs hub_id to flip to folder
     // creation mode — nid can fill in asynchronously.
     this._curWorkspace = { hub_id, nid, area: data.area };
-    this.mset({ hub_id, nid, nodeId: nid, area: data.area, ownpath: '/', home_id: nid });
-
+    this.mset({
+      hub_id,
+      nid,
+      nodeId: nid,
+      area: data.area,
+      ownpath: data.ownpath, // "/",
+      home_id: nid,
+    });
 
     // Data provided by the triggeer may not be reliable ennoug. Get fresh one
-    this.fetchService(SERVICE.media.attributes, { hub_id, nid }).then((attrs) => {
-      const resolved = attrs && (attrs.actual_home_id || attrs.home_id || attrs.nid);
-      if (!resolved) {
-        this.warn("loadWorkspace: cannot resolve workspace root", { hub_id, attrs });
-        return;
-      }
-      try { workspace.model && workspace.model.set(attrs); } catch (e) { }
-      apply(attrs);
-    }).catch((e) => this.warn("loadWorkspace: get_attributes failed", e));
+    this.fetchService(SERVICE.media.attributes, { hub_id, nid })
+      .then((attrs) => {
+        const resolved =
+          attrs && (attrs.actual_home_id || attrs.home_id || attrs.nid);
+        if (!resolved) {
+          this.warn("loadWorkspace: cannot resolve workspace root", {
+            hub_id,
+            attrs,
+          });
+          return;
+        }
+        try {
+          workspace.model && workspace.model.set(attrs);
+        } catch (e) { }
+        apply(attrs);
+      })
+      .catch((e) => this.warn("loadWorkspace: get_attributes failed", e));
+  }
+
+  /**
+   * Called by a headless `window_folder` when it gains focus (state→1).
+   * Mirrors the window's stored context into the globals every other
+   * subsystem reads from (`_curWorkspace`, `Wm.mset`, sidebar highlight,
+   * breadcrumb) so all existing consumers keep working as today — they
+   * just now reflect whichever workspace tab is on top.
+   */
+  onWorkspaceRaised(win) {
+    if (!win || win.isDestroyed()) return;
+    if (win.mget(_a.kind) !== "window_folder" || !win.mget(_a.headless)) return;
+
+    const hub_id = win.mget(_a.hub_id);
+    if (!hub_id) return;
+
+    const nid =
+      win.mget(_a.nid) || win.mget(_a.actual_home_id) || win.mget(_a.home_id);
+    const area = win.mget(_a.area);
+    const ownpath = win.mget(_a.ownpath) || "/";
+    const home_id = win.mget(_a.actual_home_id) || win.mget(_a.home_id) || nid;
+
+    // Idempotent: skip the broadcast if globals already reflect this window.
+    const cur = this._curWorkspace;
+    const sameContext =
+      cur && cur.hub_id == hub_id && cur.nid == nid && cur.area == area;
+
+    this._curWorkspace = { hub_id, nid, area };
+    this.mset({ hub_id, nid, nodeId: nid, area, ownpath, home_id });
+
+    if (!sameContext) {
+      RADIO_BROADCAST.trigger("workspace:focus", { hub_id, nid, area });
+      this.updateBreadcrumb(
+        {
+          hub_id,
+          nid,
+          area,
+          filename: win.mget(_a.filename) || win.mget(_a.name),
+          service: "change-workspace",
+        },
+        this,
+      );
+    }
   }
 
   /**
@@ -321,7 +434,7 @@ class __window_manager extends push {
    * Used by `load-folder` UI events from the sidebar subtree.
    */
   loadWorkspaceNode(node) {
-    const data = node.model ? node.model.toJSON() : (node || {});
+    const data = node.model ? node.model.toJSON() : node || {};
     const hub_id = data.hub_id || data.id;
     const isWorkspace = data.nodeRole === "workspace";
     const nid = isWorkspace
@@ -330,22 +443,26 @@ class __window_manager extends push {
     // Workspace root → '/'; folder → its own ownpath/filepath as reported by
     // show_node_by. Without this, uploads dropped here inherit a stale path
     // and the server stores them at the previous parent.
-    const ownpath = isWorkspace ? '/' : (data.ownpath || data.filepath || '/');
+    const ownpath = isWorkspace ? "/" : data.ownpath || data.filepath || "/";
     // home_id stays at the workspace root nid even when navigating into a
     // subfolder, so cross-window drops keep classifying as MOVE.
     const home_id = isWorkspace
       ? nid
-      : (data.actual_home_id || data.home_id || data.workspace_nid || this.mget(_a.home_id) || nid);
+      : data.actual_home_id ||
+      data.home_id ||
+      data.workspace_nid ||
+      this.mget(_a.home_id) ||
+      nid;
     this._curWorkspace = { hub_id, nid, area: data.area };
     this.mset({ hub_id, nid, nodeId: nid, area: data.area, ownpath, home_id });
     this.ensurePart(_a.list).then((l) => {
       l.setApi({ service: SERVICE.media.show_node_by, hub_id, nid });
       if (l.collection) l.collection.reset();
-      l.el.style.visibility = 'hidden';
-      const scrollEl = l.el.querySelector('.smart-container');
+      l.el.style.visibility = "hidden";
+      const scrollEl = l.el.querySelector(".smart-container");
       if (scrollEl) {
         scrollEl.dataset.partitioning = 1;
-        scrollEl.style.visibility = 'hidden';
+        scrollEl.style.visibility = "hidden";
       }
       l.restart();
       this._prepareListPartition(l);
@@ -362,17 +479,18 @@ class __window_manager extends push {
    * Home › Workspace › Folder path via the change-workspace broadcast.
    */
   openWorkspaceFolder(node) {
-    this.debug("AAA:314", node)
+    this.debug("AAA:314", node);
 
-    const data = node.model ? node.model.toJSON() : (node || {});
-    let media = Wm.getItemsByAttr(_a.nid, data.nid)[0]
+    const data = node.model ? node.model.toJSON() : node || {};
+    let media = Wm.getItemsByAttr(_a.nid, data.nid)[0];
     if (media) {
       return media.triggerHandlers({ service: "open-node" });
     }
     const hub_id = data.hub_id || data.workspace_hub_id || data.id;
     // Use the sub-folder's own nid; fall back to workspace root only when
     // the node carries no nid (e.g. the row clicked is the workspace root).
-    const nid = data.nid || data.actual_home_id || data.home_id || data.workspace_nid;
+    const nid =
+      data.nid || data.actual_home_id || data.home_id || data.workspace_nid;
 
     if (!hub_id || !nid) return this.loadWorkspaceNode(node);
 
@@ -380,60 +498,86 @@ class __window_manager extends push {
       window.Desk._closeMainPanels();
     }
     // Data provided by the triggeer may not be reliable ennoug. Get fresh one
-    this.fetchService(SERVICE.media.attributes, { hub_id, nid }).then((attrs) => {
-      const resolved = attrs && (attrs.actual_home_id || attrs.home_id || attrs.nid);
-      if (!resolved) {
-        this.warn("loadWorkspace: cannot resolve workspace root", { hub_id, attrs });
-        return;
-      }
-      let currentFolder = this.windowsLayer.children.last()
-      currentFolder.refreshContent(attrs)
-      this.debug("AAA:374", currentFolder, attrs)
-    }).catch((e) => this.warn("loadWorkspace: get_attributes failed", e));
+    this.fetchService(SERVICE.media.attributes, { hub_id, nid })
+      .then((attrs) => {
+        const resolved =
+          attrs && (attrs.actual_home_id || attrs.home_id || attrs.nid);
+        if (!resolved) {
+          this.warn("loadWorkspace: cannot resolve workspace root", {
+            hub_id,
+            attrs,
+          });
+          return;
+        }
+        let currentFolder = this.windowsLayer.children.last();
+        currentFolder.refreshContent(attrs);
+        this.debug("AAA:374", currentFolder, attrs);
+      })
+      .catch((e) => this.warn("loadWorkspace: get_attributes failed", e));
 
-    return
+    return;
 
     const area = data.area || data.workspace_area;
     // Subfolder ownpath comes from show_node_by (sidebar feeds workspace_item
     // with the server item; ownpath/filepath is the per-hub path). Required
     // so drag-drop uploads target THIS subfolder — without it, the destpath
     // resolved by _getDestination stays at the previous workspace root.
-    const ownpath = data.ownpath || data.filepath || '/';
+    const ownpath = data.ownpath || data.filepath || "/";
     // home_id = workspace root nid (preserved across subfolder navigation) so
     // makeOptions classifies cross-window drops as MOVE not COPY.
-    const home_id = data.actual_home_id || data.workspace_nid || data.home_id || this.mget(_a.home_id) || nid;
+    const home_id =
+      data.actual_home_id ||
+      data.workspace_nid ||
+      data.home_id ||
+      this.mget(_a.home_id) ||
+      nid;
     this._curWorkspace = { hub_id, nid, area };
     this.mset({ hub_id, nid, nodeId: nid, area, ownpath, home_id });
     this.ensurePart(_a.list).then((l) => {
       l.setApi({ service: SERVICE.media.show_node_by, hub_id, nid });
       if (l.collection) l.collection.reset();
-      l.el.style.visibility = 'hidden';
-      const scrollEl = l.el.querySelector('.smart-container');
+      l.el.style.visibility = "hidden";
+      const scrollEl = l.el.querySelector(".smart-container");
       if (scrollEl) {
         scrollEl.dataset.partitioning = 1;
-        scrollEl.style.visibility = 'hidden';
+        scrollEl.style.visibility = "hidden";
       }
       l.restart();
       this._prepareListPartition(l);
     });
     this.ensurePart("wrapper-modal").then((p) => p.clear());
-    this.updateBreadcrumb({
-      ...data,
-      hub_id,
-      nid,
-      area,
-      service: "change-workspace",
-    }, this);
+    this.updateBreadcrumb(
+      {
+        ...data,
+        hub_id,
+        nid,
+        area,
+        service: "change-workspace",
+      },
+      this,
+    );
   }
 
   openContent(media, args) {
-    if (media && media.mget
-      && media.mget(_a.filetype) === _a.hub
-      && media.mget(_a.status) !== _a.deleted) {
+    if (
+      media &&
+      media.mget &&
+      media.mget(_a.filetype) === _a.hub &&
+      media.mget(_a.status) !== _a.deleted
+    ) {
       const item = this.getWindowPreset(media);
       item.kind = "window_folder";
       item.wm_unique_id = `window_folder-${item.hub_id}`;
-      return this.launch(item, { explicit: 1, singleton: 1 });
+      // Multi-tab: raise the existing tab for this hub_id if any (scoped
+      // to top-level windows). `launch({unique})` cannot be used here —
+      // its getItemsByAttr walks the full descendant tree and would match
+      // a media item with the same hub_id, returning a non-window object.
+      const existing = this._findWorkspaceWindow(item.hub_id);
+      if (existing) {
+        existing.raise();
+        return false;
+      }
+      return this.launch(item, { explicit: 1 });
     }
     return super.openContent(media, args);
   }
@@ -459,8 +603,8 @@ class __window_manager extends push {
    */
   upgradePlage() {
     this.ensurePart("wrapper-modal").then((p) => {
-      p.feed({ kind: "settings_pricing" })
-    })
+      p.feed({ kind: "settings_pricing" });
+    });
   }
 
   /**
@@ -473,7 +617,7 @@ class __window_manager extends push {
         nid: opt.nid,
         hub_id: opt.hub_id,
       },
-      { async: 1 }
+      { async: 1 },
     )
       .then((r) => {
         let m = new Backbone.Model(r);
@@ -496,13 +640,14 @@ class __window_manager extends push {
   _openChatWithUser(drumate_id) {
     if (!drumate_id) return;
 
-    Desk.ensurePart('chat-panel').then(panel => {
+    Desk.ensurePart("chat-panel").then((panel) => {
       if (panel.isEmpty()) {
-        Desk.togglePanel('chat_p2p', 'chat-panel');
+        Desk.togglePanel("chat_p2p", "chat-panel");
       }
 
       const tryOpen = (retries = 20) => {
-        const widget = panel.children && panel.children.last && panel.children.last();
+        const widget =
+          panel.children && panel.children.last && panel.children.last();
         if (widget && _.isFunction(widget.openChatByPeerId)) {
           try {
             widget.openChatByPeerId(drumate_id);
@@ -550,7 +695,7 @@ class __window_manager extends push {
         nid: Visitor.get(_a.home_id),
         service: SERVICE.reminder.list,
       },
-      { async: 1 }
+      { async: 1 },
     ).then((data) => {
       if (!data || !data.length) return;
       for (let c of data) {
@@ -582,7 +727,7 @@ class __window_manager extends push {
         nid: opt.nid,
         hub_id: opt.hub_id,
       },
-      { async: 1 }
+      { async: 1 },
     )
       .then((data) => {
         if (data.status == 403) {
@@ -601,20 +746,25 @@ class __window_manager extends push {
   }
 
   /**
-   * 
+   *
    */
   bindWsEvents() {
-    let expected = [SERVICE.signaling.dial, SERVICE.signaling.notify, "live", "adminpanel"];
+    let expected = [
+      SERVICE.signaling.dial,
+      SERVICE.signaling.notify,
+      "live",
+      "adminpanel",
+    ];
     uiRouter.ensureWebsocket().then(() => {
       let timer = setInterval(() => {
         let activeEvents = wsRouter.hasListener(this);
         if (activeEvents && _.isArray(activeEvents)) {
           let missing = activeEvents.filter((p) => {
             if (!expected.includes(p)) {
-              return 1
+              return 1;
             }
-            return 0
-          })
+            return 0;
+          });
           if (!missing.length) {
             clearInterval(timer);
           }
@@ -623,20 +773,18 @@ class __window_manager extends push {
             SERVICE.signaling.dial,
             SERVICE.signaling.notify,
             "live",
-            "adminpanel"
+            "adminpanel",
           );
           this.updatePeersState();
         }
-      }, 2000)
+      }, 2000);
     });
   }
 
   /**
    * To do : allow copy/paste/supp through keyboard short cut
    */
-  _handelKbdEvents(e) {
-  }
-
+  _handelKbdEvents(e) { }
 
   /**
    * Home-grid filter — drop hub-symlinks for non-collaborative areas
@@ -655,8 +803,8 @@ class __window_manager extends push {
       const wm = this;
       child.prepareData = function (data) {
         const prepared = original(data) || [];
-        const atHome = !wm._curWorkspace
-          || wm._curWorkspace.hub_id === Visitor.id;
+        const atHome =
+          !wm._curWorkspace || wm._curWorkspace.hub_id === Visitor.id;
         if (!atHome) return prepared;
         return prepared.filter((it) => {
           if (!it || it.filetype !== _a.hub) return true;
@@ -669,9 +817,10 @@ class __window_manager extends push {
 
   onDomRefresh() {
     this.feed(require("./skeleton")(this));
-    this.fetchService(SERVICE.desk.get_env,
+    this.fetchService(
+      SERVICE.desk.get_env,
       { hub_id: Visitor.id },
-      { async: 1 }
+      { async: 1 },
     ).then((data) => {
       if (_.isEmpty(data)) return;
       if (data.home_id) this.mset(data);
@@ -681,7 +830,7 @@ class __window_manager extends push {
       this.trigger(_e.ready);
       // this.route();
       Visitor.set({ disk: data.disk });
-      this.bindWsEvents()
+      this.bindWsEvents();
     });
     this.visible = !document.hidden;
     document.onvisibilitychange = async (e) => {
@@ -713,7 +862,7 @@ class __window_manager extends push {
     let data = await this.fetchService(
       SERVICE.yp.tutorial,
       { name },
-      { async: 1 }
+      { async: 1 },
     );
     if (!data || !data.src) return null;
     const { protocol } = bootstrap();
@@ -737,14 +886,13 @@ class __window_manager extends push {
     return c;
   }
 
-
   /**
-   * 
+   *
    */
   _openDefault() { }
 
   /**
-   * 
+   *
    */
   make_default_dirs() {
     this.postService({
@@ -757,8 +905,8 @@ class __window_manager extends push {
    * Capture the moving media
    * When several browsers are open and overlapping, the most highest z-index is the target
    * Selecting insertion point is locked then on children of that target
-   * @param {*} moving 
-   * @returns 
+   * @param {*} moving
+   * @returns
    */
   capture(moving) {
     if (!moving) return;
@@ -794,9 +942,9 @@ class __window_manager extends push {
   }
 
   /**
-   * 
-   * @param {*} moving 
-   * @returns 
+   *
+   * @param {*} moving
+   * @returns
    */
   insert(moving) {
     const selected = this.getGlobalSelection();
@@ -896,16 +1044,15 @@ class __window_manager extends push {
   }
 
   /**
-   * 
-   * @returns 
+   *
+   * @returns
    */
   load() {
     return this.searchBar != null ? this.searchBar.setValue("") : undefined;
   }
 
-
   /**
-   * 
+   *
    */
   clearShift() {
     this.resetShift();
@@ -917,8 +1064,8 @@ class __window_manager extends push {
   }
 
   /**
-   * 
-   * @param {*} view 
+   *
+   * @param {*} view
    */
   reloadAll(view) {
     this.windowsLayer.children.each(function (c) {
@@ -937,7 +1084,12 @@ class __window_manager extends push {
     // Clear the per-workspace context so the topbar's + Add new button
     // reverts to the workspace creation flow on the home view.
     this._curWorkspace = null;
-    this.mset({ hub_id: Visitor.id, nid: Visitor.get(_a.home_id), nodeId: Visitor.get(_a.home_id), area: _a.personal });
+    this.mset({
+      hub_id: Visitor.id,
+      nid: Visitor.get(_a.home_id),
+      nodeId: Visitor.get(_a.home_id),
+      area: _a.personal,
+    });
     this.feed(require("./skeleton")(this));
   }
 
@@ -960,7 +1112,6 @@ class __window_manager extends push {
     return Array.from(lockList).map((i) => i.lock());
   }
 
-
   /**
    *
    * @param {*} cmd
@@ -973,14 +1124,14 @@ class __window_manager extends push {
   }
 
   /**
- * 
- * @param {*} list  -- List of nodes 
- */
+   *
+   * @param {*} list  -- List of nodes
+   */
   putIntoTrash(list) {
     let nodes = [];
     if (list.length == 1) {
       list[0].delete(1, this.__trashBin.$el);
-      return
+      return;
     }
     for (var n of list) {
       if (n.mget(_a.filetype) == _a.hub) {
@@ -992,17 +1143,18 @@ class __window_manager extends push {
         nid: n.mget(_a.nodeId),
         hub_id: n.mget(_a.hub_id),
         parent_id: n.mget(_a.parent_id),
-      })
+      });
     }
     if (_.isEmpty(nodes)) return;
     this.postService({
       service: SERVICE.media.trash,
       nodes,
-      hub_id: nodes[0].hub_id
-    }).then((data) => {
-    }).catch(e => {
-      this.warn("Failed to delete nodes", nodes, e)
+      hub_id: nodes[0].hub_id,
     })
+      .then((data) => { })
+      .catch((e) => {
+        this.warn("Failed to delete nodes", nodes, e);
+      });
   }
 
   /**
@@ -1010,58 +1162,64 @@ class __window_manager extends push {
    * @param {*} cmd
    */
   confirmRemoveHub(media) {
-    media.select()
+    media.select();
     return new Promise((resolve, reject) => {
-      this.ensurePart('wrapper-modal').then(async (p) => {
-        await Kind.waitFor('window_confirm')
+      this.ensurePart("wrapper-modal").then(async (p) => {
+        await Kind.waitFor("window_confirm");
         p.feed({
-          kind: 'window_confirm',
+          kind: "window_confirm",
           maxsize: 2,
           title: LOCALE.DELETE,
           message: LOCALE.MSG_DELETE_HUB.format(media.mget(_a.filename)),
           confirm: LOCALE.DELETE,
-        }).ask().then(() => {
-          const deleteHub = () => this.postService({
-            service: SERVICE.hub.delete_hub,
-            hub_id: media.mget(_a.hub_id)
-          }).then((data) => {
-            media.suppress();
-            resolve(data)
+        })
+          .ask()
+          .then(() => {
+            const deleteHub = () =>
+              this.postService({
+                service: SERVICE.hub.delete_hub,
+                hub_id: media.mget(_a.hub_id),
+              }).then((data) => {
+                media.suppress();
+                resolve(data);
+              });
+            this.animateMediaToTrash(media).then(deleteHub).catch(deleteHub);
+            p.clear();
+          })
+          .catch((e) => {
+            resolve({});
           });
-          this.animateMediaToTrash(media).then(deleteHub).catch(deleteHub);
-          p.clear()
-        }).catch((e) => {
-          resolve({})
-        });
-      })
-    })
+      });
+    });
   }
-
 
   /**
    *
    * @param {*} cmd
    */
   confirmLeaveHub(media) {
-    this.ensurePart('wrapper-modal').then(async (p) => {
-      await Kind.waitFor('window_confirm')
+    this.ensurePart("wrapper-modal").then(async (p) => {
+      await Kind.waitFor("window_confirm");
       p.feed({
-        kind: 'window_confirm',
+        kind: "window_confirm",
         maxsize: 2,
         title: LOCALE.LEAVE,
         message: LOCALE.MSG_LEAVE_HUB.format(media.mget(_a.filename)),
-        confirm: LOCALE.LEAVE
-      }).ask().then(() => {
-        this.animateMediaToTrash(media).then(() => {
-          this.postService({
-            service: SERVICE.desk.leave_hub,
-            nid: media.mget(_a.hub_id),
-            hub_id: Visitor.id
+        confirm: LOCALE.LEAVE,
+      })
+        .ask()
+        .then(() => {
+          this.animateMediaToTrash(media).then(() => {
+            this.postService({
+              service: SERVICE.desk.leave_hub,
+              nid: media.mget(_a.hub_id),
+              hub_id: Visitor.id,
+            });
           });
+          p.clear();
         })
-        p.clear()
-      }).catch(() => { });
-    })
+        .catch(() => { });
+    });
   }
 
   /**
@@ -1069,54 +1227,59 @@ class __window_manager extends push {
    * @param {*} cmd
    */
   confirmRemoveHubsInside(media) {
-    this.ensurePart('wrapper-modal').then(async (p) => {
-      await Kind.waitFor('window_confirm')
+    this.ensurePart("wrapper-modal").then(async (p) => {
+      await Kind.waitFor("window_confirm");
       let msg = `The directory {0} contains one or more shares folders. Deleting it shall remove all the content within them`;
       p.feed({
-        kind: 'window_confirm',
+        kind: "window_confirm",
         maxsize: 2,
         title: "Caution! Shared folders inside.",
         message: msg.format(media.mget(_a.filename)),
-        confirm: LOCALE.REMOVE
-      }).ask().then(async () => {
-        let ids = media.mget(_a.hubs).split(/,/g)
-        for (let hub_id of ids) {
-          /** Get attr from desk */
-          let data = await this.fetchService(SERVICE.media.get_node_attr, {
-            nid: hub_id,
-            hub_id: Visitor.id
-          })
-          if (!_.isArray(data)) data = [data]
-          for (let item of data) {
-            if (item.privilege & _K.permission.owner) {
-              await this.postService({
-                service: SERVICE.hub.delete_hub,
-                hub_id: item.actual_hub_id,
-                nid: item.actual_home_id
-              })
-            } else if (item.privilege & _K.permission.read) {
-              await this.postService({
-                service: SERVICE.desk.leave_hub,
-                nid: item.actual_hub_id,
-                hub_id: Visitor.id
-              })
+        confirm: LOCALE.REMOVE,
+      })
+        .ask()
+        .then(async () => {
+          let ids = media.mget(_a.hubs).split(/,/g);
+          for (let hub_id of ids) {
+            /** Get attr from desk */
+            let data = await this.fetchService(SERVICE.media.get_node_attr, {
+              nid: hub_id,
+              hub_id: Visitor.id,
+            });
+            if (!_.isArray(data)) data = [data];
+            for (let item of data) {
+              if (item.privilege & _K.permission.owner) {
+                await this.postService({
+                  service: SERVICE.hub.delete_hub,
+                  hub_id: item.actual_hub_id,
+                  nid: item.actual_home_id,
+                });
+              } else if (item.privilege & _K.permission.read) {
+                await this.postService({
+                  service: SERVICE.desk.leave_hub,
+                  nid: item.actual_hub_id,
+                  hub_id: Visitor.id,
+                });
+              }
             }
+            this.animateMediaToTrash(media)
+              .then(() => {
+                media.logicalParent.syncGeometry();
+                media.putIntoTrash(1);
+              })
+              .catch(() => {
+                media.putIntoTrash(1);
+              });
           }
-          this.animateMediaToTrash(media).then(() => {
-            media.logicalParent.syncGeometry()
-            media.putIntoTrash(1);
-          }).catch(() => {
-            media.putIntoTrash(1);
-          })
-        }
-        p.clear()
-      }).catch(() => { });
-    })
+          p.clear();
+        })
+        .catch(() => { });
+    });
   }
 
   /**
-   * 
-   * @param {*} media 
+   *
+   * @param {*} media
    */
   getMediaSelection(media) {
     let selection = Wm.getGlobalSelection();
@@ -1129,68 +1292,74 @@ class __window_manager extends push {
         }
       }
       if (!duplicated) {
-        selection.push(media)
+        selection.push(media);
       }
     }
-    let own_hubs = []
-    let other_hubs = []
-    let hubs_inside = []
+    let own_hubs = [];
+    let other_hubs = [];
+    let hubs_inside = [];
     let allowed = [];
     let rejected = [];
     let locked = [];
     for (let m of selection) {
       if (m.mget(_a.status) === _a.locked) {
-        locked.push(m)
+        locked.push(m);
         continue;
       }
       if (m.isHub) {
         if (m.isGranted(_K.permission.owner)) {
-          own_hubs.push(m)
+          own_hubs.push(m);
         } else {
-          other_hubs.push(m)
+          other_hubs.push(m);
         }
       } else if (m.isFolder) {
         if (m.containsHub) {
-          hubs_inside.push(m)
+          hubs_inside.push(m);
         } else if (m.canRemove()) {
-          allowed.push(m)
+          allowed.push(m);
         } else {
-          rejected.push(m)
+          rejected.push(m);
         }
       } else if (m.canRemove()) {
-        allowed.push(m)
+        allowed.push(m);
       } else {
-        rejected.push(m)
+        rejected.push(m);
       }
     }
     return {
-      own_hubs, other_hubs, hubs_inside, allowed, rejected, locked
-    }
+      own_hubs,
+      other_hubs,
+      hubs_inside,
+      allowed,
+      rejected,
+      locked,
+    };
   }
 
   /**
-   * 
+   *
    */
   async removeMediaSelection(media) {
-    let {
-      own_hubs, other_hubs, hubs_inside, allowed, rejected, locked
-    } = this.getMediaSelection(media)
+    let { own_hubs, other_hubs, hubs_inside, allowed, rejected, locked } =
+      this.getMediaSelection(media);
 
     for (let r of rejected) {
-      r.actionDenied()
+      r.actionDenied();
     }
 
     for (let r of allowed) {
-      this.animateMediaToTrash(r).then(() => {
-        r.logicalParent.syncGeometry()
-        if (r.mget(_a.status) === "seeding") {
-          r.suppress();
-          return;
-        }
-        r.putIntoTrash(1);
-      }).catch(() => {
-        r.putIntoTrash(1);
-      })
+      this.animateMediaToTrash(r)
+        .then(() => {
+          r.logicalParent.syncGeometry();
+          if (r.mget(_a.status) === "seeding") {
+            r.suppress();
+            return;
+          }
+          r.putIntoTrash(1);
+        })
+        .catch(() => {
+          r.putIntoTrash(1);
+        });
     }
 
     for (let r of own_hubs) {
@@ -1208,11 +1377,10 @@ class __window_manager extends push {
     for (let r of locked) {
       r.actionDenied(LOCALE.FILE_NOT_DISPOSABLE);
     }
-
   }
 
   /**
-   * 
+   *
    */
   animateMediaToTrash(media) {
     return new Promise((resolve, reject) => {
@@ -1226,9 +1394,9 @@ class __window_manager extends push {
         top: pos.top - media.$el.height(),
         zIndex: 200002, // Must be hight than modal popup
       });
-      let trash = this.getTrashBin()
+      let trash = this.getTrashBin();
       if (!trash) {
-        return reject()
+        return reject();
       }
       let trashbin = trash.$el;
       this.$el.append(helper);
@@ -1237,7 +1405,7 @@ class __window_manager extends push {
         tl.to(trashbin, 0.3, { scale: 1.2 }).to(trashbin, 0.3, { scale: 1 });
         trashbin.parent().children(".temp-anim").remove();
         helper.remove();
-        resolve()
+        resolve();
       };
 
       const dest_x = trashbin.offset().left;
@@ -1249,21 +1417,19 @@ class __window_manager extends push {
         alpha: 0,
         onComplete: f,
       });
-    })
+    });
   }
 
   /**
-   * 
+   *
    */
   getTrashBin() {
-    let dock = Wm.getPart('dock');
+    let dock = Wm.getPart("dock");
     if (dock) {
-      return dock.getPart('trash-bin')
+      return dock.getPart("trash-bin");
     }
     return null;
   }
-
-
 
   /**
    *
@@ -1272,7 +1438,8 @@ class __window_manager extends push {
    * @returns
    */
   async onUiEvent(cmd, args = {}) {
-    const service = args.service || cmd.service || cmd.status || cmd.mget(_a.service);
+    const service =
+      args.service || cmd.service || cmd.status || cmd.mget(_a.service);
     switch (service) {
       case "open-manager":
         return this.openManager(cmd, args);
@@ -1289,7 +1456,7 @@ class __window_manager extends push {
         return;
 
       case "remove-selection":
-        return this.removeMediaSelection(args.media)
+        return this.removeMediaSelection(args.media);
 
       case "confirm-remove-selection":
         for (let hub of args.selection) {
@@ -1303,10 +1470,10 @@ class __window_manager extends push {
         return;
 
       case "open-node":
-        let now = new Date().getTime()
-        if ((now - lastClickTime) < 1000) return /** Prevent too fast click */
+        let now = new Date().getTime();
+        if (now - lastClickTime < 1000) return; /** Prevent too fast click */
 
-        lastClickTime = now
+        lastClickTime = now;
         this.openContent(cmd, args);
         return this.unselect();
 
@@ -1317,13 +1484,18 @@ class __window_manager extends push {
         return this.launch(args, { explicit: 1, singleton: 1 });
 
       case "new-workspace":
-        return this.ensurePart('wrapper-modal').then((p) => {
+        return this.ensurePart("wrapper-modal").then((p) => {
           p.clear();
           p.el.dataset.state = "open";
           p.el.dataset.overlay = "none";
-          const skel = (this._curWorkspace && this._curWorkspace.hub_id)
-            ? { kind: 'folder_form', hub_id: this._curWorkspace.hub_id, nid: this._curWorkspace.nid }
-            : { kind: 'media_form' };
+          const skel =
+            this._curWorkspace && this._curWorkspace.hub_id
+              ? {
+                kind: "folder_form",
+                hub_id: this._curWorkspace.hub_id,
+                nid: this._curWorkspace.nid,
+              }
+              : { kind: "media_form" };
           p.feed(skel);
           // Reset the wrapper only when the whole dialog chain is gone.
           // media_form chains to permission_* via parent.feed(); collection
@@ -1341,18 +1513,22 @@ class __window_manager extends push {
         });
 
       case "new-sub-folder":
-        return this.addFolder({ position: 0, area: _a.personal, filename: LOCALE.NEW_FOLDER })
+        return this.addFolder({
+          position: 0,
+          area: _a.personal,
+          filename: LOCALE.NEW_FOLDER,
+        });
 
       case _a.helpdesk:
         return this.launch(
           { kind: "window_helpdesk" },
-          { explicit: 1, singleton: 1 }
+          { explicit: 1, singleton: 1 },
         );
 
       case _a.account:
         return this.launch(
           { kind: "window_account", start: _a.profile },
-          { explicit: 1, singleton: 1 }
+          { explicit: 1, singleton: 1 },
         );
 
       case "pricing":
@@ -1380,7 +1556,7 @@ class __window_manager extends push {
             type: cmd.mget(_a.type),
             source: this,
           },
-          { explicit: 1, singleton: 1 }
+          { explicit: 1, singleton: 1 },
         );
         return this.verbose("import export", cmd, this);
 
@@ -1469,8 +1645,8 @@ class __window_manager extends push {
         }
         this.unselect(1);
         if (this.el.contains(lastClick.target)) {
-          Desk.closeMainPanels()
-          Desk.closeOtherSidebarPanels()
+          Desk.closeMainPanels();
+          Desk.closeOtherSidebarPanels();
         }
         return this.warn("AAA:471", WARNING.method.unprocessed.format(service));
     }
@@ -1521,7 +1697,7 @@ class __window_manager extends push {
 
     Wm.launch(
       { kind: "window_supportticket", args: route },
-      { explicit: 1, singleton: 1 }
+      { explicit: 1, singleton: 1 },
     );
     return;
   }
@@ -1647,7 +1823,7 @@ class __window_manager extends push {
     // Find the <a> tag — could be e.target or a parent of e.target
     let anchor = e.target;
     if (anchor.tagName !== "A") {
-      anchor = anchor.closest('a');
+      anchor = anchor.closest("a");
     }
     if (anchor && anchor.tagName == "A") {
       e.stopPropagation();
@@ -1655,7 +1831,7 @@ class __window_manager extends push {
       e.preventDefault();
 
       // Handle user-mention clicks → open bigchat with that user
-      if (anchor.classList.contains('user-mention')) {
+      if (anchor.classList.contains("user-mention")) {
         const drumate_id = anchor.dataset.drumate_id;
         if (drumate_id) {
           this._openChatWithUser(drumate_id);
@@ -1664,7 +1840,7 @@ class __window_manager extends push {
       }
 
       // Handle file-mention clicks
-      if (anchor.classList.contains('file-mention')) {
+      if (anchor.classList.contains("file-mention")) {
         const nid = anchor.dataset.nid;
         const hub_id = anchor.dataset.hub_id;
         if (nid && hub_id) {
@@ -1675,53 +1851,55 @@ class __window_manager extends push {
               nid,
               hub_id,
             },
-            { async: 1 }
-          ).then((r) => {
-            if (!r || !r.filetype) return;
-            const m = new Backbone.Model(r);
-            const fType = r.filetype;
-            const application = require("builtins/window/configs/application");
+            { async: 1 },
+          )
+            .then((r) => {
+              if (!r || !r.filetype) return;
+              const m = new Backbone.Model(r);
+              const fType = r.filetype;
+              const application = require("builtins/window/configs/application");
 
-            Kind.waitFor(_a.media).then((k) => {
-              const media = new k({ model: m });
-              const preset = {
-                nid: r.nid || nid,
-                hub_id: r.hub_id || hub_id,
-                filename: r.filename,
-                filetype: fType,
-                vhost: r.vhost,
-                home_id: r.home_id,
-                holder_id: r.holder_id,
-                area: r.area,
-                privilege: r.privilege,
-                useKeyEvent: 1,
-                service: "open-node",
-                state: _a.on,
-                uiHandler: [this],
-                media,
-                trigger: media,
-                radio: _a.on,
-              };
+              Kind.waitFor(_a.media).then((k) => {
+                const media = new k({ model: m });
+                const preset = {
+                  nid: r.nid || nid,
+                  hub_id: r.hub_id || hub_id,
+                  filename: r.filename,
+                  filetype: fType,
+                  vhost: r.vhost,
+                  home_id: r.home_id,
+                  holder_id: r.holder_id,
+                  area: r.area,
+                  privilege: r.privilege,
+                  useKeyEvent: 1,
+                  service: "open-node",
+                  state: _a.on,
+                  uiHandler: [this],
+                  media,
+                  trigger: media,
+                  radio: _a.on,
+                };
 
-              let app = application(fType, preset);
-              if (_.isEmpty(app) || !app.kind) {
-                app = { ...app, kind: "props_viewer", media };
-              }
-              app.style = this.getWindowPosition(media);
-
-              const launchTag = _.uniqueId();
-              Kind.waitFor(app.kind).then(() => {
-                try {
-                  app.launchTag = launchTag;
-                  this.windowsLayer.append(app);
-                } catch (err) {
-                  this.warn("Failed to open mentioned file", err);
+                let app = application(fType, preset);
+                if (_.isEmpty(app) || !app.kind) {
+                  app = { ...app, kind: "props_viewer", media };
                 }
+                app.style = this.getWindowPosition(media);
+
+                const launchTag = _.uniqueId();
+                Kind.waitFor(app.kind).then(() => {
+                  try {
+                    app.launchTag = launchTag;
+                    this.windowsLayer.append(app);
+                  } catch (err) {
+                    this.warn("Failed to open mentioned file", err);
+                  }
+                });
               });
+            })
+            .catch((err) => {
+              this.warn("Failed to fetch mentioned file info", err);
             });
-          }).catch((err) => {
-            this.warn("Failed to fetch mentioned file info", err);
-          });
           return;
         }
       }
@@ -1781,23 +1959,23 @@ class __window_manager extends push {
   }
 
   /**
- * 
- */
+   *
+   */
   openAccessManager(cmd) {
     const invitation = {
-      kind: 'invitation',
+      kind: "invitation",
       topLabel: LOCALE.DOCUMENTS_ACCESS,
       media: cmd,
-      uiHandler: [this]
+      uiHandler: [this],
     };
-    this.__wrapperModal.feed(invitation)
+    this.__wrapperModal.feed(invitation);
   }
 
   /**
- *
- * @param {*} media
- * @param {*} start
- */
+   *
+   * @param {*} media
+   * @param {*} start
+   */
   openSettings(media) {
     let item = media.model.toJSON();
     // Toggle settings popup (same behavior as sharebox switchShowShareboxSettings)
@@ -1829,9 +2007,10 @@ class __window_manager extends push {
     item.persistence = _a.once;
     this.__wrapperModal.feed(item);
 
-    const c = this.__wrapperModal.children && this.__wrapperModal.children.last
-      ? this.__wrapperModal.children.last()
-      : null;
+    const c =
+      this.__wrapperModal.children && this.__wrapperModal.children.last
+        ? this.__wrapperModal.children.last()
+        : null;
     if (!c) return;
 
     c.once(_e.destroy, () => {

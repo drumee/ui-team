@@ -55,7 +55,11 @@ const __window_meeting_feedback = function (_ui_, opts = {}) {
           }),
           Skeletons.Note({
             className: `${fig}__feedback-stat`,
-            content: `${participantCount} ${LOCALE.PARTICIPANTS || "Participants"}`,
+            content: `${participantCount} ${
+              participantCount === 1
+                ? LOCALE.PARTICIPANT || "Participant"
+                : LOCALE.PARTICIPANTS || "Participants"
+            }`,
           }),
         ],
       }),

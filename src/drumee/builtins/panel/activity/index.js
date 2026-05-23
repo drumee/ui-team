@@ -898,7 +898,7 @@ class __panel_activity extends LetcBox {
             this.warn("Failed to parse", meeting)
           }
         } else {
-          url = `${url}/channel/?hub_id=${hub_id}&pid=${nid}&ts=${now}`
+          url = `${url}/channel/?hub_id=${hub_id}&nid=${nid}&ts=${now}`
         }
         break;
     }
@@ -918,7 +918,6 @@ class __panel_activity extends LetcBox {
       const n = new Notification(title, notif);
       n.onclick = () => {
         window.focus();
-        this.debug("AAA:www", url)
         location.hash = url
       };
       Visitor.playSound(_K.notifications.drip, 0);

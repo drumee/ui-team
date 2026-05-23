@@ -14,13 +14,32 @@ class __desk_workspace extends LetcBox {
     this.declareHandlers();
     this._openWorkspaceKey = null;
     this._openWorkspaceItem = null;
+    this._onWorkspaceFocus = this._onWorkspaceFocus.bind(this);
     RADIO_BROADCAST.on("workspace:refresh", this.refreshList, this);
+    RADIO_BROADCAST.on("workspace:focus", this._onWorkspaceFocus);
     this.bindEvent(_a.live);
   }
 
   onBeforeDestroy() {
     RADIO_BROADCAST.off("workspace:refresh", this.refreshList, this);
+    RADIO_BROADCAST.off("workspace:focus", this._onWorkspaceFocus);
     this.unbindEvent(_a.live);
+  }
+
+  /**
+   * Multi-tab: a different workspace tab gained focus (via tab click, drag
+   * start, programmatic raise, …). Sync the sidebar highlight to match so
+   * the user always sees which tab is on top. Same one-source-of-truth
+   * principle as the sidebar-driven flow — `_openWorkspaceItem` stays the
+   * single highlight, we just move it.
+   */
+  _onWorkspaceFocus({ hub_id } = {}) {
+    if (!hub_id || hub_id == this._openWorkspaceKey) return;
+    const list = this.__list;
+    if (!list || !list.children) return;
+    const item = list.children.find((c) => this.getWorkspaceKey(c) == hub_id);
+    if (!item) return;
+    this.openWorkspace(item);
   }
 
   refreshList() {
@@ -90,12 +109,14 @@ class __desk_workspace extends LetcBox {
   onWsMessage(svc, data, options = {}) {
     const { service } = options || svc;
 
+    // Handle before the data/list guard — refreshList() uses ensurePart and
+    // is safe regardless of data or this.__list state.
     if (service === "hub.invite_received") {
       this.refreshList();
       return;
     }
 
-    if (!data) {
+    if (!data || !this.__list) {
       if (super.onWsMessage) super.onWsMessage(svc, data, options);
       return;
     }
@@ -126,18 +147,8 @@ class __desk_workspace extends LetcBox {
     }
   }
 
-  // List.Smart accessor — the skeleton sets sys_pn: _a.list but no
-  // partHandler, so we resolve via ensurePart on demand instead of
-  // stashing on this.__list during onPartReady.
-  _withList(fn) {
-    return this.ensurePart(_a.list).then((list) => {
-      if (!list) return;
-      return fn(list);
-    });
-  }
-
-  _findHubModel(list, data) {
-    const col = list && list.collection;
+  _findHubModel(data) {
+    const col = this.__list && this.__list.collection;
     if (!col) return null;
     const hubId = data.hub_id || data.nid || data.id;
     return col.find((m) => {
@@ -148,36 +159,25 @@ class __desk_workspace extends LetcBox {
   }
 
   _addHub(data) {
+    if (this._findHubModel(data)) return;
     // Mirror the skeleton's skip filter — `private` is the UX "restricted".
     const area = data && data.area;
     if (area !== _a.share && area !== _a.private && area !== _a.restricted) return;
-    this._withList((list) => {
-      if (this._findHubModel(list, data)) return;
-      list.append(data);
-    });
+    this.__list.append(data);
   }
 
   _removeHub(data) {
-    this._withList((list) => {
-      const model = this._findHubModel(list, data);
-      if (model) list.collection.remove(model);
-    });
+    const model = this._findHubModel(data);
+    if (model) this.__list.collection.remove(model);
   }
 
   _renameHub(data) {
     const args = (data && data.args && data.args.dest) || data;
     if (!args) return;
-    this._withList((list) => {
-      const model = this._findHubModel(list, args);
-      if (!model) return;
-      // Server emits the new name in either `filename` or `name`/`hubname`
-      // (depending on hub.update_name vs media.rename path).
-      const filename = args.filename || args.name || args.hubname;
-      if (filename) {
-        model.set(_a.filename, filename);
-        model.set(_a.name, filename);
-      }
-    });
+    const model = this._findHubModel(args);
+    if (!model) return;
+    if (args.filename) model.set(_a.filename, args.filename);
+    if (args.name) model.set(_a.name, args.name);
   }
 }
 
