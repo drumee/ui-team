@@ -315,3 +315,43 @@
     }
   }
 }
+
+// ── Dark mode overrides (Figma node 1506:31860, file g5V3PjhNMf5bHlsHMvV17w) ──
+// Light mode keeps the canonical tokens from /router/skin/themes/light.scss.
+html[data-theme="dark"] .desk-module-sidebar {
+  &__main {
+    // Sidebar sits ON TOP of the dark desk surface (#0b0a21 = --normal-bg).
+    // Its own bg is the elevated purple-grey Primary/90 (#282538), not the
+    // bottom-of-stack black.
+    background-color: var(--primary-90);
+  }
+
+  &__item[data-radio="on"] {
+    // Active item text in dark mode is light-purple Primary/20 (#b1adff),
+    // not the deep #433cc5 (--primary-50) used against light bg.
+    color: var(--primary-purple-20);
+  }
+
+  &__footer-user-menu {
+    // Light theme uses var(--white) for the popover surface; in dark mode
+    // swap to elevated dark surface so the dropdown is readable.
+    background-color: var(--normal-bg-elevated);
+  }
+
+  &__footer-user-menu-item {
+    // Light-mode :hover fallback (#f5f5fa) bleeds through; re-anchor.
+    &:hover {
+      background-color: var(--normal-bg-80);
+    }
+  }
+
+  &__footer-user-btn {
+    // Bottom profile row's hover. The base rule uses --default-bg-hover
+    // which resolves to --neutral-200 (#ebecf0, light gray) and has no
+    // dark override — leaving a near-white hover smear on the dark
+    // sidebar. Match the elevated dark surface instead.
+    &:hover {
+      background-color: var(--normal-bg-80);
+    }
+  }
+}
