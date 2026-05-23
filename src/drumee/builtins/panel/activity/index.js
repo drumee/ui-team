@@ -574,7 +574,12 @@ class __panel_activity extends LetcBox {
       }
       return true;
     });
-    const unread_count = live.reduce((acc, it) => acc + (parseInt(it.cnt, 10) || 0), 0);
+    // Badge reflects the number of distinct notification rows the user
+    // sees (one per grouped category × peer × hub), NOT the total event
+    // count `cnt` accumulated inside each group. Otherwise "Tran sent 3
+    // messages" + "Snake invited you" would render as 1 list row with
+    // badge=4 — confusing. Matches Gmail/Slack convention.
+    const unread_count = live.length;
     RADIO_BROADCAST.trigger('activity-update', { unread_count });
     this.updatePriorityListUnified(live);
     if (!this.mget(_a.state)) return;
