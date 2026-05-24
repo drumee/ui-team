@@ -172,7 +172,7 @@ class __media_interact extends media_core {
       this.over.moveIn(this);
     }
     this.initBounds();
-    window.pointerDragged = true;
+    window.pointerDragged = false;
 
     return true;
   }

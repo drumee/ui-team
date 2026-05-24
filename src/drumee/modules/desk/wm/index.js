@@ -565,10 +565,28 @@ class __window_manager extends push {
       // to top-level windows). `launch({unique})` cannot be used here —
       // its getItemsByAttr walks the full descendant tree and would match
       // a media item with the same hub_id, returning a non-window object.
-      const existing = this._findWorkspaceWindow(item.hub_id);
-      if (existing) {
-        existing.raise();
+      const existingHeadless = this._findWorkspaceWindow(item.hub_id);
+      if (existingHeadless) {
+        existingHeadless.raise();
         return false;
+      }
+      // Also dedupe against an existing non-headless workspace window in
+      // windowsLayer (this is the home-grid path's own pool). Without
+      // this, a stray click after _resizeStop on the existing tab
+      // re-enters openContent and `launch({ explicit: 1 })` appends a
+      // second window_folder for the same hub_id — the duplicate-tab
+      // symptom on Safari double-click of the right border and Chrome
+      // shrink-to-min release. `_findWorkspaceWindow` only searches
+      // headlessLayer, so we look in windowsLayer directly here.
+      if (this.windowsLayer && this.windowsLayer.children) {
+        for (const c of this.windowsLayer.children.toArray()) {
+          if (!c || c.isDestroyed()) continue;
+          if (c.mget(_a.kind) !== "window_folder") continue;
+          if (c.mget(_a.hub_id) == item.hub_id) {
+            if (_.isFunction(c.raise)) c.raise();
+            return false;
+          }
+        }
       }
       return this.launch(item, { explicit: 1 });
     }
