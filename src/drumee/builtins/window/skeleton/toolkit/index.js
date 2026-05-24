@@ -47,59 +47,68 @@ export function tabBar(ui, opt = {}) {
         }),
       ],
     });
+
+  let chat_tab = folderTab({
+    icon: "💬",
+    label: LOCALE.CHAT,
+    service: "tab-chat",
+    state: 0,
+    tab: _a.chat,
+  });
+  let chat_label = Skeletons.Button.Label({
+    className: `${cnRoot}-item ${ui.fig.family}__tab-bar-item`,
+    label: LOCALE.CHAT,
+    ico: "tchat",
+    service: "tab-chat",
+    state: 0,
+    dataset: { tab: _a.chat },
+    uiHandler: [ui],
+  })
+
+  if (ui.mget(_a.area) === _a.personal) {
+    chat_label = "";
+    chat_tab = ""
+  }
+
   const kids = isFolder
     ? [
-        folderTab({
-          icon: "📄",
-          label: LOCALE.FILES,
-          service: "tab-files",
-          state: 1,
-          tab: "files",
-        }),
-        folderTab({
-          icon: "💬",
-          label: LOCALE.CHAT,
-          service: "tab-chat",
-          state: 0,
-          tab: _a.chat,
-        }),
-        folderTab({
-          icon: "📋",
-          label: "Tasks",
-          service: "tab-task",
-          state: 0,
-          tab: _a.task,
-        }),
-      ]
+      folderTab({
+        icon: "📄",
+        label: LOCALE.FILES,
+        service: "tab-files",
+        state: 1,
+        tab: "files",
+      }),
+      chat_tab,
+      folderTab({
+        icon: "📋",
+        label: "Tasks",
+        service: "tab-task",
+        state: 0,
+        tab: _a.task,
+      }),
+    ]
     : [
-        Skeletons.Button.Label({
-          className: `${cnRoot}-item ${ui.fig.family}__tab-bar-item`,
-          label: LOCALE.FILES,
-          ico: "desktop_docfile",
-          service: "tab-files",
-          state: 1,
-          dataset: { tab: "files" },
-          uiHandler: [ui],
-        }),
-        Skeletons.Button.Label({
-          className: `${cnRoot}-item ${ui.fig.family}__tab-bar-item`,
-          label: LOCALE.CHAT,
-          ico: "tchat",
-          service: "tab-chat",
-          state: 0,
-          dataset: { tab: _a.chat },
-          uiHandler: [ui],
-        }),
-        Skeletons.Button.Label({
-          className: `${cnRoot}-item ${ui.fig.family}__tab-bar-item`,
-          label: LOCALE.TASK,
-          ico: "list",
-          service: "tab-task",
-          state: 0,
-          dataset: { tab: _a.task },
-          uiHandler: [ui],
-        }),
-      ];
+      Skeletons.Button.Label({
+        className: `${cnRoot}-item ${ui.fig.family}__tab-bar-item`,
+        label: LOCALE.FILES,
+        ico: "desktop_docfile",
+        service: "tab-files",
+        state: 1,
+        dataset: { tab: "files" },
+        uiHandler: [ui],
+      }),
+      chat_label,
+      Skeletons.Button.Label({
+        className: `${cnRoot}-item ${ui.fig.family}__tab-bar-item`,
+        label: LOCALE.TASK,
+        ico: "list",
+        service: "tab-task",
+        state: 0,
+        dataset: { tab: _a.task },
+        uiHandler: [ui],
+      }),
+    ];
 
   if (opt.meeting) {
     kids.push(
@@ -366,6 +375,7 @@ export function folderFilesView(ui) {
     ui.getViewMode && ui.getViewMode() === _a.row
       ? folderFilesRowContainer(ui)
       : filesContainer(ui);
+  if (ui.mget(_a.area) === _a.personal) return [files];
   return [files, chatPanel(ui)];
 }
 
