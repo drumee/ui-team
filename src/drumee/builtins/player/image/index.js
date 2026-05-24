@@ -93,6 +93,23 @@ class __player_image extends __core {
     this.feed(require('./skeleton')(this));
     this.loadSiblings().then((r) => {
       this.siblingsData = r;
+      // Re-feed if server-fresh data disagrees with our cached fields —
+      // a previous rotate may have left a stale md5Hash on this model.
+      const currentNid = this.mget(_a.nid);
+      const fresh = Array.isArray(r) ? r.find((it) => it && it.nid == currentNid) : null;
+      if (fresh) {
+        const localHash = this.mget('md5Hash');
+        const localMtime = this.mget(_a.mtime);
+        if (
+          (fresh.md5Hash && fresh.md5Hash !== localHash) ||
+          (fresh.mtime != null && fresh.mtime !== localMtime)
+        ) {
+          if (fresh.mtime != null && fresh.ptime == null) fresh.ptime = fresh.mtime;
+          this.mset(fresh);
+          this._mergeMd5IntoMetadata(this, fresh.md5Hash);
+          this.feed(require('./skeleton')(this));
+        }
+      }
       if (this.siblingsData.length > 1) {
         this.ensurePart("slider-buttons").then((p) => {
           p.el.dataset.state = 1;

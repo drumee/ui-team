@@ -186,11 +186,27 @@ module.exports = function (ui) {
     active: 0,
   });
 
+  const emailError = Skeletons.Note({
+    className: `${pfx}__field-error`,
+    sys_pn: "email-error",
+    partHandler: ui,
+    dataset: { state: 0 },
+    content: "",
+  });
+
   const workspaceList = Skeletons.Box.Y({
     className: `${pfx}__workspaces`,
     sys_pn: "workspaces",
     partHandler: ui,
     kids: [buildWorkspaceRow(ui, 0)],
+  });
+
+  const workspaceError = Skeletons.Note({
+    className: `${pfx}__field-error`,
+    sys_pn: "workspace-error",
+    partHandler: ui,
+    dataset: { state: 0 },
+    content: "",
   });
 
   const addRoleLink = Skeletons.Note({
@@ -219,7 +235,9 @@ module.exports = function (ui) {
       emailLabel,
       emailRow,
       suggestion,
+      emailError,
       workspaceList,
+      workspaceError,
       addRoleLink,
       sendBtn,
     ],
