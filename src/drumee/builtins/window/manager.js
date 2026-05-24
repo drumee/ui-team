@@ -103,12 +103,12 @@ class __window_manager extends mfsInteract {
    */
   info(opt) {
     if (_.isString(opt)) {
-      return this.windowsLayer.append({
+      return this.getWindowsPool().append({
         kind: "window_info",
         message: opt,
       });
     } else {
-      return this.windowsLayer.append({
+      return this.getWindowsPool().append({
         kind: "window_info",
         body: opt,
       });
@@ -229,7 +229,7 @@ class __window_manager extends mfsInteract {
   selectWindow(moving) {
     let target = null;
     let max = 1;
-    for (let c of Array.from(this.windowsLayer.children.toArray())) {
+    for (let c of Array.from(this.getWindowsPool().children.toArray())) {
       c.el.dataset.selected = 0;
       c.el.dataset.over = _a.off;
       if (c.mget(_a.minimize)) continue;
@@ -277,7 +277,7 @@ class __window_manager extends mfsInteract {
     this._currentBrowser = null;
     return (() => {
       const result = [];
-      for (let c of Array.from(this.windowsLayer.children.toArray())) {
+      for (let c of Array.from(this.getWindowsPool().children.toArray())) {
         if (!c.isDestroyed() && _.isFunction(c.feed)) {
           this._currentBrowser = c;
           break;
@@ -312,7 +312,7 @@ class __window_manager extends mfsInteract {
     if (this.isWm) {
       this.$el.css({ width: "" });
     }
-    this.windowsLayer.children.each((c) => {
+    this.getWindowsPool().children.each((c) => {
       const cx = c.$el.offset().left;
       const cy = c.$el.offset().top;
       const cw = c.$el.width();
@@ -403,7 +403,7 @@ class __window_manager extends mfsInteract {
    * @returns
    */
   addWindow(v) {
-    return this.windowsLayer.append(v);
+    return this.getWindowsPool().append(v);
   }
 
   /**
@@ -434,7 +434,7 @@ class __window_manager extends mfsInteract {
     if (mkdir == null) {
       mkdir = 0;
     }
-    for (let c of Array.from(this.windowsLayer.children.toArray())) {
+    for (let c of Array.from(this.getWindowsPool().children.toArray())) {
       if (c.acceptMedia && !c.isDestroyed()) {
         if (c.mget(_a.state)) {
           if (!mkdir) {
@@ -455,7 +455,7 @@ class __window_manager extends mfsInteract {
    *
    */
   getActivePlayer() {
-    for (let c of Array.from(this.windowsLayer.children.toArray())) {
+    for (let c of Array.from(this.getWindowsPool().children.toArray())) {
       if (c.isPlayer && c.mget(_a.state) && !c.isDestroyed()) {
         return c;
       }
@@ -496,7 +496,7 @@ class __window_manager extends mfsInteract {
       return;
     }
 
-    this.windowsLayer.append({
+    this.getWindowsPool().append({
       kind: "window_downloader",
       token: this.mget(_a.token),
       nodes: s,
@@ -509,7 +509,7 @@ class __window_manager extends mfsInteract {
    */
   getGlobalSelection() {
     let f = [];
-    this.windowsLayer.children.each((w) => {
+    this.getWindowsPool().children.each((w) => {
       if (_.isFunction(w.getLocalSelection)) {
         return (f = f.concat(w.getLocalSelection()));
       }
@@ -533,7 +533,9 @@ class __window_manager extends mfsInteract {
         });
         return this.buildIconsList(child, pn);
       case "windows-layer":
-        this.windowsLayer = child;
+      case "headless-layer":
+        if (pn === "windows-layer") this.windowsLayer = child;
+        if (pn === "headless-layer") this.headlessLayer = child;
         this._responsive = () => {
           const f = () => {
             this.responsive();
@@ -598,7 +600,7 @@ class __window_manager extends mfsInteract {
    * @returns
    */
   getItemByKind(kind) {
-    for (let c of Array.from(this.windowsLayer.children.toArray())) {
+    for (let c of Array.from(this.getWindowsPool().children.toArray())) {
       if (c.mget(_a.kind) === kind) {
         return c;
       }
@@ -613,7 +615,7 @@ class __window_manager extends mfsInteract {
    */
   countItemsByKind(kind) {
     let c = 0;
-    for (let child of Array.from(this.windowsLayer.children.toArray())) {
+    for (let child of Array.from(this.getWindowsPool().children.toArray())) {
       if (child.mget(_a.kind) === kind) {
         c++;
       }
@@ -634,7 +636,7 @@ class __window_manager extends mfsInteract {
     let p = {
       width: _K.docViewer.width, //_K.browser.width
       height: _K.docViewer.height, //_K.browser.height
-      zIndex: 1000 + this.windowsLayer.collection.length,
+      zIndex: 1000 + this.getWindowsPool().collection.length,
     };
 
     if (opt === _a.document) {
@@ -715,7 +717,7 @@ class __window_manager extends mfsInteract {
     let y = p.top;
     p.width = _K.docViewer.width;
     p.height = _K.docViewer.height;
-    p.zIndex = 1000 + this.windowsLayer.collection.length;
+    p.zIndex = 1000 + this.getWindowsPool().collection.length;
     if (p.left + _K.docViewer.width > width) {
       p.left = width - _K.docViewer.width - 52;
       if (p.left < 0) {
@@ -770,7 +772,7 @@ class __window_manager extends mfsInteract {
 
     const height = this.iconsList.$el.height() - (this.offsetHeight || 80);
     const space = width % item_width;
-    for (let c of Array.from(this.windowsLayer.children.toArray())) {
+    for (let c of Array.from(this.getWindowsPool().children.toArray())) {
       if (c.mget(_a.kind) === kind) {
         i++;
         items++;
@@ -864,6 +866,18 @@ class __window_manager extends mfsInteract {
   }
 
   /**
+   * Returns the window container for the current mode:
+   * - Headless mode (workspace opened from the sidebar): windows are added
+   *   to headlessLayer, which hosts the singleton headless window_folder.
+   * - Regular mode (workspace opened as a floating window, or no workspace
+   *   open): windows are added to windowsLayer as usual.
+   */
+  getWindowsPool() {
+    if (this.headlessLayer && !this.headlessLayer.isEmpty()) return this.headlessLayer
+    return this.windowsLayer
+  }
+
+  /**
    *
    */
   _launchApp(media, args) {
@@ -879,9 +893,9 @@ class __window_manager extends mfsInteract {
       Kind.waitFor(app.kind).then(() => {
         try {
           app.launchTag = launchTag;
-          this.windowsLayer.append(app);
+          this.getWindowsPool().append(app);
         } catch (e) {
-          let widget = this.windowsLayer.children.last();
+          let widget = this.getWindowsPool().children.last();
           this.warn(`Failed to launch kind=${app.kind}`, widget, e);
           if (widget && widget.mget("launchTag") == launchTag) {
             widget.suppress();
@@ -992,7 +1006,7 @@ class __window_manager extends mfsInteract {
    * @returns
    */
   checkAlreadyOpened(media) {
-    let w = this.windowsLayer.children.find(
+    let w = this.getWindowsPool().children.find(
       (r) => r.mget(_a.nid) == media.mget(_a.nid),
     );
     if (w && !w.isDestroyed()) {
@@ -1044,7 +1058,7 @@ class __window_manager extends mfsInteract {
     opt.radio = _a.on;
     opt.trigger = opt.media;
     opt.service = null;
-    return this.windowsLayer.append(opt);
+    return this.getWindowsPool().append(opt);
   }
 
   /**
@@ -1068,7 +1082,7 @@ class __window_manager extends mfsInteract {
     opt.radio = _a.on;
     opt.trigger = item.source;
     opt.service = null;
-    return this.windowsLayer.append(opt);
+    return this.getWindowsPool().append(opt);
   }
 
   /**
@@ -1093,8 +1107,8 @@ class __window_manager extends mfsInteract {
       const uniqueKey = o.unique
         ? o.unique
         : (arg && arg.wm_unique_id
-            ? { key: 'wm_unique_id', value: arg.wm_unique_id }
-            : null);
+          ? { key: 'wm_unique_id', value: arg.wm_unique_id }
+          : null);
       let w;
       if (uniqueKey) {
         w = this.getItemsByAttr(uniqueKey.key, uniqueKey.value)[0];
@@ -1115,7 +1129,7 @@ class __window_manager extends mfsInteract {
 
     if (o.explicit || o.options === "explicit") {
       Kind.waitFor(arg.kind).then(() => {
-        this.windowsLayer.append(arg);
+        this.getWindowsPool().append(arg);
       });
       return true;
     }
@@ -1136,7 +1150,7 @@ class __window_manager extends mfsInteract {
     opt.args = opt;
     opt.radio = _a.on;
     opt.kind = "window_launcher";
-    this.windowsLayer.append(opt);
+    this.getWindowsPool().append(opt);
     return true;
   }
 
@@ -1295,12 +1309,12 @@ class __window_manager extends mfsInteract {
             kind: "window_info",
             message: LOCALE.FILE_NOT_FOUND,
           };
-          return this.windowsLayer.append(opt);
+          return this.getWindowsPool().append(opt);
         }
       })
       .catch((e) => {
         opt = { kind: "window_info" };
-        return this.windowsLayer.append(opt);
+        return this.getWindowsPool().append(opt);
       });
   }
 

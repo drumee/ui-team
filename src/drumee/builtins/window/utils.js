@@ -979,8 +979,18 @@ class __window_mfs extends DrumeeMFS {
       data = source;
     }
     let { nid, hub_id, role, pid, filetype, area } = data;
-    this.debug("AAA:9876", data)
-    let opt = require('window/configs/application')(filetype, data)
+    let node;
+    if (!filetype) {
+      node = await this.fetchService({
+        service: SERVICE.media.attributes,
+        nid,
+        hub_id,
+      }, { async: 1 });
+      if (!node || !node.nid) {
+        return Wm.alert(LOCALE.FILE_NOT_FOUND)
+      }
+    }
+    let opt = require('window/configs/application')(filetype, { ...data, ...node })
 
     /** Direct open from the Wm if if possible */
     let found = Wm.getItemsByAttr(_a.nid, nid)[0]
@@ -990,13 +1000,12 @@ class __window_mfs extends DrumeeMFS {
     }
 
     /** Open the player if applicable */
-    if (opt.kind) {
-      let node = await this.fetchService({
+    if (opt.kind && !node) {
+      node = await this.fetchService({
         service: SERVICE.media.attributes,
         nid,
         hub_id,
       }, { async: 1 });
-      this.debug("AAA:952", { ...opt, ...node })
       if (!node || !node.nid) {
         return Wm.alert(LOCALE.FILE_NOT_FOUND)
       }
