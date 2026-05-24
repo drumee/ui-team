@@ -1,27 +1,26 @@
 /** ================================================================== *
 #   Copyright Xialia.com  2011-2020
-#   FILE : /src/drumee/builtins/player/stream/skin/index.scss
+#   FILE : /src/drumee/builtins/player/video/skin/index.scss
 #   TYPE : Component style
 # ===================================================================**/
 @use "mixins/drumee";
 @import "openplayer.css";
 
 .player-video {
-  height: 595px !important;
+  display: flex;
+  width: 100%;
+  height: 100%;
+  max-height: calc(100vh - 120px);
+
   &__ui {
     overflow: hidden;
-    height: 100%;
     width: 100%;
-
-    &[data-device="mobile"] {
-      width: 360px !important;
-      height: 500px !important;
-      left: 50% !important;
-      transform: translateX(-50%) translateY(15%);
-    }
+    height: 100%;
   }
 
   &__main {
+    display: flex;
+    flex-direction: column;
     height: 100%;
     width: 100%;
   }
@@ -31,69 +30,90 @@
     z-index: 2;
     right: var(--spacer-4);
     top: var(--spacer-4);
-    padding: var(--spacer-2) var(--spacer-4);
-    border-radius: var(--corner-radius-2);
-    background-color: var(--normal-bg-90);
+    background: transparent;
+    padding: 0;
+
+    .window-button__icon-button {
+      width: 32px;
+      height: 32px;
+      padding: 0;
+      border-radius: 50%;
+      background-color: rgba(0, 0, 0, 0.55);
+      backdrop-filter: blur(4px);
+      color: #ffffff;
+      transition: background-color 0.15s ease;
+
+      svg, .icon { width: 14px; height: 14px; }
+
+      &:hover {
+        background-color: rgba(0, 0, 0, 0.75);
+        color: #ffffff;
+      }
+    }
   }
 
   &__video {
-    background-color: var(--multimedia-player-vdo-bg); //black;
-    height: 100%;
+    background-color: var(--multimedia-player-vdo-bg, #000);
     width: 100%;
+    height: 100%;
+    // Preserve aspect ratio: portrait/landscape videos no longer stretch to fill.
+    object-fit: contain;
+    border-radius: var(--corner-radius-2);
   }
 
-  /* Openplayer costumizing */
+  // Letterbox/pillarbox area outside the <video> — keep dark so the
+  // aspect-ratio bars don't read as a white frame around the video.
+  &__ui,
+  &__main {
+    background-color: var(--multimedia-player-vdo-bg, #000);
+  }
+
+  /* OpenPlayer brand alignment */
   .op-player {
     font-family: "Roboto-Light", sans-serif;
     width: 100%;
     height: 100%;
   }
 
-  input[type="range"].op-controls__volume--input {
-    top: -8px;
-  }
-
+  input[type="range"].op-controls__volume--input,
   input[type="range"].op-controls__progress--seek {
     top: -8px;
   }
 
   .op-player__play {
-    border-width: 20px 0 20px 36px;
-    height: 40px;
-  }
-
-  .op-player__loader {
-    border-top: 5px solid lightgray;
+    border-width: 16px 0 16px 28px;
+    height: 32px;
   }
 
   .op-player__play:hover {
-    border-color: transparent transparent transparent lightgray;
+    border-color: transparent transparent transparent var(--grid-color-icon-file);
+  }
+
+  .op-player__loader {
+    border-top: 4px solid var(--grid-color-icon-file);
+  }
+
+  .op-controls .op-controls__progress--played,
+  .op-controls .op-controls__volume--display,
+  .op-controls .op-controls__captions--on:before {
+    color: var(--grid-color-icon-file);
+  }
+
+  .op-controls input[type="range"],
+  .op-controls progress {
+    height: 4px;
   }
 
   .op-controls .op-controls__progress--seek.error {
     background: linear-gradient(
       -45deg,
-      lightgray 25%,
+      var(--grid-color-icon-file) 25%,
       transparent 25%,
       transparent 50%,
-      lightgray 50%,
-      lightgray 75%,
+      var(--grid-color-icon-file) 50%,
+      var(--grid-color-icon-file) 75%,
       transparent 75%,
       transparent
     );
-  }
-
-  .op-controls .op-controls__progress--played,
-  .op-controls .op-controls__volume--display {
-    color: lightgray;
-  }
-
-  .op-controls .op-controls__captions--on:before {
-    color: lightgray;
-  }
-
-  .op-controls input[type="range"],
-  .op-controls progress {
-    height: 3px;
   }
 }

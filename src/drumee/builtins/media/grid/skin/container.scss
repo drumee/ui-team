@@ -204,6 +204,13 @@
       background-position: center;
       border-radius: var(--grid-card-radius);
 
+      &.video {
+        // Center the play badge over the video poster.
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
       &.vector {
         background-color: var(--neutral-500);
       }
@@ -215,7 +222,13 @@
       height: var(--grid-icon-file);
 
       &.video {
-        fill: var(--grid-color-icon-file);
+        // Centered play badge: smaller than the file-icon size, white with a
+        // soft shadow so it stays legible on any video poster (dark or light).
+        width: 40px;
+        height: 40px;
+        fill: #ffffff;
+        filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.45));
+        opacity: 0.95;
       }
 
       &.document,
