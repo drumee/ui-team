@@ -91,12 +91,7 @@
         display: block;
         width: 14px;
         height: 14px;
-        fill: $ink-600;
-
-        .icon-fill-blue,
-        .icon-fill-grey {
-          fill: $ink-600;
-        }
+        @include svg-color($ink-600);
       }
     }
   }
@@ -339,12 +334,7 @@
       display: block;
       width: 14px;
       height: 14px;
-      fill: $purple-base;
-
-      .icon-fill-blue,
-      .icon-fill-grey {
-        fill: $purple-base;
-      }
+      @include svg-color($purple-base);
     }
   }
 
@@ -389,12 +379,7 @@
       display: block;
       width: 14px;
       height: 14px;
-      fill: var(--white, #fff);
-
-      .icon-fill-blue,
-      .icon-fill-grey {
-        fill: var(--white, #fff);
-      }
+      @include svg-color(var(--white, #fff));
     }
   }
 
@@ -471,12 +456,7 @@
         display: block;
         width: 12px;
         height: 14px;
-        fill: $purple-base;
-
-        .icon-fill-blue,
-        .icon-fill-grey {
-          fill: $purple-base;
-        }
+        @include svg-color($purple-base);
       }
     }
   }
@@ -727,12 +707,7 @@
         display: block;
         width: 13px;
         height: 15px;
-        fill: $red;
-
-        .icon-fill-blue,
-        .icon-fill-grey {
-          fill: $red;
-        }
+        @include svg-color($red);
       }
     }
   }
@@ -756,12 +731,7 @@
       display: block;
       width: 20px;
       height: 20px;
-      fill: $ink-900;
-
-      .icon-fill-blue,
-      .icon-fill-grey {
-        fill: $ink-900;
-      }
+      @include svg-color($ink-900);
     }
   }
 
@@ -809,12 +779,7 @@
         display: block;
         width: 13px;
         height: 13px;
-        fill: $red;
-
-        .icon-fill-blue,
-        .icon-fill-grey {
-          fill: $red;
-        }
+        @include svg-color($red);
       }
     }
   }
@@ -853,12 +818,7 @@
       display: block;
       width: 18px;
       height: 18px;
-      fill: var(--white, #fff);
-
-      .icon-fill-blue,
-      .icon-fill-grey {
-        fill: var(--white, #fff);
-      }
+      @include svg-color(var(--white, #fff));
     }
   }
 
