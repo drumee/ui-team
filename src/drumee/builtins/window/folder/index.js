@@ -1249,13 +1249,14 @@ class __window_folder extends mfsInteract {
   }
 
   _formatFolderMemberName(row) {
-    return (
-      row.fullname ||
-      [row.firstname, row.lastname].filter(Boolean).join(" ") ||
-      row.surname ||
-      row.email ||
-      ""
-    ).trim();
+    const pick = (...vals) =>
+      vals.map((v) => (v == null ? "" : String(v).trim())).find(Boolean) || "";
+    return pick(
+      row.fullname,
+      [row.firstname, row.lastname].filter(Boolean).join(" "),
+      row.surname,
+      row.email,
+    );
   }
 
   async _refreshFolderMembers() {

@@ -9,226 +9,278 @@
 @use "gateway";
 @use "url";
 
+// Figma tokens (Drumee design system, node 5:73987)
+$drumee-bg: #f2f2f7; // Grey/20
+$drumee-primary: #433cc5; // Primary/50
+$drumee-primary-hover: #5950ff; // brand overlay
+$drumee-grey-90: #34343a; // Grey/90
+$drumee-grey-80: #65656c; // Grey/80
+$drumee-input-bg: rgba(0, 0, 0, 0.05);
+$drumee-divider: rgba(71, 69, 84, 0.2);
+$drumee-google-bg: rgba(89, 80, 255, 0.1);
+$drumee-link-purple: #b1adff;
+
 .welcome-signin {
   &__ui,
   &__main,
   &__container,
   &__items {
-    height: 100%;
     width: 100%;
   }
 
   &__ui {
+    background-color: $drumee-bg;
     padding-top: 70px;
+
     &[data-mode="reconnect"] {
-      background-color: var(--normal-bg);
-      padding: 40px;
+      background-color: $drumee-bg;
+      padding: 0;
     }
   }
 
-  &__content {
-    height: auto;
-    width: 100%;
+  &__main {
+    height: 100%;
+  }
+
+  &__container {
+    background-color: $drumee-bg;
+    padding: 48px;
+    gap: 32px;
+    border-radius: 12px;
+
+    &[data-mode="reconnect"] {
+      padding: 48px;
+      max-width: 520px;
+      margin: 0 auto;
+    }
   }
 
   &__logo-content {
-    justify-content: center;
     align-items: center;
+    justify-content: flex-start;
+    width: 100%;
+  }
+
+  &__logo-icon {
+    height: 24px;
+    width: 100px;
   }
 
   &__header {
-    height: auto;
     width: 100%;
+
     &[data-mode="reconnect"] {
-      display: none;
-      // height: 40px;
-      // justify-content: center;
+      display: flex;
     }
   }
 
   &__header-content {
-    align-items: center;
-    &[data-mode="reconnect"] {
-      max-height: 30px;
-    }
+    align-items: flex-start;
+    gap: 12px;
+    width: 100%;
+  }
+
+  &__content {
+    width: 100%;
+    height: auto;
   }
 
   &__items {
-    align-items: center;
-    justify-content: start;
-    margin: 0 auto 0;
-    max-width: 350px;
-    min-width: 320px;
-    width: auto;
-
-    &[data-mode="reconnect"] {
-      min-height: 0;
-      padding-top: 10px;
-      min-height: 300px;
-    }
+    align-items: stretch;
+    margin: 0 auto;
+    max-width: 440px;
+    width: 100%;
+    gap: 24px;
 
     &.content {
-      align-items: center;
-      justify-content: center;
-    }
-
-    & .welcome__pw-meter.wrapper {
-      margin-top: 28px;
-    }
-
-    &.welcome__row {
-      &[data-status="error"] {
-        border-radius: 4px;
-        border: 2px solid var(--signout-fg, var(--error));
-      }
+      align-items: stretch;
     }
   }
 
-  &__wrapper {
-    align-items: center;
-    height: 70px;
-    justify-content: center;
-    margin: 5px 0; //10px 0;
-    max-height: 70px;
+  &__form-section {
+    gap: 12px;
     width: 100%;
-    &[data-mode="reconnect"] {
-      height: 60px;
-    }
-
-    &.helper {
-      margin: 0;
-      height: 120px;
-      // max-height: 20px;
-    }
-
-    &.no-code {
-      &[data-mode="closed"] {
-        display: none;
-      }
-    }
-    &.password {
-      input {
-        margin-left: 55px;
-      }
-    }
+    padding-top: 8px;
   }
 
   &__row {
     align-items: center;
-    background-color: var(--overlay-bg-05);
-    border-radius: 4px;
-    height: 100%;
-    max-height: 56px;
+    background-color: transparent;
     width: 100%;
+    height: auto;
+    padding: 0;
+    border: none;
 
-    &.email {
-      border: 1px solid var(--border-muted);
-    }
-
-    &.entry-status {
-      border: 1px solid var(--border-muted);
-    }
-
-    &.mobile-title,
-    &.email-title {
-      margin-bottom: 60px;
+    &.helper {
+      justify-content: center;
     }
 
     &.without-icon,
     &.no-background {
       background-color: transparent;
     }
+  }
 
-    &.company {
-      background-color: transparent;
+  &__entry-main {
+    width: 100%;
+    gap: 6px;
+  }
+
+  &__entry-label {
+    font-size: 12px;
+    font-weight: 400;
+    line-height: 1.4;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: $drumee-grey-80;
+    text-align: left;
+    justify-content: flex-start;
+    width: 100%;
+  }
+
+  &__entry-row {
+    width: 100%;
+    height: 45px;
+    background-color: $drumee-input-bg;
+    border: none;
+    border-radius: 4px;
+    padding: 0 12px;
+    align-items: center;
+    gap: 8px;
+    overflow: hidden;
+    transition: box-shadow 0.2s;
+
+    &:focus-within {
+      box-shadow: 0 0 0 1px $drumee-primary-hover;
     }
+  }
 
-    &.helper,
-    &.message-wrapper {
-      justify-content: center;
-    }
+  &__entry-ico {
+    width: 20px;
+    height: 20px;
+    flex-shrink: 0;
+    color: $drumee-grey-80;
 
-    .welcome__icon {
-      height: 24px;
-      margin: auto 24px;
-      position: absolute;
-      width: 24px;
-    }
-
-    .welcome__entry {
-      padding-left: 65px;
-    }
-
-    &.mobile-number {
-      max-height: 70px;
-    }
-
-    &.company-url {
-      //top: 60px;
-      & .drumee-text {
-        margin: 0px -20px;
-        @include drumee.typo(
-          $size: 16px,
-          $line: 16px,
-          $color: var(--neutral-600)
-        );
-      }
-    }
-    &.buttons-wrapper,
-    &.message-wrapper {
-      margin: 15px 0;
-      height: 60px;
-      &.message.no-background {
-        width: 100%;
-        height: auto;
-      }
-    }
-
-    &.buttons-wrapper,
-    &.message-wrapper {
-      &[data-mode="closed"] {
-        display: none;
-      }
-
-      &[data-error="yes"] {
-        opacity: 0.5;
-        pointer-events: none;
-      }
-    }
-
-    & .welcome__entry {
+    svg {
+      width: 100%;
       height: 100%;
+      fill: currentColor;
+    }
+  }
+
+  &__entry-input {
+    flex: 1;
+    min-width: 0;
+    width: 100%;
+    height: 100%;
+    border: none;
+    outline: none;
+    display: flex;
+    align-items: center;
+    padding: 0;
+    background: transparent;
+
+    // EntryBox internal wrappers — make them transparent passthroughs
+    .entry-reminder__main,
+    .entry-reminder__component,
+    .entry-reminder__input-wrap,
+    .entry-reminder__label,
+    .entry-box,
+    .entry-wrapper {
+      flex: 1;
+      min-width: 0;
+      width: 100%;
+      height: 100%;
+      background: transparent;
+      border: none;
+      outline: none;
+      box-shadow: none;
       padding: 0;
-      &[data-status="error"] {
-        border-radius: var(--border-radius);
-        border: 2px solid var(--default-border-error);
+      margin: 0;
+      align-items: center;
+    }
+
+    .entry-reminder__icon {
+      right: 5px;
+      position: absolute;
+    }
+
+    input {
+      width: 100%;
+      height: 43px;
+      background: transparent;
+      border: none;
+      outline: none;
+      color: $drumee-grey-90;
+      font-size: 15px;
+      line-height: 43px;
+      padding: 0;
+      margin: 0;
+      box-sizing: border-box;
+      vertical-align: middle;
+
+      &::placeholder {
+        color: $drumee-grey-80;
+        line-height: 43px;
+      }
+
+      &:focus {
+        border: none;
+        outline: none;
+        box-shadow: none;
+      }
+
+      &:-webkit-autofill,
+      &:-webkit-autofill:hover,
+      &:-webkit-autofill:focus,
+      &:-webkit-autofill:active {
+        -webkit-text-fill-color: $drumee-grey-90 !important;
+        -webkit-box-shadow: 0 0 0 1000px $drumee-input-bg inset !important;
+        box-shadow: 0 0 0 1000px $drumee-input-bg inset !important;
+        background-color: transparent !important;
+        background-image: none !important;
+        transition: background-color 5000s ease-in-out 0s;
+        caret-color: $drumee-grey-90;
+        border-radius: 0;
       }
     }
   }
 
-  &__mobile-wrapper {
+  &__entry-eye-toggle {
+    width: 21px;
+    height: 21px;
+    flex-shrink: 0;
+    cursor: pointer;
+    color: $drumee-grey-80;
+    display: flex;
+    align-items: center;
     justify-content: center;
-    padding-top: 10px;
+    margin-right: 2px;
+    transition: color 0.2s;
+
+    svg {
+      width: 100%;
+      height: 100%;
+      fill: currentColor;
+    }
+
+    &:hover {
+      color: $drumee-primary;
+    }
+
+    &[data-state="1"] {
+      color: $drumee-primary;
+    }
   }
 
   &__note {
     @include drumee.typo(
-      $size: 20px,
-      $line: 28px,
+      $size: 14px,
+      $line: 1.4,
       $weight: 400,
-      $color: var(--default-text-reverse)
+      $color: $drumee-grey-80
     );
-    justify-content: center;
-    text-align: center;
     width: 100%;
-    &[data-state="reconnect"] {
-      @include drumee.typo(
-        $size: 14px,
-        $line: 20px,
-        $weight: 300,
-        $color: var(--default-text-reverse)
-      );
-    }
 
     &.message {
       color: var(--default-text-error);
@@ -236,216 +288,110 @@
 
     &.header {
       @include drumee.typo(
-        $size: 32px,
-        $line: 35px,
-        $weight: 600,
-        $color: var(--normal-fg)
-      );
-      &[data-mode="reconnect"] {
-        @include drumee.typo(
-          $size: 12px,
-          $line: 12px,
-          $weight: 300,
-          $color: var(--normal-fg)
-        );
-      }
-    }
-    &.sub-header {
-      padding-top: 20px;
-    }
-
-    &.steps {
-      color: var(--white-f7);
-      top: 30px;
-    }
-
-    &.drumee-com {
-      @include drumee.typo(
         $size: 20px,
-        $line: 28px,
-        $weight: 500,
-        $color: var(--white-f9)
+        $line: 1.1,
+        $weight: 600,
+        $color: $drumee-primary
       );
-      position: absolute;
-      right: -130px;
-    }
-
-    &.input-label {
-      max-width: 110px;
-      text-align: right;
+      justify-content: flex-start;
+      text-align: left;
       width: 100%;
     }
 
-    &.password-tips {
-      @include drumee.typo(
-        $size: 12px,
-        $line: 16px,
-        $weight: 400,
-        $color: var(--white-f9)
-      );
-      padding-top: 47px;
-    }
-
-    &.mobile-number {
-      align-items: center;
-      width: 376px;
-      margin-top: -5px;
-    }
-
-    &.mobile {
-      justify-content: center;
-      width: 100%;
-    }
-
-    &.helper,
-    &.not-now {
+    &.sub-header {
       @include drumee.typo(
         $size: 16px,
-        $line: 16px,
-        $color: var(--neutral-600)
+        $line: 1.4,
+        $weight: 400,
+        $color: $drumee-grey-80
       );
-      width: 100%;
+      padding-top: 0;
+      text-align: left;
+      justify-content: flex-start;
     }
 
     &.helper,
-    &.title {
-      justify-content: center;
-    }
-
     &.forgot-password {
-      justify-content: center;
-      //justify-content: flex-start;
-    }
-
-    &.no-account {
-      justify-content: flex-end;
-    }
-
-    &.text-underline {
+      @include drumee.typo(
+        $size: 14px,
+        $line: 20px,
+        $weight: 400,
+        $color: $drumee-grey-80
+      );
       cursor: pointer;
-      text-decoration-line: underline;
+      width: auto;
       &:hover {
-        color: var(--eviolet); //#6a85ff;
+        color: $drumee-primary;
       }
     }
   }
 
   &__icon {
-    color: var(--default-icon-neutral); //var(--egrey-89);
+    color: $drumee-grey-80;
     cursor: pointer;
-    height: 18px;
-    width: 18px; //20px;
+    height: 20px;
+    width: 20px;
 
     &.input-wrapper {
-      position: absolute;
-      margin: 12px 20px; // 8px 12px 12px 15px;
-    }
-
-    &.mobile,
-    &.mobile-number,
-    &.acknowledgment {
-      color: var(--default-text-reverse);
-    }
-
-    &.mobile,
-    &.mobile-number {
-      height: 20px;
-      width: 20px;
-    }
-
-    &.mobile-number,
-    &.acknowledgment {
-      right: 10px;
-      top: 5px;
+      position: relative;
+      margin: 0 8px 0 0;
     }
 
     &.email {
-      height: 21px;
-      left: 2px;
-      top: 5px;
-      width: 21px;
+      height: 20px;
+      width: 20px;
+      left: auto;
+      top: auto;
 
       svg {
-        fill: #2f2f2f;
-        opacity: 0.8;
+        fill: $drumee-grey-80;
+        opacity: 1;
       }
     }
-
-    &.lock {
-      left: -2px;
-    }
-
-    &.code {
-      height: 22px;
-      width: 22px;
-    }
   }
 
-  &__protocol {
-    position: relative;
-  }
   &__entry {
     & input {
       border-bottom: none;
-      border-radius: 0 6px 6px 0px;
-      padding: 4px;
+      border-radius: 0;
+      padding: 4px 0;
+      background-color: transparent;
       @include drumee.typo(
-        $size: 18px,
-        $line: 28px,
-        $color: var(--default-text-color)
+        $size: 14px,
+        $line: 1.4,
+        $weight: 400,
+        $color: $drumee-grey-90
       );
 
       &::placeholder {
         @include drumee.typo(
-          $size: 19px,
-          $line: 28px,
-          $weight: 300,
-          $color: var(--connect-text-placeholder)
+          $size: 14px,
+          $line: 1.4,
+          $weight: 400,
+          $color: $drumee-grey-80
         );
       }
     }
 
-    &[data-status="error"] {
-      border-radius: var(--border-radius);
-      border: 2px solid var(--default-border-error);
-    }
-
-    & .entry-reminder_error {
-      display: none;
-    }
-
     &.with-icon {
       height: 100%;
-      padding: 0 0 0 55px;
+      padding: 0;
       width: 100%;
-    }
-
-    &.input-box {
-      border-radius: 4px;
-      align-items: center;
-      background-color: var(--normal-bg);
-      height: 56px;
-      width: 100%;
-      border: 1px solid var(--border-muted);
-
-      & input {
-        padding-left: 10px;
-      }
     }
 
     .pw-shower {
       cursor: pointer;
       left: auto;
-      right: 10px;
+      right: 0;
     }
   }
 
   .pw-shower {
-    position: absolute;
-    right: 15px;
-    top: 15px;
-    color: var(--egrey-2f);
-    opacity: 0.7;
+    position: relative;
+    right: 0;
+    top: 0;
+    color: $drumee-grey-80;
+    opacity: 1;
   }
 
   &__button-confirm {
@@ -453,22 +399,144 @@
       $size: 16px,
       $line: 24px,
       $weight: 600,
-      $color: #FFFFFF
+      $color: #ffffff
     );
     align-items: center;
-    background-color: #433CC5;
+    background-color: $drumee-primary;
     border-radius: 4px;
     cursor: pointer;
     height: 56px;
     justify-content: center;
     width: 100%;
     padding: 16px 24px;
+    margin-top: 8px;
+    font-family: var(--font-main);
 
     &:hover {
-      background-color: #5950FF;
+      background-color: $drumee-primary-hover;
       box-shadow: 0 0 13px 0 rgba(89, 80, 255, 0.5);
     }
   }
+
+  &__divider {
+    align-items: center;
+    gap: 16px;
+    padding-top: 8px;
+    width: 100%;
+
+    &-line {
+      flex: 1 0 0;
+      height: 1px;
+      background-color: $drumee-divider;
+    }
+
+    &-label {
+      @include drumee.typo(
+        $size: 12px,
+        $line: 1.4,
+        $weight: 400,
+        $color: $drumee-grey-90
+      );
+      width: auto;
+      white-space: nowrap;
+    }
+  }
+
+  &__social-button {
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    height: 56px;
+    background-color: $drumee-google-bg;
+    border-radius: 8px;
+    cursor: pointer;
+    width: 100%;
+    transition: background-color 0.15s ease;
+
+    &:hover {
+      background-color: rgba(89, 80, 255, 0.18);
+    }
+  }
+
+  &__social-icon {
+    height: 20px;
+    width: 20px;
+  }
+
+  &__social-label {
+    @include drumee.typo(
+      $size: 16px,
+      $line: 24px,
+      $weight: 600,
+      $color: $drumee-primary
+    );
+    width: auto;
+  }
+
+  &__footer-links {
+    gap: 16px;
+    padding-top: 8px;
+    align-items: center;
+    width: 100%;
+  }
+
+  &__signup-prompt {
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    width: 100%;
+
+    &-text {
+      @include drumee.typo(
+        $size: 14px,
+        $line: 20px,
+        $weight: 600,
+        $color: $drumee-grey-90
+      );
+      width: auto;
+    }
+
+    &-link {
+      @include drumee.typo(
+        $size: 14px,
+        $line: 20px,
+        $weight: 600,
+        $color: $drumee-link-purple
+      );
+      width: auto;
+      cursor: pointer;
+    }
+  }
+
+  &__legal-links {
+    gap: 24px;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+  }
+
+  &__legal-link {
+    @include drumee.typo(
+      $size: 12px,
+      $line: 1.4,
+      $weight: 400,
+      $color: $drumee-grey-80
+    );
+    cursor: pointer;
+    text-align: center;
+    width: auto;
+    white-space: nowrap;
+  }
+
+  &__legal-dot {
+    background-color: $drumee-grey-80;
+    border-radius: 12px;
+    width: 4px;
+    height: 4px;
+    flex-shrink: 0;
+  }
+
+  // -----  Non-Figma states preserved for OTP / URL / cross-signin flows  -----
 
   &-go {
     @include drumee.typo(

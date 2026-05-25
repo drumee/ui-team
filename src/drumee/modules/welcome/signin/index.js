@@ -134,6 +134,23 @@ class __welcome_signin extends __welcome_interact {
   onUiEvent(cmd, args) {
     const service = args.service || cmd.model.get(_a.service);
     switch (service) {
+      case "toggle-password-visibility": {
+        const row = cmd.el.closest(`.${this.fig.family}__entry-row`);
+        const input = row && row.querySelector("input");
+        if (!input) break;
+        const isVisible = input.type === "text";
+        input.type = isVisible ? "password" : "text";
+        const useEl = cmd.el.querySelector("svg use");
+        if (useEl) {
+          useEl.setAttribute(
+            "xlink:href",
+            isVisible ? "#--icon-eye_closed" : "#--icon-eye"
+          );
+        }
+        cmd.el.dataset.state = isVisible ? "0" : "1";
+        return;
+      }
+
       case _e.submit:
         var vars = this.checkSanity();
         if (!vars) {

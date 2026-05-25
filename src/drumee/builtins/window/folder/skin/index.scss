@@ -932,6 +932,7 @@
   &__settings-action-close,
   &__settings-action-role-caret,
   &__settings-action-member-remove {
+    display: flex;
     align-items: center;
     justify-content: center;
     flex: 0 0 auto;
@@ -1004,7 +1005,6 @@
   &__settings-action-role-dropdown {
     position: relative;
     overflow: visible;
-    z-index: 9999;
 
     // Right-align the popover with the trigger so the menu grows LEFT into
     // the panel interior rather than overflowing past the panel's right
@@ -1711,10 +1711,9 @@
   .window__filter__main,
   .media-row__main {
     min-width: 0;
-    grid-template-columns: 44px 44px minmax(140px, 1fr) minmax(
-        120px,
-        150px
-      ) 76px 76px;
+    grid-template-columns:
+      44px 44px minmax(140px, 1fr) minmax(120px, 150px)
+      76px 76px;
   }
 
   .window__filter__main {
