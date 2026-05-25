@@ -130,7 +130,9 @@
     &-row--empty {
       opacity: 0.7;
     }
-    &-disconnect-main {
+    &-disconnect-main[data-flow] {
+      display: flex;
+      flex-direction: row;
       width: 120px;
       height: 32px;
       border-radius: 4px;
