@@ -456,12 +456,7 @@
     svg {
       width: 16px;
       height: 16px;
-      fill: $purple-base;
-
-      .icon-fill-blue,
-      .icon-fill-grey {
-        fill: $purple-base;
-      }
+      @include svg-color($purple-base);
     }
   }
 
@@ -546,12 +541,7 @@
     height: 20px;
 
     svg {
-      fill: $purple-base;
-
-      .icon-fill-blue,
-      .icon-fill-grey {
-        fill: $purple-base;
-      }
+      @include svg-color($purple-base);
     }
   }
 
@@ -783,12 +773,7 @@
     svg {
       width: 16px;
       height: 16px;
-      fill: $purple-base;
-
-      .icon-fill-blue,
-      .icon-fill-grey {
-        fill: $purple-base;
-      }
+      @include svg-color($purple-base);
     }
 
     &:hover svg {
@@ -846,12 +831,7 @@
     svg {
       width: 12px;
       height: 12px;
-      fill: $ink-700;
-
-      .icon-fill-blue,
-      .icon-fill-grey {
-        fill: $ink-700;
-      }
+      @include svg-color($ink-700);
     }
   }
 

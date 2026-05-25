@@ -120,12 +120,7 @@
     svg {
       width: 16px;
       height: 20px;
-      fill: $ink-900;
-
-      .icon-fill-blue,
-      .icon-fill-grey {
-        fill: $ink-900;
-      }
+      @include svg-color($ink-900);
     }
   }
 
@@ -177,12 +172,7 @@
     svg {
       width: 20px;
       height: 20px;
-      fill: $purple-base;
-
-      .icon-fill-blue,
-      .icon-fill-grey {
-        fill: $purple-base;
-      }
+      @include svg-color($purple-base);
     }
   }
 
@@ -256,12 +246,7 @@
     svg {
       width: 24px;
       height: 24px;
-      fill: $ink-900;
-
-      .icon-fill-blue,
-      .icon-fill-grey {
-        fill: $ink-900;
-      }
+      @include svg-color($ink-900);
     }
   }
 
@@ -461,12 +446,7 @@
     svg {
       width: 16px;
       height: 16px;
-      fill: $purple-base;
-
-      .icon-fill-blue,
-      .icon-fill-grey {
-        fill: $purple-base;
-      }
+      @include svg-color($purple-base);
     }
   }
 
@@ -500,12 +480,7 @@
     svg {
       width: 12px;
       height: 12px;
-      fill: $ink-500;
-
-      .icon-fill-blue,
-      .icon-fill-grey {
-        fill: $ink-500;
-      }
+      @include svg-color($ink-500);
     }
   }
 
@@ -585,6 +560,80 @@
 
     &__sec-top--split > * {
       flex: 1 1 100%;
+    }
+  }
+}
+
+
+// ── Security tab — dark mode ─────────────────────────────────
+html[data-theme="dark"] .apps-main {
+  &__sec-page-title,
+  &__sec-section-title,
+  &__sec-2fa-head-label,
+  &__sec-2fa-title,
+  &__sec-card-title {
+    color: var(--normal-fg);
+  }
+
+  &__sec-2fa-desc,
+  &__sec-card-meta {
+    color: var(--normal-fg-50);
+  }
+
+  &__sec-2fa-card,
+  &__sec-sso-card {
+    background: var(--overlay-bg-05);
+  }
+
+  &__sec-2fa-row,
+  &__sec-sso-row,
+  &__sec-card {
+    background: var(--normal-bg-elevated);
+    border-color: var(--border-muted);
+  }
+
+  &__sec-sso-head-label,
+  &__sec-sso-title {
+    color: var(--normal-fg);
+  }
+
+  &__sec-sso-sub {
+    color: var(--normal-fg-50);
+  }
+
+  &__sec-sso-head-ico svg {
+    @include svg-color(var(--normal-fg));
+  }
+
+  &__sec-plan-switch {
+    background: var(--overlay-bg-05);
+  }
+
+  &__sec-plan-opt--active {
+    background: var(--normal-bg-elevated);
+
+    .apps-main__sec-plan-opt-label {
+      color: var(--normal-fg);
+    }
+  }
+
+  &__sec-plan-opt-label {
+    color: var(--normal-fg-50);
+  }
+
+  &__sec-toggle {
+    background: var(--normal-bg-40);
+  }
+
+  &__sec-2fa-head-ico svg {
+    @include svg-color(var(--normal-fg));
+  }
+
+  &__sec-empty {
+    background: var(--overlay-bg-05);
+
+    .apps-main__sec-empty-label {
+      color: var(--normal-fg-50);
     }
   }
 }

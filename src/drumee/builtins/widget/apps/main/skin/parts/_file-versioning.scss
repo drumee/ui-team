@@ -74,12 +74,7 @@
         display: block;
         width: 14px;
         height: 14px;
-        fill: $purple-base;
-
-        .icon-fill-blue,
-        .icon-fill-grey {
-          fill: $purple-base;
-        }
+        @include svg-color($purple-base);
       }
     }
 
@@ -239,12 +234,7 @@
         display: block;
         width: 12px;
         height: 12px;
-        fill: var(--white, #fff);
-
-        .icon-fill-blue,
-        .icon-fill-grey {
-          fill: var(--white, #fff);
-        }
+        @include svg-color(var(--white, #fff));
       }
     }
   }
@@ -267,12 +257,7 @@
         display: block;
         width: 15px;
         height: 19px;
-        fill: $purple-light;
-
-        .icon-fill-blue,
-        .icon-fill-grey {
-          fill: $purple-light;
-        }
+        @include svg-color($purple-light);
       }
     }
   }
@@ -342,12 +327,7 @@
 
     &--more {
       svg {
-        fill: $ink-900;
-
-        .icon-fill-blue,
-        .icon-fill-grey {
-          fill: $ink-900;
-        }
+        @include svg-color($ink-900);
       }
 
       &:hover {
@@ -357,12 +337,7 @@
 
     &--delete {
       svg {
-        fill: $red;
-
-        .icon-fill-blue,
-        .icon-fill-grey {
-          fill: $red;
-        }
+        @include svg-color($red);
       }
 
       &:hover {
@@ -451,12 +426,7 @@
         display: block;
         width: 8px;
         height: 12px;
-        fill: $ink-600;
-
-        .icon-fill-blue,
-        .icon-fill-grey {
-          fill: $ink-600;
-        }
+        @include svg-color($ink-600);
       }
     }
 
@@ -530,12 +500,7 @@
       display: block;
       width: 12px;
       height: 12px;
-      fill: $ink-600;
-
-      .icon-fill-blue,
-      .icon-fill-grey {
-        fill: $ink-600;
-      }
+      @include svg-color($ink-600);
     }
 
     &:hover {
@@ -595,4 +560,105 @@
     }
   }
 
+}
+
+
+// ── Admin Storage — File Versioning — dark mode ─────────────────────────────────
+html[data-theme="dark"] .apps-main {
+  &__fv-card {
+    background: var(--normal-bg);
+    border-color: var(--border-muted);
+  }
+
+  &__fv-table-header,
+  &__fv-footer {
+    background: var(--normal-bg-elevated);
+  }
+
+  &__fv-table {
+    background: var(--normal-bg);
+  }
+
+  &__fv-row {
+    border-bottom-color: var(--border-muted);
+
+    &--header {
+      background: var(--overlay-bg-05);
+
+      .apps-main__fv-col-label {
+        color: var(--normal-fg-20);
+      }
+    }
+
+    &:hover:not(.apps-main__fv-row--header) {
+      background: var(--hover-bg-40);
+    }
+  }
+
+  &__fv-heading-title,
+  &__fv-filename,
+  &__fv-size,
+  &__fv-page-num {
+    color: var(--normal-fg-10);
+  }
+
+  &__fv-heading-sub,
+  &__fv-col-label,
+  &__fv-pill-label,
+  &__fv-versions,
+  &__fv-view-all,
+  &__fv-back-label,
+  &__fv-pagination-label,
+  &__fv-page-ellipsis {
+    color: var(--normal-fg-20);
+  }
+
+  &__fv-view-all:hover {
+    color: var(--normal-fg-10);
+  }
+
+  &__fv-search {
+    background: var(--overlay-bg-05);
+
+    input {
+      color: var(--normal-fg-10);
+
+      &::placeholder {
+        color: var(--placeholder-fg);
+      }
+    }
+  }
+
+  &__fv-pill,
+  &__fv-fileico {
+    background: var(--overlay-bg-05);
+  }
+
+  &__fv-checkbox {
+    background: var(--normal-bg-elevated);
+    border-color: var(--border-strong);
+  }
+
+  &__fv-action--more svg {
+    @include svg-color(var(--normal-fg-10));
+  }
+
+  &__fv-action--more:hover,
+  &__fv-page-arrow:hover,
+  &__fv-page-btn:hover {
+    background: var(--hover-bg-40);
+  }
+
+  &__fv-page-arrow svg,
+  &__fv-back-ico svg {
+    @include svg-color(var(--normal-fg-20));
+  }
+
+  &__fv-page-btn--active {
+    background: var(--active-item-bg);
+  }
+
+  &__fv-pagination {
+    background: var(--overlay-bg-05);
+  }
 }
