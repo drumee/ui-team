@@ -278,46 +278,56 @@ class settings_main extends LetcBox {
    * user with a single linked provider can't lock themselves out.
    *
    * @param {string} provider e.g. "google", "apple"
+   * @param {object} [cmd]    the clicked button view; flagged with
+   *                          data-loading=1 during the network step
    */
-  async disconnectOauth(provider) {
+  async disconnectOauth(provider, cmd) {
     if (!provider) return;
-    const profile = Visitor.profile() || {};
-    const passwordSet = profile.password_set;
-    const usePassword = passwordSet === undefined || parseInt(passwordSet) === 1;
+    const setLoading = (on) => {
+      if (!cmd || !cmd.el) return;
+      if (on) cmd.el.dataset.loading = '1';
+      else delete cmd.el.dataset.loading;
+    };
+    setLoading(true);
+    try {
+      const profile = Visitor.profile() || {};
+      const passwordSet = profile.password_set;
+      const usePassword = passwordSet === undefined || parseInt(passwordSet) === 1;
 
-    if (usePassword) {
-      // Password-mode placeholder — uses the native prompt. Replace
-      // with a small password modal when polishing this surface.
-      const password = prompt(LOCALE.CONFIRM_PASSWORD_LABEL || "Password");
-      if (!password) return;
-      try {
-        const res = await this.postService({
-          service: SERVICE.drumate.unlink_oauth,
-          hub_id: Visitor.id,
-          provider,
-          password,
-        });
-        if (res && res.error) {
-          return this.alert(res.error === "WRONG_CREDENTIALS"
-            ? (LOCALE.WRONG_PASSOWRD || "Wrong password")
-            : res.error);
+      if (usePassword) {
+        const password = prompt(LOCALE.CONFIRM_PASSWORD_LABEL || "Password");
+        if (!password) return;
+        try {
+          const res = await this.postService({
+            service: SERVICE.drumate.unlink_oauth,
+            hub_id: Visitor.id,
+            provider,
+            password,
+          });
+          if (res && res.error) {
+            return this.alert(res.error === "WRONG_CREDENTIALS"
+              ? (LOCALE.WRONG_PASSOWRD || "Wrong password")
+              : res.error);
+          }
+          return this._refreshOauthLinks();
+        } catch (e) {
+          this.warn("disconnectOauth (password): failed", e);
         }
-        return this._refreshOauthLinks();
-      } catch (e) {
-        this.warn("disconnectOauth (password): failed", e);
+        return;
       }
-      return;
-    }
 
-    const otp = await sendOtp(this);
-    if (!otp) return this.alert(LOCALE.UNKNOWN_ERROR);
-    return openOtpModal(this, {
-      ...otp,
-      api: SERVICE.drumate.unlink_oauth,
-      payload: { provider },
-      successService: "unlink-oauth-success",
-      cancelService: "unlink-oauth-cancel",
-    });
+      const otp = await sendOtp(this);
+      if (!otp) return this.alert(LOCALE.UNKNOWN_ERROR);
+      return openOtpModal(this, {
+        ...otp,
+        api: SERVICE.drumate.unlink_oauth,
+        payload: { provider },
+        successService: "unlink-oauth-success",
+        cancelService: "unlink-oauth-cancel",
+      });
+    } finally {
+      setLoading(false);
+    }
   }
 
   /**
@@ -399,7 +409,7 @@ class settings_main extends LetcBox {
         return this._cancelMfa();
 
       case "disconnect-oauth":
-        return this.disconnectOauth(cmd && cmd.mget("provider"));
+        return this.disconnectOauth(cmd && cmd.mget("provider"), cmd);
 
       case "unlink-oauth-success":
         // Same shape constraint as "mfa-changed" — only act on the
