@@ -10,6 +10,12 @@
     gap: 16px;
     width: 100%;
     overflow-y: auto;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+
+    &::-webkit-scrollbar {
+      display: none;
+    }
   }
 
   &__sec-header {
@@ -41,7 +47,9 @@
     cursor: pointer;
     align-items: center;
     justify-content: center;
-    transition: background 0.15s ease, color 0.15s ease;
+    transition:
+      background 0.15s ease,
+      color 0.15s ease;
 
     > * {
       pointer-events: none;
@@ -465,7 +473,9 @@
     gap: 4px;
     align-items: center;
     cursor: pointer;
-    transition: background 0.15s ease, border-color 0.15s ease;
+    transition:
+      background 0.15s ease,
+      border-color 0.15s ease;
 
     > * {
       pointer-events: none;
@@ -563,7 +573,6 @@
     }
   }
 }
-
 
 // ── Security tab — dark mode ─────────────────────────────────
 html[data-theme="dark"] .apps-main {
