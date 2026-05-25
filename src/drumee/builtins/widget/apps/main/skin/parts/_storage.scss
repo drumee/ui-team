@@ -7,7 +7,6 @@
   //  STORAGE VIEW
   // ─────────────────────────────────────────────────────────
 
-
   // ── Header (title + retention pill) ───────────────────────
   &__storage-header {
     width: 100%;
@@ -834,5 +833,4 @@
       @include svg-color($ink-700);
     }
   }
-
 }
