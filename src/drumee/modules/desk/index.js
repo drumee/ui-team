@@ -121,12 +121,17 @@ class desk_module extends LetcBox {
 
   /**
    * After the user lands on the Desk, if onboarding said they use Google
-   * Drive AND they haven't started/completed a migration AND they
-   * haven't explicitly skipped, auto-launch the migrate popup once.
+   * Drive AND they haven't interacted with the migration prompt yet,
+   * auto-launch the migrate popup once.
    *
-   * The popup respects `autoFromOnboarding` to show a "Skip for now"
-   * link that calls google_drive.dismiss_post_onboarding so the prompt
-   * doesn't re-appear on reload.
+   * "Interacted" = either clicked Start (which sets
+   * profile.tools_migration_skipped.google_drive=1 inside start_migration)
+   * or clicked "Skip for now" (calls dismiss_post_onboarding which sets
+   * the same flag). Once the flag is set, no more auto-launches —
+   * Settings → Linked accounts is the manual re-entry point.
+   *
+   * The popup respects `autoFromOnboarding` to render the "Skip for now"
+   * link in addition to the normal flow.
    */
   async _maybeAutoLaunchGDriveMigration() {
     const profile = (Visitor.profile && Visitor.profile()) || {};
@@ -134,16 +139,6 @@ class desk_module extends LetcBox {
     if (!Array.isArray(tools) || !tools.includes("google_drive")) return;
     const skipped = (profile.tools_migration_skipped || {}).google_drive;
     if (skipped) return;
-    let r;
-    try {
-      r = await this.fetchService("google_drive.get_status", {
-        hub_id: Visitor.id, latest_only: 1,
-      });
-    } catch (e) {
-      return; // server down or endpoint missing — silently skip
-    }
-    // Already had a non-cancelled run → don't nag.
-    if (r && r.status && r.status !== "none" && r.status !== "cancelled") return;
 
     await Kind.waitFor("migrate_gdrive_popup");
     Wm.launch({
