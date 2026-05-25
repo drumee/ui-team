@@ -73,12 +73,7 @@
         display: block;
         width: 14px;
         height: 14px;
-        fill: $ink-600;
-
-        .icon-fill-blue,
-        .icon-fill-grey {
-          fill: $ink-600;
-        }
+        @include svg-color($ink-600);
       }
     }
   }

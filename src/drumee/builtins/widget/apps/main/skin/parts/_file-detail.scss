@@ -729,3 +729,85 @@ html[data-theme="dark"] .apps-main {
     border-bottom-color: var(--border-muted);
   }
 }
+
+
+// ── File detail screen — dark mode ─────────────────────────────────
+html[data-theme="dark"] .apps-main {
+  &__filed-back-label,
+  &__filed-history-sub,
+  &__filed-version-time,
+  &__filed-version-tag,
+  &__filed-version-editor-by,
+  &__filed-stat-label {
+    color: var(--normal-fg-20);
+  }
+
+  &__filed-back-ico svg,
+  &__filed-history-close-ico svg {
+    @include svg-color(var(--normal-fg-20));
+  }
+
+  &__filed-preview-name,
+  &__filed-doc-title,
+  &__filed-section-title,
+  &__filed-subsection-title,
+  &__filed-meta-heading,
+  &__filed-meta-value,
+  &__filed-history-title,
+  &__filed-version-filename,
+  &__filed-version-editor-name {
+    color: var(--normal-fg-10);
+  }
+
+  &__filed-section-body,
+  &__filed-bullet {
+    color: var(--normal-fg-20);
+  }
+
+  &__filed-loading-label,
+  &__filed-preview-empty,
+  &__filed-meta-label {
+    color: var(--normal-fg-50);
+  }
+
+  &__filed-search {
+    background: var(--overlay-bg-05);
+
+    input {
+      color: var(--normal-fg-10);
+
+      &::placeholder {
+        color: var(--placeholder-fg);
+      }
+    }
+  }
+
+  &__filed-preview-header,
+  &__filed-preview-card,
+  &__filed-show-folder {
+    background: var(--normal-bg);
+    border-color: var(--border-muted);
+  }
+
+  &__filed-show-folder:hover {
+    background: var(--hover-bg-40);
+  }
+
+  &__filed-section {
+    border-top-color: var(--border-muted);
+  }
+
+  &__filed-stat,
+  &__filed-history,
+  &__filed-version {
+    background: var(--overlay-bg-05);
+  }
+
+  &__filed-version:hover {
+    background: var(--hover-bg-40);
+  }
+
+  &__filed-meta-row {
+    border-bottom-color: var(--border-muted);
+  }
+}

@@ -78,12 +78,7 @@
         display: block;
         width: 14px;
         height: 14px;
-        fill: $ink-600;
-
-        .icon-fill-blue,
-        .icon-fill-grey {
-          fill: $ink-600;
-        }
+        @include svg-color($ink-600);
       }
     }
   }
@@ -326,12 +321,7 @@
       display: block;
       width: 14px;
       height: 14px;
-      fill: $purple-base;
-
-      .icon-fill-blue,
-      .icon-fill-grey {
-        fill: $purple-base;
-      }
+      @include svg-color($purple-base);
     }
   }
 
@@ -376,12 +366,7 @@
       display: block;
       width: 14px;
       height: 14px;
-      fill: var(--white, #fff);
-
-      .icon-fill-blue,
-      .icon-fill-grey {
-        fill: var(--white, #fff);
-      }
+      @include svg-color(var(--white, #fff));
     }
   }
 
@@ -452,12 +437,7 @@
         display: block;
         width: 12px;
         height: 14px;
-        fill: $purple-base;
-
-        .icon-fill-blue,
-        .icon-fill-grey {
-          fill: $purple-base;
-        }
+        @include svg-color($purple-base);
       }
     }
   }
@@ -703,12 +683,7 @@
         display: block;
         width: 13px;
         height: 15px;
-        fill: $red;
-
-        .icon-fill-blue,
-        .icon-fill-grey {
-          fill: $red;
-        }
+        @include svg-color($red);
       }
     }
   }
@@ -732,12 +707,7 @@
       display: block;
       width: 20px;
       height: 20px;
-      fill: $ink-900;
-
-      .icon-fill-blue,
-      .icon-fill-grey {
-        fill: $ink-900;
-      }
+      @include svg-color($ink-900);
     }
   }
 
@@ -785,12 +755,7 @@
         display: block;
         width: 13px;
         height: 13px;
-        fill: $red;
-
-        .icon-fill-blue,
-        .icon-fill-grey {
-          fill: $red;
-        }
+        @include svg-color($red);
       }
     }
   }
@@ -829,12 +794,7 @@
       display: block;
       width: 18px;
       height: 18px;
-      fill: var(--white, #fff);
-
-      .icon-fill-blue,
-      .icon-fill-grey {
-        fill: var(--white, #fff);
-      }
+      @include svg-color(var(--white, #fff));
     }
   }
 
@@ -890,6 +850,89 @@ html[data-theme="dark"] .apps-main {
     background: var(--overlay-bg-05);
   }
 }
+
+// ── Folder permission popup (part 2) — dark mode ─────────────────────────────────
+html[data-theme="dark"] .apps-main {
+  &__fperm-access-row:hover,
+  &__fperm-role-pill:hover {
+    background: var(--hover-bg-40);
+  }
+
+  &__fperm-link-field,
+  &__fperm-add-input,
+  &__fperm-device-row {
+    background: var(--overlay-bg-05);
+    border-color: var(--border-muted);
+  }
+
+  &__fperm-access-check {
+    background: var(--normal-bg-elevated);
+    border-color: var(--border-strong);
+  }
+
+  &__fperm-slider {
+    background: var(--overlay-bg-05);
+  }
+
+  &__fperm-slider-thumb {
+    background: var(--normal-fg-10);
+  }
+
+  &__fperm-toggle {
+    background: var(--normal-bg-40);
+  }
+
+  &__fperm-device-ico svg {
+    @include svg-color(var(--normal-fg-10));
+  }
+}
+
+
+// ── Folder permission popup (part 1) — dark mode ─────────────────────────────────
+html[data-theme="dark"] .apps-main {
+  &__fperm-card {
+    background: var(--normal-bg-elevated);
+    box-shadow:
+      0 24px 48px rgba(0, 0, 0, 0.55),
+      0 6px 16px rgba(0, 0, 0, 0.35);
+  }
+
+  &__fperm-title,
+  &__fperm-folder-title,
+  &__fperm-sec-label,
+  &__fperm-access-label,
+  &__fperm-member-name,
+  &__fperm-device-name,
+  &__fperm-slider-label {
+    color: var(--normal-fg-10);
+  }
+
+  &__fperm-folder-meta,
+  &__fperm-onetime-sub,
+  &__fperm-add-placeholder,
+  &__fperm-role-pill-label,
+  &__fperm-member-email,
+  &__fperm-avatar-initials,
+  &__fperm-device-info {
+    color: var(--normal-fg-20);
+  }
+
+  &__fperm-empty-label,
+  &__fperm-link-text {
+    color: var(--normal-fg-50);
+  }
+
+  &__fperm-close-ico svg {
+    @include svg-color(var(--normal-fg-20));
+  }
+
+  &__fperm-folder-card,
+  &__fperm-access-row,
+  &__fperm-role-pill {
+    background: var(--overlay-bg-05);
+  }
+}
+
 
 // ── Folder permission popup (part 2) — dark mode ─────────────────────────────────
 html[data-theme="dark"] .apps-main {
