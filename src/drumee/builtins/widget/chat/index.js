@@ -451,6 +451,9 @@ class __widget_chat extends LetcBox {
       case 'close-reply-message':
         return this.clearReplyMessage();
 
+      case 'clear-file-scope':
+        return this.setScopedFileNid(null, null);
+
       case 'attachment-reponse':
         return this.__list.scrollToBottom();
 
@@ -855,10 +858,12 @@ class __widget_chat extends LetcBox {
 
 
     if (this.scopedFileNid) {
-      // list_by_file returns the full thread in one response; a large
-      // pagelength makes the list widget call `_eod` after the first page.
+      // list_thread_by_file returns attachment hits UNION mention hits
+      // (server merges channel_list_by_file + channel_search on the
+      // `mention:hub_id:file_nid` literal pattern, dedupes by message_id).
+      // Large pagelength makes the list widget call `_eod` after the first page.
       return {
-        service: SERVICE.channel.list_by_file,
+        service: SERVICE.channel.list_thread_by_file,
         hub_id: this.hubId,
         file_nid: this.scopedFileNid,
         pagelength: 200
@@ -891,9 +896,13 @@ class __widget_chat extends LetcBox {
   }
 
   // Switch the message list to a file-scoped thread; pass falsy to leave it.
-  setScopedFileNid(fileNid) {
+  // `label` is the visible filename used by the scope chip; falsy hides chip.
+  setScopedFileNid(fileNid, label) {
     const next = fileNid ? `${fileNid}` : '';
-    if (this.scopedFileNid === next) return;
+    if (this.scopedFileNid === next) {
+      this._refreshScopeChip(next, label);
+      return;
+    }
 
     this._scopedScroll = this._scopedScroll || {};
     if (this.__list && this.__list.__container) {
@@ -902,6 +911,8 @@ class __widget_chat extends LetcBox {
     if (this.threadId) this.clearReplyMessage();
 
     this.scopedFileNid = next;
+    this.scopedFileLabel = label || '';
+    this._refreshScopeChip(next, label);
     this.ensurePart(_a.list).then((list) => {
       if (!list || !_.isFunction(list.restart)) return;
       const prevSpinner = list.mget(_a.spinner);
@@ -916,6 +927,30 @@ class __widget_chat extends LetcBox {
         });
       }
     });
+  }
+
+  // Toggle the visible scope chip showing what file the chat is filtered by.
+  // Hide the messenger footer in scope mode so users can only chat in the
+  // normal (unscoped) view. Parts register on nearest declareHandlers (this).
+  _refreshScopeChip(fileNid, label) {
+    const text = fileNid
+      ? (label || `#${String(fileNid).slice(-6)}`)
+      : '';
+    const scoped = fileNid ? 1 : 0;
+    this.ensurePart('scope-chip').then((chip) => {
+      if (chip && chip.el) {
+        chip.el.dataset.state = String(scoped);
+        if (_.isFunction(chip.setState)) chip.setState(scoped);
+      }
+    }).catch(() => {});
+    this.ensurePart('scope-chip-label').then((labelView) => {
+      if (labelView && labelView.el) labelView.el.textContent = text;
+    }).catch(() => {});
+    this.ensurePart('chat-footer').then((footer) => {
+      if (footer && footer.el) {
+        footer.el.dataset.scopedHidden = scoped ? '1' : '0';
+      }
+    }).catch(() => {});
   }
 
   // Server stores the attachment field as a JSON string; normalise to array.
@@ -953,7 +988,9 @@ class __widget_chat extends LetcBox {
     if (_.isArray(data)) data = data[0] || {};
     if (this.scopedFileNid) {
       const attachments = this.parseAttachmentField(data.attachment).map(String);
-      return attachments.includes(`${this.scopedFileNid}`);
+      if (attachments.includes(`${this.scopedFileNid}`)) return true;
+      const body = data.message || '';
+      return body.includes(`mention:${this.hubId}:${this.scopedFileNid}`);
     }
     const nid = this.getScopedNid();
     if (!nid) return true;
@@ -995,9 +1032,9 @@ class __widget_chat extends LetcBox {
     // subfolder (mfs_move_all → physical move), which is correct for
     // uploaded files but DELETES mentioned files from their original
     // location. The mention stays as an inline anchor in the message
-    // body, so the reference UX still works; channel.list_by_file
-    // indexing of mentions requires a separate server field (e.g.
-    // `mention_file_ids`) and is out of scope for this safety fix.
+    // body; channel.list_thread_by_file indexes mentions via substring
+    // match on `mention:hub_id:file_nid` so referenced files still show
+    // up in scoped views without being physically moved.
     if (_.isEmpty(attachments) && _.isEmpty(message)) {
       return false;
     }
