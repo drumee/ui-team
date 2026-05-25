@@ -131,8 +131,8 @@ function deriveRole(row) {
 }
 
 const TABS_BY_ROLE = {
-  // 'security' temporarily hidden — backend SPs not yet wired up.
-  owner: ["member", "audit", "storage"],
+  // 'security' is UI-only for now — toggles update local state, no SP calls.
+  owner: ["member", "security", "audit", "storage"],
   admin: ["member", "permissions", "admin-storage"],
   member: [],
 };
@@ -248,6 +248,15 @@ class apps_main extends LetcBox {
     this._activeWorkspace = null;
     this._wsDetailPage = 1;
     this._editingFolder = null;
+    // Security tab: UI-only state (no backend wiring yet).
+    this._securityPlan = "normal"; // "normal" | "self-hosting"
+    this._security2fa = {
+      authenticator: true,
+      passkeys: false,
+      hardware: true,
+    };
+    this._securitySso = { okta: false, google: false, azure: false };
+    this._securityTags = {};
     this._fpermMembers = [];
     this._fpermDevices = [];
     this._permWorkspaces = [];
@@ -996,7 +1005,31 @@ class apps_main extends LetcBox {
       this._adminStorageState !== "loading"
     ) {
       this._loadAdminStorageTab();
+    } else if (tab === "security") {
+      this._bootstrapSecurityTab();
     }
+  }
+
+  // Security tab needs the workspace list (admins load it at boot; owners
+  // don't, so fetch lazily on first entry).
+  async _bootstrapSecurityTab() {
+    if (this._adminHubsState === "loading") return;
+    if (!this._adminHubs.length && this._adminHubsState !== "loaded") {
+      await this._loadAdminHubs();
+      this._render();
+    }
+  }
+
+  _securityTagsFor(hubId) {
+    if (!this._securityTags[hubId]) {
+      this._securityTags[hubId] = {
+        ipgeo: true,
+        vpn: true,
+        onetime: true,
+        managed: true,
+      };
+    }
+    return this._securityTags[hubId];
   }
 
   toggleMember(id) {
@@ -1613,6 +1646,72 @@ class apps_main extends LetcBox {
           }
         }
         return;
+      }
+
+      case "apps-security-switch-plan": {
+        const plan = cmd.mget("security_plan");
+        if (
+          (plan === "normal" || plan === "self-hosting") &&
+          plan !== this._securityPlan
+        ) {
+          this._securityPlan = plan;
+          this._render();
+        }
+        return;
+      }
+
+      case "apps-security-toggle-sso": {
+        const key = cmd.mget("security_sso_key");
+        if (key && this._securitySso[key] != null) {
+          this._securitySso[key] = !this._securitySso[key];
+          this._render();
+        }
+        return;
+      }
+
+      case "apps-security-toggle-2fa": {
+        const key = cmd.mget("security_2fa_key");
+        if (key && this._security2fa[key] != null) {
+          this._security2fa[key] = !this._security2fa[key];
+          this._render();
+        }
+        return;
+      }
+
+      case "apps-security-toggle-tag": {
+        const hubId = cmd.mget("hub_id");
+        const tag = cmd.mget("security_tag");
+        if (!hubId || !tag) return;
+        const tags = this._securityTagsFor(hubId);
+        if (tags[tag] != null) {
+          tags[tag] = !tags[tag];
+          this._render();
+        }
+        return;
+      }
+
+      case "apps-security-edit-hub": {
+        const hubId = cmd.mget("hub_id");
+        const h = (this._adminHubs || []).find((x) => x.hub_id === hubId);
+        if (!h) return;
+        // Reuse the folder-permission overlay against a workspace stub.
+        // No SP preload — keeps the Security tab UI-only for now.
+        this._editingFolder = {
+          id: h.hub_id,
+          name: h.hub_name || h.hub_id,
+          filename: h.hub_name || h.hub_id,
+          area: h.area || "private",
+        };
+        this._activeWorkspace = {
+          id: h.hub_id,
+          name: h.hub_name || h.hub_id,
+          area: h.area || "private",
+          mode: "restricted",
+        };
+        this._fpermMode = "restricted";
+        this._fpermMembers = [];
+        this._fpermDevices = [];
+        return this._render();
       }
 
       case "apps-perm-edit-folder": {

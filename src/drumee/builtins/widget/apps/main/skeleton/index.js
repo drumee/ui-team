@@ -813,6 +813,9 @@ export default function apps_main_skeleton(ui) {
         ? require("./permission-detail").default(ui)
         : require("./permission").default(ui);
       break;
+    case "security":
+      content = require("./security").default(ui);
+      break;
     case "audit":
       content = require("./audit").default(ui);
       break;
