@@ -131,7 +131,6 @@
       opacity: 0.7;
     }
     &-disconnect-main {
-      position: relative;
       width: 120px;
       height: 32px;
       border-radius: 4px;
@@ -140,6 +139,7 @@
       align-items: center;
       justify-content: center;
       flex-shrink: 0;
+      gap: 8px;
 
       .btn {
         color: $danger-fg;
@@ -152,26 +152,24 @@
         background: rgba(214, 78, 73, 0.18);
       }
 
+      &::before {
+        content: '';
+        width: 14px;
+        height: 14px;
+        border: 2px solid rgba(214, 78, 73, 0.25);
+        border-top-color: $danger-fg;
+        border-radius: 50%;
+        animation: settings-main-spinner 0.7s linear infinite;
+        display: none;
+        flex-shrink: 0;
+      }
+
       &[data-loading="1"] {
         pointer-events: none;
         opacity: 0.85;
 
-        .btn {
-          visibility: hidden;
-        }
-
-        &::after {
-          content: '';
-          position: absolute;
-          top: 50%;
-          left: 50%;
-          width: 16px;
-          height: 16px;
-          margin: -8px 0 0 -8px;
-          border: 2px solid rgba(214, 78, 73, 0.25);
-          border-top-color: $danger-fg;
-          border-radius: 50%;
-          animation: settings-main-spinner 0.7s linear infinite;
+        &::before {
+          display: block;
         }
       }
     }
