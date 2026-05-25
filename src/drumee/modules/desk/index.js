@@ -827,6 +827,7 @@ class desk_module extends LetcBox {
     if (pointerDragged || !window.Wm) {
       return;
     }
+    this.debug("AAA:830", service)
     switch (service) {
       case _e.home:
         this.updateBreadcrumb({ event: _e.home });
@@ -887,7 +888,7 @@ class desk_module extends LetcBox {
         // Open-only — clicking Settings (sidebar) or the bottom Profile
         // item never closes the panel; the close icon inside Settings
         // handles closing.
-        return this.togglePanel("settings_main", "settings-main-slot", true);
+        return this.togglePanel("settings_main", "settings-main-slot");
 
       case "toggle-apps":
         RADIO_BROADCAST.trigger("breadcrumb:context", {
