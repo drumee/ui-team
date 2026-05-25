@@ -976,12 +976,10 @@ class desk_module extends LetcBox {
         // promise — loadWorkspace only updates list.setApi() and the
         // partition-prep visibility flip can bail if the list is still
         // covered by an Apps/Settings panel during restart.
+        this.closeAllPanels();
         Wm.loadWorkspace(cmd)
-        return this.closeAllPanels();
+        return
 
-      /** No need - use menu  widget */
-      // case "toggle-add-menu":
-      //   return this._toggleAddMenu();
 
       case "new-workspace":
         return Wm.onUiEvent(cmd, { ...args, service: "new-workspace" });

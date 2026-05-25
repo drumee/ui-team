@@ -136,7 +136,7 @@
   }
 
   &__logo {
-    align-items: center;
+    align-items: start;
     gap: 8px;
     padding: 0 24px;
 
@@ -155,6 +155,7 @@
     line-height: 1;
     text-transform: uppercase;
     white-space: nowrap;
+    margin-left: 10px;
   }
 
   &__workspace {

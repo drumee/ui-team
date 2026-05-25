@@ -299,12 +299,11 @@ class __window_manager extends push {
     if (
       this._curWorkspace &&
       this._curWorkspace.hub_id == hub_id &&
-      !this._curWorkspace.widget?.isDestroyed() &&
       this._curWorkspace.nid == nid
     ) {
       return;
     }
-
+    Desk.closeAllPanels()
     // Close any settings/admin/apps panel that would occlude the workspace
     // grid. Sidebar workspace items dispatch directly to Wm.loadWorkspace
     // (not through desk.onUiEvent), so cleanup must live here too. Only
@@ -343,7 +342,6 @@ class __window_manager extends push {
         if (_.isEmpty(data)) return;
         cur.refreshBreadcrumbsUI(data);
       })
-      this._curWorkspace.widget = cur;
     };
 
     // nid often arrives later via the media.attributes fetch below. The
@@ -1459,6 +1457,8 @@ class __window_manager extends push {
   async onUiEvent(cmd, args = {}) {
     const service =
       args.service || cmd.service || cmd.status || cmd.mget(_a.service);
+    this.debug("AAAA:1460", service)
+
     switch (service) {
       case "open-manager":
         return this.openManager(cmd, args);
