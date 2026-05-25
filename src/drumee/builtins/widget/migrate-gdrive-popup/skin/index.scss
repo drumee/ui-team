@@ -192,3 +192,56 @@
     pointer-events: none;
   }
 }
+
+.migrate-gdrive-popup {
+  &__progress-bar {
+    width: 100%;
+    height: 8px;
+    background: var(--normal-bg-90, #f2f2f7);
+    border-radius: 4px;
+    overflow: hidden;
+    margin: 12px 0 4px;
+  }
+  &__progress-fill {
+    height: 100%;
+    background: var(--primary-40, #5950ff);
+    transition: width 200ms linear;
+  }
+  &__progress-count {
+    font-size: 12px;
+    color: var(--normal-fg-50, #84848c);
+    margin-bottom: 16px;
+  }
+  &__summary {
+    font-size: 14px;
+    line-height: 1.4;
+    color: var(--normal-fg, #0b0a21);
+    margin: 16px 0;
+  }
+  &__skip {
+    font-size: 13px;
+    color: var(--normal-fg-20, #65656c);
+    text-decoration: underline;
+    cursor: pointer;
+    margin-top: 8px;
+    align-self: center;
+    &:hover { color: var(--primary-50, #433cc5); }
+  }
+  &__toggle-row {
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    padding: 8px 0;
+    &[data-state="1"] &__toggle-label::before {
+      content: "☑ ";
+    }
+    &[data-state="0"] &__toggle-label::before {
+      content: "☐ ";
+    }
+  }
+  &__loading {
+    text-align: center;
+    padding: 32px 16px;
+    color: var(--normal-fg-50, #84848c);
+  }
+}

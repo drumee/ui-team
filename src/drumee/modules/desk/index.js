@@ -114,6 +114,45 @@ class desk_module extends LetcBox {
   async onDomRefresh() {
     this.route();
     RADIO_BROADCAST.on("breadcrumb:content", this._updateAddmenu);
+    // Post-onboarding handoff for users who picked Google Drive in the
+    // tools step. Delayed so workspace renders first.
+    setTimeout(() => this._maybeAutoLaunchGDriveMigration(), 1500);
+  }
+
+  /**
+   * After the user lands on the Desk, if onboarding said they use Google
+   * Drive AND they haven't started/completed a migration AND they
+   * haven't explicitly skipped, auto-launch the migrate popup once.
+   *
+   * The popup respects `autoFromOnboarding` to show a "Skip for now"
+   * link that calls google_drive.dismiss_post_onboarding so the prompt
+   * doesn't re-appear on reload.
+   */
+  async _maybeAutoLaunchGDriveMigration() {
+    const profile = (Visitor.profile && Visitor.profile()) || {};
+    const tools = profile.tools || [];
+    if (!Array.isArray(tools) || !tools.includes("google_drive")) return;
+    const skipped = (profile.tools_migration_skipped || {}).google_drive;
+    if (skipped) return;
+    let r;
+    try {
+      r = await this.fetchService("google_drive.get_status", {
+        hub_id: Visitor.id, latest_only: 1,
+      });
+    } catch (e) {
+      return; // server down or endpoint missing — silently skip
+    }
+    // Already had a non-cancelled run → don't nag.
+    if (r && r.status && r.status !== "none" && r.status !== "cancelled") return;
+
+    await Kind.waitFor("migrate_gdrive_popup");
+    Wm.launch({
+      kind: "migrate_gdrive_popup",
+      hub_id: Visitor.id,
+      nid: Visitor.get(_a.home_id),
+      autoFromOnboarding: 1,
+      wm_unique_id: "migrate_gdrive_popup",
+    }, { explicit: 1, singleton: 1 });
   }
 
   /**

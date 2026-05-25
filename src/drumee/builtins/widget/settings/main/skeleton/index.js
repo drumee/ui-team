@@ -413,6 +413,23 @@ function linkedAccountsCard(ui) {
     );
   }
 
+  // Migrate-from-Google-Drive CTA. Always shown — if the user hasn't
+  // granted drive.readonly scope yet, the popup will prompt for it.
+  const migrateRow = innerItem(ui, {
+    ico: "logo-google",
+    title: LOCALE.LINKED_ACCOUNTS_MIGRATE_GDRIVE || "Migrate from Google Drive",
+    description:
+      LOCALE.MIGRATE_GDRIVE_HINT ||
+      "Imports files and folders from your Google Drive into Drumee.",
+    className: `${pfx}-row ${pfx}-row--migrate`,
+    trailing: button(ui, {
+      label: LOCALE.MIGRATE_GDRIVE_START || "Start",
+      className: `${pfx}-migrate-btn`,
+      priority: "primary",
+      service: "launch-gdrive-migration",
+    }),
+  });
+
   return Skeletons.Box.Y({
     className: `${ui.fig.family}__card ${pfx}-card`,
     kids: [
@@ -424,7 +441,7 @@ function linkedAccountsCard(ui) {
       }),
       Skeletons.Box.Y({
         className: `${pfx}-list`,
-        kids: rows,
+        kids: [...rows, migrateRow],
       }),
     ],
   });

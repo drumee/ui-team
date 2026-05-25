@@ -450,6 +450,18 @@ class settings_main extends LetcBox {
           if (p) p.set({ content: (args && args.email) || (Visitor.profile() || {}).email || "" });
         });
 
+      case "launch-gdrive-migration":
+        // Open the migrate-gdrive popup. singleton:1 + wm_unique_id auto
+        // detection (per fix/multi-folder-windows) prevents duplicates.
+        return Kind.waitFor("migrate_gdrive_popup").then(() => {
+          Wm.launch({
+            kind: "migrate_gdrive_popup",
+            hub_id: Visitor.id,
+            nid: Visitor.get(_a.home_id),
+            wm_unique_id: "migrate_gdrive_popup",
+          }, { explicit: 1, singleton: 1 });
+        });
+
       default:
         return;
     }
