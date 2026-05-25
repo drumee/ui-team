@@ -1,0 +1,820 @@
+@use "../tokens" as *;
+
+// Member tab — page header, stats, table, rows, checkbox, avatar, pill, status, actions, footer
+
+.apps-main {
+  // ── Page content ──────────────────────────────────────────
+  &__content {
+    // min-height: 0 lets inner tables own the vertical scroll instead
+    // of the whole page expanding past the viewport.
+    flex: 1;
+    min-height: 0;
+    width: 100%;
+    padding: 24px;
+    gap: 24px;
+    overflow: auto;
+
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+
+    &::-webkit-scrollbar {
+      display: none;
+    }
+  }
+
+  // ── Page header ───────────────────────────────────────────
+  &__page-header {
+    width: 100%;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 24px;
+  }
+
+  &__page-heading {
+    flex: 1;
+    min-width: 0;
+    gap: 4px;
+  }
+
+  &__page-title {
+    font-size: 32px;
+    line-height: 36px;
+    font-weight: 600;
+    color: $ink-900;
+  }
+
+  &__page-subtitle {
+    font-size: 14px;
+    line-height: 20px;
+    font-weight: 400;
+    color: $ink-600;
+  }
+
+  &__search {
+    width: 276px;
+    height: 48px;
+    padding: 12px 6px 12px 14px;
+    background: #f2f2f7;
+    border-radius: 6px;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+
+    &-ico {
+      width: 14px;
+      height: 14px;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+
+      svg {
+        display: block;
+        width: 14px;
+        height: 14px;
+        fill: $purple-deep;
+
+        .icon-fill-blue,
+        .icon-fill-grey {
+          fill: $purple-deep;
+        }
+      }
+    }
+
+    &-input {
+      flex: 1;
+      min-width: 0;
+
+      input {
+        width: 100%;
+        border: none;
+        outline: none;
+        background: transparent;
+        font-size: 14px;
+        line-height: 20px;
+        color: $ink-900;
+        font-weight: 400;
+
+        &::placeholder {
+          color: $ink-500;
+        }
+      }
+    }
+  }
+
+  // ── Stats cards ───────────────────────────────────────────
+  &__stats {
+    width: 100%;
+    gap: 16px;
+  }
+
+  &__stat {
+    flex: 1 1 0;
+    min-width: 0;
+    background: $bg-tint;
+    border-radius: 8px;
+    padding: 16px 20px;
+    gap: 8px;
+
+    border-left: 2px solid $ink-900;
+
+    &.admins {
+      border-left-color: $purple-light;
+    }
+
+    &.guests {
+      border-left-color: $pink;
+    }
+
+    &.pending {
+      border-left-color: $red;
+    }
+
+    &-label {
+      font-size: 10px;
+      line-height: 14px;
+      font-weight: 600;
+      color: $ink-600;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    &-value {
+      font-size: 24px;
+      line-height: 28px;
+      font-weight: 600;
+      color: $ink-900;
+
+      &--admins {
+        color: $purple-light;
+      }
+
+      &--guests {
+        color: $pink;
+      }
+
+      &--pending {
+        color: $red;
+      }
+    }
+  }
+
+  // ── Table wrapper ─────────────────────────────────────────
+  &__table-wrap {
+    width: 100%;
+    background: $bg-tint;
+    border-radius: 8px;
+    padding: 0;
+    gap: 0;
+    overflow: hidden;
+    flex: 1;
+    min-height: 0;
+  }
+
+  &__table-header {
+    width: 100%;
+    height: 53px;
+    padding: 16px 24px;
+    align-items: center;
+    justify-content: space-between;
+    background: $bg-tint;
+  }
+
+  &__table-title {
+    font-size: 12px;
+    line-height: 16px;
+    font-weight: 600;
+    color: $ink-600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  &__table-filter-wrap {
+    position: relative;
+    align-items: center;
+  }
+
+  &__table-filter {
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    height: 21px;
+
+    > * {
+      pointer-events: none;
+    }
+
+    &-label {
+      font-size: 12px;
+      line-height: 16px;
+      font-weight: 600;
+      color: $ink-600;
+    }
+
+    &-btn {
+      width: 26px;
+      height: 21px;
+      padding: 6px;
+      border-radius: 4px;
+      align-items: center;
+      justify-content: center;
+      background: transparent;
+      transition: background 0.15s ease;
+      box-sizing: border-box;
+    }
+
+    &-ico {
+      width: 14px;
+      height: 9px;
+      align-items: center;
+      justify-content: center;
+
+      svg {
+        display: block;
+        width: 14px;
+        height: 9px;
+        fill: $ink-600;
+
+        .icon-fill-blue,
+        .icon-fill-grey {
+          fill: $ink-600;
+        }
+      }
+    }
+
+    &:hover .apps-main__table-filter-btn {
+      background: rgba(0, 0, 0, 0.06);
+    }
+
+    &--open .apps-main__table-filter-btn {
+      background: rgba(0, 0, 0, 0.08);
+    }
+  }
+
+  // ── Role filter dropdown ──────────────────────────────────
+  &__filter-menu {
+    position: absolute;
+    top: calc(100% + 4px);
+    right: 0;
+    width: 168px;
+    padding: 12px 8px;
+    gap: 8px;
+    background: var(--white, #ffffff);
+    border-radius: 6px;
+    box-shadow:
+      0 4px 16px rgba(0, 0, 0, 0.1),
+      0 1px 3px rgba(0, 0, 0, 0.06);
+    z-index: 100;
+  }
+
+  &__filter-item {
+    width: 100%;
+    height: 25px;
+    padding: 4px;
+    align-items: center;
+    justify-content: space-between;
+    gap: 4px;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: background 0.1s ease;
+
+    &:hover {
+      background: rgba(0, 0, 0, 0.03);
+    }
+
+    > * {
+      pointer-events: none;
+    }
+
+    &-label {
+      font-size: 12px;
+      line-height: 17px;
+      font-weight: 400;
+      color: $ink-900;
+    }
+
+    &-radio {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      border: 1px solid $ink-600;
+      box-sizing: border-box;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      background: var(--white, #ffffff);
+
+      &--selected {
+        border-color: $purple-deep;
+
+        .apps-main__filter-item-radio-dot {
+          width: 6px;
+          height: 6px;
+          border-radius: 50%;
+          background: $purple-deep;
+        }
+      }
+    }
+  }
+
+  // ── Table rows ────────────────────────────────────────────
+  &__table {
+    width: 100%;
+    background: $bg;
+    gap: 0;
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+  }
+
+  &__table-empty {
+    width: 100%;
+    padding: 32px 24px;
+    align-items: center;
+    justify-content: center;
+    background: $bg;
+  }
+
+  &__table-empty-label {
+    font-size: 13px;
+    line-height: 18px;
+    font-weight: 400;
+    color: $ink-500;
+  }
+
+  &__row {
+    width: 100%;
+    align-items: center;
+    border-bottom: 1px solid $line;
+    transition: background 0.1s ease;
+
+    &--header {
+      height: 40px;
+      // Opaque fill so the sticky header isn't see-through over scrolling rows.
+      background: #fafafa;
+      position: sticky;
+      top: 0;
+      z-index: 1;
+
+      .apps-main__col-label {
+        font-size: 12px;
+        line-height: 16px;
+        font-weight: 600;
+        color: $ink-600;
+      }
+    }
+
+    &--checked {
+      background: rgba(89, 80, 255, 0.04);
+    }
+
+    &:hover:not(.apps-main__row--header) {
+      background: $row-hover;
+    }
+
+    &:last-child {
+      border-bottom: none;
+    }
+  }
+
+  &__cell {
+    align-items: center;
+    height: 100%;
+    padding: 16px 12px;
+    gap: 12px;
+
+    &--check {
+      width: 76px;
+      flex-shrink: 0;
+      padding-left: 24px;
+      padding-right: 0;
+    }
+
+    &--member {
+      flex: 240;
+      min-width: 0;
+      gap: 12px;
+    }
+
+    &--role {
+      flex: 155;
+      min-width: 0;
+    }
+
+    &--workspaces {
+      flex: 225;
+      min-width: 0;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    &--status {
+      flex: 88;
+      min-width: 0;
+      gap: 8px;
+    }
+
+    &--last-active {
+      flex: 120;
+      min-width: 0;
+    }
+
+    &--actions {
+      flex: 123;
+      min-width: 0;
+      gap: 4px;
+      padding-right: 24px;
+    }
+  }
+
+  // ── Checkbox ──────────────────────────────────────────────
+  &__checkbox {
+    width: 20px;
+    height: 20px;
+    border-radius: 4px;
+    background: var(--white, #fff);
+    border: 1.5px solid $ink-500;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    cursor: pointer;
+    box-sizing: border-box;
+
+    > * {
+      pointer-events: none;
+    }
+
+    &--checked {
+      background: $purple-deep;
+      border-color: $purple-deep;
+    }
+
+    &-mark {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 12px;
+      height: 12px;
+
+      svg {
+        display: block;
+        width: 12px;
+        height: 12px;
+        fill: var(--white, #fff);
+
+        .icon-fill-blue,
+        .icon-fill-grey {
+          fill: var(--white, #fff);
+        }
+      }
+    }
+  }
+
+  // ── Avatar ────────────────────────────────────────────────
+  &__avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    overflow: hidden;
+    background: $cyan-soft;
+
+    // Color variants for initials avatars (deterministic per-name in JS)
+    &--cyan {
+      background: $cyan-soft;
+
+      .apps-main__avatar-initials {
+        color: $cyan-text;
+      }
+    }
+
+    &--purple {
+      background: rgba(89, 80, 255, 0.18);
+
+      .apps-main__avatar-initials {
+        color: $purple-deep;
+      }
+    }
+
+    &--pink {
+      background: rgba(255, 168, 220, 0.3);
+
+      .apps-main__avatar-initials {
+        color: #c54e95;
+      }
+    }
+
+    &--amber {
+      background: rgba(245, 166, 35, 0.2);
+
+      .apps-main__avatar-initials {
+        color: #b8780f;
+      }
+    }
+
+    &-initials {
+      font-size: 14px;
+      line-height: 20px;
+      font-weight: 600;
+      color: $cyan-text;
+    }
+  }
+
+  &__member-info {
+    flex: 1;
+    min-width: 0;
+    gap: 0;
+  }
+
+  &__member-name {
+    font-size: 14px;
+    line-height: 20px;
+    font-weight: 600;
+    color: $ink-900;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  &__member-email {
+    font-size: 12px;
+    line-height: 16px;
+    font-weight: 400;
+    color: $ink-400;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  // ── Pill badges (Role) — full pill shape ──────────────────
+  &__pill {
+    align-items: center;
+    padding: 4px 10px;
+    border-radius: 56px;
+    background: $purple-soft;
+
+    &-label {
+      font-size: 10px;
+      line-height: 12px;
+      font-weight: 600;
+      color: $purple-deep;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      white-space: nowrap;
+    }
+
+    &--owner,
+    &--admin {
+      background: $purple-soft;
+
+      .apps-main__pill-label {
+        color: $purple-deep;
+      }
+    }
+
+    &--member {
+      background: $bg-tint;
+
+      .apps-main__pill-label {
+        color: $ink-600;
+      }
+    }
+  }
+
+  // ── Workspace pill — rectangular, gray ────────────────────
+  &__workspace {
+    align-items: center;
+    padding: 4px 8px;
+    border-radius: 4px;
+    background: $bg-tint;
+
+    &-label {
+      font-size: 10px;
+      line-height: 12px;
+      font-weight: 600;
+      color: $ink-600;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      white-space: nowrap;
+    }
+  }
+
+  // ── Status ────────────────────────────────────────────────
+  &__status {
+    align-items: center;
+    gap: 8px;
+
+    &-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      flex-shrink: 0;
+      background: $purple-status;
+    }
+
+    &-label {
+      font-size: 12px;
+      line-height: 16px;
+      font-weight: 400;
+      color: $ink-900;
+    }
+
+    &--away .apps-main__status-dot {
+      background: $ink-500;
+    }
+
+    &--offline .apps-main__status-dot {
+      background: $ink-400;
+    }
+  }
+
+  &__last-active {
+    font-size: 12px;
+    line-height: 16px;
+    font-weight: 400;
+    color: $ink-600;
+  }
+
+  // ── Action buttons ────────────────────────────────────────
+  &__action {
+    width: 31px;
+    height: 31px;
+    border-radius: 4px;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    flex-shrink: 0;
+
+    svg {
+      width: 15px;
+      height: 15px;
+    }
+
+    background: transparent;
+
+    &:hover {
+      background: transparent !important;
+    }
+
+    &--edit {
+      svg {
+        fill: $purple-light;
+
+        .icon-fill-blue,
+        .icon-fill-grey {
+          fill: $purple-light;
+        }
+      }
+
+      &:hover svg {
+        fill: $purple-deep;
+
+        .icon-fill-blue,
+        .icon-fill-grey {
+          fill: $purple-deep;
+        }
+      }
+    }
+
+    &--delete {
+      svg {
+        fill: $red;
+
+        .icon-fill-blue,
+        .icon-fill-grey {
+          fill: $red;
+        }
+      }
+
+      &:hover svg {
+        filter: brightness(0.85);
+      }
+    }
+  }
+
+  // ── Footer (remove + pagination) ──────────────────────────
+  &__footer {
+    width: 100%;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 8px 0 0;
+  }
+
+  &__pager-summary {
+    font-size: 12px;
+    line-height: 16px;
+    color: $ink-500;
+  }
+
+  &__remove-btn {
+    height: 32px;
+    padding: 0 12px;
+    background: $red-soft;
+    border-radius: 4px;
+    align-items: center;
+    cursor: pointer;
+    transition: filter 0.15s ease;
+
+    &:hover {
+      filter: brightness(0.97);
+    }
+
+    > * {
+      pointer-events: none;
+    }
+  }
+
+  &__remove-label {
+    font-size: 12px;
+    line-height: 16px;
+    font-weight: 600;
+    color: $red;
+  }
+
+  &__pager {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+
+    &-arrow {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 28px;
+      height: 28px;
+      border-radius: 4px;
+      cursor: pointer;
+      box-sizing: border-box;
+
+      svg {
+        display: block;
+        width: 14px;
+        height: 14px;
+        fill: $ink-700;
+
+        .icon-fill-blue,
+        .icon-fill-grey {
+          fill: $ink-700;
+        }
+      }
+
+      &:hover {
+        background: rgba(0, 0, 0, 0.04);
+      }
+    }
+
+    &-ellipsis {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      height: 28px;
+      padding: 0 8px;
+      font-size: 12px;
+      font-weight: 500;
+      color: $ink-600;
+    }
+  }
+
+  &__page-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 28px;
+    height: 28px;
+    padding: 0 6px;
+    border-radius: 4px;
+    cursor: pointer;
+    box-sizing: border-box;
+
+    > * {
+      pointer-events: none;
+    }
+
+    &:hover {
+      background: rgba(0, 0, 0, 0.04);
+    }
+
+    &--active {
+      background: $purple-light;
+
+      .apps-main__page-num {
+        color: $purple-deep;
+      }
+    }
+  }
+
+  &__page-num {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    line-height: 1;
+    font-weight: 600;
+    color: $ink-700;
+  }
+
+}

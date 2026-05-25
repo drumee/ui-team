@@ -1,0 +1,848 @@
+@use "../tokens" as *;
+
+// Folder permission popup (workspace detail → pencil)
+
+.apps-main {
+  // ─────────────────────────────────────────────────────────
+  //  FOLDER PERMISSION POPUP (workspace detail → pencil click)
+  // ─────────────────────────────────────────────────────────
+  &__fperm-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 20000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(11, 10, 33, 0.4);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    pointer-events: auto;
+  }
+
+  &__fperm-card {
+    width: 520px;
+    max-width: calc(100vw - 32px);
+    max-height: calc(100vh - 64px);
+    padding: 32px;
+    background: #f2f2f7;
+    border-radius: 12px;
+    gap: 24px;
+    overflow: hidden;
+    box-shadow:
+      0 24px 48px rgba(11, 10, 33, 0.16),
+      0 6px 16px rgba(11, 10, 33, 0.06);
+  }
+
+  // Header (title + folder card)
+  &__fperm-header {
+    width: 100%;
+    gap: 24px;
+    flex-shrink: 0;
+  }
+
+  &__fperm-header-row {
+    width: 100%;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+  }
+
+  &__fperm-title {
+    font-size: 20px;
+    line-height: 28px;
+    font-weight: 700;
+    color: $ink-900;
+  }
+
+  &__fperm-close {
+    width: 24px;
+    height: 24px;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    flex-shrink: 0;
+
+    > * {
+      pointer-events: none;
+    }
+
+    &:hover {
+      opacity: 0.75;
+    }
+
+    &-ico {
+      width: 14px;
+      height: 14px;
+
+      svg {
+        display: block;
+        width: 14px;
+        height: 14px;
+        fill: $ink-600;
+
+        .icon-fill-blue,
+        .icon-fill-grey {
+          fill: $ink-600;
+        }
+      }
+    }
+  }
+
+  &__fperm-folder-card {
+    width: 100%;
+    height: 72px;
+    padding: 12px;
+    background: rgba(0, 0, 0, 0.05);
+    border-radius: 8px;
+    align-items: center;
+    gap: 8px;
+  }
+
+  &__fperm-folder-ico {
+    width: 48px;
+    height: 40px;
+    flex-shrink: 0;
+    position: relative;
+
+    .folder-shape {
+      display: block;
+      width: 48px;
+      height: 40px;
+      fill: var(--area-private, #885eff);
+    }
+
+    .badge {
+      position: absolute;
+      width: 14px;
+      height: 14px;
+      bottom: -2px;
+      left: -2px;
+    }
+
+    &.private .folder-shape {
+      fill: var(--area-private);
+    }
+
+    &.restricted .folder-shape {
+      fill: var(--area-private);
+    }
+
+    &.share,
+    &.dmz {
+      .folder-shape {
+        fill: var(--area-share);
+      }
+    }
+
+    &.public .folder-shape {
+      fill: var(--area-public);
+    }
+
+    &.personal,
+    &.inner-folder {
+      .folder-shape {
+        fill: var(--area-personal);
+      }
+    }
+  }
+
+  &__fperm-folder-text {
+    flex: 1;
+    min-width: 0;
+    gap: 0;
+  }
+
+  &__fperm-folder-title {
+    font-size: 14px;
+    line-height: 20px;
+    font-weight: 600;
+    color: $ink-900;
+  }
+
+  &__fperm-folder-meta {
+    font-size: 12px;
+    line-height: 17px;
+    font-weight: 400;
+    color: $ink-600;
+  }
+
+  // Body (scrollable middle)
+  &__fperm-body {
+    width: 100%;
+    flex: 1;
+    min-height: 0;
+    gap: 16px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding-right: 4px;
+
+    &::-webkit-scrollbar {
+      width: 4px;
+    }
+
+    &::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    &::-webkit-scrollbar-thumb {
+      background: $purple-base;
+      border-radius: 4px;
+    }
+
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+
+    &::-webkit-scrollbar {
+      display: none;
+    }
+  }
+
+  &__fperm-section {
+    width: 100%;
+    gap: 16px;
+  }
+
+  // Section heading row (icon + label  +  add input + remove all)
+  &__fperm-sec-heading {
+    width: 100%;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+  }
+
+  &__fperm-sec-title {
+    align-items: center;
+    gap: 8px;
+  }
+
+  &__fperm-sec-ico {
+    width: 20px;
+    height: 20px;
+    flex-shrink: 0;
+
+    svg {
+      display: block;
+      width: 18px;
+      height: 18px;
+      fill: $purple-base;
+    }
+  }
+
+  &__fperm-sec-label {
+    font-size: 14px;
+    line-height: 20px;
+    font-weight: 600;
+    color: $ink-900;
+  }
+
+  // Auto Revocation toggle
+  &__fperm-auto-row {
+    width: 100%;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  // Slider (visible when Auto Revocation is ON)
+  &__fperm-slider-row {
+    width: 100%;
+    align-items: center;
+    gap: 16px;
+  }
+
+  &__fperm-slider {
+    flex: 1;
+    min-width: 0;
+    height: 4px;
+    border-radius: 12px;
+    background: rgba(0, 0, 0, 0.06);
+    position: relative;
+    align-items: center;
+  }
+
+  &__fperm-slider-fill {
+    height: 4px;
+    border-radius: 12px;
+    background: $purple-base;
+  }
+
+  &__fperm-slider-thumb {
+    position: absolute;
+    top: 50%;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: $ink-900;
+    transform: translate(-50%, -50%);
+  }
+
+  &__fperm-slider-label {
+    font-size: 12px;
+    line-height: 16px;
+    font-weight: 700;
+    color: $ink-900;
+    flex-shrink: 0;
+  }
+
+  // Access level (shared mode): icon + label rows with right-side checkbox
+  &__fperm-access-list {
+    width: 100%;
+    gap: 8px;
+  }
+
+  &__fperm-access-row {
+    width: 100%;
+    height: 49px;
+    padding: 14px 16px;
+    background: rgba(0, 0, 0, 0.05);
+    border-radius: 6px;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    cursor: pointer;
+    transition: background 0.15s ease;
+
+    > * {
+      pointer-events: none;
+    }
+
+    &:hover {
+      background: rgba(0, 0, 0, 0.07);
+    }
+  }
+
+  &__fperm-access-info {
+    flex: 1;
+    min-width: 0;
+    align-items: center;
+    gap: 8px;
+  }
+
+  &__fperm-access-ico {
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+
+    svg {
+      display: block;
+      width: 14px;
+      height: 14px;
+      fill: $purple-base;
+
+      .icon-fill-blue,
+      .icon-fill-grey {
+        fill: $purple-base;
+      }
+    }
+  }
+
+  &__fperm-access-row--checked &__fperm-access-ico svg,
+  &__fperm-access-row--checked &__fperm-access-ico svg path {
+    fill: $purple-base;
+  }
+
+  &__fperm-access-label {
+    font-size: 14px;
+    line-height: 20px;
+    font-weight: 600;
+    color: $ink-900;
+  }
+
+  &__fperm-access-check {
+    width: 22px;
+    height: 22px;
+    border-radius: 4px;
+    background: var(--white, #fff);
+    border: 1.5px solid rgba(0, 0, 0, 0.2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    box-sizing: border-box;
+    transition:
+      background 0.15s ease,
+      border-color 0.15s ease;
+
+    &--on {
+      background: $purple-deep;
+      border-color: $purple-deep;
+    }
+  }
+
+  &__fperm-access-check-mark {
+    width: 14px;
+    height: 14px;
+
+    svg {
+      display: block;
+      width: 14px;
+      height: 14px;
+      fill: var(--white, #fff);
+
+      .icon-fill-blue,
+      .icon-fill-grey {
+        fill: var(--white, #fff);
+      }
+    }
+  }
+
+  // One-time link header row + link field
+  &__fperm-onetime-row {
+    width: 100%;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+  }
+
+  &__fperm-onetime-meta {
+    align-items: center;
+    gap: 12px;
+  }
+
+  &__fperm-onetime-sub {
+    font-size: 12px;
+    line-height: 17px;
+    font-weight: 400;
+    color: $ink-600;
+  }
+
+  &__fperm-link-field {
+    width: 100%;
+    height: 41px;
+    padding: 12px 12px 12px 16px;
+    background: var(--white, #fff);
+    border-radius: 6px;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+  }
+
+  &__fperm-link-text {
+    flex: 1;
+    min-width: 0;
+    font-size: 12px;
+    line-height: 17px;
+    font-weight: 400;
+    color: $ink-500;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  &__fperm-link-copy {
+    width: 20px;
+    height: 20px;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    flex-shrink: 0;
+
+    > * {
+      pointer-events: none;
+    }
+
+    &:hover {
+      opacity: 0.75;
+    }
+
+    &-ico {
+      width: 12px;
+      height: 14px;
+
+      svg {
+        display: block;
+        width: 12px;
+        height: 14px;
+        fill: $purple-base;
+
+        .icon-fill-blue,
+        .icon-fill-grey {
+          fill: $purple-base;
+        }
+      }
+    }
+  }
+
+  &__fperm-toggle {
+    width: 40px;
+    height: 20px;
+    border-radius: 12px;
+    background: $ink-400;
+    padding: 2px;
+    cursor: pointer;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: flex-start;
+    transition: background 0.2s ease;
+
+    > * {
+      pointer-events: none;
+    }
+
+    &-knob {
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: var(--white, #fff);
+      transition: transform 0.2s ease;
+    }
+
+    &--on {
+      background: $purple-base;
+      justify-content: flex-end;
+    }
+  }
+
+  // Add input (placeholder + purple "+" tile)
+  &__fperm-sec-actions {
+    align-items: center;
+    gap: 8px;
+  }
+
+  &__fperm-add-input {
+    height: 36px;
+    padding: 8px 8px 8px 12px;
+    background: var(--white, #fff);
+    border-radius: 4px;
+    align-items: center;
+    gap: 24px;
+    cursor: pointer;
+
+    > * {
+      pointer-events: none;
+    }
+  }
+
+  &__fperm-add-placeholder {
+    font-size: 12px;
+    line-height: 17px;
+    font-weight: 400;
+    color: $ink-600;
+  }
+
+  &__fperm-add-plus {
+    width: 20px;
+    height: 20px;
+    border-radius: 4px;
+    background: $purple-deep;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  &__fperm-add-plus-glyph {
+    font-size: 14px;
+    height: 18px;
+    font-weight: 600;
+    color: #e4e3ff;
+  }
+
+  &__fperm-remove-all {
+    height: 36px;
+    padding: 8px 16px;
+    background: rgba(255, 0, 30, 0.1);
+    border-radius: 4px;
+    align-items: center;
+    cursor: pointer;
+    transition: filter 0.15s ease;
+
+    > * {
+      pointer-events: none;
+    }
+
+    &:hover {
+      filter: brightness(0.97);
+    }
+  }
+
+  &__fperm-remove-all-label {
+    font-size: 12px;
+    line-height: 16px;
+    font-weight: 600;
+    color: $red;
+  }
+
+  // Member rows
+  &__fperm-list {
+    width: 100%;
+    gap: 0;
+  }
+
+  &__fperm-empty {
+    width: 100%;
+    padding: 16px 0;
+    align-items: center;
+    justify-content: center;
+  }
+
+  &__fperm-empty-label {
+    font-size: 12px;
+    line-height: 17px;
+    font-weight: 400;
+    color: $ink-500;
+    font-style: italic;
+  }
+
+  &__fperm-member-row {
+    width: 100%;
+    padding: 8px 0;
+    align-items: center;
+    gap: 8px;
+  }
+
+  &__fperm-member-info {
+    flex: 1;
+    min-width: 0;
+    align-items: center;
+    gap: 12px;
+  }
+
+  &__fperm-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    background: $audit-dark-avatar;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    overflow: hidden;
+
+    &--neutral {
+      background: rgba(0, 0, 0, 0.05);
+    }
+  }
+
+  &__fperm-avatar-initials {
+    font-size: 12px;
+    line-height: 16px;
+    font-weight: 700;
+    color: $ink-600;
+  }
+
+  &__fperm-member-text {
+    flex: 1;
+    min-width: 0;
+    gap: 0;
+  }
+
+  &__fperm-member-name {
+    font-size: 14px;
+    line-height: 20px;
+    font-weight: 600;
+    color: $ink-900;
+  }
+
+  &__fperm-member-email {
+    font-size: 10px;
+    line-height: 14px;
+    font-weight: 400;
+    color: $ink-600;
+  }
+
+  // Role select pill
+  &__fperm-role-pill {
+    height: 25px;
+    padding: 4px 4px 4px 8px;
+    background: rgba(0, 0, 0, 0.05);
+    border-radius: 4px;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    min-width: 100px;
+    cursor: pointer;
+
+    > * {
+      pointer-events: none;
+    }
+
+    &:hover {
+      background: rgba(0, 0, 0, 0.07);
+    }
+  }
+
+  &__fperm-role-pill-label {
+    font-size: 12px;
+    line-height: 17px;
+    font-weight: 400;
+    color: $ink-600;
+  }
+
+  &__fperm-role-pill-caret {
+    width: 12px;
+    height: 12px;
+
+    svg {
+      display: block;
+      width: 12px;
+      height: 12px;
+    }
+  }
+
+  // Remove buttons
+  &__fperm-row-remove {
+    width: 29px;
+    height: 31px;
+    padding: 8px;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    flex-shrink: 0;
+
+    > * {
+      pointer-events: none;
+    }
+
+    &:hover {
+      opacity: 0.75;
+    }
+
+    &-ico {
+      width: 13px;
+      height: 15px;
+
+      svg {
+        display: block;
+        width: 13px;
+        height: 15px;
+        fill: $red;
+
+        .icon-fill-blue,
+        .icon-fill-grey {
+          fill: $red;
+        }
+      }
+    }
+  }
+
+  // Device rows
+  &__fperm-device-row {
+    width: 100%;
+    padding: 12px;
+    background: var(--white, #fff);
+    border: 1px solid rgba(0, 0, 0, 0.06);
+    border-radius: 8px;
+    align-items: center;
+    gap: 12px;
+  }
+
+  &__fperm-device-ico {
+    width: 23px;
+    height: 23px;
+
+    svg {
+      display: block;
+      width: 20px;
+      height: 20px;
+      fill: $ink-900;
+
+      .icon-fill-blue,
+      .icon-fill-grey {
+        fill: $ink-900;
+      }
+    }
+  }
+
+  &__fperm-device-text {
+    flex: 1;
+    min-width: 0;
+    gap: 0;
+  }
+
+  &__fperm-device-name {
+    font-size: 12px;
+    line-height: 16px;
+    font-weight: 600;
+    color: $ink-900;
+  }
+
+  &__fperm-device-info {
+    font-size: 10px;
+    line-height: 14px;
+    font-weight: 400;
+    color: $ink-600;
+  }
+
+  &__fperm-device-remove {
+    width: 20px;
+    height: 20px;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    flex-shrink: 0;
+
+    > * {
+      pointer-events: none;
+    }
+
+    &:hover {
+      opacity: 0.75;
+    }
+
+    &-ico {
+      width: 13px;
+      height: 13px;
+
+      svg {
+        display: block;
+        width: 13px;
+        height: 13px;
+        fill: $red;
+
+        .icon-fill-blue,
+        .icon-fill-grey {
+          fill: $red;
+        }
+      }
+    }
+  }
+
+  // Save Changes button
+  &__fperm-save-btn {
+    width: 100%;
+    height: 48px;
+    padding: 12px 24px;
+    background: $purple-deep;
+    border-radius: 4px;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    gap: 8px;
+    flex-shrink: 0;
+    transition: filter 0.15s ease;
+
+    &:hover {
+      filter: brightness(0.95);
+    }
+
+    > * {
+      pointer-events: none;
+    }
+  }
+
+  &__fperm-save-ico {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 24px;
+    height: 24px;
+
+    svg {
+      display: block;
+      width: 18px;
+      height: 18px;
+      fill: var(--white, #fff);
+
+      .icon-fill-blue,
+      .icon-fill-grey {
+        fill: var(--white, #fff);
+      }
+    }
+  }
+
+  &__fperm-save-label {
+    font-size: 16px;
+    line-height: 24px;
+    font-weight: 600;
+    color: var(--white, #fff);
+  }
+
+}

@@ -1,0 +1,748 @@
+@use "../tokens" as *;
+
+// Edit-Member overlay
+
+.apps-main {
+  // ─────────────────────────────────────────────────────────
+  //  EDIT-MEMBER OVERLAY
+  // ─────────────────────────────────────────────────────────
+  &__edit-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 20000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(11, 10, 33, 0.4);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    pointer-events: auto;
+  }
+
+  &__edit-card {
+    position: relative;
+    width: 520px;
+    max-width: calc(100vw - 32px);
+    max-height: calc(100vh - 64px);
+    padding: 32px;
+    background: #f2f2f7;
+    border-radius: 12px;
+    gap: 24px;
+    overflow: hidden;
+    box-shadow:
+      0 24px 48px rgba(11, 10, 33, 0.16),
+      0 6px 16px rgba(11, 10, 33, 0.06);
+  }
+
+  // Header row
+  &__edit-header {
+    width: 100%;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+  }
+
+  &__edit-title {
+    font-size: 24px;
+    line-height: 28px;
+    font-weight: 700;
+    color: $ink-900;
+  }
+
+  &__edit-close {
+    width: 24px;
+    height: 24px;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    flex-shrink: 0;
+
+    > * {
+      pointer-events: none;
+    }
+
+    &:hover {
+      opacity: 0.75;
+    }
+
+    &-ico {
+      width: 14px;
+      height: 14px;
+
+      svg {
+        display: block;
+        width: 14px;
+        height: 14px;
+        fill: $ink-600;
+
+        .icon-fill-blue,
+        .icon-fill-grey {
+          fill: $ink-600;
+        }
+      }
+    }
+  }
+
+  // User card
+  &__edit-user {
+    width: 100%;
+    height: 64px;
+    padding: 12px;
+    background: rgba(0, 0, 0, 0.04);
+    border-radius: 8px;
+    align-items: center;
+    gap: 16px;
+  }
+
+  &__edit-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 8px;
+    background: $audit-dark-avatar;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    overflow: hidden;
+
+    &--cyan {
+      background: rgba(137, 228, 246, 0.2);
+    }
+
+    &--purple {
+      background: rgba(89, 80, 255, 0.18);
+    }
+
+    &--amber {
+      background: rgba(255, 183, 77, 0.22);
+    }
+
+    &--pink {
+      background: rgba(255, 168, 220, 0.3);
+    }
+  }
+
+  &__edit-avatar-initials {
+    font-size: 14px;
+    line-height: 20px;
+    font-weight: 700;
+    color: $storage-cyan;
+
+    .apps-main__edit-avatar--purple & {
+      color: $purple-deep;
+    }
+
+    .apps-main__edit-avatar--amber & {
+      color: #b87a1d;
+    }
+
+    .apps-main__edit-avatar--pink & {
+      color: #b04a87;
+    }
+  }
+
+  &__edit-user-info {
+    flex: 1;
+    min-width: 0;
+    gap: 0;
+  }
+
+  &__edit-user-name {
+    font-size: 16px;
+    line-height: 22px;
+    font-weight: 700;
+    color: $ink-900;
+  }
+
+  &__edit-user-email {
+    font-size: 13px;
+    line-height: 18px;
+    font-weight: 400;
+    color: $ink-500;
+  }
+
+  // Body (scrollable middle)
+  &__edit-body {
+    width: 100%;
+    flex: 1;
+    min-height: 0;
+    gap: 24px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding-right: 4px;
+
+    &::-webkit-scrollbar {
+      width: 4px;
+    }
+
+    &::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    &::-webkit-scrollbar-thumb {
+      background: $purple-base;
+      border-radius: 4px;
+    }
+  }
+
+  // Section heading (Role / Device)
+  &__edit-section-heading {
+    align-items: center;
+    gap: 8px;
+  }
+
+  &__edit-section-ico {
+    width: 20px;
+    height: 20px;
+
+    svg {
+      display: block;
+      width: 18px;
+      height: 18px;
+    }
+  }
+
+  &__edit-section-label {
+    font-size: 14px;
+    line-height: 20px;
+    font-weight: 700;
+    color: $ink-900;
+  }
+
+  // Owner role row
+  &__edit-role-row {
+    width: 100%;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+  }
+
+  // Generic select pill
+  &__edit-select {
+    height: 33px;
+    min-width: 154px;
+    padding: 8px 12px;
+    background: rgba(0, 0, 0, 0.05);
+    border-radius: 4px;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    cursor: pointer;
+
+    > * {
+      pointer-events: none;
+    }
+
+    &:hover {
+      background: rgba(0, 0, 0, 0.07);
+    }
+
+    &-value {
+      font-size: 12px;
+      line-height: 17px;
+      font-weight: 400;
+      color: $ink-600;
+    }
+
+    &-caret {
+      width: 12px;
+      height: 12px;
+
+      svg {
+        display: block;
+        width: 12px;
+        height: 12px;
+      }
+    }
+  }
+
+  // Workspace list
+  &__edit-ws-list {
+    width: 100%;
+    gap: 12px;
+  }
+
+  &__edit-ws-row {
+    width: 100%;
+    align-items: center;
+    gap: 8px;
+  }
+
+  &__edit-ws-name {
+    flex: 1;
+    min-width: 0;
+    height: 36px;
+    padding: 8px 12px;
+    background: var(--white, #fff);
+    border-radius: 4px;
+    align-items: center;
+    gap: 8px;
+  }
+
+  &__edit-ws-ico {
+    width: 20px;
+    height: 20px;
+
+    svg {
+      display: block;
+      width: 18px;
+      height: 16px;
+    }
+  }
+
+  &__edit-ws-label {
+    font-size: 12px;
+    line-height: 17px;
+    font-weight: 400;
+    color: $ink-500;
+  }
+
+  // Workspace-row role dropdown (label + caret toggle + options panel)
+  &__edit-ws-role-cell {
+    position: relative;
+    flex-shrink: 0;
+    width: 154px;
+    min-width: 0;
+  }
+
+  &__edit-ws-role-select {
+    width: 100%;
+    height: 33px;
+    padding: 8px 12px;
+    background: rgba(0, 0, 0, 0.05);
+    border-radius: 4px;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    cursor: pointer;
+    box-sizing: border-box;
+
+    > * {
+      pointer-events: none;
+    }
+
+    &:hover {
+      background: rgba(0, 0, 0, 0.07);
+    }
+  }
+
+  &__edit-ws-role-label {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 12px;
+    line-height: 17px;
+    font-weight: 400;
+    color: $ink-600;
+
+    .inner {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+  }
+
+  &__edit-ws-role-caret {
+    width: 12px;
+    height: 12px;
+    flex-shrink: 0;
+
+    svg {
+      display: block;
+      width: 12px;
+      height: 12px;
+    }
+  }
+
+  &__edit-ws-role-options {
+    visibility: hidden;
+    pointer-events: none;
+    position: absolute;
+    top: calc(100% + 4px);
+    right: 0;
+    min-width: 154px;
+    background-color: var(--white, #fff);
+    border-radius: 8px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.12);
+    padding: 4px 0;
+    z-index: 99999;
+
+    &[data-state="1"] {
+      visibility: visible;
+      pointer-events: auto;
+    }
+  }
+
+  &__edit-ws-role-option {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    cursor: pointer;
+    font-size: 12px;
+    line-height: 17px;
+    font-weight: 400;
+    color: $ink-600;
+
+    > * {
+      pointer-events: none;
+    }
+
+    &:hover {
+      background-color: rgba(0, 0, 0, 0.04);
+    }
+
+    &::before {
+      content: "";
+      width: 16px;
+      height: 16px;
+      flex-shrink: 0;
+      border: 1.5px solid $ink-400;
+      border-radius: 3px;
+      box-sizing: border-box;
+    }
+
+    &[data-checked="1"]::before {
+      border-color: $purple-base;
+      background-color: $purple-base;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 12 9' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 4l3.5 3.5L11 1' stroke='%23fff' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: center;
+      background-size: 10px 8px;
+    }
+  }
+
+  &__edit-ws-remove {
+    flex-shrink: 0;
+    font-size: 16px;
+    font-weight: 300;
+    line-height: 1;
+    color: $ink-500;
+    cursor: pointer;
+    padding: 6px;
+    min-width: 28px;
+    min-height: 28px;
+    box-sizing: border-box;
+    border-radius: 6px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    transition:
+      color 0.15s,
+      background 0.15s;
+
+    > * {
+      pointer-events: none;
+    }
+
+    &:hover {
+      color: var(--error, #d74e49);
+      background: rgba(0, 0, 0, 0.04);
+    }
+  }
+
+  &__edit-ws-search {
+    width: 100%;
+    height: 36px;
+    padding: 8px 8px 8px 12px;
+    background: var(--white, #fff);
+    border-radius: 4px;
+    align-items: center;
+    justify-content: space-between;
+    gap: 24px;
+  }
+
+  &__edit-ws-search-placeholder {
+    flex: 1;
+    min-width: 0;
+    font-size: 12px;
+    line-height: 17px;
+    font-weight: 400;
+    color: $ink-500;
+  }
+
+  &__edit-ws-search-add {
+    width: 20px;
+    height: 20px;
+    border-radius: 4px;
+    background: $purple-deep;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    flex-shrink: 0;
+
+    > * {
+      pointer-events: none;
+    }
+
+    &:hover {
+      filter: brightness(0.95);
+    }
+  }
+
+  &__edit-ws-search-plus {
+    font-size: 14px;
+    height: 18px;
+    font-weight: 600;
+    color: var(--white, #fff);
+  }
+
+  &__edit-ws-search-input {
+    flex: 1;
+    min-width: 0;
+
+    input {
+      width: 100%;
+      border: 0;
+      outline: 0;
+      background: transparent;
+      font-size: 12px;
+      line-height: 17px;
+      font-weight: 400;
+      color: $ink-900;
+
+      &::placeholder {
+        color: $ink-500;
+      }
+    }
+  }
+
+  // Sits inside __edit-card (not __edit-body) so __edit-body's overflow:auto
+  // doesn't clip it. top/left/width/max-height are set inline by
+  // _positionEditWsSuggestions against the search input's bounding rect.
+  &__edit-ws-suggestions {
+    position: absolute;
+    z-index: 10;
+    overflow-y: auto;
+    background: var(--white, #fff);
+    border: 1px solid var(--border-default);
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+
+    &::-webkit-scrollbar {
+      display: none;
+    }
+
+    &[data-state="0"] {
+      display: none;
+    }
+
+    &[data-state="1"] {
+      display: flex;
+    }
+  }
+
+  &__edit-ws-suggestion {
+    width: 100%;
+    padding: 8px 12px;
+    font-size: 12px;
+    line-height: 17px;
+    font-weight: 400;
+    color: $ink-900;
+    cursor: pointer;
+
+    &:hover {
+      background: rgba(0, 0, 0, 0.04);
+    }
+  }
+
+  // Devices section
+  &__edit-devices {
+    width: 100%;
+    gap: 16px;
+  }
+
+  &__edit-devices-header {
+    width: 100%;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+  }
+
+  &__edit-remove-all {
+    height: 27px;
+    padding: 4px 8px 4px 4px;
+    background: rgba(246, 81, 75, 0.1);
+    border-radius: 4px;
+    align-items: center;
+    gap: 4px;
+    cursor: pointer;
+
+    > * {
+      pointer-events: none;
+    }
+
+    &:hover {
+      filter: brightness(0.97);
+    }
+
+    &-ico {
+      width: 18px;
+      height: 18px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+
+      svg {
+        display: block;
+        width: 13px;
+        height: 15px;
+        fill: $red;
+
+        .icon-fill-blue,
+        .icon-fill-grey {
+          fill: $red;
+        }
+      }
+    }
+
+    &-label {
+      font-size: 12px;
+      line-height: 17px;
+      font-weight: 400;
+      color: $red;
+    }
+  }
+
+  &__edit-device-list {
+    width: 100%;
+    gap: 8px;
+  }
+
+  &__edit-device {
+    width: 100%;
+    padding: 12px;
+    background: var(--white, #fff);
+    border: 1px solid rgba(0, 0, 0, 0.06);
+    border-radius: 8px;
+    align-items: center;
+    gap: 12px;
+  }
+
+  &__edit-device-ico {
+    width: 23px;
+    height: 23px;
+
+    svg {
+      display: block;
+      width: 20px;
+      height: 20px;
+      fill: $ink-900;
+
+      .icon-fill-blue,
+      .icon-fill-grey {
+        fill: $ink-900;
+      }
+    }
+  }
+
+  &__edit-device-text {
+    flex: 1;
+    min-width: 0;
+    gap: 0;
+  }
+
+  &__edit-device-name {
+    font-size: 12px;
+    line-height: 16px;
+    font-weight: 700;
+    color: $ink-900;
+  }
+
+  &__edit-device-info {
+    font-size: 10px;
+    line-height: 14px;
+    font-weight: 400;
+    color: $ink-600;
+  }
+
+  &__edit-device-remove {
+    width: 20px;
+    height: 20px;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    flex-shrink: 0;
+
+    > * {
+      pointer-events: none;
+    }
+
+    &:hover {
+      opacity: 0.75;
+    }
+
+    &-ico {
+      width: 13px;
+      height: 13px;
+
+      svg {
+        display: block;
+        width: 13px;
+        height: 13px;
+        fill: $red;
+
+        .icon-fill-blue,
+        .icon-fill-grey {
+          fill: $red;
+        }
+      }
+    }
+  }
+
+  // Save button
+  &__edit-save-btn {
+    width: 100%;
+    height: 48px;
+    padding: 12px 24px;
+    background: $purple-deep;
+    border-radius: 4px;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    gap: 8px;
+    flex-shrink: 0;
+    transition: filter 0.15s ease;
+
+    &:hover {
+      filter: brightness(0.95);
+    }
+
+    > * {
+      pointer-events: none;
+    }
+  }
+
+  &__edit-save-ico {
+    width: 24px;
+    height: 24px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+
+    svg {
+      display: block;
+      width: 18px;
+      height: 18px;
+      fill: var(--white, #fff);
+
+      .icon-fill-blue,
+      .icon-fill-grey {
+        fill: var(--white, #fff);
+      }
+    }
+  }
+
+  &__edit-save-label {
+    font-size: 16px;
+    line-height: 24px;
+    font-weight: 600;
+    color: var(--white, #fff);
+  }
+
+}

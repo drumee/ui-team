@@ -1,0 +1,61 @@
+// SCSS tokens — extracted from the monolithic index.scss for shared use across partials.
+// Stage 1 keeps these as plain SCSS variables; Stage 2 will migrate them to CSS custom
+// properties so partials can own their own dark-mode variants.
+
+// Base palette
+$bg: #ffffff;
+$bg-tint: rgba(0, 0, 0, 0.05);
+$bg-tint-strong: rgba(0, 0, 0, 0.06);
+$row-hover: rgba(0, 0, 0, 0.02);
+$line: rgba(0, 0, 0, 0.06);
+
+$ink-900: #0b0a21;
+$ink-700: #2f2f37;
+$ink-600: #65656c;
+$ink-500: #84848c;
+$ink-400: #aeaeb2;
+
+$purple-base: #5950ff;
+$purple-deep: #433cc5;
+$purple-light: #b1acff;
+$purple-soft: rgba(89, 80, 255, 0.1);
+$purple-status: #847dff;
+
+$cyan-soft: rgba(137, 228, 246, 0.2);
+$cyan-text: #38a2ce;
+
+$pink: #ffa8dc;
+$red: #d64e49;
+$red-soft: rgba(214, 78, 73, 0.1);
+
+$reward-bg: #4f46d6;
+$reward-text: #e4e3ff;
+
+// Audit-specific tokens
+$audit-dark-avatar: #363246;
+$audit-grant-bg: rgba(89, 80, 255, 0.1);
+$audit-grant-text: #433cc5;
+$audit-policy-bg: rgba(176, 242, 255, 0.2);
+$audit-policy-text: #38a2ce;
+$audit-share-bg: rgba(255, 168, 220, 0.2);
+$audit-share-text: #b43481;
+$audit-neutral-bg: rgba(0, 0, 0, 0.05);
+
+// Storage-specific tokens
+$storage-doc: #433cc5;
+$storage-media: #847dff;
+$storage-avail: #65d0ea;
+$storage-other: #b8b8d6;
+$storage-cyan: #38a2ce;
+$storage-cyan-soft: rgba(137, 228, 246, 0.2);
+$storage-policy-bg: rgba(176, 242, 255, 0.2);
+
+// Security-specific tokens
+$sec-green: #1c8f5a;
+$sec-green-soft: rgba(28, 143, 90, 0.1);
+$sec-green-border: rgba(28, 143, 90, 0.3);
+$sec-red: #d64e49;
+$sec-red-soft: rgba(214, 78, 73, 0.1);
+$sec-red-border: rgba(214, 78, 73, 0.3);
+$sec-grey-soft: rgba(0, 0, 0, 0.04);
+$sec-grey-border: rgba(0, 0, 0, 0.12);

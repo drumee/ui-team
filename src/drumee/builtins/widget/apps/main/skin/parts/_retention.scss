@@ -1,0 +1,518 @@
+@use "../tokens" as *;
+
+// Retention Policy view
+
+.apps-main {
+  // ─────────────────────────────────────────────────────────
+  //  RETENTION POLICY VIEW
+  // ─────────────────────────────────────────────────────────
+
+  &__content--storage {
+    padding-bottom: 24px;
+  }
+
+  // Back link
+  &__retpolicy-back {
+    align-items: center;
+    gap: 8px;
+    height: 24px;
+    cursor: pointer;
+    flex-shrink: 0;
+
+    > * {
+      pointer-events: none;
+    }
+
+    &:hover {
+      opacity: 0.8;
+    }
+
+    &-ico {
+      width: 8px;
+      height: 12px;
+
+      svg {
+        display: block;
+        width: 8px;
+        height: 12px;
+      }
+    }
+
+    &-label {
+      font-size: 16px;
+      line-height: 24px;
+      font-weight: 600;
+      color: $ink-600;
+    }
+  }
+
+  // Window
+  &__retpolicy-window {
+    width: 100%;
+    background: $bg-tint;
+    border-radius: 8px;
+    overflow: auto;
+    gap: 0;
+    margin-top: 8px;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+
+    &::-webkit-scrollbar {
+      display: none;
+    }
+  }
+
+  &__retpolicy-window-header {
+    width: 100%;
+    height: 56px;
+    padding: 12px 24px;
+    align-items: center;
+    background: rgba(0, 0, 0, 0.02);
+    gap: 12px;
+  }
+
+  &__retpolicy-lock-purple {
+    width: 16px;
+    height: 20px;
+    flex-shrink: 0;
+
+    svg {
+      display: block;
+      width: 16px;
+      height: 20px;
+      fill: $purple-base;
+    }
+  }
+
+  &__retpolicy-window-title {
+    font-size: 18px;
+    line-height: 24px;
+    font-weight: 600;
+    color: $ink-900;
+  }
+
+  // Window content
+  &__retpolicy-content {
+    width: 100%;
+    padding: 40px;
+    gap: 24px;
+  }
+
+  // Bento row of 3 cards
+  &__retpolicy-bento {
+    width: 100%;
+    gap: 24px;
+    align-items: stretch;
+  }
+
+  &__retpolicy-info {
+    flex: 1 1 0;
+    min-width: 0;
+    padding: 24px;
+    border-radius: 8px;
+    gap: 16px;
+
+    &--storage {
+      background: rgba(89, 80, 255, 0.1);
+    }
+
+    &--readonly {
+      background: rgba(246, 81, 75, 0.1);
+      gap: 12px;
+    }
+
+    &--impact {
+      background: $bg-tint;
+    }
+  }
+
+  &__retpolicy-info-top {
+    width: 100%;
+    align-items: center;
+    gap: 12px;
+  }
+
+  &__retpolicy-info-iconwrap {
+    width: 30px;
+    height: 30px;
+    border-radius: 4px;
+    background: rgba(89, 80, 255, 0.1);
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  &__retpolicy-info-ico {
+    flex-shrink: 0;
+
+    svg {
+      display: block;
+    }
+
+    &--db {
+      width: 14px;
+      height: 14px;
+
+      svg {
+        width: 14px;
+        height: 14px;
+        fill: $purple-base;
+      }
+    }
+
+    &--lock-red {
+      width: 16px;
+      height: 21px;
+
+      svg {
+        width: 16px;
+        height: 21px;
+        fill: #d64e49;
+      }
+    }
+  }
+
+  &__retpolicy-info-meta {
+    gap: 0;
+  }
+
+  &__retpolicy-info-label {
+    font-size: 10px;
+    line-height: 14px;
+    font-weight: 600;
+    color: $ink-600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  &__retpolicy-info-value {
+    font-size: 14px;
+    line-height: 20px;
+    font-weight: 600;
+    color: $ink-900;
+  }
+
+  &__retpolicy-info-title-red {
+    font-size: 14px;
+    line-height: 20px;
+    font-weight: 700;
+    color: $red;
+  }
+
+  &__retpolicy-info-body {
+    font-size: 12px;
+    line-height: 17px;
+    font-weight: 400;
+    color: $ink-600;
+
+    &--red {
+      color: $red;
+    }
+  }
+
+  &__retpolicy-info-impact-title {
+    font-size: 12px;
+    line-height: 17px;
+    font-weight: 600;
+    color: $ink-600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  &__retpolicy-info-impact-list {
+    width: 100%;
+    gap: 16px;
+  }
+
+  &__retpolicy-info-impact-row {
+    width: 100%;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+
+    &--total {
+      padding-top: 8px;
+      border-top: 1px solid $line;
+    }
+  }
+
+  &__retpolicy-info-impact-key {
+    font-size: 12px;
+    line-height: 17px;
+    font-weight: 400;
+    color: $ink-900;
+  }
+
+  &__retpolicy-info-impact-val {
+    font-size: 14px;
+    line-height: 20px;
+    font-weight: 600;
+    color: $ink-900;
+
+    &--accent {
+      color: $purple-base;
+    }
+  }
+
+  // Sections row (period + access)
+  &__retpolicy-sections {
+    width: 100%;
+    gap: 24px;
+    align-items: stretch;
+  }
+
+  &__retpolicy-section {
+    flex: 1 1 0;
+    min-width: 0;
+    padding: 24px;
+    border-radius: 8px;
+    background: rgba(0, 0, 0, 0.02);
+    gap: 24px;
+  }
+
+  &__retpolicy-section-heading {
+    align-items: center;
+    gap: 8px;
+  }
+
+  &__retpolicy-section-title {
+    font-size: 18px;
+    line-height: 24px;
+    font-weight: 600;
+    color: $ink-900;
+  }
+
+  &__retpolicy-section-desc {
+    font-size: 14px;
+    line-height: 20px;
+    font-weight: 400;
+    color: $ink-600;
+  }
+
+  // Period choices
+  &__retpolicy-choices {
+    width: 100%;
+    gap: 16px;
+    align-items: stretch;
+  }
+
+  &__retpolicy-choice {
+    position: relative;
+    flex: 1 1 0;
+    min-width: 0;
+    height: 108px;
+    padding: 24px;
+    border-radius: 8px;
+    background: rgba(89, 80, 255, 0.1);
+    align-items: center;
+    justify-content: center;
+    gap: 0;
+    cursor: pointer;
+    border: 2px solid transparent;
+    transition: border-color 0.15s ease;
+
+    > * {
+      pointer-events: none;
+    }
+
+    &--selected {
+      border-color: $purple-base;
+    }
+
+    &-num {
+      font-size: 24px;
+      line-height: 26px;
+      font-weight: 600;
+      color: $ink-900;
+      margin-bottom: 4px;
+    }
+
+    &--selected &-num {
+      color: $purple-base;
+    }
+
+    &-unit {
+      font-size: 10px;
+      line-height: 14px;
+      font-weight: 400;
+      color: $ink-600;
+      letter-spacing: 0.04em;
+    }
+
+    &-check {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      width: 12px;
+      height: 12px;
+
+      svg {
+        display: block;
+        width: 12px;
+        height: 12px;
+        fill: $purple-base;
+      }
+    }
+  }
+
+  // Toggle item card
+  &__retpolicy-toggles {
+    width: 100%;
+    gap: 16px;
+  }
+
+  &__retpolicy-toggle-item {
+    width: 100%;
+    padding: 16px;
+    background: var(--white, #fff);
+    border-radius: 8px;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+  }
+
+  &__retpolicy-toggle-text {
+    flex: 1;
+    min-width: 0;
+    gap: 4px;
+  }
+
+  &__retpolicy-toggle-title {
+    font-size: 14px;
+    line-height: 20px;
+    font-weight: 600;
+    color: $ink-900;
+  }
+
+  &__retpolicy-toggle-body {
+    font-size: 10px;
+    line-height: 14px;
+    font-weight: 400;
+    color: $ink-600;
+  }
+
+  // Switch (off-by-default look from Figma: gray track, white knob)
+  &__retpolicy-switch {
+    width: 40px;
+    height: 20px;
+    border-radius: 12px;
+    background: $ink-600;
+    padding: 2px;
+    cursor: pointer;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: flex-start;
+    transition: background 0.2s ease;
+
+    > * {
+      pointer-events: none;
+    }
+
+    &-knob {
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background: var(--white, #fff);
+      transition: transform 0.2s ease;
+    }
+
+    &--on {
+      background: $purple-base;
+      justify-content: flex-end;
+
+      .apps-main__retpolicy-switch-knob {
+        transform: translateX(0);
+      }
+    }
+  }
+
+  // Heading icons (timer + signin)
+  &__retpolicy-timer-ico {
+    width: 24px;
+    height: 24px;
+    flex-shrink: 0;
+
+    svg {
+      display: block;
+      width: 24px;
+      height: 24px;
+      fill: $purple-base;
+    }
+  }
+
+  &__retpolicy-signin-ico {
+    width: 24px;
+    height: 24px;
+    flex-shrink: 0;
+
+    svg {
+      display: block;
+      width: 24px;
+      height: 24px;
+      fill: $purple-base;
+    }
+  }
+
+  // Footer (last modified + apply button)
+  &__retpolicy-footer {
+    width: 100%;
+    height: 61px;
+    padding: 12px 32px;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    background: rgba(0, 0, 0, 0.02);
+    border-top: 1px solid $line;
+  }
+
+  &__retpolicy-footer-info {
+    align-items: center;
+    gap: 8px;
+  }
+
+  &__retpolicy-footer-clock {
+    width: 12px;
+    height: 12px;
+    flex-shrink: 0;
+
+    svg {
+      display: block;
+      width: 12px;
+      height: 12px;
+    }
+  }
+
+  &__retpolicy-footer-label {
+    font-size: 12px;
+    line-height: 17px;
+    font-weight: 400;
+    color: $ink-600;
+  }
+
+  &__retpolicy-apply-btn {
+    height: 36px;
+    padding: 12px 24px;
+    background: $purple-deep;
+    border-radius: 4px;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: filter 0.15s ease;
+
+    &:hover {
+      filter: brightness(0.95);
+    }
+
+    > * {
+      pointer-events: none;
+    }
+  }
+
+  &__retpolicy-apply-label {
+    font-size: 14px;
+    line-height: 20px;
+    font-weight: 600;
+    color: var(--white, #fff);
+  }
+
+}

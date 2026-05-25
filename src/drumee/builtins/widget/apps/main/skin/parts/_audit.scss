@@ -1,0 +1,798 @@
+@use "../tokens" as *;
+
+// Audit Logs view (incl. upsell overlay)
+
+.apps-main {
+  // ─────────────────────────────────────────────────────────
+  //  AUDIT LOGS VIEW
+  // ─────────────────────────────────────────────────────────
+
+
+  &__audit-header {
+    width: 100%;
+    align-items: center;
+    justify-content: space-between;
+    gap: 24px;
+    flex-shrink: 0;
+  }
+
+  &__audit-title {
+    font-size: 32px;
+    line-height: 36px;
+    font-weight: 600;
+    color: $ink-900;
+  }
+
+  &__audit-actions {
+    align-items: center;
+    gap: 12px;
+  }
+
+  &__audit-search {
+    width: 200px;
+    height: 33px;
+    padding: 8px 16px;
+    background: rgba(0, 0, 0, 0.05);
+    border-radius: 6px;
+    align-items: center;
+    gap: 8px;
+
+    &-ico {
+      width: 14px;
+      height: 14px;
+      flex-shrink: 0;
+
+      svg {
+        display: block;
+        width: 14px;
+        height: 14px;
+        fill: $purple-base;
+
+        .icon-fill-blue,
+        .icon-fill-grey {
+          fill: $purple-base;
+        }
+      }
+    }
+
+    &-input {
+      flex: 1;
+      min-width: 0;
+
+      input {
+        width: 100%;
+        border: none;
+        outline: none;
+        background: transparent;
+        font-size: 12px;
+        line-height: 17px;
+        font-weight: 400;
+        color: $ink-900;
+
+        &::placeholder {
+          color: $ink-600;
+        }
+      }
+    }
+  }
+
+  &__audit-range-wrap {
+    position: relative;
+  }
+
+  &__audit-range {
+    height: 32px;
+    padding: 8px 16px;
+    background: rgba(0, 0, 0, 0.05);
+    border-radius: 6px;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    transition: background 0.1s ease;
+
+    &:hover,
+    &--open {
+      background: rgba(0, 0, 0, 0.08);
+    }
+
+    > * {
+      pointer-events: none;
+    }
+
+    &-ico {
+      width: 12px;
+      height: 12px;
+      flex-shrink: 0;
+
+      svg {
+        width: 10px;
+        height: 12px;
+        fill: $purple-base;
+
+        .icon-fill-blue,
+        .icon-fill-grey {
+          fill: $purple-base;
+        }
+      }
+    }
+
+    &-label {
+      font-size: 12px;
+      line-height: 16px;
+      font-weight: 600;
+      color: $ink-600;
+    }
+
+    &-chevron {
+      width: 7px;
+      height: 13px;
+      flex-shrink: 0;
+
+      svg {
+        fill: $purple-base;
+
+        .icon-fill-blue,
+        .icon-fill-grey {
+          fill: $purple-base;
+        }
+      }
+    }
+  }
+
+  &__audit-range-menu {
+    position: absolute;
+    top: calc(100% + 4px);
+    right: 0;
+    width: 168px;
+    padding: 12px 8px;
+    gap: 8px;
+    background: var(--white, #ffffff);
+    border-radius: 6px;
+    box-shadow:
+      0 4px 16px rgba(0, 0, 0, 0.1),
+      0 1px 3px rgba(0, 0, 0, 0.06);
+    z-index: 100;
+  }
+
+  &__audit-range-item {
+    width: 100%;
+    height: 25px;
+    padding: 4px;
+    align-items: center;
+    justify-content: space-between;
+    gap: 4px;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: background 0.1s ease;
+
+    &:hover {
+      background: rgba(0, 0, 0, 0.03);
+    }
+
+    > * {
+      pointer-events: none;
+    }
+
+    &-label {
+      font-size: 12px;
+      line-height: 17px;
+      font-weight: 400;
+      color: $ink-900;
+    }
+
+    &-radio {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      border: 1px solid $ink-600;
+      box-sizing: border-box;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      background: var(--white, #ffffff);
+
+      &--selected {
+        border-color: $purple-deep;
+      }
+
+      &-dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: $purple-deep;
+      }
+    }
+  }
+
+  &__audit-export {
+    height: 32px;
+    padding: 6px 24px;
+    background: $purple-deep;
+    border-radius: 4px;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    transition: filter 0.15s ease;
+
+    &:hover {
+      filter: brightness(0.95);
+    }
+
+    > * {
+      pointer-events: none;
+    }
+
+    &-ico {
+      width: 20px;
+      height: 20px;
+
+      svg {
+        width: 15px;
+        height: 15px;
+        fill: var(--white, #fff);
+
+        .icon-fill-blue,
+        .icon-fill-grey {
+          fill: var(--white, #fff);
+        }
+      }
+    }
+
+    &-label {
+      font-size: 14px;
+      line-height: 20px;
+      font-weight: 600;
+      color: var(--white, #fff);
+    }
+  }
+
+  // ── Audit table ───────────────────────────────────────────
+  &__audit-window {
+    width: 100%;
+    background: $bg-tint;
+    border-radius: 8px;
+    overflow: hidden;
+    gap: 0;
+    flex: 1;
+    min-height: 0;
+  }
+
+  &__audit-thead {
+    width: 100%;
+    height: 48px;
+    padding: 16px 32px;
+    background: rgba(0, 0, 0, 0.02);
+    align-items: center;
+  }
+
+  // Proportional column weights match the Figma layout (292/194/389/233)
+  // and scale with whatever width the table renders at.
+  &__audit-col {
+    align-items: center;
+
+    &--user {
+      flex: 292 1 0;
+      min-width: 0;
+    }
+
+    &--action {
+      flex: 194 1 0;
+      min-width: 0;
+    }
+
+    &--resource {
+      flex: 389 1 0;
+      min-width: 0;
+    }
+
+    &--timestamp {
+      flex: 233 1 0;
+      min-width: 0;
+    }
+  }
+
+  &__audit-col-label {
+    font-size: 12px;
+    line-height: 15px;
+    font-weight: 600;
+    color: $ink-600;
+  }
+
+  &__audit-list {
+    width: 100%;
+    background: $bg;
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+  }
+
+  &__audit-row {
+    width: 100%;
+    padding: 20px 32px;
+    align-items: center;
+    border-bottom: 1px solid $line;
+    transition: background 0.1s ease;
+
+    &:hover {
+      background: $row-hover;
+    }
+
+    &:last-child {
+      border-bottom: none;
+    }
+  }
+
+  &__audit-cell {
+    align-items: center;
+    gap: 12px;
+  }
+
+  &__audit-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    background: $audit-dark-avatar;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    overflow: hidden;
+
+    &--neutral {
+      background: rgba(0, 0, 0, 0.05);
+    }
+
+    &-initials {
+      font-size: 12px;
+      line-height: 16px;
+      font-weight: 700;
+      color: $ink-600;
+
+      &--light {
+        color: var(--white, #fff);
+      }
+    }
+  }
+
+  &__audit-user-info {
+    flex: 1;
+    min-width: 0;
+    gap: 0;
+  }
+
+  &__audit-user-name {
+    font-size: 14px;
+    line-height: 20px;
+    font-weight: 600;
+    color: $ink-900;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  &__audit-user-email {
+    font-size: 10px;
+    line-height: 14px;
+    font-weight: 400;
+    color: $ink-600;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  // ── Action badges ─────────────────────────────────────────
+  &__audit-action {
+    align-items: center;
+    padding: 4px 10px;
+    border-radius: 12px;
+
+    &-label {
+      font-size: 10px;
+      line-height: 12px;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+
+    &--grant {
+      background: $audit-grant-bg;
+
+      .apps-main__audit-action-label {
+        color: $audit-grant-text;
+      }
+    }
+
+    &--policy {
+      background: $audit-policy-bg;
+
+      .apps-main__audit-action-label {
+        color: $audit-policy-text;
+      }
+    }
+
+    &--share {
+      background: $audit-share-bg;
+
+      .apps-main__audit-action-label {
+        color: $audit-share-text;
+      }
+    }
+
+    &--neutral {
+      background: $audit-neutral-bg;
+
+      .apps-main__audit-action-label {
+        color: $ink-600;
+      }
+    }
+  }
+
+  // ── Resource cell ─────────────────────────────────────────
+  &__audit-resource-ico {
+    width: 15px;
+    height: 15px;
+    flex-shrink: 0;
+
+    svg {
+      width: 13px;
+      height: 13px;
+      fill: $ink-600;
+
+      .icon-fill-blue,
+      .icon-fill-grey {
+        fill: $ink-600;
+      }
+    }
+  }
+
+  &__audit-resource-label {
+    font-size: 14px;
+    line-height: 20px;
+    font-weight: 400;
+    color: $ink-600;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  &__audit-timestamp {
+    font-size: 14px;
+    line-height: 20px;
+    font-weight: 400;
+    color: $ink-600;
+  }
+
+  // ── Audit pagination ──────────────────────────────────────
+  &__audit-pagination {
+    width: 100%;
+    height: 60px;
+    padding: 16px 32px;
+    background: rgba(0, 0, 0, 0.02);
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  &__audit-pagination-label {
+    font-size: 12px;
+    line-height: 16px;
+    font-weight: 400;
+    color: $ink-600;
+  }
+
+  &__audit-pager {
+    align-items: center;
+    gap: 8px;
+  }
+
+  &__audit-pager-btn {
+    width: 28px;
+    height: 28px;
+    border-radius: 4px;
+    background: rgba(0, 0, 0, 0.05);
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background 0.1s ease;
+
+    &:hover {
+      background: rgba(0, 0, 0, 0.08);
+    }
+
+    > * {
+      pointer-events: none;
+    }
+  }
+
+  &__audit-pager-ico {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    svg {
+      width: 12px;
+      height: 12px;
+      fill: $ink-700;
+
+      .icon-fill-blue,
+      .icon-fill-grey {
+        fill: $ink-700;
+      }
+    }
+  }
+
+  // ── Insight cards ─────────────────────────────────────────
+  &__insights {
+    width: 100%;
+    gap: 16px;
+  }
+
+  &__insight {
+    flex: 1 1 0;
+    min-width: 0;
+    padding: 24px;
+    background: $bg-tint;
+    border-radius: 8px;
+    gap: 16px;
+    border-left: 3px solid transparent;
+
+    &--security {
+      border-left-color: $purple-base;
+    }
+
+    &--risk {
+      border-left-color: $red;
+    }
+
+    &--storage {
+      border-left-color: $pink;
+    }
+
+    &-top {
+      width: 100%;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      height: 44px;
+    }
+
+    &-iconwrap {
+      width: 44px;
+      height: 44px;
+      border-radius: 8px;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    &--security .apps-main__insight-iconwrap {
+      background: rgba(89, 80, 255, 0.1);
+    }
+
+    &--risk .apps-main__insight-iconwrap {
+      background: rgba(255, 179, 173, 0.2);
+    }
+
+    &--storage .apps-main__insight-iconwrap {
+      background: rgba(255, 168, 220, 0.2);
+    }
+
+    &-ico {
+      width: 22px;
+      height: 22px;
+
+      svg {
+        width: 22px;
+        height: 22px;
+      }
+    }
+
+    &--security .apps-main__insight-ico svg {
+      fill: $purple-base;
+
+      .icon-fill-blue,
+      .icon-fill-grey {
+        fill: $purple-base;
+      }
+    }
+
+    &--risk .apps-main__insight-ico svg {
+      fill: $red;
+
+      .icon-fill-blue,
+      .icon-fill-grey {
+        fill: $red;
+      }
+    }
+
+    &--storage .apps-main__insight-ico svg {
+      fill: #b43481;
+
+      .icon-fill-blue,
+      .icon-fill-grey {
+        fill: #b43481;
+      }
+    }
+
+    &-badge {
+      font-size: 12px;
+      line-height: 16px;
+      font-weight: 600;
+    }
+
+    &--security .apps-main__insight-badge {
+      color: $purple-base;
+    }
+
+    &--risk .apps-main__insight-badge {
+      color: $red;
+    }
+
+    &--storage .apps-main__insight-badge {
+      color: #b43481;
+    }
+
+    &-content {
+      width: 100%;
+      gap: 4px;
+    }
+
+    &-label {
+      font-size: 10px;
+      line-height: 14px;
+      font-weight: 600;
+      color: $ink-600;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    &-value {
+      font-size: 32px;
+      line-height: 36px;
+      font-weight: 600;
+    }
+
+    &--security .apps-main__insight-value {
+      color: $purple-base;
+    }
+
+    &--risk .apps-main__insight-value {
+      color: $red;
+    }
+
+    &--storage .apps-main__insight-value {
+      color: #b43481;
+    }
+
+    &-bar {
+      width: 100%;
+      height: 6px;
+      border-radius: 12px;
+      background: #d1d1d6;
+      overflow: hidden;
+
+      &-fill {
+        height: 100%;
+        background: $purple-base;
+        border-radius: 12px;
+      }
+    }
+
+    &-footer {
+      font-size: 12px;
+      line-height: 17px;
+      font-weight: 400;
+      color: $ink-600;
+    }
+  }
+
+  // ── Upsell blur overlay (locked state) ────────────────────
+  &__audit-locked-wrap {
+    position: relative;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    flex: 1;
+    min-height: 0;
+  }
+
+  &__upsell {
+    position: absolute;
+    inset: 0;
+    background: rgba(255, 255, 255, 0.55);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    align-items: center;
+    justify-content: center;
+    z-index: 5;
+    border-radius: 8px;
+    pointer-events: auto;
+  }
+
+  // Visually relax the table/insights underneath while locked
+  &__audit-locked-wrap--locked {
+    .apps-main__audit-window,
+    .apps-main__insights {
+      user-select: none;
+    }
+  }
+
+  &__upsell-card {
+    width: 450px;
+    max-width: calc(100% - 48px);
+    padding: 32px;
+    background: var(--white, #fff);
+    border-radius: 12px;
+    align-items: center;
+    gap: 32px;
+    box-shadow:
+      0 24px 48px rgba(11, 10, 33, 0.16),
+      0 6px 16px rgba(11, 10, 33, 0.06);
+  }
+
+  &__upsell-icon {
+    width: 70px;
+    height: 60px;
+    flex-shrink: 0;
+
+    svg {
+      display: block;
+      width: 70px;
+      height: 60px;
+    }
+  }
+
+  &__upsell-text {
+    width: 100%;
+    align-items: center;
+    gap: 16px;
+  }
+
+  &__upsell-title {
+    font-size: 20px;
+    line-height: 24px;
+    font-weight: 600;
+    color: $ink-900;
+    text-align: center;
+  }
+
+  &__upsell-desc {
+    font-size: 14px;
+    line-height: 20px;
+    font-weight: 400;
+    color: $ink-600;
+    text-align: center;
+  }
+
+  &__upsell-btn {
+    width: 100%;
+    height: 48px;
+    padding: 12px 24px;
+    background: $purple-deep;
+    border-radius: 4px;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    cursor: pointer;
+    transition: filter 0.15s ease;
+
+    &:hover {
+      filter: brightness(0.95);
+    }
+
+    > * {
+      pointer-events: none;
+    }
+  }
+
+  &__upsell-btn-label,
+  &__upsell-btn-arrow {
+    font-size: 16px;
+    line-height: 24px;
+    font-weight: 600;
+    color: var(--white, #fff);
+  }
+
+}
