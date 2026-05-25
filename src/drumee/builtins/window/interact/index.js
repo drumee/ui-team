@@ -964,6 +964,29 @@ class __window_interact extends windowCore {
    * @param {*} files
    * @param {*} position
    */
+  _crossHubCopyOpt(m) {
+    if (!m || !m.mget) return null;
+    if (this.isTrash || this.isDmz || this.isSearch) return null;
+    if (m.mget(_a.files) || m.isPseudo || m.phase === _a.creating) return null;
+    if (m.mget(_a.status) === _a.deleted) return null;
+    if (m.mget(_a.filetype) === _a.hub) return null;
+    const srcHub = m.mget(_a.hub_id);
+    const dstHub = this.mget(_a.hub_id);
+    if (!srcHub || !dstHub || srcHub === dstHub) return null;
+    // No echoId so the destination window renders the server's newContent echo (carries the real copy nid).
+    return {
+      service: SERVICE.media.copy,
+      nid: m.mget(_a.nodeId),
+      pid: this.mget(_a.nodeId) || this.getCurrentNid(),
+      action: _a.copy,
+      hub_id: srcHub,
+      recipient_id: dstHub,
+      notify: 1,
+      moved_in: 1,
+      async: 1,
+    };
+  }
+
   insertMedia(files, position = 0) {
     if (!_.isArray(files)) {
       files = [files];
@@ -983,6 +1006,14 @@ class __window_interact extends windowCore {
         continue;
       }
       if (file.phase == _a.creating || file.isPseudo) shouldSync = 0;
+      // Cross-hub drops use the same media.copy payload as moveIn/prepareMove (media/core.js:1471); makeOptions would otherwise pick phase=moved and 403.
+      const copyOpt = this._crossHubCopyOpt(file);
+      if (copyOpt) {
+        this.postService(copyOpt).catch((e) =>
+          this.warn("Cross-hub drop failed", e),
+        );
+        continue;
+      }
       this._insertMedia(file, position);
     }
     this.resetShift();

@@ -101,6 +101,10 @@ class __window_manager extends push {
       case _a.channel:
         this.loadWorkspace(args);
         return;
+
+      case _a.open:
+        this.openFileLocation(args);
+        return;
     }
     const loc = JSON.parse(localStorage.getItem("locationOnStart")); //"locationOnStart";
     if (loc) {
@@ -258,12 +262,13 @@ class __window_manager extends push {
 
   /**
    * Find a headless workspace window already open for the given hub_id.
+   * Searches headlessLayer only — headless windows never live in windowsLayer.
    * Returns null if none is open or all are mid-destroy.
    */
   _findWorkspaceWindow(hub_id) {
-    if (!hub_id || !this.windowsLayer || !this.windowsLayer.children)
+    if (!hub_id || !this.headlessLayer || !this.headlessLayer.children)
       return null;
-    for (const c of this.windowsLayer.children.toArray()) {
+    for (const c of this.headlessLayer.children.toArray()) {
       if (!c || c.isDestroyed()) continue;
       if (c.mget(_a.kind) !== "window_folder") continue;
       if (!c.mget(_a.headless)) continue;
@@ -273,18 +278,12 @@ class __window_manager extends push {
   }
 
   /**
-   * Switch the main grid to show the contents of `workspace` (a hub).
-   * Accepts any of actual_home_id / home_id / nid / id as the root
-   * directory id; falls back to hub.get_attributes when none is set.
-   *
-   * Multi-tab model: if a headless workspace window already exists for this
-   * hub_id, raise it (preserving its in-window state) instead of creating
-   * another. Raising fires `change:state` on the window's model, which the
-   * folder widget routes to `Wm.onWorkspaceRaised(this)` — that's where
-   * `_curWorkspace`, `Wm.mset(...)`, the sidebar highlight, and the
-   * breadcrumb get re-synced. Keeping the global-context writes in one
-   * place (the raise path) is what makes every existing consumer of
-   * `_curWorkspace` / `Wm.mget(home_id)` work unchanged.
+   * Headless mode entry point — called when the user opens a workspace from
+   * the sidebar. Mounts a headless window_folder into headlessLayer (replacing
+   * any previous one) so that all subsequent windows open within that context.
+   * Accepts any of actual_home_id / home_id / nid / id as the root directory
+   * id; falls back to a media.attributes fetch when none is set.
+   * No-ops when the same hub_id+nid is already active.
    */
   loadWorkspace(workspace) {
     const data = workspace.model ? workspace.model.toJSON() : workspace || {};
@@ -320,35 +319,29 @@ class __window_manager extends push {
     // nid often arrives later via the get_attributes fetch below.
     this._wsGeneration = (this._wsGeneration || 0) + 1;
     const gen = this._wsGeneration;
-    if (this._currentWorkspace && !this._currentWorkspace.isDestroyed())
-      this._currentWorkspace.suppress();
     const apply = (data) => {
       if (gen !== this._wsGeneration) return;
       this._curWorkspace = { hub_id, nid: data.nid, area: data.area };
       this.mset(data);
-      this.windowsLayer.append({
+      this.headlessLayer.feed({
         kind: "window_folder",
         hub_id,
         ...data,
         headless: 1,
         filename: data.filename || data.name,
-        // Headless workspace lives in its own singleton pool, separate
-        // from the right-click "Open in Window" popup (which keeps the
-        // `window_folder-${hub_id}` prefix). See
+        // Headless workspace lives in its own singleton pool, which is headlessLayer.
+        // subfolders or players open from the workspace shall go to this pool.
         // docs/superpowers/specs/2026-05-22-multi-folder-windows-design.md.
         wm_unique_id: `window_folder-${hub_id}`,
       });
-      this.windowsLayer.el.dataset.headless = "1";
       this.ensurePart("wrapper-modal").then((p) => p.clear());
-      // this.updateBreadcrumb({ ...data, hub_id, service: "change-workspace" }, this);
-      let cur = this.windowsLayer.children.last()
+      let cur = this.headlessLayer.children.last()
       cur.once(_a.destroy, () => {
         this._curWorkspace = null;
-        this.windowsLayer.el.dataset.headless = "0"
       })
       this.fetchService(SERVICE.media.get_path, { nid, hub_id }).then((data) => {
         if (_.isEmpty(data)) return;
-        cur.refreshBreadcrumbsUI(data)
+        cur.refreshBreadcrumbsUI(data);
       })
       this._curWorkspace.widget = cur;
     };
@@ -366,7 +359,7 @@ class __window_manager extends push {
       home_id: nid,
     });
 
-    // Data provided by the triggeer may not be reliable ennoug. Get fresh one
+    // Data provided by the trigger may not be reliable enough. Get fresh one
     this.fetchService(SERVICE.media.attributes, { hub_id, nid })
       .then((attrs) => {
         const resolved =
@@ -497,7 +490,7 @@ class __window_manager extends push {
     if (window.Desk && _.isFunction(window.Desk._closeMainPanels)) {
       window.Desk._closeMainPanels();
     }
-    // Data provided by the triggeer may not be reliable ennoug. Get fresh one
+    // Data provided by the trigger may not be reliable enough. Get fresh one
     this.fetchService(SERVICE.media.attributes, { hub_id, nid })
       .then((attrs) => {
         const resolved =
@@ -509,7 +502,7 @@ class __window_manager extends push {
           });
           return;
         }
-        let currentFolder = this.windowsLayer.children.last();
+        let currentFolder = this.getWindowsPool().children.last();
         currentFolder.refreshContent(attrs);
         this.debug("AAA:374", currentFolder, attrs);
       })
@@ -572,10 +565,28 @@ class __window_manager extends push {
       // to top-level windows). `launch({unique})` cannot be used here —
       // its getItemsByAttr walks the full descendant tree and would match
       // a media item with the same hub_id, returning a non-window object.
-      const existing = this._findWorkspaceWindow(item.hub_id);
-      if (existing) {
-        existing.raise();
+      const existingHeadless = this._findWorkspaceWindow(item.hub_id);
+      if (existingHeadless) {
+        existingHeadless.raise();
         return false;
+      }
+      // Also dedupe against an existing non-headless workspace window in
+      // windowsLayer (this is the home-grid path's own pool). Without
+      // this, a stray click after _resizeStop on the existing tab
+      // re-enters openContent and `launch({ explicit: 1 })` appends a
+      // second window_folder for the same hub_id — the duplicate-tab
+      // symptom on Safari double-click of the right border and Chrome
+      // shrink-to-min release. `_findWorkspaceWindow` only searches
+      // headlessLayer, so we look in windowsLayer directly here.
+      if (this.windowsLayer && this.windowsLayer.children) {
+        for (const c of this.windowsLayer.children.toArray()) {
+          if (!c || c.isDestroyed()) continue;
+          if (c.mget(_a.kind) !== "window_folder") continue;
+          if (c.mget(_a.hub_id) == item.hub_id) {
+            if (_.isFunction(c.raise)) c.raise();
+            return false;
+          }
+        }
       }
       return this.launch(item, { explicit: 1 });
     }
@@ -685,37 +696,37 @@ class __window_manager extends push {
     });
   }
 
-  /**
-   *
-   */
-  loadReminders() {
-    this.postService(
-      {
-        hub_id: Visitor.id,
-        nid: Visitor.get(_a.home_id),
-        service: SERVICE.reminder.list,
-      },
-      { async: 1 },
-    ).then((data) => {
-      if (!data || !data.length) return;
-      for (let c of data) {
-        if (_.isString(c.task)) c.task = JSON.parse(c.task);
-        if (c.task && c.task.kind) {
-          c.kind = c.task.kind;
-          delete c.task.kind;
-          if (c.task.style) c.pin = c.task.style;
-          c.task.filename = c.filename || LOCALE.NOTE;
-          if (c.task.repeat == "onload") {
-            this.windowsLayer.append(c);
-          } else if (c.task.stime && c.task.stime > Dayjs().valueOf()) {
-            setTimeout(() => {
-              this.windowsLayer.append(c);
-            }, c.task.stime - Dayjs().valueOf());
-          }
-        }
-      }
-    });
-  }
+  // /**
+  //  *
+  //  */
+  // loadReminders() {
+  //   this.postService(
+  //     {
+  //       hub_id: Visitor.id,
+  //       nid: Visitor.get(_a.home_id),
+  //       service: SERVICE.reminder.list,
+  //     },
+  //     { async: 1 },
+  //   ).then((data) => {
+  //     if (!data || !data.length) return;
+  //     for (let c of data) {
+  //       if (_.isString(c.task)) c.task = JSON.parse(c.task);
+  //       if (c.task && c.task.kind) {
+  //         c.kind = c.task.kind;
+  //         delete c.task.kind;
+  //         if (c.task.style) c.pin = c.task.style;
+  //         c.task.filename = c.filename || LOCALE.NOTE;
+  //         if (c.task.repeat == "onload") {
+  //           this.getWindowsPool().append(c);
+  //         } else if (c.task.stime && c.task.stime > Dayjs().valueOf()) {
+  //           setTimeout(() => {
+  //             this.getWindowsPool().append(c);
+  //           }, c.task.stime - Dayjs().valueOf());
+  //         }
+  //       }
+  //     }
+  //   });
+  // }
 
   /**
    * @param {Object} opt
@@ -828,7 +839,15 @@ class __window_manager extends push {
         Visitor.set({ wicket_id: data.wicket_id });
       }
       this.trigger(_e.ready);
-      // this.route();
+      // Show spefici file/folder by url
+      // let path = Visitor.parseModule() || [];
+      // if (path[2] === _a.open) {
+      //   this.ensurePart(_a.list).then((p) => {
+      //     p.once('end:of:data', (l)=>{
+      //       this.route();
+      //     })
+      //   })
+      // }
       Visitor.set({ disk: data.disk });
       this.bindWsEvents();
     });
@@ -878,7 +897,7 @@ class __window_manager extends push {
         }
       }
     }
-    let c = this.windowsLayer.append({
+    let c = this.getWindowsPool().append({
       kind: "video_viewer",
       type: "tutorial",
       src: data.src,
@@ -1056,7 +1075,7 @@ class __window_manager extends push {
    */
   clearShift() {
     this.resetShift();
-    this.windowsLayer.children.each(function (c) {
+    this.getWindowsPool().children.each(function (c) {
       if (c.acceptMedia) {
         return c.resetShift();
       }
@@ -1068,7 +1087,7 @@ class __window_manager extends push {
    * @param {*} view
    */
   reloadAll(view) {
-    this.windowsLayer.children.each(function (c) {
+    this.getWindowsPool().children.each(function (c) {
       try {
         return c.reload();
       } catch (error) { }
@@ -1573,7 +1592,7 @@ class __window_manager extends push {
       case SERVICE.desk.create_hub:
         args.data.kind = this._getKind();
         args.data.isalink = 1;
-        this.windowsLayer.append(args.data);
+        this.getWindowsPool().append(args.data);
         this.syncOrder();
         return;
 
@@ -1739,7 +1758,7 @@ class __window_manager extends push {
       });
     }
 
-    this.windowsLayer.children.each((c) => {
+    this.getWindowsPool().children.each((c) => {
       if (t !== c) {
         try {
           return c.unselect();
@@ -1886,7 +1905,7 @@ class __window_manager extends push {
                 Kind.waitFor(app.kind).then(() => {
                   try {
                     app.launchTag = launchTag;
-                    this.windowsLayer.append(app);
+                    this.getWindowsPool().append(app);
                   } catch (err) {
                     this.warn("Failed to open mentioned file", err);
                   }
@@ -1951,7 +1970,7 @@ class __window_manager extends push {
     }
     item.trigger = media;
     item.media = media;
-    this.windowsLayer.append(item);
+    this.getWindowsPool().append(item);
   }
 
   /**
@@ -2057,7 +2076,7 @@ class __window_manager extends push {
         trigger: cmd,
         uiHandler: [this],
       };
-      this.windowsLayer.append(item);
+      this.getWindowsPool().append(item);
       //cmd.setValue(str);
     }
   }
@@ -2103,13 +2122,13 @@ class __window_manager extends push {
       _.merge(item, opt);
     }
     const f = () => {
-      this.windowsLayer.append(item);
+      this.getWindowsPool().append(item);
       if (_.isFunction(cb)) {
-        const last = this.windowsLayer.children.last();
+        const last = this.getWindowsPool().children.last();
         cb(last);
       }
     };
-    this.waitElement(this.windowsLayer.el, f);
+    this.waitElement(this.getWindowsPool().el, f);
   }
 
   /**

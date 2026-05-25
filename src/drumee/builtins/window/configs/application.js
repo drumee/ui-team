@@ -8,6 +8,10 @@ const __skl_window_application = function (filetype, opt = {}) {
     folder: {
       kind: "window_folder",
     },
+    
+    hub: {
+      kind: "window_folder",
+    },
 
     personal: {
       kind: "window_folder",
