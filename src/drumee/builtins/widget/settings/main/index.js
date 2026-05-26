@@ -280,6 +280,15 @@ class settings_main extends LetcBox {
    * @param {string} provider e.g. "google", "apple"
    * @param {object} [cmd]    the clicked button view; flagged with
    *                          data-loading=1 during the network step
+   *
+   * Verifier choice (matches user's mental model — "what auth am I
+   * using right now?"):
+   *   - mfa=1                → email OTP (consistent with 2FA on)
+   *   - mfa=0, password set  → password prompt (no extra friction)
+   *   - oauth-only           → email OTP (only choice the user has)
+   *
+   * The server (drumate.unlink_oauth) accepts whichever credential is
+   * sent and self-heals profile.password_set when password verifies.
    */
   async disconnectOauth(provider, cmd) {
     if (!provider) return;
@@ -291,8 +300,13 @@ class settings_main extends LetcBox {
     setLoading(true);
     try {
       const profile = Visitor.profile() || {};
-      const passwordSet = profile.password_set;
-      const usePassword = passwordSet === undefined || parseInt(passwordSet) === 1;
+      const mfaOn = parseInt(profile.mfa) === 1;
+      const passwordSet = parseInt(profile.password_set) === 1;
+      const hasOauth = Array.isArray(this._oauthLinks) && this._oauthLinks.length > 0;
+      // Use password when 2FA is off AND user has a password (or the
+      // flag is missing but they're clearly not oauth-only). Otherwise
+      // fall through to OTP.
+      const usePassword = !mfaOn && (passwordSet || !hasOauth);
 
       if (usePassword) {
         const password = prompt(LOCALE.CONFIRM_PASSWORD_LABEL || "Password");
