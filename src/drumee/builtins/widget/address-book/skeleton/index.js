@@ -47,14 +47,13 @@ module.exports = function (ui) {
         kids: [
           Skeletons.Entry({
             className: `${fig}__search-input`,
+            sys_pn: "ab-search",
             placeholder: LOCALE.SEARCH,
             value: ui.getSearch(),
             require: "any",
-            mode: "commit",
             interactive: 1,
             bubble: 0,
-            service: "search-input",
-            uiHandler: [ui],
+            partHandler: ui,
           }),
         ],
       }),
