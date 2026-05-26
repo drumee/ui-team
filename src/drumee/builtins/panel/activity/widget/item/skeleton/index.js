@@ -8,7 +8,36 @@ function timeAgo(timestamp) {
 }
 
 function getSender(data) {
-  return data.fullname || [data.firstname, data.lastname].filter(Boolean).join(" ") || data.email || data.uid || "Someone";
+  // Prefer the per-event author (latest uploader/poster), then the rollup peer
+  // (chat/contact), then any other identity field. "Someone" is the last resort
+  // when the row truly carries no actor info.
+  const authorName = [data.author_firstname, data.author_lastname].filter(Boolean).join(" ");
+  if (authorName) return authorName;
+  if (data.author_email) return data.author_email;
+  if (data.fullname) return data.fullname;
+  const peerName = [data.firstname, data.lastname].filter(Boolean).join(" ");
+  if (peerName) return peerName;
+  return data.email || data.uid || "Someone";
+}
+
+function getAuthorId(data) {
+  // Resolve avatar id per category. Falling through to undefined makes
+  // Visitor.avatar default to the current user's id — that's the bug behind
+  // "all rows show my own face." Each category exposes a different "actor"
+  // field; pick the right one.
+  if (data.author_id) return data.author_id;
+  switch (data.category) {
+    case 'chat':
+    case 'contact':
+      return data.drumate_id;
+    case 'media':
+    case 'teamchat':
+      return data.hub_id;
+    case 'hub_invite':
+      return data.author_id || data.hub_id;
+    default:
+      return data.drumate_id || data.hub_id;
+  }
 }
 
 function getPreview(data) {
@@ -223,7 +252,11 @@ module.exports = function (ui) {
   const sender = escapeHtml(getSender(data));
   const meta = getActivityMeta(data, preview);
   const text = `<span>${sender} ${escapeHtml(meta.before)}</span><span class="${pfx}__link ${meta.colorClass}">${escapeHtml(meta.label)}</span><span>${escapeHtml(meta.after)}</span>`;
-  const authorId = data.author_id || data.uid;
+  const authorId = getAuthorId(data);
+  // Author name fields drive the avatar initials when the image fails to load.
+  // Prefer the per-event author; fall back to the rollup peer (chat/contact).
+  const avatarFirstname = data.author_firstname || data.firstname;
+  const avatarLastname = data.author_lastname || data.lastname;
 
   const avatar = Skeletons.Box.Y({
     className: `${pfx}__avatar-wrap`,
@@ -231,8 +264,8 @@ module.exports = function (ui) {
       Skeletons.UserProfile({
         className: `${pfx}__avatar`,
         id: authorId,
-        firstname: data.firstname,
-        lastname: data.lastname,
+        firstname: avatarFirstname,
+        lastname: avatarLastname,
         type: 'thumb',
       }),
       Skeletons.Note({
