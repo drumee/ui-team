@@ -1658,6 +1658,11 @@ class __window_manager extends push {
           "search",
           "Backspace",
           _e.update,
+          // `end:of:data` is emitted by every list when its data load finishes.
+          // It bubbles all the way up to the window manager; without this guard,
+          // the default branch's `unselect(1)` collapses every open window —
+          // visible to the user as "clicking a chat closes the conversation."
+          _e.eod,
         ];
         if (ignoredServices.includes(service)) {
           return;
