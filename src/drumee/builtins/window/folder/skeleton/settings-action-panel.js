@@ -182,6 +182,7 @@ function memberRows(list, ui, pfx, isAdmin) {
     return Skeletons.Box.X({
       className: `${pfx}-member-row`,
       dataset: { index, member_id: member.id },
+      styleOpt: { zIndex: 1000 - index },
       kids: [
         Skeletons.Box.X({
           className: `${pfx}-member-info`,
