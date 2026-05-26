@@ -321,7 +321,10 @@ class settings_main extends LetcBox {
       return openOtpModal(this, {
         ...otp,
         api: SERVICE.drumate.unlink_oauth,
-        payload: { provider },
+        // unlink_oauth ACL is owner-on-hub. Force Visitor.id so the
+        // request hits the user's own hub regardless of which
+        // workspace the Settings panel was opened from.
+        payload: { provider, hub_id: Visitor.id },
         successService: "unlink-oauth-success",
         cancelService: "unlink-oauth-cancel",
       });
