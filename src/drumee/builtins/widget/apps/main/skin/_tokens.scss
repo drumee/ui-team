@@ -1,0 +1,105 @@
+// Apps Main — shared tokens (with mixins re-exported for ergonomic use).
+@forward "mixins";
+
+//
+// Theme-varying colors are emitted as CSS custom properties scoped to
+// `.apps-main`. Light values are declared inline; the dark overrides reassign
+// the same custom properties from the framework theme (router/skin/themes).
+// SCSS variables are kept as aliases (`var(--apps-…)`) so partials use plain
+// `$bg`, `$ink-900`, etc. — and theming "just works" via the cascade with no
+// per-rule overrides for the common cases.
+//
+// Brand and semantic colors (purple, audit categories, security tag tints)
+// don't change with theme and stay as plain SCSS variables.
+
+.apps-main {
+  // Surfaces
+  --apps-bg: #ffffff;
+  --apps-elevated: #ffffff;
+  --apps-bg-tint: rgba(0, 0, 0, 0.05);
+  --apps-bg-tint-strong: rgba(0, 0, 0, 0.06);
+  --apps-row-hover: rgba(0, 0, 0, 0.02);
+  --apps-border: rgba(0, 0, 0, 0.06);
+
+  // Ink scale (text + icon fills)
+  --apps-ink-900: #0b0a21;
+  --apps-ink-700: #2f2f37;
+  --apps-ink-600: #65656c;
+  --apps-ink-500: #84848c;
+  --apps-ink-400: #aeaeb2;
+}
+
+html[data-theme="dark"] .apps-main {
+  --apps-bg: var(--normal-bg);
+  --apps-elevated: var(--normal-bg-elevated);
+  --apps-bg-tint: var(--overlay-bg-05);
+  --apps-bg-tint-strong: var(--overlay-bg-05);
+  --apps-row-hover: var(--hover-bg-40);
+  --apps-border: var(--border-muted);
+
+  --apps-ink-900: var(--normal-fg-10);
+  --apps-ink-700: var(--normal-fg-10);
+  --apps-ink-600: var(--normal-fg-20);
+  --apps-ink-500: var(--normal-fg-50);
+  --apps-ink-400: var(--placeholder-fg);
+}
+
+// SCSS aliases — partials use these names by convention.
+$bg: var(--apps-bg);
+$elevated: var(--apps-elevated);
+$bg-tint: var(--apps-bg-tint);
+$bg-tint-strong: var(--apps-bg-tint-strong);
+$row-hover: var(--apps-row-hover);
+$line: var(--apps-border);
+
+$ink-900: var(--apps-ink-900);
+$ink-700: var(--apps-ink-700);
+$ink-600: var(--apps-ink-600);
+$ink-500: var(--apps-ink-500);
+$ink-400: var(--apps-ink-400);
+
+// Brand / accent palette (theme-stable)
+$purple-base: #5950ff;
+$purple-deep: #433cc5;
+$purple-light: #b1acff;
+$purple-soft: rgba(89, 80, 255, 0.1);
+$purple-status: #847dff;
+
+$cyan-soft: rgba(137, 228, 246, 0.2);
+$cyan-text: #38a2ce;
+
+$pink: #ffa8dc;
+$red: #d64e49;
+$red-soft: rgba(214, 78, 73, 0.1);
+
+$reward-bg: #4f46d6;
+$reward-text: #e4e3ff;
+
+// Audit category colors (theme-stable — semantic, not chrome)
+$audit-dark-avatar: #363246;
+$audit-grant-bg: rgba(89, 80, 255, 0.1);
+$audit-grant-text: #433cc5;
+$audit-policy-bg: rgba(176, 242, 255, 0.2);
+$audit-policy-text: #38a2ce;
+$audit-share-bg: rgba(255, 168, 220, 0.2);
+$audit-share-text: #b43481;
+$audit-neutral-bg: rgba(0, 0, 0, 0.05);
+
+// Storage chart palette (theme-stable)
+$storage-doc: #433cc5;
+$storage-media: #847dff;
+$storage-avail: #65d0ea;
+$storage-other: #b8b8d6;
+$storage-cyan: #38a2ce;
+$storage-cyan-soft: rgba(137, 228, 246, 0.2);
+$storage-policy-bg: rgba(176, 242, 255, 0.2);
+
+// Security tag colors (theme-stable)
+$sec-green: #1c8f5a;
+$sec-green-soft: rgba(28, 143, 90, 0.1);
+$sec-green-border: rgba(28, 143, 90, 0.3);
+$sec-red: #d64e49;
+$sec-red-soft: rgba(214, 78, 73, 0.1);
+$sec-red-border: rgba(214, 78, 73, 0.3);
+$sec-grey-soft: rgba(0, 0, 0, 0.04);
+$sec-grey-border: rgba(0, 0, 0, 0.12);

@@ -7,7 +7,7 @@ function __skl_welcome_signin(_ui_, opt, type = "") {
     kids: [
       Skeletons.Button.Svg({
         ico: "raw-logo-drumee-full",
-        lassName: `${fig}__logo-icon`,
+        className: `${fig}__logo-icon`,
       }),
     ],
   });
@@ -19,13 +19,13 @@ function __skl_welcome_signin(_ui_, opt, type = "") {
         className: `${fig}__container`,
         dataset,
         kids: [
+          logo,
           Skeletons.Box.Y({
             className: `${fig}__header`,
             sys_pn: _a.header,
             dataset,
             kids: [opt.header],
           }),
-          logo,
           Skeletons.Box.Y({
             className: `${fig}__content ${type}`,
             sys_pn: _a.content,

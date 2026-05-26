@@ -1,0 +1,358 @@
+@use "../tokens" as *;
+
+// Permissions tab — workspace overview + admin member detail back link
+
+.apps-main {
+  // ─────────────────────────────────────────────────────────
+  //  PERMISSIONS TAB — Workspace Overview
+  // ─────────────────────────────────────────────────────────
+
+  $perm-red: #d65f59;
+  $perm-pink: #ffa8dc;
+  $perm-purple: #5950ff;
+  $perm-magenta: #b43481;
+  $perm-green: #54b684;
+
+  &__perm-header {
+    width: 100%;
+    flex-shrink: 0;
+    align-items: center;
+  }
+
+  &__perm-heading-block {
+    gap: 4px;
+  }
+
+  &__perm-page-title {
+    font-size: 32px;
+    line-height: 36px;
+    font-weight: 600;
+    color: $ink-900;
+  }
+
+  &__perm-page-subtitle {
+    font-size: 13px;
+    line-height: 18px;
+    font-weight: 400;
+    color: $ink-600;
+  }
+
+  &__perm-empty {
+    width: 100%;
+    padding: 48px 24px;
+    align-items: center;
+    justify-content: center;
+  }
+
+  &__perm-empty-label {
+    font-size: 14px;
+    line-height: 20px;
+    color: $ink-500;
+  }
+
+  // ── Admin Member detail back link ─────────────────────────
+  &__member-back {
+    align-items: center;
+    gap: 8px;
+    padding: 6px 0;
+    cursor: pointer;
+    flex-shrink: 0;
+
+    > * {
+      pointer-events: none;
+    }
+
+    &-ico {
+      width: 14px;
+      height: 14px;
+
+      svg {
+        width: 14px;
+        height: 14px;
+      }
+    }
+
+    &-label {
+      font-size: 13px;
+      line-height: 18px;
+      font-weight: 500;
+      color: $ink-600;
+    }
+
+    &-context {
+      font-size: 13px;
+      line-height: 18px;
+      font-weight: 600;
+      color: $ink-900;
+
+      &::before {
+        content: "·";
+        padding: 0 6px;
+        color: $ink-400;
+      }
+    }
+
+    &:hover &-label,
+    &:hover &-context {
+      color: $purple-base;
+    }
+  }
+
+  &__perm-grid {
+    width: 100%;
+    flex-wrap: wrap;
+    gap: 16px;
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    align-content: flex-start;
+    padding-right: 4px; // scrollbar gutter
+
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+
+    &::-webkit-scrollbar {
+      display: none;
+    }
+  }
+
+  &__perm-card {
+    // flex-grow: 0 keeps a lone wrapped card at 50% instead of stretching.
+    flex: 0 1 calc(50% - 8px);
+    min-width: 0;
+    padding: 20px;
+    background: $bg-tint;
+    border-radius: 8px;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    cursor: pointer;
+    transition: background 0.15s ease;
+
+    &:hover {
+      background: rgba(0, 0, 0, 0.07);
+    }
+
+    > * {
+      pointer-events: none;
+    }
+  }
+
+  &__perm-card-body {
+    flex: 1;
+    min-width: 0;
+    align-items: flex-start;
+    gap: 20px;
+  }
+
+  &__perm-folder {
+    // Inline folder-shape SVG (media/grid/template/folder), tinted by
+    // --area-* CSS vars to match the home/desk view.
+    width: 105px;
+    height: 86px;
+    flex-shrink: 0;
+    position: relative;
+
+    .folder-shape {
+      display: block;
+      width: 105px;
+      height: 86px;
+      fill: var(--area-private, #885eff);
+    }
+
+    .badge {
+      position: absolute;
+      width: 30px;
+      height: 30px;
+      bottom: -4px;
+      left: -4px;
+    }
+
+    &.private .folder-shape {
+      fill: var(--area-private);
+    }
+
+    &.share,
+    &.dmz {
+      .folder-shape {
+        fill: var(--area-share);
+      }
+    }
+
+    &.restricted .folder-shape {
+      fill: var(--area-private);
+    }
+
+    &.public .folder-shape {
+      fill: var(--area-public);
+    }
+
+    &.personal,
+    &.inner-folder {
+      .folder-shape {
+        fill: var(--area-personal);
+      }
+    }
+  }
+
+  &__perm-meta {
+    flex: 1;
+    min-width: 0;
+    gap: 8px;
+  }
+
+  &__perm-title-block {
+    gap: 0;
+  }
+
+  &__perm-title {
+    font-size: 16px;
+    line-height: 24px;
+    font-weight: 600;
+    color: $ink-900;
+  }
+
+  &__perm-subtitle {
+    font-size: 12px;
+    line-height: 16px;
+    font-weight: 400;
+    color: $ink-600;
+  }
+
+  &__perm-members {
+    align-items: center;
+    gap: 4px;
+    margin-top: 4px;
+  }
+
+  &__perm-members-ico {
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+
+    svg {
+      display: block;
+      width: 16px;
+      height: 16px;
+
+      path {
+        fill: $ink-600;
+      }
+    }
+  }
+
+  &__perm-members-label {
+    font-size: 12px;
+    line-height: 16px;
+    font-weight: 400;
+    color: $ink-600;
+  }
+
+  &__perm-tags {
+    flex-wrap: wrap;
+    gap: 6px;
+    align-items: center;
+  }
+
+  &__perm-tag {
+    height: 25px;
+    padding: 3px 12px;
+    border-radius: 12px;
+    align-items: center;
+    gap: 4px;
+    background: rgba(255, 255, 255, 0.6);
+
+    &--purple {
+      background: rgba(89, 80, 255, 0.08);
+
+      .apps-main__perm-tag-label {
+        color: $perm-purple;
+      }
+
+      .apps-main__perm-tag-ico svg path {
+        fill: $perm-purple;
+      }
+    }
+
+    &--magenta {
+      background: rgba(180, 52, 129, 0.08);
+
+      .apps-main__perm-tag-label {
+        color: $perm-magenta;
+      }
+
+      .apps-main__perm-tag-ico svg path {
+        fill: $perm-magenta;
+      }
+    }
+
+    &--green {
+      background: rgba(84, 182, 132, 0.1);
+
+      .apps-main__perm-tag-label {
+        color: $perm-green;
+      }
+
+      .apps-main__perm-tag-ico svg path {
+        fill: $perm-green;
+      }
+    }
+
+    &--neutral {
+      background: rgba(0, 0, 0, 0.04);
+
+      .apps-main__perm-tag-label {
+        color: $ink-600;
+      }
+
+      .apps-main__perm-tag-ico svg path {
+        fill: $ink-600;
+      }
+    }
+  }
+
+  &__perm-tag-ico {
+    width: 15px;
+    height: 15px;
+    flex-shrink: 0;
+
+    svg {
+      display: block;
+      width: 12px;
+      height: 12px;
+    }
+  }
+
+  &__perm-tag-label {
+    font-size: 10px;
+    line-height: 14px;
+    font-weight: 400;
+    white-space: nowrap;
+  }
+
+  &__perm-open-ico {
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+    margin-top: 2px;
+
+    svg {
+      display: block;
+      width: 16px;
+      height: 16px;
+      fill: $purple-base;
+
+      path {
+        fill: $perm-purple;
+      }
+    }
+  }
+
+  // Narrow viewport: stack to one column
+  @media (max-width: 1024px) {
+    &__perm-card {
+      flex: 1 1 100%;
+    }
+  }
+
+}

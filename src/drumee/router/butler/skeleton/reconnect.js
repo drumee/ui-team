@@ -16,9 +16,10 @@
  */
 const _reconnect = function (ui, vhost, title) {
   let { email } = Visitor.profile();
-  let kind = "welcome_signin";
-  let body = {
-    kind,
+  const fig = ui.fig.family;
+
+  const body = {
+    kind: "welcome_signin",
     sys_pn: "reconnect-popup",
     uiHandler: [ui],
     partHandler: [ui],
@@ -26,33 +27,23 @@ const _reconnect = function (ui, vhost, title) {
     vhost,
     uid: Visitor.id,
     email,
+    reconnect_title: title,
     dataset: {
       mode: "reconnect",
     },
   };
 
-  const a = Skeletons.Box.Y({
-    className: `${ui.fig.family}__reconnect main`,
+  return Skeletons.Box.Y({
+    className: `${fig}__reconnect main`,
     debug: __filename,
     sys_pn: "raw-content",
     kids: [
-      // Preset.Button.Close(ui, "close-reconnect"),
       Skeletons.Box.X({
-        className: `${ui.fig.family}__reconnect close`,
+        className: `${fig}__reconnect close`,
         kids: [Preset.Button.Close(ui, "close-reconnect")],
-      }),
-      Skeletons.Box.X({
-        className: `${ui.fig.family}__reconnect header`,
-        kids: [
-          Skeletons.Note({
-            className: `${ui.fig.family}__reconnect title`,
-            content: title || LOCALE.SESSION_EXPIRED,
-          }),
-        ],
       }),
       body,
     ],
   });
-  return a;
 };
 module.exports = _reconnect;
