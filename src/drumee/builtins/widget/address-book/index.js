@@ -1063,13 +1063,13 @@ class __address_book extends LetcBox {
   // ─── View accessors ─────────────────────────────────────────────
 
   _listForView() {
-    if (this._tab === "pending") {
-      return [...this._invitations, ...this._sentInvitations];
-    }
-    let list;
+    let list = this._tab === "pending"
+      ? [...this._invitations, ...this._sentInvitations]
+      : this._contacts;
+
     if (this._search) {
       const term = this._search.toLowerCase();
-      list = this._contacts.filter((c) => {
+      list = list.filter((c) => {
         const haystack = [
           c.firstname, c.lastname, c.surname, c.fullname,
           ...(Array.isArray(c.email) ? c.email.map((e) => e.email || e) : []),
@@ -1077,9 +1077,10 @@ class __address_book extends LetcBox {
         ].filter(Boolean).join(" ").toLowerCase();
         return haystack.includes(term);
       });
-    } else {
-      list = this._contacts;
     }
+
+    if (this._tab === "pending") return list;
+
     const isBlocked = (c) => c.is_blocked === 1 || c.status === "blocked";
     if (this._tab === "blocked") {
       list = list.filter(isBlocked);
