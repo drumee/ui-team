@@ -257,6 +257,8 @@ class apps_main extends LetcBox {
     };
     this._securitySso = { okta: false, google: false, azure: false };
     this._securityTags = {};
+    this._editingHub = null; // Access-control overlay (Security tab pencil)
+    this._secCtrl = null;
     this._fpermMembers = [];
     this._fpermDevices = [];
     this._permWorkspaces = [];
@@ -368,6 +370,48 @@ class apps_main extends LetcBox {
       ) {
         this._filterOpen = false;
         this._render();
+      }
+    }
+    if (
+      this._secCtrl &&
+      this._secCtrl.countryPickerOpen &&
+      this.el
+    ) {
+      const openRow = this.el.querySelector(".apps-main__ac-country-row--open");
+      const dropdown = this.el.querySelector(".apps-main__ac-cdrop");
+      const insideRow = openRow && openRow.contains(e.target);
+      const insideDropdown = dropdown && dropdown.contains(e.target);
+      if (!insideRow && !insideDropdown) {
+        this._secCtrl.countryPickerOpen = null;
+        this._secCtrl.countrySearch = "";
+        this._render();
+      }
+    }
+    if (
+      this._secCtrl &&
+      this._secCtrl.timePickerOpen &&
+      this.el
+    ) {
+      const openField = this.el.querySelector(".apps-main__ac-time-field--open");
+      const tdrop = this.el.querySelector(".apps-main__ac-tdrop");
+      const insideField = openField && openField.contains(e.target);
+      const insideTdrop = tdrop && tdrop.contains(e.target);
+      if (!insideField && !insideTdrop) {
+        this._secCtrl.timePickerOpen = null;
+        this._secCtrl.timeUnitOpen = null;
+        this._render();
+      } else if (this._secCtrl.timeUnitOpen) {
+        // Inside the time popup — check whether the click is outside the
+        // open hour/minute flyout (and its pill). Click on the other pill or
+        // anywhere else inside the popup closes the flyout.
+        const flyout = this.el.querySelector(".apps-main__ac-tdrop-flyout");
+        const openPill = this.el.querySelector(".apps-main__ac-tdrop-pill--open");
+        const insideFlyout = flyout && flyout.contains(e.target);
+        const insidePill = openPill && openPill.contains(e.target);
+        if (!insideFlyout && !insidePill) {
+          this._secCtrl.timeUnitOpen = null;
+          this._render();
+        }
       }
     }
     if (this._adminHubMenuOpen) {
@@ -1694,25 +1738,229 @@ class apps_main extends LetcBox {
         const hubId = cmd.mget("hub_id");
         const h = (this._adminHubs || []).find((x) => x.hub_id === hubId);
         if (!h) return;
-        // Reuse the folder-permission overlay against a workspace stub.
-        // No SP preload — keeps the Security tab UI-only for now.
-        this._editingFolder = {
-          id: h.hub_id,
-          name: h.hub_name || h.hub_id,
-          filename: h.hub_name || h.hub_id,
-          area: h.area || "private",
-        };
-        this._activeWorkspace = {
+        // Open the owner Access-control overlay (UI-only state).
+        this._editingHub = {
           id: h.hub_id,
           name: h.hub_name || h.hub_id,
           area: h.area || "private",
-          mode: "restricted",
+          mtime: h.mtime,
+          updated: h.updated,
+          filesize: h.filesize,
+          size: h.size,
         };
-        this._fpermMode = "restricted";
-        this._fpermMembers = [];
-        this._fpermDevices = [];
+        const tags = this._securityTags && this._securityTags[h.hub_id];
+        this._secCtrl = {
+          geoOn: !!(tags && tags.ipgeo),
+          vpnOn: !!(tags && tags.vpn),
+          timeOn: false,
+          autoOn: false,
+          autoMins: 30,
+          oneTimeOn: !!(tags && tags.onetime),
+          oneTimeUrl: "drumee.com/s/pink-folder-2023-x92...",
+          managedOn: !!(tags && tags.managed),
+          startTime: { hour: 9, minute: 0, period: "AM" },
+          endTime: { hour: 6, minute: 0, period: "PM" },
+          timePickerOpen: null, // null | "start" | "end"
+          // null | "start-hour" | "start-minute" | "end-hour" | "end-minute"
+          timeUnitOpen: null,
+          days: { mon: true, tue: true, wed: true, thu: true, fri: true },
+          allowedCountry: null,
+          blockedCountry: null,
+          countryPickerOpen: null, // null | "allowed" | "blocked"
+          countrySearch: "",
+          members: [],
+          devices: [],
+        };
         return this._render();
       }
+
+      case "apps-ac-close":
+        this._editingHub = null;
+        this._secCtrl = null;
+        return this._render();
+
+      case "apps-ac-toggle-geo":
+        if (!this._secCtrl) return;
+        this._secCtrl.geoOn = !this._secCtrl.geoOn;
+        return this._render();
+
+      case "apps-ac-toggle-vpn":
+        if (!this._secCtrl) return;
+        this._secCtrl.vpnOn = !this._secCtrl.vpnOn;
+        return this._render();
+
+      case "apps-ac-toggle-time":
+        if (!this._secCtrl) return;
+        this._secCtrl.timeOn = !this._secCtrl.timeOn;
+        return this._render();
+
+      case "apps-ac-toggle-auto":
+        if (!this._secCtrl) return;
+        this._secCtrl.autoOn = !this._secCtrl.autoOn;
+        return this._render();
+
+      case "apps-ac-toggle-onetime":
+        if (!this._secCtrl) return;
+        this._secCtrl.oneTimeOn = !this._secCtrl.oneTimeOn;
+        return this._render();
+
+      case "apps-ac-toggle-managed":
+        if (!this._secCtrl) return;
+        this._secCtrl.managedOn = !this._secCtrl.managedOn;
+        return this._render();
+
+      case "apps-ac-toggle-day": {
+        if (!this._secCtrl) return;
+        const k = cmd.mget("day_key");
+        if (!k) return;
+        const days = this._secCtrl.days || {};
+        days[k] = !days[k];
+        this._secCtrl.days = days;
+        return this._render();
+      }
+
+      case "apps-ac-copy-link":
+        if (
+          this._secCtrl &&
+          this._secCtrl.oneTimeUrl &&
+          navigator &&
+          navigator.clipboard
+        ) {
+          navigator.clipboard
+            .writeText(this._secCtrl.oneTimeUrl)
+            .catch(() => {});
+        }
+        return;
+
+      case "apps-ac-save":
+        this._editingHub = null;
+        this._secCtrl = null;
+        return this._render();
+
+      case "apps-ac-view-audit":
+        this._editingHub = null;
+        this._secCtrl = null;
+        return this.switchTab("audit");
+
+      case "apps-ac-pick-country": {
+        if (!this._secCtrl) return;
+        const kind = cmd.mget("country_kind");
+        if (kind !== "allowed" && kind !== "blocked") return;
+        // Toggle the picker: clicking the open row collapses it.
+        this._secCtrl.countryPickerOpen =
+          this._secCtrl.countryPickerOpen === kind ? null : kind;
+        this._secCtrl.countrySearch = "";
+        return this._render();
+      }
+
+      case "apps-ac-country-search": {
+        if (!this._secCtrl) return;
+        const next = (
+          (args && args.value != null
+            ? args.value
+            : cmd && cmd.mget && cmd.mget(_a.value)) || ""
+        ).toString();
+        if (next === (this._secCtrl.countrySearch || "")) return;
+        this._secCtrl.countrySearch = next;
+        return this._render();
+      }
+
+      case "apps-ac-select-country": {
+        if (!this._secCtrl) return;
+        const kind = cmd.mget("country_kind");
+        const code = cmd.mget("country_code");
+        if (!code || (kind !== "allowed" && kind !== "blocked")) return;
+        if (kind === "allowed") this._secCtrl.allowedCountry = code;
+        else this._secCtrl.blockedCountry = code;
+        this._secCtrl.countryPickerOpen = null;
+        this._secCtrl.countrySearch = "";
+        return this._render();
+      }
+
+      case "apps-ac-pick-time": {
+        if (!this._secCtrl) return;
+        const kind = cmd.mget("time_kind");
+        if (kind !== "start" && kind !== "end") return;
+        this._secCtrl.timePickerOpen =
+          this._secCtrl.timePickerOpen === kind ? null : kind;
+        this._secCtrl.timeUnitOpen = null;
+        return this._render();
+      }
+
+      case "apps-ac-time-hour-toggle":
+      case "apps-ac-time-minute-toggle": {
+        if (!this._secCtrl) return;
+        const kind = cmd.mget("time_kind");
+        if (kind !== "start" && kind !== "end") return;
+        const unit = service.endsWith("hour-toggle") ? "hour" : "minute";
+        const next = `${kind}-${unit}`;
+        this._secCtrl.timeUnitOpen =
+          this._secCtrl.timeUnitOpen === next ? null : next;
+        return this._render();
+      }
+
+      case "apps-ac-time-hour-pick":
+      case "apps-ac-time-minute-pick": {
+        if (!this._secCtrl) return;
+        const kind = cmd.mget("time_kind");
+        const v = parseInt(cmd.mget("time_value"), 10);
+        if (Number.isNaN(v)) return;
+        const key = kind === "start" ? "startTime" : "endTime";
+        const t = this._secCtrl[key] || { hour: 12, minute: 0, period: "AM" };
+        if (service.endsWith("hour-pick")) {
+          t.hour = Math.max(1, Math.min(12, v));
+        } else {
+          t.minute = Math.max(0, Math.min(59, v));
+        }
+        this._secCtrl[key] = t;
+        this._secCtrl.timeUnitOpen = null;
+        return this._render();
+      }
+
+      case "apps-ac-time-hour-input":
+      case "apps-ac-time-minute-input": {
+        if (!this._secCtrl) return;
+        const kind = cmd.mget("time_kind");
+        const raw = (
+          (args && args.value != null
+            ? args.value
+            : cmd && cmd.mget && cmd.mget(_a.value)) || ""
+        )
+          .toString()
+          .trim();
+        const v = parseInt(raw, 10);
+        if (Number.isNaN(v)) return this._render();
+        const key = kind === "start" ? "startTime" : "endTime";
+        const t = this._secCtrl[key] || { hour: 12, minute: 0, period: "AM" };
+        if (service.endsWith("hour-input")) {
+          t.hour = Math.max(1, Math.min(12, v));
+        } else {
+          t.minute = Math.max(0, Math.min(59, v));
+        }
+        this._secCtrl[key] = t;
+        this._secCtrl.timeUnitOpen = null;
+        return this._render();
+      }
+
+      case "apps-ac-time-period": {
+        if (!this._secCtrl) return;
+        const kind = cmd.mget("time_kind");
+        const value = cmd.mget("period_value");
+        const key = kind === "start" ? "startTime" : "endTime";
+        const t = this._secCtrl[key] || { hour: 12, minute: 0, period: "AM" };
+        t.period = value === "PM" ? "PM" : "AM";
+        this._secCtrl[key] = t;
+        return this._render();
+      }
+
+      case "apps-ac-add-member":
+      case "apps-ac-remove-all-members":
+      case "apps-ac-change-role":
+      case "apps-ac-remove-member":
+      case "apps-ac-add-device":
+      case "apps-ac-remove-all-devices":
+      case "apps-ac-remove-device":
+        return;
 
       case "apps-perm-edit-folder": {
         const id = cmd.mget("folder_id");

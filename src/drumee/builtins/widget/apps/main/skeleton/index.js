@@ -860,6 +860,10 @@ export default function apps_main_skeleton(ui) {
     const fpermOverlay = require("./folder-permission").default(ui);
     if (fpermOverlay) root.push(fpermOverlay);
   }
+  if (ui._editingHub) {
+    const acOverlay = require("./access-control").default(ui);
+    if (acOverlay) root.push(acOverlay);
+  }
   root.push(comingSoonOverlay(ui));
   return root;
 }
