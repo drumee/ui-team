@@ -418,6 +418,7 @@ class __player_document extends PlayerInteract {
   edit() {
     this.el.dataset.mode = _a.edit;
     this.mset({ mode: _a.edit })
+    this.el.requestFullscreen();
     this.feed(require('./skeleton')(this, LOCALE.DOWNLOADING));
     const { nid, hub_id } = this.actualNode()
     let { user_domain, svc } = bootstrap()

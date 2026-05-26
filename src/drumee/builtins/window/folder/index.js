@@ -547,8 +547,13 @@ class __window_folder extends mfsInteract {
           (cmd && cmd._args && cmd._args.nid) ||
           (cmd && cmd.mget && cmd.mget(_a.nid));
         if (!fileNid) return;
+        const fileLabel =
+          (cmd && cmd._args && (cmd._args.filename || cmd._args.name)) ||
+          (cmd && cmd.mget && (cmd.mget(_a.filename) || cmd.mget(_a.name))) ||
+          (cmd && _.isFunction(cmd.fullname) && cmd.fullname()) ||
+          '';
         this.showFolderTab(_a.chat);
-        return this.scopeChatToFile(fileNid);
+        return this.scopeChatToFile(fileNid, fileLabel);
       }
 
       case "tab-task":
@@ -741,10 +746,10 @@ class __window_folder extends mfsInteract {
     }
   }
 
-  scopeChatToFile(fileNid) {
+  scopeChatToFile(fileNid, fileLabel) {
     return this.ensurePart("folder-chat").then((chat) => {
       if (chat && _.isFunction(chat.setScopedFileNid))
-        chat.setScopedFileNid(fileNid);
+        chat.setScopedFileNid(fileNid, fileLabel);
     });
   }
 

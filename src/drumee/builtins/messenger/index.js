@@ -467,7 +467,9 @@ class __lib_messenger extends LetcBox {
   }
 
   // File nids of every file mentioned in the input — used so chat.sendMessage
-  // can auto-attach them; channel.list_by_file searches attachment, not text.
+  // can decide what to do with them. channel.list_thread_by_file indexes both
+  // attachments and inline `mention:hub_id:nid` markers so referenced files
+  // surface in "See Chat Threads" without being physically moved.
   getMentionedFileNids() {
     const content = this.__content;
     if (!content || !content.content) return [];

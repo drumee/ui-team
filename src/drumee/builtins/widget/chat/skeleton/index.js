@@ -75,11 +75,42 @@ const __skl_widget_chat = function (ui) {
   if (!ui.getCurrentApi()) {
     delete list.api;
   }
-  content = Skeletons.Box.X({
+  const scopeChip = Skeletons.Box.X({
+    className: `${chatFig}__scope-chip-bar`,
+    sys_pn: 'scope-chip',
+    state: 0,
+    kids: [
+      Skeletons.Box.X({
+        className: `${chatFig}__scope-chip-pill`,
+        kids: [
+          Skeletons.Note({
+            sys_pn: 'scope-chip-label',
+            className: `${chatFig}__scope-chip-label`,
+            content: ''
+          }),
+          Skeletons.Button.Svg({
+            ico: 'cross',
+            className: `${chatFig}__scope-chip-clear`,
+            service: 'clear-file-scope',
+            tooltips: LOCALE.CANCEL || 'Cancel',
+            uiHandler: [ui]
+          })
+        ]
+      })
+    ]
+  });
+
+  content = Skeletons.Box.Y({
     className: `${chatFig}__chat-content`,
     kids: [
-      list,
-      scrollButton
+      scopeChip,
+      Skeletons.Box.X({
+        className: `${chatFig}__chat-content-inner`,
+        kids: [
+          list,
+          scrollButton
+        ]
+      })
     ]
   });
 

@@ -63,6 +63,75 @@
     }
   }
 
+  &__chat-content-inner {
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+    position: relative;
+    width: 100%;
+  }
+
+  &__scope-chip-bar {
+    align-items: center;
+    flex-shrink: 0;
+    justify-content: center;
+    padding: 10px 12px;
+    width: 100%;
+
+    &[data-state="0"] {
+      display: none;
+    }
+  }
+
+  &__scope-chip-pill {
+    align-items: center;
+    background: var(--egrey-e8, #dde2e8);
+    border-radius: 9999px;
+    gap: 6px;
+    max-width: calc(100% - 16px);
+    padding: 5px 8px 5px 14px;
+
+    @include drumee.typo(
+      $line: 18px,
+      $size: 13px,
+      $color: var(--default-text-color)
+    );
+  }
+
+  &__scope-chip-label {
+    max-width: 320px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  &__scope-chip-clear {
+    cursor: pointer;
+    flex-shrink: 0;
+    height: 14px;
+    width: 14px;
+
+    svg,
+    use,
+    path {
+      fill: var(--default-text-color, #2f2f2f);
+      stroke: var(--default-text-color, #2f2f2f);
+    }
+
+    &:hover {
+      svg, use, path {
+        fill: var(--default-text-error, #ea4d44);
+        stroke: var(--default-text-error, #ea4d44);
+      }
+    }
+  }
+
+  // Hide messenger input footer while a file scope is active; clearing the
+  // scope (close button on chip) restores normal chat composing.
+  [data-scoped-hidden="1"] {
+    display: none !important;
+  }
+
   &__button-scroll {
     position: absolute;
     @include drumee.typo(
@@ -956,5 +1025,34 @@
     min-width: 0;
     max-width: none;
     border-left: none;
+  }
+}
+
+html[data-theme="dark"] {
+  .widget-chat__scope-chip-pill {
+    background: var(--egrey-3f, #3f3f3f);
+    color: var(--default-text-reverse, #ffffff);
+  }
+
+  .widget-chat__scope-chip-label {
+    color: var(--default-text-reverse, #ffffff);
+  }
+
+  .widget-chat__scope-chip-clear {
+    svg,
+    use,
+    path {
+      fill: var(--default-text-reverse, #ffffff) !important;
+      stroke: var(--default-text-reverse, #ffffff) !important;
+    }
+
+    &:hover {
+      svg,
+      use,
+      path {
+        fill: var(--eorange-light, #f99b64) !important;
+        stroke: var(--eorange-light, #f99b64) !important;
+      }
+    }
   }
 }
