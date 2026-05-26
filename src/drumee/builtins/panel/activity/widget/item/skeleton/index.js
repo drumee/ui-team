@@ -13,7 +13,6 @@ function getSender(data) {
   // when the row truly carries no actor info.
   const authorName = [data.author_firstname, data.author_lastname].filter(Boolean).join(" ");
   if (authorName) return authorName;
-  if (data.author_email) return data.author_email;
   if (data.fullname) return data.fullname;
   const peerName = [data.firstname, data.lastname].filter(Boolean).join(" ");
   if (peerName) return peerName;
