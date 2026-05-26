@@ -210,10 +210,6 @@ class __address_book extends LetcBox {
       case "delete-tag":
         return this._deleteTag(trigger);
 
-      case "search-input":
-        this._search = String(trigger.mget("value") || "").trim();
-        return this._refreshList();
-
       case "close-panel":
         return Desk.togglePanel("address_book", "chat-panel");
 
@@ -1055,6 +1051,22 @@ class __address_book extends LetcBox {
   onPartReady(child, pn) {
     if (pn === "ab-fileselector") {
       child.el.onchange = (e) => this._onImportFilePicked(e);
+      return;
+    }
+    if (pn === "ab-search") {
+      const bind = () => {
+        const input = child.el.querySelector("input");
+        if (!input) return;
+        const sync = () => {
+          const next = (input.value || "").trim();
+          if (next === this._search) return;
+          this._search = next;
+          this._refreshList();
+        };
+        input.addEventListener("input", sync);
+      };
+      if (child.waitElement) child.waitElement(child.el, bind);
+      else bind();
       return;
     }
     if (super.onPartReady) super.onPartReady(child, pn);
