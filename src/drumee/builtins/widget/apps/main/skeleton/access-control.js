@@ -981,109 +981,355 @@ function deviceSection(ui) {
   });
 }
 
+// ─────────────────────────────────────────────────────────────
+//  ACCESS AUDIT LOG — shared-workspace section + drill-in
+// ─────────────────────────────────────────────────────────────
+
+// Mock entries — UI-only stub matching the Figma at 100:51230. Replace with
+// a backend feed when the audit service is wired up.
+const AUDIT_ENTRIES = [
+  {
+    id: 1,
+    firstname: "Marcus",
+    lastname: "Thorne",
+    email: "marcus@drumee.io",
+    avatar: "dark",
+    ts: "Oct 24, 2023 - 14:22:05",
+  },
+  {
+    id: 2,
+    firstname: "Elena",
+    lastname: "Rodriguez",
+    email: "elena.r@drumee.io",
+    avatar: "dark",
+    ts: "Oct 23, 2023 - 11:45:12",
+  },
+  {
+    id: 3,
+    firstname: "Samir",
+    lastname: "Al-Fayed",
+    email: "samir@drumee.io",
+    avatar: "dark",
+    ts: "Oct 23, 2023 - 19:30:55",
+  },
+  {
+    id: 4,
+    fullname: "System (Bot)",
+    email: "automation-service",
+    avatar: "neutral",
+    ts: "Oct 23, 2023 - 00:00:00",
+  },
+  {
+    id: 5,
+    fullname: "System (Bot)",
+    email: "automation-service",
+    avatar: "neutral",
+    ts: "Oct 23, 2023 - 00:00:00",
+  },
+];
+
+// In shared mode the audit log is a section in the main body; clicking it
+// drills into the dedicated audit view. Matches the chevron-right affordance
+// reviewers expect for "tap row → push view" navigation.
+function auditLogSection(ui) {
+  const pfx = ui.fig.family;
+  return Skeletons.Box.X({
+    className: `${pfx}__ac-row ${pfx}__ac-row--nav`,
+    service: "apps-ac-open-audit",
+    uiHandler: [ui],
+    kids: [
+      Skeletons.Box.X({
+        className: `${pfx}__ac-row-title`,
+        kids: [
+          Skeletons.Image.Svg({
+            ico: "apps-arrow-clockwise",
+            className: `${pfx}__ac-row-ico`,
+          }),
+          Skeletons.Note({
+            className: `${pfx}__ac-row-label`,
+            content: LOCALE.ACCESS_AUDIT_LOG || "Access Audit Log",
+          }),
+        ],
+      }),
+      Skeletons.Image.Svg({
+        ico: "apps-caret-down",
+        className: `${pfx}__ac-row-chevron`,
+      }),
+    ],
+  });
+}
+
+function auditEntryRow(ui, entry) {
+  const pfx = ui.fig.family;
+  const m = mapMemberRow(entry);
+  return Skeletons.Box.X({
+    className: `${pfx}__ac-audit-row`,
+    kids: [
+      Skeletons.Box.X({
+        className: `${pfx}__ac-audit-user`,
+        kids: [
+          memberAvatar(pfx, m),
+          Skeletons.Box.Y({
+            className: `${pfx}__ac-audit-user-text`,
+            kids: [
+              Skeletons.Note({
+                className: `${pfx}__ac-audit-user-name`,
+                content: m.name,
+              }),
+              Skeletons.Note({
+                className: `${pfx}__ac-audit-user-email`,
+                content: m.email,
+              }),
+            ],
+          }),
+        ],
+      }),
+      Skeletons.Note({
+        className: `${pfx}__ac-audit-ts`,
+        content: entry.ts,
+      }),
+    ],
+  });
+}
+
+function auditDrillIn(ui, hub) {
+  const pfx = ui.fig.family;
+  const sc = ui._secCtrl || {};
+  const total = sc.auditTotal || 0;
+  const pageSize = sc.auditPageSize || 25;
+  const page = sc.auditPage || 1;
+  const start = total ? (page - 1) * pageSize + 1 : 0;
+  const end = Math.min(page * pageSize, total);
+  const pageCount = Math.max(1, Math.ceil(total / pageSize));
+  return [
+    // Header — Back arrow + close
+    Skeletons.Box.Y({
+      className: `${pfx}__ac-header`,
+      kids: [
+        Skeletons.Box.X({
+          className: `${pfx}__ac-header-row`,
+          kids: [
+            Skeletons.Box.X({
+              className: `${pfx}__ac-back`,
+              service: "apps-ac-back-from-audit",
+              uiHandler: [ui],
+              kids: [
+                Skeletons.Image.Svg({
+                  ico: "apps-caret-down",
+                  className: `${pfx}__ac-back-ico`,
+                }),
+                Skeletons.Note({
+                  className: `${pfx}__ac-back-label`,
+                  content: LOCALE.BACK || "Back",
+                }),
+              ],
+            }),
+            Skeletons.Box.X({
+              className: `${pfx}__ac-close`,
+              service: "apps-ac-close",
+              uiHandler: [ui],
+              kids: [
+                Skeletons.Image.Svg({
+                  ico: "cross",
+                  className: `${pfx}__ac-close-ico`,
+                }),
+              ],
+            }),
+          ],
+        }),
+        hubHeader(ui, hub),
+      ],
+    }),
+    // Body — toggle row, table, entries
+    Skeletons.Box.Y({
+      className: `${pfx}__ac-body ${pfx}__ac-body--audit`,
+      kids: [
+        toggleRow(ui, {
+          icon: "apps-arrow-clockwise",
+          label: LOCALE.ACCESS_AUDIT_LOG || "Access Audit Log",
+          on: !!sc.auditOn,
+          service: "apps-ac-toggle-audit",
+        }),
+        sc.auditOn
+          ? Skeletons.Box.Y({
+              className: `${pfx}__ac-audit-table`,
+              kids: [
+                Skeletons.Box.X({
+                  className: `${pfx}__ac-audit-thead`,
+                  kids: [
+                    Skeletons.Note({
+                      className: `${pfx}__ac-audit-th ${pfx}__ac-audit-th--user`,
+                      content: LOCALE.USER || "User",
+                    }),
+                    Skeletons.Note({
+                      className: `${pfx}__ac-audit-th ${pfx}__ac-audit-th--ts`,
+                      content: LOCALE.TIMESTAMP || "Timestamp",
+                    }),
+                  ],
+                }),
+                Skeletons.Box.Y({
+                  className: `${pfx}__ac-audit-list`,
+                  kids: AUDIT_ENTRIES.map((e) => auditEntryRow(ui, e)),
+                }),
+              ],
+            })
+          : null,
+      ].filter(Boolean),
+    }),
+    // Footer — pagination
+    Skeletons.Box.X({
+      className: `${pfx}__ac-audit-footer`,
+      kids: [
+        Skeletons.Note({
+          className: `${pfx}__ac-audit-count`,
+          content: total
+            ? `Showing ${start}-${end} of ${total.toLocaleString()} entries`
+            : "",
+        }),
+        Skeletons.Box.X({
+          className: `${pfx}__ac-audit-pager`,
+          kids: [
+            Skeletons.Box.X({
+              className: `${pfx}__ac-audit-pager-btn${page <= 1 ? ` ${pfx}__ac-audit-pager-btn--disabled` : ""}`,
+              service: page > 1 ? "apps-ac-audit-prev" : null,
+              uiHandler: page > 1 ? [ui] : null,
+              kids: [
+                Skeletons.Image.Svg({
+                  ico: "apps-caret-down",
+                  className: `${pfx}__ac-audit-pager-ico ${pfx}__ac-audit-pager-ico--prev`,
+                }),
+              ],
+            }),
+            Skeletons.Box.X({
+              className: `${pfx}__ac-audit-pager-btn${page >= pageCount ? ` ${pfx}__ac-audit-pager-btn--disabled` : ""}`,
+              service: page < pageCount ? "apps-ac-audit-next" : null,
+              uiHandler: page < pageCount ? [ui] : null,
+              kids: [
+                Skeletons.Image.Svg({
+                  ico: "apps-caret-down",
+                  className: `${pfx}__ac-audit-pager-ico ${pfx}__ac-audit-pager-ico--next`,
+                }),
+              ],
+            }),
+          ],
+        }),
+      ],
+    }),
+  ];
+}
+
+function mainView(ui, hub) {
+  const pfx = ui.fig.family;
+  const sc = ui._secCtrl || {};
+  const isShared = sc.mode === "shared";
+  const bodyKids = [
+    geoSection(ui),
+    toggleRow(ui, {
+      icon: "apps-lock-simple",
+      label: LOCALE.VPN_REQUIRED || "VPN Required",
+      on: !!sc.vpnOn,
+      service: "apps-ac-toggle-vpn",
+    }),
+    timeWindowSection(ui),
+    autoRevocationSection(ui),
+  ];
+  // Restricted workspaces: Member Permissions + Device Access (no One-time link).
+  // Shared workspaces: One-time link + Device Access + Access Audit Log nav row.
+  if (isShared) {
+    bodyKids.push(
+      oneTimeLinkSection(ui),
+      deviceSection(ui),
+      auditLogSection(ui),
+    );
+  } else {
+    bodyKids.push(memberSection(ui), deviceSection(ui));
+  }
+  return [
+    // Header
+    Skeletons.Box.Y({
+      className: `${pfx}__ac-header`,
+      kids: [
+        Skeletons.Box.X({
+          className: `${pfx}__ac-header-row`,
+          kids: [
+            Skeletons.Note({
+              className: `${pfx}__ac-title`,
+              content: LOCALE.ACCESS_CONTROL || "Access control",
+            }),
+            Skeletons.Box.X({
+              className: `${pfx}__ac-close`,
+              service: "apps-ac-close",
+              uiHandler: [ui],
+              kids: [
+                Skeletons.Image.Svg({
+                  ico: "cross",
+                  className: `${pfx}__ac-close-ico`,
+                }),
+              ],
+            }),
+          ],
+        }),
+        hubHeader(ui, hub),
+      ],
+    }),
+    // Body
+    Skeletons.Box.Y({
+      className: `${pfx}__ac-body`,
+      kids: bodyKids,
+    }),
+    // Footer
+    Skeletons.Box.Y({
+      className: `${pfx}__ac-footer`,
+      kids: [
+        Skeletons.Box.X({
+          className: `${pfx}__ac-save-btn`,
+          service: "apps-ac-save",
+          uiHandler: [ui],
+          kids: [
+            Skeletons.Image.Svg({
+              ico: "apps-floppy",
+              className: `${pfx}__ac-save-ico`,
+            }),
+            Skeletons.Note({
+              className: `${pfx}__ac-save-label`,
+              content: LOCALE.SAVE_CHANGES || "Save Changes",
+            }),
+          ],
+        }),
+        Skeletons.Box.X({
+          className: `${pfx}__ac-audit-btn`,
+          service: "apps-ac-view-audit",
+          uiHandler: [ui],
+          kids: [
+            Skeletons.Image.Svg({
+              ico: "apps-arrow-clockwise",
+              className: `${pfx}__ac-audit-ico`,
+            }),
+            Skeletons.Note({
+              className: `${pfx}__ac-audit-label`,
+              content: LOCALE.VIEW_ACCESS_AUDIT || "View Access Audit",
+            }),
+          ],
+        }),
+      ],
+    }),
+  ];
+}
+
 export default function access_control_overlay(ui) {
   const pfx = ui.fig.family;
   const hub = ui._editingHub;
   if (!hub) return null;
   const sc = ui._secCtrl || {};
+  const cardKids = sc.auditView ? auditDrillIn(ui, hub) : mainView(ui, hub);
 
   return Skeletons.Box.Y({
     className: `${pfx}__ac-overlay`,
-    dataset: { state: "open" },
+    dataset: { state: "open", view: sc.auditView ? "audit" : "main" },
     kids: [
       Skeletons.Box.Y({
         className: `${pfx}__ac-card`,
-        kids: [
-          // Header
-          Skeletons.Box.Y({
-            className: `${pfx}__ac-header`,
-            kids: [
-              Skeletons.Box.X({
-                className: `${pfx}__ac-header-row`,
-                kids: [
-                  Skeletons.Note({
-                    className: `${pfx}__ac-title`,
-                    content: LOCALE.ACCESS_CONTROL || "Access control",
-                  }),
-                  Skeletons.Box.X({
-                    className: `${pfx}__ac-close`,
-                    service: "apps-ac-close",
-                    uiHandler: [ui],
-                    kids: [
-                      Skeletons.Image.Svg({
-                        ico: "cross",
-                        className: `${pfx}__ac-close-ico`,
-                      }),
-                    ],
-                  }),
-                ],
-              }),
-              hubHeader(ui, hub),
-            ],
-          }),
-
-          // Body (scrollable)
-          Skeletons.Box.Y({
-            className: `${pfx}__ac-body`,
-            kids: [
-              geoSection(ui),
-              toggleRow(ui, {
-                icon: "apps-lock-simple",
-                label: LOCALE.VPN_REQUIRED || "VPN Required",
-                on: !!sc.vpnOn,
-                service: "apps-ac-toggle-vpn",
-              }),
-              timeWindowSection(ui),
-              autoRevocationSection(ui),
-              oneTimeLinkSection(ui),
-              toggleRow(ui, {
-                icon: "apps-devices",
-                label: LOCALE.MANAGED_DEVICE || "Managed Device",
-                on: !!sc.managedOn,
-                service: "apps-ac-toggle-managed",
-              }),
-              memberSection(ui),
-              deviceSection(ui),
-            ],
-          }),
-
-          // Footer
-          Skeletons.Box.Y({
-            className: `${pfx}__ac-footer`,
-            kids: [
-              Skeletons.Box.X({
-                className: `${pfx}__ac-save-btn`,
-                service: "apps-ac-save",
-                uiHandler: [ui],
-                kids: [
-                  Skeletons.Image.Svg({
-                    ico: "apps-floppy",
-                    className: `${pfx}__ac-save-ico`,
-                  }),
-                  Skeletons.Note({
-                    className: `${pfx}__ac-save-label`,
-                    content: LOCALE.SAVE_CHANGES || "Save Changes",
-                  }),
-                ],
-              }),
-              Skeletons.Box.X({
-                className: `${pfx}__ac-audit-btn`,
-                service: "apps-ac-view-audit",
-                uiHandler: [ui],
-                kids: [
-                  Skeletons.Image.Svg({
-                    ico: "apps-arrow-clockwise",
-                    className: `${pfx}__ac-audit-ico`,
-                  }),
-                  Skeletons.Note({
-                    className: `${pfx}__ac-audit-label`,
-                    content: LOCALE.VIEW_ACCESS_AUDIT || "View Access Audit",
-                  }),
-                ],
-              }),
-            ],
-          }),
-        ],
+        kids: cardKids,
       }),
     ],
   });

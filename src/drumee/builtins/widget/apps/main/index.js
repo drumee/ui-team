@@ -1749,7 +1749,13 @@ class apps_main extends LetcBox {
           size: h.size,
         };
         const tags = this._securityTags && this._securityTags[h.hub_id];
+        // "share" / "dmz" workspaces use the shared-mode layout (no Member
+        // Permissions; gains an Access Audit Log section). Everything else
+        // defaults to the restricted layout.
+        const area = h.area || "private";
+        const mode = area === "share" || area === "dmz" ? "shared" : "restricted";
         this._secCtrl = {
+          mode,
           geoOn: !!(tags && tags.ipgeo),
           vpnOn: !!(tags && tags.vpn),
           timeOn: false,
@@ -1757,7 +1763,6 @@ class apps_main extends LetcBox {
           autoMins: 30,
           oneTimeOn: !!(tags && tags.onetime),
           oneTimeUrl: "drumee.com/s/pink-folder-2023-x92...",
-          managedOn: !!(tags && tags.managed),
           startTime: { hour: 9, minute: 0, period: "AM" },
           endTime: { hour: 6, minute: 0, period: "PM" },
           timePickerOpen: null, // null | "start" | "end"
@@ -1770,6 +1775,12 @@ class apps_main extends LetcBox {
           countrySearch: "",
           members: [],
           devices: [],
+          // Access Audit Log drill-in (shared mode)
+          auditView: false,
+          auditOn: true,
+          auditPage: 1,
+          auditPageSize: 25,
+          auditTotal: 1460,
         };
         return this._render();
       }
@@ -1804,11 +1815,6 @@ class apps_main extends LetcBox {
         this._secCtrl.oneTimeOn = !this._secCtrl.oneTimeOn;
         return this._render();
 
-      case "apps-ac-toggle-managed":
-        if (!this._secCtrl) return;
-        this._secCtrl.managedOn = !this._secCtrl.managedOn;
-        return this._render();
-
       case "apps-ac-toggle-day": {
         if (!this._secCtrl) return;
         const k = cmd.mget("day_key");
@@ -1838,9 +1844,51 @@ class apps_main extends LetcBox {
         return this._render();
 
       case "apps-ac-view-audit":
+        // Shared workspaces have their own in-modal Access Audit Log
+        // drill-in; restricted workspaces fall back to the global Audit tab.
+        if (this._secCtrl && this._secCtrl.mode === "shared") {
+          this._secCtrl.auditView = true;
+          return this._render();
+        }
         this._editingHub = null;
         this._secCtrl = null;
         return this.switchTab("audit");
+
+      case "apps-ac-open-audit":
+        if (!this._secCtrl) return;
+        this._secCtrl.auditView = true;
+        return this._render();
+
+      case "apps-ac-back-from-audit":
+        if (!this._secCtrl) return;
+        this._secCtrl.auditView = false;
+        return this._render();
+
+      case "apps-ac-toggle-audit":
+        if (!this._secCtrl) return;
+        this._secCtrl.auditOn = !this._secCtrl.auditOn;
+        return this._render();
+
+      case "apps-ac-audit-prev":
+        if (!this._secCtrl) return;
+        if (this._secCtrl.auditPage > 1) {
+          this._secCtrl.auditPage -= 1;
+          this._render();
+        }
+        return;
+
+      case "apps-ac-audit-next": {
+        if (!this._secCtrl) return;
+        const pageCount = Math.max(
+          1,
+          Math.ceil(this._secCtrl.auditTotal / this._secCtrl.auditPageSize),
+        );
+        if (this._secCtrl.auditPage < pageCount) {
+          this._secCtrl.auditPage += 1;
+          this._render();
+        }
+        return;
+      }
 
       case "apps-ac-pick-country": {
         if (!this._secCtrl) return;
