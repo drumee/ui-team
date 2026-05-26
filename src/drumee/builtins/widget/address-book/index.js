@@ -30,7 +30,6 @@ class __address_book extends LetcBox {
     this._sentInvitations = [];
     this._tags = [];
     this._selectedTagId = null;
-    this._serverSearchHits = null;
     this._selectedKey = null;
     this._inviteDraft = { email: "", message: "" };
     this._inviteError = null;
@@ -213,7 +212,7 @@ class __address_book extends LetcBox {
 
       case "search-input":
         this._search = String(trigger.mget("value") || "").trim();
-        return this._runSearch();
+        return this._refreshList();
 
       case "close-panel":
         return Desk.togglePanel("address_book", "chat-panel");
@@ -325,7 +324,6 @@ class __address_book extends LetcBox {
     this._tab = tab;
     this._selectedKey = null;
     this._editing = false;
-    this._serverSearchHits = null;
     // `my_contact_show_next` honours 'active', 'archived', or 'sent'. The All
     // and Blocked tabs share the 'active' fetch (Blocked filters client-side
     // on `is_blocked`). Pending combines received invitations (notification
@@ -340,30 +338,6 @@ class __address_book extends LetcBox {
     if (tasks.length) await Promise.all(tasks);
     this._refreshList();
     this._refreshDetail();
-  }
-
-  async _runSearch() {
-    const term = this._search;
-    if (!term) {
-      this._serverSearchHits = null;
-      return this._refreshList();
-    }
-    if (!SERVICE.contact || !SERVICE.contact.search_my_contacts) {
-      // Server search not exposed → fall back to local filter via _refreshList.
-      return this._refreshList();
-    }
-    try {
-      const rows = await this.postService({
-        service: SERVICE.contact.search_my_contacts,
-        name: term,
-        page: 1,
-        hub_id: Visitor.id,
-      });
-      this._serverSearchHits = Array.isArray(rows) ? rows : [];
-    } catch (err) {
-      this._serverSearchHits = null;
-    }
-    this._refreshList();
   }
 
   // ─── Mutations ──────────────────────────────────────────────────
@@ -1093,9 +1067,7 @@ class __address_book extends LetcBox {
       return [...this._invitations, ...this._sentInvitations];
     }
     let list;
-    if (this._serverSearchHits) {
-      list = this._serverSearchHits;
-    } else if (this._search) {
+    if (this._search) {
       const term = this._search.toLowerCase();
       list = this._contacts.filter((c) => {
         const haystack = [
