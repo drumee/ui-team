@@ -1,9 +1,3 @@
-// ==================================================================== *
-//   Copyright Xialia.com  2011-2019
-//   FILE : __dbg_path
-//   TYPE : Skelton
-// ==================================================================== *
-
 const __m_preview = function (m, speudo_icon) {
   let dmz, html;
   const { ext, chartId } = require('../../template/icon-name')(m);
@@ -22,12 +16,6 @@ const __m_preview = function (m, speudo_icon) {
         <div id="${m._id}-preview" class="preview image-capable" 
         style="background-image:url(${m.url});"></div>`;
       break;
-    // case _a.vector:
-    //   html = `
-    //       <div id="${m._id}-preview" class="full preview image-capable" style="background-image:url(${m.url});"> 
-    //       <svg id="${m._id}-icon" class="full icon ${type} ${dmz} ${area}">${m.svgText}</svg> 
-    //     </div>`;
-    //   break;
     case _a.video:
       html = `
         <div id="${m._id}-preview" class="preview u-jc-center u-ai-center" style="background-image:url(${m.url});"> 

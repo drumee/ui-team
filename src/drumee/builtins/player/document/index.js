@@ -707,6 +707,10 @@ class __player_document extends PlayerInteract {
         this.__overlay.clear();
         break;
 
+      case "fullscreen":
+        this.el.requestFullscreen().catch(e => console.warn("Fullscreen request failed:", e));
+        break;
+        
       case 'download-pdf':
         url = `${bootstrap().serviceUrl}${SERVICE.media.pdf}?nid=${nid}&hub_id=${hub_id}`;
         let f = filename.split('.')
