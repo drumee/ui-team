@@ -147,7 +147,14 @@ function __skl_welcome_signin_content(ui) {
           Skeletons.Note({
             className: `${contentFig}__signup-prompt-link`,
             content: LOCALE.START_FREE,
-            href: "#/welcome/signup",
+            on_click: () => {
+              try { history.replaceState(null, '', '#/welcome/signup'); } catch (e) {}
+              if (window.Welcome && _.isFunction(Welcome.loadSignup)) {
+                Welcome.loadSignup();
+              } else {
+                location.hash = "#/welcome/signup";
+              }
+            },
           }),
         ],
       })

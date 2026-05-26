@@ -49,7 +49,7 @@ class __welcome_router extends LetcBox {
     }
     let plugins = Platform.get('plugins');
     if (!plugins) {
-      this.loadDefault()
+      loadDefault()
       return;
     }
     try {
