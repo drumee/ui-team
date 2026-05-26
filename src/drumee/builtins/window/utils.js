@@ -1076,20 +1076,23 @@ class __window_mfs extends DrumeeMFS {
   setContainment() {
     const w = this.$el.outerWidth();
     const h = this.$el.outerHeight();
-    // Clamp to the workspace rect (.window-manager__ui) in page coords so
-    // the dragged window can never leave the desk body on any side.
-    // jQuery UI's array containment constrains the element's TOP-LEFT
-    // corner, so subtract the window's own size from the bottom/right
-    // bounds to keep its bottom-right corner inside the workspace.
+    // Keep the draggable handle visible inside the workspace. Requiring the
+    // full window to stay inside leaves tall editors with almost no Y range.
     const $wm = Wm.$el;
     const offset = $wm.offset();
     const wmW = $wm.outerWidth();
     const wmH = $wm.outerHeight();
+    const minVisibleWidth = Math.min(w, Math.max(150, this.topbarHeight));
+    const minVisibleHeight = Math.min(h, this.topbarHeight);
+    const left = offset.left;
+    const top = offset.top;
+    const right = offset.left + wmW - minVisibleWidth;
+    const bottom = offset.top + wmH - minVisibleHeight;
     const containment = [
-      offset.left,
-      offset.top,
-      offset.left + wmW - w,
-      offset.top + wmH - h,
+      Math.min(left, right),
+      Math.min(top, bottom),
+      Math.max(left, right),
+      Math.max(top, bottom),
     ];
     this.$el.draggable("option", { containment });
   }
