@@ -8,7 +8,13 @@
   }
 
   &__ui {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
     width: 480px;
+    max-height: calc(100vh - 48px);
+    overflow-y: auto;
     background-color: var(--normal-bg-90, #f1f1f5);
     border: 1px solid rgba(0, 0, 0, 0.06);
     border-radius: 12px;

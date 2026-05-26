@@ -45,9 +45,37 @@ class __migrate_gdrive_popup extends LetcBox {
     this._stopPolling();
   }
 
+  /**
+   * Wm.launch({ singleton: 1 }) reuses the existing popup instance and
+   * calls .raise() on it instead of relaunching. LetcBox doesn't ship
+   * one; without this stub the second click would throw `w.raise is not
+   * a function` and never bring the popup back to the user.
+   */
+  raise() {
+    if (this.el) {
+      this.el.style.display = '';
+      this.el.style.zIndex = 9999;
+    }
+    return this;
+  }
+
   async onDomRefresh() {
+    this._portalToBody();
     this._render();
     await this._refreshScope();
+  }
+
+  /**
+   * Wm.launch renders the popup inside window-manager (z-auto), but the
+   * Settings overlay slot has z-index 1500 — Settings paints on top.
+   * Move the root element to document.body so its position:fixed + high
+   * z-index actually wins.
+   */
+  _portalToBody() {
+    if (!this.el) return;
+    if (this.el.parentElement !== document.body) {
+      document.body.appendChild(this.el);
+    }
   }
 
   // ───────── state transitions ─────────
