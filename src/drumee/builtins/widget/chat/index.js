@@ -58,6 +58,17 @@ class __widget_chat extends LetcBox {
     this.bindEvent(_a.live);
     this._newMsgCount = 0;
 
+    // Typing indicator state.
+    // _typers: author_id -> { name, timer } for remote users currently typing.
+    // _typingSentAt / _typingIdleTimer: throttle + idle-stop for the local user.
+    this._typers = new Map();
+    this._typingSentAt = 0;
+    this._typingIdleTimer = null;
+
+    // Mark this conversation read when its workspace/folder is clicked in the
+    // window manager (Wm fires "chat:read" with the focused hub context).
+    this._onReadContext = this._onReadContext.bind(this);
+    RADIO_BROADCAST.on("chat:read", this._onReadContext);
   }
 
   /**
@@ -80,9 +91,18 @@ class __widget_chat extends LetcBox {
    */
   onBeforeDestroy() {
     this.unbindEvent(_a.live);
+    RADIO_BROADCAST.off("chat:read", this._onReadContext);
     clearTimeout(this._folderContentSyncTimer);
     if (this.attachmentList) {
       this.attachmentList.off("uploaded", this.showSend);
+    }
+    // Tell the peer(s) we stopped typing and clear all typing timers.
+    this._stopTyping();
+    if (this._typers) {
+      for (const t of this._typers.values()) {
+        if (t && t.timer) clearTimeout(t.timer);
+      }
+      this._typers.clear();
     }
   }
 
@@ -192,7 +212,213 @@ class __widget_chat extends LetcBox {
    * @param {*} args 
    */
   onInputChange(args) {
-    this.saveMessage(args.text);
+    const text = args && args.text;
+    // Persist a draft only while the input holds an unsent value. When the
+    // input is emptied, drop the message draft (keeping any pending
+    // attachments, since saveMessage only touches the message field) so stale
+    // text is never restored on reopen or sent on Enter. A successful send
+    // clears the draft separately via clearStorage().
+    if (text && String(text).trim()) {
+      this.saveMessage(text);
+    } else {
+      this.saveMessage('');
+    }
+    this._handleTypingInput(text);
+  }
+
+  /**
+   * Window-manager "chat:read" signal — fired when a workspace (or a folder
+   * within it) is clicked/raised. Mark this conversation read when the focused
+   * hub matches ours.
+   * @param {Object} ctx { hub_id, nid, area }
+   */
+  _onReadContext(ctx = {}) {
+    if (!ctx || ctx.hub_id == null) return;
+    if (`${ctx.hub_id}` !== `${this.hubId}`) return;
+    this.markConversationRead();
+  }
+
+  /**
+   * Mark the conversation as read up to the latest message. Triggered when the
+   * user focuses the message input or when its workspace/folder is clicked.
+   * Reuses the existing acknowledge services;
+   * the server advances the read cursor and (for channels) broadcasts the
+   * updated reader set so other participants' read-receipt avatars update.
+   * Throttled so repeated focus events don't spam the server.
+   */
+  markConversationRead() {
+    const now = Date.now();
+    if (this._lastReadAt && (now - this._lastReadAt) < 2000) return;
+    if (!this.__list || !this.__list.children) return;
+    const last = _.isFunction(this.__list.children.last) ? this.__list.children.last() : null;
+    if (!last || !last.model) return;
+    const data = last.model.toJSON();
+    const area = this.mget(_a.area) || this.mget(_a.type);
+    const isPrivate = area === _a.personal || area === _a.privateRoom;
+    const postData = { hub_id: this.hubId };
+    if (area === _a.share) {
+      postData.service = SERVICE.channel.acknowledge;
+    } else if (isPrivate) {
+      postData.service = SERVICE.chat.acknowledge;
+    } else if (area === _a.ticket) {
+      postData.service = SERVICE.channel.acknowledge_ticket;
+    } else {
+      postData.service = SERVICE.channel.acknowledge;
+    }
+    if (isPrivate) {
+      if (!this.peerId) return;
+      postData.peer_id = this.peerId;
+      if (data.ctime) postData.ref_ctime = data.ctime;
+    } else {
+      if (!data.message_id) return;
+      postData.message_id = data.message_id;
+      if (area === _a.ticket) postData.ticket_id = data.ticket_id;
+    }
+    this._lastReadAt = now;
+    this.postService(postData);
+  }
+
+  /**
+   * Resolve the typing service + payload for the current conversation mode.
+   * Returns null when typing should not be signalled (no peer/hub, blocked
+   * peer, or the service is unavailable in this platform).
+   * @param {Number} state 1 = typing, 0 = stopped
+   */
+  _typingApi(state) {
+    const area = this.mget(_a.area) || this.mget(_a.type);
+    const isPrivate = area === _a.personal || area === _a.privateRoom;
+    if (isPrivate) {
+      if (!this.peerId) return null;
+      if (this.peer && (this.peer.is_blocked || this.peer.is_blocked_me)) return null;
+      return { service: 'chat.typing', hub_id: this.hubId, entity_id: this.peerId, state };
+    }
+    if (!this.hubId) return null;
+    return { service: 'channel.typing', hub_id: this.hubId, state };
+  }
+
+  /**
+   * Fire-and-forget the typing signal. Ephemeral — failures are non-critical.
+   * @param {Number} state 1 = typing, 0 = stopped
+   */
+  _sendTyping(state) {
+    const api = this._typingApi(state);
+    if (!api || !api.service) return;
+    try {
+      const p = this.postService(api);
+      if (p && _.isFunction(p.catch)) p.catch(() => { });
+    } catch (e) { /* noop — ephemeral signal */ }
+  }
+
+  /**
+   * Called on every keystroke. Sends a throttled typing signal (at most once
+   * per 3s) and (re)arms a 4s idle timer that sends the stop signal.
+   * @param {String} text current draft text
+   */
+  _handleTypingInput(text) {
+    if (_.isEmpty(text) || !String(text).trim()) {
+      this._stopTyping();
+      return;
+    }
+    const now = Date.now();
+    if (!this._typingSentAt || (now - this._typingSentAt) > 3000) {
+      this._typingSentAt = now;
+      this._sendTyping(1);
+    }
+    if (this._typingIdleTimer) clearTimeout(this._typingIdleTimer);
+    this._typingIdleTimer = setTimeout(() => this._stopTyping(), 4000);
+  }
+
+  /**
+   * Send the stop signal (once) and clear the idle timer.
+   */
+  _stopTyping() {
+    if (this._typingIdleTimer) {
+      clearTimeout(this._typingIdleTimer);
+      this._typingIdleTimer = null;
+    }
+    if (this._typingSentAt) {
+      this._typingSentAt = 0;
+      this._sendTyping(0);
+    }
+  }
+
+  /**
+   * Handle an incoming typing signal from a remote user.
+   * @param {Object} data { author_id, firstname, lastname, peer_id|hub_id, state }
+   */
+  _onTyping(data = {}) {
+    if (!data || _.isEmpty(data)) return;
+    const authorId = data.author_id;
+    if (!authorId || authorId === Visitor.id) return; // ignore self
+    const area = this.mget(_a.area) || this.mget(_a.type);
+    const isPrivate = area === _a.personal || area === _a.privateRoom;
+    if (isPrivate) {
+      if (this.peerId !== data.peer_id) return;
+    } else if (this.hubId !== data.hub_id) {
+      return;
+    }
+    if (Number(data.state) === 0) {
+      return this._removeTyper(authorId);
+    }
+    const name = this._typerName(data);
+    const existing = this._typers.get(authorId);
+    if (existing && existing.timer) clearTimeout(existing.timer);
+    // Auto-expire in case a stop signal is lost.
+    const timer = setTimeout(() => this._removeTyper(authorId), 6000);
+    this._typers.set(authorId, { name, timer });
+    this._renderTypers();
+  }
+
+  /**
+   * @returns {String} display name for a typing remote user
+   */
+  _typerName(data) {
+    const fn = (data.firstname || '').trim();
+    const ln = (data.lastname || '').trim();
+    const name = `${fn} ${ln}`.trim();
+    return name || data.fullname || data.name || LOCALE.SOMEONE || 'Someone';
+  }
+
+  /**
+   * Remove a user from the typing set and re-render.
+   * @param {String} authorId
+   */
+  _removeTyper(authorId) {
+    if (!this._typers) return;
+    const existing = this._typers.get(authorId);
+    if (!existing) return;
+    if (existing.timer) clearTimeout(existing.timer);
+    this._typers.delete(authorId);
+    this._renderTypers();
+  }
+
+  /**
+   * Render the typing indicator from the current _typers set.
+   */
+  _renderTypers() {
+    this.ensurePart('typing-indicator').then((part) => {
+      if (!part || !part.el) return;
+      const names = Array.from(this._typers.values()).map((t) => t.name);
+      if (!names.length) {
+        if (_.isFunction(part.setState)) part.setState(0);
+        else part.el.dataset.state = '0';
+        return;
+      }
+      let text;
+      if (names.length === 1) {
+        text = (LOCALE.IS_TYPING || '{0} is typing…').format(names[0]);
+      } else if (names.length === 2) {
+        text = (LOCALE.TWO_TYPING || '{0} and {1} are typing…').format(names[0], names[1]);
+      } else {
+        // 3+ typers: show at most the first two names, then "and more".
+        text = (LOCALE.MANY_TYPING || '{0}, {1} and more are typing…').format(names[0], names[1]);
+      }
+      this.ensurePart('typing-text').then((t) => {
+        if (t && t.el) t.el.textContent = text;
+      }).catch(() => { });
+      if (_.isFunction(part.setState)) part.setState(1);
+      else part.el.dataset.state = '1';
+    }).catch(() => { });
   }
 
   /**
@@ -312,7 +538,15 @@ class __widget_chat extends LetcBox {
         break;
       case _a.list:
         child.onAddKid = this.handleScroll.bind(this);
-        child.once(_e.ready, () => this.scrollMessagesToBottom(child));
+        child.once(_e.ready, () => {
+          this.scrollMessagesToBottom(child);
+          // Render read-receipt avatars across every row once the list is fully
+          // loaded. Items render incrementally, so an item mounted before its
+          // newer sibling computes last-read placement against an incomplete
+          // list; this pass re-renders them all with the complete collection so
+          // read users always show on open.
+          this.refreshAllReaders();
+        });
         break;
       case 'chat-content':
         this.waitElement(child.el, () => {
@@ -426,6 +660,9 @@ class __widget_chat extends LetcBox {
 
       case _a.interactive:
         return this.onInputChange(args);
+
+      case 'input-focus':
+        return this.markConversationRead();
 
       case 'mention-filter':
         return this._showMentionFiles(args.filter, args.mentionType);
@@ -1068,13 +1305,19 @@ class __widget_chat extends LetcBox {
    * @returns 
    */
   sendMessage(args = {}) {
+    // Sending ends the typing session.
+    this._stopTyping();
     let message = '';
-    // Get message with encoded mentions if available
+    // The live messenger content is the source of truth. When the user clears
+    // the input it returns '', and we must NOT fall back to a stale
+    // sessionStorage draft: the messenger does not emit an input-change event
+    // when emptied, so the draft still holds the previously typed value, which
+    // would otherwise get sent on Enter. Only fall back when no messenger
+    // exists (e.g. programmatic sends).
     const messenger = this.findPart(_a.message);
     if (messenger && _.isFunction(messenger.getMessageWithMentions)) {
       message = messenger.getMessageWithMentions();
-    }
-    if (!message) {
+    } else {
       message = args.text || this.getStorage().message;
     }
     const list = this.attachmentList;
@@ -1444,7 +1687,7 @@ class __widget_chat extends LetcBox {
   /**
   * @param {*} data
   */
-  acknowledge(data) {
+  acknowledge(data, options = {}) {
     if (!this.__list) return;
     if (!_.isArray(data)) {
       data = [data];
@@ -1456,6 +1699,54 @@ class __widget_chat extends LetcBox {
           item.acknowledge(d);
         }
       }
+    }
+    // Read receipts: the acknowledger has read up to the acknowledged message.
+    // Apply their read cursor across the whole list so their avatar lands only
+    // on their last-read message (Messenger-style), without a stale duplicate
+    // remaining on an earlier message.
+    const reader = options && options.sender && options.sender.uid;
+    const refCtime = data.length ? data[data.length - 1].ctime : null;
+    if (reader && refCtime != null) {
+      this.applyReadReceipt(reader, refCtime);
+    }
+  }
+
+  /**
+   * Apply a reader's read cursor across all visible message rows, then re-render
+   * every reader-avatar strip. Two passes because last-read placement depends on
+   * the next row's _seen_, so all rows must be updated before any are rendered.
+   * @param {String} readerUid
+   * @param {Number} refCtime the reader has read every message with ctime <= this
+   */
+  applyReadReceipt(readerUid, refCtime) {
+    if (!readerUid || readerUid === Visitor.id) return;
+    if (!this.__list || !_.isFunction(this.__list.getItemsByKind)) return;
+    const items = this.__list.getItemsByKind('widget_chat_item') || [];
+    // Pass 1: update each row's _seen_ for this reader from the cursor.
+    for (const item of items) {
+      if (item && _.isFunction(item.updateReaderSeen)) {
+        const ct = item.mget(_a.ctime);
+        item.updateReaderSeen(readerUid, ct != null && ct <= refCtime);
+      }
+    }
+    // Pass 2: re-render — last-read placement reads the next row's _seen_, so
+    // every row must be updated before any render.
+    for (const item of items) {
+      if (item && _.isFunction(item.renderReaders)) item.renderReaders();
+    }
+  }
+
+  /**
+   * Re-render the read-receipt avatar row on every message item. Used once the
+   * list has finished loading so last-read placement is computed against the
+   * complete collection (each row's "next row" now exists). Reads the _seen_
+   * the server returned on load — no mutation.
+   */
+  refreshAllReaders() {
+    if (!this.__list || !_.isFunction(this.__list.getItemsByKind)) return;
+    const items = this.__list.getItemsByKind('widget_chat_item') || [];
+    for (const item of items) {
+      if (item && _.isFunction(item.renderReaders)) item.renderReaders();
     }
   }
 
@@ -1509,6 +1800,8 @@ class __widget_chat extends LetcBox {
         if ((hubMatch && inScope) || privateMach || ticketMach) {
           this.handleReceivedMsg(data);
         }
+        // A received message means that author is no longer typing.
+        if (data && data.author_id) this._removeTyper(data.author_id);
 
         // If the widget id hiddent, don't acknowledge
         try {
@@ -1565,7 +1858,15 @@ class __widget_chat extends LetcBox {
 
       case SERVICE.channel.acknowledge:
       case SERVICE.chat.acknowledge:
-        this.acknowledge(data);
+        this.acknowledge(data, options);
+        break;
+
+      // Literal service strings (not SERVICE.* constants): the platform may not
+      // expose *.typing until env reload, which would make the constants
+      // `undefined` and wrongly match service-less messages.
+      case 'chat.typing':
+      case 'channel.typing':
+        this._onTyping(data);
         break;
 
     }

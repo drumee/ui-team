@@ -108,6 +108,8 @@
       gap: 8px;
       max-width: min(100%, 560px);
       min-width: 0;
+      // Anchor for the absolutely-positioned time.
+      position: relative;
 
       &.me {
         align-items: flex-end;
@@ -122,15 +124,39 @@
       }
     }
 
+    // Anchor for the absolutely-positioned time; sized to the bubble (it's the
+    // only in-flow child once the footer is taken out of flow).
+    &-line {
+      display: flex;
+      align-items: center;
+      position: relative;
+      min-width: 0;
+      max-width: 100%;
+    }
+
     &-footer {
+      // Time + read indicator, floated beside the bubble and revealed only on
+      // hover: left of the bubble for incoming, right for own. Absolute so it
+      // adds no inline gap, vertically centred on the bubble.
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%);
+      right: calc(100% + 6px);
+      left: auto;
       display: flex;
       flex-direction: row;
       align-items: center;
-      justify-content: flex-start;
       gap: 4px;
+      visibility: hidden;
 
       &.me {
-        justify-content: flex-end;
+        right: auto;
+        left: calc(100% + 6px);
+      }
+
+      // Reveal time + actions only while hovering the conversation bubble.
+      .widget-chatItem__conversation-content:hover ~ & {
+        visibility: visible;
       }
 
       & .readed-icon {
@@ -147,6 +173,10 @@
     }
 
     &-date {
+      // Inline beside the bubble (inside the footer, which sits on the message
+      // line). Vertically centred via the line's align-items: center.
+      white-space: nowrap;
+      flex-shrink: 0;
       @include drumee.typo($size: 11px,
         $line: 1.4,
         $weight: 400,
@@ -157,6 +187,51 @@
   &__forward-tag-wrapper {
     padding-top: 5px;
     margin-bottom: -5px;
+  }
+
+  // Read-receipt avatar row, in flow just below the message bubble so it is
+  // always visible (never covered/clipped by the message box or neighbours).
+  // Aligned to the bubble's side via the message-content's align-items.
+  &__readers {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 2px;
+    margin-top: 4px;
+
+    &.me {
+      justify-content: flex-end;
+    }
+
+    &.other {
+      justify-content: flex-start;
+    }
+
+    &[data-empty="1"] {
+      display: none;
+    }
+  }
+
+  &__reader-avatar {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 1px solid var(--normal-bg, #fff);
+    background-color: var(--normal-bg-90);
+
+    // Overlap successive avatars slightly (stacked look).
+    & + & {
+      margin-left: -6px;
+    }
+  }
+
+  &__reader-more {
+    margin-left: 4px;
+    @include drumee.typo($size: 10px,
+      $line: 1.4,
+      $weight: 400,
+      $color: var(--normal-fg-50));
   }
 
   &__icon {
@@ -249,6 +324,28 @@
     height: 32px;
     flex-shrink: 0;
     align-self: flex-end;
+    // Anchor for the hover username tooltip.
+    position: relative;
+
+    // Styled username tooltip on avatar hover (replaces the native title).
+    // Shows the full resolved name from data-tooltip, on a single line.
+    &[data-tooltip]:not([data-tooltip=""]):hover::after {
+      content: attr(data-tooltip);
+      position: absolute;
+      left: 0;
+      bottom: calc(100% + 6px);
+      z-index: 100000;
+      padding: 4px 8px;
+      border-radius: 6px;
+      white-space: nowrap;
+      pointer-events: none;
+      background: var(--tooltip-bg, rgba(33, 33, 33, 0.95));
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+      @include drumee.typo($size: 11px,
+        $line: 1.4,
+        $weight: 400,
+        $color: var(--tooltip-fg, #ffffff));
+    }
 
     // For own messages avatar isn't shown — hide it entirely so the bubble
     // (and any reply quote) can sit flush with the right edge instead of

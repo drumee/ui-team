@@ -405,6 +405,9 @@ class __window_manager extends push {
     this._curWorkspace = { hub_id, nid, area };
     this.mset({ hub_id, nid, nodeId: nid, area, ownpath, home_id });
 
+    // Clicking/raising a workspace marks its chat as read.
+    RADIO_BROADCAST.trigger("chat:read", { hub_id, nid, area });
+
     if (!sameContext) {
       RADIO_BROADCAST.trigger("workspace:focus", { hub_id, nid, area });
       this.updateBreadcrumb(
@@ -446,6 +449,8 @@ class __window_manager extends push {
       nid;
     this._curWorkspace = { hub_id, nid, area: data.area };
     this.mset({ hub_id, nid, nodeId: nid, area: data.area, ownpath, home_id });
+    // Clicking into a folder marks the workspace chat as read.
+    RADIO_BROADCAST.trigger("chat:read", { hub_id, nid, area: data.area });
     this.ensurePart(_a.list).then((l) => {
       l.setApi({ service: SERVICE.media.show_node_by, hub_id, nid });
       if (l.collection) l.collection.reset();
