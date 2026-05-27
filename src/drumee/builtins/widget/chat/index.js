@@ -1867,11 +1867,14 @@ class __widget_chat extends LetcBox {
     const isPrivate = area === _a.personal || area === _a.privateRoom;
     if (!isPrivate || !this.peerId) return;
     if (!this.__list || !_.isFunction(this.__list.getItemsByKind)) return;
-    const items = this.__list.getItemsByKind('widget_chat_item') || [];
+    const items = this.__list.getItemsByKind("widget_chat_item") || [];
     let cursor = 0;
     for (const item of items) {
-      const c = item && item.mget ? ~~item.mget('peer_ref_ctime') : 0;
-      if (c) { cursor = c; break; }
+      const c = item && item.mget ? ~~item.mget("peer_ref_ctime") : 0;
+      if (c) {
+        cursor = c;
+        break;
+      }
     }
     if (cursor > 0) this.applyReadReceipt(this.peerId, cursor);
   }
