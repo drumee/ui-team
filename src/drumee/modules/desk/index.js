@@ -672,6 +672,12 @@ class desk_module extends LetcBox {
    *
    */
   togglePanel(kind, pn, openOnly) {
+    const __dbgTag = `[PANEL_DBG:desk.togglePanel kind=${kind} pn=${pn} openOnly=${!!openOnly}]`;
+    console.log(`${__dbgTag} ENTRY pendingBefore=${this._pendingKinds && this._pendingKinds[pn]}`);
+    const __listenerCount = (RADIO_CLICK && RADIO_CLICK._events && RADIO_CLICK._events[_e.click])
+      ? (Array.isArray(RADIO_CLICK._events[_e.click]) ? RADIO_CLICK._events[_e.click].length : 1)
+      : 0;
+    console.log(`${__dbgTag} RADIO_CLICK click listeners count=${__listenerCount}`);
     if (!this._pendingKinds) this._pendingKinds = {};
     if (!this._closeTimers) this._closeTimers = {};
 
@@ -701,12 +707,15 @@ class desk_module extends LetcBox {
       if (sameKindMounted && keepAlive) {
         const child = p.children.last();
         const isOpen = child && child.el && child.el.dataset.anim === "in";
+        console.log(`${__dbgTag} BRANCH sameKind+keepAlive isOpen=${isOpen} childCid=${child && child.cid}`);
         if (isOpen) {
           // Open-only callers (e.g. sidebar Settings / Profile) opt out of
           // the close-on-second-click toggle behaviour.
           if (openOnly) return;
+          console.log(`${__dbgTag} -> hidePanel`);
           this._hidePanel(p);
         } else {
+          console.log(`${__dbgTag} -> showPanel`);
           this.closeOtherSidebarPanels(pn);
           this._showPanel(p);
         }
@@ -727,9 +736,11 @@ class desk_module extends LetcBox {
       }
 
       if (!p.isEmpty()) {
+        console.log(`${__dbgTag} CLEAR previous slot occupant (kind switch) prevKind=${this._pendingKinds[pn]}`);
         p.clear();
         this._pendingKinds[pn] = null;
       }
+      console.log(`${__dbgTag} -> loadKind`);
       this.closeOtherSidebarPanels(pn);
       this._loadKind(p, kind, pn);
     });
@@ -804,6 +815,8 @@ class desk_module extends LetcBox {
    * 
    */
   closeAllPanels() {
+    console.log(`[PANEL_DBG:desk] closeAllPanels() called`);
+    console.trace(`[PANEL_DBG:desk] closeAllPanels trace`);
     this.closeOtherSidebarPanels();
     return this.closeMainPanels()
   }

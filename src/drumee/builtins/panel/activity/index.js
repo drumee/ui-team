@@ -50,9 +50,26 @@ class __panel_activity extends LetcBox {
    */
   _onOutsideClick(e, source) {
     const svc = source && source.mget && source.mget(_a.service);
-    if (typeof svc === "string" && svc.startsWith("toggle-")) return;
-    if (this.activityState && !this.el.contains(e.target)) {
-      Desk.closeAllPanels()
+    const isDetached = !this.el || !document.body.contains(this.el);
+    const tag = `[PANEL_DBG:activity cid=${this.cid}]`;
+    if (typeof svc === "string" && svc.startsWith("toggle-")) {
+      console.log(`${tag} BAIL toggle-* svc=${svc} detached=${isDetached}`);
+      return;
+    }
+    const state = this.activityState;
+    const inside = this.el && e && e.target && this.el.contains(e.target);
+    const target = e && e.target;
+    const targetDesc = target && target.tagName
+      ? `${target.tagName.toLowerCase()}.${(target.className || "").toString().split(" ").slice(0, 2).join(".")}`
+      : String(target);
+    console.log(
+      `${tag} FIRE activityState=${state} inside=${inside} detached=${isDetached} ` +
+      `svc=${svc} sourceCid=${source && source.cid} target=${targetDesc}`
+    );
+    if (state && !inside) {
+      console.log(`${tag} >>> calling Desk.closeAllPanels() <<<`);
+      console.trace(`${tag} close trace`);
+      Desk.closeAllPanels();
     }
   }
 
@@ -60,6 +77,7 @@ class __panel_activity extends LetcBox {
    * 
    */
   onDestroy() {
+    console.log(`[PANEL_DBG:activity cid=${this.cid}] onDestroy — unregistering RADIO_CLICK`);
     RADIO_CLICK.off(_e.click, this._onOutsideClick);
     RADIO_BROADCAST.off('activity:request', this.updateSubactivityCount);
     RADIO_BROADCAST.off('activity:notify', this._notify);
@@ -86,6 +104,7 @@ class __panel_activity extends LetcBox {
     RADIO_BROADCAST.on('activity:request', this.updateSubactivityCount);
     RADIO_BROADCAST.on('activity:notify', this._notify);
     RADIO_NETWORK.on(_e.online, this.refreshActivity);
+    console.log(`[PANEL_DBG:activity cid=${this.cid}] onDomRefresh — registering RADIO_CLICK`);
     RADIO_CLICK.on(_e.click, this._onOutsideClick)
     this.visible = !document.hidden;
     this.feed(require('./skeleton')(this));
