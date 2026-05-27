@@ -319,24 +319,22 @@ class ___widget_chatItem extends LetcBox {
       if (this.menu && !this.menu.isDestroyed()) {
         const el = this.menu.el;
         const gap = 6;
-        const barW = el.offsetWidth || 120;
-        const barH = el.offsetHeight || 28;
-        // Sit beside the bubble, vertically centred on it.
-        let top = (bubbleRect.top - uiRect.top) + (bubbleRect.height - barH) / 2;
-        if (top < 0) top = 0;
-        el.style.top = `${top}px`;
-        el.style.right = 'auto';
+        // Vertically centre on the bubble via transform — no bar height needed.
+        el.style.top = `${(bubbleRect.top - uiRect.top) + bubbleRect.height / 2}px`;
+        el.style.transform = 'translateY(-50%)';
+        // Anchor each side to the bubble edge WITHOUT measuring the bar width
+        // (offsetWidth is unreliable on the first hover before layout settles,
+        // which mis-placed the bar for own messages).
         if (this.mget(_a.author) === _a.me) {
-          // Own messages (right-aligned bubble): bar to the LEFT of the bubble.
-          let left = (bubbleRect.left - uiRect.left) - gap - barW;
-          if (left < 0) left = 0;
-          el.style.left = `${left}px`;
+          // Own messages: bar to the LEFT of the bubble — pin its right edge to
+          // the bubble's left edge.
+          el.style.right = `${Math.max(0, (uiRect.right - bubbleRect.left) + gap)}px`;
+          el.style.left = 'auto';
         } else {
-          // Incoming messages (left-aligned bubble): bar to the RIGHT of the bubble.
-          let left = (bubbleRect.right - uiRect.left) + gap;
-          const maxLeft = uiRect.width - barW;
-          if (left > maxLeft) left = Math.max(0, maxLeft);
-          el.style.left = `${left}px`;
+          // Incoming messages: bar to the RIGHT of the bubble — pin its left
+          // edge to the bubble's right edge.
+          el.style.left = `${Math.max(0, (bubbleRect.right - uiRect.left) + gap)}px`;
+          el.style.right = 'auto';
         }
       }
     } else {

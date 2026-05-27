@@ -108,6 +108,8 @@
       gap: 8px;
       max-width: min(100%, 560px);
       min-width: 0;
+      // Anchor for the absolutely-positioned time.
+      position: relative;
 
       &.me {
         align-items: flex-end;
@@ -122,15 +124,39 @@
       }
     }
 
+    // Anchor for the absolutely-positioned time; sized to the bubble (it's the
+    // only in-flow child once the footer is taken out of flow).
+    &-line {
+      display: flex;
+      align-items: center;
+      position: relative;
+      min-width: 0;
+      max-width: 100%;
+    }
+
     &-footer {
+      // Time + read indicator, floated beside the bubble and revealed only on
+      // hover: left of the bubble for incoming, right for own. Absolute so it
+      // adds no inline gap, vertically centred on the bubble.
+      position: absolute;
+      top: 50%;
+      transform: translateY(-50%);
+      right: calc(100% + 6px);
+      left: auto;
       display: flex;
       flex-direction: row;
       align-items: center;
-      justify-content: flex-start;
       gap: 4px;
+      visibility: hidden;
 
       &.me {
-        justify-content: flex-end;
+        right: auto;
+        left: calc(100% + 6px);
+      }
+
+      // Reveal time + actions only while hovering the conversation bubble.
+      .widget-chatItem__conversation-content:hover ~ & {
+        visibility: visible;
       }
 
       & .readed-icon {
@@ -147,17 +173,14 @@
     }
 
     &-date {
-      // Time is metadata: hidden until the message bubble is hovered. Revealed
-      // when hovering the conversation content (the footer is a later sibling).
-      visibility: hidden;
+      // Inline beside the bubble (inside the footer, which sits on the message
+      // line). Vertically centred via the line's align-items: center.
+      white-space: nowrap;
+      flex-shrink: 0;
       @include drumee.typo($size: 11px,
         $line: 1.4,
         $weight: 400,
         $color: var(--normal-fg-50));
-
-      .widget-chatItem__conversation-content:hover ~ .widget-chatItem__message-footer & {
-        visibility: visible;
-      }
     }
   }
 
@@ -168,13 +191,21 @@
 
   // Read-receipt avatar row, shown below a message bubble.
   &__readers {
+    // Absolutely positioned just below the conversation bubble (anchored to the
+    // message line, which is position:relative and sized to the bubble) so it
+    // adds no vertical space. Left-aligned for incoming, right for own.
+    position: absolute;
+    top: calc(100% + 2px);
+    left: 0;
+    z-index: 1;
     display: flex;
     flex-direction: row;
     align-items: center;
     gap: 2px;
-    margin-top: 2px;
 
     &.me {
+      left: auto;
+      right: 0;
       justify-content: flex-end;
     }
 
