@@ -54,6 +54,9 @@ class __dmz_sharebox extends LetcBox {
       case 'ref-password':
         return this._input = child;
 
+      case 'ref-email':
+        return this._emailInput = child;
+
       case 'desk-content':
         child.once('content:ready', () => {
           this.windowsLayer = child.windowsLayer;
@@ -138,6 +141,15 @@ class __dmz_sharebox extends LetcBox {
       case 'REQUIRED_PASSWORD':
         this.promptPassword();
         break;
+      case 'REQUIRED_EMAIL':
+        this.promptEmail();
+        break;
+      case 'TICKET_REVOKED':
+      case 'TICKET_EXPIRED':
+      case 'WRONG_TICKET':
+      case 'TICKET_INVALID':
+        this.handleInfoStatus(data);
+        break;
       default:
         this.getInfoData();
 
@@ -150,6 +162,44 @@ class __dmz_sharebox extends LetcBox {
   promptPassword() {
     this.__content.feed(require('./skeleton/password').default(this));
   }
+  /**
+   *
+   */
+  promptEmail() {
+    this.__content.feed(require('./skeleton/email').default(this));
+  }
+
+  /**
+   *
+   */
+  verifyEmail() {
+    this.validateData();
+    if (this.formStatus == _a.error) {
+      this._emailInput.showError();
+      const msg = this._emailInput.reason;
+      return this.renderErrorMessage(msg);
+    }
+
+    const hub_id = Visitor.parseLocation().keysel || '';
+    const inputData = this._emailInput.getData();
+    const opt = {
+      token  : this.mget(_a.token),
+      hub_id,
+      email  : inputData.value
+    };
+
+    this.postService(SERVICE.dmz.login, opt).then((data) => {
+      if (data && data.status === 'TICKET_OK' && data.is_secure) {
+        this.mset(data);
+        this.getInfoData();
+      } else if (data && data.status === 'EMAIL_MISMATCH') {
+        this.renderErrorMessage(LOCALE.SECURE_SHARE_EMAIL_MISMATCH);
+      } else {
+        this.handleInfoStatus(data);
+      }
+    });
+  }
+
   /**
    *
   */
@@ -189,6 +239,9 @@ class __dmz_sharebox extends LetcBox {
 
       case 'verify-password':
         return this.verifyPassword();
+
+      case 'verify-email':
+        return this.verifyEmail();
 
       case 'dmz-user-signup':
         return this.dmzUserSignup();
@@ -383,6 +436,11 @@ class __dmz_sharebox extends LetcBox {
 
       case "INVALID_CREDENTIAL":
         return this.feed(this.defaultSkeleton(this));
+
+      case 'TICKET_REVOKED':
+        opt.content = LOCALE.SECURE_SHARE_REVOKED
+        opt.btnService = 'redirect-to-home'
+        break
 
       case 'WRONG_TICKET':
       case 'TICKET_INVALID':

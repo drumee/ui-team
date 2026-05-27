@@ -1,0 +1,134 @@
+.window_secure_share {
+  &__main {
+    display: flex;
+    flex-direction: column;
+    padding: 20px;
+    gap: 12px;
+    min-width: 420px;
+  }
+
+  &__title {
+    font-size: 16px;
+    font-weight: 600;
+    margin-bottom: 8px;
+  }
+
+  &__form {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  &__row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+
+    &.expiry {
+      flex-wrap: wrap;
+    }
+
+    &.buttons {
+      justify-content: flex-end;
+      margin-top: 4px;
+    }
+
+    &.link-result {
+      &[data-mode='closed'] { display: none; }
+    }
+  }
+
+  &__label {
+    min-width: 140px;
+    font-size: 13px;
+    color: #666;
+  }
+
+  &__input {
+    flex: 1;
+  }
+
+  &__expiry-sep {
+    font-size: 12px;
+    color: #888;
+  }
+
+  &__button {
+    &.submit {
+      cursor: pointer;
+      padding: 6px 16px;
+      border-radius: 4px;
+      background: var(--color-primary, #5b5ef4);
+      color: #fff;
+      font-size: 13px;
+    }
+  }
+
+  &__link-text {
+    flex: 1;
+    font-size: 12px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    padding: 4px 8px;
+    background: #f5f5f5;
+    border-radius: 4px;
+  }
+
+  &__copy-button {
+    cursor: pointer;
+    padding: 4px 12px;
+    border-radius: 4px;
+    background: var(--color-primary, #5b5ef4);
+    color: #fff;
+    font-size: 12px;
+  }
+
+  &__list-section {
+    margin-top: 16px;
+    border-top: 1px solid #eee;
+    padding-top: 12px;
+  }
+
+  &__share-rows {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  &__share-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 0;
+  }
+
+  &__share-email {
+    flex: 1;
+    font-size: 13px;
+  }
+
+  &__share-status {
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 10px;
+
+    &.active { background: #e8f5e9; color: #2e7d32; }
+    &.inactive { background: #fafafa; color: #999; }
+  }
+
+  &__share-revoke {
+    cursor: pointer;
+    font-size: 11px;
+    color: #d32f2f;
+    padding: 2px 8px;
+    border: 1px solid #d32f2f;
+    border-radius: 4px;
+  }
+
+  &__share-empty {
+    font-size: 12px;
+    color: #aaa;
+    font-style: italic;
+  }
+}
