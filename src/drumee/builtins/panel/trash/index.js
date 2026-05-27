@@ -28,25 +28,8 @@ class __panel_trash extends mfsInteract {
    */
   _onOutsideClick(e, source) {
     const svc = source && source.mget && source.mget(_a.service);
-    const isDetached = !this.el || !document.body.contains(this.el);
-    const tag = `[PANEL_DBG:trash cid=${this.cid}]`;
-    if (typeof svc === "string" && svc.startsWith("toggle-")) {
-      console.log(`${tag} BAIL toggle-* svc=${svc} detached=${isDetached}`);
-      return;
-    }
-    const anim = this.el && this.el.dataset && this.el.dataset.anim;
-    const inside = this.el && e && e.target && this.el.contains(e.target);
-    const target = e && e.target;
-    const targetDesc = target && target.tagName
-      ? `${target.tagName.toLowerCase()}.${(target.className || "").toString().split(" ").slice(0, 2).join(".")}`
-      : String(target);
-    console.log(
-      `${tag} FIRE anim=${anim} inside=${inside} detached=${isDetached} ` +
-      `svc=${svc} sourceCid=${source && source.cid} target=${targetDesc}`
-    );
-    if (anim === "in" && !inside) {
-      console.log(`${tag} >>> calling Desk.closeAllPanels() <<<`);
-      console.trace(`${tag} close trace`);
+    if (typeof svc === "string" && svc.startsWith("toggle-")) return;
+    if (this.el.dataset.anim === "in" && !this.el.contains(e.target)) {
       Desk.closeAllPanels();
     }
   }
@@ -55,7 +38,6 @@ class __panel_trash extends mfsInteract {
    * 
    */
   onDestroy() {
-    console.log(`[PANEL_DBG:trash cid=${this.cid}] onDestroy — unregistering RADIO_CLICK`);
     RADIO_CLICK.off(_e.click, this._onOutsideClick);
   }
 
@@ -110,7 +92,6 @@ class __panel_trash extends mfsInteract {
     requestAnimationFrame(() => {
       if (this.el) this.el.dataset.anim = "in";
     });
-    console.log(`[PANEL_DBG:trash cid=${this.cid}] onDomRefresh — registering RADIO_CLICK`);
     RADIO_CLICK.on(_e.click, this._onOutsideClick)
 
   }
