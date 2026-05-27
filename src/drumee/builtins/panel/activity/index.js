@@ -48,9 +48,12 @@ class __panel_activity extends LetcBox {
    * 
    * @param {*} e 
    */
-  _onOutsideClick(e) {
-    if (this.activityState && !this.el.contains(e.target)) {
-      Desk.closeAllPanels()
+  _onOutsideClick(e, source) {
+    const svc = source && source.mget && source.mget(_a.service);
+    if (typeof svc === "string" && svc.startsWith("toggle-")) return;
+    const open = this.activityState && this.mget(_a.state);
+    if (open && !this.el.contains(e.target)) {
+      Desk.closeAllPanels();
     }
   }
 
@@ -58,7 +61,7 @@ class __panel_activity extends LetcBox {
    * 
    */
   onDestroy() {
-    RADIO_BROADCAST.off(_e.click, this._onOutsideClick);
+    RADIO_CLICK.off(_e.click, this._onOutsideClick);
     RADIO_BROADCAST.off('activity:request', this.updateSubactivityCount);
     RADIO_BROADCAST.off('activity:notify', this._notify);
     document.removeEventListener("visibilitychange", this.onVisibilityChange);

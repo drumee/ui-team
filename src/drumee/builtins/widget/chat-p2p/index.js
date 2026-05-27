@@ -24,16 +24,18 @@ class __chat_p2p extends LetcBox {
    * 
    * @param {*} e 
    */
-  _onOutsideClick(e) {
+  _onOutsideClick(e, source) {
+    const svc = source && source.mget && source.mget(_a.service);
+    if (typeof svc === "string" && svc.startsWith("toggle-")) return;
     if (this.el.dataset.anim === "in" && !this.el.contains(e.target)) {
-      Desk.closeAllPanels()
+      Desk.closeAllPanels();
     }
   }
 
   onBeforeDestroy() {
     this.unbindEvent(_a.live);
     document.removeEventListener("mousedown", this._onDocClick);
-    RADIO_BROADCAST.off(_e.click, this._onOutsideClick);
+    RADIO_CLICK.off(_e.click, this._onOutsideClick);
 
   }
 
