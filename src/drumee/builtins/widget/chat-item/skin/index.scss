@@ -218,6 +218,13 @@
   // always visible (never covered/clipped by the message box or neighbours).
   // Aligned to the bubble's side via the message-content's align-items.
   &__readers {
+    // Absolutely positioned just below the conversation bubble (anchored to the
+    // message line, which is position:relative and sized to the bubble) so it
+    // adds no vertical space. Left-aligned for incoming, right for own.
+    position: absolute;
+    top: calc(100% + 2px);
+    left: 0;
+    z-index: 1;
     display: flex;
     flex-direction: row;
     align-items: center;
@@ -225,6 +232,8 @@
     margin-top: 4px;
 
     &.me {
+      left: auto;
+      right: 0;
       justify-content: flex-end;
     }
 
