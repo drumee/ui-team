@@ -173,19 +173,19 @@ class __dmz_sharebox extends LetcBox {
    *
    */
   verifyEmail() {
-    this.validateData();
-    if (this.formStatus == _a.error) {
-      this._emailInput.showError();
-      const msg = this._emailInput.reason;
-      return this.renderErrorMessage(msg);
+    const email = this._emailInput ? (this._emailInput.getData().value || '').trim() : '';
+    if (!email) {
+      return this.renderErrorMessage(LOCALE.SECURE_SHARE_ENTER_EMAIL);
+    }
+    if (!Validator.email(email)) {
+      return this.renderErrorMessage(LOCALE.INVALID_EMAIL);
     }
 
     const hub_id = Visitor.parseLocation().keysel || '';
-    const inputData = this._emailInput.getData();
     const opt = {
       token  : this.mget(_a.token),
       hub_id,
-      email  : inputData.value
+      email,
     };
 
     this.postService(SERVICE.dmz.login, opt).then((data) => {
@@ -307,20 +307,17 @@ class __dmz_sharebox extends LetcBox {
    *
   */
   verifyPassword() {
-    this.validateData();
-    if (this.formStatus == _a.error) {
-      this._input.showError()
-      const msg = this._input.reason
-      return this.renderErrorMessage(msg)
+    const password = this._input ? (this._input.getData().value || '').trim() : '';
+    if (!password) {
+      return this.renderErrorMessage(LOCALE.DMZ_PASSWORD_TO_CONTINUE);
     }
 
     let hub_id = Visitor.parseLocation().keysel || ""
 
-    const inputData = this._input.getData();
     let opt = {
       token: this.mget(_a.token),
       hub_id,
-      password: inputData.value
+      password,
     }
     this.postService(SERVICE.dmz.login, opt).then((data) => {
       if (data && data.is_verified) {
