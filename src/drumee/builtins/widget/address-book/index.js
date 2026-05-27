@@ -77,9 +77,9 @@ class __address_book extends LetcBox {
  * 
  * @param {*} e 
  */
-  _onOutsideClick(e) {
-    this.debug("AAA:%443", this.el.dataset.anim, this);
-
+  _onOutsideClick(e, source) {
+    const svc = source && source.mget && source.mget(_a.service);
+    if (typeof svc === "string" && svc.startsWith("toggle-")) return;
     if (this.el.dataset.anim === "in" && !this.el.contains(e.target)) {
       Desk.closeAllPanels()
     }
