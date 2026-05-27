@@ -86,6 +86,7 @@ class __widget_chat extends LetcBox {
    */
   onBeforeDestroy() {
     this.unbindEvent(_a.live);
+    clearTimeout(this._folderContentSyncTimer);
     if (this.attachmentList) {
       this.attachmentList.off("uploaded", this.showSend);
     }
@@ -1131,6 +1132,69 @@ class __widget_chat extends LetcBox {
     return [];
   }
 
+  _messageData(data = {}) {
+    if (_.isArray(data)) return data[0] || {};
+    return data || {};
+  }
+
+  _attachmentIds(data = {}, fallback = {}) {
+    const messageData = this._messageData(data);
+    const dataAttachment = this.parseAttachmentField(messageData.attachment);
+    const fallbackAttachment = this.parseAttachmentField(fallback.attachment);
+    const attachment = _.isEmpty(dataAttachment) ? fallbackAttachment : dataAttachment;
+    return attachment.map((item) => {
+      if (item && typeof item === 'object') return item.nid || item.id;
+      return item;
+    }).filter((id) => id != null && id !== '');
+  }
+
+  _hasAttachmentPayload(data = {}, fallback = {}) {
+    const messageData = this._messageData(data);
+    return messageData.is_attachment || !_.isEmpty(this._attachmentIds(messageData, fallback));
+  }
+
+  _matchesScopedFolder(data = {}) {
+    const nid = this.getScopedNid();
+    if (!nid) return false;
+    const messageData = this._messageData(data);
+    const messageNid = messageData.nid || messageData.parent_id || messageData.pid;
+    return `${messageNid}` === `${nid}`;
+  }
+
+  _syncScopedFolderContent(data = {}, fallback = {}) {
+    if (this.mget('scope') !== _a.folder) return;
+    const messageData = this._messageData(data);
+    const attachmentIds = this._attachmentIds(messageData, fallback);
+    const payload = {
+      ...messageData,
+      attachment: attachmentIds,
+      nid: messageData.nid || fallback.nid,
+      is_attachment: messageData.is_attachment || !_.isEmpty(attachmentIds),
+    };
+    if (!this._hasAttachmentPayload(payload, fallback)) return;
+    if (!this._matchesScopedFolder(payload)) return;
+
+    const folderWindow = this.getParentByKind && this.getParentByKind('window_folder');
+    if (!folderWindow || (folderWindow.isDestroyed && folderWindow.isDestroyed())) return;
+    const scopedNid = `${this.getScopedNid()}`;
+    if (folderWindow.mget && `${folderWindow.mget(_a.nid)}` !== scopedNid) return;
+
+    clearTimeout(this._folderContentSyncTimer);
+    this._folderContentSyncTimer = setTimeout(() => {
+      if (folderWindow.isDestroyed && folderWindow.isDestroyed()) return;
+      if (this.getScopedNid && `${this.getScopedNid()}` !== scopedNid) return;
+      if (folderWindow.mget && `${folderWindow.mget(_a.nid)}` !== scopedNid) return;
+      if (!_.isEmpty(attachmentIds) && _.isFunction(folderWindow.getItemsByAttr)) {
+        const allRendered = attachmentIds.every((id) => {
+          return !_.isEmpty(folderWindow.getItemsByAttr(_a.nid, id))
+            || !_.isEmpty(folderWindow.getItemsByAttr(_a.nid, `${id}`));
+        });
+        if (allRendered) return;
+      }
+      if (_.isFunction(folderWindow.loadContent)) folderWindow.loadContent();
+    }, 700);
+  }
+
   /**
    * 
    * @param {*} mkdir 
@@ -1358,6 +1422,7 @@ class __widget_chat extends LetcBox {
         this.showError(LOCALE.MESSAGE_NOT_SENT_RETRY);
         return;
       }
+      this._syncScopedFolderContent(data, api);
       this.handleReceivedMsg(data);
     }).catch(error => {
       this.queue.unshift(api);
@@ -1612,6 +1677,9 @@ class __widget_chat extends LetcBox {
         // P2P message payload now carries peer_id (replaces entity_id).
         var privateMach = isPrivate && (this.peerId === data.peer_id);
         var ticketMach = (area === _a.ticket) && (data.ticket_id === this.mget('ticket_id'));
+        if (hubMatch) {
+          this._syncScopedFolderContent(data);
+        }
         if ((hubMatch && inScope) || privateMach || ticketMach) {
           this.handleReceivedMsg(data);
         }

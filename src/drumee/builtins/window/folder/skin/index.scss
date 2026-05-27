@@ -970,10 +970,13 @@
     align-items: center;
     justify-content: space-between;
     gap: 12px;
+    position: relative;
+    z-index: 1200;
     min-height: 46px;
     padding: 12px;
     border-radius: 4px;
     background: #ffffff;
+    overflow: visible;
   }
 
   &__settings-action-invite-entry {
@@ -1036,6 +1039,10 @@
   &__settings-action-member-actions,
   &__settings-action-members-section {
     overflow: visible;
+  }
+
+  &__settings-action-member-row {
+    position: relative;
   }
 
   &__settings-action-role-label {
