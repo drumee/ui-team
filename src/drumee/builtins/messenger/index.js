@@ -239,6 +239,10 @@ class __lib_messenger extends LetcBox {
         } else {
           this._closeMentionPopup();
           this.hideSend();
+          // Propagate the emptied state so the host clears its saved draft and
+          // stops the typing indicator. Without this, the draft keeps the
+          // previous value and reappears when the conversation is reopened.
+          this.triggerHandlers({ ...args, text: '' });
         }
         return;
 

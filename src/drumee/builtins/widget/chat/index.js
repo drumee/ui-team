@@ -205,8 +205,18 @@ class __widget_chat extends LetcBox {
    * @param {*} args 
    */
   onInputChange(args) {
-    this.saveMessage(args.text);
-    this._handleTypingInput(args && args.text);
+    const text = args && args.text;
+    // Persist a draft only while the input holds an unsent value. When the
+    // input is emptied, drop the message draft (keeping any pending
+    // attachments, since saveMessage only touches the message field) so stale
+    // text is never restored on reopen or sent on Enter. A successful send
+    // clears the draft separately via clearStorage().
+    if (text && String(text).trim()) {
+      this.saveMessage(text);
+    } else {
+      this.saveMessage('');
+    }
+    this._handleTypingInput(text);
   }
 
   /**
@@ -1165,12 +1175,16 @@ class __widget_chat extends LetcBox {
     // Sending ends the typing session.
     this._stopTyping();
     let message = '';
-    // Get message with encoded mentions if available
+    // The live messenger content is the source of truth. When the user clears
+    // the input it returns '', and we must NOT fall back to a stale
+    // sessionStorage draft: the messenger does not emit an input-change event
+    // when emptied, so the draft still holds the previously typed value, which
+    // would otherwise get sent on Enter. Only fall back when no messenger
+    // exists (e.g. programmatic sends).
     const messenger = this.findPart(_a.message);
     if (messenger && _.isFunction(messenger.getMessageWithMentions)) {
       message = messenger.getMessageWithMentions();
-    }
-    if (!message) {
+    } else {
       message = args.text || this.getStorage().message;
     }
     const list = this.attachmentList;
