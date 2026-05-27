@@ -55,7 +55,7 @@ class __address_book extends LetcBox {
 
   onBeforeDestroy() {
     this.unbindEvent(_a.live);
-    RADIO_BROADCAST.off(_e.click, this._onOutsideClick);
+    RADIO_CLICK.off(_e.click, this._onOutsideClick);
 
   }
 

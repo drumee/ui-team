@@ -35,7 +35,7 @@ class __chat_p2p extends LetcBox {
   onBeforeDestroy() {
     this.unbindEvent(_a.live);
     document.removeEventListener("mousedown", this._onDocClick);
-    RADIO_BROADCAST.off(_e.click, this._onOutsideClick);
+    RADIO_CLICK.off(_e.click, this._onOutsideClick);
 
   }
 

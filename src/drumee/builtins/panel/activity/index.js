@@ -60,7 +60,7 @@ class __panel_activity extends LetcBox {
    * 
    */
   onDestroy() {
-    RADIO_BROADCAST.off(_e.click, this._onOutsideClick);
+    RADIO_CLICK.off(_e.click, this._onOutsideClick);
     RADIO_BROADCAST.off('activity:request', this.updateSubactivityCount);
     RADIO_BROADCAST.off('activity:notify', this._notify);
     document.removeEventListener("visibilitychange", this.onVisibilityChange);

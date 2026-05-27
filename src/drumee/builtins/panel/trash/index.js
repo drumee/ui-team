@@ -38,7 +38,7 @@ class __panel_trash extends mfsInteract {
    * 
    */
   onDestroy() {
-    RADIO_BROADCAST.off(_e.click, this._onOutsideClick);
+    RADIO_CLICK.off(_e.click, this._onOutsideClick);
   }
 
   _refreshStorageUsed() {
