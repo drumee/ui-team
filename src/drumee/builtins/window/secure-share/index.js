@@ -145,7 +145,7 @@ class __window_secure_share extends mfsInteract {
   _copyLink(cmd) {
     const link = cmd.mget('link') || this.mget('link');
     if (!link) return;
-    copyToClipboard(link).then(() => Wm.acknowledge());
+    copyToClipboard(link);
   }
 
 }
