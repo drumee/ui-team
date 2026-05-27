@@ -1,10 +1,30 @@
 
 const __skl_secure_share = function(_ui_) {
-  const pfx = `${_ui_.fig.family}`;
+  const pfx   = _ui_.fig.family;
+  const group = _ui_.fig.group;
 
-  const title = Skeletons.Note({
-    className : `${pfx}__title`,
-    content   : `${LOCALE.SECURE_SHARE} — ${_ui_.mget(_a.filename) || ''}`
+  const topbar = Skeletons.Box.X({
+    className : `${group}-topbar__container`,
+    sys_pn    : 'topbar',
+    service   : _e.raise,
+    kids      : [
+      require('window/skeleton/topbar/control')(_ui_, 'c'),
+      Skeletons.Box.X({
+        className : `${pfx}__topbar-title forbiden`,
+        kids      : [
+          Skeletons.Note({
+            sys_pn    : 'window-label',
+            className : _a.name,
+            content   : `${LOCALE.SECURE_SHARE} — ${_ui_.mget(_a.filename) || ''}`
+          })
+        ]
+      })
+    ]
+  });
+
+  const header = Skeletons.Box.X({
+    className : `${pfx}__header ${group}__header`,
+    kids      : [topbar]
   });
 
   const emailRow = Skeletons.Box.X({
@@ -70,14 +90,15 @@ const __skl_secure_share = function(_ui_) {
 
   const createButton = Skeletons.Box.X({
     className : `${pfx}__row buttons`,
-    sys_pn    : 'button-wrapper',
-    dataset   : { mode: _a.open },
     kids      : [
-      Skeletons.Note({
-        className : `${pfx}__button submit`,
-        content   : LOCALE.SECURE_SHARE_CREATE,
+      Skeletons.Box.X({
+        className : `${pfx}__button submit button`,
         service   : 'create-secure-share',
-        uiHandler : _ui_
+        uiHandler : _ui_,
+        kidsOpt   : { active: 0 },
+        kids      : [
+          Skeletons.Note({ content: LOCALE.SECURE_SHARE_CREATE })
+        ]
       })
     ]
   });
@@ -88,29 +109,27 @@ const __skl_secure_share = function(_ui_) {
     dataset   : { mode: _a.closed }
   });
 
+  const body = Skeletons.Box.Y({
+    className : `${pfx}__body`,
+    kids      : [ emailRow, domainRow, expiryRow, createButton, linkResult ]
+  });
+
   const shareList = Skeletons.Box.Y({
     className : `${pfx}__share-list`,
     sys_pn    : 'share-list'
   });
 
-  const a = Skeletons.Box.Y({
-    className : `${pfx}__main`,
-    debug     : __filename,
-    kids      : [
-      Preset.Button.Close(_ui_),
-      title,
-      Skeletons.Box.Y({
-        className : `${pfx}__form`,
-        kids      : [ emailRow, domainRow, expiryRow, createButton, linkResult ]
-      }),
-      Skeletons.Box.Y({
-        className : `${pfx}__list-section`,
-        kids      : [ shareList ]
-      })
-    ]
+  const listSection = Skeletons.Box.Y({
+    className : `${pfx}__list-section`,
+    kids      : [ shareList ]
   });
 
-  return a;
+  return Skeletons.Box.Y({
+    className : `${pfx}__main ${group}__main drive-popup`,
+    radio     : _a.parent,
+    debug     : __filename,
+    kids      : [ header, body, listSection ]
+  });
 };
 
 module.exports = __skl_secure_share;
