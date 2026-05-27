@@ -236,7 +236,8 @@ class __media_core extends DrumeeMFS {
 
     if (this.canOrganize() || this.isMediaOwner()) {
       fileItems = [_a.rename, _a.download, _a.separator, _a.copy, _a.duplicate, _a.separator, _a.info];
-      if (this.canShare()) fileItems.push(_a.share, 'secureShare');
+      if (this.canShare()) fileItems.push(_a.share);
+      fileItems.push('secureShare');
       if (fileType == _a.image) {
         fileItems.push(_a.separator, 'background', _a.rotateLeft, _a.rotateRight);
       }

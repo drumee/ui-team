@@ -6,16 +6,25 @@ class __window_secure_share extends mfsInteract {
 
   static initClass() {
     this.prototype.figName = 'window_secure_share';
+    this.prototype.size = { width: 480, height: 560, minWidth: 420, minHeight: 400 };
   }
 
   initialize(opt) {
     require('./skin');
     super.initialize(opt);
+    if (this.style.get(_a.left) == null) {
+      this.style.set({ left: (window.innerWidth / 2) - (this.size.width / 2) });
+    }
+    if (this.style.get(_a.top) == null) {
+      this.style.set({ top: (window.innerHeight / 2) - (this.size.height / 2) });
+    }
+    this.style.set({ width: this.size.width, height: this.size.height });
     this.declareHandlers();
   }
 
   onDomRefresh() {
     this.feed(require('./skeleton/main')(this));
+    this.raise();
   }
 
   onPartReady(child, pn) {
