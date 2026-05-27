@@ -299,12 +299,11 @@ class __window_manager extends push {
     if (
       this._curWorkspace &&
       this._curWorkspace.hub_id == hub_id &&
-      !this._curWorkspace.widget?.isDestroyed() &&
       this._curWorkspace.nid == nid
     ) {
       return;
     }
-
+    Desk.closeAllPanels()
     // Close any settings/admin/apps panel that would occlude the workspace
     // grid. Sidebar workspace items dispatch directly to Wm.loadWorkspace
     // (not through desk.onUiEvent), so cleanup must live here too. Only
@@ -343,7 +342,6 @@ class __window_manager extends push {
         if (_.isEmpty(data)) return;
         cur.refreshBreadcrumbsUI(data);
       })
-      this._curWorkspace.widget = cur;
     };
 
     // nid often arrives later via the media.attributes fetch below. The
@@ -407,6 +405,9 @@ class __window_manager extends push {
     this._curWorkspace = { hub_id, nid, area };
     this.mset({ hub_id, nid, nodeId: nid, area, ownpath, home_id });
 
+    // Clicking/raising a workspace marks its chat as read.
+    RADIO_BROADCAST.trigger("chat:read", { hub_id, nid, area });
+
     if (!sameContext) {
       RADIO_BROADCAST.trigger("workspace:focus", { hub_id, nid, area });
       this.updateBreadcrumb(
@@ -448,6 +449,8 @@ class __window_manager extends push {
       nid;
     this._curWorkspace = { hub_id, nid, area: data.area };
     this.mset({ hub_id, nid, nodeId: nid, area: data.area, ownpath, home_id });
+    // Clicking into a folder marks the workspace chat as read.
+    RADIO_BROADCAST.trigger("chat:read", { hub_id, nid, area: data.area });
     this.ensurePart(_a.list).then((l) => {
       l.setApi({ service: SERVICE.media.show_node_by, hub_id, nid });
       if (l.collection) l.collection.reset();
@@ -1459,6 +1462,8 @@ class __window_manager extends push {
   async onUiEvent(cmd, args = {}) {
     const service =
       args.service || cmd.service || cmd.status || cmd.mget(_a.service);
+    this.debug("AAAA:1460", service)
+
     switch (service) {
       case "open-manager":
         return this.openManager(cmd, args);
@@ -1658,6 +1663,11 @@ class __window_manager extends push {
           "search",
           "Backspace",
           _e.update,
+          // `end:of:data` is emitted by every list when its data load finishes.
+          // It bubbles all the way up to the window manager; without this guard,
+          // the default branch's `unselect(1)` collapses every open window —
+          // visible to the user as "clicking a chat closes the conversation."
+          _e.eod,
         ];
         if (ignoredServices.includes(service)) {
           return;

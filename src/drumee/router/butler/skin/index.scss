@@ -160,11 +160,12 @@
 
   &__reconnect {
     &.main {
+      position: relative;
       width: 100%;
-      max-width: 600px;
-      min-width: 450px;
-      background-color: white;
-      border-radius: 24px;
+      max-width: 520px;
+      min-width: 320px;
+      background-color: #f2f2f7;
+      border-radius: 12px;
       overflow: hidden;
     }
 
@@ -172,26 +173,7 @@
       position: absolute;
       top: 20px;
       right: 20px;
-    }
-
-    &.header {
-      height: 80px;
-      padding: 0 40px;
-      background-color: var(--neutral-100);
-      justify-items: center;
-      justify-content: center;
-      align-items: center;
-      align-content: center;
-      display: flex;
-    }
-
-    &.title {
-      @include drumee.typo(
-        $color: var(--default-text-error),
-        $size: 20px,
-        $line: 28px,
-        $weight: 300
-      );
+      z-index: 1;
     }
   }
 

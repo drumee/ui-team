@@ -1,7 +1,5 @@
 @mixin desk-close-btn {
   &--close {
-    background-color: var(--neutral-200);
-    border-radius: 50%;
     position: absolute;
     top: 0;
     right: 0;

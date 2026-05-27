@@ -1,9 +1,3 @@
-// ==================================================================== *
-//   Copyright Xialia.com  2011-2021
-//   FILE : /src/drumee/builtins/media/row/template/filename.coffee
-//   TYPE : Skeleton
-// ==================================================================== *
-
 const __media_filename = function(m) {
   let edit;
   const {

@@ -23,14 +23,20 @@ function roleFromPrivilege(priv) {
 }
 
 // Map a hub.get_members_by_type row to the member-row view shape.
+// The stored procedure personalizes firstname/lastname/fullname/surname from
+// the caller's contact DB — if the caller has the row's user as a contact
+// without a name set, fullname comes back as " " (single space). JS truthiness
+// would short-circuit on that and skip the email fallback, so trim each
+// candidate before picking.
 function mapFolderMember(row) {
-  const name = (
-    row.fullname ||
-    [row.firstname, row.lastname].filter(Boolean).join(" ") ||
-    row.surname ||
-    row.email ||
-    "—"
-  ).trim();
+  const pick = (...vals) =>
+    vals.map((v) => (v == null ? "" : String(v).trim())).find(Boolean) || "—";
+  const name = pick(
+    row.fullname,
+    [row.firstname, row.lastname].filter(Boolean).join(" "),
+    row.surname,
+    row.email,
+  );
   const isSelf = row.id === Visitor.id || row.entity_id === Visitor.id;
   const parts = name.split(/\s+/).filter(Boolean);
   const initials =
@@ -176,6 +182,7 @@ function memberRows(list, ui, pfx, isAdmin) {
     return Skeletons.Box.X({
       className: `${pfx}-member-row`,
       dataset: { index, member_id: member.id },
+      styleOpt: { zIndex: 1000 - index },
       kids: [
         Skeletons.Box.X({
           className: `${pfx}-member-info`,

@@ -1,11 +1,16 @@
-@forward './typo';
-@forward './vendor';
+@forward "./typo";
+@forward "./vendor";
 
 @mixin glass-overlay {
   backdrop-filter: blur(30px);
   -webkit-backdrop-filter: blur(30px);
   overflow: hidden;
   flex-shrink: 0;
+  background-color: rgba(255, 255, 255, 0.55);
+
+  html[data-theme="dark"] & {
+    background-color: rgba(11, 10, 33, 0.55);
+  }
 
   &::before {
     content: "";
@@ -20,5 +25,3 @@
     pointer-events: none;
   }
 }
-
-

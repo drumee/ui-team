@@ -1,4 +1,5 @@
 const EDITABLE = [
+  "doc",
   "docx",
   "docm",
   "dotx",
@@ -85,6 +86,7 @@ module.exports = function (ui) {
   }
 
   print = item(ui, "print", "print", LOCALE.PRINT);
+  let fullscreen = item(ui, "fullscreen", "player-fullscreen", LOCALE.FULLSCREEN);
 
   const separator = Skeletons.Box.X({
     className: `${cnWindowButtonDropdownMenu}__separator`,
@@ -95,7 +97,7 @@ module.exports = function (ui) {
     kids: [
       Skeletons.Box.Y({
         className: `${cnWindowButtonDropdownMenu}__items`,
-        kids: [download, downloadPDF, separator, edit, print],
+        kids: [download, downloadPDF, separator, edit, print, fullscreen],
       }),
     ],
   });

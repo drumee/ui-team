@@ -813,6 +813,9 @@ export default function apps_main_skeleton(ui) {
         ? require("./permission-detail").default(ui)
         : require("./permission").default(ui);
       break;
+    case "security":
+      content = require("./security").default(ui);
+      break;
     case "audit":
       content = require("./audit").default(ui);
       break;
@@ -856,6 +859,10 @@ export default function apps_main_skeleton(ui) {
   if (ui._editingFolder) {
     const fpermOverlay = require("./folder-permission").default(ui);
     if (fpermOverlay) root.push(fpermOverlay);
+  }
+  if (ui._editingHub) {
+    const acOverlay = require("./access-control").default(ui);
+    if (acOverlay) root.push(acOverlay);
   }
   root.push(comingSoonOverlay(ui));
   return root;

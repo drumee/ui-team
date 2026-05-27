@@ -30,7 +30,6 @@ class __address_book extends LetcBox {
     this._sentInvitations = [];
     this._tags = [];
     this._selectedTagId = null;
-    this._serverSearchHits = null;
     this._selectedKey = null;
     this._inviteDraft = { email: "", message: "" };
     this._inviteError = null;
@@ -211,10 +210,6 @@ class __address_book extends LetcBox {
       case "delete-tag":
         return this._deleteTag(trigger);
 
-      case "search-input":
-        this._search = String(trigger.mget("value") || "").trim();
-        return this._runSearch();
-
       case "close-panel":
         return Desk.togglePanel("address_book", "chat-panel");
 
@@ -325,7 +320,6 @@ class __address_book extends LetcBox {
     this._tab = tab;
     this._selectedKey = null;
     this._editing = false;
-    this._serverSearchHits = null;
     // `my_contact_show_next` honours 'active', 'archived', or 'sent'. The All
     // and Blocked tabs share the 'active' fetch (Blocked filters client-side
     // on `is_blocked`). Pending combines received invitations (notification
@@ -340,30 +334,6 @@ class __address_book extends LetcBox {
     if (tasks.length) await Promise.all(tasks);
     this._refreshList();
     this._refreshDetail();
-  }
-
-  async _runSearch() {
-    const term = this._search;
-    if (!term) {
-      this._serverSearchHits = null;
-      return this._refreshList();
-    }
-    if (!SERVICE.contact || !SERVICE.contact.search_my_contacts) {
-      // Server search not exposed → fall back to local filter via _refreshList.
-      return this._refreshList();
-    }
-    try {
-      const rows = await this.postService({
-        service: SERVICE.contact.search_my_contacts,
-        name: term,
-        page: 1,
-        hub_id: Visitor.id,
-      });
-      this._serverSearchHits = Array.isArray(rows) ? rows : [];
-    } catch (err) {
-      this._serverSearchHits = null;
-    }
-    this._refreshList();
   }
 
   // ─── Mutations ──────────────────────────────────────────────────
@@ -1083,21 +1053,35 @@ class __address_book extends LetcBox {
       child.el.onchange = (e) => this._onImportFilePicked(e);
       return;
     }
+    if (pn === "ab-search") {
+      const bind = () => {
+        const input = child.el.querySelector("input");
+        if (!input) return;
+        const sync = () => {
+          const next = (input.value || "").trim();
+          if (next === this._search) return;
+          this._search = next;
+          this._refreshList();
+        };
+        input.addEventListener("input", sync);
+      };
+      if (child.waitElement) child.waitElement(child.el, bind);
+      else bind();
+      return;
+    }
     if (super.onPartReady) super.onPartReady(child, pn);
   }
 
   // ─── View accessors ─────────────────────────────────────────────
 
   _listForView() {
-    if (this._tab === "pending") {
-      return [...this._invitations, ...this._sentInvitations];
-    }
-    let list;
-    if (this._serverSearchHits) {
-      list = this._serverSearchHits;
-    } else if (this._search) {
+    let list = this._tab === "pending"
+      ? [...this._invitations, ...this._sentInvitations]
+      : this._contacts;
+
+    if (this._search) {
       const term = this._search.toLowerCase();
-      list = this._contacts.filter((c) => {
+      list = list.filter((c) => {
         const haystack = [
           c.firstname, c.lastname, c.surname, c.fullname,
           ...(Array.isArray(c.email) ? c.email.map((e) => e.email || e) : []),
@@ -1105,9 +1089,10 @@ class __address_book extends LetcBox {
         ].filter(Boolean).join(" ").toLowerCase();
         return haystack.includes(term);
       });
-    } else {
-      list = this._contacts;
     }
+
+    if (this._tab === "pending") return list;
+
     const isBlocked = (c) => c.is_blocked === 1 || c.status === "blocked";
     if (this._tab === "blocked") {
       list = list.filter(isBlocked);

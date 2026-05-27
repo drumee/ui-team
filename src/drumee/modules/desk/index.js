@@ -861,6 +861,7 @@ class desk_module extends LetcBox {
     if (pointerDragged || !window.Wm) {
       return;
     }
+    this.debug("AAA:830", service)
     switch (service) {
       case _e.home:
         this.updateBreadcrumb({ event: _e.home });
@@ -921,7 +922,7 @@ class desk_module extends LetcBox {
         // Open-only — clicking Settings (sidebar) or the bottom Profile
         // item never closes the panel; the close icon inside Settings
         // handles closing.
-        return this.togglePanel("settings_main", "settings-main-slot", true);
+        return this.togglePanel("settings_main", "settings-main-slot");
 
       case "toggle-apps":
         RADIO_BROADCAST.trigger("breadcrumb:context", {
@@ -1010,12 +1011,10 @@ class desk_module extends LetcBox {
         // promise — loadWorkspace only updates list.setApi() and the
         // partition-prep visibility flip can bail if the list is still
         // covered by an Apps/Settings panel during restart.
+        this.closeAllPanels();
         Wm.loadWorkspace(cmd)
-        return this.closeAllPanels();
+        return
 
-      /** No need - use menu  widget */
-      // case "toggle-add-menu":
-      //   return this._toggleAddMenu();
 
       case "new-workspace":
         return Wm.onUiEvent(cmd, { ...args, service: "new-workspace" });
