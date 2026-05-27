@@ -58,6 +58,12 @@ class __widget_chat extends LetcBox {
     this.bindEvent(_a.live);
     this._newMsgCount = 0;
 
+    // Typing indicator state.
+    // _typers: author_id -> { name, timer } for remote users currently typing.
+    // _typingSentAt / _typingIdleTimer: throttle + idle-stop for the local user.
+    this._typers = new Map();
+    this._typingSentAt = 0;
+    this._typingIdleTimer = null;
   }
 
   /**
@@ -82,6 +88,14 @@ class __widget_chat extends LetcBox {
     this.unbindEvent(_a.live);
     if (this.attachmentList) {
       this.attachmentList.off("uploaded", this.showSend);
+    }
+    // Tell the peer(s) we stopped typing and clear all typing timers.
+    this._stopTyping();
+    if (this._typers) {
+      for (const t of this._typers.values()) {
+        if (t && t.timer) clearTimeout(t.timer);
+      }
+      this._typers.clear();
     }
   }
 
@@ -192,6 +206,150 @@ class __widget_chat extends LetcBox {
    */
   onInputChange(args) {
     this.saveMessage(args.text);
+    this._handleTypingInput(args && args.text);
+  }
+
+  /**
+   * Resolve the typing service + payload for the current conversation mode.
+   * Returns null when typing should not be signalled (no peer/hub, blocked
+   * peer, or the service is unavailable in this platform).
+   * @param {Number} state 1 = typing, 0 = stopped
+   */
+  _typingApi(state) {
+    const area = this.mget(_a.area) || this.mget(_a.type);
+    const isPrivate = area === _a.personal || area === _a.privateRoom;
+    if (isPrivate) {
+      if (!this.peerId) return null;
+      if (this.peer && (this.peer.is_blocked || this.peer.is_blocked_me)) return null;
+      return { service: 'chat.typing', hub_id: this.hubId, entity_id: this.peerId, state };
+    }
+    if (!this.hubId) return null;
+    return { service: 'channel.typing', hub_id: this.hubId, state };
+  }
+
+  /**
+   * Fire-and-forget the typing signal. Ephemeral — failures are non-critical.
+   * @param {Number} state 1 = typing, 0 = stopped
+   */
+  _sendTyping(state) {
+    const api = this._typingApi(state);
+    if (!api || !api.service) return;
+    try {
+      const p = this.postService(api);
+      if (p && _.isFunction(p.catch)) p.catch(() => { });
+    } catch (e) { /* noop — ephemeral signal */ }
+  }
+
+  /**
+   * Called on every keystroke. Sends a throttled typing signal (at most once
+   * per 3s) and (re)arms a 4s idle timer that sends the stop signal.
+   * @param {String} text current draft text
+   */
+  _handleTypingInput(text) {
+    if (_.isEmpty(text) || !String(text).trim()) {
+      this._stopTyping();
+      return;
+    }
+    const now = Date.now();
+    if (!this._typingSentAt || (now - this._typingSentAt) > 3000) {
+      this._typingSentAt = now;
+      this._sendTyping(1);
+    }
+    if (this._typingIdleTimer) clearTimeout(this._typingIdleTimer);
+    this._typingIdleTimer = setTimeout(() => this._stopTyping(), 4000);
+  }
+
+  /**
+   * Send the stop signal (once) and clear the idle timer.
+   */
+  _stopTyping() {
+    if (this._typingIdleTimer) {
+      clearTimeout(this._typingIdleTimer);
+      this._typingIdleTimer = null;
+    }
+    if (this._typingSentAt) {
+      this._typingSentAt = 0;
+      this._sendTyping(0);
+    }
+  }
+
+  /**
+   * Handle an incoming typing signal from a remote user.
+   * @param {Object} data { author_id, firstname, lastname, peer_id|hub_id, state }
+   */
+  _onTyping(data = {}) {
+    if (!data || _.isEmpty(data)) return;
+    const authorId = data.author_id;
+    if (!authorId || authorId === Visitor.id) return; // ignore self
+    const area = this.mget(_a.area) || this.mget(_a.type);
+    const isPrivate = area === _a.personal || area === _a.privateRoom;
+    if (isPrivate) {
+      if (this.peerId !== data.peer_id) return;
+    } else if (this.hubId !== data.hub_id) {
+      return;
+    }
+    if (Number(data.state) === 0) {
+      return this._removeTyper(authorId);
+    }
+    const name = this._typerName(data);
+    const existing = this._typers.get(authorId);
+    if (existing && existing.timer) clearTimeout(existing.timer);
+    // Auto-expire in case a stop signal is lost.
+    const timer = setTimeout(() => this._removeTyper(authorId), 6000);
+    this._typers.set(authorId, { name, timer });
+    this._renderTypers();
+  }
+
+  /**
+   * @returns {String} display name for a typing remote user
+   */
+  _typerName(data) {
+    const fn = (data.firstname || '').trim();
+    const ln = (data.lastname || '').trim();
+    const name = `${fn} ${ln}`.trim();
+    return name || data.fullname || data.name || LOCALE.SOMEONE || 'Someone';
+  }
+
+  /**
+   * Remove a user from the typing set and re-render.
+   * @param {String} authorId
+   */
+  _removeTyper(authorId) {
+    if (!this._typers) return;
+    const existing = this._typers.get(authorId);
+    if (!existing) return;
+    if (existing.timer) clearTimeout(existing.timer);
+    this._typers.delete(authorId);
+    this._renderTypers();
+  }
+
+  /**
+   * Render the typing indicator from the current _typers set.
+   */
+  _renderTypers() {
+    this.ensurePart('typing-indicator').then((part) => {
+      if (!part || !part.el) return;
+      const names = Array.from(this._typers.values()).map((t) => t.name);
+      if (!names.length) {
+        if (_.isFunction(part.setState)) part.setState(0);
+        else part.el.dataset.state = '0';
+        return;
+      }
+      let text;
+      if (names.length === 1) {
+        text = (LOCALE.IS_TYPING || '{0} is typing…').format(names[0]);
+      } else if (names.length === 2) {
+        text = (LOCALE.TWO_TYPING || '{0} and {1} are typing…').format(names[0], names[1]);
+      } else {
+        // 3+ typers: show at most the first two names, then "and more".
+        text = (LOCALE.MANY_TYPING || '{0}, {1} and more are typing…').format(names[0], names[1]);
+      }
+      this.ensurePart('typing-text').then((t) => {
+        if (t && t.el) t.el.textContent = text;
+      }).catch(() => { });
+      if (_.isFunction(part.setState)) part.setState(1);
+      else part.el.dataset.state = '1';
+    }).catch(() => { });
   }
 
   /**
@@ -1004,6 +1162,8 @@ class __widget_chat extends LetcBox {
    * @returns 
    */
   sendMessage(args = {}) {
+    // Sending ends the typing session.
+    this._stopTyping();
     let message = '';
     // Get message with encoded mentions if available
     const messenger = this.findPart(_a.message);
@@ -1441,6 +1601,8 @@ class __widget_chat extends LetcBox {
         if ((hubMatch && inScope) || privateMach || ticketMach) {
           this.handleReceivedMsg(data);
         }
+        // A received message means that author is no longer typing.
+        if (data && data.author_id) this._removeTyper(data.author_id);
 
         // If the widget id hiddent, don't acknowledge
         try {
@@ -1498,6 +1660,14 @@ class __widget_chat extends LetcBox {
       case SERVICE.channel.acknowledge:
       case SERVICE.chat.acknowledge:
         this.acknowledge(data);
+        break;
+
+      // Literal service strings (not SERVICE.* constants): the platform may not
+      // expose *.typing until env reload, which would make the constants
+      // `undefined` and wrongly match service-less messages.
+      case 'chat.typing':
+      case 'channel.typing':
+        this._onTyping(data);
         break;
 
     }

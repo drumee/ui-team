@@ -1,5 +1,19 @@
 @use "sass:meta";
 @use "mixins/drumee";
+
+@keyframes widget-chat-typing-bounce {
+  0%,
+  80%,
+  100% {
+    opacity: 0.3;
+    transform: translateY(0);
+  }
+  40% {
+    opacity: 1;
+    transform: translateY(-3px);
+  }
+}
+
 @include meta.load-css("attachment");
 @include meta.load-css("message-options");
 @include meta.load-css("reply-message");
@@ -119,7 +133,9 @@
     }
 
     &:hover {
-      svg, use, path {
+      svg,
+      use,
+      path {
         fill: var(--default-text-error, #ea4d44);
         stroke: var(--default-text-error, #ea4d44);
       }
@@ -185,6 +201,71 @@
     &::before {
       content: attr(data-count);
       margin-right: 12px;
+    }
+  }
+
+  // Ephemeral typing indicator, pinned to the bottom-left of the message
+  // viewport (__chat-content-inner is position:relative). Reads as the newest
+  // incoming bubble. Toggled via data-state.
+  &__typing-indicator {
+    position: absolute;
+    bottom: 6px;
+    left: 12px;
+    align-items: center;
+    gap: 8px;
+    max-width: calc(100% - 24px);
+    padding: 6px 12px;
+    border-radius: 12px;
+    background-color: var(--normal-bg-90);
+    border-radius: 1px solid var(--border-strong);
+    box-shadow: var(--shadow-top-tiny);
+    pointer-events: none;
+    z-index: 50000;
+
+    &[data-state="0"] {
+      display: none;
+    }
+
+    &[data-state="1"] {
+      display: flex;
+    }
+  }
+
+  &__typing-dots {
+    align-items: flex-end;
+    gap: 3px;
+    flex-shrink: 0;
+  }
+
+  &__typing-dot {
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background-color: var(--normal-fg-10);
+    animation: widget-chat-typing-bounce 1.2s infinite ease-in-out;
+
+    &:nth-child(2) {
+      animation-delay: 0.2s;
+    }
+
+    &:nth-child(3) {
+      animation-delay: 0.4s;
+    }
+  }
+
+  &__typing-text {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    @include drumee.typo(
+      $line: 14px,
+      $size: 12px,
+      $weight: 300,
+      $color: var(--normal-fg-10)
+    );
+
+    .note-content {
+      color: inherit;
     }
   }
 
@@ -418,7 +499,7 @@
 
   &__desk-picker.dialog__wrapper[data-state="open"] {
     background: var(--default-bg);
-    border-top: 2px solid var(--drumee-orange, #FA8540);
+    border-top: 2px solid var(--drumee-orange, #fa8540);
     box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.12);
     display: flex !important;
     flex-direction: column;
@@ -786,19 +867,37 @@
       .folder-shape {
         fill: var(--area-private);
 
-        &.personal { fill: var(--area-personal); }
-        &.private { fill: var(--area-private); }
+        &.personal {
+          fill: var(--area-personal);
+        }
+        &.private {
+          fill: var(--area-private);
+        }
         &.share,
-        &.dmz { fill: var(--area-share); }
-        &.public { fill: var(--area-public); }
-        &.inner-folder { fill: var(--area-private); }
+        &.dmz {
+          fill: var(--area-share);
+        }
+        &.public {
+          fill: var(--area-public);
+        }
+        &.inner-folder {
+          fill: var(--area-private);
+        }
       }
 
-      &.personal .folder-shape.inner-folder { fill: var(--area-personal); }
-      &.private .folder-shape.inner-folder { fill: var(--area-private); }
+      &.personal .folder-shape.inner-folder {
+        fill: var(--area-personal);
+      }
+      &.private .folder-shape.inner-folder {
+        fill: var(--area-private);
+      }
       &.share .folder-shape.inner-folder,
-      &.dmz .folder-shape.inner-folder { fill: var(--area-share); }
-      &.public .folder-shape.inner-folder { fill: var(--area-public); }
+      &.dmz .folder-shape.inner-folder {
+        fill: var(--area-share);
+      }
+      &.public .folder-shape.inner-folder {
+        fill: var(--area-public);
+      }
     }
 
     .mention-item__avatar {
