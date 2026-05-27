@@ -1164,3 +1164,9 @@ html[data-theme="dark"] {
     }
   }
 }
+
+.lib-messenger__wrapper-popup.dialog__wrapper[data-state="open"] {
+  box-shadow: var(--drumee-shadow-box);
+  min-height: 180px;
+  width: 280px;
+}
