@@ -687,19 +687,21 @@ class ___widget_chatItem extends LetcBox {
    * they have seen THIS message (uid in _seen_) but NOT the next (newer) one.
    * Since _seen_ accumulates downward, that pins each reader to their cursor.
    *
-   * Excludes only the current viewer (you don't see your own seen-marker, as in
-   * Messenger). The message author IS shown: their avatar sits on the most
-   * recent message they have seen — e.g. "Hello" (sent/seen by user1) shows
-   * user1 when user1 hasn't read the newer "Halo".
+   * Excludes the current viewer (you don't see your own seen-marker, as in
+   * Messenger) AND the message's own author (the sender trivially "saw" their
+   * own message — showing their avatar below it is wrong, and on a teammate's
+   * view the author = you would otherwise appear under your own sent message).
+   * Other readers still show at their last-read message.
    * @returns {String[]}
    */
   _readerUids() {
     const seen = this._metadataObject()._seen_ || {};
-    const me = Visitor.id;
+    const me = `${Visitor.id}`;
+    const author = `${this.mget(_a.author_id)}`;
     const next = this.nextRow();
     const nextSeen = next ? this._seenOf(next) : {};
     return Object.keys(seen).filter((uid) =>
-      uid && uid !== me && nextSeen[uid] == null
+      uid && `${uid}` !== me && `${uid}` !== author && nextSeen[uid] == null
     );
   }
 

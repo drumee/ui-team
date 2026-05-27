@@ -42,11 +42,10 @@ module.exports = function (ui) {
   // Time (footer) + bubble share one vertically-centred row. Incoming: time
   // left of the bubble; own: time right (the row is reversed in CSS). The hover
   // action bar floats on the opposite, outer side.
-  // readers is placed INSIDE the line so it can be absolutely positioned below
-  // the bubble (the line is position:relative and sized to the conversation
-  // content).
-  const line = `<div class="${m.fig}__message-line ${m.author}">${body}${footer}${readers}</div>`;
-  let content = `<div id="content-${m.widgetId}" class="${m.fig}__message-content ${m.author}">${usernameHtml}${line}</div>`;
+  const line = `<div class="${m.fig}__message-line ${m.author}">${body}${footer}</div>`;
+  // readers sit in flow below the line so they're always visible (never covered
+  // or clipped by the message box / neighbouring messages).
+  let content = `<div id="content-${m.widgetId}" class="${m.fig}__message-content ${m.author}">${usernameHtml}${line}${readers}</div>`;
   html = `${avatar}${content}`;
   return html;
 };
