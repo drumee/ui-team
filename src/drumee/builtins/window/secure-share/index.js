@@ -91,15 +91,18 @@ class __window_secure_share extends mfsInteract {
   }
 
   async _createShare() {
-    this.validateData();
-    if (this.formStatus == _a.error) {
-      if (this._emailInput) this._emailInput.showError();
+    const email = this._emailInput ? (this._emailInput.getData().value || '').trim() : '';
+    if (!email) {
+      if (this._emailInput) this._emailInput.showError(LOCALE.SECURE_SHARE_ENTER_EMAIL);
+      return;
+    }
+    if (!Validator.email(email)) {
+      if (this._emailInput) this._emailInput.showError(LOCALE.INVALID_EMAIL);
       return;
     }
 
     const nid              = this.mget(_a.nid);
     const hub_id           = this.mget(_a.hub_id);
-    const email            = this._emailInput  ? (this._emailInput.getData().value  || '') : '';
     const domain_restriction = this._domainInput ? (this._domainInput.getData().value || '') : '';
     const days             = this._daysInput  ? (parseInt(this._daysInput.getData().value)  || 0) : 0;
     const hours            = this._hoursInput ? (parseInt(this._hoursInput.getData().value) || 0) : 0;
