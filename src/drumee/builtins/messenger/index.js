@@ -64,6 +64,10 @@ class __lib_messenger extends LetcBox {
     };
     document.addEventListener('selectionchange', this._trackSelection);
     this.el.addEventListener('mousedown', this._trackEmojiMouseDown, true);
+    // Focusing the composer means the user is reading the conversation — notify
+    // the host so it can mark messages as read (read receipts).
+    this._onInputFocus = () => this.triggerHandlers({ service: 'input-focus' });
+    this.el.addEventListener('focusin', this._onInputFocus);
   }
 
   onBeforeDestroy() {
@@ -72,6 +76,9 @@ class __lib_messenger extends LetcBox {
     }
     if (this._trackEmojiMouseDown) {
       this.el.removeEventListener('mousedown', this._trackEmojiMouseDown, true);
+    }
+    if (this._onInputFocus) {
+      this.el.removeEventListener('focusin', this._onInputFocus);
     }
   }
 

@@ -34,7 +34,10 @@ module.exports = function (ui) {
     }
   }
   const footer = require('./footer')(m);
-  let content = `<div id="content-${m.widgetId}" class="${m.fig}__message-content ${m.author}">${body}${footer}</div>`;
+  // Read-receipt avatar row — populated imperatively by chat-item.renderReaders()
+  // from metadata._seen_ (the accumulating {uid: ts} reader map the server sends).
+  const readers = `<div id="readers-${m.widgetId}" class="${m.fig}__readers ${m.author}" data-empty="1"></div>`;
+  let content = `<div id="content-${m.widgetId}" class="${m.fig}__message-content ${m.author}">${body}${footer}${readers}</div>`;
   html = `${avatar}${content}`;
   return html;
 };

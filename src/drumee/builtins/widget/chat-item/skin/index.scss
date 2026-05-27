@@ -147,16 +147,66 @@
     }
 
     &-date {
+      // Time is metadata: hidden until the message bubble is hovered. Revealed
+      // when hovering the conversation content (the footer is a later sibling).
+      visibility: hidden;
       @include drumee.typo($size: 11px,
         $line: 1.4,
         $weight: 400,
         $color: var(--normal-fg-50));
+
+      .widget-chatItem__conversation-content:hover ~ .widget-chatItem__message-footer & {
+        visibility: visible;
+      }
     }
   }
 
   &__forward-tag-wrapper {
     padding-top: 5px;
     margin-bottom: -5px;
+  }
+
+  // Read-receipt avatar row, shown below a message bubble.
+  &__readers {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 2px;
+    margin-top: 2px;
+
+    &.me {
+      justify-content: flex-end;
+    }
+
+    &.other {
+      justify-content: flex-start;
+    }
+
+    &[data-empty="1"] {
+      display: none;
+    }
+  }
+
+  &__reader-avatar {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 1px solid var(--normal-bg, #fff);
+    background-color: var(--normal-bg-90);
+
+    // Overlap successive avatars slightly (stacked look).
+    & + & {
+      margin-left: -6px;
+    }
+  }
+
+  &__reader-more {
+    margin-left: 4px;
+    @include drumee.typo($size: 10px,
+      $line: 1.4,
+      $weight: 400,
+      $color: var(--normal-fg-50));
   }
 
   &__icon {
@@ -249,6 +299,28 @@
     height: 32px;
     flex-shrink: 0;
     align-self: flex-end;
+    // Anchor for the hover username tooltip.
+    position: relative;
+
+    // Styled username tooltip on avatar hover (replaces the native title).
+    // Shows the full resolved name from data-tooltip, on a single line.
+    &[data-tooltip]:not([data-tooltip=""]):hover::after {
+      content: attr(data-tooltip);
+      position: absolute;
+      left: 0;
+      bottom: calc(100% + 6px);
+      z-index: 100000;
+      padding: 4px 8px;
+      border-radius: 6px;
+      white-space: nowrap;
+      pointer-events: none;
+      background: var(--tooltip-bg, rgba(33, 33, 33, 0.95));
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+      @include drumee.typo($size: 11px,
+        $line: 1.4,
+        $weight: 400,
+        $color: var(--tooltip-fg, #ffffff));
+    }
 
     // For own messages avatar isn't shown — hide it entirely so the bubble
     // (and any reply quote) can sit flush with the right edge instead of

@@ -107,6 +107,11 @@ class ___widget_chatItem extends LetcBox {
         if (!el) return;
         this.messageEl = el;
         el.onclick = Wm.onAnchorClick.bind(Wm);
+        // Open the action bar only while hovering the message bubble (the
+        // conversation content), mirroring the time reveal — not the whole row.
+        const bubble = el.querySelector(`.${this.fig.family}__conversation-content`) || el;
+        bubble.addEventListener('mouseenter', this._mouseenter.bind(this));
+        bubble.addEventListener('mouseleave', this._mouseleave.bind(this));
       });
     }, 0);
   }
@@ -237,10 +242,12 @@ class ___widget_chatItem extends LetcBox {
         preattachment
       }
     }));
-    this.el.onmouseenter = this._mouseenter.bind(this);
-    this.el.onmouseleave = this._mouseleave.bind(this);
+    // Hover handlers are bound to the message bubble (conversation content) in
+    // buildContent — not the whole row — so the action bar opens on the same
+    // target as the time reveal.
     this.el.oncontextmenu = null;
     this.acknowledge();
+    this.renderReaders();
     let img_id = `${this.mget(_a.widgetId)}-avatar`;
     this.ensureElement(img_id).then((img) => {
       this._loadAvatar(img)
@@ -260,6 +267,7 @@ class ___widget_chatItem extends LetcBox {
    */
   _mouseenter(e) {
     if (e.buttons) return;
+    clearTimeout(this._timer.hide);
     const f = () => {
       this._hover(_a.on, e);
     };
@@ -267,12 +275,14 @@ class ___widget_chatItem extends LetcBox {
   }
 
   /**
-   * 
-   * @param {*} e 
+   *
+   * @param {*} e
    */
   _mouseleave(e) {
     clearTimeout(this._timer.hover);
-    this._hover(_a.off, e);
+    // Delay the hide so moving the cursor onto the floating action bar (which
+    // sits over the bubble's top edge) keeps it open instead of dismissing it.
+    this._timer.hide = _.delay(() => this._hover(_a.off, e), 220);
   }
 
   /**
@@ -287,23 +297,48 @@ class ___widget_chatItem extends LetcBox {
       if (fresh) {
         this.prepend(require('./skeleton/menu')(this));
         this.menu = this.children.first();
+        // Keep the bar open while the cursor is over it; hide shortly after it
+        // leaves so the gap between bubble and bar doesn't dismiss it.
+        const barEl = this.menu.el;
+        barEl.addEventListener('mouseenter', () => clearTimeout(this._timer.hide));
+        barEl.addEventListener('mouseleave', (ev) => {
+          this._timer.hide = _.delay(() => this._hover(_a.off, ev), 220);
+        });
       } else {
         this.menu.el.show();
       }
       const mainEl = this.__main.el;
-      const bubble = mainEl.querySelector(`.${this.fig.family}__message-container`) || mainEl;
+      const fig = this.fig.family;
+      // Position relative to the conversation bubble itself (fall back to the
+      // message container / main for non-text messages).
+      const bubble = mainEl.querySelector(`.${fig}__conversation-content`)
+        || mainEl.querySelector(`.${fig}__message-container`)
+        || mainEl;
       const uiRect = this.el.getBoundingClientRect();
       const bubbleRect = bubble.getBoundingClientRect();
-      // 24px trigger sits half-overlapping the bubble's top-right corner
-      // (badge style) so the full hit area stays inside the row hover zone
-      // while being clearly visible against any bubble color.
-      const left = bubbleRect.left - uiRect.left + bubbleRect.width - 12;
-      const top = bubbleRect.top - uiRect.top - 12;
       if (this.menu && !this.menu.isDestroyed()) {
-        this.menu.el.style.left = `${left}px`;
-        this.menu.el.style.top = `${top}px`;
+        const el = this.menu.el;
+        const gap = 6;
+        const barW = el.offsetWidth || 120;
+        const barH = el.offsetHeight || 28;
+        // Sit beside the bubble, vertically centred on it.
+        let top = (bubbleRect.top - uiRect.top) + (bubbleRect.height - barH) / 2;
+        if (top < 0) top = 0;
+        el.style.top = `${top}px`;
+        el.style.right = 'auto';
+        if (this.mget(_a.author) === _a.me) {
+          // Own messages (right-aligned bubble): bar to the LEFT of the bubble.
+          let left = (bubbleRect.left - uiRect.left) - gap - barW;
+          if (left < 0) left = 0;
+          el.style.left = `${left}px`;
+        } else {
+          // Incoming messages (left-aligned bubble): bar to the RIGHT of the bubble.
+          let left = (bubbleRect.right - uiRect.left) + gap;
+          const maxLeft = uiRect.width - barW;
+          if (left > maxLeft) left = Math.max(0, maxLeft);
+          el.style.left = `${left}px`;
+        }
       }
-      if (fresh) this._wireDropdownPositioning();
     } else {
       if (this.menu && !this.menu.isDestroyed()) {
         this.menu.el.hide();
@@ -610,20 +645,118 @@ class ___widget_chatItem extends LetcBox {
     let el;
     let id = `readstatus-${this._id}`;
     let seen = 0;
-    try {
-      JSON.parse(this.mget(_a.metadata))._seen_[data.entity_id] || 0;
-    } catch (e) {
-
-    }
     if (data && data.metadata && data.message_id && data.message_id == this.mget('message_id')) {
-      seen = JSON.parse(data.metadata)._seen_[data.entity_id] || 0;
+      try {
+        seen = JSON.parse(data.metadata)._seen_[data.entity_id] || 0;
+      } catch (e) { /* ignore */ }
     }
     this.waitElement(id, () => {
       el = document.getElementById(id);
       this.mset('is_seen', seen);
-      el.dataset.is_seen = seen;
+      if (el) el.dataset.is_seen = seen;
     })
 
+  }
+
+  /**
+   * Parse the model's metadata field into an object (it arrives as a JSON
+   * string from the server).
+   * @returns {Object}
+   */
+  _metadataObject() {
+    const md = this.mget(_a.metadata);
+    if (!md) return {};
+    if (typeof md === 'object') return Object.assign({}, md);
+    try { return JSON.parse(md) || {}; } catch (e) { return {}; }
+  }
+
+  /**
+   * _seen_ map ({uid: ts}) of a sibling message model.
+   * @param {Backbone.Model} model
+   * @returns {Object}
+   */
+  _seenOf(model) {
+    if (!model || !model.get) return {};
+    const md = model.get(_a.metadata);
+    if (!md) return {};
+    if (typeof md === 'object') return (md && md._seen_) || {};
+    try { return (JSON.parse(md)._seen_) || {}; } catch (e) { return {}; }
+  }
+
+  /**
+   * UIDs whose LAST read message is this one — Messenger-style placement. A
+   * reader's avatar shows only on the most recent message they have read, i.e.
+   * they have seen THIS message (uid in _seen_) but NOT the next (newer) one.
+   * Since _seen_ accumulates downward, that pins each reader to their cursor.
+   *
+   * Excludes only the current viewer (you don't see your own seen-marker, as in
+   * Messenger). The message author IS shown: their avatar sits on the most
+   * recent message they have seen — e.g. "Hello" (sent/seen by user1) shows
+   * user1 when user1 hasn't read the newer "Halo".
+   * @returns {String[]}
+   */
+  _readerUids() {
+    const seen = this._metadataObject()._seen_ || {};
+    const me = Visitor.id;
+    const next = this.nextRow();
+    const nextSeen = next ? this._seenOf(next) : {};
+    return Object.keys(seen).filter((uid) =>
+      uid && uid !== me && nextSeen[uid] == null
+    );
+  }
+
+  /**
+   * Add/remove a reader uid in this message's local _seen_ map without
+   * re-rendering — used by the parent chat widget to apply a read cursor
+   * across the whole list before re-rendering all rows in one pass.
+   * @param {String} uid
+   * @param {Boolean} seen whether uid has read this message
+   */
+  updateReaderSeen(uid, seen) {
+    if (!uid) return;
+    const md = this._metadataObject();
+    md._seen_ = md._seen_ || {};
+    const has = md._seen_[uid] != null;
+    if (seen && !has) {
+      md._seen_[uid] = Math.floor(Date.now() / 1000);
+      this.mset(_a.metadata, JSON.stringify(md));
+    } else if (!seen && has) {
+      delete md._seen_[uid];
+      this.mset(_a.metadata, JSON.stringify(md));
+    }
+  }
+
+  /**
+   * Render the read-receipt avatar row below the message: up to 3 reader
+   * avatars, then an "and more …" label when there are more than 3.
+   */
+  renderReaders() {
+    const id = `readers-${this._id}`;
+    this.waitElement(id, () => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      const readers = this._readerUids();
+      el.innerHTML = '';
+      if (!readers.length) {
+        el.dataset.empty = '1';
+        return;
+      }
+      el.dataset.empty = '0';
+      const max = 3;
+      for (const uid of readers.slice(0, max)) {
+        const img = document.createElement('img');
+        img.className = `${this.fig.family}__reader-avatar`;
+        img.onerror = () => { img.style.visibility = 'hidden'; };
+        img.src = Visitor.avatar(uid, _a.vignette);
+        el.appendChild(img);
+      }
+      if (readers.length > max) {
+        const more = document.createElement('span');
+        more.className = `${this.fig.family}__reader-more`;
+        more.textContent = LOCALE.AND_MORE || 'and more …';
+        el.appendChild(more);
+      }
+    });
   }
 
   /**

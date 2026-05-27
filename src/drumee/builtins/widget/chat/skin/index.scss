@@ -221,7 +221,6 @@
     box-shadow: var(--shadow-top-tiny);
     pointer-events: none;
     z-index: 50000;
-
     &[data-state="0"] {
       display: none;
     }
@@ -1017,18 +1016,28 @@
     }
   }
 
-  // Folder sidebar chat: no avatars, only name + bubble (per Figma 140:28810)
   .widget-chatItem__ui {
     margin-top: 16px;
     padding: 0;
   }
 
-  .widget-chatItem__profile {
+  // One avatar per incoming message: the img-based template avatar (which
+  // carries the username tooltip). Hide own avatar AND the duplicate
+  // UserProfile (Skeletons.UserProfile → .user-profile) that buildContent
+  // appends for share messages.
+  .widget-chatItem__profile.me,
+  .widget-chatItem__profile.user-profile {
     display: none !important;
   }
 
+  // The sender's name is shown via the avatar's hover tooltip, not inline.
+  .widget-chatItem__username-container {
+    display: none !important;
+  }
+
+  // Gap only takes effect for incoming rows (own rows have no avatar child).
   .widget-chatItem__message-container {
-    gap: 0;
+    gap: 8px;
   }
 
   .widget-chatItem__message-content {

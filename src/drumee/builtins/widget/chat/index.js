@@ -64,6 +64,11 @@ class __widget_chat extends LetcBox {
     this._typers = new Map();
     this._typingSentAt = 0;
     this._typingIdleTimer = null;
+
+    // Mark this conversation read when its workspace/folder is clicked in the
+    // window manager (Wm fires "chat:read" with the focused hub context).
+    this._onReadContext = this._onReadContext.bind(this);
+    RADIO_BROADCAST.on("chat:read", this._onReadContext);
   }
 
   /**
@@ -86,6 +91,7 @@ class __widget_chat extends LetcBox {
    */
   onBeforeDestroy() {
     this.unbindEvent(_a.live);
+    RADIO_BROADCAST.off("chat:read", this._onReadContext);
     clearTimeout(this._folderContentSyncTimer);
     if (this.attachmentList) {
       this.attachmentList.off("uploaded", this.showSend);
@@ -218,6 +224,58 @@ class __widget_chat extends LetcBox {
       this.saveMessage('');
     }
     this._handleTypingInput(text);
+  }
+
+  /**
+   * Window-manager "chat:read" signal — fired when a workspace (or a folder
+   * within it) is clicked/raised. Mark this conversation read when the focused
+   * hub matches ours.
+   * @param {Object} ctx { hub_id, nid, area }
+   */
+  _onReadContext(ctx = {}) {
+    if (!ctx || ctx.hub_id == null) return;
+    if (`${ctx.hub_id}` !== `${this.hubId}`) return;
+    this.markConversationRead();
+  }
+
+  /**
+   * Mark the conversation as read up to the latest message. Triggered when the
+   * user focuses the message input or when its workspace/folder is clicked.
+   * Reuses the existing acknowledge services;
+   * the server advances the read cursor and (for channels) broadcasts the
+   * updated reader set so other participants' read-receipt avatars update.
+   * Throttled so repeated focus events don't spam the server.
+   */
+  markConversationRead() {
+    const now = Date.now();
+    if (this._lastReadAt && (now - this._lastReadAt) < 2000) return;
+    if (!this.__list || !this.__list.children) return;
+    const last = _.isFunction(this.__list.children.last) ? this.__list.children.last() : null;
+    if (!last || !last.model) return;
+    const data = last.model.toJSON();
+    const area = this.mget(_a.area) || this.mget(_a.type);
+    const isPrivate = area === _a.personal || area === _a.privateRoom;
+    const postData = { hub_id: this.hubId };
+    if (area === _a.share) {
+      postData.service = SERVICE.channel.acknowledge;
+    } else if (isPrivate) {
+      postData.service = SERVICE.chat.acknowledge;
+    } else if (area === _a.ticket) {
+      postData.service = SERVICE.channel.acknowledge_ticket;
+    } else {
+      postData.service = SERVICE.channel.acknowledge;
+    }
+    if (isPrivate) {
+      if (!this.peerId) return;
+      postData.peer_id = this.peerId;
+      if (data.ctime) postData.ref_ctime = data.ctime;
+    } else {
+      if (!data.message_id) return;
+      postData.message_id = data.message_id;
+      if (area === _a.ticket) postData.ticket_id = data.ticket_id;
+    }
+    this._lastReadAt = now;
+    this.postService(postData);
   }
 
   /**
@@ -480,7 +538,15 @@ class __widget_chat extends LetcBox {
         break;
       case _a.list:
         child.onAddKid = this.handleScroll.bind(this);
-        child.once(_e.ready, () => this.scrollMessagesToBottom(child));
+        child.once(_e.ready, () => {
+          this.scrollMessagesToBottom(child);
+          // Render read-receipt avatars across every row once the list is fully
+          // loaded. Items render incrementally, so an item mounted before its
+          // newer sibling computes last-read placement against an incomplete
+          // list; this pass re-renders them all with the complete collection so
+          // read users always show on open.
+          this.refreshAllReaders();
+        });
         break;
       case 'chat-content':
         this.waitElement(child.el, () => {
@@ -594,6 +660,9 @@ class __widget_chat extends LetcBox {
 
       case _a.interactive:
         return this.onInputChange(args);
+
+      case 'input-focus':
+        return this.markConversationRead();
 
       case 'mention-filter':
         return this._showMentionFiles(args.filter, args.mentionType);
@@ -1618,7 +1687,7 @@ class __widget_chat extends LetcBox {
   /**
   * @param {*} data
   */
-  acknowledge(data) {
+  acknowledge(data, options = {}) {
     if (!this.__list) return;
     if (!_.isArray(data)) {
       data = [data];
@@ -1630,6 +1699,54 @@ class __widget_chat extends LetcBox {
           item.acknowledge(d);
         }
       }
+    }
+    // Read receipts: the acknowledger has read up to the acknowledged message.
+    // Apply their read cursor across the whole list so their avatar lands only
+    // on their last-read message (Messenger-style), without a stale duplicate
+    // remaining on an earlier message.
+    const reader = options && options.sender && options.sender.uid;
+    const refCtime = data.length ? data[data.length - 1].ctime : null;
+    if (reader && refCtime != null) {
+      this.applyReadReceipt(reader, refCtime);
+    }
+  }
+
+  /**
+   * Apply a reader's read cursor across all visible message rows, then re-render
+   * every reader-avatar strip. Two passes because last-read placement depends on
+   * the next row's _seen_, so all rows must be updated before any are rendered.
+   * @param {String} readerUid
+   * @param {Number} refCtime the reader has read every message with ctime <= this
+   */
+  applyReadReceipt(readerUid, refCtime) {
+    if (!readerUid || readerUid === Visitor.id) return;
+    if (!this.__list || !_.isFunction(this.__list.getItemsByKind)) return;
+    const items = this.__list.getItemsByKind('widget_chat_item') || [];
+    // Pass 1: update each row's _seen_ for this reader from the cursor.
+    for (const item of items) {
+      if (item && _.isFunction(item.updateReaderSeen)) {
+        const ct = item.mget(_a.ctime);
+        item.updateReaderSeen(readerUid, ct != null && ct <= refCtime);
+      }
+    }
+    // Pass 2: re-render — last-read placement reads the next row's _seen_, so
+    // every row must be updated before any render.
+    for (const item of items) {
+      if (item && _.isFunction(item.renderReaders)) item.renderReaders();
+    }
+  }
+
+  /**
+   * Re-render the read-receipt avatar row on every message item. Used once the
+   * list has finished loading so last-read placement is computed against the
+   * complete collection (each row's "next row" now exists). Reads the _seen_
+   * the server returned on load — no mutation.
+   */
+  refreshAllReaders() {
+    if (!this.__list || !_.isFunction(this.__list.getItemsByKind)) return;
+    const items = this.__list.getItemsByKind('widget_chat_item') || [];
+    for (const item of items) {
+      if (item && _.isFunction(item.renderReaders)) item.renderReaders();
     }
   }
 
@@ -1741,7 +1858,7 @@ class __widget_chat extends LetcBox {
 
       case SERVICE.channel.acknowledge:
       case SERVICE.chat.acknowledge:
-        this.acknowledge(data);
+        this.acknowledge(data, options);
         break;
 
       // Literal service strings (not SERVICE.* constants): the platform may not

@@ -345,6 +345,7 @@
   "TWO_TYPING": "{0} and {1} are typing…",
   "MANY_TYPING": "{0}, {1} and more are typing…",
   "SOMEONE": "Someone",
+  "AND_MORE": "and more …",
   "NOTIFICATION_NOT_GRANTED": "Notifications are not allowed. Please enable them in your browser settings.",
   "X_FILES": "{0} file(s)",
   "FILE_NOT_DISPOSABLE": "This file is not disposable",
