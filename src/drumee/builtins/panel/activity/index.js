@@ -17,6 +17,7 @@ class __panel_activity extends LetcBox {
     this.onVisibilityChange = this.onVisibilityChange.bind(this);
     this.getCurrentApi = this.getCurrentApi.bind(this);
     this._notify = this._notify.bind(this);
+    this._hide = this._hide.bind(this);
   }
 
   /**
@@ -46,14 +47,19 @@ class __panel_activity extends LetcBox {
 
   /**
    * 
+   */
+  _hide() {
+    this.el.dataset.anim = "out";
+    this.setState(0)
+    this.activityState = 0
+  }
+  /**
+   * 
    * @param {*} e 
    */
-  _onOutsideClick(e, source) {
-    const svc = source && source.mget && source.mget(_a.service);
-    if (typeof svc === "string" && svc.startsWith("toggle-")) return;
-    const open = this.activityState && this.mget(_a.state);
-    if (open && !this.el.contains(e.target)) {
-      Desk.closeAllPanels();
+  _onOutsideClick(e) {
+    if (this.activityState && !this.el.contains(e.target)) {
+      this._hide()
     }
   }
 
@@ -138,8 +144,7 @@ class __panel_activity extends LetcBox {
         return '';
 
       case 'close-activity-panel':
-        this.activityState = 0;
-        this.setState(0);
+        this._hide()
         return '';
 
       case 'delete-entity':
@@ -152,48 +157,48 @@ class __panel_activity extends LetcBox {
       case 'toggle-favorite':
         return this._toggleFavorite(cmd, args);
 
-      case 'open-contact':
-        this._dismissFromOpen(cmd, args);
-        this.activityState = 0;
-        this.setState(0);
-        return Desk.togglePanel('address_book', 'chat-panel');
+      // case 'open-contact':
+      //   this._dismissFromOpen(cmd, args);
+      //   this.activityState = 0;
+      //   this.setState(0);
+      //   return Desk.togglePanel('address_book', 'chat-panel');
 
-      case 'open-chat': {
-        const drumate_id = args && args.drumate_id;
-        const message_id = args && args.message_id;
-        this._dismissFromOpen(cmd, args);
-        this.activityState = 0;
-        this.setState(0);
-        Desk.openP2Pchat(args)
-        return;
-      }
+      // case 'open-chat': {
+      //   const drumate_id = args && args.drumate_id;
+      //   const message_id = args && args.message_id;
+      //   this._dismissFromOpen(cmd, args);
+      //   this.activityState = 0;
+      //   this.setState(0);
+      //   Desk.openP2Pchat(args)
+      //   return;
+      // }
 
-      case 'open-activity':
-        this._dismissFromOpen(cmd, args);
-        return;
+      // case 'open-activity':
+      //   this._dismissFromOpen(cmd, args);
+      //   return;
 
-      case 'open-workspace-invitation':
-      case 'open-folder':
-      case 'open-channel':
-      case 'open-ticket': {
-        // For any "open the underlying entity" service we (1) dismiss the
-        // notification (in-memory + server-side persistence), (2) close
-        // the activity panel, and (3) navigate the desk to the target hub.
-        // Acting on a notification implies "I've seen this" — keeps the
-        // panel and badge in sync with what the user has actually engaged
-        // with, no matter which row category fired the open.
-        const item = this._findActivityItem(cmd);
-        const hubId = (args && args.hub_id)
-          || (item && item.mget && item.mget('hub_id'));
-        this._dismissFromOpen(cmd, args);
-        this.activityState = 0;
-        this.setState(0);
-        if (hubId && typeof Wm !== 'undefined' && Wm.loadWorkspace) {
-          try { Wm.loadWorkspace({ hub_id: hubId }); }
-          catch (e) { this.warn('loadWorkspace failed', e); }
-        }
-        return;
-      }
+      // case 'open-workspace-invitation':
+      // case 'open-folder':
+      // case 'open-channel':
+      // case 'open-ticket': {
+      //   // For any "open the underlying entity" service we (1) dismiss the
+      //   // notification (in-memory + server-side persistence), (2) close
+      //   // the activity panel, and (3) navigate the desk to the target hub.
+      //   // Acting on a notification implies "I've seen this" — keeps the
+      //   // panel and badge in sync with what the user has actually engaged
+      //   // with, no matter which row category fired the open.
+      //   const item = this._findActivityItem(cmd);
+      //   const hubId = (args && args.hub_id)
+      //     || (item && item.mget && item.mget('hub_id'));
+      //   this._dismissFromOpen(cmd, args);
+      //   this.activityState = 0;
+      //   this.setState(0);
+      //   if (hubId && typeof Wm !== 'undefined' && Wm.loadWorkspace) {
+      //     try { Wm.loadWorkspace({ hub_id: hubId }); }
+      //     catch (e) { this.warn('loadWorkspace failed', e); }
+      //   }
+      //   return;
+      // }
 
       case 'toggle-unreads':
         this._unreadsOnly = this._unreadsOnly ? 0 : 1;
@@ -290,7 +295,7 @@ class __panel_activity extends LetcBox {
       || (item && item.mget && item.mget('hub_id'))
       || Visitor.id;
     const favorited = args.favorited ? 1 : 0;
-    console.log('[activity] toggle-favorite', { favorited, messageId, hubId, item_key: args.item_key });
+    this.verbose('[activity] toggle-favorite', { favorited, messageId, hubId, item_key: args.item_key });
     if (!messageId) {
       console.warn('[activity] toggle-favorite skipped — no message_id on row');
       return;
@@ -458,7 +463,6 @@ class __panel_activity extends LetcBox {
       };
       e.kind = 'activity_item';
       e.contact = contact;
-      e.service = "open-contact";
       e.type = "invitation";
       e.event_type = 'contact_invite';
       e.id = e.activity_id || e.id || null;
@@ -496,11 +500,6 @@ class __panel_activity extends LetcBox {
       // so dismiss can route correctly. Default to 'chat' for legacy rows missing category.
       const category = e.category || 'chat';
       e.kind = 'activity_item';
-      e.service = category === 'media' ? 'open-folder'
-        : category === 'teamchat' ? 'open-channel'
-          : category === 'contact' ? 'open-contact'
-            : category === 'ticket' ? 'open-ticket'
-              : 'open-chat';
       e.type = category;
       e.event_type = category;
       e.item_key = `${category}:${e.key_id || e.drumate_id || e.hub_id || ''}`;
@@ -646,28 +645,28 @@ class __panel_activity extends LetcBox {
       switch (it.category) {
         case 'hub_invite':
           e.event = 'hub.invite_received';
-          e.service = 'open-workspace-invitation';
+          // e.service = 'open-workspace-invitation';
           e.action = LOCALE.INVITED_YOU_TO_WORKSPACE || 'invited you to';
           e.link_label = it.hub_name;
           e.fullname = (it.surname || `${it.firstname || ''} ${it.lastname || ''}`).trim();
           break;
         case 'contact':
-          e.service = 'open-contact';
+          // e.service = 'open-contact';
           e.event = (it.status === 'informed') ? 'contact.accept_informed' : 'contact.invite';
           e.status = it.status;
           e.fullname = (it.surname || `${it.firstname || ''} ${it.lastname || ''}`).trim();
           break;
-        case 'media':
-          e.service = 'open-folder';
-          break;
-        case 'teamchat':
-          e.service = 'open-channel';
-          break;
-        case 'ticket':
-          e.service = 'open-ticket';
-          break;
-        default:
-          e.service = 'open-chat';
+        // case 'media':
+        //   e.service = 'open-folder';
+        //   break;
+        // case 'teamchat':
+        //   e.service = 'open-channel';
+        //   break;
+        // case 'ticket':
+        //   e.service = 'open-ticket';
+        //   break;
+        // default:
+        //   e.service = 'open-chat';
       }
       e.uiHandler = this;
       e.logicalParent = this;
@@ -712,6 +711,7 @@ class __panel_activity extends LetcBox {
       case "contact.invite":
       case "hub.invite_received":
         this.refreshActivity()
+        this.shouldNofity();
         break;
       case "contact.invite_accept":
       case "contact.accept_informed":
@@ -1043,7 +1043,7 @@ class __panel_activity extends LetcBox {
       || 'mfs';
     const changelogId = args.changelog_id
       || (cmd && cmd.mget && (cmd.mget('changelog_id') || cmd.mget(_a.id) || cmd.mget('id')));
-    console.log('[activity] dismiss', { itemType, itemKey, changelogId });
+    this.verbose('[activity] dismiss', { itemType, itemKey, changelogId });
 
     if (itemKey) {
       this._dismissedKeys = this._dismissedKeys || new Set();
@@ -1057,12 +1057,13 @@ class __panel_activity extends LetcBox {
     this._decrementBadge(1);
 
     if (itemType === 'mfs' && changelogId) {
-      console.log('[activity] → POST activity.dismiss', { changelog_id: changelogId });
+      this.verbose('[activity] → POST activity.dismiss', { changelog_id: changelogId });
       try {
         await this.postService(SERVICE.activity.dismiss, {
           hub_id: Visitor.id,
           changelog_id: changelogId,
         });
+        cmd.goodbye()
       } catch (e) {
         this.warn('dismiss-activity failed', e);
       }
@@ -1073,13 +1074,14 @@ class __panel_activity extends LetcBox {
       const activityId = changelogId
         || (cmd && cmd.mget && (cmd.mget(_a.id) || cmd.mget('id') || cmd.mget('last_id') || cmd.mget('key_id')));
       if (activityId) {
-        console.log('[activity] → POST activity.dismiss_contact_event', { activity_id: activityId });
+        this.verbose('[activity] → POST activity.dismiss_contact_event', { activity_id: activityId });
         try {
           await this.postService({
             service: (SERVICE.activity && SERVICE.activity.dismiss_contact_event) || 'activity.dismiss_contact_event',
             hub_id: Visitor.id,
             activity_id: activityId,
           });
+          cmd.goodbye()
         } catch (e) {
           this.warn('dismiss contact_activity failed', e);
         }
@@ -1097,25 +1099,25 @@ class __panel_activity extends LetcBox {
       switch (itemType) {
         case 'chat':
           // p2p_read.peer_id is the peer's drumate_id, NOT the contact_id.
-          keyId = m('drumate_id') || m('peer_id') || m('key_id');
+          keyId = args.key_id || m('drumate_id') || m('peer_id') || m('key_id');
           break;
         case 'media':
         case 'teamchat':
-          keyId = m('hub_id') || m('key_id');
+          keyId = args.key_id || m('hub_id') || m('key_id');
           break;
         case 'contact':
-          keyId = m('contact_id') || m('key_id');
+          keyId = args.key_id || m('contact_id') || m('key_id');
           break;
         case 'ticket':
         default:
-          keyId = m('key_id') || m('hub_id');
+          keyId = args.key_id || m('key_id') || m('hub_id');
       }
       const hubId = m('hub_id') || Visitor.id;
       const lastId = m('last_id') || 0;
       if (!keyId) {
         console.warn('[activity] notification_dismiss skipped — no key_id', { itemType, itemKey });
       } else {
-        console.log('[activity] → POST activity.dismiss_rollup', { category: itemType, key_id: keyId, hub_id: hubId, last_id: lastId });
+        this.verbose('[activity] → POST activity.dismiss_rollup', { category: itemType, key_id: keyId, hub_id: hubId, last_id: lastId });
         try {
           await this.postService({
             service: (SERVICE.activity && SERVICE.activity.dismiss_rollup)
@@ -1126,12 +1128,13 @@ class __panel_activity extends LetcBox {
             hub_id: hubId,
             last_id: lastId,
           });
+          cmd.goodbye()
         } catch (e) {
           this.warn('notification_dismiss failed', e);
         }
       }
     } else {
-      console.log('[activity] dismiss UI-only (no API)', { itemType, itemKey });
+      this.verbose('[activity] dismiss UI-only (no API)', { itemType, itemKey });
     }
   }
 

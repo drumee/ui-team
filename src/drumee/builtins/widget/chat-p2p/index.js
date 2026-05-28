@@ -25,10 +25,8 @@ class __chat_p2p extends LetcBox {
    * @param {*} e 
    */
   _onOutsideClick(e, source) {
-    const svc = source && source.mget && source.mget(_a.service);
-    if (typeof svc === "string" && svc.startsWith("toggle-")) return;
     if (this.el.dataset.anim === "in" && !this.el.contains(e.target)) {
-      Desk.closeAllPanels();
+      this.el.dataset.anim = "out";
     }
   }
 
@@ -391,7 +389,7 @@ class __chat_p2p extends LetcBox {
 
   /**
    * @param {View} trigger
-   * @param {Object} args
+   * @param {Object} args 
    */
   onUiEvent(trigger, args = {}) {
     // trigger.service is the JS property set by widget_chat before calling
