@@ -88,6 +88,7 @@ class __window_manager extends push {
   route(l) {
     let args = Visitor.parseModuleArgs() || {};
     let path = Visitor.parseModule() || [];
+    this.debug("AAA:100", args)
     switch (path[2]) {
       case _a.meeting:
         let media = this.getItemsByAttr(_a.nid, args.nid)[0];
@@ -98,10 +99,18 @@ class __window_manager extends push {
       case _a.chat:
         Desk.openP2Pchat(args);
         return;
+      case _a.contact:
+        Desk.openContactPanel(args);
+        return;
+      case _a.teamchat:
       case _a.channel:
         this.loadWorkspace(args);
         return;
 
+      case _a.folder:
+      case _a.file:
+      case _a.edit:
+      case _a.play:
       case _a.open:
         this.openFileLocation(args);
         return;

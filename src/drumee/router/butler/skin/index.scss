@@ -1,20 +1,5 @@
-/**
- * @license
- * Copyright 2024 Thidima SA. All Rights Reserved.
- * Licensed under the GNU AFFERO GENERAL PUBLIC LICENSE, Version 3 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- * https://www.gnu.org/licenses/agpl-3.0.html
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- * =============================================================================
- */
 @use "../../../skin/mixins/drumee.scss";
+@use "../../../skin/lib/button" as *;
 
 @use "goodbye";
 
@@ -32,8 +17,8 @@
     flex-wrap: wrap;
 
     &[data-state="open"] {
-      background-color: rgb(22 22 22 /55%) !important; //0.55
-      z-index: 50000 !important;
+      background-color: rgb(22 22 22 / 55%);
+      z-index: 50000;
       bottom: 0;
       right: 0;
       left: 0;
@@ -44,10 +29,10 @@
 
   &__title {
     @include drumee.typo(
-      $color: var(--primary-40),
-      $size: 26px,
+      $color: var(--primary-500),
+      $size: 24px,
       $line: 33px,
-      $weight: 300
+      $weight: bold
     );
   }
 
@@ -57,7 +42,7 @@
       $size: 14px,
       $weight: 300,
       $line: 36px
-    ); // var(--egrey-2f)
+    );
 
     &.ph-reminder {
       display: none;
@@ -73,7 +58,7 @@
           $size: 13px,
           $weight: 300,
           $line: 16px
-        ); //#4A90E2
+        );
         text-align: left;
         margin: 0 auto 0 0;
       }
@@ -81,14 +66,22 @@
   }
 
   &__message {
-    bottom: 16px;
+    padding: 25px;
+    text-align: center;
+    width: 480px;
+    margin-right: auto;
+    margin-left: auto;
+    margin-bottom: 6px;
     @include drumee.typo(
-      $color: var(--default-text-color),
-      $size: 16px,
-      $line: 18px,
-      $weight: 400
-    ); //$egrey-78
-    text-align: left;
+      $weight: 300,
+      $size: 24px,
+      $line: 33px,
+      $color: var(--default-text-color)
+    );
+
+    p {
+      text-align: center;
+    }
 
     &.subtitle {
       font-size: 14px;
@@ -113,12 +106,11 @@
     min-width: 300px;
     width: 570px;
     height: auto;
-    padding: 50px;
-    border-radius: var(--border-radius); //6px;
-    background-color: var(--default-bg) !important; //#FFFFFF
-    justify-content: space-between;
+    padding: var(--spacer-5);
+    border-radius: var(--border-radius);
+    background-color: var(--default-bg);
+    justify-content: center;
     align-items: center;
-    background: var(--default-bg); //white;
     box-shadow:
       0 0 7px 0 rgb(0 0 0 / 14%),
       0 0 6px 0 #f8fafc,
@@ -142,6 +134,9 @@
   }
 
   &__container {
+    height: 100%;
+    justify-content: center;
+
     &-input {
       width: 220px;
 
@@ -156,6 +151,12 @@
         }
       }
     }
+  }
+
+  &__footer {
+    width: 100%;
+    justify-content: center;
+    margin-bottom: var(--spacer-6);
   }
 
   &__reconnect {
@@ -177,6 +178,13 @@
     }
   }
 
+  @include common-button;
+
+  &__buttons {
+    justify-content: center;
+    padding: 10px;
+  }
+
   &__button {
     cursor: pointer;
     user-select: none;
@@ -187,24 +195,16 @@
       padding: 16px;
     }
 
-    &.no-go {
-      background-color: var(--primary-500);
-      @include drumee.typo(
-        $color: var(--secondary-text-color),
-        $size: 13px,
-        $line: 16px,
-        $weight: 300
-      ); //var(--egrey-78)
-    }
-
     &.go {
       min-width: 115px;
+      border-radius: var(--corner-radius-max);
       background-color: var(--primary-500);
+      justify-content: center;
       @include drumee.typo(
         $size: 16px,
         $line: 35px,
         $weight: 400,
-        $color: var(--btn-commit-text)
+        $color: var(--white)
       );
     }
 
@@ -212,8 +212,10 @@
     &.btn {
       margin: 0 10px;
       min-width: 115px;
-      border-radius: 4px;
-      background-color: var(--primary-40);
+      border-radius: var(--corner-radius-max);
+      background-color: var(--neutral-200);
+      justify-content: center;
+      padding: var(--spacer-3) var(--spacer-5);
     }
 
     &.link {
@@ -222,7 +224,7 @@
         $size: 13px,
         $line: 16px,
         $weight: 300
-      ); //var(--egrey-78)
+      );
     }
   }
 
@@ -240,7 +242,7 @@
 
     .message {
       width: auto;
-      background: var(--default-bg); //var(--ewhite);
+      background: var(--default-bg);
       position: absolute;
       top: -12px;
       height: auto;
@@ -253,5 +255,11 @@
         $weight: 300
       );
     }
+  }
+}
+
+html[data-theme="dark"] .router-butler {
+  &__message {
+    color: var(--normal-fg-10);
   }
 }

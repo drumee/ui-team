@@ -26,7 +26,7 @@ class __chat_p2p extends LetcBox {
    */
   _onOutsideClick(e) {
     if (this.el.dataset.anim === "in" && !this.el.contains(e.target)) {
-      Desk.closeAllPanels()
+      this.el.dataset.anim = "out";
     }
   }
 
@@ -389,7 +389,7 @@ class __chat_p2p extends LetcBox {
 
   /**
    * @param {View} trigger
-   * @param {Object} args
+   * @param {Object} args 
    */
   onUiEvent(trigger, args = {}) {
     // trigger.service is the JS property set by widget_chat before calling

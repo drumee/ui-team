@@ -28,7 +28,7 @@ class __panel_trash extends mfsInteract {
    */
   _onOutsideClick(e) {
     if (this.el.dataset.anim === "in" && !this.el.contains(e.target)) {
-      Desk.closeAllPanels()
+      this.el.dataset.anim = "out";
     }
   }
 

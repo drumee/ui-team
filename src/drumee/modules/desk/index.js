@@ -97,16 +97,50 @@ class desk_module extends LetcBox {
    * @param {*} args 
    * @returns 
    */
-  openP2Pchat(args = {}) {
+  async openP2Pchat(args = {}) {
     const { drumate_id, message_id } = args;
+    let p = await this.ensurePart('chat-panel')
+    let widget = p.children.last();
+    if (!widget || widget.isDestroyed()) {
+      this.togglePanel('chat_p2p', 'chat-panel')
+    } else if (widget.mget(_a.kind) === 'chat_p2p') {
+      if (widget.el.dataset.anim === 'in') {
+        return;
+      } else {
+        this.togglePanel('chat_p2p', 'chat-panel')
+      }
+    } else {
+      this.togglePanel('chat_p2p', 'chat-panel')
+    }
     if (!drumate_id) return;
-    this.togglePanel('chat_p2p', 'chat-panel').then(() => {
-      this.ensurePart('chat-panel').then(p => {
-        const widget = p && p.children && p.children.last && p.children.last();
-        if (widget && widget.openChatByPeerId) widget.openChatByPeerId(drumate_id, message_id);
-      });
-    });
+    p = await this.ensurePart('chat-panel')
+    widget = p && p.children && p.children.last && p.children.last();
+    if (widget && widget.openChatByPeerId) widget.openChatByPeerId(drumate_id, message_id);
   }
+
+  /**
+   * 
+   * @param {*} args 
+   * @returns 
+   */
+  async openContactPanel(args = {}) {
+    let p = await this.ensurePart('chat-panel')
+    let widget = p.children.last();
+    if (!widget || widget.isDestroyed()) {
+      this.togglePanel('address_book', 'chat-panel')
+    } else if (widget.mget(_a.kind) === 'address_book') {
+      if (widget.el.dataset.anim === 'in') {
+        return;
+      } else {
+        this.togglePanel('address_book', 'chat-panel')
+      }
+    }
+    this.togglePanel('address_book', 'chat-panel')
+    p = await this.ensurePart('chat-panel')
+    widget = p && p.children && p.children.last && p.children.last();
+    if (widget && widget.switchTab) widget.switchTab(_a.pending);
+  }
+
 
   /**
    *

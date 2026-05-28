@@ -329,7 +329,7 @@ class __lib_messenger extends LetcBox {
    * Detect @ (contacts) or / (files) in text and manage mention popup
    */
   _handleMentionInput(text) {
-    console.log('[mention] _handleMentionInput', { text, len: text && text.length });
+    this.verbose('[mention] _handleMentionInput', { text, len: text && text.length });
     if (!text) {
       this._closeMentionPopup();
       return;
@@ -337,7 +337,7 @@ class __lib_messenger extends LetcBox {
 
     const contactMatch = text.match(/@(\S*)$/);
     const fileMatch = text.match(/\/(\S*)$/);
-    console.log('[mention] regex match', { contactMatch: !!contactMatch, fileMatch: !!fileMatch });
+    this.verbose('[mention] regex match', { contactMatch: !!contactMatch, fileMatch: !!fileMatch });
 
     if (contactMatch) {
       this._mentionActive = true;
@@ -358,7 +358,7 @@ class __lib_messenger extends LetcBox {
    * Show mention dropdown (contacts or files)
    */
   _showMentionPopup() {
-    console.log('[mention] _showMentionPopup → triggerHandlers', {
+    this.verbose('[mention] _showMentionPopup → triggerHandlers', {
       filter: this._mentionFilter,
       mentionType: this._mentionType,
     });

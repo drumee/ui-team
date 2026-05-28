@@ -978,7 +978,7 @@ class __window_mfs extends DrumeeMFS {
     } else {
       data = source;
     }
-    let { nid, hub_id, role, pid, filetype, area } = data;
+    let { nid = 0, hub_id, role, pid = 0, filetype, area } = data;
     let node;
     if (!filetype) {
       node = await this.fetchService({

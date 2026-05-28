@@ -78,20 +78,18 @@ class __address_book extends LetcBox {
  * @param {*} e 
  */
   _onOutsideClick(e) {
-    this.debug("AAA:%443", this.el.dataset.anim, this);
-
     if (this.el.dataset.anim === "in" && !this.el.contains(e.target)) {
-      Desk.closeAllPanels()
+      this.el.dataset.anim = "out";
     }
   }
 
   onUiEvent(trigger, args = {}) {
     const service = args.service || trigger.get(_a.service);
     switch (service) {
-      case "tab-all": return this._switchTab("all");
-      case "tab-pending": return this._switchTab("pending");
-      case "tab-archived": return this._switchTab("archived");
-      case "tab-blocked": return this._switchTab("blocked");
+      case "tab-all": return this.switchTab("all");
+      case "tab-pending": return this.switchTab("pending");
+      case "tab-archived": return this.switchTab("archived");
+      case "tab-blocked": return this.switchTab("blocked");
 
       case "filter-tag":
         this._selectedTagId = trigger.mget("tagId") || null;
@@ -316,7 +314,7 @@ class __address_book extends LetcBox {
     }
   }
 
-  async _switchTab(tab) {
+  async switchTab(tab) {
     this._tab = tab;
     this._selectedKey = null;
     this._editing = false;
