@@ -4,7 +4,38 @@ const { TweenMax, Expo } = require("@drumee/ui-core/vendor");
 const PlayerInteract = require('player/interact');
 const { loadPdfDocument, initializePdfium, getCurrentPdfiumDocumentBlob } = require('./pdfium-wrapper')
 const WS_EVENT = "ws:event";
-const printJS = require('print-js')
+const EDITOR_READY_FALLBACK_MS = 2500;
+const EDITOR_READY_EVENTS = new Set(['onDocumentReady', 'onAppReady', 'docEditorReady']);
+
+let editorPrewarmed = false;
+function prewarmEditor() {
+  if (editorPrewarmed) return;
+  editorPrewarmed = true;
+  const schedule = (typeof requestIdleCallback === 'function')
+    ? requestIdleCallback
+    : (cb) => setTimeout(cb, 0);
+  schedule(() => {
+    // 1) Preconnect to the OnlyOffice host so the TLS handshake happens
+    //    before the user opens a document.
+    try {
+      if (Platform.get('doc_editor')) {
+        const { user_domain } = bootstrap();
+        const host = user_domain || location.host;
+        if (!document.head.querySelector(`link[rel="preconnect"][href="https://${host}"]`)) {
+          const link = document.createElement('link');
+          link.rel = 'preconnect';
+          link.href = `https://${host}`;
+          link.crossOrigin = 'anonymous';
+          document.head.appendChild(link);
+        }
+      }
+    } catch (e) { /* non-fatal */ }
+    // 2) Warm the iframe Kind so the first document open doesn't pay
+    //    the dynamic-import cost.
+    try { Kind.waitFor('iframe'); } catch (e) { /* non-fatal */ }
+  });
+}
+
 class __player_document extends PlayerInteract {
 
   /**
@@ -30,8 +61,7 @@ class __player_document extends PlayerInteract {
       this.media = opt.source || opt.trigger;
     }
     this.pollCount = 0;
-    /** Lazy loading */
-    initializePdfium()
+    prewarmEditor();
   }
 
 
@@ -44,6 +74,7 @@ class __player_document extends PlayerInteract {
       this.loader = null;
     }
     Wm.off(WS_EVENT, this.onWsMessage)
+    this._cleanupEditorListeners();
     if (super.onBeforeDestroy) {
       super.onBeforeDestroy()
     }
@@ -94,10 +125,20 @@ class __player_document extends PlayerInteract {
   onDomRefresh() {
     Wm.on(WS_EVENT, this.onWsMessage)
     this.initSize();
-    if (this.mget(_a.mode) == _a.edit) {
-      return this.edit()
+    if (this.shouldOpenInEditMode()) {
+      return this.edit();
     }
+    initializePdfium();
     this.reload(300);
+  }
+
+  shouldOpenInEditMode() {
+    if (this.mget(_a.mode) === _a.preview) return false;
+    if (this.mget(_a.mode) === _a.edit) return true;
+    const ext = (this.mget(_a.ext) || '').toLowerCase();
+    return this.canUpload()
+      && require('./editable').includes(ext)
+      && !!Platform.get('doc_editor');
   }
 
 
@@ -415,34 +456,81 @@ class __player_document extends PlayerInteract {
   /**
    * 
    */
-  edit() {
+  async edit({ fullscreen = false } = {}) {
     this.el.dataset.mode = _a.edit;
     this.mset({ mode: _a.edit })
-    this.el.requestFullscreen();
-    this.feed(require('./skeleton')(this, LOCALE.DOWNLOADING));
+    if (fullscreen && this.el.requestFullscreen) {
+      this.el.requestFullscreen().catch(() => {});
+    }
+    this.feed(require('./skeleton').edit(this, LOCALE.DOWNLOADING));
     const { nid, hub_id } = this.actualNode()
     let { user_domain, svc } = bootstrap()
-    this.ensurePart(_a.content).then(async (p) => {
-      let host = user_domain || location.host
-      let url = `https://${host}${svc}${Platform.get('doc_editor')}.html?hub_id=${hub_id}&nid=${nid}`
-      await Kind.waitFor('iframe');
-      let opt = {
-        kind: 'iframe',
-        url,
-        onLoad: (e) => {
-          this.__progress.el.hide();
-          this.updateMenu()
-        }
-      };
-      p.feed(opt)
+    let host = user_domain || location.host
+    let url = `https://${host}${svc}${Platform.get('doc_editor')}.html?hub_id=${hub_id}&nid=${nid}`
 
-    })
+    this._editorOrigin = new URL(url).origin;
+    this._editorReady = false;
+    this._onEditorMessage = (e) => {
+      if (this._editorReady) return;
+      if (this._editorOrigin && e.origin !== this._editorOrigin) return;
+      const data = e.data;
+      const ev = (data && (data.event || data.type)) || data;
+      if (EDITOR_READY_EVENTS.has(ev)) {
+        this._hideEditorProgress();
+      }
+    };
+    window.addEventListener('message', this._onEditorMessage);
+
+    // ensurePart and Kind.waitFor are independent — run in parallel
+    const [p] = await Promise.all([
+      this.ensurePart(_a.content),
+      Kind.waitFor('iframe'),
+    ]);
+    p.feed({
+      kind: 'iframe',
+      url,
+      onLoad: () => {
+        this.updateMenu();
+        // OnlyOffice JS keeps bootstrapping after the HTML onLoad fires;
+        // keep the spinner up briefly as a fallback in case the editor
+        // never posts a ready event.
+        clearTimeout(this._editorReadyFallback);
+        this._editorReadyFallback = setTimeout(
+          () => this._hideEditorProgress(),
+          EDITOR_READY_FALLBACK_MS,
+        );
+      }
+    });
+  }
+
+  _cleanupEditorListeners() {
+    if (this._onEditorMessage) {
+      window.removeEventListener('message', this._onEditorMessage);
+      this._onEditorMessage = null;
+    }
+    if (this._editorReadyFallback) {
+      clearTimeout(this._editorReadyFallback);
+      this._editorReadyFallback = null;
+    }
+  }
+
+  _hideEditorProgress() {
+    if (this._editorReady) return;
+    this._editorReady = true;
+    this._cleanupEditorListeners();
+    this.ensurePart('progress')
+      .then((p) => {
+        if (p && !p.isDestroyed()) p.setState(0);
+      })
+      .catch(() => {});
   }
 
   /**
    * 
    */
   preview() {
+    this._cleanupEditorListeners();
+    this._editorReady = false;
     this.reloadTimer = 0;
     this.reload(0);
     this.el.dataset.mode = _a.preview;
@@ -692,7 +780,7 @@ class __player_document extends PlayerInteract {
         break;
 
       case _a.edit:
-        this.edit()
+        this.edit({ fullscreen: true })
         break;
 
       case _a.preview:
@@ -722,8 +810,9 @@ class __player_document extends PlayerInteract {
       case "print":
         this.loadedPages = 0;
         this.initProgess()
-        this.once(_e.eod, (blob) => {
+        this.once(_e.eod, async (blob) => {
           const blobUrl = URL.createObjectURL(blob);
+          const { default: printJS } = await import(/* webpackChunkName: "print-js" */ 'print-js');
           printJS({
             printable: blobUrl,
             type: 'pdf',
