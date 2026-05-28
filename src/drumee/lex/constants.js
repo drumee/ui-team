@@ -20,7 +20,7 @@ const a = {
   docViewer: {
     width: 750,
     height: 600
-  }, //window.innerHeight - 120
+  }, 
   char: {
     arrow: {
       left: 37,
@@ -85,23 +85,26 @@ const a = {
   // The privilege is attached to the visitor whithin the hub scope
   // Therefore Host.get(_a.privilege) gives the user privilege whithin the site
   privilege: {
-    owner: 0b0111111, // 127
-    admin: 0b0011111, // 
-    delete: 0b0001111, //
-    write: 0b0000111, //
-    read: 0b0000011, //
-    anonymous: 0b0000001, //
-    //aliases
-    modify: 0b0001111, // delete
-    upload: 0b0000111, // write
-    view: 0b0000011, // read
-    download: 0b0000011, // read
-    guest: 0b0000001, // read 
+    owner            : 0b0111111, 
+    admin            : 0b0011111, 
+    delete           : 0b0001111,
+    write            : 0b0001111,
+    modify           : 0b0001111,
+    upload           : 0b0001111,
+    get              : 0b0000111,
+    download         : 0b0000111,
+    chat             : 0b0000111,
+    read             : 0b0000011,
+    view             : 0b0000011,
+    anonymous        : 0b0000001,
+    anyone           : 0b0000001,
+    guest            : 0b0000001, 
+
     //aliases - domain 
-    admin_security: 0b0001111, //
-    admin_member: 0b0000111, //
-    admin_view: 0b0000011, //
-    member: 0b0000001
+    admin_security   : 0b0001111, 
+    admin_member     : 0b0000111, 
+    admin_view       : 0b0000011, 
+    member           : 0b0000001
   }, //
 
   // Permission is a particular the right required a execute a particule service 
@@ -109,24 +112,26 @@ const a = {
   // The resquested service shall only be executude if logical operation
   // privilege&permission > 0
   permission: {
-    owner: 0b0100000, // 127
-    admin: 0b0010000, // 
-    delete: 0b0001000, //
-    write: 0b0000100, //
-    read: 0b0000010, //
-    anonymous: 0b0000001, //
-    //aliases
-    modify: 0b0001000, // delete
-    upload: 0b0000100, // write
-    view: 0b0000010, // read
-    download: 0b0000010, // read
-    guest: 0b0000001, // read 
+    owner              : 0b0100000, 
+    admin              : 0b0010000, 
+    delete             : 0b0001000,
+    write              : 0b0001000,
+    modify             : 0b0001000,
+    upload             : 0b0001000,
+    get                : 0b0000100,
+    download           : 0b0000100,
+    chat               : 0b0000110,
+    read               : 0b0000010,
+    view               : 0b0000010,
+    anonymous          : 0b0000001,
+    anyone             : 0b0000001,
+    guest              : 0b0000001, 
 
     //aliases - domain
-    admin_security: 0b0001000, //
-    admin_member: 0b0000100, //
-    admin_view: 0b0000010, // 
-    member: 0b0000001
+    admin_security     : 0b0001000, 
+    admin_member       : 0b0000100, 
+    admin_view         : 0b0000010,
+    member             : 0b0000001
   }, // 
 
   pagelength: 45,
