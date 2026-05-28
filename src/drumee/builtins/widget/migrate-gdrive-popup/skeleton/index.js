@@ -13,9 +13,29 @@ module.exports = function (ui) {
   const header = (title) => Skeletons.Box.X({
     className: `${pfx}__header`,
     kids: [
-      Skeletons.Note({ className: `${pfx}__title`, content: title }),
+      Skeletons.Box.X({
+        className: `${pfx}__title-wrap`,
+        kids: [
+          Skeletons.Image.Svg({ ico: 'logo-google', className: `${pfx}__title-ico` }),
+          Skeletons.Note({ className: `${pfx}__title`, content: title }),
+        ],
+      }),
       close,
     ],
+  });
+
+  // Reusable hero block: big icon + title + subtitle.
+  const hero = (ico, heroClass, title, subtitle) => Skeletons.Box.Y({
+    className: `${pfx}__hero ${heroClass}`,
+    kids: [
+      Skeletons.Image.Svg({ ico, className: `${pfx}__hero-ico` }),
+      title ? Skeletons.Note({ className: `${pfx}__hero-title`, content: title }) : null,
+      subtitle ? Skeletons.Note({ className: `${pfx}__hero-sub`, content: subtitle }) : null,
+    ].filter(Boolean),
+  });
+
+  const primaryBtn = (content, service) => Skeletons.Note({
+    className: `${pfx}__primary-btn`, content, service, uiHandler: [ui],
   });
 
   const state = ui.getState();
@@ -27,22 +47,24 @@ module.exports = function (ui) {
     body = Skeletons.Box.Y({
       className: `${pfx}__body ${pfx}__body--checking`,
       kids: [
-        Skeletons.Note({ className: `${pfx}__loading`, content: LOCALE.LOADING || 'Loading…' }),
+        Skeletons.Box.Y({ className: `${pfx}__spinner` }),
+        Skeletons.Note({ className: `${pfx}__loading`, content: LOCALE.LOADING || 'Checking connection…' }),
       ],
     });
   } else if (state === 'not-connected') {
+    const err = ui.getConnectError && ui.getConnectError();
     body = Skeletons.Box.Y({
       className: `${pfx}__body ${pfx}__body--not-connected`,
       kids: [
-        Skeletons.Note({
-          className: `${pfx}__description`,
-          content: LOCALE.MIGRATE_GDRIVE_CONNECT_HINT,
-        }),
-        Skeletons.Note({
-          className: `${pfx}__primary-btn`,
-          content: LOCALE.MIGRATE_GDRIVE_CONNECT_BTN,
-          service: 'gdrive-connect', uiHandler: [ui],
-        }),
+        hero('logo-google', `${pfx}__hero--brand`,
+          LOCALE.MIGRATE_GDRIVE_CONNECT_TITLE || 'Connect your Google Drive',
+          LOCALE.MIGRATE_GDRIVE_CONNECT_HINT),
+        err ? Skeletons.Note({
+          className: `${pfx}__status`,
+          dataset: { state: '1', kind: 'error' },
+          content: (LOCALE.MIGRATE_GDRIVE_CONNECT_ERROR || 'Connection failed: {0}').replace('{0}', err),
+        }) : null,
+        primaryBtn(LOCALE.MIGRATE_GDRIVE_CONNECT_BTN, 'gdrive-connect'),
         auto ? Skeletons.Note({
           className: `${pfx}__skip`,
           content: LOCALE.MIGRATE_GDRIVE_SKIP_FOR_NOW,
@@ -51,6 +73,9 @@ module.exports = function (ui) {
       ].filter(Boolean),
     });
   } else if (state === 'ready') {
+    const shared = ui.getIncludeShared ? ui.getIncludeShared() : 0;
+    const seedFolder = ui.getSourceFolderId && ui.getSourceFolderId() !== 'root'
+      ? ui.getSourceFolderId() : '';
     body = Skeletons.Box.Y({
       className: `${pfx}__body ${pfx}__body--ready`,
       kids: [
@@ -58,11 +83,18 @@ module.exports = function (ui) {
           className: `${pfx}__description`,
           content: LOCALE.MIGRATE_GDRIVE_HINT,
         }),
-        Skeletons.Box.Y({
-          className: `${pfx}__field`,
+        // Destination card — where files will land.
+        Skeletons.Box.X({
+          className: `${pfx}__dest-card`,
           kids: [
-            Skeletons.Note({ className: `${pfx}__field-label`, content: LOCALE.DESTINATION || 'Destination' }),
-            Skeletons.Note({ className: `${pfx}__destination`, content: ui._destinationName }),
+            Skeletons.Image.Svg({ ico: 'desktop_folder', className: `${pfx}__dest-ico` }),
+            Skeletons.Box.Y({
+              className: `${pfx}__dest-text`,
+              kids: [
+                Skeletons.Note({ className: `${pfx}__field-label`, content: LOCALE.DESTINATION || 'Destination' }),
+                Skeletons.Note({ className: `${pfx}__destination`, content: ui._destinationName }),
+              ],
+            }),
           ],
         }),
         Skeletons.Box.Y({
@@ -73,19 +105,25 @@ module.exports = function (ui) {
             Skeletons.Entry({
               className: `${pfx}__entry`,
               placeholder: LOCALE.MIGRATE_GDRIVE_SOURCE_FOLDER_HELP,
+              value: seedFolder,
               require: 'any',
               bubble: 0,
             }),
             Skeletons.Note({ className: `${pfx}__field-help`, content: LOCALE.MIGRATE_GDRIVE_SOURCE_FOLDER_HELP }),
           ],
         }),
+        // Real toggle switch (track + knob) instead of a unicode checkbox.
         Skeletons.Box.X({
           className: `${pfx}__toggle-row`,
-          dataset: { partname: 'shared-drives-toggle', state: '0' },
+          dataset: { partname: 'shared-drives-toggle', state: String(shared) },
           service: 'gdrive-toggle-shared',
           uiHandler: [ui],
           kids: [
             Skeletons.Note({ className: `${pfx}__toggle-label`, content: LOCALE.MIGRATE_GDRIVE_INCLUDE_SHARED }),
+            Skeletons.Box.X({
+              className: `${pfx}__switch`,
+              kids: [Skeletons.Box.Y({ className: `${pfx}__switch-knob` })],
+            }),
           ],
         }),
         Skeletons.Box.X({
@@ -96,11 +134,7 @@ module.exports = function (ui) {
               content: LOCALE.CANCEL || 'Cancel',
               service: 'close-migrate-popup', uiHandler: [ui],
             }),
-            Skeletons.Note({
-              className: `${pfx}__primary-btn`,
-              content: LOCALE.MIGRATE_GDRIVE_START,
-              service: 'gdrive-start', uiHandler: [ui],
-            }),
+            primaryBtn(LOCALE.MIGRATE_GDRIVE_START, 'gdrive-start'),
             auto ? Skeletons.Note({
               className: `${pfx}__skip`,
               content: LOCALE.MIGRATE_GDRIVE_SKIP_FOR_NOW,
@@ -114,10 +148,18 @@ module.exports = function (ui) {
     const total = snap.total_files || 0;
     const done = snap.processed_files || 0;
     const pct = total > 0 ? Math.min(100, Math.round((done / total) * 100)) : 0;
+    const cur = snap.current_filename;
     body = Skeletons.Box.Y({
       className: `${pfx}__body ${pfx}__body--in-progress`,
       kids: [
-        Skeletons.Note({ className: `${pfx}__progress-label`, content: LOCALE.MIGRATION_IN_PROGRESS }),
+        Skeletons.Box.X({
+          className: `${pfx}__progress-head`,
+          kids: [
+            Skeletons.Image.Svg({ ico: 'cloud-pause', className: `${pfx}__progress-ico` }),
+            Skeletons.Note({ className: `${pfx}__progress-label`, content: LOCALE.MIGRATION_IN_PROGRESS }),
+            Skeletons.Note({ className: `${pfx}__progress-pct`, content: `${pct}%` }),
+          ],
+        }),
         Skeletons.Box.X({
           className: `${pfx}__progress-bar`,
           kids: [
@@ -132,30 +174,56 @@ module.exports = function (ui) {
           content: (LOCALE.MIGRATION_PROGRESS_X_OF_Y || '{0} of {1} files')
             .replace('{0}', done).replace('{1}', total || '?'),
         }),
-        Skeletons.Note({
-          className: `${pfx}__cancel`,
-          content: LOCALE.MIGRATE_GDRIVE_CANCEL_JOB,
-          service: 'gdrive-cancel', uiHandler: [ui],
+        // Current file being imported (truncated by CSS).
+        cur ? Skeletons.Note({
+          className: `${pfx}__progress-current`,
+          content: (LOCALE.MIGRATION_IMPORTING_FILE || 'Importing: {0}').replace('{0}', cur),
+        }) : null,
+        Skeletons.Box.X({
+          className: `${pfx}__footer`,
+          kids: [
+            Skeletons.Note({
+              className: `${pfx}__cancel`,
+              content: LOCALE.MIGRATE_GDRIVE_CANCEL_JOB,
+              service: 'gdrive-cancel', uiHandler: [ui],
+            }),
+          ],
         }),
-      ],
+      ].filter(Boolean),
     });
   } else { // done | failed | cancelled
     const errors = snap.errors || [];
+    const isDone = state === 'done';
+    const isFailed = state === 'failed';
+    const heroIco = isDone ? 'apps-check-circle' : (isFailed ? 'alert' : 'cloud-pause');
+    const heroMod = isDone ? `${pfx}__hero--success` : (isFailed ? `${pfx}__hero--error` : `${pfx}__hero--neutral`);
+    const heroTitle = isDone
+      ? (LOCALE.MIGRATION_DONE_TITLE || 'Migration complete')
+      : isFailed
+        ? (LOCALE.MIGRATION_FAILED_TITLE || 'Migration failed')
+        : (LOCALE.MIGRATION_CANCELLED_TITLE || 'Migration cancelled');
     const summary = (LOCALE.MIGRATION_DONE_SUMMARY || 'Imported {0} files in {1} folders. {2} errors.')
       .replace('{0}', snap.processed_files || 0)
       .replace('{1}', snap.total_folders || 0)
       .replace('{2}', errors.length);
     body = Skeletons.Box.Y({
-      className: `${pfx}__body ${pfx}__body--done ${pfx}__body--${state}`,
+      className: `${pfx}__body ${pfx}__body--result ${pfx}__body--${state}`,
       kids: [
-        Skeletons.Note({ className: `${pfx}__progress-label`, content: LOCALE.MIGRATION_DONE_TITLE }),
+        hero(heroIco, heroMod, heroTitle, null),
         Skeletons.Note({ className: `${pfx}__summary`, content: summary }),
-        Skeletons.Note({
-          className: `${pfx}__primary-btn`,
-          content: LOCALE.CLOSE || 'Close',
-          service: 'close-migrate-popup', uiHandler: [ui],
+        // Error detail list (first few) when present.
+        errors.length ? Skeletons.Box.Y({
+          className: `${pfx}__error-list`,
+          kids: errors.slice(0, 5).map((e) => Skeletons.Note({
+            className: `${pfx}__error-item`,
+            content: `${e.file || e.folder || '?'} — ${e.reason || e.code || 'error'}`,
+          })),
+        }) : null,
+        Skeletons.Box.X({
+          className: `${pfx}__footer`,
+          kids: [primaryBtn(LOCALE.CLOSE || 'Close', 'close-migrate-popup')],
         }),
-      ],
+      ].filter(Boolean),
     });
   }
 

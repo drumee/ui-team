@@ -3,7 +3,7 @@
 .migrate-gdrive-popup {
   &__close > *,
   &__cancel > *,
-  &__submit-btn > * {
+  &__primary-btn > * {
     pointer-events: none !important;
   }
 
@@ -31,17 +31,29 @@
     gap: 16px;
   }
 
+  // ───────── header ─────────
   &__header {
     align-items: center;
     justify-content: space-between;
     width: 100%;
   }
 
+  &__title-wrap {
+    align-items: center;
+    gap: 10px;
+  }
+
+  &__title-ico {
+    width: 22px;
+    height: 22px;
+    flex: 0 0 auto;
+  }
+
   &__title {
     @include drumee.typo(
-      $size: 20px,
+      $size: 19px,
       $weight: 700,
-      $line: 28px,
+      $line: 26px,
       $color: var(--normal-fg-10)
     );
     font-family: "Manrope", var(--font-bold);
@@ -53,62 +65,80 @@
     cursor: pointer;
     color: var(--normal-fg-50);
     transition: color 0.2s;
+    flex: 0 0 auto;
 
-    svg {
-      width: 100%;
-      height: 100%;
-      fill: currentColor;
-    }
-
-    &:hover {
-      color: var(--normal-fg-10);
-    }
+    svg { width: 100%; height: 100%; fill: currentColor; }
+    &:hover { color: var(--normal-fg-10); }
   }
 
+  // ───────── hero (icon + title + subtitle) ─────────
+  &__hero {
+    align-items: center;
+    text-align: center;
+    gap: 10px;
+    padding: 16px 8px 4px;
+  }
+
+  &__hero-ico {
+    width: 56px;
+    height: 56px;
+  }
+
+  &__hero-title {
+    @include drumee.typo($size: 17px, $weight: 700, $line: 24px, $color: var(--normal-fg-10));
+  }
+
+  &__hero-sub {
+    @include drumee.typo($size: 14px, $weight: 400, $line: 20px, $color: var(--normal-fg-50));
+    max-width: 360px;
+  }
+
+  &__hero--success &__hero-ico { color: #16a34a; fill: #16a34a; }
+  &__hero--error   &__hero-ico { color: #dc2626; fill: #dc2626; }
+  &__hero--neutral &__hero-ico { color: var(--normal-fg-40); fill: var(--normal-fg-40); }
+
+  // ───────── text ─────────
   &__description {
-    @include drumee.typo(
-      $size: 14px,
-      $weight: 400,
-      $line: 19.6px,
-      $color: var(--normal-fg-50)
-    );
+    @include drumee.typo($size: 14px, $weight: 400, $line: 20px, $color: var(--normal-fg-50));
   }
 
-  &__field {
-    gap: 6px;
-  }
+  &__field { gap: 6px; }
 
   &__field-label {
-    @include drumee.typo(
-      $size: 13px,
-      $weight: 600,
-      $line: 18px,
-      $color: var(--normal-fg-10)
-    );
+    @include drumee.typo($size: 13px, $weight: 600, $line: 18px, $color: var(--normal-fg-10));
   }
 
   &__field-help {
-    @include drumee.typo(
-      $size: 12px,
-      $weight: 400,
-      $line: 16px,
-      $color: var(--normal-fg-60, #6b6b75)
-    );
+    @include drumee.typo($size: 12px, $weight: 400, $line: 16px, $color: var(--normal-fg-60, #6b6b75));
   }
 
-  &__destination {
-    @include drumee.typo(
-      $size: 14px,
-      $weight: 500,
-      $line: 20px,
-      $color: var(--normal-fg-20)
-    );
-    padding: 10px 12px;
+  // ───────── destination card ─────────
+  &__dest-card {
+    align-items: center;
+    gap: 12px;
+    padding: 12px;
     background: var(--normal-bg-100, #ffffff);
     border: 1px solid rgba(0, 0, 0, 0.08);
     border-radius: 8px;
   }
 
+  &__dest-ico {
+    width: 28px;
+    height: 28px;
+    flex: 0 0 auto;
+    color: var(--accent-orange, #fa8540);
+  }
+
+  &__dest-text { gap: 2px; min-width: 0; }
+
+  &__destination {
+    @include drumee.typo($size: 14px, $weight: 600, $line: 20px, $color: var(--normal-fg-10));
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  // ───────── source folder entry ─────────
   &__entry {
     background: var(--normal-bg-100, #ffffff);
     border: 1px solid rgba(0, 0, 0, 0.12);
@@ -117,6 +147,9 @@
     height: 40px;
     display: flex;
     align-items: center;
+    transition: border-color 0.15s;
+
+    &:focus-within { border-color: var(--accent-orange, #fa8540); }
 
     input {
       width: 100%;
@@ -128,39 +161,77 @@
     }
   }
 
+  // ───────── status banner ─────────
   &__status {
     @include drumee.typo($size: 13px, $weight: 500, $line: 18px);
     padding: 8px 12px;
     border-radius: 6px;
 
-    &[data-state="0"] {
-      display: none;
-    }
-
-    &[data-kind="info"] {
-      background: rgba(250, 133, 64, 0.08);
-      color: var(--accent-orange, #fa8540);
-    }
-
-    &[data-kind="error"] {
-      background: rgba(220, 38, 38, 0.08);
-      color: #dc2626;
-    }
+    &[data-state="0"] { display: none; }
+    &[data-kind="info"]  { background: rgba(250, 133, 64, 0.08); color: var(--accent-orange, #fa8540); }
+    &[data-kind="error"] { background: rgba(220, 38, 38, 0.08); color: #dc2626; }
   }
 
+  // ───────── toggle switch ─────────
+  &__toggle-row {
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    cursor: pointer;
+    padding: 10px 12px;
+    background: var(--normal-bg-100, #ffffff);
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    border-radius: 8px;
+  }
+
+  &__toggle-label {
+    @include drumee.typo($size: 14px, $weight: 500, $line: 20px, $color: var(--normal-fg-10));
+  }
+
+  &__switch {
+    flex: 0 0 auto;
+    width: 40px;
+    height: 22px;
+    border-radius: 11px;
+    background: var(--normal-fg-70, #c8c8cf);
+    transition: background 0.2s;
+    align-items: center;
+    padding: 0 2px;
+  }
+
+  &__switch-knob {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: #ffffff;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+    transition: transform 0.2s;
+  }
+
+  &__toggle-row[data-state="1"] &__switch {
+    background: var(--accent-orange, #fa8540);
+  }
+  &__toggle-row[data-state="1"] &__switch-knob {
+    transform: translateX(18px);
+  }
+
+  // ───────── footer + buttons ─────────
   &__footer {
     justify-content: flex-end;
+    align-items: center;
     gap: 12px;
     margin-top: 8px;
   }
 
   &__cancel,
-  &__submit-btn {
+  &__primary-btn {
     cursor: pointer;
     padding: 10px 18px;
     border-radius: 8px;
     @include drumee.typo($size: 14px, $weight: 600, $line: 20px);
     user-select: none;
+    text-align: center;
+    transition: filter 0.15s, background 0.15s, color 0.15s;
   }
 
   &__cancel {
@@ -168,86 +239,126 @@
     background: transparent;
     border: 1px solid rgba(0, 0, 0, 0.12);
 
-    &:hover {
-      color: var(--normal-fg-10);
-      background: var(--normal-bg-100, #ffffff);
-    }
+    &:hover { color: var(--normal-fg-10); background: var(--normal-bg-100, #ffffff); }
   }
 
-  &__submit-btn {
+  // Primary CTA — was previously unstyled (rendered as plain text) because
+  // the skin only defined `__submit-btn`. Now properly an orange filled
+  // button, full-width when it's the only action (connect / close states).
+  &__primary-btn {
     color: #ffffff;
     background: var(--accent-orange, #fa8540);
     border: 1px solid transparent;
 
-    &[data-state="0"] {
-      opacity: 0.6;
-      pointer-events: none;
-    }
-
-    &[data-busy="1"] {
-      opacity: 0.8;
-      pointer-events: none;
-    }
-
-    &:hover {
-      filter: brightness(0.96);
-    }
+    &[data-state="0"] { opacity: 0.6; pointer-events: none; }
+    &[data-busy="1"]  { opacity: 0.8; pointer-events: none; }
+    &:hover { filter: brightness(0.96); }
   }
 
-  &[data-busy="1"] {
-    pointer-events: none;
+  // In connect / result states the primary button stands alone — make it
+  // full-width for a clearer CTA.
+  &__body--not-connected > &__primary-btn,
+  &__body--result &__footer {
+    width: 100%;
   }
-}
+  &__body--not-connected > &__primary-btn { width: 100%; }
+  &__body--result &__footer &__primary-btn { flex: 1; }
 
-.migrate-gdrive-popup {
+  &[data-busy="1"] { pointer-events: none; }
+
+  // ───────── progress ─────────
+  &__progress-head {
+    align-items: center;
+    gap: 8px;
+  }
+  &__progress-ico {
+    width: 20px;
+    height: 20px;
+    color: var(--accent-orange, #fa8540);
+    flex: 0 0 auto;
+  }
+  &__progress-label {
+    @include drumee.typo($size: 14px, $weight: 600, $line: 20px, $color: var(--normal-fg-10));
+    flex: 1;
+  }
+  &__progress-pct {
+    @include drumee.typo($size: 14px, $weight: 700, $line: 20px, $color: var(--accent-orange, #fa8540));
+  }
   &__progress-bar {
     width: 100%;
     height: 8px;
-    background: var(--normal-bg-90, #f2f2f7);
+    background: var(--normal-bg-100, #e9e9ef);
     border-radius: 4px;
     overflow: hidden;
-    margin: 12px 0 4px;
+    margin: 10px 0 4px;
   }
   &__progress-fill {
     height: 100%;
-    background: var(--primary-40, #5950ff);
+    background: var(--accent-orange, #fa8540);
     transition: width 200ms linear;
+    min-width: 2px;
   }
   &__progress-count {
-    font-size: 12px;
-    color: var(--normal-fg-50, #84848c);
-    margin-bottom: 16px;
+    @include drumee.typo($size: 12px, $weight: 400, $line: 16px, $color: var(--normal-fg-50, #84848c));
   }
+  &__progress-current {
+    @include drumee.typo($size: 12px, $weight: 400, $line: 16px, $color: var(--normal-fg-40));
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-top: 2px;
+    font-style: italic;
+  }
+
+  // ───────── result summary + errors ─────────
   &__summary {
-    font-size: 14px;
-    line-height: 1.4;
-    color: var(--normal-fg, #0b0a21);
-    margin: 16px 0;
+    @include drumee.typo($size: 14px, $weight: 400, $line: 20px, $color: var(--normal-fg-20));
+    text-align: center;
   }
+  &__error-list {
+    gap: 4px;
+    max-height: 120px;
+    overflow-y: auto;
+    padding: 8px 12px;
+    background: rgba(220, 38, 38, 0.05);
+    border-radius: 6px;
+  }
+  &__error-item {
+    @include drumee.typo($size: 12px, $weight: 400, $line: 16px, $color: #b91c1c);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  // ───────── skip link ─────────
   &__skip {
-    font-size: 13px;
-    color: var(--normal-fg-20, #65656c);
+    @include drumee.typo($size: 13px, $weight: 400, $line: 18px, $color: var(--normal-fg-20, #65656c));
     text-decoration: underline;
     cursor: pointer;
-    margin-top: 8px;
+    margin-top: 4px;
     align-self: center;
-    &:hover { color: var(--primary-50, #433cc5); }
+    &:hover { color: var(--accent-orange, #fa8540); }
   }
-  &__toggle-row {
+
+  // ───────── spinner (checking) ─────────
+  &__body--checking {
     align-items: center;
-    gap: 8px;
-    cursor: pointer;
-    padding: 8px 0;
-    &[data-state="1"] &__toggle-label::before {
-      content: "☑ ";
-    }
-    &[data-state="0"] &__toggle-label::before {
-      content: "☐ ";
-    }
+    padding: 32px 16px;
+    gap: 16px;
+  }
+  &__spinner {
+    width: 36px;
+    height: 36px;
+    border: 3px solid rgba(250, 133, 64, 0.2);
+    border-top-color: var(--accent-orange, #fa8540);
+    border-radius: 50%;
+    animation: migrate-gdrive-spin 0.8s linear infinite;
   }
   &__loading {
-    text-align: center;
-    padding: 32px 16px;
-    color: var(--normal-fg-50, #84848c);
+    @include drumee.typo($size: 14px, $weight: 400, $line: 20px, $color: var(--normal-fg-50, #84848c));
   }
+}
+
+@keyframes migrate-gdrive-spin {
+  to { transform: rotate(360deg); }
 }

@@ -36,6 +36,12 @@ class __migrate_gdrive_popup extends LetcBox {
     this._jobId = null;
     this._jobSnap = null;
     this._poll = null;
+    // Form values persisted on the instance — the popup re-renders on every
+    // state transition (post-OAuth, post-poll, etc.) and `feed()` rebuilds
+    // the DOM, so reading raw `<input>` / `dataset` is unreliable. Skeleton
+    // reads these via the getters below.
+    this._sourceFolderId = 'root';
+    this._includeShared = 0;
     this._onPostMessage = this._onPostMessage.bind(this);
     window.addEventListener('message', this._onPostMessage, false);
   }
@@ -82,6 +88,23 @@ class __migrate_gdrive_popup extends LetcBox {
 
   _render() {
     this.feed(require('./skeleton')(this));
+    // Mirror DOM → instance on every keystroke so subsequent re-renders
+    // (post-OAuth, post-poll) seed the Entry with the user's latest value
+    // instead of resetting to ''.
+    requestAnimationFrame(() => this._wireFormSync());
+  }
+
+  _wireFormSync() {
+    if (!this.el) return;
+    const folderEl = this._getPartEl('source-folder-input');
+    const input = folderEl && folderEl.querySelector('input');
+    if (input && !input._gdriveBound) {
+      input._gdriveBound = 1;
+      input.value = this._sourceFolderId;
+      input.addEventListener('input', () => {
+        this._sourceFolderId = (input.value || '').trim() || 'root';
+      });
+    }
   }
 
   async _refreshScope() {
@@ -99,6 +122,9 @@ class __migrate_gdrive_popup extends LetcBox {
   }
 
   _onPostMessage(evt) {
+    // Only accept messages from our own origin — the callback page is
+    // served same-origin and posts with window.location.origin as target.
+    if (evt && evt.origin && evt.origin !== window.location.origin) return;
     const data = evt && evt.data;
     if (!data || data.type !== 'gdrive-connected') return;
     if (data.ok) {
@@ -111,6 +137,8 @@ class __migrate_gdrive_popup extends LetcBox {
   }
 
   async _connect() {
+    // Clear any prior connect error so the retry doesn't keep showing it.
+    this._connectError = null;
     let res;
     try {
       res = await this.fetchService('google_drive.connect', { hub_id: Visitor.id });
@@ -124,19 +152,36 @@ class __migrate_gdrive_popup extends LetcBox {
   }
 
   _getInputs() {
+    // Read the latest DOM values first (user may have typed/toggled since
+    // the last cache), then persist to instance so a subsequent re-render
+    // can restore them from `getSourceFolderId()` / `getIncludeShared()`.
     const folderInput = this._getPartEl('source-folder-input');
-    const source_folder_id = folderInput
-      ? (folderInput.querySelector('input')?.value || '').trim() || 'root'
-      : 'root';
+    if (folderInput) {
+      const v = (folderInput.querySelector('input')?.value || '').trim();
+      this._sourceFolderId = v || 'root';
+    }
     const sharedToggle = this._getPartEl('shared-drives-toggle');
-    const include_shared_drives = sharedToggle && sharedToggle.dataset.state === '1' ? 1 : 0;
-    return { source_folder_id, include_shared_drives };
+    if (sharedToggle) {
+      this._includeShared = sharedToggle.dataset.state === '1' ? 1 : 0;
+    }
+    return {
+      source_folder_id: this._sourceFolderId,
+      include_shared_drives: this._includeShared,
+    };
   }
 
   _getPartEl(pn) {
     if (!this.el) return null;
     return this.el.querySelector(`[data-partname="${pn}"]`);
   }
+
+  /**
+   * Skeleton reads these to seed Entry value + toggle state on every
+   * re-render, so user input survives re-render cycles triggered by
+   * polling / postMessage / state transitions.
+   */
+  getSourceFolderId() { return this._sourceFolderId; }
+  getIncludeShared() { return this._includeShared; }
 
   async _startMigration() {
     if (this._starting) return;
@@ -239,10 +284,12 @@ class __migrate_gdrive_popup extends LetcBox {
       case 'gdrive-retry-connect':
         return this._refreshScope();
       case 'gdrive-toggle-shared': {
-        // Flip dataset.state in place — avoids a full re-render so the
-        // source-folder input value isn't lost.
+        // Flip dataset.state in place AND persist to instance so the
+        // value survives re-renders (skeleton seeds dataset.state from
+        // `getIncludeShared()`).
+        this._includeShared = this._includeShared ? 0 : 1;
         const row = this._getPartEl('shared-drives-toggle');
-        if (row) row.dataset.state = row.dataset.state === '1' ? '0' : '1';
+        if (row) row.dataset.state = String(this._includeShared);
         return;
       }
     }
@@ -252,6 +299,7 @@ class __migrate_gdrive_popup extends LetcBox {
   getState() { return this._state; }
   getJobSnap() { return this._jobSnap; }
   isAutoFromOnboarding() { return this._autoFromOnboarding; }
+  getConnectError() { return this._connectError; }
 }
 
 __migrate_gdrive_popup.initClass();
