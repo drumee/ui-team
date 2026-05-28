@@ -10,6 +10,7 @@ html {
 @include meta.load-css("toolkit");
 @include meta.load-css("buttons.scss");
 @include meta.load-css("topbar");
+@include meta.load-css("mobile-topbar");
 @include meta.load-css("body");
 @include meta.load-css("desk/dmz-copy-media");
 @include meta.load-css("desk/intro-popup");
@@ -48,6 +49,32 @@ html {
     width: 100%;
     height: 100%;
     z-index: 10010;
+    background-color: rgba(0, 0, 0, 0.45);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s ease;
+
+    // Mobile: pin to the viewport so the backdrop covers the area
+    // behind the mobile-topbar too — not just the desk body.
+    &[data-device="mobile"] {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      width: 100vw;
+      height: 100vh;
+    }
+
+    &[data-state="open"] {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    // Desktop never opens this backdrop; defend against stray writes.
+    &:not([data-device="mobile"]) {
+      background-color: transparent;
+    }
   }
 
   &__panel-inner {
@@ -76,6 +103,11 @@ html {
   &__right-side {
     flex-grow: 1;
     background-color: var(--normal-bg-100);
+  }
+
+  // Desktop top bar is replaced by __mobile-topbar on mobile.
+  &__topbar[data-device="mobile"] {
+    display: none;
   }
 
   &__wm-container {
