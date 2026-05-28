@@ -608,73 +608,71 @@
     }
   }
 
-  // ── Responsive: mobile ────────────────────────────────────
-  // Single-column everything: row contents, profile body (avatar over
-  // fields), name/username pair, and the header row (title above the
-  // full-width Save button).
-  &__ui[data-device="mobile"] {
-    padding: var(--spacer-5);
-    gap: var(--spacer-5);
-  }
-
-  &__row[data-device="mobile"] {
-    flex-direction: column;
-
-    .settings-main__profile-card,
-    .settings-main__preferences-card,
-    .settings-main__credentials-card,
-    .settings-main__danger-card,
-    .settings-main__linked-card {
-      flex: 1 1 auto;
+  // ── Responsive: tablet (viewport-based) ───────────────────
+  // Mirror the mobile [data-device] rules at <=1024px so tablet
+  // viewports collapse to the single-column layout regardless of
+  // whether the data-device attribute is set.
+  @media (max-width: 1024px) {
+    &__ui {
+      padding: var(--spacer-5);
+      gap: var(--spacer-5);
     }
-  }
 
-  &__header-row[data-device="mobile"] {
-    flex-direction: column;
-    align-items: stretch;
-    gap: var(--spacer-5);
-  }
+    &__row {
+      flex-direction: column !important;
 
-  &__header-save-main[data-device="mobile"] {
-    width: 100%;
-    min-width: 0;
-  }
+      .settings-main__profile-card,
+      .settings-main__preferences-card,
+      .settings-main__credentials-card,
+      .settings-main__danger-card,
+      .settings-main__linked-card {
+        flex: 1 1 auto;
+      }
+    }
 
-  &__header-title[data-device="mobile"] {
-    font-size: 24px;
-    line-height: 28px;
-  }
+    &__header-row {
+      flex-direction: column !important;
+      align-items: stretch;
+      gap: var(--spacer-5);
+    }
 
-  &__profile-body[data-device="mobile"] {
-    flex-direction: column;
-    align-items: center;
-    gap: var(--spacer-5);
-  }
+    &__header-save-main {
+      width: 100%;
+      min-width: 0;
+    }
 
-  &__profile-avatar-block[data-device="mobile"] {
-    align-self: center;
-  }
+    &__header-title {
+      font-size: 24px;
+      line-height: 28px;
+    }
 
-  &__profile-fields[data-device="mobile"] {
-    width: 100%;
-  }
+    &__profile-body {
+      flex-direction: column !important;
+      align-items: center;
+      gap: var(--spacer-5);
+    }
 
-  &__profile-fields-row[data-device="mobile"] {
-    flex-direction: column;
-  }
+    &__profile-avatar-block {
+      align-self: center;
+    }
 
-  &__card[data-device="mobile"] {
-    padding: var(--spacer-5);
-    gap: var(--spacer-5);
-  }
+    &__profile-fields {
+      width: 100%;
+    }
 
-  // Inner rows (icon + text on left, button/toggle on right) start to
-  // wrap awkwardly at small widths. Allow them to stack if the right
-  // side has its own visible affordance (button/pill), but keep toggle
-  // rows inline since the switch is narrow.
-  &__inner[data-device="mobile"] {
-    flex-wrap: wrap;
-    row-gap: var(--spacer-3);
+    &__profile-fields-row {
+      flex-direction: column !important;
+    }
+
+    &__card {
+      padding: var(--spacer-5);
+      gap: var(--spacer-5);
+    }
+
+    &__inner {
+      flex-wrap: wrap;
+      row-gap: var(--spacer-3);
+    }
   }
 }
 

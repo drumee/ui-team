@@ -461,12 +461,6 @@
     @media (max-width: 560px) {
       flex-direction: column-reverse !important;
     }
-
-    &--triple {
-      .settings-delete-account__btn--continue {
-        flex: 1;
-      }
-    }
   }
 
   &__btn {
