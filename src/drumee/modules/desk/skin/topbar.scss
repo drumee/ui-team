@@ -540,6 +540,121 @@
     line-height: 1;
   }
 
+  // Tablet "more" menu — collapses Add / Upload / Invite into a single
+  // icon-only dropdown between 768px and 1024px (see media query at the
+  // bottom of this block).
+  &__more-wrapper {
+    display: none;
+    position: relative;
+    flex-shrink: 0;
+
+    .menu-topic-items {
+      background: var(--normal-bg);
+      border-radius: 4px;
+      padding: 8px;
+      gap: 4px;
+      min-width: 160px;
+      border: 1px solid var(--border-default);
+    }
+
+    .menu-topic-items__wrapper {
+      box-shadow: 0 1px 5.5px rgba(0, 0, 0, 0.13);
+      border-radius: 4px;
+      right: 0;
+      min-width: 160px;
+      z-index: 99999;
+
+      &[data-direction="down"] {
+        top: calc(100% + 4px);
+      }
+    }
+
+    &:not([data-state="1"]) .menu-topic-items__wrapper {
+      visibility: hidden;
+    }
+  }
+
+  &__more-btn {
+    width: 28px;
+    height: 28px;
+    padding: 6px;
+    background-color: var(--white);
+    border-radius: 4px;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    flex-shrink: 0;
+
+    svg {
+      width: 16px;
+      height: 16px;
+      fill: var(--normal-fg-10);
+      color: var(--normal-fg-10);
+    }
+
+    &:hover {
+      background-color: var(--normal-bg-80);
+    }
+  }
+
+  &__more-menu-item {
+    display: flex !important;
+    flex-direction: row !important;
+    padding: 6px 8px;
+    gap: 8px;
+    border-radius: 4px;
+    align-items: center !important;
+    cursor: pointer;
+    white-space: nowrap;
+    width: 100%;
+    box-sizing: border-box;
+
+    > * {
+      display: inline-flex;
+      align-items: center;
+    }
+
+    .svg-wrapper,
+    .drumee-svg,
+    svg {
+      width: 14px;
+      height: 14px;
+      flex-shrink: 0;
+      color: var(--normal-fg-10);
+      fill: currentColor;
+    }
+
+    span.label,
+    section.label {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--normal-fg);
+      white-space: nowrap;
+      line-height: 1;
+      display: inline-flex;
+      align-items: center;
+    }
+
+    &:hover {
+      background: rgba(89, 80, 255, 0.1);
+    }
+  }
+
+  // Tablet breakpoint: swap the three primary actions for the consolidated menu.
+  // `!important` is required because __upload-btn ships with `display: inline-flex !important`
+  // and __invite-btn is declared further down the cascade.
+  @media (min-width: 768px) and (max-width: 1024px) {
+    &__add-wrapper,
+    &__upload-btn,
+    &__invite-btn {
+      display: none !important;
+    }
+
+    &__more-wrapper {
+      display: flex !important;
+    }
+  }
+
   // Invite button
   &__invite-btn {
     display: inline-flex;
@@ -624,6 +739,40 @@ html[data-theme="dark"] {
 
       &:hover {
         background-color: var(--normal-bg-40);
+      }
+    }
+
+    &__more-btn {
+      background-color: var(--normal-bg-elevated);
+
+      svg {
+        fill: var(--normal-fg);
+        color: var(--normal-fg);
+      }
+
+      &:hover {
+        background-color: var(--normal-bg-40);
+      }
+    }
+
+    &__more-wrapper .menu-topic-items {
+      background-color: var(--normal-bg-elevated);
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+    }
+
+    &__more-menu-item {
+      svg {
+        color: var(--normal-fg);
+        fill: var(--normal-fg);
+      }
+
+      span.label,
+      section.label {
+        color: var(--normal-fg);
+      }
+
+      &:hover {
+        background: rgba(89, 80, 255, 0.2);
       }
     }
 

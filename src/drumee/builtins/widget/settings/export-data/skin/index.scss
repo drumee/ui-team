@@ -215,6 +215,7 @@
     width: 100%;
     padding: 32px;
     gap: 8px;
+    justify-content: flex-end;
     @media (max-width: 560px) {
       flex-direction: column-reverse !important;
     }
