@@ -113,7 +113,8 @@ class desk_module extends LetcBox {
       this.togglePanel('chat_p2p', 'chat-panel')
     }
     if (!drumate_id) return;
-    p = await this.ensurePart('chat-panel')
+    p = await this.ensurePart('chat-panel');
+    this.debug("AAA:122", this)
     widget = p && p.children && p.children.last && p.children.last();
     if (widget && widget.openChatByPeerId) widget.openChatByPeerId(drumate_id, message_id);
   }

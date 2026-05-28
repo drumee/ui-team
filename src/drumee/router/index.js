@@ -336,11 +336,12 @@ class drumee_router extends LetcBox {
         kind = 'module_welcome';
       }
     }
-    this.debug("AAA:8887", moduleName(), this.currentModule)
+    this.debug("currentModule", moduleName(), this.currentModule)
     this.ensurePart('body').then(async (p) => {
       await Kind.waitFor(kind);
-      if (this.currentKind === kind) {
-        this.debug("AAA:342", kind, moduleName(), this.currentModule)
+      if (this.currentKind === kind && this.currentModule && !this.currentModule.isDestroyed()) {
+        this.debug("Forwarding routing to", kind, moduleName(), this.currentModule)
+        this.currentModule.route()
         return;
       }
       p.feed({ kind, name });
