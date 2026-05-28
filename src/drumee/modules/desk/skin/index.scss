@@ -110,6 +110,14 @@ html {
     display: none;
   }
 
+  // Left panel-container hosts trash / activity (notifications) /
+  // settings slide-outs that anchor to the desktop sidebar column.
+  // On mobile that column doesn't exist (sidebar is a drawer overlay),
+  // so the panels end up floating against the viewport edge — hide.
+  &__panel-container.left[data-device="mobile"] {
+    display: none;
+  }
+
   &__wm-container {
     width: 100%;
     height: 100%;

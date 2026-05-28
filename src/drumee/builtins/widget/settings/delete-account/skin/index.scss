@@ -202,7 +202,7 @@
     width: 100%;
     gap: 16px;
 
-    >* {
+    > * {
       flex: 1 1 0;
       min-width: 0;
     }
@@ -223,7 +223,7 @@
     }
 
     // Inner elements pass clicks through to the row container
-    >* {
+    > * {
       pointer-events: none;
     }
   }
@@ -306,7 +306,7 @@
     transition: filter 0.15s ease;
 
     &[data-state="0"] {
-      opacity: .5;
+      opacity: 0.5;
       pointer-events: none;
     }
 
@@ -314,7 +314,7 @@
       filter: brightness(0.95);
     }
 
-    >* {
+    > * {
       pointer-events: none;
     }
 
@@ -458,6 +458,10 @@
     padding: 32px;
     gap: 8px;
 
+    @media (max-width: 560px) {
+      flex-direction: column-reverse !important;
+    }
+
     &--triple {
       .settings-delete-account__btn--continue {
         flex: 1;
@@ -478,7 +482,7 @@
       filter: brightness(0.95);
     }
 
-    >* {
+    > * {
       pointer-events: none;
     }
 
@@ -488,13 +492,16 @@
       padding: 0 16px;
       background: $danger;
 
+      @media (max-width: 560px) {
+        width: 100%;
+      }
+
       .settings-delete-account__btn-label {
         color: var(--white, #fff);
       }
     }
 
     &--continue {
-      flex: 1;
       padding: 0 24px;
       background: $neutral-soft;
 
@@ -504,7 +511,7 @@
       }
 
       &.step2[data-state="0"] {
-        opacity: .5;
+        opacity: 0.5;
         pointer-events: none;
       }
     }

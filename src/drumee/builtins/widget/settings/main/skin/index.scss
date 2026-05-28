@@ -588,34 +588,93 @@
     }
   }
 
-  // Mobile / narrow viewport: stack rows.
-  @media (max-width: 960px) {
-    &__ui {
-      padding: var(--spacer-5);
-    }
+  // ── Responsive: tablet ────────────────────────────────────
+  // Two-column layout (~698 + 450 / ~375 + 773) doesn't fit at tablet
+  // widths (≤ 1024). Stack rows; keep header on one line and avatar/
+  // fields side-by-side since there's still enough horizontal room.
+  &__ui[data-device="tablet"] {
+    padding: var(--spacer-5);
+  }
 
-    &__row {
-      flex-direction: column;
-    }
-    &__row-1,
-    &__row-2,
-    &__row-3 {
-      .settings-main__profile-card,
-      .settings-main__preferences-card,
-      .settings-main__credentials-card,
-      .settings-main__danger-card,
-      .settings-main__linked-card {
-        flex: 1 1 auto;
-      }
-    }
+  &__row[data-device="tablet"] {
+    flex-direction: column;
 
-    &__profile-body {
-      flex-direction: column;
-      align-items: stretch;
+    .settings-main__profile-card,
+    .settings-main__preferences-card,
+    .settings-main__credentials-card,
+    .settings-main__danger-card,
+    .settings-main__linked-card {
+      flex: 1 1 auto;
     }
-    &__profile-fields-row {
-      flex-direction: column;
+  }
+
+  // ── Responsive: mobile ────────────────────────────────────
+  // Single-column everything: row contents, profile body (avatar over
+  // fields), name/username pair, and the header row (title above the
+  // full-width Save button).
+  &__ui[data-device="mobile"] {
+    padding: var(--spacer-5);
+    gap: var(--spacer-5);
+  }
+
+  &__row[data-device="mobile"] {
+    flex-direction: column;
+
+    .settings-main__profile-card,
+    .settings-main__preferences-card,
+    .settings-main__credentials-card,
+    .settings-main__danger-card,
+    .settings-main__linked-card {
+      flex: 1 1 auto;
     }
+  }
+
+  &__header-row[data-device="mobile"] {
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--spacer-5);
+  }
+
+  &__header-save-main[data-device="mobile"] {
+    width: 100%;
+    min-width: 0;
+  }
+
+  &__header-title[data-device="mobile"] {
+    font-size: 24px;
+    line-height: 28px;
+  }
+
+  &__profile-body[data-device="mobile"] {
+    flex-direction: column;
+    align-items: center;
+    gap: var(--spacer-5);
+  }
+
+  &__profile-avatar-block[data-device="mobile"] {
+    align-self: center;
+  }
+
+  &__profile-fields[data-device="mobile"] {
+    width: 100%;
+  }
+
+  &__profile-fields-row[data-device="mobile"] {
+    flex-direction: column;
+  }
+
+  &__card[data-device="mobile"] {
+    padding: var(--spacer-5);
+    gap: var(--spacer-5);
+  }
+
+  // Inner rows (icon + text on left, button/toggle on right) start to
+  // wrap awkwardly at small widths. Allow them to stack if the right
+  // side has its own visible affordance (button/pill), but keep toggle
+  // rows inline since the switch is narrow.
+  &__inner[data-device="mobile"] {
+    flex-wrap: wrap;
+    row-gap: var(--spacer-3);
   }
 }
 

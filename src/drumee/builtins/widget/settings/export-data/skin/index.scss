@@ -15,6 +15,11 @@
     justify-content: center;
     gap: 32px;
     font-family: "Geist", system-ui, sans-serif;
+
+    @media (max-width: 560px) {
+      gap: 12px;
+      margin-top: 40px;
+    }
   }
 
   // ── Modal card ────────────────────────────────────────────
@@ -66,7 +71,7 @@
     width: 100%;
     gap: 16px;
 
-    >* {
+    > * {
       flex: 1 1 0;
       min-width: 0;
     }
@@ -86,7 +91,7 @@
       background: rgba(0, 0, 0, 0.07);
     }
 
-    >* {
+    > * {
       pointer-events: none;
     }
   }
@@ -169,7 +174,7 @@
     transition: filter 0.15s ease;
 
     &[data-state="0"] {
-      opacity: .5;
+      opacity: 0.5;
       pointer-events: none;
     }
 
@@ -177,7 +182,7 @@
       filter: brightness(0.95);
     }
 
-    >* {
+    > * {
       pointer-events: none;
     }
 
@@ -210,6 +215,9 @@
     width: 100%;
     padding: 32px;
     gap: 8px;
+    @media (max-width: 560px) {
+      flex-direction: column-reverse !important;
+    }
   }
 
   &__btn {
@@ -225,7 +233,7 @@
       filter: brightness(0.95);
     }
 
-    >* {
+    > * {
       pointer-events: none;
     }
 
@@ -234,6 +242,9 @@
       flex-shrink: 0;
       padding: 0 16px;
       background: $cancel-bg;
+      @media (max-width: 560px) {
+        width: 100%;
+      }
 
       .settings-export-data__btn-label {
         color: $ink-900;
@@ -241,7 +252,6 @@
     }
 
     &--continue {
-      flex: 1;
       padding: 0 24px;
       background: $purple-base;
 

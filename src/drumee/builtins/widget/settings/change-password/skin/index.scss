@@ -3,17 +3,17 @@
 // backdrop dim + blur.
 
 .settings-change-password {
-  $modal-bg:        #f2f2f7;          // Grey/20
-  $title-color:     #0b0a21;          // Primary/100
-  $body-color:      #65656c;          // Grey/80
-  $input-bg:        rgba(0, 0, 0, 0.05); // overlay lghtmode
-  $primary:         #433cc5;          // Primary/50
-  $primary-hover:   #3730a3;
-  $danger:          #d64e49;
-  $success-bg:      rgba(84, 182, 132, 0.15);
-  $success-fg:      #54b684;          // Signal/Success
-  $shadow:          0 1px 11px rgba(0, 0, 0, 0.13);
-  $font:            "Geist", system-ui, sans-serif;
+  $modal-bg: #f2f2f7; // Grey/20
+  $title-color: #0b0a21; // Primary/100
+  $body-color: #65656c; // Grey/80
+  $input-bg: rgba(0, 0, 0, 0.05); // overlay lghtmode
+  $primary: #433cc5; // Primary/50
+  $primary-hover: #3730a3;
+  $danger: #d64e49;
+  $success-bg: rgba(84, 182, 132, 0.15);
+  $success-fg: #54b684; // Signal/Success
+  $shadow: 0 1px 11px rgba(0, 0, 0, 0.13);
+  $font: "Geist", system-ui, sans-serif;
 
   // Auto-sized so the overlay's flex centering acts on the modal directly.
   // Width/height 100% would fill the overlay and pin the modal top-left.
@@ -32,8 +32,12 @@
     overflow: hidden;
     flex-shrink: 0;
 
-    &--form    { width: 520px; }
-    &--success { width: 450px; }
+    &--form {
+      width: 520px;
+    }
+    &--success {
+      width: 450px;
+    }
 
     @media (max-width: 560px) {
       width: calc(100vw - 32px) !important;
@@ -139,7 +143,9 @@
         fill: currentColor;
 
         .icon-fill-blue,
-        .icon-fill-grey { fill: currentColor; }
+        .icon-fill-grey {
+          fill: currentColor;
+        }
       }
 
       &:hover {
@@ -164,6 +170,10 @@
     &--success {
       padding: 0 32px 32px;
     }
+
+    @media (max-width: 560px) {
+      flex-direction: column-reverse !important;
+    }
   }
 
   &__btn {
@@ -173,28 +183,44 @@
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    transition: background 0.15s ease, opacity 0.15s ease;
+    transition:
+      background 0.15s ease,
+      opacity 0.15s ease;
     user-select: none;
 
-    > * { pointer-events: none; }
+    > * {
+      pointer-events: none;
+    }
 
     &--cancel {
       background: $input-bg;
       width: 137px;
       flex-shrink: 0;
 
-      .settings-change-password__btn-label { color: #000000; }
+      @media (max-width: 560px) {
+        width: 100%;
+      }
 
-      &:hover { background: rgba(0, 0, 0, 0.08); }
+      .settings-change-password__btn-label {
+        color: #000000;
+      }
+
+      &:hover {
+        background: rgba(0, 0, 0, 0.08);
+      }
     }
 
     &--primary {
       background: $primary;
       flex: 1;
 
-      .settings-change-password__btn-label { color: #ffffff; }
+      .settings-change-password__btn-label {
+        color: #ffffff;
+      }
 
-      &:hover:not(.is-loading) { background: $primary-hover; }
+      &:hover:not(.is-loading) {
+        background: $primary-hover;
+      }
       &.is-loading {
         cursor: not-allowed;
         opacity: 0.7;
@@ -260,10 +286,14 @@ html[data-theme="dark"] {
       box-shadow: 0 1px 11px rgba(0, 0, 0, 0.55);
     }
 
-    &__title { color: var(--normal-fg-10); }
+    &__title {
+      color: var(--normal-fg-10);
+    }
     &__subtitle,
     &__field-label,
-    &__success-description { color: var(--normal-fg-20); }
+    &__success-description {
+      color: var(--normal-fg-20);
+    }
 
     &__field-input {
       background: var(--overlay-bg-05);
@@ -276,17 +306,27 @@ html[data-theme="dark"] {
     &__field-entry input {
       color: var(--normal-fg-10);
 
-      &::placeholder { color: var(--placeholder-fg); }
+      &::placeholder {
+        color: var(--placeholder-fg);
+      }
     }
 
-    &__field-toggle { color: var(--normal-fg-20); }
-    &__field-toggle:hover { color: var(--normal-fg-10); }
+    &__field-toggle {
+      color: var(--normal-fg-20);
+    }
+    &__field-toggle:hover {
+      color: var(--normal-fg-10);
+    }
 
     &__btn--cancel {
       background: var(--overlay-bg-05);
-      .settings-change-password__btn-label { color: var(--normal-fg-10); }
+      .settings-change-password__btn-label {
+        color: var(--normal-fg-10);
+      }
 
-      &:hover { background: var(--hover-bg-40); }
+      &:hover {
+        background: var(--hover-bg-40);
+      }
     }
   }
 }
