@@ -998,7 +998,7 @@ class __window_folder extends mfsInteract {
     return [
       { label: LOCALE.ROLE_ADMIN, privilege: _K.privilege.admin },
       { label: LOCALE.ROLE_VIEW_EDIT, privilege: _K.privilege.write },
-      { label: LOCALE.ROLE_VIEW_CHAT, privilege: _K.privilege.read },
+      { label: LOCALE.ROLE_VIEW_CHAT, privilege: _K.privilege.chat },
       {
         label: LOCALE.VIEW,
         privilege: _K.privilege.guest || _K.privilege.read,
