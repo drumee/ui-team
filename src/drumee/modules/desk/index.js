@@ -99,49 +99,49 @@ class desk_module extends LetcBox {
    */
   async openP2Pchat(args = {}) {
     const { drumate_id, message_id } = args;
-    let p = await this.ensurePart('chat-panel')
+    let p = await this.ensurePart("chat-panel");
     let widget = p.children.last();
     if (!widget || widget.isDestroyed()) {
-      this.togglePanel('chat_p2p', 'chat-panel')
-    } else if (widget.mget(_a.kind) === 'chat_p2p') {
-      if (widget.el.dataset.anim === 'in') {
+      this.togglePanel("chat_p2p", "chat-panel");
+    } else if (widget.mget(_a.kind) === "chat_p2p") {
+      if (widget.el.dataset.anim === "in") {
         return;
       } else {
-        this.togglePanel('chat_p2p', 'chat-panel')
+        this.togglePanel("chat_p2p", "chat-panel");
       }
     } else {
-      this.togglePanel('chat_p2p', 'chat-panel')
+      this.togglePanel("chat_p2p", "chat-panel");
     }
     if (!drumate_id) return;
-    p = await this.ensurePart('chat-panel');
-    this.debug("AAA:122", this)
+    p = await this.ensurePart("chat-panel");
+    this.debug("AAA:122", this);
     widget = p && p.children && p.children.last && p.children.last();
-    if (widget && widget.openChatByPeerId) widget.openChatByPeerId(drumate_id, message_id);
+    if (widget && widget.openChatByPeerId)
+      widget.openChatByPeerId(drumate_id, message_id);
   }
 
   /**
-   * 
-   * @param {*} args 
-   * @returns 
+   *
+   * @param {*} args
+   * @returns
    */
   async openContactPanel(args = {}) {
-    let p = await this.ensurePart('chat-panel')
+    let p = await this.ensurePart("chat-panel");
     let widget = p.children.last();
     if (!widget || widget.isDestroyed()) {
-      this.togglePanel('address_book', 'chat-panel')
-    } else if (widget.mget(_a.kind) === 'address_book') {
-      if (widget.el.dataset.anim === 'in') {
+      this.togglePanel("address_book", "chat-panel");
+    } else if (widget.mget(_a.kind) === "address_book") {
+      if (widget.el.dataset.anim === "in") {
         return;
       } else {
-        this.togglePanel('address_book', 'chat-panel')
+        this.togglePanel("address_book", "chat-panel");
       }
     }
-    this.togglePanel('address_book', 'chat-panel')
-    p = await this.ensurePart('chat-panel')
+    this.togglePanel("address_book", "chat-panel");
+    p = await this.ensurePart("chat-panel");
     widget = p && p.children && p.children.last && p.children.last();
     if (widget && widget.switchTab) widget.switchTab(_a.pending);
   }
-
 
   /**
    *
@@ -176,13 +176,16 @@ class desk_module extends LetcBox {
     if (skipped) return;
 
     await Kind.waitFor("migrate_gdrive_popup");
-    Wm.launch({
-      kind: "migrate_gdrive_popup",
-      hub_id: Visitor.id,
-      nid: Visitor.get(_a.home_id),
-      autoFromOnboarding: 1,
-      wm_unique_id: "migrate_gdrive_popup",
-    }, { explicit: 1, singleton: 1 });
+    Wm.launch(
+      {
+        kind: "migrate_gdrive_popup",
+        hub_id: Visitor.id,
+        nid: Visitor.get(_a.home_id),
+        autoFromOnboarding: 1,
+        wm_unique_id: "migrate_gdrive_popup",
+      },
+      { explicit: 1, singleton: 1 },
+    );
   }
 
   /**
@@ -989,7 +992,7 @@ class desk_module extends LetcBox {
     if (pointerDragged || !window.Wm) {
       return;
     }
-    this.debug("AAA:830", service)
+    this.debug("AAA:830", service);
     // Mobile: tapping a navigational sidebar item dismisses the drawer so
     // the resulting panel/content is visible. on_click items (e.g. logout)
     // never reach here, and drawer-control services (mobile-show-*/close),
