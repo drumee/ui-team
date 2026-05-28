@@ -5,7 +5,6 @@
 .apps-main {
   // ── Coming-soon blur overlay ──────────────────────────────
   &__coming-soon-overlay {
-    display: none !important;
     position: absolute;
     inset: 0;
     display: flex;
@@ -30,5 +29,4 @@
     text-align: center;
     color: #885eff;
   }
-
 }
