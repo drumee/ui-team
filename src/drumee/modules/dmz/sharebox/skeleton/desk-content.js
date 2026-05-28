@@ -115,6 +115,7 @@ function dmzSplitBody(ui) {
       nid: ui.mget(_a.nid),
       share_id: ui.mget(_a.share_id),
       recipient_id: ui.mget(_a.user_id),
+      file_nid: ui.mget('file_nid'),
       page: 1,
     };
   }
