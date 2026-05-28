@@ -14,6 +14,36 @@
  * limitations under the License.
  * =============================================================================
  */
+
+// --- Frontend telemetry — Grafana Faro → watcher.drumee.com/collect ---
+// Captures JS errors, unhandled rejections, fetch failures and Web Vitals.
+// Placed first so it instruments code that runs during bootstrap.
+try {
+  const { initializeFaro, getWebInstrumentations } = require('@grafana/faro-web-sdk');
+  const host = location.hostname;
+  initializeFaro({
+    url: 'https://watcher.drumee.com/collect',
+    app: {
+      name: 'drumee-ui',
+      version: typeof __VERSION__ !== 'undefined' ? __VERSION__ : 'dev',
+      environment:
+        host === 'app.drumee.com' || host.endsWith('.app.drumee.com') ? 'production' :
+        host === 'drumee.in'      || host.endsWith('.drumee.in')      ? 'staging'    :
+                                                                        'dev',
+    },
+    instrumentations: getWebInstrumentations({ captureConsole: false }),
+    beforeSend: (item) => {
+      const msg = item?.payload?.value || item?.payload?.message || '';
+      if (/ResizeObserver loop limit exceeded/.test(msg)) return null;
+      if (/Non-Error promise rejection captured/.test(msg)) return null;
+      return item;
+    },
+  });
+} catch (e) {
+  // SDK failure must never block app bootstrap
+  console.warn('Faro init failed:', e);
+}
+
 const STYLE = "color: green; font-weight: bold;"
 let bunldes = new Map();
 
