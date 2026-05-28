@@ -43,7 +43,6 @@ try {
       return item;
     },
   });
-  console.log('%cFaro initialized', 'color:#fa8540;font-weight:bold');
 } catch (e) {
   // SDK failure must never block app bootstrap
   console.warn('Faro init failed:', e);
