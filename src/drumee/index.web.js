@@ -21,15 +21,19 @@
 try {
   const { initializeFaro, getWebInstrumentations } = require('@grafana/faro-web-sdk');
   const host = location.hostname;
+  const isPreview   = location.pathname.startsWith('/-/preview/');
+  const isProdHost  = host === 'app.drumee.com' || host.endsWith('.app.drumee.com');
+  const isStageHost = host === 'drumee.in'      || host.endsWith('.drumee.in');
   window.faro = initializeFaro({
     url: 'https://watcher.drumee.com/collect',
     app: {
       name: 'drumee-ui',
       version: typeof __VERSION__ !== 'undefined' ? __VERSION__ : 'dev',
       environment:
-        host === 'app.drumee.com' || host.endsWith('.app.drumee.com') ? 'production' :
-        host === 'drumee.in'      || host.endsWith('.drumee.in')      ? 'staging'    :
-                                                                        'dev',
+        isProdHost && isPreview ? 'uat'        :
+        isProdHost              ? 'production' :
+        isStageHost             ? 'staging'    :
+                                  'dev',
     },
     instrumentations: getWebInstrumentations({ captureConsole: false }),
     beforeSend: (item) => {
