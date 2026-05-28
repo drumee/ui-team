@@ -276,7 +276,7 @@ const createActionsNav = (ui) => {
         kids: [
           createNavItem(
             ui,
-            "add",
+            "topbar-add",
             LOCALE.ADD_NEW || "Add new",
             "new-workspace",
             "",
