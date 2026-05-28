@@ -1,27 +1,4 @@
-const EDITABLE = [
-  "doc",
-  "docx",
-  "docm",
-  "dotx",
-  "dotm",
-  "odt",
-  "ott",
-  "xlsx",
-  "xlsm",
-  "xltx",
-  "xltm",
-  "xlsb",
-  "ods",
-  "ots",
-  "pptx",
-  "pptm",
-  "potx",
-  "potm",
-  "ppsx",
-  "ppsm",
-  "odp",
-  "otp",
-];
+const EDITABLE = require("../editable");
 
 const cnWindowButton = "window-button";
 const cnWindowButtonDropdownMenu = `${cnWindowButton}__dropdown-menu`;
