@@ -38,7 +38,7 @@ module.exports = function (ui) {
     {
       ico: "eye",
       label: LOCALE.CAN_VIEW_FILES || "Can View Files",
-      bit: _K.permission.download,
+      bit: _K.permission.read,
     },
     {
       ico: "desktop_edit",
@@ -48,7 +48,7 @@ module.exports = function (ui) {
     {
       ico: "desktop__chat",
       label: LOCALE.CAN_CHAT || "Can Chat",
-      bit: _K.permission.modify,
+      bit: _K.permission.download,
     },
   ];
 
