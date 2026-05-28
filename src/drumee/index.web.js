@@ -21,7 +21,7 @@
 try {
   const { initializeFaro, getWebInstrumentations } = require('@grafana/faro-web-sdk');
   const host = location.hostname;
-  initializeFaro({
+  window.faro = initializeFaro({
     url: 'https://watcher.drumee.com/collect',
     app: {
       name: 'drumee-ui',
@@ -39,6 +39,7 @@ try {
       return item;
     },
   });
+  console.log('%cFaro initialized', 'color:#fa8540;font-weight:bold');
 } catch (e) {
   // SDK failure must never block app bootstrap
   console.warn('Faro init failed:', e);
