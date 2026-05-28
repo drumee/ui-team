@@ -41,7 +41,7 @@ const createNavItem = (
         partHandler: ui,
         content: "",
         dataset: { count: 0 },
-      })
+      }),
     );
   }
 
@@ -71,7 +71,7 @@ const createWorkspaceSection = (ui) => {
         kind: "workspace_list",
         className: cls(fig, "workspace-main"),
         uiHandler: [ui],
-        sys_pn:"workspace-main"
+        sys_pn: "workspace-main",
       },
     ],
   });
@@ -187,7 +187,11 @@ const createLogoRow = (ui) => {
             ico: "raw-logo-drumee-full",
             className: `${fig}__logo-icon`,
           }),
-          createText(fig, "header", Organization.name() || LOCALE.WORKSPACE_NAME),
+          createText(
+            fig,
+            "header",
+            Organization.name() || LOCALE.WORKSPACE_NAME,
+          ),
         ],
       }),
       Skeletons.Button.Svg({
@@ -214,7 +218,15 @@ const createNav = (ui) => {
       Skeletons.Box.Y({
         className: `${fig}__nav-main`,
         kids: [
-          createNavItem(ui, "sidebar_home", LOCALE.HOME, _e.home, "", null, "sidebar-home"),
+          createNavItem(
+            ui,
+            "sidebar_home",
+            LOCALE.HOME,
+            _e.home,
+            "",
+            null,
+            "sidebar-home",
+          ),
           createNavItem(
             ui,
             "sidebar_notifications",
@@ -226,9 +238,19 @@ const createNav = (ui) => {
             "activity-count",
           ),
           createNavItem(ui, "sidebar_inbox", LOCALE.INBOX, "toggle-inbox"),
-          createNavItem(ui, "sidebar_contacts", LOCALE.CONTACTS, "toggle-contacts"),
+          createNavItem(
+            ui,
+            "sidebar_contacts",
+            LOCALE.CONTACTS,
+            "toggle-contacts",
+          ),
           createNavItem(ui, "sidebar_trash", LOCALE.TRASH, "toggle-trash"),
-          createNavItem(ui, "sidebar_apps", LOCALE.ADMIN_CONSOLE, "toggle-apps"),
+          createNavItem(
+            ui,
+            "sidebar_apps",
+            LOCALE.ADMIN_CONSOLE,
+            "toggle-apps",
+          ),
         ],
       }),
 
@@ -252,10 +274,42 @@ const createActionsNav = (ui) => {
       Skeletons.Box.Y({
         className: `${fig}__nav-main`,
         kids: [
-          createNavItem(ui, "topbar-add", LOCALE.ADD_NEW || "Add new", "new-workspace", "", null, "mobile-add-new"),
-          createNavItem(ui, "desktop_upload", LOCALE.UPLOAD, _e.upload, "", null, "mobile-upload"),
-          createNavItem(ui, "magnifying-glass", LOCALE.SEARCH || "Search", "search-files", "", null, "mobile-search"),
-          createNavItem(ui, "topbar-invite", LOCALE.INVITE || "Invite", "invite-member", "", null, "mobile-invite"),
+          createNavItem(
+            ui,
+            "add",
+            LOCALE.ADD_NEW || "Add new",
+            "new-workspace",
+            "",
+            null,
+            "mobile-add-new",
+          ),
+          createNavItem(
+            ui,
+            "desktop_upload",
+            LOCALE.UPLOAD,
+            _e.upload,
+            "",
+            null,
+            "mobile-upload",
+          ),
+          createNavItem(
+            ui,
+            "magnifying-glass",
+            LOCALE.SEARCH || "Search",
+            "search-files",
+            "",
+            null,
+            "mobile-search",
+          ),
+          createNavItem(
+            ui,
+            "topbar-invite",
+            LOCALE.INVITE || "Invite",
+            "invite-member",
+            "",
+            null,
+            "mobile-invite",
+          ),
         ],
       }),
     ],
