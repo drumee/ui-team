@@ -18,6 +18,10 @@ $danger-soft: rgba(246, 81, 75, 0.12);
   // Icons nested inside clickable Notes/Buttons must not swallow the click.
   &__close > *,
   &__cancel > *,
+  &__mode-opt > *,
+  &__tree-caret > *,
+  &__tree-check > *,
+  &__tree-more > *,
   &__primary-btn > * { pointer-events: none !important; }
 
   // ───────── shell ─────────
@@ -266,6 +270,137 @@ $danger-soft: rgba(246, 81, 75, 0.12);
   &__toggle-row[data-state="1"] &__switch { background: $accent; }
   &__toggle-row[data-state="1"] &__switch-knob { transform: translateX(18px); }
 
+  // ───────── mode selector (All / Choose) ─────────
+  &__mode { gap: var(--spacer-3); }
+
+  &__mode-opt {
+    align-items: center;
+    gap: var(--spacer-3);
+    padding: var(--spacer-3) var(--spacer-4);
+    border: 1px solid var(--border-default);
+    border-radius: var(--corner-radius-3);
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
+
+    &[data-state="1"] { border-color: $accent; background: $accent-soft; }
+    &:hover { background: var(--overlay-bg-05); }
+  }
+
+  &__mode-radio {
+    flex: 0 0 auto;
+    width: 18px;
+    height: 18px;
+    border: 2px solid var(--border-strong);
+    border-radius: 50%;
+    align-items: center;
+    justify-content: center;
+    transition: border-color 0.15s;
+  }
+  &__mode-opt[data-state="1"] &__mode-radio { border-color: $accent; }
+
+  &__mode-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: transparent;
+    transition: background 0.15s;
+  }
+  &__mode-opt[data-state="1"] &__mode-dot { background: $accent; }
+
+  &__mode-label {
+    @include drumee.typo($size: 14px, $weight: 500, $line: 20px, $color: var(--normal-fg-10));
+    font-weight: 500;
+  }
+
+  // ───────── picker tree ─────────
+  &__tree {
+    max-height: 260px;
+    overflow-y: auto;
+    border: 1px solid var(--border-default);
+    border-radius: var(--corner-radius-3);
+    padding: var(--spacer-2) 0;
+    background: var(--normal-bg-elevated);
+  }
+
+  &__tree-row {
+    align-items: center;
+    gap: var(--spacer-2);
+    height: 32px;
+    padding-right: var(--spacer-3);
+
+    &[data-implied="1"] { opacity: 0.5; }
+    &:hover { background: var(--overlay-bg-05); }
+  }
+
+  &__tree-caret {
+    flex: 0 0 auto;
+    width: 18px;
+    height: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: var(--normal-fg-50);
+    transition: transform 0.12s ease;
+    svg { width: 12px; height: 12px; fill: currentColor; }
+  }
+  // Single caret icon (apps-caret-down) rotated when the folder is collapsed.
+  &__tree-caret[data-state="0"] { transform: rotate(-90deg); }
+  &__tree-caret--leaf { cursor: default; visibility: hidden; }
+
+  &__tree-check {
+    flex: 0 0 auto;
+    width: 18px;
+    height: 18px;
+    border: 2px solid var(--border-strong);
+    border-radius: var(--corner-radius-2);
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background 0.12s, border-color 0.12s;
+
+    &[data-state="1"] { background: $accent; border-color: $accent; }
+    &[data-disabled="1"] { cursor: default; }
+  }
+
+  &__tree-check-mark {
+    width: 8px;
+    height: 8px;
+    border-radius: 1px;
+    background: transparent;
+  }
+  &__tree-check[data-state="1"] &__tree-check-mark { background: #ffffff; }
+
+  &__tree-ico {
+    flex: 0 0 auto;
+    width: 18px;
+    height: 18px;
+    color: var(--normal-fg-50);
+    fill: var(--normal-fg-50);
+  }
+
+  &__tree-name {
+    @include drumee.typo($size: 13.5px, $weight: 400, $line: 20px, $color: var(--normal-fg-10));
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-width: 0;
+  }
+
+  &__tree-info {
+    @include drumee.typo($size: 12.5px, $weight: 400, $line: 18px, $color: var(--normal-fg-50));
+    padding: var(--spacer-2) var(--spacer-4);
+    &[data-kind="error"] { color: var(--error); }
+  }
+
+  &__tree-more {
+    @include drumee.typo($size: 12.5px, $weight: 500, $line: 18px, $color: $accent);
+    font-weight: 500;
+    padding: var(--spacer-2) var(--spacer-4);
+    cursor: pointer;
+    &:hover { color: $accent-strong; }
+  }
+
   // ───────── footer + buttons ─────────
   &__footer {
     justify-content: flex-end;
@@ -314,6 +449,7 @@ $danger-soft: rgba(246, 81, 75, 0.12);
     box-sizing: border-box;
 
     &[data-state="0"] { opacity: 0.55; pointer-events: none; }
+    &[data-disabled="1"] { opacity: 0.55; pointer-events: none; }
     &[data-busy="1"]  { opacity: 0.8; pointer-events: none; }
     &:hover { background: $accent-strong; }
   }
