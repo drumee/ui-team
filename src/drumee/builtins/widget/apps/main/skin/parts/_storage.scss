@@ -15,6 +15,11 @@
     justify-content: space-between;
     gap: 24px;
     flex-shrink: 0;
+
+    &[data-device="mobile"] {
+      flex-direction: column;
+      gap: 12px;
+    }
   }
 
   &__storage-heading {
@@ -28,6 +33,11 @@
     line-height: 36px;
     font-weight: 600;
     color: $ink-900;
+
+    &[data-device="mobile"] {
+      font-size: 22px;
+      line-height: 28px;
+    }
   }
 
   &__storage-subtitle {
@@ -49,6 +59,13 @@
     align-items: center;
     justify-content: space-between;
     gap: 24px;
+
+    &[data-device="mobile"] {
+      width: 100%;
+      height: auto;
+      padding: 16px;
+      gap: 12px;
+    }
   }
 
   &__retention-info {
@@ -141,12 +158,22 @@
     width: 100%;
     align-items: stretch;
     gap: 24px;
+
+    &[data-device="mobile"] {
+      flex-direction: column;
+      gap: 12px;
+    }
   }
 
   &__storage-side-col {
     width: 376px;
     flex-shrink: 0;
     gap: 24px;
+
+    &[data-device="mobile"] {
+      width: 100%;
+      gap: 12px;
+    }
   }
 
   // ── Total Capacity card ───────────────────────────────────
@@ -157,6 +184,11 @@
     background: $bg-tint;
     border-radius: 8px;
     gap: 48px;
+
+    &[data-device="mobile"] {
+      padding: 16px;
+      gap: 24px;
+    }
   }
 
   &__capacity-top {
@@ -164,6 +196,11 @@
     align-items: flex-start;
     justify-content: space-between;
     gap: 24px;
+
+    &[data-device="mobile"] {
+      flex-direction: column;
+      gap: 12px;
+    }
   }
 
   &__capacity-stat {
@@ -188,6 +225,11 @@
       line-height: 62px;
       font-weight: 600;
       color: $purple-deep;
+
+      &[data-device="mobile"] {
+        font-size: 40px;
+        line-height: 44px;
+      }
     }
 
     &-unit {
@@ -195,6 +237,11 @@
       line-height: 28px;
       font-weight: 600;
       color: $ink-600;
+
+      &[data-device="mobile"] {
+        font-size: 18px;
+        line-height: 22px;
+      }
     }
   }
 
@@ -295,6 +342,11 @@
     align-items: center;
     gap: 32px;
     padding-top: 12px;
+
+    &[data-device="mobile"] {
+      flex-wrap: wrap;
+      gap: 12px;
+    }
   }
 
   &__capacity-legend-item {
@@ -352,6 +404,11 @@
     border-left: 3px solid $red;
     align-items: flex-start;
     gap: 16px;
+
+    &[data-device="mobile"] {
+      padding: 16px;
+      gap: 12px;
+    }
   }
 
   &__alert-iconwrap {
@@ -412,6 +469,10 @@
     background: $bg-tint;
     border-radius: 8px;
     gap: 16px;
+
+    &[data-device="mobile"] {
+      padding: 16px;
+    }
   }
 
   &__optim-title {
@@ -492,6 +553,14 @@
     align-items: center;
     justify-content: space-between;
     background: $bg-tint;
+
+    &[data-device="mobile"] {
+      height: auto;
+      padding: 12px 14px;
+      flex-direction: column;
+      align-items: stretch;
+      gap: 8px;
+    }
   }
 
   &__storage-table-title {
@@ -551,6 +620,10 @@
     padding: 0 24px;
     align-items: center;
     background: rgba(0, 0, 0, 0.02);
+
+    &[data-device="mobile"] {
+      padding: 0 12px;
+    }
   }
 
   &__storage-col {
@@ -564,12 +637,20 @@
     &--role {
       flex: 141 1 0;
       min-width: 0;
+
+      &[data-device="mobile"] {
+        display: none;
+      }
     }
 
     &--usage {
       flex: 256 1 0;
       min-width: 0;
       gap: 16px;
+
+      &[data-device="mobile"] {
+        display: none;
+      }
     }
 
     &--storage {
@@ -604,6 +685,19 @@
     &.apps-main__storage-col--action {
       padding-right: 24px;
     }
+
+    &[data-device="mobile"] {
+      padding: 10px 6px;
+      gap: 8px;
+
+      &.apps-main__storage-col--user {
+        padding-left: 12px;
+      }
+
+      &.apps-main__storage-col--action {
+        padding-right: 12px;
+      }
+    }
   }
 
   &__storage-tbody {
@@ -626,6 +720,10 @@
 
     &:last-child {
       border-bottom: none;
+    }
+
+    &[data-device="mobile"] {
+      padding: 0 12px;
     }
   }
 
@@ -789,6 +887,13 @@
     background: rgba(0, 0, 0, 0.02);
     align-items: center;
     justify-content: space-between;
+
+    &[data-device="mobile"] {
+      height: auto;
+      padding: 12px 14px;
+      flex-direction: column;
+      gap: 8px;
+    }
   }
 
   &__storage-pagination-label {

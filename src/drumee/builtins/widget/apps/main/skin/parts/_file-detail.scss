@@ -12,6 +12,12 @@
     justify-content: space-between;
     gap: 24px;
     flex-shrink: 0;
+
+    &[data-device="mobile"] {
+      flex-direction: column;
+      align-items: stretch;
+      gap: 12px;
+    }
   }
 
   &__filed-back {
@@ -59,6 +65,11 @@
     align-items: center;
     gap: 8px;
 
+    &[data-device="mobile"] {
+      width: 100%;
+      max-width: 100%;
+    }
+
     &-ico {
       width: 14px;
       height: 14px;
@@ -98,6 +109,12 @@
     min-height: 0;
     align-items: stretch;
     gap: 24px;
+
+    &[data-device="mobile"] {
+      flex-direction: column;
+      gap: 16px;
+      overflow-y: auto;
+    }
   }
 
   // ── Left preview pane ────────────────────────────────────
@@ -106,6 +123,11 @@
     flex: 640 1 0;
     min-width: 0;
     gap: 0;
+
+    &[data-device="mobile"] {
+      width: 100%;
+      flex: none;
+    }
   }
 
   &__filed-preview-header {
@@ -249,12 +271,23 @@
     flex: 508 1 0;
     min-width: 0;
     gap: 24px;
+
+    &[data-device="mobile"] {
+      width: 100%;
+      flex: none;
+      gap: 16px;
+    }
   }
 
   // Stats row (Total Storage + Retention)
   &__filed-stats {
     width: 100%;
     gap: 24px;
+
+    &[data-device="mobile"] {
+      flex-direction: column;
+      gap: 12px;
+    }
   }
 
   &__filed-stat {
@@ -321,6 +354,12 @@
     padding: 32px;
     gap: 24px;
     overflow: hidden;
+
+    &[data-device="mobile"] {
+      padding: 16px;
+      gap: 16px;
+      flex: none;
+    }
   }
 
   &__filed-history-header {
@@ -341,6 +380,11 @@
     line-height: 28px;
     font-weight: 700;
     color: $ink-900;
+
+    &[data-device="mobile"] {
+      font-size: 16px;
+      line-height: 22px;
+    }
   }
 
   &__filed-history-sub {

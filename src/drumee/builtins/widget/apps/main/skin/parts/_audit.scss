@@ -7,13 +7,18 @@
   //  AUDIT LOGS VIEW
   // ─────────────────────────────────────────────────────────
 
-
   &__audit-header {
     width: 100%;
     align-items: center;
     justify-content: space-between;
     gap: 24px;
     flex-shrink: 0;
+
+    &[data-device="mobile"] {
+      flex-direction: column;
+      align-items: stretch;
+      gap: 12px;
+    }
   }
 
   &__audit-title {
@@ -21,11 +26,21 @@
     line-height: 36px;
     font-weight: 600;
     color: $ink-900;
+
+    &[data-device="mobile"] {
+      font-size: 22px;
+      line-height: 28px;
+    }
   }
 
   &__audit-actions {
     align-items: center;
     gap: 12px;
+
+    &[data-device="mobile"] {
+      flex-wrap: wrap;
+      gap: 8px;
+    }
   }
 
   &__audit-search {
@@ -36,6 +51,11 @@
     border-radius: 6px;
     align-items: center;
     gap: 8px;
+
+    &[data-device="mobile"] {
+      width: 100%;
+      flex: 1;
+    }
 
     &-ico {
       width: 14px;
@@ -234,7 +254,7 @@
     overflow: hidden;
     gap: 0;
     flex: 1;
-    min-height: 0;
+    min-height: 240px;
   }
 
   &__audit-thead {
@@ -243,6 +263,24 @@
     padding: 16px 32px;
     background: rgba(0, 0, 0, 0.02);
     align-items: center;
+
+    &[data-device="mobile"] {
+      padding: 12px 8px;
+      overflow-x: auto;
+      flex-wrap: nowrap;
+      width: 100%;
+      min-width: 0;
+      scrollbar-width: none;
+      -ms-overflow-style: none;
+
+      &::-webkit-scrollbar {
+        display: none;
+      }
+
+      > * {
+        flex-shrink: 0;
+      }
+    }
   }
 
   // Proportional column weights match the Figma layout (292/194/389/233)
@@ -253,21 +291,37 @@
     &--user {
       flex: 292 1 0;
       min-width: 0;
+
+      &[data-device="mobile"] {
+        flex: 0 0 200px;
+      }
     }
 
     &--action {
       flex: 194 1 0;
       min-width: 0;
+
+      &[data-device="mobile"] {
+        flex: 0 0 140px;
+      }
     }
 
     &--resource {
       flex: 389 1 0;
       min-width: 0;
+
+      &[data-device="mobile"] {
+        flex: 0 0 260px;
+      }
     }
 
     &--timestamp {
       flex: 233 1 0;
       min-width: 0;
+
+      &[data-device="mobile"] {
+        flex: 0 0 160px;
+      }
     }
   }
 
@@ -284,6 +338,10 @@
     flex: 1;
     min-height: 0;
     overflow-y: auto;
+
+    &[data-device="mobile"] {
+      overflow-x: auto;
+    }
   }
 
   &__audit-row {
@@ -299,6 +357,13 @@
 
     &:last-child {
       border-bottom: none;
+    }
+
+    &[data-device="mobile"] {
+      padding: 12px 8px;
+      flex-wrap: nowrap;
+      width: max-content;
+      min-width: 100%;
     }
   }
 
@@ -428,6 +493,14 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+
+    &[data-device="mobile"] {
+      overflow: visible;
+      text-overflow: clip;
+      white-space: normal;
+      word-break: break-word;
+      overflow-wrap: break-word;
+    }
   }
 
   &__audit-timestamp {
@@ -445,6 +518,13 @@
     background: rgba(0, 0, 0, 0.02);
     align-items: center;
     justify-content: space-between;
+
+    &[data-device="mobile"] {
+      padding: 12px 14px;
+      height: auto;
+      flex-direction: column;
+      gap: 8px;
+    }
   }
 
   &__audit-pagination-label {
@@ -496,6 +576,11 @@
   &__insights {
     width: 100%;
     gap: 16px;
+
+    &[data-device="mobile"] {
+      flex-wrap: wrap;
+      gap: 8px;
+    }
   }
 
   &__insight {
@@ -506,6 +591,12 @@
     border-radius: 8px;
     gap: 16px;
     border-left: 3px solid transparent;
+
+    &[data-device="mobile"] {
+      flex: 1 1 calc(50% - 4px);
+      padding: 16px;
+      gap: 12px;
+    }
 
     &--security {
       border-left-color: $purple-base;
@@ -606,6 +697,11 @@
       font-size: 32px;
       line-height: 36px;
       font-weight: 600;
+
+      &[data-device="mobile"] {
+        font-size: 24px;
+        line-height: 28px;
+      }
     }
 
     &--security .apps-main__insight-value {
@@ -651,6 +747,15 @@
     gap: 24px;
     flex: 1;
     min-height: 0;
+
+    overflow: auto;
+
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+
+    &::-webkit-scrollbar {
+      display: none;
+    }
   }
 
   &__upsell {
@@ -685,6 +790,13 @@
     box-shadow:
       0 24px 48px rgba(11, 10, 33, 0.16),
       0 6px 16px rgba(11, 10, 33, 0.06);
+
+    &[data-device="mobile"] {
+      width: calc(100% - 24px);
+      max-width: calc(100% - 24px);
+      padding: 20px;
+      gap: 20px;
+    }
   }
 
   &__upsell-icon {
@@ -749,5 +861,4 @@
     font-weight: 600;
     color: var(--white, #fff);
   }
-
 }

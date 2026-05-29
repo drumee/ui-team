@@ -96,6 +96,11 @@
     width: 100%;
     padding: 40px;
     gap: 24px;
+
+    &[data-device="mobile"] {
+      padding: 16px;
+      gap: 16px;
+    }
   }
 
   // Bento row of 3 cards
@@ -103,6 +108,11 @@
     width: 100%;
     gap: 24px;
     align-items: stretch;
+
+    &[data-device="mobile"] {
+      flex-direction: column;
+      gap: 12px;
+    }
   }
 
   &__retpolicy-info {
@@ -111,6 +121,11 @@
     padding: 24px;
     border-radius: 8px;
     gap: 16px;
+
+    &[data-device="mobile"] {
+      padding: 16px;
+      gap: 12px;
+    }
 
     &--storage {
       background: rgba(89, 80, 255, 0.1);
@@ -259,6 +274,11 @@
     width: 100%;
     gap: 24px;
     align-items: stretch;
+
+    &[data-device="mobile"] {
+      flex-direction: column;
+      gap: 12px;
+    }
   }
 
   &__retpolicy-section {
@@ -268,6 +288,11 @@
     border-radius: 8px;
     background: rgba(0, 0, 0, 0.02);
     gap: 24px;
+
+    &[data-device="mobile"] {
+      padding: 16px;
+      gap: 16px;
+    }
   }
 
   &__retpolicy-section-heading {
@@ -294,6 +319,11 @@
     width: 100%;
     gap: 16px;
     align-items: stretch;
+
+    &[data-device="mobile"] {
+      flex-wrap: wrap;
+      gap: 8px;
+    }
   }
 
   &__retpolicy-choice {
@@ -310,6 +340,12 @@
     cursor: pointer;
     border: 2px solid transparent;
     transition: border-color 0.15s ease;
+
+    &[data-device="mobile"] {
+      flex: 1 1 calc(50% - 4px);
+      height: 80px;
+      padding: 12px;
+    }
 
     > * {
       pointer-events: none;
@@ -463,6 +499,14 @@
     gap: 16px;
     background: rgba(0, 0, 0, 0.02);
     border-top: 1px solid $line;
+
+    &[data-device="mobile"] {
+      height: auto;
+      padding: 12px 16px;
+      flex-direction: column;
+      align-items: stretch;
+      gap: 12px;
+    }
   }
 
   &__retpolicy-footer-info {

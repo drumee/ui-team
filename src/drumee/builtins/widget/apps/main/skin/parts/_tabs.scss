@@ -13,12 +13,28 @@
     justify-content: space-between;
     flex-shrink: 0;
     border-bottom: 1px solid $line;
+
+    &[data-device="mobile"] {
+      padding: 0 12px;
+      gap: 8px;
+    }
   }
 
   &__tabs-list {
     align-items: center;
     gap: 24px;
     height: 100%;
+
+    &[data-device="mobile"] {
+      gap: 12px;
+      justify-content: center;
+      overflow-x: auto;
+      flex: 1;
+      min-width: 0;
+      scrollbar-width: none;
+      -ms-overflow-style: none;
+      &::-webkit-scrollbar { display: none; }
+    }
   }
 
   &__tab {
@@ -31,6 +47,10 @@
 
     > * {
       pointer-events: none;
+    }
+
+    &[data-device="mobile"] {
+      flex-shrink: 0;
     }
 
     &-label {
@@ -60,6 +80,10 @@
 
     > * {
       pointer-events: none;
+    }
+
+    &[data-device="mobile"] {
+      display: none;
     }
 
     &-emoji {

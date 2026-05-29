@@ -458,6 +458,48 @@ class apps_main extends LetcBox {
   _render() {
     if (this.isDestroyed && this.isDestroyed()) return;
     this.feed(require("./skeleton").default(this));
+    this._scheduleAuditScrollSync();
+  }
+
+  // Keep the audit thead's horizontal scroll in sync with the list, so column
+  // headers stay aligned when the user scrolls the data horizontally on mobile.
+  _scheduleAuditScrollSync(attempt = 0) {
+    if (this._auditScrollSyncScheduled) return;
+    this._auditScrollSyncScheduled = true;
+    requestAnimationFrame(() => {
+      this._auditScrollSyncScheduled = false;
+      if (this.isDestroyed && this.isDestroyed()) return;
+      const bound = this._bindAuditScrollSync();
+      // feed() mounts asynchronously; retry a few frames if the audit DOM
+      // isn't ready yet so the sync attaches on tab activation too.
+      if (!bound && attempt < 5) {
+        setTimeout(() => this._scheduleAuditScrollSync(attempt + 1), 50);
+      }
+    });
+  }
+
+  _bindAuditScrollSync() {
+    if (!this.el) return false;
+    const list = this.el.querySelector(".apps-main__audit-list");
+    const thead = this.el.querySelector(".apps-main__audit-thead");
+    if (!list || !thead) return false;
+    if (this._auditScrollList === list && this._auditScrollThead === thead) {
+      return true;
+    }
+    if (this._auditScrollList && this._auditScrollHandler) {
+      this._auditScrollList.removeEventListener(
+        "scroll",
+        this._auditScrollHandler,
+      );
+    }
+    this._auditScrollList = list;
+    this._auditScrollThead = thead;
+    this._auditScrollHandler = () => {
+      thead.scrollLeft = list.scrollLeft;
+    };
+    list.addEventListener("scroll", this._auditScrollHandler, { passive: true });
+    thead.scrollLeft = list.scrollLeft;
+    return true;
   }
 
   async onDomRefresh() {

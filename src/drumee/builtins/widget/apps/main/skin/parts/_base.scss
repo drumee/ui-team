@@ -12,6 +12,10 @@
     background: $bg;
     font-family: "Geist", system-ui, sans-serif;
     position: relative;
+
+    &[data-device="mobile"] {
+      font-size: 13px;
+    }
   }
 
   &__admin-upsell {
