@@ -56,7 +56,7 @@ class __chat_p2p extends LetcBox {
 
     const list = this._contactList;
     if (list && list.getItemsByAttr) {
-      const items = list.getItemsByAttr(_a.entity_id, data.id) || [];
+      const items = list.getItemsByAttr(_a.entity_id, peerId) || [];
       items.forEach(item => {
         if (!item) return;
         item.mset && item.mset(_a.online, status);
