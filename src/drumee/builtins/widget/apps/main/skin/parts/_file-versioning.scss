@@ -114,6 +114,10 @@
     width: 100%;
     background: $bg;
     gap: 0;
+
+    &[data-device="mobile"] {
+      overflow-x: auto;
+    }
   }
 
   &__fv-row {
@@ -145,6 +149,16 @@
     &:last-child {
       border-bottom: none;
     }
+
+    &[data-device="mobile"] {
+      flex-wrap: nowrap;
+      width: max-content;
+      min-width: 100%;
+
+      > * {
+        flex-shrink: 0;
+      }
+    }
   }
 
   &__fv-cell {
@@ -173,7 +187,7 @@
       min-width: 0;
 
       &[data-device="mobile"] {
-        flex: 0 0 40px;
+        flex: 0 0 60px;
       }
     }
 
@@ -181,6 +195,10 @@
       flex: 300 1 0;
       min-width: 0;
       gap: 16px;
+
+      &[data-device="mobile"] {
+        flex: 0 0 220px;
+      }
     }
 
     &--folder {
@@ -188,7 +206,7 @@
       min-width: 0;
 
       &[data-device="mobile"] {
-        display: none;
+        flex: 0 0 130px;
       }
     }
 
@@ -197,13 +215,17 @@
       min-width: 0;
 
       &[data-device="mobile"] {
-        display: none;
+        flex: 0 0 140px;
       }
     }
 
     &--size {
       flex: 88 1 0;
       min-width: 0;
+
+      &[data-device="mobile"] {
+        flex: 0 0 80px;
+      }
     }
 
     &--versions {
@@ -212,13 +234,18 @@
       padding: 0 24px;
 
       &[data-device="mobile"] {
-        display: none;
+        flex: 0 0 110px;
+        padding: 0 8px;
       }
     }
 
     &--actions {
       flex: 123 0 0;
       min-width: 0;
+
+      &[data-device="mobile"] {
+        flex: 0 0 110px;
+      }
     }
   }
 

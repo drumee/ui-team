@@ -18,6 +18,16 @@
       padding: 0 12px;
       gap: 8px;
     }
+
+    // Admin role on mobile: stack the tabs row (tabs-list + hub chip)
+    // vertically so the workspace picker doesn't squeeze the tab labels.
+    &--admin[data-device="mobile"] {
+      flex-direction: column !important;
+      height: auto;
+      padding: 8px 12px;
+      align-items: stretch;
+      gap: 20px;
+    }
   }
 
   &__tabs-list {
@@ -33,7 +43,9 @@
       min-width: 0;
       scrollbar-width: none;
       -ms-overflow-style: none;
-      &::-webkit-scrollbar { display: none; }
+      &::-webkit-scrollbar {
+        display: none;
+      }
     }
   }
 
@@ -98,5 +110,4 @@
       color: $reward-text;
     }
   }
-
 }
