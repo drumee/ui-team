@@ -1598,11 +1598,11 @@
   "INVITE_LINK_INVALID": "This invite link is no longer valid.",
   "SECURE_SHARE": "Secure Share",
   "SECURE_SHARE_CREATE": "Create Secure Share",
-  "SECURE_SHARE_ENTER_EMAIL": "Enter your email address to access this file",
+  "SECURE_SHARE_ENTER_EMAIL": "Enter your email address to access this content",
   "SECURE_SHARE_EMAIL_PLACEHOLDER": "your@email.com",
   "SECURE_SHARE_DOMAIN_HINT": "Access restricted to authorized emails only",
   "SECURE_SHARE_EMAIL_MISMATCH": "This link is not valid for your email address",
-  "SECURE_SHARE_REVOKED": "Access to this file has been revoked",
+  "SECURE_SHARE_REVOKED": "Access to this content has been revoked",
   "SECURE_SHARE_EXPIRED": "This secure link has expired",
   "SECURE_SHARE_RECIPIENT": "Recipient email",
   "SECURE_SHARE_DOMAIN_RESTRICTION": "Domain restriction (optional)",
@@ -1610,5 +1610,11 @@
   "SECURE_SHARE_NO_EXPIRY": "No expiry",
   "SECURE_SHARE_ACTIVE": "Active",
   "SECURE_SHARE_REVOKE": "Revoke access",
-  "SECURE_SHARE_VIEWS": "views"
+  "SECURE_SHARE_VIEWS": "views",
+  "SECURE_SHARE_VIEW": "view",
+  "SECURE_SHARE_NOT_OPENED": "Not yet opened",
+  "SECURE_SHARE_NO_SHARES": "No shares created yet",
+  "SECURE_SHARE_EXISTING": "Shared links",
+  "SECURE_SHARE_STATUS_REVOKED": "Revoked",
+  "SECURE_SHARE_STATUS_EXPIRED": "Expired"
 }

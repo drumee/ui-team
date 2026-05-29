@@ -94,7 +94,7 @@ const __skl_secure_share = function(_ui_) {
       Skeletons.Box.X({
         className : `${pfx}__button submit button`,
         service   : 'create-secure-share',
-        uiHandler : _ui_,
+        uiHandler : [_ui_],
         kidsOpt   : { active: 0 },
         kids      : [
           Skeletons.Note({ content: LOCALE.SECURE_SHARE_CREATE })
@@ -121,7 +121,10 @@ const __skl_secure_share = function(_ui_) {
 
   const listSection = Skeletons.Box.Y({
     className : `${pfx}__list-section`,
-    kids      : [ shareList ]
+    kids      : [
+      Skeletons.Note({ className: `${pfx}__list-header`, content: LOCALE.SECURE_SHARE_EXISTING }),
+      shareList
+    ]
   });
 
   return Skeletons.Box.Y({

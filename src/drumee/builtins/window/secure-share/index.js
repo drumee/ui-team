@@ -93,7 +93,7 @@ class __window_secure_share extends mfsInteract {
     if (!rows.length) {
       this._shareList.feed(Skeletons.Note({
         className: `${this.fig.family}__share-empty`,
-        content: ''
+        content: LOCALE.SECURE_SHARE_NO_SHARES
       }));
       return;
     }
@@ -105,6 +105,7 @@ class __window_secure_share extends mfsInteract {
   }
 
   async _createShare() {
+    if (this._linkResult) this._linkResult.el.dataset.mode = _a.closed;
     const email = this._emailInput ? (this._emailInput.getData().value || '').trim() : '';
     if (!email) {
       if (this._emailInput) this._emailInput.showError(LOCALE.SECURE_SHARE_ENTER_EMAIL);
@@ -146,6 +147,9 @@ class __window_secure_share extends mfsInteract {
         }));
       }
       this._loadShares();
+      [this._emailInput, this._domainInput, this._daysInput, this._hoursInput].forEach(ref => {
+        if (ref) { const input = ref.el.querySelector('input'); if (input) input.value = ''; }
+      });
     }
   }
 
