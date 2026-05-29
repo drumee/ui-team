@@ -282,26 +282,30 @@ class __router_websocket extends LetcBox {
    * @returns
    */
   connect() {
-    const { endpoint, main_domain } = bootstrap();
-    if (!endpoint || !main_domain) return;
-    if (this._reconnect_count > 50) {
-      this.warn("Too many reconnections failed. Giving up");
-      return;
-    }
-    if (this.timer) {
-      this.warn("Already connection pending> Skipped");
-      this.timer = null;
-    }
-    this.postService(SERVICE.bootstrap.authn).then((r) => {
-      if (r.otp_key) {
-        Visitor.set({ otp_key: r.otp_key });
+    return new Promise(async (resolve, reject) => {
+      const { endpoint, main_domain } = bootstrap();
+      if (!endpoint || !main_domain) {
+        return resolve(0);
       }
-      let url = this.url(r);
-      this._bind(new W3CWebSocket(url, _a.service));
-    }).catch((e) => {
-      this.warn("ERROR:292 - failed to connect websocket", e)
-      let url = this.url({});
-      this._bind(new W3CWebSocket(url, _a.service));
+      if (this._reconnect_count > 50) {
+        this.warn("Too many reconnections failed. Giving up");
+        return resolve(0);
+      }
+      if (this.timer) {
+        this.warn("Already connection pending> Skipped");
+        this.timer = null;
+      }
+      this.postService(SERVICE.bootstrap.authn).then((r) => {
+        if (r.otp_key) {
+          Visitor.set({ otp_key: r.otp_key });
+        }
+        let url = this.url(r);
+        this._bind(new W3CWebSocket(url, _a.service)).then(() => { resolve(1) }).catch(() => { resolve(0) });
+      }).catch((e) => {
+        this.warn("ERROR:292 - failed to connect websocket", e)
+        let url = this.url({});
+        this._bind(new W3CWebSocket(url, _a.service)).then(() => { resolve(1) }).catch(() => { resolve(0) });
+      })
     })
   }
 
@@ -312,8 +316,15 @@ class __router_websocket extends LetcBox {
    */
   restart(force = 0) {
     if (force) this._reconnect_count = 0;
-    if (!force && this.isOk()) return;
-    this.connect()
+    return new Promise(async (resolve, reject) => {
+      if (!force && this.isOk()) return resolve();
+      let o = await this.connect()
+      this.debug("AAAA:318", o)
+      if (o) {
+        return resolve()
+      }
+      return reject()
+    })
   }
 
   /**
@@ -386,14 +397,18 @@ class __router_websocket extends LetcBox {
       return;
     }
     if (!this.check_sanity()) {
-      this.restart()
-        .then(() => {
-          this.socket.send(msg);
-        })
-        .catch((e) => {
-          this.warn("Failed to ping", e);
-        });
-      return;
+      try {
+        this.restart()
+          .then(() => {
+            this.socket.send(msg);
+          })
+          .catch((e) => {
+            this.warn("Failed to ping", e);
+          });
+        return;
+      } catch (e) {
+        this.warn("ping failed", e)
+      }
     }
     this.socket.send(msg);
   }
