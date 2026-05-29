@@ -7,7 +7,6 @@
   //  STORAGE VIEW
   // ─────────────────────────────────────────────────────────
 
-
   // ── Header (title + retention pill) ───────────────────────
   &__storage-header {
     width: 100%;
@@ -543,7 +542,7 @@
     overflow: hidden;
     gap: 0;
     flex: 1;
-    min-height: 0;
+    min-height: 400px;
   }
 
   &__storage-table-header {
@@ -623,6 +622,18 @@
 
     &[data-device="mobile"] {
       padding: 0 12px;
+      overflow-x: auto;
+      flex-wrap: nowrap;
+      scrollbar-width: none;
+      -ms-overflow-style: none;
+
+      &::-webkit-scrollbar {
+        display: none;
+      }
+
+      > * {
+        flex-shrink: 0;
+      }
     }
   }
 
@@ -632,6 +643,10 @@
     &--user {
       flex: 290 1 0;
       min-width: 0;
+
+      &[data-device="mobile"] {
+        flex: 0 0 220px;
+      }
     }
 
     &--role {
@@ -639,7 +654,7 @@
       min-width: 0;
 
       &[data-device="mobile"] {
-        display: none;
+        flex: 0 0 130px;
       }
     }
 
@@ -649,19 +664,27 @@
       gap: 16px;
 
       &[data-device="mobile"] {
-        display: none;
+        flex: 0 0 200px;
       }
     }
 
     &--storage {
       flex: 181 1 0;
       min-width: 0;
+
+      &[data-device="mobile"] {
+        flex: 0 0 140px;
+      }
     }
 
     &--action {
       flex: 128 1 0;
       min-width: 0;
       justify-content: flex-end;
+
+      &[data-device="mobile"] {
+        flex: 0 0 110px;
+      }
     }
   }
 
@@ -706,6 +729,10 @@
     flex: 1;
     min-height: 0;
     overflow-y: auto;
+
+    &[data-device="mobile"] {
+      overflow-x: auto;
+    }
   }
 
   &__storage-row {
@@ -724,6 +751,13 @@
 
     &[data-device="mobile"] {
       padding: 0 12px;
+      flex-wrap: nowrap;
+      width: max-content;
+      min-width: 100%;
+
+      > * {
+        flex-shrink: 0;
+      }
     }
   }
 
@@ -940,4 +974,150 @@
     }
   }
 
+  // ── Tablet: 768px–1024px ──────────────────────────────────
+  // Mirror the mobile layout: stack header/body/side-col, full-width cards,
+  // tighter paddings, hide non-essential table columns.
+  @media (min-width: 768px) and (max-width: 1024px) {
+    &__storage-header {
+      flex-direction: column !important;
+      gap: 12px;
+    }
+
+    &__storage-title {
+      font-size: 22px;
+      line-height: 28px;
+    }
+
+    &__retention-card {
+      width: 100%;
+      height: auto;
+      padding: 16px;
+      gap: 12px;
+    }
+
+    &__storage-body-row {
+      flex-direction: column !important;
+      gap: 12px;
+    }
+
+    &__storage-side-col {
+      width: 100%;
+      gap: 12px;
+    }
+
+    &__capacity-card {
+      padding: 16px;
+      gap: 24px;
+    }
+
+    &__capacity-top {
+      flex-direction: column !important;
+      gap: 12px;
+    }
+
+    &__capacity-amount-num {
+      font-size: 40px;
+      line-height: 44px;
+    }
+
+    &__capacity-amount-unit {
+      font-size: 18px;
+      line-height: 22px;
+    }
+
+    &__capacity-legend {
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    &__alert-card {
+      padding: 16px;
+      gap: 12px;
+    }
+
+    &__optim-card {
+      padding: 16px;
+    }
+
+    &__storage-table-header {
+      height: auto;
+      padding: 12px 14px;
+      flex-direction: column !important;
+      align-items: stretch;
+      gap: 8px;
+    }
+
+    &__storage-thead {
+      padding: 0 12px;
+      overflow-x: auto;
+      flex-wrap: nowrap;
+      scrollbar-width: none;
+      -ms-overflow-style: none;
+
+      &::-webkit-scrollbar {
+        display: none;
+      }
+
+      > * {
+        flex-shrink: 0;
+      }
+    }
+
+    &__storage-tbody {
+      overflow-x: auto;
+    }
+
+    &__storage-col {
+      &--user {
+        flex: 0 0 240px;
+      }
+
+      &--role {
+        flex: 0 0 140px;
+      }
+
+      &--usage {
+        flex: 0 0 220px;
+      }
+
+      &--storage {
+        flex: 0 0 160px;
+      }
+
+      &--action {
+        flex: 0 0 120px;
+      }
+    }
+
+    &__storage-cell {
+      padding: 10px 6px;
+      gap: 8px;
+
+      &.apps-main__storage-col--user {
+        padding-left: 12px;
+      }
+
+      &.apps-main__storage-col--action {
+        padding-right: 12px;
+      }
+    }
+
+    &__storage-row {
+      padding: 0 12px;
+      flex-wrap: nowrap;
+      width: max-content;
+      min-width: 100%;
+
+      > * {
+        flex-shrink: 0;
+      }
+    }
+
+    &__storage-pagination {
+      height: auto;
+      padding: 12px 14px;
+      flex-direction: column !important;
+      gap: 8px;
+    }
+  }
 }

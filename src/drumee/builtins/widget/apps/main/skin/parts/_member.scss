@@ -880,4 +880,61 @@
     font-weight: 600;
     color: $ink-700;
   }
+
+  // ── Tablet: 768px–1024px ──────────────────────────────────
+  // Mirror the mobile scrollable-table behavior so columns stay readable
+  // when the table-wrap can't fit all columns side-by-side.
+  @media (min-width: 768px) and (max-width: 1024px) {
+    &__stats {
+      flex-wrap: wrap;
+    }
+
+    &__stat {
+      flex: 1 1 calc(50% - 8px);
+    }
+
+    &__table {
+      overflow-x: auto;
+    }
+
+    &__row {
+      flex-wrap: nowrap;
+      width: max-content;
+      min-width: 100%;
+
+      > * {
+        flex-shrink: 0;
+      }
+    }
+
+    &__cell {
+      &--check {
+        width: 64px;
+      }
+
+      &--member {
+        flex: 0 0 240px;
+      }
+
+      &--role {
+        flex: 0 0 140px;
+      }
+
+      &--workspaces {
+        flex: 0 0 220px;
+      }
+
+      &--status {
+        flex: 0 0 110px;
+      }
+
+      &--last-active {
+        flex: 0 0 140px;
+      }
+
+      &--actions {
+        flex: 0 0 120px;
+      }
+    }
+  }
 }

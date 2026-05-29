@@ -36,6 +36,7 @@
   &__audit-actions {
     align-items: center;
     gap: 12px;
+    justify-content: end;
 
     &[data-device="mobile"] {
       flex-wrap: wrap;
@@ -254,7 +255,7 @@
     overflow: hidden;
     gap: 0;
     flex: 1;
-    min-height: 240px;
+    min-height: 320px;
   }
 
   &__audit-thead {
@@ -860,5 +861,78 @@
     line-height: 24px;
     font-weight: 600;
     color: var(--white, #fff);
+  }
+
+  // ── Tablet: 768px–1024px ──────────────────────────────────
+  // Mirror the mobile scrollable-table behavior so columns stay readable
+  // when the audit-window can't fit all four columns side-by-side.
+  @media (min-width: 768px) and (max-width: 1024px) {
+    &__audit-header {
+      flex-direction: column !important;
+      align-items: stretch;
+      gap: 12px;
+    }
+
+    &__audit-actions {
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    &__audit-search {
+      width: 100%;
+      flex: 1;
+    }
+
+    &__audit-thead {
+      overflow-x: auto;
+      flex-wrap: nowrap;
+      scrollbar-width: none;
+      -ms-overflow-style: none;
+
+      &::-webkit-scrollbar {
+        display: none;
+      }
+
+      > * {
+        flex-shrink: 0;
+      }
+    }
+
+    &__audit-list {
+      overflow-x: auto;
+    }
+
+    &__audit-row {
+      flex-wrap: nowrap;
+      width: max-content;
+      min-width: 100%;
+    }
+
+    &__audit-col {
+      &--user {
+        flex: 0 0 240px;
+      }
+
+      &--action {
+        flex: 0 0 160px;
+      }
+
+      &--resource {
+        flex: 0 0 320px;
+      }
+
+      &--timestamp {
+        flex: 0 0 200px;
+      }
+    }
+
+    &__insights {
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    &__insight {
+      flex: 1 1 calc(50% - 4px);
+    }
   }
 }
