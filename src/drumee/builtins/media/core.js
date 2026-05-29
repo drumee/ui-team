@@ -214,6 +214,7 @@ class __media_core extends DrumeeMFS {
       // Download, Rename, Organize, Make a copy, [Share?], Delete
       fileItems = [_a.download, _a.rename, 'organize', 'makeACopy', _a.separator, _a.trash];
       if (this.canShare()) fileItems.splice(fileItems.length - 1, 0, _a.share);
+      if (this.mget(_a.area) === _a.share) fileItems.splice(fileItems.length - 1, 0, 'secureShare');
     } else if (this.canDownload()) {
       // Restricted/shared recipient — Download only per Figma 2.2
       fileItems = [_a.download];
