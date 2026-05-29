@@ -47,8 +47,15 @@ class __migrate_gdrive_popup extends LetcBox {
     // state transition (post-OAuth, post-poll, etc.) and `feed()` rebuilds
     // the DOM, so reading raw `<input>` / `dataset` is unreliable. Skeleton
     // reads these via the getters below.
-    this._sourceFolderId = 'root';
     this._includeShared = 0;
+    // Migration mode + lazy folder-tree state (Selected mode). All of this
+    // lives on the instance so it survives the re-render cycle.
+    this._migrateMode = 'all';                 // 'all' | 'selected'
+    this._treeCache = {};                      // folderId → { items, next_page_token, error? }
+    this._expanded = new Set();
+    this._checkedFolders = new Set();
+    this._checkedFiles = new Set();
+    this._loading = new Set();
     this._onPostMessage = this._onPostMessage.bind(this);
     this._onStorage = this._onStorage.bind(this);
     window.addEventListener('message', this._onPostMessage, false);
@@ -113,23 +120,6 @@ class __migrate_gdrive_popup extends LetcBox {
 
   _render() {
     this.feed(require('./skeleton')(this));
-    // Mirror DOM → instance on every keystroke so subsequent re-renders
-    // (post-OAuth, post-poll) seed the Entry with the user's latest value
-    // instead of resetting to ''.
-    requestAnimationFrame(() => this._wireFormSync());
-  }
-
-  _wireFormSync() {
-    if (!this.el) return;
-    const folderEl = this._getPartEl('source-folder-input');
-    const input = folderEl && folderEl.querySelector('input');
-    if (input && !input._gdriveBound) {
-      input._gdriveBound = 1;
-      input.value = this._sourceFolderId;
-      input.addEventListener('input', () => {
-        this._sourceFolderId = (input.value || '').trim() || 'root';
-      });
-    }
   }
 
   async _refreshScope() {
@@ -225,21 +215,18 @@ class __migrate_gdrive_popup extends LetcBox {
   }
 
   _getInputs() {
-    // Read the latest DOM values first (user may have typed/toggled since
-    // the last cache), then persist to instance so a subsequent re-render
-    // can restore them from `getSourceFolderId()` / `getIncludeShared()`.
-    const folderInput = this._getPartEl('source-folder-input');
-    if (folderInput) {
-      const v = (folderInput.querySelector('input')?.value || '').trim();
-      this._sourceFolderId = v || 'root';
-    }
     const sharedToggle = this._getPartEl('shared-drives-toggle');
     if (sharedToggle) {
       this._includeShared = sharedToggle.dataset.state === '1' ? 1 : 0;
     }
     return {
-      source_folder_id: this._sourceFolderId,
+      mode: this._migrateMode,
+      source_folder_id: 'root',
       include_shared_drives: this._includeShared,
+      selections: {
+        folder_ids: Array.from(this._checkedFolders),
+        file_ids: Array.from(this._checkedFiles),
+      },
     };
   }
 
@@ -249,12 +236,18 @@ class __migrate_gdrive_popup extends LetcBox {
   }
 
   /**
-   * Skeleton reads these to seed Entry value + toggle state on every
-   * re-render, so user input survives re-render cycles triggered by
-   * polling / postMessage / state transitions.
+   * Skeleton reads these to rebuild the ready screen + tree on every
+   * re-render, so toggle state + selection survive re-render cycles
+   * triggered by polling / postMessage / state transitions.
    */
-  getSourceFolderId() { return this._sourceFolderId; }
   getIncludeShared() { return this._includeShared; }
+  getMigrateMode() { return this._migrateMode; }
+  getTreeNode(folderId) { return this._treeCache[folderId]; }
+  isExpanded(id) { return this._expanded.has(id); }
+  isFolderChecked(id) { return this._checkedFolders.has(id); }
+  isFileChecked(id) { return this._checkedFiles.has(id); }
+  isTreeLoading(id) { return this._loading.has(id); }
+  hasSelection() { return this._checkedFolders.size > 0 || this._checkedFiles.size > 0; }
 
   /**
    * Another open popup (same browser) started a migration — switch this one to
@@ -271,17 +264,80 @@ class __migrate_gdrive_popup extends LetcBox {
     this._startPolling();
   }
 
+  async _loadFolder(folderId) {
+    if (this._treeCache[folderId] || this._loading.has(folderId)) return;
+    this._loading.add(folderId);
+    this._renderTree();
+    try {
+      const res = await this.fetchService('google_drive.list', {
+        hub_id: Visitor.id, folder_id: folderId,
+      });
+      this._treeCache[folderId] = {
+        items: (res && res.files) || [],
+        next_page_token: (res && res.next_page_token) || null,
+      };
+    } catch (e) {
+      this.warn('[migrate-gdrive] list failed', e);
+      this._treeCache[folderId] = { items: [], next_page_token: null, error: 1 };
+    } finally {
+      this._loading.delete(folderId);
+      this._renderTree();
+    }
+  }
+
+  async _loadMore(folderId) {
+    const node = this._treeCache[folderId];
+    if (!node || !node.next_page_token || this._loading.has(folderId)) return;
+    this._loading.add(folderId);
+    this._renderTree();
+    try {
+      const res = await this.fetchService('google_drive.list', {
+        hub_id: Visitor.id, folder_id: folderId, page_token: node.next_page_token,
+      });
+      node.items = node.items.concat((res && res.files) || []);
+      node.next_page_token = (res && res.next_page_token) || null;
+    } catch (e) {
+      this.warn('[migrate-gdrive] list more failed', e);
+    } finally {
+      this._loading.delete(folderId);
+      this._renderTree();
+    }
+  }
+
+  /** Re-feed only the tree region, keeping the rest of the popup intact. */
+  _renderTree() {
+    if (!this.el || this._migrateMode !== 'selected') return;
+    this.ensurePart('gdrive-tree')
+      .then((p) => { if (p) p.feed(require('./skeleton/tree')(this)); })
+      .catch(() => {});
+  }
+
+  /** Toggle the Start button's disabled look without a full re-render. */
+  _refreshStartState() {
+    const btn = this._getPartEl('gdrive-start-btn');
+    if (!btn) return;
+    const empty = this._migrateMode === 'selected' && !this.hasSelection();
+    btn.dataset.disabled = empty ? '1' : '';
+  }
+
   async _startMigration() {
     if (this._starting) return;
     this._starting = 1;
-    const { source_folder_id, include_shared_drives } = this._getInputs();
+    if (this._migrateMode === 'selected' && !this.hasSelection()) {
+      Wm.alert(LOCALE.MIGRATE_GDRIVE_NOTHING_SELECTED || 'Select at least one folder or file.');
+      this._starting = 0;
+      return;
+    }
+    const { mode, source_folder_id, include_shared_drives, selections } = this._getInputs();
     let res;
     try {
       res = await this.postService('google_drive.start_migration', {
         hub_id: this._hub_id,
         nid: this._nid,
+        mode,
         source_folder_id,
         include_shared_drives,
+        selections,
         conflict_policy: 'skip',
       });
     } catch (e) {
@@ -382,6 +438,12 @@ class __migrate_gdrive_popup extends LetcBox {
     this._jobId = null;
     this._jobSnap = null;
     this._seenJobId = null;
+    this._migrateMode = 'all';
+    this._treeCache = {};
+    this._expanded.clear();
+    this._checkedFolders.clear();
+    this._checkedFiles.clear();
+    this._loading.clear();
     this._state = 'ready';
     this._render();
   }
@@ -413,6 +475,38 @@ class __migrate_gdrive_popup extends LetcBox {
         const row = this._getPartEl('shared-drives-toggle');
         if (row) row.dataset.state = String(this._includeShared);
         return;
+      }
+      case 'gdrive-mode': {
+        const mode = cmd.mget('mode') === 'selected' ? 'selected' : 'all';
+        if (mode === this._migrateMode) return;
+        this._migrateMode = mode;
+        this._render();
+        if (mode === 'selected' && !this._treeCache.root) this._loadFolder('root');
+        return;
+      }
+      case 'gdrive-tree-expand': {
+        const id = cmd.mget('gid');
+        if (!id) return;
+        if (this._expanded.has(id)) {
+          this._expanded.delete(id);
+        } else {
+          this._expanded.add(id);
+          if (!this._treeCache[id]) this._loadFolder(id);
+        }
+        this._renderTree();
+        return;
+      }
+      case 'gdrive-tree-check': {
+        const id = cmd.mget('gid');
+        if (!id) return;
+        const set = cmd.mget('gtype') === 'folder' ? this._checkedFolders : this._checkedFiles;
+        if (set.has(id)) set.delete(id); else set.add(id);
+        this._renderTree();
+        this._refreshStartState();
+        return;
+      }
+      case 'gdrive-tree-more': {
+        return this._loadMore(cmd.mget('gid'));
       }
     }
   }
