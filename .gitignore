@@ -12,7 +12,6 @@ kind/seeds/dynamic.js
 *_tmp*
 ._*
 t
-package-lock.json
 .dev-tools.rc/
 build/
 media-test/file_example_MP4_1280_10MG.mp4
