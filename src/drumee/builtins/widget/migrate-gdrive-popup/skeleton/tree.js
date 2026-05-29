@@ -59,7 +59,9 @@ module.exports = function (ui) {
         caret,
         box,
         Skeletons.Image.Svg({
-          ico: isFolder ? 'folder' : 'app-file',
+          // 'dock-folder' is the folder glyph that actually exists in the sprite
+          // (there is no '--icon-folder' symbol); 'app-file' for regular files.
+          ico: isFolder ? 'dock-folder' : 'app-file',
           className: `${pfx}__tree-ico`,
         }),
         Skeletons.Note({ className: `${pfx}__tree-name`, content: item.name }),
