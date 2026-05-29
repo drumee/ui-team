@@ -166,7 +166,7 @@ class __media_core extends DrumeeMFS {
         items = this.contextmenuItemsForFiles();
     }
 
-    items.push('share_qrcode');
+    if ([_a.public, _a.share, _a.dmz].includes(this.mget(_a.area))) items.push('share_qrcode');
 
     /** Children of window_search */
     if (this.mget(_a.role) == _a.search) {
@@ -252,7 +252,7 @@ class __media_core extends DrumeeMFS {
 
     let extra = []
     // 3WC href
-    if (this.isRegularFile()) {
+    if (this.isRegularFile() && [_a.public].includes(this.mget(_a.area))) {
       extra.push("directUrl");
     }
 
