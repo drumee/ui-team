@@ -793,6 +793,16 @@
       row-gap: var(--spacer-3);
     }
 
+    &__card {
+      padding: var(--spacer-5);
+      gap: var(--spacer-5);
+    }
+
+    &__inner {
+      flex-wrap: wrap;
+      row-gap: var(--spacer-3);
+    }
+
     &__row {
       flex-direction: column !important;
 

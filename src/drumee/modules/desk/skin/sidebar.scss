@@ -198,13 +198,6 @@
   &__logo {
     align-items: center;
     gap: 8px;
-    padding: 0 24px;
-    box-sizing: border-box;
-  }
-
-  &__logo {
-    align-items: center;
-    gap: 8px;
     // Padding lives on __logo-row now; keep this empty so existing
     // desktop callers still get the same visual offset via the wrapper.
     padding: 0;
