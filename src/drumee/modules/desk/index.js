@@ -704,6 +704,65 @@ class desk_module extends LetcBox {
   }
 
   /**
+   * Open the mobile drawer in a given mode ("nav" | "actions"). Tapping
+   * an already-active button is a no-op (does not toggle closed). The
+   * drawer closes only via the in-drawer close button or by tapping the
+   * overlay backdrop. No-op on non-mobile.
+   */
+  openMobileDrawer(mode) {
+    return this.ensurePart("sidebar-main").then((p) => {
+      if (!p || !p.el) return;
+      const el = p.el;
+      el.dataset.mode = mode;
+      el.dataset.state = "open";
+      this._setMobileBackdrop(true);
+      this._setMobileTopbarActive(mode);
+    });
+  }
+
+  /**
+   * Mirror the drawer state on the two mobile-topbar buttons so the
+   * currently-displayed mode shows as active. Pass null to clear both.
+   */
+  _setMobileTopbarActive(activeMode) {
+    const map = {
+      "mobile-add-btn": activeMode === "actions",
+      "mobile-menu-btn": activeMode === "nav",
+    };
+    Object.entries(map).forEach(([pn, isActive]) => {
+      this.ensurePart(pn).then((p) => {
+        if (!p || !p.el) return;
+        if (isActive) {
+          p.el.dataset.state = "active";
+        } else {
+          delete p.el.dataset.state;
+        }
+      });
+    });
+  }
+
+  /**
+   * Show/hide the shared __overlay as a tap-to-close backdrop for the
+   * mobile drawer. The click listener that actually closes the drawer
+   * is bound once in _bindMobileBackdropListener at mount time.
+   */
+  _setMobileBackdrop(visible) {
+    this.ensurePart("overlay").then((p) => {
+      if (!p || !p.el) return;
+      p.el.dataset.state = visible ? "open" : "closed";
+    });
+  }
+
+  _closeMobileDrawer() {
+    this.ensurePart("sidebar-main").then((p) => {
+      if (!p || !p.el) return;
+      p.el.dataset.state = "closed";
+    });
+    this._setMobileBackdrop(false);
+    this._setMobileTopbarActive(null);
+  }
+
+  /**
    *
    */
   togglePanel(kind, pn, openOnly) {
@@ -898,6 +957,15 @@ class desk_module extends LetcBox {
           { kind: cmd.mget(_a.respawn) },
           { explicit: 1, singleton: 1 },
         );
+
+      case "mobile-show-add":
+        return this.openMobileDrawer("actions");
+
+      case "mobile-show-menu":
+        return this.openMobileDrawer("nav");
+
+      case "mobile-close-drawer":
+        return this._closeMobileDrawer();
 
       case "toggle-activity":
         return this.ensurePart("activity-panel").then((p) => {

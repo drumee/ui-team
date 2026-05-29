@@ -588,18 +588,39 @@
     }
   }
 
-  // Mobile / narrow viewport: stack rows.
-  @media (max-width: 960px) {
+  // ── Responsive: tablet ────────────────────────────────────
+  // Two-column layout (~698 + 450 / ~375 + 773) doesn't fit at tablet
+  // widths (≤ 1024). Stack rows; keep header on one line and avatar/
+  // fields side-by-side since there's still enough horizontal room.
+  &__ui[data-device="tablet"] {
+    padding: var(--spacer-5);
+  }
+
+  &__row[data-device="tablet"] {
+    flex-direction: column;
+
+    .settings-main__profile-card,
+    .settings-main__preferences-card,
+    .settings-main__credentials-card,
+    .settings-main__danger-card,
+    .settings-main__linked-card {
+      flex: 1 1 auto;
+    }
+  }
+
+  // ── Responsive: tablet (viewport-based) ───────────────────
+  // Mirror the mobile [data-device] rules at <=1024px so tablet
+  // viewports collapse to the single-column layout regardless of
+  // whether the data-device attribute is set.
+  @media (max-width: 1024px) {
     &__ui {
       padding: var(--spacer-5);
+      gap: var(--spacer-5);
     }
 
     &__row {
-      flex-direction: column;
-    }
-    &__row-1,
-    &__row-2,
-    &__row-3 {
+      flex-direction: column !important;
+
       .settings-main__profile-card,
       .settings-main__preferences-card,
       .settings-main__credentials-card,
@@ -609,12 +630,48 @@
       }
     }
 
-    &__profile-body {
-      flex-direction: column;
+    &__header-row {
+      flex-direction: column !important;
       align-items: stretch;
+      gap: var(--spacer-5);
     }
+
+    &__header-save-main {
+      width: 100%;
+      min-width: 0;
+    }
+
+    &__header-title {
+      font-size: 24px;
+      line-height: 28px;
+    }
+
+    &__profile-body {
+      flex-direction: column !important;
+      align-items: center;
+      gap: var(--spacer-5);
+    }
+
+    &__profile-avatar-block {
+      align-self: center;
+    }
+
+    &__profile-fields {
+      width: 100%;
+    }
+
     &__profile-fields-row {
-      flex-direction: column;
+      flex-direction: column !important;
+    }
+
+    &__card {
+      padding: var(--spacer-5);
+      gap: var(--spacer-5);
+    }
+
+    &__inner {
+      flex-wrap: wrap;
+      row-gap: var(--spacer-3);
     }
   }
 }

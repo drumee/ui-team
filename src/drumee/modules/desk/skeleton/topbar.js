@@ -14,6 +14,15 @@ const addMenuItem = (pfx, ui, ico, label, service, name, opts = {}) =>
     uiHandler: [ui],
   });
 
+const addItems = (pfx, ui) => [
+  addMenuItem(pfx, ui, "addmenu-folder", LOCALE.WORKSPACE || "Workspace", "new-workspace", "", { highlight: 1, iconClass: "ico-workspace" }),
+  addMenuItem(pfx, ui, "addmenu-folder", LOCALE.PRIVATE_FOLDER || "Private folder", "add-private-folder", "", { iconClass: "ico-private-folder" }),
+  addMenuItem(pfx, ui, "addmenu-note", LOCALE.NOTE || "Note", "new-note", "", { iconClass: "ico-note" }),
+  addMenuItem(pfx, ui, "addmenu-document", LOCALE.DOCUMENT || "Document", "new-document", "document.docx", { iconClass: "ico-document" }),
+  addMenuItem(pfx, ui, "addmenu-spreadsheet", LOCALE.SPREADSHEET || "Spreadsheet", "new-spreadsheet", "spreadsheet.xlsx", { iconClass: "ico-spreadsheet" }),
+  addMenuItem(pfx, ui, "addmenu-presentation", LOCALE.PRESENTATION || "Presentation", "new-presentation", "presentation.pptx", { iconClass: "ico-presentation" }),
+];
+
 module.exports = function (ui) {
   const pfx = `${ui.fig.family}-topbar`;
 
@@ -46,14 +55,7 @@ module.exports = function (ui) {
               className: `${pfx}__new-workspace-btn`,
               label: LOCALE.ADD_NEW || "Add new",
             }),
-            items: [
-              addMenuItem(pfx, ui, "addmenu-folder", LOCALE.WORKSPACE || "Workspace", "new-workspace", "", { highlight: 1, iconClass: "ico-workspace" }),
-              addMenuItem(pfx, ui, "addmenu-folder", LOCALE.PRIVATE_FOLDER || "Private folder", "add-private-folder", "", { iconClass: "ico-private-folder" }),
-              addMenuItem(pfx, ui, "addmenu-note", LOCALE.NOTE || "Note", "new-note", "", { iconClass: "ico-note" }),
-              addMenuItem(pfx, ui, "addmenu-document", LOCALE.DOCUMENT || "Document", "new-document", "document.docx", { iconClass: "ico-document" }),
-              addMenuItem(pfx, ui, "addmenu-spreadsheet", LOCALE.SPREADSHEET || "Spreadsheet", "new-spreadsheet", "spreadsheet.xlsx", { iconClass: "ico-spreadsheet" }),
-              addMenuItem(pfx, ui, "addmenu-presentation", LOCALE.PRESENTATION || "Presentation", "new-presentation", "presentation.pptx", { iconClass: "ico-presentation" }),
-            ],
+            items: addItems(pfx, ui),
           }),
           Skeletons.Button.Label({
             ico: "desktop_upload",
@@ -127,6 +129,40 @@ module.exports = function (ui) {
             label: LOCALE.INVITE || "Invite",
             service: "invite-member",
             uiHandler: [ui],
+          }),
+
+          // Tablet-only consolidated menu (768px ≤ width < 1024px).
+          // Flattened: nesting Skeletons.Menu inside another Menu's `items`
+          // breaks menu_topic's outside-click handling, so the six Add
+          // entries are spliced in at the top instead of behind a sub-menu.
+          Skeletons.Menu({
+            className: `${pfx}__more-wrapper`,
+            direction: _a.down,
+            opening: _e.click,
+            persistence: _a.once,
+            sys_pn: "moremenu",
+            partHandler: [ui],
+            trigger: Skeletons.Button.Label({
+              ico: "bars",
+              className: `${pfx}__more-btn`,
+            }),
+            items: [
+              ...addItems(pfx, ui),
+              Skeletons.Button.Label({
+                ico: "desktop_upload",
+                className: `${pfx}__more-menu-item`,
+                label: LOCALE.UPLOAD,
+                service: _e.upload,
+                uiHandler: [ui],
+              }),
+              Skeletons.Button.Label({
+                ico: "topbar-invite",
+                className: `${pfx}__more-menu-item`,
+                label: LOCALE.INVITE || "Invite",
+                service: "invite-member",
+                uiHandler: [ui],
+              }),
+            ],
           }),
         ],
       }),
