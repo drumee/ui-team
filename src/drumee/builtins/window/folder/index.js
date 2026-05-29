@@ -69,6 +69,56 @@ class __window_folder extends mfsInteract {
   }
 
   /**
+   * Toggle "zoom" — macOS-style maximize-within-workspace.
+   * First call captures the current bounds and animates the window to fill
+   * its workspace container; second call restores those captured bounds.
+   */
+  toggleZoom() {
+    if (document.fullscreenElement === this.el) {
+      document.exitFullscreen();
+    }
+    if (this._zoomed && this._preZoomBounds) {
+      this.change_size_to(this._preZoomBounds);
+      this._zoomed = false;
+      return;
+    }
+    const pos = this.$el.position();
+    this._preZoomBounds = {
+      left: pos.left,
+      top: pos.top,
+      width: this.$el.width(),
+      height: this.$el.height(),
+    };
+    const workspace =
+      document.querySelector(".desk-module__wm-container") ||
+      document.querySelector(".desk-module__right-side");
+    const rect = workspace ? workspace.getBoundingClientRect() : {};
+    const w = rect.width || window.innerWidth;
+    const h = rect.height || window.innerHeight;
+    this.change_size_to({ left: 0, top: 0, width: w, height: h });
+    this._zoomed = true;
+  }
+
+  /**
+   * Restore the window to its default bounds (the same geometry it had
+   * when first opened) — the macOS green-button "Zoom" reset behavior.
+   */
+  reframeToDefault() {
+    if (document.fullscreenElement === this.el) {
+      document.exitFullscreen();
+    }
+    const b = this._defaultBounds();
+    this.change_size_to({
+      left: b.left,
+      top: b.top,
+      width: b.width,
+      height: b.height,
+    });
+    this._zoomed = false;
+    this._preZoomBounds = null;
+  }
+
+  /**
    * @param {*} opt
    */
   initialize(opt) {
@@ -604,6 +654,12 @@ class __window_folder extends mfsInteract {
           Desk.onWorkspaceClosed();
         }
         return super.onUiEvent(cmd, args);
+
+      case "window-zoom":
+        return this.toggleZoom();
+
+      case "window-reframe":
+        return this.reframeToDefault();
 
       default:
         super.onUiEvent(cmd, args);

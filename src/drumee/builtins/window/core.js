@@ -821,25 +821,16 @@ class __window_core extends __utils {
         });
 
       case "fullscreen":
-        if (cmd.get(_a.state)) {
-          this._fullscreen = true;
-          this.currentSize = {
-            width: this.$el.width(),
-            height: this.$el.height(),
-          };
-          this.size = this.currentSize;
-          let p = this.$el.position();
-          let opt = { ...this.currentSize, ...p };
-          this.el.requestFullscreen();
-          this.el.onfullscreenchange = () => {
-            _.delay(() => {
-              this.change_size_to(opt);
-            }, 500);
-          };
-        } else {
+        if (document.fullscreenElement) {
           this._fullscreen = false;
           this.el.onfullscreenchange = null;
           document.exitFullscreen();
+        } else {
+          this._fullscreen = true;
+          this.el.requestFullscreen();
+        }
+        if (this.__ctrlFullscreen && this.__ctrlFullscreen.setState) {
+          this.__ctrlFullscreen.setState(this._fullscreen ? 1 : 0);
         }
         return;
 
