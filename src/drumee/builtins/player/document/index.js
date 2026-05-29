@@ -129,6 +129,7 @@ class __player_document extends PlayerInteract {
     if (this.shouldOpenInEditMode()) {
       return this.edit();
     }
+    initializePdfium();
     this.reload(300);
   }
 
@@ -460,7 +461,11 @@ class __player_document extends PlayerInteract {
     this.el.dataset.mode = _a.edit;
     this.mset({ mode: _a.edit })
     if (fullscreen && this.el.requestFullscreen) {
+<<<<<<< HEAD
       this.el.requestFullscreen().catch(() => { });
+=======
+      this.el.requestFullscreen().catch(() => {});
+>>>>>>> 06db78d8096b788df26ff4427ca57855c7c57891
     }
     this.feed(require('./skeleton').edit(this, LOCALE.DOWNLOADING));
     const { nid, hub_id } = this.actualNode()
@@ -522,7 +527,11 @@ class __player_document extends PlayerInteract {
       .then((p) => {
         if (p && !p.isDestroyed()) p.setState(0);
       })
+<<<<<<< HEAD
       .catch(() => { });
+=======
+      .catch(() => {});
+>>>>>>> 06db78d8096b788df26ff4427ca57855c7c57891
   }
 
   /**
