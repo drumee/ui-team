@@ -432,17 +432,30 @@ function linkedAccountsCard(ui) {
     );
   }
 
-  // Migrate-from-Google-Drive CTA. Always shown — if the user hasn't
-  // granted drive.readonly scope yet, the popup will prompt for it.
+  // Migrate-from-Google-Drive CTA. Reflects the gdrive state fetched on load
+  // (google_drive.get_state): a running job shows live progress + %, a prior
+  // job offers "Migrate again", otherwise "Start". The button always opens the
+  // popup (full, live progress); the row is just a load-time snapshot.
+  const gd = (ui.getGdriveState && ui.getGdriveState()) || {};
+  const gjob = gd.job;
+  const gRunning = !!(gjob && (gjob.status === "queued" || gjob.status === "running"));
+  const gPct = (gRunning && gjob.total_files > 0)
+    ? Math.min(100, Math.round((gjob.processed_files || 0) / gjob.total_files * 100))
+    : 0;
+  const migrateDesc = gRunning
+    ? `${LOCALE.MIGRATION_IN_PROGRESS || "Migration in progress"} — ${gjob.processed_files || 0}/${gjob.total_files || "?"} (${gPct}%)`
+    : (LOCALE.MIGRATE_GDRIVE_HINT || "Imports files and folders from your Google Drive into Drumee.");
+  const migrateLabel = gRunning
+    ? (LOCALE.MIGRATE_GDRIVE_VIEW || "View progress")
+    : (gjob ? (LOCALE.MIGRATE_GDRIVE_AGAIN || "Migrate again") : (LOCALE.MIGRATE_GDRIVE_START || "Start"));
+
   const migrateRow = innerItem(ui, {
     ico: "logo-google",
     title: LOCALE.LINKED_ACCOUNTS_MIGRATE_GDRIVE || "Migrate from Google Drive",
-    description:
-      LOCALE.MIGRATE_GDRIVE_HINT ||
-      "Imports files and folders from your Google Drive into Drumee.",
+    description: migrateDesc,
     className: `${pfx}-row ${pfx}-row--migrate`,
     trailing: button(ui, {
-      label: LOCALE.MIGRATE_GDRIVE_START || "Start",
+      label: migrateLabel,
       className: `${pfx}-migrate-btn`,
       priority: "primary",
       service: "launch-gdrive-migration",

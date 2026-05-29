@@ -41,7 +41,15 @@ class settings_main extends LetcBox {
    *
    */
   async onDomRefresh() {
-    this._oauthLinks = await this._loadOauthLinks();
+    // Load linked providers + the gdrive migration state in parallel so the
+    // "Migrate from Google Drive" row reflects a running job (in-progress + %)
+    // as soon as Settings opens, instead of always offering "Start".
+    const [links, gdrive] = await Promise.all([
+      this._loadOauthLinks(),
+      this._loadGdriveState(),
+    ]);
+    this._oauthLinks = links;
+    this._gdriveState = gdrive;
     this._reconcilePasswordSet();
     this.feed(require("./skeleton").default(this));
   }
@@ -63,6 +71,24 @@ class settings_main extends LetcBox {
       return [];
     }
   }
+
+  /**
+   * Fetch the gdrive migration state (google_drive.get_state) so the Linked
+   * Accounts "Migrate" row can show live progress when a job is running.
+   * Returns { ok, job, seen_job_id } or {} on failure.
+   */
+  async _loadGdriveState() {
+    try {
+      const res = await this.fetchService("google_drive.get_state", { hub_id: Visitor.id });
+      return res || {};
+    } catch (e) {
+      this.warn("settings_main: gdrive get_state failed", e);
+      return {};
+    }
+  }
+
+  /** Skeleton reads this to render the Migrate row's state (running %, etc.). */
+  getGdriveState() { return this._gdriveState || {}; }
 
   async _refreshOauthLinks() {
     this._oauthLinks = await this._loadOauthLinks();

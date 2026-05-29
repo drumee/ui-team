@@ -38,6 +38,10 @@ module.exports = function (ui) {
     className: `${pfx}__primary-btn`, content, service, uiHandler: [ui],
   });
 
+  const secondaryBtn = (content, service) => Skeletons.Note({
+    className: `${pfx}__cancel`, content, service, uiHandler: [ui],
+  });
+
   const state = ui.getState();
   const snap = ui.getJobSnap() || {};
   const auto = ui.isAutoFromOnboarding();
@@ -83,6 +87,12 @@ module.exports = function (ui) {
           className: `${pfx}__description`,
           content: LOCALE.MIGRATE_GDRIVE_HINT,
         }),
+        // Returning user (already migrated once): frame this run as an
+        // incremental sync — new files only, existing ones skipped.
+        (ui.hasPriorJob && ui.hasPriorJob()) ? Skeletons.Note({
+          className: `${pfx}__resync-hint`,
+          content: LOCALE.MIGRATE_GDRIVE_RESYNC_HINT,
+        }) : null,
         // Destination card — where files will land.
         Skeletons.Box.X({
           className: `${pfx}__dest-card`,
@@ -112,16 +122,19 @@ module.exports = function (ui) {
             Skeletons.Note({ className: `${pfx}__field-help`, content: LOCALE.MIGRATE_GDRIVE_SOURCE_FOLDER_HELP }),
           ],
         }),
-        // Real toggle switch (track + knob) instead of a unicode checkbox.
+        // Real toggle switch (track + knob). Only the switch is clickable —
+        // the row is just a label + switch container (data-state on the row
+        // still drives the on/off styling + is read by getData/_getInputs).
         Skeletons.Box.X({
           className: `${pfx}__toggle-row`,
           dataset: { partname: 'shared-drives-toggle', state: String(shared) },
-          service: 'gdrive-toggle-shared',
-          uiHandler: [ui],
           kids: [
             Skeletons.Note({ className: `${pfx}__toggle-label`, content: LOCALE.MIGRATE_GDRIVE_INCLUDE_SHARED }),
             Skeletons.Box.X({
               className: `${pfx}__switch`,
+              service: 'gdrive-toggle-shared',
+              uiHandler: [ui],
+              kidsOpt: { active: 0 },
               kids: [Skeletons.Box.Y({ className: `${pfx}__switch-knob` })],
             }),
           ],
@@ -142,7 +155,7 @@ module.exports = function (ui) {
             }) : null,
           ].filter(Boolean),
         }),
-      ],
+      ].filter(Boolean),
     });
   } else if (state === 'in-progress') {
     const total = snap.total_files || 0;
@@ -227,9 +240,19 @@ module.exports = function (ui) {
             content: `${e.file || e.folder || '?'} — ${e.reason || e.code || 'error'}`,
           })),
         }) : null,
+        // Footer: never a dead-end. done/cancelled → "Migrate again" (re-run
+        // an incremental sync) + Close; failed → Close + "Try again".
         Skeletons.Box.X({
           className: `${pfx}__footer`,
-          kids: [primaryBtn(LOCALE.CLOSE || 'Close', 'close-migrate-popup')],
+          kids: isFailed
+            ? [
+                secondaryBtn(LOCALE.CLOSE || 'Close', 'close-migrate-popup'),
+                primaryBtn(LOCALE.MIGRATE_GDRIVE_RETRY || 'Try again', 'gdrive-restart'),
+              ]
+            : [
+                secondaryBtn(LOCALE.MIGRATE_GDRIVE_AGAIN || 'Migrate again', 'gdrive-restart'),
+                primaryBtn(LOCALE.CLOSE || 'Close', 'close-migrate-popup'),
+              ],
         }),
       ].filter(Boolean),
     });

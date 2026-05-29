@@ -132,6 +132,14 @@ $danger-soft: rgba(246, 81, 75, 0.12);
     @include drumee.typo($size: 13.5px, $weight: 400, $line: 20px, $color: var(--normal-fg-20));
   }
 
+  // returning-user "incremental sync" note on the ready screen
+  &__resync-hint {
+    @include drumee.typo($size: 12.5px, $weight: 400, $line: 18px, $color: var(--normal-fg-20));
+    background: var(--overlay-bg-05);
+    border-radius: var(--corner-radius-2);
+    padding: var(--spacer-3) var(--spacer-4);
+  }
+
   // ───────── shared elevated surfaces (card / row / input) ─────────
   &__dest-card,
   &__toggle-row,
@@ -221,15 +229,12 @@ $danger-soft: rgba(246, 81, 75, 0.12);
   }
 
   // ───────── toggle switch ─────────
+  // The row is a static label + switch container; only the switch is clickable.
   &__toggle-row {
     align-items: center;
     justify-content: space-between;
     gap: var(--spacer-3);
-    cursor: pointer;
     padding: var(--spacer-4);
-    transition: border-color 0.15s, background 0.15s;
-
-    &:hover { border-color: var(--border-strong); }
   }
 
   &__toggle-label {
@@ -246,6 +251,7 @@ $danger-soft: rgba(246, 81, 75, 0.12);
     transition: background 0.2s;
     align-items: center;
     padding: 0 3px;
+    cursor: pointer;
   }
 
   &__switch-knob {
@@ -277,6 +283,12 @@ $danger-soft: rgba(246, 81, 75, 0.12);
     font-weight: 600;
     user-select: none;
     text-align: center;
+    // The button is a `note` (drumee-widget, data-flow="wrap") which the global
+    // container rule renders as `display:flex; flex-direction:row`. Its inner
+    // `.note-content` is a flex child, so text-align alone won't center it —
+    // justify/align-items center the label inside the full-width button.
+    justify-content: center;
+    align-items: center;
     transition: filter 0.15s, background 0.15s, color 0.15s, border-color 0.15s, transform 0.06s;
 
     &:active { transform: translateY(1px); }
@@ -294,20 +306,26 @@ $danger-soft: rgba(246, 81, 75, 0.12);
     color: #ffffff;
     background: $accent;
     border: 1px solid transparent;
-    box-shadow: 0 2px 8px rgba(250, 133, 64, 0.3);
+    // No drop-shadow: the shell is `overflow-y:auto` + border-radius, which
+    // clips a child's glow into hard square corners at the rounded edge
+    // (looked like the button bleeding past the popup). Flat reads cleaner and
+    // matches the system buttons (settings).
+    max-width: 100%;
+    box-sizing: border-box;
 
-    &[data-state="0"] { opacity: 0.55; pointer-events: none; box-shadow: none; }
+    &[data-state="0"] { opacity: 0.55; pointer-events: none; }
     &[data-busy="1"]  { opacity: 0.8; pointer-events: none; }
     &:hover { background: $accent-strong; }
   }
 
-  // Stand-alone CTA (connect / result states) spans the full width.
-  &__body--not-connected > &__primary-btn {
-    width: 100%;
-    box-shadow: 0 4px 14px rgba(250, 133, 64, 0.32);
-  }
+  // Stand-alone CTA (connect / result states) spans the full width. Use an
+  // explicit width:100% (not flex:1 in a flex-end row) so it can't be widened
+  // past the padded content box by flex quirks.
+  &__body--not-connected > &__primary-btn { width: 100%; }
+  // Result footer holds two equal buttons (Migrate again / Close, or
+  // Close / Try again) — split the row evenly, contained in the padding.
   &__body--result &__footer { width: 100%; }
-  &__body--result &__footer &__primary-btn { flex: 1; }
+  &__body--result &__footer > * { flex: 1 1 0; min-width: 0; }
 
   &[data-busy="1"] { pointer-events: none; }
 
@@ -368,9 +386,12 @@ $danger-soft: rgba(246, 81, 75, 0.12);
   }
 
   // ───────── result summary + errors ─────────
+  // Notes render as flex rows (drumee-widget + data-flow="wrap"), so text-align
+  // alone won't center the inner .note-content — justify-content does.
   &__summary {
     @include drumee.typo($size: 14px, $weight: 400, $line: 20px, $color: var(--normal-fg-20));
     text-align: center;
+    justify-content: center;
   }
 
   &__fail-reason {
@@ -379,6 +400,8 @@ $danger-soft: rgba(246, 81, 75, 0.12);
     font-weight: 500;
     padding: var(--spacer-3) var(--spacer-4);
     border-radius: var(--corner-radius-2);
+    text-align: center;
+    justify-content: center;
   }
 
   &__error-list {
@@ -441,9 +464,6 @@ html[data-theme="dark"] .migrate-gdrive-popup {
       0 20px 56px -8px rgba(0, 0, 0, 0.6),
       0 0 0 1px rgba(255, 255, 255, 0.04);
   }
-
-  &__primary-btn { box-shadow: 0 2px 10px rgba(250, 133, 64, 0.22); }
-  &__body--not-connected > &__primary-btn { box-shadow: 0 4px 16px rgba(250, 133, 64, 0.24); }
 
   &__switch-knob { background: #f4f4f6; }
 

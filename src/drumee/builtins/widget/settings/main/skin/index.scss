@@ -130,6 +130,9 @@
     &-row--empty {
       opacity: 0.7;
     }
+
+    // (migrate CTA shares the common ghost-button style — see the grouped
+    // rule below, near the other card buttons.)
     &-disconnect-main[data-flow] {
       display: flex;
       flex-direction: row;
@@ -571,9 +574,12 @@
   }
 
   // ── Ghost (light-purple) buttons used inside cards ────────
+  // Shared "normal button" style for the settings cards — same light-purple
+  // tint as the "Coming soon" pill. Used by manage / action / export / migrate.
   &__preferences-manage-main,
   &__credentials-action-main,
-  &__danger-export-btn-main {
+  &__danger-export-btn-main,
+  &__linked-migrate-btn-main {
     width: 120px;
     height: 32px;
     border-radius: 4px;
@@ -600,6 +606,15 @@
     &:hover {
       background: rgba(89, 80, 255, 0.18);
     }
+  }
+
+  // The migrate CTA shares the same ghost look as the "Coming soon" pill in
+  // every state (Start migration / View progress / Migrate again); its labels
+  // are wider than the 120px tiles, so size to content.
+  &__linked-migrate-btn-main {
+    width: auto;
+    min-width: 120px;
+    padding: 0 var(--spacer-5);
   }
 
   &__danger-export-btn-main {

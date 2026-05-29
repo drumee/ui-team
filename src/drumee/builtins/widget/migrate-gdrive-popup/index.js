@@ -36,6 +36,13 @@ class __migrate_gdrive_popup extends LetcBox {
     this._jobId = null;
     this._jobSnap = null;
     this._poll = null;
+    // Last result the user already dismissed (profile.gdrive_seen_job from the
+    // server) — so a migration that finished while the popup was closed is
+    // shown exactly once.
+    this._seenJobId = null;
+    // True once the user has at least one prior migration job — lets the
+    // "ready" screen frame re-running as an incremental sync (new files only).
+    this._hasPriorJob = false;
     // Form values persisted on the instance — the popup re-renders on every
     // state transition (post-OAuth, post-poll, etc.) and `feed()` rebuilds
     // the DOM, so reading raw `<input>` / `dataset` is unreliable. Skeleton
@@ -52,7 +59,11 @@ class __migrate_gdrive_popup extends LetcBox {
     window.addEventListener('storage', this._onStorage, false);
     try {
       this._bc = new BroadcastChannel('gdrive-oauth');
-      this._bc.onmessage = (evt) => this._handleConnectResult(evt && evt.data);
+      this._bc.onmessage = (evt) => {
+        const d = evt && evt.data;
+        if (d && d.type === 'gdrive-migration-started') return this._onMigrationStarted(d);
+        return this._handleConnectResult(d);
+      };
     } catch (e) {
       this._bc = null;
     }
@@ -126,11 +137,41 @@ class __migrate_gdrive_popup extends LetcBox {
     this._render();
     let res;
     try {
-      res = await this.fetchService('google_drive.has_drive_scope', { hub_id: Visitor.id });
+      // get_state is the source of truth: it tells us whether a migration is
+      // running in the worker (so we reconnect instead of showing "Start"),
+      // whether one just finished (show the result once), and the drive scope.
+      res = await this.fetchService('google_drive.get_state', { hub_id: Visitor.id });
     } catch (e) {
-      this.warn('[migrate-gdrive] has_drive_scope failed', e);
-      res = { ok: false };
+      this.warn('[migrate-gdrive] get_state failed', e);
+      res = {};
     }
+    this._seenJobId = (res && res.seen_job_id) || null;
+    const job = res && res.job;
+    this._hasPriorJob = !!job;
+
+    // 1) A migration is still running in the worker → reconnect + resume poll.
+    if (job && (job.status === 'queued' || job.status === 'running')) {
+      this._jobId = job.job_id;
+      this._jobSnap = job;
+      this._state = 'in-progress';
+      this._render();
+      this._startPolling();
+      return;
+    }
+
+    // 2) A migration finished while the popup was closed → show its result
+    //    once. _close() acks it (server: profile.gdrive_seen_job) so later
+    //    opens fall through to the normal ready screen.
+    if (job && ['done', 'failed', 'cancelled'].includes(job.status)
+        && String(job.job_id) !== String(this._seenJobId)) {
+      this._jobId = job.job_id;
+      this._jobSnap = job;
+      this._state = job.status;
+      this._render();
+      return;
+    }
+
+    // 3) No active/unseen job → connect or ready as before.
     this._state = (res && res.ok) ? 'ready' : 'not-connected';
     this._render();
   }
@@ -215,6 +256,21 @@ class __migrate_gdrive_popup extends LetcBox {
   getSourceFolderId() { return this._sourceFolderId; }
   getIncludeShared() { return this._includeShared; }
 
+  /**
+   * Another open popup (same browser) started a migration — switch this one to
+   * live progress instead of leaving "Start migration" visible. The first poll
+   * tick fills in the real %, so we seed a queued snapshot meanwhile.
+   */
+  _onMigrationStarted(d) {
+    if (!d || !d.job_id) return;
+    if (this._state === 'in-progress' && String(this._jobId) === String(d.job_id)) return;
+    this._jobId = d.job_id;
+    this._jobSnap = { job_id: d.job_id, status: 'queued' };
+    this._state = 'in-progress';
+    this._render();
+    this._startPolling();
+  }
+
   async _startMigration() {
     if (this._starting) return;
     this._starting = 1;
@@ -243,6 +299,12 @@ class __migrate_gdrive_popup extends LetcBox {
     this._state = 'in-progress';
     this._render();
     this._startPolling();
+    // Tell other open popups (same browser, e.g. another tab sitting on the
+    // "ready" screen) that a migration just started, so they switch to live
+    // progress instead of still offering "Start migration".
+    try {
+      if (this._bc) this._bc.postMessage({ type: 'gdrive-migration-started', job_id: res.job_id });
+    } catch (e) { /* noop */ }
   }
 
   _startPolling() {
@@ -294,8 +356,34 @@ class __migrate_gdrive_popup extends LetcBox {
   }
 
   _close() {
+    // Closing from a finished-result view (whether it just finished here or
+    // we reconnected to a completed job) → tell the server we've seen it, so
+    // reopening the popup won't replay the same result.
+    if (this._jobId && ['done', 'failed', 'cancelled'].includes(this._state)) {
+      this.postService('google_drive.ack_result', { hub_id: Visitor.id, job_id: this._jobId })
+        .catch(() => {});
+    }
     if (this.parent && _.isFunction(this.parent.clear)) this.parent.clear();
     else this.softDestroy();
+  }
+
+  /**
+   * From a finished-result view, go back to the ready screen to run another
+   * (incremental) migration instead of closing. Acks the shown result so it
+   * won't reappear, then jumps straight to 'ready' (the user is connected,
+   * having just migrated) — avoiding a get_state round-trip that would replay
+   * the same result.
+   */
+  _restart() {
+    if (this._jobId) {
+      this.postService('google_drive.ack_result', { hub_id: Visitor.id, job_id: this._jobId })
+        .catch(() => {});
+    }
+    this._jobId = null;
+    this._jobSnap = null;
+    this._seenJobId = null;
+    this._state = 'ready';
+    this._render();
   }
 
   // ───────── event routing ─────────
@@ -315,6 +403,8 @@ class __migrate_gdrive_popup extends LetcBox {
         return this._skipForNow();
       case 'gdrive-retry-connect':
         return this._refreshScope();
+      case 'gdrive-restart':
+        return this._restart();
       case 'gdrive-toggle-shared': {
         // Flip dataset.state in place AND persist to instance so the
         // value survives re-renders (skeleton seeds dataset.state from
@@ -331,6 +421,7 @@ class __migrate_gdrive_popup extends LetcBox {
   getState() { return this._state; }
   getJobSnap() { return this._jobSnap; }
   isAutoFromOnboarding() { return this._autoFromOnboarding; }
+  hasPriorJob() { return this._hasPriorJob; }
   getConnectError() { return this._connectError; }
 }
 
