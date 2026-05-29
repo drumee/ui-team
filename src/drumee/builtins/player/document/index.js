@@ -62,6 +62,7 @@ class __player_document extends PlayerInteract {
     }
     this.pollCount = 0;
     prewarmEditor();
+    initializePdfium(); /** Lazy load the reader anyway */
   }
 
 
@@ -128,7 +129,6 @@ class __player_document extends PlayerInteract {
     if (this.shouldOpenInEditMode()) {
       return this.edit();
     }
-    initializePdfium();
     this.reload(300);
   }
 
@@ -460,7 +460,7 @@ class __player_document extends PlayerInteract {
     this.el.dataset.mode = _a.edit;
     this.mset({ mode: _a.edit })
     if (fullscreen && this.el.requestFullscreen) {
-      this.el.requestFullscreen().catch(() => {});
+      this.el.requestFullscreen().catch(() => { });
     }
     this.feed(require('./skeleton').edit(this, LOCALE.DOWNLOADING));
     const { nid, hub_id } = this.actualNode()
@@ -522,7 +522,7 @@ class __player_document extends PlayerInteract {
       .then((p) => {
         if (p && !p.isDestroyed()) p.setState(0);
       })
-      .catch(() => {});
+      .catch(() => { });
   }
 
   /**
@@ -798,7 +798,7 @@ class __player_document extends PlayerInteract {
       case "fullscreen":
         this.el.requestFullscreen().catch(e => console.warn("Fullscreen request failed:", e));
         break;
-        
+
       case 'download-pdf':
         url = `${bootstrap().serviceUrl}${SERVICE.media.pdf}?nid=${nid}&hub_id=${hub_id}`;
         let f = filename.split('.')
