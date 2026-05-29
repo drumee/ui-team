@@ -358,6 +358,7 @@ flowchart TD
 - Resume per-file sau crash (retry/re-run chạy lại từ đầu, dựa skip để bỏ qua file đã có).
 - Real-time push (FE poll 2s; Settings row là snapshot lúc load).
 - Live reconnect cross-device (chỉ cross-tab cùng browser qua BroadcastChannel; cross-device cần mở lại popup → get_state).
+- **Home menu KHÔNG cập nhật live khi migrate xong.** Worker (offline) tạo node trực tiếp qua `mfs_create_node`, KHÔNG phát WS `media.new` → desk `workspace-list`/`workspace-item` (vốn refresh theo `media.new`) không thấy folder/file mới ngay. Node được tạo **đúng dưới home root** nên hiện khi home **re-fetch** (navigate/reload). Trường hợp home rỗng cũng vậy: sau migrate cần reload mới thấy "GoogleDriveMigration". → Phase 2: worker đẩy `media.new` qua Redis pub/sub → endpoint → user socket (hoặc FE tự refresh desk khi popup `done`).
 
 ## 10. Deploy
 
