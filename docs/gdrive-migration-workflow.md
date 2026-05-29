@@ -351,6 +351,7 @@ flowchart TD
 - Progress / cancel / retry (3 attempts, exp backoff).
 - **Reconnect** job đang chạy (đóng/reload/tab khác) + show-once kết quả + **re-migrate incremental**.
 - Settings row phản ánh trạng thái migration lúc load.
+- **Chọn folder/file cụ thể** (Selected mode) qua cây lazy-load — xem section 11.
 - Async fs I/O + Bull lock tolerance (lockDuration 60s, maxStalledCount 3) → chống "job stalled".
 
 **Chưa có (Phase 2):**
@@ -364,3 +365,26 @@ flowchart TD
 
 - **server-team**: thay đổi `service/*` (endpoint) → restart endpoint/service. Thay đổi **`offline/workers/gdrive/importer.js` hoặc `migrationQueue.js` lock settings → `sudo drumee restart gdrive-worker`** (process worker riêng, deploy KHÔNG tự restart). Google Console (client Drive) phải đăng ký đúng `redirect_uri` từ `svc_location` mỗi endpoint.
 - **ui-team**: `npm run dev` (build+deploy) + **`pm2 restart vudangnt`** (endpoint cache bundle manifest lúc startup) + hard-reload trình duyệt.
+
+## 11. Chọn folder/file cụ thể (Selected mode)
+
+Màn hình `ready` có 2 chế độ (radio):
+- **Migrate everything** (mặc định) — như cũ: duyệt từ `root` toàn My Drive, tôn trọng toggle *Include Shared Drives*.
+- **Choose folders & files** — hiện cây thư mục lazy-load (My Drive only). Tick folder = cả subtree; tick file = file đó. **Không tri-state**: mở 1 folder đã tick thì các con hiện mờ ("included via parent") — muốn chọn lẻ con thì bỏ tick folder cha trước.
+
+**Endpoint `google_drive.list`** (read-only, My Drive only):
+- in: `{ folder_id='root', page_token? }` → out: `{ files: [{ id, name, is_folder, mime_type, size }], next_page_token }`.
+- Token qua `ExtImport.ensureFreshToken('google')`; lỗi → `NEEDS_RECONNECT`. Phân trang `pageSize=200`, `orderBy=folder,name` (folder trước, rồi tên).
+
+**`start_migration`** nhận thêm:
+- `mode` ('all' | 'selected', default 'all').
+- `selections` = `{ folder_ids:[], file_ids:[] }` (chỉ Selected; rỗng → `NOTHING_SELECTED`). All-mode bỏ qua `selections`; Selected-mode bỏ qua `source_folder_id`/`include_shared_drives`.
+- Truyền tiếp vào job data qua `addMigration` (queue whitelist field → đã thêm `mode`/`selections`).
+
+**Importer** (`run()`):
+- `mode` thiếu/'all' → `_traverse` từ `source_folder_id` (tương thích ngược với job cũ).
+- 'selected' → `_migrateSelected`: mỗi `folder_id` → `_getMeta` lấy tên → tạo subfolder cùng tên dưới `GoogleDriveMigration` rồi `_traverse` (cả subtree); mỗi `file_id` → `_getMeta` → `_importItem` thẳng vào root. `_getMeta` = Drive `files.get?fields=id,name,mimeType,size` (server tự lấy metadata, KHÔNG tin tên client gửi).
+
+**FE state** (popup instance): `_migrateMode`, `_treeCache` (folderId→`{items,next_page_token}`), `_expanded`/`_checkedFolders`/`_checkedFiles`/`_loading` (Set). Tree re-render scoped qua `ensurePart('gdrive-tree').feed(require('./skeleton/tree')(this))`; Start disable khi Selected + chưa chọn gì (`_refreshStartState` set `data-disabled`, `_startMigration` cũng guard + alert `NOTHING_SELECTED`).
+
+**Giới hạn (Phase sau):** Shared Drives KHÔNG hiện trong cây (chỉ áp dụng All mode). Không chọn lẻ file bên trong folder đã tick (phải bỏ tick cha). Tri-state include/exclude.
