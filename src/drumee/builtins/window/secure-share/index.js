@@ -20,6 +20,20 @@ class __window_secure_share extends mfsInteract {
     }
     this.style.set({ width: this.size.width, height: this.size.height });
     this.declareHandlers();
+    this.bindEvent(_a.live);
+  }
+
+  onBeforeDestroy() {
+    this.unbindEvent(_a.live);
+  }
+
+  onWsMessage(svc, data, options = {}) {
+    const { service } = options || svc;
+    if (service === 'share.track_event') {
+      this._loadShares();
+      return;
+    }
+    if (super.onWsMessage) super.onWsMessage(svc, data, options);
   }
 
   onDomRefresh() {
@@ -122,7 +136,7 @@ class __window_secure_share extends mfsInteract {
             Skeletons.Box.X({
               className : `${this.fig.family}__copy-button button`,
               service   : 'copy-secure-link',
-              uiHandler : this,
+              uiHandler : [this],
               kidsOpt   : { active: 0 },
               kids      : [
                 Skeletons.Note({ content: LOCALE.COPY })

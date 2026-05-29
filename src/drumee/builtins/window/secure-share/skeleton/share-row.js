@@ -8,6 +8,7 @@ const __skl_secure_share_row = function(_ui_, row) {
   const kids = [
     Skeletons.Note({ className: `${pfx}__share-email`, content: row.recipient_email }),
     Skeletons.Note({ className: `${pfx}__share-status ${isActive ? 'active' : 'inactive'}`, content: statusLabel }),
+    Skeletons.Note({ className: `${pfx}__share-count`, content: `${row.access_count || 0} ${LOCALE.SECURE_SHARE_VIEWS}` }),
   ];
 
   if (isActive) {
@@ -16,7 +17,7 @@ const __skl_secure_share_row = function(_ui_, row) {
         className : `${pfx}__share-revoke button`,
         service   : 'revoke-secure-share',
         token     : row.id,
-        uiHandler : _ui_,
+        uiHandler : [_ui_],
         kidsOpt   : { active: 0 },
         kids      : [
           Skeletons.Note({ content: LOCALE.SECURE_SHARE_REVOKE })

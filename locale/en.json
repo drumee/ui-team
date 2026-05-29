@@ -1609,5 +1609,6 @@
   "SECURE_SHARE_EXPIRY": "Link expires in",
   "SECURE_SHARE_NO_EXPIRY": "No expiry",
   "SECURE_SHARE_ACTIVE": "Active",
-  "SECURE_SHARE_REVOKE": "Revoke access"
+  "SECURE_SHARE_REVOKE": "Revoke access",
+  "SECURE_SHARE_VIEWS": "views"
 }
