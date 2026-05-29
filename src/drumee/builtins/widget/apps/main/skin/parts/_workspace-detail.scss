@@ -356,11 +356,13 @@
     line-height: 17px;
     font-weight: 400;
     color: $ink-600;
+    justify-content: center;
   }
 
   &__wsdetail-pager {
     align-items: center;
     gap: 8px;
+    justify-content: center;
   }
 
   &__wsdetail-page-arrow {
@@ -432,9 +434,7 @@
       flex: 1 1 100%;
     }
   }
-
 }
-
 
 // ── Workspace detail — dark mode ─────────────────────────────────
 html[data-theme="dark"] .apps-main {
