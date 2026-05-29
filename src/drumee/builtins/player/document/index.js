@@ -129,6 +129,7 @@ class __player_document extends PlayerInteract {
     if (this.shouldOpenInEditMode()) {
       return this.edit();
     }
+    initializePdfium();
     this.reload(300);
   }
 

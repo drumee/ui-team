@@ -33,6 +33,16 @@ module.exports = function (ui, contact) {
   const entityId = contact.mget('entity_id');
   const isContact = contact.mget('flag') === _a.contact;
 
+  const cached = (window.Wm && Wm.getContactStatus && Wm.getContactStatus(entityId)) || null;
+  const onlineState = (cached && cached.status != null) ? cached.status : contact.mget(_a.online);
+
+  const statusLabel = (state) => {
+    const s = ~~state;
+    if (s === 1) return LOCALE.ACTIVE_NOW;
+    if (s === 2) return LOCALE.AWAY;
+    return LOCALE.OFFLINE;
+  };
+
   const profileIcon = isContact
     ? Skeletons.UserProfile({
         className: `${fig}__header-profile`,
@@ -40,7 +50,7 @@ module.exports = function (ui, contact) {
         firstname: fname,
         lastname: lname,
         fullname,
-        online: contact.mget(_a.online),
+        online: onlineState,
         live_status: 1,
         sys_pn: 'header-profile'
       })
@@ -60,11 +70,12 @@ module.exports = function (ui, contact) {
             className: `${fig}__header-name`,
             content: displayName
           }),
-          Skeletons.Note({
+          isContact ? Skeletons.Note({
             className: `${fig}__header-status`,
             sys_pn: 'header-status',
-            content: LOCALE.ACTIVE_NOW
-          })
+            dataset: { online: onlineState == null ? '' : onlineState },
+            content: statusLabel(onlineState)
+          }) : null
         ]
       })
     ]
