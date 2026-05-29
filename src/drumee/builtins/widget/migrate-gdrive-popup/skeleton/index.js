@@ -211,6 +211,14 @@ module.exports = function (ui) {
       kids: [
         hero(heroIco, heroMod, heroTitle, null),
         Skeletons.Note({ className: `${pfx}__summary`, content: summary }),
+        // Top-level failure reason (Bull failedReason). Per-file errors land
+        // in the list below; this surfaces a job-wide throw (e.g. token /
+        // destination resolution) that would otherwise show as "0 errors".
+        (isFailed && snap.failed_reason) ? Skeletons.Note({
+          className: `${pfx}__summary ${pfx}__fail-reason`,
+          dataset: { kind: 'error' },
+          content: String(snap.failed_reason),
+        }) : null,
         // Error detail list (first few) when present.
         errors.length ? Skeletons.Box.Y({
           className: `${pfx}__error-list`,

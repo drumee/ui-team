@@ -434,6 +434,8 @@
   "MIGRATE_GDRIVE_VIEW_ERRORS": "View errors",
   "MIGRATE_GDRIVE_CONNECT_TITLE": "Connect your Google Drive",
   "MIGRATE_GDRIVE_CONNECT_ERROR": "Connection failed: {0}",
+  "DESTINATION": "Destination",
+  "MY_HOME": "My home",
   "MIGRATION_IN_PROGRESS": "Migration in progress…",
   "MIGRATION_PROGRESS_X_OF_Y": "{0} of {1} files",
   "MIGRATION_IMPORTING_FILE": "Importing: {0}",
