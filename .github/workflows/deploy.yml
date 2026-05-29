@@ -79,6 +79,18 @@ jobs:
           echo "Deploy succeeded"
           EOSSH
 
+      - name: Start services
+        env:
+          EP: ${{ steps.target.outputs.endpoint }}
+        run: |
+          ssh "$SGP_USER@$SGP_HOST" "sudo docker exec -i $CONTAINER bash -s" <<EOSSH
+          set -euo pipefail
+          /usr/sbin/drumee start $EP         >> $LOG_FILE 2>&1
+          /usr/sbin/drumee start $EP/service >> $LOG_FILE 2>&1
+          echo "drumee start issued for $EP and $EP/service"
+          sleep 3
+          EOSSH
+
       - name: Verify (HTTP + commit head)
         env:
           EP: ${{ steps.target.outputs.endpoint }}
