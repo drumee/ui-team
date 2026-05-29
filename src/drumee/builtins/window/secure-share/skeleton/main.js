@@ -8,7 +8,6 @@ const __skl_secure_share = function(_ui_) {
     sys_pn    : 'topbar',
     service   : _e.raise,
     kids      : [
-      require('window/skeleton/topbar/control')(_ui_, 'c'),
       Skeletons.Box.X({
         className : `${pfx}__topbar-title forbiden`,
         kids      : [
@@ -18,7 +17,8 @@ const __skl_secure_share = function(_ui_) {
             content   : `${LOCALE.SECURE_SHARE} — ${_ui_.mget(_a.filename) || ''}`
           })
         ]
-      })
+      }),
+      require('window/skeleton/topbar/control')(_ui_, 'c')
     ]
   });
 
