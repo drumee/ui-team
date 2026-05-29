@@ -271,6 +271,42 @@
       visibility: hidden;
     }
 
+    // ── Avatar processing state (HEIC convert + upload in flight) ──
+    &-avatar-overlay {
+      position: absolute;
+      inset: 0;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      background: rgba(255, 255, 255, 0.45);
+      backdrop-filter: blur(2px);
+    }
+
+    &-avatar-spinner {
+      width: 28px;
+      height: 28px;
+      border: 3px solid rgba(67, 60, 197, 0.25); // $purple-deep @ 25%
+      border-top-color: $purple-deep;
+      border-radius: 50%;
+      animation: settings-main-spinner 0.7s linear infinite;
+    }
+
+    &-avatar-frame[data-processing="1"] {
+      pointer-events: none; // block re-click while uploading
+
+      .settings-main__profile-avatar-overlay {
+        display: flex;
+      }
+
+      .settings-main__profile-avatar {
+        filter: brightness(0.8);
+      }
+
+      .settings-main__profile-avatar-edit {
+        opacity: 0;
+      }
+    }
+
     &-fields {
       flex: 1;
       gap: var(--spacer-6);

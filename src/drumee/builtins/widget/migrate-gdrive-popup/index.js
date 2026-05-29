@@ -43,11 +43,25 @@ class __migrate_gdrive_popup extends LetcBox {
     this._sourceFolderId = 'root';
     this._includeShared = 0;
     this._onPostMessage = this._onPostMessage.bind(this);
+    this._onStorage = this._onStorage.bind(this);
     window.addEventListener('message', this._onPostMessage, false);
+    // Google's consent screen sets Cross-Origin-Opener-Policy, which severs
+    // the OAuth popup's window.opener — so the callback page can't reliably
+    // postMessage back. Listen on same-origin channels that survive opener
+    // severance instead.
+    window.addEventListener('storage', this._onStorage, false);
+    try {
+      this._bc = new BroadcastChannel('gdrive-oauth');
+      this._bc.onmessage = (evt) => this._handleConnectResult(evt && evt.data);
+    } catch (e) {
+      this._bc = null;
+    }
   }
 
   onBeforeDestroy() {
     window.removeEventListener('message', this._onPostMessage, false);
+    window.removeEventListener('storage', this._onStorage, false);
+    if (this._bc) { try { this._bc.close(); } catch (e) {} this._bc = null; }
     this._stopPolling();
   }
 
@@ -125,8 +139,26 @@ class __migrate_gdrive_popup extends LetcBox {
     // Only accept messages from our own origin — the callback page is
     // served same-origin and posts with window.location.origin as target.
     if (evt && evt.origin && evt.origin !== window.location.origin) return;
-    const data = evt && evt.data;
+    this._handleConnectResult(evt && evt.data);
+  }
+
+  _onStorage(evt) {
+    // The callback page writes the result to localStorage when its
+    // window.opener was severed by Google's COOP. `storage` events fire only
+    // in *other* same-origin documents — i.e. this widget's window.
+    if (!evt || evt.key !== 'gdrive-oauth-result' || !evt.newValue) return;
+    let data;
+    try { data = JSON.parse(evt.newValue); } catch (e) { return; }
+    this._handleConnectResult(data);
+  }
+
+  _handleConnectResult(data) {
     if (!data || data.type !== 'gdrive-connected') return;
+    // The same result can arrive on several channels (BroadcastChannel,
+    // storage event, postMessage) — act on it once.
+    if (this._connectHandled) return;
+    this._connectHandled = 1;
+    setTimeout(() => { this._connectHandled = 0; }, 1500);
     if (data.ok) {
       this._refreshScope();
     } else {

@@ -56,8 +56,13 @@ function generalProfileCard(ui) {
     kids: [
       Skeletons.Box.X({
         className: `${pfx}-avatar-frame`,
+        sys_pn: "avatar-frame",
         service: "edit-avatar",
         uiHandler: [ui],
+        // data-processing="1" dims/blurs the avatar and shows the spinner
+        // overlay while HEIC conversion + upload are in flight. Driven by
+        // an instance flag so the state survives skeleton re-renders.
+        dataset: { processing: ui.isAvatarProcessing && ui.isAvatarProcessing() ? 1 : 0 },
         kids: [
           Skeletons.Avatar(avatar, `${pfx}-avatar`, fullname),
           Skeletons.Button.Svg({
@@ -65,6 +70,16 @@ function generalProfileCard(ui) {
             className: `${pfx}-avatar-edit`,
             service: "edit-avatar",
             uiHandler: [ui],
+          }),
+          // Processing overlay — hidden via CSS unless the frame carries
+          // data-processing="1". active:0 keeps the frame's edit-avatar
+          // click intact (see feedback_skeleton_event_active).
+          Skeletons.Box.Z({
+            className: `${pfx}-avatar-overlay`,
+            active: 0,
+            kids: [
+              Skeletons.Note({ className: `${pfx}-avatar-spinner`, active: 0 }),
+            ],
           }),
         ],
       }),
@@ -75,7 +90,11 @@ function generalProfileCard(ui) {
       // Skeletons.FileSelector hardcodes sys_pn:"fileselector" — match
       // it via ensurePart("fileselector") in openAvatarPicker().
       Skeletons.FileSelector({
-        accept: "image/*",
+        // Explicit .heic/.heif on top of image/* — some desktop browsers
+        // grey out HEIC under a bare image/* filter (missing MIME
+        // registration), which would block selection before _convertHeic
+        // ever runs. iPhone photos are HEIC by default.
+        accept: "image/*,.heic,.heif",
         className: `${pfx}-avatar-input`,
       }),
     ],

@@ -16,6 +16,25 @@ class settings_main extends LetcBox {
     // LetcBox auto-binds fetchService/postService but not uploadFile.
     this.uploadFile = uploadFile.bind(this);
     this.model.set({ hub_id: Visitor.id });
+    // True while a picked avatar is being converted (HEIC) and/or uploaded.
+    // The skeleton reads this via isAvatarProcessing() to show the spinner.
+    this._avatarProcessing = false;
+  }
+
+  /** Skeleton reads this to seed the avatar-frame's data-processing flag. */
+  isAvatarProcessing() {
+    return this._avatarProcessing;
+  }
+
+  /**
+   * Toggle the processing state. Updates the instance flag (so a re-render
+   * keeps the spinner) AND flips data-processing on the live frame so the
+   * overlay appears instantly without waiting for a re-render.
+   */
+  _setAvatarProcessing(on) {
+    this._avatarProcessing = !!on;
+    const frame = this.el && this.el.querySelector('[data-partname="avatar-frame"]');
+    if (frame) frame.dataset.processing = on ? "1" : "0";
   }
 
   /**
@@ -241,21 +260,67 @@ class settings_main extends LetcBox {
   }
 
   /**
+   * iPhone photos are HEIC/HEIF, which neither the browser nor the server's
+   * GraphicsMagick avatar pipeline can decode — the raw upload reaches
+   * create_avatar and `gm convert` fails, surfacing as AVATAR_UPLOAD_FAILED.
+   * Detect by extension too: accept="image/*" lets .heic through but some
+   * browsers report an empty `type` for it.
+   */
+  _isHeic(file) {
+    const type = (file.type || "").toLowerCase();
+    if (type === "image/heic" || type === "image/heif") return true;
+    return /\.(heic|heif)$/i.test(file.name || "");
+  }
+
+  /**
+   * Convert HEIC/HEIF to JPEG in the browser before upload. heic2any pulls a
+   * libheif wasm worker, so it's loaded on demand only when a HEIC is picked
+   * and never weighs on the main bundle.
+   */
+  async _convertHeic(file) {
+    const mod = await import("heic2any");
+    const heic2any = mod.default || mod;
+    const out = await heic2any({ blob: file, toType: "image/jpeg", quality: 0.92 });
+    const blob = Array.isArray(out) ? out[0] : out;
+    const name = (file.name || "avatar").replace(/\.(heic|heif)$/i, "") + ".jpg";
+    return new File([blob], name, { type: "image/jpeg" });
+  }
+
+  /**
    * nid=-2 routes the upload to configure_icon → Generator.create_avatar
    * via special_file() (server-core utils/mfs.js). nid=-1 would land it
    * as favicon.<ext>; -3 as something else.
    */
-  _uploadAvatar(file) {
-    if (!file || !file.type || !file.type.startsWith("image/")) return;
+  async _uploadAvatar(file) {
+    if (!file) return;
+    const heic = this._isHeic(file);
+    if (!heic && (!file.type || !file.type.startsWith("image/"))) return;
+    // Show the spinner now — HEIC conversion (libheif wasm) can take a few
+    // seconds, well before the upload even starts.
+    this._setAvatarProcessing(true);
+    if (heic) {
+      try {
+        file = await this._convertHeic(file);
+      } catch (e) {
+        this.warn("settings_main: HEIC conversion failed", e);
+        this._setAvatarProcessing(false);
+        return this.alert(LOCALE.AVATAR_UPLOAD_FAILED);
+      }
+    }
     const xhr = this.uploadFile(file, { nid: -2, hub_id: Visitor.id });
-    if (!xhr) return;
+    if (!xhr) {
+      this._setAvatarProcessing(false);
+      return;
+    }
     xhr.addEventListener("readystatechange", () => {
       if (xhr.readyState !== 4) return;
       if (xhr.status >= 200 && xhr.status < 300) {
         // Generator.create_avatar runs after the HTTP response is sent,
         // so wait briefly for the new PNG to land before refetching.
+        // _refreshAvatar() clears the processing flag as it re-renders.
         setTimeout(() => this._refreshAvatar(), 800);
       } else {
+        this._setAvatarProcessing(false);
         this.alert(LOCALE.AVATAR_UPLOAD_FAILED);
       }
     });
@@ -267,6 +332,7 @@ class settings_main extends LetcBox {
    * the constructed `<endpoint>/avatar/<id>?ts=<mtime>` URL is used.
    */
   _refreshAvatar() {
+    this._avatarProcessing = false;
     Visitor.set({ avatar: null, mtime: Date.now() });
     this.feed(require("./skeleton").default(this));
   }
