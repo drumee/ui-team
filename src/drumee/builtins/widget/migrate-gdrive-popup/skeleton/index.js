@@ -78,8 +78,22 @@ module.exports = function (ui) {
     });
   } else if (state === 'ready') {
     const shared = ui.getIncludeShared ? ui.getIncludeShared() : 0;
-    const seedFolder = ui.getSourceFolderId && ui.getSourceFolderId() !== 'root'
-      ? ui.getSourceFolderId() : '';
+    const mode = ui.getMigrateMode ? ui.getMigrateMode() : 'all';
+    const isSelected = mode === 'selected';
+
+    // Radio: Migrate everything | Choose folders & files.
+    const modeRadio = (label, value) => Skeletons.Box.X({
+      className: `${pfx}__mode-opt`,
+      dataset: { state: mode === value ? '1' : '0' },
+      service: 'gdrive-mode',
+      mode: value,
+      uiHandler: [ui],
+      kidsOpt: { active: 0 },
+      kids: [
+        Skeletons.Box.X({ className: `${pfx}__mode-radio`, kids: [Skeletons.Box.Y({ className: `${pfx}__mode-dot` })] }),
+        Skeletons.Note({ className: `${pfx}__mode-label`, content: label }),
+      ],
+    });
     body = Skeletons.Box.Y({
       className: `${pfx}__body ${pfx}__body--ready`,
       kids: [
@@ -107,25 +121,18 @@ module.exports = function (ui) {
             }),
           ],
         }),
+        // Mode selector.
         Skeletons.Box.Y({
-          className: `${pfx}__field`,
-          dataset: { partname: 'source-folder-input' },
+          className: `${pfx}__mode`,
           kids: [
-            Skeletons.Note({ className: `${pfx}__field-label`, content: LOCALE.MIGRATE_GDRIVE_SOURCE_FOLDER }),
-            Skeletons.Entry({
-              className: `${pfx}__entry`,
-              placeholder: LOCALE.MIGRATE_GDRIVE_SOURCE_FOLDER_HELP,
-              value: seedFolder,
-              require: 'any',
-              bubble: 0,
-            }),
-            Skeletons.Note({ className: `${pfx}__field-help`, content: LOCALE.MIGRATE_GDRIVE_SOURCE_FOLDER_HELP }),
+            modeRadio(LOCALE.MIGRATE_GDRIVE_MODE_ALL || 'Migrate everything', 'all'),
+            modeRadio(LOCALE.MIGRATE_GDRIVE_MODE_SELECTED || 'Choose folders & files', 'selected'),
           ],
         }),
-        // Real toggle switch (track + knob). Only the switch is clickable —
-        // the row is just a label + switch container (data-state on the row
-        // still drives the on/off styling + is read by getData/_getInputs).
-        Skeletons.Box.X({
+        // Shared Drives toggle — All mode only. (Track + knob; only the switch
+        // is clickable. data-state on the row drives styling + is read by
+        // _getInputs.)
+        !isSelected ? Skeletons.Box.X({
           className: `${pfx}__toggle-row`,
           dataset: { partname: 'shared-drives-toggle', state: String(shared) },
           kids: [
@@ -138,7 +145,14 @@ module.exports = function (ui) {
               kids: [Skeletons.Box.Y({ className: `${pfx}__switch-knob` })],
             }),
           ],
-        }),
+        }) : null,
+        // Picker tree — Selected mode only.
+        isSelected ? Skeletons.List.Scroll({
+          className: `${pfx}__tree`,
+          sys_pn: 'gdrive-tree',
+          flow: 'y',
+          kids: require('./tree')(ui),
+        }) : null,
         Skeletons.Box.X({
           className: `${pfx}__footer`,
           kids: [
@@ -147,7 +161,14 @@ module.exports = function (ui) {
               content: LOCALE.CANCEL || 'Cancel',
               service: 'close-migrate-popup', uiHandler: [ui],
             }),
-            primaryBtn(LOCALE.MIGRATE_GDRIVE_START, 'gdrive-start'),
+            Skeletons.Note({
+              className: `${pfx}__primary-btn`,
+              sys_pn: 'gdrive-start-btn',
+              dataset: (isSelected && ui.hasSelection && !ui.hasSelection()) ? { disabled: '1' } : undefined,
+              content: LOCALE.MIGRATE_GDRIVE_START,
+              service: 'gdrive-start',
+              uiHandler: [ui],
+            }),
             auto ? Skeletons.Note({
               className: `${pfx}__skip`,
               content: LOCALE.MIGRATE_GDRIVE_SKIP_FOR_NOW,
