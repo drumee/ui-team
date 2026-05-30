@@ -37,6 +37,7 @@ class __dmz_sharebox extends LetcBox {
    */
   onBeforeDestroy() {
     this.unbindEvent(_a.live);
+    this._stopRevokePolling();
   }
 
   /**
@@ -379,6 +380,8 @@ class __dmz_sharebox extends LetcBox {
       this.__actionButtons.el.dataset.mode = _a.open;
     }
 
+    this._startRevokePolling();
+
     //if(!banner)return;
 
     const f = () => {
@@ -386,6 +389,34 @@ class __dmz_sharebox extends LetcBox {
     }
 
     _.delay(f, Visitor.timeout(1000));
+  }
+
+  /**
+   * Poll dmz.info every 5 s to detect revoke/expiry in near-real-time.
+   * Uses a read-only endpoint — no access_count side-effect.
+   */
+  _startRevokePolling() {
+    const token = this.mget(_a.token);
+    if (!token || this._revokePoller) return;
+    this._revokePoller = setInterval(async () => {
+      if (!this._revokePoller) return;
+      try {
+        const data = await this.postService(SERVICE.dmz.info, { token });
+        if (!this._revokePoller) return;
+        if (data && (data.status === 'TICKET_REVOKED' || data.status === 'TICKET_EXPIRED')) {
+          this._stopRevokePolling();
+          this.handleInfoStatus(data);
+        }
+      } catch (_) {}
+    }, 5000);
+  }
+
+  /**
+   *
+   */
+  _stopRevokePolling() {
+    clearInterval(this._revokePoller);
+    this._revokePoller = null;
   }
 
   /**
