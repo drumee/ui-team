@@ -69,7 +69,7 @@ jobs:
           ssh "$SGP_USER@$SGP_HOST" "sudo docker exec -i $CONTAINER bash -s" <<EOSSH
           set -euo pipefail
           cd $REPO_PATH
-          if ! npm install --no-audit --no-fund > $LOG_FILE 2>&1; then
+          if ! npm install --ignore-scripts --no-audit --no-fund > $LOG_FILE 2>&1; then
             echo "::error::npm install failed. Tail of log:"
             tail -50 $LOG_FILE
             exit 1
