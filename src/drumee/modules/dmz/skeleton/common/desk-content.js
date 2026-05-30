@@ -8,7 +8,7 @@ function __skl_dmz_desk_content (_ui_) {
 
   const deskFig = `${_ui_.fig.family}-desk`
   let privilege = _ui_.mget(_a.privilege);
-  if(privilege > _K.privilege.write) privilege = _K.privilege.write;
+  if(privilege & _K.permission.admin) privilege = _K.privilege.write;
   let api = null;
   if(_ui_.nodeInfoService ==  SERVICE.media.show_node_by){
     api = { 
