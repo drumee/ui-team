@@ -2,7 +2,7 @@
 const { filesize, fitBoxes } = require("@drumee/ui-essentials")
 const { TweenMax, Expo } = require("@drumee/ui-core/vendor");
 const PlayerInteract = require('player/interact');
-const { loadPdfDocument, initializePdfium, getCurrentPdfiumDocumentBlob } = require('./pdfium-wrapper')
+const { loadPdfDocument, getCurrentPdfiumDocumentBlob } = require('./pdfium-wrapper')
 const WS_EVENT = "ws:event";
 const EDITOR_READY_FALLBACK_MS = 2500;
 const EDITOR_READY_EVENTS = new Set(['onDocumentReady', 'onAppReady', 'docEditorReady']);
@@ -61,8 +61,6 @@ class __player_document extends PlayerInteract {
       this.media = opt.source || opt.trigger;
     }
     this.pollCount = 0;
-    prewarmEditor();
-    initializePdfium(); /** Lazy load the reader anyway */
   }
 
 
@@ -127,9 +125,8 @@ class __player_document extends PlayerInteract {
     Wm.on(WS_EVENT, this.onWsMessage)
     this.initSize();
     if (this.shouldOpenInEditMode()) {
-      return this.edit();
+      return this.edit({ fullscreen: true });
     }
-    initializePdfium();
     this.reload(300);
   }
 
@@ -461,11 +458,7 @@ class __player_document extends PlayerInteract {
     this.el.dataset.mode = _a.edit;
     this.mset({ mode: _a.edit })
     if (fullscreen && this.el.requestFullscreen) {
-<<<<<<< HEAD
       this.el.requestFullscreen().catch(() => { });
-=======
-      this.el.requestFullscreen().catch(() => {});
->>>>>>> 06db78d8096b788df26ff4427ca57855c7c57891
     }
     this.feed(require('./skeleton').edit(this, LOCALE.DOWNLOADING));
     const { nid, hub_id } = this.actualNode()
@@ -527,11 +520,7 @@ class __player_document extends PlayerInteract {
       .then((p) => {
         if (p && !p.isDestroyed()) p.setState(0);
       })
-<<<<<<< HEAD
       .catch(() => { });
-=======
-      .catch(() => {});
->>>>>>> 06db78d8096b788df26ff4427ca57855c7c57891
   }
 
   /**
@@ -690,7 +679,7 @@ class __player_document extends PlayerInteract {
     this.raise();
     let o = require("window/configs/default")();
     this.el.dataset.ready = 1;
-    let maxWidth = 742;
+    let maxWidth = 10240;
     let maxHeight = 900;
     const max_height = window.innerHeight - o.offsetY - 2 * o.marginY;
     const max_width = window.innerWidth - 2 * o.marginX;

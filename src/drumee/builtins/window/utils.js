@@ -5,10 +5,72 @@ const WS_EVENT = "ws:event";
 
 const Rectangle = require('rectangle-node');
 const { TimelineMax, Expo } = require("@drumee/ui-core/vendor");
+const { initializePdfium } = require('../player/document/pdfium-wrapper');
+const EDITABLES = require('../player/document/editable');
 
 const ViewMode = new Map();
 const DEFAULT = 'default';
 ViewMode.set(DEFAULT, _a.icon);
+
+let editorPrewarmed = false;
+
+/**
+ * heavy weight editors get preloaded whenever there is a file that may use them
+ */
+function prewarmEditors() {
+  console.log("Prewarming editors...", editorPrewarmed)
+  if (editorPrewarmed) return;
+  editorPrewarmed = true;
+  const schedule = (typeof requestIdleCallback === 'function')
+    ? requestIdleCallback
+    : (cb) => setTimeout(cb, 0);
+  schedule(() => {
+    console.log("schedule editors...", editorPrewarmed)
+    /** Create a blank iframce to preload editor app, which is a heavy payload */
+    try {
+      if (Platform.get('doc_editor')) {
+        const { serviceUrl } = bootstrap();
+        let href = `${serviceUrl}euroffice.preload?name=document.docx`;
+        if (!document.getElementById('drumee-editor-prewarm')) {
+          const el = document.createElement('iframe');
+          el.id = 'drumee-editor-prewarm';
+          el.style.display = _a.none;
+          el.onload = () => el.remove();
+          el.src = href;
+          document.body.appendChild(el);
+        }
+      }
+    } catch (e) {
+      console.log("prewarmEditors:", e)
+      /* non-fatal */
+    }
+    // 2) Warm the iframe Kind so the first document open doesn't pay
+    //    the dynamic-import cost.
+    try { Kind.waitFor('iframe'); } catch (e) { /* non-fatal */ }
+    initializePdfium();
+  });
+}
+
+/**
+ * Detect if there is a file that may need editors to be preloaded.
+ * The fist file found from the list fetching or the one just uploaded.
+ */
+function preloadEditors(e, collection, handler) {
+  if (e.get(_a.filetype) === _a.document) {
+    prewarmEditors()
+    collection.off(_e.add, handler)
+  } else if (e.get(_a.filetype) === _a.pseudo) {
+    try {
+      let extension = e.get(_a.file).name.split('.').pop()
+      if (EDITABLES.includes(extension)) {
+        prewarmEditors()
+        collection.off(_e.add, handler)
+      }
+    } catch (e) {
+    }
+  }
+}
+
 
 /**
  * Sync `md5Hash` into a view's existing `metadata` blob without
@@ -262,6 +324,13 @@ class __window_mfs extends DrumeeMFS {
       this._setupPartitionObserver(child);
     }
 
+    const f = (e) => {
+      preloadEditors(e, child.collection, f)
+    }
+    if (!editorPrewarmed) {
+      child.collection.on(_e.add, f)
+    }
+
     child.once(EOD, () => {
       if (timer) clearTimeout(timer);
       child.el.dataset.wait = 0;
@@ -365,6 +434,10 @@ class __window_mfs extends DrumeeMFS {
     }
   }
 
+  /**
+   * 
+   * @param {*} listPart 
+   */
   _prepareListPartition(listPart) {
     this._partitionListPart = null;
     this._cleanupPartition();
@@ -386,6 +459,14 @@ class __window_mfs extends DrumeeMFS {
     }
     this._setupPartitionObserver(listPart);
     this._partitionFoldersAndFiles(listPart);
+
+    const f = (e) => {
+      preloadEditors(e, listPart.collection, f)
+    }
+    if (!editorPrewarmed) {
+      listPart.collection.on(_e.add, f)
+    }
+
     listPart.once(EOD, () => {
       listPart.el.dataset.wait = 0;
       listPart.$el.removeClass('drumee-sprinner');
@@ -397,6 +478,10 @@ class __window_mfs extends DrumeeMFS {
     });
   }
 
+  /**
+   * 
+   * @param {*} listPart 
+   */
   _setupPartitionObserver(listPart) {
     if (this._partitionObserver) {
       this._partitionObserver.disconnect();
