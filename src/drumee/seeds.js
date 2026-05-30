@@ -248,6 +248,9 @@ module.exports = {
   messenger: function () {
     return import("./builtins/messenger");
   },
+  migrate_gdrive_popup: function () {
+    return import("./builtins/widget/migrate-gdrive-popup");
+  },
   module_desk: function () {
     return import("./modules/desk");
   },

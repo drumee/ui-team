@@ -1,116 +1,209 @@
 @use "mixins/drumee";
 
+// Drumee brand accent (orange). Same hue in both themes; tints are derived
+// with rgba so they sit correctly on light AND dark surfaces. Everything
+// structural (surfaces, borders, shadows, text) uses theme tokens so the
+// popup flips cleanly between light and dark.
+//
+// NOTE: drumee.typo() maps $weight -> font-family but does NOT emit
+// `font-weight` (a system quirk — see skin/mixins/typo.scss). Following the
+// settings_main convention, bold text declares `font-weight` explicitly.
+$accent: #fa8540;
+$accent-strong: #ec6f2a;
+$accent-soft: rgba(250, 133, 64, 0.12);
+$accent-soft-2: rgba(250, 133, 64, 0.2);
+$danger-soft: rgba(246, 81, 75, 0.12);
+
 .migrate-gdrive-popup {
+  // Icons nested inside clickable Notes/Buttons must not swallow the click.
   &__close > *,
   &__cancel > *,
-  &__submit-btn > * {
-    pointer-events: none !important;
-  }
+  &__mode-opt > *,
+  &__tree-caret > *,
+  &__tree-check > *,
+  &__tree-more > *,
+  &__primary-btn > * { pointer-events: none !important; }
 
+  // ───────── shell ─────────
   &__ui {
-    width: 480px;
-    background-color: var(--normal-bg-90, #f1f1f5);
-    border: 1px solid rgba(0, 0, 0, 0.06);
-    border-radius: 12px;
-    box-shadow: 0 12px 32px 0 rgba(0, 0, 0, 0.16);
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: min(480px, calc(100vw - 32px));
+    max-height: calc(100vh - 48px);
+    overflow-y: auto;
+    background: var(--normal-bg-90);
+    border: 1px solid var(--border-default);
+    border-radius: var(--corner-radius-4);          // 12px
+    box-shadow:
+      0 16px 48px -8px rgba(11, 10, 33, 0.24),
+      0 4px 12px rgba(11, 10, 33, 0.08);
     z-index: 99998;
+    animation: migrate-gdrive-in 0.22s cubic-bezier(0.2, 0.7, 0.2, 1) both;
 
-    &[data-state="0"] {
-      display: none;
+    &[data-state="0"] { display: none; }
+
+    scrollbar-width: thin;
+    scrollbar-color: var(--border-strong) transparent;
+    &::-webkit-scrollbar { width: 8px; }
+    &::-webkit-scrollbar-track { background: transparent; }
+    &::-webkit-scrollbar-thumb {
+      background: var(--border-strong);
+      border-radius: var(--corner-radius-max);
     }
   }
 
   &__container {
-    padding: 24px;
-    gap: 16px;
+    padding: var(--spacer-6);                        // 24px
+    gap: var(--spacer-5);                            // 16px
   }
 
+  // ───────── header ─────────
   &__header {
     align-items: center;
     justify-content: space-between;
     width: 100%;
+    padding-bottom: var(--spacer-4);                 // 12px
+    border-bottom: 1px solid var(--border-muted);
   }
 
+  &__title-wrap { align-items: center; gap: var(--spacer-3); }   // 8px
+
+  &__title-ico { width: 22px; height: 22px; flex: 0 0 auto; }
+
   &__title {
-    @include drumee.typo(
-      $size: 20px,
-      $weight: 700,
-      $line: 28px,
-      $color: var(--normal-fg-10)
-    );
+    @include drumee.typo($size: 18px, $weight: 700, $line: 24px, $color: var(--normal-fg-10));
     font-family: "Manrope", var(--font-bold);
+    font-weight: 700;
+    letter-spacing: -0.01em;
   }
 
   &__close {
-    width: 20px;
-    height: 20px;
-    cursor: pointer;
-    color: var(--normal-fg-50);
-    transition: color 0.2s;
-
-    svg {
-      width: 100%;
-      height: 100%;
-      fill: currentColor;
-    }
-
-    &:hover {
-      color: var(--normal-fg-10);
-    }
-  }
-
-  &__description {
-    @include drumee.typo(
-      $size: 14px,
-      $weight: 400,
-      $line: 19.6px,
-      $color: var(--normal-fg-50)
-    );
-  }
-
-  &__field {
-    gap: 6px;
-  }
-
-  &__field-label {
-    @include drumee.typo(
-      $size: 13px,
-      $weight: 600,
-      $line: 18px,
-      $color: var(--normal-fg-10)
-    );
-  }
-
-  &__field-help {
-    @include drumee.typo(
-      $size: 12px,
-      $weight: 400,
-      $line: 16px,
-      $color: var(--normal-fg-60, #6b6b75)
-    );
-  }
-
-  &__destination {
-    @include drumee.typo(
-      $size: 14px,
-      $weight: 500,
-      $line: 20px,
-      $color: var(--normal-fg-20)
-    );
-    padding: 10px 12px;
-    background: var(--normal-bg-100, #ffffff);
-    border: 1px solid rgba(0, 0, 0, 0.08);
-    border-radius: 8px;
-  }
-
-  &__entry {
-    background: var(--normal-bg-100, #ffffff);
-    border: 1px solid rgba(0, 0, 0, 0.12);
-    border-radius: 8px;
-    padding: 0 12px;
-    height: 40px;
+    width: 28px;
+    height: 28px;
     display: flex;
     align-items: center;
+    justify-content: center;
+    border-radius: var(--corner-radius-2);
+    cursor: pointer;
+    flex: 0 0 auto;
+    color: var(--normal-fg-50);
+    transition: color 0.15s, background 0.15s;
+
+    svg { width: 16px; height: 16px; fill: currentColor; }
+    &:hover { color: var(--normal-fg-10); background: var(--overlay-bg-05); }
+  }
+
+  // ───────── hero (big icon + title + subtitle) ─────────
+  &__hero {
+    align-items: center;
+    text-align: center;
+    gap: var(--spacer-4);
+    padding: var(--spacer-5) var(--spacer-3) var(--spacer-2);
+  }
+
+  &__hero-ico {
+    width: 64px;
+    height: 64px;
+    padding: 14px;
+    box-sizing: border-box;
+    border-radius: 50%;
+    background: var(--overlay-bg-05);
+  }
+
+  &__hero-title {
+    @include drumee.typo($size: 17px, $weight: 700, $line: 24px, $color: var(--normal-fg-10));
+    font-weight: 700;
+  }
+
+  &__hero-sub {
+    @include drumee.typo($size: 13.5px, $weight: 400, $line: 20px, $color: var(--normal-fg-20));
+    max-width: 340px;
+  }
+
+  // brand hero keeps the multicolor Google logo — neutral elevated ring only
+  &__hero--brand &__hero-ico {
+    background: var(--normal-bg-elevated);
+    border: 1px solid var(--border-muted);
+  }
+  &__hero--success &__hero-ico { background: rgba(84, 182, 132, 0.14); color: var(--success); fill: var(--success); }
+  &__hero--error   &__hero-ico { background: rgba(246, 81, 75, 0.14);  color: var(--error);   fill: var(--error); }
+  &__hero--neutral &__hero-ico { background: var(--overlay-bg-05);      color: var(--normal-fg-50); fill: var(--normal-fg-50); }
+
+  // ───────── intro text ─────────
+  &__description {
+    @include drumee.typo($size: 13.5px, $weight: 400, $line: 20px, $color: var(--normal-fg-20));
+  }
+
+  // returning-user "incremental sync" note on the ready screen
+  &__resync-hint {
+    @include drumee.typo($size: 12.5px, $weight: 400, $line: 18px, $color: var(--normal-fg-20));
+    background: var(--overlay-bg-05);
+    border-radius: var(--corner-radius-2);
+    padding: var(--spacer-3) var(--spacer-4);
+  }
+
+  // ───────── shared elevated surfaces (card / row / input) ─────────
+  &__dest-card,
+  &__toggle-row,
+  &__entry {
+    background: var(--normal-bg-elevated);
+    border: 1px solid var(--border-default);
+    border-radius: var(--corner-radius-3);           // 8px
+  }
+
+  // micro section label (uppercase) — used above destination + source folder
+  &__field-label {
+    @include drumee.typo($size: 11px, $weight: 600, $line: 16px, $color: var(--normal-fg-50));
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  // ───────── destination card ─────────
+  &__dest-card {
+    align-items: center;
+    gap: var(--spacer-4);
+    padding: var(--spacer-4);
+  }
+
+  &__dest-ico {
+    width: 36px;
+    height: 36px;
+    padding: 7px;
+    box-sizing: border-box;
+    border-radius: var(--corner-radius-2);
+    background: $accent-soft;
+    color: $accent;
+    fill: $accent;
+    flex: 0 0 auto;
+  }
+
+  &__dest-text { gap: 1px; min-width: 0; }
+
+  &__destination {
+    @include drumee.typo($size: 14px, $weight: 600, $line: 20px, $color: var(--normal-fg-10));
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  // ───────── source folder field ─────────
+  &__field { gap: var(--spacer-3); }
+
+  &__entry {
+    padding: 0 var(--spacer-4);
+    height: 42px;
+    display: flex;
+    align-items: center;
+    transition: border-color 0.15s, box-shadow 0.15s;
+
+    &:focus-within {
+      border-color: $accent;
+      box-shadow: 0 0 0 3px $accent-soft;
+    }
 
     input {
       width: 100%;
@@ -119,76 +212,406 @@
       outline: none;
       background: transparent;
       @include drumee.typo($size: 14px, $weight: 400, $line: 20px, $color: var(--normal-fg-10));
+      &::placeholder { color: var(--placeholder-fg); }
     }
   }
 
+  &__field-help {
+    @include drumee.typo($size: 12px, $weight: 400, $line: 16px, $color: var(--normal-fg-50));
+  }
+
+  // ───────── status banner ─────────
   &__status {
     @include drumee.typo($size: 13px, $weight: 500, $line: 18px);
-    padding: 8px 12px;
-    border-radius: 6px;
+    font-weight: 500;
+    padding: var(--spacer-3) var(--spacer-4);
+    border-radius: var(--corner-radius-2);
 
-    &[data-state="0"] {
-      display: none;
-    }
-
-    &[data-kind="info"] {
-      background: rgba(250, 133, 64, 0.08);
-      color: var(--accent-orange, #fa8540);
-    }
-
-    &[data-kind="error"] {
-      background: rgba(220, 38, 38, 0.08);
-      color: #dc2626;
-    }
+    &[data-state="0"] { display: none; }
+    &[data-kind="info"]  { background: $accent-soft; color: $accent; }
+    &[data-kind="error"] { background: $danger-soft; color: var(--error); }
   }
 
+  // ───────── toggle switch ─────────
+  // The row is a static label + switch container; only the switch is clickable.
+  &__toggle-row {
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--spacer-3);
+    padding: var(--spacer-4);
+  }
+
+  &__toggle-label {
+    @include drumee.typo($size: 14px, $weight: 500, $line: 20px, $color: var(--normal-fg-10));
+    font-weight: 500;
+  }
+
+  &__switch {
+    flex: 0 0 auto;
+    width: 42px;
+    height: 24px;
+    border-radius: var(--corner-radius-max);
+    background: var(--normal-bg-40);
+    transition: background 0.2s;
+    align-items: center;
+    padding: 0 3px;
+    cursor: pointer;
+  }
+
+  &__switch-knob {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: #ffffff;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+    transition: transform 0.2s cubic-bezier(0.2, 0.7, 0.2, 1);
+  }
+
+  &__toggle-row[data-state="1"] &__switch { background: $accent; }
+  &__toggle-row[data-state="1"] &__switch-knob { transform: translateX(18px); }
+
+  // ───────── mode selector (All / Choose) ─────────
+  &__mode { gap: var(--spacer-3); }
+
+  &__mode-opt {
+    align-items: center;
+    gap: var(--spacer-3);
+    padding: var(--spacer-3) var(--spacer-4);
+    border: 1px solid var(--border-default);
+    border-radius: var(--corner-radius-3);
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
+
+    &[data-state="1"] { border-color: $accent; background: $accent-soft; }
+    &:hover { background: var(--overlay-bg-05); }
+  }
+
+  &__mode-radio {
+    flex: 0 0 auto;
+    width: 18px;
+    height: 18px;
+    border: 2px solid var(--border-strong);
+    border-radius: 50%;
+    align-items: center;
+    justify-content: center;
+    transition: border-color 0.15s;
+  }
+  &__mode-opt[data-state="1"] &__mode-radio { border-color: $accent; }
+
+  &__mode-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: transparent;
+    transition: background 0.15s;
+  }
+  &__mode-opt[data-state="1"] &__mode-dot { background: $accent; }
+
+  &__mode-label {
+    @include drumee.typo($size: 14px, $weight: 500, $line: 20px, $color: var(--normal-fg-10));
+    font-weight: 500;
+  }
+
+  // ───────── picker tree ─────────
+  &__tree {
+    max-height: 260px;
+    overflow-y: auto;
+    border: 1px solid var(--border-default);
+    border-radius: var(--corner-radius-3);
+    padding: var(--spacer-2) 0;
+    background: var(--normal-bg-elevated);
+  }
+
+  &__tree-row {
+    align-items: center;
+    gap: var(--spacer-2);
+    height: 32px;
+    padding-right: var(--spacer-3);
+
+    &[data-implied="1"] { opacity: 0.5; }
+    &:hover { background: var(--overlay-bg-05); }
+  }
+
+  &__tree-caret {
+    flex: 0 0 auto;
+    width: 18px;
+    height: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: var(--normal-fg-50);
+    transition: transform 0.12s ease;
+    svg { width: 12px; height: 12px; fill: currentColor; }
+  }
+  // Single caret icon (apps-caret-down) rotated when the folder is collapsed.
+  &__tree-caret[data-state="0"] { transform: rotate(-90deg); }
+  &__tree-caret--leaf { cursor: default; visibility: hidden; }
+
+  &__tree-check {
+    flex: 0 0 auto;
+    width: 18px;
+    height: 18px;
+    border: 2px solid var(--border-strong);
+    border-radius: var(--corner-radius-2);
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background 0.12s, border-color 0.12s;
+
+    &[data-state="1"] { background: $accent; border-color: $accent; }
+    &[data-disabled="1"] { cursor: default; }
+  }
+
+  &__tree-check-mark {
+    width: 8px;
+    height: 8px;
+    border-radius: 1px;
+    background: transparent;
+  }
+  &__tree-check[data-state="1"] &__tree-check-mark { background: #ffffff; }
+
+  &__tree-ico {
+    flex: 0 0 auto;
+    width: 18px;
+    height: 18px;
+    color: var(--normal-fg-50);
+    fill: var(--normal-fg-50);
+  }
+
+  &__tree-name {
+    @include drumee.typo($size: 13.5px, $weight: 400, $line: 20px, $color: var(--normal-fg-10));
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-width: 0;
+  }
+
+  &__tree-info {
+    @include drumee.typo($size: 12.5px, $weight: 400, $line: 18px, $color: var(--normal-fg-50));
+    padding: var(--spacer-2) var(--spacer-4);
+    &[data-kind="error"] { color: var(--error); }
+  }
+
+  &__tree-more {
+    @include drumee.typo($size: 12.5px, $weight: 500, $line: 18px, $color: $accent);
+    font-weight: 500;
+    padding: var(--spacer-2) var(--spacer-4);
+    cursor: pointer;
+    &:hover { color: $accent-strong; }
+  }
+
+  // ───────── footer + buttons ─────────
   &__footer {
     justify-content: flex-end;
-    gap: 12px;
-    margin-top: 8px;
+    align-items: center;
+    gap: var(--spacer-3);
+    margin-top: var(--spacer-2);
   }
 
   &__cancel,
-  &__submit-btn {
+  &__primary-btn {
     cursor: pointer;
-    padding: 10px 18px;
-    border-radius: 8px;
+    padding: 11px var(--spacer-5);
+    border-radius: var(--corner-radius-3);
     @include drumee.typo($size: 14px, $weight: 600, $line: 20px);
+    font-weight: 600;
     user-select: none;
+    text-align: center;
+    // The button is a `note` (drumee-widget, data-flow="wrap") which the global
+    // container rule renders as `display:flex; flex-direction:row`. Its inner
+    // `.note-content` is a flex child, so text-align alone won't center it —
+    // justify/align-items center the label inside the full-width button.
+    justify-content: center;
+    align-items: center;
+    transition: filter 0.15s, background 0.15s, color 0.15s, border-color 0.15s, transform 0.06s;
+
+    &:active { transform: translateY(1px); }
   }
 
   &__cancel {
-    color: var(--normal-fg-30);
+    color: var(--normal-fg-20);
     background: transparent;
-    border: 1px solid rgba(0, 0, 0, 0.12);
+    border: 1px solid var(--border-default);
 
-    &:hover {
-      color: var(--normal-fg-10);
-      background: var(--normal-bg-100, #ffffff);
-    }
+    &:hover { color: var(--normal-fg-10); background: var(--overlay-bg-05); }
   }
 
-  &__submit-btn {
+  &__primary-btn {
     color: #ffffff;
-    background: var(--accent-orange, #fa8540);
+    background: $accent;
     border: 1px solid transparent;
+    // No drop-shadow: the shell is `overflow-y:auto` + border-radius, which
+    // clips a child's glow into hard square corners at the rounded edge
+    // (looked like the button bleeding past the popup). Flat reads cleaner and
+    // matches the system buttons (settings).
+    max-width: 100%;
+    box-sizing: border-box;
 
-    &[data-state="0"] {
-      opacity: 0.6;
-      pointer-events: none;
-    }
-
-    &[data-busy="1"] {
-      opacity: 0.8;
-      pointer-events: none;
-    }
-
-    &:hover {
-      filter: brightness(0.96);
-    }
+    &[data-state="0"] { opacity: 0.55; pointer-events: none; }
+    &[data-disabled="1"] { opacity: 0.55; pointer-events: none; }
+    &[data-busy="1"]  { opacity: 0.8; pointer-events: none; }
+    &:hover { background: $accent-strong; }
   }
 
-  &[data-busy="1"] {
-    pointer-events: none;
+  // Stand-alone CTA (connect / result states) spans the full width. Use an
+  // explicit width:100% (not flex:1 in a flex-end row) so it can't be widened
+  // past the padded content box by flex quirks.
+  &__body--not-connected > &__primary-btn { width: 100%; }
+  // Result footer holds two equal buttons (Migrate again / Close, or
+  // Close / Try again) — split the row evenly, contained in the padding.
+  &__body--result &__footer { width: 100%; }
+  &__body--result &__footer > * { flex: 1 1 0; min-width: 0; }
+
+  &[data-busy="1"] { pointer-events: none; }
+
+  // ───────── progress ─────────
+  &__body--in-progress { gap: var(--spacer-3); }
+
+  &__progress-head { align-items: center; gap: var(--spacer-3); }
+
+  &__progress-ico {
+    width: 20px;
+    height: 20px;
+    color: $accent;
+    fill: $accent;
+    flex: 0 0 auto;
   }
+
+  &__progress-label {
+    @include drumee.typo($size: 14px, $weight: 600, $line: 20px, $color: var(--normal-fg-10));
+    font-weight: 600;
+    flex: 1;
+  }
+
+  &__progress-pct {
+    @include drumee.typo($size: 15px, $weight: 700, $line: 20px, $color: $accent);
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+
+  &__progress-bar {
+    width: 100%;
+    height: 8px;
+    background: var(--overlay-bg-05);
+    border-radius: var(--corner-radius-max);
+    overflow: hidden;
+    margin: var(--spacer-2) 0;
+  }
+
+  &__progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, $accent, #ffb072);
+    border-radius: inherit;
+    transition: width 250ms cubic-bezier(0.4, 0, 0.2, 1);
+    min-width: 4px;
+  }
+
+  &__progress-count {
+    @include drumee.typo($size: 12px, $weight: 500, $line: 16px, $color: var(--normal-fg-20));
+    font-weight: 500;
+    font-variant-numeric: tabular-nums;
+  }
+
+  &__progress-current {
+    @include drumee.typo($size: 12px, $weight: 400, $line: 16px, $color: var(--normal-fg-50));
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-style: italic;
+  }
+
+  // ───────── result summary + errors ─────────
+  // Notes render as flex rows (drumee-widget + data-flow="wrap"), so text-align
+  // alone won't center the inner .note-content — justify-content does.
+  &__summary {
+    @include drumee.typo($size: 14px, $weight: 400, $line: 20px, $color: var(--normal-fg-20));
+    text-align: center;
+    justify-content: center;
+  }
+
+  &__fail-reason {
+    background: rgba(246, 81, 75, 0.1);
+    color: var(--error);
+    font-weight: 500;
+    padding: var(--spacer-3) var(--spacer-4);
+    border-radius: var(--corner-radius-2);
+    text-align: center;
+    justify-content: center;
+  }
+
+  &__error-list {
+    gap: var(--spacer-2);
+    max-height: 132px;
+    overflow-y: auto;
+    padding: var(--spacer-3) var(--spacer-4);
+    background: rgba(246, 81, 75, 0.07);
+    border: 1px solid rgba(246, 81, 75, 0.18);
+    border-radius: var(--corner-radius-2);
+  }
+
+  &__error-item {
+    @include drumee.typo($size: 12px, $weight: 400, $line: 16px, $color: var(--error));
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  // ───────── skip link ─────────
+  &__skip {
+    @include drumee.typo($size: 13px, $weight: 500, $line: 18px, $color: var(--normal-fg-50));
+    font-weight: 500;
+    cursor: pointer;
+    margin-top: var(--spacer-1);
+    align-self: center;
+    transition: color 0.15s;
+
+    &:hover { color: $accent; }
+  }
+
+  // ───────── checking spinner ─────────
+  &__body--checking {
+    align-items: center;
+    padding: var(--spacer-8) var(--spacer-5);
+    gap: var(--spacer-5);
+  }
+
+  &__spinner {
+    width: 38px;
+    height: 38px;
+    border: 3px solid $accent-soft-2;
+    border-top-color: $accent;
+    border-radius: 50%;
+    animation: migrate-gdrive-spin 0.8s linear infinite;
+  }
+
+  &__loading {
+    @include drumee.typo($size: 14px, $weight: 400, $line: 20px, $color: var(--normal-fg-50));
+  }
+}
+
+// ───────── DARK MODE ─────────
+// Surfaces/borders/text already flip via theme tokens; this block sharpens the
+// distinction: deeper shell shadow + hairline rim so the popup lifts off the
+// dark page, and small tweaks where a fixed value reads better on dark.
+html[data-theme="dark"] .migrate-gdrive-popup {
+  &__ui {
+    box-shadow:
+      0 20px 56px -8px rgba(0, 0, 0, 0.6),
+      0 0 0 1px rgba(255, 255, 255, 0.04);
+  }
+
+  &__switch-knob { background: #f4f4f6; }
+
+  // brand hero ring a touch lighter so the (mostly white) Google logo separates
+  &__hero--brand &__hero-ico { background: rgba(255, 255, 255, 0.06); }
+}
+
+@keyframes migrate-gdrive-spin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes migrate-gdrive-in {
+  from { opacity: 0; transform: translate(-50%, -48%) scale(0.97); }
+  to   { opacity: 1; transform: translate(-50%, -50%) scale(1); }
 }
