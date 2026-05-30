@@ -1,4 +1,8 @@
 {
+  "WINDOW_ZOOM": "Ampliar",
+  "TILE_LEFT": "Anclar a la izquierda",
+  "TILE_RIGHT": "Anclar a la derecha",
+  "REFRAME": "Restablecer",
   "ACCEPT": "Aceptado",
   "ACCEPT_CONTACT_AND_JOIN_DRUMEE": "Acéptame como contacto y únete a mí en Drumee.",
   "ACCEPT_GENERAL_TERMS_USE": "Acepto las condiciones generales de uso",

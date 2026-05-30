@@ -534,6 +534,109 @@ export function visioMenu(ui, opt = {}) {
 }
 
 /**
+ * macOS-style zoom menu — icon trigger with a CSS-hover dropdown offering
+ * Enter/Exit Full Screen, Zoom, Tile Left/Right, Reframe. Clicking the
+ * trigger toggles Zoom directly.
+ *
+ * @param {*} ui
+ */
+export function zoomMenu(ui) {
+  const cnRoot = `${ui.fig.family}-topbar__zoom`;
+
+  const items = [
+    {
+      service: "fullscreen",
+      ico: "player-fullscreen",
+      // The fullscreen row renders two CSS-swapped labels (see kids map) so it
+      // tracks the live fullscreen state instead of a stale build-time snapshot
+      // of document.fullscreenElement.
+      content: LOCALE.FULLSCREEN,
+      modifier: "fullscreen",
+    },
+    {
+      service: "window-zoom",
+      ico: "desktop_fullview",
+      // Dedicated key (not LOCALE.ZOOM, which labels the Zoom video app) so
+      // this "maximize window" action can be translated independently.
+      content: LOCALE.WINDOW_ZOOM,
+      modifier: "zoom",
+    },
+    {
+      service: "window-tile-left",
+      ico: "square-split-horizontal",
+      content: LOCALE.TILE_LEFT,
+      modifier: "tile-left",
+    },
+    {
+      service: "window-tile-right",
+      ico: "square-split-horizontal",
+      content: LOCALE.TILE_RIGHT,
+      modifier: "tile-right",
+    },
+    {
+      service: "window-reframe",
+      ico: "desktop_reduce",
+      content: LOCALE.REFRAME,
+      modifier: "reframe",
+    },
+  ];
+
+  return Skeletons.Box.X({
+    className: `${cnRoot}-wrapper`,
+    kids: [
+      Skeletons.Button.Svg({
+        ico: "desktop_fullview",
+        className: `${cnRoot}-trigger`,
+        sys_pn: "ctrl-fullscreen",
+        service: "window-zoom",
+        uiHandler: [ui],
+        partHandler: ui,
+      }),
+      Skeletons.Box.Y({
+        className: `${cnRoot}-menu`,
+        kids: items.map(({ service, ico, content, modifier }) =>
+          Skeletons.Box.X({
+            className: `${cnRoot}-item ${cnRoot}-item--${modifier}`,
+            uiHandler: [ui],
+            service,
+            kidsOpt: { active: 0 },
+            kids: [
+              Skeletons.Button.Svg({
+                ico,
+                active: 0,
+                className: `${cnRoot}-item-icon`,
+              }),
+              // Fullscreen row carries both labels; CSS (`:fullscreen`) shows the
+              // right one. Every other row has a single static label.
+              ...(modifier === "fullscreen"
+                ? [
+                    Skeletons.Note({
+                      content: LOCALE.FULLSCREEN,
+                      active: 0,
+                      className: `${cnRoot}-item-label ${cnRoot}-item-label--fs-enter`,
+                    }),
+                    Skeletons.Note({
+                      content: LOCALE.EXIT_FULLSCREEN,
+                      active: 0,
+                      className: `${cnRoot}-item-label ${cnRoot}-item-label--fs-exit`,
+                    }),
+                  ]
+                : [
+                    Skeletons.Note({
+                      content,
+                      active: 0,
+                      className: `${cnRoot}-item-label`,
+                    }),
+                  ]),
+            ],
+          }),
+        ),
+      }),
+    ],
+  });
+}
+
+/**
  *
  * @param {*} ui
  * @returns

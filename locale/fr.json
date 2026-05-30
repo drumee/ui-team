@@ -1,4 +1,8 @@
 {
+  "WINDOW_ZOOM": "Agrandir",
+  "TILE_LEFT": "Aligner à gauche",
+  "TILE_RIGHT": "Aligner à droite",
+  "REFRAME": "Recadrer",
   "km": "Khmer",
   "ACCESS_PERMISSION": "Droit d'accès",
   "ACK_COPY_LINK": "Le lien a été copié dans votre presse-papier",
