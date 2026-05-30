@@ -23,12 +23,34 @@ class __dmz_sharebox extends LetcBox {
     require('./skin');
     super.initialize(opt);
     this.declareHandlers();
+    this.bindEvent(_a.live);
     this.defaultSkeleton = require('./skeleton').default;
     this.topNavSkeleton = require('./skeleton/top-nav').default;
     this.headerSkeleton = require('./skeleton/header').default;
     this.footerSkeleton = require('dmz/skeleton/common/footer');
     this.deskSkeleton = require("./skeleton/desk-content").default;
     this.nodeInfoService = SERVICE.media.show_node_by;
+  }
+
+  /**
+   *
+   */
+  onBeforeDestroy() {
+    this.unbindEvent(_a.live);
+  }
+
+  /**
+   *
+   */
+  onWsMessage(svc, data, options = {}) {
+    const { service } = options || svc;
+    if (service === 'share.track_event') {
+      if (data && data.event === 'secure_share_revoked' && data.token === this.mget(_a.token)) {
+        this.handleInfoStatus({ status: 'TICKET_REVOKED' });
+      }
+      return;
+    }
+    if (super.onWsMessage) super.onWsMessage(svc, data, options);
   }
 
   /**
