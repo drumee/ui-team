@@ -9,7 +9,7 @@
  *   ↑ left cluster                                      ↑ right cluster (gap 13.14)
  * ==================================================================== */
 
-const { getAreaLabel, newFileMenu } = require("../../skeleton/toolkit");
+const { getAreaLabel, newFileMenu, zoomMenu } = require("../../skeleton/toolkit");
 
 const __skl_folder_topbar = function (ui) {
   const cnFolder = `${ui.fig.family}-topbar`;
@@ -121,7 +121,7 @@ const __skl_folder_topbar = function (ui) {
 
   const rightCluster = Skeletons.Box.X({
     className: `${cnFolder}__right`,
-    kids: [videoBtn, uploadBtn, addNew, shareBtn, settingsBtn, splitBtn, controls],
+    kids: [videoBtn, uploadBtn, addNew, shareBtn, settingsBtn, splitBtn, zoomMenu(ui), controls],
   });
 
   // ── Root row ─────────────────────────────────────────────────
