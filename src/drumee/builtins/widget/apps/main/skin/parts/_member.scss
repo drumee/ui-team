@@ -20,6 +20,11 @@
     &::-webkit-scrollbar {
       display: none;
     }
+
+    &[data-device="mobile"] {
+      padding: 12px;
+      gap: 16px;
+    }
   }
 
   // ── Page header ───────────────────────────────────────────
@@ -28,6 +33,11 @@
     align-items: flex-start;
     justify-content: space-between;
     gap: 24px;
+
+    &[data-device="mobile"] {
+      flex-direction: column;
+      gap: 12px;
+    }
   }
 
   &__page-heading {
@@ -41,6 +51,11 @@
     line-height: 36px;
     font-weight: 600;
     color: $ink-900;
+
+    &[data-device="mobile"] {
+      font-size: 22px;
+      line-height: 28px;
+    }
   }
 
   &__page-subtitle {
@@ -48,6 +63,11 @@
     line-height: 20px;
     font-weight: 400;
     color: $ink-600;
+
+    &[data-device="mobile"] {
+      font-size: 12px;
+      line-height: 16px;
+    }
   }
 
   &__search {
@@ -59,6 +79,11 @@
     align-items: center;
     gap: 8px;
     flex-shrink: 0;
+
+    &[data-device="mobile"] {
+      width: 100%;
+      height: 40px;
+    }
 
     &-ico {
       width: 14px;
@@ -101,6 +126,11 @@
   &__stats {
     width: 100%;
     gap: 16px;
+
+    &[data-device="mobile"] {
+      flex-wrap: wrap;
+      gap: 8px;
+    }
   }
 
   &__stat {
@@ -112,6 +142,11 @@
     gap: 8px;
 
     border-left: 2px solid $ink-900;
+
+    &[data-device="mobile"] {
+      flex: 1 1 calc(50% - 4px);
+      padding: 12px 14px;
+    }
 
     &.admins {
       border-left-color: $purple-light;
@@ -173,6 +208,10 @@
     align-items: center;
     justify-content: space-between;
     background: $bg-tint;
+
+    &[data-device="mobile"] {
+      padding: 12px 14px;
+    }
   }
 
   &__table-title {
@@ -315,6 +354,10 @@
     flex: 1;
     min-height: 0;
     overflow-y: auto;
+
+    &[data-device="mobile"] {
+      overflow-x: auto;
+    }
   }
 
   &__table-empty {
@@ -365,6 +408,16 @@
     &:last-child {
       border-bottom: none;
     }
+
+    &[data-device="mobile"] {
+      flex-wrap: nowrap;
+      width: max-content;
+      min-width: 100%;
+
+      > * {
+        flex-shrink: 0;
+      }
+    }
   }
 
   &__cell {
@@ -373,22 +426,40 @@
     padding: 16px 12px;
     gap: 12px;
 
+    &[data-device="mobile"] {
+      padding: 10px 6px;
+      gap: 8px;
+    }
+
     &--check {
       width: 76px;
       flex-shrink: 0;
       padding-left: 24px;
       padding-right: 0;
+
+      &[data-device="mobile"] {
+        width: 56px;
+        padding-left: 10px;
+      }
     }
 
     &--member {
       flex: 240;
       min-width: 0;
       gap: 12px;
+
+      &[data-device="mobile"] {
+        flex: 0 0 200px;
+      }
     }
 
     &--role {
       flex: 155;
       min-width: 0;
+
+      &[data-device="mobile"] {
+        flex: 0 0 160px;
+      }
     }
 
     &--workspaces {
@@ -396,17 +467,29 @@
       min-width: 0;
       gap: 6px;
       flex-wrap: wrap;
+
+      &[data-device="mobile"] {
+        flex: 0 0 200px;
+      }
     }
 
     &--status {
       flex: 88;
       min-width: 0;
       gap: 8px;
+
+      &[data-device="mobile"] {
+        flex: 0 0 100px;
+      }
     }
 
     &--last-active {
       flex: 120;
       min-width: 0;
+
+      &[data-device="mobile"] {
+        flex: 0 0 130px;
+      }
     }
 
     &--actions {
@@ -414,6 +497,11 @@
       min-width: 0;
       gap: 4px;
       padding-right: 24px;
+
+      &[data-device="mobile"] {
+        flex: 0 0 110px;
+        padding-right: 10px;
+      }
     }
   }
 
@@ -672,6 +760,13 @@
     justify-content: space-between;
     gap: 16px;
     padding: 8px 0 0;
+
+    &[data-device="mobile"] {
+      flex-direction: column-reverse;
+      align-items: center;
+      justify-content: center;
+      gap: 24px;
+    }
   }
 
   &__pager-summary {
@@ -709,6 +804,10 @@
     display: inline-flex;
     align-items: center;
     gap: 4px;
+
+    &[data-device="mobile"] {
+      justify-content: center;
+    }
 
     &-arrow {
       display: inline-flex;
@@ -782,4 +881,60 @@
     color: $ink-700;
   }
 
+  // ── Tablet: 768px–1024px ──────────────────────────────────
+  // Mirror the mobile scrollable-table behavior so columns stay readable
+  // when the table-wrap can't fit all columns side-by-side.
+  @media (min-width: 768px) and (max-width: 1024px) {
+    &__stats {
+      flex-wrap: wrap;
+    }
+
+    &__stat {
+      flex: 1 1 calc(50% - 8px);
+    }
+
+    &__table {
+      overflow-x: auto;
+    }
+
+    &__row {
+      flex-wrap: nowrap;
+      width: max-content;
+      min-width: 100%;
+
+      > * {
+        flex-shrink: 0;
+      }
+    }
+
+    &__cell {
+      &--check {
+        width: 64px;
+      }
+
+      &--member {
+        flex: 0 0 240px;
+      }
+
+      &--role {
+        flex: 0 0 140px;
+      }
+
+      &--workspaces {
+        flex: 0 0 220px;
+      }
+
+      &--status {
+        flex: 0 0 110px;
+      }
+
+      &--last-active {
+        flex: 0 0 140px;
+      }
+
+      &--actions {
+        flex: 0 0 120px;
+      }
+    }
+  }
 }

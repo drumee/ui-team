@@ -41,7 +41,7 @@ const createNavItem = (
         partHandler: ui,
         content: "",
         dataset: { count: 0 },
-      })
+      }),
     );
   }
 
@@ -71,7 +71,7 @@ const createWorkspaceSection = (ui) => {
         kind: "workspace_list",
         className: cls(fig, "workspace-main"),
         uiHandler: [ui],
-        sys_pn:"workspace-main"
+        sys_pn: "workspace-main",
       },
     ],
   });
@@ -170,13 +170,15 @@ const createFooter = (ui, username) => {
   });
 };
 
-// ---------- Navigation ----------
-const createNav = (ui) => {
+// ---------- Logo Row (logo + mobile close button) ----------
+// Used at the top of both createNav and createActionsNav so the close
+// button sits consistently on the right. The close button is rendered
+// in both contexts but is hidden via CSS on non-mobile devices.
+const createLogoRow = (ui) => {
   const fig = getSidebarFig(ui);
 
-  return Skeletons.Box.Y({
-    className: `${fig}__nav`,
-
+  return Skeletons.Box.X({
+    className: `${fig}__logo-row`,
     kids: [
       Skeletons.Box.Y({
         className: `${fig}__logo`,
@@ -185,14 +187,46 @@ const createNav = (ui) => {
             ico: "raw-logo-drumee-full",
             className: `${fig}__logo-icon`,
           }),
-          createText(fig, "header", Organization.name() || LOCALE.WORKSPACE_NAME),
+          createText(
+            fig,
+            "header",
+            Organization.name() || LOCALE.WORKSPACE_NAME,
+          ),
         ],
       }),
+      Skeletons.Button.Svg({
+        ico: "cross",
+        className: `${fig}__logo-close-btn`,
+        service: "mobile-close-drawer",
+        uiHandler: [ui],
+        sys_pn: "mobile-close-btn",
+      }),
+    ],
+  });
+};
+
+// ---------- Navigation ----------
+const createNav = (ui) => {
+  const fig = getSidebarFig(ui);
+
+  return Skeletons.Box.Y({
+    className: `${fig}__nav`,
+
+    kids: [
+      createLogoRow(ui),
 
       Skeletons.Box.Y({
         className: `${fig}__nav-main`,
         kids: [
-          createNavItem(ui, "sidebar_home", LOCALE.HOME, _e.home, "", null, "sidebar-home"),
+          createNavItem(
+            ui,
+            "sidebar_home",
+            LOCALE.HOME,
+            _e.home,
+            "",
+            null,
+            "sidebar-home",
+          ),
           createNavItem(
             ui,
             "sidebar_notifications",
@@ -204,9 +238,19 @@ const createNav = (ui) => {
             "activity-count",
           ),
           createNavItem(ui, "sidebar_inbox", LOCALE.INBOX, "toggle-inbox"),
-          createNavItem(ui, "sidebar_contacts", LOCALE.CONTACTS, "toggle-contacts"),
+          createNavItem(
+            ui,
+            "sidebar_contacts",
+            LOCALE.CONTACTS,
+            "toggle-contacts",
+          ),
           createNavItem(ui, "sidebar_trash", LOCALE.TRASH, "toggle-trash"),
-          createNavItem(ui, "sidebar_apps", LOCALE.ADMIN_CONSOLE, "toggle-apps"),
+          createNavItem(
+            ui,
+            "sidebar_apps",
+            LOCALE.ADMIN_CONSOLE,
+            "toggle-apps",
+          ),
         ],
       }),
 
@@ -215,11 +259,100 @@ const createNav = (ui) => {
   });
 };
 
+// ---------- Actions Navigation (mobile only) ----------
+// Mirrors createNav's structure (logo + nav-main) so the "actions" mode
+// of the mobile drawer looks identical to the "nav" mode — just with
+// Add new / Upload / Search / Invite as the rows.
+const createActionsNav = (ui) => {
+  const fig = getSidebarFig(ui);
+
+  return Skeletons.Box.Y({
+    className: `${fig}__nav`,
+    kids: [
+      createLogoRow(ui),
+
+      Skeletons.Box.Y({
+        className: `${fig}__nav-main`,
+        kids: [
+          createNavItem(
+            ui,
+            "add",
+            LOCALE.ADD_NEW || "Add new",
+            "new-workspace",
+            "",
+            null,
+            "mobile-add-new",
+          ),
+          createNavItem(
+            ui,
+            "desktop_upload",
+            LOCALE.UPLOAD,
+            _e.upload,
+            "",
+            null,
+            "mobile-upload",
+          ),
+          createNavItem(
+            ui,
+            "magnifying-glass",
+            LOCALE.SEARCH || "Search",
+            "search-files",
+            "",
+            null,
+            "mobile-search",
+          ),
+          createNavItem(
+            ui,
+            "topbar-invite",
+            LOCALE.INVITE || "Invite",
+            "invite-member",
+            "",
+            null,
+            "mobile-invite",
+          ),
+        ],
+      }),
+    ],
+  });
+};
+
 // ---------- Export ----------
 module.exports = function (ui) {
   const fig = getSidebarFig(ui);
+  const isMobile = Visitor.isMobile();
+
+  if (!isMobile) {
+    return Skeletons.Box.Y({
+      className: cls(fig, "main"),
+      kids: [createNav(ui), createFooter(ui, Visitor.firstname())],
+    });
+  }
+
+  // Mobile: sidebar becomes a slide-in drawer. data-mode picks between
+  // "nav" (default sidebar content) and "actions" (Add new / Upload /
+  // Search / Invite rendered as nav-item rows with the same logo
+  // header). The footer (Settings / Theme / Sign out / Profile) lives
+  // outside both slots so it stays visible in both modes — and so its
+  // sys_pn elements (sidebar-avatar, theme-toggle, etc.) stay unique.
+  // data-state toggles closed (off-screen) vs open.
   return Skeletons.Box.Y({
     className: cls(fig, "main"),
-    kids: [createNav(ui), createFooter(ui, Visitor.firstname())],
+    sys_pn: "sidebar-main",
+    partHandler: ui,
+    dataset: {
+      mode: "nav",
+      state: "closed",
+    },
+    kids: [
+      Skeletons.Box.Y({
+        className: cls(fig, "nav-slot"),
+        kids: [createNav(ui)],
+      }),
+      Skeletons.Box.Y({
+        className: cls(fig, "actions-slot"),
+        kids: [createActionsNav(ui)],
+      }),
+      createFooter(ui, Visitor.firstname()),
+    ],
   });
 };

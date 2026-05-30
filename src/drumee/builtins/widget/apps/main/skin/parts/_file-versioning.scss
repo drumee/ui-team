@@ -30,6 +30,13 @@
     justify-content: space-between;
     gap: 24px;
     border-radius: 8px 8px 0 0;
+
+    &[data-device="mobile"] {
+      padding: 12px 14px;
+      gap: 12px;
+      flex-direction: column;
+      align-items: stretch;
+    }
   }
 
   &__fv-heading {
@@ -64,6 +71,10 @@
     border-radius: 6px;
     align-items: center;
     gap: 8px;
+
+    &[data-device="mobile"] {
+      width: 100%;
+    }
 
     &-ico {
       width: 14px;
@@ -103,6 +114,10 @@
     width: 100%;
     background: $bg;
     gap: 0;
+
+    &[data-device="mobile"] {
+      overflow-x: auto;
+    }
   }
 
   &__fv-row {
@@ -134,6 +149,16 @@
     &:last-child {
       border-bottom: none;
     }
+
+    &[data-device="mobile"] {
+      flex-wrap: nowrap;
+      width: max-content;
+      min-width: 100%;
+
+      > * {
+        flex-shrink: 0;
+      }
+    }
   }
 
   &__fv-cell {
@@ -160,38 +185,67 @@
     &--check {
       flex: 68 0 0;
       min-width: 0;
+
+      &[data-device="mobile"] {
+        flex: 0 0 60px;
+      }
     }
 
     &--file {
       flex: 300 1 0;
       min-width: 0;
       gap: 16px;
+
+      &[data-device="mobile"] {
+        flex: 0 0 220px;
+      }
     }
 
     &--folder {
       flex: 155 1 0;
       min-width: 0;
+
+      &[data-device="mobile"] {
+        flex: 0 0 130px;
+      }
     }
 
     &--workspace {
       flex: 174 1 0;
       min-width: 0;
+
+      &[data-device="mobile"] {
+        flex: 0 0 140px;
+      }
     }
 
     &--size {
       flex: 88 1 0;
       min-width: 0;
+
+      &[data-device="mobile"] {
+        flex: 0 0 80px;
+      }
     }
 
     &--versions {
       flex: 120 1 0;
       min-width: 0;
       padding: 0 24px;
+
+      &[data-device="mobile"] {
+        flex: 0 0 110px;
+        padding: 0 8px;
+      }
     }
 
     &--actions {
       flex: 123 0 0;
       min-width: 0;
+
+      &[data-device="mobile"] {
+        flex: 0 0 110px;
+      }
     }
   }
 
@@ -356,6 +410,14 @@
     justify-content: space-between;
     gap: 16px;
     border-radius: 0 0 8px 8px;
+
+    &[data-device="mobile"] {
+      height: auto;
+      padding: 12px 14px;
+      flex-direction: column;
+      align-items: stretch;
+      gap: 8px;
+    }
   }
 
   &__fv-view-all {
@@ -474,6 +536,13 @@
     background: $bg-tint;
     align-items: center;
     justify-content: space-between;
+
+    &[data-device="mobile"] {
+      height: auto;
+      padding: 12px 14px;
+      flex-direction: column;
+      gap: 8px;
+    }
   }
 
   &__fv-pagination-label {

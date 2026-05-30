@@ -130,7 +130,12 @@
     &-row--empty {
       opacity: 0.7;
     }
-    &-disconnect-main {
+
+    // (migrate CTA shares the common ghost-button style — see the grouped
+    // rule below, near the other card buttons.)
+    &-disconnect-main[data-flow] {
+      display: flex;
+      flex-direction: row;
       width: 120px;
       height: 32px;
       border-radius: 4px;
@@ -139,6 +144,7 @@
       align-items: center;
       justify-content: center;
       flex-shrink: 0;
+      gap: 8px;
 
       .btn {
         color: $danger-fg;
@@ -149,6 +155,27 @@
 
       &:hover {
         background: rgba(214, 78, 73, 0.18);
+      }
+
+      &::before {
+        content: '';
+        width: 14px;
+        height: 14px;
+        border: 2px solid rgba(214, 78, 73, 0.25);
+        border-top-color: $danger-fg;
+        border-radius: 50%;
+        animation: settings-main-spinner 0.7s linear infinite;
+        display: none;
+        flex-shrink: 0;
+      }
+
+      &[data-loading="1"] {
+        pointer-events: none;
+        opacity: 0.85;
+
+        &::before {
+          display: block;
+        }
       }
     }
   }
@@ -245,6 +272,42 @@
       width: 0;
       height: 0;
       visibility: hidden;
+    }
+
+    // ── Avatar processing state (HEIC convert + upload in flight) ──
+    &-avatar-overlay {
+      position: absolute;
+      inset: 0;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      background: rgba(255, 255, 255, 0.45);
+      backdrop-filter: blur(2px);
+    }
+
+    &-avatar-spinner {
+      width: 28px;
+      height: 28px;
+      border: 3px solid rgba(67, 60, 197, 0.25); // $purple-deep @ 25%
+      border-top-color: $purple-deep;
+      border-radius: 50%;
+      animation: settings-main-spinner 0.7s linear infinite;
+    }
+
+    &-avatar-frame[data-processing="1"] {
+      pointer-events: none; // block re-click while uploading
+
+      .settings-main__profile-avatar-overlay {
+        display: flex;
+      }
+
+      .settings-main__profile-avatar {
+        filter: brightness(0.8);
+      }
+
+      .settings-main__profile-avatar-edit {
+        opacity: 0;
+      }
     }
 
     &-fields {
@@ -511,9 +574,12 @@
   }
 
   // ── Ghost (light-purple) buttons used inside cards ────────
+  // Shared "normal button" style for the settings cards — same light-purple
+  // tint as the "Coming soon" pill. Used by manage / action / export / migrate.
   &__preferences-manage-main,
   &__credentials-action-main,
-  &__danger-export-btn-main {
+  &__danger-export-btn-main,
+  &__linked-migrate-btn-main {
     width: 120px;
     height: 32px;
     border-radius: 4px;
@@ -540,6 +606,15 @@
     &:hover {
       background: rgba(89, 80, 255, 0.18);
     }
+  }
+
+  // The migrate CTA shares the same ghost look as the "Coming soon" pill in
+  // every state (Start migration / View progress / Migrate again); its labels
+  // are wider than the 120px tiles, so size to content.
+  &__linked-migrate-btn-main {
+    width: auto;
+    min-width: 120px;
+    padding: 0 var(--spacer-5);
   }
 
   &__danger-export-btn-main {
@@ -588,18 +663,39 @@
     }
   }
 
-  // Mobile / narrow viewport: stack rows.
-  @media (max-width: 960px) {
+  // ── Responsive: tablet ────────────────────────────────────
+  // Two-column layout (~698 + 450 / ~375 + 773) doesn't fit at tablet
+  // widths (≤ 1024). Stack rows; keep header on one line and avatar/
+  // fields side-by-side since there's still enough horizontal room.
+  &__ui[data-device="tablet"] {
+    padding: var(--spacer-5);
+  }
+
+  &__row[data-device="tablet"] {
+    flex-direction: column;
+
+    .settings-main__profile-card,
+    .settings-main__preferences-card,
+    .settings-main__credentials-card,
+    .settings-main__danger-card,
+    .settings-main__linked-card {
+      flex: 1 1 auto;
+    }
+  }
+
+  // ── Responsive: tablet (viewport-based) ───────────────────
+  // Mirror the mobile [data-device] rules at <=1024px so tablet
+  // viewports collapse to the single-column layout regardless of
+  // whether the data-device attribute is set.
+  @media (max-width: 1024px) {
     &__ui {
       padding: var(--spacer-5);
+      gap: var(--spacer-5);
     }
 
     &__row {
-      flex-direction: column;
-    }
-    &__row-1,
-    &__row-2,
-    &__row-3 {
+      flex-direction: column !important;
+
       .settings-main__profile-card,
       .settings-main__preferences-card,
       .settings-main__credentials-card,
@@ -609,12 +705,48 @@
       }
     }
 
-    &__profile-body {
-      flex-direction: column;
+    &__header-row {
+      flex-direction: column !important;
       align-items: stretch;
+      gap: var(--spacer-5);
     }
+
+    &__header-save-main {
+      width: 100%;
+      min-width: 0;
+    }
+
+    &__header-title {
+      font-size: 24px;
+      line-height: 28px;
+    }
+
+    &__profile-body {
+      flex-direction: column !important;
+      align-items: center;
+      gap: var(--spacer-5);
+    }
+
+    &__profile-avatar-block {
+      align-self: center;
+    }
+
+    &__profile-fields {
+      width: 100%;
+    }
+
     &__profile-fields-row {
-      flex-direction: column;
+      flex-direction: column !important;
+    }
+
+    &__card {
+      padding: var(--spacer-5);
+      gap: var(--spacer-5);
+    }
+
+    &__inner {
+      flex-wrap: wrap;
+      row-gap: var(--spacer-3);
     }
   }
 }
@@ -683,4 +815,8 @@ html[data-theme="dark"] {
       background: var(--normal-bg-40);
     }
   }
+}
+
+@keyframes settings-main-spinner {
+  to { transform: rotate(360deg); }
 }

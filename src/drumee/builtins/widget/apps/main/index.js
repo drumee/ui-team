@@ -458,6 +458,53 @@ class apps_main extends LetcBox {
   _render() {
     if (this.isDestroyed && this.isDestroyed()) return;
     this.feed(require("./skeleton").default(this));
+    this._scheduleTableScrollSync();
+  }
+
+  // Keep each table thead's horizontal scroll in sync with its tbody/list, so
+  // column headers stay aligned when the user scrolls the data horizontally.
+  _scheduleTableScrollSync(attempt = 0) {
+    if (this._tableScrollSyncScheduled) return;
+    this._tableScrollSyncScheduled = true;
+    requestAnimationFrame(() => {
+      this._tableScrollSyncScheduled = false;
+      if (this.isDestroyed && this.isDestroyed()) return;
+      const auditBound = this._bindTableScrollSync(
+        "audit",
+        ".apps-main__audit-list",
+        ".apps-main__audit-thead",
+      );
+      const storageBound = this._bindTableScrollSync(
+        "storage",
+        ".apps-main__storage-tbody",
+        ".apps-main__storage-thead",
+      );
+      // feed() mounts asynchronously; retry a few frames if the table DOM
+      // isn't ready yet so the sync attaches on tab activation too.
+      if (!auditBound && !storageBound && attempt < 5) {
+        setTimeout(() => this._scheduleTableScrollSync(attempt + 1), 50);
+      }
+    });
+  }
+
+  _bindTableScrollSync(key, listSelector, theadSelector) {
+    if (!this.el) return false;
+    const list = this.el.querySelector(listSelector);
+    const thead = this.el.querySelector(theadSelector);
+    if (!list || !thead) return false;
+    this._tableScrollRefs ||= {};
+    const prev = this._tableScrollRefs[key];
+    if (prev && prev.list === list && prev.thead === thead) return true;
+    if (prev) {
+      prev.list.removeEventListener("scroll", prev.handler);
+    }
+    const handler = () => {
+      thead.scrollLeft = list.scrollLeft;
+    };
+    list.addEventListener("scroll", handler, { passive: true });
+    thead.scrollLeft = list.scrollLeft;
+    this._tableScrollRefs[key] = { list, thead, handler };
+    return true;
   }
 
   async onDomRefresh() {
