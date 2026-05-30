@@ -405,6 +405,12 @@ class __dmz_sharebox extends LetcBox {
         if (!this._revokePoller) return;
         if (data && (data.status === 'TICKET_REVOKED' || data.status === 'TICKET_EXPIRED')) {
           this._stopRevokePolling();
+          // Tear down the desk content before showing the popup — this ensures
+          // files are gone even if the user dismisses the popup instead of
+          // clicking the redirect button.
+          if (this.__content) {
+            this.__content.feed(Skeletons.Box.Y({ className: `${this.fig.family}__content` }));
+          }
           this.handleInfoStatus(data);
         }
       } catch (_) {}
