@@ -9,6 +9,7 @@ module.exports = function (ui) {
   const m = ui.model.toJSON();
   m.fig = ui.fig.family;
   let body;
+  let usernameHtml = '';
   let avatar = require('./avatar')(m);
 
   const sentinel = typeof m.message === 'string' && m.message.match(MEETING_SENTINEL);
@@ -30,11 +31,21 @@ module.exports = function (ui) {
     body = require('./conversation')(m);
     const isP2P = m.type === _a.private || m.type === _a.privateRoom || m.area === _a.personal;
     if (!isP2P && m.author !== _a.me) {
-      body = `${require('./username')(m)}${body}`;
+      // Username stays as a label ABOVE the line (not inline with time + bubble).
+      usernameHtml = require('./username')(m);
     }
   }
   const footer = require('./footer')(m);
-  let content = `<div id="content-${m.widgetId}" class="${m.fig}__message-content ${m.author}">${body}${footer}</div>`;
+  // Read-receipt avatar row — populated imperatively by chat-item.renderReaders()
+  // from metadata._seen_ (the accumulating {uid: ts} reader map the server sends).
+  const readers = `<div id="readers-${m.widgetId}" class="${m.fig}__readers ${m.author}" data-empty="1"></div>`;
+  // Time (footer) + bubble share one vertically-centred row. Incoming: time
+  // left of the bubble; own: time right (the row is reversed in CSS). The hover
+  // action bar floats on the opposite, outer side.
+  const line = `<div class="${m.fig}__message-line ${m.author}">${body}${footer}</div>`;
+  // readers sit in flow below the line so they're always visible (never covered
+  // or clipped by the message box / neighbouring messages).
+  let content = `<div id="content-${m.widgetId}" class="${m.fig}__message-content ${m.author}">${usernameHtml}${line}${readers}</div>`;
   html = `${avatar}${content}`;
   return html;
 };

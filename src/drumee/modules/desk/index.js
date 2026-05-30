@@ -97,16 +97,51 @@ class desk_module extends LetcBox {
    * @param {*} args 
    * @returns 
    */
-  openP2Pchat(args = {}) {
+  async openP2Pchat(args = {}) {
     const { drumate_id, message_id } = args;
+    let p = await this.ensurePart('chat-panel')
+    let widget = p.children.last();
+    if (!widget || widget.isDestroyed()) {
+      this.togglePanel('chat_p2p', 'chat-panel')
+    } else if (widget.mget(_a.kind) === 'chat_p2p') {
+      if (widget.el.dataset.anim === 'in') {
+        return;
+      } else {
+        this.togglePanel('chat_p2p', 'chat-panel')
+      }
+    } else {
+      this.togglePanel('chat_p2p', 'chat-panel')
+    }
     if (!drumate_id) return;
-    this.togglePanel('chat_p2p', 'chat-panel').then(() => {
-      this.ensurePart('chat-panel').then(p => {
-        const widget = p && p.children && p.children.last && p.children.last();
-        if (widget && widget.openChatByPeerId) widget.openChatByPeerId(drumate_id, message_id);
-      });
-    });
+    p = await this.ensurePart('chat-panel');
+    this.debug("AAA:122", this)
+    widget = p && p.children && p.children.last && p.children.last();
+    if (widget && widget.openChatByPeerId) widget.openChatByPeerId(drumate_id, message_id);
   }
+
+  /**
+   * 
+   * @param {*} args 
+   * @returns 
+   */
+  async openContactPanel(args = {}) {
+    let p = await this.ensurePart('chat-panel')
+    let widget = p.children.last();
+    if (!widget || widget.isDestroyed()) {
+      this.togglePanel('address_book', 'chat-panel')
+    } else if (widget.mget(_a.kind) === 'address_book') {
+      if (widget.el.dataset.anim === 'in') {
+        return;
+      } else {
+        this.togglePanel('address_book', 'chat-panel')
+      }
+    }
+    this.togglePanel('address_book', 'chat-panel')
+    p = await this.ensurePart('chat-panel')
+    widget = p && p.children && p.children.last && p.children.last();
+    if (widget && widget.switchTab) widget.switchTab(_a.pending);
+  }
+
 
   /**
    *
@@ -669,6 +704,65 @@ class desk_module extends LetcBox {
   }
 
   /**
+   * Open the mobile drawer in a given mode ("nav" | "actions"). Tapping
+   * an already-active button is a no-op (does not toggle closed). The
+   * drawer closes only via the in-drawer close button or by tapping the
+   * overlay backdrop. No-op on non-mobile.
+   */
+  openMobileDrawer(mode) {
+    return this.ensurePart("sidebar-main").then((p) => {
+      if (!p || !p.el) return;
+      const el = p.el;
+      el.dataset.mode = mode;
+      el.dataset.state = "open";
+      this._setMobileBackdrop(true);
+      this._setMobileTopbarActive(mode);
+    });
+  }
+
+  /**
+   * Mirror the drawer state on the two mobile-topbar buttons so the
+   * currently-displayed mode shows as active. Pass null to clear both.
+   */
+  _setMobileTopbarActive(activeMode) {
+    const map = {
+      "mobile-add-btn": activeMode === "actions",
+      "mobile-menu-btn": activeMode === "nav",
+    };
+    Object.entries(map).forEach(([pn, isActive]) => {
+      this.ensurePart(pn).then((p) => {
+        if (!p || !p.el) return;
+        if (isActive) {
+          p.el.dataset.state = "active";
+        } else {
+          delete p.el.dataset.state;
+        }
+      });
+    });
+  }
+
+  /**
+   * Show/hide the shared __overlay as a tap-to-close backdrop for the
+   * mobile drawer. The click listener that actually closes the drawer
+   * is bound once in _bindMobileBackdropListener at mount time.
+   */
+  _setMobileBackdrop(visible) {
+    this.ensurePart("overlay").then((p) => {
+      if (!p || !p.el) return;
+      p.el.dataset.state = visible ? "open" : "closed";
+    });
+  }
+
+  _closeMobileDrawer() {
+    this.ensurePart("sidebar-main").then((p) => {
+      if (!p || !p.el) return;
+      p.el.dataset.state = "closed";
+    });
+    this._setMobileBackdrop(false);
+    this._setMobileTopbarActive(null);
+  }
+
+  /**
    *
    */
   togglePanel(kind, pn, openOnly) {
@@ -764,7 +858,10 @@ class desk_module extends LetcBox {
     if (except !== "activity-panel") {
       tasks.push(
         this.ensurePart("activity-panel").then((p) => {
-          if (p) p.setState(0);
+          if (p) {
+            p.activityState = 0;
+            p.setState(0);
+          }
         }),
       );
     }
@@ -860,6 +957,15 @@ class desk_module extends LetcBox {
           { kind: cmd.mget(_a.respawn) },
           { explicit: 1, singleton: 1 },
         );
+
+      case "mobile-show-add":
+        return this.openMobileDrawer("actions");
+
+      case "mobile-show-menu":
+        return this.openMobileDrawer("nav");
+
+      case "mobile-close-drawer":
+        return this._closeMobileDrawer();
 
       case "toggle-activity":
         return this.ensurePart("activity-panel").then((p) => {

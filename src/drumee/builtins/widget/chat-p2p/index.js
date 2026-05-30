@@ -17,24 +17,52 @@ class __chat_p2p extends LetcBox {
     this._filter = _a.contact;
     this.bindEvent(_a.live);
     this._onOutsideClick = this._onOutsideClick.bind(this);
-
+    this._onPeerData = this._onPeerData.bind(this);
+    RADIO_BROADCAST.on(_e.peerData, this._onPeerData);
   }
 
   /**
    * 
    * @param {*} e 
    */
-  _onOutsideClick(e) {
+  _onOutsideClick(e, source) {
     if (this.el.dataset.anim === "in" && !this.el.contains(e.target)) {
-      Desk.closeAllPanels()
+      this.el.dataset.anim = "out";
     }
   }
 
   onBeforeDestroy() {
     this.unbindEvent(_a.live);
     document.removeEventListener("mousedown", this._onDocClick);
-    RADIO_BROADCAST.off(_e.click, this._onOutsideClick);
+    RADIO_CLICK.off(_e.click, this._onOutsideClick);
+    RADIO_BROADCAST.off(_e.peerData, this._onPeerData);
+  }
 
+  _onPeerData(data) {
+    if (!data || data.id == null) return;
+    const peerId = String(data.id);
+    const status = data.status;
+
+    if (this.activePeer && String(this.activePeer.entity_id) === peerId) {
+      this.activePeer.online = status;
+      const statusEl = this.el && this.el.querySelector(`.${this.fig.family}__header-status`);
+      if (statusEl) {
+        const s = ~~status;
+        const label = s === 1 ? LOCALE.ACTIVE_NOW : s === 2 ? LOCALE.AWAY : LOCALE.OFFLINE;
+        statusEl.textContent = label;
+        statusEl.dataset.online = status == null ? '' : status;
+      }
+    }
+
+    const list = this._contactList;
+    if (list && list.getItemsByAttr) {
+      const items = list.getItemsByAttr(_a.entity_id, peerId) || [];
+      items.forEach(item => {
+        if (!item) return;
+        item.mset && item.mset(_a.online, status);
+        if (item.el) item.el.dataset.online = status == null ? '' : status;
+      });
+    }
   }
 
   /**
@@ -389,7 +417,7 @@ class __chat_p2p extends LetcBox {
 
   /**
    * @param {View} trigger
-   * @param {Object} args
+   * @param {Object} args 
    */
   onUiEvent(trigger, args = {}) {
     // trigger.service is the JS property set by widget_chat before calling

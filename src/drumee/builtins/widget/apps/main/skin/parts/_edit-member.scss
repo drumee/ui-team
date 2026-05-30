@@ -32,6 +32,14 @@
     box-shadow:
       0 24px 48px rgba(11, 10, 33, 0.16),
       0 6px 16px rgba(11, 10, 33, 0.06);
+
+    &[data-device="mobile"] {
+      width: calc(100vw - 16px);
+      max-width: calc(100vw - 16px);
+      max-height: calc(100vh - 200px);
+      padding: 20px;
+      gap: 16px;
+    }
   }
 
   // Header row
@@ -47,6 +55,11 @@
     line-height: 28px;
     font-weight: 700;
     color: $ink-900;
+
+    &[data-device="mobile"] {
+      font-size: 18px;
+      line-height: 22px;
+    }
   }
 
   &__edit-close {
@@ -209,6 +222,12 @@
     align-items: center;
     justify-content: space-between;
     gap: 16px;
+
+    &[data-device="mobile"] {
+      flex-direction: column;
+      align-items: stretch;
+      gap: 8px;
+    }
   }
 
   // Generic select pill
@@ -229,6 +248,11 @@
 
     &:hover {
       background: rgba(0, 0, 0, 0.07);
+    }
+
+    &[data-device="mobile"] {
+      width: 100%;
+      min-width: 0;
     }
 
     &-value {
@@ -260,6 +284,11 @@
     width: 100%;
     align-items: center;
     gap: 8px;
+
+    &[data-device="mobile"] {
+      flex-wrap: wrap;
+      gap: 6px;
+    }
   }
 
   &__edit-ws-name {
@@ -297,6 +326,10 @@
     flex-shrink: 0;
     width: 154px;
     min-width: 0;
+
+    &[data-device="mobile"] {
+      width: 100%;
+    }
   }
 
   &__edit-ws-role-select {
@@ -557,6 +590,11 @@
     align-items: center;
     justify-content: space-between;
     gap: 16px;
+
+    &[data-device="mobile"] {
+      flex-wrap: wrap;
+      gap: 8px;
+    }
   }
 
   &__edit-remove-all {
@@ -719,5 +757,4 @@
     font-weight: 600;
     color: var(--white, #fff);
   }
-
 }

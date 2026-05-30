@@ -36,7 +36,7 @@
   &__progress {
     &-container {
       transition-property: opacity;
-      transition-duration: 1s;
+      transition-duration: 0.2s;
       position: absolute;
       top: 132px;
       left: 0;
@@ -62,6 +62,16 @@
       transition: width 0.5s;
       background-color: var(--primary-500);
       z-index: 1;
+    }
+
+    &-container[data-loading="indeterminate"] {
+      overflow: hidden;
+
+      .player-document__progress-bar {
+        width: 30%;
+        will-change: transform;
+        animation: player-document-indeterminate 1.4s ease-in-out infinite;
+      }
     }
 
     &-text {
@@ -329,5 +339,14 @@
         color: var(--primary-500);
       }
     }
+  }
+}
+
+@keyframes player-document-indeterminate {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(333%);
   }
 }

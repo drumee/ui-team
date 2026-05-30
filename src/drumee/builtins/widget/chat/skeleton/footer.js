@@ -1,5 +1,4 @@
 const __skl_widget_chat_footer = function (ui) {
-
   const chatFig = ui.fig.family;
   const chatFooterContent = [];
 
@@ -8,26 +7,26 @@ const __skl_widget_chat_footer = function (ui) {
     kids: [
       Skeletons.Box.X({
         className: `${chatFig}-reply__wrapper`,
-        sys_pn: 'reply-wrapper',
+        sys_pn: "reply-wrapper",
         dataset: {
-          mode: _a.closed
-        }
+          mode: _a.closed,
+        },
       }),
 
       Skeletons.Wrapper.Y({
         className: `${chatFig}__mention-dropdown`,
-        sys_pn: 'mention-dropdown',
+        sys_pn: "mention-dropdown",
         partHandler: ui,
         dataset: {
-          state: _a.closed
-        }
+          state: _a.closed,
+        },
       }),
 
       Skeletons.Messenger({
         className: `${chatFig}__messenger`,
         sys_pn: _a.message,
         dataset: {
-          mode: _a.open
+          mode: _a.open,
         },
         uiHandler: [ui],
         autofocus: 1,
@@ -36,54 +35,54 @@ const __skl_widget_chat_footer = function (ui) {
         service: _e.send,
         content: ui.getStoredMessage(),
         placeholder: ui.mget(_a.placeholder),
-        no_emoji: ui.mget('no_emoji'),
-        send_icon: ui.mget('send_icon'),
-        attach_icon: ui.mget('attach_icon'),
-        bubble: 0
+        no_emoji: ui.mget("no_emoji"),
+        send_icon: ui.mget("send_icon"),
+        attach_icon: ui.mget("attach_icon"),
+        bubble: 0,
       }),
 
       Skeletons.Wrapper.Y({
         className: `${chatFig}__attachment-wrapper`,
-        sys_pn: 'attachment-container',
+        sys_pn: "attachment-container",
         // Start collapsed; chat.checkPendingContent flips this when a file
         // is queued via media-wrapper's add/clear `_e.update` trigger.
-        dataset: { hasAttachment: '0' },
+        dataset: { hasAttachment: "0" },
         kids: {
-          kind: 'media_wrapper',
+          kind: "media_wrapper",
           storageKey: ui.storageKey,
           uiHandler: [ui],
-          partHandler:[ui],
-          sys_pn: "attachment-list"
-        }
-      })
-    ]
+          partHandler: [ui],
+          sys_pn: "attachment-list",
+        },
+      }),
+    ],
   });
 
   const messageOptions = Skeletons.Box.Y({
     className: `${chatFig}__message-options-wrapper`,
-    sys_pn: 'message-options-wrapper',
+    sys_pn: "message-options-wrapper",
     state: 0,
     kids: [
       Skeletons.Box.X({
         className: `${chatFig}__message-count`,
-        sys_pn: 'selected-message-count'
+        sys_pn: "selected-message-count",
       }),
 
       Skeletons.Box.X({
         className: `${chatFig}__action-buttons`,
-        sys_pn: 'message-action-buttons'
-      })
-    ]
+        sys_pn: "message-action-buttons",
+      }),
+    ],
   });
 
-  if (Visitor.isMimicUser() || ui.mget('isReadOnly')) {
+  if (Visitor.isMimicUser() || ui.mget("isReadOnly")) {
     const readOnly = Skeletons.Wrapper.Y({
       className: `${chatFig}_read-only-msg`,
       kids: [
         Skeletons.Note({
-          content: ui.mget('readOnlyMsg') || 'Read Only'
-        })
-      ]
+          content: ui.mget("readOnlyMsg") || "Read Only",
+        }),
+      ],
     });
     chatFooterContent.push(readOnly);
   } else {

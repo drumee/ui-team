@@ -100,6 +100,30 @@ const __skl_widget_chat = function (ui) {
     ]
   });
 
+  // Ephemeral typing indicator. Pinned to the bottom-left of the message
+  // viewport (which is position:relative) so it reads as the newest incoming
+  // bubble. Hidden (state 0) until someone is typing; updated imperatively.
+  const typingIndicator = Skeletons.Box.X({
+    className: `${chatFig}__typing-indicator`,
+    sys_pn: 'typing-indicator',
+    state: 0,
+    kids: [
+      Skeletons.Box.X({
+        className: `${chatFig}__typing-dots`,
+        kids: [
+          Skeletons.Note({ className: `${chatFig}__typing-dot` }),
+          Skeletons.Note({ className: `${chatFig}__typing-dot` }),
+          Skeletons.Note({ className: `${chatFig}__typing-dot` })
+        ]
+      }),
+      Skeletons.Note({
+        sys_pn: 'typing-text',
+        className: `${chatFig}__typing-text`,
+        content: ''
+      })
+    ]
+  });
+
   content = Skeletons.Box.Y({
     className: `${chatFig}__chat-content`,
     kids: [
@@ -108,6 +132,7 @@ const __skl_widget_chat = function (ui) {
         className: `${chatFig}__chat-content-inner`,
         kids: [
           list,
+          typingIndicator,
           scrollButton
         ]
       })

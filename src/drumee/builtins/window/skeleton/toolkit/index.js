@@ -289,7 +289,8 @@ export function chatPanel(ui) {
     hub_id: ui.mget(_a.hub_id),
     nid: ui.mget(_a.nid),
     placeholder: LOCALE.TYPE_MESSAGE + "...",
-    no_emoji: true,
+    // Show the emoji picker icon (lib-messenger__icon emoji) in the panel.
+    no_emoji: false,
     send_icon: "raw-send-chat",
     attach_icon: "chat-link-simple",
     sys_pn: "folder-chat",
@@ -333,6 +334,7 @@ export function fileTypeFilterBar(ui) {
     { label: "Images", value: "image" },
     { label: "Other", value: "other" },
   ];
+  let dataset = ui.mget(_a.area);
   return Skeletons.Box.X({
     className: `${ui.fig.family}__filter-bar`,
     dataset: { area: ui.mget(_a.area) },
@@ -344,6 +346,7 @@ export function fileTypeFilterBar(ui) {
         state: index === 0 ? 1 : 0,
         radiotoggle: `media-filter-${ui._id}`,
         value: tab.value,
+        dataset: { area: ui.mget(_a.area) },
       }),
     ),
   });

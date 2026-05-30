@@ -85,6 +85,11 @@
       @include drumee.glass-overlay;
     }
 
+    &[data-state="open"]:has(> .window-folder__settings-action-panel) {
+      pointer-events: none;
+      > * { pointer-events: auto; }
+    }
+
     .drumee-spinner {
       width: 150px;
       height: 150px;

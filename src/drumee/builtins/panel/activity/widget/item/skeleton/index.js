@@ -7,42 +7,7 @@ function timeAgo(timestamp) {
   return Dayjs.unix(timestamp).fromNow();
 }
 
-function getSender(data) {
-  // Prefer the per-event author (latest uploader/poster), then the rollup peer
-  // (chat/contact), then any other identity field. "Someone" is the last resort
-  // when the row truly carries no actor info.
-  const authorName = [data.author_firstname, data.author_lastname].filter(Boolean).join(" ");
-  if (authorName) return authorName;
-  if (data.fullname) return data.fullname;
-  const peerName = [data.firstname, data.lastname].filter(Boolean).join(" ");
-  if (peerName) return peerName;
-  return data.email || data.uid || "Someone";
-}
 
-function getAuthorId(data) {
-  // Resolve avatar id per category. Falling through to undefined makes
-  // Visitor.avatar default to the current user's id — that's the bug behind
-  // "all rows show my own face." Each category exposes a different "actor"
-  // field; pick the right one.
-  if (data.author_id) return data.author_id;
-  switch (data.category) {
-    case 'chat':
-    case 'contact':
-      return data.drumate_id;
-    case 'media':
-    case 'teamchat':
-      return data.hub_id;
-    case 'hub_invite':
-      return data.author_id || data.hub_id;
-    default:
-      return data.drumate_id || data.hub_id;
-  }
-}
-
-function getPreview(data) {
-  if (data.dest?.nid) return data.dest;
-  return data.src || data;
-}
 
 function parseJson(value, fallback) {
   if (!value) return fallback;
@@ -59,20 +24,7 @@ function getMentionIds(data) {
   return _.isArray(ids) ? ids : [];
 }
 
-function hasAttachment(data) {
-  const attachment = parseJson(data.attachment, data.attachment);
-  if (_.isArray(attachment)) return attachment.length > 0;
-  if (_.isObject(attachment)) return !_.isEmpty(attachment);
-  return !!attachment && String(attachment).trim() !== "" && attachment !== "null";
-}
 
-function isFolder(item = {}) {
-  return item.filetype === _a.folder || item.ftype === _a.folder || item.category === _a.folder;
-}
-
-function getItemName(data, preview) {
-  return preview.filename || preview.name || preview.user_filename || data.link_label || data.surname || data.hub_name || data.message || "item";
-}
 
 // Canonical category keys returned by activity.list. activity.get_feed
 // rows (from mfs_changelog) only carry `event` like "media.remove" — fall
@@ -88,9 +40,8 @@ function getCategory(data) {
 
 const COUNT_SUFFIX = (cnt) => (cnt > 1 ? ` (${cnt})` : '');
 
-function getActivityMeta(data, preview) {
-  const category = getCategory(data);
-  const name = getItemName(data, preview);
+function getActivityMeta(ui, data) {
+  const name = ui.getItemName();
   const cnt = parseInt(data.cnt, 10) || 0;
   const mentioned =
     data.event === 'mention'
@@ -107,7 +58,7 @@ function getActivityMeta(data, preview) {
     };
   }
 
-  switch (category) {
+  switch (ui.mget(_a.category)) {
     case 'hub_invite':
       // Never fall back to `name` for hub_invite — that resolver chains
       // through surname/sender fields and ends up showing the inviter's
@@ -169,7 +120,7 @@ function getActivityMeta(data, preview) {
     case 'mfs':
       // Sub-routing by `event` for individual mfs_changelog rows from get_feed.
       if (data.event === 'media.share' || data.is_forward === 1) {
-        if (preview.accessibility === 'restricted') {
+        if (ui.megt(_a.accessibility) === 'restricted') {
           return {
             before: 'shared a ',
             label: 'Restricted Link',
@@ -180,7 +131,7 @@ function getActivityMeta(data, preview) {
         }
         return {
           before: 'shared a ',
-          label: preview.filetype === 'link' ? 'Shared Link' : name,
+          label: ui.megt(_a.filetype) === 'link' ? 'Shared Link' : name,
           after: ' with you',
           colorClass: 'link-share',
           badge: 'share',
@@ -188,7 +139,7 @@ function getActivityMeta(data, preview) {
       }
       if (data.event === 'media.remove') {
         return {
-          before: isFolder(preview) ? 'removed folder ' : 'removed file ',
+          before: ui.isFolder() ? 'removed folder ' : 'removed file ',
           label: name,
           after: '',
           colorClass: 'restricted',
@@ -204,7 +155,7 @@ function getActivityMeta(data, preview) {
           badge: 'mention',
         };
       }
-      if (hasAttachment(data) && data.event !== 'media.new') {
+      if (ui.hasAttachment() && data.event !== 'media.new') {
         return {
           before: 'shared a file in ',
           label: name,
@@ -215,7 +166,7 @@ function getActivityMeta(data, preview) {
       }
       // Default media event (media.new or aggregated rollup)
       return {
-        before: isFolder(preview) ? 'created folder ' : 'uploaded file ',
+        before: ui.isFolder() ? 'created folder ' : 'uploaded file ',
         label: name,
         after: cnt > 1 ? ` and ${cnt - 1} more` : '',
         colorClass: 'mention',
@@ -247,13 +198,9 @@ function getActivityMeta(data, preview) {
 module.exports = function (ui) {
   const pfx = 'activity-item';
   const data = ui.model.toJSON();
-  const preview = getPreview(data);
-  const sender = escapeHtml(getSender(data));
-  const meta = getActivityMeta(data, preview);
+  const sender = escapeHtml(ui.mget(_a.sender));
+  const meta = getActivityMeta(ui, data);
   const text = `<span>${sender} ${escapeHtml(meta.before)}</span><span class="${pfx}__link ${meta.colorClass}">${escapeHtml(meta.label)}</span><span>${escapeHtml(meta.after)}</span>`;
-  const authorId = getAuthorId(data);
-  // Author name fields drive the avatar initials when the image fails to load.
-  // Prefer the per-event author; fall back to the rollup peer (chat/contact).
   const avatarFirstname = data.author_firstname || data.firstname;
   const avatarLastname = data.author_lastname || data.lastname;
 
@@ -262,7 +209,7 @@ module.exports = function (ui) {
     kids: [
       Skeletons.UserProfile({
         className: `${pfx}__avatar`,
-        id: authorId,
+        id: ui.mget(_a.autho_id),
         firstname: avatarFirstname,
         lastname: avatarLastname,
         type: 'thumb',
@@ -284,50 +231,39 @@ module.exports = function (ui) {
     ],
   });
 
-  // itemType routes the dismiss handler — DO NOT use the inferred
-  // getCategory() here. Rollup rows from activity.list carry an explicit
-  // `data.category` and dismiss via activity.dismiss_rollup. Raw
-  // mfs_changelog rows from activity.get_feed have no category, only
-  // `event`, and must dismiss via activity.dismiss with changelog_id —
-  // they MUST stay tagged as 'mfs' so the dismiss handler takes the
-  // per-changelog branch.
-  const itemType = data.category
-    || (data.event === 'hub.invite_received' ? 'hub_invite' : 'mfs');
-  const itemKey = `${itemType}:${data.id || data.hub_id || data.drumate_id || data.key_id || ''}`;
-  ui.mset('item_type', itemType);
-  ui.mset('item_key', itemKey);
-  if (data.id != null) ui.mset('changelog_id', data.id);
+
+  // if (data.id != null) ui.mset('changelog_id', data.id);
 
   const category = getCategory(data);
   const actionKids = category === 'meeting'
     ? [
-        Skeletons.Button.Svg({
-          className: `${pfx}__join`,
-          ico: 'drumee-phone-cam',
-          service: 'join-meeting',
-          uiHandler: ui,
-        }),
-        Skeletons.Button.Svg({
-          className: `${pfx}__trash`,
-          ico: 'notification_trash',
-          service: 'dismiss-activity',
-          uiHandler: ui,
-        }),
-      ]
+      Skeletons.Button.Svg({
+        className: `${pfx}__join`,
+        ico: 'drumee-phone-cam',
+        service: 'join-meeting',
+        uiHandler: ui,
+      }),
+      Skeletons.Button.Svg({
+        className: `${pfx}__trash`,
+        ico: 'notification_trash',
+        service: 'dismiss-activity',
+        uiHandler: ui,
+      }),
+    ]
     : [
-        Skeletons.Button.Svg({
-          className: `${pfx}__bookmark`,
-          ico: 'notification_favorite',
-          service: 'toggle-favorite',
-          uiHandler: ui,
-        }),
-        Skeletons.Button.Svg({
-          className: `${pfx}__trash`,
-          ico: 'notification_trash',
-          service: 'dismiss-activity',
-          uiHandler: ui,
-        }),
-      ];
+      Skeletons.Button.Svg({
+        className: `${pfx}__bookmark`,
+        ico: 'notification_favorite',
+        service: 'toggle-favorite',
+        uiHandler: ui,
+      }),
+      Skeletons.Button.Svg({
+        className: `${pfx}__trash`,
+        ico: 'notification_trash',
+        service: 'dismiss-activity',
+        uiHandler: ui,
+      }),
+    ];
   const actions = Skeletons.Box.X({
     className: `${pfx}__actions`,
     kids: actionKids,

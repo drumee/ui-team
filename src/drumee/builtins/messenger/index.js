@@ -64,6 +64,10 @@ class __lib_messenger extends LetcBox {
     };
     document.addEventListener('selectionchange', this._trackSelection);
     this.el.addEventListener('mousedown', this._trackEmojiMouseDown, true);
+    // Focusing the composer means the user is reading the conversation — notify
+    // the host so it can mark messages as read (read receipts).
+    this._onInputFocus = () => this.triggerHandlers({ service: 'input-focus' });
+    this.el.addEventListener('focusin', this._onInputFocus);
   }
 
   onBeforeDestroy() {
@@ -72,6 +76,9 @@ class __lib_messenger extends LetcBox {
     }
     if (this._trackEmojiMouseDown) {
       this.el.removeEventListener('mousedown', this._trackEmojiMouseDown, true);
+    }
+    if (this._onInputFocus) {
+      this.el.removeEventListener('focusin', this._onInputFocus);
     }
   }
 
@@ -239,6 +246,10 @@ class __lib_messenger extends LetcBox {
         } else {
           this._closeMentionPopup();
           this.hideSend();
+          // Propagate the emptied state so the host clears its saved draft and
+          // stops the typing indicator. Without this, the draft keeps the
+          // previous value and reappears when the conversation is reopened.
+          this.triggerHandlers({ ...args, text: '' });
         }
         return;
 
@@ -329,7 +340,7 @@ class __lib_messenger extends LetcBox {
    * Detect @ (contacts) or / (files) in text and manage mention popup
    */
   _handleMentionInput(text) {
-    console.log('[mention] _handleMentionInput', { text, len: text && text.length });
+    this.verbose('[mention] _handleMentionInput', { text, len: text && text.length });
     if (!text) {
       this._closeMentionPopup();
       return;
@@ -337,7 +348,7 @@ class __lib_messenger extends LetcBox {
 
     const contactMatch = text.match(/@(\S*)$/);
     const fileMatch = text.match(/\/(\S*)$/);
-    console.log('[mention] regex match', { contactMatch: !!contactMatch, fileMatch: !!fileMatch });
+    this.verbose('[mention] regex match', { contactMatch: !!contactMatch, fileMatch: !!fileMatch });
 
     if (contactMatch) {
       this._mentionActive = true;
@@ -358,7 +369,7 @@ class __lib_messenger extends LetcBox {
    * Show mention dropdown (contacts or files)
    */
   _showMentionPopup() {
-    console.log('[mention] _showMentionPopup → triggerHandlers', {
+    this.verbose('[mention] _showMentionPopup → triggerHandlers', {
       filter: this._mentionFilter,
       mentionType: this._mentionType,
     });
