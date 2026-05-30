@@ -534,87 +534,85 @@ export function visioMenu(ui, opt = {}) {
 }
 
 /**
- * macOS-style zoom menu — single icon trigger that reveals a hover dropdown
- * with three actions: Enter/Exit Full Screen, Zoom, Reframe.
- *
- * - Enter Full Screen → `fullscreen` service (window/core.js handles real
- *   browser-fullscreen toggle).
- * - Zoom              → `window-zoom` service (toggle maximize within the
- *   workspace area, like the macOS green button's default click).
- * - Reframe           → `window-reframe` service (restore to the window's
- *   default bounds via `_defaultBounds()`).
+ * macOS-style zoom menu — icon trigger with a CSS-hover dropdown offering
+ * Enter/Exit Full Screen, Zoom, Tile Left/Right, Reframe. Clicking the
+ * trigger toggles Zoom directly.
  *
  * @param {*} ui
  */
 export function zoomMenu(ui) {
-  const cnRoot = `${ui.fig.family}-zoom`;
-  const cnItem = `${cnRoot}__item`;
+  const cnRoot = `${ui.fig.family}-topbar__zoom`;
   const isFullscreen = !!document.fullscreenElement;
-
-  const trigger = Skeletons.Button.Svg({
-    ico: "player-fullscreen",
-    className: `${cnRoot}__trigger`,
-    sys_pn: "ctrl-fullscreen",
-    uiHandler: ui,
-    partHandler: ui,
-  });
 
   const items = [
     {
       service: "fullscreen",
       ico: "player-fullscreen",
-      content: isFullscreen
-        ? (LOCALE.EXIT_FULLSCREEN || "Exit Full Screen")
-        : (LOCALE.FULLSCREEN || "Enter Full Screen"),
-      className: `${cnItem} ${cnItem}--fullscreen`,
+      content: isFullscreen ? LOCALE.EXIT_FULLSCREEN : LOCALE.FULLSCREEN,
+      modifier: "fullscreen",
     },
     {
       service: "window-zoom",
       ico: "desktop_fullview",
-      content: LOCALE.ZOOM || "Zoom",
-      className: `${cnItem} ${cnItem}--zoom`,
+      content: LOCALE.ZOOM,
+      modifier: "zoom",
+    },
+    {
+      service: "window-tile-left",
+      ico: "square-split-horizontal",
+      content: LOCALE.TILE_LEFT,
+      modifier: "tile-left",
+    },
+    {
+      service: "window-tile-right",
+      ico: "square-split-horizontal",
+      content: LOCALE.TILE_RIGHT,
+      modifier: "tile-right",
     },
     {
       service: "window-reframe",
       ico: "desktop_reduce",
-      content: LOCALE.RESTORE || "Reframe",
-      className: `${cnItem} ${cnItem}--reframe`,
+      content: LOCALE.REFRAME,
+      modifier: "reframe",
     },
   ];
 
-  const itemsNode = Skeletons.Box.Y({
-    className: `${cnRoot}__items`,
-    kids: items.map(({ service, ico, content, className }) =>
-      Skeletons.Box.X({
-        className,
+  return Skeletons.Box.X({
+    className: `${cnRoot}-wrapper`,
+    kids: [
+      Skeletons.Button.Svg({
+        ico: "desktop_fullview",
+        className: `${cnRoot}-trigger`,
+        sys_pn: "ctrl-fullscreen",
+        service: "window-zoom",
         uiHandler: [ui],
-        service,
-        kidsOpt: { active: 0 },
-        kids: [
-          Skeletons.Button.Svg({
-            ico,
-            active: 0,
-            className: `${cnRoot}__icon`,
-          }),
-          Skeletons.Note({
-            content,
-            active: 0,
-            className: `${cnRoot}__label`,
-          }),
-        ],
+        partHandler: ui,
       }),
-    ),
+      Skeletons.Box.Y({
+        className: `${cnRoot}-menu`,
+        kids: items.map(({ service, ico, content, modifier }) =>
+          Skeletons.Box.X({
+            className: `${cnRoot}-item ${cnRoot}-item--${modifier}`,
+            uiHandler: [ui],
+            service,
+            kidsOpt: { active: 0 },
+            kids: [
+              Skeletons.Button.Svg({
+                ico,
+                active: 0,
+                className: `${cnRoot}-item-icon`,
+              }),
+              Skeletons.Note({
+                content,
+                active: 0,
+                className: `${cnRoot}-item-label`,
+              }),
+            ],
+          }),
+        ),
+      }),
+    ],
   });
-
-  return {
-    kind: KIND.menu.topic,
-    className: `${cnRoot}__wrapper`,
-    flow: _a.y,
-    opening: _e.flyover,
-    persistence: _a.none,
-    trigger,
-    items: itemsNode,
-  };
 }
 
 /**

@@ -68,54 +68,127 @@ class __window_folder extends mfsInteract {
     };
   }
 
-  /**
-   * Toggle "zoom" — macOS-style maximize-within-workspace.
-   * First call captures the current bounds and animates the window to fill
-   * its workspace container; second call restores those captured bounds.
-   */
   toggleZoom() {
-    if (document.fullscreenElement === this.el) {
+    const inFs = document.fullscreenElement === this.el;
+    // While the window is in browser fullscreen, the WM's resize handler
+    // has already overwritten this.style with viewport-sized values (via
+    // syncGeometry → $el.width()). A fresh snapshot here would cache that
+    // viewport size as the zoom-restore target. Fall back to _preFsBounds,
+    // which was captured before fullscreen entry.
+    const preFsSafe = inFs ? this._preFsBounds : null;
+    if (inFs) {
+      this._preFsBounds = null;
       document.exitFullscreen();
     }
     if (this._zoomed && this._preZoomBounds) {
-      this.change_size_to(this._preZoomBounds);
+      this._applyBounds(this._preZoomBounds);
       this._zoomed = false;
+      this._preZoomBounds = null;
       return;
     }
-    const pos = this.$el.position();
-    this._preZoomBounds = {
-      left: pos.left,
-      top: pos.top,
-      width: this.$el.width(),
-      height: this.$el.height(),
-    };
-    const workspace =
-      document.querySelector(".desk-module__wm-container") ||
-      document.querySelector(".desk-module__right-side");
-    const rect = workspace ? workspace.getBoundingClientRect() : {};
-    const w = rect.width || window.innerWidth;
-    const h = rect.height || window.innerHeight;
-    this.change_size_to({ left: 0, top: 0, width: w, height: h });
+    this._preZoomBounds = preFsSafe || this._snapshotBounds();
+    const ws = this._workspaceRect();
+    this._applyBounds({ left: 0, top: 0, width: ws.width, height: ws.height });
     this._zoomed = true;
   }
 
-  /**
-   * Restore the window to its default bounds (the same geometry it had
-   * when first opened) — the macOS green-button "Zoom" reset behavior.
-   */
+  toggleFullscreen() {
+    if (document.fullscreenElement === this.el) {
+      document.exitFullscreen();
+      return;
+    }
+    this._preFsBounds = this._snapshotBounds();
+    // One-shot listener handles both menu "Exit Full Screen" and ESC.
+    const onChange = () => {
+      if (document.fullscreenElement === this.el) return;
+      document.removeEventListener("fullscreenchange", onChange);
+      const restore = this._preFsBounds;
+      this._preFsBounds = null;
+      if (restore) _.delay(() => this._applyBounds(restore), 50);
+    };
+    document.addEventListener("fullscreenchange", onChange);
+    const req = this.el.requestFullscreen && this.el.requestFullscreen();
+    if (req && req.catch) {
+      req.catch(() => document.removeEventListener("fullscreenchange", onChange));
+    }
+  }
+
+  tileToSide(side) {
+    if (document.fullscreenElement === this.el) {
+      this._preFsBounds = null;
+      document.exitFullscreen();
+    }
+    const ws = this._workspaceRect();
+    const halfW = Math.floor(ws.width / 2);
+    const bounds = side === "right"
+      ? { left: halfW, top: 0, width: ws.width - halfW, height: ws.height }
+      : { left: 0, top: 0, width: halfW, height: ws.height };
+    this._applyBounds(bounds);
+    this._zoomed = false;
+    this._preZoomBounds = null;
+  }
+
   reframeToDefault() {
     if (document.fullscreenElement === this.el) {
+      this._preFsBounds = null;
       document.exitFullscreen();
     }
     const b = this._defaultBounds();
-    this.change_size_to({
-      left: b.left,
-      top: b.top,
-      width: b.width,
-      height: b.height,
-    });
+    this._applyBounds({ left: b.left, top: b.top, width: b.width, height: b.height });
     this._zoomed = false;
     this._preZoomBounds = null;
+  }
+
+  _snapshotBounds() {
+    const m = this.style.toJSON() || {};
+    const el = this.el;
+    const pos = this.$el.position() || { left: 0, top: 0 };
+    const px = (v, fallback) => {
+      if (typeof v === "number" && Number.isFinite(v)) return Math.round(v);
+      const n = parseFloat(v);
+      return Number.isFinite(n) ? Math.round(n) : fallback;
+    };
+    return {
+      left: px(m.left, px(el.style.left, Math.round(pos.left))),
+      top: px(m.top, px(el.style.top, Math.round(pos.top))),
+      width: px(m.width, px(el.style.width, this.$el.outerWidth())),
+      height: px(m.height, px(el.style.height, this.$el.outerHeight())),
+    };
+  }
+
+  _workspaceRect() {
+    const el =
+      document.querySelector(".desk-module__wm-container") ||
+      document.querySelector(".desk-module__right-side");
+    const r = el ? el.getBoundingClientRect() : {};
+    return {
+      width: Math.round(r.width || window.innerWidth),
+      height: Math.round(r.height || window.innerHeight),
+    };
+  }
+
+  _applyBounds(bounds) {
+    const ws = this._workspaceRect();
+    const minW = (this.size && this.size.minWidth) || 760;
+    const minH = (this.size && this.size.minHeight) || 480;
+    const width = Math.max(minW, Math.min(bounds.width, ws.width));
+    const height = Math.max(minH, Math.min(bounds.height, ws.height));
+    const next = {
+      left: Math.max(0, Math.min(bounds.left, Math.max(0, ws.width - width))),
+      top: Math.max(0, Math.min(bounds.top, Math.max(0, ws.height - height))),
+      width,
+      height,
+    };
+    this.size = { ...this.size, width: next.width, height: next.height };
+    this.style.set(next);
+    this.$el.stop(true, false).animate(next, {
+      duration: 220,
+      queue: false,
+      complete: () => {
+        this.$el.css(next);
+        if (this.syncBounds) this.syncBounds(true);
+      },
+    });
   }
 
   /**
@@ -660,6 +733,15 @@ class __window_folder extends mfsInteract {
 
       case "window-reframe":
         return this.reframeToDefault();
+
+      case "window-tile-left":
+        return this.tileToSide("left");
+
+      case "window-tile-right":
+        return this.tileToSide("right");
+
+      case "fullscreen":
+        return this.toggleFullscreen();
 
       default:
         super.onUiEvent(cmd, args);

@@ -119,14 +119,9 @@ const __skl_folder_topbar = function (ui) {
 
   let controls = require("window/skeleton/topbar/control")(ui, "c");
 
-  const zoom = Skeletons.Box.X({
-    className: `${cnFolder}__zoom-wrapper`,
-    kids: [zoomMenu(ui)],
-  });
-
   const rightCluster = Skeletons.Box.X({
     className: `${cnFolder}__right`,
-    kids: [videoBtn, uploadBtn, addNew, shareBtn, settingsBtn, splitBtn, zoom, controls],
+    kids: [videoBtn, uploadBtn, addNew, shareBtn, settingsBtn, splitBtn, zoomMenu(ui), controls],
   });
 
   // ── Root row ─────────────────────────────────────────────────
