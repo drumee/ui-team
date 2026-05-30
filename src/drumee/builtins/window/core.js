@@ -821,12 +821,30 @@ class __window_core extends __utils {
         });
 
       case "fullscreen":
-        if (document.fullscreenElement) {
+        // Scope to THIS window's element. document.fullscreenElement is truthy
+        // for ANY element in fullscreen, so the bare check would exit whatever
+        // other window/video is fullscreen instead of toggling this one.
+        if (document.fullscreenElement === this.el) {
           this._fullscreen = false;
           this.el.onfullscreenchange = null;
           document.exitFullscreen();
         } else {
           this._fullscreen = true;
+          // Capture pre-fullscreen geometry and restore it on exit. The WM's
+          // resize handler overwrites this.style with viewport-sized values
+          // while fullscreen, so without this the window stays maximized after
+          // leaving fullscreen (via the button or ESC).
+          this.currentSize = {
+            width: this.$el.width(),
+            height: this.$el.height(),
+          };
+          this.size = this.currentSize;
+          const restore = { ...this.currentSize, ...this.$el.position() };
+          this.el.onfullscreenchange = () => {
+            if (document.fullscreenElement === this.el) return;
+            this.el.onfullscreenchange = null;
+            _.delay(() => this.change_size_to(restore), 50);
+          };
           this.el.requestFullscreen();
         }
         if (this.__ctrlFullscreen && this.__ctrlFullscreen.setState) {

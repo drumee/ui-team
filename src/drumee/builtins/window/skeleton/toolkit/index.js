@@ -542,19 +542,23 @@ export function visioMenu(ui, opt = {}) {
  */
 export function zoomMenu(ui) {
   const cnRoot = `${ui.fig.family}-topbar__zoom`;
-  const isFullscreen = !!document.fullscreenElement;
 
   const items = [
     {
       service: "fullscreen",
       ico: "player-fullscreen",
-      content: isFullscreen ? LOCALE.EXIT_FULLSCREEN : LOCALE.FULLSCREEN,
+      // The fullscreen row renders two CSS-swapped labels (see kids map) so it
+      // tracks the live fullscreen state instead of a stale build-time snapshot
+      // of document.fullscreenElement.
+      content: LOCALE.FULLSCREEN,
       modifier: "fullscreen",
     },
     {
       service: "window-zoom",
       ico: "desktop_fullview",
-      content: LOCALE.ZOOM,
+      // Dedicated key (not LOCALE.ZOOM, which labels the Zoom video app) so
+      // this "maximize window" action can be translated independently.
+      content: LOCALE.WINDOW_ZOOM,
       modifier: "zoom",
     },
     {
@@ -602,11 +606,28 @@ export function zoomMenu(ui) {
                 active: 0,
                 className: `${cnRoot}-item-icon`,
               }),
-              Skeletons.Note({
-                content,
-                active: 0,
-                className: `${cnRoot}-item-label`,
-              }),
+              // Fullscreen row carries both labels; CSS (`:fullscreen`) shows the
+              // right one. Every other row has a single static label.
+              ...(modifier === "fullscreen"
+                ? [
+                    Skeletons.Note({
+                      content: LOCALE.FULLSCREEN,
+                      active: 0,
+                      className: `${cnRoot}-item-label ${cnRoot}-item-label--fs-enter`,
+                    }),
+                    Skeletons.Note({
+                      content: LOCALE.EXIT_FULLSCREEN,
+                      active: 0,
+                      className: `${cnRoot}-item-label ${cnRoot}-item-label--fs-exit`,
+                    }),
+                  ]
+                : [
+                    Skeletons.Note({
+                      content,
+                      active: 0,
+                      className: `${cnRoot}-item-label`,
+                    }),
+                  ]),
             ],
           }),
         ),

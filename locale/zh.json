@@ -1,4 +1,8 @@
 {
+  "WINDOW_ZOOM": "缩放",
+  "TILE_LEFT": "靠左平铺",
+  "TILE_RIGHT": "靠右平铺",
+  "REFRAME": "重置窗口",
   "km": "高棉",
   "ACCESS_PERMISSION": "访问权限",
   "ACK_COPY_LINK": "链接已复制到剪贴板中",

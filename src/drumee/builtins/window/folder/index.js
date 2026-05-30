@@ -76,20 +76,20 @@ class __window_folder extends mfsInteract {
     // viewport size as the zoom-restore target. Fall back to _preFsBounds,
     // which was captured before fullscreen entry.
     const preFsSafe = inFs ? this._preFsBounds : null;
-    if (inFs) {
-      this._preFsBounds = null;
-      document.exitFullscreen();
-    }
+
+    let target;
     if (this._zoomed && this._preZoomBounds) {
-      this._applyBounds(this._preZoomBounds);
+      target = this._preZoomBounds;
       this._zoomed = false;
       this._preZoomBounds = null;
-      return;
+    } else {
+      this._preZoomBounds = preFsSafe || this._snapshotBounds();
+      const ws = this._workspaceRect();
+      target = { left: 0, top: 0, width: ws.width, height: ws.height };
+      this._zoomed = true;
     }
-    this._preZoomBounds = preFsSafe || this._snapshotBounds();
-    const ws = this._workspaceRect();
-    this._applyBounds({ left: 0, top: 0, width: ws.width, height: ws.height });
-    this._zoomed = true;
+    // Defer the resize until after fullscreen actually exits (see helper).
+    this._applyBoundsAfterFs(target);
   }
 
   toggleFullscreen() {
@@ -114,29 +114,21 @@ class __window_folder extends mfsInteract {
   }
 
   tileToSide(side) {
-    if (document.fullscreenElement === this.el) {
-      this._preFsBounds = null;
-      document.exitFullscreen();
-    }
     const ws = this._workspaceRect();
     const halfW = Math.floor(ws.width / 2);
     const bounds = side === "right"
       ? { left: halfW, top: 0, width: ws.width - halfW, height: ws.height }
       : { left: 0, top: 0, width: halfW, height: ws.height };
-    this._applyBounds(bounds);
     this._zoomed = false;
     this._preZoomBounds = null;
+    this._applyBoundsAfterFs(bounds);
   }
 
   reframeToDefault() {
-    if (document.fullscreenElement === this.el) {
-      this._preFsBounds = null;
-      document.exitFullscreen();
-    }
     const b = this._defaultBounds();
-    this._applyBounds({ left: b.left, top: b.top, width: b.width, height: b.height });
     this._zoomed = false;
     this._preZoomBounds = null;
+    this._applyBoundsAfterFs({ left: b.left, top: b.top, width: b.width, height: b.height });
   }
 
   _snapshotBounds() {
@@ -165,6 +157,29 @@ class __window_folder extends mfsInteract {
       width: Math.round(r.width || window.innerWidth),
       height: Math.round(r.height || window.innerHeight),
     };
+  }
+
+  /**
+   * Apply bounds, but if this window is currently in browser fullscreen, exit
+   * first and defer the resize to the `fullscreenchange` event. Resizing while
+   * still fullscreen animates against the fullscreen overlay (the browser
+   * ignores inline geometry until exit), so the animation is invisible and the
+   * final geometry can be wrong. Mirrors the deferred pattern in
+   * toggleFullscreen().
+   */
+  _applyBoundsAfterFs(bounds) {
+    if (document.fullscreenElement === this.el) {
+      this._preFsBounds = null;
+      const onChange = () => {
+        if (document.fullscreenElement === this.el) return;
+        document.removeEventListener("fullscreenchange", onChange);
+        _.delay(() => this._applyBounds(bounds), 50);
+      };
+      document.addEventListener("fullscreenchange", onChange);
+      document.exitFullscreen();
+      return;
+    }
+    this._applyBounds(bounds);
   }
 
   _applyBounds(bounds) {

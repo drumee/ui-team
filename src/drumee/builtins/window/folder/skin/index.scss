@@ -538,8 +538,7 @@
       box-shadow:
         0 4px 8px -2px rgba(0, 0, 0, 0.08),
         0 12px 24px -4px rgba(0, 0, 0, 0.12);
-      display: flex;
-      flex-direction: column;
+      // Box.Y already supplies `display: flex; flex-direction: column`.
       gap: 2px;
 
       opacity: 0;
@@ -575,7 +574,7 @@
     }
 
     &__zoom-item {
-      display: flex;
+      // Box.X already supplies `display: flex; flex-direction: row`.
       align-items: center;
       gap: 10px;
       padding: 8px 10px;
@@ -614,6 +613,26 @@
 
     &__zoom-item-label {
       flex: 1;
+    }
+
+    // Fullscreen label swaps "Enter"/"Exit Full Screen" purely in CSS. The
+    // window element this menu lives in is the one passed to requestFullscreen,
+    // so `:fullscreen` reflects the live state — no stale `document.fullscreen
+    // Element` snapshot baked at skeleton-build time.
+    &__zoom-item-label--fs-exit {
+      display: none;
+    }
+
+    // When the window element is in browser fullscreen, show "Exit Full Screen"
+    // and hide "Enter Full Screen". Emitted at root so the selector starts from
+    // the `:fullscreen` ancestor (the window el), not from `.window-folder-topbar`.
+    @at-root {
+      :fullscreen .window-folder-topbar__zoom-item-label--fs-enter {
+        display: none !important;
+      }
+      :fullscreen .window-folder-topbar__zoom-item-label--fs-exit {
+        display: block !important;
+      }
     }
 
     // The window control (close ×) sits at the far right of the row.
