@@ -484,8 +484,6 @@ class __window_manager extends push {
    * Home › Workspace › Folder path via the change-workspace broadcast.
    */
   openWorkspaceFolder(node) {
-    this.debug("AAA:314", node);
-
     const data = node.model ? node.model.toJSON() : node || {};
     let media = Wm.getItemsByAttr(_a.nid, data.nid)[0];
     if (media) {
@@ -516,7 +514,6 @@ class __window_manager extends push {
         }
         let currentFolder = this.getWindowsPool().children.last();
         currentFolder.refreshContent(attrs);
-        this.debug("AAA:374", currentFolder, attrs);
       })
       .catch((e) => this.warn("loadWorkspace: get_attributes failed", e));
 
@@ -1471,7 +1468,7 @@ class __window_manager extends push {
   async onUiEvent(cmd, args = {}) {
     const service =
       args.service || cmd.service || cmd.status || cmd.mget(_a.service);
-    this.debug("AAAA:1460", service)
+    this.verbose("Wm.onUiEvent[1471]", service)
 
     switch (service) {
       case "open-manager":

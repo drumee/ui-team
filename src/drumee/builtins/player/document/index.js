@@ -2,7 +2,7 @@
 const { filesize, fitBoxes } = require("@drumee/ui-essentials")
 const { TweenMax, Expo } = require("@drumee/ui-core/vendor");
 const PlayerInteract = require('player/interact');
-const { loadPdfDocument, initializePdfium, getCurrentPdfiumDocumentBlob } = require('./pdfium-wrapper')
+const { loadPdfDocument, getCurrentPdfiumDocumentBlob } = require('./pdfium-wrapper')
 const WS_EVENT = "ws:event";
 const EDITOR_READY_FALLBACK_MS = 2500;
 const EDITOR_READY_EVENTS = new Set(['onDocumentReady', 'onAppReady', 'docEditorReady']);
@@ -61,8 +61,6 @@ class __player_document extends PlayerInteract {
       this.media = opt.source || opt.trigger;
     }
     this.pollCount = 0;
-    prewarmEditor();
-    initializePdfium(); /** Lazy load the reader anyway */
   }
 
 
@@ -127,7 +125,7 @@ class __player_document extends PlayerInteract {
     Wm.on(WS_EVENT, this.onWsMessage)
     this.initSize();
     if (this.shouldOpenInEditMode()) {
-      return this.edit();
+      return this.edit({ fullscreen: true });
     }
     this.reload(300);
   }
@@ -681,7 +679,7 @@ class __player_document extends PlayerInteract {
     this.raise();
     let o = require("window/configs/default")();
     this.el.dataset.ready = 1;
-    let maxWidth = 742;
+    let maxWidth = 10240;
     let maxHeight = 900;
     const max_height = window.innerHeight - o.offsetY - 2 * o.marginY;
     const max_width = window.innerWidth - 2 * o.marginX;
