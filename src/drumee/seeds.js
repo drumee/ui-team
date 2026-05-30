@@ -558,6 +558,9 @@ module.exports = {
   window_search: function () {
     return import("./builtins/window/search");
   },
+  window_secure_share: function () {
+    return import("./builtins/window/secure-share");
+  },
   window_sharebox: function () {
     return import("./builtins/window/sharebox");
   },
