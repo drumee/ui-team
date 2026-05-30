@@ -39,6 +39,7 @@ class __window_secure_share extends mfsInteract {
   onDomRefresh() {
     this.feed(require('./skeleton/main')(this));
     this.raise();
+    this.setupInteract();
   }
 
   onPartReady(child, pn) {
