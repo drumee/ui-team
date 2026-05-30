@@ -68,6 +68,144 @@ class __window_folder extends mfsInteract {
     };
   }
 
+  toggleZoom() {
+    const inFs = document.fullscreenElement === this.el;
+    // While the window is in browser fullscreen, the WM's resize handler
+    // has already overwritten this.style with viewport-sized values (via
+    // syncGeometry → $el.width()). A fresh snapshot here would cache that
+    // viewport size as the zoom-restore target. Fall back to _preFsBounds,
+    // which was captured before fullscreen entry.
+    const preFsSafe = inFs ? this._preFsBounds : null;
+
+    let target;
+    if (this._zoomed && this._preZoomBounds) {
+      target = this._preZoomBounds;
+      this._zoomed = false;
+      this._preZoomBounds = null;
+    } else {
+      this._preZoomBounds = preFsSafe || this._snapshotBounds();
+      const ws = this._workspaceRect();
+      target = { left: 0, top: 0, width: ws.width, height: ws.height };
+      this._zoomed = true;
+    }
+    // Defer the resize until after fullscreen actually exits (see helper).
+    this._applyBoundsAfterFs(target);
+  }
+
+  toggleFullscreen() {
+    if (document.fullscreenElement === this.el) {
+      document.exitFullscreen();
+      return;
+    }
+    this._preFsBounds = this._snapshotBounds();
+    // One-shot listener handles both menu "Exit Full Screen" and ESC.
+    const onChange = () => {
+      if (document.fullscreenElement === this.el) return;
+      document.removeEventListener("fullscreenchange", onChange);
+      const restore = this._preFsBounds;
+      this._preFsBounds = null;
+      if (restore) _.delay(() => this._applyBounds(restore), 50);
+    };
+    document.addEventListener("fullscreenchange", onChange);
+    const req = this.el.requestFullscreen && this.el.requestFullscreen();
+    if (req && req.catch) {
+      req.catch(() => document.removeEventListener("fullscreenchange", onChange));
+    }
+  }
+
+  tileToSide(side) {
+    const ws = this._workspaceRect();
+    const halfW = Math.floor(ws.width / 2);
+    const bounds = side === "right"
+      ? { left: halfW, top: 0, width: ws.width - halfW, height: ws.height }
+      : { left: 0, top: 0, width: halfW, height: ws.height };
+    this._zoomed = false;
+    this._preZoomBounds = null;
+    this._applyBoundsAfterFs(bounds);
+  }
+
+  reframeToDefault() {
+    const b = this._defaultBounds();
+    this._zoomed = false;
+    this._preZoomBounds = null;
+    this._applyBoundsAfterFs({ left: b.left, top: b.top, width: b.width, height: b.height });
+  }
+
+  _snapshotBounds() {
+    const m = this.style.toJSON() || {};
+    const el = this.el;
+    const pos = this.$el.position() || { left: 0, top: 0 };
+    const px = (v, fallback) => {
+      if (typeof v === "number" && Number.isFinite(v)) return Math.round(v);
+      const n = parseFloat(v);
+      return Number.isFinite(n) ? Math.round(n) : fallback;
+    };
+    return {
+      left: px(m.left, px(el.style.left, Math.round(pos.left))),
+      top: px(m.top, px(el.style.top, Math.round(pos.top))),
+      width: px(m.width, px(el.style.width, this.$el.outerWidth())),
+      height: px(m.height, px(el.style.height, this.$el.outerHeight())),
+    };
+  }
+
+  _workspaceRect() {
+    const el =
+      document.querySelector(".desk-module__wm-container") ||
+      document.querySelector(".desk-module__right-side");
+    const r = el ? el.getBoundingClientRect() : {};
+    return {
+      width: Math.round(r.width || window.innerWidth),
+      height: Math.round(r.height || window.innerHeight),
+    };
+  }
+
+  /**
+   * Apply bounds, but if this window is currently in browser fullscreen, exit
+   * first and defer the resize to the `fullscreenchange` event. Resizing while
+   * still fullscreen animates against the fullscreen overlay (the browser
+   * ignores inline geometry until exit), so the animation is invisible and the
+   * final geometry can be wrong. Mirrors the deferred pattern in
+   * toggleFullscreen().
+   */
+  _applyBoundsAfterFs(bounds) {
+    if (document.fullscreenElement === this.el) {
+      this._preFsBounds = null;
+      const onChange = () => {
+        if (document.fullscreenElement === this.el) return;
+        document.removeEventListener("fullscreenchange", onChange);
+        _.delay(() => this._applyBounds(bounds), 50);
+      };
+      document.addEventListener("fullscreenchange", onChange);
+      document.exitFullscreen();
+      return;
+    }
+    this._applyBounds(bounds);
+  }
+
+  _applyBounds(bounds) {
+    const ws = this._workspaceRect();
+    const minW = (this.size && this.size.minWidth) || 760;
+    const minH = (this.size && this.size.minHeight) || 480;
+    const width = Math.max(minW, Math.min(bounds.width, ws.width));
+    const height = Math.max(minH, Math.min(bounds.height, ws.height));
+    const next = {
+      left: Math.max(0, Math.min(bounds.left, Math.max(0, ws.width - width))),
+      top: Math.max(0, Math.min(bounds.top, Math.max(0, ws.height - height))),
+      width,
+      height,
+    };
+    this.size = { ...this.size, width: next.width, height: next.height };
+    this.style.set(next);
+    this.$el.stop(true, false).animate(next, {
+      duration: 220,
+      queue: false,
+      complete: () => {
+        this.$el.css(next);
+        if (this.syncBounds) this.syncBounds(true);
+      },
+    });
+  }
+
   /**
    * @param {*} opt
    */
@@ -605,6 +743,21 @@ class __window_folder extends mfsInteract {
         }
         return super.onUiEvent(cmd, args);
 
+      case "window-zoom":
+        return this.toggleZoom();
+
+      case "window-reframe":
+        return this.reframeToDefault();
+
+      case "window-tile-left":
+        return this.tileToSide("left");
+
+      case "window-tile-right":
+        return this.tileToSide("right");
+
+      case "fullscreen":
+        return this.toggleFullscreen();
+
       default:
         super.onUiEvent(cmd, args);
     }
@@ -998,7 +1151,7 @@ class __window_folder extends mfsInteract {
     return [
       { label: LOCALE.ROLE_ADMIN, privilege: _K.privilege.admin },
       { label: LOCALE.ROLE_VIEW_EDIT, privilege: _K.privilege.write },
-      { label: LOCALE.ROLE_VIEW_CHAT, privilege: _K.privilege.read },
+      { label: LOCALE.ROLE_VIEW_CHAT, privilege: _K.privilege.chat },
       {
         label: LOCALE.VIEW,
         privilege: _K.privilege.guest || _K.privilege.read,
