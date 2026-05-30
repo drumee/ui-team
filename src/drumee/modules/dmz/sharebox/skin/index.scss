@@ -222,6 +222,11 @@
     font-family: var(--sb-font-body);
   }
 
+  &__subline-expiry {
+    @include drumee.typo($size: 12px, $line: 1.4, $weight: 400, $color: var(--sb-text-muted));
+    font-family: var(--sb-font-body);
+  }
+
   &__breadcrumb {
     background: #ffffff;
     backdrop-filter: blur(6px);

@@ -132,6 +132,12 @@
     "member_admin_remove": "adminpanel.member_admin_remove",
     "send_password_link": "adminpanel.send_password_link"
   },
+  "secure_share": {
+    "create": "secure_share.create",
+    "list": "secure_share.list",
+    "revoke": "secure_share.revoke",
+    "delete": "secure_share.delete"
+  },
   "reward_hub": {
     "get_env": "reward_hub.get_env",
     "get_referral_code": "reward_hub.get_referral_code",

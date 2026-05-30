@@ -168,6 +168,8 @@ const __button = function (ui, trigger, k) {
 
     share: button({ content: LOCALE.SHARE, service: _a.share }),
 
+    secureShare: button({ content: LOCALE.SECURE_SHARE, service: 'secure-share' }),
+
     share_qrcode: button({ content: LOCALE.SHOW_QRCODE, service: "share-qrcode" }),
 
     shortcut: button({ content: LOCALE.CREATE_SHORTCUT, service: _a.shortcut }),
