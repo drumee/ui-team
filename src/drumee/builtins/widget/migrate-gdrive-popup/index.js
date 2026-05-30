@@ -1,23 +1,28 @@
 /**
- * Google Drive migration popup
+ * Google Drive migration popup — state machine.
  *
- * Asks the user for a Google Drive folder ID (optional — defaults to "root"
- * = entire My Drive) and triggers google_drive.import_directory against the
- * current Drumee destination (hub_id/nid passed in by opener).
+ *   checking      → fetch has_drive_scope
+ *     ├ not-connected → "Connect Google Drive" button opens OAuth popup;
+ *     │   listens for window.postMessage({ type: 'gdrive-connected', ok })
+ *     │   from butler.google_drive_callback's closing page → re-checks
+ *     │   scope on success.
+ *     └ ready     → settings form (source folder + Shared Drives toggle)
+ *                  → "Start migration" → POST google_drive.start_migration
+ *                  → state = in-progress with job_id
+ *   in-progress  → poll google_drive.get_status every 2s until status
+ *                  != 'queued' and != 'running'
+ *   done | failed | cancelled → summary + close
  *
- * OAuth precondition is not handled here: if the user hasn't linked their
- * Google account, the backend throws and we surface the error message.
+ * When opened with opt.autoFromOnboarding = 1 the popup shows a "Skip
+ * for now" link in the not-connected + ready states; clicking it POSTs
+ * google_drive.dismiss_post_onboarding then closes.
  */
-class __migrate_gdrive_popup extends LetcBox {
-  constructor(...args) {
-    super(...args);
-    this.onDomRefresh = this.onDomRefresh.bind(this);
-    this.onPartReady = this.onPartReady.bind(this);
-    this.onUiEvent = this.onUiEvent.bind(this);
-  }
 
+const POLL_INTERVAL_MS = 2000;
+
+class __migrate_gdrive_popup extends LetcBox {
   static initClass() {
-    require("./skin");
+    require('./skin');
   }
 
   initialize(opt = {}) {
@@ -25,149 +30,493 @@ class __migrate_gdrive_popup extends LetcBox {
     this.declareHandlers();
     this._hub_id = opt.hub_id || Visitor.id;
     this._nid = opt.nid || Visitor.get(_a.home_id);
-    this._destinationName = opt.destinationName || LOCALE.MY_HOME || "My home";
-  }
-
-  onDomRefresh() {
-    this.feed(require("./skeleton")(this));
-    this.el.dataset.state = 1;
-    if (this.parent && this.parent.el) {
-      this._wrapperEl = this.parent.el;
-      this._wrapperEl.dataset.state = "open";
-      this._wrapperEl.dataset.overlay = "blur";
+    this._destinationName = opt.destinationName || LOCALE.MY_HOME || 'My home';
+    this._autoFromOnboarding = !!opt.autoFromOnboarding;
+    this._state = 'checking';
+    this._jobId = null;
+    this._jobSnap = null;
+    this._poll = null;
+    // Last result the user already dismissed (profile.gdrive_seen_job from the
+    // server) — so a migration that finished while the popup was closed is
+    // shown exactly once.
+    this._seenJobId = null;
+    // True once the user has at least one prior migration job — lets the
+    // "ready" screen frame re-running as an incremental sync (new files only).
+    this._hasPriorJob = false;
+    // Form values persisted on the instance — the popup re-renders on every
+    // state transition (post-OAuth, post-poll, etc.) and `feed()` rebuilds
+    // the DOM, so reading raw `<input>` / `dataset` is unreliable. Skeleton
+    // reads these via the getters below.
+    this._includeShared = 0;
+    // Migration mode + lazy folder-tree state (Selected mode). All of this
+    // lives on the instance so it survives the re-render cycle.
+    this._migrateMode = 'all';                 // 'all' | 'selected'
+    this._treeCache = {};                      // folderId → { items, next_page_token, error? }
+    this._expanded = new Set();
+    this._checkedFolders = new Set();
+    this._checkedFiles = new Set();
+    this._loading = new Set();
+    this._onPostMessage = this._onPostMessage.bind(this);
+    this._onStorage = this._onStorage.bind(this);
+    window.addEventListener('message', this._onPostMessage, false);
+    // Google's consent screen sets Cross-Origin-Opener-Policy, which severs
+    // the OAuth popup's window.opener — so the callback page can't reliably
+    // postMessage back. Listen on same-origin channels that survive opener
+    // severance instead.
+    window.addEventListener('storage', this._onStorage, false);
+    try {
+      this._bc = new BroadcastChannel('gdrive-oauth');
+      this._bc.onmessage = (evt) => {
+        const d = evt && evt.data;
+        if (d && d.type === 'gdrive-migration-started') return this._onMigrationStarted(d);
+        return this._handleConnectResult(d);
+      };
+    } catch (e) {
+      this._bc = null;
     }
   }
 
   onBeforeDestroy() {
-    if (this._wrapperEl) {
-      this._wrapperEl.dataset.state = "closed";
-      delete this._wrapperEl.dataset.overlay;
+    window.removeEventListener('message', this._onPostMessage, false);
+    window.removeEventListener('storage', this._onStorage, false);
+    if (this._bc) { try { this._bc.close(); } catch (e) {} this._bc = null; }
+    this._stopPolling();
+  }
+
+  /**
+   * Wm.launch({ singleton: 1 }) reuses the existing popup instance and
+   * calls .raise() on it instead of relaunching. LetcBox doesn't ship
+   * one; without this stub the second click would throw `w.raise is not
+   * a function` and never bring the popup back to the user.
+   */
+  raise() {
+    if (this.el) {
+      this.el.style.display = '';
+      this.el.style.zIndex = 9999;
+    }
+    return this;
+  }
+
+  async onDomRefresh() {
+    this._portalToBody();
+    this._render();
+    await this._refreshScope();
+  }
+
+  /**
+   * Wm.launch renders the popup inside window-manager (z-auto), but the
+   * Settings overlay slot has z-index 1500 — Settings paints on top.
+   * Move the root element to document.body so its position:fixed + high
+   * z-index actually wins.
+   */
+  _portalToBody() {
+    if (!this.el) return;
+    if (this.el.parentElement !== document.body) {
+      document.body.appendChild(this.el);
     }
   }
 
-  onPartReady(child, pn) {
-    if (pn === "folder-id-input") {
-      this._folderInput = child;
-    } else if (pn === "submit-btn") {
-      this._submitBtn = child;
-    } else if (pn === "status") {
-      this._statusBox = child;
+  // ───────── state transitions ─────────
+
+  _render() {
+    this.feed(require('./skeleton')(this));
+  }
+
+  async _refreshScope() {
+    this._state = 'checking';
+    this._render();
+    let res;
+    try {
+      // get_state is the source of truth: it tells us whether a migration is
+      // running in the worker (so we reconnect instead of showing "Start"),
+      // whether one just finished (show the result once), and the drive scope.
+      res = await this.fetchService('google_drive.get_state', { hub_id: Visitor.id });
+    } catch (e) {
+      this.warn('[migrate-gdrive] get_state failed', e);
+      res = {};
     }
-  }
+    this._seenJobId = (res && res.seen_job_id) || null;
+    const job = res && res.job;
+    this._hasPriorJob = !!job;
 
-  _closePopup() {
-    if (this.parent && _.isFunction(this.parent.clear)) {
-      this.parent.clear();
-    } else {
-      this.softDestroy();
-    }
-  }
-
-  _getFolderId() {
-    const inputEl = this._folderInput?.el?.querySelector("input");
-    const raw = (inputEl?.value || "").trim();
-    return raw || "root";
-  }
-
-  _setBusy(busy) {
-    if (this._submitBtn) {
-      this._submitBtn.el.dataset.state = busy ? 0 : 1;
-      this._submitBtn.el.dataset.busy = busy ? 1 : 0;
-    }
-    if (this.el) this.el.dataset.busy = busy ? 1 : 0;
-  }
-
-  _setStatus(msg, kind) {
-    if (!this._statusBox) return;
-    this._statusBox.el.dataset.kind = kind || "";
-    this._statusBox.el.dataset.state = msg ? 1 : 0;
-    this._statusBox.el.textContent = msg || "";
-  }
-
-  // The framework catches non-200 responses and routes them through
-  // onServerComplain instead of rejecting the postService promise — so
-  // .then() receives `undefined` and `.catch()` never fires. Capture the
-  // reason here so _startMigration can surface it.
-  async onServerComplain(err) {
-    let reason = "";
-    if (err && typeof err.json === "function") {
-      try {
-        const body = await err.json();
-        reason = (body && (body.reason || body.error)) || "";
-      } catch (e) { /* body wasn't JSON */ }
-    } else if (err && typeof err === "object") {
-      reason = err.reason || err.error || err.message || "";
-    }
-    this._lastServerError = reason || LOCALE.TRY_AGAIN || "Try again";
-    this._setBusy(false);
-    this._running = 0;
-    this._setStatus(this._lastServerError, "error");
-  }
-
-  _startMigration() {
-    if (this._running) return;
-    if (!this._nid) {
-      this._setStatus(LOCALE.TRY_AGAIN || "Try again", "error");
+    // 1) A migration is still running in the worker → reconnect + resume poll.
+    if (job && (job.status === 'queued' || job.status === 'running')) {
+      this._jobId = job.job_id;
+      this._jobSnap = job;
+      this._state = 'in-progress';
+      this._render();
+      this._startPolling();
       return;
     }
-    this._running = 1;
-    this._lastServerError = null;
-    this._setBusy(true);
-    this._setStatus(LOCALE.MIGRATION_IN_PROGRESS || "Migration in progress. This may take several minutes…", "info");
 
-    const folder_id = this._getFolderId();
-    this.postService("google_drive.import_directory", {
-      hub_id: this._hub_id,
-      nid: this._nid,
-      folder_id,
-    }).then((data) => {
-      // onServerComplain already populated status + reset state.
-      if (this._lastServerError) return;
-      // 200 with embedded error payload (rare but possible).
-      if (data && (data.error || data.error_code)) {
-        const reason = data.reason || data.error || LOCALE.TRY_AGAIN;
-        this._setStatus(reason, "error");
-        this._setBusy(false);
-        this._running = 0;
-        return;
-      }
-      if (!data) {
-        // No data and no captured error — bail without claiming success.
-        this._setStatus(LOCALE.TRY_AGAIN || "Try again", "error");
-        this._setBusy(false);
-        this._running = 0;
-        return;
-      }
-      const folders = data.folders || 0;
-      const files = data.files || 0;
-      const skipped = data.skipped || 0;
-      const errors = data.errors || [];
-      const summary = (LOCALE.MIGRATION_SUCCESS_SUMMARY
-        || "Imported {0} files in {1} folders ({2} skipped, {3} errors).")
-        .format(files, folders, skipped, errors.length);
-      if (Wm && _.isFunction(Wm.alert)) Wm.alert(summary);
-      this.triggerHandlers({ service: "migration-complete", stats: data });
-      this._closePopup();
-    }).catch((e) => {
-      this.warn("[migrate-gdrive] import_directory failed", e);
-      const reason = (e && (e.reason || e.error || e.message)) || LOCALE.TRY_AGAIN;
-      this._setStatus(reason, "error");
-      this._setBusy(false);
-      this._running = 0;
-    });
+    // 2) A migration finished while the popup was closed → show its result
+    //    once. _close() acks it (server: profile.gdrive_seen_job) so later
+    //    opens fall through to the normal ready screen.
+    if (job && ['done', 'failed', 'cancelled'].includes(job.status)
+        && String(job.job_id) !== String(this._seenJobId)) {
+      this._jobId = job.job_id;
+      this._jobSnap = job;
+      this._state = job.status;
+      this._render();
+      return;
+    }
+
+    // 3) No active/unseen job → connect or ready as before.
+    this._state = (res && res.ok) ? 'ready' : 'not-connected';
+    this._render();
   }
+
+  _onPostMessage(evt) {
+    // Only accept messages from our own origin — the callback page is
+    // served same-origin and posts with window.location.origin as target.
+    if (evt && evt.origin && evt.origin !== window.location.origin) return;
+    this._handleConnectResult(evt && evt.data);
+  }
+
+  _onStorage(evt) {
+    // The callback page writes the result to localStorage when its
+    // window.opener was severed by Google's COOP. `storage` events fire only
+    // in *other* same-origin documents — i.e. this widget's window.
+    if (!evt || evt.key !== 'gdrive-oauth-result' || !evt.newValue) return;
+    let data;
+    try { data = JSON.parse(evt.newValue); } catch (e) { return; }
+    this._handleConnectResult(data);
+  }
+
+  _handleConnectResult(data) {
+    if (!data || data.type !== 'gdrive-connected') return;
+    // The same result can arrive on several channels (BroadcastChannel,
+    // storage event, postMessage) — act on it once.
+    if (this._connectHandled) return;
+    this._connectHandled = 1;
+    setTimeout(() => { this._connectHandled = 0; }, 1500);
+    if (data.ok) {
+      this._refreshScope();
+    } else {
+      this._connectError = data.reason || 'unknown';
+      this._state = 'not-connected';
+      this._render();
+    }
+  }
+
+  async _connect() {
+    // Clear any prior connect error so the retry doesn't keep showing it.
+    this._connectError = null;
+    let res;
+    try {
+      res = await this.fetchService('google_drive.connect', { hub_id: Visitor.id });
+    } catch (e) {
+      this.warn('[migrate-gdrive] connect failed', e);
+      return;
+    }
+    if (!res || !res.auth_url) return;
+    const w = window.open(res.auth_url, 'gdrive-oauth', 'width=520,height=640');
+    if (!w) Wm.alert(LOCALE.POPUP_BLOCKED || 'Popup blocked — allow popups and try again.');
+  }
+
+  _getInputs() {
+    const sharedToggle = this._getPartEl('shared-drives-toggle');
+    if (sharedToggle) {
+      this._includeShared = sharedToggle.dataset.state === '1' ? 1 : 0;
+    }
+    return {
+      mode: this._migrateMode,
+      source_folder_id: 'root',
+      include_shared_drives: this._includeShared,
+      selections: {
+        folder_ids: Array.from(this._checkedFolders),
+        file_ids: Array.from(this._checkedFiles),
+      },
+    };
+  }
+
+  _getPartEl(pn) {
+    if (!this.el) return null;
+    return this.el.querySelector(`[data-partname="${pn}"]`);
+  }
+
+  /**
+   * Skeleton reads these to rebuild the ready screen + tree on every
+   * re-render, so toggle state + selection survive re-render cycles
+   * triggered by polling / postMessage / state transitions.
+   */
+  getIncludeShared() { return this._includeShared; }
+  getMigrateMode() { return this._migrateMode; }
+  getTreeNode(folderId) { return this._treeCache[folderId]; }
+  isExpanded(id) { return this._expanded.has(id); }
+  isFolderChecked(id) { return this._checkedFolders.has(id); }
+  isFileChecked(id) { return this._checkedFiles.has(id); }
+  isTreeLoading(id) { return this._loading.has(id); }
+  hasSelection() { return this._checkedFolders.size > 0 || this._checkedFiles.size > 0; }
+
+  /**
+   * Another open popup (same browser) started a migration — switch this one to
+   * live progress instead of leaving "Start migration" visible. The first poll
+   * tick fills in the real %, so we seed a queued snapshot meanwhile.
+   */
+  _onMigrationStarted(d) {
+    if (!d || !d.job_id) return;
+    if (this._state === 'in-progress' && String(this._jobId) === String(d.job_id)) return;
+    this._jobId = d.job_id;
+    this._jobSnap = { job_id: d.job_id, status: 'queued' };
+    this._state = 'in-progress';
+    this._render();
+    this._startPolling();
+  }
+
+  async _loadFolder(folderId) {
+    if (this._treeCache[folderId] || this._loading.has(folderId)) return;
+    this._loading.add(folderId);
+    this._renderTree();
+    try {
+      const res = await this.fetchService('google_drive.list', {
+        hub_id: Visitor.id, folder_id: folderId,
+      });
+      this._treeCache[folderId] = {
+        items: (res && res.files) || [],
+        next_page_token: (res && res.next_page_token) || null,
+      };
+    } catch (e) {
+      this.warn('[migrate-gdrive] list failed', e);
+      this._treeCache[folderId] = { items: [], next_page_token: null, error: 1 };
+    } finally {
+      this._loading.delete(folderId);
+      this._renderTree();
+    }
+  }
+
+  async _loadMore(folderId) {
+    const node = this._treeCache[folderId];
+    if (!node || !node.next_page_token || this._loading.has(folderId)) return;
+    this._loading.add(folderId);
+    this._renderTree();
+    try {
+      const res = await this.fetchService('google_drive.list', {
+        hub_id: Visitor.id, folder_id: folderId, page_token: node.next_page_token,
+      });
+      node.items = node.items.concat((res && res.files) || []);
+      node.next_page_token = (res && res.next_page_token) || null;
+    } catch (e) {
+      this.warn('[migrate-gdrive] list more failed', e);
+    } finally {
+      this._loading.delete(folderId);
+      this._renderTree();
+    }
+  }
+
+  /** Re-feed only the tree region, keeping the rest of the popup intact. */
+  _renderTree() {
+    if (!this.el || this._migrateMode !== 'selected') return;
+    this.ensurePart('gdrive-tree')
+      .then((p) => { if (p) p.feed(require('./skeleton/tree')(this)); })
+      .catch(() => {});
+  }
+
+  /** Toggle the Start button's disabled look without a full re-render. */
+  _refreshStartState() {
+    const btn = this._getPartEl('gdrive-start-btn');
+    if (!btn) return;
+    const empty = this._migrateMode === 'selected' && !this.hasSelection();
+    btn.dataset.disabled = empty ? '1' : '';
+  }
+
+  async _startMigration() {
+    if (this._starting) return;
+    this._starting = 1;
+    if (this._migrateMode === 'selected' && !this.hasSelection()) {
+      Wm.alert(LOCALE.MIGRATE_GDRIVE_NOTHING_SELECTED || 'Select at least one folder or file.');
+      this._starting = 0;
+      return;
+    }
+    const { mode, source_folder_id, include_shared_drives, selections } = this._getInputs();
+    let res;
+    try {
+      res = await this.postService('google_drive.start_migration', {
+        hub_id: this._hub_id,
+        nid: this._nid,
+        mode,
+        source_folder_id,
+        include_shared_drives,
+        selections,
+        conflict_policy: 'skip',
+      });
+    } catch (e) {
+      this.warn('[migrate-gdrive] start_migration failed', e);
+      Wm.alert((e && (e.reason || e.error || e.message)) || (LOCALE.TRY_AGAIN || 'Try again'));
+      this._starting = 0;
+      return;
+    }
+    this._starting = 0;
+    if (!res || !res.job_id) {
+      Wm.alert(LOCALE.TRY_AGAIN || 'Try again');
+      return;
+    }
+    this._jobId = res.job_id;
+    this._state = 'in-progress';
+    this._render();
+    this._startPolling();
+    // Tell other open popups (same browser, e.g. another tab sitting on the
+    // "ready" screen) that a migration just started, so they switch to live
+    // progress instead of still offering "Start migration".
+    try {
+      if (this._bc) this._bc.postMessage({ type: 'gdrive-migration-started', job_id: res.job_id });
+    } catch (e) { /* noop */ }
+  }
+
+  _startPolling() {
+    this._stopPolling();
+    const tick = async () => {
+      if (!this._jobId) return;
+      try {
+        const r = await this.fetchService('google_drive.get_status', {
+          hub_id: Visitor.id,
+          job_id: this._jobId,
+        });
+        if (!r) return;
+        this._jobSnap = r;
+        if (['done', 'failed', 'cancelled'].includes(r.status)) {
+          this._stopPolling();
+          this._state = r.status;
+        }
+        this._render();
+      } catch (e) {
+        this.warn('[migrate-gdrive] get_status failed', e);
+      }
+    };
+    tick();
+    this._poll = setInterval(tick, POLL_INTERVAL_MS);
+  }
+
+  _stopPolling() {
+    if (this._poll) { clearInterval(this._poll); this._poll = null; }
+  }
+
+  async _cancelJob() {
+    if (!this._jobId) return;
+    try {
+      await this.postService('google_drive.cancel', {
+        hub_id: Visitor.id, job_id: this._jobId,
+      });
+    } catch (e) {
+      this.warn('[migrate-gdrive] cancel failed', e);
+    }
+  }
+
+  async _skipForNow() {
+    try {
+      await this.postService('google_drive.dismiss_post_onboarding', { hub_id: Visitor.id });
+    } catch (e) {
+      this.warn('[migrate-gdrive] dismiss_post_onboarding failed', e);
+    }
+    this._close();
+  }
+
+  _close() {
+    // Closing from a finished-result view (whether it just finished here or
+    // we reconnected to a completed job) → tell the server we've seen it, so
+    // reopening the popup won't replay the same result.
+    if (this._jobId && ['done', 'failed', 'cancelled'].includes(this._state)) {
+      this.postService('google_drive.ack_result', { hub_id: Visitor.id, job_id: this._jobId })
+        .catch(() => {});
+    }
+    if (this.parent && _.isFunction(this.parent.clear)) this.parent.clear();
+    else this.softDestroy();
+  }
+
+  /**
+   * From a finished-result view, go back to the ready screen to run another
+   * (incremental) migration instead of closing. Acks the shown result so it
+   * won't reappear, then jumps straight to 'ready' (the user is connected,
+   * having just migrated) — avoiding a get_state round-trip that would replay
+   * the same result.
+   */
+  _restart() {
+    if (this._jobId) {
+      this.postService('google_drive.ack_result', { hub_id: Visitor.id, job_id: this._jobId })
+        .catch(() => {});
+    }
+    this._jobId = null;
+    this._jobSnap = null;
+    this._seenJobId = null;
+    this._migrateMode = 'all';
+    this._treeCache = {};
+    this._expanded.clear();
+    this._checkedFolders.clear();
+    this._checkedFiles.clear();
+    this._loading.clear();
+    this._state = 'ready';
+    this._render();
+  }
+
+  // ───────── event routing ─────────
 
   onUiEvent(cmd, args = {}) {
     const service = args.service || cmd.mget(_a.service);
     switch (service) {
-      case "close-migrate-popup":
-        if (this._running) return;
-        return this._closePopup();
-
-      case "start-migration":
+      case 'close-migrate-popup':
+        return this._close();
+      case 'gdrive-connect':
+        return this._connect();
+      case 'gdrive-start':
         return this._startMigration();
+      case 'gdrive-cancel':
+        return this._cancelJob();
+      case 'gdrive-skip':
+        return this._skipForNow();
+      case 'gdrive-retry-connect':
+        return this._refreshScope();
+      case 'gdrive-restart':
+        return this._restart();
+      case 'gdrive-toggle-shared': {
+        // Flip dataset.state in place AND persist to instance so the
+        // value survives re-renders (skeleton seeds dataset.state from
+        // `getIncludeShared()`).
+        this._includeShared = this._includeShared ? 0 : 1;
+        const row = this._getPartEl('shared-drives-toggle');
+        if (row) row.dataset.state = String(this._includeShared);
+        return;
+      }
+      case 'gdrive-mode': {
+        const mode = cmd.mget('mode') === 'selected' ? 'selected' : 'all';
+        if (mode === this._migrateMode) return;
+        this._migrateMode = mode;
+        this._render();
+        if (mode === 'selected' && !this._treeCache.root) this._loadFolder('root');
+        return;
+      }
+      case 'gdrive-tree-expand': {
+        const id = cmd.mget('gid');
+        if (!id) return;
+        if (this._expanded.has(id)) {
+          this._expanded.delete(id);
+        } else {
+          this._expanded.add(id);
+          if (!this._treeCache[id]) this._loadFolder(id);
+        }
+        this._renderTree();
+        return;
+      }
+      case 'gdrive-tree-check': {
+        const id = cmd.mget('gid');
+        if (!id) return;
+        const set = cmd.mget('gtype') === 'folder' ? this._checkedFolders : this._checkedFiles;
+        if (set.has(id)) set.delete(id); else set.add(id);
+        this._renderTree();
+        this._refreshStartState();
+        return;
+      }
+      case 'gdrive-tree-more': {
+        return this._loadMore(cmd.mget('gid'));
+      }
     }
   }
+
+  // Expose state for the skeleton.
+  getState() { return this._state; }
+  getJobSnap() { return this._jobSnap; }
+  isAutoFromOnboarding() { return this._autoFromOnboarding; }
+  hasPriorJob() { return this._hasPriorJob; }
+  getConnectError() { return this._connectError; }
 }
 
 __migrate_gdrive_popup.initClass();
