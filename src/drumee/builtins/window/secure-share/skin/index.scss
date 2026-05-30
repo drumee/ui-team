@@ -61,6 +61,31 @@
 
   &__input {
     flex: 1;
+
+    & input {
+      color: var(--default-text-color);
+
+      &::placeholder {
+        color: var(--default-text-placeholder);
+      }
+    }
+
+    &.days,
+    &.hours {
+      & input {
+        text-align: center;
+
+        &::-webkit-outer-spin-button,
+        &::-webkit-inner-spin-button {
+          -webkit-appearance: none;
+          margin: 0;
+        }
+
+        &[type="number"] {
+          -moz-appearance: textfield;
+        }
+      }
+    }
   }
 
   &__expiry-sep {
