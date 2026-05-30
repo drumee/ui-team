@@ -63,10 +63,62 @@ const __skl_secure_share = function(_ui_) {
     ]
   });
 
+  // Expiry preset buttons (1h / 24h / 7d / Custom)
   const expiryRow = Skeletons.Box.X({
     className : `${pfx}__row expiry`,
     kids      : [
       Skeletons.Note({ className: `${pfx}__label`, content: LOCALE.SECURE_SHARE_EXPIRY }),
+      Skeletons.Box.X({
+        className : `${pfx}__presets`,
+        kids      : [
+          Skeletons.Box.X({
+            className : `${pfx}__preset button`,
+            service   : 'expiry-preset',
+            preset    : '1h',
+            dataset   : { preset: '1h' },
+            uiHandler : [_ui_],
+            kidsOpt   : { active: 0 },
+            kids      : [Skeletons.Note({ content: LOCALE.SECURE_SHARE_EXPIRY_1H })]
+          }),
+          Skeletons.Box.X({
+            className : `${pfx}__preset button`,
+            service   : 'expiry-preset',
+            preset    : '24h',
+            dataset   : { preset: '24h' },
+            uiHandler : [_ui_],
+            kidsOpt   : { active: 0 },
+            kids      : [Skeletons.Note({ content: LOCALE.SECURE_SHARE_EXPIRY_24H })]
+          }),
+          Skeletons.Box.X({
+            className : `${pfx}__preset button`,
+            service   : 'expiry-preset',
+            preset    : '7d',
+            dataset   : { preset: '7d' },
+            uiHandler : [_ui_],
+            kidsOpt   : { active: 0 },
+            kids      : [Skeletons.Note({ content: LOCALE.SECURE_SHARE_EXPIRY_7D })]
+          }),
+          Skeletons.Box.X({
+            className : `${pfx}__preset button`,
+            service   : 'expiry-preset',
+            preset    : 'custom',
+            dataset   : { preset: 'custom' },
+            uiHandler : [_ui_],
+            kidsOpt   : { active: 0 },
+            kids      : [Skeletons.Note({ content: LOCALE.SECURE_SHARE_EXPIRY_CUSTOM })]
+          })
+        ]
+      })
+    ]
+  });
+
+  // Custom expiry inputs — hidden until "Custom" preset is selected
+  const customExpiryRow = Skeletons.Box.X({
+    className : `${pfx}__row custom-expiry`,
+    sys_pn    : 'custom-expiry',
+    dataset   : { mode: _a.closed },
+    kids      : [
+      Skeletons.Note({ className: `${pfx}__label`, content: '' }),
       Skeletons.EntryBox({
         className   : `${pfx}__input days`,
         sys_pn      : 'ref-days',
@@ -85,6 +137,23 @@ const __skl_secure_share = function(_ui_) {
         showError   : false
       }),
       Skeletons.Note({ className: `${pfx}__expiry-sep`, content: LOCALE.HOUR })
+    ]
+  });
+
+  // Optional password field (communicated out-of-band to recipient)
+  const passwordRow = Skeletons.Box.X({
+    className : `${pfx}__row`,
+    kids      : [
+      Skeletons.Note({ className: `${pfx}__label`, content: LOCALE.SECURE_SHARE_PASSWORD_OPTIONAL }),
+      Skeletons.EntryBox({
+        className   : `${pfx}__input password`,
+        sys_pn      : 'ref-create-password',
+        formItem    : 'password',
+        type        : _a.password,
+        placeholder : LOCALE.SECURE_SHARE_PASSWORD_PLACEHOLDER,
+        shower      : 1,
+        showError   : false
+      })
     ]
   });
 
@@ -111,7 +180,7 @@ const __skl_secure_share = function(_ui_) {
 
   const body = Skeletons.Box.Y({
     className : `${pfx}__body`,
-    kids      : [ emailRow, domainRow, expiryRow, createButton, linkResult ]
+    kids      : [ emailRow, domainRow, expiryRow, customExpiryRow, passwordRow, createButton, linkResult ]
   });
 
   const shareList = Skeletons.Box.Y({

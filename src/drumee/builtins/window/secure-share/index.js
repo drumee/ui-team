@@ -6,7 +6,7 @@ class __window_secure_share extends mfsInteract {
 
   static initClass() {
     this.prototype.figName = 'window_secure_share';
-    this.prototype.size = { width: 480, height: 560, minWidth: 420, minHeight: 400 };
+    this.prototype.size = { width: 480, height: 600, minWidth: 420, minHeight: 420 };
   }
 
   initialize(opt) {
@@ -19,6 +19,7 @@ class __window_secure_share extends mfsInteract {
       this.style.set({ top: (window.innerHeight / 2) - (this.size.height / 2) });
     }
     this.style.set({ width: this.size.width, height: this.size.height });
+    this._expiryPreset = null;
     this.declareHandlers();
     this.bindEvent(_a.live);
   }
@@ -52,6 +53,10 @@ class __window_secure_share extends mfsInteract {
         return this._daysInput = child;
       case 'ref-hours':
         return this._hoursInput = child;
+      case 'ref-create-password':
+        return this._createPasswordInput = child;
+      case 'custom-expiry':
+        return this._customExpiry = child;
       case 'share-list':
         this._shareList = child;
         this._loadShares();
@@ -68,12 +73,31 @@ class __window_secure_share extends mfsInteract {
     switch (service) {
       case 'create-secure-share':
         return this._createShare();
+      case 'expiry-preset':
+        return this._selectPreset(cmd);
       case 'copy-secure-link':
         return this._copyLink(cmd);
       case 'revoke-secure-share':
         return this._revokeShare(cmd);
       default:
         if (super.onUiEvent) return super.onUiEvent(cmd, args);
+    }
+  }
+
+  // Select an expiry preset and update visual state
+  _selectPreset(cmd) {
+    const preset = cmd.mget('preset');
+    this._expiryPreset = preset;
+
+    // Highlight selected button via data-selected attribute
+    const presetBtns = this.el.querySelectorAll(`.${this.fig.family}__preset`);
+    presetBtns.forEach(btn => {
+      btn.dataset.selected = (btn.dataset.preset === preset) ? 'yes' : '';
+    });
+
+    // Show custom inputs only when "Custom" is selected
+    if (this._customExpiry) {
+      this._customExpiry.el.dataset.mode = (preset === 'custom') ? _a.open : _a.closed;
     }
   }
 
@@ -107,6 +131,7 @@ class __window_secure_share extends mfsInteract {
 
   async _createShare() {
     if (this._linkResult) this._linkResult.el.dataset.mode = _a.closed;
+
     const email = this._emailInput ? (this._emailInput.getData().value || '').trim() : '';
     if (!email) {
       if (this._emailInput) this._emailInput.showError(LOCALE.SECURE_SHARE_ENTER_EMAIL);
@@ -120,12 +145,28 @@ class __window_secure_share extends mfsInteract {
     const nid              = this.mget(_a.nid);
     const hub_id           = this.mget(_a.hub_id);
     const domain_restriction = this._domainInput ? (this._domainInput.getData().value || '') : '';
-    const days             = this._daysInput  ? (parseInt(this._daysInput.getData().value)  || 0) : 0;
-    const hours            = this._hoursInput ? (parseInt(this._hoursInput.getData().value) || 0) : 0;
+    const password         = this._createPasswordInput
+      ? (this._createPasswordInput.getData().value || '').trim()
+      : '';
 
-    const data = await this.postService(SERVICE.secure_share.create, {
-      nid, hub_id, email, domain_restriction, days, hours
-    });
+    // Derive days/hours from selected preset
+    let days = 0, hours = 0;
+    switch (this._expiryPreset) {
+      case '1h':    hours = 1; break;
+      case '24h':   days  = 1; break;
+      case '7d':    days  = 7; break;
+      case 'custom':
+        days  = this._daysInput  ? (parseInt(this._daysInput.getData().value)  || 0) : 0;
+        hours = this._hoursInput ? (parseInt(this._hoursInput.getData().value) || 0) : 0;
+        break;
+      default:
+        break; // no preset selected = no expiry
+    }
+
+    const payload = { nid, hub_id, email, domain_restriction, days, hours };
+    if (password) payload.password = password;
+
+    const data = await this.postService(SERVICE.secure_share.create, payload);
 
     if (data && data.link) {
       this.mset({ link: data.link });
@@ -148,10 +189,23 @@ class __window_secure_share extends mfsInteract {
         }));
       }
       this._loadShares();
-      [this._emailInput, this._domainInput, this._daysInput, this._hoursInput].forEach(ref => {
-        if (ref) { const input = ref.el.querySelector('input'); if (input) input.value = ''; }
-      });
+      this._resetForm();
     }
+  }
+
+  // Clear all form inputs and preset state after a successful create
+  _resetForm() {
+    [this._emailInput, this._domainInput, this._createPasswordInput, this._daysInput, this._hoursInput].forEach(ref => {
+      if (ref) {
+        const input = ref.el.querySelector('input');
+        if (input) input.value = '';
+      }
+    });
+    this._expiryPreset = null;
+    this.el.querySelectorAll(`.${this.fig.family}__preset`).forEach(btn => {
+      btn.dataset.selected = '';
+    });
+    if (this._customExpiry) this._customExpiry.el.dataset.mode = _a.closed;
   }
 
   async _revokeShare(cmd) {

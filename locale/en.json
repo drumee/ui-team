@@ -1620,5 +1620,12 @@
   "SECURE_SHARE_NO_SHARES": "No shares created yet",
   "SECURE_SHARE_EXISTING": "Shared links",
   "SECURE_SHARE_STATUS_REVOKED": "Revoked",
-  "SECURE_SHARE_STATUS_EXPIRED": "Expired"
+  "SECURE_SHARE_STATUS_EXPIRED": "Expired",
+  "SECURE_SHARE_EXPIRY_1H": "1 hour",
+  "SECURE_SHARE_EXPIRY_24H": "24 hours",
+  "SECURE_SHARE_EXPIRY_7D": "7 days",
+  "SECURE_SHARE_EXPIRY_CUSTOM": "Custom",
+  "SECURE_SHARE_EXPIRY_LABEL": "Expires",
+  "SECURE_SHARE_PASSWORD_OPTIONAL": "Password (optional)",
+  "SECURE_SHARE_PASSWORD_PLACEHOLDER": "Protect with a password"
 }

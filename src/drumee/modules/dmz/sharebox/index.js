@@ -192,6 +192,10 @@ class __dmz_sharebox extends LetcBox {
       if (data && data.status === 'TICKET_OK' && data.is_secure) {
         this.mset(data);
         this.getInfoData();
+      } else if (data && data.status === 'REQUIRED_PASSWORD' && data.is_secure) {
+        // Email validated — save it so verifyPassword can re-submit it with the password
+        this._verifiedEmail = email;
+        this.promptPassword();
       } else if (data && data.status === 'EMAIL_MISMATCH') {
         this.renderErrorMessage(LOCALE.SECURE_SHARE_EMAIL_MISMATCH);
       } else {
@@ -319,8 +323,19 @@ class __dmz_sharebox extends LetcBox {
       hub_id,
       password,
     }
+    // For secure-share password flow: re-send the verified email so the server
+    // can validate email + password in one step (stateless on the server side)
+    if (this._verifiedEmail) {
+      opt.email = this._verifiedEmail;
+    }
     this.postService(SERVICE.dmz.login, opt).then((data) => {
-      if (data && data.is_verified) {
+      if (data && data.status === 'TICKET_OK' && data.is_secure) {
+        // Secure-share password accepted — grant access
+        this.mset(data);
+        this.getInfoData();
+      } else if (data && data.status === 'WRONG_PASSWORD') {
+        this.renderErrorMessage(LOCALE.WRONG_CREDENTIALS);
+      } else if (data && data.is_verified) {
         this.mset(data);
         localStorage.setItem('token', data.token);
         localStorage.setItem('guest-sid', data.guest_sid);

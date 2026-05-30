@@ -44,6 +44,10 @@
       flex-wrap: wrap;
     }
 
+    &.custom-expiry {
+      &[data-mode='closed'] { display: none; }
+    }
+
     &.buttons {
       justify-content: flex-end;
       margin-top: var(--spacer-2);
@@ -51,6 +55,33 @@
 
     &.link-result {
       &[data-mode='closed'] { display: none; }
+    }
+  }
+
+  &__presets {
+    flex: 1;
+    gap: var(--spacer-2);
+    flex-wrap: wrap;
+  }
+
+  &__preset {
+    cursor: pointer;
+    padding: var(--spacer-1) var(--spacer-3);
+    border-radius: var(--corner-radius-max);
+    border: 1px solid var(--border-default);
+    @include drumee.typo($size: 12px, $line: 20px, $color: var(--default-text-color));
+    white-space: nowrap;
+    user-select: none;
+
+    &[data-selected='yes'] {
+      border-color: var(--primary-500);
+      background: var(--primary-500);
+      color: var(--white);
+    }
+
+    &:hover:not([data-selected='yes']) {
+      border-color: var(--primary-500);
+      color: var(--primary-500);
     }
   }
 
