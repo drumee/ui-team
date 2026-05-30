@@ -745,6 +745,13 @@ class __media_interact extends media_core {
       case _a.properties:
         return this.triggerHandlers({ trigger: this, service });
 
+      case 'secure-share': {
+        const item = Wm.getWindowPreset(this);
+        item.kind = 'window_secure_share';
+        item.wm_unique_id = `window_secure_share-${item.nid}`;
+        return Wm.launch(item, { explicit: 1, singleton: 1 });
+      }
+
       case "share-qrcode":
         if (/^(dmz|share)$/i.test(this.mget(_a.area))) {
           this.viewerLink().then((url) => {

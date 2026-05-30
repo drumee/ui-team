@@ -400,6 +400,7 @@ class __dmz_wm extends winman {
       nid: this.mget(_a.nid),
       share_id: original.share_id,
       recipient_id: original.recipient_id,
+      file_nid: original.file_nid,
     };
     switch (type) {
       case "all":
