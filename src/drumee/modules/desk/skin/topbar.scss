@@ -35,24 +35,24 @@
     }
   }
 
-  // Chrome-style minimized-folder tabs — populated dynamically when a
-  // folder window is minimized. Container is empty (no padding/bg) until
-  // a tab is added.
-  &__minimized-tabs {
+  // Chrome-style folder tabs — leftmost in the topbar, one per open
+  // folder window. data-state="1" = window visible; data-state="0" =
+  // minimized. Empty until at least one folder window opens.
+  &__folder-tabs {
     align-items: center;
-    gap: 6px;
-    flex: 1 1 auto;
+    gap: 4px;
+    flex: 0 1 auto;
     min-width: 0;
-    margin: 0 12px;
+    margin-right: 12px;
     overflow: hidden;
   }
 
-  &__min-tab {
+  &__folder-tab {
     align-items: center;
     gap: 6px;
-    max-width: 220px;
+    max-width: 200px;
     height: 28px;
-    padding: 0 6px 0 10px;
+    padding: 0 4px 0 10px;
     border-radius: 8px 8px 0 0;
     background-color: var(--normal-bg-elevated, #fff);
     border: 1px solid var(--border-muted, rgba(0, 0, 0, 0.08));
@@ -62,14 +62,21 @@
     font-size: 13px;
     font-weight: 500;
     color: var(--normal-fg-10);
-    transition: background-color 0.12s ease;
+    transition: background-color 0.12s ease, opacity 0.12s ease;
 
     &:hover {
       background-color: var(--normal-bg-90);
     }
+
+    // Minimized: muted background + dimmed text.
+    &[data-state="0"] {
+      background-color: var(--normal-bg-80, rgba(0, 0, 0, 0.04));
+      opacity: 0.7;
+      font-weight: 400;
+    }
   }
 
-  &__min-tab-icon {
+  &__folder-tab-icon {
     width: 16px;
     height: 16px;
     flex-shrink: 0;
@@ -86,7 +93,7 @@
     &[data-area="public"]   { color: var(--area-public); }
   }
 
-  &__min-tab-label {
+  &__folder-tab-label {
     flex: 1 1 auto;
     min-width: 0;
     overflow: hidden;
@@ -95,9 +102,9 @@
     line-height: 1.2;
   }
 
-  &__min-tab-close {
-    width: 16px;
-    height: 16px;
+  &__folder-tab-close {
+    width: 18px;
+    height: 18px;
     flex-shrink: 0;
     border-radius: 4px;
     display: flex;
@@ -113,7 +120,7 @@
     }
 
     &:hover {
-      background-color: var(--normal-bg-80, rgba(0, 0, 0, 0.08));
+      background-color: var(--normal-bg-70, rgba(0, 0, 0, 0.08));
       color: var(--normal-fg-10);
     }
   }

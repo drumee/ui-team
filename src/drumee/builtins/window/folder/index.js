@@ -329,6 +329,23 @@ class __window_folder extends mfsInteract {
     // A workspace root's name (hub_name) can resolve after the title element
     // has mounted; re-apply it whenever it changes.
     this.listenTo(this.model, "change:hub_name", this._syncWindowTitle);
+
+    // Tell the desk to render a tab in the home header. `headless` folders
+    // ARE the workspace pane itself, not a popup, so they don't get a tab.
+    // Deferred so the desk's listener and the folder's $el are both ready.
+    if (!this.mget(_a.headless) && window.Wm && Wm.$el) {
+      _.defer(() => {
+        if (this.isDestroyed && this.isDestroyed()) return;
+        Wm.$el.trigger("folder:open", this);
+      });
+    }
+  }
+
+  onBeforeDestroy(opt) {
+    if (!this.mget(_a.headless) && window.Wm && Wm.$el) {
+      Wm.$el.trigger("folder:close", this);
+    }
+    if (super.onBeforeDestroy) return super.onBeforeDestroy(opt);
   }
 
   // Apply filename — or hub_name for an empty-filename root — to the title.
