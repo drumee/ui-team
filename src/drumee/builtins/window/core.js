@@ -7,7 +7,7 @@ const TIMERS = {
   reorder: null,
 };
 
-const { TweenLite, TimelineMax } = require("@drumee/ui-core/vendor");
+const { TweenLite, TimelineMax, TweenMax } = require("@drumee/ui-core/vendor");
 
 const {
   copyToClipboard,
