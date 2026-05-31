@@ -54,6 +54,98 @@ class desk_module extends LetcBox {
     Visitor.on(_e.change, this._updateAvatar);
     RADIO_BROADCAST.on("activity-update", this._updateActivityBadge, this);
     setTimeout(this.lazyClasses, 5000);
+
+    // Chrome-style minimized folder tabs in the desk topbar. We track
+    // folder windows that the user has minimized; each becomes a tab in
+    // the topbar's __minimized-tabs container. Click the tab to restore,
+    // click its × to destroy.
+    this._minimizedFolders = new Map();
+    this._onWmMinimize = this._onWmMinimize.bind(this);
+    this._onWmWake = this._onWmWake.bind(this);
+    this._bindMinimizedTabs();
+  }
+
+  _bindMinimizedTabs() {
+    if (this._minTabsBound) return;
+    if (!window.Wm || !Wm.$el) {
+      // Wm not ready yet — try again next tick.
+      _.delay(() => this._bindMinimizedTabs(), 100);
+      return;
+    }
+    Wm.$el.on(_e.minimize, this._onWmMinimize);
+    Wm.$el.on(_e.wake, this._onWmWake);
+    this._minTabsBound = true;
+  }
+
+  _onWmMinimize(event, winInstance) {
+    if (!winInstance || !winInstance.isFolder) return;
+    if (this._minimizedFolders.has(winInstance.cid)) return;
+    this._minimizedFolders.set(winInstance.cid, winInstance);
+    winInstance.once("destroy", () => {
+      if (this._minimizedFolders.delete(winInstance.cid)) {
+        this._renderMinimizedTabs();
+      }
+    });
+    this._renderMinimizedTabs();
+  }
+
+  _onWmWake(event, winInstance) {
+    if (!winInstance) return;
+    if (this._minimizedFolders.delete(winInstance.cid)) {
+      this._renderMinimizedTabs();
+    }
+  }
+
+  _renderMinimizedTabs() {
+    if (!this._minimizedTabsBox || (this._minimizedTabsBox.isDestroyed && this._minimizedTabsBox.isDestroyed())) {
+      return;
+    }
+    const pfx = `${this.fig.family}-topbar`;
+    const tabs = [];
+    for (const win of this._minimizedFolders.values()) {
+      if (!win || (win.isDestroyed && win.isDestroyed())) continue;
+      tabs.push(this._buildMinimizedTab(win, pfx));
+    }
+    this._minimizedTabsBox.feed(tabs);
+  }
+
+  _buildMinimizedTab(winInstance, pfx) {
+    const cn = `${pfx}__min-tab`;
+    const name =
+      winInstance.mget(_a.filename) ||
+      winInstance.mget(_a.name) ||
+      LOCALE.FOLDER ||
+      "Folder";
+    const area = winInstance.mget(_a.area);
+    return Skeletons.Box.X({
+      className: cn,
+      uiHandler: [this],
+      service: "restore-min-window",
+      wincid: winInstance.cid,
+      dataset: area ? { area } : undefined,
+      kidsOpt: { active: 0 },
+      kids: [
+        Skeletons.Button.Svg({
+          ico: "folder-header",
+          active: 0,
+          className: `${cn}-icon`,
+          dataset: area ? { area } : undefined,
+        }),
+        Skeletons.Note({
+          content: name,
+          active: 0,
+          className: `${cn}-label`,
+        }),
+        Skeletons.Button.Svg({
+          ico: "cross",
+          className: `${cn}-close`,
+          service: "close-min-window",
+          uiHandler: [this],
+          wincid: winInstance.cid,
+          bubble: 0,
+        }),
+      ],
+    });
   }
 
   /**
@@ -76,6 +168,11 @@ class desk_module extends LetcBox {
     }
     RADIO_BROADCAST.off("activity-update", this._updateActivityBadge, this);
     RADIO_BROADCAST.off("breadcrumb:content", this._updateAddmenu);
+    if (this._minTabsBound && window.Wm && Wm.$el) {
+      Wm.$el.off(_e.minimize, this._onWmMinimize);
+      Wm.$el.off(_e.wake, this._onWmWake);
+      this._minTabsBound = false;
+    }
   }
 
   /**
@@ -280,6 +377,11 @@ class desk_module extends LetcBox {
 
       case "avatar-listener":
         return (this._avatarListener = child);
+
+      case "minimized-tabs":
+        this._minimizedTabsBox = child;
+        this._renderMinimizedTabs();
+        return;
 
       case "search-container":
         this._searchContainer = child;
@@ -1002,6 +1104,25 @@ class desk_module extends LetcBox {
       this._maybeDismissMobileDrawer(service);
     }
     switch (service) {
+      case "restore-min-window": {
+        const cid = cmd.mget && cmd.mget("wincid");
+        const win = cid && this._minimizedFolders.get(cid);
+        if (win && !win.isDestroyed()) win.wake(cmd);
+        return;
+      }
+
+      case "close-min-window": {
+        const cid = cmd.mget && cmd.mget("wincid");
+        const win = cid && this._minimizedFolders.get(cid);
+        if (win && !win.isDestroyed()) {
+          this._minimizedFolders.delete(cid);
+          this._renderMinimizedTabs();
+          if (typeof win.goodbye === "function") win.goodbye();
+          else if (typeof win.destroy === "function") win.destroy();
+        }
+        return;
+      }
+
       case _e.home:
         this.updateBreadcrumb({ event: _e.home });
         this.loadHome();

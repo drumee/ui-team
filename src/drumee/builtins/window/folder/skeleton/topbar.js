@@ -138,7 +138,7 @@ const __skl_folder_topbar = function (ui) {
     ],
   });
 
-  let controls = require("window/skeleton/topbar/control")(ui, "c");
+  let controls = require("window/skeleton/topbar/control")(ui, "mc");
 
   const rightCluster = Skeletons.Box.X({
     className: `${cnFolder}__right`,

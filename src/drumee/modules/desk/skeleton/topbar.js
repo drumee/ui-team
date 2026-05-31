@@ -38,6 +38,14 @@ module.exports = function (ui) {
         uiHandler: [ui],
       },
 
+      // Minimized-folder tabs (Chrome-style). Empty until a folder window
+      // is minimized; populated by desk_module via partHandler.
+      Skeletons.Box.X({
+        className: `${pfx}__minimized-tabs`,
+        sys_pn: "minimized-tabs",
+        partHandler: ui,
+      }),
+
       // Actions cluster (right)
       Skeletons.Box.X({
         className: `${pfx}__actions-cluster`,
