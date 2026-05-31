@@ -589,13 +589,16 @@ class __window_folder extends mfsInteract {
     this.setViewMode(mode);
     this.ensurePart(_a.content).then((content) => {
       if (!content || (content.isDestroyed && content.isDestroyed())) return;
+      // setState (Backbone.View) flips data-state on the toggle box; the CSS
+      // swaps the visible glyph. (The old splitBtn used changeState, which only
+      // exists on the svg widget — the box needs setState.)
       if (mode === _a.row) {
         content.feed(require("../skeleton/content/row")(this));
-        cmd?.changeState?.(1);
+        cmd?.setState?.(1);
         return;
       }
       content.feed([fileTypeFilterBar(this), gridFilesBrowser(this)]);
-      cmd?.changeState?.(0);
+      cmd?.setState?.(0);
     });
   }
 

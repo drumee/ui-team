@@ -471,18 +471,28 @@
       }
     }
 
-    &__control-icon[data-state="1"] svg {
-      transform: rotate(90deg);
+    // File view toggle — the control shows the glyph of the CURRENT view.
+    // Grid is the default (covers data-state "0"/unset); the list glyph only
+    // appears when the toggle carries data-state="1" (row/list view active).
+    &__control-icon-glyph {
+      width: 20px;
+      height: 20px;
     }
 
-    &__control-icon {
-      svg {
-        transition: transform 0.2s ease;
-      }
+    &__control-icon-glyph--list {
+      display: none;
+    }
 
-      &[data-state="1"] svg {
-        transform: rotate(90deg);
-      }
+    &__control-icon-glyph--grid {
+      display: block;
+    }
+
+    &__control-icon[data-state="1"] .window-folder-topbar__control-icon-glyph--list {
+      display: block;
+    }
+
+    &__control-icon[data-state="1"] .window-folder-topbar__control-icon-glyph--grid {
+      display: none;
     }
 
     // macOS-style zoom menu — icon trigger with CSS-hover dropdown.
