@@ -1,5 +1,6 @@
 @forward "./typo";
 @forward "./vendor";
+@forward "./responsive";
 
 @mixin glass-overlay {
   backdrop-filter: blur(30px);

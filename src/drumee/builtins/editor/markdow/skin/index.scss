@@ -7,12 +7,13 @@
     border-radius: var(--corner-radius-5);
     min-width: 600px;
     min-height: 400px;
-    &[data-device="mobile"] {
-      width: 360px !important;
-      height: 500px !important;
-      left: 50% !important;
-      transform: translateX(-50%) translateY(15%) !important;
-    }
+
+    // Mobile full-bleed under the desk's 44px mobile topbar. The
+    // previous rule pinned the markdown editor to a 360×500 floating
+    // dialog with a translateX(-50%) which left it overflowing on
+    // 430px phones. Use the shared recipe so it matches the rest of
+    // the mobile window family (folder, note proper).
+    @include drumee.mobile-fullscreen-window($top: 44px);
   }
 
   &-topbar {

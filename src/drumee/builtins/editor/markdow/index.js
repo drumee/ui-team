@@ -84,6 +84,32 @@ class __editor_markdown extends __player {
    * 
    */
   display() {
+    // Mobile: open as a full-bleed panel under the 44px mobile topbar
+    // so the editor doesn't appear as a 600×400 floating dialog that
+    // overflows on a 430px phone. 650 matches the SCSS @media fallback
+    // in mixins/responsive.scss so JS and CSS agree on what counts as
+    // mobile. `Visitor.isMobile()` is also OR'd in to catch DevTools
+    // emulator cases where data-device tags mobile but innerWidth is
+    // between 651 and 800.
+    const isCompactViewport =
+      window.innerWidth <= 650 ||
+      (typeof Visitor.isMobile === 'function' && Visitor.isMobile());
+    if (isCompactViewport) {
+      // The mobile-topbar is a separate 44px flex row ABOVE the WM
+      // container, so WM coordinates already start below it. Place the
+      // panel at top:0 within WM (= 44px from viewport top) and let
+      // its height fill the WM area. Setting top:44 here offsets it
+      // a second time and clips the bottom past the visible WM.
+      this.size = {
+        width: window.innerWidth,
+        height: window.innerHeight - 44,
+        left: 0,
+        top: 0,
+      };
+      super.display(this.size, this.preview.bind(this), { scale: 0.55, opacity: 0 });
+      return;
+    }
+
     const width = 600;
     const height = 400;
     const ww = Wm.$el.width();
