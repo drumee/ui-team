@@ -313,9 +313,11 @@ class __media_core extends DrumeeMFS {
     let f = "vignette";
     if (this.mget(_a.filetype) == _a.vector) {
       f = "orig";
-    } else if (this.mget(_a.ext) == _a.pdf) {
+    } else if (this.mget(_a.ext) == _a.pdf || EDITABLE.includes(this.mget(_a.ext))) {
       // Whole first page at natural aspect (no center-crop / no letterbox); the
       // cell crops it to cover+top in CSS so the document title stays visible.
+      // EDITABLE = office exts (docx/xlsx/pptx/odt…); only used when imgCapable
+      // (i.e. metadata.poster is set), otherwise the icon shows instead.
       f = "thumb";
     }
     this.mset({
@@ -1231,6 +1233,11 @@ class __media_core extends DrumeeMFS {
    * @returns
    */
   imgCapable() {
+    // A server-generated content poster (office/pdf first page, marked via
+    // metadata.poster) makes the node image-capable — this is the per-node
+    // gate for office docs so they only show a thumbnail once it exists.
+    const _md = this.metadata();
+    if (_md && _md.poster) return 1;
     if (/^\-/.test(this.mget(_a.capability))) return 0;
     switch (this.mget(_a.ext)) {
       case 'svg':
