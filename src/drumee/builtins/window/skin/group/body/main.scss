@@ -205,3 +205,59 @@
     }
   }
 }
+
+@media (max-width: 650px) {
+  .window {
+    &__main {
+      min-height: 0;
+      min-width: 0 !important;
+      overflow: hidden;
+
+      &[data-device="mobile"] {
+        min-width: 0;
+      }
+
+      &-container-icons {
+        min-width: 0 !important;
+        padding: var(--spacer-3) 0;
+
+        &[data-device="mobile"] {
+          min-width: 0;
+        }
+      }
+    }
+
+    &__content-main {
+      min-height: 0;
+      min-width: 0;
+      overflow: hidden;
+    }
+
+    &__split-body {
+      grid-template-columns: 1fr !important;
+      min-width: 0;
+
+      &[data-active-tab="files"] {
+        grid-template-columns: 1fr !important;
+
+        .window__chat-panel,
+        .window__meeting-panel {
+          display: none;
+        }
+      }
+    }
+
+    &__files-panel,
+    &__chat-panel,
+    &__tasks-panel {
+      max-width: 100%;
+      min-width: 0;
+      width: 100%;
+    }
+
+    &__icons-scroll {
+      grid-template-columns: repeat(auto-fill, minmax(min(var(--grid-cell-w), 100%), var(--grid-cell-w)));
+      padding: var(--spacer-3);
+    }
+  }
+}

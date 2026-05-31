@@ -80,3 +80,22 @@
     padding: var(--spacer-6);
   }
 }
+
+@media (max-width: 650px) {
+  .window-warning,
+  .player-warning {
+    &__body {
+      max-height: calc(100vh - 32px);
+      max-height: calc(100dvh - 32px);
+      min-height: 0;
+      min-width: 0;
+      overflow: hidden;
+      width: calc(100vw - 32px);
+    }
+
+    &__content {
+      overflow-y: auto;
+      padding: var(--spacer-4);
+    }
+  }
+}

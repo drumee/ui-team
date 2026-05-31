@@ -13,9 +13,11 @@
     width: 100%;
 
     &[data-device="mobile"] {
-      width: 360px !important;
       left: 50% !important;
-      transform: translateX(-50%) translateY(50%) !important;
+      max-width: calc(100vw - 32px);
+      min-width: 0 !important;
+      transform: translateX(-50%) translateY(24px) !important;
+      width: calc(100vw - 32px) !important;
     }
   }
 
@@ -99,6 +101,18 @@
       position: absolute;
       top: 55px;
       width: 100%;
+    }
+  }
+}
+
+@media (max-width: 650px) {
+  .player-audio {
+    &__ui {
+      left: 50% !important;
+      max-width: calc(100vw - 32px);
+      min-width: 0 !important;
+      transform: translateX(-50%) translateY(24px) !important;
+      width: calc(100vw - 32px) !important;
     }
   }
 }

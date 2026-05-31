@@ -415,6 +415,18 @@
   }
 }
 
+@media (max-width: 650px) {
+  // Hide the DESKTOP sidebar column on narrow viewports. The mobile
+  // sidebar is the same widget but rendered with `data-device="mobile"`
+  // as a slide-in drawer — do NOT hide that variant or `openMobileDrawer`
+  // toggles `data-state` on a `display:none` element.
+  .desk-module-sidebar {
+    &__main:not([data-device="mobile"]) {
+      display: none;
+    }
+  }
+}
+
 // ── Dark mode overrides (Figma node 1506:31860, file g5V3PjhNMf5bHlsHMvV17w) ──
 // Light mode keeps the canonical tokens from /router/skin/themes/light.scss.
 html[data-theme="dark"] .desk-module-sidebar {

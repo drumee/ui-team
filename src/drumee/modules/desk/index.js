@@ -921,10 +921,7 @@ class desk_module extends LetcBox {
     if (except !== "activity-panel") {
       tasks.push(
         this.ensurePart("activity-panel").then((p) => {
-          if (p) {
-            p.activityState = 0;
-            p.setState(0);
-          }
+          if (p) p.setState(0);
         }),
       );
     }
