@@ -24,12 +24,246 @@
       pointer-events: none;
     }
 
+    // Mobile: the desktop left-rail slide-in doesn't fit a phone, so the
+    // panel renders as a centered floating card. position:fixed + inset:0
+    // + margin:auto centres it in the viewport. Both transform AND
+    // will-change:transform (set on the base __ui for the desktop slide)
+    // establish a containing block for fixed-position descendants, which
+    // would shrink the full-viewport ::before scrim down to the card box
+    // — so we clear both here. The left panel-container is un-hidden just
+    // for this panel in desk/skin/index.scss. Tap-outside-to-close is
+    // wired in index.js (_onOutsideClick); ::before is visual-only
+    // (pointer-events:none) so those taps reach the content behind.
     &[data-device="mobile"] {
-      width: 360px !important;
-      height: 500px !important;
-      left: 50% !important;
-      transform: translateX(-50%) translateY(15%);
+      position: fixed;
+      inset: 0;
+      margin: auto;
+      width: min(360px, 92vw) !important;
+      height: min(520px, 78vh) !important;
+      border-radius: 14px;
+      z-index: 10050;
+      box-shadow: 0 8px 40px rgba(0, 0, 0, 0.28);
+      will-change: auto;
+      transition: opacity 0.2s ease;
+
+      // Full-viewport scrim that frosts the desk body behind the card.
+      // Sits at z-index:-1 (below the card content, see __main) so it
+      // never tints the card itself; the topbar/drawer at z 99999 paint
+      // above it and stay crisp. Theme-aware via --overlay-bg. When open it
+      // captures pointer events (see [data-state="1"]) so taps on the scrim
+      // don't fall through and trigger desk-body items behind it.
+      &::before {
+        content: "";
+        position: fixed;
+        inset: 0;
+        z-index: -1;
+        background: var(--overlay-bg);
+        backdrop-filter: blur(6px);
+        -webkit-backdrop-filter: blur(6px);
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.2s ease;
+      }
+
+      &[data-state="0"] {
+        transform: none;
+        opacity: 0;
+        pointer-events: none;
+      }
+
+      &[data-state="1"] {
+        transform: none;
+        opacity: 1;
+        pointer-events: auto;
+      }
+
+      &[data-state="1"]::before {
+        opacity: 1;
+        // Block taps on the scrim from reaching desk-body items behind it.
+        // (Closing is button-only on mobile, so the scrim swallows the tap
+        // without dismissing the panel.)
+        pointer-events: auto;
+      }
+
+      // Opaque card surface painted ABOVE the ::before scrim (in-flow
+      // content outranks the negative-z pseudo), so the dim/blur only
+      // shows outside the card — never washing it out. `inherit` tracks
+      // __ui's background across light/dark. Rounded to match the card;
+      // __main already clips with overflow:hidden.
+      .panel-activity__main {
+        border-radius: 14px;
+        background-color: inherit;
+      }
+
+      // The desktop feed cap (100vh-102px) overflows a fixed-height card;
+      // let the flex column own the scroll instead.
+      .panel-activity__feed {
+        max-height: none;
+        min-height: 0;
+        padding: 0 10px 20px;
+      }
+
+      // ── Enlarge content for touch UX ──────────────────────────────
+      // The desktop panel is sized for a mouse; on a phone the rows,
+      // labels and icon buttons are too small to read and tap. Scale
+      // the header, tabs, toggle and notification rows up to comfortable
+      // mobile sizes (icon buttons → ~40px touch targets).
+      .panel-activity__topbar {
+        height: 100px;
+        padding: 16px;
+        flex-direction: column;
+        gap: 8px;
+      }
+
+      .panel-activity__title {
+        font-size: 19px;
+        line-height: 26px;
+      }
+
+      .panel-activity__mark-read-btn {
+        gap: 6px;
+
+        svg {
+          width: 18px;
+          height: 18px;
+        }
+
+        .label,
+        span,
+        section {
+          font-size: 14px;
+        }
+      }
+
+      .panel-activity__unread-label {
+        font-size: 14px;
+        line-height: 20px;
+      }
+
+      // Toggle scaled 40×20 → 48×28 (thumb 16 → 24); travel stays 20px
+      // so the shared [data-state="1"] transform still lands correctly.
+      .panel-activity__toggle-track {
+        width: 48px;
+        height: 28px;
+      }
+
+      .panel-activity__toggle-thumb {
+        width: 24px;
+        height: 24px;
+      }
+
+      .panel-activity__tabbar {
+        gap: 20px;
+        padding: 14px 16px;
+        justify-content: center;
+      }
+
+      .panel-activity__tab {
+        font-size: 15px;
+        line-height: 15px;
+      }
+
+      .panel-activity__empty {
+        font-size: 14px;
+        line-height: 20px;
+        padding: 48px 16px;
+      }
+
+      // Notification rows (.activity-item from widget/item).
+      .activity-item__row {
+        min-height: 60px;
+        gap: 14px;
+        padding: 10px 14px;
+
+        &.share {
+          min-height: 64px;
+        }
+      }
+
+      .activity-item__avatar-wrap,
+      .activity-item__avatar {
+        width: 44px;
+        height: 44px;
+      }
+
+      .activity-item__badge {
+        width: 18px;
+        height: 18px;
+      }
+
+      .activity-item__text {
+        font-size: 15px;
+        line-height: 21px;
+      }
+
+      .activity-item__time {
+        font-size: 13px;
+        line-height: 18px;
+      }
+
+      .activity-item__actions {
+        width: auto;
+        gap: 12px;
+        height: auto;
+      }
+
+      // Icon buttons → ~40px tap targets (was 20px).
+      .activity-item__bookmark,
+      .activity-item__trash {
+        width: 40px;
+        height: 40px;
+
+        svg {
+          width: 26px;
+          height: 26px;
+        }
+      }
+
+      .activity-item__join {
+        width: 40px;
+        height: 40px;
+
+        svg {
+          width: 18px;
+          height: 18px;
+        }
+      }
+
+      // Close button (mobile only). Pinned to the card's top-right corner,
+      // out of the topbar's flow, so the column header layout is untouched.
+      // Positioned against __ui (the only positioned ancestor).
+      .panel-activity__close-btn {
+        display: flex;
+        position: absolute;
+        top: 12px;
+        right: 12px;
+        width: 36px;
+        height: 36px;
+        padding: 6px;
+        border-radius: 8px;
+        cursor: pointer;
+        color: #65656c;
+        z-index: 2;
+
+        svg {
+          width: 100%;
+          height: 100%;
+          fill: currentColor;
+        }
+
+        &:hover,
+        &:active {
+          background-color: rgba(0, 0, 0, 0.06);
+          color: #0b0a21;
+        }
+      }
     }
+  }
+
+  // Close button is mobile-only; the desktop panel closes via its nav
+  // toggle, so keep it out of the desktop topbar entirely.
+  &__close-btn {
+    display: none;
   }
 
   &__main {
@@ -114,17 +348,25 @@
       width: 14px;
       height: 14px;
       flex-shrink: 0;
-      color: #65656C;
+      color: #65656c;
     }
-    .label, span, section {
+    .label,
+    span,
+    section {
       font-size: 12px;
       font-weight: 400;
-      color: #65656C;
+      color: #65656c;
       white-space: nowrap;
     }
     &:hover {
-      svg { color: #5950FF; }
-      .label, span, section { color: #5950FF; }
+      svg {
+        color: #5950ff;
+      }
+      .label,
+      span,
+      section {
+        color: #5950ff;
+      }
     }
   }
 
@@ -283,6 +525,16 @@ html[data-theme="dark"] {
 
     &__empty {
       color: var(--normal-fg-50);
+    }
+
+    &__close-btn {
+      color: var(--normal-fg-50);
+
+      &:hover,
+      &:active {
+        background-color: var(--overlay-bg-05);
+        color: var(--normal-fg-10);
+      }
     }
   }
 }
