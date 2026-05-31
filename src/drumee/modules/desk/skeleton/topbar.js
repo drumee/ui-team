@@ -30,21 +30,23 @@ module.exports = function (ui) {
     debug: __filename,
     className: `${pfx}__main`,
     kids: [
-      // Breadcrumb (left, "home")
-      {
-        kind: "desk_breadcrumb",
-        sys_pn: "breadcrumb",
-        className: `${pfx}__breadcrumb`,
-        uiHandler: [ui],
-      },
-
-      // Open-folder tabs (Chrome-style) — sit to the right of the home
-      // breadcrumb. One tab per open folder window; populated by
-      // desk_module via partHandler.
+      // Left cluster — home breadcrumb + folder tabs glued together so
+      // the topbar's space-between layout doesn't push them apart.
       Skeletons.Box.X({
-        className: `${pfx}__folder-tabs`,
-        sys_pn: "folder-tabs",
-        partHandler: ui,
+        className: `${pfx}__left-cluster`,
+        kids: [
+          {
+            kind: "desk_breadcrumb",
+            sys_pn: "breadcrumb",
+            className: `${pfx}__breadcrumb`,
+            uiHandler: [ui],
+          },
+          Skeletons.Box.X({
+            className: `${pfx}__folder-tabs`,
+            sys_pn: "folder-tabs",
+            partHandler: ui,
+          }),
+        ],
       }),
 
       // Actions cluster (right)

@@ -1144,9 +1144,11 @@ class desk_module extends LetcBox {
         const entry = cid && this._openFolders.get(cid);
         const win = entry && entry.win;
         if (!win || win.isDestroyed()) return;
-        // The folder's onBeforeDestroy will fire "folder:close" which
-        // removes the entry from the map and re-renders.
-        if (typeof win.goodbye === "function") win.goodbye();
+        // {now:true} bypasses goodbye()'s default 2s timeout + scale/opacity
+        // animation so the floating window closes the moment the user clicks
+        // × on the header tab. The folder's onBeforeDestroy still fires
+        // folder:close, which removes the tab.
+        if (typeof win.goodbye === "function") win.goodbye({ now: true });
         else if (typeof win.destroy === "function") win.destroy();
         return;
       }
