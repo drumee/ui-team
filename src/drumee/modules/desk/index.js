@@ -797,6 +797,35 @@ class desk_module extends LetcBox {
   }
 
   /**
+   * Close the mobile drawer when a navigational sidebar service fires.
+   * The set covers the nav-mode rows (Home / Notifications / Inbox /
+   * Contacts / Trash / Apps), the actions-mode rows (Add new / Upload /
+   * Invite), Settings, and workspace selection. Excluded on purpose:
+   * search-files (fires per keystroke), toggle-theme (kept open for
+   * repeated toggling), and the mobile-show / mobile-close drawer controls.
+   */
+  _maybeDismissMobileDrawer(service) {
+    if (!this._drawerDismissServices) {
+      this._drawerDismissServices = new Set([
+        _e.home,
+        _e.upload,
+        "toggle-activity",
+        "toggle-inbox",
+        "toggle-contacts",
+        "toggle-trash",
+        "toggle-apps",
+        "toggle-settings",
+        "new-workspace",
+        "invite-member",
+        "load-workspace",
+      ]);
+    }
+    if (this._drawerDismissServices.has(service)) {
+      this._closeMobileDrawer();
+    }
+  }
+
+  /**
    *
    */
   togglePanel(kind, pn, openOnly) {
@@ -959,6 +988,14 @@ class desk_module extends LetcBox {
       return;
     }
     this.debug("AAA:830", service)
+    // Mobile: tapping a navigational sidebar item dismisses the drawer so
+    // the resulting panel/content is visible. on_click items (e.g. logout)
+    // never reach here, and drawer-control services (mobile-show-*/close),
+    // the search input, and the theme toggle are intentionally excluded —
+    // they manage the drawer themselves or are expected to leave it open.
+    if (Visitor.isMobile()) {
+      this._maybeDismissMobileDrawer(service);
+    }
     switch (service) {
       case _e.home:
         this.updateBreadcrumb({ event: _e.home });

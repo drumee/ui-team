@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
     inputs:
       target:
-        description: 'Deploy target environment'
+        description: "Deploy target environment"
         type: choice
         options: [UAT, PROD]
         default: UAT
@@ -63,19 +63,6 @@ jobs:
           echo "new=$NEW"   >> "$GITHUB_OUTPUT"
           echo "Previous: ${PREV:0:8}"
           echo "New     : ${NEW:0:8}"
-
-      - name: Install dependencies
-        run: |
-          ssh "$SGP_USER@$SGP_HOST" "sudo docker exec -i $CONTAINER bash -s" <<EOSSH
-          set -euo pipefail
-          cd $REPO_PATH
-          if ! npm install --ignore-scripts --no-audit --no-fund > $LOG_FILE 2>&1; then
-            echo "::error::npm install failed. Tail of log:"
-            tail -50 $LOG_FILE
-            exit 1
-          fi
-          echo "Dependencies installed"
-          EOSSH
 
       - name: Deploy
         env:
