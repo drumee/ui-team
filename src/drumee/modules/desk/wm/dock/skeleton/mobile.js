@@ -39,8 +39,8 @@ const __dock_widget_mobile_launchers = function(_ui_) {
         trigger   : mobileLauncherTrigger,
         items     : mobileLauncherItems,
         service   : "go-to",
-        uiHandler : _ui_
-      })       
+        uiHandler : [_ui_]
+      })
     ]});
   
   return a;

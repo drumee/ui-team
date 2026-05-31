@@ -20,6 +20,23 @@
     width: 400px;
     left: 50%;
     transform: translateX(-50%);
+
+    // Hide the entire bottom dock on mobile — the mobile UI has its own
+    // navigation surfaces (topbar + sidebar), the dock duplicates them
+    // and the mobile-launcher variant was dead code revived in 232258b7.
+    // Both triggers needed: `data-device="mobile"` fires on real iOS/
+    // Android, but Chrome DevTools mobile emulator (viewport ~430px,
+    // desktop UA) returns `desktop` from Visitor.device() — the media
+    // query catches that case so the dock stays hidden during testing.
+    &[data-device="mobile"] {
+      display: none !important;
+    }
+
+    @media (max-width: 650px) {
+      & {
+        display: none !important;
+      }
+    }
   }
 
   &__container {
@@ -582,7 +599,7 @@
     }
   }
 
-  @media (max-width: var(--small-width)) {
+  @media (max-width: 650px) {
     .desk-dock__container.application.maker {
       display: none;
     }
@@ -603,7 +620,7 @@
   }
 
   &__mobile-launch-wrapper {
-    @media (max-width: var(--small-width)) {
+    @media (max-width: 650px) {
       .desk-dock__container.application.maker {
         display: flex !important;
         padding-bottom: 8px;
@@ -687,5 +704,64 @@
 
   &__button.launcher.mobile-launcher {
     padding: 15px;
+  }
+
+  @media (min-width: 651px) {
+    &__ui {
+      display: none;
+    }
+  }
+
+  @media (max-width: 650px) {
+    &__ui {
+      bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+      max-width: 400px;
+      pointer-events: none;
+      width: calc(100vw - 24px);
+      z-index: 20000;
+    }
+
+    &__main {
+      max-width: 100%;
+      overflow: visible;
+      padding: 4px;
+      pointer-events: auto;
+    }
+
+    &__button {
+      height: 44px;
+      width: 44px;
+    }
+
+    &__button.launcher.mobile-launcher {
+      padding: 12px;
+    }
+
+    &__container.searchbox {
+      max-width: min(140px, calc(100vw - 230px));
+    }
+
+    &__mobile-launch-wrapper {
+      & .menu-topic-items__wrapper {
+        left: 50%;
+        max-width: calc(100vw - 24px);
+        overflow-x: auto !important;
+        transform: translateX(-50%);
+
+        &[data-device="mobile"] {
+          left: 50%;
+        }
+      }
+    }
+  }
+}
+
+@media (max-width: 650px) {
+  .window-manager__ui:has(.window-manager__layer .window__ui[data-state="1"]),
+  .window-manager__ui:has(.window-manager__layer .player__ui[data-state="1"]),
+  .window-manager__ui:has(.window-manager__wrapper-modal[data-state="open"]) {
+    .desk-dock__ui {
+      display: none;
+    }
   }
 }

@@ -1,0 +1,85 @@
+// =====================================================================
+// Responsive helpers for window-style widgets.
+//
+// `mobile-fullscreen-window` makes a floating window (folder, note,
+// editor dialog, etc.) collapse to a full-bleed panel on small screens.
+// It emits BOTH:
+//   1. `&[data-device="mobile"] { ... }` — fires when `Visitor.device()`
+//      tags the root element. Visitor only returns "mobile" for
+//      `innerWidth ≤ 800`, so on emulators and landscape phones the
+//      attribute may stay "desktop".
+//   2. `@media (max-width: 650px) { ... }` — viewport fallback so the
+//      layout still goes full-screen when the device attribute lies.
+//
+// Two positioning modes:
+//
+//   $top: 0px  (default) — "overlay topbar" mode
+//     Window sits at viewport top (0,0); the desk's mobile topbar
+//     stays on top with a higher z-index and visually overlays the
+//     window's top edge. Used by folder window so the chrome stays
+//     where the user expects it.
+//
+//   $top: 44px  — "below topbar" mode
+//     Window starts below the 44px mobile topbar, leaving its content
+//     fully visible. Use this when the widget has its own important
+//     header at top that must not sit behind the desk chrome (note
+//     editor, etc.).
+//
+// `$topbar-h` is always subtracted from `100vh` so the window never
+// extends behind the topbar's reserved row, regardless of $top.
+//
+// Usage:
+//
+//   .my-widget {
+//     &__ui {
+//       width: 400px;
+//       height: 480px;
+//
+//       // Default — overlay-topbar mode (window starts at 0,0)
+//       @include drumee.mobile-fullscreen-window;
+//
+//       // Below-topbar mode (window starts at 44px)
+//       @include drumee.mobile-fullscreen-window($top: 44px);
+//     }
+//   }
+// =====================================================================
+
+@mixin mobile-fullscreen-window($top: 0px, $topbar-h: 44px) {
+  // `Visitor.device() === "mobile"` branch — fires on real phones in
+  // portrait. `!important` defeats the inline width/height/left/top
+  // /transform that the window manager applies when dragging.
+  &[data-device="mobile"] {
+    border-radius: 0;
+    height: calc(100vh - #{$topbar-h}) !important;
+    height: calc(100dvh - #{$topbar-h}) !important;
+    left: 0 !important;
+    max-height: calc(100vh - #{$topbar-h});
+    max-height: calc(100dvh - #{$topbar-h});
+    max-width: 100vw;
+    min-width: 0 !important;
+    top: #{$top} !important;
+    transform: none !important;
+    width: 100vw !important;
+  }
+
+  // Viewport fallback — same rules, fires when the data-device
+  // attribute is wrong (Chrome DevTools emulator, landscape phone
+  // where Visitor.device() tags "desktop" because innerWidth > 800).
+  // Kept at the 650px breakpoint folder window used originally; widget
+  // JS owns the wider-net behaviour (see editor/markdow/index.js).
+  @media (max-width: 650px) {
+    & {
+      border-radius: 0;
+      height: calc(100vh - #{$topbar-h}) !important;
+      height: calc(100dvh - #{$topbar-h}) !important;
+      left: 0 !important;
+      max-height: calc(100vh - #{$topbar-h});
+      max-height: calc(100dvh - #{$topbar-h});
+      max-width: 100vw;
+      min-width: 0 !important;
+      top: #{$top} !important;
+      transform: none !important;
+      width: 100vw !important;
+    }
+  }
+}
