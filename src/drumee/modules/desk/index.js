@@ -137,13 +137,17 @@ class desk_module extends LetcBox {
     const area = winInstance.mget(_a.area);
     const dataset = { state: minimized ? 0 : 1 };
     if (area) dataset.area = area;
+    // Note: do NOT use `kidsOpt: { active: 0 }` here — _.merge(kid, kidsOpt)
+    // overrides each child's own props, which would zero out the close
+    // button's `active: 1` and silently drop its click handler. Set
+    // `active: 0` directly on the icon + label instead so the close
+    // button stays interactive.
     return Skeletons.Box.X({
       className: cn,
       uiHandler: [this],
       service: "focus-folder-tab",
       wincid: winInstance.cid,
       dataset,
-      kidsOpt: { active: 0 },
       kids: [
         Skeletons.Button.Svg({
           ico: "folder-header",

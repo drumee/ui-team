@@ -37,13 +37,20 @@
 
   // Left cluster — home breadcrumb + folder tabs sit flush, then
   // flex's space-between pushes the whole cluster left and the actions
-  // cluster right.
+  // cluster right. The breadcrumb widget ships with `flex: 1` on its
+  // `__ui` root (from breadcrumb/skin/index.scss), which would otherwise
+  // stretch it to fill the row and push the tabs all the way right.
+  // Override that inside the cluster so the breadcrumb hugs its content.
   &__left-cluster {
     align-items: center;
     gap: 8px;
     min-width: 0;
-    flex: 1 1 auto;
+    flex: 0 1 auto;
     overflow: hidden;
+
+    .desk-breadcrumb__ui {
+      flex: 0 1 auto;
+    }
   }
 
   // Chrome-style folder tabs — sit immediately right of the home
