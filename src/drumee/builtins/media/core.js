@@ -313,6 +313,10 @@ class __media_core extends DrumeeMFS {
     let f = "vignette";
     if (this.mget(_a.filetype) == _a.vector) {
       f = "orig";
+    } else if (this.mget(_a.ext) == _a.pdf) {
+      // Whole first page at natural aspect (no center-crop / no letterbox); the
+      // cell crops it to cover+top in CSS so the document title stays visible.
+      f = "thumb";
     }
     this.mset({
       url: this.actualNode(f).url,
@@ -1231,8 +1235,10 @@ class __media_core extends DrumeeMFS {
     switch (this.mget(_a.ext)) {
       case 'svg':
         return 1;
+      // PDF: the server rasterizes page 1 on demand (create_document_thumb →
+      // gm convert orig.pdf[0]); show that content thumbnail instead of an icon.
       case _a.pdf:
-        return 0;
+        return 1;
     }
     if (/text/.test(this.mget(_a.mimetype))) return 0;
     if (/shell|script|text/.test(this.mget(_a.filetype))) return 0;
