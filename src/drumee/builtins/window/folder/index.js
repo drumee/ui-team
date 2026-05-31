@@ -97,6 +97,65 @@ class __window_folder extends mfsInteract {
     this._applyBoundsAfterFs(target);
   }
 
+  // Override the inherited utils.js minimize/wake. The inherited version
+  // captures bounds via $el.offset() (document-relative) and writes them
+  // as inline top/left (parent-relative), so when the window's offset
+  // parent is not at (0,0) the restored window lands off-screen — the
+  // list inside never gets a visible viewport and looks "stuck loading".
+  // Also, the original 1.5s TweenMax animations make the tab-click →
+  // restore round-trip feel laggy; a short opacity fade + bounds snap is
+  // enough.
+  minimize(cmd) {
+    if (this.mget(_a.minimize)) return;
+    this._minimizedBounds = this._snapshotBounds();
+    this.mset(_a.minimize, 1);
+    if (this.el) {
+      this.el.dataset.minimize = 1;
+      this.el.dataset.state = 0;
+    }
+    if (window.Wm && Wm.$el) Wm.$el.trigger(_e.minimize, this);
+    this.$el.stop(true, false).animate(
+      { opacity: 0 },
+      {
+        duration: 150,
+        complete: () => {
+          if (this.isDestroyed && this.isDestroyed()) return;
+          this.$el.css({ display: "none", opacity: 1 });
+        },
+      },
+    );
+  }
+
+  wake(cmd, callback) {
+    if (!this.mget(_a.minimize)) return;
+    this.mset(_a.minimize, 0);
+    if (this.el) {
+      this.el.dataset.minimize = 0;
+      this.el.dataset.state = 1;
+    }
+    this.$el.css({ display: "" });
+    const b = this._minimizedBounds;
+    this._minimizedBounds = null;
+    if (b) {
+      this.size = { ...this.size, width: b.width, height: b.height };
+      this.style.set(b);
+      this.$el.css(b);
+      if (this.syncBounds) this.syncBounds(true);
+    }
+    this.$el.stop(true, false).css({ opacity: 0 }).animate(
+      { opacity: 1 },
+      {
+        duration: 150,
+        complete: () => {
+          if (this.isDestroyed && this.isDestroyed()) return;
+          if (typeof callback === "function") callback();
+        },
+      },
+    );
+    if (this.raise) this.raise();
+    if (window.Wm && Wm.$el) Wm.$el.trigger(_e.wake, this);
+  }
+
   toggleFullscreen() {
     if (document.fullscreenElement === this.el) {
       document.exitFullscreen();
