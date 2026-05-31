@@ -1371,6 +1371,8 @@
   "ACCOUNT_SETTINGS": "Account settings",
   "ACCOUNT_SETTINGS_SUBTITLE": "Manage your account preferences, notifications, and connected apps.",
   "SAVE_PROFILE": "Save Profile",
+  "PROFILE_SAVED": "Profile saved",
+  "PROFILE_SAVE_FAILED": "Couldn't save profile. Please try again.",
   "EDIT_AVATAR": "EDIT AVATAR",
   "AVATAR_UPLOAD_FAILED": "Could not upload avatar. Please try again.",
   "DISPLAY_NAME": "Display Name",
