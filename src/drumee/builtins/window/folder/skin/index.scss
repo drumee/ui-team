@@ -517,6 +517,30 @@
       display: none;
     }
 
+    // Minimize control — thin Unicode minus glyph (U+2212), not the
+    // chunky window-minimize SVG bar.
+    &__minimize-btn {
+      width: 20px;
+      height: 20px;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: "Inter", "Geist", system-ui, sans-serif;
+      font-size: 18px;
+      font-weight: 300;
+      line-height: 1;
+      color: var(--normal-fg-20, var(--normal-fg-10));
+      cursor: pointer;
+      user-select: none;
+      transition: color 0.15s ease, transform 0.15s ease;
+
+      &:hover {
+        color: var(--normal-fg-10);
+        transform: scale(1.1);
+      }
+    }
+
     // macOS-style zoom menu — icon trigger with CSS-hover dropdown.
     &__zoom-wrapper {
       position: relative;
@@ -647,26 +671,6 @@
 
     &__zoom-item-label {
       flex: 1;
-    }
-
-    // Fullscreen label swaps "Enter"/"Exit Full Screen" purely in CSS. The
-    // window element this menu lives in is the one passed to requestFullscreen,
-    // so `:fullscreen` reflects the live state — no stale `document.fullscreen
-    // Element` snapshot baked at skeleton-build time.
-    &__zoom-item-label--fs-exit {
-      display: none;
-    }
-
-    // When the window element is in browser fullscreen, show "Exit Full Screen"
-    // and hide "Enter Full Screen". Emitted at root so the selector starts from
-    // the `:fullscreen` ancestor (the window el), not from `.window-folder-topbar`.
-    @at-root {
-      :fullscreen .window-folder-topbar__zoom-item-label--fs-enter {
-        display: none !important;
-      }
-      :fullscreen .window-folder-topbar__zoom-item-label--fs-exit {
-        display: block !important;
-      }
     }
 
     // The window control (close ×) sits at the far right of the row.

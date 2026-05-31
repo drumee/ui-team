@@ -30,21 +30,22 @@ module.exports = function (ui) {
     debug: __filename,
     className: `${pfx}__main`,
     kids: [
-      // Open-folder tabs (Chrome-style) — leftmost. One tab per open
-      // folder window; populated by desk_module via partHandler.
-      Skeletons.Box.X({
-        className: `${pfx}__folder-tabs`,
-        sys_pn: "folder-tabs",
-        partHandler: ui,
-      }),
-
-      // Breadcrumb
+      // Breadcrumb (left, "home")
       {
         kind: "desk_breadcrumb",
         sys_pn: "breadcrumb",
         className: `${pfx}__breadcrumb`,
         uiHandler: [ui],
       },
+
+      // Open-folder tabs (Chrome-style) — sit to the right of the home
+      // breadcrumb. One tab per open folder window; populated by
+      // desk_module via partHandler.
+      Skeletons.Box.X({
+        className: `${pfx}__folder-tabs`,
+        sys_pn: "folder-tabs",
+        partHandler: ui,
+      }),
 
       // Actions cluster (right)
       Skeletons.Box.X({

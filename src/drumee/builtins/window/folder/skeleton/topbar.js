@@ -138,11 +138,20 @@ const __skl_folder_topbar = function (ui) {
     ],
   });
 
-  let controls = require("window/skeleton/topbar/control")(ui, "mc");
+  let controls = require("window/skeleton/topbar/control")(ui, "c");
+
+  // Custom minimize glyph (Unicode U+2212) — thinner than the bundled
+  // `window-minimize` SVG which renders as a heavy 1.6/14 vh bar.
+  const minimizeBtn = Skeletons.Note({
+    className: `${cnFolder}__minimize-btn`,
+    content: "−",
+    service: _e.minimize,
+    uiHandler: [ui],
+  });
 
   const rightCluster = Skeletons.Box.X({
     className: `${cnFolder}__right`,
-    kids: [videoBtn, uploadBtn, addNew, shareBtn, settingsBtn, splitBtn, zoomMenu(ui), controls],
+    kids: [videoBtn, uploadBtn, addNew, shareBtn, settingsBtn, splitBtn, zoomMenu(ui), minimizeBtn, controls],
   });
 
   // ── Root row ─────────────────────────────────────────────────
