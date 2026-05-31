@@ -214,6 +214,12 @@
       &.vector {
         background-color: var(--neutral-500);
       }
+
+      // Document posters (PDF first page) crop to the top so the title stays
+      // visible, unlike photos which crop to center.
+      &.document {
+        background-position: top;
+      }
     }
 
     .preview-icon {
