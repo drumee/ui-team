@@ -1,0 +1,13 @@
+diff --git a/node_modules/@drumee/ui-core/letc/mfs.js b/node_modules/@drumee/ui-core/letc/mfs.js
+index 2c5aedb..976702d 100644
+--- a/node_modules/@drumee/ui-core/letc/mfs.js
++++ b/node_modules/@drumee/ui-core/letc/mfs.js
+@@ -652,7 +652,7 @@ class __core_mfs extends LetcBox {
+           this.viewerURL = r.link;
+         }
+     }
+-    return this.viewerURL.replace(/\/+/g, '/');
++    return this.viewerURL.replace(/\/+/g, '/').replace(/^https:/, 'https:/');
+   }
+ 
+   /**
