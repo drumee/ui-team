@@ -33,9 +33,12 @@ module.exports = function (ui) {
     body = require("./meeting-event")(m);
   } else {
     body = require("./conversation")(m);
+    // Only true 1-on-1 chats (personal / private room) hide the per-message
+    // sender name. "private" is the TEAM group app (window_team) — a group, so
+    // it must keep showing names; don't treat it as P2P here.
     const isP2P =
-      m.type === _a.private ||
       m.type === _a.privateRoom ||
+      m.area === _a.privateRoom ||
       m.area === _a.personal;
     if (!isP2P && m.author !== _a.me) {
       // Username stays as a label ABOVE the line (not inline with time + bubble).

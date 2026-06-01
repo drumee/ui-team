@@ -296,10 +296,10 @@ class ___widget_chatItem extends LetcBox {
    * @param {*} e
    */
   _mouseleave(e) {
+    // The menu + time now live inside the message line and reveal via CSS
+    // :hover, so there is no floating-bar gap to bridge — just cancel a pending
+    // lazy build if the cursor leaves before it fires.
     clearTimeout(this._timer.hover);
-    // Delay the hide so moving the cursor onto the floating action bar (which
-    // sits over the bubble's top edge) keeps it open instead of dismissing it.
-    this._timer.hide = _.delay(() => this._hover(_a.off, e), 220);
   }
 
   /**
@@ -309,58 +309,19 @@ class ___widget_chatItem extends LetcBox {
   _hover(state, e) {
     if (!e) return;
     if (this.selectable == _a.yes) return;
-    if (state == _a.on) {
-      const fresh = !this.menu || this.menu.isDestroyed();
-      if (fresh) {
-        this.prepend(require("./skeleton/menu")(this));
-        this.menu = this.children.first();
-        // Keep the bar open while the cursor is over it; hide shortly after it
-        // leaves so the gap between bubble and bar doesn't dismiss it.
-        const barEl = this.menu.el;
-        barEl.addEventListener("mouseenter", () =>
-          clearTimeout(this._timer.hide),
-        );
-        barEl.addEventListener("mouseleave", (ev) => {
-          this._timer.hide = _.delay(() => this._hover(_a.off, ev), 220);
-        });
-      } else {
-        this.menu.el.show();
-      }
-      const mainEl = this.__main.el;
-      const fig = this.fig.family;
-      // Position relative to the conversation bubble itself (fall back to the
-      // message container / main for non-text messages).
-      const bubble =
-        mainEl.querySelector(`.${fig}__conversation-content`) ||
-        mainEl.querySelector(`.${fig}__message-container`) ||
-        mainEl;
-      const uiRect = this.el.getBoundingClientRect();
-      const bubbleRect = bubble.getBoundingClientRect();
-      if (this.menu && !this.menu.isDestroyed()) {
-        const el = this.menu.el;
-        const gap = 6;
-        // Vertically centre on the bubble via transform — no bar height needed.
-        el.style.top = `${bubbleRect.top - uiRect.top + bubbleRect.height / 2}px`;
-        el.style.transform = "translateY(-50%)";
-        // Anchor each side to the bubble edge WITHOUT measuring the bar width
-        // (offsetWidth is unreliable on the first hover before layout settles,
-        // which mis-placed the bar for own messages).
-        if (this.mget(_a.author) === _a.me) {
-          // Own messages: bar to the LEFT of the bubble — pin its right edge to
-          // the bubble's left edge.
-          el.style.right = `${Math.max(0, uiRect.right - bubbleRect.left + gap)}px`;
-          el.style.left = "auto";
-        } else {
-          // Incoming messages: bar to the RIGHT of the bubble — pin its left
-          // edge to the bubble's right edge.
-          el.style.left = `${Math.max(0, bubbleRect.right - uiRect.left + gap)}px`;
-          el.style.right = "auto";
-        }
-      }
-    } else {
-      if (this.menu && !this.menu.isDestroyed()) {
-        this.menu.el.hide();
-      }
+    if (state != _a.on) return;
+    // Build the action menu lazily on first hover, then drop it INTO the
+    // message line so CSS lays it out on one vertically-centred row beside the
+    // bubble (time on the opposite side). Placement + reveal are pure CSS —
+    // see skin/index.scss (&-line / &-footer) and skin/menu.scss (&__dropdown).
+    const fresh = !this.menu || this.menu.isDestroyed();
+    if (!fresh) return;
+    this.prepend(require("./skeleton/menu")(this));
+    this.menu = this.children.first();
+    const fig = this.fig.family;
+    const line = this.__main.el.querySelector(`.${fig}__message-line`);
+    if (line && this.menu && this.menu.el) {
+      line.appendChild(this.menu.el);
     }
   }
 

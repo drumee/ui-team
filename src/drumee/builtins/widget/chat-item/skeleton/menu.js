@@ -1,86 +1,64 @@
-const __skl_chatiItem_menu = function(_ui_) {
-  let forwardMsg;
+// Hover action bar for a chat message. A plain horizontal row of icon buttons
+// (reply / copy / forward / delete) — NOT a menu_topic dropdown, so there is no
+// ⋮ trigger and no click-to-open. chat-item._hover drops this into the message
+// line; skin/menu.scss floats it beside the bubble and reveals it on hover.
+const __skl_chatiItem_menu = function (_ui_) {
   const author = _ui_.mget(_a.author);
   const chatMenuFig = `${_ui_.fig.family}-menu`;
-
   const handler = _ui_.mget(_a.uiHandler);
 
-  const menuTrigger = Skeletons.Button.Svg({
-    ico       : "apps-dots-vertical",
-    className : `${chatMenuFig}__icon ${chatMenuFig}__trigger menu-icon ${author}`,
-    service   : 'chat-item-menu',
-    uiHandler : _ui_
-  });
-
   const reply = Skeletons.Button.Svg({
-    className : `${chatMenuFig}__item reply`,
-    ico       : 'chat_reply',
-    service   : _e.reply,
-    uiHandler : _ui_
+    className: `${chatMenuFig}__item reply`,
+    ico: "chat_reply",
+    service: _e.reply,
+    uiHandler: _ui_,
   });
 
   const copyText = Skeletons.Button.Svg({
-    className : `${chatMenuFig}__item copy-tex`,
-    ico       : 'chat_copy',
-    service   : _e.copy,
-    uiHandler : _ui_
+    className: `${chatMenuFig}__item copy-tex`,
+    ico: "chat_copy",
+    service: _e.copy,
+    uiHandler: _ui_,
   });
-   
-  if ((handler.type === _a.share) && (handler.view === 'quickChat')) {
-    forwardMsg = '';
+
+  let forwardMsg;
+  if (handler.type === _a.share && handler.view === "quickChat") {
+    forwardMsg = undefined;
   } else {
     forwardMsg = Skeletons.Button.Svg({
-      className : `${chatMenuFig}__item forward-message`,
-      ico       : 'chat_forward',
-      service   : _a.forward,
-      uiHandler : _ui_
+      className: `${chatMenuFig}__item forward-message`,
+      ico: "chat_forward",
+      service: _a.forward,
+      uiHandler: _ui_,
     });
   }
 
-  
   const deleteMsg = Skeletons.Button.Svg({
-    className : `${chatMenuFig}__item delete-for-me`,
-    ico       : 'chat_delete',
-    service   : 'chat-item-delete',
-    uiHandler : _ui_
+    className: `${chatMenuFig}__item delete-for-me`,
+    ico: "chat_delete",
+    service: "chat-item-delete",
+    uiHandler: _ui_,
   });
-  
-  const menuItems = Skeletons.Box.X({
-    className : `${chatMenuFig}__items-wrapper ${author}`,
-    flow      : _a.horizontal,
-    kids      : [
+
+  const isTicket = _ui_.mget("message_type") === _a.ticket;
+
+  const menu = Skeletons.Box.X({
+    debug: __filename,
+    className: `${chatMenuFig}__dropdown chat-item__dropdown ${author}`,
+    kids: [
       Skeletons.Box.X({
-        kids  : [
+        className: `${chatMenuFig}__items-container ${author}`,
+        flow: _a.horizontal,
+        kids: [
           reply,
           copyText,
-          _ui_.mget('message_type') !== _a.ticket ?
-            forwardMsg : undefined,
-          _ui_.mget('message_type') !== _a.ticket ?
-            deleteMsg : undefined
-        ]})
-    ]});
-  const f = '';
-  if(_ui_.showDateOfDay()) { 
-    const fi = 'first-of-group'; 
-  }
-  const menu = Skeletons.Box.X({
-    debug     : __filename,
-    className : `${chatMenuFig}__dropdown chat-item__dropdown ${author} ${f}`,
-    kids      : [{
-      kind        : KIND.menu.topic,
-      className   : `${chatMenuFig}__wrapper chat-item__dropdown-wrapper ${author}`,
-      flow        : _a.y,
-      direction   : _a.left,
-      axis        : _a.x,
-      opening     : _e.click,
-      sys_pn      : "chat-item-dropdown",
-      service     : "chat-item-menu",
-      persistence : _a.none,
-      itemsClass  : `${chatMenuFig}__items-container ${author}`,
-      trigger     : menuTrigger,
-      items       : menuItems
-    }]});
-  
+          isTicket ? undefined : forwardMsg,
+          isTicket ? undefined : deleteMsg,
+        ],
+      }),
+    ],
+  });
+
   return menu;
 };
 
