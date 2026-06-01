@@ -30,11 +30,18 @@
     // Active (radio) rows shave 4px to absorb their 4px left border so the
     // label stays aligned with inactive siblings.
     @for $i from 0 through 12 {
+      // Use @if/@else statements instead of the deprecated if() function.
+      $pad: 22px + $i * 18px;
+      $pad-active: 18px + $i * 18px;
+      @if $i == 0 {
+        $pad: 24px;
+        $pad-active: 20px;
+      }
       &[data-level="#{$i}"] {
-        padding-left: if($i == 0, 24px, 22px + $i * 18px);
+        padding-left: $pad;
 
         &[data-radio="on"] {
-          padding-left: if($i == 0, 20px, 18px + $i * 18px);
+          padding-left: $pad-active;
         }
       }
     }

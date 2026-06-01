@@ -83,7 +83,12 @@ class __address_book extends LetcBox {
    *
    * @param {*} e
    */
-  _onOutsideClick(e) {
+  _onOutsideClick(e, source) {
+    // Clicks coming from a sidebar toggle button are owned by
+    // Desk.togglePanel — bail so we don't race it (flip anim to "out"
+    // here and have togglePanel read it as closed and reopen).
+    const svc = source && source.mget && source.mget(_a.service);
+    if (typeof svc === "string" && svc.startsWith("toggle-")) return;
     if (this.el.dataset.anim === "in" && !this.el.contains(e.target)) {
       Desk.closeAllPanels();
     }

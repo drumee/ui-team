@@ -100,6 +100,10 @@ class __window_meeting extends __room {
    */
   async onDomRefresh() {
     this.raise();
+    this._initIdleControls();
+    // Standalone (Wm pool) calls must float via the base window's absolute
+    // positioning; embedded meetings (folder tab) stay relative/fill-parent.
+    if (this.el) this.el.dataset.standalone = this.mget("standalone") ? "1" : "0";
     if (this.el) this.el.dataset.ready = "0";
     this.feed(require("./skeleton/init")(this));
     this.stateMachine("initializing");
@@ -166,7 +170,32 @@ class __window_meeting extends __room {
     });
   }
 
+  /**
+   * Auto-hide the floating control bar after a few seconds of mouse inactivity
+   * (reappears on movement). Toggles data-idle on the window root; the skin
+   * owns the fade.
+   */
+  _initIdleControls() {
+    if (this._idleBound || !this.el) return;
+    this._idleBound = 1;
+    this._idleDelay = 3000;
+    this._wakeControls = () => {
+      if (!this.el) return;
+      this.el.dataset.idle = "0";
+      clearTimeout(this._idleTimer);
+      this._idleTimer = setTimeout(() => {
+        if (this.el) this.el.dataset.idle = "1";
+      }, this._idleDelay);
+    };
+    this.el.addEventListener("mousemove", this._wakeControls);
+    this._wakeControls();
+  }
+
   onBeforeDestroy() {
+    clearTimeout(this._idleTimer);
+    this._hideScreenSelfPreview();
+    if (this.el && this._wakeControls)
+      this.el.removeEventListener("mousemove", this._wakeControls);
     // Covers teardown paths that bypass _closeFeedbackAndLeave (tab close,
     // error teardown). _meetingEndedBroadcast keeps it idempotent.
     if (this._isHost && !this._meetingEndedBroadcast && !this._meetingEndedRemote) {
@@ -284,6 +313,22 @@ class __window_meeting extends __room {
     this._refreshDashboard();
   }
 
+  // When a participant leaves, clear their call/hand/presenting state so the
+  // dashboard card flips back from "Joined" to a callable "Call" button (and
+  // drops any stale hand-raise / presenting badges). Map the participant id to
+  // its drumate uid BEFORE super destroys the endpoint.
+  onUserLeft(id) {
+    const uid = this._uidForParticipant(id);
+    if (super.onUserLeft) super.onUserLeft(id);
+    if (uid != null) {
+      const key = String(uid);
+      if (this._memberCallStates) this._memberCallStates.delete(key);
+      if (this._memberHandRaised) this._memberHandRaised.delete(key);
+      if (this._memberPresenting) this._memberPresenting.delete(key);
+      this._refreshDashboard();
+    }
+  }
+
   /**
    *
    */
@@ -293,6 +338,14 @@ class __window_meeting extends __room {
     switch (service) {
       case _a.close:
         this.warning(require("./skeleton/confirm")(this, null));
+        break;
+
+      case _a.chat:
+        this.toggleMeetingChat();
+        break;
+
+      case "close-chat":
+        this.closeMeetingChat();
         break;
 
       case _a.invite:
@@ -369,6 +422,134 @@ class __window_meeting extends __room {
 
       default:
         super.onUiEvent(cmd, args);
+    }
+  }
+
+  /**
+   * Slide the embedded team-chat panel in/out (toggled from the topbar chat
+   * button or the panel's own close button). Opening it clears the unread
+   * badge. The panel embeds widget_chat bound to the team's hub channel, so
+   * it's the same persisted conversation as the team window.
+   */
+  _chatPanelEl() {
+    return this.el && this.el.querySelector(`.${this.fig.family}__chat-panel`);
+  }
+
+  _setChatOpen(open) {
+    const panel = this._chatPanelEl();
+    if (!panel) return;
+    panel.dataset.open = open ? "1" : "0";
+    if (open) {
+      const badge = this.el.querySelector(
+        `.${this.fig.family}__in-topbar-chat-badge`,
+      );
+      if (badge) badge.dataset.state = 0;
+    }
+  }
+
+  toggleMeetingChat() {
+    const panel = this._chatPanelEl();
+    if (!panel) return;
+    this._setChatOpen(panel.dataset.open !== "1");
+  }
+
+  closeMeetingChat() {
+    this._setChatOpen(false);
+  }
+
+  // Show a small self-preview of our own shared screen while presenting, so
+  // the presenter can see exactly what's being broadcast (the main presenter
+  // stage shows the share to *other* participants, not to the sharer).
+  async startPresentation() {
+    let r;
+    try {
+      r = await super.startPresentation();
+    } catch (e) {
+      // User canceled the screen-picker (gum.screensharing_user_canceled) or a
+      // device error — already warned by the base layer. Swallow it so it
+      // doesn't surface as an uncaught promise rejection.
+      return false;
+    }
+    // Only mirror locally when sharing actually started (super returns true);
+    // the bail-out branches return false/undefined. This is purely a local
+    // preview and does not touch the desktop track sent to other participants.
+    if (r === true) {
+      const track =
+        this.getLocalTrack(_a.desktop) ||
+        (this.localTracks && this.localTracks.desktop);
+      if (track) this._showScreenSelfPreview(track);
+    }
+    return r;
+  }
+
+  async stopPresentation(track) {
+    this._hideScreenSelfPreview();
+    return super.stopPresentation(track);
+  }
+
+  _showScreenSelfPreview(track) {
+    if (!track || !this.el) return;
+    this._hideScreenSelfPreview();
+    // Render the preview from a CLONE of the desktop track, never the live
+    // track that's published to the peer connection — so consuming it for the
+    // local <video> can't affect the stream other participants receive.
+    let stream = null;
+    try {
+      const mst =
+        track.track ||
+        (typeof track.getTrack === "function" ? track.getTrack() : null);
+      if (mst && typeof mst.clone === "function") {
+        this._screenSelfPreviewTrack = mst.clone();
+        stream = new MediaStream([this._screenSelfPreviewTrack]);
+      } else if (typeof track.getOriginalStream === "function") {
+        stream = track.getOriginalStream();
+      }
+    } catch (e) {
+      stream = null;
+    }
+    if (!stream) return;
+
+    const pfx = this.fig.family;
+    const box = document.createElement("div");
+    box.className = `${pfx}__screen-self-preview`;
+
+    const video = document.createElement("video");
+    video.muted = true;
+    video.autoplay = true;
+    video.playsInline = true;
+    video.srcObject = stream;
+
+    const label = document.createElement("div");
+    label.className = `${pfx}__screen-self-preview-label`;
+    label.textContent = LOCALE.YOU_ARE_PRESENTING || "You're presenting";
+
+    const stop = document.createElement("div");
+    stop.className = `${pfx}__screen-self-preview-stop`;
+    stop.textContent = LOCALE.STOP_SHARING || LOCALE.STOP || "Stop";
+    stop.onclick = () => this._stopOwnPresentation();
+
+    box.appendChild(video);
+    box.appendChild(label);
+    box.appendChild(stop);
+
+    const host = this.el.querySelector(`.${pfx}__body`) || this.el;
+    host.appendChild(box);
+    this._screenSelfPreview = box;
+    if (video.play) video.play().catch(() => {});
+  }
+
+  _hideScreenSelfPreview() {
+    if (this._screenSelfPreviewTrack) {
+      try {
+        this._screenSelfPreviewTrack.stop();
+      } catch (e) {}
+      this._screenSelfPreviewTrack = null;
+    }
+    if (this._screenSelfPreview) {
+      try {
+        this._screenSelfPreview.remove();
+      } catch (e) {}
+      this._screenSelfPreview = null;
     }
   }
 

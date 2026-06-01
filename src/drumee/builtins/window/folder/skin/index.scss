@@ -2034,8 +2034,15 @@
   }
 
   .window__chat-panel .widget-chat__body {
-    padding: 16px;
+    // No right padding so the message scrollbar sits flush against the panel
+    // edge instead of floating in a gap; per-item right padding keeps text
+    // clear of the scrollbar.
+    padding: 16px 0 16px 16px;
     gap: 16px;
+  }
+
+  .window__chat-panel .widget-chatItem__ui {
+    padding-right: 12px;
   }
 
   .widget-chat__messenger-wrapper {
