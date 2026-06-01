@@ -261,6 +261,27 @@ class __window_folder extends mfsInteract {
     if (this.mget(_a.headless)) {
       this.listenTo(this.model, `change:${_a.state}`, this._syncWorkspaceFocus);
     }
+
+    // Keep the window title in sync with the model name. A workspace ROOT has an
+    // empty filename and only receives its name (hub_name) LATER via get_path —
+    // by which point the title element may have mounted blank (and core's
+    // onPartReady cleanText()'d it). The earlier symptom was "the workspace name
+    // only shows on the 2nd click". Listening to the model sets the title on
+    // whichever instance actually holds the resolved name, independent of
+    // mount/fetch ordering or headless-singleton churn.
+    this.listenTo(
+      this.model,
+      `change:hub_name change:${_a.filename}`,
+      this._syncWindowTitle,
+    );
+  }
+
+  // Apply filename (or hub_name for an empty-filename root) to the title widget.
+  _syncWindowTitle() {
+    const name = this.mget(_a.filename) || this.model.get("hub_name");
+    if (!name) return;
+    const t = this.__refWindowName || this.name;
+    if (t && _.isFunction(t.set)) t.set({ content: name });
   }
 
 
@@ -481,6 +502,15 @@ class __window_folder extends mfsInteract {
       return;
     }
     if (super.onPartReady) super.onPartReady(child, pn);
+    if (pn === "ref-window-name") {
+      // core's onPartReady cleanText()'s the title to "". A workspace root's
+      // name lives in hub_name (its filename is empty); seed it now — on first
+      // open the title mounts AFTER get_path already set hub_name, so it's
+      // available here. (Late arrivals are handled by _syncWindowTitle's model
+      // listener.)
+      const name = this.mget(_a.filename) || this.model.get("hub_name");
+      if (name && _.isFunction(child.set)) child.set({ content: name });
+    }
   }
 
   onChildBubble(c) {

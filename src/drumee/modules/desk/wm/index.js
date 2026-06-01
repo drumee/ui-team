@@ -299,6 +299,14 @@ class __window_manager extends push {
     const hub_id = data.hub_id || data.id;
     let nid = data.actual_home_id || data.home_id || data.nid;
     data.nid = nid;
+    // The clicked sidebar item ALREADY knows the workspace name (it renders it
+    // from `filename`). Capture it now — inside `apply` below the `data` param
+    // shadows this outer one and refers to media.attributes (whose root filename
+    // is empty), so without this the window opened nameless and depended on the
+    // async get_path to backfill the title/crumb (the race that made the root
+    // name vanish, esp. when switching workspaces).
+    const workspaceName =
+      data.filename || data.name || data.hub_name || data.workspace_name;
 
     if (!hub_id) {
       this.warn("loadWorkspace: missing hub_id", data);
@@ -337,6 +345,12 @@ class __window_manager extends push {
         ...data,
         headless: 1,
         filename: data.filename || data.name,
+        // Seed the workspace name synchronously so the title + root breadcrumb
+        // crumb are correct from first paint (topbar reads filename||name||
+        // hub_name; _captureNavState snapshots hub_name for the crumb). No
+        // longer waits on get_path, so the name survives rapid workspace
+        // switching and never "shows only on the 2nd click".
+        hub_name: data.hub_name || workspaceName,
         // Headless workspace lives in its own singleton pool, which is headlessLayer.
         // subfolders or players open from the workspace shall go to this pool.
         // docs/superpowers/specs/2026-05-22-multi-folder-windows-design.md.
