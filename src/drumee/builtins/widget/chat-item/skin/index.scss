@@ -114,7 +114,6 @@
         // Same trick as the reply quote — shrink to bubble width so the
         // container right edge sits exactly where the quote's right edge sits.
         width: max-content;
-        margin-left: auto;
       }
 
       &.other {
@@ -614,6 +613,11 @@
   }
 
   .widget-chatItem__message-footer {
+    display: none !important;
+  }
+
+  // No hover action menu on meeting notices.
+  .widget-chatItem-menu__dropdown {
     display: none !important;
   }
 
