@@ -30,10 +30,13 @@ const __media_skl_grid = function (ui) {
       filename: /^\./,
     },
     vendorOpt: Preset.List.Orange_e,
-    // api: function () {
-    //   return ui.getCurrentApi();
-    // },
-    api: ui.getCurrentApi
+    // List._initApi calls api(this) as a plain function (no `this` binding),
+    // so a bare `ui.getCurrentApi` reference runs with this=undefined and
+    // crashes on this.actualNode(). Wrap it so getCurrentApi is invoked as a
+    // method on `ui` (same pattern as gridFilesBrowser's working api).
+    api: function () {
+      return ui.getCurrentApi();
+    },
   });
 
   if (localStorage.getItem("showHidden")) {

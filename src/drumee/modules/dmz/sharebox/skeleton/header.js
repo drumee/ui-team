@@ -14,6 +14,14 @@ function __skl_dmz_sharebox_header(ui) {
     content: ui.mget(_a.title) || ui.mget(_a.filename) || ui.mget(_a.name),
   });
 
+  const expiryTime = ui.mget('is_secure') ? (ui.mget('expiry_time') || 0) : 0;
+  const expiryNote = (expiryTime > 0)
+    ? Skeletons.Note({
+        className: `${headerFig}__subline-expiry`,
+        content: `· ${LOCALE.SECURE_SHARE_EXPIRY_LABEL} ${Dayjs.unix(expiryTime).fromNow()}`
+      })
+    : null;
+
   const subline = Skeletons.Box.X({
     className: `${headerFig}__subline`,
     kids: [
@@ -25,7 +33,8 @@ function __skl_dmz_sharebox_header(ui) {
         className: `${headerFig}__subline-label`,
         content: LOCALE.SHARED_BY_LINK || "Shared by link",
       }),
-    ],
+      expiryNote,
+    ].filter(Boolean),
   });
 
   const titleBlock = Skeletons.Box.Y({

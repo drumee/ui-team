@@ -16,13 +16,40 @@ class settings_main extends LetcBox {
     // LetcBox auto-binds fetchService/postService but not uploadFile.
     this.uploadFile = uploadFile.bind(this);
     this.model.set({ hub_id: Visitor.id });
+    // True while a picked avatar is being converted (HEIC) and/or uploaded.
+    // The skeleton reads this via isAvatarProcessing() to show the spinner.
+    this._avatarProcessing = false;
+  }
+
+  /** Skeleton reads this to seed the avatar-frame's data-processing flag. */
+  isAvatarProcessing() {
+    return this._avatarProcessing;
+  }
+
+  /**
+   * Toggle the processing state. Updates the instance flag (so a re-render
+   * keeps the spinner) AND flips data-processing on the live frame so the
+   * overlay appears instantly without waiting for a re-render.
+   */
+  _setAvatarProcessing(on) {
+    this._avatarProcessing = !!on;
+    const frame = this.el && this.el.querySelector('[data-partname="avatar-frame"]');
+    if (frame) frame.dataset.processing = on ? "1" : "0";
   }
 
   /**
    *
    */
   async onDomRefresh() {
-    this._oauthLinks = await this._loadOauthLinks();
+    // Load linked providers + the gdrive migration state in parallel so the
+    // "Migrate from Google Drive" row reflects a running job (in-progress + %)
+    // as soon as Settings opens, instead of always offering "Start".
+    const [links, gdrive] = await Promise.all([
+      this._loadOauthLinks(),
+      this._loadGdriveState(),
+    ]);
+    this._oauthLinks = links;
+    this._gdriveState = gdrive;
     this._reconcilePasswordSet();
     this.feed(require("./skeleton").default(this));
   }
@@ -44,6 +71,24 @@ class settings_main extends LetcBox {
       return [];
     }
   }
+
+  /**
+   * Fetch the gdrive migration state (google_drive.get_state) so the Linked
+   * Accounts "Migrate" row can show live progress when a job is running.
+   * Returns { ok, job, seen_job_id } or {} on failure.
+   */
+  async _loadGdriveState() {
+    try {
+      const res = await this.fetchService("google_drive.get_state", { hub_id: Visitor.id });
+      return res || {};
+    } catch (e) {
+      this.warn("settings_main: gdrive get_state failed", e);
+      return {};
+    }
+  }
+
+  /** Skeleton reads this to render the Migrate row's state (running %, etc.). */
+  getGdriveState() { return this._gdriveState || {}; }
 
   async _refreshOauthLinks() {
     this._oauthLinks = await this._loadOauthLinks();
@@ -103,7 +148,9 @@ class settings_main extends LetcBox {
       firstname,
       lastname,
       username: data.username,
-      bio: data.bio,
+      // Bio is optional — `|| ""` lets the profile save with an empty bio
+      // (and lets a user clear it) instead of requiring some text first.
+      bio: typeof data.bio === "string" ? data.bio : (current.bio || ""),
     };
     // hub_id pins the ACL owner check to the user's personal hub
     // (acl/drumate.json: scope=hub, src=owner).
@@ -111,7 +158,12 @@ class settings_main extends LetcBox {
       hub_id: Visitor.id,
       profile,
     });
-    if (!res || res.error) return;
+    if (!res || res.error) {
+      // Surface the failure instead of silently doing nothing — otherwise
+      // the user can't tell a click did anything at all.
+      this._flashSaveStatus(false);
+      return;
+    }
     // Server returns the full updated profile object. Fall back to the
     // request payload if the response is an unexpected scalar/array so
     // Visitor.profile() reads fresh firstname/lastname either way.
@@ -119,7 +171,38 @@ class settings_main extends LetcBox {
       ? { ...current, ...res }
       : { ...current, ...profile };
     Visitor.set({ profile: nextProfile });
+    // Re-render first (refreshes the displayed name/avatar), THEN reveal the
+    // confirmation on the freshly-rendered "save-status" part.
     this.feed(require("./skeleton").default(this));
+    this._flashSaveStatus(true);
+  }
+
+  /**
+   * Briefly reveal the "Profile saved" pill next to the Save button so the
+   * user gets visible confirmation. `ok=false` shows the failure variant.
+   * The pill is part of the skeleton (sys_pn:"save-status", hidden at
+   * data-state="0"); we flip it on, then fade it back out after a delay.
+   */
+  _flashSaveStatus(ok = true) {
+    return this.ensurePart("save-status").then((p) => {
+      if (!p || !p.el) return;
+      p.set({
+        content: ok
+          ? (LOCALE.PROFILE_SAVED || "Profile saved")
+          : (LOCALE.PROFILE_SAVE_FAILED || "Couldn't save profile. Please try again."),
+      });
+      p.el.dataset.variant = ok ? "success" : "error";
+      p.el.dataset.state = "1";
+      clearTimeout(this._saveStatusTimer);
+      this._saveStatusTimer = setTimeout(() => {
+        if (p.el) p.el.dataset.state = "0";
+      }, ok ? 2500 : 4000);
+    });
+  }
+
+  onBeforeDestroy() {
+    clearTimeout(this._saveStatusTimer);
+    if (super.onBeforeDestroy) super.onBeforeDestroy();
   }
 
   /**
@@ -241,21 +324,67 @@ class settings_main extends LetcBox {
   }
 
   /**
+   * iPhone photos are HEIC/HEIF, which neither the browser nor the server's
+   * GraphicsMagick avatar pipeline can decode — the raw upload reaches
+   * create_avatar and `gm convert` fails, surfacing as AVATAR_UPLOAD_FAILED.
+   * Detect by extension too: accept="image/*" lets .heic through but some
+   * browsers report an empty `type` for it.
+   */
+  _isHeic(file) {
+    const type = (file.type || "").toLowerCase();
+    if (type === "image/heic" || type === "image/heif") return true;
+    return /\.(heic|heif)$/i.test(file.name || "");
+  }
+
+  /**
+   * Convert HEIC/HEIF to JPEG in the browser before upload. heic2any pulls a
+   * libheif wasm worker, so it's loaded on demand only when a HEIC is picked
+   * and never weighs on the main bundle.
+   */
+  async _convertHeic(file) {
+    const mod = await import("heic2any");
+    const heic2any = mod.default || mod;
+    const out = await heic2any({ blob: file, toType: "image/jpeg", quality: 0.92 });
+    const blob = Array.isArray(out) ? out[0] : out;
+    const name = (file.name || "avatar").replace(/\.(heic|heif)$/i, "") + ".jpg";
+    return new File([blob], name, { type: "image/jpeg" });
+  }
+
+  /**
    * nid=-2 routes the upload to configure_icon → Generator.create_avatar
    * via special_file() (server-core utils/mfs.js). nid=-1 would land it
    * as favicon.<ext>; -3 as something else.
    */
-  _uploadAvatar(file) {
-    if (!file || !file.type || !file.type.startsWith("image/")) return;
+  async _uploadAvatar(file) {
+    if (!file) return;
+    const heic = this._isHeic(file);
+    if (!heic && (!file.type || !file.type.startsWith("image/"))) return;
+    // Show the spinner now — HEIC conversion (libheif wasm) can take a few
+    // seconds, well before the upload even starts.
+    this._setAvatarProcessing(true);
+    if (heic) {
+      try {
+        file = await this._convertHeic(file);
+      } catch (e) {
+        this.warn("settings_main: HEIC conversion failed", e);
+        this._setAvatarProcessing(false);
+        return this.alert(LOCALE.AVATAR_UPLOAD_FAILED);
+      }
+    }
     const xhr = this.uploadFile(file, { nid: -2, hub_id: Visitor.id });
-    if (!xhr) return;
+    if (!xhr) {
+      this._setAvatarProcessing(false);
+      return;
+    }
     xhr.addEventListener("readystatechange", () => {
       if (xhr.readyState !== 4) return;
       if (xhr.status >= 200 && xhr.status < 300) {
         // Generator.create_avatar runs after the HTTP response is sent,
         // so wait briefly for the new PNG to land before refetching.
+        // _refreshAvatar() clears the processing flag as it re-renders.
         setTimeout(() => this._refreshAvatar(), 800);
       } else {
+        this._setAvatarProcessing(false);
         this.alert(LOCALE.AVATAR_UPLOAD_FAILED);
       }
     });
@@ -267,6 +396,7 @@ class settings_main extends LetcBox {
    * the constructed `<endpoint>/avatar/<id>?ts=<mtime>` URL is used.
    */
   _refreshAvatar() {
+    this._avatarProcessing = false;
     Visitor.set({ avatar: null, mtime: Date.now() });
     this.feed(require("./skeleton").default(this));
   }
@@ -278,46 +408,73 @@ class settings_main extends LetcBox {
    * user with a single linked provider can't lock themselves out.
    *
    * @param {string} provider e.g. "google", "apple"
+   * @param {object} [cmd]    the clicked button view; flagged with
+   *                          data-loading=1 during the network step
+   *
+   * Verifier choice (matches user's mental model — "what auth am I
+   * using right now?"):
+   *   - mfa=1                → email OTP (consistent with 2FA on)
+   *   - mfa=0, password set  → password prompt (no extra friction)
+   *   - oauth-only           → email OTP (only choice the user has)
+   *
+   * The server (drumate.unlink_oauth) accepts whichever credential is
+   * sent and self-heals profile.password_set when password verifies.
    */
-  async disconnectOauth(provider) {
+  async disconnectOauth(provider, cmd) {
     if (!provider) return;
-    const profile = Visitor.profile() || {};
-    const passwordSet = profile.password_set;
-    const usePassword = passwordSet === undefined || parseInt(passwordSet) === 1;
+    const setLoading = (on) => {
+      if (!cmd || !cmd.el) return;
+      if (on) cmd.el.dataset.loading = '1';
+      else delete cmd.el.dataset.loading;
+    };
+    setLoading(true);
+    try {
+      const profile = Visitor.profile() || {};
+      const mfaOn = parseInt(profile.mfa) === 1;
+      const passwordSet = parseInt(profile.password_set) === 1;
+      const hasOauth = Array.isArray(this._oauthLinks) && this._oauthLinks.length > 0;
+      // Use password when 2FA is off AND user has a password (or the
+      // flag is missing but they're clearly not oauth-only). Otherwise
+      // fall through to OTP.
+      const usePassword = !mfaOn && (passwordSet || !hasOauth);
 
-    if (usePassword) {
-      // Password-mode placeholder — uses the native prompt. Replace
-      // with a small password modal when polishing this surface.
-      const password = prompt(LOCALE.CONFIRM_PASSWORD_LABEL || "Password");
-      if (!password) return;
-      try {
-        const res = await this.postService({
-          service: SERVICE.drumate.unlink_oauth,
-          hub_id: Visitor.id,
-          provider,
-          password,
-        });
-        if (res && res.error) {
-          return this.alert(res.error === "WRONG_CREDENTIALS"
-            ? (LOCALE.WRONG_PASSOWRD || "Wrong password")
-            : res.error);
+      if (usePassword) {
+        const password = prompt(LOCALE.CONFIRM_PASSWORD_LABEL || "Password");
+        if (!password) return;
+        try {
+          const res = await this.postService({
+            service: SERVICE.drumate.unlink_oauth,
+            hub_id: Visitor.id,
+            provider,
+            password,
+          });
+          if (res && res.error) {
+            return this.alert(res.error === "WRONG_CREDENTIALS"
+              ? (LOCALE.WRONG_PASSOWRD || "Wrong password")
+              : res.error);
+          }
+          return this._refreshOauthLinks();
+        } catch (e) {
+          this.warn("disconnectOauth (password): failed", e);
         }
-        return this._refreshOauthLinks();
-      } catch (e) {
-        this.warn("disconnectOauth (password): failed", e);
+        return;
       }
-      return;
-    }
 
-    const otp = await sendOtp(this);
-    if (!otp) return this.alert(LOCALE.UNKNOWN_ERROR);
-    return openOtpModal(this, {
-      ...otp,
-      api: SERVICE.drumate.unlink_oauth,
-      payload: { provider },
-      successService: "unlink-oauth-success",
-      cancelService: "unlink-oauth-cancel",
-    });
+      const otp = await sendOtp(this);
+      if (!otp) return this.alert(LOCALE.UNKNOWN_ERROR);
+      return openOtpModal(this, {
+        ...otp,
+        api: SERVICE.drumate.unlink_oauth,
+        // unlink_oauth ACL is owner-on-hub. Force Visitor.id so the
+        // request hits the user's own hub regardless of which
+        // workspace the Settings panel was opened from.
+        payload: { provider, hub_id: Visitor.id },
+        successService: "unlink-oauth-success",
+        cancelService: "unlink-oauth-cancel",
+      });
+    } finally {
+      setLoading(false);
+    }
   }
 
   /**
@@ -399,7 +556,7 @@ class settings_main extends LetcBox {
         return this._cancelMfa();
 
       case "disconnect-oauth":
-        return this.disconnectOauth(cmd && cmd.mget("provider"));
+        return this.disconnectOauth(cmd && cmd.mget("provider"), cmd);
 
       case "unlink-oauth-success":
         // Same shape constraint as "mfa-changed" — only act on the
@@ -448,6 +605,18 @@ class settings_main extends LetcBox {
         // modal still showing on top of us).
         return this.ensurePart("credentials-email").then((p) => {
           if (p) p.set({ content: (args && args.email) || (Visitor.profile() || {}).email || "" });
+        });
+
+      case "launch-gdrive-migration":
+        // Open the migrate-gdrive popup. singleton:1 + wm_unique_id auto
+        // detection (per fix/multi-folder-windows) prevents duplicates.
+        return Kind.waitFor("migrate_gdrive_popup").then(() => {
+          Wm.launch({
+            kind: "migrate_gdrive_popup",
+            hub_id: Visitor.id,
+            nid: Visitor.get(_a.home_id),
+            wm_unique_id: "migrate_gdrive_popup",
+          }, { explicit: 1, singleton: 1 });
         });
 
       default:

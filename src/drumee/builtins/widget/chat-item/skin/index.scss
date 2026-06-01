@@ -108,8 +108,6 @@
       gap: 8px;
       max-width: min(100%, 560px);
       min-width: 0;
-      // Anchor for the absolutely-positioned time.
-      position: relative;
 
       &.me {
         align-items: flex-end;
@@ -124,39 +122,15 @@
       }
     }
 
-    // Anchor for the absolutely-positioned time; sized to the bubble (it's the
-    // only in-flow child once the footer is taken out of flow).
-    &-line {
-      display: flex;
-      align-items: center;
-      position: relative;
-      min-width: 0;
-      max-width: 100%;
-    }
-
     &-footer {
-      // Time + read indicator, floated beside the bubble and revealed only on
-      // hover: left of the bubble for incoming, right for own. Absolute so it
-      // adds no inline gap, vertically centred on the bubble.
-      position: absolute;
-      top: 50%;
-      transform: translateY(-50%);
-      right: calc(100% + 6px);
-      left: auto;
       display: flex;
       flex-direction: row;
       align-items: center;
+      justify-content: flex-start;
       gap: 4px;
-      visibility: hidden;
 
       &.me {
-        right: auto;
-        left: calc(100% + 6px);
-      }
-
-      // Reveal time + actions only while hovering the conversation bubble.
-      .widget-chatItem__conversation-content:hover ~ & {
-        visibility: visible;
+        justify-content: flex-end;
       }
 
       & .readed-icon {
@@ -173,14 +147,16 @@
     }
 
     &-date {
-      // Inline beside the bubble (inside the footer, which sits on the message
-      // line). Vertically centred via the line's align-items: center.
-      white-space: nowrap;
-      flex-shrink: 0;
-      @include drumee.typo($size: 11px,
+      @include drumee.typo(
+        $size: 8px,
         $line: 1.4,
         $weight: 400,
-        $color: var(--normal-fg-50));
+        $color: var(--normal-fg-10)
+      );
+      background-color: var(--normal-bg-elevated);
+      padding: 6px;
+      border: 1px solid var(--border-strong);
+      border-radius: 4px;
     }
   }
 
@@ -228,10 +204,12 @@
 
   &__reader-more {
     margin-left: 4px;
-    @include drumee.typo($size: 10px,
+    @include drumee.typo(
+      $size: 10px,
       $line: 1.4,
       $weight: 400,
-      $color: var(--normal-fg-50));
+      $color: var(--normal-fg-50)
+    );
   }
 
   &__icon {
@@ -274,9 +252,11 @@
       padding-left: 4px;
       padding-top: 4px;
       text-transform: capitalize;
-      @include drumee.typo($size: 12px,
+      @include drumee.typo(
+        $size: 12px,
         $line: 12px,
-        $color: var(--secondary-text-color));
+        $color: var(--secondary-text-color)
+      );
     }
   }
 
@@ -290,9 +270,11 @@
       margin: auto;
       max-width: 200px;
       width: 82px;
-      @include drumee.typo($size: 11px,
+      @include drumee.typo(
+        $size: 11px,
         $line: 20px,
-        $color: var(--tertiary-text-color));
+        $color: var(--tertiary-text-color)
+      );
       display: flex;
       flex-direction: row;
       justify-content: center;
@@ -313,9 +295,11 @@
     margin: auto;
     max-width: 200px;
     width: 82px;
-    @include drumee.typo($size: 11px,
+    @include drumee.typo(
+      $size: 11px,
       $line: 12px,
-      $color: var(--tertiary-text-color));
+      $color: var(--tertiary-text-color)
+    );
   }
 
   &__profile {
@@ -341,10 +325,12 @@
       pointer-events: none;
       background: var(--tooltip-bg, rgba(33, 33, 33, 0.95));
       box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
-      @include drumee.typo($size: 11px,
+      @include drumee.typo(
+        $size: 11px,
         $line: 1.4,
         $weight: 400,
-        $color: var(--tooltip-fg, #ffffff));
+        $color: var(--tooltip-fg, #ffffff)
+      );
     }
 
     // For own messages avatar isn't shown — hide it entirely so the bubble
@@ -399,7 +385,12 @@
     }
 
     &-content {
-      @include drumee.typo($size: 13px, $line: 1.4, $weight: 700, $color: var(--normal-fg-10));
+      @include drumee.typo(
+        $size: 13px,
+        $line: 1.4,
+        $weight: 700,
+        $color: var(--normal-fg-10)
+      );
       max-width: min(100%, 560px);
       overflow: hidden;
       text-overflow: ellipsis;
@@ -418,10 +409,12 @@
     text-transform: capitalize;
     white-space: nowrap;
     width: 121px;
-    @include drumee.typo($size: 11px,
+    @include drumee.typo(
+      $size: 11px,
       $line: 10px,
       $weight: 400,
-      $color: var(--default-text-color));
+      $color: var(--default-text-color)
+    );
 
     & .inner.note-content {
       overflow: hidden;
@@ -461,10 +454,12 @@
     &-content {
       overflow: hidden;
       word-wrap: break-word;
-      @include drumee.typo($size: 12px,
+      @include drumee.typo(
+        $size: 12px,
         $line: 14px,
         $weight: 400,
-        $color: var(--normal-fg-10));
+        $color: var(--normal-fg-10)
+      );
 
       & a {
         color: var(--secondary-text-color);
@@ -491,10 +486,12 @@
 
   &__call-duration {
     margin-left: 10px;
-    @include drumee.typo($size: 13px,
+    @include drumee.typo(
+      $size: 13px,
       $line: 14px,
       $weight: 400,
-      $color: var(--default-text-title));
+      $color: var(--default-text-title)
+    );
   }
 
   &__media-attachment {
@@ -513,10 +510,12 @@
     padding: 16px;
     width: fit-content;
     max-width: 100%;
-    @include drumee.typo($size: 14px,
+    @include drumee.typo(
+      $size: 14px,
       $line: 1.4,
       $weight: 400,
-      $color: var(--normal-fg-10));
+      $color: var(--normal-fg-10)
+    );
 
     &.me {
       background-color: var(--chat-bubble-me-bg, #433cc5);

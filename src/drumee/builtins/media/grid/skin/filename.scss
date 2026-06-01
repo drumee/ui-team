@@ -170,6 +170,30 @@
   }
 }
 
+// Mobile: bump filename to 16px and add lateral padding so the label
+// column stays inside the folder/workspace icon's visual width (icon
+// ~99px in a ~140-180px cell). Desktop keeps the smaller 14px Figma
+// recipe untouched.
+@media (max-width: 480px) {
+  .media-grid {
+    .filename {
+      padding: var(--spacer-1) var(--spacer-5);
+      @include drumee.typo(
+        $line: 1.4,
+        $size: 16px,
+        $weight: 500,
+        $color: var(--grid-color-folder-name, #65656c)
+      );
+      max-height: calc(16px * 1.4 * 2);
+    }
+
+    &__container.folder .filename,
+    &__container.hub .filename {
+      margin-top: 12px;
+    }
+  }
+}
+
 html[data-theme="dark"] .media-grid {
   &__input {
     textarea {

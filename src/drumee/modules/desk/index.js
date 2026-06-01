@@ -149,6 +149,40 @@ class desk_module extends LetcBox {
   async onDomRefresh() {
     this.route();
     RADIO_BROADCAST.on("breadcrumb:content", this._updateAddmenu);
+    // Post-onboarding handoff for users who picked Google Drive in the
+    // tools step. Delayed so workspace renders first.
+    setTimeout(() => this._maybeAutoLaunchGDriveMigration(), 1500);
+  }
+
+  /**
+   * After the user lands on the Desk, if onboarding said they use Google
+   * Drive AND they haven't interacted with the migration prompt yet,
+   * auto-launch the migrate popup once.
+   *
+   * "Interacted" = either clicked Start (which sets
+   * profile.tools_migration_skipped.google_drive=1 inside start_migration)
+   * or clicked "Skip for now" (calls dismiss_post_onboarding which sets
+   * the same flag). Once the flag is set, no more auto-launches —
+   * Settings → Linked accounts is the manual re-entry point.
+   *
+   * The popup respects `autoFromOnboarding` to render the "Skip for now"
+   * link in addition to the normal flow.
+   */
+  async _maybeAutoLaunchGDriveMigration() {
+    const profile = (Visitor.profile && Visitor.profile()) || {};
+    const tools = profile.tools || [];
+    if (!Array.isArray(tools) || !tools.includes("google_drive")) return;
+    const skipped = (profile.tools_migration_skipped || {}).google_drive;
+    if (skipped) return;
+
+    await Kind.waitFor("migrate_gdrive_popup");
+    Wm.launch({
+      kind: "migrate_gdrive_popup",
+      hub_id: Visitor.id,
+      nid: Visitor.get(_a.home_id),
+      autoFromOnboarding: 1,
+      wm_unique_id: "migrate_gdrive_popup",
+    }, { explicit: 1, singleton: 1 });
   }
 
   /**
@@ -763,6 +797,35 @@ class desk_module extends LetcBox {
   }
 
   /**
+   * Close the mobile drawer when a navigational sidebar service fires.
+   * The set covers the nav-mode rows (Home / Notifications / Inbox /
+   * Contacts / Trash / Apps), the actions-mode rows (Add new / Upload /
+   * Invite), Settings, and workspace selection. Excluded on purpose:
+   * search-files (fires per keystroke), toggle-theme (kept open for
+   * repeated toggling), and the mobile-show / mobile-close drawer controls.
+   */
+  _maybeDismissMobileDrawer(service) {
+    if (!this._drawerDismissServices) {
+      this._drawerDismissServices = new Set([
+        _e.home,
+        _e.upload,
+        "toggle-activity",
+        "toggle-inbox",
+        "toggle-contacts",
+        "toggle-trash",
+        "toggle-apps",
+        "toggle-settings",
+        "new-workspace",
+        "invite-member",
+        "load-workspace",
+      ]);
+    }
+    if (this._drawerDismissServices.has(service)) {
+      this._closeMobileDrawer();
+    }
+  }
+
+  /**
    *
    */
   togglePanel(kind, pn, openOnly) {
@@ -858,10 +921,7 @@ class desk_module extends LetcBox {
     if (except !== "activity-panel") {
       tasks.push(
         this.ensurePart("activity-panel").then((p) => {
-          if (p) {
-            p.activityState = 0;
-            p.setState(0);
-          }
+          if (p) p.setState(0);
         }),
       );
     }
@@ -925,6 +985,14 @@ class desk_module extends LetcBox {
       return;
     }
     this.debug("AAA:830", service)
+    // Mobile: tapping a navigational sidebar item dismisses the drawer so
+    // the resulting panel/content is visible. on_click items (e.g. logout)
+    // never reach here, and drawer-control services (mobile-show-*/close),
+    // the search input, and the theme toggle are intentionally excluded —
+    // they manage the drawer themselves or are expected to leave it open.
+    if (Visitor.isMobile()) {
+      this._maybeDismissMobileDrawer(service);
+    }
     switch (service) {
       case _e.home:
         this.updateBreadcrumb({ event: _e.home });

@@ -248,6 +248,9 @@ module.exports = {
   messenger: function () {
     return import("./builtins/messenger");
   },
+  migrate_gdrive_popup: function () {
+    return import("./builtins/widget/migrate-gdrive-popup");
+  },
   module_desk: function () {
     return import("./modules/desk");
   },
@@ -554,6 +557,9 @@ module.exports = {
   },
   window_search: function () {
     return import("./builtins/window/search");
+  },
+  window_secure_share: function () {
+    return import("./builtins/window/secure-share");
   },
   window_sharebox: function () {
     return import("./builtins/window/sharebox");

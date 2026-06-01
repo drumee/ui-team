@@ -2,12 +2,20 @@
 
 .window-folder {
   &__ui {
-    &[data-device="mobile"] {
-      width: 360px !important;
-      height: 500px !important;
-      left: 50% !important;
-      transform: translateX(-50%) translateY(15%);
-    }
+    // Container query anchor. The folder window registers itself as a
+    // size container so descendants can switch to a compact layout based
+    // on the actual window width (not viewport). This fixes the case
+    // where the window is split with a side chat on desktop and the
+    // remaining files area is narrow — the prior `@media` rules only
+    // fired on small viewports and missed that scenario entirely.
+    container-type: inline-size;
+    container-name: window-folder-w;
+
+    // Mobile full-bleed under the desk's 44px mobile topbar. Shared
+    // recipe lives in mixins/responsive.scss so other window widgets
+    // (note, editor dialogs, etc.) collapse to the same panel layout
+    // when the device or viewport flags small-screen.
+    @include drumee.mobile-fullscreen-window;
 
     .ui-resizable-handle {
       pointer-events: auto;
@@ -471,17 +479,177 @@
       }
     }
 
-    &__control-icon[data-state="1"] svg {
-      transform: rotate(90deg);
+    // File view toggle — the control shows the glyph of the CURRENT view.
+    // Grid is the default (covers data-state "0"/unset); the list glyph only
+    // appears when the toggle carries data-state="1" (row/list view active).
+    &__control-icon-glyph {
+      width: 20px;
+      height: 20px;
     }
 
-    &__control-icon {
+    &__control-icon-glyph--list {
+      display: none;
+    }
+
+    &__control-icon-glyph--grid {
+      display: block;
+    }
+
+    &__control-icon[data-state="1"] .window-folder-topbar__control-icon-glyph--list {
+      display: block;
+    }
+
+    &__control-icon[data-state="1"] .window-folder-topbar__control-icon-glyph--grid {
+      display: none;
+    }
+
+    // macOS-style zoom menu — icon trigger with CSS-hover dropdown.
+    &__zoom-wrapper {
+      position: relative;
+      overflow: visible;
+      flex-shrink: 0;
+      width: 20px;
+      height: 20px;
+      align-items: center;
+      justify-content: center;
+
+      &:hover .window-folder-topbar__zoom-menu,
+      .window-folder-topbar__zoom-menu:hover {
+        opacity: 1;
+        visibility: visible;
+        transform: translateY(0);
+        pointer-events: auto;
+      }
+    }
+
+    &__zoom-trigger {
+      width: 20px;
+      height: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--normal-fg-20, var(--normal-fg-10));
+      cursor: pointer;
+      transition: color 0.15s ease, transform 0.15s ease;
+
       svg {
-        transition: transform 0.2s ease;
+        width: 18px;
+        height: 18px;
       }
 
-      &[data-state="1"] svg {
-        transform: rotate(90deg);
+      &:hover {
+        color: var(--normal-fg-10);
+        transform: scale(1.06);
+      }
+    }
+
+    &__zoom-menu {
+      position: absolute;
+      top: calc(100% + 8px);
+      right: -4px;
+      z-index: 1000;
+      min-width: 220px;
+      padding: 6px;
+      background-color: var(--normal-bg-elevated, #fff);
+      border: 1px solid rgba(0, 0, 0, 0.06);
+      border-radius: 10px;
+      box-shadow:
+        0 4px 8px -2px rgba(0, 0, 0, 0.08),
+        0 12px 24px -4px rgba(0, 0, 0, 0.12);
+      // Box.Y already supplies `display: flex; flex-direction: column`.
+      gap: 2px;
+
+      opacity: 0;
+      visibility: hidden;
+      transform: translateY(-4px);
+      // `visibility 0s linear 0.15s` delays the close so the cursor can
+      // cross the trigger→menu gap without the panel disappearing.
+      transition:
+        opacity 0.15s ease,
+        transform 0.15s ease,
+        visibility 0s linear 0.15s;
+      pointer-events: none;
+
+      // Invisible strip between trigger and panel — bridges the 8px gap
+      // so the cursor doesn't drop out of hover during transit.
+      &::before {
+        content: "";
+        position: absolute;
+        top: -10px;
+        left: 0;
+        right: 0;
+        height: 10px;
+      }
+    }
+
+    // Override the close-delay on `visibility` so opening is immediate.
+    &__zoom-wrapper:hover .window-folder-topbar__zoom-menu,
+    .window-folder-topbar__zoom-menu:hover {
+      transition:
+        opacity 0.15s ease,
+        transform 0.15s ease,
+        visibility 0s linear 0s;
+    }
+
+    &__zoom-item {
+      // Box.X already supplies `display: flex; flex-direction: row`.
+      align-items: center;
+      gap: 10px;
+      padding: 8px 10px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-family: "Geist", sans-serif;
+      font-size: 13px;
+      font-weight: 500;
+      line-height: 1.2;
+      color: var(--normal-fg-10);
+      white-space: nowrap;
+      transition: background-color 0.12s ease;
+
+      &:hover {
+        background-color: var(--normal-bg-90);
+      }
+    }
+
+    &__zoom-item-icon {
+      width: 16px;
+      height: 16px;
+      flex-shrink: 0;
+      color: var(--normal-fg-20, var(--normal-fg-10));
+
+      svg {
+        width: 16px;
+        height: 16px;
+      }
+    }
+
+    // Mirror the split-square icon for "Tile to Right" so the two tile
+    // rows are visually distinguishable at a glance.
+    &__zoom-item--tile-right .window-folder-topbar__zoom-item-icon svg {
+      transform: scaleX(-1);
+    }
+
+    &__zoom-item-label {
+      flex: 1;
+    }
+
+    // Fullscreen label swaps "Enter"/"Exit Full Screen" purely in CSS. The
+    // window element this menu lives in is the one passed to requestFullscreen,
+    // so `:fullscreen` reflects the live state — no stale `document.fullscreen
+    // Element` snapshot baked at skeleton-build time.
+    &__zoom-item-label--fs-exit {
+      display: none;
+    }
+
+    // When the window element is in browser fullscreen, show "Exit Full Screen"
+    // and hide "Enter Full Screen". Emitted at root so the selector starts from
+    // the `:fullscreen` ancestor (the window el), not from `.window-folder-topbar`.
+    @at-root {
+      :fullscreen .window-folder-topbar__zoom-item-label--fs-enter {
+        display: none !important;
+      }
+      :fullscreen .window-folder-topbar__zoom-item-label--fs-exit {
+        display: block !important;
       }
     }
 
@@ -2188,6 +2356,335 @@
   &__folder-list,
   &__file-list {
     flex: 1 1 auto;
+  }
+}
+
+// ── Compact layout (container query) ──────────────────────────────
+// Fires whenever the folder window's own width drops below 700px,
+// regardless of viewport. Covers both true mobile and "narrow split
+// on desktop" cases the previous viewport media query missed.
+@container window-folder-w (max-width: 700px) {
+  .window-folder {
+    &__main {
+      border-radius: 0;
+      min-width: 0;
+      overflow: hidden;
+    }
+
+    // ── Topbar ────────────────────────────────────────────────────
+    &__main &-topbar {
+      &__container {
+        gap: var(--spacer-2);
+        height: auto;
+        min-height: 52px;
+        min-width: 0;
+        padding: 0 var(--spacer-3);
+      }
+
+      &__left {
+        flex: 1 1 auto;
+        min-width: 0;
+      }
+
+      // Right cluster: let it shrink in-flow instead of scrolling
+      // horizontally. The previous overflow-x:auto recipe clipped
+      // settings/split/close behind the gradient and was unreachable
+      // by touch.
+      // Bumped gap from spacer-1 (2px) to spacer-2 (4px) so the 32×32
+      // chips don't visually butt against each other now that they
+      // share the same background fill.
+      &__right {
+        flex: 0 1 auto;
+        gap: var(--spacer-2);
+        min-width: 0;
+        overflow: visible;
+      }
+
+      &__title {
+        flex: 1 1 auto;
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        font-size: 14px;
+      }
+
+      // ── Breadcrumb (mobile compact) ─────────────────────────────
+      // Desktop renders the full path (Home › Workspace › Folder ›
+      // Sub…) in 14px which eats most of the row on a 430px viewport.
+      // Compact mode shrinks the type and hides every hop except the
+      // immediate parent — combined with the always-visible title
+      // below, the user still sees "where they are" + "one step up"
+      // without the path overflowing the action cluster.
+      &__breadcrumb-path {
+        max-width: 40%;
+        gap: 2px;
+      }
+
+      &__breadcrumb-crumb {
+        font-size: 11px;
+        line-height: 16px;
+        max-width: 80px;
+        padding: 0 2px;
+      }
+
+      &__breadcrumb-sep {
+        font-size: 11px;
+        line-height: 16px;
+      }
+
+      // Show only the LAST crumb (the parent folder) + its preceding
+      // separator. Earlier hops collapse to keep the strip short.
+      // The crumb/sep pair alternates in source order, so hiding all
+      // but the last two children leaves "› ParentName".
+      &__breadcrumb-path > *:not(:nth-last-child(-n+2)) {
+        display: none;
+      }
+
+      // The area pill is purely decorative; sacrifice it first so the
+      // action cluster has room. Video stays visible but collapses to
+      // an icon-only 32×32 square like its siblings.
+      &__badge {
+        display: none;
+      }
+
+      // All right-cluster icons collapse to a uniform 32×32 chip on
+      // compact. Desktop styled video/upload/add-new with a Grey/20
+      // background and left settings/share/close bare — on small
+      // screens this mix reads as "loaded" buttons next to floating
+      // icons. Mobile unifies them: same square, same Grey/20 bg,
+      // same 6px radius, flex-centered SVG. The Add-new trigger
+      // keeps its purple via the .secondary override below.
+      &__video-btn,
+      &__upload-btn,
+      &__add-new-wrapper,
+      &__control-icon,
+      .window-button__icon-button {
+        flex: 0 0 auto;
+        height: 32px;
+        min-width: 32px;
+        width: 32px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0;
+        background-color: var(--normal-bg-90);
+        border-radius: 6px;
+        box-sizing: border-box;
+        // Desktop close-button row used `gap: 12` for inline children;
+        // a single-icon chip needs none.
+        gap: 0;
+      }
+
+      // Hide the split/layout toggle on mobile — single-column layout
+      // makes the row/grid switch meaningless and the user asked to
+      // reclaim the slot next to ×.
+      &__control-icon.split {
+        display: none;
+      }
+
+      &__upload-btn {
+        justify-content: center;
+        padding: 0;
+
+        span.label,
+        section.label,
+        .note-content {
+          display: none !important;
+        }
+      }
+
+      &__add-new-wrapper {
+        // The shared `.window-button__label-button.secondary` rule
+        // (line ~1448, outside this container query) pins the button
+        // to `min-width: 103px`, which kept the pill wide even after
+        // the wrapper was locked to 32×32 — the child overflowed the
+        // wrapper. Neutralize that here so the trigger collapses with
+        // its parent.
+        .window-button__label-button,
+        .window-button__label-button.secondary {
+          min-width: 0 !important;
+          min-height: 0 !important;
+          width: 100% !important;
+          height: 100% !important;
+          padding: 0 !important;
+          border-radius: 6px;
+
+          span.label,
+          section.label,
+          .note-content {
+            display: none !important;
+          }
+        }
+
+        .menu-topic-items__wrapper {
+          max-width: calc(100cqw - 24px);
+          min-width: 200px;
+          right: 0;
+        }
+      }
+    }
+
+    // ── Tab bar (Files / Chat / Tasks) ───────────────────────────
+    // Horizontal scroll when there isn't room — keeps all tabs
+    // reachable without breaking row layout.
+    &__tab-bar-wrapper {
+      flex-wrap: nowrap;
+      gap: var(--spacer-2);
+      overflow-x: auto;
+      scrollbar-width: none;
+
+      &::-webkit-scrollbar {
+        display: none;
+      }
+    }
+
+    &__tab-bar-item {
+      flex: 0 0 auto;
+    }
+
+    // ── Filter bar (All / Docs / PDF / Images / Other) ──────────
+    // Bigger gap so the underline-pill tabs read as distinct chips
+    // rather than running into each other when the row scrolls
+    // horizontally on a narrow window.
+    &__filter-bar {
+      flex-wrap: nowrap;
+      gap: var(--spacer-5);
+      overflow-x: auto;
+      padding: var(--spacer-2) var(--spacer-3);
+      scrollbar-width: none;
+
+      &::-webkit-scrollbar {
+        display: none;
+      }
+    }
+
+    // The rendered tab class is `__filter-tab-main` (see topbar/filter
+    // skeletons). The previous rule targeted `__filter-tab` and never
+    // applied, so the tabs shrank and collided once the row had more
+    // entries than fit. Lock the tab boxes to their content width and
+    // give each one a comfortable horizontal pad.
+    &__filter-tab-main {
+      flex: 0 0 auto;
+      padding-left: var(--spacer-2);
+      padding-right: var(--spacer-2);
+    }
+
+    // ── Split body: collapse to single column ─────────────────────
+    // Chat/meeting/tasks live in the same content area; tab clicks
+    // toggle `data-view`. Files panel is the default visible one so
+    // compact mode never opens with a side chat eating the grid.
+    &__split-body {
+      grid-template-columns: 1fr !important;
+      min-width: 0;
+
+      .window__chat-panel,
+      .window__meeting-panel {
+        display: none;
+      }
+
+      &[data-view="chat"] {
+        .window__files-panel,
+        .window__meeting-panel,
+        .window__tasks-panel {
+          display: none;
+        }
+
+        .window__chat-panel {
+          display: flex;
+          max-width: none;
+          min-width: 0;
+          width: 100%;
+        }
+      }
+
+      &[data-view="task"] {
+        .window__files-panel,
+        .window__chat-panel,
+        .window__meeting-panel {
+          display: none;
+        }
+
+        .window__tasks-panel {
+          display: flex;
+        }
+      }
+
+      &[data-call-panel="open"] {
+        .window__files-panel,
+        .window__chat-panel,
+        .window__tasks-panel {
+          display: none;
+        }
+
+        .window__meeting-panel {
+          display: flex;
+          max-width: none;
+          min-width: 0;
+          width: 100%;
+        }
+      }
+    }
+
+    // ── File / folder grid ───────────────────────────────────────
+    .window__icons-list .smart-container,
+    .window__icons-scroll,
+    &__partition-container {
+      padding: var(--spacer-3);
+    }
+
+    // 2 columns scaled to the window width — uses container-query
+    // units (cqw) so cells track the folder window, not viewport.
+    .window__icons-list .smart-container,
+    .window__icons-scroll,
+    .window__icons-scroll .workspace-section,
+    .window__icons-scroll .folder-section,
+    .window__icons-scroll .file-section {
+      grid-template-columns: 1fr 1fr;
+    }
+
+    // File section row needs to grow to fit the capped 140×140 card
+    // plus the (now larger) meta-row text — see
+    // builtins/media/grid/skin/container.scss mobile block. Desktop's
+    // 184px row was calibrated for a 120×120 card and overflows when
+    // the cell grows, so use minmax(184, auto).
+    .window__icons-scroll .file-section {
+      grid-auto-rows: minmax(var(--grid-cell-h-file), auto);
+    }
+
+    // Desktop locks each card to --grid-cell-w (120px). Let it
+    // expand to fill the column so icon + label have room.
+    .window__icons-scroll .media-grid__ui {
+      width: 100%;
+      max-width: 100%;
+    }
+
+    // Card content (filename, badge, kebab menu) needs to wrap and
+    // truncate within the new cell width.
+    .media-grid__filename {
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      word-break: break-word;
+    }
+
+    // ── Dialogs & side panels (full-width on compact) ───────────
+    &__create-folder-dialog,
+    &__rename-folder-dialog {
+      max-width: calc(100cqw - 32px);
+      width: calc(100cqw - 32px);
+    }
+
+    &__rename-folder-button {
+      width: 100%;
+    }
+
+    &__settings-action-panel {
+      max-width: 100cqw;
+      width: min(360px, 100cqw);
+    }
   }
 }
 

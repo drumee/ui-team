@@ -13,12 +13,40 @@
     justify-content: space-between;
     flex-shrink: 0;
     border-bottom: 1px solid $line;
+
+    &[data-device="mobile"] {
+      padding: 0 12px;
+      gap: 8px;
+    }
+
+    // Admin role on mobile: stack the tabs row (tabs-list + hub chip)
+    // vertically so the workspace picker doesn't squeeze the tab labels.
+    &--admin[data-device="mobile"] {
+      flex-direction: column !important;
+      height: auto;
+      padding: 8px 12px;
+      align-items: stretch;
+      gap: 20px;
+    }
   }
 
   &__tabs-list {
     align-items: center;
     gap: 24px;
     height: 100%;
+
+    &[data-device="mobile"] {
+      gap: 12px;
+      justify-content: center;
+      overflow-x: auto;
+      flex: 1;
+      min-width: 0;
+      scrollbar-width: none;
+      -ms-overflow-style: none;
+      &::-webkit-scrollbar {
+        display: none;
+      }
+    }
   }
 
   &__tab {
@@ -31,6 +59,10 @@
 
     > * {
       pointer-events: none;
+    }
+
+    &[data-device="mobile"] {
+      flex-shrink: 0;
     }
 
     &-label {
@@ -62,6 +94,10 @@
       pointer-events: none;
     }
 
+    &[data-device="mobile"] {
+      display: none;
+    }
+
     &-emoji {
       font-size: 12px;
       line-height: 16px;
@@ -74,5 +110,4 @@
       color: $reward-text;
     }
   }
-
 }
