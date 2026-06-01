@@ -44,17 +44,22 @@ class __window_folder extends mfsInteract {
     // stack popups on top of each other. Headless workspace pane is
     // excluded (it's full-area, not a sibling popup). Sibling count is
     // computed at mount time — already-open popups don't move.
-    const siblings = (window.Wm && typeof window.Wm.getItemsByKind === "function")
-      ? window.Wm.getItemsByKind("window_folder").filter(
-        (w) => w !== this && !w.isDestroyed() && !w.mget(_a.headless)
-      ).length
-      : 0;
+    const siblings =
+      window.Wm && typeof window.Wm.getItemsByKind === "function"
+        ? window.Wm.getItemsByKind("window_folder").filter(
+            (w) => w !== this && !w.isDestroyed() && !w.mget(_a.headless),
+          ).length
+        : 0;
     const cascadeStep = 30;
-    const maxSteps = Math.max(0, Math.floor((workspaceWidth - width - 48) / cascadeStep));
+    const maxSteps = Math.max(
+      0,
+      Math.floor((workspaceWidth - width - 48) / cascadeStep),
+    );
     const cascade = (siblings % (maxSteps + 1)) * cascadeStep;
 
     let left = Math.round((workspaceWidth - width) / 2) + cascade;
-    let top = Math.max(24, Math.round((workspaceHeight - height) / 2)) + cascade;
+    let top =
+      Math.max(24, Math.round((workspaceHeight - height) / 2)) + cascade;
     left = Math.min(left, Math.max(0, workspaceWidth - width - 24));
     top = Math.min(top, Math.max(24, workspaceHeight - height - 24));
 
@@ -263,7 +268,6 @@ class __window_folder extends mfsInteract {
     }
   }
 
-
   _syncWorkspaceFocus() {
     if (!this.mget(_a.headless)) return;
     if (this.isDestroyed && this.isDestroyed()) return;
@@ -271,7 +275,6 @@ class __window_folder extends mfsInteract {
     if (!window.Wm || !_.isFunction(window.Wm.onWorkspaceRaised)) return;
     window.Wm.onWorkspaceRaised(this);
   }
-
 
   buildContent(child) {
     this.__content = child;
@@ -290,7 +293,7 @@ class __window_folder extends mfsInteract {
       this.openSettingsPanel();
     }
     if (this.mget(_a.headless)) {
-      this.el.dataset.headless = "1"
+      this.el.dataset.headless = "1";
     }
   }
 
@@ -306,7 +309,7 @@ class __window_folder extends mfsInteract {
       this.$el.resizable(_a.option, "minWidth", bounds.minWidth);
       this.$el.resizable(_a.option, "minHeight", bounds.minHeight);
       this.$el.resizable(_a.option, "handles", this.handles || "all");
-    } catch (e) { }
+    } catch (e) {}
     this.syncBounds();
   }
 
@@ -477,7 +480,7 @@ class __window_folder extends mfsInteract {
       return;
     }
     if (pn == "meeting-panel" && this.mget(_a.start_meeting)) {
-      this._launchMeetingInPanel()
+      this._launchMeetingInPanel();
       return;
     }
     if (super.onPartReady) super.onPartReady(child, pn);
@@ -542,7 +545,7 @@ class __window_folder extends mfsInteract {
 
   refreshBreadcrumbsUI(stack) {
     if (stack && _.isArray(stack)) {
-      this._navStack = stack
+      this._navStack = stack;
     }
     const depth = this._navStack.length;
     this.ensurePart("folder-breadcrumb-path").then((box) => {
@@ -692,7 +695,7 @@ class __window_folder extends mfsInteract {
           (cmd && cmd._args && (cmd._args.filename || cmd._args.name)) ||
           (cmd && cmd.mget && (cmd.mget(_a.filename) || cmd.mget(_a.name))) ||
           (cmd && _.isFunction(cmd.fullname) && cmd.fullname()) ||
-          '';
+          "";
         this.showFolderTab(_a.chat);
         return this.scopeChatToFile(fileNid, fileLabel);
       }
@@ -742,7 +745,25 @@ class __window_folder extends mfsInteract {
 
       case "close":
         if (this.mget(_a.headless)) {
-          Desk.onWorkspaceClosed();
+          // Multi-tab: only fall back to the "no workspace open" UI when
+          // this is the last open workspace tab. With other tabs still
+          // alive, the generic destroy handler in window/manager.js raises
+          // the next-topmost window and our _syncWorkspaceFocus rewires
+          // globals; resetting workspace-main would clear the sidebar
+          // highlight that the surviving tab is about to claim.
+          let remaining = 0;
+          if (Wm && Wm.windowsLayer && Wm.windowsLayer.children) {
+            for (const c of Wm.windowsLayer.children.toArray()) {
+              if (!c || c === this || c.isDestroyed()) continue;
+              if (c.mget(_a.kind) !== "window_folder") continue;
+              if (!c.mget(_a.headless)) continue;
+              remaining++;
+              break;
+            }
+          }
+          if (!remaining) {
+            Desk.onWorkspaceClosed();
+          }
         }
         return super.onUiEvent(cmd, args);
 
@@ -1133,7 +1154,7 @@ class __window_folder extends mfsInteract {
         if (target?.trash) return target.trash();
         if (target?.delete) return target.delete();
       })
-      .catch(() => { });
+      .catch(() => {});
   }
 
   getFolderSettingPart() {
@@ -1385,8 +1406,7 @@ class __window_folder extends mfsInteract {
     const key = String(memberId);
     return (
       list.find(
-        (r) =>
-          String(r.entity_id || r.drumate_id || r.id || "") === key,
+        (r) => String(r.entity_id || r.drumate_id || r.id || "") === key,
       ) || null
     );
   }
@@ -1469,7 +1489,9 @@ class __window_folder extends mfsInteract {
     const render = () => {
       if (this.isDestroyed && this.isDestroyed()) return;
       if (!this.isShowSettings || !this.dialogWrapper) return;
-      this.dialogWrapper.feed(require("./skeleton/settings-action-panel")(this));
+      this.dialogWrapper.feed(
+        require("./skeleton/settings-action-panel")(this),
+      );
       const c = this.dialogWrapper.children.last();
       if (!c) return;
       c.once(_e.destroy, () => {

@@ -49,13 +49,7 @@ module.exports = function (ui) {
     kids: [
       Skeletons.Box.Y({
         className: `${fig}__items`,
-        kids: [
-          exportHtml,
-          exportPdf,
-          exportWord,
-          separator,
-          print,
-        ],
+        kids: [exportHtml, exportPdf, exportWord, separator, print],
       }),
     ],
   });
