@@ -513,7 +513,21 @@ class __window_manager extends push {
           return;
         }
         let currentFolder = this.getWindowsPool().children.last();
+        if (!currentFolder) return;
         currentFolder.refreshContent(attrs);
+        // refreshContent → updateTopbar(self) can't infer the ancestor chain
+        // for a DEEP jump (it captures the just-mset destination as "prev", so
+        // nothing is pushed) — the breadcrumb would keep the PREVIOUS folder's
+        // stale crumbs. Rebuild it from get_path exactly like loadWorkspace, so
+        // a deep-opened folder shows the correct "Workspace › … › Folder" path.
+        const deepNid = attrs.nid || nid;
+        this.fetchService(SERVICE.media.get_path, { nid: deepNid, hub_id })
+          .then((path) => {
+            if (_.isEmpty(path)) return;
+            if (_.isFunction(currentFolder.refreshBreadcrumbsUI))
+              currentFolder.refreshBreadcrumbsUI(path);
+          })
+          .catch((e) => this.warn("openWorkspaceFolder: get_path failed", e));
       })
       .catch((e) => this.warn("loadWorkspace: get_attributes failed", e));
 

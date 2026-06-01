@@ -623,13 +623,21 @@ class __window_core extends __utils {
       this.copyPropertiesFrom(m);
       this.updateBreadcrumb({ ...m.model.toJSON(), event: _a.browse }, this);
     }
-    const folderName = this.get(_a.filename) || m.get(_a.filename);
+    // Root/workspace nodes have an empty filename; their name lives in hub_name.
+    // Recompute on each read (incl. the 1s recheck below) so a name that arrives
+    // LATE — e.g. a workspace's hub_name set by get_path AFTER the first paint —
+    // isn't clobbered back to "" by a stale closure value. That stale-"" clobber
+    // was why the workspace name only appeared on the 2nd click.
+    const nameOf = () =>
+      this.get(_a.filename) || (m && m.get(_a.filename)) || this.get("hub_name") || "";
+    const folderName = nameOf();
     if (this.__refWindowName != null) {
       this.__refWindowName.set({ content: folderName });
       /** FIX ME: sometime new value is not updated */
       setTimeout(() => {
-        if (this.__refWindowName.mget(_a.content) != folderName) {
-          this.__refWindowName.set({ content: folderName });
+        const latest = nameOf();
+        if (this.__refWindowName.mget(_a.content) != latest) {
+          this.__refWindowName.set({ content: latest });
         }
       }, 1000);
     }
