@@ -313,6 +313,12 @@ class __media_core extends DrumeeMFS {
     let f = "vignette";
     if (this.mget(_a.filetype) == _a.vector) {
       f = "orig";
+    } else if (this.mget(_a.ext) == _a.pdf || EDITABLE.includes(this.mget(_a.ext))) {
+      // Whole first page at natural aspect (no center-crop / no letterbox); the
+      // cell crops it to cover+top in CSS so the document title stays visible.
+      // EDITABLE = office exts (docx/xlsx/pptx/odt…); only used when imgCapable
+      // (i.e. metadata.poster is set), otherwise the icon shows instead.
+      f = "thumb";
     }
     this.mset({
       url: this.actualNode(f).url,
@@ -1227,12 +1233,19 @@ class __media_core extends DrumeeMFS {
    * @returns
    */
   imgCapable() {
+    // A server-generated content poster (office/pdf first page, marked via
+    // metadata.poster) makes the node image-capable — this is the per-node
+    // gate for office docs so they only show a thumbnail once it exists.
+    const _md = this.metadata();
+    if (_md && _md.poster) return 1;
     if (/^\-/.test(this.mget(_a.capability))) return 0;
     switch (this.mget(_a.ext)) {
       case 'svg':
         return 1;
+      // PDF: the server rasterizes page 1 on demand (create_document_thumb →
+      // gm convert orig.pdf[0]); show that content thumbnail instead of an icon.
       case _a.pdf:
-        return 0;
+        return 1;
     }
     if (/text/.test(this.mget(_a.mimetype))) return 0;
     if (/shell|script|text/.test(this.mget(_a.filetype))) return 0;
@@ -2029,11 +2042,17 @@ class __media_core extends DrumeeMFS {
             let nid = this.mget(_a.nid);
             let hub_id = this.mget(_a.hub_id);
             let zip_id = data.zipid;
-            let url = `${svc}media.zip?hub_id=${hub_id}&nid=${nid}&id=${zip_id}&keysel=${keysel}&zipname=${data.zipname}`;
+            // The server locates the archive at <id>/<zipname>.zip, so use the
+            // name it returned (persisted in __dispatchRest) rather than the
+            // completion message — which may omit zipname — and URL-encode it
+            // (archive names carry spaces/colons, e.g. "Drumee-2026-05-31 04:45").
+            const zipname =
+              this.mget("zipname") || data.zipname || this.mget(_a.filename);
+            let url = `${svc}media.zip?hub_id=${hub_id}&nid=${nid}&id=${zip_id}&keysel=${keysel}&zipname=${encodeURIComponent(zipname)}`;
             this.getFromUrl(url);
             Wm.alert(
               LOCALE.DOWNLOAD_LONG_TIME.format(
-                data.zipname,
+                zipname,
                 filesize(this._zipsize)
               )
             );
@@ -2061,6 +2080,65 @@ class __media_core extends DrumeeMFS {
     }
     this._waitingForZip = null;
     this.download(data);
+  }
+
+  /**
+   * Build the signed media.zip URL and stream the archive.
+   *
+   * Overrides the ui-core default, which passed the archive name under the
+   * query key `name`. The server's media.zip handler does
+   * `input.need('zipname')` AND locates the file at `<id>/<zipname>.zip`, so
+   * the wrong key produced "VARIABLE zipname IS MANDATORY" (412) and the
+   * hub/folder download never started. We send the correct `zipname` key
+   * (URL-encoded — the server names archives with spaces/colons, e.g.
+   * "Drumee-2026-05-31 04:45"), sourcing it from the caller, then the model
+   * (persisted in __dispatchRest), then the filename as a last resort.
+   */
+  download_zip(o = {}) {
+    const { svc, keysel } = bootstrap();
+    const type = this.mget(_a.filetype);
+    // Reject null/undefined AND the literal strings "null"/"undefined" (which
+    // can leak in from the async zip-complete message) so the saved file is
+    // never named "null.zip". Prefer the name the server returned (persisted
+    // in __dispatchRest), then the node's own name, then a dated fallback.
+    const clean = (v) => {
+      if (v == null) return null;
+      const s = String(v).trim();
+      return s && s !== "null" && s !== "undefined" ? s : null;
+    };
+    const zipname =
+      clean(o.zipname) ||
+      clean(this.mget("zipname")) ||
+      clean(this.mget(_a.filename)) ||
+      clean(this.mget(_a.name)) ||
+      Dayjs().format("[drumee]-YYYY-MM-DD");
+    let hub_id = this.mget(_a.hub_id);
+    let nid = this.mget(_a.nid);
+    switch (type) {
+      case null:
+      case undefined:
+        if (!Visitor.inDmz) {
+          nid = Visitor.get(_a.home_id);
+          hub_id = Visitor.get(_a.id);
+        }
+        break;
+      case _a.hub:
+        nid = this.mget(_a.actual_home_id);
+        hub_id = this.mget(_a.hub_id);
+        break;
+      default:
+        hub_id = this.mget(_a.hub_id);
+        nid = this.mget(_a.nid);
+    }
+    let url =
+      `${svc}media.zip?keysel=${keysel}&hub_id=${hub_id}&nid=${nid}` +
+      `&id=${o.zipid}&zipname=${encodeURIComponent(zipname)}`;
+    if (o.backup) url += `&backup=${o.backup}`;
+    return this.fetchFile({
+      url,
+      progress: o.progress || this._progress,
+      download: `${zipname}.zip`,
+    });
   }
 
   /**
@@ -2142,7 +2220,10 @@ class __media_core extends DrumeeMFS {
           return;
         }
         if (data.zipid) {
-          this.mset({ zipid: data.zipid });
+          // Persist zipname now: the async zip-complete WS message that later
+          // drives download_zip() may not echo it, and the server's media.zip
+          // endpoint needs zipname to locate <id>/<zipname>.zip.
+          this.mset({ zipid: data.zipid, zipname: data.zipname });
           this._zipsize = data.size;
           if (this._progress) this._progress.setLabel(LOCALE.PREPARING);
         }
