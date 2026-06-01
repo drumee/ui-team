@@ -15,7 +15,9 @@ const __skl_folder_topbar = function (ui) {
   const cnFolder = `${ui.fig.family}-topbar`;
   const cnGroup = `${ui.fig.group}-topbar`;
   const area = ui.mget(_a.area);
-  const filename = ui.mget(_a.filename) || ui.mget(_a.name) || "";
+  // Root nodes have an empty filename; the workspace name lives in hub_name.
+  // Fall back to it so the topbar title isn't blank at a workspace root.
+  const filename = ui.mget(_a.filename) || ui.mget(_a.name) || ui.model.get("hub_name") || "";
 
   // ── Left cluster ─────────────────────────────────────────────
   const logo = Skeletons.Image.Svg({

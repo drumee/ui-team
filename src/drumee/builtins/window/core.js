@@ -623,13 +623,18 @@ class __window_core extends __utils {
       this.copyPropertiesFrom(m);
       this.updateBreadcrumb({ ...m.model.toJSON(), event: _a.browse }, this);
     }
-    const folderName = this.get(_a.filename) || m.get(_a.filename);
+    // Empty-filename root nodes take their name from hub_name. Recompute in the
+    // recheck below so a late-resolved name isn't reverted by a stale value.
+    const nameOf = () =>
+      this.get(_a.filename) || (m && m.get(_a.filename)) || this.get("hub_name") || "";
+    const folderName = nameOf();
     if (this.__refWindowName != null) {
       this.__refWindowName.set({ content: folderName });
       /** FIX ME: sometime new value is not updated */
       setTimeout(() => {
-        if (this.__refWindowName.mget(_a.content) != folderName) {
-          this.__refWindowName.set({ content: folderName });
+        const latest = nameOf();
+        if (this.__refWindowName.mget(_a.content) != latest) {
+          this.__refWindowName.set({ content: latest });
         }
       }, 1000);
     }

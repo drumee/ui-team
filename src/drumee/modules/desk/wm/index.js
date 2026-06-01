@@ -299,6 +299,12 @@ class __window_manager extends push {
     const hub_id = data.hub_id || data.id;
     let nid = data.actual_home_id || data.home_id || data.nid;
     data.nid = nid;
+    // Capture the workspace name from the clicked item now: inside `apply` the
+    // `data` param shadows this one with media.attributes (empty root filename),
+    // so seeding it lets the window open already named instead of waiting on the
+    // async get_path.
+    const workspaceName =
+      data.filename || data.name || data.hub_name || data.workspace_name;
 
     if (!hub_id) {
       this.warn("loadWorkspace: missing hub_id", data);
@@ -337,6 +343,9 @@ class __window_manager extends push {
         ...data,
         headless: 1,
         filename: data.filename || data.name,
+        // Seed the name synchronously so the title and root crumb are correct
+        // from first paint, without waiting on get_path.
+        hub_name: data.hub_name || workspaceName,
         // Headless workspace lives in its own singleton pool, which is headlessLayer.
         // subfolders or players open from the workspace shall go to this pool.
         // docs/superpowers/specs/2026-05-22-multi-folder-windows-design.md.
@@ -558,7 +567,19 @@ class __window_manager extends push {
           return;
         }
         let currentFolder = this.getWindowsPool().children.last();
+        if (!currentFolder) return;
         currentFolder.refreshContent(attrs);
+        // refreshContent can't infer the ancestor chain for a deep jump, so the
+        // breadcrumb would keep the previous folder's crumbs. Rebuild it from
+        // get_path, as loadWorkspace does.
+        const deepNid = attrs.nid || nid;
+        this.fetchService(SERVICE.media.get_path, { nid: deepNid, hub_id })
+          .then((path) => {
+            if (_.isEmpty(path)) return;
+            if (_.isFunction(currentFolder.refreshBreadcrumbsUI))
+              currentFolder.refreshBreadcrumbsUI(path);
+          })
+          .catch((e) => this.warn("openWorkspaceFolder: get_path failed", e));
       })
       .catch((e) => this.warn("loadWorkspace: get_attributes failed", e));
 
