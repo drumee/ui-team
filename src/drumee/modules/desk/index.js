@@ -97,17 +97,51 @@ class desk_module extends LetcBox {
    * @param {*} args
    * @returns
    */
-  openP2Pchat(args = {}) {
+  async openP2Pchat(args = {}) {
     const { drumate_id, message_id } = args;
+    let p = await this.ensurePart('chat-panel')
+    let widget = p.children.last();
+    if (!widget || widget.isDestroyed()) {
+      this.togglePanel('chat_p2p', 'chat-panel')
+    } else if (widget.mget(_a.kind) === 'chat_p2p') {
+      if (widget.el.dataset.anim === 'in') {
+        return;
+      } else {
+        this.togglePanel('chat_p2p', 'chat-panel')
+      }
+    } else {
+      this.togglePanel('chat_p2p', 'chat-panel')
+    }
     if (!drumate_id) return;
-    this.togglePanel("chat_p2p", "chat-panel").then(() => {
-      this.ensurePart("chat-panel").then((p) => {
-        const widget = p && p.children && p.children.last && p.children.last();
-        if (widget && widget.openChatByPeerId)
-          widget.openChatByPeerId(drumate_id, message_id);
-      });
-    });
+    p = await this.ensurePart('chat-panel');
+    this.debug("AAA:122", this)
+    widget = p && p.children && p.children.last && p.children.last();
+    if (widget && widget.openChatByPeerId) widget.openChatByPeerId(drumate_id, message_id);
   }
+
+  /**
+   * 
+   * @param {*} args 
+   * @returns 
+   */
+  async openContactPanel(args = {}) {
+    let p = await this.ensurePart('chat-panel')
+    let widget = p.children.last();
+    if (!widget || widget.isDestroyed()) {
+      this.togglePanel('address_book', 'chat-panel')
+    } else if (widget.mget(_a.kind) === 'address_book') {
+      if (widget.el.dataset.anim === 'in') {
+        return;
+      } else {
+        this.togglePanel('address_book', 'chat-panel')
+      }
+    }
+    this.togglePanel('address_book', 'chat-panel')
+    p = await this.ensurePart('chat-panel')
+    widget = p && p.children && p.children.last && p.children.last();
+    if (widget && widget.switchTab) widget.switchTab(_a.pending);
+  }
+
 
   /**
    *
@@ -115,6 +149,40 @@ class desk_module extends LetcBox {
   async onDomRefresh() {
     this.route();
     RADIO_BROADCAST.on("breadcrumb:content", this._updateAddmenu);
+    // Post-onboarding handoff for users who picked Google Drive in the
+    // tools step. Delayed so workspace renders first.
+    setTimeout(() => this._maybeAutoLaunchGDriveMigration(), 1500);
+  }
+
+  /**
+   * After the user lands on the Desk, if onboarding said they use Google
+   * Drive AND they haven't interacted with the migration prompt yet,
+   * auto-launch the migrate popup once.
+   *
+   * "Interacted" = either clicked Start (which sets
+   * profile.tools_migration_skipped.google_drive=1 inside start_migration)
+   * or clicked "Skip for now" (calls dismiss_post_onboarding which sets
+   * the same flag). Once the flag is set, no more auto-launches —
+   * Settings → Linked accounts is the manual re-entry point.
+   *
+   * The popup respects `autoFromOnboarding` to render the "Skip for now"
+   * link in addition to the normal flow.
+   */
+  async _maybeAutoLaunchGDriveMigration() {
+    const profile = (Visitor.profile && Visitor.profile()) || {};
+    const tools = profile.tools || [];
+    if (!Array.isArray(tools) || !tools.includes("google_drive")) return;
+    const skipped = (profile.tools_migration_skipped || {}).google_drive;
+    if (skipped) return;
+
+    await Kind.waitFor("migrate_gdrive_popup");
+    Wm.launch({
+      kind: "migrate_gdrive_popup",
+      hub_id: Visitor.id,
+      nid: Visitor.get(_a.home_id),
+      autoFromOnboarding: 1,
+      wm_unique_id: "migrate_gdrive_popup",
+    }, { explicit: 1, singleton: 1 });
   }
 
   /**
@@ -672,6 +740,94 @@ class desk_module extends LetcBox {
   }
 
   /**
+   * Open the mobile drawer in a given mode ("nav" | "actions"). Tapping
+   * an already-active button is a no-op (does not toggle closed). The
+   * drawer closes only via the in-drawer close button or by tapping the
+   * overlay backdrop. No-op on non-mobile.
+   */
+  openMobileDrawer(mode) {
+    return this.ensurePart("sidebar-main").then((p) => {
+      if (!p || !p.el) return;
+      const el = p.el;
+      el.dataset.mode = mode;
+      el.dataset.state = "open";
+      this._setMobileBackdrop(true);
+      this._setMobileTopbarActive(mode);
+    });
+  }
+
+  /**
+   * Mirror the drawer state on the two mobile-topbar buttons so the
+   * currently-displayed mode shows as active. Pass null to clear both.
+   */
+  _setMobileTopbarActive(activeMode) {
+    const map = {
+      "mobile-add-btn": activeMode === "actions",
+      "mobile-menu-btn": activeMode === "nav",
+    };
+    Object.entries(map).forEach(([pn, isActive]) => {
+      this.ensurePart(pn).then((p) => {
+        if (!p || !p.el) return;
+        if (isActive) {
+          p.el.dataset.state = "active";
+        } else {
+          delete p.el.dataset.state;
+        }
+      });
+    });
+  }
+
+  /**
+   * Show/hide the shared __overlay as a tap-to-close backdrop for the
+   * mobile drawer. The click listener that actually closes the drawer
+   * is bound once in _bindMobileBackdropListener at mount time.
+   */
+  _setMobileBackdrop(visible) {
+    this.ensurePart("overlay").then((p) => {
+      if (!p || !p.el) return;
+      p.el.dataset.state = visible ? "open" : "closed";
+    });
+  }
+
+  _closeMobileDrawer() {
+    this.ensurePart("sidebar-main").then((p) => {
+      if (!p || !p.el) return;
+      p.el.dataset.state = "closed";
+    });
+    this._setMobileBackdrop(false);
+    this._setMobileTopbarActive(null);
+  }
+
+  /**
+   * Close the mobile drawer when a navigational sidebar service fires.
+   * The set covers the nav-mode rows (Home / Notifications / Inbox /
+   * Contacts / Trash / Apps), the actions-mode rows (Add new / Upload /
+   * Invite), Settings, and workspace selection. Excluded on purpose:
+   * search-files (fires per keystroke), toggle-theme (kept open for
+   * repeated toggling), and the mobile-show / mobile-close drawer controls.
+   */
+  _maybeDismissMobileDrawer(service) {
+    if (!this._drawerDismissServices) {
+      this._drawerDismissServices = new Set([
+        _e.home,
+        _e.upload,
+        "toggle-activity",
+        "toggle-inbox",
+        "toggle-contacts",
+        "toggle-trash",
+        "toggle-apps",
+        "toggle-settings",
+        "new-workspace",
+        "invite-member",
+        "load-workspace",
+      ]);
+    }
+    if (this._drawerDismissServices.has(service)) {
+      this._closeMobileDrawer();
+    }
+  }
+
+  /**
    *
    */
   togglePanel(kind, pn, openOnly) {
@@ -766,10 +922,7 @@ class desk_module extends LetcBox {
     if (except !== "activity-panel") {
       tasks.push(
         this.ensurePart("activity-panel").then((p) => {
-          if (p) {
-            p.activityState = 0;
-            p.setState(0);
-          }
+          if (p) p.setState(0);
         }),
       );
     }
@@ -836,7 +989,15 @@ class desk_module extends LetcBox {
     if (pointerDragged || !window.Wm) {
       return;
     }
-    this.debug("AAA:830", service);
+    this.debug("AAA:830", service)
+    // Mobile: tapping a navigational sidebar item dismisses the drawer so
+    // the resulting panel/content is visible. on_click items (e.g. logout)
+    // never reach here, and drawer-control services (mobile-show-*/close),
+    // the search input, and the theme toggle are intentionally excluded —
+    // they manage the drawer themselves or are expected to leave it open.
+    if (Visitor.isMobile()) {
+      this._maybeDismissMobileDrawer(service);
+    }
     switch (service) {
       case _e.home:
         this.updateBreadcrumb({ event: _e.home });
@@ -869,6 +1030,15 @@ class desk_module extends LetcBox {
           { kind: cmd.mget(_a.respawn) },
           { explicit: 1, singleton: 1 },
         );
+
+      case "mobile-show-add":
+        return this.openMobileDrawer("actions");
+
+      case "mobile-show-menu":
+        return this.openMobileDrawer("nav");
+
+      case "mobile-close-drawer":
+        return this._closeMobileDrawer();
 
       case "toggle-activity":
         return this.ensurePart("activity-panel").then((p) => {

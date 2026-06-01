@@ -1,4 +1,8 @@
 {
+  "WINDOW_ZOOM": "Ampliar",
+  "TILE_LEFT": "Anclar a la izquierda",
+  "TILE_RIGHT": "Anclar a la derecha",
+  "REFRAME": "Restablecer",
   "ACCEPT": "Aceptado",
   "ACCEPT_CONTACT_AND_JOIN_DRUMEE": "Acéptame como contacto y únete a mí en Drumee.",
   "ACCEPT_GENERAL_TERMS_USE": "Acepto las condiciones generales de uso",
@@ -1321,6 +1325,8 @@
   "ACCOUNT_SETTINGS": "Account settings",
   "ACCOUNT_SETTINGS_SUBTITLE": "Manage your account preferences, notifications, and connected apps.",
   "SAVE_PROFILE": "Save Profile",
+  "PROFILE_SAVED": "Perfil guardado",
+  "PROFILE_SAVE_FAILED": "No se pudo guardar el perfil. Inténtalo de nuevo.",
   "EDIT_AVATAR": "EDIT AVATAR",
   "AVATAR_UPLOAD_FAILED": "Could not upload avatar. Please try again.",
   "DISPLAY_NAME": "Display Name",

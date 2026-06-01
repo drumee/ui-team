@@ -146,9 +146,10 @@ class __push_manager extends winman {
 
       case SERVICE.contact.connection_status:
       case "user.connection_status":
-        this.myContactsStatus.set(data.user_id, data);
+        // UserProfile.updateStatus guards on data.id; server push uses user_id.
+        this.myContactsStatus.set(data.user_id, { status: data.status });
         this.trigger(options.service, data);
-        RADIO_BROADCAST.trigger(_e.peerData, data);
+        RADIO_BROADCAST.trigger(_e.peerData, { id: data.user_id, status: data.status });
         break;
 
       case "subscription.paid":

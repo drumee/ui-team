@@ -144,8 +144,9 @@ function tabs(ui) {
   let tabList = visible ? allTabs.filter((t) => visible.has(t.key)) : allTabs;
   if (!ui._isPrivileged) tabList = tabList.filter((t) => t.key !== "security");
   const hubChip = adminHubChip(ui);
+  const adminClass = ui._role === "admin" ? ` ${pfx}__tabs--admin` : "";
   return Skeletons.Box.X({
-    className: `${pfx}__tabs`,
+    className: `${pfx}__tabs${adminClass}`,
     kids: [
       Skeletons.Box.X({
         className: `${pfx}__tabs-list`,

@@ -14,7 +14,7 @@ const actions = [
 const roleOptions = [
   { label: LOCALE.ROLE_ADMIN, privilege: _K.privilege.admin },
   { label: LOCALE.ROLE_VIEW_EDIT, privilege: _K.privilege.write },
-  { label: LOCALE.ROLE_VIEW_CHAT, privilege: _K.privilege.read },
+  { label: LOCALE.ROLE_VIEW_CHAT, privilege: _K.privilege.chat },
   { label: LOCALE.VIEW, privilege: _K.privilege.guest || _K.privilege.read },
 ];
 
@@ -23,7 +23,7 @@ function roleFromPrivilege(priv) {
   const p = ~~priv;
   if (p & _K.permission.admin) return roleOptions[0];
   if (p & _K.permission.write) return roleOptions[1];
-  if (p & _K.permission.read) return roleOptions[2];
+  if (p & _K.permission.download) return roleOptions[2];
   return roleOptions[3];
 }
 

@@ -1,4 +1,8 @@
 {
+  "WINDOW_ZOOM": "Agrandir",
+  "TILE_LEFT": "Aligner à gauche",
+  "TILE_RIGHT": "Aligner à droite",
+  "REFRAME": "Recadrer",
   "km": "Khmer",
   "ACCESS_PERMISSION": "Droit d'accès",
   "ACK_COPY_LINK": "Le lien a été copié dans votre presse-papier",
@@ -1319,6 +1323,8 @@
   "ACCOUNT_SETTINGS": "Account settings",
   "ACCOUNT_SETTINGS_SUBTITLE": "Manage your account preferences, notifications, and connected apps.",
   "SAVE_PROFILE": "Save Profile",
+  "PROFILE_SAVED": "Profil enregistré",
+  "PROFILE_SAVE_FAILED": "Impossible d'enregistrer le profil. Veuillez réessayer.",
   "EDIT_AVATAR": "EDIT AVATAR",
   "AVATAR_UPLOAD_FAILED": "Could not upload avatar. Please try again.",
   "DISPLAY_NAME": "Display Name",

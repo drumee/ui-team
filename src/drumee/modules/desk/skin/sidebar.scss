@@ -14,6 +14,62 @@
     border-right: none;
     box-shadow: var(--shadow-right-big, 0 1px 11px rgba(0, 0, 0, 0.13));
     overflow: hidden;
+
+    // Mobile drawer mode — sidebar exits the flex row and becomes a
+    // fixed slide-in panel above the desk content.
+    &[data-device="mobile"] {
+      position: fixed;
+      top: 0;
+      left: 0;
+      height: 100vh;
+      width: 280px;
+      transform: translateX(-100%);
+      transition: transform 0.2s ease;
+      z-index: 99999 !important;
+
+      &[data-state="open"] {
+        transform: translateX(0);
+      }
+    }
+  }
+
+  &__nav-slot,
+  &__actions-slot {
+    width: 100%;
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  &__main[data-device="mobile"] {
+    .desk-module-sidebar__nav-slot,
+    .desk-module-sidebar__actions-slot {
+      display: none;
+    }
+
+    &[data-mode="nav"] .desk-module-sidebar__nav-slot {
+      display: flex;
+    }
+
+    &[data-mode="actions"] .desk-module-sidebar__actions-slot {
+      display: flex;
+    }
+  }
+
+  // Force SVG fills inside the actions-slot to inherit the sidebar's
+  // text color the same way sidebar_* icons do. The reused icons
+  // (desktop_upload teal, magnifying-glass black, etc.) hardcode colors
+  // that visually break the row alongside the currentColor sidebar icons.
+  &__actions-slot {
+    .desk-module-sidebar__item-icon svg {
+      path,
+      polygon,
+      rect,
+      circle,
+      ellipse {
+        fill: currentColor;
+      }
+    }
   }
 
   &__nav {
@@ -45,12 +101,6 @@
     &:hover {
       border-left-color: var(--hover-border-40);
       background-color: var(--active-item-bg);
-    }
-
-    &[data-device="mobile"] {
-      flex-shrink: 0;
-      width: 150px;
-      justify-content: center;
     }
 
     &[data-radio="on"] {
@@ -135,15 +185,60 @@
     }
   }
 
+  // Row that holds the logo (left) and the mobile close button (right).
+  // The close button is hidden on desktop/tablet via the rule below.
+  &__logo-row {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: flex-start;
+    width: 100%;
+    padding: 0 24px;
+    box-sizing: border-box;
+  }
+
   &__logo {
     align-items: center;
     gap: 8px;
-    padding: 0 24px;
+    // Padding lives on __logo-row now; keep this empty so existing
+    // desktop callers still get the same visual offset via the wrapper.
+    padding: 0;
 
     &-icon {
       width: 101px;
       height: 20px;
     }
+  }
+
+  // Mobile-only close button next to the logo. Closes the drawer via
+  // the "mobile-close-drawer" service handler in desk/index.js.
+  &__logo-close-btn {
+    display: none; // hidden by default; shown on mobile below
+    width: 32px;
+    height: 32px;
+    padding: 6px;
+    border-radius: 4px;
+    cursor: pointer;
+    color: var(--normal-fg-10);
+    flex-shrink: 0;
+
+    svg {
+      width: 100%;
+      height: 100%;
+
+      path {
+        fill: currentColor;
+      }
+    }
+
+    &:hover,
+    &:active {
+      background-color: var(--default-bg-hover, rgba(0, 0, 0, 0.06));
+    }
+  }
+
+  &__main[data-device="mobile"] &__logo-close-btn {
+    display: flex;
   }
 
   &__header {
@@ -316,6 +411,18 @@
       color: var(--normal-fg-50);
       font-size: 10px;
       line-height: 1.4;
+    }
+  }
+}
+
+@media (max-width: 650px) {
+  // Hide the DESKTOP sidebar column on narrow viewports. The mobile
+  // sidebar is the same widget but rendered with `data-device="mobile"`
+  // as a slide-in drawer — do NOT hide that variant or `openMobileDrawer`
+  // toggles `data-state` on a `display:none` element.
+  .desk-module-sidebar {
+    &__main:not([data-device="mobile"]) {
+      display: none;
     }
   }
 }

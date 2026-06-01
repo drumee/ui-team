@@ -106,7 +106,7 @@ function dmzTopbar(ui) {
 
 function dmzSplitBody(ui) {
   let privilege = ui.mget(_a.privilege);
-  if (privilege > _K.privilege.write) privilege = _K.privilege.write;
+  if (privilege & _K.permission.admin) privilege = _K.privilege.write;
 
   let api = null;
   if (ui.nodeInfoService === SERVICE.media.show_node_by) {
@@ -115,6 +115,7 @@ function dmzSplitBody(ui) {
       nid: ui.mget(_a.nid),
       share_id: ui.mget(_a.share_id),
       recipient_id: ui.mget(_a.user_id),
+      file_nid: ui.mget('file_nid'),
       page: 1,
     };
   }

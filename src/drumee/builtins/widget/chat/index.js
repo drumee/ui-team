@@ -576,6 +576,9 @@ class __widget_chat extends LetcBox {
           // list; this pass re-renders them all with the complete collection so
           // read users always show on open.
           this.refreshAllReaders();
+          // P2P has no per-message _seen_; place the peer's avatar from their
+          // read cursor returned alongside the messages (peer_ref_ctime).
+          this._applyPeerReadCursor();
         });
         break;
       case "chat-content":
@@ -1850,6 +1853,27 @@ class __widget_chat extends LetcBox {
     for (const item of items) {
       if (item && _.isFunction(item.renderReaders)) item.renderReaders();
     }
+  }
+
+  /**
+   * P2P only: place the peer's "seen" avatar from their read cursor, returned by
+   * p2p_list_messages as `peer_ref_ctime` (the same scalar on every row). Feeds
+   * the cursor into applyReadReceipt, which synthesises the per-row _seen_ the
+   * renderer expects. The hub-channel path uses real per-message metadata._seen_
+   * instead, so this is a no-op there (no peer_ref_ctime, not a private area).
+   */
+  _applyPeerReadCursor() {
+    const area = this.mget(_a.area) || this.mget(_a.type);
+    const isPrivate = area === _a.personal || area === _a.privateRoom;
+    if (!isPrivate || !this.peerId) return;
+    if (!this.__list || !_.isFunction(this.__list.getItemsByKind)) return;
+    const items = this.__list.getItemsByKind('widget_chat_item') || [];
+    let cursor = 0;
+    for (const item of items) {
+      const c = item && item.mget ? ~~item.mget('peer_ref_ctime') : 0;
+      if (c) { cursor = c; break; }
+    }
+    if (cursor > 0) this.applyReadReceipt(this.peerId, cursor);
   }
 
   /**

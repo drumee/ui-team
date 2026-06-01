@@ -20,11 +20,25 @@ function header(ui) {
           }),
         ],
       }),
-      button(ui, {
-        label: LOCALE.SAVE_PROFILE || "Save Profile",
-        className: `${pfx}-save`,
-        priority: "primary",
-        service: "save-profile",
+      Skeletons.Box.X({
+        className: `${pfx}-actions`,
+        kids: [
+          // Save confirmation pill. Hidden while data-state="0"; saveProfile()
+          // flips it to "1" (success) / "1" + data-variant="error" (failure)
+          // and a timer fades it back out — see _flashSaveStatus().
+          Skeletons.Note({
+            className: `${pfx}-saved`,
+            sys_pn: "save-status",
+            state: 0,
+            content: LOCALE.PROFILE_SAVED || "Profile saved",
+          }),
+          button(ui, {
+            label: LOCALE.SAVE_PROFILE || "Save Profile",
+            className: `${pfx}-save`,
+            priority: "primary",
+            service: "save-profile",
+          }),
+        ],
       }),
     ],
   });
@@ -56,8 +70,13 @@ function generalProfileCard(ui) {
     kids: [
       Skeletons.Box.X({
         className: `${pfx}-avatar-frame`,
+        sys_pn: "avatar-frame",
         service: "edit-avatar",
         uiHandler: [ui],
+        // data-processing="1" dims/blurs the avatar and shows the spinner
+        // overlay while HEIC conversion + upload are in flight. Driven by
+        // an instance flag so the state survives skeleton re-renders.
+        dataset: { processing: ui.isAvatarProcessing && ui.isAvatarProcessing() ? 1 : 0 },
         kids: [
           Skeletons.Avatar(avatar, `${pfx}-avatar`, fullname),
           Skeletons.Button.Svg({
@@ -65,6 +84,16 @@ function generalProfileCard(ui) {
             className: `${pfx}-avatar-edit`,
             service: "edit-avatar",
             uiHandler: [ui],
+          }),
+          // Processing overlay — hidden via CSS unless the frame carries
+          // data-processing="1". active:0 keeps the frame's edit-avatar
+          // click intact (see feedback_skeleton_event_active).
+          Skeletons.Box.Z({
+            className: `${pfx}-avatar-overlay`,
+            active: 0,
+            kids: [
+              Skeletons.Note({ className: `${pfx}-avatar-spinner`, active: 0 }),
+            ],
           }),
         ],
       }),
@@ -75,7 +104,11 @@ function generalProfileCard(ui) {
       // Skeletons.FileSelector hardcodes sys_pn:"fileselector" — match
       // it via ensurePart("fileselector") in openAvatarPicker().
       Skeletons.FileSelector({
-        accept: "image/*",
+        // Explicit .heic/.heif on top of image/* — some desktop browsers
+        // grey out HEIC under a bare image/* filter (missing MIME
+        // registration), which would block selection before _convertHeic
+        // ever runs. iPhone photos are HEIC by default.
+        accept: "image/*,.heic,.heif",
         className: `${pfx}-avatar-input`,
       }),
     ],
@@ -413,6 +446,36 @@ function linkedAccountsCard(ui) {
     );
   }
 
+  // Migrate-from-Google-Drive CTA. Reflects the gdrive state fetched on load
+  // (google_drive.get_state): a running job shows live progress + %, a prior
+  // job offers "Migrate again", otherwise "Start". The button always opens the
+  // popup (full, live progress); the row is just a load-time snapshot.
+  const gd = (ui.getGdriveState && ui.getGdriveState()) || {};
+  const gjob = gd.job;
+  const gRunning = !!(gjob && (gjob.status === "queued" || gjob.status === "running"));
+  const gPct = (gRunning && gjob.total_files > 0)
+    ? Math.min(100, Math.round((gjob.processed_files || 0) / gjob.total_files * 100))
+    : 0;
+  const migrateDesc = gRunning
+    ? `${LOCALE.MIGRATION_IN_PROGRESS || "Migration in progress"} — ${gjob.processed_files || 0}/${gjob.total_files || "?"} (${gPct}%)`
+    : (LOCALE.MIGRATE_GDRIVE_HINT || "Imports files and folders from your Google Drive into Drumee.");
+  const migrateLabel = gRunning
+    ? (LOCALE.MIGRATE_GDRIVE_VIEW || "View progress")
+    : (gjob ? (LOCALE.MIGRATE_GDRIVE_AGAIN || "Migrate again") : (LOCALE.MIGRATE_GDRIVE_START || "Start"));
+
+  const migrateRow = innerItem(ui, {
+    ico: "logo-google",
+    title: LOCALE.LINKED_ACCOUNTS_MIGRATE_GDRIVE || "Migrate from Google Drive",
+    description: migrateDesc,
+    className: `${pfx}-row ${pfx}-row--migrate`,
+    trailing: button(ui, {
+      label: migrateLabel,
+      className: `${pfx}-migrate-btn`,
+      priority: "primary",
+      service: "launch-gdrive-migration",
+    }),
+  });
+
   return Skeletons.Box.Y({
     className: `${ui.fig.family}__card ${pfx}-card`,
     kids: [
@@ -424,7 +487,7 @@ function linkedAccountsCard(ui) {
       }),
       Skeletons.Box.Y({
         className: `${pfx}-list`,
-        kids: rows,
+        kids: [...rows, migrateRow],
       }),
     ],
   });

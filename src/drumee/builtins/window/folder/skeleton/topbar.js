@@ -9,7 +9,7 @@
  *   ↑ left cluster                                      ↑ right cluster (gap 13.14)
  * ==================================================================== */
 
-const { getAreaLabel, newFileMenu } = require("../../skeleton/toolkit");
+const { getAreaLabel, newFileMenu, zoomMenu } = require("../../skeleton/toolkit");
 
 const __skl_folder_topbar = function (ui) {
   const cnFolder = `${ui.fig.family}-topbar`;
@@ -108,20 +108,39 @@ const __skl_folder_topbar = function (ui) {
     uiHandler: ui,
   });
 
-  const splitBtn = Skeletons.Button.Svg({
+  // File view toggle. A single control that shows the CURRENT view's glyph:
+  // the list icon (3 bars) in row mode, the grid icon (2x2) otherwise. Both
+  // glyphs are rendered; CSS reveals only the one matching the control's
+  // data-state. toggleFilesLayout() flips that state via cmd.changeState(), so
+  // the glyph swaps with no extra JS. active:0 on the glyphs lets the click
+  // bubble to the box's "toggle-files-layout" service.
+  const splitBtn = Skeletons.Box.X({
     className: `${cnFolder}__control-icon`,
-    ico: "square-split-horizontal",
     service: "toggle-files-layout",
     sys_pn: "view-ctrl",
-    state: ui.getViewMode && ui.getViewMode() === _a.row ? 1 : 0,
+    // Explicit data-state (not the `state` prop) guarantees the attribute is
+    // present on first render so the correct glyph shows immediately; the
+    // grid glyph is the CSS default, so only row/list (state 1) needs it.
+    dataset: { state: ui.getViewMode && ui.getViewMode() === _a.row ? 1 : 0 },
     uiHandler: [ui],
+    kidsOpt: { active: 0 },
+    kids: [
+      Skeletons.Image.Svg({
+        ico: "view-list",
+        className: `${cnFolder}__control-icon-glyph ${cnFolder}__control-icon-glyph--list`,
+      }),
+      Skeletons.Image.Svg({
+        ico: "view-grid",
+        className: `${cnFolder}__control-icon-glyph ${cnFolder}__control-icon-glyph--grid`,
+      }),
+    ],
   });
 
   let controls = require("window/skeleton/topbar/control")(ui, "c");
 
   const rightCluster = Skeletons.Box.X({
     className: `${cnFolder}__right`,
-    kids: [videoBtn, uploadBtn, addNew, shareBtn, settingsBtn, splitBtn, controls],
+    kids: [videoBtn, uploadBtn, addNew, shareBtn, settingsBtn, splitBtn, zoomMenu(ui), controls],
   });
 
   // ── Root row ─────────────────────────────────────────────────

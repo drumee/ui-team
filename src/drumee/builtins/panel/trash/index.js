@@ -27,10 +27,10 @@ class __panel_trash extends mfsInteract {
    * @param {*} e 
    */
   _onOutsideClick(e, source) {
-    const svc = source && source.mget && source.mget(_a.service);
-    if (typeof svc === "string" && svc.startsWith("toggle-")) return;
+    // const svc = source && source.mget && source.mget(_a.service);
+    // if (typeof svc === "string" && svc.startsWith("toggle-")) return;
     if (this.el.dataset.anim === "in" && !this.el.contains(e.target)) {
-      Desk.closeAllPanels();
+      this.el.dataset.anim = "out";
     }
   }
 

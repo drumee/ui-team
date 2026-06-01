@@ -108,8 +108,6 @@
       gap: 8px;
       max-width: min(100%, 560px);
       min-width: 0;
-      // Anchor for the absolutely-positioned time.
-      position: relative;
 
       &.me {
         align-items: flex-end;
@@ -124,39 +122,15 @@
       }
     }
 
-    // Anchor for the absolutely-positioned time; sized to the bubble (it's the
-    // only in-flow child once the footer is taken out of flow).
-    &-line {
-      display: flex;
-      align-items: center;
-      position: relative;
-      min-width: 0;
-      max-width: 100%;
-    }
-
     &-footer {
-      // Time + read indicator, floated beside the bubble and revealed only on
-      // hover: left of the bubble for incoming, right for own. Absolute so it
-      // adds no inline gap, vertically centred on the bubble.
-      position: absolute;
-      top: 50%;
-      transform: translateY(-50%);
-      right: calc(100% + 6px);
-      left: auto;
       display: flex;
       flex-direction: row;
       align-items: center;
+      justify-content: flex-start;
       gap: 4px;
-      visibility: hidden;
 
       &.me {
-        right: auto;
-        left: calc(100% + 6px);
-      }
-
-      // Reveal time + actions only while hovering the conversation bubble.
-      .widget-chatItem__conversation-content:hover ~ & {
-        visibility: visible;
+        justify-content: flex-end;
       }
 
       & .readed-icon {
@@ -173,22 +147,16 @@
     }
 
     &-date {
-      // Inline beside the bubble (inside the footer, which sits on the message
-      // line). Vertically centred via the line's align-items: center.
-      white-space: nowrap;
-      flex-shrink: 0;
       @include drumee.typo(
-        $size: 11px,
+        $size: 8px,
         $line: 1.4,
         $weight: 400,
-        $color: var(--normal-fg-50)
+        $color: var(--normal-fg-10)
       );
-
-      .widget-chatItem__conversation-content:hover
-        ~ .widget-chatItem__message-footer
-        & {
-        visibility: visible;
-      }
+      background-color: var(--normal-bg-elevated);
+      padding: 6px;
+      border: 1px solid var(--border-strong);
+      border-radius: 4px;
     }
   }
 

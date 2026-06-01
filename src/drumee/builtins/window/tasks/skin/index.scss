@@ -36,6 +36,47 @@
     overflow: hidden;
   }
 
+  // ── Mobile: lock columns + force horizontal scroll on board ──
+  // 4 columns × 260px = 1076px > 430px phone viewport → board needs
+  // to scroll horizontally. The previous attempt set overflow-x:auto
+  // on __main but the scroll never engaged because the ancestor chain
+  // (window__tasks-panel grid cell, tasks-panel__ui, tasks-panel__root)
+  // all default to `min-width: auto` for flex/grid items — meaning
+  // they expand to fit their content instead of clamping to their
+  // parent cell. The whole folder window then scrolled instead of
+  // the inner board. Pin every wrapper to `min-width: 0` so each
+  // level clamps to its parent, then __main's overflow-x finally
+  // becomes meaningful and the user can swipe through status columns
+  // (TO DO → IN PROGRESS → REVIEW → COMPLETE).
+  @media (max-width: 650px) {
+    &__ui,
+    &__root {
+      min-width: 0;
+      max-width: 100%;
+    }
+
+    &__main {
+      flex-wrap: nowrap;
+      min-width: 0;
+      max-width: 100%;
+      overflow-x: auto !important;
+      overflow-y: hidden;
+      scrollbar-width: none;
+      -webkit-overflow-scrolling: touch;
+      touch-action: pan-x pan-y;
+
+      &::-webkit-scrollbar {
+        display: none;
+      }
+    }
+
+    &__column {
+      flex: 0 0 260px !important;
+      min-width: 260px !important;
+      width: 260px;
+    }
+  }
+
   &__column-body {
     align-items: stretch;
     gap: 8px;
@@ -1646,5 +1687,20 @@ html[data-theme="dark"] .tasks-panel__flatpickr.flatpickr-calendar {
     &.nextMonthDay {
       color: rgba(228, 227, 255, 0.35);
     }
+  }
+}
+
+// `window__tasks-panel` is the grid cell folder window uses to hold
+// the tasks widget. Grid items default to `min-width: auto`, so when
+// `tasks-panel__main` builds 1076px of column content the cell
+// stretches with it and the entire folder window scrolls horizontally
+// instead of the board scrolling internally. Force the cell to clamp
+// at the grid track width so the panel stays its slot size and the
+// inner board owns the horizontal overflow.
+@media (max-width: 650px) {
+  .window__tasks-panel {
+    min-width: 0;
+    max-width: 100%;
+    overflow: hidden;
   }
 }

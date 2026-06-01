@@ -6,8 +6,8 @@
  */
 export function button(ui, opt) {
   let {
-    label, state = "", ico, service, sys_pn, flow, radiotoggle,
-    className, priority = "primary", type, haptic, radio, value
+    label, state = "", ico, service, sys_pn, flow, radiotoggle, dataset,
+    className, priority = "primary", type, haptic, radio, value, provider
   } = opt;
   const pfx = className || `${ui.fig.group}__button`;
   let kids = []
@@ -61,10 +61,12 @@ export function button(ui, opt) {
     radio,
     radiotoggle,
     value,
+    provider,
     kidsOpt: {
       active: 0,
     },
-    kids
+    kids,
+    dataset
   })
 }
 
