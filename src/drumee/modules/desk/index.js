@@ -54,6 +54,122 @@ class desk_module extends LetcBox {
     Visitor.on(_e.change, this._updateAvatar);
     RADIO_BROADCAST.on("activity-update", this._updateActivityBadge, this);
     setTimeout(this.lazyClasses, 5000);
+
+    // Chrome-style folder tabs in the desk topbar. One tab per open
+    // folder window — added on launch, removed on destroy. Minimize
+    // toggles a visual `minimized` flag on the tab but doesn't remove it.
+    // Click the tab body to focus/restore; click × to destroy.
+    this._openFolders = new Map();
+    this._onFolderOpen = this._onFolderOpen.bind(this);
+    this._onFolderClose = this._onFolderClose.bind(this);
+    this._onWmMinimize = this._onWmMinimize.bind(this);
+    this._onWmWake = this._onWmWake.bind(this);
+    this._bindFolderTabs();
+  }
+
+  _bindFolderTabs() {
+    if (this._folderTabsBound) return;
+    if (!window.Wm || !Wm.$el) {
+      _.delay(() => this._bindFolderTabs(), 100);
+      return;
+    }
+    Wm.$el.on("folder:open", this._onFolderOpen);
+    Wm.$el.on("folder:close", this._onFolderClose);
+    Wm.$el.on(_e.minimize, this._onWmMinimize);
+    Wm.$el.on(_e.wake, this._onWmWake);
+    this._folderTabsBound = true;
+  }
+
+  _onFolderOpen(event, winInstance) {
+    if (!winInstance || !winInstance.isFolder) return;
+    if (this._openFolders.has(winInstance.cid)) return;
+    this._openFolders.set(winInstance.cid, {
+      win: winInstance,
+      minimized: !!winInstance.mget(_a.minimize),
+    });
+    this._renderFolderTabs();
+  }
+
+  _onFolderClose(event, winInstance) {
+    if (!winInstance) return;
+    if (this._openFolders.delete(winInstance.cid)) {
+      this._renderFolderTabs();
+    }
+  }
+
+  _onWmMinimize(event, winInstance) {
+    if (!winInstance || !winInstance.isFolder) return;
+    const entry = this._openFolders.get(winInstance.cid);
+    if (!entry) return;
+    entry.minimized = true;
+    this._renderFolderTabs();
+  }
+
+  _onWmWake(event, winInstance) {
+    if (!winInstance || !winInstance.isFolder) return;
+    const entry = this._openFolders.get(winInstance.cid);
+    if (!entry) return;
+    entry.minimized = false;
+    this._renderFolderTabs();
+  }
+
+  _renderFolderTabs() {
+    if (!this._folderTabsBox || (this._folderTabsBox.isDestroyed && this._folderTabsBox.isDestroyed())) {
+      return;
+    }
+    const pfx = `${this.fig.family}-topbar`;
+    const tabs = [];
+    for (const entry of this._openFolders.values()) {
+      const win = entry && entry.win;
+      if (!win || (win.isDestroyed && win.isDestroyed())) continue;
+      tabs.push(this._buildFolderTab(win, entry.minimized, pfx));
+    }
+    this._folderTabsBox.feed(tabs);
+  }
+
+  _buildFolderTab(winInstance, minimized, pfx) {
+    const cn = `${pfx}__folder-tab`;
+    const name =
+      winInstance.mget(_a.filename) ||
+      winInstance.mget(_a.name) ||
+      LOCALE.FOLDER ||
+      "Folder";
+    const area = winInstance.mget(_a.area);
+    const dataset = { state: minimized ? 0 : 1 };
+    if (area) dataset.area = area;
+    // Note: do NOT use `kidsOpt: { active: 0 }` here — _.merge(kid, kidsOpt)
+    // overrides each child's own props, which would zero out the close
+    // button's `active: 1` and silently drop its click handler. Set
+    // `active: 0` directly on the icon + label instead so the close
+    // button stays interactive.
+    return Skeletons.Box.X({
+      className: cn,
+      uiHandler: [this],
+      service: "focus-folder-tab",
+      wincid: winInstance.cid,
+      dataset,
+      kids: [
+        Skeletons.Button.Svg({
+          ico: "folder-header",
+          active: 0,
+          className: `${cn}-icon`,
+          dataset: area ? { area } : undefined,
+        }),
+        Skeletons.Note({
+          content: name,
+          active: 0,
+          className: `${cn}-label`,
+        }),
+        Skeletons.Button.Svg({
+          ico: "cross",
+          className: `${cn}-close`,
+          service: "close-folder-tab",
+          uiHandler: [this],
+          wincid: winInstance.cid,
+          bubble: 0,
+        }),
+      ],
+    });
   }
 
   /**
@@ -76,6 +192,13 @@ class desk_module extends LetcBox {
     }
     RADIO_BROADCAST.off("activity-update", this._updateActivityBadge, this);
     RADIO_BROADCAST.off("breadcrumb:content", this._updateAddmenu);
+    if (this._folderTabsBound && window.Wm && Wm.$el) {
+      Wm.$el.off("folder:open", this._onFolderOpen);
+      Wm.$el.off("folder:close", this._onFolderClose);
+      Wm.$el.off(_e.minimize, this._onWmMinimize);
+      Wm.$el.off(_e.wake, this._onWmWake);
+      this._folderTabsBound = false;
+    }
   }
 
   /**
@@ -280,6 +403,11 @@ class desk_module extends LetcBox {
 
       case "avatar-listener":
         return (this._avatarListener = child);
+
+      case "folder-tabs":
+        this._folderTabsBox = child;
+        this._renderFolderTabs();
+        return;
 
       case "search-container":
         this._searchContainer = child;
@@ -1002,6 +1130,33 @@ class desk_module extends LetcBox {
       this._maybeDismissMobileDrawer(service);
     }
     switch (service) {
+      case "focus-folder-tab": {
+        const cid = cmd.mget && cmd.mget("wincid");
+        const entry = cid && this._openFolders.get(cid);
+        const win = entry && entry.win;
+        if (!win || win.isDestroyed()) return;
+        if (entry.minimized && typeof win.wake === "function") {
+          win.wake(cmd);
+        } else if (typeof win.raise === "function") {
+          win.raise();
+        }
+        return;
+      }
+
+      case "close-folder-tab": {
+        const cid = cmd.mget && cmd.mget("wincid");
+        const entry = cid && this._openFolders.get(cid);
+        const win = entry && entry.win;
+        if (!win || win.isDestroyed()) return;
+        // {now:true} bypasses goodbye()'s default 2s timeout + scale/opacity
+        // animation so the floating window closes the moment the user clicks
+        // × on the header tab. The folder's onBeforeDestroy still fires
+        // folder:close, which removes the tab.
+        if (typeof win.goodbye === "function") win.goodbye({ now: true });
+        else if (typeof win.destroy === "function") win.destroy();
+        return;
+      }
+
       case _e.home:
         this.updateBreadcrumb({ event: _e.home });
         this.loadHome();

@@ -35,6 +35,113 @@
     }
   }
 
+  // Left cluster — home breadcrumb + folder tabs sit flush, then
+  // flex's space-between pushes the whole cluster left and the actions
+  // cluster right. The breadcrumb widget ships with `flex: 1` on its
+  // `__ui` root (from breadcrumb/skin/index.scss), which would otherwise
+  // stretch it to fill the row and push the tabs all the way right.
+  // Override that inside the cluster so the breadcrumb hugs its content.
+  &__left-cluster {
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+    flex: 0 1 auto;
+    overflow: hidden;
+
+    .desk-breadcrumb__ui {
+      flex: 0 1 auto;
+    }
+  }
+
+  // Chrome-style folder tabs — sit immediately right of the home
+  // breadcrumb. One tab per open folder window. data-state="1" = visible;
+  // data-state="0" = minimized. Empty until at least one folder opens.
+  &__folder-tabs {
+    align-items: center;
+    gap: 4px;
+    flex: 0 1 auto;
+    min-width: 0;
+    overflow: hidden;
+  }
+
+  &__folder-tab {
+    align-items: center;
+    gap: 6px;
+    max-width: 200px;
+    height: 28px;
+    padding: 0 4px 0 10px;
+    border-radius: 8px 8px 0 0;
+    background-color: var(--normal-bg-elevated, #fff);
+    border: 1px solid var(--border-muted, rgba(0, 0, 0, 0.08));
+    border-bottom: none;
+    cursor: pointer;
+    font-family: "Geist", sans-serif;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--normal-fg-10);
+    transition: background-color 0.12s ease, opacity 0.12s ease;
+
+    &:hover {
+      background-color: var(--normal-bg-90);
+    }
+
+    // Minimized: muted background + dimmed text.
+    &[data-state="0"] {
+      background-color: var(--normal-bg-80, rgba(0, 0, 0, 0.04));
+      opacity: 0.7;
+      font-weight: 400;
+    }
+  }
+
+  &__folder-tab-icon {
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+    color: var(--area-private);
+
+    svg {
+      width: 16px;
+      height: 16px;
+    }
+
+    &[data-area="personal"] { color: var(--area-personal); }
+    &[data-area="share"],
+    &[data-area="dmz"]      { color: var(--area-share); }
+    &[data-area="public"]   { color: var(--area-public); }
+  }
+
+  &__folder-tab-label {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    line-height: 1.2;
+  }
+
+  &__folder-tab-close {
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--normal-fg-20, var(--normal-fg-10));
+    cursor: pointer;
+    transition: background-color 0.12s ease, color 0.12s ease;
+
+    svg {
+      width: 10px;
+      height: 10px;
+    }
+
+    &:hover {
+      background-color: var(--normal-bg-70, rgba(0, 0, 0, 0.08));
+      color: var(--normal-fg-10);
+    }
+  }
+
   &__user-menu {
     align-items: center;
     justify-content: center;

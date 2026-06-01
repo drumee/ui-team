@@ -40,7 +40,6 @@ const __skl_stream_local = function (_ui_) {
         ico: "drumee-tools_pin",
         sys_pn: "tile-pin",
         service: "pin-tile",
-        tooltips: LOCALE.PIN_TILE || "Pin to spotlight",
         uiHandler: [_ui_],
       }),
       Skeletons.Button.Svg({
