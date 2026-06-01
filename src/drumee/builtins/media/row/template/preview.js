@@ -38,7 +38,13 @@ const __m_preview = function (m, speudo_icon) {
       break;
 
     default:
-      if (ext) {
+      if (m.imgCapable) {
+        // Image-capable document (e.g. PDF): show the first-page poster, cropped
+        // to cover+top via the `.image-capable.document` SCSS rule.
+        html = `
+          <div id="${m._id}-preview" class="preview image-capable ${type}"
+          style="background-image:url(${m.url});"></div>`;
+      } else if (ext) {
         html = Template.SvgText(ext, `full icon extension ${type} ${dmz} ${area}`);
       } else {
         html = `

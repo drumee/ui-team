@@ -655,6 +655,14 @@
     }
   }
 
+  // Desktop: never show the consolidated "more" button — the three primary
+  // actions are displayed inline above 1024px.
+  @media (min-width: 1025px) {
+    &__more-btn {
+      display: none !important;
+    }
+  }
+
   // Invite button
   &__invite-btn {
     display: inline-flex;

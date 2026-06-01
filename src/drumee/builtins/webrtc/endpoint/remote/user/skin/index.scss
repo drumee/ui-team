@@ -111,6 +111,7 @@
     align-items: center;
     justify-content: center;
     z-index: 10;
+    width: 300px;
   }
 
   &__tile-mic {
@@ -186,7 +187,8 @@
   }
 
   @keyframes hand-raise-pulse {
-    0%, 100% {
+    0%,
+    100% {
       box-shadow: 0 0 0 0 rgba(24, 172, 114, 0.6);
     }
     50% {
@@ -217,7 +219,9 @@
     color: #fff;
     cursor: pointer;
 
-    &:hover { background-color: rgba(20, 17, 35, 0.65); }
+    &:hover {
+      background-color: rgba(20, 17, 35, 0.65);
+    }
   }
 
   &__tile-badge {
@@ -230,7 +234,10 @@
     cursor: default;
     pointer-events: none;
 
-    svg { width: 16px; height: 16px; }
+    svg {
+      width: 16px;
+      height: 16px;
+    }
 
     &--share {
       background-color: rgba(89, 80, 255, 0.85);
@@ -238,7 +245,9 @@
     }
   }
 
-  &__ui[data-presenting="1"] &__tile-badge--share { display: flex; }
+  &__ui[data-presenting="1"] &__tile-badge--share {
+    display: flex;
+  }
 
   // Pinned highlight (synced with local-user skin).
   &__ui[data-pinned="1"] {

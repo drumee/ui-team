@@ -6,13 +6,16 @@ const { sendOtp, openOtpModal } = require("../../otp-gate");
  * new email + current-password) and a success acknowledgement after
  * the server accepts the change.
  *
- * Verifier branches on Visitor.profile().password_set:
- *   - 1 (or undefined for legacy): pre-check yp.check_password, then call
- *     drumate.change_email with {email, password}. The server now also
- *     re-verifies the password defense-in-depth.
- *   - 0: OAuth-only user — there's no password to enter. Fire otp.send,
- *     open the shared otp-gate modal, and submit drumate.change_email
- *     with {email, secret, code} for the server to validate.
+ * BE flow (server-team/service/private/drumate.js#change_email):
+ *   - The server only takes `email` and validates format + uniqueness.
+ *     It does NOT verify the password. We therefore pre-validate the
+ *     current password via SERVICE.yp.check_password, then short-circuit
+ *     on existing-address via SERVICE.yp.email_exists, and only then call
+ *     SERVICE.drumate.change_email.
+ *   - On format/existence failure the server replies 400 with a localized
+ *     `error` string via exception.user(). That bypasses the postService
+ *     promise (resolves to undefined) and lands in onServerComplain — we
+ *     override it to surface the message inside this modal.
  */
 class settings_change_email extends LetcBox {
   initialize(opt) {
@@ -74,17 +77,13 @@ class settings_change_email extends LetcBox {
     this.rerender();
   }
 
-  async _callChangeEmail(email, extra = {}) {
+  async _callChangeEmail(email) {
     // hub_id pins the ACL owner check to the user's personal hub
     // (acl/drumate.json: scope=hub, src=owner) — otherwise 403.
-    // For password_set=1 users we forward the password so the server
-    // can re-verify defense-in-depth. The OAuth path uses the dtk_otp
-    // modal directly (it POSTs change_email with secret+code).
     return this.postService({
       service: SERVICE.drumate.change_email,
       hub_id: Visitor.id,
       email,
-      ...extra,
     });
   }
 
@@ -95,7 +94,8 @@ class settings_change_email extends LetcBox {
     const current = (Visitor.profile() || {}).email || "";
     const profile = Visitor.profile() || {};
     const passwordSet = profile.password_set;
-    const usePassword = passwordSet === undefined || parseInt(passwordSet) === 1;
+    const usePassword =
+      passwordSet === undefined || parseInt(passwordSet) === 1;
 
     if (!email) {
       this._error = LOCALE.EMAIL_FIELDS_REQUIRED;
@@ -118,9 +118,26 @@ class settings_change_email extends LetcBox {
     this._error = "";
     this.rerender();
 
-    // Fail fast if the address is already taken — same pre-check for
-    // both password and OTP paths. Saves a 400 round-trip on the
-    // change_email call.
+    // Passwordless / OAuth accounts (password_set === 0) have no current
+    // password to verify — confirm the change via OTP instead of posting an
+    // empty password to yp.check_password (which would always fail).
+    if (!usePassword) return this._submitWithOtp(email);
+
+    // Step 1 — verify current password. yp.check_password returns the
+    // user row on success and an empty payload on mismatch.
+    const pw = await this.postService(SERVICE.yp.check_password, {
+      hub_id: Visitor.id,
+      password,
+    });
+    if (this._error) return; // onServerComplain already reacted
+    if (!pw || _.isEmpty(pw)) {
+      this._submitting = false;
+      this._error = LOCALE.WRONG_CURRENT_PASSWORD;
+      return this.rerender();
+    }
+
+    // Step 2 — fail fast if the address is already taken. Saves a 400
+    // round-trip and gives a friendlier inline message.
     const exists = await this.postService(SERVICE.yp.email_exists, {
       hub_id: Visitor.id,
       value: email,
@@ -131,26 +148,6 @@ class settings_change_email extends LetcBox {
       this._error = email.printf
         ? email.printf(LOCALE.EMAIL_ALREADY_EXISTS)
         : LOCALE.EMAIL_ALREADY_EXISTS;
-      return this.rerender();
-    }
-
-    if (usePassword) return this._submitWithPassword(email, password);
-    return this._submitWithOtp(email);
-  }
-
-  async _submitWithPassword(email, password) {
-    // Pre-check the password client-side (yp.check_password returns the
-    // user row on success, empty on mismatch). The server-side
-    // drumate.change_email also re-verifies; this just gives a faster
-    // inline error.
-    const pw = await this.postService(SERVICE.yp.check_password, {
-      hub_id: Visitor.id,
-      password,
-    });
-    if (this._error) return;
-    if (!pw || _.isEmpty(pw)) {
-      this._submitting = false;
-      this._error = LOCALE.WRONG_CURRENT_PASSWORD;
       return this.rerender();
     }
 
@@ -181,9 +178,11 @@ class settings_change_email extends LetcBox {
     if (data && data.profile) {
       Visitor.set(_a.profile, data.profile);
     }
+
     // Notify the parent (settings_main) so it can refresh the email row
     // underneath the modal without waiting for the user to click Done.
     this.triggerHandlers({ service: "change-email-success", email });
+
     this._step = "success";
     this._submitting = false;
     this._sentTo = email;
@@ -192,19 +191,19 @@ class settings_change_email extends LetcBox {
   }
 
   async resend() {
-    // The success view shows a "Resend email" link from a planned
-    // confirmation-email flow that was never implemented server-side
-    // (drumate.change_email applies the change directly, no email).
-    // Re-firing change_email now also requires fresh credentials
-    // (password or fresh OTP), neither of which we hold post-success.
-    // Treat as a visual no-op until that flow ships.
     if (this._resending || !this._sentTo) return;
     this._resending = true;
+    this._error = "";
     this.rerender();
-    setTimeout(() => {
-      this._resending = false;
-      this.rerender();
-    }, 400);
+
+    const data = await this._callChangeEmail(this._sentTo);
+    if (this._error) return;
+
+    if (data && data.profile) {
+      Visitor.set(_a.profile, data.profile);
+    }
+    this._resending = false;
+    this.rerender();
   }
 
   onUiEvent(cmd, args = {}) {
@@ -220,23 +219,6 @@ class settings_change_email extends LetcBox {
         return this.done();
       case "change-email-resend":
         return this.resend();
-
-      case "change-email-otp-success": {
-        // dtk_otp already POSTed change_email{secret,code,email}. Server
-        // returned the updated profile in args.data — apply it and flip
-        // to the success step. Close the OTP overlay first.
-        const email = this._pendingEmail;
-        this._pendingEmail = null;
-        this.ensurePart("overlay").then((p) => p && p.clear());
-        return this._onChangeEmailSuccess(email, args && args.data);
-      }
-
-      case "change-email-otp-cancel":
-        this._submitting = false;
-        this._pendingEmail = null;
-        this.ensurePart("overlay").then((p) => p && p.clear());
-        return;
-
       default:
         return;
     }
