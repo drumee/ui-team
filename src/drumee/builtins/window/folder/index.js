@@ -262,26 +262,18 @@ class __window_folder extends mfsInteract {
       this.listenTo(this.model, `change:${_a.state}`, this._syncWorkspaceFocus);
     }
 
-    // Keep the window title in sync with the model name. A workspace ROOT has an
-    // empty filename and only receives its name (hub_name) LATER via get_path —
-    // by which point the title element may have mounted blank (and core's
-    // onPartReady cleanText()'d it). The earlier symptom was "the workspace name
-    // only shows on the 2nd click". Listening to the model sets the title on
-    // whichever instance actually holds the resolved name, independent of
-    // mount/fetch ordering or headless-singleton churn.
-    this.listenTo(
-      this.model,
-      `change:hub_name change:${_a.filename}`,
-      this._syncWindowTitle,
-    );
+    // A workspace root's name (hub_name) can resolve after the title element
+    // has mounted; re-apply it whenever it changes.
+    this.listenTo(this.model, "change:hub_name", this._syncWindowTitle);
   }
 
-  // Apply filename (or hub_name for an empty-filename root) to the title widget.
+  // Apply filename — or hub_name for an empty-filename root — to the title.
   _syncWindowTitle() {
     const name = this.mget(_a.filename) || this.model.get("hub_name");
     if (!name) return;
-    const t = this.__refWindowName || this.name;
-    if (t && _.isFunction(t.set)) t.set({ content: name });
+    this.ensurePart("ref-window-name").then((p) => {
+      if (p && _.isFunction(p.set)) p.set({ content: name });
+    });
   }
 
 
@@ -503,13 +495,9 @@ class __window_folder extends mfsInteract {
     }
     if (super.onPartReady) super.onPartReady(child, pn);
     if (pn === "ref-window-name") {
-      // core's onPartReady cleanText()'s the title to "". A workspace root's
-      // name lives in hub_name (its filename is empty); seed it now — on first
-      // open the title mounts AFTER get_path already set hub_name, so it's
-      // available here. (Late arrivals are handled by _syncWindowTitle's model
-      // listener.)
-      const name = this.mget(_a.filename) || this.model.get("hub_name");
-      if (name && _.isFunction(child.set)) child.set({ content: name });
+      // core's handler clears the title; restore it from the model (an empty-
+      // filename workspace root takes its name from hub_name).
+      this._syncWindowTitle();
     }
   }
 
@@ -537,17 +525,14 @@ class __window_folder extends mfsInteract {
       ownpath: this.mget(_a.ownpath),
       pid: this.mget(_a.pid),
       privilege: this.mget(_a.privilege),
-      // Restore the FULL fetch context too — otherwise mset() leaves these at
-      // the deeper folder's stale values and the restored folder's listing is
-      // fetched with the wrong working-nid / parent-mode / share token,
-      // yielding an empty or errored file list (esp. in restricted shares).
+      // Full fetch context — without it, mset() on restore keeps the deeper
+      // folder's nid / parent-mode / token and refetches the wrong (or empty)
+      // listing, notably in restricted shares.
       actual_home_id: this.mget(_a.actual_home_id),
       usePid: this.model.get("usePid"),
       token: this.mget(_a.token),
       vhost: this.mget(_a.vhost),
-      // hub_name (workspace name) so a restored root titles itself when its own
-      // filename is empty — without leaking the name into the "/" crumb (the
-      // crumb uses filename only).
+      // Workspace name, so an empty-filename root can label its title/crumb.
       hub_name: this.model.get("hub_name"),
     };
   }
@@ -571,8 +556,7 @@ class __window_folder extends mfsInteract {
     try {
       this.mset(state);
       if (this.__refWindowName) {
-        // Root has an empty filename; fall back to hub_name so going "back" to
-        // the workspace root shows its name instead of a blank title.
+        // Empty-filename root falls back to hub_name (avoids a blank title).
         this.__refWindowName.set({ content: state.filename || state.hub_name || "" });
       }
       this.scopeChatToFolder(state.nid);
@@ -586,43 +570,19 @@ class __window_folder extends mfsInteract {
 
   refreshBreadcrumbsUI(stack) {
     if (stack && _.isArray(stack)) {
-      // get_path (workspace open from the sidebar) returns the full chain
-      // root→current INCLUDING the current node. The folder-window convention
-      // is: the current location is the TITLE and only its ANCESTORS are
-      // crumbs. Drop the current node (match by nid) so a freshly-opened
-      // workspace root shows no spurious "/" crumb — and so the first forward
-      // navigation doesn't DUPLICATE the root (updateTopbar → _captureNavState
-      // would re-push the same root that get_path already seeded, yielding the
-      // "/ › / › …" double-root we saw). Ancestor crumbs then come exclusively
-      // from _captureNavState, which carries the full fetch context.
+      // get_path returns the full root→current chain INCLUDING the current node.
+      // Convention: the current location is the title, only ancestors are
+      // crumbs. Drop the current node so the root isn't rendered as a crumb (nor
+      // duplicated when the first forward navigation re-pushes it).
       const curNid = this.mget(_a.nid);
-      // The entry matching the current nid is the current LOCATION (the
-      // workspace root), not an ancestor crumb. On a fresh sidebar open the
-      // model carries no name; this entry has hub_name (the workspace name).
-      // Surface it as the TITLE (never a crumb — so "no workspace name in
-      // crumbs" still holds) and persist hub_name so the title survives
-      // restore/re-render after navigation.
+      // Persist the workspace name; _syncWindowTitle applies it to the title.
       const here = stack.find((s) => s && s.nid != null && s.nid == curNid);
-      const hereName = here && (here.filename || here.hub_name || here.name);
-      if (hereName) {
-        this.mset({ hub_name: here.hub_name || hereName });
-        // Use ensurePart (NOT the __refWindowName ref) so the title is applied
-        // whether the title element has bound yet or not. On the FIRST workspace
-        // open the topbar is still rendering when get_path resolves, so the ref
-        // is often still null and the name was silently dropped — it only showed
-        // after a 2nd click (once the element had bound). ensurePart resolves
-        // when the part mounts (now or later), eliminating that race.
-        this.ensurePart("ref-window-name").then((p) => {
-          if (p && _.isFunction(p.set)) p.set({ content: hereName });
-        });
-      }
-      // Ancestor entries from get_path carry only identity (nid/filename/hub_id),
-      // NOT the workspace-level fetch context (token/usePid/actual_home_id/vhost).
-      // That context is identical for every node in the same hub, so stamp the
-      // current window's values onto each ancestor — otherwise clicking a crumb
-      // in a RESTRICTED/share workspace re-fetches the listing with no token and
-      // errors (the reported "click crumb → lỗi files"). Spread `s` LAST so any
-      // field get_path does provide wins over the stamped fallback.
+      const hereName = here && (here.hub_name || here.filename || here.name);
+      if (hereName) this.mset({ hub_name: hereName });
+      // get_path ancestors carry identity only, not the hub-wide fetch context
+      // (token/usePid/actual_home_id/vhost) which is identical across the hub.
+      // Stamp the current window's values so a crumb click can reload a
+      // restricted/share listing. Spread `s` last so real get_path fields win.
       const ctx = {
         hub_id: this.mget(_a.hub_id),
         token: this.mget(_a.token),
@@ -656,9 +616,8 @@ class __window_folder extends mfsInteract {
         crumbs.push(
           Skeletons.Note({
             className: `${cnFolder}__breadcrumb-crumb`,
-            // Root nodes have an empty filename; fall back to hub_name so the
-            // workspace root crumb keeps its name (e.g. "My team folder")
-            // instead of collapsing to "/" once you navigate into a child.
+            // Empty-filename root falls back to hub_name so it keeps its name
+            // (not "/") once you navigate into a child.
             content: state.filename || state.hub_name || "/",
             service: "breadcrumb-jump",
             stackIndex: i,

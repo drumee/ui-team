@@ -299,12 +299,10 @@ class __window_manager extends push {
     const hub_id = data.hub_id || data.id;
     let nid = data.actual_home_id || data.home_id || data.nid;
     data.nid = nid;
-    // The clicked sidebar item ALREADY knows the workspace name (it renders it
-    // from `filename`). Capture it now — inside `apply` below the `data` param
-    // shadows this outer one and refers to media.attributes (whose root filename
-    // is empty), so without this the window opened nameless and depended on the
-    // async get_path to backfill the title/crumb (the race that made the root
-    // name vanish, esp. when switching workspaces).
+    // Capture the workspace name from the clicked item now: inside `apply` the
+    // `data` param shadows this one with media.attributes (empty root filename),
+    // so seeding it lets the window open already named instead of waiting on the
+    // async get_path.
     const workspaceName =
       data.filename || data.name || data.hub_name || data.workspace_name;
 
@@ -345,11 +343,8 @@ class __window_manager extends push {
         ...data,
         headless: 1,
         filename: data.filename || data.name,
-        // Seed the workspace name synchronously so the title + root breadcrumb
-        // crumb are correct from first paint (topbar reads filename||name||
-        // hub_name; _captureNavState snapshots hub_name for the crumb). No
-        // longer waits on get_path, so the name survives rapid workspace
-        // switching and never "shows only on the 2nd click".
+        // Seed the name synchronously so the title and root crumb are correct
+        // from first paint, without waiting on get_path.
         hub_name: data.hub_name || workspaceName,
         // Headless workspace lives in its own singleton pool, which is headlessLayer.
         // subfolders or players open from the workspace shall go to this pool.
@@ -529,11 +524,9 @@ class __window_manager extends push {
         let currentFolder = this.getWindowsPool().children.last();
         if (!currentFolder) return;
         currentFolder.refreshContent(attrs);
-        // refreshContent → updateTopbar(self) can't infer the ancestor chain
-        // for a DEEP jump (it captures the just-mset destination as "prev", so
-        // nothing is pushed) — the breadcrumb would keep the PREVIOUS folder's
-        // stale crumbs. Rebuild it from get_path exactly like loadWorkspace, so
-        // a deep-opened folder shows the correct "Workspace › … › Folder" path.
+        // refreshContent can't infer the ancestor chain for a deep jump, so the
+        // breadcrumb would keep the previous folder's crumbs. Rebuild it from
+        // get_path, as loadWorkspace does.
         const deepNid = attrs.nid || nid;
         this.fetchService(SERVICE.media.get_path, { nid: deepNid, hub_id })
           .then((path) => {
