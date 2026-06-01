@@ -1,5 +1,4 @@
 // ==================================================================== *
-const { colorFromName } = require("@drumee/ui-essentials");
 const __chat_item_username = function(m) {
   // "me" rows carry only author_id; pull names from Visitor for the sender.
   const e = (m.author === 'me' && typeof Visitor !== 'undefined')
@@ -21,9 +20,9 @@ const __chat_item_username = function(m) {
   // header is never blank (some rows carry only author_id).
   const fullname = displayName || e.email || m.email || e.mail || m.mail || m.author_id || e.id || e.entity_id || '';
   const safeName = safeText(fullname);
-  const color = colorFromName(fullname || 'user');
+  // Colour comes from CSS (var(--normal-fg-10)); no per-user inline colour.
   const html = `<div class="${m.fig}__username-container ${m.author}">
-    <div class="${m.fig}__username-content" style="color:${color};">
+    <div class="${m.fig}__username-content">
       ${safeName}
     </div>
   </div>`;

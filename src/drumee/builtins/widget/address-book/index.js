@@ -93,13 +93,13 @@ class __address_book extends LetcBox {
     const service = args.service || trigger.get(_a.service);
     switch (service) {
       case "tab-all":
-        return this._switchTab("all");
+        return this.switchTab("all");
       case "tab-pending":
-        return this._switchTab("pending");
+        return this.switchTab("pending");
       case "tab-archived":
-        return this._switchTab("archived");
+        return this.switchTab("archived");
       case "tab-blocked":
-        return this._switchTab("blocked");
+        return this.switchTab("blocked");
 
       case "filter-tag":
         this._selectedTagId = trigger.mget("tagId") || null;

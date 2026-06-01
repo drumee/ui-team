@@ -25,6 +25,19 @@ class ___widget_chatItem extends LetcBox {
   }
 
   /**
+   * A meeting system message — either via an explicit message_type or the
+   * `[[MEETING:start|end:...]]` sentinel embedded in the message body. These
+   * render as centred notices with no hover actions.
+   * @returns {Boolean}
+   */
+  _isMeeting() {
+    const t = this.mget("message_type");
+    if (t === "meeting.start" || t === "meeting.end") return true;
+    const msg = this.mget("message");
+    return typeof msg === "string" && /^\[\[MEETING:(start|end):/.test(msg);
+  }
+
+  /**
    *
    * @param {*} child
    * @returns
@@ -116,10 +129,14 @@ class ___widget_chatItem extends LetcBox {
         el.onclick = Wm.onAnchorClick.bind(Wm);
         // Open the action bar only while hovering the message bubble (the
         // conversation content), mirroring the time reveal — not the whole row.
-        const bubble =
-          el.querySelector(`.${this.fig.family}__conversation-content`) || el;
-        bubble.addEventListener("mouseenter", this._mouseenter.bind(this));
-        bubble.addEventListener("mouseleave", this._mouseleave.bind(this));
+        // Meeting system messages are centred notices with no actions, so they
+        // get no hover menu.
+        if (!this._isMeeting()) {
+          const bubble =
+            el.querySelector(`.${this.fig.family}__conversation-content`) || el;
+          bubble.addEventListener("mouseenter", this._mouseenter.bind(this));
+          bubble.addEventListener("mouseleave", this._mouseleave.bind(this));
+        }
       });
     }, 0);
   }
@@ -225,8 +242,7 @@ class ___widget_chatItem extends LetcBox {
     let area = this.mget(_a.area);
     this.$el.addClass(author);
     this.$el.addClass(area);
-    const messageType = this.mget("message_type");
-    if (messageType === "meeting.start" || messageType === "meeting.end") {
+    if (this._isMeeting()) {
       this.$el.addClass("meeting-event");
     }
     let html = "";

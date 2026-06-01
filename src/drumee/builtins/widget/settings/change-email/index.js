@@ -118,6 +118,11 @@ class settings_change_email extends LetcBox {
     this._error = "";
     this.rerender();
 
+    // Passwordless / OAuth accounts (password_set === 0) have no current
+    // password to verify — confirm the change via OTP instead of posting an
+    // empty password to yp.check_password (which would always fail).
+    if (!usePassword) return this._submitWithOtp(email);
+
     // Step 1 — verify current password. yp.check_password returns the
     // user row on success and an empty payload on mismatch.
     const pw = await this.postService(SERVICE.yp.check_password, {
