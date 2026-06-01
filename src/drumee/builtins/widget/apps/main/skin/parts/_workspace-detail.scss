@@ -495,3 +495,63 @@ html[data-theme="dark"] .apps-main {
     background: var(--active-item-bg);
   }
 }
+
+// ── Workspace detail — dark mode ─────────────────────────────────
+html[data-theme="dark"] .apps-main {
+  &__wsdetail-window {
+    background: var(--normal-bg);
+    box-shadow: 0 0 0 1px var(--border-muted);
+  }
+
+  &__wsdetail-heading {
+    background: var(--overlay-bg-05);
+    border-bottom-color: var(--border-muted);
+  }
+
+  &__wsdetail-title,
+  &__wsdetail-row-title,
+  &__wsdetail-page-num {
+    color: var(--normal-fg-10);
+  }
+
+  &__wsdetail-back-label,
+  &__wsdetail-row-meta,
+  &__wsdetail-footer-label,
+  &__wsdetail-page-ellipsis {
+    color: var(--normal-fg-20);
+  }
+
+  &__wsdetail-back-ico svg,
+  &__wsdetail-page-arrow svg {
+    @include svg-color(var(--normal-fg-20));
+  }
+
+  &__wsdetail-search {
+    background: var(--overlay-bg-05);
+
+    input {
+      color: var(--normal-fg-10);
+
+      &::placeholder {
+        color: var(--placeholder-fg);
+      }
+    }
+  }
+
+  &__wsdetail-row {
+    background: var(--overlay-bg-05);
+
+    &:hover {
+      background: var(--hover-bg-40);
+    }
+  }
+
+  &__wsdetail-page-arrow:hover,
+  &__wsdetail-page-btn:hover {
+    background: var(--hover-bg-40);
+  }
+
+  &__wsdetail-page-btn--active {
+    background: var(--active-item-bg);
+  }
+}

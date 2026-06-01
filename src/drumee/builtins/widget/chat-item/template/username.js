@@ -17,7 +17,9 @@ const __chat_item_username = function(m) {
   }[char]));
   const nonEmail = (value) => value && !String(value).includes('@') ? value : '';
   const displayName = `${firstname} ${lastname}`.trim() || nonEmail(e.fullname) || nonEmail(m.fullname) || nonEmail(e.name) || nonEmail(m.name);
-  const fullname = displayName || e.email || m.email || e.mail || m.mail || m.author_id || '';
+  // Prefer a real name, then email; fall back to the user id last so the
+  // header is never blank (some rows carry only author_id).
+  const fullname = displayName || e.email || m.email || e.mail || m.mail || m.author_id || e.id || e.entity_id || '';
   const safeName = safeText(fullname);
   const color = colorFromName(fullname || 'user');
   const html = `<div class="${m.fig}__username-container ${m.author}">

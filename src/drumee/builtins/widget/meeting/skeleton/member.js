@@ -34,7 +34,7 @@ module.exports = function (_ui_) {
         className: `${pfx}__member-badge ${pfx}__member-badge--hand`,
         tooltips: LOCALE.HAND_RAISED || "Hand raised",
         active: 0,
-      })
+      }),
     );
   }
   if (presenting) {
@@ -44,7 +44,7 @@ module.exports = function (_ui_) {
         className: `${pfx}__member-badge ${pfx}__member-badge--share`,
         tooltips: LOCALE.SHARING_SCREEN || "Sharing screen",
         active: 0,
-      })
+      }),
     );
   }
 

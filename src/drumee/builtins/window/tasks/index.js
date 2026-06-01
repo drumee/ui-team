@@ -1,21 +1,20 @@
 const { uploadFile } = require("@drumee/ui-essentials");
 
 const COLUMNS = [
-  { key: "todo",        label: "STATUS_TODO",        color: "#AEAEB2" },
+  { key: "todo", label: "STATUS_TODO", color: "#AEAEB2" },
   { key: "in_progress", label: "STATUS_IN_PROGRESS", color: "#65D0EA" },
-  { key: "to_review",   label: "STATUS_TO_REVIEW",   color: "#E8A13B" },
-  { key: "complete",    label: "STATUS_COMPLETE",    color: "#54B684" },
+  { key: "to_review", label: "STATUS_TO_REVIEW", color: "#E8A13B" },
+  { key: "complete", label: "STATUS_COMPLETE", color: "#54B684" },
 ];
 
 const PRIORITIES = [
-  { key: "low",    label: "PRIORITY_LOW",    color: "#54B684" },
+  { key: "low", label: "PRIORITY_LOW", color: "#54B684" },
   { key: "medium", label: "PRIORITY_MEDIUM", color: "#65D0EA" },
-  { key: "high",   label: "PRIORITY_HIGH",   color: "#E8A13B" },
+  { key: "high", label: "PRIORITY_HIGH", color: "#E8A13B" },
   { key: "urgent", label: "PRIORITY_URGENT", color: "#d65f59" },
 ];
 
 class __tasks_panel extends LetcBox {
-
   initialize(opt = {}) {
     require("./skin");
     super.initialize(opt);
@@ -87,24 +86,32 @@ class __tasks_panel extends LetcBox {
       try {
         e.dataTransfer.setData("text/plain", tid);
         e.dataTransfer.effectAllowed = "move";
-      } catch (_) { /* ignore */ }
+      } catch (_) {
+        /* ignore */
+      }
     });
 
     root.addEventListener("dragend", (e) => {
       const card = findCard(e.target);
       if (card) card.classList.remove("is-dragging");
       this._dragTaskId = null;
-      root.querySelectorAll(".tasks-panel__column-body.is-drop-target")
-          .forEach((n) => n.classList.remove("is-drop-target"));
+      root
+        .querySelectorAll(".tasks-panel__column-body.is-drop-target")
+        .forEach((n) => n.classList.remove("is-drop-target"));
     });
 
     root.addEventListener("dragover", (e) => {
       const col = findColumn(e.target);
       if (!col) return;
       e.preventDefault();
-      try { e.dataTransfer.dropEffect = "move"; } catch (_) {}
-      root.querySelectorAll(".tasks-panel__column-body.is-drop-target")
-          .forEach((n) => { if (n !== col) n.classList.remove("is-drop-target"); });
+      try {
+        e.dataTransfer.dropEffect = "move";
+      } catch (_) {}
+      root
+        .querySelectorAll(".tasks-panel__column-body.is-drop-target")
+        .forEach((n) => {
+          if (n !== col) n.classList.remove("is-drop-target");
+        });
       col.classList.add("is-drop-target");
     });
 
@@ -118,13 +125,18 @@ class __tasks_panel extends LetcBox {
       if (!col) return;
       e.preventDefault();
       const transferId = (() => {
-        try { return e.dataTransfer.getData("text/plain"); } catch (_) { return null; }
+        try {
+          return e.dataTransfer.getData("text/plain");
+        } catch (_) {
+          return null;
+        }
       })();
       const taskId = this._dragTaskId || transferId;
       const targetStatus = col.dataset.dropcol;
       this._dragTaskId = null;
-      root.querySelectorAll(".tasks-panel__column-body.is-drop-target")
-          .forEach((n) => n.classList.remove("is-drop-target"));
+      root
+        .querySelectorAll(".tasks-panel__column-body.is-drop-target")
+        .forEach((n) => n.classList.remove("is-drop-target"));
       if (!taskId || !targetStatus) return;
       this._moveTaskTo(taskId, targetStatus);
     });
@@ -153,7 +165,8 @@ class __tasks_panel extends LetcBox {
   }
 
   async onUiEvent(trigger, args = {}) {
-    let service = args.service || (trigger && trigger.get && trigger.get(_a.service));
+    let service =
+      args.service || (trigger && trigger.get && trigger.get(_a.service));
     // Drumee dispatches click on the deepest widget; if it has no service of
     // its own (e.g. a Note inside a card), walk up to find an ancestor that does.
     if (!service && trigger && trigger.parent) {
@@ -161,7 +174,11 @@ class __tasks_panel extends LetcBox {
       let depth = 0;
       while (p && depth < 8) {
         const s = p.mget && p.mget(_a.service);
-        if (s) { service = s; trigger = p; break; }
+        if (s) {
+          service = s;
+          trigger = p;
+          break;
+        }
         p = p.parent;
         depth += 1;
       }
@@ -203,8 +220,11 @@ class __tasks_panel extends LetcBox {
         if (this._createDefaults) {
           const next = trigger.mget("taskStatus");
           this._createDefaults.status = next;
-          this._updateStatusPills(".tasks-panel__create-modal",
-                                  ".tasks-panel__create-status-pill", next);
+          this._updateStatusPills(
+            ".tasks-panel__create-modal",
+            ".tasks-panel__create-status-pill",
+            next,
+          );
         }
         return;
 
@@ -229,10 +249,13 @@ class __tasks_panel extends LetcBox {
         if (this._createDefaults) {
           const id = trigger.mget("labelId");
           const set = new Set(this._createDefaults.labels);
-          if (set.has(id)) set.delete(id); else set.add(id);
+          if (set.has(id)) set.delete(id);
+          else set.add(id);
           this._createDefaults.labels = Array.from(set);
-          this._updateLabelOptions(".tasks-panel__create-modal",
-                                   this._createDefaults.labels);
+          this._updateLabelOptions(
+            ".tasks-panel__create-modal",
+            this._createDefaults.labels,
+          );
         }
         return;
 
@@ -255,8 +278,11 @@ class __tasks_panel extends LetcBox {
         if (this._detailDraft) {
           const next = trigger.mget("taskStatus");
           this._detailDraft.status = next;
-          this._updateStatusPills(".tasks-panel__detail-panel",
-                                  ".tasks-panel__detail-status-pill", next);
+          this._updateStatusPills(
+            ".tasks-panel__detail-panel",
+            ".tasks-panel__detail-status-pill",
+            next,
+          );
         }
         return;
 
@@ -281,10 +307,13 @@ class __tasks_panel extends LetcBox {
         if (this._detailDraft) {
           const id = trigger.mget("labelId");
           const set = new Set(this._detailDraft.labels || []);
-          if (set.has(id)) set.delete(id); else set.add(id);
+          if (set.has(id)) set.delete(id);
+          else set.add(id);
           this._detailDraft.labels = Array.from(set);
-          this._updateLabelOptions(".tasks-panel__detail-panel",
-                                   this._detailDraft.labels);
+          this._updateLabelOptions(
+            ".tasks-panel__detail-panel",
+            this._detailDraft.labels,
+          );
         }
         return;
 
@@ -362,7 +391,8 @@ class __tasks_panel extends LetcBox {
       if (this._fileSearchBlurTimer) clearTimeout(this._fileSearchBlurTimer);
       this._fileSearchBlurTimer = setTimeout(() => {
         this._fileSearchBlurTimer = null;
-        const active = (typeof document !== "undefined") ? document.activeElement : null;
+        const active =
+          typeof document !== "undefined" ? document.activeElement : null;
         if (isSearchInput(active)) return;
         if (field.isConnected) field.dataset.searchFocused = "0";
       }, 200);
@@ -412,15 +442,22 @@ class __tasks_panel extends LetcBox {
     const has = (k) => Object.prototype.hasOwnProperty.call(row, k);
 
     if (has("label_ids")) {
-      result.label_ids = typeof row.label_ids === "string" && row.label_ids
-        ? row.label_ids.split(",").filter(Boolean)
-        : (Array.isArray(row.label_ids) ? row.label_ids : []);
+      result.label_ids =
+        typeof row.label_ids === "string" && row.label_ids
+          ? row.label_ids.split(",").filter(Boolean)
+          : Array.isArray(row.label_ids)
+            ? row.label_ids
+            : [];
     }
 
     if (has("linked_files")) {
       let files = row.linked_files;
       if (typeof files === "string") {
-        try { files = JSON.parse(files); } catch (_) { files = []; }
+        try {
+          files = JSON.parse(files);
+        } catch (_) {
+          files = [];
+        }
       }
       result.linked_files = Array.isArray(files) ? files : [];
     }
@@ -430,7 +467,8 @@ class __tasks_panel extends LetcBox {
       let due = row.due_date;
       if (due) {
         if (due instanceof Date) due = due.toISOString().slice(0, 10);
-        else if (typeof due === "string" && due.length >= 10) due = due.slice(0, 10);
+        else if (typeof due === "string" && due.length >= 10)
+          due = due.slice(0, 10);
       } else {
         due = null;
       }
@@ -486,11 +524,11 @@ class __tasks_panel extends LetcBox {
     if (!root) return;
     const draft = this._createDefaults;
     const title = root.querySelector('input[name="title"]');
-    const desc  = root.querySelector('textarea[name="description"]');
-    const due   = root.querySelector('input[name="due_date"]');
-    if (title) draft.title       = title.value || "";
-    if (desc)  draft.description = desc.value  || "";
-    if (due)   draft.due_date    = due.value   || "";
+    const desc = root.querySelector('textarea[name="description"]');
+    const due = root.querySelector('input[name="due_date"]');
+    if (title) draft.title = title.value || "";
+    if (desc) draft.description = desc.value || "";
+    if (due) draft.due_date = due.value || "";
   }
 
   _captureDetailDraft() {
@@ -499,11 +537,11 @@ class __tasks_panel extends LetcBox {
     if (!root) return;
     const draft = this._detailDraft;
     const title = root.querySelector('input[name="title"]');
-    const desc  = root.querySelector('textarea[name="description"]');
-    const due   = root.querySelector('input[name="due_date"]');
-    if (title) draft.title       = title.value || "";
-    if (desc)  draft.description = desc.value  || "";
-    if (due)   draft.due_date    = due.value   || "";
+    const desc = root.querySelector('textarea[name="description"]');
+    const due = root.querySelector('input[name="due_date"]');
+    if (title) draft.title = title.value || "";
+    if (desc) draft.description = desc.value || "";
+    if (due) draft.due_date = due.value || "";
   }
 
   // Push every keystroke straight into the active draft. The Entry widget
@@ -515,7 +553,8 @@ class __tasks_panel extends LetcBox {
     let value = args && args.value != null ? String(args.value) : null;
     let name = null;
     let scopeEl = null;
-    const active = (typeof document !== "undefined") ? document.activeElement : null;
+    const active =
+      typeof document !== "undefined" ? document.activeElement : null;
     if (active && active.getAttribute && this.el && this.el.contains(active)) {
       name = active.getAttribute("name");
       scopeEl = active;
@@ -531,7 +570,12 @@ class __tasks_panel extends LetcBox {
     if (value == null) value = "";
     const inCreate = this.el.querySelector(".tasks-panel__create-modal");
     const inDetail = this.el.querySelector(".tasks-panel__detail-panel");
-    if (this._creating && inCreate && inCreate.contains(scopeEl) && this._createDefaults) {
+    if (
+      this._creating &&
+      inCreate &&
+      inCreate.contains(scopeEl) &&
+      this._createDefaults
+    ) {
       this._createDefaults[name] = value;
     } else if (this._detailDraft && inDetail && inDetail.contains(scopeEl)) {
       this._detailDraft[name] = value;
@@ -550,7 +594,9 @@ class __tasks_panel extends LetcBox {
     this._setSubmitting(".tasks-panel__create-submit", true);
 
     const labels = Array.isArray(draft.labels) ? draft.labels.slice() : [];
-    const pendingFiles = Array.isArray(draft.pending_files) ? draft.pending_files.slice() : [];
+    const pendingFiles = Array.isArray(draft.pending_files)
+      ? draft.pending_files.slice()
+      : [];
 
     try {
       const raw = await this.postService({
@@ -595,7 +641,7 @@ class __tasks_panel extends LetcBox {
               hub_id: this._hubId,
               task_id: row.id,
               label_id: labelId,
-            }).catch(() => null)
+            }).catch(() => null),
           ),
           ...pendingFiles.map(linkPending),
         ]);
@@ -650,90 +696,112 @@ class __tasks_panel extends LetcBox {
     // task.update — covers title, description, priority, due_date.
     const upd = {};
     const draftTitle = String(draft.title || "").trim();
-    const taskTitle  = String(task.title  || "").trim();
+    const taskTitle = String(task.title || "").trim();
     if (draftTitle && draftTitle !== taskTitle) upd.title = draftTitle;
-    if ((draft.description || "") !== (task.description || "")) upd.description = draft.description || "";
-    if ((draft.priority || "medium") !== (task.priority || "medium")) upd.priority = draft.priority;
+    if ((draft.description || "") !== (task.description || ""))
+      upd.description = draft.description || "";
+    if ((draft.priority || "medium") !== (task.priority || "medium"))
+      upd.priority = draft.priority;
     const draftDue = (draft.due_date || "").trim();
-    const taskDue  = task.due_date || "";
+    const taskDue = task.due_date || "";
     const dueChanged = draftDue !== taskDue;
     if (Object.keys(upd).length || dueChanged) {
       // task_update SP overwrites due_date unconditionally — always send
       // the current value or another-field update would null the date.
       upd.due_date = draftDue || null;
-      calls.push(this.postService({
-        service: SERVICE.task.update,
-        hub_id: this._hubId,
-        id,
-        ...upd,
-      }).catch((err) => console.error("[tasks_panel] task.update failed:", err)));
+      calls.push(
+        this.postService({
+          service: SERVICE.task.update,
+          hub_id: this._hubId,
+          id,
+          ...upd,
+        }).catch((err) =>
+          console.error("[tasks_panel] task.update failed:", err),
+        ),
+      );
     }
 
     if ((draft.status || "todo") !== (task.status || "todo")) {
-      calls.push(this.postService({
-        service: SERVICE.task.update_status,
-        hub_id: this._hubId,
-        id,
-        status: draft.status,
-      }).catch((err) => console.error("[tasks_panel] task.update_status failed:", err)));
+      calls.push(
+        this.postService({
+          service: SERVICE.task.update_status,
+          hub_id: this._hubId,
+          id,
+          status: draft.status,
+        }).catch((err) =>
+          console.error("[tasks_panel] task.update_status failed:", err),
+        ),
+      );
     }
 
     if ((draft.assignee_uid || null) !== (task.assignee_uid || null)) {
-      calls.push(this.postService({
-        service: SERVICE.task.update_assignee,
-        hub_id: this._hubId,
-        id,
-        assignee_uid: draft.assignee_uid || null,
-      }).catch((err) => console.error("[tasks_panel] task.update_assignee failed:", err)));
+      calls.push(
+        this.postService({
+          service: SERVICE.task.update_assignee,
+          hub_id: this._hubId,
+          id,
+          assignee_uid: draft.assignee_uid || null,
+        }).catch((err) =>
+          console.error("[tasks_panel] task.update_assignee failed:", err),
+        ),
+      );
     }
 
     const original = new Set(task.label_ids || []);
     const next = new Set(draft.labels || []);
     for (const lid of next) {
       if (!original.has(lid)) {
-        calls.push(this.postService({
-          service: SERVICE.task.link_label,
-          hub_id: this._hubId,
-          task_id: id,
-          label_id: lid,
-        }).catch(() => null));
+        calls.push(
+          this.postService({
+            service: SERVICE.task.link_label,
+            hub_id: this._hubId,
+            task_id: id,
+            label_id: lid,
+          }).catch(() => null),
+        );
       }
     }
     for (const lid of original) {
       if (!next.has(lid)) {
-        calls.push(this.postService({
-          service: SERVICE.task.unlink_label,
-          hub_id: this._hubId,
-          task_id: id,
-          label_id: lid,
-        }).catch(() => null));
+        calls.push(
+          this.postService({
+            service: SERVICE.task.unlink_label,
+            hub_id: this._hubId,
+            task_id: id,
+            label_id: lid,
+          }).catch(() => null),
+        );
       }
     }
 
     // Pending attachments — same flow as _commitTask: search-picked entries
     // already have nid; uploaded entries carry the File and need to land in
     // the folder body first.
-    const pendingFiles = Array.isArray(draft.pending_files) ? draft.pending_files.slice() : [];
+    const pendingFiles = Array.isArray(draft.pending_files)
+      ? draft.pending_files.slice()
+      : [];
     for (const pf of pendingFiles) {
-      calls.push((async () => {
-        let nid = pf.nid;
-        if (!nid && pf.file) {
-          try {
-            const result = await this._uploadPendingFile(pf);
-            nid = result.nid;
-          } catch (err) {
-            console.error("[tasks_panel] pending file upload failed:", err);
-            return;
+      calls.push(
+        (async () => {
+          let nid = pf.nid;
+          if (!nid && pf.file) {
+            try {
+              const result = await this._uploadPendingFile(pf);
+              nid = result.nid;
+            } catch (err) {
+              console.error("[tasks_panel] pending file upload failed:", err);
+              return;
+            }
           }
-        }
-        if (!nid) return;
-        await this.postService({
-          service: SERVICE.task.link_file,
-          hub_id: this._hubId,
-          task_id: id,
-          file_nid: nid,
-        }).catch(() => null);
-      })());
+          if (!nid) return;
+          await this.postService({
+            service: SERVICE.task.link_file,
+            hub_id: this._hubId,
+            task_id: id,
+            file_nid: nid,
+          }).catch(() => null);
+        })(),
+      );
     }
 
     if (calls.length) await Promise.all(calls);
@@ -753,18 +821,20 @@ class __tasks_panel extends LetcBox {
     if (!id) return;
     const task = this._tasks.find((t) => t.id === id);
     this._detailId = id;
-    this._detailDraft = task ? {
-      title: task.title || "",
-      description: task.description || "",
-      due_date: task.due_date || "",
-      status: task.status || "todo",
-      priority: task.priority || "medium",
-      assignee_uid: task.assignee_uid || null,
-      labels: Array.isArray(task.label_ids) ? task.label_ids.slice() : [],
-      // Files picked but not yet uploaded/linked — _commitDetail processes
-      // these (upload missing nids, then link_file) on Update.
-      pending_files: [],
-    } : null;
+    this._detailDraft = task
+      ? {
+          title: task.title || "",
+          description: task.description || "",
+          due_date: task.due_date || "",
+          status: task.status || "todo",
+          priority: task.priority || "medium",
+          assignee_uid: task.assignee_uid || null,
+          labels: Array.isArray(task.label_ids) ? task.label_ids.slice() : [],
+          // Files picked but not yet uploaded/linked — _commitDetail processes
+          // these (upload missing nids, then link_file) on Update.
+          pending_files: [],
+        }
+      : null;
     // Re-fetch folder filenames so collision preview (a → a(1)) reflects
     // the folder's current state.
     this._folderFilenames = null;
@@ -870,15 +940,15 @@ class __tasks_panel extends LetcBox {
       for (const n of this._folderFilenames) taken.add(n);
     }
     // Pending entries on whichever draft is active
-    for (const f of (this._createDefaults?.pending_files || [])) {
+    for (const f of this._createDefaults?.pending_files || []) {
       addName(f.filename, f.extension);
     }
-    for (const f of (this._detailDraft?.pending_files || [])) {
+    for (const f of this._detailDraft?.pending_files || []) {
       addName(f.filename, f.extension);
     }
     // Already-linked attachments on the open detail task
     if (this._detailId) {
-      for (const f of (this._attachments[this._detailId] || [])) {
+      for (const f of this._attachments[this._detailId] || []) {
         addName(f.filename, f.extension || f.ext);
       }
     }
@@ -899,7 +969,9 @@ class __tasks_panel extends LetcBox {
     return new Promise((resolve, reject) => {
       this._pendingUploadScope = "_commit";
       const params = { hub_id: this._hubId, nid: this._destNid };
-      const fullName = pf.extension ? `${pf.filename}.${pf.extension}` : pf.filename;
+      const fullName = pf.extension
+        ? `${pf.filename}.${pf.extension}`
+        : pf.filename;
       if (fullName && fullName !== pf.file?.name) {
         params.filename = encodeURI(fullName);
       }
@@ -965,8 +1037,9 @@ class __tasks_panel extends LetcBox {
       task_id: taskId,
       file_nid: fileNid,
     });
-    this._attachments[taskId] = (this._attachments[taskId] || [])
-      .filter((f) => f.file_nid !== fileNid);
+    this._attachments[taskId] = (this._attachments[taskId] || []).filter(
+      (f) => f.file_nid !== fileNid,
+    );
     // Surgical update — full _render() would blow away any unsaved
     // title/description/etc. the user is currently editing.
     this._refreshAttachmentsList();
@@ -995,12 +1068,16 @@ class __tasks_panel extends LetcBox {
     const taskId = this._detailId;
     if (!taskId) return;
     const attachments = this._attachments[taskId] || [];
-    this.ensurePart("attachment-rows").then((rows) => {
-      if (!rows || rows.isDestroyed?.()) return;
-      const skel = require("./skeleton");
-      rows.feed(skel.buildAttachmentRowsContent(this, attachments, taskId));
-      if (rows.el) rows.el.dataset.empty = attachments.length ? "0" : "1";
-    }).catch(() => { /* part not mounted yet */ });
+    this.ensurePart("attachment-rows")
+      .then((rows) => {
+        if (!rows || rows.isDestroyed?.()) return;
+        const skel = require("./skeleton");
+        rows.feed(skel.buildAttachmentRowsContent(this, attachments, taskId));
+        if (rows.el) rows.el.dataset.empty = attachments.length ? "0" : "1";
+      })
+      .catch(() => {
+        /* part not mounted yet */
+      });
   }
 
   // ── File picker (search-and-link) ─────────────────────────────
@@ -1019,7 +1096,8 @@ class __tasks_panel extends LetcBox {
   _scheduleFileSearch(trigger) {
     const inputEl = trigger?.el?.querySelector("input");
     const query = String(inputEl?.value || "").trim();
-    const scope = trigger.mget("searchScope") || (this._creating ? "create" : "detail");
+    const scope =
+      trigger.mget("searchScope") || (this._creating ? "create" : "detail");
     this._fileSearch.query = query;
     this._fileSearch.scope = scope;
 
@@ -1059,31 +1137,47 @@ class __tasks_panel extends LetcBox {
     const draft = scope === "create" ? this._createDefaults : this._detailDraft;
     const pendingFiles = (draft && draft.pending_files) || [];
     const partName = `file-pending-list-${scope}`;
-    this.ensurePart(partName).then((list) => {
-      if (!list || list.isDestroyed?.()) return;
-      const skel = require("./skeleton");
-      list.feed(skel.buildPendingListContent(this, pendingFiles));
-      if (list.el) list.el.dataset.empty = pendingFiles.length ? "0" : "1";
-    }).catch(() => { /* part not mounted yet */ });
+    this.ensurePart(partName)
+      .then((list) => {
+        if (!list || list.isDestroyed?.()) return;
+        const skel = require("./skeleton");
+        list.feed(skel.buildPendingListContent(this, pendingFiles));
+        if (list.el) list.el.dataset.empty = pendingFiles.length ? "0" : "1";
+      })
+      .catch(() => {
+        /* part not mounted yet */
+      });
   }
 
   _refreshFileSearchDropdown(scope) {
     if (!scope) return;
     const partName = `file-search-dropdown-${scope}`;
-    this.ensurePart(partName).then((dropdown) => {
-      if (!dropdown || dropdown.isDestroyed?.()) return;
-      const ctx = scope === "create"
-        ? { pendingFiles: (this._createDefaults && this._createDefaults.pending_files) || [] }
-        : {
-            existingFiles: (this._detailId && this._attachments[this._detailId]) || [],
-            // Detail also has a pending list now — mark those linked too.
-            pendingFiles: (this._detailDraft && this._detailDraft.pending_files) || [],
-          };
-      const skel = require("./skeleton");
-      const content = skel.buildFileSearchDropdownContent(this, scope, ctx);
-      dropdown.feed(content);
-      if (dropdown.el) dropdown.el.dataset.empty = content.length ? "0" : "1";
-    }).catch(() => { /* part not mounted yet */ });
+    this.ensurePart(partName)
+      .then((dropdown) => {
+        if (!dropdown || dropdown.isDestroyed?.()) return;
+        const ctx =
+          scope === "create"
+            ? {
+                pendingFiles:
+                  (this._createDefaults &&
+                    this._createDefaults.pending_files) ||
+                  [],
+              }
+            : {
+                existingFiles:
+                  (this._detailId && this._attachments[this._detailId]) || [],
+                // Detail also has a pending list now — mark those linked too.
+                pendingFiles:
+                  (this._detailDraft && this._detailDraft.pending_files) || [],
+              };
+        const skel = require("./skeleton");
+        const content = skel.buildFileSearchDropdownContent(this, scope, ctx);
+        dropdown.feed(content);
+        if (dropdown.el) dropdown.el.dataset.empty = content.length ? "0" : "1";
+      })
+      .catch(() => {
+        /* part not mounted yet */
+      });
   }
 
   async _linkSearchResult(trigger) {
@@ -1099,7 +1193,7 @@ class __tasks_panel extends LetcBox {
     if (!draft) return;
 
     const set = new Map(
-      (draft.pending_files || []).map((f) => [f.nid || f.localKey, f])
+      (draft.pending_files || []).map((f) => [f.nid || f.localKey, f]),
     );
     if (!set.has(nid)) {
       set.set(nid, { nid, filename, extension: ext });
@@ -1108,7 +1202,9 @@ class __tasks_panel extends LetcBox {
     // Close the suggestion dropdown after a pick. We no longer full-render,
     // so clear the search input value in the DOM directly.
     this._resetFileSearch();
-    const inputEl = this.el?.querySelector(`input[name="file-search-${scope}"]`);
+    const inputEl = this.el?.querySelector(
+      `input[name="file-search-${scope}"]`,
+    );
     if (inputEl) inputEl.value = "";
     this._refreshPendingList(scope);
     this._refreshFileSearchDropdown(scope);
@@ -1125,10 +1221,12 @@ class __tasks_panel extends LetcBox {
     // Same row template renders in both scopes; filter both drafts and let
     // the surgical refresh skip whichever isn't mounted.
     if (this._createDefaults?.pending_files) {
-      this._createDefaults.pending_files = this._createDefaults.pending_files.filter(keep);
+      this._createDefaults.pending_files =
+        this._createDefaults.pending_files.filter(keep);
     }
     if (this._detailDraft?.pending_files) {
-      this._detailDraft.pending_files = this._detailDraft.pending_files.filter(keep);
+      this._detailDraft.pending_files =
+        this._detailDraft.pending_files.filter(keep);
     }
     this._refreshPendingList("create");
     this._refreshPendingList("detail");
@@ -1143,7 +1241,9 @@ class __tasks_panel extends LetcBox {
     if (!root) return;
     const cols = this.getColumns();
     const colorByKey = {};
-    cols.forEach((c) => { colorByKey[c.key] = c.color; });
+    cols.forEach((c) => {
+      colorByKey[c.key] = c.color;
+    });
     root.querySelectorAll(pillSel).forEach((pill) => {
       const status = pill.dataset.status;
       const active = status === newStatus;
@@ -1164,7 +1264,9 @@ class __tasks_panel extends LetcBox {
     if (!root) return;
     const pris = this.getPriorities();
     const colorByKey = {};
-    pris.forEach((p) => { colorByKey[p.key] = p.color; });
+    pris.forEach((p) => {
+      colorByKey[p.key] = p.color;
+    });
     root.querySelectorAll(".tasks-panel__priority-pill").forEach((pill) => {
       const pri = pill.dataset.priority;
       const active = pri === newPriority;
@@ -1185,7 +1287,9 @@ class __tasks_panel extends LetcBox {
     if (!root) return;
     const labels = this.getLabels();
     const colorById = {};
-    labels.forEach((l) => { colorById[l.id] = l.color; });
+    labels.forEach((l) => {
+      colorById[l.id] = l.color;
+    });
     const selectedSet = new Set((selectedLabelIds || []).map(String));
     root.querySelectorAll(".tasks-panel__label-option").forEach((opt) => {
       const id = opt.dataset.labelId;
@@ -1211,14 +1315,19 @@ class __tasks_panel extends LetcBox {
     if (picker) {
       const target = String(uid || "");
       picker.querySelectorAll(".tasks-panel__member-row").forEach((row) => {
-        row.dataset.active = row.getAttribute("data-member-uid") === target ? "1" : "0";
+        row.dataset.active =
+          row.getAttribute("data-member-uid") === target ? "1" : "0";
       });
     }
-    this.ensurePart(`${kind}-button`).then((btn) => {
-      if (!btn || btn.isDestroyed?.()) return;
-      btn.feed(require("./skeleton").buildAssigneeButtonContent(this, uid));
-      if (btn.el) btn.el.dataset.open = "0";
-    }).catch(() => { /* not mounted yet */ });
+    this.ensurePart(`${kind}-button`)
+      .then((btn) => {
+        if (!btn || btn.isDestroyed?.()) return;
+        btn.feed(require("./skeleton").buildAssigneeButtonContent(this, uid));
+        if (btn.el) btn.el.dataset.open = "0";
+      })
+      .catch(() => {
+        /* not mounted yet */
+      });
   }
 
   _applyPickerOpen(kind, isOpen) {
@@ -1227,7 +1336,9 @@ class __tasks_panel extends LetcBox {
   }
 
   _setPickerOpenInDom(kind, isOpen) {
-    const btn = this.el.querySelector(`.tasks-panel__assignee-button[data-picker-kind="${kind}"]`);
+    const btn = this.el.querySelector(
+      `.tasks-panel__assignee-button[data-picker-kind="${kind}"]`,
+    );
     if (btn) btn.dataset.open = isOpen ? "1" : "0";
     const picker = this._findPickerEl(kind);
     if (picker) picker.dataset.open = isOpen ? "1" : "0";
@@ -1235,7 +1346,9 @@ class __tasks_panel extends LetcBox {
 
   _findPickerEl(kind) {
     if (!this.el || !kind) return null;
-    return this.el.querySelector(`.tasks-panel__member-picker[data-picker-kind="${kind}"]`);
+    return this.el.querySelector(
+      `.tasks-panel__member-picker[data-picker-kind="${kind}"]`,
+    );
   }
 
   _prepopulateInputs() {
@@ -1247,12 +1360,18 @@ class __tasks_panel extends LetcBox {
     if (this._creating && this._createDefaults) {
       const d = this._createDefaults;
       setVal('.tasks-panel__create-modal input[name="title"]', d.title);
-      setVal('.tasks-panel__create-modal textarea[name="description"]', d.description);
+      setVal(
+        '.tasks-panel__create-modal textarea[name="description"]',
+        d.description,
+      );
     }
     if (this._detailDraft) {
       const d = this._detailDraft;
       setVal('.tasks-panel__detail-panel input[name="title"]', d.title);
-      setVal('.tasks-panel__detail-panel textarea[name="description"]', d.description);
+      setVal(
+        '.tasks-panel__detail-panel textarea[name="description"]',
+        d.description,
+      );
     }
   }
 
@@ -1273,17 +1392,22 @@ class __tasks_panel extends LetcBox {
     let cursorPos = null;
     let cursorEnd = null;
     let scopeSel = "";
-    const active = (typeof document !== "undefined") ? document.activeElement : null;
+    const active =
+      typeof document !== "undefined" ? document.activeElement : null;
     if (active && this.el && this.el.contains(active) && active.getAttribute) {
       focusName = active.getAttribute("name");
       const inCreate = this.el.querySelector(".tasks-panel__create-modal");
       const inDetail = this.el.querySelector(".tasks-panel__detail-panel");
-      if (inCreate && inCreate.contains(active)) scopeSel = ".tasks-panel__create-modal ";
-      else if (inDetail && inDetail.contains(active)) scopeSel = ".tasks-panel__detail-panel ";
+      if (inCreate && inCreate.contains(active))
+        scopeSel = ".tasks-panel__create-modal ";
+      else if (inDetail && inDetail.contains(active))
+        scopeSel = ".tasks-panel__detail-panel ";
       try {
         cursorPos = active.selectionStart;
         cursorEnd = active.selectionEnd;
-      } catch (_) { /* date / number inputs throw here */ }
+      } catch (_) {
+        /* date / number inputs throw here */
+      }
     }
 
     this.feed(require("./skeleton")(this));
@@ -1302,19 +1426,36 @@ class __tasks_panel extends LetcBox {
         if (!next || typeof next.focus !== "function") return;
         next.focus();
         if (cursorPos != null && typeof next.setSelectionRange === "function") {
-          try { next.setSelectionRange(cursorPos, cursorEnd != null ? cursorEnd : cursorPos); } catch (_) {}
+          try {
+            next.setSelectionRange(
+              cursorPos,
+              cursorEnd != null ? cursorEnd : cursorPos,
+            );
+          } catch (_) {}
         }
       });
     }
   }
 
   // ── Skeleton accessors ─────────────────────────────────────────
-  getColumns() { return COLUMNS; }
-  getPriorities() { return PRIORITIES; }
-  getMembers() { return this._members; }
-  getLabels() { return this._labels; }
-  getLabel(id) { return this._labels.find((l) => l.id === id) || null; }
-  getMember(uid) { return this._members.find((m) => m.id === uid || m.uid === uid) || null; }
+  getColumns() {
+    return COLUMNS;
+  }
+  getPriorities() {
+    return PRIORITIES;
+  }
+  getMembers() {
+    return this._members;
+  }
+  getLabels() {
+    return this._labels;
+  }
+  getLabel(id) {
+    return this._labels.find((l) => l.id === id) || null;
+  }
+  getMember(uid) {
+    return this._members.find((m) => m.id === uid || m.uid === uid) || null;
+  }
 
   getState() {
     return COLUMNS.reduce((acc, c) => {
@@ -1323,16 +1464,26 @@ class __tasks_panel extends LetcBox {
     }, {});
   }
 
-  isCreating() { return this._creating; }
-  getCreateDraft() { return this._createDefaults || null; }
-  getPickerOpen() { return this._pickerOpen; }
-  getFileSearch() { return this._fileSearch; }
+  isCreating() {
+    return this._creating;
+  }
+  getCreateDraft() {
+    return this._createDefaults || null;
+  }
+  getPickerOpen() {
+    return this._pickerOpen;
+  }
+  getFileSearch() {
+    return this._fileSearch;
+  }
 
   getDetailTask() {
     if (!this._detailId) return null;
     return this._tasks.find((t) => t.id === this._detailId) || null;
   }
-  getDetailDraft() { return this._detailDraft; }
+  getDetailDraft() {
+    return this._detailDraft;
+  }
   getDetailAttachments() {
     return (this._detailId && this._attachments[this._detailId]) || [];
   }

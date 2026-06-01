@@ -97,7 +97,12 @@
         display: block;
         width: 14px;
         height: 14px;
-        @include svg-color($purple-deep);
+        fill: $purple-deep;
+
+        .icon-fill-blue,
+        .icon-fill-grey {
+          fill: $purple-deep;
+        }
       }
     }
 
@@ -267,7 +272,12 @@
         display: block;
         width: 14px;
         height: 9px;
-        @include svg-color($ink-600);
+        fill: $ink-600;
+
+        .icon-fill-blue,
+        .icon-fill-grey {
+          fill: $ink-600;
+        }
       }
     }
 
@@ -539,7 +549,12 @@
         display: block;
         width: 12px;
         height: 12px;
-        @include svg-color(var(--white, #fff));
+        fill: var(--white, #fff);
+
+        .icon-fill-blue,
+        .icon-fill-grey {
+          fill: var(--white, #fff);
+        }
       }
     }
   }
@@ -734,17 +749,32 @@
 
     &--edit {
       svg {
-        @include svg-color($purple-light);
+        fill: $purple-light;
+
+        .icon-fill-blue,
+        .icon-fill-grey {
+          fill: $purple-light;
+        }
       }
 
       &:hover svg {
-        @include svg-color($purple-deep);
+        fill: $purple-deep;
+
+        .icon-fill-blue,
+        .icon-fill-grey {
+          fill: $purple-deep;
+        }
       }
     }
 
     &--delete {
       svg {
-        @include svg-color($red);
+        fill: $red;
+
+        .icon-fill-blue,
+        .icon-fill-grey {
+          fill: $red;
+        }
       }
 
       &:hover svg {
@@ -823,7 +853,12 @@
         display: block;
         width: 14px;
         height: 14px;
-        @include svg-color($ink-700);
+        fill: $ink-700;
+
+        .icon-fill-blue,
+        .icon-fill-grey {
+          fill: $ink-700;
+        }
       }
 
       &:hover {

@@ -231,6 +231,27 @@
       &[data-area="public"] svg {
         color: var(--area-public);
       }
+
+      &[data-area="personal"] svg {
+        color: var(--area-personal);
+      }
+
+      &[data-area="private"] svg {
+        color: var(--area-private);
+      }
+
+      &[data-area="share"] svg,
+      &[data-area="dmz"] svg {
+        color: var(--area-share);
+      }
+
+      &[data-area="public"] svg {
+        color: var(--area-public);
+      }
+    }
+
+    &__item.white &__icon svg {
+      fill: var(--white);
     }
 
     &__item.white &__icon svg {

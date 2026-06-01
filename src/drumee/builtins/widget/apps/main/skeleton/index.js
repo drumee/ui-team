@@ -800,7 +800,10 @@ function comingSoonOverlay(ui) {
   return Skeletons.Box.Y({
     className: `${pfx}__coming-soon-overlay`,
     kids: [
-      Skeletons.Note({ className: `${pfx}__coming-soon`, content: LOCALE.COMING_SOON }),
+      Skeletons.Note({
+        className: `${pfx}__coming-soon`,
+        content: LOCALE.COMING_SOON,
+      }),
     ],
   });
 }

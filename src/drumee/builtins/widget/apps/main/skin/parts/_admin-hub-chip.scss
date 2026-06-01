@@ -272,3 +272,59 @@ html[data-theme="dark"] .apps-main {
     }
   }
 }
+
+// ── Admin hub chip — dark mode ─────────────────────────────────
+html[data-theme="dark"] .apps-main {
+  &__hub-chip {
+    background: var(--overlay-bg-05);
+    border-color: var(--border-muted);
+
+    &-prefix {
+      color: var(--normal-fg-20);
+    }
+
+    &-name {
+      color: var(--normal-fg-10);
+    }
+
+    &-chevron svg {
+      fill: var(--normal-fg-20);
+    }
+
+    &-menu {
+      background: var(--normal-bg-elevated);
+      border-color: var(--border-muted);
+      box-shadow:
+        var(--shadow-top-tiny),
+        0 4px 16px rgba(0, 0, 0, 0.5);
+    }
+
+    &-search {
+      background: var(--overlay-bg-05);
+
+      input {
+        color: var(--normal-fg-10);
+
+        &::placeholder {
+          color: var(--placeholder-fg);
+        }
+      }
+    }
+
+    &-item:hover {
+      background: var(--hover-bg-40);
+    }
+
+    &-item-label {
+      color: var(--normal-fg-10);
+    }
+
+    &-item-area {
+      color: var(--normal-fg-20);
+    }
+
+    &-empty {
+      color: var(--normal-fg-50);
+    }
+  }
+}

@@ -71,7 +71,7 @@ function __skl_welcome_signin_content(ui) {
   const submit = require("../../skeleton/common/button").default(
     ui,
     _e.submit,
-    LOCALE.LOG_IN_TO_WORKSPACE
+    LOCALE.LOG_IN_TO_WORKSPACE,
   );
   const msgBox = require("../../skeleton/common/message-box").default(ui);
 
@@ -148,7 +148,9 @@ function __skl_welcome_signin_content(ui) {
             className: `${contentFig}__signup-prompt-link`,
             content: LOCALE.START_FREE,
             on_click: () => {
-              try { history.replaceState(null, '', '#/welcome/signup'); } catch (e) {}
+              try {
+                history.replaceState(null, "", "#/welcome/signup");
+              } catch (e) {}
               if (window.Welcome && _.isFunction(Welcome.loadSignup)) {
                 Welcome.loadSignup();
               } else {

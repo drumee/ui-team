@@ -23,7 +23,10 @@ function buildFileSearchDropdownContent(ui, scope, ctx = {}) {
       fileExt: r.ext,
       searchScope: scope,
       kids: [
-        Skeletons.Image.Svg({ ico: "attachment", className: `${pfx}__file-result-ico` }),
+        Skeletons.Image.Svg({
+          ico: "attachment",
+          className: `${pfx}__file-result-ico`,
+        }),
         Skeletons.Note({
           className: `${pfx}__file-result-name`,
           content: `${r.filename || ""}${r.ext ? "." + r.ext : ""}`,
@@ -712,7 +715,9 @@ const make = function (ui) {
           content: LOCALE.ASSIGNEE,
         }),
         assigneeButton({ assignee_uid: dAssignee }, "detail-assignee"),
-        memberPicker(dAssignee, "set-assignee", { pickerKind: "detail-assignee" }),
+        memberPicker(dAssignee, "set-assignee", {
+          pickerKind: "detail-assignee",
+        }),
       ],
     });
 
@@ -730,7 +735,10 @@ const make = function (ui) {
           Skeletons.Note({
             className: `${pfx}__label-option`,
             content: l.name,
-            dataset: { selected: dLabelSet.has(l.id) ? 1 : 0, "label-id": l.id },
+            dataset: {
+              selected: dLabelSet.has(l.id) ? 1 : 0,
+              "label-id": l.id,
+            },
             styleOpt: dLabelSet.has(l.id)
               ? { background: l.color, borderColor: l.color }
               : { borderColor: l.color, color: l.color },
@@ -778,7 +786,9 @@ const make = function (ui) {
             appendTo: document.body,
             onReady: (_d, _s, instance) => {
               if (instance && instance.calendarContainer) {
-                instance.calendarContainer.classList.add("tasks-panel__flatpickr");
+                instance.calendarContainer.classList.add(
+                  "tasks-panel__flatpickr",
+                );
               }
             },
           },
@@ -939,7 +949,10 @@ const make = function (ui) {
             Skeletons.Note({
               className: `${pfx}__label-option`,
               content: l.name,
-              dataset: { selected: selectedLabels.has(l.id) ? 1 : 0, "label-id": l.id },
+              dataset: {
+                selected: selectedLabels.has(l.id) ? 1 : 0,
+                "label-id": l.id,
+              },
               styleOpt: selectedLabels.has(l.id)
                 ? { background: l.color, borderColor: l.color }
                 : { borderColor: l.color, color: l.color },
@@ -1055,7 +1068,9 @@ const make = function (ui) {
               content: LOCALE.ASSIGNEE,
             }),
             assigneeButtonNode,
-            memberPicker(selectedAssignee, "create-assignee", { pickerKind: "create-assignee" }),
+            memberPicker(selectedAssignee, "create-assignee", {
+              pickerKind: "create-assignee",
+            }),
           ],
         }),
         Skeletons.Box.Y({
@@ -1089,7 +1104,9 @@ const make = function (ui) {
                 appendTo: document.body,
                 onReady: (_d, _s, instance) => {
                   if (instance && instance.calendarContainer) {
-                    instance.calendarContainer.classList.add("tasks-panel__flatpickr");
+                    instance.calendarContainer.classList.add(
+                      "tasks-panel__flatpickr",
+                    );
                   }
                 },
               },
@@ -1180,7 +1197,9 @@ function buildAssigneeButtonContent(ui, assigneeUid) {
   const pfx = ui.fig.family;
   const m = assigneeUid ? ui.getMember(assigneeUid) : null;
   const label = m
-    ? [m.firstname, m.lastname].filter(Boolean).join(" ").trim() || m.email || ""
+    ? [m.firstname, m.lastname].filter(Boolean).join(" ").trim() ||
+      m.email ||
+      ""
     : LOCALE.UNASSIGNED;
   return [
     m
