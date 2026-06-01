@@ -1856,7 +1856,6 @@ class __widget_chat extends LetcBox {
   }
 
   /**
-<<<<<<< HEAD
    * P2P only: place the peer's "seen" avatar from their read cursor, returned by
    * p2p_list_messages as `peer_ref_ctime` (the same scalar on every row). Feeds
    * the cursor into applyReadReceipt, which synthesises the per-row _seen_ the
@@ -1881,8 +1880,6 @@ class __widget_chat extends LetcBox {
   }
 
   /**
-=======
->>>>>>> da6fe4ab (typing indicator)
    *
    * @param {*} data
    */
