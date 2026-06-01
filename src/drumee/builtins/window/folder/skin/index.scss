@@ -128,7 +128,10 @@
       align-items: center;
       gap: 4px;
       min-width: 0;
-      max-width: 50%;
+      // Wider budget + crumbs that shrink (below) so a deep path (4+ levels)
+      // stays fully visible — each crumb ellipsizes instead of the trailing
+      // ones being clipped off the right edge.
+      max-width: 66%;
       overflow: hidden;
       display: none;
 
@@ -148,12 +151,19 @@
       opacity: 0.65;
       cursor: pointer;
       max-width: 140px;
+      // min-width:0 + flex-shrink:1 let every crumb compress and ellipsize so
+      // all parts of a deep path fit. min-width MUST be 0 (not a fixed px):
+      // a fixed min forces short crumbs ("/" or brief names) to that width,
+      // left-aligning the glyph and leaving dead space before the "›"
+      // separator (looks like a spacing bug). With 0, short crumbs size to
+      // their content while long ones still shrink + ellipsize under pressure.
+      min-width: 0;
+      flex: 0 1 auto;
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
       padding: 0 4px;
       border-radius: 4px;
-      flex-shrink: 0;
 
       &:hover {
         background-color: var(--normal-bg-90);

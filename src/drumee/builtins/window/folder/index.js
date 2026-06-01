@@ -266,6 +266,20 @@ class __window_folder extends mfsInteract {
     if (this.mget(_a.headless)) {
       this.listenTo(this.model, `change:${_a.state}`, this._syncWorkspaceFocus);
     }
+
+    // A workspace root's name (hub_name) can resolve after the title element
+    // has mounted; re-apply it whenever it changes.
+    this.listenTo(this.model, "change:hub_name", this._syncWindowTitle);
+  }
+
+  // Apply filename — or hub_name for an empty-filename root — to the title.
+  // Uses the bound ref directly (NOT ensurePart): calling ensurePart for a part
+  // from within its own onPartReady replays onPartReady and loops forever.
+  _syncWindowTitle() {
+    const name = this.mget(_a.filename) || this.model.get("hub_name");
+    if (!name) return;
+    const t = this.__refWindowName || this.name;
+    if (t && _.isFunction(t.set)) t.set({ content: name });
   }
 
   _syncWorkspaceFocus() {
@@ -484,6 +498,14 @@ class __window_folder extends mfsInteract {
       return;
     }
     if (super.onPartReady) super.onPartReady(child, pn);
+    if (pn === "ref-window-name") {
+      // core's handler clears the title; restore it from the model (an empty-
+      // filename workspace root takes its name from hub_name). Set `child`
+      // DIRECTLY — calling ensurePart for this part here would replay
+      // onPartReady and loop forever.
+      const name = this.mget(_a.filename) || this.model.get("hub_name");
+      if (name && _.isFunction(child.set)) child.set({ content: name });
+    }
   }
 
   onChildBubble(c) {
@@ -510,6 +532,15 @@ class __window_folder extends mfsInteract {
       ownpath: this.mget(_a.ownpath),
       pid: this.mget(_a.pid),
       privilege: this.mget(_a.privilege),
+      // Full fetch context — without it, mset() on restore keeps the deeper
+      // folder's nid / parent-mode / token and refetches the wrong (or empty)
+      // listing, notably in restricted shares.
+      actual_home_id: this.mget(_a.actual_home_id),
+      usePid: this.model.get("usePid"),
+      token: this.mget(_a.token),
+      vhost: this.mget(_a.vhost),
+      // Workspace name, so an empty-filename root can label its title/crumb.
+      hub_name: this.model.get("hub_name"),
     };
   }
 
@@ -532,7 +563,8 @@ class __window_folder extends mfsInteract {
     try {
       this.mset(state);
       if (this.__refWindowName) {
-        this.__refWindowName.set({ content: state.filename });
+        // Empty-filename root falls back to hub_name (avoids a blank title).
+        this.__refWindowName.set({ content: state.filename || state.hub_name || "" });
       }
       this.scopeChatToFolder(state.nid);
       this.loadContent();
@@ -545,7 +577,37 @@ class __window_folder extends mfsInteract {
 
   refreshBreadcrumbsUI(stack) {
     if (stack && _.isArray(stack)) {
-      this._navStack = stack;
+      // get_path returns the full root→current chain INCLUDING the current node.
+      // Convention: the current location is the title, only ancestors are
+      // crumbs. Drop the current node so the root isn't rendered as a crumb (nor
+      // duplicated when the first forward navigation re-pushes it). A
+      // hub/workspace ROOT window's active directory is its actual_home_id, not
+      // the model nid (mirrors desk/breadcrumb's hub normalization); without it
+      // the root entry isn't matched and renders as a crumb beside the title.
+      let curNid = this.mget(_a.nid);
+      if (this.mget(_a.filetype) === _a.hub && this.mget(_a.actual_home_id)) {
+        curNid = this.mget(_a.actual_home_id);
+      }
+      // Persist the workspace name — hub_name/name ONLY. get_path gives the root
+      // a "/" filename, which must not overwrite the name seeded in
+      // loadWorkspace (that would revert the title/root label back to "/").
+      const here = stack.find((s) => s && s.nid != null && s.nid == curNid);
+      const hereName = here && (here.hub_name || here.name);
+      if (hereName && hereName !== "/") this.mset({ hub_name: hereName });
+      // get_path ancestors carry identity only, not the hub-wide fetch context
+      // (token/usePid/actual_home_id/vhost) which is identical across the hub.
+      // Stamp the current window's values so a crumb click can reload a
+      // restricted/share listing. Spread `s` last so real get_path fields win.
+      const ctx = {
+        hub_id: this.mget(_a.hub_id),
+        token: this.mget(_a.token),
+        usePid: this.model.get("usePid"),
+        actual_home_id: this.mget(_a.actual_home_id),
+        vhost: this.mget(_a.vhost),
+      };
+      this._navStack = stack
+        .filter((s) => s && s.nid != null && s.nid != curNid)
+        .map((s) => Object.assign({}, ctx, s));
     }
     const depth = this._navStack.length;
     this.ensurePart("folder-breadcrumb-path").then((box) => {
@@ -569,7 +631,9 @@ class __window_folder extends mfsInteract {
         crumbs.push(
           Skeletons.Note({
             className: `${cnFolder}__breadcrumb-crumb`,
-            content: state.filename || "/",
+            // Empty-filename root falls back to hub_name so it keeps its name
+            // (not "/") once you navigate into a child.
+            content: state.filename || state.hub_name || "/",
             service: "breadcrumb-jump",
             stackIndex: i,
             uiHandler: [this],
