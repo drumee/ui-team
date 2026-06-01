@@ -23,41 +23,25 @@
     padding-top: 6px;
     width: 100%;
 
-    &[data-level="0"] {
-      padding-left: 24px;
-    }
+    // Indentation scales with nesting depth, generated across a deep range so
+    // the tree keeps indenting past level 3 — a fixed 0..3 list previously
+    // capped here, dropping level-4+ folders back to the workspace baseline.
+    // Values: level 0 = 24px; each deeper level adds 18px (22 + level*18).
+    // Active (radio) rows shave 4px to absorb their 4px left border so the
+    // label stays aligned with inactive siblings.
+    @for $i from 0 through 12 {
+      &[data-level="#{$i}"] {
+        padding-left: if($i == 0, 24px, 22px + $i * 18px);
 
-    &[data-level="1"] {
-      padding-left: 40px;
-    }
-
-    &[data-level="2"] {
-      padding-left: 58px;
-    }
-
-    &[data-level="3"] {
-      padding-left: 76px;
+        &[data-radio="on"] {
+          padding-left: if($i == 0, 20px, 18px + $i * 18px);
+        }
+      }
     }
 
     &[data-radio="on"] {
       background: var(--active-item-bg);
       border-left: 4px solid var(--active-border);
-    }
-
-    &[data-level="0"][data-radio="on"] {
-      padding-left: 20px;
-    }
-
-    &[data-level="1"][data-radio="on"] {
-      padding-left: 36px;
-    }
-
-    &[data-level="2"][data-radio="on"] {
-      padding-left: 54px;
-    }
-
-    &[data-level="3"][data-radio="on"] {
-      padding-left: 72px;
     }
 
     &:hover {
