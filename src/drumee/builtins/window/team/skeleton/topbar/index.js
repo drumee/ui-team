@@ -66,7 +66,8 @@ const __skl_window_team_topbar = function (ui, icon) {
         ico: "folder-meeting",
         uiHandler: ui,
         partHandler: ui,
-        service: "open-call-panel",
+        service: "start-meeting",
+        attrOpt: { title: LOCALE.DRUMEE_CALL },
       }),
       newFileMenu(ui),
       Skeletons.Button.Label({

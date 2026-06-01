@@ -129,15 +129,38 @@ const make = function (ui) {
   };
 
   const assigneeAvatar = (task) => {
-    if (!task.assignee_uid) return null;
-    const m = ui.getMember(task.assignee_uid);
-    return Skeletons.UserProfile({
-      className: `${pfx}__task-assignee`,
-      id: task.assignee_uid,
-      firstname: m?.firstname,
-      lastname: m?.lastname,
-      auto_color: 1,
-      live_status: 0,
+    // Multi-assignee: stack up to 3 avatars on the card, then a "+N" chip.
+    const uids = Array.isArray(task.assignee_uids)
+      ? task.assignee_uids
+      : task.assignee_uid
+        ? [task.assignee_uid]
+        : [];
+    if (!uids.length) return null;
+    const MAX = 3;
+    const shown = uids.slice(0, MAX);
+    const overflow = uids.length - shown.length;
+    const avatars = shown.map((uid) => {
+      const m = ui.getMember(uid);
+      return Skeletons.UserProfile({
+        className: `${pfx}__task-assignee`,
+        id: uid,
+        firstname: m?.firstname,
+        lastname: m?.lastname,
+        auto_color: 1,
+        live_status: 0,
+      });
+    });
+    if (overflow > 0) {
+      avatars.push(
+        Skeletons.Note({
+          className: `${pfx}__task-assignee-more`,
+          content: `+${overflow}`,
+        }),
+      );
+    }
+    return Skeletons.Box.X({
+      className: `${pfx}__task-assignees`,
+      kids: avatars,
     });
   };
 
@@ -338,11 +361,19 @@ const make = function (ui) {
 
   // Always rendered; CSS hides via data-open. data-member-uid lets the JS
   // re-target data-active after an assignee selection.
-  const memberPicker = (selectedUid, serviceName, extra = {}) => {
+  const memberPicker = (selectedUids, serviceName, extra = {}) => {
+    // Multi-select: selectedUids is the array of currently-assigned uids. Rows
+    // toggle membership and the picker stays open; the "Unassigned" row clears
+    // the whole set and is active only when nothing is selected.
+    const selected = Array.isArray(selectedUids)
+      ? selectedUids.map(String)
+      : selectedUids
+        ? [String(selectedUids)]
+        : [];
     const items = [
       Skeletons.Box.X({
         className: `${pfx}__member-row`,
-        dataset: { active: !selectedUid ? 1 : 0, "member-uid": "" },
+        dataset: { active: !selected.length ? 1 : 0, "member-uid": "" },
         bubble: 0,
         service: serviceName,
         uiHandler: [ui],
@@ -359,7 +390,7 @@ const make = function (ui) {
         Skeletons.Box.X({
           className: `${pfx}__member-row`,
           dataset: {
-            active: selectedUid === (m.id || m.uid) ? 1 : 0,
+            active: selected.includes(String(m.id || m.uid)) ? 1 : 0,
             "member-uid": m.id || m.uid,
           },
           bubble: 0,
@@ -396,8 +427,11 @@ const make = function (ui) {
   };
 
   const assigneeButton = (task, kind) => {
-    const m = task.assignee_uid ? ui.getMember(task.assignee_uid) : null;
-    const label = m ? fullName(m) : LOCALE.UNASSIGNED;
+    const assignees = Array.isArray(task.assignees)
+      ? task.assignees
+      : task.assignee_uid
+        ? [task.assignee_uid]
+        : [];
     return Skeletons.Box.X({
       className: `${pfx}__assignee-button`,
       sys_pn: `${kind}-button`,
@@ -407,25 +441,7 @@ const make = function (ui) {
       service: "toggle-picker",
       uiHandler: [ui],
       pickerKind: kind,
-      kids: [
-        m
-          ? Skeletons.UserProfile({
-              className: `${pfx}__assignee-button-avatar`,
-              id: m.id || m.uid,
-              firstname: m.firstname,
-              lastname: m.lastname,
-              auto_color: 1,
-              live_status: 0,
-            })
-          : Skeletons.Note({
-              className: `${pfx}__assignee-button-placeholder`,
-              content: "?",
-            }),
-        Skeletons.Note({
-          className: `${pfx}__assignee-button-label`,
-          content: label,
-        }),
-      ],
+      kids: buildAssigneeButtonContent(ui, assignees),
     });
   };
 
@@ -649,8 +665,11 @@ const make = function (ui) {
     const dDraft = ui.getDetailDraft() || detail;
     const dStatus = dDraft.status || detail.status || "todo";
     const dPriority = dDraft.priority || detail.priority || "medium";
-    const dAssignee =
-      dDraft.assignee_uid != null ? dDraft.assignee_uid : detail.assignee_uid;
+    const dAssignees = Array.isArray(dDraft.assignees)
+      ? dDraft.assignees
+      : Array.isArray(detail.assignee_uids)
+        ? detail.assignee_uids
+        : [];
     const dLabels = Array.isArray(dDraft.labels)
       ? dDraft.labels
       : detail.label_ids || [];
@@ -714,8 +733,8 @@ const make = function (ui) {
           className: `${pfx}__detail-label`,
           content: LOCALE.ASSIGNEE,
         }),
-        assigneeButton({ assignee_uid: dAssignee }, "detail-assignee"),
-        memberPicker(dAssignee, "set-assignee", {
+        assigneeButton({ assignees: dAssignees }, "detail-assignee"),
+        memberPicker(dAssignees, "set-assignee", {
           pickerKind: "detail-assignee",
         }),
       ],
@@ -882,12 +901,17 @@ const make = function (ui) {
         Skeletons.Box.X({
           className: `${pfx}__detail-header`,
           kids: [
-            Skeletons.Entry({
+            // Textarea (not Entry) so a long title wraps and stays fully
+            // visible in the update popup instead of being clipped past the
+            // field width. `ignoreEnter` keeps it logically single-line.
+            Skeletons.Textarea({
               className: `${pfx}__detail-title`,
               name: "title",
               value: dDraft.title || "",
               placeholder: LOCALE.TASK_TITLE,
               require: "any",
+              rows: 1,
+              ignoreEnter: true,
               bubble: 0,
               watch: "task-input-changed",
               uiHandler: [ui],
@@ -918,7 +942,9 @@ const make = function (ui) {
     const cols = ui.getColumns();
     const selectedStatus = draft?.status || "todo";
     const selectedPriority = draft?.priority || "medium";
-    const selectedAssignee = draft?.assignee_uid || null;
+    const selectedAssignees = Array.isArray(draft?.assignees)
+      ? draft.assignees
+      : [];
     const selectedLabels = new Set(draft?.labels || []);
 
     const statusPicker = Skeletons.Box.X({
@@ -973,7 +999,7 @@ const make = function (ui) {
     // _applyAssigneeChange's ensurePart(...) never resolves and the button
     // stays blank until the next full render.
     const assigneeButtonNode = assigneeButton(
-      { assignee_uid: selectedAssignee },
+      { assignees: selectedAssignees },
       "create-assignee",
     );
 
@@ -1003,16 +1029,19 @@ const make = function (ui) {
               className: `${pfx}__create-label`,
               content: LOCALE.TASK_TITLE,
             }),
-            Skeletons.Entry({
+            // Textarea (not Entry) so a long title wraps and stays fully
+            // visible instead of being clipped past the field width.
+            // `ignoreEnter` keeps it logically single-line (Enter is a no-op,
+            // never inserts a newline); the Create button is the submit path.
+            Skeletons.Textarea({
               className: `${pfx}__create-input`,
-              formItem: "title",
               name: "title",
               value: draft?.title || "",
               placeholder: LOCALE.TASK_TITLE,
               require: "any",
-              mode: "commit",
+              rows: 1,
+              ignoreEnter: true,
               bubble: 0,
-              service: "commit-task",
               uiHandler: [ui],
               watch: "task-input-changed",
             }),
@@ -1068,7 +1097,7 @@ const make = function (ui) {
               content: LOCALE.ASSIGNEE,
             }),
             assigneeButtonNode,
-            memberPicker(selectedAssignee, "create-assignee", {
+            memberPicker(selectedAssignees, "create-assignee", {
               pickerKind: "create-assignee",
             }),
           ],
@@ -1193,31 +1222,60 @@ const make = function (ui) {
   });
 };
 
-function buildAssigneeButtonContent(ui, assigneeUid) {
+function buildAssigneeButtonContent(ui, assignees) {
   const pfx = ui.fig.family;
-  const m = assigneeUid ? ui.getMember(assigneeUid) : null;
-  const label = m
-    ? [m.firstname, m.lastname].filter(Boolean).join(" ").trim() ||
-      m.email ||
-      ""
-    : LOCALE.UNASSIGNED;
+  // Accept an array of uids (multi-assignee); tolerate a single uid/null.
+  const uids = Array.isArray(assignees)
+    ? assignees
+    : assignees
+      ? [assignees]
+      : [];
+  const fullName = (m) =>
+    [m.firstname, m.lastname].filter(Boolean).join(" ").trim() || m.email || "";
+
+  if (!uids.length) {
+    return [
+      Skeletons.Note({
+        className: `${pfx}__assignee-button-placeholder`,
+        content: "?",
+      }),
+      Skeletons.Note({
+        className: `${pfx}__assignee-button-label`,
+        content: LOCALE.UNASSIGNED,
+      }),
+    ];
+  }
+
+  const MAX = 3;
+  const shown = uids.slice(0, MAX);
+  const overflow = uids.length - shown.length;
+  const avatars = shown.map((uid) => {
+    const m = ui.getMember(uid) || {};
+    return Skeletons.UserProfile({
+      className: `${pfx}__assignee-button-avatar`,
+      id: uid,
+      firstname: m.firstname,
+      lastname: m.lastname,
+      auto_color: 1,
+      live_status: 0,
+    });
+  });
+  // Label: single → the member's name; multiple → "N assigned".
+  let label;
+  if (uids.length === 1) {
+    const m = ui.getMember(uids[0]);
+    label = m ? fullName(m) : "";
+  } else {
+    label = `${uids.length} ${LOCALE.ASSIGNEES || "Assignees"}`;
+  }
   return [
-    m
-      ? Skeletons.UserProfile({
-          className: `${pfx}__assignee-button-avatar`,
-          id: m.id || m.uid,
-          firstname: m.firstname,
-          lastname: m.lastname,
-          auto_color: 1,
-          live_status: 0,
-        })
-      : Skeletons.Note({
-          className: `${pfx}__assignee-button-placeholder`,
-          content: "?",
-        }),
+    Skeletons.Box.X({
+      className: `${pfx}__assignee-button-avatars`,
+      kids: avatars,
+    }),
     Skeletons.Note({
       className: `${pfx}__assignee-button-label`,
-      content: label,
+      content: overflow > 0 ? `${label} (+${overflow})` : label,
     }),
   ];
 }

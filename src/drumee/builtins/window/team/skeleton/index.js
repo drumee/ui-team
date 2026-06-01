@@ -1,19 +1,14 @@
 const { windowHeader, dialog, tooltips, tabBar, folderFilesView } = require("../../skeleton/toolkit")
 
-// Toolkit's splitBody() no longer includes a meeting-panel child (refactored); keep it here.
+// The team call now opens as its own standalone window (see startTeamCall in
+// index.js), so the split-body no longer carries an embedded meeting-panel.
 function teamSplitBody(ui) {
   return Skeletons.Box.G({
     className: `${ui.fig.family}__split-body ${ui.fig.group}__split-body`,
     sys_pn: "folder-view",
     partHandler: ui,
     dataset: { view: "files" },
-    kids: [
-      ...folderFilesView(ui),
-      Skeletons.Box.Y({
-        className: `${ui.fig.family}__meeting-panel ${ui.fig.group}__meeting-panel`,
-        sys_pn: "meeting-panel",
-      }),
-    ],
+    kids: folderFilesView(ui),
   });
 }
 

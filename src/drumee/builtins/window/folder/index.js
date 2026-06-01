@@ -97,6 +97,66 @@ class __window_folder extends mfsInteract {
     this._applyBoundsAfterFs(target);
   }
 
+  // Override the inherited utils.js minimize/wake. The inherited version
+  // captures bounds via $el.offset() (document-relative) and writes them
+  // as inline top/left (parent-relative), so when the window's offset
+  // parent is not at (0,0) the restored window lands off-screen — the
+  // list inside never gets a visible viewport and looks "stuck loading".
+  // Also, the original 1.5s TweenMax animations make the tab-click →
+  // restore round-trip feel laggy; a short opacity fade + bounds snap is
+  // enough.
+  minimize(cmd) {
+    if (this.mget(_a.minimize)) return;
+    this._minimizedBounds = this._snapshotBounds();
+    this.mset(_a.minimize, 1);
+    if (this.el) {
+      this.el.dataset.minimize = 1;
+      this.el.dataset.state = 0;
+    }
+    // Fire the event first so the tab appears in the header immediately.
+    if (window.Wm && Wm.$el) Wm.$el.trigger(_e.minimize, this);
+    this.$el.stop(true, false).animate(
+      { opacity: 0 },
+      {
+        duration: 150,
+        complete: () => {
+          if (this.isDestroyed && this.isDestroyed()) return;
+          this.$el.css({ display: "none", opacity: 1 });
+        },
+      },
+    );
+  }
+
+  wake(cmd, callback) {
+    if (!this.mget(_a.minimize)) return;
+    this.mset(_a.minimize, 0);
+    if (this.el) {
+      this.el.dataset.minimize = 0;
+      this.el.dataset.state = 1;
+    }
+    this.$el.css({ display: "" });
+    const b = this._minimizedBounds;
+    this._minimizedBounds = null;
+    if (b) {
+      this.size = { ...this.size, width: b.width, height: b.height };
+      this.style.set(b);
+      this.$el.css(b);
+      if (this.syncBounds) this.syncBounds(true);
+    }
+    this.$el.stop(true, false).css({ opacity: 0 }).animate(
+      { opacity: 1 },
+      {
+        duration: 150,
+        complete: () => {
+          if (this.isDestroyed && this.isDestroyed()) return;
+          if (typeof callback === "function") callback();
+        },
+      },
+    );
+    if (this.raise) this.raise();
+    if (window.Wm && Wm.$el) Wm.$el.trigger(_e.wake, this);
+  }
+
   toggleFullscreen() {
     if (document.fullscreenElement === this.el) {
       document.exitFullscreen();
@@ -270,6 +330,23 @@ class __window_folder extends mfsInteract {
     // A workspace root's name (hub_name) can resolve after the title element
     // has mounted; re-apply it whenever it changes.
     this.listenTo(this.model, "change:hub_name", this._syncWindowTitle);
+
+    // Tell the desk to render a tab in the home header. `headless` folders
+    // ARE the workspace pane itself, not a popup, so they don't get a tab.
+    // Deferred so the desk's listener and the folder's $el are both ready.
+    if (!this.mget(_a.headless) && window.Wm && Wm.$el) {
+      _.defer(() => {
+        if (this.isDestroyed && this.isDestroyed()) return;
+        Wm.$el.trigger("folder:open", this);
+      });
+    }
+  }
+
+  onBeforeDestroy(opt) {
+    if (!this.mget(_a.headless) && window.Wm && Wm.$el) {
+      Wm.$el.trigger("folder:close", this);
+    }
+    if (super.onBeforeDestroy) return super.onBeforeDestroy(opt);
   }
 
   // Apply filename — or hub_name for an empty-filename root — to the title.
@@ -297,9 +374,12 @@ class __window_folder extends mfsInteract {
     if (!this._raised) this.raise();
     if (this.media && this.media.wait) this.media.wait(0);
     // Honor the launch-time `activeTab` option (e.g. opened from the,
-    // sidebar live-meeting badge with activeTab: "meeting").
+    // sidebar live-meeting badge with activeTab: "meeting"). A meeting request
+    // now opens a standalone call window rather than an embedded folder tab.
     const initialTab = this.mget("activeTab");
-    if (initialTab && initialTab !== "files") {
+    if (initialTab === "meeting" || this.mget(_a.start_meeting)) {
+      this._launchMeetingStandalone();
+    } else if (initialTab && initialTab !== "files") {
       this.ensurePart("folder-view").then(() => this.showFolderTab(initialTab));
     }
     // "Get info" launches the window with this flag to pre-select settings.
@@ -768,7 +848,8 @@ class __window_folder extends mfsInteract {
         return this.showFolderTab(_a.task);
 
       case "tab-meeting":
-        return this.showFolderTab("meeting");
+        // The meeting opens as its own window now, not an embedded folder tab.
+        return this._launchMeetingStandalone();
 
       case "toggle-files-layout":
         return this.toggleFilesLayout(cmd);
@@ -967,24 +1048,60 @@ class __window_folder extends mfsInteract {
       });
   }
 
-  async _launchMeetingInPanel() {
+  // Kept for backward-compat with existing callers (start-meeting service,
+  // onPartReady start_meeting flag). The meeting no longer embeds in a folder
+  // panel — it opens as its own free-floating window. See _launchMeetingStandalone.
+  _launchMeetingInPanel() {
+    return this._launchMeetingStandalone();
+  }
+
+  /**
+   * Open the folder/workspace meeting as its own top-level window (Wm pool),
+   * centered and resizable — never embedded in the folder body. Mirrors the
+   * team window's startTeamCall. Singleton-guarded so a second click refocuses
+   * the running call instead of launching a duplicate.
+   */
+  _launchMeetingStandalone() {
     if (this._launchingMeeting) return;
     this._launchingMeeting = true;
     try {
+      const existing =
+        Wm.getItemByKind("window_meeting") || Wm.getItemByKind("window_connect");
+      if (existing && !existing.isDestroyed()) {
+        if (typeof existing.raise === "function") existing.raise();
+        Wm.alert(LOCALE.ALREADY_ANOTHER_CALL);
+        return;
+      }
       const switchcall = Wm.getItemByKind("window_switchcall");
       if (switchcall && !switchcall.isDestroyed()) switchcall.goodbye();
-      const panel = await this.ensurePart("meeting-panel");
-      panel.feed({
-        kind: "window_meeting",
-        className: `${this.fig.family}__meeting-room-widget`,
-        hub_id: this.mget(_a.hub_id),
-        filename: this.mget(_a.filename),
-        nid: this.mget(_a.actual_home_id) || this.mget(_a.nid),
-        trigger: this.mget(_a.media) || this,
-        media: this.mget(_a.media) || this,
-        service: "meeting",
-        uiHandler: [this],
-      });
+
+      const room_id = this.mget(_a.actual_home_id) || this.mget(_a.nid);
+      let width = Math.min(1200, window.innerWidth - 80);
+      let height = Math.min(720, window.innerHeight - 120);
+      if (width < 480) width = window.innerWidth;
+      if (height < 360) height = window.innerHeight;
+      const left = Math.max(0, (window.innerWidth - width) / 2);
+      const top = Math.max(40, (window.innerHeight - height) / 2);
+
+      return Wm.launch(
+        {
+          kind: "window_meeting",
+          hub_id: this.mget(_a.hub_id),
+          nid: room_id,
+          room_id,
+          filename: this.mget(_a.filename) || this.mget(_a.name),
+          area: this.mget(_a.area),
+          trigger: this.mget(_a.media) || this,
+          media: this.mget(_a.media) || this,
+          service: "meeting",
+          audio: 1,
+          video: 1,
+          standalone: 1,
+          wm_unique_id: `window_meeting-${this.mget(_a.hub_id)}`,
+          style: { top, left, width, height, minWidth: 480, minHeight: 420, margin: 0 },
+        },
+        { explicit: 1, singleton: 1 },
+      );
     } finally {
       this._launchingMeeting = false;
     }
@@ -1048,13 +1165,27 @@ class __window_folder extends mfsInteract {
         case _a.task:
           if (!this._taskPanelMounted) {
             this._taskPanelMounted = 1;
+            // Canonical "current directory" nid for task scoping: a hub/workspace
+            // ROOT window's active dir is actual_home_id (which is hub-wide, so
+            // `actual_home_id || nid` would wrongly collapse every subfolder onto
+            // the root); a subfolder window uses its own nid. Mirrors the
+            // breadcrumb's curNid resolution. `scope_is_root` lets the panel ask
+            // the server to also surface legacy (nid-less) tasks at the root only.
+            const isRoot =
+              this.mget(_a.filetype) === _a.hub && this.mget(_a.actual_home_id);
+            const scopeNid = isRoot
+              ? this.mget(_a.actual_home_id)
+              : this.mget(_a.nid);
             return view.append({
               kind: "tasks_panel",
               hub_id: this.mget(_a.hub_id),
-              // Match the meeting/upload destination resolution: for a
-              // hub-level window the working nid is actual_home_id, not the
-              // hub_id itself. Without this, media.upload returns 403.
+              // Upload/destination nid (unchanged): for a hub-level window the
+              // working nid is actual_home_id, not the hub_id itself. Without
+              // this, media.upload returns 403.
               nid: this.mget(_a.actual_home_id) || this.mget(_a.nid),
+              // Folder-scope identity for the task list/create.
+              scope_nid: scopeNid,
+              scope_is_root: isRoot ? 1 : 0,
               uiHandler: [this],
             });
           }

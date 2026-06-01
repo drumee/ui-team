@@ -630,6 +630,11 @@
 .widget-chatItem__meeting-card {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
+  // Stay within the chat column (narrow in the in-meeting panel) and wrap
+  // long names instead of overflowing — keeps every notice the same shape.
+  flex-wrap: wrap;
+  max-width: 100%;
   gap: 6px;
   padding: 4px 8px;
   border-radius: 6px;
@@ -654,7 +659,11 @@
 }
 
 .widget-chatItem__meeting-card-text {
-  white-space: nowrap;
+  // Wrap (and break overly long names) so the notice never overflows the
+  // chat column; centered to read as a tidy system line.
+  white-space: normal;
+  overflow-wrap: anywhere;
+  text-align: center;
 }
 
 .widget-chatItem__meeting-card-action {

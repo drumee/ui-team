@@ -15,6 +15,12 @@
   &__main {
     width: 100%;
     height: 100%;
+    // Flex item of the Box.Y __root (vertical main-axis). Without this the
+    // default `min-height: auto` lets __main grow to the full card-stack
+    // height instead of clamping to __root, so each column's
+    // `overflow-y: auto` never engages and tall columns simply overflow.
+    // (Vertical twin of the `min-width: 0` horizontal-scroll fix below.)
+    min-height: 0;
     align-items: stretch;
     gap: 12px;
     padding: 16px;
@@ -464,7 +470,8 @@
     position: relative;
     box-sizing: border-box;
 
-    input {
+    input,
+    textarea {
       width: 100%;
       padding: 8px 10px;
       border: 1px solid var(--border-default, rgba(0, 0, 0, 0.08));
@@ -497,6 +504,18 @@
         cursor: pointer;
         caret-color: transparent;
       }
+    }
+
+    // Long titles wrap across lines and stay fully visible; the field grows
+    // up to ~4 lines, then scrolls. No drag handle (resize) since it's a
+    // logically single-line title.
+    textarea {
+      resize: none;
+      overflow-y: auto;
+      min-height: 36px;
+      max-height: 90px;
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
     }
   }
 
@@ -652,9 +671,11 @@
 
   &__detail-title {
     flex: 1 1 auto;
+    min-width: 0;
     background: transparent;
 
-    input {
+    input,
+    textarea {
       width: 100%;
       padding: 4px 6px;
       border: 1px solid transparent;
@@ -679,6 +700,18 @@
         border-color: var(--active-border, #433cc5);
         box-shadow: 0 0 0 3px rgba(67, 60, 197, 0.12);
       }
+    }
+
+    // Long titles wrap and stay fully visible; grows up to ~3 lines then
+    // scrolls. No resize handle — it's a logically single-line title.
+    textarea {
+      resize: none;
+      overflow-y: auto;
+      min-height: 30px;
+      max-height: 88px;
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+      display: block;
     }
   }
 
@@ -890,13 +923,47 @@
   }
 
   // ── Card assignee avatar (top-right of the card) ──────────────
+  // Multi-assignee avatar stack on the card (overlapping circles + "+N").
+  &__task-assignees {
+    margin-left: auto; // push to the right of the title row
+    flex-shrink: 0;
+    align-items: center;
+    flex-direction: row;
+  }
+
   &__task-assignee {
     width: 24px;
     height: 24px;
     flex-shrink: 0;
     border-radius: 50%;
     overflow: hidden;
-    margin-left: auto; // push it to the right of the title row
+    box-shadow: 0 0 0 2px var(--normal-bg-elevated, #fff);
+
+    // Overlap successive avatars in the stack.
+    & + & {
+      margin-left: -8px;
+    }
+  }
+
+  &__task-assignee-more {
+    flex-shrink: 0;
+    height: 24px;
+    min-width: 24px;
+    padding: 0 4px;
+    margin-left: -8px;
+    border-radius: 12px;
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--normal-bg-80, rgba(0, 0, 0, 0.06));
+    box-shadow: 0 0 0 2px var(--normal-bg-elevated, #fff);
+    @include drumee.typo(
+      $size: 11px,
+      $weight: 600,
+      $line: 1,
+      $color: var(--normal-fg-30, #5a5a66)
+    );
   }
 
   // ── Priority pills (create + detail) ──────────────────────────
@@ -994,11 +1061,24 @@
     }
   }
 
+  // Stack of assignee avatars inside the picker button (overlapping).
+  &__assignee-button-avatars {
+    flex-direction: row;
+    align-items: center;
+    flex-shrink: 0;
+  }
+
   &__assignee-button-avatar {
     width: 24px;
     height: 24px;
     border-radius: 50%;
     overflow: hidden;
+    flex-shrink: 0;
+    box-shadow: 0 0 0 2px var(--normal-bg-elevated, #fff);
+
+    & + & {
+      margin-left: -8px;
+    }
   }
 
   &__assignee-button-placeholder {

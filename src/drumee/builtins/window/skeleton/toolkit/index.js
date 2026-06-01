@@ -546,15 +546,6 @@ export function zoomMenu(ui) {
 
   const items = [
     {
-      service: "fullscreen",
-      ico: "player-fullscreen",
-      // The fullscreen row renders two CSS-swapped labels (see kids map) so it
-      // tracks the live fullscreen state instead of a stale build-time snapshot
-      // of document.fullscreenElement.
-      content: LOCALE.FULLSCREEN,
-      modifier: "fullscreen",
-    },
-    {
       service: "window-zoom",
       ico: "desktop_fullview",
       // Dedicated key (not LOCALE.ZOOM, which labels the Zoom video app) so
@@ -607,28 +598,11 @@ export function zoomMenu(ui) {
                 active: 0,
                 className: `${cnRoot}-item-icon`,
               }),
-              // Fullscreen row carries both labels; CSS (`:fullscreen`) shows the
-              // right one. Every other row has a single static label.
-              ...(modifier === "fullscreen"
-                ? [
-                    Skeletons.Note({
-                      content: LOCALE.FULLSCREEN,
-                      active: 0,
-                      className: `${cnRoot}-item-label ${cnRoot}-item-label--fs-enter`,
-                    }),
-                    Skeletons.Note({
-                      content: LOCALE.EXIT_FULLSCREEN,
-                      active: 0,
-                      className: `${cnRoot}-item-label ${cnRoot}-item-label--fs-exit`,
-                    }),
-                  ]
-                : [
-                    Skeletons.Note({
-                      content,
-                      active: 0,
-                      className: `${cnRoot}-item-label`,
-                    }),
-                  ]),
+              Skeletons.Note({
+                content,
+                active: 0,
+                className: `${cnRoot}-item-label`,
+              }),
             ],
           }),
         ),

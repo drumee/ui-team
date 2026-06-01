@@ -3,7 +3,7 @@ const OPEN_NODE = "open-node";
 const WS_EVENT = "ws:event";
 
 const Rectangle = require("rectangle-node");
-const { TimelineMax, Expo } = require("@drumee/ui-core/vendor");
+const { TimelineMax, Expo, TweenMax } = require("@drumee/ui-core/vendor");
 const { initializePdfium } = require('../player/document/pdfium-wrapper');
 const EDITABLES = require('../player/document/editable');
 

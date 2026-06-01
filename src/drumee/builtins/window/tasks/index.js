@@ -25,6 +25,12 @@ class __tasks_panel extends LetcBox {
     // Upload destination — must be a real folder/home node, not the hub_id.
     // The folder window passes `actual_home_id || nid` when launching us.
     this._destNid = this.mget(_a.actual_home_id) || this.mget(_a.nid) || 0;
+    // Folder scope for the task list/create. `scope_nid` is the canonical
+    // current-directory node (root window → actual_home_id, subfolder → own
+    // nid); `scope_is_root` makes the root view also show legacy nid-less
+    // tasks. Falls back to _destNid for safety if not supplied.
+    this._scopeNid = this.mget("scope_nid") || this._destNid || null;
+    this._scopeIsRoot = this.mget("scope_is_root") ? 1 : 0;
     this._tasks = [];
     this._members = [];
     this._labels = [];
@@ -195,7 +201,7 @@ class __tasks_panel extends LetcBox {
           description: "",
           priority: "medium",
           due_date: "",
-          assignee_uid: null,
+          assignees: [],
           labels: [],
           pending_files: [],
         };
@@ -238,10 +244,11 @@ class __tasks_panel extends LetcBox {
 
       case "create-assignee":
         if (this._createDefaults) {
-          const uid = trigger.mget("memberUid") || null;
-          this._createDefaults.assignee_uid = uid;
-          this._pickerOpen = null;
-          this._applyAssigneeChange("create-assignee", uid);
+          this._createDefaults.assignees = this._toggleAssignee(
+            this._createDefaults.assignees,
+            trigger.mget("memberUid"),
+          );
+          this._applyAssigneeChange("create-assignee", this._createDefaults.assignees);
         }
         return;
 
@@ -296,10 +303,11 @@ class __tasks_panel extends LetcBox {
 
       case "set-assignee":
         if (this._detailDraft) {
-          const uid = trigger.mget("memberUid") || null;
-          this._detailDraft.assignee_uid = uid;
-          this._pickerOpen = null;
-          this._applyAssigneeChange("detail-assignee", uid);
+          this._detailDraft.assignees = this._toggleAssignee(
+            this._detailDraft.assignees,
+            trigger.mget("memberUid"),
+          );
+          this._applyAssigneeChange("detail-assignee", this._detailDraft.assignees);
         }
         return;
 
@@ -427,6 +435,8 @@ class __tasks_panel extends LetcBox {
       const rows = await this.fetchService({
         service: SERVICE.task.list,
         hub_id: this._hubId,
+        nid: this._scopeNid,
+        include_unscoped: this._scopeIsRoot,
       });
       this._tasks = (Array.isArray(rows) ? rows : []).map(this._normalizeTask);
     } catch (err) {
@@ -448,6 +458,19 @@ class __tasks_panel extends LetcBox {
           : Array.isArray(row.label_ids)
             ? row.label_ids
             : [];
+    }
+
+    // Multi-assignee: server returns a comma-separated string of uids.
+    if (has("assignee_uids")) {
+      result.assignee_uids =
+        typeof row.assignee_uids === "string" && row.assignee_uids
+          ? row.assignee_uids.split(",").filter(Boolean)
+          : Array.isArray(row.assignee_uids)
+            ? row.assignee_uids
+            : [];
+    } else if (has("assignee_uid")) {
+      // Legacy single-assignee row (e.g. older broadcast payloads).
+      result.assignee_uids = row.assignee_uid ? [row.assignee_uid] : [];
     }
 
     if (has("linked_files")) {
@@ -523,7 +546,7 @@ class __tasks_panel extends LetcBox {
     const root = this.el && this.el.querySelector(".tasks-panel__create-modal");
     if (!root) return;
     const draft = this._createDefaults;
-    const title = root.querySelector('input[name="title"]');
+    const title = root.querySelector('[name="title"]');
     const desc = root.querySelector('textarea[name="description"]');
     const due = root.querySelector('input[name="due_date"]');
     if (title) draft.title = title.value || "";
@@ -536,7 +559,7 @@ class __tasks_panel extends LetcBox {
     const root = this.el && this.el.querySelector(".tasks-panel__detail-panel");
     if (!root) return;
     const draft = this._detailDraft;
-    const title = root.querySelector('input[name="title"]');
+    const title = root.querySelector('[name="title"]');
     const desc = root.querySelector('textarea[name="description"]');
     const due = root.querySelector('input[name="due_date"]');
     if (title) draft.title = title.value || "";
@@ -602,12 +625,13 @@ class __tasks_panel extends LetcBox {
       const raw = await this.postService({
         service: SERVICE.task.create,
         hub_id: this._hubId,
+        nid: this._scopeNid,
         title,
         description: description || null,
         status: draft.status || "todo",
         priority: draft.priority || "medium",
         due_date: dueRaw || null,
-        assignee_uid: draft.assignee_uid || null,
+        assignee_uids: Array.isArray(draft.assignees) ? draft.assignees : [],
       });
       const row = Array.isArray(raw) ? raw[0] : raw;
       if (row && row.id) {
@@ -734,13 +758,24 @@ class __tasks_panel extends LetcBox {
       );
     }
 
-    if ((draft.assignee_uid || null) !== (task.assignee_uid || null)) {
+    // Multi-assignee: send the full new set only when it differs (order-
+    // independent) from the task's current assignees.
+    const draftAssignees = Array.isArray(draft.assignees) ? draft.assignees : [];
+    const taskAssignees = Array.isArray(task.assignee_uids)
+      ? task.assignee_uids
+      : task.assignee_uid
+        ? [task.assignee_uid]
+        : [];
+    const sameAssignees =
+      draftAssignees.length === taskAssignees.length &&
+      [...draftAssignees].sort().join(",") === [...taskAssignees].sort().join(",");
+    if (!sameAssignees) {
       calls.push(
         this.postService({
           service: SERVICE.task.update_assignee,
           hub_id: this._hubId,
           id,
-          assignee_uid: draft.assignee_uid || null,
+          assignee_uids: draftAssignees,
         }).catch((err) =>
           console.error("[tasks_panel] task.update_assignee failed:", err),
         ),
@@ -828,7 +863,11 @@ class __tasks_panel extends LetcBox {
           due_date: task.due_date || "",
           status: task.status || "todo",
           priority: task.priority || "medium",
-          assignee_uid: task.assignee_uid || null,
+          assignees: Array.isArray(task.assignee_uids)
+            ? task.assignee_uids.slice()
+            : task.assignee_uid
+              ? [task.assignee_uid]
+              : [],
           labels: Array.isArray(task.label_ids) ? task.label_ids.slice() : [],
           // Files picked but not yet uploaded/linked — _commitDetail processes
           // these (upload missing nids, then link_file) on Update.
@@ -1308,22 +1347,42 @@ class __tasks_panel extends LetcBox {
     });
   }
 
-  _applyAssigneeChange(kind, uid) {
+  // Toggle a uid in/out of an assignee array (multi-select). An empty uid is
+  // the "Unassigned" row → clears the whole set.
+  _toggleAssignee(current, uid) {
+    const list = Array.isArray(current) ? current.slice() : [];
+    if (!uid) return [];
+    const i = list.indexOf(uid);
+    if (i >= 0) list.splice(i, 1);
+    else list.push(uid);
+    return list;
+  }
+
+  // Reflect the current assignee set in the picker rows + button, in place.
+  // The picker stays OPEN so the user can pick several members in a row.
+  _applyAssigneeChange(kind, assignees) {
     if (!this.el) return;
-    this._setPickerOpenInDom(kind, false);
+    const set = new Set((assignees || []).map(String));
     const picker = this._findPickerEl(kind);
     if (picker) {
-      const target = String(uid || "");
       picker.querySelectorAll(".tasks-panel__member-row").forEach((row) => {
-        row.dataset.active =
-          row.getAttribute("data-member-uid") === target ? "1" : "0";
+        const uid = row.getAttribute("data-member-uid") || "";
+        // The "Unassigned" row (uid === "") is active only when the set is empty.
+        row.dataset.active = uid
+          ? set.has(uid)
+            ? "1"
+            : "0"
+          : set.size
+            ? "0"
+            : "1";
       });
     }
     this.ensurePart(`${kind}-button`)
       .then((btn) => {
         if (!btn || btn.isDestroyed?.()) return;
-        btn.feed(require("./skeleton").buildAssigneeButtonContent(this, uid));
-        if (btn.el) btn.el.dataset.open = "0";
+        btn.feed(
+          require("./skeleton").buildAssigneeButtonContent(this, assignees),
+        );
       })
       .catch(() => {
         /* not mounted yet */
@@ -1359,7 +1418,7 @@ class __tasks_panel extends LetcBox {
     };
     if (this._creating && this._createDefaults) {
       const d = this._createDefaults;
-      setVal('.tasks-panel__create-modal input[name="title"]', d.title);
+      setVal('.tasks-panel__create-modal [name="title"]', d.title);
       setVal(
         '.tasks-panel__create-modal textarea[name="description"]',
         d.description,
@@ -1367,7 +1426,7 @@ class __tasks_panel extends LetcBox {
     }
     if (this._detailDraft) {
       const d = this._detailDraft;
-      setVal('.tasks-panel__detail-panel input[name="title"]', d.title);
+      setVal('.tasks-panel__detail-panel [name="title"]', d.title);
       setVal(
         '.tasks-panel__detail-panel textarea[name="description"]',
         d.description,

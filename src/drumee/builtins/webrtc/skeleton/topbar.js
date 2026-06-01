@@ -32,15 +32,55 @@ module.exports = function (_ui_) {
     content: "",
   }) : null;
 
+  // Chat toggle + unread badge — opens the slide-in team chat panel
+  // (handled by toggleMeetingChat). Team meetings only.
+  const chatBtn = isTeamMeeting ? Skeletons.Box.X({
+    className: `${pfx}__in-topbar-chat-wrap`,
+    kids: [
+      Skeletons.Button.Svg({
+        ico: "tchat",
+        service: _a.chat,
+        uiHandler: [_ui_],
+        className: `${pfx}__in-topbar-chat-btn`,
+        attrOpt: { title: LOCALE.CHAT },
+      }),
+      Skeletons.Note({
+        className: `${pfx}__in-topbar-chat-badge`,
+        sys_pn: "new-message",
+        state: 0,
+        content: "",
+      }),
+    ],
+  }) : null;
+
+  // Window close (X) — routes to the meeting's close/leave confirmation.
+  // Team-meeting only, so connect/dmz topbars keep their original controls.
+  const closeBtn = isTeamMeeting ? Skeletons.Button.Svg({
+    ico: "cross",
+    service: _a.close,
+    uiHandler: [_ui_],
+    className: `${pfx}__in-topbar-close`,
+    attrOpt: { title: LOCALE.CLOSE },
+  }) : null;
+
+  // `window__header` makes this bar the window's drag handle (setupInteract
+  // binds dragging to `.${fig.group}__header`). Scoped to the team meeting so
+  // connect/dmz/sharebox topbars are unchanged from before.
+  const headerClass = isTeamMeeting
+    ? `${pfx}__in-topbar window__header`
+    : `${pfx}__in-topbar`;
+
   return Skeletons.Box.X({
-    className: `${pfx}__in-topbar`,
+    className: headerClass,
     kids: [
       Skeletons.Image.Svg({ ico: "folder-meeting", className: `${pfx}__in-topbar-icon` }),
       Skeletons.Note({ className: `${pfx}__in-topbar-title`, content: name, sys_pn: "call-title" }),
       hostLabel,
       Skeletons.Note({ className: `${pfx}__in-topbar-timer`, content: "00:00", sys_pn: "elapsed-timer" }),
       Skeletons.Box.X({ className: `${pfx}__in-topbar-avatars`, sys_pn: "topbar-avatars" }),
+      chatBtn,
       dashboardBtn,
+      closeBtn,
     ].filter(Boolean),
   });
 };
