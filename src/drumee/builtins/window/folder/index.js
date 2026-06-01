@@ -751,9 +751,12 @@ class __window_folder extends mfsInteract {
           // the next-topmost window and our _syncWorkspaceFocus rewires
           // globals; resetting workspace-main would clear the sidebar
           // highlight that the surviving tab is about to claim.
+          // Headless workspace windows live in headlessLayer, never
+          // windowsLayer (see wm/index.js _findWorkspaceWindow) — count
+          // surviving sibling tabs there.
           let remaining = 0;
-          if (Wm && Wm.windowsLayer && Wm.windowsLayer.children) {
-            for (const c of Wm.windowsLayer.children.toArray()) {
+          if (Wm && Wm.headlessLayer && Wm.headlessLayer.children) {
+            for (const c of Wm.headlessLayer.children.toArray()) {
               if (!c || c === this || c.isDestroyed()) continue;
               if (c.mget(_a.kind) !== "window_folder") continue;
               if (!c.mget(_a.headless)) continue;
