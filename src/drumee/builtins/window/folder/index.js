@@ -268,12 +268,13 @@ class __window_folder extends mfsInteract {
   }
 
   // Apply filename — or hub_name for an empty-filename root — to the title.
+  // Uses the bound ref directly (NOT ensurePart): calling ensurePart for a part
+  // from within its own onPartReady replays onPartReady and loops forever.
   _syncWindowTitle() {
     const name = this.mget(_a.filename) || this.model.get("hub_name");
     if (!name) return;
-    this.ensurePart("ref-window-name").then((p) => {
-      if (p && _.isFunction(p.set)) p.set({ content: name });
-    });
+    const t = this.__refWindowName || this.name;
+    if (t && _.isFunction(t.set)) t.set({ content: name });
   }
 
 
@@ -496,8 +497,11 @@ class __window_folder extends mfsInteract {
     if (super.onPartReady) super.onPartReady(child, pn);
     if (pn === "ref-window-name") {
       // core's handler clears the title; restore it from the model (an empty-
-      // filename workspace root takes its name from hub_name).
-      this._syncWindowTitle();
+      // filename workspace root takes its name from hub_name). Set `child`
+      // DIRECTLY — calling ensurePart for this part here would replay
+      // onPartReady and loop forever.
+      const name = this.mget(_a.filename) || this.model.get("hub_name");
+      if (name && _.isFunction(child.set)) child.set({ content: name });
     }
   }
 
