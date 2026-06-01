@@ -580,12 +580,20 @@ class __window_folder extends mfsInteract {
       // get_path returns the full root→current chain INCLUDING the current node.
       // Convention: the current location is the title, only ancestors are
       // crumbs. Drop the current node so the root isn't rendered as a crumb (nor
-      // duplicated when the first forward navigation re-pushes it).
-      const curNid = this.mget(_a.nid);
-      // Persist the workspace name; _syncWindowTitle applies it to the title.
+      // duplicated when the first forward navigation re-pushes it). A
+      // hub/workspace ROOT window's active directory is its actual_home_id, not
+      // the model nid (mirrors desk/breadcrumb's hub normalization); without it
+      // the root entry isn't matched and renders as a crumb beside the title.
+      let curNid = this.mget(_a.nid);
+      if (this.mget(_a.filetype) === _a.hub && this.mget(_a.actual_home_id)) {
+        curNid = this.mget(_a.actual_home_id);
+      }
+      // Persist the workspace name — hub_name/name ONLY. get_path gives the root
+      // a "/" filename, which must not overwrite the name seeded in
+      // loadWorkspace (that would revert the title/root label back to "/").
       const here = stack.find((s) => s && s.nid != null && s.nid == curNid);
-      const hereName = here && (here.hub_name || here.filename || here.name);
-      if (hereName) this.mset({ hub_name: hereName });
+      const hereName = here && (here.hub_name || here.name);
+      if (hereName && hereName !== "/") this.mset({ hub_name: hereName });
       // get_path ancestors carry identity only, not the hub-wide fetch context
       // (token/usePid/actual_home_id/vhost) which is identical across the hub.
       // Stamp the current window's values so a crumb click can reload a
