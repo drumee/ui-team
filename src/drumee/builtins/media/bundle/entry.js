@@ -70,7 +70,7 @@ function computeSize(entries) {
   return total;
 }
 
-/** Total bytes across a forest of roots. */
+/** Total bytes across a forest of roots. Note: re-runs computeSize, which mutates each folder.size. */
 function countSize(roots) { return computeSize(roots); }
 
 /**
@@ -109,14 +109,12 @@ async function entriesFromDataTransfer(transfer) {
       const reader = entry.createReader();
       const dirPrefix = prefix + entry.name + "/";
       const all = [];
+      const finish = () => Promise.all(all.map((c) => walk(c, dirPrefix))).then(() => resolve());
       const readBatch = () => reader.readEntries((batch) => {
-        if (!batch.length) {
-          Promise.all(all.map((c) => walk(c, dirPrefix))).then(() => resolve());
-          return;
-        }
+        if (!batch.length) { finish(); return; }
         all.push(...batch);
         readBatch();
-      }, () => resolve());
+      }, finish);   // on error: still walk what we already read, then resolve
       readBatch();
       return;
     }
