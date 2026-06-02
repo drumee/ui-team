@@ -696,7 +696,8 @@ class __media_core extends DrumeeMFS {
     let svc = SERVICE.media.get_node_attr;
     let opt = { ...this._uploadBase };
     let attr;
-    if (opt.relpath) {
+    if (opt.relpath || opt.nid) {
+      // relpath (legacy) OR nid (make_dir-first): refresh the adopted top folder.
       attr = await this.postService(svc, opt);
       if (attr) {
         attr.kind = this._getKind();
@@ -896,14 +897,6 @@ class __media_core extends DrumeeMFS {
      * already the renamed dir). In those two cases the destination nid is root.
      */
     const createTop = !newDir && !merge;
-    /**
-     * Adopt = the normal placeholder case only: a throwaway placeholder widget
-     * BECOMES the created folder and re-renders. uploadInplace also creates a
-     * top but `this` is the real container — it must stay as-is — so it never
-     * adopts (it passes no updateOnComplete).
-     */
-    const adopt = createTop && updateOnComplete;
-
     this.emptyFolders = [];
 
     let rootNid;
@@ -919,28 +912,17 @@ class __media_core extends DrumeeMFS {
       }
       rootNid = top.nid != null ? top.nid : top.home_id;
 
+      /**
+       * Adoption is DEFERRED to afterUpload (refresh-by-nid). Do NOT restart
+       * `this` here: a mid-flight restart re-renders the widget and clobbers the
+       * uploader child created below, so files never upload. The created top is
+       * not broadcast-added on this client (make_dir echoId matches -> newContent
+       * skips), so deferring adoption causes no duplicate.
+       * No `relpath` on _uploadBase -> afterUpload refreshes by nid (shared-hub
+       * safe) and skips the empty-folder loop.
+       */
       if (updateOnComplete) {
-        /** No relpath -> afterUpload skips the get_node_attr/empty-folder loop */
         this._uploadBase = { hub_id, nid: rootNid };
-      }
-
-      if (adopt) {
-        /**
-         * Re-entrancy guard: clear the `folder` (and `file`) attr AFTER set so
-         * a stray folder/file key in the make_dir response cannot silently undo
-         * the guard. set() first, then unset() before restart().
-         */
-        /** Become the created folder, then restart to re-render. */
-        this.model.set({
-          ...top,
-          actual_home_id: top.home_id,
-          kind: this._getKind(),
-          service: OPEN_NODE,
-          uiHandler: this.mget(_a.uiHandler),
-        });
-        this.model.unset(_a.folder);
-        this.model.unset(_a.file);
-        this.restart("media:created");
       }
     } else {
       rootNid = nid;
@@ -2334,6 +2316,12 @@ class __media_core extends DrumeeMFS {
           if (this._progress) this._progress.setLabel(LOCALE.PREPARING);
         }
         break;
+      case SERVICE.media.make_dir:
+      case SERVICE.media.get_node_attr:
+        // Consumed via the postService() return value (folder creation during
+        // make_dir-first folder upload / node refresh) — no REST-dispatch action
+        // needed. Explicit no-op avoids the "unexpected service" console noise.
+        return;
       case null:
       case undefined:
       default:
