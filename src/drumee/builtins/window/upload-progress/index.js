@@ -1418,26 +1418,9 @@ class __window_upload_progress extends __window_core {
    */
   onPartReady(child, pn) {
     if (pn === "fileselector") {
-      // files picker change -> add as root files
-      child.el.querySelector("input").onchange = (e) => {
-        const roots = this._bundleEntry.entriesFromFileList(e.target.files);
-        this._addToBundle(roots);
-        e.target.value = "";
-      };
-      // build a sibling folder picker once
-      if (!this._dirInput) {
-        const inp = document.createElement("input");
-        inp.type = "file"; inp.webkitdirectory = true; inp.multiple = true;
-        inp.style.display = "none";
-        inp.onchange = (e) => {
-          const roots = this._bundleEntry.entriesFromFileList(e.target.files);
-          this._addToBundle(roots);
-          e.target.value = "";
-        };
-        child.el.appendChild(inp);
-        this._dirInput = inp;
-        this._filesInput = child.el.querySelector("input");
-      }
+      // Store the FileSelector widget; its <input> is created later in onDomRefresh,
+      // so we trigger it via its own open() API on demand (see onUiEvent add-files).
+      this._fileSelector = child;
       return;
     }
     if (pn === "staging") {
@@ -1453,6 +1436,22 @@ class __window_upload_progress extends __window_core {
       return;
     }
     if (super.onPartReady) super.onPartReady(child, pn);
+  }
+
+  _ensureDirInput() {
+    if (!this._dirInput) {
+      const inp = document.createElement("input");
+      inp.type = "file"; inp.webkitdirectory = true; inp.multiple = true;
+      inp.style.display = "none";
+      inp.onchange = (e) => {
+        const roots = this._bundleEntry.entriesFromFileList(e.target.files);
+        this._addToBundle(roots);
+        e.target.value = "";
+      };
+      this.el.appendChild(inp);
+      this._dirInput = inp;
+    }
+    return this._dirInput;
   }
 
   _addToBundle(roots) {
@@ -1478,7 +1477,6 @@ class __window_upload_progress extends __window_core {
     this.ensurePart("staging-summary").then((p) =>
       p.set({ content: `${fileCount} ${LOCALE.FILES || "files"} · ${filesize(total)}` }));
     this.ensurePart("staging-list").then((list) => {
-      if (list.empty) list.empty();
       list.feed(this._stagingRows(this._bundle, 0));
     });
   }
@@ -1512,6 +1510,7 @@ class __window_upload_progress extends __window_core {
   }
 
   _startBundle() {
+    if (this._uploading) return;
     if (!this._bundle.length) return;
     const target = this._targetWindow;
     const destNid = target ? target.getCurrentNid() : Visitor.get(_a.home_id);
@@ -1524,18 +1523,17 @@ class __window_upload_progress extends __window_core {
       return;
     }
 
-    // Bulk conflict policy decided up-front via the staging toggle (§5.6):
-    //   _replaceExisting OFF -> "rename" (server appends timestamp on dup names)
-    //   _replaceExisting ON  -> "replace" (server overwrites)
     const resolution = {
       mode: this._replaceExisting ? "replace" : "rename",
       skip: new Set(),
     };
 
     const job = this._bundleManager.create({ entries: this._bundle, destNid, hub_id, resolution });
-    this._attachJob(job);
+    this._attachJob(job);            // subscribe BEFORE the job starts (manager.pump)
+    this._uploading = true;
     this._phase = "progress";
     this._switchToProgress();
+    this._bundleManager.pump();      // now start; first events are captured
   }
 
   _attachJob(job) {
@@ -1562,14 +1560,15 @@ class __window_upload_progress extends __window_core {
     this.ensurePart("agg-fill").then((p) => { if (p.el) p.el.style.width = pct + "%"; });
     const rate = this._bundleManager.governor.currentRate();
     const mbps = (rate / (1024 * 1024)).toFixed(1);
+    const remaining = Math.max(0, this._job.bytesTotal - this._job.bytesDone);
+    const etaSuffix = (rate > 0 && remaining > 0) ? ` · ~${Math.ceil(remaining / rate)}s` : "";
     this.ensurePart("agg-text").then((p) => p.set({
-      content: `${pct}% · ${filesize(this._job.bytesDone)}/${filesize(this._job.bytesTotal)} · ${mbps} MB/s`,
+      content: `${pct}% · ${filesize(this._job.bytesDone)}/${filesize(this._job.bytesTotal)} · ${mbps} MB/s${etaSuffix}`,
     }));
   }
 
   _renderProgressList() {
     this.ensurePart("file-list").then((list) => {
-      if (list.empty) list.empty();
       list.feed(this._progressRows(this._bundle, 0));
     });
   }
@@ -1593,6 +1592,7 @@ class __window_upload_progress extends __window_core {
   }
 
   _onBundleDone(canceled) {
+    this._uploading = false;
     this._renderAggregate();
     this._renderProgressList();
     // refresh target folder view so new nodes appear (reuse existing reload if available)
@@ -1634,11 +1634,23 @@ class __window_upload_progress extends __window_core {
     }
 
     // ---- bundle staging events (return early; others fall through to existing handling) ----
-    if (service === "add-files") { this._filesInput && this._filesInput.click(); return; }
-    if (service === "add-folder") { this._dirInput && this._dirInput.click(); return; }
+    if (service === "add-files") {
+      if (this._fileSelector && this._fileSelector.open) {
+        this._fileSelector.open((e) => {
+          const roots = this._bundleEntry.entriesFromFileList(e.target.files);
+          this._addToBundle(roots);
+        });
+      }
+      return;
+    }
+    if (service === "add-folder") { this._ensureDirInput().click(); return; }
     if (service === "upload-all") { this._startBundle(); return; }
     if (service === "clear-bundle") { this._bundle = []; this._renderStaging(); return; }
-    if (service === "toggle-replace") { this._replaceExisting = !this._replaceExisting; return; }
+    if (service === "toggle-replace") {
+      this._replaceExisting = !this._replaceExisting;
+      if (cmd && cmd.setState) cmd.setState(this._replaceExisting ? 1 : 0);
+      return;
+    }
     if (service && service.indexOf("remove:") === 0) {
       this._removeFromBundle(service.slice(7)); return;
     }

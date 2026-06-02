@@ -17,19 +17,20 @@ class _BundleManager {
   queuedCount() { return this._queue.length; }
 
   /**
+   * Create a job and queue it. Does NOT start it — caller must attach listeners
+   * then call pump(), so the first events (activated/progress) are not missed.
    * @param {object} spec { entries, destNid, hub_id, resolution }
-   * @returns {BundleJob} the created job (status "active" or "queued")
+   * @returns {BundleJob}
    */
   create(spec) {
     const job = new BundleJob({ ...spec, governor: this.governor });
     job.state = "queued";
     job.once("done", () => this._onJobDone(job));
     this._queue.push(job);
-    this._pump();
     return job;
   }
 
-  _pump() {
+  pump() {
     while (this._active.size < MAX_JOBS && this._queue.length) {
       const job = this._queue.shift();
       this._active.add(job);
@@ -43,7 +44,7 @@ class _BundleManager {
     this._active.delete(job);
     const i = this._queue.indexOf(job);
     if (i >= 0) this._queue.splice(i, 1);
-    this._pump();
+    this.pump();
   }
 }
 

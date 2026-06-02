@@ -98,7 +98,7 @@ async function entriesFromDataTransfer(transfer) {
       // size unknown until .file(); fetch it for accurate totals
       entry.file((f) => {
         if (!IGNORED_FILES.test(entry.name)) {
-          items.push({ relpath: prefix + entry.name, size: f.size, source: entry });
+          items.push({ relpath: prefix + entry.name, size: f.size, source: f });
         }
         resolve();
       }, () => resolve());

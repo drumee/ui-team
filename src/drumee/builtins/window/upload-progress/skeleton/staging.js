@@ -34,9 +34,9 @@ module.exports = function staging(ui) {
       // Bulk conflict policy chosen UP-FRONT (frontend-only, no name enumeration needed):
       // toggle OFF (default) = keep both (server appends timestamp); ON = replace existing.
       Skeletons.Button.Label({
-        className: `${pfx}__replace-toggle`, ico: "refresh",
+        className: `${pfx}__replace-toggle`, ico: "refresh-view",
         label: LOCALE.REPLACE_EXISTING || "Replace existing files",
-        radiotoggle: 1, initialState: 0,
+        state: 0,
         service: "toggle-replace", uiHandler: [ui],
       }),
       Skeletons.Box.X({
