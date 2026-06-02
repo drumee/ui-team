@@ -256,7 +256,10 @@ class ___window_move extends mfsInteract {
   }
 
   _normalizeWorkspace(ws = {}) {
-    const nid = ws.home_id || ws.actual_home_id || ws.nid || ws.id || ws.hub_id;
+    // Per-workspace home node id. actual_home_id is the distinct root nid of
+    // each hub; home_id is the visitor's shared home and must not win here
+    // (same field priority as the sidebar's workspace-item.getNodeId).
+    const nid = ws.actual_home_id || ws.home_id || ws.nid || ws.id || ws.hub_id;
     const hub_id = ws.hub_id || ws.id;
     return {
       nid,
