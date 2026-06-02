@@ -17,13 +17,14 @@ class ThroughputGovernor {
   }
 
   report(bytes) {
-    if (!bytes || bytes <= 0) return;
-    this._samples.push({ t: now(), bytes });
-    this._trim();
+    if (!(bytes > 0)) return;
+    const t = now();
+    this._samples.push({ t, bytes });
+    this._trim(t);
   }
 
-  _trim() {
-    const cutoff = now() - WINDOW_MS;
+  _trim(t = now()) {
+    const cutoff = t - WINDOW_MS;
     while (this._samples.length && this._samples[0].t < cutoff) this._samples.shift();
   }
 
@@ -35,14 +36,15 @@ class ThroughputGovernor {
     return sum * (1000 / WINDOW_MS);
   }
 
-  /** Resolve when current rate is below the cap (approximate, file-granularity). */
+  /** Resolve when current rate is below the cap (approximate, file-granularity).
+   *  Returns true if the 30s starvation guard fired (still over cap on resolve). */
   async gateBeforeFile() {
-    // Hard guard against starvation: cap total wait per file at ~30s.
     let waited = 0;
     while (this.currentRate() >= this._max && waited < 30000) {
       await sleep(POLL_MS);
       waited += POLL_MS;
     }
+    return waited >= 30000;
   }
 }
 
