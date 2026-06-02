@@ -155,6 +155,8 @@
   "CURRENT_LOCATION": "Current location:",
   "SELECT_DESTINATION": "Select a location to display the folder path",
   "SEARCH_WORKSPACE_OR_FOLDER": "Search workspace or folder to add...",
+  "SELECT_THIS_FOLDER": "Select this folder",
+  "MOVE_FAILED": "Could not move to the selected destination.",
   "ORGANIZE": "Organize",
   "MAKE_A_COPY": "Make a copy",
   "LINK_TO_TASK_TRACKER": "Link to task tracker",
