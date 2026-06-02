@@ -53,7 +53,6 @@ class __bundle_job extends LetcBox {
     entry.error = null;
     const parentNid = (entry._parentNid != null) ? entry._parentNid : this._destNid;
     await this._uploadEntry(entry, parentNid);
-    this.trigger("file-done", { job: this, entry, retried: true });
   }
 
   async _uploadEntry(entry, destNid) {

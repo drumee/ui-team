@@ -542,6 +542,14 @@
   // Error state for progress rows
   &__progress-row[data-status="error"] &__progress-state { color: #d33; }
 
+  &__progress-retry {
+    cursor: pointer;
+    color: #FA8540;
+    font-size: 12px;
+    margin-left: 8px;
+    &:hover { text-decoration: underline; }
+  }
+
   // Remove button
   &__staging-remove { cursor: pointer; opacity: .6; }
 }
