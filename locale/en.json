@@ -213,6 +213,7 @@
   "REMOVE": "Remove",
   "RENAME": "Rename",
   "REPLACE": "Replace",
+  "RETRY": "Retry",
   "REQUIRE_EMAIL": "A valid email address is required",
   "REQUIRE_IDENT": "Alphanumeric, at least 2 characters",
   "REQUIRE_THAT_FIELD": "{0} required",

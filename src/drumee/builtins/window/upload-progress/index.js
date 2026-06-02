@@ -1513,8 +1513,16 @@ class __window_upload_progress extends __window_core {
     if (this._uploading) return;
     if (!this._bundle.length) return;
     const target = this._targetWindow;
-    const destNid = target ? target.getCurrentNid() : Visitor.get(_a.home_id);
-    const hub_id = target ? target.mget(_a.hub_id) : Visitor.get(_a.id);
+    let destNid = (target && typeof target.getCurrentNid === "function") ? target.getCurrentNid() : null;
+    let hub_id = (target && typeof target.mget === "function") ? target.mget(_a.hub_id) : null;
+    if (destNid == null) {                       // no real folder/hub target (e.g. WM is active)
+      destNid = Visitor.get(_a.home_id);
+      hub_id = hub_id != null ? hub_id : Visitor.get(_a.id);
+    }
+    if (destNid == null) {
+      Butler.say(LOCALE.WRONG_DROP_AREA || "Please open a folder to upload into");
+      return;
+    }
 
     // Quota guard: total bundle bytes vs free disk (spec §5.8)
     const total = this._bundleEntry.countSize(this._bundle);
@@ -1579,12 +1587,20 @@ class __window_upload_progress extends __window_core {
     for (const e of entries) {
       const label = e.kind === "folder" && e.status === "creating"
         ? (LOCALE.CREATING_FOLDER || "Creating folder…") : (e.status || "queued");
+      const kids = [
+        Skeletons.Note({ className: `${pfx}__progress-name`, content: e.name }),
+        Skeletons.Note({ className: `${pfx}__progress-state`, content: label }),
+      ];
+      if (e.status === "error") {
+        kids.push(Skeletons.Note({
+          className: `${pfx}__progress-retry`,
+          content: LOCALE.RETRY || "Retry",
+          service: `retry:${e.id}`, uiHandler: [this],
+        }));
+      }
       rows.push(Skeletons.Box.X({
         className: `${pfx}__progress-row`, dataset: { kind: e.kind, status: e.status, depth },
-        kids: [
-          Skeletons.Note({ className: `${pfx}__progress-name`, content: e.name }),
-          Skeletons.Note({ className: `${pfx}__progress-state`, content: label }),
-        ],
+        kids,
       }));
       if (e.kind === "folder" && e.children.length) rows.push(...this._progressRows(e.children, depth + 1));
     }
@@ -1610,6 +1626,22 @@ class __window_upload_progress extends __window_core {
     };
     prune(this._bundle);
     this._renderStaging();
+  }
+
+  _retryEntry(id) {
+    if (!this._job) return;
+    const find = (list) => {
+      for (const e of list) {
+        if (e.id === id) return e;
+        if (e.kind === "folder") { const r = find(e.children); if (r) return r; }
+      }
+      return null;
+    };
+    const entry = find(this._bundle);
+    if (!entry || entry.status !== "error") return;
+    entry.status = "queued";
+    this._renderProgressList();
+    this._job.retry(entry).then(() => { this._renderAggregate(); this._renderProgressList(); });
   }
 
   /**
@@ -1654,6 +1686,7 @@ class __window_upload_progress extends __window_core {
     if (service && service.indexOf("remove:") === 0) {
       this._removeFromBundle(service.slice(7)); return;
     }
+    if (service && service.indexOf("retry:") === 0) { this._retryEntry(service.slice(6)); return; }
 
     switch (service) {
       case _e.close:

@@ -46,8 +46,19 @@ class __bundle_job extends LetcBox {
     if (this._currentXhr && this._currentXhr.abort) this._currentXhr.abort();
   }
 
+  /** Manually re-run a single failed entry (file or folder) into its stored parent nid. */
+  async retry(entry) {
+    if (this._canceled || !entry) return;
+    this._retried[entry.id] = 0;          // fresh auto-retry budget for this attempt
+    entry.error = null;
+    const parentNid = (entry._parentNid != null) ? entry._parentNid : this._destNid;
+    await this._uploadEntry(entry, parentNid);
+    this.trigger("file-done", { job: this, entry, retried: true });
+  }
+
   async _uploadEntry(entry, destNid) {
     if (this._canceled) return;
+    entry._parentNid = destNid;
     if (entry.kind === "file") {
       if (this._resolution.skip.has(entry.relpath)) {
         entry.status = "skipped";
