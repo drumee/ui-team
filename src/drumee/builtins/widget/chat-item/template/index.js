@@ -49,13 +49,13 @@ module.exports = function (ui) {
   // Read-receipt avatar row — populated imperatively by chat-item.renderReaders()
   // from metadata._seen_ (the accumulating {uid: ts} reader map the server sends).
   const readers = `<div id="readers-${m.widgetId}" class="${m.fig}__readers ${m.author}" data-empty="1"></div>`;
-  // Time (footer) + bubble share one vertically-centred row. Incoming: time
-  // left of the bubble; own: time right (the row is reversed in CSS). The hover
-  // action bar floats on the opposite, outer side.
-  const line = `<div class="${m.fig}__message-line ${m.author}">${body}${footer}</div>`;
-  // readers sit in flow below the line so they're always visible (never covered
-  // or clipped by the message box / neighbouring messages).
-  let content = `<div id="content-${m.widgetId}" class="${m.fig}__message-content ${m.author}">${usernameHtml}${line}${readers}</div>`;
+  // The bubble sits alone on the line; the hover action bar floats on the outer
+  // side (appended into the line on hover — see chat-item._hover).
+  const line = `<div class="${m.fig}__message-line ${m.author}">${body}</div>`;
+  // Footer (date + seen tick) and readers both sit in flow below the line so
+  // they're always visible (never hover-gated, covered, or clipped by the
+  // message box / neighbouring messages).
+  let content = `<div id="content-${m.widgetId}" class="${m.fig}__message-content ${m.author}">${usernameHtml}${line}${footer}${readers}</div>`;
   html = `${avatar}${content}`;
   return html;
 };
