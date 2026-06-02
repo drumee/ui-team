@@ -248,15 +248,16 @@ class apps_main extends LetcBox {
     this._activeWorkspace = null;
     this._wsDetailPage = 1;
     this._editingFolder = null;
-    // Security tab: UI-only state (no backend wiring yet).
     this._securityPlan = "normal"; // "normal" | "self-hosting"
     this._security2fa = {
-      authenticator: true,
+      authenticator: false,
       passkeys: false,
-      hardware: true,
+      hardware: false,
     };
     this._securitySso = { okta: false, google: false, azure: false };
     this._securityTags = {};
+    this._securityTabLoaded = false;
+    this._securityTabState = "idle"; // "idle" | "loading" | "loaded"
     this._editingHub = null; // Access-control overlay (Security tab pencil)
     this._secCtrl = null;
     this._fpermMembers = [];
@@ -1096,22 +1097,186 @@ class apps_main extends LetcBox {
   }
 
   // Security tab needs the workspace list (admins load it at boot; owners
-  // don't, so fetch lazily on first entry).
+  // don't, so fetch lazily on first entry). Also loads TFA/SSO settings and
+  // per-hub security tags from the backend on the first visit.
   async _bootstrapSecurityTab() {
     if (this._adminHubsState === "loading") return;
     if (!this._adminHubs.length && this._adminHubsState !== "loaded") {
       await this._loadAdminHubs();
       this._render();
     }
+    if (!this._securityTabLoaded && this._securityTabState !== "loading") {
+      await this._loadSecurityTabData();
+      this._render();
+    }
+  }
+
+  async _loadSecurityTabData() {
+    this._securityTabState = "loading";
+    // Load TFA/SSO settings from organisation.metadata
+    try {
+      const settings = await this.postService(SERVICE.admin.get_security_settings, {});
+      if (settings && !settings.__status) {
+        this._security2fa = {
+          authenticator: !!settings.tfa_app,
+          passkeys:      !!settings.tfa_sms,
+          hardware:      !!settings.tfa_key,
+        };
+        this._securitySso = {
+          okta:   !!settings.sso_okta,
+          google: !!settings.sso_google,
+          azure:  !!settings.sso_azure,
+        };
+      }
+    } catch (_) {}
+    // Load per-hub security tags and root nids
+    try {
+      const wsData = await this.postService(SERVICE.admin.get_workspace_security, {});
+      const rows = Array.isArray(wsData) ? wsData : (wsData && wsData.data) || [];
+      rows.forEach((w) => {
+        if (!w.hub_id) return;
+        this._securityTags[w.hub_id] = {
+          ipgeo:   !!w.ipgeo,
+          vpn:     !!w.vpn,
+          onetime: !!w.onetime,
+          managed: !!w.managed,
+        };
+        // Cache root_nid on the hub row so the AC overlay can call
+        // get_folder_permissions without a separate round-trip.
+        const hub = (this._adminHubs || []).find((h) => h.hub_id === w.hub_id);
+        if (hub) hub.root_nid = w.root_nid || null;
+      });
+    } catch (_) {}
+    this._securityTabLoaded = true;
+    this._securityTabState = "loaded";
+  }
+
+  // Load real folder-permission config for the hub root and merge it into
+  // _secCtrl. Called after the overlay is already rendered with defaults so
+  // the user sees the modal immediately, then fields populate.
+  async _loadHubAccessControl(hubId, rootNid) {
+    if (!rootNid) {
+      if (this._secCtrl) { this._secCtrl.loading = false; this._render(); }
+      return;
+    }
+    try {
+      const data = await this.postService(SERVICE.admin.get_folder_permissions, {
+        hub_id: hubId,
+        nid:    rootNid,
+      });
+      if (!this._secCtrl) return; // overlay was closed during the async call
+      const cfg = data || {};
+      if (cfg.mode) this._secCtrl.mode = cfg.mode;
+      if (typeof cfg.geo_on   === "boolean") this._secCtrl.geoOn  = cfg.geo_on;
+      if (typeof cfg.vpn_on   === "boolean") this._secCtrl.vpnOn  = cfg.vpn_on;
+      if (typeof cfg.time_on  === "boolean") this._secCtrl.timeOn = cfg.time_on;
+      if (typeof cfg.auto_revoke === "boolean") this._secCtrl.autoOn = cfg.auto_revoke;
+      if (cfg.auto_revoke_minutes != null) this._secCtrl.autoMins = cfg.auto_revoke_minutes;
+      if (typeof cfg.one_time === "boolean") this._secCtrl.oneTimeOn = cfg.one_time;
+      if (cfg.one_time_url) this._secCtrl.oneTimeUrl = cfg.one_time_url;
+      if (cfg.allowed_country != null) this._secCtrl.allowedCountry = cfg.allowed_country;
+      if (cfg.blocked_country != null) this._secCtrl.blockedCountry = cfg.blocked_country;
+      if (cfg.days)       this._secCtrl.days      = cfg.days;
+      if (cfg.start_time) this._secCtrl.startTime = cfg.start_time;
+      if (cfg.end_time)   this._secCtrl.endTime   = cfg.end_time;
+      if (Array.isArray(cfg.members)) this._secCtrl.members = cfg.members;
+      if (Array.isArray(cfg.devices)) this._secCtrl.devices = cfg.devices;
+    } catch (e) {
+      this.warn && this.warn("_loadHubAccessControl failed", e);
+    }
+    if (this._secCtrl) this._secCtrl.loading = false;
+    this._render();
+  }
+
+  // Load one page of hub audit log entries into _secCtrl.auditEntries.
+  async _loadHubAuditLogs() {
+    if (!this._secCtrl || !this._editingHub) return;
+    this._secCtrl.auditLoading = true;
+    this._render();
+    try {
+      const res = await this.postService(SERVICE.admin.get_hub_audit_logs, {
+        hub_id: this._editingHub.id,
+        page:   this._secCtrl.auditPage || 1,
+      });
+      if (!this._secCtrl) return;
+      const entries = Array.isArray(res) ? res : (res && res.data) || [];
+      const pageSize = this._secCtrl.auditPageSize || 25;
+      const page     = this._secCtrl.auditPage     || 1;
+      this._secCtrl.auditEntries = entries.map((e) => ({
+        id:       e.id,
+        firstname: e.firstname || "",
+        lastname:  e.lastname  || "",
+        fullname:  e.actor_name || [e.firstname, e.lastname].filter(Boolean).join(" "),
+        email:     e.email || "",
+        avatar:    e.uid ? "dark" : "neutral",
+        ts: e.ctime
+          ? (typeof Dayjs !== "undefined"
+              ? Dayjs.unix(e.ctime).format("MMM DD, YYYY - HH:mm:ss")
+              : String(e.ctime))
+          : "",
+      }));
+      // If a full page came back there are likely more; if partial, this is
+      // the last page. Either way the paginator stays meaningful.
+      if (entries.length >= pageSize) {
+        this._secCtrl.auditTotal = Math.max(
+          this._secCtrl.auditTotal || 0,
+          page * pageSize + 1
+        );
+      } else {
+        this._secCtrl.auditTotal = (page - 1) * pageSize + entries.length;
+      }
+    } catch (e) {
+      this.warn && this.warn("get_hub_audit_logs failed", e);
+      if (this._secCtrl) this._secCtrl.auditEntries = [];
+    }
+    if (this._secCtrl) this._secCtrl.auditLoading = false;
+    this._render();
+  }
+
+  async _generateHubOtl() {
+    if (!this._secCtrl || !this._editingHub) return;
+    const rootNid = this._editingHub.root_nid;
+    if (!rootNid) return;
+    try {
+      const res = await this.postService(SERVICE.admin.generate_folder_otl, {
+        hub_id: this._editingHub.id,
+        nid:    rootNid,
+      });
+      if (!this._secCtrl) return;
+      const url = (res && (res.url || res.one_time_url || "")) || "";
+      if (url) this._secCtrl.oneTimeUrl = url;
+      this._render();
+    } catch (e) {
+      if (this._secCtrl) { this._secCtrl.oneTimeOn = false; this._render(); }
+      this.warn && this.warn("generate_folder_otl failed", e);
+    }
+  }
+
+  async _revokeHubOtl() {
+    if (!this._secCtrl || !this._editingHub) return;
+    const rootNid = this._editingHub.root_nid;
+    if (!rootNid) return;
+    try {
+      await this.postService(SERVICE.admin.revoke_folder_otl, {
+        hub_id: this._editingHub.id,
+        nid:    rootNid,
+      });
+      if (!this._secCtrl) { return; }
+      this._secCtrl.oneTimeUrl = "";
+      this._render();
+    } catch (e) {
+      if (this._secCtrl) { this._secCtrl.oneTimeOn = true; this._render(); }
+      this.warn && this.warn("revoke_folder_otl failed", e);
+    }
   }
 
   _securityTagsFor(hubId) {
     if (!this._securityTags[hubId]) {
       this._securityTags[hubId] = {
-        ipgeo: true,
-        vpn: true,
-        onetime: true,
-        managed: true,
+        ipgeo:   false,
+        vpn:     false,
+        onetime: false,
+        managed: false,
       };
     }
     return this._securityTags[hubId];
@@ -1749,8 +1914,15 @@ class apps_main extends LetcBox {
       case "apps-security-toggle-sso": {
         const key = cmd.mget("security_sso_key");
         if (key && this._securitySso[key] != null) {
-          this._securitySso[key] = !this._securitySso[key];
+          const prev = this._securitySso[key];
+          this._securitySso[key] = !prev;
           this._render();
+          const backendKeyMap = { okta: "sso_okta", google: "sso_google", azure: "sso_azure" };
+          const bk = backendKeyMap[key];
+          if (bk) {
+            this.postService(SERVICE.admin["save-sso-settings"], { key: bk, value: !prev })
+              .catch(() => { this._securitySso[key] = prev; this._render(); });
+          }
         }
         return;
       }
@@ -1758,8 +1930,15 @@ class apps_main extends LetcBox {
       case "apps-security-toggle-2fa": {
         const key = cmd.mget("security_2fa_key");
         if (key && this._security2fa[key] != null) {
-          this._security2fa[key] = !this._security2fa[key];
+          const prev = this._security2fa[key];
+          this._security2fa[key] = !prev;
           this._render();
+          const backendKeyMap = { authenticator: "tfa_app", passkeys: "tfa_sms", hardware: "tfa_key" };
+          const bk = backendKeyMap[key];
+          if (bk) {
+            this.postService(SERVICE.admin["save-tfa-settings"], { key: bk, value: !prev })
+              .catch(() => { this._security2fa[key] = prev; this._render(); });
+          }
         }
         return;
       }
@@ -1780,52 +1959,51 @@ class apps_main extends LetcBox {
         const hubId = cmd.mget("hub_id");
         const h = (this._adminHubs || []).find((x) => x.hub_id === hubId);
         if (!h) return;
-        // Open the owner Access-control overlay (UI-only state).
         this._editingHub = {
-          id: h.hub_id,
-          name: h.hub_name || h.hub_id,
-          area: h.area || "private",
-          mtime: h.mtime,
-          updated: h.updated,
+          id:       h.hub_id,
+          name:     h.hub_name || h.hub_id,
+          area:     h.area || "private",
+          mtime:    h.mtime,
+          updated:  h.updated,
           filesize: h.filesize,
-          size: h.size,
+          size:     h.size,
+          root_nid: h.root_nid || null,
         };
         const tags = this._securityTags && this._securityTags[h.hub_id];
-        // "share" / "dmz" workspaces use the shared-mode layout (no Member
-        // Permissions; gains an Access Audit Log section). Everything else
-        // defaults to the restricted layout.
         const area = h.area || "private";
-        const mode =
-          area === "share" || area === "dmz" ? "shared" : "restricted";
+        const mode = area === "share" || area === "dmz" ? "shared" : "restricted";
         this._secCtrl = {
           mode,
-          geoOn: !!(tags && tags.ipgeo),
-          vpnOn: !!(tags && tags.vpn),
-          timeOn: false,
-          autoOn: false,
-          autoMins: 30,
-          oneTimeOn: !!(tags && tags.onetime),
-          oneTimeUrl: "drumee.com/s/pink-folder-2023-x92...",
+          loading:    true,
+          geoOn:      !!(tags && tags.ipgeo),
+          vpnOn:      !!(tags && tags.vpn),
+          timeOn:     false,
+          autoOn:     false,
+          autoMins:   30,
+          oneTimeOn:  !!(tags && tags.onetime),
+          oneTimeUrl: "",
           startTime: { hour: 9, minute: 0, period: "AM" },
-          endTime: { hour: 6, minute: 0, period: "PM" },
-          timePickerOpen: null, // null | "start" | "end"
-          // null | "start-hour" | "start-minute" | "end-hour" | "end-minute"
-          timeUnitOpen: null,
+          endTime:   { hour: 6, minute: 0, period: "PM" },
+          timePickerOpen:    null,
+          timeUnitOpen:      null,
           days: { mon: true, tue: true, wed: true, thu: true, fri: true },
-          allowedCountry: null,
-          blockedCountry: null,
-          countryPickerOpen: null, // null | "allowed" | "blocked"
-          countrySearch: "",
-          members: [],
-          devices: [],
-          // Access Audit Log drill-in (shared mode)
-          auditView: false,
-          auditOn: true,
-          auditPage: 1,
+          allowedCountry:    null,
+          blockedCountry:    null,
+          countryPickerOpen: null,
+          countrySearch:     "",
+          members:      [],
+          devices:      [],
+          auditView:    false,
+          auditOn:      true,
+          auditPage:    1,
           auditPageSize: 25,
-          auditTotal: 1460,
+          auditTotal:   0,
+          auditEntries: [],
+          auditLoading: false,
         };
-        return this._render();
+        this._render();
+        this._loadHubAccessControl(hubId, h.root_nid || null);
+        return;
       }
 
       case "apps-ac-close":
@@ -1853,10 +2031,18 @@ class apps_main extends LetcBox {
         this._secCtrl.autoOn = !this._secCtrl.autoOn;
         return this._render();
 
-      case "apps-ac-toggle-onetime":
+      case "apps-ac-toggle-onetime": {
         if (!this._secCtrl) return;
-        this._secCtrl.oneTimeOn = !this._secCtrl.oneTimeOn;
-        return this._render();
+        const wasOn = this._secCtrl.oneTimeOn;
+        this._secCtrl.oneTimeOn = !wasOn;
+        this._render();
+        if (!wasOn) {
+          this._generateHubOtl();
+        } else {
+          this._revokeHubOtl();
+        }
+        return;
+      }
 
       case "apps-ac-toggle-day": {
         if (!this._secCtrl) return;
@@ -1881,17 +2067,59 @@ class apps_main extends LetcBox {
         }
         return;
 
-      case "apps-ac-save":
+      case "apps-ac-save": {
+        if (!this._editingHub || !this._secCtrl) {
+          this._editingHub = null;
+          this._secCtrl = null;
+          return this._render();
+        }
+        const sc      = this._secCtrl;
+        const hubId   = this._editingHub.id;
+        const rootNid = this._editingHub.root_nid;
+        if (rootNid) {
+          this.postService(SERVICE.admin.save_folder_permissions, {
+            hub_id: hubId,
+            nid:    rootNid,
+            config: {
+              mode:                sc.mode,
+              geoOn:               sc.geoOn,
+              vpnOn:               sc.vpnOn,
+              timeOn:              sc.timeOn,
+              auto_revoke:         sc.autoOn,
+              auto_revoke_minutes: sc.autoMins,
+              // Preserve OTL state — folder_save_permissions replaces the
+              // entire fperm object (JSON_MERGE_PATCH at the key level), so
+              // omitting these would clear them from the stored metadata.
+              one_time:            sc.oneTimeOn,
+              one_time_url:        sc.oneTimeUrl || "",
+              allowedCountry:      sc.allowedCountry,
+              blockedCountry:      sc.blockedCountry,
+              days:                sc.days,
+              startTime:           sc.startTime,
+              endTime:             sc.endTime,
+            },
+          }).catch((e) => this.warn && this.warn("save_folder_permissions failed", e));
+        }
+        // Update the security-tag grid optimistically from the saved state.
+        this._securityTags[hubId] = {
+          ipgeo:   !!sc.geoOn,
+          vpn:     !!sc.vpnOn,
+          onetime: !!sc.oneTimeOn,
+          managed: !!(sc.devices && sc.devices.length),
+        };
         this._editingHub = null;
-        this._secCtrl = null;
+        this._secCtrl    = null;
         return this._render();
+      }
 
       case "apps-ac-view-audit":
         // Shared workspaces have their own in-modal Access Audit Log
         // drill-in; restricted workspaces fall back to the global Audit tab.
         if (this._secCtrl && this._secCtrl.mode === "shared") {
           this._secCtrl.auditView = true;
-          return this._render();
+          this._render();
+          this._loadHubAuditLogs();
+          return;
         }
         this._editingHub = null;
         this._secCtrl = null;
@@ -1900,7 +2128,9 @@ class apps_main extends LetcBox {
       case "apps-ac-open-audit":
         if (!this._secCtrl) return;
         this._secCtrl.auditView = true;
-        return this._render();
+        this._render();
+        this._loadHubAuditLogs();
+        return;
 
       case "apps-ac-back-from-audit":
         if (!this._secCtrl) return;
@@ -1916,7 +2146,7 @@ class apps_main extends LetcBox {
         if (!this._secCtrl) return;
         if (this._secCtrl.auditPage > 1) {
           this._secCtrl.auditPage -= 1;
-          this._render();
+          this._loadHubAuditLogs();
         }
         return;
 
@@ -1928,7 +2158,7 @@ class apps_main extends LetcBox {
         );
         if (this._secCtrl.auditPage < pageCount) {
           this._secCtrl.auditPage += 1;
-          this._render();
+          this._loadHubAuditLogs();
         }
         return;
       }

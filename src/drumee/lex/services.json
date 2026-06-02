@@ -116,7 +116,12 @@
     "get_file_versions": "admin.get_file_versions",
     "get_file_version_detail": "admin.get_file_version_detail",
     "delete_file_old_versions": "admin.delete_file_old_versions",
-    "download_file_versions": "admin.download_file_versions"
+    "download_file_versions": "admin.download_file_versions",
+    "get_workspace_security": "admin.get_workspace_security",
+    "get_security_settings": "adminpanel.get_security_settings",
+    "get_hub_audit_logs": "admin.get_hub_audit_logs",
+    "save-tfa-settings": "adminpanel.save_security_settings",
+    "save-sso-settings": "adminpanel.save_security_settings"
   },
   "adminpanel": {
     "member_list": "adminpanel.member_list",

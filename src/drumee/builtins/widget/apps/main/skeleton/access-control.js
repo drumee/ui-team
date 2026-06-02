@@ -1171,7 +1171,11 @@ function auditDrillIn(ui, hub) {
                 }),
                 Skeletons.Box.Y({
                   className: `${pfx}__ac-audit-list`,
-                  kids: AUDIT_ENTRIES.map((e) => auditEntryRow(ui, e)),
+                  kids: sc.auditLoading
+                    ? [Skeletons.Note({ className: `${pfx}__ac-audit-loading`, content: LOCALE.LOADING || "Loading…" })]
+                    : (sc.auditEntries && sc.auditEntries.length)
+                      ? sc.auditEntries.map((e) => auditEntryRow(ui, e))
+                      : [Skeletons.Note({ className: `${pfx}__ac-audit-empty`, content: LOCALE.NO_AUDIT_ENTRIES || "No entries." })],
                 }),
               ],
             })
