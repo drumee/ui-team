@@ -43,18 +43,16 @@ function mapFolderMember(row) {
     row.email,
   );
   const isSelf = row.id === Visitor.id || row.entity_id === Visitor.id;
-  const parts = name.split(/\s+/).filter(Boolean);
-  const initials =
-    parts.length >= 2
-      ? (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
-      : (name.slice(0, 2) || "?").toUpperCase();
   return {
     id: row.entity_id || row.drumate_id || row.id,
     name: isSelf ? `${name} (${LOCALE.YOU || "You"})` : name,
     rawName: name,
-    initials,
+    // Carried through to UserProfile so it can load the real avatar and derive
+    // initials/auto-color the same way every other member list in the app does.
+    firstname: (row.firstname || "").trim(),
+    lastname: (row.lastname || "").trim(),
+    fullname: (row.fullname || "").trim() || name,
     role: roleFromPrivilege(row.privilege),
-    color: isSelf ? "user" : "primary",
     isSelf,
   };
 }
@@ -120,18 +118,19 @@ function roleDropdown(pfx, role, service, extra = {}) {
   };
 }
 
+// Render every member's real avatar via UserProfile — it loads the user's
+// photo by id and falls back to initials when none exists. Self and other
+// members share one path so the list stays visually consistent. auto_color
+// is off so the fallback keeps the fixed grey/dark styling from the skin
+// instead of a per-name generated background.
 function memberAvatar(pfx, member) {
-  if (member.color === "user") {
-    return Skeletons.UserProfile({
-      className: `${pfx}-avatar user`,
-      id: Visitor.id,
-      firstname: Visitor.get(_a.firstname),
-      lastname: Visitor.get(_a.lastname),
-    });
-  }
-  return Skeletons.Note({
-    className: `${pfx}-avatar ${member.color}`,
-    content: member.initials,
+  return Skeletons.UserProfile({
+    className: `${pfx}-avatar`,
+    auto_color: 0,
+    id: member.id,
+    firstname: member.firstname,
+    lastname: member.lastname,
+    fullname: member.fullname,
   });
 }
 

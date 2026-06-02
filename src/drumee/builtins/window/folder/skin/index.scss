@@ -1382,24 +1382,14 @@
     flex: 0 0 32px;
     width: 32px;
     height: 32px;
-    border-radius: 12px;
+    border-radius: 50%;
     overflow: hidden;
-    @include drumee.typo(
-      $size: 10px,
-      $line: 15px,
-      $weight: 600,
-      $color: #e4e3ff
-    );
+    background: #e8e8ed;
 
-    &.primary {
-      background: #5950ff;
-    }
-    &.secondary {
-      background: #38a2ce;
-      color: #d8f9fd;
-    }
-    &.dark {
-      background: #3c3989;
+    // Fallback initials when UserProfile has no photo: near-black text on the
+    // light-grey disc. Depth beats ui-core's .user-profile__initiales rule.
+    .user-profile__initiales .note-content {
+      color: #0b0a21;
     }
   }
 
