@@ -944,62 +944,90 @@ class __media_core extends DrumeeMFS {
         step();
       });
 
+    /** Resolve a FileSystemFileEntry to a stable File object (null on failure). */
+    const entryToFile = (fe) =>
+      new Promise((resolve) => fe.file((f) => resolve(f), () => resolve(null)));
+
     /**
-     * Phase 1 — create the WHOLE directory scaffold first, collecting files as
-     * { file, parentNid }. We must NOT feed the upload queue incrementally: the
-     * queue's spool timer self-destructs the uploader the moment its queue is
-     * empty, which would happen during an awaited make_dir between adds. So we
-     * gather all files first, then feed them in one synchronous burst (phase 2),
-     * mirroring the old single-pass timing. Awaits each subdir's make_dir before
-     * descending so children land in the right nid.
+     * Phase A — read the ENTIRE tree up-front into stable File objects + a
+     * pre-ordered list of dir paths, doing NO network in between. Drag-drop
+     * FileSystemEntry objects expire shortly after the drop task: if we await a
+     * make_dir network round-trip and only THEN read a subdir's entries / a
+     * file's content, the now-expired entry's readEntries()/.file() silently
+     * fails — which is why files inside subfolders went missing. Reading
+     * everything first (local, fast) sidesteps expiry; File objects don't expire.
+     * `parentPath` is relative to the dropped folder ("" = its root).
      */
-    const files = [];
-    const walk = async (dirEntry, parentNid) => {
+    const fileList = []; // { file: File, parentPath: string }
+    const dirPaths = []; // relative dir paths, pre-order (parent before child)
+    const scan = async (dirEntry, relPath) => {
       let entries;
       try {
         entries = await readAll(dirEntry.createReader());
       } catch (e) {
-        this.warn("readEntries failed", dirEntry && dirEntry.fullPath, e);
+        this.warn("readEntries failed", relPath, e);
         return;
       }
       for (const entry of entries) {
         if (IGNORED_FILES.test(entry.name)) continue;
+        if (entry.isFile) {
+          const f = await entryToFile(entry);
+          if (f) fileList.push({ file: f, parentPath: relPath });
+          else this.warn("entry.file() failed", relPath, entry.name);
+        }
+      }
+      for (const entry of entries) {
+        if (IGNORED_FILES.test(entry.name)) continue;
         if (entry.isDirectory) {
-          const sub = await this._mkdir(hub_id, parentNid, entry.name);
-          if (!sub) continue; // skip subtree we could not create
-          const subNid = sub.nid != null ? sub.nid : sub.home_id;
-          await walk(entry, subNid);
-        } else if (entry.isFile) {
-          files.push({ file: entry, parentNid });
+          const childPath = relPath ? `${relPath}/${entry.name}` : entry.name;
+          dirPaths.push(childPath);
+          await scan(entry, childPath);
         }
       }
     };
+    await scan(folder, "");
 
-    await walk(folder, rootNid);
+    /**
+     * Phase B — create the dir scaffold (parent before child, hence dirPaths is
+     * pre-ordered), mapping each relative path to its created nid.
+     */
+    const pathNid = new Map();
+    pathNid.set("", rootNid);
+    for (const dp of dirPaths) {
+      const slash = dp.lastIndexOf("/");
+      const parentPath = slash >= 0 ? dp.slice(0, slash) : "";
+      const name = slash >= 0 ? dp.slice(slash + 1) : dp;
+      const parentNid = pathNid.get(parentPath);
+      if (parentNid == null) {
+        this.warn("missing parent nid for dir", dp);
+        continue;
+      }
+      const node = await this._mkdir(hub_id, parentNid, name);
+      if (node) pathNid.set(dp, node.nid != null ? node.nid : node.home_id);
+    }
 
-    if (!files.length) {
+    if (!fileList.length) {
       /**
-       * Empty tree (only empty dirs, which were already created during the
-       * walk). Do NOT spin up an uploader (its idle spool would self-destruct
-       * and fire afterUpload). Finalize directly with a no-op stub that
-       * satisfies afterUpload's `c.isCanceled()` / `c.getFailed()` usage.
+       * Only (empty) dirs — already created in phase B. Do NOT spin up an
+       * uploader (its idle spool would self-destruct). Finalize directly with a
+       * no-op stub satisfying afterUpload's c.isCanceled()/c.getFailed() usage.
        */
       this.afterUpload({ isCanceled: () => false, getFailed: () => [] });
       return;
     }
 
     /**
-     * Phase 2 — acquire the queue AFTER the restart (restart may recreate
-     * children) and AFTER the scaffold exists, then enqueue every file at once
-     * so the uploader's spool never sees an empty queue mid-flight. NO ownpath:
-     * files go straight into their parent folder's real nid.
+     * Phase C — enqueue every file (stable File objects → no expiry, and
+     * checkQuota uses file.size directly) into its parent folder's real nid in
+     * one burst so the uploader's spool never sees an empty queue mid-flight.
+     * NO ownpath: files go straight into the created folder nids.
      */
     const queue = this.uploader(1);
     queue.add(
-      files.map(({ file, parentNid }) => ({
-        destination: { hub_id, nid: parentNid },
-        file,
-      }))
+      fileList.map(({ file, parentPath }) => {
+        const nid = pathNid.get(parentPath);
+        return { destination: { hub_id, nid: nid != null ? nid : rootNid }, file };
+      })
     );
   }
 
