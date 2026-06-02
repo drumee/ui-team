@@ -228,7 +228,7 @@
     justify-content: space-between;
     gap: 16px;
 
-    &[data-device="mobile"] {
+    @media (max-width: 1024px) {
       flex-direction: column;
       align-items: stretch;
       gap: 8px;
@@ -255,7 +255,7 @@
       background: rgba(0, 0, 0, 0.07);
     }
 
-    &[data-device="mobile"] {
+    @media (max-width: 1024px) {
       width: 100%;
       min-width: 0;
     }
@@ -292,7 +292,7 @@
 
     // Mobile: workspace name on its own line, then role-cell + remove share
     // the next line at equal width (see their per-element mobile rules).
-    &[data-device="mobile"] {
+    @media (max-width: 1024px) {
       flex-wrap: wrap;
       gap: 8px;
     }
@@ -309,7 +309,7 @@
     gap: 8px;
 
     // Full first line on mobile so role-cell + remove wrap below it.
-    &[data-device="mobile"] {
+    @media (max-width: 1024px) {
       flex: 1 1 100%;
     }
   }
@@ -340,7 +340,7 @@
     min-width: 0;
 
     // Mobile: share the second line equally with the remove button.
-    &[data-device="mobile"] {
+    @media (max-width: 1024px) {
       flex: 1 1 0;
       width: auto;
       min-width: 0;
@@ -418,7 +418,7 @@
 
     // The role cell is a flexed half-width on mobile, so match the panel to it
     // instead of floating a 154px panel that overflows the cell's left edge.
-    &[data-device="mobile"] {
+    @media (max-width: 1024px) {
       left: 0;
       right: 0;
       min-width: 0;
@@ -495,7 +495,7 @@
 
     // Mobile: a real half-width button (same width as the role cell beside it),
     // taller and tinted red so the destructive action is easy to tap and read.
-    &[data-device="mobile"] {
+    @media (max-width: 1024px) {
       flex: 1 1 0;
       min-width: 0;
       height: 33px;
@@ -632,7 +632,7 @@
     justify-content: space-between;
     gap: 16px;
 
-    &[data-device="mobile"] {
+    @media (max-width: 1024px) {
       flex-wrap: wrap;
       gap: 8px;
     }

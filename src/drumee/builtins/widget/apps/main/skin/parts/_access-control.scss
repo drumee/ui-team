@@ -223,7 +223,7 @@
     justify-content: space-between;
     gap: 16px;
 
-    &[data-device="mobile"] {
+    @media (max-width: 1024px) {
       flex-wrap: wrap;
       gap: 8px;
     }
@@ -628,7 +628,7 @@
     // On mobile the picker spans the full width of the country list and grows
     // taller so more countries are visible and rows are easier to tap. The
     // 40px row anchoring (top: 48/96) is unchanged — rows keep their height.
-    &[data-device="mobile"] {
+    @media (max-width: 1024px) {
       width: auto;
       left: 0;
       right: 0;
@@ -643,7 +643,7 @@
     gap: 8px;
     border-bottom: 1px solid rgba(71, 69, 84, 0.08);
 
-    &[data-device="mobile"] {
+    @media (max-width: 1024px) {
       padding: 12px;
       gap: 10px;
     }
@@ -680,10 +680,12 @@
       }
     }
 
-    // 16px input on mobile keeps the search readable and avoids iOS focus-zoom.
-    &[data-device="mobile"] input {
-      font-size: 16px;
-      line-height: 22px;
+    // 16px input keeps the search readable and avoids iOS focus-zoom.
+    @media (max-width: 1024px) {
+      input {
+        font-size: 16px;
+        line-height: 22px;
+      }
     }
   }
 
@@ -725,7 +727,7 @@
     }
 
     // Show more countries before scrolling on mobile.
-    &[data-device="mobile"] {
+    @media (max-width: 1024px) {
       max-height: 50vh;
     }
   }
@@ -751,7 +753,7 @@
     }
 
     // Taller rows + more spacing for comfortable tapping on mobile.
-    &[data-device="mobile"] {
+    @media (max-width: 1024px) {
       padding: 12px;
       gap: 12px;
     }
@@ -762,7 +764,7 @@
     line-height: 18px;
     flex-shrink: 0;
 
-    &[data-device="mobile"] {
+    @media (max-width: 1024px) {
       font-size: 20px;
       line-height: 24px;
     }
@@ -779,7 +781,7 @@
     overflow: hidden;
     text-overflow: ellipsis;
 
-    &[data-device="mobile"] {
+    @media (max-width: 1024px) {
       font-size: 14px;
       line-height: 20px;
     }
@@ -804,7 +806,7 @@
       border-color: $purple-base;
     }
 
-    &[data-device="mobile"] {
+    @media (max-width: 1024px) {
       width: 20px;
       height: 20px;
     }
@@ -821,7 +823,7 @@
       @include svg-color(var(--white, #fff));
     }
 
-    &[data-device="mobile"] {
+    @media (max-width: 1024px) {
       width: 11px;
       height: 11px;
 
@@ -840,7 +842,7 @@
     color: $ink-500;
     font-style: italic;
 
-    &[data-device="mobile"] {
+    @media (max-width: 1024px) {
       font-size: 14px;
       line-height: 20px;
     }
@@ -855,7 +857,7 @@
     align-items: stretch;
     gap: 16px;
 
-    &[data-device="mobile"] {
+    @media (max-width: 1024px) {
       flex-direction: column;
       gap: 8px;
     }
@@ -934,18 +936,20 @@
     // On mobile the picker spans the full width of the (stacked) time-row so
     // its controls are bigger and easier to tap, instead of a cramped 206px
     // popup. width:auto + left/right:0 stretch it to the row.
-    &[data-device="mobile"] {
+    @media (max-width: 1024px) {
       width: auto;
       left: 0;
       right: 0;
       padding: 16px;
     }
 
-    // The start/end fields stack vertically on mobile (see __ac-time-row), so
-    // anchoring at the row's bottom (top: 100%) would drop the START dropdown
-    // under the END field. Pin it just below the 44px-tall start field.
-    &[data-device="mobile"][data-kind="start"] {
-      top: 50px;
+    // The time-row stacks at <=1024px (see __ac-time-row), so anchoring at the
+    // row's bottom (top: 100%) would drop the START dropdown under the END
+    // field. Pin it just below the 44px-tall start field — on tablet too.
+    @media (max-width: 1024px) {
+      &[data-kind="start"] {
+        top: 50px;
+      }
     }
   }
 
@@ -977,7 +981,7 @@
     font-weight: 600;
     color: $purple-deep;
 
-    &[data-device="mobile"] {
+    @media (max-width: 1024px) {
       font-size: 14px;
     }
   }
@@ -1006,7 +1010,7 @@
     font-weight: 400;
     color: $ink-900;
 
-    &[data-device="mobile"] {
+    @media (max-width: 1024px) {
       font-size: 12px;
       line-height: 16px;
     }
@@ -1037,7 +1041,7 @@
     }
 
     // Taller, roomier pill on mobile for an easier tap target.
-    &[data-device="mobile"] {
+    @media (max-width: 1024px) {
       padding: 8px 10px;
       gap: 8px;
     }
@@ -1065,7 +1069,7 @@
     }
 
     // Wider field + 16px font on mobile (also avoids iOS focus-zoom).
-    &[data-device="mobile"] {
+    @media (max-width: 1024px) {
       width: 28px;
 
       input {
@@ -1111,7 +1115,7 @@
       border-radius: 4px;
     }
 
-    &[data-device="mobile"] {
+    @media (max-width: 1024px) {
       min-width: 84px;
       max-height: 200px;
     }
@@ -1137,7 +1141,7 @@
     }
 
     // Taller rows on mobile for comfortable scrolling/tapping.
-    &[data-device="mobile"] {
+    @media (max-width: 1024px) {
       padding: 10px 16px;
     }
   }
@@ -1147,7 +1151,7 @@
     font-weight: 600;
     color: $ink-700;
 
-    &[data-device="mobile"] {
+    @media (max-width: 1024px) {
       font-size: 14px;
     }
   }
@@ -1187,7 +1191,7 @@
     }
 
     // Bigger AM/PM tap targets on mobile.
-    &[data-device="mobile"] {
+    @media (max-width: 1024px) {
       padding: 8px 12px;
     }
   }
@@ -1197,7 +1201,7 @@
     font-weight: 600;
     color: $ink-500;
 
-    &[data-device="mobile"] {
+    @media (max-width: 1024px) {
       font-size: 14px;
     }
   }
@@ -1214,7 +1218,7 @@
 
     // Doubled day chips can't fit beside the label on a mobile-width card, so
     // give the chips their own full-width line below it.
-    &[data-device="mobile"] {
+    @media (max-width: 1024px) {
       flex-direction: column;
       align-items: stretch;
       gap: 8px;
@@ -1233,7 +1237,7 @@
     gap: 8px;
 
     // Spread the 7 doubled chips across the full row for bigger tap targets.
-    &[data-device="mobile"] {
+    @media (max-width: 1024px) {
       width: 100%;
       justify-content: space-between;
       gap: 0;
@@ -1254,7 +1258,7 @@
     }
 
     // Double the size on mobile (square keeps a comfortable tap target).
-    &[data-device="mobile"] {
+    @media (max-width: 1024px) {
       width: 40px;
       height: 40px;
     }
@@ -1271,7 +1275,7 @@
     color: $ink-600;
 
     // Scale the letter up to match the doubled chip on mobile.
-    &[data-device="mobile"] {
+    @media (max-width: 1024px) {
       font-size: 14px;
       line-height: 20px;
     }
@@ -1392,7 +1396,7 @@
     flex: 1;
     align-items: center;
     gap: 8px;
-    &[data-device="mobile"] {
+  &[data-device="mobile"]{
       flex-direction: column;
       align-items: end;
     }
