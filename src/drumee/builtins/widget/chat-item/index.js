@@ -312,9 +312,10 @@ class ___widget_chatItem extends LetcBox {
    * @param {*} e
    */
   _mouseleave(e) {
-    // The menu + time now live inside the message line and reveal via CSS
-    // :hover, so there is no floating-bar gap to bridge — just cancel a pending
-    // lazy build if the cursor leaves before it fires.
+    // The action menu lives inside the message line and reveals via CSS :hover,
+    // so there is no floating-bar gap to bridge — just cancel a pending lazy
+    // build if the cursor leaves before it fires. (The time now sits in flow
+    // below the bubble, always visible — not hover-gated.)
     clearTimeout(this._timer.hover);
   }
 
