@@ -515,6 +515,9 @@
   &__fperm-sec-actions {
     align-items: center;
     gap: 8px;
+    &[data-device="mobile"]{
+      flex-direction: column;
+    }
   }
 
   &__fperm-add-input {
