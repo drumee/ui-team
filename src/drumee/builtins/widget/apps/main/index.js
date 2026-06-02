@@ -451,8 +451,54 @@ class apps_main extends LetcBox {
 
   _render() {
     if (this.isDestroyed && this.isDestroyed()) return;
+    // Every interaction (tab toggles, plan switch, dropdowns, pickers) rebuilds
+    // the whole skeleton via feed(), which tears down and recreates the
+    // scrollable containers and resets their scroll to the top. Capture the
+    // offsets before the rebuild and restore them afterwards so the page stays
+    // put instead of jumping to the top on each click.
+    const saved = this._captureScroll();
     this.feed(require("./skeleton").default(this));
+    this._restoreScroll(saved);
     this._scheduleTableScrollSync();
+  }
+
+  // Page-level scroll containers whose scrollTop is lost when feed() rebuilds
+  // them: the tab body (security/storage/etc.) and the Access-control overlay.
+  // Keyed by a stable class selector so the offset can be reapplied to the
+  // freshly-built node. Inner tables own their own scroll handled separately.
+  _scrollSelectors() {
+    return [".apps-main__content", ".apps-main__ac-body"];
+  }
+
+  _captureScroll() {
+    const saved = [];
+    if (!this.el) return saved;
+    for (const sel of this._scrollSelectors()) {
+      const el = this.el.querySelector(sel);
+      if (el && el.scrollTop) saved.push({ sel, top: el.scrollTop });
+    }
+    return saved;
+  }
+
+  // feed() rebuilds the containers, so saved offsets must be reapplied to the
+  // fresh nodes. Marionette mounts synchronously when the widget root is already
+  // attached (the case for every re-render), making this flicker-free; the rAF
+  // retries cover the rare case where a node isn't in the DOM yet.
+  _restoreScroll(saved, attempt = 0) {
+    if (!saved || !saved.length) return;
+    if (this.isDestroyed && this.isDestroyed()) return;
+    const pending = [];
+    for (const s of saved) {
+      const el = this.el && this.el.querySelector(s.sel);
+      if (el) {
+        el.scrollTop = s.top;
+      } else {
+        pending.push(s);
+      }
+    }
+    if (pending.length && attempt < 5) {
+      requestAnimationFrame(() => this._restoreScroll(pending, attempt + 1));
+    }
   }
 
   // Keep each table thead's horizontal scroll in sync with its tbody/list, so
