@@ -992,6 +992,7 @@ class __window_upload_progress extends __window_core {
    * Cancel all uploads
    */
   cancelAll() {
+    if (this._job && this._job.cancel) this._job.cancel();
     // Cancel all active uploads
     this._uploadItems.forEach(item => {
       if (item.status === 'uploading') {
@@ -1861,6 +1862,25 @@ __window_upload_progress.getOrCreate = function() {
   });
   
   return _pendingPromise;
+};
+
+/**
+ * Open (or reuse) the upload-progress window in staging phase.
+ * Reuses the existing getOrCreate singleton path.
+ * @param {Object} [targetWindow] - the caller window (stored as _targetWindow)
+ * @returns {Promise<__window_upload_progress|null>}
+ */
+__window_upload_progress.openStaging = function(targetWindow) {
+  return __window_upload_progress.getOrCreate().then(function(win) {
+    if (!win) return null;
+    win._targetWindow = targetWindow || win._targetWindow;
+    win._phase = "staging";
+    const root = win.el && win.el.querySelector(`.${win.fig.family}__container`);
+    if (root && root.dataset) root.dataset.phase = "staging";
+    if (win.raise) win.raise();
+    if (win._renderStaging) win._renderStaging();
+    return win;
+  });
 };
 
 module.exports = __window_upload_progress;
