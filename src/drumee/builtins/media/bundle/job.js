@@ -73,8 +73,9 @@ class __bundle_job extends LetcBox {
       entry.status = "uploading";
       this.trigger("folder-created", { job: this, entry, nid: newNid });
     } catch (e) {
+      const detail = (e && e.message) || "make_dir failed";
       entry.status = "error";
-      entry.error = (e && e.message) || "make_dir failed";
+      entry.error = `Failed to create folder "${entry.name}": ${detail}`;
       this.trigger("error", { job: this, entry, error: entry.error });
       return; // skip subtree (cannot upload without a nid)
     }
@@ -85,12 +86,11 @@ class __bundle_job extends LetcBox {
     entry.status = "done";
   }
 
-  _uploadOneFile(entry, destNid) {
-    return new Promise(async (resolve) => {
-      await this._governor.gateBeforeFile();
-      if (this._canceled) { entry.status = "skipped"; return resolve(); }
+  async _uploadOneFile(entry, destNid) {
+    await this._governor.gateBeforeFile();
+    if (this._canceled) { entry.status = "skipped"; return; }
+    return new Promise((resolve) => {
       entry.status = "uploading";
-      this._current = { entry, resolve, loaded: 0 };
       const opt = {
         nid: destNid,
         hub_id: this._hubId,
@@ -98,6 +98,12 @@ class __bundle_job extends LetcBox {
         notify: 0,
         replace: this._resolution.mode === "replace" ? 1 : 0,
       };
+      // Sequential invariant: exactly one XHR is in flight per job, so a single
+      // `_current` slot is safe. Each terminal hook (onUploadResponse/onUploadError/
+      // onAbort) nulls `_current` before resolve(); any later duplicate XHR event
+      // no-ops via the `if (!this._current) return` guard. `destNid`/`opt` are stored
+      // so a retry re-uploads to the SAME parent folder (not the bundle root).
+      this._current = { entry, resolve, loaded: 0, destNid, opt };
       try {
         this._currentXhr = this.uploadFile(entry.source, opt);
       } catch (e) {
@@ -130,16 +136,14 @@ class __bundle_job extends LetcBox {
 
   onUploadError() {
     if (!this._current) return;
-    const { entry, resolve } = this._current;
+    const { entry, resolve, opt } = this._current;
     const n = this._retried[entry.id] || 0;
     if (n < 2 && !this._canceled) {
       this._retried[entry.id] = n + 1;
       this._current.loaded = 0;
       try {
-        this._currentXhr = this.uploadFile(entry.source, {
-          nid: this._destNid, hub_id: this._hubId, single: 1, notify: 0,
-          replace: this._resolution.mode === "replace" ? 1 : 0,
-        });
+        // Reuse the stored opt so the retry targets the file's real parent folder.
+        this._currentXhr = this.uploadFile(entry.source, opt);
       } catch (e) { this._failOrResolve(entry, e); }
       return;
     }
