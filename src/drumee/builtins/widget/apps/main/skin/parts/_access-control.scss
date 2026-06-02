@@ -35,7 +35,7 @@
     &[data-device="mobile"] {
       width: calc(100vw - 16px);
       max-width: calc(100vw - 16px);
-      max-height: calc(100vh - 24px);
+      max-height: calc(100vh - 160px);
     }
   }
 
@@ -867,6 +867,17 @@
 
     &[data-kind="end"] {
       right: 0;
+    }
+
+    // On mobile the start/end fields stack vertically (see __ac-time-row),
+    // so anchoring at the row's bottom (top: 100%) drops the START dropdown
+    // under the END field, overlapping the operational-days row. Pin it just
+    // below the 44px-tall start field instead (12px padding + 20px line +
+    // 12px padding, + 6px breathing room). The END dropdown still sits at the
+    // row bottom, which is correct since the end field is the last item.
+    &[data-device="mobile"][data-kind="start"] {
+      top: 50px;
+      left: 135px;
     }
   }
 

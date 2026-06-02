@@ -451,8 +451,32 @@ class apps_main extends LetcBox {
 
   _render() {
     if (this.isDestroyed && this.isDestroyed()) return;
+    // Every interaction (toggles, dropdowns, pickers) rebuilds the whole
+    // skeleton via feed(), which tears down and recreates the scrollable
+    // Access-control body and resets its scroll to the top. Capture the
+    // offset before the rebuild and restore it afterwards so the overlay
+    // stays put instead of jumping to the top on each click.
+    const acBody = this.el && this.el.querySelector(".apps-main__ac-body");
+    const acScrollTop = acBody ? acBody.scrollTop : 0;
     this.feed(require("./skeleton").default(this));
+    if (acScrollTop) this._restoreAcScroll(acScrollTop);
     this._scheduleTableScrollSync();
+  }
+
+  // feed() rebuilds the body element, so the saved offset must be reapplied to
+  // the fresh node. Marionette mounts synchronously when the widget root is
+  // already attached (the case for every re-render), making this flicker-free;
+  // the rAF retries cover the rare case where the node isn't in the DOM yet.
+  _restoreAcScroll(top, attempt = 0) {
+    if (this.isDestroyed && this.isDestroyed()) return;
+    const body = this.el && this.el.querySelector(".apps-main__ac-body");
+    if (body) {
+      body.scrollTop = top;
+      return;
+    }
+    if (attempt < 5) {
+      requestAnimationFrame(() => this._restoreAcScroll(top, attempt + 1));
+    }
   }
 
   // Keep each table thead's horizontal scroll in sync with its tbody/list, so
