@@ -1510,6 +1510,33 @@ class __window_upload_progress extends __window_core {
     return rows;
   }
 
+  _startBundle() {
+    if (!this._bundle.length) return;
+    const target = this._targetWindow;
+    const destNid = target ? target.getCurrentNid() : Visitor.get(_a.home_id);
+    const hub_id = target ? target.mget(_a.hub_id) : Visitor.get(_a.id);
+
+    // Quota guard: total bundle bytes vs free disk (spec §5.8)
+    const total = this._bundleEntry.countSize(this._bundle);
+    if (typeof Visitor.diskFree === "function" && total > Visitor.diskFree()) {
+      Butler.say(LOCALE.QUOTA_EXCEEDED || "Not enough space for this upload");
+      return;
+    }
+
+    // Bulk conflict policy decided up-front via the staging toggle (§5.6):
+    //   _replaceExisting OFF -> "rename" (server appends timestamp on dup names)
+    //   _replaceExisting ON  -> "replace" (server overwrites)
+    const resolution = {
+      mode: this._replaceExisting ? "replace" : "rename",
+      skip: new Set(),
+    };
+
+    const job = this._bundleManager.create({ entries: this._bundle, destNid, hub_id, resolution });
+    this._attachJob(job);
+    this._phase = "progress";
+    this._switchToProgress();
+  }
+
   _removeFromBundle(id) {
     const prune = (list) => {
       const i = list.findIndex((e) => e.id === id);
@@ -1547,6 +1574,7 @@ class __window_upload_progress extends __window_core {
     // ---- bundle staging events (return early; others fall through to existing handling) ----
     if (service === "add-files") { this._filesInput && this._filesInput.click(); return; }
     if (service === "add-folder") { this._dirInput && this._dirInput.click(); return; }
+    if (service === "upload-all") { this._startBundle(); return; }
     if (service === "clear-bundle") { this._bundle = []; this._renderStaging(); return; }
     if (service === "toggle-replace") { this._replaceExisting = !this._replaceExisting; return; }
     if (service && service.indexOf("remove:") === 0) {
