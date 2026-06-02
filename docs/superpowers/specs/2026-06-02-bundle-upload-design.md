@@ -190,10 +190,13 @@ async uploadEntry(entry, destNid):
   trên media item [core.js:1875](../../src/drumee/builtins/media/core.js#L1875)).
   - Toggle **OFF (mặc định)** → `mode:"rename"`: server tự append-timestamp khi trùng tên (hành vi sẵn có).
   - Toggle **ON** → `mode:"replace"`: gửi `replace=1`, server ghi đè.
-- Folder trùng tên: **merge vào folder cùng tên** (client gọi `make_dir` cùng tên → server trả node
-  folder tồn tại, con upload vào trong → merge tự nhiên).
-- (Tùy chọn tương lai) Có thể nâng cấp thành dialog reactive chỉ-khi-có-trùng nếu thêm cách liệt kê
-  tên đích từ media-list của folder window — ngoài phạm vi v1.
+- Folder trùng tên (v1 thực tế — **KHÔNG merge**): client gọi `make_dir` với `dirname` (không kèm
+  `ownpath`), server đi qua `ensureCreateNode` → khi trùng tên sẽ **append-timestamp** tạo folder mới
+  (`name-YYYY-MM-DD@hh:mm:ss`), KHÔNG gộp vào folder cũ ([server media.js ~814](../../../../server-team/service/media.js)).
+  Con vẫn vào đúng folder vừa tạo (job dùng `nid` trả về) nên không mất dữ liệu, chỉ là tạo folder
+  thứ hai thay vì merge. Đây là hành vi chấp nhận cho v1.
+  - **Nâng cấp tương lai để merge:** gọi `make_dir` theo `ownpath` (route vào `ensureMakeDir`, vốn merge),
+    hoặc thêm dialog reactive chỉ-khi-trùng (cần liệt kê tên đích từ media-list của folder window).
 
 ### 5.7 Progress & grouping UI (pha 2)
 - **Thanh tiến trình tổng**: `% = bytesUploaded / bytesTotal`, kèm tổng bytes và **ETA** suy từ rate.
@@ -298,6 +301,17 @@ governor.currentRate(): number                       // MB/s
 - ~~make_dir response shape~~ **(đã xác nhận)**: `media.make_dir({ hub_id, nid: parentNid, socket_id, dirname })`
   trả node folder mới có `.nid` ([client core.js:1939](../../src/drumee/builtins/media/core.js#L1939),
   [server media.js:145](../../../../server-team/service/media.js#L145)). Con upload vào `nid` này.
+- **Tray singleton chia sẻ part `file-list` với luồng upload trực tiếp (legacy).** Bundle render qua
+  `_renderProgressList`, legacy qua `_renderFileList`, cùng `sys_pn:"file-list"`. Nếu một bundle đang
+  chạy/staging mà có upload kéo-thả trực tiếp tới (hoặc ngược lại) trong cùng cửa sổ singleton, hai bộ
+  render có thể đè nhau và phase `staging` ẩn `file-list`/`aggregate`. v1 không xử lý đồng thời chéo
+  luồng trong một cửa sổ; nâng cấp: dùng part riêng (`bundle-list`) cho bundle.
+- **v1 hiển thị một bundle/job tại một thời điểm trong tray** (`this._job` bị ghi đè). `BundleManager`
+  vẫn enforce trần 3 job như hạ tầng. Render nhiều job-group song song là nâng cấp tương lai (đổi
+  `this._job` → `this._jobs[]`, staging thành overlay).
+- **Sau khi bundle xong, `_bundle` không tự xoá** (giữ để hiển thị kết quả); cờ `_uploading` chặn bấm
+  "Upload all" lần hai. Người dùng bấm **Clear** rồi stage lại cho bundle kế. Tự reset/auto re-stage là
+  nâng cấp UX tương lai.
 
 ---
 
