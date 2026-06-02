@@ -624,6 +624,16 @@
     &[data-kind="blocked"] {
       top: 96px;
     }
+
+    // On mobile the picker spans the full width of the country list and grows
+    // taller so more countries are visible and rows are easier to tap. The
+    // 40px row anchoring (top: 48/96) is unchanged — rows keep their height.
+    &[data-device="mobile"] {
+      width: auto;
+      left: 0;
+      right: 0;
+      max-height: 60vh;
+    }
   }
 
   &__ac-cdrop-search {
@@ -632,6 +642,11 @@
     align-items: center;
     gap: 8px;
     border-bottom: 1px solid rgba(71, 69, 84, 0.08);
+
+    &[data-device="mobile"] {
+      padding: 12px;
+      gap: 10px;
+    }
   }
 
   &__ac-cdrop-search-ico {
@@ -663,6 +678,12 @@
       &::placeholder {
         color: $ink-500;
       }
+    }
+
+    // 16px input on mobile keeps the search readable and avoids iOS focus-zoom.
+    &[data-device="mobile"] input {
+      font-size: 16px;
+      line-height: 22px;
     }
   }
 
@@ -702,6 +723,11 @@
       background: $purple-base;
       border-radius: 4px;
     }
+
+    // Show more countries before scrolling on mobile.
+    &[data-device="mobile"] {
+      max-height: 50vh;
+    }
   }
 
   &__ac-cdrop-item {
@@ -723,12 +749,23 @@
     &--checked {
       background: rgba(89, 80, 255, 0.04);
     }
+
+    // Taller rows + more spacing for comfortable tapping on mobile.
+    &[data-device="mobile"] {
+      padding: 12px;
+      gap: 12px;
+    }
   }
 
   &__ac-cdrop-flag {
     font-size: 16px;
     line-height: 18px;
     flex-shrink: 0;
+
+    &[data-device="mobile"] {
+      font-size: 20px;
+      line-height: 24px;
+    }
   }
 
   &__ac-cdrop-name {
@@ -741,6 +778,11 @@
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+
+    &[data-device="mobile"] {
+      font-size: 14px;
+      line-height: 20px;
+    }
   }
 
   &__ac-cdrop-radio {
@@ -761,6 +803,11 @@
       background: $purple-base;
       border-color: $purple-base;
     }
+
+    &[data-device="mobile"] {
+      width: 20px;
+      height: 20px;
+    }
   }
 
   &__ac-cdrop-radio-mark {
@@ -773,6 +820,16 @@
       height: 8px;
       @include svg-color(var(--white, #fff));
     }
+
+    &[data-device="mobile"] {
+      width: 11px;
+      height: 11px;
+
+      svg {
+        width: 11px;
+        height: 11px;
+      }
+    }
   }
 
   &__ac-cdrop-empty {
@@ -782,6 +839,11 @@
     line-height: 17px;
     color: $ink-500;
     font-style: italic;
+
+    &[data-device="mobile"] {
+      font-size: 14px;
+      line-height: 20px;
+    }
   }
 
   // ───────────────────────────────────────────────────────────
@@ -869,15 +931,21 @@
       right: 0;
     }
 
-    // On mobile the start/end fields stack vertically (see __ac-time-row),
-    // so anchoring at the row's bottom (top: 100%) drops the START dropdown
-    // under the END field, overlapping the operational-days row. Pin it just
-    // below the 44px-tall start field instead (12px padding + 20px line +
-    // 12px padding, + 6px breathing room). The END dropdown still sits at the
-    // row bottom, which is correct since the end field is the last item.
+    // On mobile the picker spans the full width of the (stacked) time-row so
+    // its controls are bigger and easier to tap, instead of a cramped 206px
+    // popup. width:auto + left/right:0 stretch it to the row.
+    &[data-device="mobile"] {
+      width: auto;
+      left: 0;
+      right: 0;
+      padding: 16px;
+    }
+
+    // The start/end fields stack vertically on mobile (see __ac-time-row), so
+    // anchoring at the row's bottom (top: 100%) would drop the START dropdown
+    // under the END field. Pin it just below the 44px-tall start field.
     &[data-device="mobile"][data-kind="start"] {
       top: 50px;
-      left: 135px;
     }
   }
 
@@ -908,6 +976,10 @@
     font-size: 12px;
     font-weight: 600;
     color: $purple-deep;
+
+    &[data-device="mobile"] {
+      font-size: 14px;
+    }
   }
 
   &__ac-tdrop-divider {
@@ -933,6 +1005,11 @@
     line-height: 14px;
     font-weight: 400;
     color: $ink-900;
+
+    &[data-device="mobile"] {
+      font-size: 12px;
+      line-height: 16px;
+    }
   }
 
   &__ac-tdrop-pill {
@@ -958,6 +1035,12 @@
       background: rgba(89, 80, 255, 0.1);
       box-shadow: inset 0 0 0 1px rgba(89, 80, 255, 0.3);
     }
+
+    // Taller, roomier pill on mobile for an easier tap target.
+    &[data-device="mobile"] {
+      padding: 8px 10px;
+      gap: 8px;
+    }
   }
 
   &__ac-tdrop-pill-input {
@@ -978,6 +1061,16 @@
 
       &:focus {
         color: $purple-deep;
+      }
+    }
+
+    // Wider field + 16px font on mobile (also avoids iOS focus-zoom).
+    &[data-device="mobile"] {
+      width: 28px;
+
+      input {
+        font-size: 16px;
+        line-height: 20px;
       }
     }
   }
@@ -1017,6 +1110,11 @@
       background: $purple-base;
       border-radius: 4px;
     }
+
+    &[data-device="mobile"] {
+      min-width: 84px;
+      max-height: 200px;
+    }
   }
 
   &__ac-tdrop-flyout-item {
@@ -1037,12 +1135,21 @@
     &--on {
       background: rgba(89, 80, 255, 0.12);
     }
+
+    // Taller rows on mobile for comfortable scrolling/tapping.
+    &[data-device="mobile"] {
+      padding: 10px 16px;
+    }
   }
 
   &__ac-tdrop-flyout-text {
     font-size: 12px;
     font-weight: 600;
     color: $ink-700;
+
+    &[data-device="mobile"] {
+      font-size: 14px;
+    }
   }
 
   &__ac-tdrop-flyout-item--on &__ac-tdrop-flyout-text {
@@ -1078,12 +1185,21 @@
     &--on {
       background: $purple-deep;
     }
+
+    // Bigger AM/PM tap targets on mobile.
+    &[data-device="mobile"] {
+      padding: 8px 12px;
+    }
   }
 
   &__ac-tdrop-period-label {
     font-size: 12px;
     font-weight: 600;
     color: $ink-500;
+
+    &[data-device="mobile"] {
+      font-size: 14px;
+    }
   }
 
   &__ac-tdrop-period-half--on &__ac-tdrop-period-label {
@@ -1095,6 +1211,14 @@
     align-items: center;
     justify-content: space-between;
     gap: 16px;
+
+    // Doubled day chips can't fit beside the label on a mobile-width card, so
+    // give the chips their own full-width line below it.
+    &[data-device="mobile"] {
+      flex-direction: column;
+      align-items: stretch;
+      gap: 8px;
+    }
   }
 
   &__ac-days-label {
@@ -1107,6 +1231,13 @@
   &__ac-days-chips {
     align-items: center;
     gap: 8px;
+
+    // Spread the 7 doubled chips across the full row for bigger tap targets.
+    &[data-device="mobile"] {
+      width: 100%;
+      justify-content: space-between;
+      gap: 0;
+    }
   }
 
   &__ac-day {
@@ -1122,6 +1253,12 @@
       pointer-events: none;
     }
 
+    // Double the size on mobile (square keeps a comfortable tap target).
+    &[data-device="mobile"] {
+      width: 40px;
+      height: 40px;
+    }
+
     &--on {
       background: $purple-base;
     }
@@ -1132,6 +1269,12 @@
     line-height: 14px;
     font-weight: 400;
     color: $ink-600;
+
+    // Scale the letter up to match the doubled chip on mobile.
+    &[data-device="mobile"] {
+      font-size: 14px;
+      line-height: 20px;
+    }
   }
 
   &__ac-day--on &__ac-day-letter {
@@ -1249,11 +1392,15 @@
     flex: 1;
     align-items: center;
     gap: 8px;
+    &[data-device="mobile"] {
+      flex-direction: column;
+      align-items: end;
+    }
   }
 
   &__ac-add-input {
     flex: 1;
-    min-width: 0;
+    min-width: 120px;
     height: 36px;
     padding: 8px 8px 8px 12px;
     background: var(--white, #fff);
