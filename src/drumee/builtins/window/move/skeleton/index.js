@@ -82,6 +82,13 @@ module.exports = function(ui) {
                   }),
                 ],
               }),
+              Skeletons.Box.X({
+                sys_pn: "breadcrumb",
+                partHandler: ui,
+                className: `${pfx}__breadcrumb`,
+                dataset: { state: 0 },
+                kids: [],
+              }),
               Skeletons.Box.Y({
                 sys_pn: "suggestions",
                 partHandler: ui,

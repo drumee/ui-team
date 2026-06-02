@@ -55,6 +55,7 @@
     "json-loader": "^0.5.7",
     "jsonfile": "^6.1.0",
     "mini-css-extract-plugin": "^2.6.1",
+    "patch-package": "^8.0.1",
     "postcss": "^8.4.16",
     "postcss-cli": "^10.0.0",
     "postcss-loader": "^7.0.1",
