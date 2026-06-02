@@ -958,8 +958,17 @@ class __media_core extends DrumeeMFS {
      * everything first (local, fast) sidesteps expiry; File objects don't expire.
      * `parentPath` is relative to the dropped folder ("" = its root).
      */
-    const fileList = []; // { file: File, parentPath: string }
-    const dirPaths = []; // relative dir paths, pre-order (parent before child)
+    const filePromises = []; // Promise<{ file: File, parentPath } | null>
+    const dirPaths = [];     // relative dir paths (sorted by depth below)
+    /**
+     * Fire entry.file() the MOMENT a file is discovered (do NOT await it
+     * sequentially) and recurse sibling subdirs in PARALLEL. Drag-drop entries
+     * expire fast; a slow sequential traversal lets deep dirs (e.g.
+     * icons/src/raw, with hundreds of files) expire before scan reaches them —
+     * their readEntries() then fails and the whole subtree's files are lost.
+     * Firing reads immediately + parallel recursion keeps the live window as
+     * small as possible. File objects, once obtained, do not expire.
+     */
     const scan = async (dirEntry, relPath) => {
       let entries;
       try {
@@ -968,24 +977,29 @@ class __media_core extends DrumeeMFS {
         this.warn("readEntries failed", relPath, e);
         return;
       }
+      const subScans = [];
       for (const entry of entries) {
         if (IGNORED_FILES.test(entry.name)) continue;
         if (entry.isFile) {
-          const f = await entryToFile(entry);
-          if (f) fileList.push({ file: f, parentPath: relPath });
-          else this.warn("entry.file() failed", relPath, entry.name);
-        }
-      }
-      for (const entry of entries) {
-        if (IGNORED_FILES.test(entry.name)) continue;
-        if (entry.isDirectory) {
+          filePromises.push(
+            entryToFile(entry).then((f) => {
+              if (f) return { file: f, parentPath: relPath };
+              this.warn("entry.file() failed", relPath, entry.name);
+              return null;
+            })
+          );
+        } else if (entry.isDirectory) {
           const childPath = relPath ? `${relPath}/${entry.name}` : entry.name;
           dirPaths.push(childPath);
-          await scan(entry, childPath);
+          subScans.push(scan(entry, childPath));
         }
       }
+      await Promise.all(subScans);
     };
     await scan(folder, "");
+    const fileList = (await Promise.all(filePromises)).filter(Boolean);
+    /** Parallel scan loses pre-order; sort so phase B creates parents first. */
+    dirPaths.sort((a, b) => a.split("/").length - b.split("/").length);
 
     /**
      * Phase B — create the dir scaffold (parent before child, hence dirPaths is
