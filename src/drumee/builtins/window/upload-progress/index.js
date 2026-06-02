@@ -1537,6 +1537,67 @@ class __window_upload_progress extends __window_core {
     this._switchToProgress();
   }
 
+  _attachJob(job) {
+    this._job = job;
+    job.on("progress", () => this._renderAggregate());
+    job.on("folder-created", () => this._renderProgressList());
+    job.on("file-done", () => { this._renderAggregate(); this._renderProgressList(); });
+    job.on("error", () => this._renderProgressList());
+    job.on("done", ({ canceled }) => this._onBundleDone(canceled));
+    job.on("activated", () => this._renderAggregate());
+  }
+
+  _switchToProgress() {
+    const root = this.el.querySelector(`.${this.fig.family}__container`) || this.el;
+    if (root && root.dataset) root.dataset.phase = "progress";
+    this._renderAggregate();
+    this._renderProgressList();
+  }
+
+  _renderAggregate() {
+    if (!this._job) return;
+    const pct = this._job.bytesTotal
+      ? Math.min(100, Math.round(100 * this._job.bytesDone / this._job.bytesTotal)) : 0;
+    this.ensurePart("agg-fill").then((p) => { if (p.el) p.el.style.width = pct + "%"; });
+    const rate = this._bundleManager.governor.currentRate();
+    const mbps = (rate / (1024 * 1024)).toFixed(1);
+    this.ensurePart("agg-text").then((p) => p.set({
+      content: `${pct}% · ${filesize(this._job.bytesDone)}/${filesize(this._job.bytesTotal)} · ${mbps} MB/s`,
+    }));
+  }
+
+  _renderProgressList() {
+    this.ensurePart("file-list").then((list) => {
+      if (list.empty) list.empty();
+      list.feed(this._progressRows(this._bundle, 0));
+    });
+  }
+
+  _progressRows(entries, depth) {
+    const pfx = this.fig.family;
+    const rows = [];
+    for (const e of entries) {
+      const label = e.kind === "folder" && e.status === "creating"
+        ? (LOCALE.CREATING_FOLDER || "Creating folder…") : (e.status || "queued");
+      rows.push(Skeletons.Box.X({
+        className: `${pfx}__progress-row`, dataset: { kind: e.kind, status: e.status, depth },
+        kids: [
+          Skeletons.Note({ className: `${pfx}__progress-name`, content: e.name }),
+          Skeletons.Note({ className: `${pfx}__progress-state`, content: label }),
+        ],
+      }));
+      if (e.kind === "folder" && e.children.length) rows.push(...this._progressRows(e.children, depth + 1));
+    }
+    return rows;
+  }
+
+  _onBundleDone(canceled) {
+    this._renderAggregate();
+    this._renderProgressList();
+    // refresh target folder view so new nodes appear (reuse existing reload if available)
+    if (this._targetWindow && this._targetWindow.reload) this._targetWindow.reload();
+  }
+
   _removeFromBundle(id) {
     const prune = (list) => {
       const i = list.findIndex((e) => e.id === id);
