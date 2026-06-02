@@ -36,7 +36,7 @@ class __window_upload_progress extends __window_core {
     this._uploadItems = []; // Array of upload items: { id, file, progress, speed, status, queue }
 
     // Bundle staging state
-    this._phase = "staging";          // "staging" | "progress"
+    this._phase = "progress";         // default; bundle staging entry (openStaging) sets "staging"
     this._bundle = [];                // BundleEntry roots
     this._replaceExisting = false;    // bulk conflict policy (toggle in staging)
     this._bundleEntry = require("media/bundle/entry");
