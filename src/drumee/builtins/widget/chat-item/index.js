@@ -312,9 +312,10 @@ class ___widget_chatItem extends LetcBox {
    * @param {*} e
    */
   _mouseleave(e) {
-    // The menu + time now live inside the message line and reveal via CSS
-    // :hover, so there is no floating-bar gap to bridge — just cancel a pending
-    // lazy build if the cursor leaves before it fires.
+    // The action menu lives inside the message line and reveals via CSS :hover,
+    // so there is no floating-bar gap to bridge — just cancel a pending lazy
+    // build if the cursor leaves before it fires. (The time now sits in flow
+    // below the bubble, always visible — not hover-gated.)
     clearTimeout(this._timer.hover);
   }
 
@@ -726,10 +727,16 @@ class ___widget_chatItem extends LetcBox {
    * they have seen THIS message (uid in _seen_) but NOT the next (newer) one.
    * Since _seen_ accumulates downward, that pins each reader to their cursor.
    *
-   * Excludes the current viewer (you don't see your own seen-marker, as in
-   * Messenger) AND the message's own author (the sender trivially "saw" their
-   * own message — showing their avatar below it is wrong, and on a teammate's
-   * view the author = you would otherwise appear under your own sent message).
+   * Always excludes the current viewer (you don't see your own seen-marker, as
+   * in Messenger).
+   *
+   * The message author is excluded ONLY in P2P (1-on-1) chats: there the _seen_
+   * map is synthesised from the peer's read cursor alone, so the sole uid is the
+   * peer — who may also be the author — and showing their avatar under their own
+   * bubble would be wrong. In group channels every reader is a real per-message
+   * seen-marker (the server seeds the author into _seen_ too), so the author
+   * MUST stay; excluding them made the sender of the latest message vanish from
+   * every teammate's view (they only saw the other readers, never the sender).
    * Other readers still show at their last-read message.
    * @returns {String[]}
    */
@@ -739,9 +746,16 @@ class ___widget_chatItem extends LetcBox {
     const author = `${this.mget(_a.author_id)}`;
     const next = this.nextRow();
     const nextSeen = next ? this._seenOf(next) : {};
+    const isP2P =
+      this.mget(_a.type) === _a.privateRoom ||
+      this.mget(_a.area) === _a.privateRoom ||
+      this.mget(_a.area) === _a.personal;
     return Object.keys(seen).filter(
       (uid) =>
-        uid && `${uid}` !== me && `${uid}` !== author && nextSeen[uid] == null,
+        uid &&
+        `${uid}` !== me &&
+        (!isP2P || `${uid}` !== author) &&
+        nextSeen[uid] == null,
     );
   }
 
