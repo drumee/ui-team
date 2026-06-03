@@ -9,6 +9,8 @@ Non-negotiable contracts. Breaking these causes runtime failures that webpack wi
 - ❌ `import { Skeletons } from '@drumee/ui-core'`
 - ✅ use `Skeletons` directly.
 
+**Exception:** the bootstrap code that *creates* these globals must require them — e.g. `drumee.js` `init_globals` does `require('lex/services')` to build `window.SERVICE`. The ban is for consumers, not the initializer.
+
 ## 2. Class name drives fig.family; seeds.js is authoritative for Kind
 
 - **`fig.family`** is deterministic = class name minus leading underscores, `_` → `-` → also the BEM/CSS prefix. `class __chat_hub` → `fig.family "chat-hub"` → css `chat-hub__*`. **Exception:** a widget that sets `prototype.figName` overrides this — `class __account_entry` with `figName = "account_field"` → fig.family `"account-field"` → css `.account-field__*`. Check for a `figName` override before deriving the prefix from the class name.

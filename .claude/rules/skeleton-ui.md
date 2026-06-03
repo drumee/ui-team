@@ -29,4 +29,4 @@ Component reference: CLAUDE.md → "Skeletons Component Reference".
 
 ## Text
 
-- All `content` / labels via `LOCALE.*` — never literals.
+- **Static** copy / labels via `LOCALE.*` — never hardcoded literals. Runtime/model data is the exception: `content: ui.mget(_a.filename)`, `content: name.withoutTag()` etc. render dynamic values, not locale keys.

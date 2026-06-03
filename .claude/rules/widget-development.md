@@ -47,12 +47,13 @@ Match the sibling/parent pattern of the file you're editing, not a blanket rule.
 
 ## WS message handler shape
 
+The WS dispatcher calls `onWsMessage(service, model, options)` — the **first arg is the service string**. Switch on it directly; don't read `service` out of `options` (it's usually `{}`, so `opts || svc` would silently skip every case).
+
 ```js
-onWsMessage(svc, data, opts = {}) {
-  const { service } = opts || svc;
+onWsMessage(service, data, opts = {}) {
   switch (service) {
     case SERVICE.channel.post: /* ... */ break;
-    default: if (super.onWsMessage) super.onWsMessage(svc, data, opts);
+    default: if (super.onWsMessage) super.onWsMessage(service, data, opts);
   }
 }
 ```

@@ -17,7 +17,7 @@ Naming detail: CLAUDE.md → "CSS class naming conventions".
 ## Tokens, not literals
 
 - Pull colors / spacing / typography from `src/sass/settings/maps.scss` + helpers. ❌ hardcoded hex or magic px when a token exists.
-- Shared mixins/vars resolve via sass-loader `includePaths` (`src/drumee/skin/`): `@use 'mixins/drumee'` / `@use 'mixins/colors/index.scss'`, or a relative `@use '../../skin/...'`. There is no `skin:` colon-prefixed alias.
+- Shared mixins/vars resolve via sass-loader `includePaths` (`src/drumee/skin/`): `@use 'mixins/drumee'` / `@use 'mixins/typo'` (real files under `skin/mixins/`), or a relative `@use '../../skin/...'`. There is no `skin:` colon-prefixed alias.
 
 ## Scope
 
