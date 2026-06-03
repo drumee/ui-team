@@ -2,6 +2,7 @@
 paths:
   - "**/skeleton/**/*.js"
   - "**/skeleton/**/*.coffee"
+  - "**/skeleton/**/*.js.tpl"
 ---
 
 # Skeleton & Event Wiring

@@ -7,6 +7,8 @@ paths:
   - "src/drumee/builtins/media/**/*.js"
   - "src/drumee/builtins/window/**/widget/**/*.js"
   - "src/drumee/builtins/permission/**/*.js"
+  - "src/drumee/builtins/player/**/widget/**/*.js"
+  - "src/drumee/builtins/webrtc/**/*.js"
   - "src/drumee/api/lib/**/*.js"
 ---
 
