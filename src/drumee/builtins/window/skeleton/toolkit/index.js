@@ -124,6 +124,34 @@ export function tabBar(ui, opt = {}) {
     );
   }
 
+  // Member-filter trigger for the Task tab — lives on the same line as the
+  // tabs (right-aligned). Hidden until the Task tab is active; the folder
+  // window toggles `data-visible` in showFolderTab and reflects the active
+  // filter via `data-active` (task-filter-state event from the task panel).
+  if (isFolder) {
+    kids.push(
+      Skeletons.Box.X({
+        className: `${ui.fig.family}__tab-filter`,
+        sys_pn: "task-filter-btn",
+        partHandler: ui,
+        dataset: { visible: 0, active: 0 },
+        bubble: 0,
+        service: "toggle-task-filter",
+        uiHandler: [ui],
+        kids: [
+          Skeletons.Image.Svg({
+            ico: "desktop_filter",
+            className: `${ui.fig.family}__tab-filter-ico`,
+          }),
+          Skeletons.Note({
+            className: `${ui.fig.family}__tab-filter-label`,
+            content: LOCALE.FILTER,
+          }),
+        ],
+      }),
+    );
+  }
+
   return Skeletons.Box.X({
     className: `${cnRoot}-wrapper ${ui.fig.family}__tab-bar-wrapper`,
     dataset: isFolder ? { area: ui.mget(_a.area) } : {},

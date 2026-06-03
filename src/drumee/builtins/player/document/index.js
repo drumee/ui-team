@@ -74,6 +74,10 @@ class __player_document extends PlayerInteract {
     }
     Wm.off(WS_EVENT, this.onWsMessage)
     this._cleanupEditorListeners();
+    if (this._wsObserver) {
+      this._wsObserver.disconnect();
+      this._wsObserver = null;
+    }
     if (super.onBeforeDestroy) {
       super.onBeforeDestroy()
     }
@@ -123,10 +127,12 @@ class __player_document extends PlayerInteract {
  */
   onDomRefresh() {
     Wm.on(WS_EVENT, this.onWsMessage)
+    const editMode = this.shouldOpenInEditMode();
+    // Set edit mode BEFORE initSize so its edit branch sizes the window to the
+    // full workspace (instead of the centered windowed default).
+    if (editMode) this.mset({ mode: _a.edit });
     this.initSize();
-    if (this.shouldOpenInEditMode()) {
-      return this.edit({ fullscreen: true });
-    }
+    if (editMode) return this.edit();
     this.reload(300);
   }
 
@@ -445,21 +451,142 @@ class __player_document extends PlayerInteract {
    * 
    */
   updateMenu() {
-    this.ensurePart('document-menu').then((p) => {
-      let { kids } = require('./skeleton/menu')(this)
-      p.renderItems(kids[0].items)
+    this.ensurePart('doc-actions').then((p) => {
+      p.feed(require('./skeleton/menu')(this).kids)
     })
+  }
+
+  /**
+   * The desk workspace rectangle in VIEWPORT coords — the area below the top
+   * header and right of the left sidebar. Mirrors the window-tab zoom so a
+   * maximized document fills exactly the workspace, never the header/sidebar.
+   */
+  _workspaceRect() {
+    const el =
+      document.querySelector(".desk-module__wm-container") ||
+      document.querySelector(".desk-module__right-side");
+    if (!el) {
+      return { left: 0, top: 0, width: window.innerWidth, height: window.innerHeight };
+    }
+    const r = el.getBoundingClientRect();
+    return {
+      left: Math.round(r.left),
+      top: Math.round(r.top),
+      width: Math.round(r.width),
+      height: Math.round(r.height),
+    };
+  }
+
+  /**
+   * Current window bounds relative to the player's offset parent, used as the
+   * restore target when un-zooming.
+   */
+  _snapshotBounds() {
+    const pos = this.$el.position() || { left: 0, top: 0 };
+    return {
+      left: Math.round(pos.left),
+      top: Math.round(pos.top),
+      width: Math.round(this.$el.outerWidth()),
+      height: Math.round(this.$el.outerHeight()),
+    };
+  }
+
+  /**
+   * The workspace-filling bounds expressed in the player's offset-parent
+   * coordinates: the workspace viewport rect minus the offset parent's viewport
+   * origin (read directly, so it's correct wherever the parent sits).
+   */
+  _workspaceTarget() {
+    const ws = this._workspaceRect();
+    const parent = this.el.offsetParent || this.el.parentElement || document.body;
+    const pr = parent.getBoundingClientRect();
+    return {
+      left: Math.round(ws.left - pr.left),
+      top: Math.round(ws.top - pr.top),
+      width: ws.width,
+      height: ws.height,
+    };
+  }
+
+  /**
+   * Apply the full-workspace bounds to the window. `animate` tweens (button
+   * toggle) vs. snaps (initial open / live resize tracking). Does NOT touch
+   * _preZoomBounds (the un-zoom restore target). Re-applying also resizes the
+   * editor iframe, so OnlyOffice (which only re-fits on a container resize)
+   * re-measures to the new size automatically.
+   */
+  _applyWorkspaceBounds(animate) {
+    const target = this._workspaceTarget();
+    this.size = { width: target.width, height: target.height - this.topbarHeight };
+    this.$el.stop(true, false);
+    if (animate) {
+      this.$el.animate(target, {
+        duration: 200,
+        queue: false,
+        complete: () => {
+          this.$el.css(target);
+          this.style.set(target);
+        },
+      });
+    } else {
+      this.style.set(target);
+      this.$el.css(target);
+    }
+  }
+
+  /**
+   * Keep a maximized document filling the workspace when the workspace itself
+   * resizes (browser resize, sidebar collapse, DevTools dock/undock). The
+   * folder window gets this from the WM's responsive handler; the player tracks
+   * the workspace element directly.
+   */
+  _observeWorkspace() {
+    if (this._wsObserver || typeof ResizeObserver === 'undefined') return;
+    const el =
+      document.querySelector(".desk-module__wm-container") ||
+      document.querySelector(".desk-module__right-side");
+    if (!el) return;
+    this._wsObserver = new ResizeObserver(() => {
+      if (this._zoomed) this._applyWorkspaceBounds(false);
+    });
+    this._wsObserver.observe(el);
+  }
+
+  /**
+   * Toggle maximize-to-workspace, like the window-tab zoom: maximize fills the
+   * workspace (and keeps tracking it on resize); the next call restores the
+   * prior bounds.
+   */
+  toggleZoom() {
+    if (this._zoomed && this._preZoomBounds) {
+      const target = this._preZoomBounds;
+      this._zoomed = false;
+      this._preZoomBounds = null;
+      this.size = { width: target.width, height: target.height - this.topbarHeight };
+      this.$el.stop(true, false).animate(target, {
+        duration: 200,
+        queue: false,
+        complete: () => {
+          this.$el.css(target);
+          this.style.set(target);
+        },
+      });
+    } else {
+      this._preZoomBounds = this._snapshotBounds();
+      this._zoomed = true;
+      this._applyWorkspaceBounds(true);
+      this._observeWorkspace();
+    }
   }
 
   /**
    * 
    */
-  async edit({ fullscreen = false } = {}) {
+  async edit() {
+    // Window geometry is owned by initSize (maximize-to-workspace on open) and
+    // the zoom button (toggleZoom) — this no longer enters native fullscreen.
     this.el.dataset.mode = _a.edit;
     this.mset({ mode: _a.edit })
-    if (fullscreen && this.el.requestFullscreen) {
-      this.el.requestFullscreen().catch(() => { });
-    }
     this.feed(require('./skeleton').edit(this, LOCALE.DOWNLOADING));
     const { nid, hub_id } = this.actualNode()
     let { user_domain, svc } = bootstrap()
@@ -684,25 +811,25 @@ class __player_document extends PlayerInteract {
     const max_height = window.innerHeight - o.offsetY - 2 * o.marginY;
     const max_width = window.innerWidth - 2 * o.marginX;
     if (this.mget(_a.mode) == _a.edit) {
-      maxWidth = max_width;
-      maxHeight = max_height;
-      if (maxWidth > 1024) maxWidth = 1024;
-      if (maxHeight > 2028) maxHeight = 2048;
-      this.size = this.max_size();
-      this.size.width = maxWidth;
-      this.size.height = maxHeight;
-      TweenMax.fromTo(this.$el, 1.5,
-        { scale: 0.15, opacity: 0 },
-        {
-          scale: 1,
-          opacity: 1,
-          ease: Expo.easeInOut,
-          top: this.offset.top,
-          left: this.size.left,
-          width: this.size.width,
-          height: this.size.height,
-        }
-      );
+      // Open the editor maximized to the workspace (header and sidebar stay
+      // visible) — same bounds the zoom button uses.
+      const ws = this._workspaceRect();
+      const base = this._workspaceTarget();
+      // Centered windowed size to restore to when the user un-zooms.
+      const rw = Math.min(1100, Math.round(ws.width * 0.85));
+      const rh = Math.round(ws.height * 0.92);
+      this._preZoomBounds = {
+        left: base.left + Math.round((ws.width - rw) / 2),
+        top: base.top + Math.round((ws.height - rh) / 2),
+        width: rw,
+        height: rh,
+      };
+      this._zoomed = true;
+      // Size instantly (no width/height tween) so the editor iframe initializes
+      // at the correct size, then keep it fitted as the workspace resizes.
+      this._applyWorkspaceBounds(false);
+      this._observeWorkspace();
+      TweenMax.fromTo(this.$el, 0.35, { opacity: 0 }, { opacity: 1, ease: Expo.easeOut });
       return
     }
     this.size = this.max_size();
@@ -778,7 +905,7 @@ class __player_document extends PlayerInteract {
         break;
 
       case _a.edit:
-        this.edit({ fullscreen: true })
+        this.edit()
         break;
 
       case _a.preview:
@@ -793,8 +920,8 @@ class __player_document extends PlayerInteract {
         this.__overlay.clear();
         break;
 
-      case "fullscreen":
-        this.el.requestFullscreen().catch(e => console.warn("Fullscreen request failed:", e));
+      case "doc-zoom":
+        this.toggleZoom();
         break;
 
       case 'download-pdf':
