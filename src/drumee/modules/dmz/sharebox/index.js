@@ -138,9 +138,17 @@ class __dmz_sharebox extends LetcBox {
     let token = this.mget(_a.token);
     let hub_id = Visitor.parseLocation().keysel || ""
 
-    let data = await this.postService(SERVICE.dmz.login,
-      { token, hub_id }
-    );
+    // If the URL contains /<file_nid>/<method>, pass file_nid so the server
+    // can navigate to the file's parent folder (same as _loginSecureShare).
+    // args: ['dmz','share',token, file_nid, method]
+    // Guard with NID regex so hash query params (e.g. ?browser=1 → args[3]='browser=1')
+    // are never forwarded as file_nid.
+    const NID_RE = /^[0-9a-f]{16}$/;
+    const urlFileNid = Visitor.parseModule()[3];
+    const loginOpt = { token, hub_id };
+    if (NID_RE.test(urlFileNid)) loginOpt.file_nid = urlFileNid;
+
+    let data = await this.postService(SERVICE.dmz.login, loginOpt);
 
     this.mset(data);
     if (data.guest_name) {
