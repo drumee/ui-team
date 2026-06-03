@@ -2,9 +2,10 @@
 paths:
   - "src/drumee/builtins/window/**/*.js"
   - "src/drumee/builtins/player/**/*.js"
+  - "src/drumee/builtins/webrtc/**/*.js"
 ---
 
-# Window & Player Development
+# Window, Player & WebRTC Room Development
 
 ## Inheritance chain — don't skip levels
 

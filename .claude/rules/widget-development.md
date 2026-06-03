@@ -12,9 +12,17 @@ Base classes + full method list: CLAUDE.md → "Widget base classes" / "Widget m
 
 ## Base class
 
-- Standard widget → extend **`LetcBox`**.
+For a **new standard widget**:
+- Plain widget → extend **`LetcBox`**.
 - Media/filesystem node (file, folder, hub) → extend **`DrumeeMFS`**.
-- Nothing else.
+- Lightweight/leaf widget (no model lifecycle) → may extend `Marionette.View`.
+
+**Don't change an existing widget's base class.** Several intentionally extend other bases and the rule above does NOT override them:
+- editors extend their player base (`__editor_diagram extends __player`),
+- MFS-node panels extend `mfsInteract` (`__panel_trash`),
+- simple widgets extend `Marionette.View`.
+
+Match the sibling/parent pattern of the file you're editing, not a blanket rule.
 
 ## Lifecycle — respect the order
 

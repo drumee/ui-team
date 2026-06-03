@@ -14,14 +14,14 @@ Path-scoped rule files for Claude Code.
 
 | File | Activates on | Purpose |
 |------|--------------|---------|
-| `framework-invariants.md` | always | non-negotiable contracts: globals not imported, class=kind=fig naming, no raw HTML, LOCALE |
-| `widget-development.md` | `builtins/{widget,panel,editor,messenger}/**` | widget lifecycle, base class, WS bind/unbind cleanup |
-| `window-development.md` | `builtins/{window,player}/**` | inheritance chain, `Wm.launch`, media-stream cleanup |
+| `framework-invariants.md` | always | non-negotiable contracts: globals not imported, fig naming + seeds authority, no raw HTML, UPPERCASE LOCALE, `fetchService`/`postService` |
+| `widget-development.md` | `builtins/{widget,panel,editor,messenger}/**` | widget lifecycle, base class (+ exceptions), WS bind/unbind cleanup |
+| `window-development.md` | `builtins/{window,player,webrtc}/**` | inheritance chain, `Wm.launch`, media-stream cleanup |
 | `skeleton-ui.md` | `**/skeleton/**` | Skeletons-only UI, BEM `pfx = fig.family`, event wiring |
 | `styling-scss.md` | `**/*.scss` | BEM root = fig.family, design tokens over literals |
-| `i18n-locale.md` | `locale/**` (+ any new user text) | `LOCALE.*` keys, mirror across all langs |
+| `i18n-locale.md` | `locale/**` | maintaining UPPERCASE keys, mirror across all langs |
 | `build-and-seeds.md` | `webpack/**`, `seeds.js` | generated seeds, mangle-off contract, path aliases |
-| `api-services.md` | `api/**`, `lex/**` | `fetchService`/`postService`, `SERVICE.*`, lexicon constants |
+| `api-services.md` | `api/**`, `lex/**` | `SERVICE.*` names, lexicon constants, `onServerComplain` |
 
 ## Authoring conventions
 

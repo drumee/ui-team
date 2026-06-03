@@ -9,19 +9,18 @@ Non-negotiable contracts. Breaking these causes runtime failures that webpack wi
 - ❌ `import { Skeletons } from '@drumee/ui-core'`
 - ✅ use `Skeletons` directly.
 
-## 2. Class name = Kind = fig.family (one contract)
+## 2. Class name drives fig.family; seeds.js is authoritative for Kind
 
-The constructor name drives four things at once:
-
-- **Kind** registry key = class name minus leading underscores (snake_case).
-- **`fig.family`** = that name with `_` → `-` (the BEM/CSS prefix).
-- **folder path** matches the family.
+- **`fig.family`** is deterministic = class name minus leading underscores, `_` → `-` → also the BEM/CSS prefix. `class __chat_hub` → `fig.family "chat-hub"` → css `chat-hub__*`.
+- **Kind registry key** is whatever `src/drumee/seeds.js` registers. It *often* equals the class name minus underscores (`__window_folder` → `window_folder`), but **not always** — e.g. `class __player_audio` is registered as `audio_player` (reversed). Always check `seeds.js` for the real key; don't infer it.
 
 ```
-class __chat_hub  →  kind "chat_hub"  →  fig.family "chat-hub"  →  css "chat-hub__*"  →  builtins/.../chat/hub/
+class __chat_hub     →  fig.family "chat-hub"  →  css "chat-hub__*"  →  builtins/.../chat/hub/
+class __window_folder → seeds key "window_folder"   (matches transform)
+class __player_audio  → seeds key "audio_player"     (does NOT match — seeds wins)
 ```
 
-Rename a class → you must update its seed entry, kind references, and CSS prefix together. Don't rename casually.
+Rename a class → update its seed entry, kind references, and CSS prefix together. Don't rename casually.
 
 ## 3. Terser `mangle` is DISABLED on purpose
 
@@ -34,4 +33,10 @@ Build DOM with `Skeletons.*` only. ❌ template-literal markup, `$('<div>')`, `i
 ## 5. All user-visible text via `LOCALE`
 
 - ❌ `content: "Send"`
-- ✅ `content: LOCALE.send` (and add the key to the locale files — see `i18n-locale.md`).
+- ✅ `content: LOCALE.SEND` — locale keys are **UPPERCASE** (`locale/en.json` has `SEND`, `ADD`, … not `send`). A wrong-case/missing key renders blank (createSafeObject returns `''`), no error.
+- New key → add to `locale/en.json` and mirror across all langs — see `i18n-locale.md`.
+
+## 6. Server calls via `fetchService` / `postService`
+
+- ✅ `this.fetchService(SERVICE.ns.method, payload)` (GET) / `this.postService(...)` (POST).
+- ❌ raw `fetch` / `$.ajax` / hardcoded URLs — they bypass auth, `socket_id`, device headers, and error dispatch. Service names come from `SERVICE.*`. (Detail: `api-services.md`, CLAUDE.md → "Socket / HTTP Utilities".)

@@ -9,11 +9,11 @@ paths:
 
 Utilities detail: CLAUDE.md → "Socket / HTTP Utilities".
 
-## Calling the server
+> The "use `fetchService`/`postService`, never raw `fetch`" rule is always-on — see `framework-invariants.md` §6. It applies at every call site (`builtins/**`, `modules/**`), not just here. This file covers the lexicon + services map those calls depend on.
 
-- Use `this.fetchService(SERVICE.ns.method, payload)` (GET) / `this.postService(SERVICE.ns.method, payload)` (POST).
-- ❌ raw `fetch` / `$.ajax` — they bypass auth injection, `socket_id`, device headers, and the error dispatcher.
-- Endpoint names come from `SERVICE.*` (services.json merged with `Platform`). ❌ hardcoded URL strings.
+## Service names
+
+- Endpoint names come from `SERVICE.*` (services.json merged with `Platform`). ❌ hardcoded URL strings — add/look up the `ns.method` entry instead.
 
 ## Errors
 
