@@ -21,6 +21,6 @@ Naming detail: CLAUDE.md → "CSS class naming conventions".
 
 ## Scope
 
-- A widget's styles live in its own `skin/` dir. Global/shared styles only in `src/sass/`.
+- A **widget's** styles live in its own `skin/` dir. App-wide page styles go in `src/sass/`; the shared Sass library in `src/drumee/skin/` (`mixins/`, `lib/`, `vars/`) is also global and load-bearing (imported via `includePaths`) — edit it for shared mixins/tokens, don't relocate it to `src/sass/`.
 - Don't leak widget-specific rules into global stylesheets.
 - Keep nesting shallow (≤ 3 levels).

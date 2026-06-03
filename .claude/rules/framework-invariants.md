@@ -32,7 +32,7 @@ Kind lookup is by class name string. Terser runs with `mangle: true`, but `keep_
 
 Build DOM with `Skeletons.*` only. ❌ template-literal markup, `$('<div>')`, `innerHTML`, jQuery DOM construction.
 
-**Exception:** the bootstrap error/failover pages (`src/drumee/template/page/*.js`, injected via `innerHTML` in `drumee.js`) render before Skeletons is available and intentionally return raw HTML strings — leave those as-is.
+**Exceptions** (intentional raw-template paths — leave as-is, the ban is for normal UI skeleton markup): bootstrap error/failover pages (`src/drumee/template/page/*.js`, injected via `innerHTML` in `drumee.js`, render before Skeletons exists), and the uploader progress-chart SVG (`media/uploader/template/{row,grid}.js`, appended via `$el.append`).
 
 ## 5. All user-visible text via `LOCALE`
 
@@ -44,3 +44,4 @@ Build DOM with `Skeletons.*` only. ❌ template-literal markup, `$('<div>')`, `i
 
 - ✅ `this.fetchService(SERVICE.ns.method, payload)` (GET) / `this.postService(...)` (POST).
 - ❌ raw `fetch` / `$.ajax` / hardcoded URLs — they bypass auth, `socket_id`, device headers, and error dispatch. Service names come from `SERVICE.*`. (Detail: `api-services.md`, CLAUDE.md → "Socket / HTTP Utilities".)
+- **Exception:** raw `fetch` for static/bundled **assets** (e.g. the PDFium wasm in `player/document/pdfium-wrapper.js`) is fine — the ban targets backend *service* calls, not asset loads.

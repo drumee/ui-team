@@ -1,5 +1,6 @@
 ---
 paths:
+  - "src/drumee/api.js"
   - "src/drumee/api/**/*.js"
   - "src/drumee/lex/services.json"
   - "src/drumee/lex/*.js"
