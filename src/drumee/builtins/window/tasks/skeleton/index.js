@@ -268,6 +268,13 @@ const make = function (ui) {
             }),
           ].filter(Boolean),
         }),
+        // Description preview (clamped to ~2 lines via CSS; omitted when empty).
+        task.description
+          ? Skeletons.Note({
+              className: `${pfx}__task-desc`,
+              content: task.description,
+            })
+          : null,
         filesNode,
         footer,
       ].filter(Boolean),

@@ -2330,6 +2330,9 @@
 
   &__split-body[data-view="task"] {
     grid-template-columns: 1fr;
+    // Clamp the row so the bounded grid cell isn't overflowed by the panel's
+    // content height; otherwise the board can't scroll and the + is clipped.
+    grid-template-rows: minmax(0, 1fr);
     background: var(--normal-bg-elevated);
 
     .window__files-panel,
@@ -2339,6 +2342,9 @@
 
     .tasks-panel__ui {
       display: flex;
+      // Vertical twin of the board's min-width:0: lets the grid row clamp
+      // instead of min-height:auto forcing __ui to full content height.
+      min-height: 0;
     }
   }
 
