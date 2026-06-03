@@ -20,7 +20,7 @@ Path-scoped rule files for Claude Code.
 | `skeleton-ui.md` | `**/skeleton/**` | Skeletons-only UI, BEM `pfx = fig.family`, event wiring |
 | `styling-scss.md` | `**/*.scss` | BEM root = fig.family, design tokens over literals |
 | `i18n-locale.md` | `locale/**` | maintaining UPPERCASE keys, mirror across all langs |
-| `build-and-seeds.md` | `webpack/**`, `seeds.js` | generated seeds, mangle-off contract, path aliases |
+| `build-and-seeds.md` | `webpack/**`, `seeds.js` | generated seeds (seeds.js authoritative), class-name preservation (`keep_classnames`), path aliases |
 | `api-services.md` | `api/**`, `lex/**` | `SERVICE.*` names, lexicon constants, `onServerComplain` |
 
 ## Authoring conventions

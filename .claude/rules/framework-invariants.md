@@ -11,7 +11,7 @@ Non-negotiable contracts. Breaking these causes runtime failures that webpack wi
 
 ## 2. Class name drives fig.family; seeds.js is authoritative for Kind
 
-- **`fig.family`** is deterministic = class name minus leading underscores, `_` → `-` → also the BEM/CSS prefix. `class __chat_hub` → `fig.family "chat-hub"` → css `chat-hub__*`.
+- **`fig.family`** is deterministic = class name minus leading underscores, `_` → `-` → also the BEM/CSS prefix. `class __chat_hub` → `fig.family "chat-hub"` → css `chat-hub__*`. **Exception:** a widget that sets `prototype.figName` overrides this — `class __account_entry` with `figName = "account_field"` → fig.family `"account-field"` → css `.account-field__*`. Check for a `figName` override before deriving the prefix from the class name.
 - **Kind registry key** is whatever `src/drumee/seeds.js` registers. It *often* equals the class name minus underscores (`__window_folder` → `window_folder`), but **not always** — e.g. `class __player_audio` is registered as `audio_player` (reversed). Always check `seeds.js` for the real key; don't infer it.
 
 ```
@@ -22,13 +22,15 @@ class __player_audio  → seeds key "audio_player"     (does NOT match — seeds
 
 Rename a class → update its seed entry, kind references, and CSS prefix together. Don't rename casually.
 
-## 3. Terser `mangle` is DISABLED on purpose
+## 3. Class names survive minification — keep `keep_classnames` / `keep_fnames`
 
-Kind lookup is by class name string, so the build preserves names. Never enable mangling and never assume minification will rename a symbol.
+Kind lookup is by class name string. Terser runs with `mangle: true`, but `keep_classnames: true` + `keep_fnames: true` (`webpack.js`) preserve the names that lookup depends on. ❌ never drop those `keep_*` options — removing them breaks Kind resolution at runtime. Don't assume minification will rename a symbol.
 
 ## 4. UI is declarative — no raw HTML
 
 Build DOM with `Skeletons.*` only. ❌ template-literal markup, `$('<div>')`, `innerHTML`, jQuery DOM construction.
+
+**Exception:** the bootstrap error/failover pages (`src/drumee/template/page/*.js`, injected via `innerHTML` in `drumee.js`) render before Skeletons is available and intentionally return raw HTML strings — leave those as-is.
 
 ## 5. All user-visible text via `LOCALE`
 

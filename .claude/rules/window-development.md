@@ -17,6 +17,8 @@ LetcBox → __window_utils → __window_core → __window_interact → <your win
 - Video/call windows → extend `__room`.
 - Players → extend `__window_interact_player`.
 
+This chain is for **top-level** windows/players/rooms only. Leaf/child widgets nested under `player/**` and `webrtc/**` extend `LetcBox` (e.g. `__player_page` in `player/document/page`, `__endpoint` in `webrtc/endpoint`) — match the sibling, don't force them onto the window chain.
+
 ## Opening / closing
 
 - Open via `Wm.launch({ kind, media, ... })` — ❌ never `new __window_x()`.

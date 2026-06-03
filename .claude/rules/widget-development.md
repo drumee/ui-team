@@ -28,7 +28,7 @@ Match the sibling/parent pattern of the file you're editing, not a blanket rule.
 
 - `constructor` — method binding only (`_.bindAll`). No DOM, no fetch.
 - `initialize(opt)` — `super.initialize(opt)`, `require('./skin')`, `declareHandlers()` (if it handles child events), `bindEvent(_a.live)` (if it needs WS).
-- `onDomRefresh()` — fetch data, then `this.feed(require('./skeleton').default(this))`.
+- `onDomRefresh()` — fetch data, then feed the skeleton. Match the skeleton's export shape: CommonJS (`module.exports = fn`) → `this.feed(require('./skeleton')(this))`; ESM default → `this.feed(require('./skeleton').default(this))`. Both shapes exist in this repo (see `skeleton-ui.md`).
 - `onPartReady(child, pn)` — wire named parts (the `sys_pn` parts).
 - `onBeforeDestroy()` — `unbindEvent(_a.live)`, clear timers/intervals.
 

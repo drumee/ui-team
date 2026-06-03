@@ -20,7 +20,7 @@ Component reference: CLAUDE.md → "Skeletons Component Reference".
 
 ## Event wiring — two channels
 
-- **Action → logic**: `service: 'send', uiHandler: [ui]` → fires `ui.onUiEvent('send', args)`. `uiHandler` MUST be an array.
+- **Action → logic**: `service: 'send', uiHandler: [ui]` → fires `ui.onUiEvent(cmd, args)`. `uiHandler` MUST be an array. Handler signature is `onUiEvent(cmd, args)` — `cmd` is the triggering command object (has `.get`/`.mget`), and the service is read inside via `args.service || cmd.get(_a.service)`. The first arg is **not** the service string.
 - **Lifecycle → part**: `sys_pn: _a.list, partHandler: ui` → fires `ui.onPartReady(child, _a.list)`.
 
 ## Forms
