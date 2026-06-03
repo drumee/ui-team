@@ -1,99 +1,87 @@
 const EDITABLE = require("../editable");
 
 const cnWindowButton = "window-button";
-const cnWindowButtonDropdownMenu = `${cnWindowButton}__dropdown-menu`;
 
-function item(ui, service, ico, content) {
-  return Skeletons.Box.X({
-    className: `${cnWindowButtonDropdownMenu}__item`,
-    uiHandler: ui,
-    service,
-    kidsOpt: {
-      active: 0,
-    },
-    kids: [
-      Skeletons.Button.Svg({
-        ico,
-        className: `${cnWindowButtonDropdownMenu}__icon`,
-      }),
-      Skeletons.Note({
-        className: `${cnWindowButtonDropdownMenu}__name`,
-        content,
-      }),
-    ],
-  });
+function tooltip(ui, content) {
+  return {
+    className: `${ui.fig.family}__tooltips ${ui.fig.name}-tooltips ${cnWindowButton}__tooltips`,
+    content,
+  };
 }
 
-module.exports = function (ui) {
-  let download, downloadPDF, edit, print;
-
-  const menuTrigger = Skeletons.Button.Label({
-    className: `${cnWindowButton}__label-button`,
-    label: LOCALE.DOCUMENT,
-    ico: "carret-down",
+function action(ui, { service, ico, tip, state, icons }) {
+  const a = {
+    ico,
+    className: `${cnWindowButton}__icon-button`,
+    service,
     uiHandler: ui,
-    partHandler: ui,
-  });
+    tooltips: tooltip(ui, tip),
+  };
+  if (state != null) a.state = state;
+  if (icons) a.icons = icons;
+  return Skeletons.Button.Svg(a);
+}
 
-  download = item(ui, _a.download, _a.download, LOCALE.DOWNLOAD_ORIG);
+// Flat header toolbar — the document actions are rendered inline in the tab
+// header (no hover/dropdown trigger) so they're directly discoverable.
+module.exports = function (ui) {
+  const actions = [];
 
-  if (ui.mget(_a.ext) == _a.pdf) {
-    downloadPDF = null;
-  } else {
-    downloadPDF = item(
-      ui,
-      "download-pdf",
-      "app-pdf-file",
-      LOCALE.DOWNLOAD_AS_PDF,
+  actions.push(
+    action(ui, {
+      service: _a.download,
+      ico: _a.download,
+      tip: LOCALE.DOWNLOAD_ORIG,
+    }),
+  );
+
+  if (ui.mget(_a.ext) != _a.pdf) {
+    actions.push(
+      action(ui, {
+        service: "download-pdf",
+        ico: "app-pdf-file",
+        tip: LOCALE.DOWNLOAD_AS_PDF,
+      }),
     );
   }
 
   if (ui.canUpload() && EDITABLE.includes(ui.mget(_a.ext).toLowerCase())) {
     if (ui.mget(_a.mode) == _a.edit) {
-      edit = item(ui, "preview", "desktop_preview", LOCALE.PREVIEW);
-    } else {
-      if (Platform.get("doc_editor")) {
-        edit = item(ui, _a.edit, "app-edit", LOCALE.EDIT);
-      } else {
-        edit = null;
-      }
+      actions.push(
+        action(ui, {
+          service: "preview",
+          ico: "desktop_preview",
+          tip: LOCALE.PREVIEW,
+        }),
+      );
+    } else if (Platform.get("doc_editor")) {
+      actions.push(
+        action(ui, { service: _a.edit, ico: "app-edit", tip: LOCALE.EDIT }),
+      );
     }
-  } else {
-    edit = null;
   }
 
-  print = item(ui, "print", "print", LOCALE.PRINT);
-  let fullscreen = item(ui, "fullscreen", "player-fullscreen", LOCALE.FULLSCREEN);
+  actions.push(
+    action(ui, { service: "print", ico: "print", tip: LOCALE.PRINT }),
+  );
 
-  const separator = Skeletons.Box.X({
-    className: `${cnWindowButtonDropdownMenu}__separator`,
-  });
-
-  const menuItems = Skeletons.Box.X({
-    className: `${cnWindowButtonDropdownMenu}__items-wrapper`,
-    kids: [
-      Skeletons.Box.Y({
-        className: `${cnWindowButtonDropdownMenu}__items`,
-        kids: [download, downloadPDF, separator, edit, print, fullscreen],
-      }),
-    ],
-  });
+  // Fullscreen → maximize-within-workspace toggle, mirroring the window-tab
+  // zoom (fills the workspace, never the header/sidebar). Icon flips per toggle.
+  actions.push(
+    action(ui, {
+      service: "doc-zoom",
+      ico: ui._zoomed ? "desktop_reduce" : "desktop_fullview",
+      tip: LOCALE.FULLSCREEN,
+      state: ui._zoomed ? 1 : 0,
+      icons: ["desktop_fullview", "desktop_reduce"],
+    }),
+  );
 
   return Skeletons.Box.X({
     debug: __filename,
     className: `${cnWindowButton}__buttons-wrapper`,
-    kids: [
-      {
-        kind: KIND.menu.topic,
-        sys_pn: "document-menu",
-        className: `${cnWindowButtonDropdownMenu}__wrapper`,
-        flow: _a.y,
-        opening: _e.click,
-        persistence: _a.none,
-        trigger: menuTrigger,
-        items: menuItems,
-      },
-      require("../../skeleton/control")(ui),
-    ],
+    sys_pn: "doc-actions",
+    partHandler: ui,
+    kids: [...actions, require("../../skeleton/control")(ui)],
   });
 };
