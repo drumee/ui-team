@@ -27,8 +27,11 @@ class __panel_trash extends mfsInteract {
    * @param {*} e 
    */
   _onOutsideClick(e, source) {
-    // const svc = source && source.mget && source.mget(_a.service);
-    // if (typeof svc === "string" && svc.startsWith("toggle-")) return;
+    // Clicks coming from a sidebar toggle button are owned by
+    // Desk.togglePanel — bail so we don't race it (flip anim to "out"
+    // here and have togglePanel read it as closed and reopen).
+    const svc = source && source.mget && source.mget(_a.service);
+    if (typeof svc === "string" && svc.startsWith("toggle-")) return;
     if (this.el.dataset.anim === "in" && !this.el.contains(e.target)) {
       this.el.dataset.anim = "out";
     }

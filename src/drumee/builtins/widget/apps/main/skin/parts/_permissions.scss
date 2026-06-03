@@ -28,6 +28,11 @@
     line-height: 36px;
     font-weight: 600;
     color: $ink-900;
+
+    &[data-device="mobile"] {
+      font-size: 22px;
+      line-height: 28px;
+    }
   }
 
   &__perm-page-subtitle {
@@ -136,6 +141,12 @@
     > * {
       pointer-events: none;
     }
+
+    &[data-device="mobile"] {
+      flex: 1 1 100%;
+      padding: 14px;
+      gap: 12px;
+    }
   }
 
   &__perm-card-body {
@@ -143,6 +154,10 @@
     min-width: 0;
     align-items: flex-start;
     gap: 20px;
+
+    &[data-device="mobile"] {
+      gap: 12px;
+    }
   }
 
   &__perm-folder {
@@ -152,6 +167,16 @@
     height: 86px;
     flex-shrink: 0;
     position: relative;
+
+    &[data-device="mobile"] {
+      width: 72px;
+      height: 60px;
+
+      .folder-shape {
+        width: 72px;
+        height: 60px;
+      }
+    }
 
     .folder-shape {
       display: block;

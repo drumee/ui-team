@@ -214,6 +214,12 @@
       &.vector {
         background-color: var(--neutral-500);
       }
+
+      // Document posters (PDF first page) crop to the top so the title stays
+      // visible, unlike photos which crop to center.
+      &.document {
+        background-position: top;
+      }
     }
 
     .preview-icon {
@@ -342,5 +348,76 @@
     flex: 0 0 auto;
     margin-left: 4px;
     margin-top: 2px;
+  }
+}
+
+// Mobile: file/document title in meta-row gets the same size + padding
+// treatment as folder/workspace labels in filename.scss — 14-16px and
+// lateral padding so titles stay aligned under the card icon, not
+// stretched edge-to-edge of the grid cell. Desktop (>480px) keeps the
+// Figma 12px recipe.
+@media (max-width: 480px) {
+  .media-grid {
+    // Folder/hub cells: cap the folder-art anchor to the Figma natural
+    // width (99×79.5). On mobile the grid cell stretches to ~190px wide
+    // while `max-height: 79.5px` clamps the height — the SVG inside
+    // preserves its own aspect ratio and renders centered at ~99px
+    // wide, but the absolute-positioned badge (bottom-left) and kebab
+    // (bottom-right) stay anchored to the folder-art edges, so they
+    // appear OUTSIDE the visible folder graphic. Locking max-width to
+    // 99px keeps the anchor box in sync with the rendered SVG, so the
+    // overlays land on the folder corners like on desktop.
+    &__container {
+      &.folder,
+      &.hub {
+        .media-grid__folder-art {
+          max-width: 99px;
+          margin-inline: auto;
+        }
+
+        // Push the two overlays into the folder corners on mobile.
+        // Desktop offsets (18px / 14px) were tuned for a wider visible
+        // folder; once the anchor is locked to 99px the overlays look
+        // crowded near the middle. Pull the badge closer to the left
+        // edge and the kebab closer to the right edge so they read as
+        // distinct corner icons.
+        .badge {
+          left: 6px;
+        }
+
+        .media-context-menu__folder-trigger {
+          right: 4px;
+        }
+      }
+    }
+
+    &__meta-row {
+      padding-left: var(--spacer-5);
+      padding-right: var(--spacer-5);
+    }
+
+    &.media-grid &__meta-row .filename,
+    & &__meta-row .filename {
+      font-size: 14px;
+      max-height: calc(14px * 1.4 * 2);
+    }
+
+    &__date {
+      font-size: 12px;
+    }
+
+    // Cap the square file-card frame. Desktop design assumes ~120px
+    // cards (aspect-ratio 1/1 fills --grid-cell-w). On mobile with
+    // 2-col fluid cells (~190-280px wide) the frame stretches to a
+    // huge 190+px square, and total card height (frame + 8gap + meta)
+    // overflows `grid-auto-rows: --grid-cell-h-file` (184px) → cards
+    // visually overlap each other vertically. Lock frame to ~140px
+    // and center inside the cell; matches the folder icon cap pattern
+    // at line ~59 (.media-grid__folder-art { max-height: 79.5px }).
+    &__background {
+      max-width: 140px;
+      max-height: 140px;
+      margin-inline: auto;
+    }
   }
 }

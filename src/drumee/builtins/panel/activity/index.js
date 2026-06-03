@@ -57,10 +57,26 @@ class __panel_activity extends LetcBox {
    * 
    * @param {*} e 
    */
-  _onOutsideClick(e) {
-    if (this.activityState && !this.el.contains(e.target)) {
-      this._hide()
-    }
+  _onOutsideClick(e, source) {
+    // Clicks coming from a sidebar toggle button are owned by
+    // Desk.togglePanel / toggle-activity — bail so we don't race the
+    // toggle handler and immediately reopen what it just closed.
+    const svc = source && source.mget && source.mget(_a.service);
+    if (typeof svc === "string" && svc.startsWith("toggle-")) return;
+    if (!this.activityState) return;
+    // Mobile: the card closes only via its explicit close button (plus the
+    // sidebar toggle), so it never auto-dismisses on an outside tap. This
+    // also removes the filter-tab (All/Mentions/Shares) re-render race that
+    // mis-fired as an outside click and closed the panel.
+    if (Visitor.isMobile()) return;
+    // Desktop keeps outside-click-to-close, but resolved against the LIVE
+    // DOM: switching the filter restarts the smart list and can detach the
+    // clicked node (or leave this.el a stale __ui), which the old
+    // this.el.contains check mis-read as an outside click.
+    const t = e && e.target;
+    if (!t || !t.isConnected) return;
+    if (t.closest && t.closest('.panel-activity__ui')) return;
+    this._hide();
   }
 
   /**
@@ -93,6 +109,9 @@ class __panel_activity extends LetcBox {
     RADIO_BROADCAST.on('activity:request', this.updateSubactivityCount);
     RADIO_BROADCAST.on('activity:notify', this._notify);
     RADIO_NETWORK.on(_e.online, this.refreshActivity);
+    // off-before-on: onDomRefresh can run again on re-feed; without this the
+    // outside-click handler stacks up duplicate registrations.
+    RADIO_CLICK.off(_e.click, this._onOutsideClick);
     RADIO_CLICK.on(_e.click, this._onOutsideClick)
     this.visible = !document.hidden;
     this.feed(require('./skeleton')(this));

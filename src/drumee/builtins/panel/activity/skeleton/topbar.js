@@ -5,6 +5,17 @@ module.exports = function (ui) {
     className: `${pfx}__topbar`,
     kids: [
       Skeletons.Note({ className: `${pfx}__title`, content: LOCALE.NOTIFICATIONS }),
+      // Mobile-only close button (hidden on desktop via CSS). Routes to the
+      // panel's own `close-activity-panel` handler → _hide(). On mobile this
+      // is the only way to dismiss the card (outside-tap close is disabled
+      // there — see _onOutsideClick); desktop still closes via the sidebar
+      // toggle / outside click.
+      Skeletons.Button.Svg({
+        ico: 'cross',
+        className: `${pfx}__close-btn`,
+        service: 'close-activity-panel',
+        uiHandler: [ui],
+      }),
       Skeletons.Box.X({
         className: `${pfx}__topbar-actions`,
         kids: [

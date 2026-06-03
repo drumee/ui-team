@@ -313,6 +313,12 @@ class __desk_dock extends LetcBox {
       case 'add-media':
         return this.handleMediaUpload();
 
+      case "toggle-chat":
+        if (window.Desk && _.isFunction(window.Desk.togglePanel)) {
+          return window.Desk.togglePanel("chat_p2p", "chat-panel");
+        }
+        return;
+
       case "open-searchbox":
         let state = this.__searchbox.get(_a.state) ^ 1;
         this.__searchbox.setState(state)

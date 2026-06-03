@@ -20,11 +20,25 @@ function header(ui) {
           }),
         ],
       }),
-      button(ui, {
-        label: LOCALE.SAVE_PROFILE || "Save Profile",
-        className: `${pfx}-save`,
-        priority: "primary",
-        service: "save-profile",
+      Skeletons.Box.X({
+        className: `${pfx}-actions`,
+        kids: [
+          // Save confirmation pill. Hidden while data-state="0"; saveProfile()
+          // flips it to "1" (success) / "1" + data-variant="error" (failure)
+          // and a timer fades it back out — see _flashSaveStatus().
+          Skeletons.Note({
+            className: `${pfx}-saved`,
+            sys_pn: "save-status",
+            state: 0,
+            content: LOCALE.PROFILE_SAVED || "Profile saved",
+          }),
+          button(ui, {
+            label: LOCALE.SAVE_PROFILE || "Save Profile",
+            className: `${pfx}-save`,
+            priority: "primary",
+            service: "save-profile",
+          }),
+        ],
       }),
     ],
   });

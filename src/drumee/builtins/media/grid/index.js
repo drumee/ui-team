@@ -168,7 +168,9 @@ class __media_grid extends DrumeeMediaInteract {
         break;
 
       default:
-        this.iconType = _a.vector;
+        // Image-capable documents (PDF) show a real poster, so treat them like
+        // vignettes (hides the icon pseudo-overlay); other docs keep the icon.
+        this.iconType = this.imgCapable() ? _a.vignette : _a.vector;
     }
     this.trigger('media:loaded');
     this.content.el.dataset.icontype = this.iconType;

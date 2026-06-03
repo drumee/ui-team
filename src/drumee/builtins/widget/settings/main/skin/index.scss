@@ -11,6 +11,8 @@
   $row-bg: #ffffff;
   $danger-fg: #d64e49; // Delete button + warning glyph
   $danger-bg: #f6504a; // Used at low opacity for warning chip & delete row
+  $success-fg: #54b684; // "Profile saved" pill text (Signal/Success)
+  $success-bg: rgba(84, 182, 132, 0.15); // "Profile saved" pill background
 
   &__ui {
     width: 100%;
@@ -82,6 +84,48 @@
           line-height: 24px;
           font-weight: 600;
         }
+      }
+    }
+
+    // Right-side action cluster. `position: relative` anchors the floating
+    // confirmation pill; the pill is absolutely positioned so showing it
+    // never shifts the Save button (or reserves empty space when hidden).
+    &-actions {
+      position: relative;
+      align-items: center;
+      gap: var(--spacer-4);
+      flex-shrink: 0;
+    }
+
+    // Save confirmation pill — floats just below the Save button and is
+    // hidden (opacity 0) until saveProfile() flips data-state to "1".
+    &-saved {
+      position: absolute;
+      top: calc(100% + var(--spacer-3));
+      right: 0;
+      z-index: 2;
+      display: flex;
+      align-items: center;
+      height: 36px;
+      padding: 0 16px;
+      border-radius: 4px;
+      background: $success-bg;
+      color: $success-fg;
+      font-size: 14px;
+      line-height: 19.6px;
+      font-weight: 600;
+      white-space: nowrap;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.25s ease;
+
+      &[data-state="1"] {
+        opacity: 1;
+      }
+
+      &[data-variant="error"] {
+        background: rgba(214, 78, 73, 0.12);
+        color: $danger-fg;
       }
     }
   }
@@ -158,7 +202,7 @@
       }
 
       &::before {
-        content: '';
+        content: "";
         width: 14px;
         height: 14px;
         border: 2px solid rgba(214, 78, 73, 0.25);
@@ -663,18 +707,39 @@
     }
   }
 
-  // Mobile / narrow viewport: stack rows.
-  @media (max-width: 960px) {
+  // ── Responsive: tablet ────────────────────────────────────
+  // Two-column layout (~698 + 450 / ~375 + 773) doesn't fit at tablet
+  // widths (≤ 1024). Stack rows; keep header on one line and avatar/
+  // fields side-by-side since there's still enough horizontal room.
+  &__ui[data-device="tablet"] {
+    padding: var(--spacer-5);
+  }
+
+  &__row[data-device="tablet"] {
+    flex-direction: column;
+
+    .settings-main__profile-card,
+    .settings-main__preferences-card,
+    .settings-main__credentials-card,
+    .settings-main__danger-card,
+    .settings-main__linked-card {
+      flex: 1 1 auto;
+    }
+  }
+
+  // ── Responsive: tablet (viewport-based) ───────────────────
+  // Mirror the mobile [data-device] rules at <=1024px so tablet
+  // viewports collapse to the single-column layout regardless of
+  // whether the data-device attribute is set.
+  @media (max-width: 1024px) {
     &__ui {
       padding: var(--spacer-5);
+      gap: var(--spacer-5);
     }
 
     &__row {
-      flex-direction: column;
-    }
-    &__row-1,
-    &__row-2,
-    &__row-3 {
+      flex-direction: column !important;
+
       .settings-main__profile-card,
       .settings-main__preferences-card,
       .settings-main__credentials-card,
@@ -684,13 +749,97 @@
       }
     }
 
-    &__profile-body {
-      flex-direction: column;
+    &__header-row {
+      flex-direction: column !important;
       align-items: stretch;
+      gap: var(--spacer-5);
     }
+
+    &__header-save-main {
+      width: 100%;
+      min-width: 0;
+    }
+
+    &__header-title {
+      font-size: 24px;
+      line-height: 28px;
+    }
+
+    &__profile-body {
+      flex-direction: column !important;
+      align-items: center;
+      gap: var(--spacer-5);
+    }
+
+    &__profile-avatar-block {
+      align-self: center;
+    }
+
+    &__profile-fields {
+      width: 100%;
+    }
+
     &__profile-fields-row {
-      flex-direction: column;
+      flex-direction: column !important;
     }
+
+    &__card {
+      padding: var(--spacer-5);
+      gap: var(--spacer-5);
+    }
+
+    &__inner {
+      flex-wrap: wrap;
+      row-gap: var(--spacer-3);
+    }
+  }
+
+  &__header-row[data-device="mobile"] {
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--spacer-5);
+  }
+
+  &__header-save-main[data-device="mobile"] {
+    width: 100%;
+    min-width: 0;
+  }
+
+  &__header-title[data-device="mobile"] {
+    font-size: 24px;
+    line-height: 28px;
+  }
+
+  &__profile-body[data-device="mobile"] {
+    flex-direction: column;
+    align-items: center;
+    gap: var(--spacer-5);
+  }
+
+  &__profile-avatar-block[data-device="mobile"] {
+    align-self: center;
+  }
+
+  &__profile-fields[data-device="mobile"] {
+    width: 100%;
+  }
+
+  &__profile-fields-row[data-device="mobile"] {
+    flex-direction: column;
+  }
+
+  &__card[data-device="mobile"] {
+    padding: var(--spacer-5);
+    gap: var(--spacer-5);
+  }
+
+  // Inner rows (icon + text on left, button/toggle on right) start to
+  // wrap awkwardly at small widths. Allow them to stack if the right
+  // side has its own visible affordance (button/pill), but keep toggle
+  // rows inline since the switch is narrow.
+  &__inner[data-device="mobile"] {
+    flex-wrap: wrap;
+    row-gap: var(--spacer-3);
   }
 }
 

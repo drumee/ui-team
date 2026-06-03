@@ -1,7 +1,7 @@
 {
   "name": "@drumee/ui-team",
   "description": "Drumee Web Os User Interface with collaborative features",
-  "version": "3.3.0",
+  "version": "3.3.1",
   "homepage": "https://drumee.com",
   "author": "Somanos Sar <somanos@drumee.com> (http://drumee.com)",
   "repository": {
@@ -55,6 +55,7 @@
     "json-loader": "^0.5.7",
     "jsonfile": "^6.1.0",
     "mini-css-extract-plugin": "^2.6.1",
+    "patch-package": "^8.0.1",
     "postcss": "^8.4.16",
     "postcss-cli": "^10.0.0",
     "postcss-loader": "^7.0.1",
@@ -161,6 +162,7 @@
     "build": "npx update-browserslist-db@latest && ./webpack/seeds/index.js && drumee-ui-deploy",
     "add-widget": "drumee-make-widget",
     "md:style": "cd src/drumee && sass -I ./skin --no-source-map --update builtins/editor/markdow/skin/viewer.scss builtins/editor/markdow/template/style.css.txt",
-    "setup": "node node_modules/@drumee/ui-dev-tools/env/write-env.js --type=app --output devel --base-dir=$(pwd)"
+    "setup": "node node_modules/@drumee/ui-dev-tools/env/write-env.js --type=app --output devel --base-dir=$(pwd)",
+    "postinstall": "patch-package"
   }
 }

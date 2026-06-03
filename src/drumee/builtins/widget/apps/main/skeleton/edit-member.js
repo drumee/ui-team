@@ -4,9 +4,16 @@
 //   variant === "member" -> per-workspace permission selectors (View & Chat / View & Edit)
 
 function deviceKind(row) {
-  const platform = (row.platform || row.os || row.device_type || "").toLowerCase();
-  if (/(iphone|android|mobile|phone|ios|sm-|pixel)/.test(platform)) return "mobile";
-  if (/(mac|win|linux|laptop|desktop|chromebook)/.test(platform)) return "laptop";
+  const platform = (
+    row.platform ||
+    row.os ||
+    row.device_type ||
+    ""
+  ).toLowerCase();
+  if (/(iphone|android|mobile|phone|ios|sm-|pixel)/.test(platform))
+    return "mobile";
+  if (/(mac|win|linux|laptop|desktop|chromebook)/.test(platform))
+    return "laptop";
   const name = (row.name || row.device_name || "").toLowerCase();
   if (/(iphone|android|mobile|phone|pixel)/.test(name)) return "mobile";
   return "laptop";
@@ -27,25 +34,26 @@ function mapDevice(row) {
 // Privilege bitmask: Admin=31, Edit=7, View=2. Anything below 7 collapses to View.
 const ROLES = [
   { id: "admin", label: LOCALE.ROLE_ADMIN || "Admin", bit: 31 },
-  { id: "edit",  label: LOCALE.ROLE_VIEW_EDIT || LOCALE.EDIT || "Edit", bit: 7 },
-  { id: "view",  label: LOCALE.VIEW || "View", bit: 2 },
+  { id: "edit", label: LOCALE.ROLE_VIEW_EDIT || LOCALE.EDIT || "Edit", bit: 7 },
+  { id: "view", label: LOCALE.VIEW || "View", bit: 2 },
 ];
 
 function roleIdFor(priv) {
   const p = parseInt(priv, 10) || 0;
   if (p >= 31) return "admin";
-  if (p >= 7)  return "edit";
+  if (p >= 7) return "edit";
   return "view";
 }
 
 function roleLabelFor(priv) {
   const role = ROLES.find((r) => r.id === roleIdFor(priv));
-  return role ? role.label : (LOCALE.VIEW || "View");
+  return role ? role.label : LOCALE.VIEW || "View";
 }
 
 function mapWorkspace(row) {
   const id = row.hub_id || row.id;
-  const name = row.hub_name || row.name || row.full_name || row.label || "Workspace";
+  const name =
+    row.hub_name || row.name || row.full_name || row.label || "Workspace";
   const priv = parseInt(row.privilege || row.permission || 0, 10) || 0;
   const roleId = roleIdFor(priv);
   return { id, name, priv, roleId, role: roleLabelFor(priv) };
@@ -334,7 +342,7 @@ function deviceSection(ui) {
       Skeletons.Box.Y({
         className: `${pfx}__edit-device-list`,
         kids: (ui._editDevices || []).map((row) =>
-          deviceItem(ui, mapDevice(row))
+          deviceItem(ui, mapDevice(row)),
         ),
       }),
     ],

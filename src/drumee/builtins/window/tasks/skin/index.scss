@@ -15,6 +15,12 @@
   &__main {
     width: 100%;
     height: 100%;
+    // Flex item of the Box.Y __root (vertical main-axis). Without this the
+    // default `min-height: auto` lets __main grow to the full card-stack
+    // height instead of clamping to __root, so each column's
+    // `overflow-y: auto` never engages and tall columns simply overflow.
+    // (Vertical twin of the `min-width: 0` horizontal-scroll fix below.)
+    min-height: 0;
     align-items: stretch;
     gap: 12px;
     padding: 16px;
@@ -34,6 +40,47 @@
     background-color: var(--normal-bg-80, rgba(0, 0, 0, 0.04));
     box-sizing: border-box;
     overflow: hidden;
+  }
+
+  // ── Mobile: lock columns + force horizontal scroll on board ──
+  // 4 columns × 260px = 1076px > 430px phone viewport → board needs
+  // to scroll horizontally. The previous attempt set overflow-x:auto
+  // on __main but the scroll never engaged because the ancestor chain
+  // (window__tasks-panel grid cell, tasks-panel__ui, tasks-panel__root)
+  // all default to `min-width: auto` for flex/grid items — meaning
+  // they expand to fit their content instead of clamping to their
+  // parent cell. The whole folder window then scrolled instead of
+  // the inner board. Pin every wrapper to `min-width: 0` so each
+  // level clamps to its parent, then __main's overflow-x finally
+  // becomes meaningful and the user can swipe through status columns
+  // (TO DO → IN PROGRESS → REVIEW → COMPLETE).
+  @media (max-width: 650px) {
+    &__ui,
+    &__root {
+      min-width: 0;
+      max-width: 100%;
+    }
+
+    &__main {
+      flex-wrap: nowrap;
+      min-width: 0;
+      max-width: 100%;
+      overflow-x: auto !important;
+      overflow-y: hidden;
+      scrollbar-width: none;
+      -webkit-overflow-scrolling: touch;
+      touch-action: pan-x pan-y;
+
+      &::-webkit-scrollbar {
+        display: none;
+      }
+    }
+
+    &__column {
+      flex: 0 0 260px !important;
+      min-width: 260px !important;
+      width: 260px;
+    }
   }
 
   &__column-body {
@@ -166,6 +213,22 @@
     flex: 1 1 auto;
     min-width: 0;
     word-break: break-word;
+  }
+
+  // Description preview on the card — compact, muted, clamped to ~2 lines.
+  &__task-desc {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    overflow-wrap: anywhere; // long unbroken tokens/URLs stay inside the card
+    margin: 2px 0 0;
+    @include drumee.typo(
+      $size: 12px,
+      $weight: 400,
+      $line: 16px,
+      $color: var(--normal-fg-40, #84848c)
+    );
   }
 
   &__task-foot {
@@ -423,7 +486,8 @@
     position: relative;
     box-sizing: border-box;
 
-    input {
+    input,
+    textarea {
       width: 100%;
       padding: 8px 10px;
       border: 1px solid var(--border-default, rgba(0, 0, 0, 0.08));
@@ -456,6 +520,18 @@
         cursor: pointer;
         caret-color: transparent;
       }
+    }
+
+    // Long titles wrap across lines and stay fully visible; the field grows
+    // up to ~4 lines, then scrolls. No drag handle (resize) since it's a
+    // logically single-line title.
+    textarea {
+      resize: none;
+      overflow-y: auto;
+      min-height: 36px;
+      max-height: 90px;
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
     }
   }
 
@@ -611,9 +687,11 @@
 
   &__detail-title {
     flex: 1 1 auto;
+    min-width: 0;
     background: transparent;
 
-    input {
+    input,
+    textarea {
       width: 100%;
       padding: 4px 6px;
       border: 1px solid transparent;
@@ -638,6 +716,18 @@
         border-color: var(--active-border, #433cc5);
         box-shadow: 0 0 0 3px rgba(67, 60, 197, 0.12);
       }
+    }
+
+    // Long titles wrap and stay fully visible; grows up to ~3 lines then
+    // scrolls. No resize handle — it's a logically single-line title.
+    textarea {
+      resize: none;
+      overflow-y: auto;
+      min-height: 30px;
+      max-height: 88px;
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+      display: block;
     }
   }
 
@@ -849,13 +939,47 @@
   }
 
   // ── Card assignee avatar (top-right of the card) ──────────────
+  // Multi-assignee avatar stack on the card (overlapping circles + "+N").
+  &__task-assignees {
+    margin-left: auto; // push to the right of the title row
+    flex-shrink: 0;
+    align-items: center;
+    flex-direction: row;
+  }
+
   &__task-assignee {
     width: 24px;
     height: 24px;
     flex-shrink: 0;
     border-radius: 50%;
     overflow: hidden;
-    margin-left: auto; // push it to the right of the title row
+    box-shadow: 0 0 0 2px var(--normal-bg-elevated, #fff);
+
+    // Overlap successive avatars in the stack.
+    & + & {
+      margin-left: -8px;
+    }
+  }
+
+  &__task-assignee-more {
+    flex-shrink: 0;
+    height: 24px;
+    min-width: 24px;
+    padding: 0 4px;
+    margin-left: -8px;
+    border-radius: 12px;
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--normal-bg-80, rgba(0, 0, 0, 0.06));
+    box-shadow: 0 0 0 2px var(--normal-bg-elevated, #fff);
+    @include drumee.typo(
+      $size: 11px,
+      $weight: 600,
+      $line: 1,
+      $color: var(--normal-fg-30, #5a5a66)
+    );
   }
 
   // ── Priority pills (create + detail) ──────────────────────────
@@ -953,11 +1077,24 @@
     }
   }
 
+  // Stack of assignee avatars inside the picker button (overlapping).
+  &__assignee-button-avatars {
+    flex-direction: row;
+    align-items: center;
+    flex-shrink: 0;
+  }
+
   &__assignee-button-avatar {
     width: 24px;
     height: 24px;
     border-radius: 50%;
     overflow: hidden;
+    flex-shrink: 0;
+    box-shadow: 0 0 0 2px var(--normal-bg-elevated, #fff);
+
+    & + & {
+      margin-left: -8px;
+    }
   }
 
   &__assignee-button-placeholder {
@@ -1646,5 +1783,20 @@ html[data-theme="dark"] .tasks-panel__flatpickr.flatpickr-calendar {
     &.nextMonthDay {
       color: rgba(228, 227, 255, 0.35);
     }
+  }
+}
+
+// `window__tasks-panel` is the grid cell folder window uses to hold
+// the tasks widget. Grid items default to `min-width: auto`, so when
+// `tasks-panel__main` builds 1076px of column content the cell
+// stretches with it and the entire folder window scrolls horizontally
+// instead of the board scrolling internally. Force the cell to clamp
+// at the grid track width so the panel stays its slot size and the
+// inner board owns the horizontal overflow.
+@media (max-width: 650px) {
+  .window__tasks-panel {
+    min-width: 0;
+    max-width: 100%;
+    overflow: hidden;
   }
 }

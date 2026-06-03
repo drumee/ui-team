@@ -63,52 +63,52 @@ export function tabBar(ui, opt = {}) {
     state: 0,
     dataset: { tab: _a.chat },
     uiHandler: [ui],
-  })
+  });
 
   if (ui.mget(_a.area) === _a.personal) {
     chat_label = "";
-    chat_tab = ""
+    chat_tab = "";
   }
 
   const kids = isFolder
     ? [
-      folderTab({
-        icon: "📄",
-        label: LOCALE.FILES,
-        service: "tab-files",
-        state: 1,
-        tab: "files",
-      }),
-      chat_tab,
-      folderTab({
-        icon: "📋",
-        label: "Tasks",
-        service: "tab-task",
-        state: 0,
-        tab: _a.task,
-      }),
-    ]
+        folderTab({
+          icon: "📄",
+          label: LOCALE.FILES,
+          service: "tab-files",
+          state: 1,
+          tab: "files",
+        }),
+        chat_tab,
+        folderTab({
+          icon: "📋",
+          label: "Tasks",
+          service: "tab-task",
+          state: 0,
+          tab: _a.task,
+        }),
+      ]
     : [
-      Skeletons.Button.Label({
-        className: `${cnRoot}-item ${ui.fig.family}__tab-bar-item`,
-        label: LOCALE.FILES,
-        ico: "desktop_docfile",
-        service: "tab-files",
-        state: 1,
-        dataset: { tab: "files" },
-        uiHandler: [ui],
-      }),
-      chat_label,
-      Skeletons.Button.Label({
-        className: `${cnRoot}-item ${ui.fig.family}__tab-bar-item`,
-        label: LOCALE.TASK,
-        ico: "list",
-        service: "tab-task",
-        state: 0,
-        dataset: { tab: _a.task },
-        uiHandler: [ui],
-      }),
-    ];
+        Skeletons.Button.Label({
+          className: `${cnRoot}-item ${ui.fig.family}__tab-bar-item`,
+          label: LOCALE.FILES,
+          ico: "desktop_docfile",
+          service: "tab-files",
+          state: 1,
+          dataset: { tab: "files" },
+          uiHandler: [ui],
+        }),
+        chat_label,
+        Skeletons.Button.Label({
+          className: `${cnRoot}-item ${ui.fig.family}__tab-bar-item`,
+          label: LOCALE.TASK,
+          ico: "list",
+          service: "tab-task",
+          state: 0,
+          dataset: { tab: _a.task },
+          uiHandler: [ui],
+        }),
+      ];
 
   if (opt.meeting) {
     kids.push(
@@ -222,32 +222,33 @@ export function dropdownMenuButton(ui, opt = {}) {
 
   const itemsNode = Skeletons.Box.Y({
     className: `${cnDropdown}__items`,
-    kids: menuItems.map(({ service, ico, content, area, className, ...extra }) =>
-      Skeletons.Box.X({
-        className: className
-          ? `${cnDropdown}__item ${className}`
-          : `${cnDropdown}__item`,
-        uiHandler: [ui],
-        service,
-        // active:0 on every child so a click on the icon/label passes
-        // through to this row (which carries `service`) instead of being
-        // swallowed by the interactive Button.Svg / Note.
-        kidsOpt: { active: 0 },
-        ...extra,
-        kids: [
-          Skeletons.Button.Svg({
-            ico,
-            active: 0,
-            className: `${cnDropdown}__icon`,
-            dataset: area ? { area } : undefined,
-          }),
-          Skeletons.Note({
-            content,
-            active: 0,
-            className: `${cnDropdown}__name`,
-          }),
-        ],
-      }),
+    kids: menuItems.map(
+      ({ service, ico, content, area, className, ...extra }) =>
+        Skeletons.Box.X({
+          className: className
+            ? `${cnDropdown}__item ${className}`
+            : `${cnDropdown}__item`,
+          uiHandler: [ui],
+          service,
+          // active:0 on every child so a click on the icon/label passes
+          // through to this row (which carries `service`) instead of being
+          // swallowed by the interactive Button.Svg / Note.
+          kidsOpt: { active: 0 },
+          ...extra,
+          kids: [
+            Skeletons.Button.Svg({
+              ico,
+              active: 0,
+              className: `${cnDropdown}__icon`,
+              dataset: area ? { area } : undefined,
+            }),
+            Skeletons.Note({
+              content,
+              active: 0,
+              className: `${cnDropdown}__name`,
+            }),
+          ],
+        }),
     ),
   });
 
@@ -529,6 +530,83 @@ export function visioMenu(ui, opt = {}) {
         ico: "raw-logo-drumee-icon",
         content: LOCALE.DRUMEE_CALL,
       },
+    ],
+  });
+}
+
+/**
+ * macOS-style zoom menu — icon trigger with a CSS-hover dropdown offering
+ * Enter/Exit Full Screen, Zoom, Tile Left/Right, Reframe. Clicking the
+ * trigger toggles Zoom directly.
+ *
+ * @param {*} ui
+ */
+export function zoomMenu(ui) {
+  const cnRoot = `${ui.fig.family}-topbar__zoom`;
+
+  const items = [
+    {
+      service: "window-zoom",
+      ico: "desktop_fullview",
+      // Dedicated key (not LOCALE.ZOOM, which labels the Zoom video app) so
+      // this "maximize window" action can be translated independently.
+      content: LOCALE.WINDOW_ZOOM,
+      modifier: "zoom",
+    },
+    {
+      service: "window-tile-left",
+      ico: "square-split-horizontal",
+      content: LOCALE.TILE_LEFT,
+      modifier: "tile-left",
+    },
+    {
+      service: "window-tile-right",
+      ico: "square-split-horizontal",
+      content: LOCALE.TILE_RIGHT,
+      modifier: "tile-right",
+    },
+    {
+      service: "window-reframe",
+      ico: "desktop_reduce",
+      content: LOCALE.REFRAME,
+      modifier: "reframe",
+    },
+  ];
+
+  return Skeletons.Box.X({
+    className: `${cnRoot}-wrapper`,
+    kids: [
+      Skeletons.Button.Svg({
+        ico: "desktop_fullview",
+        className: `${cnRoot}-trigger`,
+        sys_pn: "ctrl-fullscreen",
+        service: "window-zoom",
+        uiHandler: [ui],
+        partHandler: ui,
+      }),
+      Skeletons.Box.Y({
+        className: `${cnRoot}-menu`,
+        kids: items.map(({ service, ico, content, modifier }) =>
+          Skeletons.Box.X({
+            className: `${cnRoot}-item ${cnRoot}-item--${modifier}`,
+            uiHandler: [ui],
+            service,
+            kidsOpt: { active: 0 },
+            kids: [
+              Skeletons.Button.Svg({
+                ico,
+                active: 0,
+                className: `${cnRoot}-item-icon`,
+              }),
+              Skeletons.Note({
+                content,
+                active: 0,
+                className: `${cnRoot}-item-label`,
+              }),
+            ],
+          }),
+        ),
+      }),
     ],
   });
 }

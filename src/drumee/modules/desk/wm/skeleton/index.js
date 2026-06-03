@@ -1,7 +1,7 @@
 const { dropdownMenuButton } = require("./dropdown-btn");
 
 const _icons_list = function (ui) {
-  return Skeletons.List.Smart({
+  const list = Skeletons.List.Smart({
     className: `${ui.fig.family}__icons-list`,
     innerClass: `${ui.fig.family}__icons-scroll ${ui.fig.group}__icons-scroll`,
     sys_pn: _a.list,
@@ -21,12 +21,20 @@ const _icons_list = function (ui) {
       hub_id: Visitor.id,
     },
   });
+
   if (Visitor.isMobile()) {
-    a.style = {
-      ...a.style,
-      height: window.innerHeight - 160,
+    // Mobile chrome was previously assumed to consume 160px (legacy:
+    // desktop topbar + sidebar + dock). The current mobile layout
+    // only renders the 48px mobile-topbar above the WM, so subtract
+    // just that — anything larger leaves a dead zone at the bottom
+    // that visually overlapped the last row of cards.
+    list.styleOpt = {
+      ...list.styleOpt,
+      height: window.innerHeight - 48,
     };
   }
+
+  return list;
 };
 
 // ======================================================
@@ -54,6 +62,11 @@ const ___window_manager = function (ui) {
       }),
 
       _icons_list(ui),
+
+      {
+        kind: "dock",
+        sys_pn: "dock",
+      },
 
       { kind: "selection", sys_pn: "ref-selection" },
 

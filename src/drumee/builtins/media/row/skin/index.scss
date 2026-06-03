@@ -274,6 +274,13 @@
         background-size: contain;
         background-repeat: no-repeat;
         background-position: center;
+
+        // Document row posters fill the square preview box (cover) and keep the
+        // top so the title stays visible (overrides the image `contain`).
+        &.document {
+          background-size: cover;
+          background-position: top;
+        }
       }
     }
 

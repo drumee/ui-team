@@ -9,13 +9,15 @@
  *   ↑ left cluster                                      ↑ right cluster (gap 13.14)
  * ==================================================================== */
 
-const { getAreaLabel, newFileMenu } = require("../../skeleton/toolkit");
+const { getAreaLabel, newFileMenu, zoomMenu } = require("../../skeleton/toolkit");
 
 const __skl_folder_topbar = function (ui) {
   const cnFolder = `${ui.fig.family}-topbar`;
   const cnGroup = `${ui.fig.group}-topbar`;
   const area = ui.mget(_a.area);
-  const filename = ui.mget(_a.filename) || ui.mget(_a.name) || "";
+  // Root nodes have an empty filename; the workspace name lives in hub_name.
+  // Fall back to it so the topbar title isn't blank at a workspace root.
+  const filename = ui.mget(_a.filename) || ui.mget(_a.name) || ui.model.get("hub_name") || "";
 
   // ── Left cluster ─────────────────────────────────────────────
   const logo = Skeletons.Image.Svg({
@@ -108,20 +110,48 @@ const __skl_folder_topbar = function (ui) {
     uiHandler: ui,
   });
 
-  const splitBtn = Skeletons.Button.Svg({
+  // File view toggle. A single control that shows the CURRENT view's glyph:
+  // the list icon (3 bars) in row mode, the grid icon (2x2) otherwise. Both
+  // glyphs are rendered; CSS reveals only the one matching the control's
+  // data-state. toggleFilesLayout() flips that state via cmd.changeState(), so
+  // the glyph swaps with no extra JS. active:0 on the glyphs lets the click
+  // bubble to the box's "toggle-files-layout" service.
+  const splitBtn = Skeletons.Box.X({
     className: `${cnFolder}__control-icon`,
-    ico: "square-split-horizontal",
     service: "toggle-files-layout",
     sys_pn: "view-ctrl",
-    state: ui.getViewMode && ui.getViewMode() === _a.row ? 1 : 0,
+    // Explicit data-state (not the `state` prop) guarantees the attribute is
+    // present on first render so the correct glyph shows immediately; the
+    // grid glyph is the CSS default, so only row/list (state 1) needs it.
+    dataset: { state: ui.getViewMode && ui.getViewMode() === _a.row ? 1 : 0 },
     uiHandler: [ui],
+    kidsOpt: { active: 0 },
+    kids: [
+      Skeletons.Image.Svg({
+        ico: "view-list",
+        className: `${cnFolder}__control-icon-glyph ${cnFolder}__control-icon-glyph--list`,
+      }),
+      Skeletons.Image.Svg({
+        ico: "view-grid",
+        className: `${cnFolder}__control-icon-glyph ${cnFolder}__control-icon-glyph--grid`,
+      }),
+    ],
   });
 
   let controls = require("window/skeleton/topbar/control")(ui, "c");
 
+  // Custom minimize glyph (Unicode U+2212) — thinner than the bundled
+  // `window-minimize` SVG which renders as a heavy 1.6/14 vh bar.
+  const minimizeBtn = Skeletons.Note({
+    className: `${cnFolder}__minimize-btn`,
+    content: "−",
+    service: _e.minimize,
+    uiHandler: [ui],
+  });
+
   const rightCluster = Skeletons.Box.X({
     className: `${cnFolder}__right`,
-    kids: [videoBtn, uploadBtn, addNew, shareBtn, settingsBtn, splitBtn, controls],
+    kids: [videoBtn, uploadBtn, addNew, shareBtn, settingsBtn, splitBtn, zoomMenu(ui), minimizeBtn, controls],
   });
 
   // ── Root row ─────────────────────────────────────────────────

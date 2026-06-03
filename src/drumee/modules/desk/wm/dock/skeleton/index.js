@@ -8,7 +8,7 @@ const __desk_dock = function (ui) {
       Skeletons.Button.Svg({
         ico: "dock-nav",
         className: `${fig}__button nav`,
-        uiHandler: ui,
+        uiHandler: [ui],
         innerClass: "bigchat",
         sys_pn: "chat-p2p-launcher",
         service: "toggle-chat",
@@ -25,6 +25,7 @@ const __desk_dock = function (ui) {
     debug: __filename,
     className: `${fig}__container trash-container ${fig}--divider-left`,
     service: "open-searchbox",
+    uiHandler: [ui],
     kidsOpt: {
       active: 0,
     },
@@ -33,7 +34,8 @@ const __desk_dock = function (ui) {
       Skeletons.Button.Svg({
         ico: "magnifying-glass",
         className: `${fig}__button trash`,
-        uiHandler: ui,
+        service: "open-searchbox",
+        uiHandler: [ui],
         tooltips: {
           className: `${fig}__tooltips ${ui.fig.name}-tooltips`,
           content: LOCALE.SEARCH,
@@ -70,7 +72,7 @@ const __desk_dock = function (ui) {
         className: `${fig}__button trash`,
         service: _e.trash,
         sys_pn: "trash-bin",
-        uiHandler: ui,
+        uiHandler: [ui],
         tooltips: {
           className: `${fig}__tooltips ${ui.fig.name}-tooltips`,
           content: LOCALE.BASKET,
@@ -85,7 +87,7 @@ const __desk_dock = function (ui) {
     kids: [
       navButton,
       // require('./minifier').default(ui),
-      // require('./mobile')(ui),
+      // require("./mobile")(ui), // dead code — kept out of the tree
       require("./maker")(ui),
       searchbox,
       search_btn,

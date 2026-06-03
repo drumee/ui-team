@@ -13,6 +13,12 @@
     justify-content: space-between;
     gap: 24px;
     flex-shrink: 0;
+
+    &[data-device="mobile"] {
+      flex-direction: column;
+      align-items: stretch;
+      gap: 12px;
+    }
   }
 
   &__wsdetail-back {
@@ -59,6 +65,11 @@
     border-radius: 6px;
     align-items: center;
     gap: 8px;
+
+    &[data-device="mobile"] {
+      width: 100%;
+      max-width: 100%;
+    }
 
     &-ico {
       width: 14px;
@@ -115,6 +126,11 @@
     align-items: center;
     justify-content: space-between;
     gap: 16px;
+
+    &[data-device="mobile"] {
+      height: auto;
+      padding: 12px 14px;
+    }
   }
 
   &__wsdetail-empty {
@@ -190,6 +206,11 @@
     min-height: 0;
     overflow-y: auto;
     align-content: flex-start;
+
+    &[data-device="mobile"] {
+      padding: 0 10px;
+      gap: 10px;
+    }
   }
 
   &__wsdetail-row {
@@ -207,6 +228,13 @@
 
     &:hover {
       background: rgba(0, 0, 0, 0.07);
+    }
+
+    &[data-device="mobile"] {
+      flex: 1 1 100%;
+      height: auto;
+      padding: 12px;
+      gap: 12px;
     }
   }
 
@@ -313,6 +341,14 @@
     align-items: center;
     justify-content: space-between;
     gap: 16px;
+
+    &[data-device="mobile"] {
+      height: auto;
+      padding: 12px 14px;
+      flex-direction: column;
+      align-items: stretch;
+      gap: 8px;
+    }
   }
 
   &__wsdetail-footer-label {
@@ -320,11 +356,13 @@
     line-height: 17px;
     font-weight: 400;
     color: $ink-600;
+    justify-content: center;
   }
 
   &__wsdetail-pager {
     align-items: center;
     gap: 8px;
+    justify-content: center;
   }
 
   &__wsdetail-page-arrow {
@@ -396,9 +434,67 @@
       flex: 1 1 100%;
     }
   }
-
 }
 
+// ── Workspace detail — dark mode ─────────────────────────────────
+html[data-theme="dark"] .apps-main {
+  &__wsdetail-window {
+    background: var(--normal-bg);
+    box-shadow: 0 0 0 1px var(--border-muted);
+  }
+
+  &__wsdetail-heading {
+    background: var(--overlay-bg-05);
+    border-bottom-color: var(--border-muted);
+  }
+
+  &__wsdetail-title,
+  &__wsdetail-row-title,
+  &__wsdetail-page-num {
+    color: var(--normal-fg-10);
+  }
+
+  &__wsdetail-back-label,
+  &__wsdetail-row-meta,
+  &__wsdetail-footer-label,
+  &__wsdetail-page-ellipsis {
+    color: var(--normal-fg-20);
+  }
+
+  &__wsdetail-back-ico svg,
+  &__wsdetail-page-arrow svg {
+    @include svg-color(var(--normal-fg-20));
+  }
+
+  &__wsdetail-search {
+    background: var(--overlay-bg-05);
+
+    input {
+      color: var(--normal-fg-10);
+
+      &::placeholder {
+        color: var(--placeholder-fg);
+      }
+    }
+  }
+
+  &__wsdetail-row {
+    background: var(--overlay-bg-05);
+
+    &:hover {
+      background: var(--hover-bg-40);
+    }
+  }
+
+  &__wsdetail-page-arrow:hover,
+  &__wsdetail-page-btn:hover {
+    background: var(--hover-bg-40);
+  }
+
+  &__wsdetail-page-btn--active {
+    background: var(--active-item-bg);
+  }
+}
 
 // ── Workspace detail — dark mode ─────────────────────────────────
 html[data-theme="dark"] .apps-main {

@@ -1026,9 +1026,10 @@
     display: none !important;
   }
 
-  // The sender's name is shown via the avatar's hover tooltip, not inline.
+  // Show the sender's name inline at the top of each incoming message.
   .widget-chatItem__username-container {
-    display: none !important;
+    display: block;
+    padding-bottom: 2px;
   }
 
   // Gap only takes effect for incoming rows (own rows have no avatar child).
@@ -1068,10 +1069,6 @@
       $weight: 400,
       $color: var(--normal-fg-10)
     );
-    background-color: var(--normal-bg-elevated);
-    padding: 6px;
-    border: 1px solid var(--border-strong);
-    border-radius: 4px;
   }
 
   .widget-chat_chat_footer {
@@ -1163,4 +1160,10 @@ html[data-theme="dark"] {
       }
     }
   }
+}
+
+.lib-messenger__wrapper-popup.dialog__wrapper[data-state="open"] {
+  box-shadow: var(--drumee-shadow-box);
+  min-height: 180px;
+  width: 280px;
 }

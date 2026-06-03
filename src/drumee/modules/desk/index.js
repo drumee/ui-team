@@ -54,6 +54,122 @@ class desk_module extends LetcBox {
     Visitor.on(_e.change, this._updateAvatar);
     RADIO_BROADCAST.on("activity-update", this._updateActivityBadge, this);
     setTimeout(this.lazyClasses, 5000);
+
+    // Chrome-style folder tabs in the desk topbar. One tab per open
+    // folder window — added on launch, removed on destroy. Minimize
+    // toggles a visual `minimized` flag on the tab but doesn't remove it.
+    // Click the tab body to focus/restore; click × to destroy.
+    this._openFolders = new Map();
+    this._onFolderOpen = this._onFolderOpen.bind(this);
+    this._onFolderClose = this._onFolderClose.bind(this);
+    this._onWmMinimize = this._onWmMinimize.bind(this);
+    this._onWmWake = this._onWmWake.bind(this);
+    this._bindFolderTabs();
+  }
+
+  _bindFolderTabs() {
+    if (this._folderTabsBound) return;
+    if (!window.Wm || !Wm.$el) {
+      _.delay(() => this._bindFolderTabs(), 100);
+      return;
+    }
+    Wm.$el.on("folder:open", this._onFolderOpen);
+    Wm.$el.on("folder:close", this._onFolderClose);
+    Wm.$el.on(_e.minimize, this._onWmMinimize);
+    Wm.$el.on(_e.wake, this._onWmWake);
+    this._folderTabsBound = true;
+  }
+
+  _onFolderOpen(event, winInstance) {
+    if (!winInstance || !winInstance.isFolder) return;
+    if (this._openFolders.has(winInstance.cid)) return;
+    this._openFolders.set(winInstance.cid, {
+      win: winInstance,
+      minimized: !!winInstance.mget(_a.minimize),
+    });
+    this._renderFolderTabs();
+  }
+
+  _onFolderClose(event, winInstance) {
+    if (!winInstance) return;
+    if (this._openFolders.delete(winInstance.cid)) {
+      this._renderFolderTabs();
+    }
+  }
+
+  _onWmMinimize(event, winInstance) {
+    if (!winInstance || !winInstance.isFolder) return;
+    const entry = this._openFolders.get(winInstance.cid);
+    if (!entry) return;
+    entry.minimized = true;
+    this._renderFolderTabs();
+  }
+
+  _onWmWake(event, winInstance) {
+    if (!winInstance || !winInstance.isFolder) return;
+    const entry = this._openFolders.get(winInstance.cid);
+    if (!entry) return;
+    entry.minimized = false;
+    this._renderFolderTabs();
+  }
+
+  _renderFolderTabs() {
+    if (!this._folderTabsBox || (this._folderTabsBox.isDestroyed && this._folderTabsBox.isDestroyed())) {
+      return;
+    }
+    const pfx = `${this.fig.family}-topbar`;
+    const tabs = [];
+    for (const entry of this._openFolders.values()) {
+      const win = entry && entry.win;
+      if (!win || (win.isDestroyed && win.isDestroyed())) continue;
+      tabs.push(this._buildFolderTab(win, entry.minimized, pfx));
+    }
+    this._folderTabsBox.feed(tabs);
+  }
+
+  _buildFolderTab(winInstance, minimized, pfx) {
+    const cn = `${pfx}__folder-tab`;
+    const name =
+      winInstance.mget(_a.filename) ||
+      winInstance.mget(_a.name) ||
+      LOCALE.FOLDER ||
+      "Folder";
+    const area = winInstance.mget(_a.area);
+    const dataset = { state: minimized ? 0 : 1 };
+    if (area) dataset.area = area;
+    // Note: do NOT use `kidsOpt: { active: 0 }` here — _.merge(kid, kidsOpt)
+    // overrides each child's own props, which would zero out the close
+    // button's `active: 1` and silently drop its click handler. Set
+    // `active: 0` directly on the icon + label instead so the close
+    // button stays interactive.
+    return Skeletons.Box.X({
+      className: cn,
+      uiHandler: [this],
+      service: "focus-folder-tab",
+      wincid: winInstance.cid,
+      dataset,
+      kids: [
+        Skeletons.Button.Svg({
+          ico: "folder-header",
+          active: 0,
+          className: `${cn}-icon`,
+          dataset: area ? { area } : undefined,
+        }),
+        Skeletons.Note({
+          content: name,
+          active: 0,
+          className: `${cn}-label`,
+        }),
+        Skeletons.Button.Svg({
+          ico: "cross",
+          className: `${cn}-close`,
+          service: "close-folder-tab",
+          uiHandler: [this],
+          wincid: winInstance.cid,
+          bubble: 0,
+        }),
+      ],
+    });
   }
 
   /**
@@ -76,6 +192,13 @@ class desk_module extends LetcBox {
     }
     RADIO_BROADCAST.off("activity-update", this._updateActivityBadge, this);
     RADIO_BROADCAST.off("breadcrumb:content", this._updateAddmenu);
+    if (this._folderTabsBound && window.Wm && Wm.$el) {
+      Wm.$el.off("folder:open", this._onFolderOpen);
+      Wm.$el.off("folder:close", this._onFolderClose);
+      Wm.$el.off(_e.minimize, this._onWmMinimize);
+      Wm.$el.off(_e.wake, this._onWmWake);
+      this._folderTabsBound = false;
+    }
   }
 
   /**
@@ -93,55 +216,55 @@ class desk_module extends LetcBox {
   }
 
   /**
-   * 
-   * @param {*} args 
-   * @returns 
+   *
+   * @param {*} args
+   * @returns
    */
   async openP2Pchat(args = {}) {
     const { drumate_id, message_id } = args;
-    let p = await this.ensurePart('chat-panel')
+    let p = await this.ensurePart("chat-panel");
     let widget = p.children.last();
     if (!widget || widget.isDestroyed()) {
-      this.togglePanel('chat_p2p', 'chat-panel')
-    } else if (widget.mget(_a.kind) === 'chat_p2p') {
-      if (widget.el.dataset.anim === 'in') {
+      this.togglePanel("chat_p2p", "chat-panel");
+    } else if (widget.mget(_a.kind) === "chat_p2p") {
+      if (widget.el.dataset.anim === "in") {
         return;
       } else {
-        this.togglePanel('chat_p2p', 'chat-panel')
+        this.togglePanel("chat_p2p", "chat-panel");
       }
     } else {
-      this.togglePanel('chat_p2p', 'chat-panel')
+      this.togglePanel("chat_p2p", "chat-panel");
     }
     if (!drumate_id) return;
-    p = await this.ensurePart('chat-panel');
-    this.debug("AAA:122", this)
+    p = await this.ensurePart("chat-panel");
+    this.debug("AAA:122", this);
     widget = p && p.children && p.children.last && p.children.last();
-    if (widget && widget.openChatByPeerId) widget.openChatByPeerId(drumate_id, message_id);
+    if (widget && widget.openChatByPeerId)
+      widget.openChatByPeerId(drumate_id, message_id);
   }
 
   /**
-   * 
-   * @param {*} args 
-   * @returns 
+   *
+   * @param {*} args
+   * @returns
    */
   async openContactPanel(args = {}) {
-    let p = await this.ensurePart('chat-panel')
+    let p = await this.ensurePart("chat-panel");
     let widget = p.children.last();
     if (!widget || widget.isDestroyed()) {
-      this.togglePanel('address_book', 'chat-panel')
-    } else if (widget.mget(_a.kind) === 'address_book') {
-      if (widget.el.dataset.anim === 'in') {
+      this.togglePanel("address_book", "chat-panel");
+    } else if (widget.mget(_a.kind) === "address_book") {
+      if (widget.el.dataset.anim === "in") {
         return;
       } else {
-        this.togglePanel('address_book', 'chat-panel')
+        this.togglePanel("address_book", "chat-panel");
       }
     }
-    this.togglePanel('address_book', 'chat-panel')
-    p = await this.ensurePart('chat-panel')
+    this.togglePanel("address_book", "chat-panel");
+    p = await this.ensurePart("chat-panel");
     widget = p && p.children && p.children.last && p.children.last();
     if (widget && widget.switchTab) widget.switchTab(_a.pending);
   }
-
 
   /**
    *
@@ -201,7 +324,8 @@ class desk_module extends LetcBox {
     // their avatar/profile in Account settings. Fires on the "avatar-changed"
     // broadcast (no model arg) and on Visitor model changes.
     const changed = model && model.changed;
-    if (changed && !(changed.profile || changed.avatar || changed.mtime)) return;
+    if (changed && !(changed.profile || changed.avatar || changed.mtime))
+      return;
     this.ensurePart("sidebar-avatar").then((p) => {
       if (p && _.isFunction(p.restart)) p.restart(1);
     });
@@ -229,24 +353,24 @@ class desk_module extends LetcBox {
    */
   _updateAddmenu(data = {}) {
     this.ensurePart("addmenu").then((p) => {
-      let item = p.__items.children.first()
+      let item = p.__items.children.first();
       if (data.filetype && data.filetype === _a.hub) {
-        item.setLabel(LOCALE.FOLDER)
+        item.setLabel(LOCALE.FOLDER);
       } else {
-        item.setLabel(LOCALE.WORKSPACE)
+        item.setLabel(LOCALE.WORKSPACE);
       }
-    })
-    this.ensurePart('action-cluster').then((p) => {
-      p.setState(1)
-    })
+    });
+    this.ensurePart("action-cluster").then((p) => {
+      p.setState(1);
+    });
   }
 
   /**
-   * 
+   *
    */
   loadHome(data = {}) {
     this.closeMainPanels();
-    this.ensurePart('action-cluster').then((p) => p && p.setState(1));
+    this.ensurePart("action-cluster").then((p) => p && p.setState(1));
     Wm.reload();
   }
 
@@ -276,6 +400,11 @@ class desk_module extends LetcBox {
 
       case "avatar-listener":
         return (this._avatarListener = child);
+
+      case "folder-tabs":
+        this._folderTabsBox = child;
+        this._renderFolderTabs();
+        return;
 
       case "search-container":
         this._searchContainer = child;
@@ -327,9 +456,11 @@ class desk_module extends LetcBox {
             const prepared = original(data) || [];
             return prepared.filter((it) => {
               if (!it || it.filetype !== _a.hub) return true;
-              return it.area === _a.share
-                || it.area === _a.private
-                || it.area === _a.restricted;
+              return (
+                it.area === _a.share ||
+                it.area === _a.private ||
+                it.area === _a.restricted
+              );
             });
           };
         }
@@ -353,7 +484,6 @@ class desk_module extends LetcBox {
 
       case "desk-wrapper":
         return (this.desk_wrapper = child);
-
 
       case "desk-tooltip":
         return (this.tooltip = child);
@@ -490,9 +620,9 @@ class desk_module extends LetcBox {
       this.warn("Use this link #/plugins?name=plugin-name&kind=entry_kind");
       return;
     }
-    let args = Visitor.parseModuleArgs()
-    if (args.hasOwnProperty('wm') && window.Wm) {
-      return window.Wm.route()
+    let args = Visitor.parseModuleArgs();
+    if (args.hasOwnProperty("wm") && window.Wm) {
+      return window.Wm.route();
     }
     this._pending = { available: false };
     if (localStorage.getItem("force-onboarding")) {
@@ -738,6 +868,94 @@ class desk_module extends LetcBox {
   }
 
   /**
+   * Open the mobile drawer in a given mode ("nav" | "actions"). Tapping
+   * an already-active button is a no-op (does not toggle closed). The
+   * drawer closes only via the in-drawer close button or by tapping the
+   * overlay backdrop. No-op on non-mobile.
+   */
+  openMobileDrawer(mode) {
+    return this.ensurePart("sidebar-main").then((p) => {
+      if (!p || !p.el) return;
+      const el = p.el;
+      el.dataset.mode = mode;
+      el.dataset.state = "open";
+      this._setMobileBackdrop(true);
+      this._setMobileTopbarActive(mode);
+    });
+  }
+
+  /**
+   * Mirror the drawer state on the two mobile-topbar buttons so the
+   * currently-displayed mode shows as active. Pass null to clear both.
+   */
+  _setMobileTopbarActive(activeMode) {
+    const map = {
+      "mobile-add-btn": activeMode === "actions",
+      "mobile-menu-btn": activeMode === "nav",
+    };
+    Object.entries(map).forEach(([pn, isActive]) => {
+      this.ensurePart(pn).then((p) => {
+        if (!p || !p.el) return;
+        if (isActive) {
+          p.el.dataset.state = "active";
+        } else {
+          delete p.el.dataset.state;
+        }
+      });
+    });
+  }
+
+  /**
+   * Show/hide the shared __overlay as a tap-to-close backdrop for the
+   * mobile drawer. The click listener that actually closes the drawer
+   * is bound once in _bindMobileBackdropListener at mount time.
+   */
+  _setMobileBackdrop(visible) {
+    this.ensurePart("overlay").then((p) => {
+      if (!p || !p.el) return;
+      p.el.dataset.state = visible ? "open" : "closed";
+    });
+  }
+
+  _closeMobileDrawer() {
+    this.ensurePart("sidebar-main").then((p) => {
+      if (!p || !p.el) return;
+      p.el.dataset.state = "closed";
+    });
+    this._setMobileBackdrop(false);
+    this._setMobileTopbarActive(null);
+  }
+
+  /**
+   * Close the mobile drawer when a navigational sidebar service fires.
+   * The set covers the nav-mode rows (Home / Notifications / Inbox /
+   * Contacts / Trash / Apps), the actions-mode rows (Add new / Upload /
+   * Invite), Settings, and workspace selection. Excluded on purpose:
+   * search-files (fires per keystroke), toggle-theme (kept open for
+   * repeated toggling), and the mobile-show / mobile-close drawer controls.
+   */
+  _maybeDismissMobileDrawer(service) {
+    if (!this._drawerDismissServices) {
+      this._drawerDismissServices = new Set([
+        _e.home,
+        _e.upload,
+        "toggle-activity",
+        "toggle-inbox",
+        "toggle-contacts",
+        "toggle-trash",
+        "toggle-apps",
+        "toggle-settings",
+        "new-workspace",
+        "invite-member",
+        "load-workspace",
+      ]);
+    }
+    if (this._drawerDismissServices.has(service)) {
+      this._closeMobileDrawer();
+    }
+  }
+
+  /**
    *
    */
   togglePanel(kind, pn, openOnly) {
@@ -745,13 +963,13 @@ class desk_module extends LetcBox {
     if (!this._closeTimers) this._closeTimers = {};
 
     // Disable actions when the admin console is active
-    this.ensurePart('action-cluster').then((p) => {
-      if (['apps_main', 'settings_main'].includes(kind)) {
-        p.setState(0)
+    this.ensurePart("action-cluster").then((p) => {
+      if (["apps_main", "settings_main"].includes(kind)) {
+        p.setState(0);
       } else {
-        p.setState(1)
+        p.setState(1);
       }
-    })
+    });
 
     return this.ensurePart(pn).then((p) => {
       // Mid-flight close animation pending: snap the dying child out so
@@ -764,8 +982,7 @@ class desk_module extends LetcBox {
       }
 
       const keepAlive = this._isKeepAliveSlot(pn);
-      const sameKindMounted =
-        this._pendingKinds[pn] === kind && !p.isEmpty();
+      const sameKindMounted = this._pendingKinds[pn] === kind && !p.isEmpty();
 
       if (sameKindMounted && keepAlive) {
         const child = p.children.last();
@@ -833,10 +1050,7 @@ class desk_module extends LetcBox {
     if (except !== "activity-panel") {
       tasks.push(
         this.ensurePart("activity-panel").then((p) => {
-          if (p) {
-            p.activityState = 0;
-            p.setState(0);
-          }
+          if (p) p.setState(0);
         }),
       );
     }
@@ -873,20 +1087,24 @@ class desk_module extends LetcBox {
   }
 
   /**
-   * 
+   *
    */
   closeAllPanels() {
     this.closeOtherSidebarPanels();
-    return this.closeMainPanels()
+    return this.closeMainPanels();
   }
 
   /**
-   * 
+   *
    */
   onWorkspaceClosed() {
-    this.ensurePart("breadcrumb").then((p) => { p.loadDefault(0) })
-    this.ensurePart("workspace-main").then((p) => { p.collapseTree() })
-    Wm.headlessLayer.clear()
+    this.ensurePart("breadcrumb").then((p) => {
+      p.loadDefault(0);
+    });
+    this.ensurePart("workspace-main").then((p) => {
+      p.collapseTree();
+    });
+    Wm.headlessLayer.clear();
   }
 
   /**
@@ -899,11 +1117,46 @@ class desk_module extends LetcBox {
     if (pointerDragged || !window.Wm) {
       return;
     }
-    this.debug("AAA:830", service)
+    this.debug("AAA:830", service);
+    // Mobile: tapping a navigational sidebar item dismisses the drawer so
+    // the resulting panel/content is visible. on_click items (e.g. logout)
+    // never reach here, and drawer-control services (mobile-show-*/close),
+    // the search input, and the theme toggle are intentionally excluded —
+    // they manage the drawer themselves or are expected to leave it open.
+    if (Visitor.isMobile()) {
+      this._maybeDismissMobileDrawer(service);
+    }
     switch (service) {
+      case "focus-folder-tab": {
+        const cid = cmd.mget && cmd.mget("wincid");
+        const entry = cid && this._openFolders.get(cid);
+        const win = entry && entry.win;
+        if (!win || win.isDestroyed()) return;
+        if (entry.minimized && typeof win.wake === "function") {
+          win.wake(cmd);
+        } else if (typeof win.raise === "function") {
+          win.raise();
+        }
+        return;
+      }
+
+      case "close-folder-tab": {
+        const cid = cmd.mget && cmd.mget("wincid");
+        const entry = cid && this._openFolders.get(cid);
+        const win = entry && entry.win;
+        if (!win || win.isDestroyed()) return;
+        // {now:true} bypasses goodbye()'s default 2s timeout + scale/opacity
+        // animation so the floating window closes the moment the user clicks
+        // × on the header tab. The folder's onBeforeDestroy still fires
+        // folder:close, which removes the tab.
+        if (typeof win.goodbye === "function") win.goodbye({ now: true });
+        else if (typeof win.destroy === "function") win.destroy();
+        return;
+      }
+
       case _e.home:
         this.updateBreadcrumb({ event: _e.home });
-        this.loadHome()
+        this.loadHome();
         return;
 
       // case _e.lock:
@@ -914,7 +1167,7 @@ class desk_module extends LetcBox {
         // local Visitor profile so route() falls through to loadDefault().
         try {
           localStorage.removeItem("force-onboarding");
-        } catch (e) { }
+        } catch (e) {}
         {
           let p = Visitor.profile && Visitor.profile();
           if (p) p.onboarded = 1;
@@ -932,6 +1185,15 @@ class desk_module extends LetcBox {
           { kind: cmd.mget(_a.respawn) },
           { explicit: 1, singleton: 1 },
         );
+
+      case "mobile-show-add":
+        return this.openMobileDrawer("actions");
+
+      case "mobile-show-menu":
+        return this.openMobileDrawer("nav");
+
+      case "mobile-close-drawer":
+        return this._closeMobileDrawer();
 
       case "toggle-activity":
         return this.ensurePart("activity-panel").then((p) => {
@@ -989,7 +1251,7 @@ class desk_module extends LetcBox {
         document.documentElement.dataset.theme = next;
         try {
           localStorage.setItem("drumee.theme", next);
-        } catch (e) { }
+        } catch (e) {}
         const wp = { ...(Visitor.wallpaper() || {}), theme: next };
         if (typeof Visitor.setWallpaper === "function")
           Visitor.setWallpaper(wp);
@@ -1050,9 +1312,8 @@ class desk_module extends LetcBox {
         // partition-prep visibility flip can bail if the list is still
         // covered by an Apps/Settings panel during restart.
         this.closeAllPanels();
-        Wm.loadWorkspace(cmd)
-        return
-
+        Wm.loadWorkspace(cmd);
+        return;
 
       case "new-workspace":
         return Wm.onUiEvent(cmd, { ...args, service: "new-workspace" });
@@ -1389,7 +1650,16 @@ class desk_module extends LetcBox {
    *
    */
   lazyClasses() {
-    for (var k of ["window_confirm", "media_uploader", "panel_trash", "panel_activity", "chat_p2p", "address_book", "apps_main", "settings_main"]) {
+    for (var k of [
+      "window_confirm",
+      "media_uploader",
+      "panel_trash",
+      "panel_activity",
+      "chat_p2p",
+      "address_book",
+      "apps_main",
+      "settings_main",
+    ]) {
       Kind.waitFor(k);
     }
   }

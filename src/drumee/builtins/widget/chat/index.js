@@ -1,9 +1,8 @@
-
-const { copyToClipboard, dataTransfer } = require("@drumee/ui-essentials")
-require('./skin');
+const { copyToClipboard, dataTransfer } = require("@drumee/ui-essentials");
+require("./skin");
 
 /**
- * 
+ *
  */
 class __widget_chat extends LetcBox {
   constructor(...args) {
@@ -25,32 +24,39 @@ class __widget_chat extends LetcBox {
     this.initStorage();
   }
 
-
   /**
-   * 
-   * @param {*} opt 
+   *
+   * @param {*} opt
    */
   initialize(opt) {
-    if (opt == null) { opt = {}; }
+    if (opt == null) {
+      opt = {};
+    }
     super.initialize();
     this.view = this.mget(_a.view);
     this._selectedMessages = [];
     this._selectedViews = [];
-    this.peer = this.mget('peer') || null;
+    this.peer = this.mget("peer") || null;
     this.updateChatUserStatus();
     this.queue = [];
     const area = this.mget(_a.area) || this.mget(_a.type);
     if (area === _a.personal || area === _a.privateRoom) {
       this.hubId = Visitor.id;
-      this.peerId = this.mget(_a.peer_id) || (this.peer && (this.peer.drumate_id || this.peer.entity_id || this.peer.id)) || '';
+      this.peerId =
+        this.mget(_a.peer_id) ||
+        (this.peer &&
+          (this.peer.drumate_id || this.peer.entity_id || this.peer.id)) ||
+        "";
       this.storageKey = `${area}-${this.hubId}-${this.peerId}`;
     } else {
       this.hubId = this.mget(_a.hub_id);
-      this.peerId = '';
-      const nid = this.mget(_a.nid) || '';
-      this.scopedNid = this.mget('scope') === _a.folder ? nid : '';
-      this.scopedFileNid = '';
-      this.storageKey = nid ? `${area}-${this.hubId}-${nid}` : `${area}-${this.hubId}`;
+      this.peerId = "";
+      const nid = this.mget(_a.nid) || "";
+      this.scopedNid = this.mget("scope") === _a.folder ? nid : "";
+      this.scopedFileNid = "";
+      this.storageKey = nid
+        ? `${area}-${this.hubId}-${nid}`
+        : `${area}-${this.hubId}`;
     }
 
     this.hubId = this.hubId || this.mget(_a.hub_id);
@@ -72,7 +78,7 @@ class __widget_chat extends LetcBox {
   }
 
   /**
-   * 
+   *
    */
   sameFilename() {
     /** DO NOT DELETE */
@@ -80,14 +86,14 @@ class __widget_chat extends LetcBox {
   }
 
   /**
-   * 
+   *
    */
   getViewMode() {
     return _a.icon;
   }
 
   /**
-   * 
+   *
    */
   onBeforeDestroy() {
     this.unbindEvent(_a.live);
@@ -109,59 +115,62 @@ class __widget_chat extends LetcBox {
   /**
    * Abstract -- Dont remove
    */
-  syncOrder() { }
+  syncOrder() {}
 
   /**
-   * 
-   * @returns 
+   *
+   * @returns
    */
   updateChatUserStatus() {
-    if (!this.peer || (this.mget(_a.area) !== _a.personal)) {
+    if (!this.peer || this.mget(_a.area) !== _a.personal) {
       return;
     }
     let isReadOnly = false;
-    let readOnlyMsg = '';
+    let readOnlyMsg = "";
     const status = this.peer.status;
 
-    if ((status !== _a.active) || this.peer.is_blocked || this.peer.is_blocked_me) {
+    if (
+      status !== _a.active ||
+      this.peer.is_blocked ||
+      this.peer.is_blocked_me
+    ) {
       isReadOnly = true;
-      // don't change the order of the below condition 
-      if (status === 'memory') {
+      // don't change the order of the below condition
+      if (status === "memory") {
         readOnlyMsg = LOCALE.CHAT_DEACTIVATED; //'Chat user is deactivated'
       }
       if (this.peer.is_blocked_me) {
-        readOnlyMsg = LOCALE.CHAT_DEACTIVATED;//'Chat user is deactivated'
+        readOnlyMsg = LOCALE.CHAT_DEACTIVATED; //'Chat user is deactivated'
       }
       if (this.peer.is_blocked) {
         readOnlyMsg = LOCALE.CONTACT_BLOCKED; //'Blocked'
       }
-      if (status === 'nocontact') {
-        readOnlyMsg = LOCALE.CONTACT_DELETED; //'Deleted' 
+      if (status === "nocontact") {
+        readOnlyMsg = LOCALE.CONTACT_DELETED; //'Deleted'
       }
     }
 
-    this.mset('isReadOnly', isReadOnly);
-    this.mset('readOnlyMsg', readOnlyMsg);
+    this.mset("isReadOnly", isReadOnly);
+    this.mset("readOnlyMsg", readOnlyMsg);
   }
 
-
   /**
- * 
- */
+   *
+   */
   initStorage() {
     const key = this.storageKey;
     if (!sessionStorage.getItem(key)) {
       const data = {
         message: "",
-        attachment: []
+        attachment: [],
       };
       sessionStorage.setItem(key, JSON.stringify(data));
     }
   }
 
   /**
-   * 
-   * @returns 
+   *
+   * @returns
    */
   getStorage() {
     const data = sessionStorage.getItem(this.storageKey);
@@ -172,8 +181,8 @@ class __widget_chat extends LetcBox {
   }
 
   /**
-   * 
-   * @returns 
+   *
+   * @returns
    */
   saveMessage(message) {
     const key = this.storageKey;
@@ -182,34 +191,33 @@ class __widget_chat extends LetcBox {
     sessionStorage.setItem(key, JSON.stringify(data));
   }
 
-
   /**
-   * 
+   *
    */
   clearStorage() {
     const data = {
       message: "",
-      attachment: []
+      attachment: [],
     };
     sessionStorage.setItem(this.storageKey, JSON.stringify(data));
   }
 
   /**
-   * 
-   * @returns 
+   *
+   * @returns
    */
   getStoredMessage() {
     const data = sessionStorage.getItem(this.storageKey);
     if (_.isEmpty(data)) {
-      return '';
+      return "";
     }
     return JSON.parse(data).message || "";
   }
 
   /**
-   * 
-   * @param {*} cmd 
-   * @param {*} args 
+   *
+   * @param {*} cmd
+   * @param {*} args
    */
   onInputChange(args) {
     const text = args && args.text;
@@ -221,7 +229,7 @@ class __widget_chat extends LetcBox {
     if (text && String(text).trim()) {
       this.saveMessage(text);
     } else {
-      this.saveMessage('');
+      this.saveMessage("");
     }
     this._handleTypingInput(text);
   }
@@ -248,9 +256,11 @@ class __widget_chat extends LetcBox {
    */
   markConversationRead() {
     const now = Date.now();
-    if (this._lastReadAt && (now - this._lastReadAt) < 2000) return;
+    if (this._lastReadAt && now - this._lastReadAt < 2000) return;
     if (!this.__list || !this.__list.children) return;
-    const last = _.isFunction(this.__list.children.last) ? this.__list.children.last() : null;
+    const last = _.isFunction(this.__list.children.last)
+      ? this.__list.children.last()
+      : null;
     if (!last || !last.model) return;
     const data = last.model.toJSON();
     const area = this.mget(_a.area) || this.mget(_a.type);
@@ -289,11 +299,17 @@ class __widget_chat extends LetcBox {
     const isPrivate = area === _a.personal || area === _a.privateRoom;
     if (isPrivate) {
       if (!this.peerId) return null;
-      if (this.peer && (this.peer.is_blocked || this.peer.is_blocked_me)) return null;
-      return { service: 'chat.typing', hub_id: this.hubId, entity_id: this.peerId, state };
+      if (this.peer && (this.peer.is_blocked || this.peer.is_blocked_me))
+        return null;
+      return {
+        service: "chat.typing",
+        hub_id: this.hubId,
+        entity_id: this.peerId,
+        state,
+      };
     }
     if (!this.hubId) return null;
-    return { service: 'channel.typing', hub_id: this.hubId, state };
+    return { service: "channel.typing", hub_id: this.hubId, state };
   }
 
   /**
@@ -305,8 +321,10 @@ class __widget_chat extends LetcBox {
     if (!api || !api.service) return;
     try {
       const p = this.postService(api);
-      if (p && _.isFunction(p.catch)) p.catch(() => { });
-    } catch (e) { /* noop — ephemeral signal */ }
+      if (p && _.isFunction(p.catch)) p.catch(() => {});
+    } catch (e) {
+      /* noop — ephemeral signal */
+    }
   }
 
   /**
@@ -320,7 +338,7 @@ class __widget_chat extends LetcBox {
       return;
     }
     const now = Date.now();
-    if (!this._typingSentAt || (now - this._typingSentAt) > 3000) {
+    if (!this._typingSentAt || now - this._typingSentAt > 3000) {
       this._typingSentAt = now;
       this._sendTyping(1);
     }
@@ -373,10 +391,10 @@ class __widget_chat extends LetcBox {
    * @returns {String} display name for a typing remote user
    */
   _typerName(data) {
-    const fn = (data.firstname || '').trim();
-    const ln = (data.lastname || '').trim();
+    const fn = (data.firstname || "").trim();
+    const ln = (data.lastname || "").trim();
     const name = `${fn} ${ln}`.trim();
-    return name || data.fullname || data.name || LOCALE.SOMEONE || 'Someone';
+    return name || data.fullname || data.name || LOCALE.SOMEONE || "Someone";
   }
 
   /**
@@ -396,43 +414,53 @@ class __widget_chat extends LetcBox {
    * Render the typing indicator from the current _typers set.
    */
   _renderTypers() {
-    this.ensurePart('typing-indicator').then((part) => {
-      if (!part || !part.el) return;
-      const names = Array.from(this._typers.values()).map((t) => t.name);
-      if (!names.length) {
-        if (_.isFunction(part.setState)) part.setState(0);
-        else part.el.dataset.state = '0';
-        return;
-      }
-      let text;
-      if (names.length === 1) {
-        text = (LOCALE.IS_TYPING || '{0} is typing…').format(names[0]);
-      } else if (names.length === 2) {
-        text = (LOCALE.TWO_TYPING || '{0} and {1} are typing…').format(names[0], names[1]);
-      } else {
-        // 3+ typers: show at most the first two names, then "and more".
-        text = (LOCALE.MANY_TYPING || '{0}, {1} and more are typing…').format(names[0], names[1]);
-      }
-      this.ensurePart('typing-text').then((t) => {
-        if (t && t.el) t.el.textContent = text;
-      }).catch(() => { });
-      if (_.isFunction(part.setState)) part.setState(1);
-      else part.el.dataset.state = '1';
-    }).catch(() => { });
+    this.ensurePart("typing-indicator")
+      .then((part) => {
+        if (!part || !part.el) return;
+        const names = Array.from(this._typers.values()).map((t) => t.name);
+        if (!names.length) {
+          if (_.isFunction(part.setState)) part.setState(0);
+          else part.el.dataset.state = "0";
+          return;
+        }
+        let text;
+        if (names.length === 1) {
+          text = (LOCALE.IS_TYPING || "{0} is typing…").format(names[0]);
+        } else if (names.length === 2) {
+          text = (LOCALE.TWO_TYPING || "{0} and {1} are typing…").format(
+            names[0],
+            names[1],
+          );
+        } else {
+          // 3+ typers: show at most the first two names, then "and more".
+          text = (LOCALE.MANY_TYPING || "{0}, {1} and more are typing…").format(
+            names[0],
+            names[1],
+          );
+        }
+        this.ensurePart("typing-text")
+          .then((t) => {
+            if (t && t.el) t.el.textContent = text;
+          })
+          .catch(() => {});
+        if (_.isFunction(part.setState)) part.setState(1);
+        else part.el.dataset.state = "1";
+      })
+      .catch(() => {});
   }
 
   /**
-   * 
+   *
    */
   async onFileListChange() {
     let content = this.findPart(_a.content);
     let uploads = [];
     if (content && content.collection) {
-      uploads = content
-        .collection
-        .filter((row) =>
-          (row.get(_a.filetype) != _a.pseudo)
-          && (row.get(_a.service) != "remove-upload")
+      uploads = content.collection
+        .filter(
+          (row) =>
+            row.get(_a.filetype) != _a.pseudo &&
+            row.get(_a.service) != "remove-upload",
         )
         .map((row) => {
           let att = { ...row.attributes };
@@ -441,13 +469,13 @@ class __widget_chat extends LetcBox {
           return att;
         });
     }
-    this.ensurePart('attachment-list').then((p) => {
+    this.ensurePart("attachment-list").then((p) => {
       p.saveAttachment(uploads);
     });
   }
 
   /**
-   * 
+   *
    */
   showSend() {
     this.ensurePart(_a.message).then((p) => {
@@ -455,16 +483,15 @@ class __widget_chat extends LetcBox {
     });
   }
 
-
   /**
-   * 
-   * @returns 
+   *
+   * @returns
    */
   onPasteBase64(args) {
     if (args.area && /^data:image/.test(args.area)) {
       const { nid, hub_id, home_id } = this._getUploadDestination();
       let pm = {
-        respawn: 'media_paste',
+        respawn: "media_paste",
         area: args.area,
         src: args.src,
         home_id,
@@ -484,7 +511,7 @@ class __widget_chat extends LetcBox {
         nid: this.scopedNid,
         hub_id: this.hubId,
         home_id: this.mget(_a.home_id),
-        destpath: this.mget(_a.ownpath) || '/',
+        destpath: this.mget(_a.ownpath) || "/",
       };
     }
     const home = this.mget(_a.home) || {};
@@ -492,12 +519,12 @@ class __widget_chat extends LetcBox {
       nid: home.chat_upload_id,
       hub_id: home.hub_id || this.hubId,
       home_id: home.home_id,
-      destpath: '/',
+      destpath: "/",
     };
   }
 
   /**
-   * 
+   *
    */
   handleScroll(c) {
     let list = this.__list;
@@ -517,15 +544,18 @@ class __widget_chat extends LetcBox {
       }
       return;
     }
-    if (list.scrollDir == _a.down || (c.mget(_a.page) == 1 && last.mget(_a.page) == 1)) {
+    if (
+      list.scrollDir == _a.down ||
+      (c.mget(_a.page) == 1 && last.mget(_a.page) == 1)
+    ) {
       timer = setTimeout(scroll, 500);
       return;
     }
   }
 
   /**
-   * 
-   * @returns 
+   *
+   * @returns
    */
   onPartReady(child, pn, section) {
     switch (pn) {
@@ -534,7 +564,7 @@ class __widget_chat extends LetcBox {
         this.checkPendingContent();
         child.on(_e.update, () => {
           this.checkPendingContent();
-        })
+        });
         break;
       case _a.list:
         child.onAddKid = this.handleScroll.bind(this);
@@ -546,20 +576,23 @@ class __widget_chat extends LetcBox {
           // list; this pass re-renders them all with the complete collection so
           // read users always show on open.
           this.refreshAllReaders();
+          // P2P has no per-message _seen_; place the peer's avatar from their
+          // read cursor returned alongside the messages (peer_ref_ctime).
+          this._applyPeerReadCursor();
         });
         break;
-      case 'chat-content':
+      case "chat-content":
         this.waitElement(child.el, () => {
           this.setMessageSelectorState(0);
         });
         break;
-
     }
   }
 
   scrollMessagesToBottom(list) {
     setTimeout(() => {
-      if (list && typeof list.scrollToBottom === "function") list.scrollToBottom();
+      if (list && typeof list.scrollToBottom === "function")
+        list.scrollToBottom();
     }, 100);
   }
 
@@ -567,11 +600,11 @@ class __widget_chat extends LetcBox {
    *
    */
   hasAttachment() {
-    return this.attachmentList.hasAttachment()
+    return this.attachmentList.hasAttachment();
   }
 
   /**
-   * 
+   *
    */
   checkPendingContent() {
     const has = this.attachmentList && this.attachmentList.hasAttachment();
@@ -579,27 +612,33 @@ class __widget_chat extends LetcBox {
     // it cleanly after clearAttachment() — `:has(.media-grid__ui)` was
     // proving unreliable across Marionette collection.reset() + browser
     // `:has()` invalidation timing.
-    if (this.attachmentList && this.attachmentList.el && this.attachmentList.el.closest) {
-      const wrapper = this.attachmentList.el.closest('.widget-chat__attachment-wrapper');
-      if (wrapper) wrapper.dataset.hasAttachment = has ? '1' : '0';
+    if (
+      this.attachmentList &&
+      this.attachmentList.el &&
+      this.attachmentList.el.closest
+    ) {
+      const wrapper = this.attachmentList.el.closest(
+        ".widget-chat__attachment-wrapper",
+      );
+      if (wrapper) wrapper.dataset.hasAttachment = has ? "1" : "0";
     }
     if (has || this.getStoredMessage()) {
-      this.showSend()
+      this.showSend();
     } else {
       this.ensurePart(_a.message).then((p) => {
         p.hideSend();
-      })
+      });
     }
   }
 
   /**
-   * 
-   * @returns 
+   *
+   * @returns
    */
   onDomRefresh() {
     this.fetchService({
       service: SERVICE.media.home,
-      hub_id: this.hubId
+      hub_id: this.hubId,
     }).then((data) => {
       this.mset(_a.home, data);
       this.mset(_a.nid, data.chat_upload_id);
@@ -607,70 +646,71 @@ class __widget_chat extends LetcBox {
       if (this.__refWindowName != null) {
         return this.__refWindowName.set({ content: data.name });
       }
-      this.feed(require('./skeleton')(this));
-    })
+      this.feed(require("./skeleton")(this));
+    });
   }
 
   /**
-   * 
+   *
    */
   setMessageSelectorState(s) {
     this.__chatContent.el.dataset.selected = s;
     this.__chatContent.el.dataset.state = s;
   }
 
-
   /**
-   * 
+   *
    */
   disableMessageSelection() {
     this.setMessageSelectorState(0);
-    let children = this.__list.getItemsByKind('widget_chat_item');
+    let children = this.__list.getItemsByKind("widget_chat_item");
     for (var c of children) {
       c.select(0);
     }
   }
 
   /**
-   * 
-   * @returns 
+   *
+   * @returns
    */
   onUiEvent(cmd, args = {}) {
-    if (args == null) { args = {}; }
+    if (args == null) {
+      args = {};
+    }
     const service = args.service || cmd.get(_a.service) || cmd.get(_a.name);
     switch (service) {
-      case 'media-file-copied':
-        setTimeout(this.onFileListChange.bind(this), 1000)
+      case "media-file-copied":
+        setTimeout(this.onFileListChange.bind(this), 1000);
         break;
       case _e.upload:
         this.upload(args.sourceEvent);
         return this.showSend();
 
-      case 'remove-upload':
+      case "remove-upload":
         return this.removeUpload(cmd);
 
-      case 'attach-from-desk':
+      case "attach-from-desk":
         return this._openDeskPicker();
 
-      case 'pick-desk-file':
+      case "pick-desk-file":
         return this._pickDeskFile(cmd);
 
-      case 'close-desk-picker':
+      case "close-desk-picker":
         return this._closeDeskPicker();
 
       case _a.interactive:
         return this.onInputChange(args);
 
-      case 'input-focus':
+      case "input-focus":
         return this.markConversationRead();
 
-      case 'mention-filter':
+      case "mention-filter":
         return this._showMentionFiles(args.filter, args.mentionType);
 
-      case 'mention-close':
+      case "mention-close":
         return this._closeMentionDropdown();
 
-      case 'mention-select':
+      case "mention-select":
         return this._onMentionFileSelect(cmd, args);
 
       case _e.send:
@@ -686,19 +726,19 @@ class __widget_chat extends LetcBox {
       case _e.reply:
         return this.replyMessage(cmd);
 
-      case 'close-reply-message':
+      case "close-reply-message":
         return this.clearReplyMessage();
 
-      case 'clear-file-scope':
+      case "clear-file-scope":
         return this.setScopedFileNid(null, null);
 
-      case 'attachment-reponse':
+      case "attachment-reponse":
         return this.__list.scrollToBottom();
 
-      case 'chat-item-child':
+      case "chat-item-child":
         return this.handleScroll(cmd);
 
-      case 'scroll-down':
+      case "scroll-down":
         this._newMsgCount = 0;
         setTimeout(() => {
           this.__buttonScroll.el.dataset.count = this._newMsgCount;
@@ -706,61 +746,65 @@ class __widget_chat extends LetcBox {
         }, 50);
         break;
 
-      case 'show-message-selector':
-        console.log('[widget-chat] show-message-selector', { type: args.type, hasActionButtons: !!this.getPart('message-action-buttons') });
-        this.getPart('message-action-buttons').feed(require('./skeleton/action-buttons')(this, args.type));
+      case "show-message-selector":
+        console.log("[widget-chat] show-message-selector", {
+          type: args.type,
+          hasActionButtons: !!this.getPart("message-action-buttons"),
+        });
+        this.getPart("message-action-buttons").feed(
+          require("./skeleton/action-buttons")(this, args.type),
+        );
         setTimeout(() => {
           this.showMsgCount(cmd);
         }, 300);
-        return;// this.showMsgCount(cmd);
+        return; // this.showMsgCount(cmd);
 
-      case 'select-message':
+      case "select-message":
         return this.showMsgCount(cmd);
 
-      case 'delete-for-me':
+      case "delete-for-me":
         return this.deleteMessage(cmd, service);
 
-      case 'delete-for-all':
+      case "delete-for-all":
         this.setMessageSelectorState(0);
         if (cmd.el.dataset.active === _a.yes) {
           return this.deleteMessage(cmd, service);
         }
         break;
 
-      case 'cancel-message-selection':
+      case "cancel-message-selection":
         return this.disableMessageSelection();
 
-      case 'paste-base64':
+      case "paste-base64":
         if (_.isEmpty(args)) return;
         return this.onPasteBase64(args);
 
-      case 'paste-file':
+      case "paste-file":
         if (args.file) {
           this.pasteFile(args.file);
         }
         return;
 
-      case 'interactive':
+      case "interactive":
         return;
 
-      case 'media:eod':
+      case "media:eod":
         this.onFileListChange();
 
       default:
         this.source = cmd;
         this.service = service;
         this.triggerHandlers(args);
-        return this.service = '';
+        return (this.service = "");
     }
   }
-
 
   /**
    * @param  {File} args
    */
   pasteFile(file) {
     let pm = {
-      kind: 'media_grid',
+      kind: "media_grid",
       phase: _a.upload,
       filetype: _a.pseudo,
       isAttachment: 1,
@@ -773,71 +817,78 @@ class __widget_chat extends LetcBox {
   }
 
   /**
-   * 
-   * @param {*} e 
-   * @param {*} token 
-   * @returns 
+   *
+   * @param {*} e
+   * @param {*} token
+   * @returns
    */
   async _openDeskPicker() {
-    const picker = await this.ensurePart('wrapper-desk-picker');
+    const picker = await this.ensurePart("wrapper-desk-picker");
     if (!picker.isEmpty()) {
       picker.clear();
       return;
     }
     let home;
     try {
-      home = await this.fetchService(SERVICE.media.home, { hub_id: Visitor.id });
+      home = await this.fetchService(SERVICE.media.home, {
+        hub_id: Visitor.id,
+      });
     } catch (e) {
-      this.warn('[chat] _openDeskPicker: failed to fetch home', e);
+      this.warn("[chat] _openDeskPicker: failed to fetch home", e);
       return;
     }
     if (!home || !home.home_id) return;
     const fig = this.fig.family;
-    picker.feed(Skeletons.Box.Y({
-      className: `${fig}__desk-picker-panel`,
-      kids: [
-        Skeletons.Box.X({
-          className: `${fig}__desk-picker-header`,
-          kids: [
-            Skeletons.Note({
-              className: `${fig}__desk-picker-title`,
-              content: LOCALE.FROM_WORKSPACE
-            }),
-          ]
-        }),
-        Skeletons.List.Smart({
-          className: `${fig}__desk-picker-list`,
-          api: {
-            service: SERVICE.media.show_node_by,
-            hub_id: home.hub_id || Visitor.id,
-            nid: home.home_id,
-            page: 1
-          },
-          itemsOpt: {
-            kind: KIND.note,
-            service: 'pick-desk-file',
-            uiHandler: [this]
-          },
-          itemsMap: { filename: 'content' },
-          evArgs: Skeletons.Note(LOCALE.NO_FILES_YET || LOCALE.NO_DISCUSSIONS_YET, 'no-content'),
-          vendorOpt: Preset.List.Orange_e,
-          spinner: true,
-          spinnerWait: 300
-        }),
-        Skeletons.Note({
-          className: `${fig}__desk-picker-cancel`,
-          content: LOCALE.CANCEL,
-          service: 'close-desk-picker',
-          uiHandler: [this]
-        })
-      ]
-    }));
+    picker.feed(
+      Skeletons.Box.Y({
+        className: `${fig}__desk-picker-panel`,
+        kids: [
+          Skeletons.Box.X({
+            className: `${fig}__desk-picker-header`,
+            kids: [
+              Skeletons.Note({
+                className: `${fig}__desk-picker-title`,
+                content: LOCALE.FROM_WORKSPACE,
+              }),
+            ],
+          }),
+          Skeletons.List.Smart({
+            className: `${fig}__desk-picker-list`,
+            api: {
+              service: SERVICE.media.show_node_by,
+              hub_id: home.hub_id || Visitor.id,
+              nid: home.home_id,
+              page: 1,
+            },
+            itemsOpt: {
+              kind: KIND.note,
+              service: "pick-desk-file",
+              uiHandler: [this],
+            },
+            itemsMap: { filename: "content" },
+            evArgs: Skeletons.Note(
+              LOCALE.NO_FILES_YET || LOCALE.NO_DISCUSSIONS_YET,
+              "no-content",
+            ),
+            vendorOpt: Preset.List.Orange_e,
+            spinner: true,
+            spinnerWait: 300,
+          }),
+          Skeletons.Note({
+            className: `${fig}__desk-picker-cancel`,
+            content: LOCALE.CANCEL,
+            service: "close-desk-picker",
+            uiHandler: [this],
+          }),
+        ],
+      }),
+    );
   }
 
   async _pickDeskFile(cmd) {
     const o = cmd.model.toJSON();
     const home = this.mget(_a.home);
-    if ([_a.hub, _a.folder].includes(o.filetype) || o.ext === 'lnk') {
+    if ([_a.hub, _a.folder].includes(o.filetype) || o.ext === "lnk") {
       Wm.alert(LOCALE.FILE_TYPE_NOT_SUPPORTED || LOCALE.ACTION_NOT_PERMITTED);
       return;
     }
@@ -855,13 +906,13 @@ class __widget_chat extends LetcBox {
         // recipient_id = the entity that owns the staging folder (home.hub_id).
         // For P2P this is Visitor.id; for channel chats it is the channel hub.
         // Must match the DB where chat_upload_id lives.
-        recipient_id: home && home.hub_id || this.hubId,
+        recipient_id: (home && home.hub_id) || this.hubId,
         hub_id: o.hub_id || this.hubId,
       });
       const first = Array.isArray(copyResult) ? copyResult[0] : copyResult;
       stagedNid = first && first.nid;
     } catch (e) {
-      this.warn('[chat] _pickDeskFile: copy to staging failed', e);
+      this.warn("[chat] _pickDeskFile: copy to staging failed", e);
     }
 
     if (!stagedNid) {
@@ -872,8 +923,8 @@ class __widget_chat extends LetcBox {
     const item = {
       ...o,
       nid: stagedNid,
-      hub_id: home && home.hub_id || this.hubId,
-      kind: 'media_grid',
+      hub_id: (home && home.hub_id) || this.hubId,
+      kind: "media_grid",
       // phase: _a.local prevents syncData from triggering another media.copy
       phase: _a.local,
       isAttachment: 1,
@@ -890,7 +941,7 @@ class __widget_chat extends LetcBox {
   }
 
   _closeDeskPicker() {
-    this.ensurePart('wrapper-desk-picker').then(picker => {
+    this.ensurePart("wrapper-desk-picker").then((picker) => {
       if (picker && !picker.isDestroyed()) picker.clear();
     });
   }
@@ -908,7 +959,7 @@ class __widget_chat extends LetcBox {
         target = this.getActiveWindow();
         break;
     }
-    if ((target == null)) {
+    if (target == null) {
       Butler.say(LOCALE.WRONG_DROP_AREA);
       return;
     }
@@ -921,40 +972,43 @@ class __widget_chat extends LetcBox {
   }
 
   /**
-   * 
-   * @param {*} cmd 
-   * @returns 
+   *
+   * @param {*} cmd
+   * @returns
    */
   removeUpload(cmd) {
     this.onFileListChange();
     const api = {
       service: SERVICE.chat.upload_remove,
       nid: cmd.mget(_a.nid),
-      hub_id: this.hubId
+      hub_id: this.hubId,
     };
     this.removeUploadFromChat(api);
-    return this.postService(api).then((data) => {
-    }).catch((err) => {
-      this.warn("Failed to remove", err);
-    })
+    return this.postService(api)
+      .then((data) => {})
+      .catch((err) => {
+        this.warn("Failed to remove", err);
+      });
   }
 
   /**
-   * 
-   * @param {*} mkdir 
-   * @returns 
+   *
+   * @param {*} mkdir
+   * @returns
    */
   getActiveWindow(mkdir) {
-    if (mkdir == null) { mkdir = 0; }
+    if (mkdir == null) {
+      mkdir = 0;
+    }
     return this;
   }
 
   /**
-   * 
-   * @param {*} target 
-   * @param {*} e 
-   * @param {*} p 
-   * @param {*} token 
+   *
+   * @param {*} target
+   * @param {*} e
+   * @param {*} p
+   * @param {*} token
    */
   sendTo(target, e, p, token) {
     let f, pm;
@@ -964,7 +1018,7 @@ class __widget_chat extends LetcBox {
 
     for (f of Array.from(r.files)) {
       pm = {
-        kind: 'media_grid',
+        kind: "media_grid",
         phase: _a.upload,
         isAttachment: 1,
         origin: _a.chat,
@@ -977,7 +1031,7 @@ class __widget_chat extends LetcBox {
 
     for (f of Array.from(r.folders)) {
       pm = {
-        kind: 'media_grid',
+        kind: "media_grid",
         phase: _a.upload,
         isAttachment: 1,
         origin: _a.chat,
@@ -994,9 +1048,9 @@ class __widget_chat extends LetcBox {
   }
 
   /**
-   * 
-   * @param {*} media 
-   * @returns 
+   *
+   * @param {*} media
+   * @returns
    */
   insertMedia(media) {
     if (!_.isArray(media)) {
@@ -1007,39 +1061,39 @@ class __widget_chat extends LetcBox {
     for (let m of Array.from(media)) {
       if (m.model) {
         const o = m.model.toJSON();
-        if ([_a.hub, _a.folder].includes(o.filetype) || o.ext == 'lnk') {
+        if ([_a.hub, _a.folder].includes(o.filetype) || o.ext == "lnk") {
           Wm.confirm({
             title: LOCALE.ACTION_NOT_PERMITTED,
             message: LOCALE.FILE_TYPE_NOT_SUPPORTED,
             cancel: LOCALE.OK,
-            cancel_type: 'secondary',
-            buttonClass: 'forbidden',
-            mode: 'hbf1'
+            cancel_type: "secondary",
+            buttonClass: "forbidden",
+            mode: "hbf1",
           });
           return;
         }
-        o.kind = 'media_grid';
+        o.kind = "media_grid";
         o.phase = _a.copied;
         o.isAttachment = 1;
         o.origin = _a.chat;
         o.destination = {
           hub_id: this.hubId,
           nid: this.mget(_a.nodeId),
-          home_id: this.mget(_a.home_id)
+          home_id: this.mget(_a.home_id),
         };
         o.uiHandler = [this];
         o.logicalParent = this;
         items.push(o);
         this.showSend();
       } else {
-        m.kind = m.respawn || 'media_grid';
+        m.kind = m.respawn || "media_grid";
         m.isAttachment = 1;
         m.origin = _a.chat;
         m.uiHandler = [this];
         items.push(m);
         this.showSend();
       }
-      this.__message.__content.$el.find('.note-content').focus();
+      this.__message.__content.$el.find(".note-content").focus();
     }
 
     // Add the attachment in the second time
@@ -1058,9 +1112,9 @@ class __widget_chat extends LetcBox {
   }
 
   /**
- * 
- * @param {*} peer 
- */
+   *
+   * @param {*} peer
+   */
   reload(peer) {
     let data = { ...peer.model.toJSON() };
     delete data.styleOpt;
@@ -1068,17 +1122,17 @@ class __widget_chat extends LetcBox {
     delete data.widgetId;
     delete data.x;
     delete data.y;
-    this.hubId = data.hub_id
-    this.peerId = data.drumate_id
-    this.mset(data)
+    this.hubId = data.hub_id;
+    this.peerId = data.drumate_id;
+    this.mset(data);
     this.ensurePart(_a.list).then((list) => {
-      list.restart()
-    })
+      list.restart();
+    });
   }
 
   /**
-   * 
-   * @returns 
+   *
+   * @returns
    */
   getCurrentApi() {
     let api;
@@ -1089,11 +1143,10 @@ class __widget_chat extends LetcBox {
         service: SERVICE.chat.messages,
         peer_id: this.peerId,
         hub_id: this.hubId,
-        order: 'desc'
+        order: "desc",
       };
       return api;
     }
-
 
     if (this.scopedFileNid) {
       // list_thread_by_file returns attachment hits UNION mention hits
@@ -1104,14 +1157,14 @@ class __widget_chat extends LetcBox {
         service: SERVICE.channel.list_thread_by_file,
         hub_id: this.hubId,
         file_nid: this.scopedFileNid,
-        pagelength: 200
+        pagelength: 200,
       };
     }
 
     api = {
       service: SERVICE.channel.messages,
       hub_id: this.hubId,
-      order: 'desc'
+      order: "desc",
     };
     if (this.getScopedNid()) {
       api.nid = this.getScopedNid();
@@ -1121,7 +1174,7 @@ class __widget_chat extends LetcBox {
 
   // Update the folder scope so messages are filtered to a specific sub-folder.
   setScopedFolderNid(folderNid) {
-    const next = folderNid ? `${folderNid}` : '';
+    const next = folderNid ? `${folderNid}` : "";
     if (this.scopedNid === next) return;
     this.scopedNid = next;
     this.ensurePart(_a.list).then((list) => {
@@ -1136,7 +1189,7 @@ class __widget_chat extends LetcBox {
   // Switch the message list to a file-scoped thread; pass falsy to leave it.
   // `label` is the visible filename used by the scope chip; falsy hides chip.
   setScopedFileNid(fileNid, label) {
-    const next = fileNid ? `${fileNid}` : '';
+    const next = fileNid ? `${fileNid}` : "";
     if (this.scopedFileNid === next) {
       this._refreshScopeChip(next, label);
       return;
@@ -1144,12 +1197,13 @@ class __widget_chat extends LetcBox {
 
     this._scopedScroll = this._scopedScroll || {};
     if (this.__list && this.__list.__container) {
-      this._scopedScroll[this.scopedFileNid || ''] = this.__list.__container.scrollTop;
+      this._scopedScroll[this.scopedFileNid || ""] =
+        this.__list.__container.scrollTop;
     }
     if (this.threadId) this.clearReplyMessage();
 
     this.scopedFileNid = next;
-    this.scopedFileLabel = label || '';
+    this.scopedFileLabel = label || "";
     this._refreshScopeChip(next, label);
     this.ensurePart(_a.list).then((list) => {
       if (!list || !_.isFunction(list.restart)) return;
@@ -1159,7 +1213,7 @@ class __widget_chat extends LetcBox {
       if (prevSpinner) list.mset(_a.spinner, prevSpinner);
 
       const targetScroll = this._scopedScroll && this._scopedScroll[next];
-      if (typeof targetScroll === 'number') {
+      if (typeof targetScroll === "number") {
         list.once(_e.ready, () => {
           if (list.__container) list.__container.scrollTop = targetScroll;
         });
@@ -1171,24 +1225,28 @@ class __widget_chat extends LetcBox {
   // Hide the messenger footer in scope mode so users can only chat in the
   // normal (unscoped) view. Parts register on nearest declareHandlers (this).
   _refreshScopeChip(fileNid, label) {
-    const text = fileNid
-      ? (label || `#${String(fileNid).slice(-6)}`)
-      : '';
+    const text = fileNid ? label || `#${String(fileNid).slice(-6)}` : "";
     const scoped = fileNid ? 1 : 0;
-    this.ensurePart('scope-chip').then((chip) => {
-      if (chip && chip.el) {
-        chip.el.dataset.state = String(scoped);
-        if (_.isFunction(chip.setState)) chip.setState(scoped);
-      }
-    }).catch(() => {});
-    this.ensurePart('scope-chip-label').then((labelView) => {
-      if (labelView && labelView.el) labelView.el.textContent = text;
-    }).catch(() => {});
-    this.ensurePart('chat-footer').then((footer) => {
-      if (footer && footer.el) {
-        footer.el.dataset.scopedHidden = scoped ? '1' : '0';
-      }
-    }).catch(() => {});
+    this.ensurePart("scope-chip")
+      .then((chip) => {
+        if (chip && chip.el) {
+          chip.el.dataset.state = String(scoped);
+          if (_.isFunction(chip.setState)) chip.setState(scoped);
+        }
+      })
+      .catch(() => {});
+    this.ensurePart("scope-chip-label")
+      .then((labelView) => {
+        if (labelView && labelView.el) labelView.el.textContent = text;
+      })
+      .catch(() => {});
+    this.ensurePart("chat-footer")
+      .then((footer) => {
+        if (footer && footer.el) {
+          footer.el.dataset.scopedHidden = scoped ? "1" : "0";
+        }
+      })
+      .catch(() => {});
   }
 
   // Server stores the attachment field as a JSON string; normalise to array.
@@ -1196,7 +1254,11 @@ class __widget_chat extends LetcBox {
     if (_.isArray(raw)) return raw;
     if (!raw) return [];
     if (_.isString(raw)) {
-      try { return JSON.parse(raw); } catch (e) { return []; }
+      try {
+        return JSON.parse(raw);
+      } catch (e) {
+        return [];
+      }
     }
     return [];
   }
@@ -1210,28 +1272,36 @@ class __widget_chat extends LetcBox {
     const messageData = this._messageData(data);
     const dataAttachment = this.parseAttachmentField(messageData.attachment);
     const fallbackAttachment = this.parseAttachmentField(fallback.attachment);
-    const attachment = _.isEmpty(dataAttachment) ? fallbackAttachment : dataAttachment;
-    return attachment.map((item) => {
-      if (item && typeof item === 'object') return item.nid || item.id;
-      return item;
-    }).filter((id) => id != null && id !== '');
+    const attachment = _.isEmpty(dataAttachment)
+      ? fallbackAttachment
+      : dataAttachment;
+    return attachment
+      .map((item) => {
+        if (item && typeof item === "object") return item.nid || item.id;
+        return item;
+      })
+      .filter((id) => id != null && id !== "");
   }
 
   _hasAttachmentPayload(data = {}, fallback = {}) {
     const messageData = this._messageData(data);
-    return messageData.is_attachment || !_.isEmpty(this._attachmentIds(messageData, fallback));
+    return (
+      messageData.is_attachment ||
+      !_.isEmpty(this._attachmentIds(messageData, fallback))
+    );
   }
 
   _matchesScopedFolder(data = {}) {
     const nid = this.getScopedNid();
     if (!nid) return false;
     const messageData = this._messageData(data);
-    const messageNid = messageData.nid || messageData.parent_id || messageData.pid;
+    const messageNid =
+      messageData.nid || messageData.parent_id || messageData.pid;
     return `${messageNid}` === `${nid}`;
   }
 
   _syncScopedFolderContent(data = {}, fallback = {}) {
-    if (this.mget('scope') !== _a.folder) return;
+    if (this.mget("scope") !== _a.folder) return;
     const messageData = this._messageData(data);
     const attachmentIds = this._attachmentIds(messageData, fallback);
     const payload = {
@@ -1243,20 +1313,32 @@ class __widget_chat extends LetcBox {
     if (!this._hasAttachmentPayload(payload, fallback)) return;
     if (!this._matchesScopedFolder(payload)) return;
 
-    const folderWindow = this.getParentByKind && this.getParentByKind('window_folder');
-    if (!folderWindow || (folderWindow.isDestroyed && folderWindow.isDestroyed())) return;
+    const folderWindow =
+      this.getParentByKind && this.getParentByKind("window_folder");
+    if (
+      !folderWindow ||
+      (folderWindow.isDestroyed && folderWindow.isDestroyed())
+    )
+      return;
     const scopedNid = `${this.getScopedNid()}`;
-    if (folderWindow.mget && `${folderWindow.mget(_a.nid)}` !== scopedNid) return;
+    if (folderWindow.mget && `${folderWindow.mget(_a.nid)}` !== scopedNid)
+      return;
 
     clearTimeout(this._folderContentSyncTimer);
     this._folderContentSyncTimer = setTimeout(() => {
       if (folderWindow.isDestroyed && folderWindow.isDestroyed()) return;
       if (this.getScopedNid && `${this.getScopedNid()}` !== scopedNid) return;
-      if (folderWindow.mget && `${folderWindow.mget(_a.nid)}` !== scopedNid) return;
-      if (!_.isEmpty(attachmentIds) && _.isFunction(folderWindow.getItemsByAttr)) {
+      if (folderWindow.mget && `${folderWindow.mget(_a.nid)}` !== scopedNid)
+        return;
+      if (
+        !_.isEmpty(attachmentIds) &&
+        _.isFunction(folderWindow.getItemsByAttr)
+      ) {
         const allRendered = attachmentIds.every((id) => {
-          return !_.isEmpty(folderWindow.getItemsByAttr(_a.nid, id))
-            || !_.isEmpty(folderWindow.getItemsByAttr(_a.nid, `${id}`));
+          return (
+            !_.isEmpty(folderWindow.getItemsByAttr(_a.nid, id)) ||
+            !_.isEmpty(folderWindow.getItemsByAttr(_a.nid, `${id}`))
+          );
         });
         if (allRendered) return;
       }
@@ -1265,11 +1347,13 @@ class __widget_chat extends LetcBox {
   }
 
   /**
-   * 
-   * @param {*} mkdir 
+   *
+   * @param {*} mkdir
    */
   clear_notifications(mkdir) {
-    if (mkdir == null) { mkdir = 0; }
+    if (mkdir == null) {
+      mkdir = 0;
+    }
   }
 
   /**
@@ -1277,7 +1361,7 @@ class __widget_chat extends LetcBox {
    * @returns
    */
   getScopedNid() {
-    return this.scopedNid || '';
+    return this.scopedNid || "";
   }
 
   /**
@@ -1288,9 +1372,11 @@ class __widget_chat extends LetcBox {
   matchesScopedChannel(data = {}) {
     if (_.isArray(data)) data = data[0] || {};
     if (this.scopedFileNid) {
-      const attachments = this.parseAttachmentField(data.attachment).map(String);
+      const attachments = this.parseAttachmentField(data.attachment).map(
+        String,
+      );
       if (attachments.includes(`${this.scopedFileNid}`)) return true;
-      const body = data.message || '';
+      const body = data.message || "";
       return body.includes(`mention:${this.hubId}:${this.scopedFileNid}`);
     }
     const nid = this.getScopedNid();
@@ -1300,14 +1386,14 @@ class __widget_chat extends LetcBox {
   }
 
   /**
-   * 
-   * @param {*} args 
-   * @returns 
+   *
+   * @param {*} args
+   * @returns
    */
   sendMessage(args = {}) {
     // Sending ends the typing session.
     this._stopTyping();
-    let message = '';
+    let message = "";
     // The live messenger content is the source of truth. When the user clears
     // the input it returns '', and we must NOT fall back to a stale
     // sessionStorage draft: the messenger does not emit an input-change event
@@ -1328,11 +1414,11 @@ class __widget_chat extends LetcBox {
 
     const area = this.mget(_a.area) || this.mget(_a.type);
     if (list.hasPendingUpload()) {
-      return this.showError(LOCALE.WAIT_UPLOAD, 'desktop_waiting');
+      return this.showError(LOCALE.WAIT_UPLOAD, "desktop_waiting");
     }
 
-    const replaceChars = { '<': '&#60;', '>': '&#62;' };
-    message = message.replace(/[<>]/g, m => replaceChars[m]);
+    const replaceChars = { "<": "&#60;", ">": "&#62;" };
+    message = message.replace(/[<>]/g, (m) => replaceChars[m]);
     const attachments = list.getAttachmentIds() || [];
     // DO NOT promote mentioned files into `attachments`. The server's
     // channel.post moves every attachment nid into a per-message chat
@@ -1354,7 +1440,7 @@ class __widget_chat extends LetcBox {
       case _a.share:
       case _a.private:
       case _a.ticket:
-      case 'supportTicket':
+      case "supportTicket":
         if (this.scopedFileNid) {
           attachments = attachments || [];
           if (!attachments.map(String).includes(`${this.scopedFileNid}`)) {
@@ -1365,7 +1451,7 @@ class __widget_chat extends LetcBox {
           service: SERVICE.channel.post,
           message,
           attachment: attachments,
-          hub_id: this.hubId
+          hub_id: this.hubId,
         };
         if (this.getScopedNid() && !this.scopedFileNid) {
           api.nid = this.getScopedNid();
@@ -1383,13 +1469,12 @@ class __widget_chat extends LetcBox {
         };
         break;
 
-
       default:
         this.warn(` ${area} -- NOT SUPPORTED`);
     }
 
     if (_.isEmpty(api)) {
-      this.warn("Undefined API")
+      this.warn("Undefined API");
       return false;
     }
 
@@ -1409,19 +1494,18 @@ class __widget_chat extends LetcBox {
     this.postMessageAPI();
   }
 
-
   /**
-   * 
-   * @param {*} data 
-   * @returns 
+   *
+   * @param {*} data
+   * @returns
    */
   handleReceivedMsg(data) {
     if (_.isArray(data)) {
-      data = data[0]
+      data = data[0];
     }
     if (!data || _.isEmpty(data)) return;
     if (!this.__list) return;
-    data.kind = 'widget_chat_item';
+    data.kind = "widget_chat_item";
     data.logicalParent = this;
     data.uiHandler = this;
     // Propagate chat container's `type` to each message so the chat-item
@@ -1431,7 +1515,7 @@ class __widget_chat extends LetcBox {
     if (data.type == null) data.type = this.mget(_a.type);
     let messageArr;
     if (data.echoId && this.echoId == data.echoId) {
-      messageArr = this.__list.getItemsByAttr('echoId', data.echoId)[0];
+      messageArr = this.__list.getItemsByAttr("echoId", data.echoId)[0];
       if (messageArr) {
         delete data.echoId;
         messageArr.mset(data);
@@ -1440,7 +1524,7 @@ class __widget_chat extends LetcBox {
       }
     }
 
-    messageArr = this.__list.getItemsByAttr('message_id', data.message_id)[0];
+    messageArr = this.__list.getItemsByAttr("message_id", data.message_id)[0];
     if (!messageArr) {
       this._newMsgCount++;
       this.__buttonScroll.el.dataset.count = this._newMsgCount;
@@ -1458,7 +1542,7 @@ class __widget_chat extends LetcBox {
     let api = this.queue.shift();
     if (!api) return;
     let tmp = {
-      kind: 'widget_chat_item',
+      kind: "widget_chat_item",
       ...api,
       logicalParent: this,
       uiHandler: this,
@@ -1466,7 +1550,7 @@ class __widget_chat extends LetcBox {
       ctime: 0,
       is_readed: 0,
       is_seen: 0,
-    }
+    };
     // Same propagation as handleReceivedMsg — locally-posted optimistic
     // rows must also inherit the chat container's `type` so the username
     // header renders for them immediately (before the server echo).
@@ -1480,77 +1564,87 @@ class __widget_chat extends LetcBox {
       this.__list.scrollToBottom();
     }
     this.clearMessageBlock();
-    this.postService(api).then(data => {
-      this.attachmentList.clearAttachment();
-      // Deterministic — drive `data-has-attachment` directly instead of
-      // relying on the `_e.update` event chain, which raced with Backbone's
-      // built-in collection 'update' event and sometimes fired before
-      // sessionStorage was actually cleared.
-      this.checkPendingContent();
-      if (_.isEmpty(data)) {
-        this.showError(LOCALE.MESSAGE_NOT_SENT_RETRY);
-        return;
-      }
-      this._syncScopedFolderContent(data, api);
-      this.handleReceivedMsg(data);
-    }).catch(error => {
-      this.queue.unshift(api);
-      let errMessage = error.message || LOCALE.MESSAGE_NOT_SENT_RETRY;
-      this.showError(errMessage);
-      this.warn("Server error sending message", error);
-    });
+    this.postService(api)
+      .then((data) => {
+        this.attachmentList.clearAttachment();
+        // Deterministic — drive `data-has-attachment` directly instead of
+        // relying on the `_e.update` event chain, which raced with Backbone's
+        // built-in collection 'update' event and sometimes fired before
+        // sessionStorage was actually cleared.
+        this.checkPendingContent();
+        if (_.isEmpty(data)) {
+          this.showError(LOCALE.MESSAGE_NOT_SENT_RETRY);
+          return;
+        }
+        this._syncScopedFolderContent(data, api);
+        this.handleReceivedMsg(data);
+      })
+      .catch((error) => {
+        this.queue.unshift(api);
+        let errMessage = error.message || LOCALE.MESSAGE_NOT_SENT_RETRY;
+        this.showError(errMessage);
+        this.warn("Server error sending message", error);
+      });
   }
 
   /**
-   * 
-   * @param {*} cmd 
-   * @returns 
+   *
+   * @param {*} cmd
+   * @returns
    */
   copyMessage(cmd) {
     const _message = cmd.mget(_a.message);
     const ackMsg = LOCALE.MESSAGE_COPIED_CLIPBOARD;
     copyToClipboard(_message);
-    this.__wrapperAck.feed(require('@drumee/ui-core/letc/preset/ack')(this, ackMsg, { height: this.$el.height() }));
+    this.__wrapperAck.feed(
+      require("@drumee/ui-core/letc/preset/ack")(this, ackMsg, {
+        height: this.$el.height(),
+      }),
+    );
     const f = () => {
-      this.__wrapperAck.feed('');
-      return this.__wrapperAck.el.dataset.state = _a.closed;
+      this.__wrapperAck.feed("");
+      return (this.__wrapperAck.el.dataset.state = _a.closed);
     };
     return setTimeout(f, Visitor.timeout());
   }
-
 
   /**
    * @param  {string} message
    */
-  showError(message, icon = '') {
-    this.__wrapperAck.feed(require('./skeleton/error')(this, message, icon, { height: this.$el.height() }));
+  showError(message, icon = "") {
+    this.__wrapperAck.feed(
+      require("./skeleton/error")(this, message, icon, {
+        height: this.$el.height(),
+      }),
+    );
     const f = () => {
-      this.__wrapperAck.feed('');
-      return this.__wrapperAck.el.dataset.state = _a.closed;
+      this.__wrapperAck.feed("");
+      return (this.__wrapperAck.el.dataset.state = _a.closed);
     };
     return setTimeout(f, Visitor.timeout());
   }
 
   /**
-   * 
-   * @param {*} cmd 
-   * @returns 
+   *
+   * @param {*} cmd
+   * @returns
    */
   replyMessage(cmd) {
-    this.threadAttachment = '';
-    const replyWrapper = this.getPart('reply-wrapper');
-    this.threadId = cmd.mget('message_id');
+    this.threadAttachment = "";
+    const replyWrapper = this.getPart("reply-wrapper");
+    this.threadId = cmd.mget("message_id");
     // Snapshot the parent so the optimistic placeholder shows the quote right
     // away. is_attachment stripped — chat-item#setThreadData would refetch.
     this.threadSnapshot = cmd.model ? cmd.model.toJSON() : null;
     if (this.threadSnapshot) delete this.threadSnapshot.is_attachment;
 
-    if (cmd.mget('is_attachment')) {
-      this.threadAttachment = cmd.__list.children != null ? cmd.__list.children.first() : undefined;
+    if (cmd.mget("is_attachment")) {
+      this.threadAttachment =
+        cmd.__list.children != null ? cmd.__list.children.first() : undefined;
     }
 
-    replyWrapper.feed(require('./skeleton/reply-message')(this, cmd));
-    return replyWrapper.el.dataset.mode = _a.open;
+    replyWrapper.feed(require("./skeleton/reply-message")(this, cmd));
+    return (replyWrapper.el.dataset.mode = _a.open);
   }
 
   /**
@@ -1558,35 +1652,35 @@ class __widget_chat extends LetcBox {
    * @returns
    */
   clearReplyMessage() {
-    const replyWrapper = this.getPart('reply-wrapper');
+    const replyWrapper = this.getPart("reply-wrapper");
     this.threadId = null;
     this.threadSnapshot = null;
-    replyWrapper.feed('');
-    return replyWrapper.el.dataset.mode = _a.closed;
+    replyWrapper.feed("");
+    return (replyWrapper.el.dataset.mode = _a.closed);
   }
 
   /**
-   * 
-   * @param {*} cmd 
-   * @returns 
+   *
+   * @param {*} cmd
+   * @returns
    */
   showMsgCount(cmd) {
     this._selectedMessages = [];
     this._selectedViews = [];
-    const chatItems = this.__list.getItemsByKind('widget_chat_item');
-    const selected = chatItems.filter(e => e.mget('selected'));
+    const chatItems = this.__list.getItemsByKind("widget_chat_item");
+    const selected = chatItems.filter((e) => e.mget("selected"));
     for (const e of selected) {
-      const mid = e.mget('message_id');
+      const mid = e.mget("message_id");
       if (mid) this._selectedMessages.push(mid);
       this._selectedViews.push(e);
     }
 
     /* for enable/disable delte-for-all button */
-    const delteForAllBtn = this.getPart('delete-for-all-button');
+    const delteForAllBtn = this.getPart("delete-for-all-button");
     if (delteForAllBtn) {
       delteForAllBtn.el.dataset.active = _a.yes;
       for (const row of selected) {
-        if (row.mget('author') === 'other') {
+        if (row.mget("author") === "other") {
           delteForAllBtn.el.dataset.active = _a.no;
           break;
         }
@@ -1602,32 +1696,40 @@ class __widget_chat extends LetcBox {
     const counterText = {
       kind: KIND.note,
       className: "widget-chat__note counter",
-      content: (msgCount.printf(LOCALE.X_SELECTED_MESSAGES)) //#{msgCount} Messages selected"
+      content: msgCount.printf(LOCALE.X_SELECTED_MESSAGES), //#{msgCount} Messages selected"
     };
 
-    this.getPart('selected-message-count').feed(counterText);
+    this.getPart("selected-message-count").feed(counterText);
   }
 
   /**
-   * 
-   * @param {*} cmd 
-   * @param {*} service 
+   *
+   * @param {*} cmd
+   * @param {*} service
    */
   deleteMessage(cmd, service) {
     let _service;
     const area = this.mget(_a.area);
-    if (cmd == null) { cmd = {}; }
+    if (cmd == null) {
+      cmd = {};
+    }
     const isPrivate = area === _a.personal || area === _a.privateRoom;
-    console.log('[chat.deleteMessage]', { service, area, isPrivate, peerId: this.peerId, selected: this._selectedMessages });
+    console.log("[chat.deleteMessage]", {
+      service,
+      area,
+      isPrivate,
+      peerId: this.peerId,
+      selected: this._selectedMessages,
+    });
     if (isPrivate) {
       _service = SERVICE.chat.delete;
     } else if (area === _a.share) {
       _service = SERVICE.channel.delete;
     }
 
-    let _option = 'me';
-    if (service === 'delete-for-all') {
-      _option = 'all';
+    let _option = "me";
+    if (service === "delete-for-all") {
+      _option = "all";
     }
 
     const payload = {
@@ -1658,11 +1760,14 @@ class __widget_chat extends LetcBox {
   scrollToMessage(message_id, retries = 25) {
     if (!message_id) return;
     const tryScroll = (r) => {
-      const item = this.__list && this.__list.getItemsByAttr('message_id', message_id)[0];
+      const item =
+        this.__list && this.__list.getItemsByAttr("message_id", message_id)[0];
       if (item && item.el) {
-        item.el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        item.el.dataset.highlighted = '1';
-        setTimeout(() => { if (item.el) delete item.el.dataset.highlighted; }, 2500);
+        item.el.scrollIntoView({ behavior: "smooth", block: "center" });
+        item.el.dataset.highlighted = "1";
+        setTimeout(() => {
+          if (item.el) delete item.el.dataset.highlighted;
+        }, 2500);
         return;
       }
       if (r > 0) setTimeout(() => tryScroll(r - 1), 200);
@@ -1671,29 +1776,29 @@ class __widget_chat extends LetcBox {
   }
 
   /**
-  * @param {*} data
-  */
+   * @param {*} data
+   */
   clearMessageFromChat(data) {
     if (!this.__list || !data) return;
     if (!_.isArray(data)) {
-      data = [data]
+      data = [data];
     }
     for (let d of Array.from(data)) {
-      let item = this.__list.getItemsByAttr('message_id', d.message_id)[0];
+      let item = this.__list.getItemsByAttr("message_id", d.message_id)[0];
       if (item) item.goodbye();
     }
   }
 
   /**
-  * @param {*} data
-  */
+   * @param {*} data
+   */
   acknowledge(data, options = {}) {
     if (!this.__list) return;
     if (!_.isArray(data)) {
       data = [data];
     }
     for (let d of data) {
-      let items = this.__list.getItemsByAttr('message_id', d.message_id);
+      let items = this.__list.getItemsByAttr("message_id", d.message_id);
       for (var item of items) {
         if (_.isFunction(item.acknowledge)) {
           item.acknowledge(d);
@@ -1721,7 +1826,7 @@ class __widget_chat extends LetcBox {
   applyReadReceipt(readerUid, refCtime) {
     if (!readerUid || readerUid === Visitor.id) return;
     if (!this.__list || !_.isFunction(this.__list.getItemsByKind)) return;
-    const items = this.__list.getItemsByKind('widget_chat_item') || [];
+    const items = this.__list.getItemsByKind("widget_chat_item") || [];
     // Pass 1: update each row's _seen_ for this reader from the cursor.
     for (const item of items) {
       if (item && _.isFunction(item.updateReaderSeen)) {
@@ -1744,15 +1849,39 @@ class __widget_chat extends LetcBox {
    */
   refreshAllReaders() {
     if (!this.__list || !_.isFunction(this.__list.getItemsByKind)) return;
-    const items = this.__list.getItemsByKind('widget_chat_item') || [];
+    const items = this.__list.getItemsByKind("widget_chat_item") || [];
     for (const item of items) {
       if (item && _.isFunction(item.renderReaders)) item.renderReaders();
     }
   }
 
   /**
-   * 
-   * @param {*} data 
+   * P2P only: place the peer's "seen" avatar from their read cursor, returned by
+   * p2p_list_messages as `peer_ref_ctime` (the same scalar on every row). Feeds
+   * the cursor into applyReadReceipt, which synthesises the per-row _seen_ the
+   * renderer expects. The hub-channel path uses real per-message metadata._seen_
+   * instead, so this is a no-op there (no peer_ref_ctime, not a private area).
+   */
+  _applyPeerReadCursor() {
+    const area = this.mget(_a.area) || this.mget(_a.type);
+    const isPrivate = area === _a.personal || area === _a.privateRoom;
+    if (!isPrivate || !this.peerId) return;
+    if (!this.__list || !_.isFunction(this.__list.getItemsByKind)) return;
+    const items = this.__list.getItemsByKind("widget_chat_item") || [];
+    let cursor = 0;
+    for (const item of items) {
+      const c = item && item.mget ? ~~item.mget("peer_ref_ctime") : 0;
+      if (c) {
+        cursor = c;
+        break;
+      }
+    }
+    if (cursor > 0) this.applyReadReceipt(this.peerId, cursor);
+  }
+
+  /**
+   *
+   * @param {*} data
    */
   removeUploadFromChat(data) {
     let list = this.attachmentList;
@@ -1782,18 +1911,23 @@ class __widget_chat extends LetcBox {
         this.peer.is_blocked = data.is_blocked;
         this.peer.is_blocked_me = data.is_blocked_me;
         this.updateChatUserStatus();
-        return this.getPart('chat-footer').feed(require('./skeleton/footer')(this));
+        return this.getPart("chat-footer").feed(
+          require("./skeleton/footer")(this),
+        );
 
       case SERVICE.channel.post:
       case SERVICE.chat.post:
       case SERVICE.chat.forward:
       case SERVICE.channel.post_ticket:
-        var isChannel = [_a.dmz, _a.public, _a.share, _a.private].includes(area);
-        var hubMatch = isChannel && (this.hubId === data.hub_id);
+        var isChannel = [_a.dmz, _a.public, _a.share, _a.private].includes(
+          area,
+        );
+        var hubMatch = isChannel && this.hubId === data.hub_id;
         var inScope = !hubMatch || this.matchesScopedChannel(data);
         // P2P message payload now carries peer_id (replaces entity_id).
-        var privateMach = isPrivate && (this.peerId === data.peer_id);
-        var ticketMach = (area === _a.ticket) && (data.ticket_id === this.mget('ticket_id'));
+        var privateMach = isPrivate && this.peerId === data.peer_id;
+        var ticketMach =
+          area === _a.ticket && data.ticket_id === this.mget("ticket_id");
         if (hubMatch) {
           this._syncScopedFolderContent(data);
         }
@@ -1805,10 +1939,8 @@ class __widget_chat extends LetcBox {
 
         // If the widget id hiddent, don't acknowledge
         try {
-          if (this.getHandlers(_a.ui)[0].isHidden()) return
-        } catch (e) {
-
-        }
+          if (this.getHandlers(_a.ui)[0].isHidden()) return;
+        } catch (e) {}
         // Ack even when out-of-scope so unread counters in the folder feed
         // don't accumulate while the user views a file-scoped thread.
         if (hubMatch || privateMach || ticketMach) {
@@ -1842,11 +1974,10 @@ class __widget_chat extends LetcBox {
         }
         break;
 
-
       case SERVICE.media.copy:
         setTimeout(() => {
           this.onFileListChange();
-        }, 2000)
+        }, 2000);
 
         break;
 
@@ -1864,11 +1995,18 @@ class __widget_chat extends LetcBox {
       // Literal service strings (not SERVICE.* constants): the platform may not
       // expose *.typing until env reload, which would make the constants
       // `undefined` and wrongly match service-less messages.
-      case 'chat.typing':
-      case 'channel.typing':
+      case "chat.typing":
+      case "channel.typing":
         this._onTyping(data);
         break;
 
+      // Literal service strings (not SERVICE.* constants): the platform may not
+      // expose *.typing until env reload, which would make the constants
+      // `undefined` and wrongly match service-less messages.
+      case "chat.typing":
+      case "channel.typing":
+        this._onTyping(data);
+        break;
     }
   }
 
@@ -1878,10 +2016,10 @@ class __widget_chat extends LetcBox {
    * @param {string} mentionType - 'contact' (from @) or 'file' (from /)
    */
   _showMentionFiles(filter, mentionType) {
-    console.log('[mention] _showMentionFiles entry', {
+    console.log("[mention] _showMentionFiles entry", {
       filter,
       mentionType,
-      scope: this.mget('scope'),
+      scope: this.mget("scope"),
       hubId: this.hubId,
       hasGetPart: !!this.getPart,
       fig: this.fig && this.fig.family,
@@ -1892,18 +2030,20 @@ class __widget_chat extends LetcBox {
     // both find it. Downstream code touches `.el.dataset` and `.el.innerHTML`,
     // so we normalize on the DOM node.
     let dropdownEl;
-    const dropdownPart = this.getPart && this.getPart('mention-dropdown');
+    const dropdownPart = this.getPart && this.getPart("mention-dropdown");
     if (dropdownPart && dropdownPart.el) {
       dropdownEl = dropdownPart.el;
-      console.log('[mention] dropdown via getPart ✓');
+      console.log("[mention] dropdown via getPart ✓");
     } else if (this.el) {
       dropdownEl = this.el.querySelector(
         `.${this.fig.family}__mention-dropdown`,
       );
-      console.log('[mention] dropdown via querySelector', { found: !!dropdownEl });
+      console.log("[mention] dropdown via querySelector", {
+        found: !!dropdownEl,
+      });
     }
     if (!dropdownEl) {
-      console.warn('[mention] NO DROPDOWN ELEMENT — aborting');
+      console.warn("[mention] NO DROPDOWN ELEMENT — aborting");
       return;
     }
     const dropdown = { el: dropdownEl };
@@ -1915,200 +2055,236 @@ class __widget_chat extends LetcBox {
     // and that path is safely guarded.
     const home = this.mget(_a.home);
 
-    const mediaGridPreview = require('builtins/media/grid/template/preview');
+    const mediaGridPreview = require("builtins/media/grid/template/preview");
 
     let filesPromise = Promise.resolve(null);
     let contactsPromise = Promise.resolve(null);
     let folderHubId = hubId;
 
-    if (mentionType === 'file') {
+    if (mentionType === "file") {
       let folderNid = this.mget(_a.nid);
       try {
-        const folderWindow = this.getParentByKind && (
-          this.getParentByKind('window_folder') ||
-          this.getParentByKind('window_team') ||
-          this.getParentByKind('window_sharebox')
-        );
+        const folderWindow =
+          this.getParentByKind &&
+          (this.getParentByKind("window_folder") ||
+            this.getParentByKind("window_team") ||
+            this.getParentByKind("window_sharebox"));
         if (folderWindow) {
           const winNid = folderWindow.mget && folderWindow.mget(_a.nid);
           const winHubId = folderWindow.mget && folderWindow.mget(_a.hub_id);
           if (winNid) folderNid = winNid;
           if (winHubId) folderHubId = winHubId;
         }
-      } catch (e) { }
+      } catch (e) {}
       if (!folderNid) folderNid = (home && home.home_id) || folderHubId;
 
       filesPromise = this.fetchService({
         service: SERVICE.media.show_node_by,
         hub_id: folderHubId,
-        nid: folderNid
+        nid: folderNid,
       }).catch(() => null);
     }
 
-    if (mentionType === 'contact') {
+    if (mentionType === "contact") {
       // Folder-chat scope: mention workspace members (people who can see
       // this folder), not the visitor's personal chat rooms. Falls back to
       // contact_rooms when not in folder scope (bigchat / direct chat).
-      if (this.mget('scope') === _a.folder && folderHubId) {
-        console.log('[mention] fetching hub members', { hub_id: folderHubId });
+      if (this.mget("scope") === _a.folder && folderHubId) {
+        console.log("[mention] fetching hub members", { hub_id: folderHubId });
         contactsPromise = this.fetchService({
           service: SERVICE.hub.get_members_by_type,
           hub_id: folderHubId,
-          type: 'all',
-        }).catch((e) => { console.warn('[mention] hub members fetch failed', e); return null; });
+          type: "all",
+        }).catch((e) => {
+          console.warn("[mention] hub members fetch failed", e);
+          return null;
+        });
       } else {
-        console.log('[mention] fetching contact_rooms', { hub_id: Visitor.get(_a.id) });
+        console.log("[mention] fetching contact_rooms", {
+          hub_id: Visitor.get(_a.id),
+        });
         contactsPromise = this.fetchService({
           service: SERVICE.chat.contact_rooms,
           hub_id: Visitor.get(_a.id),
-          key: filter || ''
-        }).catch((e) => { console.warn('[mention] contact_rooms fetch failed', e); return null; });
+          key: filter || "",
+        }).catch((e) => {
+          console.warn("[mention] contact_rooms fetch failed", e);
+          return null;
+        });
       }
     }
 
-    Promise.all([filesPromise, contactsPromise]).then(([filesData, contactsData]) => {
-      console.log('[mention] fetch resolved', {
-        filesRaw: filesData,
-        contactsRaw: contactsData,
-        contactsType: Array.isArray(contactsData) ? 'array' : typeof contactsData,
-      });
-      const toRows = (d) => {
-        if (!d) return [];
-        if (Array.isArray(d)) return d;
-        return d.rows || d.data || [];
-      };
-      let files = toRows(filesData);
-      let contacts = toRows(contactsData);
-      console.log('[mention] toRows', { files: files.length, contacts: contacts.length });
-
-      files = files.filter(f => f.filetype !== _a.hub);
-
-      contacts = contacts.filter((c) => {
-        const firstname = c.firstname || c.surname || '';
-        const lastname = c.lastname || '';
-        const fullname = `${firstname} ${lastname}`.trim();
-        return fullname.length > 0;
-      });
-
-      if (filter) {
-        files = files.filter(f =>
-          (f.filename || '').toLowerCase().includes(filter)
-        );
-        contacts = contacts.filter(c => {
-          const name = `${c.firstname || ''} ${c.lastname || ''} ${c.surname || ''}`.toLowerCase();
-          return name.includes(filter);
+    Promise.all([filesPromise, contactsPromise])
+      .then(([filesData, contactsData]) => {
+        console.log("[mention] fetch resolved", {
+          filesRaw: filesData,
+          contactsRaw: contactsData,
+          contactsType: Array.isArray(contactsData)
+            ? "array"
+            : typeof contactsData,
         });
-      }
-
-      let html = '';
-
-      if (files.length) {
-        const isImgCapable = (file) => {
-          if (/^-/.test(file.capability || '')) return 0;
-          if ((file.ext || '').toLowerCase() === 'svg') return 1;
-          if ((file.ext || '').toLowerCase() === _a.pdf) return 0;
-          if (/text/.test(file.mimetype || '')) return 0;
-          if (/shell|script|text/.test(file.filetype || '')) return 0;
-          return /^r/.test(file.capability || '') ? 1 : 0;
+        const toRows = (d) => {
+          if (!d) return [];
+          if (Array.isArray(d)) return d;
+          return d.rows || d.data || [];
         };
-        const previewUrl = (file) => file.url || file.vignette || file.thumbnail || file.src || file.preview || '';
-        const renderFileIcon = (file) => {
-          const url = previewUrl(file);
-          const model = {
-            ...file,
-            _id: file._id || file.id || file.nid,
-            area: file.area || this.mget(_a.area),
-            role: file.filetype === _a.folder ? 'mention' : (file.role || 'desk'),
-            imgCapable: url ? isImgCapable(file) : 0,
-            url,
-            widgetId: _.uniqueId('mention-preview-'),
-            isAttachment: 1,
+        let files = toRows(filesData);
+        let contacts = toRows(contactsData);
+        console.log("[mention] toRows", {
+          files: files.length,
+          contacts: contacts.length,
+        });
+
+        files = files.filter((f) => f.filetype !== _a.hub);
+
+        contacts = contacts.filter((c) => {
+          const firstname = c.firstname || c.surname || "";
+          const lastname = c.lastname || "";
+          const fullname = `${firstname} ${lastname}`.trim();
+          return fullname.length > 0;
+        });
+
+        if (filter) {
+          files = files.filter((f) =>
+            (f.filename || "").toLowerCase().includes(filter),
+          );
+          contacts = contacts.filter((c) => {
+            const name =
+              `${c.firstname || ""} ${c.lastname || ""} ${c.surname || ""}`.toLowerCase();
+            return name.includes(filter);
+          });
+        }
+
+        let html = "";
+
+        if (files.length) {
+          const isImgCapable = (file) => {
+            if (/^-/.test(file.capability || "")) return 0;
+            if ((file.ext || "").toLowerCase() === "svg") return 1;
+            if ((file.ext || "").toLowerCase() === _a.pdf) return 0;
+            if (/text/.test(file.mimetype || "")) return 0;
+            if (/shell|script|text/.test(file.filetype || "")) return 0;
+            return /^r/.test(file.capability || "") ? 1 : 0;
           };
-          switch (model.filetype) {
-            case _a.folder:
-              return require('builtins/media/grid/template/folder')(model);
-            case _a.audio:
-              return require('builtins/media/grid/template/filetype/audio.txt').default;
-            case _a.note:
-            case 'markdown':
-              return require('builtins/media/grid/template/filetype/note.txt').default;
-            default:
-              return mediaGridPreview(model);
-          }
-        };
-        html += '<div class="mention-section-header">Files</div>';
-        files.slice(0, 6).forEach(f => {
-          html += `<div class="mention-item" data-nid="${_.escape(f.nid)}" data-hub_id="${_.escape(folderHubId)}" data-filename="${_.escape(f.filename)}" data-type="file" data-service="mention-select">
-            <div class="mention-item__icon ${_.escape(f.area || '')}">${renderFileIcon(f)}</div>
+          const previewUrl = (file) =>
+            file.url ||
+            file.vignette ||
+            file.thumbnail ||
+            file.src ||
+            file.preview ||
+            "";
+          const renderFileIcon = (file) => {
+            const url = previewUrl(file);
+            const model = {
+              ...file,
+              _id: file._id || file.id || file.nid,
+              area: file.area || this.mget(_a.area),
+              role:
+                file.filetype === _a.folder ? "mention" : file.role || "desk",
+              imgCapable: url ? isImgCapable(file) : 0,
+              url,
+              widgetId: _.uniqueId("mention-preview-"),
+              isAttachment: 1,
+            };
+            switch (model.filetype) {
+              case _a.folder:
+                return require("builtins/media/grid/template/folder")(model);
+              case _a.audio:
+                return require("builtins/media/grid/template/filetype/audio.txt")
+                  .default;
+              case _a.note:
+              case "markdown":
+                return require("builtins/media/grid/template/filetype/note.txt")
+                  .default;
+              default:
+                return mediaGridPreview(model);
+            }
+          };
+          html += '<div class="mention-section-header">Files</div>';
+          files.slice(0, 6).forEach((f) => {
+            html += `<div class="mention-item" data-nid="${_.escape(f.nid)}" data-hub_id="${_.escape(folderHubId)}" data-filename="${_.escape(f.filename)}" data-type="file" data-service="mention-select">
+            <div class="mention-item__icon ${_.escape(f.area || "")}">${renderFileIcon(f)}</div>
             <div class="mention-item__name">${_.escape(f.filename)}</div>
           </div>`;
-        });
-      }
+          });
+        }
 
-      if (contacts.length) {
-        html += '<div class="mention-section-header">People</div>';
-        contacts.slice(0, 6).forEach(c => {
-          const drumate_id = c.drumate_id || c.entity_id || c.id;
-          const firstname = c.firstname || c.surname || '';
-          const lastname = c.lastname || '';
-          const fullname = `${firstname} ${lastname}`.trim();
-          const avatarUrl = Visitor.avatar(drumate_id, _a.vignette);
+        if (contacts.length) {
+          html += '<div class="mention-section-header">People</div>';
+          contacts.slice(0, 6).forEach((c) => {
+            const drumate_id = c.drumate_id || c.entity_id || c.id;
+            const firstname = c.firstname || c.surname || "";
+            const lastname = c.lastname || "";
+            const fullname = `${firstname} ${lastname}`.trim();
+            const avatarUrl = Visitor.avatar(drumate_id, _a.vignette);
 
-          html += `<div class="mention-item mention-item--contact" data-drumate_id="${drumate_id}" data-firstname="${_.escape(firstname)}" data-lastname="${_.escape(lastname)}" data-fullname="${_.escape(fullname)}" data-type="contact" data-service="mention-select">
+            html += `<div class="mention-item mention-item--contact" data-drumate_id="${drumate_id}" data-firstname="${_.escape(firstname)}" data-lastname="${_.escape(lastname)}" data-fullname="${_.escape(fullname)}" data-type="contact" data-service="mention-select">
             <div class="mention-item__avatar"><img class="mention-item__avatar-img" src="${avatarUrl}"></div>
             <div class="mention-item__name">${_.escape(fullname)}</div>
           </div>`;
-        });
-      }
-
-      console.log('[mention] html length', html.length);
-      if (!html) {
-        console.warn('[mention] empty html → closing dropdown');
-        dropdown.el.dataset.state = _a.closed;
-        return;
-      }
-
-      dropdown.el.innerHTML = html;
-      dropdown.el.dataset.state = _a.open;
-      console.log('[mention] dropdown OPENED', {
-        state: dropdown.el.dataset.state,
-        visible: dropdown.el.offsetParent !== null,
-        rect: dropdown.el.getBoundingClientRect(),
-      });
-
-      const self = this;
-      dropdown.el.querySelectorAll('.mention-item').forEach(el => {
-        el.onclick = function (e) {
-          e.stopPropagation();
-          const d = this.dataset;
-          let item;
-          if (d.type === 'contact') {
-            item = { type: 'contact', drumate_id: d.drumate_id, firstname: d.firstname, lastname: d.lastname, fullname: d.fullname };
-          } else {
-            item = { type: 'file', nid: d.nid, hub_id: d.hub_id, filename: d.filename };
-          }
-          self.ensurePart(_a.message).then((messenger) => {
-            if (_.isFunction(messenger._onMentionSelect)) {
-              messenger._onMentionSelect(item);
-            }
           });
-          self._closeMentionDropdown();
-        };
+        }
+
+        console.log("[mention] html length", html.length);
+        if (!html) {
+          console.warn("[mention] empty html → closing dropdown");
+          dropdown.el.dataset.state = _a.closed;
+          return;
+        }
+
+        dropdown.el.innerHTML = html;
+        dropdown.el.dataset.state = _a.open;
+        console.log("[mention] dropdown OPENED", {
+          state: dropdown.el.dataset.state,
+          visible: dropdown.el.offsetParent !== null,
+          rect: dropdown.el.getBoundingClientRect(),
+        });
+
+        const self = this;
+        dropdown.el.querySelectorAll(".mention-item").forEach((el) => {
+          el.onclick = function (e) {
+            e.stopPropagation();
+            const d = this.dataset;
+            let item;
+            if (d.type === "contact") {
+              item = {
+                type: "contact",
+                drumate_id: d.drumate_id,
+                firstname: d.firstname,
+                lastname: d.lastname,
+                fullname: d.fullname,
+              };
+            } else {
+              item = {
+                type: "file",
+                nid: d.nid,
+                hub_id: d.hub_id,
+                filename: d.filename,
+              };
+            }
+            self.ensurePart(_a.message).then((messenger) => {
+              if (_.isFunction(messenger._onMentionSelect)) {
+                messenger._onMentionSelect(item);
+              }
+            });
+            self._closeMentionDropdown();
+          };
+        });
+      })
+      .catch((err) => {
+        this.warn("Mention error:", err);
+        this._closeMentionDropdown();
       });
-    }).catch((err) => {
-      this.warn("Mention error:", err);
-      this._closeMentionDropdown();
-    });
   }
 
   /**
    * Close mention dropdown
    */
   _closeMentionDropdown() {
-    const dropdown = this.getPart('mention-dropdown');
+    const dropdown = this.getPart("mention-dropdown");
     if (!dropdown) return;
     dropdown.el.dataset.state = _a.closed;
-    dropdown.el.innerHTML = '';
+    dropdown.el.innerHTML = "";
   }
 
   /**
@@ -2120,23 +2296,23 @@ class __widget_chat extends LetcBox {
     if (cmd && cmd.el) {
       let el = cmd.el;
       if (!el.dataset.type) {
-        el = el.closest('.mention-item') || el;
+        el = el.closest(".mention-item") || el;
       }
       const d = el.dataset;
-      if (d.type === 'contact') {
+      if (d.type === "contact") {
         item = {
-          type: 'contact',
+          type: "contact",
           drumate_id: d.drumate_id,
           firstname: d.firstname,
           lastname: d.lastname,
-          fullname: d.fullname
+          fullname: d.fullname,
         };
       } else {
         item = {
-          type: 'file',
+          type: "file",
           nid: d.nid,
           hub_id: d.hub_id,
-          filename: d.filename
+          filename: d.filename,
         };
       }
     }
@@ -2197,14 +2373,13 @@ class __widget_chat extends LetcBox {
 
   static initClass() {
     this.prototype.events = {
-      dragenter: '_onDragEnter',
-      dragover: '_onDragOver',
-      dragleave: '_onDragLeave',
-      drop: '_onDrop',
+      dragenter: "_onDragEnter",
+      dragover: "_onDragOver",
+      dragleave: "_onDragLeave",
+      drop: "_onDrop",
     };
   }
 }
-
 
 __widget_chat.initClass();
 

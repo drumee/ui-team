@@ -307,6 +307,45 @@
   }
 }
 
+@media (max-width: 650px) {
+  .window-confirm {
+    &__ui {
+      max-height: calc(100vh - 32px);
+      max-height: calc(100dvh - 32px);
+      max-width: calc(100vw - 32px) !important;
+      min-width: 0 !important;
+      overflow: hidden;
+      width: calc(100vw - 32px) !important;
+
+      &[data-maxsize="0"],
+      &[data-maxsize="1"],
+      &[data-maxsize="2"] {
+        max-width: calc(100vw - 32px) !important;
+        width: calc(100vw - 32px) !important;
+      }
+    }
+
+    &__body {
+      overflow-y: auto;
+    }
+
+    &__buttons {
+      flex-wrap: wrap;
+      justify-content: stretch;
+
+      .button {
+        flex: 1 1 calc(50% - 4px);
+        min-width: 0;
+      }
+
+      &.intro-popup .button {
+        flex-basis: 100%;
+        min-width: 0;
+      }
+    }
+  }
+}
+
 // Dark-mode tweaks for the confirm dialog title — the default
 // var(--normal-fg-10) resolves to #e4e3ff in dark mode, which has noticeably
 // lower contrast on the dark popup surface than the body uses. Bump it to
