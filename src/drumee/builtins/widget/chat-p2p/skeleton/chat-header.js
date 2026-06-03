@@ -7,10 +7,22 @@
 module.exports = function (ui, contact) {
   const fig = ui.fig.family;
 
+  // Desktop close button — closes the whole panel. Lives in the chat
+  // header here, but is hidden on mobile/tablet (≤1024px) where the close
+  // button moves into the sidebar header instead (see skeleton/index.js).
   const closeBtn = Skeletons.Button.Svg({
     ico: 'account_cross',
-    className: `${fig}__header-btn`,
+    className: `${fig}__header-btn ${fig}__chat-close-btn`,
     service: 'close-chat',
+    uiHandler: [ui]
+  });
+
+  // Mobile/tablet back button — returns from the chat pane to the inbox
+  // sidebar. Hidden on desktop via CSS (both panes show side-by-side there).
+  const backBtn = Skeletons.Button.Svg({
+    ico: 'arrow-left',
+    className: `${fig}__header-btn ${fig}__back-btn`,
+    service: 'back-to-list',
     uiHandler: [ui]
   });
 
@@ -62,6 +74,7 @@ module.exports = function (ui, contact) {
   const info = Skeletons.Box.X({
     className: `${fig}__header-info`,
     kids: [
+      backBtn,
       profileIcon,
       Skeletons.Box.Y({
         className: `${fig}__header-text`,

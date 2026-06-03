@@ -9,7 +9,10 @@ class __chat_p2p extends LetcBox {
 
   initialize(opt = {}) {
     require("./skin");
-    opt.dataset = { ...opt.dataset, anim: "out" };
+    // `mview` drives the single-pane mobile/tablet layout (≤ 1024px):
+    // "sidebar" shows the inbox, "chat" shows the conversation. On wider
+    // screens both panes show side-by-side and the attribute is ignored.
+    opt.dataset = { ...opt.dataset, anim: "out", mview: "sidebar" };
     super.initialize(opt);
     this.declareHandlers();
     this._radioId = `peer-${this.mget(_a.widgetId)}`;
@@ -30,6 +33,26 @@ class __chat_p2p extends LetcBox {
     // here and have togglePanel read it as closed and reopen).
     const svc = source && source.mget && source.mget(_a.service);
     if (typeof svc === "string" && svc.startsWith("toggle-")) return;
+    // Opening the desk's mobile sidebar/drawer via a topbar button must not
+    // dismiss the chat panel — the drawer overlays on top and the chat
+    // stays open behind it. Bail on those clicks (they read as "outside").
+    if (
+      e.target &&
+      e.target.closest &&
+      e.target.closest(".desk-module__mobile-topbar-btn")
+    )
+      return;
+    // Likewise on mobile/tablet, interacting with the desk sidebar drawer or
+    // tapping its close-backdrop must not close the chat behind it.
+    if (this._isMobile()) {
+      if (svc === "mobile-close-drawer") return;
+      if (
+        e.target &&
+        e.target.closest &&
+        e.target.closest(".desk-module-sidebar__main")
+      )
+        return;
+    }
     if (this.el.dataset.anim === "in" && !this.el.contains(e.target)) {
       this.el.dataset.anim = "out";
     }
@@ -79,6 +102,19 @@ class __chat_p2p extends LetcBox {
   }
 
   /**
+   * True when the panel is in single-pane mode (≤ 1024px). 1024 matches the
+   * SCSS @media fallback in skin/index.scss so JS and CSS agree on what
+   * counts as compact. `Visitor.isMobile()` is OR'd in to catch DevTools
+   * emulator cases where data-device tags mobile but innerWidth differs.
+   */
+  _isMobile() {
+    return (
+      window.innerWidth <= 1024 ||
+      (typeof Visitor.isMobile === "function" && Visitor.isMobile())
+    );
+  }
+
+  /**
    * Returns the API config for the contact list.
    */
   getCurrentApi() {
@@ -124,6 +160,10 @@ class __chat_p2p extends LetcBox {
           this.el.dataset.anim = "in";
           this._applyFilter();
           await Kind.waitFor("widget_chat");
+          // On mobile/tablet stay on the inbox — auto-opening the first
+          // conversation would jump past the sidebar the user expects to
+          // land on. They tap a contact to reveal the chat pane.
+          if (this._isMobile()) return;
           const first =
             child.children && child.children.first && child.children.first();
           if (first && first.el && first.el.style.display !== "none")
@@ -354,6 +394,9 @@ class __chat_p2p extends LetcBox {
     this.activePeer = peer;
     this.activePeerType = type;
 
+    // Single-pane mobile/tablet: reveal the chat pane (no effect ≥ 1024px).
+    this.el.dataset.mview = "chat";
+
     this.ensurePart("chat-header").then((header) => {
       header.clear();
       header.feed(require("./skeleton/chat-header")(this, contact));
@@ -478,6 +521,11 @@ class __chat_p2p extends LetcBox {
 
       case "close-chat":
         Desk.togglePanel("chat_p2p", "chat-panel");
+        break;
+
+      case "back-to-list":
+        // Mobile/tablet: return from the chat pane to the inbox sidebar.
+        this.el.dataset.mview = "sidebar";
         break;
 
       case "filter-all":

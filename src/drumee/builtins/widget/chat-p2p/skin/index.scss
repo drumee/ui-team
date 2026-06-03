@@ -63,6 +63,35 @@
     line-height: 1.1;
   }
 
+  &__sidebar-actions {
+    align-items: center;
+    flex-shrink: 0;
+    gap: 16px;
+  }
+
+  &__close-btn {
+    // Sidebar close button is mobile/tablet only — the media query below
+    // reveals it. On desktop the close button stays in the chat header.
+    display: none;
+    color: var(--normal-fg-50);
+    cursor: pointer;
+    align-items: center;
+    justify-content: center;
+    height: 21px;
+    width: 20px;
+    align-self: center;
+
+    svg {
+      width: 20px;
+      height: 20px;
+      display: block;
+    }
+
+    &:hover {
+      color: var(--normal-fg-20);
+    }
+  }
+
   &__compose-wrapper {
     position: relative;
     align-items: center;
@@ -368,6 +397,11 @@
     }
   }
 
+  // Back button is mobile/tablet only — the media query below reveals it.
+  &__back-btn {
+    display: none;
+  }
+
   // ── Chat panel ───────────────────────────────────────────────────
 
   &__chat-panel {
@@ -402,6 +436,74 @@
       margin: auto;
       position: absolute;
       width: 100%;
+    }
+  }
+
+  // ── Responsive: single pane on tablet & mobile (≤ 1024px) ──────────
+  // The panel fills the viewport and shows ONE pane at a time. `mview`
+  // on the __ui root toggles which: "sidebar" (inbox) or "chat"
+  // (conversation). The back button in the chat header returns to the
+  // inbox. Above 1024px the attribute is inert and both panes show
+  // side-by-side as before.
+  @media (max-width: 1024px) {
+    // Fill the desk's right panel-container (sized to __right-side) rather
+    // than the full viewport — keeps the panel off the 231px desktop
+    // sidebar at tablet widths. Stays position-based so the translateX
+    // slide animation still parks it off the container's right edge.
+    &__ui {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      max-width: 100%;
+    }
+
+    &__sidebar {
+      border-right: none;
+      width: 100%;
+    }
+
+    &__chat-area {
+      border-left: none;
+      width: 100%;
+    }
+
+    &__back-btn {
+      display: flex;
+    }
+
+    // Move the close button into the sidebar: reveal the sidebar one,
+    // hide the chat-header one.
+    &__close-btn {
+      display: flex;
+    }
+
+    &__chat-close-btn {
+      display: none;
+    }
+
+    // Compose popup adapts to small screens: widen toward the available
+    // width but never overflow the viewport, and cap height to the viewport
+    // so it stays on-screen on short landscape phones. Anchor stays
+    // JS-driven (right edge of the sidebar, top under the compose button).
+    &__compose-popup {
+      width: min(360px, calc(100vw - 16px));
+      max-width: calc(100vw - 16px);
+      max-height: min(70vh, 480px);
+    }
+
+    // Let the contact list use the available height instead of the fixed
+    // 280px desktop cap, so more contacts show on tall mobile screens.
+    &__compose-list {
+      max-height: min(56vh, 360px);
+    }
+
+    &__ui[data-mview="sidebar"] &__chat-area {
+      display: none;
+    }
+
+    &__ui[data-mview="chat"] &__sidebar {
+      display: none;
     }
   }
 }
