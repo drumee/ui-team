@@ -11,7 +11,7 @@ Component reference: CLAUDE.md → "Skeletons Component Reference".
 
 ## Structure
 
-- Export a function `(ui, ...) => Skeletons.*` tree (`module.exports = function(...)` or `.default`).
+- A **skeleton factory** exports a function `(ui, ...) => Skeletons.*` tree (`module.exports = function(...)` or `.default`). **Exception:** helper/aggregate modules that happen to live under a `skeleton/` dir export named utilities instead (e.g. `upload-progress/skeleton/helpers.js` → `{ getFileIcon, formatSpeed }`, or `invite-popup/skeleton/index.js` exporting the factory **plus** named utils). Keep their existing export shape — don't force them into a single factory.
 - `const pfx = ui.fig.family;` then use as BEM root: `` className: `${pfx}__container` ``.
 - ❌ never hardcode **this widget's own** family string — derive it from `ui.fig.family`. **Exception:** when a skeleton renders a *child* component's placeholder, it may hardcode that child's BEM root so the markup matches the child's `skin/` (e.g. `const memberListItemFig = 'widget-members-listItem'` matching `members-list-item/skin`). Use the child's real family, not `ui.fig.family`, in that case.
 

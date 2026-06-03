@@ -20,7 +20,7 @@ paths:
 
 ## Imports
 
-- Use the webpack aliases (`builtins`, `widget`, `window`, `media`, `player`, `skeleton`, `skin`, `lex`, `locale`, `toolkit`, `desk`, `dmz`, `welcome` …) across module boundaries — not deep relative paths (CLAUDE.md → "Path aliases").
+- Use webpack path aliases across module boundaries — not deep relative paths. `webpack/resolve.js` is the authoritative alias→path map (verified ones include `builtins`, `widget`, `window`, `media`, `player`, `lex`, `locale`, `skin`, `desk`, `dmz`, `welcome`). Check it before using an alias — some names listed in CLAUDE.md (e.g. `skeleton` → missing `libs/skeleton`, `toolkit` → use `ui-toolkit`) don't resolve here.
 
 ## Dependencies
 

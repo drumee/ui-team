@@ -3,6 +3,7 @@ paths:
   - "src/sass/**/*.scss"
   - "src/drumee/**/skin/**/*.scss"
   - "**/*.scss"
+  - "**/*.scss.tpl"
 ---
 
 # SCSS / Styling
