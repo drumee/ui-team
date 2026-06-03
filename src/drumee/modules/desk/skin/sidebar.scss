@@ -190,15 +190,12 @@
   &__logo-row {
     display: flex;
     flex-direction: row;
-    justify-content: center;
+    justify-content: space-between;
     align-items: flex-start;
     width: 100%;
     padding: 0 24px;
     box-sizing: border-box;
-    &[data-device="mobile"]{
-    justify-content: space-between;
-
-    }
+    
   }
 
   &__logo {
