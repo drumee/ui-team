@@ -135,9 +135,11 @@ class __window_manager extends mfsInteract {
    *
    */
   handleUpload() {
-    const target = this.getActiveWindow();
-    const UploadProgress = require("./upload-progress");
-    return UploadProgress.openStaging(target);
+    let target = this.getActiveWindow();
+    return this.__fileselector.open((e) => {
+      if (target && target !== this) target.raise();
+      this.upload(e);
+    });
   }
 
   /**
