@@ -215,6 +215,22 @@
     word-break: break-word;
   }
 
+  // Description preview on the card — compact, muted, clamped to ~2 lines.
+  &__task-desc {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    overflow-wrap: anywhere; // long unbroken tokens/URLs stay inside the card
+    margin: 2px 0 0;
+    @include drumee.typo(
+      $size: 12px,
+      $weight: 400,
+      $line: 16px,
+      $color: var(--normal-fg-40, #84848c)
+    );
+  }
+
   &__task-foot {
     align-items: center;
     gap: 8px;

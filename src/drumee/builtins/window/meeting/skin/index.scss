@@ -1216,17 +1216,20 @@
   }
 
   // Both this panel and the waiting message-container are Wrapper.Y elements,
-  // so they share `.dialog__wrapper { z-index: var(--z-index-context) }` (50000)
-  // and tie — the message, later in the DOM, then paints over the panel. The
-  // compound `.dialog__wrapper` selector raises specificity so this z-index wins
-  // and lifts the dashboard above the message (both live inside __main's
-  // stacking context). Stays below the floating command bar (100000).
+  // so when shown they each get `data-state="open"`, which forces
+  // `z-index: var(--z-index-context) !important` (50000) via skin/lib/utils.scss.
+  // A plain `z-index: 60000` here loses to that `!important`, so both tie at
+  // 50000 and the message — later in the DOM (body after topbar) — paints over
+  // the panel. We must therefore use `!important` too: the compound
+  // `.dialog__wrapper` selector (specificity 0,2,0) outranks `[data-state="open"]`
+  // (0,1,0), so this declaration wins and lifts the dashboard above the message.
+  // Stays below the floating command bar (100000).
   &__in-topbar-dashboard-panel,
   &__in-topbar-dashboard-panel.dialog__wrapper {
     position: absolute;
     top: calc(100% + 8px);
     right: 0;
-    z-index: 60000;
+    z-index: 60000 !important;
     min-width: 320px;
     max-width: 380px;
     max-height: 480px;
