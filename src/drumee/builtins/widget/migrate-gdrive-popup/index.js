@@ -448,6 +448,35 @@ class __migrate_gdrive_popup extends LetcBox {
     this._render();
   }
 
+  /**
+   * From a NEEDS_RECONNECT failure, re-authorize Drive instead of dead-ending.
+   * The stored token is dead (revoked, or clobbered by a later Google login
+   * writing a login-client refresh_token over the row), so just going to
+   * 'ready' and pressing Start would re-fail. Ack the failed job first so
+   * get_state won't replay it after re-auth, clear job state, then open the
+   * OAuth flow. On success _handleConnectResult → _refreshScope lands on
+   * 'ready' with a fresh Drive-scoped refresh_token.
+   */
+  async _reconnect() {
+    // The failed job is replayed by get_state until acked — ack it (AWAITED, so
+    // the get_state inside _refreshScope below doesn't race and re-surface the
+    // same NEEDS_RECONNECT result) before re-evaluating the connection.
+    if (this._jobId) {
+      try {
+        await this.postService('google_drive.ack_result', { hub_id: Visitor.id, job_id: this._jobId });
+      } catch (e) { /* best-effort ack */ }
+    }
+    this._jobId = null;
+    this._jobSnap = null;
+    this._seenJobId = null;
+    // Re-check scope. If the Drive token is already valid (e.g. it was fixed
+    // out of band, or a stale failed job was just being replayed), _refreshScope
+    // lands on 'ready' so the user can Start again with NO redundant OAuth. If
+    // it's genuinely dead, it routes to the 'not-connected' screen whose
+    // "Connect Google Drive" button re-authorizes.
+    await this._refreshScope();
+  }
+
   // ───────── event routing ─────────
 
   onUiEvent(cmd, args = {}) {
@@ -467,6 +496,8 @@ class __migrate_gdrive_popup extends LetcBox {
         return this._refreshScope();
       case 'gdrive-restart':
         return this._restart();
+      case 'gdrive-reconnect':
+        return this._reconnect();
       case 'gdrive-toggle-shared': {
         // Flip dataset.state in place AND persist to instance so the
         // value survives re-renders (skeleton seeds dataset.state from
