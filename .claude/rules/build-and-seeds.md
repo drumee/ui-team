@@ -20,7 +20,8 @@ paths:
 
 ## Imports
 
-- Use webpack path aliases across module boundaries — not deep relative paths. `webpack/resolve.js` is the authoritative alias→path map (verified ones include `builtins`, `widget`, `window`, `media`, `player`, `lex`, `locale`, `skin`, `desk`, `dmz`, `welcome`). Check it before using an alias — some names listed in CLAUDE.md (e.g. `skeleton` → missing `libs/skeleton`, `toolkit` → use `ui-toolkit`) don't resolve here.
+- (Bundled **app code** only.) Use webpack path aliases across module boundaries — not deep relative paths. `webpack/resolve.js` is the authoritative alias→path map (verified ones include `builtins`, `widget`, `window`, `media`, `player`, `lex`, `locale`, `skin`, `desk`, `dmz`, `welcome`). Check it before using an alias — some names listed in CLAUDE.md (e.g. `skeleton` → missing `libs/skeleton`, `toolkit` → use `ui-toolkit`) don't resolve here.
+- The Node build scripts themselves (`webpack/**`, `letc/**` — `#!/usr/bin/env node`) run **before** webpack's resolver; they use relative `require`. Don't convert those to aliases.
 
 ## Dependencies
 

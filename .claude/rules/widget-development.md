@@ -10,6 +10,7 @@ paths:
   - "src/drumee/builtins/player/**/widget/**/*.js"
   - "src/drumee/builtins/webrtc/**/*.js"
   - "src/drumee/api/lib/**/*.js"
+  - "src/drumee/modules/**/*.js"
   - "letc/template/index.js.tpl"
 ---
 
