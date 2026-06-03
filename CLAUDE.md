@@ -2,6 +2,10 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Path-Specific Rules
+
+Imperative checklists live in `.claude/rules/`. Each rule with a `paths:` frontmatter activates only when you read/edit a matching file; `framework-invariants.md` (no `paths:`) is always active. This file is the **reference** (how things work); `.claude/rules/` is the **do/don't** distilled per file area. See `.claude/rules/README.md` for the catalog.
+
 ## Project Overview
 
 Drumee Web OS UI — a collaborative web application (v3.2.32, AGPL-3.0) built on Backbone.js/Marionette with a custom JSON-based Skeletons UI rendering framework. Do **not** generate HTML; all UI is expressed as Skeletons component trees.
