@@ -38,6 +38,15 @@ module.exports = function (ui) {
                   }),
                 ],
               }),
+              // Mobile/tablet close button — lives in the sidebar header next
+              // to Add so it doesn't overlap them (the floating __close-btn is
+              // hidden on small screens). Desktop keeps the floating one.
+              Skeletons.Button.Svg({
+                ico: "account_cross",
+                className: `${fig}__header-close-btn`,
+                service: "close-panel",
+                uiHandler: [ui],
+              }),
             ],
           }),
         ],
@@ -76,6 +85,15 @@ module.exports = function (ui) {
     kids: [
       sidebar,
       detail,
+      // Mobile/tablet back button — returns from the detail pane to the
+      // contact list. Lives outside the re-rendered detail part so it
+      // survives detail/edit repaints. Hidden on desktop via CSS.
+      Skeletons.Button.Svg({
+        ico: "arrow-left",
+        className: `${fig}__back-btn`,
+        service: "back-to-list",
+        uiHandler: [ui],
+      }),
       Skeletons.Button.Svg({
         ico: "account_cross",
         className: `${fig}__close-btn`,
