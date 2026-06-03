@@ -1512,9 +1512,17 @@ class __window_upload_progress extends __window_core {
   _startBundle() {
     if (this._uploading) return;
     if (!this._bundle.length) return;
-    const target = this._targetWindow;
-    let destNid = (target && typeof target.getCurrentNid === "function") ? target.getCurrentNid() : null;
-    let hub_id = (target && typeof target.mget === "function") ? target.mget(_a.hub_id) : null;
+    let destNid, hub_id;
+    if (this._dropDest) {
+      // Drag-drop: explicit destination (drop target dir / folder), captured at drop time.
+      destNid = this._dropDest.destNid;
+      hub_id = this._dropDest.hub_id;
+      this._dropDest = null;
+    } else {
+      const target = this._targetWindow;
+      destNid = (target && typeof target.getCurrentNid === "function") ? target.getCurrentNid() : null;
+      hub_id = (target && typeof target.mget === "function") ? target.mget(_a.hub_id) : null;
+    }
     if (destNid == null) {                       // no real folder/hub target (e.g. WM is active)
       destNid = Visitor.get(_a.home_id);
       hub_id = hub_id != null ? hub_id : Visitor.get(_a.id);
@@ -1919,11 +1927,40 @@ __window_upload_progress.openStaging = function(targetWindow) {
   return __window_upload_progress.getOrCreate().then(function(win) {
     if (!win) return null;
     win._targetWindow = targetWindow || win._targetWindow;
+    win._dropDest = null;            // staging derives dest from the target window
     win._phase = "staging";
     const root = win.el && win.el.querySelector(`.${win.fig.family}__container`);
     if (root && root.dataset) root.dataset.phase = "staging";
     if (win.raise) win.raise();
     if (win._renderStaging) win._renderStaging();
+    return win;
+  });
+};
+
+/**
+ * Run a drag-dropped bundle directly (skip staging): set the entry tree + an
+ * explicit destination, then start the job and show progress. Used by the
+ * workspace drag-drop path so file+folder drops go through the same proven
+ * make_dir-first BundleJob orchestrator as the staging "Upload all".
+ * @param {Array}  roots        BundleEntry roots (from entriesFromDataTransfer)
+ * @param {string} destNid      destination directory nid (the drop target)
+ * @param {string} hub_id       destination hub id
+ * @param {Object} [targetWindow] folder window to refresh on completion
+ * @returns {Promise<__window_upload_progress|null>}
+ */
+__window_upload_progress.runBundle = function(roots, destNid, hub_id, targetWindow) {
+  if (!roots || !roots.length) return Promise.resolve(null);
+  return __window_upload_progress.getOrCreate().then(function(win) {
+    if (!win) return null;
+    win._targetWindow = targetWindow || null;
+    win._bundle = roots;
+    win._replaceExisting = false;
+    win._dropDest = { destNid, hub_id };
+    win._phase = "progress";
+    const root = win.el && win.el.querySelector(`.${win.fig.family}__container`);
+    if (root && root.dataset) root.dataset.phase = "progress";
+    if (win.raise) win.raise();
+    win._startBundle();
     return win;
   });
 };
