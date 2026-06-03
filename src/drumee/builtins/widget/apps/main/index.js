@@ -1244,7 +1244,11 @@ class apps_main extends LetcBox {
       });
       if (!this._secCtrl) return;
       const url = (res && (res.url || res.one_time_url || "")) || "";
-      if (url) this._secCtrl.oneTimeUrl = url;
+      if (url) {
+        this._secCtrl.oneTimeUrl = url;
+        if (this._securityTags[this._editingHub.id])
+          this._securityTags[this._editingHub.id].onetime = true;
+      }
       this._render();
     } catch (e) {
       if (this._secCtrl) { this._secCtrl.oneTimeOn = false; this._render(); }
@@ -1263,6 +1267,8 @@ class apps_main extends LetcBox {
       });
       if (!this._secCtrl) { return; }
       this._secCtrl.oneTimeUrl = "";
+      if (this._securityTags[this._editingHub.id])
+        this._securityTags[this._editingHub.id].onetime = false;
       this._render();
     } catch (e) {
       if (this._secCtrl) { this._secCtrl.oneTimeOn = true; this._render(); }
