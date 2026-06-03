@@ -14,7 +14,8 @@ Utilities detail: CLAUDE.md → "Socket / HTTP Utilities".
 
 ## Service names
 
-- Endpoint names come from `SERVICE.*` (services.json merged with `Platform`). ❌ hardcoded URL strings — add/look up the `ns.method` entry instead.
+- Endpoint names come from `SERVICE.*` (services.json merged with `Platform`). ❌ hardcoded URL strings in **consumers** — add/look up the `ns.method` entry instead.
+- **Exception:** `src/drumee/api.js` is the bootstrap that *builds* the endpoint paths (`endpointPath`, `servicePath`, `websocketPath`, `serviceApi`) before `SERVICE.*` exists — its URL strings are load-bearing, leave them. The hardcoded-URL ban targets service consumers, not this initializer.
 
 ## Errors
 

@@ -1,6 +1,7 @@
 ---
 paths:
   - "**/skeleton/**/*.js"
+  - "**/skeleton/**/*.coffee"
 ---
 
 # Skeleton & Event Wiring
@@ -17,6 +18,7 @@ Component reference: CLAUDE.md → "Skeletons Component Reference".
 
 - ✅ `Skeletons.Box.Y/X/G/Z`, `Button.Svg/Label`, `Entry`, `EntryBox`, `Textarea`, `Messenger`, `RichText`, `List.Smart/Scroll/Table`, `Avatar`, `Image.Smart`, `Progress`, `Note`.
 - ❌ raw HTML strings, `$('<div>')`, `innerHTML`, hand-written markup templates.
+- **Exception:** a few legacy skeleton modules return a composed HTML **string** instead of a Skeletons tree (e.g. `media/minifyer/skeleton` → `<div>…</div>`, stored as `innerContent` by the caller). Maintain those in place; the ban is for **new** skeletons.
 
 ## Event wiring — two channels
 
