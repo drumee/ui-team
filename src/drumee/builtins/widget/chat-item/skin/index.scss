@@ -180,6 +180,21 @@
     }
   }
 
+  // Footer (date + seen tick) and readers (read-receipt avatars) share one
+  // row in flow just below the bubble. Aligned to the bubble's side via the
+  // message-content's align-items.
+  &__footer-line {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 8px;
+
+    &.me {
+      // Footer hugs the bubble's right edge; readers sit to its left.
+      flex-direction: row-reverse;
+    }
+  }
+
   &__forward-tag-wrapper {
     padding-top: 5px;
     margin-bottom: -5px;
@@ -193,7 +208,6 @@
     flex-direction: row;
     align-items: center;
     gap: 2px;
-    margin-top: 4px;
 
     &.me {
       justify-content: flex-end;
