@@ -10,7 +10,7 @@ Managing the locale files. The "never hardcode text, use `LOCALE.*`" rule that a
 
 ## Rules
 
-- Keys are **UPPERCASE** (`SEND`, `NO_FILES_YET`) — match existing `locale/en.json` style.
+- Keys are **UPPERCASE** (`SEND`, `NO_FILES_YET`) — match existing `locale/en.json` style. **Exception:** language-code / mixed-case label keys (`en`, `fr`, `km`, `en_GB`, `QnA`) are looked up dynamically via `LOCALE[code]` (e.g. the language selector) — keep their existing casing, don't uppercase them.
 - New key → add to `locale/en.json` first, then mirror into **every** other lang file (es, fr, ru, km, zh).
 - Missing/wrong-case keys resolve to `''` via `createSafeObject` — a typo shows blank instead of erroring, so verify the key exists.
 - Key names: descriptive, consistent with siblings; never reuse one key for two meanings.

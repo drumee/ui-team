@@ -17,7 +17,7 @@ LetcBox → __window_utils → __window_core → __window_interact → <your win
 - Call **windows** → extend `__room` (= `require('builtins/webrtc/room/jitsi')`, the Jitsi wrapper), e.g. `window/connect`. The base WebRTC room itself (`webrtc/room`) extends `window/interact/webrtc`, **not** `__room` — don't put it on the `__room` chain.
 - Players → extend `__window_interact_player`.
 
-This chain is for **top-level** windows/players/rooms only. Leaf/child widgets nested under `player/**` and `webrtc/**` extend `LetcBox` (e.g. `__player_page` in `player/document/page`, `__endpoint` in `webrtc/endpoint`) — match the sibling, don't force them onto the window chain.
+This chain is for **top-level** windows/players/rooms only. Leaf/child widgets nested under `window/**/widget/**`, `player/**`, and `webrtc/**` extend `LetcBox` (e.g. `__account_entry` in `window/account/widget/input`, `___widget_member_chooseAdmins` in `window/adminpanel/widget/member-choose-admins`, `__player_page` in `player/document/page`, `__endpoint` in `webrtc/endpoint`) — match the sibling, don't force them onto the window chain. (Those `widget/**` files also load `widget-development.md`.)
 
 ## Opening / closing
 

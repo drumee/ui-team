@@ -32,7 +32,10 @@ Kind lookup is by class name string. Terser runs with `mangle: true`, but `keep_
 
 Build DOM with `Skeletons.*` only. ❌ template-literal markup, `$('<div>')`, `innerHTML`, jQuery DOM construction.
 
-**Exception:** existing `*/template/*.js` modules that return HTML/SVG strings are a legacy rendering pattern — maintain them in place, don't rewrite to Skeletons. Examples: bootstrap failover pages (`template/page/*.js` via `innerHTML` in `drumee.js`), `media/template/icon.js`, `media/uploader/template/{row,grid}.js`, `widget/chat-item/template/*` (inserted via `innerHTML` / `$el.append` by their callers). The ban is for **new** UI.
+**Exceptions** (the ban is for **new** UI components; these intentional raw-markup paths stay as-is):
+- **Bootstrap / loader code** that runs before or around Skeletons — failover pages (`template/page/*.js` via `innerHTML` in `drumee.js`), SVG-sprite injection (`api/loader.js` `el.innerHTML = require('…/normalized.sprite.txt')`).
+- **Legacy `*/template/*.js` markup modules** that return HTML/SVG strings — `media/template/icon.js`, `media/uploader/template/{row,grid}.js`, `widget/chat-item/template/*` (inserted via `innerHTML` / `$el.append` by their callers).
+Maintain these in place; don't rewrite them to Skeletons.
 
 ## 5. All user-visible text via `LOCALE`
 

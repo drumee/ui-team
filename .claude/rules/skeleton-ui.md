@@ -11,7 +11,7 @@ Component reference: CLAUDE.md → "Skeletons Component Reference".
 
 - Export a function `(ui, ...) => Skeletons.*` tree (`module.exports = function(...)` or `.default`).
 - `const pfx = ui.fig.family;` then use as BEM root: `` className: `${pfx}__container` ``.
-- ❌ never hardcode the family string — always derive from `ui.fig.family`.
+- ❌ never hardcode **this widget's own** family string — derive it from `ui.fig.family`. **Exception:** when a skeleton renders a *child* component's placeholder, it may hardcode that child's BEM root so the markup matches the child's `skin/` (e.g. `const memberListItemFig = 'widget-members-listItem'` matching `members-list-item/skin`). Use the child's real family, not `ui.fig.family`, in that case.
 
 ## Build with Skeletons only
 
