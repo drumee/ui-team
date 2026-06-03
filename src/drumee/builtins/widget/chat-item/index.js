@@ -666,8 +666,6 @@ class ___widget_chatItem extends LetcBox {
    */
   acknowledge(data) {
     if (this.mget("is_seen")) return;
-    let el;
-    let id = `readstatus-${this._id}`;
     let seen = 0;
     if (
       data &&
@@ -681,11 +679,13 @@ class ___widget_chatItem extends LetcBox {
         /* ignore */
       }
     }
-    this.waitElement(id, () => {
-      el = document.getElementById(id);
-      this.mset("is_seen", seen);
-      if (el) el.dataset.is_seen = seen;
-    });
+    // Mark the model directly. The read-status node is optional in the footer
+    // template, so the seen flag must not depend on the element existing —
+    // otherwise the ack waits forever on a missing node and never short-circuits
+    // subsequent acknowledge events. Update the DOM only when the node is present.
+    this.mset("is_seen", seen);
+    const el = document.getElementById(`readstatus-${this._id}`);
+    if (el) el.dataset.is_seen = seen;
   }
 
   /**
