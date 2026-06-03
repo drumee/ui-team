@@ -14,8 +14,8 @@ Path-scoped rule files for Claude Code.
 
 | File | Activates on | Purpose |
 |------|--------------|---------|
-| `framework-invariants.md` | always | non-negotiable contracts: globals not imported, fig naming + seeds authority, no raw HTML, UPPERCASE LOCALE, `fetchService`/`postService` |
-| `widget-development.md` | `builtins/{widget,panel,editor,messenger}/**` | widget lifecycle, base class (+ exceptions), WS bind/unbind cleanup |
+| `framework-invariants.md` | always | non-negotiable contracts: globals not imported, fig naming + seeds authority, no raw HTML, UPPERCASE LOCALE, `fetchService`/`postService`, `onWsMessage` signature |
+| `widget-development.md` | `builtins/{widget,panel,editor,messenger,media}/**`, `builtins/window/**/widget/**` | widget lifecycle, base class (+ exceptions), WS bind/unbind cleanup |
 | `window-development.md` | `builtins/{window,player,webrtc}/**` | inheritance chain, `Wm.launch`, media-stream cleanup |
 | `skeleton-ui.md` | `**/skeleton/**` | Skeletons-only UI, BEM `pfx = fig.family`, event wiring |
 | `styling-scss.md` | `**/*.scss` | BEM root = fig.family, design tokens over literals |

@@ -32,7 +32,7 @@ Kind lookup is by class name string. Terser runs with `mangle: true`, but `keep_
 
 Build DOM with `Skeletons.*` only. ❌ template-literal markup, `$('<div>')`, `innerHTML`, jQuery DOM construction.
 
-**Exceptions** (intentional raw-template paths — leave as-is, the ban is for normal UI skeleton markup): bootstrap error/failover pages (`src/drumee/template/page/*.js`, injected via `innerHTML` in `drumee.js`, render before Skeletons exists), and the uploader progress-chart SVG (`media/uploader/template/{row,grid}.js`, appended via `$el.append`).
+**Exception:** existing `*/template/*.js` modules that return HTML/SVG strings are a legacy rendering pattern — maintain them in place, don't rewrite to Skeletons. Examples: bootstrap failover pages (`template/page/*.js` via `innerHTML` in `drumee.js`), `media/template/icon.js`, `media/uploader/template/{row,grid}.js`, `widget/chat-item/template/*` (inserted via `innerHTML` / `$el.append` by their callers). The ban is for **new** UI.
 
 ## 5. All user-visible text via `LOCALE`
 
@@ -45,3 +45,7 @@ Build DOM with `Skeletons.*` only. ❌ template-literal markup, `$('<div>')`, `i
 - ✅ `this.fetchService(SERVICE.ns.method, payload)` (GET) / `this.postService(...)` (POST).
 - ❌ raw `fetch` / `$.ajax` / hardcoded URLs — they bypass auth, `socket_id`, device headers, and error dispatch. Service names come from `SERVICE.*`. (Detail: `api-services.md`, CLAUDE.md → "Socket / HTTP Utilities".)
 - **Exception:** raw `fetch` for static/bundled **assets** (e.g. the PDFium wasm in `player/document/pdfium-wrapper.js`) is fine — the ban targets backend *service* calls, not asset loads.
+
+## 7. WS handler signature — `onWsMessage(service, data, opts)`
+
+The dispatcher (`router/websocket/index.js`) calls `onWsMessage(service, model, options)`. Switch on the **first arg**; never read the service out of `opts` (it's usually `{}`, so `opts || svc` silently skips every case). Applies to every WS handler wherever it lives — windows, modules, widgets. Lifecycle detail: `widget-development.md`.

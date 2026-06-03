@@ -5,6 +5,7 @@ paths:
   - "src/drumee/builtins/editor/**/*.js"
   - "src/drumee/builtins/messenger/**/*.js"
   - "src/drumee/builtins/media/**/*.js"
+  - "src/drumee/builtins/window/**/widget/**/*.js"
 ---
 
 # Widget Development

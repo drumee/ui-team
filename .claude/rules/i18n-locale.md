@@ -1,7 +1,6 @@
 ---
 paths:
   - "locale/**/*.json"
-  - "src/drumee/**/locale/**/*.json"
   - "letc/**"
 ---
 
