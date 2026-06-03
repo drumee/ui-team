@@ -3,28 +3,35 @@
 .widget-chatItem {
   &-menu {
     // Floating action bar — moved into the message line on hover by chat-item
-    // _hover. Hidden until the line is hovered; sits on the opposite side of the
-    // bubble from the time, vertically centred. me → left of bubble (3·1·2),
-    // other → right of bubble (2·1·3).
+    // _hover. Hidden until the line is hovered. It floats just above the bubble,
+    // anchored to the bubble's inner edge (me → right, other → left).
+    //
+    // It used to sit beside the bubble (me → left, other → right). In the narrow
+    // team-chat panel a wide bubble fills the width, so a beside-placement
+    // pushed the bar past the panel edge and the scroll container clipped it —
+    // only short messages left enough side room for it to show. Anchoring it to
+    // an edge that is always inside the panel keeps it visible for any message
+    // width; the per-item top margin leaves room for it to float above.
     &__dropdown {
       position: absolute;
       z-index: 10;
-      top: 50%;
-      transform: translateY(-50%);
+      top: 0;
+      bottom: auto;
+      transform: translateY(-100%);
       opacity: 0;
       pointer-events: none;
       transition: opacity 0.12s ease;
 
       &.me {
-        right: 100%;
+        right: 0;
         left: auto;
-        padding-right: 8px;
+        padding-bottom: 4px;
       }
 
       &.other {
-        left: 100%;
+        left: 0;
         right: auto;
-        padding-left: 8px;
+        padding-bottom: 4px;
       }
     }
 
