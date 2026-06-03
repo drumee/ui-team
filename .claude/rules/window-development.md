@@ -14,7 +14,7 @@ LetcBox → __window_utils → __window_core → __window_interact → <your win
 ```
 
 - Chat windows → extend `chatInteract`.
-- Video/call windows → extend `__room`.
+- Call **windows** → extend `__room` (= `require('builtins/webrtc/room/jitsi')`, the Jitsi wrapper), e.g. `window/connect`. The base WebRTC room itself (`webrtc/room`) extends `window/interact/webrtc`, **not** `__room` — don't put it on the `__room` chain.
 - Players → extend `__window_interact_player`.
 
 This chain is for **top-level** windows/players/rooms only. Leaf/child widgets nested under `player/**` and `webrtc/**` extend `LetcBox` (e.g. `__player_page` in `player/document/page`, `__endpoint` in `webrtc/endpoint`) — match the sibling, don't force them onto the window chain.
@@ -23,7 +23,7 @@ This chain is for **top-level** windows/players/rooms only. Leaf/child widgets n
 
 - Open via `Wm.launch({ kind, media, ... })` — ❌ never `new __window_x()`.
 - Close via `this.goodbye()` or an `onUiEvent` `_e.close` case.
-- Single-instance windows (account, adminpanel) extend the `__intercat_singleton` variant — don't bypass it or you get duplicate windows.
+- Single-instance windows (account, adminpanel) extend `__window_interact_singleton` (`require('window/interact/singleton')`) — don't bypass it or you get duplicate windows. (Note: `window/account` aliases it locally as the misspelled `__intercat_singleton`; use the real name `__window_interact_singleton` elsewhere.)
 
 ## Event dispatch
 
