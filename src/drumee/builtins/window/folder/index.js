@@ -1459,8 +1459,16 @@ class __window_folder extends mfsInteract {
   }
 
   // Menu pick from the invite-row role dropdown — set _folderInviteRole and
-  // re-render the panel so the trigger label refreshes. (No server call until
-  // the user actually clicks Send Invitation.)
+  // refresh just the trigger label. (No server call until the user actually
+  // clicks Send Invitation.)
+  //
+  // Re-feeding the whole panel here destroys and recreates the still-open
+  // menu_topic widget mid-click, before it finishes dispatching the option
+  // click. The rebuilt menu's trigger still opens, but its option click
+  // handlers never get wired, so the role could only be changed once. Update
+  // the label text in place instead: the live menu stays intact (it closes
+  // itself on pick, and the radio behaviour moves the selected highlight), so
+  // the role can be re-picked any number of times.
   setFolderInviteRole(cmd) {
     const privilegeAttr = cmd.el?.dataset?.privilege;
     const roleLabel = cmd.el?.dataset?.role_label;
@@ -1469,11 +1477,18 @@ class __window_folder extends mfsInteract {
       label: roleLabel || LOCALE.ROLE_ADMIN || "Admin",
       privilege: Number(privilegeAttr),
     };
-    if (this.isShowSettings && this.dialogWrapper) {
-      this.dialogWrapper.feed(
-        require("./skeleton/settings-action-panel")(this),
-      );
-    }
+    const label = this.dialogWrapper?.el?.querySelector(
+      ".window-folder__settings-action-invite-input-row " +
+        ".window-folder__settings-action-role-label .note-content",
+    );
+    if (label) label.textContent = this._folderInviteRole.label;
+
+    // The option fires its pick straight at this window via uiHandler, so the
+    // click never bubbles back to the menu_topic for it to auto-close. Close
+    // it explicitly (animated, widget kept alive) so the dropdown dismisses on
+    // every pick and stays reusable for the next change.
+    const menu = cmd.getParentByKind?.(KIND.menu.topic);
+    if (menu?.changeState) menu.changeState(0);
   }
 
   // Menu pick from a member-row role dropdown — confirm and persist the
