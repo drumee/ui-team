@@ -103,6 +103,7 @@ html {
   &__right-side {
     flex-grow: 1;
     background-color: var(--normal-bg-100);
+    overflow: hidden;
   }
 
   // Desktop top bar is replaced by __mobile-topbar on mobile.

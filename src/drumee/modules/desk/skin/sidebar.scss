@@ -42,6 +42,7 @@
   }
 
   &__main[data-device="mobile"] {
+
     .desk-module-sidebar__nav-slot,
     .desk-module-sidebar__actions-slot {
       display: none;
@@ -62,6 +63,7 @@
   // that visually break the row alongside the currentColor sidebar icons.
   &__actions-slot {
     .desk-module-sidebar__item-icon svg {
+
       path,
       polygon,
       rect,
@@ -207,6 +209,7 @@
     &-icon {
       width: 101px;
       height: 20px;
+      margin-left: -7px;
     }
   }
 
@@ -250,7 +253,7 @@
     line-height: 1;
     text-transform: uppercase;
     white-space: nowrap;
-    margin-left: 10px;
+    margin-left: 4px;
   }
 
   &__workspace {
@@ -438,6 +441,7 @@ html[data-theme="dark"] .desk-module-sidebar {
   }
 
   &__footer-user-menu-item {
+
     // Light-mode :hover fallback (#f5f5fa) bleeds through; re-anchor.
     &:hover {
       background-color: var(--normal-bg-80);
@@ -445,6 +449,7 @@ html[data-theme="dark"] .desk-module-sidebar {
   }
 
   &__footer-user-btn {
+
     // Bottom profile row's hover. The base rule uses --default-bg-hover
     // which resolves to --neutral-200 (#ebecf0, light gray) and has no
     // dark override — leaving a near-white hover smear on the dark
