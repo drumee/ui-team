@@ -160,6 +160,10 @@ export function tabBar(ui, opt = {}) {
   // "toggle-files-layout" service, which flips the state via cmd.changeState().
   // Folder-only: the styling lives in the folder skin, keyed on the
   // `window-folder-topbar` class prefix.
+  //
+  // Shown only on the Files tab (data-visible toggled by showFolderTab); Files
+  // is the default tab, so it renders visible. The layout toggle is irrelevant
+  // on the Chat/Task/Meeting tabs.
   const cnTopbar = `${ui.fig.family}-topbar`;
   const viewSegment = (mode, ico) =>
     Skeletons.Box.X({
@@ -185,7 +189,11 @@ export function tabBar(ui, opt = {}) {
         // is present on first render so the correct half is highlighted
         // immediately; grid is the CSS default, so only row/list (state 1)
         // needs it.
-        dataset: { state: ui.getViewMode && ui.getViewMode() === _a.row ? 1 : 0 },
+        dataset: {
+          state: ui.getViewMode && ui.getViewMode() === _a.row ? 1 : 0,
+          // Files is the default active tab, so the toggle starts visible.
+          visible: 1,
+        },
         uiHandler: [ui],
         kidsOpt: { active: 0 },
         kids: [
