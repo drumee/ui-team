@@ -14,7 +14,9 @@ Utilities detail: CLAUDE.md → "Socket / HTTP Utilities".
 
 ## Service names
 
-- Endpoint names come from `SERVICE.*` (services.json merged with `Platform`). ❌ hardcoded URL strings in **consumers** — add/look up the `ns.method` entry instead.
+- Endpoint names come from `SERVICE.*` at runtime. ❌ hardcoded URL strings in **consumers** — look up the `ns.method` entry instead.
+- **`SERVICE` is built at bootstrap, not from the static file.** `drumee.js` does `window.SERVICE = _.merge({}, require('lex/services'), Platform.get('services'))`. `Platform.get('services')` comes from the backend `yp.get_env` RPC (the XHR in `drumee.js` → `Platform.set(platform)`) and is merged **on top**, so the backend's map is authoritative and wins on any conflict.
+- **`src/drumee/lex/services.json` is only a local placeholder / fallback** — the subset available before `yp.get_env` returns. Don't treat it as the source of truth: editing it does **not** add a server endpoint, and a service's presence/absence here doesn't determine whether the backend exposes it. The backend defines the real service surface.
 - **Exception:** `src/drumee/api.js` is the bootstrap that *builds* the endpoint paths (`endpointPath`, `servicePath`, `websocketPath`, `serviceApi`) before `SERVICE.*` exists — its URL strings are load-bearing, leave them. The hardcoded-URL ban targets service consumers, not this initializer.
 
 ## Errors
@@ -24,4 +26,4 @@ Utilities detail: CLAUDE.md → "Socket / HTTP Utilities".
 ## Lexicon files (`lex/*.js`)
 
 - `_a` attributes, `_e` events, `_K` constants. Add a constant here rather than scattering string literals across widgets.
-- Adding a service → add it to `services.json` in `ns.method` shape.
+- A new server endpoint is defined by the **backend** and arrives via `yp.get_env` (`Platform.get('services')`) — adding it to `services.json` does not create it. Only add an `ns.method` entry to the `services.json` placeholder when the local fallback genuinely needs it before bootstrap completes.

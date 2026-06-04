@@ -40,7 +40,7 @@ Maintain these in place; don't rewrite them to Skeletons.
 ## 5. All user-visible text via `LOCALE`
 
 - ❌ `content: "Send"`
-- ✅ `content: LOCALE.SEND` — locale keys are **UPPERCASE** (`locale/en.json` has `SEND`, `ADD`, … not `send`). A wrong-case/missing key renders blank (createSafeObject returns `''`), no error.
+- ✅ `content: LOCALE.SEND` — locale keys are **UPPERCASE** (`locale/en.json` has `SEND`, `ADD`, … not `send`). A wrong-case/missing key renders blank (createSafeObject returns `THE_KEY_AS_STRING`), no error.
 - New key → add to `locale/en.json` and mirror across all langs — see `i18n-locale.md`.
 - **Exception:** the bootstrap error/failover pages (`template/page/*.js`, e.g. `403-en.js`/`403-fr.js`/`502.js`) hardcode language-specific literal copy on purpose — they render in the pre-locale failure path where `LOCALE` is an empty safe object (`drumee.js` sets `window.LOCALE = createSafeObject()`), so `LOCALE.*` would render blank there. Leave their literals.
 

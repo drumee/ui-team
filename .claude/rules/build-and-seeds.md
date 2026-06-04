@@ -12,8 +12,7 @@ paths:
 ## `seeds.js` maps Kind → import (hand-maintained source)
 
 - **Root `src/drumee/seeds.js`** is the **runtime Kind registry** — `index.web.js` does `Kind.registerAddons(require('./seeds'))`. Each entry maps a Kind key → `import()` of its folder. To register a new widget/window **for the app, edit this file** (hand-maintained, edited directly — not generated).
-- **Nested `**/seeds.js`** (e.g. `modules/desk/workspace-indicator/seeds.js` → `{ 'desk_workspaceIndicator': '.' }`) are **string-valued** maps consumed by `./webpack/seeds/index.js` for *documentation* — they are **not** registered by the root runtime path. Editing a nested seeds.js does **not** register a kind for the app.
-- `./webpack/seeds/index.js` (run by `npm run build`) walks and consumes every `seeds.js` to build docs — it does **not** regenerate them; edits are authoritative, never overwritten.
+- **Nested `**/seeds.js`** (e.g. `modules/desk/workspace-indicator/seeds.js` → `{ 'desk_workspaceIndicator': '.' }`) are **string-valued** maps used only for *documentation* generation — they are **not** registered by the root runtime path. Editing a nested seeds.js does **not** register a kind for the app.
 - Kind key = whatever the entry registers. It *often* equals the class name minus leading underscores, but **not always** — e.g. `audio_player` → `builtins/player/audio` though the class is `__player_audio`. Don't infer the key from the class name (see `framework-invariants.md` §2).
 
 ## Class names are load-bearing

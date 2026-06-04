@@ -1,17 +1,6 @@
 ---
 paths:
-  - "src/drumee/builtins/widget/**/*.js"
-  - "src/drumee/builtins/panel/**/*.js"
-  - "src/drumee/builtins/editor/**/*.js"
-  - "src/drumee/builtins/messenger/**/*.js"
-  - "src/drumee/builtins/media/**/*.js"
-  - "src/drumee/builtins/window/**/widget/**/*.js"
-  - "src/drumee/builtins/permission/**/*.js"
-  - "src/drumee/builtins/player/**/widget/**/*.js"
-  - "src/drumee/builtins/webrtc/**/*.js"
-  - "src/drumee/api/lib/**/*.js"
-  - "src/drumee/modules/**/*.js"
-  - "letc/template/index.js.tpl"
+  - "src/drumee/**/*.js"
 ---
 
 # Widget Development
@@ -24,6 +13,8 @@ For a **new standard widget**:
 - Plain widget → extend **`LetcBox`**.
 - Media/filesystem node (file, folder, hub) → extend **`DrumeeMFS`**.
 - Lightweight/leaf widget (no model lifecycle) → may extend `Marionette.View`.
+
+**Source of truth for filesystem methods/properties:** the `DrumeeMFS` global is `class __core_mfs extends LetcBox`, defined in `node_modules/@drumee/ui-core/letc/mfs.js`. All MFS-node behavior lives there — type flags (`initData()` → `isMfs`/`isHub`/`isFolder`/`isHubOrFolder`), permission helpers (`isGranted`, `canUpload`, `canManageAccess`, `canRemove`, …), identity (`getCurrentNid`, `isRegularFile`, `getHostId`), links (`url`, `viewerLink`, `directUrl`), download (`download`, `fetchFile`), `metadata()`, `fullname()`, `markAsSeen()`, `unselect()`. When you need exact semantics — or a method not in CLAUDE.md's "MFS (Media File System)" section — read that file; it's canonical. Vendored in `node_modules`, so it changes by upgrading `@drumee/ui-core`, not by editing in place.
 
 **Don't change an existing widget's base class.** Several intentionally extend other bases and the rule above does NOT override them:
 - editors extend their player base (`__editor_diagram extends __player`),
