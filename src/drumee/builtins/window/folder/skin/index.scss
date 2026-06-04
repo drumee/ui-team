@@ -491,30 +491,73 @@
       }
     }
 
-    // File view toggle — the control shows the glyph of the CURRENT view.
-    // Grid is the default (covers data-state "0"/unset); the list glyph only
-    // appears when the toggle carries data-state="1" (row/list view active).
-    &__control-icon-glyph {
-      width: 20px;
-      height: 20px;
+    // File view toggle — segmented pill (list | grid). Both halves always
+    // render; the half matching the wrapper's data-state is the active view:
+    // a light-blue fill, dark-blue glyphs and a revealed checkmark. Grid is the
+    // default (data-state "0"/unset); list is active at data-state "1" (row).
+    &__view-toggle {
+      display: inline-flex;
+      align-items: stretch;
+      height: 28px;
+      flex-shrink: 0;
+      border: 1px solid var(--border-default, #d6d6dc);
+      border-radius: 999px;
+      background: var(--normal-bg-elevated, #fff);
+      overflow: hidden;
+      cursor: pointer;
     }
 
-    &__control-icon-glyph--list {
+    &__view-toggle-seg {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 5px;
+      padding: 0 12px;
+      color: var(--normal-fg-10);
+      transition:
+        background 0.15s,
+        color 0.15s;
+
+      // Divider between the two halves.
+      & + & {
+        border-left: 1px solid var(--border-default, #d6d6dc);
+      }
+
+      svg {
+        fill: currentColor;
+      }
+    }
+
+    &__view-toggle-glyph {
+      width: 16px;
+      height: 16px;
+      flex-shrink: 0;
+    }
+
+    // Checkmark — hidden by default, revealed only on the active half.
+    &__view-toggle-check {
+      width: 14px;
+      height: 14px;
+      flex-shrink: 0;
       display: none;
     }
 
-    &__control-icon-glyph--grid {
-      display: block;
+    // Active half — list when data-state="1", grid otherwise (default).
+    &__view-toggle[data-state="1"]
+      .window-folder-topbar__view-toggle-seg--list,
+    &__view-toggle:not([data-state="1"])
+      .window-folder-topbar__view-toggle-seg--grid {
+      background: var(--view-toggle-active-bg, #cfe3fb);
+      color: var(--view-toggle-active-fg, #2b5c9e);
     }
 
-    &__control-icon[data-state="1"]
-      .window-folder-topbar__control-icon-glyph--list {
+    &__view-toggle[data-state="1"]
+      .window-folder-topbar__view-toggle-seg--list
+      .window-folder-topbar__view-toggle-check,
+    &__view-toggle:not([data-state="1"])
+      .window-folder-topbar__view-toggle-seg--grid
+      .window-folder-topbar__view-toggle-check {
       display: block;
-    }
-
-    &__control-icon[data-state="1"]
-      .window-folder-topbar__control-icon-glyph--grid {
-      display: none;
     }
 
     // Minimize control — thin Unicode minus glyph (U+2212), not the
@@ -811,10 +854,21 @@
 
   &__tab-bar-wrapper {
     align-items: center;
-    gap: 16px;
+    justify-content: space-between;
     padding: 8px 16px 8.5px;
     background-color: var(--normal-bg-90);
     border-bottom: 1px solid var(--border-muted, rgba(0, 0, 0, 0.2));
+  }
+
+  // Tab items group — fills the row so the splitBtn stays pinned right (and the
+  // Task-tab member filter, which uses margin-left:auto, still right-aligns
+  // within this group). The 16px gap that used to live on the wrapper moves
+  // here, between the individual tab items.
+  &__tab-bar-tabs {
+    flex: 1 1 auto;
+    align-items: center;
+    gap: 16px;
+    min-width: 0;
   }
 
   &__tab-bar-item {
@@ -866,6 +920,61 @@
   &__tab-bar-icon {
     font-size: 13px;
     transform: translateY(-0.5px);
+  }
+
+  // Member-filter trigger — right-aligned on the tab line, shown only on the
+  // Task tab (data-visible toggled by showFolderTab).
+  &__tab-filter {
+    margin-left: auto;
+    align-items: center;
+    gap: 6px;
+    height: 32px;
+    padding: 0 12px;
+    border: 1px solid var(--border-default, #d6d6dc);
+    border-radius: 6px;
+    background: var(--normal-bg-elevated, #fff);
+    color: var(--normal-fg-20, #65656c);
+    cursor: pointer;
+    user-select: none;
+    box-sizing: border-box;
+    transition:
+      border-color 0.15s,
+      background 0.15s,
+      color 0.15s;
+
+    &[data-visible="0"] {
+      display: none;
+    }
+    &:hover {
+      border-color: var(--border-strong, rgba(11, 10, 33, 0.3));
+    }
+    &[data-active="1"] {
+      border-color: var(--area-private, #433cc5);
+      background: rgba(67, 60, 197, 0.08);
+      color: var(--area-private, #433cc5);
+    }
+  }
+
+  &__tab-filter-ico {
+    width: 15px;
+    height: 15px;
+    flex-shrink: 0;
+    pointer-events: none;
+
+    svg {
+      width: 100%;
+      height: 100%;
+      display: block;
+      fill: currentColor;
+    }
+  }
+
+  &__tab-filter-label {
+    font-family: "Geist", sans-serif;
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1;
+    pointer-events: none;
   }
 
   &__create-folder-dialog,

@@ -566,6 +566,23 @@ class __window_folder extends mfsInteract {
       this.__folderView = child;
       return;
     }
+    if (pn === "folder-task-panel") {
+      this._taskPanel = child;
+      return;
+    }
+    if (pn === "task-filter-btn") {
+      this._taskFilterBtn = child;
+      // Reflect current tab + filter state on (re)mount of the button.
+      if (child && child.el) {
+        child.el.dataset.visible = this.activeTab === _a.task ? "1" : "0";
+        const active =
+          this._taskPanel &&
+          typeof this._taskPanel.isFilterActive === "function" &&
+          this._taskPanel.isFilterActive();
+        child.el.dataset.active = active ? "1" : "0";
+      }
+      return;
+    }
     if (pn === _a.list) {
       this.iconsList = child;
       if (this.getViewMode && this.getViewMode() !== _a.row) {
@@ -647,6 +664,7 @@ class __window_folder extends mfsInteract {
         this.__refWindowName.set({ content: state.filename || state.hub_name || "" });
       }
       this.scopeChatToFolder(state.nid);
+      this.scopeTasksToFolder();
       this.loadContent();
       this.updateBreadcrumb({ ...state, event: _a.browse }, this);
     } finally {
@@ -846,6 +864,21 @@ class __window_folder extends mfsInteract {
 
       case "tab-task":
         return this.showFolderTab(_a.task);
+
+      case "toggle-task-filter":
+        // Tab-bar filter button → open/close the task panel's member dropdown.
+        if (this._taskPanel && _.isFunction(this._taskPanel.toggleFilter)) {
+          this._taskPanel.toggleFilter();
+        }
+        return;
+
+      case "task-filter-state":
+        // The task panel reports whether a filter is applied; reflect it on
+        // the tab-bar button so the user sees the active state.
+        if (this._taskFilterBtn && this._taskFilterBtn.el) {
+          this._taskFilterBtn.el.dataset.active = args && args.active ? "1" : "0";
+        }
+        return;
 
       case "tab-meeting":
         // The meeting opens as its own window now, not an embedded folder tab.
@@ -1121,6 +1154,36 @@ class __window_folder extends mfsInteract {
     });
   }
 
+  // Canonical task-scoping args for the *current* folder. A hub/workspace ROOT
+  // window's active dir is actual_home_id (hub-wide, so `actual_home_id || nid`
+  // would wrongly collapse every subfolder onto the root); a subfolder window
+  // uses its own nid. `isRoot` also lets the panel surface legacy (nid-less)
+  // tasks at the root only. Mirrors the breadcrumb's curNid resolution.
+  _taskScopeArgs() {
+    const isRoot =
+      this.mget(_a.filetype) === _a.hub && this.mget(_a.actual_home_id);
+    return {
+      scopeNid: isRoot ? this.mget(_a.actual_home_id) : this.mget(_a.nid),
+      isRoot: isRoot ? 1 : 0,
+      destNid: this.mget(_a.actual_home_id) || this.mget(_a.nid),
+    };
+  }
+
+  // Keep the embedded task panel scoped to the navigated folder, mirroring
+  // scopeChatToFolder. No-op until the Task tab has been opened once.
+  scopeTasksToFolder() {
+    if (!this._taskPanelMounted) return;
+    const apply = (p) => {
+      if (p && !(p.isDestroyed && p.isDestroyed()) && _.isFunction(p.setScope))
+        p.setScope(this._taskScopeArgs());
+    };
+    if (this._taskPanel) return apply(this._taskPanel);
+    return this.ensurePart("folder-task-panel").then((p) => {
+      this._taskPanel = p;
+      apply(p);
+    });
+  }
+
   // Keep folder-chat scope in sync with the navigated folder so the right-side
   // chat panel reflects the current folder's messages even on the Files tab.
   // Snapshot must run before super (which overwrites the model via
@@ -1136,6 +1199,7 @@ class __window_folder extends mfsInteract {
     }
     super.updateTopbar(m);
     this.scopeChatToFolder(this.mget(_a.nid));
+    this.scopeTasksToFolder();
     this.refreshBreadcrumbsUI();
   }
 
@@ -1146,6 +1210,10 @@ class __window_folder extends mfsInteract {
     this.$el
       .find(`.window-folder__tab-bar-item[data-tab='${tab}']`)
       .attr("data-state", 1);
+    // The member-filter button shares the tab line but only applies to Tasks.
+    if (this._taskFilterBtn && this._taskFilterBtn.el) {
+      this._taskFilterBtn.el.dataset.visible = tab === _a.task ? "1" : "0";
+    }
 
     const switchView = (view) => {
       if (this._meetingViewActive && tab !== "meeting") {
@@ -1165,27 +1233,20 @@ class __window_folder extends mfsInteract {
         case _a.task:
           if (!this._taskPanelMounted) {
             this._taskPanelMounted = 1;
-            // Canonical "current directory" nid for task scoping: a hub/workspace
-            // ROOT window's active dir is actual_home_id (which is hub-wide, so
-            // `actual_home_id || nid` would wrongly collapse every subfolder onto
-            // the root); a subfolder window uses its own nid. Mirrors the
-            // breadcrumb's curNid resolution. `scope_is_root` lets the panel ask
-            // the server to also surface legacy (nid-less) tasks at the root only.
-            const isRoot =
-              this.mget(_a.filetype) === _a.hub && this.mget(_a.actual_home_id);
-            const scopeNid = isRoot
-              ? this.mget(_a.actual_home_id)
-              : this.mget(_a.nid);
+            const { scopeNid, isRoot, destNid } = this._taskScopeArgs();
             return view.append({
               kind: "tasks_panel",
               hub_id: this.mget(_a.hub_id),
-              // Upload/destination nid (unchanged): for a hub-level window the
-              // working nid is actual_home_id, not the hub_id itself. Without
-              // this, media.upload returns 403.
-              nid: this.mget(_a.actual_home_id) || this.mget(_a.nid),
+              // Upload/destination nid: for a hub-level window the working nid
+              // is actual_home_id, not the hub_id itself (else media.upload 403).
+              nid: destNid,
               // Folder-scope identity for the task list/create.
               scope_nid: scopeNid,
-              scope_is_root: isRoot ? 1 : 0,
+              scope_is_root: isRoot,
+              // sys_pn + partHandler let the window grab a reference (for the
+              // tab-bar filter button) and re-scope the panel on navigation.
+              sys_pn: "folder-task-panel",
+              partHandler: this,
               uiHandler: [this],
             });
           }
@@ -1398,8 +1459,16 @@ class __window_folder extends mfsInteract {
   }
 
   // Menu pick from the invite-row role dropdown — set _folderInviteRole and
-  // re-render the panel so the trigger label refreshes. (No server call until
-  // the user actually clicks Send Invitation.)
+  // refresh just the trigger label. (No server call until the user actually
+  // clicks Send Invitation.)
+  //
+  // Re-feeding the whole panel here destroys and recreates the still-open
+  // menu_topic widget mid-click, before it finishes dispatching the option
+  // click. The rebuilt menu's trigger still opens, but its option click
+  // handlers never get wired, so the role could only be changed once. Update
+  // the label text in place instead: the live menu stays intact (it closes
+  // itself on pick, and the radio behaviour moves the selected highlight), so
+  // the role can be re-picked any number of times.
   setFolderInviteRole(cmd) {
     const privilegeAttr = cmd.el?.dataset?.privilege;
     const roleLabel = cmd.el?.dataset?.role_label;
@@ -1408,11 +1477,18 @@ class __window_folder extends mfsInteract {
       label: roleLabel || LOCALE.ROLE_ADMIN || "Admin",
       privilege: Number(privilegeAttr),
     };
-    if (this.isShowSettings && this.dialogWrapper) {
-      this.dialogWrapper.feed(
-        require("./skeleton/settings-action-panel")(this),
-      );
-    }
+    const label = this.dialogWrapper?.el?.querySelector(
+      ".window-folder__settings-action-invite-input-row " +
+        ".window-folder__settings-action-role-label .note-content",
+    );
+    if (label) label.textContent = this._folderInviteRole.label;
+
+    // The option fires its pick straight at this window via uiHandler, so the
+    // click never bubbles back to the menu_topic for it to auto-close. Close
+    // it explicitly (animated, widget kept alive) so the dropdown dismisses on
+    // every pick and stays reusable for the next change.
+    const menu = cmd.getParentByKind?.(KIND.menu.topic);
+    if (menu?.changeState) menu.changeState(0);
   }
 
   // Menu pick from a member-row role dropdown — confirm and persist the

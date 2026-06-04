@@ -200,12 +200,15 @@
     }
   }
 
-  // Ephemeral typing indicator, pinned to the bottom-left of the message
-  // viewport (__chat-content-inner is position:relative). Reads as the newest
-  // incoming bubble. Toggled via data-state.
+  // Ephemeral typing indicator. Lives in the footer wrapper (pinned at the
+  // panel bottom) and floats just above it, so it always sits right above the
+  // input — regardless of how tall the message area is. Toggled via data-state.
   &__typing-indicator {
     position: absolute;
-    bottom: 6px;
+    // Sit just above the input field. The footer's top edge is the input bar's
+    // top, which has padding/messenger chrome above the actual field, so drop
+    // down into it (negative offset) to hug the field instead of floating above.
+    bottom: calc(100% - 16px);
     left: 12px;
     align-items: center;
     gap: 8px;
@@ -213,8 +216,6 @@
     padding: 6px 12px;
     border-radius: 12px;
     background-color: var(--normal-bg-90);
-    border-radius: 1px solid var(--border-strong);
-    box-shadow: var(--shadow-top-tiny);
     pointer-events: none;
     z-index: 50000;
     &[data-state="0"] {
@@ -1077,6 +1078,9 @@
     flex-direction: column;
     flex-shrink: 0;
     margin-top: auto;
+    // Positioning context for the typing indicator, which floats just above
+    // this footer (the input) via bottom: calc(100% + …).
+    position: relative;
     width: 100%;
     min-width: 0;
     gap: 0;

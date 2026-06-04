@@ -910,7 +910,5 @@ html[data-theme="dark"] {
 }
 
 @keyframes settings-main-spinner {
-  to {
-    transform: rotate(360deg);
-  }
+  to { transform: rotate(360deg); }
 }

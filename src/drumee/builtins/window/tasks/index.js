@@ -40,6 +40,8 @@ class __tasks_panel extends LetcBox {
     this._detailDraft = null;
     this._attachments = {};
     this._pickerOpen = null;
+    // Member filter — empty = show all. Uids stored as strings.
+    this._filterUids = [];
     this._fileSearch = { query: "", results: [], scope: null };
     this._fileSearchTimer = null;
     this._fileSearchBlurTimer = null;
@@ -50,6 +52,55 @@ class __tasks_panel extends LetcBox {
     this.unbindEvent(_a.live);
     if (this._fileSearchTimer) clearTimeout(this._fileSearchTimer);
     if (this._fileSearchBlurTimer) clearTimeout(this._fileSearchBlurTimer);
+  }
+
+  // ── Host-window controls (filter button lives on the tab bar) ──
+  // Toggle the member-filter dropdown (rendered top-right of the board).
+  toggleFilter() {
+    this._pickerOpen = this._pickerOpen === "filter" ? null : "filter";
+    this._render();
+  }
+
+  isFilterActive() {
+    return (this._filterUids || []).length > 0;
+  }
+
+  // Let the host window reflect the active filter on its tab-bar button.
+  _notifyFilterState() {
+    if (typeof this.triggerHandlers === "function") {
+      this.triggerHandlers({
+        service: "task-filter-state",
+        active: this.isFilterActive() ? 1 : 0,
+      });
+    }
+  }
+
+  // Re-point the panel at a different folder when the host window navigates
+  // (breadcrumb / into a child). Mirrors the chat panel's setScopedFolderNid.
+  setScope({ scopeNid = null, isRoot = 0, destNid } = {}) {
+    const nextScope = scopeNid != null ? scopeNid : null;
+    const nextRoot = isRoot ? 1 : 0;
+    const nextDest = destNid != null ? destNid : this._destNid;
+    if (
+      this._scopeNid === nextScope &&
+      this._scopeIsRoot === nextRoot &&
+      this._destNid === nextDest
+    ) {
+      return;
+    }
+    this._scopeNid = nextScope;
+    this._scopeIsRoot = nextRoot;
+    this._destNid = nextDest;
+    // The create/detail popups and any pending file search belong to the
+    // folder we just left — close them so nothing commits into the new scope.
+    this._creating = false;
+    this._createDefaults = null;
+    this._detailId = null;
+    this._detailDraft = null;
+    this._pickerOpen = null;
+    if (typeof this._resetFileSearch === "function") this._resetFileSearch();
+    if (!this.el) return; // not mounted yet — onDomRefresh loads fresh
+    this._loadTasks().then(() => this._render());
   }
 
   async onDomRefresh() {
@@ -101,9 +152,7 @@ class __tasks_panel extends LetcBox {
       const card = findCard(e.target);
       if (card) card.classList.remove("is-dragging");
       this._dragTaskId = null;
-      root
-        .querySelectorAll(".tasks-panel__column-body.is-drop-target")
-        .forEach((n) => n.classList.remove("is-drop-target"));
+      this._clearDropAffordance();
     });
 
     root.addEventListener("dragover", (e) => {
@@ -119,16 +168,33 @@ class __tasks_panel extends LetcBox {
           if (n !== col) n.classList.remove("is-drop-target");
         });
       col.classList.add("is-drop-target");
+      // Show a placeholder at the exact insertion point so the drop reads as
+      // precise (Jira/Trello-style) rather than "somewhere in this column".
+      const ph = this._ensurePlaceholder();
+      const after = this._dragAfterCard(col, e.clientY);
+      if (after) {
+        if (after.previousElementSibling !== ph) col.insertBefore(ph, after);
+      } else if (col.lastElementChild !== ph) {
+        col.appendChild(ph);
+      }
     });
 
     root.addEventListener("dragleave", (e) => {
       const col = findColumn(e.target);
-      if (col) col.classList.remove("is-drop-target");
+      // Only clear the highlight when the pointer actually leaves the column
+      // body (relatedTarget outside it) — child→child transitions also fire
+      // dragleave and would otherwise strobe the outline + placeholder.
+      if (col && !col.contains(e.relatedTarget)) {
+        col.classList.remove("is-drop-target");
+      }
     });
 
     root.addEventListener("drop", (e) => {
       const col = findColumn(e.target);
-      if (!col) return;
+      if (!col) {
+        this._clearDropAffordance();
+        return;
+      }
       e.preventDefault();
       const transferId = (() => {
         try {
@@ -139,21 +205,94 @@ class __tasks_panel extends LetcBox {
       })();
       const taskId = this._dragTaskId || transferId;
       const targetStatus = col.dataset.dropcol;
+      // Resolve the insertion point BEFORE tearing down the placeholder.
+      const afterEl = this._dragAfterCard(col, e.clientY);
       this._dragTaskId = null;
-      root
-        .querySelectorAll(".tasks-panel__column-body.is-drop-target")
-        .forEach((n) => n.classList.remove("is-drop-target"));
+      this._clearDropAffordance();
       if (!taskId || !targetStatus) return;
-      this._moveTaskTo(taskId, targetStatus);
+      this._moveTaskTo(taskId, targetStatus, afterEl);
     });
   }
 
-  async _moveTaskTo(taskId, status) {
+  // Lazily-created insertion placeholder shared across columns.
+  _ensurePlaceholder() {
+    if (this._placeholder) return this._placeholder;
+    const ph = document.createElement("div");
+    ph.className = "tasks-panel__card-placeholder";
+    this._placeholder = ph;
+    return ph;
+  }
+
+  // The card the dragged item should be inserted *before*, based on pointer Y.
+  // null → append to the end of the column. Excludes the in-flight card and
+  // the placeholder itself so geometry stays stable mid-drag.
+  _dragAfterCard(colBody, y) {
+    const cards = Array.from(
+      colBody.querySelectorAll(".tasks-panel__task-card"),
+    ).filter((c) => !c.classList.contains("is-dragging"));
+    for (const c of cards) {
+      const r = c.getBoundingClientRect();
+      if (y < r.top + r.height / 2) return c;
+    }
+    return null;
+  }
+
+  _clearDropAffordance() {
+    if (!this.el) return;
+    this.el
+      .querySelectorAll(".tasks-panel__column-body.is-drop-target")
+      .forEach((n) => n.classList.remove("is-drop-target"));
+    if (this._placeholder && this._placeholder.parentNode) {
+      this._placeholder.parentNode.removeChild(this._placeholder);
+    }
+  }
+
+  async _moveTaskTo(taskId, status, afterEl) {
     const task = this._tasks.find((t) => t.id === taskId);
-    if (!task || task.status === status) return;
+    if (!task) return;
     const originalStatus = task.status;
-    task.status = status;
-    this._render();
+    const sameColumn = originalStatus === status;
+
+    const card =
+      this.el &&
+      this.el.querySelector(`.tasks-panel__task-card[data-tid="${taskId}"]`);
+    const targetBody =
+      this.el &&
+      this.el.querySelector(
+        `.tasks-panel__column-body[data-dropcol="${status}"]`,
+      );
+
+    // No-op: same column and dropped onto itself / its own slot.
+    if (sameColumn && (!afterEl || afterEl === card)) return;
+
+    // Fall back to a full render if we can't locate the DOM nodes (defensive).
+    if (!card || !targetBody) {
+      task.status = status;
+      this._render();
+    } else {
+      const sourceBody = card.closest(".tasks-panel__column-body");
+      card.classList.remove("is-dragging");
+      // FLIP: capture every card's position, perform the DOM move, then animate
+      // the deltas so the dragged card glides into place and siblings reflow
+      // smoothly — instead of the whole board snapping after a re-render.
+      this._animateMove(() => {
+        if (afterEl && afterEl.parentNode === targetBody) {
+          targetBody.insertBefore(card, afterEl);
+        } else {
+          targetBody.appendChild(card);
+        }
+        card.dataset.status = status;
+        task.status = status;
+      });
+      // Refresh counts + empty-state on both affected columns in place.
+      this._syncColumn(sourceBody);
+      if (targetBody !== sourceBody) this._syncColumn(targetBody);
+    }
+
+    // Reordering within the same column has no server-side rank to persist yet,
+    // so skip the round-trip; the visual order holds until the next reload.
+    if (sameColumn) return;
+
     try {
       const updated = await this.postService({
         service: SERVICE.task.update_status,
@@ -166,8 +305,80 @@ class __tasks_panel extends LetcBox {
       console.error("[tasks_panel] update_status (drag) failed:", err);
       task.status = originalStatus;
       await this._loadTasks();
+      this._render();
     }
-    this._render();
+  }
+
+  // FLIP helper: run `mutate` (a synchronous DOM change), then transition each
+  // card from its previous box to its new one. Cards with no delta are skipped.
+  _animateMove(mutate) {
+    const reduce =
+      typeof window !== "undefined" &&
+      window.matchMedia &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (reduce || typeof requestAnimationFrame !== "function") {
+      mutate();
+      return;
+    }
+    const cards = Array.from(
+      this.el.querySelectorAll(".tasks-panel__task-card"),
+    );
+    const first = new Map();
+    cards.forEach((c) => first.set(c, c.getBoundingClientRect()));
+
+    mutate();
+
+    this.el.querySelectorAll(".tasks-panel__task-card").forEach((c) => {
+      const f = first.get(c);
+      if (!f) return; // card wasn't present before the move
+      const l = c.getBoundingClientRect();
+      const dx = f.left - l.left;
+      const dy = f.top - l.top;
+      if (!dx && !dy) return;
+      if (Math.abs(dx) > 8) {
+        // Crossed columns: a translate FLIP would be clipped by the column's
+        // overflow (`overflow-y:auto` / `overflow:hidden`), so settle the card
+        // in place with a quick pop rather than a clipped horizontal slide.
+        // (Only the dragged card ever changes column; siblings move vertically.)
+        c.style.animation = "tasks-panel-pop-in 0.18s cubic-bezier(0.2, 0, 0, 1)";
+        const done = () => {
+          c.style.animation = "";
+          c.removeEventListener("animationend", done);
+        };
+        c.addEventListener("animationend", done);
+      } else {
+        c.style.transition = "none";
+        c.style.transform = `translate(${dx}px, ${dy}px)`;
+        requestAnimationFrame(() => {
+          c.style.transition = "transform 0.18s cubic-bezier(0.2, 0, 0, 1)";
+          c.style.transform = "";
+        });
+        const clear = () => {
+          c.style.transition = "";
+          c.style.transform = "";
+          c.removeEventListener("transitionend", clear);
+        };
+        c.addEventListener("transitionend", clear);
+      }
+    });
+  }
+
+  // Keep a column's count badge and empty-state hint in sync after a surgical
+  // card move (no full re-render). Mirrors what the skeleton renders initially.
+  _syncColumn(colBody) {
+    if (!colBody) return;
+    const count = colBody.querySelectorAll(".tasks-panel__task-card").length;
+    const countEl = colBody.querySelector(".tasks-panel__column-count-text");
+    if (countEl) countEl.textContent = String(count);
+    let empty = colBody.querySelector(".tasks-panel__column-empty");
+    if (count === 0 && !empty) {
+      empty = document.createElement("div");
+      empty.className = "tasks-panel__column-empty";
+      empty.textContent = LOCALE.DROP_TASKS_HERE || "";
+      colBody.appendChild(empty);
+    } else if (count > 0 && empty) {
+      empty.remove();
+    }
   }
 
   async onUiEvent(trigger, args = {}) {
@@ -271,6 +482,16 @@ class __tasks_panel extends LetcBox {
         this._pickerOpen = this._pickerOpen === kind ? null : kind;
         this._applyPickerOpen(kind, this._pickerOpen === kind);
         return;
+      }
+
+      case "filter-member": {
+        // Empty uid ("All members") clears; any other uid multi-toggles. The
+        // dropdown stays open so several members can be picked in a row.
+        const uid = trigger.mget("memberUid");
+        if (!uid) this._filterUids = [];
+        else this._filterUids = this._toggleAssignee(this._filterUids, uid);
+        this._notifyFilterState();
+        return this._render();
       }
 
       case "remove-task":
@@ -1516,9 +1737,25 @@ class __tasks_panel extends LetcBox {
     return this._members.find((m) => m.id === uid || m.uid === uid) || null;
   }
 
+  getFilterUids() {
+    return this._filterUids;
+  }
+
   getState() {
+    const filter = this._filterUids || [];
+    const matchesFilter = (t) => {
+      if (!filter.length) return true;
+      const uids = Array.isArray(t.assignee_uids)
+        ? t.assignee_uids.map(String)
+        : t.assignee_uid
+          ? [String(t.assignee_uid)]
+          : [];
+      return uids.some((u) => filter.includes(u));
+    };
     return COLUMNS.reduce((acc, c) => {
-      acc[c.key] = this._tasks.filter((t) => t.status === c.key);
+      acc[c.key] = this._tasks.filter(
+        (t) => t.status === c.key && matchesFilter(t),
+      );
       return acc;
     }, {});
   }

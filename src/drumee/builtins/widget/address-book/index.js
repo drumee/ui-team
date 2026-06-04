@@ -29,7 +29,11 @@ function normalizeTags(raw) {
 class __address_book extends LetcBox {
   initialize(opt = {}) {
     require("./skin");
-    opt.dataset = { ...opt.dataset, anim: "out" };
+    // `mview` drives the single-pane mobile/tablet layout (≤ 1024px):
+    // "sidebar" shows the contact list, "detail" shows the selected
+    // contact. On wider screens both panes show side-by-side and the
+    // attribute is ignored.
+    opt.dataset = { ...opt.dataset, anim: "out", mview: "sidebar" };
     super.initialize(opt);
     this.declareHandlers();
     this._tab = "all";
@@ -66,6 +70,19 @@ class __address_book extends LetcBox {
     RADIO_CLICK.off(_e.click, this._onOutsideClick);
   }
 
+  /**
+   * True when the panel is in single-pane mode (≤ 1024px). 1024 matches the
+   * SCSS @media fallback in skin/index.scss so JS and CSS agree on what
+   * counts as compact. `Visitor.isMobile()` is OR'd in to catch DevTools
+   * emulator cases where data-device tags mobile but innerWidth differs.
+   */
+  _isMobile() {
+    return (
+      window.innerWidth <= 1024 ||
+      (typeof Visitor.isMobile === "function" && Visitor.isMobile())
+    );
+  }
+
   async onDomRefresh() {
     this.feed(require("./skeleton")(this));
     await Promise.all([
@@ -89,6 +106,26 @@ class __address_book extends LetcBox {
     // here and have togglePanel read it as closed and reopen).
     const svc = source && source.mget && source.mget(_a.service);
     if (typeof svc === "string" && svc.startsWith("toggle-")) return;
+    // Opening the desk's mobile sidebar/drawer via a topbar button must not
+    // dismiss the contact panel — the drawer overlays on top and the panel
+    // stays open behind it. Bail on those clicks (they read as "outside").
+    if (
+      e.target &&
+      e.target.closest &&
+      e.target.closest(".desk-module__mobile-topbar-btn")
+    )
+      return;
+    // Likewise on mobile/tablet, interacting with the desk sidebar drawer or
+    // tapping its close-backdrop must not close the contact panel behind it.
+    if (this._isMobile()) {
+      if (svc === "mobile-close-drawer") return;
+      if (
+        e.target &&
+        e.target.closest &&
+        e.target.closest(".desk-module-sidebar__main")
+      )
+        return;
+    }
     if (this.el.dataset.anim === "in" && !this.el.contains(e.target)) {
       Desk.closeAllPanels();
     }
@@ -114,7 +151,14 @@ class __address_book extends LetcBox {
         this._selectedKey = trigger.mget("contactKey");
         this._editing = false;
         this._updateSelectionDom();
+        // Single-pane mobile/tablet: reveal the detail pane (inert ≥ 1024px).
+        this.el.dataset.mview = "detail";
         return this._selectContact();
+
+      case "back-to-list":
+        // Mobile/tablet: return from the detail pane to the contact list.
+        this.el.dataset.mview = "sidebar";
+        break;
 
       case "open-invite":
         this._inviteDraft = { email: "", message: "" };

@@ -294,7 +294,7 @@
     flex: 1 1 auto;
     min-width: 0;
     height: 100%;
-    background-color: var(--normal-bg-80, #f7f7f8);
+    background-color: var(--normal-bg-90, #f7f7f8);
     overflow: hidden;
   }
 
@@ -553,6 +553,67 @@
     svg {
       width: 16px;
       height: 16px;
+      display: block;
+    }
+  }
+
+  // Sidebar-header close button (sits next to Add). Mobile/tablet only —
+  // the media query reveals it; on desktop the floating __close-btn is used.
+  &__header-close-btn {
+    display: none;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    flex-shrink: 0;
+    padding: 0;
+    border-radius: 6px;
+    cursor: pointer;
+    color: var(--normal-fg-50, #65656c);
+    transition:
+      background 0.15s,
+      color 0.15s;
+
+    svg {
+      width: 16px;
+      height: 16px;
+      display: block;
+    }
+
+    &:hover {
+      background: rgba(0, 0, 0, 0.06);
+      color: var(--normal-fg-10, #0b0a21);
+    }
+  }
+
+  &__back-btn {
+    // Mobile/tablet only — the media query below reveals it on the detail
+    // pane. On desktop both panes show side-by-side, so there's no back nav.
+    display: none;
+    position: absolute;
+    top: 16px;
+    left: 16px;
+    width: 28px;
+    height: 28px;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    border-radius: 6px;
+    cursor: pointer;
+    color: var(--normal-fg-50, #65656c);
+    transition:
+      background 0.15s,
+      color 0.15s;
+    z-index: 2;
+
+    &:hover {
+      background: rgba(0, 0, 0, 0.06);
+      color: var(--normal-fg-10, #0b0a21);
+    }
+
+    svg {
+      width: 18px;
+      height: 18px;
       display: block;
     }
   }
@@ -1058,6 +1119,145 @@
     }
     &--success {
       background: #54b684;
+    }
+  }
+
+  // ── Responsive: single pane on tablet & mobile (≤ 1024px) ──────────
+  // The panel fills the viewport and shows ONE pane at a time. `mview` on
+  // the __ui root toggles which: "sidebar" (contact list) or "detail"
+  // (selected contact). The back button returns to the list. Above 1024px
+  // the attribute is inert and both panes show side-by-side.
+  @media (max-width: 1024px) {
+    // Full-bleed, viewport-anchored (stays position:fixed from the base
+    // rule). Sized in viewport units rather than 100% so it never depends
+    // on the desk's right panel-container width (a 0-width slide anchor).
+    // The translateX slide animation still parks it off the right edge.
+    &__ui {
+      width: 100vw;
+      max-width: 100vw;
+    }
+
+    &__sidebar {
+      border-right: none;
+      width: 100%;
+    }
+
+    &__detail-area {
+      width: 100%;
+    }
+
+    &__ui[data-mview="sidebar"] &__detail-area {
+      display: none;
+    }
+
+    &__ui[data-mview="detail"] &__sidebar {
+      display: none;
+    }
+
+    // Back button shows only on the detail pane.
+    &__ui[data-mview="detail"] &__back-btn {
+      display: flex;
+    }
+
+    // Close button moves into the sidebar header next to Add (no overlap).
+    &__header-close-btn {
+      display: flex;
+    }
+
+    // Hide the floating detail-area close button entirely on mobile/tablet.
+    // The sidebar-header close button (next to Add) handles closing on the
+    // list view, and the back button returns to it from the detail pane.
+    &__close-btn {
+      display: none;
+    }
+  }
+
+  // The 48px mobile topbar (drumee logo / add / menu) only renders at the
+  // mobile breakpoint (Visitor.isMobile() ≤ 800px) and paints above the
+  // panel. Offset the panel below it so the sidebar header isn't hidden;
+  // at tablet widths there's no mobile topbar, so the panel stays at top:0.
+  @media (max-width: 800px) {
+    &__ui {
+      top: 48px;
+      height: calc(100vh - 48px);
+      height: calc(100dvh - 48px);
+    }
+  }
+
+  // Tablet (801–1024px): the desk nav sidebar is a persistent 231px column
+  // (it only collapses to an off-canvas drawer at ≤800px). A full-width
+  // 100vw panel starts at x=0, so its contact list is painted behind that
+  // column. Anchor the panel to the right of the sidebar instead. Placed
+  // after the ≤1024 block so it overrides the 100vw there for this range.
+  @media (min-width: 801px) and (max-width: 1024px) {
+    &__ui {
+      left: 231px;
+      width: auto;
+      max-width: none;
+    }
+
+    // The panel is much wider than the 300px the items were sized for, so
+    // scale up the contact-list rows and the detail content to fill it.
+
+    // ── Sidebar (contact list) ──
+    &__contact-item {
+      gap: 14px;
+      padding: 12px 14px;
+    }
+
+    &__avatar {
+      width: 44px;
+      height: 44px;
+    }
+
+    &__avatar-text {
+      font-size: 16px;
+      line-height: 20px;
+    }
+
+    &__contact-name {
+      font-size: 16px;
+      line-height: 22px;
+    }
+
+    &__contact-sub {
+      font-size: 13px;
+      line-height: 18px;
+    }
+
+    // ── Detail area ──
+    &__detail-panel {
+      padding: 32px;
+      gap: 24px;
+    }
+
+    &__detail-avatar {
+      width: 72px;
+      height: 72px;
+    }
+
+    &__detail-avatar-text {
+      font-size: 26px;
+      line-height: 30px;
+    }
+
+    &__detail-name {
+      font-size: 20px;
+      line-height: 26px;
+    }
+
+    &__detail-fields {
+      gap: 18px;
+    }
+
+    &__field-label {
+      font-size: 12px;
+      line-height: 16px;
+    }
+
+    &__field-value {
+      font-size: 15px;
+      line-height: 22px;
     }
   }
 }

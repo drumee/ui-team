@@ -229,6 +229,10 @@ module.exports = function (ui) {
     const errors = snap.errors || [];
     const isDone = state === 'done';
     const isFailed = state === 'failed';
+    // NEEDS_RECONNECT = the stored Drive token is dead (revoked, or clobbered
+    // by a later Google *login* writing a login-client token over the row).
+    // "Try again" would re-fail immediately; the user must re-authorize Drive.
+    const needsReconnect = isFailed && snap.failed_reason === 'NEEDS_RECONNECT';
     const heroIco = isDone ? 'apps-check-circle' : (isFailed ? 'alert' : 'cloud-pause');
     const heroMod = isDone ? `${pfx}__hero--success` : (isFailed ? `${pfx}__hero--error` : `${pfx}__hero--neutral`);
     const heroTitle = isDone
@@ -251,7 +255,9 @@ module.exports = function (ui) {
         (isFailed && snap.failed_reason) ? Skeletons.Note({
           className: `${pfx}__summary ${pfx}__fail-reason`,
           dataset: { kind: 'error' },
-          content: String(snap.failed_reason),
+          content: needsReconnect
+            ? (LOCALE.MIGRATE_GDRIVE_NEEDS_RECONNECT || 'Your Google Drive access expired. Connect again to continue.')
+            : String(snap.failed_reason),
         }) : null,
         // Error detail list (first few) when present.
         errors.length ? Skeletons.Box.Y({
@@ -266,10 +272,15 @@ module.exports = function (ui) {
         Skeletons.Box.X({
           className: `${pfx}__footer`,
           kids: isFailed
-            ? [
-                secondaryBtn(LOCALE.CLOSE || 'Close', 'close-migrate-popup'),
-                primaryBtn(LOCALE.MIGRATE_GDRIVE_RETRY || 'Try again', 'gdrive-restart'),
-              ]
+            ? (needsReconnect
+                ? [
+                    secondaryBtn(LOCALE.CLOSE || 'Close', 'close-migrate-popup'),
+                    primaryBtn(LOCALE.MIGRATE_GDRIVE_CONNECT_BTN || 'Connect Google Drive', 'gdrive-reconnect'),
+                  ]
+                : [
+                    secondaryBtn(LOCALE.CLOSE || 'Close', 'close-migrate-popup'),
+                    primaryBtn(LOCALE.MIGRATE_GDRIVE_RETRY || 'Try again', 'gdrive-restart'),
+                  ])
             : [
                 secondaryBtn(LOCALE.MIGRATE_GDRIVE_AGAIN || 'Migrate again', 'gdrive-restart'),
                 primaryBtn(LOCALE.CLOSE || 'Close', 'close-migrate-popup'),

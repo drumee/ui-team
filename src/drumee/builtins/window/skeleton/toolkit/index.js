@@ -124,10 +124,89 @@ export function tabBar(ui, opt = {}) {
     );
   }
 
+  // Member-filter trigger for the Task tab — lives on the same line as the
+  // tabs (right-aligned). Hidden until the Task tab is active; the folder
+  // window toggles `data-visible` in showFolderTab and reflects the active
+  // filter via `data-active` (task-filter-state event from the task panel).
+  if (isFolder) {
+    kids.push(
+      Skeletons.Box.X({
+        className: `${ui.fig.family}__tab-filter`,
+        sys_pn: "task-filter-btn",
+        partHandler: ui,
+        dataset: { visible: 0, active: 0 },
+        bubble: 0,
+        service: "toggle-task-filter",
+        uiHandler: [ui],
+        kids: [
+          Skeletons.Image.Svg({
+            ico: "desktop_filter",
+            className: `${ui.fig.family}__tab-filter-ico`,
+          }),
+          Skeletons.Note({
+            className: `${ui.fig.family}__tab-filter-label`,
+            content: LOCALE.FILTER,
+          }),
+        ],
+      }),
+    );
+  }
+
+  // File view toggle — a segmented pill with two halves: list (row) and grid.
+  // Both halves always render; the half matching the wrapper's data-state is
+  // the active view (light-blue fill + a checkmark next to its glyph). Grid is
+  // the default (data-state "0"/unset); list is active at data-state "1" (row
+  // view). Clicks bubble (kidsOpt active:0) to the wrapper's
+  // "toggle-files-layout" service, which flips the state via cmd.changeState().
+  // Folder-only: the styling lives in the folder skin, keyed on the
+  // `window-folder-topbar` class prefix.
+  const cnTopbar = `${ui.fig.family}-topbar`;
+  const viewSegment = (mode, ico) =>
+    Skeletons.Box.X({
+      className: `${cnTopbar}__view-toggle-seg ${cnTopbar}__view-toggle-seg--${mode}`,
+      kidsOpt: { active: 0 },
+      kids: [
+        Skeletons.Image.Svg({
+          ico: "account_check",
+          className: `${cnTopbar}__view-toggle-check`,
+        }),
+        Skeletons.Image.Svg({
+          ico,
+          className: `${cnTopbar}__view-toggle-glyph`,
+        }),
+      ],
+    });
+  const splitBtn = isFolder
+    ? Skeletons.Box.X({
+        className: `${cnTopbar}__view-toggle`,
+        service: "toggle-files-layout",
+        sys_pn: "view-ctrl",
+        // Explicit data-state (not the `state` prop) guarantees the attribute
+        // is present on first render so the correct half is highlighted
+        // immediately; grid is the CSS default, so only row/list (state 1)
+        // needs it.
+        dataset: { state: ui.getViewMode && ui.getViewMode() === _a.row ? 1 : 0 },
+        uiHandler: [ui],
+        kidsOpt: { active: 0 },
+        kids: [
+          viewSegment("list", "view-list"),
+          viewSegment("grid", "view-grid"),
+        ],
+      })
+    : "";
+
+  // Tab bar lays out as flex space-between: the tab items group on the left,
+  // the view-toggle splitBtn on the right.
   return Skeletons.Box.X({
     className: `${cnRoot}-wrapper ${ui.fig.family}__tab-bar-wrapper`,
     dataset: isFolder ? { area: ui.mget(_a.area) } : {},
-    kids,
+    kids: [
+      Skeletons.Box.X({
+        className: `${cnRoot}-tabs ${ui.fig.family}__tab-bar-tabs`,
+        kids,
+      }),
+      splitBtn,
+    ],
   });
 }
 
