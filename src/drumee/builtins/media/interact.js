@@ -604,6 +604,7 @@ class __media_interact extends media_core {
   onUiEvent(cmd, args = {}) {
     const service = args.service || cmd.service || cmd.mget(_a.service);
     let { nid, hub_id } = this.actualNode();
+    this.verbose("media:service[607]", service, args)
     switch (service) {
       case _e.rename:
         this.service = service;

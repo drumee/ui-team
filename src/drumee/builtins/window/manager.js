@@ -1096,8 +1096,7 @@ class __window_manager extends mfsInteract {
     if (o == null) {
       o = {};
     }
-    this.debug("AAAA:112", arg, o)
-
+    this.verbose("manager:launch[1099]", arg, o)
     if (o.singleton) {
       // Derive the "is this already open?" key in priority order:
       //   1. explicit o.unique (legacy callers, e.g. window/team)
