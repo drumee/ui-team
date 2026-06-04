@@ -12,9 +12,35 @@
     position: relative;
   }
 
+  // ── Member filter dropdown ────────────────────────────────────
+  // The trigger button lives on the host window's tab bar; this dropdown is a
+  // top-right overlay over the board, anchored under that button. Rows reuse
+  // the shared __member-row / __member-name / __member-avatar styles.
+  &__filter-picker {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    z-index: 30;
+    min-width: 220px;
+    max-height: 280px;
+    overflow-y: auto;
+    align-items: stretch;
+    border: 1px solid var(--border-default, #d6d6dc);
+    border-radius: 8px;
+    background: var(--normal-bg-elevated, #fff);
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.16);
+    animation: tasks-panel-pop-in 0.14s cubic-bezier(0.2, 0, 0, 1);
+  }
+
   &__main {
     width: 100%;
-    height: 100%;
+    flex: 1 1 auto;
+    // Flex item of the Box.Y __root (vertical main-axis). Without this the
+    // default `min-height: auto` lets __main grow to the full card-stack
+    // height instead of clamping to __root, so each column's
+    // `overflow-y: auto` never engages and tall columns simply overflow.
+    // (Vertical twin of the `min-width: 0` horizontal-scroll fix below.)
+    min-height: 0;
     align-items: stretch;
     gap: 12px;
     padding: 16px;
@@ -36,13 +62,57 @@
     overflow: hidden;
   }
 
+  // ── Mobile: lock columns + force horizontal scroll on board ──
+  // 4 columns × 260px = 1076px > 430px phone viewport → board needs
+  // to scroll horizontally. The previous attempt set overflow-x:auto
+  // on __main but the scroll never engaged because the ancestor chain
+  // (window__tasks-panel grid cell, tasks-panel__ui, tasks-panel__root)
+  // all default to `min-width: auto` for flex/grid items — meaning
+  // they expand to fit their content instead of clamping to their
+  // parent cell. The whole folder window then scrolled instead of
+  // the inner board. Pin every wrapper to `min-width: 0` so each
+  // level clamps to its parent, then __main's overflow-x finally
+  // becomes meaningful and the user can swipe through status columns
+  // (TO DO → IN PROGRESS → REVIEW → COMPLETE).
+  @media (max-width: 650px) {
+    &__ui,
+    &__root {
+      min-width: 0;
+      max-width: 100%;
+    }
+
+    &__main {
+      flex-wrap: nowrap;
+      min-width: 0;
+      max-width: 100%;
+      overflow-x: auto !important;
+      overflow-y: hidden;
+      scrollbar-width: none;
+      -webkit-overflow-scrolling: touch;
+      touch-action: pan-x pan-y;
+
+      &::-webkit-scrollbar {
+        display: none;
+      }
+    }
+
+    &__column {
+      flex: 0 0 260px !important;
+      min-width: 260px !important;
+      width: 260px;
+    }
+  }
+
   &__column-body {
     align-items: stretch;
     gap: 8px;
     flex: 1 1 auto;
     min-height: 0;
     overflow-y: auto;
-    padding-right: 2px;
+    // Reserve a gutter for the scrollbar so it never overlaps the cards, plus
+    // a small gap between the cards and that gutter.
+    scrollbar-gutter: stable;
+    padding-right: 6px;
     border-radius: 8px;
     scrollbar-width: thin;
     scrollbar-color: var(--border-strong, rgba(0, 0, 0, 0.15)) transparent;
@@ -166,6 +236,22 @@
     flex: 1 1 auto;
     min-width: 0;
     word-break: break-word;
+  }
+
+  // Description preview on the card — compact, muted, clamped to ~2 lines.
+  &__task-desc {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    overflow-wrap: anywhere; // long unbroken tokens/URLs stay inside the card
+    margin: 2px 0 0;
+    @include drumee.typo(
+      $size: 12px,
+      $weight: 400,
+      $line: 16px,
+      $color: var(--normal-fg-40, #84848c)
+    );
   }
 
   &__task-foot {
@@ -318,6 +404,37 @@
     );
   }
 
+  // ── Drag-and-drop affordances ─────────────────────────────────
+  // Insertion placeholder shown at the exact drop point during a drag.
+  &__card-placeholder {
+    flex-shrink: 0;
+    height: 40px;
+    border-radius: 8px;
+    border: 2px dashed var(--active-border, rgba(67, 60, 197, 0.4));
+    background: var(--hover-bg-40, rgba(67, 60, 197, 0.06));
+    box-sizing: border-box;
+    animation: tasks-panel-fade-in 0.12s ease;
+  }
+
+  // Empty-column hint — also a large, obvious drop target.
+  &__column-empty {
+    @include drumee.typo(
+      $size: 12px,
+      $weight: 500,
+      $line: 16px,
+      $color: var(--placeholder-fg, #aeaeb2)
+    );
+    flex: 1 1 auto;
+    min-height: 72px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    border: 1px dashed var(--border-default, rgba(11, 10, 33, 0.12));
+    border-radius: 8px;
+    user-select: none;
+  }
+
   // ── Create modal ──────────────────────────────────────────────
   &__create-wrapper {
     position: absolute;
@@ -337,31 +454,103 @@
     backdrop-filter: blur(2px);
     align-items: center;
     justify-content: center;
+    animation: tasks-panel-fade-in 0.15s ease;
   }
 
   &__create-modal {
-    width: 380px;
-    max-width: 92%;
-    max-height: 50vh;
+    width: 720px;
+    max-width: 94%;
+    max-height: 80vh;
     background: var(--normal-bg-90, #f2f2f7);
     border: 1px solid var(--border-default, rgba(0, 0, 0, 0.05));
     border-radius: 12px;
     box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
     overflow: hidden;
+    animation: tasks-panel-pop-in 0.18s cubic-bezier(0.2, 0, 0, 1);
   }
 
   &__create-form {
+    flex: 1 1 auto;
+    min-height: 0;
     padding: 20px;
-    gap: 14px;
-    overflow-y: auto;
-    max-height: 86vh;
+    gap: 16px;
     box-sizing: border-box;
+  }
 
-    scrollbar-width: none;
-    -ms-overflow-style: none;
+  // ── Shared modal layout (create + detail/update) ──────────────
+  // Two-column issue layout: scrolling content body between a fixed header
+  // and a fixed footer.
+  &__modal-body {
+    align-items: stretch;
+    gap: 24px;
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    padding: 2px;
+    margin: -2px; // keep focus rings from clipping against the scroll edge
 
+    scrollbar-width: thin;
+    scrollbar-color: var(--border-strong, rgba(0, 0, 0, 0.15)) transparent;
     &::-webkit-scrollbar {
-      display: none;
+      width: 6px;
+    }
+    &::-webkit-scrollbar-thumb {
+      background-color: var(--border-strong, rgba(0, 0, 0, 0.15));
+      border-radius: 6px;
+    }
+  }
+
+  &__modal-main {
+    flex: 1 1 auto;
+    min-width: 0;
+    gap: 16px;
+  }
+
+  &__modal-side {
+    flex: 0 0 256px;
+    width: 256px;
+    gap: 16px;
+    padding: 14px;
+    box-sizing: border-box;
+    border-radius: 10px;
+    border: 1px solid var(--border-muted, rgba(11, 10, 33, 0.06));
+    background: var(--normal-bg-elevated, #fff);
+    align-self: flex-start;
+  }
+
+  @media (max-width: 650px) {
+    &__modal-body {
+      flex-direction: column;
+      overflow-y: auto;
+      gap: 16px;
+    }
+    &__modal-side {
+      flex: 1 1 auto;
+      width: 100%;
+    }
+  }
+
+  // Prominent issue title (Jira-style) — bigger than the body inputs.
+  &__create-title-input textarea {
+    @include drumee.typo(
+      $size: 16px,
+      $weight: 600,
+      $line: 22px,
+      $color: var(--normal-fg-10, #0b0a21)
+    );
+  }
+
+  // Let the description field absorb the leftover height in the main column.
+  &__create-field-grow {
+    flex: 1 1 auto;
+
+    .tasks-panel__create-textarea {
+      flex: 1 1 auto;
+
+      textarea {
+        height: 100%;
+        min-height: 160px;
+      }
     }
   }
 
@@ -423,7 +612,8 @@
     position: relative;
     box-sizing: border-box;
 
-    input {
+    input,
+    textarea {
       width: 100%;
       padding: 8px 10px;
       border: 1px solid var(--border-default, rgba(0, 0, 0, 0.08));
@@ -456,6 +646,18 @@
         cursor: pointer;
         caret-color: transparent;
       }
+    }
+
+    // Long titles wrap across lines and stay fully visible; the field grows
+    // up to ~4 lines, then scrolls. No drag handle (resize) since it's a
+    // logically single-line title.
+    textarea {
+      resize: none;
+      overflow-y: auto;
+      min-height: 36px;
+      max-height: 90px;
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
     }
   }
 
@@ -569,18 +771,31 @@
     }
   }
 
+  @keyframes tasks-panel-fade-in {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+
+  @keyframes tasks-panel-pop-in {
+    from {
+      opacity: 0;
+      transform: scale(0.96);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1);
+    }
+  }
+
   // ── Detail popover ────────────────────────────────────────────
   &__detail-wrapper {
     position: absolute;
-    top: 0;
-    right: 0;
-    bottom: 0;
-    width: 320px;
-    max-width: 100%;
-    background: var(--normal-bg-90, #fff);
-    border-left: 1px solid var(--border-default, #e5e5e5);
-    box-shadow: var(--shadow-left-big, -8px 0 24px rgba(0, 0, 0, 0.06));
-    z-index: 5;
+    inset: 0;
+    z-index: 10;
 
     &[data-state="closed"],
     &:empty {
@@ -588,19 +803,29 @@
     }
   }
 
-  &__detail-panel {
-    width: 100%;
-    height: 100%;
-    padding: 16px;
-    gap: 12px;
-    box-sizing: border-box;
-    overflow-y: auto;
-    scrollbar-width: none;
-    -ms-overflow-style: none;
+  &__detail-backdrop {
+    position: absolute;
+    inset: 0;
+    background: var(--overlay-bg, rgba(11, 10, 33, 0.4));
+    backdrop-filter: blur(2px);
+    align-items: center;
+    justify-content: center;
+    animation: tasks-panel-fade-in 0.15s ease;
+  }
 
-    &::-webkit-scrollbar {
-      display: none;
-    }
+  &__detail-panel {
+    width: 720px;
+    max-width: 94%;
+    max-height: 80vh;
+    padding: 20px;
+    gap: 16px;
+    box-sizing: border-box;
+    background: var(--normal-bg-90, #f2f2f7);
+    border: 1px solid var(--border-default, rgba(0, 0, 0, 0.05));
+    border-radius: 12px;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+    overflow: hidden;
+    animation: tasks-panel-pop-in 0.18s cubic-bezier(0.2, 0, 0, 1);
   }
 
   &__detail-header {
@@ -611,9 +836,11 @@
 
   &__detail-title {
     flex: 1 1 auto;
+    min-width: 0;
     background: transparent;
 
-    input {
+    input,
+    textarea {
       width: 100%;
       padding: 4px 6px;
       border: 1px solid transparent;
@@ -638,6 +865,18 @@
         border-color: var(--active-border, #433cc5);
         box-shadow: 0 0 0 3px rgba(67, 60, 197, 0.12);
       }
+    }
+
+    // Long titles wrap and stay fully visible; grows up to ~3 lines then
+    // scrolls. No resize handle — it's a logically single-line title.
+    textarea {
+      resize: none;
+      overflow-y: auto;
+      min-height: 30px;
+      max-height: 88px;
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+      display: block;
     }
   }
 
@@ -849,13 +1088,47 @@
   }
 
   // ── Card assignee avatar (top-right of the card) ──────────────
+  // Multi-assignee avatar stack on the card (overlapping circles + "+N").
+  &__task-assignees {
+    margin-left: auto; // push to the right of the title row
+    flex-shrink: 0;
+    align-items: center;
+    flex-direction: row;
+  }
+
   &__task-assignee {
     width: 24px;
     height: 24px;
     flex-shrink: 0;
     border-radius: 50%;
     overflow: hidden;
-    margin-left: auto; // push it to the right of the title row
+    box-shadow: 0 0 0 2px var(--normal-bg-elevated, #fff);
+
+    // Overlap successive avatars in the stack.
+    & + & {
+      margin-left: -8px;
+    }
+  }
+
+  &__task-assignee-more {
+    flex-shrink: 0;
+    height: 24px;
+    min-width: 24px;
+    padding: 0 4px;
+    margin-left: -8px;
+    border-radius: 12px;
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--normal-bg-80, rgba(0, 0, 0, 0.06));
+    box-shadow: 0 0 0 2px var(--normal-bg-elevated, #fff);
+    @include drumee.typo(
+      $size: 11px,
+      $weight: 600,
+      $line: 1,
+      $color: var(--normal-fg-30, #5a5a66)
+    );
   }
 
   // ── Priority pills (create + detail) ──────────────────────────
@@ -953,11 +1226,24 @@
     }
   }
 
+  // Stack of assignee avatars inside the picker button (overlapping).
+  &__assignee-button-avatars {
+    flex-direction: row;
+    align-items: center;
+    flex-shrink: 0;
+  }
+
   &__assignee-button-avatar {
     width: 24px;
     height: 24px;
     border-radius: 50%;
     overflow: hidden;
+    flex-shrink: 0;
+    box-shadow: 0 0 0 2px var(--normal-bg-elevated, #fff);
+
+    & + & {
+      margin-left: -8px;
+    }
   }
 
   &__assignee-button-placeholder {
@@ -1472,11 +1758,18 @@ html[data-theme="dark"] .tasks-panel {
     outline-color: var(--active-border, #5950ff);
   }
 
-  &__create-modal {
+  &__create-modal,
+  &__detail-panel {
     box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.6);
   }
 
-  &__file-search-dropdown {
+  &__modal-side {
+    background: var(--normal-bg-80, #333042);
+    border-color: var(--border-default, rgba(71, 69, 84, 0.4));
+  }
+
+  &__file-search-dropdown,
+  &__filter-picker {
     box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
   }
 
@@ -1646,5 +1939,20 @@ html[data-theme="dark"] .tasks-panel__flatpickr.flatpickr-calendar {
     &.nextMonthDay {
       color: rgba(228, 227, 255, 0.35);
     }
+  }
+}
+
+// `window__tasks-panel` is the grid cell folder window uses to hold
+// the tasks widget. Grid items default to `min-width: auto`, so when
+// `tasks-panel__main` builds 1076px of column content the cell
+// stretches with it and the entire folder window scrolls horizontally
+// instead of the board scrolling internally. Force the cell to clamp
+// at the grid track width so the panel stays its slot size and the
+// inner board owns the horizontal overflow.
+@media (max-width: 650px) {
+  .window__tasks-panel {
+    min-width: 0;
+    max-width: 100%;
+    overflow: hidden;
   }
 }

@@ -23,12 +23,35 @@ class __dmz_sharebox extends LetcBox {
     require('./skin');
     super.initialize(opt);
     this.declareHandlers();
+    this.bindEvent(_a.live);
     this.defaultSkeleton = require('./skeleton').default;
     this.topNavSkeleton = require('./skeleton/top-nav').default;
     this.headerSkeleton = require('./skeleton/header').default;
     this.footerSkeleton = require('dmz/skeleton/common/footer');
     this.deskSkeleton = require("./skeleton/desk-content").default;
     this.nodeInfoService = SERVICE.media.show_node_by;
+  }
+
+  /**
+   *
+   */
+  onBeforeDestroy() {
+    this.unbindEvent(_a.live);
+    this._stopRevokePolling();
+  }
+
+  /**
+   *
+   */
+  onWsMessage(svc, data, options = {}) {
+    const { service } = options || svc;
+    if (service === 'share.track_event') {
+      if (data && data.event === 'secure_share_revoked' && data.token === this.mget(_a.token)) {
+        this.handleInfoStatus({ status: 'TICKET_REVOKED' });
+      }
+      return;
+    }
+    if (super.onWsMessage) super.onWsMessage(svc, data, options);
   }
 
   /**
@@ -53,6 +76,9 @@ class __dmz_sharebox extends LetcBox {
 
       case 'ref-password':
         return this._input = child;
+
+      case 'ref-email':
+        return this._emailInput = child;
 
       case 'desk-content':
         child.once('content:ready', () => {
@@ -112,9 +138,17 @@ class __dmz_sharebox extends LetcBox {
     let token = this.mget(_a.token);
     let hub_id = Visitor.parseLocation().keysel || ""
 
-    let data = await this.postService(SERVICE.dmz.login,
-      { token, hub_id }
-    );
+    // If the URL contains /<file_nid>/<method>, pass file_nid so the server
+    // can navigate to the file's parent folder (same as _loginSecureShare).
+    // args: ['dmz','share',token, file_nid, method]
+    // Guard with NID regex so hash query params (e.g. ?browser=1 → args[3]='browser=1')
+    // are never forwarded as file_nid.
+    const NID_RE = /^[0-9a-f]{16}$/;
+    const urlFileNid = Visitor.parseModule()[3];
+    const loginOpt = { token, hub_id };
+    if (NID_RE.test(urlFileNid)) loginOpt.file_nid = urlFileNid;
+
+    let data = await this.postService(SERVICE.dmz.login, loginOpt);
 
     this.mset(data);
     if (data.guest_name) {
@@ -138,6 +172,15 @@ class __dmz_sharebox extends LetcBox {
       case 'REQUIRED_PASSWORD':
         this.promptPassword();
         break;
+      case 'REQUIRED_EMAIL':
+        this.promptEmail();
+        break;
+      case 'TICKET_REVOKED':
+      case 'TICKET_EXPIRED':
+      case 'WRONG_TICKET':
+      case 'TICKET_INVALID':
+        this.handleInfoStatus(data);
+        break;
       default:
         this.getInfoData();
 
@@ -150,6 +193,48 @@ class __dmz_sharebox extends LetcBox {
   promptPassword() {
     this.__content.feed(require('./skeleton/password').default(this));
   }
+  /**
+   *
+   */
+  promptEmail() {
+    this.__content.feed(require('./skeleton/email').default(this));
+  }
+
+  /**
+   *
+   */
+  verifyEmail() {
+    const email = this._emailInput ? (this._emailInput.getData().value || '').trim() : '';
+    if (!email) {
+      return this.renderErrorMessage(LOCALE.SECURE_SHARE_ENTER_EMAIL);
+    }
+    if (!Validator.email(email)) {
+      return this.renderErrorMessage(LOCALE.INVALID_EMAIL);
+    }
+
+    const hub_id = Visitor.parseLocation().keysel || '';
+    const opt = {
+      token  : this.mget(_a.token),
+      hub_id,
+      email,
+    };
+
+    this.postService(SERVICE.dmz.login, opt).then((data) => {
+      if (data && data.status === 'TICKET_OK' && data.is_secure) {
+        this.mset(data);
+        this.getInfoData();
+      } else if (data && data.status === 'REQUIRED_PASSWORD' && data.is_secure) {
+        // Email validated — save it so verifyPassword can re-submit it with the password
+        this._verifiedEmail = email;
+        this.promptPassword();
+      } else if (data && data.status === 'EMAIL_MISMATCH') {
+        this.renderErrorMessage(LOCALE.SECURE_SHARE_EMAIL_MISMATCH);
+      } else {
+        this.handleInfoStatus(data);
+      }
+    });
+  }
+
   /**
    *
   */
@@ -189,6 +274,9 @@ class __dmz_sharebox extends LetcBox {
 
       case 'verify-password':
         return this.verifyPassword();
+
+      case 'verify-email':
+        return this.verifyEmail();
 
       case 'dmz-user-signup':
         return this.dmzUserSignup();
@@ -254,23 +342,31 @@ class __dmz_sharebox extends LetcBox {
    *
   */
   verifyPassword() {
-    this.validateData();
-    if (this.formStatus == _a.error) {
-      this._input.showError()
-      const msg = this._input.reason
-      return this.renderErrorMessage(msg)
+    const password = this._input ? (this._input.getData().value || '').trim() : '';
+    if (!password) {
+      return this.renderErrorMessage(LOCALE.DMZ_PASSWORD_TO_CONTINUE);
     }
 
     let hub_id = Visitor.parseLocation().keysel || ""
 
-    const inputData = this._input.getData();
     let opt = {
       token: this.mget(_a.token),
       hub_id,
-      password: inputData.value
+      password,
+    }
+    // For secure-share password flow: re-send the verified email so the server
+    // can validate email + password in one step (stateless on the server side)
+    if (this._verifiedEmail) {
+      opt.email = this._verifiedEmail;
     }
     this.postService(SERVICE.dmz.login, opt).then((data) => {
-      if (data && data.is_verified) {
+      if (data && data.status === 'TICKET_OK' && data.is_secure) {
+        // Secure-share password accepted — grant access
+        this.mset(data);
+        this.getInfoData();
+      } else if (data && data.status === 'WRONG_PASSWORD') {
+        this.renderErrorMessage(LOCALE.WRONG_CREDENTIALS);
+      } else if (data && data.is_verified) {
         this.mset(data);
         localStorage.setItem('token', data.token);
         localStorage.setItem('guest-sid', data.guest_sid);
@@ -292,6 +388,8 @@ class __dmz_sharebox extends LetcBox {
       this.__actionButtons.el.dataset.mode = _a.open;
     }
 
+    this._startRevokePolling();
+
     //if(!banner)return;
 
     const f = () => {
@@ -299,6 +397,40 @@ class __dmz_sharebox extends LetcBox {
     }
 
     _.delay(f, Visitor.timeout(1000));
+  }
+
+  /**
+   * Poll dmz.info every 5 s to detect revoke/expiry in near-real-time.
+   * Uses a read-only endpoint — no access_count side-effect.
+   */
+  _startRevokePolling() {
+    const token = this.mget(_a.token);
+    if (!token || this._revokePoller) return;
+    this._revokePoller = setInterval(async () => {
+      if (!this._revokePoller) return;
+      try {
+        const data = await this.postService(SERVICE.dmz.info, { token });
+        if (!this._revokePoller) return;
+        if (data && (data.status === 'TICKET_REVOKED' || data.status === 'TICKET_EXPIRED')) {
+          this._stopRevokePolling();
+          // Tear down the desk content before showing the popup — this ensures
+          // files are gone even if the user dismisses the popup instead of
+          // clicking the redirect button.
+          if (this.__content) {
+            this.__content.feed(Skeletons.Box.Y({ className: `${this.fig.family}__content` }));
+          }
+          this.handleInfoStatus(data);
+        }
+      } catch (_) {}
+    }, 5000);
+  }
+
+  /**
+   *
+   */
+  _stopRevokePolling() {
+    clearInterval(this._revokePoller);
+    this._revokePoller = null;
   }
 
   /**
@@ -383,6 +515,11 @@ class __dmz_sharebox extends LetcBox {
 
       case "INVALID_CREDENTIAL":
         return this.feed(this.defaultSkeleton(this));
+
+      case 'TICKET_REVOKED':
+        opt.content = LOCALE.SECURE_SHARE_REVOKED
+        opt.btnService = 'redirect-to-home'
+        break
 
       case 'WRONG_TICKET':
       case 'TICKET_INVALID':

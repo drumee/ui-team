@@ -308,8 +308,7 @@ class apps_main extends LetcBox {
       // unreliable (an inner widget on the bubble path stopPropagation's),
       // so we dispatch the click here in capture phase against data-idx.
       const removeEl =
-        e.target.closest &&
-        e.target.closest(".apps-main__edit-ws-remove");
+        e.target.closest && e.target.closest(".apps-main__edit-ws-remove");
       if (removeEl && this.el.contains(removeEl)) {
         const rmIdx = parseInt(removeEl.dataset.idx, 10);
         if (!Number.isNaN(rmIdx)) {
@@ -319,8 +318,7 @@ class apps_main extends LetcBox {
         }
       }
       const optEl =
-        e.target.closest &&
-        e.target.closest(".apps-main__edit-ws-role-option");
+        e.target.closest && e.target.closest(".apps-main__edit-ws-role-option");
       if (optEl && this.el.contains(optEl)) {
         const optIdx = parseInt(optEl.dataset.idx, 10);
         const roleId = optEl.dataset.id;
@@ -372,11 +370,7 @@ class apps_main extends LetcBox {
         this._render();
       }
     }
-    if (
-      this._secCtrl &&
-      this._secCtrl.countryPickerOpen &&
-      this.el
-    ) {
+    if (this._secCtrl && this._secCtrl.countryPickerOpen && this.el) {
       const openRow = this.el.querySelector(".apps-main__ac-country-row--open");
       const dropdown = this.el.querySelector(".apps-main__ac-cdrop");
       const insideRow = openRow && openRow.contains(e.target);
@@ -387,12 +381,10 @@ class apps_main extends LetcBox {
         this._render();
       }
     }
-    if (
-      this._secCtrl &&
-      this._secCtrl.timePickerOpen &&
-      this.el
-    ) {
-      const openField = this.el.querySelector(".apps-main__ac-time-field--open");
+    if (this._secCtrl && this._secCtrl.timePickerOpen && this.el) {
+      const openField = this.el.querySelector(
+        ".apps-main__ac-time-field--open",
+      );
       const tdrop = this.el.querySelector(".apps-main__ac-tdrop");
       const insideField = openField && openField.contains(e.target);
       const insideTdrop = tdrop && tdrop.contains(e.target);
@@ -405,7 +397,9 @@ class apps_main extends LetcBox {
         // open hour/minute flyout (and its pill). Click on the other pill or
         // anywhere else inside the popup closes the flyout.
         const flyout = this.el.querySelector(".apps-main__ac-tdrop-flyout");
-        const openPill = this.el.querySelector(".apps-main__ac-tdrop-pill--open");
+        const openPill = this.el.querySelector(
+          ".apps-main__ac-tdrop-pill--open",
+        );
         const insideFlyout = flyout && flyout.contains(e.target);
         const insidePill = openPill && openPill.contains(e.target);
         if (!insideFlyout && !insidePill) {
@@ -457,8 +451,54 @@ class apps_main extends LetcBox {
 
   _render() {
     if (this.isDestroyed && this.isDestroyed()) return;
+    // Every interaction (tab toggles, plan switch, dropdowns, pickers) rebuilds
+    // the whole skeleton via feed(), which tears down and recreates the
+    // scrollable containers and resets their scroll to the top. Capture the
+    // offsets before the rebuild and restore them afterwards so the page stays
+    // put instead of jumping to the top on each click.
+    const saved = this._captureScroll();
     this.feed(require("./skeleton").default(this));
+    this._restoreScroll(saved);
     this._scheduleTableScrollSync();
+  }
+
+  // Page-level scroll containers whose scrollTop is lost when feed() rebuilds
+  // them: the tab body (security/storage/etc.) and the Access-control overlay.
+  // Keyed by a stable class selector so the offset can be reapplied to the
+  // freshly-built node. Inner tables own their own scroll handled separately.
+  _scrollSelectors() {
+    return [".apps-main__content", ".apps-main__ac-body"];
+  }
+
+  _captureScroll() {
+    const saved = [];
+    if (!this.el) return saved;
+    for (const sel of this._scrollSelectors()) {
+      const el = this.el.querySelector(sel);
+      if (el && el.scrollTop) saved.push({ sel, top: el.scrollTop });
+    }
+    return saved;
+  }
+
+  // feed() rebuilds the containers, so saved offsets must be reapplied to the
+  // fresh nodes. Marionette mounts synchronously when the widget root is already
+  // attached (the case for every re-render), making this flicker-free; the rAF
+  // retries cover the rare case where a node isn't in the DOM yet.
+  _restoreScroll(saved, attempt = 0) {
+    if (!saved || !saved.length) return;
+    if (this.isDestroyed && this.isDestroyed()) return;
+    const pending = [];
+    for (const s of saved) {
+      const el = this.el && this.el.querySelector(s.sel);
+      if (el) {
+        el.scrollTop = s.top;
+      } else {
+        pending.push(s);
+      }
+    }
+    if (pending.length && attempt < 5) {
+      requestAnimationFrame(() => this._restoreScroll(pending, attempt + 1));
+    }
   }
 
   // Keep each table thead's horizontal scroll in sync with its tbody/list, so
@@ -1463,7 +1503,8 @@ class apps_main extends LetcBox {
 
   async _removeEditWorkspace(idx) {
     if (Number.isNaN(idx)) return;
-    if (!Array.isArray(this._editWorkspaces) || !this._editWorkspaces[idx]) return;
+    if (!Array.isArray(this._editWorkspaces) || !this._editWorkspaces[idx])
+      return;
     const ws = this._editWorkspaces[idx];
     const hub_id = ws.hub_id || ws.id || ws.actual_hub_id;
     const uid = this._editingMember && this._editingMember.id;
@@ -1800,7 +1841,8 @@ class apps_main extends LetcBox {
         // Permissions; gains an Access Audit Log section). Everything else
         // defaults to the restricted layout.
         const area = h.area || "private";
-        const mode = area === "share" || area === "dmz" ? "shared" : "restricted";
+        const mode =
+          area === "share" || area === "dmz" ? "shared" : "restricted";
         this._secCtrl = {
           mode,
           geoOn: !!(tags && tags.ipgeo),

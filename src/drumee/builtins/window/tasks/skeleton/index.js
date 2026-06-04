@@ -23,7 +23,10 @@ function buildFileSearchDropdownContent(ui, scope, ctx = {}) {
       fileExt: r.ext,
       searchScope: scope,
       kids: [
-        Skeletons.Image.Svg({ ico: "attachment", className: `${pfx}__file-result-ico` }),
+        Skeletons.Image.Svg({
+          ico: "attachment",
+          className: `${pfx}__file-result-ico`,
+        }),
         Skeletons.Note({
           className: `${pfx}__file-result-name`,
           content: `${r.filename || ""}${r.ext ? "." + r.ext : ""}`,
@@ -126,15 +129,38 @@ const make = function (ui) {
   };
 
   const assigneeAvatar = (task) => {
-    if (!task.assignee_uid) return null;
-    const m = ui.getMember(task.assignee_uid);
-    return Skeletons.UserProfile({
-      className: `${pfx}__task-assignee`,
-      id: task.assignee_uid,
-      firstname: m?.firstname,
-      lastname: m?.lastname,
-      auto_color: 1,
-      live_status: 0,
+    // Multi-assignee: stack up to 3 avatars on the card, then a "+N" chip.
+    const uids = Array.isArray(task.assignee_uids)
+      ? task.assignee_uids
+      : task.assignee_uid
+        ? [task.assignee_uid]
+        : [];
+    if (!uids.length) return null;
+    const MAX = 3;
+    const shown = uids.slice(0, MAX);
+    const overflow = uids.length - shown.length;
+    const avatars = shown.map((uid) => {
+      const m = ui.getMember(uid);
+      return Skeletons.UserProfile({
+        className: `${pfx}__task-assignee`,
+        id: uid,
+        firstname: m?.firstname,
+        lastname: m?.lastname,
+        auto_color: 1,
+        live_status: 0,
+      });
+    });
+    if (overflow > 0) {
+      avatars.push(
+        Skeletons.Note({
+          className: `${pfx}__task-assignee-more`,
+          content: `+${overflow}`,
+        }),
+      );
+    }
+    return Skeletons.Box.X({
+      className: `${pfx}__task-assignees`,
+      kids: avatars,
     });
   };
 
@@ -242,6 +268,13 @@ const make = function (ui) {
             }),
           ].filter(Boolean),
         }),
+        // Description preview (clamped to ~2 lines via CSS; omitted when empty).
+        task.description
+          ? Skeletons.Note({
+              className: `${pfx}__task-desc`,
+              content: task.description,
+            })
+          : null,
         filesNode,
         footer,
       ].filter(Boolean),
@@ -291,21 +324,33 @@ const make = function (ui) {
                       className: `${pfx}__column-title`,
                       content: LOCALE[col.label] || col.key,
                     }),
-                  ],
-                }),
-                Skeletons.Box.X({
-                  className: `${pfx}__column-count`,
-                  kids: [
-                    Skeletons.Note({
-                      className: `${pfx}__column-count-text`,
-                      content: String((state[col.key] || []).length),
+                    // Count sits right next to the title ("TO DO  8"). Kept as
+                    // its own pill so _syncColumn can update the number in
+                    // place after a surgical drag without re-rendering.
+                    Skeletons.Box.X({
+                      className: `${pfx}__column-count`,
+                      kids: [
+                        Skeletons.Note({
+                          className: `${pfx}__column-count-text`,
+                          content: String((state[col.key] || []).length),
+                        }),
+                      ],
                     }),
                   ],
                 }),
               ],
             }),
             ...(state[col.key] || []).map((t) => taskCard(col.key, t)),
-          ],
+            // Empty-state drop hint. Keeps an empty column an obvious, valid
+            // drop target. The surgical drag handler (_syncColumn) adds/removes
+            // an equivalent node as cards enter/leave without a full re-render.
+            (state[col.key] || []).length
+              ? null
+              : Skeletons.Note({
+                  className: `${pfx}__column-empty`,
+                  content: LOCALE.DROP_TASKS_HERE,
+                }),
+          ].filter(Boolean),
         }),
         addButton(col.key),
       ],
@@ -335,11 +380,19 @@ const make = function (ui) {
 
   // Always rendered; CSS hides via data-open. data-member-uid lets the JS
   // re-target data-active after an assignee selection.
-  const memberPicker = (selectedUid, serviceName, extra = {}) => {
+  const memberPicker = (selectedUids, serviceName, extra = {}) => {
+    // Multi-select: selectedUids is the array of currently-assigned uids. Rows
+    // toggle membership and the picker stays open; the "Unassigned" row clears
+    // the whole set and is active only when nothing is selected.
+    const selected = Array.isArray(selectedUids)
+      ? selectedUids.map(String)
+      : selectedUids
+        ? [String(selectedUids)]
+        : [];
     const items = [
       Skeletons.Box.X({
         className: `${pfx}__member-row`,
-        dataset: { active: !selectedUid ? 1 : 0, "member-uid": "" },
+        dataset: { active: !selected.length ? 1 : 0, "member-uid": "" },
         bubble: 0,
         service: serviceName,
         uiHandler: [ui],
@@ -356,7 +409,7 @@ const make = function (ui) {
         Skeletons.Box.X({
           className: `${pfx}__member-row`,
           dataset: {
-            active: selectedUid === (m.id || m.uid) ? 1 : 0,
+            active: selected.includes(String(m.id || m.uid)) ? 1 : 0,
             "member-uid": m.id || m.uid,
           },
           bubble: 0,
@@ -393,8 +446,11 @@ const make = function (ui) {
   };
 
   const assigneeButton = (task, kind) => {
-    const m = task.assignee_uid ? ui.getMember(task.assignee_uid) : null;
-    const label = m ? fullName(m) : LOCALE.UNASSIGNED;
+    const assignees = Array.isArray(task.assignees)
+      ? task.assignees
+      : task.assignee_uid
+        ? [task.assignee_uid]
+        : [];
     return Skeletons.Box.X({
       className: `${pfx}__assignee-button`,
       sys_pn: `${kind}-button`,
@@ -404,25 +460,7 @@ const make = function (ui) {
       service: "toggle-picker",
       uiHandler: [ui],
       pickerKind: kind,
-      kids: [
-        m
-          ? Skeletons.UserProfile({
-              className: `${pfx}__assignee-button-avatar`,
-              id: m.id || m.uid,
-              firstname: m.firstname,
-              lastname: m.lastname,
-              auto_color: 1,
-              live_status: 0,
-            })
-          : Skeletons.Note({
-              className: `${pfx}__assignee-button-placeholder`,
-              content: "?",
-            }),
-        Skeletons.Note({
-          className: `${pfx}__assignee-button-label`,
-          content: label,
-        }),
-      ],
+      kids: buildAssigneeButtonContent(ui, assignees),
     });
   };
 
@@ -646,8 +684,11 @@ const make = function (ui) {
     const dDraft = ui.getDetailDraft() || detail;
     const dStatus = dDraft.status || detail.status || "todo";
     const dPriority = dDraft.priority || detail.priority || "medium";
-    const dAssignee =
-      dDraft.assignee_uid != null ? dDraft.assignee_uid : detail.assignee_uid;
+    const dAssignees = Array.isArray(dDraft.assignees)
+      ? dDraft.assignees
+      : Array.isArray(detail.assignee_uids)
+        ? detail.assignee_uids
+        : [];
     const dLabels = Array.isArray(dDraft.labels)
       ? dDraft.labels
       : detail.label_ids || [];
@@ -695,6 +736,7 @@ const make = function (ui) {
           placeholder: LOCALE.TASK_DESCRIPTION_PLACEHOLDER,
           require: "any",
           rows: 3,
+          ignoreEnter: true,
           removeOnEscape: false,
           bubble: 0,
           watch: "task-input-changed",
@@ -710,8 +752,10 @@ const make = function (ui) {
           className: `${pfx}__detail-label`,
           content: LOCALE.ASSIGNEE,
         }),
-        assigneeButton({ assignee_uid: dAssignee }, "detail-assignee"),
-        memberPicker(dAssignee, "set-assignee", { pickerKind: "detail-assignee" }),
+        assigneeButton({ assignees: dAssignees }, "detail-assignee"),
+        memberPicker(dAssignees, "set-assignee", {
+          pickerKind: "detail-assignee",
+        }),
       ],
     });
 
@@ -729,7 +773,10 @@ const make = function (ui) {
           Skeletons.Note({
             className: `${pfx}__label-option`,
             content: l.name,
-            dataset: { selected: dLabelSet.has(l.id) ? 1 : 0, "label-id": l.id },
+            dataset: {
+              selected: dLabelSet.has(l.id) ? 1 : 0,
+              "label-id": l.id,
+            },
             styleOpt: dLabelSet.has(l.id)
               ? { background: l.color, borderColor: l.color }
               : { borderColor: l.color, color: l.color },
@@ -777,7 +824,9 @@ const make = function (ui) {
             appendTo: document.body,
             onReady: (_d, _s, instance) => {
               if (instance && instance.calendarContainer) {
-                instance.calendarContainer.classList.add("tasks-panel__flatpickr");
+                instance.calendarContainer.classList.add(
+                  "tasks-panel__flatpickr",
+                );
               }
             },
           },
@@ -865,39 +914,76 @@ const make = function (ui) {
       ],
     });
 
-    return Skeletons.Box.Y({
-      className: `${pfx}__detail-panel`,
+    const header = Skeletons.Box.X({
+      className: `${pfx}__detail-header`,
       kids: [
-        Skeletons.Box.X({
-          className: `${pfx}__detail-header`,
-          kids: [
-            Skeletons.Entry({
-              className: `${pfx}__detail-title`,
-              name: "title",
-              value: dDraft.title || "",
-              placeholder: LOCALE.TASK_TITLE,
-              require: "any",
-              bubble: 0,
-              watch: "task-input-changed",
-              uiHandler: [ui],
-            }),
-            Skeletons.Button.Svg({
-              className: `${pfx}__detail-close`,
-              ico: "cross",
-              bubble: 0,
-              service: "close-detail",
-              uiHandler: [ui],
-            }),
-          ],
+        // Textarea (not Entry) so a long title wraps and stays fully
+        // visible in the update popup instead of being clipped past the
+        // field width. `ignoreEnter` keeps it logically single-line.
+        Skeletons.Textarea({
+          className: `${pfx}__detail-title`,
+          name: "title",
+          value: dDraft.title || "",
+          placeholder: LOCALE.TASK_TITLE,
+          require: "any",
+          rows: 1,
+          ignoreEnter: true,
+          bubble: 0,
+          watch: "task-input-changed",
+          uiHandler: [ui],
+        }),
+        Skeletons.Button.Svg({
+          className: `${pfx}__detail-close`,
+          ico: "cross",
+          bubble: 0,
+          service: "close-detail",
+          uiHandler: [ui],
+        }),
+      ],
+    });
+
+    // Status pills get a label in the sidebar so the metadata column reads
+    // as a consistent list of labeled fields (Jira "Details" panel).
+    const statusRow = Skeletons.Box.Y({
+      className: `${pfx}__detail-row`,
+      kids: [
+        Skeletons.Note({
+          className: `${pfx}__detail-label`,
+          content: LOCALE.STATUS,
         }),
         statusSwitcher,
-        priorityRow,
-        descriptionRow,
-        assigneeRow,
-        labelsRow,
-        dueRow,
-        attachmentsList,
-        actions,
+      ],
+    });
+
+    // Centered two-column modal (Jira issue view): description + attachments
+    // on the left, the metadata sidebar on the right.
+    return Skeletons.Box.Y({
+      className: `${pfx}__detail-backdrop`,
+      // No backdrop service — closing is explicit (X or Cancel), matching the
+      // create modal and guarding against accidental loss of unsaved edits.
+      bubble: 0,
+      kids: [
+        Skeletons.Box.Y({
+          className: `${pfx}__detail-panel`,
+          bubble: 0,
+          kids: [
+            header,
+            Skeletons.Box.X({
+              className: `${pfx}__modal-body`,
+              kids: [
+                Skeletons.Box.Y({
+                  className: `${pfx}__modal-main`,
+                  kids: [descriptionRow, attachmentsList],
+                }),
+                Skeletons.Box.Y({
+                  className: `${pfx}__modal-side`,
+                  kids: [statusRow, priorityRow, assigneeRow, labelsRow, dueRow],
+                }),
+              ],
+            }),
+            actions,
+          ],
+        }),
       ],
     });
   };
@@ -907,7 +993,9 @@ const make = function (ui) {
     const cols = ui.getColumns();
     const selectedStatus = draft?.status || "todo";
     const selectedPriority = draft?.priority || "medium";
-    const selectedAssignee = draft?.assignee_uid || null;
+    const selectedAssignees = Array.isArray(draft?.assignees)
+      ? draft.assignees
+      : [];
     const selectedLabels = new Set(draft?.labels || []);
 
     const statusPicker = Skeletons.Box.X({
@@ -938,7 +1026,10 @@ const make = function (ui) {
             Skeletons.Note({
               className: `${pfx}__label-option`,
               content: l.name,
-              dataset: { selected: selectedLabels.has(l.id) ? 1 : 0, "label-id": l.id },
+              dataset: {
+                selected: selectedLabels.has(l.id) ? 1 : 0,
+                "label-id": l.id,
+              },
               styleOpt: selectedLabels.has(l.id)
                 ? { background: l.color, borderColor: l.color }
                 : { borderColor: l.color, color: l.color },
@@ -959,9 +1050,85 @@ const make = function (ui) {
     // _applyAssigneeChange's ensurePart(...) never resolves and the button
     // stays blank until the next full render.
     const assigneeButtonNode = assigneeButton(
-      { assignee_uid: selectedAssignee },
+      { assignees: selectedAssignees },
       "create-assignee",
     );
+
+    // Labeled field shell. extraCn lets a field opt into grow/scroll behaviour.
+    const field = (labelText, control, extraCn = "") =>
+      Skeletons.Box.Y({
+        className: `${pfx}__create-field${extraCn ? " " + extraCn : ""}`,
+        kids: [
+          Skeletons.Note({
+            className: `${pfx}__create-label`,
+            content: labelText,
+          }),
+          control,
+        ],
+      });
+
+    // Textarea (not Entry) so a long title wraps and stays fully visible
+    // instead of being clipped. `ignoreEnter` keeps it logically single-line.
+    const titleControl = Skeletons.Textarea({
+      className: `${pfx}__create-input ${pfx}__create-title-input`,
+      name: "title",
+      value: draft?.title || "",
+      placeholder: LOCALE.TASK_TITLE,
+      require: "any",
+      rows: 1,
+      ignoreEnter: true,
+      bubble: 0,
+      uiHandler: [ui],
+      watch: "task-input-changed",
+    });
+
+    const descControl = Skeletons.Textarea({
+      className: `${pfx}__create-textarea`,
+      formItem: "description",
+      name: "description",
+      value: draft?.description || "",
+      placeholder: LOCALE.TASK_DESCRIPTION_PLACEHOLDER,
+      require: "any",
+      rows: 3,
+      ignoreEnter: true,
+      bubble: 0,
+      watch: "task-input-changed",
+      uiHandler: [ui],
+    });
+
+    const dueControl = {
+      kind: "date_picker",
+      className: `${pfx}__create-input`,
+      innerClass: `${pfx}__create-input-inner`,
+      name: "due_date",
+      value: draft?.due_date || "",
+      service: "task-input-changed",
+      uiHandler: [ui],
+      vendorOpt: {
+        dateFormat: "Y-m-d",
+        minDate: "today",
+        appendTo: document.body,
+        onReady: (_d, _s, instance) => {
+          if (instance && instance.calendarContainer) {
+            instance.calendarContainer.classList.add("tasks-panel__flatpickr");
+          }
+        },
+      },
+    };
+
+    const assigneeField = Skeletons.Box.Y({
+      className: `${pfx}__create-field`,
+      kids: [
+        Skeletons.Note({
+          className: `${pfx}__create-label`,
+          content: LOCALE.ASSIGNEE,
+        }),
+        assigneeButtonNode,
+        memberPicker(selectedAssignees, "create-assignee", {
+          pickerKind: "create-assignee",
+        }),
+      ],
+    });
 
     const form = Skeletons.Box.Y({
       className: `${pfx}__create-form`,
@@ -982,127 +1149,40 @@ const make = function (ui) {
             }),
           ],
         }),
-        Skeletons.Box.Y({
-          className: `${pfx}__create-field`,
+        // Two-column body (Jira issue-modal layout): primary content on the
+        // left, the metadata sidebar on the right. Stacks on narrow screens.
+        Skeletons.Box.X({
+          className: `${pfx}__modal-body`,
           kids: [
-            Skeletons.Note({
-              className: `${pfx}__create-label`,
-              content: LOCALE.TASK_TITLE,
+            Skeletons.Box.Y({
+              className: `${pfx}__modal-main`,
+              kids: [
+                field(LOCALE.TASK_TITLE, titleControl),
+                field(
+                  LOCALE.TASK_DESCRIPTION,
+                  descControl,
+                  `${pfx}__create-field-grow`,
+                ),
+                field(
+                  LOCALE.LINKED_FILES,
+                  filePickerBlock("create", {
+                    pendingFiles: draft?.pending_files || [],
+                  }),
+                ),
+              ],
             }),
-            Skeletons.Entry({
-              className: `${pfx}__create-input`,
-              formItem: "title",
-              name: "title",
-              value: draft?.title || "",
-              placeholder: LOCALE.TASK_TITLE,
-              require: "any",
-              mode: "commit",
-              bubble: 0,
-              service: "commit-task",
-              uiHandler: [ui],
-              watch: "task-input-changed",
-            }),
-          ],
-        }),
-        Skeletons.Box.Y({
-          className: `${pfx}__create-field`,
-          kids: [
-            Skeletons.Note({
-              className: `${pfx}__create-label`,
-              content: LOCALE.TASK_DESCRIPTION,
-            }),
-            Skeletons.Textarea({
-              className: `${pfx}__create-textarea`,
-              formItem: "description",
-              name: "description",
-              value: draft?.description || "",
-              placeholder: LOCALE.TASK_DESCRIPTION_PLACEHOLDER,
-              require: "any",
-              rows: 3,
-              bubble: 0,
-              watch: "task-input-changed",
-              uiHandler: [ui],
-            }),
-          ],
-        }),
-        Skeletons.Box.Y({
-          className: `${pfx}__create-field`,
-          kids: [
-            Skeletons.Note({
-              className: `${pfx}__create-label`,
-              content: LOCALE.STATUS,
-            }),
-            statusPicker,
-          ],
-        }),
-        Skeletons.Box.Y({
-          className: `${pfx}__create-field`,
-          kids: [
-            Skeletons.Note({
-              className: `${pfx}__create-label`,
-              content: LOCALE.PRIORITY,
-            }),
-            priorityPills(selectedPriority, "create-priority"),
-          ],
-        }),
-        Skeletons.Box.Y({
-          className: `${pfx}__create-field`,
-          kids: [
-            Skeletons.Note({
-              className: `${pfx}__create-label`,
-              content: LOCALE.ASSIGNEE,
-            }),
-            assigneeButtonNode,
-            memberPicker(selectedAssignee, "create-assignee", { pickerKind: "create-assignee" }),
-          ],
-        }),
-        Skeletons.Box.Y({
-          className: `${pfx}__create-field`,
-          kids: [
-            Skeletons.Note({
-              className: `${pfx}__create-label`,
-              content: LOCALE.LABELS,
-            }),
-            labelChooser,
-          ],
-        }),
-        Skeletons.Box.Y({
-          className: `${pfx}__create-field`,
-          kids: [
-            Skeletons.Note({
-              className: `${pfx}__create-label`,
-              content: LOCALE.DUE_DATE,
-            }),
-            {
-              kind: "date_picker",
-              className: `${pfx}__create-input`,
-              innerClass: `${pfx}__create-input-inner`,
-              name: "due_date",
-              value: draft?.due_date || "",
-              service: "task-input-changed",
-              uiHandler: [ui],
-              vendorOpt: {
-                dateFormat: "Y-m-d",
-                minDate: "today",
-                appendTo: document.body,
-                onReady: (_d, _s, instance) => {
-                  if (instance && instance.calendarContainer) {
-                    instance.calendarContainer.classList.add("tasks-panel__flatpickr");
-                  }
-                },
-              },
-            },
-          ],
-        }),
-        Skeletons.Box.Y({
-          className: `${pfx}__create-field`,
-          kids: [
-            Skeletons.Note({
-              className: `${pfx}__create-label`,
-              content: LOCALE.LINKED_FILES,
-            }),
-            filePickerBlock("create", {
-              pendingFiles: draft?.pending_files || [],
+            Skeletons.Box.Y({
+              className: `${pfx}__modal-side`,
+              kids: [
+                field(LOCALE.STATUS, statusPicker),
+                field(
+                  LOCALE.PRIORITY,
+                  priorityPills(selectedPriority, "create-priority"),
+                ),
+                assigneeField,
+                field(LOCALE.LABELS, labelChooser),
+                field(LOCALE.DUE_DATE, dueControl),
+              ],
             }),
           ],
         }),
@@ -1143,6 +1223,62 @@ const make = function (ui) {
     });
   };
 
+  // ── Member filter dropdown ────────────────────────────────────
+  // The trigger button lives on the host window's tab bar (same line as
+  // Files / Chat / Tasks); this panel owns the members + filter state and
+  // renders the dropdown as a top-right overlay when opened via toggleFilter().
+  const filterUids = (ui.getFilterUids() || []).map(String);
+  const filterActive = filterUids.length > 0;
+  const filterOpen = pickerOpen === "filter";
+
+  const filterDropdown = Skeletons.Box.Y({
+    className: `${pfx}__filter-picker`,
+    kids: [
+      Skeletons.Box.X({
+        className: `${pfx}__member-row`,
+        dataset: { active: filterActive ? 0 : 1, "member-uid": "" },
+        bubble: 0,
+        service: "filter-member",
+        uiHandler: [ui],
+        memberUid: "",
+        kids: [
+          Skeletons.Note({
+            className: `${pfx}__member-name`,
+            content: LOCALE.ALL_MEMBERS,
+          }),
+        ],
+      }),
+      ...members.map((m) => {
+        const uid = String(m.id || m.uid);
+        return Skeletons.Box.X({
+          className: `${pfx}__member-row`,
+          dataset: {
+            active: filterUids.includes(uid) ? 1 : 0,
+            "member-uid": uid,
+          },
+          bubble: 0,
+          service: "filter-member",
+          uiHandler: [ui],
+          memberUid: uid,
+          kids: [
+            Skeletons.UserProfile({
+              className: `${pfx}__member-avatar`,
+              id: uid,
+              firstname: m.firstname,
+              lastname: m.lastname,
+              auto_color: 1,
+              live_status: 0,
+            }),
+            Skeletons.Note({
+              className: `${pfx}__member-name`,
+              content: fullName(m),
+            }),
+          ],
+        });
+      }),
+    ],
+  });
+
   return Skeletons.Box.Y({
     className: `${pfx}__root`,
     kids: [
@@ -1150,6 +1286,8 @@ const make = function (ui) {
         className: `${pfx}__main`,
         kids: ui.getColumns().map(column),
       }),
+      // Filter overlay (anchored top-right, below the tab bar's filter button).
+      filterOpen ? filterDropdown : null,
       Skeletons.Wrapper.Y({
         className: `${pfx}__detail-wrapper`,
         name: "task-detail",
@@ -1170,33 +1308,64 @@ const make = function (ui) {
         uiHandler: [ui],
         bubble: 0,
       }),
-    ],
+    ].filter(Boolean),
   });
 };
 
-function buildAssigneeButtonContent(ui, assigneeUid) {
+function buildAssigneeButtonContent(ui, assignees) {
   const pfx = ui.fig.family;
-  const m = assigneeUid ? ui.getMember(assigneeUid) : null;
-  const label = m
-    ? [m.firstname, m.lastname].filter(Boolean).join(" ").trim() || m.email || ""
-    : LOCALE.UNASSIGNED;
+  // Accept an array of uids (multi-assignee); tolerate a single uid/null.
+  const uids = Array.isArray(assignees)
+    ? assignees
+    : assignees
+      ? [assignees]
+      : [];
+  const fullName = (m) =>
+    [m.firstname, m.lastname].filter(Boolean).join(" ").trim() || m.email || "";
+
+  if (!uids.length) {
+    return [
+      Skeletons.Note({
+        className: `${pfx}__assignee-button-placeholder`,
+        content: "?",
+      }),
+      Skeletons.Note({
+        className: `${pfx}__assignee-button-label`,
+        content: LOCALE.UNASSIGNED,
+      }),
+    ];
+  }
+
+  const MAX = 3;
+  const shown = uids.slice(0, MAX);
+  const overflow = uids.length - shown.length;
+  const avatars = shown.map((uid) => {
+    const m = ui.getMember(uid) || {};
+    return Skeletons.UserProfile({
+      className: `${pfx}__assignee-button-avatar`,
+      id: uid,
+      firstname: m.firstname,
+      lastname: m.lastname,
+      auto_color: 1,
+      live_status: 0,
+    });
+  });
+  // Label: single → the member's name; multiple → "N assigned".
+  let label;
+  if (uids.length === 1) {
+    const m = ui.getMember(uids[0]);
+    label = m ? fullName(m) : "";
+  } else {
+    label = `${uids.length} ${LOCALE.ASSIGNEES || "Assignees"}`;
+  }
   return [
-    m
-      ? Skeletons.UserProfile({
-          className: `${pfx}__assignee-button-avatar`,
-          id: m.id || m.uid,
-          firstname: m.firstname,
-          lastname: m.lastname,
-          auto_color: 1,
-          live_status: 0,
-        })
-      : Skeletons.Note({
-          className: `${pfx}__assignee-button-placeholder`,
-          content: "?",
-        }),
+    Skeletons.Box.X({
+      className: `${pfx}__assignee-button-avatars`,
+      kids: avatars,
+    }),
     Skeletons.Note({
       className: `${pfx}__assignee-button-label`,
-      content: label,
+      content: overflow > 0 ? `${label} (+${overflow})` : label,
     }),
   ];
 }

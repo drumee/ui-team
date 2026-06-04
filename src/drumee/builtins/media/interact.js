@@ -745,6 +745,13 @@ class __media_interact extends media_core {
       case _a.properties:
         return this.triggerHandlers({ trigger: this, service });
 
+      case 'secure-share': {
+        const item = Wm.getWindowPreset(this);
+        item.kind = 'window_secure_share';
+        item.wm_unique_id = `window_secure_share-${item.nid}`;
+        return Wm.launch(item, { explicit: 1, singleton: 1 });
+      }
+
       case "share-qrcode":
         if (/^(dmz|share)$/i.test(this.mget(_a.area))) {
           this.viewerLink().then((url) => {
@@ -1101,10 +1108,16 @@ class __media_interact extends media_core {
         const crossHubDestinations = targetDestinations.filter(isCrossHub);
 
         const resolvePid = (dest) => {
+          // A subfolder destination already carries the exact target nid
+          // (resolved by the move dialog via show_node_by) — use it directly
+          // for both same-hub and cross-hub so the item lands in the chosen
+          // subfolder, not the recipient workspace root.
+          if (dest.isFolder && dest.nid) return Promise.resolve(dest.nid);
           if (!isCrossHub(dest)) return Promise.resolve(dest.nid);
+          // Workspace-root cross-hub: resolve the recipient hub's home nid.
           return this.fetchService(SERVICE.hub.get_attributes, { hub_id: dest.hub_id })
-            .then((attrs) => (attrs && (attrs.actual_home_id || attrs.home_id || attrs.nid)) || '0')
-            .catch(() => '0');
+            .then((attrs) => (attrs && (attrs.actual_home_id || attrs.home_id || attrs.nid)) || dest.nid || '0')
+            .catch(() => dest.nid || '0');
         };
 
         const moveToDestination = (dest) => resolvePid(dest).then((pid) => {
@@ -1143,7 +1156,10 @@ class __media_interact extends media_core {
         });
       };
 
-      Promise.all(items.map(moveItem)).catch((e) => this.warn("Move failed", e));
+      Promise.all(items.map(moveItem)).catch((e) => {
+        this.warn("Move failed", e);
+        if (typeof Butler !== "undefined" && Butler.say) Butler.say(LOCALE.MOVE_FAILED);
+      });
     }).catch((e) => {
       if (e.response !== _e.cancel && e.response !== _e.close) {
         this.warn("Move popup error", e);

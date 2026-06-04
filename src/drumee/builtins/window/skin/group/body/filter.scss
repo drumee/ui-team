@@ -48,3 +48,35 @@
     }
   }
 }
+
+@media (max-width: 650px) {
+  .window {
+    &__filter {
+      &__main {
+        grid-template-columns: minmax(150px, 1fr) 84px 72px;
+        min-width: 0;
+        overflow-x: auto;
+        width: 100%;
+      }
+
+      &__column {
+        height: 36px;
+        min-width: 0;
+        padding: 0 var(--spacer-2);
+        @include drumee.typo($size: 12px, $line: 36px, $color: var(--default-text-title));
+
+        &:nth-child(1),
+        &:nth-child(2),
+        &.type {
+          display: none;
+        }
+
+        &.name,
+        &.date,
+        &.size {
+          min-width: 0;
+        }
+      }
+    }
+  }
+}

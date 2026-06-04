@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
     inputs:
       target:
-        description: 'Deploy target environment'
+        description: "Deploy target environment"
         type: choice
         options: [UAT, PROD]
         default: UAT

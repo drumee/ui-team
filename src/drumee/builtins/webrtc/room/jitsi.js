@@ -27,6 +27,34 @@ class __webrtc_room extends __room {
     this.stopPresentation = this.stopPresentation.bind(this);
     this.loadRemotePresentation = this.loadRemotePresentation.bind(this);
     this.leaveRoom = this.leaveRoom.bind(this);
+    this.onDominantSpeaker = this.onDominantSpeaker.bind(this);
+  }
+
+  /**
+   * Jitsi DOMINANT_SPEAKER_CHANGED handler. Flips data-speaking on the tile
+   * of whoever is currently talking (and clears it on everyone else) so the
+   * skin can draw an active-speaker ring — like Google Meet. Remote tiles
+   * live in this.endpoints keyed by participant id; the local tile is the
+   * participants manager's "local-user" part.
+   */
+  onDominantSpeaker(id) {
+    const myId = this.room && this.room.myUserId && this.room.myUserId();
+    if (this.endpoints) {
+      for (const pid of Object.keys(this.endpoints)) {
+        const ep = this.endpoints[pid];
+        if (ep && !ep.isDestroyed() && ep.el)
+          ep.el.dataset.speaking = pid === id ? 1 : 0;
+      }
+    }
+    if (typeof this.getLocalParts === "function") {
+      this.getLocalParts()
+        .then((parts) => {
+          const local = parts && parts.local;
+          if (local && !local.isDestroyed() && local.el)
+            local.el.dataset.speaking = id === myId ? 1 : 0;
+        })
+        .catch(() => {});
+    }
   }
 
   /**
@@ -160,6 +188,10 @@ class __webrtc_room extends __room {
       JEVENTS.conference.ENDPOINT_STATS_RECEIVED,
       this.onStatsReceived
     );
+    this.room.on(
+      JEVENTS.conference.DOMINANT_SPEAKER_CHANGED,
+      this.onDominantSpeaker
+    );
 
     // Add tracks before join so they ride the initial Jingle offer.
     if (this.localTracks.audio) {
@@ -226,6 +258,10 @@ class __webrtc_room extends __room {
       this.room.off(
         JEVENTS.conference.ENDPOINT_STATS_RECEIVED,
         this.onStatsReceived
+      );
+      this.room.off(
+        JEVENTS.conference.DOMINANT_SPEAKER_CHANGED,
+        this.onDominantSpeaker
       );
     }
   }

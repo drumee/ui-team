@@ -44,17 +44,22 @@ class __window_folder extends mfsInteract {
     // stack popups on top of each other. Headless workspace pane is
     // excluded (it's full-area, not a sibling popup). Sibling count is
     // computed at mount time — already-open popups don't move.
-    const siblings = (window.Wm && typeof window.Wm.getItemsByKind === "function")
-      ? window.Wm.getItemsByKind("window_folder").filter(
-        (w) => w !== this && !w.isDestroyed() && !w.mget(_a.headless)
-      ).length
-      : 0;
+    const siblings =
+      window.Wm && typeof window.Wm.getItemsByKind === "function"
+        ? window.Wm.getItemsByKind("window_folder").filter(
+            (w) => w !== this && !w.isDestroyed() && !w.mget(_a.headless),
+          ).length
+        : 0;
     const cascadeStep = 30;
-    const maxSteps = Math.max(0, Math.floor((workspaceWidth - width - 48) / cascadeStep));
+    const maxSteps = Math.max(
+      0,
+      Math.floor((workspaceWidth - width - 48) / cascadeStep),
+    );
     const cascade = (siblings % (maxSteps + 1)) * cascadeStep;
 
     let left = Math.round((workspaceWidth - width) / 2) + cascade;
-    let top = Math.max(24, Math.round((workspaceHeight - height) / 2)) + cascade;
+    let top =
+      Math.max(24, Math.round((workspaceHeight - height) / 2)) + cascade;
     left = Math.min(left, Math.max(0, workspaceWidth - width - 24));
     top = Math.min(top, Math.max(24, workspaceHeight - height - 24));
 
@@ -66,6 +71,204 @@ class __window_folder extends mfsInteract {
       minWidth: 760,
       minHeight: 480,
     };
+  }
+
+  toggleZoom() {
+    const inFs = document.fullscreenElement === this.el;
+    // While the window is in browser fullscreen, the WM's resize handler
+    // has already overwritten this.style with viewport-sized values (via
+    // syncGeometry → $el.width()). A fresh snapshot here would cache that
+    // viewport size as the zoom-restore target. Fall back to _preFsBounds,
+    // which was captured before fullscreen entry.
+    const preFsSafe = inFs ? this._preFsBounds : null;
+
+    let target;
+    if (this._zoomed && this._preZoomBounds) {
+      target = this._preZoomBounds;
+      this._zoomed = false;
+      this._preZoomBounds = null;
+    } else {
+      this._preZoomBounds = preFsSafe || this._snapshotBounds();
+      const ws = this._workspaceRect();
+      target = { left: 0, top: 0, width: ws.width, height: ws.height };
+      this._zoomed = true;
+    }
+    // Defer the resize until after fullscreen actually exits (see helper).
+    this._applyBoundsAfterFs(target);
+  }
+
+  // Override the inherited utils.js minimize/wake. The inherited version
+  // captures bounds via $el.offset() (document-relative) and writes them
+  // as inline top/left (parent-relative), so when the window's offset
+  // parent is not at (0,0) the restored window lands off-screen — the
+  // list inside never gets a visible viewport and looks "stuck loading".
+  // Also, the original 1.5s TweenMax animations make the tab-click →
+  // restore round-trip feel laggy; a short opacity fade + bounds snap is
+  // enough.
+  minimize(cmd) {
+    if (this.mget(_a.minimize)) return;
+    this._minimizedBounds = this._snapshotBounds();
+    this.mset(_a.minimize, 1);
+    if (this.el) {
+      this.el.dataset.minimize = 1;
+      this.el.dataset.state = 0;
+    }
+    // Fire the event first so the tab appears in the header immediately.
+    if (window.Wm && Wm.$el) Wm.$el.trigger(_e.minimize, this);
+    this.$el.stop(true, false).animate(
+      { opacity: 0 },
+      {
+        duration: 150,
+        complete: () => {
+          if (this.isDestroyed && this.isDestroyed()) return;
+          this.$el.css({ display: "none", opacity: 1 });
+        },
+      },
+    );
+  }
+
+  wake(cmd, callback) {
+    if (!this.mget(_a.minimize)) return;
+    this.mset(_a.minimize, 0);
+    if (this.el) {
+      this.el.dataset.minimize = 0;
+      this.el.dataset.state = 1;
+    }
+    this.$el.css({ display: "" });
+    const b = this._minimizedBounds;
+    this._minimizedBounds = null;
+    if (b) {
+      this.size = { ...this.size, width: b.width, height: b.height };
+      this.style.set(b);
+      this.$el.css(b);
+      if (this.syncBounds) this.syncBounds(true);
+    }
+    this.$el.stop(true, false).css({ opacity: 0 }).animate(
+      { opacity: 1 },
+      {
+        duration: 150,
+        complete: () => {
+          if (this.isDestroyed && this.isDestroyed()) return;
+          if (typeof callback === "function") callback();
+        },
+      },
+    );
+    if (this.raise) this.raise();
+    if (window.Wm && Wm.$el) Wm.$el.trigger(_e.wake, this);
+  }
+
+  toggleFullscreen() {
+    if (document.fullscreenElement === this.el) {
+      document.exitFullscreen();
+      return;
+    }
+    this._preFsBounds = this._snapshotBounds();
+    // One-shot listener handles both menu "Exit Full Screen" and ESC.
+    const onChange = () => {
+      if (document.fullscreenElement === this.el) return;
+      document.removeEventListener("fullscreenchange", onChange);
+      const restore = this._preFsBounds;
+      this._preFsBounds = null;
+      if (restore) _.delay(() => this._applyBounds(restore), 50);
+    };
+    document.addEventListener("fullscreenchange", onChange);
+    const req = this.el.requestFullscreen && this.el.requestFullscreen();
+    if (req && req.catch) {
+      req.catch(() => document.removeEventListener("fullscreenchange", onChange));
+    }
+  }
+
+  tileToSide(side) {
+    const ws = this._workspaceRect();
+    const halfW = Math.floor(ws.width / 2);
+    const bounds = side === "right"
+      ? { left: halfW, top: 0, width: ws.width - halfW, height: ws.height }
+      : { left: 0, top: 0, width: halfW, height: ws.height };
+    this._zoomed = false;
+    this._preZoomBounds = null;
+    this._applyBoundsAfterFs(bounds);
+  }
+
+  reframeToDefault() {
+    const b = this._defaultBounds();
+    this._zoomed = false;
+    this._preZoomBounds = null;
+    this._applyBoundsAfterFs({ left: b.left, top: b.top, width: b.width, height: b.height });
+  }
+
+  _snapshotBounds() {
+    const m = this.style.toJSON() || {};
+    const el = this.el;
+    const pos = this.$el.position() || { left: 0, top: 0 };
+    const px = (v, fallback) => {
+      if (typeof v === "number" && Number.isFinite(v)) return Math.round(v);
+      const n = parseFloat(v);
+      return Number.isFinite(n) ? Math.round(n) : fallback;
+    };
+    return {
+      left: px(m.left, px(el.style.left, Math.round(pos.left))),
+      top: px(m.top, px(el.style.top, Math.round(pos.top))),
+      width: px(m.width, px(el.style.width, this.$el.outerWidth())),
+      height: px(m.height, px(el.style.height, this.$el.outerHeight())),
+    };
+  }
+
+  _workspaceRect() {
+    const el =
+      document.querySelector(".desk-module__wm-container") ||
+      document.querySelector(".desk-module__right-side");
+    const r = el ? el.getBoundingClientRect() : {};
+    return {
+      width: Math.round(r.width || window.innerWidth),
+      height: Math.round(r.height || window.innerHeight),
+    };
+  }
+
+  /**
+   * Apply bounds, but if this window is currently in browser fullscreen, exit
+   * first and defer the resize to the `fullscreenchange` event. Resizing while
+   * still fullscreen animates against the fullscreen overlay (the browser
+   * ignores inline geometry until exit), so the animation is invisible and the
+   * final geometry can be wrong. Mirrors the deferred pattern in
+   * toggleFullscreen().
+   */
+  _applyBoundsAfterFs(bounds) {
+    if (document.fullscreenElement === this.el) {
+      this._preFsBounds = null;
+      const onChange = () => {
+        if (document.fullscreenElement === this.el) return;
+        document.removeEventListener("fullscreenchange", onChange);
+        _.delay(() => this._applyBounds(bounds), 50);
+      };
+      document.addEventListener("fullscreenchange", onChange);
+      document.exitFullscreen();
+      return;
+    }
+    this._applyBounds(bounds);
+  }
+
+  _applyBounds(bounds) {
+    const ws = this._workspaceRect();
+    const minW = (this.size && this.size.minWidth) || 760;
+    const minH = (this.size && this.size.minHeight) || 480;
+    const width = Math.max(minW, Math.min(bounds.width, ws.width));
+    const height = Math.max(minH, Math.min(bounds.height, ws.height));
+    const next = {
+      left: Math.max(0, Math.min(bounds.left, Math.max(0, ws.width - width))),
+      top: Math.max(0, Math.min(bounds.top, Math.max(0, ws.height - height))),
+      width,
+      height,
+    };
+    this.size = { ...this.size, width: next.width, height: next.height };
+    this.style.set(next);
+    this.$el.stop(true, false).animate(next, {
+      duration: 220,
+      queue: false,
+      complete: () => {
+        this.$el.css(next);
+        if (this.syncBounds) this.syncBounds(true);
+      },
+    });
   }
 
   /**
@@ -123,8 +326,38 @@ class __window_folder extends mfsInteract {
     if (this.mget(_a.headless)) {
       this.listenTo(this.model, `change:${_a.state}`, this._syncWorkspaceFocus);
     }
+
+    // A workspace root's name (hub_name) can resolve after the title element
+    // has mounted; re-apply it whenever it changes.
+    this.listenTo(this.model, "change:hub_name", this._syncWindowTitle);
+
+    // Tell the desk to render a tab in the home header. `headless` folders
+    // ARE the workspace pane itself, not a popup, so they don't get a tab.
+    // Deferred so the desk's listener and the folder's $el are both ready.
+    if (!this.mget(_a.headless) && window.Wm && Wm.$el) {
+      _.defer(() => {
+        if (this.isDestroyed && this.isDestroyed()) return;
+        Wm.$el.trigger("folder:open", this);
+      });
+    }
   }
 
+  onBeforeDestroy(opt) {
+    if (!this.mget(_a.headless) && window.Wm && Wm.$el) {
+      Wm.$el.trigger("folder:close", this);
+    }
+    if (super.onBeforeDestroy) return super.onBeforeDestroy(opt);
+  }
+
+  // Apply filename — or hub_name for an empty-filename root — to the title.
+  // Uses the bound ref directly (NOT ensurePart): calling ensurePart for a part
+  // from within its own onPartReady replays onPartReady and loops forever.
+  _syncWindowTitle() {
+    const name = this.mget(_a.filename) || this.model.get("hub_name");
+    if (!name) return;
+    const t = this.__refWindowName || this.name;
+    if (t && _.isFunction(t.set)) t.set({ content: name });
+  }
 
   _syncWorkspaceFocus() {
     if (!this.mget(_a.headless)) return;
@@ -134,7 +367,6 @@ class __window_folder extends mfsInteract {
     window.Wm.onWorkspaceRaised(this);
   }
 
-
   buildContent(child) {
     this.__content = child;
     this.setupInteract();
@@ -142,9 +374,12 @@ class __window_folder extends mfsInteract {
     if (!this._raised) this.raise();
     if (this.media && this.media.wait) this.media.wait(0);
     // Honor the launch-time `activeTab` option (e.g. opened from the,
-    // sidebar live-meeting badge with activeTab: "meeting").
+    // sidebar live-meeting badge with activeTab: "meeting"). A meeting request
+    // now opens a standalone call window rather than an embedded folder tab.
     const initialTab = this.mget("activeTab");
-    if (initialTab && initialTab !== "files") {
+    if (initialTab === "meeting" || this.mget(_a.start_meeting)) {
+      this._launchMeetingStandalone();
+    } else if (initialTab && initialTab !== "files") {
       this.ensurePart("folder-view").then(() => this.showFolderTab(initialTab));
     }
     // "Get info" launches the window with this flag to pre-select settings.
@@ -152,7 +387,7 @@ class __window_folder extends mfsInteract {
       this.openSettingsPanel();
     }
     if (this.mget(_a.headless)) {
-      this.el.dataset.headless = "1"
+      this.el.dataset.headless = "1";
     }
   }
 
@@ -168,7 +403,7 @@ class __window_folder extends mfsInteract {
       this.$el.resizable(_a.option, "minWidth", bounds.minWidth);
       this.$el.resizable(_a.option, "minHeight", bounds.minHeight);
       this.$el.resizable(_a.option, "handles", this.handles || "all");
-    } catch (e) { }
+    } catch (e) {}
     this.syncBounds();
   }
 
@@ -331,6 +566,23 @@ class __window_folder extends mfsInteract {
       this.__folderView = child;
       return;
     }
+    if (pn === "folder-task-panel") {
+      this._taskPanel = child;
+      return;
+    }
+    if (pn === "task-filter-btn") {
+      this._taskFilterBtn = child;
+      // Reflect current tab + filter state on (re)mount of the button.
+      if (child && child.el) {
+        child.el.dataset.visible = this.activeTab === _a.task ? "1" : "0";
+        const active =
+          this._taskPanel &&
+          typeof this._taskPanel.isFilterActive === "function" &&
+          this._taskPanel.isFilterActive();
+        child.el.dataset.active = active ? "1" : "0";
+      }
+      return;
+    }
     if (pn === _a.list) {
       this.iconsList = child;
       if (this.getViewMode && this.getViewMode() !== _a.row) {
@@ -339,10 +591,18 @@ class __window_folder extends mfsInteract {
       return;
     }
     if (pn == "meeting-panel" && this.mget(_a.start_meeting)) {
-      this._launchMeetingInPanel()
+      this._launchMeetingInPanel();
       return;
     }
     if (super.onPartReady) super.onPartReady(child, pn);
+    if (pn === "ref-window-name") {
+      // core's handler clears the title; restore it from the model (an empty-
+      // filename workspace root takes its name from hub_name). Set `child`
+      // DIRECTLY — calling ensurePart for this part here would replay
+      // onPartReady and loop forever.
+      const name = this.mget(_a.filename) || this.model.get("hub_name");
+      if (name && _.isFunction(child.set)) child.set({ content: name });
+    }
   }
 
   onChildBubble(c) {
@@ -369,6 +629,15 @@ class __window_folder extends mfsInteract {
       ownpath: this.mget(_a.ownpath),
       pid: this.mget(_a.pid),
       privilege: this.mget(_a.privilege),
+      // Full fetch context — without it, mset() on restore keeps the deeper
+      // folder's nid / parent-mode / token and refetches the wrong (or empty)
+      // listing, notably in restricted shares.
+      actual_home_id: this.mget(_a.actual_home_id),
+      usePid: this.model.get("usePid"),
+      token: this.mget(_a.token),
+      vhost: this.mget(_a.vhost),
+      // Workspace name, so an empty-filename root can label its title/crumb.
+      hub_name: this.model.get("hub_name"),
     };
   }
 
@@ -391,9 +660,11 @@ class __window_folder extends mfsInteract {
     try {
       this.mset(state);
       if (this.__refWindowName) {
-        this.__refWindowName.set({ content: state.filename });
+        // Empty-filename root falls back to hub_name (avoids a blank title).
+        this.__refWindowName.set({ content: state.filename || state.hub_name || "" });
       }
       this.scopeChatToFolder(state.nid);
+      this.scopeTasksToFolder();
       this.loadContent();
       this.updateBreadcrumb({ ...state, event: _a.browse }, this);
     } finally {
@@ -404,7 +675,37 @@ class __window_folder extends mfsInteract {
 
   refreshBreadcrumbsUI(stack) {
     if (stack && _.isArray(stack)) {
+      // get_path returns the full root→current chain INCLUDING the current node.
+      // Convention: the current location is the title, only ancestors are
+      // crumbs. Drop the current node so the root isn't rendered as a crumb (nor
+      // duplicated when the first forward navigation re-pushes it). A
+      // hub/workspace ROOT window's active directory is its actual_home_id, not
+      // the model nid (mirrors desk/breadcrumb's hub normalization); without it
+      // the root entry isn't matched and renders as a crumb beside the title.
+      let curNid = this.mget(_a.nid);
+      if (this.mget(_a.filetype) === _a.hub && this.mget(_a.actual_home_id)) {
+        curNid = this.mget(_a.actual_home_id);
+      }
+      // Persist the workspace name — hub_name/name ONLY. get_path gives the root
+      // a "/" filename, which must not overwrite the name seeded in
+      // loadWorkspace (that would revert the title/root label back to "/").
+      const here = stack.find((s) => s && s.nid != null && s.nid == curNid);
+      const hereName = here && (here.hub_name || here.name);
+      if (hereName && hereName !== "/") this.mset({ hub_name: hereName });
+      // get_path ancestors carry identity only, not the hub-wide fetch context
+      // (token/usePid/actual_home_id/vhost) which is identical across the hub.
+      // Stamp the current window's values so a crumb click can reload a
+      // restricted/share listing. Spread `s` last so real get_path fields win.
+      const ctx = {
+        hub_id: this.mget(_a.hub_id),
+        token: this.mget(_a.token),
+        usePid: this.model.get("usePid"),
+        actual_home_id: this.mget(_a.actual_home_id),
+        vhost: this.mget(_a.vhost),
+      };
       this._navStack = stack
+        .filter((s) => s && s.nid != null && s.nid != curNid)
+        .map((s) => Object.assign({}, ctx, s));
     }
     const depth = this._navStack.length;
     this.ensurePart("folder-breadcrumb-path").then((box) => {
@@ -428,7 +729,9 @@ class __window_folder extends mfsInteract {
         crumbs.push(
           Skeletons.Note({
             className: `${cnFolder}__breadcrumb-crumb`,
-            content: state.filename || "/",
+            // Empty-filename root falls back to hub_name so it keeps its name
+            // (not "/") once you navigate into a child.
+            content: state.filename || state.hub_name || "/",
             service: "breadcrumb-jump",
             stackIndex: i,
             uiHandler: [this],
@@ -451,13 +754,16 @@ class __window_folder extends mfsInteract {
     this.setViewMode(mode);
     this.ensurePart(_a.content).then((content) => {
       if (!content || (content.isDestroyed && content.isDestroyed())) return;
+      // setState (Backbone.View) flips data-state on the toggle box; the CSS
+      // swaps the visible glyph. (The old splitBtn used changeState, which only
+      // exists on the svg widget — the box needs setState.)
       if (mode === _a.row) {
         content.feed(require("../skeleton/content/row")(this));
-        cmd?.changeState?.(1);
+        cmd?.setState?.(1);
         return;
       }
       content.feed([fileTypeFilterBar(this), gridFilesBrowser(this)]);
-      cmd?.changeState?.(0);
+      cmd?.setState?.(0);
     });
   }
 
@@ -551,7 +857,7 @@ class __window_folder extends mfsInteract {
           (cmd && cmd._args && (cmd._args.filename || cmd._args.name)) ||
           (cmd && cmd.mget && (cmd.mget(_a.filename) || cmd.mget(_a.name))) ||
           (cmd && _.isFunction(cmd.fullname) && cmd.fullname()) ||
-          '';
+          "";
         this.showFolderTab(_a.chat);
         return this.scopeChatToFile(fileNid, fileLabel);
       }
@@ -559,8 +865,24 @@ class __window_folder extends mfsInteract {
       case "tab-task":
         return this.showFolderTab(_a.task);
 
+      case "toggle-task-filter":
+        // Tab-bar filter button → open/close the task panel's member dropdown.
+        if (this._taskPanel && _.isFunction(this._taskPanel.toggleFilter)) {
+          this._taskPanel.toggleFilter();
+        }
+        return;
+
+      case "task-filter-state":
+        // The task panel reports whether a filter is applied; reflect it on
+        // the tab-bar button so the user sees the active state.
+        if (this._taskFilterBtn && this._taskFilterBtn.el) {
+          this._taskFilterBtn.el.dataset.active = args && args.active ? "1" : "0";
+        }
+        return;
+
       case "tab-meeting":
-        return this.showFolderTab("meeting");
+        // The meeting opens as its own window now, not an embedded folder tab.
+        return this._launchMeetingStandalone();
 
       case "toggle-files-layout":
         return this.toggleFilesLayout(cmd);
@@ -601,9 +923,45 @@ class __window_folder extends mfsInteract {
 
       case "close":
         if (this.mget(_a.headless)) {
-          Desk.onWorkspaceClosed();
+          // Multi-tab: only fall back to the "no workspace open" UI when
+          // this is the last open workspace tab. With other tabs still
+          // alive, the generic destroy handler in window/manager.js raises
+          // the next-topmost window and our _syncWorkspaceFocus rewires
+          // globals; resetting workspace-main would clear the sidebar
+          // highlight that the surviving tab is about to claim.
+          // Headless workspace windows live in headlessLayer, never
+          // windowsLayer (see wm/index.js _findWorkspaceWindow) — count
+          // surviving sibling tabs there.
+          let remaining = 0;
+          if (Wm && Wm.headlessLayer && Wm.headlessLayer.children) {
+            for (const c of Wm.headlessLayer.children.toArray()) {
+              if (!c || c === this || c.isDestroyed()) continue;
+              if (c.mget(_a.kind) !== "window_folder") continue;
+              if (!c.mget(_a.headless)) continue;
+              remaining++;
+              break;
+            }
+          }
+          if (!remaining) {
+            Desk.onWorkspaceClosed();
+          }
         }
         return super.onUiEvent(cmd, args);
+
+      case "window-zoom":
+        return this.toggleZoom();
+
+      case "window-reframe":
+        return this.reframeToDefault();
+
+      case "window-tile-left":
+        return this.tileToSide("left");
+
+      case "window-tile-right":
+        return this.tileToSide("right");
+
+      case "fullscreen":
+        return this.toggleFullscreen();
 
       default:
         super.onUiEvent(cmd, args);
@@ -723,24 +1081,60 @@ class __window_folder extends mfsInteract {
       });
   }
 
-  async _launchMeetingInPanel() {
+  // Kept for backward-compat with existing callers (start-meeting service,
+  // onPartReady start_meeting flag). The meeting no longer embeds in a folder
+  // panel — it opens as its own free-floating window. See _launchMeetingStandalone.
+  _launchMeetingInPanel() {
+    return this._launchMeetingStandalone();
+  }
+
+  /**
+   * Open the folder/workspace meeting as its own top-level window (Wm pool),
+   * centered and resizable — never embedded in the folder body. Mirrors the
+   * team window's startTeamCall. Singleton-guarded so a second click refocuses
+   * the running call instead of launching a duplicate.
+   */
+  _launchMeetingStandalone() {
     if (this._launchingMeeting) return;
     this._launchingMeeting = true;
     try {
+      const existing =
+        Wm.getItemByKind("window_meeting") || Wm.getItemByKind("window_connect");
+      if (existing && !existing.isDestroyed()) {
+        if (typeof existing.raise === "function") existing.raise();
+        Wm.alert(LOCALE.ALREADY_ANOTHER_CALL);
+        return;
+      }
       const switchcall = Wm.getItemByKind("window_switchcall");
       if (switchcall && !switchcall.isDestroyed()) switchcall.goodbye();
-      const panel = await this.ensurePart("meeting-panel");
-      panel.feed({
-        kind: "window_meeting",
-        className: `${this.fig.family}__meeting-room-widget`,
-        hub_id: this.mget(_a.hub_id),
-        filename: this.mget(_a.filename),
-        nid: this.mget(_a.actual_home_id) || this.mget(_a.nid),
-        trigger: this.mget(_a.media) || this,
-        media: this.mget(_a.media) || this,
-        service: "meeting",
-        uiHandler: [this],
-      });
+
+      const room_id = this.mget(_a.actual_home_id) || this.mget(_a.nid);
+      let width = Math.min(1200, window.innerWidth - 80);
+      let height = Math.min(720, window.innerHeight - 120);
+      if (width < 480) width = window.innerWidth;
+      if (height < 360) height = window.innerHeight;
+      const left = Math.max(0, (window.innerWidth - width) / 2);
+      const top = Math.max(40, (window.innerHeight - height) / 2);
+
+      return Wm.launch(
+        {
+          kind: "window_meeting",
+          hub_id: this.mget(_a.hub_id),
+          nid: room_id,
+          room_id,
+          filename: this.mget(_a.filename) || this.mget(_a.name),
+          area: this.mget(_a.area),
+          trigger: this.mget(_a.media) || this,
+          media: this.mget(_a.media) || this,
+          service: "meeting",
+          audio: 1,
+          video: 1,
+          standalone: 1,
+          wm_unique_id: `window_meeting-${this.mget(_a.hub_id)}`,
+          style: { top, left, width, height, minWidth: 480, minHeight: 420, margin: 0 },
+        },
+        { explicit: 1, singleton: 1 },
+      );
     } finally {
       this._launchingMeeting = false;
     }
@@ -760,6 +1154,36 @@ class __window_folder extends mfsInteract {
     });
   }
 
+  // Canonical task-scoping args for the *current* folder. A hub/workspace ROOT
+  // window's active dir is actual_home_id (hub-wide, so `actual_home_id || nid`
+  // would wrongly collapse every subfolder onto the root); a subfolder window
+  // uses its own nid. `isRoot` also lets the panel surface legacy (nid-less)
+  // tasks at the root only. Mirrors the breadcrumb's curNid resolution.
+  _taskScopeArgs() {
+    const isRoot =
+      this.mget(_a.filetype) === _a.hub && this.mget(_a.actual_home_id);
+    return {
+      scopeNid: isRoot ? this.mget(_a.actual_home_id) : this.mget(_a.nid),
+      isRoot: isRoot ? 1 : 0,
+      destNid: this.mget(_a.actual_home_id) || this.mget(_a.nid),
+    };
+  }
+
+  // Keep the embedded task panel scoped to the navigated folder, mirroring
+  // scopeChatToFolder. No-op until the Task tab has been opened once.
+  scopeTasksToFolder() {
+    if (!this._taskPanelMounted) return;
+    const apply = (p) => {
+      if (p && !(p.isDestroyed && p.isDestroyed()) && _.isFunction(p.setScope))
+        p.setScope(this._taskScopeArgs());
+    };
+    if (this._taskPanel) return apply(this._taskPanel);
+    return this.ensurePart("folder-task-panel").then((p) => {
+      this._taskPanel = p;
+      apply(p);
+    });
+  }
+
   // Keep folder-chat scope in sync with the navigated folder so the right-side
   // chat panel reflects the current folder's messages even on the Files tab.
   // Snapshot must run before super (which overwrites the model via
@@ -775,6 +1199,7 @@ class __window_folder extends mfsInteract {
     }
     super.updateTopbar(m);
     this.scopeChatToFolder(this.mget(_a.nid));
+    this.scopeTasksToFolder();
     this.refreshBreadcrumbsUI();
   }
 
@@ -785,6 +1210,10 @@ class __window_folder extends mfsInteract {
     this.$el
       .find(`.window-folder__tab-bar-item[data-tab='${tab}']`)
       .attr("data-state", 1);
+    // The member-filter button shares the tab line but only applies to Tasks.
+    if (this._taskFilterBtn && this._taskFilterBtn.el) {
+      this._taskFilterBtn.el.dataset.visible = tab === _a.task ? "1" : "0";
+    }
 
     const switchView = (view) => {
       if (this._meetingViewActive && tab !== "meeting") {
@@ -804,13 +1233,20 @@ class __window_folder extends mfsInteract {
         case _a.task:
           if (!this._taskPanelMounted) {
             this._taskPanelMounted = 1;
+            const { scopeNid, isRoot, destNid } = this._taskScopeArgs();
             return view.append({
               kind: "tasks_panel",
               hub_id: this.mget(_a.hub_id),
-              // Match the meeting/upload destination resolution: for a
-              // hub-level window the working nid is actual_home_id, not the
-              // hub_id itself. Without this, media.upload returns 403.
-              nid: this.mget(_a.actual_home_id) || this.mget(_a.nid),
+              // Upload/destination nid: for a hub-level window the working nid
+              // is actual_home_id, not the hub_id itself (else media.upload 403).
+              nid: destNid,
+              // Folder-scope identity for the task list/create.
+              scope_nid: scopeNid,
+              scope_is_root: isRoot,
+              // sys_pn + partHandler let the window grab a reference (for the
+              // tab-bar filter button) and re-scope the panel on navigation.
+              sys_pn: "folder-task-panel",
+              partHandler: this,
               uiHandler: [this],
             });
           }
@@ -977,7 +1413,7 @@ class __window_folder extends mfsInteract {
         if (target?.trash) return target.trash();
         if (target?.delete) return target.delete();
       })
-      .catch(() => { });
+      .catch(() => {});
   }
 
   getFolderSettingPart() {
@@ -1023,8 +1459,16 @@ class __window_folder extends mfsInteract {
   }
 
   // Menu pick from the invite-row role dropdown — set _folderInviteRole and
-  // re-render the panel so the trigger label refreshes. (No server call until
-  // the user actually clicks Send Invitation.)
+  // refresh just the trigger label. (No server call until the user actually
+  // clicks Send Invitation.)
+  //
+  // Re-feeding the whole panel here destroys and recreates the still-open
+  // menu_topic widget mid-click, before it finishes dispatching the option
+  // click. The rebuilt menu's trigger still opens, but its option click
+  // handlers never get wired, so the role could only be changed once. Update
+  // the label text in place instead: the live menu stays intact (it closes
+  // itself on pick, and the radio behaviour moves the selected highlight), so
+  // the role can be re-picked any number of times.
   setFolderInviteRole(cmd) {
     const privilegeAttr = cmd.el?.dataset?.privilege;
     const roleLabel = cmd.el?.dataset?.role_label;
@@ -1033,11 +1477,18 @@ class __window_folder extends mfsInteract {
       label: roleLabel || LOCALE.ROLE_ADMIN || "Admin",
       privilege: Number(privilegeAttr),
     };
-    if (this.isShowSettings && this.dialogWrapper) {
-      this.dialogWrapper.feed(
-        require("./skeleton/settings-action-panel")(this),
-      );
-    }
+    const label = this.dialogWrapper?.el?.querySelector(
+      ".window-folder__settings-action-invite-input-row " +
+        ".window-folder__settings-action-role-label .note-content",
+    );
+    if (label) label.textContent = this._folderInviteRole.label;
+
+    // The option fires its pick straight at this window via uiHandler, so the
+    // click never bubbles back to the menu_topic for it to auto-close. Close
+    // it explicitly (animated, widget kept alive) so the dropdown dismisses on
+    // every pick and stays reusable for the next change.
+    const menu = cmd.getParentByKind?.(KIND.menu.topic);
+    if (menu?.changeState) menu.changeState(0);
   }
 
   // Menu pick from a member-row role dropdown — confirm and persist the
@@ -1229,8 +1680,7 @@ class __window_folder extends mfsInteract {
     const key = String(memberId);
     return (
       list.find(
-        (r) =>
-          String(r.entity_id || r.drumate_id || r.id || "") === key,
+        (r) => String(r.entity_id || r.drumate_id || r.id || "") === key,
       ) || null
     );
   }
@@ -1313,7 +1763,9 @@ class __window_folder extends mfsInteract {
     const render = () => {
       if (this.isDestroyed && this.isDestroyed()) return;
       if (!this.isShowSettings || !this.dialogWrapper) return;
-      this.dialogWrapper.feed(require("./skeleton/settings-action-panel")(this));
+      this.dialogWrapper.feed(
+        require("./skeleton/settings-action-panel")(this),
+      );
       const c = this.dialogWrapper.children.last();
       if (!c) return;
       c.once(_e.destroy, () => {

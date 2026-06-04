@@ -112,3 +112,37 @@
     }
   }
 }
+
+@media (max-width: 650px) {
+  .window {
+    &__header {
+      padding: var(--spacer-2) var(--spacer-3);
+    }
+
+    &-topbar {
+      &__container {
+        height: auto;
+        min-height: 44px;
+        min-width: 0 !important;
+        width: 100%;
+
+        &[data-device="mobile"] {
+          height: auto;
+          min-width: 0;
+        }
+      }
+
+      &__title {
+        min-width: 0;
+
+        &[data-device="mobile"] {
+          padding: var(--spacer-3);
+        }
+
+        .name {
+          min-width: 0;
+        }
+      }
+    }
+  }
+}

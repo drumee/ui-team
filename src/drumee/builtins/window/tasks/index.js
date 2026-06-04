@@ -1,21 +1,20 @@
 const { uploadFile } = require("@drumee/ui-essentials");
 
 const COLUMNS = [
-  { key: "todo",        label: "STATUS_TODO",        color: "#AEAEB2" },
+  { key: "todo", label: "STATUS_TODO", color: "#AEAEB2" },
   { key: "in_progress", label: "STATUS_IN_PROGRESS", color: "#65D0EA" },
-  { key: "to_review",   label: "STATUS_TO_REVIEW",   color: "#E8A13B" },
-  { key: "complete",    label: "STATUS_COMPLETE",    color: "#54B684" },
+  { key: "to_review", label: "STATUS_TO_REVIEW", color: "#E8A13B" },
+  { key: "complete", label: "STATUS_COMPLETE", color: "#54B684" },
 ];
 
 const PRIORITIES = [
-  { key: "low",    label: "PRIORITY_LOW",    color: "#54B684" },
+  { key: "low", label: "PRIORITY_LOW", color: "#54B684" },
   { key: "medium", label: "PRIORITY_MEDIUM", color: "#65D0EA" },
-  { key: "high",   label: "PRIORITY_HIGH",   color: "#E8A13B" },
+  { key: "high", label: "PRIORITY_HIGH", color: "#E8A13B" },
   { key: "urgent", label: "PRIORITY_URGENT", color: "#d65f59" },
 ];
 
 class __tasks_panel extends LetcBox {
-
   initialize(opt = {}) {
     require("./skin");
     super.initialize(opt);
@@ -26,6 +25,12 @@ class __tasks_panel extends LetcBox {
     // Upload destination — must be a real folder/home node, not the hub_id.
     // The folder window passes `actual_home_id || nid` when launching us.
     this._destNid = this.mget(_a.actual_home_id) || this.mget(_a.nid) || 0;
+    // Folder scope for the task list/create. `scope_nid` is the canonical
+    // current-directory node (root window → actual_home_id, subfolder → own
+    // nid); `scope_is_root` makes the root view also show legacy nid-less
+    // tasks. Falls back to _destNid for safety if not supplied.
+    this._scopeNid = this.mget("scope_nid") || this._destNid || null;
+    this._scopeIsRoot = this.mget("scope_is_root") ? 1 : 0;
     this._tasks = [];
     this._members = [];
     this._labels = [];
@@ -35,6 +40,8 @@ class __tasks_panel extends LetcBox {
     this._detailDraft = null;
     this._attachments = {};
     this._pickerOpen = null;
+    // Member filter — empty = show all. Uids stored as strings.
+    this._filterUids = [];
     this._fileSearch = { query: "", results: [], scope: null };
     this._fileSearchTimer = null;
     this._fileSearchBlurTimer = null;
@@ -45,6 +52,55 @@ class __tasks_panel extends LetcBox {
     this.unbindEvent(_a.live);
     if (this._fileSearchTimer) clearTimeout(this._fileSearchTimer);
     if (this._fileSearchBlurTimer) clearTimeout(this._fileSearchBlurTimer);
+  }
+
+  // ── Host-window controls (filter button lives on the tab bar) ──
+  // Toggle the member-filter dropdown (rendered top-right of the board).
+  toggleFilter() {
+    this._pickerOpen = this._pickerOpen === "filter" ? null : "filter";
+    this._render();
+  }
+
+  isFilterActive() {
+    return (this._filterUids || []).length > 0;
+  }
+
+  // Let the host window reflect the active filter on its tab-bar button.
+  _notifyFilterState() {
+    if (typeof this.triggerHandlers === "function") {
+      this.triggerHandlers({
+        service: "task-filter-state",
+        active: this.isFilterActive() ? 1 : 0,
+      });
+    }
+  }
+
+  // Re-point the panel at a different folder when the host window navigates
+  // (breadcrumb / into a child). Mirrors the chat panel's setScopedFolderNid.
+  setScope({ scopeNid = null, isRoot = 0, destNid } = {}) {
+    const nextScope = scopeNid != null ? scopeNid : null;
+    const nextRoot = isRoot ? 1 : 0;
+    const nextDest = destNid != null ? destNid : this._destNid;
+    if (
+      this._scopeNid === nextScope &&
+      this._scopeIsRoot === nextRoot &&
+      this._destNid === nextDest
+    ) {
+      return;
+    }
+    this._scopeNid = nextScope;
+    this._scopeIsRoot = nextRoot;
+    this._destNid = nextDest;
+    // The create/detail popups and any pending file search belong to the
+    // folder we just left — close them so nothing commits into the new scope.
+    this._creating = false;
+    this._createDefaults = null;
+    this._detailId = null;
+    this._detailDraft = null;
+    this._pickerOpen = null;
+    if (typeof this._resetFileSearch === "function") this._resetFileSearch();
+    if (!this.el) return; // not mounted yet — onDomRefresh loads fresh
+    this._loadTasks().then(() => this._render());
   }
 
   async onDomRefresh() {
@@ -87,55 +143,156 @@ class __tasks_panel extends LetcBox {
       try {
         e.dataTransfer.setData("text/plain", tid);
         e.dataTransfer.effectAllowed = "move";
-      } catch (_) { /* ignore */ }
+      } catch (_) {
+        /* ignore */
+      }
     });
 
     root.addEventListener("dragend", (e) => {
       const card = findCard(e.target);
       if (card) card.classList.remove("is-dragging");
       this._dragTaskId = null;
-      root.querySelectorAll(".tasks-panel__column-body.is-drop-target")
-          .forEach((n) => n.classList.remove("is-drop-target"));
+      this._clearDropAffordance();
     });
 
     root.addEventListener("dragover", (e) => {
       const col = findColumn(e.target);
       if (!col) return;
       e.preventDefault();
-      try { e.dataTransfer.dropEffect = "move"; } catch (_) {}
-      root.querySelectorAll(".tasks-panel__column-body.is-drop-target")
-          .forEach((n) => { if (n !== col) n.classList.remove("is-drop-target"); });
+      try {
+        e.dataTransfer.dropEffect = "move";
+      } catch (_) {}
+      root
+        .querySelectorAll(".tasks-panel__column-body.is-drop-target")
+        .forEach((n) => {
+          if (n !== col) n.classList.remove("is-drop-target");
+        });
       col.classList.add("is-drop-target");
+      // Show a placeholder at the exact insertion point so the drop reads as
+      // precise (Jira/Trello-style) rather than "somewhere in this column".
+      const ph = this._ensurePlaceholder();
+      const after = this._dragAfterCard(col, e.clientY);
+      if (after) {
+        if (after.previousElementSibling !== ph) col.insertBefore(ph, after);
+      } else if (col.lastElementChild !== ph) {
+        col.appendChild(ph);
+      }
     });
 
     root.addEventListener("dragleave", (e) => {
       const col = findColumn(e.target);
-      if (col) col.classList.remove("is-drop-target");
+      // Only clear the highlight when the pointer actually leaves the column
+      // body (relatedTarget outside it) — child→child transitions also fire
+      // dragleave and would otherwise strobe the outline + placeholder.
+      if (col && !col.contains(e.relatedTarget)) {
+        col.classList.remove("is-drop-target");
+      }
     });
 
     root.addEventListener("drop", (e) => {
       const col = findColumn(e.target);
-      if (!col) return;
+      if (!col) {
+        this._clearDropAffordance();
+        return;
+      }
       e.preventDefault();
       const transferId = (() => {
-        try { return e.dataTransfer.getData("text/plain"); } catch (_) { return null; }
+        try {
+          return e.dataTransfer.getData("text/plain");
+        } catch (_) {
+          return null;
+        }
       })();
       const taskId = this._dragTaskId || transferId;
       const targetStatus = col.dataset.dropcol;
+      // Resolve the insertion point BEFORE tearing down the placeholder.
+      const afterEl = this._dragAfterCard(col, e.clientY);
       this._dragTaskId = null;
-      root.querySelectorAll(".tasks-panel__column-body.is-drop-target")
-          .forEach((n) => n.classList.remove("is-drop-target"));
+      this._clearDropAffordance();
       if (!taskId || !targetStatus) return;
-      this._moveTaskTo(taskId, targetStatus);
+      this._moveTaskTo(taskId, targetStatus, afterEl);
     });
   }
 
-  async _moveTaskTo(taskId, status) {
+  // Lazily-created insertion placeholder shared across columns.
+  _ensurePlaceholder() {
+    if (this._placeholder) return this._placeholder;
+    const ph = document.createElement("div");
+    ph.className = "tasks-panel__card-placeholder";
+    this._placeholder = ph;
+    return ph;
+  }
+
+  // The card the dragged item should be inserted *before*, based on pointer Y.
+  // null → append to the end of the column. Excludes the in-flight card and
+  // the placeholder itself so geometry stays stable mid-drag.
+  _dragAfterCard(colBody, y) {
+    const cards = Array.from(
+      colBody.querySelectorAll(".tasks-panel__task-card"),
+    ).filter((c) => !c.classList.contains("is-dragging"));
+    for (const c of cards) {
+      const r = c.getBoundingClientRect();
+      if (y < r.top + r.height / 2) return c;
+    }
+    return null;
+  }
+
+  _clearDropAffordance() {
+    if (!this.el) return;
+    this.el
+      .querySelectorAll(".tasks-panel__column-body.is-drop-target")
+      .forEach((n) => n.classList.remove("is-drop-target"));
+    if (this._placeholder && this._placeholder.parentNode) {
+      this._placeholder.parentNode.removeChild(this._placeholder);
+    }
+  }
+
+  async _moveTaskTo(taskId, status, afterEl) {
     const task = this._tasks.find((t) => t.id === taskId);
-    if (!task || task.status === status) return;
+    if (!task) return;
     const originalStatus = task.status;
-    task.status = status;
-    this._render();
+    const sameColumn = originalStatus === status;
+
+    const card =
+      this.el &&
+      this.el.querySelector(`.tasks-panel__task-card[data-tid="${taskId}"]`);
+    const targetBody =
+      this.el &&
+      this.el.querySelector(
+        `.tasks-panel__column-body[data-dropcol="${status}"]`,
+      );
+
+    // No-op: same column and dropped onto itself / its own slot.
+    if (sameColumn && (!afterEl || afterEl === card)) return;
+
+    // Fall back to a full render if we can't locate the DOM nodes (defensive).
+    if (!card || !targetBody) {
+      task.status = status;
+      this._render();
+    } else {
+      const sourceBody = card.closest(".tasks-panel__column-body");
+      card.classList.remove("is-dragging");
+      // FLIP: capture every card's position, perform the DOM move, then animate
+      // the deltas so the dragged card glides into place and siblings reflow
+      // smoothly — instead of the whole board snapping after a re-render.
+      this._animateMove(() => {
+        if (afterEl && afterEl.parentNode === targetBody) {
+          targetBody.insertBefore(card, afterEl);
+        } else {
+          targetBody.appendChild(card);
+        }
+        card.dataset.status = status;
+        task.status = status;
+      });
+      // Refresh counts + empty-state on both affected columns in place.
+      this._syncColumn(sourceBody);
+      if (targetBody !== sourceBody) this._syncColumn(targetBody);
+    }
+
+    // Reordering within the same column has no server-side rank to persist yet,
+    // so skip the round-trip; the visual order holds until the next reload.
+    if (sameColumn) return;
+
     try {
       const updated = await this.postService({
         service: SERVICE.task.update_status,
@@ -148,12 +305,85 @@ class __tasks_panel extends LetcBox {
       console.error("[tasks_panel] update_status (drag) failed:", err);
       task.status = originalStatus;
       await this._loadTasks();
+      this._render();
     }
-    this._render();
+  }
+
+  // FLIP helper: run `mutate` (a synchronous DOM change), then transition each
+  // card from its previous box to its new one. Cards with no delta are skipped.
+  _animateMove(mutate) {
+    const reduce =
+      typeof window !== "undefined" &&
+      window.matchMedia &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (reduce || typeof requestAnimationFrame !== "function") {
+      mutate();
+      return;
+    }
+    const cards = Array.from(
+      this.el.querySelectorAll(".tasks-panel__task-card"),
+    );
+    const first = new Map();
+    cards.forEach((c) => first.set(c, c.getBoundingClientRect()));
+
+    mutate();
+
+    this.el.querySelectorAll(".tasks-panel__task-card").forEach((c) => {
+      const f = first.get(c);
+      if (!f) return; // card wasn't present before the move
+      const l = c.getBoundingClientRect();
+      const dx = f.left - l.left;
+      const dy = f.top - l.top;
+      if (!dx && !dy) return;
+      if (Math.abs(dx) > 8) {
+        // Crossed columns: a translate FLIP would be clipped by the column's
+        // overflow (`overflow-y:auto` / `overflow:hidden`), so settle the card
+        // in place with a quick pop rather than a clipped horizontal slide.
+        // (Only the dragged card ever changes column; siblings move vertically.)
+        c.style.animation = "tasks-panel-pop-in 0.18s cubic-bezier(0.2, 0, 0, 1)";
+        const done = () => {
+          c.style.animation = "";
+          c.removeEventListener("animationend", done);
+        };
+        c.addEventListener("animationend", done);
+      } else {
+        c.style.transition = "none";
+        c.style.transform = `translate(${dx}px, ${dy}px)`;
+        requestAnimationFrame(() => {
+          c.style.transition = "transform 0.18s cubic-bezier(0.2, 0, 0, 1)";
+          c.style.transform = "";
+        });
+        const clear = () => {
+          c.style.transition = "";
+          c.style.transform = "";
+          c.removeEventListener("transitionend", clear);
+        };
+        c.addEventListener("transitionend", clear);
+      }
+    });
+  }
+
+  // Keep a column's count badge and empty-state hint in sync after a surgical
+  // card move (no full re-render). Mirrors what the skeleton renders initially.
+  _syncColumn(colBody) {
+    if (!colBody) return;
+    const count = colBody.querySelectorAll(".tasks-panel__task-card").length;
+    const countEl = colBody.querySelector(".tasks-panel__column-count-text");
+    if (countEl) countEl.textContent = String(count);
+    let empty = colBody.querySelector(".tasks-panel__column-empty");
+    if (count === 0 && !empty) {
+      empty = document.createElement("div");
+      empty.className = "tasks-panel__column-empty";
+      empty.textContent = LOCALE.DROP_TASKS_HERE || "";
+      colBody.appendChild(empty);
+    } else if (count > 0 && empty) {
+      empty.remove();
+    }
   }
 
   async onUiEvent(trigger, args = {}) {
-    let service = args.service || (trigger && trigger.get && trigger.get(_a.service));
+    let service =
+      args.service || (trigger && trigger.get && trigger.get(_a.service));
     // Drumee dispatches click on the deepest widget; if it has no service of
     // its own (e.g. a Note inside a card), walk up to find an ancestor that does.
     if (!service && trigger && trigger.parent) {
@@ -161,7 +391,11 @@ class __tasks_panel extends LetcBox {
       let depth = 0;
       while (p && depth < 8) {
         const s = p.mget && p.mget(_a.service);
-        if (s) { service = s; trigger = p; break; }
+        if (s) {
+          service = s;
+          trigger = p;
+          break;
+        }
         p = p.parent;
         depth += 1;
       }
@@ -178,7 +412,7 @@ class __tasks_panel extends LetcBox {
           description: "",
           priority: "medium",
           due_date: "",
-          assignee_uid: null,
+          assignees: [],
           labels: [],
           pending_files: [],
         };
@@ -203,8 +437,11 @@ class __tasks_panel extends LetcBox {
         if (this._createDefaults) {
           const next = trigger.mget("taskStatus");
           this._createDefaults.status = next;
-          this._updateStatusPills(".tasks-panel__create-modal",
-                                  ".tasks-panel__create-status-pill", next);
+          this._updateStatusPills(
+            ".tasks-panel__create-modal",
+            ".tasks-panel__create-status-pill",
+            next,
+          );
         }
         return;
 
@@ -218,10 +455,11 @@ class __tasks_panel extends LetcBox {
 
       case "create-assignee":
         if (this._createDefaults) {
-          const uid = trigger.mget("memberUid") || null;
-          this._createDefaults.assignee_uid = uid;
-          this._pickerOpen = null;
-          this._applyAssigneeChange("create-assignee", uid);
+          this._createDefaults.assignees = this._toggleAssignee(
+            this._createDefaults.assignees,
+            trigger.mget("memberUid"),
+          );
+          this._applyAssigneeChange("create-assignee", this._createDefaults.assignees);
         }
         return;
 
@@ -229,10 +467,13 @@ class __tasks_panel extends LetcBox {
         if (this._createDefaults) {
           const id = trigger.mget("labelId");
           const set = new Set(this._createDefaults.labels);
-          if (set.has(id)) set.delete(id); else set.add(id);
+          if (set.has(id)) set.delete(id);
+          else set.add(id);
           this._createDefaults.labels = Array.from(set);
-          this._updateLabelOptions(".tasks-panel__create-modal",
-                                   this._createDefaults.labels);
+          this._updateLabelOptions(
+            ".tasks-panel__create-modal",
+            this._createDefaults.labels,
+          );
         }
         return;
 
@@ -241,6 +482,16 @@ class __tasks_panel extends LetcBox {
         this._pickerOpen = this._pickerOpen === kind ? null : kind;
         this._applyPickerOpen(kind, this._pickerOpen === kind);
         return;
+      }
+
+      case "filter-member": {
+        // Empty uid ("All members") clears; any other uid multi-toggles. The
+        // dropdown stays open so several members can be picked in a row.
+        const uid = trigger.mget("memberUid");
+        if (!uid) this._filterUids = [];
+        else this._filterUids = this._toggleAssignee(this._filterUids, uid);
+        this._notifyFilterState();
+        return this._render();
       }
 
       case "remove-task":
@@ -255,8 +506,11 @@ class __tasks_panel extends LetcBox {
         if (this._detailDraft) {
           const next = trigger.mget("taskStatus");
           this._detailDraft.status = next;
-          this._updateStatusPills(".tasks-panel__detail-panel",
-                                  ".tasks-panel__detail-status-pill", next);
+          this._updateStatusPills(
+            ".tasks-panel__detail-panel",
+            ".tasks-panel__detail-status-pill",
+            next,
+          );
         }
         return;
 
@@ -270,10 +524,11 @@ class __tasks_panel extends LetcBox {
 
       case "set-assignee":
         if (this._detailDraft) {
-          const uid = trigger.mget("memberUid") || null;
-          this._detailDraft.assignee_uid = uid;
-          this._pickerOpen = null;
-          this._applyAssigneeChange("detail-assignee", uid);
+          this._detailDraft.assignees = this._toggleAssignee(
+            this._detailDraft.assignees,
+            trigger.mget("memberUid"),
+          );
+          this._applyAssigneeChange("detail-assignee", this._detailDraft.assignees);
         }
         return;
 
@@ -281,10 +536,13 @@ class __tasks_panel extends LetcBox {
         if (this._detailDraft) {
           const id = trigger.mget("labelId");
           const set = new Set(this._detailDraft.labels || []);
-          if (set.has(id)) set.delete(id); else set.add(id);
+          if (set.has(id)) set.delete(id);
+          else set.add(id);
           this._detailDraft.labels = Array.from(set);
-          this._updateLabelOptions(".tasks-panel__detail-panel",
-                                   this._detailDraft.labels);
+          this._updateLabelOptions(
+            ".tasks-panel__detail-panel",
+            this._detailDraft.labels,
+          );
         }
         return;
 
@@ -362,7 +620,8 @@ class __tasks_panel extends LetcBox {
       if (this._fileSearchBlurTimer) clearTimeout(this._fileSearchBlurTimer);
       this._fileSearchBlurTimer = setTimeout(() => {
         this._fileSearchBlurTimer = null;
-        const active = (typeof document !== "undefined") ? document.activeElement : null;
+        const active =
+          typeof document !== "undefined" ? document.activeElement : null;
         if (isSearchInput(active)) return;
         if (field.isConnected) field.dataset.searchFocused = "0";
       }, 200);
@@ -397,6 +656,8 @@ class __tasks_panel extends LetcBox {
       const rows = await this.fetchService({
         service: SERVICE.task.list,
         hub_id: this._hubId,
+        nid: this._scopeNid,
+        include_unscoped: this._scopeIsRoot,
       });
       this._tasks = (Array.isArray(rows) ? rows : []).map(this._normalizeTask);
     } catch (err) {
@@ -412,15 +673,35 @@ class __tasks_panel extends LetcBox {
     const has = (k) => Object.prototype.hasOwnProperty.call(row, k);
 
     if (has("label_ids")) {
-      result.label_ids = typeof row.label_ids === "string" && row.label_ids
-        ? row.label_ids.split(",").filter(Boolean)
-        : (Array.isArray(row.label_ids) ? row.label_ids : []);
+      result.label_ids =
+        typeof row.label_ids === "string" && row.label_ids
+          ? row.label_ids.split(",").filter(Boolean)
+          : Array.isArray(row.label_ids)
+            ? row.label_ids
+            : [];
+    }
+
+    // Multi-assignee: server returns a comma-separated string of uids.
+    if (has("assignee_uids")) {
+      result.assignee_uids =
+        typeof row.assignee_uids === "string" && row.assignee_uids
+          ? row.assignee_uids.split(",").filter(Boolean)
+          : Array.isArray(row.assignee_uids)
+            ? row.assignee_uids
+            : [];
+    } else if (has("assignee_uid")) {
+      // Legacy single-assignee row (e.g. older broadcast payloads).
+      result.assignee_uids = row.assignee_uid ? [row.assignee_uid] : [];
     }
 
     if (has("linked_files")) {
       let files = row.linked_files;
       if (typeof files === "string") {
-        try { files = JSON.parse(files); } catch (_) { files = []; }
+        try {
+          files = JSON.parse(files);
+        } catch (_) {
+          files = [];
+        }
       }
       result.linked_files = Array.isArray(files) ? files : [];
     }
@@ -430,7 +711,8 @@ class __tasks_panel extends LetcBox {
       let due = row.due_date;
       if (due) {
         if (due instanceof Date) due = due.toISOString().slice(0, 10);
-        else if (typeof due === "string" && due.length >= 10) due = due.slice(0, 10);
+        else if (typeof due === "string" && due.length >= 10)
+          due = due.slice(0, 10);
       } else {
         due = null;
       }
@@ -485,12 +767,12 @@ class __tasks_panel extends LetcBox {
     const root = this.el && this.el.querySelector(".tasks-panel__create-modal");
     if (!root) return;
     const draft = this._createDefaults;
-    const title = root.querySelector('input[name="title"]');
-    const desc  = root.querySelector('textarea[name="description"]');
-    const due   = root.querySelector('input[name="due_date"]');
-    if (title) draft.title       = title.value || "";
-    if (desc)  draft.description = desc.value  || "";
-    if (due)   draft.due_date    = due.value   || "";
+    const title = root.querySelector('[name="title"]');
+    const desc = root.querySelector('textarea[name="description"]');
+    const due = root.querySelector('input[name="due_date"]');
+    if (title) draft.title = title.value || "";
+    if (desc) draft.description = desc.value || "";
+    if (due) draft.due_date = due.value || "";
   }
 
   _captureDetailDraft() {
@@ -498,12 +780,12 @@ class __tasks_panel extends LetcBox {
     const root = this.el && this.el.querySelector(".tasks-panel__detail-panel");
     if (!root) return;
     const draft = this._detailDraft;
-    const title = root.querySelector('input[name="title"]');
-    const desc  = root.querySelector('textarea[name="description"]');
-    const due   = root.querySelector('input[name="due_date"]');
-    if (title) draft.title       = title.value || "";
-    if (desc)  draft.description = desc.value  || "";
-    if (due)   draft.due_date    = due.value   || "";
+    const title = root.querySelector('[name="title"]');
+    const desc = root.querySelector('textarea[name="description"]');
+    const due = root.querySelector('input[name="due_date"]');
+    if (title) draft.title = title.value || "";
+    if (desc) draft.description = desc.value || "";
+    if (due) draft.due_date = due.value || "";
   }
 
   // Push every keystroke straight into the active draft. The Entry widget
@@ -515,7 +797,8 @@ class __tasks_panel extends LetcBox {
     let value = args && args.value != null ? String(args.value) : null;
     let name = null;
     let scopeEl = null;
-    const active = (typeof document !== "undefined") ? document.activeElement : null;
+    const active =
+      typeof document !== "undefined" ? document.activeElement : null;
     if (active && active.getAttribute && this.el && this.el.contains(active)) {
       name = active.getAttribute("name");
       scopeEl = active;
@@ -531,7 +814,12 @@ class __tasks_panel extends LetcBox {
     if (value == null) value = "";
     const inCreate = this.el.querySelector(".tasks-panel__create-modal");
     const inDetail = this.el.querySelector(".tasks-panel__detail-panel");
-    if (this._creating && inCreate && inCreate.contains(scopeEl) && this._createDefaults) {
+    if (
+      this._creating &&
+      inCreate &&
+      inCreate.contains(scopeEl) &&
+      this._createDefaults
+    ) {
       this._createDefaults[name] = value;
     } else if (this._detailDraft && inDetail && inDetail.contains(scopeEl)) {
       this._detailDraft[name] = value;
@@ -550,18 +838,21 @@ class __tasks_panel extends LetcBox {
     this._setSubmitting(".tasks-panel__create-submit", true);
 
     const labels = Array.isArray(draft.labels) ? draft.labels.slice() : [];
-    const pendingFiles = Array.isArray(draft.pending_files) ? draft.pending_files.slice() : [];
+    const pendingFiles = Array.isArray(draft.pending_files)
+      ? draft.pending_files.slice()
+      : [];
 
     try {
       const raw = await this.postService({
         service: SERVICE.task.create,
         hub_id: this._hubId,
+        nid: this._scopeNid,
         title,
         description: description || null,
         status: draft.status || "todo",
         priority: draft.priority || "medium",
         due_date: dueRaw || null,
-        assignee_uid: draft.assignee_uid || null,
+        assignee_uids: Array.isArray(draft.assignees) ? draft.assignees : [],
       });
       const row = Array.isArray(raw) ? raw[0] : raw;
       if (row && row.id) {
@@ -595,7 +886,7 @@ class __tasks_panel extends LetcBox {
               hub_id: this._hubId,
               task_id: row.id,
               label_id: labelId,
-            }).catch(() => null)
+            }).catch(() => null),
           ),
           ...pendingFiles.map(linkPending),
         ]);
@@ -650,90 +941,123 @@ class __tasks_panel extends LetcBox {
     // task.update — covers title, description, priority, due_date.
     const upd = {};
     const draftTitle = String(draft.title || "").trim();
-    const taskTitle  = String(task.title  || "").trim();
+    const taskTitle = String(task.title || "").trim();
     if (draftTitle && draftTitle !== taskTitle) upd.title = draftTitle;
-    if ((draft.description || "") !== (task.description || "")) upd.description = draft.description || "";
-    if ((draft.priority || "medium") !== (task.priority || "medium")) upd.priority = draft.priority;
+    if ((draft.description || "") !== (task.description || ""))
+      upd.description = draft.description || "";
+    if ((draft.priority || "medium") !== (task.priority || "medium"))
+      upd.priority = draft.priority;
     const draftDue = (draft.due_date || "").trim();
-    const taskDue  = task.due_date || "";
+    const taskDue = task.due_date || "";
     const dueChanged = draftDue !== taskDue;
     if (Object.keys(upd).length || dueChanged) {
       // task_update SP overwrites due_date unconditionally — always send
       // the current value or another-field update would null the date.
       upd.due_date = draftDue || null;
-      calls.push(this.postService({
-        service: SERVICE.task.update,
-        hub_id: this._hubId,
-        id,
-        ...upd,
-      }).catch((err) => console.error("[tasks_panel] task.update failed:", err)));
+      calls.push(
+        this.postService({
+          service: SERVICE.task.update,
+          hub_id: this._hubId,
+          id,
+          ...upd,
+        }).catch((err) =>
+          console.error("[tasks_panel] task.update failed:", err),
+        ),
+      );
     }
 
     if ((draft.status || "todo") !== (task.status || "todo")) {
-      calls.push(this.postService({
-        service: SERVICE.task.update_status,
-        hub_id: this._hubId,
-        id,
-        status: draft.status,
-      }).catch((err) => console.error("[tasks_panel] task.update_status failed:", err)));
+      calls.push(
+        this.postService({
+          service: SERVICE.task.update_status,
+          hub_id: this._hubId,
+          id,
+          status: draft.status,
+        }).catch((err) =>
+          console.error("[tasks_panel] task.update_status failed:", err),
+        ),
+      );
     }
 
-    if ((draft.assignee_uid || null) !== (task.assignee_uid || null)) {
-      calls.push(this.postService({
-        service: SERVICE.task.update_assignee,
-        hub_id: this._hubId,
-        id,
-        assignee_uid: draft.assignee_uid || null,
-      }).catch((err) => console.error("[tasks_panel] task.update_assignee failed:", err)));
+    // Multi-assignee: send the full new set only when it differs (order-
+    // independent) from the task's current assignees.
+    const draftAssignees = Array.isArray(draft.assignees) ? draft.assignees : [];
+    const taskAssignees = Array.isArray(task.assignee_uids)
+      ? task.assignee_uids
+      : task.assignee_uid
+        ? [task.assignee_uid]
+        : [];
+    const sameAssignees =
+      draftAssignees.length === taskAssignees.length &&
+      [...draftAssignees].sort().join(",") === [...taskAssignees].sort().join(",");
+    if (!sameAssignees) {
+      calls.push(
+        this.postService({
+          service: SERVICE.task.update_assignee,
+          hub_id: this._hubId,
+          id,
+          assignee_uids: draftAssignees,
+        }).catch((err) =>
+          console.error("[tasks_panel] task.update_assignee failed:", err),
+        ),
+      );
     }
 
     const original = new Set(task.label_ids || []);
     const next = new Set(draft.labels || []);
     for (const lid of next) {
       if (!original.has(lid)) {
-        calls.push(this.postService({
-          service: SERVICE.task.link_label,
-          hub_id: this._hubId,
-          task_id: id,
-          label_id: lid,
-        }).catch(() => null));
+        calls.push(
+          this.postService({
+            service: SERVICE.task.link_label,
+            hub_id: this._hubId,
+            task_id: id,
+            label_id: lid,
+          }).catch(() => null),
+        );
       }
     }
     for (const lid of original) {
       if (!next.has(lid)) {
-        calls.push(this.postService({
-          service: SERVICE.task.unlink_label,
-          hub_id: this._hubId,
-          task_id: id,
-          label_id: lid,
-        }).catch(() => null));
+        calls.push(
+          this.postService({
+            service: SERVICE.task.unlink_label,
+            hub_id: this._hubId,
+            task_id: id,
+            label_id: lid,
+          }).catch(() => null),
+        );
       }
     }
 
     // Pending attachments — same flow as _commitTask: search-picked entries
     // already have nid; uploaded entries carry the File and need to land in
     // the folder body first.
-    const pendingFiles = Array.isArray(draft.pending_files) ? draft.pending_files.slice() : [];
+    const pendingFiles = Array.isArray(draft.pending_files)
+      ? draft.pending_files.slice()
+      : [];
     for (const pf of pendingFiles) {
-      calls.push((async () => {
-        let nid = pf.nid;
-        if (!nid && pf.file) {
-          try {
-            const result = await this._uploadPendingFile(pf);
-            nid = result.nid;
-          } catch (err) {
-            console.error("[tasks_panel] pending file upload failed:", err);
-            return;
+      calls.push(
+        (async () => {
+          let nid = pf.nid;
+          if (!nid && pf.file) {
+            try {
+              const result = await this._uploadPendingFile(pf);
+              nid = result.nid;
+            } catch (err) {
+              console.error("[tasks_panel] pending file upload failed:", err);
+              return;
+            }
           }
-        }
-        if (!nid) return;
-        await this.postService({
-          service: SERVICE.task.link_file,
-          hub_id: this._hubId,
-          task_id: id,
-          file_nid: nid,
-        }).catch(() => null);
-      })());
+          if (!nid) return;
+          await this.postService({
+            service: SERVICE.task.link_file,
+            hub_id: this._hubId,
+            task_id: id,
+            file_nid: nid,
+          }).catch(() => null);
+        })(),
+      );
     }
 
     if (calls.length) await Promise.all(calls);
@@ -753,18 +1077,24 @@ class __tasks_panel extends LetcBox {
     if (!id) return;
     const task = this._tasks.find((t) => t.id === id);
     this._detailId = id;
-    this._detailDraft = task ? {
-      title: task.title || "",
-      description: task.description || "",
-      due_date: task.due_date || "",
-      status: task.status || "todo",
-      priority: task.priority || "medium",
-      assignee_uid: task.assignee_uid || null,
-      labels: Array.isArray(task.label_ids) ? task.label_ids.slice() : [],
-      // Files picked but not yet uploaded/linked — _commitDetail processes
-      // these (upload missing nids, then link_file) on Update.
-      pending_files: [],
-    } : null;
+    this._detailDraft = task
+      ? {
+          title: task.title || "",
+          description: task.description || "",
+          due_date: task.due_date || "",
+          status: task.status || "todo",
+          priority: task.priority || "medium",
+          assignees: Array.isArray(task.assignee_uids)
+            ? task.assignee_uids.slice()
+            : task.assignee_uid
+              ? [task.assignee_uid]
+              : [],
+          labels: Array.isArray(task.label_ids) ? task.label_ids.slice() : [],
+          // Files picked but not yet uploaded/linked — _commitDetail processes
+          // these (upload missing nids, then link_file) on Update.
+          pending_files: [],
+        }
+      : null;
     // Re-fetch folder filenames so collision preview (a → a(1)) reflects
     // the folder's current state.
     this._folderFilenames = null;
@@ -870,15 +1200,15 @@ class __tasks_panel extends LetcBox {
       for (const n of this._folderFilenames) taken.add(n);
     }
     // Pending entries on whichever draft is active
-    for (const f of (this._createDefaults?.pending_files || [])) {
+    for (const f of this._createDefaults?.pending_files || []) {
       addName(f.filename, f.extension);
     }
-    for (const f of (this._detailDraft?.pending_files || [])) {
+    for (const f of this._detailDraft?.pending_files || []) {
       addName(f.filename, f.extension);
     }
     // Already-linked attachments on the open detail task
     if (this._detailId) {
-      for (const f of (this._attachments[this._detailId] || [])) {
+      for (const f of this._attachments[this._detailId] || []) {
         addName(f.filename, f.extension || f.ext);
       }
     }
@@ -899,7 +1229,9 @@ class __tasks_panel extends LetcBox {
     return new Promise((resolve, reject) => {
       this._pendingUploadScope = "_commit";
       const params = { hub_id: this._hubId, nid: this._destNid };
-      const fullName = pf.extension ? `${pf.filename}.${pf.extension}` : pf.filename;
+      const fullName = pf.extension
+        ? `${pf.filename}.${pf.extension}`
+        : pf.filename;
       if (fullName && fullName !== pf.file?.name) {
         params.filename = encodeURI(fullName);
       }
@@ -965,8 +1297,9 @@ class __tasks_panel extends LetcBox {
       task_id: taskId,
       file_nid: fileNid,
     });
-    this._attachments[taskId] = (this._attachments[taskId] || [])
-      .filter((f) => f.file_nid !== fileNid);
+    this._attachments[taskId] = (this._attachments[taskId] || []).filter(
+      (f) => f.file_nid !== fileNid,
+    );
     // Surgical update — full _render() would blow away any unsaved
     // title/description/etc. the user is currently editing.
     this._refreshAttachmentsList();
@@ -995,12 +1328,16 @@ class __tasks_panel extends LetcBox {
     const taskId = this._detailId;
     if (!taskId) return;
     const attachments = this._attachments[taskId] || [];
-    this.ensurePart("attachment-rows").then((rows) => {
-      if (!rows || rows.isDestroyed?.()) return;
-      const skel = require("./skeleton");
-      rows.feed(skel.buildAttachmentRowsContent(this, attachments, taskId));
-      if (rows.el) rows.el.dataset.empty = attachments.length ? "0" : "1";
-    }).catch(() => { /* part not mounted yet */ });
+    this.ensurePart("attachment-rows")
+      .then((rows) => {
+        if (!rows || rows.isDestroyed?.()) return;
+        const skel = require("./skeleton");
+        rows.feed(skel.buildAttachmentRowsContent(this, attachments, taskId));
+        if (rows.el) rows.el.dataset.empty = attachments.length ? "0" : "1";
+      })
+      .catch(() => {
+        /* part not mounted yet */
+      });
   }
 
   // ── File picker (search-and-link) ─────────────────────────────
@@ -1019,7 +1356,8 @@ class __tasks_panel extends LetcBox {
   _scheduleFileSearch(trigger) {
     const inputEl = trigger?.el?.querySelector("input");
     const query = String(inputEl?.value || "").trim();
-    const scope = trigger.mget("searchScope") || (this._creating ? "create" : "detail");
+    const scope =
+      trigger.mget("searchScope") || (this._creating ? "create" : "detail");
     this._fileSearch.query = query;
     this._fileSearch.scope = scope;
 
@@ -1059,31 +1397,47 @@ class __tasks_panel extends LetcBox {
     const draft = scope === "create" ? this._createDefaults : this._detailDraft;
     const pendingFiles = (draft && draft.pending_files) || [];
     const partName = `file-pending-list-${scope}`;
-    this.ensurePart(partName).then((list) => {
-      if (!list || list.isDestroyed?.()) return;
-      const skel = require("./skeleton");
-      list.feed(skel.buildPendingListContent(this, pendingFiles));
-      if (list.el) list.el.dataset.empty = pendingFiles.length ? "0" : "1";
-    }).catch(() => { /* part not mounted yet */ });
+    this.ensurePart(partName)
+      .then((list) => {
+        if (!list || list.isDestroyed?.()) return;
+        const skel = require("./skeleton");
+        list.feed(skel.buildPendingListContent(this, pendingFiles));
+        if (list.el) list.el.dataset.empty = pendingFiles.length ? "0" : "1";
+      })
+      .catch(() => {
+        /* part not mounted yet */
+      });
   }
 
   _refreshFileSearchDropdown(scope) {
     if (!scope) return;
     const partName = `file-search-dropdown-${scope}`;
-    this.ensurePart(partName).then((dropdown) => {
-      if (!dropdown || dropdown.isDestroyed?.()) return;
-      const ctx = scope === "create"
-        ? { pendingFiles: (this._createDefaults && this._createDefaults.pending_files) || [] }
-        : {
-            existingFiles: (this._detailId && this._attachments[this._detailId]) || [],
-            // Detail also has a pending list now — mark those linked too.
-            pendingFiles: (this._detailDraft && this._detailDraft.pending_files) || [],
-          };
-      const skel = require("./skeleton");
-      const content = skel.buildFileSearchDropdownContent(this, scope, ctx);
-      dropdown.feed(content);
-      if (dropdown.el) dropdown.el.dataset.empty = content.length ? "0" : "1";
-    }).catch(() => { /* part not mounted yet */ });
+    this.ensurePart(partName)
+      .then((dropdown) => {
+        if (!dropdown || dropdown.isDestroyed?.()) return;
+        const ctx =
+          scope === "create"
+            ? {
+                pendingFiles:
+                  (this._createDefaults &&
+                    this._createDefaults.pending_files) ||
+                  [],
+              }
+            : {
+                existingFiles:
+                  (this._detailId && this._attachments[this._detailId]) || [],
+                // Detail also has a pending list now — mark those linked too.
+                pendingFiles:
+                  (this._detailDraft && this._detailDraft.pending_files) || [],
+              };
+        const skel = require("./skeleton");
+        const content = skel.buildFileSearchDropdownContent(this, scope, ctx);
+        dropdown.feed(content);
+        if (dropdown.el) dropdown.el.dataset.empty = content.length ? "0" : "1";
+      })
+      .catch(() => {
+        /* part not mounted yet */
+      });
   }
 
   async _linkSearchResult(trigger) {
@@ -1099,7 +1453,7 @@ class __tasks_panel extends LetcBox {
     if (!draft) return;
 
     const set = new Map(
-      (draft.pending_files || []).map((f) => [f.nid || f.localKey, f])
+      (draft.pending_files || []).map((f) => [f.nid || f.localKey, f]),
     );
     if (!set.has(nid)) {
       set.set(nid, { nid, filename, extension: ext });
@@ -1108,7 +1462,9 @@ class __tasks_panel extends LetcBox {
     // Close the suggestion dropdown after a pick. We no longer full-render,
     // so clear the search input value in the DOM directly.
     this._resetFileSearch();
-    const inputEl = this.el?.querySelector(`input[name="file-search-${scope}"]`);
+    const inputEl = this.el?.querySelector(
+      `input[name="file-search-${scope}"]`,
+    );
     if (inputEl) inputEl.value = "";
     this._refreshPendingList(scope);
     this._refreshFileSearchDropdown(scope);
@@ -1125,10 +1481,12 @@ class __tasks_panel extends LetcBox {
     // Same row template renders in both scopes; filter both drafts and let
     // the surgical refresh skip whichever isn't mounted.
     if (this._createDefaults?.pending_files) {
-      this._createDefaults.pending_files = this._createDefaults.pending_files.filter(keep);
+      this._createDefaults.pending_files =
+        this._createDefaults.pending_files.filter(keep);
     }
     if (this._detailDraft?.pending_files) {
-      this._detailDraft.pending_files = this._detailDraft.pending_files.filter(keep);
+      this._detailDraft.pending_files =
+        this._detailDraft.pending_files.filter(keep);
     }
     this._refreshPendingList("create");
     this._refreshPendingList("detail");
@@ -1143,7 +1501,9 @@ class __tasks_panel extends LetcBox {
     if (!root) return;
     const cols = this.getColumns();
     const colorByKey = {};
-    cols.forEach((c) => { colorByKey[c.key] = c.color; });
+    cols.forEach((c) => {
+      colorByKey[c.key] = c.color;
+    });
     root.querySelectorAll(pillSel).forEach((pill) => {
       const status = pill.dataset.status;
       const active = status === newStatus;
@@ -1164,7 +1524,9 @@ class __tasks_panel extends LetcBox {
     if (!root) return;
     const pris = this.getPriorities();
     const colorByKey = {};
-    pris.forEach((p) => { colorByKey[p.key] = p.color; });
+    pris.forEach((p) => {
+      colorByKey[p.key] = p.color;
+    });
     root.querySelectorAll(".tasks-panel__priority-pill").forEach((pill) => {
       const pri = pill.dataset.priority;
       const active = pri === newPriority;
@@ -1185,7 +1547,9 @@ class __tasks_panel extends LetcBox {
     if (!root) return;
     const labels = this.getLabels();
     const colorById = {};
-    labels.forEach((l) => { colorById[l.id] = l.color; });
+    labels.forEach((l) => {
+      colorById[l.id] = l.color;
+    });
     const selectedSet = new Set((selectedLabelIds || []).map(String));
     root.querySelectorAll(".tasks-panel__label-option").forEach((opt) => {
       const id = opt.dataset.labelId;
@@ -1204,21 +1568,46 @@ class __tasks_panel extends LetcBox {
     });
   }
 
-  _applyAssigneeChange(kind, uid) {
+  // Toggle a uid in/out of an assignee array (multi-select). An empty uid is
+  // the "Unassigned" row → clears the whole set.
+  _toggleAssignee(current, uid) {
+    const list = Array.isArray(current) ? current.slice() : [];
+    if (!uid) return [];
+    const i = list.indexOf(uid);
+    if (i >= 0) list.splice(i, 1);
+    else list.push(uid);
+    return list;
+  }
+
+  // Reflect the current assignee set in the picker rows + button, in place.
+  // The picker stays OPEN so the user can pick several members in a row.
+  _applyAssigneeChange(kind, assignees) {
     if (!this.el) return;
-    this._setPickerOpenInDom(kind, false);
+    const set = new Set((assignees || []).map(String));
     const picker = this._findPickerEl(kind);
     if (picker) {
-      const target = String(uid || "");
       picker.querySelectorAll(".tasks-panel__member-row").forEach((row) => {
-        row.dataset.active = row.getAttribute("data-member-uid") === target ? "1" : "0";
+        const uid = row.getAttribute("data-member-uid") || "";
+        // The "Unassigned" row (uid === "") is active only when the set is empty.
+        row.dataset.active = uid
+          ? set.has(uid)
+            ? "1"
+            : "0"
+          : set.size
+            ? "0"
+            : "1";
       });
     }
-    this.ensurePart(`${kind}-button`).then((btn) => {
-      if (!btn || btn.isDestroyed?.()) return;
-      btn.feed(require("./skeleton").buildAssigneeButtonContent(this, uid));
-      if (btn.el) btn.el.dataset.open = "0";
-    }).catch(() => { /* not mounted yet */ });
+    this.ensurePart(`${kind}-button`)
+      .then((btn) => {
+        if (!btn || btn.isDestroyed?.()) return;
+        btn.feed(
+          require("./skeleton").buildAssigneeButtonContent(this, assignees),
+        );
+      })
+      .catch(() => {
+        /* not mounted yet */
+      });
   }
 
   _applyPickerOpen(kind, isOpen) {
@@ -1227,7 +1616,9 @@ class __tasks_panel extends LetcBox {
   }
 
   _setPickerOpenInDom(kind, isOpen) {
-    const btn = this.el.querySelector(`.tasks-panel__assignee-button[data-picker-kind="${kind}"]`);
+    const btn = this.el.querySelector(
+      `.tasks-panel__assignee-button[data-picker-kind="${kind}"]`,
+    );
     if (btn) btn.dataset.open = isOpen ? "1" : "0";
     const picker = this._findPickerEl(kind);
     if (picker) picker.dataset.open = isOpen ? "1" : "0";
@@ -1235,7 +1626,9 @@ class __tasks_panel extends LetcBox {
 
   _findPickerEl(kind) {
     if (!this.el || !kind) return null;
-    return this.el.querySelector(`.tasks-panel__member-picker[data-picker-kind="${kind}"]`);
+    return this.el.querySelector(
+      `.tasks-panel__member-picker[data-picker-kind="${kind}"]`,
+    );
   }
 
   _prepopulateInputs() {
@@ -1246,13 +1639,19 @@ class __tasks_panel extends LetcBox {
     };
     if (this._creating && this._createDefaults) {
       const d = this._createDefaults;
-      setVal('.tasks-panel__create-modal input[name="title"]', d.title);
-      setVal('.tasks-panel__create-modal textarea[name="description"]', d.description);
+      setVal('.tasks-panel__create-modal [name="title"]', d.title);
+      setVal(
+        '.tasks-panel__create-modal textarea[name="description"]',
+        d.description,
+      );
     }
     if (this._detailDraft) {
       const d = this._detailDraft;
-      setVal('.tasks-panel__detail-panel input[name="title"]', d.title);
-      setVal('.tasks-panel__detail-panel textarea[name="description"]', d.description);
+      setVal('.tasks-panel__detail-panel [name="title"]', d.title);
+      setVal(
+        '.tasks-panel__detail-panel textarea[name="description"]',
+        d.description,
+      );
     }
   }
 
@@ -1273,17 +1672,22 @@ class __tasks_panel extends LetcBox {
     let cursorPos = null;
     let cursorEnd = null;
     let scopeSel = "";
-    const active = (typeof document !== "undefined") ? document.activeElement : null;
+    const active =
+      typeof document !== "undefined" ? document.activeElement : null;
     if (active && this.el && this.el.contains(active) && active.getAttribute) {
       focusName = active.getAttribute("name");
       const inCreate = this.el.querySelector(".tasks-panel__create-modal");
       const inDetail = this.el.querySelector(".tasks-panel__detail-panel");
-      if (inCreate && inCreate.contains(active)) scopeSel = ".tasks-panel__create-modal ";
-      else if (inDetail && inDetail.contains(active)) scopeSel = ".tasks-panel__detail-panel ";
+      if (inCreate && inCreate.contains(active))
+        scopeSel = ".tasks-panel__create-modal ";
+      else if (inDetail && inDetail.contains(active))
+        scopeSel = ".tasks-panel__detail-panel ";
       try {
         cursorPos = active.selectionStart;
         cursorEnd = active.selectionEnd;
-      } catch (_) { /* date / number inputs throw here */ }
+      } catch (_) {
+        /* date / number inputs throw here */
+      }
     }
 
     this.feed(require("./skeleton")(this));
@@ -1302,37 +1706,80 @@ class __tasks_panel extends LetcBox {
         if (!next || typeof next.focus !== "function") return;
         next.focus();
         if (cursorPos != null && typeof next.setSelectionRange === "function") {
-          try { next.setSelectionRange(cursorPos, cursorEnd != null ? cursorEnd : cursorPos); } catch (_) {}
+          try {
+            next.setSelectionRange(
+              cursorPos,
+              cursorEnd != null ? cursorEnd : cursorPos,
+            );
+          } catch (_) {}
         }
       });
     }
   }
 
   // ── Skeleton accessors ─────────────────────────────────────────
-  getColumns() { return COLUMNS; }
-  getPriorities() { return PRIORITIES; }
-  getMembers() { return this._members; }
-  getLabels() { return this._labels; }
-  getLabel(id) { return this._labels.find((l) => l.id === id) || null; }
-  getMember(uid) { return this._members.find((m) => m.id === uid || m.uid === uid) || null; }
+  getColumns() {
+    return COLUMNS;
+  }
+  getPriorities() {
+    return PRIORITIES;
+  }
+  getMembers() {
+    return this._members;
+  }
+  getLabels() {
+    return this._labels;
+  }
+  getLabel(id) {
+    return this._labels.find((l) => l.id === id) || null;
+  }
+  getMember(uid) {
+    return this._members.find((m) => m.id === uid || m.uid === uid) || null;
+  }
+
+  getFilterUids() {
+    return this._filterUids;
+  }
 
   getState() {
+    const filter = this._filterUids || [];
+    const matchesFilter = (t) => {
+      if (!filter.length) return true;
+      const uids = Array.isArray(t.assignee_uids)
+        ? t.assignee_uids.map(String)
+        : t.assignee_uid
+          ? [String(t.assignee_uid)]
+          : [];
+      return uids.some((u) => filter.includes(u));
+    };
     return COLUMNS.reduce((acc, c) => {
-      acc[c.key] = this._tasks.filter((t) => t.status === c.key);
+      acc[c.key] = this._tasks.filter(
+        (t) => t.status === c.key && matchesFilter(t),
+      );
       return acc;
     }, {});
   }
 
-  isCreating() { return this._creating; }
-  getCreateDraft() { return this._createDefaults || null; }
-  getPickerOpen() { return this._pickerOpen; }
-  getFileSearch() { return this._fileSearch; }
+  isCreating() {
+    return this._creating;
+  }
+  getCreateDraft() {
+    return this._createDefaults || null;
+  }
+  getPickerOpen() {
+    return this._pickerOpen;
+  }
+  getFileSearch() {
+    return this._fileSearch;
+  }
 
   getDetailTask() {
     if (!this._detailId) return null;
     return this._tasks.find((t) => t.id === this._detailId) || null;
   }
-  getDetailDraft() { return this._detailDraft; }
+  getDetailDraft() {
+    return this._detailDraft;
+  }
   getDetailAttachments() {
     return (this._detailId && this._attachments[this._detailId]) || [];
   }

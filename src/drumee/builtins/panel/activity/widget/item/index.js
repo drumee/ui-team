@@ -122,9 +122,12 @@ class __activity_item extends LetcBox {
    * 
    */
   onDomRefresh() {
-    this.once(_e.destroy, (e) => {
-      this.triggerHandlers({ service: 'close-activity-panel' })
-    })
+    // NOTE: previously this registered `once(destroy → close-activity-panel)`
+    // to dismiss the panel after opening a notification. But items are also
+    // destroyed by list.restart() (e.g. switching the All/Mentions/Shares
+    // filter) and by dismiss/trash — so any of those would wrongly close the
+    // whole panel (repro: Shares → All activity closed it). The panel now
+    // closes only via the explicit close button / sidebar toggle.
     this.feed(require('./skeleton')(this));
   }
 

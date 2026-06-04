@@ -49,7 +49,9 @@ html {
     width: 100%;
     height: 100%;
     z-index: 10010;
-    background-color: rgba(0, 0, 0, 0.45);
+    // Theme-aware scrim (light: rgba(0,0,0,.4) / dark: rgba(20,17,35,.4))
+    // so the backdrop reads correctly in both modes, not just dark.
+    background-color: var(--overlay-bg);
     opacity: 0;
     pointer-events: none;
     transition: opacity 0.2s ease;
@@ -69,6 +71,15 @@ html {
     &[data-state="open"] {
       opacity: 1;
       pointer-events: auto;
+    }
+
+    // Mobile: frost the desk body behind the open drawer. The mobile
+    // topbar and the drawer both sit at z-index 99999 (above this 10010
+    // overlay), so they paint on top and stay crisp — only the body
+    // content behind the overlay is blurred, never the topbar.
+    &[data-device="mobile"][data-state="open"] {
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
     }
 
     // Desktop never opens this backdrop; defend against stray writes.
@@ -112,11 +123,17 @@ html {
   }
 
   // Left panel-container hosts trash / activity (notifications) /
-  // settings slide-outs that anchor to the desktop sidebar column.
-  // On mobile that column doesn't exist (sidebar is a drawer overlay),
-  // so the panels end up floating against the viewport edge — hide.
+  // settings slide-outs that anchor to the desktop sidebar column. On
+  // mobile that column doesn't exist (sidebar is a drawer overlay), so
+  // Trash & Settings — not yet laid out for mobile — stay hidden. The
+  // notifications panel renders as a centered card (position:fixed, see
+  // panel-activity skin); the container itself must stay displayed so
+  // that fixed child can paint, so we hide only the two unported panels.
   &__panel-container.left[data-device="mobile"] {
-    display: none;
+    [data-partname="trash-panel"],
+    [data-partname="settings-panel"] {
+      display: none;
+    }
   }
 
   &__wm-container {
@@ -137,7 +154,7 @@ html {
     isolation: isolate;
     pointer-events: none;
 
-    >* {
+    > * {
       pointer-events: auto;
     }
 
@@ -167,8 +184,116 @@ html {
 
 // Lift window_manager above the settings/apps slot (z 1500–20001) while
 // its modal is open; otherwise the modal stays trapped behind Settings/Apps.
-.desk-module__wm-container:has(.window-manager__wrapper-modal[data-state="open"]) {
+.desk-module__wm-container:has(
+  .window-manager__wrapper-modal[data-state="open"]
+) {
   .window-manager__ui {
     z-index: 30000 !important;
+  }
+}
+
+@media (max-width: 650px) {
+  html,
+  body {
+    height: 100%;
+    width: 100%;
+    overflow: hidden;
+  }
+
+  .desk-module {
+    &__main {
+      height: 100vh;
+      height: 100dvh;
+      max-height: 100vh;
+      max-height: 100dvh;
+      overflow: hidden;
+    }
+
+    // Mobile-topbar sits above __body inside __main (column flex). With
+    // both elements taking 100vh, body overflowed by the topbar height
+    // (~48px) and the last row of workspace cards got clipped at the
+    // viewport bottom. Let flex distribute the remaining height instead
+    // of hard-coding 100vh.
+    &__body {
+      flex: 1 1 auto;
+      min-height: 0;
+      min-width: 0;
+      width: 100%;
+      overflow: hidden;
+    }
+
+    &__right-side {
+      flex: 1 1 auto;
+      min-height: 0;
+      min-width: 0;
+      width: 100%;
+    }
+
+    &__wm-container {
+      flex: 1 1 auto;
+      min-height: 0;
+      min-width: 0;
+      overflow: hidden;
+      width: 100%;
+    }
+
+    &__panel-container {
+      inset: 0 auto 0 0;
+      max-width: 100vw;
+      pointer-events: none;
+      position: absolute;
+      width: 0;
+
+      &.right {
+        left: auto;
+        right: 0;
+      }
+    }
+
+    &__panel-inner,
+    &__panel-container > * {
+      max-width: 100vw;
+      pointer-events: auto;
+    }
+
+    &__settings-main-slot {
+      max-width: 100vw;
+      overflow: hidden;
+    }
+  }
+}
+
+// Tablet & mobile (≤ 1024px): the right slide-out container (chat-p2p
+// inbox) overlays the workspace (__right-side) only — not the 231px
+// desktop sidebar column. Giving the container a real width/height lets
+// chat-p2p fill it with position:absolute instead of a 100vw fixed panel
+// that would otherwise cover the sidebar at tablet widths. Placed after
+// the 650px block so it wins where the two ranges overlap.
+@media (max-width: 1024px) {
+  .desk-module {
+    // Containing block for the absolutely-positioned right container —
+    // its box equals __right-side once the 0-width left container and
+    // the sidebar offset are accounted for.
+    &__body {
+      position: relative;
+    }
+
+    &__panel-container.right {
+      position: absolute;
+      top: 0;
+      right: 0;
+      bottom: 0;
+      // Start after the desktop sidebar column (231px, see sidebar.scss).
+      left: 231px;
+      width: auto;
+      max-width: none;
+      height: 100%;
+    }
+
+    // ≤ 800px the sidebar collapses to a fixed drawer and leaves the flex
+    // row, so the workspace spans the full width — overlay from the edge.
+    &__panel-container.right[data-device="mobile"] {
+      left: 0;
+    }
   }
 }

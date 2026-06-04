@@ -197,10 +197,11 @@
     width: 100%;
     padding: 0 24px;
     box-sizing: border-box;
+    
   }
 
   &__logo {
-    align-items: start;
+    align-items: center;
     gap: 8px;
     // Padding lives on __logo-row now; keep this empty so existing
     // desktop callers still get the same visual offset via the wrapper.
@@ -414,6 +415,18 @@
       color: var(--normal-fg-50);
       font-size: 10px;
       line-height: 1.4;
+    }
+  }
+}
+
+@media (max-width: 650px) {
+  // Hide the DESKTOP sidebar column on narrow viewports. The mobile
+  // sidebar is the same widget but rendered with `data-device="mobile"`
+  // as a slide-in drawer — do NOT hide that variant or `openMobileDrawer`
+  // toggles `data-state` on a `display:none` element.
+  .desk-module-sidebar {
+    &__main:not([data-device="mobile"]) {
+      display: none;
     }
   }
 }

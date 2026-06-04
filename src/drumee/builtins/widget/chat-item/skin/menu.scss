@@ -2,123 +2,81 @@
 
 .widget-chatItem {
   &-menu {
-    // Inline action bar (reply / copy / forward / delete) floated over the
-    // bubble on hover. Positioned by ___widget_chatItem._hover().
-    &__bar {
+    // Floating action bar — moved into the message line on hover by chat-item
+    // _hover. Hidden until the line is hovered. It floats just above the bubble,
+    // anchored to the bubble's inner edge (me → right, other → left).
+    //
+    // It used to sit beside the bubble (me → left, other → right). In the narrow
+    // team-chat panel a wide bubble fills the width, so a beside-placement
+    // pushed the bar past the panel edge and the scroll container clipped it —
+    // only short messages left enough side room for it to show. Anchoring it to
+    // an edge that is always inside the panel keeps it visible for any message
+    // width; the per-item top margin leaves room for it to float above.
+    &__dropdown {
       position: absolute;
-      z-index: 99999;
+      z-index: 10;
+      top: 0;
+      bottom: auto;
+      transform: translateY(-100%);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.12s ease;
+
+      &.me {
+        right: 0;
+        left: auto;
+        padding-bottom: 4px;
+      }
+
+      &.other {
+        left: 0;
+        right: auto;
+        padding-bottom: 4px;
+      }
+    }
+
+    // The action list itself (reply / copy / forward / delete) — a compact pill.
+    &__items-container {
       display: flex;
       flex-direction: row;
       align-items: center;
       gap: 2px;
-      padding: 4px 6px;
       background-color: var(--default-bg, #ffffff);
-      border: 1px solid var(--border-muted, var(--eviolet));
-      border-radius: var(--border-radius);
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.16);
-    }
-
-    &__dropdown {
-      position: absolute;
-      z-index: 99999;
-    }
-
-    &__wrapper {
-      &.me {
-        & .menu-items {
-          left: -9px;
-          padding: 10px 2px;
-        }
-      }
-
-      & .menu-topic-items {
-        background-color: var(--default-bg);
-        border-radius: var(--border-radius);
-        box-shadow: var(--drumee-container-dropdown);
-        min-width: 115px;
-        padding: 10px;
-
-        &__wrapper {
-          width: fit-content;
-          left: -115px;
-          padding: 10px;
-          top: 10px;
-        }
-      }
-    }
-
-    &__icon {
-      &.menu-icon {
-        background-color: var(--default-bg, #ffffff);
-        border-radius: 50%;
-        border: 1px solid var(--border-default, var(--eviolet));
-        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.14);
-        color: var(--normal-fg-60, #5a5a5a);
-        cursor: pointer;
-        height: 24px;
-        width: 24px;
-        padding: 4px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        transition: transform 0.15s ease, box-shadow 0.15s ease,
-          background-color 0.15s ease;
-
-        &:hover {
-          background-color: var(--default-bg-hover);
-          box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
-          transform: scale(1.05);
-        }
-      }
+      border: 1px solid var(--border-default, var(--border-strong));
+      border-radius: 4px;
+      box-shadow: var(
+        --drumee-container-dropdown,
+        0 2px 8px rgba(0, 0, 0, 0.12)
+      );
+      padding: 4px 6px;
     }
 
     &__item {
-      color: var(--tertiary-text-color);
+      color: var(--normal-fg-60, var(--tertiary-text-color));
       cursor: pointer;
       height: 18px;
       width: 18px;
-      margin: 2px 8px;
+      padding: 3px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 50%;
+      box-sizing: content-box;
+      transition:
+        color 0.12s ease,
+        background-color 0.12s ease;
 
       &:hover {
         color: var(--eviolet);
+        background-color: var(--default-bg-hover);
       }
 
       &.forward-message {
-        height: 18px;
         width: 22px;
       }
 
       &.delete-for-me {
-        padding: 1px;
-      }
-    }
-
-    &__items-container {
-      top: -60px;
-
-      &.other {
-        left: -116px;
-        top: -60px;
-      }
-
-      &.me {
-        left: -130px;
-        top: -60px;
-      }
-    }
-  }
-
-  // menu item custom css for first-child
-  &__ui {
-    &:first-child {
-      & .widget-chatItem-menu {
-        &__items-container {
-          top: 3px;
-
-          &.other {
-            left: -30px;
-          }
-        }
+        padding: 2px;
       }
     }
   }

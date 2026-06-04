@@ -148,7 +148,9 @@ class settings_main extends LetcBox {
       firstname,
       lastname,
       username: data.username,
-      bio: data.bio,
+      // Bio is optional — `|| ""` lets the profile save with an empty bio
+      // (and lets a user clear it) instead of requiring some text first.
+      bio: typeof data.bio === "string" ? data.bio : (current.bio || ""),
     };
     // hub_id pins the ACL owner check to the user's personal hub
     // (acl/drumate.json: scope=hub, src=owner).
@@ -156,7 +158,12 @@ class settings_main extends LetcBox {
       hub_id: Visitor.id,
       profile,
     });
-    if (!res || res.error) return;
+    if (!res || res.error) {
+      // Surface the failure instead of silently doing nothing — otherwise
+      // the user can't tell a click did anything at all.
+      this._flashSaveStatus(false);
+      return;
+    }
     // Server returns the full updated profile object. Fall back to the
     // request payload if the response is an unexpected scalar/array so
     // Visitor.profile() reads fresh firstname/lastname either way.
@@ -164,7 +171,38 @@ class settings_main extends LetcBox {
       ? { ...current, ...res }
       : { ...current, ...profile };
     Visitor.set({ profile: nextProfile });
+    // Re-render first (refreshes the displayed name/avatar), THEN reveal the
+    // confirmation on the freshly-rendered "save-status" part.
     this.feed(require("./skeleton").default(this));
+    this._flashSaveStatus(true);
+  }
+
+  /**
+   * Briefly reveal the "Profile saved" pill next to the Save button so the
+   * user gets visible confirmation. `ok=false` shows the failure variant.
+   * The pill is part of the skeleton (sys_pn:"save-status", hidden at
+   * data-state="0"); we flip it on, then fade it back out after a delay.
+   */
+  _flashSaveStatus(ok = true) {
+    return this.ensurePart("save-status").then((p) => {
+      if (!p || !p.el) return;
+      p.set({
+        content: ok
+          ? (LOCALE.PROFILE_SAVED || "Profile saved")
+          : (LOCALE.PROFILE_SAVE_FAILED || "Couldn't save profile. Please try again."),
+      });
+      p.el.dataset.variant = ok ? "success" : "error";
+      p.el.dataset.state = "1";
+      clearTimeout(this._saveStatusTimer);
+      this._saveStatusTimer = setTimeout(() => {
+        if (p.el) p.el.dataset.state = "0";
+      }, ok ? 2500 : 4000);
+    });
+  }
+
+  onBeforeDestroy() {
+    clearTimeout(this._saveStatusTimer);
+    if (super.onBeforeDestroy) super.onBeforeDestroy();
   }
 
   /**

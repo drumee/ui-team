@@ -2,12 +2,20 @@
 
 .window-folder {
   &__ui {
-    &[data-device="mobile"] {
-      width: 360px !important;
-      height: 500px !important;
-      left: 50% !important;
-      transform: translateX(-50%) translateY(15%);
-    }
+    // Container query anchor. The folder window registers itself as a
+    // size container so descendants can switch to a compact layout based
+    // on the actual window width (not viewport). This fixes the case
+    // where the window is split with a side chat on desktop and the
+    // remaining files area is narrow — the prior `@media` rules only
+    // fired on small viewports and missed that scenario entirely.
+    container-type: inline-size;
+    container-name: window-folder-w;
+
+    // Mobile full-bleed under the desk's 44px mobile topbar. Shared
+    // recipe lives in mixins/responsive.scss so other window widgets
+    // (note, editor dialogs, etc.) collapse to the same panel layout
+    // when the device or viewport flags small-screen.
+    @include drumee.mobile-fullscreen-window;
 
     .ui-resizable-handle {
       pointer-events: auto;
@@ -49,10 +57,12 @@
   &__header {
     &-title {
       align-items: center;
-      @include drumee.typo($size: 18px,
+      @include drumee.typo(
+        $size: 18px,
         $line: 24px,
         $weight: 400,
-        $color: var(--core-default-text-reverse));
+        $color: var(--core-default-text-reverse)
+      );
     }
 
     &-control {
@@ -118,7 +128,10 @@
       align-items: center;
       gap: 4px;
       min-width: 0;
-      max-width: 50%;
+      // Wider budget + crumbs that shrink (below) so a deep path (4+ levels)
+      // stays fully visible — each crumb ellipsizes instead of the trailing
+      // ones being clipped off the right edge.
+      max-width: 66%;
       overflow: hidden;
       display: none;
 
@@ -138,12 +151,19 @@
       opacity: 0.65;
       cursor: pointer;
       max-width: 140px;
+      // min-width:0 + flex-shrink:1 let every crumb compress and ellipsize so
+      // all parts of a deep path fit. min-width MUST be 0 (not a fixed px):
+      // a fixed min forces short crumbs ("/" or brief names) to that width,
+      // left-aligning the glyph and leaving dead space before the "›"
+      // separator (looks like a spacing bug). With 0, short crumbs size to
+      // their content while long ones still shrink + ellipsize under pressure.
+      min-width: 0;
+      flex: 0 1 auto;
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
       padding: 0 4px;
       border-radius: 4px;
-      flex-shrink: 0;
 
       &:hover {
         background-color: var(--normal-bg-90);
@@ -471,18 +491,186 @@
       }
     }
 
-    &__control-icon[data-state="1"] svg {
-      transform: rotate(90deg);
+    // File view toggle — the control shows the glyph of the CURRENT view.
+    // Grid is the default (covers data-state "0"/unset); the list glyph only
+    // appears when the toggle carries data-state="1" (row/list view active).
+    &__control-icon-glyph {
+      width: 20px;
+      height: 20px;
     }
 
-    &__control-icon {
+    &__control-icon-glyph--list {
+      display: none;
+    }
+
+    &__control-icon-glyph--grid {
+      display: block;
+    }
+
+    &__control-icon[data-state="1"]
+      .window-folder-topbar__control-icon-glyph--list {
+      display: block;
+    }
+
+    &__control-icon[data-state="1"]
+      .window-folder-topbar__control-icon-glyph--grid {
+      display: none;
+    }
+
+    // Minimize control — thin Unicode minus glyph (U+2212), not the
+    // chunky window-minimize SVG bar.
+    &__minimize-btn {
+      width: 20px;
+      height: 20px;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: "Inter", "Geist", system-ui, sans-serif;
+      font-size: 18px;
+      font-weight: 300;
+      line-height: 1;
+      color: var(--normal-fg-20, var(--normal-fg-10));
+      cursor: pointer;
+      user-select: none;
+      transition: color 0.15s ease, transform 0.15s ease;
+
+      &:hover {
+        color: var(--normal-fg-10);
+        transform: scale(1.1);
+      }
+    }
+
+    // macOS-style zoom menu — icon trigger with CSS-hover dropdown.
+    &__zoom-wrapper {
+      position: relative;
+      overflow: visible;
+      flex-shrink: 0;
+      width: 20px;
+      height: 20px;
+      align-items: center;
+      justify-content: center;
+
+      &:hover .window-folder-topbar__zoom-menu,
+      .window-folder-topbar__zoom-menu:hover {
+        opacity: 1;
+        visibility: visible;
+        transform: translateY(0);
+        pointer-events: auto;
+      }
+    }
+
+    &__zoom-trigger {
+      width: 20px;
+      height: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--normal-fg-20, var(--normal-fg-10));
+      cursor: pointer;
+      transition:
+        color 0.15s ease,
+        transform 0.15s ease;
+
       svg {
-        transition: transform 0.2s ease;
+        width: 18px;
+        height: 18px;
       }
 
-      &[data-state="1"] svg {
-        transform: rotate(90deg);
+      &:hover {
+        color: var(--normal-fg-10);
+        transform: scale(1.06);
       }
+    }
+
+    &__zoom-menu {
+      position: absolute;
+      top: calc(100% + 8px);
+      right: -4px;
+      z-index: 1000;
+      min-width: 220px;
+      padding: 6px;
+      background-color: var(--normal-bg-elevated, #fff);
+      border: 1px solid rgba(0, 0, 0, 0.06);
+      border-radius: 10px;
+      box-shadow:
+        0 4px 8px -2px rgba(0, 0, 0, 0.08),
+        0 12px 24px -4px rgba(0, 0, 0, 0.12);
+      // Box.Y already supplies `display: flex; flex-direction: column`.
+      gap: 2px;
+
+      opacity: 0;
+      visibility: hidden;
+      transform: translateY(-4px);
+      // `visibility 0s linear 0.15s` delays the close so the cursor can
+      // cross the trigger→menu gap without the panel disappearing.
+      transition:
+        opacity 0.15s ease,
+        transform 0.15s ease,
+        visibility 0s linear 0.15s;
+      pointer-events: none;
+
+      // Invisible strip between trigger and panel — bridges the 8px gap
+      // so the cursor doesn't drop out of hover during transit.
+      &::before {
+        content: "";
+        position: absolute;
+        top: -10px;
+        left: 0;
+        right: 0;
+        height: 10px;
+      }
+    }
+
+    // Override the close-delay on `visibility` so opening is immediate.
+    &__zoom-wrapper:hover .window-folder-topbar__zoom-menu,
+    .window-folder-topbar__zoom-menu:hover {
+      transition:
+        opacity 0.15s ease,
+        transform 0.15s ease,
+        visibility 0s linear 0s;
+    }
+
+    &__zoom-item {
+      // Box.X already supplies `display: flex; flex-direction: row`.
+      align-items: center;
+      gap: 10px;
+      padding: 8px 10px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-family: "Geist", sans-serif;
+      font-size: 13px;
+      font-weight: 500;
+      line-height: 1.2;
+      color: var(--normal-fg-10);
+      white-space: nowrap;
+      transition: background-color 0.12s ease;
+
+      &:hover {
+        background-color: var(--normal-bg-90);
+      }
+    }
+
+    &__zoom-item-icon {
+      width: 16px;
+      height: 16px;
+      flex-shrink: 0;
+      color: var(--normal-fg-20, var(--normal-fg-10));
+
+      svg {
+        width: 16px;
+        height: 16px;
+      }
+    }
+
+    // Mirror the split-square icon for "Tile to Right" so the two tile
+    // rows are visually distinguishable at a glance.
+    &__zoom-item--tile-right .window-folder-topbar__zoom-item-icon svg {
+      transform: scaleX(-1);
+    }
+
+    &__zoom-item-label {
+      flex: 1;
     }
 
     // The window control (close ×) sits at the far right of the row.
@@ -511,10 +699,12 @@
     &-name {
       align-items: flex-start;
       padding-left: 10px;
-      @include drumee.typo($size: 18px,
+      @include drumee.typo(
+        $size: 18px,
         $line: 24px,
         $weight: 400,
-        $color: var(--core-default-text-reverse));
+        $color: var(--core-default-text-reverse)
+      );
       @include drumee.overflow-text;
 
       .inner {
@@ -555,10 +745,12 @@
       width: 100%;
       padding-left: 10px;
       padding-top: 4px;
-      @include drumee.typo($color: var(--core-default-text-color),
+      @include drumee.typo(
+        $color: var(--core-default-text-color),
         $size: 12px,
         $line: 16px,
-        $weight: 300);
+        $weight: 300
+      );
       @include drumee.overflow-text;
 
       .icon {
@@ -581,10 +773,12 @@
       width: 50%;
       padding-left: 10px;
       padding-top: 4px;
-      @include drumee.typo($color: var(--core-default-text-color),
+      @include drumee.typo(
+        $color: var(--core-default-text-color),
         $size: 12px,
         $line: 16px,
-        $weight: 300);
+        $weight: 300
+      );
       @include drumee.overflow-text;
 
       &.value {
@@ -602,7 +796,6 @@
 
     &[data-view="chat"],
     &[data-view="task"] {
-
       .window__chat-panel,
       .tasks-panel__ui {
         width: 100%;
@@ -675,6 +868,61 @@
     transform: translateY(-0.5px);
   }
 
+  // Member-filter trigger — right-aligned on the tab line, shown only on the
+  // Task tab (data-visible toggled by showFolderTab).
+  &__tab-filter {
+    margin-left: auto;
+    align-items: center;
+    gap: 6px;
+    height: 32px;
+    padding: 0 12px;
+    border: 1px solid var(--border-default, #d6d6dc);
+    border-radius: 6px;
+    background: var(--normal-bg-elevated, #fff);
+    color: var(--normal-fg-20, #65656c);
+    cursor: pointer;
+    user-select: none;
+    box-sizing: border-box;
+    transition:
+      border-color 0.15s,
+      background 0.15s,
+      color 0.15s;
+
+    &[data-visible="0"] {
+      display: none;
+    }
+    &:hover {
+      border-color: var(--border-strong, rgba(11, 10, 33, 0.3));
+    }
+    &[data-active="1"] {
+      border-color: var(--area-private, #433cc5);
+      background: rgba(67, 60, 197, 0.08);
+      color: var(--area-private, #433cc5);
+    }
+  }
+
+  &__tab-filter-ico {
+    width: 15px;
+    height: 15px;
+    flex-shrink: 0;
+    pointer-events: none;
+
+    svg {
+      width: 100%;
+      height: 100%;
+      display: block;
+      fill: currentColor;
+    }
+  }
+
+  &__tab-filter-label {
+    font-family: "Geist", sans-serif;
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1;
+    pointer-events: none;
+  }
+
   &__create-folder-dialog,
   &__rename-folder-dialog {
     width: 360px;
@@ -708,17 +956,21 @@
   &__rename-folder-title,
   &__settings-action-title,
   &__tracker-title {
-    @include drumee.typo($size: 18px,
+    @include drumee.typo(
+      $size: 18px,
       $line: 24px,
       $weight: 600,
-      $color: var(--normal-fg-10));
+      $color: var(--normal-fg-10)
+    );
   }
 
   &__create-folder-subtitle {
-    @include drumee.typo($size: 12px,
+    @include drumee.typo(
+      $size: 12px,
       $line: 17px,
       $weight: 400,
-      $color: var(--normal-fg-20));
+      $color: var(--normal-fg-20)
+    );
   }
 
   &__create-folder-close,
@@ -740,10 +992,12 @@
   }
 
   &__create-folder-label {
-    @include drumee.typo($size: 12px,
+    @include drumee.typo(
+      $size: 12px,
       $line: 14px,
       $weight: 600,
-      $color: var(--normal-fg-10));
+      $color: var(--normal-fg-10)
+    );
   }
 
   &__create-folder-entry,
@@ -756,10 +1010,12 @@
       border: 0;
       border-radius: 8px;
       background: var(--normal-bg-elevated);
-      @include drumee.typo($size: 12px,
+      @include drumee.typo(
+        $size: 12px,
         $line: 17px,
         $weight: 400,
-        $color: var(--normal-fg-20));
+        $color: var(--normal-fg-20)
+      );
     }
   }
 
@@ -770,10 +1026,12 @@
       border: 1px solid rgba(11, 10, 33, 0.08);
       border-radius: 10px;
       box-shadow: 0 1px 2px rgba(11, 10, 33, 0.04);
-      @include drumee.typo($size: 13px,
+      @include drumee.typo(
+        $size: 13px,
         $line: 18px,
         $weight: 500,
-        $color: var(--normal-fg-10));
+        $color: var(--normal-fg-10)
+      );
     }
   }
 
@@ -799,10 +1057,12 @@
     // text so the "Create" label sits in the middle of the full-width button.
     align-items: center;
     justify-content: center;
-    @include drumee.typo($size: 14px,
+    @include drumee.typo(
+      $size: 14px,
       $line: 20px,
       $weight: 600,
-      $color: #ffffff);
+      $color: #ffffff
+    );
 
     .note-content {
       width: 100%;
@@ -889,10 +1149,12 @@
   &__settings-action-label,
   &__settings-action-section-title,
   &__settings-action-member-name {
-    @include drumee.typo($size: 12px,
+    @include drumee.typo(
+      $size: 12px,
       $line: 18px,
       $weight: 600,
-      $color: #0b0a21);
+      $color: #0b0a21
+    );
   }
 
   &__settings-action-item &__settings-action-label,
@@ -967,10 +1229,12 @@
       padding: 0;
       border: 0;
       background: transparent;
-      @include drumee.typo($size: 12px,
+      @include drumee.typo(
+        $size: 12px,
         $line: 17px,
         $weight: 400,
-        $color: #0b0a21);
+        $color: #0b0a21
+      );
 
       &::placeholder {
         color: #aeaeb2;
@@ -1024,10 +1288,12 @@
 
   &__settings-action-role-label {
     min-width: 0;
-    @include drumee.typo($size: 10px,
+    @include drumee.typo(
+      $size: 10px,
       $line: 14px,
       $weight: 400,
-      $color: #65656c);
+      $color: #65656c
+    );
     @include drumee.overflow-text;
   }
 
@@ -1073,10 +1339,12 @@
     padding: 8px 12px;
     transition: background-color 120ms ease;
     white-space: nowrap;
-    @include drumee.typo($size: 12px,
+    @include drumee.typo(
+      $size: 12px,
       $line: 16px,
       $weight: 400,
-      $color: var(--default-text-color));
+      $color: var(--default-text-color)
+    );
 
     &:hover {
       background-color: rgba(29, 138, 234, 0.08);
@@ -1100,10 +1368,12 @@
     cursor: pointer;
     position: relative;
     overflow: hidden;
-    @include drumee.typo($size: 14px,
+    @include drumee.typo(
+      $size: 14px,
       $line: 20px,
       $weight: 600,
-      $color: #ffffff);
+      $color: #ffffff
+    );
 
     &[data-pending="1"] {
       cursor: progress;
@@ -1117,10 +1387,12 @@
         left: -100%;
         width: 100%;
         height: 100%;
-        background: linear-gradient(90deg,
-            transparent 0%,
-            rgba(255, 255, 255, 0.25) 50%,
-            transparent 100%);
+        background: linear-gradient(
+          90deg,
+          transparent 0%,
+          rgba(255, 255, 255, 0.25) 50%,
+          transparent 100%
+        );
         animation: window-folder__send-button-shimmer 1.1s ease-in-out infinite;
       }
     }
@@ -1165,24 +1437,14 @@
     flex: 0 0 32px;
     width: 32px;
     height: 32px;
-    border-radius: 12px;
+    border-radius: 50%;
     overflow: hidden;
-    @include drumee.typo($size: 10px,
-      $line: 15px,
-      $weight: 600,
-      $color: #e4e3ff);
+    background: #e8e8ed;
 
-    &.primary {
-      background: #5950ff;
-    }
-
-    &.secondary {
-      background: #38a2ce;
-      color: #d8f9fd;
-    }
-
-    &.dark {
-      background: #3c3989;
+    // Fallback initials when UserProfile has no photo: near-black text on the
+    // light-grey disc. Depth beats ui-core's .user-profile__initiales rule.
+    .user-profile__initiales .note-content {
+      color: #0b0a21;
     }
   }
 
@@ -1229,7 +1491,7 @@
     // a fixed-width side dock; we use !important + maximum specificity here
     // because flex chains with min-width:auto were leaking through and
     // pushing the Cancel button (right of footer) past the right edge.
-    >* {
+    > * {
       width: 100% !important;
       max-width: 100% !important;
       min-width: 0 !important;
@@ -1381,10 +1643,12 @@
   .window-topbar-title__wrapper .name {
     max-width: 360px;
     min-width: 0;
-    @include drumee.typo($size: 18px,
+    @include drumee.typo(
+      $size: 18px,
       $line: 26px,
       $weight: 600,
-      $color: var(--normal-fg-10));
+      $color: var(--normal-fg-10)
+    );
     @include drumee.overflow-text;
   }
 
@@ -1394,10 +1658,12 @@
     padding: 4px 8px;
     border-radius: 2px;
     background: rgba(150, 99, 255, 0.15);
-    @include drumee.typo($size: 11px,
+    @include drumee.typo(
+      $size: 11px,
       $line: 11px,
       $weight: 600,
-      $color: #884eff);
+      $color: #884eff
+    );
     letter-spacing: 0.44px;
     text-transform: uppercase;
   }
@@ -1417,10 +1683,12 @@
     border-radius: 4px;
     background: var(--normal-bg-90);
     color: var(--normal-fg-10);
-    @include drumee.typo($size: 13px,
+    @include drumee.typo(
+      $size: 13px,
       $line: 16px,
       $weight: 600,
-      $color: var(--normal-fg-10));
+      $color: var(--normal-fg-10)
+    );
 
     svg {
       width: 14px;
@@ -1457,7 +1725,7 @@
       padding: 0;
     }
 
-    >.icon,
+    > .icon,
     .ctrl-close,
     .ctrl-aspect,
     svg {
@@ -1539,17 +1807,21 @@
     padding: 0 0 4px;
     border-bottom: 2px solid transparent;
     background: transparent;
-    @include drumee.typo($size: 13px,
+    @include drumee.typo(
+      $size: 13px,
       $line: 1,
       $weight: 700,
-      $color: var(--normal-fg-10));
+      $color: var(--normal-fg-10)
+    );
 
     .window-folder__filter-tab,
     .note-content {
-      @include drumee.typo($size: 13px,
+      @include drumee.typo(
+        $size: 13px,
         $line: 1,
         $weight: 700,
-        $color: var(--normal-fg-10));
+        $color: var(--normal-fg-10)
+      );
       cursor: pointer;
     }
 
@@ -1573,23 +1845,28 @@
     &[data-radiotoggle="on"] {
       padding-bottom: 6px;
       border-bottom-color: var(--area-private);
-      @include drumee.typo($size: 13px,
+      @include drumee.typo(
+        $size: 13px,
         $line: 1,
         $weight: 800,
-        $color: var(--normal-fg-10));
+        $color: var(--normal-fg-10)
+      );
 
       .window-folder__filter-tab,
       .note-content {
-        @include drumee.typo($size: 13px,
+        @include drumee.typo(
+          $size: 13px,
           $line: 1,
           $weight: 800,
-          $color: var(--normal-fg-10));
+          $color: var(--normal-fg-10)
+        );
       }
     }
   }
 
   &__filter-bar[data-area="personal"] &__filter-tab-main[data-state="1"],
-  &__filter-bar[data-area="personal"] &__filter-tab-main[data-radiotoggle="on"] {
+  &__filter-bar[data-area="personal"]
+    &__filter-tab-main[data-radiotoggle="on"] {
     border-bottom-color: var(--area-personal);
   }
 
@@ -1625,7 +1902,9 @@
     align-items: flex-start;
     justify-content: flex-start;
     grid-template-columns: repeat(auto-fill, var(--grid-cell-w));
-    grid-auto-rows: var(--grid-cell-h-file); // single-list default = file height
+    grid-auto-rows: var(
+      --grid-cell-h-file
+    ); // single-list default = file height
     gap: var(--grid-gap);
     padding: 24px; // folder window dialog uses tighter padding than home
     margin: 0;
@@ -1686,7 +1965,8 @@
   .media-row__main {
     min-width: 0;
     grid-template-columns:
-      44px 44px minmax(140px, 1fr) minmax(120px, 150px) 76px 76px;
+      44px 44px minmax(140px, 1fr) minmax(120px, 150px)
+      76px 76px;
   }
 
   .window__filter__main {
@@ -1701,10 +1981,12 @@
     padding: 0 6px;
     flex-wrap: nowrap;
     overflow: hidden;
-    @include drumee.typo($size: 12px,
+    @include drumee.typo(
+      $size: 12px,
       $line: 16px,
       $weight: 700,
-      $color: var(--primary-400, #4a90e2));
+      $color: var(--primary-400, #4a90e2)
+    );
 
     svg {
       width: 16px;
@@ -1736,10 +2018,12 @@
   }
 
   .media-row__main {
-    @include drumee.typo($size: 12px,
+    @include drumee.typo(
+      $size: 12px,
       $line: 16px,
       $weight: 500,
-      $color: var(--normal-fg-10));
+      $color: var(--normal-fg-10)
+    );
   }
 
   .media-row__field-filename,
@@ -1750,10 +2034,12 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    @include drumee.typo($size: 12px,
+    @include drumee.typo(
+      $size: 12px,
       $line: 16px,
       $weight: 500,
-      $color: var(--normal-fg-10));
+      $color: var(--normal-fg-10)
+    );
   }
 
   .window__chat-label {
@@ -1765,10 +2051,12 @@
     box-sizing: border-box;
     border-bottom: 1px solid var(--border-muted);
     font-family: "Geist Mono", monospace;
-    @include drumee.typo($size: 10px,
+    @include drumee.typo(
+      $size: 10px,
       $line: 1,
       $weight: 600,
-      $color: var(--normal-fg-10));
+      $color: var(--normal-fg-10)
+    );
     letter-spacing: 0.04em;
     text-transform: uppercase;
   }
@@ -1791,8 +2079,15 @@
   }
 
   .window__chat-panel .widget-chat__body {
-    padding: 16px;
+    // No right padding so the message scrollbar sits flush against the panel
+    // edge instead of floating in a gap; per-item right padding keeps text
+    // clear of the scrollbar.
+    padding: 16px 0 16px 16px;
     gap: 16px;
+  }
+
+  .window__chat-panel .widget-chatItem__ui {
+    padding-right: 12px;
   }
 
   .widget-chat__messenger-wrapper {
@@ -1837,17 +2132,21 @@
       .note-content {
         min-height: 16px;
         padding: 0 8px;
-        @include drumee.typo($size: 12px,
+        @include drumee.typo(
+          $size: 14px,
           $line: 16.8px,
           $weight: 400,
-          $color: var(--normal-fg-10));
+          $color: var(--normal-fg-10)
+        );
 
         &::before {
           color: var(--normal-fg-50);
-          @include drumee.typo($size: 12px,
+          @include drumee.typo(
+            $size: 12px,
             $line: 16.8px,
             $weight: 400,
-            $color: var(--normal-fg-50));
+            $color: var(--normal-fg-50)
+          );
         }
       }
     }
@@ -1887,10 +2186,12 @@
   .widget-chatItem__conversation-content {
     max-width: 320px;
     padding: 12px;
-    @include drumee.typo($size: 12px,
+    @include drumee.typo(
+      $size: 12px,
       $line: 1.4,
       $weight: 400,
-      $color: var(--normal-fg-10));
+      $color: var(--normal-fg-10)
+    );
   }
 
   .widget-chatItem__conversation-content.me,
@@ -1914,20 +2215,30 @@
     }
   }
 
-  .window__chat-panel[data-area="personal"] .widget-chatItem__conversation-content.me,
-  .window__chat-panel[data-area="personal"] .widget-chatItem__conversation.me .widget-chatItem__conversation-content {
+  .window__chat-panel[data-area="personal"]
+    .widget-chatItem__conversation-content.me,
+  .window__chat-panel[data-area="personal"]
+    .widget-chatItem__conversation.me
+    .widget-chatItem__conversation-content {
     background: var(--area-personal);
   }
-
-  .window__chat-panel[data-area="share"] .widget-chatItem__conversation-content.me,
-  .window__chat-panel[data-area="share"] .widget-chatItem__conversation.me .widget-chatItem__conversation-content,
-  .window__chat-panel[data-area="dmz"] .widget-chatItem__conversation-content.me,
-  .window__chat-panel[data-area="dmz"] .widget-chatItem__conversation.me .widget-chatItem__conversation-content {
+  .window__chat-panel[data-area="share"]
+    .widget-chatItem__conversation-content.me,
+  .window__chat-panel[data-area="share"]
+    .widget-chatItem__conversation.me
+    .widget-chatItem__conversation-content,
+  .window__chat-panel[data-area="dmz"]
+    .widget-chatItem__conversation-content.me,
+  .window__chat-panel[data-area="dmz"]
+    .widget-chatItem__conversation.me
+    .widget-chatItem__conversation-content {
     background: var(--area-share);
   }
-
-  .window__chat-panel[data-area="public"] .widget-chatItem__conversation-content.me,
-  .window__chat-panel[data-area="public"] .widget-chatItem__conversation.me .widget-chatItem__conversation-content {
+  .window__chat-panel[data-area="public"]
+    .widget-chatItem__conversation-content.me,
+  .window__chat-panel[data-area="public"]
+    .widget-chatItem__conversation.me
+    .widget-chatItem__conversation-content {
     background: var(--area-public);
   }
 
@@ -1946,31 +2257,38 @@
     }
   }
 
-  .window__chat-panel[data-area="personal"] .widget-chatItem__conversation-content.other,
-  .window__chat-panel[data-area="personal"] .widget-chatItem__conversation.other .widget-chatItem__conversation-content {
-
+  .window__chat-panel[data-area="personal"]
+    .widget-chatItem__conversation-content.other,
+  .window__chat-panel[data-area="personal"]
+    .widget-chatItem__conversation.other
+    .widget-chatItem__conversation-content {
     .file-mention,
     .user-mention,
     a {
       color: var(--area-personal);
     }
   }
-
-  .window__chat-panel[data-area="share"] .widget-chatItem__conversation-content.other,
-  .window__chat-panel[data-area="share"] .widget-chatItem__conversation.other .widget-chatItem__conversation-content,
-  .window__chat-panel[data-area="dmz"] .widget-chatItem__conversation-content.other,
-  .window__chat-panel[data-area="dmz"] .widget-chatItem__conversation.other .widget-chatItem__conversation-content {
-
+  .window__chat-panel[data-area="share"]
+    .widget-chatItem__conversation-content.other,
+  .window__chat-panel[data-area="share"]
+    .widget-chatItem__conversation.other
+    .widget-chatItem__conversation-content,
+  .window__chat-panel[data-area="dmz"]
+    .widget-chatItem__conversation-content.other,
+  .window__chat-panel[data-area="dmz"]
+    .widget-chatItem__conversation.other
+    .widget-chatItem__conversation-content {
     .file-mention,
     .user-mention,
     a {
       color: var(--area-share);
     }
   }
-
-  .window__chat-panel[data-area="public"] .widget-chatItem__conversation-content.other,
-  .window__chat-panel[data-area="public"] .widget-chatItem__conversation.other .widget-chatItem__conversation-content {
-
+  .window__chat-panel[data-area="public"]
+    .widget-chatItem__conversation-content.other,
+  .window__chat-panel[data-area="public"]
+    .widget-chatItem__conversation.other
+    .widget-chatItem__conversation-content {
     .file-mention,
     .user-mention,
     a {
@@ -1981,10 +2299,12 @@
   .widget-chatItem__name,
   .widget-chatItem__username-content,
   .widget-chatItem__message-username {
-    @include drumee.typo($size: 10px,
+    @include drumee.typo(
+      $size: 10px,
       $line: 1.4,
       $weight: 700,
-      $color: var(--normal-fg-10));
+      $color: var(--normal-fg-10)
+    );
   }
 
   .widget-chatItem__username-content {
@@ -1995,10 +2315,12 @@
   }
 
   .widget-chatItem__message-date {
-    @include drumee.typo($size: 11px,
+    @include drumee.typo(
+      $size: 11px,
       $line: 1.4,
       $weight: 400,
-      $color: var(--normal-fg-50));
+      $color: var(--normal-fg-50)
+    );
   }
 
   &__split-body[data-view="chat"] {
@@ -2053,6 +2375,9 @@
 
   &__split-body[data-view="task"] {
     grid-template-columns: 1fr;
+    // Clamp the row so the bounded grid cell isn't overflowed by the panel's
+    // content height; otherwise the board can't scroll and the + is clipped.
+    grid-template-rows: minmax(0, 1fr);
     background: var(--normal-bg-elevated);
 
     .window__files-panel,
@@ -2062,6 +2387,9 @@
 
     .tasks-panel__ui {
       display: flex;
+      // Vertical twin of the board's min-width:0: lets the grid row clamp
+      // instead of min-height:auto forcing __ui to full content height.
+      min-height: 0;
     }
   }
 
@@ -2117,10 +2445,12 @@
     flex: 1 1 auto;
     padding: 0 8px;
     text-align: center;
-    @include drumee.typo($size: 14px,
+    @include drumee.typo(
+      $size: 14px,
       $line: 20px,
       $weight: 600,
-      $color: var(--normal-fg-10));
+      $color: var(--normal-fg-10)
+    );
     @include drumee.overflow-text;
   }
 
@@ -2128,10 +2458,12 @@
     min-width: 16px;
     text-align: right;
     letter-spacing: 0.4px;
-    @include drumee.typo($size: 10px,
+    @include drumee.typo(
+      $size: 10px,
       $line: 10px,
       $weight: 600,
-      $color: var(--normal-fg-50));
+      $color: var(--normal-fg-50)
+    );
   }
 
   &__tracker-card {
@@ -2141,10 +2473,12 @@
     border: 0.5px solid var(--border-default);
     border-radius: 4px;
     background: var(--normal-bg-elevated);
-    @include drumee.typo($size: 12px,
+    @include drumee.typo(
+      $size: 12px,
       $line: 15px,
       $weight: 600,
-      $color: var(--normal-fg-10));
+      $color: var(--normal-fg-10)
+    );
   }
 
   &__tracker-add {
@@ -2155,10 +2489,12 @@
     text-align: center;
     cursor: default;
     opacity: 0.7;
-    @include drumee.typo($size: 10px,
+    @include drumee.typo(
+      $size: 10px,
       $line: 14px,
       $weight: 400,
-      $color: var(--normal-fg-20));
+      $color: var(--normal-fg-20)
+    );
   }
 
   // --- Partition layout (dual List.Smart — folders above, files below) ---
@@ -2188,6 +2524,335 @@
   &__folder-list,
   &__file-list {
     flex: 1 1 auto;
+  }
+}
+
+// ── Compact layout (container query) ──────────────────────────────
+// Fires whenever the folder window's own width drops below 700px,
+// regardless of viewport. Covers both true mobile and "narrow split
+// on desktop" cases the previous viewport media query missed.
+@container window-folder-w (max-width: 700px) {
+  .window-folder {
+    &__main {
+      border-radius: 0;
+      min-width: 0;
+      overflow: hidden;
+    }
+
+    // ── Topbar ────────────────────────────────────────────────────
+    &__main &-topbar {
+      &__container {
+        gap: var(--spacer-2);
+        height: auto;
+        min-height: 52px;
+        min-width: 0;
+        padding: 0 var(--spacer-3);
+      }
+
+      &__left {
+        flex: 1 1 auto;
+        min-width: 0;
+      }
+
+      // Right cluster: let it shrink in-flow instead of scrolling
+      // horizontally. The previous overflow-x:auto recipe clipped
+      // settings/split/close behind the gradient and was unreachable
+      // by touch.
+      // Bumped gap from spacer-1 (2px) to spacer-2 (4px) so the 32×32
+      // chips don't visually butt against each other now that they
+      // share the same background fill.
+      &__right {
+        flex: 0 1 auto;
+        gap: var(--spacer-2);
+        min-width: 0;
+        overflow: visible;
+      }
+
+      &__title {
+        flex: 1 1 auto;
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        font-size: 14px;
+      }
+
+      // ── Breadcrumb (mobile compact) ─────────────────────────────
+      // Desktop renders the full path (Home › Workspace › Folder ›
+      // Sub…) in 14px which eats most of the row on a 430px viewport.
+      // Compact mode shrinks the type and hides every hop except the
+      // immediate parent — combined with the always-visible title
+      // below, the user still sees "where they are" + "one step up"
+      // without the path overflowing the action cluster.
+      &__breadcrumb-path {
+        max-width: 40%;
+        gap: 2px;
+      }
+
+      &__breadcrumb-crumb {
+        font-size: 11px;
+        line-height: 16px;
+        max-width: 80px;
+        padding: 0 2px;
+      }
+
+      &__breadcrumb-sep {
+        font-size: 11px;
+        line-height: 16px;
+      }
+
+      // Show only the LAST crumb (the parent folder) + its preceding
+      // separator. Earlier hops collapse to keep the strip short.
+      // The crumb/sep pair alternates in source order, so hiding all
+      // but the last two children leaves "› ParentName".
+      &__breadcrumb-path > *:not(:nth-last-child(-n + 2)) {
+        display: none;
+      }
+
+      // The area pill is purely decorative; sacrifice it first so the
+      // action cluster has room. Video stays visible but collapses to
+      // an icon-only 32×32 square like its siblings.
+      &__badge {
+        display: none;
+      }
+
+      // All right-cluster icons collapse to a uniform 32×32 chip on
+      // compact. Desktop styled video/upload/add-new with a Grey/20
+      // background and left settings/share/close bare — on small
+      // screens this mix reads as "loaded" buttons next to floating
+      // icons. Mobile unifies them: same square, same Grey/20 bg,
+      // same 6px radius, flex-centered SVG. The Add-new trigger
+      // keeps its purple via the .secondary override below.
+      &__video-btn,
+      &__upload-btn,
+      &__add-new-wrapper,
+      &__control-icon,
+      .window-button__icon-button {
+        flex: 0 0 auto;
+        height: 32px;
+        min-width: 32px;
+        width: 32px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0;
+        background-color: var(--normal-bg-90);
+        border-radius: 6px;
+        box-sizing: border-box;
+        // Desktop close-button row used `gap: 12` for inline children;
+        // a single-icon chip needs none.
+        gap: 0;
+      }
+
+      // Hide the split/layout toggle on mobile — single-column layout
+      // makes the row/grid switch meaningless and the user asked to
+      // reclaim the slot next to ×.
+      &__control-icon.split {
+        display: none;
+      }
+
+      &__upload-btn {
+        justify-content: center;
+        padding: 0;
+
+        span.label,
+        section.label,
+        .note-content {
+          display: none !important;
+        }
+      }
+
+      &__add-new-wrapper {
+        // The shared `.window-button__label-button.secondary` rule
+        // (line ~1448, outside this container query) pins the button
+        // to `min-width: 103px`, which kept the pill wide even after
+        // the wrapper was locked to 32×32 — the child overflowed the
+        // wrapper. Neutralize that here so the trigger collapses with
+        // its parent.
+        .window-button__label-button,
+        .window-button__label-button.secondary {
+          min-width: 0 !important;
+          min-height: 0 !important;
+          width: 100% !important;
+          height: 100% !important;
+          padding: 0 !important;
+          border-radius: 6px;
+
+          span.label,
+          section.label,
+          .note-content {
+            display: none !important;
+          }
+        }
+
+        .menu-topic-items__wrapper {
+          max-width: calc(100cqw - 24px);
+          min-width: 200px;
+          right: 0;
+        }
+      }
+    }
+
+    // ── Tab bar (Files / Chat / Tasks) ───────────────────────────
+    // Horizontal scroll when there isn't room — keeps all tabs
+    // reachable without breaking row layout.
+    &__tab-bar-wrapper {
+      flex-wrap: nowrap;
+      gap: var(--spacer-2);
+      overflow-x: auto;
+      scrollbar-width: none;
+
+      &::-webkit-scrollbar {
+        display: none;
+      }
+    }
+
+    &__tab-bar-item {
+      flex: 0 0 auto;
+    }
+
+    // ── Filter bar (All / Docs / PDF / Images / Other) ──────────
+    // Bigger gap so the underline-pill tabs read as distinct chips
+    // rather than running into each other when the row scrolls
+    // horizontally on a narrow window.
+    &__filter-bar {
+      flex-wrap: nowrap;
+      gap: var(--spacer-5);
+      overflow-x: auto;
+      padding: var(--spacer-2) var(--spacer-3);
+      scrollbar-width: none;
+
+      &::-webkit-scrollbar {
+        display: none;
+      }
+    }
+
+    // The rendered tab class is `__filter-tab-main` (see topbar/filter
+    // skeletons). The previous rule targeted `__filter-tab` and never
+    // applied, so the tabs shrank and collided once the row had more
+    // entries than fit. Lock the tab boxes to their content width and
+    // give each one a comfortable horizontal pad.
+    &__filter-tab-main {
+      flex: 0 0 auto;
+      padding-left: var(--spacer-2);
+      padding-right: var(--spacer-2);
+    }
+
+    // ── Split body: collapse to single column ─────────────────────
+    // Chat/meeting/tasks live in the same content area; tab clicks
+    // toggle `data-view`. Files panel is the default visible one so
+    // compact mode never opens with a side chat eating the grid.
+    &__split-body {
+      grid-template-columns: 1fr !important;
+      min-width: 0;
+
+      .window__chat-panel,
+      .window__meeting-panel {
+        display: none;
+      }
+
+      &[data-view="chat"] {
+        .window__files-panel,
+        .window__meeting-panel,
+        .window__tasks-panel {
+          display: none;
+        }
+
+        .window__chat-panel {
+          display: flex;
+          max-width: none;
+          min-width: 0;
+          width: 100%;
+        }
+      }
+
+      &[data-view="task"] {
+        .window__files-panel,
+        .window__chat-panel,
+        .window__meeting-panel {
+          display: none;
+        }
+
+        .window__tasks-panel {
+          display: flex;
+        }
+      }
+
+      &[data-call-panel="open"] {
+        .window__files-panel,
+        .window__chat-panel,
+        .window__tasks-panel {
+          display: none;
+        }
+
+        .window__meeting-panel {
+          display: flex;
+          max-width: none;
+          min-width: 0;
+          width: 100%;
+        }
+      }
+    }
+
+    // ── File / folder grid ───────────────────────────────────────
+    .window__icons-list .smart-container,
+    .window__icons-scroll,
+    &__partition-container {
+      padding: var(--spacer-3);
+    }
+
+    // 2 columns scaled to the window width — uses container-query
+    // units (cqw) so cells track the folder window, not viewport.
+    .window__icons-list .smart-container,
+    .window__icons-scroll,
+    .window__icons-scroll .workspace-section,
+    .window__icons-scroll .folder-section,
+    .window__icons-scroll .file-section {
+      grid-template-columns: 1fr 1fr;
+    }
+
+    // File section row needs to grow to fit the capped 140×140 card
+    // plus the (now larger) meta-row text — see
+    // builtins/media/grid/skin/container.scss mobile block. Desktop's
+    // 184px row was calibrated for a 120×120 card and overflows when
+    // the cell grows, so use minmax(184, auto).
+    .window__icons-scroll .file-section {
+      grid-auto-rows: minmax(var(--grid-cell-h-file), auto);
+    }
+
+    // Desktop locks each card to --grid-cell-w (120px). Let it
+    // expand to fill the column so icon + label have room.
+    .window__icons-scroll .media-grid__ui {
+      width: 100%;
+      max-width: 100%;
+    }
+
+    // Card content (filename, badge, kebab menu) needs to wrap and
+    // truncate within the new cell width.
+    .media-grid__filename {
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      word-break: break-word;
+    }
+
+    // ── Dialogs & side panels (full-width on compact) ───────────
+    &__create-folder-dialog,
+    &__rename-folder-dialog {
+      max-width: calc(100cqw - 32px);
+      width: calc(100cqw - 32px);
+    }
+
+    &__rename-folder-button {
+      width: 100%;
+    }
+
+    &__settings-action-panel {
+      max-width: 100cqw;
+      width: min(360px, 100cqw);
+    }
   }
 }
 

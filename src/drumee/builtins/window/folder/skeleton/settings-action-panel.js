@@ -3,7 +3,12 @@ const actions = [
   { service: "folder-rename", label: LOCALE.RENAME, ico: "apps-pencil-simple" },
   { service: "folder-organize", label: LOCALE.ORGANIZE, ico: "file-organize" },
   { service: "folder-duplicate", label: LOCALE.DUPLICATE, ico: "file-copy" },
-  { service: "folder-delete", label: LOCALE.DELETE, ico: "trash-action", destructive: 1 },
+  {
+    service: "folder-delete",
+    label: LOCALE.DELETE,
+    ico: "trash-action",
+    destructive: 1,
+  },
 ];
 
 const roleOptions = [
@@ -38,18 +43,16 @@ function mapFolderMember(row) {
     row.email,
   );
   const isSelf = row.id === Visitor.id || row.entity_id === Visitor.id;
-  const parts = name.split(/\s+/).filter(Boolean);
-  const initials =
-    parts.length >= 2
-      ? (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
-      : (name.slice(0, 2) || "?").toUpperCase();
   return {
     id: row.entity_id || row.drumate_id || row.id,
     name: isSelf ? `${name} (${LOCALE.YOU || "You"})` : name,
     rawName: name,
-    initials,
+    // Carried through to UserProfile so it can load the real avatar and derive
+    // initials/auto-color the same way every other member list in the app does.
+    firstname: (row.firstname || "").trim(),
+    lastname: (row.lastname || "").trim(),
+    fullname: (row.fullname || "").trim() || name,
     role: roleFromPrivilege(row.privilege),
-    color: isSelf ? "user" : "primary",
     isSelf,
   };
 }
@@ -115,18 +118,19 @@ function roleDropdown(pfx, role, service, extra = {}) {
   };
 }
 
+// Render every member's real avatar via UserProfile — it loads the user's
+// photo by id and falls back to initials when none exists. Self and other
+// members share one path so the list stays visually consistent. auto_color
+// is off so the fallback keeps the fixed grey/dark styling from the skin
+// instead of a per-name generated background.
 function memberAvatar(pfx, member) {
-  if (member.color === "user") {
-    return Skeletons.UserProfile({
-      className: `${pfx}-avatar user`,
-      id: Visitor.id,
-      firstname: Visitor.get(_a.firstname),
-      lastname: Visitor.get(_a.lastname),
-    });
-  }
-  return Skeletons.Note({
-    className: `${pfx}-avatar ${member.color}`,
-    content: member.initials,
+  return Skeletons.UserProfile({
+    className: `${pfx}-avatar`,
+    auto_color: 0,
+    id: member.id,
+    firstname: member.firstname,
+    lastname: member.lastname,
+    fullname: member.fullname,
   });
 }
 
@@ -159,26 +163,27 @@ function memberRows(list, ui, pfx, isAdmin) {
     // Self row: always read-only label.
     // Other members + viewer is admin: editable role + remove button.
     // Other members + viewer NOT admin: read-only role label only (no remove).
-    const actions = member.isSelf || !isAdmin
-      ? [
-          Skeletons.Note({
-            className: `${pfx}-role-label ${pfx}-role-readonly`,
-            content: member.role.label,
-          }),
-        ]
-      : [
-          roleDropdown(pfx, member.role, "folder-member-role", {
-            uiHandler: ui,
-            dataset: { index, member_id: member.id },
-          }),
-          Skeletons.Button.Svg({
-            className: `${pfx}-member-remove`,
-            ico: "trash-action",
-            service: "folder-remove-member",
-            dataset: { index, member_id: member.id },
-            uiHandler: [ui],
-          }),
-        ];
+    const actions =
+      member.isSelf || !isAdmin
+        ? [
+            Skeletons.Note({
+              className: `${pfx}-role-label ${pfx}-role-readonly`,
+              content: member.role.label,
+            }),
+          ]
+        : [
+            roleDropdown(pfx, member.role, "folder-member-role", {
+              uiHandler: ui,
+              dataset: { index, member_id: member.id },
+            }),
+            Skeletons.Button.Svg({
+              className: `${pfx}-member-remove`,
+              ico: "trash-action",
+              service: "folder-remove-member",
+              dataset: { index, member_id: member.id },
+              uiHandler: [ui],
+            }),
+          ];
     return Skeletons.Box.X({
       className: `${pfx}-member-row`,
       dataset: { index, member_id: member.id },
@@ -188,7 +193,10 @@ function memberRows(list, ui, pfx, isAdmin) {
           className: `${pfx}-member-info`,
           kids: [
             memberAvatar(pfx, member),
-            Skeletons.Note({ className: `${pfx}-member-name`, content: member.name }),
+            Skeletons.Note({
+              className: `${pfx}-member-name`,
+              content: member.name,
+            }),
           ],
         }),
         Skeletons.Box.X({
@@ -215,7 +223,10 @@ module.exports = function settingsActionPanel(ui) {
     ? Skeletons.Box.Y({
         className: `${pfx}-invite-section`,
         kids: [
-          Skeletons.Note({ className: `${pfx}-section-title`, content: LOCALE.INVITE_MEMBER }),
+          Skeletons.Note({
+            className: `${pfx}-section-title`,
+            content: LOCALE.INVITE_MEMBER,
+          }),
           Skeletons.Box.X({
             className: `${pfx}-invite-input-row`,
             kids: [
@@ -227,7 +238,9 @@ module.exports = function settingsActionPanel(ui) {
                 require: _a.email,
                 bubble: 0,
               }),
-              roleDropdown(pfx, inviteRole, "folder-invite-role", { uiHandler: ui }),
+              roleDropdown(pfx, inviteRole, "folder-invite-role", {
+                uiHandler: ui,
+              }),
             ],
           }),
           Skeletons.Note({
@@ -248,7 +261,10 @@ module.exports = function settingsActionPanel(ui) {
       Skeletons.Box.X({
         className: `${pfx}-header`,
         kids: [
-          Skeletons.Note({ className: `${pfx}-title`, content: LOCALE.FOLDER_SETTING }),
+          Skeletons.Note({
+            className: `${pfx}-title`,
+            content: LOCALE.FOLDER_SETTING,
+          }),
           Skeletons.Button.Svg({
             className: `${pfx}-close`,
             ico: _a.cross,
@@ -275,7 +291,10 @@ module.exports = function settingsActionPanel(ui) {
       Skeletons.Box.Y({
         className: `${pfx}-members-section`,
         kids: [
-          Skeletons.Note({ className: `${pfx}-section-title`, content: LOCALE.PERMISSIONS_MATRIX }),
+          Skeletons.Note({
+            className: `${pfx}-section-title`,
+            content: LOCALE.PERMISSIONS_MATRIX,
+          }),
           ...memberRows(mappedMembers, ui, pfx, isAdmin),
         ],
       }),

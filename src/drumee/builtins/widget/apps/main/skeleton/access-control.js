@@ -324,7 +324,7 @@ function geoSection(ui) {
         className: `${pfx}__ac-country-list`,
         dataset: { open: sc.countryPickerOpen || "" },
         kids: listKids,
-      })
+      }),
     );
   }
   return Skeletons.Box.Y({
@@ -388,7 +388,8 @@ function timeUnitFlyout(ui, kind, unit) {
   const pfx = ui.fig.family;
   const sc = ui._secCtrl || {};
   const t = (kind === "start" ? sc.startTime : sc.endTime) || {};
-  const current = unit === "hour" ? t.hour || 12 : t.minute == null ? 0 : t.minute;
+  const current =
+    unit === "hour" ? t.hour || 12 : t.minute == null ? 0 : t.minute;
   return Skeletons.Box.Y({
     className: `${pfx}__ac-tdrop-flyout`,
     dataset: { kind, unit },
@@ -405,14 +406,15 @@ function timeUnitFlyout(ui, kind, unit) {
             content: pad2(v),
           }),
         ],
-      })
+      }),
     ),
   });
 }
 
 function timeUnitColumn(ui, { kind, unit, label, t, openUnit }) {
   const pfx = ui.fig.family;
-  const value = unit === "hour" ? t.hour || 12 : t.minute == null ? 0 : t.minute;
+  const value =
+    unit === "hour" ? t.hour || 12 : t.minute == null ? 0 : t.minute;
   const open = openUnit === unit;
   return Skeletons.Box.Y({
     className: `${pfx}__ac-tdrop-col`,
@@ -623,7 +625,7 @@ function timeWindowSection(ui) {
             kids: DAY_KEYS.map((k) => dayChip(ui, k, !!days[k])),
           }),
         ],
-      })
+      }),
     );
   }
   return Skeletons.Box.Y({
@@ -669,7 +671,7 @@ function autoRevocationSection(ui) {
             content: `${mins} min`,
           }),
         ],
-      })
+      }),
     );
   }
   return Skeletons.Box.Y({
@@ -737,7 +739,7 @@ function oneTimeLinkSection(ui) {
             ],
           }),
         ],
-      })
+      }),
     );
   }
   return Skeletons.Box.Y({

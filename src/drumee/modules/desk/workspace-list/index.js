@@ -7,9 +7,8 @@
  * ==================================================================== */
 
 class __desk_workspace extends LetcBox {
-
   initialize(opt = {}) {
-    require('./skin');
+    require("./skin");
     super.initialize(opt);
     this.declareHandlers();
     this._openWorkspaceKey = null;
@@ -44,13 +43,13 @@ class __desk_workspace extends LetcBox {
   }
 
   /**
-   * 
+   *
    */
   collapseTree() {
-    if (!this._openWorkspaceItem || this._openWorkspaceItem.isDestroyed()) return
+    if (!this._openWorkspaceItem || this._openWorkspaceItem.isDestroyed())
+      return;
     this._openWorkspaceItem.collapseTree();
   }
-
 
   refreshList() {
     this._openWorkspaceKey = null;
@@ -59,7 +58,12 @@ class __desk_workspace extends LetcBox {
   }
 
   getWorkspaceKey(item) {
-    return item.mget(_a.hub_id) || item.mget(_a.home_id) || item.mget(_a.actual_home_id) || item.mget(_a.nid);
+    return (
+      item.mget(_a.hub_id) ||
+      item.mget(_a.home_id) ||
+      item.mget(_a.actual_home_id) ||
+      item.mget(_a.nid)
+    );
   }
 
   openWorkspace(item) {
@@ -82,7 +86,7 @@ class __desk_workspace extends LetcBox {
   }
 
   onDomRefresh() {
-    this.feed(require('./skeleton')(this));
+    this.feed(require("./skeleton")(this));
   }
 
   /**
@@ -94,7 +98,8 @@ class __desk_workspace extends LetcBox {
     switch (service) {
       case "load-workspace": {
         const result = Wm.loadWorkspace(trigger);
-        if (result && result.then) return result.then(() => this.openWorkspace(trigger));
+        if (result && result.then)
+          return result.then(() => this.openWorkspace(trigger));
         return this.openWorkspace(trigger);
       }
 
@@ -104,7 +109,7 @@ class __desk_workspace extends LetcBox {
       case "new-workspace":
         return Wm.launch(
           { kind: "window_manager", service: "new-hub" },
-          { explicit: 1, singleton: 1 }
+          { explicit: 1, singleton: 1 },
         );
 
       default:
@@ -180,16 +185,18 @@ class __desk_workspace extends LetcBox {
     if (!col) return null;
     const hubId = data.hub_id || data.home_id;
     if (!hubId) return null;
-    return col.find((m) =>
-      m.get(_a.hub_id) === hubId ||
-      m.get(_a.home_id) === hubId ||
-      m.get(_a.actual_home_id) === hubId,
+    return col.find(
+      (m) =>
+        m.get(_a.hub_id) === hubId ||
+        m.get(_a.home_id) === hubId ||
+        m.get(_a.actual_home_id) === hubId,
     );
   }
 
   _addHub(data) {
     const area = data && data.area;
-    if (area !== _a.share && area !== _a.private && area !== _a.restricted) return;
+    if (area !== _a.share && area !== _a.private && area !== _a.restricted)
+      return;
     this._withList((list) => {
       if (this._findHubModel(list, data)) return;
       list.append(data);
@@ -212,7 +219,9 @@ class __desk_workspace extends LetcBox {
       if (!model) return;
       model.set(_a.filename, filename);
       model.set(_a.name, filename);
-      const item = list.children && list.children.find &&
+      const item =
+        list.children &&
+        list.children.find &&
         list.children.find((c) => c.model === model);
       if (item && typeof item.refresh === "function") item.refresh();
     });

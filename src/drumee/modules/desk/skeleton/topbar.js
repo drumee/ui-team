@@ -30,13 +30,24 @@ module.exports = function (ui) {
     debug: __filename,
     className: `${pfx}__main`,
     kids: [
-      // Breadcrumb (left)
-      {
-        kind: "desk_breadcrumb",
-        sys_pn: "breadcrumb",
-        className: `${pfx}__breadcrumb`,
-        uiHandler: [ui],
-      },
+      // Left cluster — home breadcrumb + folder tabs glued together so
+      // the topbar's space-between layout doesn't push them apart.
+      Skeletons.Box.X({
+        className: `${pfx}__left-cluster`,
+        kids: [
+          {
+            kind: "desk_breadcrumb",
+            sys_pn: "breadcrumb",
+            className: `${pfx}__breadcrumb`,
+            uiHandler: [ui],
+          },
+          Skeletons.Box.X({
+            className: `${pfx}__folder-tabs`,
+            sys_pn: "folder-tabs",
+            partHandler: ui,
+          }),
+        ],
+      }),
 
       // Actions cluster (right)
       Skeletons.Box.X({

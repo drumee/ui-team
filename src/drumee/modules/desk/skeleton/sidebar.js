@@ -276,7 +276,7 @@ const createActionsNav = (ui) => {
         kids: [
           createNavItem(
             ui,
-            "add",
+            "app-add",
             LOCALE.ADD_NEW || "Add new",
             "new-workspace",
             "",
@@ -285,7 +285,7 @@ const createActionsNav = (ui) => {
           ),
           createNavItem(
             ui,
-            "desktop_upload",
+            "app-upload",
             LOCALE.UPLOAD,
             _e.upload,
             "",
@@ -294,7 +294,7 @@ const createActionsNav = (ui) => {
           ),
           createNavItem(
             ui,
-            "magnifying-glass",
+            "app-search",
             LOCALE.SEARCH || "Search",
             "search-files",
             "",

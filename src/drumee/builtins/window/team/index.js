@@ -103,13 +103,8 @@ class __window_team extends __hub {
         return this.openSettings();
 
       case "open-call-panel":
-        return this.toggleCallPanel();
-
       case "start-meeting":
-        return this.switchToMeeting();
-
-      case "leave-meeting":
-        return this.switchToWidget();
+        return this.startTeamCall();
 
       case "change-owner":
         var opt = require('../hub/skeleton/change-owner')(this, args);
@@ -130,86 +125,47 @@ class __window_team extends __hub {
     }
   }
 
-  async toggleCallPanel() {
-    if (this._callPanelOpening) return;
-
-    const meetingPanel = await this.ensurePart("meeting-panel");
-    const splitBody = await this.ensurePart("folder-view");
-
-    if (this._callPanel) {
-      const panel = this._callPanel;
-      this._callPanel = null;
-      splitBody.el.removeAttribute("data-call-panel");
-      panel.goodbye();
-      return;
+  /**
+   * Launch the native team call as its own top-level window so it gets the
+   * full screen real-estate instead of a cramped side panel. window_meeting
+   * already renders standalone chrome (header/resizable) and honors the
+   * _meeting_standalone flag for default sizing. A singleton guard prevents
+   * a second concurrent call — we just refocus the running one.
+   */
+  startTeamCall() {
+    const existing =
+      Wm.getItemByKind("window_meeting") || Wm.getItemByKind("window_connect");
+    if (existing && !existing.isDestroyed()) {
+      if (typeof existing.raise === "function") existing.raise();
+      return Wm.alert(LOCALE.ALREADY_ANOTHER_CALL);
     }
+    const room_id = this.mget(_a.nid) || this.mget(_a.actual_home_id);
 
-    this._callPanelOpening = true;
-    this._splitBody = splitBody;
-    splitBody.el.setAttribute("data-call-panel", "open");
-    meetingPanel.feed({
-      kind: "widget_meeting",
-      hub_id: this.mget(_a.hub_id),
-      nid: this.mget(_a.nid),
-      name: this.mget(_a.filename) || this.mget(_a.name),
-      area: this.mget(_a.area),
-      uiHandler: [this],
-      sys_pn: "active-meeting",
-      partHandler: this,
-    });
-  }
+    // Center a free-floating popup via an explicit `style` so it floats
+    // correctly instead of docking to the team window.
+    let width = Math.min(1200, window.innerWidth - 80);
+    let height = Math.min(720, window.innerHeight - 120);
+    if (width < 480) width = window.innerWidth;
+    if (height < 360) height = window.innerHeight;
+    const left = Math.max(0, (window.innerWidth - width) / 2);
+    const top = Math.max(40, (window.innerHeight - height) / 2);
 
-  async switchToMeeting() {
-    this._callPanelSwitching = true;
-    const meetingPanel = await this.ensurePart("meeting-panel");
-    meetingPanel.feed({
-      kind: "window_meeting",
-      hub_id: this.mget(_a.hub_id),
-      nid: this.mget(_a.nid) || this.mget(_a.actual_home_id),
-      filename: this.mget(_a.filename),
-      audio: 1,
-      video: 1,
-      area: this.mget(_a.area),
-      uiHandler: [this],
-      sys_pn: "active-meeting",
-      partHandler: this,
-    });
-    this._callPanelSwitching = false;
-  }
-
-  async switchToWidget() {
-    this._callPanelSwitching = true;
-    const meetingPanel = await this.ensurePart("meeting-panel");
-    meetingPanel.feed({
-      kind: "widget_meeting",
-      hub_id: this.mget(_a.hub_id),
-      nid: this.mget(_a.nid),
-      name: this.mget(_a.filename) || this.mget(_a.name),
-      area: this.mget(_a.area),
-      uiHandler: [this],
-      sys_pn: "active-meeting",
-      partHandler: this,
-    });
-    this._callPanelSwitching = false;
-  }
-
-  onPartReady(child, pn) {
-    switch (pn) {
-      case "active-meeting":
-        this._callPanelOpening = false;
-        this._callPanel = child;
-        child.once(_e.destroy, () => {
-          if (this._callPanel === child && !this._callPanelSwitching) {
-            this._callPanel = null;
-            if (this._splitBody) {
-              this._splitBody.el.removeAttribute("data-call-panel");
-            }
-          }
-        });
-        break;
-      default:
-        super.onPartReady(child, pn);
-    }
+    return Wm.launch(
+      {
+        kind: "window_meeting",
+        hub_id: this.mget(_a.hub_id),
+        nid: room_id,
+        room_id,
+        filename: this.mget(_a.filename) || this.mget(_a.name),
+        area: this.mget(_a.area),
+        audio: 1,
+        video: 1,
+        standalone: 1,
+        wm_unique_id: `window_meeting-${this.mget(_a.hub_id)}`,
+        style: { top, left, width, height, minWidth: 480, minHeight: 420, margin: 0 },
+      },
+      { explicit: 1, singleton: 1 },
+    );
   }
 
 

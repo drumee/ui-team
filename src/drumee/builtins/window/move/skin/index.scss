@@ -197,6 +197,47 @@
     }
   }
 
+  // Breadcrumb path — back-navigation across drilled levels
+  &__breadcrumb {
+    width: 100%;
+    align-items: center;
+    flex-wrap: nowrap;
+    gap: 4px;
+    padding: 6px 8px;
+    background-color: #ffffff;
+    border: 1px solid var(--border-muted);
+    border-top: none;
+    overflow-x: auto;
+    @include drumee.typo($size: 12px, $line: 17px, $color: var(--normal-fg-20));
+
+    &[data-state="0"] {
+      display: none;
+    }
+  }
+
+  &__crumb {
+    cursor: pointer;
+    white-space: nowrap;
+    color: var(--primary-50);
+    flex-shrink: 0;
+
+    // Last crumb (current level) is not a link
+    &:last-child {
+      color: var(--normal-fg-10);
+      font-weight: 600;
+      cursor: default;
+    }
+
+    &:hover:not(:last-child) {
+      text-decoration: underline;
+    }
+  }
+
+  &__crumb-sep {
+    color: var(--normal-fg-20);
+    flex-shrink: 0;
+  }
+
   &__suggestions {
     width: 100%;
     background-color: #ffffff;
@@ -211,6 +252,36 @@
 
     &[data-state="0"] {
       display: none;
+    }
+  }
+
+  // "Select this folder" row — choose the current container as destination
+  &__select-current {
+    min-height: 25px;
+    padding: 6px 4px;
+    cursor: pointer;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    border-bottom: 1px solid var(--border-muted);
+    @include drumee.typo($size: 12px, $line: 17px, $weight: 600, $color: var(--primary-50));
+
+    &:hover {
+      background-color: rgba(89, 80, 255, 0.06);
+    }
+
+    &[data-selected="1"] .window-move__checkbox {
+      background-color: #5950ff;
+      border-color: #5950ff;
+    }
+  }
+
+  // Blocked destination (cyclic-move guard) — name still drillable, no select
+  &__ws-row[data-disabled="1"],
+  &__select-current[data-disabled="1"] {
+    .window-move__checkbox {
+      opacity: 0.35;
+      pointer-events: none;
     }
   }
 
