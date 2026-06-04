@@ -1300,7 +1300,8 @@ class __window_manager extends mfsInteract {
   /**
    * Show move destination picker popup
    * @param {object|object[]} items - Media item(s) to move
-   * @returns {Promise} resolves with { destination, items }
+   * @returns {Promise} resolves with { destination, destinations, items }
+   *   destinations: array of { nid, hub_id, filename, wsName, isFolder, home_nid }
    */
   move(items, opt = {}) {
     const kind = "window_move";

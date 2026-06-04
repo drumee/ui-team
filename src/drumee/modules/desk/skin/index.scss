@@ -261,3 +261,38 @@ html {
     }
   }
 }
+
+// Tablet & mobile (≤ 1024px): the right slide-out container (chat-p2p
+// inbox) overlays the workspace (__right-side) only — not the 231px
+// desktop sidebar column. Giving the container a real width/height lets
+// chat-p2p fill it with position:absolute instead of a 100vw fixed panel
+// that would otherwise cover the sidebar at tablet widths. Placed after
+// the 650px block so it wins where the two ranges overlap.
+@media (max-width: 1024px) {
+  .desk-module {
+    // Containing block for the absolutely-positioned right container —
+    // its box equals __right-side once the 0-width left container and
+    // the sidebar offset are accounted for.
+    &__body {
+      position: relative;
+    }
+
+    &__panel-container.right {
+      position: absolute;
+      top: 0;
+      right: 0;
+      bottom: 0;
+      // Start after the desktop sidebar column (231px, see sidebar.scss).
+      left: 231px;
+      width: auto;
+      max-width: none;
+      height: 100%;
+    }
+
+    // ≤ 800px the sidebar collapses to a fixed drawer and leaves the flex
+    // row, so the workspace spans the full width — overlay from the edge.
+    &__panel-container.right[data-device="mobile"] {
+      left: 0;
+    }
+  }
+}

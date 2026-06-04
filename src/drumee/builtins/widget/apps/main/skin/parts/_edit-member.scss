@@ -228,8 +228,8 @@
     justify-content: space-between;
     gap: 16px;
 
-    &[data-device="mobile"] {
-      flex-direction: column;
+    @media (max-width: 1024px) {
+      flex-direction: column !important;
       align-items: stretch;
       gap: 8px;
     }
@@ -255,7 +255,7 @@
       background: rgba(0, 0, 0, 0.07);
     }
 
-    &[data-device="mobile"] {
+    @media (max-width: 1024px) {
       width: 100%;
       min-width: 0;
     }
@@ -290,9 +290,11 @@
     align-items: center;
     gap: 8px;
 
-    &[data-device="mobile"] {
+    // Mobile: workspace name on its own line, then role-cell + remove share
+    // the next line at equal width (see their per-element mobile rules).
+    @media (max-width: 1024px) {
       flex-wrap: wrap;
-      gap: 6px;
+      gap: 8px;
     }
   }
 
@@ -305,6 +307,11 @@
     border-radius: 4px;
     align-items: center;
     gap: 8px;
+
+    // Full first line on mobile so role-cell + remove wrap below it.
+    @media (max-width: 1024px) {
+      flex: 1 1 100%;
+    }
   }
 
   &__edit-ws-ico {
@@ -332,8 +339,11 @@
     width: 154px;
     min-width: 0;
 
-    &[data-device="mobile"] {
-      width: 100%;
+    // Mobile: share the second line equally with the remove button.
+    @media (max-width: 1024px) {
+      flex: 1 1 0;
+      width: auto;
+      min-width: 0;
     }
   }
 
@@ -405,6 +415,14 @@
       visibility: visible;
       pointer-events: auto;
     }
+
+    // The role cell is a flexed half-width on mobile, so match the panel to it
+    // instead of floating a 154px panel that overflows the cell's left edge.
+    @media (max-width: 1024px) {
+      left: 0;
+      right: 0;
+      min-width: 0;
+    }
   }
 
   &__edit-ws-role-option {
@@ -473,6 +491,24 @@
     &:hover {
       color: var(--error, #d74e49);
       background: rgba(0, 0, 0, 0.04);
+    }
+
+    // Mobile: a real half-width button (same width as the role cell beside it),
+    // taller and tinted red so the destructive action is easy to tap and read.
+    @media (max-width: 1024px) {
+      flex: 1 1 0;
+      min-width: 0;
+      height: 33px;
+      padding: 6px 12px;
+      font-size: 20px;
+      color: $red;
+      background: rgba(246, 81, 75, 0.1);
+      border-radius: 4px;
+
+      &:hover {
+        color: $red;
+        background: rgba(246, 81, 75, 0.18);
+      }
     }
   }
 
@@ -596,7 +632,7 @@
     justify-content: space-between;
     gap: 16px;
 
-    &[data-device="mobile"] {
+    @media (max-width: 1024px) {
       flex-wrap: wrap;
       gap: 8px;
     }

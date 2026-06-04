@@ -299,16 +299,13 @@ class desk_module extends LetcBox {
     if (skipped) return;
 
     await Kind.waitFor("migrate_gdrive_popup");
-    Wm.launch(
-      {
-        kind: "migrate_gdrive_popup",
-        hub_id: Visitor.id,
-        nid: Visitor.get(_a.home_id),
-        autoFromOnboarding: 1,
-        wm_unique_id: "migrate_gdrive_popup",
-      },
-      { explicit: 1, singleton: 1 },
-    );
+    Wm.launch({
+      kind: "migrate_gdrive_popup",
+      hub_id: Visitor.id,
+      nid: Visitor.get(_a.home_id),
+      autoFromOnboarding: 1,
+      wm_unique_id: "migrate_gdrive_popup",
+    }, { explicit: 1, singleton: 1 });
   }
 
   /**

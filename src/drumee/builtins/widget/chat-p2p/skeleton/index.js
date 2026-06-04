@@ -57,6 +57,21 @@ module.exports = function (ui) {
     ],
   });
 
+  // Closes the whole chat-p2p panel (Desk.togglePanel). Lives in the
+  // sidebar header next to the compose button — the chat header no longer
+  // carries it.
+  const closeBtn = Skeletons.Button.Svg({
+    ico: "account_cross",
+    className: `${fig}__close-btn`,
+    service: "close-chat",
+    uiHandler: ui,
+  });
+
+  const sidebarActions = Skeletons.Box.X({
+    className: `${fig}__sidebar-actions`,
+    kids: [composeWrapper, closeBtn],
+  });
+
   const sidebarHeader = Skeletons.Box.X({
     className: `${fig}__sidebar-header`,
     kids: [
@@ -64,7 +79,7 @@ module.exports = function (ui) {
         className: `${fig}__inbox-title`,
         content: LOCALE.INBOX || "Inbox",
       }),
-      composeWrapper,
+      sidebarActions,
     ],
   });
 

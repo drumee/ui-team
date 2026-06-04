@@ -52,10 +52,11 @@ module.exports = function (ui) {
   // The bubble sits alone on the line; the hover action bar floats on the outer
   // side (appended into the line on hover — see chat-item._hover).
   const line = `<div class="${m.fig}__message-line ${m.author}">${body}</div>`;
-  // Footer (date + seen tick) and readers both sit in flow below the line so
-  // they're always visible (never hover-gated, covered, or clipped by the
+  // Footer (date + seen tick) and readers share one row in flow below the line
+  // so they're always visible (never hover-gated, covered, or clipped by the
   // message box / neighbouring messages).
-  let content = `<div id="content-${m.widgetId}" class="${m.fig}__message-content ${m.author}">${usernameHtml}${line}${footer}${readers}</div>`;
+  const footerLine = `<div class="${m.fig}__footer-line ${m.author}">${footer}${readers}</div>`;
+  let content = `<div id="content-${m.widgetId}" class="${m.fig}__message-content ${m.author}">${usernameHtml}${line}${footerLine}</div>`;
   html = `${avatar}${content}`;
   return html;
 };

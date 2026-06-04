@@ -8,7 +8,9 @@ class ___window_move extends mfsInteract {
     this.declareHandlers();
     this.contextmenuSkeleton = _a.none;
     this._selectedDestinations = [];
-    this._workspaces = [];
+    this._navStack = [];
+    this._currentItems = [];
+    this._blockedNids = new Set();
     this._searchTimer = null;
   }
 
@@ -27,6 +29,10 @@ class ___window_move extends mfsInteract {
         this.__suggestionsList = child;
         this._setupSuggestionClicks(child);
         break;
+      case 'breadcrumb':
+        this.__breadcrumb = child;
+        this._setupBreadcrumbClicks(child);
+        break;
       default:
         super.onPartReady(child, pn);
     }
@@ -35,11 +41,10 @@ class ___window_move extends mfsInteract {
   onUiEvent(cmd, args = {}) {
     const service = args.service || cmd.get(_a.service);
     switch (service) {
-      case 'select-suggestion':
-        break;
       case 'browse-destination':
-        this._visibleWorkspaces = this._workspaces.filter((ws) => (ws.hub_id || ws.id) !== this._currentHubId);
-        this._renderSuggestions(this._visibleWorkspaces);
+        // The "+" button resets navigation back to the workspace root level.
+        this._navStack = [{ type: 'root', name: LOCALE.WORKSPACES }];
+        this._loadLevel();
         break;
       case 'confirm-move':
         if (this.onConfirmMove) this.onConfirmMove(cmd, args);
@@ -52,35 +57,61 @@ class ___window_move extends mfsInteract {
     }
   }
 
-  // --- Event delegation: single click handler on suggestions container ---
+  // --- Click delegation: open (drill-in) vs select (toggle destination) ---
   _setupSuggestionClicks(container) {
     container.el.addEventListener('mousedown', (e) => {
       clearTimeout(this._searchTimer);
+      const target = e.target.closest('[data-action]');
       const row = e.target.closest('[data-service="select-suggestion"]');
-      if (!row) return;
+      if (!target || !row) return;
       e.preventDefault();
       e.stopPropagation();
-      this._toggleDestination(row.dataset, row);
+      if (target.dataset.action === 'open') {
+        this._openNode(row.dataset);
+      } else if (target.dataset.action === 'select') {
+        this._toggleDestination(row.dataset, row);
+      }
     });
     container.el.addEventListener('click', (e) => {
-      if (!e.target.closest('[data-service="select-suggestion"]')) return;
+      if (!e.target.closest('[data-action]')) return;
       e.preventDefault();
       e.stopPropagation();
     });
   }
 
+  _setupBreadcrumbClicks(container) {
+    container.el.addEventListener('mousedown', (e) => {
+      const crumb = e.target.closest('[data-action="crumb"]');
+      if (!crumb) return;
+      e.preventDefault();
+      e.stopPropagation();
+      this._navigateTo(Number(crumb.dataset.index));
+    });
+  }
+
+  // --- Selection (keyed by hub_id:nid to allow many subfolders per hub) ---
+  _destKey(d) {
+    return `${d.hub_id}:${d.nid}`;
+  }
+
   _toggleDestination(ds = {}, row) {
+    const nid = ds.nid;
     const hubId = ds.hub_id;
-    if (!hubId) return;
-    const index = this._selectedDestinations.findIndex((dest) => String(dest.hub_id) === String(hubId));
+    if (!nid || !hubId) return;
+    if (this._isBlockedDest({ nid })) return; // cyclic guard
+    const dest = {
+      nid,
+      hub_id: hubId,
+      filename: ds.filename || ds.wsname,
+      wsName: ds.wsname || ds.filename,
+      isFolder: ds.isfolder === '1' ? 1 : 0,
+      home_nid: ds.home_nid || nid,
+    };
+    const key = this._destKey(dest);
+    const index = this._selectedDestinations.findIndex((d) => this._destKey(d) === key);
     const selected = index < 0;
     if (selected) {
-      this._selectedDestinations.push({
-        nid: ds.nid || hubId,
-        hub_id: hubId,
-        filename: ds.filename || ds.wsname,
-        wsName: ds.wsname || ds.filename,
-      });
+      this._selectedDestinations.push(dest);
     } else {
       this._selectedDestinations.splice(index, 1);
     }
@@ -92,12 +123,21 @@ class ___window_move extends mfsInteract {
     this._updateMoveButton();
   }
 
-  _isSelectedDestination(hubId) {
-    return this._selectedDestinations.some((dest) => String(dest.hub_id) === String(hubId));
+  _isSelectedDestination(hubId, nid) {
+    const key = `${hubId}:${nid}`;
+    return this._selectedDestinations.some((d) => this._destKey(d) === key);
+  }
+
+  // A destination is invalid when it is the folder being moved, or any node
+  // inside that folder's subtree (would create a cyclic move).
+  _isBlockedDest(node = {}) {
+    if (!this._blockedNids.size) return false;
+    if (node.nid && this._blockedNids.has(String(node.nid))) return true;
+    return this._navStack.some((lvl) => lvl.nid && this._blockedNids.has(String(lvl.nid)));
   }
 
   _updateMoveButton() {
-    const btn = this.el.querySelector('.window-move__move-btn');
+    const btn = this.el.querySelector(`.${this.fig.group}-move__move-btn`);
     if (btn) btn.dataset.ready = this._selectedDestinations.length ? 1 : 0;
   }
 
@@ -108,8 +148,7 @@ class ___window_move extends mfsInteract {
       const q = (e.target.value || '').trim();
       clearTimeout(this._searchTimer);
       if (!q) {
-        this._visibleWorkspaces = this._workspaces.filter((ws) => (ws.hub_id || ws.id) !== this._currentHubId);
-        this._renderSuggestions(this._visibleWorkspaces);
+        this._renderLevel(this._currentItems);
         return;
       }
       this._searchTimer = setTimeout(() => this._search(q), 100);
@@ -131,8 +170,22 @@ class ___window_move extends mfsInteract {
     this._area = this.mget(_a.area) || this.mget('area') || 'inner-folder';
     this._currentHubId = this.mget(_a.hub_id) || this.mget('hub_id');
 
+    // Cyclic-move guard: block the folder(s)/hub(s) being moved as destinations.
+    // Files have no descendants, so they never create a cycle.
+    this._blockedNids = new Set(
+      this._items
+        .filter((it) => {
+          const ft = it.mget ? it.mget(_a.filetype) : it.filetype;
+          return ft === _a.folder || ft === _a.hub;
+        })
+        .map((it) => String(it.mget ? it.mget(_a.nid) : it.nid))
+        .filter(Boolean)
+    );
+
+    this._navStack = [{ type: 'root', name: LOCALE.WORKSPACES }];
+
     this.feed(require('./skeleton')(this));
-    this._loadWorkspaces();
+    this._loadLevel();
 
     return new Promise((resolve, reject) => {
       this.onConfirmMove = () => {
@@ -162,66 +215,195 @@ class ___window_move extends mfsInteract {
     });
   }
 
-  // --- Workspace loading ---
-  _loadWorkspaces() {
-    this.fetchService(SERVICE.desk.home, {
-      hub_id: Visitor.id,
-      type: _a.hub,
+  // --- Level loading (root = workspaces; folder = subfolders via show_node_by) ---
+  _loadLevel() {
+    const level = this._navStack[this._navStack.length - 1];
+
+    if (!level || level.type === 'root') {
+      this.fetchService(SERVICE.desk.home, {
+        hub_id: Visitor.id,
+        type: _a.hub,
+      }).then((data) => {
+        const items = this._asList(data).map((ws) => this._normalizeWorkspace(ws));
+        this._currentItems = items;
+        this._renderLevel(items);
+        this._updateLocationPath();
+      }).catch((e) => this.warn("Failed to load workspaces", e));
+      return;
+    }
+
+    // Drill-down: list folders inside the current node (mirror workspace-item).
+    this.fetchService(SERVICE.media.show_node_by, {
+      hub_id: level.hub_id,
+      nid: level.nid,
+      type: _a.folder,
     }).then((data) => {
-      this._workspaces = _.isArray(data) ? data : (data.data || data.list || data.rows || []);
-      this._visibleWorkspaces = this._workspaces.filter((ws) => (ws.hub_id || ws.id) !== this._currentHubId);
-      this._renderSuggestions(this._visibleWorkspaces);
-      const match = this._workspaces.find((ws) => (ws.hub_id || ws.id) === this._currentHubId);
-      if (match) {
-        const wsName = match.filename || match.name || LOCALE.WORKSPACE;
-        this.ensurePart("location-path").then((n) => {
-          if (n && n.el) n.el.textContent = wsName;
-        });
-      }
-    }).catch((e) => this.warn("Failed to load workspaces", e));
+      const items = this._asList(data)
+        .filter((it) => it.filetype === _a.folder || it.type === _a.folder)
+        .map((it) => this._normalizeFolder(it, level));
+      this._currentItems = items;
+      this._renderLevel(items);
+    }).catch((e) => {
+      this.warn("Failed to load folders", e);
+      this._currentItems = [];
+      this._renderLevel([]);
+    });
   }
 
-  // --- Search ---
+  _asList(data) {
+    if (_.isArray(data)) return data;
+    return (data && (data.data || data.list || data.rows || data.result)) || [];
+  }
+
+  _normalizeWorkspace(ws = {}) {
+    // Per-workspace home node id. actual_home_id is the distinct root nid of
+    // each hub; home_id is the visitor's shared home and must not win here
+    // (same field priority as the sidebar's workspace-item.getNodeId).
+    const nid = ws.actual_home_id || ws.home_id || ws.nid || ws.id || ws.hub_id;
+    const hub_id = ws.hub_id || ws.id;
+    return {
+      nid,
+      hub_id,
+      name: ws.filename || ws.name || LOCALE.WORKSPACE,
+      area: ws.area || this._area,
+      isFolder: 0,        // workspace root
+      home_nid: nid,
+    };
+  }
+
+  _normalizeFolder(item = {}, parentLevel = {}) {
+    const nid = item.nid || item.actual_home_id || item.home_id || item.id;
+    return {
+      nid,
+      hub_id: item.hub_id || parentLevel.hub_id,
+      name: item.filename || item.name || LOCALE.FOLDER,
+      area: item.area || parentLevel.area || this._area,
+      isFolder: 1,        // subfolder
+      home_nid: parentLevel.home_nid || parentLevel.nid,
+    };
+  }
+
+  // --- Navigation ---
+  _openNode(ds = {}) {
+    if (!ds.nid || !ds.hub_id) return;
+    this._navStack.push({
+      type: 'folder',
+      nid: ds.nid,
+      hub_id: ds.hub_id,
+      name: ds.filename || ds.wsname || LOCALE.FOLDER,
+      area: ds.area || this._area,
+      isFolder: ds.isfolder === '1' ? 1 : 0,
+      home_nid: ds.home_nid || ds.nid,
+    });
+    this._loadLevel();
+  }
+
+  _navigateTo(index) {
+    if (index < 0 || index >= this._navStack.length) return;
+    this._navStack = this._navStack.slice(0, index + 1);
+    this._loadLevel();
+  }
+
   _search(query) {
     const lower = query.toLowerCase();
-    const matchedWs = this._workspaces.filter((ws) => {
-      const wsId = ws.hub_id || ws.id;
-      if (wsId === this._currentHubId) return false;
-      const name = ws.filename || ws.name || '';
-      return name.toLowerCase().includes(lower);
-    });
-    this._visibleWorkspaces = matchedWs;
-    this._renderSuggestions(matchedWs);
+    const matched = this._currentItems.filter((it) =>
+      (it.name || '').toLowerCase().includes(lower)
+    );
+    this._renderLevel(matched);
   }
 
-  _renderSuggestions(workspaces) {
+  _updateLocationPath() {
+    const match = this._currentItems.find((ws) => String(ws.hub_id) === String(this._currentHubId));
+    if (!match) return;
+    this.ensurePart("location-path").then((n) => {
+      if (n && n.el) n.el.textContent = match.name;
+    });
+  }
+
+  // --- Rendering ---
+  _renderLevel(items) {
+    this._renderBreadcrumb();
+
     const pfx = `${this.fig.group}-move`;
-    const kids = workspaces.map((ws) => {
-      const wsName = ws.filename || ws.name || LOCALE.WORKSPACE;
-      const hubId = ws.hub_id || ws.id;
-      const destNid = ws.home_id || ws.actual_home_id || ws.nid || hubId;
-      const selected = this._isSelectedDestination(hubId) ? 1 : 0;
-      return Skeletons.Box.X({
-        className: `${pfx}__ws-row`,
-        dataset: { service: 'select-suggestion', nid: destNid, hub_id: hubId, filename: wsName, wsname: wsName, selected },
+    const kids = [];
+
+    // "Select this folder" — choose the current container as a destination.
+    const level = this._navStack[this._navStack.length - 1];
+    if (level && level.type === 'folder') {
+      const blocked = this._isBlockedDest(level);
+      const selected = this._isSelectedDestination(level.hub_id, level.nid) ? 1 : 0;
+      kids.push(Skeletons.Box.X({
+        className: `${pfx}__select-current`,
+        dataset: {
+          service: 'select-suggestion',
+          nid: level.nid,
+          hub_id: level.hub_id,
+          filename: level.name,
+          wsname: level.name,
+          area: level.area,
+          isfolder: level.isFolder,
+          home_nid: level.home_nid,
+          selected,
+          disabled: blocked ? 1 : 0,
+        },
         kids: [
-          Skeletons.Note({ className: `${pfx}__item-name`, content: wsName }),
-          Skeletons.Element({ className: `${pfx}__checkbox`, content: selected ? '✓' : '&nbsp;' }),
+          Skeletons.Note({ className: `${pfx}__item-name`, content: LOCALE.SELECT_THIS_FOLDER, dataset: { action: 'select' } }),
+          Skeletons.Element({ className: `${pfx}__checkbox`, content: selected ? '✓' : '&nbsp;', dataset: { action: 'select' } }),
         ],
-      });
+      }));
+    }
+
+    items.forEach((node) => {
+      const blocked = this._isBlockedDest(node);
+      const selected = this._isSelectedDestination(node.hub_id, node.nid) ? 1 : 0;
+      kids.push(Skeletons.Box.X({
+        className: `${pfx}__ws-row`,
+        dataset: {
+          service: 'select-suggestion',
+          nid: node.nid,
+          hub_id: node.hub_id,
+          filename: node.name,
+          wsname: node.name,
+          area: node.area,
+          isfolder: node.isFolder,
+          home_nid: node.home_nid,
+          selected,
+          disabled: blocked ? 1 : 0,
+        },
+        kids: [
+          Skeletons.Note({ className: `${pfx}__item-name`, content: node.name, dataset: { action: 'open' } }),
+          Skeletons.Element({ className: `${pfx}__checkbox`, content: selected ? '✓' : '&nbsp;', dataset: { action: 'select' } }),
+        ],
+      }));
     });
 
     if (kids.length === 0) {
-      kids.push(Skeletons.Note({
-        className: `${pfx}__no-results`,
-        content: LOCALE.NO_FILE_RESULTS,
-      }));
+      kids.push(Skeletons.Note({ className: `${pfx}__no-results`, content: LOCALE.NO_FILE_RESULTS }));
     }
 
     const s = this.__suggestionsList;
     if (!s) return;
     s.feed(kids);
     s.el.dataset.state = 1;
+  }
+
+  _renderBreadcrumb() {
+    const b = this.__breadcrumb;
+    if (!b) return;
+    const pfx = `${this.fig.group}-move`;
+    const kids = [];
+    this._navStack.forEach((lvl, i) => {
+      if (i > 0) {
+        kids.push(Skeletons.Note({ className: `${pfx}__crumb-sep`, content: '›' }));
+      }
+      kids.push(Skeletons.Note({
+        className: `${pfx}__crumb`,
+        content: lvl.name,
+        dataset: { action: 'crumb', index: i },
+      }));
+    });
+    b.feed(kids);
+    b.el.dataset.state = this._navStack.length > 1 ? 1 : 0;
   }
 
 }
