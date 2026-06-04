@@ -97,7 +97,7 @@ const __skl_folder_topbar = function (ui) {
     area === _a.share
       ? Skeletons.Button.Svg({
         className: `${cnFolder}__control-icon share`,
-        ico: "share",
+        ico: "app-share",
         service: "folder-manage-access",
         uiHandler: ui,
       })
@@ -108,34 +108,6 @@ const __skl_folder_topbar = function (ui) {
     ico: "gear-header",
     service: _e.settings,
     uiHandler: ui,
-  });
-
-  // File view toggle. A single control that shows the CURRENT view's glyph:
-  // the list icon (3 bars) in row mode, the grid icon (2x2) otherwise. Both
-  // glyphs are rendered; CSS reveals only the one matching the control's
-  // data-state. toggleFilesLayout() flips that state via cmd.changeState(), so
-  // the glyph swaps with no extra JS. active:0 on the glyphs lets the click
-  // bubble to the box's "toggle-files-layout" service.
-  const splitBtn = Skeletons.Box.X({
-    className: `${cnFolder}__control-icon`,
-    service: "toggle-files-layout",
-    sys_pn: "view-ctrl",
-    // Explicit data-state (not the `state` prop) guarantees the attribute is
-    // present on first render so the correct glyph shows immediately; the
-    // grid glyph is the CSS default, so only row/list (state 1) needs it.
-    dataset: { state: ui.getViewMode && ui.getViewMode() === _a.row ? 1 : 0 },
-    uiHandler: [ui],
-    kidsOpt: { active: 0 },
-    kids: [
-      Skeletons.Image.Svg({
-        ico: "view-list",
-        className: `${cnFolder}__control-icon-glyph ${cnFolder}__control-icon-glyph--list`,
-      }),
-      Skeletons.Image.Svg({
-        ico: "view-grid",
-        className: `${cnFolder}__control-icon-glyph ${cnFolder}__control-icon-glyph--grid`,
-      }),
-    ],
   });
 
   let controls = require("window/skeleton/topbar/control")(ui, "c");
@@ -151,7 +123,7 @@ const __skl_folder_topbar = function (ui) {
 
   const rightCluster = Skeletons.Box.X({
     className: `${cnFolder}__right`,
-    kids: [videoBtn, uploadBtn, addNew, shareBtn, settingsBtn, splitBtn, zoomMenu(ui), minimizeBtn, controls],
+    kids: [videoBtn, uploadBtn, addNew, shareBtn, settingsBtn, zoomMenu(ui), minimizeBtn, controls],
   });
 
   // ── Root row ─────────────────────────────────────────────────
