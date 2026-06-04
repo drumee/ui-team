@@ -4,20 +4,27 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Drumee Web OS UI — a collaborative web application (v3.2.32, AGPL-3.0) built on Backbone.js/Marionette with a custom JSON-based Skeletons UI rendering framework. Do **not** generate HTML; all UI is expressed as Skeletons component trees.
+Drumee Web OS UI — a collaborative web application (v3.3.1, AGPL-3.0) built on Backbone.js/Marionette with a custom JSON-based Skeletons UI rendering framework. Do **not** generate HTML; all UI is expressed as Skeletons component trees.
 
 ## Commands
 
 ```bash
 npm run dev          # Start development server (drumee-ui-devel)
-npm run build        # Full production build: update browserslist + seeds + deploy
-npm run seeds        # Update browserslist and regenerate webpack entry points
-npm run deploy       # Deploy only (drumee-ui-deploy)
-npm run build:icons  # Rebuild SVG icon sprites
+npm run deploy       # Production build + deploy (drumee-ui-deploy) — this is what CI runs
+npm run build:icons  # Rebuild SVG icon sprites (also copies *.sprite.svg → *.sprite.txt)
 npm run md:style     # Recompile markdown viewer CSS
 npm run setup        # Write dev environment config (run once after clone)
-npm run add-widget -- --fig=group.name --dest src/path/to/widget  # Scaffold a new widget
+npm run add-widget -- --fig=group.name --dest src/path/to/widget  # Scaffold a new widget (drumee-make-widget)
 ```
+
+Build/seed generation now lives inside `@drumee/ui-dev-tools` (the `drumee-ui-devel` / `drumee-ui-deploy` binaries), **not** in this repo's `webpack/` directory:
+
+- **`npm run deploy` is the production build** and the command CI uses. There is no `build` script — it was removed because it referenced `./webpack/seeds/index.js`, an entry-point generator that no longer exists (along with `webpack/seed/` and the old `seed-letc` bin). Don't recreate that path; the seed/entry-point logic was intentionally moved into the dev-tools package.
+- `webpack/` here holds only the shared config consumed by dev-tools (`module.js`, `resolve.js`, `plugins.js`, `sync.js`, `postcss.config.js`, `tsconfig.json`).
+
+ESLint (v9) is a dependency but no `lint` script or config file is committed — there is no lint or test runner wired up.
+
+`postinstall` runs `patch-package`. **`@drumee/ui-core` is patched** (`patches/@drumee+ui-core+1.1.43.patch`) — that patch reapplies on every install, so account for it before upgrading `@drumee/ui-core` or editing the patch.
 
 `--fig` sets the widget identity (`group` + `family` BEM root); `--dest` is the output directory.
 
@@ -70,7 +77,8 @@ Webpack 5 config is split across `webpack/`:
 - `resolve.js` — 40+ path aliases (e.g., `desk`, `builtins`, `media`, `locale`, `toolkit`)
 - `plugins.js` — MiniCssExtract, CleanWebpack, DefinePlugin (`__BUILD__`, `__VERSION__`, `__COMMIT__`, `__TEMPLATES__`), StatsWriter, Duplicates
 - `sync.js` — post-build git-based versioning and remote sync
-- `seeds/` — generates modular entry points
+
+These files are config inputs consumed by the `@drumee/ui-dev-tools` build binaries. The old in-repo entry-point generator (`webpack/seeds/`, `webpack/seed/`) has been removed — that logic now lives in dev-tools.
 
 Supported file extensions: `.coffee`, `.js`, `.scss`, `.css`, `.web.coffee`, `.web.js`, `.json`, `.tpl`, `.tsx`, `.ts`
 

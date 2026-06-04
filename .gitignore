@@ -17,7 +17,8 @@ package-lock.json
 build/
 media-test/file_example_MP4_1280_10MG.mp4
 media-test/file_example_MP4_1920_18MG.mp4
-.claude/
+.claude/*
+!.claude/rules/
 .playwright-mcp/
 .clinerules
 local-session-guide.md

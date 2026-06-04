@@ -11,9 +11,6 @@
   "bugs": {
     "url": "https://github.com/drumee/ui-team/issues/"
   },
-  "bin": {
-    "seed-letc": "./webpack/seed/index.js"
-  },
   "licenses": [
     {
       "type": "AGPL V3",
@@ -159,10 +156,8 @@
     "dev": "drumee-ui-devel",
     "build:icons": "cd icons && node build.js && cd sprites && cp normalized.sprite.svg normalized.sprite.txt && cp raw.sprite.svg raw.sprite.txt",
     "deploy": "drumee-ui-deploy",
-    "build": "npx update-browserslist-db@latest && ./webpack/seeds/index.js && drumee-ui-deploy",
     "add-widget": "drumee-make-widget",
     "md:style": "cd src/drumee && sass -I ./skin --no-source-map --update builtins/editor/markdow/skin/viewer.scss builtins/editor/markdow/template/style.css.txt",
-    "setup": "node node_modules/@drumee/ui-dev-tools/env/write-env.js --type=app --output devel --base-dir=$(pwd)",
-    "postinstall": "patch-package"
+    "setup": "node node_modules/@drumee/ui-dev-tools/env/write-env.js --type=app --output devel --base-dir=$(pwd)"
   }
 }
