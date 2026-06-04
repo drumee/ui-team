@@ -51,13 +51,20 @@
 
   // ── Columns ───────────────────────────────────────────────────
   &__column {
+    // `--col-accent` is set inline per column from the status color (see the
+    // COLUMNS table in index.js). Everything below tints off this one var, so
+    // re-coloring a status only means editing that table.
     flex: 1 1 0;
     min-width: 220px;
     align-items: stretch;
     justify-content: space-between;
     padding: 12px;
     border-radius: 10px;
-    background-color: var(--normal-bg-80, rgba(0, 0, 0, 0.04));
+    background-color: color-mix(
+      in srgb,
+      var(--col-accent, transparent) 7%,
+      var(--normal-bg-80, rgba(0, 0, 0, 0.04))
+    );
     box-sizing: border-box;
     overflow: hidden;
   }
@@ -132,7 +139,17 @@
 
     &.is-drop-target {
       background-color: var(--hover-bg-40, rgba(67, 60, 197, 0.06));
+      background-color: color-mix(
+        in srgb,
+        var(--col-accent, rgba(67, 60, 197, 1)) 10%,
+        transparent
+      );
       outline-color: var(--active-border, rgba(67, 60, 197, 0.4));
+      outline-color: color-mix(
+        in srgb,
+        var(--col-accent, rgba(67, 60, 197, 1)) 55%,
+        transparent
+      );
     }
   }
 
@@ -158,14 +175,19 @@
   }
 
   &__column-title {
+    // Sentence case (no uppercase), tinted with the status color. The mix
+    // toward the base fg keeps the light-grey "Not started" and the brighter
+    // statuses both legible in either theme.
     @include drumee.typo(
       $size: 13px,
       $weight: 600,
       $line: 18px,
-      $color: var(--normal-fg-10, #0b0a21)
+      $color: color-mix(
+        in srgb,
+        var(--col-accent, var(--normal-fg-10, #0b0a21)) 80%,
+        var(--normal-fg-10, #0b0a21)
+      )
     );
-    text-transform: uppercase;
-    letter-spacing: 0.03em;
   }
 
   &__column-count {
@@ -174,7 +196,13 @@
     min-width: 22px;
     padding: 0 8px;
     border-radius: 100px;
+    // Accent-tinted badge (solid neutral fallback for no color-mix support).
     background-color: var(--overlay-bg-05, rgba(0, 0, 0, 0.06));
+    background-color: color-mix(
+      in srgb,
+      var(--col-accent, transparent) 18%,
+      transparent
+    );
   }
 
   &__column-count-text {
@@ -184,16 +212,21 @@
       $line: 16px,
       $color: var(--normal-fg-50, #65656c)
     );
+    // Pick up the status color for the number itself.
+    color: color-mix(in srgb, var(--col-accent, #65656c) 80%, var(--normal-fg-10, #0b0a21));
   }
 
   // ── Task card (Trello-like) ───────────────────────────────────
+  // Cards inherit `--col-accent` from their column, so each item is tinted by
+  // the status it currently sits in: a colored left bar, a faint background
+  // wash, and an accent hover border.
   &__task-card {
     align-items: stretch;
     gap: 8px;
     padding: 12px;
     border: 1px solid var(--border-default, rgba(11, 10, 33, 0.06));
     border-radius: 8px;
-    background-color: var(--normal-bg-elevated, #ffffff);
+    background-color: color-mix(in srgb, var(--col-accent, transparent) 24%, var(--normal-bg-80, rgba(0, 0, 0, 0.04)));
     box-shadow: var(--shadow-top-tiny, 0 1px 0 rgba(9, 30, 66, 0.08));
     cursor: pointer;
     transition:
@@ -204,6 +237,7 @@
 
     &:hover {
       border-color: var(--border-strong, rgba(11, 10, 33, 0.12));
+      border-left-color: var(--col-accent, var(--border-strong, rgba(11, 10, 33, 0.12)));
       box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
 
       .tasks-panel__task-remove {
@@ -261,12 +295,22 @@
     margin-top: 4px;
   }
 
+  // Priority chip — the status color fills the pill; the label sits inside.
+  // (Background color is set inline from `priority.color`.)
   &__task-priority-dot {
-    display: inline-block;
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
     flex-shrink: 0;
+    padding: 1px 8px;
+    border-radius: 100px;
+    // Dark text reads cleanly on every (pastel) priority color in both themes.
+    @include drumee.typo(
+      $size: 10px,
+      $weight: 700,
+      $line: 16px,
+      $letter: 0.03em,
+      $color: var(--white)
+    );
   }
 
   // ── Linked-file preview on the kanban card ────────────────────
@@ -276,7 +320,7 @@
     margin-top: 2px;
     padding: 6px 8px;
     border-radius: 6px;
-    background: var(--normal-bg-90, #f7f7fa);
+    background-color: color-mix(in srgb, var(--col-accent, transparent) 60%, var(--normal-bg-80, rgba(0, 0, 0, 0.04)));
     border: 1px solid var(--border-muted, rgba(11, 10, 33, 0.04));
   }
 
@@ -290,7 +334,7 @@
     width: 12px;
     height: 12px;
     flex-shrink: 0;
-    color: var(--normal-fg-50, #84848c);
+    color: var(--normal-fg-10);
 
     svg {
       width: 100%;
@@ -318,7 +362,7 @@
       $size: 11px,
       $weight: 500,
       $line: 14px,
-      $color: var(--normal-fg-50, #65656c)
+      $color: var(--normal-fg-10)
     );
   }
 
@@ -356,11 +400,11 @@
       $size: 11px,
       $weight: 500,
       $line: 14px,
-      $color: var(--normal-fg-50, #65656c)
+      $color: var(--normal-fg-10)
     );
     padding: 2px 8px;
     border-radius: 100px;
-    background: var(--overlay-bg-05, rgba(0, 0, 0, 0.05));
+    background-color: color-mix(in srgb, var(--col-accent, transparent) 60%, var(--normal-bg-80, rgba(0, 0, 0, 0.04)));
 
     &[data-overdue="1"] {
       color: #fff;
@@ -375,7 +419,7 @@
     gap: 4px;
     padding: 8px;
     margin-top: 8px;
-    border: 1px dashed var(--border-default, rgba(11, 10, 33, 0.2));
+    border: 1px dashed var(--col-accent);
     border-radius: 8px;
     background-color: transparent;
     cursor: pointer;
@@ -400,7 +444,7 @@
       $size: 12px,
       $weight: 500,
       $line: 16px,
-      $color: var(--normal-fg-50, #65656c)
+      $color: var(--col-accent)
     );
   }
 
@@ -1102,7 +1146,6 @@
     flex-shrink: 0;
     border-radius: 50%;
     overflow: hidden;
-    box-shadow: 0 0 0 2px var(--normal-bg-elevated, #fff);
 
     // Overlap successive avatars in the stack.
     & + & {

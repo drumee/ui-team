@@ -199,7 +199,7 @@ const make = function (ui) {
                 className: `${pfx}__task-file`,
                 kids: [
                   Skeletons.Image.Svg({
-                    ico: "attachment",
+                    ico: "app-attachment",
                     className: `${pfx}__task-file-ico`,
                   }),
                   Skeletons.Note({
@@ -222,14 +222,16 @@ const make = function (ui) {
     // Footer: priority dot + due date only. Attachment count badge removed
     // (the inline file rows above already convey the number visually).
     // Assignee avatar moves up to the title row (top-right of the card).
+    const priorityText = LOCALE[priority.label] || priority.key;
     const footer = Skeletons.Box.X({
       className: `${pfx}__task-foot`,
       kids: [
-        Skeletons.Element({
-          tagName: "span",
+        // Priority chip — the status color fills it and the label reads inside
+        // (Note renders `content` as text; a bare wrapper would not).
+        Skeletons.Note({
           className: `${pfx}__task-priority-dot`,
+          content: priorityText,
           styleOpt: { background: priority.color },
-          attrOpt: { title: LOCALE[priority.label] || priority.key },
         }),
         task.due_date ? dueBadge(task) : null,
       ].filter(Boolean),
@@ -300,6 +302,10 @@ const make = function (ui) {
     Skeletons.Box.Y({
       className: `${pfx}__column`,
       dataset: { column: col.key },
+      // Per-column accent driven by the status color (COLUMNS in index.js) so
+      // the SCSS theming (top strip, count pill, drop highlight) stays in sync
+      // with the single source of truth instead of duplicating hex values.
+      styleOpt: { "--col-accent": col.color },
       kids: [
         Skeletons.Box.Y({
           className: `${pfx}__column-body`,
