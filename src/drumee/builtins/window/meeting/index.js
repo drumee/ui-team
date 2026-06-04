@@ -474,10 +474,17 @@ class __window_meeting extends __room {
     // the bail-out branches return false/undefined. This is purely a local
     // preview and does not touch the desktop track sent to other participants.
     if (r === true) {
+      // The desktop track is stored synchronously under `localTracks.video`
+      // (createLocalTracks keys by `track.getType()`, which is "video" for a
+      // desktop track) BEFORE `room.addTrack` runs. `getLocalTrack(desktop)`
+      // scans the room's tracks and can miss it if addTrack hasn't registered
+      // it yet, and `localTracks.desktop` never exists — so fall back to
+      // `localTracks.video`, which is the live desktop track while sharing.
       const track =
         this.getLocalTrack(_a.desktop) ||
-        (this.localTracks && this.localTracks.desktop);
+        (this.localTracks && this.localTracks.video);
       if (track) this._showScreenSelfPreview(track);
+      else if (this.warn) this.warn("screen self-preview: no desktop track");
     }
     return r;
   }
@@ -507,7 +514,10 @@ class __window_meeting extends __room {
     } catch (e) {
       stream = null;
     }
-    if (!stream) return;
+    if (!stream) {
+      if (this.warn) this.warn("screen self-preview: no stream from track");
+      return;
+    }
 
     const pfx = this.fig.family;
     const box = document.createElement("div");
