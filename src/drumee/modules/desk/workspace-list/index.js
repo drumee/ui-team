@@ -5,6 +5,7 @@
  * Handles "nav-workspace" to open a hub in the window manager,
  * and "new-workspace" to create a new one.
  * ==================================================================== */
+const WS_EVENT = "ws:event";
 
 class __desk_workspace extends LetcBox {
   initialize(opt = {}) {
@@ -16,13 +17,17 @@ class __desk_workspace extends LetcBox {
     this._onWorkspaceFocus = this._onWorkspaceFocus.bind(this);
     RADIO_BROADCAST.on("workspace:refresh", this.refreshList, this);
     RADIO_BROADCAST.on("workspace:focus", this._onWorkspaceFocus);
-    this.bindEvent(_a.live);
+    this.handleWsEvent = this.handleWsEvent.bind(this);
+    // this.bindEvent(_a.live);
+
   }
 
   onBeforeDestroy() {
     RADIO_BROADCAST.off("workspace:refresh", this.refreshList, this);
     RADIO_BROADCAST.off("workspace:focus", this._onWorkspaceFocus);
-    this.unbindEvent(_a.live);
+    Wm.off(WS_EVENT, this.handleWsEvent);
+
+    // this.unbindEvent(_a.live);
   }
 
   /**
@@ -86,6 +91,7 @@ class __desk_workspace extends LetcBox {
   }
 
   onDomRefresh() {
+    Wm.on(WS_EVENT, this.handleWsEvent);
     this.feed(require("./skeleton")(this));
   }
 
@@ -126,27 +132,26 @@ class __desk_workspace extends LetcBox {
    * list.restart() is reserved for hub.invite_received where we don't
    * know the precise delta.
    */
-  onWsMessage(svc, data, options = {}) {
-    const { service } = options || svc;
-
+  // onWsMessage(svc, data, options = {}) {
+  handleWsEvent(args = {}) {
+    let { data, options } = args || {};
+    let { echoId, service: service } = options;
+    let { src, dest } = data.args || {};
+    this.verbose("onWsMessage[132]", src, dest , service, data, options)
     if (service === "hub.invite_received") {
       this.refreshList();
       return;
     }
 
     if (!data) {
-      if (super.onWsMessage) super.onWsMessage(svc, data, options);
+      if (super.onWsMessage) super.onWsMessage(service, data, options);
       return;
     }
 
-    const args = (data.args && data.args.dest) || data;
+    // const args = (data.args && data.args.dest) || data;
     const filetype = args.filetype || data.filetype;
-    const isMediaEvent =
-      service === "media.new" ||
-      service === "media.remove" ||
-      service === "media.rename";
-    if (isMediaEvent && filetype !== _a.hub) {
-      if (super.onWsMessage) super.onWsMessage(svc, data, options);
+    if (/^media/.test(service) && filetype !== _a.hub) {
+      if (super.onWsMessage) super.onWsMessage(service, data, options);
       return;
     }
 
@@ -166,7 +171,7 @@ class __desk_workspace extends LetcBox {
         this._renameHub(data);
         return;
       default:
-        if (super.onWsMessage) super.onWsMessage(svc, data, options);
+        if (super.onWsMessage) super.onWsMessage(service, data, options);
     }
   }
 
