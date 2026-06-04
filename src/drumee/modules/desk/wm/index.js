@@ -391,7 +391,7 @@ class __window_manager extends push {
         }
         try {
           workspace.model && workspace.model.set(attrs);
-        } catch (e) {}
+        } catch (e) { }
         apply(attrs);
       })
       .catch((e) => this.warn("loadWorkspace: get_attributes failed", e));
@@ -506,10 +506,10 @@ class __window_manager extends push {
     const home_id = isWorkspace
       ? nid
       : data.actual_home_id ||
-        data.home_id ||
-        data.workspace_nid ||
-        this.mget(_a.home_id) ||
-        nid;
+      data.home_id ||
+      data.workspace_nid ||
+      this.mget(_a.home_id) ||
+      nid;
     this._curWorkspace = { hub_id, nid, area: data.area };
     this.mset({ hub_id, nid, nodeId: nid, area: data.area, ownpath, home_id });
     // Clicking into a folder marks the workspace chat as read.
@@ -850,7 +850,7 @@ class __window_manager extends push {
   /**
    * To do : allow copy/paste/supp through keyboard short cut
    */
-  _handelKbdEvents(e) {}
+  _handelKbdEvents(e) { }
 
   /**
    * Home-grid filter — drop hub-symlinks for non-collaborative areas
@@ -963,7 +963,7 @@ class __window_manager extends push {
   /**
    *
    */
-  _openDefault() {}
+  _openDefault() { }
 
   /**
    *
@@ -1145,7 +1145,7 @@ class __window_manager extends push {
     this.getWindowsPool().children.each(function (c) {
       try {
         return c.reload();
-      } catch (error) {}
+      } catch (error) { }
     });
   }
 
@@ -1225,7 +1225,7 @@ class __window_manager extends push {
       nodes,
       hub_id: nodes[0].hub_id,
     })
-      .then((data) => {})
+      .then((data) => { })
       .catch((e) => {
         this.warn("Failed to delete nodes", nodes, e);
       });
@@ -1292,7 +1292,7 @@ class __window_manager extends push {
           });
           p.clear();
         })
-        .catch(() => {});
+        .catch(() => { });
     });
   }
 
@@ -1347,7 +1347,7 @@ class __window_manager extends push {
           }
           p.clear();
         })
-        .catch(() => {});
+        .catch(() => { });
     });
   }
 
@@ -1571,10 +1571,10 @@ class __window_manager extends push {
           const skel =
             this._curWorkspace && this._curWorkspace.hub_id
               ? {
-                  kind: "folder_form",
-                  hub_id: this._curWorkspace.hub_id,
-                  nid: this._curWorkspace.nid,
-                }
+                kind: "folder_form",
+                hub_id: this._curWorkspace.hub_id,
+                nid: this._curWorkspace.nid,
+              }
               : { kind: "media_form" };
           p.feed(skel);
           // Reset the wrapper only when the whole dialog chain is gone.
@@ -1820,7 +1820,7 @@ class __window_manager extends push {
       this.iconsList.children.each((c) => {
         try {
           return c.unselect();
-        } catch (error) {}
+        } catch (error) { }
       });
     }
 
@@ -1828,7 +1828,7 @@ class __window_manager extends push {
       if (t !== c) {
         try {
           return c.unselect();
-        } catch (error) {}
+        } catch (error) { }
       }
     });
   }
@@ -1996,8 +1996,7 @@ class __window_manager extends push {
       }
       let opt = Visitor.parseModuleArgs(text);
       const url = new URL(href);
-      if (url.host != bootstrap().main_domain) {
-        //window.open(href, "_blank", "noopener;");
+      if (url.host != bootstrap().main_domain || /\#\/plugins/.test(url.hash)) {
         window.open(href, "_blank");
         return;
       }
