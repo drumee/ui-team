@@ -1,6 +1,6 @@
 require("./skin");
 const { copyToClipboard } = require("@drumee/ui-essentials");
-const { TweenLite, TimelineMax } = require("@drumee/ui-core/vendor");
+const { TweenLite, gsap } = require("@drumee/ui-core/vendor");
 let lastClickTime = new Date().getTime();
 const push = require("./push");
 
@@ -1475,8 +1475,12 @@ class __window_manager extends push {
       let trashbin = trash.$el;
       this.$el.append(helper);
       const f = () => {
-        const tl = new TimelineMax();
-        tl.to(trashbin, 0.3, { scale: 1.2 }).to(trashbin, 0.3, { scale: 1 });
+        // GSAP3: vendor exports gsap (default+named) but not the TimelineMax shim,
+        // so build the timeline directly. Unwrap the jQuery target to a DOM node
+        // (mirrors the shim's getTarget) and use the v3 .to(target, {duration,...}) signature.
+        const node = trashbin.get ? trashbin.get(0) : trashbin;
+        const tl = gsap.timeline();
+        tl.to(node, { duration: 0.3, scale: 1.2 }).to(node, { duration: 0.3, scale: 1 });
         trashbin.parent().children(".temp-anim").remove();
         helper.remove();
         resolve();

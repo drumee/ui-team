@@ -1,4 +1,4 @@
-const { filesize } = require("@drumee/ui-essentials");
+const { filesize, dataTransfer } = require("@drumee/ui-essentials");
 const __window_core = require("../core");
 
 /**
@@ -34,6 +34,15 @@ class __window_upload_progress extends __window_core {
     
     // State management
     this._uploadItems = []; // Array of upload items: { id, file, progress, speed, status, queue }
+
+    // Bundle staging state
+    this._phase = "progress";         // default; bundle staging entry (openStaging) sets "staging"
+    this._bundle = [];                // BundleEntry roots
+    this._replaceExisting = false;    // bulk conflict policy (toggle in staging)
+    this._bundleEntry = require("media/bundle/entry");
+    this._bundleManager = require("media/bundle/manager");
+    this._targetWindow = opt && opt.targetWindow ? opt.targetWindow : null; // folder window
+
     this._isExpanded = true;
     this._totalFiles = 0;
     this._fileProgressMap = {}; // Track progress for speed calculation
@@ -983,6 +992,7 @@ class __window_upload_progress extends __window_core {
    * Cancel all uploads
    */
   cancelAll() {
+    if (this._job && this._job.cancel) this._job.cancel();
     // Cancel all active uploads
     this._uploadItems.forEach(item => {
       if (item.status === 'uploading') {
@@ -1403,6 +1413,246 @@ class __window_upload_progress extends __window_core {
   }
 
   /**
+   * @param {*} child
+   * @param {*} pn
+   */
+  onPartReady(child, pn) {
+    if (pn === "fileselector") {
+      // Store the FileSelector widget; its <input> is created later in onDomRefresh,
+      // so we trigger it via its own open() API on demand (see onUiEvent add-files).
+      this._fileSelector = child;
+      return;
+    }
+    if (pn === "staging") {
+      const el = child.el;
+      el.addEventListener("dragover", (e) => { e.preventDefault(); el.dataset.over = "1"; });
+      el.addEventListener("dragleave", () => { el.dataset.over = "0"; });
+      el.addEventListener("drop", async (e) => {
+        e.preventDefault(); e.stopPropagation(); el.dataset.over = "0";
+        const transfer = dataTransfer({ type: _e.drop, originalEvent: e });
+        const roots = await this._bundleEntry.entriesFromDataTransfer(transfer);
+        this._addToBundle(roots);
+      });
+      return;
+    }
+    if (super.onPartReady) super.onPartReady(child, pn);
+  }
+
+  _ensureDirInput() {
+    if (!this._dirInput) {
+      const inp = document.createElement("input");
+      inp.type = "file"; inp.webkitdirectory = true; inp.multiple = true;
+      inp.style.display = "none";
+      inp.onchange = (e) => {
+        const roots = this._bundleEntry.entriesFromFileList(e.target.files);
+        this._addToBundle(roots);
+        e.target.value = "";
+      };
+      this.el.appendChild(inp);
+      this._dirInput = inp;
+    }
+    return this._dirInput;
+  }
+
+  _addToBundle(roots) {
+    // merge roots into this._bundle by name (folders merge, files append)
+    for (const r of roots) this._mergeEntry(this._bundle, r);
+    this._renderStaging();
+  }
+
+  _mergeEntry(list, entry) {
+    if (entry.kind === "folder") {
+      let existing = list.find((e) => e.kind === "folder" && e.name === entry.name);
+      if (!existing) { list.push(entry); return; }
+      for (const c of entry.children) this._mergeEntry(existing.children, c);
+      existing.size = this._bundleEntry.computeSize(existing.children);
+    } else {
+      list.push(entry);
+    }
+  }
+
+  _renderStaging() {
+    const total = this._bundleEntry.countSize(this._bundle);
+    const fileCount = this._countBundleFiles(this._bundle);
+    this.ensurePart("staging-summary").then((p) =>
+      p.set({ content: `${fileCount} ${LOCALE.FILES || "files"} · ${filesize(total)}` }));
+    this.ensurePart("staging-list").then((list) => {
+      list.feed(this._stagingRows(this._bundle, 0));
+    });
+  }
+
+  _countBundleFiles(list) {
+    let n = 0;
+    for (const e of list) n += e.kind === "file" ? 1 : this._countBundleFiles(e.children);
+    return n;
+  }
+
+  _stagingRows(list, depth) {
+    const pfx = this.fig.family;
+    const rows = [];
+    for (const e of list) {
+      rows.push(Skeletons.Box.X({
+        className: `${pfx}__staging-row`,
+        dataset: { kind: e.kind, depth },
+        kids: [
+          Skeletons.Note({ className: `${pfx}__staging-name`, content: e.name }),
+          Skeletons.Note({
+            className: `${pfx}__staging-remove`, content: "✕",
+            service: `remove:${e.id}`, uiHandler: [this],
+          }),
+        ],
+      }));
+      if (e.kind === "folder" && e.children.length) {
+        rows.push(...this._stagingRows(e.children, depth + 1));
+      }
+    }
+    return rows;
+  }
+
+  _startBundle() {
+    if (this._uploading) return;
+    if (!this._bundle.length) return;
+    let destNid, hub_id;
+    if (this._dropDest) {
+      // Drag-drop: explicit destination (drop target dir / folder), captured at drop time.
+      destNid = this._dropDest.destNid;
+      hub_id = this._dropDest.hub_id;
+      this._dropDest = null;
+    } else {
+      const target = this._targetWindow;
+      destNid = (target && typeof target.getCurrentNid === "function") ? target.getCurrentNid() : null;
+      hub_id = (target && typeof target.mget === "function") ? target.mget(_a.hub_id) : null;
+    }
+    if (destNid == null) {                       // no real folder/hub target (e.g. WM is active)
+      destNid = Visitor.get(_a.home_id);
+      hub_id = hub_id != null ? hub_id : Visitor.get(_a.id);
+    }
+    if (destNid == null) {
+      Butler.say(LOCALE.WRONG_DROP_AREA || "Please open a folder to upload into");
+      return;
+    }
+
+    // Quota guard: total bundle bytes vs free disk (spec §5.8)
+    const total = this._bundleEntry.countSize(this._bundle);
+    if (typeof Visitor.diskFree === "function" && total > Visitor.diskFree()) {
+      Butler.say(LOCALE.QUOTA_EXCEEDED || "Not enough space for this upload");
+      return;
+    }
+
+    const resolution = {
+      mode: this._replaceExisting ? "replace" : "rename",
+      skip: new Set(),
+    };
+
+    const job = this._bundleManager.create({ entries: this._bundle, destNid, hub_id, resolution });
+    this._attachJob(job);            // subscribe BEFORE the job starts (manager.pump)
+    this._uploading = true;
+    this._phase = "progress";
+    this._switchToProgress();
+    this._bundleManager.pump();      // now start; first events are captured
+  }
+
+  _attachJob(job) {
+    this._job = job;
+    job.on("progress", () => this._renderAggregate());
+    job.on("folder-created", () => this._renderProgressList());
+    job.on("file-done", () => { this._renderAggregate(); this._renderProgressList(); });
+    job.on("error", () => this._renderProgressList());
+    job.on("done", ({ canceled }) => this._onBundleDone(canceled));
+    job.on("activated", () => this._renderAggregate());
+  }
+
+  _switchToProgress() {
+    const root = this.el.querySelector(`.${this.fig.family}__container`) || this.el;
+    if (root && root.dataset) root.dataset.phase = "progress";
+    this._renderAggregate();
+    this._renderProgressList();
+  }
+
+  _renderAggregate() {
+    if (!this._job) return;
+    const pct = this._job.bytesTotal
+      ? Math.min(100, Math.round(100 * this._job.bytesDone / this._job.bytesTotal)) : 0;
+    this.ensurePart("agg-fill").then((p) => { if (p.el) p.el.style.width = pct + "%"; });
+    const rate = this._bundleManager.governor.currentRate();
+    const mbps = (rate / (1024 * 1024)).toFixed(1);
+    const remaining = Math.max(0, this._job.bytesTotal - this._job.bytesDone);
+    const etaSuffix = (rate > 0 && remaining > 0) ? ` · ~${Math.ceil(remaining / rate)}s` : "";
+    this.ensurePart("agg-text").then((p) => p.set({
+      content: `${pct}% · ${filesize(this._job.bytesDone)}/${filesize(this._job.bytesTotal)} · ${mbps} MB/s${etaSuffix}`,
+    }));
+  }
+
+  _renderProgressList() {
+    this.ensurePart("file-list").then((list) => {
+      list.feed(this._progressRows(this._bundle, 0));
+    });
+  }
+
+  _progressRows(entries, depth) {
+    const pfx = this.fig.family;
+    const rows = [];
+    for (const e of entries) {
+      const label = e.kind === "folder" && e.status === "creating"
+        ? (LOCALE.CREATING_FOLDER || "Creating folder…") : (e.status || "queued");
+      const kids = [
+        Skeletons.Note({ className: `${pfx}__progress-name`, content: e.name }),
+        Skeletons.Note({ className: `${pfx}__progress-state`, content: label }),
+      ];
+      if (e.status === "error") {
+        kids.push(Skeletons.Note({
+          className: `${pfx}__progress-retry`,
+          content: LOCALE.RETRY || "Retry",
+          service: `retry:${e.id}`, uiHandler: [this],
+        }));
+      }
+      rows.push(Skeletons.Box.X({
+        className: `${pfx}__progress-row`, dataset: { kind: e.kind, status: e.status, depth },
+        kids,
+      }));
+      if (e.kind === "folder" && e.children.length) rows.push(...this._progressRows(e.children, depth + 1));
+    }
+    return rows;
+  }
+
+  _onBundleDone(canceled) {
+    this._uploading = false;
+    this._renderAggregate();
+    this._renderProgressList();
+    // refresh target folder view so new nodes appear (reuse existing reload if available)
+    if (this._targetWindow && this._targetWindow.reload) this._targetWindow.reload();
+  }
+
+  _removeFromBundle(id) {
+    const prune = (list) => {
+      const i = list.findIndex((e) => e.id === id);
+      if (i >= 0) { list.splice(i, 1); return true; }
+      for (const e of list) if (e.kind === "folder" && prune(e.children)) {
+        e.size = this._bundleEntry.computeSize(e.children); return true;
+      }
+      return false;
+    };
+    prune(this._bundle);
+    this._renderStaging();
+  }
+
+  _retryEntry(id) {
+    if (!this._job) return;
+    const find = (list) => {
+      for (const e of list) {
+        if (e.id === id) return e;
+        if (e.kind === "folder") { const r = find(e.children); if (r) return r; }
+      }
+      return null;
+    };
+    const entry = find(this._bundle);
+    if (!entry || entry.status !== "error") return;
+    entry.status = "queued";
+    this._renderProgressList();
+    this._job.retry(entry).then(() => { this._renderAggregate(); this._renderProgressList(); });
+  }
+
+  /**
    * @param {*} cmd
    * @param {*} args
    */
@@ -1422,6 +1672,29 @@ class __window_upload_progress extends __window_core {
                 cmd.el.getAttribute?.('service') ||
                 cmd.el.getAttribute?.('data-service');
     }
+
+    // ---- bundle staging events (return early; others fall through to existing handling) ----
+    if (service === "add-files") {
+      if (this._fileSelector && this._fileSelector.open) {
+        this._fileSelector.open((e) => {
+          const roots = this._bundleEntry.entriesFromFileList(e.target.files);
+          this._addToBundle(roots);
+        });
+      }
+      return;
+    }
+    if (service === "add-folder") { this._ensureDirInput().click(); return; }
+    if (service === "upload-all") { this._startBundle(); return; }
+    if (service === "clear-bundle") { this._bundle = []; this._renderStaging(); return; }
+    if (service === "toggle-replace") {
+      this._replaceExisting = !this._replaceExisting;
+      if (cmd && cmd.setState) cmd.setState(this._replaceExisting ? 1 : 0);
+      return;
+    }
+    if (service && service.indexOf("remove:") === 0) {
+      this._removeFromBundle(service.slice(7)); return;
+    }
+    if (service && service.indexOf("retry:") === 0) { this._retryEntry(service.slice(6)); return; }
 
     switch (service) {
       case _e.close:
@@ -1642,6 +1915,54 @@ __window_upload_progress.getOrCreate = function() {
   });
   
   return _pendingPromise;
+};
+
+/**
+ * Open (or reuse) the upload-progress window in staging phase.
+ * Reuses the existing getOrCreate singleton path.
+ * @param {Object} [targetWindow] - the caller window (stored as _targetWindow)
+ * @returns {Promise<__window_upload_progress|null>}
+ */
+__window_upload_progress.openStaging = function(targetWindow) {
+  return __window_upload_progress.getOrCreate().then(function(win) {
+    if (!win) return null;
+    win._targetWindow = targetWindow || win._targetWindow;
+    win._dropDest = null;            // staging derives dest from the target window
+    win._phase = "staging";
+    const root = win.el && win.el.querySelector(`.${win.fig.family}__container`);
+    if (root && root.dataset) root.dataset.phase = "staging";
+    if (win.raise) win.raise();
+    if (win._renderStaging) win._renderStaging();
+    return win;
+  });
+};
+
+/**
+ * Run a drag-dropped bundle directly (skip staging): set the entry tree + an
+ * explicit destination, then start the job and show progress. Used by the
+ * workspace drag-drop path so file+folder drops go through the same proven
+ * make_dir-first BundleJob orchestrator as the staging "Upload all".
+ * @param {Array}  roots        BundleEntry roots (from entriesFromDataTransfer)
+ * @param {string} destNid      destination directory nid (the drop target)
+ * @param {string} hub_id       destination hub id
+ * @param {Object} [targetWindow] folder window to refresh on completion
+ * @returns {Promise<__window_upload_progress|null>}
+ */
+__window_upload_progress.runBundle = function(roots, destNid, hub_id, targetWindow) {
+  if (!roots || !roots.length) return Promise.resolve(null);
+  return __window_upload_progress.getOrCreate().then(function(win) {
+    if (!win) return null;
+    win._targetWindow = targetWindow || null;
+    win._bundle = roots;
+    win._replaceExisting = false;
+    win._dropDest = { destNid, hub_id };
+    win._phase = "progress";
+    const root = win.el && win.el.querySelector(`.${win.fig.family}__container`);
+    if (root && root.dataset) root.dataset.phase = "progress";
+    if (win.raise) win.raise();
+    win._startBundle();
+    return win;
+  });
 };
 
 module.exports = __window_upload_progress;
