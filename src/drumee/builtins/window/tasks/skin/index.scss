@@ -1133,39 +1133,56 @@
 
   // ── Card assignee avatar (top-right of the card) ──────────────
   // Multi-assignee avatar stack on the card (overlapping circles + "+N").
+  // Assignee list — full-width footer block (avatar + name per person),
+  // wrapping to new lines when there are several.
   &__task-assignees {
-    margin-left: auto; // push to the right of the title row
-    flex-shrink: 0;
-    align-items: center;
     flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px 10px;
+    margin-top: 6px;
+  }
+
+  // One assignee chip: avatar next to the name.
+  &__task-assignee-item {
+    align-items: center;
+    gap: 6px;
+    min-width: 0; // let the name truncate instead of overflowing the card
+    max-width: 100%;
   }
 
   &__task-assignee {
-    width: 24px;
-    height: 24px;
+    width: 20px;
+    height: 20px;
     flex-shrink: 0;
     border-radius: 50%;
     overflow: hidden;
+  }
 
-    // Overlap successive avatars in the stack.
-    & + & {
-      margin-left: -8px;
-    }
+  &__task-assignee-name {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    @include drumee.typo(
+      $size: 12px,
+      $weight: 500,
+      $line: 16px,
+      $color: var(--normal-fg-20, #4a4a55)
+    );
   }
 
   &__task-assignee-more {
     flex-shrink: 0;
-    height: 24px;
-    min-width: 24px;
-    padding: 0 4px;
-    margin-left: -8px;
+    height: 20px;
+    min-width: 20px;
+    padding: 0 6px;
     border-radius: 12px;
     box-sizing: border-box;
     display: flex;
     align-items: center;
     justify-content: center;
     background: var(--normal-bg-80, rgba(0, 0, 0, 0.06));
-    box-shadow: 0 0 0 2px var(--normal-bg-elevated, #fff);
     @include drumee.typo(
       $size: 11px,
       $weight: 600,
