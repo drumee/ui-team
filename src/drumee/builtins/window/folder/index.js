@@ -746,6 +746,37 @@ class __window_folder extends mfsInteract {
       );
       box.feed(crumbs);
     });
+
+    // Mirror the ACTIVE workspace window's navigation into the visible desk
+    // topbar breadcrumb (desk_breadcrumb). refreshBreadcrumbsUI is the single
+    // chokepoint for every in-place navigation (workspace switch, sidebar
+    // folder open, and in-grid forward/backward), so driving it here keeps the
+    // topbar breadcrumb in sync for all of them — not just section toggles.
+    // Gate on headless + focused so standalone/background folder windows never
+    // retitle the topbar. desk_breadcrumb._updateContent only accepts
+    // broadcasts whose source IS Wm, so pass Wm explicitly; it resolves the
+    // full Home › Workspace › … path itself via get_path.
+    if (
+      window.Wm &&
+      this.mget(_a.headless) &&
+      this.mget(_a.state) == 1 &&
+      _.isFunction(this.updateBreadcrumb)
+    ) {
+      let curNid = this.mget(_a.nid);
+      if (this.mget(_a.filetype) === _a.hub && this.mget(_a.actual_home_id)) {
+        curNid = this.mget(_a.actual_home_id);
+      }
+      this.updateBreadcrumb(
+        {
+          nid: curNid,
+          hub_id: this.mget(_a.hub_id),
+          actual_home_id: this.mget(_a.actual_home_id),
+          filetype: this.mget(_a.filetype),
+          service: "change-workspace",
+        },
+        window.Wm,
+      );
+    }
   }
 
   toggleFilesLayout(cmd) {
