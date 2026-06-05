@@ -505,6 +505,11 @@
       background: var(--normal-bg-elevated, #fff);
       overflow: hidden;
       cursor: pointer;
+
+      // Shown only on the Files tab (data-visible toggled by showFolderTab).
+      &[data-visible="0"] {
+        display: none;
+      }
     }
 
     &__view-toggle-seg {

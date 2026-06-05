@@ -696,7 +696,8 @@ class __media_core extends DrumeeMFS {
     let svc = SERVICE.media.get_node_attr;
     let opt = { ...this._uploadBase };
     let attr;
-    if (opt.relpath) {
+    if (opt.relpath || opt.nid) {
+      // relpath (legacy) OR nid (make_dir-first): refresh the adopted top folder.
       attr = await this.postService(svc, opt);
       if (attr) {
         attr.kind = this._getKind();
@@ -827,93 +828,221 @@ class __media_core extends DrumeeMFS {
   }
 
   /**
-   * 
-   * @param {*} folder 
-   * @param {*} queue 
-   * @param {*} dest 
-   * @returns 
+   * Create a directory under `parentNid` using the nid+dirname form, which the
+   * server accepts even for shared/received hubs (the bundle feature does the
+   * same — see media/bundle/job.js). NO ownpath is sent, so the server's
+   * `_ensureParentExists` check is never triggered.
+   *
+   * @param {*} hub_id
+   * @param {*} parentNid  nid of the directory the new folder is created under
+   * @param {*} dirname    name of the folder to create
+   * @returns the created node, or null on failure
    */
-  uploadFolder(folder, opt = {}) {
-    let { hub_id, destpath, home_id, nid } = this._getDestination();
-    let cx = 0;
-    const queue = this.uploader(1);
+  async _mkdir(hub_id, parentNid, dirname) {
+    try {
+      const node = await this.postService(SERVICE.media.make_dir, {
+        hub_id,
+        nid: parentNid,
+        socket_id: Visitor.get(_a.socket_id),
+        dirname,
+        echoId: this.mget(ECHO_ID),
+      });
+      if (node && (node.nid != null || node.home_id != null)) return node;
+      this.warn("make_dir returned no nid", { hub_id, parentNid, dirname });
+      return null;
+    } catch (e) {
+      this.warn("make_dir failed", { hub_id, parentNid, dirname }, e);
+      return null;
+    }
+  }
 
-    if (!folder.isDirectory) {
+  /**
+   * Upload a dropped folder tree WITHOUT per-file ownpath.
+   *
+   * Strategy (make_dir-first): every directory is created first via
+   * `_mkdir(hub_id, parentNid, dirname)` (nid+dirname form that works for
+   * shared hubs), then each file is queued into its parent folder's REAL nid
+   * with no `ownpath`. Dropping ownpath makes the server's `_ensureParentExists`
+   * return early, bypassing the `actual_home_id == home_id` check that 403'd
+   * folder uploads into shared/received hubs.
+   *
+   * Caller cases:
+   *  - normal (placeholder, {updateOnComplete:1}): create the dropped folder
+   *    under the drop directory, adopt it, restart, then upload its contents
+   *    into the created top's nid.
+   *  - uploadInplace (this.uploadFolder(folder), drop INTO an open folder): the
+   *    dropped folder is created as a subfolder of the open directory; root =
+   *    the created top's nid.
+   *  - merge ({merge:1}): the dropped folder's contents go INTO a pre-existing
+   *    same-named folder; root = that folder's own nid; do NOT create a top.
+   *  - rename ({updateOnComplete:1, newDir:1}): the widget was already turned
+   *    into the renamed dir; root = its own nid; do NOT create a top.
+   *
+   * @param {*} folder  a DataTransfer directory entry
+   * @param {*} opt     { updateOnComplete, newDir, merge }
+   * @returns
+   */
+  async uploadFolder(folder, opt = {}) {
+    if (!folder || !folder.isDirectory) {
       this.warn("Designed for folder only");
       return;
     }
-    let { updateOnComplete, newDir } = opt;
-    if (updateOnComplete) {
-      /** uploadInplace doesn't need this */
-      this._uploadBase = {
-        hub_id,
-        nid,
-        relpath: folder.fullPath
+    const { updateOnComplete, newDir, merge } = opt;
+
+    let { hub_id, nid } = this._getDestination();
+    /**
+     * Create a new top folder for the normal placeholder drop and for
+     * uploadInplace (drop into an open dir). Skip it for merge (the existing
+     * same-named folder IS the root) and rename (newDir:1 — the widget is
+     * already the renamed dir). In those two cases the destination nid is root.
+     */
+    const createTop = !newDir && !merge;
+    this.emptyFolders = [];
+
+    let rootNid;
+    if (createTop) {
+      const top = await this._mkdir(hub_id, nid, folder.name);
+      if (!top) {
+        Butler.say(LOCALE.UPLOAD_ERROR || "Upload failed");
+        this.model.unset(_a.folder);
+        this.model.unset(_a.file);
+        this.isUploading = 0;
+        this.trigger(_e.reset);
+        return;
+      }
+      rootNid = top.nid != null ? top.nid : top.home_id;
+
+      /**
+       * Adoption is DEFERRED to afterUpload (refresh-by-nid). Do NOT restart
+       * `this` here: a mid-flight restart re-renders the widget and clobbers the
+       * uploader child created below, so files never upload. The created top is
+       * not broadcast-added on this client (make_dir echoId matches -> newContent
+       * skips), so deferring adoption causes no duplicate.
+       * No `relpath` on _uploadBase -> afterUpload refreshes by nid (shared-hub
+       * safe) and skips the empty-folder loop.
+       */
+      if (updateOnComplete) {
+        this._uploadBase = { hub_id, nid: rootNid };
+      }
+    } else {
+      rootNid = nid;
+      if (updateOnComplete) {
+        this._uploadBase = { hub_id, nid: rootNid };
       }
     }
-    if (newDir) {
-      delete this._uploadBase.relpath;
-    }
-    let destination = {
-      hub_id,
-      nid: home_id,
-      destpath,
-      home_id
-    }
-    this.emptyFolders = [];
-    let traversed = new Map();
-    const self = this;
-    var walk = function (c) {
-      const folder = c.createReader();
-      cx = 0;
-      var fetch = () =>
-        folder.readEntries(function (entries) {
-          if (!Array.from(entries).length) {
-            if (c.isDirectory) {
-              if (!traversed.get(c.fullPath)) {
-                let ownpath = destpath + c.fullPath;
-                if (newDir) {
-                  ownpath = destpath + shiftDir(c.fullPath);
-                }
-                self.emptyFolders.push(ownpath);
-              }
-            }
-          }
-          for (let entry of Array.from(entries)) {
-            cx++;
-            if (entry.isDirectory) {
-              if (IGNORED_FILES.test(entry.name)) {
-                continue;
-              }
-              walk(entry);
-            } else if (entry.isFile) {
-              if (IGNORED_FILES.test(entry.name)) {
-                continue;
-              }
-              let ownpath = destpath + entry.fullPath;
-              if (newDir) {
-                ownpath = destpath + shiftDir(entry.fullPath);
-              }
-              const opt = {
-                destination,
-                ownpath,
-                file: entry,
-              };
-              queue.add(opt);
-              let path = entry.fullPath.split(/\/+/);
-              path.pop();
-              let p = path.join('/');
-              traversed.set(p, 1)
-            }
-          }
 
-          if (entries.length) {
-            return fetch();
-          }
-        });
-      return fetch();
+    /** Read all entries of a directory reader, batching until empty. */
+    const readAll = (reader) =>
+      new Promise((resolve, reject) => {
+        const out = [];
+        const step = () =>
+          reader.readEntries((entries) => {
+            if (!entries.length) return resolve(out);
+            for (const e of entries) out.push(e);
+            step();
+          }, reject);
+        step();
+      });
+
+    /** Resolve a FileSystemFileEntry to a stable File object (null on failure). */
+    const entryToFile = (fe) =>
+      new Promise((resolve) => fe.file((f) => resolve(f), () => resolve(null)));
+
+    /**
+     * Phase A — read the ENTIRE tree up-front into stable File objects + a
+     * pre-ordered list of dir paths, doing NO network in between. Drag-drop
+     * FileSystemEntry objects expire shortly after the drop task: if we await a
+     * make_dir network round-trip and only THEN read a subdir's entries / a
+     * file's content, the now-expired entry's readEntries()/.file() silently
+     * fails — which is why files inside subfolders went missing. Reading
+     * everything first (local, fast) sidesteps expiry; File objects don't expire.
+     * `parentPath` is relative to the dropped folder ("" = its root).
+     */
+    const filePromises = []; // Promise<{ file: File, parentPath } | null>
+    const dirPaths = [];     // relative dir paths (sorted by depth below)
+    /**
+     * Fire entry.file() the MOMENT a file is discovered (do NOT await it
+     * sequentially) and recurse sibling subdirs in PARALLEL. Drag-drop entries
+     * expire fast; a slow sequential traversal lets deep dirs (e.g.
+     * icons/src/raw, with hundreds of files) expire before scan reaches them —
+     * their readEntries() then fails and the whole subtree's files are lost.
+     * Firing reads immediately + parallel recursion keeps the live window as
+     * small as possible. File objects, once obtained, do not expire.
+     */
+    const scan = async (dirEntry, relPath) => {
+      let entries;
+      try {
+        entries = await readAll(dirEntry.createReader());
+      } catch (e) {
+        this.warn("readEntries failed", relPath, e);
+        return;
+      }
+      const subScans = [];
+      for (const entry of entries) {
+        if (IGNORED_FILES.test(entry.name)) continue;
+        if (entry.isFile) {
+          filePromises.push(
+            entryToFile(entry).then((f) => {
+              if (f) return { file: f, parentPath: relPath };
+              this.warn("entry.file() failed", relPath, entry.name);
+              return null;
+            })
+          );
+        } else if (entry.isDirectory) {
+          const childPath = relPath ? `${relPath}/${entry.name}` : entry.name;
+          dirPaths.push(childPath);
+          subScans.push(scan(entry, childPath));
+        }
+      }
+      await Promise.all(subScans);
     };
-    walk(folder);
+    await scan(folder, "");
+    const fileList = (await Promise.all(filePromises)).filter(Boolean);
+    /** Parallel scan loses pre-order; sort so phase B creates parents first. */
+    dirPaths.sort((a, b) => a.split("/").length - b.split("/").length);
+
+    /**
+     * Phase B — create the dir scaffold (parent before child, hence dirPaths is
+     * pre-ordered), mapping each relative path to its created nid.
+     */
+    const pathNid = new Map();
+    pathNid.set("", rootNid);
+    for (const dp of dirPaths) {
+      const slash = dp.lastIndexOf("/");
+      const parentPath = slash >= 0 ? dp.slice(0, slash) : "";
+      const name = slash >= 0 ? dp.slice(slash + 1) : dp;
+      const parentNid = pathNid.get(parentPath);
+      if (parentNid == null) {
+        this.warn("missing parent nid for dir", dp);
+        continue;
+      }
+      const node = await this._mkdir(hub_id, parentNid, name);
+      if (node) pathNid.set(dp, node.nid != null ? node.nid : node.home_id);
+    }
+
+    if (!fileList.length) {
+      /**
+       * Only (empty) dirs — already created in phase B. Do NOT spin up an
+       * uploader (its idle spool would self-destruct). Finalize directly with a
+       * no-op stub satisfying afterUpload's c.isCanceled()/c.getFailed() usage.
+       */
+      this.afterUpload({ isCanceled: () => false, getFailed: () => [] });
+      return;
+    }
+
+    /**
+     * Phase C — enqueue every file (stable File objects → no expiry, and
+     * checkQuota uses file.size directly) into its parent folder's real nid in
+     * one burst so the uploader's spool never sees an empty queue mid-flight.
+     * NO ownpath: files go straight into the created folder nids.
+     */
+    const queue = this.uploader(1);
+    queue.add(
+      fileList.map(({ file, parentPath }) => {
+        const nid = pathNid.get(parentPath);
+        return { destination: { hub_id, nid: nid != null ? nid : rootNid }, file };
+      })
+    );
   }
 
 
@@ -1924,7 +2053,8 @@ class __media_core extends DrumeeMFS {
     }
     let msg = LOCALE.CONFIRM_FILENAME_CONFLICT.format(dirname);
     Wm.confirm(msg).then(() => {
-      existing.uploadFolder(folder);
+      /** merge: contents go INTO the same-named existing folder; no new top */
+      existing.uploadFolder(folder, { merge: 1 });
       existing.once(_e.reset, () => {
         this.cut()
       })
@@ -2228,6 +2358,12 @@ class __media_core extends DrumeeMFS {
           if (this._progress) this._progress.setLabel(LOCALE.PREPARING);
         }
         break;
+      case SERVICE.media.make_dir:
+      case SERVICE.media.get_node_attr:
+        // Consumed via the postService() return value (folder creation during
+        // make_dir-first folder upload / node refresh) — no REST-dispatch action
+        // needed. Explicit no-op avoids the "unexpected service" console noise.
+        return;
       case null:
       case undefined:
       default:

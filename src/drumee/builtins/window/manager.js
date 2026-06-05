@@ -10,7 +10,7 @@ if (window.innerWidth > 900) {
 const Rectangle = require("rectangle-node");
 const mfsInteract = require("./interact");
 const pseudo_media = require("media/pseudo");
-const { xhRequest } = require("@drumee/ui-essentials");
+const { xhRequest, dataTransfer } = require("@drumee/ui-essentials");
 const { createQrcode } = require("@drumee/ui-essentials");
 const DEFAULT_WIDTH = 800;
 const DEFAULT_HEIGHT = 600;
@@ -174,7 +174,15 @@ class __window_manager extends mfsInteract {
       this.captured = this._target.captured;
     }
     if (this.captured && this.captured.over) {
-      target = this.captured.over;
+      // Drop onto a folder tile -> upload INTO that folder.
+      const dest = this.captured.over;
+      if (e.type === _e.drop) {
+        this._bundleDrop(dest, e, token);
+        if (dest.on) dest.on(_e.reset, () => (this.captured.over = null));
+        setTimeout(this.resetShift.bind(this), 300);
+        return;
+      }
+      target = dest;
       target.uploadInplace(e);
       target.on(_e.reset, () => {
         return (this.captured.over = null);
@@ -204,21 +212,54 @@ class __window_manager extends mfsInteract {
       return;
     }
 
-    let p = 0;
-    if (_.isEmpty(target.captured)) {
-      this.sendTo(target, e, 0, token);
+    // Drag-drop (file + folder, mixed) -> route through the proven make_dir-first
+    // bundle orchestrator (BundleJob) instead of legacy per-pseudo upload.
+    if (e.type === _e.drop) {
+      this._bundleDrop(target, e, token);
+      setTimeout(this.resetShift.bind(this), 300);
       return;
     }
-    if (target.captured.left) {
-      p = target.captured.left.mget(_a.rank) + 1;
-    } else if (target.captured.right) {
-      p = target.captured.right.mget(_a.rank) - 1;
-    }
-    if (e.type === _e.change) {
-      p = 0;
-    }
-    this.sendTo(target, e, p, token);
+
+    this.sendTo(target, e, 0, token);
     setTimeout(this.resetShift.bind(this), 300);
+  }
+
+  /**
+   * Read a file/folder drop into a stable BundleEntry tree and run it through the
+   * bundle orchestrator (make_dir-first, sequential upload, shared-hub safe).
+   * Handles mixed file+folder drops uniformly. Falls back to the legacy sendTo
+   * for non-file drops (text, links).
+   * @param {*} target  drop destination (folder window or folder tile)
+   * @param {*} e       the drop event
+   * @param {*} token
+   */
+  async _bundleDrop(target, e, token) {
+    let transfer;
+    try {
+      transfer = dataTransfer(e); // synchronous: captures FileSystemEntry items NOW
+    } catch (err) {
+      transfer = null;
+    }
+    if (!transfer || (!transfer.files.length && !transfer.folders.length)) {
+      if (target && target.acceptMedia) this.sendTo(target, e, 0, token); // non-file drop -> legacy
+      return;
+    }
+    const destNid = (target && typeof target.getCurrentNid === "function") ? target.getCurrentNid() : null;
+    const hub_id = (target && typeof target.mget === "function") ? target.mget(_a.hub_id) : null;
+    const Entry = require("media/bundle/entry");
+    const UploadProgress = require("./upload-progress");
+    let roots;
+    try {
+      roots = await Entry.entriesFromDataTransfer(transfer);
+    } catch (err) {
+      this.warn("drop read failed", err);
+      roots = [];
+    }
+    if (!roots.length) {
+      Butler.say(LOCALE.UPLOAD_ERROR || "Nothing to upload");
+      return;
+    }
+    UploadProgress.runBundle(roots, destNid, hub_id, (target && target.acceptMedia) ? target : null);
   }
 
   /**

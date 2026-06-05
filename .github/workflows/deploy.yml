@@ -2,17 +2,19 @@ name: CD - deploy ui-team
 
 on:
   push:
-    branches: [preview]
+    branches: [preview, test]
   workflow_dispatch:
     inputs:
       target:
         description: "Deploy target environment"
         type: choice
-        options: [UAT, PROD]
+        options: [UAT, TEST, PROD]
         default: UAT
 
 concurrency:
-  group: cd-ui-team-${{ github.event.inputs.target || 'UAT' }}
+  # Repo-wide group: all targets share one working tree in the container,
+  # so deploys must serialize regardless of target/branch.
+  group: cd-ui-team
   cancel-in-progress: false
 
 jobs:
@@ -30,28 +32,40 @@ jobs:
       - name: Resolve target
         id: target
         run: |
-          TARGET="${{ github.event.inputs.target || 'UAT' }}"
+          if [ "${{ github.event_name }}" = "push" ]; then
+            case "${{ github.ref_name }}" in
+              test)    TARGET=TEST ;;
+              preview) TARGET=UAT ;;
+              *) echo "Unsupported push branch: ${{ github.ref_name }}"; exit 1 ;;
+            esac
+          else
+            TARGET="${{ github.event.inputs.target || 'UAT' }}"
+          fi
           case "$TARGET" in
-            PROD) ENV_FILE=production; EP=main;    PUB_PATH=/-/app/ ;;
-            UAT)  ENV_FILE=deploy;     EP=preview; PUB_PATH=/-/preview/app/ ;;
+            PROD) ENV_FILE=production; EP=main;    PUB_PATH=/-/app/;         BRANCH=preview ;;
+            TEST) ENV_FILE=test;       EP=test;    PUB_PATH=/-/test/app/;    BRANCH=test ;;
+            UAT)  ENV_FILE=deploy;     EP=preview; PUB_PATH=/-/preview/app/; BRANCH=preview ;;
             *) echo "Unknown target: $TARGET"; exit 1 ;;
           esac
           echo "env_file=$ENV_FILE" >> "$GITHUB_OUTPUT"
           echo "endpoint=$EP"       >> "$GITHUB_OUTPUT"
           echo "pub_path=$PUB_PATH" >> "$GITHUB_OUTPUT"
-          echo "::notice::Target $TARGET -> endpoint $EP"
+          echo "branch=$BRANCH"     >> "$GITHUB_OUTPUT"
+          echo "::notice::Target $TARGET -> endpoint $EP (branch $BRANCH)"
 
       - name: Fetch and reset working tree
         id: fetch
+        env:
+          BRANCH: ${{ steps.target.outputs.branch }}
         run: |
           OUTPUT=$(ssh "$SGP_USER@$SGP_HOST" "sudo docker exec -i $CONTAINER bash -s" <<EOSSH
           set -euo pipefail
           cd $REPO_PATH
           PREV=\$(git rev-parse HEAD)
           echo "PREV=\$PREV"
-          git fetch origin preview --quiet
-          git checkout -f preview --quiet
-          git reset --hard origin/preview --quiet
+          git fetch origin $BRANCH --quiet
+          git checkout -f $BRANCH --quiet
+          git reset --hard origin/$BRANCH --quiet
           git clean -fd --quiet >/dev/null 2>&1 || true
           NEW=\$(git rev-parse HEAD)
           echo "NEW=\$NEW"
