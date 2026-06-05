@@ -84,22 +84,15 @@ module.exports = function (ui, contacts) {
     const status = c.status || "active";
     const isReceived = status === "received";
     const isSent = status === "sent";
-    const isPending = isReceived || isSent;
     const isArchived = c.is_archived === 1 || status === "archived";
     const isBlocked = c.is_blocked === 1 || status === "blocked";
 
-    const pill =
-      isBlocked
-        ? Skeletons.Note({
-            className: `${fig}__contact-pill ${fig}__contact-pill--blocked`,
-            content: LOCALE.BLOCKED || "Blocked",
-          })
-        : isPending
-          ? Skeletons.Note({
-              className: `${fig}__contact-pill`,
-              content: LOCALE.PENDING,
-            })
-          : null;
+    const pill = isBlocked
+      ? Skeletons.Note({
+          className: `${fig}__contact-pill ${fig}__contact-pill--blocked`,
+          content: LOCALE.BLOCKED || "Blocked",
+        })
+      : null;
 
     // Hover/selection swaps the status pill for these actions (visibility in
     // skin/index.scss). Same set as the detail footer minus Edit: only Archive
