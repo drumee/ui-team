@@ -1,0 +1,19 @@
+name: Guard preview source
+
+# Only allow PRs into `preview` when they originate from the `test` branch.
+on:
+  pull_request:
+    branches: [preview]
+    types: [opened, synchronize, reopened, edited]
+
+jobs:
+  check-source:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Only allow merges from 'test'
+        run: |
+          if [ "${{ github.head_ref }}" != "test" ]; then
+            echo "::error::PR into preview must come from branch 'test' (got '${{ github.head_ref }}')"
+            exit 1
+          fi
+          echo "OK: source branch is 'test'"
