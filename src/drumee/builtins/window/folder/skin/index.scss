@@ -2860,30 +2860,26 @@
       padding: var(--spacer-3);
     }
 
-    // 2 columns scaled to the window width — uses container-query
-    // units (cqw) so cells track the folder window, not viewport.
+    // Keep the desktop fixed-cell auto-fill grid (cards locked to
+    // --grid-cell-w) down through this whole 700px range. A half-tiled
+    // folder window on common laptops (1280→640px, 1366→683px) lands
+    // under 700px; switching to a `1fr 1fr` fill here ballooned each
+    // card to ~half the window (~320px) — much bigger than the usual
+    // 120px desktop card. Cards only switch to the 2-column fill layout
+    // at genuine phone widths (≤480px, see the narrower @container
+    // block below). Auto-fill already reflows the column count to the
+    // available width, so a narrow split simply shows fewer 120px cards.
     .window__icons-list .smart-container,
     .window__icons-scroll,
     .window__icons-scroll .workspace-section,
     .window__icons-scroll .folder-section,
     .window__icons-scroll .file-section {
-      grid-template-columns: 1fr 1fr;
+      grid-template-columns: repeat(auto-fill, var(--grid-cell-w));
     }
 
-    // File section row needs to grow to fit the capped 140×140 card
-    // plus the (now larger) meta-row text — see
-    // builtins/media/grid/skin/container.scss mobile block. Desktop's
-    // 184px row was calibrated for a 120×120 card and overflows when
-    // the cell grows, so use minmax(184, auto).
-    .window__icons-scroll .file-section {
-      grid-auto-rows: minmax(var(--grid-cell-h-file), auto);
-    }
-
-    // Desktop locks each card to --grid-cell-w (120px). Let it
-    // expand to fill the column so icon + label have room.
     .window__icons-scroll .media-grid__ui {
-      width: 100%;
-      max-width: 100%;
+      width: var(--grid-cell-w);
+      max-width: var(--grid-cell-w);
     }
 
     // Card content (filename, badge, kebab menu) needs to wrap and
@@ -2911,6 +2907,43 @@
     &__settings-action-panel {
       max-width: 100cqw;
       width: min(360px, 100cqw);
+    }
+  }
+}
+
+// ── Phone-width card grid (container query) ───────────────────────
+// Below 480px the window is genuinely phone-sized (mobile full-bleed,
+// or a tablet portrait split). At this width the fixed 120px auto-fill
+// grid leaves a sparse single column with dead space, so switch to a
+// 2-column fill where cards expand to use the width. This is the
+// layout that used to fire for the whole 700px range; it's now scoped
+// to true phone widths so half-tiled desktop windows keep the normal
+// 120px desktop cards.
+@container window-folder-w (max-width: 480px) {
+  .window-folder {
+    // 2 columns scaled to the window width — uses container-query
+    // units (cqw) so cells track the folder window, not viewport.
+    .window__icons-list .smart-container,
+    .window__icons-scroll,
+    .window__icons-scroll .workspace-section,
+    .window__icons-scroll .folder-section,
+    .window__icons-scroll .file-section {
+      grid-template-columns: 1fr 1fr;
+    }
+
+    // File section row needs to grow to fit the capped 140×140 card
+    // plus the (now larger) meta-row text — see
+    // builtins/media/grid/skin/container.scss mobile block. Desktop's
+    // 184px row was calibrated for a 120×120 card and overflows when
+    // the cell grows, so use minmax(184, auto).
+    .window__icons-scroll .file-section {
+      grid-auto-rows: minmax(var(--grid-cell-h-file), auto);
+    }
+
+    // Let each card expand to fill the column so icon + label have room.
+    .window__icons-scroll .media-grid__ui {
+      width: 100%;
+      max-width: 100%;
     }
   }
 }

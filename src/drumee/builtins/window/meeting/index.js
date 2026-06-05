@@ -70,6 +70,11 @@ class __window_meeting extends __room {
    * @param {*} anim
    */
   _resize(e, ui, anim) {
+    // While a presenter video is fullscreen, the browser owns geometry.
+    // Re-running our responsive layout re-flows the presenter and can knock
+    // the browser straight back out of fullscreen (a visible flash). Skip
+    // until fullscreen exits.
+    if (document.fullscreenElement) return;
     this.responsive();
     super._resize(e, ui, anim);
   }
@@ -193,7 +198,6 @@ class __window_meeting extends __room {
 
   onBeforeDestroy() {
     clearTimeout(this._idleTimer);
-    this._hideScreenSelfPreview();
     if (this.el && this._wakeControls)
       this.el.removeEventListener("mousemove", this._wakeControls);
     // Covers teardown paths that bypass _closeFeedbackAndLeave (tab close,
@@ -457,9 +461,13 @@ class __window_meeting extends __room {
     this._setChatOpen(false);
   }
 
-  // Show a small self-preview of our own shared screen while presenting, so
-  // the presenter can see exactly what's being broadcast (the main presenter
-  // stage shows the share to *other* participants, not to the sharer).
+  // Google Meet behavior for the sharer's own view: render our shared screen
+  // on the big presenter stage, with the participant tiles (including our own
+  // avatar) collapsed into the side strip via presenter mode. Jitsi never
+  // echoes our own desktop track back as a remote track, so we feed the *live
+  // local* track into the same `webrtc_remote_display` widget that viewers
+  // use. Attaching a local track to a <video> is display-only and does not
+  // affect the stream published to peers.
   async startPresentation() {
     let r;
     try {
@@ -470,9 +478,8 @@ class __window_meeting extends __room {
       // doesn't surface as an uncaught promise rejection.
       return false;
     }
-    // Only mirror locally when sharing actually started (super returns true);
-    // the bail-out branches return false/undefined. This is purely a local
-    // preview and does not touch the desktop track sent to other participants.
+    // Only mount the stage when sharing actually started (super returns true);
+    // the bail-out branches return false/undefined.
     if (r === true) {
       // The desktop track is stored synchronously under `localTracks.video`
       // (createLocalTracks keys by `track.getType()`, which is "video" for a
@@ -483,84 +490,34 @@ class __window_meeting extends __room {
       const track =
         this.getLocalTrack(_a.desktop) ||
         (this.localTracks && this.localTracks.video);
-      if (track) this._showScreenSelfPreview(track);
-      else if (this.warn) this.warn("screen self-preview: no desktop track");
+      if (track) {
+        try {
+          // loadRemotePresentation builds the remote-display widget, attaches
+          // the track to its <video>, and (via the video's onloadeddata) fires
+          // start-remote-screen → onRemoteScreenStart → presenter mode. We also
+          // flip presenter mode here so the layout switches immediately.
+          this._presentingLocally = true;
+          await this.loadRemotePresentation(track);
+          this.responsive("presenter");
+        } catch (e) {
+          if (this.warn) this.warn("own screen presentation failed", e);
+        }
+      } else if (this.warn) {
+        this.warn("own screen presentation: no desktop track");
+      }
     }
     return r;
   }
 
   async stopPresentation(track) {
-    this._hideScreenSelfPreview();
+    // Tear our own screen off the presenter stage and drop back to the grid.
+    // onRemoteScreenStop clears __presenter and returns to "normal" mode; it's
+    // idempotent, so a double-fire from the track-stopped path is harmless.
+    if (this._presentingLocally) {
+      this._presentingLocally = false;
+      if (typeof this.onRemoteScreenStop === "function") this.onRemoteScreenStop();
+    }
     return super.stopPresentation(track);
-  }
-
-  _showScreenSelfPreview(track) {
-    if (!track || !this.el) return;
-    this._hideScreenSelfPreview();
-    // Render the preview from a CLONE of the desktop track, never the live
-    // track that's published to the peer connection — so consuming it for the
-    // local <video> can't affect the stream other participants receive.
-    let stream = null;
-    try {
-      const mst =
-        track.track ||
-        (typeof track.getTrack === "function" ? track.getTrack() : null);
-      if (mst && typeof mst.clone === "function") {
-        this._screenSelfPreviewTrack = mst.clone();
-        stream = new MediaStream([this._screenSelfPreviewTrack]);
-      } else if (typeof track.getOriginalStream === "function") {
-        stream = track.getOriginalStream();
-      }
-    } catch (e) {
-      stream = null;
-    }
-    if (!stream) {
-      if (this.warn) this.warn("screen self-preview: no stream from track");
-      return;
-    }
-
-    const pfx = this.fig.family;
-    const box = document.createElement("div");
-    box.className = `${pfx}__screen-self-preview`;
-
-    const video = document.createElement("video");
-    video.muted = true;
-    video.autoplay = true;
-    video.playsInline = true;
-    video.srcObject = stream;
-
-    const label = document.createElement("div");
-    label.className = `${pfx}__screen-self-preview-label`;
-    label.textContent = LOCALE.YOU_ARE_PRESENTING || "You're presenting";
-
-    const stop = document.createElement("div");
-    stop.className = `${pfx}__screen-self-preview-stop`;
-    stop.textContent = LOCALE.STOP_SHARING || LOCALE.STOP || "Stop";
-    stop.onclick = () => this._stopOwnPresentation();
-
-    box.appendChild(video);
-    box.appendChild(label);
-    box.appendChild(stop);
-
-    const host = this.el.querySelector(`.${pfx}__body`) || this.el;
-    host.appendChild(box);
-    this._screenSelfPreview = box;
-    if (video.play) video.play().catch(() => {});
-  }
-
-  _hideScreenSelfPreview() {
-    if (this._screenSelfPreviewTrack) {
-      try {
-        this._screenSelfPreviewTrack.stop();
-      } catch (e) {}
-      this._screenSelfPreviewTrack = null;
-    }
-    if (this._screenSelfPreview) {
-      try {
-        this._screenSelfPreview.remove();
-      } catch (e) {}
-      this._screenSelfPreview = null;
-    }
   }
 
   _toggleScreenShareFullscreen() {
@@ -574,9 +531,16 @@ class __window_meeting extends __room {
       return;
     }
     const child = this.__presenter.children && this.__presenter.children.last();
-    if (!child || child.isDestroyed() || !child.el) return;
-    if (typeof child.el.requestFullscreen !== "function") return;
-    child.el.requestFullscreen().catch((e) => {
+    if (!child || child.isDestroyed()) return;
+    // Fullscreen the <video> element itself, not the widget root. The meeting
+    // window is Wm-positioned under an absolutely-placed, transformed ancestor;
+    // fullscreening a nested <div> in that context makes Chrome enter and
+    // instantly drop fullscreen (the "flash"). A <video> is promoted to the
+    // browser's top layer and is immune to ancestor transforms, so it stays
+    // fullscreen reliably. ESC exits.
+    const target = (child.__video && child.__video.el) || child.el;
+    if (!target || typeof target.requestFullscreen !== "function") return;
+    target.requestFullscreen().catch((e) => {
       if (this.warn) this.warn("requestFullscreen failed", e);
     });
   }
