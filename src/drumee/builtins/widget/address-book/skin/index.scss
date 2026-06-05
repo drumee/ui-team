@@ -287,6 +287,43 @@
     }
   }
 
+  // ── Hover actions ─────────────────────────────────────────────────
+  // Hidden by default; revealed when a row is hovered or selected. Uses the
+  // shared __btn (Archive/Accept text) and __action-icon (everything else)
+  // styles — same set as the detail footer minus Edit. Compact-sized to fit
+  // the list row.
+  &__contact-actions {
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+    display: none !important;
+
+    .address-book__action-icon {
+      width: 28px;
+      height: 28px;
+
+      svg {
+        width: 15px;
+        height: 15px;
+      }
+    }
+
+    .address-book__btn {
+      padding: 6px 10px;
+    }
+  }
+
+  // On hover/selection, swap the status pill for the action buttons.
+  &__contact-item:hover,
+  &__contact-item[data-selected="1"] {
+    .address-book__contact-actions {
+      display: flex !important;
+    }
+    .address-book__contact-pill {
+      display: none;
+    }
+  }
+
   &__empty {
     @include drumee.typo(
       $size: 12px,
@@ -422,13 +459,144 @@
     letter-spacing: 0.04em;
   }
 
+  // Action row directly below the avatar/name (inside the header). Buttons
+  // share the width equally and wrap when there are too many to fit.
+  // 2-column grid: two buttons per row. `!important` overrides the Box.X
+  // default display:flex (same reason __contact-actions needs it).
   &__detail-actions {
-    align-items: center;
-    justify-content: flex-end;
+    display: grid !important;
+    grid-template-columns: repeat(2, 1fr);
     gap: 8px;
-    margin-top: auto;
-    padding-top: 16px;
-    flex-wrap: wrap;
+    width: 100%;
+    margin-top: 4px;
+
+    // A lone trailing button (odd count) spans the full row.
+    > .address-book__detail-btn:last-child:nth-child(odd) {
+      grid-column: 1 / -1;
+    }
+  }
+
+  // Icon + text action button (Archive, Block, Delete, Edit, Accept, …).
+  &__detail-btn {
+    flex: 1 1 0;
+    min-width: 88px;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    height: 32px;
+    padding: 0 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    user-select: none;
+    transition:
+      background 0.15s,
+      color 0.15s;
+
+    &--primary {
+      color: #fff;
+      background: var(--primary-purple-40, #5950ff);
+
+      &:hover {
+        background: var(--primary-purple-50, #433cc5);
+      }
+    }
+
+    &--neutral {
+      color: var(--primary-purple-50, #433cc5);
+      background: rgba(89, 80, 255, 0.1);
+
+      &:hover {
+        background: rgba(89, 80, 255, 0.18);
+      }
+    }
+
+    &--danger {
+      color: #d74e49;
+      background: rgba(214, 95, 89, 0.16);
+
+      &:hover {
+        background: rgba(214, 95, 89, 0.26);
+      }
+    }
+
+    // Submitting state (edit form Cancel/Save).
+    &[data-disabled="1"] {
+      cursor: not-allowed;
+      opacity: 0.6;
+      pointer-events: none;
+    }
+
+    &[data-loading="1"] .address-book__detail-btn-ico {
+      animation: address-book-spin 0.6s linear infinite;
+    }
+  }
+
+  &__detail-btn-ico {
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+    color: inherit;
+    pointer-events: none;
+
+    svg {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+  }
+
+  &__detail-btn-label {
+    @include drumee.typo($size: 11px, $weight: 600, $line: 15px);
+    color: inherit;
+    pointer-events: none;
+    white-space: nowrap;
+    margin-top: 3px;
+  }
+
+  // Icon-only action buttons in the detail footer (Delete, Block/Unblock,
+  // Edit, Restore, Refuse, Cancel-invite). Archive and Accept stay as text
+  // buttons (&__btn).
+  &__action-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    padding: 0;
+    border-radius: 6px;
+    cursor: pointer;
+    user-select: none;
+    flex-shrink: 0;
+    color: var(--normal-fg-50, #65656c);
+    background: transparent;
+    border: 1px solid var(--border-default, #d1d1d6);
+    transition:
+      background 0.15s,
+      color 0.15s,
+      border-color 0.15s;
+
+    svg {
+      width: 16px;
+      height: 16px;
+      display: block;
+    }
+
+    &:hover {
+      background: rgba(0, 0, 0, 0.05);
+      color: var(--normal-fg-10, #0b0a21);
+      border-color: var(--normal-fg-50, #84848c);
+    }
+
+    &--danger {
+      color: #d65f59;
+      border-color: rgba(214, 95, 89, 0.3);
+
+      &:hover {
+        background: rgba(214, 95, 89, 0.08);
+        border-color: #d65f59;
+        color: #d65f59;
+      }
+    }
   }
 
   &__edit-form {

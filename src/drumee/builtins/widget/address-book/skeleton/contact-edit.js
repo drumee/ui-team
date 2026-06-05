@@ -1,3 +1,5 @@
+const { iconTextBtn } = require("./action-buttons");
+
 module.exports = function (ui, contact, ctx) {
   const fig = ui.fig.family;
   const { initials, contactId, editError } = ctx;
@@ -260,25 +262,26 @@ module.exports = function (ui, contact, ctx) {
       Skeletons.Box.X({
         className: `${fig}__detail-actions`,
         kids: [
-          Skeletons.Note({
-            className: `${fig}__btn ${fig}__btn--secondary`,
-            content: LOCALE.CANCEL,
-            bubble: 0,
-            service: submitting ? null : "cancel-edit",
-            state: submitting ? 0 : 1,
-            dataset: submitting ? { disabled: 1 } : undefined,
-            uiHandler: [ui],
-          }),
-          Skeletons.Note({
-            className: `${fig}__btn ${fig}__btn--primary`,
-            content: submitting ? (LOCALE.SAVING || `${LOCALE.SAVE}…`) : LOCALE.SAVE,
-            bubble: 0,
-            service: submitting ? null : "save-edit",
-            state: submitting ? 0 : 1,
-            dataset: submitting ? { disabled: 1, loading: 1 } : undefined,
-            uiHandler: [ui],
-            contactId,
-          }),
+          iconTextBtn(
+            fig,
+            "neutral",
+            "cross",
+            LOCALE.CANCEL,
+            submitting ? null : "cancel-edit",
+            submitting ? { state: 0, dataset: { disabled: 1 } } : {},
+            ui,
+          ),
+          iconTextBtn(
+            fig,
+            "primary",
+            "apps-floppy",
+            submitting ? (LOCALE.SAVING || `${LOCALE.SAVE}…`) : LOCALE.SAVE,
+            submitting ? null : "save-edit",
+            submitting
+              ? { state: 0, dataset: { disabled: 1, loading: 1 }, contactId }
+              : { contactId },
+            ui,
+          ),
         ],
       }),
     ].filter(Boolean),
