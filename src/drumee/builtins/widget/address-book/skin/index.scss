@@ -280,6 +280,11 @@
     letter-spacing: 0.04em;
     flex-shrink: 0;
     pointer-events: none;
+
+    &--blocked {
+      color: #d65f59;
+      background: rgba(214, 95, 89, 0.12);
+    }
   }
 
   &__empty {
