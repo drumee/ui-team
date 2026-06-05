@@ -710,6 +710,13 @@ class __media_interact extends media_core {
       case _a.link:
       case _a.share:
         return this.viewerLink().then((url) => {
+          // In DMZ, folder/hub shares must not include the nid — the share
+          // token already scopes the content to the workspace. Without this
+          // strip the recipient gets /{folderNid}/play in the URL which the
+          // sharebox treats as a file_nid filter, showing a blank folder.
+          if (Visitor.inDmz && this.isHubOrFolder) {
+            url = url.replace(/\/[0-9a-f]{16}\/play$/, '');
+          }
           setTimeout(async () => {
             await copyToClipboard(url);
             Wm.acknowledge();
