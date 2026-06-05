@@ -420,7 +420,7 @@
   "BROADCAST_MESSAGE": "广播消息",
   "TERMINAL": "终奌站",
   "BROWSER": "浏览器",
-  "MSG_DELETE_HUB": "您即将删除共享文件夹“{0}”。 一旦您的操作生效，您和您的参与者将无法再访问其内容：聊天、文件、会议等。",
+  "MSG_DELETE_HUB": "您即将删除工作区 *{0}*。 <b>此删除操作不可撤销。</b> 您将无法从回收站中恢复其内容。 您和您的成员将无法再访问其内容：聊天、文件、会议等。",
   "IMPORT_MEMBERS_LIST": "导入会员列表",
   "PANELADMIN_REMOVE_ADMIN": "删除管理员权限？",
   "REMOVE_ADMIN_RIGHTS": "您是否要从以下位置删除管理员权限：",

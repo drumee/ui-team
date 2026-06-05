@@ -795,7 +795,7 @@
   "BROADCAST_MESSAGE": "Broadcast a message",
   "TERMINAL": "Terminal",
   "BROWSER": "Browser",
-  "MSG_DELETE_HUB": "You are about to delete the shared folder \"{0}\". Once your action is effective, you and your participants will no longer be able to access its content: chat, files, conferences, etc..",
+  "MSG_DELETE_HUB": "Está a punto de eliminar el espacio de trabajo *{0}*. <b>La eliminación es definitiva.</b> No podrá recuperar su contenido desde la papelera. Usted y sus miembros ya no podrán acceder a su contenido: chat, archivos, conferencias, etc..",
   "IMPORT_MEMBERS_LIST": "Import members list",
   "PANELADMIN_REMOVE_ADMIN": "Remove administrator rights?",
   "REMOVE_ADMIN_RIGHTS": "Do you want to remove the admin rights from:",
