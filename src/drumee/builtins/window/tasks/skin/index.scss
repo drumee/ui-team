@@ -119,7 +119,7 @@
     // Reserve a gutter for the scrollbar so it never overlaps the cards, plus
     // a small gap between the cards and that gutter.
     scrollbar-gutter: stable;
-    padding-right: 6px;
+    padding-left: 16px;
     border-radius: 8px;
     scrollbar-width: thin;
     scrollbar-color: var(--border-strong, rgba(0, 0, 0, 0.15)) transparent;
