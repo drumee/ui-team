@@ -1214,6 +1214,11 @@ class __window_folder extends mfsInteract {
     if (this._taskFilterBtn && this._taskFilterBtn.el) {
       this._taskFilterBtn.el.dataset.visible = tab === _a.task ? "1" : "0";
     }
+    // The list/grid view toggle shares the tab line but only applies to Files.
+    const viewCtrl = this.getPart("view-ctrl");
+    if (viewCtrl && viewCtrl.el) {
+      viewCtrl.el.dataset.visible = tab === "files" ? "1" : "0";
+    }
 
     const switchView = (view) => {
       if (this._meetingViewActive && tab !== "meeting") {

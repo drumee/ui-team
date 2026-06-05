@@ -475,5 +475,82 @@
   &__footer-spacer {
     flex: 1;
   }
+
+  // ── Bundle-upload phase toggle ────────────────────────────────────────────
+  // data-phase="progress" → hide staging panel
+  &__container[data-phase="progress"] &__staging { display: none; }
+  // data-phase="staging"  → hide aggregate bar and progress file-list
+  &__container[data-phase="staging"]  &__aggregate { display: none; }
+  &__container[data-phase="staging"]  &__file-list  { display: none; }
+
+  // Staging action bar
+  &__staging-actions { gap: 8px; align-items: center; padding: 8px; }
+
+  // Staging / progress action buttons
+  &__add-files,
+  &__add-folder,
+  &__upload-all,
+  &__clear-bundle {
+    cursor: pointer;
+    padding: 4px 10px;
+    border-radius: 6px;
+  }
+
+  // Scrollable lists
+  &__staging-list,
+  &__file-list { max-height: 180px; overflow: auto; }
+
+  // Row layout (Box.X rows — do NOT add display:flex / flex-direction)
+  &__staging-row,
+  &__progress-row {
+    justify-content: space-between;
+    align-items: center;
+    padding: 2px 8px;
+  }
+
+  // Folder name emphasis
+  &__staging-row[data-kind="folder"] &__staging-name { font-weight: 600; }
+
+  // Depth indentation
+  &__staging-row[data-depth="1"],
+  &__progress-row[data-depth="1"] { padding-left: 20px; }
+
+  &__staging-row[data-depth="2"],
+  &__progress-row[data-depth="2"] { padding-left: 32px; }
+
+  // Aggregate progress bar
+  &__agg-bar {
+    height: 6px;
+    background: #E5E5E5;
+    border-radius: 3px;
+    overflow: hidden;
+  }
+
+  &__agg-fill {
+    height: 6px;
+    width: 0;
+    background: #FA8540;
+    transition: width .2s ease;
+  }
+
+  &__agg-text {
+    font-size: 12px;
+    opacity: .8;
+    padding: 4px 8px;
+  }
+
+  // Error state for progress rows
+  &__progress-row[data-status="error"] &__progress-state { color: #d33; }
+
+  &__progress-retry {
+    cursor: pointer;
+    color: #FA8540;
+    font-size: 12px;
+    margin-left: 8px;
+    &:hover { text-decoration: underline; }
+  }
+
+  // Remove button
+  &__staging-remove { cursor: pointer; opacity: .6; }
 }
 

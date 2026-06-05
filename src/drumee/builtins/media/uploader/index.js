@@ -180,17 +180,18 @@ class __media_uploader extends LetcBox {
     this._pendingCount--;
     this._bytesPending = this._bytesPending - file.size;
     if (item && item.file) {
-      let retry = this._retried[item.ownpath] || 0;
-      this.warn("Upload failed", this, item, item.ownpath, retry);
+      const key = item.ownpath || (item.file && (item.file.fullPath || item.file.name)) || String(item.position);
+      let retry = this._retried[key] || 0;
+      this.warn("Upload failed", this, item, key, retry);
       if (retry > 1) {
-        if (!this._skipped.includes(item.ownpath)) {
-          this._skipped.push(item.ownpath)
+        if (!this._skipped.includes(key)) {
+          this._skipped.push(key)
         }
         return;
       }
       /** Deduplicate */
-      this._retried[item.ownpath] = retry + 1;
-      if (this._failed.includes(item.ownpath)) return;
+      this._retried[key] = retry + 1;
+      if (this._failed.includes(item)) return;
       item.replace = 1;
       this._failed.push(item);
     }
