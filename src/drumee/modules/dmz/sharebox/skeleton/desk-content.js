@@ -113,6 +113,7 @@ function dmzSplitBody(ui) {
     api = {
       service: ui.nodeInfoService,
       nid: ui.mget(_a.nid),
+      hub_id: ui.mget(_a.hub_id),
       share_id: ui.mget(_a.share_id),
       recipient_id: ui.mget(_a.user_id),
       file_nid: ui.mget('file_nid'),
