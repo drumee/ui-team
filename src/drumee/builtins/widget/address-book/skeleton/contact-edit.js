@@ -229,7 +229,7 @@ module.exports = function (ui, contact, ctx) {
         kids: [
           Skeletons.Box.Y({
             className: `${fig}__detail-avatar`,
-            styleOpt: { background: contact.color || "#fa8540" },
+            styleOpt: { background: contact.color || "#e4e3ff" },
             kids: [
               Skeletons.Note({
                 className: `${fig}__detail-avatar-text`,
