@@ -795,6 +795,39 @@ class __window_manager extends mfsInteract {
     return p;
   }
 
+  /**
+   * Centered geometry for a free-floating popup window (e.g. the meeting/call
+   * window) within the window-manager content area.
+   *
+   * Free windows are `position:absolute` inside the WM `__layer`, whose origin
+   * is the top-left of the workspace content region — to the RIGHT of the
+   * desktop sidebar, not the viewport origin. Centering against
+   * `window.innerWidth/innerHeight` therefore pushes the popup off-center by
+   * the sidebar width (and can overflow on narrow screens). Measure the
+   * manager element instead — it spans exactly that content region — so the
+   * popup lands centered on every screen, with or without a sidebar.
+   */
+  centeredPopupGeometry(opt = {}) {
+    const {
+      maxWidth = 1200,
+      maxHeight = 720,
+      marginX = 80,
+      marginY = 120,
+      minWidth = 480,
+      minHeight = 360,
+      minTop = 40,
+    } = opt;
+    const availW = (this.$el && this.$el.width()) || window.innerWidth;
+    const availH = (this.$el && this.$el.height()) || window.innerHeight;
+    let width = Math.min(maxWidth, availW - marginX);
+    let height = Math.min(maxHeight, availH - marginY);
+    if (width < minWidth) width = availW;
+    if (height < minHeight) height = availH;
+    const left = Math.max(0, (availW - width) / 2);
+    const top = Math.max(minTop, (availH - height) / 2);
+    return { top, left, width, height };
+  }
+
   // ===========================================================
   //
   // ===========================================================

@@ -256,61 +256,6 @@
     }
   }
 
-  // ── Screen-share self-preview (picture-in-picture) ──────────────────────
-  // Shown to the presenter while sharing, anchored bottom-right of the stage,
-  // above the floating control bar.
-  &__screen-self-preview {
-    position: absolute;
-    right: 16px;
-    bottom: 80px;
-    width: 240px;
-    z-index: 130;
-    border-radius: 10px;
-    overflow: hidden;
-    background: #000;
-    border: 2px solid var(--primary-40, #5950ff);
-    box-shadow: 0 8px 28px rgba(0, 0, 0, 0.35);
-
-    video {
-      display: block;
-      width: 100%;
-      height: auto;
-      max-height: 160px;
-      object-fit: contain;
-      background: #000;
-    }
-
-    &-label {
-      position: absolute;
-      top: 6px;
-      left: 8px;
-      padding: 2px 8px;
-      border-radius: 10px;
-      background: rgba(0, 0, 0, 0.55);
-      color: #fff;
-      font-size: 10px;
-      font-weight: 500;
-      pointer-events: none;
-    }
-
-    &-stop {
-      position: absolute;
-      top: 6px;
-      right: 8px;
-      padding: 2px 8px;
-      border-radius: 10px;
-      background: var(--signal-error, #d74e49);
-      color: #fff;
-      font-size: 10px;
-      font-weight: 600;
-      cursor: pointer;
-
-      &:hover {
-        filter: brightness(1.1);
-      }
-    }
-  }
-
   &__ui[data-ready="0"] &__main {
     opacity: 0;
     pointer-events: none;
