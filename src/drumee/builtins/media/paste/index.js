@@ -58,6 +58,9 @@ class __media_paste extends media_gird {
       data.service = "open-node";
       data.uiHandler = handler;
       data.isAttachment = this.isAttachment();
+      // model.clear() below wipes every attr — carry the device-origin
+      // marker over so chat send still reports this nid in folder_attachment
+      data.from_device = this.mget("from_device");
       this.model.clear();
       this.model.set(data);     
       this.initData();
