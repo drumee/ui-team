@@ -110,13 +110,20 @@ function dmzSplitBody(ui) {
 
   let api = null;
   if (ui.nodeInfoService === SERVICE.media.show_node_by) {
+    const fileNid = ui.mget('file_nid');
     api = {
       service: ui.nodeInfoService,
       nid: ui.mget(_a.nid),
       hub_id: ui.mget(_a.hub_id),
-      share_id: ui.mget(_a.share_id),
-      recipient_id: ui.mget(_a.user_id),
-      file_nid: ui.mget('file_nid'),
+      // For file-specific shares include DMZ auth params so the server filters
+      // to only the shared file. For workspace shares (no file_nid) omit them —
+      // sending share_id/recipient_id without file_nid triggers file-specific
+      // filtering on the server and returns an empty list.
+      ...(fileNid ? {
+        share_id: ui.mget(_a.share_id),
+        recipient_id: ui.mget(_a.user_id),
+        file_nid: fileNid,
+      } : {}),
       page: 1,
     };
   }
