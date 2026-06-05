@@ -80,7 +80,7 @@ module.exports = function (ui, contacts) {
       kids: [
         Skeletons.Box.Y({
           className: `${fig}__avatar`,
-          styleOpt: { background: c.color || "#fa8540" },
+          styleOpt: { background: c.color || "#e4e3ff" },
           kids: [
             Skeletons.Note({
               className: `${fig}__avatar-text`,
@@ -103,12 +103,17 @@ module.exports = function (ui, contacts) {
               : null,
           ].filter(Boolean),
         }),
-        (c.status === "received" || c.status === "sent")
+        c.is_blocked === 1 || c.status === "blocked"
           ? Skeletons.Note({
-              className: `${fig}__contact-pill`,
-              content: LOCALE.PENDING,
+              className: `${fig}__contact-pill ${fig}__contact-pill--blocked`,
+              content: LOCALE.BLOCKED || "Blocked",
             })
-          : null,
+          : (c.status === "received" || c.status === "sent")
+            ? Skeletons.Note({
+                className: `${fig}__contact-pill`,
+                content: LOCALE.PENDING,
+              })
+            : null,
       ].filter(Boolean),
     });
   };

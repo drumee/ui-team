@@ -62,13 +62,13 @@
     align-items: center;
     padding: 5px 10px;
     border-radius: 6px;
-    background: rgba(250, 133, 64, 0.12);
+    background: rgba(89, 80, 255, 0.12);
     cursor: pointer;
     user-select: none;
     transition: background 0.15s;
 
     &:hover {
-      background: rgba(250, 133, 64, 0.22);
+      background: rgba(89, 80, 255, 0.22);
     }
   }
 
@@ -77,7 +77,7 @@
       $size: 12px,
       $weight: 600,
       $line: 16px,
-      $color: #fa8540
+      $color: var(--primary-purple-40, #5950ff)
     );
     pointer-events: none;
   }
@@ -102,9 +102,9 @@
       color 0.15s;
 
     &[data-active="1"] {
-      background: rgba(250, 133, 64, 0.12);
+      background: rgba(89, 80, 255, 0.12);
       .address-book__tab-label {
-        color: #fa8540;
+        color: var(--primary-purple-40, #5950ff);
       }
     }
 
@@ -129,7 +129,7 @@
     min-width: 16px;
     text-align: center;
     border-radius: 100px;
-    background: #fa8540;
+    background: var(--primary-purple-40, #5950ff);
     pointer-events: none;
   }
 
@@ -159,8 +159,8 @@
 
       &:focus {
         background: var(--normal-bg-90, #fff);
-        border-color: #fa8540;
-        box-shadow: 0 0 0 3px rgba(250, 133, 64, 0.15);
+        border-color: var(--primary-purple-40, #5950ff);
+        box-shadow: 0 0 0 3px rgba(89, 80, 255, 0.15);
       }
 
       &::placeholder {
@@ -211,7 +211,7 @@
       background: rgba(0, 0, 0, 0.04);
     }
     &[data-selected="1"] {
-      background: rgba(250, 133, 64, 0.12);
+      background: rgba(89, 80, 255, 0.12);
     }
   }
 
@@ -226,7 +226,12 @@
   }
 
   &__avatar-text {
-    @include drumee.typo($size: 12px, $weight: 600, $line: 16px, $color: #fff);
+    @include drumee.typo(
+      $size: 12px,
+      $weight: 600,
+      $line: 16px,
+      $color: var(--primary-purple-100, #0b0a21)
+    );
     text-transform: uppercase;
   }
 
@@ -266,15 +271,20 @@
       $size: 9px,
       $weight: 600,
       $line: 12px,
-      $color: #e8a13b
+      $color: var(--normal-fg-50, #65656c)
     );
     padding: 2px 6px;
     border-radius: 100px;
-    background: rgba(232, 161, 59, 0.14);
+    background: rgba(0, 0, 0, 0.05);
     text-transform: uppercase;
     letter-spacing: 0.04em;
     flex-shrink: 0;
     pointer-events: none;
+
+    &--blocked {
+      color: #d65f59;
+      background: rgba(214, 95, 89, 0.12);
+    }
   }
 
   &__empty {
@@ -330,7 +340,12 @@
   }
 
   &__detail-avatar-text {
-    @include drumee.typo($size: 20px, $weight: 600, $line: 24px, $color: #fff);
+    @include drumee.typo(
+      $size: 20px,
+      $weight: 600,
+      $line: 24px,
+      $color: var(--primary-purple-100, #0b0a21)
+    );
     text-transform: uppercase;
   }
 
@@ -398,11 +413,11 @@
       $size: 9px,
       $weight: 600,
       $line: 12px,
-      $color: #fa8540
+      $color: var(--primary-purple-40, #5950ff)
     );
     padding: 1px 6px;
     border-radius: 100px;
-    background: rgba(250, 133, 64, 0.12);
+    background: rgba(89, 80, 255, 0.12);
     text-transform: uppercase;
     letter-spacing: 0.04em;
   }
@@ -452,9 +467,9 @@
       border-color 0.15s;
 
     &[data-active="1"] {
-      background: rgba(250, 133, 64, 0.12);
-      color: #fa8540;
-      border-color: rgba(250, 133, 64, 0.3);
+      background: rgba(89, 80, 255, 0.12);
+      color: var(--primary-purple-40, #5950ff);
+      border-color: rgba(89, 80, 255, 0.3);
     }
   }
 
@@ -480,7 +495,7 @@
       $size: 12px,
       $weight: 600,
       $line: 16px,
-      $color: #fa8540
+      $color: var(--primary-purple-40, #5950ff)
     );
     cursor: pointer;
     user-select: none;
@@ -651,9 +666,9 @@
     flex-shrink: 0;
 
     &[data-active="1"] {
-      background: rgba(250, 133, 64, 0.12);
-      color: #fa8540;
-      border-color: rgba(250, 133, 64, 0.3);
+      background: rgba(89, 80, 255, 0.12);
+      color: var(--primary-purple-40, #5950ff);
+      border-color: rgba(89, 80, 255, 0.3);
     }
   }
 
@@ -676,11 +691,11 @@
     }
 
     &[data-active="1"] {
-      background: rgba(250, 133, 64, 0.12);
-      border-color: rgba(250, 133, 64, 0.3);
+      background: rgba(89, 80, 255, 0.12);
+      border-color: rgba(89, 80, 255, 0.3);
 
       > .address-book__tag-chip {
-        color: #fa8540;
+        color: var(--primary-purple-40, #5950ff);
         background: transparent;
         border: none;
       }
@@ -778,8 +793,8 @@
     gap: 4px;
 
     &:hover {
-      background: rgba(250, 133, 64, 0.04);
-      border-color: rgba(250, 133, 64, 0.5);
+      background: rgba(89, 80, 255, 0.04);
+      border-color: rgba(89, 80, 255, 0.5);
     }
   }
 
@@ -811,7 +826,7 @@
       $color: var(--normal-fg-10, #0b0a21)
     );
     padding: 8px 12px;
-    background: rgba(250, 133, 64, 0.1);
+    background: rgba(89, 80, 255, 0.1);
     border-radius: 6px;
   }
 
@@ -833,10 +848,10 @@
       border-color 0.15s;
 
     &--primary {
-      background: #fa8540;
+      background: var(--primary-purple-40, #5950ff);
       &:hover {
-        background: #e7762e;
-        box-shadow: 0 4px 12px rgba(250, 133, 64, 0.3);
+        background: var(--primary-purple-50, #433cc5);
+        box-shadow: 0 4px 12px rgba(89, 80, 255, 0.3);
       }
     }
 
@@ -1068,8 +1083,8 @@
         box-shadow 0.15s;
 
       &:focus {
-        border-color: #fa8540;
-        box-shadow: 0 0 0 3px rgba(250, 133, 64, 0.15);
+        border-color: var(--primary-purple-40, #5950ff);
+        box-shadow: 0 0 0 3px rgba(89, 80, 255, 0.15);
       }
 
       &::placeholder {
