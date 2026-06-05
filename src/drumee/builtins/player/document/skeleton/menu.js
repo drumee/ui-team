@@ -45,7 +45,7 @@ module.exports = function (ui) {
     );
   }
 
-  if (ui.canUpload() && EDITABLE.includes(ui.mget(_a.ext).toLowerCase())) {
+  if (ui.canUpload() && !Visitor.inDmz && EDITABLE.includes(ui.mget(_a.ext).toLowerCase())) {
     if (ui.mget(_a.mode) == _a.edit) {
       actions.push(
         action(ui, {

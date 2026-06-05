@@ -137,6 +137,7 @@ class __player_document extends PlayerInteract {
   }
 
   shouldOpenInEditMode() {
+    if (Visitor.inDmz) return false;
     if (this.mget(_a.mode) === _a.preview) return false;
     if (this.mget(_a.mode) === _a.edit) return true;
     const ext = (this.mget(_a.ext) || '').toLowerCase();
