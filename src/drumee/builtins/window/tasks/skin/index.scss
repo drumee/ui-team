@@ -183,7 +183,7 @@
     align-items: center;
     justify-content: center;
     gap: 6px;
-    background-color: 
+    background-color:
 color-mix(in srgb, var(--col-accent, transparent) 60%, var(--normal-bg-80, rgba(0, 0, 0, 0.04)));
     padding: 0 8px;
     border-radius: 12px;
@@ -226,6 +226,7 @@ color-mix(in srgb, var(--col-accent, transparent) 60%, var(--normal-bg-80, rgba(
 
     &:hover {
       border-color: var(--border-strong, rgba(11, 10, 33, 0.12));
+      border-left-color: var(--col-accent, var(--border-strong, rgba(11, 10, 33, 0.12)));
       box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
 
       .tasks-panel__task-remove {
