@@ -1,3 +1,5 @@
+const { actionBtn, iconBtn } = require("./action-buttons");
+
 module.exports = function (ui, contacts) {
   const fig = ui.fig.family;
   const selectedKey = ui.getSelectedKey();
@@ -34,6 +36,19 @@ module.exports = function (ui, contacts) {
     return (name[0] || "?").toUpperCase();
   };
 
+  // Best email for invite accept/refuse (mirrors contact-detail's pickEmail).
+  const pickEmail = (c) => {
+    if (Array.isArray(c.email) && c.email.length) {
+      const def = c.email.find((e) => e.is_default === 1) || c.email[0];
+      const v = def?.email || def || "";
+      if (looksLikeEmail(v)) return v;
+    }
+    if (looksLikeEmail(c.email_default)) return c.email_default;
+    if (typeof c.email === "string" && looksLikeEmail(c.email)) return c.email;
+    if (looksLikeEmail(c.entity)) return c.entity;
+    return "";
+  };
+
   const tabBtn = (key, label, count) =>
     Skeletons.Box.X({
       className: `${fig}__tab`,
@@ -66,12 +81,55 @@ module.exports = function (ui, contacts) {
     const key = ui.keyOf(c);
     const name = fullName(c);
     const sub = subtitle(c, name);
+    const status = c.status || "active";
+    const isReceived = status === "received";
+    const isSent = status === "sent";
+    const isArchived = c.is_archived === 1 || status === "archived";
+    const isBlocked = c.is_blocked === 1 || status === "blocked";
+
+    const pill = isBlocked
+      ? Skeletons.Note({
+          className: `${fig}__contact-pill ${fig}__contact-pill--blocked`,
+          content: LOCALE.BLOCKED || "Blocked",
+        })
+      : null;
+
+    // Hover/selection swaps the status pill for these actions (visibility in
+    // skin/index.scss). Same set as the detail footer minus Edit: only Archive
+    // and Accept are text buttons; the rest are icon buttons.
+    let actionKids;
+    if (isReceived) {
+      const email = pickEmail(c);
+      actionKids = [
+        actionBtn(fig, "primary", LOCALE.ACCEPT, "accept-invitation", { contactEmail: email }, ui),
+        iconBtn(fig, "danger", "cross", LOCALE.REFUSE, "refuse-invitation", { contactEmail: email }, ui),
+      ];
+    } else if (isSent) {
+      actionKids = [
+        iconBtn(fig, "danger", "cross", LOCALE.CANCEL_INVITE || LOCALE.CANCEL, "delete-contact", { contactId: key }, ui),
+      ];
+    } else {
+      actionKids = [
+        isArchived
+          ? iconBtn(fig, "neutral", "apps-arrow-clockwise", LOCALE.RESTORE, "restore-contact", { contactId: key }, ui)
+          : actionBtn(fig, "secondary", LOCALE.ARCHIVE, "archive-contact", { contactId: key }, ui),
+        isBlocked
+          ? iconBtn(fig, "neutral", "unlock", LOCALE.UNBLOCK || "Unblock", "unblock-contact", { contactId: key }, ui)
+          : iconBtn(fig, "neutral", "ban", LOCALE.BLOCK || "Block", "block-contact", { contactId: key }, ui),
+        iconBtn(fig, "danger", "trash", LOCALE.DELETE, "delete-contact", { contactId: key }, ui),
+      ];
+    }
+    const actions = Skeletons.Box.X({
+      className: `${fig}__contact-actions`,
+      kids: actionKids,
+    });
+
     return Skeletons.Box.X({
       className: `${fig}__contact-item`,
       dataset: {
         contactKey: key,
         selected: selectedKey === key ? 1 : 0,
-        status: c.status || "active",
+        status,
       },
       bubble: 0,
       service: "select-contact",
@@ -80,7 +138,7 @@ module.exports = function (ui, contacts) {
       kids: [
         Skeletons.Box.Y({
           className: `${fig}__avatar`,
-          styleOpt: { background: c.color || "#fa8540" },
+          styleOpt: { background: c.color || "#e4e3ff" },
           kids: [
             Skeletons.Note({
               className: `${fig}__avatar-text`,
@@ -103,12 +161,8 @@ module.exports = function (ui, contacts) {
               : null,
           ].filter(Boolean),
         }),
-        (c.status === "received" || c.status === "sent")
-          ? Skeletons.Note({
-              className: `${fig}__contact-pill`,
-              content: LOCALE.PENDING,
-            })
-          : null,
+        pill,
+        actions,
       ].filter(Boolean),
     });
   };

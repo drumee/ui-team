@@ -70,6 +70,11 @@ class __window_meeting extends __room {
    * @param {*} anim
    */
   _resize(e, ui, anim) {
+    // While a presenter video is fullscreen, the browser owns geometry.
+    // Re-running our responsive layout re-flows the presenter and can knock
+    // the browser straight back out of fullscreen (a visible flash). Skip
+    // until fullscreen exits.
+    if (document.fullscreenElement) return;
     this.responsive();
     super._resize(e, ui, anim);
   }
@@ -193,7 +198,6 @@ class __window_meeting extends __room {
 
   onBeforeDestroy() {
     clearTimeout(this._idleTimer);
-    this._hideScreenSelfPreview();
     if (this.el && this._wakeControls)
       this.el.removeEventListener("mousemove", this._wakeControls);
     // Covers teardown paths that bypass _closeFeedbackAndLeave (tab close,
@@ -310,7 +314,7 @@ class __window_meeting extends __room {
   _markMemberJoined(drumate_id) {
     if (!this._memberCallStates) this._memberCallStates = new Map();
     this._memberCallStates.set(String(drumate_id), "joined");
-    this._refreshDashboard();
+    this._refreshMember(drumate_id);
   }
 
   // When a participant leaves, clear their call/hand/presenting state so the
@@ -325,7 +329,7 @@ class __window_meeting extends __room {
       if (this._memberCallStates) this._memberCallStates.delete(key);
       if (this._memberHandRaised) this._memberHandRaised.delete(key);
       if (this._memberPresenting) this._memberPresenting.delete(key);
-      this._refreshDashboard();
+      this._refreshMember(uid);
     }
   }
 
@@ -387,8 +391,13 @@ class __window_meeting extends __room {
         this._closeFeedbackAndLeave();
         break;
 
-      case "toggle-dashboard":
-        this._toggleDashboard();
+      case "switch-tab":
+        this._switchPanelTab(cmd.mget("tab"));
+        break;
+
+      case "show-people":
+        // Topbar People button → open the side panel on the Participants tab.
+        this._toggleSidePanel("participants");
         break;
 
       case "call-member":
@@ -447,19 +456,53 @@ class __window_meeting extends __room {
     }
   }
 
+  // Topbar chat button: open the side panel on the Chat tab, or collapse it if
+  // it's already open on Chat (so the one button toggles).
   toggleMeetingChat() {
-    const panel = this._chatPanelEl();
-    if (!panel) return;
-    this._setChatOpen(panel.dataset.open !== "1");
+    this._toggleSidePanel("chat");
   }
 
   closeMeetingChat() {
     this._setChatOpen(false);
   }
 
-  // Show a small self-preview of our own shared screen while presenting, so
-  // the presenter can see exactly what's being broadcast (the main presenter
-  // stage shows the share to *other* participants, not to the sharer).
+  _toggleSidePanel(tab) {
+    const panel = this._chatPanelEl();
+    if (!panel) return;
+    if (panel.dataset.open === "1" && panel.dataset.tab === tab) {
+      this._setChatOpen(false);
+      return;
+    }
+    this._switchPanelTab(tab);
+  }
+
+  // Show `tab` and open the panel. Panes are never re-mounted, so chat and the
+  // docked tiles keep their state across switches.
+  _switchPanelTab(tab) {
+    if (this._applyPanelTab(tab)) this._setChatOpen(true);
+  }
+
+  // Set the active tab (data-tab + button highlight) without changing whether
+  // the panel is open — used to restore the prior tab after a share ends.
+  _applyPanelTab(tab) {
+    if (tab !== "participants" && tab !== "chat") return false;
+    const panel = this._chatPanelEl();
+    if (!panel) return false;
+    panel.dataset.tab = tab;
+    const tabs = panel.querySelectorAll(`.${this.fig.family}__chat-tab`);
+    tabs.forEach((b) => {
+      b.dataset.state = b.dataset.tab === tab ? "1" : "0";
+    });
+    return true;
+  }
+
+  // Google Meet behavior for the sharer's own view: render our shared screen
+  // on the big presenter stage, with the participant tiles (including our own
+  // avatar) collapsed into the side strip via presenter mode. Jitsi never
+  // echoes our own desktop track back as a remote track, so we feed the *live
+  // local* track into the same `webrtc_remote_display` widget that viewers
+  // use. Attaching a local track to a <video> is display-only and does not
+  // affect the stream published to peers.
   async startPresentation() {
     let r;
     try {
@@ -470,87 +513,46 @@ class __window_meeting extends __room {
       // doesn't surface as an uncaught promise rejection.
       return false;
     }
-    // Only mirror locally when sharing actually started (super returns true);
-    // the bail-out branches return false/undefined. This is purely a local
-    // preview and does not touch the desktop track sent to other participants.
+    // Only mount the stage when sharing actually started (super returns true);
+    // the bail-out branches return false/undefined.
     if (r === true) {
+      // The desktop track is stored synchronously under `localTracks.video`
+      // (createLocalTracks keys by `track.getType()`, which is "video" for a
+      // desktop track) BEFORE `room.addTrack` runs. `getLocalTrack(desktop)`
+      // scans the room's tracks and can miss it if addTrack hasn't registered
+      // it yet, and `localTracks.desktop` never exists — so fall back to
+      // `localTracks.video`, which is the live desktop track while sharing.
       const track =
         this.getLocalTrack(_a.desktop) ||
-        (this.localTracks && this.localTracks.desktop);
-      if (track) this._showScreenSelfPreview(track);
+        (this.localTracks && this.localTracks.video);
+      if (track) {
+        try {
+          // Render our own screen on the presenter stage (Jitsi never echoes
+          // our desktop track back as a remote track), switch to presenter
+          // mode, and dock the tiles into the side panel.
+          this._presentingLocally = true;
+          await this.loadRemotePresentation(track);
+          this.responsive("presenter");
+          this._dockParticipants(true);
+        } catch (e) {
+          if (this.warn) this.warn("own screen presentation failed", e);
+        }
+      } else if (this.warn) {
+        this.warn("own screen presentation: no desktop track");
+      }
     }
     return r;
   }
 
   async stopPresentation(track) {
-    this._hideScreenSelfPreview();
+    // Tear our own screen off the presenter stage and drop back to the grid.
+    // onRemoteScreenStop clears __presenter and returns to "normal" mode; it's
+    // idempotent, so a double-fire from the track-stopped path is harmless.
+    if (this._presentingLocally) {
+      this._presentingLocally = false;
+      if (typeof this.onRemoteScreenStop === "function") this.onRemoteScreenStop();
+    }
     return super.stopPresentation(track);
-  }
-
-  _showScreenSelfPreview(track) {
-    if (!track || !this.el) return;
-    this._hideScreenSelfPreview();
-    // Render the preview from a CLONE of the desktop track, never the live
-    // track that's published to the peer connection — so consuming it for the
-    // local <video> can't affect the stream other participants receive.
-    let stream = null;
-    try {
-      const mst =
-        track.track ||
-        (typeof track.getTrack === "function" ? track.getTrack() : null);
-      if (mst && typeof mst.clone === "function") {
-        this._screenSelfPreviewTrack = mst.clone();
-        stream = new MediaStream([this._screenSelfPreviewTrack]);
-      } else if (typeof track.getOriginalStream === "function") {
-        stream = track.getOriginalStream();
-      }
-    } catch (e) {
-      stream = null;
-    }
-    if (!stream) return;
-
-    const pfx = this.fig.family;
-    const box = document.createElement("div");
-    box.className = `${pfx}__screen-self-preview`;
-
-    const video = document.createElement("video");
-    video.muted = true;
-    video.autoplay = true;
-    video.playsInline = true;
-    video.srcObject = stream;
-
-    const label = document.createElement("div");
-    label.className = `${pfx}__screen-self-preview-label`;
-    label.textContent = LOCALE.YOU_ARE_PRESENTING || "You're presenting";
-
-    const stop = document.createElement("div");
-    stop.className = `${pfx}__screen-self-preview-stop`;
-    stop.textContent = LOCALE.STOP_SHARING || LOCALE.STOP || "Stop";
-    stop.onclick = () => this._stopOwnPresentation();
-
-    box.appendChild(video);
-    box.appendChild(label);
-    box.appendChild(stop);
-
-    const host = this.el.querySelector(`.${pfx}__body`) || this.el;
-    host.appendChild(box);
-    this._screenSelfPreview = box;
-    if (video.play) video.play().catch(() => {});
-  }
-
-  _hideScreenSelfPreview() {
-    if (this._screenSelfPreviewTrack) {
-      try {
-        this._screenSelfPreviewTrack.stop();
-      } catch (e) {}
-      this._screenSelfPreviewTrack = null;
-    }
-    if (this._screenSelfPreview) {
-      try {
-        this._screenSelfPreview.remove();
-      } catch (e) {}
-      this._screenSelfPreview = null;
-    }
   }
 
   _toggleScreenShareFullscreen() {
@@ -564,9 +566,16 @@ class __window_meeting extends __room {
       return;
     }
     const child = this.__presenter.children && this.__presenter.children.last();
-    if (!child || child.isDestroyed() || !child.el) return;
-    if (typeof child.el.requestFullscreen !== "function") return;
-    child.el.requestFullscreen().catch((e) => {
+    if (!child || child.isDestroyed()) return;
+    // Fullscreen the <video> element itself, not the widget root. The meeting
+    // window is Wm-positioned under an absolutely-placed, transformed ancestor;
+    // fullscreening a nested <div> in that context makes Chrome enter and
+    // instantly drop fullscreen (the "flash"). A <video> is promoted to the
+    // browser's top layer and is immune to ancestor transforms, so it stays
+    // fullscreen reliably. ESC exits.
+    const target = (child.__video && child.__video.el) || child.el;
+    if (!target || typeof target.requestFullscreen !== "function") return;
+    target.requestFullscreen().catch((e) => {
       if (this.warn) this.warn("requestFullscreen failed", e);
     });
   }
@@ -588,7 +597,7 @@ class __window_meeting extends __room {
     if (on) this._memberHandRaised.set(key, 1);
     else this._memberHandRaised.delete(key);
     this._applyTileDataset(uid, "raised", on);
-    this._refreshDashboard();
+    this._refreshMember(uid);
   }
 
   _setMemberPresenting(uid, on) {
@@ -597,7 +606,7 @@ class __window_meeting extends __room {
     if (on) this._memberPresenting.set(key, 1);
     else this._memberPresenting.delete(key);
     this._applyTileDataset(uid, "presenting", on);
-    this._refreshDashboard();
+    this._refreshMember(uid);
   }
 
   // Flip a data-attr on the video tile so the tile skin shows the
@@ -747,6 +756,9 @@ class __window_meeting extends __room {
   // before calling onRemoteScreenStop) can still clear the right entry.
   prepareRemoteScreen(args) {
     if (super.prepareRemoteScreen) super.prepareRemoteScreen(args);
+    // Viewer side: dock the tiles into the panel as soon as the share is
+    // announced, so the strip never lingers in the main stage.
+    this._dockParticipants(true);
     const uid = (args && args.uid) || this._uidForParticipant(args && args.id);
     if (uid) {
       this._currentPresenterUid = String(uid);
@@ -756,6 +768,7 @@ class __window_meeting extends __room {
 
   onRemoteScreenStop() {
     if (super.onRemoteScreenStop) super.onRemoteScreenStop();
+    this._dockParticipants(false);
     if (this._currentPresenterUid) {
       this._setMemberPresenting(this._currentPresenterUid, false);
       this._currentPresenterUid = null;
@@ -774,18 +787,6 @@ class __window_meeting extends __room {
     this._setMemberPresenting(Visitor.id, !track.isMuted());
   }
 
-  async _toggleDashboard() {
-    const wrap = await this.ensurePart("wrapper-dashboard");
-    if (!wrap) return;
-    if (this._dashboardOpen) {
-      wrap.clear();
-      this._dashboardOpen = false;
-      return;
-    }
-    wrap.feed(require("./skeleton/dashboard")(this));
-    this._dashboardOpen = true;
-  }
-
   async _inviteToRoom(callee) {
     if (!callee) return;
     const guest_id = callee.drumate_id || callee.entity_id || callee.uid || callee.id;
@@ -795,20 +796,94 @@ class __window_meeting extends __room {
     if (state === "calling" || state === "joined") return;
     if (!this._memberCallStates) this._memberCallStates = new Map();
     this._memberCallStates.set(key, "calling");
-    this._refreshDashboard();
+    this._refreshMember(guest_id);
     try {
       await this.sendRoomSignaling(SERVICE.conference.invite, { guest_id });
     } catch (e) {
       this._memberCallStates.delete(key);
-      this._refreshDashboard();
+      this._refreshMember(guest_id);
       if (this.warn) this.warn("conference.invite failed", e);
     }
   }
 
-  _refreshDashboard() {
-    if (!this._dashboardOpen) return;
-    const wrap = this.getPart && this.getPart("wrapper-dashboard");
-    if (wrap && wrap.feed) wrap.feed(require("./skeleton/dashboard")(this));
+  // Re-render only the affected member row so call-state / hand-raise /
+  // presenting updates show *without* reloading (re-fetching) the whole roster.
+  // The row reads its state from `_meetingUi` (this), which the callers update
+  // before calling here. (The live tiles, shown instead while sharing, update
+  // themselves via _applyTileDataset.)
+  _refreshMember(uid) {
+    if (uid == null) return;
+    const list = this.getPart && this.getPart("roster-list");
+    if (!list || !list.children || typeof list.children.each !== "function") return;
+    const key = String(uid);
+    list.children.each((item) => {
+      if (!item || (item.isDestroyed && item.isDestroyed()) || !item.mget) return;
+      const id = item.mget(_a.drumate_id) || item.mget(_a.entity_id) || item.mget(_a.uid);
+      if (id != null && String(id) === key && typeof item.onDomRefresh === "function") {
+        item.onDomRefresh();
+      }
+    });
+  }
+
+  // Move the live webrtc_participants tiles widget between the main stage
+  // (__endpoints) and the side panel's Participants pane. While a screen is
+  // shared we dock the tiles into the panel so the shared screen owns the full
+  // main stage; when sharing stops we move them back into the grid. The same
+  // widget element is relocated (never re-mounted), so video tracks stay
+  // attached. No-op on DMZ (no side panel).
+  async _dockParticipants(toPanel) {
+    if (this.mget(_a.area) === _a.dmz) return;
+    try {
+      const participants = this.__participants;
+      if (!participants || participants.isDestroyed() || !participants.el) return;
+      // Remember the tiles' original home (the __endpoints grid — which isn't a
+      // registered part) the first time we move them, so we can put them back.
+      if (!this._participantsHome && participants.el.parentNode) {
+        this._participantsHome = participants.el.parentNode;
+      }
+      const targetEl = toPanel
+        ? (await this.ensurePart("participants-tiles"))?.el
+        : this._participantsHome;
+      if (!targetEl) return;
+      if (participants.el.parentNode !== targetEl) {
+        targetEl.appendChild(participants.el);
+      }
+      // Flag the stage so its grid drops the now-empty 200px participants
+      // column and the shared screen can fill the full width.
+      if (this._participantsHome) {
+        this._participantsHome.dataset.docked = toPanel ? "1" : "0";
+      }
+      // Flag the panel so CSS swaps the roster for the live tiles, switch to
+      // the Participants tab, and (on stop) restore whatever tab was active
+      // before the share started.
+      const panel = this._chatPanelEl();
+      if (toPanel) {
+        if (panel) {
+          // Remember the tab + open state once per share so we can restore it.
+          if (panel.dataset.sharing !== "1") {
+            this._tabBeforeShare = panel.dataset.tab;
+            this._panelOpenBeforeShare = panel.dataset.open === "1";
+          }
+          panel.dataset.sharing = "1";
+        }
+        this._switchPanelTab("participants");
+      } else {
+        if (panel) panel.dataset.sharing = "0";
+        // Re-lay out the grid immediately. The base responsive() defers the
+        // participants relayout ~1s, which leaves the tiles briefly in their
+        // docked single-column form — a visible glitch right after the screen
+        // closes. Doing it now makes the return to the grid clean.
+        if (typeof participants.responsive === "function") {
+          participants.responsive("normal");
+        }
+        // Restore the tab + open/closed state the panel had before the share.
+        this._applyPanelTab(this._tabBeforeShare || "chat");
+        this._setChatOpen(!!this._panelOpenBeforeShare);
+        this._tabBeforeShare = null;
+      }
+    } catch (e) {
+      if (this.warn) this.warn("dock participants failed", e);
+    }
   }
 
   /**

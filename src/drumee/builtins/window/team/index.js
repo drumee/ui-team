@@ -142,13 +142,10 @@ class __window_team extends __hub {
     const room_id = this.mget(_a.nid) || this.mget(_a.actual_home_id);
 
     // Center a free-floating popup via an explicit `style` so it floats
-    // correctly instead of docking to the team window.
-    let width = Math.min(1200, window.innerWidth - 80);
-    let height = Math.min(720, window.innerHeight - 120);
-    if (width < 480) width = window.innerWidth;
-    if (height < 360) height = window.innerHeight;
-    const left = Math.max(0, (window.innerWidth - width) / 2);
-    const top = Math.max(40, (window.innerHeight - height) / 2);
+    // correctly instead of docking to the team window. Center within the WM
+    // content area (right of the sidebar), not the raw viewport — see
+    // Wm.centeredPopupGeometry.
+    const { top, left, width, height } = Wm.centeredPopupGeometry();
 
     return Wm.launch(
       {

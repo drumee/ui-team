@@ -129,7 +129,8 @@ const make = function (ui) {
   };
 
   const assigneeAvatar = (task) => {
-    // Multi-assignee: stack up to 3 avatars on the card, then a "+N" chip.
+    // Multi-assignee: show avatar + name per assignee (up to 3) then a "+N"
+    // chip. Rendered in the card footer, wrapping to new lines as needed.
     const uids = Array.isArray(task.assignee_uids)
       ? task.assignee_uids
       : task.assignee_uid
@@ -139,19 +140,28 @@ const make = function (ui) {
     const MAX = 3;
     const shown = uids.slice(0, MAX);
     const overflow = uids.length - shown.length;
-    const avatars = shown.map((uid) => {
+    const items = shown.map((uid) => {
       const m = ui.getMember(uid);
-      return Skeletons.UserProfile({
-        className: `${pfx}__task-assignee`,
-        id: uid,
-        firstname: m?.firstname,
-        lastname: m?.lastname,
-        auto_color: 1,
-        live_status: 0,
+      return Skeletons.Box.X({
+        className: `${pfx}__task-assignee-item`,
+        kids: [
+          Skeletons.UserProfile({
+            className: `${pfx}__task-assignee`,
+            id: uid,
+            firstname: m?.firstname,
+            lastname: m?.lastname,
+            auto_color: 1,
+            live_status: 0,
+          }),
+          Skeletons.Note({
+            className: `${pfx}__task-assignee-name`,
+            content: fullName(m),
+          }),
+        ],
       });
     });
     if (overflow > 0) {
-      avatars.push(
+      items.push(
         Skeletons.Note({
           className: `${pfx}__task-assignee-more`,
           content: `+${overflow}`,
@@ -160,7 +170,7 @@ const make = function (ui) {
     }
     return Skeletons.Box.X({
       className: `${pfx}__task-assignees`,
-      kids: avatars,
+      kids: items,
     });
   };
 
@@ -221,7 +231,7 @@ const make = function (ui) {
 
     // Footer: priority dot + due date only. Attachment count badge removed
     // (the inline file rows above already convey the number visually).
-    // Assignee avatar moves up to the title row (top-right of the card).
+    // Assignees render above this row (see card kids).
     const priorityText = LOCALE[priority.label] || priority.key;
     const footer = Skeletons.Box.X({
       className: `${pfx}__task-foot`,
@@ -259,7 +269,6 @@ const make = function (ui) {
           className: `${pfx}__task-card-row`,
           kids: [
             titleNode(task),
-            assigneeAvatar(task),
             Skeletons.Button.Svg({
               className: `${pfx}__task-remove`,
               ico: "cross",
@@ -278,6 +287,8 @@ const make = function (ui) {
             })
           : null,
         filesNode,
+        // Assignees (avatar + name) sit just above the priority/due footer row.
+        assigneeAvatar(task),
         footer,
       ].filter(Boolean),
     });
@@ -321,7 +332,11 @@ const make = function (ui) {
                 Skeletons.Box.X({
                   className: `${pfx}__column-title-group`,
                   kids: [
-                    Skeletons.Element({
+                    
+                    Skeletons.Box.X({
+                      className: `${pfx}__column-title-dot-group`,
+                      kids: [
+                        Skeletons.Element({
                       tagName: "span",
                       className: `${pfx}__column-dot`,
                       styleOpt: { background: col.color },
@@ -330,9 +345,8 @@ const make = function (ui) {
                       className: `${pfx}__column-title`,
                       content: LOCALE[col.label] || col.key,
                     }),
-                    // Count sits right next to the title ("TO DO  8"). Kept as
-                    // its own pill so _syncColumn can update the number in
-                    // place after a surgical drag without re-rendering.
+                      ],
+                    }),
                     Skeletons.Box.X({
                       className: `${pfx}__column-count`,
                       kids: [

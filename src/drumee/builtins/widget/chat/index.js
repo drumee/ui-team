@@ -99,6 +99,7 @@ class __widget_chat extends LetcBox {
     this.unbindEvent(_a.live);
     RADIO_BROADCAST.off("chat:read", this._onReadContext);
     clearTimeout(this._folderContentSyncTimer);
+    this._cleanupUnsentAttachments();
     if (this.attachmentList) {
       this.attachmentList.off("uploaded", this.showSend);
     }
@@ -490,10 +491,15 @@ class __widget_chat extends LetcBox {
   onPasteBase64(args) {
     if (args.area && /^data:image/.test(args.area)) {
       const { nid, hub_id, home_id } = this._getUploadDestination();
+      if (!nid) {
+        this.warn("[chat] paste before staging folder is known, ignoring");
+        return;
+      }
       let pm = {
         respawn: "media_paste",
         area: args.area,
         src: args.src,
+        from_device: 1,
         home_id,
         nid,
         hub_id,
@@ -504,16 +510,11 @@ class __widget_chat extends LetcBox {
   }
 
   _getUploadDestination() {
-    // onDomRefresh overwrites mget(_a.nid) with chat_upload_id, so use the
-    // scopedNid captured at init time to recover the folder nid.
-    if (this.scopedNid) {
-      return {
-        nid: this.scopedNid,
-        hub_id: this.hubId,
-        home_id: this.mget(_a.home_id),
-        destpath: this.mget(_a.ownpath) || "/",
-      };
-    }
+    // Every attachment uploads into the hub's hidden chat staging
+    // (/__chat__/__upload__/) — never straight into the scoped folder.
+    // A file must not show up in the folder's Files tab before the
+    // message is sent; channel.post promotes staged device uploads
+    // (folder_attachment) into the folder at send time.
     const home = this.mget(_a.home) || {};
     return {
       nid: home.chat_upload_id,
@@ -803,15 +804,21 @@ class __widget_chat extends LetcBox {
    * @param  {File} args
    */
   pasteFile(file) {
+    const destination = this._getUploadDestination();
+    if (!destination.nid) {
+      this.warn("[chat] pasteFile before staging folder is known, ignoring");
+      return;
+    }
     let pm = {
       kind: "media_grid",
       phase: _a.upload,
       filetype: _a.pseudo,
       isAttachment: 1,
+      from_device: 1,
       origin: _a.chat,
       uiHandler: [this],
       file: file,
-      destination: this._getUploadDestination(),
+      destination,
     };
     this.insertMedia(pm);
   }
@@ -985,10 +992,52 @@ class __widget_chat extends LetcBox {
     };
     this.removeUploadFromChat(api);
     return this.postService(api)
-      .then((data) => {})
+      .then((data) => {
+        // Backend refusals come back as data.status, not as an HTTP error —
+        // surface them instead of silently leaving the file on the server.
+        if (data && data.status === "INVALID_ATTACHMENT") {
+          this.warn("[chat] upload_remove refused", api.nid, data);
+        }
+      })
       .catch((err) => {
         this.warn("Failed to remove", err);
       });
+  }
+
+  /**
+   * Closing the chat with unsent attachments would otherwise leave their
+   * staged uploads orphaned in /__chat__/__upload__/ — delete them.
+   * Nids that are part of an in-flight send are skipped (the server is
+   * still moving/copying them); a nid the server already moved out of
+   * staging is refused with INVALID_ATTACHMENT, which is harmless.
+   */
+  _cleanupUnsentAttachments() {
+    const list = this.attachmentList;
+    if (!list || list.isDestroyed() || !_.isFunction(list.getAttachmentIds)) {
+      return;
+    }
+    const sending = this._sendingNids || new Set();
+    for (const nid of list.getAttachmentIds() || []) {
+      if (!nid || sending.has(String(nid))) continue;
+      this.postService({
+        service: SERVICE.chat.upload_remove,
+        nid,
+        hub_id: this.hubId,
+      }).catch(() => {});
+    }
+    // The staged files are gone — drop the persisted attachment draft too,
+    // otherwise reopening this chat restores tray entries pointing at
+    // deleted nodes and the next send produces an empty message.
+    // Keep the message text: only the attachments were invalidated.
+    // (A plain page reload never reaches this method, so its still-staged
+    // files keep their restorable draft.)
+    try {
+      const data = this.getStorage();
+      data.attachment = [];
+      sessionStorage.setItem(this.storageKey, JSON.stringify(data));
+    } catch (e) {
+      this.warn("[chat] failed to clear attachment draft", e);
+    }
   }
 
   /**
@@ -1015,12 +1064,17 @@ class __widget_chat extends LetcBox {
     const a = [];
     const r = dataTransfer(e);
     const destination = this._getUploadDestination();
+    if (!destination.nid) {
+      this.warn("[chat] upload before staging folder is known, ignoring");
+      return;
+    }
 
     for (f of Array.from(r.files)) {
       pm = {
         kind: "media_grid",
         phase: _a.upload,
         isAttachment: 1,
+        from_device: 1,
         origin: _a.chat,
         uiHandler: [this],
         file: f,
@@ -1029,17 +1083,27 @@ class __widget_chat extends LetcBox {
       a.push(pm);
     }
 
-    for (f of Array.from(r.folders)) {
-      pm = {
-        kind: "media_grid",
-        phase: _a.upload,
-        isAttachment: 1,
-        origin: _a.chat,
-        uiHandler: [this],
-        folder: f,
-        destination,
-      };
-      a.push(pm);
+    if (!_.isEmpty(Array.from(r.folders))) {
+      // Folder trees cannot be staged/promoted as chat attachments in a
+      // folder-scoped chat (remove_attachment rejects folders, and a
+      // cross-hub tree move re-creates every nid).
+      if (this.getScopedNid()) {
+        Wm.alert(LOCALE.FILE_TYPE_NOT_SUPPORTED || LOCALE.ACTION_NOT_PERMITTED);
+      } else {
+        for (f of Array.from(r.folders)) {
+          pm = {
+            kind: "media_grid",
+            phase: _a.upload,
+            isAttachment: 1,
+            from_device: 1,
+            origin: _a.chat,
+            uiHandler: [this],
+            folder: f,
+            destination,
+          };
+          a.push(pm);
+        }
+      }
     }
 
     if (!_.isEmpty(a)) {
@@ -1419,7 +1483,8 @@ class __widget_chat extends LetcBox {
 
     const replaceChars = { "<": "&#60;", ">": "&#62;" };
     message = message.replace(/[<>]/g, (m) => replaceChars[m]);
-    const attachments = list.getAttachmentIds() || [];
+    // let (not const): the scopedFileNid branch below reassigns it.
+    let attachments = list.getAttachmentIds() || [];
     // DO NOT promote mentioned files into `attachments`. The server's
     // channel.post moves every attachment nid into a per-message chat
     // subfolder (mfs_move_all → physical move), which is correct for
@@ -1455,6 +1520,11 @@ class __widget_chat extends LetcBox {
         };
         if (this.getScopedNid() && !this.scopedFileNid) {
           api.nid = this.getScopedNid();
+          // Staged device uploads the server should move into the folder
+          // at send time (everything else stays link-only in the sbox).
+          api.folder_attachment = list.getDeviceAttachmentIds
+            ? list.getDeviceAttachmentIds() || []
+            : [];
         }
         break;
 
@@ -1564,8 +1634,13 @@ class __widget_chat extends LetcBox {
       this.__list.scrollToBottom();
     }
     this.clearMessageBlock();
+    // Guard for the destroy-time cleanup: nids belonging to an in-flight
+    // send must not be upload_remove'd while the server may still be
+    // moving/copying them out of staging.
+    this._sendingNids = new Set((api.attachment || []).map(String));
     this.postService(api)
       .then((data) => {
+        this._sendingNids = null;
         this.attachmentList.clearAttachment();
         // Deterministic — drive `data-has-attachment` directly instead of
         // relying on the `_e.update` event chain, which raced with Backbone's
@@ -1580,6 +1655,7 @@ class __widget_chat extends LetcBox {
         this.handleReceivedMsg(data);
       })
       .catch((error) => {
+        this._sendingNids = null;
         this.queue.unshift(api);
         let errMessage = error.message || LOCALE.MESSAGE_NOT_SENT_RETRY;
         this.showError(errMessage);
