@@ -356,12 +356,14 @@ class __window_manager extends push {
       cur.once(_a.destroy, () => {
         this._curWorkspace = null;
       });
-      // Sync the VISIBLE desk topbar breadcrumb (desk_breadcrumb) with the
-      // workspace switch. The refreshBreadcrumbsUI call below only updates the
-      // headless folder window's own (hidden) breadcrumb; the topbar breadcrumb
-      // is driven exclusively by the "breadcrumb:content" broadcast — same path
-      // loadWorkspaceNode already uses. Without this, switching workspace never
-      // retitles the topbar breadcrumb.
+      // Drive the VISIBLE desk topbar breadcrumb (desk_breadcrumb) on the
+      // workspace switch. The get_path → refreshBreadcrumbsUI call below also
+      // mirrors into the topbar, but only once it resolves AND only while the
+      // headless window is focused (state==1); firing here gives the breadcrumb
+      // an immediate, unconditional update. The topbar listens to the
+      // "breadcrumb:content" broadcast (source must be Wm) — same path
+      // loadWorkspaceNode uses. Without this, switching workspace can leave the
+      // topbar breadcrumb stale (e.g. stuck on a Settings/Contacts section).
       this.updateBreadcrumb({ ...data, service: "change-workspace" }, this);
       this.fetchService(SERVICE.media.get_path, { nid, hub_id }).then(
         (data) => {
@@ -585,10 +587,11 @@ class __window_manager extends push {
             if (_.isEmpty(path)) return;
             if (_.isFunction(currentFolder.refreshBreadcrumbsUI))
               currentFolder.refreshBreadcrumbsUI(path);
-            // Keep the visible desk topbar breadcrumb in sync with the folder
-            // navigation. refreshBreadcrumbsUI above only updates the folder
-            // window's own breadcrumb; the topbar breadcrumb (desk_breadcrumb)
-            // listens to "breadcrumb:content".
+            // Drive the visible desk topbar breadcrumb (desk_breadcrumb) for the
+            // folder navigation. refreshBreadcrumbsUI above also mirrors into the
+            // topbar, but only when `currentFolder` is the focused headless
+            // workspace window; this explicit broadcast covers the case where it
+            // isn't. The topbar listens to "breadcrumb:content" (source must be Wm).
             this.updateBreadcrumb({ ...attrs, service: "change-workspace" }, this);
           })
           .catch((e) => this.warn("openWorkspaceFolder: get_path failed", e));
