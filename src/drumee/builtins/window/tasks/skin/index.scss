@@ -119,7 +119,6 @@
     // Reserve a gutter for the scrollbar so it never overlaps the cards, plus
     // a small gap between the cards and that gutter.
     scrollbar-gutter: stable;
-    padding-left: 16px;
     border-radius: 8px;
     scrollbar-width: thin;
     scrollbar-color: var(--border-strong, rgba(0, 0, 0, 0.15)) transparent;
@@ -128,14 +127,8 @@
       outline-color 0.15s;
     outline: 2px dashed transparent;
     outline-offset: -2px;
-
-    &::-webkit-scrollbar {
-      width: 4px;
-    }
-    &::-webkit-scrollbar-thumb {
-      background-color: var(--border-strong, rgba(0, 0, 0, 0.15));
-      border-radius: 4px;
-    }
+  scrollbar-width: none;
+  -ms-overflow-style: none;
 
     &.is-drop-target {
       background-color: var(--hover-bg-40, rgba(67, 60, 197, 0.06));
@@ -182,27 +175,24 @@
       $size: 13px,
       $weight: 600,
       $line: 18px,
-      $color: color-mix(
-        in srgb,
-        var(--col-accent, var(--normal-fg-10, #0b0a21)) 80%,
-        var(--normal-fg-10, #0b0a21)
-      )
+      $color: var(--normal-fg-10)
     );
   }
 
-  &__column-count {
+  &__column-title-dot-group{
     align-items: center;
     justify-content: center;
-    min-width: 22px;
+    gap: 6px;
+    background-color: 
+color-mix(in srgb, var(--col-accent, transparent) 60%, var(--normal-bg-80, rgba(0, 0, 0, 0.04)));
     padding: 0 8px;
-    border-radius: 100px;
-    // Accent-tinted badge (solid neutral fallback for no color-mix support).
-    background-color: var(--overlay-bg-05, rgba(0, 0, 0, 0.06));
-    background-color: color-mix(
-      in srgb,
-      var(--col-accent, transparent) 18%,
-      transparent
-    );
+    border-radius: 12px;
+  }
+
+  &__column-count {
+    margin-top: 2px;
+    align-items: center;
+    justify-content: center;
   }
 
   &__column-count-text {
