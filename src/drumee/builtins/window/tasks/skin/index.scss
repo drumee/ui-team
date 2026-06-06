@@ -224,7 +224,6 @@
     align-items: stretch;
     gap: 8px;
     padding: 12px;
-    border: 1px solid var(--border-default, rgba(11, 10, 33, 0.06));
     border-radius: 8px;
     background-color: color-mix(in srgb, var(--col-accent, transparent) 24%, var(--normal-bg-80, rgba(0, 0, 0, 0.04)));
     box-shadow: var(--shadow-top-tiny, 0 1px 0 rgba(9, 30, 66, 0.08));
@@ -237,7 +236,6 @@
 
     &:hover {
       border-color: var(--border-strong, rgba(11, 10, 33, 0.12));
-      border-left-color: var(--col-accent, var(--border-strong, rgba(11, 10, 33, 0.12)));
       box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
 
       .tasks-panel__task-remove {
