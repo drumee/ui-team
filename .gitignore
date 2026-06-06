@@ -27,3 +27,7 @@ docs/api/
 docs/journals/
 src/drumee/core/kind/seeds/
 test/
+
+# BMad (bmad-method) — generated, do not commit
+_bmad/
+_bmad-output/
