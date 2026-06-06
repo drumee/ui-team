@@ -894,15 +894,20 @@ class __window_manager extends push {
         Visitor.set({ wicket_id: data.wicket_id });
       }
       this.trigger(_e.ready);
-      // Show spefici file/folder by url
-      // let path = Visitor.parseModule() || [];
-      // if (path[2] === _a.open) {
-      //   this.ensurePart(_a.list).then((p) => {
-      //     p.once('end:of:data', (l)=>{
-      //       this.route();
-      //     })
-      //   })
-      // }
+      const path = Visitor.parseModule() || [];
+      if (path[2] === _a.open) {
+        this.route();
+      } else {
+        try {
+          const loc = JSON.parse(localStorage.getItem('locationOnStart'));
+          if (loc && loc.hash) {
+            const savedPath = Visitor.parseModule(loc.hash);
+            if (savedPath && savedPath[2] === _a.open) {
+              this.openFileLocation(Visitor.parseModuleArgs(loc.hash));
+            }
+          }
+        } catch (e) {}
+      }
       Visitor.set({ disk: data.disk });
       this.bindWsEvents();
     });
