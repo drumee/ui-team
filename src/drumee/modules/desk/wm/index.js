@@ -104,6 +104,7 @@ class __window_manager extends push {
         return;
       case _a.teamchat:
       case _a.channel:
+      case _a.hub:
         this.loadWorkspace(args);
         return;
 
@@ -895,15 +896,15 @@ class __window_manager extends push {
       }
       this.trigger(_e.ready);
       const path = Visitor.parseModule() || [];
-      if (path[2] === _a.open) {
+      if (path[2] === _a.hub) {
         this.route();
       } else {
         try {
           const loc = JSON.parse(localStorage.getItem('locationOnStart'));
           if (loc && loc.hash) {
             const savedPath = Visitor.parseModule(loc.hash);
-            if (savedPath && savedPath[2] === _a.open) {
-              this.openFileLocation(Visitor.parseModuleArgs(loc.hash));
+            if (savedPath && savedPath[2] === _a.hub) {
+              this.loadWorkspace(Visitor.parseModuleArgs(loc.hash));
             }
           }
         } catch (e) {}
