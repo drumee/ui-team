@@ -314,7 +314,7 @@ class __window_meeting extends __room {
   _markMemberJoined(drumate_id) {
     if (!this._memberCallStates) this._memberCallStates = new Map();
     this._memberCallStates.set(String(drumate_id), "joined");
-    this._refreshDashboard();
+    this._refreshMember(drumate_id);
   }
 
   // When a participant leaves, clear their call/hand/presenting state so the
@@ -329,7 +329,7 @@ class __window_meeting extends __room {
       if (this._memberCallStates) this._memberCallStates.delete(key);
       if (this._memberHandRaised) this._memberHandRaised.delete(key);
       if (this._memberPresenting) this._memberPresenting.delete(key);
-      this._refreshDashboard();
+      this._refreshMember(uid);
     }
   }
 
@@ -391,8 +391,13 @@ class __window_meeting extends __room {
         this._closeFeedbackAndLeave();
         break;
 
-      case "toggle-dashboard":
-        this._toggleDashboard();
+      case "switch-tab":
+        this._switchPanelTab(cmd.mget("tab"));
+        break;
+
+      case "show-people":
+        // Topbar People button → open the side panel on the Participants tab.
+        this._toggleSidePanel("participants");
         break;
 
       case "call-member":
@@ -451,14 +456,44 @@ class __window_meeting extends __room {
     }
   }
 
+  // Topbar chat button: open the side panel on the Chat tab, or collapse it if
+  // it's already open on Chat (so the one button toggles).
   toggleMeetingChat() {
-    const panel = this._chatPanelEl();
-    if (!panel) return;
-    this._setChatOpen(panel.dataset.open !== "1");
+    this._toggleSidePanel("chat");
   }
 
   closeMeetingChat() {
     this._setChatOpen(false);
+  }
+
+  _toggleSidePanel(tab) {
+    const panel = this._chatPanelEl();
+    if (!panel) return;
+    if (panel.dataset.open === "1" && panel.dataset.tab === tab) {
+      this._setChatOpen(false);
+      return;
+    }
+    this._switchPanelTab(tab);
+  }
+
+  // Show `tab` and open the panel. Panes are never re-mounted, so chat and the
+  // docked tiles keep their state across switches.
+  _switchPanelTab(tab) {
+    if (this._applyPanelTab(tab)) this._setChatOpen(true);
+  }
+
+  // Set the active tab (data-tab + button highlight) without changing whether
+  // the panel is open — used to restore the prior tab after a share ends.
+  _applyPanelTab(tab) {
+    if (tab !== "participants" && tab !== "chat") return false;
+    const panel = this._chatPanelEl();
+    if (!panel) return false;
+    panel.dataset.tab = tab;
+    const tabs = panel.querySelectorAll(`.${this.fig.family}__chat-tab`);
+    tabs.forEach((b) => {
+      b.dataset.state = b.dataset.tab === tab ? "1" : "0";
+    });
+    return true;
   }
 
   // Google Meet behavior for the sharer's own view: render our shared screen
@@ -492,13 +527,13 @@ class __window_meeting extends __room {
         (this.localTracks && this.localTracks.video);
       if (track) {
         try {
-          // loadRemotePresentation builds the remote-display widget, attaches
-          // the track to its <video>, and (via the video's onloadeddata) fires
-          // start-remote-screen → onRemoteScreenStart → presenter mode. We also
-          // flip presenter mode here so the layout switches immediately.
+          // Render our own screen on the presenter stage (Jitsi never echoes
+          // our desktop track back as a remote track), switch to presenter
+          // mode, and dock the tiles into the side panel.
           this._presentingLocally = true;
           await this.loadRemotePresentation(track);
           this.responsive("presenter");
+          this._dockParticipants(true);
         } catch (e) {
           if (this.warn) this.warn("own screen presentation failed", e);
         }
@@ -562,7 +597,7 @@ class __window_meeting extends __room {
     if (on) this._memberHandRaised.set(key, 1);
     else this._memberHandRaised.delete(key);
     this._applyTileDataset(uid, "raised", on);
-    this._refreshDashboard();
+    this._refreshMember(uid);
   }
 
   _setMemberPresenting(uid, on) {
@@ -571,7 +606,7 @@ class __window_meeting extends __room {
     if (on) this._memberPresenting.set(key, 1);
     else this._memberPresenting.delete(key);
     this._applyTileDataset(uid, "presenting", on);
-    this._refreshDashboard();
+    this._refreshMember(uid);
   }
 
   // Flip a data-attr on the video tile so the tile skin shows the
@@ -721,6 +756,9 @@ class __window_meeting extends __room {
   // before calling onRemoteScreenStop) can still clear the right entry.
   prepareRemoteScreen(args) {
     if (super.prepareRemoteScreen) super.prepareRemoteScreen(args);
+    // Viewer side: dock the tiles into the panel as soon as the share is
+    // announced, so the strip never lingers in the main stage.
+    this._dockParticipants(true);
     const uid = (args && args.uid) || this._uidForParticipant(args && args.id);
     if (uid) {
       this._currentPresenterUid = String(uid);
@@ -730,6 +768,7 @@ class __window_meeting extends __room {
 
   onRemoteScreenStop() {
     if (super.onRemoteScreenStop) super.onRemoteScreenStop();
+    this._dockParticipants(false);
     if (this._currentPresenterUid) {
       this._setMemberPresenting(this._currentPresenterUid, false);
       this._currentPresenterUid = null;
@@ -748,18 +787,6 @@ class __window_meeting extends __room {
     this._setMemberPresenting(Visitor.id, !track.isMuted());
   }
 
-  async _toggleDashboard() {
-    const wrap = await this.ensurePart("wrapper-dashboard");
-    if (!wrap) return;
-    if (this._dashboardOpen) {
-      wrap.clear();
-      this._dashboardOpen = false;
-      return;
-    }
-    wrap.feed(require("./skeleton/dashboard")(this));
-    this._dashboardOpen = true;
-  }
-
   async _inviteToRoom(callee) {
     if (!callee) return;
     const guest_id = callee.drumate_id || callee.entity_id || callee.uid || callee.id;
@@ -769,20 +796,94 @@ class __window_meeting extends __room {
     if (state === "calling" || state === "joined") return;
     if (!this._memberCallStates) this._memberCallStates = new Map();
     this._memberCallStates.set(key, "calling");
-    this._refreshDashboard();
+    this._refreshMember(guest_id);
     try {
       await this.sendRoomSignaling(SERVICE.conference.invite, { guest_id });
     } catch (e) {
       this._memberCallStates.delete(key);
-      this._refreshDashboard();
+      this._refreshMember(guest_id);
       if (this.warn) this.warn("conference.invite failed", e);
     }
   }
 
-  _refreshDashboard() {
-    if (!this._dashboardOpen) return;
-    const wrap = this.getPart && this.getPart("wrapper-dashboard");
-    if (wrap && wrap.feed) wrap.feed(require("./skeleton/dashboard")(this));
+  // Re-render only the affected member row so call-state / hand-raise /
+  // presenting updates show *without* reloading (re-fetching) the whole roster.
+  // The row reads its state from `_meetingUi` (this), which the callers update
+  // before calling here. (The live tiles, shown instead while sharing, update
+  // themselves via _applyTileDataset.)
+  _refreshMember(uid) {
+    if (uid == null) return;
+    const list = this.getPart && this.getPart("roster-list");
+    if (!list || !list.children || typeof list.children.each !== "function") return;
+    const key = String(uid);
+    list.children.each((item) => {
+      if (!item || (item.isDestroyed && item.isDestroyed()) || !item.mget) return;
+      const id = item.mget(_a.drumate_id) || item.mget(_a.entity_id) || item.mget(_a.uid);
+      if (id != null && String(id) === key && typeof item.onDomRefresh === "function") {
+        item.onDomRefresh();
+      }
+    });
+  }
+
+  // Move the live webrtc_participants tiles widget between the main stage
+  // (__endpoints) and the side panel's Participants pane. While a screen is
+  // shared we dock the tiles into the panel so the shared screen owns the full
+  // main stage; when sharing stops we move them back into the grid. The same
+  // widget element is relocated (never re-mounted), so video tracks stay
+  // attached. No-op on DMZ (no side panel).
+  async _dockParticipants(toPanel) {
+    if (this.mget(_a.area) === _a.dmz) return;
+    try {
+      const participants = this.__participants;
+      if (!participants || participants.isDestroyed() || !participants.el) return;
+      // Remember the tiles' original home (the __endpoints grid — which isn't a
+      // registered part) the first time we move them, so we can put them back.
+      if (!this._participantsHome && participants.el.parentNode) {
+        this._participantsHome = participants.el.parentNode;
+      }
+      const targetEl = toPanel
+        ? (await this.ensurePart("participants-tiles"))?.el
+        : this._participantsHome;
+      if (!targetEl) return;
+      if (participants.el.parentNode !== targetEl) {
+        targetEl.appendChild(participants.el);
+      }
+      // Flag the stage so its grid drops the now-empty 200px participants
+      // column and the shared screen can fill the full width.
+      if (this._participantsHome) {
+        this._participantsHome.dataset.docked = toPanel ? "1" : "0";
+      }
+      // Flag the panel so CSS swaps the roster for the live tiles, switch to
+      // the Participants tab, and (on stop) restore whatever tab was active
+      // before the share started.
+      const panel = this._chatPanelEl();
+      if (toPanel) {
+        if (panel) {
+          // Remember the tab + open state once per share so we can restore it.
+          if (panel.dataset.sharing !== "1") {
+            this._tabBeforeShare = panel.dataset.tab;
+            this._panelOpenBeforeShare = panel.dataset.open === "1";
+          }
+          panel.dataset.sharing = "1";
+        }
+        this._switchPanelTab("participants");
+      } else {
+        if (panel) panel.dataset.sharing = "0";
+        // Re-lay out the grid immediately. The base responsive() defers the
+        // participants relayout ~1s, which leaves the tiles briefly in their
+        // docked single-column form — a visible glitch right after the screen
+        // closes. Doing it now makes the return to the grid clean.
+        if (typeof participants.responsive === "function") {
+          participants.responsive("normal");
+        }
+        // Restore the tab + open/closed state the panel had before the share.
+        this._applyPanelTab(this._tabBeforeShare || "chat");
+        this._setChatOpen(!!this._panelOpenBeforeShare);
+        this._tabBeforeShare = null;
+      }
+    } catch (e) {
+      if (this.warn) this.warn("dock participants failed", e);
+    }
   }
 
   /**

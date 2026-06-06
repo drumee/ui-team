@@ -7,22 +7,15 @@ module.exports = function (_ui_) {
   const isTeamMeeting = _ui_.service_class === "meeting"
     && _ui_.mget(_a.area) !== _a.dmz;
 
-  const dashboardBtn = isTeamMeeting ? Skeletons.Box.X({
-    className: `${pfx}__in-topbar-dashboard-wrap`,
-    kids: [
-      Skeletons.Button.Svg({
-        ico: "bold-dot-vertical",
-        service: "toggle-dashboard",
-        uiHandler: [_ui_],
-        className: `${pfx}__in-topbar-dashboard-btn`,
-      }),
-      Skeletons.Wrapper.Y({
-        className: `${pfx}__in-topbar-dashboard-panel`,
-        name: "dashboard",
-        uiHandler: [_ui_],
-        partHandler: _ui_,
-      }),
-    ],
+  // People toggle — opens the side panel on the Participants tab (roster of
+  // members + Call buttons, or the live tiles while sharing). Team meetings
+  // only; handled by _toggleSidePanel in window/meeting/index.js.
+  const peopleBtn = isTeamMeeting ? Skeletons.Button.Svg({
+    ico: "desktop_group",
+    service: "show-people",
+    uiHandler: [_ui_],
+    className: `${pfx}__in-topbar-people-btn`,
+    attrOpt: { title: LOCALE.PARTICIPANTS },
   }) : null;
 
   const hostLabel = isTeamMeeting ? Skeletons.Note({
@@ -79,7 +72,7 @@ module.exports = function (_ui_) {
       Skeletons.Note({ className: `${pfx}__in-topbar-timer`, content: "00:00", sys_pn: "elapsed-timer" }),
       Skeletons.Box.X({ className: `${pfx}__in-topbar-avatars`, sys_pn: "topbar-avatars" }),
       chatBtn,
-      dashboardBtn,
+      peopleBtn,
       closeBtn,
     ].filter(Boolean),
   });
