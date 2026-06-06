@@ -115,12 +115,13 @@
 
   &__tab-label {
     @include drumee.typo(
-      $size: 12px,
+      $size: 10px,
       $weight: 600,
       $line: 16px,
       $color: var(--normal-fg-50, #65656c)
     );
     pointer-events: none;
+    text-transform: uppercase;
   }
 
   &__tab-count {
