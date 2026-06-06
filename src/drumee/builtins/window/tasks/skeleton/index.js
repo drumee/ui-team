@@ -332,7 +332,11 @@ const make = function (ui) {
                 Skeletons.Box.X({
                   className: `${pfx}__column-title-group`,
                   kids: [
-                    Skeletons.Element({
+                    
+                    Skeletons.Box.X({
+                      className: `${pfx}__column-title-dot-group`,
+                      kids: [
+                        Skeletons.Element({
                       tagName: "span",
                       className: `${pfx}__column-dot`,
                       styleOpt: { background: col.color },
@@ -341,9 +345,8 @@ const make = function (ui) {
                       className: `${pfx}__column-title`,
                       content: LOCALE[col.label] || col.key,
                     }),
-                    // Count sits right next to the title ("TO DO  8"). Kept as
-                    // its own pill so _syncColumn can update the number in
-                    // place after a surgical drag without re-rendering.
+                      ],
+                    }),
                     Skeletons.Box.X({
                       className: `${pfx}__column-count`,
                       kids: [
