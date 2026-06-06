@@ -710,6 +710,7 @@
   "INVITED_YOU_TO_WORKSPACE": "invited you to workspace",
   "WANTS_TO_CONNECT": "quiere conectar contigo",
   "ACCEPTED_YOUR_INVITATION": "ha aceptado tu invitación",
+  "DECLINED_YOUR_INVITATION": "ha rechazado tu invitación de contacto",
   "NOTES": "Notes:",
   "NO_CONTACT_FOUND": "No contact found",
   "REFUSE": "Refuse",

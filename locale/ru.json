@@ -1256,6 +1256,7 @@
   "INVITED_YOU_TO_WORKSPACE": "invited you to workspace",
   "WANTS_TO_CONNECT": "хочет добавить вас в контакты",
   "ACCEPTED_YOUR_INVITATION": "принял ваше приглашение",
+  "DECLINED_YOUR_INVITATION": "отклонил ваше приглашение в контакты",
   "ZOOM": "Zoom",
   "JOIN": "Join",
   "STARTED_A_MEETING": "started a meeting",

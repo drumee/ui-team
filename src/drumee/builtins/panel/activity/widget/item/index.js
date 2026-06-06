@@ -193,9 +193,13 @@ class __activity_item extends LetcBox {
           case _a.contact:
             this.triggerHandlers({ service: 'dismiss-activity', hub_id, nid, item_type, item_key, changelog_id })
             return
+
+          case 'contact_refused':
+            this.triggerHandlers({ service: 'dismiss-activity', item_type, item_key })
+            return
         }
     }
-    
+
   }
 
   /**
@@ -263,6 +267,10 @@ class __activity_item extends LetcBox {
         hash = `#/desk/wm/${category}`;
         location.hash = hash + `&ts=${ts}`;
         this.triggerHandlers({ service: 'dismiss-activity', hub_id, nid, item_type, item_key, changelog_id })
+        break;
+
+      case 'contact_refused':
+        this.triggerHandlers({ service: 'dismiss-activity', item_type, item_key })
         break;
     }
   }

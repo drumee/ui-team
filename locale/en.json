@@ -425,6 +425,7 @@
   "INVITED_YOU_TO_WORKSPACE": "invited you to workspace",
   "WANTS_TO_CONNECT": "wants to connect",
   "ACCEPTED_YOUR_INVITATION": "accepted your invitation",
+  "DECLINED_YOUR_INVITATION": "declined your contact invitation",
   "CREATE_SHARED_FOLDER": "Create an external folder",
   "NOTES": "Notes:",
   "NO_CONTACT_FOUND": "No contact found",

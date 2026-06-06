@@ -675,6 +675,10 @@ class __panel_activity extends LetcBox {
           e.status = it.status;
           e.fullname = (it.surname || `${it.firstname || ''} ${it.lastname || ''}`).trim();
           break;
+        case 'contact_refused':
+          e.event = 'contact.invite_refuse';
+          e.fullname = (it.surname || `${it.firstname || ''} ${it.lastname || ''}`).trim();
+          break;
         // case 'media':
         //   e.service = 'open-folder';
         //   break;
@@ -748,6 +752,9 @@ class __panel_activity extends LetcBox {
         }
         this.refreshActivity();
         this.shouldNofity();
+        break;
+      case "contact.invite_refuse":
+        this.refreshActivity();
         break;
       case "messages.read":
         this._buildactivities(data);
@@ -1086,7 +1093,7 @@ class __panel_activity extends LetcBox {
       } catch (e) {
         this.warn('dismiss-activity failed', e);
       }
-    } else if (itemType === 'hub_invite' || itemType === 'contact_invite') {
+    } else if (itemType === 'hub_invite' || itemType === 'contact_invite' || itemType === 'contact_refused') {
       // Resolve the contact_activity row id. activity.list returns it via
       // `key_id` (string) and `last_id` (number); legacy paths used `id` /
       // `changelog_id`. Use the first non-empty.

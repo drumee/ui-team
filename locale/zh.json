@@ -1256,6 +1256,7 @@
   "INVITED_YOU_TO_WORKSPACE": "invited you to workspace",
   "WANTS_TO_CONNECT": "想要与您建立联系",
   "ACCEPTED_YOUR_INVITATION": "已接受您的邀请",
+  "DECLINED_YOUR_INVITATION": "拒绝了您的联系人邀请",
   "ZOOM": "Zoom",
   "JOIN": "Join",
   "STARTED_A_MEETING": "started a meeting",
