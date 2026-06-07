@@ -91,6 +91,20 @@ class __window_meeting extends __room {
     if (this.responsive) this.responsive(mode);
   }
 
+  // Drive small-size layout off the WINDOW width. The meeting is a resizable
+  // Wm window that can be small even on a large viewport, so @media (viewport)
+  // breakpoints don't fire when the user shrinks it — we flip data-narrow /
+  // data-compact on the root and let the skin adapt (panel → overlay, tighter
+  // controls), Google-Meet style.
+  responsive(m, ui) {
+    if (super.responsive) super.responsive(m, ui);
+    if (!this.el || !this.$el) return;
+    const w = this.$el.width() || this.el.offsetWidth || 0;
+    if (!w) return;
+    this.el.dataset.narrow = w < 640 ? "1" : "0";
+    this.el.dataset.compact = w < 520 ? "1" : "0";
+  }
+
   /**
    *
    * @returns

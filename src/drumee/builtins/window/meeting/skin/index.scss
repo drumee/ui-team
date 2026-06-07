@@ -307,6 +307,52 @@
     }
   }
 
+  // ── Narrow / compact window (driven by data-narrow / data-compact set in
+  // responsive(); the window can be small on a large viewport so @media can't
+  // catch it). Google-Meet-style graceful shrink. ──────────────────────────
+  &__ui[data-narrow="1"] &__chat-panel {
+    // Side panel becomes a full-width overlay instead of a fixed 340px column
+    // that crushes the video stage.
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 140;
+
+    > * {
+      width: 100%;
+      max-width: 100%;
+    }
+
+    &[data-open="1"] {
+      width: 100%;
+    }
+  }
+
+  &__ui[data-compact="1"] {
+    // Tighten the floating control bar so 5 buttons fit without overflowing.
+    .window-meeting__commands {
+      gap: 10px;
+    }
+    .window-meeting__commands-container {
+      bottom: 10px;
+      padding: 0 8px;
+    }
+    // Tighten the (wider, labelled) leave button to save width.
+    .window-meeting__commands .ctrl-button.line {
+      padding: 0 10px;
+    }
+    // Tighten the topbar; drop the elapsed timer (least essential) so the
+    // title + action icons don't jam together.
+    .window-meeting__in-topbar {
+      padding: 0 6px;
+      gap: 6px;
+    }
+    .window-meeting__in-topbar-timer {
+      display: none;
+    }
+  }
+
   // ── Embedded widget_chat styling ────────────────────────────────────────
   // The team/folder windows style their chat via the shared `.window__chat-*`
   // rules scoped to their own root; the meeting needs the same so the input
