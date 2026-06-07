@@ -766,6 +766,14 @@ class __window_meeting extends __room {
     }
   }
 
+  // The one dock hook a late joiner hits: they miss the START_REMOTE_SCREEN
+  // broadcast (so prepareRemoteScreen never runs) and discover the share via
+  // onStreamReceived → loadRemotePresentation → here. Idempotent.
+  onRemoteScreenStart(size) {
+    if (super.onRemoteScreenStart) super.onRemoteScreenStart(size);
+    this._dockParticipants(true);
+  }
+
   onRemoteScreenStop() {
     if (super.onRemoteScreenStop) super.onRemoteScreenStop();
     this._dockParticipants(false);
@@ -962,7 +970,9 @@ class __window_meeting extends __room {
       this._feedbackModal.clear();
       this._feedbackModal = null;
     }
-    this.triggerHandlers({ service: "leave-meeting" });
+    // Close the window; onBeforeDestroy → super releases the room (leave +
+    // disconnect). No "leave-meeting" re-emit — that's a legacy embedded-tab
+    // signal that now only reaches the Wm unhandled (standalone window).
     this.goodbye();
   }
 

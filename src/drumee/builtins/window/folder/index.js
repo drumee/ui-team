@@ -1238,6 +1238,14 @@ class __window_folder extends mfsInteract {
           hub_id: this.mget(_a.hub_id),
           nid: room_id,
           room_id,
+          // Forward this folder's chat-channel identity so the meeting chat
+          // binds to the same conversation. chat_nid is the folder chat's
+          // scope nid (this window's nid), not the workspace root.
+          actual_hub_id: this.mget(_a.actual_hub_id),
+          actual_home_id: this.mget(_a.actual_home_id),
+          chat_nid: this.mget(_a.nid),
+          home_id: this.mget(_a.home_id),
+          ownpath: this.mget(_a.ownpath),
           filename: this.mget(_a.filename) || this.mget(_a.name),
           area: this.mget(_a.area),
           trigger: this.mget(_a.media) || this,

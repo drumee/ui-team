@@ -89,6 +89,15 @@ function getActivityMeta(ui, data) {
       };
     }
 
+    case 'contact_refused':
+      return {
+        before: LOCALE.DECLINED_YOUR_INVITATION || 'declined your contact invitation',
+        label: '',
+        after: '',
+        colorClass: 'mention',
+        badge: 'mention',
+      };
+
     case 'chat':
       return {
         before: 'sent you a message',

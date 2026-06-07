@@ -1256,6 +1256,7 @@
   "INVITED_YOU_TO_WORKSPACE": "invited you to workspace",
   "WANTS_TO_CONNECT": "ចង់ភ្ជាប់ទំនាក់ទំនង",
   "ACCEPTED_YOUR_INVITATION": "បានទទួលយកការអញ្ជើញរបស់អ្នក",
+  "DECLINED_YOUR_INVITATION": "បានបដិសេធការអញ្ជើញទំនាក់ទំនងរបស់អ្នក",
   "ZOOM": "Zoom",
   "JOIN": "Join",
   "STARTED_A_MEETING": "started a meeting",

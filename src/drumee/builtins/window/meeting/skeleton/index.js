@@ -26,11 +26,15 @@
 function meetingSidePanel(_ui_) {
   if (_ui_.mget(_a.area) === _a.dmz) return null;
   const pfx = _ui_.fig.family;
-  // Attendees who joined via an invite-launched folder can arrive with an
-  // empty `area`, which makes widget_chat's send hit the "NOT SUPPORTED"
-  // default branch (no channel.post). Fall back to the shared team channel
-  // so every participant posts to the same hub conversation.
-  const chatArea = _ui_.mget(_a.area) || _a.share;
+
+  // Bind the meeting chat to the SAME channel the launching folder/team window
+  // uses (folder-scoped `share`), so messages + uploads sync into that chat.
+  // chat_nid is the launching window's own chat-scope nid — NOT actual_home_id
+  // (the workspace root), which would post to the outer team chat. Absent for
+  // p2p/scheduled rooms, where we fall back to the room's own ids.
+  const teamChatNid = _ui_.mget("chat_nid") || _ui_.mget(_a.actual_home_id);
+  const isTeamChannel = !!teamChatNid;
+  const chatArea = isTeamChannel ? _a.share : (_ui_.mget(_a.area) || _a.share);
 
   const tab = (id, label) =>
     Skeletons.Note({
@@ -99,8 +103,19 @@ function meetingSidePanel(_ui_) {
             type: chatArea,
             area: chatArea,
             view: "quickChat",
-            hub_id: _ui_.mget(_a.hub_id),
-            nid: _ui_.mget(_a.nid),
+            // Team-meeting: same channel as the folder chat (folder-scoped
+            // share channel keyed by actual_hub_id + actual_home_id). The
+            // upload destination resolves from hub_id via media.home in
+            // widget_chat. Falls back to the room's own ids otherwise.
+            scope: isTeamChannel ? _a.folder : undefined,
+            hub_id:
+              (isTeamChannel && _ui_.mget(_a.actual_hub_id)) ||
+              _ui_.mget(_a.hub_id),
+            nid: isTeamChannel ? teamChatNid : _ui_.mget(_a.nid),
+            home_id: isTeamChannel
+              ? _ui_.mget(_a.home_id) || teamChatNid
+              : undefined,
+            ownpath: isTeamChannel ? _ui_.mget(_a.ownpath) : undefined,
             placeholder: LOCALE.TYPE_MESSAGE + "...",
             no_emoji: false,
             send_icon: "raw-send-chat",

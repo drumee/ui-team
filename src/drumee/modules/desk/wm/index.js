@@ -104,6 +104,7 @@ class __window_manager extends push {
         return;
       case _a.teamchat:
       case _a.channel:
+      case _a.hub:
         this.loadWorkspace(args);
         return;
 
@@ -898,6 +899,19 @@ class __window_manager extends push {
 
   onDomRefresh() {
     this.feed(require("./skeleton")(this));
+    // Capture hub_id synchronously before any async ops so hash changes cannot lose it.
+    // Falls back to sessionStorage set by welcome module for the not-logged-in flow.
+    const _path = Visitor.parseModule() || [];
+    const _args = Visitor.parseModuleArgs() || {};
+    const _hubId = (_path[2] === _a.hub && _args.hub_id)
+      ? _args.hub_id
+      : sessionStorage.getItem('drumee_hubDeepLink');
+    if (_hubId) {
+      sessionStorage.removeItem('drumee_hubDeepLink');
+      this.ensurePart('headless-layer').then(() => {
+        this.loadWorkspace({ hub_id: _hubId });
+      });
+    }
     this.fetchService(
       SERVICE.desk.get_env,
       { hub_id: Visitor.id },
@@ -909,15 +923,6 @@ class __window_manager extends push {
         Visitor.set({ wicket_id: data.wicket_id });
       }
       this.trigger(_e.ready);
-      // Show spefici file/folder by url
-      // let path = Visitor.parseModule() || [];
-      // if (path[2] === _a.open) {
-      //   this.ensurePart(_a.list).then((p) => {
-      //     p.once('end:of:data', (l)=>{
-      //       this.route();
-      //     })
-      //   })
-      // }
       Visitor.set({ disk: data.disk });
       this.bindWsEvents();
     });
