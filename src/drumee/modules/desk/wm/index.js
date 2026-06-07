@@ -884,6 +884,22 @@ class __window_manager extends push {
 
   onDomRefresh() {
     this.feed(require("./skeleton")(this));
+    // Hub invite deep link: fires once headlessLayer exists, independent of get_env.
+    // Handles the not-logged-in flow where hash changed to #/desk during sign-in.
+    this.ensurePart('headless-layer').then(() => {
+      const path = Visitor.parseModule() || [];
+      if (path[2] === _a.hub) return; // logged-in case: handled by get_env.then → route()
+      try {
+        const loc = JSON.parse(localStorage.getItem('locationOnStart'));
+        if (loc && loc.hash) {
+          const savedPath = Visitor.parseModule(loc.hash);
+          if (savedPath && savedPath[2] === _a.hub) {
+            localStorage.removeItem('locationOnStart');
+            this.loadWorkspace(Visitor.parseModuleArgs(loc.hash));
+          }
+        }
+      } catch (e) {}
+    });
     this.fetchService(
       SERVICE.desk.get_env,
       { hub_id: Visitor.id },
@@ -898,16 +914,6 @@ class __window_manager extends push {
       const path = Visitor.parseModule() || [];
       if (path[2] === _a.hub) {
         this.route();
-      } else {
-        try {
-          const loc = JSON.parse(localStorage.getItem('locationOnStart'));
-          if (loc && loc.hash) {
-            const savedPath = Visitor.parseModule(loc.hash);
-            if (savedPath && savedPath[2] === _a.hub) {
-              this.loadWorkspace(Visitor.parseModuleArgs(loc.hash));
-            }
-          }
-        } catch (e) {}
       }
       Visitor.set({ disk: data.disk });
       this.bindWsEvents();
