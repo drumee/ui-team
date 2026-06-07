@@ -29,6 +29,10 @@ class __welcome_router extends LetcBox {
         this._redeemInviteThenEnter();
       });
     }
+    const path = Visitor.parseModule() || [];
+    if (path[2] === _a.hub && args.hub_id) {
+      sessionStorage.setItem('drumee_hubDeepLink', args.hub_id);
+    }
     this.route();
   }
 
