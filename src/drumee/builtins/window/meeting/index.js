@@ -970,7 +970,9 @@ class __window_meeting extends __room {
       this._feedbackModal.clear();
       this._feedbackModal = null;
     }
-    this.triggerHandlers({ service: "leave-meeting" });
+    // Close the window; onBeforeDestroy → super releases the room (leave +
+    // disconnect). No "leave-meeting" re-emit — that's a legacy embedded-tab
+    // signal that now only reaches the Wm unhandled (standalone window).
     this.goodbye();
   }
 

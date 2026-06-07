@@ -75,6 +75,12 @@ class __widget_chat extends LetcBox {
     // window manager (Wm fires "chat:read" with the focused hub context).
     this._onReadContext = this._onReadContext.bind(this);
     RADIO_BROADCAST.on("chat:read", this._onReadContext);
+
+    // Sync own posts to sibling chat widgets on the same channel in this client
+    // (the server doesn't WS-echo your own posts, so e.g. the team chat would
+    // stay stale while you type in the meeting chat). See _onPeerChatPosted.
+    this._onPeerChatPosted = this._onPeerChatPosted.bind(this);
+    RADIO_BROADCAST.on("chat:posted", this._onPeerChatPosted);
   }
 
   /**
@@ -98,6 +104,7 @@ class __widget_chat extends LetcBox {
   onBeforeDestroy() {
     this.unbindEvent(_a.live);
     RADIO_BROADCAST.off("chat:read", this._onReadContext);
+    RADIO_BROADCAST.off("chat:posted", this._onPeerChatPosted);
     clearTimeout(this._folderContentSyncTimer);
     this._cleanupUnsentAttachments();
     if (this.attachmentList) {
@@ -1449,6 +1456,21 @@ class __widget_chat extends LetcBox {
     return `${messageNid}` === `${nid}`;
   }
 
+  // Mirror a message posted by another chat widget in THIS client onto our
+  // list, when it targets the same channel/scope. Only handles the local
+  // user's own posts (others' messages already arrive via WS); handleReceivedMsg
+  // dedups by message_id, so a stray double-delivery is harmless.
+  _onPeerChatPosted(payload = {}) {
+    const { from, hub_id, data } = payload;
+    if (!data || from === this.cid) return;
+    if (`${hub_id}` !== `${this.hubId}`) return;
+    if (data.author_id != null && `${data.author_id}` !== `${Visitor.id}`) return;
+    const area = this.mget(_a.area) || this.mget(_a.type);
+    const isChannel = [_a.dmz, _a.public, _a.share, _a.private].includes(area);
+    if (!isChannel || !this.matchesScopedChannel(data)) return;
+    this.handleReceivedMsg(data);
+  }
+
   /**
    *
    * @param {*} args
@@ -1653,6 +1675,13 @@ class __widget_chat extends LetcBox {
         }
         this._syncScopedFolderContent(data, api);
         this.handleReceivedMsg(data);
+        // Mirror to sibling chat widgets on the same channel in this client
+        // (the server won't WS-echo our own post back to us).
+        RADIO_BROADCAST.trigger("chat:posted", {
+          from: this.cid,
+          hub_id: this.hubId,
+          data,
+        });
       })
       .catch((error) => {
         this._sendingNids = null;
