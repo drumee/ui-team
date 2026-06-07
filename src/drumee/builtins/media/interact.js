@@ -709,6 +709,20 @@ class __media_interact extends media_core {
 
       case _a.link:
       case _a.share:
+        if (Visitor.inDmz && this.isHubOrFolder) {
+          // In DMZ, sharing a folder/hub must copy the current workspace share
+          // URL — not a result from get_external_room_attr, which may return a
+          // file-specific token that shows blank when opened without a file_nid.
+          // The current page URL is always the correct working share link.
+          // Strip any /{nid}/play suffix in case we're in a file-specific view.
+          const cleanHash = location.hash.replace(/\/[0-9a-f]{16}\/play$/, '');
+          const shareUrl = location.href.replace(/#.*/, '') + cleanHash;
+          setTimeout(async () => {
+            await copyToClipboard(shareUrl);
+            Wm.acknowledge();
+          }, 0);
+          return;
+        }
         return this.viewerLink().then((url) => {
           setTimeout(async () => {
             await copyToClipboard(url);

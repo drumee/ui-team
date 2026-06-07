@@ -180,6 +180,16 @@ class __media_wrapper extends LetcBox {
   }
 
   /**
+   * Attachments uploaded from the user's device (as opposed to picked from
+   * the workspace). channel.post moves these into the scoped folder on send.
+   */
+  getDeviceAttachmentIds() {
+    return this.__content.collection
+      .filter((model) => model.get("from_device"))
+      .map((model) => model.get(_a.nid));
+  }
+
+  /**
    * 
    */
   hasPendingUpload() {

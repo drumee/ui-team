@@ -996,7 +996,11 @@ class __window_core extends __utils {
   getCurrentApi(type) {
     let api;
     const { nid, hub_id } = this.actualNode();
-    const f = type;
+    // When called without an explicit type (the list's dynamic api function),
+    // honor any active file-type filter so loadContent()/restart keeps the
+    // current Docs/PDF/Images view while still reading the live nid. Replacing
+    // the list api with a static object instead would freeze navigation.
+    const f = type != null ? type : this._filterType;
     switch (f) {
       case "all":
       case "docs":

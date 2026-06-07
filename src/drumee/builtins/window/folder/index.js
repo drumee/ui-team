@@ -181,12 +181,22 @@ class __window_folder extends mfsInteract {
   tileToSide(side) {
     const ws = this._workspaceRect();
     const halfW = Math.floor(ws.width / 2);
+    // Left gets the floored half, right gets the remainder, so an odd width
+    // splits with no overlap and no gap (left ends exactly where right starts).
+    const leftW = halfW;
+    const rightW = ws.width - halfW;
     const bounds = side === "right"
-      ? { left: halfW, top: 0, width: ws.width - halfW, height: ws.height }
-      : { left: 0, top: 0, width: halfW, height: ws.height };
+      ? { left: halfW, top: 0, width: rightW, height: ws.height }
+      : { left: 0, top: 0, width: leftW, height: ws.height };
     this._zoomed = false;
     this._preZoomBounds = null;
-    this._applyBoundsAfterFs(bounds);
+    // A half-tile is narrower than the normal window minimum (760) on any
+    // workspace < 1520px wide; without this override _applyBounds would clamp
+    // both tiles up to 760 and they would overlap. Pass the tile's own width
+    // as the minimum so it can shrink to exactly half the screen.
+    this._applyBoundsAfterFs(bounds, {
+      minWidth: side === "right" ? rightW : leftW,
+    });
   }
 
   reframeToDefault() {
@@ -232,25 +242,31 @@ class __window_folder extends mfsInteract {
    * final geometry can be wrong. Mirrors the deferred pattern in
    * toggleFullscreen().
    */
-  _applyBoundsAfterFs(bounds) {
+  _applyBoundsAfterFs(bounds, opt) {
     if (document.fullscreenElement === this.el) {
       this._preFsBounds = null;
       const onChange = () => {
         if (document.fullscreenElement === this.el) return;
         document.removeEventListener("fullscreenchange", onChange);
-        _.delay(() => this._applyBounds(bounds), 50);
+        _.delay(() => this._applyBounds(bounds, opt), 50);
       };
       document.addEventListener("fullscreenchange", onChange);
       document.exitFullscreen();
       return;
     }
-    this._applyBounds(bounds);
+    this._applyBounds(bounds, opt);
   }
 
-  _applyBounds(bounds) {
+  _applyBounds(bounds, opt = {}) {
     const ws = this._workspaceRect();
-    const minW = (this.size && this.size.minWidth) || 760;
-    const minH = (this.size && this.size.minHeight) || 480;
+    // Callers (e.g. tiling) may request a smaller minimum so a tile can shrink
+    // below the normal window minimum. In all cases the effective minimum is
+    // capped to the workspace itself — otherwise two half-tiles on a screen
+    // narrower than 2× the minimum would each be clamped up and overlap.
+    const baseMinW = (this.size && this.size.minWidth) || 760;
+    const baseMinH = (this.size && this.size.minHeight) || 480;
+    const minW = Math.min(opt.minWidth || baseMinW, ws.width);
+    const minH = Math.min(opt.minHeight || baseMinH, ws.height);
     const width = Math.max(minW, Math.min(bounds.width, ws.width));
     const height = Math.max(minH, Math.min(bounds.height, ws.height));
     const next = {
@@ -261,6 +277,20 @@ class __window_folder extends mfsInteract {
     };
     this.size = { ...this.size, width: next.width, height: next.height };
     this.style.set(next);
+    // `.window__ui` carries a stylesheet floor (`min-width:600px`,
+    // `min-height:320px` in window/skin/window.scss). CSS min-width WINS over a
+    // smaller inline width, so a half-tile narrower than 600px (workspace <
+    // 1200px wide) is rendered back up to 600px and the two tiles overlap even
+    // though the JS geometry is correct. Pin the inline min to the applied size
+    // to override the stylesheet floor.
+    this.$el.css({ minWidth: minW, minHeight: minH });
+    // Keep the resizable minimum in sync with the applied geometry so a manual
+    // drag right after tiling doesn't snap the tile back up to 760 and overlap
+    // its neighbour again.
+    try {
+      this.$el.resizable(_a.option, "minWidth", minW);
+      this.$el.resizable(_a.option, "minHeight", minH);
+    } catch (e) {}
     this.$el.stop(true, false).animate(next, {
       duration: 220,
       queue: false,
@@ -279,6 +309,9 @@ class __window_folder extends mfsInteract {
     super.initialize(opt);
     this._path = [];
     this._navStack = [];
+    // Active file-type filter (Docs/PDF/Images/…), scoped to the current
+    // folder view. Drives getCurrentApi(); null means "All" (no filter).
+    this._filterType = null;
 
     this._flow = _a.horizontal;
     this.model.atLeast({
@@ -566,6 +599,11 @@ class __window_folder extends mfsInteract {
       this.__folderView = child;
       return;
     }
+    if (pn === "file-type-filter") {
+      // Reference to the Docs/PDF/Images filter bar so navigation can reset it.
+      this._fileTypeFilterBar = child;
+      return;
+    }
     if (pn === "folder-task-panel") {
       this._taskPanel = child;
       return;
@@ -641,6 +679,25 @@ class __window_folder extends mfsInteract {
     };
   }
 
+  // The file-type filter is scoped to a single folder view. When moving to
+  // another folder (forward into a child or back via a breadcrumb), drop it so
+  // the destination shows its full contents — otherwise a lingering "Docs"
+  // filter hides every sub-folder and the listing looks empty/unreachable.
+  // Resets both the api state and the radiotoggle UI (via its broadcast
+  // channel, simulating a click on the "All" tab). No-op when no filter is set.
+  _resetFileTypeFilter() {
+    if (!this._filterType) return;
+    this._filterType = null;
+    const bar = this._fileTypeFilterBar;
+    if (!bar || (bar.isDestroyed && bar.isDestroyed()) || !bar.children) return;
+    const all =
+      bar.children.find &&
+      bar.children.find((c) => c && c.mget && c.mget(_a.value) === "all");
+    if (all && typeof RADIO_BROADCAST !== "undefined") {
+      RADIO_BROADCAST.trigger(`media-filter-${this._id}`, all);
+    }
+  }
+
   _navigateToStackIndex(idx) {
     const i = Number(idx);
     if (!Number.isFinite(i) || i < 0 || i >= this._navStack.length) return;
@@ -658,6 +715,7 @@ class __window_folder extends mfsInteract {
     if (!state) return;
     this._navRestoring = 1;
     try {
+      this._resetFileTypeFilter();
       this.mset(state);
       if (this.__refWindowName) {
         // Empty-filename root falls back to hub_name (avoids a blank title).
@@ -871,6 +929,20 @@ class __window_folder extends mfsInteract {
       case "breadcrumb-jump":
         return this._navigateToStackIndex(cmd.mget("stackIndex"));
 
+      case "filter-by-type": {
+        // Record the filter on the window and re-run the list's DYNAMIC api via
+        // loadContent — do NOT call l.setApi() (core's default handler) here.
+        // setApi swaps the `() => ui.getCurrentApi()` function for a static
+        // object frozen at the current nid + type, which then makes every later
+        // loadContent → restart refetch that frozen listing, breaking
+        // navigation (e.g. a child folder becomes unreachable after filtering).
+        const value =
+          (cmd.mget && cmd.mget(_a.value)) ||
+          (cmd.options && cmd.options.value);
+        this._filterType = value && value !== "all" ? value : null;
+        return this.loadContent();
+      }
+
       case "tab-files":
         return this.showFolderTab("files");
 
@@ -1036,8 +1108,24 @@ class __window_folder extends mfsInteract {
     return this.ensurePart("wrapper-dialog").then((wrapper) => {
       this.dialogWrapper = wrapper;
       wrapper.feed(require("./skeleton/create-folder-dialog")(this));
-      return this.ensurePart("create-folder-name").then(
-        (entry) => entry.focus && entry.focus(),
+      return this.ensurePart("create-folder-name").then((entry) =>
+        // Defer focus: ensurePart resolves as soon as the EntryBox mounts, but
+        // its inner native <input> isn't ready yet, so an immediate
+        // entry.focus() no-ops. In folders that show the chat panel (shared
+        // workspaces) the chat composer autofocused on render and KEEPS the
+        // caret, so the dialog field never gets focus and can't be typed into.
+        // Focus the real <input> on the next tick so the dialog reliably wins.
+        // Mirrors openFolderRenameDialog's _.delay pattern.
+        _.delay(() => {
+          if (!entry || (entry.isDestroyed && entry.isDestroyed())) return;
+          const input = entry.el && entry.el.querySelector("input");
+          if (input) {
+            input.focus();
+            input.select();
+          } else if (entry.focus) {
+            entry.focus();
+          }
+        }, 60),
       );
     });
   }
@@ -1140,12 +1228,9 @@ class __window_folder extends mfsInteract {
       if (switchcall && !switchcall.isDestroyed()) switchcall.goodbye();
 
       const room_id = this.mget(_a.actual_home_id) || this.mget(_a.nid);
-      let width = Math.min(1200, window.innerWidth - 80);
-      let height = Math.min(720, window.innerHeight - 120);
-      if (width < 480) width = window.innerWidth;
-      if (height < 360) height = window.innerHeight;
-      const left = Math.max(0, (window.innerWidth - width) / 2);
-      const top = Math.max(40, (window.innerHeight - height) / 2);
+      // Center within the WM content area (right of the sidebar), not the raw
+      // viewport — see Wm.centeredPopupGeometry.
+      const { top, left, width, height } = Wm.centeredPopupGeometry();
 
       return Wm.launch(
         {
@@ -1226,6 +1311,9 @@ class __window_folder extends mfsInteract {
       const nextNid = m && m.mget && m.mget(_a.nid);
       if (prev && prev.nid != null && nextNid != null && prev.nid != nextNid) {
         this._navStack.push(prev);
+        // Entering a different folder — clear any active file-type filter so
+        // the child's full contents render (mirrors the breadcrumb path).
+        this._resetFileTypeFilter();
       }
     }
     super.updateTopbar(m);

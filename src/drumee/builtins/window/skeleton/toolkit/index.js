@@ -425,6 +425,8 @@ export function fileTypeFilterBar(ui) {
   let dataset = ui.mget(_a.area);
   return Skeletons.Box.X({
     className: `${ui.fig.family}__filter-bar`,
+    sys_pn: "file-type-filter",
+    partHandler: ui,
     dataset: { area: ui.mget(_a.area) },
     kids: tabs.map((tab, index) =>
       button(ui, {

@@ -1,3 +1,5 @@
+const { iconTextBtn } = require("./action-buttons");
+
 module.exports = function (ui, contact) {
   const fig = ui.fig.family;
   const isReceivedInvite = contact.status === "received";
@@ -111,36 +113,37 @@ module.exports = function (ui, contact) {
       })]
     : [];
 
+  // Every action is an icon + text button. Sits directly below the header.
   let actions;
   if (isReceivedInvite) {
     actions = Skeletons.Box.X({
       className: `${fig}__detail-actions`,
       kids: [
-        actionBtn(fig, "secondary", LOCALE.REFUSE, "refuse-invitation", { contactEmail: senderEmail }, ui),
-        actionBtn(fig, "primary",   LOCALE.ACCEPT, "accept-invitation", { contactEmail: senderEmail }, ui),
+        iconTextBtn(fig, "primary", "account_check", LOCALE.ACCEPT, "accept-invitation", { contactEmail: senderEmail }, ui),
+        iconTextBtn(fig, "danger", "cross", LOCALE.REFUSE, "refuse-invitation", { contactEmail: senderEmail }, ui),
       ],
     });
   } else if (isSentInvite) {
     actions = Skeletons.Box.X({
       className: `${fig}__detail-actions`,
       kids: [
-        actionBtn(fig, "danger", LOCALE.CANCEL_INVITE || LOCALE.CANCEL, "delete-contact", { contactId }, ui),
+        iconTextBtn(fig, "danger", "cross", LOCALE.CANCEL_INVITE || LOCALE.CANCEL, "delete-contact", { contactId }, ui),
       ],
     });
   } else {
     const buttons = [];
-    buttons.push(actionBtn(fig, "danger", LOCALE.DELETE, "delete-contact", { contactId }, ui));
-    if (isBlocked) {
-      buttons.push(actionBtn(fig, "secondary", LOCALE.UNBLOCK || "Unblock", "unblock-contact", { contactId }, ui));
-    } else {
-      buttons.push(actionBtn(fig, "secondary", LOCALE.BLOCK || "Block", "block-contact", { contactId }, ui));
-    }
     if (isArchived) {
-      buttons.push(actionBtn(fig, "secondary", LOCALE.RESTORE, "restore-contact", { contactId }, ui));
+      buttons.push(iconTextBtn(fig, "neutral", "apps-arrow-clockwise", LOCALE.RESTORE, "restore-contact", { contactId }, ui));
     } else {
-      buttons.push(actionBtn(fig, "secondary", LOCALE.ARCHIVE, "archive-contact", { contactId }, ui));
+      buttons.push(iconTextBtn(fig, "neutral", "app-archive", LOCALE.ARCHIVE, "archive-contact", { contactId }, ui));
     }
-    buttons.push(actionBtn(fig, "primary", LOCALE.EDIT, "edit-contact", {}, ui));
+    buttons.push(iconTextBtn(fig, "neutral", "app-edit", LOCALE.EDIT, "edit-contact", {}, ui));
+    if (isBlocked) {
+      buttons.push(iconTextBtn(fig, "neutral", "unlock", LOCALE.UNBLOCK || "Unblock", "unblock-contact", { contactId }, ui));
+    } else {
+      buttons.push(iconTextBtn(fig, "danger", "ban", LOCALE.BLOCK || "Block", "block-contact", { contactId }, ui));
+    }
+    buttons.push(iconTextBtn(fig, "danger", "trash", LOCALE.DELETE, "delete-contact", { contactId }, ui));
     actions = Skeletons.Box.X({ className: `${fig}__detail-actions`, kids: buttons });
   }
 
@@ -152,7 +155,7 @@ module.exports = function (ui, contact) {
         kids: [
           Skeletons.Box.Y({
             className: `${fig}__detail-avatar`,
-            styleOpt: { background: contact.color || "#fa8540" },
+            styleOpt: { background: contact.color || "#e4e3ff" },
             kids: [
               Skeletons.Note({
                 className: `${fig}__detail-avatar-text`,
@@ -170,6 +173,8 @@ module.exports = function (ui, contact) {
                 content: contact.status,
               })
             : null,
+          // Action buttons sit directly below the avatar/name.
+          actions,
         ].filter(Boolean),
       }),
       Skeletons.Box.Y({
@@ -189,18 +194,7 @@ module.exports = function (ui, contact) {
             : null,
         ].filter(Boolean),
       }),
-      actions,
     ],
   });
 };
 
-function actionBtn(fig, kind, label, service, extra, ui) {
-  return Skeletons.Note({
-    className: `${fig}__btn ${fig}__btn--${kind}`,
-    content: label,
-    bubble: 0,
-    service,
-    uiHandler: [ui],
-    ...extra,
-  });
-}
