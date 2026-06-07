@@ -304,7 +304,8 @@ class __welcome_router extends LetcBox {
         });
         this._inviteToken = null;
         if (res && res.hub_id) {
-          location.hash = `${_K.module.desk}/@${res.hub_id}`;
+          RADIO_BROADCAST.trigger("workspace:refresh");
+          location.hash = `${_K.module.desk}/wm/hub/?hub_id=${res.hub_id}`;
           return;
         }
       } catch (e) {
