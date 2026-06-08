@@ -357,6 +357,15 @@ class __window_manager extends push {
       cur.once(_a.destroy, () => {
         this._curWorkspace = null;
       });
+      // Drive the VISIBLE desk topbar breadcrumb (desk_breadcrumb) on the
+      // workspace switch. The get_path → refreshBreadcrumbsUI call below also
+      // mirrors into the topbar, but only once it resolves AND only while the
+      // headless window is focused (state==1); firing here gives the breadcrumb
+      // an immediate, unconditional update. The topbar listens to the
+      // "breadcrumb:content" broadcast (source must be Wm) — same path
+      // loadWorkspaceNode uses. Without this, switching workspace can leave the
+      // topbar breadcrumb stale (e.g. stuck on a Settings/Contacts section).
+      this.updateBreadcrumb({ ...data, service: "change-workspace" }, this);
       this.fetchService(SERVICE.media.get_path, { nid, hub_id }).then(
         (data) => {
           if (_.isEmpty(data)) return;
@@ -579,6 +588,12 @@ class __window_manager extends push {
             if (_.isEmpty(path)) return;
             if (_.isFunction(currentFolder.refreshBreadcrumbsUI))
               currentFolder.refreshBreadcrumbsUI(path);
+            // Drive the visible desk topbar breadcrumb (desk_breadcrumb) for the
+            // folder navigation. refreshBreadcrumbsUI above also mirrors into the
+            // topbar, but only when `currentFolder` is the focused headless
+            // workspace window; this explicit broadcast covers the case where it
+            // isn't. The topbar listens to "breadcrumb:content" (source must be Wm).
+            this.updateBreadcrumb({ ...attrs, service: "change-workspace" }, this);
           })
           .catch((e) => this.warn("openWorkspaceFolder: get_path failed", e));
       })
