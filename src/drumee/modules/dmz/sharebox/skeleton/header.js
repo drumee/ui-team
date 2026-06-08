@@ -1,6 +1,8 @@
 function __skl_dmz_sharebox_header(ui) {
   const headerFig = `${ui.fig.family}-header`;
   const area = ui.mget(_a.area) || _a.share;
+  // Restricted workspace (anything but share/dmz) → lock glyph; shared → link glyph.
+  const restricted = !(area === _a.share || area === 'dmz');
 
   const folderIcon = Skeletons.Box.X({
     className: `${headerFig}__folder-icon`,
@@ -26,7 +28,7 @@ function __skl_dmz_sharebox_header(ui) {
     className: `${headerFig}__subline`,
     kids: [
       Skeletons.Button.Svg({
-        ico: "profile-lock",
+        ico: restricted ? "profile-lock" : "apps-link-simple",
         className: `${headerFig}__subline-icon`,
       }),
       Skeletons.Note({

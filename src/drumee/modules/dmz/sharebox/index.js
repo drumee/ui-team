@@ -27,7 +27,7 @@ class __dmz_sharebox extends LetcBox {
     this.defaultSkeleton = require('./skeleton').default;
     this.topNavSkeleton = require('./skeleton/top-nav').default;
     this.headerSkeleton = require('./skeleton/header').default;
-    this.footerSkeleton = require('dmz/skeleton/common/footer');
+    this.footerSkeleton = require('./skeleton/footer').default;
     this.deskSkeleton = require("./skeleton/desk-content").default;
     this.nodeInfoService = SERVICE.media.show_node_by;
   }
@@ -90,11 +90,21 @@ class __dmz_sharebox extends LetcBox {
 
         return this.waitElement(child.el, () => {
           this.wm = child;
+          // The drive-popup is a separate window-manager subtree that the outer
+          // .dmz-sharebox[data-area] does not contain, so propagate the area tag
+          // here too — it drives the accent for the inner topbar icon, file-grid
+          // folder art and active tab border.
+          child.el.dataset.area = this._areaTag || 'shared';
         })
 
       case 'folder-view':
         this._folderView = child;
         return;
+
+      case _a.footer:
+        return this.waitElement(child.el, () => {
+          child.feed(this.footerSkeleton(this));
+        });
 
       case 'wrapper-dialog':
         this.dialogWrapper = child;
@@ -151,6 +161,13 @@ class __dmz_sharebox extends LetcBox {
     let data = await this.postService(SERVICE.dmz.login, loginOpt);
 
     this.mset(data);
+    // Accent the share UI by workspace area (same rule as the server's
+    // workspace_restricted): anything but share/dmz is "restricted" and turns the
+    // header / badge / folder art red; shared stays pink. Missing area (e.g.
+    // file-only shares) defaults to the shared look.
+    const _restricted = data.area && !(data.area === 'share' || data.area === 'dmz');
+    this._areaTag = _restricted ? 'restricted' : 'shared';
+    this.el.dataset.area = this._areaTag;
     if (loginOpt.file_nid) this.mset({ file_nid: loginOpt.file_nid });
     if (data.guest_name) {
       Visitor.set({
@@ -305,11 +322,8 @@ class __dmz_sharebox extends LetcBox {
         return;
 
       case 'open-signup':
-        this.append({
-          kind: 'drumee_api_popup',
-          autostart: 1,
-          popupContent: 'drumee_api_signup'
-        });
+        // Move the guest to the sign-up form (mirrors 'go-login' → signin).
+        location.href = _K.module.signup;
         return;
 
       case 'tab-files':
