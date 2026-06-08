@@ -40,6 +40,11 @@ class __sound_analyzer extends LetcBox {
     };
     this.vendor = _.merge(this.vendor, this.mget(_a.vendorOpt));
     this.color = Color(this.vendor.strokeStyle);
+    // Cap the canvas redraw rate. The visualizer runs one RAF loop PER
+    // participant; at 60fps × N tiles it dominates the main thread during a
+    // call. ~20fps is visually fine for an audio meter and ~3× cheaper.
+    this._minFrameMs = 1000 / 20;
+    this._lastFrameAt = 0;
   }
 
   // ===========================================================
@@ -118,6 +123,9 @@ class __sound_analyzer extends LetcBox {
         return;
       }
       this.drawRequest = requestAnimationFrame(draw);
+      const now = performance.now();
+      if (now - this._lastFrameAt < this._minFrameMs) return;
+      this._lastFrameAt = now;
       this.analyzer.getFloatTimeDomainData(dataArray);
       this.canvasCtx.clearRect(0, 0, this.width, this.height);
       this.canvasCtx.fillStyle = this.vendor.fillStyle;
@@ -171,6 +179,14 @@ class __sound_analyzer extends LetcBox {
     const h = this.height;
     ctx.globalAlpha = alpha;
     ctx.clearRect(0, 0, w, h);
+    // Precompute lightened bar colors once instead of building a Color object
+    // + rgb string per bar, per frame (huge GC churn × bins × fps × tiles).
+    const STEPS = 24;
+    const barColors =
+      this._barColors ||
+      (this._barColors = Array.from({ length: STEPS }, (_v, i) =>
+        this.color.lighten(i / STEPS).rgb().string(),
+      ));
     let length = 0;
     const service = this.mget(_a.service);
     this.status = _a.idle;
@@ -188,6 +204,9 @@ class __sound_analyzer extends LetcBox {
         return;
       }
       this.drawRequest = requestAnimationFrame(draw);
+      const now = performance.now();
+      if (now - this._lastFrameAt < this._minFrameMs) return;
+      this._lastFrameAt = now;
       asr.getFloatFrequencyData(dataArray);
       ctx.clearRect(0, 0, w, h);
       ctx.fillStyle = this.vendor.fillStyle;
@@ -200,7 +219,9 @@ class __sound_analyzer extends LetcBox {
       let count = 0;
       for (let i = 0, end = bufferLength - 1, asc = 0 <= end; asc ? i <= end : i >= end; asc ? i++ : i--) {
         barHeight = dataArray[i] - minDb;
-        ctx.fillStyle = this.color.lighten(barHeight / range).rgb().string();
+        const ci = (barHeight / range) * STEPS;
+        ctx.fillStyle =
+          barColors[ci < 0 ? 0 : ci >= STEPS ? STEPS - 1 : ci | 0];
         ctx.fillRect(x, h - (ratio * barHeight), barWidth, ratio * barHeight);
         x += barWidth + 1;
         if (barHeight > 20) {

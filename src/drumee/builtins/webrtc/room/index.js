@@ -36,16 +36,15 @@ class __webrtc_room extends __interact {
   onBeforeDestroy() {
     Visitor.muteSound();
     this.unbindEvent("conference");
-    document.removeEventListener(
-      "fullscreenchange",
-      this.onFullScreenChange.bind(this)
-    );
+    if (this._onFullScreenChange)
+      document.removeEventListener("fullscreenchange", this._onFullScreenChange);
     try {
       super.onBeforeDestroy();
     } catch (e) { }
     this.leaveRoom();
     if (this.watchdog) clearInterval(this.watchdog);
     if (this._timerInterval) clearInterval(this._timerInterval);
+    if (this._responsiveTimer) clearTimeout(this._responsiveTimer);
   }
 
   /**

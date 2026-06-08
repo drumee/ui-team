@@ -285,7 +285,6 @@ class __participants_manager extends LetcBox {
       listHeight = this.logicalParent.el.innerHeight() - this.logicalParent.topbarHeight;
       listWidth = this.logicalParent.el.innerWidth();
     }
-    console.log(listHeight, listWidth, "HEIGHT WIDTH");
     //          <----- N ----->
     //  ________ ______ ______ ________    
     // |        :      :      :        |   *

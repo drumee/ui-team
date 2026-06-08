@@ -72,10 +72,11 @@ class __webrtc_room extends __room {
     );
     window.addEventListener("unload", this.leaveRoom);
 
-    document.addEventListener(
-      "fullscreenchange",
-      this.onFullScreenChange.bind(this)
-    );
+    // Keep the bound ref so onBeforeDestroy can actually remove it — a fresh
+    // .bind() there would be a different function and removeEventListener would
+    // silently no-op, leaking one listener per meeting open/close.
+    this._onFullScreenChange = this.onFullScreenChange.bind(this);
+    document.addEventListener("fullscreenchange", this._onFullScreenChange);
 
     this.model.atLeast({
       role: "attendee",
@@ -516,6 +517,7 @@ class __webrtc_room extends __room {
 
     /** Wait a while to ensure HELLO message has arrived */
     setTimeout(() => {
+      if (this.isDestroyed() || !this.room) return;
       if (!this._guests.get(participant_id)) {
         this.warn(`Participant ${participant_id} is not expected. Should kick out`);
         if (this.mget(_a.role) == "host") {
