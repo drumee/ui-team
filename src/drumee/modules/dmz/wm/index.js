@@ -455,6 +455,11 @@ class __dmz_wm extends winman {
    * @param {*} options 
    * @returns 
    */
+  newContent(xhr, options = {}) {
+    if ((this.mget(_a.api) || {}).file_nid) return;
+    super.newContent(xhr, options);
+  }
+
   onWsMessage(service, data, options = {}) {
     let items = [];
     let sender = options.sender;

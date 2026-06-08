@@ -592,7 +592,9 @@ class __player_document extends PlayerInteract {
     const { nid, hub_id } = this.actualNode()
     let { user_domain, svc } = bootstrap()
     let host = user_domain || location.host
-    let url = `https://${host}${svc}${Platform.get('doc_editor')}.html?hub_id=${hub_id}&nid=${nid}`
+    // Forward the app theme so the editor matches it instead of defaulting to dark.
+    const theme = (Visitor.wallpaper() || {}).theme || document.documentElement.dataset.theme || 'light'
+    let url = `https://${host}${svc}${Platform.get('doc_editor')}.html?hub_id=${hub_id}&nid=${nid}&theme=${theme}`
 
     this._editorOrigin = new URL(url).origin;
     this._editorReady = false;

@@ -29,6 +29,10 @@ class __welcome_router extends LetcBox {
         this._redeemInviteThenEnter();
       });
     }
+    const path = Visitor.parseModule() || [];
+    if (path[2] === _a.hub && args.hub_id) {
+      sessionStorage.setItem('drumee_hubDeepLink', args.hub_id);
+    }
     this.route();
   }
 
@@ -295,12 +299,13 @@ class __welcome_router extends LetcBox {
   async _redeemInviteThenEnter() {
     if (this._inviteToken) {
       try {
-        const res = await this.postService('invite.accept_invite', {
+        const res = await this.postService('hub.accept_invite', {
           token: this._inviteToken,
         });
         this._inviteToken = null;
         if (res && res.hub_id) {
-          location.hash = `${_K.module.desk}/@${res.hub_id}`;
+          RADIO_BROADCAST.trigger("workspace:refresh");
+          location.hash = `${_K.module.desk}/wm/hub/?hub_id=${res.hub_id}`;
           return;
         }
       } catch (e) {

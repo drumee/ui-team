@@ -142,13 +142,10 @@ class __window_team extends __hub {
     const room_id = this.mget(_a.nid) || this.mget(_a.actual_home_id);
 
     // Center a free-floating popup via an explicit `style` so it floats
-    // correctly instead of docking to the team window.
-    let width = Math.min(1200, window.innerWidth - 80);
-    let height = Math.min(720, window.innerHeight - 120);
-    if (width < 480) width = window.innerWidth;
-    if (height < 360) height = window.innerHeight;
-    const left = Math.max(0, (window.innerWidth - width) / 2);
-    const top = Math.max(40, (window.innerHeight - height) / 2);
+    // correctly instead of docking to the team window. Center within the WM
+    // content area (right of the sidebar), not the raw viewport — see
+    // Wm.centeredPopupGeometry.
+    const { top, left, width, height } = Wm.centeredPopupGeometry();
 
     return Wm.launch(
       {
@@ -156,6 +153,14 @@ class __window_team extends __hub {
         hub_id: this.mget(_a.hub_id),
         nid: room_id,
         room_id,
+        // Forward the team window's chat-channel identity so the meeting chat
+        // binds to the same conversation as the team window (sync in/out).
+        // chat_nid is the chat's scope nid (this window's own nid).
+        actual_hub_id: this.mget(_a.actual_hub_id),
+        actual_home_id: this.mget(_a.actual_home_id),
+        chat_nid: this.mget(_a.nid),
+        home_id: this.mget(_a.home_id),
+        ownpath: this.mget(_a.ownpath),
         filename: this.mget(_a.filename) || this.mget(_a.name),
         area: this.mget(_a.area),
         audio: 1,

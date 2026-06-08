@@ -151,6 +151,7 @@ class __dmz_sharebox extends LetcBox {
     let data = await this.postService(SERVICE.dmz.login, loginOpt);
 
     this.mset(data);
+    if (loginOpt.file_nid) this.mset({ file_nid: loginOpt.file_nid });
     if (data.guest_name) {
       Visitor.set({
         firstname: data.guest_name

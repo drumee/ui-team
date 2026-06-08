@@ -220,15 +220,33 @@ class ___window_move extends mfsInteract {
     const level = this._navStack[this._navStack.length - 1];
 
     if (!level || level.type === 'root') {
-      this.fetchService(SERVICE.desk.home, {
+      const workspacesPromise = this.fetchService(SERVICE.desk.home, {
         hub_id: Visitor.id,
         type: _a.hub,
-      }).then((data) => {
-        const items = this._asList(data).map((ws) => this._normalizeWorkspace(ws));
+      }).catch((e) => {
+        this.warn("Failed to load workspaces", e);
+        return [];
+      });
+      const homeFoldersPromise = this.fetchService(SERVICE.desk.home, {
+        hub_id: Visitor.id,
+      }).catch((e) => {
+        this.warn("Failed to load home folders", e);
+        return [];
+      });
+      Promise.all([
+        workspacesPromise,
+        homeFoldersPromise,
+      ]).then(([workspaceData, homeData]) => {
+        const workspaces = this._asList(workspaceData)
+          .map((ws) => this._normalizeWorkspace(ws));
+        const homeFolders = this._asList(homeData)
+          .filter((it) => this._isFolderItem(it))
+          .map((it) => this._normalizeHomeFolder(it));
+        const items = [...workspaces, ...homeFolders];
         this._currentItems = items;
         this._renderLevel(items);
         this._updateLocationPath();
-      }).catch((e) => this.warn("Failed to load workspaces", e));
+      }).catch((e) => this.warn("Failed to load root destinations", e));
       return;
     }
 
@@ -255,6 +273,10 @@ class ___window_move extends mfsInteract {
     return (data && (data.data || data.list || data.rows || data.result)) || [];
   }
 
+  _isFolderItem(item = {}) {
+    return item.filetype === _a.folder || item.type === _a.folder;
+  }
+
   _normalizeWorkspace(ws = {}) {
     // Per-workspace home node id. actual_home_id is the distinct root nid of
     // each hub; home_id is the visitor's shared home and must not win here
@@ -268,6 +290,20 @@ class ___window_move extends mfsInteract {
       area: ws.area || this._area,
       isFolder: 0,        // workspace root
       home_nid: nid,
+      section: 'workspace',
+    };
+  }
+
+  _normalizeHomeFolder(item = {}) {
+    const nid = item.nid || item.actual_home_id || item.home_id || item.id;
+    return {
+      nid,
+      hub_id: item.hub_id || Visitor.id,
+      name: item.filename || item.name || LOCALE.FOLDER,
+      area: item.area || _a.personal,
+      isFolder: 1,
+      home_nid: item.home_id || Visitor.get(_a.home_id),
+      section: 'home-folder',
     };
   }
 
@@ -280,6 +316,7 @@ class ___window_move extends mfsInteract {
       area: item.area || parentLevel.area || this._area,
       isFolder: 1,        // subfolder
       home_nid: parentLevel.home_nid || parentLevel.nid,
+      section: 'folder',
     };
   }
 
@@ -313,7 +350,9 @@ class ___window_move extends mfsInteract {
   }
 
   _updateLocationPath() {
-    const match = this._currentItems.find((ws) => String(ws.hub_id) === String(this._currentHubId));
+    const match = this._currentItems.find((ws) =>
+      ws.section === 'workspace' && String(ws.hub_id) === String(this._currentHubId)
+    );
     if (!match) return;
     this.ensurePart("location-path").then((n) => {
       if (n && n.el) n.el.textContent = match.name;
@@ -353,7 +392,15 @@ class ___window_move extends mfsInteract {
       }));
     }
 
+    let homeFolderSectionRendered = false;
     items.forEach((node) => {
+      if (node.section === 'home-folder' && !homeFolderSectionRendered) {
+        homeFolderSectionRendered = true;
+        kids.push(Skeletons.Note({
+          className: `${pfx}__section-divider`,
+          content: LOCALE.FOLDERS || LOCALE.FOLDER,
+        }));
+      }
       const blocked = this._isBlockedDest(node);
       const selected = this._isSelectedDestination(node.hub_id, node.nid) ? 1 : 0;
       kids.push(Skeletons.Box.X({
