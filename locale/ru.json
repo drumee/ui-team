@@ -1230,6 +1230,7 @@
   "CURRENT_LOCATION": "Current location:",
   "SELECT_DESTINATION": "Select a location to display the folder path",
   "SEARCH_WORKSPACE_OR_FOLDER": "Search workspace or folder to add...",
+  "EMPTY_FOLDER_WORKSPACE": "Empty folder/workspace",
   "NO_LINKED_ACCOUNTS": "No linked accounts",
   "NO_LINKED_ACCOUNTS_HINT": "Sign in with Google or Apple from the welcome screen to link an account.",
   "OPEN_IN_WINDOW": "Open in window",

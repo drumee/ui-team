@@ -155,6 +155,7 @@
   "CURRENT_LOCATION": "Current location:",
   "SELECT_DESTINATION": "Select a location to display the folder path",
   "SEARCH_WORKSPACE_OR_FOLDER": "Search workspace or folder to add...",
+  "EMPTY_FOLDER_WORKSPACE": "Empty folder/workspace",
   "SELECT_THIS_FOLDER": "Select this folder",
   "MOVE_FAILED": "Could not move to the selected destination.",
   "ORGANIZE": "Organize",
