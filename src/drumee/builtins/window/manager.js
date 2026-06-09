@@ -244,8 +244,28 @@ class __window_manager extends mfsInteract {
       if (target && target.acceptMedia) this.sendTo(target, e, 0, token); // non-file drop -> legacy
       return;
     }
-    const destNid = (target && typeof target.getCurrentNid === "function") ? target.getCurrentNid() : null;
-    const hub_id = (target && typeof target.mget === "function") ? target.mget(_a.hub_id) : null;
+    // Resolve a CONSISTENT (destNid, hub_id): both must describe the SAME node.
+    // getCurrentNid() on the desk prefers Wm._curWorkspace.nid, which can desync
+    // from the WM's hub_id (e.g. a lingering workspace context after returning
+    // Home) — pairing a workspace nid with the personal hub_id yields a node that
+    // does not belong to hub_id, so the server rejects make_dir (DENIED) and the
+    // whole upload fails. Take both from one source: a folder window/tile uses its
+    // own node + host; the desk uses the active workspace's {nid, hub_id}, falling
+    // back to the user's own home root when no workspace is active.
+    let destNid = null;
+    let hub_id = null;
+    if (target && target !== Wm && typeof target.getCurrentNid === "function") {
+      destNid = target.getCurrentNid();
+      hub_id = (typeof target.getHostId === "function" && target.getHostId()) ||
+        (typeof target.mget === "function" ? target.mget(_a.hub_id) : null);
+    } else {
+      const ws = Wm && Wm._curWorkspace;
+      if (ws && ws.nid != null && ws.hub_id != null) { destNid = ws.nid; hub_id = ws.hub_id; }
+    }
+    if (destNid == null || hub_id == null) {
+      destNid = Visitor.get(_a.home_id);
+      hub_id = Visitor.id;
+    }
     const Entry = require("media/bundle/entry");
     const UploadProgress = require("./upload-progress");
     let roots;
@@ -258,6 +278,7 @@ class __window_manager extends mfsInteract {
     // Diagnostic: distinguishes build-loss (folders > roots) from capture/OS-loss
     // (folders already short) when a dropped folder goes missing.
     this.warn("bundle drop", {
+      destNid, hub_id,
       folders: (transfer.folders || []).length,
       files: (transfer.files || []).length,
       roots: roots.length,

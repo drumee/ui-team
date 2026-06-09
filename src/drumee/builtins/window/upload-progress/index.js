@@ -1714,7 +1714,7 @@ class __window_upload_progress extends __window_core {
       });
     } else if (st === "done") {
       statusEl = Skeletons.Button.Svg({
-        className: `${pfx}__progress-check`, ico: "upload-checked", active: 0,
+        className: `${pfx}__progress-check`, ico: "checked-circle", active: 0,
       });
     } else {
       statusEl = Skeletons.Box.X({ className: `${pfx}__progress-spinner` });
