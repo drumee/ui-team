@@ -140,11 +140,11 @@ class drumee_router extends LetcBox {
       Visitor.respawn(data);
     }
     let { nid, hub_id, color } = Visitor.wallpaper() || {};
-    const stored = (() => { try { return localStorage.getItem('drumee.theme'); } catch { return null; } })();
-    const theme = (Visitor.wallpaper() || {}).theme || stored || 'light';
     require("./skin/themes/light");
     require("./skin/themes/dark");
-    document.documentElement.dataset.theme = (theme === 'dark') ? 'dark' : 'light';
+    // Display mode (light/dark/system) — single source of truth. Applies the
+    // stored preference and wires the OS listener when set to "system".
+    require("./theme").initTheme();
     return;
     this._wallpaper = '';
     if (color && color.primary) {

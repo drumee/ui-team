@@ -73,7 +73,6 @@ const footer = (ui, username) => {
     className: `${p}-footer`,
     kids: [
       navItem(ui, "sidebar_settings", LOCALE.SETTINGS),
-      navItem(ui, "raw-light", LOCALE.DISPLAY_MODE),
       navItem(ui, "sidebar_signout", LOCALE.SIGN_OUT, { color: "red" }),
       Skeletons.Box.Y({
         className: `${p}-footer-user-wrapper`,
