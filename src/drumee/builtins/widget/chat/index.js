@@ -531,6 +531,34 @@ class __widget_chat extends LetcBox {
     };
   }
 
+  _scopePrivilege() {
+    const folderWindow =
+      this.getParentByKind && this.getParentByKind("window_folder");
+    const sources = [folderWindow, this];
+    if (this.getHandlers) {
+      const handlers = this.getHandlers(_a.ui) || [];
+      sources.push(...handlers);
+    }
+    for (const source of sources) {
+      if (!source || !source.mget) continue;
+      const privilege = source.mget(_a.privilege);
+      if (privilege != null) return privilege;
+      const permission = source.mget(_a.permission);
+      if (permission != null) return permission;
+    }
+    return 0;
+  }
+
+  canPromoteDeviceAttachmentsToFolder() {
+    if (!this.getScopedNid()) return false;
+    return !!(_K.permission.write & this._scopePrivilege());
+  }
+
+  getPromotableDeviceAttachmentIds(list) {
+    if (!list || !this.canPromoteDeviceAttachmentsToFolder()) return [];
+    return list.getDeviceAttachmentIds ? list.getDeviceAttachmentIds() || [] : [];
+  }
+
   /**
    *
    */
@@ -1374,7 +1402,12 @@ class __widget_chat extends LetcBox {
   _syncScopedFolderContent(data = {}, fallback = {}) {
     if (this.mget("scope") !== _a.folder) return;
     const messageData = this._messageData(data);
-    const attachmentIds = this._attachmentIds(messageData, fallback);
+    const hasFolderAttachmentFallback =
+      fallback && Object.prototype.hasOwnProperty.call(fallback, "folder_attachment");
+    const attachmentIds = hasFolderAttachmentFallback
+      ? this._attachmentIds({ attachment: fallback.folder_attachment })
+      : this._attachmentIds(messageData);
+    if (hasFolderAttachmentFallback && _.isEmpty(attachmentIds)) return;
     const payload = {
       ...messageData,
       attachment: attachmentIds,
@@ -1544,9 +1577,10 @@ class __widget_chat extends LetcBox {
           api.nid = this.getScopedNid();
           // Staged device uploads the server should move into the folder
           // at send time (everything else stays link-only in the sbox).
-          api.folder_attachment = list.getDeviceAttachmentIds
-            ? list.getDeviceAttachmentIds() || []
-            : [];
+          const folderAttachment = this.getPromotableDeviceAttachmentIds(list);
+          if (!_.isEmpty(folderAttachment)) {
+            api.folder_attachment = folderAttachment;
+          }
         }
         break;
 

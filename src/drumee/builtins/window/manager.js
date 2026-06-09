@@ -224,6 +224,55 @@ class __window_manager extends mfsInteract {
     setTimeout(this.resetShift.bind(this), 300);
   }
 
+  _canUploadToTarget(target) {
+    if (!target) return false;
+    if (target.mget && target.mget(_a.isalink) && !target.isHub) return false;
+    const privilege =
+      target.mget && (target.mget(_a.privilege) || target.mget(_a.permission));
+    return !!(_K.permission.write & privilege);
+  }
+
+  _rejectUploadTarget() {
+    this._showUploadDeniedToast(LOCALE.WEAK_PRIVILEGE);
+  }
+
+  _showUploadDeniedToast(message) {
+    const render = (wrapper) => {
+      if (!wrapper || (wrapper.isDestroyed && wrapper.isDestroyed())) {
+        Butler.say(message);
+        return;
+      }
+      if (
+        this._uploadDeniedToast &&
+        (!this._uploadDeniedToast.isDestroyed || !this._uploadDeniedToast.isDestroyed())
+      ) {
+        this._uploadDeniedToast.suppress();
+      }
+      wrapper.append(
+        Skeletons.Box.X({
+          className: `${this.fig.group}__drop-denied-toast`,
+          kids: [
+            Skeletons.Note({
+              className: `${this.fig.group}__drop-denied-toast-icon`,
+              content: "!",
+            }),
+            Skeletons.Note({
+              className: `${this.fig.group}__drop-denied-toast-text`,
+              content: message,
+            }),
+          ],
+        }),
+      );
+      this._uploadDeniedToast = wrapper.children.last();
+      this._uploadDeniedToast.selfDestroy({ timeout: Visitor.timeout(2200) });
+    };
+
+    if (this.tooltipsWrapper) return render(this.tooltipsWrapper);
+    this.ensurePart("wrapper-tooltips").then(render).catch(() => {
+      Butler.say(message);
+    });
+  }
+
   /**
    * Read a file/folder drop into a stable BundleEntry tree and run it through the
    * bundle orchestrator (make_dir-first, sequential upload, shared-hub safe).
@@ -242,6 +291,10 @@ class __window_manager extends mfsInteract {
     }
     if (!transfer || (!transfer.files.length && !transfer.folders.length)) {
       if (target && target.acceptMedia) this.sendTo(target, e, 0, token); // non-file drop -> legacy
+      return;
+    }
+    if (!this._canUploadToTarget(target)) {
+      this._rejectUploadTarget();
       return;
     }
     const destNid = (target && typeof target.getCurrentNid === "function") ? target.getCurrentNid() : null;
