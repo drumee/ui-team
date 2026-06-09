@@ -766,7 +766,15 @@ class __media_interact extends media_core {
         item.wm_unique_id = `window_secure_share-${item.nid}`;
         return Wm.launch(item, { explicit: 1, singleton: 1 });
       }
-
+      case "designation-link":
+        this.viewerLink().then((url) => {
+          setTimeout(async () => {
+            url = `${bootstrap().protocol}://${bootstrap().main_domain}${url}`
+            await copyToClipboard(url);
+            Wm.acknowledge();
+          }, 0);
+        });
+        break;
       case "share-qrcode":
         if (/^(dmz|share)$/i.test(this.mget(_a.area))) {
           this.viewerLink().then((url) => {

@@ -78,7 +78,7 @@
     "@drumee/ui-essentials": "^1.0.1",
     "@drumee/ui-styles": "^1.0.6",
     "@drumee/ui-toolkit": "^0.0.20",
-    "@embedpdf/pdfium": "^1.3.0",
+    "@embedpdf/pdfium": "^1.5.0",
     "@webcomponents/webcomponentsjs": "^2.6.0",
     "aes256": "^1.1.0",
     "ajv": "^8.11.0",
