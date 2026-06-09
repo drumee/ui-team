@@ -61,19 +61,24 @@ class ___window_move extends mfsInteract {
   _setupSuggestionClicks(container) {
     container.el.addEventListener('mousedown', (e) => {
       clearTimeout(this._searchTimer);
-      const target = e.target.closest('[data-action]');
       const row = e.target.closest('[data-service="select-suggestion"]');
-      if (!target || !row) return;
+      if (!row) return;
+      const target = e.target.closest('[data-action]');
+      const action = target ? target.dataset.action : row.dataset.action;
+      if (!action) return;
       e.preventDefault();
       e.stopPropagation();
-      if (target.dataset.action === 'open') {
-        this._openNode(row.dataset);
-      } else if (target.dataset.action === 'select') {
+      if (action === 'open') {
+        if (row.dataset.loading === '1') return;
+        row.dataset.loading = 1;
+        this._openNode(row.dataset, row);
+      } else if (action === 'select') {
         this._toggleDestination(row.dataset, row);
       }
     });
     container.el.addEventListener('click', (e) => {
-      if (!e.target.closest('[data-action]')) return;
+      const row = e.target.closest('[data-service="select-suggestion"]');
+      if (!e.target.closest('[data-action]') && !row) return;
       e.preventDefault();
       e.stopPropagation();
     });
@@ -128,6 +133,20 @@ class ___window_move extends mfsInteract {
     return this._selectedDestinations.some((d) => this._destKey(d) === key);
   }
 
+  _currentDestination() {
+    const level = this._navStack[this._navStack.length - 1];
+    if (!level || level.type !== 'folder') return null;
+    if (this._isBlockedDest(level)) return null;
+    return {
+      nid: level.nid,
+      hub_id: level.hub_id,
+      filename: level.name,
+      wsName: level.name,
+      isFolder: level.isFolder ? 1 : 0,
+      home_nid: level.home_nid || level.nid,
+    };
+  }
+
   // A destination is invalid when it is the folder being moved, or any node
   // inside that folder's subtree (would create a cyclic move).
   _isBlockedDest(node = {}) {
@@ -138,7 +157,8 @@ class ___window_move extends mfsInteract {
 
   _updateMoveButton() {
     const btn = this.el.querySelector(`.${this.fig.group}-move__move-btn`);
-    if (btn) btn.dataset.ready = this._selectedDestinations.length ? 1 : 0;
+    const ready = this._selectedDestinations.length || this._currentDestination();
+    if (btn) btn.dataset.ready = ready ? 1 : 0;
   }
 
   _setupSearchInput(entry) {
@@ -190,14 +210,18 @@ class ___window_move extends mfsInteract {
     return new Promise((resolve, reject) => {
       this.onConfirmMove = () => {
         this._done = true;
-        if (!this._selectedDestinations.length) {
+        const currentDestination = this._currentDestination();
+        const destinations = this._selectedDestinations.length
+          ? this._selectedDestinations
+          : currentDestination ? [currentDestination] : [];
+        if (!destinations.length) {
           reject({ response: _e.cancel });
           this.goodbye();
           return;
         }
         resolve({
-          destination: this._selectedDestinations[0],
-          destinations: this._selectedDestinations,
+          destination: destinations[0],
+          destinations,
           items: this._items,
         });
         this.goodbye();
@@ -320,9 +344,17 @@ class ___window_move extends mfsInteract {
     };
   }
 
+  _folderIcon(area) {
+    const iconArea = area || 'inner-folder';
+    return `<svg class="folder-shape ${iconArea}" viewBox="0 0 105 86" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M33.5743 1.5H15C8.37258 1.5 3 6.87258 3 13.5V69C3 75.6274 8.37258 81 15 81H90C96.6274 81 102 75.6274 102 69L102 28.2C102 21.5726 96.6274 16.2 90 16.2H58.8349C55.8072 16.2 52.8913 15.0555 50.672 12.9959L41.7372 4.70411C39.5179 2.64453 36.6021 1.5 33.5743 1.5Z"/></svg>`;
+  }
+
   // --- Navigation ---
-  _openNode(ds = {}) {
-    if (!ds.nid || !ds.hub_id) return;
+  _openNode(ds = {}, row) {
+    if (!ds.nid || !ds.hub_id) {
+      if (row) row.dataset.loading = 0;
+      return;
+    }
     this._navStack.push({
       type: 'folder',
       nid: ds.nid,
@@ -366,47 +398,14 @@ class ___window_move extends mfsInteract {
     const pfx = `${this.fig.group}-move`;
     const kids = [];
 
-    // "Select this folder" — choose the current container as a destination.
-    const level = this._navStack[this._navStack.length - 1];
-    if (level && level.type === 'folder') {
-      const blocked = this._isBlockedDest(level);
-      const selected = this._isSelectedDestination(level.hub_id, level.nid) ? 1 : 0;
-      kids.push(Skeletons.Box.X({
-        className: `${pfx}__select-current`,
-        dataset: {
-          service: 'select-suggestion',
-          nid: level.nid,
-          hub_id: level.hub_id,
-          filename: level.name,
-          wsname: level.name,
-          area: level.area,
-          isfolder: level.isFolder,
-          home_nid: level.home_nid,
-          selected,
-          disabled: blocked ? 1 : 0,
-        },
-        kids: [
-          Skeletons.Note({ className: `${pfx}__item-name`, content: LOCALE.SELECT_THIS_FOLDER, dataset: { action: 'select' } }),
-          Skeletons.Element({ className: `${pfx}__checkbox`, content: selected ? '✓' : '&nbsp;', dataset: { action: 'select' } }),
-        ],
-      }));
-    }
-
-    let homeFolderSectionRendered = false;
     items.forEach((node) => {
-      if (node.section === 'home-folder' && !homeFolderSectionRendered) {
-        homeFolderSectionRendered = true;
-        kids.push(Skeletons.Note({
-          className: `${pfx}__section-divider`,
-          content: LOCALE.FOLDERS || LOCALE.FOLDER,
-        }));
-      }
       const blocked = this._isBlockedDest(node);
       const selected = this._isSelectedDestination(node.hub_id, node.nid) ? 1 : 0;
       kids.push(Skeletons.Box.X({
         className: `${pfx}__ws-row`,
         dataset: {
           service: 'select-suggestion',
+          action: 'open',
           nid: node.nid,
           hub_id: node.hub_id,
           filename: node.name,
@@ -418,20 +417,35 @@ class ___window_move extends mfsInteract {
           disabled: blocked ? 1 : 0,
         },
         kids: [
-          Skeletons.Note({ className: `${pfx}__item-name`, content: node.name, dataset: { action: 'open' } }),
-          Skeletons.Element({ className: `${pfx}__checkbox`, content: selected ? '✓' : '&nbsp;', dataset: { action: 'select' } }),
+          Skeletons.Element({ className: `${pfx}__item-icon`, content: this._folderIcon(node.area), dataset: { action: 'open' } }),
+          Skeletons.Box.X({
+            className: `${pfx}__item-label`,
+            dataset: { action: 'open' },
+            kids: [
+              Skeletons.Note({ className: `${pfx}__item-name`, content: node.name }),
+              Skeletons.Element({ className: `${pfx}__item-loader` }),
+            ],
+          }),
+          Skeletons.Box.X({
+            className: `${pfx}__checkbox-hit`,
+            dataset: { action: 'select' },
+            kids: [
+              Skeletons.Element({ className: `${pfx}__checkbox`, content: selected ? '✓' : '&nbsp;' }),
+            ],
+          }),
         ],
       }));
     });
 
     if (kids.length === 0) {
-      kids.push(Skeletons.Note({ className: `${pfx}__no-results`, content: LOCALE.NO_FILE_RESULTS }));
+      kids.push(Skeletons.Note({ className: `${pfx}__no-results`, content: LOCALE.EMPTY_FOLDER_WORKSPACE }));
     }
 
     const s = this.__suggestionsList;
     if (!s) return;
     s.feed(kids);
     s.el.dataset.state = 1;
+    this._updateMoveButton();
   }
 
   _renderBreadcrumb() {

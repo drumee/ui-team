@@ -255,39 +255,8 @@
     }
   }
 
-  &__section-divider {
-    margin: 4px 0 0;
-    padding: 7px 4px 3px;
-    border-top: 1px solid var(--border-muted);
-    text-transform: uppercase;
-    letter-spacing: 0;
-    @include drumee.typo($size: 10px, $line: 14px, $weight: 600, $color: var(--normal-fg-20));
-  }
-
-  // "Select this folder" row — choose the current container as destination
-  &__select-current {
-    min-height: 25px;
-    padding: 6px 4px;
-    cursor: pointer;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-    border-bottom: 1px solid var(--border-muted);
-    @include drumee.typo($size: 12px, $line: 17px, $weight: 600, $color: var(--primary-50));
-
-    &:hover {
-      background-color: rgba(89, 80, 255, 0.06);
-    }
-
-    &[data-selected="1"] .window-move__checkbox {
-      background-color: #5950ff;
-      border-color: #5950ff;
-    }
-  }
-
   // Blocked destination (cyclic-move guard) — name still drillable, no select
-  &__ws-row[data-disabled="1"],
-  &__select-current[data-disabled="1"] {
+  &__ws-row[data-disabled="1"] {
     .window-move__checkbox {
       opacity: 0.35;
       pointer-events: none;
@@ -295,17 +264,35 @@
   }
 
   &__ws-row {
-    min-height: 25px;
+    min-height: 32px;
     padding: 4px;
     cursor: pointer;
     align-items: center;
-    justify-content: space-between;
-    gap: 12px;
+    justify-content: flex-start;
+    gap: 8px;
     @include drumee.typo($size: 12px, $line: 17px, $weight: 400, $color: #65656c);
 
     &:hover {
       background-color: rgba(89, 80, 255, 0.06);
     }
+
+    &[data-loading="1"] {
+      cursor: wait;
+    }
+
+    &[data-loading="1"] .window-move__item-loader {
+      display: block !important;
+    }
+  }
+
+  &__checkbox-hit {
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    margin-left: auto;
+    flex-shrink: 0;
+    cursor: pointer;
   }
 
   &__checkbox {
@@ -343,15 +330,39 @@
   }
 
   &__item-icon {
-    width: 18px;
-    height: 18px;
+    width: 24px;
+    height: 20px;
     flex-shrink: 0;
-    color: var(--normal-fg-20);
 
-    svg {
+    .folder-shape {
       width: 100%;
       height: 100%;
+      fill: #885eff;
+
+      &.personal {
+        fill: var(--area-personal);
+      }
+
+      &.private {
+        fill: var(--area-private);
+      }
+
+      &.share,
+      &.dmz {
+        fill: var(--area-share);
+      }
+
+      &.public {
+        fill: var(--area-public);
+      }
     }
+  }
+
+  &__item-label {
+    align-items: center;
+    gap: 6px;
+    flex: 1;
+    min-width: 0;
   }
 
   &__item-name {
@@ -360,6 +371,17 @@
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+  }
+
+  &__item-loader {
+    display: none !important;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    border: 2px solid rgba(89, 80, 255, 0.18);
+    border-top-color: #5950ff;
+    flex-shrink: 0;
+    animation: window-move-spin 0.8s linear infinite;
   }
 
   &__move-btn {
@@ -454,5 +476,11 @@
     padding: 12px;
     text-align: center;
     @include drumee.typo($size: 12px, $line: 17px, $color: var(--normal-fg-20));
+  }
+}
+
+@keyframes window-move-spin {
+  to {
+    transform: rotate(360deg);
   }
 }
