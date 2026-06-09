@@ -562,14 +562,14 @@
 
   // Aggregate progress bar
   &__agg-bar {
-    height: 6px;
+    height: 3px;
     background: #E5E5E5;
-    border-radius: 3px;
+    border-radius: 2px;
     overflow: hidden;
   }
 
   &__agg-fill {
-    height: 6px;
+    height: 3px;
     width: 0;
     background: #FA8540;
     transition: width .2s ease;
