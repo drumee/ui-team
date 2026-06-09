@@ -166,7 +166,7 @@ class __media_core extends DrumeeMFS {
         items = this.contextmenuItemsForFiles();
     }
 
-    if ([_a.public, _a.share, _a.dmz].includes(this.mget(_a.area))) items.push('share_qrcode');
+    if ([_a.public, _a.share, _a.dmz].includes(this.mget(_a.area)) && this.canShare()) items.push('share_qrcode');
 
     /** Children of window_search */
     if (this.mget(_a.role) == _a.search) {
@@ -214,6 +214,14 @@ class __media_core extends DrumeeMFS {
       // Download, Rename, Organize, Make a copy, [Share?], Delete
       fileItems = [_a.download, _a.rename, 'organize', 'makeACopy', _a.separator, _a.trash];
       if (this.canShare()) fileItems.splice(fileItems.length - 1, 0, _a.share);
+      switch (this.isRegularFile() && this.mget(_a.area)) {
+        case _a.share:
+          fileItems.splice(fileItems.length - 1, 0, 'secureShare');/** Share link for access from the outside world */
+          break;
+        case _a.private:
+          fileItems.splice(fileItems.length - 1, 0, 'designationLink'); /** Open a file from the link with the user environment */
+          break;
+      }
       if (this.mget(_a.area) === _a.share) fileItems.splice(fileItems.length - 1, 0, 'secureShare');
     } else if (this.canDownload()) {
       // Restricted/shared recipient — Download only per Figma 2.2
@@ -238,7 +246,17 @@ class __media_core extends DrumeeMFS {
     if (this.canOrganize() || this.isMediaOwner()) {
       fileItems = [_a.rename, _a.download, _a.separator, _a.copy, _a.duplicate, _a.separator, _a.info];
       if (this.canShare()) fileItems.push(_a.share);
-      if (this.mget(_a.area) === _a.share) fileItems.push('secureShare');
+      switch (this.isRegularFile() && this.mget(_a.area)) {
+        case _a.share:
+          fileItems.push('secureShare'); /** Share link for access from the outside world */
+          break;
+        case _a.private:
+          fileItems.push('designationLink'); /** Open a file from the link with the user environment */
+          break;
+        case _a.public:
+          fileItems.push('directUrl');  /** Web-base URL. Readable by anyone. No token needed */
+          break;
+      }
       if (fileType == _a.image) {
         fileItems.push(_a.separator, 'background', _a.rotateLeft, _a.rotateRight);
       }
@@ -253,10 +271,6 @@ class __media_core extends DrumeeMFS {
     }
 
     let extra = []
-    // 3WC href
-    if (this.isRegularFile() && [_a.public].includes(this.mget(_a.area))) {
-      extra.push("directUrl");
-    }
 
     switch (this.mget(_a.filetype)) {
       case _a.note:
