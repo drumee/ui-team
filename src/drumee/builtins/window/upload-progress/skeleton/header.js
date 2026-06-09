@@ -31,16 +31,35 @@ module.exports = function header(ui) {
           }),
         ]
       }),
-      // Collapse/Expand button - wrap in Box to ensure service attribute is rendered
+      // Right cluster: collapse/expand + close (X)
       Skeletons.Box.X({
-        className: `${pfx}__collapse-wrapper`,
-        service: "toggle-expand",
-        uiHandler: [ui],
+        className: `${pfx}__header-actions`,
         kids: [
-          Skeletons.Button.Svg({
-            className: `${pfx}__collapse`,
-            ico: "arrow--pages",
-            active: 0,
+          // Collapse/Expand button - wrap in Box to ensure service attribute is rendered
+          Skeletons.Box.X({
+            className: `${pfx}__collapse-wrapper`,
+            service: "toggle-expand",
+            uiHandler: [ui],
+            kids: [
+              Skeletons.Button.Svg({
+                className: `${pfx}__collapse`,
+                ico: "arrow--pages",
+                active: 0,
+              }),
+            ]
+          }),
+          // Close (X) — cancels the upload and dismisses the popup
+          Skeletons.Box.X({
+            className: `${pfx}__close-wrapper`,
+            service: "cancel-all",
+            uiHandler: [ui],
+            kids: [
+              Skeletons.Button.Svg({
+                className: `${pfx}__close-btn`,
+                ico: "cross",
+                active: 0,
+              }),
+            ]
           }),
         ]
       }),

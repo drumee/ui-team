@@ -1,6 +1,12 @@
 const { filesize, dataTransfer } = require("@drumee/ui-essentials");
 const __window_core = require("../core");
 
+// Cap the number of per-entry rows rendered in the bundle progress list. A
+// dropped folder can hold tens of thousands of files; rendering one DOM row each
+// (repeatedly, per file-done) exhausts memory. Show at most this many plus a
+// "+N more" summary — the aggregate bar still reflects the true overall progress.
+const MAX_PROGRESS_ROWS = 200;
+
 /**
  * @class __window_upload_progress
  * @extends __window_core
@@ -42,6 +48,17 @@ class __window_upload_progress extends __window_core {
     this._bundleEntry = require("media/bundle/entry");
     this._bundleManager = require("media/bundle/manager");
     this._targetWindow = opt && opt.targetWindow ? opt.targetWindow : null; // folder window
+
+    // Large drops (10k–20k files) fire file-done/folder-created thousands of
+    // times. Rebuilding the whole progress list each time is O(N^2) and blows up
+    // memory, so coalesce the re-renders (the list itself is capped — see
+    // MAX_PROGRESS_ROWS in _renderProgressList).
+    this._renderProgressListThrottled = _.throttle(
+      () => this._renderProgressList(), 400, { leading: true, trailing: true }
+    );
+    this._renderAggregateThrottled = _.throttle(
+      () => this._renderAggregate(), 150, { leading: true, trailing: true }
+    );
 
     this._isExpanded = true;
     this._totalFiles = 0;
@@ -1077,8 +1094,20 @@ class __window_upload_progress extends __window_core {
    */
   toggleExpand() {
     this._isExpanded = !this._isExpanded;
+
+    // Bundle path: the legacy _refreshUI() rebuilds the file-list from the EMPTY
+    // _uploadItems array, which is exactly what wiped the list on collapse/expand.
+    // Just flip the expanded state and re-render the bundle UI in place.
+    if (this._bundleMode) {
+      if (this.el) this.el.dataset.expanded = this._isExpanded ? "1" : "0";
+      const container = this.el && this.el.querySelector(`.${this.fig.family}__container`);
+      if (container) container.dataset.expanded = this._isExpanded ? "1" : "0";
+      if (this._isExpanded) { this._renderAggregate(); this._renderProgressList(); }
+      return;
+    }
+
     this._refreshUI();
-    
+
     // When expanding, process any pending updates immediately
     if (this._isExpanded && this._pendingProgressUpdates && this._pendingProgressUpdates.size > 0) {
       setTimeout(() => {
@@ -1548,18 +1577,21 @@ class __window_upload_progress extends __window_core {
     this._attachJob(job);            // subscribe BEFORE the job starts (manager.pump)
     this._uploading = true;
     this._phase = "progress";
+    this._bundleMode = true;         // route toggle/refresh through the bundle path
     this._switchToProgress();
     this._bundleManager.pump();      // now start; first events are captured
   }
 
   _attachJob(job) {
     this._job = job;
-    job.on("progress", () => this._renderAggregate());
-    job.on("folder-created", () => this._renderProgressList());
-    job.on("file-done", () => { this._renderAggregate(); this._renderProgressList(); });
-    job.on("error", () => this._renderProgressList());
+    // Throttled renders: bursts of file-done events (thousands for a big folder)
+    // coalesce instead of rebuilding the whole list on every single file.
+    job.on("progress", this._renderAggregateThrottled);
+    job.on("folder-created", this._renderProgressListThrottled);
+    job.on("file-done", () => { this._renderAggregateThrottled(); this._renderProgressListThrottled(); });
+    job.on("error", this._renderProgressListThrottled);
     job.on("done", ({ canceled }) => this._onBundleDone(canceled));
-    job.on("activated", () => this._renderAggregate());
+    job.on("activated", this._renderAggregateThrottled);
   }
 
   _switchToProgress() {
@@ -1571,48 +1603,162 @@ class __window_upload_progress extends __window_core {
 
   _renderAggregate() {
     if (!this._job) return;
+    if (this.isDestroyed && this.isDestroyed()) return;
     const pct = this._job.bytesTotal
       ? Math.min(100, Math.round(100 * this._job.bytesDone / this._job.bytesTotal)) : 0;
     this.ensurePart("agg-fill").then((p) => { if (p.el) p.el.style.width = pct + "%"; });
     const rate = this._bundleManager.governor.currentRate();
-    const mbps = (rate / (1024 * 1024)).toFixed(1);
     const remaining = Math.max(0, this._job.bytesTotal - this._job.bytesDone);
-    const etaSuffix = (rate > 0 && remaining > 0) ? ` · ~${Math.ceil(remaining / rate)}s` : "";
+    // Tidy aggregate line: percent + uploaded/total size only (Google-Drive style).
     this.ensurePart("agg-text").then((p) => p.set({
-      content: `${pct}% · ${filesize(this._job.bytesDone)}/${filesize(this._job.bytesTotal)} · ${mbps} MB/s${etaSuffix}`,
+      content: `${pct}% · ${filesize(this._job.bytesDone)}/${filesize(this._job.bytesTotal)}`,
+    }));
+    // ETA shown in the footer next to the Cancel/Close button.
+    let etaText = "";
+    if (rate > 0 && remaining > 0) {
+      const secs = Math.ceil(remaining / rate);
+      etaText = secs >= 60 ? `~${Math.ceil(secs / 60)} min` : `~${secs} s`;
+    }
+    this.ensurePart("estimated-time").then((p) => p.set({ content: etaText }));
+    // The bundle drag-drop path never runs through _refreshUI, so the header
+    // title would otherwise stay stuck at "Uploading 0 files". Drive it here
+    // from the job's own file counters so the user sees uploaded/total files.
+    this.ensurePart("upload-title").then((p) => p.set({
+      content: `${LOCALE.UPLOADING || "Uploading"} ${this._job.filesDone || 0}/${this._job.filesTotal || 0} ${LOCALE.FILES || "files"}`,
     }));
   }
 
   _renderProgressList() {
+    if (this.isDestroyed && this.isDestroyed()) return;
     this.ensurePart("file-list").then((list) => {
-      list.feed(this._progressRows(this._bundle, 0));
+      if (!list || (list.isDestroyed && list.isDestroyed())) return;
+      // Google-Drive-style tidy list: ONE row per TOP-LEVEL dropped item only
+      // (a folder shows an aggregate "done / total" count), never one row per
+      // nested file — that keeps the DOM tiny no matter how big the bundle is.
+      // Errors bucket first so a failed item is always visible (with Retry) even
+      // if many loose files were dropped past the cap.
+      const roots = this._bundle || [];
+      const errors = [], active = [], rest = [];
+      for (const e of roots) {
+        const st = this._entryDisplayStatus(e);
+        if (st === "error") errors.push(e);
+        else if (st === "done") rest.push(e);
+        else active.push(e);
+      }
+      const ordered = errors.concat(active, rest);
+      const shown = ordered.slice(0, MAX_PROGRESS_ROWS);
+      const rows = shown.map((e) => this._buildProgressRow(e));
+      const omitted = roots.length - shown.length;
+      if (omitted > 0) {
+        rows.push(Skeletons.Note({
+          className: `${this.fig.family}__progress-more`,
+          content: `+ ${omitted} ${LOCALE.FILES || "files"}`,
+        }));
+      }
+      list.feed(rows);
     });
   }
 
-  _progressRows(entries, depth) {
+  // Rolled-up display status for a top-level entry. Files use their own status;
+  // folders aggregate their subtree (any error -> error, all files done -> done,
+  // otherwise in-progress). Used for bucketing AND the row status indicator.
+  _entryDisplayStatus(e) {
+    if (e.kind !== "folder") {
+      if (e.status === "error") return "error";
+      if (e.status === "done" || e.status === "skipped") return "done";
+      return "active";
+    }
+    const s = this._folderStats(e);
+    if (e.status === "error" || s.hasError) return "error";
+    if (s.total > 0 && s.done >= s.total) return "done";
+    if (e.status === "done") return "done";
+    return "active";
+  }
+
+  // One cheap walk over a folder subtree (ints/refs only, no UI) returning
+  // { done, total, hasError }. Bounded work: only called for shown folder rows.
+  _folderStats(folder) {
+    let done = 0, total = 0, hasError = false;
+    const walk = (l) => {
+      for (const e of l || []) {
+        if (e.kind === "folder") {
+          if (e.status === "error") hasError = true;
+          walk(e.children);
+        } else {
+          total += 1;
+          if (e.status === "done" || e.status === "skipped") done += 1;
+          else if (e.status === "error") hasError = true;
+        }
+      }
+    };
+    walk(folder.children);
+    return { done, total, hasError };
+  }
+
+  _buildProgressRow(e) {
     const pfx = this.fig.family;
-    const rows = [];
-    for (const e of entries) {
-      const label = e.kind === "folder" && e.status === "creating"
-        ? (LOCALE.CREATING_FOLDER || "Creating folder…") : (e.status || "queued");
-      const kids = [
-        Skeletons.Note({ className: `${pfx}__progress-name`, content: e.name }),
-        Skeletons.Note({ className: `${pfx}__progress-state`, content: label }),
-      ];
-      if (e.status === "error") {
-        kids.push(Skeletons.Note({
-          className: `${pfx}__progress-retry`,
-          content: LOCALE.RETRY || "Retry",
-          service: `retry:${e.id}`, uiHandler: [this],
+    const isFolder = e.kind === "folder";
+    const st = this._entryDisplayStatus(e);
+    const { getFileIcon } = require("./skeleton/helpers");
+    // Folder: a valid NORMALIZED sprite (raw-* icons aren't in the sprite sheet,
+    // so Button.Svg can't render them). File: derive from name via getFileIcon.
+    const ico = isFolder ? "dock-folder" : getFileIcon({ name: e.name });
+
+    // Right-hand status indicator: Retry (error) · check (done) · spinner (active).
+    let statusEl;
+    if (st === "error") {
+      statusEl = Skeletons.Note({
+        className: `${pfx}__progress-retry`,
+        content: LOCALE.RETRY || "Retry",
+        service: `retry:${e.id}`, uiHandler: [this],
+      });
+    } else if (st === "done") {
+      statusEl = Skeletons.Button.Svg({
+        className: `${pfx}__progress-check`, ico: "upload-checked", active: 0,
+      });
+    } else {
+      statusEl = Skeletons.Box.X({ className: `${pfx}__progress-spinner` });
+    }
+
+    // Folder rows carry an aggregate "done / total" file count.
+    const right = [];
+    if (isFolder) {
+      const s = this._folderStats(e);
+      // Only show the "done / total" count when the folder actually holds files
+      // (an empty/seeded folder would otherwise read a confusing "0 / 0").
+      if (s.total > 0) {
+        right.push(Skeletons.Note({
+          className: `${pfx}__progress-count`, content: `${s.done} / ${s.total}`,
         }));
       }
-      rows.push(Skeletons.Box.X({
-        className: `${pfx}__progress-row`, dataset: { kind: e.kind, status: e.status, depth },
-        kids,
-      }));
-      if (e.kind === "folder" && e.children.length) rows.push(...this._progressRows(e.children, depth + 1));
     }
-    return rows;
+    right.push(statusEl);
+
+    // A finished item is clickable → reveal/focus it in the workspace. Every
+    // nested child needs active:0 so the click reaches this row's handler.
+    const clickable = st === "done" && e.nid != null;
+    const childOpt = clickable ? { active: 0 } : undefined;
+    return Skeletons.Box.X({
+      className: `${pfx}__progress-row`,
+      dataset: { kind: e.kind, status: st, clickable: clickable ? 1 : 0 },
+      service: clickable ? "open-uploaded" : null,
+      uiHandler: clickable ? [this] : null,
+      nid: clickable ? e.nid : undefined,
+      hub_id: clickable ? e.hub_id : undefined,
+      filetype: clickable && isFolder ? _a.folder : undefined,
+      kidsOpt: childOpt,
+      kids: [
+        Skeletons.Box.X({
+          className: `${pfx}__progress-left`,
+          kidsOpt: childOpt,
+          kids: [
+            Skeletons.Button.Svg({ className: `${pfx}__progress-icon`, ico, active: 0 }),
+            Skeletons.Note({ className: `${pfx}__progress-name`, content: e.name }),
+          ],
+        }),
+        Skeletons.Box.X({ className: `${pfx}__progress-right`, kidsOpt: childOpt, kids: right }),
+      ],
+    });
   }
 
   _onBundleDone(canceled) {
@@ -1621,6 +1767,17 @@ class __window_upload_progress extends __window_core {
     this._renderProgressList();
     // refresh target folder view so new nodes appear (reuse existing reload if available)
     if (this._targetWindow && this._targetWindow.reload) this._targetWindow.reload();
+    // The bundle drag-drop path does NOT populate `_uploadItems`, so
+    // `_refreshFooter` can't detect completion and the footer button stays on
+    // "Cancel all". Flip it to "Close" here so the user can dismiss the popup
+    // once the drop finished (onUiEvent "close" -> goodbye()).
+    this.ensurePart("footer-action").then((p) => {
+      if (!p || !p.el) return;
+      p.set({ content: LOCALE.CLOSE || "Close" });
+      p.el.className = `${this.fig.family}__close`;
+      p.el.setAttribute(_a.service, "close");
+      if (p.el.dataset) p.el.dataset.service = "close";
+    });
   }
 
   _removeFromBundle(id) {
@@ -1695,6 +1852,17 @@ class __window_upload_progress extends __window_core {
       this._removeFromBundle(service.slice(7)); return;
     }
     if (service && service.indexOf("retry:") === 0) { this._retryEntry(service.slice(6)); return; }
+    if (service === "open-uploaded") {
+      // Reveal the finished file/folder in the workspace via the shared
+      // Wm.openFileLocation (takes a plain {nid, hub_id, filetype}).
+      const nid = cmd && cmd.mget ? cmd.mget(_a.nid) : null;
+      const hub_id = cmd && cmd.mget ? cmd.mget(_a.hub_id) : null;
+      const filetype = cmd && cmd.mget ? cmd.mget(_a.filetype) : null;
+      if (nid != null && window.Wm && typeof window.Wm.openFileLocation === "function") {
+        window.Wm.openFileLocation({ nid, hub_id, filetype });
+      }
+      return;
+    }
 
     switch (service) {
       case _e.close:
