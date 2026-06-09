@@ -127,7 +127,9 @@ class __bundle_job extends LetcBox {
       entry.nid = newNid;          // for click-to-focus from the progress popup
       entry.hub_id = this._hubId;
       entry.status = "uploading";
-      this.trigger("folder-created", { job: this, entry, nid: newNid });
+      // Carry the full server node + the dir it was created into, so the progress
+      // popup can live-append this folder to the grid (per-item, no reload).
+      this.trigger("folder-created", { job: this, entry, nid: newNid, node, parent: destNid });
     } catch (e) {
       const detail = (e && e.message) || "make_dir failed";
       entry.status = "error";
@@ -201,14 +203,16 @@ class __bundle_job extends LetcBox {
   onUploadResponse(data) {
     if (!this._current) return;
     this._clearWatchdog();
-    const { entry, resolve } = this._current;
+    const { entry, resolve, destNid } = this._current;
     entry.status = "done";
     // Remember the server node so the progress popup can focus it on click.
     entry.nid = (data && (data.nid || (data.media && data.media.nid))) || entry.nid;
     entry.hub_id = this._hubId;
     this.filesDone += 1;
     this._current = null; this._currentXhr = null;
-    this.trigger("file-done", { job: this, entry, data });
+    // `parent` = dir this file was uploaded into; lets the popup live-append a
+    // top-level file root to the grid as it completes (per-item, no reload).
+    this.trigger("file-done", { job: this, entry, data, parent: destNid });
     resolve();
   }
 

@@ -1560,6 +1560,9 @@ class __window_upload_progress extends __window_core {
       Butler.say(LOCALE.WRONG_DROP_AREA || "Please open a folder to upload into");
       return;
     }
+    // Destination of this bundle — used by _revealInLayout to live-append only
+    // the top-level roots (nodes whose parent == this dir) to the visible grid.
+    this._bundleDest = destNid;
 
     // Quota guard: total bundle bytes vs free disk (spec §5.8)
     const total = this._bundleEntry.countSize(this._bundle);
@@ -1587,8 +1590,15 @@ class __window_upload_progress extends __window_core {
     // Throttled renders: bursts of file-done events (thousands for a big folder)
     // coalesce instead of rebuilding the whole list on every single file.
     job.on("progress", this._renderAggregateThrottled);
-    job.on("folder-created", this._renderProgressListThrottled);
-    job.on("file-done", () => { this._renderAggregateThrottled(); this._renderProgressListThrottled(); });
+    job.on("folder-created", (ev) => {
+      this._revealInLayout(ev && ev.node, ev && ev.parent);
+      this._renderProgressListThrottled();
+    });
+    job.on("file-done", (ev) => {
+      this._revealInLayout(ev && ev.data, ev && ev.parent);
+      this._renderAggregateThrottled();
+      this._renderProgressListThrottled();
+    });
     job.on("error", this._renderProgressListThrottled);
     job.on("done", ({ canceled }) => this._onBundleDone(canceled));
     job.on("activated", this._renderAggregateThrottled);
@@ -1761,12 +1771,50 @@ class __window_upload_progress extends __window_core {
     });
   }
 
+  // Live-append a finished TOP-LEVEL root to the target's grid, so each uploaded
+  // file/folder appears as it completes WITHOUT reloading the view (a reload would
+  // destroy this popup). Mirrors the app's own create-folder / WS-echo append
+  // (wm:243-261, folder:586-593) so it behaves identically for the desk Wm and
+  // folder windows — dedup, parent guard, and folder/file partition included.
+  _revealInLayout(node, parent) {
+    const tw = this._targetWindow;
+    if (!tw || !node || node.nid == null) return;
+    // Only the bundle's top-level roots belong in the currently-visible grid;
+    // nested children live inside their own folders. `parent` is the dir the
+    // node was created into — for a root that equals the bundle destination.
+    if (this._bundleDest != null && parent !== this._bundleDest) return;
+    // …and only while the target still shows that destination (the user may have
+    // navigated elsewhere after dropping).
+    if (this._bundleDest != null && typeof tw.getCurrentNid === "function" &&
+        tw.getCurrentNid() !== this._bundleDest) return;
+    if (typeof tw.ensurePart !== "function") return;
+    tw.ensurePart(_a.list).then((list) => {
+      if (!list || (list.isDestroyed && list.isDestroyed())) return;
+      // Dedup: a server WS echo may have rendered it already.
+      if (typeof tw.getItemsByAttr === "function" &&
+          tw.getItemsByAttr(_a.nid, node.nid).length) return;
+      const data = Object.assign({}, node);
+      if (data.pid == null && parent != null) data.pid = parent;
+      if (typeof tw._getKind === "function") data.kind = tw._getKind();
+      data.service = "open-node";
+      data.uiHandler = [tw];
+      if (data.position >= 0) list.append(data, data.position);
+      else list.append(data);
+      if (tw.getViewMode && tw.getViewMode() !== _a.row &&
+          typeof tw._partitionFoldersAndFiles === "function") {
+        tw._partitionFoldersAndFiles(list);
+      }
+    }).catch(() => {});
+  }
+
   _onBundleDone(canceled) {
     this._uploading = false;
     this._renderAggregate();
     this._renderProgressList();
-    // refresh target folder view so new nodes appear (reuse existing reload if available)
-    if (this._targetWindow && this._targetWindow.reload) this._targetWindow.reload();
+    // No reload here: each finished file/folder was already live-appended to the
+    // grid by `_revealInLayout` (driven off the job's folder-created/file-done
+    // events). Reloading would re-render the whole view and destroy this popup —
+    // exactly what we're avoiding.
     // The bundle drag-drop path does NOT populate `_uploadItems`, so
     // `_refreshFooter` can't detect completion and the footer button stays on
     // "Cancel all". Flip it to "Close" here so the user can dismiss the popup
@@ -1853,13 +1901,17 @@ class __window_upload_progress extends __window_core {
     }
     if (service && service.indexOf("retry:") === 0) { this._retryEntry(service.slice(6)); return; }
     if (service === "open-uploaded") {
-      // Reveal the finished file/folder in the workspace via the shared
-      // Wm.openFileLocation (takes a plain {nid, hub_id, filetype}).
+      // Focus the finished file/folder ON THE LAYOUT only: locate its tile in the
+      // current grid and select + scroll it into view. Never open a viewer / fall
+      // back to navigation — if the tile isn't on screen, this is a no-op.
       const nid = cmd && cmd.mget ? cmd.mget(_a.nid) : null;
-      const hub_id = cmd && cmd.mget ? cmd.mget(_a.hub_id) : null;
-      const filetype = cmd && cmd.mget ? cmd.mget(_a.filetype) : null;
-      if (nid != null && window.Wm && typeof window.Wm.openFileLocation === "function") {
-        window.Wm.openFileLocation({ nid, hub_id, filetype });
+      const wm = window.Wm;
+      if (nid == null || !wm || typeof wm.getItemsByAttr !== "function") return;
+      const item = wm.getItemsByAttr(_a.nid, nid)[0];
+      if (item && item.el) {
+        if (typeof item.select === "function") item.select();
+        else if (typeof item.setState === "function") item.setState(1);
+        try { item.el.scrollIntoView({ behavior: "smooth", block: "center" }); } catch (e) { }
       }
       return;
     }
