@@ -341,7 +341,7 @@
     width: 32px;
     height: 32px;
     flex-shrink: 0;
-    align-self: flex-end;
+    align-self: flex-start;
     // Anchor for the hover username tooltip.
     position: relative;
 
@@ -410,6 +410,12 @@
         height: 100%;
         @include drumee.typo($size: 9px, $line: 10px);
       }
+    }
+  }
+
+  .widget-chatItem__message-container:has(.widget-chatItem__username-container) {
+    .widget-chatItem__profile {
+      margin-top: 30px;
     }
   }
 
