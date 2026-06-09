@@ -51,7 +51,11 @@
   &__content-row {
     width: 100%;
     height: calc(100% - 132px);
-    min-width: 810px;
+    // Prefer 810px (keeps the folder grid's multi-column layout) but never
+    // force the content wider than the window itself — otherwise it pins the
+    // window to an 810px floor and it can't shrink to fit a narrow work area
+    // (sidebar open / DevTools / small browser). Below 810 the grid reflows.
+    min-width: min(810px, 100%);
 
     .smart-container {
       direction: rtl;
