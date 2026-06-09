@@ -33,10 +33,9 @@ const __skl_secure_share_row = function(_ui_, row) {
     ? LOCALE.SECURE_SHARE_STATUS_REVOKED
     : (!isActive ? LOCALE.SECURE_SHARE_STATUS_EXPIRED : LOCALE.SECURE_SHARE_ACTIVE);
 
-  const count    = row.access_count || 0;
-  const viewsStr = count === 0
-    ? LOCALE.SECURE_SHARE_NOT_OPENED
-    : `${count} ${count === 1 ? LOCALE.SECURE_SHARE_VIEW : LOCALE.SECURE_SHARE_VIEWS}`;
+  const lastAccessedStr = row.last_accessed
+    ? Dayjs.unix(row.last_accessed).fromNow()
+    : LOCALE.SECURE_SHARE_NEVER_ACCESSED;
   const expiryStr = row.expiry_time
     ? Dayjs.unix(row.expiry_time).fromNow()
     : LOCALE.SECURE_SHARE_NO_EXPIRY;
@@ -78,7 +77,7 @@ const __skl_secure_share_row = function(_ui_, row) {
             Skeletons.Note({ className: `${pfx}__share-permission`, content: permLabel })
           ]
         }),
-        Skeletons.Note({ className: `${pfx}__share-meta`, content: `${viewsStr} · ${expiryStr}` })
+        Skeletons.Note({ className: `${pfx}__share-meta`, content: `${lastAccessedStr} · ${expiryStr}` })
       ]
     }),
     Skeletons.Note({ className: `${pfx}__share-status ${isActive ? 'active' : 'inactive'}`, content: statusLabel })

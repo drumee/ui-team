@@ -166,6 +166,23 @@
     letter-spacing: 0.5px;
   }
 
+  &__list-cols {
+    gap: var(--spacer-3);
+    padding: var(--spacer-1) 0;
+    border-bottom: 1px solid var(--border-default);
+  }
+
+  &__list-col {
+    @include drumee.typo($size: 10px, $line: 14px, $weight: 600, $color: var(--tertiary-text-color));
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    white-space: nowrap;
+
+    &.col-recipient { flex: 1; min-width: 0; }
+    &.col-accessed  { width: 90px; flex-shrink: 0; }
+    &.col-expires   { width: 80px; flex-shrink: 0; }
+  }
+
   &__share-rows {
     gap: var(--spacer-2);
   }

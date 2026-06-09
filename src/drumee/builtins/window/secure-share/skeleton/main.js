@@ -238,10 +238,20 @@ const __skl_secure_share = function(_ui_) {
     sys_pn    : 'share-list'
   });
 
+  const listColsHeader = Skeletons.Box.X({
+    className : `${pfx}__list-cols`,
+    kids      : [
+      Skeletons.Note({ className: `${pfx}__list-col col-recipient`, content: LOCALE.SECURE_SHARE_COL_RECIPIENT }),
+      Skeletons.Note({ className: `${pfx}__list-col col-accessed`,  content: LOCALE.SECURE_SHARE_COL_ACCESSED }),
+      Skeletons.Note({ className: `${pfx}__list-col col-expires`,   content: LOCALE.SECURE_SHARE_COL_EXPIRES }),
+    ]
+  });
+
   const listSection = Skeletons.Box.Y({
     className : `${pfx}__list-section`,
     kids      : [
       Skeletons.Note({ className: `${pfx}__list-header`, content: LOCALE.SECURE_SHARE_EXISTING }),
+      listColsHeader,
       shareList
     ]
   });
