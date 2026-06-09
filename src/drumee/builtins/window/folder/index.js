@@ -1382,6 +1382,10 @@ class __window_folder extends mfsInteract {
               uiHandler: [this],
             });
           }
+          // Already mounted: folder navigation happens on the Files tab, so
+          // re-apply the current folder's scope when the Task tab is reopened
+          // (otherwise the panel keeps the scope from wherever it was mounted).
+          this.scopeTasksToFolder();
           return;
         default:
           view.el.dataset.view = "files";

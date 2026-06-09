@@ -60,6 +60,15 @@ function buildFileSearchDropdownContent(ui, scope, ctx = {}) {
   return [];
 }
 
+// Stored description markers `[@Full Name](user:uid)` ↔ display text `@Full Name`.
+// On read-only surfaces (the card) we strip the marker syntax to the plain
+// "@Name" so the raw `(user:uid)` payload never leaks into the UI.
+const MENTION_MARKER_RE = /\[@([^\]]+)\]\(user:([^)]+)\)/g;
+function stripMentionMarkers(text) {
+  if (!text) return "";
+  return String(text).replace(MENTION_MARKER_RE, "@$1");
+}
+
 const make = function (ui) {
   const pfx = ui.fig.family;
   const state = ui.getState();
@@ -100,6 +109,42 @@ const make = function (ui) {
 
   const priorityOf = (key) =>
     priorities.find((p) => p.key === key) || priorities[1];
+
+  // @-mention support for the description fields. The description is a
+  // contenteditable editor (not a textarea) so tagged members render as styled
+  // inline chips and the dropdown can anchor to the live caret — the same
+  // primitive Jira/Linear use. The panel owns the editor's content and events
+  // via onPartReady; `scope` is "create" | "detail" so it targets the right
+  // editor + dropdown.
+  const mentionDropdown = (scope) =>
+    Skeletons.Box.Y({
+      className: `${pfx}__mention-dropdown`,
+      sys_pn: `${scope}-mention`,
+      partHandler: ui,
+      // dataset is dropped at render unless attrOpt is also set — use attrOpt.
+      attrOpt: { "data-open": "0" },
+      bubble: 0,
+      kids: [],
+    });
+
+  const descEditor = (scope) =>
+    Skeletons.Box.Y({
+      className: `${pfx}__desc-field`,
+      kids: [
+        Skeletons.Element({
+          tagName: "div",
+          className: `${pfx}__desc-editor`,
+          sys_pn: `${scope}-desc-editor`,
+          partHandler: ui,
+          flow: "none", // block flow for contenteditable, not flex
+          attrOpt: {
+            contenteditable: "true",
+            "data-placeholder": LOCALE.TASK_DESCRIPTION_PLACEHOLDER,
+          },
+        }),
+        mentionDropdown(scope),
+      ],
+    });
 
   // ── Card pieces ───────────────────────────────────────────────
   // Title on the card is a plain Note: clicking it bubbles up to the card,
@@ -283,7 +328,7 @@ const make = function (ui) {
         task.description
           ? Skeletons.Note({
               className: `${pfx}__task-desc`,
-              content: task.description,
+              content: stripMentionMarkers(task.description),
             })
           : null,
         filesNode,
@@ -749,18 +794,7 @@ const make = function (ui) {
           className: `${pfx}__detail-label`,
           content: LOCALE.TASK_DESCRIPTION,
         }),
-        Skeletons.Textarea({
-          className: `${pfx}__detail-description`,
-          name: "description",
-          value: dDraft.description || "",
-          placeholder: LOCALE.TASK_DESCRIPTION_PLACEHOLDER,
-          require: "any",
-          rows: 3,
-          removeOnEscape: false,
-          bubble: 0,
-          watch: "task-input-changed",
-          uiHandler: [ui],
-        }),
+        descEditor("detail"),
       ],
     });
 
@@ -1101,18 +1135,7 @@ const make = function (ui) {
       watch: "task-input-changed",
     });
 
-    const descControl = Skeletons.Textarea({
-      className: `${pfx}__create-textarea`,
-      formItem: "description",
-      name: "description",
-      value: draft?.description || "",
-      placeholder: LOCALE.TASK_DESCRIPTION_PLACEHOLDER,
-      require: "any",
-      rows: 3,
-      bubble: 0,
-      watch: "task-input-changed",
-      uiHandler: [ui],
-    });
+    const descControl = descEditor("create");
 
     const dueControl = {
       kind: "date_picker",
@@ -1388,6 +1411,36 @@ function buildAssigneeButtonContent(ui, assignees) {
   ];
 }
 
+// Filtered member rows fed into the description @-mention dropdown. The panel
+// wires native onclick on each row (the framework's click dispatch is
+// unreliable for dynamically-fed rows — the chat mention list does the same),
+// so these carry no service/uiHandler.
+function buildMentionItemsContent(ui, members) {
+  const pfx = ui.fig.family;
+  return (members || []).map((m) => {
+    const uid = String(m.id || m.uid || "");
+    const name =
+      [m.firstname, m.lastname].filter(Boolean).join(" ").trim() ||
+      m.email ||
+      uid;
+    return Skeletons.Box.X({
+      className: `${pfx}__mention-item`,
+      bubble: 0,
+      kids: [
+        Skeletons.UserProfile({
+          className: `${pfx}__mention-avatar`,
+          id: uid,
+          firstname: m.firstname,
+          lastname: m.lastname,
+          auto_color: 1,
+          live_status: 0,
+        }),
+        Skeletons.Note({ className: `${pfx}__mention-name`, content: name }),
+      ],
+    });
+  });
+}
+
 function buildPendingListContent(ui, pendingFiles) {
   const pfx = ui.fig.family;
   return (pendingFiles || []).map((f) =>
@@ -1446,6 +1499,7 @@ function buildAttachmentRowsContent(ui, attachments, taskId) {
 
 make.buildFileSearchDropdownContent = buildFileSearchDropdownContent;
 make.buildAssigneeButtonContent = buildAssigneeButtonContent;
+make.buildMentionItemsContent = buildMentionItemsContent;
 make.buildPendingListContent = buildPendingListContent;
 make.buildAttachmentRowsContent = buildAttachmentRowsContent;
 module.exports = make;

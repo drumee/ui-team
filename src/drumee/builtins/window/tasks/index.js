@@ -45,6 +45,9 @@ class __tasks_panel extends LetcBox {
     this._fileSearch = { query: "", results: [], scope: null };
     this._fileSearchTimer = null;
     this._fileSearchBlurTimer = null;
+    // Active @-mention session (null when the popup is closed): the "@token"
+    // range in the focused description editor + the filtered member list.
+    this._mention = null;
     this.bindEvent(_a.live);
   }
 
@@ -587,6 +590,13 @@ class __tasks_panel extends LetcBox {
       child.el.onchange = (e) => this._onAttachmentPicked(e);
       return;
     }
+    if (pn === "create-desc-editor" || pn === "detail-desc-editor") {
+      this._initDescEditor(
+        child.el,
+        pn === "create-desc-editor" ? "create" : "detail",
+      );
+      return;
+    }
     if (super.onPartReady) super.onPartReady(child, pn);
   }
 
@@ -768,11 +778,10 @@ class __tasks_panel extends LetcBox {
     if (!root) return;
     const draft = this._createDefaults;
     const title = root.querySelector('[name="title"]');
-    const desc = root.querySelector('textarea[name="description"]');
     const due = root.querySelector('input[name="due_date"]');
     if (title) draft.title = title.value || "";
-    if (desc) draft.description = desc.value || "";
     if (due) draft.due_date = due.value || "";
+    // description syncs live from the contenteditable editor (_onDescInput).
   }
 
   _captureDetailDraft() {
@@ -781,11 +790,10 @@ class __tasks_panel extends LetcBox {
     if (!root) return;
     const draft = this._detailDraft;
     const title = root.querySelector('[name="title"]');
-    const desc = root.querySelector('textarea[name="description"]');
     const due = root.querySelector('input[name="due_date"]');
     if (title) draft.title = title.value || "";
-    if (desc) draft.description = desc.value || "";
     if (due) draft.due_date = due.value || "";
+    // description syncs live from the contenteditable editor (_onDescInput).
   }
 
   // Push every keystroke straight into the active draft. The Entry widget
@@ -831,6 +839,7 @@ class __tasks_panel extends LetcBox {
     const draft = this._createDefaults || {};
     const title = String(draft.title || "").trim();
     const dueRaw = String(draft.due_date || "").trim();
+    // Already in marker form (chips serialize to "[@Name](user:uid)").
     const description = String(draft.description || "").trim();
 
     if (!title) return this._render();
@@ -853,6 +862,10 @@ class __tasks_panel extends LetcBox {
         priority: draft.priority || "medium",
         due_date: dueRaw || null,
         assignee_uids: Array.isArray(draft.assignees) ? draft.assignees : [],
+        // Tagged members — server notifies them (excluding self).
+        mention_uids: Array.isArray(draft.mention_uids)
+          ? draft.mention_uids
+          : [],
       });
       const row = Array.isArray(raw) ? raw[0] : raw;
       if (row && row.id) {
@@ -943,8 +956,16 @@ class __tasks_panel extends LetcBox {
     const draftTitle = String(draft.title || "").trim();
     const taskTitle = String(task.title || "").trim();
     if (draftTitle && draftTitle !== taskTitle) upd.title = draftTitle;
-    if ((draft.description || "") !== (task.description || ""))
+    // Both are marker form (the editor serializes chips to markers).
+    if ((draft.description || "") !== (task.description || "")) {
       upd.description = draft.description || "";
+      // Notify only members tagged in this edit who weren't tagged before.
+      const before = Array.isArray(draft._mentioned_before)
+        ? draft._mentioned_before
+        : [];
+      const now = Array.isArray(draft.mention_uids) ? draft.mention_uids : [];
+      upd.mention_uids = now.filter((u) => !before.includes(u));
+    }
     if ((draft.priority || "medium") !== (task.priority || "medium"))
       upd.priority = draft.priority;
     const draftDue = (draft.due_date || "").trim();
@@ -1077,10 +1098,19 @@ class __tasks_panel extends LetcBox {
     if (!id) return;
     const task = this._tasks.find((t) => t.id === id);
     this._detailId = id;
+    // Description is stored/edited in marker form (`[@Name](user:uid)`); the
+    // editor renders chips from it. Seed mention_uids from the existing markers
+    // so the Update diff can tell which mentions are newly added.
+    const seededMentions = task
+      ? this._mentionUidsFromText(task.description || "")
+      : [];
     this._detailDraft = task
       ? {
           title: task.title || "",
           description: task.description || "",
+          mention_uids: seededMentions.slice(),
+          // Snapshot of who was already tagged, so Update only notifies new tags.
+          _mentioned_before: seededMentions,
           due_date: task.due_date || "",
           status: task.status || "todo",
           priority: task.priority || "medium",
@@ -1631,26 +1661,368 @@ class __tasks_panel extends LetcBox {
     );
   }
 
+  // ── @-mention (contenteditable description editor) ─────────────
+  // The description is a contenteditable div, so tagged members render as
+  // styled inline chips and the dropdown anchors to the live caret. The chip
+  // carries the uid, so serialization to "[@Name](user:uid)" markers is exact
+  // (no fragile name-matching) and that marker form is what we store/send.
+
+  _descDraft(scope) {
+    return scope === "create" ? this._createDefaults : this._detailDraft;
+  }
+
+  _descEditorEl(scope) {
+    const root =
+      this.el &&
+      this.el.querySelector(
+        scope === "create"
+          ? ".tasks-panel__create-modal"
+          : ".tasks-panel__detail-panel",
+      );
+    return root && root.querySelector(`.${this.fig.family}__desc-editor`);
+  }
+
+  // Build a contenteditable=false chip node for a mention.
+  _makeMentionChip(uid, name) {
+    const chip = document.createElement("span");
+    chip.className = `${this.fig.family}__mention-chip`;
+    chip.setAttribute("contenteditable", "false");
+    chip.dataset.uid = String(uid);
+    chip.dataset.name = name;
+    chip.textContent = `@${name}`;
+    return chip;
+  }
+
+  // Render stored marker text into the editor as text nodes + chip spans.
+  _renderEditorContent(editorEl, markerText) {
+    editorEl.textContent = "";
+    const text = String(markerText || "");
+    const appendText = (str) => {
+      str.split("\n").forEach((part, i) => {
+        if (i > 0) editorEl.appendChild(document.createElement("br"));
+        if (part) editorEl.appendChild(document.createTextNode(part));
+      });
+    };
+    const re = /\[@([^\]]+)\]\(user:([^)]+)\)/g;
+    let last = 0;
+    let m;
+    while ((m = re.exec(text))) {
+      if (m.index > last) appendText(text.slice(last, m.index));
+      editorEl.appendChild(this._makeMentionChip(m[2], m[1]));
+      last = re.lastIndex;
+    }
+    if (last < text.length) appendText(text.slice(last));
+  }
+
+  // Editor DOM → marker text. Chips become "[@Name](user:uid)"; <br>/<div>
+  // boundaries become newlines.
+  _serializeEditor(editorEl) {
+    const chipClass = `${this.fig.family}__mention-chip`;
+    let out = "";
+    const walk = (node) => {
+      node.childNodes.forEach((n) => {
+        if (n.nodeType === 3) {
+          out += n.textContent;
+        } else if (n.nodeType === 1) {
+          if (n.classList && n.classList.contains(chipClass)) {
+            const uid = n.dataset.uid;
+            const name = n.dataset.name || n.textContent.replace(/^@/, "");
+            out += `[@${name}](user:${uid})`;
+          } else if (n.tagName === "BR") {
+            out += "\n";
+          } else if (n.tagName === "DIV") {
+            if (out && !out.endsWith("\n")) out += "\n";
+            walk(n);
+          } else {
+            walk(n);
+          }
+        }
+      });
+    };
+    walk(editorEl);
+    return out;
+  }
+
+  _collectMentionUids(editorEl) {
+    const uids = [];
+    editorEl
+      .querySelectorAll(`.${this.fig.family}__mention-chip`)
+      .forEach((c) => {
+        const u = String(c.dataset.uid || "");
+        if (u && !uids.includes(u)) uids.push(u);
+      });
+    return uids;
+  }
+
+  _mentionUidsFromText(text) {
+    const uids = [];
+    String(text || "").replace(
+      /\[@[^\]]+\]\(user:([^)]+)\)/g,
+      (mt, uid) => {
+        if (uid && !uids.includes(String(uid))) uids.push(String(uid));
+        return mt;
+      },
+    );
+    return uids;
+  }
+
+  // Seed the editor from the draft and wire its events. Idempotent and called
+  // from both onPartReady and _prepopulateInputs (onPartReady alone doesn't
+  // reliably re-fire on reopen); only re-renders when the DOM differs from the
+  // draft, so an active caret isn't disturbed.
+  _initDescEditor(editorEl, scope) {
+    if (!editorEl) return;
+    // Guarantee the placeholder attr even if the framework dropped attrOpt.
+    if (!editorEl.getAttribute("data-placeholder")) {
+      editorEl.setAttribute(
+        "data-placeholder",
+        LOCALE.TASK_DESCRIPTION_PLACEHOLDER,
+      );
+    }
+    const draft = this._descDraft(scope);
+    const want = draft ? draft.description || "" : "";
+    if (this._serializeEditor(editorEl) !== want) {
+      this._renderEditorContent(editorEl, want);
+    }
+    editorEl.oninput = () => this._onDescInput(scope, editorEl);
+    editorEl.onkeydown = (e) => this._onDescKeydown(e, scope);
+    editorEl.onblur = () => setTimeout(() => this._closeMention(), 150);
+  }
+
+  _onDescInput(scope, editorEl) {
+    // Browsers leave a stray <br> when the field is cleared, which defeats the
+    // :empty placeholder — strip it back to truly empty.
+    if (
+      !editorEl.textContent.trim() &&
+      !editorEl.querySelector(`.${this.fig.family}__mention-chip`)
+    ) {
+      editorEl.innerHTML = "";
+    }
+    const draft = this._descDraft(scope);
+    if (draft) {
+      draft.description = this._serializeEditor(editorEl);
+      draft.mention_uids = this._collectMentionUids(editorEl);
+    }
+    this._handleEditorMention(editorEl, scope);
+  }
+
+  _onDescKeydown(e, scope) {
+    const ref = this._mention;
+    if (!ref || ref.scope !== scope) return;
+    if (e.key === "Escape") {
+      e.preventDefault();
+      return this._closeMention();
+    }
+    if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+      e.preventDefault();
+      const n = ref.members.length;
+      ref.index = (ref.index + (e.key === "ArrowDown" ? 1 : -1) + n) % n;
+      return this._highlightMention(ref);
+    }
+    if (e.key === "Enter") {
+      e.preventDefault();
+      return this._insertMentionChip(scope, ref.members[ref.index]);
+    }
+  }
+
+  // Detect an unterminated "@token" immediately before a collapsed caret and
+  // open the filtered dropdown. "@" alone lists everyone.
+  _handleEditorMention(editorEl, scope) {
+    const sel = window.getSelection();
+    if (!sel || !sel.rangeCount) return this._closeMention();
+    const range = sel.getRangeAt(0);
+    const node = range.startContainer;
+    if (!range.collapsed || node.nodeType !== 3 || !editorEl.contains(node))
+      return this._closeMention();
+    const m = node.textContent.slice(0, range.startOffset).match(/@([^\s@]*)$/);
+    if (!m) return this._closeMention();
+    const filter = m[1].toLowerCase();
+    const members = (this._members || [])
+      .filter((mm) => {
+        if (!filter) return true;
+        const name = [mm.firstname, mm.lastname]
+          .filter(Boolean)
+          .join(" ")
+          .toLowerCase();
+        return (
+          name.includes(filter) ||
+          String(mm.email || "").toLowerCase().includes(filter)
+        );
+      })
+      .slice(0, 8);
+    if (!members.length) return this._closeMention();
+    this._mention = {
+      scope,
+      node,
+      start: range.startOffset - m[0].length,
+      end: range.startOffset,
+      members,
+      index: 0,
+      dropdownEl: null,
+    };
+    this._openMention(scope, members, editorEl);
+  }
+
+  _openMention(scope, members, editorEl) {
+    const skel = require("./skeleton");
+    this.ensurePart(`${scope}-mention`)
+      .then((part) => {
+        if (!part || (part.isDestroyed && part.isDestroyed())) return;
+        part.feed(skel.buildMentionItemsContent(this, members));
+        const root = part.el;
+        if (!root || !this._mention || this._mention.scope !== scope) return;
+        this._mention.dropdownEl = root;
+        root
+          .querySelectorAll(`.${this.fig.family}__mention-item`)
+          .forEach((el, i) => {
+            el.dataset.active = i === 0 ? "1" : "0";
+            // Keep caret/selection in the editor through the click.
+            el.onmousedown = (ev) => ev.preventDefault();
+            el.onclick = (ev) => {
+              ev.preventDefault();
+              ev.stopPropagation();
+              this._insertMentionChip(scope, members[i]);
+            };
+          });
+        this._positionMentionAtCaret(root, editorEl);
+        root.dataset.open = "1";
+      })
+      .catch(() => {
+        /* not mounted yet */
+      });
+  }
+
+  // Position the popup just under the "@" text, anchored relative to the
+  // __desc-field (absolute, not fixed): windows are placed via CSS transform,
+  // so fixed coords would resolve against the window box and land outside. The
+  // caret rect comes from the @token range (a collapsed-caret rect is often
+  // empty); coordinates are field-relative, so transforms cancel out.
+  _positionMentionAtCaret(el, editorEl) {
+    const field = el.closest(`.${this.fig.family}__desc-field`);
+    if (!field) return;
+    const ref = this._mention;
+    let caret = null;
+    if (ref && ref.node && ref.node.isConnected) {
+      try {
+        const r = document.createRange();
+        r.setStart(ref.node, Math.max(0, ref.start));
+        r.setEnd(ref.node, Math.min(ref.end, ref.node.length));
+        caret = r.getBoundingClientRect();
+      } catch (_) {
+        /* offsets shifted — fall through */
+      }
+    }
+    if (!caret || (!caret.width && !caret.height)) {
+      const sel = window.getSelection();
+      if (sel && sel.rangeCount) caret = sel.getRangeAt(0).getBoundingClientRect();
+    }
+    if (!caret || (!caret.width && !caret.height && !caret.left && !caret.top)) {
+      caret = editorEl.getBoundingClientRect();
+    }
+    const fieldRect = field.getBoundingClientRect();
+    const maxH = 220;
+    el.style.left = `${Math.round(caret.left - fieldRect.left)}px`;
+    // Flip above the caret line when there isn't room below in the viewport.
+    if (window.innerHeight - caret.bottom < maxH) {
+      el.style.top = "auto";
+      el.style.bottom = `${Math.round(fieldRect.bottom - caret.top + 4)}px`;
+    } else {
+      el.style.bottom = "auto";
+      el.style.top = `${Math.round(caret.bottom - fieldRect.top + 4)}px`;
+    }
+  }
+
+  _highlightMention(ref) {
+    if (!ref || !ref.dropdownEl) return;
+    ref.dropdownEl
+      .querySelectorAll(`.${this.fig.family}__mention-item`)
+      .forEach((el, i) => {
+        el.dataset.active = i === ref.index ? "1" : "0";
+      });
+  }
+
+  _closeMention() {
+    if (!this._mention) return;
+    this._mention = null;
+    if (!this.el) return;
+    this.el
+      .querySelectorAll(`.${this.fig.family}__mention-dropdown`)
+      .forEach((d) => {
+        d.dataset.open = "0";
+      });
+  }
+
+  // Replace the "@token" range in the caret's text node with a chip + space.
+  _insertMentionChip(scope, member) {
+    const ref = this._mention;
+    this._closeMention();
+    if (!ref || !member) return;
+    const node = ref.node;
+    if (!node || node.nodeType !== 3 || !node.isConnected) return;
+    const editorEl = this._descEditorEl(scope);
+    if (!editorEl) return;
+    const uid = String(member.id || member.uid || "");
+    const name =
+      [member.firstname, member.lastname].filter(Boolean).join(" ").trim() ||
+      member.email ||
+      uid;
+    if (!uid) return;
+
+    const full = node.textContent;
+    const parent = node.parentNode;
+    const chip = this._makeMentionChip(uid, name);
+    const space = document.createTextNode(" ");
+    const afterNode = document.createTextNode(full.slice(ref.end));
+    node.textContent = full.slice(0, ref.start);
+    parent.insertBefore(afterNode, node.nextSibling);
+    parent.insertBefore(space, afterNode);
+    parent.insertBefore(chip, space);
+
+    const range = document.createRange();
+    range.setStart(afterNode, 0);
+    range.collapse(true);
+    const sel = window.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(range);
+    editorEl.focus();
+
+    const draft = this._descDraft(scope);
+    if (draft) {
+      draft.description = this._serializeEditor(editorEl);
+      draft.mention_uids = this._collectMentionUids(editorEl);
+    }
+  }
+
   _prepopulateInputs() {
     if (!this.el) return;
     const setVal = (sel, val) => {
       const el = this.el.querySelector(sel);
       if (el && (val || "") !== el.value) el.value = val || "";
     };
+    // The description editor is contenteditable; populate it here too (not just
+    // in onPartReady, which doesn't reliably re-fire on reopen).
+    const initEditor = (sel, scope) => {
+      const ed = this.el.querySelector(sel);
+      if (ed) this._initDescEditor(ed, scope);
+    };
     if (this._creating && this._createDefaults) {
-      const d = this._createDefaults;
-      setVal('.tasks-panel__create-modal [name="title"]', d.title);
       setVal(
-        '.tasks-panel__create-modal textarea[name="description"]',
-        d.description,
+        '.tasks-panel__create-modal [name="title"]',
+        this._createDefaults.title,
+      );
+      initEditor(
+        ".tasks-panel__create-modal .tasks-panel__desc-editor",
+        "create",
       );
     }
     if (this._detailDraft) {
-      const d = this._detailDraft;
-      setVal('.tasks-panel__detail-panel [name="title"]', d.title);
       setVal(
-        '.tasks-panel__detail-panel textarea[name="description"]',
-        d.description,
+        '.tasks-panel__detail-panel [name="title"]',
+        this._detailDraft.title,
+      );
+      initEditor(
+        ".tasks-panel__detail-panel .tasks-panel__desc-editor",
+        "detail",
       );
     }
   }
