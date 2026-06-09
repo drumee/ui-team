@@ -48,6 +48,8 @@ const __button = function (ui, trigger, k) {
 
     deletePermanently: button({ content: LOCALE.DELETE_PERMENANTLY, service: 'delete-permanently' }),
 
+    designationLink: button({ content: LOCALE.DESIGNATION_LINK, service: 'designation-link' }),
+
     directUrl: button({ content: LOCALE.URL_ADDRESS, service: 'direct-url' }),
 
     download: button({ content: LOCALE.DOWNLOAD, service: _e.download }),
