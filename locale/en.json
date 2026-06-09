@@ -851,6 +851,7 @@
   "COPY_MEETING_LINK": "Copy Meeting Link",
   "FULLSCREEN": "Enter Full Screen",
   "EXIT_FULLSCREEN": "Exit Full Screen",
+  "MAXIMIZE": "Maximize",
   "TILE_LEFT": "Tile Window to Left",
   "TILE_RIGHT": "Tile Window to Right",
   "REFRAME": "Reframe",

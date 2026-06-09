@@ -704,6 +704,7 @@
   "COPY_MEETING_LINK": "复制会议链接",
   "FULLSCREEN": "全屏",
   "EXIT_FULLSCREEN": "退出全屏",
+  "MAXIMIZE": "最大化",
   "OPEN_FILE_LOCATION": "打开文件所在位置",
   "SET_AS_BACKGROUND": "设置为背景",
   "MESSAGE_NOT_SENT_RETRY": "无法发送消息。请重试。",

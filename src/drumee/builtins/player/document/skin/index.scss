@@ -30,6 +30,20 @@
     }
   }
 
+  // True browser fullscreen (doc-fullscreen button / Fullscreen API). The UA
+  // :fullscreen rule is overridden by the JS-set inline width/height/top/left,
+  // so force the element to fill the screen.
+  &__ui:fullscreen,
+  &__ui:-webkit-full-screen {
+    width: 100% !important;
+    height: 100% !important;
+    max-width: none !important;
+    max-height: none !important;
+    top: 0 !important;
+    left: 0 !important;
+    border-radius: 0;
+  }
+
   &__main {
     height: 100%;
     min-height: 300px;

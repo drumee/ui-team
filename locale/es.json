@@ -1069,6 +1069,7 @@
   "COPY_MEETING_LINK": "Copy Meeting Link",
   "FULLSCREEN": "Fullscreen",
   "EXIT_FULLSCREEN": "Exit fullscreen",
+  "MAXIMIZE": "Maximizar",
   "OPEN_FILE_LOCATION": "Open file location",
   "SET_AS_BACKGROUND": "Set as background",
   "MESSAGE_NOT_SENT_RETRY": "The message could not be sent. Please retry.",

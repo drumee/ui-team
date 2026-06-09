@@ -704,6 +704,7 @@
   "COPY_MEETING_LINK": "Copier le lien de la réunion",
   "FULLSCREEN": "Plein écran",
   "EXIT_FULLSCREEN": "Quitter le mode plein écran",
+  "MAXIMIZE": "Agrandir",
   "OPEN_FILE_LOCATION": "Ouvrir l'emplacement du fichier",
   "SET_AS_BACKGROUND": "Définir comme arrière-plan",
   "MESSAGE_NOT_SENT_RETRY": "Le message n'a pas pu être envoyé. Veuillez réessayer.",
