@@ -1557,5 +1557,15 @@
   "ONBOARDING_GOAL_PERSONAL": "Gestion personnelle de fichiers - un seul systeme",
   "ONBOARDING_INVITE_PLACEHOLDER": "collegue@entreprise.com",
   "INVITE_PLACEHOLDER": "nom@entreprise.com",
-  "INVITE_LINK_INVALID": "Ce lien d'invitation n'est plus valide."
+  "INVITE_LINK_INVALID": "Ce lien d'invitation n'est plus valide.",
+  "SECURE_SHARE_ADD_EMAIL_PLACEHOLDER": "Ajouter un email ou @domaine, appuyez sur Entrée",
+  "SECURE_SHARE_CAN_CHAT": "Chat",
+  "SECURE_SHARE_CAN_DOWNLOAD": "Télécharger",
+  "SECURE_SHARE_CAN_EDIT": "Modifier",
+  "SECURE_SHARE_CAN_VIEW": "Voir",
+  "SECURE_SHARE_PERMISSION_LEVEL": "Niveau d'autorisation",
+  "SECURE_SHARE_PUBLIC": "Public",
+  "SECURE_SHARE_RECIPIENTS": "destinataires",
+  "SECURE_SHARE_REQUIRE_EMAIL": "Restreindre à des emails spécifiques",
+  "SECURE_SHARE_REQUIRE_PASSWORD": "Exiger un mot de passe"
 }

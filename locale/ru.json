@@ -1557,5 +1557,15 @@
   "ONBOARDING_GOAL_PERSONAL": "Личное управление файлами - одна система",
   "ONBOARDING_INVITE_PLACEHOLDER": "коллега@компания.com",
   "INVITE_PLACEHOLDER": "имя@компания.com",
-  "INVITE_LINK_INVALID": "Эта пригласительная ссылка больше недействительна."
+  "INVITE_LINK_INVALID": "Эта пригласительная ссылка больше недействительна.",
+  "SECURE_SHARE_ADD_EMAIL_PLACEHOLDER": "Добавить email или @домен, нажмите Enter",
+  "SECURE_SHARE_CAN_CHAT": "Чат",
+  "SECURE_SHARE_CAN_DOWNLOAD": "Скачать",
+  "SECURE_SHARE_CAN_EDIT": "Редактировать",
+  "SECURE_SHARE_CAN_VIEW": "Просмотр",
+  "SECURE_SHARE_PERMISSION_LEVEL": "Уровень доступа",
+  "SECURE_SHARE_PUBLIC": "Публичный",
+  "SECURE_SHARE_RECIPIENTS": "получателей",
+  "SECURE_SHARE_REQUIRE_EMAIL": "Ограничить определёнными адресами",
+  "SECURE_SHARE_REQUIRE_PASSWORD": "Требовать пароль"
 }

@@ -3,6 +3,7 @@ const __skl_secure_share = function(_ui_) {
   const pfx   = _ui_.fig.family;
   const group = _ui_.fig.group;
 
+  // ── Topbar (unchanged) ────────────────────────────────────
   const topbar = Skeletons.Box.X({
     className : `${group}-topbar__container`,
     sys_pn    : 'topbar',
@@ -27,43 +28,108 @@ const __skl_secure_share = function(_ui_) {
     kids      : [topbar]
   });
 
-  const emailRow = Skeletons.Box.X({
-    className : `${pfx}__row`,
+  // ── Permission level section ──────────────────────────────
+  const PERM_LEVELS = [
+    { level: 'can_view',     label: LOCALE.SECURE_SHARE_CAN_VIEW },
+    { level: 'can_download', label: LOCALE.SECURE_SHARE_CAN_DOWNLOAD },
+    { level: 'can_chat',     label: LOCALE.SECURE_SHARE_CAN_CHAT },
+    { level: 'can_edit',     label: LOCALE.SECURE_SHARE_CAN_EDIT },
+  ];
+
+  const permSection = Skeletons.Box.Y({
+    className : `${pfx}__perm-section`,
     kids      : [
-      Skeletons.Note({ className: `${pfx}__label`, content: LOCALE.SECURE_SHARE_RECIPIENT }),
-      Skeletons.EntryBox({
-        className    : `${pfx}__input email`,
-        sys_pn       : 'ref-email',
-        formItem     : _a.email,
-        type         : _a.email,
-        placeholder  : LOCALE.SECURE_SHARE_EMAIL_PLACEHOLDER,
-        preselect    : 1,
-        errorHandler : [_ui_],
-        validators   : [
-          { reason: LOCALE.SECURE_SHARE_ENTER_EMAIL, comply: Validator.require },
-          { reason: LOCALE.INVALID_EMAIL,            comply: Validator.email }
-        ],
-        showError : false
+      Skeletons.Note({ className: `${pfx}__perm-label`, content: LOCALE.SECURE_SHARE_PERMISSION_LEVEL }),
+      Skeletons.Box.X({
+        className : `${pfx}__perm-btns`,
+        kids      : PERM_LEVELS.map(({ level, label }) => Skeletons.Box.X({
+          className : `${pfx}__perm-btn button`,
+          service   : 'select-permission',
+          level,
+          dataset   : { level, selected: level === 'can_view' ? 'yes' : '' },
+          uiHandler : [_ui_],
+          kidsOpt   : { active: 0 },
+          kids      : [Skeletons.Note({ content: label })]
+        }))
       })
     ]
   });
 
-  const domainRow = Skeletons.Box.X({
-    className : `${pfx}__row`,
+  // ── Access management section ─────────────────────────────
+  const emailToggleRow = Skeletons.Box.X({
+    className : `${pfx}__toggle-row`,
     kids      : [
-      Skeletons.Note({ className: `${pfx}__label`, content: LOCALE.SECURE_SHARE_DOMAIN_RESTRICTION }),
+      Skeletons.Note({ className: `${pfx}__toggle-label`, content: LOCALE.SECURE_SHARE_REQUIRE_EMAIL }),
+      Skeletons.Box.X({
+        className : `${pfx}__toggle`,
+        dataset   : { for: 'require-email', on: '' },
+        service   : 'toggle-require-email',
+        uiHandler : [_ui_],
+        kidsOpt   : { active: 0 },
+        kids      : [Skeletons.Box.X({ className: `${pfx}__toggle-thumb` })]
+      })
+    ]
+  });
+
+  const emailGate = Skeletons.Box.Y({
+    className : `${pfx}__email-gate`,
+    dataset   : { mode: _a.closed },
+    kids      : [
+      Skeletons.Box.X({
+        className : `${pfx}__chips-area`,
+        sys_pn    : 'chips-container'
+      }),
       Skeletons.EntryBox({
-        className   : `${pfx}__input domain`,
-        sys_pn      : 'ref-domain',
-        formItem    : 'domain_restriction',
+        className   : `${pfx}__chip-input`,
+        sys_pn      : 'ref-chips-input',
+        formItem    : 'chip_email',
         type        : _a.text,
-        placeholder : 'company.com',
+        placeholder : LOCALE.SECURE_SHARE_ADD_EMAIL_PLACEHOLDER,
+        mode        : 'commit',
+        service     : 'add-email-chip',
+        uiHandler   : [_ui_],
         showError   : false
       })
     ]
   });
 
-  // Expiry preset buttons (1h / 24h / 7d / Custom)
+  const passwordToggleRow = Skeletons.Box.X({
+    className : `${pfx}__toggle-row`,
+    kids      : [
+      Skeletons.Note({ className: `${pfx}__toggle-label`, content: LOCALE.SECURE_SHARE_REQUIRE_PASSWORD }),
+      Skeletons.Box.X({
+        className : `${pfx}__toggle`,
+        dataset   : { for: 'require-password', on: '' },
+        service   : 'toggle-require-password',
+        uiHandler : [_ui_],
+        kidsOpt   : { active: 0 },
+        kids      : [Skeletons.Box.X({ className: `${pfx}__toggle-thumb` })]
+      })
+    ]
+  });
+
+  const passwordGate = Skeletons.Box.Y({
+    className : `${pfx}__password-gate`,
+    dataset   : { mode: _a.closed },
+    kids      : [
+      Skeletons.EntryBox({
+        className   : `${pfx}__input password`,
+        sys_pn      : 'ref-create-password',
+        formItem    : 'password',
+        type        : _a.password,
+        placeholder : LOCALE.SECURE_SHARE_PASSWORD_PLACEHOLDER,
+        shower      : 1,
+        showError   : false
+      })
+    ]
+  });
+
+  const accessSection = Skeletons.Box.Y({
+    className : `${pfx}__access-section`,
+    kids      : [emailToggleRow, emailGate, passwordToggleRow, passwordGate]
+  });
+
+  // ── Expiry section (unchanged) ────────────────────────────
   const expiryRow = Skeletons.Box.X({
     className : `${pfx}__row expiry`,
     kids      : [
@@ -112,7 +178,6 @@ const __skl_secure_share = function(_ui_) {
     ]
   });
 
-  // Custom expiry inputs — hidden until "Custom" preset is selected
   const customExpiryRow = Skeletons.Box.X({
     className : `${pfx}__row custom-expiry`,
     sys_pn    : 'custom-expiry',
@@ -140,23 +205,7 @@ const __skl_secure_share = function(_ui_) {
     ]
   });
 
-  // Optional password field (communicated out-of-band to recipient)
-  const passwordRow = Skeletons.Box.X({
-    className : `${pfx}__row`,
-    kids      : [
-      Skeletons.Note({ className: `${pfx}__label`, content: LOCALE.SECURE_SHARE_PASSWORD_OPTIONAL }),
-      Skeletons.EntryBox({
-        className   : `${pfx}__input password`,
-        sys_pn      : 'ref-create-password',
-        formItem    : 'password',
-        type        : _a.password,
-        placeholder : LOCALE.SECURE_SHARE_PASSWORD_PLACEHOLDER,
-        shower      : 1,
-        showError   : false
-      })
-    ]
-  });
-
+  // ── Create button + link result (unchanged) ───────────────
   const createButton = Skeletons.Box.X({
     className : `${pfx}__row buttons`,
     kids      : [
@@ -180,9 +229,10 @@ const __skl_secure_share = function(_ui_) {
 
   const body = Skeletons.Box.Y({
     className : `${pfx}__body`,
-    kids      : [ emailRow, domainRow, expiryRow, customExpiryRow, passwordRow, createButton, linkResult ]
+    kids      : [permSection, accessSection, expiryRow, customExpiryRow, createButton, linkResult]
   });
 
+  // ── Share list section (unchanged) ───────────────────────
   const shareList = Skeletons.Box.Y({
     className : `${pfx}__share-list`,
     sys_pn    : 'share-list'
@@ -200,7 +250,7 @@ const __skl_secure_share = function(_ui_) {
     className : `${pfx}__main ${group}__main drive-popup`,
     radio     : _a.parent,
     debug     : __filename,
-    kids      : [ header, body, listSection ]
+    kids      : [header, body, listSection]
   });
 };
 

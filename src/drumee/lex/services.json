@@ -134,6 +134,7 @@
   },
   "secure_share": {
     "create": "secure_share.create",
+    "access_list": "secure_share.access_list",
     "list": "secure_share.list",
     "revoke": "secure_share.revoke",
     "delete": "secure_share.delete"

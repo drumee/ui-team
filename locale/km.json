@@ -1557,5 +1557,15 @@
   "ONBOARDING_GOAL_PERSONAL": "គ្រប់គ្រងឯកសារផ្ទាល់ខ្លួន",
   "ONBOARDING_INVITE_PLACEHOLDER": "សមាជិក@ក្រុមហ៊ុន.com",
   "INVITE_PLACEHOLDER": "ឈ្មោះ@ក្រុមហ៊ុន.com",
-  "INVITE_LINK_INVALID": "តំណអញ្ជើញនេះលែងមានសុពលភាពទៀតហើយ។"
+  "INVITE_LINK_INVALID": "តំណអញ្ជើញនេះលែងមានសុពលភាពទៀតហើយ។",
+  "SECURE_SHARE_ADD_EMAIL_PLACEHOLDER": "Add email or @domain, press Enter",
+  "SECURE_SHARE_CAN_CHAT": "Chat",
+  "SECURE_SHARE_CAN_DOWNLOAD": "Download",
+  "SECURE_SHARE_CAN_EDIT": "Edit",
+  "SECURE_SHARE_CAN_VIEW": "View",
+  "SECURE_SHARE_PERMISSION_LEVEL": "Permission level",
+  "SECURE_SHARE_PUBLIC": "Public",
+  "SECURE_SHARE_RECIPIENTS": "recipients",
+  "SECURE_SHARE_REQUIRE_EMAIL": "Restrict to specific emails",
+  "SECURE_SHARE_REQUIRE_PASSWORD": "Require password"
 }

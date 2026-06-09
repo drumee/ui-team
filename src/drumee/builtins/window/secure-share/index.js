@@ -19,7 +19,11 @@ class __window_secure_share extends mfsInteract {
       this.style.set({ top: (window.innerHeight / 2) - (this.size.height / 2) });
     }
     this.style.set({ width: this.size.width, height: this.size.height });
-    this._expiryPreset = null;
+    this._expiryPreset    = null;
+    this._permissionLevel = 'can_view';
+    this._requireEmail    = false;
+    this._requirePassword = false;
+    this._emailChips      = [];
     this.declareHandlers();
     this.bindEvent(_a.live);
   }
@@ -55,6 +59,10 @@ class __window_secure_share extends mfsInteract {
         return this._hoursInput = child;
       case 'ref-create-password':
         return this._createPasswordInput = child;
+      case 'chips-container':
+        return this._chipsContainer = child;
+      case 'ref-chips-input':
+        return this._chipsInput = child;
       case 'custom-expiry':
         return this._customExpiry = child;
       case 'share-list':
@@ -73,6 +81,16 @@ class __window_secure_share extends mfsInteract {
     switch (service) {
       case 'create-secure-share':
         return this._createShare();
+      case 'select-permission':
+        return this._selectPermission(cmd);
+      case 'toggle-require-email':
+        return this._toggleRequireEmail();
+      case 'toggle-require-password':
+        return this._toggleRequirePassword();
+      case 'add-email-chip':
+        return this._addEmailChip();
+      case 'remove-email-chip':
+        return this._removeEmailChip(cmd);
       case 'expiry-preset':
         return this._selectPreset(cmd);
       case 'copy-secure-link':
@@ -99,6 +117,80 @@ class __window_secure_share extends mfsInteract {
     if (this._customExpiry) {
       this._customExpiry.el.dataset.mode = (preset === 'custom') ? _a.open : _a.closed;
     }
+  }
+
+  _selectPermission(cmd) {
+    const level = cmd.mget('level');
+    if (!level) return;
+    this._permissionLevel = level;
+    this.el.querySelectorAll(`.${this.fig.family}__perm-btn`).forEach(btn => {
+      btn.dataset.selected = (btn.dataset.level === level) ? 'yes' : '';
+    });
+  }
+
+  _toggleRequireEmail() {
+    this._requireEmail = !this._requireEmail;
+    const toggle = this.el.querySelector(`.${this.fig.family}__toggle[data-for='require-email']`);
+    if (toggle) toggle.dataset.on = this._requireEmail ? 'yes' : '';
+    const gate = this.el.querySelector(`.${this.fig.family}__email-gate`);
+    if (gate) gate.dataset.mode = this._requireEmail ? _a.open : _a.closed;
+    if (!this._requireEmail) {
+      this._emailChips = [];
+      this._renderChips();
+    }
+  }
+
+  _toggleRequirePassword() {
+    this._requirePassword = !this._requirePassword;
+    const toggle = this.el.querySelector(`.${this.fig.family}__toggle[data-for='require-password']`);
+    if (toggle) toggle.dataset.on = this._requirePassword ? 'yes' : '';
+    const gate = this.el.querySelector(`.${this.fig.family}__password-gate`);
+    if (gate) gate.dataset.mode = this._requirePassword ? _a.open : _a.closed;
+    if (!this._requirePassword && this._createPasswordInput) {
+      const input = this._createPasswordInput.el.querySelector('input');
+      if (input) input.value = '';
+    }
+  }
+
+  _addEmailChip() {
+    if (!this._chipsInput) return;
+    const input = this._chipsInput.el.querySelector('input');
+    if (!input) return;
+    const raw = input.value.trim().toLowerCase();
+    if (!raw) return;
+    const isEmail  = Validator.email(raw);
+    const isDomain = raw.startsWith('@') && raw.length > 1 && !/\s/.test(raw);
+    if (!isEmail && !isDomain) return;
+    if (!this._emailChips.includes(raw)) this._emailChips.push(raw);
+    input.value = '';
+    this._renderChips();
+  }
+
+  _removeEmailChip(cmd) {
+    const email = cmd.mget('chip_email');
+    this._emailChips = this._emailChips.filter(e => e !== email);
+    this._renderChips();
+  }
+
+  _renderChips() {
+    if (!this._chipsContainer) return;
+    const pfx  = this.fig.family;
+    const kids = this._emailChips.map(email =>
+      Skeletons.Box.X({
+        className : `${pfx}__chip`,
+        kids      : [
+          Skeletons.Note({ className: `${pfx}__chip-text`, content: email }),
+          Skeletons.Note({
+            className  : `${pfx}__chip-remove`,
+            content    : '×',
+            service    : 'remove-email-chip',
+            chip_email : email,
+            uiHandler  : [this]
+          })
+        ]
+      })
+    );
+    this._chipsContainer.feed(Skeletons.Box.X({ className: `${pfx}__chips`, kids }));
   }
 
   async _loadShares() {
@@ -132,21 +224,11 @@ class __window_secure_share extends mfsInteract {
   async _createShare() {
     if (this._linkResult) this._linkResult.el.dataset.mode = _a.closed;
 
-    const email = this._emailInput ? (this._emailInput.getData().value || '').trim() : '';
-    if (!email) {
-      if (this._emailInput) this._emailInput.showError(LOCALE.SECURE_SHARE_ENTER_EMAIL);
-      return;
-    }
-    if (!Validator.email(email)) {
-      if (this._emailInput) this._emailInput.showError(LOCALE.INVALID_EMAIL);
-      return;
-    }
+    const nid    = this.mget(_a.nid);
+    const hub_id = this.mget(_a.hub_id);
 
-    const nid              = this.mget(_a.nid);
-    const hub_id           = this.mget(_a.hub_id);
-    const domain_restriction = this._domainInput ? (this._domainInput.getData().value || '') : '';
-    const password         = this._createPasswordInput
-      ? (this._createPasswordInput.getData().value || '').trim()
+    const password = this._requirePassword && this._createPasswordInput
+      ? (this._createPasswordInput.el.querySelector('input')?.value || '').trim()
       : '';
 
     // Derive days/hours from selected preset
@@ -163,7 +245,8 @@ class __window_secure_share extends mfsInteract {
         break; // no preset selected = no expiry
     }
 
-    const payload = { nid, hub_id, email, domain_restriction, days, hours };
+    const payload = { nid, hub_id, permission_level: this._permissionLevel, days, hours };
+    if (this._requireEmail && this._emailChips.length) payload.allowed_emails = this._emailChips;
     if (password) payload.password = password;
 
     const data = await this.postService(SERVICE.secure_share.create, payload);
@@ -193,16 +276,45 @@ class __window_secure_share extends mfsInteract {
     }
   }
 
-  // Clear all form inputs and preset state after a successful create
+  // Clear all form inputs and reset state after a successful create
   _resetForm() {
-    [this._emailInput, this._domainInput, this._createPasswordInput, this._daysInput, this._hoursInput].forEach(ref => {
+    const pfx = this.fig.family;
+
+    // Reset permission level → back to default 'can_view'
+    this._permissionLevel = 'can_view';
+    this.el.querySelectorAll(`.${pfx}__perm-btn`).forEach(btn => {
+      btn.dataset.selected = (btn.dataset.level === 'can_view') ? 'yes' : '';
+    });
+
+    // Reset email toggle + gate
+    this._requireEmail = false;
+    this._emailChips   = [];
+    const emailToggle = this.el.querySelector(`.${pfx}__toggle[data-for='require-email']`);
+    if (emailToggle) emailToggle.dataset.on = '';
+    const emailGate = this.el.querySelector(`.${pfx}__email-gate`);
+    if (emailGate) emailGate.dataset.mode = _a.closed;
+    this._renderChips();
+
+    // Reset password toggle + gate + input
+    this._requirePassword = false;
+    const pwToggle = this.el.querySelector(`.${pfx}__toggle[data-for='require-password']`);
+    if (pwToggle) pwToggle.dataset.on = '';
+    const pwGate = this.el.querySelector(`.${pfx}__password-gate`);
+    if (pwGate) pwGate.dataset.mode = _a.closed;
+    if (this._createPasswordInput) {
+      const input = this._createPasswordInput.el.querySelector('input');
+      if (input) input.value = '';
+    }
+
+    // Reset expiry (unchanged logic)
+    [this._daysInput, this._hoursInput].forEach(ref => {
       if (ref) {
         const input = ref.el.querySelector('input');
         if (input) input.value = '';
       }
     });
     this._expiryPreset = null;
-    this.el.querySelectorAll(`.${this.fig.family}__preset`).forEach(btn => {
+    this.el.querySelectorAll(`.${pfx}__preset`).forEach(btn => {
       btn.dataset.selected = '';
     });
     if (this._customExpiry) this._customExpiry.el.dataset.mode = _a.closed;
