@@ -507,6 +507,7 @@
   "OWNERS": "Owners",
   "PASSWORD": "Password",
   "PASSWORDS_DONT_MATCH": "New passwords don't match.",
+  "CONFIRM_PASSWORDS_DONT_MATCH": "Las contraseñas no coinciden.",
   "PASSWORD_CHANGE_FAILED": "Could not update password. Please check your current password.",
   "PASSWORD_FIELDS_REQUIRED": "Please fill in all fields.",
   "PASSWORD_TOO_SHORT": "Password must be at least 8 characters.",

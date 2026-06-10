@@ -1,6 +1,5 @@
 function __skl_welcome_reset(ui) {
   const fig = ui.fig.family
-  const { button } = require("builtins/skeleton/toolkit");
   const msgBox = require('../../skeleton/common/message-box').default(ui)
 
   const header = Skeletons.Box.Y({
@@ -9,13 +8,34 @@ function __skl_welcome_reset(ui) {
     kids: require('./header').default(ui)
   })
 
-  const content = Skeletons.Box.X({
+  const content = Skeletons.Box.Y({
     className: `${fig}__content`,
     sys_pn: _a.content,
     kids: require('./password').default(ui)
   })
 
-  let a = Skeletons.Box.Y({
+  // Update-password action. The box itself carries the click service and is
+  // styled as the primary button; it starts disabled (state 0) and is enabled
+  // by the controller once every rule passes and both fields match.
+  const button = Skeletons.Box.X({
+    className: `${fig}__button-confirm`,
+    sys_pn: 'button-confirm',
+    service: 'create-password',
+    uiHandler: [ui],
+    dataset: { state: 0 },
+    kids: [
+      Skeletons.Button.Svg({
+        ico: 'app-check',
+        className: `${fig}__button-ico`
+      }),
+      Skeletons.Note({
+        className: `${fig}__button-label`,
+        content: LOCALE.UPDATE_PASSWORD
+      })
+    ]
+  })
+
+  return Skeletons.Box.Y({
     className: `${fig}__main`,
     debug: __filename,
     kids: [
@@ -27,22 +47,9 @@ function __skl_welcome_reset(ui) {
         ]
       }),
       msgBox,
-      button(ui, {
-        label: LOCALE.CONFIRM,
-        type: _a.toggle,
-        className: `${fig}__button`,
-        service: "create-password",
-        ico: "arrow-right",
-        sys_pn: "button-confirm",
-        flow: 'g',
-        priority: "primary",
-      }),
-
+      button
     ]
   })
-
-  return a;
-
 }
 
 export default __skl_welcome_reset

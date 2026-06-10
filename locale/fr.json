@@ -1240,6 +1240,7 @@
   "NO_LINKED_ACCOUNTS_HINT": "Sign in with Google or Apple from the welcome screen to link an account.",
   "OPEN_IN_WINDOW": "Open in window",
   "PASSWORDS_DONT_MATCH": "New passwords don't match.",
+  "CONFIRM_PASSWORDS_DONT_MATCH": "Les mots de passe ne correspondent pas.",
   "PASSWORD_CHANGE_FAILED": "Could not update password. Please check your current password.",
   "PASSWORD_FIELDS_REQUIRED": "Please fill in all fields.",
   "PASSWORD_TOO_SHORT": "Password must be at least 8 characters.",

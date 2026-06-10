@@ -1,406 +1,342 @@
+/** ================================================================== *
+#   Copyright Xialia.com  2011-2021
+#   FILE : /src/drumee/modules/welcome/reset/skin/index.scss
+#   TYPE : Component style
+# ===================================================================**/
+
 @use "mixins/drumee";
-@use "skin/lib/button" as *;
+
+// Figma tokens (Drumee design system) — kept in sync with the signin module.
+$drumee-bg: #f2f2f7; // Grey/20
+$drumee-primary: #433cc5; // Primary/50
+$drumee-primary-hover: #5950ff; // brand overlay
+$drumee-grey-90: #34343a; // Grey/90
+$drumee-grey-80: #65656c; // Grey/80
+$drumee-input-bg: rgba(0, 0, 0, 0.05);
+$drumee-success: #1faa59; // satisfied requirement pill
 
 .welcome-reset {
   &__ui {
-    padding-top: 70px;
-    align-content: center;
-    flex-wrap: wrap;
+    background-color: $drumee-bg;
+    min-height: 100vh;
     width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
   }
 
+  &__main {
+    align-items: stretch;
+    justify-content: flex-start;
+    margin: 0 auto;
+    max-width: 520px;
+    width: 520px;
+    background-color: var(--white);
+    border-radius: 12px;
+    padding: 48px;
+
+    &[data-device="mobile"] {
+      width: auto;
+      max-width: 100%;
+      margin: 0 10px;
+      padding: 32px;
+    }
+  }
+
+  &__container {
+    width: 100%;
+    gap: 32px;
+  }
+
+  // --- Header: inline lock icon + title -------------------------------------
   &__header {
-    height: auto;
+    width: 100%;
   }
 
   &__header-content {
     align-items: center;
-  }
-
-  &__content {
-    height: 75px;
+    gap: 12px;
     width: 100%;
   }
 
-  &__container {
-    height: 100%;
-    width: 100%;
-    gap: var(--spacer-5);
-  }
+  &__header-icon.lock {
+    width: 32px;
+    height: 32px;
+    flex-shrink: 0;
+    color: $drumee-primary;
 
-  &__main {
-    justify-content: start;
-    align-items: center;
-    width: 480px;
-    border-width: 1px;
-    gap: var(--spacer-8);
-    background-color: var(--white);
-    border: 1px solid var(--neutral-200);
-    padding: var(--spacer-7);
-    border-radius: var(--corner-radius-6);
-
-    &[data-device="mobile"] {
-      width: auto;
-      margin: 0 10px;
-    }
-  }
-
-  &__content-password {
-    align-items: center;
-    flex-wrap: wrap;
-    justify-content: center;
-    width: 100%;
-  }
-
-  &__passmeter {
-    align-items: center;
-    justify-content: start;
-    margin: 0 auto 0;
-    width: 100%;
-
-    & .welcome__pw-meter {
-      &.info {
-        color: var(--neutral-800);
-      }
-
-      &.wrapper {
-        margin-top: 28px;
-      }
-
-      & .strength {
-        background-color: #abafc7;
-      }
-    }
-  }
-
-  &__entry.password {
-    padding: 0;
-  }
-
-  &__wrapper {
-    align-items: center;
-    height: 100%;
-    justify-content: center;
-    margin: 5px 0;
-    max-height: 70px;
-    width: 100%;
-
-    &.no-code {
-      &[data-mode="closed"] {
-        display: none;
-      }
-    }
-  }
-
-  &__row {
-    border-radius: var(--border-radius);
-    align-items: center;
-    background-color: var(--default-bg-block);
-    max-height: 56px;
-    height: 100%;
-    width: 100%;
-
-    &.mobile-title,
-    &.email-title {
-      margin-bottom: 60px;
-    }
-
-    &.without-icon,
-    &.no-background {
-      background-color: transparent;
-
-      &.title {
-        width: 405px;
-      }
-    }
-
-    &.no-code,
-    &.message-wrapper {
-      justify-content: center;
-    }
-
-    & .welcome__icon.lock {
-      padding: 0;
-      top: 5px;
-
-      svg {
-        fill: var(--egrey-2f);
-      }
-    }
-
-    &.mobile-number {
-      max-height: 70px;
-    }
-
-    &.buttons-wrapper,
-    &.message-wrapper {
-      // margin: 75px 0 15px 0px;
-      font-size: 16px;
-      color: var(--neutral-700);
-
-      &.message.no-background {
-        width: 400px;
-      }
-
-      &[data-mode="closed"] {
-        display: none;
-      }
-
-      &[data-error="yes"] {
-        opacity: 0.5;
-        pointer-events: none;
-      }
-    }
-
-    & .welcome__entry {
+    svg {
+      width: 100%;
       height: 100%;
-
-      &[data-status="error"] {
-        border-radius: var(--border-radius);
-        border: 1px solid var(--default-border-error); //var(--eorange-sunset);
-      }
+      fill: currentColor;
     }
-  }
-
-  &__mobile-wrapper {
-    justify-content: center;
-    padding-top: 10px;
   }
 
   &__note {
-    justify-content: center;
-    text-align: center;
-    width: 100%;
     @include drumee.typo(
-      $size: 20px,
-      $line: 28px,
+      $size: 14px,
+      $line: 1.4,
       $weight: 400,
-      $color: var(--neutral-900)
+      $color: $drumee-grey-80
     );
+    width: 100%;
 
     &.header {
       @include drumee.typo(
-        $size: 38px,
-        $line: 45px,
-        $weight: 500,
-        $color: var(--neutral-900)
+        $size: 32px,
+        $line: 1.1,
+        $weight: 600,
+        $color: $drumee-primary
       );
-    }
-
-    // &.steps {
-    //   color: var(--neutral-900);
-    // }
-
-    &.drumee-com {
-      // color: var(--white-f9);
-      position: absolute;
-      right: -130px;
-      @include drumee.typo(
-        $size: 20px,
-        $line: 28px,
-        $weight: 500,
-        $color: var(--white-f9)
-      );
-    }
-
-    &.input-label {
-      max-width: 110px;
-      text-align: right;
-      width: 100%;
-    }
-
-    &.password-tips {
-      padding-top: 47px;
-      @include drumee.typo(
-        $size: 12px,
-        $line: 16px,
-        $weight: 400,
-        $color: var(--white-f9)
-      );
-    }
-
-    &.mobile-number {
-      align-items: center;
-      width: 376px;
-      margin-top: -5px;
-    }
-
-    &.mobile {
-      justify-content: center;
-      width: 100%;
-    }
-
-    &.no-code,
-    &.not-now {
-      width: 100%;
-      @include drumee.typo($size: 16px, $line: 16px, $color: var(--white-f9));
-    }
-
-    &.no-code-text,
-    &.title {
-      justify-content: center;
-    }
-
-    &.resent-code {
       justify-content: flex-start;
+      text-align: left;
+      width: auto;
     }
 
-    &.correct-number,
-    &.not-now {
-      justify-content: flex-end;
-    }
-
-    &.text-underline {
-      cursor: pointer;
-      text-decoration-line: underline;
-
-      &:hover {
-        color: var(--eviolet); //#6a85ff;
-      }
+    &.message {
+      justify-content: center;
+      text-align: center;
+      color: var(--default-text-error);
     }
   }
 
-  &__icon {
-    color: var(--default-icon-neutral); //var(--egrey-89);
-    cursor: pointer;
-    height: 18px;
-    width: 18px;
+  // --- Form -----------------------------------------------------------------
+  &__content {
+    width: 100%;
+    height: auto;
+  }
 
-    &.input-wrapper {
-      position: absolute;
-      margin: 12px 20px;
-    }
+  &__content-password {
+    align-items: stretch;
+    width: 100%;
+    gap: 9px;
+  }
 
-    &.mobile,
-    &.mobile-number,
-    &.acknowledgment {
-      color: var(--neutral-900); //var(--ewhite);
-    }
+  &__entry-main {
+    width: 100%;
+    gap: 9px;
+  }
 
-    &.mobile,
-    &.mobile-number {
-      height: 20px;
-      width: 20px;
-    }
+  &__entry-label {
+    @include drumee.typo(
+      $size: 14px,
+      $line: 1.4,
+      $weight: 400,
+      $color: $drumee-grey-80
+    );
+    text-align: left;
+    justify-content: flex-start;
+    width: 100%;
+  }
 
-    &.mobile-number,
-    &.acknowledgment {
-      right: 10px;
-      top: 5px;
-    }
+  &__entry-row {
+    width: 100%;
+    height: 45px;
+    background-color: $drumee-input-bg;
+    border: none;
+    border-radius: 4px;
+    padding: 0 12px;
+    align-items: center;
+    gap: 8px;
+    overflow: hidden;
+    transition: box-shadow 0.2s;
 
-    &.email {
-      left: 0;
-      top: 6px; //8px;
-      width: 21px;
-      height: 21px;
-
-      svg {
-        opacity: 0.7;
-      }
-    }
-
-    &.code {
-      height: 22px;
-      width: 22px;
+    &:focus-within {
+      box-shadow: 0 0 0 1px $drumee-primary-hover;
     }
   }
 
-  &__entry {
-    & input {
-      // border-bottom: none;
-      @include drumee.typo(
-        $size: 18px,
-        $line: 28px,
-        $color: var(--default-text-color)
-      );
+  &__entry-input {
+    flex: 1;
+    min-width: 0;
+    width: 100%;
+    height: 100%;
+    border: none;
+    outline: none;
+    display: flex;
+    align-items: center;
+    padding: 0;
+    background: transparent;
 
-      &::placeholder {
-        @include drumee.typo(
-          $size: 18px,
-          $line: 28px,
-          $weight: 300,
-          $color: var(--default-text-placeholder)
-        ); //var(--egrey-b6));
-      }
+    // EntryBox internal wrappers — make them transparent passthroughs.
+    .entry-reminder__main,
+    .entry-reminder__component,
+    .entry-reminder__input-wrap,
+    .entry-reminder__label,
+    .entry-box,
+    .entry-wrapper {
+      flex: 1;
+      min-width: 0;
+      width: 100%;
+      height: 100%;
+      background: transparent;
+      border: none;
+      outline: none;
+      box-shadow: none;
+      padding: 0;
+      margin: 0;
+      align-items: center;
     }
 
-    &[data-status="error"] {
-      border-radius: var(--border-radius);
-      border: 1px solid var(--red-500); //var(--eorange-sunset);
-    }
-
-    & .entry-reminder_error {
+    .entry-reminder_error {
       display: none;
     }
 
-    &.with-icon {
+    input {
+      width: 100%;
+      height: 43px;
+      background: transparent;
+      border: none;
+      outline: none;
+      color: $drumee-grey-90;
+      font-size: 14px;
+      line-height: 43px;
+      padding: 0;
+      margin: 0;
+      box-sizing: border-box;
+
+      &::placeholder {
+        color: $drumee-grey-80;
+        line-height: 43px;
+      }
+
+      &:focus {
+        border: none;
+        outline: none;
+        box-shadow: none;
+      }
+
+      &:-webkit-autofill,
+      &:-webkit-autofill:hover,
+      &:-webkit-autofill:focus,
+      &:-webkit-autofill:active {
+        -webkit-text-fill-color: $drumee-grey-90 !important;
+        -webkit-box-shadow: 0 0 0 1000px $drumee-input-bg inset !important;
+        box-shadow: 0 0 0 1000px $drumee-input-bg inset !important;
+        transition: background-color 5000s ease-in-out 0s;
+        caret-color: $drumee-grey-90;
+        border-radius: 0;
+      }
+    }
+  }
+
+  &__entry-eye-toggle {
+    width: 21px;
+    height: 21px;
+    flex-shrink: 0;
+    cursor: pointer;
+    color: $drumee-grey-80;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: color 0.2s;
+
+    svg {
+      width: 100%;
       height: 100%;
-      padding: 0 0 0 65px; //50px;
+      fill: currentColor;
+    }
+
+    &:hover {
+      color: $drumee-primary;
+    }
+
+    &[data-state="1"] {
+      color: $drumee-primary;
+    }
+  }
+
+  // --- Requirement pills ----------------------------------------------------
+  &__pills {
+    flex-wrap: wrap;
+    gap: 8px;
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  &__pill {
+    align-items: center;
+    gap: 4px;
+    padding: 4px 8px;
+    border-radius: 100px;
+    background-color: $drumee-input-bg;
+    width: auto;
+    flex: 0 0 auto;
+    transition: background-color 0.2s, color 0.2s;
+    color: $drumee-grey-80;
+
+    &[data-state="1"] {
+      background-color: rgba(31, 170, 89, 0.12);
+      color: $drumee-success;
+    }
+  }
+
+  &__pill-ico {
+    width: 12px;
+    height: 12px;
+    flex-shrink: 0;
+    color: inherit;
+
+    svg {
       width: 100%;
+      height: 100%;
+      fill: currentColor;
+    }
+  }
+
+  &__pill-label {
+    @include drumee.typo($size: 12px, $line: 1.4, $weight: 400);
+    color: inherit;
+    width: auto;
+  }
+
+  // --- Update button --------------------------------------------------------
+  &__button-confirm {
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    height: 56px;
+    width: 100%;
+    padding: 16px 24px;
+    margin-top: 8px;
+    background-color: $drumee-primary;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.2s, opacity 0.2s;
+
+    &:hover {
+      background-color: $drumee-primary-hover;
+      box-shadow: 0 0 13px 0 rgba(89, 80, 255, 0.5);
     }
 
-    &.input-box {
-      border-radius: var(--border-radius);
-      align-items: center;
-      background-color: var(--default-bg); //var(--ewhite);
-      height: 56px;
+    // Disabled until every rule passes and both fields match.
+    &[data-state="0"] {
+      opacity: 0.5;
+      pointer-events: none;
+    }
+  }
+
+  &__button-ico {
+    width: 24px;
+    height: 24px;
+    flex-shrink: 0;
+    color: #ffffff;
+
+    svg {
       width: 100%;
-
-      & input {
-        padding-left: 10px;
-      }
-    }
-
-    .pw-shower {
-      cursor: pointer;
-      left: auto;
-      right: 10px;
+      height: 100%;
+      fill: currentColor;
     }
   }
 
-  .pw-shower {
-    position: absolute;
-    right: 15px;
-    top: 7px;
-    color: var(--egrey-2f);
-    opacity: 0.7;
-  }
-
-  // &__button-confirm {
-  //   align-items: center;
-  //   background-color: var(--egreen-soft);
-  //   border-radius:var(--border-radius);
-  //   cursor: pointer;
-  //   height: 100%;
-  //   justify-content: center;
-  //   width: 100%;
-  //   @include drumee.typo($size: 20px, $line: 28px, $color: var(--neutral-900));
-  //   &:hover{
-  //     box-shadow: 0 0 13px 0 rgb(169 186 255 / 50%);
-  //   }
-  // }
-
-  @include common-button;
-
-  &__buttons {
-    padding: 0 var(--spacer-5) var(--spacer-5) 0;
-    justify-content: end;
-  }
-
-  &__button-main {
-    height: auto;
-    padding: 10px 32px;
-    display: grid;
-
-    &.primary {
-      grid-template-columns: 1fr 15px;
-
-      .icon.svg-wrapper {
-        height: 30px;
-        width: 30px;
-        padding: 8px;
-      }
-    }
+  &__button-label {
+    @include drumee.typo(
+      $size: 16px,
+      $line: 24px,
+      $weight: 600,
+      $color: #ffffff
+    );
+    width: auto;
   }
 }
