@@ -369,6 +369,7 @@ class desk_module extends LetcBox {
    *
    */
   loadHome(data = {}) {
+    this._dismissWmModal();
     this.closeMainPanels();
     this.ensurePart("action-cluster").then((p) => p && p.setState(1));
     Wm.reload();
@@ -857,7 +858,29 @@ class desk_module extends LetcBox {
     }
   }
 
+  /**
+   * Any wrapper-modal dialog (alert / confirm / add-folder form / invite /
+   * move…) lifts the WHOLE window-manager to z 30000 (the desk skin :has()
+   * rule) so the dialog can sit above the side panels. The sidebar does not
+   * geometrically overlap the wm, so the user can still navigate while such
+   * a dialog is open — the lifted wm (home grid + windows) then covers the
+   * panel that opens underneath at z 10001 ("home folder overlays other
+   * screen"). Dismiss the modal before showing another screen so the lift
+   * is released.
+   */
+  _dismissWmModal() {
+    try {
+      const w = typeof Wm !== "undefined" && Wm.__wrapperModal;
+      if (!w || !w.el) return;
+      if (w.el.dataset.state === "open" || (w.children && w.children.length)) {
+        w.clear();
+        w.el.dataset.state = "closed";
+      }
+    } catch (e) { /* non-fatal */ }
+  }
+
   _showPanel(p) {
+    this._dismissWmModal();
     if (!p || p.isEmpty()) return false;
     const child = p.children.last();
     if (child && child.el) {
@@ -978,6 +1001,10 @@ class desk_module extends LetcBox {
    *
    */
   togglePanel(kind, pn, openOnly) {
+    // Release the wm z-30000 lift before any sidebar screen change — see
+    // _dismissWmModal. Covers both the first-open (_loadKind) and the
+    // keep-alive re-show (_showPanel) paths.
+    this._dismissWmModal();
     if (!this._pendingKinds) this._pendingKinds = {};
     if (!this._closeTimers) this._closeTimers = {};
 
@@ -1218,6 +1245,8 @@ class desk_module extends LetcBox {
         return this._toggleSidebarPin();
 
       case "toggle-activity":
+        // Activity predates togglePanel — release the wm modal lift here too.
+        this._dismissWmModal();
         return this.ensurePart("activity-panel").then((p) => {
           const state = p.mget(_a.state) ? 0 : 1;
           p.activityState = state;
