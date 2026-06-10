@@ -21,6 +21,8 @@ class __widget_chat extends LetcBox {
     this.showSend = this.showSend.bind(this);
     this.clearMessageFromChat = this.clearMessageFromChat.bind(this);
     this.removeUploadFromChat = this.removeUploadFromChat.bind(this);
+    this._onMentionDropdownKeydown = this._onMentionDropdownKeydown.bind(this);
+    this._onMentionDropdownKeyup = this._onMentionDropdownKeyup.bind(this);
     this.initStorage();
   }
 
@@ -117,6 +119,11 @@ class __widget_chat extends LetcBox {
         if (t && t.timer) clearTimeout(t.timer);
       }
       this._typers.clear();
+    }
+    if (this._mentionKeyboardBound && this.el) {
+      this.el.removeEventListener("keydown", this._onMentionDropdownKeydown, true);
+      this.el.removeEventListener("keyup", this._onMentionDropdownKeyup, true);
+      this._mentionKeyboardBound = false;
     }
   }
 
@@ -683,6 +690,7 @@ class __widget_chat extends LetcBox {
         return this.__refWindowName.set({ content: data.name });
       }
       this.feed(require("./skeleton")(this));
+      this._bindMentionKeyboard();
     });
   }
 
@@ -2149,6 +2157,104 @@ class __widget_chat extends LetcBox {
     }
   }
 
+  _bindMentionKeyboard() {
+    if (this._mentionKeyboardBound || !this.el) return;
+    this._mentionDropdownIndex = -1;
+    this.el.addEventListener("keydown", this._onMentionDropdownKeydown, true);
+    this.el.addEventListener("keyup", this._onMentionDropdownKeyup, true);
+    this._mentionKeyboardBound = true;
+  }
+
+  _getMentionDropdownEl() {
+    const dropdown = this.getPart && this.getPart("mention-dropdown");
+    if (dropdown && dropdown.el) return dropdown.el;
+    if (!this.el) return null;
+    return this.el.querySelector(`.${this.fig.family}__mention-dropdown`);
+  }
+
+  _getMentionItems() {
+    const dropdownEl = this._getMentionDropdownEl();
+    if (!dropdownEl || dropdownEl.dataset.state !== _a.open) return [];
+    return Array.from(dropdownEl.querySelectorAll(".mention-item"));
+  }
+
+  _setMentionActiveIndex(index) {
+    const items = this._getMentionItems();
+    if (!items.length) {
+      this._mentionDropdownIndex = -1;
+      return null;
+    }
+    const next = ((index % items.length) + items.length) % items.length;
+    items.forEach((item, i) => {
+      const active = i === next ? "1" : "0";
+      item.dataset.active = active;
+      item.setAttribute("aria-selected", active === "1" ? "true" : "false");
+    });
+    this._mentionDropdownIndex = next;
+    items[next].scrollIntoView({ block: "nearest" });
+    return items[next];
+  }
+
+  _selectMentionDropdownItem(item) {
+    if (!item) return false;
+    this._onMentionFileSelect({ el: item }, { service: "mention-select" });
+    return true;
+  }
+
+  _stopMentionKeyboardEvent(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    if (_.isFunction(e.stopImmediatePropagation)) e.stopImmediatePropagation();
+  }
+
+  _onMentionDropdownKeydown(e) {
+    const key = e.key || e.code;
+    if (!["ArrowDown", "ArrowUp", "Enter", "Escape"].includes(key)) return true;
+
+    const dropdownEl = this._getMentionDropdownEl();
+    if (!dropdownEl || dropdownEl.dataset.state !== _a.open) return true;
+
+    const items = this._getMentionItems();
+    if (!items.length) {
+      if (key !== "Escape") return true;
+      this._stopMentionKeyboardEvent(e);
+      this._mentionKeyboardSuppressKeyup = key;
+      this._closeMentionDropdown();
+      return false;
+    }
+
+    this._stopMentionKeyboardEvent(e);
+    this._mentionKeyboardSuppressKeyup = key;
+
+    if (key === "Escape") {
+      this._closeMentionDropdown();
+      return false;
+    }
+
+    if (key === "Enter") {
+      const item = items[this._mentionDropdownIndex] ||
+        this._setMentionActiveIndex(0);
+      this._selectMentionDropdownItem(item);
+      return false;
+    }
+
+    const delta = key === "ArrowDown" ? 1 : -1;
+    const start = this._mentionDropdownIndex < 0
+      ? (key === "ArrowDown" ? 0 : items.length - 1)
+      : this._mentionDropdownIndex + delta;
+    this._setMentionActiveIndex(start);
+    return false;
+  }
+
+  _onMentionDropdownKeyup(e) {
+    const key = e.key || e.code;
+    if (!this._mentionKeyboardSuppressKeyup) return true;
+    if (this._mentionKeyboardSuppressKeyup !== key) return true;
+    this._mentionKeyboardSuppressKeyup = null;
+    this._stopMentionKeyboardEvent(e);
+    return false;
+  }
+
   /**
    * Search files/folders under the current folder for mention suggestions.
    * Uses only read/list calls; sendMessage keeps mentions out of attachments.
@@ -2436,12 +2542,13 @@ class __widget_chat extends LetcBox {
         console.log("[mention] html length", html.length);
         if (!html) {
           console.warn("[mention] empty html → closing dropdown");
-          dropdown.el.dataset.state = _a.closed;
+          this._closeMentionDropdown();
           return;
         }
 
         dropdown.el.innerHTML = html;
         dropdown.el.dataset.state = _a.open;
+        this._setMentionActiveIndex(0);
         console.log("[mention] dropdown OPENED", {
           state: dropdown.el.dataset.state,
           visible: dropdown.el.offsetParent !== null,
@@ -2452,30 +2559,7 @@ class __widget_chat extends LetcBox {
         dropdown.el.querySelectorAll(".mention-item").forEach((el) => {
           el.onclick = function (e) {
             e.stopPropagation();
-            const d = this.dataset;
-            let item;
-            if (d.type === "contact") {
-              item = {
-                type: "contact",
-                drumate_id: d.drumate_id,
-                firstname: d.firstname,
-                lastname: d.lastname,
-                fullname: d.fullname,
-              };
-            } else {
-              item = {
-                type: "file",
-                nid: d.nid,
-                hub_id: d.hub_id,
-                filename: d.filename,
-              };
-            }
-            self.ensurePart(_a.message).then((messenger) => {
-              if (_.isFunction(messenger._onMentionSelect)) {
-                messenger._onMentionSelect(item);
-              }
-            });
-            self._closeMentionDropdown();
+            self._selectMentionDropdownItem(this);
           };
         });
       })
@@ -2489,10 +2573,11 @@ class __widget_chat extends LetcBox {
    * Close mention dropdown
    */
   _closeMentionDropdown() {
-    const dropdown = this.getPart("mention-dropdown");
-    if (!dropdown) return;
-    dropdown.el.dataset.state = _a.closed;
-    dropdown.el.innerHTML = "";
+    const dropdownEl = this._getMentionDropdownEl();
+    if (!dropdownEl) return;
+    this._mentionDropdownIndex = -1;
+    dropdownEl.dataset.state = _a.closed;
+    dropdownEl.innerHTML = "";
   }
 
   /**
