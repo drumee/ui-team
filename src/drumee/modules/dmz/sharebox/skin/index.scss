@@ -741,6 +741,183 @@
   }
 }
 
+/* Limited-access banner shown when guest has restricted privilege */
+.dmz-sharebox__limited-access-banner {
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 22px;
+  background: rgba(67, 60, 197, 0.08);
+  border-bottom: 1px solid rgba(67, 60, 197, 0.15);
+  flex-shrink: 0;
+}
+
+.dmz-sharebox__limited-access-text {
+  @include drumee.typo($size: 13px, $line: 20px, $weight: 400, $color: var(--sb-text));
+  font-family: var(--sb-font-body);
+}
+
+.dmz-sharebox__limited-access-btn {
+  @include drumee.typo($size: 13px, $line: 20px, $weight: 600, $color: var(--sb-cta));
+  font-family: var(--sb-font-body);
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+
+  &:hover { opacity: 0.8; }
+}
+
+/* Request-access overlay panel */
+.dmz-sharebox-request-access {
+  &__panel {
+    background: #ffffff;
+    border-radius: 12px;
+    box-shadow: var(--sb-card-shadow);
+    gap: 20px;
+    max-width: calc(100vw - 64px);
+    padding: 40px 48px;
+    width: 480px;
+  }
+
+  &__title {
+    @include drumee.typo($size: 24px, $line: 110%, $weight: 600, $color: var(--sb-cta));
+    font-family: var(--sb-font-body);
+  }
+
+  &__level-desc {
+    @include drumee.typo($size: 13px, $line: 20px, $weight: 400, $color: var(--sb-text-muted));
+    font-family: var(--sb-font-body);
+    margin-bottom: 6px;
+  }
+
+  &__level-picker {
+    gap: 6px;
+  }
+
+  &__level-options {
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  &__level-option {
+    cursor: pointer;
+    padding: 6px 14px;
+    border-radius: 100px;
+    border: 1px solid var(--sb-grey-30);
+    @include drumee.typo($size: 12px, $line: 20px, $weight: 500, $color: var(--sb-text));
+    font-family: var(--sb-font-body);
+    white-space: nowrap;
+    user-select: none;
+
+    &[data-selected='yes'] {
+      border-color: var(--sb-cta);
+      background: var(--sb-cta);
+      color: #ffffff;
+    }
+
+    &:hover:not([data-selected='yes']) {
+      border-color: var(--sb-cta);
+      color: var(--sb-cta);
+    }
+  }
+
+  &__email {
+    width: 100%;
+  }
+
+  &__message {
+    width: 100%;
+    resize: vertical;
+  }
+
+  &__actions {
+    gap: 12px;
+    justify-content: flex-end;
+    margin-top: 4px;
+  }
+
+  &__cancel-btn {
+    cursor: pointer;
+    padding: 10px 20px;
+    border-radius: 4px;
+    border: 1px solid var(--sb-grey-30);
+    @include drumee.typo($size: 14px, $line: 20px, $weight: 600, $color: var(--sb-text));
+    font-family: var(--sb-font-body);
+
+    &:hover { background: var(--sb-grey-20); }
+  }
+
+  &__submit-btn {
+    cursor: pointer;
+    padding: 10px 20px;
+    border-radius: 4px;
+    background: var(--sb-cta);
+    @include drumee.typo($size: 14px, $line: 20px, $weight: 600, $color: #ffffff);
+    font-family: var(--sb-font-body);
+
+    &:hover { filter: brightness(1.08); }
+  }
+}
+
+/* Request-sent confirmation panel */
+.dmz-sharebox-request-sent {
+  &__panel {
+    align-items: center;
+    background: #ffffff;
+    border-radius: 12px;
+    box-shadow: var(--sb-card-shadow);
+    gap: 16px;
+    max-width: calc(100vw - 64px);
+    padding: 40px 48px;
+    width: 480px;
+  }
+
+  &__title {
+    @include drumee.typo($size: 24px, $line: 110%, $weight: 600, $color: var(--sb-cta));
+    font-family: var(--sb-font-body);
+    text-align: center;
+  }
+
+  &__body {
+    @include drumee.typo($size: 14px, $line: 20px, $weight: 400, $color: var(--sb-text-muted));
+    font-family: var(--sb-font-body);
+    text-align: center;
+  }
+
+  &__email {
+    @include drumee.typo($size: 14px, $line: 20px, $weight: 600, $color: var(--sb-text));
+    font-family: var(--sb-font-body);
+  }
+
+  &__level {
+    @include drumee.typo($size: 13px, $line: 20px, $weight: 400, $color: var(--sb-text-muted));
+    font-family: var(--sb-font-body);
+  }
+
+  &__pending {
+    padding: 4px 12px;
+    border-radius: 100px;
+    background: rgba(67, 60, 197, 0.1);
+    @include drumee.typo($size: 12px, $line: 20px, $weight: 600, $color: var(--sb-cta));
+    font-family: var(--sb-font-mono);
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+  }
+
+  &__close-btn {
+    cursor: pointer;
+    margin-top: 8px;
+    padding: 12px 24px;
+    border-radius: 4px;
+    background: var(--sb-cta);
+    @include drumee.typo($size: 14px, $line: 20px, $weight: 600, $color: #ffffff);
+    font-family: var(--sb-font-body);
+    text-align: center;
+
+    &:hover { filter: brightness(1.08); }
+  }
+}
+
 /* Inner desk-content area used by dmz_window_manager */
 .dmz-sharebox__content.desk-content.dmz-wm__ui {
   background: transparent;

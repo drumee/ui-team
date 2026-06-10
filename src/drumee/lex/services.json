@@ -15,7 +15,8 @@
     "login": "dmz.login",
     "logout": "dmz.logout",
     "reset_sessions": "dmz.reset_sessions",
-    "signup": "dmz.signup"
+    "signup": "dmz.signup",
+    "request_access": "dmz.request_access"
   },
   "font": {
     "font_list": "font.font_list",
@@ -137,7 +138,8 @@
     "access_list": "secure_share.access_list",
     "list": "secure_share.list",
     "revoke": "secure_share.revoke",
-    "delete": "secure_share.delete"
+    "delete": "secure_share.delete",
+    "respond_to_access_request": "secure_share.respond_to_access_request"
   },
   "reward_hub": {
     "get_env": "reward_hub.get_env",

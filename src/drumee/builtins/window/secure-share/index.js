@@ -24,6 +24,8 @@ class __window_secure_share extends mfsInteract {
     this._requireEmail    = false;
     this._requirePassword = false;
     this._emailChips      = [];
+    this._grantLevel      = null;
+    this._pendingRequest  = null;
     this.declareHandlers();
     this.bindEvent(_a.live);
   }
@@ -35,6 +37,9 @@ class __window_secure_share extends mfsInteract {
   onWsMessage(svc, data, options = {}) {
     const { service } = options || svc;
     if (service === 'share.track_event') {
+      if (data && data.event === 'secure_share_access_requested') {
+        this._showApprovePopup(data);
+      }
       this._loadShares();
       return;
     }
@@ -71,6 +76,8 @@ class __window_secure_share extends mfsInteract {
         return;
       case 'link-result':
         return this._linkResult = child;
+      case 'approve-overlay':
+        return this.__approveOverlay = child;
       default:
         if (super.onPartReady) super.onPartReady(child, pn);
     }
@@ -97,6 +104,14 @@ class __window_secure_share extends mfsInteract {
         return this._copyLink(cmd);
       case 'revoke-secure-share':
         return this._revokeShare(cmd);
+      case 'select-grant-level':
+        return this._selectGrantLevel(cmd);
+      case 'approve-access-request':
+        return this._approveRequest();
+      case 'deny-access-request':
+        return this._denyRequest();
+      case 'close-approve-popup':
+        return this._closeApprovePopup();
       default:
         if (super.onUiEvent) return super.onUiEvent(cmd, args);
     }
@@ -331,6 +346,70 @@ class __window_secure_share extends mfsInteract {
     const link = cmd.mget('link') || this.mget('link');
     if (!link) return;
     copyToClipboard(link);
+  }
+
+  _showApprovePopup(request) {
+    this.mset({ _pendingRequest: request });
+    this._grantLevel = null;
+    const overlay = this.__approveOverlay;
+    if (!overlay) return;
+    overlay.feed(require('./skeleton/approve-access')(this));
+    overlay.el.dataset.mode = _a.open;
+  }
+
+  _closeApprovePopup() {
+    const overlay = this.__approveOverlay;
+    if (!overlay) return;
+    overlay.el.dataset.mode = _a.closed;
+    overlay.clear();
+    this._grantLevel     = null;
+    this._pendingRequest = null;
+  }
+
+  _selectGrantLevel(cmd) {
+    const level = cmd.mget('level');
+    this._grantLevel = level;
+    const overlay = this.__approveOverlay;
+    if (overlay) {
+      overlay.el.querySelectorAll('[data-level]').forEach(btn => {
+        btn.dataset.selected = (btn.dataset.level === level) ? 'yes' : '';
+      });
+    }
+  }
+
+  async _approveRequest() {
+    const req = this.mget('_pendingRequest') || {};
+    const requestId = req.request_id || req.id;
+    if (!requestId || !this._grantLevel) return;
+    const hub_id = this.mget(_a.hub_id);
+    try {
+      await this.postService(SERVICE.secure_share.respond_to_access_request, {
+        hub_id,
+        request_id   : requestId,
+        action       : 'approve',
+        granted_level: this._grantLevel,
+      });
+    } catch (e) {
+      this.warn('[secure_share] approve request failed:', e && e.message);
+    }
+    this._closeApprovePopup();
+  }
+
+  async _denyRequest() {
+    const req = this.mget('_pendingRequest') || {};
+    const requestId = req.request_id || req.id;
+    if (!requestId) return;
+    const hub_id = this.mget(_a.hub_id);
+    try {
+      await this.postService(SERVICE.secure_share.respond_to_access_request, {
+        hub_id,
+        request_id: requestId,
+        action    : 'deny',
+      });
+    } catch (e) {
+      this.warn('[secure_share] deny request failed:', e && e.message);
+    }
+    this._closeApprovePopup();
   }
 
 }

@@ -432,4 +432,116 @@
     @include drumee.typo($size: 10px, $line: 14px, $color: var(--tertiary-text-color));
     white-space: nowrap;
   }
+
+  // ── Approve-access overlay ────────────────────────────────
+
+  &__approve-overlay {
+    inset: 0;
+    background: rgba(0, 0, 0, 0.45);
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+
+    &[data-mode='closed'] { display: none; }
+  }
+}
+
+.window-secure-share-approve-access {
+  &__panel {
+    background: var(--normal-bg-90);
+    border: 1px solid var(--border-default);
+    border-radius: var(--corner-radius-5);
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.18);
+    gap: var(--spacer-4);
+    padding: var(--spacer-6);
+    width: 360px;
+    max-width: calc(100vw - 32px);
+    position: relative;
+  }
+
+  &__close {
+    position: absolute;
+    top: var(--spacer-3);
+    right: var(--spacer-4);
+    cursor: pointer;
+    @include drumee.typo($size: 18px, $line: 1, $color: var(--tertiary-text-color));
+    padding: 4px;
+
+    &:hover { color: var(--default-text-color); }
+  }
+
+  &__title {
+    @include drumee.typo($size: 15px, $line: 20px, $weight: 600, $color: var(--default-text-color));
+    padding-right: var(--spacer-6);
+  }
+
+  &__email {
+    @include drumee.typo($size: 13px, $line: 20px, $weight: 600, $color: var(--default-text-color));
+  }
+
+  &__level {
+    @include drumee.typo($size: 12px, $line: 18px, $color: var(--tertiary-text-color));
+  }
+
+  &__message {
+    @include drumee.typo($size: 12px, $line: 18px, $color: var(--default-text-color));
+    background: var(--normal-bg-80);
+    border-radius: var(--corner-radius-2);
+    padding: var(--spacer-2) var(--spacer-3);
+  }
+
+  &__levels {
+    gap: var(--spacer-2);
+    flex-wrap: wrap;
+  }
+
+  &__level-btn {
+    cursor: pointer;
+    padding: var(--spacer-1) var(--spacer-3);
+    border-radius: var(--corner-radius-max);
+    border: 1px solid var(--border-default);
+    @include drumee.typo($size: 12px, $line: 20px, $color: var(--default-text-color));
+    white-space: nowrap;
+    user-select: none;
+
+    &[data-selected='yes'] {
+      border-color: var(--primary-500);
+      background: var(--primary-500);
+      color: var(--white);
+    }
+
+    &:hover:not([data-selected='yes']) {
+      border-color: var(--primary-500);
+      color: var(--primary-500);
+    }
+  }
+
+  &__actions {
+    gap: var(--spacer-3);
+    justify-content: flex-end;
+    margin-top: var(--spacer-2);
+  }
+
+  &__deny-btn {
+    cursor: pointer;
+    padding: var(--spacer-2) var(--spacer-4);
+    border-radius: var(--corner-radius-max);
+    border: 1px solid var(--btn-caution-background);
+    @include drumee.typo($size: 13px, $line: 20px, $color: var(--btn-caution-background));
+
+    &:hover {
+      background: var(--btn-caution-background);
+      color: var(--white);
+    }
+  }
+
+  &__approve-btn {
+    cursor: pointer;
+    padding: var(--spacer-2) var(--spacer-4);
+    border-radius: var(--corner-radius-max);
+    background: var(--primary-500);
+    @include drumee.typo($size: 13px, $line: 20px, $color: var(--white));
+
+    &:hover { background: var(--primary-600); }
+  }
 }

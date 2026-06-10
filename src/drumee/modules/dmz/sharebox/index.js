@@ -30,6 +30,9 @@ class __dmz_sharebox extends LetcBox {
     this.footerSkeleton = require('./skeleton/footer').default;
     this.deskSkeleton = require("./skeleton/desk-content").default;
     this.nodeInfoService = SERVICE.media.show_node_by;
+    this._selectedRequestLevel = null;
+    this._requestEmailInput    = null;
+    this._requestMessageInput  = null;
   }
 
   /**
@@ -48,6 +51,9 @@ class __dmz_sharebox extends LetcBox {
     if (service === 'share.track_event') {
       if (data && data.event === 'secure_share_revoked' && data.token === this.mget(_a.token)) {
         this.handleInfoStatus({ status: 'TICKET_REVOKED' });
+      }
+      if (data && data.event === 'secure_share_access_responded') {
+        this._handleAccessResponse(data);
       }
       return;
     }
@@ -105,6 +111,12 @@ class __dmz_sharebox extends LetcBox {
       case 'wrapper-dialog':
         this.dialogWrapper = child;
         return;
+
+      case 'ref-request-email':
+        return this._requestEmailInput = child;
+
+      case 'ref-request-message':
+        return this._requestMessageInput = child;
 
       default:
         if (super.onPartReady) super.onPartReady(child, pn);
@@ -259,6 +271,7 @@ class __dmz_sharebox extends LetcBox {
     this.postService(SERVICE.dmz.login, opt).then((data) => {
       if (data && data.status === 'TICKET_OK' && data.is_secure) {
         this.mset(data);
+        this.mset({ recipient_email: email });
         this.getInfoData();
       } else if (data && data.status === 'REQUIRED_PASSWORD' && data.is_secure) {
         // Email validated — save it so verifyPassword can re-submit it with the password
@@ -374,6 +387,32 @@ class __dmz_sharebox extends LetcBox {
       case _e.raise:
         return;
 
+      case 'open-request-access':
+        return this.showRequestAccessPopup();
+
+      case 'select-request-level': {
+        const lvl = cmd.mget('level');
+        this._selectedRequestLevel = lvl;
+        if (this.__signupOverlay) {
+          this.__signupOverlay.el.querySelectorAll('[data-level]').forEach(btn => {
+            btn.dataset.selected = (btn.dataset.level === lvl) ? 'yes' : '';
+          });
+        }
+        return;
+      }
+
+      case 'submit-access-request':
+        return this.submitAccessRequest();
+
+      case 'close-request-access':
+        this._selectedRequestLevel = null;
+        this.closeSignupRequiredOverlay();
+        return;
+
+      case 'close-request-sent':
+        this.closeSignupRequiredOverlay();
+        return;
+
       default:
         if (super.onUiEvent) return super.onUiEvent(cmd, args);
     }
@@ -411,6 +450,7 @@ class __dmz_sharebox extends LetcBox {
       if (data && data.status === 'TICKET_OK' && data.is_secure) {
         // Secure-share password accepted — grant access
         this.mset(data);
+        if (this._verifiedEmail) this.mset({ recipient_email: this._verifiedEmail });
         this.getInfoData();
       } else if (data && data.status === 'WRONG_PASSWORD') {
         let msg = LOCALE.SECURE_SHARE_WRONG_PASSWORD;
@@ -597,6 +637,88 @@ class __dmz_sharebox extends LetcBox {
     Dmz.say(opt);
   }
 
+
+  /**
+   *
+   */
+  showRequestAccessPopup() {
+    const overlay = this.__signupOverlay;
+    if (!overlay) return;
+    this._selectedRequestLevel = null;
+    this._requestEmailInput    = null;
+    this._requestMessageInput  = null;
+    overlay.feed(require('./skeleton/request-access').default(this));
+    overlay.el.dataset.mode = _a.open;
+  }
+
+  /**
+   *
+   */
+  async submitAccessRequest() {
+    const emailEl = this._requestEmailInput
+      ? this._requestEmailInput.el.querySelector('input')
+      : null;
+    const emailVal = emailEl
+      ? emailEl.value.trim().toLowerCase()
+      : (this.mget('recipient_email') || '').toLowerCase().trim();
+
+    if (!emailVal || !emailVal.includes('@')) {
+      return this.renderErrorMessage(LOCALE.SECURE_SHARE_ENTER_EMAIL);
+    }
+    if (!this._selectedRequestLevel) return;
+
+    const msgEl  = this._requestMessageInput
+      ? this._requestMessageInput.el.querySelector('textarea')
+      : null;
+    const msgVal = msgEl ? msgEl.value.trim() : '';
+
+    const token  = this.mget(_a.token);
+    const hub_id = Visitor.parseLocation().keysel || '';
+    const payload = {
+      token,
+      hub_id,
+      email          : emailVal,
+      requested_level: this._selectedRequestLevel,
+    };
+    if (msgVal) payload.message = msgVal;
+
+    try {
+      const data = await this.postService(SERVICE.dmz.request_access, payload);
+      if (data && data.status === 'REQUEST_SENT') {
+        this.mset({
+          _request_email  : emailVal,
+          _request_level  : this._selectedRequestLevel,
+          _request_message: msgVal,
+        });
+        const overlay = this.__signupOverlay;
+        if (overlay) {
+          overlay.feed(require('./skeleton/request-sent').default(this));
+        }
+      }
+    } catch (e) {
+      this.renderErrorMessage(LOCALE.SOMETHING_WENT_WRONG);
+    }
+  }
+
+  /**
+   *
+   */
+  _handleAccessResponse(data) {
+    const overlay = this.__signupOverlay;
+    if (overlay) {
+      overlay.el.dataset.mode = _a.closed;
+      overlay.clear();
+    }
+    if (data.action === 'approve') {
+      this.mset({
+        permission_level: data.granted_level,
+        privilege       : data.privilege || 3,
+      });
+      this.loadDeskContent();
+    } else {
+      this.renderErrorMessage(LOCALE.SECURE_SHARE_ACCESS_DENIED);
+    }
+  }
 
 }
 

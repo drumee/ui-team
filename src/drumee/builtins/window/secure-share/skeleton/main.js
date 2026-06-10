@@ -260,7 +260,17 @@ const __skl_secure_share = function(_ui_) {
     className : `${pfx}__main ${group}__main drive-popup`,
     radio     : _a.parent,
     debug     : __filename,
-    kids      : [header, body, listSection]
+    kids      : [
+      header,
+      body,
+      listSection,
+      Skeletons.Box.Z({
+        className   : `${pfx}__approve-overlay`,
+        sys_pn      : 'approve-overlay',
+        dataset     : { mode: _a.closed },
+        partHandler : _ui_,
+      }),
+    ]
   });
 };
 

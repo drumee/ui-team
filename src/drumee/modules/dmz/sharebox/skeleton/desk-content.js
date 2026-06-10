@@ -159,7 +159,22 @@ function dmzSplitBody(ui) {
 }
 
 function __skl_dmz_sharebox_desk_content(_ui_) {
-  const topbar = dmzTopbar(_ui_);
+  const topbar    = dmzTopbar(_ui_);
+  const privilege = _ui_.mget(_a.privilege) || 0;
+  const showBanner = !!_ui_.mget('is_secure') && !!_ui_.mget('is_guest') && (privilege < _K.privilege.write);
+
+  const limitedBanner = showBanner ? Skeletons.Box.X({
+    className : `${_ui_.fig.family}__limited-access-banner`,
+    kids      : [
+      Skeletons.Note({ className: `${_ui_.fig.family}__limited-access-text`, content: LOCALE.SECURE_SHARE_LIMITED_ACCESS }),
+      Skeletons.Note({
+        className : `${_ui_.fig.family}__limited-access-btn`,
+        content   : LOCALE.SECURE_SHARE_REQUEST_ACCESS,
+        service   : 'open-request-access',
+        uiHandler : [_ui_],
+      }),
+    ]
+  }) : null;
 
   return Skeletons.Box.Y({
     className: `${_ui_.fig.family}__main ${_ui_.fig.group}__main drive-popup`,
@@ -167,6 +182,7 @@ function __skl_dmz_sharebox_desk_content(_ui_) {
     debug: __filename,
     kids: [
       windowHeader(_ui_, topbar),
+      limitedBanner,
       tabBar(_ui_),
       dmzSplitBody(_ui_),
       dialog(_ui_),
