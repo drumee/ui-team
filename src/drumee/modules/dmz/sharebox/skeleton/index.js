@@ -24,6 +24,12 @@ function __skl_dmz_sharebox(_ui_) {
     },
   });
 
+  const signupOverlay = Skeletons.Box.Z({
+    className : `${shareboxFig}__signup-overlay`,
+    sys_pn    : 'signup-overlay',
+    dataset   : { mode: _a.closed },
+  });
+
   return Skeletons.Box.Y({
     className: `${shareboxFig}__main`,
     debug: __filename,
@@ -32,6 +38,7 @@ function __skl_dmz_sharebox(_ui_) {
         className: `${shareboxFig}__container`,
         kids: [topNav, header, content, footer],
       }),
+      signupOverlay,
     ],
   });
 }

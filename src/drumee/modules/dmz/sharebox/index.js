@@ -27,7 +27,7 @@ class __dmz_sharebox extends LetcBox {
     this.defaultSkeleton = require('./skeleton').default;
     this.topNavSkeleton = require('./skeleton/top-nav').default;
     this.headerSkeleton = require('./skeleton/header').default;
-    this.footerSkeleton = require('dmz/skeleton/common/footer');
+    this.footerSkeleton = require('./skeleton/footer').default;
     this.deskSkeleton = require("./skeleton/desk-content").default;
     this.nodeInfoService = SERVICE.media.show_node_by;
   }
@@ -69,6 +69,12 @@ class __dmz_sharebox extends LetcBox {
         return this.waitElement(child.el, () => {
           child.feed(this.headerSkeleton(this))
         })
+
+      case _a.footer:
+        if (!this.mget('is_secure')) return;
+        return this.waitElement(child.el, () => {
+          child.feed(this.footerSkeleton(this));
+        });
 
       case "logo-block":
         let mascott = require("assets/mascot.png").default;
@@ -176,6 +182,9 @@ class __dmz_sharebox extends LetcBox {
       case 'REQUIRED_EMAIL':
         this.promptEmail();
         break;
+      case 'TICKET_LOCKED':
+        this.promptLockedPassword();
+        break;
       case 'TICKET_REVOKED':
       case 'TICKET_EXPIRED':
       case 'WRONG_TICKET':
@@ -204,13 +213,40 @@ class __dmz_sharebox extends LetcBox {
   /**
    *
    */
+  promptLockedPassword() {
+    this.__content.feed(require('./skeleton/password').default(this, { locked: true }));
+  }
+
+  /**
+   *
+   */
+  showSignupRequiredOverlay() {
+    const overlay = this.__signupOverlay;
+    if (!overlay) return;
+    overlay.feed(require('./skeleton/signup-required').default(this));
+    overlay.el.dataset.mode = _a.open;
+  }
+
+  /**
+   *
+   */
+  closeSignupRequiredOverlay() {
+    const overlay = this.__signupOverlay;
+    if (!overlay) return;
+    overlay.el.dataset.mode = _a.closed;
+    overlay.clear();
+  }
+
+  /**
+   *
+   */
   verifyEmail() {
     const email = this._emailInput ? (this._emailInput.getData().value || '').trim() : '';
     if (!email) {
       return this.renderErrorMessage(LOCALE.SECURE_SHARE_ENTER_EMAIL);
     }
     if (!Validator.email(email)) {
-      return this.renderErrorMessage(LOCALE.INVALID_EMAIL);
+      return this.renderErrorMessage(LOCALE.SECURE_SHARE_EMAIL_INVALID_FORMAT);
     }
 
     const hub_id = Visitor.parseLocation().keysel || '';
@@ -229,7 +265,7 @@ class __dmz_sharebox extends LetcBox {
         this._verifiedEmail = email;
         this.promptPassword();
       } else if (data && data.status === 'EMAIL_MISMATCH') {
-        this.renderErrorMessage(LOCALE.SECURE_SHARE_EMAIL_MISMATCH);
+        this.renderErrorMessage(LOCALE.SECURE_SHARE_EMAIL_BLOCKED);
       } else {
         this.handleInfoStatus(data);
       }
@@ -286,10 +322,14 @@ class __dmz_sharebox extends LetcBox {
         return this.__footer.el.dataset.mode = _a.closed
 
       case 'go-login':
+        this.closeSignupRequiredOverlay();
         location.href = _K.module.signin;
         return;
 
       case _e.upload:
+        if (this.mget('guest_id')) {
+          return this.showSignupRequiredOverlay();
+        }
         return this.__fileselector.open(this._upload.bind(this));
 
       case _e.download:
@@ -299,12 +339,16 @@ class __dmz_sharebox extends LetcBox {
       // "Add new" lives in the sharebox topbar (uiHandler = this sharebox),
       // but folder creation belongs to the window manager child — delegate.
       case "add-folder":
+        if (this.mget('guest_id')) {
+          return this.showSignupRequiredOverlay();
+        }
         if (this.wm && this.wm.onUiEvent) {
           this.wm.onUiEvent(cmd, { service: "add-folder" });
         }
         return;
 
       case 'open-signup':
+        this.closeSignupRequiredOverlay();
         this.append({
           kind: 'drumee_api_popup',
           autostart: 1,
@@ -317,6 +361,9 @@ class __dmz_sharebox extends LetcBox {
         return;
 
       case 'tab-chat':
+        if (this.mget('guest_id')) {
+          return this.showSignupRequiredOverlay();
+        }
         if (this._folderView) this._folderView.el.dataset.view = _a.chat;
         return;
 
@@ -366,7 +413,13 @@ class __dmz_sharebox extends LetcBox {
         this.mset(data);
         this.getInfoData();
       } else if (data && data.status === 'WRONG_PASSWORD') {
-        this.renderErrorMessage(LOCALE.WRONG_CREDENTIALS);
+        let msg = LOCALE.SECURE_SHARE_WRONG_PASSWORD;
+        if (data.attempts_remaining != null && data.attempts_remaining > 0) {
+          msg += ' ' + LOCALE.SECURE_SHARE_ATTEMPTS_REMAINING.replace('{0}', data.attempts_remaining);
+        }
+        this.renderErrorMessage(msg);
+      } else if (data && data.status === 'TICKET_LOCKED') {
+        this.promptLockedPassword();
       } else if (data && data.is_verified) {
         this.mset(data);
         localStorage.setItem('token', data.token);

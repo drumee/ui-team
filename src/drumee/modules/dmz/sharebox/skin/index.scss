@@ -39,6 +39,7 @@
     background: var(--sb-grey-20);
     font-family: var(--sb-font-body);
     color: var(--sb-text);
+    position: relative;
   }
 
   &__container {
@@ -71,6 +72,19 @@
     bottom: 0;
     padding: 24px 40px;
     z-index: 2000;
+
+    &[data-mode="closed"] {
+      display: none;
+    }
+  }
+
+  &__signup-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(11, 10, 33, 0.6);
+    align-items: center;
+    justify-content: center;
+    z-index: 3000;
 
     &[data-mode="closed"] {
       display: none;
@@ -642,6 +656,87 @@
   .widget-chatItem__conversation-content {
     &.me {
       background-color: var(--sb-pink);
+    }
+  }
+}
+
+/* Sign-up required overlay modal */
+.dmz-sharebox-signup-required {
+  &__panel {
+    align-items: center;
+    background: #ffffff;
+    border-radius: 12px;
+    box-shadow: var(--sb-card-shadow);
+    gap: 32px;
+    max-width: calc(100vw - 64px);
+    padding: 48px;
+    width: 520px;
+  }
+
+  &__header {
+    align-items: center;
+    gap: 24px;
+    width: 100%;
+  }
+
+  &__logo {
+    align-items: center;
+    flex-shrink: 0;
+    height: 60px;
+    justify-content: center;
+    width: 72px;
+
+    svg {
+      fill: var(--sb-cta);
+      height: 100%;
+      width: 100%;
+    }
+  }
+
+  &__title {
+    @include drumee.typo($size: 32px, $line: 110%, $weight: 600, $color: var(--sb-cta));
+    font-family: var(--sb-font-body);
+    text-align: center;
+  }
+
+  &__body {
+    @include drumee.typo($size: 14px, $line: 20px, $weight: 400, $color: var(--sb-text-muted));
+    font-family: var(--sb-font-body);
+    text-align: center;
+    width: 100%;
+  }
+
+  &__actions {
+    align-items: center;
+    gap: 16px;
+    width: 100%;
+  }
+
+  &__signup-btn {
+    @include drumee.typo($size: 16px, $line: 24px, $weight: 600, $color: #ffffff);
+    align-items: center;
+    background: var(--sb-cta);
+    border-radius: 4px;
+    cursor: pointer;
+    font-family: var(--sb-font-body);
+    justify-content: center;
+    padding: 16px 24px;
+    text-align: center;
+    width: 100%;
+
+    &:hover {
+      filter: brightness(1.08);
+    }
+  }
+
+  &__login-link {
+    @include drumee.typo($size: 14px, $line: 20px, $weight: 600, $color: var(--sb-text));
+    cursor: pointer;
+    font-family: var(--sb-font-body);
+    text-align: center;
+
+    &:hover {
+      opacity: 0.8;
     }
   }
 }
