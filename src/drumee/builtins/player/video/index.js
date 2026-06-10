@@ -49,44 +49,40 @@ class __player_video extends __core {
       if (s.codec_type === _a.video) {
         this.width = s.coded_width;
         this.height = s.coded_height;
-        if (/h264/i.test(s.codec_name)) {
-          this.isH264 = 1;
-        } else {
-          this.isH264 = 0;
-        }
-        this.width = this.width || this.$el.width();
-        this.height = this.height || this.$el.height();
-
-        let max_w = window.innerWidth - 20;
-        let max_h = window.innerHeight - 20;
-        if (this.width > max_w || this.height > max_h) {
-          this.size = fitBoxes(
-            { width: window.innerWidth, height: window.innerHeight },
-            { width: this.width, height: this.height },
-          );
-          this.width = this.size.width;
-          this.height = this.size.height;
-        } else {
-          this.size = {
-            width: this.width,
-            height: this.height
-          };
-
-        }
-        this.ratio = this.height / this.width;
-        this.$el.height(this.height);
-        this.$el.width(this.width);
+        this.isH264 = /h264/i.test(s.codec_name) ? 1 : 0;
         break;
       }
     }
     this.width = this.width || this.$el.width();
     this.height = this.height || this.$el.height();
 
-    let max_w = window.innerWidth - 20;
-    let max_h = window.innerHeight - 20;
+    this._clampToViewport();
+
+    this.ratio = this.height / this.width;
+    this.$el.height(this.height);
+    this.$el.width(this.width);
+    return true;
+  }
+
+  /**
+   * Keep the player within the browser window. A large video must never make
+   * the player grow past the viewport, so we fit the native dimensions into a
+   * box that also reserves room for the window margins, the top offset and the
+   * draggable header (topbarHeight) — otherwise the header + video together can
+   * still overflow. fitBoxes preserves the aspect ratio (letterbox), and we
+   * only shrink: videos smaller than the box keep their natural size.
+   */
+  _clampToViewport() {
+    const o = require("window/configs/default")();
+    // Usable width excludes the desk sidebar: Wm.$el (the WM container) starts
+    // at the sidebar's right edge, so its left offset is the sidebar width.
+    const sidebar = Wm.$el ? Wm.$el.offset().left : 0;
+    const max_w = window.innerWidth - 2 * o.marginX - sidebar;
+    const max_h =
+      window.innerHeight - o.offsetY - 2 * o.marginY - o.topbarHeight;
     if (this.width > max_w || this.height > max_h) {
       this.size = fitBoxes(
-        { width: window.innerWidth, height: window.innerHeight },
+        { width: max_w, height: max_h },
         { width: this.width, height: this.height },
       );
       this.width = this.size.width;
@@ -94,14 +90,9 @@ class __player_video extends __core {
     } else {
       this.size = {
         width: this.width,
-        height: this.height
+        height: this.height,
       };
-
     }
-    this.ratio = this.height / this.width;
-    this.$el.height(this.height);
-    this.$el.width(this.width);
-    return true;
   }
 
 

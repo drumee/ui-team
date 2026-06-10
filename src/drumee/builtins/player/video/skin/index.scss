@@ -25,13 +25,12 @@
     width: 100%;
   }
 
+  // Drag handle. The window is dragged by this header (see
+  // player/interact.js `setupInteract`, handle `.player__header`).
   &-topbar__control {
-    position: absolute;
-    z-index: 2;
-    right: var(--spacer-4);
-    top: var(--spacer-4);
     background: transparent;
     padding: 0;
+    cursor: move;
 
     .window-button__icon-button {
       width: 32px;
@@ -42,6 +41,7 @@
       backdrop-filter: blur(4px);
       color: #ffffff;
       transition: background-color 0.15s ease;
+      cursor: pointer;
 
       svg, .icon { width: 14px; height: 14px; }
 

@@ -557,21 +557,36 @@ class __window_interact_player extends __utils {
     size = size || o.imagePlayer;
     let s = fitBoxes(this.size, size);
     let height = s.height + o.topbarHeight;
-    let dy = o.marginY;
     let shiftY = this.mget("shiftY") || o.marginY || 0;
     let shiftX = this.mget("shiftX") || o.marginX || 0;
     const max_height = window.innerHeight - o.offsetY - 2 * o.marginY;
-    const max_width = window.innerWidth - 2 * o.marginX;
-    //if(s.width > max_width) s.width = max_width;
+    // The workspace lives to the right of the desk sidebar, so the usable width
+    // is the viewport minus the sidebar. Wm.$el (the WM container) starts at the
+    // sidebar's right edge, so its left offset is the sidebar width — subtract
+    // it so wide media never extends under the sidebar / past the workspace.
+    const sidebar = Wm.$el ? Wm.$el.offset().left : 0;
+    const max_width = window.innerWidth - 2 * o.marginX - sidebar;
+    // Clamp both dimensions independently. Each branch scales width/height
+    // together so the aspect ratio is preserved (letterbox). These must NOT be
+    // `else if`: a wide media that overflows height can still overflow width
+    // after the first clamp, so the width check has to run too.
     if (height > max_height) {
       s.width = (s.width * max_height) / height;
       height = max_height;
-      dy = 0;
-    } else if (s.width > max_width) {
+    }
+    if (s.width > max_width) {
       height = (height * max_width) / s.width;
       s.width = max_width;
     }
-    let x = (max_width - s.width) / 2 - Wm.$el.offset().left + this._lastX;
+    // Center the media within the workspace (the WM container, which sits below
+    // the top header and to the right of the sidebar). `x`/`y` are relative to
+    // the container's own origin — the player's offset parent — so we center
+    // against the container's own width/height directly; no viewport-to-
+    // container offset conversion is needed.
+    const ws_width = Wm.$el ? Wm.$el.width() : window.innerWidth;
+    const ws_height = Wm.$el ? Wm.$el.height() : window.innerHeight;
+    let x = (ws_width - s.width) / 2 + this._lastX;
+    let y = (ws_height - height) / 2;
     let pos = {};
     let pin = this.mget("pin") || {};
     if (Visitor.isMobile()) {
@@ -585,7 +600,7 @@ class __window_interact_player extends __utils {
         pos = pin;
       } else {
         pos = {
-          top: dy - this.offset.top + shiftY,
+          top: y + shiftY,
           left: x + shiftX,
         };
       }
