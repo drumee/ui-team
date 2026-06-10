@@ -1,4 +1,5 @@
 const { uploadFile } = require("@drumee/ui-essentials");
+const { markerRe, uidsFromText } = require("./mention-markers");
 
 const COLUMNS = [
   { key: "todo", label: "STATUS_TODO", color: "#AEAEB2" },
@@ -42,12 +43,23 @@ class __tasks_panel extends LetcBox {
     this._pickerOpen = null;
     // Member filter — empty = show all. Uids stored as strings.
     this._filterUids = [];
+    // Active sub-view (board | list | summary) and the List view's sort state.
+    this._view = "board";
+    this._sort = null; // { key, dir } — null = natural (status, rank) order
     this._fileSearch = { query: "", results: [], scope: null };
     this._fileSearchTimer = null;
     this._fileSearchBlurTimer = null;
     // Active @-mention session (null when the popup is closed): the "@token"
     // range in the focused description editor + the filtered member list.
     this._mention = null;
+    // Comment feed state for the open task detail.
+    this._comments = [];
+    this._commentDraft = null; // composer buffer { body, mention_uids }
+    this._editingCommentId = null;
+    this._commentEditDraft = null; // inline-edit buffer { body, mention_uids }
+    this._replyingTo = null; // root comment id whose reply composer is open
+    this._replyDraft = null; // reply buffer { body, mention_uids }
+    this._reactPickerFor = null; // comment id whose reaction palette is open
     this.bindEvent(_a.live);
   }
 
@@ -558,11 +570,87 @@ class __tasks_panel extends LetcBox {
         this._detailId = null;
         this._detailDraft = null;
         this._pickerOpen = null;
+        this._comments = [];
+        this._commentDraft = null;
+        this._editingCommentId = null;
+        this._commentEditDraft = null;
+        this._replyingTo = null;
+        this._replyDraft = null;
+        this._reactPickerFor = null;
         this._resetFileSearch();
         return this._render();
 
       case "open-detail":
         return this._openDetail(trigger.mget("taskId"));
+
+      case "set-view": {
+        const v = trigger.mget("viewMode");
+        if (v && v !== this._view) {
+          this._view = v;
+          this._render();
+        }
+        return;
+      }
+
+      case "set-sort": {
+        // Toggle direction when re-selecting the same column, else sort asc.
+        const key = trigger.mget("sortKey");
+        if (!key) return;
+        if (this._sort && this._sort.key === key) {
+          this._sort = { key, dir: this._sort.dir === 1 ? -1 : 1 };
+        } else {
+          this._sort = { key, dir: 1 };
+        }
+        return this._render();
+      }
+
+      case "comment-submit":
+        return this._submitComment();
+
+      case "comment-edit": {
+        const cid = trigger.mget("commentId");
+        const c = this._comments.find((x) => x.id === cid);
+        this._editingCommentId = cid;
+        // Seed the inline editor with the comment's current body + its tags.
+        this._commentEditDraft = c
+          ? { body: c.body || "", mention_uids: uidsFromText(c.body || "") }
+          : null;
+        return this._refreshCommentList();
+      }
+
+      case "comment-save":
+        return this._saveCommentEdit();
+
+      case "comment-cancel":
+        this._editingCommentId = null;
+        this._commentEditDraft = null;
+        return this._refreshCommentList();
+
+      case "comment-delete":
+        return this._deleteComment(trigger);
+
+      case "comment-reply":
+        this._replyingTo = trigger.mget("commentId");
+        this._replyDraft = null;
+        this._reactPickerFor = null;
+        return this._refreshCommentList();
+
+      case "comment-reply-cancel":
+        this._replyingTo = null;
+        this._replyDraft = null;
+        return this._refreshCommentList();
+
+      case "comment-reply-submit":
+        return this._submitReply();
+
+      case "comment-react":
+        return this._toggleReaction(trigger);
+
+      case "comment-react-toggle": {
+        const cid = trigger.mget("commentId");
+        this._reactPickerFor = this._reactPickerFor === cid ? null : cid;
+        return this._refreshCommentList();
+      }
 
       case "file-search-input":
         return this._scheduleFileSearch(trigger);
@@ -590,11 +678,10 @@ class __tasks_panel extends LetcBox {
       child.el.onchange = (e) => this._onAttachmentPicked(e);
       return;
     }
-    if (pn === "create-desc-editor" || pn === "detail-desc-editor") {
-      this._initDescEditor(
-        child.el,
-        pn === "create-desc-editor" ? "create" : "detail",
-      );
+    // Mention editors register as "<scope>-desc-editor" (create / detail /
+    // comment / comment-edit / comment-reply). Init each with its scope.
+    if (typeof pn === "string" && pn.endsWith("-desc-editor")) {
+      this._initDescEditor(child.el, pn.slice(0, -"-desc-editor".length));
       return;
     }
     if (super.onPartReady) super.onPartReady(child, pn);
@@ -654,6 +741,18 @@ class __tasks_panel extends LetcBox {
       case SERVICE.task.unlink_file:
         if (this._detailId) {
           this._refreshAttachments(this._detailId).then(() => this._render());
+        }
+        return;
+      case SERVICE.task.comment_create:
+      case SERVICE.task.comment_update:
+      case SERVICE.task.comment_delete:
+      case SERVICE.task.comment_react:
+        // A peer changed a comment. Surgically refresh the open task's feed so
+        // an in-progress composer/edit isn't disturbed.
+        if (this._detailId) {
+          this._loadComments(this._detailId).then(() => {
+            if (this._detailId) this._refreshCommentList();
+          });
         }
         return;
       default:
@@ -1101,9 +1200,7 @@ class __tasks_panel extends LetcBox {
     // Description is stored/edited in marker form (`[@Name](user:uid)`); the
     // editor renders chips from it. Seed mention_uids from the existing markers
     // so the Update diff can tell which mentions are newly added.
-    const seededMentions = task
-      ? this._mentionUidsFromText(task.description || "")
-      : [];
+    const seededMentions = task ? uidsFromText(task.description || "") : [];
     this._detailDraft = task
       ? {
           title: task.title || "",
@@ -1125,6 +1222,14 @@ class __tasks_panel extends LetcBox {
           pending_files: [],
         }
       : null;
+    // Reset comment state for the newly-opened task.
+    this._comments = [];
+    this._commentDraft = null;
+    this._editingCommentId = null;
+    this._commentEditDraft = null;
+    this._replyingTo = null;
+    this._replyDraft = null;
+    this._reactPickerFor = null;
     // Re-fetch folder filenames so collision preview (a → a(1)) reflects
     // the folder's current state.
     this._folderFilenames = null;
@@ -1136,6 +1241,196 @@ class __tasks_panel extends LetcBox {
       this._refreshAttachmentsList();
       this._refreshFileSearchDropdown("detail");
     });
+    // Surgically feed the comment list when it arrives — a full _render() here
+    // rebuilds the panel and replays its open animation (visible glitch).
+    this._loadComments(id).then(() => {
+      if (this._detailId === id) this._refreshCommentList();
+    });
+  }
+
+  async _loadComments(taskId) {
+    try {
+      const rows = await this.fetchService({
+        service: SERVICE.task.comment_list,
+        hub_id: this._hubId,
+        task_id: taskId,
+      });
+      // reactions arrives as a JSON array (sometimes a JSON string from the DB).
+      this._comments = (Array.isArray(rows) ? rows : []).map((r) => {
+        let reactions = r.reactions;
+        if (typeof reactions === "string") {
+          try {
+            reactions = JSON.parse(reactions);
+          } catch (_) {
+            reactions = [];
+          }
+        }
+        return { ...r, reactions: Array.isArray(reactions) ? reactions : [] };
+      });
+    } catch (err) {
+      this._comments = [];
+    }
+  }
+
+  async _submitComment() {
+    if (!this._detailId) return;
+    const draft = this._commentDraft;
+    const body = String((draft && draft.body) || "").trim();
+    if (!body) return;
+    const taskId = this._detailId;
+    try {
+      await this.postService({
+        service: SERVICE.task.comment_create,
+        hub_id: this._hubId,
+        task_id: taskId,
+        body,
+        mention_uids: Array.isArray(draft.mention_uids) ? draft.mention_uids : [],
+      });
+      this._commentDraft = null;
+      await this._loadComments(taskId);
+    } catch (err) {
+      console.error("[tasks_panel] comment.create failed:", err);
+    }
+    // Surgically slot in the new comment + clear the composer — no full
+    // _render() (which rebuilds the whole panel and feels like a reload).
+    if (this._detailId === taskId) {
+      this._refreshCommentList();
+      const ed = this._descEditorEl("comment");
+      if (ed) this._renderEditorContent(ed, "");
+    }
+  }
+
+  async _saveCommentEdit() {
+    const id = this._editingCommentId;
+    if (!id) return;
+    const draft = this._commentEditDraft;
+    const body = String((draft && draft.body) || "").trim();
+    if (!body) return; // empty edit is a no-op; use delete to remove
+    const taskId = this._detailId;
+    try {
+      await this.postService({
+        service: SERVICE.task.comment_update,
+        hub_id: this._hubId,
+        id,
+        body,
+        mention_uids: Array.isArray(draft.mention_uids) ? draft.mention_uids : [],
+      });
+      this._editingCommentId = null;
+      this._commentEditDraft = null;
+      await this._loadComments(taskId);
+    } catch (err) {
+      console.error("[tasks_panel] comment.update failed:", err);
+    }
+    if (this._detailId === taskId) this._refreshCommentList();
+  }
+
+  async _deleteComment(trigger) {
+    const id = trigger.mget("commentId");
+    if (!id || !this._detailId) return;
+    const taskId = this._detailId;
+    try {
+      await this.postService({
+        service: SERVICE.task.comment_delete,
+        hub_id: this._hubId,
+        id,
+        task_id: taskId,
+      });
+      this._comments = this._comments.filter((c) => c.id !== id);
+      if (this._editingCommentId === id) {
+        this._editingCommentId = null;
+        this._commentEditDraft = null;
+      }
+    } catch (err) {
+      console.error("[tasks_panel] comment.delete failed:", err);
+    }
+    if (this._detailId === taskId) this._refreshCommentList();
+  }
+
+  async _submitReply() {
+    const rootId = this._replyingTo;
+    if (!rootId || !this._detailId) return;
+    const draft = this._replyDraft;
+    const body = String((draft && draft.body) || "").trim();
+    if (!body) return;
+    const taskId = this._detailId;
+    try {
+      await this.postService({
+        service: SERVICE.task.comment_create,
+        hub_id: this._hubId,
+        task_id: taskId,
+        parent_id: rootId,
+        body,
+        mention_uids: Array.isArray(draft.mention_uids) ? draft.mention_uids : [],
+      });
+      this._replyingTo = null;
+      this._replyDraft = null;
+      await this._loadComments(taskId);
+    } catch (err) {
+      console.error("[tasks_panel] comment reply failed:", err);
+    }
+    if (this._detailId === taskId) this._refreshCommentList();
+  }
+
+  async _toggleReaction(trigger) {
+    const commentId = trigger.mget("commentId");
+    const emoji = trigger.mget("emoji");
+    if (!commentId || !emoji || !this._detailId) return;
+    const taskId = this._detailId;
+    this._reactPickerFor = null;
+    try {
+      await this.postService({
+        service: SERVICE.task.comment_react,
+        hub_id: this._hubId,
+        comment_id: commentId,
+        task_id: taskId,
+        emoji,
+      });
+      await this._loadComments(taskId);
+    } catch (err) {
+      console.error("[tasks_panel] comment react failed:", err);
+    }
+    if (this._detailId === taskId) this._refreshCommentList();
+  }
+
+  // Read-only render of each comment body into its <div> (reuses the editor's
+  // chip rendering). Bodies are populated post-feed, like the description.
+  _renderCommentBodies() {
+    if (!this.el) return;
+    this.el
+      .querySelectorAll(`.${this.fig.family}__comment-body[data-comment-id]`)
+      .forEach((el) => {
+        const c = this._comments.find(
+          (x) => String(x.id) === String(el.dataset.commentId),
+        );
+        if (c) this._renderEditorContent(el, c.body || "");
+      });
+  }
+
+  // Surgical comment-feed refresh (no full _render) so a peer's WS comment
+  // doesn't disturb an in-progress composer. Mirrors _refreshAttachmentsList.
+  _refreshCommentList() {
+    this.ensurePart("comment-list")
+      .then((p) => {
+        if (!p || (p.isDestroyed && p.isDestroyed())) return;
+        p.feed(require("./skeleton").buildCommentListContent(this));
+        this._renderCommentBodies();
+        // onPartReady doesn't reliably re-fire for surgically-fed parts, so wire
+        // the active inline editors explicitly (mirrors _prepopulateInputs).
+        const root = ".tasks-panel__detail-panel ";
+        if (this._editingCommentId) {
+          const ed = this.el.querySelector(
+            root + ".tasks-panel__comment-edit-input",
+          );
+          if (ed) this._initDescEditor(ed, "comment-edit");
+        }
+        if (this._replyingTo) {
+          const ed = this.el.querySelector(
+            root + ".tasks-panel__comment-reply-input",
+          );
+          if (ed) this._initDescEditor(ed, "comment-reply");
+        }
+      })
+      .catch(() => {});
   }
 
   _pickAttachment(trigger) {
@@ -1667,19 +1962,71 @@ class __tasks_panel extends LetcBox {
   // carries the uid, so serialization to "[@Name](user:uid)" markers is exact
   // (no fragile name-matching) and that marker form is what we store/send.
 
-  _descDraft(scope) {
-    return scope === "create" ? this._createDefaults : this._detailDraft;
+  // Per-scope adapter: which DOM element the editor binds to and where it
+  // reads/writes its marker text. Decouples the mention editor from any one
+  // model so the description (create/detail) and the comment composer can all
+  // reuse the same editor logic.
+  _mentionTarget(scope) {
+    const pfx = this.fig.family;
+    switch (scope) {
+      case "create":
+        return {
+          editorSelector: `.${pfx}__create-modal .${pfx}__desc-editor`,
+          placeholder: LOCALE.TASK_DESCRIPTION_PLACEHOLDER,
+          get: () =>
+            (this._createDefaults && this._createDefaults.description) || "",
+          set: (text, uids) => {
+            if (!this._createDefaults) return;
+            this._createDefaults.description = text;
+            this._createDefaults.mention_uids = uids;
+          },
+        };
+      case "detail":
+        return {
+          editorSelector: `.${pfx}__detail-panel .${pfx}__desc-editor`,
+          placeholder: LOCALE.TASK_DESCRIPTION_PLACEHOLDER,
+          get: () => (this._detailDraft && this._detailDraft.description) || "",
+          set: (text, uids) => {
+            if (!this._detailDraft) return;
+            this._detailDraft.description = text;
+            this._detailDraft.mention_uids = uids;
+          },
+        };
+      case "comment":
+        return {
+          editorSelector: `.${pfx}__detail-panel .${pfx}__comment-input`,
+          placeholder: LOCALE.TASK_COMMENT_PLACEHOLDER,
+          get: () => (this._commentDraft && this._commentDraft.body) || "",
+          set: (text, uids) => {
+            this._commentDraft = { body: text, mention_uids: uids };
+          },
+        };
+      case "comment-edit":
+        return {
+          editorSelector: `.${pfx}__detail-panel .${pfx}__comment-edit-input`,
+          placeholder: LOCALE.TASK_COMMENT_PLACEHOLDER,
+          get: () => (this._commentEditDraft && this._commentEditDraft.body) || "",
+          set: (text, uids) => {
+            this._commentEditDraft = { body: text, mention_uids: uids };
+          },
+        };
+      case "comment-reply":
+        return {
+          editorSelector: `.${pfx}__detail-panel .${pfx}__comment-reply-input`,
+          placeholder: LOCALE.TASK_COMMENT_PLACEHOLDER,
+          get: () => (this._replyDraft && this._replyDraft.body) || "",
+          set: (text, uids) => {
+            this._replyDraft = { body: text, mention_uids: uids };
+          },
+        };
+      default:
+        return null;
+    }
   }
 
   _descEditorEl(scope) {
-    const root =
-      this.el &&
-      this.el.querySelector(
-        scope === "create"
-          ? ".tasks-panel__create-modal"
-          : ".tasks-panel__detail-panel",
-      );
-    return root && root.querySelector(`.${this.fig.family}__desc-editor`);
+    const t = this._mentionTarget(scope);
+    return t && this.el && this.el.querySelector(t.editorSelector);
   }
 
   // Build a contenteditable=false chip node for a mention.
@@ -1703,7 +2050,7 @@ class __tasks_panel extends LetcBox {
         if (part) editorEl.appendChild(document.createTextNode(part));
       });
     };
-    const re = /\[@([^\]]+)\]\(user:([^)]+)\)/g;
+    const re = markerRe();
     let last = 0;
     let m;
     while ((m = re.exec(text))) {
@@ -1754,33 +2101,19 @@ class __tasks_panel extends LetcBox {
     return uids;
   }
 
-  _mentionUidsFromText(text) {
-    const uids = [];
-    String(text || "").replace(
-      /\[@[^\]]+\]\(user:([^)]+)\)/g,
-      (mt, uid) => {
-        if (uid && !uids.includes(String(uid))) uids.push(String(uid));
-        return mt;
-      },
-    );
-    return uids;
-  }
-
   // Seed the editor from the draft and wire its events. Idempotent and called
   // from both onPartReady and _prepopulateInputs (onPartReady alone doesn't
   // reliably re-fire on reopen); only re-renders when the DOM differs from the
   // draft, so an active caret isn't disturbed.
   _initDescEditor(editorEl, scope) {
     if (!editorEl) return;
+    const target = this._mentionTarget(scope);
+    if (!target) return;
     // Guarantee the placeholder attr even if the framework dropped attrOpt.
-    if (!editorEl.getAttribute("data-placeholder")) {
-      editorEl.setAttribute(
-        "data-placeholder",
-        LOCALE.TASK_DESCRIPTION_PLACEHOLDER,
-      );
+    if (!editorEl.getAttribute("data-placeholder") && target.placeholder) {
+      editorEl.setAttribute("data-placeholder", target.placeholder);
     }
-    const draft = this._descDraft(scope);
-    const want = draft ? draft.description || "" : "";
+    const want = target.get();
     if (this._serializeEditor(editorEl) !== want) {
       this._renderEditorContent(editorEl, want);
     }
@@ -1798,10 +2131,12 @@ class __tasks_panel extends LetcBox {
     ) {
       editorEl.innerHTML = "";
     }
-    const draft = this._descDraft(scope);
-    if (draft) {
-      draft.description = this._serializeEditor(editorEl);
-      draft.mention_uids = this._collectMentionUids(editorEl);
+    const target = this._mentionTarget(scope);
+    if (target) {
+      target.set(
+        this._serializeEditor(editorEl),
+        this._collectMentionUids(editorEl),
+      );
     }
     this._handleEditorMention(editorEl, scope);
   }
@@ -1898,7 +2233,10 @@ class __tasks_panel extends LetcBox {
   // caret rect comes from the @token range (a collapsed-caret rect is often
   // empty); coordinates are field-relative, so transforms cancel out.
   _positionMentionAtCaret(el, editorEl) {
-    const field = el.closest(`.${this.fig.family}__desc-field`);
+    // The editor's wrapper is the positioning context (position: relative); the
+    // dropdown is its sibling. Using the parent (not a fixed class) keeps this
+    // generic across the description field and the comment composer.
+    const field = editorEl.parentNode;
     if (!field) return;
     const ref = this._mention;
     let caret = null;
@@ -1986,10 +2324,12 @@ class __tasks_panel extends LetcBox {
     sel.addRange(range);
     editorEl.focus();
 
-    const draft = this._descDraft(scope);
-    if (draft) {
-      draft.description = this._serializeEditor(editorEl);
-      draft.mention_uids = this._collectMentionUids(editorEl);
+    const target = this._mentionTarget(scope);
+    if (target) {
+      target.set(
+        this._serializeEditor(editorEl),
+        this._collectMentionUids(editorEl),
+      );
     }
   }
 
@@ -2024,6 +2364,22 @@ class __tasks_panel extends LetcBox {
         ".tasks-panel__detail-panel .tasks-panel__desc-editor",
         "detail",
       );
+      initEditor(
+        ".tasks-panel__detail-panel .tasks-panel__comment-input",
+        "comment",
+      );
+      if (this._editingCommentId) {
+        initEditor(
+          ".tasks-panel__detail-panel .tasks-panel__comment-edit-input",
+          "comment-edit",
+        );
+      }
+      if (this._replyingTo) {
+        initEditor(
+          ".tasks-panel__detail-panel .tasks-panel__comment-reply-input",
+          "comment-reply",
+        );
+      }
     }
   }
 
@@ -2067,8 +2423,12 @@ class __tasks_panel extends LetcBox {
     // the title/description start empty after each feed; pre-populate them
     // (sync + next frame as a safety net for late-mount children).
     this._prepopulateInputs();
+    this._renderCommentBodies();
     if (typeof requestAnimationFrame === "function") {
-      requestAnimationFrame(() => this._prepopulateInputs());
+      requestAnimationFrame(() => {
+        this._prepopulateInputs();
+        this._renderCommentBodies();
+      });
     }
 
     if (focusName && typeof requestAnimationFrame === "function") {
@@ -2113,23 +2473,37 @@ class __tasks_panel extends LetcBox {
     return this._filterUids;
   }
 
-  getState() {
+  // Member-filter predicate shared by every view (board / list / summary).
+  _matchesFilter(t) {
     const filter = this._filterUids || [];
-    const matchesFilter = (t) => {
-      if (!filter.length) return true;
-      const uids = Array.isArray(t.assignee_uids)
-        ? t.assignee_uids.map(String)
-        : t.assignee_uid
-          ? [String(t.assignee_uid)]
-          : [];
-      return uids.some((u) => filter.includes(u));
-    };
+    if (!filter.length) return true;
+    const uids = Array.isArray(t.assignee_uids)
+      ? t.assignee_uids.map(String)
+      : t.assignee_uid
+        ? [String(t.assignee_uid)]
+        : [];
+    return uids.some((u) => filter.includes(u));
+  }
+
+  getState() {
     return COLUMNS.reduce((acc, c) => {
       acc[c.key] = this._tasks.filter(
-        (t) => t.status === c.key && matchesFilter(t),
+        (t) => t.status === c.key && this._matchesFilter(t),
       );
       return acc;
     }, {});
+  }
+
+  // Flat member-filtered task list — the dataset for the List + Summary views.
+  getFilteredTasks() {
+    return this._tasks.filter((t) => this._matchesFilter(t));
+  }
+
+  getView() {
+    return this._view || "board";
+  }
+  getSort() {
+    return this._sort || null;
   }
 
   isCreating() {
@@ -2154,6 +2528,18 @@ class __tasks_panel extends LetcBox {
   }
   getDetailAttachments() {
     return (this._detailId && this._attachments[this._detailId]) || [];
+  }
+  getComments() {
+    return this._comments;
+  }
+  getEditingCommentId() {
+    return this._editingCommentId;
+  }
+  getReplyingTo() {
+    return this._replyingTo;
+  }
+  getReactPickerFor() {
+    return this._reactPickerFor;
   }
 }
 
