@@ -263,11 +263,7 @@ color-mix(in srgb, var(--col-accent, transparent) 60%, var(--normal-bg-80, rgba(
 
   // Description preview on the card — compact, muted, clamped to ~2 lines.
   &__task-desc {
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
     overflow: hidden;
-    overflow-wrap: anywhere; // long unbroken tokens/URLs stay inside the card
     margin: 2px 0 0;
     @include drumee.typo(
       $size: 12px,
@@ -275,6 +271,19 @@ color-mix(in srgb, var(--col-accent, transparent) 60%, var(--normal-bg-80, rgba(
       $line: 16px,
       $color: var(--normal-fg-40, #84848c)
     );
+
+    // The note widget renders text in an inner .note-content, so the 2-line
+    // clamp has to live there (clamping the outer wrapper never engages).
+    // max-height (line-height × 2) is the hard-cap fallback.
+    .note-content {
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+      max-height: 32px;
+      overflow-wrap: anywhere; // break long unbroken tokens/URLs
+      word-break: break-word;
+    }
   }
 
   &__task-foot {
@@ -1711,7 +1720,7 @@ color-mix(in srgb, var(--col-accent, transparent) 60%, var(--normal-bg-80, rgba(
       min-width: 0;
     }
     & > *:nth-child(2) {
-      flex: 0 0 110px;
+      flex: 0 0 124px; // status — fits the "In progress" pill
     }
     & > *:nth-child(3) {
       flex: 0 0 90px;
@@ -1773,14 +1782,21 @@ color-mix(in srgb, var(--col-accent, transparent) 60%, var(--normal-bg-80, rgba(
     );
   }
 
+  // Fixed-width cell (fills its column slot) holding a tight, left-aligned pill.
+  &__list-status-cell {
+    align-items: center;
+  }
+
   &__list-status {
-    align-self: center;
+    display: inline-block;
+    max-width: 100%;
     border: 1px solid;
     border-radius: 11px;
-    padding: 2px 8px !important;
+    padding: 2px 8px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
     @include drumee.typo($size: 11px, $weight: 600, $line: 14px);
-    overflow: visible !important;
-    max-width: max-content;
   }
 
   &__list-priority {
@@ -1912,7 +1928,12 @@ color-mix(in srgb, var(--col-accent, transparent) 60%, var(--normal-bg-80, rgba(
   }
 
   &__sum-work-row &__sum-bar-label {
-    flex: 1 1 auto;
+    flex: 0 1 140px; // cap the name so the bar (flex:1) stays prominent
+    min-width: 0;
+  }
+
+  &__sum-work-avatar--none {
+    background: var(--normal-bg-80, #ececf1);
   }
 
   &__sum-bar-track {

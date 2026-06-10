@@ -129,32 +129,49 @@ module.exports = function (ui) {
     .map((uid) => ({ uid, count: byAssignee[uid] }))
     .sort((a, b) => b.count - a.count);
   const maxWork = Math.max(1, unassigned, ...work.map((e) => e.count));
-  const workRows = work.map((e) => {
-    const m = ui.getMember(e.uid) || {};
-    return Skeletons.Box.X({
+  // All workload rows share one structure so their bars align — Unassigned uses
+  // a neutral placeholder avatar.
+  const workRow = (avatarNode, label, count, color) =>
+    Skeletons.Box.X({
       className: `${pfx}__sum-work-row`,
       kids: [
-        Skeletons.UserProfile({
-          className: `${pfx}__sum-work-avatar`,
-          id: e.uid,
-          firstname: m.firstname,
-          lastname: m.lastname,
-          auto_color: 1,
-          live_status: 0,
-        }),
-        Skeletons.Note({
-          className: `${pfx}__sum-bar-label`,
-          content: fullName(m) || e.uid,
-        }),
-        track(e.count / maxWork, "#65D0EA"),
+        avatarNode,
+        Skeletons.Note({ className: `${pfx}__sum-bar-label`, content: label }),
+        track(count / maxWork, color),
         Skeletons.Note({
           className: `${pfx}__sum-bar-count`,
-          content: String(e.count),
+          content: String(count),
         }),
       ],
     });
+  const workRows = work.map((e) => {
+    const m = ui.getMember(e.uid) || {};
+    return workRow(
+      Skeletons.UserProfile({
+        className: `${pfx}__sum-work-avatar`,
+        id: e.uid,
+        firstname: m.firstname,
+        lastname: m.lastname,
+        auto_color: 1,
+        live_status: 0,
+      }),
+      fullName(m) || e.uid,
+      e.count,
+      "#65D0EA",
+    );
   });
-  if (unassigned) workRows.push(bar(LOCALE.UNASSIGNED, unassigned, "#AEAEB2", maxWork));
+  if (unassigned) {
+    workRows.push(
+      workRow(
+        Skeletons.Note({
+          className: `${pfx}__sum-work-avatar ${pfx}__sum-work-avatar--none`,
+        }),
+        LOCALE.UNASSIGNED,
+        unassigned,
+        "#AEAEB2",
+      ),
+    );
+  }
   const workloadCard = card(
     LOCALE.TASK_SUMMARY_WORKLOAD,
     workRows.length

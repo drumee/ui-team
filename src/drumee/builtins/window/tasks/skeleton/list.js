@@ -111,10 +111,15 @@ module.exports = function (ui) {
           className: `${pfx}__list-cell ${pfx}__list-title`,
           content: t.title || "",
         }),
-        Skeletons.Note({
-          className: `${pfx}__list-cell ${pfx}__list-status`,
-          content: LOCALE[s.label] || s.key,
-          styleOpt: { color: s.color, borderColor: s.color },
+        Skeletons.Box.X({
+          className: `${pfx}__list-cell ${pfx}__list-status-cell`,
+          kids: [
+            Skeletons.Note({
+              className: `${pfx}__list-status`,
+              content: LOCALE[s.label] || s.key,
+              styleOpt: { color: s.color, borderColor: s.color },
+            }),
+          ],
         }),
         Skeletons.Note({
           className: `${pfx}__list-cell ${pfx}__list-priority`,
