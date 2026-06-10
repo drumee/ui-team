@@ -416,6 +416,8 @@
   "DAYS": "DAYS",
   "DELETE": "Delete",
   "DESCRIPTION": "Description",
+  "DETAILS": "Detalles",
+  "MODIFIED": "Modificado",
   "DIDNT_RECEIVE_EMAIL": "Didn't receive the email?",
   "DISCONNECT": "Disconnect",
   "DOCUMENT": "Document",
