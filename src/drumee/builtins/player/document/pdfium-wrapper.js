@@ -7,7 +7,6 @@ let pdfiumInstance;
 
 export async function initializePdfium() {
   const { init, DEFAULT_PDFIUM_WASM_URL } = await import('@embedpdf/pdfium');
-  console.log("AAAA:10", { PDFIUM_WASM_URL, DEFAULT_PDFIUM_WASM_URL })
   if (pdfiumInstance) return pdfiumInstance;
 
   /** Prefer a runtime override, then the self-hosted bundle, then the CDN default */
