@@ -2150,6 +2150,75 @@ class __widget_chat extends LetcBox {
   }
 
   /**
+   * Search files/folders under the current folder for mention suggestions.
+   * Uses only read/list calls; sendMessage keeps mentions out of attachments.
+   */
+  async _fetchMentionFiles(folderHubId, folderNid, filter) {
+    const query = (filter || "").trim().toLowerCase();
+    const rows = [];
+    const seen = new Set();
+    const visitedFolders = new Set();
+    const queue = [{ nid: folderNid, path: "", depth: 0 }];
+    const maxDepth = query ? 4 : 0;
+    const maxFolders = query ? 40 : 1;
+    const maxRows = 80;
+
+    const toRows = (d) => {
+      if (!d) return [];
+      if (Array.isArray(d)) return d;
+      return d.rows || d.data || [];
+    };
+
+    const matches = (file) => {
+      if (!query) return true;
+      const name = (file.filename || file.user_filename || "").toLowerCase();
+      const path = (file.mention_path || "").toLowerCase();
+      return name.includes(query) || path.includes(query);
+    };
+
+    while (queue.length && visitedFolders.size < maxFolders && rows.length < maxRows) {
+      const folder = queue.shift();
+      if (!folder || !folder.nid || visitedFolders.has(folder.nid)) continue;
+      visitedFolders.add(folder.nid);
+
+      const data = await this.fetchService({
+        service: SERVICE.media.show_node_by,
+        hub_id: folderHubId,
+        nid: folder.nid,
+      }).catch(() => null);
+
+      for (const item of toRows(data)) {
+        if (!item || item.filetype === _a.hub) continue;
+        const filename = item.filename || item.user_filename || "";
+        const mentionPath = folder.path ? `${folder.path}/${filename}` : filename;
+        const normalized = {
+          ...item,
+          filename,
+          mention_path: mentionPath,
+        };
+        const key = `${normalized.nid || ""}`;
+        const isFolder = item.filetype === _a.folder || item.ftype === _a.folder;
+
+        if (matches(normalized) && key && !seen.has(key)) {
+          seen.add(key);
+          rows.push(normalized);
+          if (rows.length >= maxRows) break;
+        }
+
+        if (query && isFolder && item.nid && folder.depth < maxDepth) {
+          queue.push({
+            nid: item.nid,
+            path: mentionPath,
+            depth: folder.depth + 1,
+          });
+        }
+      }
+    }
+
+    return rows;
+  }
+
+  /**
    * Show mention dropdown filtered by text
    * @param {string} filter - text after trigger character
    * @param {string} mentionType - 'contact' (from @) or 'file' (from /)
@@ -2217,11 +2286,7 @@ class __widget_chat extends LetcBox {
       } catch (e) {}
       if (!folderNid) folderNid = (home && home.home_id) || folderHubId;
 
-      filesPromise = this.fetchService({
-        service: SERVICE.media.show_node_by,
-        hub_id: folderHubId,
-        nid: folderNid,
-      }).catch(() => null);
+      filesPromise = this._fetchMentionFiles(folderHubId, folderNid, filter);
     }
 
     if (mentionType === "contact") {
@@ -2283,14 +2348,17 @@ class __widget_chat extends LetcBox {
           return fullname.length > 0;
         });
 
-        if (filter) {
-          files = files.filter((f) =>
-            (f.filename || "").toLowerCase().includes(filter),
-          );
+        const normalizedFilter = (filter || "").toLowerCase();
+        if (normalizedFilter) {
+          files = files.filter((f) => {
+            const name = (f.filename || "").toLowerCase();
+            const path = (f.mention_path || "").toLowerCase();
+            return name.includes(normalizedFilter) || path.includes(normalizedFilter);
+          });
           contacts = contacts.filter((c) => {
             const name =
               `${c.firstname || ""} ${c.lastname || ""} ${c.surname || ""}`.toLowerCase();
-            return name.includes(filter);
+            return name.includes(normalizedFilter);
           });
         }
 
@@ -2341,9 +2409,10 @@ class __widget_chat extends LetcBox {
           };
           html += '<div class="mention-section-header">Files</div>';
           files.slice(0, 6).forEach((f) => {
+            const label = f.mention_path || f.filename;
             html += `<div class="mention-item" data-nid="${_.escape(f.nid)}" data-hub_id="${_.escape(folderHubId)}" data-filename="${_.escape(f.filename)}" data-type="file" data-service="mention-select">
             <div class="mention-item__icon ${_.escape(f.area || "")}">${renderFileIcon(f)}</div>
-            <div class="mention-item__name">${_.escape(f.filename)}</div>
+            <div class="mention-item__name">${_.escape(label)}</div>
           </div>`;
           });
         }
