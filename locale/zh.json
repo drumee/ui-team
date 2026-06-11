@@ -51,6 +51,8 @@
   "DELETE": "删除",
   "ACCOUNT_DELETE": "删除我的账户",
   "DESCRIPTION": "描述",
+  "DETAILS": "详细信息",
+  "MODIFIED": "修改时间",
   "DELETE_WORKSPACE_FAILED": "无法删除工作区，列表已恢复。",
   "LEAVE_WORKSPACE_FAILED": "无法退出工作区，列表已恢复。",
   "DISCONNECT": "断开",

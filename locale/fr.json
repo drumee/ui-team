@@ -51,6 +51,8 @@
   "DELETE": "Supprimer",
   "ACCOUNT_DELETE": "Supprimer mon compte",
   "DESCRIPTION": "Description",
+  "DETAILS": "Détails",
+  "MODIFIED": "Modifié",
   "DELETE_WORKSPACE_FAILED": "Impossible de supprimer l'espace de travail. La liste a été restaurée.",
   "LEAVE_WORKSPACE_FAILED": "Impossible de quitter l'espace de travail. La liste a été restaurée.",
   "DISCONNECT": "Déconnexion",

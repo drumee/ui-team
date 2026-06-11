@@ -418,6 +418,8 @@
   "DAYS": "DAYS",
   "DELETE": "Delete",
   "DESCRIPTION": "Description",
+  "DETAILS": "Detalles",
+  "MODIFIED": "Modificado",
   "DELETE_WORKSPACE_FAILED": "No se pudo eliminar el espacio de trabajo. La lista ha sido restaurada.",
   "LEAVE_WORKSPACE_FAILED": "No se pudo salir del espacio de trabajo. La lista ha sido restaurada.",
   "DIDNT_RECEIVE_EMAIL": "Didn't receive the email?",
