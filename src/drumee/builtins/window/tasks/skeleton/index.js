@@ -60,14 +60,7 @@ function buildFileSearchDropdownContent(ui, scope, ctx = {}) {
   return [];
 }
 
-// Stored description markers `[@Full Name](user:uid)` ↔ display text `@Full Name`.
-// On read-only surfaces (the card) we strip the marker syntax to the plain
-// "@Name" so the raw `(user:uid)` payload never leaks into the UI.
-const MENTION_MARKER_RE = /\[@([^\]]+)\]\(user:([^)]+)\)/g;
-function stripMentionMarkers(text) {
-  if (!text) return "";
-  return String(text).replace(MENTION_MARKER_RE, "@$1");
-}
+const { stripMarkers: stripMentionMarkers } = require("../mention-markers");
 
 const make = function (ui) {
   const pfx = ui.fig.family;
@@ -116,35 +109,7 @@ const make = function (ui) {
   // primitive Jira/Linear use. The panel owns the editor's content and events
   // via onPartReady; `scope` is "create" | "detail" so it targets the right
   // editor + dropdown.
-  const mentionDropdown = (scope) =>
-    Skeletons.Box.Y({
-      className: `${pfx}__mention-dropdown`,
-      sys_pn: `${scope}-mention`,
-      partHandler: ui,
-      // dataset is dropped at render unless attrOpt is also set — use attrOpt.
-      attrOpt: { "data-open": "0" },
-      bubble: 0,
-      kids: [],
-    });
-
-  const descEditor = (scope) =>
-    Skeletons.Box.Y({
-      className: `${pfx}__desc-field`,
-      kids: [
-        Skeletons.Element({
-          tagName: "div",
-          className: `${pfx}__desc-editor`,
-          sys_pn: `${scope}-desc-editor`,
-          partHandler: ui,
-          flow: "none", // block flow for contenteditable, not flex
-          attrOpt: {
-            contenteditable: "true",
-            "data-placeholder": LOCALE.TASK_DESCRIPTION_PLACEHOLDER,
-          },
-        }),
-        mentionDropdown(scope),
-      ],
-    });
+  const descEditor = (scope) => mentionField(ui, scope);
 
   // ── Card pieces ───────────────────────────────────────────────
   // Title on the card is a plain Note: clicking it bubbles up to the card,
@@ -947,6 +912,40 @@ const make = function (ui) {
       ],
     });
 
+    // Comments: flat feed (a re-feedable part) + an @-mention composer.
+    const commentsSection = Skeletons.Box.Y({
+      className: `${pfx}__comments`,
+      kids: [
+        Skeletons.Note({
+          className: `${pfx}__detail-label`,
+          content: LOCALE.COMMENTS,
+        }),
+        Skeletons.Box.Y({
+          className: `${pfx}__comment-list`,
+          sys_pn: "comment-list",
+          partHandler: ui,
+          kids: buildCommentListContent(ui),
+        }),
+        Skeletons.Box.Y({
+          className: `${pfx}__comment-composer`,
+          kids: [
+            mentionField(ui, "comment", {
+              fieldClass: `${pfx}__comment-field`,
+              editorClass: `${pfx}__comment-input`,
+              placeholder: LOCALE.TASK_COMMENT_PLACEHOLDER,
+            }),
+            Skeletons.Note({
+              className: `${pfx}__comment-submit`,
+              content: LOCALE.COMMENT,
+              bubble: 0,
+              service: "comment-submit",
+              uiHandler: [ui],
+            }),
+          ],
+        }),
+      ],
+    });
+
     const actions = Skeletons.Box.X({
       className: `${pfx}__detail-actions`,
       kids: [
@@ -1026,7 +1025,7 @@ const make = function (ui) {
               kids: [
                 Skeletons.Box.Y({
                   className: `${pfx}__modal-main`,
-                  kids: [descriptionRow, attachmentsList],
+                  kids: [descriptionRow, attachmentsList, commentsSection],
                 }),
                 Skeletons.Box.Y({
                   className: `${pfx}__modal-side`,
@@ -1320,13 +1319,56 @@ const make = function (ui) {
     ],
   });
 
+  // Sub-views over the same folder-scoped task set. Board is rendered inline
+  // (its columns + DnD); List/Summary are separate modules fed the same data.
+  const view = ui.getView();
+  const boardView = () =>
+    Skeletons.Box.X({
+      className: `${pfx}__main`,
+      kids: ui.getColumns().map(column),
+    });
+  const viewContent =
+    view === "list"
+      ? require("./list")(ui)
+      : view === "summary"
+        ? require("./summary")(ui)
+        : boardView();
+
+  const subHeader = Skeletons.Box.X({
+    className: `${pfx}__viewbar`,
+    kids: [
+      ...[
+        ["board", LOCALE.TASK_VIEW_BOARD],
+        ["list", LOCALE.TASK_VIEW_LIST],
+        ["summary", LOCALE.TASK_VIEW_SUMMARY],
+      ].map(([key, label]) =>
+        Skeletons.Note({
+          className: `${pfx}__viewbar-item`,
+          content: label,
+          attrOpt: { "data-active": view === key ? "1" : "0" },
+          bubble: 0,
+          service: "set-view",
+          uiHandler: [ui],
+          viewMode: key,
+        }),
+      ),
+      // Global create — the board also has per-column "+"; this gives List and
+      // Summary a way to add a task (defaults to the "todo" column).
+      Skeletons.Note({
+        className: `${pfx}__viewbar-new`,
+        content: `+ ${LOCALE.NEW_TASK}`,
+        bubble: 0,
+        service: "add-task",
+        uiHandler: [ui],
+      }),
+    ],
+  });
+
   return Skeletons.Box.Y({
     className: `${pfx}__root`,
     kids: [
-      Skeletons.Box.X({
-        className: `${pfx}__main`,
-        kids: ui.getColumns().map(column),
-      }),
+      subHeader,
+      viewContent,
       // Filter overlay (anchored top-right, below the tab bar's filter button).
       filterOpen ? filterDropdown : null,
       Skeletons.Wrapper.Y({
@@ -1415,6 +1457,319 @@ function buildAssigneeButtonContent(ui, assignees) {
 // wires native onclick on each row (the framework's click dispatch is
 // unreliable for dynamically-fed rows — the chat mention list does the same),
 // so these carry no service/uiHandler.
+// The mention dropdown part (fed with member rows by the panel on @-input).
+function mentionDropdown(ui, scope) {
+  const pfx = ui.fig.family;
+  return Skeletons.Box.Y({
+    className: `${pfx}__mention-dropdown`,
+    sys_pn: `${scope}-mention`,
+    partHandler: ui,
+    // dataset is dropped at render unless attrOpt is also set — use attrOpt.
+    attrOpt: { "data-open": "0" },
+    bubble: 0,
+    kids: [],
+  });
+}
+
+// Reusable contenteditable mention editor. `scope` keys the panel's editor
+// logic + dropdown part; opt overrides the field/editor classes + placeholder
+// so the description and the comment composer/editor each style their own.
+function mentionField(ui, scope, opt = {}) {
+  const pfx = ui.fig.family;
+  return Skeletons.Box.Y({
+    className: opt.fieldClass || `${pfx}__desc-field`,
+    kids: [
+      Skeletons.Element({
+        tagName: "div",
+        className: opt.editorClass || `${pfx}__desc-editor`,
+        sys_pn: `${scope}-desc-editor`,
+        partHandler: ui,
+        flow: "none", // block flow for contenteditable, not flex
+        attrOpt: {
+          contenteditable: "true",
+          "data-placeholder":
+            opt.placeholder || LOCALE.TASK_DESCRIPTION_PLACEHOLDER,
+        },
+      }),
+      mentionDropdown(ui, scope),
+    ],
+  });
+}
+
+function commentTimeAgo(ts) {
+  if (!ts) return "";
+  try {
+    return Dayjs.unix(ts).fromNow();
+  } catch {
+    return "";
+  }
+}
+
+// Comment feed rows (flat, chronological). Bodies are populated read-only by
+// the panel post-render (chip rendering reused from the editor); the row being
+// edited renders an inline mention editor instead. Exported so the panel can
+// surgically re-feed the list on a peer's WS change without a full re-render.
+// Quick-react palette (also the set offered by the "add reaction" button).
+const REACT_EMOJIS = ["👍", "❤️", "🎉", "👀", "✅"];
+
+// Group a comment's raw [{emoji, uid}] reactions into [{emoji, count, own}].
+function groupReactions(reactions) {
+  const g = {};
+  (reactions || []).forEach((x) => {
+    const e = x && x.emoji;
+    if (!e) return;
+    if (!g[e]) g[e] = { emoji: e, count: 0, own: false };
+    g[e].count++;
+    if (String(x.uid) === String(Visitor.id)) g[e].own = true;
+  });
+  return Object.keys(g).map((k) => g[k]);
+}
+
+function buildCommentListContent(ui) {
+  const pfx = ui.fig.family;
+  const comments = ui.getComments() || [];
+  if (!comments.length) {
+    return [
+      Skeletons.Note({
+        className: `${pfx}__comments-empty`,
+        content: LOCALE.NO_COMMENTS,
+      }),
+    ];
+  }
+  const editingId = ui.getEditingCommentId();
+  const replyingTo = ui.getReplyingTo();
+  const pickerFor = ui.getReactPickerFor();
+  const fullName = (m) =>
+    [m.firstname, m.lastname].filter(Boolean).join(" ").trim() || m.email || "";
+
+  const reactBar = (c) => {
+    const kids = groupReactions(c.reactions).map((g) =>
+      Skeletons.Note({
+        className: `${pfx}__react-chip`,
+        content: `${g.emoji} ${g.count}`,
+        attrOpt: { "data-own": g.own ? "1" : "0" },
+        bubble: 0,
+        service: "comment-react",
+        uiHandler: [ui],
+        commentId: c.id,
+        emoji: g.emoji,
+      }),
+    );
+    kids.push(
+      Skeletons.Note({
+        className: `${pfx}__react-add`,
+        content: "☺",
+        bubble: 0,
+        service: "comment-react-toggle",
+        uiHandler: [ui],
+        commentId: c.id,
+      }),
+    );
+    if (String(pickerFor || "") === String(c.id)) {
+      REACT_EMOJIS.forEach((e) =>
+        kids.push(
+          Skeletons.Note({
+            className: `${pfx}__react-pick`,
+            content: e,
+            bubble: 0,
+            service: "comment-react",
+            uiHandler: [ui],
+            commentId: c.id,
+            emoji: e,
+          }),
+        ),
+      );
+    }
+    return Skeletons.Box.X({ className: `${pfx}__react-bar`, kids });
+  };
+
+  const commentBlock = (c, isReply) => {
+    const m = ui.getMember(c.author_uid) || {};
+    const isOwn = String(c.author_uid) === String(Visitor.id);
+    const avatar = Skeletons.UserProfile({
+      className: `${pfx}__comment-avatar`,
+      id: c.author_uid,
+      firstname: m.firstname,
+      lastname: m.lastname,
+      auto_color: 1,
+      live_status: 0,
+    });
+    const head = Skeletons.Box.X({
+      className: `${pfx}__comment-head`,
+      kids: [
+        Skeletons.Note({
+          className: `${pfx}__comment-author`,
+          content: fullName(m) || c.author_uid,
+        }),
+        Skeletons.Note({
+          className: `${pfx}__comment-time`,
+          content:
+            commentTimeAgo(c.ctime) + (c.edited ? ` · ${LOCALE.EDITED}` : ""),
+        }),
+      ],
+    });
+
+    // Inline edit mode for this comment.
+    if (editingId && String(editingId) === String(c.id)) {
+      return Skeletons.Box.X({
+        className: `${pfx}__comment-row`,
+        attrOpt: { "data-reply": isReply ? "1" : "0" },
+        kids: [
+          avatar,
+          Skeletons.Box.Y({
+            className: `${pfx}__comment-main`,
+            kids: [
+              head,
+              mentionField(ui, "comment-edit", {
+                fieldClass: `${pfx}__comment-field`,
+                editorClass: `${pfx}__comment-edit-input`,
+                placeholder: LOCALE.TASK_COMMENT_PLACEHOLDER,
+              }),
+              Skeletons.Box.X({
+                className: `${pfx}__comment-actions`,
+                kids: [
+                  Skeletons.Note({
+                    className: `${pfx}__comment-action ${pfx}__comment-action--primary`,
+                    content: LOCALE.SAVE,
+                    bubble: 0,
+                    service: "comment-save",
+                    uiHandler: [ui],
+                  }),
+                  Skeletons.Note({
+                    className: `${pfx}__comment-action`,
+                    content: LOCALE.CANCEL,
+                    bubble: 0,
+                    service: "comment-cancel",
+                    uiHandler: [ui],
+                  }),
+                ],
+              }),
+            ],
+          }),
+        ],
+      });
+    }
+
+    // Action row: Reply (root only) + Edit/Delete (own).
+    const actions = [];
+    if (!isReply)
+      actions.push(
+        Skeletons.Note({
+          className: `${pfx}__comment-action`,
+          content: LOCALE.REPLY,
+          bubble: 0,
+          service: "comment-reply",
+          uiHandler: [ui],
+          commentId: c.id,
+        }),
+      );
+    if (isOwn) {
+      actions.push(
+        Skeletons.Note({
+          className: `${pfx}__comment-action`,
+          content: LOCALE.EDIT,
+          bubble: 0,
+          service: "comment-edit",
+          uiHandler: [ui],
+          commentId: c.id,
+        }),
+        Skeletons.Note({
+          className: `${pfx}__comment-action`,
+          content: LOCALE.DELETE,
+          bubble: 0,
+          service: "comment-delete",
+          uiHandler: [ui],
+          commentId: c.id,
+        }),
+      );
+    }
+
+    return Skeletons.Box.X({
+      className: `${pfx}__comment-row`,
+      attrOpt: { "data-reply": isReply ? "1" : "0" },
+      kids: [
+        avatar,
+        Skeletons.Box.Y({
+          className: `${pfx}__comment-main`,
+          kids: [
+            head,
+            Skeletons.Element({
+              tagName: "div",
+              className: `${pfx}__comment-body`,
+              flow: "none",
+              attrOpt: { "data-comment-id": c.id },
+            }),
+            reactBar(c),
+            actions.length
+              ? Skeletons.Box.X({
+                  className: `${pfx}__comment-actions`,
+                  kids: actions,
+                })
+              : null,
+          ].filter(Boolean),
+        }),
+      ],
+    });
+  };
+
+  // 1-level threads: replies nest under their root; an orphaned reply (parent
+  // deleted) falls back to the top level.
+  const ids = new Set(comments.map((c) => String(c.id)));
+  const repliesByParent = {};
+  const roots = [];
+  comments.forEach((c) => {
+    if (c.parent_id && ids.has(String(c.parent_id))) {
+      (repliesByParent[c.parent_id] = repliesByParent[c.parent_id] || []).push(
+        c,
+      );
+    } else {
+      roots.push(c);
+    }
+  });
+
+  const out = [];
+  roots.forEach((root) => {
+    out.push(commentBlock(root, false));
+    (repliesByParent[root.id] || []).forEach((rep) =>
+      out.push(commentBlock(rep, true)),
+    );
+    if (String(replyingTo || "") === String(root.id)) {
+      out.push(
+        Skeletons.Box.Y({
+          className: `${pfx}__comment-replybox`,
+          kids: [
+            mentionField(ui, "comment-reply", {
+              fieldClass: `${pfx}__comment-field`,
+              editorClass: `${pfx}__comment-reply-input`,
+              placeholder: LOCALE.TASK_COMMENT_PLACEHOLDER,
+            }),
+            Skeletons.Box.X({
+              className: `${pfx}__comment-actions`,
+              kids: [
+                Skeletons.Note({
+                  className: `${pfx}__comment-action ${pfx}__comment-action--primary`,
+                  content: LOCALE.REPLY,
+                  bubble: 0,
+                  service: "comment-reply-submit",
+                  uiHandler: [ui],
+                }),
+                Skeletons.Note({
+                  className: `${pfx}__comment-action`,
+                  content: LOCALE.CANCEL,
+                  bubble: 0,
+                  service: "comment-reply-cancel",
+                  uiHandler: [ui],
+                }),
+              ],
+            }),
+          ],
+        }),
+      );
+    }
+  });
+  return out;
+}
+
 function buildMentionItemsContent(ui, members) {
   const pfx = ui.fig.family;
   return (members || []).map((m) => {
@@ -1500,6 +1855,7 @@ function buildAttachmentRowsContent(ui, attachments, taskId) {
 make.buildFileSearchDropdownContent = buildFileSearchDropdownContent;
 make.buildAssigneeButtonContent = buildAssigneeButtonContent;
 make.buildMentionItemsContent = buildMentionItemsContent;
+make.buildCommentListContent = buildCommentListContent;
 make.buildPendingListContent = buildPendingListContent;
 make.buildAttachmentRowsContent = buildAttachmentRowsContent;
 module.exports = make;

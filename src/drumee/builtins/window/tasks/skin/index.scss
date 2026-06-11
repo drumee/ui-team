@@ -866,6 +866,10 @@ color-mix(in srgb, var(--col-accent, transparent) 60%, var(--normal-bg-80, rgba(
     align-items: flex-start;
     justify-content: space-between;
     gap: 8px;
+    // Full-bleed divider under the title (Jira-style zoned header).
+    margin: 0 -20px;
+    padding: 0 20px 14px;
+    border-bottom: 1px solid var(--border-muted, rgba(11, 10, 33, 0.08));
   }
 
   &__detail-title {
@@ -1326,13 +1330,17 @@ color-mix(in srgb, var(--col-accent, transparent) 60%, var(--normal-bg-80, rgba(
   // Contenteditable editor so tagged members render as inline chips; the field
   // wrapper is the positioning context for the dropdown (placed from the caret
   // rect in JS).
-  &__desc-field {
+  &__desc-field,
+  &__comment-field {
     position: relative; // positioning context for the absolute mention dropdown
     flex: 1 1 auto;
     min-height: 0;
   }
 
-  &__desc-editor {
+  &__desc-editor,
+  &__comment-input,
+  &__comment-edit-input,
+  &__comment-reply-input {
     display: block; // contenteditable needs normal block flow, not flex
     width: 100%;
     box-sizing: border-box;
@@ -1363,6 +1371,13 @@ color-mix(in srgb, var(--col-accent, transparent) 60%, var(--normal-bg-80, rgba(
       color: var(--normal-fg-40, #84848c);
       pointer-events: none;
     }
+  }
+
+  // The comment composer/edit/reply inputs are shorter than the description.
+  &__comment-input,
+  &__comment-edit-input,
+  &__comment-reply-input {
+    min-height: 38px;
   }
 
   // Inline mention chip — visually distinct "tag", not plain text.
@@ -1434,6 +1449,545 @@ color-mix(in srgb, var(--col-accent, transparent) 60%, var(--normal-bg-80, rgba(
       $weight: 500,
       $line: 18px,
       $color: var(--normal-fg-10, #0b0a21)
+    );
+  }
+
+  // ── Comments ──────────────────────────────────────────────────
+  &__comments {
+    gap: 10px;
+    margin-top: 8px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border-muted, rgba(11, 10, 33, 0.08));
+  }
+
+  &__comment-list {
+    gap: 12px;
+  }
+
+  &__comments-empty {
+    @include drumee.typo(
+      $size: 12px,
+      $weight: 400,
+      $line: 16px,
+      $color: var(--normal-fg-40, #84848c)
+    );
+  }
+
+  &__comment-row {
+    gap: 8px;
+    align-items: flex-start;
+    min-width: 0; // let the body column shrink + wrap instead of overflowing
+  }
+
+  &__comment-avatar {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    overflow: hidden;
+    flex-shrink: 0;
+  }
+
+  &__comment-main {
+    flex: 1 1 auto;
+    min-width: 0;
+    gap: 3px;
+  }
+
+  &__comment-head {
+    align-items: baseline;
+    gap: 8px;
+  }
+
+  &__comment-author {
+    @include drumee.typo(
+      $size: 13px,
+      $weight: 600,
+      $line: 18px,
+      $color: var(--normal-fg-10, #0b0a21)
+    );
+  }
+
+  &__comment-time {
+    @include drumee.typo(
+      $size: 11px,
+      $weight: 400,
+      $line: 16px,
+      $color: var(--normal-fg-40, #84848c)
+    );
+  }
+
+  &__comment-body {
+    display: block;
+    min-width: 0;
+    max-width: 100%;
+    white-space: pre-wrap;
+    word-break: break-word;
+    overflow-wrap: anywhere; // break long unbroken strings / URLs
+    @include drumee.typo(
+      $size: 13px,
+      $weight: 400,
+      $line: 19px,
+      $color: var(--normal-fg-10, #0b0a21)
+    );
+  }
+
+  &__comment-actions {
+    gap: 12px;
+    margin-top: 2px;
+  }
+
+  &__comment-action {
+    cursor: pointer;
+    @include drumee.typo(
+      $size: 11px,
+      $weight: 500,
+      $line: 16px,
+      $color: var(--normal-fg-40, #84848c)
+    );
+
+    &:hover {
+      color: var(--accent, #fa8540);
+    }
+  }
+
+  &__comment-composer {
+    gap: 6px;
+    margin-top: 4px;
+  }
+
+  &__comment-submit {
+    align-self: flex-end;
+    padding: 6px 16px;
+    border-radius: 6px;
+    cursor: pointer;
+    background: var(--accent, #fa8540);
+    @include drumee.typo(
+      $size: 13px,
+      $weight: 600,
+      $line: 16px,
+      $color: #fff
+    );
+
+    &:hover {
+      opacity: 0.92;
+    }
+  }
+
+  // Replies are indented under their root comment.
+  &__comment-row[data-reply="1"] {
+    margin-left: 32px;
+    padding-left: 10px;
+    border-left: 2px solid var(--border-default, rgba(0, 0, 0, 0.08));
+  }
+
+  &__comment-replybox {
+    margin-left: 32px;
+    gap: 6px;
+  }
+
+  &__comment-action--primary {
+    color: var(--accent, #fa8540);
+    font-weight: 600;
+  }
+
+  // ── Reactions ─────────────────────────────────────────────────
+  &__react-bar {
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 4px;
+  }
+
+  &__react-chip {
+    padding: 1px 8px;
+    border-radius: 11px;
+    cursor: pointer;
+    border: 1px solid var(--border-default, rgba(0, 0, 0, 0.1));
+    background: var(--normal-bg-80, #f2f2f7);
+    @include drumee.typo(
+      $size: 12px,
+      $weight: 500,
+      $line: 18px,
+      $color: var(--normal-fg-10, #0b0a21)
+    );
+
+    &[data-own="1"] {
+      border-color: var(--accent, #fa8540);
+      background: var(--active-item-bg, rgba(250, 133, 64, 0.12));
+    }
+  }
+
+  &__react-add {
+    width: 22px;
+    height: 20px;
+    text-align: center;
+    border-radius: 11px;
+    cursor: pointer;
+    border: 1px solid var(--border-default, rgba(0, 0, 0, 0.1));
+    color: var(--normal-fg-40, #84848c);
+
+    &:hover {
+      background: var(--hover-bg-40, rgba(0, 0, 0, 0.04));
+    }
+  }
+
+  &__react-pick {
+    padding: 1px 6px;
+    border-radius: 8px;
+    cursor: pointer;
+    @include drumee.typo($size: 15px, $weight: 400, $line: 18px);
+
+    &:hover {
+      background: var(--hover-bg-40, rgba(0, 0, 0, 0.04));
+    }
+  }
+
+  // ── View sub-header (Board / List / Summary) ──────────────────
+  &__viewbar {
+    flex: 0 0 auto;
+    align-items: center;
+    gap: 4px;
+    padding: 6px 12px;
+    border-bottom: 1px solid var(--border-default, rgba(0, 0, 0, 0.08));
+    background: var(--normal-bg-90, #fff);
+  }
+
+  &__viewbar-item {
+    padding: 5px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+    @include drumee.typo(
+      $size: 13px,
+      $weight: 500,
+      $line: 18px,
+      $color: var(--normal-fg-40, #84848c)
+    );
+
+    &:hover {
+      background: var(--hover-bg-40, rgba(0, 0, 0, 0.04));
+    }
+    &[data-active="1"] {
+      color: var(--accent, #fa8540);
+      background: var(--active-item-bg, rgba(250, 133, 64, 0.12));
+    }
+  }
+
+  &__viewbar-new {
+    margin-left: auto;
+    padding: 5px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    background: var(--accent, #fa8540);
+    @include drumee.typo($size: 13px, $weight: 600, $line: 18px, $color: #fff);
+
+    &:hover {
+      opacity: 0.92;
+    }
+  }
+
+  // ── List view ─────────────────────────────────────────────────
+  &__list {
+    flex: 1 1 auto;
+    min-height: 0;
+    background: var(--normal-bg-90, #fff);
+  }
+
+  &__list-head,
+  &__list-row {
+    align-items: center;
+    border-bottom: 1px solid var(--border-default, rgba(0, 0, 0, 0.06));
+
+    & > * {
+      padding: 8px 12px;
+      box-sizing: border-box;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    // Column widths — kept identical between header and rows for alignment.
+    & > *:nth-child(1) {
+      flex: 1 1 auto;
+      min-width: 0;
+    }
+    & > *:nth-child(2) {
+      flex: 0 0 110px;
+    }
+    & > *:nth-child(3) {
+      flex: 0 0 90px;
+    }
+    & > *:nth-child(4) {
+      flex: 0 0 120px;
+    }
+    & > *:nth-child(5) {
+      flex: 0 0 84px;
+    }
+  }
+
+  &__list-head {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    background: var(--normal-bg-80, #f2f2f7);
+  }
+
+  &__list-th {
+    @include drumee.typo(
+      $size: 11px,
+      $weight: 600,
+      $line: 16px,
+      $color: var(--normal-fg-40, #84848c)
+    );
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+
+    &[data-sortable="1"] {
+      cursor: pointer;
+    }
+    &[data-sortable="1"]:hover {
+      color: var(--normal-fg-10, #0b0a21);
+    }
+  }
+
+  &__list-body {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+  }
+
+  &__list-row {
+    cursor: pointer;
+    transition: background 0.12s;
+
+    &:hover {
+      background: var(--hover-bg-40, rgba(0, 0, 0, 0.04));
+    }
+  }
+
+  &__list-title {
+    @include drumee.typo(
+      $size: 13px,
+      $weight: 500,
+      $line: 18px,
+      $color: var(--normal-fg-10, #0b0a21)
+    );
+  }
+
+  &__list-status {
+    align-self: center;
+    border: 1px solid;
+    border-radius: 11px;
+    padding: 2px 8px !important;
+    @include drumee.typo($size: 11px, $weight: 600, $line: 14px);
+    overflow: visible !important;
+    max-width: max-content;
+  }
+
+  &__list-priority {
+    @include drumee.typo($size: 12px, $weight: 600, $line: 16px);
+  }
+
+  &__list-assignees {
+    gap: 2px;
+    overflow: visible !important;
+  }
+
+  &__list-avatar {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    overflow: hidden;
+    flex-shrink: 0;
+  }
+
+  &__list-due {
+    @include drumee.typo(
+      $size: 12px,
+      $weight: 400,
+      $line: 16px,
+      $color: var(--normal-fg-40, #84848c)
+    );
+
+    &[data-overdue="1"] {
+      color: var(--col-urgent, #d65f59);
+      font-weight: 600;
+    }
+  }
+
+  &__list-empty,
+  &__list-assignee-empty {
+    @include drumee.typo(
+      $size: 12px,
+      $weight: 400,
+      $line: 16px,
+      $color: var(--normal-fg-40, #84848c)
+    );
+  }
+
+  &__list-empty {
+    padding: 24px 12px;
+    text-align: center;
+  }
+
+  // ── Summary view ──────────────────────────────────────────────
+  &__summary {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    gap: 12px;
+    padding: 16px;
+    box-sizing: border-box;
+    background: var(--normal-bg-90, #fff);
+  }
+
+  &__sum-grid {
+    gap: 12px;
+    align-items: stretch;
+    flex-wrap: wrap;
+
+    & > * {
+      flex: 1 1 240px;
+    }
+  }
+
+  &__sum-card {
+    gap: 10px;
+    padding: 14px 16px;
+    border: 1px solid var(--border-default, rgba(0, 0, 0, 0.08));
+    border-radius: 8px;
+    background: var(--normal-bg-elevated, #fff);
+  }
+
+  &__sum-card-title {
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    @include drumee.typo(
+      $size: 11px,
+      $weight: 600,
+      $line: 16px,
+      $color: var(--normal-fg-40, #84848c)
+    );
+  }
+
+  &__sum-completion {
+    align-items: baseline;
+    gap: 8px;
+  }
+
+  &__sum-pct {
+    @include drumee.typo(
+      $size: 28px,
+      $weight: 700,
+      $line: 32px,
+      $color: var(--normal-fg-10, #0b0a21)
+    );
+  }
+
+  &__sum-pct-sub {
+    @include drumee.typo(
+      $size: 12px,
+      $weight: 400,
+      $line: 16px,
+      $color: var(--normal-fg-40, #84848c)
+    );
+  }
+
+  &__sum-bar-row,
+  &__sum-work-row {
+    align-items: center;
+    gap: 8px;
+  }
+
+  &__sum-bar-label {
+    flex: 0 0 90px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    @include drumee.typo(
+      $size: 12px,
+      $weight: 400,
+      $line: 16px,
+      $color: var(--normal-fg-10, #0b0a21)
+    );
+  }
+
+  &__sum-work-row &__sum-bar-label {
+    flex: 1 1 auto;
+  }
+
+  &__sum-bar-track {
+    flex: 1 1 auto;
+    height: 8px;
+    border-radius: 4px;
+    overflow: hidden;
+    background: var(--normal-bg-80, #ececf1);
+  }
+
+  &__sum-bar-fill {
+    height: 100%;
+    border-radius: 4px;
+    min-width: 2px;
+    transition: width 0.2s;
+  }
+
+  &__sum-bar-count {
+    flex: 0 0 28px;
+    text-align: right;
+    @include drumee.typo(
+      $size: 12px,
+      $weight: 600,
+      $line: 16px,
+      $color: var(--normal-fg-40, #84848c)
+    );
+  }
+
+  &__sum-work-avatar {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    overflow: hidden;
+    flex-shrink: 0;
+  }
+
+  &__sum-stat-row {
+    gap: 18px;
+  }
+
+  &__sum-stat {
+    align-items: center;
+    gap: 2px;
+  }
+
+  &__sum-stat-num {
+    @include drumee.typo(
+      $size: 24px,
+      $weight: 700,
+      $line: 28px,
+      $color: var(--normal-fg-10, #0b0a21)
+    );
+
+    &[data-tone="overdue"] {
+      color: var(--col-urgent, #d65f59);
+    }
+  }
+
+  &__sum-stat-label {
+    @include drumee.typo(
+      $size: 11px,
+      $weight: 400,
+      $line: 14px,
+      $color: var(--normal-fg-40, #84848c)
+    );
+  }
+
+  &__sum-empty {
+    padding: 24px 0;
+    text-align: center;
+    @include drumee.typo(
+      $size: 13px,
+      $weight: 400,
+      $line: 18px,
+      $color: var(--normal-fg-40, #84848c)
     );
   }
 
@@ -1758,9 +2312,11 @@ color-mix(in srgb, var(--col-accent, transparent) 60%, var(--normal-bg-80, rgba(
     align-items: center;
     justify-content: flex-end;
     gap: 8px;
-    margin-top: 8px;
-    padding-top: 10px;
+    // Full-bleed footer bar pinned to the panel's bottom edge.
+    margin: 8px -20px -20px;
+    padding: 14px 20px;
     border-top: 1px solid var(--border-muted, rgba(0, 0, 0, 0.06));
+    background: var(--normal-bg-90, #f2f2f7);
   }
 
   &__detail-cancel {
