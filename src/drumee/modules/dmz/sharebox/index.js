@@ -362,7 +362,7 @@ class __dmz_sharebox extends LetcBox {
 
       case 'open-signup':
         this.closeSignupRequiredOverlay();
-        location.href = _K.module.signup;
+        window.open(`${location.origin}/${_K.module.signup}`, '_blank');
         return;
 
       case 'tab-files':

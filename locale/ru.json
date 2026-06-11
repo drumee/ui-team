@@ -1604,6 +1604,7 @@
   "SECURE_SHARE_REQUEST_PENDING": "Ожидание",
   "SECURE_SHARE_REQUEST_MESSAGE_PLACEHOLDER": "Необязательное сообщение владельцу ресурса…",
   "SECURE_SHARE_REQUEST_LEVEL_LABEL": "Запрошено:",
+  "SECURE_SHARE_EMAIL_REQUIRED": "Пожалуйста, добавьте хотя бы один адрес электронной почты для ограничения доступа.",
   "SECURE_SHARE_CREATE": "Получить ссылку",
   "SECURE_SHARE_TITLE_FILE": "Безопасный обмен файлом",
   "SECURE_SHARE_TITLE_FOLDER": "Безопасный обмен папкой",

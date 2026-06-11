@@ -1604,6 +1604,7 @@
   "SECURE_SHARE_REQUEST_PENDING": "En attente",
   "SECURE_SHARE_REQUEST_MESSAGE_PLACEHOLDER": "Message optionnel au propriétaire du partage…",
   "SECURE_SHARE_REQUEST_LEVEL_LABEL": "Demandé :",
+  "SECURE_SHARE_EMAIL_REQUIRED": "Veuillez ajouter au moins une adresse e-mail pour restreindre l'accès.",
   "SECURE_SHARE_CREATE": "Obtenir le lien",
   "SECURE_SHARE_TITLE_FILE": "Partage sécurisé de fichier",
   "SECURE_SHARE_TITLE_FOLDER": "Partage sécurisé de dossier",

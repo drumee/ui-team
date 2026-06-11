@@ -2031,6 +2031,7 @@
   "SECURE_SHARE_REQUEST_PENDING": "Pending",
   "SECURE_SHARE_REQUEST_MESSAGE_PLACEHOLDER": "Optional message to the share owner…",
   "SECURE_SHARE_REQUEST_LEVEL_LABEL": "Requesting:",
+  "SECURE_SHARE_EMAIL_REQUIRED": "Please add at least one email address to restrict access.",
   "PRODUCT": "Product",
   "PRICING": "Pricing",
   "DMZ_SHAREBOX_BANNER_HEADLINE": "Shared via Drumee — Get your own workspace →",

@@ -115,6 +115,9 @@ class __dmz_wm extends winman {
     }).then((r) => {
       let m = new Backbone.Model(r);
       opt = { ...opt, ...r };
+      // node_info returns the file's full hub privilege; override with the
+      // share's restricted privilege so players respect the share access level.
+      if (this.isDmz) opt.privilege = this.mget(_a.privilege);
       Kind.waitFor(_a.media).then((k) => {
         opt.media = new k({ model: m });
         this.launch(opt, { explicit: 1 });

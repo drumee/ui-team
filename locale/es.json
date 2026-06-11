@@ -1607,6 +1607,7 @@
   "SECURE_SHARE_REQUEST_PENDING": "Pendiente",
   "SECURE_SHARE_REQUEST_MESSAGE_PLACEHOLDER": "Mensaje opcional para el propietario del recurso…",
   "SECURE_SHARE_REQUEST_LEVEL_LABEL": "Solicitado:",
+  "SECURE_SHARE_EMAIL_REQUIRED": "Por favor, añade al menos una dirección de correo electrónico para restringir el acceso.",
   "SECURE_SHARE_CREATE": "Obtener enlace",
   "SECURE_SHARE_TITLE_FILE": "Compartir archivo de forma segura",
   "SECURE_SHARE_TITLE_FOLDER": "Compartir carpeta de forma segura",
