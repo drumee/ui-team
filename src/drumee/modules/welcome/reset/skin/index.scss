@@ -58,6 +58,7 @@ $drumee-success: #1faa59; // satisfied requirement pill
     align-items: center;
     gap: 12px;
     width: 100%;
+    justify-content: center;
   }
 
   &__header-icon.lock {

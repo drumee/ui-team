@@ -24,12 +24,17 @@ function __skl_welcome_reset(ui) {
     uiHandler: [ui],
     dataset: { state: 0 },
     kids: [
+      // active: 0 makes the icon + label click-through, so a click anywhere on
+      // the button (not just the padding) bubbles to the 'create-password'
+      // service instead of being swallowed by the inner Svg/Note.
       Skeletons.Button.Svg({
         ico: 'app-check',
+        active: 0,
         className: `${fig}__button-ico`
       }),
       Skeletons.Note({
         className: `${fig}__button-label`,
+        active: 0,
         content: LOCALE.UPDATE_PASSWORD
       })
     ]

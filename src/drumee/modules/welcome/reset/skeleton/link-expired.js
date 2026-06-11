@@ -38,8 +38,12 @@ function __skl_welcome_reset_link_expired(ui) {
     service: 'goto-signin',
     uiHandler: [ui],
     kids: [
+      // active: 0 makes the label click-through, so a click anywhere on the
+      // button bubbles to the 'goto-signin' service instead of being swallowed
+      // by the inner Note.
       Skeletons.Note({
         className: `${fig}__success-button-label`,
+        active: 0,
         content: LOCALE.BACK_TO_DRUMEE || 'Back to Drumee'
       })
     ]
