@@ -1,15 +1,20 @@
 
+// Bundled by webpack as an asset/resource — resolves to the public URL of the
+// self-hosted pdfium.wasm copied into the build output.
+import PDFIUM_WASM_URL from '@embedpdf/pdfium/pdfium.wasm';
+
 let pdfiumInstance;
 
 export async function initializePdfium() {
   const { init, DEFAULT_PDFIUM_WASM_URL } = await import('@embedpdf/pdfium');
-
-  /** Use self-hosted bundle, fallback to DEFAULT_PDFIUM_WASM_URL*/
-  let { pdfium_wasm } = bootstrap();
   if (pdfiumInstance) return pdfiumInstance;
 
-  let response = await fetch(pdfium_wasm);
-  if (!pdfium_wasm || response.status != 200) {
+  /** Prefer a runtime override, then the self-hosted bundle, then the CDN default */
+  let { pdfium_wasm } = bootstrap();
+  let wasmUrl = PDFIUM_WASM_URL;
+
+  let response = await fetch(wasmUrl);
+  if (response.status != 200) {
     response = await fetch(DEFAULT_PDFIUM_WASM_URL);
   }
   const wasmBinary = await response.arrayBuffer();

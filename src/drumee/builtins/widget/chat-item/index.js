@@ -727,34 +727,24 @@ class ___widget_chatItem extends LetcBox {
    * they have seen THIS message (uid in _seen_) but NOT the next (newer) one.
    * Since _seen_ accumulates downward, that pins each reader to their cursor.
    *
-   * Always excludes the current viewer (you don't see your own seen-marker, as
-   * in Messenger).
-   *
-   * The message author is excluded ONLY in P2P (1-on-1) chats: there the _seen_
-   * map is synthesised from the peer's read cursor alone, so the sole uid is the
-   * peer — who may also be the author — and showing their avatar under their own
-   * bubble would be wrong. In group channels every reader is a real per-message
-   * seen-marker (the server seeds the author into _seen_ too), so the author
-   * MUST stay; excluding them made the sender of the latest message vanish from
-   * every teammate's view (they only saw the other readers, never the sender).
+   * Always excludes the current viewer and the message author. The author has
+   * already seen their own message and is already represented by the message row,
+   * so rendering them again as a reader avatar duplicates their presence.
    * Other readers still show at their last-read message.
    * @returns {String[]}
    */
   _readerUids() {
     const seen = this._metadataObject()._seen_ || {};
     const me = `${Visitor.id}`;
-    const author = `${this.mget(_a.author_id)}`;
+    const author = this.mget(_a.author_id);
+    const authorId = author == null ? null : `${author}`;
     const next = this.nextRow();
     const nextSeen = next ? this._seenOf(next) : {};
-    const isP2P =
-      this.mget(_a.type) === _a.privateRoom ||
-      this.mget(_a.area) === _a.privateRoom ||
-      this.mget(_a.area) === _a.personal;
     return Object.keys(seen).filter(
       (uid) =>
         uid &&
         `${uid}` !== me &&
-        (!isP2P || `${uid}` !== author) &&
+        (!authorId || `${uid}` !== authorId) &&
         nextSeen[uid] == null,
     );
   }

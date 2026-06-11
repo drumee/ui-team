@@ -398,10 +398,7 @@ class __lib_messenger extends LetcBox {
     if (!content || !content.content) return;
 
     const el = content.content;
-    const text = el.innerText;
-
-    const replaced = text.replace(/[@/]\S*$/, '');
-    el.innerText = replaced;
+    this._removeTrailingMentionTrigger(el);
 
     const mention = document.createElement('a');
     mention.contentEditable = 'false';
@@ -436,6 +433,81 @@ class __lib_messenger extends LetcBox {
     this.showSend();
   }
 
+  _isMentionNode(node) {
+    return (
+      node &&
+      node.nodeType === 1 &&
+      node.classList &&
+      (node.classList.contains('file-mention') ||
+        node.classList.contains('user-mention'))
+    );
+  }
+
+  _isInsideMentionNode(node, root) {
+    let parent = node && node.parentNode;
+    while (parent && parent !== root) {
+      if (this._isMentionNode(parent)) return true;
+      parent = parent.parentNode;
+    }
+    return false;
+  }
+
+  _removeTrailingMentionTrigger(el) {
+    const nodes = [];
+    let text = '';
+    const showText = (window.NodeFilter && window.NodeFilter.SHOW_TEXT) || 4;
+    const walker = document.createTreeWalker(el, showText, null);
+    let node;
+    while ((node = walker.nextNode())) {
+      if (this._isInsideMentionNode(node, el)) continue;
+      const value = node.textContent || '';
+      nodes.push({
+        node,
+        start: text.length,
+        end: text.length + value.length
+      });
+      text += value;
+    }
+
+    const match = text.match(/[@/]\S*$/);
+    if (!match) return;
+
+    const start = match.index;
+    const end = text.length;
+    nodes.forEach((entry) => {
+      if (entry.end <= start || entry.start >= end) return;
+      const value = entry.node.textContent || '';
+      const from = Math.max(0, start - entry.start);
+      const to = Math.min(value.length, end - entry.start);
+      entry.node.textContent = `${value.slice(0, from)}${value.slice(to)}`;
+    });
+  }
+
+  _serializeMentionContent(node) {
+    if (!node) return '';
+    if (node.nodeType === 3) return node.textContent || '';
+    if (node.nodeType !== 1) return '';
+
+    if (node.classList.contains('file-mention')) {
+      const filename = node.dataset.filename || node.textContent.replace(/^@/, '');
+      const hub_id = node.dataset.hub_id;
+      const nid = node.dataset.nid;
+      return `[@${filename}](mention:${hub_id}:${nid})`;
+    }
+
+    if (node.classList.contains('user-mention')) {
+      const fullname = node.dataset.fullname || node.textContent.replace(/^@/, '');
+      const drumate_id = node.dataset.drumate_id;
+      return `[@${fullname}](user:${drumate_id})`;
+    }
+
+    let result = '';
+    for (const child of node.childNodes) {
+      result += this._serializeMentionContent(child);
+    }
+    return result;
+  }
+
   /**
    * Get message text with encoded mentions for sending
    */
@@ -443,27 +515,7 @@ class __lib_messenger extends LetcBox {
     const content = this.__content;
     if (!content || !content.content) return '';
 
-    const el = content.content;
-    let result = '';
-
-    for (const node of el.childNodes) {
-      if (node.nodeType === 3) {
-        result += node.textContent;
-      } else if (node.nodeType === 1 && node.classList.contains('file-mention')) {
-        const filename = node.dataset.filename || node.textContent.replace(/^@/, '');
-        const hub_id = node.dataset.hub_id;
-        const nid = node.dataset.nid;
-        result += `[@${filename}](mention:${hub_id}:${nid})`;
-      } else if (node.nodeType === 1 && node.classList.contains('user-mention')) {
-        const fullname = node.dataset.fullname || node.textContent.replace(/^@/, '');
-        const drumate_id = node.dataset.drumate_id;
-        result += `[@${fullname}](user:${drumate_id})`;
-      } else if (node.nodeType === 1) {
-        result += node.textContent;
-      }
-    }
-
-    return result.trim();
+    return this._serializeMentionContent(content.content).trim();
   }
 
   getMentionUserIds() {

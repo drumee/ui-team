@@ -41,8 +41,13 @@ module.exports = function (basedir) {
       test: /(\.woff|\.woff2|\.ttf|\.eot|\.svg)($|\?.*$)/,
       use: ['url-loader']
     }, {
+      // Emit .wasm as a separate, content-hashed asset and resolve
+      // `import url from '*.wasm'` to its public URL — self-hosted in our own
+      // build output, no CDN. PDFium fetches that URL for the raw binary
+      // (init({ wasmBinary })), so asset/resource — not webassembly/async,
+      // which would instantiate the module — is what we want here.
       test: /\.wasm$/,
-      type: 'webassembly/async',
+      type: 'asset/resource',
     }, {
       test: /babel(.*)\.js?$/,
       use: ['babel-loader']

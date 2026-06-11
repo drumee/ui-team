@@ -149,12 +149,19 @@ function dmzSplitBody(ui) {
     ],
   });
 
+  // Shared workspaces (area share/dmz) get the conversation panel beside the
+  // files (Figma: files-left + chat-right split). Restricted workspaces stay
+  // files-only / view-only, consistent with the rest of the sharebox.
+  const area = ui.mget(_a.area);
+  const shared = area === _a.share || area === "dmz";
+  const kids = shared ? [filesPanel, chatPanel(ui)] : [filesPanel];
+
   return Skeletons.Box.G({
     className: `${ui.fig.family}__split-body ${ui.fig.group}__split-body`,
     sys_pn: "folder-view",
     partHandler: ui,
-    dataset: { view: "files" },
-    kids: [filesPanel],
+    dataset: shared ? { view: "files", layout: "split" } : { view: "files" },
+    kids,
   });
 }
 

@@ -224,6 +224,55 @@ class __window_manager extends mfsInteract {
     setTimeout(this.resetShift.bind(this), 300);
   }
 
+  _canUploadToTarget(target) {
+    if (!target) return false;
+    if (target.mget && target.mget(_a.isalink) && !target.isHub) return false;
+    const privilege =
+      target.mget && (target.mget(_a.privilege) || target.mget(_a.permission));
+    return !!(_K.permission.write & privilege);
+  }
+
+  _rejectUploadTarget() {
+    this._showUploadDeniedToast(LOCALE.WEAK_PRIVILEGE);
+  }
+
+  _showUploadDeniedToast(message) {
+    const render = (wrapper) => {
+      if (!wrapper || (wrapper.isDestroyed && wrapper.isDestroyed())) {
+        Butler.say(message);
+        return;
+      }
+      if (
+        this._uploadDeniedToast &&
+        (!this._uploadDeniedToast.isDestroyed || !this._uploadDeniedToast.isDestroyed())
+      ) {
+        this._uploadDeniedToast.suppress();
+      }
+      wrapper.append(
+        Skeletons.Box.X({
+          className: `${this.fig.group}__drop-denied-toast`,
+          kids: [
+            Skeletons.Note({
+              className: `${this.fig.group}__drop-denied-toast-icon`,
+              content: "!",
+            }),
+            Skeletons.Note({
+              className: `${this.fig.group}__drop-denied-toast-text`,
+              content: message,
+            }),
+          ],
+        }),
+      );
+      this._uploadDeniedToast = wrapper.children.last();
+      this._uploadDeniedToast.selfDestroy({ timeout: Visitor.timeout(2200) });
+    };
+
+    if (this.tooltipsWrapper) return render(this.tooltipsWrapper);
+    this.ensurePart("wrapper-tooltips").then(render).catch(() => {
+      Butler.say(message);
+    });
+  }
+
   /**
    * Read a file/folder drop into a stable BundleEntry tree and run it through the
    * bundle orchestrator (make_dir-first, sequential upload, shared-hub safe).
@@ -244,28 +293,12 @@ class __window_manager extends mfsInteract {
       if (target && target.acceptMedia) this.sendTo(target, e, 0, token); // non-file drop -> legacy
       return;
     }
-    // Resolve a CONSISTENT (destNid, hub_id): both must describe the SAME node.
-    // getCurrentNid() on the desk prefers Wm._curWorkspace.nid, which can desync
-    // from the WM's hub_id (e.g. a lingering workspace context after returning
-    // Home) — pairing a workspace nid with the personal hub_id yields a node that
-    // does not belong to hub_id, so the server rejects make_dir (DENIED) and the
-    // whole upload fails. Take both from one source: a folder window/tile uses its
-    // own node + host; the desk uses the active workspace's {nid, hub_id}, falling
-    // back to the user's own home root when no workspace is active.
-    let destNid = null;
-    let hub_id = null;
-    if (target && target !== Wm && typeof target.getCurrentNid === "function") {
-      destNid = target.getCurrentNid();
-      hub_id = (typeof target.getHostId === "function" && target.getHostId()) ||
-        (typeof target.mget === "function" ? target.mget(_a.hub_id) : null);
-    } else {
-      const ws = Wm && Wm._curWorkspace;
-      if (ws && ws.nid != null && ws.hub_id != null) { destNid = ws.nid; hub_id = ws.hub_id; }
+    if (!this._canUploadToTarget(target)) {
+      this._rejectUploadTarget();
+      return;
     }
-    if (destNid == null || hub_id == null) {
-      destNid = Visitor.get(_a.home_id);
-      hub_id = Visitor.id;
-    }
+    const destNid = (target && typeof target.getCurrentNid === "function") ? target.getCurrentNid() : null;
+    const hub_id = (target && typeof target.mget === "function") ? target.mget(_a.hub_id) : null;
     const Entry = require("media/bundle/entry");
     const UploadProgress = require("./upload-progress");
     let roots;
@@ -382,21 +415,22 @@ class __window_manager extends mfsInteract {
     if (this.isWm) {
       this.$el.css({ width: "" });
     }
-    this.getWindowsPool().children.each((c) => {
-      const cx = c.$el.offset().left;
-      const cy = c.$el.offset().top;
-      const cw = c.$el.width();
-      const ch = c.$el.height();
-      const max_w = window.innerWidth - 30;
-      const max_h = window.innerHeight - 90;
-      let opt = {};
-      if (c._moved) {
-        const r = new Rectangle(0, 0, w, h);
-        const rc = new Rectangle(cx, cy, cw, ch);
-        if (r.intersection(rc) && cw < max_w) {
-          return;
-        }
-      }
+    // Clamp every open window into the visible work area — the WM's container
+    // (offset by the sidebar rail and topbar), not the full viewport. Measured
+    // via getBoundingClientRect so it holds whether the windows layer is
+    // position:fixed or absolute.
+    const host = this.el.parentElement || this.el;
+    const area = host.getBoundingClientRect();
+    const pool = this.getWindowsPool();
+    pool.children.each((c) => {
+      // Window rect in viewport coords (wr) + its CSS offset (pos). The
+      // viewport↔CSS delta is constant: newCssLeft = pos.left + (target - wr.left).
+      const wr = c.el.getBoundingClientRect();
+      const pos = c.$el.position();
+      const cw = wr.width;
+      const ch = wr.height;
+      const headerH = c.topbarHeight || 40;
+      const opt = {};
 
       if (c.mget(_a.kind) === "audio_player") {
         let o = c.$el.position();
@@ -407,40 +441,32 @@ class __window_manager extends mfsInteract {
         c.$el.css({ left: o.left + dw });
         c.$el.css({ top: o.top + dh });
       }
-      //c.syncGeometry();
-      const right = cx + cw;
-      let d = 0;
-      if (cw > max_w) {
-        opt = {
-          left: 10,
-          width: max_w,
-        };
-      } else {
-        d = right - window.innerWidth;
-        if (d >= 0) {
-          let left = c.$el.position().left - d;
-          if (left < 0) {
-            left = 0;
-          }
-          opt = { ...opt, left };
-        }
-      }
 
-      //bottom = cy #+ ch
-      if (ch > max_h) {
-        opt = { ...opt, height: max_h };
+      // Width: never wider than the work area.
+      if (cw > area.width) opt.width = Math.round(area.width);
+
+      // Left: keep inside [area.left, area.right]. A window wider than the
+      // section (intrinsic min-width) is right-aligned so its toolbar/close
+      // and a grabbable header stay on-screen instead of overflowing right.
+      let vpLeft = wr.left;
+      if (cw > area.width) {
+        vpLeft = area.right - cw;
       } else {
-        let d = cy - window.innerHeight;
-        if (d >= 0) {
-          let top = c.$el.position().top - d;
-          if (top < -125) {
-            top = -125;
-          }
-          opt = { ...opt, top };
-        }
+        vpLeft = Math.max(area.left, Math.min(vpLeft, area.right - cw));
       }
-      c.$el.css(opt);
-      c.style.set(opt);
+      const newLeft = pos.left + (vpLeft - wr.left);
+      if (Math.abs(newLeft - pos.left) >= 1) opt.left = Math.round(newLeft);
+
+      // Height: never taller than the work area; keep the header reachable.
+      if (ch > area.height) opt.height = Math.round(area.height);
+      const vpTop = Math.max(area.top, Math.min(wr.top, area.bottom - headerH));
+      const newTop = pos.top + (vpTop - wr.top);
+      if (Math.abs(newTop - pos.top) >= 1) opt.top = Math.round(newTop);
+
+      if (Object.keys(opt).length) {
+        c.$el.css(opt);
+        c.style.set(opt);
+      }
       if (c.syncGeometry) {
         c.syncGeometry();
       }
@@ -613,6 +639,17 @@ class __window_manager extends mfsInteract {
           setTimeout(f, 500);
         };
         RADIO_BROADCAST.on(_e.responsive, this._responsive);
+        // _e.responsive is never emitted (its lex/event key is undefined), so
+        // bind a real debounced window resize listener to re-clamp windows on
+        // browser resize / DevTools open. Bound once (Wm is an app singleton).
+        if (!this._viewportResizeBound) {
+          this._viewportResizeBound = true;
+          this._onViewportResize = () => {
+            clearTimeout(this._viewportResizeTimer);
+            this._viewportResizeTimer = setTimeout(() => this.responsive(), 150);
+          };
+          window.addEventListener("resize", this._onViewportResize);
+        }
         child.onAddKid = (c) => {
           c.once(_e.destroy, () => {
             const last = child.children.last();

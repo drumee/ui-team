@@ -523,6 +523,22 @@ class settings_main extends LetcBox {
   }
 
   /**
+   * Apply a display-mode choice (light/dark/system) from the Appearance
+   * control. Delegates to the shared router/theme helper (persists +
+   * applies + wires the OS listener for "system"), then updates the
+   * segmented control's active highlight in place — no full re-render.
+   */
+  setThemeMode(mode) {
+    if (!mode) return;
+    require("router/theme").setThemePreference(mode);
+    ["light", "dark", "system"].forEach((m) => {
+      this.ensurePart(`theme-opt-${m}`).then((p) => {
+        if (p && p.el) p.el.dataset.active = m === mode ? "1" : "0";
+      });
+    });
+  }
+
+  /**
    * @param {*} cmd
    * @param {*} args
    */
@@ -531,6 +547,9 @@ class settings_main extends LetcBox {
     switch (service) {
       case "save-profile":
         return this.saveProfile();
+
+      case "set-theme":
+        return this.setThemeMode(cmd && cmd.mget && cmd.mget("theme_mode"));
 
       case "edit-avatar":
       case "upload-avatar":

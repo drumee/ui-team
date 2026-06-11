@@ -5,7 +5,7 @@ function __skl_dmz_sharebox_footer(_ui_) {
     className: `${footerFig}__icon-tile`,
     kids: [
       Skeletons.Button.Svg({
-        ico: "raw-share",
+        ico: "app-lightning",
         className: `${footerFig}__icon`,
       }),
     ],

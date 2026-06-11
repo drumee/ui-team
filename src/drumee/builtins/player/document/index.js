@@ -56,6 +56,10 @@ class __player_document extends PlayerInteract {
 
     this.checkPreview = this.checkPreview.bind(this);
     this.onWsMessage = this.onWsMessage.bind(this);
+    // Sync the fullscreen button when the user exits via Esc / browser chrome.
+    this._onFullscreenChange = this._onFullscreenChange.bind(this);
+    document.addEventListener("fullscreenchange", this._onFullscreenChange);
+    document.addEventListener("webkitfullscreenchange", this._onFullscreenChange);
     // to set media - do not remove
     if (!this.media) {
       this.media = opt.source || opt.trigger;
@@ -74,6 +78,15 @@ class __player_document extends PlayerInteract {
     }
     Wm.off(WS_EVENT, this.onWsMessage)
     this._cleanupEditorListeners();
+    document.removeEventListener("fullscreenchange", this._onFullscreenChange);
+    document.removeEventListener("webkitfullscreenchange", this._onFullscreenChange);
+    // Don't leave the browser stuck in fullscreen if closed while fullscreened.
+    if (this._fullscreenElement() === this.el) {
+      const exit = document.exitFullscreen || document.webkitExitFullscreen;
+      if (exit) {
+        try { exit.call(document); } catch (e) { /* ignore */ }
+      }
+    }
     if (this._wsObserver) {
       this._wsObserver.disconnect();
       this._wsObserver = null;
@@ -580,6 +593,47 @@ class __player_document extends PlayerInteract {
     }
   }
 
+  /** Current browser-fullscreen element (webkit fallback), or null. */
+  _fullscreenElement() {
+    return (
+      document.fullscreenElement || document.webkitFullscreenElement || null
+    );
+  }
+
+  /**
+   * Toggle true browser fullscreen on the whole viewer — fills the monitor,
+   * distinct from doc-zoom's maximize-to-workspace. Runs from the click
+   * handler so requestFullscreen()'s user-gesture requirement is met.
+   */
+  toggleFullscreen() {
+    if (this._fullscreenElement() === this.el) {
+      const exit = document.exitFullscreen || document.webkitExitFullscreen;
+      if (exit) {
+        try { exit.call(document); } catch (e) { /* ignore */ }
+      }
+    } else {
+      const req = this.el.requestFullscreen || this.el.webkitRequestFullscreen;
+      if (req) {
+        try { req.call(this.el); } catch (e) { this.warn("fullscreen request failed", e); }
+      }
+    }
+  }
+
+  /** Sync the toolbar button glyph/state with the real fullscreen state. */
+  _onFullscreenChange() {
+    const isFs = this._fullscreenElement() === this.el;
+    this._fullscreen = isFs;
+    if (!this.el) return;
+    const btn = this.el.querySelector('[data-partname="doc-fullscreen-btn"]');
+    if (!btn) return;
+    btn.dataset.state = isFs ? 1 : 0;
+    const useEl = btn.querySelector("svg use");
+    if (useEl) {
+      const ico = isFs ? "desktop_reduce" : "player-fullscreen";
+      useEl.setAttribute("xlink:href", `#--icon-${ico}`);
+    }
+  }
+
   /**
    * 
    */
@@ -925,6 +979,10 @@ class __player_document extends PlayerInteract {
 
       case "doc-zoom":
         this.toggleZoom();
+        break;
+
+      case "doc-fullscreen":
+        this.toggleFullscreen();
         break;
 
       case 'download-pdf':

@@ -2016,7 +2016,9 @@ class __window_manager extends push {
       }
       let opt = Visitor.parseModuleArgs(text);
       const url = new URL(href);
-      if (url.host != bootstrap().main_domain || /\#\/plugins/.test(url.hash)) {
+      let host = new RegExp(`${bootstrap().main_domain}$`)
+      this.debug("AAA:1933", host.test(url.host), url.host, bootstrap().main_domain)
+      if (!host.test(url.host) || /\#\/plugins/.test(url.hash)) {
         window.open(href, "_blank");
         return;
       }
