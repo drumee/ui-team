@@ -32,6 +32,7 @@
   "CONFIRM_QUIT": "Etes-vous sûr(e) de vouloir quitter cette page ?",
   "CONFIRM_RETRIEVE": "Cet élément a déjà été supprimé. Voulez-vous le restituer ?",
   "CONFIRM_YOUR_NEW_PASSWORD": "Confirmez votre nouveau mot de passe",
+  "PW_RULE_MATCH": "Les mots de passe correspondent",
   "CONTACT": "Contact",
   "CONTACTS": "Contacts",
   "COOKIES_REQUIRED": "Pour des raisons de confort et de sécurité, la connexion à drumee.com nécessite l'activation de cookies sur votre navigateur.",

@@ -112,6 +112,23 @@ class __welcome_reset extends __welcome_interact {
   }
 
   /**
+   * Paint a requirement pill: grey/cross when unmet, green/check when met.
+   * @param {string} sys_pn
+   * @param {boolean} ok
+  */
+  _paintPill(sys_pn, ok) {
+    const pill = this.getPart(sys_pn);
+    if (!pill || !pill.el) {
+      return;
+    }
+    pill.el.dataset.state = ok ? 1 : 0;
+    const use = pill.el.querySelector('svg use');
+    if (use) {
+      use.setAttribute('xlink:href', ok ? '#--icon-app-check' : '#--icon-cross');
+    }
+  }
+
+  /**
    * Evaluate the password against every rule + the confirm-match, repaint the
    * pills (cross/grey -> check/green) and enable the button only when all pass.
    * @returns {boolean} true when the form is valid and submittable.
@@ -124,20 +141,14 @@ class __welcome_reset extends __welcome_interact {
     for (const rule of PW_RULES) {
       const ok = rule.test(value);
       allRulesPass = allRulesPass && ok;
-
-      const pill = this.getPart(rule.sys_pn);
-      if (!pill || !pill.el) {
-        continue;
-      }
-      pill.el.dataset.state = ok ? 1 : 0;
-      const use = pill.el.querySelector('svg use');
-      if (use) {
-        use.setAttribute('xlink:href', ok ? '#--icon-app-check' : '#--icon-cross');
-      }
+      this._paintPill(rule.sys_pn, ok);
     }
 
     const matches = value.length > 0 && value === confirm;
     const valid = allRulesPass && matches;
+
+    // "Passwords match" tag (green/check only once both fields agree).
+    this._paintPill('pill-match', matches);
 
     // Live confirm feedback: show the mismatch error as soon as the confirm
     // field has a value that differs from the new password.

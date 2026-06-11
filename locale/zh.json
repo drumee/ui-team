@@ -32,6 +32,7 @@
   "CONFIRM_QUIT": "您确定要退出此页面吗？",
   "CONFIRM_RETRIEVE": "此元素已被删除。您想要检索它吗？",
   "CONFIRM_YOUR_NEW_PASSWORD": "请确认您的新密码",
+  "PW_RULE_MATCH": "密码一致",
   "CONTACT": "接触",
   "CONTACTS": "往来",
   "COOKIES_REQUIRED": "为方便和安全起见，连接到drumee.com 需要在您的网络浏览器上激活cookie。",

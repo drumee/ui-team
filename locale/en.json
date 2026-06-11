@@ -191,6 +191,7 @@
   "PW_RULE_UPPERCASE": "Uppercase",
   "PW_RULE_NUMBER": "Number",
   "PW_RULE_SYMBOL": "Symbol",
+  "PW_RULE_MATCH": "Passwords match",
   "SET_A_NEW_PASSWORD": "Set a new password",
   "CONFIRM_PASSWORD": "Confirm password",
   "PASSWORD_CHANGE_FAILED": "Could not update password. Please check your current password.",
