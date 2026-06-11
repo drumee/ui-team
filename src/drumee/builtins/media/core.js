@@ -213,8 +213,7 @@ class __media_core extends DrumeeMFS {
       // Figma B.1.2/B.2.2/B.3.2 (Folder Action - all workspace types):
       // Download, Rename, Organize, Make a copy, [Share?], Delete
       fileItems = [_a.download, _a.rename, 'organize', 'makeACopy', _a.separator, _a.trash];
-      if (this.canShare()) fileItems.splice(fileItems.length - 1, 0, _a.share);
-      if (this.mget(_a.area) === _a.share) fileItems.splice(fileItems.length - 1, 0, 'secureShare');
+      if (this.canShare()) fileItems.splice(fileItems.length - 1, 0, this.mget(_a.area) === _a.share ? 'secureShare' : _a.share);
     } else if (this.canDownload()) {
       // Restricted/shared recipient — Download only per Figma 2.2
       fileItems = [_a.download];
@@ -237,8 +236,7 @@ class __media_core extends DrumeeMFS {
 
     if (this.canOrganize() || this.isMediaOwner()) {
       fileItems = [_a.rename, _a.download, _a.separator, _a.copy, _a.duplicate, _a.separator, _a.info];
-      if (this.canShare()) fileItems.push(_a.share);
-      if (this.mget(_a.area) === _a.share) fileItems.push('secureShare');
+      if (this.canShare()) fileItems.push(this.mget(_a.area) === _a.share ? 'secureShare' : _a.share);
       if (fileType == _a.image) {
         fileItems.push(_a.separator, 'background', _a.rotateLeft, _a.rotateRight);
       }

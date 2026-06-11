@@ -362,11 +362,7 @@ class __dmz_sharebox extends LetcBox {
 
       case 'open-signup':
         this.closeSignupRequiredOverlay();
-        this.append({
-          kind: 'drumee_api_popup',
-          autostart: 1,
-          popupContent: 'drumee_api_signup'
-        });
+        location.href = _K.module.signup;
         return;
 
       case 'tab-files':

@@ -261,6 +261,7 @@ class __window_secure_share extends mfsInteract {
     }
 
     const payload = { nid, hub_id, permission_level: this._permissionLevel, days, hours };
+    if (this._requireEmail && !this._emailChips.length) return;
     if (this._requireEmail && this._emailChips.length) payload.allowed_emails = this._emailChips;
     if (password) payload.password = password;
 

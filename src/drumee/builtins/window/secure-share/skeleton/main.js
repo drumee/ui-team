@@ -15,7 +15,9 @@ const __skl_secure_share = function(_ui_) {
           Skeletons.Note({
             sys_pn    : 'window-label',
             className : _a.name,
-            content   : `${LOCALE.SECURE_SHARE} — ${_ui_.mget(_a.filename) || ''}`
+            content   : [_a.hub, _a.folder].includes(_ui_.mget(_a.filetype))
+              ? LOCALE.SECURE_SHARE_TITLE_FOLDER
+              : LOCALE.SECURE_SHARE_TITLE_FILE
           })
         ]
       }),

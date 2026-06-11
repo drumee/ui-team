@@ -27,22 +27,24 @@ function action(ui, { service, ico, tip, state, icons }) {
 module.exports = function (ui) {
   const actions = [];
 
-  actions.push(
-    action(ui, {
-      service: _a.download,
-      ico: _a.download,
-      tip: LOCALE.DOWNLOAD_ORIG,
-    }),
-  );
-
-  if (ui.mget(_a.ext) != _a.pdf) {
+  if (!Visitor.inDmz || ui.canDownload()) {
     actions.push(
       action(ui, {
-        service: "download-pdf",
-        ico: "app-pdf-file",
-        tip: LOCALE.DOWNLOAD_AS_PDF,
+        service: _a.download,
+        ico: _a.download,
+        tip: LOCALE.DOWNLOAD_ORIG,
       }),
     );
+
+    if (ui.mget(_a.ext) != _a.pdf) {
+      actions.push(
+        action(ui, {
+          service: "download-pdf",
+          ico: "app-pdf-file",
+          tip: LOCALE.DOWNLOAD_AS_PDF,
+        }),
+      );
+    }
   }
 
   if (ui.canUpload() && !Visitor.inDmz && EDITABLE.includes(ui.mget(_a.ext).toLowerCase())) {
