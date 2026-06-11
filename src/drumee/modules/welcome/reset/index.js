@@ -35,24 +35,56 @@ class __welcome_reset extends __welcome_interact {
   }
 
   /**
-   *
+   * Validate the reset token up front. A valid (non-expired) token shows the
+   * set-new-password form; an expired/invalid token shows the "Link Expired"
+   * screen. A transient/unknown error falls back to the form — the token is
+   * re-checked on submit anyway. check_token has no session side effect.
   */
   onDomRefresh() {
-    let sid = bootstrap().maiden_session;
-    // if (this._secret) {
-    //   this.postService({
-    //     service: SERVICE.butler.check_token,
-    //     secret: this._secret,
-    //     sid
-    //   }, { async: 1 }).then((data) => {
-    //     this.checkTokenResponse(data);
-    //   }).catch(() => {
-    //     return this.feed(require('./skeleton').default(this));
-    //   });
-    //   return;
-    // }
-    return this.feed(require('./skeleton').default(this));
+    const showForm = () => this.feed(require('./skeleton').default(this));
 
+    if (!this._secret) {
+      return showForm();
+    }
+
+    // Brief spinner while we validate the token.
+    this.feed({ kind: 'spinner', mode: 'welcome' });
+    let sid = bootstrap().maiden_session;
+    this.postService({
+      service: SERVICE.butler.check_token,
+      secret: this._secret,
+      sid
+    }, { async: 1 }).then((data) => {
+      if (data && (data.error === 'INVALID_LINK' || data.error === 'LINK_EXPIRES')) {
+        return this.showLinkExpired();
+      }
+      return showForm();
+    }).catch((e) => {
+      // Don't bounce a valid link on a transient error — show the form;
+      // createPassword() re-validates the token before set_password.
+      this.warn('onDomRefresh: token check failed; showing reset form', e);
+      return showForm();
+    });
+  }
+
+  /**
+   * Render the "Link Expired" screen (replaces the whole card).
+  */
+  showLinkExpired() {
+    return this.feed(require('./skeleton/link-expired').default(this));
+  }
+
+  /**
+   * Navigate to the sign-in form (used by the expired screen's button). Unlike
+   * backToSignin() this does not log out, since an expired link creates no
+   * session — the user simply never reached the set-password step.
+  */
+  gotoSignin() {
+    try { history.replaceState(null, '', '#/welcome/signin'); } catch (e) {}
+    if (window.Welcome && _.isFunction(Welcome.loadSignin)) {
+      return Welcome.loadSignin();
+    }
+    location.hash = '#/welcome/signin';
   }
 
   /**
@@ -147,6 +179,22 @@ class __welcome_reset extends __welcome_interact {
   }
 
   /**
+   * Toggle the submit button's loading spinner (hides icon + label, blocks
+   * clicks) while the password is being submitted.
+   * @param {boolean} on
+  */
+  setButtonLoading(on) {
+    if (!this._button || !this._button.el) {
+      return;
+    }
+    if (on) {
+      this._button.el.dataset.loading = 1;
+    } else {
+      delete this._button.el.dataset.loading;
+    }
+  }
+
+  /**
    * The inherited clearMessage() force-enables the button (dataset.state = 1)
    * whenever a field blurs or a child bubbles. Re-assert the validated state
    * afterwards so the button stays disabled until the form is actually valid.
@@ -177,9 +225,7 @@ class __welcome_reset extends __welcome_interact {
       //   break
 
       case 'complete':
-        this.feed({ kind: 'spinner', mode: 'welcome' });
-        setTimeout(() => { location.hash = ''; location.reload() }, 2000);
-        return;
+        return this.showSuccess();
 
       default:
         _content = require('./skeleton/password').default(this)
@@ -187,6 +233,44 @@ class __welcome_reset extends __welcome_interact {
 
     this.__header.feed(require('./skeleton/header').default(this))
     return this.__content.feed(_content)
+  }
+
+  /**
+   * Render the "Password Changed!" success screen (replaces the whole card).
+  */
+  showSuccess() {
+    return this.feed(require('./skeleton/success').default(this));
+  }
+
+  /**
+   * Leave the reset flow for the sign-in form.
+   *
+   * A successful reset signs the user in server-side, so Visitor.isOnline() is
+   * true here. Navigating straight to sign-in would make loadSignin() see the
+   * live session and auto-enter the app (triggering the onboarding flow). So we
+   * drop that session first (same as loadReset), then reload onto the sign-in
+   * form for a manual login with the new password.
+  */
+  backToSignin() {
+    // Land on the sign-in form after a fresh, logged-out boot. Setting the hash
+    // then synchronously reloading means the reload pre-empts the SPA's async
+    // hashchange route, so loadSignin() can't auto-enter the app before the page
+    // reloads with the session already gone.
+    const goSignin = () => {
+      location.hash = '#/welcome/signin';
+      location.reload();
+    };
+
+    // Always log out: a successful reset signs the user in server-side, and the
+    // session is keyed by the session cookie (hub_id is irrelevant), so this
+    // ends the current session even when the cached Visitor state looks offline.
+    // Without this the next env fetch sees the live cookie and auto-logs-in.
+    this.postService(SERVICE.drumate.logout, { hub_id: Visitor.id }, { async: 1 })
+      .then(goSignin)
+      .catch((e) => {
+        this.warn('backToSignin: logout failed', e);
+        goSignin();
+      });
   }
 
   /**
@@ -216,6 +300,12 @@ class __welcome_reset extends __welcome_interact {
 
       case 'create-password':
         return this.createPassword();
+
+      case 'back-to-signin':
+        return this.backToSignin();
+
+      case 'goto-signin':
+        return this.gotoSignin();
 
       // OTP handlers disabled alongside the OTP screen.
       // case 'verify-code':
@@ -266,6 +356,9 @@ class __welcome_reset extends __welcome_interact {
     }
     this._newPassword = this._pwNew.getValue();
     let sid = bootstrap().maiden_session;
+    // Start the spinner; it's cleared by renderMessage() on any error exit, and
+    // stays on through the success path (which reloads the page).
+    this.setButtonLoading(true);
     this.postService({
       service: SERVICE.butler.check_token,
       secret: this._secret,
@@ -273,6 +366,7 @@ class __welcome_reset extends __welcome_interact {
     }, { async: 1 }).then((data) => {
       this.checkTokenResponse(data);
     }).catch((e) => {
+      this.setButtonLoading(false);
     });
   }
 
@@ -322,6 +416,9 @@ class __welcome_reset extends __welcome_interact {
   */
   renderMessage(msg = '', type = '') {
     const msgBox = require('./skeleton/acknowledgment').default(this, msg, type)
+
+    // Any message ends a submit attempt -> stop the button spinner.
+    this.setButtonLoading(false);
 
     // This message takes over the shared box, so release the live confirm-error
     // ownership; liveValidate() will re-show the mismatch on the next keystroke.
@@ -384,18 +481,10 @@ class __welcome_reset extends __welcome_interact {
           secret: this._secret,
           password,
           id: this.mget(_a.uid)
-        }).then(async (resp) => {
-          let params = await this.fetchService(SERVICE.yp.get_env);
-          if (params.user && params.user.signed_in) {
-            Visitor.set(params.user);
-            location.hash = '#/desk';
-            setTimeout(() => {
-              location.reload()
-            }, 1000);
-          } else {
-            this.renderMessage(LOCALE.SOMETHING_WENT_WRONG)
-            // this.responseRouter(resp);
-          }
+        }).then(() => {
+          // Password set: show the success screen. The user signs in again with
+          // the new password via the "Back to Drumee" button.
+          this.showSuccess();
         }).catch((e) => {
           this.renderMessage(LOCALE.SOMETHING_WENT_WRONG)
         })
