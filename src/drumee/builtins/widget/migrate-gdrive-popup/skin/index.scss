@@ -569,6 +569,215 @@ $danger-soft: rgba(246, 81, 75, 0.12);
     &:hover { color: $accent; }
   }
 
+  // ───────── Figma-flow additions (choose / in-progress / result) ─────────
+  &__primary-btn--full { width: 100%; text-align: center; }
+  &__primary-btn--grow { flex: 1; text-align: center; }
+
+  &__btn-row { gap: var(--spacer-3); }
+
+  &__back-btn {
+    @include drumee.typo($size: 14px, $weight: 600, $line: 20px, $color: var(--normal-fg-10));
+    padding: var(--spacer-3) var(--spacer-7);
+    border-radius: var(--corner-radius-2);
+    background: var(--normal-bg-90);
+    cursor: pointer;
+    align-self: stretch;
+    display: flex;
+    align-items: center;
+
+    &:hover { background: var(--normal-bg-100); }
+  }
+
+  &__summary-row {
+    justify-content: space-between;
+    align-items: center;
+
+    > * { @include drumee.typo($size: 13px, $weight: 500, $line: 18px, $color: var(--normal-fg-50)); }
+  }
+
+  &__keep-open {
+    @include drumee.typo($size: 13px, $weight: 400, $line: 18px, $color: var(--normal-fg-50));
+  }
+
+  &__progress-row {
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  &__filelog {
+    gap: 0;
+    max-height: 280px;
+    overflow-y: auto;
+  }
+
+  &__filelog-row {
+    align-items: center;
+    gap: var(--spacer-3);
+    padding: var(--spacer-3) 0;
+    border-bottom: 1px solid var(--border-muted, rgba(0, 0, 0, 0.05));
+
+    &:last-child { border-bottom: none; }
+
+    svg { width: 18px; height: 18px; flex-shrink: 0; }
+  }
+
+  &__filelog-name {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    @include drumee.typo($size: 13px, $weight: 500, $line: 18px, $color: var(--normal-fg-10));
+  }
+
+  &__chip {
+    flex-shrink: 0;
+    padding: 2px 10px;
+    border-radius: 999px;
+    @include drumee.typo($size: 11px, $weight: 600, $line: 16px, $color: var(--normal-fg-50));
+    background: var(--normal-bg-90);
+
+    &[data-kind="done"] { background: rgba(34, 160, 107, 0.12); color: #1d8f5f; }
+    &[data-kind="uploading"] { background: rgba(244, 162, 60, 0.14); color: #c87d1e; }
+  }
+
+  &__tree-size {
+    flex-shrink: 0;
+    margin-left: auto;
+    @include drumee.typo($size: 12px, $weight: 500, $line: 16px, $color: var(--normal-fg-50));
+  }
+
+  &__summary-errors[data-kind="error"] { color: var(--red-500); }
+
+  &__dest-block { gap: var(--spacer-2); }
+
+  &__dest-sub {
+    @include drumee.typo($size: 12px, $weight: 400, $line: 16px, $color: var(--normal-fg-50));
+  }
+
+  &__header--bare { justify-content: flex-end; border-bottom: none; }
+
+  &__title-ico--cloud { color: $accent; }
+
+  // ───────── whole-folder import (share-to-SA) ─────────
+  &__body--sa { gap: var(--spacer-3); }
+
+  &__sa-link {
+    @include drumee.typo($size: 13px, $weight: 600, $line: 18px, $color: $accent);
+    cursor: pointer;
+    align-self: center;
+    margin-top: var(--spacer-1);
+
+    &:hover { text-decoration: underline; }
+  }
+
+  &__sa-email-card {
+    align-items: center;
+    gap: var(--spacer-2);
+    padding: var(--spacer-2) var(--spacer-3);
+    border-radius: var(--corner-radius-1);
+    background: var(--normal-bg-90);
+  }
+
+  &__sa-email {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    user-select: all;
+    @include drumee.typo($size: 13px, $weight: 600, $line: 18px, $color: var(--normal-fg-10));
+  }
+
+  &__sa-copy {
+    flex-shrink: 0;
+    cursor: pointer;
+    padding: 2px 10px;
+    border-radius: 999px;
+    background: var(--normal-bg-100);
+    @include drumee.typo($size: 11px, $weight: 600, $line: 16px, $color: $accent);
+
+    &[data-copied="1"] { opacity: 0.55; }
+  }
+
+  &__sa-input-row {
+    input {
+      width: 100%;
+      padding: var(--spacer-2) var(--spacer-3);
+      border: 1px solid var(--border-default);
+      border-radius: var(--corner-radius-1);
+      @include drumee.typo($size: 13px, $weight: 500, $line: 18px, $color: var(--normal-fg-10));
+
+      &:focus { border-color: $accent; outline: none; }
+    }
+  }
+
+  &__sa-status {
+    @include drumee.typo($size: 12px, $weight: 500, $line: 16px, $color: var(--normal-fg-50));
+
+    &[data-kind="ok"] { color: #1d8f5f; }
+    &[data-kind="error"] { color: var(--red-500); }
+  }
+
+  // ───────── Google Picker (drive.file flow) ─────────
+  &__picker {
+    gap: var(--spacer-3);
+  }
+
+  &__picker-hint {
+    @include drumee.typo($size: 13px, $weight: 400, $line: 18px, $color: var(--normal-fg-50));
+  }
+
+  &__picker-btn {
+    align-items: center;
+    justify-content: center;
+    gap: var(--spacer-2);
+    padding: var(--spacer-3) var(--spacer-5);
+    border: 1px dashed var(--border-default);
+    border-radius: var(--corner-radius-2);
+    cursor: pointer;
+    transition: color 0.15s, border-color 0.15s;
+    @include drumee.typo($size: 14px, $weight: 600, $line: 20px, $color: var(--normal-fg-10));
+
+    &:hover { border-color: $accent; color: $accent; }
+
+    svg { width: 18px; height: 18px; }
+  }
+
+  &__picker-list {
+    gap: var(--spacer-1);
+    max-height: 180px;
+    overflow-y: auto;
+  }
+
+  &__picker-item {
+    align-items: center;
+    gap: var(--spacer-2);
+    padding: var(--spacer-2) var(--spacer-3);
+    border-radius: var(--corner-radius-1);
+    background: var(--normal-bg-90);
+
+    svg { width: 16px; height: 16px; flex-shrink: 0; }
+  }
+
+  &__picker-item-name {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    @include drumee.typo($size: 13px, $weight: 500, $line: 18px, $color: var(--normal-fg-10));
+  }
+
+  &__picker-item-remove {
+    cursor: pointer;
+    color: var(--normal-fg-50);
+
+    &:hover { color: var(--red-500); }
+
+    svg { width: 12px; height: 12px; }
+  }
+
   // ───────── checking spinner ─────────
   &__body--checking {
     align-items: center;
@@ -606,6 +815,13 @@ html[data-theme="dark"] .migrate-gdrive-popup {
   // brand hero ring a touch lighter so the (mostly white) Google logo separates
   &__hero--brand &__hero-ico { background: rgba(255, 255, 255, 0.06); }
 }
+
+// Google Picker mounts its dialog directly on <body> with z-index ~1001 —
+// far below this popup (z 9999) and the wm modal lift (30000), so without
+// this the picker opens INVISIBLE behind the app. Google's own classes, no
+// Drumee element matches them.
+.picker-dialog { z-index: 100001 !important; }
+.picker-dialog-bg { z-index: 100000 !important; }
 
 @keyframes migrate-gdrive-spin {
   to { transform: rotate(360deg); }

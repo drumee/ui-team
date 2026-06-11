@@ -8,6 +8,7 @@
  * subset, uncheck the parent first.
  */
 const INDENT_PX = 18;
+const { filesize } = require('@drumee/ui-essentials');
 
 module.exports = function (ui) {
   const pfx = ui.fig.family;
@@ -65,7 +66,13 @@ module.exports = function (ui) {
           className: `${pfx}__tree-ico`,
         }),
         Skeletons.Note({ className: `${pfx}__tree-name`, content: item.name }),
-      ],
+        // Right-aligned size (Figma 1639:52297). Drive only reports sizes for
+        // FILES — folders render without one.
+        item.size ? Skeletons.Note({
+          className: `${pfx}__tree-size`,
+          content: filesize(parseInt(item.size, 10) || 0),
+        }) : null,
+      ].filter(Boolean),
     });
   };
 
