@@ -48,6 +48,8 @@
   "DELETE": "លុប",
   "ACCOUNT_DELETE": "លុបគណនីរបស់ខ្ញុំ",
   "DESCRIPTION": "ការពិពណ៌នា",
+  "DELETE_WORKSPACE_FAILED": "មិនអាចលុបកន្លែងធ្វើការបានទេ។ បញ្ជីត្រូវបានស្ដារឡើងវិញ។",
+  "LEAVE_WORKSPACE_FAILED": "មិនអាចចាកចេញពីកន្លែងធ្វើការបានទេ។ បញ្ជីត្រូវបានស្ដារឡើងវិញ។",
   "DISCONNECT": "ផ្តាច់",
   "DOCUMENT": "ឯកសារ",
   "DOCUMENTS": "ឯកសារ",

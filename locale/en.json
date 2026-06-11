@@ -158,6 +158,8 @@
   "EMPTY_FOLDER_WORKSPACE": "Empty folder/workspace",
   "SELECT_THIS_FOLDER": "Select this folder",
   "MOVE_FAILED": "Could not move to the selected destination.",
+  "DELETE_WORKSPACE_FAILED": "Could not delete the workspace. The listing has been restored.",
+  "LEAVE_WORKSPACE_FAILED": "Could not leave the workspace. The listing has been restored.",
   "ORGANIZE": "Organize",
   "MAKE_A_COPY": "Make a copy",
   "LINK_TO_TASK_TRACKER": "Link to task tracker",
