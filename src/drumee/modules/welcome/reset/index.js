@@ -250,6 +250,13 @@ class __welcome_reset extends __welcome_interact {
    * Render the "Password Changed!" success screen (replaces the whole card).
   */
   showSuccess() {
+    // Signal any open "check your inbox" tab (same origin) that the reset is
+    // complete, so it can disable its resend button — there's nothing left to
+    // resend. storage events fire in OTHER tabs; the changing timestamp value
+    // guarantees the event dispatches even on a repeat success.
+    try {
+      localStorage.setItem('drumee:password-reset:done', String(Date.now()));
+    } catch (e) {}
     return this.feed(require('./skeleton/success').default(this));
   }
 
