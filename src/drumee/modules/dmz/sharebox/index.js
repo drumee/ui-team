@@ -360,10 +360,12 @@ class __dmz_sharebox extends LetcBox {
         }
         return;
 
-      case 'open-signup':
+      case 'open-signup': {
         this.closeSignupRequiredOverlay();
-        window.open(`${location.origin}/${_K.module.signup}`, '_blank');
+        const { main_domain } = bootstrap();
+        window.open(`${location.protocol}//${main_domain}/${_K.module.signup}`, '_blank');
         return;
+      }
 
       case 'tab-files':
         if (this._folderView) this._folderView.el.dataset.view = 'files';

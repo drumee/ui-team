@@ -261,9 +261,17 @@ class __window_secure_share extends mfsInteract {
     }
 
     const payload = { nid, hub_id, permission_level: this._permissionLevel, days, hours };
-    if (this._requireEmail && !this._emailChips.length) {
-      Butler.say(LOCALE.SECURE_SHARE_EMAIL_REQUIRED);
-      return;
+    if (this._requireEmail) {
+      // Auto-confirm any text still sitting in the chips input (user typed but
+      // didn't press Enter before clicking "Get link").
+      if (this._chipsInput) {
+        const inputEl = this._chipsInput.el.querySelector('input');
+        if (inputEl && inputEl.value.trim()) this._addEmailChip();
+      }
+      if (!this._emailChips.length) {
+        Butler.say(LOCALE.SECURE_SHARE_EMAIL_REQUIRED);
+        return;
+      }
     }
     if (this._requireEmail && this._emailChips.length) payload.allowed_emails = this._emailChips;
     if (password) payload.password = password;

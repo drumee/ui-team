@@ -106,7 +106,17 @@ class __dmz_wm extends winman {
   }
 
   /**
-  * 
+   * Force the share's privilege onto every window opened from the DMZ WM so
+   * players never inherit the file's full hub privilege from node_info.
+   */
+  getWindowPreset(c, opt) {
+    const item = super.getWindowPreset(c, opt);
+    item.privilege = ~~this.mget(_a.privilege);
+    return item;
+  }
+
+  /**
+  *
   */
   fetchMediaAttributes(opt) {
     return this.fetchService(SERVICE.media.node_info, {
