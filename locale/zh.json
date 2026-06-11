@@ -49,6 +49,8 @@
   "DELETE": "删除",
   "ACCOUNT_DELETE": "删除我的账户",
   "DESCRIPTION": "描述",
+  "DELETE_WORKSPACE_FAILED": "无法删除工作区，列表已恢复。",
+  "LEAVE_WORKSPACE_FAILED": "无法退出工作区，列表已恢复。",
   "DISCONNECT": "断开",
   "DOCUMENT": "文件",
   "DOCUMENTS": "文件",
