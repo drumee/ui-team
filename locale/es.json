@@ -431,6 +431,7 @@
   "GDRIVE_SA_NEEDS_GOOGLE": "Conecta primero tu cuenta de Google para verificar el propietario de la carpeta.",
   "GDRIVE_SA_BAD_LINK": "Eso no parece un enlace o ID de carpeta de Google Drive.",
   "GDRIVE_SA_NOT_A_FOLDER": "Ese enlace apunta a un archivo — pega un enlace de carpeta.",
+  "POPUP_BLOCKED": "Ventana emergente bloqueada — permite los popups para este sitio e inténtalo de nuevo.",
   "MIGRATE_GDRIVE_CHOOSE_TITLE": "Elegir carpetas a migrar",
   "MIGRATE_GDRIVE_CHOOSE_HINT": "Selecciona qué carpetas de tu Google Drive importar a Drumee.",
   "MIGRATE_GDRIVE_FOLDERS_SELECTED": "{0} carpetas seleccionadas",

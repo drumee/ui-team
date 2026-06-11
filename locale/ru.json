@@ -64,6 +64,7 @@
   "GDRIVE_SA_NEEDS_GOOGLE": "Сначала подключите аккаунт Google, чтобы мы могли проверить владельца папки.",
   "GDRIVE_SA_BAD_LINK": "Это не похоже на ссылку или ID папки Google Drive.",
   "GDRIVE_SA_NOT_A_FOLDER": "Эта ссылка ведёт на файл — вставьте ссылку на папку.",
+  "POPUP_BLOCKED": "Всплывающее окно заблокировано — разрешите попапы для этого сайта и попробуйте снова.",
   "MIGRATE_GDRIVE_CHOOSE_TITLE": "Выберите папки для переноса",
   "MIGRATE_GDRIVE_CHOOSE_HINT": "Выберите, какие папки из Google Drive импортировать в Drumee.",
   "MIGRATE_GDRIVE_FOLDERS_SELECTED": "Выбрано папок: {0}",

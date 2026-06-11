@@ -63,6 +63,7 @@
   "GDRIVE_SA_NEEDS_GOOGLE": "សូមភ្ជាប់គណនី Google របស់អ្នកជាមុនសិន ដើម្បីផ្ទៀងផ្ទាត់ម្ចាស់ថត។",
   "GDRIVE_SA_BAD_LINK": "វាមិនមើលទៅដូចជាតំណ ឬ ID ថត Google Drive ទេ។",
   "GDRIVE_SA_NOT_A_FOLDER": "តំណនេះចង្អុលទៅឯកសារ — សូមបិទភ្ជាប់តំណថត។",
+  "POPUP_BLOCKED": "បង្អួចលេចឡើងត្រូវបានទប់ស្កាត់ — សូមអនុញ្ញាតបង្អួចលេចឡើងសម្រាប់គេហទំព័រនេះ រួចព្យាយាមម្តងទៀត។",
   "MIGRATE_GDRIVE_CHOOSE_TITLE": "ជ្រើសរើសថតដែលត្រូវផ្ទេរ",
   "MIGRATE_GDRIVE_CHOOSE_HINT": "ជ្រើសរើសថតពី Google Drive របស់អ្នកដើម្បីនាំចូលទៅ Drumee។",
   "MIGRATE_GDRIVE_FOLDERS_SELECTED": "បានជ្រើសរើសថត {0}",

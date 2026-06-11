@@ -464,6 +464,7 @@
   "GDRIVE_SA_NEEDS_GOOGLE": "Connect your Google account first so we can verify the folder's owner.",
   "GDRIVE_SA_BAD_LINK": "That doesn't look like a Google Drive folder link or ID.",
   "GDRIVE_SA_NOT_A_FOLDER": "That link points to a file — paste a folder link.",
+  "POPUP_BLOCKED": "Popup blocked — allow popups for this site and try again.",
   "MIGRATE_GDRIVE_CHOOSE_TITLE": "Choose folders to migrate",
   "MIGRATE_GDRIVE_CHOOSE_HINT": "Select which folders from your Google Drive to import into Drumee.",
   "MIGRATE_GDRIVE_FOLDERS_SELECTED": "{0} folders selected",

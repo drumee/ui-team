@@ -720,6 +720,10 @@ class __migrate_gdrive_popup extends LetcBox {
     // round with an empty staging list instead of silently re-importing it.
     this._pickerDocs = [];
     this._fileLog = [];
+    // SA flow likewise: drop the verified-folder state so "Migrate again"
+    // doesn't show a stale folder name from the previous run.
+    this._saFolder = null;
+    this._saError = null;
     this._state = 'ready';
     this._render();
   }

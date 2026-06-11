@@ -64,6 +64,7 @@
   "GDRIVE_SA_NEEDS_GOOGLE": "请先连接您的 Google 账号，以便我们验证文件夹所有者。",
   "GDRIVE_SA_BAD_LINK": "这看起来不像 Google Drive 文件夹链接或 ID。",
   "GDRIVE_SA_NOT_A_FOLDER": "该链接指向一个文件 — 请粘贴文件夹链接。",
+  "POPUP_BLOCKED": "弹窗被拦截 — 请允许此网站的弹窗后重试。",
   "MIGRATE_GDRIVE_CHOOSE_TITLE": "选择要迁移的文件夹",
   "MIGRATE_GDRIVE_CHOOSE_HINT": "选择要从您的 Google Drive 导入到 Drumee 的文件夹。",
   "MIGRATE_GDRIVE_FOLDERS_SELECTED": "已选择 {0} 个文件夹",
