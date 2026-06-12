@@ -30,7 +30,10 @@ class __welcome_router extends LetcBox {
       });
     }
     const path = Visitor.parseModule() || [];
-    if (path[2] === _a.hub && args.hub_id) {
+    // Honour a workspace deep-link: the hub-invite email uses #/welcome/hub?hub_id=…,
+    // and a secure-share sign-up opens #/welcome/signup?hub_id=… (new window). Either
+    // way, stash the hub so the desk window-manager opens that workspace after auth.
+    if (args.hub_id) {
       sessionStorage.setItem('drumee_hubDeepLink', args.hub_id);
     }
     this.route();

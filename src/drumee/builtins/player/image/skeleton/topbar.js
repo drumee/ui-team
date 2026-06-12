@@ -42,12 +42,12 @@ module.exports = function (ui, size) {
     uiHandler: ui,
   });
 
-  let actionIcons = "";
-  if (ui.canDownload()) {
-    actionIcons = Skeletons.Box.X({
-      className: `${ui.fig.group}-topbar__icon-wrapper`,
-      kids: [downloadIcon],
-    });
+  let actionIcons = Skeletons.Box.X({
+    className: `${ui.fig.group}-topbar__icon-wrapper`,
+    kids: [],
+  });
+  if (!Visitor.inDmz || ui.canDownload()) {
+    actionIcons.kids.unshift(downloadIcon);
   }
 
   if (ui.canUpload() && ui.media && ui.media.imgCapable()) {

@@ -61,10 +61,20 @@ function __skl_dmz_sharebox_password(_ui_, opts = {}) {
   let contentKids
 
   if (locked) {
+    // Figma 3.3.6 — locked state shown as a light-red alert box with icon.
     contentKids = [
-      Skeletons.Note({
-        className : `${passwordFig}__locked-message`,
-        content   : LOCALE.SECURE_SHARE_ACCESS_LOCKED
+      Skeletons.Box.X({
+        className : `${passwordFig}__locked-alert`,
+        kids      : [
+          Skeletons.Button.Svg({
+            ico       : 'apps-lock-padlock',
+            className : `${passwordFig}__locked-icon`
+          }),
+          Skeletons.Note({
+            className : `${passwordFig}__locked-message`,
+            content   : LOCALE.SECURE_SHARE_ACCESS_LOCKED
+          })
+        ]
       })
     ]
   } else {

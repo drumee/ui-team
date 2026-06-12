@@ -3,6 +3,9 @@ const __skl_secure_share = function(_ui_) {
   const pfx   = _ui_.fig.family;
   const group = _ui_.fig.group;
 
+  // Leading row icon (non-interactive) — matches the Figma row glyphs.
+  const rowIcon = (ico) => Skeletons.Image.Svg({ className: `${pfx}__row-icon`, ico });
+
   // ── Topbar (unchanged) ────────────────────────────────────
   const topbar = Skeletons.Box.X({
     className : `${group}-topbar__container`,
@@ -30,53 +33,115 @@ const __skl_secure_share = function(_ui_) {
     kids      : [topbar]
   });
 
-  // ── Permission level section ──────────────────────────────
+  // ── Recipients mode (permission level) section ────────────
+  // "Can View" is the implicit default (sharing = viewing) and is no longer a
+  // row — these three are the upgrades. No row selected ⇒ can_view.
+  // Single-select is preserved (handler unchanged); rendered with the Figma
+  // row + checkbox styling.
   const PERM_LEVELS = [
-    { level: 'can_view',     label: LOCALE.SECURE_SHARE_CAN_VIEW },
-    { level: 'can_download', label: LOCALE.SECURE_SHARE_CAN_DOWNLOAD },
-    { level: 'can_chat',     label: LOCALE.SECURE_SHARE_CAN_CHAT },
-    { level: 'can_edit',     label: LOCALE.SECURE_SHARE_CAN_EDIT },
+    { level: 'can_download', ico: 'download',           label: LOCALE.SECURE_SHARE_CAN_DOWNLOAD },
+    { level: 'can_chat',     ico: 'apps-chat',          label: LOCALE.SECURE_SHARE_CAN_CHAT },
+    { level: 'can_edit',     ico: 'apps-pencil-simple', label: LOCALE.SECURE_SHARE_CAN_EDIT },
   ];
 
   const permSection = Skeletons.Box.Y({
     className : `${pfx}__perm-section`,
     kids      : [
-      Skeletons.Note({ className: `${pfx}__perm-label`, content: LOCALE.SECURE_SHARE_PERMISSION_LEVEL }),
-      Skeletons.Box.X({
+      Skeletons.Note({ className: `${pfx}__section-label`, content: LOCALE.SECURE_SHARE_PERMISSION_LEVEL }),
+      Skeletons.Note({ className: `${pfx}__section-hint`,  content: LOCALE.SECURE_SHARE_PERMISSION_HINT }),
+      Skeletons.Box.Y({
         className : `${pfx}__perm-btns`,
-        kids      : PERM_LEVELS.map(({ level, label }) => Skeletons.Box.X({
+        kids      : PERM_LEVELS.map(({ level, ico, label }) => Skeletons.Box.X({
           className : `${pfx}__perm-btn button`,
           service   : 'select-permission',
           level,
-          dataset   : { level, selected: level === 'can_view' ? 'yes' : '' },
+          dataset   : { level, selected: '' },
           uiHandler : [_ui_],
           kidsOpt   : { active: 0 },
-          kids      : [Skeletons.Note({ content: label })]
+          kids      : [
+            Skeletons.Box.X({
+              className : `${pfx}__row-main`,
+              kids      : [ rowIcon(ico), Skeletons.Note({ className: `${pfx}__row-title`, content: label }) ]
+            }),
+            Skeletons.Box.X({ className: `${pfx}__checkbox` })
+          ]
         }))
       })
     ]
   });
 
   // ── Access management section ─────────────────────────────
-  const emailToggleRow = Skeletons.Box.X({
-    className : `${pfx}__toggle-row`,
+  // Single choice: Public share vs Secure share. Choosing Secure reveals two
+  // independent checkboxes (require email / require password). The allowed-emails
+  // chip list lives under "require email" and is optional.
+  const modeOption = (mode, ico, title, desc, selected) => Skeletons.Box.X({
+    className : `${pfx}__mode-option button`,
+    service   : 'select-share-mode',
+    share_mode: mode,
+    dataset   : { mode, selected: selected ? 'yes' : '' },
+    uiHandler : [_ui_],
+    kidsOpt   : { active: 0 },
     kids      : [
-      Skeletons.Note({ className: `${pfx}__toggle-label`, content: LOCALE.SECURE_SHARE_REQUIRE_EMAIL }),
       Skeletons.Box.X({
-        className : `${pfx}__toggle`,
-        dataset   : { for: 'require-email', on: '' },
-        service   : 'toggle-require-email',
-        uiHandler : [_ui_],
-        kidsOpt   : { active: 0 },
-        kids      : [Skeletons.Box.X({ className: `${pfx}__toggle-thumb` })]
-      })
+        className : `${pfx}__row-main`,
+        kids      : [
+          rowIcon(ico),
+          Skeletons.Box.Y({
+            className : `${pfx}__mode-text`,
+            kids      : [
+              Skeletons.Note({ className: `${pfx}__mode-title`, content: title }),
+              Skeletons.Note({ className: `${pfx}__mode-desc`,  content: desc })
+            ]
+          })
+        ]
+      }),
+      Skeletons.Box.X({ className: `${pfx}__radio` })
     ]
   });
+
+  const publicOption = modeOption('public', 'apps-globe',       LOCALE.SECURE_SHARE_MODE_PUBLIC, LOCALE.SECURE_SHARE_MODE_PUBLIC_DESC, true);
+  const secureOption = modeOption('secure', 'apps-lock-shield', LOCALE.SECURE_SHARE_MODE_SECURE, LOCALE.SECURE_SHARE_MODE_SECURE_DESC, false);
+
+  // A secure-option row: leading icon + title/desc + trailing checkbox.
+  const checkRow = (forKey, service, ico, title, desc) => Skeletons.Box.X({
+    className : `${pfx}__check-row button`,
+    service,
+    uiHandler : [_ui_],
+    kidsOpt   : { active: 0 },
+    kids      : [
+      Skeletons.Box.X({
+        className : `${pfx}__row-main`,
+        kids      : [
+          rowIcon(ico),
+          Skeletons.Box.Y({
+            className : `${pfx}__mode-text`,
+            kids      : [
+              Skeletons.Note({ className: `${pfx}__mode-title`, content: title }),
+              Skeletons.Note({ className: `${pfx}__mode-desc`,  content: desc })
+            ]
+          })
+        ]
+      }),
+      Skeletons.Box.X({ className: `${pfx}__check`, dataset: { for: forKey, on: '' } })
+    ]
+  });
+
+  const emailCheckRow = checkRow(
+    'require-email', 'toggle-require-email', 'app-mail',
+    LOCALE.SECURE_SHARE_REQUIRE_EMAIL, LOCALE.SECURE_SHARE_REQUIRE_EMAIL_DESC
+  );
 
   const emailGate = Skeletons.Box.Y({
     className : `${pfx}__email-gate`,
     dataset   : { mode: _a.closed },
     kids      : [
+      Skeletons.Box.X({
+        className : `${pfx}__sub-label-row`,
+        kids      : [
+          Skeletons.Note({ className: `${pfx}__sub-label`, content: LOCALE.SECURE_SHARE_ALLOW_EMAILS }),
+          Skeletons.Image.Svg({ className: `${pfx}__sub-label-info`, ico: 'info', tooltips: LOCALE.SECURE_SHARE_ALLOW_EMAILS_HINT })
+        ]
+      }),
       Skeletons.Box.X({
         className : `${pfx}__chips-area`,
         sys_pn    : 'chips-container'
@@ -95,20 +160,10 @@ const __skl_secure_share = function(_ui_) {
     ]
   });
 
-  const passwordToggleRow = Skeletons.Box.X({
-    className : `${pfx}__toggle-row`,
-    kids      : [
-      Skeletons.Note({ className: `${pfx}__toggle-label`, content: LOCALE.SECURE_SHARE_REQUIRE_PASSWORD }),
-      Skeletons.Box.X({
-        className : `${pfx}__toggle`,
-        dataset   : { for: 'require-password', on: '' },
-        service   : 'toggle-require-password',
-        uiHandler : [_ui_],
-        kidsOpt   : { active: 0 },
-        kids      : [Skeletons.Box.X({ className: `${pfx}__toggle-thumb` })]
-      })
-    ]
-  });
+  const passwordCheckRow = checkRow(
+    'require-password', 'toggle-require-password', 'apps-lock-padlock',
+    LOCALE.SECURE_SHARE_REQUIRE_PASSWORD, LOCALE.SECURE_SHARE_REQUIRE_PASSWORD_DESC
+  );
 
   const passwordGate = Skeletons.Box.Y({
     className : `${pfx}__password-gate`,
@@ -126,100 +181,118 @@ const __skl_secure_share = function(_ui_) {
     ]
   });
 
-  const accessSection = Skeletons.Box.Y({
-    className : `${pfx}__access-section`,
-    kids      : [emailToggleRow, emailGate, passwordToggleRow, passwordGate]
+  const secureOptions = Skeletons.Box.Y({
+    className : `${pfx}__secure-options`,
+    sys_pn    : 'secure-options',
+    dataset   : { mode: _a.closed },
+    kids      : [emailCheckRow, emailGate, passwordCheckRow, passwordGate]
   });
 
-  // ── Expiry section (unchanged) ────────────────────────────
-  const expiryRow = Skeletons.Box.X({
-    className : `${pfx}__row expiry`,
+  // Figma: choosing Secure nests the email/password options INSIDE the Secure
+  // card — one purple-bordered, light-purple panel wrapping the Secure row and
+  // its options. _selectShareMode toggles `data-selected` on this card.
+  const secureCard = Skeletons.Box.Y({
+    className : `${pfx}__secure-card`,
+    dataset   : { selected: '' },
+    kids      : [secureOption, secureOptions]
+  });
+
+  const modeGroup = Skeletons.Box.Y({
+    className : `${pfx}__mode-group`,
+    kids      : [publicOption, secureCard]
+  });
+
+  const accessSection = Skeletons.Box.Y({
+    className : `${pfx}__access-section`,
     kids      : [
-      Skeletons.Note({ className: `${pfx}__label`, content: LOCALE.SECURE_SHARE_EXPIRY }),
-      Skeletons.Box.X({
-        className : `${pfx}__presets`,
-        kids      : [
-          Skeletons.Box.X({
-            className : `${pfx}__preset button`,
-            service   : 'expiry-preset',
-            preset    : '1h',
-            dataset   : { preset: '1h' },
-            uiHandler : [_ui_],
-            kidsOpt   : { active: 0 },
-            kids      : [Skeletons.Note({ content: LOCALE.SECURE_SHARE_EXPIRY_1H })]
-          }),
-          Skeletons.Box.X({
-            className : `${pfx}__preset button`,
-            service   : 'expiry-preset',
-            preset    : '24h',
-            dataset   : { preset: '24h' },
-            uiHandler : [_ui_],
-            kidsOpt   : { active: 0 },
-            kids      : [Skeletons.Note({ content: LOCALE.SECURE_SHARE_EXPIRY_24H })]
-          }),
-          Skeletons.Box.X({
-            className : `${pfx}__preset button`,
-            service   : 'expiry-preset',
-            preset    : '7d',
-            dataset   : { preset: '7d' },
-            uiHandler : [_ui_],
-            kidsOpt   : { active: 0 },
-            kids      : [Skeletons.Note({ content: LOCALE.SECURE_SHARE_EXPIRY_7D })]
-          }),
-          Skeletons.Box.X({
-            className : `${pfx}__preset button`,
-            service   : 'expiry-preset',
-            preset    : 'custom',
-            dataset   : { preset: 'custom' },
-            uiHandler : [_ui_],
-            kidsOpt   : { active: 0 },
-            kids      : [Skeletons.Note({ content: LOCALE.SECURE_SHARE_EXPIRY_CUSTOM })]
-          })
-        ]
-      })
+      Skeletons.Note({ className: `${pfx}__section-label`, content: LOCALE.SECURE_SHARE_ACCESS_MGMT }),
+      modeGroup
     ]
   });
 
+  // ── Expiry section ────────────────────────────────────────
+  // Figma collapsed state = "Link Expiration" label + toggle. Toggling it on
+  // reveals the existing presets + calendar picker (no functionality removed).
+  const expiryPresets = Skeletons.Box.X({
+    className : `${pfx}__presets`,
+    kids      : ['1h', '24h', '7d', 'custom'].map(preset => Skeletons.Box.X({
+      className : `${pfx}__preset button`,
+      service   : 'expiry-preset',
+      preset,
+      dataset   : { preset },
+      uiHandler : [_ui_],
+      kidsOpt   : { active: 0 },
+      kids      : [
+        Skeletons.Note({ content: {
+          '1h'     : LOCALE.SECURE_SHARE_EXPIRY_1H,
+          '24h'    : LOCALE.SECURE_SHARE_EXPIRY_24H,
+          '7d'     : LOCALE.SECURE_SHARE_EXPIRY_7D,
+          'custom' : LOCALE.SECURE_SHARE_EXPIRY_CUSTOM,
+        }[preset] }),
+        // Figma: the Custom segment carries a calendar glyph.
+        preset === 'custom'
+          ? Skeletons.Image.Svg({ className: `${pfx}__preset-icon`, ico: 'calendar' })
+          : null,
+      ].filter(Boolean)
+    }))
+  });
+
+  // Custom expiry → calendar date/time picker (per Figma "set date" screens).
   const customExpiryRow = Skeletons.Box.X({
     className : `${pfx}__row custom-expiry`,
     sys_pn    : 'custom-expiry',
     dataset   : { mode: _a.closed },
     kids      : [
-      Skeletons.Note({ className: `${pfx}__label`, content: '' }),
-      Skeletons.EntryBox({
-        className   : `${pfx}__input days`,
-        sys_pn      : 'ref-days',
-        formItem    : 'days',
-        type        : _a.number,
-        placeholder : '0',
-        showError   : false
-      }),
-      Skeletons.Note({ className: `${pfx}__expiry-sep`, content: LOCALE.DAY }),
-      Skeletons.EntryBox({
-        className   : `${pfx}__input hours`,
-        sys_pn      : 'ref-hours',
-        formItem    : 'hours',
-        type        : _a.number,
-        placeholder : '0',
-        showError   : false
-      }),
-      Skeletons.Note({ className: `${pfx}__expiry-sep`, content: LOCALE.HOUR })
+      Skeletons.Note({ className: `${pfx}__label`, content: LOCALE.SECURE_SHARE_EXPIRY_DATE }),
+      {
+        // seeds.js registers the lazy chunk under the alias `date_picker`;
+        // referencing `KIND.datepicker` yields an unregistered name (safe-object
+        // echoes the key) so the chunk never loads → "Snippet not found".
+        kind      : KIND.date_picker,
+        className : `${pfx}__datepicker`,
+        name      : 'expiry-date',
+        placement : 'up',
+        service   : 'expiry-date-picked',
+        uiHandler : [_ui_],
+        vendorOpt : { enableTime: true, time_24hr: true, dateFormat: 'd/m/Y H:i', minDate: 'today' }
+      }
     ]
   });
 
-  // ── Create button + link result (unchanged) ───────────────
-  const createButton = Skeletons.Box.X({
-    className : `${pfx}__row buttons`,
+  const expirySection = Skeletons.Box.Y({
+    className : `${pfx}__expiry-section`,
     kids      : [
       Skeletons.Box.X({
-        className : `${pfx}__button submit button`,
-        service   : 'create-secure-share',
-        uiHandler : [_ui_],
-        kidsOpt   : { active: 0 },
+        className : `${pfx}__expiry-header`,
         kids      : [
-          Skeletons.Note({ content: LOCALE.SECURE_SHARE_CREATE })
+          Skeletons.Note({ className: `${pfx}__section-label`, content: LOCALE.SECURE_SHARE_EXPIRY }),
+          Skeletons.Box.X({
+            className : `${pfx}__toggle`,
+            service   : 'toggle-expiry',
+            dataset   : { on: '' },
+            uiHandler : [_ui_],
+            kidsOpt   : { active: 0 },
+            kids      : [Skeletons.Box.X({ className: `${pfx}__toggle-thumb` })]
+          })
         ]
+      }),
+      Skeletons.Box.Y({
+        className : `${pfx}__expiry-options`,
+        dataset   : { mode: _a.closed },
+        kids      : [expiryPresets, customExpiryRow]
       })
+    ]
+  });
+
+  // ── Get link button + link result ─────────────────────────
+  const createButton = Skeletons.Box.X({
+    className : `${pfx}__button submit button`,
+    service   : 'create-secure-share',
+    uiHandler : [_ui_],
+    kidsOpt   : { active: 0 },
+    kids      : [
+      Skeletons.Image.Svg({ className: `${pfx}__button-icon`, ico: 'apps-link-simple' }),
+      Skeletons.Note({ content: LOCALE.SECURE_SHARE_CREATE })
     ]
   });
 
@@ -229,9 +302,26 @@ const __skl_secure_share = function(_ui_) {
     dataset   : { mode: _a.closed }
   });
 
+  // ── Notify when someone opens (Figma — below Get link) ────
+  // Defaults ON, mirroring the existing always-notify behaviour.
+  const notifySection = Skeletons.Box.X({
+    className : `${pfx}__notify-row`,
+    kids      : [
+      Skeletons.Note({ className: `${pfx}__notify-label`, content: LOCALE.SECURE_SHARE_NOTIFY_ON_OPEN }),
+      Skeletons.Box.X({
+        className : `${pfx}__toggle`,
+        service   : 'toggle-notify',
+        dataset   : { on: 'yes' },
+        uiHandler : [_ui_],
+        kidsOpt   : { active: 0 },
+        kids      : [Skeletons.Box.X({ className: `${pfx}__toggle-thumb` })]
+      })
+    ]
+  });
+
   const body = Skeletons.Box.Y({
     className : `${pfx}__body`,
-    kids      : [permSection, accessSection, expiryRow, customExpiryRow, createButton, linkResult]
+    kids      : [permSection, accessSection, expirySection, createButton, linkResult, notifySection]
   });
 
   // ── Share list section (unchanged) ───────────────────────

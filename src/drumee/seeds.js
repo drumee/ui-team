@@ -296,6 +296,9 @@ module.exports = {
   schedule_recipient: function () {
     return import("./builtins/window/schedule/widget/recipient");
   },
+  request_access_modal: function () {
+    return import("widget/request-access");
+  },
   selection: function () {
     return import("./builtins/window/selection");
   },

@@ -1,0 +1,134 @@
+@use "mixins/drumee";
+
+/* Secure-share "You don't have permission" desk modal (Figma 1961:115796).
+ * Rendered inside the desk wm `wrapper-modal` slot (centred + blurred). */
+.request-access-modal {
+  --ram-cta: var(--primary-50, #433cc5);
+  --ram-title: var(--primary-50, #433cc5);
+  --ram-text: #0b0a21;
+  --ram-text-muted: #65656c;
+  --ram-card-shadow: 0 1px 11px 0 rgba(0, 0, 0, 0.13);
+
+  &__card {
+    width: 440px;
+    max-width: calc(100vw - 32px);
+    box-sizing: border-box;
+    padding: 32px;
+    gap: 16px;
+    align-items: center;
+    text-align: center;
+    background: #ffffff;
+    border-radius: 12px;
+    box-shadow: var(--ram-card-shadow);
+  }
+
+  &__brand {
+    width: 40px;
+    height: 40px;
+    margin-bottom: 4px;
+  }
+
+  &__title {
+    @include drumee.typo($size: 22px, $line: 28px, $weight: 600, $color: var(--ram-title));
+  }
+
+  &__body {
+    @include drumee.typo($size: 14px, $line: 20px, $weight: 400, $color: var(--ram-text-muted));
+    max-width: 340px;
+  }
+
+  &__cta {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 12px 16px;
+    margin-top: 8px;
+    border-radius: 8px;
+    text-align: center;
+    cursor: pointer;
+    background: var(--ram-cta);
+    @include drumee.typo($size: 14px, $line: 20px, $weight: 600, $color: #ffffff);
+
+    &:hover {
+      background: color-mix(in srgb, var(--ram-cta) 88%, #000);
+    }
+  }
+
+  /* ---- request form (step 2) ---- */
+  &__card-form {
+    align-items: stretch;
+    text-align: left;
+  }
+
+  &__level-desc {
+    @include drumee.typo($size: 14px, $line: 20px, $weight: 500, $color: var(--ram-text));
+  }
+
+  &__level-options {
+    gap: 8px;
+  }
+
+  &__level-option {
+    flex: 1;
+    padding: 10px 8px;
+    border-radius: 8px;
+    border: 1px solid var(--border-default, #e5e5ea);
+    text-align: center;
+    cursor: pointer;
+    @include drumee.typo($size: 13px, $line: 18px, $weight: 500, $color: var(--ram-text));
+
+    &[data-selected="yes"] {
+      border-color: var(--primary-40, #5950ff);
+      background: color-mix(in srgb, var(--primary-40, #5950ff) 8%, #fff);
+      color: var(--ram-cta);
+    }
+  }
+
+  &__message {
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  &__actions {
+    gap: 12px;
+    justify-content: flex-end;
+    margin-top: 4px;
+  }
+
+  &__cancel-btn,
+  &__submit-btn {
+    padding: 10px 18px;
+    border-radius: 8px;
+    cursor: pointer;
+    @include drumee.typo($size: 14px, $line: 20px, $weight: 600);
+  }
+
+  &__cancel-btn {
+    border: 1px solid var(--border-default, #e5e5ea);
+    color: var(--ram-text);
+  }
+
+  &__submit-btn {
+    background: var(--ram-cta);
+    color: #ffffff;
+
+    &:hover {
+      background: color-mix(in srgb, var(--ram-cta) 88%, #000);
+    }
+  }
+
+  /* ---- request sent (step 3) ---- */
+  &__email {
+    @include drumee.typo($size: 14px, $line: 20px, $weight: 600, $color: var(--ram-text));
+  }
+
+  &__level {
+    @include drumee.typo($size: 13px, $line: 18px, $weight: 400, $color: var(--ram-text-muted));
+  }
+
+  &__pending {
+    padding: 4px 12px;
+    border-radius: 999px;
+    background: #fff4e0;
+    @include drumee.typo($size: 12px, $line: 16px, $weight: 600, $color: #b8860b);
+  }
+}

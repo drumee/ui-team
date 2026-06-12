@@ -212,21 +212,28 @@ class __dmz_sharebox extends LetcBox {
   /**
    * 
    */
-  promptPassword() {
-    this.__content.feed(require('./skeleton/password').default(this));
+  // Unified recipient gate (Toon 2026-06-12): one adaptive card showing the
+  // email field, the password field, or both. promptEmail/promptPassword are
+  // kept as thin aliases so any existing caller still routes to the gate.
+  promptGate(opts = {}) {
+    this.__content.feed(require('./skeleton/gate').default(this, opts));
+    // Show the viral gate banner ("Create your sovereign workspace with Drumee")
+    // beneath the gate card — distinct from the post-unlock landing banner. Only
+    // applies on the gate; the public/landing flow never sets this flag.
+    this.mset({ _gate_footer: true });
+    this.ensurePart(_a.footer).then((footer) => {
+      footer.feed(this.footerSkeleton(this));
+      footer.el.dataset.mode = _a.open;
+    });
   }
-  /**
-   *
-   */
-  promptEmail() {
-    this.__content.feed(require('./skeleton/email').default(this));
-  }
+  promptPassword() { this.promptGate(); }
+  promptEmail()    { this.promptGate(); }
 
   /**
    *
    */
   promptLockedPassword() {
-    this.__content.feed(require('./skeleton/password').default(this, { locked: true }));
+    this.promptGate({ locked: true });
   }
 
   /**
@@ -286,6 +293,59 @@ class __dmz_sharebox extends LetcBox {
   }
 
   /**
+   * Unified gate submit (Toon 2026-06-12): validates whichever fields the share
+   * requires (email and/or password) in a SINGLE server call. The server gates
+   * email first then password, so it returns the first failing step's status.
+   */
+  verifyGate() {
+    const needEmail    = !!(this.mget('require_email') || this.mget('recipient_email'));
+    const needPassword = !!(this.mget('require_password') || this.mget('require_pwd'));
+
+    let email = '';
+    if (needEmail) {
+      email = this._emailInput ? (this._emailInput.getData().value || '').trim() : '';
+      if (!email) return this.renderErrorMessage(LOCALE.SECURE_SHARE_ENTER_EMAIL);
+      if (!Validator.email(email)) return this.renderErrorMessage(LOCALE.SECURE_SHARE_EMAIL_INVALID_FORMAT);
+    }
+
+    let password = '';
+    if (needPassword) {
+      password = this._input ? (this._input.getData().value || '').trim() : '';
+      if (!password) return this.renderErrorMessage(LOCALE.DMZ_PASSWORD_TO_CONTINUE);
+    }
+
+    const hub_id = Visitor.parseLocation().keysel || '';
+    const opt = { token: this.mget(_a.token), hub_id };
+    if (needEmail)    opt.email    = email;
+    if (needPassword) opt.password = password;
+
+    this.postService(SERVICE.dmz.login, opt).then((data) => {
+      if (data && data.status === 'TICKET_OK' && data.is_secure) {
+        this.mset(data);
+        if (needEmail) { this._verifiedEmail = email; this.mset({ recipient_email: email }); }
+        return this.getInfoData();
+      }
+      if (data && data.status === 'EMAIL_MISMATCH') {
+        return this.renderErrorMessage(LOCALE.SECURE_SHARE_EMAIL_BLOCKED);
+      }
+      if (data && data.status === 'WRONG_PASSWORD') {
+        const attempts = (data.attempts_remaining != null && data.attempts_remaining > 0) ? data.attempts_remaining : null;
+        return this.renderPasswordError(LOCALE.SECURE_SHARE_WRONG_PASSWORD, attempts);
+      }
+      if (data && data.status === 'TICKET_LOCKED') {
+        return this.promptLockedPassword();
+      }
+      if (data && data.status === 'REQUIRED_EMAIL') {
+        return this.renderErrorMessage(LOCALE.SECURE_SHARE_ENTER_EMAIL);
+      }
+      if (data && data.status === 'REQUIRED_PASSWORD') {
+        return this.renderErrorMessage(LOCALE.DMZ_PASSWORD_TO_CONTINUE);
+      }
+      return this.handleInfoStatus(data);
+    });
+  }
+
+  /**
    *
   */
   getInfoData() {
@@ -328,19 +388,34 @@ class __dmz_sharebox extends LetcBox {
       case 'verify-email':
         return this.verifyEmail();
 
+      case 'verify-gate':
+        return this.verifyGate();
+
       case 'dmz-user-signup':
         return this.dmzUserSignup();
 
       case 'close-banner':
         return this.__footer.el.dataset.mode = _a.closed
 
-      case 'go-login':
+      case 'go-login': {
         this.closeSignupRequiredOverlay();
+        // Remember the shared workspace so the desk opens it after sign-in.
+        // Signin is a same-origin hash navigation, so sessionStorage survives;
+        // the desk window-manager consumes `drumee_hubDeepLink` on load (the
+        // existing hub deep-link handoff). Never route back through /dmz/share —
+        // that re-runs the guest login and binds the session to the sender.
+        // Secure-share URLs carry a token, not a hub_id, so the real hub_id is the
+        // one the login response stored on the model; keysel is only a fallback.
+        const _hubId = this.mget(_a.hub_id) || Visitor.parseLocation().keysel || '';
+        if (_hubId) sessionStorage.setItem('drumee_hubDeepLink', _hubId);
         location.href = _K.module.signin;
         return;
+      }
 
       case _e.upload:
-        if (this.mget('guest_id')) {
+        // A guest may upload only when the share granted edit (write privilege).
+        // Without it, prompt sign-up (Figma: "edit → sign in required").
+        if (this.mget('guest_id') && !this.havePermission(_K.permission.write, this.mget(_a.privilege))) {
           return this.showSignupRequiredOverlay();
         }
         return this.__fileselector.open(this._upload.bind(this));
@@ -352,7 +427,7 @@ class __dmz_sharebox extends LetcBox {
       // "Add new" lives in the sharebox topbar (uiHandler = this sharebox),
       // but folder creation belongs to the window manager child — delegate.
       case "add-folder":
-        if (this.mget('guest_id')) {
+        if (this.mget('guest_id') && !this.havePermission(_K.permission.write, this.mget(_a.privilege))) {
           return this.showSignupRequiredOverlay();
         }
         if (this.wm && this.wm.onUiEvent) {
@@ -363,7 +438,15 @@ class __dmz_sharebox extends LetcBox {
       case 'open-signup': {
         this.closeSignupRequiredOverlay();
         const { main_domain } = bootstrap();
-        window.open(`${location.protocol}//${main_domain}/${_K.module.signup}`, '_blank');
+        // Sign-up opens a new window on the canonical main domain (Session-7 fix
+        // to avoid embedding the guest session). sessionStorage does NOT cross to
+        // the new window, so carry the shared workspace as a hash query param;
+        // the welcome module stashes it into `drumee_hubDeepLink` for the desk.
+        // Secure-share URLs carry a token, not a hub_id, so the real hub_id is the
+        // one the login response stored on the model; keysel is only a fallback.
+        const _hubId = this.mget(_a.hub_id) || Visitor.parseLocation().keysel || '';
+        const _suffix = _hubId ? `?hub_id=${encodeURIComponent(_hubId)}` : '';
+        window.open(`${location.protocol}//${main_domain}/${_K.module.signup}${_suffix}`, '_blank');
         return;
       }
 
@@ -372,7 +455,9 @@ class __dmz_sharebox extends LetcBox {
         return;
 
       case 'tab-chat':
-        if (this.mget('guest_id')) {
+        // Chat has no privilege bit (it overlaps view in the bitmask); the share
+        // carries an explicit can_chat flag. A guest without it must sign up.
+        if (this.mget('guest_id') && !this.mget('can_chat')) {
           return this.showSignupRequiredOverlay();
         }
         if (this._folderView) this._folderView.el.dataset.view = _a.chat;
@@ -451,11 +536,11 @@ class __dmz_sharebox extends LetcBox {
         if (this._verifiedEmail) this.mset({ recipient_email: this._verifiedEmail });
         this.getInfoData();
       } else if (data && data.status === 'WRONG_PASSWORD') {
-        let msg = LOCALE.SECURE_SHARE_WRONG_PASSWORD;
-        if (data.attempts_remaining != null && data.attempts_remaining > 0) {
-          msg += ' ' + LOCALE.SECURE_SHARE_ATTEMPTS_REMAINING.replace('{0}', data.attempts_remaining);
-        }
-        this.renderErrorMessage(msg);
+        // Figma 3.3.5: two lines — a red alert box with the failure message, then
+        // a muted warning line with the remaining-attempts count.
+        const attempts = (data.attempts_remaining != null && data.attempts_remaining > 0)
+          ? data.attempts_remaining : null;
+        this.renderPasswordError(LOCALE.SECURE_SHARE_WRONG_PASSWORD, attempts);
       } else if (data && data.status === 'TICKET_LOCKED') {
         this.promptLockedPassword();
       } else if (data && data.is_verified) {
@@ -478,6 +563,14 @@ class __dmz_sharebox extends LetcBox {
     this.__content.feed(this.deskSkeleton(this))
     if (this.__actionButtons) {
       this.__actionButtons.el.dataset.mode = _a.open;
+    }
+
+    // If we arrived here through the gate, swap the gate banner back to the
+    // landing banner now that the recipient has access. No-op for the public
+    // flow (flag never set).
+    if (this.mget('_gate_footer')) {
+      this.mset({ _gate_footer: false });
+      this.ensurePart(_a.footer).then((footer) => footer.feed(this.footerSkeleton(this)));
     }
 
     this._startRevokePolling();
@@ -587,6 +680,59 @@ class __dmz_sharebox extends LetcBox {
       buttonWrapper.el.dataset.mode = _a.open
     }
     return _.delay(f, Visitor.timeout(2000))
+  }
+
+  /**
+   * Two-line password error (Figma 3.3.5): a light-red alert box with the
+   * failure message, plus a muted warning line (⚠ icon) with the remaining
+   * attempts. Falls back to the single-line treatment when no message box is
+   * mounted. Keeps the existing transient show/hide timing so the rest of the
+   * gate behaviour is unchanged.
+   * @param {String} mainMsg
+   * @param {Number|null} attemptsRemaining
+   */
+  renderPasswordError(mainMsg, attemptsRemaining) {
+    // Match the password gate's BEM family (this error only renders there) so
+    // the styles co-locate under `.dmz-sharebox-password` in password.scss.
+    const pfx           = `${this.fig.family}-password`
+    const buttonWrapper = this.__buttonWrapper
+    const msgWrapper    = this.__messageBox
+    if (!msgWrapper) return this.renderErrorMessage(mainMsg)
+
+    const kids = [
+      Skeletons.Box.X({
+        className : `${pfx}__error-alert`,
+        kids      : [
+          Skeletons.Note({ className: `${pfx}__error-alert-text`, content: mainMsg })
+        ]
+      })
+    ]
+    if (attemptsRemaining != null) {
+      kids.push(Skeletons.Box.X({
+        className : `${pfx}__attempts-note`,
+        kids      : [
+          Skeletons.Button.Svg({ ico: 'apps-warning', className: `${pfx}__attempts-icon` }),
+          Skeletons.Note({
+            className : `${pfx}__attempts-text`,
+            content   : LOCALE.SECURE_SHARE_ATTEMPTS_REMAINING.replace('{0}', attemptsRemaining)
+          })
+        ]
+      }))
+    }
+
+    if (buttonWrapper) buttonWrapper.el.dataset.mode = _a.closed
+    msgWrapper.el.dataset.mode    = _a.open
+    msgWrapper.el.dataset.error   = ''        // not the single-line red-bar variant
+    msgWrapper.el.dataset.variant = 'block'
+    msgWrapper.feed(Skeletons.Box.Y({ className: `${pfx}__error-block`, kids }))
+
+    const f = () => {
+      msgWrapper.el.dataset.mode    = _a.closed
+      msgWrapper.el.dataset.variant = ''
+      msgWrapper.clear()
+      if (buttonWrapper) buttonWrapper.el.dataset.mode = _a.open
+    }
+    return _.delay(f, Visitor.timeout(3000))
   }
 
   /**
@@ -711,6 +857,12 @@ class __dmz_sharebox extends LetcBox {
       this.mset({
         permission_level: data.granted_level,
         privilege       : data.privilege || 3,
+        // Carry the capability flags so the chat tab / edit gates unlock to match
+        // the freshly granted level (server sends these on the approval event).
+        capabilities    : data.capabilities || [],
+        can_download    : data.can_download || 0,
+        can_chat        : data.can_chat || 0,
+        can_edit        : data.can_edit || 0,
       });
       this.loadDeskContent();
     } else {

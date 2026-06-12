@@ -45,7 +45,7 @@ const __icon = function (_ui_) {
     setAsHomepage: "desktop_public",
     settings: "editbox_cog",
     share: "ctxmenu-share",
-    secureShare: "apps-lock-shield",
+    secureShare: "ctxmenu-share",
     share_qrcode: "ctxmenu-qrcode",
     shortcut: "editbox_link",
     showHidden: "eye",

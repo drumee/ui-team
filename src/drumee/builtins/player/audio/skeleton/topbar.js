@@ -11,24 +11,27 @@ function __player_audio_topbar(_ui_) {
   const topBarFig = `${_ui_.fig.family}-topbar`;
   const cnWidowButton = "window-button";
 
-  const downloadIcon = Skeletons.Box.X({
-    className: `${_ui_.fig.group}-topbar__action ${topBarFig}__action`,
-    sys_pn: "commands",
-    kids: [
-      Skeletons.Box.X({
-        className: `${_ui_.fig.group}-topbar__icon-wrapper`,
-        kids: [
-          Skeletons.Button.Svg({
-            ico: "download",
-            className: `${topBarFig}__icon icon link`,
-            sys_pn: "download-button",
-            service: _e.download,
-            uiHandler: _ui_,
-          }),
-        ],
-      }),
-    ],
-  });
+  let downloadIcon = null;
+  if (!Visitor.inDmz || _ui_.canDownload()) {
+    downloadIcon = Skeletons.Box.X({
+      className: `${_ui_.fig.group}-topbar__action ${topBarFig}__action`,
+      sys_pn: "commands",
+      kids: [
+        Skeletons.Box.X({
+          className: `${_ui_.fig.group}-topbar__icon-wrapper`,
+          kids: [
+            Skeletons.Button.Svg({
+              ico: "download",
+              className: `${topBarFig}__icon icon link`,
+              sys_pn: "download-button",
+              service: _e.download,
+              uiHandler: _ui_,
+            }),
+          ],
+        }),
+      ],
+    });
+  }
 
   const name = Skeletons.Note({
     className: `${topBarFig}__note title`,

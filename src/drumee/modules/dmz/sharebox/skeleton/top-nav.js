@@ -28,12 +28,12 @@ function __skl_dmz_sharebox_top_nav(_ui_) {
       ],
     });
 
-  // FEATURES has no dedicated page on drumee.com — only PRODUCT (homepage)
-  // and PRICING are linked.
+  // Figma nav: Product / Features / Pricing — all linking out to drumee.com.
   const links = Skeletons.Box.X({
     className: `${navFig}__links`,
     kids: [
       navLink(LOCALE.PRODUCT || "Product", DRUMEE_SITE),
+      navLink(LOCALE.FEATURES || "Features", `${DRUMEE_SITE}/features`),
       navLink(LOCALE.PRICING || "Pricing", `${DRUMEE_SITE}/pricing`),
     ],
   });
@@ -46,7 +46,7 @@ function __skl_dmz_sharebox_top_nav(_ui_) {
     kids: [
       Skeletons.Note({
         className: `${navFig}__login-label`,
-        content: LOCALE.SIGN_IN,
+        content: LOCALE.SECURE_SHARE_NAV_LOGIN,
       }),
     ],
   });
