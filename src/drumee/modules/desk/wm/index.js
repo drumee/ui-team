@@ -88,8 +88,15 @@ class __window_manager extends push {
   route(l) {
     let args = Visitor.parseModuleArgs() || {};
     let path = Visitor.parseModule() || [];
-    this.debug("AAA:100", args);
+
+    /** Reset the url to its default value*/
+    setTimeout(()=>{
+      location.hash='#/desk/wm/home'
+    }, Visitor.timeout(5000))
+
     switch (path[2]) {
+      case _a.home:
+        return;
       case _a.meeting:
         let media = this.getItemsByAttr(_a.nid, args.nid)[0];
         if (media && media.triggerHandlers) {
