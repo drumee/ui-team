@@ -43,20 +43,178 @@ $drumee-link-purple: #b1adff;
   }
 
   // Reconnect OTP embeds the dtk_otp widget (data-fit="parent"). The widget's
-  // shared skin gives __main a 180px top offset meant for the standalone
-  // full-page OTP; inside the popup that reads as a large empty margin on top.
-  // Drop the offset and center the widget within the popup.
+  // shared skin is the full-page layout (52×72 cells, 180px top offset); here
+  // we reshape it to the shared otp-gate modal — the "Unlock Activity Insights"
+  // Figma popup (file g5V3PjhNMf5bHlsHMvV17w, node 100:53094): a 450 white card,
+  // padding 32, gap 16, radius 12, two-layer shadow, Geist 20/14 typography,
+  // 44×44 square digit cells. Mirrors builtins/widget/otp-gate so the reconnect
+  // popup matches dtk-otp__main everywhere else it is used.
   &__items.reconnect {
+    $otp-font: "Geist", system-ui, sans-serif;
+
+    // Transparent centering wrapper — the popup container provides the
+    // backdrop; this just centers the card.
     .dtk-otp__ui {
+      width: 100%;
       height: 100%;
-      padding: 0;
+      padding: 16px;
+      background: transparent;
       justify-content: center;
       align-items: center;
       align-content: center;
+      overflow: auto;
+      font-family: $otp-font;
     }
 
+    // __main IS the card (otp-gate's .otp-gate-card merged onto __main).
     .dtk-otp__main {
+      position: relative;
+      flex: 0 0 auto;
       top: 0;
+      width: 450px;
+      max-width: calc(100vw - 32px);
+      padding: 32px;
+      gap: 16px;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      background: #ffffff;
+      border: none;
+      border-radius: 12px;
+      font-family: $otp-font;
+    }
+
+    // Center every stacked row inside the card.
+    .dtk-otp__header,
+    .dtk-otp__logo-container,
+    .dtk-otp__text-container,
+    .dtk-otp__message,
+    .dtk-otp__digits,
+    .dtk-otp__tips,
+    .dtk-otp__resend {
+      width: 100%;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+    }
+
+    .dtk-otp__header {
+      gap: 12px;
+    }
+
+    // Heading — rendered by the toolkit header() helper as __title.
+    .dtk-otp__title {
+      font-family: $otp-font;
+      font-weight: 600;
+      font-size: 20px;
+      line-height: 1.1;
+      color: #0b0a21;
+      text-align: center;
+    }
+
+    // Body / "sent to" message.
+    .dtk-otp__message,
+    .dtk-otp__message-text {
+      font-family: $otp-font;
+      font-weight: 400;
+      font-size: 14px;
+      line-height: 1.4;
+      color: #65656c;
+      text-align: center;
+    }
+
+    // Compact square OTP digit cells (default was a 52×72 rectangle).
+    .dtk-otp__digits {
+      height: auto;
+      gap: 8px;
+      flex-wrap: nowrap;
+    }
+
+    .dtk-otp__digit {
+      // flex lock stops the Box.X row from stretching the cells into wide
+      // rectangles; keeps them a true 44×44 square.
+      flex: 0 0 auto;
+      box-sizing: border-box;
+      width: 44px;
+      height: 44px;
+      min-width: 44px;
+      padding: 0;
+      aspect-ratio: 1 / 1;
+      border-radius: 8px;
+      border: 1px solid var(--border-strong, #c7c7cc);
+      transition: border-color 120ms ease, background-color 120ms ease;
+
+      input {
+        width: 100%;
+        height: 100%;
+        padding: 0;
+        border-radius: 8px;
+        font-family: $otp-font;
+        font-size: 20px;
+        font-weight: 600;
+        line-height: 1;
+        text-align: center;
+        vertical-align: middle;
+        color: #0b0a21;
+      }
+
+      &:focus-within {
+        border-color: #433cc5;
+        background: #f4e7ff;
+      }
+    }
+
+    // Error / transient note line below the inputs.
+    .dtk-otp__tips-text {
+      width: 100%;
+      font-family: $otp-font;
+      font-weight: 400;
+      font-size: 14px;
+      line-height: 1.4;
+      text-align: center;
+
+      &[data-error="1"] {
+        color: var(--red-500);
+        font-weight: 600;
+        cursor: pointer;
+      }
+    }
+
+    .dtk-otp__resend {
+      gap: 12px;
+
+      &-text {
+        width: 100%;
+        font-family: $otp-font;
+        font-weight: 400;
+        font-size: 14px;
+        line-height: 1.4;
+        text-align: center;
+        color: #65656c;
+
+        &.resend {
+          color: #433cc5;
+          font-weight: 600;
+          cursor: pointer;
+        }
+      }
+    }
+
+    @media (max-width: 560px) {
+      .dtk-otp__main {
+        width: calc(100vw - 24px);
+        padding: 24px;
+      }
+
+      .dtk-otp__digit {
+        width: 38px;
+        height: 38px;
+        min-width: 38px;
+
+        input {
+          font-size: 18px;
+        }
+      }
     }
   }
 
