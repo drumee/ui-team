@@ -1566,6 +1566,12 @@
   "SECURE_SHARE_COL_ACCESSED": "Последний доступ",
   "SECURE_SHARE_COL_EXPIRES": "Истекает",
   "SECURE_SHARE_COL_RECIPIENT": "Получатель",
+  "SECURE_SHARE_COL_ACCESS_TIME": "Время доступа",
+  "SECURE_SHARE_COL_DURATION": "Длительность",
+  "SECURE_SHARE_COL_ACTION": "Действие",
+  "SECURE_SHARE_VIEW_ACCESS_LIST": "Просмотреть список доступа",
+  "SECURE_SHARE_NO_ACCESS_EVENTS": "Этот доступ ещё никто не открывал",
+  "SECURE_SHARE_REVOKE_RECIPIENT": "Отозвать доступ этого получателя",
   "SECURE_SHARE_NEVER_ACCESSED": "Не открывался",
   "SECURE_SHARE_PERMISSION_LEVEL": "Уровень доступа",
   "SECURE_SHARE_PUBLIC": "Публичный",
@@ -1633,5 +1639,8 @@
   "SECURE_SHARE_PASSWORD_REQUIRED_CREATE": "Please set a password to protect this link.",
   "SECURE_SHARE_NO_PERMISSION_TITLE": "You don't have permission",
   "SECURE_SHARE_NO_PERMISSION_BODY": "To interact with this shared file, workspace, or folder, you need to sign in or create an account.",
-  "SHARED": "Shared"
+  "SHARED": "Shared",
+  "SECURE_SHARE_REQUESTING_ACCESS": "запрашивает доступ к",
+  "SECURE_SHARE_APPROVE_TITLE": "Одобрить доступ",
+  "SECURE_SHARE_GRANT_LEVEL": "Уровень доступа:"
 }

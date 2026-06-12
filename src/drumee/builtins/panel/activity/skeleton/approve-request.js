@@ -1,0 +1,84 @@
+// ==================================================================== *
+//   Approve-access popup (Figma 63), shown from an access-request
+//   notification in the activity panel. Self-contained so the sender can
+//   approve/deny without opening the secure-share window.
+// ==================================================================== *
+
+module.exports = function (_ui_, req = {}) {
+  const pfx = `${_ui_.fig.family}-approve-request`;
+  const requested = req.requested_level;
+
+  const GRANT_LEVELS = [
+    { level: 'can_download', label: LOCALE.SECURE_SHARE_CAN_DOWNLOAD, ico: 'download' },
+    { level: 'can_chat',     label: LOCALE.SECURE_SHARE_CAN_CHAT,     ico: 'apps-chat' },
+    { level: 'can_edit',     label: LOCALE.SECURE_SHARE_CAN_EDIT,     ico: 'apps-pencil-simple' },
+  ];
+
+  const header = Skeletons.Box.X({
+    className: `${pfx}__header`,
+    kids: [
+      Skeletons.Note({ className: `${pfx}__title`, content: LOCALE.SECURE_SHARE_APPROVE_TITLE }),
+      Skeletons.Note({ className: `${pfx}__close`, content: '×', service: 'ar-close', uiHandler: [_ui_] }),
+    ],
+  });
+
+  const infoBox = Skeletons.Box.Y({
+    className: `${pfx}__info`,
+    kids: [
+      Skeletons.Box.X({
+        className: `${pfx}__info-top`,
+        kids: [
+          Skeletons.Avatar('default', `${pfx}__info-avatar`, req.requester_email || ''),
+          Skeletons.Box.Y({
+            className: `${pfx}__info-text`,
+            kids: [
+              Skeletons.Note({ className: `${pfx}__info-email`, content: req.requester_email || '' }),
+              Skeletons.Note({
+                className: `${pfx}__info-level`,
+                content: `${LOCALE.SECURE_SHARE_REQUEST_LEVEL_LABEL} ${req.requested_level || ''}`,
+              }),
+            ],
+          }),
+        ],
+      }),
+      req.message ? Skeletons.Note({ className: `${pfx}__info-message`, content: req.message }) : null,
+    ].filter(Boolean),
+  });
+
+  const levelRows = Skeletons.Box.Y({
+    className: `${pfx}__levels`,
+    // `level` is a top-level prop (handler reads cmd.mget('level')); the
+    // requested level is pre-selected.
+    kids: GRANT_LEVELS.map(({ level, label, ico }) => Skeletons.Box.X({
+      className: `${pfx}__level-row`,
+      service: 'ar-select-level',
+      level,
+      dataset: { level, selected: (level === requested) ? 'yes' : '' },
+      uiHandler: [_ui_],
+      kidsOpt: { active: 0 },
+      kids: [
+        Skeletons.Box.X({
+          className: `${pfx}__level-main`,
+          kids: [
+            Skeletons.Image.Svg({ className: `${pfx}__level-icon`, ico }),
+            Skeletons.Note({ className: `${pfx}__level-label`, content: label }),
+          ],
+        }),
+        Skeletons.Box.X({ className: `${pfx}__level-check` }),
+      ],
+    })),
+  });
+
+  return Skeletons.Box.Y({
+    className: `${pfx}__panel`,
+    debug: __filename,
+    kids: [
+      header,
+      infoBox,
+      Skeletons.Note({ className: `${pfx}__grant-label`, content: LOCALE.SECURE_SHARE_GRANT_LEVEL }),
+      levelRows,
+      Skeletons.Note({ className: `${pfx}__confirm`, content: LOCALE.CONFIRM, service: 'ar-approve', uiHandler: [_ui_] }),
+      Skeletons.Note({ className: `${pfx}__deny`, content: LOCALE.SECURE_SHARE_DENY_ACCESS, service: 'ar-deny', uiHandler: [_ui_] }),
+    ],
+  });
+};

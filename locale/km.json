@@ -1566,6 +1566,12 @@
   "SECURE_SHARE_COL_ACCESSED": "Last accessed",
   "SECURE_SHARE_COL_EXPIRES": "Expires",
   "SECURE_SHARE_COL_RECIPIENT": "Recipient",
+  "SECURE_SHARE_COL_ACCESS_TIME": "ពេលវេលាចូលប្រើ",
+  "SECURE_SHARE_COL_DURATION": "រយៈពេល",
+  "SECURE_SHARE_COL_ACTION": "សកម្មភាព",
+  "SECURE_SHARE_VIEW_ACCESS_LIST": "មើលបញ្ជីការចូលប្រើ",
+  "SECURE_SHARE_NO_ACCESS_EVENTS": "មិនទាន់មាននរណាបើកការចែករំលែកនេះទេ",
+  "SECURE_SHARE_REVOKE_RECIPIENT": "ដកសិទ្ធិចូលប្រើរបស់អ្នកទទួលនេះ",
   "SECURE_SHARE_NEVER_ACCESSED": "Never accessed",
   "SECURE_SHARE_PERMISSION_LEVEL": "Permission level",
   "SECURE_SHARE_PUBLIC": "Public",
@@ -1633,5 +1639,8 @@
   "SECURE_SHARE_PASSWORD_REQUIRED_CREATE": "Please set a password to protect this link.",
   "SECURE_SHARE_NO_PERMISSION_TITLE": "You don't have permission",
   "SECURE_SHARE_NO_PERMISSION_BODY": "To interact with this shared file, workspace, or folder, you need to sign in or create an account.",
-  "SHARED": "Shared"
+  "SHARED": "Shared",
+  "SECURE_SHARE_REQUESTING_ACCESS": "កំពុងស្នើសុំការចូលប្រើ",
+  "SECURE_SHARE_APPROVE_TITLE": "អនុម័តការចូលប្រើ",
+  "SECURE_SHARE_GRANT_LEVEL": "កម្រិតការអនុញ្ញាត៖"
 }

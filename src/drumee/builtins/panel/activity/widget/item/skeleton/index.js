@@ -193,6 +193,16 @@ function getActivityMeta(ui, data) {
       };
     }
 
+    case 'access_request':
+      // "{email} is requesting access to {workspace}" (Figma 62).
+      return {
+        before: data.action || 'is requesting access to ',
+        label: data.link_label || '',
+        after: '',
+        colorClass: 'mention',
+        badge: 'mention',
+      };
+
     default:
       return {
         before: data.action || data.event || 'updated ',
@@ -232,7 +242,10 @@ module.exports = function (ui) {
 
   const textBlock = Skeletons.Box.Y({
     className: `${pfx}__text-block`,
-    service: data.service || 'open-activity',
+    // Access-request rows open the approve popup; other rows keep their default.
+    service: data.category === 'access_request'
+      ? 'open-access-request'
+      : (data.service || 'open-activity'),
     uiHandler: ui,
     kids: [
       Skeletons.Note({ className: `${pfx}__text`, content: text }),

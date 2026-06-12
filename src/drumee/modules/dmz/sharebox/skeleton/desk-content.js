@@ -149,19 +149,34 @@ function dmzSplitBody(ui) {
     ],
   });
 
+  // Chat panel (Figma "conversation"): produces `.dmz__chat-panel` (group `dmz`),
+  // which the SCSS reveals when the split body's data-view flips to "chat". Was
+  // missing entirely — the Chat tab only hid the files panel, so it showed blank
+  // (d11). Access to the Chat tab is gated upstream (anonymous → sign-up;
+  // signed-in without can_chat → Request Access), so rendering it here is safe.
   return Skeletons.Box.G({
     className: `${ui.fig.family}__split-body ${ui.fig.group}__split-body`,
     sys_pn: "folder-view",
     partHandler: ui,
     dataset: { view: "files" },
-    kids: [filesPanel],
+    kids: [filesPanel, chatPanel(ui)],
   });
 }
 
 function __skl_dmz_sharebox_desk_content(_ui_) {
   const topbar    = dmzTopbar(_ui_);
   const privilege = _ui_.mget(_a.privilege) || 0;
-  const showBanner = !!_ui_.mget('is_secure') && !!_ui_.mget('is_guest') && (privilege < _K.privilege.write);
+  // Figma flow: the "limited access → Request Access" banner is for SIGNED-IN
+  // non-members. An anonymous visitor instead meets a sign-up/login gate when
+  // they attempt an action beyond their grant (chat/edit), so they get no banner.
+  //  • is_guest is true ONLY for the anonymous system guest (server: guest_id ===
+  //    user.id) → exclude them here.
+  //  • exclude the share's own creator (viewer `uid` === `creator_id`; distinct
+  //    server columns).
+  //  • only when the grant is below full access (privilege < write).
+  const isAnonymous = !!_ui_.mget('is_guest');
+  const isOwner     = !!_ui_.mget('creator_id') && (_ui_.mget('uid') === _ui_.mget('creator_id'));
+  const showBanner  = !!_ui_.mget('is_secure') && !isAnonymous && (privilege < _K.privilege.write) && !isOwner;
 
   const limitedBanner = showBanner ? Skeletons.Box.X({
     className : `${_ui_.fig.family}__limited-access-banner`,

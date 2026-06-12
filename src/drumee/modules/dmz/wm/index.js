@@ -111,7 +111,15 @@ class __dmz_wm extends winman {
    */
   getWindowPreset(c, opt) {
     const item = super.getWindowPreset(c, opt);
-    item.privilege = ~~this.mget(_a.privilege);
+    const sharePriv = ~~this.mget(_a.privilege);
+    item.privilege = sharePriv;
+    // Players copy props (incl. privilege) from item.media via
+    // copyPropertiesFrom, which would otherwise re-elevate to the file's FULL
+    // hub privilege — the guest session is cookie-bound to the share creator, so
+    // node listings carry the creator's privilege. Pin the media model to the
+    // share privilege so e.g. a view-only share can't expose a working download
+    // button in the player.
+    if (item.media && item.media.mset) item.media.mset(_a.privilege, sharePriv);
     return item;
   }
 
@@ -127,7 +135,12 @@ class __dmz_wm extends winman {
       opt = { ...opt, ...r };
       // node_info returns the file's full hub privilege; override with the
       // share's restricted privilege so players respect the share access level.
-      if (this.isDmz) opt.privilege = this.mget(_a.privilege);
+      // Pin the media model too — the player copies privilege from it
+      // (copyPropertiesFrom), which would otherwise re-elevate past the share.
+      if (this.isDmz) {
+        opt.privilege = ~~this.mget(_a.privilege);
+        m.set(_a.privilege, opt.privilege);
+      }
       Kind.waitFor(_a.media).then((k) => {
         opt.media = new k({ model: m });
         this.launch(opt, { explicit: 1 });
@@ -311,6 +324,12 @@ class __dmz_wm extends winman {
       cmd.service ||
       (cmd.model && cmd.model.get(_a.service));
     switch (service) {
+      case 'dmz-request-download':
+        // A player gated a download (DMZ share, no download grant). Forward to
+        // the sharebox (this WM's uiHandler), which routes anonymous visitors to
+        // sign-up/login and signed-in non-members to Request Access.
+        return this.triggerHandlers({ service: 'dmz-request-download' });
+
       case _e.download:
         return this.download();
 

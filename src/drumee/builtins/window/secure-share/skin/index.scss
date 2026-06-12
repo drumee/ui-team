@@ -526,8 +526,19 @@
     border-top: 1px solid var(--border-default);
     padding: var(--spacer-5) var(--spacer-6);
     gap: var(--spacer-4);
+  }
+
+  &__list-toggle {
+    align-items: center;
+    cursor: pointer;
+  }
+
+  &__list-body {
+    gap: var(--spacer-4);
     overflow-y: auto;
     max-height: 220px;
+
+    &[data-mode='closed'] { display: none; }
   }
 
   &__list-header {
@@ -554,6 +565,109 @@
   }
 
   &__share-rows { gap: var(--spacer-3); }
+
+  // ── "View access list" per-access-event table (Figma 2.2.3) ──
+  // Additive; mirrors the list-section / share-row patterns above.
+  &__events-section {
+    border-top: 1px solid var(--border-default);
+    padding: var(--spacer-5) var(--spacer-6);
+    gap: var(--spacer-4);
+  }
+
+  &__events-toggle {
+    align-items: center;
+    cursor: pointer;
+  }
+
+  &__events-toggle-label {
+    @include drumee.typo($size: 11px, $line: 16px, $weight: 600, $color: var(--tertiary-text-color));
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  &__events-container {
+    gap: var(--spacer-3);
+    overflow-y: auto;
+    max-height: 220px;
+    margin-top: var(--spacer-3);
+
+    &[data-mode='closed'] { display: none; }
+  }
+
+  &__events-table { gap: var(--spacer-2); }
+
+  &__events-cols {
+    gap: var(--spacer-4);
+    padding: var(--spacer-2) 0;
+    border-bottom: 1px solid var(--border-default);
+  }
+
+  &__events-col {
+    @include drumee.typo($size: 10px, $line: 14px, $weight: 600, $color: var(--tertiary-text-color));
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    white-space: nowrap;
+  }
+
+  &__events-row {
+    align-items: center;
+    gap: var(--spacer-4);
+    padding: var(--spacer-3) 0;
+    border-bottom: 1px solid var(--border-default);
+
+    &:last-child { border-bottom: none; }
+  }
+
+  &__events-cell {
+    @include drumee.typo($size: 12px, $line: 17px, $color: var(--default-text-color));
+    align-items: center;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  // column widths shared by header + rows
+  &__events-col.col-email,
+  &__events-cell.col-email    { flex: 1; min-width: 0; gap: var(--spacer-3); }
+  &__events-col.col-time,
+  &__events-cell.col-time     { width: 110px; flex-shrink: 0; }
+  &__events-col.col-duration,
+  &__events-cell.col-duration { width: 64px; flex-shrink: 0; }
+  &__events-col.col-action,
+  &__events-cell.col-action   { width: 48px; flex-shrink: 0; justify-content: flex-end; }
+
+  &__events-row { min-height: 28px; }
+
+  &__events-avatar {
+    width: 20px;
+    height: 20px;
+    border-radius: var(--corner-radius-max);
+    flex-shrink: 0;
+  }
+
+  &__events-email {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--primary-50);
+  }
+
+  &__events-revoke {
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+    cursor: pointer;
+    opacity: 0.7;
+
+    svg { width: 18px; height: 18px; fill: var(--tertiary-grey-70); }
+    &:hover { opacity: 1; }
+  }
+
+  &__events-empty {
+    @include drumee.typo($size: 11px, $line: 16px, $color: var(--tertiary-text-color));
+    padding: var(--spacer-4) 0;
+    text-align: center;
+  }
 
   &__share-row {
     align-items: center;
@@ -651,94 +765,159 @@
 
 .window-secure-share-approve-access {
   &__panel {
-    background: var(--normal-bg-90);
-    border: 1px solid var(--border-default);
-    border-radius: var(--corner-radius-5);
-    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.18);
-    gap: var(--spacer-4);
-    padding: var(--spacer-6);
-    width: 360px;
+    background: var(--white, #ffffff);
+    border-radius: 12px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
+    gap: 16px;
+    padding: 24px;
+    width: 380px;
     max-width: calc(100vw - 32px);
-    position: relative;
+  }
+
+  // ── Header ────────────────────────────────────────────────
+  &__header {
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  &__title {
+    @include drumee.typo($size: 18px, $line: 24px, $weight: 600, $color: var(--default-text-color));
   }
 
   &__close {
-    position: absolute;
-    top: var(--spacer-3);
-    right: var(--spacer-4);
     cursor: pointer;
-    @include drumee.typo($size: 18px, $line: 1, $color: var(--tertiary-text-color));
-    padding: 4px;
+    @include drumee.typo($size: 20px, $line: 1, $color: var(--tertiary-text-color));
+    padding: 2px 4px;
 
     &:hover { color: var(--default-text-color); }
   }
 
-  &__title {
-    @include drumee.typo($size: 15px, $line: 20px, $weight: 600, $color: var(--default-text-color));
-    padding-right: var(--spacer-6);
-  }
-
-  &__email {
-    @include drumee.typo($size: 13px, $line: 20px, $weight: 600, $color: var(--default-text-color));
-  }
-
-  &__level {
-    @include drumee.typo($size: 12px, $line: 18px, $color: var(--tertiary-text-color));
-  }
-
-  &__message {
-    @include drumee.typo($size: 12px, $line: 18px, $color: var(--default-text-color));
+  // ── Requester info box ────────────────────────────────────
+  &__info {
+    gap: 10px;
+    padding: 14px;
+    border-radius: 8px;
     background: var(--normal-bg-80);
-    border-radius: var(--corner-radius-2);
-    padding: var(--spacer-2) var(--spacer-3);
   }
 
-  &__levels { gap: var(--spacer-2); flex-wrap: wrap; }
+  &__info-top {
+    align-items: center;
+    gap: 10px;
+  }
 
-  &__level-btn {
+  &__info-avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    background-size: cover;
+    background-position: center;
+  }
+
+  &__info-text { gap: 2px; }
+
+  &__info-email {
+    @include drumee.typo($size: 14px, $line: 18px, $weight: 600, $color: var(--default-text-color));
+  }
+
+  &__info-level {
+    @include drumee.typo($size: 12px, $line: 16px, $color: var(--tertiary-text-color));
+  }
+
+  &__info-message {
+    @include drumee.typo($size: 13px, $line: 18px, $color: var(--default-text-color));
+    font-style: italic;
+  }
+
+  // ── Grant level ───────────────────────────────────────────
+  &__grant-label {
+    @include drumee.typo($size: 13px, $line: 18px, $weight: 500, $color: var(--tertiary-text-color));
+  }
+
+  &__levels { gap: 8px; }
+
+  &__level-row {
+    align-items: center;
+    justify-content: space-between;
     cursor: pointer;
-    padding: var(--spacer-2) var(--spacer-4);
-    border-radius: var(--corner-radius-max);
-    border: 1px solid var(--border-default);
-    @include drumee.typo($size: 12px, $line: 20px, $color: var(--default-text-color));
-    white-space: nowrap;
+    padding: 10px 12px;
+    border-radius: 8px;
+    background: var(--normal-bg-80);
     user-select: none;
 
     &[data-selected='yes'] {
-      border-color: var(--primary-50);
-      background: var(--primary-50);
-      color: var(--white);
+      background: var(--primary-20, #b1adff);
     }
 
     &:hover:not([data-selected='yes']) {
-      border-color: var(--primary-40);
-      color: var(--primary-40);
+      background: var(--normal-bg-70, #ececf2);
     }
   }
 
-  &__actions {
-    gap: var(--spacer-3);
-    justify-content: flex-end;
-    margin-top: var(--spacer-2);
+  &__level-main {
+    align-items: center;
+    gap: 10px;
   }
 
-  &__deny-btn {
-    cursor: pointer;
-    padding: var(--spacer-3) var(--spacer-5);
-    border-radius: var(--corner-radius-3);
-    border: 1px solid var(--btn-caution-background);
-    @include drumee.typo($size: 13px, $line: 20px, $color: var(--btn-caution-background));
+  &__level-icon {
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
 
-    &:hover { background: var(--btn-caution-background); color: var(--white); }
+    svg { width: 18px; height: 18px; fill: var(--default-text-color); }
   }
 
-  &__approve-btn {
-    cursor: pointer;
-    padding: var(--spacer-3) var(--spacer-5);
-    border-radius: var(--corner-radius-3);
-    background: var(--primary-50);
-    @include drumee.typo($size: 13px, $line: 20px, $color: var(--white));
+  &__level-label {
+    @include drumee.typo($size: 14px, $line: 20px, $color: var(--default-text-color));
+  }
 
-    &:hover { background: var(--primary-40); }
+  &__level-check {
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+    border-radius: 4px;
+    border: 1.5px solid var(--tertiary-grey-60, #aeaeb2);
+    background: var(--white, #ffffff);
+    position: relative;
+  }
+
+  &__level-row[data-selected='yes'] &__level-check {
+    background: var(--primary-50, #433cc5);
+    border-color: var(--primary-50, #433cc5);
+
+    &::after {
+      content: '';
+      position: absolute;
+      left: 5px;
+      top: 1.5px;
+      width: 4px;
+      height: 9px;
+      border: solid #ffffff;
+      border-width: 0 2px 2px 0;
+      transform: rotate(45deg);
+    }
+  }
+
+  // ── Stacked Confirm / Deny ────────────────────────────────
+  &__confirm {
+    cursor: pointer;
+    text-align: center;
+    padding: 11px;
+    border-radius: 8px;
+    background: var(--primary-50, #433cc5);
+    @include drumee.typo($size: 14px, $line: 20px, $weight: 600, $color: var(--white, #ffffff));
+
+    &:hover { filter: brightness(1.08); }
+  }
+
+  &__deny {
+    cursor: pointer;
+    text-align: center;
+    padding: 11px;
+    border-radius: 8px;
+    background: var(--btn-caution-background, #ff5a5f);
+    @include drumee.typo($size: 14px, $line: 20px, $weight: 600, $color: var(--white, #ffffff));
+
+    &:hover { filter: brightness(1.08); }
   }
 }

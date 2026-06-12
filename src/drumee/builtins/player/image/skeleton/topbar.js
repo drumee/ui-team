@@ -46,9 +46,9 @@ module.exports = function (ui, size) {
     className: `${ui.fig.group}-topbar__icon-wrapper`,
     kids: [],
   });
-  if (!Visitor.inDmz || ui.canDownload()) {
-    actionIcons.kids.unshift(downloadIcon);
-  }
+  // Always show download; in a DMZ share without the download grant the click
+  // is gated (sign-up / Request Access) in the player's onUiEvent.
+  actionIcons.kids.unshift(downloadIcon);
 
   if (ui.canUpload() && ui.media && ui.media.imgCapable()) {
     actionIcons.kids.push(rotateLeftIcon, rotateRightIcon, saveRotationIcon);

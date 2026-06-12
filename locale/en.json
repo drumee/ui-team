@@ -1965,6 +1965,12 @@
   "SECURE_SHARE_COL_ACCESSED": "Last accessed",
   "SECURE_SHARE_COL_EXPIRES": "Expires",
   "SECURE_SHARE_COL_RECIPIENT": "Recipient",
+  "SECURE_SHARE_COL_ACCESS_TIME": "Access Time",
+  "SECURE_SHARE_COL_DURATION": "Duration",
+  "SECURE_SHARE_COL_ACTION": "Action",
+  "SECURE_SHARE_VIEW_ACCESS_LIST": "View access list",
+  "SECURE_SHARE_NO_ACCESS_EVENTS": "No one has opened this share yet",
+  "SECURE_SHARE_REVOKE_RECIPIENT": "Revoke this recipient's access",
   "SECURE_SHARE_CREATE": "Get link",
   "SECURE_SHARE_DOMAIN_HINT": "Access restricted to authorized emails only",
   "SECURE_SHARE_DOMAIN_RESTRICTION": "Domain restriction (optional)",
@@ -2059,5 +2065,8 @@
   "SECURE_SHARE_PASSWORD_REQUIRED_CREATE": "Please set a password to protect this link.",
   "SECURE_SHARE_NO_PERMISSION_TITLE": "You don't have permission",
   "SECURE_SHARE_NO_PERMISSION_BODY": "To interact with this shared file, workspace, or folder, you need to sign in or create an account.",
-  "SHARED": "Shared"
+  "SHARED": "Shared",
+  "SECURE_SHARE_REQUESTING_ACCESS": "is requesting access to",
+  "SECURE_SHARE_APPROVE_TITLE": "Approve access",
+  "SECURE_SHARE_GRANT_LEVEL": "Grant access level:"
 }

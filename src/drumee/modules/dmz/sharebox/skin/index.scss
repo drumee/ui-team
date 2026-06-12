@@ -608,6 +608,15 @@
   flex-direction: row;
   min-height: 0;
 
+  // Tabs are one-at-a-time: hide the chat panel in the default files view
+  // (it was only ever hidden in task view, so adding it to the split body made
+  // it show alongside files — d23). Chat view shows it below.
+  &[data-view="files"] {
+    .dmz__chat-panel {
+      display: none;
+    }
+  }
+
   &[data-view="chat"] {
     .dmz__files-panel,
     .dmz-sharebox__files-panel {
@@ -823,6 +832,28 @@
 
   &__email {
     width: 100%;
+
+    // The EntryBox renders a bare input; give it a visible field box so the
+    // recipient can tell it's an input (it previously looked like plain text).
+    input {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid var(--sb-grey-30);
+      border-radius: 4px;
+      background: #ffffff;
+      @include drumee.typo($size: 14px, $line: 20px, $color: var(--sb-text));
+      font-family: var(--sb-font-body);
+
+      &::placeholder { color: var(--sb-text-muted); }
+      &:focus { border-color: var(--sb-cta); outline: none; }
+    }
+  }
+
+  &__error {
+    @include drumee.typo($size: 13px, $line: 18px, $weight: 500, $color: var(--red-500));
+    font-family: var(--sb-font-body);
+
+    &[data-mode='closed'] { display: none; }
   }
 
   &__message {

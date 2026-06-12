@@ -18,6 +18,11 @@ function __skl_dmz_sharebox_request_access(_ui_) {
           className : `${reqFig}__level-option`,
           content   : label,
           service   : 'select-request-level',
+          // `level` must be a top-level prop (not only in dataset) — the handler
+          // reads it via `cmd.mget('level')`, which reads model props, not the
+          // DOM dataset. Without it the selection was always undefined, so no
+          // level highlighted and submit silently aborted (`!_selectedRequestLevel`).
+          level,
           dataset   : { level, selected: '' },
           uiHandler : [_ui_],
         }))
@@ -30,7 +35,9 @@ function __skl_dmz_sharebox_request_access(_ui_) {
     sys_pn      : 'ref-request-email',
     formItem    : 'request_email',
     placeholder : LOCALE.SECURE_SHARE_ENTER_EMAIL,
-    value       : _ui_.mget('recipient_email') || '',
+    // This popup is only reached by signed-in users, so pre-fill their account
+    // email (or the gate email). Kept visible/editable so it's never blank-submit.
+    value       : _ui_.mget('recipient_email') || Visitor.get('email') || '',
     require     : 'email',
     showError   : false,
     partHandler : _ui_,
@@ -45,6 +52,16 @@ function __skl_dmz_sharebox_request_access(_ui_) {
     ignoreEnter : true,
     partHandler : _ui_,
     uiHandler   : [_ui_],
+  });
+
+  // Inline error line (e.g. missing email / level). Hidden until populated —
+  // the gate's renderErrorMessage targets gate-only parts, so this popup needs
+  // its own feedback element.
+  const errorLine = Skeletons.Note({
+    className : `${reqFig}__error`,
+    sys_pn    : 'request-error',
+    content   : '',
+    dataset   : { mode: _a.closed },
   });
 
   const actions = Skeletons.Box.X({
@@ -73,6 +90,7 @@ function __skl_dmz_sharebox_request_access(_ui_) {
       levelPicker,
       emailField,
       messageField,
+      errorLine,
       actions,
     ]
   });

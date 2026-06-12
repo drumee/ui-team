@@ -27,24 +27,25 @@ function action(ui, { service, ico, tip, state, icons }) {
 module.exports = function (ui) {
   const actions = [];
 
-  if (!Visitor.inDmz || ui.canDownload()) {
+  // Download / download-as-PDF are always shown. In a DMZ share without the
+  // download grant, the click is gated (sign-up/login or Request Access) rather
+  // than hidden — the action handlers call _dmzGateDownload().
+  actions.push(
+    action(ui, {
+      service: _a.download,
+      ico: _a.download,
+      tip: LOCALE.DOWNLOAD_ORIG,
+    }),
+  );
+
+  if (ui.mget(_a.ext) != _a.pdf) {
     actions.push(
       action(ui, {
-        service: _a.download,
-        ico: _a.download,
-        tip: LOCALE.DOWNLOAD_ORIG,
+        service: "download-pdf",
+        ico: "app-pdf-file",
+        tip: LOCALE.DOWNLOAD_AS_PDF,
       }),
     );
-
-    if (ui.mget(_a.ext) != _a.pdf) {
-      actions.push(
-        action(ui, {
-          service: "download-pdf",
-          ico: "app-pdf-file",
-          tip: LOCALE.DOWNLOAD_AS_PDF,
-        }),
-      );
-    }
   }
 
   if (ui.canUpload() && !Visitor.inDmz && EDITABLE.includes(ui.mget(_a.ext).toLowerCase())) {

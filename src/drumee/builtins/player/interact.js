@@ -503,6 +503,27 @@ class __window_interact_player extends __utils {
    * @param {*} args 
    * @returns 
    */
+  /**
+   * In a DMZ share, extracting content (download / print) without the share's
+   * download grant is gated like any other beyond-grant action: the button stays
+   * visible, but on click the sharebox routes anonymous visitors to sign-up/login
+   * and signed-in non-members to Request Access (Figma flow). Returns true when it
+   * gated (caller should stop). Outside DMZ, or with the grant, returns false.
+   */
+  _dmzGateDownload() {
+    if (Visitor.inDmz && !this.canDownload()) {
+      this.triggerHandlers({ service: 'dmz-request-download' });
+      return true;
+    }
+    return false;
+  }
+
+  /**
+   *
+   * @param {*} cmd
+   * @param {*} args
+   * @returns
+   */
   onUiEvent(cmd, args = {}) {
     const service = args.service || cmd.get(_a.service) || cmd.get(_a.name);
     switch (service) {
@@ -520,9 +541,11 @@ class __window_interact_player extends __utils {
         return this.minimize(cmd);
 
       case "print":
+        if (this._dmzGateDownload()) return;
         return this.printPdf();
 
       case _e.download:
+        if (this._dmzGateDownload()) return;
         this.service = _a.idle;
         return this.download();
 

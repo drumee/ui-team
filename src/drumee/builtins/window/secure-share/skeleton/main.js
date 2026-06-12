@@ -254,7 +254,11 @@ const __skl_secure_share = function(_ui_) {
         placement : 'up',
         service   : 'expiry-date-picked',
         uiHandler : [_ui_],
-        vendorOpt : { enableTime: true, time_24hr: true, dateFormat: 'd/m/Y H:i', minDate: 'today' }
+        // `inline: true` renders the month grid in normal flow instead of a
+        // focus-triggered popup — the popup was being clipped by the drawer's
+        // `overflow: hidden` (so the calendar never appeared), and Figma's "set
+        // date" screens show an always-visible inline calendar anyway.
+        vendorOpt : { enableTime: true, time_24hr: true, dateFormat: 'd/m/Y H:i', minDate: 'today', inline: true }
       }
     ]
   });
@@ -339,12 +343,50 @@ const __skl_secure_share = function(_ui_) {
     ]
   });
 
+  // SHARED LINKS = secondary link-management list (Copy / Revoke / status),
+  // collapsed by default under a clickable header (count appended at load time).
   const listSection = Skeletons.Box.Y({
     className : `${pfx}__list-section`,
     kids      : [
-      Skeletons.Note({ className: `${pfx}__list-header`, content: LOCALE.SECURE_SHARE_EXISTING }),
-      listColsHeader,
-      shareList
+      Skeletons.Box.X({
+        className : `${pfx}__list-toggle`,
+        service   : 'toggle-shared-links',
+        uiHandler : [_ui_],
+        kidsOpt   : { active: 0 },
+        kids      : [
+          Skeletons.Note({ className: `${pfx}__list-header`, sys_pn: 'shared-links-label', content: LOCALE.SECURE_SHARE_EXISTING })
+        ]
+      }),
+      Skeletons.Box.Y({
+        className : `${pfx}__list-body`,
+        sys_pn    : 'shared-links-body',
+        dataset   : { mode: _a.closed },
+        kids      : [ listColsHeader, shareList ]
+      })
+    ]
+  });
+
+  // ── "View access list" — per-access-event table (Figma 2.2.3) ──
+  // PRIMARY view: auto-expanded and loaded on render (mode open). The toggle
+  // still collapses/expands it.
+  const accessListSection = Skeletons.Box.Y({
+    className : `${pfx}__events-section`,
+    kids      : [
+      Skeletons.Box.X({
+        className : `${pfx}__events-toggle`,
+        service   : 'toggle-access-list',
+        uiHandler : [_ui_],
+        kidsOpt   : { active: 0 },
+        kids      : [
+          Skeletons.Note({ className: `${pfx}__events-toggle-label`, content: LOCALE.SECURE_SHARE_VIEW_ACCESS_LIST })
+        ]
+      }),
+      Skeletons.Box.Y({
+        className   : `${pfx}__events-container`,
+        sys_pn      : 'access-events',
+        partHandler : _ui_,
+        dataset     : { mode: _a.open }
+      })
     ]
   });
 
@@ -355,6 +397,7 @@ const __skl_secure_share = function(_ui_) {
     kids      : [
       header,
       body,
+      accessListSection,
       listSection,
       Skeletons.Box.Z({
         className   : `${pfx}__approve-overlay`,

@@ -1566,6 +1566,12 @@
   "SECURE_SHARE_COL_ACCESSED": "最后访问",
   "SECURE_SHARE_COL_EXPIRES": "到期",
   "SECURE_SHARE_COL_RECIPIENT": "收件人",
+  "SECURE_SHARE_COL_ACCESS_TIME": "访问时间",
+  "SECURE_SHARE_COL_DURATION": "时长",
+  "SECURE_SHARE_COL_ACTION": "操作",
+  "SECURE_SHARE_VIEW_ACCESS_LIST": "查看访问列表",
+  "SECURE_SHARE_NO_ACCESS_EVENTS": "还没有人打开此共享",
+  "SECURE_SHARE_REVOKE_RECIPIENT": "撤销此收件人的访问权限",
   "SECURE_SHARE_NEVER_ACCESSED": "从未访问",
   "SECURE_SHARE_PERMISSION_LEVEL": "权限级别",
   "SECURE_SHARE_PUBLIC": "公开",
@@ -1633,5 +1639,8 @@
   "SECURE_SHARE_PASSWORD_REQUIRED_CREATE": "Please set a password to protect this link.",
   "SECURE_SHARE_NO_PERMISSION_TITLE": "You don't have permission",
   "SECURE_SHARE_NO_PERMISSION_BODY": "To interact with this shared file, workspace, or folder, you need to sign in or create an account.",
-  "SHARED": "Shared"
+  "SHARED": "Shared",
+  "SECURE_SHARE_REQUESTING_ACCESS": "正在请求访问",
+  "SECURE_SHARE_APPROVE_TITLE": "批准访问",
+  "SECURE_SHARE_GRANT_LEVEL": "授予访问级别："
 }

@@ -118,6 +118,9 @@ class __dmz_sharebox extends LetcBox {
       case 'ref-request-message':
         return this._requestMessageInput = child;
 
+      case 'request-error':
+        return this._requestError = child;
+
       default:
         if (super.onPartReady) super.onPartReady(child, pn);
     }
@@ -413,11 +416,8 @@ class __dmz_sharebox extends LetcBox {
       }
 
       case _e.upload:
-        // A guest may upload only when the share granted edit (write privilege).
-        // Without it, prompt sign-up (Figma: "edit → sign in required").
-        if (this.mget('guest_id') && !this.havePermission(_K.permission.write, this.mget(_a.privilege))) {
-          return this.showSignupRequiredOverlay();
-        }
+        // Uploading is an edit action → needs the write grant + an identity.
+        if (this._gateInteraction(this.havePermission(_K.permission.write, this.mget(_a.privilege)))) return;
         return this.__fileselector.open(this._upload.bind(this));
 
       case _e.download:
@@ -427,9 +427,8 @@ class __dmz_sharebox extends LetcBox {
       // "Add new" lives in the sharebox topbar (uiHandler = this sharebox),
       // but folder creation belongs to the window manager child — delegate.
       case "add-folder":
-        if (this.mget('guest_id') && !this.havePermission(_K.permission.write, this.mget(_a.privilege))) {
-          return this.showSignupRequiredOverlay();
-        }
+        // Creating a folder is an edit action → needs the write grant + identity.
+        if (this._gateInteraction(this.havePermission(_K.permission.write, this.mget(_a.privilege)))) return;
         if (this.wm && this.wm.onUiEvent) {
           this.wm.onUiEvent(cmd, { service: "add-folder" });
         }
@@ -455,11 +454,10 @@ class __dmz_sharebox extends LetcBox {
         return;
 
       case 'tab-chat':
-        // Chat has no privilege bit (it overlaps view in the bitmask); the share
-        // carries an explicit can_chat flag. A guest without it must sign up.
-        if (this.mget('guest_id') && !this.mget('can_chat')) {
-          return this.showSignupRequiredOverlay();
-        }
+        // Chat is an interactive action (Figma "edit/chat → sign in required"):
+        // anonymous must sign in even if the share grants chat; a signed-in
+        // recipient needs the explicit can_chat grant, else Request Access.
+        if (this._gateInteraction(this.mget('can_chat'))) return;
         if (this._folderView) this._folderView.el.dataset.view = _a.chat;
         return;
 
@@ -471,7 +469,17 @@ class __dmz_sharebox extends LetcBox {
         return;
 
       case 'open-request-access':
+        // The banner only renders for signed-in non-members, but guard
+        // defensively so an anonymous viewer is still routed to sign-up first.
+        if (this.mget('is_guest')) return this.showSignupRequiredOverlay();
         return this.showRequestAccessPopup();
+
+      case 'dmz-request-download':
+        // A player reported a download/print attempt without the share's
+        // download grant — route it like any other beyond-grant interaction
+        // (anonymous → sign-up/login; signed-in non-member → Request Access).
+        this._gateInteraction(false);
+        return;
 
       case 'select-request-level': {
         const lvl = cmd.mget('level');
@@ -785,6 +793,28 @@ class __dmz_sharebox extends LetcBox {
   /**
    *
    */
+  /**
+   * Gate an interactive action (chat / edit / upload) per the Figma flow.
+   * Such actions need an identity, so:
+   *   • anonymous visitor → sign-up / login overlay — ALWAYS, even when the share
+   *     grants the capability (you can't chat/edit anonymously);
+   *   • signed-in non-member WITHOUT the grant → Request Access popup;
+   *   • the share's own creator, or a signed-in recipient who already holds the
+   *     grant → proceed.
+   * `hasGrant` = whether the share grants this capability. Returns true when it
+   * gated (caller should stop), false to proceed.
+   */
+  _gateInteraction(hasGrant) {
+    const isOwner = !!this.mget('creator_id') && (this.mget('uid') === this.mget('creator_id'));
+    if (isOwner) return false;
+    if (this.mget('is_guest')) { this.showSignupRequiredOverlay(); return true; }
+    if (!hasGrant) { this.showRequestAccessPopup(); return true; }
+    return false;
+  }
+
+  /**
+   *
+   */
   showRequestAccessPopup() {
     const overlay = this.__signupOverlay;
     if (!overlay) return;
@@ -799,6 +829,13 @@ class __dmz_sharebox extends LetcBox {
    *
    */
   async submitAccessRequest() {
+    // Validate with INLINE feedback in the popup. renderErrorMessage targets the
+    // gate's parts (absent here), so it would fail silently — which is why submit
+    // appeared dead when a field was missing.
+    if (!this._selectedRequestLevel) {
+      return this._showRequestError(LOCALE.SECURE_SHARE_CHOOSE_LEVEL);
+    }
+
     const emailEl = this._requestEmailInput
       ? this._requestEmailInput.el.querySelector('input')
       : null;
@@ -806,10 +843,10 @@ class __dmz_sharebox extends LetcBox {
       ? emailEl.value.trim().toLowerCase()
       : (this.mget('recipient_email') || '').toLowerCase().trim();
 
-    if (!emailVal || !emailVal.includes('@')) {
-      return this.renderErrorMessage(LOCALE.SECURE_SHARE_ENTER_EMAIL);
+    if (!emailVal || !Validator.email(emailVal)) {
+      return this._showRequestError(LOCALE.SECURE_SHARE_ENTER_EMAIL);
     }
-    if (!this._selectedRequestLevel) return;
+    this._showRequestError('');
 
     const msgEl  = this._requestMessageInput
       ? this._requestMessageInput.el.querySelector('textarea')
@@ -840,8 +877,20 @@ class __dmz_sharebox extends LetcBox {
         }
       }
     } catch (e) {
-      this.renderErrorMessage(LOCALE.SOMETHING_WENT_WRONG);
+      this._showRequestError(LOCALE.SOMETHING_WENT_WRONG);
     }
+  }
+
+  /**
+   * Inline error feedback inside the request-access popup. The gate's
+   * renderErrorMessage cannot be reused here (it drives gate-only parts).
+   * @param {String} msg  empty string clears + hides the line
+   */
+  _showRequestError(msg) {
+    const el = this._requestError;
+    if (!el || !el.el) return;
+    el.el.textContent = msg || '';
+    el.el.dataset.mode = msg ? _a.open : _a.closed;
   }
 
   /**

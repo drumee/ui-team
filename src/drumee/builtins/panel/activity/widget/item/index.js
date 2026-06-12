@@ -235,6 +235,13 @@ class __activity_item extends LetcBox {
       nid,
     });
     // return;
+    if (service === 'open-access-request') {
+      // Forward to the activity panel (logicalParent) to show the approve popup.
+      // _dispatchService only knows toggle-favorite / dismiss-activity, so an
+      // open-* service would otherwise be swallowed.
+      if (parent && parent.onUiEvent) parent.onUiEvent(this, { service });
+      return;
+    }
     if (service) {
       this._dispatchService(cmd, args)
       return;

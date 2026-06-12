@@ -17,15 +17,14 @@ module.exports = function (ui, size) {
   });
 
 
-  let actionIcons = "";
-  if (!Visitor.inDmz || ui.canDownload()) {
-    actionIcons = Skeletons.Box.X({
-      className: `${ui.fig.group}-topbar__icon-wrapper`,
-      kids: [
-        downloadIcon,
-      ],
-    });
-  }
+  // Always show download; in a DMZ share without the download grant the click
+  // is gated (sign-up / Request Access) in the player's onUiEvent.
+  const actionIcons = Skeletons.Box.X({
+    className: `${ui.fig.group}-topbar__icon-wrapper`,
+    kids: [
+      downloadIcon,
+    ],
+  });
 
 
   const dl = Skeletons.Box.X({

@@ -238,6 +238,47 @@ class __panel_activity extends LetcBox {
       case 'clear-all':
         return this._clearAll();
 
+      case 'open-access-request': {
+        const item = this._findActivityItem(cmd);
+        if (!item) return;
+        const req = {
+          request_id:      item.mget('request_id'),
+          requested_level: item.mget('requested_level'),
+          requester_email: item.mget('requester_email'),
+          message:         item.mget('message'),
+          hub_id:          item.mget('hub_id'),
+          workspace_name:  item.mget('workspace_name'),
+        };
+        this._arRequest    = req;
+        // Default the grant to the requested level (Figma pre-selects it).
+        this._arGrantLevel = req.requested_level || null;
+        return this.ensurePart('ar-overlay').then((p) => {
+          if (!p) return;
+          p.feed(require('./skeleton/approve-request')(this, req));
+          if (p.el) p.el.dataset.mode = _a.open;
+        });
+      }
+
+      case 'ar-select-level': {
+        const lvl = cmd.mget('level');
+        this._arGrantLevel = lvl;
+        return this.ensurePart('ar-overlay').then((p) => {
+          if (!p || !p.el) return;
+          p.el.querySelectorAll('[data-level]').forEach((b) => {
+            b.dataset.selected = (b.dataset.level === lvl) ? 'yes' : '';
+          });
+        });
+      }
+
+      case 'ar-approve':
+        return this._respondAccessRequest('approve');
+
+      case 'ar-deny':
+        return this._respondAccessRequest('deny');
+
+      case 'ar-close':
+        return this._closeArOverlay();
+
       case 'join-meeting': {
         const item = this._findActivityItem(cmd);
         const hub_id = (args && args.hub_id) || (item && item.mget && item.mget('hub_id'));
@@ -304,6 +345,40 @@ class __panel_activity extends LetcBox {
     if (cmd.mget && cmd.mget('kind') === 'activity_item') return cmd;
     if (cmd.getParentByKind) return cmd.getParentByKind('activity_item');
     return null;
+  }
+
+  /**
+   * Approve or deny the access request currently shown in the overlay, then
+   * refresh the list so the handled request drops off. Caller must be the share
+   * creator (enforced server-side).
+   */
+  async _respondAccessRequest(action) {
+    const req = this._arRequest || {};
+    if (!req.request_id) return this._closeArOverlay();
+    if (action === 'approve' && !this._arGrantLevel) return; // need a level
+    const payload = { hub_id: req.hub_id, request_id: req.request_id, action };
+    if (action === 'approve') payload.granted_level = this._arGrantLevel;
+    try {
+      await this.postService(
+        (SERVICE.secure_share && SERVICE.secure_share.respond_to_access_request)
+          || 'secure_share.respond_to_access_request',
+        payload
+      );
+    } catch (e) {
+      this.warn('[panel_activity] respond_to_access_request failed', e);
+    }
+    this._closeArOverlay();
+    this.refreshActivity(0);
+  }
+
+  _closeArOverlay() {
+    this._arRequest = null;
+    this._arGrantLevel = null;
+    this.ensurePart('ar-overlay').then((p) => {
+      if (!p || !p.el) return;
+      p.el.dataset.mode = _a.closed;
+      p.clear();
+    });
   }
 
   async _toggleFavorite(cmd, args = {}) {
@@ -608,9 +683,31 @@ class __panel_activity extends LetcBox {
     // count `cnt` accumulated inside each group. Otherwise "Tran sent 3
     // messages" + "Snake invited you" would render as 1 list row with
     // badge=4 — confusing. Matches Gmail/Slack convention.
-    const unread_count = live.length;
+    // Pending secure-share access requests addressed to this user (Figma 62).
+    // Fetched separately from the persisted secure_share_access_request table and
+    // merged in — keeps the shared activity feed proc untouched. Guarded so a
+    // failure never affects the rest of the notification list.
+    let accessReqs = [];
+    try {
+      const ar = await this.postService({
+        service: (SERVICE.secure_share && SERVICE.secure_share.list_requests) || 'secure_share.list_requests',
+        hub_id: Visitor.id,
+      });
+      const rows = _.isArray(ar) ? ar : (_.isArray(ar?.data) ? ar.data : []);
+      accessReqs = rows.map((r) => ({
+        ...r,
+        category: 'access_request',
+        key_id: r.request_id,
+        last_id: r.ctime,
+      }));
+    } catch (e) {
+      this.warn('[panel_activity] secure_share.list_requests failed', e);
+    }
+    const merged = accessReqs.concat(live);
+
+    const unread_count = merged.length;
     RADIO_BROADCAST.trigger('activity-update', { unread_count });
-    this.updatePriorityListUnified(live);
+    this.updatePriorityListUnified(merged);
     if (!this.mget(_a.state)) return;
     if (this.__list && !this.__list.isDestroyed()) {
       this.__list.restart()
@@ -678,6 +775,17 @@ class __panel_activity extends LetcBox {
         case 'contact_refused':
           e.event = 'contact.invite_refuse';
           e.fullname = (it.surname || `${it.firstname || ''} ${it.lastname || ''}`).trim();
+          break;
+        case 'access_request':
+          // Secure-share access request addressed to this user (Figma 62).
+          // Clicking opens the approve popup (handled in onUiEvent). The click
+          // service is set on the row in the item skeleton (not on the model) so
+          // it doesn't shadow the per-button services (bookmark/trash).
+          e.event   = 'secure_share.access_requested';
+          e.action  = LOCALE.SECURE_SHARE_REQUESTING_ACCESS;
+          e.link_label = it.workspace_name;
+          e.sender     = it.requester_email;
+          e.fullname   = it.requester_email;
           break;
         // case 'media':
         //   e.service = 'open-folder';
@@ -755,6 +863,14 @@ class __panel_activity extends LetcBox {
         break;
       case "contact.invite_refuse":
         this.refreshActivity();
+        break;
+      case "share.track_event":
+        // A secure-share access request just arrived for this user — refresh so
+        // the notification appears in real time (Figma 62), without reopening.
+        if (data.some((d) => d && d.event === 'secure_share_access_requested')) {
+          this.refreshActivity();
+          this.shouldNofity();
+        }
         break;
       case "messages.read":
         this._buildactivities(data);

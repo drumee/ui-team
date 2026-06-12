@@ -110,6 +110,14 @@ class __window_secure_share extends mfsInteract {
         this._shareList = child;
         this._loadShares();
         return;
+      case 'shared-links-body':
+        return this._sharedLinksBody = child;
+      case 'shared-links-label':
+        return this._sharedLinksLabel = child;
+      case 'access-events':
+        this._accessEvents = child;
+        this._loadAccessEvents();   // PRIMARY view — auto-expanded, load on render
+        return;
       case 'link-result':
         return this._linkResult = child;
       case 'approve-overlay':
@@ -149,6 +157,12 @@ class __window_secure_share extends mfsInteract {
         return this._copyLink(cmd);
       case 'revoke-secure-share':
         return this._revokeShare(cmd);
+      case 'toggle-access-list':
+        return this._toggleAccessList();
+      case 'toggle-shared-links':
+        return this._toggleSharedLinks();
+      case 'revoke-access-recipient':
+        return this._revokeRecipient(cmd);
       case 'select-grant-level':
         return this._selectGrantLevel(cmd);
       case 'approve-access-request':
@@ -340,8 +354,21 @@ class __window_secure_share extends mfsInteract {
     }
   }
 
+  // Collapse / expand the secondary SHARED LINKS list.
+  _toggleSharedLinks() {
+    if (!this._sharedLinksBody) return;
+    const open = this._sharedLinksBody.el.dataset.mode !== _a.open;
+    this._sharedLinksBody.el.dataset.mode = open ? _a.open : _a.closed;
+  }
+
   _renderShareList(rows) {
     if (!this._shareList) return;
+    // Reflect the count in the collapsed header (e.g. "Shared links (3)").
+    if (this._sharedLinksLabel) {
+      this._sharedLinksLabel.el.textContent = rows.length
+        ? `${LOCALE.SECURE_SHARE_EXISTING} (${rows.length})`
+        : LOCALE.SECURE_SHARE_EXISTING;
+    }
     const row_skl = require('./skeleton/share-row');
     if (!rows.length) {
       this._shareList.feed(Skeletons.Note({
@@ -355,6 +382,41 @@ class __window_secure_share extends mfsInteract {
       className: `${this.fig.family}__share-rows`,
       kids
     }));
+  }
+
+  // ── "View access list" — per-access-event table (Figma 2.2.3) ──
+  // Collapsed by default; the toggle lazy-loads the events the first and every
+  // subsequent time it is opened so the data stays fresh.
+  _toggleAccessList() {
+    if (!this._accessEvents) return;
+    const open = this._accessEvents.el.dataset.mode !== _a.open;
+    this._accessEvents.el.dataset.mode = open ? _a.open : _a.closed;
+    if (open) this._loadAccessEvents();
+  }
+
+  async _loadAccessEvents() {
+    if (!this._accessEvents) return;
+    const nid    = this.mget(_a.nid);
+    const hub_id = this.mget(_a.hub_id);
+    const events_skl = require('./skeleton/access-events');
+    try {
+      const rows = await this.postService(SERVICE.secure_share.list_access_events, { nid, hub_id });
+      this._accessEvents.feed(events_skl(this, Array.isArray(rows) ? rows : []));
+    } catch (e) {
+      this._accessEvents.feed(events_skl(this, []));
+    }
+  }
+
+  // ⊖ revoke a single recipient's current grant (re-requestable — not blocklisted),
+  // then refresh the table so the row drops off.
+  async _revokeRecipient(cmd) {
+    const email  = cmd.mget('email') || '';
+    const uid    = cmd.mget('uid') || '';
+    if (!email && !uid) return;
+    const nid    = this.mget(_a.nid);
+    const hub_id = this.mget(_a.hub_id);
+    await this.postService(SERVICE.secure_share.revoke_recipient, { nid, hub_id, email, uid });
+    this._loadAccessEvents();
   }
 
   async _createShare() {
@@ -508,7 +570,9 @@ class __window_secure_share extends mfsInteract {
 
   _showApprovePopup(request) {
     this.mset({ _pendingRequest: request });
-    this._grantLevel = null;
+    // Default the grant to the level the recipient requested (Figma pre-selects
+    // it), so Approve works immediately; the sender can still pick another level.
+    this._grantLevel = (request && request.requested_level) || null;
     const overlay = this.__approveOverlay;
     if (!overlay) return;
     overlay.feed(require('./skeleton/approve-access')(this));
