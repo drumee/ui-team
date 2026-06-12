@@ -662,6 +662,39 @@ $danger-soft: rgba(246, 81, 75, 0.12);
   // ───────── whole-folder import (share-to-SA) ─────────
   &__body--sa { gap: var(--spacer-3); }
 
+  // Big primary CTA on the ready screen — the ONLY import entry point for
+  // drive.file users (Picker option removed).
+  &__sa-cta {
+    align-items: center;
+    justify-content: center;
+    gap: var(--spacer-3);
+    width: 100%;
+    padding: var(--spacer-5);
+    box-sizing: border-box;
+    border-radius: var(--corner-radius-3);
+    background: $accent;
+    cursor: pointer;
+    transition: background 0.15s, transform 0.1s;
+
+    > * { pointer-events: none !important; }
+
+    &:hover { background: $accent-strong; }
+    &:active { transform: scale(0.99); }
+  }
+
+  &__sa-cta-ico {
+    width: 22px;
+    height: 22px;
+    color: #fff;
+    fill: #fff;
+    flex: 0 0 auto;
+  }
+
+  &__sa-cta-label {
+    @include drumee.typo($size: 15px, $weight: 700, $line: 22px, $color: #fff);
+    font-weight: 700;
+  }
+
   &__sa-link {
     @include drumee.typo($size: 13px, $weight: 600, $line: 18px, $color: $accent);
     cursor: pointer;

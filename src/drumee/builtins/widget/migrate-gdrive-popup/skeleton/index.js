@@ -126,24 +126,39 @@ module.exports = function (ui) {
             }),
           ],
         }),
-        // ── drive.file flow: Google Picker + staged pick list ──
+        // ── drive.file flow: two EQUAL import entry points ──
+        // 1. Google Picker — pick individual files (open folders, multiselect)
+        // 2. Share-to-SA — import an entire folder tree
+        // Same CTA style/size for both, stacked full-width.
         usesPicker ? Skeletons.Box.Y({
           className: `${pfx}__picker`,
           kids: [
-            Skeletons.Note({
-              className: `${pfx}__picker-hint`,
-              content: LOCALE.GDRIVE_PICKER_HINT,
-            }),
             Skeletons.Box.X({
-              className: `${pfx}__picker-btn`,
+              className: `${pfx}__sa-cta`,
               service: 'gdrive-open-picker',
               uiHandler: [ui],
               kidsOpt: { active: 0 },
               kids: [
-                Skeletons.Image.Svg({ ico: 'desktop_folder', className: `${pfx}__picker-btn-ico` }),
-                Skeletons.Note({ content: LOCALE.GDRIVE_PICKER_CHOOSE }),
+                Skeletons.Image.Svg({ ico: 'desktop_docfile', className: `${pfx}__sa-cta-ico` }),
+                Skeletons.Note({ className: `${pfx}__sa-cta-label`, content: LOCALE.GDRIVE_PICKER_CHOOSE }),
               ],
             }),
+            (ui.isSaAvailable && ui.isSaAvailable()) ? Skeletons.Box.X({
+              className: `${pfx}__sa-cta`,
+              service: 'gdrive-sa-open',
+              uiHandler: [ui],
+              kidsOpt: { active: 0 },
+              kids: [
+                Skeletons.Image.Svg({ ico: 'desktop_folder', className: `${pfx}__sa-cta-ico` }),
+                Skeletons.Note({ className: `${pfx}__sa-cta-label`, content: LOCALE.GDRIVE_SA_TITLE }),
+              ],
+            }) : null,
+            Skeletons.Note({
+              className: `${pfx}__picker-hint`,
+              content: LOCALE.GDRIVE_PICKER_HINT,
+            }),
+            // Staged Picker picks (removable) — Start appears in the footer
+            // once something is staged.
             pickerDocs.length ? Skeletons.Box.Y({
               className: `${pfx}__picker-list`,
               kids: pickerDocs.map((d) => Skeletons.Box.X({
@@ -164,13 +179,6 @@ module.exports = function (ui) {
                   }),
                 ],
               })),
-            }) : null,
-            // Whole-folder path (share-to-SA) — shown only when the server
-            // has a service-account key configured.
-            (ui.isSaAvailable && ui.isSaAvailable()) ? Skeletons.Note({
-              className: `${pfx}__sa-link`,
-              content: LOCALE.GDRIVE_SA_LINK,
-              service: 'gdrive-sa-open', uiHandler: [ui],
             }) : null,
           ].filter(Boolean),
         }) : null,
@@ -208,21 +216,21 @@ module.exports = function (ui) {
           kids: require('./tree')(ui),
         }) : null,
         // Footer (Figma 1646:91930): one full-width primary. Legacy
-        // mode=selected reads "Next" (goes to the Choose-folders step);
-        // everything else starts right away. The X in the header closes.
-        Skeletons.Box.X({
+        // mode=selected reads "Next" (goes to the Choose-folders step).
+        // drive.file users get Start only once Picker picks are staged —
+        // the SA path starts from its own screen.
+        (!usesPicker || pickerDocs.length) ? Skeletons.Box.X({
           className: `${pfx}__footer`,
           kids: [
             Skeletons.Note({
               className: `${pfx}__primary-btn ${pfx}__primary-btn--full`,
               sys_pn: 'gdrive-start-btn',
-              dataset: (usesPicker && ui.hasSelection && !ui.hasSelection()) ? { disabled: '1' } : undefined,
               content: (!usesPicker && isSelected) ? (LOCALE.NEXT || 'Next') : LOCALE.MIGRATE_GDRIVE_START,
               service: (!usesPicker && isSelected) ? 'gdrive-next' : 'gdrive-start',
               uiHandler: [ui],
             }),
           ],
-        }),
+        }) : null,
         auto ? Skeletons.Note({
           className: `${pfx}__skip`,
           content: LOCALE.MIGRATE_GDRIVE_SKIP_FOR_NOW,

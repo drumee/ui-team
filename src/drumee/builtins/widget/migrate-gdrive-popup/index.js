@@ -840,6 +840,14 @@ class __migrate_gdrive_popup extends LetcBox {
       case 'gdrive-open-dest': {
         const snap = this._jobSnap || {};
         const nid = snap.dest_nid || this._nid;
+        // The popup is launched FROM Settings — its overlay sits above the
+        // desk, so the revealed folder would open BEHIND it. Close the main
+        // panels first (same guard pattern as desk/wm).
+        try {
+          if (window.Desk && typeof window.Desk.closeMainPanels === 'function') {
+            window.Desk.closeMainPanels();
+          }
+        } catch (e) { /* non-fatal */ }
         try {
           Wm.openFileLocation({ nid, hub_id: this._hub_id, filetype: _a.folder });
         } catch (e) { /* non-fatal — still close */ }
