@@ -232,6 +232,7 @@ class __welcome_signin extends __welcome_interact {
    *
    */
   loginUser(vars) {
+    this.setButtonLoading(true);
     let token = Visitor.parseModuleArgs().back;
     if (token) vars.secret = token;
     this.postService(SERVICE.yp.login, {
@@ -258,6 +259,7 @@ class __welcome_signin extends __welcome_interact {
       location.hash = _K.module.welcome;
       return;
     }
+    this.setButtonLoading(true);
     return this.postService({
       service: SERVICE.butler.check_domain,
       domain,
@@ -279,7 +281,7 @@ class __welcome_signin extends __welcome_interact {
       } else {
         this.renderMessage(LOCALE.PLEASE_ENTER_VALID_URL);
       }
-    });
+    }).catch(() => this.setButtonLoading(false));
   }
 
   /**
@@ -306,6 +308,7 @@ class __welcome_signin extends __welcome_interact {
       return this.renderMessage(msg);
     }
 
+    this.setButtonLoading(true);
     let token = Visitor.parseModuleArgs().back;
     if (token) vars.token = token;
     this.postService({
@@ -313,7 +316,7 @@ class __welcome_signin extends __welcome_interact {
       secret: this.data.secret || Visitor.get('otp_key'),
       code: this.__refCode.getValue(),
     }
-    ).then(this.checkLoginStatus);
+    ).then(this.checkLoginStatus).catch(() => this.setButtonLoading(false));
   }
 
   /**
@@ -393,9 +396,28 @@ class __welcome_signin extends __welcome_interact {
   }
 
   /**
+   * Toggle the confirm button's loading spinner (hides the label, blocks
+   * clicks) while a request is in flight. No-op on screens without the
+   * button (e.g. the dtk_otp reconnect OTP step).
+   * @param {boolean} on
+   */
+  setButtonLoading(on) {
+    const b = this.getPart('button-confirm');
+    if (!b || !b.el) {
+      return;
+    }
+    if (on) {
+      b.el.dataset.loading = 1;
+    } else {
+      delete b.el.dataset.loading;
+    }
+  }
+
+  /**
    *
    */
   renderMessage(msg) {
+    this.setButtonLoading(false);
     this.ensurePart('button-wrapper').then((p) => {
       const msgBox = require("./skeleton/acknowledgment")(this, msg);
       p.el.dataset.mode = _a.closed;
@@ -460,6 +482,7 @@ class __welcome_signin extends __welcome_interact {
    * @param {*} data 
    */
   checkLoginStatus(data) {
+    this.setButtonLoading(false);
     switch (data.status) {
       case "INCOMPLETE_SIGNUP":
         if (data.secret) {
