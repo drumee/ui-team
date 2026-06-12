@@ -158,6 +158,7 @@
     "deploy": "drumee-ui-deploy",
     "add-widget": "drumee-make-widget",
     "md:style": "cd src/drumee && sass -I ./skin --no-source-map --update builtins/editor/markdow/skin/viewer.scss builtins/editor/markdow/template/style.css.txt",
-    "setup": "node node_modules/@drumee/ui-dev-tools/env/write-env.js --type=app --output devel --base-dir=$(pwd)"
+    "setup": "node node_modules/@drumee/ui-dev-tools/env/write-env.js --type=app --output devel --base-dir=$(pwd)",
+    "postinstall": "patch-package"
   }
 }

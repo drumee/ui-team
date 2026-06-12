@@ -42,6 +42,24 @@ $drumee-link-purple: #b1adff;
     height: 100%;
   }
 
+  // Reconnect OTP embeds the dtk_otp widget (data-fit="parent"). The widget's
+  // shared skin gives __main a 180px top offset meant for the standalone
+  // full-page OTP; inside the popup that reads as a large empty margin on top.
+  // Drop the offset and center the widget within the popup.
+  &__items.reconnect {
+    .dtk-otp__ui {
+      height: 100%;
+      padding: 0;
+      justify-content: center;
+      align-items: center;
+      align-content: center;
+    }
+
+    .dtk-otp__main {
+      top: 0;
+    }
+  }
+
   &__container {
     background-color: $drumee-bg;
     padding: 48px;
@@ -49,8 +67,8 @@ $drumee-link-purple: #b1adff;
     border-radius: 12px;
 
     &[data-mode="reconnect"] {
-      padding: 48px;
-      max-width: 520px;
+      padding: 32px;
+      max-width: 600px;
       margin: 0 auto;
     }
   }
@@ -88,7 +106,7 @@ $drumee-link-purple: #b1adff;
   &__items {
     align-items: stretch;
     margin: 0 auto;
-    max-width: 440px;
+    max-width: 500px;
     width: 100%;
     gap: 24px;
 
