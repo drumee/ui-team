@@ -164,6 +164,12 @@ class __welcome_signin extends __welcome_interact {
         this._otpResent++;
         return this.loginUser(this._vars);
 
+      case "reconnect-otp-verified":
+        // dtk_otp (reconnect popup) auto-submitted yp.authenticate and got a
+        // clean response; hand it to the shared login-status handler. Bad
+        // codes are caught inline by the widget and never reach here.
+        return this.checkLoginStatus(args.data);
+
       case "authenticate":
         return this.postService(SERVICE.yp.hello).then((user) => {
           if (user.signed_in) {
@@ -324,6 +330,11 @@ class __welcome_signin extends __welcome_interact {
    */
   prompt_otp(data) {
     this.data = data;
+    // Reconnect popup uses the dtk_otp 6-box widget (matches dtk-otp__main);
+    // normal sign-in keeps the single-input ./otp.js screen.
+    if (this.mget(RECONNECT)) {
+      return this._promptOtpReconnect(data);
+    }
     // Upopn reload while prompting otp
     if (!this.__content) {
       let opt = {
@@ -341,6 +352,25 @@ class __welcome_signin extends __welcome_interact {
       this.__noCodeOptions.el.dataset.mode = _a.open;
     };
     return _.delay(f, Visitor.timeout(5000));
+  }
+
+  /**
+   * Reconnect-only OTP entry using the dtk_otp 6-box widget. Self-registers
+   * dtk_otp on demand (its loadSeeds() isn't run by this bundle), then feeds
+   * the dtk_otp skeleton. The widget auto-submits to yp.authenticate; its
+   * success is routed through `reconnect-otp-verified` -> checkLoginStatus.
+   * @param {Object} data
+   */
+  async _promptOtpReconnect(data) {
+    if (!Kind.get("dtk_otp")) {
+      Kind.registerAddons({ dtk_otp: import("@drumee/ui-toolkit/widgets/otp") });
+    }
+    await Kind.waitFor("dtk_otp");
+    const skel = require("./skeleton/otp-reconnect")(this);
+    if (!this.__content) {
+      return this.feed(this._skeleton(this, { content: skel }));
+    }
+    this.__content.feed(skel);
   }
 
   /**

@@ -7,7 +7,9 @@
   position: absolute;
   box-shadow: 0 1px 11px 0 rgba(0, 0, 0, 0.13);
   min-width: 123px;
-  padding: 8px;
+  // Vertical padding only: the horizontal inset lives on each item so the
+  // separators and the hover band span the menu edge-to-edge (Drive-like).
+  padding: 8px 0;
   gap: 4px;
   font-family: var(--font-main);
   border: none;
@@ -20,9 +22,8 @@
     justify-items: center;
     white-space: nowrap;
     width: 100%;
-    padding: 4px;
+    padding: 4px 12px;
     gap: 4px;
-    border-radius: 4px;
 
     @include drumee.typo(
       $color: var(--normal-fg-10),
@@ -49,9 +50,15 @@
     }
 
     &.separator {
-      background-color: var(--normal-bg-100);
+      // Section divider. Must CONTRAST with the menu surface: --normal-bg-100
+      // equals --normal-bg in both themes (white/white, #0b0a21/#0b0a21), so
+      // the old line rendered invisible. --border-default reads in both.
+      background-color: var(--border-default);
       height: 1px;
+      flex-shrink: 0;
       padding: 0px;
+      cursor: default;
+      pointer-events: none;
     }
 
     &.trash {
@@ -79,7 +86,9 @@
       left: calc(100% - 8px);
       min-width: 220px;
       min-height: 84px;
-      padding: 8px;
+      // Same edge-to-edge treatment as the root menu: vertical padding only,
+      // submenu items carry their own horizontal inset (8px 16px below).
+      padding: 8px 0;
       gap: 4px;
       align-items: stretch;
       flex-direction: column;
