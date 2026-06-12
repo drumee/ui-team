@@ -434,6 +434,29 @@ $drumee-link-purple: #b1adff;
       background-color: $drumee-primary-hover;
       box-shadow: 0 0 13px 0 rgba(89, 80, 255, 0.5);
     }
+
+    // Loading: hide the label and show a centered spinner while the request
+    // is in flight (set via setButtonLoading()). Reuses the `loader` keyframes
+    // defined further down in this file.
+    &[data-loading="1"] {
+      pointer-events: none;
+      position: relative;
+      color: transparent;
+
+      &::after {
+        content: "";
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: 20px;
+        height: 20px;
+        margin: -10px 0 0 -10px;
+        border: 2px solid rgba(255, 255, 255, 0.4);
+        border-top-color: #ffffff;
+        border-radius: 50%;
+        animation: loader 0.7s linear infinite;
+      }
+    }
   }
 
   &__divider {
