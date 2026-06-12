@@ -96,6 +96,17 @@
         color: var(--normal-fg-20);
       }
     }
+    // The tabBar wraps its tab items in __tab-bar-tabs so the folder view-toggle
+    // can sit beside them (flex space-between). The inter-tab gap used to come
+    // from the wrapper (tabs were its direct children); now it must live here,
+    // or non-folder windows (team, sharebox, dmz) lose their tab spacing. Folder
+    // overrides gap (16px) + flex in its own skin.
+    &-tabs {
+      display: flex;
+      align-items: center;
+      gap: var(--spacer-4);
+      min-width: 0;
+    }
   }
 }
 

@@ -3,6 +3,9 @@ const { copyToClipboard } = require("@drumee/ui-essentials");
 const { TweenLite, gsap } = require("@drumee/ui-core/vendor");
 let lastClickTime = new Date().getTime();
 const push = require("./push");
+// Same channel the websocket dispatcher triggers on Wm — windows and the
+// sidebar workspace list subscribe to it (window/utils.js, workspace-list).
+const WS_EVENT = "ws:event";
 
 class __window_manager extends push {
   constructor(...args) {
@@ -1276,15 +1279,57 @@ class __window_manager extends push {
         })
           .ask()
           .then(() => {
-            const deleteHub = () =>
-              this.postService({
-                service: SERVICE.hub.delete_hub,
-                hub_id: media.mget(_a.hub_id),
-              }).then((data) => {
-                media.suppress();
-                resolve(data);
+            // Optimistic delete: fire the request in PARALLEL with the trash
+            // animation (it used to wait for it), and remove the tile + the
+            // sidebar entry when the animation ends instead of after the
+            // server round-trip — deleting a big workspace holds the response
+            // for seconds+ (DB drop) and the UI used to sit frozen for all of
+            // it. The later WS echo finds nothing left to remove (idempotent).
+            const hub_id = media.mget(_a.hub_id);
+            // Full node attrs, like the server's `...old_node` broadcast —
+            // windows' removeContent matches on `filepath`, so a bare
+            // {hub_id} echo would leave an open window of this hub alive.
+            const echoData = {
+              ...media.getAttr(),
+              hub_id,
+              home_id: hub_id,
+              nid: hub_id,
+              filetype: _a.hub,
+            };
+            const request = this.postService({
+              service: SERVICE.hub.delete_hub,
+              hub_id,
+            });
+            const animation = this.animateMediaToTrash(media).catch(() => { });
+            animation.then(() => {
+              media.suppress();
+              // Locally echo the event shape the websocket dispatcher emits —
+              // the sidebar workspace list and any open window of this hub
+              // already subscribe to it.
+              this.trigger(WS_EVENT, {
+                data: echoData,
+                options: { service: "hub.delete_hub" },
               });
-            this.animateMediaToTrash(media).then(deleteHub).catch(deleteHub);
+            });
+            request
+              .then((data) => {
+                // A failed request resolves UNDEFINED (doRequest swallows the
+                // throw via onServerComplain) — treat no-data as failure too,
+                // not only an explicit {error}.
+                if (!data || data.error) {
+                  return Promise.reject((data && data.error) || "no response");
+                }
+                resolve(data);
+              })
+              .catch(async (e) => {
+                // Rare (owner-only, validated upfront): restore the listing
+                // and say why instead of leaving a silently missing tile.
+                await animation;
+                this.warn("delete_hub failed — restoring listing", e);
+                Butler.say(LOCALE.DELETE_WORKSPACE_FAILED);
+                this.reload();
+                resolve({ error: e });
+              });
             p.clear();
           })
           .catch((e) => {
@@ -1299,27 +1344,66 @@ class __window_manager extends push {
    * @param {*} cmd
    */
   confirmLeaveHub(media) {
-    this.ensurePart("wrapper-modal").then(async (p) => {
-      await Kind.waitFor("window_confirm");
-      p.feed({
-        kind: "window_confirm",
-        maxsize: 2,
-        title: LOCALE.LEAVE,
-        message: LOCALE.MSG_LEAVE_HUB.format(media.mget(_a.filename)),
-        confirm: LOCALE.LEAVE,
-      })
-        .ask()
-        .then(() => {
-          this.animateMediaToTrash(media).then(() => {
-            this.postService({
+    // Returns a Promise that settles once the request settles (or the user
+    // cancels) — removeMediaSelection awaits this for multi-select.
+    return new Promise((resolve) => {
+      this.ensurePart("wrapper-modal").then(async (p) => {
+        await Kind.waitFor("window_confirm");
+        p.feed({
+          kind: "window_confirm",
+          maxsize: 2,
+          title: LOCALE.LEAVE,
+          message: LOCALE.MSG_LEAVE_HUB.format(media.mget(_a.filename)),
+          confirm: LOCALE.LEAVE,
+        })
+          .ask()
+          .then(() => {
+            // Same optimistic treatment as confirmRemoveHub. This path was
+            // even worse before: it never suppress()ed — the tile only
+            // vanished when the WS echo arrived.
+            const hub_id = media.mget(_a.hub_id);
+            const echoData = {
+              ...media.getAttr(),
+              hub_id,
+              home_id: hub_id,
+              nid: hub_id,
+              filetype: _a.hub,
+            };
+            const request = this.postService({
               service: SERVICE.desk.leave_hub,
-              nid: media.mget(_a.hub_id),
+              nid: hub_id,
               hub_id: Visitor.id,
             });
+            const animation = this.animateMediaToTrash(media).catch(() => { });
+            animation.then(() => {
+              media.suppress();
+              this.trigger(WS_EVENT, {
+                data: echoData,
+                options: { service: "desk.leave_hub" },
+              });
+            });
+            request
+              .then((data) => {
+                if (!data || data.error) {
+                  return Promise.reject((data && data.error) || "no response");
+                }
+                resolve(data);
+              })
+              .catch(async (e) => {
+                // Wait the animation out so the reload doesn't race the
+                // deferred local echo (restore-then-remove flicker).
+                await animation;
+                this.warn("leave_hub failed — restoring listing", e);
+                Butler.say(LOCALE.LEAVE_WORKSPACE_FAILED);
+                this.reload();
+                resolve({ error: e });
+              });
+            p.clear();
+          })
+          .catch(() => {
+            resolve({});
           });
-          p.clear();
-        })
-        .catch(() => { });
+      });
     });
   }
 

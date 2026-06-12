@@ -308,6 +308,15 @@ class __window_manager extends mfsInteract {
       this.warn("drop read failed", err);
       roots = [];
     }
+    // Diagnostic: distinguishes build-loss (folders > roots) from capture/OS-loss
+    // (folders already short) when a dropped folder goes missing.
+    this.warn("bundle drop", {
+      destNid, hub_id,
+      folders: (transfer.folders || []).length,
+      files: (transfer.files || []).length,
+      roots: roots.length,
+      names: roots.map((r) => r.name),
+    });
     if (!roots.length) {
       Butler.say(LOCALE.UPLOAD_ERROR || "Nothing to upload");
       return;
