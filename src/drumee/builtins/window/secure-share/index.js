@@ -54,7 +54,12 @@ class __window_secure_share extends mfsInteract {
     const service = (options && options.service) || svc;
     if (service === 'share.track_event') {
       if (data && data.event === 'secure_share_access_requested') {
-        this._showApprovePopup(data);
+        // Scope to THIS panel's shared node: with multiple secure-share panels open,
+        // only the one for the requested node should pop the approve popup. node_id is
+        // carried on the event; fall through if it's absent (best-effort/legacy).
+        if (!data.node_id || data.node_id === this.mget(_a.nid)) {
+          this._showApprovePopup(data);
+        }
       }
       this._loadShares();
       return;
