@@ -39,6 +39,12 @@
       height: 24px;
       width: 24px;
     }
+
+    // Full-area workspace pane: flatten the popup chrome (corners + shadow).
+    &[data-headless="1"] {
+      border-radius: 0;
+      box-shadow: none;
+    }
   }
 
   // The header wrapper carries both `.window-folder__header` and the

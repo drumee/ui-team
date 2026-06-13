@@ -72,6 +72,7 @@ async function openOtpModal(widget, opts) {
     message,
     successService,
     cancelService,
+    resendService,
   } = opts;
 
   // dtk_otp lives in @drumee/ui-toolkit and its loadSeeds() isn't called
@@ -130,6 +131,10 @@ async function openOtpModal(widget, opts) {
           title: title || LOCALE.MULTI_FACTOR_AUTH,
           message: message || `${LOCALE.VALIDATION_SENT_TO} ${email}`,
           service: successService,
+          // Opt-in: when set, dtk_otp delegates resend to the host (which
+          // routes it to resendOtpGate) instead of self-POSTing — lets us show
+          // a loading state. Omitted → widget keeps its built-in self-resend.
+          resendService,
           uiHandler: [widget],
           dataset: { fit: "parent" },
         },
@@ -138,4 +143,59 @@ async function openOtpModal(widget, opts) {
   );
 }
 
-module.exports = { sendOtp, openOtpModal };
+/**
+ * Host-driven resend for the otp-gate modal. Opt in by passing
+ * `resendService` to openOtpModal and routing that service to this helper from
+ * the host's onUiEvent, e.g.:
+ *
+ *   case "otp-gate-resend": return resendOtpGate(this, cmd);
+ *
+ * `cmd` is the dtk_otp widget that fired the service. While otp.send is in
+ * flight a spinner shows on the resend link (see the `[data-resending]` rule
+ * in the otp-gate skin); on success the fresh secret is swapped into the
+ * widget's payload and the digit boxes are cleared for re-entry.
+ *
+ * @param {Backbone.View} host       the widget that opened the modal
+ * @param {Backbone.View} otpWidget  the dtk_otp instance (the onUiEvent `cmd`)
+ */
+async function resendOtpGate(host, otpWidget) {
+  if (!host || !otpWidget || host._otpGateResending) return;
+  host._otpGateResending = true;
+  if (otpWidget.el) otpWidget.el.dataset.resending = "1";
+  try {
+    const otp = await sendOtp(host);
+    if (!otp) {
+      if (typeof otpWidget.displayMessage === "function") {
+        otpWidget.displayMessage(LOCALE.UNKNOWN_ERROR, 1);
+      }
+      return;
+    }
+    // Only the secret changes; keep the rest of the payload (hub_id, mfa, …).
+    const payload = otpWidget.mget("payload") || {};
+    otpWidget.mset({ payload: { ...payload, secret: otp.secret } });
+    // Clear the boxes so the stale code isn't auto-resubmitted.
+    const p = await otpWidget.ensurePart("digits");
+    if (p && p.children) {
+      const boxes = p.children.toArray();
+      for (const c of boxes) {
+        if (typeof c.setValue === "function") c.setValue("");
+      }
+      if (boxes[0] && typeof boxes[0].focus === "function") boxes[0].focus();
+    }
+    if (typeof otpWidget.displayMessage === "function") {
+      otpWidget.displayMessage(
+        LOCALE.NEW_CODE_RESENT || `${LOCALE.VALIDATION_SENT_TO} ${otp.email}`
+      );
+    }
+  } catch (e) {
+    host.warn && host.warn("[otp-gate] resend failed", e);
+    if (typeof otpWidget.displayMessage === "function") {
+      otpWidget.displayMessage(LOCALE.UNKNOWN_ERROR, 1);
+    }
+  } finally {
+    host._otpGateResending = false;
+    if (otpWidget.el) otpWidget.el.dataset.resending = "0";
+  }
+}
+
+module.exports = { sendOtp, openOtpModal, resendOtpGate };

@@ -369,6 +369,7 @@ class desk_module extends LetcBox {
    *
    */
   loadHome(data = {}) {
+    this._dismissWmModal();
     this.closeMainPanels();
     this.ensurePart("action-cluster").then((p) => p && p.setState(1));
     Wm.reload();
@@ -857,7 +858,29 @@ class desk_module extends LetcBox {
     }
   }
 
+  /**
+   * Any wrapper-modal dialog (alert / confirm / add-folder form / invite /
+   * move…) lifts the WHOLE window-manager to z 30000 (the desk skin :has()
+   * rule) so the dialog can sit above the side panels. The sidebar does not
+   * geometrically overlap the wm, so the user can still navigate while such
+   * a dialog is open — the lifted wm (home grid + windows) then covers the
+   * panel that opens underneath at z 10001 ("home folder overlays other
+   * screen"). Dismiss the modal before showing another screen so the lift
+   * is released.
+   */
+  _dismissWmModal() {
+    try {
+      const w = typeof Wm !== "undefined" && Wm.__wrapperModal;
+      if (!w || !w.el) return;
+      if (w.el.dataset.state === "open" || (w.children && w.children.length)) {
+        w.clear();
+        w.el.dataset.state = "closed";
+      }
+    } catch (e) { /* non-fatal */ }
+  }
+
   _showPanel(p) {
+    this._dismissWmModal();
     if (!p || p.isEmpty()) return false;
     const child = p.children.last();
     if (child && child.el) {
@@ -927,12 +950,31 @@ class desk_module extends LetcBox {
   }
 
   /**
+   * Toggle the desktop sidebar between the collapsed mini rail (icon-only,
+   * expand-on-hover) and pinned-open. Flips data-collapsed on the rail and
+   * persists the choice (drumee.sidebar.pinned). The toggle glyph is static
+   * (a panel icon) — the rail width itself conveys the state. No-op on
+   * mobile (the rail isn't rendered there). See skeleton/sidebar.js +
+   * skin/sidebar.scss.
+   */
+  _toggleSidebarPin() {
+    return this.ensurePart("sidebar-rail").then((p) => {
+      if (!p || !p.el) return;
+      const pinnedNext = p.el.dataset.collapsed === "1"; // collapsed → pin open
+      p.el.dataset.collapsed = pinnedNext ? "0" : "1";
+      try {
+        localStorage.setItem("drumee.sidebar.pinned", pinnedNext ? "1" : "0");
+      } catch (e) {}
+    });
+  }
+
+  /**
    * Close the mobile drawer when a navigational sidebar service fires.
    * The set covers the nav-mode rows (Home / Notifications / Inbox /
    * Contacts / Trash / Apps), the actions-mode rows (Add new / Upload /
    * Invite), Settings, and workspace selection. Excluded on purpose:
-   * search-files (fires per keystroke), toggle-theme (kept open for
-   * repeated toggling), and the mobile-show / mobile-close drawer controls.
+   * search-files (fires per keystroke) and the mobile-show / mobile-close
+   * drawer controls.
    */
   _maybeDismissMobileDrawer(service) {
     if (!this._drawerDismissServices) {
@@ -959,6 +1001,10 @@ class desk_module extends LetcBox {
    *
    */
   togglePanel(kind, pn, openOnly) {
+    // Release the wm z-30000 lift before any sidebar screen change — see
+    // _dismissWmModal. Covers both the first-open (_loadKind) and the
+    // keep-alive re-show (_showPanel) paths.
+    this._dismissWmModal();
     if (!this._pendingKinds) this._pendingKinds = {};
     if (!this._closeTimers) this._closeTimers = {};
 
@@ -1195,7 +1241,12 @@ class desk_module extends LetcBox {
       case "mobile-close-drawer":
         return this._closeMobileDrawer();
 
+      case "toggle-sidebar-pin":
+        return this._toggleSidebarPin();
+
       case "toggle-activity":
+        // Activity predates togglePanel — release the wm modal lift here too.
+        this._dismissWmModal();
         return this.ensurePart("activity-panel").then((p) => {
           const state = p.mget(_a.state) ? 0 : 1;
           p.activityState = state;
@@ -1236,32 +1287,8 @@ class desk_module extends LetcBox {
         });
         return this.togglePanel("panel_trash", "trash-panel");
 
-      case "toggle-theme": {
-        const cur =
-          (Visitor.wallpaper() || {}).theme ||
-          (() => {
-            try {
-              return localStorage.getItem("drumee.theme");
-            } catch {
-              return null;
-            }
-          })() ||
-          "light";
-        const next = cur === "dark" ? "light" : "dark";
-        document.documentElement.dataset.theme = next;
-        try {
-          localStorage.setItem("drumee.theme", next);
-        } catch (e) {}
-        const wp = { ...(Visitor.wallpaper() || {}), theme: next };
-        if (typeof Visitor.setWallpaper === "function")
-          Visitor.setWallpaper(wp);
-        const iconName = next === "dark" ? "raw-light" : "raw-dark";
-        const useEl = document.querySelector(
-          '[data-partname="theme-toggle"] svg use',
-        );
-        if (useEl) useEl.setAttribute("xlink:href", `#--icon-${iconName}`);
-        return;
-      }
+      // Display mode (light/dark/system) moved to Settings → Appearance.
+      // See builtins/widget/settings/main + utils router/theme.js.
 
       case "open-contact-manager":
         return Wm.launch(

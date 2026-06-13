@@ -123,11 +123,21 @@ class __dmz_sharebox extends LetcBox {
 
         return this.waitElement(child.el, () => {
           this.wm = child;
+          // The drive-popup is a separate window-manager subtree that the outer
+          // .dmz-sharebox[data-area] does not contain, so propagate the area tag
+          // here too — it drives the accent for the inner topbar icon, file-grid
+          // folder art and active tab border.
+          child.el.dataset.area = this._areaTag || 'shared';
         })
 
       case 'folder-view':
         this._folderView = child;
         return;
+
+      case _a.footer:
+        return this.waitElement(child.el, () => {
+          child.feed(this.footerSkeleton(this));
+        });
 
       case 'wrapper-dialog':
         this.dialogWrapper = child;
@@ -201,6 +211,13 @@ class __dmz_sharebox extends LetcBox {
     let data = await this.postService(SERVICE.dmz.login, loginOpt);
 
     this.mset(data);
+    // Accent the share UI by workspace area (same rule as the server's
+    // workspace_restricted): anything but share/dmz is "restricted" and turns the
+    // header / badge / folder art red; shared stays pink. Missing area (e.g.
+    // file-only shares) defaults to the shared look.
+    const _restricted = data.area && !(data.area === 'share' || data.area === 'dmz');
+    this._areaTag = _restricted ? 'restricted' : 'shared';
+    this.el.dataset.area = this._areaTag;
     if (loginOpt.file_nid) this.mset({ file_nid: loginOpt.file_nid });
 
     // Own the tab title for the share page. Otherwise ui-core/letc/user.js respawn

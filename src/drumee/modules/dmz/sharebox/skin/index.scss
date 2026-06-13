@@ -27,6 +27,28 @@
   --sb-font-mono: "Geist Mono", ui-monospace, "SF Mono", Menlo, monospace;
 }
 
+/* Workspace accent tokens. Declared on the outer module root (.dmz-sharebox)
+   AND the inner drive-popup root (.dmz-sharebox__main.drive-popup) — the
+   drive-popup is a separate window-manager subtree the outer root does not
+   contain, so it carries its own token scope. The `.drive-popup` qualifier is
+   essential: the outer skeleton's .dmz-sharebox__main (which wraps the page
+   header) must NOT redeclare these, or it would shadow .dmz-sharebox's
+   restricted value and the header would fall back to pink. Defaults = shared
+   (pink); [data-area="restricted"] recolors to red (#eb6159 = --area-private). */
+.dmz-sharebox,
+.dmz-sharebox__main.drive-popup {
+  --sb-accent: #ffa8dc;
+  --sb-accent-soft: rgba(255, 168, 220, 0.15);
+  --sb-accent-deep: #b43481;
+}
+
+.dmz-sharebox[data-area="restricted"],
+.dmz-sharebox__main.drive-popup[data-area="restricted"] {
+  --sb-accent: #eb6159;
+  --sb-accent-soft: rgba(235, 97, 89, 0.15);
+  --sb-accent-deep: #a8392f;
+}
+
 /* Page-level chrome (outer viewport) */
 .dmz-sharebox {
   &__ui,
@@ -200,7 +222,7 @@
     height: 40px;
     align-items: center;
     justify-content: center;
-    background: var(--sb-pink-15);
+    background: var(--sb-accent-soft);
     border-radius: 8px;
     flex-shrink: 0;
 
@@ -214,7 +236,7 @@
       svg.folder-shape {
         width: 100%;
         height: 100%;
-        fill: var(--sb-pink);
+        fill: var(--sb-accent);
       }
     }
   }
@@ -236,13 +258,13 @@
   }
 
   &__subline-icon {
-    width: 8px;
-    height: 10.5px;
+   width: 16px;
+    height: 16px;
 
     svg {
       width: 100%;
       height: 100%;
-      fill: var(--sb-text);
+      fill: var(--sb-accent);
     }
   }
 
@@ -271,7 +293,7 @@
     font-family: var(--sb-font-body);
 
     &.current {
-      color: var(--sb-pink);
+      color: var(--sb-accent);
     }
   }
 
@@ -427,22 +449,54 @@
   svg {
     width: 16px;
     height: 16px;
-    fill: var(--sb-pink);
+    fill: var(--sb-accent);
   }
 }
 
 /* Pink "SHARED" badge (mirrors window-sharebox__badge) */
 .dmz-sharebox__badge {
-  background-color: var(--sb-pink);
+  background-color: var(--sb-accent);
   padding: 4px 8px;
   border-radius: 2px;
 
   .note-content {
-    @include drumee.typo($size: 10px, $line: 1, $weight: 600, $color: var(--sb-pink-deep));
+    @include drumee.typo($size: 10px, $line: 1, $weight: 600, $color: var(--sb-accent-deep));
     font-family: var(--sb-font-mono);
     text-transform: uppercase;
     letter-spacing: 0.4px;
   }
+}
+
+/* Media-grid folder art tracks the workspace accent (red for restricted,
+   pink for shared), overriding the grid's per-area folder fill. */
+.dmz-sharebox[data-area] .media-grid__folder-art .folder-shape,
+.dmz-sharebox__main.drive-popup[data-area] .media-grid__folder-art .folder-shape {
+  fill: var(--sb-accent);
+}
+
+/* Inner drive-popup topbar folder icon. Higher specificity (0,5,1) than the
+   toolkit's `.window-sharebox .topbar-folder-icon svg.folder-shape` (0,3,1)
+   which otherwise forces var(--area-share) pink. */
+.dmz-sharebox__main.drive-popup[data-area] .topbar-folder-icon svg.folder-shape {
+  fill: var(--sb-accent);
+}
+
+/* Restricted override for the drive-popup topbar folder icon and the workspace
+   badge. Scope under the OUTERMOST .dmz-sharebox[data-area] — that is the element
+   the module actually tags (verified against the live DOM: the drive-popup root
+   never receives data-area). It is an ancestor of both the badge and the inner
+   topbar icon. Bind the canonical --area-private token directly: it is never
+   redeclared in the sharebox scope, so the --sb-accent shadowing that pinkens
+   these (the drive-popup declares a pink --sb-accent default) cannot reach it.
+   The shared case still flows through --sb-accent / the base badge rule. */
+.dmz-sharebox[data-area="restricted"] .topbar-folder-icon svg.folder-shape {
+  fill: var(--area-private);
+}
+.dmz-sharebox[data-area="restricted"] .dmz-sharebox__badge {
+  background-color: var(--area-private);
+}
+.dmz-sharebox[data-area="restricted"] .dmz-sharebox__badge .note-content {
+  color: #a8392f;
 }
 
 /* Buttons row (mirrors common.scss .window-button) */
@@ -628,13 +682,14 @@
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
 }
 
-/* Split body (mirrors window-sharebox__split-body) */
+/* Split body. Box.G renders this as a grid (data-flow="g"), so layout is driven
+   by grid-template-columns, not flex. Shared workspaces add data-layout="split"
+   for a 2-column files | conversation view (Figma); restricted stays a single
+   files column. */
 .dmz-sharebox__split-body,
 .dmz__split-body {
   flex: 1;
   overflow: hidden;
-  display: flex;
-  flex-direction: row;
   min-height: 0;
   // Mirror the proven meeting-window content+chat row (window/meeting __main):
   // stretch the file + conversation columns to full height, or the row collapses
@@ -653,6 +708,20 @@
   &[data-view="files"]:not([data-chat="1"]) {
     .dmz__chat-panel {
       display: none;
+    }
+  }
+
+  /* Box.G keeps this a grid (.drumee-box[data-flow="g"], specificity 0,2,0).
+     Shared workspaces define a 2-column files | conversation track set (Figma);
+     restricted stays the default single column. The doubled class (0,3,0) beats
+     the framework grid rule so the columns win regardless of stylesheet order. */
+  &.dmz__split-body[data-layout="split"] {
+    grid-template-columns: minmax(0, 3fr) minmax(202px, 1fr);
+
+    /* Chat / Task tab: collapse to one column (the hidden panels drop out). */
+    &[data-view="chat"],
+    &[data-view="task"] {
+      grid-template-columns: minmax(0, 1fr);
     }
   }
 

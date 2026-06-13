@@ -153,7 +153,14 @@ class __window_webrtc extends windowCore {
     this.__presenter && (this.__presenter.el.dataset.mode = mode);
     this.__endpoints && (this.__endpoints.el.dataset.mode = mode);
     if (this.__participants && !this.__participants.isDestroyed()) {
-      setTimeout(() => { this.__participants.responsive(mode, ui) }, 1000);
+      // Debounce: a drag-resize calls responsive() many times/sec; without
+      // clearing, each one queued its own 1s relayout → a storm of heavy grid
+      // recalcs landing together. Collapse to a single trailing relayout.
+      clearTimeout(this._responsiveTimer);
+      this._responsiveTimer = setTimeout(() => {
+        if (this.__participants && !this.__participants.isDestroyed())
+          this.__participants.responsive(mode, ui);
+      }, 250);
     }
   }
 

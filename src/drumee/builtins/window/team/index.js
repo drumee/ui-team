@@ -153,6 +153,14 @@ class __window_team extends __hub {
         hub_id: this.mget(_a.hub_id),
         nid: room_id,
         room_id,
+        // Forward the team window's chat-channel identity so the meeting chat
+        // binds to the same conversation as the team window (sync in/out).
+        // chat_nid is the chat's scope nid (this window's own nid).
+        actual_hub_id: this.mget(_a.actual_hub_id),
+        actual_home_id: this.mget(_a.actual_home_id),
+        chat_nid: this.mget(_a.nid),
+        home_id: this.mget(_a.home_id),
+        ownpath: this.mget(_a.ownpath),
         filename: this.mget(_a.filename) || this.mget(_a.name),
         area: this.mget(_a.area),
         audio: 1,

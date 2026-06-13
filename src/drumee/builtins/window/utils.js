@@ -4,7 +4,6 @@ const WS_EVENT = "ws:event";
 
 const Rectangle = require("rectangle-node");
 const { TimelineMax, Expo, TweenMax } = require("@drumee/ui-core/vendor");
-const { initializePdfium } = require('../player/document/pdfium-wrapper');
 const EDITABLES = require('../player/document/editable');
 
 const ViewMode = new Map();
@@ -17,36 +16,35 @@ let editorPrewarmed = false;
  * heavy weight editors get preloaded whenever there is a file that may use them
  */
 function prewarmEditors() {
-  console.log("Prewarming editors...", editorPrewarmed)
   if (editorPrewarmed) return;
   editorPrewarmed = true;
   const schedule = (typeof requestIdleCallback === 'function')
     ? requestIdleCallback
     : (cb) => setTimeout(cb, 0);
   schedule(() => {
-    console.log("schedule editors...", editorPrewarmed)
-    /** Create a blank iframce to preload editor app, which is a heavy payload */
-    try {
-      if (Platform.get('doc_editor')) {
-        const { serviceUrl } = bootstrap();
-        let href = `${serviceUrl}euroffice.preload?name=document.docx`;
-        if (!document.getElementById('drumee-editor-prewarm')) {
-          const el = document.createElement('iframe');
-          el.id = 'drumee-editor-prewarm';
-          el.style.display = _a.none;
-          el.onload = () => el.remove();
-          el.src = href;
-          document.body.appendChild(el);
-        }
-      }
-    } catch (e) {
-      console.log("prewarmEditors:", e)
-      /* non-fatal */
-    }
-    // 2) Warm the iframe Kind so the first document open doesn't pay
+    // NOTE: the office-editor (euroffice) iframe prewarm was removed — its
+    // `svc/euroffice.preload` endpoint uses header-token auth, which an <iframe>
+    // src cannot carry, so it always returned 401 (onload never fired, nothing
+    // was actually preloaded). The browser logged that failed GET as a console
+    // error for zero benefit. The real editor open authenticates separately.
+    // 1) Warm the iframe Kind so the first document open doesn't pay
     //    the dynamic-import cost.
     try { Kind.waitFor('iframe'); } catch (e) { /* non-fatal */ }
-    initializePdfium();
+    // Lazy-require: this util is the base window module, loaded very early in
+    // bootstrap. A top-level `require` of the ESM pdfium-wrapper can resolve
+    // before that module has finished evaluating, capturing `undefined`
+    // ("initializePdfium is not a function"). Resolving here — when prewarm
+    // actually runs, well after module init — gets the real export. Non-fatal.
+    try {
+      const { initializePdfium } = require('../player/document/pdfium-wrapper');
+      // initializePdfium is async — its returned promise can reject (e.g. a WASM
+      // LinkError). Catch BOTH the sync throw and the async rejection so a prewarm
+      // failure stays non-fatal instead of surfacing as an Uncaught (in promise).
+      if (typeof initializePdfium === 'function') {
+        Promise.resolve(initializePdfium()).catch((err) =>
+          console.log("prewarm pdfium:", (err && err.message) || err));
+      }
+    } catch (e) { console.log("prewarm pdfium:", e); /* non-fatal */ }
   });
 }
 

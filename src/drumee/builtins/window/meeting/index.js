@@ -91,6 +91,20 @@ class __window_meeting extends __room {
     if (this.responsive) this.responsive(mode);
   }
 
+  // Drive small-size layout off the WINDOW width. The meeting is a resizable
+  // Wm window that can be small even on a large viewport, so @media (viewport)
+  // breakpoints don't fire when the user shrinks it — we flip data-narrow /
+  // data-compact on the root and let the skin adapt (panel → overlay, tighter
+  // controls), Google-Meet style.
+  responsive(m, ui) {
+    if (super.responsive) super.responsive(m, ui);
+    if (!this.el || !this.$el) return;
+    const w = this.$el.width() || this.el.offsetWidth || 0;
+    if (!w) return;
+    this.el.dataset.narrow = w < 640 ? "1" : "0";
+    this.el.dataset.compact = w < 520 ? "1" : "0";
+  }
+
   /**
    *
    * @returns
@@ -766,6 +780,14 @@ class __window_meeting extends __room {
     }
   }
 
+  // The one dock hook a late joiner hits: they miss the START_REMOTE_SCREEN
+  // broadcast (so prepareRemoteScreen never runs) and discover the share via
+  // onStreamReceived → loadRemotePresentation → here. Idempotent.
+  onRemoteScreenStart(size) {
+    if (super.onRemoteScreenStart) super.onRemoteScreenStart(size);
+    this._dockParticipants(true);
+  }
+
   onRemoteScreenStop() {
     if (super.onRemoteScreenStop) super.onRemoteScreenStop();
     this._dockParticipants(false);
@@ -962,7 +984,9 @@ class __window_meeting extends __room {
       this._feedbackModal.clear();
       this._feedbackModal = null;
     }
-    this.triggerHandlers({ service: "leave-meeting" });
+    // Close the window; onBeforeDestroy → super releases the room (leave +
+    // disconnect). No "leave-meeting" re-emit — that's a legacy embedded-tab
+    // signal that now only reaches the Wm unhandled (standalone window).
     this.goodbye();
   }
 

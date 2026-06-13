@@ -546,6 +546,9 @@ module.exports = {
   window_info: function () {
     return import("./builtins/window/info");
   },
+  window_media_details: function () {
+    return import("./builtins/window/media-details");
+  },
   window_move: function () {
     return import("./builtins/window/move/move-window");
   },

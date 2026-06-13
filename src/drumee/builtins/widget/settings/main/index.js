@@ -1,5 +1,5 @@
 const { uploadFile } = require("@drumee/ui-essentials");
-const { sendOtp, openOtpModal } = require("../../otp-gate");
+const { sendOtp, openOtpModal, resendOtpGate } = require("../../otp-gate");
 
 /**
  * Full-area Settings page rendered into the desk main center
@@ -244,19 +244,36 @@ class settings_main extends LetcBox {
     this._mfaCmd = cmd;
     this._mfaPrev = prev;
     this._mfaNext = next;
+    // Spinner on the toggle while we request the OTP and load/open the modal:
+    // sendOtp is a round-trip and dtk_otp is imported on demand, so there's a
+    // visible gap before the modal appears.
+    this._setMfaToggleLoading(1);
 
     const otp = await sendOtp(this);
     if (!otp) {
       return this._cancelMfa(LOCALE.UNKNOWN_ERROR);
     }
 
-    return openOtpModal(this, {
+    await openOtpModal(this, {
       ...otp,
       api: SERVICE.desk.set_mfa,
       payload: { mfa: next },
       successService: "mfa-changed",
       cancelService: "mfa-cancel",
+      resendService: "otp-gate-resend",
     });
+    // Modal is up; the spinner has served its purpose (and would sit behind
+    // the overlay anyway).
+    this._setMfaToggleLoading(0);
+  }
+
+  /**
+   * Toggle the loading spinner on the MFA switch (see the `data-loading`
+   * rule in the skin). No-op if the toggle reference isn't around.
+   */
+  _setMfaToggleLoading(on) {
+    const cmd = this._mfaCmd;
+    if (cmd && cmd.el) cmd.el.dataset.loading = on ? "1" : "0";
   }
 
   _cancelMfa(errorMessage) {
@@ -277,6 +294,7 @@ class settings_main extends LetcBox {
   }
 
   _resetMfaState() {
+    this._setMfaToggleLoading(0);
     this._mfaCmd = null;
     this._mfaPrev = null;
     this._mfaNext = null;
@@ -523,6 +541,22 @@ class settings_main extends LetcBox {
   }
 
   /**
+   * Apply a display-mode choice (light/dark/system) from the Appearance
+   * control. Delegates to the shared router/theme helper (persists +
+   * applies + wires the OS listener for "system"), then updates the
+   * segmented control's active highlight in place — no full re-render.
+   */
+  setThemeMode(mode) {
+    if (!mode) return;
+    require("router/theme").setThemePreference(mode);
+    ["light", "dark", "system"].forEach((m) => {
+      this.ensurePart(`theme-opt-${m}`).then((p) => {
+        if (p && p.el) p.el.dataset.active = m === mode ? "1" : "0";
+      });
+    });
+  }
+
+  /**
    * @param {*} cmd
    * @param {*} args
    */
@@ -531,6 +565,9 @@ class settings_main extends LetcBox {
     switch (service) {
       case "save-profile":
         return this.saveProfile();
+
+      case "set-theme":
+        return this.setThemeMode(cmd && cmd.mget && cmd.mget("theme_mode"));
 
       case "edit-avatar":
       case "upload-avatar":
@@ -554,6 +591,12 @@ class settings_main extends LetcBox {
 
       case "mfa-cancel":
         return this._cancelMfa();
+
+      case "otp-gate-resend":
+        // dtk_otp delegated the resend (see resendService in toggleTwoFactor);
+        // cmd is the dtk_otp widget. Shows a spinner on the resend link while
+        // otp.send is in flight.
+        return resendOtpGate(this, cmd);
 
       case "disconnect-oauth":
         return this.disconnectOauth(cmd && cmd.mget("provider"), cmd);

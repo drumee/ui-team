@@ -207,6 +207,11 @@ class __welcome_router extends LetcBox {
       case 'reset':
         return this.loadReset()
 
+      case 'verify':
+        // Email-verification landing (#/welcome/verify?token=...). The signup
+        // plugin's router renders the "Email confirmed" screen from the token.
+        return this.loadSignup()
+
       default:
         return this.loadSignin()
     }

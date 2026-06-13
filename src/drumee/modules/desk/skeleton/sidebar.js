@@ -86,19 +86,15 @@ const getInitials = (name = "") =>
     .join("")
     .toUpperCase();
 
-const getThemeIcon = () => {
-  const theme =
-    document.documentElement.dataset.theme ||
-    (Visitor.wallpaper() || {}).theme ||
-    (() => {
-      try {
-        return localStorage.getItem("drumee.theme");
-      } catch {
-        return null;
-      }
-    })() ||
-    "light";
-  return theme === "dark" ? "raw-light" : "raw-dark";
+// Has the user pinned the desktop sidebar open? Persisted across sessions.
+// Default (unset) = not pinned = collapsed-to-rail. Display mode used to
+// live in the footer here; it has moved to Settings → Appearance.
+const isSidebarPinned = () => {
+  try {
+    return localStorage.getItem("drumee.sidebar.pinned") === "1";
+  } catch {
+    return false;
+  }
 };
 
 const createFooter = (ui, username) => {
@@ -108,15 +104,6 @@ const createFooter = (ui, username) => {
     className: cls(fig, "footer"),
     kids: [
       createNavItem(ui, "sidebar_settings", LOCALE.SETTINGS, "toggle-settings"),
-      createNavItem(
-        ui,
-        getThemeIcon(),
-        LOCALE.DISPLAY_MODE,
-        "toggle-theme",
-        "",
-        undefined,
-        "theme-toggle",
-      ),
       createNavItem(
         ui,
         "sidebar_signout",
@@ -183,9 +170,15 @@ const createLogoRow = (ui) => {
       Skeletons.Box.Y({
         className: `${fig}__logo`,
         kids: [
+          // Full wordmark (shown expanded / on hover) + compact mark
+          // (shown in the collapsed mini rail). CSS toggles between them.
           Skeletons.Button.Svg({
             ico: "raw-logo-drumee-full",
             className: `${fig}__logo-icon`,
+          }),
+          Skeletons.Button.Svg({
+            ico: "raw-logo-drumee-icon",
+            className: `${fig}__logo-mark`,
           }),
           createText(
             fig,
@@ -193,6 +186,17 @@ const createLogoRow = (ui) => {
             Organization.name() || LOCALE.WORKSPACE_NAME,
           ),
         ],
+      }),
+      // Desktop collapse/pin toggle — a panel/sidebar glyph (same in both
+      // states; the rail itself shows whether it's open or mini). Hidden on
+      // mobile via CSS (the drawer uses the close button on the right).
+      Skeletons.Button.Svg({
+        ico: "square-split-horizontal",
+        className: `${fig}__logo-pin-btn`,
+        service: "toggle-sidebar-pin",
+        uiHandler: [ui],
+        sys_pn: "sidebar-pin-btn",
+        partHandler: ui,
       }),
       Skeletons.Button.Svg({
         ico: "cross",
@@ -322,9 +326,29 @@ module.exports = function (ui) {
   const isMobile = Visitor.isMobile();
 
   if (!isMobile) {
+    // The rail is the in-flow flex column that reserves horizontal space
+    // in the desk body. __main is absolutely positioned inside it (see
+    // sidebar.scss), so widening on hover OVERLAYS the workspace rather
+    // than pushing it — no content reflow. data-collapsed drives the
+    // mini (icon-only) vs full width; it starts collapsed unless the user
+    // has pinned it open. desk_module flips it on "toggle-sidebar-pin".
     return Skeletons.Box.Y({
-      className: cls(fig, "main"),
-      kids: [createNav(ui), createFooter(ui, Visitor.firstname())],
+      className: cls(fig, "rail"),
+      sys_pn: "sidebar-rail",
+      partHandler: ui,
+      // NOTE: use attrOpt, not `dataset` — the framework only honors a
+      // skeleton `dataset` when `attribute`/`attrOpt` is ALSO present
+      // (letc.js applies dataset onto the attribute model), and `_a.dataset`
+      // is undefined so the secondary path is a no-op. attrOpt sets the
+      // attribute directly at render time. desk_module flips it on the pin
+      // toggle (data-collapsed: "1" = mini rail, "0" = pinned open).
+      attrOpt: { "data-collapsed": isSidebarPinned() ? "0" : "1" },
+      kids: [
+        Skeletons.Box.Y({
+          className: cls(fig, "main"),
+          kids: [createNav(ui), createFooter(ui, Visitor.firstname())],
+        }),
+      ],
     });
   }
 
@@ -333,7 +357,7 @@ module.exports = function (ui) {
   // Search / Invite rendered as nav-item rows with the same logo
   // header). The footer (Settings / Theme / Sign out / Profile) lives
   // outside both slots so it stays visible in both modes — and so its
-  // sys_pn elements (sidebar-avatar, theme-toggle, etc.) stay unique.
+  // sys_pn elements (sidebar-avatar, etc.) stay unique.
   // data-state toggles closed (off-screen) vs open.
   return Skeletons.Box.Y({
     className: cls(fig, "main"),

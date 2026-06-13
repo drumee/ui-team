@@ -9,7 +9,7 @@ function tooltip(ui, content) {
   };
 }
 
-function action(ui, { service, ico, tip, state, icons }) {
+function action(ui, { service, ico, tip, state, icons, sys_pn }) {
   const a = {
     ico,
     className: `${cnWindowButton}__icon-button`,
@@ -19,6 +19,10 @@ function action(ui, { service, ico, tip, state, icons }) {
   };
   if (state != null) a.state = state;
   if (icons) a.icons = icons;
+  if (sys_pn) {
+    a.sys_pn = sys_pn;
+    a.partHandler = ui;
+  }
   return Skeletons.Button.Svg(a);
 }
 
@@ -68,15 +72,26 @@ module.exports = function (ui) {
     action(ui, { service: "print", ico: "print", tip: LOCALE.PRINT }),
   );
 
-  // Fullscreen → maximize-within-workspace toggle, mirroring the window-tab
-  // zoom (fills the workspace, never the header/sidebar). Icon flips per toggle.
+  // Maximize → fills the workspace (never the header/sidebar), mirroring the
+  // window-tab zoom. Icon flips per toggle.
   actions.push(
     action(ui, {
       service: "doc-zoom",
       ico: ui._zoomed ? "desktop_reduce" : "desktop_fullview",
-      tip: LOCALE.FULLSCREEN,
+      tip: LOCALE.MAXIMIZE,
       state: ui._zoomed ? 1 : 0,
       icons: ["desktop_fullview", "desktop_reduce"],
+    }),
+  );
+
+  // True full screen → browser Fullscreen API on the whole viewer (fills the
+  // monitor). Distinct from the maximize button above.
+  actions.push(
+    action(ui, {
+      service: "doc-fullscreen",
+      ico: ui._fullscreen ? "desktop_reduce" : "player-fullscreen",
+      tip: ui._fullscreen ? LOCALE.EXIT_FULLSCREEN : LOCALE.FULLSCREEN,
+      sys_pn: "doc-fullscreen-btn",
     }),
   );
 

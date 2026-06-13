@@ -384,6 +384,7 @@ export function chatPanel(ui) {
     view: "quickChat",
     hub_id: ui.mget(_a.hub_id),
     nid: ui.mget(_a.nid),
+    privilege: ui.mget(_a.privilege) || ui.mget(_a.permission),
     placeholder: LOCALE.TYPE_MESSAGE + "...",
     // Show the emoji picker icon (lib-messenger__icon emoji) in the panel.
     no_emoji: false,

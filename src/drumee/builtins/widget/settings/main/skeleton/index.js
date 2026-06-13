@@ -228,11 +228,58 @@ function toggle(ui, opt) {
   });
 }
 
+// Three-way display-mode selector (Light / Dark / System). Replaces the
+// old binary toggle that lived on the desk sidebar footer. Selecting an
+// option fires "set-theme" with theme_mode; settings_main applies it via
+// the shared router/theme helper and updates the highlight in place.
+function themeControl(ui) {
+  const pfx = `${ui.fig.family}__theme`;
+  const current = require("router/theme").getThemePreference();
+
+  const opt = (mode, ico, label) =>
+    Skeletons.Box.X({
+      className: `${pfx}-opt`,
+      sys_pn: `theme-opt-${mode}`,
+      service: "set-theme",
+      theme_mode: mode,
+      uiHandler: [ui],
+      dataset: { mode, active: current === mode ? 1 : 0 },
+      kids: [
+        Skeletons.Button.Svg({ ico, className: `${pfx}-opt-ico`, active: 0 }),
+        Skeletons.Note({
+          className: `${pfx}-opt-label`,
+          content: label,
+          active: 0,
+        }),
+      ],
+    });
+
+  return Skeletons.Box.X({
+    className: `${pfx}-control`,
+    kids: [
+      opt("light", "raw-light", LOCALE.LIGHT || "Light"),
+      opt("dark", "raw-dark", LOCALE.DARK || "Dark"),
+      opt("system", "apps-laptop", LOCALE.SYSTEM || "System"),
+    ],
+  });
+}
+
 function preferencesCard(ui) {
   const pfx = `${ui.fig.family}__preferences`;
   const settings = Visitor.settings() || {};
   const emailOn = settings.email_notifications ? 1 : 0;
   const mfaOn = parseInt(Visitor.profile().mfa) ? 1 : 0;
+
+  // Appearance (display mode) — moved here from the sidebar. Stacked layout
+  // so the segmented control sits below the title/description on its own row.
+  const appearanceRow = innerItem(ui, {
+    title: LOCALE.DISPLAY_MODE || "Display mode",
+    description:
+      LOCALE.DISPLAY_MODE_DESC ||
+      "Choose how Drumee looks. System follows your device setting.",
+    className: `${pfx}-appearance-row`,
+    trailing: themeControl(ui),
+  });
 
   const emailRow = innerItem(ui, {
     title: LOCALE.EMAIL_NOTIFICATIONS || "Email notifications",
@@ -276,7 +323,7 @@ function preferencesCard(ui) {
       cardHeading(ui, { title: LOCALE.PREFERENCES || "Preferences" }),
       Skeletons.Box.Y({
         className: `${pfx}-list`,
-        kids: [emailRow, mfaRow, appsRow],
+        kids: [appearanceRow, emailRow, mfaRow, appsRow],
       }),
     ],
   });

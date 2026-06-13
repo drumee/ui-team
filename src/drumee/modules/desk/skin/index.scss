@@ -140,7 +140,7 @@ html {
     width: 100%;
     height: 100%;
     position: relative;
-    overflow: hidden;
+    overflow: visible;
   }
 
   &__settings-main-slot {
@@ -284,8 +284,11 @@ html {
       top: 0;
       right: 0;
       bottom: 0;
-      // Start after the desktop sidebar column (231px, see sidebar.scss).
-      left: 231px;
+      // Start after the desktop sidebar column. The sidebar now defaults
+      // to the collapsed mini rail (64px, see sidebar.scss __rail); when
+      // expanded/pinned __main floats above this panel (z 10002 > 10001)
+      // so it still reads correctly.
+      left: 64px;
       width: auto;
       max-width: none;
       height: 100%;

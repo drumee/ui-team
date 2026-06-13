@@ -707,8 +707,13 @@ class __media_interact extends media_core {
       case _e.lock:
         return this.lock();
 
-      case _a.link:
       case _a.share:
+        // "Share" opens the invite-members popup — the per-file/folder
+        // shortcut into the invite flow (spec 2026-06-10). DMZ guests cannot
+        // invite, so they fall through to the legacy share-link copy below.
+        if (!Visitor.inDmz) return this.openInvitePopup();
+      /* falls through */
+      case _a.link:
         if (Visitor.inDmz && this.isHubOrFolder) {
           // In DMZ, sharing a folder/hub must copy the current workspace share
           // URL — not a result from get_external_room_attr, which may return a
@@ -798,7 +803,15 @@ class __media_interact extends media_core {
         setTimeout(() => once(launchFloating), 600);
         return;
       }
-
+      case "designation-link":
+        this.viewerLink().then((url) => {
+          setTimeout(async () => {
+            url = `${bootstrap().protocol}://${bootstrap().main_domain}${url}`
+            await copyToClipboard(url);
+            Wm.acknowledge();
+          }, 0);
+        });
+        break;
       case "share-qrcode":
         if (/^(dmz|share)$/i.test(this.mget(_a.area))) {
           this.viewerLink().then((url) => {
@@ -877,13 +890,16 @@ class __media_interact extends media_core {
         break;
 
       case _e.settings:
-        // "Get info" on a workspace: open it as a window_folder with the
-        // settings panel pre-selected, instead of the standalone popup.
-        if (this.mget(_a.filetype) === _a.hub) {
+        // "Get info": a workspace (hub) or folder opens as a window_folder
+        // with the settings panel pre-selected (members + roles); a regular
+        // file opens its own details window (spec 2026-06-10). Previously
+        // non-hub nodes emitted "hub-settings" → Wm.openSettings, which
+        // showed the parent HUB's settings popup — nothing about the file
+        // itself, hence "Get info looks dead" reports.
+        if (this.isHubOrFolder) {
           return this.openInfoWindow();
         }
-        this.emitServiceToHandler("hub-settings", args);
-        break;
+        return this.openDetailsWindow();
 
       case "manage-access":
         this.emitServiceToHandler(service, args);
@@ -925,14 +941,43 @@ class __media_interact extends media_core {
   openInfoWindow() {
     const item = Wm.getWindowPreset(this);
     item.kind = "window_folder";
-    item.wm_unique_id = `window_folder-${item.hub_id}`;
+    // A folder opens its own window (keyed by nid); a hub keeps the hub key.
+    item.wm_unique_id = `window_folder-${this.isFolder ? item.nid : item.hub_id}`;
     item.showSettings = 1;
     // singleton:1 only raises an already-open window_folder; buildContent
     // won't re-run, so open its settings panel directly in that case.
-    const existing = Wm.getItemsByKind("window_folder")[0];
-    if (existing && !existing.isDestroyed()) {
+    const existing = Wm.getItemsByKind("window_folder").find((w) => {
+      if (w.isDestroyed() || w.mget(_a.hub_id) != item.hub_id) return false;
+      return this.isFolder ? w.mget(_a.nid) == item.nid : true;
+    });
+    if (existing) {
       existing.openSettingsPanel();
     }
+    return Wm.launch(item, { explicit: 1, singleton: 1 });
+  }
+
+  /**
+   * "Share" — open the invite-members popup targeting this node's hub
+   * (the per-file/folder shortcut into the invite flow).
+   */
+  openInvitePopup() {
+    if (typeof Wm === "undefined" || !Wm.__wrapperModal) return;
+    const hub_id =
+      (typeof this.getHostId === "function" && this.getHostId()) ||
+      this.mget(_a.hub_id) ||
+      Visitor.id;
+    return Kind.waitFor("invite_popup").then(() => {
+      Wm.__wrapperModal.feed({ kind: "invite_popup", hub_id, uiHandler: [this] });
+    });
+  }
+
+  /**
+   * "Get info" on a regular file — open its details window (singleton per node).
+   */
+  openDetailsWindow() {
+    const item = Wm.getWindowPreset(this);
+    item.kind = "window_media_details";
+    item.wm_unique_id = `window_media_details-${item.nid}`;
     return Wm.launch(item, { explicit: 1, singleton: 1 });
   }
 

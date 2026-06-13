@@ -32,11 +32,13 @@ class __window_folder extends mfsInteract {
     );
 
     if (this.mget(_a.headless)) {
+      // Workspace pane fills the area exactly. No top offset — the topbar IS
+      // the header, so any upward shift clips it against `overflow: hidden`.
       return {
         left: 0,
-        top: -49,
+        top: 0,
         width: workspaceWidth,
-        height: workspaceHeight + 49,
+        height: workspaceHeight,
       };
     }
     // Cascade: shift each new popup 30px down-right per existing
@@ -804,6 +806,37 @@ class __window_folder extends mfsInteract {
       );
       box.feed(crumbs);
     });
+
+    // Mirror the ACTIVE workspace window's navigation into the visible desk
+    // topbar breadcrumb (desk_breadcrumb). refreshBreadcrumbsUI is the single
+    // chokepoint for every in-place navigation (workspace switch, sidebar
+    // folder open, and in-grid forward/backward), so driving it here keeps the
+    // topbar breadcrumb in sync for all of them — not just section toggles.
+    // Gate on headless + focused so standalone/background folder windows never
+    // retitle the topbar. desk_breadcrumb._updateContent only accepts
+    // broadcasts whose source IS Wm, so pass Wm explicitly; it resolves the
+    // full Home › Workspace › … path itself via get_path.
+    if (
+      window.Wm &&
+      this.mget(_a.headless) &&
+      this.mget(_a.state) == 1 &&
+      _.isFunction(this.updateBreadcrumb)
+    ) {
+      let curNid = this.mget(_a.nid);
+      if (this.mget(_a.filetype) === _a.hub && this.mget(_a.actual_home_id)) {
+        curNid = this.mget(_a.actual_home_id);
+      }
+      this.updateBreadcrumb(
+        {
+          nid: curNid,
+          hub_id: this.mget(_a.hub_id),
+          actual_home_id: this.mget(_a.actual_home_id),
+          filetype: this.mget(_a.filetype),
+          service: "change-workspace",
+        },
+        window.Wm,
+      );
+    }
   }
 
   toggleFilesLayout(cmd) {
@@ -1207,6 +1240,14 @@ class __window_folder extends mfsInteract {
           hub_id: this.mget(_a.hub_id),
           nid: room_id,
           room_id,
+          // Forward this folder's chat-channel identity so the meeting chat
+          // binds to the same conversation. chat_nid is the folder chat's
+          // scope nid (this window's nid), not the workspace root.
+          actual_hub_id: this.mget(_a.actual_hub_id),
+          actual_home_id: this.mget(_a.actual_home_id),
+          chat_nid: this.mget(_a.nid),
+          home_id: this.mget(_a.home_id),
+          ownpath: this.mget(_a.ownpath),
           filename: this.mget(_a.filename) || this.mget(_a.name),
           area: this.mget(_a.area),
           trigger: this.mget(_a.media) || this,
@@ -1343,6 +1384,10 @@ class __window_folder extends mfsInteract {
               uiHandler: [this],
             });
           }
+          // Already mounted: folder navigation happens on the Files tab, so
+          // re-apply the current folder's scope when the Task tab is reopened
+          // (otherwise the panel keeps the scope from wherever it was mounted).
+          this.scopeTasksToFolder();
           return;
         default:
           view.el.dataset.view = "files";
