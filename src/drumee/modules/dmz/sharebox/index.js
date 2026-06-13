@@ -546,9 +546,10 @@ class __dmz_sharebox extends LetcBox {
         return;
 
       case 'open-request-access':
-        // The banner only renders for signed-in non-members, but guard
-        // defensively so an anonymous viewer is still routed to sign-up first.
-        if (this.mget('is_guest')) return this.showSignupRequiredOverlay();
+        // Route anonymous (not-authenticated) viewers to sign-up first — Request
+        // Access is for signed-in non-members. Keyed on is_authenticated, not the
+        // unreliable is_guest (false for public shares; see _gateInteraction).
+        if (!this.mget('is_authenticated')) return this.showSignupRequiredOverlay();
         return this.showRequestAccessPopup();
 
       case 'dmz-request-download':
@@ -887,7 +888,11 @@ class __dmz_sharebox extends LetcBox {
   _gateInteraction(hasGrant) {
     const isOwner = !!this.mget('creator_id') && (this.mget('uid') === this.mget('creator_id'));
     if (isOwner) return false;
-    if (this.mget('is_guest')) { this.showSignupRequiredOverlay(); return true; }
+    // Anonymous = NOT authenticated. is_guest is unreliable here (the server returns
+    // it FALSE for public shares, since the guest session is bound to the creator),
+    // so an anonymous viewer of an edit/chat-granting public link would otherwise slip
+    // past the sign-up gate. is_authenticated is set true only for a real account.
+    if (!this.mget('is_authenticated')) { this.showSignupRequiredOverlay(); return true; }
     if (!hasGrant) { this.showRequestAccessPopup(); return true; }
     return false;
   }

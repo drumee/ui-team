@@ -195,14 +195,16 @@ function __skl_dmz_sharebox_desk_content(_ui_) {
   // Figma flow: the "limited access → Request Access" banner is for SIGNED-IN
   // non-members. An anonymous visitor instead meets a sign-up/login gate when
   // they attempt an action beyond their grant (chat/edit), so they get no banner.
-  //  • is_guest is true ONLY for the anonymous system guest (server: guest_id ===
-  //    user.id) → exclude them here.
+  //  • anonymous = NOT authenticated → exclude them here (they meet the sign-up gate
+  //    on action instead). Keyed on is_authenticated, NOT is_guest: the server returns
+  //    is_guest=false for public shares (guest session bound to the creator), so an
+  //    anonymous public viewer would otherwise wrongly get the "request access" banner.
   //  • exclude the share's own creator (viewer `uid` === `creator_id`; distinct
   //    server columns).
   //  • exclude real workspace MEMBERS (server `is_member`) — they already have
   //    standing access, so the guest "request access" banner doesn't apply.
   //  • only when the grant is below full access (privilege < write).
-  const isAnonymous = !!_ui_.mget('is_guest');
+  const isAnonymous = !_ui_.mget('is_authenticated');
   const isOwner     = !!_ui_.mget('creator_id') && (_ui_.mget('uid') === _ui_.mget('creator_id'));
   const isMember    = !!_ui_.mget('is_member');
   const showBanner  = !!_ui_.mget('is_secure') && !isAnonymous && !isMember && (privilege < _K.privilege.write) && !isOwner;

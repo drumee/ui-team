@@ -464,7 +464,16 @@ class __window_secure_share extends mfsInteract {
         // didn't press Enter before clicking "Get link").
         if (this._chipsInput) {
           const inputEl = this._chipsInput.el.querySelector('input');
-          if (inputEl && inputEl.value.trim()) this._addEmailChip();
+          if (inputEl && inputEl.value.trim()) {
+            this._addEmailChip();
+            // _addEmailChip clears the input ONLY when the value was a valid email/
+            // domain. Leftover text means it was invalid — block creation so we don't
+            // silently drop the intended restriction and publish an any-email link.
+            if (inputEl.value.trim()) {
+              Butler.say(LOCALE.INVALID_EMAIL);
+              return;
+            }
+          }
         }
         // The allowed-emails list is OPTIONAL — when empty, any email is accepted.
         if (this._emailChips.length) payload.allowed_emails = this._emailChips;
