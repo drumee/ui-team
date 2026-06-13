@@ -10,7 +10,8 @@
   display: flex;
   width: 100%;
   height: 100%;
-  max-height: calc(100vh - 120px);
+  // No max-height: it would cap the inline height jQuery UI resizable sets,
+  // blocking vertical resize. Viewport bounds are enforced in JS.
 
   &__ui {
     overflow: hidden;
