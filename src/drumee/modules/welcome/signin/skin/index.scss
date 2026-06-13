@@ -82,6 +82,7 @@ $drumee-link-purple: #b1adff;
       border: none;
       border-radius: 12px;
       font-family: $otp-font;
+      box-shadow: none;
     }
 
     // Center every stacked row inside the card.
@@ -172,6 +173,7 @@ $drumee-link-purple: #b1adff;
       font-size: 14px;
       line-height: 1.4;
       text-align: center;
+      justify-content: center;
 
       &[data-error="1"] {
         color: var(--red-500);
@@ -191,12 +193,39 @@ $drumee-link-purple: #b1adff;
         line-height: 1.4;
         text-align: center;
         color: #65656c;
+        justify-content: center;
 
         &.resend {
           color: #433cc5;
           font-weight: 600;
           cursor: pointer;
         }
+      }
+    }
+
+    // Resend in flight: the host sets data-resending="1" on the dtk_otp root
+    // while yp.login re-sends the code. Lock the link and swap its label for a
+    // spinner (reuses the `loader` keyframes defined further down).
+    [data-resending="1"] .dtk-otp__resend {
+      pointer-events: none;
+    }
+
+    [data-resending="1"] .dtk-otp__resend-text.resend {
+      position: relative;
+      color: transparent;
+
+      &::after {
+        content: "";
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: 14px;
+        height: 14px;
+        margin: -7px 0 0 -7px;
+        border: 2px solid rgba(67, 60, 197, 0.3);
+        border-top-color: #433cc5;
+        border-radius: 50%;
+        animation: loader 0.7s linear infinite;
       }
     }
 

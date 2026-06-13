@@ -131,6 +131,12 @@
     }
   }
 
+  .dtk-otp__tips{
+    .dtk-otp__tips-text{
+      justify-content: center;
+    }
+  }
+
   .dtk-otp__resend{
     width: 100%;
     justify-content: center;
@@ -152,6 +158,32 @@
     }
   }
 
+  // Resend in flight (host-driven; see resendOtpGate). The host sets
+  // data-resending="1" on the dtk_otp root while otp.send is pending — lock the
+  // link and swap its label for a spinner so the user can't double-send.
+  [data-resending="1"] .dtk-otp__resend {
+    pointer-events: none;
+  }
+
+  [data-resending="1"] .dtk-otp__resend-text.resend {
+    position: relative;
+    color: transparent;
+
+    &::after {
+      content: "";
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 14px;
+      height: 14px;
+      margin: -7px 0 0 -7px;
+      border: 2px solid rgba(67, 60, 197, 0.3);
+      border-top-color: #433cc5;
+      border-radius: 50%;
+      animation: otp-gate-spin 0.6s linear infinite;
+    }
+  }
+
   @media (max-width: 560px) {
     width: calc(100vw - 24px);
     padding: 24px;
@@ -170,4 +202,10 @@
 
 html[data-theme="dark"] .otp-gate-card {
   background: var(--normal-bg-elevated);
+}
+
+@keyframes otp-gate-spin {
+  to {
+    transform: rotate(360deg);
+  }
 }

@@ -162,6 +162,12 @@ class __welcome_signin extends __welcome_interact {
 
       case "resend-otp":
         this._otpResent++;
+        // Spinner on the resend link while yp.login re-sends the code. cmd is
+        // the dtk_otp widget (it fired resendService). Cleared in
+        // checkLoginStatus when the response lands — on success the reconnect
+        // OTP view is re-fed with a fresh widget anyway.
+        this._reconnectOtpCmd = cmd;
+        if (cmd && cmd.el) cmd.el.dataset.resending = "1";
         return this.loginUser(this._vars);
 
       case "reconnect-otp-verified":
@@ -483,6 +489,12 @@ class __welcome_signin extends __welcome_interact {
    */
   checkLoginStatus(data) {
     this.setButtonLoading(false);
+    // The round-trip is done — drop the reconnect-OTP resend spinner (if any).
+    // On the OTP path the view is re-fed right after, replacing this widget.
+    if (this._reconnectOtpCmd && this._reconnectOtpCmd.el) {
+      this._reconnectOtpCmd.el.dataset.resending = "0";
+    }
+    this._reconnectOtpCmd = null;
     switch (data.status) {
       case "INCOMPLETE_SIGNUP":
         if (data.secret) {
