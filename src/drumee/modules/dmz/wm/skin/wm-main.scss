@@ -9,8 +9,11 @@
 .dmz-wm {
   &__ui {
     background: transparent;
-    height: calc(100vh - 30px);
-    margin: auto;
+    // Fill the flex cell (.dmz__files-panel), NOT the viewport. The old
+    // `calc(100vh - 30px)` + `margin:auto` sized the file area off the viewport, so
+    // in the 3:1 split (files + conversation, Figma 3.1) the grid floated/detached
+    // from its column. height:100% keeps it inside its flex cell.
+    height: 100%;
     width: 100%;
   }
 
@@ -74,7 +77,9 @@
     display: flex;
     flex-flow: column;
     height: 100%;
-    justify-content: center;
+    // Top-align the grid (Figma 3.1) instead of vertically centering it — centering
+    // made a partly-filled grid float in the middle of the panel.
+    justify-content: flex-start;
     justify-items: center;
     width: 100%;
 
@@ -89,7 +94,9 @@
         z-index: 1000;
         height: 100%;
         width: 100%;
-        max-height: calc(100vh - 190px);
+        // Cap to the flex cell, not the viewport (was calc(100vh - 190px), which
+        // overflowed the column in the 3:1 split). Internal scroll stays via overflow.
+        max-height: 100%;
 
         &[data-type="evaluation"]::after {
           @include drumee.license-trial();

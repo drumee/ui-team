@@ -47,7 +47,7 @@ function __skl_dmz_sharebox_top_nav(_ui_) {
     kids: [
       Skeletons.Note({
         className: `${navFig}__login-label`,
-        content: LOCALE.SIGN_IN,
+        content: LOCALE.SECURE_SHARE_NAV_LOGIN,
       }),
     ],
   });

@@ -238,6 +238,65 @@ class __panel_activity extends LetcBox {
       case 'clear-all':
         return this._clearAll();
 
+      case 'open-access-request': {
+        // The request fields arrive in args (forwarded by the item); fall back to
+        // the item model so this still works if called with only a cmd. Do NOT
+        // hard-return on a missing item — that was the silent failure that left
+        // the approve popup from ever opening.
+        const item = this._findActivityItem(cmd);
+        const pick = (k) => (args[k] != null ? args[k] : (item && item.mget ? item.mget(k) : undefined));
+        const req = {
+          request_id:      pick('request_id'),
+          requested_level: pick('requested_level'),
+          requester_email: pick('requester_email'),
+          message:         pick('message'),
+          hub_id:          pick('hub_id'),
+          workspace_name:  pick('workspace_name'),
+        };
+        if (!req.request_id) return;
+        this._arRequest    = req;
+        // Default the grant to the requested level (Figma pre-selects it).
+        this._arGrantLevel = req.requested_level || null;
+        return this.ensurePart('ar-overlay').then((p) => {
+          if (!p) return;
+          p.feed(require('./skeleton/approve-request')(this, req));
+          this._liftArOverlay(p);
+        });
+      }
+
+      case 'ar-select-level': {
+        const lvl = cmd.mget('level');
+        this._arGrantLevel = lvl;
+        return this.ensurePart('ar-overlay').then((p) => {
+          if (!p || !p.el) return;
+          p.el.querySelectorAll('[data-level]').forEach((b) => {
+            b.dataset.selected = (b.dataset.level === lvl) ? 'yes' : '';
+          });
+        });
+      }
+
+      case 'ar-approve':
+        return this._respondAccessRequest('approve');
+
+      case 'ar-deny':
+        return this._respondAccessRequest('deny');
+
+      case 'ar-close':
+        return this._closeArOverlay();
+
+      case 'close-access-result':
+        // "Done" on the post-decision confirmation (Figma 64/65/66).
+        return this._closeArOverlay();
+
+      case 'change-permission':
+        // Reopen the approve-request popup for the same request.
+        this._arGrantLevel = (this._arRequest && this._arRequest.requested_level) || null;
+        return this.ensurePart('ar-overlay').then((p) => {
+          if (!p) return;
+          p.feed(require('./skeleton/approve-request')(this, this._arRequest || {}));
+          this._liftArOverlay(p);
+        });
+
       case 'join-meeting': {
         const item = this._findActivityItem(cmd);
         const hub_id = (args && args.hub_id) || (item && item.mget && item.mget('hub_id'));
@@ -301,9 +360,77 @@ class __panel_activity extends LetcBox {
 
   _findActivityItem(cmd) {
     if (!cmd) return null;
-    if (cmd.mget && cmd.mget('kind') === 'activity_item') return cmd;
+    // `kind` is consumed by the list factory and not always retained on the
+    // model, so also accept a forwarded item by `item_key` (always set in the
+    // item's initialize via mset). Falls back to walking parents for child
+    // elements (e.g. action buttons) that bubble up.
+    if (cmd.mget && (cmd.mget('kind') === 'activity_item' || cmd.mget('item_key'))) return cmd;
     if (cmd.getParentByKind) return cmd.getParentByKind('activity_item');
     return null;
+  }
+
+  /**
+   * Approve or deny the access request currently shown in the overlay, then
+   * refresh the list so the handled request drops off. Caller must be the share
+   * creator (enforced server-side).
+   */
+  async _respondAccessRequest(action) {
+    const req = this._arRequest || {};
+    if (!req.request_id) return this._closeArOverlay();
+    if (action === 'approve' && !this._arGrantLevel) return; // need a level
+    const grantLevel = this._arGrantLevel;
+    const payload = { hub_id: req.hub_id, request_id: req.request_id, action };
+    if (action === 'approve') payload.granted_level = grantLevel;
+    try {
+      await this.postService(
+        (SERVICE.secure_share && SERVICE.secure_share.respond_to_access_request)
+          || 'secure_share.respond_to_access_request',
+        payload
+      );
+    } catch (e) {
+      this.warn('[panel_activity] respond_to_access_request failed', e);
+      this._closeArOverlay();
+      this.refreshActivity(0);
+      return;
+    }
+    this.refreshActivity(0);
+    // Figma 64/65/66 — show the post-decision confirmation in the same overlay.
+    this._showArResult(action === 'deny' ? 'denied' : grantLevel);
+  }
+
+  // Render the post-decision confirmation (Figma 64/65/66) into the ar-overlay,
+  // reusing the secure-share window's access-result skeleton + SCSS (fig override
+  // so the same styles apply). Keeps `_arRequest` so "Change permission" works.
+  _showArResult(outcome) {
+    this.mset({ _pendingRequest: this._arRequest || {}, _resultOutcome: outcome });
+    this.ensurePart('ar-overlay').then((p) => {
+      if (!p) return;
+      p.feed(require('window/secure-share/skeleton/access-result')(this, { fig: 'window-secure-share-access-result' }));
+      this._liftArOverlay(p);
+    });
+  }
+
+  // Lift the approve/result overlay out of the slide-transformed panel rail to
+  // <body> so position:fixed centres it over the whole viewport (Figma 63/64/65/66).
+  // A transformed/will-change ancestor (the panel's __ui slide) is a containing block
+  // for fixed descendants, so the overlay would otherwise stay trapped in the 450px
+  // rail. LETC routes button clicks by uiHandler ref (not DOM ancestry), so moving
+  // the node keeps Confirm/Deny/level-select working. Idempotent.
+  _liftArOverlay(p) {
+    if (!p || !p.el) return;
+    if (p.el.parentNode !== document.body) document.body.appendChild(p.el);
+    p.el.dataset.mode = _a.open;
+  }
+
+  _closeArOverlay() {
+    this._arRequest = null;
+    this._arGrantLevel = null;
+    this.mset({ _resultOutcome: null });
+    this.ensurePart('ar-overlay').then((p) => {
+      if (!p || !p.el) return;
+      p.el.dataset.mode = _a.closed;
+      p.clear();
+    });
   }
 
   async _toggleFavorite(cmd, args = {}) {
@@ -608,9 +735,36 @@ class __panel_activity extends LetcBox {
     // count `cnt` accumulated inside each group. Otherwise "Tran sent 3
     // messages" + "Snake invited you" would render as 1 list row with
     // badge=4 — confusing. Matches Gmail/Slack convention.
-    const unread_count = live.length;
+    // Pending secure-share access requests addressed to this user (Figma 62).
+    // Fetched separately from the persisted secure_share_access_request table and
+    // merged in — keeps the shared activity feed proc untouched. Guarded so a
+    // failure never affects the rest of the notification list.
+    let accessReqs = [];
+    try {
+      const ar = await this.postService({
+        service: (SERVICE.secure_share && SERVICE.secure_share.list_requests) || 'secure_share.list_requests',
+        hub_id: Visitor.id,
+      });
+      const rows = _.isArray(ar) ? ar : (_.isArray(ar?.data) ? ar.data : []);
+      // Skip rows the sender trashed this session (item_key = access_request:<id>),
+      // so a snoozed pending request doesn't immediately re-appear on the next refresh.
+      const dismissed = this._dismissedKeys || new Set();
+      accessReqs = rows
+        .filter((r) => !dismissed.has(`access_request:${r.request_id}`))
+        .map((r) => ({
+          ...r,
+          category: 'access_request',
+          key_id: r.request_id,
+          last_id: r.ctime,
+        }));
+    } catch (e) {
+      this.warn('[panel_activity] secure_share.list_requests failed', e);
+    }
+    const merged = accessReqs.concat(live);
+
+    const unread_count = merged.length;
     RADIO_BROADCAST.trigger('activity-update', { unread_count });
-    this.updatePriorityListUnified(live);
+    this.updatePriorityListUnified(merged);
     if (!this.mget(_a.state)) return;
     if (this.__list && !this.__list.isDestroyed()) {
       this.__list.restart()
@@ -678,6 +832,30 @@ class __panel_activity extends LetcBox {
         case 'contact_refused':
           e.event = 'contact.invite_refuse';
           e.fullname = (it.surname || `${it.firstname || ''} ${it.lastname || ''}`).trim();
+          break;
+        case 'access_request':
+          // Secure-share access request addressed to this user (Figma 62).
+          // Clicking opens the approve popup (handled in onUiEvent). The click
+          // service is set on the row in the item skeleton (not on the model) so
+          // it doesn't shadow the per-button services (bookmark/trash).
+          e.event   = 'secure_share.access_requested';
+          // Figma 62: "…is requesting Download access to <folder>". Weave the
+          // requested level into the phrase; fall back to the plain wording.
+          {
+            const LV = {
+              can_download: LOCALE.SECURE_SHARE_CAN_DOWNLOAD,
+              can_chat    : LOCALE.SECURE_SHARE_CAN_CHAT,
+              can_edit    : LOCALE.SECURE_SHARE_CAN_EDIT,
+            };
+            const lvl = LV[it.requested_level];
+            e.action = lvl
+              ? LOCALE.SECURE_SHARE_REQUESTING_LEVEL_ACCESS.replace('{level}', lvl)
+              : LOCALE.SECURE_SHARE_REQUESTING_ACCESS;
+          }
+          // Prefer the shared node's own name (e.g. "vb") over the workspace root.
+          e.link_label = it.node_name || it.workspace_name;
+          e.sender     = it.requester_email;
+          e.fullname   = it.requester_email;
           break;
         // case 'media':
         //   e.service = 'open-folder';
@@ -755,6 +933,14 @@ class __panel_activity extends LetcBox {
         break;
       case "contact.invite_refuse":
         this.refreshActivity();
+        break;
+      case "share.track_event":
+        // A secure-share access request just arrived for this user — refresh so
+        // the notification appears in real time (Figma 62), without reopening.
+        if (data.some((d) => d && d.event === 'secure_share_access_requested')) {
+          this.refreshActivity();
+          this.shouldNofity();
+        }
         break;
       case "messages.read":
         this._buildactivities(data);
@@ -1081,6 +1267,15 @@ class __panel_activity extends LetcBox {
       this._dismissedLastIds.set(itemKey, Number(lastId));
     }
     this._decrementBadge(1);
+
+    if (itemType === 'access_request') {
+      // Pending secure-share request: no server-side dismiss endpoint (resolved via
+      // approve/deny). Just remove the row from view; its key is already tracked in
+      // _dismissedKeys above so refreshActivity skips it this session. It reappears
+      // only on a full reload, where the sender can still approve/deny it.
+      if (cmd && cmd.goodbye) cmd.goodbye();
+      return;
+    }
 
     if (itemType === 'mfs' && changelogId) {
       this.verbose('[activity] → POST activity.dismiss', { changelog_id: changelogId });

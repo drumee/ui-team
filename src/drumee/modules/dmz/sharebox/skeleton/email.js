@@ -2,33 +2,71 @@
 function __skl_dmz_sharebox_email(_ui_) {
 
   const emailFig = `${_ui_.fig.family}-password`
+  const sender   = _ui_.mget('sender') || ''
+  const title    = _ui_.mget(_a.title) || _ui_.mget(_a.filename) || _ui_.mget(_a.name) || ''
+  const area     = _ui_.mget(_a.area) || _a.share
 
-  const title = Skeletons.Box.X({
-    className : `${emailFig}__title`,
+  // ── Top row: folder icon + workspace name + sender ────────────────────────
+  const topRow = Skeletons.Box.X({
+    className : `${emailFig}__card-top-row`,
     kids      : [
-      Skeletons.Note({
-        className : `${emailFig}__note title`,
-        content   : LOCALE.SECURE_SHARE_ENTER_EMAIL
+      Skeletons.Box.X({
+        className : `${emailFig}__card-folder-icon`,
+        kids      : [
+          require('builtins/window/skeleton/topbar/folder-icon')(area)
+        ]
+      }),
+      Skeletons.Box.Y({
+        className : `${emailFig}__card-info`,
+        kids      : [
+          title ? Skeletons.Note({
+            className : `${emailFig}__card-workspace-name`,
+            content   : title
+          }) : null,
+          sender ? Skeletons.Note({
+            className : `${emailFig}__card-sender`,
+            content   : `${LOCALE.SECURE_SHARE_SHARED_BY_PREFIX} ${sender}`
+          }) : null
+        ]
       })
     ]
   })
 
+  // ── Header group: icon + title + description ──────────────────────────────
+  const headerGroup = Skeletons.Box.Y({
+    className : `${emailFig}__card-header-group`,
+    kids      : [
+      Skeletons.Box.X({
+        className : `${emailFig}__card-title-row`,
+        kids      : [
+          Skeletons.Button.Svg({
+            ico       : 'email',
+            className : `${emailFig}__card-title-icon`
+          }),
+          Skeletons.Note({
+            className : `${emailFig}__card-title-text`,
+            content   : LOCALE.SECURE_SHARE_ENTER_EMAIL
+          })
+        ]
+      }),
+      Skeletons.Note({
+        className : `${emailFig}__card-description`,
+        content   : LOCALE.SECURE_SHARE_SENDER_REQUIRES_EMAIL
+      })
+    ]
+  })
+
+  // ── Input row ─────────────────────────────────────────────────────────────
   const emailEntry = Skeletons.Box.X({
     className : `${emailFig}__row password`,
-    sys_pn    : 'wrapper-email',
     kids      : [
-      Skeletons.Button.Svg({
-        ico       : 'email',
-        className : `${emailFig}__icon lock input-wrapper`,
-      }),
-
       Skeletons.EntryBox({
-        className   : `${emailFig}__entry password with-icon`,
-        placeholder : LOCALE.SECURE_SHARE_EMAIL_PLACEHOLDER,
-        sys_pn      : 'ref-email',
-        formItem    : _a.email,
-        type        : _a.email,
-        preselect   : 1,
+        className     : `${emailFig}__entry password`,
+        placeholder   : LOCALE.SECURE_SHARE_EMAIL_PLACEHOLDER,
+        sys_pn        : 'ref-email',
+        formItem      : _a.email,
+        type          : _a.email,
+        preselect     : 1,
         errorHandler  : [_ui_],
         validators    : [
           { reason: LOCALE.SECURE_SHARE_ENTER_EMAIL, comply: Validator.require },
@@ -39,6 +77,7 @@ function __skl_dmz_sharebox_email(_ui_) {
     ]
   })
 
+  // ── Button + message (preserve sys_pn for renderErrorMessage) ─────────────
   const button = Skeletons.Box.X({
     className : `${emailFig}__row buttons-wrapper buttons`,
     sys_pn    : 'button-wrapper',
@@ -55,7 +94,7 @@ function __skl_dmz_sharebox_email(_ui_) {
     kids      : [
       Skeletons.Note({
         className : `${emailFig}__button-confirm`,
-        content   : LOCALE.GO
+        content   : LOCALE.SECURE_SHARE_CONTINUE
       })
     ]
   })
@@ -68,24 +107,26 @@ function __skl_dmz_sharebox_email(_ui_) {
     }
   })
 
-  const a = Skeletons.Box.Y({
-    className : `${emailFig}__container`,
-    debug     : __filename,
+  // ── Body: header + input + button + message + footer ─────────────────────
+  const body = Skeletons.Box.Y({
+    className : `${emailFig}__card-body`,
     kids      : [
-      title,
-
-      Skeletons.Box.Y({
-        className : `${emailFig}__content`,
-        kids      : [
-          emailEntry,
-          button,
-          messageBox
-        ]
+      headerGroup,
+      emailEntry,
+      button,
+      messageBox,
+      Skeletons.Note({
+        className : `${emailFig}__card-footer`,
+        content   : LOCALE.SECURE_SHARE_YOUR_EMAIL_SHARED
       })
     ]
-  });
+  })
 
-  return a;
+  return Skeletons.Box.Y({
+    className : `${emailFig}__container`,
+    debug     : __filename,
+    kids      : [topRow, body]
+  })
 }
 
 export default __skl_dmz_sharebox_email;

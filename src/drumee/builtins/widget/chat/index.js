@@ -1518,6 +1518,18 @@ class __widget_chat extends LetcBox {
    * @returns
    */
   sendMessage(args = {}) {
+    // DMZ guest gate (Figma "user chat → sign in required", screen 57): an
+    // anonymous recipient of a shared link may READ the conversation but must
+    // sign up / log in to post. On a send attempt, open the sharebox's sign-up
+    // overlay instead of posting. `guest_chat`/`desk` are set only in the DMZ
+    // guest context (toolkit chatPanel); authenticated chat is unaffected.
+    if (this.mget("guest_chat")) {
+      const desk = this.mget("desk");
+      if (desk && _.isFunction(desk.showSignupRequiredOverlay)) {
+        desk.showSignupRequiredOverlay();
+      }
+      return;
+    }
     // Sending ends the typing session.
     this._stopTyping();
     let message = "";

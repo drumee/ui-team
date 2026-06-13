@@ -769,7 +769,39 @@ class __media_interact extends media_core {
         const item = Wm.getWindowPreset(this);
         item.kind = 'window_secure_share';
         item.wm_unique_id = `window_secure_share-${item.nid}`;
-        return Wm.launch(item, { explicit: 1, singleton: 1 });
+        const launchFloating = () => Wm.launch(item, { explicit: 1, singleton: 1 });
+        // Figma: render the panel as a right drawer INSIDE the host workspace
+        // window (the same dialog-wrapper mechanism as folder settings) so it
+        // reads as part of the folder, not a detached floating window. Walk up to
+        // the host window; if it isn't a drawer-capable workspace window, or the
+        // wrapper can't be resolved quickly, fall back to the standalone window —
+        // sharing must never break.
+        const DRAWER_HOSTS = ['window_folder', 'window_sharebox'];
+        let host = this.parent;
+        while (host && !DRAWER_HOSTS.includes(String(host.mget && host.mget(_a.kind)))) {
+          host = host.parent;
+        }
+        if (!host || !host.ensurePart) return launchFloating();
+        let done = false;
+        const once = (fn) => { if (done) return; done = true; fn(); };
+        host.ensurePart('wrapper-dialog').then((wrapper) => once(() => {
+          if (!wrapper || !wrapper.feed) return launchFloating();
+          host.isShowSettings = false;          // mirror the settings drawer toggle state
+          wrapper.clear();
+          wrapper.feed({
+            kind     : 'window_secure_share',
+            embedded : 1,
+            dataset  : { embedded: 'yes' },
+            nid      : item.nid,
+            hub_id   : item.hub_id   || this.mget(_a.hub_id),
+            filetype : item.filetype || this.mget(_a.filetype),
+            uiHandler: [host],
+          });
+        })).catch(() => once(launchFloating));
+        // Safety net: if the wrapper never resolves (window kind without that
+        // part), open the standalone panel instead of hanging silently.
+        setTimeout(() => once(launchFloating), 600);
+        return;
       }
       case "designation-link":
         this.viewerLink().then((url) => {

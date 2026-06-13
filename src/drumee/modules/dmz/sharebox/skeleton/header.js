@@ -11,9 +11,12 @@ function __skl_dmz_sharebox_header(ui) {
     ],
   });
 
+  // Figma 3.1 hero: "Shared Project: {name}" — the localized prefix precedes the
+  // shared item's name.
+  const sharedName = ui.mget(_a.title) || ui.mget(_a.filename) || ui.mget(_a.name) || "";
   const titleNote = Skeletons.Note({
     className: `${headerFig}__title-text`,
-    content: ui.mget(_a.title) || ui.mget(_a.filename) || ui.mget(_a.name),
+    content: `${LOCALE.SECURE_SHARE_SHARED_PROJECT} ${sharedName}`,
   });
 
   const expiryTime = ui.mget('is_secure') ? (ui.mget('expiry_time') || 0) : 0;

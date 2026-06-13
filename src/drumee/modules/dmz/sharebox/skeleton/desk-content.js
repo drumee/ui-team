@@ -80,6 +80,18 @@ function dmzTopbar(ui) {
             uiHandler: ui,
           })
         : null,
+      // Download (folder) — shown only when the share grants download (Figma 3.1
+      // header has a download icon). Routes to the existing _e.download → wm.download()
+      // path already wired in the sharebox; gated so a view-only recipient never sees it.
+      ui.mget('can_download')
+        ? Skeletons.Button.Svg({
+            className: `${cnWindowButton}__icon-button`,
+            ico: "desktop_download",
+            service: _e.download,
+            uiHandler: ui,
+            tooltips: LOCALE.DOWNLOAD,
+          })
+        : null,
       settingsBtn,
     ],
   });
@@ -149,24 +161,66 @@ function dmzSplitBody(ui) {
     ],
   });
 
-  // Shared workspaces (area share/dmz) get the conversation panel beside the
-  // files (Figma: files-left + chat-right split). Restricted workspaces stay
-  // files-only / view-only, consistent with the rest of the sharebox.
-  const area = ui.mget(_a.area);
-  const shared = area === _a.share || area === "dmz";
-  const kids = shared ? [filesPanel, chatPanel(ui)] : [filesPanel];
-
-  return Skeletons.Box.G({
+  // Chat panel (Figma "conversation"): produces `.dmz__chat-panel` (group `dmz`),
+  // which the SCSS reveals when the split body's data-view flips to "chat". Was
+  // missing entirely — the Chat tab only hid the files panel, so it showed blank
+  // (d11). Access to the Chat tab is gated upstream (anonymous → sign-up;
+  // signed-in without can_chat → Request Access), so rendering it here is safe.
+  // Figma 3.1: a chat-enabled share shows the conversation on the RIGHT (fixed
+  // ~320px) alongside the file grid in the default Files view; shares without
+  // the chat grant stay files-only. `data-chat="1"` opts the Files view into the
+  // side-by-side (the conversation panel is fixed-width so it can't collapse the
+  // file grid — see skin). The Chat tab still switches to a full-width view.
+  // Box.X (explicit flex row), NOT Box.G (grid): the DMZ files view shows files +
+  // conversation SIDE BY SIDE (Figma 3.1's 3:1). Box.G renders display:grid, which
+  // fights the stylesheet's flex layout and collapsed one panel — the bug behind the
+  // chat filling the whole row. The authenticated window-folder gets away with Box.G
+  // only because it shows one panel at a time (tabs).
+  return Skeletons.Box.X({
     className: `${ui.fig.family}__split-body ${ui.fig.group}__split-body`,
     sys_pn: "folder-view",
     partHandler: ui,
-    dataset: shared ? { view: "files", layout: "split" } : { view: "files" },
-    kids,
+    dataset: { view: "files", chat: ui.mget('can_chat') ? '1' : '' },
+    // Only MOUNT the conversation when the share grants chat. Rendering it
+    // unconditionally let the chat widget load/subscribe to the channel even on a
+    // view-only share — the "chat visible before permission" leak. The Chat tab is
+    // likewise hidden without the grant (tabBar opt.chat below).
+    kids: ui.mget('can_chat') ? [filesPanel, chatPanel(ui)] : [filesPanel],
   });
 }
 
 function __skl_dmz_sharebox_desk_content(_ui_) {
-  const topbar = dmzTopbar(_ui_);
+  const topbar    = dmzTopbar(_ui_);
+  const privilege = _ui_.mget(_a.privilege) || 0;
+  // Figma flow: the "limited access → Request Access" banner is for SIGNED-IN
+  // non-members. An anonymous visitor instead meets a sign-up/login gate when
+  // they attempt an action beyond their grant (chat/edit), so they get no banner.
+  //  • anonymous = NOT authenticated → exclude them here (they meet the sign-up gate
+  //    on action instead). Keyed on is_authenticated, NOT is_guest: the server returns
+  //    is_guest=false for public shares (guest session bound to the creator), so an
+  //    anonymous public viewer would otherwise wrongly get the "request access" banner.
+  //  • exclude the share's own creator (viewer `uid` === `creator_id`; distinct
+  //    server columns).
+  //  • exclude real workspace MEMBERS (server `is_member`) — they already have
+  //    standing access, so the guest "request access" banner doesn't apply.
+  //  • only when the grant is below full access (privilege < write).
+  const isAnonymous = !_ui_.mget('is_authenticated');
+  const isOwner     = !!_ui_.mget('creator_id') && (_ui_.mget('uid') === _ui_.mget('creator_id'));
+  const isMember    = !!_ui_.mget('is_member');
+  const showBanner  = !!_ui_.mget('is_secure') && !isAnonymous && !isMember && (privilege < _K.privilege.write) && !isOwner;
+
+  const limitedBanner = showBanner ? Skeletons.Box.X({
+    className : `${_ui_.fig.family}__limited-access-banner`,
+    kids      : [
+      Skeletons.Note({ className: `${_ui_.fig.family}__limited-access-text`, content: LOCALE.SECURE_SHARE_LIMITED_ACCESS }),
+      Skeletons.Note({
+        className : `${_ui_.fig.family}__limited-access-btn`,
+        content   : LOCALE.SECURE_SHARE_REQUEST_ACCESS,
+        service   : 'open-request-access',
+        uiHandler : [_ui_],
+      }),
+    ]
+  }) : null;
 
   return Skeletons.Box.Y({
     className: `${_ui_.fig.family}__main ${_ui_.fig.group}__main drive-popup`,
@@ -174,7 +228,8 @@ function __skl_dmz_sharebox_desk_content(_ui_) {
     debug: __filename,
     kids: [
       windowHeader(_ui_, topbar),
-      tabBar(_ui_),
+      limitedBanner,
+      tabBar(_ui_, { chat: !!_ui_.mget('can_chat') }),
       dmzSplitBody(_ui_),
       dialog(_ui_),
       tooltips(_ui_),

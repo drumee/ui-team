@@ -42,13 +42,14 @@ module.exports = function (ui, size) {
     uiHandler: ui,
   });
 
-  let actionIcons = "";
-  if (ui.canDownload()) {
-    actionIcons = Skeletons.Box.X({
-      className: `${ui.fig.group}-topbar__icon-wrapper`,
-      kids: [downloadIcon],
-    });
-  }
+  let actionIcons = Skeletons.Box.X({
+    className: `${ui.fig.group}-topbar__icon-wrapper`,
+    kids: [],
+  });
+  // Inside a DMZ share, always show download and gate the click (sign-up /
+  // Request Access) in the player's onUiEvent. OUTSIDE DMZ, keep the original
+  // permission check so a view-only/no-download user doesn't get a usable button.
+  if (Visitor.inDmz || ui.canDownload()) actionIcons.kids.unshift(downloadIcon);
 
   if (ui.canUpload() && ui.media && ui.media.imgCapable()) {
     actionIcons.kids.push(rotateLeftIcon, rotateRightIcon, saveRotationIcon);

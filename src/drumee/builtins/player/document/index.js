@@ -986,6 +986,7 @@ class __player_document extends PlayerInteract {
         break;
 
       case 'download-pdf':
+        if (this._dmzGateDownload()) return;
         url = `${bootstrap().serviceUrl}${SERVICE.media.pdf}?nid=${nid}&hub_id=${hub_id}`;
         let f = filename.split('.')
         f.pop()
@@ -994,6 +995,7 @@ class __player_document extends PlayerInteract {
         break;
 
       case "print":
+        if (this._dmzGateDownload()) return;
         this.loadedPages = 0;
         this.initProgess()
         this.once(_e.eod, async (blob) => {
@@ -1017,6 +1019,7 @@ class __player_document extends PlayerInteract {
         break;
 
       case _e.download:
+        if (this._dmzGateDownload()) return;
         this.fetchFile({ url, download: filename })
         break;
 

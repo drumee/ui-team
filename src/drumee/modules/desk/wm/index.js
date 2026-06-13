@@ -712,6 +712,9 @@ class __window_manager extends push {
       { async: 1 },
     )
       .then((r) => {
+        if (r && r.status == 403) {
+          return this._onShareAccessDenied(opt);
+        }
         let m = new Backbone.Model(r);
         opt = _.merge(opt, r);
         Kind.waitFor(_a.media).then((k) => {
@@ -823,7 +826,7 @@ class __window_manager extends push {
     )
       .then((data) => {
         if (data.status == 403) {
-          return this.alert(LOCALE.WEAK_PRIVILEGE);
+          return this._onShareAccessDenied(opt);
         }
         Kind.waitFor(_a.media).then((k) => {
           data.role = _a.url;
@@ -835,6 +838,49 @@ class __window_manager extends push {
       .catch(() => {
         this.alert(LOCALE.WEAK_PRIVILEGE);
       });
+  }
+
+  /**
+   * Permission denied while a signed-in user opens a secure-shared node.
+   * When a secure-share token is in scope (the user reached the desk through a
+   * share link) show the "You don't have permission" → Request access modal
+   * (secure-share v2, Figma 1961:115796). With no token, fall back to the plain
+   * alert so ordinary member 403s behave exactly as before.
+   */
+  _onShareAccessDenied(opt = {}) {
+    const token =
+      Visitor.get(_a.token) || localStorage.getItem("token") || "";
+    // Only treat a 403 as a secure-share access request when it's for the SAME
+    // workspace the share token belongs to (stored at share login). Otherwise an
+    // unrelated desk 403 after a share visit would wrongly pop the Request Access
+    // modal — fall back to the normal privilege alert. When no share hub is known
+    // (older/public-share sessions) keep the prior best-effort behaviour.
+    const shareHub = localStorage.getItem("share_hub_id") || "";
+    if (!token || (shareHub && opt.hub_id && opt.hub_id !== shareHub)) {
+      return this.alert(LOCALE.WEAK_PRIVILEGE);
+    }
+    return this.openRequestAccessModal({
+      token,
+      hub_id: opt.hub_id,
+      nid: opt.nid,
+    });
+  }
+
+  /**
+   * Feed the request-access modal into the centred, blurred wrapper-modal slot.
+   */
+  openRequestAccessModal(opt = {}) {
+    return this.ensurePart("wrapper-modal").then((p) => {
+      p.clear();
+      p.el.dataset.state = "open";
+      p.el.dataset.overlay = "blur";
+      p.feed({
+        kind: "request_access_modal",
+        token: opt.token,
+        hub_id: opt.hub_id,
+        nid: opt.nid,
+      });
+    });
   }
 
   /**

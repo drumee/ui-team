@@ -7,6 +7,13 @@ module.exports = function (ui) {
     kids: [
       require('./topbar')(ui),
       require('./tabbar')(ui),
+      // Approve-access overlay (Figma 63) shown when the sender clicks an
+      // access-request notification. Auto-hidden while empty / closed.
+      Skeletons.Box.Z({
+        className: `${pfx}__ar-overlay`,
+        sys_pn: 'ar-overlay',
+        dataset: { mode: _a.closed },
+      }),
       // Single scroll container so priority items and the smart list
       // share the same scroll axis and horizontal padding. Previously
       // the priority Box.Y sat above an independently scrolling list,

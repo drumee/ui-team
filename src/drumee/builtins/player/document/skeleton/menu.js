@@ -31,6 +31,9 @@ function action(ui, { service, ico, tip, state, icons, sys_pn }) {
 module.exports = function (ui) {
   const actions = [];
 
+  // Download / download-as-PDF are always shown. In a DMZ share without the
+  // download grant, the click is gated (sign-up/login or Request Access) rather
+  // than hidden — the action handlers call _dmzGateDownload().
   actions.push(
     action(ui, {
       service: _a.download,
