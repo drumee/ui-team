@@ -749,12 +749,20 @@ class __migrate_gdrive_popup extends LetcBox {
     this._jobId = null;
     this._jobSnap = null;
     this._seenJobId = null;
-    // Re-check scope. If the Drive token is already valid (e.g. it was fixed
-    // out of band, or a stale failed job was just being replayed), _refreshScope
-    // lands on 'ready' so the user can Start again with NO redundant OAuth. If
-    // it's genuinely dead, it routes to the 'not-connected' screen whose
-    // "Connect Google Drive" button re-authorizes.
-    await this._refreshScope();
+    // We only reach here from a NEEDS_RECONNECT failure, which the worker
+    // raises ONLY on a fatal token error (invalid_grant / invalid_client /
+    // unauthorized_client) — i.e. the stored Drive token is provably dead
+    // (revoked, minted by a DIFFERENT OAuth client than the current Drive
+    // client, or clobbered by a later Google login). get_state/has_drive_scope
+    // only check that the row EXISTS (scope + refresh_token present), never
+    // that the token still WORKS, so re-checking scope would wrongly land on
+    // 'ready' and the next Start would re-fail — trapping the user in a loop.
+    // Force the OAuth flow to mint a fresh token from the current Drive client.
+    // Show 'not-connected' meanwhile so a blocked/cancelled popup leaves the
+    // user on the re-authorize screen, not a stale failed-job view.
+    this._state = 'not-connected';
+    this._render();
+    return this._connect();
   }
 
   // ───────── event routing ─────────
