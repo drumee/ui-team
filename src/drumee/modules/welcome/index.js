@@ -36,7 +36,47 @@ class __welcome_router extends LetcBox {
     if (args.hub_id) {
       sessionStorage.setItem('drumee_hubDeepLink', args.hub_id);
     }
+    // Secure-share recipients who click Login / Sign up arrive with
+    // ?return_to=<their share link>. After they authenticate, send THIS (fresh,
+    // real-session) tab back to that share link so the shared folder re-opens as
+    // their authenticated self — instead of being stranded on the desk while the
+    // original guest tab stays a guest. Purely additive + guarded: a once-listener
+    // is registered ONLY when return_to is present AND validates as a Drumee
+    // /dmz/share/ URL (open-redirect guard). No return_to → no listener → the normal
+    // signin/signup/desk flow is completely unchanged. Mirrors the existing invite
+    // `user:signed:in` pattern above.
+    const _ssReturn = args.return_to ? this._secureShareReturnTarget(args.return_to) : null;
+    if (_ssReturn) {
+      RADIO_BROADCAST.once('user:signed:in', () => { location.href = _ssReturn; });
+    }
     this.route();
+  }
+
+  /**
+   * Open-redirect guard for the secure-share return_to. Accepts ONLY an absolute
+   * http(s) URL that (a) shares this page's registrable domain (same host or a
+   * subdomain — so the share endpoint is allowed but external hosts are not) and
+   * (b) points at a /dmz/share/ link. Returns the safe URL string, or null to
+   * ignore it (→ normal flow, no redirect).
+   * @param {string} raw
+   * @returns {string|null}
+   */
+  _secureShareReturnTarget(raw) {
+    try {
+      // parseModuleArgs returns the raw, still-URL-encoded query value (it does not
+      // decode). go-login/open-signup encodeURIComponent the share URL so it survives
+      // the `[#/&?]` token split — so decode it back here before parsing.
+      let s = String(raw || '');
+      try { s = decodeURIComponent(s); } catch (e) { /* fall back to raw */ }
+      const url = new URL(s, location.href);
+      if (url.protocol !== 'https:' && url.protocol !== 'http:') return null;
+      const base = (h) => h.split('.').slice(-2).join('.');
+      if (base(url.hostname) !== base(location.hostname)) return null;
+      if (!/\/dmz\/share\//.test(url.href)) return null;
+      return url.href;
+    } catch (e) {
+      return null;
+    }
   }
 
   /**

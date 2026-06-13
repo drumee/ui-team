@@ -241,7 +241,12 @@ class __dmz_sharebox extends LetcBox {
 
     // An expired share must not load content — handleInfoStatus maps
     // dmz_expiry==='expired' to the TICKET_EXPIRED "link expired" message.
-    if (data.dmz_expiry === _a.expired) {
+    // SECURE shares are exempt: dmz_expiry here is the WORKSPACE-level dmz_settings
+    // value (copied for display), NOT the secure-share token's own expiry. A secure
+    // token's validity is already in data.status/validity (from secure_share_info,
+    // e.g. TICKET_OK for expiry_time=0). Without this guard a valid no-expiry secure
+    // link falsely shows "expired" whenever the workspace's general DMZ link is expired.
+    if (!data.is_secure && data.dmz_expiry === _a.expired) {
       return this.handleInfoStatus(data);
     }
 
@@ -468,7 +473,14 @@ class __dmz_sharebox extends LetcBox {
         // sessionStorage doesn't cross windows, so carry the workspace as
         // ?hub_id= (the welcome module stashes it into drumee_hubDeepLink).
         const _hubId = this.mget(_a.hub_id) || Visitor.parseLocation().keysel || '';
-        const _suffix = _hubId ? `?hub_id=${encodeURIComponent(_hubId)}` : '';
+        const _params = [];
+        if (_hubId) _params.push(`hub_id=${encodeURIComponent(_hubId)}`);
+        // Return the recipient to THIS share link after signin, so they re-open the
+        // shared folder as their authenticated self (not stranded on the desk while
+        // this tab stays a guest). Welcome validates it's a Drumee /dmz/share/ URL
+        // before redirecting (open-redirect guard) — see _secureShareReturnTarget.
+        _params.push(`return_to=${encodeURIComponent(location.href)}`);
+        const _suffix = `?${_params.join('&')}`;
         window.open(`${location.protocol}//${main_domain}/${_K.module.signin}${_suffix}`, '_blank');
         return;
       }
@@ -502,7 +514,11 @@ class __dmz_sharebox extends LetcBox {
         // Secure-share URLs carry a token, not a hub_id, so the real hub_id is the
         // one the login response stored on the model; keysel is only a fallback.
         const _hubId = this.mget(_a.hub_id) || Visitor.parseLocation().keysel || '';
-        const _suffix = _hubId ? `?hub_id=${encodeURIComponent(_hubId)}` : '';
+        const _params = [];
+        if (_hubId) _params.push(`hub_id=${encodeURIComponent(_hubId)}`);
+        // Same return-to-share behaviour as go-login (welcome validates the URL).
+        _params.push(`return_to=${encodeURIComponent(location.href)}`);
+        const _suffix = `?${_params.join('&')}`;
         window.open(`${location.protocol}//${main_domain}/${_K.module.signup}${_suffix}`, '_blank');
         return;
       }
@@ -810,7 +826,10 @@ class __dmz_sharebox extends LetcBox {
   handleInfoStatus(data = {}) {
     let opt = {};
     let status = data.validity || data.status;
-    if (data.dmz_expiry == _a.expired) {
+    // Secure shares are exempt from the workspace-level dmz_expiry override — their
+    // validity comes from the token (data.status/validity). Only normal dmz/public
+    // shares derive expiry from the workspace dmz_settings value. (See onDomRefresh.)
+    if (!data.is_secure && data.dmz_expiry == _a.expired) {
       status = 'TICKET_EXPIRED';
     }
     switch (status) {
