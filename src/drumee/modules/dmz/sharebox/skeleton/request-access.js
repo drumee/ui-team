@@ -1,47 +1,61 @@
+// ==================================================================== *
+//   Request-access popup (Figma 60). Shown to a signed-in non-member who
+//   lacks the capability they tried to use. Mirrors the sender-side
+//   approve popup (Figma 63 / panel-activity approve-request) so the two
+//   read as the same component: icon + label + checkbox ROWS.
+//   NOTE: the level is single-select (the backend stores one granted_level)
+//   even though Figma draws checkboxes — selecting a row clears the others
+//   via the `select-request-level` handler.
+// ==================================================================== *
 
 function __skl_dmz_sharebox_request_access(_ui_) {
   const reqFig = `${_ui_.fig.family}-request-access`;
 
   const LEVEL_OPTIONS = [
-    { level: 'can_download', label: LOCALE.SECURE_SHARE_CAN_DOWNLOAD },
-    { level: 'can_chat',     label: LOCALE.SECURE_SHARE_CAN_CHAT },
-    { level: 'can_edit',     label: LOCALE.SECURE_SHARE_CAN_EDIT },
+    { level: 'can_download', label: LOCALE.SECURE_SHARE_CAN_DOWNLOAD, ico: 'download' },
+    { level: 'can_chat',     label: LOCALE.SECURE_SHARE_CAN_CHAT,     ico: 'apps-chat' },
+    { level: 'can_edit',     label: LOCALE.SECURE_SHARE_CAN_EDIT,     ico: 'apps-pencil-simple' },
   ];
+
+  // Header: title + × close (Figma 60 has no Cancel button — just the close).
+  const header = Skeletons.Box.X({
+    className : `${reqFig}__header`,
+    kids      : [
+      Skeletons.Note({ className: `${reqFig}__title`, content: LOCALE.SECURE_SHARE_REQUEST_ACCESS }),
+      Skeletons.Note({ className: `${reqFig}__close`, content: '×', service: 'close-request-access', uiHandler: [_ui_] }),
+    ]
+  });
 
   const levelPicker = Skeletons.Box.Y({
     className : `${reqFig}__level-picker`,
     kids      : [
       Skeletons.Note({ className: `${reqFig}__level-desc`, content: LOCALE.SECURE_SHARE_CHOOSE_LEVEL }),
-      Skeletons.Box.X({
-        className : `${reqFig}__level-options`,
-        kids      : LEVEL_OPTIONS.map(({ level, label }) => Skeletons.Note({
-          className : `${reqFig}__level-option`,
-          content   : label,
+      Skeletons.Box.Y({
+        className : `${reqFig}__levels`,
+        kids      : LEVEL_OPTIONS.map(({ level, label, ico }) => Skeletons.Box.X({
+          className : `${reqFig}__level-row`,
           service   : 'select-request-level',
           // `level` must be a top-level prop (not only in dataset) — the handler
           // reads it via `cmd.mget('level')`, which reads model props, not the
-          // DOM dataset. Without it the selection was always undefined, so no
-          // level highlighted and submit silently aborted (`!_selectedRequestLevel`).
+          // DOM dataset. The handler also toggles `data-selected` on every row
+          // sharing `[data-level]`, giving single-select (radio) behavior.
           level,
           dataset   : { level, selected: '' },
           uiHandler : [_ui_],
+          kidsOpt   : { active: 0 },
+          kids      : [
+            Skeletons.Box.X({
+              className : `${reqFig}__level-main`,
+              kids      : [
+                Skeletons.Image.Svg({ className: `${reqFig}__level-icon`, ico }),
+                Skeletons.Note({ className: `${reqFig}__level-label`, content: label }),
+              ]
+            }),
+            Skeletons.Box.X({ className: `${reqFig}__level-check` }),
+          ]
         }))
       })
     ]
-  });
-
-  const emailField = Skeletons.EntryBox({
-    className   : `${reqFig}__email`,
-    sys_pn      : 'ref-request-email',
-    formItem    : 'request_email',
-    placeholder : LOCALE.SECURE_SHARE_ENTER_EMAIL,
-    // This popup is only reached by signed-in users, so pre-fill their account
-    // email (or the gate email). Kept visible/editable so it's never blank-submit.
-    value       : _ui_.mget('recipient_email') || Visitor.get('email') || '',
-    require     : 'email',
-    showError   : false,
-    partHandler : _ui_,
-    uiHandler   : [_ui_],
   });
 
   const messageField = Skeletons.Textarea({
@@ -54,7 +68,24 @@ function __skl_dmz_sharebox_request_access(_ui_) {
     uiHandler   : [_ui_],
   });
 
-  // Inline error line (e.g. missing email / level). Hidden until populated —
+  // Email field: Figma 60 shows none (the requester is signed-in, so their
+  // account email is known). Render it only as a fallback when no email is
+  // available, so submit never blank-aborts. submitAccessRequest() falls back
+  // to the account/gate email when this field is absent.
+  const knownEmail = (_ui_.mget('recipient_email') || Visitor.get('email') || '').trim();
+  const emailField = knownEmail ? null : Skeletons.EntryBox({
+    className   : `${reqFig}__email`,
+    sys_pn      : 'ref-request-email',
+    formItem    : 'request_email',
+    placeholder : LOCALE.SECURE_SHARE_ENTER_EMAIL,
+    value       : '',
+    require     : 'email',
+    showError   : false,
+    partHandler : _ui_,
+    uiHandler   : [_ui_],
+  });
+
+  // Inline error line (e.g. missing level / email). Hidden until populated —
   // the gate's renderErrorMessage targets gate-only parts, so this popup needs
   // its own feedback element.
   const errorLine = Skeletons.Note({
@@ -64,21 +95,15 @@ function __skl_dmz_sharebox_request_access(_ui_) {
     dataset   : { mode: _a.closed },
   });
 
-  const actions = Skeletons.Box.X({
-    className : `${reqFig}__actions`,
+  // Single full-width "Send request" (Figma 60) with a send glyph.
+  const submit = Skeletons.Box.X({
+    className : `${reqFig}__submit-btn`,
+    service   : 'submit-access-request',
+    uiHandler : [_ui_],
+    kidsOpt   : { active: 0 },
     kids      : [
-      Skeletons.Note({
-        className : `${reqFig}__cancel-btn`,
-        content   : LOCALE.CANCEL,
-        service   : 'close-request-access',
-        uiHandler : [_ui_],
-      }),
-      Skeletons.Note({
-        className : `${reqFig}__submit-btn`,
-        content   : LOCALE.SECURE_SHARE_SEND_REQUEST,
-        service   : 'submit-access-request',
-        uiHandler : [_ui_],
-      }),
+      Skeletons.Image.Svg({ className: `${reqFig}__submit-icon`, ico: 'send' }),
+      Skeletons.Note({ className: `${reqFig}__submit-label`, content: LOCALE.SECURE_SHARE_SEND_REQUEST }),
     ]
   });
 
@@ -86,13 +111,13 @@ function __skl_dmz_sharebox_request_access(_ui_) {
     className : `${reqFig}__panel`,
     debug     : __filename,
     kids      : [
-      Skeletons.Note({ className: `${reqFig}__title`, content: LOCALE.SECURE_SHARE_REQUEST_ACCESS }),
+      header,
       levelPicker,
-      emailField,
       messageField,
+      emailField,
       errorLine,
-      actions,
-    ]
+      submit,
+    ].filter(Boolean)
   });
 }
 

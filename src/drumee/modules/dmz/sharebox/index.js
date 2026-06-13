@@ -885,7 +885,10 @@ class __dmz_sharebox extends LetcBox {
       : null;
     const emailVal = emailEl
       ? emailEl.value.trim().toLowerCase()
-      : (this.mget('recipient_email') || '').toLowerCase().trim();
+      // No field rendered (signed-in user — Figma 60 hides it): fall back to the
+      // gate email, then the signed-in account email. Mirrors the skeleton's
+      // `knownEmail` check so the popup never blank-aborts when the field is hidden.
+      : ((this.mget('recipient_email') || Visitor.get('email') || '')).toLowerCase().trim();
 
     if (!emailVal || !Validator.email(emailVal)) {
       return this._showRequestError(LOCALE.SECURE_SHARE_ENTER_EMAIL);
