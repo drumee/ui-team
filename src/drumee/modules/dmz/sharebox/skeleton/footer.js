@@ -62,7 +62,10 @@ function __skl_dmz_sharebox_footer(_ui_) {
     className: `${footerFig}__icon-tile`,
     kids: [
       Skeletons.Button.Svg({
-        ico: "raw-share",
+        // Figma footer uses a white lightning bolt. Normalized icon (currentColor)
+        // so the footer's `fill:#fff` recolours it — a raw icon (e.g. the old
+        // raw-share) has a hardcoded fill that can't be recoloured → wrong colour.
+        ico: "lightning",
         className: `${footerFig}__icon`,
       }),
     ],

@@ -40,7 +40,10 @@
     width: 100%;
     height: 100%;
     min-height: 100vh;
-    background: var(--sb-grey-20);
+    // Figma 3.1 page background is "Grey/white" (white). The grey-20 card + grey-30
+    // header then stand out on it via the card shadow — the real fix for the "flat"
+    // look (the page was grey-20, same as the card, so the card was invisible).
+    background: var(--sb-white);
     font-family: var(--sb-font-body);
     color: var(--sb-text);
     position: relative;
@@ -307,7 +310,9 @@
     height: 40px;
     align-items: center;
     justify-content: center;
-    background: rgba(0, 0, 0, 0.2);
+    // Frosted translucent-white tile (Figma) — the old dark overlay made the white
+    // glyph read poorly on the purple bar.
+    background: rgba(255, 255, 255, 0.15);
     border-radius: 8px;
   }
 
@@ -360,25 +365,28 @@
  * Applies to the toolkit-rendered chrome inside .dmz-sharebox__main.drive-popup
  * ---------------------------------------------------------------------- */
 
-/* Inner card shell — WHITE on the grey page (Figma 3.1) with a hairline border so
-   the card edges + shadow read; before it was --sb-grey-20 == the page colour. */
+/* Inner card shell — Grey/20 panel lifted off the white page by its shadow (Figma
+   3.1 "Shared Link" frame: Grey/20 fill, radius 8, shadow, no border). */
 .dmz-sharebox__main.drive-popup {
   width: 100%;
+  // Figma 3.1 card is a fixed 1255px, centred (~332px side margins on the 1920 frame)
+  // — not full-width. The content row (Box.X, justify-content:center) centres it; it
+  // shrinks below 1255 on narrower viewports.
+  max-width: 1255px;
+  margin: 0 auto;
   height: 100%;
   min-height: 0;
-  background: var(--sb-white);
-  border: 1px solid var(--sb-border);
-  border-radius: 12px;
+  background: var(--sb-grey-20);
+  border-radius: 8px;
   box-shadow: var(--sb-card-shadow);
   overflow: hidden;
 }
 
-/* windowHeader output: .dmz-sharebox__header.dmz__header — white header bar with a
-   bottom divider, matching the Figma card header. */
+/* windowHeader output: .dmz-sharebox__header.dmz__header — Grey/30 header bar (Figma
+   "Window Header" frame), slightly darker than the Grey/20 card body. */
 .dmz__header {
   flex-shrink: 0;
-  background: var(--sb-white);
-  border-bottom: 1px solid var(--sb-border);
+  background: var(--sb-grey-30);
   height: 56px;
   padding: 0 22px;
   align-items: center;
