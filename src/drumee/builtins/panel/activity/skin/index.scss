@@ -540,14 +540,17 @@ html[data-theme="dark"] {
 
 }
 
-/* Access-request approve overlay (Figma 63) — top level, not theme-scoped */
+/* Access-request approve overlay (Figma 63). The widget lifts this node to <body>
+   (_liftArOverlay) so position:fixed centres it over the full viewport — the panel's
+   own slide transform would otherwise trap a fixed/absolute descendant in the rail. */
 .panel-activity__ar-overlay {
-  position: absolute;
+  position: fixed;
   inset: 0;
+  display: flex;
   align-items: center;
   justify-content: center;
   background: rgba(11, 10, 33, 0.45);
-  z-index: 5000;
+  z-index: 10050;
 
   &[data-mode="closed"] { display: none; }
 }

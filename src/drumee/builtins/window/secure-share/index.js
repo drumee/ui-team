@@ -49,7 +49,9 @@ class __window_secure_share extends mfsInteract {
   }
 
   onWsMessage(svc, data, options = {}) {
-    const { service } = options || svc;
+    // Service is the FIRST arg; options is usually {} (no options.service). The old
+    // `const {service}=options||svc` resolved to undefined and dropped every event.
+    const service = (options && options.service) || svc;
     if (service === 'share.track_event') {
       if (data && data.event === 'secure_share_access_requested') {
         this._showApprovePopup(data);
@@ -171,6 +173,11 @@ class __window_secure_share extends mfsInteract {
         return this._denyRequest();
       case 'close-approve-popup':
         return this._closeApprovePopup();
+      case 'close-access-result':
+        return this._closeApprovePopup();
+      case 'change-permission':
+        // Reopen the approve popup for the same request (Figma "Change permission").
+        return this._showApprovePopup(this.mget('_pendingRequest'));
       default:
         if (super.onUiEvent) return super.onUiEvent(cmd, args);
     }
@@ -586,6 +593,7 @@ class __window_secure_share extends mfsInteract {
     overlay.clear();
     this._grantLevel     = null;
     this._pendingRequest = null;
+    this.mset({ _resultOutcome: null });
   }
 
   _selectGrantLevel(cmd) {
@@ -603,18 +611,22 @@ class __window_secure_share extends mfsInteract {
     const req = this.mget('_pendingRequest') || {};
     const requestId = req.request_id || req.id;
     if (!requestId || !this._grantLevel) return;
+    const grantLevel = this._grantLevel;
     const hub_id = this.mget(_a.hub_id);
     try {
       await this.postService(SERVICE.secure_share.respond_to_access_request, {
         hub_id,
         request_id   : requestId,
         action       : 'approve',
-        granted_level: this._grantLevel,
+        granted_level: grantLevel,
       });
     } catch (e) {
       this.warn('[secure_share] approve request failed:', e && e.message);
+      return this._closeApprovePopup();
     }
-    this._closeApprovePopup();
+    this._loadAccessEvents();
+    // Figma 65/66: show the "Access granted" confirmation with the effective level.
+    this._showResultModal(grantLevel);
   }
 
   async _denyRequest() {
@@ -630,8 +642,21 @@ class __window_secure_share extends mfsInteract {
       });
     } catch (e) {
       this.warn('[secure_share] deny request failed:', e && e.message);
+      return this._closeApprovePopup();
     }
-    this._closeApprovePopup();
+    // Figma 64: show the "Access Denied" (view only) confirmation.
+    this._showResultModal('denied');
+  }
+
+  // Figma 64/65/66 — post-decision confirmation modal. Rendered into the same
+  // approve overlay (kept open) so it stacks over the dimmed backdrop. Keeps
+  // `_pendingRequest` so "Change permission" can reopen the approve popup.
+  _showResultModal(outcome) {
+    this.mset({ _resultOutcome: outcome });
+    const overlay = this.__approveOverlay;
+    if (!overlay) return this._closeApprovePopup();
+    overlay.feed(require('./skeleton/access-result')(this));
+    overlay.el.dataset.mode = _a.open;
   }
 
 }

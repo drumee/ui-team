@@ -47,13 +47,28 @@ class __dmz_sharebox extends LetcBox {
    *
    */
   onWsMessage(svc, data, options = {}) {
-    const { service } = options || svc;
+    // The dispatcher (router/websocket) passes the service string as the FIRST arg and
+    // options is normally {} (no options.service). The old `const {service}=options||svc`
+    // therefore resolved service=undefined and silently dropped EVERY event — which is
+    // why approval/revoke were never real-time (the recipient had to refresh).
+    const service = (options && options.service) || svc;
     if (service === 'share.track_event') {
       if (data && data.event === 'secure_share_revoked' && data.token === this.mget(_a.token)) {
         this.handleInfoStatus({ status: 'TICKET_REVOKED' });
       }
       if (data && data.event === 'secure_share_access_responded') {
-        this._handleAccessResponse(data);
+        // The event is hub-broadcast (reaches every viewer of the share), so only
+        // THIS recipient — the one whose request was answered — should reload. Match
+        // the email they requested with (stored locally / on the model).
+        const tok = this.mget(_a.token);
+        let myEmail = '';
+        try { myEmail = (localStorage.getItem('dmz_share_email_' + tok) || '').toLowerCase().trim(); } catch (e) { /* ignore */ }
+        myEmail = myEmail || (this.mget('_request_email') || this.mget('recipient_email') || '').toLowerCase().trim();
+        const evEmail = (data.requester_email || '').toLowerCase().trim();
+        // Act only on a positive email match (or a legacy event with no email).
+        if (!evEmail || (myEmail && evEmail === myEmail)) {
+          this._handleAccessResponse(data);
+        }
       }
       return;
     }
@@ -67,6 +82,9 @@ class __dmz_sharebox extends LetcBox {
   onPartReady(child, pn) {
     switch (pn) {
       case "top-nav":
+        // Viral landing chrome (logo / Login / Join Workspace) — shown to ALL
+        // recipients so the logged-in view matches the incognito one (user choice:
+        // identical to incognito).
         return this.waitElement(child.el, () => {
           child.feed(this.topNavSkeleton(this));
         });
@@ -77,6 +95,9 @@ class __dmz_sharebox extends LetcBox {
         })
 
       case _a.footer:
+        // Viral landing footer ("Sign Up Free") — shown to ALL recipients so the
+        // logged-in view matches the incognito one (user choice: identical). The gate
+        // footer is fed separately by promptGate.
         if (!this.mget('is_secure')) return;
         return this.waitElement(child.el, () => {
           child.feed(this.footerSkeleton(this));
@@ -169,10 +190,27 @@ class __dmz_sharebox extends LetcBox {
     const loginOpt = { token, hub_id };
     if (NID_RE.test(urlFileNid)) loginOpt.file_nid = urlFileNid;
 
+    // Replay the email this recipient requested access with (stored on request) so the
+    // server can apply an approved grant on refresh. Sent as `grant_email` — used ONLY
+    // for grant lookup, never the email gate — so it can't affect gated shares.
+    try {
+      const savedEmail = localStorage.getItem('dmz_share_email_' + token);
+      if (savedEmail) loginOpt.grant_email = savedEmail;
+    } catch (e) { /* ignore */ }
+
     let data = await this.postService(SERVICE.dmz.login, loginOpt);
 
     this.mset(data);
     if (loginOpt.file_nid) this.mset({ file_nid: loginOpt.file_nid });
+
+    // Own the tab title for the share page. Otherwise ui-core/letc/user.js respawn
+    // sets document.title to `<fullname>@<Org>` and for an anonymous guest fullname
+    // is empty → "undefined@Zert". preserveTitle blocks that path (host.js already
+    // no-ops); data.title is the shared node name (server: node-scoped title).
+    document.head.dataset.preserveTitle = '1';
+    const sharedTitle = data.title || data.filename || data.name || '';
+    document.title = sharedTitle ? `${sharedTitle} · Drumee` : 'Drumee';
+
     if (data.guest_name) {
       Visitor.set({
         firstname: data.guest_name
@@ -402,16 +440,19 @@ class __dmz_sharebox extends LetcBox {
 
       case 'go-login': {
         this.closeSignupRequiredOverlay();
-        // Remember the shared workspace so the desk opens it after sign-in.
-        // Signin is a same-origin hash navigation, so sessionStorage survives;
-        // the desk window-manager consumes `drumee_hubDeepLink` on load (the
-        // existing hub deep-link handoff). Never route back through /dmz/share —
-        // that re-runs the guest login and binds the session to the sender.
-        // Secure-share URLs carry a token, not a hub_id, so the real hub_id is the
-        // one the login response stored on the model; keysel is only a fallback.
+        const { main_domain } = bootstrap();
+        // CRITICAL: open LOGIN on the canonical main domain in a new window —
+        // exactly like open-signup. The old code did `location.href =
+        // _K.module.signin`, but that constant is a HASH route ("#/welcome/signin"),
+        // so it was a same-page hash navigation that kept the running app and its
+        // in-memory guest session — which is bound to the share's SENDER — so the
+        // visitor got auto-logged-in AS THE SENDER (even in incognito). A fresh
+        // main-domain page load has no share session → a clean login screen.
+        // sessionStorage doesn't cross windows, so carry the workspace as
+        // ?hub_id= (the welcome module stashes it into drumee_hubDeepLink).
         const _hubId = this.mget(_a.hub_id) || Visitor.parseLocation().keysel || '';
-        if (_hubId) sessionStorage.setItem('drumee_hubDeepLink', _hubId);
-        location.href = _K.module.signin;
+        const _suffix = _hubId ? `?hub_id=${encodeURIComponent(_hubId)}` : '';
+        window.open(`${location.protocol}//${main_domain}/${_K.module.signin}${_suffix}`, '_blank');
         return;
       }
 
@@ -454,10 +495,13 @@ class __dmz_sharebox extends LetcBox {
         return;
 
       case 'tab-chat':
-        // Chat is an interactive action (Figma "edit/chat → sign in required"):
-        // anonymous must sign in even if the share grants chat; a signed-in
-        // recipient needs the explicit can_chat grant, else Request Access.
-        if (this._gateInteraction(this.mget('can_chat'))) return;
+        // Anonymous recipients may OPEN the Chat tab to READ when the share
+        // grants chat (Figma: "view the chat"); posting is gated at send time —
+        // a send attempt opens the sign-up overlay (screen 57), wired in the
+        // chat widget's sendMessage. Without a chat grant, fall back to the
+        // standard gate (anonymous → sign-up; signed-in non-member → Request
+        // Access; owner → proceed).
+        if (!this.mget('can_chat') && this._gateInteraction(false)) return;
         if (this._folderView) this._folderView.el.dataset.view = _a.chat;
         return;
 
@@ -866,6 +910,10 @@ class __dmz_sharebox extends LetcBox {
     try {
       const data = await this.postService(SERVICE.dmz.request_access, payload);
       if (data && data.status === 'REQUEST_SENT') {
+        // Remember the email this share was requested with, so a later approval can
+        // be matched on refresh — an anonymous (incognito) recipient has no account
+        // email to key the grant on. Sent back as `grant_email` on the next login.
+        try { localStorage.setItem('dmz_share_email_' + token, emailVal); } catch (e) { /* ignore */ }
         this.mset({
           _request_email  : emailVal,
           _request_level  : this._selectedRequestLevel,
@@ -914,6 +962,10 @@ class __dmz_sharebox extends LetcBox {
         can_edit        : data.can_edit || 0,
       });
       this.loadDeskContent();
+      // Figma 67 — notify the guest their access request was approved. The folder
+      // name comes from the model (the guest is already viewing it).
+      const folder = this.mget(_a.title) || this.mget(_a.filename) || this.mget(_a.name) || '';
+      Butler.say(LOCALE.SECURE_SHARE_REQUEST_APPROVED_NOTICE.replace('{folder}', folder));
     } else {
       this.renderErrorMessage(LOCALE.SECURE_SHARE_ACCESS_DENIED);
     }

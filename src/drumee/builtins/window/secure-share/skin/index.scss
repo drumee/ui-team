@@ -7,6 +7,12 @@
 .window-secure-share {
   // ── Panel chrome — full-height right dock ─────────────────
   &__main.drive-popup {
+    // position:relative makes this panel the containing block for the
+    // __approve-overlay (Box.Z, position:absolute inset:0) so the approve modal
+    // covers + centers within the panel instead of anchoring to an outer ancestor
+    // and cramping at the bottom. No offsets → no layout change to the panel itself;
+    // every inner absolutely-positioned element already has a nearer relative parent.
+    position: relative;
     overflow: hidden;
     background: var(--normal-bg-90);
     border-left: 1px solid var(--border-default);
@@ -919,5 +925,117 @@
     @include drumee.typo($size: 14px, $line: 20px, $weight: 600, $color: var(--white, #ffffff));
 
     &:hover { filter: brightness(1.08); }
+  }
+}
+
+// ── Post-decision confirmation modal (Figma 64 / 65 / 66) ───────────────────
+.window-secure-share-access-result {
+  &__panel {
+    background: var(--white, #ffffff);
+    border-radius: 12px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
+    gap: 14px;
+    padding: 28px 24px 24px;
+    width: 380px;
+    max-width: calc(100vw - 32px);
+    align-items: center;
+  }
+
+  &__status-icon {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    align-items: center;
+    justify-content: center;
+
+    &.granted { background: rgba(46, 160, 67, 0.12); }
+    &.denied  { background: rgba(215, 78, 73, 0.12); }
+  }
+
+  &__status-glyph svg { width: 28px; height: 28px; }
+  &__status-icon.granted &__status-glyph svg { fill: #2ea043; }
+  &__status-icon.denied  &__status-glyph svg { fill: #d74e49; }
+
+  &__title {
+    text-align: center;
+    @include drumee.typo($size: 22px, $line: 28px, $weight: 700, $color: var(--primary-50, #433cc5));
+  }
+
+  &__subtitle {
+    text-align: center;
+    @include drumee.typo($size: 14px, $line: 20px, $color: var(--tertiary-text-color));
+  }
+
+  &__info {
+    align-self: stretch;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 14px;
+    border-radius: 8px;
+    background: var(--normal-bg-80);
+  }
+
+  &__info-avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    background-size: cover;
+    background-position: center;
+  }
+
+  &__info-text { gap: 2px; flex: 1; min-width: 0; }
+
+  &__info-email {
+    @include drumee.typo($size: 14px, $line: 18px, $weight: 600, $color: var(--default-text-color));
+  }
+
+  &__info-folder {
+    @include drumee.typo($size: 12px, $line: 16px, $color: var(--tertiary-text-color));
+  }
+
+  &__info-badge {
+    align-items: center;
+    gap: 5px;
+    margin-top: 2px;
+  }
+
+  &__info-badge-icon {
+    width: 14px;
+    height: 14px;
+    svg { width: 14px; height: 14px; fill: var(--tertiary-text-color); }
+  }
+
+  &__info-badge-label {
+    @include drumee.typo($size: 12px, $line: 16px, $weight: 500, $color: var(--tertiary-text-color));
+  }
+
+  &__desc {
+    text-align: center;
+    @include drumee.typo($size: 12px, $line: 17px, $color: var(--tertiary-text-color));
+  }
+
+  &__done {
+    align-self: stretch;
+    cursor: pointer;
+    text-align: center;
+    padding: 11px;
+    border-radius: 8px;
+    background: var(--primary-50, #433cc5);
+    @include drumee.typo($size: 14px, $line: 20px, $weight: 600, $color: var(--white, #ffffff));
+
+    &:hover { filter: brightness(1.08); }
+  }
+
+  &__change {
+    align-self: stretch;
+    cursor: pointer;
+    text-align: center;
+    padding: 11px;
+    border-radius: 8px;
+    background: var(--normal-bg-80);
+    @include drumee.typo($size: 14px, $line: 20px, $weight: 600, $color: var(--default-text-color));
+
+    &:hover { background: var(--normal-bg-70, #ececf2); }
   }
 }

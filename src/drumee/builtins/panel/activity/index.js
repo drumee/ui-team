@@ -239,23 +239,28 @@ class __panel_activity extends LetcBox {
         return this._clearAll();
 
       case 'open-access-request': {
+        // The request fields arrive in args (forwarded by the item); fall back to
+        // the item model so this still works if called with only a cmd. Do NOT
+        // hard-return on a missing item — that was the silent failure that left
+        // the approve popup from ever opening.
         const item = this._findActivityItem(cmd);
-        if (!item) return;
+        const pick = (k) => (args[k] != null ? args[k] : (item && item.mget ? item.mget(k) : undefined));
         const req = {
-          request_id:      item.mget('request_id'),
-          requested_level: item.mget('requested_level'),
-          requester_email: item.mget('requester_email'),
-          message:         item.mget('message'),
-          hub_id:          item.mget('hub_id'),
-          workspace_name:  item.mget('workspace_name'),
+          request_id:      pick('request_id'),
+          requested_level: pick('requested_level'),
+          requester_email: pick('requester_email'),
+          message:         pick('message'),
+          hub_id:          pick('hub_id'),
+          workspace_name:  pick('workspace_name'),
         };
+        if (!req.request_id) return;
         this._arRequest    = req;
         // Default the grant to the requested level (Figma pre-selects it).
         this._arGrantLevel = req.requested_level || null;
         return this.ensurePart('ar-overlay').then((p) => {
           if (!p) return;
           p.feed(require('./skeleton/approve-request')(this, req));
-          if (p.el) p.el.dataset.mode = _a.open;
+          this._liftArOverlay(p);
         });
       }
 
@@ -278,6 +283,19 @@ class __panel_activity extends LetcBox {
 
       case 'ar-close':
         return this._closeArOverlay();
+
+      case 'close-access-result':
+        // "Done" on the post-decision confirmation (Figma 64/65/66).
+        return this._closeArOverlay();
+
+      case 'change-permission':
+        // Reopen the approve-request popup for the same request.
+        this._arGrantLevel = (this._arRequest && this._arRequest.requested_level) || null;
+        return this.ensurePart('ar-overlay').then((p) => {
+          if (!p) return;
+          p.feed(require('./skeleton/approve-request')(this, this._arRequest || {}));
+          this._liftArOverlay(p);
+        });
 
       case 'join-meeting': {
         const item = this._findActivityItem(cmd);
@@ -342,7 +360,11 @@ class __panel_activity extends LetcBox {
 
   _findActivityItem(cmd) {
     if (!cmd) return null;
-    if (cmd.mget && cmd.mget('kind') === 'activity_item') return cmd;
+    // `kind` is consumed by the list factory and not always retained on the
+    // model, so also accept a forwarded item by `item_key` (always set in the
+    // item's initialize via mset). Falls back to walking parents for child
+    // elements (e.g. action buttons) that bubble up.
+    if (cmd.mget && (cmd.mget('kind') === 'activity_item' || cmd.mget('item_key'))) return cmd;
     if (cmd.getParentByKind) return cmd.getParentByKind('activity_item');
     return null;
   }
@@ -356,8 +378,9 @@ class __panel_activity extends LetcBox {
     const req = this._arRequest || {};
     if (!req.request_id) return this._closeArOverlay();
     if (action === 'approve' && !this._arGrantLevel) return; // need a level
+    const grantLevel = this._arGrantLevel;
     const payload = { hub_id: req.hub_id, request_id: req.request_id, action };
-    if (action === 'approve') payload.granted_level = this._arGrantLevel;
+    if (action === 'approve') payload.granted_level = grantLevel;
     try {
       await this.postService(
         (SERVICE.secure_share && SERVICE.secure_share.respond_to_access_request)
@@ -366,14 +389,43 @@ class __panel_activity extends LetcBox {
       );
     } catch (e) {
       this.warn('[panel_activity] respond_to_access_request failed', e);
+      this._closeArOverlay();
+      this.refreshActivity(0);
+      return;
     }
-    this._closeArOverlay();
     this.refreshActivity(0);
+    // Figma 64/65/66 — show the post-decision confirmation in the same overlay.
+    this._showArResult(action === 'deny' ? 'denied' : grantLevel);
+  }
+
+  // Render the post-decision confirmation (Figma 64/65/66) into the ar-overlay,
+  // reusing the secure-share window's access-result skeleton + SCSS (fig override
+  // so the same styles apply). Keeps `_arRequest` so "Change permission" works.
+  _showArResult(outcome) {
+    this.mset({ _pendingRequest: this._arRequest || {}, _resultOutcome: outcome });
+    this.ensurePart('ar-overlay').then((p) => {
+      if (!p) return;
+      p.feed(require('window/secure-share/skeleton/access-result')(this, { fig: 'window-secure-share-access-result' }));
+      this._liftArOverlay(p);
+    });
+  }
+
+  // Lift the approve/result overlay out of the slide-transformed panel rail to
+  // <body> so position:fixed centres it over the whole viewport (Figma 63/64/65/66).
+  // A transformed/will-change ancestor (the panel's __ui slide) is a containing block
+  // for fixed descendants, so the overlay would otherwise stay trapped in the 450px
+  // rail. LETC routes button clicks by uiHandler ref (not DOM ancestry), so moving
+  // the node keeps Confirm/Deny/level-select working. Idempotent.
+  _liftArOverlay(p) {
+    if (!p || !p.el) return;
+    if (p.el.parentNode !== document.body) document.body.appendChild(p.el);
+    p.el.dataset.mode = _a.open;
   }
 
   _closeArOverlay() {
     this._arRequest = null;
     this._arGrantLevel = null;
+    this.mset({ _resultOutcome: null });
     this.ensurePart('ar-overlay').then((p) => {
       if (!p || !p.el) return;
       p.el.dataset.mode = _a.closed;
@@ -782,8 +834,21 @@ class __panel_activity extends LetcBox {
           // service is set on the row in the item skeleton (not on the model) so
           // it doesn't shadow the per-button services (bookmark/trash).
           e.event   = 'secure_share.access_requested';
-          e.action  = LOCALE.SECURE_SHARE_REQUESTING_ACCESS;
-          e.link_label = it.workspace_name;
+          // Figma 62: "…is requesting Download access to <folder>". Weave the
+          // requested level into the phrase; fall back to the plain wording.
+          {
+            const LV = {
+              can_download: LOCALE.SECURE_SHARE_CAN_DOWNLOAD,
+              can_chat    : LOCALE.SECURE_SHARE_CAN_CHAT,
+              can_edit    : LOCALE.SECURE_SHARE_CAN_EDIT,
+            };
+            const lvl = LV[it.requested_level];
+            e.action = lvl
+              ? LOCALE.SECURE_SHARE_REQUESTING_LEVEL_ACCESS.replace('{level}', lvl)
+              : LOCALE.SECURE_SHARE_REQUESTING_ACCESS;
+          }
+          // Prefer the shared node's own name (e.g. "vb") over the workspace root.
+          e.link_label = it.node_name || it.workspace_name;
           e.sender     = it.requester_email;
           e.fullname   = it.requester_email;
           break;

@@ -13,6 +13,13 @@ module.exports = function (_ui_, req = {}) {
     { level: 'can_chat',     label: LOCALE.SECURE_SHARE_CAN_CHAT,     ico: 'apps-chat' },
     { level: 'can_edit',     label: LOCALE.SECURE_SHARE_CAN_EDIT,     ico: 'apps-pencil-simple' },
   ];
+  // Human label for the requested level — was rendering the raw "can_download" token.
+  const LEVEL_LABELS = {
+    can_download: LOCALE.SECURE_SHARE_CAN_DOWNLOAD,
+    can_chat    : LOCALE.SECURE_SHARE_CAN_CHAT,
+    can_edit    : LOCALE.SECURE_SHARE_CAN_EDIT,
+  };
+  const requestedLabel = LEVEL_LABELS[requested] || requested || '';
 
   const header = Skeletons.Box.X({
     className: `${pfx}__header`,
@@ -35,7 +42,7 @@ module.exports = function (_ui_, req = {}) {
               Skeletons.Note({ className: `${pfx}__info-email`, content: req.requester_email || '' }),
               Skeletons.Note({
                 className: `${pfx}__info-level`,
-                content: `${LOCALE.SECURE_SHARE_REQUEST_LEVEL_LABEL} ${req.requested_level || ''}`,
+                content: `${LOCALE.SECURE_SHARE_REQUEST_LEVEL_LABEL} ${requestedLabel}`,
               }),
             ],
           }),

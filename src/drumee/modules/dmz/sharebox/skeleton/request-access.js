@@ -75,7 +75,7 @@ function __skl_dmz_sharebox_request_access(_ui_) {
       }),
       Skeletons.Note({
         className : `${reqFig}__submit-btn`,
-        content   : LOCALE.SECURE_SHARE_REQUEST_ACCESS,
+        content   : LOCALE.SECURE_SHARE_SEND_REQUEST,
         service   : 'submit-access-request',
         uiHandler : [_ui_],
       }),

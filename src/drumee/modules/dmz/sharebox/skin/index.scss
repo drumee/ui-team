@@ -15,6 +15,10 @@
   --sb-grey-20: #f2f2f7;
   --sb-grey-30: #e5e5ea;
   --sb-grey-60: #aeaeb2;
+  // White card surface + hairline border so the card stands out from the grey page
+  // (Figma 3.1 is a white card on a grey background; before, card == page colour).
+  --sb-white: #ffffff;
+  --sb-border: rgba(11, 10, 33, 0.08);
   --sb-cta: #433cc5;
   --sb-banner-from: #6c5ce7;
   --sb-banner-to: #2900a0;
@@ -356,21 +360,25 @@
  * Applies to the toolkit-rendered chrome inside .dmz-sharebox__main.drive-popup
  * ---------------------------------------------------------------------- */
 
-/* Inner card shell */
+/* Inner card shell — WHITE on the grey page (Figma 3.1) with a hairline border so
+   the card edges + shadow read; before it was --sb-grey-20 == the page colour. */
 .dmz-sharebox__main.drive-popup {
   width: 100%;
   height: 100%;
   min-height: 0;
-  background: var(--sb-grey-20);
-  border-radius: 8px;
+  background: var(--sb-white);
+  border: 1px solid var(--sb-border);
+  border-radius: 12px;
   box-shadow: var(--sb-card-shadow);
   overflow: hidden;
 }
 
-/* windowHeader output: .dmz-sharebox__header.dmz__header */
+/* windowHeader output: .dmz-sharebox__header.dmz__header — white header bar with a
+   bottom divider, matching the Figma card header. */
 .dmz__header {
   flex-shrink: 0;
-  background: var(--sb-grey-30);
+  background: var(--sb-white);
+  border-bottom: 1px solid var(--sb-border);
   height: 56px;
   padding: 0 22px;
   align-items: center;
@@ -562,20 +570,23 @@
   &-wrapper {
     align-items: center;
     gap: var(--spacer-4);
-    padding: 8.76px 17.52px 9.308px;
-    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
-    background: var(--sb-grey-20);
+    padding: 10px 18px;
+    // Transparent on the white card (was grey, which looked like a strip on the
+    // now-white card); a hairline divider separates it from the file area.
+    border-bottom: 1px solid var(--sb-border);
+    background: transparent;
   }
 
   &-item {
     cursor: pointer;
     align-items: center;
     justify-content: center;
-    padding: 9.855px 18.615px;
-    color: var(--sb-text);
-    background-color: rgba(0, 0, 0, 0.05);
-    border: 1.095px solid transparent;
-    border-radius: 6px;
+    padding: 8px 16px;
+    color: var(--sb-text-muted);
+    // Inactive tabs are quiet (no fill); the active one becomes a bordered white pill.
+    background-color: transparent;
+    border: 1px solid transparent;
+    border-radius: 8px;
     font-size: 13.14px;
     font-weight: 600;
     font-family: var(--sb-font-body);
@@ -588,15 +599,17 @@
     }
 
     &:hover {
-      color: var(--sb-pink);
+      color: var(--sb-text);
     }
   }
 }
 
-/* Sharebox-specific tab states (mirrors window-sharebox active border) */
+/* Active tab — white pill with a hairline border + subtle lift (Figma 3.1). */
 .dmz-sharebox__main.drive-popup .window-body__tab-bar-item[data-state="1"] {
-  border-color: var(--sb-pink);
-  background-color: transparent;
+  color: var(--sb-text);
+  border-color: var(--sb-border);
+  background-color: var(--sb-white);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
 }
 
 /* Split body (mirrors window-sharebox__split-body) */
@@ -607,11 +620,21 @@
   display: flex;
   flex-direction: row;
   min-height: 0;
+  // Mirror the proven meeting-window content+chat row (window/meeting __main):
+  // stretch the file + conversation columns to full height, or the row collapses
+  // to content height and a column renders half-height/centered. The container is
+  // a Box.X flex row (see desk-content.js) — files panel flexes, conversation is a
+  // fixed-width flex-shrink:0 sibling, exactly like meeting's stage + chat-panel.
+  align-items: stretch;
+  height: 100%;
 
-  // Tabs are one-at-a-time: hide the chat panel in the default files view
-  // (it was only ever hidden in task view, so adding it to the split body made
-  // it show alongside files — d23). Chat view shows it below.
-  &[data-view="files"] {
+  // Figma 3.1: file grid + conversation side by side. The conversation panel has
+  // a FIXED width (flex-basis, no grow/shrink — see .dmz__chat-panel) and the
+  // file panel takes the rest (min-width:0 so it can shrink). This avoids the
+  // earlier bug where the chat's min-content width let it fill the whole row
+  // while the file panel collapsed. Chat-enabled shares (data-chat="1") show the
+  // conversation in the Files view; shares without the grant stay files-only.
+  &[data-view="files"]:not([data-chat="1"]) {
     .dmz__chat-panel {
       display: none;
     }
@@ -623,8 +646,9 @@
       display: none;
     }
 
+    // Chat tab → conversation fills the row.
     .dmz__chat-panel {
-      flex: 1;
+      flex: 1 1 auto;
     }
   }
 
@@ -637,29 +661,32 @@
   }
 }
 
-/* Files panel (3:1 split with chat) */
+/* Files panel — takes the space left by the fixed-width conversation panel */
 .dmz-sharebox__files-panel,
 .dmz__files-panel {
-  flex: 3;
+  flex: 1 1 0;
   min-width: 0;
   background: var(--sb-grey-20);
   overflow: auto;
 }
 
-/* Chat panel */
+/* Conversation panel — FIXED width on the right (Figma 3.1), like window-folder.
+   flex: 0 0 <basis> = no grow, no shrink, so it can never expand to fill the row
+   (the old `flex: 1` + min-content was what collapsed the file grid). */
 .dmz__chat-panel {
-  flex: 1;
-  min-width: 202px;
-  border-left: 1px solid rgba(0, 0, 0, 0.05);
+  flex: 0 0 clamp(280px, 24vw, 360px);
+  min-width: 0;
+  // Clear divider from the file grid (Figma 3.1) — the old 0.05 alpha was invisible.
+  border-left: 1px solid var(--border-default, rgba(0, 0, 0, 0.12));
   background: var(--sb-grey-20);
 
   .note-content.dmz__chat-label {
-    @include drumee.typo($size: 10px, $line: 1, $weight: 600, $color: var(--sb-text));
+    @include drumee.typo($size: 11px, $line: 1, $weight: 600, $color: var(--sb-text-muted, var(--sb-text)));
     font-family: var(--sb-font-mono);
     text-transform: uppercase;
-    letter-spacing: 0.4px;
-    padding: 16px;
-    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+    letter-spacing: 0.6px;
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border-default, rgba(0, 0, 0, 0.08));
   }
 
   .widget-chatItem__conversation-content {
