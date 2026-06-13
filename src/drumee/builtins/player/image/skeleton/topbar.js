@@ -46,9 +46,10 @@ module.exports = function (ui, size) {
     className: `${ui.fig.group}-topbar__icon-wrapper`,
     kids: [],
   });
-  // Always show download; in a DMZ share without the download grant the click
-  // is gated (sign-up / Request Access) in the player's onUiEvent.
-  actionIcons.kids.unshift(downloadIcon);
+  // Inside a DMZ share, always show download and gate the click (sign-up /
+  // Request Access) in the player's onUiEvent. OUTSIDE DMZ, keep the original
+  // permission check so a view-only/no-download user doesn't get a usable button.
+  if (Visitor.inDmz || ui.canDownload()) actionIcons.kids.unshift(downloadIcon);
 
   if (ui.canUpload() && ui.media && ui.media.imgCapable()) {
     actionIcons.kids.push(rotateLeftIcon, rotateRightIcon, saveRotationIcon);
