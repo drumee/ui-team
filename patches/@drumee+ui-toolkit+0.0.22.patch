@@ -1,0 +1,248 @@
+diff --git a/node_modules/@drumee/ui-toolkit/widgets/otp/skin/index.scss b/node_modules/@drumee/ui-toolkit/widgets/otp/skin/index.scss
+index b607598..043a0fb 100644
+--- a/node_modules/@drumee/ui-toolkit/widgets/otp/skin/index.scss
++++ b/node_modules/@drumee/ui-toolkit/widgets/otp/skin/index.scss
+@@ -1,65 +1,160 @@
+ @use '../../../skin' as *;
+ 
++// dtk_otp — visual parity with the shared otp-gate modal used across the
++// settings widgets (ui-team builtins/widget/otp-gate). signin renders this
++// widget standalone (no card wrapper), so the otp-gate card styling lives
++// here on `__main` itself.
++//
++// Visual spec follows the "Unlock Activity Insights" Figma popup
++// (file g5V3PjhNMf5bHlsHMvV17w, node 100:53094):
++//   card width 450, padding 32, gap 16, radius 12, two-layer shadow,
++//   20/14 typography (var(--font-main)), Primary/100 heading, Grey/80 body,
++//   compact 44×44 square digit cells.
++
++$otp-font: var(--font-main);
++
+ .dtk-otp {
+   @include dtk-butler-main;
+ 
++  // Transparent centering wrapper — the page (signin-router__ui) provides
++  // the background; this just centers the card.
++  &__ui {
++    width: 100%;
++    height: 100%;
++    background: transparent;
++    align-items: center;
++    align-content: center;
++    justify-content: center;
++    padding: 16px;
++    gap: 16px;
++    overflow: auto;
++    font-family: $otp-font;
++  }
++
++  // __main IS the card (otp-gate's .otp-gate-card merged onto __main).
++  // Every direct row is centered: align-items centers the boxes, and the
++  // rows below are forced to full width + centered content/text so the
++  // header, message, digits and resend all stack down the middle.
++  &__main {
++    position: relative;
++    flex: 0 0 auto;
++    top: 0;
++    width: 450px;
++    max-width: calc(100vw - 32px);
++    padding: 32px;
++    gap: 16px;
++    justify-content: center;
++    align-items: center;
++    text-align: center;
++    background: #ffffff;
++    border: none;
++    border-radius: 12px;
++    box-shadow: 0 1px 11px 0 rgba(0, 0, 0, 0.13),
++      0 25px 50px -12px rgba(0, 0, 0, 0.25);
++    font-family: $otp-font;
++  }
++
++  // Center every stacked row inside the card.
++  &__header,
++  &__logo-container,
++  &__text-container,
++  &__message,
++  &__digits,
++  &__tips,
++  &__resend {
++    width: 100%;
++    justify-content: center;
++    align-items: center;
++    text-align: center;
++  }
++
++  &__header {
++    gap: 12px;
++  }
++
++  // Heading — rendered by the shared header() helper as `__title`.
++  &__title {
++    font-family: $otp-font;
++    font-weight: 600;
++    font-size: 20px;
++    line-height: 1.1;
++    color: #0b0a21;
++    text-align: center;
++  }
++
++  // Body / "sent to" message.
++  &__message,
++  &__message-text {
++    font-family: $otp-font;
++    font-weight: 400;
++    font-size: 14px;
++    line-height: 1.4;
++    color: #65656c;
++    text-align: center;
++  }
++
++  // Compact square OTP digit cells (default was a 52×72 rectangle).
+   &__digits {
+     width: 100%;
++    height: auto;
++    gap: 8px;
+     justify-content: center;
+-    height: 78px;
+-    gap: var(--spacer-6);
++    align-items: center;
++    flex-wrap: nowrap;
+   }
+ 
+   &__digit {
+-    width: 52px;
+-    height: 72px;
+-    opacity: 1;
+-    gap: 16px;
+-    border-radius: var(--corner-radius-max);
+-    padding-top: 8px;
+-    padding-right: 16px;
+-    padding-bottom: 8px;
+-    padding-left: 16px;
+-    border: 1px var(--neutral-200) solid;
++    // flex: 0 0 auto stops the Box.X flex row from stretching/shrinking the
++    // cells — without it the framework's flex defaults blow them into wide
++    // rectangles. Locked to a 44×44 square to match the reference popup.
++    flex: 0 0 auto;
++    box-sizing: border-box;
++    width: 44px;
++    height: 44px;
++    min-width: 44px;
++    padding: 0;
++    aspect-ratio: 1 / 1;
++    border-radius: 8px;
++    border: 1px solid var(--border-strong, #c7c7cc);
++    transition: border-color 120ms ease, background-color 120ms ease;
+ 
+     input {
+       width: 100%;
+-      width: 100%;
+-      font-weight: 400;
+-      font-style: normal;
+-      font-size: 32px;
+-      line-height: 40px;
++      height: 100%;
++      padding: 0;
++      border-radius: 8px;
++      font-family: $otp-font;
++      font-size: 20px;
++      font-weight: 600;
++      line-height: 1;
+       text-align: center;
+       vertical-align: middle;
+-
+-      &:focus {
+-        background: var(--primary-100);
+-        color: var(--primary-500);
+-      }
++      color: #0b0a21;
+     }
+ 
+     &:focus-within {
+-      border: 1px solid var(--primary-500);
+-      background: var(--primary-100);
++      border-color: #433cc5;
++      background: #f4e7ff;
+     }
+   }
+ 
++  // Error / transient note line (shown below the inputs).
+   &__tips {
+     width: 100%;
+     justify-content: center;
+     flex-wrap: wrap;
+ 
+     &-text {
+-      font-weight: 400;
+-      font-style: normal;
+-      font-size: 16px;
+-      line-height: 26px;
+-      letter-spacing: 1px;
+       width: 100%;
++      font-family: $otp-font;
++      font-weight: 400;
++      font-size: 14px;
++      line-height: 1.4;
++      text-align: center;
+ 
+       &[data-error="1"] {
+         color: var(--red-500);
+-        font-weight: bold;
++        font-weight: 600;
+         cursor: pointer;
+       }
+     }
+@@ -67,22 +162,44 @@
+ 
+   &__resend {
+     width: 100%;
+-    justify-content: start;
++    justify-content: center;
+     flex-wrap: wrap;
++    gap: 12px;
+ 
+     &-text {
+-      font-weight: 400;
+-      font-style: normal;
+-      font-size: 16px;
+-      line-height: 26px;
+-      letter-spacing: 1px;
+       width: 100%;
++      font-family: $otp-font;
++      font-weight: 400;
++      font-size: 14px;
++      line-height: 1.4;
++      text-align: center;
++      color: #65656c;
+ 
+       &.resend {
+-        color: var(--primary-500);
+-        font-weight: bold;
++        color: #433cc5;
++        font-weight: 600;
+         cursor: pointer;
+       }
+     }
+   }
++
++  @media (max-width: 560px) {
++    &__main {
++      width: calc(100vw - 24px);
++      padding: 24px;
++    }
++
++    &__digit {
++      width: 38px;
++      height: 38px;
++
++      input {
++        font-size: 18px;
++      }
++    }
++  }
++}
++
++html[data-theme="dark"] .dtk-otp__main {
++  background: var(--normal-bg-elevated, #1b1b1f);
+ }

@@ -654,6 +654,32 @@
         transform: translateX(20px);
       }
     }
+
+    // Loading: while the OTP is requested and the modal loads, lock the switch
+    // and replace the knob with a centered spinner (reads on both the grey and
+    // purple pill backgrounds).
+    &[data-loading="1"] {
+      position: relative;
+      pointer-events: none;
+
+      .settings-main__toggle-knob {
+        opacity: 0;
+      }
+
+      &::after {
+        content: "";
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: 14px;
+        height: 14px;
+        margin: -7px 0 0 -7px;
+        border: 2px solid rgba(255, 255, 255, 0.5);
+        border-top-color: var(--white);
+        border-radius: 50%;
+        animation: settings-main-spinner 0.6s linear infinite;
+      }
+    }
   }
 
   // ── "Coming soon" pill used on placeholder rows ───────────
