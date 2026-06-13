@@ -70,8 +70,13 @@ class __welcome_router extends LetcBox {
       try { s = decodeURIComponent(s); } catch (e) { /* fall back to raw */ }
       const url = new URL(s, location.href);
       if (url.protocol !== 'https:' && url.protocol !== 'http:') return null;
-      const base = (h) => h.split('.').slice(-2).join('.');
-      if (base(url.hostname) !== base(location.hostname)) return null;
+      // Same-site = the deployment's main domain or a subdomain of it (the share
+      // endpoint is a subdomain). Using the KNOWN main_domain avoids the public-suffix
+      // pitfall of a naive last-two-labels compare (e.g. attacker.co.uk vs victim.co.uk).
+      const { main_domain } = bootstrap() || {};
+      const md   = String(main_domain || '').toLowerCase();
+      const host = url.hostname.toLowerCase();
+      if (!md || (host !== md && !host.endsWith('.' + md))) return null;
       if (!/\/dmz\/share\//.test(url.href)) return null;
       return url.href;
     } catch (e) {

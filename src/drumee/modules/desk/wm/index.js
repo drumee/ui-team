@@ -850,7 +850,13 @@ class __window_manager extends push {
   _onShareAccessDenied(opt = {}) {
     const token =
       Visitor.get(_a.token) || localStorage.getItem("token") || "";
-    if (!token) {
+    // Only treat a 403 as a secure-share access request when it's for the SAME
+    // workspace the share token belongs to (stored at share login). Otherwise an
+    // unrelated desk 403 after a share visit would wrongly pop the Request Access
+    // modal — fall back to the normal privilege alert. When no share hub is known
+    // (older/public-share sessions) keep the prior best-effort behaviour.
+    const shareHub = localStorage.getItem("share_hub_id") || "";
+    if (!token || (shareHub && opt.hub_id && opt.hub_id !== shareHub)) {
       return this.alert(LOCALE.WEAK_PRIVILEGE);
     }
     return this.openRequestAccessModal({

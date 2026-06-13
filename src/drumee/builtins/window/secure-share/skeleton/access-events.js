@@ -56,17 +56,21 @@ const __skl_secure_share_access_events = function(_ui_, rows) {
         Skeletons.Note({ className: `${pfx}__events-cell col-duration`, content: durStr }),
         Skeletons.Box.X({
           className : `${pfx}__events-cell col-action`,
-          kids      : [
+          // Only show ⊖ when there's a real recipient to revoke. Anonymous "Public"
+          // visits have no grant — and `email` above is the localized "Public" LABEL,
+          // which must never be sent to revoke_recipient. Pass the REAL recipient_email
+          // (or actor_id), never the display label.
+          kids      : (r.recipient_email || r.actor_id) ? [
             Skeletons.Button.Svg({
               ico       : 'ban',
               className : `${pfx}__events-revoke`,
               service   : 'revoke-access-recipient',
               tooltips  : LOCALE.SECURE_SHARE_REVOKE_RECIPIENT,
-              email     : email,
+              email     : r.recipient_email || '',
               uid       : r.actor_id || '',
               uiHandler : [_ui_],
             })
-          ]
+          ] : []
         })
       ]
     });

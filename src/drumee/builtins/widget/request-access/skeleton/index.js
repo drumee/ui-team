@@ -33,6 +33,10 @@ function requestForm(_ui_, pfx) {
       className : `${pfx}__level-option`,
       content   : LOCALE[label],
       service   : 'select-request-level',
+      // `level` must be a top-level prop: the handler reads `trigger.mget('level')`
+      // (model prop), not the DOM dataset — without it `_level` stays null and
+      // submit silently aborts.
+      level,
       dataset   : { level, selected: '' },
       uiHandler : [_ui_],
     })),

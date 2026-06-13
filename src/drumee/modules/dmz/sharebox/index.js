@@ -632,6 +632,11 @@ class __dmz_sharebox extends LetcBox {
       } else if (data && data.is_verified) {
         this.mset(data);
         localStorage.setItem('token', data.token);
+        // Remember which workspace this share token belongs to, so a later desk
+        // node_info 403 only opens the Request Access modal when it's for THIS share's
+        // hub (not any unrelated 403 after the share visit). See desk/wm
+        // _onShareAccessDenied.
+        localStorage.setItem('share_hub_id', this.mget(_a.hub_id) || data.hub_id || '');
         localStorage.setItem('guest-sid', data.guest_sid);
         this.dmzCheckPasswordResponse(data);
       } else if (!_.isEmpty(data.error)) {
