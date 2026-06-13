@@ -32,11 +32,13 @@ class __window_folder extends mfsInteract {
     );
 
     if (this.mget(_a.headless)) {
+      // Workspace pane fills the area exactly. No top offset — the topbar IS
+      // the header, so any upward shift clips it against `overflow: hidden`.
       return {
         left: 0,
-        top: -49,
+        top: 0,
         width: workspaceWidth,
-        height: workspaceHeight + 49,
+        height: workspaceHeight,
       };
     }
     // Cascade: shift each new popup 30px down-right per existing
