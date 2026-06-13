@@ -746,12 +746,17 @@ class __panel_activity extends LetcBox {
         hub_id: Visitor.id,
       });
       const rows = _.isArray(ar) ? ar : (_.isArray(ar?.data) ? ar.data : []);
-      accessReqs = rows.map((r) => ({
-        ...r,
-        category: 'access_request',
-        key_id: r.request_id,
-        last_id: r.ctime,
-      }));
+      // Skip rows the sender trashed this session (item_key = access_request:<id>),
+      // so a snoozed pending request doesn't immediately re-appear on the next refresh.
+      const dismissed = this._dismissedKeys || new Set();
+      accessReqs = rows
+        .filter((r) => !dismissed.has(`access_request:${r.request_id}`))
+        .map((r) => ({
+          ...r,
+          category: 'access_request',
+          key_id: r.request_id,
+          last_id: r.ctime,
+        }));
     } catch (e) {
       this.warn('[panel_activity] secure_share.list_requests failed', e);
     }
@@ -1262,6 +1267,15 @@ class __panel_activity extends LetcBox {
       this._dismissedLastIds.set(itemKey, Number(lastId));
     }
     this._decrementBadge(1);
+
+    if (itemType === 'access_request') {
+      // Pending secure-share request: no server-side dismiss endpoint (resolved via
+      // approve/deny). Just remove the row from view; its key is already tracked in
+      // _dismissedKeys above so refreshActivity skips it this session. It reappears
+      // only on a full reload, where the sender can still approve/deny it.
+      if (cmd && cmd.goodbye) cmd.goodbye();
+      return;
+    }
 
     if (itemType === 'mfs' && changelogId) {
       this.verbose('[activity] → POST activity.dismiss', { changelog_id: changelogId });

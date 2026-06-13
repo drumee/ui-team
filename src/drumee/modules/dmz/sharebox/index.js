@@ -1006,7 +1006,11 @@ class __dmz_sharebox extends LetcBox {
       const folder = this.mget(_a.title) || this.mget(_a.filename) || this.mget(_a.name) || '';
       Butler.say(LOCALE.SECURE_SHARE_REQUEST_APPROVED_NOTICE.replace('{folder}', folder));
     } else {
-      this.renderErrorMessage(LOCALE.SECURE_SHARE_ACCESS_DENIED);
+      // Denial: the request overlay was just closed above, and renderErrorMessage
+      // only targets the email/password gate parts (absent in the request-access
+      // flow) — so it rendered nothing. Use a toast so the recipient actually sees
+      // the denial (mirrors the approve-notice path above).
+      Butler.say(LOCALE.SECURE_SHARE_ACCESS_DENIED);
     }
   }
 

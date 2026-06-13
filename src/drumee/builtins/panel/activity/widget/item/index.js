@@ -197,6 +197,13 @@ class __activity_item extends LetcBox {
           case 'contact_refused':
             this.triggerHandlers({ service: 'dismiss-activity', item_type, item_key })
             return
+
+          case 'access_request':
+            // Pending secure-share request (Figma 62). No server-side dismiss
+            // endpoint (it's resolved via approve/deny) — trash just snoozes the
+            // row for the session; the panel removes it and skips it on refresh.
+            this.triggerHandlers({ service: 'dismiss-activity', item_type, item_key })
+            return
         }
     }
 
