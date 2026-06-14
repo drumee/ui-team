@@ -62,6 +62,11 @@ class __window_secure_share extends mfsInteract {
         }
       }
       this._loadShares();
+      // Also refresh the access-list table (who opened / current recipients) so it
+      // updates live — e.g. on secure_share_opened when a recipient views the share,
+      // or after an approval/revoke. _loadShares only reloads the links list, not this
+      // table, so without this the access list stayed stale until a manual refresh.
+      if (this._accessEvents) this._loadAccessEvents();
       return;
     }
     if (super.onWsMessage) super.onWsMessage(svc, data, options);
