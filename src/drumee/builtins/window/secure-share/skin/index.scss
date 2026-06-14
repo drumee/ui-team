@@ -753,6 +753,9 @@
     gap: var(--spacer-4);
     overflow-y: auto;
     max-height: 220px;
+  scrollbar-width: none;
+  
+  -ms-overflow-style: none;
 
     &[data-mode='closed'] { display: none; }
   }
@@ -801,41 +804,42 @@
     letter-spacing: 0.5px;
   }
 
+  // Figma "Link Control" table card: light grey fill (black @ 5%), 12px pad,
+  // rounded-8. Rows are separated by spacing (16px) — no dividers.
   &__events-container {
-    gap: var(--spacer-3);
     overflow-y: auto;
     max-height: 220px;
     margin-top: var(--spacer-3);
+  scrollbar-width: none;
+
+  -ms-overflow-style: none;
+    background: rgba(0, 0, 0, 0.05);
+    border-radius: var(--corner-radius-3);
+    padding: var(--spacer-4);
 
     &[data-mode='closed'] { display: none; }
   }
 
-  &__events-table { gap: var(--spacer-2); }
+  &__events-table { gap: var(--spacer-5); }
 
+  // Header labels — plain grey, no uppercase / divider (Figma "Tiny Body").
   &__events-cols {
-    gap: var(--spacer-4);
-    padding: var(--spacer-2) 0;
-    border-bottom: 1px solid var(--border-default);
+    justify-content: space-between;
   }
 
   &__events-col {
-    @include drumee.typo($size: 10px, $line: 14px, $weight: 600, $color: var(--tertiary-text-color));
-    text-transform: uppercase;
-    letter-spacing: 0.4px;
+    @include drumee.typo($size: 10px, $line: 14px, $color: var(--tertiary-grey-80));
     white-space: nowrap;
   }
 
   &__events-row {
     align-items: center;
-    gap: var(--spacer-4);
-    padding: var(--spacer-3) 0;
-    border-bottom: 1px solid var(--border-default);
-
-    &:last-child { border-bottom: none; }
+    justify-content: space-between;
+    min-height: 16px;
   }
 
   &__events-cell {
-    @include drumee.typo($size: 12px, $line: 17px, $color: var(--default-text-color));
+    @include drumee.typo($size: 10px, $line: 14px, $color: var(--tertiary-grey-80));
     align-items: center;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -844,39 +848,39 @@
 
   // column widths shared by header + rows
   &__events-col.col-email,
-  &__events-cell.col-email    { flex: 1; min-width: 0; gap: var(--spacer-3); }
+  &__events-cell.col-email    { flex: 1; min-width: 0; gap: var(--spacer-2); }
   &__events-col.col-time,
-  &__events-cell.col-time     { width: 110px; flex-shrink: 0; }
+  &__events-cell.col-time     { width: 90px; flex-shrink: 0; }
   &__events-col.col-duration,
-  &__events-cell.col-duration { width: 64px; flex-shrink: 0; }
+  &__events-cell.col-duration { width: 50px; flex-shrink: 0; }
   &__events-col.col-action,
-  &__events-cell.col-action   { width: 48px; flex-shrink: 0; justify-content: flex-end; }
+  &__events-cell.col-action   { width: 30px; flex-shrink: 0; justify-content: flex-end; text-align: right; }
 
-  &__events-row { min-height: 28px; }
-
+  // Figma: avatar 16px, round.
   &__events-avatar {
-    width: 20px;
-    height: 20px;
+    width: 16px;
+    height: 16px;
     border-radius: var(--corner-radius-max);
     flex-shrink: 0;
   }
 
+  // Email uses primary text colour (#0b0a21), not the brand purple.
   &__events-email {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    color: var(--primary-50);
+    color: var(--default-text-color);
   }
 
+  // Figma "MinusCircle" action — red (Signal/Error) glyph.
   &__events-revoke {
-    width: 18px;
-    height: 18px;
+    width: 14px;
+    height: 14px;
     flex-shrink: 0;
     cursor: pointer;
-    opacity: 0.7;
 
-    svg { width: 18px; height: 18px; fill: var(--tertiary-grey-70); }
-    &:hover { opacity: 1; }
+    svg { width: 14px; height: 14px; fill: var(--error); }
+    &:hover { opacity: 0.8; }
   }
 
   &__events-empty {
