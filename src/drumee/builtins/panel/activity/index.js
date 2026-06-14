@@ -256,8 +256,10 @@ class __panel_activity extends LetcBox {
         if (!req.request_id) return;
         this._arRequest    = req;
         // Multi-select: pre-select every requested level (the recipient may have
-        // asked for several, e.g. chat + edit). granted_level is a SET (comma-list).
-        this._arGrantLevels = new Set((req.requested_level || '').split(',').map(s => s.trim()).filter(Boolean));
+        // asked for several, e.g. chat + edit). requested_level is a SET column —
+        // the driver returns it as an ARRAY, so String() it before splitting
+        // (String(['a','b']) → "a,b"); also handles the legacy single-string form.
+        this._arGrantLevels = new Set(String(req.requested_level || '').split(',').map(s => s.trim()).filter(Boolean));
         return this.ensurePart('ar-overlay').then((p) => {
           if (!p) return;
           p.feed(require('./skeleton/approve-request')(this, req));
@@ -294,8 +296,9 @@ class __panel_activity extends LetcBox {
         return this._closeArOverlay();
 
       case 'change-permission':
-        // Reopen the approve-request popup for the same request.
-        this._arGrantLevels = new Set(((this._arRequest && this._arRequest.requested_level) || '').split(',').map(s => s.trim()).filter(Boolean));
+        // Reopen the approve-request popup for the same request. String() the
+        // SET value (driver returns it as an array) before splitting.
+        this._arGrantLevels = new Set(String((this._arRequest && this._arRequest.requested_level) || '').split(',').map(s => s.trim()).filter(Boolean));
         return this.ensurePart('ar-overlay').then((p) => {
           if (!p) return;
           p.feed(require('./skeleton/approve-request')(this, this._arRequest || {}));
