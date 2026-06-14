@@ -53,14 +53,11 @@ class __window_secure_share extends mfsInteract {
     // `const {service}=options||svc` resolved to undefined and dropped every event.
     const service = (options && options.service) || svc;
     if (service === 'share.track_event') {
-      if (data && data.event === 'secure_share_access_requested') {
-        // Scope to THIS panel's shared node: with multiple secure-share panels open,
-        // only the one for the requested node should pop the approve popup. node_id is
-        // carried on the event; fall through if it's absent (best-effort/legacy).
-        if (!data.node_id || data.node_id === this.mget(_a.nid)) {
-          this._showApprovePopup(data);
-        }
-      }
+      // NOTE: we deliberately do NOT auto-open the approve popup inside this panel
+      // on a new access request (per Lexis 2026-06-14) — it rendered as a stuck,
+      // unusable popup cramped into the sharing panel. Approval is handled from the
+      // activity-panel notification instead (which opens a proper centered popup).
+      // The window only refreshes its lists here.
       this._loadShares();
       // Also refresh the access-list table (who opened / current recipients) so it
       // updates live — e.g. on secure_share_opened when a recipient views the share,
@@ -543,7 +540,9 @@ class __window_secure_share extends mfsInteract {
         }));
       }
       this._loadShares();
-      this._resetForm();
+      // Keep the user's setup visible after Get-link (per Lexis 2026-06-14) so they
+      // can see what they configured and add more; previously _resetForm() wiped it.
+      // State is per-window-instance, so it naturally clears when the panel is closed.
     }
   }
 
