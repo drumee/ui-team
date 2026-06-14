@@ -594,13 +594,26 @@ class __window_secure_share extends mfsInteract {
         this._linkResult.feed(Skeletons.Box.X({
           className : `${pfx}__link-row`,
           kids      : [
-            Skeletons.Note({ className: `${pfx}__link-text`, content: data.link }),
-            Skeletons.Button.Svg({
-              ico       : 'apps-copy',
-              className : `${pfx}__copy-icon`,
-              service   : 'copy-secure-link',
-              link      : data.link,
-              uiHandler : [this],
+            // Figma: brand-tinted box holding [link glyph + URL] on the left and
+            // the copy icon pinned to the right (space-between).
+            Skeletons.Box.X({
+              className : `${pfx}__link-box`,
+              kids      : [
+                Skeletons.Box.X({
+                  className : `${pfx}__link-main`,
+                  kids      : [
+                    Skeletons.Image.Svg({ className: `${pfx}__link-icon`, ico: 'apps-link-simple' }),
+                    Skeletons.Note({ className: `${pfx}__link-text`, content: data.link }),
+                  ]
+                }),
+                Skeletons.Button.Svg({
+                  ico       : 'apps-copy',
+                  className : `${pfx}__copy-icon`,
+                  service   : 'copy-secure-link',
+                  link      : data.link,
+                  uiHandler : [this],
+                }),
+              ]
             }),
             Skeletons.Box.X({
               className : `${pfx}__link-revoke button`,
@@ -609,7 +622,7 @@ class __window_secure_share extends mfsInteract {
               uiHandler : [this],
               kidsOpt   : { active: 0 },
               kids      : [
-                Skeletons.Image.Svg({ className: `${pfx}__link-revoke-icon`, ico: 'ban' }),
+                Skeletons.Image.Svg({ className: `${pfx}__link-revoke-icon`, ico: 'app-ban' }),
                 Skeletons.Note({ content: LOCALE.SECURE_SHARE_REVOKE })
               ]
             })

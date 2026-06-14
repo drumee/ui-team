@@ -655,62 +655,86 @@
     svg { width: 20px; height: 20px; }
   }
 
-  // ── Generated link result ─────────────────────────────────
-  &__link-row { align-items: center; gap: var(--spacer-3); width: 100%; }
+  // ── Generated link result (Figma 1.2.7) ──────────────────
+  // Row = brand-tinted link box (flex) + red Revoke button, 8px gap, 40px tall.
+  &__link-row {
+    align-items: center;
+    gap: var(--spacer-3);
+    width: 100%;
+    height: 40px;
+  }
+
+  // Brand overlay @ 10%, rounded-8, link/URL on the left, copy icon on the right.
+  &__link-box {
+    flex: 1;
+    min-width: 0;
+    height: 100%;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--spacer-3);
+    padding: var(--spacer-3) var(--spacer-4);
+    border-radius: var(--corner-radius-3);
+    background: rgba(89, 80, 255, 0.1);
+  }
+
+  &__link-main {
+    flex: 1;
+    min-width: 0;
+    align-items: center;
+    gap: var(--spacer-3);
+  }
+
+  &__link-icon {
+    flex-shrink: 0;
+    width: 16px;
+    height: 16px;
+    svg { width: 16px; height: 16px; fill: var(--default-text-color); }
+  }
 
   &__link-text {
     flex: 1;
-    @include drumee.typo($size: 12px, $line: 20px, $color: var(--default-text-color));
+    min-width: 0;
+    @include drumee.typo($size: 12px, $line: 17px, $color: var(--default-text-color));
+    opacity: 0.6;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    padding: var(--spacer-3) var(--spacer-4);
-    background: var(--normal-bg-80);
-    border-radius: var(--corner-radius-2);
   }
 
-  &__copy-button {
-    cursor: pointer;
-    padding: var(--spacer-3) var(--spacer-5);
-    border-radius: var(--corner-radius-3);
-    background: var(--primary-50);
-    @include drumee.typo($size: 12px, $line: 20px, $color: var(--white));
-
-    &:hover { background: var(--primary-40); }
-  }
-
-  // Figma link-generated row: copy icon + red Revoke button beside the link.
+  // Copy icon, pinned to the right edge of the link box.
   &__copy-icon {
     cursor: pointer;
     flex-shrink: 0;
-    height: 20px;
-    width: 20px;
+    height: 16px;
+    width: 16px;
 
     svg { fill: var(--tertiary-grey-70); height: 100%; width: 100%; }
-    &:hover svg { fill: var(--primary-50); }
+    &:hover svg { fill: var(--primary-40); }
   }
 
   // Figma: red FILLED Revoke button with a prohibit (⊘) glyph.
   &__link-revoke {
     cursor: pointer;
     flex-shrink: 0;
+    height: 100%;
     align-items: center;
-    gap: var(--spacer-2);
+    justify-content: center;
+    gap: var(--spacer-3);
     padding: var(--spacer-3) var(--spacer-4);
-    border-radius: var(--corner-radius-2);
+    border-radius: var(--corner-radius-3);
     border: 1px solid var(--btn-caution-background);
     background: var(--btn-caution-background);
-    @include drumee.typo($size: 12px, $line: 20px, $weight: 600, $color: var(--white));
+    @include drumee.typo($size: 14px, $line: 20px, $weight: 600, $color: var(--white));
     white-space: nowrap;
 
-    &:hover { opacity: 0.9; }
+    &:hover { background: var(--btn-caution-background-hover); border-color: var(--btn-caution-background-hover); }
   }
 
   &__link-revoke-icon {
-    width: 14px;
-    height: 14px;
+    width: 20px;
+    height: 20px;
     flex-shrink: 0;
-    svg { width: 14px; height: 14px; fill: var(--white); }
+    svg { width: 20px; height: 20px; fill: var(--white); }
   }
 
   // ── Shared-links list section ─────────────────────────────
