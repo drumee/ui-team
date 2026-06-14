@@ -1000,15 +1000,21 @@ class __dmz_sharebox extends LetcBox {
       overlay.clear();
     }
     if (data.action === 'approve') {
+      // The approval ADDS to the recipient's current capabilities — it does not
+      // replace them (the event payload carries only the newly granted level). A
+      // chat share approved for download must keep chat AND gain download, so we
+      // union the new caps onto the existing model rather than overwriting (which
+      // dropped chat). Mirrors the server-side union in dmz.js _loginSecureShare.
+      const prevCaps = this.mget('capabilities') || [];
+      const newCaps  = data.capabilities || [];
+      const mergedCaps = Array.from(new Set([...prevCaps, ...newCaps]));
       this.mset({
-        permission_level: data.granted_level,
-        privilege       : data.privilege || 3,
-        // Carry the capability flags so the chat tab / edit gates unlock to match
-        // the freshly granted level (server sends these on the approval event).
-        capabilities    : data.capabilities || [],
-        can_download    : data.can_download || 0,
-        can_chat        : data.can_chat || 0,
-        can_edit        : data.can_edit || 0,
+        permission_level: data.granted_level || this.mget('permission_level'),
+        privilege       : Math.max(this.mget('privilege') || 3, data.privilege || 3),
+        capabilities    : mergedCaps,
+        can_download    : this.mget('can_download') || data.can_download || 0,
+        can_chat        : this.mget('can_chat') || data.can_chat || 0,
+        can_edit        : this.mget('can_edit') || data.can_edit || 0,
       });
       this.loadDeskContent();
       // Figma 67 — notify the guest their access request was approved. The folder

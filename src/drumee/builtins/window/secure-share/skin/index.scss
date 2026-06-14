@@ -771,7 +771,12 @@
 
 .window-secure-share-approve-access {
   &__panel {
-    background: var(--white, #ffffff);
+    // Theme-aware surface: white in light, dark in dark mode. Was hardcoded
+    // --white (always #fff) → the popup rendered as a white card in dark mode
+    // with the (correctly dark-flipped) light text on it = unreadable. The level
+    // rows/info use --normal-bg-80 (#333042 dark), so the panel uses the darker
+    // --normal-bg-100 (#0b0a21 dark) to keep them readable as lighter cards.
+    background: var(--normal-bg-100, #ffffff);
     border-radius: 12px;
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
     gap: 16px;
@@ -931,7 +936,11 @@
 // ── Post-decision confirmation modal (Figma 64 / 65 / 66) ───────────────────
 .window-secure-share-access-result {
   &__panel {
-    background: var(--white, #ffffff);
+    // Theme-aware surface (see approve-access __panel above): was hardcoded
+    // --white so the result modal showed a white card in dark mode. --normal-bg-100
+    // is #fff in light (unchanged) and #0b0a21 in dark; the __info box uses the
+    // lighter --normal-bg-80 so it stays readable on top.
+    background: var(--normal-bg-100, #ffffff);
     border-radius: 12px;
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
     gap: 14px;
