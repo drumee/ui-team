@@ -47,6 +47,13 @@ class __welcome_router extends LetcBox {
     // `user:signed:in` pattern above.
     const _ssReturn = args.return_to ? this._secureShareReturnTarget(args.return_to) : null;
     if (_ssReturn) {
+      // Hand the validated target to the router so restart() redirects there
+      // BEFORE its own route()/changeHost runs — both fire on the same
+      // user:signed:in event and were winning the navigation race against the
+      // once-handler below (so the recipient landed on the desk/org host, not
+      // the shared folder). The once-listener stays as a harmless fallback for
+      // any signin path that doesn't run through restart.
+      if (window.uiRouter) window.uiRouter._secureShareReturn = _ssReturn;
       RADIO_BROADCAST.once('user:signed:in', () => { location.href = _ssReturn; });
     }
     this.route();
