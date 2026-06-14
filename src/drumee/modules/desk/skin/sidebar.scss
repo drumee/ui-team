@@ -33,6 +33,154 @@
     }
   }
 
+  // ── Collapsible desktop rail ───────────────────────────────────────
+  // The rail is the IN-FLOW flex column that RESERVES the sidebar's space
+  // so it never overlaps the workspace. __main is absolutely positioned
+  // inside it. Two modes, switched by data-collapsed on __rail:
+  //
+  //   collapsed (default, ="1") — rail reserves the 64px mini column; the
+  //     workspace sits beside it (no overlap). On HOVER, __main alone grows
+  //     to 231px and OVERLAYS the workspace (z-index 10002) — the reserved
+  //     64px is unchanged, so the main UI never reflows between the hovered
+  //     and non-hovered states.
+  //
+  //   pinned (="0")             — rail reserves the full 231px column,
+  //     pushing the workspace over (a deliberate user choice).
+  //
+  // The mobile drawer keeps its own fixed __main (no rail wrapper) and is
+  // unaffected by everything here.
+  &__rail {
+    position: relative;
+    height: 100vh;
+    box-sizing: border-box;
+    // Pinned: reserve the full column.
+    flex: 0 0 231px;
+
+    &[data-collapsed="1"] {
+      // Collapsed: reserve just the mini rail. Hover expands __main as an
+      // overlay (below) without touching this reserved width.
+      flex-basis: 64px;
+    }
+  }
+
+  // __main floats inside the rail (desktop only — mobile __main isn't
+  // wrapped in a rail, so this compound selector never matches it).
+  &__rail &__main {
+    position: absolute;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    height: auto;
+    width: 231px;
+    transition: width 0.18s ease;
+  }
+
+  &__rail[data-collapsed="1"] &__main {
+    width: 64px;
+
+    &:hover {
+      width: 231px;
+      // Lift the shadow while floating over the workspace.
+      box-shadow: var(--shadow-right-big, 0 1px 18px rgba(0, 0, 0, 0.18));
+    }
+  }
+
+  // Collapsed + not hovered = the mini icon-only rail. Show ONLY the icons:
+  // hide every label, the workspace list, and the pin button; center the
+  // glyphs and swap the wordmark for the compact mark. On hover the
+  // :not(:hover) selector stops matching and the full sidebar returns.
+  &__rail[data-collapsed="1"] &__main:not(:hover) {
+    // !important is required: __item-text and __badge carry
+    // `display: flex !important` in their base rules, which a plain
+    // `display: none` can't override.
+    .desk-module-sidebar__item-text,
+    .desk-module-sidebar__header,
+    .desk-module-sidebar__workspace,
+    .desk-module-sidebar__footer-name-wrapper,
+    .desk-module-sidebar__footer-user-plan,
+    .desk-module-sidebar__logo-pin-btn,
+    .desk-module-sidebar__logo-icon {
+      display: none !important;
+    }
+
+    .desk-module-sidebar__logo-mark {
+      display: flex;
+    }
+
+    .desk-module-sidebar__logo-row {
+      justify-content: center;
+      padding: 0;
+    }
+
+    .desk-module-sidebar__item {
+      justify-content: center;
+      gap: 0;
+      padding-left: 0;
+      padding-right: 0;
+    }
+
+    // Notification count shrinks to a dot anchored on the icon.
+    .desk-module-sidebar__badge {
+      position: absolute;
+      top: 4px;
+      right: 16px;
+      min-width: 9px;
+      width: 9px;
+      height: 9px;
+      padding: 0;
+      border-radius: 50%;
+      font-size: 0;
+      line-height: 0;
+      margin-left: 0;
+    }
+
+    .desk-module-sidebar__footer-user-btn {
+      justify-content: center;
+      padding-left: 0;
+      padding-right: 0;
+    }
+  }
+
+  // Compact mark is hidden by default (full wordmark wins); the collapsed
+  // rule above flips this.
+  &__logo-mark {
+    display: none;
+    width: 28px;
+    height: 28px;
+    margin-left: -2px;
+  }
+
+  // Desktop collapse/pin toggle. Hidden on the mobile drawer (it uses the
+  // close button instead).
+  &__logo-pin-btn {
+    width: 24px;
+    height: 24px;
+    padding: 4px;
+    border-radius: 4px;
+    cursor: pointer;
+    color: var(--normal-fg-50);
+    flex-shrink: 0;
+    margin-left: auto;
+
+    svg {
+      width: 100%;
+      height: 100%;
+
+      path {
+        fill: currentColor;
+      }
+    }
+
+    &:hover {
+      background-color: var(--default-bg-hover, rgba(0, 0, 0, 0.06));
+      color: var(--normal-fg);
+    }
+  }
+
+  &__main[data-device="mobile"] &__logo-pin-btn {
+    display: none;
+  }
+
   &__nav-slot,
   &__actions-slot {
     width: 100%;
@@ -89,6 +237,7 @@
   }
 
   &__item {
+    position: relative;
     align-items: center;
     padding: 7.25px 24px 8px;
     gap: 12px;
@@ -110,13 +259,6 @@
       background-color: var(--active-item-bg);
       border-left-color: var(--active-border);
       font-weight: bold;
-    }
-
-    &[data-partname="theme-toggle"] {
-      .desk-module-sidebar__item-icon {
-        width: 20px;
-        height: 20px;
-      }
     }
 
     &-icon {
@@ -424,6 +566,7 @@
   // as a slide-in drawer — do NOT hide that variant or `openMobileDrawer`
   // toggles `data-state` on a `display:none` element.
   .desk-module-sidebar {
+    &__rail,
     &__main:not([data-device="mobile"]) {
       display: none;
     }

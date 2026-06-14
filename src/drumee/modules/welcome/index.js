@@ -29,7 +29,59 @@ class __welcome_router extends LetcBox {
         this._redeemInviteThenEnter();
       });
     }
+    const path = Visitor.parseModule() || [];
+    // Honour a workspace deep-link: the hub-invite email uses #/welcome/hub?hub_id=…,
+    // and a secure-share sign-up opens #/welcome/signup?hub_id=… (new window). Either
+    // way, stash the hub so the desk window-manager opens that workspace after auth.
+    if (args.hub_id) {
+      sessionStorage.setItem('drumee_hubDeepLink', args.hub_id);
+    }
+    // Secure-share recipients who click Login / Sign up arrive with
+    // ?return_to=<their share link>. After they authenticate, send THIS (fresh,
+    // real-session) tab back to that share link so the shared folder re-opens as
+    // their authenticated self — instead of being stranded on the desk while the
+    // original guest tab stays a guest. Purely additive + guarded: a once-listener
+    // is registered ONLY when return_to is present AND validates as a Drumee
+    // /dmz/share/ URL (open-redirect guard). No return_to → no listener → the normal
+    // signin/signup/desk flow is completely unchanged. Mirrors the existing invite
+    // `user:signed:in` pattern above.
+    const _ssReturn = args.return_to ? this._secureShareReturnTarget(args.return_to) : null;
+    if (_ssReturn) {
+      RADIO_BROADCAST.once('user:signed:in', () => { location.href = _ssReturn; });
+    }
     this.route();
+  }
+
+  /**
+   * Open-redirect guard for the secure-share return_to. Accepts ONLY an absolute
+   * http(s) URL that (a) shares this page's registrable domain (same host or a
+   * subdomain — so the share endpoint is allowed but external hosts are not) and
+   * (b) points at a /dmz/share/ link. Returns the safe URL string, or null to
+   * ignore it (→ normal flow, no redirect).
+   * @param {string} raw
+   * @returns {string|null}
+   */
+  _secureShareReturnTarget(raw) {
+    try {
+      // parseModuleArgs returns the raw, still-URL-encoded query value (it does not
+      // decode). go-login/open-signup encodeURIComponent the share URL so it survives
+      // the `[#/&?]` token split — so decode it back here before parsing.
+      let s = String(raw || '');
+      try { s = decodeURIComponent(s); } catch (e) { /* fall back to raw */ }
+      const url = new URL(s, location.href);
+      if (url.protocol !== 'https:' && url.protocol !== 'http:') return null;
+      // Same-site = the deployment's main domain or a subdomain of it (the share
+      // endpoint is a subdomain). Using the KNOWN main_domain avoids the public-suffix
+      // pitfall of a naive last-two-labels compare (e.g. attacker.co.uk vs victim.co.uk).
+      const { main_domain } = bootstrap() || {};
+      const md   = String(main_domain || '').toLowerCase();
+      const host = url.hostname.toLowerCase();
+      if (!md || (host !== md && !host.endsWith('.' + md))) return null;
+      if (!/\/dmz\/share\//.test(url.href)) return null;
+      return url.href;
+    } catch (e) {
+      return null;
+    }
   }
 
   /**
@@ -200,6 +252,11 @@ class __welcome_router extends LetcBox {
       case 'reset':
         return this.loadReset()
 
+      case 'verify':
+        // Email-verification landing (#/welcome/verify?token=...). The signup
+        // plugin's router renders the "Email confirmed" screen from the token.
+        return this.loadSignup()
+
       default:
         return this.loadSignin()
     }
@@ -300,7 +357,8 @@ class __welcome_router extends LetcBox {
         });
         this._inviteToken = null;
         if (res && res.hub_id) {
-          location.hash = `${_K.module.desk}/@${res.hub_id}`;
+          RADIO_BROADCAST.trigger("workspace:refresh");
+          location.hash = `${_K.module.desk}/wm/hub/?hub_id=${res.hub_id}`;
           return;
         }
       } catch (e) {

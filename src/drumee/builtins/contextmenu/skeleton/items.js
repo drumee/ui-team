@@ -48,6 +48,8 @@ const __button = function (ui, trigger, k) {
 
     deletePermanently: button({ content: LOCALE.DELETE_PERMENANTLY, service: 'delete-permanently' }),
 
+    designationLink: button({ content: LOCALE.DESIGNATION_LINK, service: 'designation-link' }),
+
     directUrl: button({ content: LOCALE.URL_ADDRESS, service: 'direct-url' }),
 
     download: button({ content: LOCALE.DOWNLOAD, service: _e.download }),
@@ -166,9 +168,12 @@ const __button = function (ui, trigger, k) {
 
     settings: button({ content: LOCALE.SETTINGS, service: _e.settings }),
 
-    share: button({ content: LOCALE.SHARE, service: _a.share }),
+    // Label "Invite": service _a.share opens the invite-members popup (per-file/
+    // folder shortcut into the invite flow). Keeps it distinct from `secureShare`
+    // (the outside-world "Share" link) so share-area menus don't show two "Share".
+    share: button({ content: LOCALE.INVITE, service: _a.share }),
 
-    secureShare: button({ content: LOCALE.SECURE_SHARE, service: 'secure-share' }),
+    secureShare: button({ content: LOCALE.SHARE, service: 'secure-share' }),
 
     share_qrcode: button({ content: LOCALE.SHOW_QRCODE, service: "share-qrcode" }),
 

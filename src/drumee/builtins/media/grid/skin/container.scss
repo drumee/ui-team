@@ -3,14 +3,12 @@
   /** In case workspaces are nested within personal folders, show tips*/
   &__areas {
     z-index: 102;
-    justify-content: flex-end;
-    gap: var(--spacer-1);
-    overflow: visible;
-    width: 52px;
-    height: 15px;
+    justify-content: space-between;
+    max-width: 44px;
+    height: 13px;
     position: absolute;
-    left: 16px;
-    top: 18px;
+    left: 15px;
+    top: 52px;
 
     .child {
       height: 100%;

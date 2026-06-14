@@ -1,6 +1,6 @@
 // Public marketing site — the share page links out to drumee.com, not the
 // Drumee instance domain the share link is served from.
-const DRUMEE_SITE = "https://drumee.com";
+const DRUMEE_SITE = "https://drumee.com/";
 
 function __skl_dmz_sharebox_top_nav(_ui_) {
   const navFig = `${_ui_.fig.family}-top-nav`;
@@ -28,13 +28,14 @@ function __skl_dmz_sharebox_top_nav(_ui_) {
       ],
     });
 
-  // FEATURES has no dedicated page on drumee.com — only PRODUCT (homepage)
-  // and PRICING are linked.
+  // Figma top-nav has three items (Product / Features / Pricing); all point to
+  // the public marketing site root (drumee.com).
   const links = Skeletons.Box.X({
     className: `${navFig}__links`,
     kids: [
       navLink(LOCALE.PRODUCT || "Product", DRUMEE_SITE),
-      navLink(LOCALE.PRICING || "Pricing", `${DRUMEE_SITE}/pricing`),
+      navLink(LOCALE.FEATURES || "Features", DRUMEE_SITE),
+      navLink(LOCALE.PRICING || "Pricing", DRUMEE_SITE),
     ],
   });
 
@@ -46,7 +47,7 @@ function __skl_dmz_sharebox_top_nav(_ui_) {
     kids: [
       Skeletons.Note({
         className: `${navFig}__login-label`,
-        content: LOCALE.SIGN_IN,
+        content: LOCALE.SECURE_SHARE_NAV_LOGIN,
       }),
     ],
   });

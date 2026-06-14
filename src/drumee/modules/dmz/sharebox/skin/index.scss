@@ -15,12 +15,38 @@
   --sb-grey-20: #f2f2f7;
   --sb-grey-30: #e5e5ea;
   --sb-grey-60: #aeaeb2;
+  // White card surface + hairline border so the card stands out from the grey page
+  // (Figma 3.1 is a white card on a grey background; before, card == page colour).
+  --sb-white: #ffffff;
+  --sb-border: rgba(11, 10, 33, 0.08);
   --sb-cta: #433cc5;
   --sb-banner-from: #6c5ce7;
   --sb-banner-to: #2900a0;
   --sb-card-shadow: 0 1px 11px 0 rgba(0, 0, 0, 0.13);
   --sb-font-body: "Geist", system-ui, -apple-system, "Segoe UI", sans-serif;
   --sb-font-mono: "Geist Mono", ui-monospace, "SF Mono", Menlo, monospace;
+}
+
+/* Workspace accent tokens. Declared on the outer module root (.dmz-sharebox)
+   AND the inner drive-popup root (.dmz-sharebox__main.drive-popup) — the
+   drive-popup is a separate window-manager subtree the outer root does not
+   contain, so it carries its own token scope. The `.drive-popup` qualifier is
+   essential: the outer skeleton's .dmz-sharebox__main (which wraps the page
+   header) must NOT redeclare these, or it would shadow .dmz-sharebox's
+   restricted value and the header would fall back to pink. Defaults = shared
+   (pink); [data-area="restricted"] recolors to red (#eb6159 = --area-private). */
+.dmz-sharebox,
+.dmz-sharebox__main.drive-popup {
+  --sb-accent: #ffa8dc;
+  --sb-accent-soft: rgba(255, 168, 220, 0.15);
+  --sb-accent-deep: #b43481;
+}
+
+.dmz-sharebox[data-area="restricted"],
+.dmz-sharebox__main.drive-popup[data-area="restricted"] {
+  --sb-accent: #eb6159;
+  --sb-accent-soft: rgba(235, 97, 89, 0.15);
+  --sb-accent-deep: #a8392f;
 }
 
 /* Page-level chrome (outer viewport) */
@@ -36,9 +62,13 @@
     width: 100%;
     height: 100%;
     min-height: 100vh;
-    background: var(--sb-grey-20);
+    // Figma 3.1 page background is "Grey/white" (white). The grey-20 card + grey-30
+    // header then stand out on it via the card shadow — the real fix for the "flat"
+    // look (the page was grey-20, same as the card, so the card was invisible).
+    background: var(--sb-white);
     font-family: var(--sb-font-body);
     color: var(--sb-text);
+    position: relative;
   }
 
   &__container {
@@ -71,6 +101,27 @@
     bottom: 0;
     padding: 24px 40px;
     z-index: 2000;
+
+    &[data-mode="closed"] {
+      display: none;
+    }
+  }
+
+  &__signup-overlay {
+    // Full-viewport centered modal scrim. The base `.box` rule sets
+    // `position: absolute`, so plain `position: fixed` loses on specificity/source
+    // order — must use !important + explicit top/left/size to win (same pattern as
+    // api/lib/popup __overlay). This centers the popup on the PAGE, not within the
+    // offset sharebox content box.
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(11, 10, 33, 0.6);
+    align-items: center;
+    justify-content: center;
+    z-index: 3000;
 
     &[data-mode="closed"] {
       display: none;
@@ -171,7 +222,7 @@
     height: 40px;
     align-items: center;
     justify-content: center;
-    background: var(--sb-pink-15);
+    background: var(--sb-accent-soft);
     border-radius: 8px;
     flex-shrink: 0;
 
@@ -185,7 +236,7 @@
       svg.folder-shape {
         width: 100%;
         height: 100%;
-        fill: var(--sb-pink);
+        fill: var(--sb-accent);
       }
     }
   }
@@ -207,13 +258,13 @@
   }
 
   &__subline-icon {
-    width: 8px;
-    height: 10.5px;
+   width: 16px;
+    height: 16px;
 
     svg {
       width: 100%;
       height: 100%;
-      fill: var(--sb-text);
+      fill: var(--sb-accent);
     }
   }
 
@@ -242,7 +293,7 @@
     font-family: var(--sb-font-body);
 
     &.current {
-      color: var(--sb-pink);
+      color: var(--sb-accent);
     }
   }
 
@@ -289,7 +340,9 @@
     height: 40px;
     align-items: center;
     justify-content: center;
-    background: rgba(0, 0, 0, 0.2);
+    // Frosted translucent-white tile (Figma) — the old dark overlay made the white
+    // glyph read poorly on the purple bar.
+    background: rgba(255, 255, 255, 0.15);
     border-radius: 8px;
   }
 
@@ -342,9 +395,15 @@
  * Applies to the toolkit-rendered chrome inside .dmz-sharebox__main.drive-popup
  * ---------------------------------------------------------------------- */
 
-/* Inner card shell */
+/* Inner card shell — Grey/20 panel lifted off the white page by its shadow (Figma
+   3.1 "Shared Link" frame: Grey/20 fill, radius 8, shadow, no border). */
 .dmz-sharebox__main.drive-popup {
   width: 100%;
+  // Figma 3.1 card is a fixed 1255px, centred (~332px side margins on the 1920 frame)
+  // — not full-width. The content row (Box.X, justify-content:center) centres it; it
+  // shrinks below 1255 on narrower viewports.
+  max-width: 1255px;
+  margin: 0 auto;
   height: 100%;
   min-height: 0;
   background: var(--sb-grey-20);
@@ -353,7 +412,8 @@
   overflow: hidden;
 }
 
-/* windowHeader output: .dmz-sharebox__header.dmz__header */
+/* windowHeader output: .dmz-sharebox__header.dmz__header — Grey/30 header bar (Figma
+   "Window Header" frame), slightly darker than the Grey/20 card body. */
 .dmz__header {
   flex-shrink: 0;
   background: var(--sb-grey-30);
@@ -389,22 +449,54 @@
   svg {
     width: 16px;
     height: 16px;
-    fill: var(--sb-pink);
+    fill: var(--sb-accent);
   }
 }
 
 /* Pink "SHARED" badge (mirrors window-sharebox__badge) */
 .dmz-sharebox__badge {
-  background-color: var(--sb-pink);
+  background-color: var(--sb-accent);
   padding: 4px 8px;
   border-radius: 2px;
 
   .note-content {
-    @include drumee.typo($size: 10px, $line: 1, $weight: 600, $color: var(--sb-pink-deep));
+    @include drumee.typo($size: 10px, $line: 1, $weight: 600, $color: var(--sb-accent-deep));
     font-family: var(--sb-font-mono);
     text-transform: uppercase;
     letter-spacing: 0.4px;
   }
+}
+
+/* Media-grid folder art tracks the workspace accent (red for restricted,
+   pink for shared), overriding the grid's per-area folder fill. */
+.dmz-sharebox[data-area] .media-grid__folder-art .folder-shape,
+.dmz-sharebox__main.drive-popup[data-area] .media-grid__folder-art .folder-shape {
+  fill: var(--sb-accent);
+}
+
+/* Inner drive-popup topbar folder icon. Higher specificity (0,5,1) than the
+   toolkit's `.window-sharebox .topbar-folder-icon svg.folder-shape` (0,3,1)
+   which otherwise forces var(--area-share) pink. */
+.dmz-sharebox__main.drive-popup[data-area] .topbar-folder-icon svg.folder-shape {
+  fill: var(--sb-accent);
+}
+
+/* Restricted override for the drive-popup topbar folder icon and the workspace
+   badge. Scope under the OUTERMOST .dmz-sharebox[data-area] — that is the element
+   the module actually tags (verified against the live DOM: the drive-popup root
+   never receives data-area). It is an ancestor of both the badge and the inner
+   topbar icon. Bind the canonical --area-private token directly: it is never
+   redeclared in the sharebox scope, so the --sb-accent shadowing that pinkens
+   these (the drive-popup declares a pink --sb-accent default) cannot reach it.
+   The shared case still flows through --sb-accent / the base badge rule. */
+.dmz-sharebox[data-area="restricted"] .topbar-folder-icon svg.folder-shape {
+  fill: var(--area-private);
+}
+.dmz-sharebox[data-area="restricted"] .dmz-sharebox__badge {
+  background-color: var(--area-private);
+}
+.dmz-sharebox[data-area="restricted"] .dmz-sharebox__badge .note-content {
+  color: #a8392f;
 }
 
 /* Buttons row (mirrors common.scss .window-button) */
@@ -548,20 +640,23 @@
   &-wrapper {
     align-items: center;
     gap: var(--spacer-4);
-    padding: 8.76px 17.52px 9.308px;
-    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
-    background: var(--sb-grey-20);
+    padding: 10px 18px;
+    // Transparent on the white card (was grey, which looked like a strip on the
+    // now-white card); a hairline divider separates it from the file area.
+    border-bottom: 1px solid var(--sb-border);
+    background: transparent;
   }
 
   &-item {
     cursor: pointer;
     align-items: center;
     justify-content: center;
-    padding: 9.855px 18.615px;
-    color: var(--sb-text);
-    background-color: rgba(0, 0, 0, 0.05);
-    border: 1.095px solid transparent;
-    border-radius: 6px;
+    padding: 8px 16px;
+    color: var(--sb-text-muted);
+    // Inactive tabs are quiet (no fill); the active one becomes a bordered white pill.
+    background-color: transparent;
+    border: 1px solid transparent;
+    border-radius: 8px;
     font-size: 13.14px;
     font-weight: 600;
     font-family: var(--sb-font-body);
@@ -574,25 +669,61 @@
     }
 
     &:hover {
-      color: var(--sb-pink);
+      color: var(--sb-text);
     }
   }
 }
 
-/* Sharebox-specific tab states (mirrors window-sharebox active border) */
+/* Active tab — white pill with a hairline border + subtle lift (Figma 3.1). */
 .dmz-sharebox__main.drive-popup .window-body__tab-bar-item[data-state="1"] {
-  border-color: var(--sb-pink);
-  background-color: transparent;
+  color: var(--sb-text);
+  border-color: var(--sb-border);
+  background-color: var(--sb-white);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
 }
 
-/* Split body (mirrors window-sharebox__split-body) */
+/* Split body. Box.G renders this as a grid (data-flow="g"), so layout is driven
+   by grid-template-columns, not flex. Shared workspaces add data-layout="split"
+   for a 2-column files | conversation view (Figma); restricted stays a single
+   files column. */
 .dmz-sharebox__split-body,
 .dmz__split-body {
   flex: 1;
   overflow: hidden;
-  display: flex;
-  flex-direction: row;
   min-height: 0;
+  // Mirror the proven meeting-window content+chat row (window/meeting __main):
+  // stretch the file + conversation columns to full height, or the row collapses
+  // to content height and a column renders half-height/centered. The container is
+  // a Box.X flex row (see desk-content.js) — files panel flexes, conversation is a
+  // fixed-width flex-shrink:0 sibling, exactly like meeting's stage + chat-panel.
+  align-items: stretch;
+  height: 100%;
+
+  // Figma 3.1: file grid + conversation side by side. The conversation panel has
+  // a FIXED width (flex-basis, no grow/shrink — see .dmz__chat-panel) and the
+  // file panel takes the rest (min-width:0 so it can shrink). This avoids the
+  // earlier bug where the chat's min-content width let it fill the whole row
+  // while the file panel collapsed. Chat-enabled shares (data-chat="1") show the
+  // conversation in the Files view; shares without the grant stay files-only.
+  &[data-view="files"]:not([data-chat="1"]) {
+    .dmz__chat-panel {
+      display: none;
+    }
+  }
+
+  /* Box.G keeps this a grid (.drumee-box[data-flow="g"], specificity 0,2,0).
+     Shared workspaces define a 2-column files | conversation track set (Figma);
+     restricted stays the default single column. The doubled class (0,3,0) beats
+     the framework grid rule so the columns win regardless of stylesheet order. */
+  &.dmz__split-body[data-layout="split"] {
+    grid-template-columns: minmax(0, 3fr) minmax(202px, 1fr);
+
+    /* Chat / Task tab: collapse to one column (the hidden panels drop out). */
+    &[data-view="chat"],
+    &[data-view="task"] {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
 
   &[data-view="chat"] {
     .dmz__files-panel,
@@ -600,8 +731,9 @@
       display: none;
     }
 
+    // Chat tab → conversation fills the row.
     .dmz__chat-panel {
-      flex: 1;
+      flex: 1 1 auto;
     }
   }
 
@@ -614,35 +746,368 @@
   }
 }
 
-/* Files panel (3:1 split with chat) */
+/* Files panel — takes the space left by the fixed-width conversation panel */
 .dmz-sharebox__files-panel,
 .dmz__files-panel {
-  flex: 3;
+  flex: 1 1 0;
   min-width: 0;
   background: var(--sb-grey-20);
   overflow: auto;
 }
 
-/* Chat panel */
+/* Conversation panel — FIXED width on the right (Figma 3.1), like window-folder.
+   flex: 0 0 <basis> = no grow, no shrink, so it can never expand to fill the row
+   (the old `flex: 1` + min-content was what collapsed the file grid). */
 .dmz__chat-panel {
-  flex: 1;
-  min-width: 202px;
-  border-left: 1px solid rgba(0, 0, 0, 0.05);
+  flex: 0 0 clamp(280px, 24vw, 360px);
+  min-width: 0;
+  // Clear divider from the file grid (Figma 3.1) — the old 0.05 alpha was invisible.
+  border-left: 1px solid var(--border-default, rgba(0, 0, 0, 0.12));
   background: var(--sb-grey-20);
 
   .note-content.dmz__chat-label {
-    @include drumee.typo($size: 10px, $line: 1, $weight: 600, $color: var(--sb-text));
+    @include drumee.typo($size: 11px, $line: 1, $weight: 600, $color: var(--sb-text-muted, var(--sb-text)));
     font-family: var(--sb-font-mono);
     text-transform: uppercase;
-    letter-spacing: 0.4px;
-    padding: 16px;
-    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+    letter-spacing: 0.6px;
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border-default, rgba(0, 0, 0, 0.08));
   }
 
   .widget-chatItem__conversation-content {
     &.me {
       background-color: var(--sb-pink);
     }
+  }
+}
+
+/* Sign-up required overlay modal */
+.dmz-sharebox-signup-required {
+  &__panel {
+    align-items: center;
+    background: #ffffff;
+    border-radius: 12px;
+    box-shadow: var(--sb-card-shadow);
+    gap: 32px;
+    max-width: calc(100vw - 64px);
+    padding: 48px;
+    width: 520px;
+  }
+
+  &__header {
+    align-items: center;
+    gap: 24px;
+    width: 100%;
+  }
+
+  &__logo {
+    align-items: center;
+    flex-shrink: 0;
+    height: 60px;
+    justify-content: center;
+    width: 72px;
+
+    svg {
+      fill: var(--sb-cta);
+      height: 100%;
+      width: 100%;
+    }
+  }
+
+  &__title {
+    @include drumee.typo($size: 32px, $line: 110%, $weight: 600, $color: var(--sb-cta));
+    font-family: var(--sb-font-body);
+    text-align: center;
+  }
+
+  &__body {
+    @include drumee.typo($size: 14px, $line: 20px, $weight: 400, $color: var(--sb-text-muted));
+    font-family: var(--sb-font-body);
+    text-align: center;
+    width: 100%;
+  }
+
+  &__actions {
+    align-items: center;
+    gap: 16px;
+    width: 100%;
+  }
+
+  &__signup-btn {
+    @include drumee.typo($size: 16px, $line: 24px, $weight: 600, $color: #ffffff);
+    align-items: center;
+    background: var(--sb-cta);
+    border-radius: 4px;
+    cursor: pointer;
+    font-family: var(--sb-font-body);
+    justify-content: center;
+    padding: 16px 24px;
+    text-align: center;
+    width: 100%;
+
+    &:hover {
+      filter: brightness(1.08);
+    }
+  }
+
+  &__login-link {
+    @include drumee.typo($size: 14px, $line: 20px, $weight: 600, $color: var(--sb-text));
+    cursor: pointer;
+    font-family: var(--sb-font-body);
+    text-align: center;
+
+    &:hover {
+      opacity: 0.8;
+    }
+  }
+}
+
+/* Limited-access banner shown when guest has restricted privilege */
+.dmz-sharebox__limited-access-banner {
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 22px;
+  background: rgba(67, 60, 197, 0.08);
+  border-bottom: 1px solid rgba(67, 60, 197, 0.15);
+  flex-shrink: 0;
+}
+
+.dmz-sharebox__limited-access-text {
+  @include drumee.typo($size: 13px, $line: 20px, $weight: 400, $color: var(--sb-text));
+  font-family: var(--sb-font-body);
+}
+
+.dmz-sharebox__limited-access-btn {
+  @include drumee.typo($size: 13px, $line: 20px, $weight: 600, $color: var(--sb-cta));
+  font-family: var(--sb-font-body);
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+
+  &:hover { opacity: 0.8; }
+}
+
+/* Request-access overlay panel */
+.dmz-sharebox-request-access {
+  &__panel {
+    background: #ffffff;
+    border-radius: 12px;
+    box-shadow: var(--sb-card-shadow);
+    gap: 20px;
+    max-width: calc(100vw - 64px);
+    padding: 40px 48px;
+    width: 480px;
+  }
+
+  &__header {
+    align-items: flex-start;
+    justify-content: space-between;
+  }
+
+  &__title {
+    @include drumee.typo($size: 24px, $line: 110%, $weight: 600, $color: var(--sb-cta));
+    font-family: var(--sb-font-body);
+  }
+
+  &__close {
+    cursor: pointer;
+    padding: 0 4px;
+    user-select: none;
+    @include drumee.typo($size: 22px, $line: 22px, $weight: 400, $color: var(--sb-text-muted));
+
+    &:hover { color: var(--sb-text); }
+  }
+
+  &__level-desc {
+    @include drumee.typo($size: 13px, $line: 20px, $weight: 400, $color: var(--sb-text-muted));
+    font-family: var(--sb-font-body);
+    margin-bottom: 6px;
+  }
+
+  &__level-picker {
+    gap: 8px;
+  }
+
+  // Icon + label + checkbox ROWS (Figma 60) — mirrors the sender-side approve
+  // popup (panel-activity approve-request) so the two read as one component.
+  // Single-select: the handler toggles [data-selected] across rows.
+  &__levels {
+    gap: 8px;
+  }
+
+  &__level-row {
+    align-items: center;
+    justify-content: space-between;
+    cursor: pointer;
+    padding: 10px 12px;
+    border-radius: 8px;
+    background: var(--sb-grey-20);
+    user-select: none;
+
+    &[data-selected='yes'] { background: var(--primary-20, #b1adff); }
+    &:hover:not([data-selected='yes']) { background: var(--sb-grey-30); }
+  }
+
+  &__level-main {
+    align-items: center;
+    gap: 10px;
+  }
+
+  &__level-icon {
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+
+    svg { width: 18px; height: 18px; fill: var(--sb-text); }
+  }
+
+  &__level-label {
+    @include drumee.typo($size: 14px, $line: 20px, $weight: 400, $color: var(--sb-text));
+    font-family: var(--sb-font-body);
+  }
+
+  &__level-check {
+    width: 18px;
+    height: 18px;
+    flex-shrink: 0;
+    border-radius: 4px;
+    border: 1.5px solid var(--sb-grey-30);
+    background: #ffffff;
+    position: relative;
+  }
+
+  &__level-row[data-selected='yes'] &__level-check {
+    background: var(--sb-cta);
+    border-color: var(--sb-cta);
+
+    &::after {
+      content: '';
+      position: absolute;
+      left: 5px;
+      top: 1.5px;
+      width: 4px;
+      height: 9px;
+      border: solid #ffffff;
+      border-width: 0 2px 2px 0;
+      transform: rotate(45deg);
+    }
+  }
+
+  &__email {
+    width: 100%;
+
+    // The EntryBox renders a bare input; give it a visible field box so the
+    // recipient can tell it's an input (it previously looked like plain text).
+    input {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid var(--sb-grey-30);
+      border-radius: 4px;
+      background: #ffffff;
+      @include drumee.typo($size: 14px, $line: 20px, $color: var(--sb-text));
+      font-family: var(--sb-font-body);
+
+      &::placeholder { color: var(--sb-text-muted); }
+      &:focus { border-color: var(--sb-cta); outline: none; }
+    }
+  }
+
+  &__error {
+    @include drumee.typo($size: 13px, $line: 18px, $weight: 500, $color: var(--red-500));
+    font-family: var(--sb-font-body);
+
+    &[data-mode='closed'] { display: none; }
+  }
+
+  &__message {
+    width: 100%;
+    resize: vertical;
+  }
+
+  // Single full-width "Send request" (Figma 60), icon + label centered.
+  &__submit-btn {
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    cursor: pointer;
+    padding: 11px;
+    border-radius: 8px;
+    background: var(--sb-cta);
+
+    &:hover { filter: brightness(1.08); }
+  }
+
+  &__submit-icon {
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+
+    svg { width: 16px; height: 16px; fill: #ffffff; }
+  }
+
+  &__submit-label {
+    @include drumee.typo($size: 14px, $line: 20px, $weight: 600, $color: #ffffff);
+    font-family: var(--sb-font-body);
+  }
+}
+
+/* Request-sent confirmation panel */
+.dmz-sharebox-request-sent {
+  &__panel {
+    align-items: center;
+    background: #ffffff;
+    border-radius: 12px;
+    box-shadow: var(--sb-card-shadow);
+    gap: 16px;
+    max-width: calc(100vw - 64px);
+    padding: 40px 48px;
+    width: 480px;
+  }
+
+  &__title {
+    @include drumee.typo($size: 24px, $line: 110%, $weight: 600, $color: var(--sb-cta));
+    font-family: var(--sb-font-body);
+    text-align: center;
+  }
+
+  &__body {
+    @include drumee.typo($size: 14px, $line: 20px, $weight: 400, $color: var(--sb-text-muted));
+    font-family: var(--sb-font-body);
+    text-align: center;
+  }
+
+  &__email {
+    @include drumee.typo($size: 14px, $line: 20px, $weight: 600, $color: var(--sb-text));
+    font-family: var(--sb-font-body);
+  }
+
+  &__level {
+    @include drumee.typo($size: 13px, $line: 20px, $weight: 400, $color: var(--sb-text-muted));
+    font-family: var(--sb-font-body);
+  }
+
+  &__pending {
+    padding: 4px 12px;
+    border-radius: 100px;
+    background: rgba(67, 60, 197, 0.1);
+    @include drumee.typo($size: 12px, $line: 20px, $weight: 600, $color: var(--sb-cta));
+    font-family: var(--sb-font-mono);
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+  }
+
+  &__close-btn {
+    cursor: pointer;
+    margin-top: 8px;
+    padding: 12px 24px;
+    border-radius: 4px;
+    background: var(--sb-cta);
+    @include drumee.typo($size: 14px, $line: 20px, $weight: 600, $color: #ffffff);
+    font-family: var(--sb-font-body);
+    text-align: center;
+
+    &:hover { filter: brightness(1.08); }
   }
 }
 

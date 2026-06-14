@@ -93,6 +93,7 @@ function entriesFromFileList(fileList) {
  */
 async function entriesFromDataTransfer(transfer) {
   const items = [];
+  const topFolders = []; // names of top-level dropped folders (seed empty ones below)
   const walk = (entry, prefix) => new Promise((resolve) => {
     if (entry.isFile) {
       // size unknown until .file(); fetch it for accurate totals
@@ -123,9 +124,25 @@ async function entriesFromDataTransfer(transfer) {
 
   const tasks = [];
   for (const f of (transfer.files || [])) tasks.push(walk(f, ""));
-  for (const d of (transfer.folders || [])) tasks.push(walk(d, ""));
+  for (const d of (transfer.folders || [])) {
+    if (d && d.name && !IGNORED_FILES.test(d.name)) topFolders.push(d.name);
+    tasks.push(walk(d, ""));
+  }
   await Promise.all(tasks);
-  return buildTreeFromPaths(items);
+  const roots = buildTreeFromPaths(items);
+  // buildTreeFromPaths materializes a folder only as the ancestor of a file, so a
+  // dropped top-level folder with no non-ignored files (empty / only .DS_Store /
+  // only empty subfolders) would vanish silently. Seed an empty folder root for
+  // every dropped folder that didn't make it in.
+  for (const name of topFolders) {
+    if (!roots.some((r) => r.kind === "folder" && r.name === name)) {
+      roots.push({
+        id: makeId(), kind: "folder", name, relpath: name,
+        size: 0, source: null, children: [], status: "queued",
+      });
+    }
+  }
+  return roots;
 }
 
 module.exports = {

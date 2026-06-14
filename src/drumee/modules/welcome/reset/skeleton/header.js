@@ -1,33 +1,23 @@
-function __skl_welcome_reset_header (_ui_) {
+function __skl_welcome_reset_header(_ui_) {
   const headerFig = _ui_.fig.family
 
-  const method = _ui_._method
-  const mode = _ui_._mode
+  let headerTitle = LOCALE.SET_A_NEW_PASSWORD
 
-  let headerTitle = Host.get('org_name')|| 'Drumee'
-  let _content = ''
+  if (Visitor.parseModuleArgs().reason == 'new-account') {
+    headerTitle = LOCALE.CHOOSE_PASSWORD
+  }
 
-  if ((mode == _a.loader) && (method == 'complete')) {
-    headerTitle = LOCALE.PASSWORD_CHANGED_SUCCESSFULLY
-  }
-  
-  if (method == _a.password) {
-    _content = LOCALE.CREATE_NEW_PASSWORD
-  }
-  if(Visitor.parseModuleArgs().reason == 'new-account'){
-    _content = LOCALE.CHOOSE_PASSWORD
-  }
-  const header = Skeletons.Box.Y({
-    className  : `${headerFig}__header-content`,
-    kids       : [
-      Skeletons.Note({
-        className  : `${headerFig}__note header`,
-        content    : headerTitle
+  const header = Skeletons.Box.X({
+    className: `${headerFig}__header-content`,
+    kids: [
+      Skeletons.Button.Svg({
+        ico: 'lock',
+        className: `${headerFig}__header-icon lock`,
       }),
 
       Skeletons.Note({
-        className  : `${headerFig}__note steps`,
-        content    : _content
+        className: `${headerFig}__note header`,
+        content: headerTitle
       })
     ]
   })

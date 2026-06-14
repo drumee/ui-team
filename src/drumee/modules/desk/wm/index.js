@@ -3,6 +3,9 @@ const { copyToClipboard } = require("@drumee/ui-essentials");
 const { TweenLite, gsap } = require("@drumee/ui-core/vendor");
 let lastClickTime = new Date().getTime();
 const push = require("./push");
+// Same channel the websocket dispatcher triggers on Wm — windows and the
+// sidebar workspace list subscribe to it (window/utils.js, workspace-list).
+const WS_EVENT = "ws:event";
 
 class __window_manager extends push {
   constructor(...args) {
@@ -88,8 +91,15 @@ class __window_manager extends push {
   route(l) {
     let args = Visitor.parseModuleArgs() || {};
     let path = Visitor.parseModule() || [];
-    this.debug("AAA:100", args);
+
+    /** Reset the url to its default value*/
+    setTimeout(()=>{
+      location.hash='#/desk/wm/home'
+    }, Visitor.timeout(5000))
+
     switch (path[2]) {
+      case _a.home:
+        return;
       case _a.meeting:
         let media = this.getItemsByAttr(_a.nid, args.nid)[0];
         if (media && media.triggerHandlers) {
@@ -104,6 +114,7 @@ class __window_manager extends push {
         return;
       case _a.teamchat:
       case _a.channel:
+      case _a.hub:
         this.loadWorkspace(args);
         return;
 
@@ -356,6 +367,15 @@ class __window_manager extends push {
       cur.once(_a.destroy, () => {
         this._curWorkspace = null;
       });
+      // Drive the VISIBLE desk topbar breadcrumb (desk_breadcrumb) on the
+      // workspace switch. The get_path → refreshBreadcrumbsUI call below also
+      // mirrors into the topbar, but only once it resolves AND only while the
+      // headless window is focused (state==1); firing here gives the breadcrumb
+      // an immediate, unconditional update. The topbar listens to the
+      // "breadcrumb:content" broadcast (source must be Wm) — same path
+      // loadWorkspaceNode uses. Without this, switching workspace can leave the
+      // topbar breadcrumb stale (e.g. stuck on a Settings/Contacts section).
+      this.updateBreadcrumb({ ...data, service: "change-workspace" }, this);
       this.fetchService(SERVICE.media.get_path, { nid, hub_id }).then(
         (data) => {
           if (_.isEmpty(data)) return;
@@ -578,6 +598,12 @@ class __window_manager extends push {
             if (_.isEmpty(path)) return;
             if (_.isFunction(currentFolder.refreshBreadcrumbsUI))
               currentFolder.refreshBreadcrumbsUI(path);
+            // Drive the visible desk topbar breadcrumb (desk_breadcrumb) for the
+            // folder navigation. refreshBreadcrumbsUI above also mirrors into the
+            // topbar, but only when `currentFolder` is the focused headless
+            // workspace window; this explicit broadcast covers the case where it
+            // isn't. The topbar listens to "breadcrumb:content" (source must be Wm).
+            this.updateBreadcrumb({ ...attrs, service: "change-workspace" }, this);
           })
           .catch((e) => this.warn("openWorkspaceFolder: get_path failed", e));
       })
@@ -686,6 +712,9 @@ class __window_manager extends push {
       { async: 1 },
     )
       .then((r) => {
+        if (r && r.status == 403) {
+          return this._onShareAccessDenied(opt);
+        }
         let m = new Backbone.Model(r);
         opt = _.merge(opt, r);
         Kind.waitFor(_a.media).then((k) => {
@@ -797,7 +826,7 @@ class __window_manager extends push {
     )
       .then((data) => {
         if (data.status == 403) {
-          return this.alert(LOCALE.WEAK_PRIVILEGE);
+          return this._onShareAccessDenied(opt);
         }
         Kind.waitFor(_a.media).then((k) => {
           data.role = _a.url;
@@ -809,6 +838,49 @@ class __window_manager extends push {
       .catch(() => {
         this.alert(LOCALE.WEAK_PRIVILEGE);
       });
+  }
+
+  /**
+   * Permission denied while a signed-in user opens a secure-shared node.
+   * When a secure-share token is in scope (the user reached the desk through a
+   * share link) show the "You don't have permission" → Request access modal
+   * (secure-share v2, Figma 1961:115796). With no token, fall back to the plain
+   * alert so ordinary member 403s behave exactly as before.
+   */
+  _onShareAccessDenied(opt = {}) {
+    const token =
+      Visitor.get(_a.token) || localStorage.getItem("token") || "";
+    // Only treat a 403 as a secure-share access request when it's for the SAME
+    // workspace the share token belongs to (stored at share login). Otherwise an
+    // unrelated desk 403 after a share visit would wrongly pop the Request Access
+    // modal — fall back to the normal privilege alert. When no share hub is known
+    // (older/public-share sessions) keep the prior best-effort behaviour.
+    const shareHub = localStorage.getItem("share_hub_id") || "";
+    if (!token || (shareHub && opt.hub_id && opt.hub_id !== shareHub)) {
+      return this.alert(LOCALE.WEAK_PRIVILEGE);
+    }
+    return this.openRequestAccessModal({
+      token,
+      hub_id: opt.hub_id,
+      nid: opt.nid,
+    });
+  }
+
+  /**
+   * Feed the request-access modal into the centred, blurred wrapper-modal slot.
+   */
+  openRequestAccessModal(opt = {}) {
+    return this.ensurePart("wrapper-modal").then((p) => {
+      p.clear();
+      p.el.dataset.state = "open";
+      p.el.dataset.overlay = "blur";
+      p.feed({
+        kind: "request_access_modal",
+        token: opt.token,
+        hub_id: opt.hub_id,
+        nid: opt.nid,
+      });
+    });
   }
 
   /**
@@ -883,6 +955,19 @@ class __window_manager extends push {
 
   onDomRefresh() {
     this.feed(require("./skeleton")(this));
+    // Capture hub_id synchronously before any async ops so hash changes cannot lose it.
+    // Falls back to sessionStorage set by welcome module for the not-logged-in flow.
+    const _path = Visitor.parseModule() || [];
+    const _args = Visitor.parseModuleArgs() || {};
+    const _hubId = (_path[2] === _a.hub && _args.hub_id)
+      ? _args.hub_id
+      : sessionStorage.getItem('drumee_hubDeepLink');
+    if (_hubId) {
+      sessionStorage.removeItem('drumee_hubDeepLink');
+      this.ensurePart('headless-layer').then(() => {
+        this.loadWorkspace({ hub_id: _hubId });
+      });
+    }
     this.fetchService(
       SERVICE.desk.get_env,
       { hub_id: Visitor.id },
@@ -894,15 +979,6 @@ class __window_manager extends push {
         Visitor.set({ wicket_id: data.wicket_id });
       }
       this.trigger(_e.ready);
-      // Show spefici file/folder by url
-      // let path = Visitor.parseModule() || [];
-      // if (path[2] === _a.open) {
-      //   this.ensurePart(_a.list).then((p) => {
-      //     p.once('end:of:data', (l)=>{
-      //       this.route();
-      //     })
-      //   })
-      // }
       Visitor.set({ disk: data.disk });
       this.bindWsEvents();
     });
@@ -1249,15 +1325,57 @@ class __window_manager extends push {
         })
           .ask()
           .then(() => {
-            const deleteHub = () =>
-              this.postService({
-                service: SERVICE.hub.delete_hub,
-                hub_id: media.mget(_a.hub_id),
-              }).then((data) => {
-                media.suppress();
-                resolve(data);
+            // Optimistic delete: fire the request in PARALLEL with the trash
+            // animation (it used to wait for it), and remove the tile + the
+            // sidebar entry when the animation ends instead of after the
+            // server round-trip — deleting a big workspace holds the response
+            // for seconds+ (DB drop) and the UI used to sit frozen for all of
+            // it. The later WS echo finds nothing left to remove (idempotent).
+            const hub_id = media.mget(_a.hub_id);
+            // Full node attrs, like the server's `...old_node` broadcast —
+            // windows' removeContent matches on `filepath`, so a bare
+            // {hub_id} echo would leave an open window of this hub alive.
+            const echoData = {
+              ...media.getAttr(),
+              hub_id,
+              home_id: hub_id,
+              nid: hub_id,
+              filetype: _a.hub,
+            };
+            const request = this.postService({
+              service: SERVICE.hub.delete_hub,
+              hub_id,
+            });
+            const animation = this.animateMediaToTrash(media).catch(() => { });
+            animation.then(() => {
+              media.suppress();
+              // Locally echo the event shape the websocket dispatcher emits —
+              // the sidebar workspace list and any open window of this hub
+              // already subscribe to it.
+              this.trigger(WS_EVENT, {
+                data: echoData,
+                options: { service: "hub.delete_hub" },
               });
-            this.animateMediaToTrash(media).then(deleteHub).catch(deleteHub);
+            });
+            request
+              .then((data) => {
+                // A failed request resolves UNDEFINED (doRequest swallows the
+                // throw via onServerComplain) — treat no-data as failure too,
+                // not only an explicit {error}.
+                if (!data || data.error) {
+                  return Promise.reject((data && data.error) || "no response");
+                }
+                resolve(data);
+              })
+              .catch(async (e) => {
+                // Rare (owner-only, validated upfront): restore the listing
+                // and say why instead of leaving a silently missing tile.
+                await animation;
+                this.warn("delete_hub failed — restoring listing", e);
+                Butler.say(LOCALE.DELETE_WORKSPACE_FAILED);
+                this.reload();
+                resolve({ error: e });
+              });
             p.clear();
           })
           .catch((e) => {
@@ -1272,27 +1390,66 @@ class __window_manager extends push {
    * @param {*} cmd
    */
   confirmLeaveHub(media) {
-    this.ensurePart("wrapper-modal").then(async (p) => {
-      await Kind.waitFor("window_confirm");
-      p.feed({
-        kind: "window_confirm",
-        maxsize: 2,
-        title: LOCALE.LEAVE,
-        message: LOCALE.MSG_LEAVE_HUB.format(media.mget(_a.filename)),
-        confirm: LOCALE.LEAVE,
-      })
-        .ask()
-        .then(() => {
-          this.animateMediaToTrash(media).then(() => {
-            this.postService({
+    // Returns a Promise that settles once the request settles (or the user
+    // cancels) — removeMediaSelection awaits this for multi-select.
+    return new Promise((resolve) => {
+      this.ensurePart("wrapper-modal").then(async (p) => {
+        await Kind.waitFor("window_confirm");
+        p.feed({
+          kind: "window_confirm",
+          maxsize: 2,
+          title: LOCALE.LEAVE,
+          message: LOCALE.MSG_LEAVE_HUB.format(media.mget(_a.filename)),
+          confirm: LOCALE.LEAVE,
+        })
+          .ask()
+          .then(() => {
+            // Same optimistic treatment as confirmRemoveHub. This path was
+            // even worse before: it never suppress()ed — the tile only
+            // vanished when the WS echo arrived.
+            const hub_id = media.mget(_a.hub_id);
+            const echoData = {
+              ...media.getAttr(),
+              hub_id,
+              home_id: hub_id,
+              nid: hub_id,
+              filetype: _a.hub,
+            };
+            const request = this.postService({
               service: SERVICE.desk.leave_hub,
-              nid: media.mget(_a.hub_id),
+              nid: hub_id,
               hub_id: Visitor.id,
             });
+            const animation = this.animateMediaToTrash(media).catch(() => { });
+            animation.then(() => {
+              media.suppress();
+              this.trigger(WS_EVENT, {
+                data: echoData,
+                options: { service: "desk.leave_hub" },
+              });
+            });
+            request
+              .then((data) => {
+                if (!data || data.error) {
+                  return Promise.reject((data && data.error) || "no response");
+                }
+                resolve(data);
+              })
+              .catch(async (e) => {
+                // Wait the animation out so the reload doesn't race the
+                // deferred local echo (restore-then-remove flicker).
+                await animation;
+                this.warn("leave_hub failed — restoring listing", e);
+                Butler.say(LOCALE.LEAVE_WORKSPACE_FAILED);
+                this.reload();
+                resolve({ error: e });
+              });
+            p.clear();
+          })
+          .catch(() => {
+            resolve({});
           });
-          p.clear();
-        })
-        .catch(() => { });
+      });
     });
   }
 
@@ -1996,7 +2153,9 @@ class __window_manager extends push {
       }
       let opt = Visitor.parseModuleArgs(text);
       const url = new URL(href);
-      if (url.host != bootstrap().main_domain || /\#\/plugins/.test(url.hash)) {
+      let host = new RegExp(`${bootstrap().main_domain}$`)
+      this.debug("AAA:1933", host.test(url.host), url.host, bootstrap().main_domain)
+      if (!host.test(url.host) || /\#\/plugins/.test(url.hash)) {
         window.open(href, "_blank");
         return;
       }

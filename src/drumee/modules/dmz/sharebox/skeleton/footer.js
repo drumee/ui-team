@@ -1,11 +1,68 @@
 function __skl_dmz_sharebox_footer(_ui_) {
   const footerFig = `${_ui_.fig.family}-footer`;
 
+  // Gate variant (Figma): while the recipient is still on the email/password
+  // gate, the bottom banner reads "Create your sovereign workspace with Drumee"
+  // with a "Sign up free" button — DISTINCT from the post-unlock landing banner
+  // ("Shared via Drumee — Get your own workspace →" + "Join 2,000+ creators").
+  // It reuses the same footer element classes so the purple-bar styling applies.
+  if (_ui_.mget("_gate_footer")) {
+    const gateIcon = Skeletons.Box.X({
+      className: `${footerFig}__icon-tile`,
+      kids: [
+        Skeletons.Button.Svg({
+          ico: "raw-logo-drumee-icon",
+          className: `${footerFig}__icon`,
+        }),
+      ],
+    });
+
+    const gateHeadline = Skeletons.Note({
+      className: `${footerFig}__headline`,
+      content: LOCALE.SECURE_SHARE_GATE_FOOTER_HEADLINE,
+    });
+
+    const gateLeft = Skeletons.Box.X({
+      className: `${footerFig}__left`,
+      kids: [gateIcon, gateHeadline],
+    });
+
+    const gateSignupButton = Skeletons.Box.X({
+      className: `${footerFig}__signup-btn`,
+      sys_pn: "button-wrapper",
+      service: "open-signup",
+      uiHandler: _ui_,
+      kidsOpt: { active: 0 },
+      kids: [
+        Skeletons.Note({
+          className: `${footerFig}__signup-label`,
+          content: LOCALE.SECURE_SHARE_GATE_FOOTER_CTA,
+        }),
+      ],
+    });
+
+    const gateRight = Skeletons.Box.X({
+      className: `${footerFig}__right`,
+      kids: [gateSignupButton],
+    });
+
+    const gateBanner = Skeletons.Box.X({
+      className: `${footerFig}__banner`,
+      debug: __filename,
+      kids: [gateLeft, gateRight],
+    });
+
+    return Skeletons.Box.X({
+      className: `${footerFig}__main`,
+      kids: [gateBanner],
+    });
+  }
+
   const lightningIcon = Skeletons.Box.X({
     className: `${footerFig}__icon-tile`,
     kids: [
       Skeletons.Button.Svg({
-        ico: "raw-share",
+        ico: "app-lightning",
         className: `${footerFig}__icon`,
       }),
     ],

@@ -1,8 +1,3 @@
-// ============================================================== *
-//   Copyright Xialia.com  2011-2021
-//   FILE : src/drumee/builtins/desk/skeleton/common/topbar/settings
-//   TYPE : Skeleton
-// ============================================================== *
 
 const __icon = function (_ui_) {
   const a = {
@@ -11,6 +6,7 @@ const __icon = function (_ui_) {
     copy: "desktop_copy",
     delete: "ctxmenu-delete",
     duplicate: "file-copy",
+    designationLink: "ctxmenu-designation-link",
     directUrl: "backoffice_public",
     download: "ctxmenu-download",
     edit: "ctxmenu-edit",
@@ -45,7 +41,7 @@ const __icon = function (_ui_) {
     setAsHomepage: "desktop_public",
     settings: "editbox_cog",
     share: "ctxmenu-share",
-    secureShare: "apps-lock-shield",
+    secureShare: "ctxmenu-share",
     share_qrcode: "ctxmenu-qrcode",
     shortcut: "editbox_link",
     showHidden: "eye",

@@ -162,7 +162,19 @@ class __welcome_signin extends __welcome_interact {
 
       case "resend-otp":
         this._otpResent++;
+        // Spinner on the resend link while yp.login re-sends the code. cmd is
+        // the dtk_otp widget (it fired resendService). Cleared in
+        // checkLoginStatus when the response lands — on success the reconnect
+        // OTP view is re-fed with a fresh widget anyway.
+        this._reconnectOtpCmd = cmd;
+        if (cmd && cmd.el) cmd.el.dataset.resending = "1";
         return this.loginUser(this._vars);
+
+      case "reconnect-otp-verified":
+        // dtk_otp (reconnect popup) auto-submitted yp.authenticate and got a
+        // clean response; hand it to the shared login-status handler. Bad
+        // codes are caught inline by the widget and never reach here.
+        return this.checkLoginStatus(args.data);
 
       case "authenticate":
         return this.postService(SERVICE.yp.hello).then((user) => {
@@ -226,6 +238,7 @@ class __welcome_signin extends __welcome_interact {
    *
    */
   loginUser(vars) {
+    this.setButtonLoading(true);
     let token = Visitor.parseModuleArgs().back;
     if (token) vars.secret = token;
     this.postService(SERVICE.yp.login, {
@@ -252,6 +265,7 @@ class __welcome_signin extends __welcome_interact {
       location.hash = _K.module.welcome;
       return;
     }
+    this.setButtonLoading(true);
     return this.postService({
       service: SERVICE.butler.check_domain,
       domain,
@@ -273,7 +287,7 @@ class __welcome_signin extends __welcome_interact {
       } else {
         this.renderMessage(LOCALE.PLEASE_ENTER_VALID_URL);
       }
-    });
+    }).catch(() => this.setButtonLoading(false));
   }
 
   /**
@@ -300,6 +314,7 @@ class __welcome_signin extends __welcome_interact {
       return this.renderMessage(msg);
     }
 
+    this.setButtonLoading(true);
     let token = Visitor.parseModuleArgs().back;
     if (token) vars.token = token;
     this.postService({
@@ -307,7 +322,7 @@ class __welcome_signin extends __welcome_interact {
       secret: this.data.secret || Visitor.get('otp_key'),
       code: this.__refCode.getValue(),
     }
-    ).then(this.checkLoginStatus);
+    ).then(this.checkLoginStatus).catch(() => this.setButtonLoading(false));
   }
 
   /**
@@ -324,6 +339,11 @@ class __welcome_signin extends __welcome_interact {
    */
   prompt_otp(data) {
     this.data = data;
+    // Reconnect popup uses the dtk_otp 6-box widget (matches dtk-otp__main);
+    // normal sign-in keeps the single-input ./otp.js screen.
+    if (this.mget(RECONNECT)) {
+      return this._promptOtpReconnect(data);
+    }
     // Upopn reload while prompting otp
     if (!this.__content) {
       let opt = {
@@ -341,6 +361,25 @@ class __welcome_signin extends __welcome_interact {
       this.__noCodeOptions.el.dataset.mode = _a.open;
     };
     return _.delay(f, Visitor.timeout(5000));
+  }
+
+  /**
+   * Reconnect-only OTP entry using the dtk_otp 6-box widget. Self-registers
+   * dtk_otp on demand (its loadSeeds() isn't run by this bundle), then feeds
+   * the dtk_otp skeleton. The widget auto-submits to yp.authenticate; its
+   * success is routed through `reconnect-otp-verified` -> checkLoginStatus.
+   * @param {Object} data
+   */
+  async _promptOtpReconnect(data) {
+    if (!Kind.get("dtk_otp")) {
+      Kind.registerAddons({ dtk_otp: import("@drumee/ui-toolkit/widgets/otp") });
+    }
+    await Kind.waitFor("dtk_otp");
+    const skel = require("./skeleton/otp-reconnect")(this);
+    if (!this.__content) {
+      return this.feed(this._skeleton(this, { content: skel }));
+    }
+    this.__content.feed(skel);
   }
 
   /**
@@ -363,9 +402,28 @@ class __welcome_signin extends __welcome_interact {
   }
 
   /**
+   * Toggle the confirm button's loading spinner (hides the label, blocks
+   * clicks) while a request is in flight. No-op on screens without the
+   * button (e.g. the dtk_otp reconnect OTP step).
+   * @param {boolean} on
+   */
+  setButtonLoading(on) {
+    const b = this.getPart('button-confirm');
+    if (!b || !b.el) {
+      return;
+    }
+    if (on) {
+      b.el.dataset.loading = 1;
+    } else {
+      delete b.el.dataset.loading;
+    }
+  }
+
+  /**
    *
    */
   renderMessage(msg) {
+    this.setButtonLoading(false);
     this.ensurePart('button-wrapper').then((p) => {
       const msgBox = require("./skeleton/acknowledgment")(this, msg);
       p.el.dataset.mode = _a.closed;
@@ -430,6 +488,13 @@ class __welcome_signin extends __welcome_interact {
    * @param {*} data 
    */
   checkLoginStatus(data) {
+    this.setButtonLoading(false);
+    // The round-trip is done — drop the reconnect-OTP resend spinner (if any).
+    // On the OTP path the view is re-fed right after, replacing this widget.
+    if (this._reconnectOtpCmd && this._reconnectOtpCmd.el) {
+      this._reconnectOtpCmd.el.dataset.resending = "0";
+    }
+    this._reconnectOtpCmd = null;
     switch (data.status) {
       case "INCOMPLETE_SIGNUP":
         if (data.secret) {

@@ -193,9 +193,20 @@ class __activity_item extends LetcBox {
           case _a.contact:
             this.triggerHandlers({ service: 'dismiss-activity', hub_id, nid, item_type, item_key, changelog_id })
             return
+
+          case 'contact_refused':
+            this.triggerHandlers({ service: 'dismiss-activity', item_type, item_key })
+            return
+
+          case 'access_request':
+            // Pending secure-share request (Figma 62). No server-side dismiss
+            // endpoint (it's resolved via approve/deny) — trash just snoozes the
+            // row for the session; the panel removes it and skips it on refresh.
+            this.triggerHandlers({ service: 'dismiss-activity', item_type, item_key })
+            return
         }
     }
-    
+
   }
 
   /**
@@ -231,6 +242,25 @@ class __activity_item extends LetcBox {
       nid,
     });
     // return;
+    if (service === 'open-access-request') {
+      // Forward to the activity panel (logicalParent) to show the approve popup.
+      // _dispatchService only knows toggle-favorite / dismiss-activity, so an
+      // open-* service would otherwise be swallowed. Pass the request fields in
+      // the args so the panel never has to re-find this item (the list factory
+      // consumes `kind`, so a kind-based lookup of a forwarded item can miss).
+      if (parent && parent.onUiEvent) {
+        parent.onUiEvent(this, {
+          service,
+          request_id     : this.mget('request_id'),
+          requested_level: this.mget('requested_level'),
+          requester_email: this.mget('requester_email'),
+          message        : this.mget('message'),
+          hub_id         : this.mget('hub_id'),
+          workspace_name : this.mget('workspace_name'),
+        });
+      }
+      return;
+    }
     if (service) {
       this._dispatchService(cmd, args)
       return;
@@ -263,6 +293,30 @@ class __activity_item extends LetcBox {
         hash = `#/desk/wm/${category}`;
         location.hash = hash + `&ts=${ts}`;
         this.triggerHandlers({ service: 'dismiss-activity', hub_id, nid, item_type, item_key, changelog_id })
+        break;
+
+      case 'contact_refused':
+        this.triggerHandlers({ service: 'dismiss-activity', item_type, item_key })
+        break;
+
+      case 'access_request':
+        // The click lands on a serviceless inner Note, so `service` is undefined and
+        // we route by category here — same as every other row above. Forward to the
+        // activity panel (logicalParent) to open the approve popup; mirrors the
+        // `if (service === 'open-access-request')` block (used when the service IS
+        // set explicitly). NOT set on the model — that would shadow the row's
+        // bookmark/trash buttons.
+        if (parent && parent.onUiEvent) {
+          parent.onUiEvent(this, {
+            service        : 'open-access-request',
+            request_id     : this.mget('request_id'),
+            requested_level: this.mget('requested_level'),
+            requester_email: this.mget('requester_email'),
+            message        : this.mget('message'),
+            hub_id         : this.mget('hub_id'),
+            workspace_name : this.mget('workspace_name'),
+          });
+        }
         break;
     }
   }

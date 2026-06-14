@@ -1,6 +1,8 @@
 function __skl_dmz_sharebox_header(ui) {
   const headerFig = `${ui.fig.family}-header`;
   const area = ui.mget(_a.area) || _a.share;
+  // Restricted workspace (anything but share/dmz) → lock glyph; shared → link glyph.
+  const restricted = !(area === _a.share || area === 'dmz');
 
   const folderIcon = Skeletons.Box.X({
     className: `${headerFig}__folder-icon`,
@@ -9,9 +11,12 @@ function __skl_dmz_sharebox_header(ui) {
     ],
   });
 
+  // Figma 3.1 hero: "Shared Project: {name}" — the localized prefix precedes the
+  // shared item's name.
+  const sharedName = ui.mget(_a.title) || ui.mget(_a.filename) || ui.mget(_a.name) || "";
   const titleNote = Skeletons.Note({
     className: `${headerFig}__title-text`,
-    content: ui.mget(_a.title) || ui.mget(_a.filename) || ui.mget(_a.name),
+    content: `${LOCALE.SECURE_SHARE_SHARED_PROJECT} ${sharedName}`,
   });
 
   const expiryTime = ui.mget('is_secure') ? (ui.mget('expiry_time') || 0) : 0;
@@ -26,7 +31,7 @@ function __skl_dmz_sharebox_header(ui) {
     className: `${headerFig}__subline`,
     kids: [
       Skeletons.Button.Svg({
-        ico: "profile-lock",
+        ico: restricted ? "profile-lock" : "apps-link-simple",
         className: `${headerFig}__subline-icon`,
       }),
       Skeletons.Note({

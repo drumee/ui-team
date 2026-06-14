@@ -65,7 +65,10 @@ export function tabBar(ui, opt = {}) {
     uiHandler: [ui],
   });
 
-  if (ui.mget(_a.area) === _a.personal) {
+  // Hide the Chat tab for personal areas, and (DMZ) when the share doesn't grant
+  // chat. opt.chat is only passed by the DMZ sharebox; undefined for every other
+  // caller, so their behaviour is unchanged.
+  if (ui.mget(_a.area) === _a.personal || opt.chat === false) {
     chat_label = "";
     chat_tab = "";
   }
@@ -358,6 +361,11 @@ function getChatLabel(ui) {
   if (ui.fig.family === "window-folder") {
     return LOCALE.FOLDER_SCOPED_CHAT || LOCALE.CHAT;
   }
+  // DMZ recipient view: the docked panel is labelled "CONVERSATION" (Figma 3.1),
+  // not "<file> - Chat".
+  if (ui.fig.family === "dmz-sharebox") {
+    return LOCALE.SECURE_SHARE_CONVERSATION || LOCALE.CHAT;
+  }
   const name = ui.mget(_a.filename) || ui.mget(_a.name) || "";
   return name ? `${name} - ${LOCALE.CHAT}` : LOCALE.CHAT;
 }
@@ -376,6 +384,7 @@ export function chatPanel(ui) {
     view: "quickChat",
     hub_id: ui.mget(_a.hub_id),
     nid: ui.mget(_a.nid),
+    privilege: ui.mget(_a.privilege) || ui.mget(_a.permission),
     placeholder: LOCALE.TYPE_MESSAGE + "...",
     // Show the emoji picker icon (lib-messenger__icon emoji) in the panel.
     no_emoji: false,
@@ -392,6 +401,19 @@ export function chatPanel(ui) {
     chat.nid = ui.mget(_a.nid);
     chat.home_id = ui.mget(_a.home_id);
     chat.ownpath = ui.mget(_a.ownpath);
+  }
+
+  // DMZ shared-link recipient (Figma "user chat → sign in required", screen 57):
+  // anyone viewing a share via the DMZ sharebox may READ the conversation but
+  // must sign up / log in to POST — a send attempt opens the sign-up overlay
+  // instead of posting (intercepted in the chat widget's sendMessage). Keyed off
+  // the DMZ sharebox identity — NOT `is_guest`, which the server does not
+  // reliably set for public shares (it returns is_guest=false, so that gate
+  // silently failed). The authenticated window-folder chat has a different
+  // fig.family, so it is unaffected and members can still post normally.
+  if (ui.fig.family === "dmz-sharebox") {
+    chat.guest_chat = 1;
+    chat.desk = ui;
   }
 
   return Skeletons.Box.Y({

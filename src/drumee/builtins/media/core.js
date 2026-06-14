@@ -166,7 +166,7 @@ class __media_core extends DrumeeMFS {
         items = this.contextmenuItemsForFiles();
     }
 
-    if ([_a.public, _a.share, _a.dmz].includes(this.mget(_a.area))) items.push('share_qrcode');
+    if ([_a.public, _a.share, _a.dmz].includes(this.mget(_a.area)) && this.canShare()) items.push('share_qrcode');
 
     /** Children of window_search */
     if (this.mget(_a.role) == _a.search) {
@@ -208,23 +208,40 @@ class __media_core extends DrumeeMFS {
    * 
    */
   contextmenuItemsForFolder() {
-    let fileItems = [];
+    // for folders in trash
+    if (this.mget(_a.status) == _a.deleted) {
+      return [_a.separator, _a.restoreToDesk, _a.deletePermanently];
+    }
+
+    // Sectioned Folder menu (spec 2026-06-10): each inner array renders as
+    // one separator-delimited section; trash always closes the menu.
+    const sections = [];
     if (this.canOrganize() || this.isMediaOwner()) {
-      // Figma B.1.2/B.2.2/B.3.2 (Folder Action - all workspace types):
-      // Download, Rename, Organize, Make a copy, [Share?], Delete
-      fileItems = [_a.download, _a.rename, 'organize', 'makeACopy', _a.separator, _a.trash];
-      if (this.canShare()) fileItems.splice(fileItems.length - 1, 0, _a.share);
-      if (this.mget(_a.area) === _a.share) fileItems.splice(fileItems.length - 1, 0, 'secureShare');
+      /** 1 — download + make a copy + rename */
+      sections.push([_a.download, 'makeACopy', _a.rename]);
+      /** 2 — organize (Move submenu) */
+      sections.push(['organize']);
+      /** 3 — share = invite-members shortcut */
+      if (this.canShare()) sections.push([_a.share]);
+      /** 4 — details: members + roles via the folder settings panel */
+      sections.push([_a.info]);
+      /** 5 — outside-world share link (share area only) */
+      if (this.mget(_a.area) === _a.share) sections.push(['secureShare']);
+      /** 6 — trash last */
+      sections.push([_a.trash]);
     } else if (this.canDownload()) {
       // Restricted/shared recipient — Download only per Figma 2.2
-      fileItems = [_a.download];
-      if (this.canShare()) fileItems.push(_a.share);
-      if (this.canRemove()) fileItems.push(_a.separator, _a.trash);
+      sections.push([_a.download]);
+      if (this.canShare()) sections.push([_a.share]);
+      sections.push([_a.info]);
+      if (this.canRemove()) sections.push([_a.trash]);
     }
-    // for media files in trash
-    if (this.mget(_a.status) == _a.deleted) {
-      fileItems = [, _a.separator, _a.restoreToDesk, _a.deletePermanently];
-    }
+
+    const fileItems = [];
+    sections.forEach((s, i) => {
+      if (i) fileItems.push(_a.separator);
+      fileItems.push(...s);
+    });
     return fileItems;
   }
 
@@ -232,67 +249,81 @@ class __media_core extends DrumeeMFS {
    *
    */
   contextmenuItemsForFiles() {
-    let fileItems = [];
     const fileType = this.mget(_a.filetype);
+    const editable = this.canOrganize() || this.isMediaOwner();
+    if (!editable && !this.canDownload()) return [];
 
-    if (this.canOrganize() || this.isMediaOwner()) {
-      fileItems = [_a.rename, _a.download, _a.separator, _a.copy, _a.duplicate, _a.separator, _a.info];
-      if (this.canShare()) fileItems.push(_a.share);
-      if (this.mget(_a.area) === _a.share) fileItems.push('secureShare');
-      if (fileType == _a.image) {
-        fileItems.push(_a.separator, 'background', _a.rotateLeft, _a.rotateRight);
-      }
-      fileItems.push(_a.separator, _a.trash)
-    } else if (this.canDownload()) {
-      fileItems = [_a.download, _a.separator, _a.copy, _a.duplicate, _a.separator, _a.info];
-      if (this.canShare()) fileItems.push(_a.share);
-      if (fileType == _a.image) {
-        fileItems.push(_a.separator, 'background');
-      }
-      if (this.canRemove()) fileItems.push(_a.trash);
+    // Sectioned File menu (spec 2026-06-10): each inner array renders as one
+    // separator-delimited section; trash always closes the menu.
+    const sections = [];
+
+    /** 1 — clipboard copy + download ("duplicate" removed from files) */
+    sections.push([_a.copy, _a.download]);
+
+    /** 2 — organize (Move submenu) + share = invite-members shortcut */
+    const organize = [];
+    if (editable) organize.push('organize');
+    if (this.canShare()) organize.push(_a.share);
+    if (organize.length) sections.push(organize);
+
+    /** 3 — rename + chat threads (inside a folder window only) */
+    const naming = [];
+    if (editable) naming.push(_a.rename);
+    if (this.getParentByKind && this.getParentByKind('window_folder')) {
+      naming.push('seeChatThreads');
     }
+    if (naming.length) sections.push(naming);
 
-    let extra = []
-    // 3WC href
-    if (this.isRegularFile() && [_a.public].includes(this.mget(_a.area))) {
-      extra.push("directUrl");
+    /** 4 — details */
+    sections.push([_a.info]);
+
+    /** 5 — area links + type extras. "edit" removed: opening an editable
+     * document auto-enters edit mode when permitted, no menu item needed. */
+    const extra = [];
+    if (editable) {
+      switch (this.isRegularFile() && this.mget(_a.area)) {
+        case _a.share:
+          extra.push('secureShare'); /** Share link for access from the outside world */
+          break;
+        case _a.private:
+          extra.push('designationLink'); /** Open a file from the link with the user environment */
+          break;
+        case _a.public:
+          extra.push('directUrl');  /** Web-base URL. Readable by anyone. No token needed */
+          break;
+      }
     }
-
-    switch (this.mget(_a.filetype)) {
+    if (fileType == _a.image) {
+      extra.push('background');
+      if (editable) extra.push(_a.rotateLeft, _a.rotateRight);
+    }
+    switch (fileType) {
       case _a.note:
         extra.push("pinOn");
-        break;
-      case _a.document:
-        if (this.canUpload() && EDITABLE.includes(this.mget(_a.ext).toLowerCase())) {
-          if ((this.mget(_a.status) !== _a.locked)) extra.push(_a.edit);
-        }
         break;
       case _a.web:
         extra.push("setAsHomepage");
         break;
       case _a.script:
         if (Visitor.profile().devel) {
-          fextra.push("execute");
+          extra.push("execute");
         }
         break;
     }
+    if (editable) {
+      extra.push(this.mget(_a.status) === _a.locked ? _e.unlock : _e.lock);
+    }
+    if (extra.length) sections.push(extra);
 
-    if (this.canOrganize() || this.isMediaOwner()) {
-      if (this.mget(_a.status) === _a.locked) {
-        extra.push(_e.unlock);
-      } else {
-        extra.push(_e.lock);
-      }
-    }
-    if (extra.length) {
-      fileItems.push(_a.separator, ...extra)
-    }
+    /** 6 — trash last */
+    if (editable || this.canRemove()) sections.push([_a.trash]);
 
-    if (this.getParentByKind && this.getParentByKind('window_folder')) {
-      fileItems.push(_a.separator, 'seeChatThreads');
-    }
+    const fileItems = [];
+    sections.forEach((s, i) => {
+      if (i) fileItems.push(_a.separator);
+      fileItems.push(...s);
+    });
     return fileItems;
-
   }
 
   /**

@@ -12,7 +12,7 @@ const __skl_widget_invite_notification_buttons = function(_ui_, status) {
 
   let buttons = Preset.ConfirmButtons(_ui_, {
       confirmLabel  : LOCALE.ACCEPT || 'Accept',
-      cancelLabel   : LOCALE.REFUSE || 'Refuse'
+      cancelLabel   : LOCALE.REFUSE || 'Decline'
     });
 
   if (status === "informed") {

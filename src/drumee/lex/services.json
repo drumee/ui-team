@@ -15,7 +15,8 @@
     "login": "dmz.login",
     "logout": "dmz.logout",
     "reset_sessions": "dmz.reset_sessions",
-    "signup": "dmz.signup"
+    "signup": "dmz.signup",
+    "request_access": "dmz.request_access"
   },
   "font": {
     "font_list": "font.font_list",
@@ -79,7 +80,12 @@
     "link_label": "task.link_label",
     "unlink_label": "task.unlink_label",
     "get_labels": "task.get_labels",
-    "search_files": "task.search_files"
+    "search_files": "task.search_files",
+    "comment_list": "task.comment_list",
+    "comment_create": "task.comment_create",
+    "comment_update": "task.comment_update",
+    "comment_delete": "task.comment_delete",
+    "comment_react": "task.comment_react"
   },
   "label": {
     "list": "label.list",
@@ -134,9 +140,13 @@
   },
   "secure_share": {
     "create": "secure_share.create",
+    "access_list": "secure_share.access_list",
+    "list_access_events": "secure_share.list_access_events",
+    "revoke_recipient": "secure_share.revoke_recipient",
     "list": "secure_share.list",
     "revoke": "secure_share.revoke",
-    "delete": "secure_share.delete"
+    "delete": "secure_share.delete",
+    "respond_to_access_request": "secure_share.respond_to_access_request"
   },
   "reward_hub": {
     "get_env": "reward_hub.get_env",

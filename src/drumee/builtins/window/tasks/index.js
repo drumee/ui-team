@@ -1,4 +1,5 @@
 const { uploadFile } = require("@drumee/ui-essentials");
+const { markerRe, uidsFromText } = require("./mention-markers");
 
 const COLUMNS = [
   { key: "todo", label: "STATUS_TODO", color: "#AEAEB2" },
@@ -42,9 +43,23 @@ class __tasks_panel extends LetcBox {
     this._pickerOpen = null;
     // Member filter — empty = show all. Uids stored as strings.
     this._filterUids = [];
+    // Active sub-view (board | list | summary) and the List view's sort state.
+    this._view = "board";
+    this._sort = null; // { key, dir } — null = natural (status, rank) order
     this._fileSearch = { query: "", results: [], scope: null };
     this._fileSearchTimer = null;
     this._fileSearchBlurTimer = null;
+    // Active @-mention session (null when the popup is closed): the "@token"
+    // range in the focused description editor + the filtered member list.
+    this._mention = null;
+    // Comment feed state for the open task detail.
+    this._comments = [];
+    this._commentDraft = null; // composer buffer { body, mention_uids }
+    this._editingCommentId = null;
+    this._commentEditDraft = null; // inline-edit buffer { body, mention_uids }
+    this._replyingTo = null; // root comment id whose reply composer is open
+    this._replyDraft = null; // reply buffer { body, mention_uids }
+    this._reactPickerFor = null; // comment id whose reaction palette is open
     this.bindEvent(_a.live);
   }
 
@@ -555,11 +570,87 @@ class __tasks_panel extends LetcBox {
         this._detailId = null;
         this._detailDraft = null;
         this._pickerOpen = null;
+        this._comments = [];
+        this._commentDraft = null;
+        this._editingCommentId = null;
+        this._commentEditDraft = null;
+        this._replyingTo = null;
+        this._replyDraft = null;
+        this._reactPickerFor = null;
         this._resetFileSearch();
         return this._render();
 
       case "open-detail":
         return this._openDetail(trigger.mget("taskId"));
+
+      case "set-view": {
+        const v = trigger.mget("viewMode");
+        if (v && v !== this._view) {
+          this._view = v;
+          this._render();
+        }
+        return;
+      }
+
+      case "set-sort": {
+        // Toggle direction when re-selecting the same column, else sort asc.
+        const key = trigger.mget("sortKey");
+        if (!key) return;
+        if (this._sort && this._sort.key === key) {
+          this._sort = { key, dir: this._sort.dir === 1 ? -1 : 1 };
+        } else {
+          this._sort = { key, dir: 1 };
+        }
+        return this._render();
+      }
+
+      case "comment-submit":
+        return this._submitComment();
+
+      case "comment-edit": {
+        const cid = trigger.mget("commentId");
+        const c = this._comments.find((x) => x.id === cid);
+        this._editingCommentId = cid;
+        // Seed the inline editor with the comment's current body + its tags.
+        this._commentEditDraft = c
+          ? { body: c.body || "", mention_uids: uidsFromText(c.body || "") }
+          : null;
+        return this._refreshCommentList();
+      }
+
+      case "comment-save":
+        return this._saveCommentEdit();
+
+      case "comment-cancel":
+        this._editingCommentId = null;
+        this._commentEditDraft = null;
+        return this._refreshCommentList();
+
+      case "comment-delete":
+        return this._deleteComment(trigger);
+
+      case "comment-reply":
+        this._replyingTo = trigger.mget("commentId");
+        this._replyDraft = null;
+        this._reactPickerFor = null;
+        return this._refreshCommentList();
+
+      case "comment-reply-cancel":
+        this._replyingTo = null;
+        this._replyDraft = null;
+        return this._refreshCommentList();
+
+      case "comment-reply-submit":
+        return this._submitReply();
+
+      case "comment-react":
+        return this._toggleReaction(trigger);
+
+      case "comment-react-toggle": {
+        const cid = trigger.mget("commentId");
+        this._reactPickerFor = this._reactPickerFor === cid ? null : cid;
+        return this._refreshCommentList();
+      }
 
       case "file-search-input":
         return this._scheduleFileSearch(trigger);
@@ -585,6 +676,12 @@ class __tasks_panel extends LetcBox {
   onPartReady(child, pn) {
     if (pn === "fileselector") {
       child.el.onchange = (e) => this._onAttachmentPicked(e);
+      return;
+    }
+    // Mention editors register as "<scope>-desc-editor" (create / detail /
+    // comment / comment-edit / comment-reply). Init each with its scope.
+    if (typeof pn === "string" && pn.endsWith("-desc-editor")) {
+      this._initDescEditor(child.el, pn.slice(0, -"-desc-editor".length));
       return;
     }
     if (super.onPartReady) super.onPartReady(child, pn);
@@ -644,6 +741,18 @@ class __tasks_panel extends LetcBox {
       case SERVICE.task.unlink_file:
         if (this._detailId) {
           this._refreshAttachments(this._detailId).then(() => this._render());
+        }
+        return;
+      case SERVICE.task.comment_create:
+      case SERVICE.task.comment_update:
+      case SERVICE.task.comment_delete:
+      case SERVICE.task.comment_react:
+        // A peer changed a comment. Surgically refresh the open task's feed so
+        // an in-progress composer/edit isn't disturbed.
+        if (this._detailId) {
+          this._loadComments(this._detailId).then(() => {
+            if (this._detailId) this._refreshCommentList();
+          });
         }
         return;
       default:
@@ -768,11 +877,10 @@ class __tasks_panel extends LetcBox {
     if (!root) return;
     const draft = this._createDefaults;
     const title = root.querySelector('[name="title"]');
-    const desc = root.querySelector('textarea[name="description"]');
     const due = root.querySelector('input[name="due_date"]');
     if (title) draft.title = title.value || "";
-    if (desc) draft.description = desc.value || "";
     if (due) draft.due_date = due.value || "";
+    // description syncs live from the contenteditable editor (_onDescInput).
   }
 
   _captureDetailDraft() {
@@ -781,11 +889,10 @@ class __tasks_panel extends LetcBox {
     if (!root) return;
     const draft = this._detailDraft;
     const title = root.querySelector('[name="title"]');
-    const desc = root.querySelector('textarea[name="description"]');
     const due = root.querySelector('input[name="due_date"]');
     if (title) draft.title = title.value || "";
-    if (desc) draft.description = desc.value || "";
     if (due) draft.due_date = due.value || "";
+    // description syncs live from the contenteditable editor (_onDescInput).
   }
 
   // Push every keystroke straight into the active draft. The Entry widget
@@ -831,6 +938,7 @@ class __tasks_panel extends LetcBox {
     const draft = this._createDefaults || {};
     const title = String(draft.title || "").trim();
     const dueRaw = String(draft.due_date || "").trim();
+    // Already in marker form (chips serialize to "[@Name](user:uid)").
     const description = String(draft.description || "").trim();
 
     if (!title) return this._render();
@@ -853,6 +961,10 @@ class __tasks_panel extends LetcBox {
         priority: draft.priority || "medium",
         due_date: dueRaw || null,
         assignee_uids: Array.isArray(draft.assignees) ? draft.assignees : [],
+        // Tagged members — server notifies them (excluding self).
+        mention_uids: Array.isArray(draft.mention_uids)
+          ? draft.mention_uids
+          : [],
       });
       const row = Array.isArray(raw) ? raw[0] : raw;
       if (row && row.id) {
@@ -943,8 +1055,16 @@ class __tasks_panel extends LetcBox {
     const draftTitle = String(draft.title || "").trim();
     const taskTitle = String(task.title || "").trim();
     if (draftTitle && draftTitle !== taskTitle) upd.title = draftTitle;
-    if ((draft.description || "") !== (task.description || ""))
+    // Both are marker form (the editor serializes chips to markers).
+    if ((draft.description || "") !== (task.description || "")) {
       upd.description = draft.description || "";
+      // Notify only members tagged in this edit who weren't tagged before.
+      const before = Array.isArray(draft._mentioned_before)
+        ? draft._mentioned_before
+        : [];
+      const now = Array.isArray(draft.mention_uids) ? draft.mention_uids : [];
+      upd.mention_uids = now.filter((u) => !before.includes(u));
+    }
     if ((draft.priority || "medium") !== (task.priority || "medium"))
       upd.priority = draft.priority;
     const draftDue = (draft.due_date || "").trim();
@@ -1077,10 +1197,17 @@ class __tasks_panel extends LetcBox {
     if (!id) return;
     const task = this._tasks.find((t) => t.id === id);
     this._detailId = id;
+    // Description is stored/edited in marker form (`[@Name](user:uid)`); the
+    // editor renders chips from it. Seed mention_uids from the existing markers
+    // so the Update diff can tell which mentions are newly added.
+    const seededMentions = task ? uidsFromText(task.description || "") : [];
     this._detailDraft = task
       ? {
           title: task.title || "",
           description: task.description || "",
+          mention_uids: seededMentions.slice(),
+          // Snapshot of who was already tagged, so Update only notifies new tags.
+          _mentioned_before: seededMentions,
           due_date: task.due_date || "",
           status: task.status || "todo",
           priority: task.priority || "medium",
@@ -1095,6 +1222,14 @@ class __tasks_panel extends LetcBox {
           pending_files: [],
         }
       : null;
+    // Reset comment state for the newly-opened task.
+    this._comments = [];
+    this._commentDraft = null;
+    this._editingCommentId = null;
+    this._commentEditDraft = null;
+    this._replyingTo = null;
+    this._replyDraft = null;
+    this._reactPickerFor = null;
     // Re-fetch folder filenames so collision preview (a → a(1)) reflects
     // the folder's current state.
     this._folderFilenames = null;
@@ -1106,6 +1241,196 @@ class __tasks_panel extends LetcBox {
       this._refreshAttachmentsList();
       this._refreshFileSearchDropdown("detail");
     });
+    // Surgically feed the comment list when it arrives — a full _render() here
+    // rebuilds the panel and replays its open animation (visible glitch).
+    this._loadComments(id).then(() => {
+      if (this._detailId === id) this._refreshCommentList();
+    });
+  }
+
+  async _loadComments(taskId) {
+    try {
+      const rows = await this.fetchService({
+        service: SERVICE.task.comment_list,
+        hub_id: this._hubId,
+        task_id: taskId,
+      });
+      // reactions arrives as a JSON array (sometimes a JSON string from the DB).
+      this._comments = (Array.isArray(rows) ? rows : []).map((r) => {
+        let reactions = r.reactions;
+        if (typeof reactions === "string") {
+          try {
+            reactions = JSON.parse(reactions);
+          } catch (_) {
+            reactions = [];
+          }
+        }
+        return { ...r, reactions: Array.isArray(reactions) ? reactions : [] };
+      });
+    } catch (err) {
+      this._comments = [];
+    }
+  }
+
+  async _submitComment() {
+    if (!this._detailId) return;
+    const draft = this._commentDraft;
+    const body = String((draft && draft.body) || "").trim();
+    if (!body) return;
+    const taskId = this._detailId;
+    try {
+      await this.postService({
+        service: SERVICE.task.comment_create,
+        hub_id: this._hubId,
+        task_id: taskId,
+        body,
+        mention_uids: Array.isArray(draft.mention_uids) ? draft.mention_uids : [],
+      });
+      this._commentDraft = null;
+      await this._loadComments(taskId);
+    } catch (err) {
+      console.error("[tasks_panel] comment.create failed:", err);
+    }
+    // Surgically slot in the new comment + clear the composer — no full
+    // _render() (which rebuilds the whole panel and feels like a reload).
+    if (this._detailId === taskId) {
+      this._refreshCommentList();
+      const ed = this._descEditorEl("comment");
+      if (ed) this._renderEditorContent(ed, "");
+    }
+  }
+
+  async _saveCommentEdit() {
+    const id = this._editingCommentId;
+    if (!id) return;
+    const draft = this._commentEditDraft;
+    const body = String((draft && draft.body) || "").trim();
+    if (!body) return; // empty edit is a no-op; use delete to remove
+    const taskId = this._detailId;
+    try {
+      await this.postService({
+        service: SERVICE.task.comment_update,
+        hub_id: this._hubId,
+        id,
+        body,
+        mention_uids: Array.isArray(draft.mention_uids) ? draft.mention_uids : [],
+      });
+      this._editingCommentId = null;
+      this._commentEditDraft = null;
+      await this._loadComments(taskId);
+    } catch (err) {
+      console.error("[tasks_panel] comment.update failed:", err);
+    }
+    if (this._detailId === taskId) this._refreshCommentList();
+  }
+
+  async _deleteComment(trigger) {
+    const id = trigger.mget("commentId");
+    if (!id || !this._detailId) return;
+    const taskId = this._detailId;
+    try {
+      await this.postService({
+        service: SERVICE.task.comment_delete,
+        hub_id: this._hubId,
+        id,
+        task_id: taskId,
+      });
+      this._comments = this._comments.filter((c) => c.id !== id);
+      if (this._editingCommentId === id) {
+        this._editingCommentId = null;
+        this._commentEditDraft = null;
+      }
+    } catch (err) {
+      console.error("[tasks_panel] comment.delete failed:", err);
+    }
+    if (this._detailId === taskId) this._refreshCommentList();
+  }
+
+  async _submitReply() {
+    const rootId = this._replyingTo;
+    if (!rootId || !this._detailId) return;
+    const draft = this._replyDraft;
+    const body = String((draft && draft.body) || "").trim();
+    if (!body) return;
+    const taskId = this._detailId;
+    try {
+      await this.postService({
+        service: SERVICE.task.comment_create,
+        hub_id: this._hubId,
+        task_id: taskId,
+        parent_id: rootId,
+        body,
+        mention_uids: Array.isArray(draft.mention_uids) ? draft.mention_uids : [],
+      });
+      this._replyingTo = null;
+      this._replyDraft = null;
+      await this._loadComments(taskId);
+    } catch (err) {
+      console.error("[tasks_panel] comment reply failed:", err);
+    }
+    if (this._detailId === taskId) this._refreshCommentList();
+  }
+
+  async _toggleReaction(trigger) {
+    const commentId = trigger.mget("commentId");
+    const emoji = trigger.mget("emoji");
+    if (!commentId || !emoji || !this._detailId) return;
+    const taskId = this._detailId;
+    this._reactPickerFor = null;
+    try {
+      await this.postService({
+        service: SERVICE.task.comment_react,
+        hub_id: this._hubId,
+        comment_id: commentId,
+        task_id: taskId,
+        emoji,
+      });
+      await this._loadComments(taskId);
+    } catch (err) {
+      console.error("[tasks_panel] comment react failed:", err);
+    }
+    if (this._detailId === taskId) this._refreshCommentList();
+  }
+
+  // Read-only render of each comment body into its <div> (reuses the editor's
+  // chip rendering). Bodies are populated post-feed, like the description.
+  _renderCommentBodies() {
+    if (!this.el) return;
+    this.el
+      .querySelectorAll(`.${this.fig.family}__comment-body[data-comment-id]`)
+      .forEach((el) => {
+        const c = this._comments.find(
+          (x) => String(x.id) === String(el.dataset.commentId),
+        );
+        if (c) this._renderEditorContent(el, c.body || "");
+      });
+  }
+
+  // Surgical comment-feed refresh (no full _render) so a peer's WS comment
+  // doesn't disturb an in-progress composer. Mirrors _refreshAttachmentsList.
+  _refreshCommentList() {
+    this.ensurePart("comment-list")
+      .then((p) => {
+        if (!p || (p.isDestroyed && p.isDestroyed())) return;
+        p.feed(require("./skeleton").buildCommentListContent(this));
+        this._renderCommentBodies();
+        // onPartReady doesn't reliably re-fire for surgically-fed parts, so wire
+        // the active inline editors explicitly (mirrors _prepopulateInputs).
+        const root = ".tasks-panel__detail-panel ";
+        if (this._editingCommentId) {
+          const ed = this.el.querySelector(
+            root + ".tasks-panel__comment-edit-input",
+          );
+          if (ed) this._initDescEditor(ed, "comment-edit");
+        }
+        if (this._replyingTo) {
+          const ed = this.el.querySelector(
+            root + ".tasks-panel__comment-reply-input",
+          );
+          if (ed) this._initDescEditor(ed, "comment-reply");
+        }
+      })
+      .catch(() => {});
   }
 
   _pickAttachment(trigger) {
@@ -1631,27 +1956,430 @@ class __tasks_panel extends LetcBox {
     );
   }
 
+  // ── @-mention (contenteditable description editor) ─────────────
+  // The description is a contenteditable div, so tagged members render as
+  // styled inline chips and the dropdown anchors to the live caret. The chip
+  // carries the uid, so serialization to "[@Name](user:uid)" markers is exact
+  // (no fragile name-matching) and that marker form is what we store/send.
+
+  // Per-scope adapter: which DOM element the editor binds to and where it
+  // reads/writes its marker text. Decouples the mention editor from any one
+  // model so the description (create/detail) and the comment composer can all
+  // reuse the same editor logic.
+  _mentionTarget(scope) {
+    const pfx = this.fig.family;
+    switch (scope) {
+      case "create":
+        return {
+          editorSelector: `.${pfx}__create-modal .${pfx}__desc-editor`,
+          placeholder: LOCALE.TASK_DESCRIPTION_PLACEHOLDER,
+          get: () =>
+            (this._createDefaults && this._createDefaults.description) || "",
+          set: (text, uids) => {
+            if (!this._createDefaults) return;
+            this._createDefaults.description = text;
+            this._createDefaults.mention_uids = uids;
+          },
+        };
+      case "detail":
+        return {
+          editorSelector: `.${pfx}__detail-panel .${pfx}__desc-editor`,
+          placeholder: LOCALE.TASK_DESCRIPTION_PLACEHOLDER,
+          get: () => (this._detailDraft && this._detailDraft.description) || "",
+          set: (text, uids) => {
+            if (!this._detailDraft) return;
+            this._detailDraft.description = text;
+            this._detailDraft.mention_uids = uids;
+          },
+        };
+      case "comment":
+        return {
+          editorSelector: `.${pfx}__detail-panel .${pfx}__comment-input`,
+          placeholder: LOCALE.TASK_COMMENT_PLACEHOLDER,
+          get: () => (this._commentDraft && this._commentDraft.body) || "",
+          set: (text, uids) => {
+            this._commentDraft = { body: text, mention_uids: uids };
+          },
+        };
+      case "comment-edit":
+        return {
+          editorSelector: `.${pfx}__detail-panel .${pfx}__comment-edit-input`,
+          placeholder: LOCALE.TASK_COMMENT_PLACEHOLDER,
+          get: () => (this._commentEditDraft && this._commentEditDraft.body) || "",
+          set: (text, uids) => {
+            this._commentEditDraft = { body: text, mention_uids: uids };
+          },
+        };
+      case "comment-reply":
+        return {
+          editorSelector: `.${pfx}__detail-panel .${pfx}__comment-reply-input`,
+          placeholder: LOCALE.TASK_COMMENT_PLACEHOLDER,
+          get: () => (this._replyDraft && this._replyDraft.body) || "",
+          set: (text, uids) => {
+            this._replyDraft = { body: text, mention_uids: uids };
+          },
+        };
+      default:
+        return null;
+    }
+  }
+
+  _descEditorEl(scope) {
+    const t = this._mentionTarget(scope);
+    return t && this.el && this.el.querySelector(t.editorSelector);
+  }
+
+  // Build a contenteditable=false chip node for a mention.
+  _makeMentionChip(uid, name) {
+    const chip = document.createElement("span");
+    chip.className = `${this.fig.family}__mention-chip`;
+    chip.setAttribute("contenteditable", "false");
+    chip.dataset.uid = String(uid);
+    chip.dataset.name = name;
+    chip.textContent = `@${name}`;
+    return chip;
+  }
+
+  // Render stored marker text into the editor as text nodes + chip spans.
+  _renderEditorContent(editorEl, markerText) {
+    editorEl.textContent = "";
+    const text = String(markerText || "");
+    const appendText = (str) => {
+      str.split("\n").forEach((part, i) => {
+        if (i > 0) editorEl.appendChild(document.createElement("br"));
+        if (part) editorEl.appendChild(document.createTextNode(part));
+      });
+    };
+    const re = markerRe();
+    let last = 0;
+    let m;
+    while ((m = re.exec(text))) {
+      if (m.index > last) appendText(text.slice(last, m.index));
+      editorEl.appendChild(this._makeMentionChip(m[2], m[1]));
+      last = re.lastIndex;
+    }
+    if (last < text.length) appendText(text.slice(last));
+  }
+
+  // Editor DOM → marker text. Chips become "[@Name](user:uid)"; <br>/<div>
+  // boundaries become newlines.
+  _serializeEditor(editorEl) {
+    const chipClass = `${this.fig.family}__mention-chip`;
+    let out = "";
+    const walk = (node) => {
+      node.childNodes.forEach((n) => {
+        if (n.nodeType === 3) {
+          out += n.textContent;
+        } else if (n.nodeType === 1) {
+          if (n.classList && n.classList.contains(chipClass)) {
+            const uid = n.dataset.uid;
+            const name = n.dataset.name || n.textContent.replace(/^@/, "");
+            out += `[@${name}](user:${uid})`;
+          } else if (n.tagName === "BR") {
+            out += "\n";
+          } else if (n.tagName === "DIV") {
+            if (out && !out.endsWith("\n")) out += "\n";
+            walk(n);
+          } else {
+            walk(n);
+          }
+        }
+      });
+    };
+    walk(editorEl);
+    return out;
+  }
+
+  _collectMentionUids(editorEl) {
+    const uids = [];
+    editorEl
+      .querySelectorAll(`.${this.fig.family}__mention-chip`)
+      .forEach((c) => {
+        const u = String(c.dataset.uid || "");
+        if (u && !uids.includes(u)) uids.push(u);
+      });
+    return uids;
+  }
+
+  // Seed the editor from the draft and wire its events. Idempotent and called
+  // from both onPartReady and _prepopulateInputs (onPartReady alone doesn't
+  // reliably re-fire on reopen); only re-renders when the DOM differs from the
+  // draft, so an active caret isn't disturbed.
+  _initDescEditor(editorEl, scope) {
+    if (!editorEl) return;
+    const target = this._mentionTarget(scope);
+    if (!target) return;
+    // Guarantee the placeholder attr even if the framework dropped attrOpt.
+    if (!editorEl.getAttribute("data-placeholder") && target.placeholder) {
+      editorEl.setAttribute("data-placeholder", target.placeholder);
+    }
+    const want = target.get();
+    if (this._serializeEditor(editorEl) !== want) {
+      this._renderEditorContent(editorEl, want);
+    }
+    editorEl.oninput = () => this._onDescInput(scope, editorEl);
+    editorEl.onkeydown = (e) => this._onDescKeydown(e, scope);
+    editorEl.onblur = () => setTimeout(() => this._closeMention(), 150);
+  }
+
+  _onDescInput(scope, editorEl) {
+    // Browsers leave a stray <br> when the field is cleared, which defeats the
+    // :empty placeholder — strip it back to truly empty.
+    if (
+      !editorEl.textContent.trim() &&
+      !editorEl.querySelector(`.${this.fig.family}__mention-chip`)
+    ) {
+      editorEl.innerHTML = "";
+    }
+    const target = this._mentionTarget(scope);
+    if (target) {
+      target.set(
+        this._serializeEditor(editorEl),
+        this._collectMentionUids(editorEl),
+      );
+    }
+    this._handleEditorMention(editorEl, scope);
+  }
+
+  _onDescKeydown(e, scope) {
+    const ref = this._mention;
+    if (!ref || ref.scope !== scope) return;
+    if (e.key === "Escape") {
+      e.preventDefault();
+      return this._closeMention();
+    }
+    if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+      e.preventDefault();
+      const n = ref.members.length;
+      ref.index = (ref.index + (e.key === "ArrowDown" ? 1 : -1) + n) % n;
+      return this._highlightMention(ref);
+    }
+    if (e.key === "Enter") {
+      e.preventDefault();
+      return this._insertMentionChip(scope, ref.members[ref.index]);
+    }
+  }
+
+  // Detect an unterminated "@token" immediately before a collapsed caret and
+  // open the filtered dropdown. "@" alone lists everyone.
+  _handleEditorMention(editorEl, scope) {
+    const sel = window.getSelection();
+    if (!sel || !sel.rangeCount) return this._closeMention();
+    const range = sel.getRangeAt(0);
+    const node = range.startContainer;
+    if (!range.collapsed || node.nodeType !== 3 || !editorEl.contains(node))
+      return this._closeMention();
+    const m = node.textContent.slice(0, range.startOffset).match(/@([^\s@]*)$/);
+    if (!m) return this._closeMention();
+    const filter = m[1].toLowerCase();
+    const members = (this._members || [])
+      .filter((mm) => {
+        if (!filter) return true;
+        const name = [mm.firstname, mm.lastname]
+          .filter(Boolean)
+          .join(" ")
+          .toLowerCase();
+        return (
+          name.includes(filter) ||
+          String(mm.email || "").toLowerCase().includes(filter)
+        );
+      })
+      .slice(0, 8);
+    if (!members.length) return this._closeMention();
+    this._mention = {
+      scope,
+      node,
+      start: range.startOffset - m[0].length,
+      end: range.startOffset,
+      members,
+      index: 0,
+      dropdownEl: null,
+    };
+    this._openMention(scope, members, editorEl);
+  }
+
+  _openMention(scope, members, editorEl) {
+    const skel = require("./skeleton");
+    this.ensurePart(`${scope}-mention`)
+      .then((part) => {
+        if (!part || (part.isDestroyed && part.isDestroyed())) return;
+        part.feed(skel.buildMentionItemsContent(this, members));
+        const root = part.el;
+        if (!root || !this._mention || this._mention.scope !== scope) return;
+        this._mention.dropdownEl = root;
+        root
+          .querySelectorAll(`.${this.fig.family}__mention-item`)
+          .forEach((el, i) => {
+            el.dataset.active = i === 0 ? "1" : "0";
+            // Keep caret/selection in the editor through the click.
+            el.onmousedown = (ev) => ev.preventDefault();
+            el.onclick = (ev) => {
+              ev.preventDefault();
+              ev.stopPropagation();
+              this._insertMentionChip(scope, members[i]);
+            };
+          });
+        this._positionMentionAtCaret(root, editorEl);
+        root.dataset.open = "1";
+      })
+      .catch(() => {
+        /* not mounted yet */
+      });
+  }
+
+  // Position the popup just under the "@" text, anchored relative to the
+  // __desc-field (absolute, not fixed): windows are placed via CSS transform,
+  // so fixed coords would resolve against the window box and land outside. The
+  // caret rect comes from the @token range (a collapsed-caret rect is often
+  // empty); coordinates are field-relative, so transforms cancel out.
+  _positionMentionAtCaret(el, editorEl) {
+    // The editor's wrapper is the positioning context (position: relative); the
+    // dropdown is its sibling. Using the parent (not a fixed class) keeps this
+    // generic across the description field and the comment composer.
+    const field = editorEl.parentNode;
+    if (!field) return;
+    const ref = this._mention;
+    let caret = null;
+    if (ref && ref.node && ref.node.isConnected) {
+      try {
+        const r = document.createRange();
+        r.setStart(ref.node, Math.max(0, ref.start));
+        r.setEnd(ref.node, Math.min(ref.end, ref.node.length));
+        caret = r.getBoundingClientRect();
+      } catch (_) {
+        /* offsets shifted — fall through */
+      }
+    }
+    if (!caret || (!caret.width && !caret.height)) {
+      const sel = window.getSelection();
+      if (sel && sel.rangeCount) caret = sel.getRangeAt(0).getBoundingClientRect();
+    }
+    if (!caret || (!caret.width && !caret.height && !caret.left && !caret.top)) {
+      caret = editorEl.getBoundingClientRect();
+    }
+    const fieldRect = field.getBoundingClientRect();
+    const maxH = 220;
+    el.style.left = `${Math.round(caret.left - fieldRect.left)}px`;
+    // Flip above the caret line when there isn't room below in the viewport.
+    if (window.innerHeight - caret.bottom < maxH) {
+      el.style.top = "auto";
+      el.style.bottom = `${Math.round(fieldRect.bottom - caret.top + 4)}px`;
+    } else {
+      el.style.bottom = "auto";
+      el.style.top = `${Math.round(caret.bottom - fieldRect.top + 4)}px`;
+    }
+  }
+
+  _highlightMention(ref) {
+    if (!ref || !ref.dropdownEl) return;
+    ref.dropdownEl
+      .querySelectorAll(`.${this.fig.family}__mention-item`)
+      .forEach((el, i) => {
+        el.dataset.active = i === ref.index ? "1" : "0";
+      });
+  }
+
+  _closeMention() {
+    if (!this._mention) return;
+    this._mention = null;
+    if (!this.el) return;
+    this.el
+      .querySelectorAll(`.${this.fig.family}__mention-dropdown`)
+      .forEach((d) => {
+        d.dataset.open = "0";
+      });
+  }
+
+  // Replace the "@token" range in the caret's text node with a chip + space.
+  _insertMentionChip(scope, member) {
+    const ref = this._mention;
+    this._closeMention();
+    if (!ref || !member) return;
+    const node = ref.node;
+    if (!node || node.nodeType !== 3 || !node.isConnected) return;
+    const editorEl = this._descEditorEl(scope);
+    if (!editorEl) return;
+    const uid = String(member.id || member.uid || "");
+    const name =
+      [member.firstname, member.lastname].filter(Boolean).join(" ").trim() ||
+      member.email ||
+      uid;
+    if (!uid) return;
+
+    const full = node.textContent;
+    const parent = node.parentNode;
+    const chip = this._makeMentionChip(uid, name);
+    const space = document.createTextNode(" ");
+    const afterNode = document.createTextNode(full.slice(ref.end));
+    node.textContent = full.slice(0, ref.start);
+    parent.insertBefore(afterNode, node.nextSibling);
+    parent.insertBefore(space, afterNode);
+    parent.insertBefore(chip, space);
+
+    const range = document.createRange();
+    range.setStart(afterNode, 0);
+    range.collapse(true);
+    const sel = window.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(range);
+    editorEl.focus();
+
+    const target = this._mentionTarget(scope);
+    if (target) {
+      target.set(
+        this._serializeEditor(editorEl),
+        this._collectMentionUids(editorEl),
+      );
+    }
+  }
+
   _prepopulateInputs() {
     if (!this.el) return;
     const setVal = (sel, val) => {
       const el = this.el.querySelector(sel);
       if (el && (val || "") !== el.value) el.value = val || "";
     };
+    // The description editor is contenteditable; populate it here too (not just
+    // in onPartReady, which doesn't reliably re-fire on reopen).
+    const initEditor = (sel, scope) => {
+      const ed = this.el.querySelector(sel);
+      if (ed) this._initDescEditor(ed, scope);
+    };
     if (this._creating && this._createDefaults) {
-      const d = this._createDefaults;
-      setVal('.tasks-panel__create-modal [name="title"]', d.title);
       setVal(
-        '.tasks-panel__create-modal textarea[name="description"]',
-        d.description,
+        '.tasks-panel__create-modal [name="title"]',
+        this._createDefaults.title,
+      );
+      initEditor(
+        ".tasks-panel__create-modal .tasks-panel__desc-editor",
+        "create",
       );
     }
     if (this._detailDraft) {
-      const d = this._detailDraft;
-      setVal('.tasks-panel__detail-panel [name="title"]', d.title);
       setVal(
-        '.tasks-panel__detail-panel textarea[name="description"]',
-        d.description,
+        '.tasks-panel__detail-panel [name="title"]',
+        this._detailDraft.title,
       );
+      initEditor(
+        ".tasks-panel__detail-panel .tasks-panel__desc-editor",
+        "detail",
+      );
+      initEditor(
+        ".tasks-panel__detail-panel .tasks-panel__comment-input",
+        "comment",
+      );
+      if (this._editingCommentId) {
+        initEditor(
+          ".tasks-panel__detail-panel .tasks-panel__comment-edit-input",
+          "comment-edit",
+        );
+      }
+      if (this._replyingTo) {
+        initEditor(
+          ".tasks-panel__detail-panel .tasks-panel__comment-reply-input",
+          "comment-reply",
+        );
+      }
     }
   }
 
@@ -1695,8 +2423,12 @@ class __tasks_panel extends LetcBox {
     // the title/description start empty after each feed; pre-populate them
     // (sync + next frame as a safety net for late-mount children).
     this._prepopulateInputs();
+    this._renderCommentBodies();
     if (typeof requestAnimationFrame === "function") {
-      requestAnimationFrame(() => this._prepopulateInputs());
+      requestAnimationFrame(() => {
+        this._prepopulateInputs();
+        this._renderCommentBodies();
+      });
     }
 
     if (focusName && typeof requestAnimationFrame === "function") {
@@ -1741,23 +2473,37 @@ class __tasks_panel extends LetcBox {
     return this._filterUids;
   }
 
-  getState() {
+  // Member-filter predicate shared by every view (board / list / summary).
+  _matchesFilter(t) {
     const filter = this._filterUids || [];
-    const matchesFilter = (t) => {
-      if (!filter.length) return true;
-      const uids = Array.isArray(t.assignee_uids)
-        ? t.assignee_uids.map(String)
-        : t.assignee_uid
-          ? [String(t.assignee_uid)]
-          : [];
-      return uids.some((u) => filter.includes(u));
-    };
+    if (!filter.length) return true;
+    const uids = Array.isArray(t.assignee_uids)
+      ? t.assignee_uids.map(String)
+      : t.assignee_uid
+        ? [String(t.assignee_uid)]
+        : [];
+    return uids.some((u) => filter.includes(u));
+  }
+
+  getState() {
     return COLUMNS.reduce((acc, c) => {
       acc[c.key] = this._tasks.filter(
-        (t) => t.status === c.key && matchesFilter(t),
+        (t) => t.status === c.key && this._matchesFilter(t),
       );
       return acc;
     }, {});
+  }
+
+  // Flat member-filtered task list — the dataset for the List + Summary views.
+  getFilteredTasks() {
+    return this._tasks.filter((t) => this._matchesFilter(t));
+  }
+
+  getView() {
+    return this._view || "board";
+  }
+  getSort() {
+    return this._sort || null;
   }
 
   isCreating() {
@@ -1782,6 +2528,18 @@ class __tasks_panel extends LetcBox {
   }
   getDetailAttachments() {
     return (this._detailId && this._attachments[this._detailId]) || [];
+  }
+  getComments() {
+    return this._comments;
+  }
+  getEditingCommentId() {
+    return this._editingCommentId;
+  }
+  getReplyingTo() {
+    return this._replyingTo;
+  }
+  getReactPickerFor() {
+    return this._reactPickerFor;
   }
 }
 

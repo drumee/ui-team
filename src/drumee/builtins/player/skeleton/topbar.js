@@ -35,7 +35,7 @@ const __player_topbar = function (ui, size) {
   });
 
   let actionIcons = "";
-  if (ui.canDownload()) {
+  if (!Visitor.inDmz || ui.canDownload()) {
     actionIcons = Skeletons.Box.X({
       className: `${ui.fig.group}-topbar__icon-wrapper`,
       kids: [

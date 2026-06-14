@@ -296,6 +296,9 @@ module.exports = {
   schedule_recipient: function () {
     return import("./builtins/window/schedule/widget/recipient");
   },
+  request_access_modal: function () {
+    return import("widget/request-access");
+  },
   selection: function () {
     return import("./builtins/window/selection");
   },
@@ -542,6 +545,9 @@ module.exports = {
   },
   window_info: function () {
     return import("./builtins/window/info");
+  },
+  window_media_details: function () {
+    return import("./builtins/window/media-details");
   },
   window_move: function () {
     return import("./builtins/window/move/move-window");

@@ -27,9 +27,12 @@ class __dmz_sharebox extends LetcBox {
     this.defaultSkeleton = require('./skeleton').default;
     this.topNavSkeleton = require('./skeleton/top-nav').default;
     this.headerSkeleton = require('./skeleton/header').default;
-    this.footerSkeleton = require('dmz/skeleton/common/footer');
+    this.footerSkeleton = require('./skeleton/footer').default;
     this.deskSkeleton = require("./skeleton/desk-content").default;
     this.nodeInfoService = SERVICE.media.show_node_by;
+    this._selectedRequestLevel = null;
+    this._requestEmailInput    = null;
+    this._requestMessageInput  = null;
   }
 
   /**
@@ -44,10 +47,28 @@ class __dmz_sharebox extends LetcBox {
    *
    */
   onWsMessage(svc, data, options = {}) {
-    const { service } = options || svc;
+    // The dispatcher (router/websocket) passes the service string as the FIRST arg and
+    // options is normally {} (no options.service). The old `const {service}=options||svc`
+    // therefore resolved service=undefined and silently dropped EVERY event — which is
+    // why approval/revoke were never real-time (the recipient had to refresh).
+    const service = (options && options.service) || svc;
     if (service === 'share.track_event') {
       if (data && data.event === 'secure_share_revoked' && data.token === this.mget(_a.token)) {
         this.handleInfoStatus({ status: 'TICKET_REVOKED' });
+      }
+      if (data && data.event === 'secure_share_access_responded') {
+        // The event is hub-broadcast (reaches every viewer of the share), so only
+        // THIS recipient — the one whose request was answered — should reload. Match
+        // the email they requested with (stored locally / on the model).
+        const tok = this.mget(_a.token);
+        let myEmail = '';
+        try { myEmail = (localStorage.getItem('dmz_share_email_' + tok) || '').toLowerCase().trim(); } catch (e) { /* ignore */ }
+        myEmail = myEmail || (this.mget('_request_email') || this.mget('recipient_email') || '').toLowerCase().trim();
+        const evEmail = (data.requester_email || '').toLowerCase().trim();
+        // Act only on a positive email match (or a legacy event with no email).
+        if (!evEmail || (myEmail && evEmail === myEmail)) {
+          this._handleAccessResponse(data);
+        }
       }
       return;
     }
@@ -61,6 +82,9 @@ class __dmz_sharebox extends LetcBox {
   onPartReady(child, pn) {
     switch (pn) {
       case "top-nav":
+        // Viral landing chrome (logo / Login / Join Workspace) — shown to ALL
+        // recipients so the logged-in view matches the incognito one (user choice:
+        // identical to incognito).
         return this.waitElement(child.el, () => {
           child.feed(this.topNavSkeleton(this));
         });
@@ -69,6 +93,15 @@ class __dmz_sharebox extends LetcBox {
         return this.waitElement(child.el, () => {
           child.feed(this.headerSkeleton(this))
         })
+
+      case _a.footer:
+        // Viral landing footer ("Sign Up Free") — shown to ALL recipients so the
+        // logged-in view matches the incognito one (user choice: identical). The gate
+        // footer is fed separately by promptGate.
+        if (!this.mget('is_secure')) return;
+        return this.waitElement(child.el, () => {
+          child.feed(this.footerSkeleton(this));
+        });
 
       case "logo-block":
         let mascott = require("assets/mascot.png").default;
@@ -90,15 +123,34 @@ class __dmz_sharebox extends LetcBox {
 
         return this.waitElement(child.el, () => {
           this.wm = child;
+          // The drive-popup is a separate window-manager subtree that the outer
+          // .dmz-sharebox[data-area] does not contain, so propagate the area tag
+          // here too — it drives the accent for the inner topbar icon, file-grid
+          // folder art and active tab border.
+          child.el.dataset.area = this._areaTag || 'shared';
         })
 
       case 'folder-view':
         this._folderView = child;
         return;
 
+      case _a.footer:
+        return this.waitElement(child.el, () => {
+          child.feed(this.footerSkeleton(this));
+        });
+
       case 'wrapper-dialog':
         this.dialogWrapper = child;
         return;
+
+      case 'ref-request-email':
+        return this._requestEmailInput = child;
+
+      case 'ref-request-message':
+        return this._requestMessageInput = child;
+
+      case 'request-error':
+        return this._requestError = child;
 
       default:
         if (super.onPartReady) super.onPartReady(child, pn);
@@ -148,10 +200,34 @@ class __dmz_sharebox extends LetcBox {
     const loginOpt = { token, hub_id };
     if (NID_RE.test(urlFileNid)) loginOpt.file_nid = urlFileNid;
 
+    // Replay the email this recipient requested access with (stored on request) so the
+    // server can apply an approved grant on refresh. Sent as `grant_email` — used ONLY
+    // for grant lookup, never the email gate — so it can't affect gated shares.
+    try {
+      const savedEmail = localStorage.getItem('dmz_share_email_' + token);
+      if (savedEmail) loginOpt.grant_email = savedEmail;
+    } catch (e) { /* ignore */ }
+
     let data = await this.postService(SERVICE.dmz.login, loginOpt);
 
     this.mset(data);
+    // Accent the share UI by workspace area (same rule as the server's
+    // workspace_restricted): anything but share/dmz is "restricted" and turns the
+    // header / badge / folder art red; shared stays pink. Missing area (e.g.
+    // file-only shares) defaults to the shared look.
+    const _restricted = data.area && !(data.area === 'share' || data.area === 'dmz');
+    this._areaTag = _restricted ? 'restricted' : 'shared';
+    this.el.dataset.area = this._areaTag;
     if (loginOpt.file_nid) this.mset({ file_nid: loginOpt.file_nid });
+
+    // Own the tab title for the share page. Otherwise ui-core/letc/user.js respawn
+    // sets document.title to `<fullname>@<Org>` and for an anonymous guest fullname
+    // is empty → "undefined@Zert". preserveTitle blocks that path (host.js already
+    // no-ops); data.title is the shared node name (server: node-scoped title).
+    document.head.dataset.preserveTitle = '1';
+    const sharedTitle = data.title || data.filename || data.name || '';
+    document.title = sharedTitle ? `${sharedTitle} · Drumee` : 'Drumee';
+
     if (data.guest_name) {
       Visitor.set({
         firstname: data.guest_name
@@ -165,7 +241,12 @@ class __dmz_sharebox extends LetcBox {
 
     // An expired share must not load content — handleInfoStatus maps
     // dmz_expiry==='expired' to the TICKET_EXPIRED "link expired" message.
-    if (data.dmz_expiry === _a.expired) {
+    // SECURE shares are exempt: dmz_expiry here is the WORKSPACE-level dmz_settings
+    // value (copied for display), NOT the secure-share token's own expiry. A secure
+    // token's validity is already in data.status/validity (from secure_share_info,
+    // e.g. TICKET_OK for expiry_time=0). Without this guard a valid no-expiry secure
+    // link falsely shows "expired" whenever the workspace's general DMZ link is expired.
+    if (!data.is_secure && data.dmz_expiry === _a.expired) {
       return this.handleInfoStatus(data);
     }
 
@@ -175,6 +256,9 @@ class __dmz_sharebox extends LetcBox {
         break;
       case 'REQUIRED_EMAIL':
         this.promptEmail();
+        break;
+      case 'TICKET_LOCKED':
+        this.promptLockedPassword();
         break;
       case 'TICKET_REVOKED':
       case 'TICKET_EXPIRED':
@@ -191,14 +275,48 @@ class __dmz_sharebox extends LetcBox {
   /**
    * 
    */
-  promptPassword() {
-    this.__content.feed(require('./skeleton/password').default(this));
+  // Unified recipient gate (Toon 2026-06-12): one adaptive card showing the
+  // email field, the password field, or both. promptEmail/promptPassword are
+  // kept as thin aliases so any existing caller still routes to the gate.
+  promptGate(opts = {}) {
+    this.__content.feed(require('./skeleton/gate').default(this, opts));
+    // Show the viral gate banner ("Create your sovereign workspace with Drumee")
+    // beneath the gate card — distinct from the post-unlock landing banner. Only
+    // applies on the gate; the public/landing flow never sets this flag.
+    this.mset({ _gate_footer: true });
+    this.ensurePart(_a.footer).then((footer) => {
+      footer.feed(this.footerSkeleton(this));
+      footer.el.dataset.mode = _a.open;
+    });
   }
+  promptPassword() { this.promptGate(); }
+  promptEmail()    { this.promptGate(); }
+
   /**
    *
    */
-  promptEmail() {
-    this.__content.feed(require('./skeleton/email').default(this));
+  promptLockedPassword() {
+    this.promptGate({ locked: true });
+  }
+
+  /**
+   *
+   */
+  showSignupRequiredOverlay() {
+    const overlay = this.__signupOverlay;
+    if (!overlay) return;
+    overlay.feed(require('./skeleton/signup-required').default(this));
+    overlay.el.dataset.mode = _a.open;
+  }
+
+  /**
+   *
+   */
+  closeSignupRequiredOverlay() {
+    const overlay = this.__signupOverlay;
+    if (!overlay) return;
+    overlay.el.dataset.mode = _a.closed;
+    overlay.clear();
   }
 
   /**
@@ -210,7 +328,7 @@ class __dmz_sharebox extends LetcBox {
       return this.renderErrorMessage(LOCALE.SECURE_SHARE_ENTER_EMAIL);
     }
     if (!Validator.email(email)) {
-      return this.renderErrorMessage(LOCALE.INVALID_EMAIL);
+      return this.renderErrorMessage(LOCALE.SECURE_SHARE_EMAIL_INVALID_FORMAT);
     }
 
     const hub_id = Visitor.parseLocation().keysel || '';
@@ -223,16 +341,70 @@ class __dmz_sharebox extends LetcBox {
     this.postService(SERVICE.dmz.login, opt).then((data) => {
       if (data && data.status === 'TICKET_OK' && data.is_secure) {
         this.mset(data);
+        this.mset({ recipient_email: email });
         this.getInfoData();
       } else if (data && data.status === 'REQUIRED_PASSWORD' && data.is_secure) {
         // Email validated — save it so verifyPassword can re-submit it with the password
         this._verifiedEmail = email;
         this.promptPassword();
       } else if (data && data.status === 'EMAIL_MISMATCH') {
-        this.renderErrorMessage(LOCALE.SECURE_SHARE_EMAIL_MISMATCH);
+        this.renderErrorMessage(LOCALE.SECURE_SHARE_EMAIL_BLOCKED);
       } else {
         this.handleInfoStatus(data);
       }
+    });
+  }
+
+  /**
+   * Unified gate submit (Toon 2026-06-12): validates whichever fields the share
+   * requires (email and/or password) in a SINGLE server call. The server gates
+   * email first then password, so it returns the first failing step's status.
+   */
+  verifyGate() {
+    const needEmail    = !!(this.mget('require_email') || this.mget('recipient_email'));
+    const needPassword = !!(this.mget('require_password') || this.mget('require_pwd'));
+
+    let email = '';
+    if (needEmail) {
+      email = this._emailInput ? (this._emailInput.getData().value || '').trim() : '';
+      if (!email) return this.renderErrorMessage(LOCALE.SECURE_SHARE_ENTER_EMAIL);
+      if (!Validator.email(email)) return this.renderErrorMessage(LOCALE.SECURE_SHARE_EMAIL_INVALID_FORMAT);
+    }
+
+    let password = '';
+    if (needPassword) {
+      password = this._input ? (this._input.getData().value || '').trim() : '';
+      if (!password) return this.renderErrorMessage(LOCALE.DMZ_PASSWORD_TO_CONTINUE);
+    }
+
+    const hub_id = Visitor.parseLocation().keysel || '';
+    const opt = { token: this.mget(_a.token), hub_id };
+    if (needEmail)    opt.email    = email;
+    if (needPassword) opt.password = password;
+
+    this.postService(SERVICE.dmz.login, opt).then((data) => {
+      if (data && data.status === 'TICKET_OK' && data.is_secure) {
+        this.mset(data);
+        if (needEmail) { this._verifiedEmail = email; this.mset({ recipient_email: email }); }
+        return this.getInfoData();
+      }
+      if (data && data.status === 'EMAIL_MISMATCH') {
+        return this.renderErrorMessage(LOCALE.SECURE_SHARE_EMAIL_BLOCKED);
+      }
+      if (data && data.status === 'WRONG_PASSWORD') {
+        const attempts = (data.attempts_remaining != null && data.attempts_remaining > 0) ? data.attempts_remaining : null;
+        return this.renderPasswordError(LOCALE.SECURE_SHARE_WRONG_PASSWORD, attempts);
+      }
+      if (data && data.status === 'TICKET_LOCKED') {
+        return this.promptLockedPassword();
+      }
+      if (data && data.status === 'REQUIRED_EMAIL') {
+        return this.renderErrorMessage(LOCALE.SECURE_SHARE_ENTER_EMAIL);
+      }
+      if (data && data.status === 'REQUIRED_PASSWORD') {
+        return this.renderErrorMessage(LOCALE.DMZ_PASSWORD_TO_CONTINUE);
+      }
+      return this.handleInfoStatus(data);
     });
   }
 
@@ -279,17 +451,43 @@ class __dmz_sharebox extends LetcBox {
       case 'verify-email':
         return this.verifyEmail();
 
+      case 'verify-gate':
+        return this.verifyGate();
+
       case 'dmz-user-signup':
         return this.dmzUserSignup();
 
       case 'close-banner':
         return this.__footer.el.dataset.mode = _a.closed
 
-      case 'go-login':
-        location.href = _K.module.signin;
+      case 'go-login': {
+        this.closeSignupRequiredOverlay();
+        const { main_domain } = bootstrap();
+        // CRITICAL: open LOGIN on the canonical main domain in a new window —
+        // exactly like open-signup. The old code did `location.href =
+        // _K.module.signin`, but that constant is a HASH route ("#/welcome/signin"),
+        // so it was a same-page hash navigation that kept the running app and its
+        // in-memory guest session — which is bound to the share's SENDER — so the
+        // visitor got auto-logged-in AS THE SENDER (even in incognito). A fresh
+        // main-domain page load has no share session → a clean login screen.
+        // sessionStorage doesn't cross windows, so carry the workspace as
+        // ?hub_id= (the welcome module stashes it into drumee_hubDeepLink).
+        const _hubId = this.mget(_a.hub_id) || Visitor.parseLocation().keysel || '';
+        const _params = [];
+        if (_hubId) _params.push(`hub_id=${encodeURIComponent(_hubId)}`);
+        // Return the recipient to THIS share link after signin, so they re-open the
+        // shared folder as their authenticated self (not stranded on the desk while
+        // this tab stays a guest). Welcome validates it's a Drumee /dmz/share/ URL
+        // before redirecting (open-redirect guard) — see _secureShareReturnTarget.
+        _params.push(`return_to=${encodeURIComponent(location.href)}`);
+        const _suffix = `?${_params.join('&')}`;
+        window.open(`${location.protocol}//${main_domain}/${_K.module.signin}${_suffix}`, '_blank');
         return;
+      }
 
       case _e.upload:
+        // Uploading is an edit action → needs the write grant + an identity.
+        if (this._gateInteraction(this.havePermission(_K.permission.write, this.mget(_a.privilege)))) return;
         return this.__fileselector.open(this._upload.bind(this));
 
       case _e.download:
@@ -299,24 +497,44 @@ class __dmz_sharebox extends LetcBox {
       // "Add new" lives in the sharebox topbar (uiHandler = this sharebox),
       // but folder creation belongs to the window manager child — delegate.
       case "add-folder":
+        // Creating a folder is an edit action → needs the write grant + identity.
+        if (this._gateInteraction(this.havePermission(_K.permission.write, this.mget(_a.privilege)))) return;
         if (this.wm && this.wm.onUiEvent) {
           this.wm.onUiEvent(cmd, { service: "add-folder" });
         }
         return;
 
-      case 'open-signup':
-        this.append({
-          kind: 'drumee_api_popup',
-          autostart: 1,
-          popupContent: 'drumee_api_signup'
-        });
+      case 'open-signup': {
+        this.closeSignupRequiredOverlay();
+        const { main_domain } = bootstrap();
+        // Sign-up opens a new window on the canonical main domain (Session-7 fix
+        // to avoid embedding the guest session). sessionStorage does NOT cross to
+        // the new window, so carry the shared workspace as a hash query param;
+        // the welcome module stashes it into `drumee_hubDeepLink` for the desk.
+        // Secure-share URLs carry a token, not a hub_id, so the real hub_id is the
+        // one the login response stored on the model; keysel is only a fallback.
+        const _hubId = this.mget(_a.hub_id) || Visitor.parseLocation().keysel || '';
+        const _params = [];
+        if (_hubId) _params.push(`hub_id=${encodeURIComponent(_hubId)}`);
+        // Same return-to-share behaviour as go-login (welcome validates the URL).
+        _params.push(`return_to=${encodeURIComponent(location.href)}`);
+        const _suffix = `?${_params.join('&')}`;
+        window.open(`${location.protocol}//${main_domain}/${_K.module.signup}${_suffix}`, '_blank');
         return;
+      }
 
       case 'tab-files':
         if (this._folderView) this._folderView.el.dataset.view = 'files';
         return;
 
       case 'tab-chat':
+        // Anonymous recipients may OPEN the Chat tab to READ when the share
+        // grants chat (Figma: "view the chat"); posting is gated at send time —
+        // a send attempt opens the sign-up overlay (screen 57), wired in the
+        // chat widget's sendMessage. Without a chat grant, fall back to the
+        // standard gate (anonymous → sign-up; signed-in non-member → Request
+        // Access; owner → proceed).
+        if (!this.mget('can_chat') && this._gateInteraction(false)) return;
         if (this._folderView) this._folderView.el.dataset.view = _a.chat;
         return;
 
@@ -325,6 +543,43 @@ class __dmz_sharebox extends LetcBox {
         return;
 
       case _e.raise:
+        return;
+
+      case 'open-request-access':
+        // Route anonymous (not-authenticated) viewers to sign-up first — Request
+        // Access is for signed-in non-members. Keyed on is_authenticated, not the
+        // unreliable is_guest (false for public shares; see _gateInteraction).
+        if (!this.mget('is_authenticated')) return this.showSignupRequiredOverlay();
+        return this.showRequestAccessPopup();
+
+      case 'dmz-request-download':
+        // A player reported a download/print attempt without the share's
+        // download grant — route it like any other beyond-grant interaction
+        // (anonymous → sign-up/login; signed-in non-member → Request Access).
+        this._gateInteraction(false);
+        return;
+
+      case 'select-request-level': {
+        const lvl = cmd.mget('level');
+        this._selectedRequestLevel = lvl;
+        if (this.__signupOverlay) {
+          this.__signupOverlay.el.querySelectorAll('[data-level]').forEach(btn => {
+            btn.dataset.selected = (btn.dataset.level === lvl) ? 'yes' : '';
+          });
+        }
+        return;
+      }
+
+      case 'submit-access-request':
+        return this.submitAccessRequest();
+
+      case 'close-request-access':
+        this._selectedRequestLevel = null;
+        this.closeSignupRequiredOverlay();
+        return;
+
+      case 'close-request-sent':
+        this.closeSignupRequiredOverlay();
         return;
 
       default:
@@ -364,12 +619,24 @@ class __dmz_sharebox extends LetcBox {
       if (data && data.status === 'TICKET_OK' && data.is_secure) {
         // Secure-share password accepted — grant access
         this.mset(data);
+        if (this._verifiedEmail) this.mset({ recipient_email: this._verifiedEmail });
         this.getInfoData();
       } else if (data && data.status === 'WRONG_PASSWORD') {
-        this.renderErrorMessage(LOCALE.WRONG_CREDENTIALS);
+        // Figma 3.3.5: two lines — a red alert box with the failure message, then
+        // a muted warning line with the remaining-attempts count.
+        const attempts = (data.attempts_remaining != null && data.attempts_remaining > 0)
+          ? data.attempts_remaining : null;
+        this.renderPasswordError(LOCALE.SECURE_SHARE_WRONG_PASSWORD, attempts);
+      } else if (data && data.status === 'TICKET_LOCKED') {
+        this.promptLockedPassword();
       } else if (data && data.is_verified) {
         this.mset(data);
         localStorage.setItem('token', data.token);
+        // Remember which workspace this share token belongs to, so a later desk
+        // node_info 403 only opens the Request Access modal when it's for THIS share's
+        // hub (not any unrelated 403 after the share visit). See desk/wm
+        // _onShareAccessDenied.
+        localStorage.setItem('share_hub_id', this.mget(_a.hub_id) || data.hub_id || '');
         localStorage.setItem('guest-sid', data.guest_sid);
         this.dmzCheckPasswordResponse(data);
       } else if (!_.isEmpty(data.error)) {
@@ -387,6 +654,14 @@ class __dmz_sharebox extends LetcBox {
     this.__content.feed(this.deskSkeleton(this))
     if (this.__actionButtons) {
       this.__actionButtons.el.dataset.mode = _a.open;
+    }
+
+    // If we arrived here through the gate, swap the gate banner back to the
+    // landing banner now that the recipient has access. No-op for the public
+    // flow (flag never set).
+    if (this.mget('_gate_footer')) {
+      this.mset({ _gate_footer: false });
+      this.ensurePart(_a.footer).then((footer) => footer.feed(this.footerSkeleton(this)));
     }
 
     this._startRevokePolling();
@@ -499,12 +774,68 @@ class __dmz_sharebox extends LetcBox {
   }
 
   /**
+   * Two-line password error (Figma 3.3.5): a light-red alert box with the
+   * failure message, plus a muted warning line (⚠ icon) with the remaining
+   * attempts. Falls back to the single-line treatment when no message box is
+   * mounted. Keeps the existing transient show/hide timing so the rest of the
+   * gate behaviour is unchanged.
+   * @param {String} mainMsg
+   * @param {Number|null} attemptsRemaining
+   */
+  renderPasswordError(mainMsg, attemptsRemaining) {
+    // Match the password gate's BEM family (this error only renders there) so
+    // the styles co-locate under `.dmz-sharebox-password` in password.scss.
+    const pfx           = `${this.fig.family}-password`
+    const buttonWrapper = this.__buttonWrapper
+    const msgWrapper    = this.__messageBox
+    if (!msgWrapper) return this.renderErrorMessage(mainMsg)
+
+    const kids = [
+      Skeletons.Box.X({
+        className : `${pfx}__error-alert`,
+        kids      : [
+          Skeletons.Note({ className: `${pfx}__error-alert-text`, content: mainMsg })
+        ]
+      })
+    ]
+    if (attemptsRemaining != null) {
+      kids.push(Skeletons.Box.X({
+        className : `${pfx}__attempts-note`,
+        kids      : [
+          Skeletons.Button.Svg({ ico: 'apps-warning', className: `${pfx}__attempts-icon` }),
+          Skeletons.Note({
+            className : `${pfx}__attempts-text`,
+            content   : LOCALE.SECURE_SHARE_ATTEMPTS_REMAINING.replace('{0}', attemptsRemaining)
+          })
+        ]
+      }))
+    }
+
+    if (buttonWrapper) buttonWrapper.el.dataset.mode = _a.closed
+    msgWrapper.el.dataset.mode    = _a.open
+    msgWrapper.el.dataset.error   = ''        // not the single-line red-bar variant
+    msgWrapper.el.dataset.variant = 'block'
+    msgWrapper.feed(Skeletons.Box.Y({ className: `${pfx}__error-block`, kids }))
+
+    const f = () => {
+      msgWrapper.el.dataset.mode    = _a.closed
+      msgWrapper.el.dataset.variant = ''
+      msgWrapper.clear()
+      if (buttonWrapper) buttonWrapper.el.dataset.mode = _a.open
+    }
+    return _.delay(f, Visitor.timeout(3000))
+  }
+
+  /**
    *@param {Object} data
   */
   handleInfoStatus(data = {}) {
     let opt = {};
     let status = data.validity || data.status;
-    if (data.dmz_expiry == _a.expired) {
+    // Secure shares are exempt from the workspace-level dmz_expiry override — their
+    // validity comes from the token (data.status/validity). Only normal dmz/public
+    // shares derive expiry from the workspace dmz_settings value. (See onDomRefresh.)
+    if (!data.is_secure && data.dmz_expiry == _a.expired) {
       status = 'TICKET_EXPIRED';
     }
     switch (status) {
@@ -544,6 +875,154 @@ class __dmz_sharebox extends LetcBox {
     Dmz.say(opt);
   }
 
+
+  /**
+   *
+   */
+  /**
+   * Gate an interactive action (chat / edit / upload) per the Figma flow.
+   * Such actions need an identity, so:
+   *   • anonymous visitor → sign-up / login overlay — ALWAYS, even when the share
+   *     grants the capability (you can't chat/edit anonymously);
+   *   • signed-in non-member WITHOUT the grant → Request Access popup;
+   *   • the share's own creator, or a signed-in recipient who already holds the
+   *     grant → proceed.
+   * `hasGrant` = whether the share grants this capability. Returns true when it
+   * gated (caller should stop), false to proceed.
+   */
+  _gateInteraction(hasGrant) {
+    const isOwner = !!this.mget('creator_id') && (this.mget('uid') === this.mget('creator_id'));
+    if (isOwner) return false;
+    // Anonymous = NOT authenticated. is_guest is unreliable here (the server returns
+    // it FALSE for public shares, since the guest session is bound to the creator),
+    // so an anonymous viewer of an edit/chat-granting public link would otherwise slip
+    // past the sign-up gate. is_authenticated is set true only for a real account.
+    if (!this.mget('is_authenticated')) { this.showSignupRequiredOverlay(); return true; }
+    if (!hasGrant) { this.showRequestAccessPopup(); return true; }
+    return false;
+  }
+
+  /**
+   *
+   */
+  showRequestAccessPopup() {
+    const overlay = this.__signupOverlay;
+    if (!overlay) return;
+    this._selectedRequestLevel = null;
+    this._requestEmailInput    = null;
+    this._requestMessageInput  = null;
+    overlay.feed(require('./skeleton/request-access').default(this));
+    overlay.el.dataset.mode = _a.open;
+  }
+
+  /**
+   *
+   */
+  async submitAccessRequest() {
+    // Validate with INLINE feedback in the popup. renderErrorMessage targets the
+    // gate's parts (absent here), so it would fail silently — which is why submit
+    // appeared dead when a field was missing.
+    if (!this._selectedRequestLevel) {
+      return this._showRequestError(LOCALE.SECURE_SHARE_CHOOSE_LEVEL);
+    }
+
+    const emailEl = this._requestEmailInput
+      ? this._requestEmailInput.el.querySelector('input')
+      : null;
+    const emailVal = emailEl
+      ? emailEl.value.trim().toLowerCase()
+      // No field rendered (signed-in user — Figma 60 hides it): fall back to the
+      // gate email, then the signed-in account email. Mirrors the skeleton's
+      // `knownEmail` check so the popup never blank-aborts when the field is hidden.
+      : ((this.mget('recipient_email') || Visitor.get('email') || '')).toLowerCase().trim();
+
+    if (!emailVal || !Validator.email(emailVal)) {
+      return this._showRequestError(LOCALE.SECURE_SHARE_ENTER_EMAIL);
+    }
+    this._showRequestError('');
+
+    const msgEl  = this._requestMessageInput
+      ? this._requestMessageInput.el.querySelector('textarea')
+      : null;
+    const msgVal = msgEl ? msgEl.value.trim() : '';
+
+    const token  = this.mget(_a.token);
+    const hub_id = Visitor.parseLocation().keysel || '';
+    const payload = {
+      token,
+      hub_id,
+      email          : emailVal,
+      requested_level: this._selectedRequestLevel,
+    };
+    if (msgVal) payload.message = msgVal;
+
+    try {
+      const data = await this.postService(SERVICE.dmz.request_access, payload);
+      if (data && data.status === 'REQUEST_SENT') {
+        // Remember the email this share was requested with, so a later approval can
+        // be matched on refresh — an anonymous (incognito) recipient has no account
+        // email to key the grant on. Sent back as `grant_email` on the next login.
+        try { localStorage.setItem('dmz_share_email_' + token, emailVal); } catch (e) { /* ignore */ }
+        this.mset({
+          _request_email  : emailVal,
+          _request_level  : this._selectedRequestLevel,
+          _request_message: msgVal,
+        });
+        const overlay = this.__signupOverlay;
+        if (overlay) {
+          overlay.feed(require('./skeleton/request-sent').default(this));
+        }
+      }
+    } catch (e) {
+      this._showRequestError(LOCALE.SOMETHING_WENT_WRONG);
+    }
+  }
+
+  /**
+   * Inline error feedback inside the request-access popup. The gate's
+   * renderErrorMessage cannot be reused here (it drives gate-only parts).
+   * @param {String} msg  empty string clears + hides the line
+   */
+  _showRequestError(msg) {
+    const el = this._requestError;
+    if (!el || !el.el) return;
+    el.el.textContent = msg || '';
+    el.el.dataset.mode = msg ? _a.open : _a.closed;
+  }
+
+  /**
+   *
+   */
+  _handleAccessResponse(data) {
+    const overlay = this.__signupOverlay;
+    if (overlay) {
+      overlay.el.dataset.mode = _a.closed;
+      overlay.clear();
+    }
+    if (data.action === 'approve') {
+      this.mset({
+        permission_level: data.granted_level,
+        privilege       : data.privilege || 3,
+        // Carry the capability flags so the chat tab / edit gates unlock to match
+        // the freshly granted level (server sends these on the approval event).
+        capabilities    : data.capabilities || [],
+        can_download    : data.can_download || 0,
+        can_chat        : data.can_chat || 0,
+        can_edit        : data.can_edit || 0,
+      });
+      this.loadDeskContent();
+      // Figma 67 — notify the guest their access request was approved. The folder
+      // name comes from the model (the guest is already viewing it).
+      const folder = this.mget(_a.title) || this.mget(_a.filename) || this.mget(_a.name) || '';
+      Butler.say(LOCALE.SECURE_SHARE_REQUEST_APPROVED_NOTICE.replace('{folder}', folder));
+    } else {
+      // Denial: the request overlay was just closed above, and renderErrorMessage
+      // only targets the email/password gate parts (absent in the request-access
+      // flow) — so it rendered nothing. Use a toast so the recipient actually sees
+      // the denial (mirrors the approve-notice path above).
+      Butler.say(LOCALE.SECURE_SHARE_ACCESS_DENIED);
+    }
+  }
 
 }
 

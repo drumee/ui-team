@@ -21,6 +21,8 @@ class __widget_chat extends LetcBox {
     this.showSend = this.showSend.bind(this);
     this.clearMessageFromChat = this.clearMessageFromChat.bind(this);
     this.removeUploadFromChat = this.removeUploadFromChat.bind(this);
+    this._onMentionDropdownKeydown = this._onMentionDropdownKeydown.bind(this);
+    this._onMentionDropdownKeyup = this._onMentionDropdownKeyup.bind(this);
     this.initStorage();
   }
 
@@ -75,6 +77,12 @@ class __widget_chat extends LetcBox {
     // window manager (Wm fires "chat:read" with the focused hub context).
     this._onReadContext = this._onReadContext.bind(this);
     RADIO_BROADCAST.on("chat:read", this._onReadContext);
+
+    // Sync own posts to sibling chat widgets on the same channel in this client
+    // (the server doesn't WS-echo your own posts, so e.g. the team chat would
+    // stay stale while you type in the meeting chat). See _onPeerChatPosted.
+    this._onPeerChatPosted = this._onPeerChatPosted.bind(this);
+    RADIO_BROADCAST.on("chat:posted", this._onPeerChatPosted);
   }
 
   /**
@@ -98,6 +106,7 @@ class __widget_chat extends LetcBox {
   onBeforeDestroy() {
     this.unbindEvent(_a.live);
     RADIO_BROADCAST.off("chat:read", this._onReadContext);
+    RADIO_BROADCAST.off("chat:posted", this._onPeerChatPosted);
     clearTimeout(this._folderContentSyncTimer);
     this._cleanupUnsentAttachments();
     if (this.attachmentList) {
@@ -110,6 +119,11 @@ class __widget_chat extends LetcBox {
         if (t && t.timer) clearTimeout(t.timer);
       }
       this._typers.clear();
+    }
+    if (this._mentionKeyboardBound && this.el) {
+      this.el.removeEventListener("keydown", this._onMentionDropdownKeydown, true);
+      this.el.removeEventListener("keyup", this._onMentionDropdownKeyup, true);
+      this._mentionKeyboardBound = false;
     }
   }
 
@@ -524,6 +538,34 @@ class __widget_chat extends LetcBox {
     };
   }
 
+  _scopePrivilege() {
+    const folderWindow =
+      this.getParentByKind && this.getParentByKind("window_folder");
+    const sources = [folderWindow, this];
+    if (this.getHandlers) {
+      const handlers = this.getHandlers(_a.ui) || [];
+      sources.push(...handlers);
+    }
+    for (const source of sources) {
+      if (!source || !source.mget) continue;
+      const privilege = source.mget(_a.privilege);
+      if (privilege != null) return privilege;
+      const permission = source.mget(_a.permission);
+      if (permission != null) return permission;
+    }
+    return 0;
+  }
+
+  canPromoteDeviceAttachmentsToFolder() {
+    if (!this.getScopedNid()) return false;
+    return !!(_K.permission.write & this._scopePrivilege());
+  }
+
+  getPromotableDeviceAttachmentIds(list) {
+    if (!list || !this.canPromoteDeviceAttachmentsToFolder()) return [];
+    return list.getDeviceAttachmentIds ? list.getDeviceAttachmentIds() || [] : [];
+  }
+
   /**
    *
    */
@@ -648,6 +690,7 @@ class __widget_chat extends LetcBox {
         return this.__refWindowName.set({ content: data.name });
       }
       this.feed(require("./skeleton")(this));
+      this._bindMentionKeyboard();
     });
   }
 
@@ -1367,7 +1410,12 @@ class __widget_chat extends LetcBox {
   _syncScopedFolderContent(data = {}, fallback = {}) {
     if (this.mget("scope") !== _a.folder) return;
     const messageData = this._messageData(data);
-    const attachmentIds = this._attachmentIds(messageData, fallback);
+    const hasFolderAttachmentFallback =
+      fallback && Object.prototype.hasOwnProperty.call(fallback, "folder_attachment");
+    const attachmentIds = hasFolderAttachmentFallback
+      ? this._attachmentIds({ attachment: fallback.folder_attachment })
+      : this._attachmentIds(messageData);
+    if (hasFolderAttachmentFallback && _.isEmpty(attachmentIds)) return;
     const payload = {
       ...messageData,
       attachment: attachmentIds,
@@ -1449,12 +1497,39 @@ class __widget_chat extends LetcBox {
     return `${messageNid}` === `${nid}`;
   }
 
+  // Mirror a message posted by another chat widget in THIS client onto our
+  // list, when it targets the same channel/scope. Only handles the local
+  // user's own posts (others' messages already arrive via WS); handleReceivedMsg
+  // dedups by message_id, so a stray double-delivery is harmless.
+  _onPeerChatPosted(payload = {}) {
+    const { from, hub_id, data } = payload;
+    if (!data || from === this.cid) return;
+    if (`${hub_id}` !== `${this.hubId}`) return;
+    if (data.author_id != null && `${data.author_id}` !== `${Visitor.id}`) return;
+    const area = this.mget(_a.area) || this.mget(_a.type);
+    const isChannel = [_a.dmz, _a.public, _a.share, _a.private].includes(area);
+    if (!isChannel || !this.matchesScopedChannel(data)) return;
+    this.handleReceivedMsg(data);
+  }
+
   /**
    *
    * @param {*} args
    * @returns
    */
   sendMessage(args = {}) {
+    // DMZ guest gate (Figma "user chat → sign in required", screen 57): an
+    // anonymous recipient of a shared link may READ the conversation but must
+    // sign up / log in to post. On a send attempt, open the sharebox's sign-up
+    // overlay instead of posting. `guest_chat`/`desk` are set only in the DMZ
+    // guest context (toolkit chatPanel); authenticated chat is unaffected.
+    if (this.mget("guest_chat")) {
+      const desk = this.mget("desk");
+      if (desk && _.isFunction(desk.showSignupRequiredOverlay)) {
+        desk.showSignupRequiredOverlay();
+      }
+      return;
+    }
     // Sending ends the typing session.
     this._stopTyping();
     let message = "";
@@ -1522,9 +1597,10 @@ class __widget_chat extends LetcBox {
           api.nid = this.getScopedNid();
           // Staged device uploads the server should move into the folder
           // at send time (everything else stays link-only in the sbox).
-          api.folder_attachment = list.getDeviceAttachmentIds
-            ? list.getDeviceAttachmentIds() || []
-            : [];
+          const folderAttachment = this.getPromotableDeviceAttachmentIds(list);
+          if (!_.isEmpty(folderAttachment)) {
+            api.folder_attachment = folderAttachment;
+          }
         }
         break;
 
@@ -1653,6 +1729,13 @@ class __widget_chat extends LetcBox {
         }
         this._syncScopedFolderContent(data, api);
         this.handleReceivedMsg(data);
+        // Mirror to sibling chat widgets on the same channel in this client
+        // (the server won't WS-echo our own post back to us).
+        RADIO_BROADCAST.trigger("chat:posted", {
+          from: this.cid,
+          hub_id: this.hubId,
+          data,
+        });
       })
       .catch((error) => {
         this._sendingNids = null;
@@ -2086,6 +2169,173 @@ class __widget_chat extends LetcBox {
     }
   }
 
+  _bindMentionKeyboard() {
+    if (this._mentionKeyboardBound || !this.el) return;
+    this._mentionDropdownIndex = -1;
+    this.el.addEventListener("keydown", this._onMentionDropdownKeydown, true);
+    this.el.addEventListener("keyup", this._onMentionDropdownKeyup, true);
+    this._mentionKeyboardBound = true;
+  }
+
+  _getMentionDropdownEl() {
+    const dropdown = this.getPart && this.getPart("mention-dropdown");
+    if (dropdown && dropdown.el) return dropdown.el;
+    if (!this.el) return null;
+    return this.el.querySelector(`.${this.fig.family}__mention-dropdown`);
+  }
+
+  _getMentionItems() {
+    const dropdownEl = this._getMentionDropdownEl();
+    if (!dropdownEl || dropdownEl.dataset.state !== _a.open) return [];
+    return Array.from(dropdownEl.querySelectorAll(".mention-item"));
+  }
+
+  _setMentionActiveIndex(index) {
+    const items = this._getMentionItems();
+    if (!items.length) {
+      this._mentionDropdownIndex = -1;
+      return null;
+    }
+    const next = ((index % items.length) + items.length) % items.length;
+    items.forEach((item, i) => {
+      const active = i === next ? "1" : "0";
+      item.dataset.active = active;
+      item.setAttribute("aria-selected", active === "1" ? "true" : "false");
+    });
+    this._mentionDropdownIndex = next;
+    items[next].scrollIntoView({ block: "nearest" });
+    return items[next];
+  }
+
+  _selectMentionDropdownItem(item) {
+    if (!item) return false;
+    this._onMentionFileSelect({ el: item }, { service: "mention-select" });
+    return true;
+  }
+
+  _stopMentionKeyboardEvent(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    if (_.isFunction(e.stopImmediatePropagation)) e.stopImmediatePropagation();
+  }
+
+  _onMentionDropdownKeydown(e) {
+    const key = e.key || e.code;
+    if (!["ArrowDown", "ArrowUp", "Enter", "Escape"].includes(key)) return true;
+
+    const dropdownEl = this._getMentionDropdownEl();
+    if (!dropdownEl || dropdownEl.dataset.state !== _a.open) return true;
+
+    const items = this._getMentionItems();
+    if (!items.length) {
+      if (key !== "Escape") return true;
+      this._stopMentionKeyboardEvent(e);
+      this._mentionKeyboardSuppressKeyup = key;
+      this._closeMentionDropdown();
+      return false;
+    }
+
+    this._stopMentionKeyboardEvent(e);
+    this._mentionKeyboardSuppressKeyup = key;
+
+    if (key === "Escape") {
+      this._closeMentionDropdown();
+      return false;
+    }
+
+    if (key === "Enter") {
+      const item = items[this._mentionDropdownIndex] ||
+        this._setMentionActiveIndex(0);
+      this._selectMentionDropdownItem(item);
+      return false;
+    }
+
+    const delta = key === "ArrowDown" ? 1 : -1;
+    const start = this._mentionDropdownIndex < 0
+      ? (key === "ArrowDown" ? 0 : items.length - 1)
+      : this._mentionDropdownIndex + delta;
+    this._setMentionActiveIndex(start);
+    return false;
+  }
+
+  _onMentionDropdownKeyup(e) {
+    const key = e.key || e.code;
+    if (!this._mentionKeyboardSuppressKeyup) return true;
+    if (this._mentionKeyboardSuppressKeyup !== key) return true;
+    this._mentionKeyboardSuppressKeyup = null;
+    this._stopMentionKeyboardEvent(e);
+    return false;
+  }
+
+  /**
+   * Search files/folders under the current folder for mention suggestions.
+   * Uses only read/list calls; sendMessage keeps mentions out of attachments.
+   */
+  async _fetchMentionFiles(folderHubId, folderNid, filter) {
+    const query = (filter || "").trim().toLowerCase();
+    const rows = [];
+    const seen = new Set();
+    const visitedFolders = new Set();
+    const queue = [{ nid: folderNid, path: "", depth: 0 }];
+    const maxDepth = query ? 4 : 0;
+    const maxFolders = query ? 40 : 1;
+    const maxRows = 80;
+
+    const toRows = (d) => {
+      if (!d) return [];
+      if (Array.isArray(d)) return d;
+      return d.rows || d.data || [];
+    };
+
+    const matches = (file) => {
+      if (!query) return true;
+      const name = (file.filename || file.user_filename || "").toLowerCase();
+      const path = (file.mention_path || "").toLowerCase();
+      return name.includes(query) || path.includes(query);
+    };
+
+    while (queue.length && visitedFolders.size < maxFolders && rows.length < maxRows) {
+      const folder = queue.shift();
+      if (!folder || !folder.nid || visitedFolders.has(folder.nid)) continue;
+      visitedFolders.add(folder.nid);
+
+      const data = await this.fetchService({
+        service: SERVICE.media.show_node_by,
+        hub_id: folderHubId,
+        nid: folder.nid,
+      }).catch(() => null);
+
+      for (const item of toRows(data)) {
+        if (!item || item.filetype === _a.hub) continue;
+        const filename = item.filename || item.user_filename || "";
+        const mentionPath = folder.path ? `${folder.path}/${filename}` : filename;
+        const normalized = {
+          ...item,
+          filename,
+          mention_path: mentionPath,
+        };
+        const key = `${normalized.nid || ""}`;
+        const isFolder = item.filetype === _a.folder || item.ftype === _a.folder;
+
+        if (matches(normalized) && key && !seen.has(key)) {
+          seen.add(key);
+          rows.push(normalized);
+          if (rows.length >= maxRows) break;
+        }
+
+        if (query && isFolder && item.nid && folder.depth < maxDepth) {
+          queue.push({
+            nid: item.nid,
+            path: mentionPath,
+            depth: folder.depth + 1,
+          });
+        }
+      }
+    }
+
+    return rows;
+  }
+
   /**
    * Show mention dropdown filtered by text
    * @param {string} filter - text after trigger character
@@ -2154,11 +2404,7 @@ class __widget_chat extends LetcBox {
       } catch (e) {}
       if (!folderNid) folderNid = (home && home.home_id) || folderHubId;
 
-      filesPromise = this.fetchService({
-        service: SERVICE.media.show_node_by,
-        hub_id: folderHubId,
-        nid: folderNid,
-      }).catch(() => null);
+      filesPromise = this._fetchMentionFiles(folderHubId, folderNid, filter);
     }
 
     if (mentionType === "contact") {
@@ -2220,14 +2466,17 @@ class __widget_chat extends LetcBox {
           return fullname.length > 0;
         });
 
-        if (filter) {
-          files = files.filter((f) =>
-            (f.filename || "").toLowerCase().includes(filter),
-          );
+        const normalizedFilter = (filter || "").toLowerCase();
+        if (normalizedFilter) {
+          files = files.filter((f) => {
+            const name = (f.filename || "").toLowerCase();
+            const path = (f.mention_path || "").toLowerCase();
+            return name.includes(normalizedFilter) || path.includes(normalizedFilter);
+          });
           contacts = contacts.filter((c) => {
             const name =
               `${c.firstname || ""} ${c.lastname || ""} ${c.surname || ""}`.toLowerCase();
-            return name.includes(filter);
+            return name.includes(normalizedFilter);
           });
         }
 
@@ -2278,9 +2527,10 @@ class __widget_chat extends LetcBox {
           };
           html += '<div class="mention-section-header">Files</div>';
           files.slice(0, 6).forEach((f) => {
+            const label = f.mention_path || f.filename;
             html += `<div class="mention-item" data-nid="${_.escape(f.nid)}" data-hub_id="${_.escape(folderHubId)}" data-filename="${_.escape(f.filename)}" data-type="file" data-service="mention-select">
             <div class="mention-item__icon ${_.escape(f.area || "")}">${renderFileIcon(f)}</div>
-            <div class="mention-item__name">${_.escape(f.filename)}</div>
+            <div class="mention-item__name">${_.escape(label)}</div>
           </div>`;
           });
         }
@@ -2304,12 +2554,13 @@ class __widget_chat extends LetcBox {
         console.log("[mention] html length", html.length);
         if (!html) {
           console.warn("[mention] empty html → closing dropdown");
-          dropdown.el.dataset.state = _a.closed;
+          this._closeMentionDropdown();
           return;
         }
 
         dropdown.el.innerHTML = html;
         dropdown.el.dataset.state = _a.open;
+        this._setMentionActiveIndex(0);
         console.log("[mention] dropdown OPENED", {
           state: dropdown.el.dataset.state,
           visible: dropdown.el.offsetParent !== null,
@@ -2320,30 +2571,7 @@ class __widget_chat extends LetcBox {
         dropdown.el.querySelectorAll(".mention-item").forEach((el) => {
           el.onclick = function (e) {
             e.stopPropagation();
-            const d = this.dataset;
-            let item;
-            if (d.type === "contact") {
-              item = {
-                type: "contact",
-                drumate_id: d.drumate_id,
-                firstname: d.firstname,
-                lastname: d.lastname,
-                fullname: d.fullname,
-              };
-            } else {
-              item = {
-                type: "file",
-                nid: d.nid,
-                hub_id: d.hub_id,
-                filename: d.filename,
-              };
-            }
-            self.ensurePart(_a.message).then((messenger) => {
-              if (_.isFunction(messenger._onMentionSelect)) {
-                messenger._onMentionSelect(item);
-              }
-            });
-            self._closeMentionDropdown();
+            self._selectMentionDropdownItem(this);
           };
         });
       })
@@ -2357,10 +2585,11 @@ class __widget_chat extends LetcBox {
    * Close mention dropdown
    */
   _closeMentionDropdown() {
-    const dropdown = this.getPart("mention-dropdown");
-    if (!dropdown) return;
-    dropdown.el.dataset.state = _a.closed;
-    dropdown.el.innerHTML = "";
+    const dropdownEl = this._getMentionDropdownEl();
+    if (!dropdownEl) return;
+    this._mentionDropdownIndex = -1;
+    dropdownEl.dataset.state = _a.closed;
+    dropdownEl.innerHTML = "";
   }
 
   /**
