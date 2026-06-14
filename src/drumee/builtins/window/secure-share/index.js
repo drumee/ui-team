@@ -149,6 +149,8 @@ class __window_secure_share extends mfsInteract {
         return this._toggleRequireEmail();
       case 'toggle-require-password':
         return this._toggleRequirePassword();
+      case 'toggle-password-visibility':
+        return this._togglePasswordVisibility(cmd);
       case 'add-email-chip':
         return this._addEmailChip();
       case 'remove-email-chip':
@@ -316,6 +318,21 @@ class __window_secure_share extends mfsInteract {
     }
   }
 
+  // Show/hide the password — mirrors welcome/signin: toggle the input type, swap
+  // the eye_closed↔eye glyph and flip data-state (CSS colours it on state=1).
+  _togglePasswordVisibility(cmd) {
+    const row = cmd.el.closest(`.${this.fig.family}__password-row`);
+    const input = row && row.querySelector('input');
+    if (!input) return;
+    const isVisible = input.type === 'text';
+    input.type = isVisible ? 'password' : 'text';
+    const useEl = cmd.el.querySelector('svg use');
+    if (useEl) {
+      useEl.setAttribute('xlink:href', isVisible ? '#--icon-eye_closed' : '#--icon-eye');
+    }
+    cmd.el.dataset.state = isVisible ? '0' : '1';
+  }
+
   _addEmailChip() {
     if (!this._chipsInput) return;
     const input = this._chipsInput.el.querySelector('input');
@@ -355,6 +372,66 @@ class __window_secure_share extends mfsInteract {
       })
     );
     this._chipsContainer.feed(Skeletons.Box.X({ className: `${pfx}__chips`, kids }));
+    this._collapseChipsOverflow();
+  }
+
+  // Keep the chips on a single row (Figma "Access filter"): show the chips that
+  // fit, collapse the rest into a "+N" badge whose hover popup lists the hidden
+  // emails. Re-measured on every render, so it stays correct as chips change.
+  _collapseChipsOverflow() {
+    if (!this._chipsContainer) return;
+    const pfx = this.fig.family;
+    const container = this._chipsContainer.el;
+    const row = container && container.querySelector(`.${pfx}__chips`);
+    if (!row) return;
+
+    // Reset previous collapse so measuring starts from the full set.
+    const oldBadge = row.querySelector(`.${pfx}__chip-more`);
+    if (oldBadge) oldBadge.remove();
+    const chips = Array.from(row.querySelectorAll(`.${pfx}__chip`));
+    chips.forEach(c => { c.style.display = ''; });
+
+    const avail = container.clientWidth;
+    if (!avail || chips.length === 0) return;
+
+    const gap     = parseFloat(getComputedStyle(row).columnGap) || 8;
+    const RESERVE = 52; // room for the "+N" badge
+
+    // Count the leading chips that fit on the line.
+    let used    = 0;
+    let visible = chips.length;
+    for (let i = 0; i < chips.length; i++) {
+      const w = chips[i].offsetWidth + (i ? gap : 0);
+      if (used + w > avail) { visible = i; break; }
+      used += w;
+    }
+    if (visible === chips.length) return; // everything fits → no badge
+
+    // Make room for the badge beside the visible chips.
+    while (visible > 0 && used + gap + RESERVE > avail) {
+      visible--;
+      used -= chips[visible].offsetWidth + (visible ? gap : 0);
+    }
+    for (let i = visible; i < chips.length; i++) chips[i].style.display = 'none';
+
+    const hidden = this._emailChips.slice(visible);
+    const badge  = document.createElement('div');
+    badge.className = `${pfx}__chip ${pfx}__chip-more`;
+    const count = document.createElement('span');
+    count.className = `${pfx}__chip-text`;
+    count.textContent = `+${hidden.length}`;
+    badge.appendChild(count);
+
+    const popup = document.createElement('div');
+    popup.className = `${pfx}__chip-popup`;
+    hidden.forEach(email => {
+      const r = document.createElement('div');
+      r.className = `${pfx}__chip-popup-row`;
+      r.textContent = email;
+      popup.appendChild(r);
+    });
+    badge.appendChild(popup);
+    row.appendChild(badge);
   }
 
   async _loadShares() {
