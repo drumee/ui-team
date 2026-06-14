@@ -1722,6 +1722,7 @@
   "SECURE_SHARE_REQUIRE_PASSWORD_DESC": "Set a password for access",
   "SECURE_SHARE_EXPIRY_DATE": "Expiry date",
   "SECURE_SHARE_NOTIFY_ON_OPEN": "Notify me when someone opens this",
+  "SECURE_SHARE_OPENED_ACTION": "открыл(а) ",
   "SECURE_SHARE_SELECT_PROTECTION": "Select at least one protection method (email or password).",
   "SECURE_SHARE_REQUIRE_ALLOWED_EMAIL": "Добавьте хотя бы один разрешённый адрес электронной почты или домен, чтобы ограничить доступ.",
   "SECURE_SHARE_PASSWORD_REQUIRED_CREATE": "Please set a password to protect this link.",

@@ -760,7 +760,31 @@ class __panel_activity extends LetcBox {
     } catch (e) {
       this.warn('[panel_activity] secure_share.list_requests failed', e);
     }
-    const merged = accessReqs.concat(live);
+    // Recent share-open notifications for the creator ("{email} opened {folder}").
+    // Fetched separately from secure_share_access_event; guarded so it no-ops
+    // gracefully before the backing SP is applied to the DB, and never affects the
+    // rest of the list. Deduped per recipient server-side.
+    let openNotifs = [];
+    try {
+      const on = await this.postService({
+        service: (SERVICE.secure_share && SERVICE.secure_share.list_open_notifications) || 'secure_share.list_open_notifications',
+        hub_id: Visitor.id,
+      });
+      const rows = _.isArray(on) ? on : (_.isArray(on?.data) ? on.data : []);
+      const dismissedOpen = this._dismissedKeys || new Set();
+      openNotifs = rows
+        .filter((r) => !dismissedOpen.has(`share_open:${r.id}`))
+        .map((r) => ({
+          ...r,
+          category: 'share_open',
+          key_id: r.id,
+          last_id: r.last_seen_at,
+          ctime: r.last_seen_at,
+        }));
+    } catch (e) {
+      this.warn('[panel_activity] secure_share.list_open_notifications failed', e);
+    }
+    const merged = accessReqs.concat(openNotifs, live);
 
     const unread_count = merged.length;
     RADIO_BROADCAST.trigger('activity-update', { unread_count });
@@ -856,6 +880,15 @@ class __panel_activity extends LetcBox {
           e.link_label = it.node_name || it.workspace_name;
           e.sender     = it.requester_email;
           e.fullname   = it.requester_email;
+          break;
+        case 'share_open':
+          // A recipient opened a secure share with notify-on-open enabled:
+          // "{email} opened {folder}". Informational — keeps the default row click.
+          e.event      = 'secure_share.opened';
+          e.action     = LOCALE.SECURE_SHARE_OPENED_ACTION;
+          e.link_label = it.node_name || it.workspace_name || '';
+          e.sender     = it.recipient_email;
+          e.fullname   = it.recipient_email;
           break;
         // case 'media':
         //   e.service = 'open-folder';
