@@ -221,8 +221,9 @@ class __media_core extends DrumeeMFS {
       sections.push([_a.download, 'makeACopy', _a.rename]);
       /** 2 — organize (Move submenu) */
       sections.push(['organize']);
-      /** 3 — share = invite-members shortcut */
-      if (this.canShare()) sections.push([_a.share]);
+      /** 3 — Invite (_a.share) hidden on subfolders per Lexis 2026-06-14: Invite is a
+       * parent-folder/hub-only action. Item def, handler, and the hub menu keep it. */
+      // if (this.canShare()) sections.push([_a.share]);
       /** 4 — details: members + roles via the folder settings panel */
       sections.push([_a.info]);
       /** 5 — outside-world share link (share area only) */
@@ -232,7 +233,8 @@ class __media_core extends DrumeeMFS {
     } else if (this.canDownload()) {
       // Restricted/shared recipient — Download only per Figma 2.2
       sections.push([_a.download]);
-      if (this.canShare()) sections.push([_a.share]);
+      // Invite (_a.share) hidden on subfolders per Lexis 2026-06-14 (parent-folder/hub only).
+      // if (this.canShare()) sections.push([_a.share]);
       sections.push([_a.info]);
       if (this.canRemove()) sections.push([_a.trash]);
     }
@@ -260,10 +262,11 @@ class __media_core extends DrumeeMFS {
     /** 1 — clipboard copy + download ("duplicate" removed from files) */
     sections.push([_a.copy, _a.download]);
 
-    /** 2 — organize (Move submenu) + share = invite-members shortcut */
+    /** 2 — organize (Move submenu). Invite (_a.share) hidden on files per Lexis
+     * 2026-06-14 (parent-folder/hub only); item def + handler + hub menu keep it. */
     const organize = [];
     if (editable) organize.push('organize');
-    if (this.canShare()) organize.push(_a.share);
+    // if (this.canShare()) organize.push(_a.share);
     if (organize.length) sections.push(organize);
 
     /** 3 — rename + chat threads (inside a folder window only) */
