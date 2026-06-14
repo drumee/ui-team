@@ -11,12 +11,15 @@ const __skl_secure_share_access_result = function(_ui_, opts = {}) {
   // duplication. Defaults to the host widget's own family.
   const fig     = opts.fig || `${_ui_.fig.family}-access-result`;
   const req     = _ui_.mget('_pendingRequest') || {};
-  // 'denied' | 'can_download' | 'can_chat' | 'can_edit'
+  // 'denied' or a comma-list SET of granted levels, e.g. "can_chat,can_edit".
   const outcome = _ui_.mget('_resultOutcome') || 'denied';
+  const grantedLevels = outcome === 'denied'
+    ? []
+    : String(outcome).split(',').map(s => s.trim()).filter(Boolean);
   const email   = req.requester_email || '';
   const who     = req.requester_name || email || LOCALE.SECURE_SHARE_THIS_USER;
   const folder  = req.workspace_name || _ui_.mget(_a.title) || _ui_.mget(_a.filename) || _ui_.mget(_a.name) || '';
-  const granted = outcome !== 'denied';
+  const granted = grantedLevels.length > 0;
 
   // Per-outcome badge + copy.
   const CONFIG = {
@@ -45,7 +48,20 @@ const __skl_secure_share_access_result = function(_ui_, opts = {}) {
       desc    : LOCALE.SECURE_SHARE_RESULT_DESC_FULL,
     },
   };
-  const cfg = CONFIG[outcome] || CONFIG.denied;
+  // Representative config (highest granted level) drives the badge icon + copy;
+  // the badge LABEL lists every granted level so a multi-grant reads e.g.
+  // "Can Download, Can Chat". Denied uses the denied config.
+  const ORDER = ['can_edit', 'can_download', 'can_chat'];
+  const primary = ORDER.find(l => grantedLevels.includes(l));
+  const cfg = granted ? { ...(CONFIG[primary] || CONFIG.can_download) } : CONFIG.denied;
+  if (granted) {
+    const LABELS = {
+      can_download: LOCALE.SECURE_SHARE_CAN_DOWNLOAD,
+      can_chat    : LOCALE.SECURE_SHARE_CAN_CHAT,
+      can_edit    : LOCALE.SECURE_SHARE_CAN_EDIT,
+    };
+    cfg.badge = grantedLevels.map(l => LABELS[l] || l).join(', ');
+  }
 
   // Status badge: tinted circle (green/red via SCSS modifier) + glyph.
   const statusIcon = Skeletons.Box.X({
