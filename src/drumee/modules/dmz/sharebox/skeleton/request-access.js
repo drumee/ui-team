@@ -3,9 +3,10 @@
 //   lacks the capability they tried to use. Mirrors the sender-side
 //   approve popup (Figma 63 / panel-activity approve-request) so the two
 //   read as the same component: icon + label + checkbox ROWS.
-//   NOTE: the level is single-select (the backend stores one granted_level)
-//   even though Figma draws checkboxes — selecting a row clears the others
-//   via the `select-request-level` handler.
+//   NOTE: multi-select — a recipient can request several permissions at once
+//   (the backend stores a SET). `select-request-level` toggles each row
+//   independently. Only permissions the recipient does NOT already have are
+//   offered (a download recipient can request chat/edit, not download).
 // ==================================================================== *
 
 function __skl_dmz_sharebox_request_access(_ui_) {
@@ -16,6 +17,9 @@ function __skl_dmz_sharebox_request_access(_ui_) {
     { level: 'can_chat',     label: LOCALE.SECURE_SHARE_CAN_CHAT,     ico: 'apps-chat' },
     { level: 'can_edit',     label: LOCALE.SECURE_SHARE_CAN_EDIT,     ico: 'apps-pencil-simple' },
   ];
+  // Exclude permissions the recipient already holds (model flags can_download /
+  // can_chat / can_edit from the share grant) — per Lexis 2026-06-14.
+  const AVAILABLE = LEVEL_OPTIONS.filter(o => !_ui_.mget(o.level));
 
   // Header: title + × close (Figma 60 has no Cancel button — just the close).
   const header = Skeletons.Box.X({
@@ -32,7 +36,7 @@ function __skl_dmz_sharebox_request_access(_ui_) {
       Skeletons.Note({ className: `${reqFig}__level-desc`, content: LOCALE.SECURE_SHARE_CHOOSE_LEVEL }),
       Skeletons.Box.Y({
         className : `${reqFig}__levels`,
-        kids      : LEVEL_OPTIONS.map(({ level, label, ico }) => Skeletons.Box.X({
+        kids      : AVAILABLE.map(({ level, label, ico }) => Skeletons.Box.X({
           className : `${reqFig}__level-row`,
           service   : 'select-request-level',
           // `level` must be a top-level prop (not only in dataset) — the handler

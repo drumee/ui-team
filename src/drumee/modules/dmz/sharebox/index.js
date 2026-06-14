@@ -30,7 +30,7 @@ class __dmz_sharebox extends LetcBox {
     this.footerSkeleton = require('./skeleton/footer').default;
     this.deskSkeleton = require("./skeleton/desk-content").default;
     this.nodeInfoService = SERVICE.media.show_node_by;
-    this._selectedRequestLevel = null;
+    this._selectedRequestLevels = new Set();
     this._requestEmailInput    = null;
     this._requestMessageInput  = null;
   }
@@ -560,11 +560,15 @@ class __dmz_sharebox extends LetcBox {
         return;
 
       case 'select-request-level': {
+        // Multi-select: toggle this level independently (a recipient can request
+        // several at once, e.g. chat + edit). Reflect the per-row selected state.
         const lvl = cmd.mget('level');
-        this._selectedRequestLevel = lvl;
+        if (!this._selectedRequestLevels) this._selectedRequestLevels = new Set();
+        if (this._selectedRequestLevels.has(lvl)) this._selectedRequestLevels.delete(lvl);
+        else this._selectedRequestLevels.add(lvl);
         if (this.__signupOverlay) {
           this.__signupOverlay.el.querySelectorAll('[data-level]').forEach(btn => {
-            btn.dataset.selected = (btn.dataset.level === lvl) ? 'yes' : '';
+            btn.dataset.selected = this._selectedRequestLevels.has(btn.dataset.level) ? 'yes' : '';
           });
         }
         return;
@@ -574,7 +578,7 @@ class __dmz_sharebox extends LetcBox {
         return this.submitAccessRequest();
 
       case 'close-request-access':
-        this._selectedRequestLevel = null;
+        if (this._selectedRequestLevels) this._selectedRequestLevels.clear();
         this.closeSignupRequiredOverlay();
         return;
 
@@ -908,7 +912,7 @@ class __dmz_sharebox extends LetcBox {
   showRequestAccessPopup() {
     const overlay = this.__signupOverlay;
     if (!overlay) return;
-    this._selectedRequestLevel = null;
+    this._selectedRequestLevels = new Set();
     this._requestEmailInput    = null;
     this._requestMessageInput  = null;
     overlay.feed(require('./skeleton/request-access').default(this));
@@ -922,9 +926,11 @@ class __dmz_sharebox extends LetcBox {
     // Validate with INLINE feedback in the popup. renderErrorMessage targets the
     // gate's parts (absent here), so it would fail silently — which is why submit
     // appeared dead when a field was missing.
-    if (!this._selectedRequestLevel) {
+    if (!this._selectedRequestLevels || this._selectedRequestLevels.size === 0) {
       return this._showRequestError(LOCALE.SECURE_SHARE_CHOOSE_LEVEL);
     }
+    // Multi-select: send the chosen levels as a comma-list (server stores a SET).
+    const requestedLevels = Array.from(this._selectedRequestLevels).join(',');
 
     const emailEl = this._requestEmailInput
       ? this._requestEmailInput.el.querySelector('input')
@@ -952,7 +958,7 @@ class __dmz_sharebox extends LetcBox {
       token,
       hub_id,
       email          : emailVal,
-      requested_level: this._selectedRequestLevel,
+      requested_level: requestedLevels,
     };
     if (msgVal) payload.message = msgVal;
 
@@ -965,7 +971,7 @@ class __dmz_sharebox extends LetcBox {
         try { localStorage.setItem('dmz_share_email_' + token, emailVal); } catch (e) { /* ignore */ }
         this.mset({
           _request_email  : emailVal,
-          _request_level  : this._selectedRequestLevel,
+          _request_level  : requestedLevels,
           _request_message: msgVal,
         });
         const overlay = this.__signupOverlay;

@@ -6,20 +6,27 @@
 
 module.exports = function (_ui_, req = {}) {
   const pfx = `${_ui_.fig.family}-approve-request`;
-  const requested = req.requested_level;
+  // Multi-select: the recipient may request several levels (comma-list / SET).
+  const requestedSet = String(req.requested_level || '').split(',').map(s => s.trim()).filter(Boolean);
 
   const GRANT_LEVELS = [
     { level: 'can_download', label: LOCALE.SECURE_SHARE_CAN_DOWNLOAD, ico: 'download' },
     { level: 'can_chat',     label: LOCALE.SECURE_SHARE_CAN_CHAT,     ico: 'apps-chat' },
     { level: 'can_edit',     label: LOCALE.SECURE_SHARE_CAN_EDIT,     ico: 'apps-pencil-simple' },
   ];
-  // Human label for the requested level — was rendering the raw "can_download" token.
+  // Human label for the requested level(s) — was rendering the raw "can_download" token.
   const LEVEL_LABELS = {
     can_download: LOCALE.SECURE_SHARE_CAN_DOWNLOAD,
     can_chat    : LOCALE.SECURE_SHARE_CAN_CHAT,
     can_edit    : LOCALE.SECURE_SHARE_CAN_EDIT,
   };
-  const requestedLabel = LEVEL_LABELS[requested] || requested || '';
+  const requestedLabel = requestedSet.map(l => LEVEL_LABELS[l] || l).join(', ');
+  // Reflect the recipient's request (and exclude any perm they already have): only
+  // the requested levels are offered to grant, all pre-selected. Fall back to all
+  // three for a legacy request with no parseable level.
+  const GRANTABLE = requestedSet.length
+    ? GRANT_LEVELS.filter(g => requestedSet.includes(g.level))
+    : GRANT_LEVELS;
 
   const header = Skeletons.Box.X({
     className: `${pfx}__header`,
@@ -54,13 +61,13 @@ module.exports = function (_ui_, req = {}) {
 
   const levelRows = Skeletons.Box.Y({
     className: `${pfx}__levels`,
-    // `level` is a top-level prop (handler reads cmd.mget('level')); the
-    // requested level is pre-selected.
-    kids: GRANT_LEVELS.map(({ level, label, ico }) => Skeletons.Box.X({
+    // `level` is a top-level prop (handler reads cmd.mget('level')); every
+    // requested level is pre-selected (multi-select).
+    kids: GRANTABLE.map(({ level, label, ico }) => Skeletons.Box.X({
       className: `${pfx}__level-row`,
       service: 'ar-select-level',
       level,
-      dataset: { level, selected: (level === requested) ? 'yes' : '' },
+      dataset: { level, selected: (!requestedSet.length || requestedSet.includes(level)) ? 'yes' : '' },
       uiHandler: [_ui_],
       kidsOpt: { active: 0 },
       kids: [

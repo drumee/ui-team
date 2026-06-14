@@ -255,8 +255,9 @@ class __panel_activity extends LetcBox {
         };
         if (!req.request_id) return;
         this._arRequest    = req;
-        // Default the grant to the requested level (Figma pre-selects it).
-        this._arGrantLevel = req.requested_level || null;
+        // Multi-select: pre-select every requested level (the recipient may have
+        // asked for several, e.g. chat + edit). granted_level is a SET (comma-list).
+        this._arGrantLevels = new Set((req.requested_level || '').split(',').map(s => s.trim()).filter(Boolean));
         return this.ensurePart('ar-overlay').then((p) => {
           if (!p) return;
           p.feed(require('./skeleton/approve-request')(this, req));
@@ -265,12 +266,16 @@ class __panel_activity extends LetcBox {
       }
 
       case 'ar-select-level': {
+        // Multi-select: toggle this level in the grant set (the sender can grant
+        // several at once, mirroring the recipient's multi request).
         const lvl = cmd.mget('level');
-        this._arGrantLevel = lvl;
+        if (!this._arGrantLevels) this._arGrantLevels = new Set();
+        if (this._arGrantLevels.has(lvl)) this._arGrantLevels.delete(lvl);
+        else this._arGrantLevels.add(lvl);
         return this.ensurePart('ar-overlay').then((p) => {
           if (!p || !p.el) return;
           p.el.querySelectorAll('[data-level]').forEach((b) => {
-            b.dataset.selected = (b.dataset.level === lvl) ? 'yes' : '';
+            b.dataset.selected = this._arGrantLevels.has(b.dataset.level) ? 'yes' : '';
           });
         });
       }
@@ -290,7 +295,7 @@ class __panel_activity extends LetcBox {
 
       case 'change-permission':
         // Reopen the approve-request popup for the same request.
-        this._arGrantLevel = (this._arRequest && this._arRequest.requested_level) || null;
+        this._arGrantLevels = new Set(((this._arRequest && this._arRequest.requested_level) || '').split(',').map(s => s.trim()).filter(Boolean));
         return this.ensurePart('ar-overlay').then((p) => {
           if (!p) return;
           p.feed(require('./skeleton/approve-request')(this, this._arRequest || {}));
@@ -377,8 +382,9 @@ class __panel_activity extends LetcBox {
   async _respondAccessRequest(action) {
     const req = this._arRequest || {};
     if (!req.request_id) return this._closeArOverlay();
-    if (action === 'approve' && !this._arGrantLevel) return; // need a level
-    const grantLevel = this._arGrantLevel;
+    // Multi-select grant → comma-list (server stores a SET). Need ≥1 to approve.
+    const grantLevel = Array.from(this._arGrantLevels || []).join(',');
+    if (action === 'approve' && !grantLevel) return; // need at least one level
     const payload = { hub_id: req.hub_id, request_id: req.request_id, action };
     if (action === 'approve') payload.granted_level = grantLevel;
     try {
@@ -871,9 +877,11 @@ class __panel_activity extends LetcBox {
               can_chat    : LOCALE.SECURE_SHARE_CAN_CHAT,
               can_edit    : LOCALE.SECURE_SHARE_CAN_EDIT,
             };
-            const lvl = LV[it.requested_level];
-            e.action = lvl
-              ? LOCALE.SECURE_SHARE_REQUESTING_LEVEL_ACCESS.replace('{level}', lvl)
+            // requested_level is a SET (comma-list) — join the level labels.
+            const lvls = String(it.requested_level || '').split(',').map(s => s.trim())
+              .filter(Boolean).map(l => LV[l]).filter(Boolean);
+            e.action = lvls.length
+              ? LOCALE.SECURE_SHARE_REQUESTING_LEVEL_ACCESS.replace('{level}', lvls.join(', '))
               : LOCALE.SECURE_SHARE_REQUESTING_ACCESS;
           }
           // Prefer the shared node's own name (e.g. "vb") over the workspace root.
