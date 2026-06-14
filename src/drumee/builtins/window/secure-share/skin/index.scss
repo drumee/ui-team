@@ -63,10 +63,16 @@
     }
   }
 
+  &__scroll {
+    overflow: auto;
+  scrollbar-width: none;
+  
+  -ms-overflow-style: none;
+  }
+
   // ── Body — sections separated by 32px (Figma gap) ─────────
   &__body {
     flex: 1;
-    overflow-y: auto;
     padding: var(--spacer-5) var(--spacer-6);
     gap: var(--spacer-7);
   }
@@ -88,11 +94,10 @@
     margin-top: 2px;
   }
 
-  // ── Generic selectable row (perm / mode / check) ──────────
+  // ── Generic selectable row (perm / mode) ──────────────────
   // Figma layout_K2V3XA: row, space-between, 8px 12px pad, radius 8px.
   &__perm-btn,
-  &__mode-option,
-  &__check-row {
+  &__mode-option {
     align-items: center;
     justify-content: space-between;
     gap: var(--spacer-4);
@@ -115,36 +120,54 @@
     }
   }
 
+  // Check-row = the header of a white secure sub-card (Figma): icon + text +
+  // checkbox, flush within the sub-card padding (no own chrome).
+  &__check-row {
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--spacer-4);
+    cursor: pointer;
+    user-select: none;
+  }
+
   &__perm-btns,
   &__mode-group {
     gap: var(--spacer-3);
   }
 
   // Figma: when Secure is selected, the email/password options nest INSIDE the
-  // Secure card — one purple-bordered, light-purple panel wrapping the Secure
-  // row + its options. Unselected = invisible wrapper (just holds the row).
+  // Secure card — one purple-bordered, light-purple (primary-40 @ 10%) panel,
+  // 12px padding, 12px gap, wrapping the Secure row + its white sub-cards.
+  // Unselected = invisible wrapper (just holds the row).
   &__secure-card {
     gap: 0;
     border: 1px solid transparent;
     border-radius: var(--corner-radius-3);
 
     &[data-selected='yes'] {
+      gap: var(--spacer-4);
+      padding: var(--spacer-4);
       border-color: var(--primary-40);
-      background: color-mix(in srgb, var(--primary-40) 6%, transparent);
-      overflow: hidden;
+      background: color-mix(in srgb, var(--primary-40) 10%, transparent);
 
-      // The Secure row is the card header — drop its own border/fill/radius so the
-      // single card border reads as one panel.
+      // The Secure row is the card header — flush within the card padding, with
+      // no own border/fill/radius/padding so the card reads as one panel.
       > .window-secure-share__mode-option[data-selected='yes'] {
         border-color: transparent;
         background: transparent;
         border-radius: 0;
-      }
-
-      .window-secure-share__secure-options {
-        padding: 0 var(--spacer-4) var(--spacer-4);
+        padding: 0;
       }
     }
+  }
+
+  // White nested sub-card per secure control (Figma: email / password cards) —
+  // bg white, 12px padding, 12px gap, radius 8px.
+  &__secure-subcard {
+    gap: var(--spacer-4);
+    padding: var(--spacer-4);
+    border-radius: var(--corner-radius-3);
+    background: var(--normal-bg-100);
   }
 
   // Icon + text cluster (Figma layout_WO1TAR: row, align center, gap 12px)
@@ -180,10 +203,9 @@
     @include drumee.typo($size: 10px, $line: 14px, $color: var(--tertiary-text-color));
   }
 
-  // ── Checkbox (recipients mode + secure options) ───────────
+  // ── Checkbox — recipients mode (perm rows) ────────────────
   // Figma 20px square, radius 4px; selected = --primary-50 fill + white check.
-  &__checkbox,
-  &__check {
+  &__checkbox {
     width: 20px;
     height: 20px;
     flex-shrink: 0;
@@ -194,15 +216,40 @@
     transition: background 0.15s, border-color 0.15s;
   }
 
+  // ── Checkbox — secure sub-cards (require-email / password) ─
+  // Figma 16px square, radius 4px, grey-70 border; checked = primary-50 fill.
+  &__check {
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+    border-radius: var(--corner-radius-1);
+    border: 1px solid var(--tertiary-grey-70);
+    background: transparent;
+    position: relative;
+    transition: background 0.15s, border-color 0.15s;
+  }
+
   // checkbox check mark — shared
-  &__checkbox::after,
-  &__check::after {
+  &__checkbox::after {
     content: '';
     position: absolute;
     left: 7px;
     top: 3px;
     width: 4px;
     height: 9px;
+    border: solid var(--white);
+    border-width: 0 2px 2px 0;
+    transform: rotate(45deg);
+    opacity: 0;
+  }
+
+  &__check::after {
+    content: '';
+    position: absolute;
+    left: 5px;
+    top: 2px;
+    width: 4px;
+    height: 8px;
     border: solid var(--white);
     border-width: 0 2px 2px 0;
     transform: rotate(45deg);
@@ -249,8 +296,9 @@
   }
 
   // ── Secure options (revealed when Secure selected) ────────
+  // 12px gap between the white email / password sub-cards (Figma).
   &__secure-options {
-    gap: var(--spacer-3);
+    gap: var(--spacer-4);
 
     &[data-mode='closed'] { display: none; }
   }
@@ -262,52 +310,176 @@
     width: 100%;
   }
 
+  // Figma: "Restrict access to specific emails…" — 12px primary text.
   &__sub-label {
-    @include drumee.typo($size: 10px, $line: 14px, $color: var(--tertiary-text-color));
+    @include drumee.typo($size: 12px, $line: 17px, $color: var(--default-text-color));
   }
 
   &__sub-label-info {
+    position: relative;
     flex-shrink: 0;
     height: 14px;
     width: 14px;
     cursor: help;
 
     svg { fill: var(--tertiary-grey-70); height: 100%; width: 100%; }
+
+    // Hover bubble (Figma base image): light rounded box, grey text, soft shadow,
+    // wraps to ~2 lines. The framework appends `<div class="tooltips">` here and
+    // toggles it via JS on hover. Anchored below-right with an up-caret so it
+    // stays inside the right-docked, overflow-hidden panel (a right-side bubble
+    // would be clipped / run off-screen).
+    .tooltips {
+      position: absolute;
+      z-index: 100;
+      top: calc(100% + 8px);
+      right: 0;
+      width: max-content;
+      max-width: 240px;
+      padding: var(--spacer-3) var(--spacer-4);
+      border-radius: var(--corner-radius-3);
+      background: var(--bg-tooltips);
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.16);
+      @include drumee.typo($size: 12px, $line: 17px, $color: var(--default-text-tooltips));
+      white-space: normal;
+      text-align: left;
+      cursor: default;
+
+      // Caret pointing up toward the info icon.
+      &::before {
+        content: '';
+        position: absolute;
+        top: -5px;
+        right: 5px;
+        border: 5px solid transparent;
+        border-top: 0;
+        border-bottom-color: var(--bg-tooltips);
+      }
+    }
   }
 
+  // Gates sit flush inside their white sub-card (Figma: no indent).
   &__email-gate,
   &__password-gate {
     gap: var(--spacer-3);
-    padding-left: var(--spacer-7);
 
     &[data-mode='closed'] { display: none; }
   }
 
-  &__input {
+  // Password field — same pattern as the signin form (welcome/signin): a grey
+  // 45px row (rgba(0,0,0,.05) → --normal-bg-80, radius 4) holding a borderless
+  // transparent entry + a trailing eye toggle; purple focus ring.
+  &__password-row {
+    width: 100%;
+    align-items: center;
+    gap: var(--spacer-3);
+    height: 45px;
+    padding: 0 var(--spacer-4);
+    border-radius: var(--corner-radius-1);
+    background: var(--normal-bg-80);
+    overflow: hidden;
+    transition: box-shadow 0.2s ease;
+
+    &:focus-within { box-shadow: 0 0 0 1px var(--primary-40); }
+  }
+
+  &__password-input {
     flex: 1;
+    min-width: 0;
+    background: transparent;
 
-    & input {
-      color: var(--default-text-color);
+    input {
+      width: 100%;
+      height: 43px;
+      border: none;
+      outline: none;
+      background: transparent;
+      @include drumee.typo($size: 15px, $line: 43px, $color: var(--default-text-color));
 
-      &::placeholder { color: var(--default-text-placeholder); }
+     &::placeholder { color: var(--normal-fg-20); }
+      &:focus { border: none; outline: none; box-shadow: none; }
     }
   }
 
-  // ── Email chip input ──────────────────────────────────────
-  &__chips-area { flex-wrap: wrap; gap: var(--spacer-2); min-height: 4px; }
-  &__chips      { flex-wrap: wrap; gap: var(--spacer-2); }
+  // Eye show/hide toggle — eye_closed (grey) ↔ eye (purple when shown).
+  // The eye_closed/eye glyphs use fill:currentColor, so `color` tints them.
+  &__password-eye {
+    width: 21px;
+    height: 21px;
+    flex-shrink: 0;
+    cursor: pointer;
+    color: var(--tertiary-grey-70);
+    transition: color 0.2s ease;
 
-  &__chip {
+    svg { width: 100%; height: 100%; fill: currentColor; }
+
+    &:hover,
+    &[data-state='1'] { color: var(--primary-50); }
+  }
+
+  // ── Email chip input ──────────────────────────────────────
+  // Single line: chips that fit + a "+N" overflow badge (collapse logic lives in
+  // index.js _collapseChipsOverflow). overflow:visible so the badge popup escapes.
+  &__chips-area { min-height: 4px; overflow: visible; }
+  &__chips {
+    flex: 1;
+    min-width: 0;
+    flex-wrap: nowrap;
     align-items: center;
-    gap: var(--spacer-2);
-    padding: 2px var(--spacer-3);
-    border-radius: var(--corner-radius-max);
-    background: color-mix(in srgb, var(--primary-40) 10%, transparent);
-    border: 1px solid var(--primary-40);
+    gap: var(--spacer-3);
+  }
+
+  // Figma: grey pill (rgba(0,0,0,.05)), radius 4, 4px/8px pad, 10px grey text.
+  &__chip {
+    flex-shrink: 0;
+    align-items: center;
+    gap: var(--spacer-3);
+    padding: var(--spacer-2) var(--spacer-3);
+    border-radius: var(--corner-radius-1);
+    background: var(--normal-bg-80);
   }
 
   &__chip-text {
-    @include drumee.typo($size: 11px, $line: 16px, $color: var(--default-text-color));
+    @include drumee.typo($size: 10px, $line: 14px, $color: var(--tertiary-text-color));
+    white-space: nowrap;
+  }
+
+  // "+N" overflow badge — same grey pill, anchors the hover popup.
+  &__chip-more {
+    position: relative;
+    display: flex;
+    align-items: center;
+    cursor: default;
+  }
+
+  // Overflow popup (Figma "Access filter"): white card, soft shadow, 8px pad/gap,
+  // radius 4; rows 10px grey. Anchored below-right so it stays inside the
+  // right-docked, overflow-hidden panel. Revealed on badge hover.
+  &__chip-popup {
+    display: none;
+    position: absolute;
+    z-index: 100;
+    top: calc(100% + 6px);
+    right: 0;
+    flex-direction: column;
+    gap: var(--spacer-3);
+    padding: var(--spacer-3);
+    width: max-content;
+    max-width: 220px;
+    border-radius: var(--corner-radius-1);
+    background: var(--normal-bg-100);
+    box-shadow: 0 1px 11px rgba(0, 0, 0, 0.13);
+  }
+
+  &__chip-more:hover &__chip-popup { display: flex; }
+
+  &__chip-popup-row {
+    padding: var(--spacer-2);
+    border-radius: var(--corner-radius-1);
+    @include drumee.typo($size: 10px, $line: 14px, $color: var(--tertiary-text-color));
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   &__chip-remove {
@@ -319,7 +491,21 @@
     &:hover { color: var(--btn-caution-background); }
   }
 
-  &__chip-input { flex: 1; }
+  // Figma: grey-filled entry box, radius 4, "Enter email or domain…".
+  &__chip-input {
+    flex: 1;
+
+    & input {
+      width: 100%;
+      padding: var(--spacer-3) var(--spacer-4);
+      border-radius: var(--corner-radius-1);
+      border: none;
+      background: var(--normal-bg-80);
+      color: var(--default-text-color);
+
+      &::placeholder { color: var(--normal-fg-20); }
+    }
+  }
 
   // ── Expiry ────────────────────────────────────────────────
   &__expiry-header {
@@ -469,62 +655,86 @@
     svg { width: 20px; height: 20px; }
   }
 
-  // ── Generated link result ─────────────────────────────────
-  &__link-row { align-items: center; gap: var(--spacer-3); width: 100%; }
+  // ── Generated link result (Figma 1.2.7) ──────────────────
+  // Row = brand-tinted link box (flex) + red Revoke button, 8px gap, 40px tall.
+  &__link-row {
+    align-items: center;
+    gap: var(--spacer-3);
+    width: 100%;
+    height: 40px;
+  }
+
+  // Brand overlay @ 10%, rounded-8, link/URL on the left, copy icon on the right.
+  &__link-box {
+    flex: 1;
+    min-width: 0;
+    height: 100%;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--spacer-3);
+    padding: var(--spacer-3) var(--spacer-4);
+    border-radius: var(--corner-radius-3);
+    background: rgba(89, 80, 255, 0.1);
+  }
+
+  &__link-main {
+    flex: 1;
+    min-width: 0;
+    align-items: center;
+    gap: var(--spacer-3);
+  }
+
+  &__link-icon {
+    flex-shrink: 0;
+    width: 16px;
+    height: 16px;
+    svg { width: 16px; height: 16px; fill: var(--default-text-color); }
+  }
 
   &__link-text {
     flex: 1;
-    @include drumee.typo($size: 12px, $line: 20px, $color: var(--default-text-color));
+    min-width: 0;
+    @include drumee.typo($size: 12px, $line: 17px, $color: var(--default-text-color));
+    opacity: 0.6;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    padding: var(--spacer-3) var(--spacer-4);
-    background: var(--normal-bg-80);
-    border-radius: var(--corner-radius-2);
   }
 
-  &__copy-button {
-    cursor: pointer;
-    padding: var(--spacer-3) var(--spacer-5);
-    border-radius: var(--corner-radius-3);
-    background: var(--primary-50);
-    @include drumee.typo($size: 12px, $line: 20px, $color: var(--white));
-
-    &:hover { background: var(--primary-40); }
-  }
-
-  // Figma link-generated row: copy icon + red Revoke button beside the link.
+  // Copy icon, pinned to the right edge of the link box.
   &__copy-icon {
     cursor: pointer;
     flex-shrink: 0;
-    height: 20px;
-    width: 20px;
+    height: 16px;
+    width: 16px;
 
     svg { fill: var(--tertiary-grey-70); height: 100%; width: 100%; }
-    &:hover svg { fill: var(--primary-50); }
+    &:hover svg { fill: var(--primary-40); }
   }
 
   // Figma: red FILLED Revoke button with a prohibit (⊘) glyph.
   &__link-revoke {
     cursor: pointer;
     flex-shrink: 0;
+    height: 100%;
     align-items: center;
-    gap: var(--spacer-2);
+    justify-content: center;
+    gap: var(--spacer-3);
     padding: var(--spacer-3) var(--spacer-4);
-    border-radius: var(--corner-radius-2);
+    border-radius: var(--corner-radius-3);
     border: 1px solid var(--btn-caution-background);
     background: var(--btn-caution-background);
-    @include drumee.typo($size: 12px, $line: 20px, $weight: 600, $color: var(--white));
+    @include drumee.typo($size: 14px, $line: 20px, $weight: 600, $color: var(--white));
     white-space: nowrap;
 
-    &:hover { opacity: 0.9; }
+    &:hover { background: var(--btn-caution-background-hover); border-color: var(--btn-caution-background-hover); }
   }
 
   &__link-revoke-icon {
-    width: 14px;
-    height: 14px;
+    width: 20px;
+    height: 20px;
     flex-shrink: 0;
-    svg { width: 14px; height: 14px; fill: var(--white); }
+    svg { width: 20px; height: 20px; fill: var(--white); }
   }
 
   // ── Shared-links list section ─────────────────────────────
@@ -543,6 +753,9 @@
     gap: var(--spacer-4);
     overflow-y: auto;
     max-height: 220px;
+  scrollbar-width: none;
+  
+  -ms-overflow-style: none;
 
     &[data-mode='closed'] { display: none; }
   }
@@ -591,41 +804,42 @@
     letter-spacing: 0.5px;
   }
 
+  // Figma "Link Control" table card: light grey fill (black @ 5%), 12px pad,
+  // rounded-8. Rows are separated by spacing (16px) — no dividers.
   &__events-container {
-    gap: var(--spacer-3);
     overflow-y: auto;
     max-height: 220px;
     margin-top: var(--spacer-3);
+  scrollbar-width: none;
+
+  -ms-overflow-style: none;
+    background: rgba(0, 0, 0, 0.05);
+    border-radius: var(--corner-radius-3);
+    padding: var(--spacer-4);
 
     &[data-mode='closed'] { display: none; }
   }
 
-  &__events-table { gap: var(--spacer-2); }
+  &__events-table { gap: var(--spacer-5); }
 
+  // Header labels — plain grey, no uppercase / divider (Figma "Tiny Body").
   &__events-cols {
-    gap: var(--spacer-4);
-    padding: var(--spacer-2) 0;
-    border-bottom: 1px solid var(--border-default);
+    justify-content: space-between;
   }
 
   &__events-col {
-    @include drumee.typo($size: 10px, $line: 14px, $weight: 600, $color: var(--tertiary-text-color));
-    text-transform: uppercase;
-    letter-spacing: 0.4px;
+    @include drumee.typo($size: 10px, $line: 14px, $color: var(--tertiary-grey-80));
     white-space: nowrap;
   }
 
   &__events-row {
     align-items: center;
-    gap: var(--spacer-4);
-    padding: var(--spacer-3) 0;
-    border-bottom: 1px solid var(--border-default);
-
-    &:last-child { border-bottom: none; }
+    justify-content: space-between;
+    min-height: 16px;
   }
 
   &__events-cell {
-    @include drumee.typo($size: 12px, $line: 17px, $color: var(--default-text-color));
+    @include drumee.typo($size: 10px, $line: 14px, $color: var(--tertiary-grey-80));
     align-items: center;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -634,39 +848,39 @@
 
   // column widths shared by header + rows
   &__events-col.col-email,
-  &__events-cell.col-email    { flex: 1; min-width: 0; gap: var(--spacer-3); }
+  &__events-cell.col-email    { flex: 1; min-width: 0; gap: var(--spacer-2); }
   &__events-col.col-time,
-  &__events-cell.col-time     { width: 110px; flex-shrink: 0; }
+  &__events-cell.col-time     { width: 90px; flex-shrink: 0; }
   &__events-col.col-duration,
-  &__events-cell.col-duration { width: 64px; flex-shrink: 0; }
+  &__events-cell.col-duration { width: 50px; flex-shrink: 0; }
   &__events-col.col-action,
-  &__events-cell.col-action   { width: 48px; flex-shrink: 0; justify-content: flex-end; }
+  &__events-cell.col-action   { width: 30px; flex-shrink: 0; justify-content: flex-end; text-align: right; }
 
-  &__events-row { min-height: 28px; }
-
+  // Figma: avatar 16px, round.
   &__events-avatar {
-    width: 20px;
-    height: 20px;
+    width: 16px;
+    height: 16px;
     border-radius: var(--corner-radius-max);
     flex-shrink: 0;
   }
 
+  // Email uses primary text colour (#0b0a21), not the brand purple.
   &__events-email {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    color: var(--primary-50);
+    color: var(--default-text-color);
   }
 
+  // Figma "MinusCircle" action — red (Signal/Error) glyph.
   &__events-revoke {
-    width: 18px;
-    height: 18px;
+    width: 14px;
+    height: 14px;
     flex-shrink: 0;
     cursor: pointer;
-    opacity: 0.7;
 
-    svg { width: 18px; height: 18px; fill: var(--tertiary-grey-70); }
-    &:hover { opacity: 1; }
+    svg { width: 14px; height: 14px; fill: var(--error); }
+    &:hover { opacity: 0.8; }
   }
 
   &__events-empty {
