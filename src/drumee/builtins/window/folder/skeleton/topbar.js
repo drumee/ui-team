@@ -78,7 +78,7 @@ const __skl_folder_topbar = function (ui) {
     ? Skeletons.Button.Label({
       className: `${cnFolder}__upload-btn`,
       label: LOCALE.UPLOAD,
-      ico: "desktop_upload",
+      ico: "app-upload",
       service: _e.upload,
       uiHandler: ui,
     })

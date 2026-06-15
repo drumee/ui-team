@@ -183,7 +183,10 @@ export function tabBar(ui, opt = {}) {
         }),
       ],
     });
-  const splitBtn = isFolder
+  // The view toggle is shown for the folder window and the DMZ share grid
+  // (both render a media grid that supports a grid ↔ row layout).
+  const showViewToggle = isFolder || ui.fig.family === "dmz-sharebox";
+  const splitBtn = showViewToggle
     ? Skeletons.Box.X({
         className: `${cnTopbar}__view-toggle`,
         service: "toggle-files-layout",

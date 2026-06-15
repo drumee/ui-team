@@ -1,5 +1,6 @@
 const winman = require('window/manager');
 const WS_EVENT = "ws:event";
+const EOD = "end:of:data";
 
 class __dmz_wm extends winman {
   constructor(...args) {
@@ -187,6 +188,20 @@ class __dmz_wm extends winman {
 
       case _a.list:
         this.iconsList = child;
+        // The dmz list bypasses buildIconsList (the home-wm path that wires
+        // partitioning), so set up the same 3-tier folder/file partition here
+        // (mirrors window-folder). The MutationObserver buckets tiles into
+        // .folder-section / .file-section as they arrive; the EOD pass handles
+        // the initial load. Guarded so it no-ops if the mixin is ever absent.
+        if (typeof this._setupPartitionObserver === "function") {
+          this._partitionListPart = child;
+          child.el.dataset.role = _a.container;
+          this._setupPartitionObserver(child);
+          child.once(EOD, () => {
+            this._partitionFoldersAndFiles(child);
+            this._applyFolderScrollMode(child);
+          });
+        }
         break;
 
       case 'windows-layer':

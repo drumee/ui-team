@@ -69,7 +69,7 @@ module.exports = function (ui) {
             items: addItems(pfx, ui),
           }),
           Skeletons.Button.Label({
-            ico: "desktop_upload",
+            ico: "app-upload",
             className: `${pfx}__upload-btn`,
             label: LOCALE.UPLOAD,
             service: _e.upload,

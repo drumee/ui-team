@@ -474,6 +474,9 @@ class __dmz_sharebox extends LetcBox {
       case 'toggle-password-visibility':
         return this._togglePasswordVisibility(cmd);
 
+      case 'toggle-files-layout':
+        return this._toggleFilesLayout(cmd);
+
       case 'verify-password':
         return this.verifyPassword();
 
@@ -928,6 +931,24 @@ class __dmz_sharebox extends LetcBox {
       useEl.setAttribute('xlink:href', isVisible ? '#--icon-eye_closed' : '#--icon-eye');
     }
     cmd.el.dataset.state = isVisible ? '0' : '1';
+  }
+
+  /**
+   * Toggle the file grid between the (default) partitioned grid and a row/list
+   * layout — delegated to the window-manager child (this.wm), which carries the
+   * view-mode support (window/utils getViewMode/setViewMode). Flips the toggle's
+   * data-state so the active half highlights, then re-renders the grid.
+   * @param {LetcBox} cmd  the view-toggle box that was clicked
+   */
+  _toggleFilesLayout(cmd) {
+    const wm = this.wm;
+    if (!wm || !wm.setViewMode) return;
+    const isRow = wm.getViewMode && wm.getViewMode() === _a.row;
+    const mode = isRow ? _a.icon : _a.row;
+    wm.setViewMode(mode);
+    if (cmd && cmd.setState) cmd.setState(mode === _a.row ? 1 : 0);
+    // Re-render the grid in the new layout (icon = partitioned grid, row = list).
+    wm.ensurePart(_a.list).then((l) => { if (l && l.restart) l.restart(); });
   }
 
   _setButtonLoading(loading) {
