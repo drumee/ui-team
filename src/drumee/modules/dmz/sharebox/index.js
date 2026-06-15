@@ -556,6 +556,7 @@ class __dmz_sharebox extends LetcBox {
       }
 
       case 'tab-files':
+        this._activateTab(cmd);
         if (this._folderView) this._folderView.el.dataset.view = 'files';
         return;
 
@@ -565,12 +566,14 @@ class __dmz_sharebox extends LetcBox {
         // a send attempt opens the sign-up overlay (screen 57), wired in the
         // chat widget's sendMessage. Without a chat grant, fall back to the
         // standard gate (anonymous → sign-up; signed-in non-member → Request
-        // Access; owner → proceed).
+        // Access; owner → proceed). Don't activate the tab if the gate blocks.
         if (!this.mget('can_chat') && this._gateInteraction(false)) return;
+        this._activateTab(cmd);
         if (this._folderView) this._folderView.el.dataset.view = _a.chat;
         return;
 
       case 'tab-task':
+        this._activateTab(cmd);
         if (this._folderView) this._folderView.el.dataset.view = _a.task;
         return;
 
@@ -940,14 +943,40 @@ class __dmz_sharebox extends LetcBox {
    * data-state so the active half highlights, then re-renders the grid.
    * @param {LetcBox} cmd  the view-toggle box that was clicked
    */
+  /**
+   * Tab bar is a single-select (radio) group — the Files/Chat/Tasks tabs aren't
+   * a framework radio group, so clicking one would leave the previously-active
+   * tab highlighted too. Clear every item in the wrapper and mark only the
+   * clicked one active.
+   * @param {LetcBox} cmd  the tab that was clicked
+   */
+  _activateTab(cmd) {
+    if (!cmd || !cmd.el) return;
+    const wrapper = cmd.el.closest('.window-body__tab-bar-wrapper');
+    if (!wrapper) return;
+    wrapper.querySelectorAll('.window-body__tab-bar-item').forEach((el) => {
+      el.dataset.state = el === cmd.el ? '1' : '0';
+    });
+  }
+
   _toggleFilesLayout(cmd) {
     const wm = this.wm;
-    if (!wm || !wm.setViewMode) return;
-    const isRow = wm.getViewMode && wm.getViewMode() === _a.row;
+    if (!wm || !wm.el) return;
+    // Row view needs BOTH: (1) the wm in row mode so media items re-render as
+    // media-row (table rows) — see media/core _getKind, which reads
+    // getLogicalParent().getViewMode(); and (2) a single-column scroll so those
+    // full-width rows stack (the data-view-mode flag drives the CSS). Doing only
+    // one leaves either squished rows in the 120px grid, or cards in a column.
+    const scroll = wm.el.querySelector(`.${wm.fig.family}__icons-scroll`);
+    const isRow =
+      (scroll && scroll.dataset.viewMode === _a.row) ||
+      (wm.getViewMode && wm.getViewMode() === _a.row);
     const mode = isRow ? _a.icon : _a.row;
-    wm.setViewMode(mode);
+    if (wm.setViewMode) wm.setViewMode(mode);
+    if (scroll) scroll.dataset.viewMode = mode;
     if (cmd && cmd.setState) cmd.setState(mode === _a.row ? 1 : 0);
-    // Re-render the grid in the new layout (icon = partitioned grid, row = list).
+    // Re-render so items re-create with the new kind (media-row ↔ media-grid);
+    // _getKind is evaluated at item construction.
     wm.ensurePart(_a.list).then((l) => { if (l && l.restart) l.restart(); });
   }
 

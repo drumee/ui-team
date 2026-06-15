@@ -213,6 +213,28 @@
       width: 100%;
     }
 
+    // List (row) view — toggled by the topbar view control (data-view-mode set
+    // in sharebox _toggleFilesLayout). In row mode the media items re-render as
+    // full-width media-row items (table rows), so the scroll becomes a single
+    // column that stacks them (mirrors window-folder's row layout).
+    &[data-view-mode="row"] {
+      grid-template-columns: 1fr;
+      grid-auto-rows: min-content;
+
+      .workspace-section,
+      .folder-section,
+      .file-section {
+        grid-template-columns: 1fr;
+        grid-auto-rows: min-content;
+      }
+
+      .media-row__ui,
+      .media-grid__ui {
+        width: 100%;
+        max-width: 100%;
+      }
+    }
+
     &[data-device="mobile"] {
       grid-template-columns: repeat(auto-fill, 160px);
       grid-gap: 0.5rem;

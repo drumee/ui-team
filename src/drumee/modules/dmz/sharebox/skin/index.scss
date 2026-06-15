@@ -92,7 +92,6 @@
     min-height: 0;
     z-index: 1200;
     justify-content: center;
-    padding: 0 32px 32px;
   }
 
   &__footer {
@@ -777,6 +776,21 @@
    [data-area="share"] active state + the reference image. */
 .dmz-sharebox__main.drive-popup .window-body__tab-bar-item[data-state="1"] {
   border-color: var(--area-share);
+}
+
+/* Tab icon/label — the share tabs use the same emoji glyphs as window-folder
+   (📄 / 💬 / 📋); align them on the row baseline. */
+.dmz-sharebox__tab-bar-icon,
+.dmz-sharebox__tab-bar-label {
+  display: inline-flex;
+  align-items: center;
+  line-height: 1;
+  pointer-events: none;
+}
+
+.dmz-sharebox__tab-bar-icon {
+  font-size: 14px;
+  transform: translateY(-0.5px);
 }
 
 /* File view toggle — segmented pill (list | grid), mirrors window-folder. Both

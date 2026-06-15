@@ -29,6 +29,10 @@ export function breadcrumbs(ui, opt) {
 export function tabBar(ui, opt = {}) {
   const cnRoot = "window-body__tab-bar";
   const isFolder = ui.fig.family === "window-folder";
+  // The folder window and the DMZ share grid use the same emoji tab icons
+  // (📄 / 💬 / 📋) — see the reference design. Other non-folder windows keep
+  // their monochrome SVG glyphs.
+  const useEmojiTabs = isFolder || ui.fig.family === "dmz-sharebox";
   const folderTab = ({ icon, label, service, state, tab }) =>
     Skeletons.Box.X({
       className: `${cnRoot}-item ${ui.fig.family}__tab-bar-item`,
@@ -73,7 +77,7 @@ export function tabBar(ui, opt = {}) {
     chat_tab = "";
   }
 
-  const kids = isFolder
+  const kids = useEmojiTabs
     ? [
         folderTab({
           icon: "📄",
@@ -85,7 +89,7 @@ export function tabBar(ui, opt = {}) {
         chat_tab,
         folderTab({
           icon: "📋",
-          label: "Tasks",
+          label: LOCALE.TASK || "Tasks",
           service: "tab-task",
           state: 0,
           tab: _a.task,
