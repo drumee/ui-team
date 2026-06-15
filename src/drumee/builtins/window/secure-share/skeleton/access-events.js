@@ -27,15 +27,10 @@ const __skl_secure_share_access_events = function(_ui_, rows) {
     ]
   });
 
-  // Only list IDENTIFIED recipients. Anonymous "Public" visits — no recipient_email
-  // and the system-guest actor_id (ffffffffffffffff) — are excluded: there is no
-  // per-recipient identity to act on, and the ⊖ below revokes the share link they
-  // came through (the same effect as the Shared-links Revoke).
-  const visible = (Array.isArray(rows) ? rows : []).filter(
-    (r) => r.recipient_email || (r.actor_id && r.actor_id !== 'ffffffffffffffff')
-  );
-
-  if (!visible.length) {
+  // Public shares are excluded server-side by secure_share_list_access_events
+  // (it returns events only for gated/secure tokens), so every row here is a real
+  // secure-share access — render them all, no client-side visitor filtering.
+  if (!Array.isArray(rows) || !rows.length) {
     return Skeletons.Box.Y({
       className : `${pfx}__events-table`,
       kids      : [
@@ -45,7 +40,7 @@ const __skl_secure_share_access_events = function(_ui_, rows) {
     });
   }
 
-  const rowKids = visible.map((r) => {
+  const rowKids = rows.map((r) => {
     const email   = r.recipient_email || LOCALE.SECURE_SHARE_PUBLIC;
     const timeStr = r.entered_at ? Dayjs.unix(r.entered_at).format('MMM D, h:mm A') : '';
     const durStr  = __fmtDuration(r.duration);
