@@ -498,15 +498,17 @@ class __window_secure_share extends mfsInteract {
     }
   }
 
-  // ⊖ revoke a single recipient's current grant (re-requestable — not blocklisted),
-  // then refresh the table so the row drops off.
+  // ⊖ revoke from the access list now revokes the share LINK (token) the recipient
+  // came through — identical to the Shared-links Revoke. The old revoke_recipient
+  // only dropped a node permission grant (which a token/gate viewer never had) and
+  // cleared the access-event rows, so the recipient kept access via the still-valid
+  // token. Revoking the token is the only thing that actually cuts token-based access.
   async _revokeRecipient(cmd) {
-    const email  = cmd.mget('email') || '';
-    const uid    = cmd.mget('uid') || '';
-    if (!email && !uid) return;
-    const nid    = this.mget(_a.nid);
+    const token  = cmd.mget(_a.token) || '';
+    if (!token) return;
     const hub_id = this.mget(_a.hub_id);
-    await this.postService(SERVICE.secure_share.revoke_recipient, { nid, hub_id, email, uid });
+    await this.postService(SERVICE.secure_share.revoke, { token, hub_id });
+    this._loadShares();
     this._loadAccessEvents();
   }
 
