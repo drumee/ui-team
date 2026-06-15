@@ -400,7 +400,12 @@ export function chatPanel(ui) {
     sys_pn: "folder-chat",
   };
 
-  if (ui.fig.family === "window-folder") {
+  // Folder-scoped chat: scope the conversation to the current folder (nid) so
+  // only that folder's messages load. Applies to the authenticated folder window
+  // AND the DMZ share view — without scope=folder the chat widget omits `nid`
+  // from channel.messages (see chat/index.js getScopedNid) and loads the whole
+  // hub, pulling in messages from other scopes.
+  if (ui.fig.family === "window-folder" || ui.fig.family === "dmz-sharebox") {
     chat.scope = _a.folder;
     chat.type = _a.share;
     chat.area = _a.share;
