@@ -45,6 +45,15 @@ function _icons_list(_ui_) {
       kind: "media",
       role: "dmz",
       token: _ui_.mget(_a.token),
+      // Pin the share's (capped) privilege onto every tile. The guest session is
+      // cookie-bound to the share creator, so the server lists each node with the
+      // creator's FULL privilege — without this a view-only recipient could drop a
+      // file onto a sub-folder tile (its privilege carries the write bit) and upload.
+      // itemsOpt is spread AFTER the row in list/smart, so this overrides the row
+      // value. Mirrors getWindowPreset/fetchMediaAttributes capping. Guarded so
+      // flows that don't advertise a privilege (e.g. meeting) keep the row value —
+      // the secure share always sets one (default 3 = view-only).
+      ...(_ui_.mget(_a.privilege) ? { privilege: ~~_ui_.mget(_a.privilege) } : {}),
       signal: _e.ui.event,
       service: "open-node",
       uiHandler: [_ui_],
