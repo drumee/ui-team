@@ -30,24 +30,26 @@ class __welcome_router extends LetcBox {
       });
     }
     const path = Visitor.parseModule() || [];
-    // Honour a workspace deep-link: the hub-invite email uses #/welcome/hub?hub_id=…,
-    // and a secure-share sign-up opens #/welcome/signup?hub_id=… (new window). Either
-    // way, stash the hub so the desk window-manager opens that workspace after auth.
-    if (args.hub_id) {
-      sessionStorage.setItem('drumee_hubDeepLink', args.hub_id);
-    }
     // Secure-share recipients who click Login / Sign up arrive with
-    // ?return_to=<their share link>. After they authenticate, send THIS (fresh,
-    // real-session) tab back to that share link so the shared folder re-opens as
-    // their authenticated self — instead of being stranded on the desk while the
-    // original guest tab stays a guest. Purely additive + guarded: a once-listener
-    // is registered ONLY when return_to is present AND validates as a Drumee
-    // /dmz/share/ URL (open-redirect guard). No return_to → no listener → the normal
-    // signin/signup/desk flow is completely unchanged. Mirrors the existing invite
-    // `user:signed:in` pattern above.
+    // ?return_to=<their share link>. Validate it (open-redirect guard) and, because
+    // login here triggers a FULL PAGE RELOAD that wipes any in-memory state, PERSIST
+    // the target in sessionStorage — the desk window-manager consumes it after boot
+    // (desk/wm onDomRefresh) and redirects the now-authenticated tab back to the
+    // shared link. The in-memory flag + once-listener stay as harmless fallbacks for
+    // any in-app (no-reload) signin path. No/invalid return_to → nothing set → the
+    // normal signin/signup/desk flow is completely unchanged.
     const _ssReturn = args.return_to ? this._secureShareReturnTarget(args.return_to) : null;
     if (_ssReturn) {
+      sessionStorage.setItem('drumee_secure_share_return', _ssReturn);
+      if (window.uiRouter) window.uiRouter._secureShareReturn = _ssReturn;
       RADIO_BROADCAST.once('user:signed:in', () => { location.href = _ssReturn; });
+    }
+    // Honour a workspace deep-link (hub-invite email #/welcome/hub?hub_id=…) so the
+    // desk opens that workspace after auth. Skip it for a secure-share return: the
+    // recipient usually isn't a member of the share's hub (opening it 403s), and the
+    // share-return redirect above takes precedence.
+    if (args.hub_id && !_ssReturn) {
+      sessionStorage.setItem('drumee_hubDeepLink', args.hub_id);
     }
     this.route();
   }

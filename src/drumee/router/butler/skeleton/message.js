@@ -15,38 +15,41 @@
  * =============================================================================
  */
 const message = function(_ui_, content, type) {
+  const fig = _ui_.fig.family;
   let body;
   if (_.isString(content)) {
     body = Skeletons.Note({
-      className : `${_ui_.fig.family}__message ${type} my-30`,
-      content,
-      service   : _e.close
+      className : `${fig}__message ${type}`,
+      content
     });
-  } else { 
+  } else {
     body = content;
   }
+  // Based on builtins/window/confirm + the image: logo+close header, left-aligned
+  // body, right-aligned primary Close. `notice` scopes alignment to this dialog.
   const a = Skeletons.Box.Y({
-    className : `${_ui_.fig.family}__main u-jc-center u-ai-center`,
-    debug     : __filename, 
-    sys_pn : "container",
+    className : `${fig}__main notice`,
+    debug     : __filename,
+    sys_pn    : "container",
     kids: [
-      Preset.Button.Close(_ui_),
-      Skeletons.Note({
-        className : `${_ui_.fig.family}__title mb-20`,
+      require('./header')(_ui_, _e.close),
+      type ? Skeletons.Note({
+        className : `${fig}__title`,
         content   : type
-      }),
-      body, 
+      }) : null,
+      body,
       Skeletons.Box.X({
+        className : `${fig}__buttons`,
         kids:[
           Skeletons.Note({
-            className : `${_ui_.fig.family}__button action u-jc-center overflow-text go`,
+            className : `${fig}__button-primary button`,
             content   : LOCALE.CLOSE,
-            service   : _e.close 
-            // ui        : _ui_
+            service   : _e.close,
+            uiHandler : _ui_
           })
         ]
       })
-    ]});
+    ].filter(Boolean)});
   return a;
 };
 module.exports = message;

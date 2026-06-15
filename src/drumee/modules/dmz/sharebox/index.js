@@ -30,7 +30,7 @@ class __dmz_sharebox extends LetcBox {
     this.footerSkeleton = require('./skeleton/footer').default;
     this.deskSkeleton = require("./skeleton/desk-content").default;
     this.nodeInfoService = SERVICE.media.show_node_by;
-    this._selectedRequestLevel = null;
+    this._selectedRequestLevels = new Set();
     this._requestEmailInput    = null;
     this._requestMessageInput  = null;
   }
@@ -95,10 +95,12 @@ class __dmz_sharebox extends LetcBox {
         })
 
       case _a.footer:
-        // Viral landing footer ("Sign Up Free") — shown to ALL recipients so the
-        // logged-in view matches the incognito one (user choice: identical). The gate
-        // footer is fed separately by promptGate.
+        // Viral "Sign Up Free" landing footer — guests only. A logged-in recipient
+        // already has an account, so don't pitch signup to them (they see their own
+        // identity in the top-nav instead). The gate footer is fed separately by
+        // promptGate, so the anonymous email/password gate banner is unaffected.
         if (!this.mget('is_secure')) return;
+        if (this.mget('is_authenticated')) return;
         return this.waitElement(child.el, () => {
           child.feed(this.footerSkeleton(this));
         });
@@ -110,8 +112,23 @@ class __dmz_sharebox extends LetcBox {
       case 'ref-password':
         return this._input = child;
 
+      case 'email-row':
+        return this._emailRow = child;
+
       case 'ref-email':
-        return this._emailInput = child;
+        this._emailInput = child;
+        // Live email validation (Figma 3.2.2): as the recipient types a valid
+        // address, surface a green "Email recognised" confirmation + green check;
+        // on blur an invalid address shows a red alert. The authoritative
+        // allow-list check still runs server-side on Continue (EMAIL_MISMATCH).
+        this.waitElement(child.el, () => {
+          const input = child.el.querySelector('input');
+          if (!input) return;
+          const onType = _.debounce(() => this.validateEmailLive(false), 250);
+          input.addEventListener('input', onType);
+          input.addEventListener('blur', () => this.validateEmailLive(true));
+        });
+        return;
 
       case 'desk-content':
         child.once('content:ready', () => {
@@ -284,6 +301,11 @@ class __dmz_sharebox extends LetcBox {
     // beneath the gate card — distinct from the post-unlock landing banner. Only
     // applies on the gate; the public/landing flow never sets this flag.
     this.mset({ _gate_footer: true });
+    // Focus the gate (Figma 3.2.1): blur the page chrome (top-nav + header) behind
+    // the card so ONLY the gate card and the conversion banner read sharp. The
+    // gate card and footer already sit in higher stacking layers, so the
+    // `[data-gate]` rule only needs to blur the chrome + decorative backdrop.
+    this.el.dataset.gate = _a.open;
     this.ensurePart(_a.footer).then((footer) => {
       footer.feed(this.footerSkeleton(this));
       footer.el.dataset.mode = _a.open;
@@ -338,7 +360,9 @@ class __dmz_sharebox extends LetcBox {
       email,
     };
 
+    this._setButtonLoading(true);
     this.postService(SERVICE.dmz.login, opt).then((data) => {
+      this._setButtonLoading(false);
       if (data && data.status === 'TICKET_OK' && data.is_secure) {
         this.mset(data);
         this.mset({ recipient_email: email });
@@ -352,7 +376,7 @@ class __dmz_sharebox extends LetcBox {
       } else {
         this.handleInfoStatus(data);
       }
-    });
+    }).catch(() => this._setButtonLoading(false));
   }
 
   /**
@@ -382,7 +406,11 @@ class __dmz_sharebox extends LetcBox {
     if (needEmail)    opt.email    = email;
     if (needPassword) opt.password = password;
 
+    // Show the in-flight spinner on the Continue/Unlock button and block
+    // re-submits until the server responds (cleared on every outcome below).
+    this._setButtonLoading(true);
     this.postService(SERVICE.dmz.login, opt).then((data) => {
+      this._setButtonLoading(false);
       if (data && data.status === 'TICKET_OK' && data.is_secure) {
         this.mset(data);
         if (needEmail) { this._verifiedEmail = email; this.mset({ recipient_email: email }); }
@@ -405,7 +433,7 @@ class __dmz_sharebox extends LetcBox {
         return this.renderErrorMessage(LOCALE.DMZ_PASSWORD_TO_CONTINUE);
       }
       return this.handleInfoStatus(data);
-    });
+    }).catch(() => this._setButtonLoading(false));
   }
 
   /**
@@ -445,6 +473,12 @@ class __dmz_sharebox extends LetcBox {
         }
         return pw.reload();
 
+      case 'toggle-password-visibility':
+        return this._togglePasswordVisibility(cmd);
+
+      case 'toggle-files-layout':
+        return this._toggleFilesLayout(cmd);
+
       case 'verify-password':
         return this.verifyPassword();
 
@@ -481,7 +515,10 @@ class __dmz_sharebox extends LetcBox {
         // before redirecting (open-redirect guard) — see _secureShareReturnTarget.
         _params.push(`return_to=${encodeURIComponent(location.href)}`);
         const _suffix = `?${_params.join('&')}`;
-        window.open(`${location.protocol}//${main_domain}/${_K.module.signin}${_suffix}`, '_blank');
+        // Preserve the deployment base path (e.g. "/-/test/") so login opens on the
+        // SAME build, not the bare root domain. location.pathname is "/-/test/" on
+        // the test endpoint and "/" in production → identical to the old URL there.
+        window.open(`${location.protocol}//${main_domain}${location.pathname}${_K.module.signin}${_suffix}`, '_blank');
         return;
       }
 
@@ -519,11 +556,15 @@ class __dmz_sharebox extends LetcBox {
         // Same return-to-share behaviour as go-login (welcome validates the URL).
         _params.push(`return_to=${encodeURIComponent(location.href)}`);
         const _suffix = `?${_params.join('&')}`;
-        window.open(`${location.protocol}//${main_domain}/${_K.module.signup}${_suffix}`, '_blank');
+        // Preserve the deployment base path (e.g. "/-/test/") so signup opens on the
+        // SAME build, not the bare root domain. location.pathname is "/-/test/" on
+        // the test endpoint and "/" in production → identical to the old URL there.
+        window.open(`${location.protocol}//${main_domain}${location.pathname}${_K.module.signup}${_suffix}`, '_blank');
         return;
       }
 
       case 'tab-files':
+        this._activateTab(cmd);
         if (this._folderView) this._folderView.el.dataset.view = 'files';
         return;
 
@@ -533,12 +574,14 @@ class __dmz_sharebox extends LetcBox {
         // a send attempt opens the sign-up overlay (screen 57), wired in the
         // chat widget's sendMessage. Without a chat grant, fall back to the
         // standard gate (anonymous → sign-up; signed-in non-member → Request
-        // Access; owner → proceed).
+        // Access; owner → proceed). Don't activate the tab if the gate blocks.
         if (!this.mget('can_chat') && this._gateInteraction(false)) return;
+        this._activateTab(cmd);
         if (this._folderView) this._folderView.el.dataset.view = _a.chat;
         return;
 
       case 'tab-task':
+        this._activateTab(cmd);
         if (this._folderView) this._folderView.el.dataset.view = _a.task;
         return;
 
@@ -560,11 +603,15 @@ class __dmz_sharebox extends LetcBox {
         return;
 
       case 'select-request-level': {
+        // Multi-select: toggle this level independently (a recipient can request
+        // several at once, e.g. chat + edit). Reflect the per-row selected state.
         const lvl = cmd.mget('level');
-        this._selectedRequestLevel = lvl;
+        if (!this._selectedRequestLevels) this._selectedRequestLevels = new Set();
+        if (this._selectedRequestLevels.has(lvl)) this._selectedRequestLevels.delete(lvl);
+        else this._selectedRequestLevels.add(lvl);
         if (this.__signupOverlay) {
           this.__signupOverlay.el.querySelectorAll('[data-level]').forEach(btn => {
-            btn.dataset.selected = (btn.dataset.level === lvl) ? 'yes' : '';
+            btn.dataset.selected = this._selectedRequestLevels.has(btn.dataset.level) ? 'yes' : '';
           });
         }
         return;
@@ -574,7 +621,7 @@ class __dmz_sharebox extends LetcBox {
         return this.submitAccessRequest();
 
       case 'close-request-access':
-        this._selectedRequestLevel = null;
+        if (this._selectedRequestLevels) this._selectedRequestLevels.clear();
         this.closeSignupRequiredOverlay();
         return;
 
@@ -615,7 +662,9 @@ class __dmz_sharebox extends LetcBox {
     if (this._verifiedEmail) {
       opt.email = this._verifiedEmail;
     }
+    this._setButtonLoading(true);
     this.postService(SERVICE.dmz.login, opt).then((data) => {
+      this._setButtonLoading(false);
       if (data && data.status === 'TICKET_OK' && data.is_secure) {
         // Secure-share password accepted — grant access
         this.mset(data);
@@ -644,7 +693,7 @@ class __dmz_sharebox extends LetcBox {
       } else {
         this.handleInfoStatus(data);
       }
-    })
+    }).catch(() => this._setButtonLoading(false))
   }
 
   /**
@@ -663,6 +712,8 @@ class __dmz_sharebox extends LetcBox {
       this.mset({ _gate_footer: false });
       this.ensurePart(_a.footer).then((footer) => footer.feed(this.footerSkeleton(this)));
     }
+    // Access granted — un-blur the page chrome (gate is gone).
+    delete this.el.dataset.gate;
 
     this._startRevokePolling();
 
@@ -751,8 +802,11 @@ class __dmz_sharebox extends LetcBox {
    * @param {String} msg
   */
   renderErrorMessage(msg) {
+    // Figma alert style: light-red rounded box with centered red text (matches
+    // the green success variant's geometry). Co-locates under -password BEM.
+    const pfx = `${this.fig.family}-password`
     const msgBox = Skeletons.Note({
-      className: `${this.fig.family}__note error-msg`,
+      className: `${pfx}__message-text ${pfx}__message-text--error`,
       content: msg
     })
 
@@ -762,15 +816,203 @@ class __dmz_sharebox extends LetcBox {
 
     buttonWrapper.el.dataset.mode = _a.closed;
     msgWrapper.el.dataset.mode = _a.open;
-    msgWrapper.el.dataset.error = _a.yes;
+    msgWrapper.el.dataset.error = '';
+    msgWrapper.el.dataset.variant = 'error';
     msgWrapper.feed(msgBox);
 
     const f = () => {
       msgWrapper.el.dataset.mode = _a.closed
+      msgWrapper.el.dataset.variant = ''
       msgWrapper.clear()
       buttonWrapper.el.dataset.mode = _a.open
     }
     return _.delay(f, Visitor.timeout(2000))
+  }
+
+  /**
+   * Live email validation for the gate (Figma 3.2.2). Called on input (debounced)
+   * and on blur. While typing, a freshly-valid address upgrades to the green
+   * "recognised" confirmation; an invalid/empty address quietly clears it. Only
+   * `onBlur` surfaces a red format error, so the field doesn't nag mid-typing.
+   * NOTE: this is a client-side FORMAT check — the server allow-list ("recognised")
+   * is still enforced on Continue (EMAIL_MISMATCH). A true server-side recognise
+   * check would need a read-only validation endpoint (dmz.login grants on success).
+   * @param {Boolean} onBlur
+   */
+  validateEmailLive(onBlur = false) {
+    if (!this._emailInput) return;
+    const email = (this._emailInput.getData().value || '').trim();
+
+    if (!email) {
+      this._setEmailValid(false);
+      return this._hideGateMessage();
+    }
+    if (Validator.email(email)) {
+      this._setEmailValid(true);
+      return this.renderGateSuccess(
+        LOCALE.SECURE_SHARE_EMAIL_RECOGNISED || 'Email recognised - click Continue to access.'
+      );
+    }
+    // Invalid format: clear the check; only alert on blur (not every keystroke).
+    this._setEmailValid(false);
+    if (onBlur) {
+      this.renderGateError(LOCALE.SECURE_SHARE_EMAIL_INVALID_FORMAT || LOCALE.INVALID_EMAIL || 'Please enter a valid email address.');
+    } else {
+      this._hideGateMessage();
+    }
+  }
+
+  /**
+   * @param {Boolean} valid  toggles the email row's green check.
+   */
+  _setEmailValid(valid) {
+    if (this._emailRow && this._emailRow.el) {
+      this._emailRow.el.dataset.valid = valid ? _a.yes : '';
+    }
+  }
+
+  /**
+   * Hide + reset the gate message row.
+   */
+  _hideGateMessage() {
+    const msgWrapper = this.__messageBox;
+    if (!msgWrapper) return;
+    msgWrapper.el.dataset.mode = _a.closed;
+    msgWrapper.el.dataset.variant = '';
+    msgWrapper.clear();
+  }
+
+  /**
+   * Green success message (Figma 3.2.2). Unlike renderErrorMessage it keeps the
+   * Continue button visible — the recipient still has to click it to proceed.
+   * @param {String} msg
+   */
+  renderGateSuccess(msg) {
+    const pfx = `${this.fig.family}-password`;
+    const msgWrapper = this.__messageBox;
+    if (!msgWrapper) return;
+    msgWrapper.el.dataset.mode = _a.open;
+    msgWrapper.el.dataset.error = '';
+    msgWrapper.el.dataset.variant = 'success';
+    msgWrapper.feed(Skeletons.Note({
+      className: `${pfx}__message-text ${pfx}__message-text--success`,
+      content: msg
+    }));
+  }
+
+  /**
+   * Persistent red alert in the gate message row (keeps the button visible).
+   * Used by live blur validation; the transient verify-time error uses
+   * renderErrorMessage (which also hides/restores the button).
+   * @param {String} msg
+   */
+  renderGateError(msg) {
+    const pfx = `${this.fig.family}-password`;
+    const msgWrapper = this.__messageBox;
+    if (!msgWrapper) return;
+    msgWrapper.el.dataset.mode = _a.open;
+    msgWrapper.el.dataset.error = '';
+    msgWrapper.el.dataset.variant = 'error';
+    msgWrapper.feed(Skeletons.Note({
+      className: `${pfx}__message-text ${pfx}__message-text--error`,
+      content: msg
+    }));
+  }
+
+  /**
+   * Toggle the in-flight spinner on the gate's Continue/Unlock button. Sets
+   * `data-loading` on the button wrapper, which the SCSS turns into a spinner
+   * and blocks pointer events (prevents double-submit).
+   * @param {Boolean} loading
+   */
+  /**
+   * Show/hide the password field — same behaviour as window-secure-share:
+   * toggle the input type and swap the eye_closed↔eye glyph + data-state (CSS
+   * tints it purple on state=1).
+   * @param {LetcBox} cmd  the eye button that was clicked
+   */
+  _togglePasswordVisibility(cmd) {
+    const row = cmd.el.closest(`.${this.fig.family}-password__row`);
+    const input = row && row.querySelector('input');
+    if (!input) return;
+    const isVisible = input.type === 'text';
+    input.type = isVisible ? 'password' : 'text';
+    const useEl = cmd.el.querySelector('svg use');
+    if (useEl) {
+      useEl.setAttribute('xlink:href', isVisible ? '#--icon-eye_closed' : '#--icon-eye');
+    }
+    cmd.el.dataset.state = isVisible ? '0' : '1';
+  }
+
+  /**
+   * Toggle the file grid between the (default) partitioned grid and a row/list
+   * layout — delegated to the window-manager child (this.wm), which carries the
+   * view-mode support (window/utils getViewMode/setViewMode). Flips the toggle's
+   * data-state so the active half highlights, then re-renders the grid.
+   * @param {LetcBox} cmd  the view-toggle box that was clicked
+   */
+  /**
+   * Tab bar is a single-select (radio) group — the Files/Chat/Tasks tabs aren't
+   * a framework radio group, so clicking one would leave the previously-active
+   * tab highlighted too. Clear every item in the wrapper and mark only the
+   * clicked one active.
+   * @param {LetcBox} cmd  the tab that was clicked
+   */
+  _activateTab(cmd) {
+    if (!cmd || !cmd.el) return;
+    const wrapper = cmd.el.closest('.window-body__tab-bar-wrapper');
+    if (!wrapper) return;
+    wrapper.querySelectorAll('.window-body__tab-bar-item').forEach((el) => {
+      el.dataset.state = el === cmd.el ? '1' : '0';
+    });
+  }
+
+  _toggleFilesLayout(cmd) {
+    const wm = this.wm;
+    if (!wm || !wm.el) return;
+    // Row view needs BOTH: (1) the wm in row mode so media items re-render as
+    // media-row (table rows) — see media/core _getKind, which reads
+    // getLogicalParent().getViewMode(); and (2) a single-column scroll so those
+    // full-width rows stack (the data-view-mode flag drives the CSS). Doing only
+    // one leaves either squished rows in the 120px grid, or cards in a column.
+    const scroll = wm.el.querySelector(`.${wm.fig.family}__icons-scroll`);
+    const isRow =
+      (scroll && scroll.dataset.viewMode === _a.row) ||
+      (wm.getViewMode && wm.getViewMode() === _a.row);
+    const mode = isRow ? _a.icon : _a.row;
+    if (wm.setViewMode) wm.setViewMode(mode);
+    if (scroll) scroll.dataset.viewMode = mode;
+    if (cmd && cmd.setState) cmd.setState(mode === _a.row ? 1 : 0);
+    // Re-render so items re-create with the new kind (media-row ↔ media-grid);
+    // _getKind is evaluated at item construction.
+    wm.ensurePart(_a.list).then((l) => { if (l && l.restart) l.restart(); });
+  }
+
+  _setButtonLoading(loading) {
+    // Resolve the button wrapper from the DOM (robust against part-capture
+    // timing) and fall back to the registered part. Querying this.el guarantees
+    // we toggle the real `.buttons-wrapper` node that the CSS spinner targets.
+    const wrapper =
+      (this.el && this.el.querySelector(`.${this.fig.family}-password__row.buttons-wrapper`)) ||
+      (this.__buttonWrapper && this.__buttonWrapper.el);
+    if (!wrapper) return;
+
+    if (loading) {
+      clearTimeout(this._loadingTimer);
+      this._loadingStart = Date.now();
+      wrapper.dataset.loading = _a.yes;
+      return;
+    }
+
+    // Keep the spinner visible for a minimum window so a fast server response
+    // doesn't flip on→off within a single frame (which reads as "no loading").
+    const MIN_MS = 500;
+    const elapsed = this._loadingStart ? (Date.now() - this._loadingStart) : MIN_MS;
+    const wait = Math.max(0, MIN_MS - elapsed);
+    clearTimeout(this._loadingTimer);
+    this._loadingTimer = setTimeout(() => {
+      if (wrapper) wrapper.dataset.loading = '';
+    }, wait);
   }
 
   /**
@@ -830,6 +1072,8 @@ class __dmz_sharebox extends LetcBox {
    *@param {Object} data
   */
   handleInfoStatus(data = {}) {
+    // Leaving the gate (error / expiry / revoke) — un-blur the page chrome.
+    delete this.el.dataset.gate;
     let opt = {};
     let status = data.validity || data.status;
     // Secure shares are exempt from the workspace-level dmz_expiry override — their
@@ -908,7 +1152,7 @@ class __dmz_sharebox extends LetcBox {
   showRequestAccessPopup() {
     const overlay = this.__signupOverlay;
     if (!overlay) return;
-    this._selectedRequestLevel = null;
+    this._selectedRequestLevels = new Set();
     this._requestEmailInput    = null;
     this._requestMessageInput  = null;
     overlay.feed(require('./skeleton/request-access').default(this));
@@ -922,9 +1166,11 @@ class __dmz_sharebox extends LetcBox {
     // Validate with INLINE feedback in the popup. renderErrorMessage targets the
     // gate's parts (absent here), so it would fail silently — which is why submit
     // appeared dead when a field was missing.
-    if (!this._selectedRequestLevel) {
+    if (!this._selectedRequestLevels || this._selectedRequestLevels.size === 0) {
       return this._showRequestError(LOCALE.SECURE_SHARE_CHOOSE_LEVEL);
     }
+    // Multi-select: send the chosen levels as a comma-list (server stores a SET).
+    const requestedLevels = Array.from(this._selectedRequestLevels).join(',');
 
     const emailEl = this._requestEmailInput
       ? this._requestEmailInput.el.querySelector('input')
@@ -952,7 +1198,7 @@ class __dmz_sharebox extends LetcBox {
       token,
       hub_id,
       email          : emailVal,
-      requested_level: this._selectedRequestLevel,
+      requested_level: requestedLevels,
     };
     if (msgVal) payload.message = msgVal;
 
@@ -965,7 +1211,7 @@ class __dmz_sharebox extends LetcBox {
         try { localStorage.setItem('dmz_share_email_' + token, emailVal); } catch (e) { /* ignore */ }
         this.mset({
           _request_email  : emailVal,
-          _request_level  : this._selectedRequestLevel,
+          _request_level  : requestedLevels,
           _request_message: msgVal,
         });
         const overlay = this.__signupOverlay;
@@ -1000,15 +1246,21 @@ class __dmz_sharebox extends LetcBox {
       overlay.clear();
     }
     if (data.action === 'approve') {
+      // The approval ADDS to the recipient's current capabilities — it does not
+      // replace them (the event payload carries only the newly granted level). A
+      // chat share approved for download must keep chat AND gain download, so we
+      // union the new caps onto the existing model rather than overwriting (which
+      // dropped chat). Mirrors the server-side union in dmz.js _loginSecureShare.
+      const prevCaps = this.mget('capabilities') || [];
+      const newCaps  = data.capabilities || [];
+      const mergedCaps = Array.from(new Set([...prevCaps, ...newCaps]));
       this.mset({
-        permission_level: data.granted_level,
-        privilege       : data.privilege || 3,
-        // Carry the capability flags so the chat tab / edit gates unlock to match
-        // the freshly granted level (server sends these on the approval event).
-        capabilities    : data.capabilities || [],
-        can_download    : data.can_download || 0,
-        can_chat        : data.can_chat || 0,
-        can_edit        : data.can_edit || 0,
+        permission_level: data.granted_level || this.mget('permission_level'),
+        privilege       : Math.max(this.mget('privilege') || 3, data.privilege || 3),
+        capabilities    : mergedCaps,
+        can_download    : this.mget('can_download') || data.can_download || 0,
+        can_chat        : this.mget('can_chat') || data.can_chat || 0,
+        can_edit        : this.mget('can_edit') || data.can_edit || 0,
       });
       this.loadDeskContent();
       // Figma 67 — notify the guest their access request was approved. The folder

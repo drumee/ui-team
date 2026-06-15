@@ -107,14 +107,15 @@
     width: 570px;
     height: auto;
     padding: var(--spacer-5);
-    border-radius: var(--border-radius);
-    background-color: var(--default-bg);
+    // Based on window/info (.window__main): an elevated --normal-bg-90 surface
+    // with a muted hairline border and large radius — theme-aware (light/dark),
+    // replacing the old --default-bg + --border-radius + dated triple shadow.
+    background-color: var(--normal-bg-90);
+    border: 1px solid var(--border-muted);
+    border-radius: var(--corner-radius-3);
     justify-content: center;
     align-items: center;
-    box-shadow:
-      0 0 7px 0 rgb(0 0 0 / 14%),
-      0 0 6px 0 #f8fafc,
-      0 3px 5px 0 rgb(0 0 0 / 20%);
+    box-shadow: 0 8px 28px rgb(0 0 0 / 18%);
     overflow: hidden;
 
     &[data-device="mobile"] {
@@ -130,6 +131,150 @@
       top: 6px;
       background-color: unset;
       color: var(--neutral-900);
+    }
+  }
+
+  // ── Notification dialogs (confirm / message) ────────────────────────────────
+  // Based on builtins/window/confirm + the update-prompt image: logo+close
+  // header, left-aligned body, right-aligned buttons. Scoped to `.notice` so the
+  // shared login / reconnect dialogs keep their centered layout.
+  &__main.notice {
+    align-items: stretch;
+    justify-content: flex-start;
+    gap: 12px;
+    text-align: left;
+    width: auto;
+    min-height: 0;
+
+    .router-butler__title {
+      width: 100%;
+      text-align: left;
+      margin: 0;
+      @include drumee.typo(
+        $size: 16px,
+        $line: 22px,
+        $weight: 600,
+        $color: var(--normal-fg)
+      );
+    }
+
+    .router-butler__message {
+      width: 100%;
+      padding: 0;
+      margin: 0;
+      text-align: left;
+      @include drumee.typo(
+        $size: 14px,
+        $line: 20px,
+        $weight: 400,
+        $color: var(--normal-fg)
+      );
+
+      p {
+        text-align: left;
+        margin: 0;
+      }
+    }
+
+    .router-butler__buttons {
+      justify-content: flex-end;
+      gap: 8px;
+      padding: 0;
+    }
+  }
+
+  &__topbar {
+    width: 100%;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: space-between;
+    position: relative;
+  }
+
+  &__logo {
+    align-items: end;
+    gap: var(--spacer-2);
+
+    &-ico {
+      width: 40px;
+      height: 40px;
+      color: var(--primary-50);
+    }
+
+    &-text {
+      font-weight: bold;
+      font-size: 24px;
+      color: var(--normal-fg);
+    }
+  }
+
+  &__close {
+    width: 28px;
+    height: 28px;
+    padding: 4px;
+    flex-shrink: 0;
+    cursor: pointer;
+    color: var(--normal-fg-10);
+    margin-left: auto;
+    border-radius: 6px;
+    transition: background-color 120ms ease;
+
+    svg {
+      width: 18px;
+      height: 18px;
+    }
+
+    &:hover {
+      background-color: rgba(0, 0, 0, 0.04);
+    }
+  }
+
+  &__button-secondary,
+  &__button-primary {
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    height: 34px;
+    min-width: 84px;
+    padding: 0 14px;
+    border-radius: var(--corner-radius-2, 8px);
+    cursor: pointer;
+    transition:
+      background-color 120ms ease,
+      border-color 120ms ease,
+      color 120ms ease;
+    @include drumee.typo($size: 14px, $line: 20px, $weight: 600);
+  }
+
+  &__button-secondary {
+    background-color: transparent;
+    border: 1px solid var(--neutral-300, rgba(0, 0, 0, 0.12));
+    color: var(--normal-fg-10);
+
+    &:hover {
+      background-color: var(--normal-bg-100);
+    }
+  }
+
+  &__button-primary {
+    background-color: var(--primary-50, #433cc5);
+    border: 0;
+    color: #fff;
+
+    &:hover {
+      background-color: var(--primary-40, #5950ff);
+    }
+  }
+
+  // Confirm action — coral, matching window/confirm's default `danger` confirm
+  // button and the "Yes" button in the update-prompt image.
+  &__button-danger {
+    background-color: var(--btn-caution-background, #d74e49);
+    border: 0;
+    color: var(--btn-caution-text, #fff);
+
+    &:hover {
+      background-color: var(--btn-caution-background-hover, #c74641);
     }
   }
 

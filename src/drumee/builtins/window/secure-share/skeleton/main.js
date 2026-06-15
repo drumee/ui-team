@@ -165,27 +165,54 @@ const __skl_secure_share = function(_ui_) {
     LOCALE.SECURE_SHARE_REQUIRE_PASSWORD, LOCALE.SECURE_SHARE_REQUIRE_PASSWORD_DESC
   );
 
+  // Password field — same pattern as the signin form (welcome/signin): a grey
+  // row holding the entry + an eye toggle that swaps eye_closed↔eye and flips
+  // its colour via data-state (handled in index.js _togglePasswordVisibility).
   const passwordGate = Skeletons.Box.Y({
     className : `${pfx}__password-gate`,
     dataset   : { mode: _a.closed },
     kids      : [
-      Skeletons.EntryBox({
-        className   : `${pfx}__input password`,
-        sys_pn      : 'ref-create-password',
-        formItem    : 'password',
-        type        : _a.password,
-        placeholder : LOCALE.SECURE_SHARE_PASSWORD_PLACEHOLDER,
-        shower      : 1,
-        showError   : false
+      Skeletons.Box.X({
+        className : `${pfx}__password-row`,
+        kids      : [
+          Skeletons.EntryBox({
+            className   : `${pfx}__password-input`,
+            sys_pn      : 'ref-create-password',
+            formItem    : 'password',
+            name        : 'password',
+            type        : _a.password,
+            placeholder : LOCALE.SECURE_SHARE_PASSWORD_PLACEHOLDER,
+            uiHandler   : [_ui_],
+            showError   : false
+          }),
+          Skeletons.Button.Svg({
+            ico       : 'eye_closed',
+            className : `${pfx}__password-eye`,
+            service   : 'toggle-password-visibility',
+            uiHandler : [_ui_]
+          })
+        ]
       })
     ]
+  });
+
+  // Figma: each control (require-email / password) is its own white sub-card —
+  // the check-row is the card header and the gate (chips/input) is its body.
+  const emailSubcard = Skeletons.Box.Y({
+    className : `${pfx}__secure-subcard`,
+    kids      : [emailCheckRow, emailGate]
+  });
+
+  const passwordSubcard = Skeletons.Box.Y({
+    className : `${pfx}__secure-subcard`,
+    kids      : [passwordCheckRow, passwordGate]
   });
 
   const secureOptions = Skeletons.Box.Y({
     className : `${pfx}__secure-options`,
     sys_pn    : 'secure-options',
     dataset   : { mode: _a.closed },
-    kids      : [emailCheckRow, emailGate, passwordCheckRow, passwordGate]
+    kids      : [emailSubcard, passwordSubcard]
   });
 
   // Figma: choosing Secure nests the email/password options INSIDE the Secure
@@ -396,9 +423,14 @@ const __skl_secure_share = function(_ui_) {
     debug     : __filename,
     kids      : [
       header,
-      body,
-      accessListSection,
-      listSection,
+      Skeletons.Box.Y({
+        className : `${pfx}__scroll`,
+        kids      : [
+          body,
+          accessListSection,
+          listSection,
+        ]
+      }),
       Skeletons.Box.Z({
         className   : `${pfx}__approve-overlay`,
         sys_pn      : 'approve-overlay',

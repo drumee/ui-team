@@ -39,28 +39,61 @@
     height: 100%;
   }
 
-  /* Filter bar (matching window-filter from common.scss + active state from main.scss) */
+  /* Filter bar — based on window-folder__filter-bar: centered row on a
+     --normal-bg-90 surface with a visible --border-default divider. */
   &__filter-bar {
     align-items: center;
-    gap: var(--spacer-6);
-    padding: var(--spacer-4) var(--spacer-6);
+    gap: 24px;
+    padding: 8px 24px 8.5px;
     color: var(--normal-fg-10);
-    border-bottom: 1px solid var(--border-muted);
+    border-bottom: 1px solid var(--border-default, #d1d1d6);
+    background: var(--normal-bg-90);
   }
 
+  // Based on window-folder__filter-tab-main: underline tab (transparent 2px
+  // bottom border that fills on active). The sharebox accent override below
+  // pins the active colour to --sb-pink (= share area) for the share context.
   &__filter-tab {
+    align-items: center;
+    justify-content: center;
+    border-bottom: 2px solid transparent;
+    background: transparent;
     cursor: pointer;
-    padding: var(--spacer-2) var(--spacer-4);
-    border-radius: var(--corner-radius-2);
+    @include drumee.typo($size: 13px, $line: 1, $weight: 700, $color: var(--normal-fg-10));
 
-    &:hover {
-      color: var(--normal-fg-20);
+    .note-content {
+      @include drumee.typo($size: 13px, $line: 1, $weight: 700, $color: var(--normal-fg-10));
+      cursor: pointer;
     }
 
     &[data-radiotoggle="on"],
     &[data-state="1"] {
-      background-color: var(--normal-bg-10);
+      padding-bottom: 6px;
+      border-bottom-color: var(--area-share);
+      @include drumee.typo($size: 13px, $line: 1, $weight: 800, $color: var(--normal-fg-10));
+
+      .note-content {
+        @include drumee.typo($size: 13px, $line: 1, $weight: 800, $color: var(--normal-fg-10));
+      }
     }
+  }
+
+  // Active underline tracks the bar's area (mirror window-folder).
+  &__filter-bar[data-area="personal"] &__filter-tab[data-state="1"],
+  &__filter-bar[data-area="personal"] &__filter-tab[data-radiotoggle="on"] {
+    border-bottom-color: var(--area-personal);
+  }
+
+  &__filter-bar[data-area="share"] &__filter-tab[data-state="1"],
+  &__filter-bar[data-area="share"] &__filter-tab[data-radiotoggle="on"],
+  &__filter-bar[data-area="dmz"] &__filter-tab[data-state="1"],
+  &__filter-bar[data-area="dmz"] &__filter-tab[data-radiotoggle="on"] {
+    border-bottom-color: var(--area-share);
+  }
+
+  &__filter-bar[data-area="public"] &__filter-tab[data-state="1"],
+  &__filter-bar[data-area="public"] &__filter-tab[data-radiotoggle="on"] {
+    border-bottom-color: var(--area-public);
   }
 
   /* File grid */
@@ -72,19 +105,23 @@
   }
 
   &__icons-list {
-    align-content: center;
-    align-items: center;
+    // Based on window-folder window__icons-list: top-LEFT aligned grid (was
+    // centered) so a partly-filled grid sits at the top-left of the panel.
+    align-content: flex-start;
+    align-items: flex-start;
     display: flex;
     flex-flow: column;
     height: 100%;
-    // Top-align the grid (Figma 3.1) instead of vertically centering it — centering
-    // made a partly-filled grid float in the middle of the panel.
     justify-content: flex-start;
-    justify-items: center;
+    justify-items: flex-start;
     width: 100%;
 
     & .smart-container {
-      padding: var(--spacer-2) var(--spacer-4) 0 var(--spacer-4);
+      align-content: flex-start;
+      align-items: flex-start;
+      justify-content: flex-start;
+      justify-items: flex-start;
+      padding: 24px;
     }
 
     &.desk-content {
@@ -119,20 +156,83 @@
   }
 
   &__icons-scroll {
-    align-items: center;
-    justify-items: center;
-    justify-content: center;
+    // Based on window-folder window__icons-scroll: top-left grid sized by the
+    // shared --grid-* tokens (cell-w / file & folder cell-h / gap) instead of the
+    // old centered, hardcoded 120/121 px grid.
+    align-content: flex-start;
+    align-items: flex-start;
+    justify-content: flex-start;
     display: grid;
-    grid-template-columns: repeat(auto-fill, 120px);
-    grid-auto-rows: 121px;
-    grid-gap: var(--spacer-5);
+    grid-template-columns: repeat(auto-fill, var(--grid-cell-w));
+    grid-auto-rows: var(--grid-cell-h-file);
+    gap: var(--grid-gap);
     min-height: 100px;
-    padding: var(--spacer-2) var(--spacer-5) 0 var(--spacer-5);
-    margin: var(--spacer-4) 0 var(--spacer-2) 0;
+    padding: 24px;
+    margin: 0;
+    min-width: 0;
+
+    // Section partitioning. The share grid is now opted into the 3-tier
+    // partition (see window/utils.js usesPartition); _doPartition flips the
+    // scroll to a flex column of .folder-section / .file-section grids. The
+    // global section base lives in desk/wm/skin (not loaded on the share page),
+    // so declare it self-sufficiently here: each section is its own top-aligned
+    // grid, file rows taller than folder rows, and never flex-grow (the
+    // framework sets inline flex-grow:1 which would stretch a short section).
+    .workspace-section,
+    .folder-section,
+    .file-section {
+      display: grid;
+      align-content: start;
+      align-items: start;
+      justify-items: start;
+      grid-template-columns: repeat(auto-fill, var(--grid-cell-w));
+      gap: var(--grid-gap);
+      width: 100%;
+      flex: 0 0 auto !important;
+    }
+
+    .workspace-section,
+    .folder-section {
+      grid-auto-rows: var(--grid-cell-h-folder);
+    }
+
+    .file-section {
+      grid-auto-rows: var(--grid-cell-h-file);
+    }
+
+    // Shares have no workspace (hub) tier — hide the empty section so it adds
+    // no gap above the folders.
+    .workspace-section:empty,
+    .folder-section:empty,
+    .file-section:empty {
+      display: none;
+    }
 
     &.smart-container {
       height: calc(100% - 1rem);
       width: 100%;
+    }
+
+    // List (row) view — toggled by the topbar view control (data-view-mode set
+    // in sharebox _toggleFilesLayout). In row mode the media items re-render as
+    // full-width media-row items (table rows), so the scroll becomes a single
+    // column that stacks them (mirrors window-folder's row layout).
+    &[data-view-mode="row"] {
+      grid-template-columns: 1fr;
+      grid-auto-rows: min-content;
+
+      .workspace-section,
+      .folder-section,
+      .file-section {
+        grid-template-columns: 1fr;
+        grid-auto-rows: min-content;
+      }
+
+      .media-row__ui,
+      .media-grid__ui {
+        width: 100%;
+        max-width: 100%;
+      }
     }
 
     &[data-device="mobile"] {
@@ -142,10 +242,15 @@
     }
 
     & .media-grid__ui {
+      // Lock cell width only (mirror window-folder); per-section grid-auto-rows
+      // owns the height so folder + file rows coexist without stretching.
+      width: var(--grid-cell-w);
+      max-width: var(--grid-cell-w);
+
       & .filename {
         @include drumee.typo(
           $line: 14px,
-          $size: 11px,
+          $size: 14px,
           $color: var(--default-text-color)
         );
         border-radius: var(--border-radius-bottom);
@@ -159,10 +264,7 @@
         text-overflow: ellipsis;
         width: 100%;
 
-        &.hub,
-        &.folder {
-          color: var(--default-text-reverse);
-        }
+        
 
         &.image,
         &.video {
@@ -182,23 +284,12 @@
         padding: 16px 24px 8px;
         gap: 16px;
 
-        .media-grid__container {
-          transform: scale(0.75);
-          transform-origin: top center;
-        }
+       
       }
 
-      .folder-section {
-        grid-template-rows: repeat(2, 110px);
-        grid-auto-columns: 90px;
-      }
+      
 
-      .file-section {
-        grid-template-columns: repeat(auto-fill, 90px);
-        grid-auto-rows: 130px;
-        overflow: visible;
-        flex: 1 1 auto;
-      }
+    
     }
   }
 
@@ -260,3 +351,4 @@
   border-radius: 0;
   color: var(--sb-text);
 }
+

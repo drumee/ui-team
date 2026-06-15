@@ -483,9 +483,9 @@ class __window_interact extends windowCore {
     // is still on the stack (afterUpload → syncOrder → _syncOrder → syncAll
     // calls us synchronously from a child destroy chain). Without an
     // explicit re-partition the items reflow into the scrollEl flex-column
-    // layout. Folder + Wm both need this; gate on isWm / isFolder to keep
-    // non-partitioned surfaces (share/search/meeting) untouched.
-    if ((this.isWm || this.isFolder)
+    // layout. Folder + Wm + DMZ share all need this; gate on isWm / isFolder /
+    // isDmz to keep the remaining flat surfaces (search/meeting) untouched.
+    if ((this.isWm || this.isFolder || this.isDmz)
       && typeof this._partitionFoldersAndFiles === "function"
       && this.getViewMode && this.getViewMode() !== _a.row) {
       this._partitionFoldersAndFiles(this.__list);
@@ -952,8 +952,8 @@ class __window_interact extends windowCore {
     // — leaving uploading items as direct children of .smart-container
     // (flex-column) so concurrent drops stack vertically until refresh.
     // Explicit partition kick after append removes that race; folder window
-    // already does this in its own override.
-    if (this.isWm && typeof this._partitionFoldersAndFiles === "function"
+    // already does this in its own override. DMZ share partitions too.
+    if ((this.isWm || this.isDmz) && typeof this._partitionFoldersAndFiles === "function"
       && this.getViewMode && this.getViewMode() !== _a.row) {
       this._partitionFoldersAndFiles(this.__list);
     }

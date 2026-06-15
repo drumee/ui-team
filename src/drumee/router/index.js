@@ -258,6 +258,19 @@ class drumee_router extends LetcBox {
   */
   async restart(reconnect) {
     if (reconnect) return;
+    // Secure-share recipients who signed in from a share link return to that
+    // shared folder instead of the desk. The target is validated + stashed by
+    // the welcome module (_secureShareReturnTarget). Handle it here so we don't
+    // route()/changeHost to the desk or org host and strand them — those run on
+    // the same user:signed:in event and were winning the navigation race against
+    // the welcome once-handler. Only a fresh login (reconnect falsy) sets/uses
+    // this, so it can never fire on a reconnect, and the flag is one-shot.
+    if (this._secureShareReturn) {
+      const _target = this._secureShareReturn;
+      this._secureShareReturn = null;
+      location.href = _target;
+      return;
+    }
     this._wallpaper = {};
     this.currentModule = null;
     this.route();

@@ -65,10 +65,34 @@ function __skl_dmz_sharebox_top_nav(_ui_) {
     ],
   });
 
-  const actions = Skeletons.Box.X({
-    className: `${navFig}__actions`,
-    kids: [loginBtn, joinBtn],
-  });
+  // Authenticated recipients already have an account — show their own identity
+  // (avatar + name) instead of the guest Login / Join CTA. The recipient's profile
+  // is resolved server-side and carried on the dmz login response (`profile`).
+  let actions;
+  if (_ui_.mget("is_authenticated")) {
+    let prof = _ui_.mget("profile");
+    if (typeof prof === "string") {
+      try { prof = JSON.parse(prof); } catch (e) { prof = {}; }
+    }
+    prof = prof || {};
+    const label =
+      [prof.firstname, prof.lastname].filter(Boolean).join(" ").trim() ||
+      prof.email ||
+      _ui_.mget("recipient_email") ||
+      "";
+    actions = Skeletons.Box.X({
+      className: `${navFig}__account`,
+      kids: [
+        Skeletons.Avatar("default", `${navFig}__account-avatar`, label),
+        Skeletons.Note({ className: `${navFig}__account-label`, content: label }),
+      ],
+    });
+  } else {
+    actions = Skeletons.Box.X({
+      className: `${navFig}__actions`,
+      kids: [loginBtn, joinBtn],
+    });
+  }
 
   return Skeletons.Box.X({
     className: `${navFig}__container`,

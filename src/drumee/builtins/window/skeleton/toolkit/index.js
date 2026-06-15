@@ -29,6 +29,10 @@ export function breadcrumbs(ui, opt) {
 export function tabBar(ui, opt = {}) {
   const cnRoot = "window-body__tab-bar";
   const isFolder = ui.fig.family === "window-folder";
+  // The folder window and the DMZ share grid use the same emoji tab icons
+  // (📄 / 💬 / 📋) — see the reference design. Other non-folder windows keep
+  // their monochrome SVG glyphs.
+  const useEmojiTabs = isFolder || ui.fig.family === "dmz-sharebox";
   const folderTab = ({ icon, label, service, state, tab }) =>
     Skeletons.Box.X({
       className: `${cnRoot}-item ${ui.fig.family}__tab-bar-item`,
@@ -73,7 +77,7 @@ export function tabBar(ui, opt = {}) {
     chat_tab = "";
   }
 
-  const kids = isFolder
+  const kids = useEmojiTabs
     ? [
         folderTab({
           icon: "📄",
@@ -85,7 +89,7 @@ export function tabBar(ui, opt = {}) {
         chat_tab,
         folderTab({
           icon: "📋",
-          label: "Tasks",
+          label: LOCALE.TASK || "Tasks",
           service: "tab-task",
           state: 0,
           tab: _a.task,
@@ -183,7 +187,10 @@ export function tabBar(ui, opt = {}) {
         }),
       ],
     });
-  const splitBtn = isFolder
+  // The view toggle is shown for the folder window and the DMZ share grid
+  // (both render a media grid that supports a grid ↔ row layout).
+  const showViewToggle = isFolder || ui.fig.family === "dmz-sharebox";
+  const splitBtn = showViewToggle
     ? Skeletons.Box.X({
         className: `${cnTopbar}__view-toggle`,
         service: "toggle-files-layout",
@@ -393,7 +400,12 @@ export function chatPanel(ui) {
     sys_pn: "folder-chat",
   };
 
-  if (ui.fig.family === "window-folder") {
+  // Folder-scoped chat: scope the conversation to the current folder (nid) so
+  // only that folder's messages load. Applies to the authenticated folder window
+  // AND the DMZ share view — without scope=folder the chat widget omits `nid`
+  // from channel.messages (see chat/index.js getScopedNid) and loads the whole
+  // hub, pulling in messages from other scopes.
+  if (ui.fig.family === "window-folder" || ui.fig.family === "dmz-sharebox") {
     chat.scope = _a.folder;
     chat.type = _a.share;
     chat.area = _a.share;

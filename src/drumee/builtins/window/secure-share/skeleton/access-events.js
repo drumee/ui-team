@@ -27,6 +27,9 @@ const __skl_secure_share_access_events = function(_ui_, rows) {
     ]
   });
 
+  // Public shares are excluded server-side by secure_share_list_access_events
+  // (it returns events only for gated/secure tokens), so every row here is a real
+  // secure-share access — render them all, no client-side visitor filtering.
   if (!Array.isArray(rows) || !rows.length) {
     return Skeletons.Box.Y({
       className : `${pfx}__events-table`,
@@ -56,18 +59,16 @@ const __skl_secure_share_access_events = function(_ui_, rows) {
         Skeletons.Note({ className: `${pfx}__events-cell col-duration`, content: durStr }),
         Skeletons.Box.X({
           className : `${pfx}__events-cell col-action`,
-          // Only show ⊖ when there's a real recipient to revoke. Anonymous "Public"
-          // visits have no grant — and `email` above is the localized "Public" LABEL,
-          // which must never be sent to revoke_recipient. Pass the REAL recipient_email
-          // (or actor_id), never the display label.
-          kids      : (r.recipient_email || r.actor_id) ? [
+          // ⊖ revokes the share link (token) this recipient came through — same
+          // effect as the Revoke button in the Shared-links list. token_id from the
+          // access-event SP IS the share id that secure_share_revoke matches on.
+          kids      : r.token_id ? [
             Skeletons.Button.Svg({
               ico       : 'ban',
               className : `${pfx}__events-revoke`,
               service   : 'revoke-access-recipient',
               tooltips  : LOCALE.SECURE_SHARE_REVOKE_RECIPIENT,
-              email     : r.recipient_email || '',
-              uid       : r.actor_id || '',
+              token     : r.token_id,
               uiHandler : [_ui_],
             })
           ] : []

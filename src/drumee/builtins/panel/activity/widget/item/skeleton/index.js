@@ -203,6 +203,16 @@ function getActivityMeta(ui, data) {
         badge: 'mention',
       };
 
+    case 'share_open':
+      // "{email} opened {folder}" — a recipient viewed a notify-on-open share.
+      return {
+        before: data.action || 'opened ',
+        label: data.link_label || '',
+        after: '',
+        colorClass: 'mention',
+        badge: 'mention',
+      };
+
     default:
       return {
         before: data.action || data.event || 'updated ',

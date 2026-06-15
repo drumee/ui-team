@@ -255,8 +255,11 @@ class __panel_activity extends LetcBox {
         };
         if (!req.request_id) return;
         this._arRequest    = req;
-        // Default the grant to the requested level (Figma pre-selects it).
-        this._arGrantLevel = req.requested_level || null;
+        // Multi-select: pre-select every requested level (the recipient may have
+        // asked for several, e.g. chat + edit). requested_level is a SET column —
+        // the driver returns it as an ARRAY, so String() it before splitting
+        // (String(['a','b']) → "a,b"); also handles the legacy single-string form.
+        this._arGrantLevels = new Set(String(req.requested_level || '').split(',').map(s => s.trim()).filter(Boolean));
         return this.ensurePart('ar-overlay').then((p) => {
           if (!p) return;
           p.feed(require('./skeleton/approve-request')(this, req));
@@ -265,12 +268,16 @@ class __panel_activity extends LetcBox {
       }
 
       case 'ar-select-level': {
+        // Multi-select: toggle this level in the grant set (the sender can grant
+        // several at once, mirroring the recipient's multi request).
         const lvl = cmd.mget('level');
-        this._arGrantLevel = lvl;
+        if (!this._arGrantLevels) this._arGrantLevels = new Set();
+        if (this._arGrantLevels.has(lvl)) this._arGrantLevels.delete(lvl);
+        else this._arGrantLevels.add(lvl);
         return this.ensurePart('ar-overlay').then((p) => {
           if (!p || !p.el) return;
           p.el.querySelectorAll('[data-level]').forEach((b) => {
-            b.dataset.selected = (b.dataset.level === lvl) ? 'yes' : '';
+            b.dataset.selected = this._arGrantLevels.has(b.dataset.level) ? 'yes' : '';
           });
         });
       }
@@ -289,8 +296,9 @@ class __panel_activity extends LetcBox {
         return this._closeArOverlay();
 
       case 'change-permission':
-        // Reopen the approve-request popup for the same request.
-        this._arGrantLevel = (this._arRequest && this._arRequest.requested_level) || null;
+        // Reopen the approve-request popup for the same request. String() the
+        // SET value (driver returns it as an array) before splitting.
+        this._arGrantLevels = new Set(String((this._arRequest && this._arRequest.requested_level) || '').split(',').map(s => s.trim()).filter(Boolean));
         return this.ensurePart('ar-overlay').then((p) => {
           if (!p) return;
           p.feed(require('./skeleton/approve-request')(this, this._arRequest || {}));
@@ -377,8 +385,9 @@ class __panel_activity extends LetcBox {
   async _respondAccessRequest(action) {
     const req = this._arRequest || {};
     if (!req.request_id) return this._closeArOverlay();
-    if (action === 'approve' && !this._arGrantLevel) return; // need a level
-    const grantLevel = this._arGrantLevel;
+    // Multi-select grant → comma-list (server stores a SET). Need ≥1 to approve.
+    const grantLevel = Array.from(this._arGrantLevels || []).join(',');
+    if (action === 'approve' && !grantLevel) return; // need at least one level
     const payload = { hub_id: req.hub_id, request_id: req.request_id, action };
     if (action === 'approve') payload.granted_level = grantLevel;
     try {
@@ -760,7 +769,31 @@ class __panel_activity extends LetcBox {
     } catch (e) {
       this.warn('[panel_activity] secure_share.list_requests failed', e);
     }
-    const merged = accessReqs.concat(live);
+    // Recent share-open notifications for the creator ("{email} opened {folder}").
+    // Fetched separately from secure_share_access_event; guarded so it no-ops
+    // gracefully before the backing SP is applied to the DB, and never affects the
+    // rest of the list. Deduped per recipient server-side.
+    let openNotifs = [];
+    try {
+      const on = await this.postService({
+        service: (SERVICE.secure_share && SERVICE.secure_share.list_open_notifications) || 'secure_share.list_open_notifications',
+        hub_id: Visitor.id,
+      });
+      const rows = _.isArray(on) ? on : (_.isArray(on?.data) ? on.data : []);
+      const dismissedOpen = this._dismissedKeys || new Set();
+      openNotifs = rows
+        .filter((r) => !dismissedOpen.has(`share_open:${r.id}`))
+        .map((r) => ({
+          ...r,
+          category: 'share_open',
+          key_id: r.id,
+          last_id: r.last_seen_at,
+          ctime: r.last_seen_at,
+        }));
+    } catch (e) {
+      this.warn('[panel_activity] secure_share.list_open_notifications failed', e);
+    }
+    const merged = accessReqs.concat(openNotifs, live);
 
     const unread_count = merged.length;
     RADIO_BROADCAST.trigger('activity-update', { unread_count });
@@ -847,15 +880,26 @@ class __panel_activity extends LetcBox {
               can_chat    : LOCALE.SECURE_SHARE_CAN_CHAT,
               can_edit    : LOCALE.SECURE_SHARE_CAN_EDIT,
             };
-            const lvl = LV[it.requested_level];
-            e.action = lvl
-              ? LOCALE.SECURE_SHARE_REQUESTING_LEVEL_ACCESS.replace('{level}', lvl)
+            // requested_level is a SET (comma-list) — join the level labels.
+            const lvls = String(it.requested_level || '').split(',').map(s => s.trim())
+              .filter(Boolean).map(l => LV[l]).filter(Boolean);
+            e.action = lvls.length
+              ? LOCALE.SECURE_SHARE_REQUESTING_LEVEL_ACCESS.replace('{level}', lvls.join(', '))
               : LOCALE.SECURE_SHARE_REQUESTING_ACCESS;
           }
           // Prefer the shared node's own name (e.g. "vb") over the workspace root.
           e.link_label = it.node_name || it.workspace_name;
           e.sender     = it.requester_email;
           e.fullname   = it.requester_email;
+          break;
+        case 'share_open':
+          // A recipient opened a secure share with notify-on-open enabled:
+          // "{email} opened {folder}". Informational — keeps the default row click.
+          e.event      = 'secure_share.opened';
+          e.action     = LOCALE.SECURE_SHARE_OPENED_ACTION;
+          e.link_label = it.node_name || it.workspace_name || '';
+          e.sender     = it.recipient_email;
+          e.fullname   = it.recipient_email;
           break;
         // case 'media':
         //   e.service = 'open-folder';

@@ -53,15 +53,17 @@ class __window_secure_share extends mfsInteract {
     // `const {service}=options||svc` resolved to undefined and dropped every event.
     const service = (options && options.service) || svc;
     if (service === 'share.track_event') {
-      if (data && data.event === 'secure_share_access_requested') {
-        // Scope to THIS panel's shared node: with multiple secure-share panels open,
-        // only the one for the requested node should pop the approve popup. node_id is
-        // carried on the event; fall through if it's absent (best-effort/legacy).
-        if (!data.node_id || data.node_id === this.mget(_a.nid)) {
-          this._showApprovePopup(data);
-        }
-      }
+      // NOTE: we deliberately do NOT auto-open the approve popup inside this panel
+      // on a new access request (per Lexis 2026-06-14) — it rendered as a stuck,
+      // unusable popup cramped into the sharing panel. Approval is handled from the
+      // activity-panel notification instead (which opens a proper centered popup).
+      // The window only refreshes its lists here.
       this._loadShares();
+      // Also refresh the access-list table (who opened / current recipients) so it
+      // updates live — e.g. on secure_share_opened when a recipient views the share,
+      // or after an approval/revoke. _loadShares only reloads the links list, not this
+      // table, so without this the access list stayed stale until a manual refresh.
+      if (this._accessEvents) this._loadAccessEvents();
       return;
     }
     if (super.onWsMessage) super.onWsMessage(svc, data, options);
@@ -147,6 +149,8 @@ class __window_secure_share extends mfsInteract {
         return this._toggleRequireEmail();
       case 'toggle-require-password':
         return this._toggleRequirePassword();
+      case 'toggle-password-visibility':
+        return this._togglePasswordVisibility(cmd);
       case 'add-email-chip':
         return this._addEmailChip();
       case 'remove-email-chip':
@@ -314,6 +318,21 @@ class __window_secure_share extends mfsInteract {
     }
   }
 
+  // Show/hide the password — mirrors welcome/signin: toggle the input type, swap
+  // the eye_closed↔eye glyph and flip data-state (CSS colours it on state=1).
+  _togglePasswordVisibility(cmd) {
+    const row = cmd.el.closest(`.${this.fig.family}__password-row`);
+    const input = row && row.querySelector('input');
+    if (!input) return;
+    const isVisible = input.type === 'text';
+    input.type = isVisible ? 'password' : 'text';
+    const useEl = cmd.el.querySelector('svg use');
+    if (useEl) {
+      useEl.setAttribute('xlink:href', isVisible ? '#--icon-eye_closed' : '#--icon-eye');
+    }
+    cmd.el.dataset.state = isVisible ? '0' : '1';
+  }
+
   _addEmailChip() {
     if (!this._chipsInput) return;
     const input = this._chipsInput.el.querySelector('input');
@@ -353,6 +372,66 @@ class __window_secure_share extends mfsInteract {
       })
     );
     this._chipsContainer.feed(Skeletons.Box.X({ className: `${pfx}__chips`, kids }));
+    this._collapseChipsOverflow();
+  }
+
+  // Keep the chips on a single row (Figma "Access filter"): show the chips that
+  // fit, collapse the rest into a "+N" badge whose hover popup lists the hidden
+  // emails. Re-measured on every render, so it stays correct as chips change.
+  _collapseChipsOverflow() {
+    if (!this._chipsContainer) return;
+    const pfx = this.fig.family;
+    const container = this._chipsContainer.el;
+    const row = container && container.querySelector(`.${pfx}__chips`);
+    if (!row) return;
+
+    // Reset previous collapse so measuring starts from the full set.
+    const oldBadge = row.querySelector(`.${pfx}__chip-more`);
+    if (oldBadge) oldBadge.remove();
+    const chips = Array.from(row.querySelectorAll(`.${pfx}__chip`));
+    chips.forEach(c => { c.style.display = ''; });
+
+    const avail = container.clientWidth;
+    if (!avail || chips.length === 0) return;
+
+    const gap     = parseFloat(getComputedStyle(row).columnGap) || 8;
+    const RESERVE = 52; // room for the "+N" badge
+
+    // Count the leading chips that fit on the line.
+    let used    = 0;
+    let visible = chips.length;
+    for (let i = 0; i < chips.length; i++) {
+      const w = chips[i].offsetWidth + (i ? gap : 0);
+      if (used + w > avail) { visible = i; break; }
+      used += w;
+    }
+    if (visible === chips.length) return; // everything fits → no badge
+
+    // Make room for the badge beside the visible chips.
+    while (visible > 0 && used + gap + RESERVE > avail) {
+      visible--;
+      used -= chips[visible].offsetWidth + (visible ? gap : 0);
+    }
+    for (let i = visible; i < chips.length; i++) chips[i].style.display = 'none';
+
+    const hidden = this._emailChips.slice(visible);
+    const badge  = document.createElement('div');
+    badge.className = `${pfx}__chip ${pfx}__chip-more`;
+    const count = document.createElement('span');
+    count.className = `${pfx}__chip-text`;
+    count.textContent = `+${hidden.length}`;
+    badge.appendChild(count);
+
+    const popup = document.createElement('div');
+    popup.className = `${pfx}__chip-popup`;
+    hidden.forEach(email => {
+      const r = document.createElement('div');
+      r.className = `${pfx}__chip-popup-row`;
+      r.textContent = email;
+      popup.appendChild(r);
+    });
+    badge.appendChild(popup);
+    row.appendChild(badge);
   }
 
   async _loadShares() {
@@ -419,15 +498,17 @@ class __window_secure_share extends mfsInteract {
     }
   }
 
-  // ⊖ revoke a single recipient's current grant (re-requestable — not blocklisted),
-  // then refresh the table so the row drops off.
+  // ⊖ revoke from the access list now revokes the share LINK (token) the recipient
+  // came through — identical to the Shared-links Revoke. The old revoke_recipient
+  // only dropped a node permission grant (which a token/gate viewer never had) and
+  // cleared the access-event rows, so the recipient kept access via the still-valid
+  // token. Revoking the token is the only thing that actually cuts token-based access.
   async _revokeRecipient(cmd) {
-    const email  = cmd.mget('email') || '';
-    const uid    = cmd.mget('uid') || '';
-    if (!email && !uid) return;
-    const nid    = this.mget(_a.nid);
+    const token  = cmd.mget(_a.token) || '';
+    if (!token) return;
     const hub_id = this.mget(_a.hub_id);
-    await this.postService(SERVICE.secure_share.revoke_recipient, { nid, hub_id, email, uid });
+    await this.postService(SERVICE.secure_share.revoke, { token, hub_id });
+    this._loadShares();
     this._loadAccessEvents();
   }
 
@@ -480,8 +561,14 @@ class __window_secure_share extends mfsInteract {
             }
           }
         }
-        // The allowed-emails list is OPTIONAL — when empty, any email is accepted.
-        if (this._emailChips.length) payload.allowed_emails = this._emailChips;
+        // "Require email to view" must restrict to at least one allowed email/domain;
+        // with an empty list the gate would accept ANY email (a cosmetic, non-real
+        // gate). Block creation and prompt the sender to add one (per Lexis 2026-06-14).
+        if (!this._emailChips.length) {
+          Butler.say(LOCALE.SECURE_SHARE_REQUIRE_ALLOWED_EMAIL);
+          return;
+        }
+        payload.allowed_emails = this._emailChips;
       }
 
       if (this._requirePassword) {
@@ -509,13 +596,26 @@ class __window_secure_share extends mfsInteract {
         this._linkResult.feed(Skeletons.Box.X({
           className : `${pfx}__link-row`,
           kids      : [
-            Skeletons.Note({ className: `${pfx}__link-text`, content: data.link }),
-            Skeletons.Button.Svg({
-              ico       : 'apps-copy',
-              className : `${pfx}__copy-icon`,
-              service   : 'copy-secure-link',
-              link      : data.link,
-              uiHandler : [this],
+            // Figma: brand-tinted box holding [link glyph + URL] on the left and
+            // the copy icon pinned to the right (space-between).
+            Skeletons.Box.X({
+              className : `${pfx}__link-box`,
+              kids      : [
+                Skeletons.Box.X({
+                  className : `${pfx}__link-main`,
+                  kids      : [
+                    Skeletons.Image.Svg({ className: `${pfx}__link-icon`, ico: 'apps-link-simple' }),
+                    Skeletons.Note({ className: `${pfx}__link-text`, content: data.link }),
+                  ]
+                }),
+                Skeletons.Button.Svg({
+                  ico       : 'apps-copy',
+                  className : `${pfx}__copy-icon`,
+                  service   : 'copy-secure-link',
+                  link      : data.link,
+                  uiHandler : [this],
+                }),
+              ]
             }),
             Skeletons.Box.X({
               className : `${pfx}__link-revoke button`,
@@ -524,7 +624,7 @@ class __window_secure_share extends mfsInteract {
               uiHandler : [this],
               kidsOpt   : { active: 0 },
               kids      : [
-                Skeletons.Image.Svg({ className: `${pfx}__link-revoke-icon`, ico: 'ban' }),
+                Skeletons.Image.Svg({ className: `${pfx}__link-revoke-icon`, ico: 'app-ban' }),
                 Skeletons.Note({ content: LOCALE.SECURE_SHARE_REVOKE })
               ]
             })
@@ -532,7 +632,9 @@ class __window_secure_share extends mfsInteract {
         }));
       }
       this._loadShares();
-      this._resetForm();
+      // Keep the user's setup visible after Get-link (per Lexis 2026-06-14) so they
+      // can see what they configured and add more; previously _resetForm() wiped it.
+      // State is per-window-instance, so it naturally clears when the panel is closed.
     }
   }
 

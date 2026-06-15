@@ -1,5 +1,6 @@
 const winman = require('window/manager');
 const WS_EVENT = "ws:event";
+const EOD = "end:of:data";
 
 class __dmz_wm extends winman {
   constructor(...args) {
@@ -120,6 +121,18 @@ class __dmz_wm extends winman {
     // share privilege so e.g. a view-only share can't expose a working download
     // button in the player.
     if (item.media && item.media.mset) item.media.mset(_a.privilege, sharePriv);
+    // Propagate the share TOKEN to every window opened from the DMZ WM. A nested
+    // sub-folder opens as its own window/folder, whose make_dir/upload already send
+    // `mget(token)` — but without it pinned here the launched window has no token,
+    // so the server write-guard (media.js _secureShareWriteAllowed) sees none,
+    // returns "allowed", and the creator-bound guest session's full privilege lets a
+    // VIEW-ONLY recipient write one layer deep. Pinning the token closes that hole at
+    // every nesting level (the guard re-derives caps from the token, not the folder).
+    const shareToken = this.mget(_a.token);
+    if (shareToken) {
+      item.token = shareToken;
+      if (item.media && item.media.mset) item.media.mset(_a.token, shareToken);
+    }
     return item;
   }
 
@@ -187,6 +200,20 @@ class __dmz_wm extends winman {
 
       case _a.list:
         this.iconsList = child;
+        // The dmz list bypasses buildIconsList (the home-wm path that wires
+        // partitioning), so set up the same 3-tier folder/file partition here
+        // (mirrors window-folder). The MutationObserver buckets tiles into
+        // .folder-section / .file-section as they arrive; the EOD pass handles
+        // the initial load. Guarded so it no-ops if the mixin is ever absent.
+        if (typeof this._setupPartitionObserver === "function") {
+          this._partitionListPart = child;
+          child.el.dataset.role = _a.container;
+          this._setupPartitionObserver(child);
+          child.once(EOD, () => {
+            this._partitionFoldersAndFiles(child);
+            this._applyFolderScrollMode(child);
+          });
+        }
         break;
 
       case 'windows-layer':
@@ -339,12 +366,20 @@ class __dmz_wm extends winman {
       case "open-node":
         return this.openContent(cmd);
 
-      case "filter-by-type":
+      case "filter-by-type": {
+        // The toolkit button() stores its `value` on the model, so read
+        // cmd.mget('value') first (cmd.options.value was always undefined —
+        // that's why filtering did nothing). Fall back to options/args.
+        const value =
+          (cmd.mget && cmd.mget(_a.value)) ||
+          (cmd.options && cmd.options.value) ||
+          args.value;
         this.ensurePart(_a.list).then((l) => {
-          l.setApi(this.getCurrentApi(cmd.options.value));
+          l.setApi(this.getCurrentApi(value));
           l.restart();
         });
         return;
+      }
 
       case "add-folder":
         return this.ensurePart("wrapper-modal").then((p) => {
@@ -430,10 +465,15 @@ class __dmz_wm extends winman {
       order: _K.order.descending,
       hub_id: this.mget(_a.hub_id),
       nid: this.mget(_a.nid),
-      share_id: original.share_id,
-      recipient_id: original.recipient_id,
-      file_nid: original.file_nid,
     };
+    // Only forward share_id / recipient_id / file_nid when they actually exist.
+    // Copying them unconditionally added keys with `undefined` values, which the
+    // socket serializes to the literal string "undefined" — the server then
+    // filters by share_id="undefined" and returns an empty list (filter looked
+    // broken). The window-folder request omits these entirely.
+    if (original.share_id != null) base.share_id = original.share_id;
+    if (original.recipient_id != null) base.recipient_id = original.recipient_id;
+    if (original.file_nid != null) base.file_nid = original.file_nid;
     switch (type) {
       case "all":
       case "docs":

@@ -954,6 +954,19 @@ class __window_manager extends push {
   }
 
   onDomRefresh() {
+    // Secure-share recipients who signed in from a share link return to that link
+    // now — the desk has booted and the tab is authenticated. welcome persists the
+    // target in sessionStorage because login does a full page reload that wipes any
+    // in-memory flag. Takes precedence over the hub deep-link (the recipient is
+    // usually not a member of the share's hub). One-shot; only set during a secure-
+    // share login, so a normal desk load is unaffected.
+    const _ssReturn = sessionStorage.getItem('drumee_secure_share_return');
+    if (_ssReturn) {
+      sessionStorage.removeItem('drumee_secure_share_return');
+      sessionStorage.removeItem('drumee_hubDeepLink');
+      location.href = _ssReturn;
+      return;
+    }
     this.feed(require("./skeleton")(this));
     // Capture hub_id synchronously before any async ops so hash changes cannot lose it.
     // Falls back to sessionStorage set by welcome module for the not-logged-in flow.

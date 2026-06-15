@@ -1,3 +1,5 @@
+@use "mixins/drumee";
+
 .gradient-start {
   &-inner-folder {
     stop-color: #ccb2ff;
@@ -67,46 +69,74 @@
     padding: var(--spacer-4) var(--spacer-6) 0;
   }
 
+  // Based on window-folder__tab-bar-*: tabs group on the left, view-toggle
+  // pinned right (space-between); grey-pill items (rgba(0,0,0,.05)) with an
+  // area-coloured active border, on a --normal-bg-90 row.
   &__tab-bar {
     &-wrapper {
       align-items: center;
-      gap: var(--spacer-4);
-      padding: var(--spacer-4);
-      border-bottom: 1px solid var(--border-muted);
+      justify-content: space-between;
+      padding: 8px 16px 8.5px;
+      background-color: var(--normal-bg-90);
+      border-bottom: 1px solid var(--border-muted, rgba(0, 0, 0, 0.2));
+    }
+
+    // Tab items group fills the row so the view-toggle stays pinned right.
+    &-tabs {
+      display: flex;
+      flex: 1 1 auto;
+      align-items: center;
+      gap: 16px;
+      min-width: 0;
     }
 
     &-item {
       cursor: pointer;
+      display: flex;
       align-items: center;
       justify-content: center;
-      padding: var(--spacer-3) var(--spacer-6);
+      height: 32px;
+      min-width: 84px;
+      padding: 8px 16px;
+      gap: 6px;
+      box-sizing: border-box;
       color: var(--normal-fg-10);
-      background-color: var(--normal-bg-100);
-      border-radius: var(--corner-radius-2);
-      font-size: 14px;
-      display: flex;
-      gap: var(--spacer-2);
+      background-color: rgba(0, 0, 0, 0.05);
+      border: 1px solid transparent;
+      border-radius: 6px;
+      font-family: "Geist", sans-serif;
+      font-size: 12px;
+      font-weight: 700;
+      line-height: 1;
 
       svg {
         width: 16px;
         height: 16px;
       }
 
+      &[data-state="1"] {
+        border-color: var(--area-private);
+      }
+
       &:hover {
-        color: var(--normal-fg-20);
+        color: var(--normal-fg-10);
+        background-color: rgba(0, 0, 0, 0.07);
       }
     }
-    // The tabBar wraps its tab items in __tab-bar-tabs so the folder view-toggle
-    // can sit beside them (flex space-between). The inter-tab gap used to come
-    // from the wrapper (tabs were its direct children); now it must live here,
-    // or non-folder windows (team, sharebox, dmz) lose their tab spacing. Folder
-    // overrides gap (16px) + flex in its own skin.
-    &-tabs {
-      display: flex;
-      align-items: center;
-      gap: var(--spacer-4);
-      min-width: 0;
-    }
+  }
+
+  // Active tab border tracks the wrapper's area (mirror window-folder).
+  &__tab-bar-wrapper[data-area="personal"] &__tab-bar-item[data-state="1"] {
+    border-color: var(--area-personal);
+  }
+
+  &__tab-bar-wrapper[data-area="share"] &__tab-bar-item[data-state="1"],
+  &__tab-bar-wrapper[data-area="dmz"] &__tab-bar-item[data-state="1"] {
+    border-color: var(--area-share);
+  }
+
+  &__tab-bar-wrapper[data-area="public"] &__tab-bar-item[data-state="1"] {
+    border-color: var(--area-public);
   }
 }
 
@@ -421,19 +451,61 @@
 }
 
 .window-filter {
+  // Based on window-folder__filter-bar: centered row on a --normal-bg-90 surface
+  // with a visible --border-default divider.
   &__bar {
-    gap: var(--spacer-6);
-    padding: var(--spacer-4) var(--spacer-6);
+    align-items: center;
+    gap: 24px;
+    padding: 8px 24px 8.5px;
     color: var(--normal-fg-10);
-    border-bottom: 1px solid var(--border-muted);
+    border-bottom: 1px solid var(--border-default, #d1d1d6);
+    background: var(--normal-bg-90);
   }
 
+  // Based on window-folder__filter-tab-main: underline tab — transparent 2px
+  // bottom border that fills with the area colour when active (default
+  // --area-private; --area-share for share/dmz, etc.).
   &__tab {
+    align-items: center;
+    justify-content: center;
+    border-bottom: 2px solid transparent;
+    background: transparent;
     cursor: pointer;
+    @include drumee.typo($size: 13px, $line: 1, $weight: 700, $color: var(--normal-fg-10));
 
-    &:hover {
-      color: var(--normal-fg-20);
+    .note-content {
+      @include drumee.typo($size: 13px, $line: 1, $weight: 700, $color: var(--normal-fg-10));
+      cursor: pointer;
     }
+
+    &[data-state="1"],
+    &[data-radiotoggle="on"] {
+      padding-bottom: 6px;
+      border-bottom-color: var(--area-share);
+      @include drumee.typo($size: 13px, $line: 1, $weight: 800, $color: var(--normal-fg-10));
+
+      .note-content {
+        @include drumee.typo($size: 13px, $line: 1, $weight: 800, $color: var(--normal-fg-10));
+      }
+    }
+  }
+
+  // Active underline tracks the bar's area (mirror window-folder).
+  &__bar[data-area="personal"] &__tab[data-state="1"],
+  &__bar[data-area="personal"] &__tab[data-radiotoggle="on"] {
+    border-bottom-color: var(--area-personal);
+  }
+
+  &__bar[data-area="share"] &__tab[data-state="1"],
+  &__bar[data-area="share"] &__tab[data-radiotoggle="on"],
+  &__bar[data-area="dmz"] &__tab[data-state="1"],
+  &__bar[data-area="dmz"] &__tab[data-radiotoggle="on"] {
+    border-bottom-color: var(--area-share);
+  }
+
+  &__bar[data-area="public"] &__tab[data-state="1"],
+  &__bar[data-area="public"] &__tab[data-radiotoggle="on"] {
+    border-bottom-color: var(--area-public);
   }
 }
 
