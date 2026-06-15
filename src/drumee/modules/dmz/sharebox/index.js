@@ -110,8 +110,23 @@ class __dmz_sharebox extends LetcBox {
       case 'ref-password':
         return this._input = child;
 
+      case 'email-row':
+        return this._emailRow = child;
+
       case 'ref-email':
-        return this._emailInput = child;
+        this._emailInput = child;
+        // Live email validation (Figma 3.2.2): as the recipient types a valid
+        // address, surface a green "Email recognised" confirmation + green check;
+        // on blur an invalid address shows a red alert. The authoritative
+        // allow-list check still runs server-side on Continue (EMAIL_MISMATCH).
+        this.waitElement(child.el, () => {
+          const input = child.el.querySelector('input');
+          if (!input) return;
+          const onType = _.debounce(() => this.validateEmailLive(false), 250);
+          input.addEventListener('input', onType);
+          input.addEventListener('blur', () => this.validateEmailLive(true));
+        });
+        return;
 
       case 'desk-content':
         child.once('content:ready', () => {
@@ -343,7 +358,9 @@ class __dmz_sharebox extends LetcBox {
       email,
     };
 
+    this._setButtonLoading(true);
     this.postService(SERVICE.dmz.login, opt).then((data) => {
+      this._setButtonLoading(false);
       if (data && data.status === 'TICKET_OK' && data.is_secure) {
         this.mset(data);
         this.mset({ recipient_email: email });
@@ -357,7 +374,7 @@ class __dmz_sharebox extends LetcBox {
       } else {
         this.handleInfoStatus(data);
       }
-    });
+    }).catch(() => this._setButtonLoading(false));
   }
 
   /**
@@ -387,7 +404,11 @@ class __dmz_sharebox extends LetcBox {
     if (needEmail)    opt.email    = email;
     if (needPassword) opt.password = password;
 
+    // Show the in-flight spinner on the Continue/Unlock button and block
+    // re-submits until the server responds (cleared on every outcome below).
+    this._setButtonLoading(true);
     this.postService(SERVICE.dmz.login, opt).then((data) => {
+      this._setButtonLoading(false);
       if (data && data.status === 'TICKET_OK' && data.is_secure) {
         this.mset(data);
         if (needEmail) { this._verifiedEmail = email; this.mset({ recipient_email: email }); }
@@ -410,7 +431,7 @@ class __dmz_sharebox extends LetcBox {
         return this.renderErrorMessage(LOCALE.DMZ_PASSWORD_TO_CONTINUE);
       }
       return this.handleInfoStatus(data);
-    });
+    }).catch(() => this._setButtonLoading(false));
   }
 
   /**
@@ -449,6 +470,9 @@ class __dmz_sharebox extends LetcBox {
           pw.mset(_a.type, _a.text);
         }
         return pw.reload();
+
+      case 'toggle-password-visibility':
+        return this._togglePasswordVisibility(cmd);
 
       case 'verify-password':
         return this.verifyPassword();
@@ -624,7 +648,9 @@ class __dmz_sharebox extends LetcBox {
     if (this._verifiedEmail) {
       opt.email = this._verifiedEmail;
     }
+    this._setButtonLoading(true);
     this.postService(SERVICE.dmz.login, opt).then((data) => {
+      this._setButtonLoading(false);
       if (data && data.status === 'TICKET_OK' && data.is_secure) {
         // Secure-share password accepted — grant access
         this.mset(data);
@@ -653,7 +679,7 @@ class __dmz_sharebox extends LetcBox {
       } else {
         this.handleInfoStatus(data);
       }
-    })
+    }).catch(() => this._setButtonLoading(false))
   }
 
   /**
@@ -762,8 +788,11 @@ class __dmz_sharebox extends LetcBox {
    * @param {String} msg
   */
   renderErrorMessage(msg) {
+    // Figma alert style: light-red rounded box with centered red text (matches
+    // the green success variant's geometry). Co-locates under -password BEM.
+    const pfx = `${this.fig.family}-password`
     const msgBox = Skeletons.Note({
-      className: `${this.fig.family}__note error-msg`,
+      className: `${pfx}__message-text ${pfx}__message-text--error`,
       content: msg
     })
 
@@ -773,15 +802,159 @@ class __dmz_sharebox extends LetcBox {
 
     buttonWrapper.el.dataset.mode = _a.closed;
     msgWrapper.el.dataset.mode = _a.open;
-    msgWrapper.el.dataset.error = _a.yes;
+    msgWrapper.el.dataset.error = '';
+    msgWrapper.el.dataset.variant = 'error';
     msgWrapper.feed(msgBox);
 
     const f = () => {
       msgWrapper.el.dataset.mode = _a.closed
+      msgWrapper.el.dataset.variant = ''
       msgWrapper.clear()
       buttonWrapper.el.dataset.mode = _a.open
     }
     return _.delay(f, Visitor.timeout(2000))
+  }
+
+  /**
+   * Live email validation for the gate (Figma 3.2.2). Called on input (debounced)
+   * and on blur. While typing, a freshly-valid address upgrades to the green
+   * "recognised" confirmation; an invalid/empty address quietly clears it. Only
+   * `onBlur` surfaces a red format error, so the field doesn't nag mid-typing.
+   * NOTE: this is a client-side FORMAT check — the server allow-list ("recognised")
+   * is still enforced on Continue (EMAIL_MISMATCH). A true server-side recognise
+   * check would need a read-only validation endpoint (dmz.login grants on success).
+   * @param {Boolean} onBlur
+   */
+  validateEmailLive(onBlur = false) {
+    if (!this._emailInput) return;
+    const email = (this._emailInput.getData().value || '').trim();
+
+    if (!email) {
+      this._setEmailValid(false);
+      return this._hideGateMessage();
+    }
+    if (Validator.email(email)) {
+      this._setEmailValid(true);
+      return this.renderGateSuccess(
+        LOCALE.SECURE_SHARE_EMAIL_RECOGNISED || 'Email recognised - click Continue to access.'
+      );
+    }
+    // Invalid format: clear the check; only alert on blur (not every keystroke).
+    this._setEmailValid(false);
+    if (onBlur) {
+      this.renderGateError(LOCALE.SECURE_SHARE_EMAIL_INVALID_FORMAT || LOCALE.INVALID_EMAIL || 'Please enter a valid email address.');
+    } else {
+      this._hideGateMessage();
+    }
+  }
+
+  /**
+   * @param {Boolean} valid  toggles the email row's green check.
+   */
+  _setEmailValid(valid) {
+    if (this._emailRow && this._emailRow.el) {
+      this._emailRow.el.dataset.valid = valid ? _a.yes : '';
+    }
+  }
+
+  /**
+   * Hide + reset the gate message row.
+   */
+  _hideGateMessage() {
+    const msgWrapper = this.__messageBox;
+    if (!msgWrapper) return;
+    msgWrapper.el.dataset.mode = _a.closed;
+    msgWrapper.el.dataset.variant = '';
+    msgWrapper.clear();
+  }
+
+  /**
+   * Green success message (Figma 3.2.2). Unlike renderErrorMessage it keeps the
+   * Continue button visible — the recipient still has to click it to proceed.
+   * @param {String} msg
+   */
+  renderGateSuccess(msg) {
+    const pfx = `${this.fig.family}-password`;
+    const msgWrapper = this.__messageBox;
+    if (!msgWrapper) return;
+    msgWrapper.el.dataset.mode = _a.open;
+    msgWrapper.el.dataset.error = '';
+    msgWrapper.el.dataset.variant = 'success';
+    msgWrapper.feed(Skeletons.Note({
+      className: `${pfx}__message-text ${pfx}__message-text--success`,
+      content: msg
+    }));
+  }
+
+  /**
+   * Persistent red alert in the gate message row (keeps the button visible).
+   * Used by live blur validation; the transient verify-time error uses
+   * renderErrorMessage (which also hides/restores the button).
+   * @param {String} msg
+   */
+  renderGateError(msg) {
+    const pfx = `${this.fig.family}-password`;
+    const msgWrapper = this.__messageBox;
+    if (!msgWrapper) return;
+    msgWrapper.el.dataset.mode = _a.open;
+    msgWrapper.el.dataset.error = '';
+    msgWrapper.el.dataset.variant = 'error';
+    msgWrapper.feed(Skeletons.Note({
+      className: `${pfx}__message-text ${pfx}__message-text--error`,
+      content: msg
+    }));
+  }
+
+  /**
+   * Toggle the in-flight spinner on the gate's Continue/Unlock button. Sets
+   * `data-loading` on the button wrapper, which the SCSS turns into a spinner
+   * and blocks pointer events (prevents double-submit).
+   * @param {Boolean} loading
+   */
+  /**
+   * Show/hide the password field — same behaviour as window-secure-share:
+   * toggle the input type and swap the eye_closed↔eye glyph + data-state (CSS
+   * tints it purple on state=1).
+   * @param {LetcBox} cmd  the eye button that was clicked
+   */
+  _togglePasswordVisibility(cmd) {
+    const row = cmd.el.closest(`.${this.fig.family}-password__row`);
+    const input = row && row.querySelector('input');
+    if (!input) return;
+    const isVisible = input.type === 'text';
+    input.type = isVisible ? 'password' : 'text';
+    const useEl = cmd.el.querySelector('svg use');
+    if (useEl) {
+      useEl.setAttribute('xlink:href', isVisible ? '#--icon-eye_closed' : '#--icon-eye');
+    }
+    cmd.el.dataset.state = isVisible ? '0' : '1';
+  }
+
+  _setButtonLoading(loading) {
+    // Resolve the button wrapper from the DOM (robust against part-capture
+    // timing) and fall back to the registered part. Querying this.el guarantees
+    // we toggle the real `.buttons-wrapper` node that the CSS spinner targets.
+    const wrapper =
+      (this.el && this.el.querySelector(`.${this.fig.family}-password__row.buttons-wrapper`)) ||
+      (this.__buttonWrapper && this.__buttonWrapper.el);
+    if (!wrapper) return;
+
+    if (loading) {
+      clearTimeout(this._loadingTimer);
+      this._loadingStart = Date.now();
+      wrapper.dataset.loading = _a.yes;
+      return;
+    }
+
+    // Keep the spinner visible for a minimum window so a fast server response
+    // doesn't flip on→off within a single frame (which reads as "no loading").
+    const MIN_MS = 500;
+    const elapsed = this._loadingStart ? (Date.now() - this._loadingStart) : MIN_MS;
+    const wait = Math.max(0, MIN_MS - elapsed);
+    clearTimeout(this._loadingTimer);
+    this._loadingTimer = setTimeout(() => {
+      if (wrapper) wrapper.dataset.loading = '';
+    }, wait);
   }
 
   /**
