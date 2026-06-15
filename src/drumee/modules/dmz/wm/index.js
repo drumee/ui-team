@@ -121,6 +121,18 @@ class __dmz_wm extends winman {
     // share privilege so e.g. a view-only share can't expose a working download
     // button in the player.
     if (item.media && item.media.mset) item.media.mset(_a.privilege, sharePriv);
+    // Propagate the share TOKEN to every window opened from the DMZ WM. A nested
+    // sub-folder opens as its own window/folder, whose make_dir/upload already send
+    // `mget(token)` — but without it pinned here the launched window has no token,
+    // so the server write-guard (media.js _secureShareWriteAllowed) sees none,
+    // returns "allowed", and the creator-bound guest session's full privilege lets a
+    // VIEW-ONLY recipient write one layer deep. Pinning the token closes that hole at
+    // every nesting level (the guard re-derives caps from the token, not the folder).
+    const shareToken = this.mget(_a.token);
+    if (shareToken) {
+      item.token = shareToken;
+      if (item.media && item.media.mset) item.media.mset(_a.token, shareToken);
+    }
     return item;
   }
 
