@@ -354,12 +354,20 @@ class __dmz_wm extends winman {
       case "open-node":
         return this.openContent(cmd);
 
-      case "filter-by-type":
+      case "filter-by-type": {
+        // The toolkit button() stores its `value` on the model, so read
+        // cmd.mget('value') first (cmd.options.value was always undefined —
+        // that's why filtering did nothing). Fall back to options/args.
+        const value =
+          (cmd.mget && cmd.mget(_a.value)) ||
+          (cmd.options && cmd.options.value) ||
+          args.value;
         this.ensurePart(_a.list).then((l) => {
-          l.setApi(this.getCurrentApi(cmd.options.value));
+          l.setApi(this.getCurrentApi(value));
           l.restart();
         });
         return;
+      }
 
       case "add-folder":
         return this.ensurePart("wrapper-modal").then((p) => {
@@ -445,10 +453,15 @@ class __dmz_wm extends winman {
       order: _K.order.descending,
       hub_id: this.mget(_a.hub_id),
       nid: this.mget(_a.nid),
-      share_id: original.share_id,
-      recipient_id: original.recipient_id,
-      file_nid: original.file_nid,
     };
+    // Only forward share_id / recipient_id / file_nid when they actually exist.
+    // Copying them unconditionally added keys with `undefined` values, which the
+    // socket serializes to the literal string "undefined" — the server then
+    // filters by share_id="undefined" and returns an empty list (filter looked
+    // broken). The window-folder request omits these entirely.
+    if (original.share_id != null) base.share_id = original.share_id;
+    if (original.recipient_id != null) base.recipient_id = original.recipient_id;
+    if (original.file_nid != null) base.file_nid = original.file_nid;
     switch (type) {
       case "all":
       case "docs":

@@ -720,12 +720,15 @@
   }
 }
 
-/* Tab bar — based on window-folder__tab-bar-* (the toolkit hardcodes the
-   .window-body__tab-bar-* classes; the full window common.scss isn't loaded on
-   the DMZ page, so the styling is declared here). Grey-pill tabs on a
-   --normal-bg-90 row; the view-toggle pins right via space-between. */
-.window-body__tab-bar {
-  &-wrapper {
+/* Tab bar — based on window-folder__tab-bar-*. The toolkit puts BOTH the shared
+   `window-body__tab-bar-*` and the family `dmz-sharebox__tab-bar-*` classes on
+   each element; we target the FAMILY classes (like window-folder does with
+   `window-folder__tab-bar-*`) and scope under `.dmz-sharebox__main.drive-popup`
+   so these win over any shared `.window-body__tab-bar-*` rule regardless of load
+   order — the earlier shared-class version was being overridden. Grey-pill tabs
+   on a --normal-bg-90 row; the view-toggle pins right via space-between. */
+.dmz-sharebox__main.drive-popup {
+  .dmz-sharebox__tab-bar-wrapper {
     align-items: center;
     justify-content: space-between;
     padding: 8px 16px 8.5px;
@@ -733,7 +736,7 @@
     border-bottom: 1px solid var(--border-muted, var(--sb-border));
   }
 
-  &-tabs {
+  .dmz-sharebox__tab-bar-tabs {
     display: flex;
     flex: 1 1 auto;
     align-items: center;
@@ -741,7 +744,7 @@
     min-width: 0;
   }
 
-  &-item {
+  .dmz-sharebox__tab-bar-item {
     cursor: pointer;
     display: flex;
     align-items: center;
@@ -769,28 +772,26 @@
       color: var(--normal-fg-10);
       background-color: rgba(0, 0, 0, 0.07);
     }
+
+    // Active tab — share-area (pink) border (window-folder's share state + image).
+    &[data-state="1"] {
+      border-color: var(--area-share);
+    }
   }
-}
 
-/* Active tab — share-area (pink) border, matching window-folder's
-   [data-area="share"] active state + the reference image. */
-.dmz-sharebox__main.drive-popup .window-body__tab-bar-item[data-state="1"] {
-  border-color: var(--area-share);
-}
+  // Tab icon/label — same emoji glyphs as window-folder (📄 / 💬 / 📋).
+  .dmz-sharebox__tab-bar-icon,
+  .dmz-sharebox__tab-bar-label {
+    display: inline-flex;
+    align-items: center;
+    line-height: 1;
+    pointer-events: none;
+  }
 
-/* Tab icon/label — the share tabs use the same emoji glyphs as window-folder
-   (📄 / 💬 / 📋); align them on the row baseline. */
-.dmz-sharebox__tab-bar-icon,
-.dmz-sharebox__tab-bar-label {
-  display: inline-flex;
-  align-items: center;
-  line-height: 1;
-  pointer-events: none;
-}
-
-.dmz-sharebox__tab-bar-icon {
-  font-size: 14px;
-  transform: translateY(-0.5px);
+  .dmz-sharebox__tab-bar-icon {
+    font-size: 14px;
+    transform: translateY(-0.5px);
+  }
 }
 
 /* File view toggle — segmented pill (list | grid), mirrors window-folder. Both
