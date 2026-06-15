@@ -127,6 +127,22 @@
       display: none;
     }
   }
+
+  // Gate focus (Figma 3.2.1 "Overlay+OverlayBlur"): while the email/password gate
+  // is up, blur the page chrome behind the card so only the gate card
+  // (.dmz-sharebox-password__container) and the conversion banner
+  // (.dmz-sharebox-footer__gate-banner) read sharp. The card lives in __content
+  // (z-index 1200) and the banner in __footer (z-index 2000) — both above this —
+  // so blurring the top-nav + header here leaves them untouched. The decorative
+  // workspace backdrop behind the card carries its own blur (see password.scss).
+  &[data-gate="open"] {
+    .dmz-sharebox__top-nav,
+    .dmz-sharebox__page-header {
+      filter: blur(18px);
+      pointer-events: none;
+      user-select: none;
+    }
+  }
 }
 
 /* Top app bar */
@@ -387,6 +403,74 @@
     @include drumee.typo($size: 14px, $line: 20px, $weight: 600, $color: var(--sb-cta));
     font-family: var(--sb-font-body);
     text-align: center;
+  }
+
+  /* Gate-banner variant — shown beneath the email/password gate. Pixel-matched
+     to Figma node 1648:96669 ("Sticky Bottom Conversion Banner"). Fully isolated
+     from the landing footer above via its own __gate-* classes. */
+  &__gate-main {
+    width: 100%;
+    align-items: center;
+    // Headroom so the raised cloud can overflow above the bar without clipping.
+    padding-top: 40px;
+  }
+
+  &__gate-banner {
+    position: relative;
+    width: 100%;
+    align-items: center;
+    justify-content: space-between;
+    // Figma bar is ~123px tall; vertical padding around the 32px headline gets
+    // there. Left padding reserves room for the absolutely-positioned cloud.
+    padding: 12px 32px 12px 190px;
+    border-radius: 12px;
+    // Figma: vertical gradient Primary/40 → Primary/50.
+    background: linear-gradient(180deg, #847eff 0%, #433cc5 100%);
+    overflow: visible;
+  }
+
+  // Full-color Drumee cloud (raw sprite — keeps its white outline + drop shadow),
+  // raised so its top rises above the bar's top edge (Figma: logo ~37px above).
+  // The SVG viewBox is 230×184 (~1.25:1); the cloud sits lower-left within it.
+  &__gate-logo {
+    position: absolute;
+    left: 26px;
+    bottom: -8px;
+    width: 180px;
+    height: 144px;
+
+    svg {
+      width: 100%;
+      height: 100%;
+    }
+  }
+
+  &__gate-headline {
+    @include drumee.typo($size: 30px, $line: 32px, $weight: 600, $color: #ffffff);
+    font-family: var(--sb-font-body);
+    letter-spacing: -0.6px;
+    white-space: nowrap;
+  }
+
+  &__gate-signup-btn {
+    flex-shrink: 0;
+    background: #ffffff;
+    border-radius: 999px;
+    padding: 18px 34px;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+
+    &:hover {
+      filter: brightness(0.97);
+    }
+  }
+
+  &__gate-signup-label {
+    @include drumee.typo($size: 20px, $line: 20px, $weight: 600, $color: #34343a);
+    font-family: var(--sb-font-body);
+    letter-spacing: -0.4px;
+    white-space: nowrap;
   }
 }
 

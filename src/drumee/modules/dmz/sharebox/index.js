@@ -284,6 +284,11 @@ class __dmz_sharebox extends LetcBox {
     // beneath the gate card — distinct from the post-unlock landing banner. Only
     // applies on the gate; the public/landing flow never sets this flag.
     this.mset({ _gate_footer: true });
+    // Focus the gate (Figma 3.2.1): blur the page chrome (top-nav + header) behind
+    // the card so ONLY the gate card and the conversion banner read sharp. The
+    // gate card and footer already sit in higher stacking layers, so the
+    // `[data-gate]` rule only needs to blur the chrome + decorative backdrop.
+    this.el.dataset.gate = _a.open;
     this.ensurePart(_a.footer).then((footer) => {
       footer.feed(this.footerSkeleton(this));
       footer.el.dataset.mode = _a.open;
@@ -667,6 +672,8 @@ class __dmz_sharebox extends LetcBox {
       this.mset({ _gate_footer: false });
       this.ensurePart(_a.footer).then((footer) => footer.feed(this.footerSkeleton(this)));
     }
+    // Access granted — un-blur the page chrome (gate is gone).
+    delete this.el.dataset.gate;
 
     this._startRevokePolling();
 
@@ -834,6 +841,8 @@ class __dmz_sharebox extends LetcBox {
    *@param {Object} data
   */
   handleInfoStatus(data = {}) {
+    // Leaving the gate (error / expiry / revoke) — un-blur the page chrome.
+    delete this.el.dataset.gate;
     let opt = {};
     let status = data.validity || data.status;
     // Secure shares are exempt from the workspace-level dmz_expiry override — their
