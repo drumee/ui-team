@@ -15,42 +15,49 @@
  * =============================================================================
  */
 const __message = function(_ui_, content, type) {
+  const fig = _ui_.fig.family;
   let body;
   if (_.isString(content)) {
     body = Skeletons.Note({
-      className : `${_ui_.fig.family}__message ${type} my-30`,
-      content,
-      service   : _e.close
+      className : `${fig}__message ${type}`,
+      content
     });
-  } else { 
+  } else {
     body = content;
   }
+  // Based on builtins/window/confirm + the update prompt image: logo+close
+  // header, left-aligned body, right-aligned Cancel(secondary)/Confirm(primary).
+  // The `notice` modifier scopes the left/right alignment to this dialog so the
+  // shared login/reconnect dialogs keep their centered layout.
   const a = Skeletons.Box.Y({
-    className : `${_ui_.fig.family}__main u-jc-center u-ai-center`,
-    debug     : __filename, 
-    sys_pn : "container",
+    className : `${fig}__main notice`,
+    debug     : __filename,
+    sys_pn    : "container",
     kids: [
-      Preset.Button.Close(_ui_),
-      Skeletons.Note({
-        className : `${_ui_.fig.family}__title mb-20`,
+      require('./header')(_ui_, _e.cancel),
+      type ? Skeletons.Note({
+        className : `${fig}__title`,
         content   : type
-      }),
-      body, 
+      }) : null,
+      body,
       Skeletons.Box.X({
+        className : `${fig}__buttons`,
         kids:[
           Skeletons.Note({
-            className : `${_ui_.fig.family}__button btn u-jc-center overflow-text go`,
-            content   : LOCALE.CONFIRM,
-            service   : _e.confirm
+            className : `${fig}__button-secondary button`,
+            content   : _ui_.mget(_a.cancel) || LOCALE.CANCEL,
+            service   : _e.cancel,
+            uiHandler : _ui_
           }),
           Skeletons.Note({
-            className : `${_ui_.fig.family}__button btn u-jc-center overflow-text`,
-            content   : LOCALE.CANCEL,
-            service   : _e.cancel
+            className : `${fig}__button-danger button`,
+            content   : _ui_.mget(_a.confirm) || LOCALE.YES,
+            service   : _e.confirm,
+            uiHandler : _ui_
           })
         ]
       })
-    ]});
+    ].filter(Boolean)});
   return a;
 };
 module.exports = __message;

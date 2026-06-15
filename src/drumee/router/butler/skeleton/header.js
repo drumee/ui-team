@@ -1,12 +1,15 @@
-module.exports = function (ui) {
-  const fig = ui.fig.family; // window-info
-  // Based on window/confirm: brand logo on the left, an X close on the right
-  // (matches the "drumee … ✕" header in the reference dialog).
+/**
+ * Notification-dialog header (based on builtins/window/confirm): brand logo on
+ * the left, an X close on the right. Shared by the butler confirm + message
+ * dialogs so they match the window/confirm look.
+ * @param {Object} ui
+ * @param {String} [closeSignal]  signal fired by the X (defaults to _e.close)
+ */
+module.exports = function (ui, closeSignal) {
+  const fig = ui.fig.family;
   return Skeletons.Box.X({
     className: `${fig}__topbar`,
-    sys_pn: "topbar",
     debug: __filename,
-    service: _e.raise,
     kids: [
       Skeletons.Box.X({
         className: `${fig}__logo`,
@@ -23,8 +26,8 @@ module.exports = function (ui) {
       }),
       Skeletons.Box.X({
         className: `${fig}__close`,
-        service: _e.close,
-        uiHandler: ui,
+        signal: closeSignal || _e.close,
+        uiHandler: [ui],
         bubble: 0,
         kidsOpt: { active: 0 },
         kids: [
