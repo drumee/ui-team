@@ -481,7 +481,10 @@ class __dmz_sharebox extends LetcBox {
         // before redirecting (open-redirect guard) — see _secureShareReturnTarget.
         _params.push(`return_to=${encodeURIComponent(location.href)}`);
         const _suffix = `?${_params.join('&')}`;
-        window.open(`${location.protocol}//${main_domain}/${_K.module.signin}${_suffix}`, '_blank');
+        // Preserve the deployment base path (e.g. "/-/test/") so login opens on the
+        // SAME build, not the bare root domain. location.pathname is "/-/test/" on
+        // the test endpoint and "/" in production → identical to the old URL there.
+        window.open(`${location.protocol}//${main_domain}${location.pathname}${_K.module.signin}${_suffix}`, '_blank');
         return;
       }
 
@@ -519,7 +522,10 @@ class __dmz_sharebox extends LetcBox {
         // Same return-to-share behaviour as go-login (welcome validates the URL).
         _params.push(`return_to=${encodeURIComponent(location.href)}`);
         const _suffix = `?${_params.join('&')}`;
-        window.open(`${location.protocol}//${main_domain}/${_K.module.signup}${_suffix}`, '_blank');
+        // Preserve the deployment base path (e.g. "/-/test/") so signup opens on the
+        // SAME build, not the bare root domain. location.pathname is "/-/test/" on
+        // the test endpoint and "/" in production → identical to the old URL there.
+        window.open(`${location.protocol}//${main_domain}${location.pathname}${_K.module.signup}${_suffix}`, '_blank');
         return;
       }
 

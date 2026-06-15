@@ -27,7 +27,15 @@ const __skl_secure_share_access_events = function(_ui_, rows) {
     ]
   });
 
-  if (!Array.isArray(rows) || !rows.length) {
+  // Only list IDENTIFIED recipients. Anonymous "Public" visits — no recipient_email
+  // and the system-guest actor_id (ffffffffffffffff) — are excluded: there is no
+  // per-recipient identity to act on, and the ⊖ below revokes the share link they
+  // came through (the same effect as the Shared-links Revoke).
+  const visible = (Array.isArray(rows) ? rows : []).filter(
+    (r) => r.recipient_email || (r.actor_id && r.actor_id !== 'ffffffffffffffff')
+  );
+
+  if (!visible.length) {
     return Skeletons.Box.Y({
       className : `${pfx}__events-table`,
       kids      : [
@@ -37,7 +45,7 @@ const __skl_secure_share_access_events = function(_ui_, rows) {
     });
   }
 
-  const rowKids = rows.map((r) => {
+  const rowKids = visible.map((r) => {
     const email   = r.recipient_email || LOCALE.SECURE_SHARE_PUBLIC;
     const timeStr = r.entered_at ? Dayjs.unix(r.entered_at).format('MMM D, h:mm A') : '';
     const durStr  = __fmtDuration(r.duration);
@@ -56,18 +64,16 @@ const __skl_secure_share_access_events = function(_ui_, rows) {
         Skeletons.Note({ className: `${pfx}__events-cell col-duration`, content: durStr }),
         Skeletons.Box.X({
           className : `${pfx}__events-cell col-action`,
-          // Only show ⊖ when there's a real recipient to revoke. Anonymous "Public"
-          // visits have no grant — and `email` above is the localized "Public" LABEL,
-          // which must never be sent to revoke_recipient. Pass the REAL recipient_email
-          // (or actor_id), never the display label.
-          kids      : (r.recipient_email || r.actor_id) ? [
+          // ⊖ revokes the share link (token) this recipient came through — same
+          // effect as the Revoke button in the Shared-links list. token_id from the
+          // access-event SP IS the share id that secure_share_revoke matches on.
+          kids      : r.token_id ? [
             Skeletons.Button.Svg({
               ico       : 'ban',
               className : `${pfx}__events-revoke`,
               service   : 'revoke-access-recipient',
               tooltips  : LOCALE.SECURE_SHARE_REVOKE_RECIPIENT,
-              email     : r.recipient_email || '',
-              uid       : r.actor_id || '',
+              token     : r.token_id,
               uiHandler : [_ui_],
             })
           ] : []
