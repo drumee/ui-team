@@ -316,8 +316,10 @@ class __window_mfs extends DrumeeMFS {
     }
 
     // Home wm uses 3-tier partition (workspace → folder → file). Other
-    // surfaces (share, search, meeting) keep flat list. Folder window
-    // bypasses buildIconsList entirely via buildContent override.
+    // surfaces (search, meeting) keep flat list. Folder window bypasses
+    // buildIconsList entirely via buildContent override. The DMZ share grid
+    // also bypasses buildIconsList (its own onPartReady), and wires the same
+    // partition setup there — see modules/dmz/wm/index.js.
     const usesPartition = this.isWm === 1;
     if (usesPartition) {
       child.el.style.visibility = "hidden";

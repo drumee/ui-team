@@ -38,6 +38,37 @@
   &__main {
     padding: var(--spacer-5);
     min-height: 300px;
+    gap: 12px;
+  }
+
+  // ── Header (based on window/confirm): logo left, X close right ──────────────
+  &__topbar {
+    width: 100%;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: space-between;
+    position: relative;
+  }
+
+  &__close {
+    width: 28px;
+    height: 28px;
+    padding: 4px;
+    flex-shrink: 0;
+    cursor: pointer;
+    color: var(--normal-fg-10);
+    margin-left: auto;
+    border-radius: 6px;
+    transition: background-color 120ms ease;
+
+    svg {
+      width: 18px;
+      height: 18px;
+    }
+
+    &:hover {
+      background-color: rgba(0, 0, 0, 0.04);
+    }
   }
 
   &__icon.badge {
@@ -60,26 +91,25 @@
     }
 
     & .note-reader {
-      padding: 25px;
-      text-align: left; //center;
-      width: 480px;
-      margin-right: auto;
-      margin-left: auto;
-      margin-bottom: 6px;
-      justify-content: center;
-      align-items: center;
-      //  white-space: break-spaces;
-      //  line-break: anywhere;
+      // Based on window/confirm__message: left-aligned body that fills the card
+      // width (the outer __main supplies the padding).
+      padding: 0;
+      text-align: left;
+      width: 100%;
+      margin: 0 0 6px;
+      justify-content: flex-start;
+      align-items: flex-start;
       word-wrap: break-word;
       @include drumee.typo(
-        $weight: 300,
-        $size: 18px,
-        $line: 33px,
-        $color: var(--default-text-color)
-      ); //24px
+        $weight: 400,
+        $size: 14px,
+        $line: 20px,
+        $color: var(--normal-fg)
+      );
 
       p {
-        text-align: center;
+        text-align: left;
+        margin: 0;
       }
 
       &.primary-color {
@@ -95,28 +125,29 @@
   }
 
   &__message {
-    padding: 25px;
-    text-align: center;
-    width: 480px;
-    margin-right: auto;
-    margin-left: auto;
-    margin-bottom: 6px;
+    // Based on window/confirm__message: left-aligned, fills the card width.
+    display: block;
+    padding: 0;
+    text-align: left;
+    width: 100%;
+    margin: 0 0 6px;
     @include drumee.typo(
-      $weight: 300,
-      $size: 24px,
-      $line: 33px,
-      $color: var(--default-text-color)
+      $weight: 400,
+      $size: 14px,
+      $line: 20px,
+      $color: var(--normal-fg)
     );
 
     p {
-      text-align: center;
+      text-align: left;
+      margin: 0;
     }
   }
 
   &__footer {
     width: 100%;
-    justify-content: center;
-    margin-bottom: 50px;
+    justify-content: flex-end;
+    margin-bottom: var(--spacer-4);
   }
 
   // &__button {
@@ -143,9 +174,13 @@
 
   @include common-button;
 
+  // Based on window/confirm__buttons: right-aligned action row.
   &__buttons {
-    justify-content: center;
-    padding: 10px;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+    width: 100%;
+    padding-top: 2px;
   }
 
   &__button-main {

@@ -7,53 +7,46 @@ function __skl_dmz_sharebox_footer(_ui_) {
   // ("Shared via Drumee — Get your own workspace →" + "Join 2,000+ creators").
   // It reuses the same footer element classes so the purple-bar styling applies.
   if (_ui_.mget("_gate_footer")) {
-    const gateIcon = Skeletons.Box.X({
-      className: `${footerFig}__icon-tile`,
-      kids: [
-        Skeletons.Button.Svg({
-          ico: "raw-logo-drumee-icon",
-          className: `${footerFig}__icon`,
-        }),
-      ],
+    // Gate banner — pixel-matched to Figma "Sticky Bottom Conversion Banner"
+    // (node 1648:96669): a purple vertical-gradient pill bar (#847eff→#433cc5,
+    // radius 24) with the full-color Drumee cloud raised above its left edge, a
+    // large white headline, and a white pill "Sign up free" button with dark
+    // text. The cloud comes from the RAW sprite — the normalized pipeline strips
+    // per-path fills + the drop-shadow filter, collapsing the two-color cloud to
+    // a dark blob. Uses dedicated __gate-* classes so the post-unlock landing
+    // footer (the other branch below) keeps its own styling.
+    const gateLogo = Skeletons.Button.Svg({
+      ico: "raw-app-logo-footer",
+      className: `${footerFig}__gate-logo`,
     });
 
     const gateHeadline = Skeletons.Note({
-      className: `${footerFig}__headline`,
+      className: `${footerFig}__gate-headline`,
       content: LOCALE.SECURE_SHARE_GATE_FOOTER_HEADLINE,
     });
 
-    const gateLeft = Skeletons.Box.X({
-      className: `${footerFig}__left`,
-      kids: [gateIcon, gateHeadline],
-    });
-
     const gateSignupButton = Skeletons.Box.X({
-      className: `${footerFig}__signup-btn`,
+      className: `${footerFig}__gate-signup-btn`,
       sys_pn: "button-wrapper",
       service: "open-signup",
       uiHandler: _ui_,
       kidsOpt: { active: 0 },
       kids: [
         Skeletons.Note({
-          className: `${footerFig}__signup-label`,
+          className: `${footerFig}__gate-signup-label`,
           content: LOCALE.SECURE_SHARE_GATE_FOOTER_CTA,
         }),
       ],
     });
 
-    const gateRight = Skeletons.Box.X({
-      className: `${footerFig}__right`,
-      kids: [gateSignupButton],
-    });
-
     const gateBanner = Skeletons.Box.X({
-      className: `${footerFig}__banner`,
+      className: `${footerFig}__gate-banner`,
       debug: __filename,
-      kids: [gateLeft, gateRight],
+      kids: [gateLogo, gateHeadline, gateSignupButton],
     });
 
     return Skeletons.Box.X({
-      className: `${footerFig}__main`,
+      className: `${footerFig}__main ${footerFig}__gate-main`,
       kids: [gateBanner],
     });
   }

@@ -58,7 +58,9 @@ function __skl_dmz_sharebox_gate(_ui_, opts = {}) {
   });
 
   const emailEntry = Skeletons.Box.X({
-    className : `${fig}__row password`,
+    className : `${fig}__row password has-check`,
+    sys_pn    : 'email-row',
+    dataset   : { valid: '' },
     kids      : [
       Skeletons.EntryBox({
         className    : `${fig}__entry password`,
@@ -73,6 +75,11 @@ function __skl_dmz_sharebox_gate(_ui_, opts = {}) {
           { reason: LOCALE.INVALID_EMAIL,            comply: Validator.email }
         ],
         showError : false
+      }),
+      // Green check shown once a valid email is recognised (Figma 3.2.2).
+      Skeletons.Button.Svg({
+        ico       : 'apps-check-circle',
+        className : `${fig}__entry-check`
       })
     ]
   });
@@ -86,11 +93,18 @@ function __skl_dmz_sharebox_gate(_ui_, opts = {}) {
         sys_pn       : 'ref-password',
         formItem     : _a.password,
         type         : _a.password,
-        shower       : 1,
         preselect    : 1,
         errorHandler : [_ui_],
         validators   : [{ reason: LOCALE.DMZ_PASSWORD_TO_CONTINUE, comply: Validator.require }],
         showError    : false
+      }),
+      // Eye show/hide toggle — same glyphs as window-secure-share__password-eye
+      // (eye_closed ↔ eye), driven by the toggle-password-visibility handler.
+      Skeletons.Button.Svg({
+        ico       : 'eye_closed',
+        className : `${fig}__password-eye`,
+        service   : 'toggle-password-visibility',
+        uiHandler : _ui_
       })
     ]
   });

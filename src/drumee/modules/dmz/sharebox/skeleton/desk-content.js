@@ -43,16 +43,7 @@ function dmzTopbar(ui) {
     ],
   });
 
-  const settingsBtn = Skeletons.Button.Svg({
-    ico:
-     "setting",
-    className: `${cnWindowButton}__icon-button`,
-    service: "show-settings",
-    uiHandler: ui,
-    partHandler: ui,
-    sys_pn: "ref-window-icon",
-  });
-
+  
   const buttons = Skeletons.Box.X({
     className: `${cnWindowButton}__buttons-wrapper`,
     kids: [
@@ -66,7 +57,7 @@ function dmzTopbar(ui) {
         ? Skeletons.Button.Label({
             className: `${cnWindowButton}__label-button secondary`,
             label: LOCALE.ADD_NEW || "Add new",
-            ico: "editbox_list-plus",
+            ico: "plus-header",
             service: "add-folder",
             uiHandler: ui,
           })
@@ -75,7 +66,7 @@ function dmzTopbar(ui) {
         ? Skeletons.Button.Label({
             className: `${cnWindowButton}__label-button`,
             label: LOCALE.UPLOAD,
-            ico: "desktop_upload",
+            ico: "app-upload",
             service: _e.upload,
             uiHandler: ui,
           })
@@ -86,13 +77,11 @@ function dmzTopbar(ui) {
       ui.mget('can_download')
         ? Skeletons.Button.Svg({
             className: `${cnWindowButton}__icon-button`,
-            ico: "desktop_download",
+            ico: "app-download",
             service: _e.download,
             uiHandler: ui,
-            tooltips: LOCALE.DOWNLOAD,
           })
         : null,
-      settingsBtn,
     ],
   });
 

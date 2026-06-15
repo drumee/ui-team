@@ -853,8 +853,9 @@
   &__events-cell.col-time     { width: 90px; flex-shrink: 0; }
   &__events-col.col-duration,
   &__events-cell.col-duration { width: 50px; flex-shrink: 0; }
+  // overflow:visible so the revoke button's hover tooltip can escape the cell.
   &__events-col.col-action,
-  &__events-cell.col-action   { width: 30px; flex-shrink: 0; justify-content: flex-end; text-align: right; }
+  &__events-cell.col-action   { width: 30px; flex-shrink: 0; justify-content: flex-end; text-align: right; overflow: visible; }
 
   // Figma: avatar 16px, round.
   &__events-avatar {
@@ -874,6 +875,7 @@
 
   // Figma "MinusCircle" action — red (Signal/Error) glyph.
   &__events-revoke {
+    position: relative;
     width: 14px;
     height: 14px;
     flex-shrink: 0;
@@ -881,6 +883,42 @@
 
     svg { width: 14px; height: 14px; fill: var(--error); }
     &:hover { opacity: 0.8; }
+
+    // The framework appends `<div class="tooltips">` here and toggles it on
+    // hover; without local rules it renders unstyled and gets clipped away.
+    // Anchored to the LEFT of the icon (the action column is right-docked) with
+    // a right-caret, so the bubble opens into the row instead of below — where
+    // the scrollable, overflow-clipped events container would hide it. Mirrors
+    // `&__sub-label-info`.
+    .tooltips {
+      position: absolute;
+      z-index: 100;
+      top: 50%;
+      right: calc(100% + 8px);
+      transform: translateY(-50%);
+      width: max-content;
+      max-width: 200px;
+      padding: var(--spacer-3) var(--spacer-4);
+      border-radius: var(--corner-radius-3);
+      background: var(--bg-tooltips);
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.16);
+      @include drumee.typo($size: 12px, $line: 17px, $color: var(--default-text-tooltips));
+      white-space: normal;
+      text-align: left;
+      cursor: default;
+
+      // Caret pointing right toward the icon.
+      &::before {
+        content: '';
+        position: absolute;
+        top: 50%;
+        left: 100%;
+        transform: translateY(-50%);
+        border: 5px solid transparent;
+        border-right: 0;
+        border-left-color: var(--bg-tooltips);
+      }
+    }
   }
 
   &__events-empty {
