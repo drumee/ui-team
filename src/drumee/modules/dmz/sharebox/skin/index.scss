@@ -217,6 +217,24 @@
     font-family: var(--sb-font-body);
     text-align: center;
   }
+
+  // Authenticated recipient identity (replaces the guest Login / Join CTA).
+  &__account {
+    gap: 10px;
+    align-items: center;
+  }
+
+  &__account-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    flex: 0 0 auto;
+  }
+
+  &__account-label {
+    @include drumee.typo($size: 14px, $line: 20px, $weight: 600, $color: var(--sb-text));
+    font-family: var(--sb-font-body);
+  }
 }
 
 /* Workspace breadcrumb header */

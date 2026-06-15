@@ -95,10 +95,12 @@ class __dmz_sharebox extends LetcBox {
         })
 
       case _a.footer:
-        // Viral landing footer ("Sign Up Free") — shown to ALL recipients so the
-        // logged-in view matches the incognito one (user choice: identical). The gate
-        // footer is fed separately by promptGate.
+        // Viral "Sign Up Free" landing footer — guests only. A logged-in recipient
+        // already has an account, so don't pitch signup to them (they see their own
+        // identity in the top-nav instead). The gate footer is fed separately by
+        // promptGate, so the anonymous email/password gate banner is unaffected.
         if (!this.mget('is_secure')) return;
+        if (this.mget('is_authenticated')) return;
         return this.waitElement(child.el, () => {
           child.feed(this.footerSkeleton(this));
         });
