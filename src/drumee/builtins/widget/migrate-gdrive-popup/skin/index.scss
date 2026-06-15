@@ -1,17 +1,19 @@
 @use "mixins/drumee";
 
-// Drumee brand accent (orange). Same hue in both themes; tints are derived
-// with rgba so they sit correctly on light AND dark surfaces. Everything
-// structural (surfaces, borders, shadows, text) uses theme tokens so the
-// popup flips cleanly between light and dark.
+// Drumee brand accent — INDIGO/PURPLE per Figma (node 1661-60457). Solid
+// colors reuse the design-system tokens (--primary-purple-40 = #5950ff is the
+// brand button color; --primary-purple-50 = #433cc5 is the darker/hover shade)
+// — the same tokens settings_main already uses. The brand purple is identical
+// in light AND dark themes, so the rgba tints below are theme-safe. Everything
+// structural (surfaces, borders, shadows, text) still flips via theme tokens.
 //
 // NOTE: drumee.typo() maps $weight -> font-family but does NOT emit
 // `font-weight` (a system quirk — see skin/mixins/typo.scss). Following the
 // settings_main convention, bold text declares `font-weight` explicitly.
-$accent: #fa8540;
-$accent-strong: #ec6f2a;
-$accent-soft: rgba(250, 133, 64, 0.12);
-$accent-soft-2: rgba(250, 133, 64, 0.2);
+$accent: var(--primary-purple-40);
+$accent-strong: var(--primary-purple-50);
+$accent-soft: rgba(89, 80, 255, 0.12);
+$accent-soft-2: rgba(89, 80, 255, 0.2);
 $danger-soft: rgba(246, 81, 75, 0.12);
 
 .migrate-gdrive-popup {
@@ -168,15 +170,17 @@ $danger-soft: rgba(246, 81, 75, 0.12);
     padding: var(--spacer-4);
   }
 
+  // Home/personal folder glyph — coral per Figma (Signal/Restricted #d65f59),
+  // decoupled from the brand accent so it stays red while buttons are indigo.
   &__dest-ico {
     width: 36px;
     height: 36px;
     padding: 7px;
     box-sizing: border-box;
     border-radius: var(--corner-radius-2);
-    background: $accent-soft;
-    color: $accent;
-    fill: $accent;
+    background: rgba(214, 95, 89, 0.14);
+    color: #d65f59;
+    fill: #d65f59;
     flex: 0 0 auto;
   }
 
@@ -501,7 +505,7 @@ $danger-soft: rgba(246, 81, 75, 0.12);
 
   &__progress-fill {
     height: 100%;
-    background: linear-gradient(90deg, $accent, #ffb072);
+    background: linear-gradient(90deg, $accent, var(--primary-purple-30));
     border-radius: inherit;
     transition: width 250ms cubic-bezier(0.4, 0, 0.2, 1);
     min-width: 4px;
@@ -570,7 +574,14 @@ $danger-soft: rgba(246, 81, 75, 0.12);
   }
 
   // ───────── Figma-flow additions (choose / in-progress / result) ─────────
-  &__primary-btn--full { width: 100%; text-align: center; }
+  // Full-width CTA (Start Migrate) = Figma "Medium Button" (16px/600, taller).
+  &__primary-btn--full {
+    width: 100%;
+    text-align: center;
+    padding: 14px var(--spacer-5);
+    @include drumee.typo($size: 16px, $weight: 600, $line: 24px);
+    font-weight: 600;
+  }
   &__primary-btn--grow { flex: 1; text-align: center; }
 
   &__btn-row { gap: var(--spacer-3); }
