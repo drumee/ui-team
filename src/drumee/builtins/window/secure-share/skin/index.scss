@@ -555,6 +555,8 @@
 
   &__expiry-options {
     gap: var(--spacer-3);
+    // Containing block for the floating custom-expiry calendar overlay.
+    position: relative;
 
     &[data-mode='closed'] { display: none; }
   }
@@ -601,11 +603,27 @@
     svg { width: 14px; height: 14px; }
   }
 
+  // Range length (in days) shown on the Custom preset once an end date is set.
+  &__preset-days {
+    flex-shrink: 0;
+    @include drumee.typo($size: 12px, $line: 20px, $weight: 600, $color: var(--primary-50, #433cc5));
+
+    &:empty { display: none; }
+  }
+
   &__row {
     align-items: center;
     gap: var(--spacer-4);
 
+    // Custom expiry calendar floats as an absolute overlay above the preset
+    // segmented control (Figma "set date") instead of pushing the layout down.
     &.custom-expiry {
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: calc(100% + var(--spacer-3));
+      z-index: 50;
+
       &[data-mode='closed'] { display: none; }
     }
 
@@ -622,7 +640,9 @@
   &__datepicker {
     flex: 1;
 
-    input {
+    // Direct child only — style the trigger <input>, not the calendar's inner
+    // inputs (cur-year / time) which live inside .flatpickr-calendar.
+    > input {
       width: 100%;
       padding: var(--spacer-3) var(--spacer-4);
       border-radius: var(--corner-radius-2);
@@ -630,6 +650,18 @@
       background: var(--normal-bg-80);
       color: var(--default-text-color);
     }
+  }
+
+  // In the floating overlay only the calendar card is shown — the row label and
+  // the inline trigger input are hidden. Use the direct-child combinator so we
+  // hide ONLY the trigger <input> (a direct child of the widget root) and not
+  // the calendar's own inputs (cur-year, time) nested inside .flatpickr-calendar.
+  &__row.custom-expiry &__label {
+    display: none;
+  }
+
+  &__row.custom-expiry &__datepicker > input {
+    display: none;
   }
 
   // ── Get link button (full-width, brand) ───────────────────
