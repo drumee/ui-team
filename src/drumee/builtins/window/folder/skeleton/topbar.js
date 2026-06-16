@@ -66,8 +66,14 @@ const __skl_folder_topbar = function (ui) {
 
   // ── Right cluster ────────────────────────────────────────────
   const canUpload = ui.canUpload && ui.canUpload();
+  // Secure-share recipient context: a folder window opened from a share carries the
+  // pinned share token (dmz/wm getWindowPreset). Such a window is a restricted VIEWER —
+  // owner/member chrome (call, Manage Access, settings) must NOT appear, at any nesting
+  // depth. A normal desk folder has no share token → full chrome (unchanged). Upload/
+  // Add-new are already gated on canUpload, which a capped recipient lacks.
+  const inShare = !!ui.mget(_a.token);
 
-  const videoBtn = Skeletons.Button.Svg({
+  const videoBtn = inShare ? "" : Skeletons.Button.Svg({
     className: `${cnFolder}__video-btn`,
     ico: "video-camera-header",
     service: "tab-meeting",
@@ -94,7 +100,7 @@ const __skl_folder_topbar = function (ui) {
   // Share-area folders get a dedicated "Manage Access" icon next to the
   // settings gear; other folder types do not show it.
   const shareBtn =
-    area === _a.share
+    (!inShare && area === _a.share)
       ? Skeletons.Button.Svg({
         className: `${cnFolder}__control-icon share`,
         ico: "app-share",
@@ -103,7 +109,7 @@ const __skl_folder_topbar = function (ui) {
       })
       : "";
 
-  const settingsBtn = Skeletons.Button.Svg({
+  const settingsBtn = inShare ? "" : Skeletons.Button.Svg({
     className: `${cnFolder}__control-icon settings`,
     ico: "gear-header",
     service: _e.settings,
