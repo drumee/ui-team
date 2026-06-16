@@ -1,6 +1,54 @@
 const { copyToClipboard, dataTransfer } = require("@drumee/ui-essentials");
 require("./skin");
 
+const cleanMentionText = (value) =>
+  value == null ? "" : String(value).trim();
+
+const mentionMemberLabel = (member = {}) => {
+  const fullname = cleanMentionText(member.fullname);
+  if (fullname) return fullname;
+
+  const firstname = cleanMentionText(member.firstname);
+  const lastname = cleanMentionText(member.lastname);
+  const fullNameFromParts = [firstname, lastname].filter(Boolean).join(" ");
+  if (fullNameFromParts) return fullNameFromParts;
+
+  const surname = cleanMentionText(member.surname);
+  if (surname) return surname;
+
+  const email = cleanMentionText(member.email);
+  if (email) return email;
+
+  return cleanMentionText(member.drumate_id || member.entity_id || member.id);
+};
+
+const mentionMemberSearchText = (member = {}) =>
+  [
+    mentionMemberLabel(member),
+    member.email,
+    member.firstname,
+    member.lastname,
+    member.surname,
+    member.fullname,
+  ]
+    .map(cleanMentionText)
+    .filter(Boolean)
+    .join(" ")
+    .toLowerCase();
+
+const mentionMemberDebugRow = (member = {}) => ({
+  id: cleanMentionText(member.id),
+  uid: cleanMentionText(member.uid),
+  entity_id: cleanMentionText(member.entity_id),
+  drumate_id: cleanMentionText(member.drumate_id),
+  firstname: cleanMentionText(member.firstname),
+  lastname: cleanMentionText(member.lastname),
+  surname: cleanMentionText(member.surname),
+  fullname: cleanMentionText(member.fullname),
+  email: cleanMentionText(member.email),
+  label: mentionMemberLabel(member),
+});
+
 /**
  *
  */
@@ -2426,24 +2474,39 @@ class __widget_chat extends LetcBox {
       // this folder), not the visitor's personal chat rooms. Falls back to
       // contact_rooms when not in folder scope (bigchat / direct chat).
       if (this.mget("scope") === _a.folder && folderHubId) {
-        console.log("[mention] fetching hub members", { hub_id: folderHubId });
-        contactsPromise = this.fetchService({
+        const payload = {
           service: SERVICE.hub.get_members_by_type,
           hub_id: folderHubId,
           type: "all",
-        }).catch((e) => {
+        };
+        console.log("[mention-members] api request", {
+          source: "hub.get_members_by_type",
+          payload,
+          filter,
+          scope: this.mget("scope"),
+          chatHubId: this.hubId,
+          folderHubId,
+          visitorId: Visitor.id,
+        });
+        contactsPromise = this.fetchService(payload).catch((e) => {
           console.warn("[mention] hub members fetch failed", e);
           return null;
         });
       } else {
-        console.log("[mention] fetching contact_rooms", {
-          hub_id: Visitor.get(_a.id),
-        });
-        contactsPromise = this.fetchService({
+        const payload = {
           service: SERVICE.chat.contact_rooms,
           hub_id: Visitor.get(_a.id),
           key: filter || "",
-        }).catch((e) => {
+        };
+        console.log("[mention-members] api request", {
+          source: "chat.contact_rooms",
+          payload,
+          filter,
+          scope: this.mget("scope"),
+          chatHubId: this.hubId,
+          visitorId: Visitor.id,
+        });
+        contactsPromise = this.fetchService(payload).catch((e) => {
           console.warn("[mention] contact_rooms fetch failed", e);
           return null;
         });
@@ -2470,14 +2533,21 @@ class __widget_chat extends LetcBox {
           files: files.length,
           contacts: contacts.length,
         });
+        console.log("[mention-members] api rows", {
+          count: contacts.length,
+          rows: contacts.map(mentionMemberDebugRow),
+        });
 
         files = files.filter((f) => f.filetype !== _a.hub);
 
-        contacts = contacts.filter((c) => {
-          const firstname = c.firstname || c.surname || "";
-          const lastname = c.lastname || "";
-          const fullname = `${firstname} ${lastname}`.trim();
-          return fullname.length > 0;
+        const contactsBeforeLabelFilter = contacts;
+        contacts = contacts.filter((c) => mentionMemberLabel(c).length > 0);
+        console.log("[mention-members] after label filter", {
+          before: contactsBeforeLabelFilter.length,
+          after: contacts.length,
+          dropped: contactsBeforeLabelFilter
+            .filter((c) => mentionMemberLabel(c).length === 0)
+            .map(mentionMemberDebugRow),
         });
 
         const normalizedFilter = (filter || "").toLowerCase();
@@ -2487,10 +2557,17 @@ class __widget_chat extends LetcBox {
             const path = (f.mention_path || "").toLowerCase();
             return name.includes(normalizedFilter) || path.includes(normalizedFilter);
           });
+          const contactsBeforeSearchFilter = contacts;
           contacts = contacts.filter((c) => {
-            const name =
-              `${c.firstname || ""} ${c.lastname || ""} ${c.surname || ""}`.toLowerCase();
-            return name.includes(normalizedFilter);
+            return mentionMemberSearchText(c).includes(normalizedFilter);
+          });
+          console.log("[mention-members] after search filter", {
+            filter: normalizedFilter,
+            before: contactsBeforeSearchFilter.length,
+            after: contacts.length,
+            dropped: contactsBeforeSearchFilter
+              .filter((c) => !mentionMemberSearchText(c).includes(normalizedFilter))
+              .map(mentionMemberDebugRow),
           });
         }
 
@@ -2550,12 +2627,19 @@ class __widget_chat extends LetcBox {
         }
 
         if (contacts.length) {
+          console.log("[mention-members] render contacts", {
+            count: contacts.length,
+            rendered: contacts.slice(0, 6).map(mentionMemberDebugRow),
+          });
           html += '<div class="mention-section-header">People</div>';
           contacts.slice(0, 6).forEach((c) => {
             const drumate_id = c.drumate_id || c.entity_id || c.id;
-            const firstname = c.firstname || c.surname || "";
-            const lastname = c.lastname || "";
-            const fullname = `${firstname} ${lastname}`.trim();
+            const fullname = mentionMemberLabel(c);
+            const firstname =
+              cleanMentionText(c.firstname) ||
+              cleanMentionText(c.surname) ||
+              fullname;
+            const lastname = cleanMentionText(c.lastname);
             const avatarUrl = Visitor.avatar(drumate_id, _a.vignette);
 
             html += `<div class="mention-item mention-item--contact" data-drumate_id="${drumate_id}" data-firstname="${_.escape(firstname)}" data-lastname="${_.escape(lastname)}" data-fullname="${_.escape(fullname)}" data-type="contact" data-service="mention-select">
