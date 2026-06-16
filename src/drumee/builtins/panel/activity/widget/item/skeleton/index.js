@@ -174,13 +174,17 @@ function getActivityMeta(ui, data) {
         };
       }
       // Default media event (media.new or aggregated rollup)
-      return {
-        before: ui.isFolder() ? 'created folder ' : 'uploaded file ',
-        label: name,
-        after: cnt > 1 ? ` and ${cnt - 1} more` : '',
-        colorClass: 'mention',
-        badge: 'mention',
-      };
+      {
+        const itemFiletype = data.item_filetype || data.uploaded_filetype || ui.mget('item_filetype');
+        const createdFolder = itemFiletype ? itemFiletype === _a.folder : ui.isFolder();
+        return {
+          before: createdFolder ? 'created folder ' : 'uploaded file ',
+          label: name,
+          after: cnt > 1 ? ` and ${cnt - 1} more` : '',
+          colorClass: 'mention',
+          badge: 'mention',
+        };
+      }
 
     case 'meeting': {
       const meetingName = (data.details && (data.details.filename || data.details.user_filename)) || data.hub_name || '';
@@ -250,12 +254,13 @@ module.exports = function (ui) {
     ],
   });
 
+  const textBlockService = data.category === 'access_request'
+    ? 'open-access-request'
+    : data.service;
   const textBlock = Skeletons.Box.Y({
     className: `${pfx}__text-block`,
-    // Access-request rows open the approve popup; other rows keep their default.
-    service: data.category === 'access_request'
-      ? 'open-access-request'
-      : (data.service || 'open-activity'),
+    // Access-request rows open the approve popup; other rows route by category.
+    service: textBlockService,
     uiHandler: ui,
     kids: [
       Skeletons.Note({ className: `${pfx}__text`, content: text }),
