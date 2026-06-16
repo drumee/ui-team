@@ -14,14 +14,6 @@ const {
   getAreaLabel,
 } = require("../../../../builtins/window/skeleton/toolkit/index");
 
-// v1: chat is HIDDEN for share recipients. The chat conversation is hub-membership
-// scoped, so a non-member recipient (anonymous, or one rebound to their own capped
-// identity) cannot load it — the panel was empty/broken. Per the standard share-link
-// model (DocSend has no viewer chat; Drive gates commenting behind sign-in), recipients
-// are viewers. Flip this to re-enable once recipients become real participants (the
-// capped guest principal). Gates every can_chat check in this recipient view.
-const RECIPIENT_CHAT_ENABLED = false;
-
 function dmzTopbar(ui) {
   const cnWindowButton = `${ui.fig.group}-button`;
   const cnTopbarTitle = `${ui.fig.group}-topbar-title`;
@@ -177,12 +169,12 @@ function dmzSplitBody(ui) {
     className: `${ui.fig.family}__split-body ${ui.fig.group}__split-body`,
     sys_pn: "folder-view",
     partHandler: ui,
-    dataset: { view: "files", chat: (ui.mget('can_chat') && RECIPIENT_CHAT_ENABLED) ? '1' : '' },
+    dataset: { view: "files", chat: ui.mget('can_chat') ? '1' : '' },
     // Only MOUNT the conversation when the share grants chat. Rendering it
     // unconditionally let the chat widget load/subscribe to the channel even on a
     // view-only share — the "chat visible before permission" leak. The Chat tab is
     // likewise hidden without the grant (tabBar opt.chat below).
-    kids: (ui.mget('can_chat') && RECIPIENT_CHAT_ENABLED) ? [filesPanel, chatPanel(ui)] : [filesPanel],
+    kids: ui.mget('can_chat') ? [filesPanel, chatPanel(ui)] : [filesPanel],
   });
 }
 
@@ -226,7 +218,7 @@ function __skl_dmz_sharebox_desk_content(_ui_) {
     kids: [
       windowHeader(_ui_, topbar),
       limitedBanner,
-      tabBar(_ui_, { chat: !!_ui_.mget('can_chat') && RECIPIENT_CHAT_ENABLED }),
+      tabBar(_ui_, { chat: !!_ui_.mget('can_chat') }),
       dmzSplitBody(_ui_),
       dialog(_ui_),
       tooltips(_ui_),
