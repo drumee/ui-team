@@ -172,14 +172,29 @@ html {
   }
 }
 
-// While a window-connect (call popup) is open, lift the WM above the
-// slide-out panel containers (z 10001 — chat-p2p inbox, address-book…)
-// and the settings slot. window-connect's own z-index 100100 is inert
-// because it lives inside the WM's __layer (z 1300), so the elevation
-// has to happen at the WM-container level.
-.desk-module__wm-container:has(.window-connect[data-state="1"]) {
+// While a window-connect (call popup) is open, the call must float above the
+// slide-out panels (chat-p2p inbox / Notification / Trash, z 10001) and the
+// sidebar (z 10002) — while the workspace folder GRID stays BELOW those panels.
+//
+// The whole WM lives inside `.window-manager__ui`, a stacking context
+// (`isolation: isolate`, see wm/skin). Inside it the folder grid sits in
+// `__main` (z auto), while every window — including the call — sits in the
+// `__layer` "windows-layer", which the global `[data-state="open"]` rule lifts
+// to z 50000. The previous fix lifted `__ui` as a whole to 30000 so the call
+// (in the 50000 layer) cleared the panels — but that dragged the grid (also in
+// `__ui`) up with it, so the grid painted over chat-p2p / Notification / Trash
+// and the expanded sidebar.
+//
+// Instead, simply DISSOLVE `__ui`'s stacking context for the duration of the
+// call. Its children then resolve their z-index at the document root:
+//   • grid (`__main`, z auto)        → below the panels (10001) & sidebar  ✓
+//   • windows-layer (z 50000)        → above the panels                    ✓
+//     carrying the call (and any open folder window, as before) above them.
+// Nothing drags the grid up, so the panels/sidebar no longer need lifting.
+.desk-module__body:has(.window-connect[data-state="1"]) {
   .window-manager__ui {
-    z-index: 30000 !important;
+    isolation: auto;
+    z-index: auto;
   }
 }
 
