@@ -683,6 +683,10 @@ class __widget_chat extends LetcBox {
       service: SERVICE.media.home,
       hub_id: this.hubId,
     }).then((data) => {
+      // media.home can come back empty for a viewer with no chat home (e.g. a
+      // secure-share recipient who is not a hub member) — guard so reading
+      // chat_upload_id off undefined doesn't throw an unhandled rejection.
+      data = data || {};
       this.mset(_a.home, data);
       this.mset(_a.nid, data.chat_upload_id);
       this.clear_notifications();
