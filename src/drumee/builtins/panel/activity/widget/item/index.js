@@ -223,6 +223,8 @@ class __activity_item extends LetcBox {
     const parent_id = this.mget(_a.parent_id) || "0";
     const filetype = this.mget(_a.filetype) || 'other';
     const nid = this.mget(_a.nid) || "0";
+    const target_filetype = this.mget('target_filetype') || filetype;
+    const target_nid = this.mget('target_nid') || nid;
     let changelog_id = this.mget('changelog_id');
     let ts = new Date().getTime()
     let category = this.mget(_a.category);
@@ -267,8 +269,8 @@ class __activity_item extends LetcBox {
     }
     switch (category) {
       case _a.media:
-        location.hash = `#/desk/wm/open/?hub_id=${hub_id}&nid=${nid}&filetype=${filetype}&pid=${parent_id}&ts=${ts}`;
-        this.triggerHandlers({ service: 'dismiss-activity', hub_id, nid, item_type, changelog_id })
+        location.hash = `#/desk/wm/open/?hub_id=${hub_id}&nid=${target_nid}&filetype=${target_filetype}&pid=${parent_id}&ts=${ts}`;
+        this.triggerHandlers({ service: 'dismiss-activity', hub_id, nid: target_nid, item_type, changelog_id })
         return
 
       case _a.hub_invite:

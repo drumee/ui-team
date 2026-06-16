@@ -423,8 +423,21 @@ export function chatPanel(ui) {
   // reliably set for public shares (it returns is_guest=false, so that gate
   // silently failed). The authenticated window-folder chat has a different
   // fig.family, so it is unaffected and members can still post normally.
-  if (ui.fig.family === "dmz-sharebox") {
-    chat.guest_chat = 1;
+  // DMZ share context = the sharebox itself, OR a NESTED window/folder launched from a
+  // share (it carries the pinned share token — see dmz/wm getWindowPreset). In both,
+  // posting requires an AUTHENTICATED recipient WITH can_chat; everyone else (anonymous,
+  // or no chat grant) stays guest_chat = read-only / sign-in-to-post. Without the
+  // window-folder branch a nested sub-folder is a normal postable chat, letting an
+  // ANONYMOUS viewer post AS the creator. A normal desk folder has no share token, so
+  // this block does not apply and its chat is unchanged. (A nested window/folder does
+  // not carry is_authenticated/can_chat, so canPost is false there → read-only, which
+  // matches the folder-scoped-chat-is-read-only design — recipients post at the share root.)
+  const inDmzShare = ui.fig.family === "dmz-sharebox" ||
+                     (ui.fig.family === "window-folder" && !!ui.mget(_a.token));
+  if (inDmzShare) {
+    const canPost = !!(ui.mget('is_authenticated') && ui.mget('can_chat'));
+    chat.guest_chat  = canPost ? 0 : 1;
+    chat.scoped_post = canPost ? 1 : 0;
     chat.desk = ui;
   }
 

@@ -56,6 +56,8 @@ class __migrate_gdrive_popup extends LetcBox {
     // 'file' (or none yet) uses the Google Picker instead — the app can
     // only see what the user explicitly picks there.
     this._scopeKind = null;                    // 'readonly' | 'file' | null
+    this._connected = false;                   // has a usable Drive OAuth grant
+    this._connectedEmail = null;               // Google account currently connected
     this._pickerAvail = 0;                     // server has api_key+project_number
     this._pickerDocs = [];                     // [{ id, name, is_folder }]
     // Whole-folder import via share-to-SA (drive-sa.json present on server).
@@ -151,6 +153,8 @@ class __migrate_gdrive_popup extends LetcBox {
     }
     this._seenJobId = (res && res.seen_job_id) || null;
     this._scopeKind = (res && res.scope_kind) || null;
+    this._connected = !!(res && res.ok);
+    this._connectedEmail = (res && res.email) || null;
     this._pickerAvail = (res && res.picker) ? 1 : 0;
     this._saAvail = (res && res.sa) ? 1 : 0;
     this._saEmail = (res && res.sa_email) || null;
@@ -230,6 +234,23 @@ class __migrate_gdrive_popup extends LetcBox {
     if (!res || !res.auth_url) return;
     const w = window.open(res.auth_url, 'gdrive-oauth', 'width=520,height=640');
     if (!w) Wm.alert(LOCALE.POPUP_BLOCKED || 'Popup blocked — allow popups and try again.');
+  }
+
+  /**
+   * Forget the connected Google account (server revokes + clears the Drive
+   * tokens, keeping sign-in intact), then re-evaluate → 'not-connected', where
+   * the user can Connect a different account. `connect` already uses
+   * prompt=select_account, so "Switch account" is just _connect() (the OAuth
+   * popup shows Google's account chooser) — no separate endpoint needed.
+   */
+  async _disconnect() {
+    try {
+      await this.postService('google_drive.disconnect', { hub_id: Visitor.id });
+    } catch (e) {
+      this.warn('[migrate-gdrive] disconnect failed', e);
+    }
+    this._connectedEmail = null;
+    await this._refreshScope();
   }
 
   _getInputs() {
@@ -590,6 +611,8 @@ class __migrate_gdrive_popup extends LetcBox {
   isSaAvailable() { return !!this._saAvail; }
   getSaEmail() { return this._saEmail; }
   getSaFolder() { return this._saFolder; }
+  getConnectedEmail() { return this._connectedEmail; }
+  isConnected() { return !!this._connected; }
   getSaError() { return this._saError; }
   isSaChecking() { return !!this._saChecking; }
 
@@ -615,7 +638,7 @@ class __migrate_gdrive_popup extends LetcBox {
     }
     this._saChecking = 0;
     if (res && res.ok && res.folder_id) {
-      this._saFolder = { folder_id: res.folder_id, name: res.name, raw: folder };
+      this._saFolder = { folder_id: res.folder_id, name: res.name, is_folder: !!res.is_folder, raw: folder };
       this._saError = null;
     } else {
       this._saError = (res && res.error) || 'SA_NOT_SHARED';
@@ -774,6 +797,12 @@ class __migrate_gdrive_popup extends LetcBox {
         return this._close();
       case 'gdrive-connect':
         return this._connect();
+      case 'gdrive-disconnect':
+        return this._disconnect();
+      // "Switch account" — reuse connect; its prompt=select_account makes
+      // Google show the account chooser so the user can pick a different Drive.
+      case 'gdrive-switch-account':
+        return this._connect();
       case 'gdrive-start':
         return this._startMigration();
       case 'gdrive-cancel':
@@ -877,7 +906,9 @@ class __migrate_gdrive_popup extends LetcBox {
         this._render();
         return;
       case 'gdrive-sa-back':
-        this._state = 'ready';
+        // Return to wherever the user entered the SA flow from: the ready
+        // screen if connected, the connect screen if not (SA needs no OAuth).
+        this._state = this._connected ? 'ready' : 'not-connected';
         this._render();
         return;
       case 'gdrive-sa-copy': {

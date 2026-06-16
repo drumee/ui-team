@@ -32,6 +32,7 @@ const __skl_messenger = function (ui) {
       autofocus: ui.mget('autofocus'),
       className: `${ui.fig.family}__content`,
       service: _e.submit,
+      shift_enter_delay: ui.mget('shift_enter_delay') || 1200,
       // Without uiHandler, RichText keyup's triggerHandlers has no parent to dispatch to,
       // so messenger.onUiEvent('interactive') never fires and the mention popup stays closed.
       uiHandler: [ui]

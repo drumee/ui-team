@@ -1,15 +1,35 @@
-@use 'mixins/drumee';
+// Datepicker — Figma "1.3.6 set date" (node 1648:60428).
+// Re-themes flatpickr (kept for range / inline+time consumers) to the indigo
+// "set date" calendar card. Tokens come from revamp.scss with literal
+// fallbacks so the skin is correct even outside that compilation scope.
+
+$font: "Geist", system-ui, -apple-system, "Segoe UI", sans-serif;
+
+$brand: var(--primary-40, #5950ff); // ring / Done button
+$brand-deep: var(--primary-50, #433cc5); // month label, selected text
+$brand-on: var(--primary-10, #e4e3ff); // Done label
+$brand-soft: rgba(89, 80, 255, 0.1); // selected / in-range fill
+$brand-hover: rgba(89, 80, 255, 0.12);
+
+$grey-60: var(--tertiary-grey-60, #aeaeb2); // weekday labels
+$grey-70: var(--tertiary-grey-70, #84848c); // day text, Cancel
+$grey-30: var(--tertiary-grey-30, #e5e5ea); // dividers
+$grey-muted: var(--tertiary-grey-50, #c7c7cc); // disabled / adjacent month
+$white: var(--tertiary-grey-10, #ffffff);
+
+$cell: 36px;
 
 // Host widget
 .datepicker {
   position: relative;
 
   input {
-    background: var(--white);
-    border: 1px solid var(--egrey-e8);
+    background: $white;
+    border: 1px solid $grey-30;
     border-radius: 6px;
-    color: var(--egrey-4a);
+    color: $grey-70;
     cursor: pointer;
+    font-family: $font;
     font-size: 13px;
     height: 36px;
     outline: none;
@@ -17,106 +37,427 @@
     width: 100%;
 
     &:focus {
-      border-color: var(--eorange);
+      border-color: $brand;
     }
   }
 }
 
-// Flatpickr calendar overrides — scoped to keep specificity low
-.flatpickr-calendar {
-  border: 1px solid var(--egrey-e8);
-  border-radius: 8px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
-  font-size: 13px;
+// Calendar card — scoped to this widget's instance via `.dp-skin`
+.flatpickr-calendar.dp-skin {
+  width: auto;
+  padding: 6px 12px;
+  border: none;
+  border-radius: 12px;
+  background: $white;
+  box-shadow: 0 1px 11px rgba(0, 0, 0, 0.13);
+  font-family: $font;
 
-  &.arrowTop::before,
-  &.arrowTop::after {
-    border-bottom-color: var(--egrey-e8);
+  // Inline (e.g. secure-share): fill the host frame. Popup: stay compact.
+  &.inline {
+    width: 100%;
   }
 
-  &.arrowBottom::before,
-  &.arrowBottom::after {
-    border-top-color: var(--egrey-e8);
-  }
-}
-
-.flatpickr-month {
-  background: var(--eorange);
-  border-radius: 7px 7px 0 0;
-  color: var(--white);
-  fill: var(--white);
-}
-
-.flatpickr-current-month {
-  color: var(--white);
-  font-size: 14px;
-
-  .numInputWrapper span {
-    border-color: rgba(255, 255, 255, 0.3);
-
-    &.arrowUp::after  { border-bottom-color: var(--white); }
-    &.arrowDown::after { border-top-color: var(--white); }
+  &:not(.inline) {
+    width: 280px;
   }
 
-  select,
-  input.cur-year {
-    color: var(--white);
-  }
-}
-
-.flatpickr-prev-month,
-.flatpickr-next-month {
-  color: var(--white);
-  fill: var(--white);
-
-  &:hover svg { fill: rgba(255, 255, 255, 0.7); }
-}
-
-.flatpickr-weekdays {
-  background: var(--eorange);
-}
-
-span.flatpickr-weekday {
-  background: var(--eorange);
-  color: rgba(255, 255, 255, 0.85);
-  font-weight: 600;
-}
-
-.flatpickr-day {
-  border-radius: 4px;
-  color: var(--egrey-4a);
-
-  &:hover,
-  &.prevMonthDay:hover,
-  &.nextMonthDay:hover {
-    background: var(--egrey-f1);
-    border-color: var(--egrey-f1);
+  // No popup pointer in the design
+  &::before,
+  &::after {
+    display: none !important;
   }
 
-  &.today {
-    border-color: var(--eorange-light);
-    color: var(--eorange);
+  // ---- Header (month + nav) ----------------------------------------------
+  .flatpickr-months {
+    align-items: center;
+    height: 48px;
+    padding: 0;
+    border-bottom: 1px solid $grey-30; // "Divider - Thin"
   }
 
-  &.selected,
-  &.startRange,
-  &.endRange {
-    background: var(--eorange);
-    border-color: var(--eorange);
-    color: var(--white);
-
-    &:hover { background: var(--eorange-dark); }
+  .flatpickr-month {
+    flex: 1;
+    height: 48px;
+    background: transparent;
+    color: $brand-deep;
   }
 
-  &.inRange {
-    background: var(--egrey-f1);
-    border-color: var(--egrey-f1);
-    box-shadow: -5px 0 0 var(--egrey-f1), 5px 0 0 var(--egrey-f1);
+  .flatpickr-current-month {
+    position: static;
+    display: flex;
+    flex: 1;
+    width: auto;
+    height: 48px;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+
+    .cur-month {
+      margin: 0 4px 0 0;
+      font-family: $font;
+      font-weight: 600;
+      font-size: 15px;
+      color: $brand-deep;
+    }
+
+    // Year sits next to the month. Keep flatpickr's own numInputWrapper sizing
+    // (overriding its width/padding collapsed the year — the input is
+    // border-box) and only re-theme: kill the grey hover box, drop the arrow
+    // "divider" borders, keep the steppers always visible, recolour to brand.
+    .numInputWrapper {
+      &:hover {
+        background: transparent;
+      }
+
+      span.arrowUp,
+      span.arrowDown {
+        border: none;
+        opacity: 1; // flatpickr hides the steppers until hover
+
+        &:hover {
+          background: transparent;
+        }
+      }
+
+      span.arrowUp::after {
+        border-bottom-color: $grey-70;
+      }
+
+      span.arrowDown::after {
+        border-top-color: $grey-70;
+      }
+
+      span:hover::after {
+        border-bottom-color: $brand;
+        border-top-color: $brand;
+      }
+    }
+
+    input.cur-year {
+      background: transparent;
+      font-family: $font;
+      font-weight: 600;
+      font-size: 15px;
+      color: $brand-deep;
+
+      &:hover,
+      &:focus {
+        background: transparent;
+      }
+    }
   }
 
-  &.flatpickr-disabled,
-  &.prevMonthDay,
-  &.nextMonthDay {
-    color: var(--egrey-b6);
+  .flatpickr-prev-month,
+  .flatpickr-next-month {
+    position: static;
+    display: flex;
+    width: 30px;
+    height: 30px;
+    padding: 7px;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.05);
+    border-radius: 50%;
+
+    svg {
+      width: 16px;
+      height: 16px;
+      fill: $grey-70;
+    }
+
+    &:hover svg {
+      fill: $brand;
+    }
+
+    // Keep the slot so the month label stays centered when nav is disabled
+    &.flatpickr-disabled {
+      display: flex;
+      visibility: hidden;
+      pointer-events: none;
+    }
+  }
+
+  // ---- Weekday labels -----------------------------------------------------
+  .flatpickr-weekdays {
+    height: 36px;
+    background: transparent;
+  }
+
+  .flatpickr-weekdaycontainer {
+    width: 100%;
+  }
+
+  span.flatpickr-weekday {
+    flex: 1;
+    background: transparent;
+    font-family: $font;
+    font-weight: 400;
+    font-size: 10px;
+    color: $grey-60;
+  }
+
+  // ---- Day grid -----------------------------------------------------------
+  .flatpickr-innerContainer {
+    border: none;
+  }
+
+  .flatpickr-rContainer,
+  .flatpickr-days {
+    width: 100%;
+  }
+
+  .dayContainer {
+    width: 100%;
+    min-width: 100%;
+    max-width: 100%;
+    padding: 0;
+    justify-content: flex-start;
+  }
+
+  // Each day is a 1/7 column (aligned with the weekday headers). The visible
+  // pill is a centred $cell circle drawn behind the number via ::before, so it
+  // stays a true circle at any column width. Per Figma "set date", a range is
+  // shown as individual soft circles: in-between days filled, the start/end
+  // endpoints additionally ringed.
+  .flatpickr-day {
+    position: relative;
+    isolation: isolate; // contain ::before so the number stays on top
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: 1 1 calc(100% / 7);
+    max-width: calc(100% / 7);
+    height: $cell;
+    margin: 0;
+    border: none;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+    font-family: $font;
+    font-weight: 400;
+    font-size: 10px;
+    color: $grey-70;
+
+    // Circular marker.
+    &::before {
+      content: "";
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      z-index: -1;
+      width: $cell;
+      height: $cell;
+      transform: translate(-50%, -50%);
+      border: 0.75px solid transparent;
+      border-radius: 50%;
+      transition:
+        background-color 0.12s ease,
+        border-color 0.12s ease;
+    }
+
+    // flatpickr paints a rectangular background on the day ELEMENT for these
+    // states; keep the element fully transparent so only the circle shows.
+    &,
+    &:hover,
+    &:focus,
+    &.today,
+    &.today:hover,
+    &.selected,
+    &.selected:hover,
+    &.selected:focus,
+    &.startRange,
+    &.startRange:hover,
+    &.endRange,
+    &.endRange:hover,
+    &.inRange,
+    &.inRange:hover {
+      background: transparent;
+      border-color: transparent;
+      box-shadow: none;
+    }
+
+    &:hover::before {
+      background: $brand-hover;
+    }
+
+    // No "today" marker — today must look like any other day so it's never
+    // mistaken for an auto-selected start date. (The element-background reset
+    // above also strips flatpickr's default today border.)
+
+    // In-between range days + single/multiple select: soft filled circle.
+    &.selected::before,
+    &.inRange::before {
+      background: $brand-soft;
+      border-color: transparent;
+    }
+
+    // Range endpoints (and single-select): soft fill + ring.
+    &.selected::before,
+    &.startRange::before,
+    &.endRange::before {
+      background: $brand-soft;
+      border-color: $brand;
+    }
+
+    &.selected,
+    &.startRange,
+    &.endRange,
+    &.inRange {
+      color: $brand-deep;
+    }
+
+    &.flatpickr-disabled,
+    &.prevMonthDay,
+    &.nextMonthDay {
+      color: $grey-muted;
+
+      &::before {
+        background: transparent;
+        border-color: transparent;
+      }
+    }
+  }
+
+  // ---- Time (only when a consumer enables it, e.g. secure-share) ----------
+  // Not in the Figma "set date" card, so themed to fit: rounded indigo chips
+  // with a brand-coloured separator, centred under the grid.
+  .flatpickr-time {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    height: 48px;
+    max-height: 48px;
+    padding: 6px 0;
+    border-top: 1px solid $grey-30;
+    font-family: $font;
+    overflow: visible;
+
+    .numInputWrapper {
+      flex: 0 0 auto;
+      width: 56px;
+      height: 36px;
+      border: 0.75px solid $grey-30;
+      border-radius: 8px;
+      background: $white;
+      transition:
+        border-color 0.15s ease,
+        background 0.15s ease;
+
+      &:hover {
+        background: $brand-hover;
+      }
+
+      &:focus-within {
+        border-color: $brand;
+        background: $brand-hover;
+      }
+    }
+
+    input {
+      display: flex;
+      height: 100%;
+      font-family: $font;
+      font-weight: 600;
+      font-size: 14px;
+      color: $brand-deep;
+
+      &:hover,
+      &:focus {
+        background: transparent;
+      }
+    }
+
+    .flatpickr-time-separator {
+      flex: 0 0 auto;
+      width: auto;
+      font-family: $font;
+      font-weight: 600;
+      font-size: 14px;
+      line-height: 36px;
+      color: $brand-deep;
+    }
+
+    .flatpickr-am-pm {
+      flex: 0 0 auto;
+      width: 56px;
+      height: 36px;
+      border: 0.75px solid $grey-30;
+      border-radius: 8px;
+      font-family: $font;
+      font-weight: 600;
+      font-size: 14px;
+      line-height: 36px;
+      color: $brand-deep;
+
+      &:hover,
+      &:focus {
+        background: $brand-hover;
+      }
+    }
+
+    // Stepper arrows — subtle, brand on hover
+    .numInputWrapper span {
+      border-color: $grey-30;
+
+      &.arrowUp::after {
+        border-bottom-color: $grey-70;
+      }
+
+      &.arrowDown::after {
+        border-top-color: $grey-70;
+      }
+
+      &:hover::after {
+        border-bottom-color: $brand;
+        border-top-color: $brand;
+      }
+    }
+  }
+
+  // ---- Footer (Cancel / Done) — injected by index.js ----------------------
+  .dp-footer {
+    display: flex;
+    gap: 12px;
+    justify-content: flex-end;
+    padding: 6px 0;
+    margin-top: 6px;
+    border-top: 1px solid $grey-30; // "Divider - Thin"
+  }
+
+  .dp-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 9px;
+    height: 36px;
+    padding: 0 12px;
+    border: none;
+    border-radius: 6px;
+    outline: none;
+    cursor: pointer;
+    font-family: $font;
+    font-weight: 600;
+    font-size: 12px;
+    white-space: nowrap;
+  }
+
+  .dp-btn--cancel {
+    background: rgba(0, 0, 0, 0.05);
+    border: 0.75px solid $grey-70;
+    color: $grey-70;
+  }
+
+  .dp-btn--done {
+    background: $brand;
+    color: $brand-on;
+    box-shadow:
+      0 0.75px 1.5px rgba(15, 86, 179, 0.2),
+      0 1.5px 3px rgba(15, 86, 179, 0.2);
+
+    svg {
+      width: 18px;
+      height: 18px;
+    }
   }
 }

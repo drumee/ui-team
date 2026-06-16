@@ -256,9 +256,10 @@ const __skl_secure_share = function(_ui_) {
           '7d'     : LOCALE.SECURE_SHARE_EXPIRY_7D,
           'custom' : LOCALE.SECURE_SHARE_EXPIRY_CUSTOM,
         }[preset] }),
-        // Figma: the Custom segment carries a calendar glyph.
+        // Custom segment shows the selected range length in days, filled in
+        // once an end date is picked (see _onExpiryDatePicked).
         preset === 'custom'
-          ? Skeletons.Image.Svg({ className: `${pfx}__preset-icon`, ico: 'calendar' })
+          ? Skeletons.Note({ className: `${pfx}__preset-days`, sys_pn: 'custom-days', content: '' })
           : null,
       ].filter(Boolean)
     }))
@@ -279,13 +280,21 @@ const __skl_secure_share = function(_ui_) {
         className : `${pfx}__datepicker`,
         name      : 'expiry-date',
         placement : 'up',
+        // Range: the user picks a start + end date; all days between are
+        // highlighted and link validity = endDate - startDate in days (see
+        // _onExpiryDatePicked). `value: []` starts with no preselected range.
+        // `rangeEdit` lets the user click an endpoint to deselect it or move
+        // the nearest endpoint instead of restarting the range.
+        ranges    : true,
+        rangeEdit : true,
+        value     : [],
         service   : 'expiry-date-picked',
         uiHandler : [_ui_],
-        // `inline: true` renders the month grid in normal flow instead of a
-        // focus-triggered popup — the popup was being clipped by the drawer's
-        // `overflow: hidden` (so the calendar never appeared), and Figma's "set
-        // date" screens show an always-visible inline calendar anyway.
-        vendorOpt : { enableTime: true, time_24hr: true, dateFormat: 'd/m/Y H:i', minDate: 'today', inline: true }
+        // `inline: true` renders the month grid in normal flow (the focus
+        // popup was clipped by the drawer's `overflow: hidden`); the skin then
+        // floats it as an absolute overlay over the panel (Figma "set date").
+        // Date-only — no time row, matching the Figma calendar card.
+        vendorOpt : { dateFormat: 'd/m/Y', minDate: 'today', inline: true }
       }
     ]
   });

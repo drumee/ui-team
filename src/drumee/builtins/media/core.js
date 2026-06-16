@@ -2212,7 +2212,12 @@ class __media_core extends DrumeeMFS {
             // (archive names carry spaces/colons, e.g. "Drumee-2026-05-31 04:45").
             const zipname =
               this.mget("zipname") || data.zipname || this.mget(_a.filename);
-            let url = `${svc}media.zip?hub_id=${hub_id}&nid=${nid}&id=${zip_id}&keysel=${keysel}&zipname=${encodeURIComponent(zipname)}`;
+            // Carry the secure-share token (when present, e.g. a nested folder
+            // window opened from a DMZ share) so the server download guard fires —
+            // a view-only recipient cannot retrieve the zip. Absent for normal
+            // desk downloads → URL unchanged.
+            const _sst = this.mget(_a.token) ? `&token=${encodeURIComponent(this.mget(_a.token))}` : '';
+            let url = `${svc}media.zip?hub_id=${hub_id}&nid=${nid}&id=${zip_id}&keysel=${keysel}&zipname=${encodeURIComponent(zipname)}${_sst}`;
             this.getFromUrl(url);
             Wm.alert(
               LOCALE.DOWNLOAD_LONG_TIME.format(
@@ -2294,9 +2299,10 @@ class __media_core extends DrumeeMFS {
         hub_id = this.mget(_a.hub_id);
         nid = this.mget(_a.nid);
     }
+    const _sst = this.mget(_a.token) ? `&token=${encodeURIComponent(this.mget(_a.token))}` : '';
     let url =
       `${svc}media.zip?keysel=${keysel}&hub_id=${hub_id}&nid=${nid}` +
-      `&id=${o.zipid}&zipname=${encodeURIComponent(zipname)}`;
+      `&id=${o.zipid}&zipname=${encodeURIComponent(zipname)}${_sst}`;
     if (o.backup) url += `&backup=${o.backup}`;
     return this.fetchFile({
       url,
