@@ -1079,7 +1079,9 @@ class __dmz_sharebox extends LetcBox {
     // Leaving the gate (error / expiry / revoke) — un-blur the page chrome.
     delete this.el.dataset.gate;
     let opt = {};
-    let status = data.validity || data.status;
+    // EMAIL_MISMATCH is a status (not a validity) — surface it even when a validity
+    // such as TICKET_OK is also present, so the "restricted email" message renders.
+    let status = (data.status === 'EMAIL_MISMATCH') ? data.status : (data.validity || data.status);
     // Secure shares are exempt from the workspace-level dmz_expiry override — their
     // validity comes from the token (data.status/validity). Only normal dmz/public
     // shares derive expiry from the workspace dmz_settings value. (See onDomRefresh.)

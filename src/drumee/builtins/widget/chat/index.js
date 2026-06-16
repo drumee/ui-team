@@ -1359,7 +1359,11 @@ class __widget_chat extends LetcBox {
           // only by the DMZ sharebox chatPanel for authenticated + can_chat) keeps
           // the messenger visible. Desk/channel/window-folder chats never set
           // scoped_post → behaviour is byte-identical for them.
-          const keepForPost = scoped && this.mget('scoped_post');
+          // ...but NOT inside an individual FILE thread (scopedFileNid set): posting
+          // there sends the file nid as an attachment, which channel.post moves into
+          // the chat folder. Keep file threads read-only; only the folder-root
+          // conversation is postable for a secure-share recipient.
+          const keepForPost = scoped && this.mget('scoped_post') && !this.scopedFileNid;
           footer.el.dataset.scopedHidden = (scoped && !keepForPost) ? "1" : "0";
         }
       })

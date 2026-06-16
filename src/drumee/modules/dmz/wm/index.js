@@ -566,9 +566,13 @@ class __dmz_wm extends winman {
         // a token is present, so regular/non-secure downloads are unchanged.
         const _shareToken = this.mget(_a.token);
         const _tok = _shareToken ? `&token=${encodeURIComponent(_shareToken)}` : '';
-        let url = `${protocol}://${h}${svc}/media.zip?id=${id}&keysel=${keysel}&zipname=${data.zipname}${_tok}`;
+        // Encode zipname (it can contain '#'/'&'/spaces) — unencoded, the appended
+        // &token would fall into the URL fragment and miss the server download guard.
+        // Matches the media/core.js zip-url path.
+        const _zip = encodeURIComponent(data.zipname || '');
+        let url = `${protocol}://${h}${svc}/media.zip?id=${id}&keysel=${keysel}&zipname=${_zip}${_tok}`;
         if(localhost){
-           url = `${protocol}://${main_domain}${svc}/@{h}/media.zip&id=${id}&keysel=${keysel}&zipname=${data.zipname}${_tok}`;
+           url = `${protocol}://${main_domain}${svc}/@{h}/media.zip&id=${id}&keysel=${keysel}&zipname=${_zip}${_tok}`;
         }
         return this._getFile(url, id);
     }
