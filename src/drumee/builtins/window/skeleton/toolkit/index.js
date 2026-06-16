@@ -424,7 +424,14 @@ export function chatPanel(ui) {
   // silently failed). The authenticated window-folder chat has a different
   // fig.family, so it is unaffected and members can still post normally.
   if (ui.fig.family === "dmz-sharebox") {
-    chat.guest_chat = 1;
+    // An AUTHENTICATED recipient WITH can_chat may post (the server capped-principal
+    // binding grants them chat at the shared node). Everyone else (anonymous, or no
+    // chat grant) stays guest_chat = read-only / sign-in-to-post (unchanged). The
+    // scoped_post flag tells the chat widget to keep the messenger visible in
+    // folder-scope mode for these posters only — desk/channel chats never set it.
+    const canPost = !!(ui.mget('is_authenticated') && ui.mget('can_chat'));
+    chat.guest_chat  = canPost ? 0 : 1;
+    chat.scoped_post = canPost ? 1 : 0;
     chat.desk = ui;
   }
 

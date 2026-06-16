@@ -281,6 +281,10 @@ class __dmz_sharebox extends LetcBox {
       case 'TICKET_EXPIRED':
       case 'WRONG_TICKET':
       case 'TICKET_INVALID':
+      // A logged-in viewer whose account email is NOT on the allow-list: show a
+      // clean "restricted to a different email" message instead of falling through
+      // to getInfoData() (which tried to load the folder and surfaced a server error).
+      case 'EMAIL_MISMATCH':
         this.handleInfoStatus(data);
         break;
       default:
@@ -1105,6 +1109,13 @@ class __dmz_sharebox extends LetcBox {
 
       case 'EMAIL_EXIST':
         opt.content = LOCALE.EMAIL_EXIST_SIGN_CONTINUE
+        opt.btnService = 'redirect-to-home'
+        break
+
+      // Logged in as an account that is not on the share's allow-list — this link
+      // is restricted to a specific email; the recipient must sign in as that one.
+      case 'EMAIL_MISMATCH':
+        opt.content = LOCALE.SECURE_SHARE_EMAIL_BLOCKED
         opt.btnService = 'redirect-to-home'
         break
 

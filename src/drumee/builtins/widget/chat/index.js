@@ -1350,7 +1350,13 @@ class __widget_chat extends LetcBox {
     this.ensurePart("chat-footer")
       .then((footer) => {
         if (footer && footer.el) {
-          footer.el.dataset.scopedHidden = scoped ? "1" : "0";
+          // Folder-scope normally hides the messenger (post in the unscoped view).
+          // EXCEPTION: a secure-share recipient allowed to post (scoped_post, set
+          // only by the DMZ sharebox chatPanel for authenticated + can_chat) keeps
+          // the messenger visible. Desk/channel/window-folder chats never set
+          // scoped_post → behaviour is byte-identical for them.
+          const keepForPost = scoped && this.mget('scoped_post');
+          footer.el.dataset.scopedHidden = (scoped && !keepForPost) ? "1" : "0";
         }
       })
       .catch(() => {});
