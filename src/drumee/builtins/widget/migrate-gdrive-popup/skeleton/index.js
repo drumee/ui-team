@@ -69,6 +69,26 @@ module.exports = function (ui) {
           content: (LOCALE.MIGRATE_GDRIVE_CONNECT_ERROR || 'Connection failed: {0}').replace('{0}', err),
         }) : null,
         primaryBtn(LOCALE.MIGRATE_GDRIVE_CONNECT_BTN, 'gdrive-connect'),
+        // Peer option: share-to-SA import needs NO Google connection (the SA
+        // reads the shared item with its own credentials), so it's offered
+        // here too — not only after connecting.
+        (ui.isSaAvailable && ui.isSaAvailable()) ? Skeletons.Box.Y({
+          className: `${pfx}__alt`,
+          kids: [
+            Skeletons.Note({ className: `${pfx}__or`, content: LOCALE.OR || 'or' }),
+            Skeletons.Box.X({
+              className: `${pfx}__sa-cta ${pfx}__sa-cta--ghost`,
+              service: 'gdrive-sa-open',
+              uiHandler: [ui],
+              kidsOpt: { active: 0 },
+              kids: [
+                Skeletons.Image.Svg({ ico: 'desktop_folder', className: `${pfx}__sa-cta-ico` }),
+                Skeletons.Note({ className: `${pfx}__sa-cta-label`, content: LOCALE.GDRIVE_SA_TITLE }),
+              ],
+            }),
+            Skeletons.Note({ className: `${pfx}__sa-cta-sub`, content: LOCALE.GDRIVE_SA_NO_CONNECT || 'No Google sign-in needed — just share the item with our address.' }),
+          ],
+        }) : null,
         auto ? Skeletons.Note({
           className: `${pfx}__skip`,
           content: LOCALE.MIGRATE_GDRIVE_SKIP_FOR_NOW,
@@ -99,6 +119,7 @@ module.exports = function (ui) {
         Skeletons.Note({ className: `${pfx}__mode-label`, content: label }),
       ],
     });
+    const connectedEmail = (ui.getConnectedEmail && ui.getConnectedEmail()) || '';
     body = Skeletons.Box.Y({
       className: `${pfx}__body ${pfx}__body--ready`,
       kids: [
@@ -106,6 +127,36 @@ module.exports = function (ui) {
           className: `${pfx}__description`,
           content: LOCALE.MIGRATE_GDRIVE_HINT,
         }),
+        // Connected Google account — confirm which Drive, and manage it:
+        // Switch account (re-OAuth with the account chooser) / Disconnect.
+        connectedEmail ? Skeletons.Box.X({
+          className: `${pfx}__account-row`,
+          kids: [
+            Skeletons.Image.Svg({ ico: 'logo-google', className: `${pfx}__account-ico` }),
+            Skeletons.Box.Y({
+              className: `${pfx}__account-text`,
+              kids: [
+                Skeletons.Note({ className: `${pfx}__field-label`, content: LOCALE.MIGRATE_GDRIVE_CONNECTED_AS || 'Connected as' }),
+                Skeletons.Note({ className: `${pfx}__account-email`, content: connectedEmail }),
+              ],
+            }),
+            Skeletons.Box.X({
+              className: `${pfx}__account-actions`,
+              kids: [
+                Skeletons.Note({
+                  className: `${pfx}__account-action`,
+                  content: LOCALE.MIGRATE_GDRIVE_SWITCH_ACCOUNT || 'Switch account',
+                  service: 'gdrive-switch-account', uiHandler: [ui],
+                }),
+                Skeletons.Note({
+                  className: `${pfx}__account-action ${pfx}__account-action--danger`,
+                  content: LOCALE.DISCONNECT || 'Disconnect',
+                  service: 'gdrive-disconnect', uiHandler: [ui],
+                }),
+              ],
+            }),
+          ],
+        }) : null,
         // Returning user (already migrated once): frame this run as an
         // incremental sync — new files only, existing ones skipped.
         (ui.hasPriorJob && ui.hasPriorJob()) ? Skeletons.Note({
