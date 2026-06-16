@@ -146,41 +146,6 @@ $danger-soft: rgba(246, 81, 75, 0.12);
     padding: var(--spacer-3) var(--spacer-4);
   }
 
-  // ───────── connected Google account row (ready screen) ─────────
-  &__account-row {
-    align-items: center;
-    gap: var(--spacer-3);
-    padding: var(--spacer-3) var(--spacer-4);
-    background: var(--normal-bg-elevated);
-    border: 1px solid var(--border-default);
-    border-radius: var(--corner-radius-3);
-  }
-
-  &__account-ico { width: 20px; height: 20px; flex: 0 0 auto; }
-
-  &__account-text { flex: 1; min-width: 0; gap: 1px; }
-
-  &__account-email {
-    @include drumee.typo($size: 13px, $weight: 600, $line: 18px, $color: var(--normal-fg-10));
-    font-weight: 600;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-
-  &__account-actions { flex: 0 0 auto; gap: var(--spacer-4); align-items: center; }
-
-  &__account-action {
-    @include drumee.typo($size: 12px, $weight: 600, $line: 16px, $color: $accent);
-    font-weight: 600;
-    cursor: pointer;
-    white-space: nowrap;
-    transition: opacity 0.12s;
-
-    &:hover { text-decoration: underline; }
-    &--danger { color: var(--error); }
-  }
-
   // ───────── shared elevated surfaces (card / row / input) ─────────
   &__dest-card,
   &__toggle-row,
@@ -739,34 +704,6 @@ $danger-soft: rgba(246, 81, 75, 0.12);
   &__sa-cta-label {
     @include drumee.typo($size: 15px, $weight: 700, $line: 22px, $color: #fff);
     font-weight: 700;
-  }
-
-  // Ghost variant — on the not-connected screen Connect is the solid primary;
-  // the SA import is the secondary (outline) peer option.
-  &__sa-cta--ghost {
-    background: transparent;
-    border: 1px solid $accent;
-
-    &:hover { background: $accent-soft; }
-  }
-  &__sa-cta--ghost &__sa-cta-ico { color: $accent; fill: $accent; }
-  &__sa-cta--ghost &__sa-cta-label { color: $accent; }
-
-  &__alt { gap: var(--spacer-2); align-items: stretch; }
-
-  &__or {
-    @include drumee.typo($size: 12px, $weight: 500, $line: 16px, $color: var(--normal-fg-50));
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-    text-align: center;
-    justify-content: center;
-    margin: var(--spacer-1) 0;
-  }
-
-  &__sa-cta-sub {
-    @include drumee.typo($size: 12px, $weight: 400, $line: 16px, $color: var(--normal-fg-50));
-    text-align: center;
-    justify-content: center;
   }
 
   &__sa-link {
