@@ -28,7 +28,7 @@ class __window_secure_share extends mfsInteract {
       this._applyRightDock();
     }
     this._expiryPreset     = null;
-    this._customExpiryDate = null;
+    this._customExpiryDays = 0;
     this._expiryOn         = false;
     this._notifyOnOpen     = true;   // notify the sender when a recipient opens (default ON)
     // v2: Recipients mode is MULTI-select — download/chat/edit are independent
@@ -207,7 +207,10 @@ class __window_secure_share extends mfsInteract {
     if (this._customExpiry) {
       this._customExpiry.el.dataset.mode = (preset === 'custom') ? _a.open : _a.closed;
     }
-    if (preset !== 'custom') this._customExpiryDate = null;
+    if (preset !== 'custom') {
+      this._customExpiryDays = 0;
+      this._renderCustomDays();
+    }
   }
 
   // Link Expiration toggle (Figma collapsed control). On → reveal the presets +
@@ -221,7 +224,8 @@ class __window_secure_share extends mfsInteract {
     if (options) options.dataset.mode = this._expiryOn ? _a.open : _a.closed;
     if (!this._expiryOn) {
       this._expiryPreset     = null;
-      this._customExpiryDate = null;
+      this._customExpiryDays = 0;
+      this._renderCustomDays();
       this.el.querySelectorAll(`.${pfx}__preset`).forEach(btn => { btn.dataset.selected = ''; });
       if (this._customExpiry) this._customExpiry.el.dataset.mode = _a.closed;
     }
@@ -235,12 +239,28 @@ class __window_secure_share extends mfsInteract {
     if (toggle) toggle.dataset.on = this._notifyOnOpen ? 'yes' : '';
   }
 
-  // Calendar date/time picked for a custom expiry. The datepicker reports the
-  // chosen date as a JS Date in `startDate`; we convert it to hours-from-now at
-  // create time so the server contract (days/hours → expiry_time) is unchanged.
+  // Custom expiry via the range calendar. The picker reports the span between
+  // the start and end date (endDate - startDate) in `durationDays`; that becomes
+  // the link's validity in days (the server contract is days/hours → expiry_time).
+  // `dpAction` distinguishes a live pick from the footer's Done/Cancel, which
+  // dismiss the floating calendar overlay.
   _onExpiryDatePicked(cmd) {
-    const d = cmd.mget('startDate');
-    this._customExpiryDate = (d instanceof Date) ? d : (d ? new Date(d) : null);
+    this._customExpiryDays = cmd.mget('durationDays') || 0;
+    // Show the range length (in days) on the Custom preset chip.
+    this._renderCustomDays();
+    const action = cmd.mget('dpAction');
+    if ((action === 'done' || action === 'cancel') && this._customExpiry) {
+      this._customExpiry.el.dataset.mode = _a.closed;
+    }
+  }
+
+  // Fill the Custom preset's day-count chip from the current range length;
+  // blank when there's no range yet.
+  _renderCustomDays() {
+    const el = this.el.querySelector(`.${this.fig.family}__preset-days`);
+    if (!el) return;
+    const days = this._customExpiryDays || 0;
+    el.textContent = days > 0 ? `${days}d` : '';
   }
 
   _selectPermission(cmd) {
@@ -525,11 +545,8 @@ class __window_secure_share extends mfsInteract {
       case '24h':   days  = 1; break;
       case '7d':    days  = 7; break;
       case 'custom':
-        // Convert the picked absolute date/time into whole hours from now.
-        if (this._customExpiryDate) {
-          const ms = this._customExpiryDate.getTime() - Date.now();
-          hours = (ms > 0) ? Math.ceil(ms / 3600000) : 0;
-        }
+        // Multi-date selection → validity = lastDate - firstDate (whole days).
+        days = this._customExpiryDays || 0;
         break;
       default:
         break; // no preset selected = no expiry
@@ -657,13 +674,14 @@ class __window_secure_share extends mfsInteract {
     this._resetSecureOptions();
 
     // Reset expiry → toggle off, collapse options, clear preset/date
-    this._customExpiryDate = null;
+    this._customExpiryDays = 0;
     this._expiryPreset = null;
     this._expiryOn = false;
     const expiryToggle = this.el.querySelector(`.${pfx}__toggle`);
     if (expiryToggle) expiryToggle.dataset.on = '';
     const expiryOptions = this.el.querySelector(`.${pfx}__expiry-options`);
     if (expiryOptions) expiryOptions.dataset.mode = _a.closed;
+    this._renderCustomDays();
     this.el.querySelectorAll(`.${pfx}__preset`).forEach(btn => {
       btn.dataset.selected = '';
     });
