@@ -560,9 +560,15 @@ class __dmz_wm extends winman {
         } = data;
         var h = data.vhost;
         let { svc, protocol, keysel, main_domain, localhost} = bootstrap();
-        let url = `${protocol}://${h}${svc}/media.zip?id=${id}&keysel=${keysel}&zipname=${data.zipname}`;
+        // In a secure-share context, carry the share token on the zip retrieval URL
+        // so the server can enforce the download capability (media.zip guard): a
+        // view-only recipient stages a zip but cannot retrieve it. Appended only when
+        // a token is present, so regular/non-secure downloads are unchanged.
+        const _shareToken = this.mget(_a.token);
+        const _tok = _shareToken ? `&token=${encodeURIComponent(_shareToken)}` : '';
+        let url = `${protocol}://${h}${svc}/media.zip?id=${id}&keysel=${keysel}&zipname=${data.zipname}${_tok}`;
         if(localhost){
-           url = `${protocol}://${main_domain}${svc}/@{h}/media.zip&id=${id}&keysel=${keysel}&zipname=${data.zipname}`;
+           url = `${protocol}://${main_domain}${svc}/@{h}/media.zip&id=${id}&keysel=${keysel}&zipname=${data.zipname}${_tok}`;
         }
         return this._getFile(url, id);
     }
