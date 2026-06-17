@@ -1,19 +1,16 @@
 
-// Recipient email gate ("require email to view"): accept only real-looking TLDs
-// so common typos like ".con" are rejected (per Lexis 2026-06-17). Every 2-letter
-// TLD is a country code and always accepted; for longer TLDs we accept a curated
-// set of common gTLDs. Extend this set if a legitimate TLD is ever rejected.
-// SCOPED to this gate only — the app-wide Validator.email (signup/invite/…) is
-// intentionally left unchanged.
-const ACCEPTED_TLDS = new Set([
-  'com', 'net', 'org', 'edu', 'gov', 'mil', 'int', 'info', 'biz', 'name', 'pro',
-  'mobi', 'tel', 'asia', 'jobs', 'coop', 'aero', 'cat', 'travel', 'museum', 'post',
-  'app', 'dev', 'xyz', 'site', 'online', 'tech', 'store', 'shop', 'blog', 'cloud',
-  'live', 'life', 'world', 'today', 'news', 'media', 'club', 'work', 'team', 'group',
-  'company', 'agency', 'studio', 'design', 'email', 'space', 'website', 'page',
-  'link', 'wiki', 'zone', 'city', 'global', 'network', 'solutions', 'services',
-  'systems', 'center', 'expert', 'digital', 'academy', 'school', 'finance',
-  'consulting', 'marketing', 'technology'
+// Recipient email gate ("require email to view"): reject only well-known typo
+// TLDs (e.g. ".con" for ".com") so obvious mistakes are caught, while EVERY other
+// valid-format address is accepted — including less common but legitimate TLDs
+// like .law / .bank / .software (a fixed allow-list wrongly rejected those; per
+// Lexis 2026-06-17 + Codex review). Entries here MUST be non-real TLDs only; add
+// more common typos as needed. SCOPED to this gate — the app-wide Validator.email
+// (signup/invite/…) is intentionally left unchanged.
+const TLD_TYPOS = new Set([
+  // .com typos
+  'con', 'cmo', 'ocm', 'vom', 'coom', 'comm', 'ccom', 'conm', 'copm', 'vcom', 'xom',
+  // .net / .org typos
+  'nett', 'nte', 'ogr', 'orgg', 'rog'
 ]);
 
 /**
@@ -896,8 +893,9 @@ class __dmz_sharebox extends LetcBox {
 
   /**
    * Stricter email check for the recipient gate ("require email to view").
-   * Requires a valid format AND a real-looking TLD, so typos like ".con" are
-   * rejected while genuine addresses pass. Scoped to this gate — the app-wide
+   * Requires a valid format AND a TLD that is not a known typo (e.g. ".con"), so
+   * obvious mistakes are caught while every other valid address — including
+   * uncommon-but-real TLDs — passes. Scoped to this gate — the app-wide
    * Validator.email (signup/invite/…) is intentionally left unchanged.
    * @param {String} v
    * @returns {Boolean}
@@ -906,7 +904,7 @@ class __dmz_sharebox extends LetcBox {
     const email = String(v || '').trim().toLowerCase();
     if (!Validator.email(email)) return false;
     const tld = email.slice(email.lastIndexOf('.') + 1);
-    return tld.length === 2 || ACCEPTED_TLDS.has(tld);
+    return !TLD_TYPOS.has(tld);
   }
 
   /**
