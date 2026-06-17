@@ -451,47 +451,6 @@ function dangerZoneCard(ui) {
 
 function linkedAccountsCard(ui) {
   const pfx = `${ui.fig.family}__linked`;
-  const links = Array.isArray(ui._oauthLinks) ? ui._oauthLinks : [];
-
-  // Provider display data — kept inline so adding a new provider only
-  // needs an entry here + a server-side OAuth handler.
-  const providerMeta = {
-    google: { label: "Google", ico: "logo-google" },
-    apple: { label: "Apple", ico: "logo-apple" },
-    dropbox: { label: "Dropbox", ico: "dropbox" },
-  };
-
-  const rows = links.map((link) => {
-    const meta = providerMeta[link.provider] || { label: link.provider };
-    const linkedAt = link.ctime
-      ? Dayjs.unix(link.ctime).format("MMM D, YYYY")
-      : "";
-    return innerItem(ui, {
-      ico: meta.ico,
-      title: meta.label,
-      description: link.email || linkedAt,
-      className: `${pfx}-row`,
-      trailing: button(ui, {
-        label: LOCALE.DISCONNECT || "Disconnect",
-        className: `${pfx}-disconnect`,
-        priority: "ghost",
-        service: "disconnect-oauth",
-        provider: link.provider,
-      }),
-    });
-  });
-
-  if (!rows.length) {
-    rows.push(
-      innerItem(ui, {
-        title: LOCALE.NO_LINKED_ACCOUNTS || "No linked accounts",
-        description:
-          LOCALE.NO_LINKED_ACCOUNTS_HINT ||
-          "Sign in with Google or Apple from the welcome screen to link an account.",
-        className: `${pfx}-row ${pfx}-row--empty`,
-      }),
-    );
-  }
 
   // Migrate-from-Google-Drive CTA. Reflects the gdrive state fetched on load
   // (google_drive.get_state): a running job shows live progress + %, a prior
@@ -534,7 +493,7 @@ function linkedAccountsCard(ui) {
       }),
       Skeletons.Box.Y({
         className: `${pfx}-list`,
-        kids: [...rows, migrateRow],
+        kids: [migrateRow],
       }),
     ],
   });
