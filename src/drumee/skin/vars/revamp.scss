@@ -198,7 +198,7 @@
 /* Grid tokens — compact workspace/folder rows, taller file rows for metadata */
 :root {
   --grid-cell-w: 120px;
-  --grid-cell-h-folder: 128px;          // compact folder row; file row stays taller for metadata
+  --grid-cell-h-folder: 144px;          // compact folder/workspace row; file row stays taller for metadata
   --grid-cell-h-file: 184px;             // 119 card + 8 gap + 56 meta (2-line filename + date)
   --grid-icon-file: 60px;
   --grid-icon-folder-badge: 28px;

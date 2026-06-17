@@ -385,6 +385,10 @@ class __window_folder extends mfsInteract {
   }
 
   onBeforeDestroy(opt) {
+    if (this._folderGridSortTimer) {
+      clearTimeout(this._folderGridSortTimer);
+      this._folderGridSortTimer = null;
+    }
     if (!this.mget(_a.headless) && window.Wm && Wm.$el) {
       Wm.$el.trigger("folder:close", this);
     } else if (this.mget(_a.headless) && window.Wm && Wm.$el) {
@@ -401,6 +405,33 @@ class __window_folder extends mfsInteract {
     if (!name) return;
     const t = this.__refWindowName || this.name;
     if (t && _.isFunction(t.set)) t.set({ content: name });
+  }
+
+  _isFolderGridMode() {
+    return !this.getViewMode || this.getViewMode() !== _a.row;
+  }
+
+  _sortFolderGridByFilename(list = this.iconsList) {
+    if (!list || (list.isDestroyed && list.isDestroyed())) return;
+    if (this.iconsList && this.iconsList !== list) return;
+    this.iconsList = list;
+    if (list.collection) this.sortContent();
+    if (this._partitionFoldersAndFiles) this._partitionFoldersAndFiles(list);
+    if (this.syncBounds) this.syncBounds();
+  }
+
+  _scheduleAlphabeticalGridSort(list = this.iconsList) {
+    if (!this._isFolderGridMode()) return;
+    if (!list || (list.isDestroyed && list.isDestroyed())) return;
+    if (this._folderGridSortTimer) clearTimeout(this._folderGridSortTimer);
+    this._folderGridSortTimer = setTimeout(() => {
+      this._folderGridSortTimer = null;
+      this._sortFolderGridByFilename(list);
+    }, 0);
+  }
+
+  onMediaRenamed() {
+    this._scheduleAlphabeticalGridSort();
   }
 
   _syncWorkspaceFocus() {
@@ -557,7 +588,7 @@ class __window_folder extends mfsInteract {
           else list.append(opt);
       }
       if (this.getViewMode && this.getViewMode() !== _a.row) {
-        this._partitionFoldersAndFiles(list);
+        this._scheduleAlphabeticalGridSort(list);
       }
     });
   }
@@ -587,6 +618,7 @@ class __window_folder extends mfsInteract {
       if (!c) return false;
       c.mset(data);
       if (c.restart) setTimeout(() => c.restart(), 500);
+      this._scheduleAlphabeticalGridSort();
       return true;
     });
     if (existing.length) return;
@@ -594,15 +626,29 @@ class __window_folder extends mfsInteract {
     data.format = this.mget(_a.format) || _a.card;
     data.kind = this._getKind();
     data.service = "open-node";
+    data.logicalParent = this;
     this.ensurePart(_a.list).then((l) => {
       if (!l || (l.isDestroyed && l.isDestroyed())) return;
       if (data.position >= 0) l.append(data, data.position);
       else l.append(data);
       if (this.getViewMode && this.getViewMode() !== _a.row) {
-        this._partitionFoldersAndFiles(l);
+        this._scheduleAlphabeticalGridSort(l);
       }
     });
     if (this.syncBounds) this.syncBounds();
+  }
+
+  addMedia(data) {
+    if (!data) return;
+    data.kind = data.kind || this._getKind();
+    data.service = data.service || "open-node";
+    data.logicalParent = this;
+    return this.ensurePart(_a.list).then((list) => {
+      if (!list || (list.isDestroyed && list.isDestroyed())) return;
+      list.append(data);
+      this._scheduleAlphabeticalGridSort(list);
+      if (this.syncBounds) this.syncBounds();
+    });
   }
 
   onPartReady(child, pn) {

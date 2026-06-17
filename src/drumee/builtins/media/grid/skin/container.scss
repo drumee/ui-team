@@ -38,23 +38,24 @@
       }
 
       .badge {
-        // Inside .media-grid__folder-art (position: relative). Figma raw
-        // spec is bottom-7.5 / left-6, but visually too close to the
-        // folder's left edge — bump padding for breathing room while still
-        // sitting on the folder body.
-        bottom: 10px;
-        left: 18px;
+        // Inside .media-grid__folder-art (position: relative). Keep the badge
+        // on the folder body after scaling the art closer to the cell width.
+        bottom: 11px;
+        left: 14px;
       }
     }
 
     /* Wrapper added by template/folder/index.js around shape + badge so
        badge absolute-positioning is anchored to the folder-shape area
-       (not the whole cell). Aspect ratio matches Figma 99×79.5. */
+       (not the whole cell). Aspect ratio matches Figma 99x79.5. The cell is
+       120px wide; 116px makes the folder/workspace art read close to full-cell
+       width while leaving a little hover/selection breathing room. */
     .media-grid__folder-art {
       position: relative;
-      width: 100%;
+      width: calc(var(--grid-cell-w) - 4px);
+      max-width: 100%;
       aspect-ratio: 99 / 79.5;
-      max-height: 79.5px;
+      max-height: 93px;
       flex: 0 0 auto;
       display: flex;
       align-items: center;
@@ -356,35 +357,24 @@
 // Figma 12px recipe.
 @media (max-width: 480px) {
   .media-grid {
-    // Folder/hub cells: cap the folder-art anchor to the Figma natural
-    // width (99×79.5). On mobile the grid cell stretches to ~190px wide
-    // while `max-height: 79.5px` clamps the height — the SVG inside
-    // preserves its own aspect ratio and renders centered at ~99px
-    // wide, but the absolute-positioned badge (bottom-left) and kebab
-    // (bottom-right) stay anchored to the folder-art edges, so they
-    // appear OUTSIDE the visible folder graphic. Locking max-width to
-    // 99px keeps the anchor box in sync with the rendered SVG, so the
-    // overlays land on the folder corners like on desktop.
+    // Folder/hub cells: keep the overlay anchor capped to the same scaled
+    // desktop width so the badge/kebab stay on the visible folder corners
+    // while fluid mobile columns grow wider than the art.
     &__container {
       &.folder,
       &.hub {
         .media-grid__folder-art {
-          max-width: 99px;
+          max-width: calc(var(--grid-cell-w) - 4px);
           margin-inline: auto;
         }
 
         // Push the two overlays into the folder corners on mobile.
-        // Desktop offsets (18px / 14px) were tuned for a wider visible
-        // folder; once the anchor is locked to 99px the overlays look
-        // crowded near the middle. Pull the badge closer to the left
-        // edge and the kebab closer to the right edge so they read as
-        // distinct corner icons.
         .badge {
-          left: 6px;
+          left: 10px;
         }
 
         .media-context-menu__folder-trigger {
-          right: 4px;
+          right: 8px;
         }
       }
     }

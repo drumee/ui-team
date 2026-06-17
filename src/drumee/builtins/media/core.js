@@ -1967,6 +1967,12 @@ class __media_core extends DrumeeMFS {
     this.mset("renamed", [src.filename, dest.filename]);
     this.mset(dest)
     this.restart();
+    const parent =
+      this.logicalParent ||
+      (_.isFunction(this.getLogicalParent) && this.getLogicalParent());
+    if (parent && _.isFunction(parent.onMediaRenamed)) {
+      parent.onMediaRenamed(this, data);
+    }
   }
 
   /**
