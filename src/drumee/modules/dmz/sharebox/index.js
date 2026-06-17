@@ -95,12 +95,12 @@ class __dmz_sharebox extends LetcBox {
         })
 
       case _a.footer:
-        // Viral "Sign Up Free" landing footer — guests only. A logged-in recipient
-        // already has an account, so don't pitch signup to them (they see their own
-        // identity in the top-nav instead). The gate footer is fed separately by
-        // promptGate, so the anonymous email/password gate banner is unaffected.
+        // Viral landing footer. A logged-in recipient already has an account, so
+        // the footer still shows (the banner/branding stays) but the "Sign Up Free"
+        // button is dropped in the skeleton — see footer.js. The gate footer is fed
+        // separately by promptGate, so the anonymous email/password gate banner is
+        // unaffected.
         if (!this.mget('is_secure')) return;
-        if (this.mget('is_authenticated')) return;
         return this.waitElement(child.el, () => {
           child.feed(this.footerSkeleton(this));
         });
