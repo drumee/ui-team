@@ -759,7 +759,7 @@ class __widget_chat extends LetcBox {
    */
   disableMessageSelection() {
     this.setMessageSelectorState(0);
-    let children = this.__list.getItemsByKind("widget_chat_item");
+    let children = this.__list.getItemsByKind(this.itemKind());
     for (var c of children) {
       c.select(0);
     }
@@ -1703,6 +1703,18 @@ class __widget_chat extends LetcBox {
   }
 
   /**
+   * Widget kind used to render each message row. Configurable via the `item_kind`
+   * option so a host can swap in a variant (the DMZ share chat passes
+   * "widget_chat_item_other" to render every message on the "other" side). Must
+   * match the kind used by the list skeleton (see skeleton/index.js) so api-loaded
+   * rows, server echoes and optimistic local posts all render with one widget.
+   * @returns {String}
+   */
+  itemKind() {
+    return this.mget("item_kind") || "widget_chat_item";
+  }
+
+  /**
    *
    * @param {*} data
    * @returns
@@ -1713,7 +1725,7 @@ class __widget_chat extends LetcBox {
     }
     if (!data || _.isEmpty(data)) return;
     if (!this.__list) return;
-    data.kind = "widget_chat_item";
+    data.kind = this.itemKind();
     data.logicalParent = this;
     data.uiHandler = this;
     // Propagate chat container's `type` to each message so the chat-item
@@ -1750,7 +1762,7 @@ class __widget_chat extends LetcBox {
     let api = this.queue.shift();
     if (!api) return;
     let tmp = {
-      kind: "widget_chat_item",
+      kind: this.itemKind(),
       ...api,
       logicalParent: this,
       uiHandler: this,
@@ -1888,7 +1900,7 @@ class __widget_chat extends LetcBox {
   showMsgCount(cmd) {
     this._selectedMessages = [];
     this._selectedViews = [];
-    const chatItems = this.__list.getItemsByKind("widget_chat_item");
+    const chatItems = this.__list.getItemsByKind(this.itemKind());
     const selected = chatItems.filter((e) => e.mget("selected"));
     for (const e of selected) {
       const mid = e.mget("message_id");
@@ -2047,7 +2059,7 @@ class __widget_chat extends LetcBox {
   applyReadReceipt(readerUid, refCtime) {
     if (!readerUid || readerUid === Visitor.id) return;
     if (!this.__list || !_.isFunction(this.__list.getItemsByKind)) return;
-    const items = this.__list.getItemsByKind("widget_chat_item") || [];
+    const items = this.__list.getItemsByKind(this.itemKind()) || [];
     // Pass 1: update each row's _seen_ for this reader from the cursor.
     for (const item of items) {
       if (item && _.isFunction(item.updateReaderSeen)) {
@@ -2070,7 +2082,7 @@ class __widget_chat extends LetcBox {
    */
   refreshAllReaders() {
     if (!this.__list || !_.isFunction(this.__list.getItemsByKind)) return;
-    const items = this.__list.getItemsByKind("widget_chat_item") || [];
+    const items = this.__list.getItemsByKind(this.itemKind()) || [];
     for (const item of items) {
       if (item && _.isFunction(item.renderReaders)) item.renderReaders();
     }
@@ -2088,7 +2100,7 @@ class __widget_chat extends LetcBox {
     const isPrivate = area === _a.personal || area === _a.privateRoom;
     if (!isPrivate || !this.peerId) return;
     if (!this.__list || !_.isFunction(this.__list.getItemsByKind)) return;
-    const items = this.__list.getItemsByKind("widget_chat_item") || [];
+    const items = this.__list.getItemsByKind(this.itemKind()) || [];
     let cursor = 0;
     for (const item of items) {
       const c = item && item.mget ? ~~item.mget("peer_ref_ctime") : 0;

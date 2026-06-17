@@ -439,6 +439,15 @@ export function chatPanel(ui) {
     chat.guest_chat  = canPost ? 0 : 1;
     chat.scoped_post = canPost ? 1 : 0;
     chat.desk = ui;
+    // DMZ sharebox conversation: an ANONYMOUS (logged-out) recipient has no
+    // identity to align against, so render one uniform column — every message
+    // sits on the "other" side via the chat-item-other variant. A LOGGED-IN
+    // recipient keeps the normal me/other split (base chat-item), so their own
+    // messages right-align. Scoped to the sharebox itself — nested window/folder
+    // chats launched from a share keep the normal split regardless.
+    if (ui.fig.family === "dmz-sharebox" && !ui.mget('is_authenticated')) {
+      chat.item_kind = "widget_chat_item_other";
+    }
   }
 
   return Skeletons.Box.Y({

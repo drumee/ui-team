@@ -80,7 +80,9 @@ function __skl_dmz_sharebox_footer(_ui_) {
       "Join 2,000+ creators curating their best work.",
   });
 
-  const signupButton = Skeletons.Box.X({
+  // A logged-in recipient already has an account, so don't pitch signup — keep the
+  // footer banner/branding but drop the "Sign Up Free" button.
+  const signupButton = _ui_.mget("is_authenticated") ? null : Skeletons.Box.X({
     className: `${footerFig}__signup-btn`,
     sys_pn: "button-wrapper",
     service: "open-signup",
@@ -96,7 +98,7 @@ function __skl_dmz_sharebox_footer(_ui_) {
 
   const right = Skeletons.Box.X({
     className: `${footerFig}__right`,
-    kids: [subline, signupButton],
+    kids: [subline, signupButton].filter(Boolean),
   });
 
   const banner = Skeletons.Box.X({
