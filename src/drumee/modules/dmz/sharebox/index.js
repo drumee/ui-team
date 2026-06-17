@@ -1,4 +1,21 @@
 
+// Recipient email gate ("require email to view"): accept only real-looking TLDs
+// so common typos like ".con" are rejected (per Lexis 2026-06-17). Every 2-letter
+// TLD is a country code and always accepted; for longer TLDs we accept a curated
+// set of common gTLDs. Extend this set if a legitimate TLD is ever rejected.
+// SCOPED to this gate only — the app-wide Validator.email (signup/invite/…) is
+// intentionally left unchanged.
+const ACCEPTED_TLDS = new Set([
+  'com', 'net', 'org', 'edu', 'gov', 'mil', 'int', 'info', 'biz', 'name', 'pro',
+  'mobi', 'tel', 'asia', 'jobs', 'coop', 'aero', 'cat', 'travel', 'museum', 'post',
+  'app', 'dev', 'xyz', 'site', 'online', 'tech', 'store', 'shop', 'blog', 'cloud',
+  'live', 'life', 'world', 'today', 'news', 'media', 'club', 'work', 'team', 'group',
+  'company', 'agency', 'studio', 'design', 'email', 'space', 'website', 'page',
+  'link', 'wiki', 'zone', 'city', 'global', 'network', 'solutions', 'services',
+  'systems', 'center', 'expert', 'digital', 'academy', 'school', 'finance',
+  'consulting', 'marketing', 'technology'
+]);
+
 /**
  * Class representing the dmz sharebox module.
  * @class __dmz_sharebox
@@ -396,7 +413,7 @@ class __dmz_sharebox extends LetcBox {
     if (needEmail) {
       email = this._emailInput ? (this._emailInput.getData().value || '').trim() : '';
       if (!email) return this.renderErrorMessage(LOCALE.SECURE_SHARE_ENTER_EMAIL);
-      if (!Validator.email(email)) return this.renderErrorMessage(LOCALE.SECURE_SHARE_EMAIL_INVALID_FORMAT);
+      if (!this._strictEmail(email)) return this.renderErrorMessage(LOCALE.SECURE_SHARE_EMAIL_INVALID_FORMAT);
     }
 
     let password = '';
@@ -851,11 +868,12 @@ class __dmz_sharebox extends LetcBox {
       this._setEmailValid(false);
       return this._hideGateMessage();
     }
-    if (Validator.email(email)) {
+    if (this._strictEmail(email)) {
+      // Valid email: keep the small green check on the row, but do NOT show the
+      // "Email recognised…" success banner (removed per Lexis 2026-06-17 — it had
+      // a typo and added noise). Clear any lingering error message instead.
       this._setEmailValid(true);
-      return this.renderGateSuccess(
-        LOCALE.SECURE_SHARE_EMAIL_RECOGNISED || 'Email recognised - click Continue to access.'
-      );
+      return this._hideGateMessage();
     }
     // Invalid format: clear the check; only alert on blur (not every keystroke).
     this._setEmailValid(false);
@@ -864,6 +882,21 @@ class __dmz_sharebox extends LetcBox {
     } else {
       this._hideGateMessage();
     }
+  }
+
+  /**
+   * Stricter email check for the recipient gate ("require email to view").
+   * Requires a valid format AND a real-looking TLD, so typos like ".con" are
+   * rejected while genuine addresses pass. Scoped to this gate — the app-wide
+   * Validator.email (signup/invite/…) is intentionally left unchanged.
+   * @param {String} v
+   * @returns {Boolean}
+   */
+  _strictEmail(v) {
+    const email = String(v || '').trim().toLowerCase();
+    if (!Validator.email(email)) return false;
+    const tld = email.slice(email.lastIndexOf('.') + 1);
+    return tld.length === 2 || ACCEPTED_TLDS.has(tld);
   }
 
   /**
