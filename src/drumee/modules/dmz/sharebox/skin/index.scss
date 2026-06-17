@@ -99,7 +99,7 @@
     position: sticky;
     bottom: 0;
     padding: 24px 40px;
-    z-index: 2000;
+    z-index: 0 !important; 
 
     &[data-mode="closed"] {
       display: none;
@@ -113,6 +113,7 @@
     // api/lib/popup __overlay). This centers the popup on the PAGE, not within the
     // offset sharebox content box.
     position: fixed !important;
+    display: flex;
     top: 0 !important;
     left: 0 !important;
     width: 100vw;
@@ -1132,12 +1133,18 @@
   }
 
   &__close {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
     cursor: pointer;
-    padding: 0 4px;
-    user-select: none;
-    @include drumee.typo($size: 22px, $line: 22px, $weight: 400, $color: var(--sb-text-muted));
+    flex-shrink: 0;
 
-    &:hover { color: var(--sb-text); }
+    svg { width: 18px; height: 18px; fill: var(--sb-text-muted); }
+    &:hover { background: var(--sb-grey-20); }
+    &:hover svg { fill: var(--sb-text); }
   }
 
   &__level-desc {
@@ -1224,7 +1231,7 @@
       width: 100%;
       padding: 10px 12px;
       border: 1px solid var(--sb-grey-30);
-      border-radius: 4px;
+      border-radius: 8px;
       background: #ffffff;
       @include drumee.typo($size: 14px, $line: 20px, $color: var(--sb-text));
       font-family: var(--sb-font-body);
@@ -1241,9 +1248,25 @@
     &[data-mode='closed'] { display: none; }
   }
 
+  // Textarea renders bare (browser-default font/border) — box it like the
+  // email field so the two inputs read as one consistent form.
   &__message {
     width: 100%;
+    min-height: 80px;
+    padding: 10px 12px;
+    border: 1px solid var(--sb-grey-30);
+    border-radius: 8px;
+    background: #ffffff;
     resize: vertical;
+    @include drumee.typo($size: 14px, $line: 20px, $color: var(--sb-text));
+    font-family: var(--sb-font-body);
+
+    &::placeholder { color: var(--sb-text-muted); }
+    &:focus { border-color: var(--sb-cta); outline: none; }
+
+    textarea { 
+      border-style: none;
+    width: 100%; }
   }
 
   // Single full-width "Send request" (Figma 60), icon + label centered.
