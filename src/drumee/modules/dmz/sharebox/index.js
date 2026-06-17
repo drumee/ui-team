@@ -721,6 +721,12 @@ class __dmz_sharebox extends LetcBox {
    *
   */
   loadDeskContent(banner = 1) {
+    // Publish this share's chat grant to a session-global so nested subfolder
+    // windows (which open as plain desk folder windows and lose the share caps)
+    // can hide the chat tab + conversation panel when chat isn't granted. Read by
+    // window/skeleton/toolkit via _dmzShareWithoutChat(); gated on uiRouter.isDmz()
+    // there, so it only ever affects this recipient session, never the desk.
+    if (window.uiRouter) window.uiRouter._dmzShareCanChat = !!this.mget('can_chat');
     this.__content.feed(this.deskSkeleton(this))
     if (this.__actionButtons) {
       this.__actionButtons.el.dataset.mode = _a.open;
