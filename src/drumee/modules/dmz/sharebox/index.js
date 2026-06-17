@@ -50,6 +50,7 @@ class __dmz_sharebox extends LetcBox {
     this._selectedRequestLevels = new Set();
     this._requestEmailInput    = null;
     this._requestMessageInput  = null;
+    this._requestSubmit        = null;
   }
 
   /**
@@ -185,6 +186,9 @@ class __dmz_sharebox extends LetcBox {
 
       case 'request-error':
         return this._requestError = child;
+
+      case 'request-submit':
+        return this._requestSubmit = child;
 
       default:
         if (super.onPartReady) super.onPartReady(child, pn);
@@ -1207,6 +1211,7 @@ class __dmz_sharebox extends LetcBox {
     this._selectedRequestLevels = new Set();
     this._requestEmailInput    = null;
     this._requestMessageInput  = null;
+    this._requestSubmit        = null;
     overlay.feed(require('./skeleton/request-access').default(this));
     overlay.el.dataset.mode = _a.open;
   }
@@ -1215,6 +1220,8 @@ class __dmz_sharebox extends LetcBox {
    *
    */
   async submitAccessRequest() {
+    // Ignore repeat clicks while a request is already in flight (the spinner is up).
+    if (this._submittingAccessRequest) return;
     // Validate with INLINE feedback in the popup. renderErrorMessage targets the
     // gate's parts (absent here), so it would fail silently — which is why submit
     // appeared dead when a field was missing.
@@ -1254,6 +1261,7 @@ class __dmz_sharebox extends LetcBox {
     };
     if (msgVal) payload.message = msgVal;
 
+    this._setRequestSubmitLoading(true);
     try {
       const data = await this.postService(SERVICE.dmz.request_access, payload);
       if (data && data.status === 'REQUEST_SENT') {
@@ -1273,7 +1281,24 @@ class __dmz_sharebox extends LetcBox {
       }
     } catch (e) {
       this._showRequestError(LOCALE.SOMETHING_WENT_WRONG);
+    } finally {
+      // On success the overlay is swapped to request-sent (button is gone), so this
+      // is effectively a no-op there; on error/validation it restores the button.
+      this._setRequestSubmitLoading(false);
     }
+  }
+
+  /**
+   * Toggle the spinner on the request-access submit button. Sets data-loading on
+   * the captured submit part and a re-entry guard so a double-click can't fire two
+   * request_access calls. Mirrors the password gate's _setButtonLoading spinner.
+   * @param {Boolean} loading
+   */
+  _setRequestSubmitLoading(loading) {
+    this._submittingAccessRequest = !!loading;
+    const el = this._requestSubmit && this._requestSubmit.el;
+    if (!el) return;
+    el.dataset.loading = loading ? _a.yes : '';
   }
 
   /**

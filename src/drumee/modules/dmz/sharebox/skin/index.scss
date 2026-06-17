@@ -1202,7 +1202,9 @@
     border-radius: 4px;
     border: 1.5px solid var(--sb-grey-30);
     background: #ffffff;
-    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
 
   &__level-row[data-selected='yes'] &__level-check {
@@ -1211,11 +1213,9 @@
 
     &::after {
       content: '';
-      position: absolute;
-      left: 5px;
-      top: 1.5px;
       width: 4px;
       height: 9px;
+      margin-top: -2px;
       border: solid #ffffff;
       border-width: 0 2px 2px 0;
       transform: rotate(45deg);
@@ -1271,6 +1271,7 @@
 
   // Single full-width "Send request" (Figma 60), icon + label centered.
   &__submit-btn {
+    position: relative;
     align-items: center;
     justify-content: center;
     gap: 8px;
@@ -1280,6 +1281,34 @@
     background: var(--sb-cta);
 
     &:hover { filter: brightness(1.08); }
+  }
+
+  // While the request is in flight: block re-submits, hide the icon+label, and
+  // spin a ring (reuses the password gate's dmz-sharebox-btn-spin keyframe).
+  &__submit-btn[data-loading='yes'] {
+    pointer-events: none;
+    cursor: default;
+
+    &:hover { filter: none; }
+  }
+
+  &__submit-btn[data-loading='yes'] &__submit-icon,
+  &__submit-btn[data-loading='yes'] &__submit-label {
+    visibility: hidden;
+  }
+
+  &__submit-btn[data-loading='yes']::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 18px;
+    height: 18px;
+    margin: -9px 0 0 -9px;
+    border: 2px solid rgba(255, 255, 255, 0.4);
+    border-top-color: #ffffff;
+    border-radius: 50%;
+    animation: dmz-sharebox-btn-spin 0.7s linear infinite;
   }
 
   &__submit-icon {

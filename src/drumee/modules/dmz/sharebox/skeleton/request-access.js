@@ -102,6 +102,7 @@ function __skl_dmz_sharebox_request_access(_ui_) {
   // Single full-width "Send request" (Figma 60) with a send glyph.
   const submit = Skeletons.Box.X({
     className : `${reqFig}__submit-btn`,
+    sys_pn    : 'request-submit',
     service   : 'submit-access-request',
     uiHandler : [_ui_],
     kidsOpt   : { active: 0 },
