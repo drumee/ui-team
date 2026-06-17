@@ -271,6 +271,20 @@
       height: 100%;
     }
 
+    // The headless layer hosts the full-area workspace pane. It is normally a
+    // 0x0 positioning anchor; give it the full work area ONLY while it hosts a
+    // pane so the pane (sized 100%, see window-folder skin) tracks the flex
+    // container as the sidebar pins/collapses/resizes. When empty (home grid
+    // shown) it stays 0x0 so it never covers or blocks the grid below it.
+    //
+    // `__ui` is `calc(100% - 10px)` — a right gutter the home grid uses (e.g.
+    // for the scrollbar). The pane should be full-bleed, so add that 10px back
+    // here to reach the container's right edge instead of stopping short of it.
+    &.headless:has(.window-folder__ui[data-headless="1"]) {
+      width: calc(100% + 10px);
+      height: 100%;
+    }
+
     &.creating-hub {
       .window__ui {
         &[data-state="0"] {

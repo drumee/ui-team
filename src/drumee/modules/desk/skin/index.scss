@@ -122,6 +122,14 @@ html {
     display: none;
   }
 
+  // A headless workspace pane (full-screen window tab opened from the
+  // sidebar) fills the desk body and carries its own window topbar. The
+  // home-section topbar is only used on the home grid, so hide it while a
+  // workspace pane is open. Toggled in desk `_syncWorkspaceTopbar`.
+  &__topbar[data-headless="1"] {
+    display: none;
+  }
+
   // Left panel-container hosts trash / activity (notifications) /
   // settings slide-outs that anchor to the desktop sidebar column. On
   // mobile that column doesn't exist (sidebar is a drawer overlay), so
@@ -134,6 +142,18 @@ html {
     [data-partname="settings-panel"] {
       display: none;
     }
+  }
+
+  // Keep the left slide-outs flush against the sidebar's current edge: on
+  // hover the collapsed rail overlays out from 64px to 231px, so shift the
+  // container right by that 167px expansion. Pinned mode (data-collapsed="0")
+  // reserves the full width in-flow, so it's excluded.
+  &__panel-container.left {
+    transition: transform 0.18s ease;
+  }
+
+  .desk-module-sidebar__rail[data-collapsed="1"]:hover ~ &__panel-container.left {
+    transform: translateX(167px);
   }
 
   &__wm-container {

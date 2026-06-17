@@ -374,12 +374,21 @@ class __window_folder extends mfsInteract {
         if (this.isDestroyed && this.isDestroyed()) return;
         Wm.$el.trigger("folder:open", this);
       });
+    } else if (this.mget(_a.headless) && window.Wm && Wm.$el) {
+      // A headless folder IS the full-screen workspace pane and carries its
+      // own window topbar, so the desk's home-section topbar above it is
+      // redundant while it's open. Fire synchronously (not deferred) so the
+      // hide/show coalesces with the previous pane's close in the same frame
+      // when switching workspaces — no topbar flicker.
+      Wm.$el.trigger("workspace:open", this);
     }
   }
 
   onBeforeDestroy(opt) {
     if (!this.mget(_a.headless) && window.Wm && Wm.$el) {
       Wm.$el.trigger("folder:close", this);
+    } else if (this.mget(_a.headless) && window.Wm && Wm.$el) {
+      Wm.$el.trigger("workspace:close", this);
     }
     if (super.onBeforeDestroy) return super.onBeforeDestroy(opt);
   }
