@@ -99,7 +99,7 @@
     position: sticky;
     bottom: 0;
     padding: 24px 40px;
-    z-index: 2000;
+    z-index: 0 !important; 
 
     &[data-mode="closed"] {
       display: none;
@@ -113,6 +113,7 @@
     // api/lib/popup __overlay). This centers the popup on the PAGE, not within the
     // offset sharebox content box.
     position: fixed !important;
+    display: flex;
     top: 0 !important;
     left: 0 !important;
     width: 100vw;
@@ -980,6 +981,18 @@
     }
   }
 
+  // One avatar per message: keep the img-based template avatar (left of the
+  // bubble, carries the username tooltip) and hide the duplicate UserProfile
+  // (Skeletons.UserProfile → .user-profile) that chat-item.buildContent appends
+  // for share messages. The window chat panel scopes the same rule under
+  // .window__chat-panel; the sharebox panel is .dmz__chat-panel, so it needs its
+  // own copy — otherwise every row shows a second avatar below it. The `.me` arm
+  // is kept for parity even though the share chat renders every row as "other".
+  .widget-chatItem__profile.me,
+  .widget-chatItem__profile.user-profile {
+    display: none !important;
+  }
+
   .widget-chatItem__conversation-content {
     &.me {
       background-color: var(--sb-pink);
@@ -1120,12 +1133,18 @@
   }
 
   &__close {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
     cursor: pointer;
-    padding: 0 4px;
-    user-select: none;
-    @include drumee.typo($size: 22px, $line: 22px, $weight: 400, $color: var(--sb-text-muted));
+    flex-shrink: 0;
 
-    &:hover { color: var(--sb-text); }
+    svg { width: 18px; height: 18px; fill: var(--sb-text-muted); }
+    &:hover { background: var(--sb-grey-20); }
+    &:hover svg { fill: var(--sb-text); }
   }
 
   &__level-desc {
@@ -1183,7 +1202,9 @@
     border-radius: 4px;
     border: 1.5px solid var(--sb-grey-30);
     background: #ffffff;
-    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
   }
 
   &__level-row[data-selected='yes'] &__level-check {
@@ -1192,11 +1213,9 @@
 
     &::after {
       content: '';
-      position: absolute;
-      left: 5px;
-      top: 1.5px;
       width: 4px;
       height: 9px;
+      margin-top: -2px;
       border: solid #ffffff;
       border-width: 0 2px 2px 0;
       transform: rotate(45deg);
@@ -1212,7 +1231,7 @@
       width: 100%;
       padding: 10px 12px;
       border: 1px solid var(--sb-grey-30);
-      border-radius: 4px;
+      border-radius: 8px;
       background: #ffffff;
       @include drumee.typo($size: 14px, $line: 20px, $color: var(--sb-text));
       font-family: var(--sb-font-body);
@@ -1229,13 +1248,30 @@
     &[data-mode='closed'] { display: none; }
   }
 
+  // Textarea renders bare (browser-default font/border) — box it like the
+  // email field so the two inputs read as one consistent form.
   &__message {
     width: 100%;
+    min-height: 80px;
+    padding: 10px 12px;
+    border: 1px solid var(--sb-grey-30);
+    border-radius: 8px;
+    background: #ffffff;
     resize: vertical;
+    @include drumee.typo($size: 14px, $line: 20px, $color: var(--sb-text));
+    font-family: var(--sb-font-body);
+
+    &::placeholder { color: var(--sb-text-muted); }
+    &:focus { border-color: var(--sb-cta); outline: none; }
+
+    textarea { 
+      border-style: none;
+    width: 100%; }
   }
 
   // Single full-width "Send request" (Figma 60), icon + label centered.
   &__submit-btn {
+    position: relative;
     align-items: center;
     justify-content: center;
     gap: 8px;
@@ -1245,6 +1281,34 @@
     background: var(--sb-cta);
 
     &:hover { filter: brightness(1.08); }
+  }
+
+  // While the request is in flight: block re-submits, hide the icon+label, and
+  // spin a ring (reuses the password gate's dmz-sharebox-btn-spin keyframe).
+  &__submit-btn[data-loading='yes'] {
+    pointer-events: none;
+    cursor: default;
+
+    &:hover { filter: none; }
+  }
+
+  &__submit-btn[data-loading='yes'] &__submit-icon,
+  &__submit-btn[data-loading='yes'] &__submit-label {
+    visibility: hidden;
+  }
+
+  &__submit-btn[data-loading='yes']::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 18px;
+    height: 18px;
+    margin: -9px 0 0 -9px;
+    border: 2px solid rgba(255, 255, 255, 0.4);
+    border-top-color: #ffffff;
+    border-radius: 50%;
+    animation: dmz-sharebox-btn-spin 0.7s linear infinite;
   }
 
   &__submit-icon {
@@ -1333,6 +1397,6 @@
   justify-items: center;
 }
 
-.widget-chat__body{
-  height: 220px;
+.widget-chat__ui{
+  height: 90% !important;
 }

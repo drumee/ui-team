@@ -40,10 +40,21 @@
       width: 24px;
     }
 
-    // Full-area workspace pane: flatten the popup chrome (corners + shadow).
+    // Full-area workspace pane: flatten the popup chrome (corners + shadow)
+    // and fill the work area. The pixel bounds in `_defaultBounds` are only a
+    // first paint; pinning/collapsing/resizing the sidebar reflows the flex
+    // container width AFTER that, so glue the pane to its layer (sized to the
+    // container by the wm skin) instead of the stale cached width — otherwise
+    // the pane overflows right and its top-right icons get clipped. Headless
+    // panes aren't draggable/resizable (interact base returns early), so the
+    // `!important` overrides of the inline geometry are safe.
     &[data-headless="1"] {
       border-radius: 0;
       box-shadow: none;
+      left: 0 !important;
+      top: 0 !important;
+      width: 100% !important;
+      height: 100% !important;
     }
   }
 

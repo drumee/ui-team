@@ -8,20 +8,24 @@ class ___widget_chatItem extends LetcBox {
   initialize(opt = {}) {
     super.initialize(opt);
 
-    if (this.mget(_a.author_id) === Visitor.id) {
-      this.mset({
-        author: "me",
-      });
-    } else {
-      this.mset({
-        author: _a.other,
-      });
-    }
+    this.mset({ author: this._resolveAuthor() });
     this._timer = {};
     this.setThreadData(); // do not remove
     this.declareHandlers({ ui: _a.multiple, part: _a.multiple });
     this.innerContent = require("./template")(this);
     this.model.unset(_a.state);
+  }
+
+  /**
+   * Resolve which side this message renders on: "me" (right-aligned bubble) for
+   * the viewer's own messages, "other" (left) for everyone else. The returned
+   * value becomes the `author` model field that drives positioning across the
+   * templates and skin. Overridable by subclasses that pin every message to a
+   * single side — see the chat-item-other variant used by the DMZ share chat.
+   * @returns {String} "me" | "other"
+   */
+  _resolveAuthor() {
+    return this.mget(_a.author_id) === Visitor.id ? _a.me : _a.other;
   }
 
   /**

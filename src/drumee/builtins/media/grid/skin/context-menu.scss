@@ -30,11 +30,11 @@
 
   // Workspace / folder kebab — Figma 264:80393 / 264:81896. Three small
   // white circles at the bottom-right corner of the folder shape, mirroring
-  // the area badge (badge sits at bottom: 10px, left: 18px). Always-visible.
+  // the area badge. Always-visible.
   .media-context-menu__folder-trigger {
     position: absolute;
-    bottom: 10px;
-    right: 14px;
+    bottom: 11px;
+    right: 12px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -49,8 +49,8 @@
   }
 
   .media-context-menu__folder-trigger-icon {
-    width: 11px;
-    height: 9px;
+    width: 12px;
+    height: 10px;
     pointer-events: none;
   }
 }

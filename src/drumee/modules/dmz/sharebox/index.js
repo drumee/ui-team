@@ -1,4 +1,21 @@
 
+// Recipient email gate ("require email to view"): accept only real-looking TLDs
+// so common typos like ".con" are rejected (per Lexis 2026-06-17). Every 2-letter
+// TLD is a country code and always accepted; for longer TLDs we accept a curated
+// set of common gTLDs. Extend this set if a legitimate TLD is ever rejected.
+// SCOPED to this gate only — the app-wide Validator.email (signup/invite/…) is
+// intentionally left unchanged.
+const ACCEPTED_TLDS = new Set([
+  'com', 'net', 'org', 'edu', 'gov', 'mil', 'int', 'info', 'biz', 'name', 'pro',
+  'mobi', 'tel', 'asia', 'jobs', 'coop', 'aero', 'cat', 'travel', 'museum', 'post',
+  'app', 'dev', 'xyz', 'site', 'online', 'tech', 'store', 'shop', 'blog', 'cloud',
+  'live', 'life', 'world', 'today', 'news', 'media', 'club', 'work', 'team', 'group',
+  'company', 'agency', 'studio', 'design', 'email', 'space', 'website', 'page',
+  'link', 'wiki', 'zone', 'city', 'global', 'network', 'solutions', 'services',
+  'systems', 'center', 'expert', 'digital', 'academy', 'school', 'finance',
+  'consulting', 'marketing', 'technology'
+]);
+
 /**
  * Class representing the dmz sharebox module.
  * @class __dmz_sharebox
@@ -33,6 +50,7 @@ class __dmz_sharebox extends LetcBox {
     this._selectedRequestLevels = new Set();
     this._requestEmailInput    = null;
     this._requestMessageInput  = null;
+    this._requestSubmit        = null;
   }
 
   /**
@@ -95,12 +113,12 @@ class __dmz_sharebox extends LetcBox {
         })
 
       case _a.footer:
-        // Viral "Sign Up Free" landing footer — guests only. A logged-in recipient
-        // already has an account, so don't pitch signup to them (they see their own
-        // identity in the top-nav instead). The gate footer is fed separately by
-        // promptGate, so the anonymous email/password gate banner is unaffected.
+        // Viral landing footer. A logged-in recipient already has an account, so
+        // the footer still shows (the banner/branding stays) but the "Sign Up Free"
+        // button is dropped in the skeleton — see footer.js. The gate footer is fed
+        // separately by promptGate, so the anonymous email/password gate banner is
+        // unaffected.
         if (!this.mget('is_secure')) return;
-        if (this.mget('is_authenticated')) return;
         return this.waitElement(child.el, () => {
           child.feed(this.footerSkeleton(this));
         });
@@ -168,6 +186,9 @@ class __dmz_sharebox extends LetcBox {
 
       case 'request-error':
         return this._requestError = child;
+
+      case 'request-submit':
+        return this._requestSubmit = child;
 
       default:
         if (super.onPartReady) super.onPartReady(child, pn);
@@ -396,7 +417,7 @@ class __dmz_sharebox extends LetcBox {
     if (needEmail) {
       email = this._emailInput ? (this._emailInput.getData().value || '').trim() : '';
       if (!email) return this.renderErrorMessage(LOCALE.SECURE_SHARE_ENTER_EMAIL);
-      if (!Validator.email(email)) return this.renderErrorMessage(LOCALE.SECURE_SHARE_EMAIL_INVALID_FORMAT);
+      if (!this._strictEmail(email)) return this.renderErrorMessage(LOCALE.SECURE_SHARE_EMAIL_INVALID_FORMAT);
     }
 
     let password = '';
@@ -704,6 +725,12 @@ class __dmz_sharebox extends LetcBox {
    *
   */
   loadDeskContent(banner = 1) {
+    // Publish this share's chat grant to a session-global so nested subfolder
+    // windows (which open as plain desk folder windows and lose the share caps)
+    // can hide the chat tab + conversation panel when chat isn't granted. Read by
+    // window/skeleton/toolkit via _dmzShareWithoutChat(); gated on uiRouter.isDmz()
+    // there, so it only ever affects this recipient session, never the desk.
+    if (window.uiRouter) window.uiRouter._dmzShareCanChat = !!this.mget('can_chat');
     this.__content.feed(this.deskSkeleton(this))
     if (this.__actionButtons) {
       this.__actionButtons.el.dataset.mode = _a.open;
@@ -851,11 +878,12 @@ class __dmz_sharebox extends LetcBox {
       this._setEmailValid(false);
       return this._hideGateMessage();
     }
-    if (Validator.email(email)) {
+    if (this._strictEmail(email)) {
+      // Valid email: keep the small green check on the row, but do NOT show the
+      // "Email recognised…" success banner (removed per Lexis 2026-06-17 — it had
+      // a typo and added noise). Clear any lingering error message instead.
       this._setEmailValid(true);
-      return this.renderGateSuccess(
-        LOCALE.SECURE_SHARE_EMAIL_RECOGNISED || 'Email recognised - click Continue to access.'
-      );
+      return this._hideGateMessage();
     }
     // Invalid format: clear the check; only alert on blur (not every keystroke).
     this._setEmailValid(false);
@@ -864,6 +892,21 @@ class __dmz_sharebox extends LetcBox {
     } else {
       this._hideGateMessage();
     }
+  }
+
+  /**
+   * Stricter email check for the recipient gate ("require email to view").
+   * Requires a valid format AND a real-looking TLD, so typos like ".con" are
+   * rejected while genuine addresses pass. Scoped to this gate — the app-wide
+   * Validator.email (signup/invite/…) is intentionally left unchanged.
+   * @param {String} v
+   * @returns {Boolean}
+   */
+  _strictEmail(v) {
+    const email = String(v || '').trim().toLowerCase();
+    if (!Validator.email(email)) return false;
+    const tld = email.slice(email.lastIndexOf('.') + 1);
+    return tld.length === 2 || ACCEPTED_TLDS.has(tld);
   }
 
   /**
@@ -1168,6 +1211,7 @@ class __dmz_sharebox extends LetcBox {
     this._selectedRequestLevels = new Set();
     this._requestEmailInput    = null;
     this._requestMessageInput  = null;
+    this._requestSubmit        = null;
     overlay.feed(require('./skeleton/request-access').default(this));
     overlay.el.dataset.mode = _a.open;
   }
@@ -1176,6 +1220,8 @@ class __dmz_sharebox extends LetcBox {
    *
    */
   async submitAccessRequest() {
+    // Ignore repeat clicks while a request is already in flight (the spinner is up).
+    if (this._submittingAccessRequest) return;
     // Validate with INLINE feedback in the popup. renderErrorMessage targets the
     // gate's parts (absent here), so it would fail silently — which is why submit
     // appeared dead when a field was missing.
@@ -1215,6 +1261,7 @@ class __dmz_sharebox extends LetcBox {
     };
     if (msgVal) payload.message = msgVal;
 
+    this._setRequestSubmitLoading(true);
     try {
       const data = await this.postService(SERVICE.dmz.request_access, payload);
       if (data && data.status === 'REQUEST_SENT') {
@@ -1234,7 +1281,24 @@ class __dmz_sharebox extends LetcBox {
       }
     } catch (e) {
       this._showRequestError(LOCALE.SOMETHING_WENT_WRONG);
+    } finally {
+      // On success the overlay is swapped to request-sent (button is gone), so this
+      // is effectively a no-op there; on error/validation it restores the button.
+      this._setRequestSubmitLoading(false);
     }
+  }
+
+  /**
+   * Toggle the spinner on the request-access submit button. Sets data-loading on
+   * the captured submit part and a re-entry guard so a double-click can't fire two
+   * request_access calls. Mirrors the password gate's _setButtonLoading spinner.
+   * @param {Boolean} loading
+   */
+  _setRequestSubmitLoading(loading) {
+    this._submittingAccessRequest = !!loading;
+    const el = this._requestSubmit && this._requestSubmit.el;
+    if (!el) return;
+    el.dataset.loading = loading ? _a.yes : '';
   }
 
   /**

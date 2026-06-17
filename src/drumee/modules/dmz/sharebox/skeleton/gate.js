@@ -72,7 +72,7 @@ function __skl_dmz_sharebox_gate(_ui_, opts = {}) {
         errorHandler : [_ui_],
         validators   : [
           { reason: LOCALE.SECURE_SHARE_ENTER_EMAIL, comply: Validator.require },
-          { reason: LOCALE.INVALID_EMAIL,            comply: Validator.email }
+          { reason: LOCALE.INVALID_EMAIL,            comply: (v) => _ui_._strictEmail(v) }
         ],
         showError : false
       }),

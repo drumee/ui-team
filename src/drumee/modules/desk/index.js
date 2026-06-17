@@ -64,6 +64,12 @@ class desk_module extends LetcBox {
     this._onFolderClose = this._onFolderClose.bind(this);
     this._onWmMinimize = this._onWmMinimize.bind(this);
     this._onWmWake = this._onWmWake.bind(this);
+    // Headless workspace panes (full-screen window tabs opened from the
+    // sidebar) hide the home-section topbar while they're open. Tracked by
+    // cid so switching between two panes never momentarily restores the bar.
+    this._openWorkspaces = new Set();
+    this._onWorkspaceOpen = this._onWorkspaceOpen.bind(this);
+    this._onWorkspaceClose = this._onWorkspaceClose.bind(this);
     this._bindFolderTabs();
   }
 
@@ -75,6 +81,8 @@ class desk_module extends LetcBox {
     }
     Wm.$el.on("folder:open", this._onFolderOpen);
     Wm.$el.on("folder:close", this._onFolderClose);
+    Wm.$el.on("workspace:open", this._onWorkspaceOpen);
+    Wm.$el.on("workspace:close", this._onWorkspaceClose);
     Wm.$el.on(_e.minimize, this._onWmMinimize);
     Wm.$el.on(_e.wake, this._onWmWake);
     this._folderTabsBound = true;
@@ -94,6 +102,33 @@ class desk_module extends LetcBox {
     if (!winInstance) return;
     if (this._openFolders.delete(winInstance.cid)) {
       this._renderFolderTabs();
+    }
+  }
+
+  _onWorkspaceOpen(event, winInstance) {
+    if (!winInstance) return;
+    this._openWorkspaces.add(winInstance.cid);
+    this._syncWorkspaceTopbar();
+  }
+
+  _onWorkspaceClose(event, winInstance) {
+    if (!winInstance) return;
+    if (this._openWorkspaces.delete(winInstance.cid)) {
+      this._syncWorkspaceTopbar();
+    }
+  }
+
+  // The home-section topbar is only meaningful on the home grid. A headless
+  // workspace pane fills the desk body and brings its own window topbar, so
+  // hide the home topbar while any workspace pane is open and restore it once
+  // the last one closes (back to home).
+  _syncWorkspaceTopbar() {
+    const part = this.getPart("top-bar");
+    if (!part || !part.el) return;
+    if (this._openWorkspaces.size) {
+      part.el.dataset.headless = "1";
+    } else {
+      delete part.el.dataset.headless;
     }
   }
 

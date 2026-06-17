@@ -9,6 +9,20 @@ const AREA_LABELS = {
   public: LOCALE.PUBLIC,
 };
 
+// True ONLY when the app booted into a DMZ/share recipient session whose share
+// does NOT grant chat. Used to hide the chat tab + conversation panel at EVERY
+// folder depth: nested subfolders open as plain desk folder windows that lose the
+// share's caps, so per-window gating doesn't reach them — but the recipient's
+// whole session is one share with fixed caps, so this session-global is correct
+// at any depth. Gated on uiRouter.isDmz() (the boot area), so it can NEVER be true
+// in a normal desk session → desk folders are completely unaffected. The flag is
+// published by the DMZ sharebox on loadDeskContent(); `=== false` means we only
+// hide when chat is explicitly not granted (unknown/undefined → show, safe default).
+function _dmzShareWithoutChat() {
+  const r = (typeof window !== "undefined") && window.uiRouter;
+  return !!(r && typeof r.isDmz === "function" && r.isDmz() && r._dmzShareCanChat === false);
+}
+
 export function breadcrumbs(ui, opt) {
   return Skeletons.Wrapper.X({
     debug: __filename,
@@ -71,8 +85,9 @@ export function tabBar(ui, opt = {}) {
 
   // Hide the Chat tab for personal areas, and (DMZ) when the share doesn't grant
   // chat. opt.chat is only passed by the DMZ sharebox; undefined for every other
-  // caller, so their behaviour is unchanged.
-  if (ui.mget(_a.area) === _a.personal || opt.chat === false) {
+  // caller, so their behaviour is unchanged. _dmzShareWithoutChat() additionally
+  // hides it inside nested recipient subfolders (which lose opt.chat).
+  if (ui.mget(_a.area) === _a.personal || opt.chat === false || _dmzShareWithoutChat()) {
     chat_label = "";
     chat_tab = "";
   }
@@ -439,6 +454,15 @@ export function chatPanel(ui) {
     chat.guest_chat  = canPost ? 0 : 1;
     chat.scoped_post = canPost ? 1 : 0;
     chat.desk = ui;
+    // DMZ sharebox conversation: an ANONYMOUS (logged-out) recipient has no
+    // identity to align against, so render one uniform column — every message
+    // sits on the "other" side via the chat-item-other variant. A LOGGED-IN
+    // recipient keeps the normal me/other split (base chat-item), so their own
+    // messages right-align. Scoped to the sharebox itself — nested window/folder
+    // chats launched from a share keep the normal split regardless.
+    if (ui.fig.family === "dmz-sharebox" && !ui.mget('is_authenticated')) {
+      chat.item_kind = "widget_chat_item_other";
+    }
   }
 
   return Skeletons.Box.Y({
@@ -516,6 +540,8 @@ export function folderFilesView(ui) {
       ? folderFilesRowContainer(ui)
       : filesContainer(ui);
   if (ui.mget(_a.area) === _a.personal) return [files];
+  // Recipient subfolder of a no-chat share → files only (no conversation panel).
+  if (_dmzShareWithoutChat()) return [files];
   return [files, chatPanel(ui)];
 }
 

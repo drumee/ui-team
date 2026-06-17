@@ -26,7 +26,7 @@ function __skl_dmz_sharebox_request_access(_ui_) {
     className : `${reqFig}__header`,
     kids      : [
       Skeletons.Note({ className: `${reqFig}__title`, content: LOCALE.SECURE_SHARE_REQUEST_ACCESS }),
-      Skeletons.Note({ className: `${reqFig}__close`, content: '×', service: 'close-request-access', uiHandler: [_ui_] }),
+      Skeletons.Button.Svg({ className: `${reqFig}__close`, ico: 'cross', service: 'close-request-access', uiHandler: [_ui_] }),
     ]
   });
 
@@ -102,11 +102,12 @@ function __skl_dmz_sharebox_request_access(_ui_) {
   // Single full-width "Send request" (Figma 60) with a send glyph.
   const submit = Skeletons.Box.X({
     className : `${reqFig}__submit-btn`,
+    sys_pn    : 'request-submit',
     service   : 'submit-access-request',
     uiHandler : [_ui_],
     kidsOpt   : { active: 0 },
     kids      : [
-      Skeletons.Image.Svg({ className: `${reqFig}__submit-icon`, ico: 'send' }),
+      Skeletons.Image.Svg({ className: `${reqFig}__submit-icon`, ico: 'app-send' }),
       Skeletons.Note({ className: `${reqFig}__submit-label`, content: LOCALE.SECURE_SHARE_SEND_REQUEST }),
     ]
   });
