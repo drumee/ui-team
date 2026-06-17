@@ -401,6 +401,9 @@ module.exports = {
   widget_chat_item: function () {
     return import("widget/chat-item");
   },
+  widget_chat_item_other: function () {
+    return import("./builtins/widget/chat-item-other");
+  },
   widget_chat: function () {
     // return import("./builtins/chat/hub");
     return import("./builtins/widget/chat");

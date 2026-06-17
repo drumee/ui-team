@@ -59,7 +59,10 @@ const __skl_widget_chat = function (ui) {
     spinner: true,
     placeholder: Skeletons.Note(LOCALE.NO_DISCUSSIONS_YET, 'no-content'),
     itemsOpt: {
-      kind: 'widget_chat_item',
+      // Item widget kind is configurable so a host (e.g. the DMZ share chat)
+      // can swap in a variant — see chat-item-other, which pins every message
+      // to the "other" side. Defaults to the standard me/other chat item.
+      kind: ui.mget('item_kind') || 'widget_chat_item',
       area: ui.mget(_a.area),
       // Fall back to `area` when type is missing so chat-item template's
       // `m.type == _a.share` gate fires for folder/share-room messages
