@@ -578,14 +578,11 @@ class __window_secure_share extends mfsInteract {
             }
           }
         }
-        // "Require email to view" must restrict to at least one allowed email/domain;
-        // with an empty list the gate would accept ANY email (a cosmetic, non-real
-        // gate). Block creation and prompt the sender to add one (per Lexis 2026-06-14).
-        if (!this._emailChips.length) {
-          Butler.say(LOCALE.SECURE_SHARE_REQUIRE_ALLOWED_EMAIL);
-          return;
-        }
-        payload.allowed_emails = this._emailChips;
+        // The allowed-emails list is OPTIONAL (per Lexis 2026-06-17). Empty → "require
+        // email to view" accepts any valid email (Mode 1); one or more chips → restrict
+        // to that list/domain (Mode 2). The recipient must still enter a valid email at
+        // the gate (format-validated on both the client and the server).
+        if (this._emailChips.length) payload.allowed_emails = this._emailChips;
       }
 
       if (this._requirePassword) {
