@@ -661,11 +661,18 @@ class desk_module extends LetcBox {
       return window.Wm.route();
     }
     this._pending = { available: false };
+    // The server-side profile.onboarded flag is authoritative: a user who has
+    // completed onboarding (persisted via onboarding.update_profile -> onboarded=1)
+    // must never be pushed back into the wizard on a later login. Check it FIRST,
+    // and also drop any stale "force-onboarding" marker so it can't re-trigger the
+    // wizard after completion. Onboarding loads purely from this flag — new
+    // accounts are created with onboarded=0 and the plugin is installed.
+    if (Visitor.profile().onboarded) {
+      try { localStorage.removeItem("force-onboarding"); } catch (e) {}
+      return this.loadDefault();
+    }
     if (localStorage.getItem("force-onboarding")) {
       return this._loadOnboarding();
-    }
-    if (Visitor.profile().onboarded) {
-      return this.loadDefault();
     }
     this._loadOnboarding();
   }
