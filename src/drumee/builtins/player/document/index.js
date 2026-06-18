@@ -890,8 +890,19 @@ class __player_document extends PlayerInteract {
       return
     }
     this.size = this.max_size();
-    this.size.width = this.size.width * .9;
-    this.size.height = this.size.height * .9;
+    // In a DMZ/secure-share recipient session the window-manager element is the
+    // constrained share card, so max_size() is far too small — a wide document
+    // (e.g. a spreadsheet PDF) overflows and its rows/cells overlap (only fixed by
+    // going fullscreen). Size from the viewport instead (~2/3 width) so the doc
+    // opens with room to render, matching the desk experience. Gated on
+    // uiRouter.isDmz() (boot area dmz|share) → the desk path is byte-identical.
+    if (window.uiRouter && typeof window.uiRouter.isDmz === 'function' && window.uiRouter.isDmz()) {
+      this.size.width  = Math.round(window.innerWidth * 0.66);
+      this.size.height = Math.round(window.innerHeight * 0.9);
+    } else {
+      this.size.width = this.size.width * .9;
+      this.size.height = this.size.height * .9;
+    }
 
 
     if (this.size.width > maxWidth) {
