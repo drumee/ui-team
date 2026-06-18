@@ -348,16 +348,13 @@ module.exports = function (ui) {
           dataset: { kind: 'error' },
           content: ERR_TEXT[saErr] || LOCALE.GDRIVE_SA_NOT_SHARED,
         }) : null,
+        // SA-only: this is the popup's main screen, so there's no "Back"
+        // destination — just the full-width primary action.
         Skeletons.Box.X({
-          className: `${pfx}__footer ${pfx}__btn-row`,
+          className: `${pfx}__footer`,
           kids: [
             Skeletons.Note({
-              className: `${pfx}__back-btn`,
-              content: LOCALE.BACK || 'Back',
-              service: 'gdrive-sa-back', uiHandler: [ui],
-            }),
-            Skeletons.Note({
-              className: `${pfx}__primary-btn ${pfx}__primary-btn--grow`,
+              className: `${pfx}__primary-btn ${pfx}__primary-btn--full`,
               content: saF ? LOCALE.MIGRATE_GDRIVE_START : (LOCALE.GDRIVE_SA_VERIFY_START || 'Verify & import'),
               service: 'gdrive-sa-start',
               uiHandler: [ui],

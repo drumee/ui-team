@@ -1,5 +1,12 @@
 @use "mixins/drumee";
 
+// Quick "pop" when the SA email is copied (migrate-gdrive-popup__sa-copy).
+@keyframes migrate-gdrive-copy-pop {
+  0% { transform: scale(0.85); }
+  55% { transform: scale(1.12); }
+  100% { transform: scale(1); }
+}
+
 // Drumee brand accent — INDIGO/PURPLE per Figma (node 1661-60457). Solid
 // colors reuse the design-system tokens (--primary-purple-40 = #5950ff is the
 // brand button color; --primary-purple-50 = #433cc5 is the darker/hover shade)
@@ -784,6 +791,15 @@ $danger-soft: rgba(246, 81, 75, 0.12);
     padding: var(--spacer-2) var(--spacer-3);
     border-radius: var(--corner-radius-1);
     background: var(--normal-bg-90);
+    // Flash a green outline when the email is copied so the feedback is
+    // unmissable; reverts with the button after ~1.8s (JS clears data-copied).
+    border: 1px solid transparent;
+    transition: border-color 0.2s ease, background 0.2s ease;
+
+    &[data-copied="1"] {
+      border-color: var(--green-400);
+      background: var(--green-100);
+    }
   }
 
   &__sa-email {
@@ -802,9 +818,22 @@ $danger-soft: rgba(246, 81, 75, 0.12);
     padding: 2px 10px;
     border-radius: 999px;
     background: var(--normal-bg-100);
+    white-space: nowrap;
+    transition: background 0.15s ease, color 0.15s ease, transform 0.1s ease;
     @include drumee.typo($size: 11px, $weight: 600, $line: 16px, $color: $accent);
 
-    &[data-copied="1"] { opacity: 0.55; }
+    &:hover { background: var(--normal-bg-elevated, var(--normal-bg-90)); }
+    &:active { transform: scale(0.92); }
+
+    // Copied: solid green pill with a ✓ + a quick pop — clearly distinct from
+    // the idle state, then JS reverts it to "Copy" after ~1.8s.
+    &[data-copied="1"] {
+      color: #fff;
+      background: var(--green-500);
+      animation: migrate-gdrive-copy-pop 0.32s ease;
+
+      &::before { content: "✓ "; }
+    }
   }
 
   &__sa-input-row {
