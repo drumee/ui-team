@@ -2272,7 +2272,7 @@
     max-width: 320px;
     padding: 12px;
     @include drumee.typo(
-      $size: 12px,
+      $size: 13px,
       $line: 1.4,
       $weight: 400,
       $color: var(--normal-fg-10)
@@ -2284,19 +2284,22 @@
     background: #d65f59;
     border-radius: 16px 0 16px 16px;
     box-shadow: none;
-    color: #ffffff;
+    // Own message: black text + tags (was white). Background stays the area
+    // colour (set per data-area below); tags must NOT use the area colour or
+    // they'd blend into the bubble, so they go dark like the body text.
+    color: var(--normal-fg-10);
 
     .note-content,
     a,
     .user-mention {
-      color: #ffffff;
+      color: var(--normal-fg-10);
     }
 
     .file-mention {
-      color: #ffffff;
+      color: var(--normal-fg-10);
       font-weight: 600;
       text-decoration: underline;
-      text-decoration-color: rgba(255, 255, 255, 0.7);
+      text-decoration-color: rgba(11, 10, 33, 0.7);
     }
   }
 
@@ -2385,7 +2388,7 @@
   .widget-chatItem__username-content,
   .widget-chatItem__message-username {
     @include drumee.typo(
-      $size: 10px,
+      $size: 11px,
       $line: 1.4,
       $weight: 700,
       $color: var(--normal-fg-10)
@@ -2400,6 +2403,7 @@
   }
 
   .widget-chatItem__message-date {
+    // Grey timestamp (#84848c), slightly enlarged.
     @include drumee.typo(
       $size: 11px,
       $line: 1.4,
