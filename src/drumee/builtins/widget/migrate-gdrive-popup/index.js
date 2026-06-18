@@ -385,6 +385,13 @@ class __migrate_gdrive_popup extends LetcBox {
         // Cloud project NUMBER — without it Google records no per-app grant
         // and the worker 403/404s on the very ids the user just picked.
         .setAppId(String(cfg.app_id))
+        // The Picker returns the user's selection via window.postMessage.
+        // Without an explicit origin it targets a guessed one that does NOT
+        // match this deployment (custom domain + `/-/<user>/` subpath), so the
+        // PICKED message — and our _onPicked callback — is silently dropped:
+        // the picker closes but the popup never shows the staged files. Pin it
+        // to this page's real origin so the result always reaches us.
+        .setOrigin(window.location.protocol + '//' + window.location.host)
         .setCallback((data) => this._onPicked(data))
         .build();
       picker.setVisible(true);
