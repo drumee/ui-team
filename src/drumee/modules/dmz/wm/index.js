@@ -471,6 +471,9 @@ class __dmz_wm extends winman {
       case "new-document":
         return this._newDocument(cmd);
 
+      case "add-note":
+        return this._newNote();
+
       default:
         return this.warn(WARNING.method.unprocessed.format(service));
     }
@@ -579,6 +582,28 @@ class __dmz_wm extends winman {
       .finally(() => {
         this._creatingDoc = 0;
       });
+  }
+
+  /**
+   * Create a markdown note in the current share folder. Mirrors the desk folder
+   * window (window/folder/index.js "add-note": Wm.windowsLayer.append) but uses
+   * THIS wm's windows-layer and passes `target: this` — the editor's save target
+   * is normally Wm.getActiveWindow(), which is empty in the share view, so without
+   * an explicit target the note would never save. The DMZ wm is a valid target
+   * (mget nid/hub_id, canUpload, insertMedia, getItemsByAttr inherited). The note
+   * saves via media.save as the recipient: a signed-in can_edit recipient's
+   * node-grant authorizes + node-scopes the write (stage-verified); an anonymous
+   * recipient is blocked by the A3 read-only ceiling (media.save is write-src).
+   * Editor opens as a draggable window in the windows-layer (markdow extends the
+   * player → inherits the DMZ viewport containment).
+   */
+  _newNote() {
+    if (!this.windowsLayer) return;
+    return this.windowsLayer.append({
+      kind: "editor_markdown",
+      uiHandler: [this],
+      target: this,
+    });
   }
 
   /**

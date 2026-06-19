@@ -59,19 +59,18 @@ function dmzTopbar(ui) {
     className: `${cnWindowButton}__buttons-wrapper`,
     kids: [
       // visioMenu(ui),
-      // "Add new" — the same dropdown the desk folder window uses (newFileMenu),
-      // restricted via opt.items. A can_edit recipient can create a sub-folder OR
-      // an office document (Document / Spreadsheet / Presentation) inside the share:
-      // the office editor now works in the DMZ view (Phase-1/2), and the create is
-      // server-gated (euroffice.new_doc requires can_edit + node-scopes to the
-      // shared subtree). Each menu item dispatches its service via its own
-      // uiHandler:[ui] to this sharebox's onUiEvent, which delegates "add-folder"
-      // and "new-document" to the window manager. NOTE creation is wired
-      // separately (next increment) and not yet listed here. Shown only to guests
-      // whose role grants write permission.
+      // "Add new" — the same dropdown the desk folder window uses (newFileMenu).
+      // A can_edit recipient can create a sub-folder, a markdown Note, or an office
+      // document (Document / Spreadsheet / Presentation) inside the share. The
+      // office editor + note editor work in the DMZ view; creates are scoped to the
+      // recipient's node-grant (+ server-gated for office via euroffice.new_doc).
+      // Each menu item dispatches its service via its own uiHandler:[ui] to this
+      // sharebox's onUiEvent, which delegates "add-folder" / "add-note" /
+      // "new-document" to the window manager. Shown only to guests whose role
+      // grants write permission.
       canEdit
         ? newFileMenu(ui, {
-            items: ["add-folder", "new-document"],
+            items: ["add-folder", "add-note", "new-document"],
             triggerIco: "plus-header",
             // Tint the (monochrome) folder glyph with the share accent so it
             // matches the colored office icons + the header/badge instead of the

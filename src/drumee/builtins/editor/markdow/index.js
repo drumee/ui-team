@@ -41,7 +41,12 @@ class __editor_markdown extends __player {
       filename: LOCALE.NOTE_ON_DATE_X.format(now),
       hub_id: Visitor.get(_a.id),
     })
-    this.target = Wm.getActiveWindow();
+    // The save target is normally the active window (the folder the note is
+    // created in). The DMZ share view has no pool window to be "active", so it
+    // passes its window manager explicitly as opt.target — without this the note
+    // would have no target and never save. Desk callers pass no opt.target → the
+    // active-window behaviour is unchanged.
+    this.target = opt.target || Wm.getActiveWindow();
   }
 
   /**

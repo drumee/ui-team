@@ -576,6 +576,18 @@ class __dmz_sharebox extends LetcBox {
         }
         return;
 
+      // "Add new" → markdown note. Same delegation as add-folder/new-document.
+      // The note saves via media.save as the recipient: a signed-in can_edit
+      // recipient's node-grant authorizes + node-scopes the write; anonymous is
+      // blocked by the A3 read-only ceiling. This client gate keeps a view-only
+      // recipient from firing the request.
+      case "add-note":
+        if (this._gateInteraction(this.havePermission(_K.permission.write, this.mget(_a.privilege)))) return;
+        if (this.wm && this.wm.onUiEvent) {
+          this.wm.onUiEvent(cmd, { service: "add-note" });
+        }
+        return;
+
       case 'open-signup': {
         this.closeSignupRequiredOverlay();
         const { main_domain } = bootstrap();
