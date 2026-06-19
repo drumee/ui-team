@@ -747,6 +747,16 @@
       }
     }
 
+    // Office icons (Document/Spreadsheet/Presentation) are brand-colored SVGs
+    // whose page-background path has NO fill — it inherits the svg fill, which
+    // above is var(--sb-text) (dark), so the page looked black. The desk paints
+    // these white via the item's `white` class; the toolkit rule lives under the
+    // .window-button namespace and doesn't reach .dmz-button, so port it here.
+    // Brand-colored paths keep their explicit fills; only the unfilled page is set.
+    &__item.white &__icon svg {
+      fill: #ffffff;
+    }
+
     &__name {
       @include drumee.typo($size: 14px, $line: 16px, $color: var(--sb-text));
       font-family: var(--sb-font-body);
