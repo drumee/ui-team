@@ -139,8 +139,8 @@ const make = function (ui) {
   };
 
   const assigneeAvatar = (task) => {
-    // Multi-assignee: show avatar + name per assignee (up to 3) then a "+N"
-    // chip. Rendered in the card footer, wrapping to new lines as needed.
+    // Multi-assignee: overlapping avatars (up to 3) then a "+N" chip — sits
+    // bottom-right of the card meta row (matches Figma 2021:117822).
     const uids = Array.isArray(task.assignee_uids)
       ? task.assignee_uids
       : task.assignee_uid
@@ -151,35 +151,26 @@ const make = function (ui) {
     const shown = uids.slice(0, MAX);
     const overflow = uids.length - shown.length;
     const items = shown.map((uid) => {
-      const m = ui.getMember(uid);
-      return Skeletons.Box.X({
-        className: `${pfx}__task-assignee-item`,
-        kids: [
-          Skeletons.UserProfile({
-            className: `${pfx}__task-assignee`,
-            id: uid,
-            firstname: m?.firstname,
-            lastname: m?.lastname,
-            auto_color: 1,
-            live_status: 0,
-          }),
-          Skeletons.Note({
-            className: `${pfx}__task-assignee-name`,
-            content: fullName(m),
-          }),
-        ],
+      const m = ui.getMember(uid) || {};
+      return Skeletons.UserProfile({
+        className: `${pfx}__task-avatar`,
+        id: uid,
+        firstname: m.firstname,
+        lastname: m.lastname,
+        auto_color: 1,
+        live_status: 0,
       });
     });
     if (overflow > 0) {
       items.push(
         Skeletons.Note({
-          className: `${pfx}__task-assignee-more`,
+          className: `${pfx}__task-avatar-more`,
           content: `+${overflow}`,
         }),
       );
     }
     return Skeletons.Box.X({
-      className: `${pfx}__task-assignees`,
+      className: `${pfx}__task-avatars`,
       kids: items,
     });
   };
@@ -207,11 +198,11 @@ const make = function (ui) {
         })
       : null;
 
-    // Compact linked-files preview — first 2 filenames + "+N more".
-    const visibleFiles = linkedFiles.slice(0, 2);
+    // Linked-files preview — wrapping paperclip chips (first 3) + "+N".
+    const visibleFiles = linkedFiles.slice(0, 3);
     const moreFiles = Math.max(0, linkedFiles.length - visibleFiles.length);
     const filesNode = visibleFiles.length
-      ? Skeletons.Box.Y({
+      ? Skeletons.Box.X({
           className: `${pfx}__task-files`,
           kids: [
             ...visibleFiles.map((f) =>
@@ -232,29 +223,31 @@ const make = function (ui) {
             moreFiles
               ? Skeletons.Note({
                   className: `${pfx}__task-files-more`,
-                  content: `+${moreFiles} ${LOCALE.MORE || "more"}`,
+                  content: `+${moreFiles}`,
                 })
               : null,
           ].filter(Boolean),
         })
       : null;
 
-    // Footer: priority dot + due date only. Attachment count badge removed
-    // (the inline file rows above already convey the number visually).
-    // Assignees render above this row (see card kids).
+    // Footer: priority pill + due-date pill on the left, assignee avatars
+    // pushed to the right (Figma 2021:117822).
     const priorityText = LOCALE[priority.label] || priority.key;
-    const footer = Skeletons.Box.X({
-      className: `${pfx}__task-foot`,
+    const meta = Skeletons.Box.X({
+      className: `${pfx}__task-meta`,
       kids: [
-        // Priority chip — the status color fills it and the label reads inside
-        // (Note renders `content` as text; a bare wrapper would not).
+        // Filled priority pill — color driven by `data-priority` in the skin.
         Skeletons.Note({
-          className: `${pfx}__task-priority-dot`,
+          className: `${pfx}__task-priority`,
           content: priorityText,
-          styleOpt: { background: priority.color },
+          attrOpt: { "data-priority": task.priority || "medium" },
         }),
         task.due_date ? dueBadge(task) : null,
       ].filter(Boolean),
+    });
+    const footer = Skeletons.Box.X({
+      className: `${pfx}__task-foot`,
+      kids: [meta, assigneeAvatar(task)].filter(Boolean),
     });
 
     return Skeletons.Box.Y({
@@ -297,8 +290,6 @@ const make = function (ui) {
             })
           : null,
         filesNode,
-        // Assignees (avatar + name) sit just above the priority/due footer row.
-        assigneeAvatar(task),
         footer,
       ].filter(Boolean),
     });
@@ -314,7 +305,7 @@ const make = function (ui) {
       kids: [
         Skeletons.Note({
           className: `${pfx}__add-label`,
-          content: LOCALE.ADD_TASK,
+          content: `+ ${LOCALE.NEW_TASK}`,
         }),
       ],
     });
@@ -394,11 +385,9 @@ const make = function (ui) {
         Skeletons.Note({
           className: `${pfx}__priority-pill`,
           content: LOCALE[p.label] || p.key,
+          // Colors are driven by `data-priority` + `data-active` in the skin
+          // (filled-when-selected, outline otherwise) to match Figma exactly.
           dataset: { active: selected === p.key ? 1 : 0, priority: p.key },
-          styleOpt:
-            selected === p.key
-              ? { borderColor: p.color, color: p.color }
-              : null,
           bubble: 0,
           service: serviceName,
           uiHandler: [ui],
@@ -710,9 +699,8 @@ const make = function (ui) {
         Skeletons.Note({
           className: `${pfx}__detail-status-pill`,
           content: LOCALE[c.label] || c.key,
+          // Selected/dot colors driven by `data-status` + `data-active` in skin.
           dataset: { active: dStatus === c.key ? 1 : 0, status: c.key },
-          styleOpt:
-            dStatus === c.key ? { borderColor: c.color, color: c.color } : null,
           bubble: 0,
           service: "set-status",
           uiHandler: [ui],
@@ -908,19 +896,13 @@ const make = function (ui) {
       ],
     });
 
+    // Figma footer is a single full-width primary button; the header X closes.
     const actions = Skeletons.Box.X({
       className: `${pfx}__detail-actions`,
       kids: [
         Skeletons.Note({
-          className: `${pfx}__detail-cancel`,
-          content: LOCALE.CANCEL,
-          bubble: 0,
-          service: "cancel-detail",
-          uiHandler: [ui],
-        }),
-        Skeletons.Note({
           className: `${pfx}__detail-submit`,
-          content: LOCALE.UPDATE,
+          content: LOCALE.SAVE_CHANGE,
           bubble: 0,
           service: "commit-detail",
           uiHandler: [ui],
@@ -1019,13 +1001,9 @@ const make = function (ui) {
         Skeletons.Note({
           className: `${pfx}__create-status-pill`,
           content: LOCALE[c.label] || c.key,
-          // `data-status` lets the JS update pills via DOM without
-          // re-rendering (see _updateStatusPills).
+          // `data-status` + `data-active` drive pill colors via the skin and
+          // let the JS update them in place without a re-render.
           dataset: { active: selectedStatus === c.key ? 1 : 0, status: c.key },
-          styleOpt:
-            selectedStatus === c.key
-              ? { borderColor: c.color, color: c.color }
-              : null,
           bubble: 0,
           service: "create-status",
           uiHandler: [ui],
@@ -1189,19 +1167,13 @@ const make = function (ui) {
             }),
           ],
         }),
+        // Figma footer is a single full-width primary button; the header X closes.
         Skeletons.Box.X({
           className: `${pfx}__create-actions`,
           kids: [
             Skeletons.Note({
-              className: `${pfx}__create-cancel`,
-              content: LOCALE.CANCEL,
-              bubble: 0,
-              service: "cancel-add",
-              uiHandler: [ui],
-            }),
-            Skeletons.Note({
               className: `${pfx}__create-submit`,
-              content: LOCALE.CREATE,
+              content: LOCALE.ADD_NEW_TASK,
               bubble: 0,
               service: "commit-task",
               uiHandler: [ui],

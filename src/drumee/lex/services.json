@@ -69,6 +69,7 @@
   },
   "task": {
     "list": "task.list",
+    "activity": "task.activity",
     "create": "task.create",
     "update": "task.update",
     "update_status": "task.update_status",
