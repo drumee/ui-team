@@ -40,6 +40,14 @@ class __dmz_wm extends winman {
     this.declareHandlers();
     this.isDmz = 1;
     this.offsetHeight = 230;
+    // In-place sub-folder navigation (Cases 3+4): a sub-folder is re-listed in
+    // THIS grid rather than launching a floating desk window_folder — that window
+    // couldn't be moved in the DMZ (its drag-containment references the global Wm,
+    // which here is this constrained share panel) and rendered a second chat panel
+    // on top of the sharebox's. _folderStack is the trail of entered sub-folders;
+    // empty = at the share root (_rootNid).
+    this._rootNid = opt.nid;
+    this._folderStack = [];
     this.mset({
       nid: opt.nid,
       home_id: opt.home_id,
@@ -104,6 +112,61 @@ class __dmz_wm extends winman {
         break;
 
     }
+  }
+
+  /**
+   * Open a tile. SUB-FOLDERS navigate IN PLACE (re-list this grid with the child
+   * nid, reusing the token/cap-aware getCurrentApi) instead of launching a desk
+   * window_folder — that floating window couldn't be moved in the DMZ (its
+   * drag-containment references the global Wm = this constrained panel) and
+   * rendered a second chat panel over the sharebox's (Cases 3 & 4). FILES are
+   * UNCHANGED — they fall through to the inherited openContent (players/preview).
+   */
+  openContent(media, args) {
+    if (media && media.mget && media.mget(_a.filetype) === _a.folder) {
+      if (!media.wait) return;
+      if (media.mget(_a.status) === _a.deleted) { media.wait(0); return; }
+      media.wait(0);
+      const childNid = media.mget(_a.nid);
+      if (!childNid) return;
+      const childName =
+        media.mget(_a.filename) || media.mget(_a.name) || LOCALE.FOLDER;
+      this._folderStack.push({ nid: childNid, name: childName });
+      return this._navToCurrentFolder();
+    }
+    return super.openContent(media, args);
+  }
+
+  /**
+   * Re-list the grid at the current folder (top of _folderStack, or the share
+   * root when the stack is empty) and refresh the back/title nav bar.
+   */
+  _navToCurrentFolder() {
+    const cur = this._folderStack[this._folderStack.length - 1];
+    const nid = cur ? cur.nid : this._rootNid;
+    this.mset({ nid });
+    this._renderNavBar();
+    return this.ensurePart(_a.list).then((l) => {
+      if (l && l.setApi) l.setApi(this.getCurrentApi());
+      if (l && l.restart) l.restart();
+    });
+  }
+
+  /**
+   * Show "‹ <folder>" while inside a sub-folder; hidden at the share root.
+   */
+  _renderNavBar() {
+    return this.ensurePart("dmz-nav-bar").then((p) => {
+      if (!p) return;
+      p.clear();
+      const cur = this._folderStack[this._folderStack.length - 1];
+      if (!cur) {
+        p.el.dataset.state = "hidden";
+        return;
+      }
+      p.el.dataset.state = "visible";
+      p.feed(require("./skeleton").navBar(this, cur.name));
+    });
   }
 
   /**
@@ -398,6 +461,12 @@ class __dmz_wm extends winman {
 
       case "create-folder-submit":
         return this._createFolder(cmd);
+
+      case "dmz-nav-back":
+        // Go up one level in the in-place sub-folder navigation.
+        if (!this._folderStack.length) return;
+        this._folderStack.pop();
+        return this._navToCurrentFolder();
 
       default:
         return this.warn(WARNING.method.unprocessed.format(service));

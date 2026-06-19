@@ -76,6 +76,14 @@ function _desk_content(_ui_) {
       height: _K.size.full,
     },
     kids: [
+      // In-place sub-folder nav bar (Cases 3+4) — hidden at the share root,
+      // shows "‹ <folder>" inside a sub-folder. Fed by __dmz_wm._renderNavBar.
+      Skeletons.Wrapper.Y({
+        className: `${_ui_.fig.family}__nav-bar`,
+        sys_pn: "dmz-nav-bar",
+        partHandler: _ui_,
+        dataset: { state: "hidden" },
+      }),
       _filter_bar(_ui_),
       _icons_list(_ui_),
       { kind: "selection", sys_pn: "ref-selection" },
@@ -97,6 +105,26 @@ function _desk_content(_ui_) {
       Skeletons.Wrapper.Y({
         className: `${_ui_.fig.family}__wrapper-modal`,
         name: "modal",
+      }),
+    ],
+  });
+}
+
+// In-place sub-folder nav bar content: a back control + the current folder name.
+// Fed into the "dmz-nav-bar" part by __dmz_wm._renderNavBar when inside a folder.
+export function navBar(_ui_, name) {
+  return Skeletons.Box.X({
+    className: `${_ui_.fig.family}__nav-bar-inner`,
+    kids: [
+      Skeletons.Button.Svg({
+        className: `${_ui_.fig.family}__nav-back`,
+        ico: "arrow-left",
+        service: "dmz-nav-back",
+        uiHandler: [_ui_],
+      }),
+      Skeletons.Note({
+        className: `${_ui_.fig.family}__nav-folder`,
+        content: name || LOCALE.FOLDER,
       }),
     ],
   });
