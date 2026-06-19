@@ -980,6 +980,12 @@
 .dmz__chat-panel {
   flex: 0 0 clamp(280px, 24vw, 360px);
   min-width: 0;
+  // Contain the chat widget's internal high z-indexes (emoji/drag-drop overlays
+  // reach z-index 99999) so they can't escape and paint OVER an open file viewer/
+  // editor window (which sits at the windows-layer's z-index 1000). isolate makes
+  // this panel a stacking context at the flex level, so the viewer (1000) cleanly
+  // overlays the whole panel — fixes the chat composer bleeding across a doc (j17/j18).
+  isolation: isolate;
   // Clear divider from the file grid (Figma 3.1) — the old 0.05 alpha was invisible.
   border-left: 1px solid var(--border-default, rgba(0, 0, 0, 0.12));
   background: var(--sb-grey-20);
