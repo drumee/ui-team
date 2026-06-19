@@ -152,6 +152,12 @@ function findCountry(code) {
   return COUNTRIES.find((c) => c.code === code) || null;
 }
 
+// Allowed/Blocked are multi-select: each holds an array of ISO codes.
+function selectedCodes(sc, kind) {
+  const arr = kind === "allowed" ? sc.allowedCountries : sc.blockedCountries;
+  return Array.isArray(arr) ? arr : [];
+}
+
 // A flag swatch (or an empty placeholder of the same size when artwork is
 // missing) so rows stay aligned.
 function flagSwatch(code, className) {
@@ -168,15 +174,24 @@ function flagSwatch(code, className) {
   });
 }
 
+// Cap how many rows the dropdown renders at once. Each row pulls a flag SVG,
+// so rendering all ~240 on open is slow (hundreds of DOM nodes + image
+// requests). Users narrow the list via the search box to reach the rest.
+const COUNTRY_DROPDOWN_LIMIT = 50;
+
 function countryDropdown(ui, kind) {
   const pfx = ui.fig.family;
   const sc = ui._secCtrl || {};
-  const selectedCode =
-    kind === "allowed" ? sc.allowedCountry : sc.blockedCountry;
+  const selected = selectedCodes(sc, kind);
+  // Codes already picked in the opposite list are disabled here (a country
+  // can't be both allowed and blocked).
+  const otherSelected = selectedCodes(sc, kind === "allowed" ? "blocked" : "allowed");
   const q = (sc.countrySearch || "").trim().toLowerCase();
-  const list = q
+  const matched = q
     ? COUNTRIES.filter((c) => c.name.toLowerCase().includes(q))
     : COUNTRIES;
+  const list = matched.slice(0, COUNTRY_DROPDOWN_LIMIT);
+  const hidden = matched.length - list.length;
 
   return Skeletons.Box.Y({
     className: `${pfx}__ac-cdrop`,
@@ -195,6 +210,9 @@ function countryDropdown(ui, kind) {
             require: "any",
             mode: "commit",
             service: "apps-ac-country-search",
+            // Live-filter as the user types (input/change/paste), not just on
+            // Enter. `_render` re-focuses this field so typing isn't broken.
+            watch: "apps-ac-country-search",
             sys_pn: `ac-country-search:${kind}`,
             partHandler: ui,
             uiHandler: [ui],
@@ -215,34 +233,53 @@ function countryDropdown(ui, kind) {
       Skeletons.Box.Y({
         className: `${pfx}__ac-cdrop-list`,
         kids: list.length
-          ? list.map((c) => {
-              const checked = c.code === selectedCode;
-              return Skeletons.Box.X({
-                className: `${pfx}__ac-cdrop-item${checked ? ` ${pfx}__ac-cdrop-item--checked` : ""}`,
-                service: "apps-ac-select-country",
-                uiHandler: [ui],
-                country_kind: kind,
-                country_code: c.code,
-                kids: [
-                  flagSwatch(c.code, `${pfx}__ac-cdrop-flag`),
-                  Skeletons.Note({
-                    className: `${pfx}__ac-cdrop-name`,
-                    content: c.name,
-                  }),
-                  Skeletons.Box.X({
-                    className: `${pfx}__ac-cdrop-radio${checked ? ` ${pfx}__ac-cdrop-radio--on` : ""}`,
-                    kids: checked
-                      ? [
-                          Skeletons.Image.Svg({
-                            ico: "editbox_checkmark",
-                            className: `${pfx}__ac-cdrop-radio-mark`,
-                          }),
-                        ]
-                      : [],
-                  }),
-                ],
-              });
-            })
+          ? list
+              .map((c) => {
+                const checked = selected.includes(c.code);
+                const disabled = otherSelected.includes(c.code);
+                return Skeletons.Box.X({
+                  className: `${pfx}__ac-cdrop-item${checked ? ` ${pfx}__ac-cdrop-item--checked` : ""}${disabled ? ` ${pfx}__ac-cdrop-item--disabled` : ""}`,
+                  // Disabled items carry no service, so they can't be picked.
+                  ...(disabled
+                    ? {}
+                    : {
+                        service: "apps-ac-select-country",
+                        uiHandler: [ui],
+                        country_kind: kind,
+                        country_code: c.code,
+                      }),
+                  kids: [
+                    flagSwatch(c.code, `${pfx}__ac-cdrop-flag`),
+                    Skeletons.Note({
+                      className: `${pfx}__ac-cdrop-name`,
+                      content: c.name,
+                    }),
+                    Skeletons.Box.X({
+                      className: `${pfx}__ac-cdrop-radio${checked ? ` ${pfx}__ac-cdrop-radio--on` : ""}`,
+                      kids: checked
+                        ? [
+                            Skeletons.Image.Svg({
+                              ico: "editbox_checkmark",
+                              className: `${pfx}__ac-cdrop-radio-mark`,
+                            }),
+                          ]
+                        : [],
+                    }),
+                  ],
+                });
+              })
+              .concat(
+                hidden > 0
+                  ? [
+                      Skeletons.Note({
+                        className: `${pfx}__ac-cdrop-hint`,
+                        content: `+${hidden} ${LOCALE.MORE || "more"} — ${
+                          LOCALE.TYPE_TO_SEARCH || "type to search"
+                        }`,
+                      }),
+                    ]
+                  : [],
+              )
           : [
               Skeletons.Note({
                 className: `${pfx}__ac-cdrop-empty`,
@@ -254,19 +291,81 @@ function countryDropdown(ui, kind) {
   });
 }
 
+// How many chips to render inline before collapsing the rest into "+N more".
+const COUNTRY_CHIP_LIMIT = 3;
+
+function countryChip(ui, { kind, code }) {
+  const pfx = ui.fig.family;
+  const c = findCountry(code);
+  return Skeletons.Box.X({
+    className: `${pfx}__ac-country-chip`,
+    kids: [
+      flagSwatch(code, `${pfx}__ac-chip-flag`),
+      Skeletons.Note({
+        className: `${pfx}__ac-chip-name`,
+        content: c ? c.name : code,
+      }),
+      // Only the × carries a service, so removing a chip never bubbles into
+      // the add-button's open/close handler.
+      Skeletons.Box.X({
+        className: `${pfx}__ac-chip-remove`,
+        service: "apps-ac-remove-country",
+        uiHandler: [ui],
+        country_kind: kind,
+        country_code: code,
+        kids: [
+          Skeletons.Image.Svg({
+            ico: "cross",
+            className: `${pfx}__ac-chip-remove-ico`,
+          }),
+        ],
+      }),
+    ],
+  });
+}
+
 function countryPickerRow(ui, { kind, label, labelClass }) {
   const pfx = ui.fig.family;
   const sc = ui._secCtrl || {};
-  const selectedCode =
-    kind === "allowed" ? sc.allowedCountry : sc.blockedCountry;
-  const sel = findCountry(selectedCode);
+  const codes = selectedCodes(sc, kind);
   const open = sc.countryPickerOpen === kind;
+  const shown = codes.slice(0, COUNTRY_CHIP_LIMIT);
+  const overflow = codes.length - shown.length;
+
+  // Chips and the add-button are siblings (the row itself has no service), so
+  // chip removal and opening the dropdown don't fight over the same click.
+  const picker = shown.map((code) => countryChip(ui, { kind, code }));
+  if (overflow > 0) {
+    picker.push(
+      Skeletons.Note({
+        className: `${pfx}__ac-country-more`,
+        content: `+${overflow} ${LOCALE.MORE || "more"}`,
+      }),
+    );
+  }
+  picker.push(
+    Skeletons.Box.X({
+      className: `${pfx}__ac-country-add`,
+      service: "apps-ac-pick-country",
+      uiHandler: [ui],
+      country_kind: kind,
+      kids: [
+        Skeletons.Note({
+          className: `${pfx}__ac-country-placeholder`,
+          content: codes.length
+            ? LOCALE.ADD_COUNTRY || "Add country"
+            : LOCALE.SELECT_COUNTRIES || "Select countries",
+        }),
+        Skeletons.Image.Svg({
+          ico: "apps-caret-down",
+          className: `${pfx}__ac-country-caret`,
+        }),
+      ],
+    }),
+  );
 
   return Skeletons.Box.X({
     className: `${pfx}__ac-country-row${open ? ` ${pfx}__ac-country-row--open` : ""}`,
-    service: "apps-ac-pick-country",
-    uiHandler: [ui],
-    country_kind: kind,
     dataset: { kind },
     kids: [
       Skeletons.Note({
@@ -275,19 +374,7 @@ function countryPickerRow(ui, { kind, label, labelClass }) {
       }),
       Skeletons.Box.X({
         className: `${pfx}__ac-country-picker`,
-        kids: [
-          sel ? flagSwatch(sel.code, `${pfx}__ac-country-flag`) : null,
-          Skeletons.Note({
-            className: sel
-              ? `${pfx}__ac-country-value`
-              : `${pfx}__ac-country-placeholder`,
-            content: sel ? sel.name : LOCALE.SELECT_COUNTRY || "Select country",
-          }),
-          Skeletons.Image.Svg({
-            ico: "apps-caret-down",
-            className: `${pfx}__ac-country-caret`,
-          }),
-        ].filter(Boolean),
+        kids: picker,
       }),
     ],
   });
