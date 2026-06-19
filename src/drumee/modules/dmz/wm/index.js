@@ -468,6 +468,9 @@ class __dmz_wm extends winman {
       case "create-folder-submit":
         return this._createFolder(cmd);
 
+      case "new-document":
+        return this._newDocument(cmd);
+
       default:
         return this.warn(WARNING.method.unprocessed.format(service));
     }
@@ -516,6 +519,65 @@ class __dmz_wm extends winman {
       })
       .finally(() => {
         this._creatingFolder = 0;
+      });
+  }
+
+  /**
+   * Create an office document (Document / Spreadsheet / Presentation) in the
+   * current share folder, then open it in the editor. Mirrors the desk path
+   * (window/core.js newDocument) but TARGETS THIS DMZ wm — not Wm.getActiveWindow,
+   * which is empty in the share view — and threads the share TOKEN so the server
+   * (euroffice.new_doc) can gate the create to a can_edit recipient + node-scope it
+   * to the shared subtree (the creator-bound session alone isn't trusted). The
+   * created node arrives in this grid via the server's `media.new` broadcast
+   * (handleWsEvent → newContent); the poll then opens it in the editor.
+   *
+   * @param {*} cmd — the new-document menu command (carries the template `name`)
+   */
+  _newDocument(cmd) {
+    if (this._creatingDoc) return;
+    // Resolve the editor namespace from the `doc_editor` sysconf (same as the desk
+    // and the document player) rather than hard-coding euroffice/onlyoffice.
+    const editor = Platform && Platform.get && Platform.get("doc_editor");
+    const ns = editor && SERVICE && SERVICE[editor];
+    const service = ns && (ns.new_doc || ns.create || ns.create_doc);
+    if (!service) {
+      return Butler.say(LOCALE.FEATURE_NOT_AVAILABLE || LOCALE.SOMETHING_WENT_WRONG);
+    }
+    const name = cmd && cmd.mget && cmd.mget(_a.name);
+    if (!name) {
+      this.warn("DMZ newDocument: missing template name");
+      return;
+    }
+    this._creatingDoc = 1;
+    this.postService(service, {
+      nid: this.mget(_a.nid),
+      hub_id: this.mget(_a.hub_id),
+      name,
+      token: this.mget(_a.token),
+    })
+      .then((data) => {
+        if (!data || !data.nid) return;
+        // Wait for the new tile to land in this grid (via the media.new broadcast),
+        // then open it in the editor. Cleared on success or after a 30s timeout so
+        // a missed broadcast can't leave the interval running.
+        const timer = setInterval(() => {
+          for (let media of this.getItemsByAttr(_a.nid, data.nid)) {
+            if (/^media/.test(media.mget(_a.kind))) {
+              clearInterval(timer);
+              media.wait(1);
+              this.openContent(media, { service: "open-node", mode: _a.edit });
+            }
+          }
+        }, 500);
+        setTimeout(() => clearInterval(timer), 30000);
+      })
+      .catch((e) => {
+        this.warn("DMZ newDocument: server error", e);
+        Butler.say(e.reason || e.error || LOCALE.SOMETHING_WENT_WRONG);
+      })
+      .finally(() => {
+        this._creatingDoc = 0;
       });
   }
 

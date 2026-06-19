@@ -60,16 +60,17 @@ function dmzTopbar(ui) {
     kids: [
       // visioMenu(ui),
       // "Add new" — the same dropdown the desk folder window uses (newFileMenu),
-      // restricted via opt.items to FOLDER only. A recipient can only create
-      // sub-folders in the DMZ share: Note/office-doc creation opens an editor
-      // that doesn't work in the creator-bound DMZ session, so those items are
-      // intentionally omitted (the toolkit's items whitelist was built for this
-      // — "DMZ share passes ['add-folder']"). Each menu item dispatches its
-      // service via its own uiHandler:[ui] to this sharebox's onUiEvent, which
-      // already delegates "add-folder" to the window manager. Shown only to
-      // guests whose role grants write permission.
+      // restricted via opt.items. A can_edit recipient can create a sub-folder OR
+      // an office document (Document / Spreadsheet / Presentation) inside the share:
+      // the office editor now works in the DMZ view (Phase-1/2), and the create is
+      // server-gated (euroffice.new_doc requires can_edit + node-scopes to the
+      // shared subtree). Each menu item dispatches its service via its own
+      // uiHandler:[ui] to this sharebox's onUiEvent, which delegates "add-folder"
+      // and "new-document" to the window manager. NOTE creation is wired
+      // separately (next increment) and not yet listed here. Shown only to guests
+      // whose role grants write permission.
       canEdit
-        ? newFileMenu(ui, { items: ["add-folder"], triggerIco: "plus-header" })
+        ? newFileMenu(ui, { items: ["add-folder", "new-document"], triggerIco: "plus-header" })
         : null,
       canUpload
         ? Skeletons.Button.Label({
