@@ -305,6 +305,13 @@
     left: 0;
     top: 0;
     width: 0;
+    // A file-viewer window (svg/image/doc) is a positioned child here with an
+    // inline z-index, but that only stacks WITHIN this layer's context. Without a
+    // z-index on the layer itself it stays at the flex level of the conversation
+    // panel (.dmz__chat-panel), which — being later in the DOM — painted OVER the
+    // viewer, so the chat composer bled across an open doc (j17). Lift the whole
+    // layer above the chat panel so viewers cleanly overlay it.
+    z-index: 1000;
 
     &[data-device="mobile"] {
       width: 100%;
@@ -318,6 +325,9 @@
     position: fixed;
     align-items: center;
     justify-content: center;
+    // Above the viewer layer (1000) so the create-folder dialog / spinner stay on
+    // top even when a file viewer is open.
+    z-index: 2000;
 
     // data-state="open" = the spinner overlay; data-mode="create-folder" = the
     // add-folder dialog (set by __dmz_wm.onUiEvent "add-folder"). Both need the
