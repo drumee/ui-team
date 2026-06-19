@@ -118,42 +118,54 @@ function toggleRow(ui, { icon, label, on, service }) {
   });
 }
 
-// Minimal country list with flag emojis (representative set per Figma).
-// Order matches the design's first-screen ordering so reviewers see the same
-// scrollback when developing against the mock.
-const COUNTRIES = [
-  { code: "DZ", name: "Algeria", flag: "🇩🇿" },
-  { code: "AF", name: "Afghanistan", flag: "🇦🇫" },
-  { code: "AL", name: "Albania", flag: "🇦🇱" },
-  { code: "AG", name: "Antigua and Barbuda", flag: "🇦🇬" },
-  { code: "AR", name: "Argentina", flag: "🇦🇷" },
-  { code: "AU", name: "Australia", flag: "🇦🇺" },
-  { code: "AO", name: "Angola", flag: "🇦🇴" },
-  { code: "AM", name: "Armenia", flag: "🇦🇲" },
-  { code: "AD", name: "Andorra", flag: "🇦🇩" },
-  { code: "BS", name: "The Bahamas", flag: "🇧🇸" },
-  { code: "BO", name: "Bolivia", flag: "🇧🇴" },
-  { code: "CK", name: "Cook Islands", flag: "🇨🇰" },
-  { code: "BJ", name: "Benin", flag: "🇧🇯" },
-  { code: "AZ", name: "Azerbaijan", flag: "🇦🇿" },
-  { code: "AT", name: "Austria", flag: "🇦🇹" },
-  { code: "BB", name: "Barbados", flag: "🇧🇧" },
-  { code: "BD", name: "Bangladesh", flag: "🇧🇩" },
-  { code: "BE", name: "Belgium", flag: "🇧🇪" },
-  { code: "BR", name: "Brazil", flag: "🇧🇷" },
-  { code: "CA", name: "Canada", flag: "🇨🇦" },
-  { code: "CN", name: "China", flag: "🇨🇳" },
-  { code: "DE", name: "Germany", flag: "🇩🇪" },
-  { code: "FR", name: "France", flag: "🇫🇷" },
-  { code: "GB", name: "United Kingdom", flag: "🇬🇧" },
-  { code: "IN", name: "India", flag: "🇮🇳" },
-  { code: "JP", name: "Japan", flag: "🇯🇵" },
-  { code: "US", name: "United States", flag: "🇺🇸" },
-];
+// Full country list, sourced from the shared profile/countries dataset
+// (ISO 3166-1 alpha-2 codes in `sortname`). Flag artwork comes from the SVGs
+// in assets/flags (served as files via the webpack asset/resource rule) — flag
+// emoji are avoided because this platform's font renders them as plain letters.
+const rawCountries = require("../../../../window/account/profile/countries");
+
+// Map lowercase ISO code → served SVG URL. require.context bundles every flag
+// under assets/flags and hands back its public URL; a few dataset codes have no
+// artwork (dissolved/non-standard states) and simply fall back to no flag.
+const flagCtx = require.context(
+  "../../../../../assets/flags",
+  false,
+  /\.svg$/,
+);
+const FLAG_URLS = flagCtx.keys().reduce((acc, key) => {
+  const code = key.replace(/^\.\//, "").replace(/\.svg$/, "");
+  const mod = flagCtx(key);
+  acc[code] = (mod && mod.default) || mod;
+  return acc;
+}, {});
+
+function flagUrl(code) {
+  return code ? FLAG_URLS[code.toLowerCase()] || null : null;
+}
+
+const COUNTRIES = rawCountries
+  .map((c) => ({ code: c.sortname, name: c.name }))
+  .sort((a, b) => a.name.localeCompare(b.name));
 
 function findCountry(code) {
   if (!code) return null;
   return COUNTRIES.find((c) => c.code === code) || null;
+}
+
+// A flag swatch (or an empty placeholder of the same size when artwork is
+// missing) so rows stay aligned.
+function flagSwatch(code, className) {
+  const url = flagUrl(code);
+  return Skeletons.Box.X({
+    className,
+    style: url
+      ? {
+          backgroundImage: `url(${url})`,
+          backgroundSize: "cover",
+          backgroundPosition: "center",
+        }
+      : {},
+  });
 }
 
 function countryDropdown(ui, kind) {
@@ -212,10 +224,7 @@ function countryDropdown(ui, kind) {
                 country_kind: kind,
                 country_code: c.code,
                 kids: [
-                  Skeletons.Note({
-                    className: `${pfx}__ac-cdrop-flag`,
-                    content: c.flag,
-                  }),
+                  flagSwatch(c.code, `${pfx}__ac-cdrop-flag`),
                   Skeletons.Note({
                     className: `${pfx}__ac-cdrop-name`,
                     content: c.name,
@@ -267,12 +276,7 @@ function countryPickerRow(ui, { kind, label, labelClass }) {
       Skeletons.Box.X({
         className: `${pfx}__ac-country-picker`,
         kids: [
-          sel
-            ? Skeletons.Note({
-                className: `${pfx}__ac-country-flag`,
-                content: sel.flag,
-              })
-            : null,
+          sel ? flagSwatch(sel.code, `${pfx}__ac-country-flag`) : null,
           Skeletons.Note({
             className: sel
               ? `${pfx}__ac-country-value`
