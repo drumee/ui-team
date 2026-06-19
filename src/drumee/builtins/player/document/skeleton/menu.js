@@ -66,6 +66,22 @@ module.exports = function (ui) {
         action(ui, { service: _a.edit, ico: "app-edit", tip: LOCALE.EDIT }),
       );
     }
+  } else if (
+    Visitor.inDmz &&
+    !ui.canUpload() &&
+    Platform.get("doc_editor") &&
+    EDITABLE.includes((ui.mget(_a.ext) || "").toLowerCase())
+  ) {
+    // Secure-share recipient WITHOUT an edit grant: the editor is read-only. Offer a
+    // "Request edit" action that opens the share's request-access popup (reusing the
+    // already-wired dmz-request-download gate → sharebox → Request Access / sign-up).
+    actions.push(
+      action(ui, {
+        service: "dmz-request-edit",
+        ico: "app-edit",
+        tip: LOCALE.SECURE_SHARE_REQUEST_ACCESS || LOCALE.EDIT,
+      }),
+    );
   }
 
   actions.push(

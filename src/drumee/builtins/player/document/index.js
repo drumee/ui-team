@@ -1057,6 +1057,13 @@ class __player_document extends PlayerInteract {
         this.fetchFile({ url, download: filename })
         break;
 
+      case 'dmz-request-edit':
+        // Share recipient without an edit grant asked to edit → open the share's
+        // request-access flow. Reuse the wired dmz-request-download gate (player →
+        // wm → sharebox → Request Access for signed-in non-members / sign-up for
+        // anonymous); the popup is multi-select so they pick "edit".
+        return this.triggerHandlers({ service: 'dmz-request-download' });
+
       default:
         return super.onUiEvent(cmd);
     }
