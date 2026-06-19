@@ -563,6 +563,19 @@ class __dmz_sharebox extends LetcBox {
         }
         return;
 
+      // "Add new" → office document (Document / Spreadsheet / Presentation). Like
+      // add-folder, the dropdown lives in this sharebox's topbar but the create
+      // belongs to the window manager child — delegate, forwarding the cmd (it
+      // carries the template `name`). The server (euroffice.new_doc) re-gates the
+      // create to a can_edit recipient + node-scopes it; this client gate keeps a
+      // view-only recipient from even firing the request.
+      case "new-document":
+        if (this._gateInteraction(this.havePermission(_K.permission.write, this.mget(_a.privilege)))) return;
+        if (this.wm && this.wm.onUiEvent) {
+          this.wm.onUiEvent(cmd, { service: "new-document" });
+        }
+        return;
+
       case 'open-signup': {
         this.closeSignupRequiredOverlay();
         const { main_domain } = bootstrap();
