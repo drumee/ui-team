@@ -70,7 +70,18 @@ function dmzTopbar(ui) {
       // separately (next increment) and not yet listed here. Shown only to guests
       // whose role grants write permission.
       canEdit
-        ? newFileMenu(ui, { items: ["add-folder", "new-document"], triggerIco: "plus-header" })
+        ? newFileMenu(ui, {
+            items: ["add-folder", "new-document"],
+            triggerIco: "plus-header",
+            // Tint the (monochrome) folder glyph with the share accent so it
+            // matches the colored office icons + the header/badge instead of the
+            // neutral "personal" default (which renders ~black). The DMZ is always
+            // a share view, so force the "dmz" accent (toolkit common.scss maps
+            // data-area=dmz -> --area-share); a non-share value wouldn't match any
+            // icon color rule and would stay dark. Office icons are brand-colored
+            // SVGs and ignore this.
+            area: _a.dmz,
+          })
         : null,
       canUpload
         ? Skeletons.Button.Label({
