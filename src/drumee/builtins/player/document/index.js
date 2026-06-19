@@ -150,7 +150,16 @@ class __player_document extends PlayerInteract {
   }
 
   shouldOpenInEditMode() {
-    if (Visitor.inDmz) return false;
+    if (Visitor.inDmz) {
+      // Secure-share recipient (Phase 1): open office docs in the EurOffice editor
+      // instead of the flat PDFium preview, so recipients get full-fidelity
+      // rendering. The editor is forced READ-ONLY server-side from the share token
+      // (euroffice.html), so this is safe for view-only recipients; edit-grant
+      // editing is Phase 2. Non-office files keep their normal players. edit()
+      // passes the share token so the service can resolve the mode.
+      const ext = (this.mget(_a.ext) || '').toLowerCase();
+      return require('./editable').includes(ext) && !!Platform.get('doc_editor');
+    }
     if (this.mget(_a.mode) === _a.preview) return false;
     if (this.mget(_a.mode) === _a.edit) return true;
     const ext = (this.mget(_a.ext) || '').toLowerCase();
@@ -649,6 +658,13 @@ class __player_document extends PlayerInteract {
     // Forward the app theme so the editor matches it instead of defaulting to dark.
     const theme = (Visitor.wallpaper() || {}).theme || document.documentElement.dataset.theme || 'light'
     let url = `https://${host}${svc}${Platform.get('doc_editor')}.html?hub_id=${hub_id}&nid=${nid}&theme=${theme}`
+    // Secure-share recipient: pass the share token so the editor service forces
+    // read-only mode from the share's caps (Phase 1). DMZ-only; a normal desk
+    // editor request carries no token, so its URL is byte-identical.
+    if (Visitor.inDmz) {
+      const _tok = this.mget(_a.token);
+      if (_tok) url += `&token=${encodeURIComponent(_tok)}`;
+    }
 
     this._editorOrigin = new URL(url).origin;
     this._editorReady = false;
