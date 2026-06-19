@@ -334,18 +334,7 @@ class __player_document extends PlayerInteract {
    * 
    */
   async display() {
-    let { url, nid, hub_id, ownpath } = this.actualNode(_a.pdf);
-    // In a DMZ/secure-share session the vhost endpoint does NOT serve sub-folder
-    // paths (only root-level files work via the vhost), so a document inside a
-    // shared sub-folder fetches a 404 and renders blank (Case 2). Route the
-    // converted PDF through the same-origin service API by nid — the exact
-    // endpoint download-pdf/print already use (see lines ~1001/1028), proven to
-    // work in the DMZ session. Mirrors the markdown player's #162 fix. Gated so
-    // the desk path and root-level DMZ files are byte-identical.
-    const isSubfolder = ownpath && ownpath.split('/').filter(Boolean).length > 1;
-    if (Visitor.inDmz && nid && isSubfolder) {
-      url = `${bootstrap().serviceUrl}${SERVICE.media.pdf}?nid=${nid}&hub_id=${hub_id}`;
-    }
+    const { url } = this.actualNode(_a.pdf);
     let w = this.size.width;
     if (this._isBuildingPages) return;
     this._isBuildingPages = 1;
