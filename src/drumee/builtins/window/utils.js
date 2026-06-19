@@ -1207,10 +1207,19 @@ class __window_mfs extends DrumeeMFS {
     const h = this.$el.outerHeight();
     // Keep the draggable handle visible inside the workspace. Requiring the
     // full window to stay inside leaves tall editors with almost no Y range.
-    const $wm = Wm.$el;
-    const offset = $wm.offset();
-    const wmW = $wm.outerWidth();
-    const wmH = $wm.outerHeight();
+    // In a DMZ/secure-share session window.Wm is the constrained share panel
+    // (.dmz-wm), so containing a file viewer to it pins it — recipients couldn't
+    // move it freely (j12). Contain to the viewport instead. uiRouter.isDmz() is
+    // the boot-area check (dmz|share) → false on the desk, so the non-DMZ branch
+    // is byte-identical to before.
+    const _dmz =
+      window.uiRouter &&
+      typeof window.uiRouter.isDmz === "function" &&
+      window.uiRouter.isDmz();
+    const $wm = _dmz ? null : Wm.$el;
+    const offset = _dmz ? { left: 0, top: 0 } : $wm.offset();
+    const wmW = _dmz ? window.innerWidth : $wm.outerWidth();
+    const wmH = _dmz ? window.innerHeight : $wm.outerHeight();
     const minVisibleWidth = Math.min(w, Math.max(150, this.topbarHeight));
     const minVisibleHeight = Math.min(h, this.topbarHeight);
     const left = offset.left;
