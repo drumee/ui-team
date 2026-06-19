@@ -28,6 +28,16 @@ function dmzTopbar(ui) {
     className: `${cnTopbarTitle}__wrapper`,
     kids: [
       require("../../../../builtins/window/skeleton/topbar/folder-icon")(area),
+      // Header breadcrumb for in-place sub-folder navigation (Cases 3+4), mirroring
+      // the desk folder window's `folder-breadcrumb-path`: ancestors render here as
+      // clickable crumbs (+ a trailing "›") and the current folder is the title
+      // (ref-window-name). Empty at the share root. Fed by sharebox._refreshBreadcrumb.
+      Skeletons.Box.X({
+        className: `${ui.fig.family}__breadcrumb-path`,
+        sys_pn: "dmz-breadcrumb-path",
+        partHandler: ui,
+        dataset: { state: 0 },
+      }),
       Skeletons.Note({
         sys_pn: "ref-window-name",
         className: _a.name,

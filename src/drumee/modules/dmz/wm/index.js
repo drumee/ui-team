@@ -139,13 +139,16 @@ class __dmz_wm extends winman {
 
   /**
    * Re-list the grid at the current folder (top of _folderStack, or the share
-   * root when the stack is empty) and refresh the back/title nav bar.
+   * root when the stack is empty) and tell the sharebox to refresh the header
+   * breadcrumb (the sharebox owns the topbar). The notify reuses the same
+   * triggerHandlers→sharebox.onUiEvent path the wm already uses for
+   * dmz-request-download.
    */
   _navToCurrentFolder() {
     const cur = this._folderStack[this._folderStack.length - 1];
     const nid = cur ? cur.nid : this._rootNid;
     this.mset({ nid });
-    this._renderNavBar();
+    this.triggerHandlers({ service: "dmz-nav-changed" });
     return this.ensurePart(_a.list).then((l) => {
       if (l && l.setApi) l.setApi(this.getCurrentApi());
       if (l && l.restart) l.restart();
@@ -153,20 +156,23 @@ class __dmz_wm extends winman {
   }
 
   /**
-   * Show "‹ <folder>" while inside a sub-folder; hidden at the share root.
+   * Navigate to a header-breadcrumb level: keep `depth` entries of _folderStack
+   * (depth 0 = the share root, depth k = the k-th entered sub-folder). Called by
+   * the sharebox when a crumb is clicked.
    */
-  _renderNavBar() {
-    return this.ensurePart("dmz-nav-bar").then((p) => {
-      if (!p) return;
-      p.clear();
-      const cur = this._folderStack[this._folderStack.length - 1];
-      if (!cur) {
-        p.el.dataset.state = "hidden";
-        return;
-      }
-      p.el.dataset.state = "visible";
-      p.feed(require("./skeleton").navBar(this, cur.name));
-    });
+  navigateToStackIndex(depth) {
+    const d = Math.max(0, ~~depth);
+    if (d >= this._folderStack.length) return;
+    this._folderStack = this._folderStack.slice(0, d);
+    return this._navToCurrentFolder();
+  }
+
+  /**
+   * The recipient's current folder trail (each {nid, name} below the share
+   * root). Read by the sharebox to build the header breadcrumb.
+   */
+  folderTrail() {
+    return this._folderStack || [];
   }
 
   /**
@@ -461,12 +467,6 @@ class __dmz_wm extends winman {
 
       case "create-folder-submit":
         return this._createFolder(cmd);
-
-      case "dmz-nav-back":
-        // Go up one level in the in-place sub-folder navigation.
-        if (!this._folderStack.length) return;
-        this._folderStack.pop();
-        return this._navToCurrentFolder();
 
       default:
         return this.warn(WARNING.method.unprocessed.format(service));

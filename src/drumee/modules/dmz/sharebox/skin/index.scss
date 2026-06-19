@@ -1423,3 +1423,56 @@
 .widget-chat__ui{
   height: 90% !important;
 }
+
+/* Header breadcrumb for in-place sub-folder navigation (Cases 3+4) — ported from
+   the desk folder window (window-folder__breadcrumb-*). Ancestors render as
+   clickable crumbs before the title (joined by "›"); hidden at the share root.
+   Theme-var based → dark-mode safe; matches the desk look (j16). */
+.dmz-sharebox {
+  &__breadcrumb-path {
+    align-items: center;
+    gap: 4px;
+    min-width: 0;
+    max-width: 66%;
+    overflow: hidden;
+    display: none;
+
+    &[data-state="1"] {
+      display: flex;
+    }
+  }
+
+  &__breadcrumb-crumb {
+    font-family: var(--sb-font-body, "Geist", sans-serif);
+    font-weight: 500;
+    font-size: 14px;
+    line-height: 24px;
+    color: var(--normal-fg-10);
+    opacity: 0.65;
+    cursor: pointer;
+    max-width: 140px;
+    min-width: 0;
+    flex: 0 1 auto;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    padding: 0 4px;
+    border-radius: 4px;
+
+    &:hover {
+      background-color: var(--normal-bg-90);
+      opacity: 1;
+    }
+  }
+
+  &__breadcrumb-sep {
+    font-family: var(--sb-font-body, "Geist", sans-serif);
+    font-size: 14px;
+    line-height: 24px;
+    color: var(--normal-fg-10);
+    opacity: 0.45;
+    flex-shrink: 0;
+    pointer-events: none;
+    padding: 0;
+  }
+}
