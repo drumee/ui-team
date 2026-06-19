@@ -11,6 +11,7 @@ const {
   tabBar,
   chatPanel,
   visioMenu,
+  newFileMenu,
   getAreaLabel,
 } = require("../../../../builtins/window/skeleton/toolkit/index");
 
@@ -48,19 +49,17 @@ function dmzTopbar(ui) {
     className: `${cnWindowButton}__buttons-wrapper`,
     kids: [
       // visioMenu(ui),
-      // "Add new" in DMZ creates a sub-folder (media.make_dir) — a plain
-      // button, not a dropdown: __dmz_wm only supports folders here, and a
-      // direct-service button routes reliably to __dmz_wm.onUiEvent (a
-      // menu_topic item does not deliver its service through the bubble
-      // chain). Shown only to guests whose role grants write permission.
+      // "Add new" — the same dropdown the desk folder window uses (newFileMenu),
+      // restricted via opt.items to FOLDER only. A recipient can only create
+      // sub-folders in the DMZ share: Note/office-doc creation opens an editor
+      // that doesn't work in the creator-bound DMZ session, so those items are
+      // intentionally omitted (the toolkit's items whitelist was built for this
+      // — "DMZ share passes ['add-folder']"). Each menu item dispatches its
+      // service via its own uiHandler:[ui] to this sharebox's onUiEvent, which
+      // already delegates "add-folder" to the window manager. Shown only to
+      // guests whose role grants write permission.
       canEdit
-        ? Skeletons.Button.Label({
-            className: `${cnWindowButton}__label-button secondary`,
-            label: LOCALE.ADD_NEW || "Add new",
-            ico: "plus-header",
-            service: "add-folder",
-            uiHandler: ui,
-          })
+        ? newFileMenu(ui, { items: ["add-folder"], triggerIco: "plus-header" })
         : null,
       canUpload
         ? Skeletons.Button.Label({

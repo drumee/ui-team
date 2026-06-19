@@ -739,6 +739,29 @@
   }
 }
 
+/* Anchor the "+ Add new" dropdown popup below its trigger. The base menu.scss
+   only toggles the popup's visibility, and dropdownMenuButton passes no
+   direction, so the popup wrapper is otherwise unpositioned and would push the
+   topbar layout. Mirrors window-folder's newFileMenu positioning. The existing
+   .dmz-button__dropdown-menu styling above (card, items, hover) was added for a
+   dropdown that was never wired in the DMZ topbar (visioMenu is commented out);
+   this completes it for the now-wired "+ Add new" menu. */
+.dmz-button__dropdown-menu__wrapper {
+  position: relative;
+
+  .menu-topic,
+  .menu-topic__ui {
+    position: relative;
+  }
+
+  .menu-topic-items__wrapper {
+    position: absolute;
+    top: calc(100% + 6px);
+    right: 0;
+    z-index: 99999;
+  }
+}
+
 /* Tab bar — based on window-folder__tab-bar-*. The toolkit puts BOTH the shared
    `window-body__tab-bar-*` and the family `dmz-sharebox__tab-bar-*` classes on
    each element; we target the FAMILY classes (like window-folder does with
