@@ -651,9 +651,73 @@ class __dmz_sharebox extends LetcBox {
         this.closeSignupRequiredOverlay();
         return;
 
+      // The window manager navigated a sub-folder in place (Cases 3+4) — refresh
+      // the header breadcrumb. The wm owns the nav state; the sharebox owns the topbar.
+      case 'dmz-nav-changed':
+        return this._refreshBreadcrumb();
+
+      // A header breadcrumb crumb was clicked — navigate the wm to that level.
+      case 'breadcrumb-jump':
+        if (this.wm && this.wm.navigateToStackIndex) {
+          this.wm.navigateToStackIndex(cmd.mget('stackIndex'));
+        }
+        return;
+
       default:
         if (super.onUiEvent) return super.onUiEvent(cmd, args);
     }
+  }
+
+  /**
+   * Render the header breadcrumb from the window manager's folder trail (Cases
+   * 3+4), mirroring the desk folder window (refreshBreadcrumbsUI): ancestors are
+   * clickable crumbs in `dmz-breadcrumb-path` (joined by "›", with a trailing
+   * "›"), and the CURRENT folder is the title (ref-window-name). An empty trail
+   * means we're at the share root → no crumbs, title = the share name.
+   */
+  _refreshBreadcrumb() {
+    const wm = this.wm;
+    const trail = (wm && wm.folderTrail && wm.folderTrail()) || [];
+    const depth = trail.length;
+    const rootName =
+      this.mget(_a.title) || this.mget(_a.filename) || this.mget(_a.name) || '';
+    const currentName = depth ? (trail[depth - 1].name || LOCALE.FOLDER) : rootName;
+
+    // Current folder → title.
+    this.ensurePart('ref-window-name').then((t) => {
+      if (t && _.isFunction(t.set)) t.set({ content: currentName });
+    });
+
+    // Ancestors → clickable crumbs: [share root, trail[0 .. depth-2]]. Each crumb
+    // carries the nav depth to keep (0 = root) so a click re-lists that level.
+    this.ensurePart('dmz-breadcrumb-path').then((box) => {
+      if (!box || (box.isDestroyed && box.isDestroyed())) return;
+      box.el.dataset.state = depth ? 1 : 0;
+      if (!depth) {
+        box.feed([]);
+        return;
+      }
+      const fam = this.fig.family;
+      const ancestors = [{ name: rootName, navDepth: 0 }];
+      for (let i = 0; i < depth - 1; i++) {
+        ancestors.push({ name: trail[i].name || LOCALE.FOLDER, navDepth: i + 1 });
+      }
+      const crumbs = [];
+      ancestors.forEach((a, i) => {
+        if (i > 0) {
+          crumbs.push(Skeletons.Note({ className: `${fam}__breadcrumb-sep`, content: '›' }));
+        }
+        crumbs.push(Skeletons.Note({
+          className: `${fam}__breadcrumb-crumb`,
+          content: a.name || LOCALE.FOLDER,
+          service: 'breadcrumb-jump',
+          stackIndex: a.navDepth,
+          uiHandler: [this],
+        }));
+      });
+      crumbs.push(Skeletons.Note({ className: `${fam}__breadcrumb-sep`, content: '›' }));
+      box.feed(crumbs);
+    });
   }
 
   /**
