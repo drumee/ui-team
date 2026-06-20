@@ -484,6 +484,13 @@ class __dmz_wm extends winman {
       case "add-note":
         return this._newNote();
 
+      // The create-folder name field is flagged `interactive`, so it emits this
+      // live keyup event on every keystroke. Folder creation happens on
+      // create-folder-submit (Enter / button), so the live signal is a no-op here
+      // — swallow it instead of logging "method not processed" on each keypress.
+      case _a.interactive:
+        return;
+
       default:
         return this.warn(WARNING.method.unprocessed.format(service));
     }
