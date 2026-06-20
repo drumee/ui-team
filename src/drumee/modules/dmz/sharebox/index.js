@@ -470,6 +470,16 @@ class __dmz_sharebox extends LetcBox {
       .then((data) => {
         if (data && _.isEmpty(data.status)) {
           this.__header.feed(this.headerSkeleton(this));
+          // Re-feed the top-nav (Login / Join Workspace vs the recipient's account).
+          // It was first rendered from the INITIAL login response — for a password/
+          // email-gated share that was the anonymous gate response (no
+          // is_authenticated), so it showed the guest Login / Join CTA. The gate has
+          // now passed and the model carries the authenticated identity (mset(data)
+          // in verify*), so re-render it: a logged-in recipient sees their account;
+          // an anonymous one keeps the CTA (is_authenticated still false).
+          this.ensurePart('top-nav').then((nav) => {
+            if (nav) nav.feed(this.topNavSkeleton(this));
+          });
           this.loadDeskContent();
         } else {
           this.handleInfoStatus(data)
