@@ -56,22 +56,24 @@ const resolveQuotedName = (_ui_, data) => {
 
 const __skl_chat_item_reply_message = function(_ui_) {
 
-  let _message, attachmentWrapper, userName;
+  let _message, userName, showAttachment = false;
   const chatItemReplyFig = `${_ui_.fig.family}-reply`;
 
   const data = _ui_.mget('thread');
+  // Quoted file detection mirrors the message bubble (is_attachment OR a
+  // non-empty attachment field) so a reply to a file shows its preview even when
+  // the snapshot only carries `attachment`. The cards are filled asynchronously
+  // by chat-item#setThreadData → attachmentReponse.
+  const hasAttachment = data.is_attachment || !_.isEmpty(data.attachment);
 
   if ((data.message === 'DELETED') && _.isEmpty(data.entity)) {
-    attachmentWrapper = '';
     _message = 'Message Deleted';
 
   } else {
-    let displayName = '';
     // Trim so the quoted preview has no stray leading/trailing whitespace.
     _message = (data.message || '').trim();
-    attachmentWrapper = '';
 
-    displayName = resolveQuotedName(_ui_, data);
+    const displayName = resolveQuotedName(_ui_, data);
 
     // Name color comes from the skin. Render only when resolved, so an empty
     // name never leaves a blank slot above the quoted message.
@@ -82,52 +84,41 @@ const __skl_chat_item_reply_message = function(_ui_) {
       });
     }
 
-    if (data.is_attachment) {
-      // Thumbnail is fed asynchronously into this part by
-      // chat-item.attachmentReponse (sys_pn → this.__attachmentContent).
-      attachmentWrapper = Skeletons.Wrapper.X({
-        className  : `${chatItemReplyFig}__wrapper attachment`,
-        kids: [
-          Skeletons.Box.Y({
-            className   : `${chatItemReplyFig}__media-attachment`,
-            flow        : _a.none,
-            partHandler : _ui_,
-            sys_pn      : 'attachment-content'
-          })
-        ]});
-    }
+    showAttachment = hasAttachment;
   }
 
-  const message = Skeletons.Note({
-    className         : `${chatItemReplyFig}__note conversation selectable-text`,
-    content           : Autolinker.link(decodeMentions(_message)),
-    escapeContextmenu : true
-  });
+  // Quoted text — full width, only when the replied message had text, so a
+  // file-only reply shows no empty line (Figma 2306-36705).
+  const message = (_message && _message.length)
+    ? Skeletons.Note({
+        className         : `${chatItemReplyFig}__note conversation selectable-text`,
+        content           : Autolinker.link(decodeMentions(_message)),
+        escapeContextmenu : true
+      })
+    : null;
 
-  // Text column: sender name (when resolved) + quoted preview.
-  const items = Skeletons.Box.Y({
-    className : `${chatItemReplyFig}__items`,
-    kids      : userName ? [userName, message] : [message]
-  });
+  // File list — one card per attached file ([thumbnail] name / extension),
+  // filled asynchronously by chat-item#attachmentReponse once the thread file
+  // metadata loads. A reply to a multi-file message shows every file.
+  const filesContainer = showAttachment
+    ? Skeletons.Box.Y({
+        className   : `${chatItemReplyFig}__files`,
+        flow        : _a.none,
+        partHandler : _ui_,
+        sys_pn      : 'attachment-files'
+      })
+    : null;
 
-  // Figma row: attachment thumbnail (left) then text column (right), centred.
-  // Omit the thumbnail slot entirely on text-only replies — an empty kid would
-  // still consume the row's column-gap and indent the quoted text from the edge.
-  const row = Skeletons.Box.X({
-    className : `${chatItemReplyFig}__row${data.is_attachment ? ' attachment' : ''}`,
-    kids      : data.is_attachment ? [attachmentWrapper, items] : [items]
-  });
-
-  // Quote box — grey overlay background + left accent bar (skin). Carry the
-  // chat-item author class so the skin can flip the palette for the dark "me"
-  // bubble where the quote is nested (see chat-item index.js).
+  // Quote box stacks vertically: sender → quoted text → file list. Any absent
+  // part is dropped so there is never an empty line. Carry the chat-item author
+  // class so the skin can flip the palette for the dark "me" bubble where the
+  // quote is nested (see chat-item index.js).
   const author = _ui_.mget('author') || '';
-  const a = Skeletons.Box.X({
+  const a = Skeletons.Box.Y({
     className : `${chatItemReplyFig}__main ${author}`,
     debug     : __filename,
-    kids      : [
-      row
-    ]});
+    kids      : [userName, message, filesContainer].filter(Boolean)
+  });
 
   return a;
 };

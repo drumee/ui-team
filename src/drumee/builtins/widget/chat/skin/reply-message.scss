@@ -46,20 +46,25 @@
       height: auto;
       justify-content: flex-start;
       min-width: 0;
-      row-gap: 2px;
+      row-gap: 4px;
     }
 
-    &__items-wrapper {
-      height: 100%;
+    // File card: thumbnail (left) + name/extension column (right), centred. Sits
+    // below the header + quoted text — mirror of the sent-bubble reply quote.
+    &__file {
+      align-items: center;
+      column-gap: 8px;
+      height: auto;
       width: 100%;
+    }
 
-      &.attachment {
-        align-items: center;
-        flex: 0 0 auto;
-        justify-content: center;
-        margin-right: 6px;
-        max-width: 50px;
-      }
+    &__file-info {
+      flex: 1 1 auto;
+      height: auto;
+      justify-content: center;
+      min-width: 0;
+      row-gap: 1px;
+      width: 100%;
     }
 
     &__note {
@@ -111,6 +116,30 @@
           word-break: break-word;
         }
       }
+
+      // Quoted file name (top line of the file card) — main foreground, ellipsis.
+      &.filename {
+        @include drumee.typo($size: 12px, $line: 1.4, $weight: 400, $color: var(--normal-fg-10));
+        display: block;
+        max-width: 100%;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        text-transform: none;
+        white-space: nowrap;
+        width: 100%;
+      }
+
+      // Quoted file extension (bottom line) — grey secondary, smaller.
+      &.fileext {
+        @include drumee.typo($size: 10px, $line: 1.4, $weight: 400, $color: var(--normal-fg-50));
+        display: block;
+        max-width: 100%;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        text-transform: none;
+        white-space: nowrap;
+        width: 100%;
+      }
     }
 
     &__icon {
@@ -126,27 +155,80 @@
       }
     }
 
+    // File thumbnail tile — render ONLY the media-grid image preview at 36px and
+    // drop its own filename / meta-row (the name + extension show as separate
+    // quote lines). Mirrors the working chat attachment card (skin/attachment.scss).
     &__media-attachment {
-      height: 40px;
+      border-radius: 4px;
+      flex: 0 0 auto;
+      height: 36px;
       overflow: hidden;
-      width: 46px;
+      width: 36px;
 
-      & .widget-chat__attachment-wrapper {
-        &.media-grid__ui {
-          background: inherit;
-          height: 100%;
+      // Target the media grid directly (its own `.media-grid__ui`) — scoped to
+      // this reply tile only. Do NOT qualify with `__attachment-wrapper`: that
+      // class collides with the footer staged-upload skin, so the reply grid
+      // uses a neutral `__grid` class instead.
+      & .media-grid__ui {
+        background: transparent;
+        box-shadow: none;
+        height: 36px;
+        margin: 0;
+        min-width: 0;
+        width: 36px;
+
+        // Hide everything except the image tile.
+        & .media-grid__meta-row,
+        & .filename,
+        & .media-grid__chatmeta,
+        & .media-grid__date,
+        & .media-grid__remove,
+        & .remove,
+        & .media-context-menu__trigger,
+        & .media-grid-notify__container {
+          display: none !important;
+        }
+
+        & [data-hover="on"]::before {
+          display: none !important;
+        }
+
+        & .media-grid__container,
+        & .media-grid__content {
+          align-items: center;
+          background: transparent;
+          height: 36px;
+          justify-content: center;
+          min-width: 0;
+          padding: 0;
+          transform: none !important;
+          width: 36px;
+        }
+
+        // Image tile fills the 36px square (theme-aware grey fallback for icons).
+        & .media-grid__background {
+          background-color: var(--normal-bg-90);
+          border-radius: 4px;
+          flex: 0 0 auto;
+          height: 36px !important;
           margin: 0;
-          width: 100%;
+          max-height: 36px;
+          max-width: 36px;
+          min-height: 36px;
+          min-width: 36px;
+          overflow: hidden;
+          width: 36px !important;
+        }
 
-          & .filename {
-            font-size: 7px;
-            line-height: 9px;
-            max-width: 46px;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            top: 22px;
-            word-break: break-word;
-          }
+        & .preview,
+        & .preview-container,
+        & .preview-content {
+          background-position: center;
+          background-size: cover;
+          height: 100% !important;
+          max-height: 36px;
+          max-width: 36px;
+          width: 100% !important;
         }
       }
     }

@@ -1928,7 +1928,6 @@ class __widget_chat extends LetcBox {
    * @returns
    */
   replyMessage(cmd) {
-    this.threadAttachment = "";
     const replyWrapper = this.getPart("reply-wrapper");
     this.threadId = cmd.mget("message_id");
     // Snapshot the parent so the optimistic placeholder shows the quote right
@@ -1936,9 +1935,23 @@ class __widget_chat extends LetcBox {
     this.threadSnapshot = cmd.model ? cmd.model.toJSON() : null;
     if (this.threadSnapshot) delete this.threadSnapshot.is_attachment;
 
-    if (cmd.mget("is_attachment")) {
-      this.threadAttachment =
-        cmd.__list.children != null ? cmd.__list.children.first() : undefined;
+    // A file message signals its attachment via EITHER `is_attachment` or a
+    // non-empty `attachment` field (folder-chat sends `attachment` only — see
+    // chat-item/index.js#buildContent), so mirror that dual check here. Collect
+    // EVERY rendered attachment card's data (getAttr → clean file fields incl.
+    // ownpath/vhost, so the quote preview URL resolves) — a reply to a multi-file
+    // message must quote all files, not just the first.
+    this.threadAttachments = [];
+    if (
+      (cmd.mget("is_attachment") || !_.isEmpty(cmd.mget("attachment"))) &&
+      cmd.__list &&
+      cmd.__list.children
+    ) {
+      cmd.__list.children.each((view) => {
+        if (view && typeof view.getAttr === "function") {
+          this.threadAttachments.push(view.getAttr());
+        }
+      });
     }
 
     replyWrapper.feed(require("./skeleton/reply-message")(this, cmd));
@@ -1953,6 +1966,7 @@ class __widget_chat extends LetcBox {
     const replyWrapper = this.getPart("reply-wrapper");
     this.threadId = null;
     this.threadSnapshot = null;
+    this.threadAttachments = [];
     replyWrapper.feed("");
     return (replyWrapper.el.dataset.mode = _a.closed);
   }

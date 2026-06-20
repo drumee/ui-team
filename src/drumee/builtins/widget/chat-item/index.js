@@ -676,7 +676,11 @@ class ___widget_chatItem extends LetcBox {
     if (_.isEmpty(this.mget("thread")) || !this.mget("thread_id")) {
       return;
     }
-    if (!this.mget("thread").is_attachment) return;
+    const thread = this.mget("thread");
+    // A quoted file shows up as is_attachment OR a non-empty attachment field
+    // (the sent reply snapshot carries `attachment` but has is_attachment
+    // stripped — see chat/index.js#replyMessage), so check both before fetching.
+    if (!thread.is_attachment && _.isEmpty(thread.attachment)) return;
     // initialize() runs before LetcBox binds fetchService; defer to next tick.
     setTimeout(() => {
       if (this.isDestroyed && this.isDestroyed()) return;
@@ -913,31 +917,54 @@ class ___widget_chatItem extends LetcBox {
   }
 
   /**
-   *
+   * Render the quoted file list — one card per attached file (Figma 2306-36705:
+   * [thumbnail] name / extension). `data` is the full SERVICE.chat.attachment
+   * response (an array for a multi-file message).
    * @param {*} data
    */
   async attachmentReponse(data) {
-    const attachment = {
-      kind: "media_grid",
-      className: `${this.fig.family}__attachment-wrapper`,
-      isAttachment: 1,
-      origin: _a.chat,
-      logicalParent: this,
-      uiHandler: this,
-      row: data,
-      filetype: data.ftype,
-      nid: data.nid,
-      hub_id: data.hub_id,
-      filename: data.filename,
-      ext: data.ext,
-      filesize: data.filesize,
-      vhost: data.vhost,
-      mode: _a.view,
-      accessibility: data.accessibility,
-      capability: data.capability,
-    };
-    await this.ensurePart("attachment-content");
-    this.__attachmentContent.feed(attachment);
+    const files = (_.isArray(data) ? data : [data]).filter(Boolean);
+    if (_.isEmpty(files)) return;
+    const replyFig = `${this.fig.family}-reply`;
+
+    const cards = files.map((f) => {
+      const infoKids = [
+        Skeletons.Note({ className: `${replyFig}__note filename`, content: f.filename || "" }),
+      ];
+      if (f.ext) {
+        infoKids.push(
+          Skeletons.Note({ className: `${replyFig}__note fileext`, content: f.ext }),
+        );
+      }
+      return Skeletons.Box.X({
+        className: `${replyFig}__file`,
+        kids: [
+          Skeletons.Box.Y({
+            className: `${replyFig}__media-attachment`,
+            flow: _a.none,
+            kids: [
+              {
+                // Spread the FULL file record — the media grid resolves its
+                // preview URL from vhost + ownpath/filepath, not just a subset,
+                // so a hand-picked field list left the thumbnail blank.
+                ...f,
+                kind: "media_grid",
+                className: `${this.fig.family}__attachment-wrapper`,
+                isAttachment: 1,
+                origin: _a.chat,
+                uiHandler: Wm,
+                logicalParent: Wm,
+                filetype: f.ftype || f.filetype,
+              },
+            ],
+          }),
+          Skeletons.Box.Y({ className: `${replyFig}__file-info`, kids: infoKids }),
+        ],
+      });
+    });
+
+    await this.ensurePart("attachment-files");
+    this.__attachmentFiles.feed(cards);
 
     this.triggerHandlers({ service: "attachment-reponse" });
   }
@@ -963,7 +990,9 @@ class ___widget_chatItem extends LetcBox {
     switch (service) {
       case SERVICE.chat.attachment:
         if (!_.isEmpty(data)) {
-          this.attachmentReponse(data[0]);
+          // Pass the whole array so a reply to a multi-file message renders
+          // every file (not just the first).
+          this.attachmentReponse(data);
         }
         return;
     }

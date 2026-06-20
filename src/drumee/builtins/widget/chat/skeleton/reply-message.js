@@ -47,7 +47,6 @@ const __skl_chat_reply_message = function(_ui_, msg) {
   const m = (msg.model && msg.model.toJSON) ? msg.model.toJSON()
           : (msg.getAttr ? msg.getAttr() : {});
   const author = m.author || msg.mget('author');
-  let attachmentWrapper = '';
 
   const displayName = (author === 'me') ? LOCALE.YOU : resolveSenderName(m);
 
@@ -70,47 +69,74 @@ const __skl_chat_reply_message = function(_ui_, msg) {
     content    : Autolinker.link(decodeMentions(m.message))
   });
 
-  if (m.is_attachment) {
-    const attachmentItem = _ui_.threadAttachment.model.attributes;
-    const attachment = {
-      kind          : 'media_grid',
-      className     : `${_ui_.fig.family}__attachment-wrapper`,
-      logicalParent : _ui_,
-      row           : attachmentItem,
-      filetype      : attachmentItem.ftype,
-      nid           : attachmentItem.nid,
-      hub_id        : attachmentItem.hub_id,
-      filename      : attachmentItem.filename,
-      ext           : attachmentItem.ext,
-      filesize      : attachmentItem.filesize,
-      vhost         : attachmentItem.vhost,
-      mode          : _a.view,
-      signal        : _e.ui.event,
-      accessibility : attachmentItem.accessibility,
-      capability    : attachmentItem.capability,
-      handler       : {
-        ui          : _ui_
-      }
-    };
+  // File cards — one per attached file ([thumbnail] name / extension), mirror of
+  // the sent-bubble reply quote (chat-item/skeleton/reply-message). Detect the
+  // file like the message bubble (is_attachment OR a non-empty attachment field);
+  // metadata comes from the replied row's already-rendered attachment cards
+  // (threadAttachments — full file records, so the preview URL resolves). A reply
+  // to a multi-file message quotes every file.
+  const hasAttachment = m.is_attachment || !_.isEmpty(m.attachment);
+  const fileCards = [];
+  if (hasAttachment && _.isArray(_ui_.threadAttachments)) {
+    _ui_.threadAttachments.forEach((attachmentItem) => {
+      if (!attachmentItem) return;
 
-    attachmentWrapper = Skeletons.Wrapper.X({
-      className  : `${chatReplyFig}__items-wrapper attachment`,
-      kids: [
-        Skeletons.Box.Y({
-          className   : `${chatReplyFig}__media-attachment ${author}`,
-          flow        : _a.none,
-          sys_pn      : "content",
-          kids        : [ attachment ]})
-      ]});
+      // Name (top) + extension (bottom). Extension omitted when absent so an
+      // extension-less file leaves no empty line.
+      const fileInfoKids = [
+        Skeletons.Note({
+          className : `${chatReplyFig}__note filename`,
+          content   : attachmentItem.filename || ''
+        })
+      ];
+      if (attachmentItem.ext) {
+        fileInfoKids.push(Skeletons.Note({
+          className : `${chatReplyFig}__note fileext`,
+          content   : attachmentItem.ext
+        }));
+      }
+
+      fileCards.push(Skeletons.Box.X({
+        className : `${chatReplyFig}__file ${author}`,
+        kids      : [
+          Skeletons.Box.Y({
+            className : `${chatReplyFig}__media-attachment ${author}`,
+            flow      : _a.none,
+            kids      : [
+              {
+                // Spread the FULL file record so the media grid resolves its
+                // preview URL from vhost + ownpath/filepath (a hand-picked subset
+                // left the thumbnail blank).
+                ...attachmentItem,
+                kind          : 'media_grid',
+                // Unique class — must NOT reuse `${fig}__attachment-wrapper`,
+                // which the chat footer's staged-upload skin (chat/skin/
+                // attachment.scss) hides (display:none) and force-sizes to 64px.
+                className     : `${chatReplyFig}__grid`,
+                isAttachment  : 1,
+                origin        : _a.chat,
+                uiHandler     : Wm,
+                logicalParent : Wm,
+                filetype      : attachmentItem.ftype || attachmentItem.filetype
+              }
+            ]
+          }),
+          Skeletons.Box.Y({
+            className : `${chatReplyFig}__file-info`,
+            kids      : fileInfoKids
+          })
+        ]}));
+    });
   }
 
-  // Text column: header + preview stacked, takes remaining width.
+  // Quoted text — only when the replied message had text (file-only → no gap).
+  const hasText = !_.isEmpty((m.message || '').trim());
+
+  // Text column: header → quoted text → file cards, dropping any absent part.
   const content = Skeletons.Box.Y({
     className : `${chatReplyFig}__content ${author}`,
-    kids      : [
-      userName,
-      message
-    ]});
+    kids      : [userName, hasText ? message : null, ...fileCards].filter(Boolean)
+  });
 
   const closeIcon = Skeletons.Button.Svg({
     ico       : 'account_cross',
@@ -125,7 +151,6 @@ const __skl_chat_reply_message = function(_ui_, msg) {
     kids      : [
       replyIcon,
       content,
-      attachmentWrapper,
       closeIcon
     ]});
 

@@ -2506,6 +2506,29 @@
     }
   }
 
+  // Reply quote on a light "me" bubble (share/dmz/public) — pin the quote text to
+  // dark constants regardless of whether the quote was moved INTO the bubble or
+  // left as a prepended sibling. Scoping to the quote root (not .conversation-
+  // content) makes this hold in both cases. The reply skin's theme-aware
+  // --normal-fg-* turn white in dark mode and wash out on the fixed light bubble;
+  // covers the new file name/extension lines the meta-row pins above miss.
+  .window__chat-panel[data-area="share"] .widget-chatItem-reply__main.me,
+  .window__chat-panel[data-area="dmz"] .widget-chatItem-reply__main.me,
+  .window__chat-panel[data-area="public"] .widget-chatItem-reply__main.me {
+    .widget-chatItem-reply__note.name,
+    .widget-chatItem-reply__note.name .note-content,
+    .widget-chatItem-reply__note.filename,
+    .widget-chatItem-reply__note.filename .note-content {
+      color: var(--primary-purple-100) !important;
+    }
+
+    .widget-chatItem-reply__note.fileext,
+    .widget-chatItem-reply__note.fileext .note-content,
+    .widget-chatItem-reply__note.conversation .note-content {
+      color: var(--tertiary-grey-80) !important;
+    }
+  }
+
   .widget-chatItem__name,
   .widget-chatItem__username-content,
   .widget-chatItem__message-username {
