@@ -47,20 +47,21 @@
 
   &__header {
     align-items: center;
-    justify-content: center;
-    max-height: 40px;
+    justify-content: space-between;
+    max-height: none;
+    padding: 4px 4px 0;
   }
 
   &__switch {
     justify-content: center;
     max-height: 60px;
-    padding-top: 30px;
+    padding-top: 16px;
   }
 
   &__content {
     overflow: hidden;
-    padding-top: 15px;
-    padding-bottom: 22px;
+    padding-top: 12px;
+    padding-bottom: 16px;
 
     & *::-webkit-scrollbar {
       height: 100%;
@@ -75,42 +76,48 @@
 
   &__footer {
     align-items: center;
-    //border-top: 1px solid var(--default-separator);
-    max-height: 80px; //50px;
-    padding-bottom:10px;//8px
+    max-height: none;
+    padding-bottom: 0;
   }
 
   &__room-content {
-    height:calc(100% - 10px);// calc(100% - 20px);
-    width: calc(100% - 2px);
-    
+    height: calc(100% - 10px);
+    padding: 0 12px;
+    row-gap: 12px;
+    width: 100%;
+
     &[data-mode="closed"] {
       display: none;
     }
   }
 
+  // Search pill (Figma 2307-52459) — full-width rounded field with the glyph
+  // inline; the underline entry is gone.
   &__search-wrapper {
-    justify-content: flex-end;
-    width: 78%;//100%;
-    //align-items: baseline;
-    //justify-content: center;
-    height:25px; // 40px;
+    align-items: center;
+    background-color: var(--grid-card-bg, rgba(0, 0, 0, 0.05));
+    border-radius: 8px;
+    column-gap: 8px;
+    height: auto;
+    min-height: 44px;
+    padding: 10px 12px;
+    width: 100%;
   }
 
   &__search {
-    width: calc(100% - 90px);
-    padding-left: 14px; //15px;
-
-
+    flex: 1 1 auto;
+    min-width: 0;
+    padding: 0;
+    width: 100%;
 
     & input {
-      border-bottom: 1px solid var(--default-entry-border-bottom);
-      max-width: 210px;
+      background: transparent;
+      border: none;
       width: 100%;
-      @include drumee.typo($size: 14px, $line: 14px, $color: var(--default-text-color));//$size: 13px, 
-      
+      @include drumee.typo($size: 16px, $line: 1.4, $color: var(--normal-fg-10, #34343a));
+
       &::placeholder {
-        @include drumee.typo($size: 14px, $line: 14px, $weight: 300, $color: var(--default-text-placeholder));//$size: 13px,
+        @include drumee.typo($size: 16px, $line: 1.4, $weight: 400, $color: var(--normal-fg-50, #65656c));
       }
     }
   }
@@ -118,24 +125,24 @@
   &__list {
     height: 100%;
     width: 100%;
-    padding-top:20px;//10px;
-    
+    padding-top: 8px;
+
     & .smart-container {
-      border-radius:var(--border-radius);  
+      border-radius: var(--border-radius);
       height: 100%;
-      padding:0 10px; //10px;//15px 0 10px 0; //20px 0 ;// 10px 0px;
+      margin: 0;
+      padding: 0;
       width: 100%;
-      max-width:302px;//280px;
-     // min-height: 164px;
-      margin: 1px 40px;
-      top:-10px;
     }
   }
 
   &__note {
     &.title {
-      padding-top: 40px;
-      @include drumee.typo($size: 16px, $line: 21px, $color: var(--default-text-title)); //$size: 18px,
+      @include drumee.typo($size: 24px, $line: 1.1, $color: var(--normal-fg-10, #34343a)); // Figma Headings/H6
+      font-weight: 600;
+      justify-content: flex-start;
+      text-align: left;
+      width: 100%;
     }
     
     &.switch-title {
@@ -210,10 +217,10 @@
     }
 
     &.search-icon {
-      height: 17px;//13px;
-      margin-right: 2px;
-      top: 4px;
-      width: 17px;//13px;
+      color: var(--normal-fg-50, #65656c);
+      flex: 0 0 auto;
+      height: 20px;
+      width: 20px;
     }
 
     &.search-close-icon {
@@ -235,29 +242,28 @@
     width: 100%;
   }
 
+  // Full-width primary CTA (Figma 2307-52459). Uses --primary-50 (#433cc5, the
+  // design's Primary/50 indigo) — NOT --primary-500, which the revamp palette
+  // redefines to magenta (#b251fb); the old fallback never applied.
   &__button-confirm {
-    border-radius:var(--border-radius);
-    // Use the modern primary palette directly — the legacy --btn-commit-*
-    // vars in skin/vars/default.scss are written as `-primary-500` (missing
-    // the var() wrapper) so they resolve to invalid CSS and the button has
-    // no background. Bypass them with --primary-* tokens, which are themed.
-    @include drumee.typo($size: 16px, $line: 19px, $color: #ffffff);
+    @include drumee.typo($size: 16px, $line: 24px, $color: #ffffff);
     align-items: center;
-    background-color: var(--primary-500, #5950ff);
-    border: 1px solid var(--primary-500, #5950ff);
-    height: 100%;
-    justify-content: center;
-    max-height: 35px;
-    max-width: 115px;
-    width: 100%;
-    margin-bottom: 10px;
-    margin-left: 2%;
-    padding: 7px;
+    background-color: var(--primary-50, #433cc5);
+    border: 1px solid var(--primary-50, #433cc5);
+    border-radius: 4px;
     cursor: pointer;
+    font-weight: 600;
+    justify-content: center;
+    margin: 0 12px 12px;
+    max-height: 48px;
+    min-height: 44px;
+    padding: 12px 24px;
     transition: background-color 120ms ease, border-color 120ms ease;
-    &:hover{
-      background-color: var(--primary-600, #4642a9);
-      border: 1px solid var(--primary-600, #4642a9);
+    width: calc(100% - 24px);
+
+    &:hover {
+      background-color: var(--primary-60, #4642a9);
+      border-color: var(--primary-60, #4642a9);
     }
   }
 
@@ -302,6 +308,11 @@ html[data-theme="dark"] {
       background-color: var(--normal-bg-90, #282538);
     }
 
+    // Search pill — a faint light overlay so it lifts off the dark modal.
+    &__search-wrapper {
+      background-color: rgba(255, 255, 255, 0.06);
+    }
+
     &__note {
       &.title { color: var(--reverse-bg, #e4e3ff); }
       &.search-title,
@@ -330,27 +341,13 @@ html[data-theme="dark"] {
     }
   }
 
-  // List items inside the forward popup
+  // List items inside the forward popup. Name (--normal-fg-10) and presence
+  // (--normal-fg-50) already resolve correctly per theme, and the filled
+  // checkbox reuses --primary-50 — so the only dark-specific need is the hover
+  // fill: the base hover (light grid overlay) is invisible on the dark modal.
   .chat-forward-list-item {
-    &__ui {
-      &:hover {
-        background-color: var(--hover-bg-40, rgba(89, 80, 255, 0.15));
-        & .room-name { color: var(--normal-fg-10, #ffffff); }
-      }
-    }
-
-    &__name {
-      color: var(--normal-fg-10, #e4e3ff);
-    }
-
-    &__icon.checkbox {
-      color: var(--normal-fg-50, #c7c7cc);
-      border-color: var(--border-default, rgba(255, 255, 255, 0.2));
-
-      &[data-state="1"] {
-        color: var(--reverse-bg, #e4e3ff);
-        border-color: var(--active-border, #5950ff);
-      }
+    &__list:hover {
+      background-color: var(--hover-bg-40, rgba(89, 80, 255, 0.15));
     }
   }
 }

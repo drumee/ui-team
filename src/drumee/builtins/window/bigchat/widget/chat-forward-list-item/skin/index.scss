@@ -1,45 +1,44 @@
 @use 'mixins/drumee';
 
 .chat-forward-list-item {
-  &__ui {
+  &__ui,
+  &__main,
+  &__container {
     background-color: inherit;
+    width: 100%;
+  }
+
+  // Row (Figma 2307-52459): avatar + name/presence column + trailing checkbox,
+  // vertically centred, rounded so the selected-state highlight reads as a card.
+  &__list {
+    align-items: center;
+    border-radius: 8px;
+    column-gap: 16px;
+    height: auto;
+    min-height: 48px;
+    padding: 8px 12px;
+    width: 100%;
+    transition: background-color 120ms ease;
+
     &:hover {
-      background-color: var(--default-background-hover);
-      & .checkbox,
-      & .room-name {
-        color: var(--default-text-hover);
-        display: block;
-      }
-      
-      & .checkbox {
-        &[data-state="1"] {
-          box-shadow: none;
-          color: var(--checkbox-checked-reverse);
-          border: 1px solid var(--checkbox-checked-border-reverse);
-        }
-      }
+      background-color: var(--grid-card-bg, rgba(0, 0, 0, 0.05));
+    }
+
+    // Selected row — tinted highlight when its checkbox is checked. :has lets the
+    // row react to the checkbox state with no extra JS / re-render.
+    &:has(.checkbox[data-state="1"]) {
+      background-color: var(--hover-bg-40, rgba(89, 80, 255, 0.1));
     }
   }
 
-  &__main {
-    background-color: inherit;
-  }
-
-  &__container {
-    background-color: inherit;
-  }
-
-  &__list {
-    padding:3px 18px 2px 19px; 
-    height: 35px;
-  }
-
+  // Avatar / team-room glyph — 32px circle (Figma).
   &__profile {
     &.user-profile__ui {
       border-radius: 50%;
-      height:29px; 
-      width:29px; 
-      
+      flex: 0 0 auto;
+      height: 32px;
+      width: 32px;
+
       &[data-default="1"] {
         border: none;
       }
@@ -47,45 +46,68 @@
   }
 
   &__icon {
-    color: var(--egrey-b6); 
+    color: var(--egrey-b6);
     cursor: pointer;
 
     &.raw-drumee_projectroom {
-      height: 22px !important; 
-      width: 29px;
-      top: 4px;
+      flex: 0 0 auto;
+      height: 24px !important;
+      width: 32px;
     }
 
     &.display-icon {
-      height: 29px; 
-      width: 29px;
-      
+      flex: 0 0 auto;
+      height: 32px;
+      width: 32px;
     }
 
+    // Checkbox — always visible 20px square (Figma): muted outline when empty,
+    // solid indigo fill + white tick when selected. The state-0 icon
+    // (editbox_shapes-roundsquare) draws the empty box; state 1 swaps to the
+    // tick, which we wrap in the filled square via background.
     &.checkbox {
-      display: none;
-      height: 15px;
-      margin-right: 18px;
-      margin-top: 7px; 
-      position: absolute;
-      right: 0;
-      width: 15px;
+      align-items: center;
+      border-radius: 4px;
+      box-sizing: border-box;
+      color: var(--normal-fg-50, #84848c);
+      display: flex;
+      flex: 0 0 auto;
+      height: 20px;
+      justify-content: center;
+      width: 20px;
 
       &[data-state="1"] {
+        background-color: var(--primary-50, #433cc5);
+        border: none;
         box-shadow: none;
-        color:var(--default-checkbox-checked);
-        border:1px solid var(--default-checkbox-border);
-        display: flex;
-        border-radius:var(--checkbox-border-radius);
+        color: #ffffff;
+        padding: 3px;
       }
     }
   }
 
+  // Name + presence column — takes the remaining width; min-width:0 lets both
+  // lines truncate with an ellipsis instead of pushing the checkbox out.
+  &__info {
+    flex: 1 1 auto;
+    justify-content: center;
+    min-width: 0;
+    row-gap: 1px;
+  }
+
   &__name {
-    margin-top: 3px;
-    padding: 5px 3px 3px 12px;
-    max-width: 165px;
-    @include drumee.typo( $size :14px, $line: 14px, $color: var(--default-text-color));
-    @include drumee.overflow-text;    
+    @include drumee.typo($size: 14px, $line: 20px, $color: var(--normal-fg-10, #0b0a21));
+    @include drumee.overflow-text;
+    font-weight: 600;
+    max-width: 100%;
+    width: 100%;
+  }
+
+  // Secondary presence line (Online / Offline) — muted, smaller, single line.
+  &__presence {
+    @include drumee.typo($size: 12px, $line: 1.4, $weight: 400, $color: var(--normal-fg-50, #65656c));
+    @include drumee.overflow-text;
+    max-width: 100%;
+    width: 100%;
   }
 }
