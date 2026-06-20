@@ -10,6 +10,7 @@ class ___chat_item_forward extends LetcBox {
     this.triggerItemList = this.triggerItemList.bind(this);
     this.filterData = this.filterData.bind(this);
     this.triggerRoomSelect = this.triggerRoomSelect.bind(this);
+    this._buildForwardButton = this._buildForwardButton.bind(this);
     this._loadSearchResults = this._loadSearchResults.bind(this);
     this.triggerSearchRoomSelect = this.triggerSearchRoomSelect.bind(this);
     this.closeSearchResult = this.closeSearchResult.bind(this);
@@ -151,13 +152,6 @@ class ___chat_item_forward extends LetcBox {
 // 
 // ===========================================================
   triggerRoomSelect(cmd) {
-    const type = cmd.mget(_a.type);
-    const {
-      source
-    } = cmd;
-    const state   = source.mget(_a.state);
-    const roomId = cmd.mget(_a.id);
-    
     const data = this.getData(_a.formItem);
 
     this._seletecdContacts    = this.filterData(data.privateRooms);
@@ -165,17 +159,29 @@ class ___chat_item_forward extends LetcBox {
 
     const roomCount = this._seletecdContacts.length + this._selectedShareRooms.length;
 
-    if (roomCount === 0) {
-      return;
+    // The picked count lives on the CTA itself — "Forward(N)" — instead of a
+    // separate "N selections" line. Always re-render so it resets to "Forward"
+    // when the last recipient is unchecked.
+    const wrap = this.getPart('forward-button-wrap');
+    if (wrap) {
+      wrap.feed(this._buildForwardButton(roomCount));
     }
-    
-    const counterText = {
-      kind        : KIND.note,
-      className   : 'chat-item-forward__note counter',
-      content     : (roomCount.printf(LOCALE.X_SELECTIONS)) //"#{roomCount} Selections"
-    };
+  }
 
-    return this.getPart('selected-contact-count').feed(counterText);
+// ===========================================================
+// Build the footer CTA. Count baked into the label ("Forward(N)"); plain
+// "Forward" when nothing is picked. Re-fed by triggerRoomSelect as the
+// selection changes.
+// ===========================================================
+  _buildForwardButton(count) {
+    const fig = this.fig.family;
+    const label = count > 0 ? `${LOCALE.FORWARD}(${count})` : LOCALE.FORWARD;
+    return Skeletons.Note({
+      className : `${fig}__button-confirm button clickable`,
+      content   : label,
+      service   : 'forward-message',
+      uiHandler : this
+    });
   }
 
 // ===========================================================

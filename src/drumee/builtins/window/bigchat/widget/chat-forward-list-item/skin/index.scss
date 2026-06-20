@@ -12,22 +12,29 @@
   // vertically centred, rounded so the selected-state highlight reads as a card.
   &__list {
     align-items: center;
+    // Transparent 1px border reserved on every row (border-box) so the selected
+    // outline below adds no layout shift.
+    border: 1px solid transparent;
     border-radius: 8px;
+    box-sizing: border-box;
     column-gap: 16px;
     height: auto;
     min-height: 48px;
     padding: 8px 12px;
     width: 100%;
-    transition: background-color 120ms ease;
+    transition: background-color 120ms ease, border-color 120ms ease;
 
     &:hover {
       background-color: var(--grid-card-bg, rgba(0, 0, 0, 0.05));
     }
 
-    // Selected row — tinted highlight when its checkbox is checked. :has lets the
-    // row react to the checkbox state with no extra JS / re-render.
+    // Selected row (light) — a white card with a grey outline rather than a flat
+    // tinted fill, which read as an "ugly blob" on the white popup. :has lets the
+    // row react to the checkbox state with no extra JS / re-render. Dark theme
+    // keeps a tinted fill (chat-item-forward dark block).
     &:has(.checkbox[data-state="1"]) {
-      background-color: var(--hover-bg-40, rgba(89, 80, 255, 0.1));
+      background-color: var(--default-background, #ffffff);
+      border-color: var(--tertiary-grey-50, #c7c7cc);
     }
   }
 
