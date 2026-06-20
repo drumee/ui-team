@@ -224,6 +224,13 @@ class __editor_markdown extends __player {
    */
   _saveContent(opt, target) {
     this.postService(opt, { async: 1 }).then((data) => {
+      // A denied/failed save resolves without a saved node — guard before reading
+      // it so a server error (e.g. a 403) degrades to a warning instead of an
+      // uncaught `data.file_path` TypeError / unhandled rejection.
+      if (!data || !data.nid) {
+        this.warn("__editor_markdown: save returned no node", data);
+        return;
+      }
       this._changed = 0;
       let content = `${LOCALE.SAVED} > ${data.file_path}`
       this.__acknowledgement.set({ content })
@@ -250,6 +257,10 @@ class __editor_markdown extends __player {
         file.restart("media:modified");
       }
       this.mset(data);
+    }).catch((e) => {
+      // Never leave a save rejection unhandled (it surfaced as a global
+      // unhandledrejection alert). The server-error path already notifies the user.
+      this.warn("__editor_markdown: save failed", e);
     });
   }
 
