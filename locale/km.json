@@ -48,6 +48,7 @@
   "CURRENT_PASSWORD": "លេខសំងាត់​បច្ចុប្បន្ន",
   "DAYS": "ថ្ងៃ",
   "DELETE": "លុប",
+  "DELETE_MESSAGE_CONFIRM": "តើអ្នកចង់លុបសារនេះមែនទេ?",
   "ACCOUNT_DELETE": "លុបគណនីរបស់ខ្ញុំ",
   "DESCRIPTION": "ការពិពណ៌នា",
   "GDRIVE_PICKER_CHOOSE": "ជ្រើសរើសពី Google Drive",

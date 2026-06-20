@@ -49,6 +49,7 @@
   "CURRENT_PASSWORD": "Текущий пароль",
   "DAYS": "День(дни)",
   "DELETE": "Удалить",
+  "DELETE_MESSAGE_CONFIRM": "Удалить это сообщение?",
   "ACCOUNT_DELETE": "Удалите мой аккаунт",
   "DESCRIPTION": "Описание",
   "GDRIVE_PICKER_CHOOSE": "Выбрать из Google Drive",

@@ -419,6 +419,7 @@
   "CURRENT_PASSWORD_LABEL": "CURRENT PASSWORD",
   "DAYS": "DAYS",
   "DELETE": "Delete",
+  "DELETE_MESSAGE_CONFIRM": "¿Quieres eliminar este mensaje?",
   "DESCRIPTION": "Description",
   "GDRIVE_PICKER_CHOOSE": "Elegir desde Google Drive",
   "GDRIVE_PICKER_HINT": "Abre una carpeta y selecciona los archivos dentro — Drumee solo accede a los archivos que elijas.",

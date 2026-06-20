@@ -49,6 +49,7 @@
   "CURRENT_PASSWORD": "当前密码",
   "DAYS": "天",
   "DELETE": "删除",
+  "DELETE_MESSAGE_CONFIRM": "确定要删除这条消息吗？",
   "ACCOUNT_DELETE": "删除我的账户",
   "DESCRIPTION": "描述",
   "GDRIVE_PICKER_CHOOSE": "从 Google Drive 选择",

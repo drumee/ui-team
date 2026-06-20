@@ -49,6 +49,7 @@
   "CURRENT_PASSWORD": "Mot de passe actuel",
   "DAYS": "Jour(s)",
   "DELETE": "Supprimer",
+  "DELETE_MESSAGE_CONFIRM": "Voulez-vous supprimer ce message ?",
   "ACCOUNT_DELETE": "Supprimer mon compte",
   "DESCRIPTION": "Description",
   "GDRIVE_PICKER_CHOOSE": "Choisir depuis Google Drive",

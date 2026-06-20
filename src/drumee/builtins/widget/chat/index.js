@@ -66,6 +66,7 @@ class __widget_chat extends LetcBox {
     this.clearReplyMessage = this.clearReplyMessage.bind(this);
     this.showMsgCount = this.showMsgCount.bind(this);
     this.deleteMessage = this.deleteMessage.bind(this);
+    this.confirmDeleteForAll = this.confirmDeleteForAll.bind(this);
     this.showSend = this.showSend.bind(this);
     this.clearMessageFromChat = this.clearMessageFromChat.bind(this);
     this.removeUploadFromChat = this.removeUploadFromChat.bind(this);
@@ -927,9 +928,11 @@ class __widget_chat extends LetcBox {
         return this.deleteMessage(cmd, service);
 
       case "delete-for-all":
-        this.setMessageSelectorState(0);
+        // Destructive "delete for everyone" — confirm first (Figma 2308-115578)
+        // instead of deleting immediately. Only the active (all-own-messages)
+        // state can delete; selection is preserved if the user cancels.
         if (cmd.el.dataset.active === _a.yes) {
-          return this.deleteMessage(cmd, service);
+          return this.confirmDeleteForAll(cmd, service);
         }
         break;
 
@@ -2014,6 +2017,40 @@ class __widget_chat extends LetcBox {
   }
 
   /**
+   * Confirm a destructive "delete for everyone" before running it (Figma
+   * 2308-115578). Reuses the shared window_confirm via Wm.confirm: a borderless
+   * Cancel + a red (danger) Delete under the "Do you want to delete this
+   * message?" prompt. Deletes only when the user confirms; on cancel/dismiss the
+   * current selection is left intact so they can adjust or back out.
+   * @param {*} cmd
+   * @param {*} service
+   */
+  confirmDeleteForAll(cmd, service) {
+    Wm.confirm({
+      // Prompt rendered through the scoped chat-delete-confirm title so it picks
+      // up the larger Figma type without touching other confirm dialogs.
+      message: () =>
+        Skeletons.Note({
+          className: "chat-delete-confirm__title",
+          content: LOCALE.DELETE_MESSAGE_CONFIRM,
+        }),
+      confirm: LOCALE.DELETE,
+      confirm_type: "danger",
+      cancel: LOCALE.CANCEL,
+      cancel_type: "secondary",
+      buttonClass: "chat-delete-confirm",
+      mode: "bf",
+    })
+      .then(() => {
+        this.setMessageSelectorState(0);
+        this.deleteMessage(cmd, service);
+      })
+      .catch(() => {
+        /* cancelled / dismissed — keep the current selection */
+      });
+  }
+
+  /**
    *
    * @param {*} cmd
    * @param {*} service
@@ -2025,13 +2062,6 @@ class __widget_chat extends LetcBox {
       cmd = {};
     }
     const isPrivate = area === _a.personal || area === _a.privateRoom;
-    console.log("[chat.deleteMessage]", {
-      service,
-      area,
-      isPrivate,
-      peerId: this.peerId,
-      selected: this._selectedMessages,
-    });
     if (isPrivate) {
       _service = SERVICE.chat.delete;
     } else if (area === _a.share) {
