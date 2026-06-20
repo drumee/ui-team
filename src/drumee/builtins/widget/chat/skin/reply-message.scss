@@ -4,9 +4,9 @@
 
   &-reply {
     &__wrapper {
-      height: 100%;
-      margin: 10px 10px 2px 10px;
-      max-height: 90px;
+      flex-shrink: 0;
+      height: auto;
+      margin: 8px 10px 4px 12px;
       width: calc(100% - 25px);
 
       &[data-mode="closed"] {
@@ -14,21 +14,39 @@
       }
     }
 
+    // Flat row (no bg / border bar) — matches design: arrow + text column + close.
     &__main {
-      background-color: var(--dgc-chat-reply-bg);
-      border-radius: 2px 4px 4px 2px;
-      height: 100%;
-      min-height: 55px;
-      max-width: 500px;
-      min-width: 200px;
-      padding: 2px;
-      width: calc(100% - 6px);
+      align-items: flex-start;
+      column-gap: 8px;
+      height: auto;
+      min-height: 0;
+      padding: 2px 0;
+      position: relative;
+      width: 100%;
     }
 
-    &__container {
-      height: 100%;
-      padding-left: 5px;
-      width: 100%;
+    // Leading reply arrow — purple (Primary/40).
+    &__arrow {
+      align-self: flex-start;
+      color: var(--primary-40);
+      cursor: default;
+      flex: 0 0 auto;
+      height: 16px;
+      width: 16px;
+
+      &:hover {
+        color: var(--primary-40);
+      }
+    }
+
+    // Text column — no overflow clip here; each line truncates itself. Height
+    // grows to fit both lines (header + preview) so the message never hides.
+    &__content {
+      flex: 1 1 auto;
+      height: auto;
+      justify-content: flex-start;
+      min-width: 0;
+      row-gap: 2px;
     }
 
     &__items-wrapper {
@@ -37,43 +55,60 @@
 
       &.attachment {
         align-items: center;
+        flex: 0 0 auto;
         justify-content: center;
-        margin-right: 10px;
-        max-width: 60px;
+        margin-right: 6px;
+        max-width: 50px;
       }
     }
 
     &__note {
       &.name {
-        @include drumee.typo($size: 12px, $line: 14px);
-        padding-bottom: 3px;
-        padding-top: 5px;
-        text-transform: capitalize;
+        @include drumee.typo($size: 12px, $line: 1.4, $color: var(--primary-40));
+        display: block;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        text-transform: none;
+        white-space: nowrap;
+        width: 100%;
       }
 
+      // Quote the WHOLE message — wrap across lines, preserve the original line
+      // breaks, never trim with an ellipsis. Capped height with scroll so a long
+      // quoted message stays fully available without shoving the input down.
       &.conversation {
-        height: calc(100% - 30px);
-        overflow: hidden;
+        display: block;
+        max-height: 72px;
+        max-width: 100%;
+        overflow-y: auto;
+        width: 100%;
 
         & .note-content {
-          @include drumee.typo($size: 12px, $line: 14px, $weight: 400, $color: var(--default-text-color));
-          overflow: hidden;
-          word-wrap: break-word;
+          @include drumee.typo($size: 10px, $line: 1.4, $weight: 400, $color: var(--normal-fg-50));
+          display: block;
+          // `normal` (not pre-wrap): collapses the whitespace the Note template
+          // wraps around content, so the quote never shows a phantom leading gap.
+          overflow-wrap: break-word;
+          white-space: normal;
+          word-break: break-word;
 
           & a {
-            color: var(--secondary-text-color);
+            color: var(--normal-fg-50);
 
             &:hover {
               color: var(--dgc-chat-hover);
             }
           }
+
+          & .file-mention {
+            text-decoration: underline;
+          }
         }
 
         & section {
-          max-width: 460px;
-          overflow: hidden;
-          text-overflow: ellipsis;
-          white-space: nowrap;
+          overflow-wrap: break-word;
+          white-space: normal;
+          word-break: break-word;
         }
       }
     }
@@ -83,18 +118,18 @@
       cursor: pointer;
 
       &.close-icon {
-        height: 8px;
-        position: absolute;
-        right: 2px;
-        top: 5px;
-        width: 8px;
+        align-self: flex-start;
+        flex: 0 0 auto;
+        height: 11px;
+        position: static;
+        width: 11px;
       }
     }
 
     &__media-attachment {
-      height: 44px;
+      height: 40px;
       overflow: hidden;
-      width: 50px;
+      width: 46px;
 
       & .widget-chat__attachment-wrapper {
         &.media-grid__ui {
@@ -106,10 +141,10 @@
           & .filename {
             font-size: 7px;
             line-height: 9px;
-            max-width: 50px;
+            max-width: 46px;
             overflow: hidden;
             text-overflow: ellipsis;
-            top: 24px;
+            top: 22px;
             word-break: break-word;
           }
         }

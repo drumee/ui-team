@@ -5,7 +5,6 @@
 // ==================================================================== *
 
 const { Autolinker } = require("autolinker");
-const { colorFromName } = require("@drumee/ui-essentials");
 
 // Mirrors `chat-item/template/conversation.js` mention decode for the preview.
 const decodeMentions = (raw) => {
@@ -24,38 +23,54 @@ const decodeMentions = (raw) => {
   return text;
 };
 
+// Resolve the replied sender's display name the same way as
+// chat-item/template/username.js — the name lives on `entity` for other users
+// (top-level surname/firstname are often empty), own messages show "You".
+const resolveSenderName = (m) => {
+  const e = m.entity || m;
+  const lastname  = e.lastname || m.lastname || '';
+  const surname   = e.surname || m.surname || '';
+  const firstname = e.firstname || m.firstname || surname || '';
+  const nonEmail  = (v) => (v && !String(v).includes('@')) ? v : '';
+  const name = `${firstname} ${lastname}`.trim()
+    || nonEmail(e.fullname) || nonEmail(m.fullname)
+    || nonEmail(e.name) || nonEmail(m.name)
+    || e.email || m.email || '';
+  return name || '';
+};
+
 const __skl_chat_reply_message = function(_ui_, msg) {
-  
+
   const chatReplyFig = `${_ui_.fig.family}-reply`;
 
-  const author      = msg.mget(_a.author);
-  let fullname    = msg.mget(_a.fullname) || (msg.mget(_a.firstname) + ' ' + msg.mget(_a.lastname));
-  let displayName = msg.mget(_a.surname);
-  let attachmentWrapper   = '';
-  if (_ui_.mget(_a.type) === _a.private) {
-    const msgEntity = msg.mget(_a.entity);
-    fullname    = (msgEntity.firstname + ' ' + msgEntity.lastname) || '';
-    displayName = msgEntity.surname;
-  }
-  
-  if (author === 'me') {
-    displayName = LOCALE.YOU;//'You'
-  }
-  
-  const userName    = Skeletons.Note({
-    className  : `${chatReplyFig}__note name ${author}`,
-    content    : displayName,
-    styleOpt   : {
-      color     : colorFromName(fullname)
-    }
+  // Replied message attributes (literal keys, like chat-item/skeleton/reply-message).
+  const m = (msg.model && msg.model.toJSON) ? msg.model.toJSON()
+          : (msg.getAttr ? msg.getAttr() : {});
+  const author = m.author || msg.mget('author');
+  let attachmentWrapper = '';
+
+  const displayName = (author === 'me') ? LOCALE.YOU : resolveSenderName(m);
+
+  // Leading reply arrow (exact Figma icon, design Primary/40 purple). Decorative
+  // — no service; color is applied in skin via currentColor (sprite strips fill).
+  const replyIcon = Skeletons.Button.Svg({
+    ico       : 'chat_reply_arrow',
+    className : `${chatReplyFig}__arrow ${author}`
   });
-  
+
+  // Header "Reply to {name}" — purple, replaces the old name-colored label.
+  const userName = Skeletons.Note({
+    className  : `${chatReplyFig}__note name ${author}`,
+    content    : `${LOCALE.REPLY_TO} ${displayName}`
+  });
+
+  // Single-line quoted preview — grey, truncated with ellipsis in skin.
   const message = Skeletons.Note({
     className  : `${chatReplyFig}__note conversation ${author}`,
-    content    : Autolinker.link(decodeMentions(msg.mget(_a.message)))
+    content    : Autolinker.link(decodeMentions(m.message))
   });
-  
-  if (msg.mget('is_attachment')) {
+
+  if (m.is_attachment) {
     const attachmentItem = _ui_.threadAttachment.model.attributes;
     const attachment = {
       kind          : 'media_grid',
@@ -84,24 +99,19 @@ const __skl_chat_reply_message = function(_ui_, msg) {
         Skeletons.Box.Y({
           className   : `${chatReplyFig}__media-attachment ${author}`,
           flow        : _a.none,
-          sys_pn      : "content", 
+          sys_pn      : "content",
           kids        : [ attachment ]})
       ]});
   }
 
-  const messageRow = Skeletons.Box.X({
-    className  : `${chatReplyFig}__items-wrapper message-row${author}`,
-    kids       : [
-      Skeletons.Box.Y({
-        className : `${chatReplyFig}__items-wrapper message`,
-        kids      : [
-          userName,
-          message
-        ]}),
-      
-      attachmentWrapper
+  // Text column: header + preview stacked, takes remaining width.
+  const content = Skeletons.Box.Y({
+    className : `${chatReplyFig}__content ${author}`,
+    kids      : [
+      userName,
+      message
     ]});
-  
+
   const closeIcon = Skeletons.Button.Svg({
     ico       : 'account_cross',
     className : `${chatReplyFig}__icon close-icon ${author} account_cross`,
@@ -112,18 +122,13 @@ const __skl_chat_reply_message = function(_ui_, msg) {
   const a = Skeletons.Box.X({
     className : `${chatReplyFig}__main ${author}`,
     debug     : __filename,
-    styleOpt  : {
-      borderLeft  : `2px solid ${colorFromName(fullname)}`
-    },
     kids      : [
-      Skeletons.Box.X({
-        className  : `${chatReplyFig}__container ${author}`,
-        kids : [
-          messageRow,
-          closeIcon
-        ]}) 
+      replyIcon,
+      content,
+      attachmentWrapper,
+      closeIcon
     ]});
-  
+
   return a;
 };
 

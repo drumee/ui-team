@@ -70,17 +70,23 @@ class ___widget_chatItem extends LetcBox {
         messageType === "meeting.end" ||
         this.mget("is_ticket");
       const hasMessageText = !_.isEmpty((this.mget("message") || "").trim());
-      const showBubble = hasMessageText || isSpecialType;
+      // Attachments now render as a card inside the bubble (Figma), so a
+      // file-only message still needs the bubble shell to host the card.
+      const showBubble = hasMessageText || isSpecialType || hasAttachment;
 
       if (hasAttachment) {
         child.append(
-          Skeletons.Wrapper.X({
-            className: `${fig}__attachment-wrapper ${author}`,
+          Skeletons.Wrapper.Y({
+            // `no-text`: file-only message → drop the gap above the card so the
+            // bubble doesn't get a stray top inset with no text to separate from.
+            className: `${fig}__attachment-wrapper ${author}${
+              hasMessageText ? "" : " no-text"
+            }`,
             kids: [
               Skeletons.List.Smart({
                 sys_pn: _a.list,
                 flow: _a.none,
-                axis: _a.x,
+                axis: _a.y,
                 timer: 50,
                 className: `${fig}__attachment-wrapper-list`,
                 uiHandler: this,
@@ -131,6 +137,53 @@ class ___widget_chatItem extends LetcBox {
         if (!el) return;
         this.messageEl = el;
         el.onclick = Wm.onAnchorClick.bind(Wm);
+        // Figma: the reply quote sits *inside* the message bubble, above the
+        // text. The quote was prepended as a sibling of the bubble; move its DOM
+        // into the colored bubble once both exist. No text bubble (e.g. an
+        // attachment-only reply) → leave the quote as the prepended sibling.
+        if (hasThread) {
+          const bubble = el.querySelector(
+            `.${this.fig.family}__conversation-content`,
+          );
+          const quote =
+            child.el &&
+            child.el.querySelector(`.${this.fig.family}-reply__main`);
+          if (bubble && quote && quote.parentNode !== bubble) {
+            bubble.insertBefore(quote, bubble.firstChild);
+          }
+        }
+        // Figma: the file card sits inside the bubble, below the text. The
+        // attachment was appended as a sibling of the bubble; move it in as the
+        // last child so it stacks under the text (and the reply quote).
+        if (hasAttachment) {
+          const bubble = el.querySelector(
+            `.${this.fig.family}__conversation-content`,
+          );
+          const card =
+            child.el &&
+            child.el.querySelector(`.${this.fig.family}__attachment-wrapper`);
+          if (bubble && card && card.parentNode !== bubble) {
+            bubble.appendChild(card);
+          }
+          // "Show in folder" → reveal the file in the folder window's Files tab.
+          // Capture phase so it beats the card's open-on-click + Wm anchor click.
+          if (!this._revealBound) {
+            this._revealBound = true;
+            el.addEventListener(
+              "click",
+              (ev) => {
+                const t =
+                  ev.target.closest &&
+                  ev.target.closest('[data-service="show-in-folder"]');
+                if (!t) return;
+                ev.preventDefault();
+                ev.stopPropagation();
+                this._showInFolder();
+              },
+              true,
+            );
+          }
+        }
         // Open the action bar only while hovering the message bubble (the
         // conversation content), mirroring the time reveal — not the whole row.
         // Meeting system messages are centred notices with no actions, so they
@@ -807,6 +860,44 @@ class ___widget_chatItem extends LetcBox {
         el.appendChild(more);
       }
     });
+  }
+
+  /**
+   * "Show in folder" on a chat file card → reveal the file's location. Prefer
+   * switching the folder window the user is already in to its Files tab; fall
+   * back to opening (or focusing) a folder window for the file's hub.
+   */
+  _showInFolder() {
+    const ownFolder =
+      this.getParentByKind && this.getParentByKind("window_folder");
+    if (ownFolder && ownFolder.showFolderTab) {
+      ownFolder.showFolderTab("files");
+      if (ownFolder.raise) ownFolder.raise();
+      return;
+    }
+
+    const hub_id =
+      this.mget(_a.hub_id) ||
+      (this.mget(_a.uiHandler) && this.mget(_a.uiHandler).hubId);
+    if (!hub_id || !Wm.launch) return;
+    const existing = (
+      (Wm.getItemsByKind && Wm.getItemsByKind("window_folder")) ||
+      []
+    ).find((w) => !w.isDestroyed() && w.mget(_a.hub_id) == hub_id);
+    if (existing && existing.showFolderTab) {
+      existing.showFolderTab("files");
+      if (existing.raise) existing.raise();
+      return;
+    }
+    Wm.launch(
+      {
+        kind: "window_folder",
+        hub_id,
+        activeTab: "files",
+        wm_unique_id: `window_folder-${hub_id}`,
+      },
+      { explicit: 1, singleton: 1 },
+    );
   }
 
   /**

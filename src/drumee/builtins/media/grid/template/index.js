@@ -1,8 +1,23 @@
 
+// Human-readable file size for the chat attachment card (Figma "1.2 MB").
+const humanFileSize = (bytes) => {
+  const n = Number(bytes);
+  if (!n || n < 0) return '';
+  if (n < 1024) return `${n} B`;
+  const units = ['KB', 'MB', 'GB', 'TB'];
+  let v = n / 1024;
+  let i = 0;
+  while (v >= 1024 && i < units.length - 1) {
+    v /= 1024;
+    i++;
+  }
+  return `${v < 10 ? v.toFixed(1) : Math.round(v)} ${units[i]}`;
+};
+
 /**
- * 
- * @param {*} ui 
- * @returns 
+ *
+ * @param {*} ui
+ * @returns
  */
 const __media_tpl_grid = function (ui) {
 
@@ -46,12 +61,31 @@ const __media_tpl_grid = function (ui) {
       const ageDays = Dayjs().diff(d, 'day');
       dateText = ageDays < 7 ? d.fromNow() : d.format('MMM D, YYYY');
     }
-    const dateHtml = dateText ? `<span class="media-grid__date">${dateText}</span>` : '';
+    // Chat attachment card (Figma): second meta line is "<size> · Show in folder"
+    // instead of the date. Regular file grids keep the date.
+    let secondLine;
+    let metaTop = filenameHtml;
+    if (m.isAttachment) {
+      const size = humanFileSize(m.filesize);
+      const sizeHtml = size ? `<span class="media-grid__filesize">${size}</span>` : '';
+      const sep = size ? `<span class="media-grid__meta-sep"> · </span>` : '';
+      secondLine =
+        `<span class="media-grid__chatmeta">` +
+          `${sizeHtml}${sep}` +
+          `<a class="media-grid__reveal" data-service="show-in-folder">${LOCALE.SHOW_IN_FOLDER}</a>` +
+        `</span>`;
+
+      // Filename uses the default single-line render (metaTop = filenameHtml);
+      // it truncates with an ellipsis and the extension is allowed to be clipped
+      // when too long — it is no longer split out and pinned.
+    } else {
+      secondLine = dateText ? `<span class="media-grid__date">${dateText}</span>` : '';
+    }
     html =
       `<div class="media-grid__background">${preview}</div>` +
       `<div class="media-grid__meta-row">` +
-        `<div class="media-grid__meta-row-top">${filenameHtml}</div>` +
-        `${dateHtml}` +
+        `<div class="media-grid__meta-row-top">${metaTop}</div>` +
+        `${secondLine}` +
       `</div>`;
   }
 

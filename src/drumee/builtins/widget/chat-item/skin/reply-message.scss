@@ -2,105 +2,117 @@
 
 .widget-chatItem {
   &-reply {
+    // Quote box: nearly-transparent dark overlay fill + a faint dark left accent
+    // bar — same on both "me" (pink) and "other" bubbles so the dark text always
+    // stands out. Nested inside the message bubble (see index.js).
     &__main {
-      background-color: var(--dgc-chat-reply-bg);
-      border-radius: 2px 4px 4px 2px;
+      background-color: var(--grid-card-bg); // rgba(0,0,0,0.05) — near transparent
+      border-left: 3px solid rgba(0, 0, 0, 0.3); // faint black accent bar
+      border-radius: 4px;
       height: auto;
-      min-width: 100px;
-      max-width: 70%;
-      padding: 5px;
-      margin-bottom: 1px;
-      width: fit-content;
-
-      // __main parent is block layout (width:100%), align-self không có hiệu lực.
-      // Tận dụng width:fit-content sẵn có + margin-left auto để đẩy preview sang
-      // phải khi mình reply (author=me), giữ trái khi người khác reply.
-      &.me {
-        margin-left: auto;
-        margin-right: 0;
-        text-align: right;
-        // Border switches to the right side via inline style in skeleton.
-        padding-left: 5px;
-        padding-right: 8px;
-      }
-
-      &.other {
-        margin-right: auto;
-        margin-left: 0;
-        text-align: left;
-      }
+      margin-bottom: 8px;
+      max-width: 100%;
+      // The bubble is width:fit-content; without a floor the quote collapses to
+      // the reply's own (often short) width and a long quoted message wraps into
+      // a tall, narrow column. A min width keeps it wrapping wide → short.
+      min-width: min(260px, 100%);
+      padding: 6px 8px;
+      width: 100%;
     }
 
-    &__container {
-      height: 100%;
-      padding-left: 5px;
+    // Thumbnail (left) + text column (right), vertically centred — matches the
+    // Figma attachment-reply row. Text-only replies have just the column.
+    &__row {
+      align-items: center;
+      column-gap: 8px;
+      height: auto;
+      width: 100%;
+    }
+
+    // Text column takes the remaining width; min-width:0 lets the lines truncate.
+    &__items {
+      flex: 1 1 auto;
+      height: auto;
+      justify-content: flex-start;
+      min-width: 0;
+      row-gap: 2px;
       width: 100%;
     }
 
     &__wrapper {
-      height: 100%;
-      width: 100%;
-
       &.attachment {
         align-items: center;
+        flex: 0 0 auto;
         justify-content: center;
-        max-width: 40px;
       }
     }
 
     &__note {
+      // Sender name — main foreground (--normal-fg-10 is theme-aware: dark in
+      // light mode, light in dark mode, so it stays readable on every bubble) +
+      // semibold (typo() never emits font-weight). NB: --primary-100 is NOT used
+      // — a duplicate :root def makes it resolve light (#f4e7ff), which washed
+      // out on light bubbles.
       &.name {
-        @include drumee.typo($size: 11px, $line: 12px);
-        padding-bottom: 3px;
-        padding-top: 3px;
-        text-transform: capitalize;
+        @include drumee.typo($size: 13px, $line: 1.4, $color: var(--normal-fg-10));
+        display: block;
+        font-weight: 600;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        text-transform: none;
+        white-space: nowrap;
+        width: 100%;
       }
 
+      // Quoted preview — quote the WHOLE message: wrap across lines, preserve the
+      // original line breaks, never trim with an ellipsis.
       &.conversation {
-        overflow: hidden;
+        display: block;
+        max-width: 100%;
+        width: 100%;
 
         & .note-content {
-          @include drumee.typo($size: 12px, $line: 14px, $weight: 400, $color: var(--default-text-color));
-          overflow: hidden;
-          word-wrap: break-word;
+          // Lighter secondary foreground + a touch smaller than the (semibold)
+          // sender name, so the name reads as heading and this as secondary.
+          // --normal-fg-50 (#84848c) is readable in both light and dark themes.
+          @include drumee.typo($size: 12px, $line: 1.4, $weight: 400, $color: var(--normal-fg-50));
+          display: block;
+          // `normal` (not pre-wrap): collapses the whitespace the Note template
+          // wraps around content, so the quote never shows a phantom leading gap.
+          overflow-wrap: break-word;
+          white-space: normal;
+          word-break: break-word;
 
           & a {
-            color: var(--secondary-text-color);
+            color: inherit;
 
             &:hover {
               color: var(--dgc-chat-hover);
             }
           }
+
+          & .file-mention {
+            text-decoration: underline;
+          }
         }
       }
     }
 
-    &__icon {
-      color: var(--egrey-89);
-      cursor: pointer;
-
-      &.close-icon {
-        height: 8px;
-        width: 8px;
-        position: absolute;
-        right: 2px;
-        top: 2px;
-
-      }
-    }
-
+    // File icon / thumbnail square (Figma: grey rounded tile). media_grid fills it.
     &__media-attachment {
-      height: 26px;
+      border-radius: 4px;
+      flex: 0 0 auto;
+      height: 36px;
       overflow: hidden;
-      width: 30px;
+      width: 36px;
 
       & .widget-chatItem__attachment-wrapper {
         &.media-grid__ui {
-          background: inherit;
+          background: var(--tertiary-grey-20);
           height: 100%;
           margin: 0;
-          min-height: 26px;
-          min-width: 30px;
+          min-height: 36px;
+          min-width: 36px;
           width: 100%;
 
           & .filename,

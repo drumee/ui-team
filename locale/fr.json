@@ -1337,6 +1337,8 @@
   "TASK_DESCRIPTION_PLACEHOLDER": "Add more detail…",
   "NO_TASKS": "No tasks yet",
   "REPLY": "Répondre",
+  "REPLY_TO": "Répondre à",
+  "SHOW_IN_FOLDER": "Afficher dans le dossier",
   "TASK_VIEW_BOARD": "Board",
   "TASK_VIEW_LIST": "List",
   "TASK_VIEW_SUMMARY": "Summary",

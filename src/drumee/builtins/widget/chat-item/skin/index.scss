@@ -106,7 +106,9 @@
       display: flex;
       flex-direction: column;
       gap: 8px;
-      max-width: min(100%, 560px);
+      // Fill the 70%-capped container; the old 560px absolute cap is dropped so
+      // the bubble can use the full 70% on wide chat frames.
+      max-width: 100%;
       min-width: 0;
 
       &.me {
@@ -414,9 +416,11 @@
     }
   }
 
+  // Avatar sits next to the sender name (top of the column), not pushed down to
+  // the bubble. `__profile` is already align-self:flex-start, so no top offset.
   .widget-chatItem__message-container:has(.widget-chatItem__username-container) {
     .widget-chatItem__profile {
-      margin-top: 30px;
+      margin-top: 0;
     }
   }
 

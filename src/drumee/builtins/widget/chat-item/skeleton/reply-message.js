@@ -1,5 +1,4 @@
 const { Autolinker } = require("autolinker");
-const { colorFromName } = require("@drumee/ui-essentials");
 
 // Mirrors `template/conversation.js` mention decode for the quoted parent.
 const decodeMentions = (raw) => {
@@ -18,65 +17,81 @@ const decodeMentions = (raw) => {
   return text;
 };
 
+// Resolve the quoted sender's display name like chat-item/template/username.js:
+// the name may live on `entity` OR at the top level of the thread snapshot
+// (server-persisted threads often drop `entity` but keep surname/firstname).
+const resolveSenderName = (m) => {
+  const e = m.entity || m;
+  const lastname  = e.lastname || m.lastname || '';
+  const surname   = e.surname || m.surname || '';
+  const firstname = e.firstname || m.firstname || surname || '';
+  const nonEmail  = (v) => (v && !String(v).includes('@')) ? v : '';
+  const name = `${firstname} ${lastname}`.trim()
+    || nonEmail(e.fullname) || nonEmail(m.fullname)
+    || nonEmail(e.name) || nonEmail(m.name)
+    || e.email || m.email || '';
+  return name || '';
+};
+
+// Resolve the quoted sender. Own messages → "You" (no name fields needed, so it
+// survives reload). For others, the server-persisted `thread` often drops the
+// sender fields — recover the name from the parent message if it is still loaded
+// in this chat list, mirroring how the parent's own bubble shows the name.
+const resolveQuotedName = (_ui_, data) => {
+  if (data.author_id === Visitor.get(_a.id)) return LOCALE.YOU || 'You';
+
+  let name = resolveSenderName(data);
+  if (name) return name;
+
+  const coll = _ui_.model && _ui_.model.collection;
+  const parentId = data.message_id || _ui_.mget('thread_id');
+  if (coll && parentId) {
+    const parent = coll.find(
+      (mm) => mm.get('message_id') === parentId || mm.id === parentId
+    );
+    if (parent) name = resolveSenderName(parent.toJSON());
+  }
+  return name || '';
+};
+
 const __skl_chat_item_reply_message = function(_ui_) {
-  
-  let _message, attachmentWrapper, color, userName;
+
+  let _message, attachmentWrapper, userName;
   const chatItemReplyFig = `${_ui_.fig.family}-reply`;
 
   const data = _ui_.mget('thread');
 
   if ((data.message === 'DELETED') && _.isEmpty(data.entity)) {
-    const username = '';
     attachmentWrapper = '';
     _message = 'Message Deleted';
-    color = '#2F2F2f';
-  
+
   } else {
-    // Optimistic UI may snapshot the parent before `entity` is populated by the
-    // server response — guard against undefined to avoid render crash.
-    const entity = data.entity || {};
-    const {
-      author_id
-    } = data;
-    let fullname = '';
     let displayName = '';
-    _message = data.message;
+    // Trim so the quoted preview has no stray leading/trailing whitespace.
+    _message = (data.message || '').trim();
     attachmentWrapper = '';
 
-    if (author_id === Visitor.get(_a.id)) {
-      fullname = Visitor.get(_a.fullname)|| (Visitor.get(_a.firstname) + ' ' + Visitor.get(_a.lastname));
-      displayName = LOCALE.YOU || 'You';
+    displayName = resolveQuotedName(_ui_, data);
 
-    } else {
-      if (entity.fullname != null) {
-        ({
-          fullname
-        } = entity);
-      } else {
-        fullname = `${entity.firstname || ''} ${entity.lastname || ''}`.trim();
-      }
-
-      displayName = entity.surname || fullname;
+    // Name color comes from the skin. Render only when resolved, so an empty
+    // name never leaves a blank slot above the quoted message.
+    if (displayName) {
+      userName = Skeletons.Note({
+        className : `${chatItemReplyFig}__note name`,
+        content   : displayName
+      });
     }
 
-    color = colorFromName(fullname);
-    
-    userName    = Skeletons.Note({
-      className         : `${chatItemReplyFig}__note name`,
-      content           : displayName,
-      styleOpt  : {
-        color
-      }
-    });
-        
     if (data.is_attachment) {
+      // Thumbnail is fed asynchronously into this part by
+      // chat-item.attachmentReponse (sys_pn → this.__attachmentContent).
       attachmentWrapper = Skeletons.Wrapper.X({
         className  : `${chatItemReplyFig}__wrapper attachment`,
         kids: [
           Skeletons.Box.Y({
             className   : `${chatItemReplyFig}__media-attachment`,
             flow        : _a.none,
-            partHandler : _ui_, 
+            partHandler : _ui_,
             sys_pn      : 'attachment-content'
           })
         ]});
@@ -89,38 +104,31 @@ const __skl_chat_item_reply_message = function(_ui_) {
     escapeContextmenu : true
   });
 
-  const messageRow = Skeletons.Box.X({
-    className  : `${chatItemReplyFig}__wrapper message`,
-    kids       : [
-      Skeletons.Box.Y({
-        className : `${chatItemReplyFig}__wrapper items`,
-        kids      : [
-          userName,
-          message
-        ]}),
-      
-      attachmentWrapper
-    ]});
-  
-  // Carry the chat-item author class so SCSS can mirror the quote alignment
-  // (own replies on the right, others on the left) — same pattern as bubble.
+  // Text column: sender name (when resolved) + quoted preview.
+  const items = Skeletons.Box.Y({
+    className : `${chatItemReplyFig}__items`,
+    kids      : userName ? [userName, message] : [message]
+  });
+
+  // Figma row: attachment thumbnail (left) then text column (right), centred.
+  // Omit the thumbnail slot entirely on text-only replies — an empty kid would
+  // still consume the row's column-gap and indent the quoted text from the edge.
+  const row = Skeletons.Box.X({
+    className : `${chatItemReplyFig}__row${data.is_attachment ? ' attachment' : ''}`,
+    kids      : data.is_attachment ? [attachmentWrapper, items] : [items]
+  });
+
+  // Quote box — grey overlay background + left accent bar (skin). Carry the
+  // chat-item author class so the skin can flip the palette for the dark "me"
+  // bubble where the quote is nested (see chat-item index.js).
   const author = _ui_.mget('author') || '';
-  // Mirror the colored border: own replies show the bar on the right edge.
-  const borderStyle = author === 'me'
-    ? { borderRight: `2px solid ${color}` }
-    : { borderLeft : `2px solid ${color}` };
   const a = Skeletons.Box.X({
     className : `${chatItemReplyFig}__main ${author}`,
     debug     : __filename,
-    styleOpt  : borderStyle,
     kids      : [
-      Skeletons.Box.X({
-        className  : `${chatItemReplyFig}__container`,
-        kids : [
-          messageRow
-        ]}) 
+      row
     ]});
-  
+
   return a;
 };
 

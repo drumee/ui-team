@@ -1337,6 +1337,8 @@
   "TASK_DESCRIPTION_PLACEHOLDER": "Add more detail…",
   "NO_TASKS": "No tasks yet",
   "REPLY": "Ответить",
+  "REPLY_TO": "Ответ для",
+  "SHOW_IN_FOLDER": "Показать в папке",
   "TASK_VIEW_BOARD": "Board",
   "TASK_VIEW_LIST": "List",
   "TASK_VIEW_SUMMARY": "Summary",

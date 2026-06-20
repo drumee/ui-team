@@ -1104,8 +1104,15 @@
     padding: 0;
 
     .widget-chat-reply__wrapper {
-      max-height: 70px;
-      overflow: hidden;
+      // Top-align the quote and stop the column from shrinking it: as a flex
+      // child it defaults to flex-shrink:1, so the messenger (flex-shrink:0
+      // below) squeezed this down to ~1 line and overflow:hidden clipped the
+      // preview. flex-shrink:0 + height:auto lets it hug its 2-line content.
+      align-items: flex-start;
+      flex-shrink: 0;
+      height: auto;
+      max-height: none;
+      overflow: visible;
     }
 
     .widget-chat__messenger-wrapper {

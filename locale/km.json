@@ -1337,6 +1337,8 @@
   "TASK_DESCRIPTION_PLACEHOLDER": "Add more detail…",
   "NO_TASKS": "No tasks yet",
   "REPLY": "ឆ្លើយតប",
+  "REPLY_TO": "ឆ្លើយតបទៅ",
+  "SHOW_IN_FOLDER": "បង្ហាញក្នុងថត",
   "TASK_VIEW_BOARD": "Board",
   "TASK_VIEW_LIST": "List",
   "TASK_VIEW_SUMMARY": "Summary",
