@@ -184,32 +184,27 @@
   //  BODY (scrollable)
   // ───────────────────────────────────────────────────────────
   &__ac-body {
-    width: 100%;
-    flex: 1;
-    min-height: 0;
-    padding: 32px;
-    gap: 32px;
-    overflow-y: auto;
-    overflow-x: hidden;
+  width: 100%;
+  flex: 1;
+  min-height: 0;
+  padding: 32px;
+  gap: 32px;
+  overflow-y: auto;
+  overflow-x: hidden;
 
-    &[data-device="mobile"] {
-      padding: 16px;
-      gap: 20px;
-    }
-
-    &::-webkit-scrollbar {
-      width: 4px;
-    }
-
-    &::-webkit-scrollbar-track {
-      background: rgba(0, 0, 0, 0.05);
-    }
-
-    &::-webkit-scrollbar-thumb {
-      background: $purple-deep;
-      border-radius: 4px;
-    }
+  &[data-device="mobile"] {
+    padding: 16px;
+    gap: 20px;
   }
+
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
+  
+}
 
   &__ac-section {
     width: 100%;
@@ -538,19 +533,17 @@
     padding: 12px;
     background: var(--white, #fff);
     border-radius: 4px;
-    align-items: center;
+    align-items: flex-start;
     justify-content: space-between;
-    cursor: pointer;
-
-    > * {
-      pointer-events: none;
-    }
+    gap: 12px;
   }
 
   &__ac-country-label {
     font-size: 12px;
     line-height: 16px;
     font-weight: 600;
+    flex-shrink: 0;
+    padding-top: 4px;
 
     &--allowed {
       color: $purple-base;
@@ -562,13 +555,88 @@
   }
 
   &__ac-country-picker {
+    flex: 1 1 auto;
+    min-width: 0;
+    flex-wrap: wrap;
     align-items: center;
+    justify-content: flex-end;
     gap: 6px;
   }
 
-  &__ac-country-flag {
-    font-size: 14px;
+  // Selected-country chip (flag + name + remove ×).
+  &__ac-country-chip {
+    align-items: center;
+    gap: 6px;
+    padding: 3px 6px 3px 8px;
+    border-radius: 12px;
+    background: rgba(0, 0, 0, 0.05);
+  }
+
+  &__ac-chip-flag {
+    flex-shrink: 0;
+    width: 18px;
+    height: 13px;
+    border-radius: 2px;
+    background-repeat: no-repeat;
+    background-color: rgba(0, 0, 0, 0.04);
+    box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.08);
+  }
+
+  &__ac-chip-name {
+    font-size: 12px;
     line-height: 16px;
+    font-weight: 600;
+    color: $ink-900;
+  }
+
+  &__ac-chip-remove {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+    color: $ink-600;
+
+    // Click must land on the service element, not its svg child.
+    > * {
+      pointer-events: none;
+    }
+
+    &:hover {
+      color: $ink-900;
+    }
+
+    svg {
+      width: 10px;
+      height: 10px;
+      display: block;
+    }
+  }
+
+  &__ac-chip-remove-ico {
+    width: 10px;
+    height: 10px;
+  }
+
+  &__ac-country-more {
+    font-size: 12px;
+    line-height: 16px;
+    font-weight: 600;
+    color: $ink-600;
+    align-self: center;
+  }
+
+  // "Add country" / "Select countries" affordance — opens the dropdown.
+  &__ac-country-add {
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+
+    // Click must land on the service element, not the label/caret children.
+    > * {
+      pointer-events: none;
+    }
   }
 
   &__ac-country-placeholder {
@@ -576,13 +644,6 @@
     line-height: 17px;
     font-weight: 400;
     color: $ink-600;
-  }
-
-  &__ac-country-value {
-    font-size: 12px;
-    line-height: 17px;
-    font-weight: 600;
-    color: $ink-900;
   }
 
   &__ac-country-caret {
@@ -752,6 +813,16 @@
       background: rgba(89, 80, 255, 0.04);
     }
 
+    // Already chosen in the opposite list — not selectable here.
+    &--disabled {
+      cursor: default;
+      opacity: 0.4;
+
+      &:hover {
+        background: transparent;
+      }
+    }
+
     // Taller rows + more spacing for comfortable tapping on mobile.
     @media (max-width: 1024px) {
       padding: 12px;
@@ -760,13 +831,17 @@
   }
 
   &__ac-cdrop-flag {
-    font-size: 16px;
-    line-height: 18px;
     flex-shrink: 0;
+    width: 24px;
+    height: 18px;
+    border-radius: 2px;
+    background-repeat: no-repeat;
+    background-color: rgba(0, 0, 0, 0.04);
+    box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.08);
 
     @media (max-width: 1024px) {
-      font-size: 20px;
-      line-height: 24px;
+      width: 28px;
+      height: 21px;
     }
   }
 
@@ -790,7 +865,7 @@
   &__ac-cdrop-radio {
     width: 14px;
     height: 14px;
-    border-radius: 50%;
+    border-radius: 4px;
     border: 1.5px solid rgba(0, 0, 0, 0.18);
     background: var(--white, #fff);
     align-items: center;
@@ -846,6 +921,15 @@
       font-size: 14px;
       line-height: 20px;
     }
+  }
+
+  &__ac-cdrop-hint {
+    padding: 8px 12px;
+    text-align: center;
+    font-size: 11px;
+    line-height: 16px;
+    color: $ink-500;
+    font-style: italic;
   }
 
   // ───────────────────────────────────────────────────────────

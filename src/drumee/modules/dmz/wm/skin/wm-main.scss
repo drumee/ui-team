@@ -305,6 +305,13 @@
     left: 0;
     top: 0;
     width: 0;
+    // A file-viewer window (svg/image/doc) is a positioned child here with an
+    // inline z-index, but that only stacks WITHIN this layer's context. Without a
+    // z-index on the layer itself it stays at the flex level of the conversation
+    // panel (.dmz__chat-panel), which — being later in the DOM — painted OVER the
+    // viewer, so the chat composer bled across an open doc (j17). Lift the whole
+    // layer above the chat panel so viewers cleanly overlay it.
+    z-index: 1000;
 
     &[data-device="mobile"] {
       width: 100%;
@@ -318,8 +325,15 @@
     position: fixed;
     align-items: center;
     justify-content: center;
+    // Above the viewer layer (1000) so the create-folder dialog / spinner stay on
+    // top even when a file viewer is open.
+    z-index: 2000;
 
-    &[data-state="open"] {
+    // data-state="open" = the spinner overlay; data-mode="create-folder" = the
+    // add-folder dialog (set by __dmz_wm.onUiEvent "add-folder"). Both need the
+    // full-viewport centered backdrop so the dialog isn't an unstyled inline form.
+    &[data-state="open"],
+    &[data-mode="create-folder"] {
       width: 100%;
       height: 100%;
       background: var(--transparency-container-overlay);
@@ -350,5 +364,100 @@
   border-bottom: 2px solid var(--sb-pink);
   border-radius: 0;
   color: var(--sb-text);
+}
+
+/* Create-folder dialog. The shared create-folder-dialog skeleton (opened by
+   __dmz_wm into the wrapper-modal) uses the ui's family prefix → dmz-wm__create-folder-*.
+   That CSS only existed for window-folder, so in the share the form rendered as
+   unstyled inline elements (oversized close cross, fields bleeding into the grid).
+   Port the window-folder card styling onto the dmz-wm family — same theme vars,
+   so it's dark-mode safe and matches the desk dialog. */
+.dmz-wm {
+  &__create-folder-dialog {
+    width: 360px;
+    background: var(--normal-bg-90);
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 1px 11px rgba(0, 0, 0, 0.13);
+  }
+
+  &__create-folder-header {
+    align-items: flex-start;
+    justify-content: space-between;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+    padding: 24px 24px 25px;
+  }
+
+  &__create-folder-heading {
+    gap: 4px;
+  }
+
+  &__create-folder-title {
+    @include drumee.typo($size: 18px, $line: 24px, $weight: 600, $color: var(--normal-fg-10));
+  }
+
+  &__create-folder-subtitle {
+    @include drumee.typo($size: 12px, $line: 17px, $weight: 400, $color: var(--normal-fg-20));
+  }
+
+  &__create-folder-close {
+    height: 24px;
+    width: 14px;
+    color: var(--normal-fg-10);
+    padding: 0;
+    cursor: pointer;
+
+    svg {
+      width: 14px;
+      height: 14px;
+    }
+  }
+
+  &__create-folder-content {
+    gap: 16px;
+    padding: 24px;
+  }
+
+  &__create-folder-label {
+    @include drumee.typo($size: 12px, $line: 14px, $weight: 600, $color: var(--normal-fg-10));
+  }
+
+  &__create-folder-entry {
+    width: 100%;
+
+    input {
+      min-height: 41px;
+      padding: 12px;
+      border: 0;
+      border-radius: 8px;
+      background: var(--normal-bg-elevated);
+      @include drumee.typo($size: 12px, $line: 17px, $weight: 400, $color: var(--normal-fg-20));
+    }
+  }
+
+  &__create-folder-footer {
+    padding: 0 24px 24px;
+  }
+
+  &__create-folder-button {
+    width: 100%;
+    padding: 8px 24px;
+    border-radius: 4px;
+    text-align: center;
+    cursor: pointer;
+    align-items: center;
+    justify-content: center;
+    @include drumee.typo($size: 14px, $line: 20px, $weight: 600, $color: #ffffff);
+
+    .note-content {
+      width: 100%;
+      text-align: center;
+      justify-content: center;
+    }
+
+    &.primary {
+      background: #433cc5;
+    }
+  }
 }
 

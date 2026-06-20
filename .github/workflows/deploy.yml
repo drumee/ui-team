@@ -85,7 +85,17 @@ jobs:
           ssh "$SGP_USER@$SGP_HOST" "sudo docker exec -i $CONTAINER bash -s" <<EOSSH
           set -euo pipefail
           cd $REPO_PATH
-          if ! npm run deploy -- $ENV_FILE > $LOG_FILE 2>&1; then
+          # Reinstall so package.json range + patch-package (postinstall) take effect.
+          # The container's node_modules is long-lived and otherwise drifts from
+          # package.json (e.g. ui-toolkit stuck at 0.0.20 while it wants ^0.0.22,
+          # leaving the OTP patch unapplied). Lockfile is gitignored so `npm ci`
+          # isn't possible; plain install reconciles the range and re-runs postinstall.
+          if ! npm install --no-audit --no-fund > $LOG_FILE 2>&1; then
+            echo "::error::npm install failed. Tail of log:"
+            tail -50 $LOG_FILE
+            exit 1
+          fi
+          if ! npm run deploy -- $ENV_FILE >> $LOG_FILE 2>&1; then
             echo "::error::Deploy command failed. Tail of log:"
             tail -50 $LOG_FILE
             exit 1
@@ -146,7 +156,8 @@ jobs:
           cd $REPO_PATH
           echo "::warning::Rolling back to ${PREV:0:8}"
           git reset --hard $PREV --quiet
-          if npm run deploy -- $ENV_FILE > $LOG_FILE 2>&1; then
+          npm install --no-audit --no-fund > $LOG_FILE 2>&1 || true
+          if npm run deploy -- $ENV_FILE >> $LOG_FILE 2>&1; then
             echo "Rollback succeeded"
           else
             echo "::error::Rollback redeploy ALSO failed. Tail:"

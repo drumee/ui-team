@@ -38,7 +38,15 @@ module.exports = function (basedir) {
       test: /\.(png|jpg|gif|jpeg)$/,
       use: ["file-loader"]
     }, {
+      // Country flags are served as separate, content-hashed files (loaded on
+      // demand as <img>/background URLs) instead of inlined — keeps the bundle
+      // lean despite ~240 SVGs. Same self-hosted philosophy as the wasm rule.
+      test: /\.svg$/,
+      include: resolve(basedir, drumee_path, 'assets', 'flags'),
+      type: 'asset/resource',
+    }, {
       test: /(\.woff|\.woff2|\.ttf|\.eot|\.svg)($|\?.*$)/,
+      exclude: resolve(basedir, drumee_path, 'assets', 'flags'),
       use: ['url-loader']
     }, {
       // Emit .wasm as a separate, content-hashed asset and resolve

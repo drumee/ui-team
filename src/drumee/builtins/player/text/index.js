@@ -149,7 +149,19 @@ class __player_text extends __player {
     this.raise();
     let url = null;
     if (this.media) {
-      url = this.media.actualNode().url;
+      let { url: u, nid, hub_id, ownpath } = this.media.actualNode();
+      // DMZ/secure-share: the vhost endpoint does NOT serve sub-folder paths, so an
+      // HTML/text file inside a shared sub-folder fetches a 404 → "Failed to load"
+      // / blank (the "HTML doesn't work when sharing" report). Route the raw content
+      // through the same-origin service API by nid. Mirrors the markdown player's
+      // #162 fix exactly. Desk + root-level DMZ files are byte-identical.
+      const isSubfolder = ownpath && ownpath.split('/').filter(Boolean).length > 1;
+      if (Visitor.inDmz && nid && isSubfolder) {
+        const env = bootstrap();
+        const ksel = env.keysel ? `&keysel=${env.keysel}` : '';
+        u = `${env.svc}media.orig?nid=${nid}&hub_id=${hub_id}${ksel}`;
+      }
+      url = u;
     } else if (this.mget(REMINDER_ID)) {
       url = this.actualNode().url + `&v=${Dayjs().valueOf()}`;
     }

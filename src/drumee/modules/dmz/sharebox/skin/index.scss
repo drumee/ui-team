@@ -720,6 +720,12 @@
         svg {
           fill: #ffffff;
         }
+
+        // The folder glyph paints via currentColor (see &__icon below), so the
+        // fill:#fff above doesn't whiten it on hover — override its color too.
+        .dmz-button__dropdown-menu__icon[data-area] svg {
+          color: #ffffff;
+        }
       }
     }
 
@@ -730,12 +736,54 @@
       svg {
         fill: var(--sb-text);
       }
+
+      // The Folder glyph is monochrome (fill:currentColor); tint it with the
+      // share accent (same --sb-accent as the grid folder art + topbar folder
+      // icon) instead of the dark text color, which made it look black next to
+      // the brand-colored office icons. Only the folder item carries data-area
+      // (set in desk-content.js), so this targets just the folder.
+      &[data-area] svg {
+        color: var(--sb-accent);
+      }
+    }
+
+    // Office icons (Document/Spreadsheet/Presentation) are brand-colored SVGs
+    // whose page-background path has NO fill — it inherits the svg fill, which
+    // above is var(--sb-text) (dark), so the page looked black. The desk paints
+    // these white via the item's `white` class; the toolkit rule lives under the
+    // .window-button namespace and doesn't reach .dmz-button, so port it here.
+    // Brand-colored paths keep their explicit fills; only the unfilled page is set.
+    &__item.white &__icon svg {
+      fill: #ffffff;
     }
 
     &__name {
       @include drumee.typo($size: 14px, $line: 16px, $color: var(--sb-text));
       font-family: var(--sb-font-body);
     }
+  }
+}
+
+/* Anchor the "+ Add new" dropdown popup below its trigger. The base menu.scss
+   only toggles the popup's visibility, and dropdownMenuButton passes no
+   direction, so the popup wrapper is otherwise unpositioned and would push the
+   topbar layout. Mirrors window-folder's newFileMenu positioning. The existing
+   .dmz-button__dropdown-menu styling above (card, items, hover) was added for a
+   dropdown that was never wired in the DMZ topbar (visioMenu is commented out);
+   this completes it for the now-wired "+ Add new" menu. */
+.dmz-button__dropdown-menu__wrapper {
+  position: relative;
+
+  .menu-topic,
+  .menu-topic__ui {
+    position: relative;
+  }
+
+  .menu-topic-items__wrapper {
+    position: absolute;
+    top: calc(100% + 6px);
+    right: 0;
+    z-index: 99999;
   }
 }
 
@@ -957,6 +1005,12 @@
 .dmz__chat-panel {
   flex: 0 0 clamp(280px, 24vw, 360px);
   min-width: 0;
+  // Contain the chat widget's internal high z-indexes (emoji/drag-drop overlays
+  // reach z-index 99999) so they can't escape and paint OVER an open file viewer/
+  // editor window (which sits at the windows-layer's z-index 1000). isolate makes
+  // this panel a stacking context at the flex level, so the viewer (1000) cleanly
+  // overlays the whole panel — fixes the chat composer bleeding across a doc (j17/j18).
+  isolation: isolate;
   // Clear divider from the file grid (Figma 3.1) — the old 0.05 alpha was invisible.
   border-left: 1px solid var(--border-default, rgba(0, 0, 0, 0.12));
   background: var(--sb-grey-20);
@@ -1399,4 +1453,57 @@
 
 .widget-chat__ui{
   height: 90% !important;
+}
+
+/* Header breadcrumb for in-place sub-folder navigation (Cases 3+4) — ported from
+   the desk folder window (window-folder__breadcrumb-*). Ancestors render as
+   clickable crumbs before the title (joined by "›"); hidden at the share root.
+   Theme-var based → dark-mode safe; matches the desk look (j16). */
+.dmz-sharebox {
+  &__breadcrumb-path {
+    align-items: center;
+    gap: 4px;
+    min-width: 0;
+    max-width: 66%;
+    overflow: hidden;
+    display: none;
+
+    &[data-state="1"] {
+      display: flex;
+    }
+  }
+
+  &__breadcrumb-crumb {
+    font-family: var(--sb-font-body, "Geist", sans-serif);
+    font-weight: 500;
+    font-size: 14px;
+    line-height: 24px;
+    color: var(--normal-fg-10);
+    opacity: 0.65;
+    cursor: pointer;
+    max-width: 140px;
+    min-width: 0;
+    flex: 0 1 auto;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    padding: 0 4px;
+    border-radius: 4px;
+
+    &:hover {
+      background-color: var(--normal-bg-90);
+      opacity: 1;
+    }
+  }
+
+  &__breadcrumb-sep {
+    font-family: var(--sb-font-body, "Geist", sans-serif);
+    font-size: 14px;
+    line-height: 24px;
+    color: var(--normal-fg-10);
+    opacity: 0.45;
+    flex-shrink: 0;
+    pointer-events: none;
+    padding: 0;
+  }
 }

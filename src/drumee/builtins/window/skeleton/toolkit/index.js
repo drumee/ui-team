@@ -600,7 +600,11 @@ export function newFileMenu(ui, opt = {}) {
       service: "add-folder",
       ico: "folder-header",
       content: LOCALE.FOLDER,
-      area: ui.mget(_a.area) || _a.personal,
+      // The folder glyph is monochrome (fill:currentColor) and is tinted by its
+      // data-area accent. opt.area lets a caller force the accent (the DMZ share
+      // view passes its share area so the folder matches the header/badge accent
+      // instead of defaulting to the neutral "personal" tint = looks black).
+      area: opt.area || ui.mget(_a.area) || _a.personal,
       filename: LOCALE.NEW_FOLDER,
       className: `${cnItem} ${cnItem}--add-folder`,
     },

@@ -41,7 +41,12 @@ class __editor_markdown extends __player {
       filename: LOCALE.NOTE_ON_DATE_X.format(now),
       hub_id: Visitor.get(_a.id),
     })
-    this.target = Wm.getActiveWindow();
+    // The save target is normally the active window (the folder the note is
+    // created in). The DMZ share view has no pool window to be "active", so it
+    // passes its window manager explicitly as opt.target — without this the note
+    // would have no target and never save. Desk callers pass no opt.target → the
+    // active-window behaviour is unchanged.
+    this.target = opt.target || Wm.getActiveWindow();
   }
 
   /**
@@ -219,6 +224,13 @@ class __editor_markdown extends __player {
    */
   _saveContent(opt, target) {
     this.postService(opt, { async: 1 }).then((data) => {
+      // A denied/failed save resolves without a saved node — guard before reading
+      // it so a server error (e.g. a 403) degrades to a warning instead of an
+      // uncaught `data.file_path` TypeError / unhandled rejection.
+      if (!data || !data.nid) {
+        this.warn("__editor_markdown: save returned no node", data);
+        return;
+      }
       this._changed = 0;
       let content = `${LOCALE.SAVED} > ${data.file_path}`
       this.__acknowledgement.set({ content })
@@ -245,6 +257,10 @@ class __editor_markdown extends __player {
         file.restart("media:modified");
       }
       this.mset(data);
+    }).catch((e) => {
+      // Never leave a save rejection unhandled (it surfaced as a global
+      // unhandledrejection alert). The server-error path already notifies the user.
+      this.warn("__editor_markdown: save failed", e);
     });
   }
 
@@ -340,6 +356,14 @@ class __editor_markdown extends __player {
     if (this.target) {
       opt.pid = this.target.mget(_a.nid);
       opt.hub_id = this.target.mget(_a.hub_id);
+      // DMZ share recipient: a non-member recipient has write only on the shared
+      // subtree (a node grant), not hub-wide. media.save's ACL authorizes the node
+      // referenced by `nid` (falling back to `p`); for a NEW note `nid` is empty so
+      // the ACL defaults to the hub HOME — which the recipient can't write → 403.
+      // Send the destination folder as `p` so the ACL authorizes against the shared
+      // folder where the grant applies (mirrors make_dir, which passes the parent as
+      // nid). DMZ-only + new files only; desk / existing-file saves are untouched.
+      if (this.target.isDmz && !opt.nid) opt.p = opt.pid;
       if (!this.target.canUpload()) {
         let msg = `
         You don't have the permission to save the file into to the folder {0}.<br>
