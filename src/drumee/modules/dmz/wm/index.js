@@ -248,13 +248,23 @@ class __dmz_wm extends winman {
   }
 
   /**
-   * 
-   * @param {*} m 
-   * @returns 
+   *
+   * @param {*} m
+   * @returns
    */
   reorder(m) {
 
   }
+
+  /**
+   * Persisting tile order is not a share-recipient feature, and the server call
+   * (media.reorder, scope:hub src:delete) sends no nid, so its ACL falls back to
+   * the hub home — where a non-member recipient has no grant → 403. The base
+   * _syncOrder still fires it after insertMedia (its `permission.modify` guard
+   * passes for a can_edit recipient). The note is already saved and its tile
+   * inserted locally, so skip the server reorder entirely (notify() is a no-op).
+   */
+  _syncOrder() { }
 
   /**
    * 
