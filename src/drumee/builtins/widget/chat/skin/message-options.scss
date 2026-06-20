@@ -41,11 +41,16 @@
 
     &[data-selected="1"] {
       & .widget-chatItem {
-        // Push the whole __main left to make room for the absolute checkbox.
-        // Applies uniformly to both reply quote and bubble (both anchor to
-        // __main's right edge) so they stay aligned in selection mode.
+        // Reserve room on the right for the absolute checkbox (right:14px, 18px
+        // wide → occupies the rightmost ~32px). Must be PADDING, not margin:
+        // __main is width:100% (border-box), so a right MARGIN just overflows
+        // and the right-aligned "me" bubble never moves — it overlaps the
+        // checkbox. Border-box padding shrinks the content box, so the bubble +
+        // reply quote (both anchor to __main's right edge) shift left and clear
+        // the checkbox with a comfortable gap. "other" bubbles are left-aligned,
+        // so this leaves them untouched.
         &__main {
-          margin-right: 40px;
+          padding-right: 56px;
         }
 
         &__message-selector-wrapper {
