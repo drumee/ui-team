@@ -210,6 +210,17 @@ class ___widget_chatItem extends LetcBox {
           this.buildContent(child);
         });
         break;
+      case _a.list:
+        // Attachment file list — a separate List.Smart that fetches its card(s)
+        // asynchronously AFTER this message row is already mounted. When the card
+        // is appended the row grows taller. Notify the chat so it can re-pin to
+        // the bottom if the user is parked there: the message list only
+        // auto-scrolls on its OWN collection updates, never on an attachment
+        // growing inside an existing row.
+        child.onAddKid = () => {
+          this.triggerHandlers({ service: "attachment-grown" });
+        };
+        break;
     }
   }
 
@@ -585,7 +596,8 @@ class ___widget_chatItem extends LetcBox {
 
       case _a.forward:
       case "chat-item-delete":
-        console.log("[chat-item] delete/forward", {
+      case "select-mode":
+        console.log("[chat-item] delete/forward/select", {
           service,
           hasMain: !!this.__main,
           hasMessageEl: !!this.messageEl,

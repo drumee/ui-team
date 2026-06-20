@@ -974,6 +974,8 @@
   "UNREADS": "未读",
   "ALL_ACTIVITY": "全部动态",
   "MENTIONS": "提及",
+  "MENTION_FILES": "提及文件",
+  "PEOPLE": "成员",
   "MENTIONED_YOU": "提到了你",
   "FORWARD_DONE": "消息已转发",
   "SHARES": "分享",

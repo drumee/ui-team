@@ -186,6 +186,10 @@
   --link-share: #ffa8dc;
   --success: #54b684;
   --error: #f6514b;
+  // Figma "Signal/Error" — deeper red for filled destructive buttons (chat
+  // Delete action, node 2308-115864). Distinct from --error (#f6514b), the
+  // brighter inline/validation error red.
+  --signal-error: #d74e49;
   --warning: #e8a13b;
   --info: #71a3f4;
   --area-personal: #433CC5;

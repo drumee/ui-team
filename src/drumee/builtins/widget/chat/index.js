@@ -156,6 +156,7 @@ class __widget_chat extends LetcBox {
     RADIO_BROADCAST.off("chat:read", this._onReadContext);
     RADIO_BROADCAST.off("chat:posted", this._onPeerChatPosted);
     clearTimeout(this._folderContentSyncTimer);
+    clearTimeout(this._initStickTimer);
     this._cleanupUnsentAttachments();
     if (this.attachmentList) {
       this.attachmentList.off("uploaded", this.showSend);
@@ -661,6 +662,17 @@ class __widget_chat extends LetcBox {
         child.onAddKid = this.handleScroll.bind(this);
         child.once(_e.ready, () => {
           this.scrollMessagesToBottom(child);
+          // Track whether the user is parked at the bottom. Content growth
+          // (an attachment card loading inside an existing row) does NOT fire a
+          // scroll event, so this flag keeps reflecting the user's last intent —
+          // it only flips false when they actively scroll up to read history.
+          // _restickBottomAfterGrowth() reads it to decide whether to re-pin.
+          this._pinnedToBottom = true;
+          child.on(_e.scroll, () => {
+            const slack =
+              typeof child.scrolledY === "function" ? child.scrolledY() : 0;
+            this._pinnedToBottom = slack != null && slack <= 40;
+          });
           // Render read-receipt avatars across every row once the list is fully
           // loaded. Items render incrementally, so an item mounted before its
           // newer sibling computes last-read placement against an incomplete
@@ -684,7 +696,61 @@ class __widget_chat extends LetcBox {
     setTimeout(() => {
       if (list && typeof list.scrollToBottom === "function")
         list.scrollToBottom();
+      // A single scroll lands short of the true bottom: attachment cards mount
+      // AND THEN their images/media load, each growing a row after this runs.
+      // Keep re-pinning until the height settles.
+      this._pinBottomDuringInitialLoad(list);
     }, 100);
+  }
+
+  // On first open the conversation height keeps changing for a beat — attachment
+  // cards mount, then their thumbnails/media load and grow the rows. An
+  // event-driven (onAddKid) re-pin misses that post-mount image growth, so the
+  // view ends up parked mid-list. Poll-and-re-pin to the bottom until
+  // scrollHeight holds steady for a few ticks (settled) or a short cap elapses.
+  // Bail the instant the user scrolls up (scrollDir up) so we never fight
+  // someone reading history.
+  _pinBottomDuringInitialLoad(list) {
+    if (!list || !list.__container) return;
+    clearTimeout(this._initStickTimer);
+    const cap = 2000; // hard stop (ms) — never pin forever
+    const step = 120; // poll interval (ms)
+    const needStable = 3; // consecutive unchanged heights = settled
+    const start = Date.now();
+    let lastHeight = -1;
+    let stable = 0;
+    const tick = () => {
+      if (this.isDestroyed && this.isDestroyed()) return;
+      const c = list.__container;
+      if (!c) return;
+      // User scrolled up to read → stop pinning, leave their position alone.
+      if (list.scrollDir === _a.up) return;
+      const h = c.scrollHeight;
+      if (typeof list.scrollToBottom === "function") list.scrollToBottom();
+      if (h === lastHeight) stable += 1;
+      else {
+        stable = 0;
+        lastHeight = h;
+      }
+      if (stable >= needStable || Date.now() - start > cap) return;
+      this._initStickTimer = setTimeout(tick, step);
+    };
+    this._initStickTimer = setTimeout(tick, step);
+  }
+
+  // An attachment card finished loading inside an already-rendered message and
+  // grew that row, shifting the true bottom below the viewport. Re-pin to the
+  // bottom — but only if the user is still parked there (=== false means they
+  // scrolled up to read history, so leave their position alone). Defer a beat so
+  // the card's final height is laid out before we measure scrollHeight.
+  _restickBottomAfterGrowth() {
+    if (this._pinnedToBottom === false) return;
+    const list = this.__list;
+    if (!list || typeof list.scrollToBottom !== "function") return;
+    setTimeout(() => {
+      if (this.isDestroyed && this.isDestroyed()) return;
+      if (this._pinnedToBottom !== false) list.scrollToBottom();
+    }, 60);
   }
 
   /**
@@ -831,6 +897,9 @@ class __widget_chat extends LetcBox {
       case "attachment-reponse":
         return this.__list.scrollToBottom();
 
+      case "attachment-grown":
+        return this._restickBottomAfterGrowth();
+
       case "chat-item-child":
         return this.handleScroll(cmd);
 
@@ -843,17 +912,13 @@ class __widget_chat extends LetcBox {
         break;
 
       case "show-message-selector":
-        console.log("[widget-chat] show-message-selector", {
-          type: args.type,
-          hasActionButtons: !!this.getPart("message-action-buttons"),
-        });
-        this.getPart("message-action-buttons").feed(
-          require("./skeleton/action-buttons")(this, args.type),
-        );
-        setTimeout(() => {
-          this.showMsgCount(cmd);
-        }, 300);
-        return; // this.showMsgCount(cmd);
+        // Remember which flow (forward vs delete) so showMsgCount can re-render
+        // the right action bar with the live count as the selection changes.
+        this._selectorType = args.type;
+        // The triggering chat-item already called select(1) synchronously, so the
+        // selection is set — showMsgCount renders the bar with the count baked in.
+        this.showMsgCount(cmd);
+        return;
 
       case "select-message":
         return this.showMsgCount(cmd);
@@ -1908,31 +1973,30 @@ class __widget_chat extends LetcBox {
       this._selectedViews.push(e);
     }
 
-    /* for enable/disable delte-for-all button */
-    const delteForAllBtn = this.getPart("delete-for-all-button");
-    if (delteForAllBtn) {
-      delteForAllBtn.el.dataset.active = _a.yes;
-      for (const row of selected) {
-        if (row.mget("author") === "other") {
-          delteForAllBtn.el.dataset.active = _a.no;
-          break;
-        }
-      }
-    }
-
     const msgCount = this._selectedMessages.length;
     if (msgCount === 0) {
       this.setMessageSelectorState(0);
       return;
     }
     this.setMessageSelectorState(1);
-    const counterText = {
-      kind: KIND.note,
-      className: "widget-chat__note counter",
-      content: msgCount.printf(LOCALE.X_SELECTED_MESSAGES), //#{msgCount} Messages selected"
-    };
 
-    this.getPart("selected-message-count").feed(counterText);
+    // "For all" delete is only valid when every selected message is the user's
+    // own — passed to the skeleton so the button renders disabled otherwise.
+    const canForAll = selected.every((row) => row.mget("author") !== "other");
+
+    // Re-render the action bar with the live count baked into the Forward/Delete
+    // labels (replaces the old separate "N selected message(s)" counter).
+    const buttons = this.getPart("message-action-buttons");
+    if (buttons) {
+      buttons.feed(
+        require("./skeleton/action-buttons")(
+          this,
+          this._selectorType,
+          msgCount,
+          canForAll,
+        ),
+      );
+    }
   }
 
   /**
@@ -2628,12 +2692,15 @@ class __widget_chat extends LetcBox {
                 return mediaGridPreview(model);
             }
           };
-          html += '<div class="mention-section-header">Files</div>';
+          html += `<div class="mention-section-header">${LOCALE.MENTION_FILES}</div>`;
           files.slice(0, 6).forEach((f) => {
             const label = f.mention_path || f.filename;
-            html += `<div class="mention-item" data-nid="${_.escape(f.nid)}" data-hub_id="${_.escape(folderHubId)}" data-filename="${_.escape(f.filename)}" data-type="file" data-service="mention-select">
+            // File row: type icon + name + a single-select radio cue on the right
+            // (filled on the active/hovered row). Click still mentions immediately.
+            html += `<div class="mention-item mention-item--file" data-nid="${_.escape(f.nid)}" data-hub_id="${_.escape(folderHubId)}" data-filename="${_.escape(f.filename)}" data-type="file" data-service="mention-select">
             <div class="mention-item__icon ${_.escape(f.area || "")}">${renderFileIcon(f)}</div>
             <div class="mention-item__name">${_.escape(label)}</div>
+            <span class="mention-item__radio" aria-hidden="true"></span>
           </div>`;
           });
         }
@@ -2643,7 +2710,7 @@ class __widget_chat extends LetcBox {
             count: contacts.length,
             rendered: contacts.slice(0, 6).map(mentionMemberDebugRow),
           });
-          html += '<div class="mention-section-header">People</div>';
+          html += `<div class="mention-section-header">${LOCALE.PEOPLE}</div>`;
           contacts.slice(0, 6).forEach((c) => {
             const drumate_id = c.drumate_id || c.entity_id || c.id;
             const fullname = mentionMemberLabel(c);

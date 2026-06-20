@@ -45,14 +45,9 @@
     }
   }
 
-  // Selected-mode highlight on chat-item root (__ui) so the tint spans the full
-  // row — covers bubble + checkbox area uniformly for both "me" and "other".
-  // The root receives data-selected via chat-item.select().
-  &__ui[data-selected="1"] {
-    background-color: rgba(250, 133, 64, 0.1);
-    border-radius: 6px;
-    padding: 6px 8px;
-  }
+  // No row tint on selection (per request): a selected message is indicated by
+  // its checkbox check only, so picking messages to forward/delete no longer
+  // paints the row background.
 
   // When chat widget is in selection mode, every message becomes clickable —
   // not just the small checkbox.

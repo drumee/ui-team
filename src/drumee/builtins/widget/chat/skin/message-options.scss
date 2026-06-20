@@ -5,15 +5,37 @@
       .checkbox {
         position: absolute;
         right: 14px;
-        top: calc(50% - 7px);
+        top: calc(50% - 9px);
         border: 1px solid var(--default-checkbox-border);
+        border-radius: var(--checkbox-border-radius);
+        height: 18px;
+        padding: 1px;
+        width: 18px;
 
+        // The tick glyph (#--icon-chat-tick) is stroke-based; hidden until the
+        // message is selected.
         svg {
-          fill: var(--default-checkbox-checked);
+          fill: none;
           visibility: hidden;
         }
 
-        ;
+        // Checked — filled indigo box + white check (Figma 2308-116599,
+        // Primary/50 #433cc5). Declared here (high specificity) so the fill and
+        // white tick reliably beat the base checkbox rule in chat-item/skin.
+        &[data-selected="1"] {
+          background-color: var(--primary-50);
+          border-color: var(--primary-50);
+          // The tick glyph uses stroke="currentColor", which resolves to `color`
+          // — a `svg`/`svg path` rule can't reach the path through <use>, so the
+          // colour MUST come from `color`. Base rule left it a faint blue that
+          // vanished on the indigo box; force white.
+          color: var(--white);
+
+          svg {
+            stroke: var(--white);
+            visibility: visible;
+          }
+        }
       }
     }
 
