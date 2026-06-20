@@ -2330,39 +2330,44 @@
     );
   }
 
+  // ── Own ("me") bubble — light area-tinted fill + pinned dark foreground ──────
+  // Every own bubble is a LIGHT tint of the folder AREA colour (--chat-bubble-*),
+  // fixed in both themes, so its text/links/mentions use theme-INDEPENDENT dark
+  // constants — the theme-aware --normal-fg-* / --white wash out on a fixed light
+  // fill in dark mode. Default fill = private (coral) tint; per-area fills below.
   .widget-chatItem__conversation-content.me,
   .widget-chatItem__conversation.me .widget-chatItem__conversation-content {
-    background: #d65f59;
+    background: var(--chat-bubble-private);
     border-radius: 16px 0 16px 16px;
     box-shadow: none;
-    // Own message: black text + tags (was white). Background stays the area
-    // colour (set per data-area below); tags must NOT use the area colour or
-    // they'd blend into the bubble, so they go dark like the body text.
-    color: var(--normal-fg-10);
+    color: var(--primary-purple-100);
 
     .note-content,
-    a,
     .user-mention {
-      color: var(--normal-fg-10);
+      color: var(--primary-purple-100);
+    }
+
+    a {
+      color: var(--primary-purple-50);
     }
 
     .file-mention {
-      color: var(--normal-fg-10);
+      color: var(--primary-purple-100);
       font-weight: 600;
       text-decoration: underline;
-      // Match the underline to the (theme- and area-aware) text colour instead
-      // of a fixed navy — otherwise dark mode shows a near-white name over a
-      // dark underline. currentColor tracks whichever colour wins for the name.
+      // Underline tracks the (now fixed-dark) name colour via currentColor.
       text-decoration-color: currentColor;
     }
   }
 
+  // Per-area own-bubble fill — light/fresh tint of each AREA colour (background
+  // only; the shared dark foreground above carries every area).
   .window__chat-panel[data-area="personal"]
     .widget-chatItem__conversation-content.me,
   .window__chat-panel[data-area="personal"]
     .widget-chatItem__conversation.me
     .widget-chatItem__conversation-content {
-    background: var(--area-personal);
+    background: var(--chat-bubble-personal);
   }
   .window__chat-panel[data-area="share"]
     .widget-chatItem__conversation-content.me,
@@ -2374,14 +2379,14 @@
   .window__chat-panel[data-area="dmz"]
     .widget-chatItem__conversation.me
     .widget-chatItem__conversation-content {
-    background: var(--area-share);
+    background: var(--chat-bubble-share);
   }
   .window__chat-panel[data-area="public"]
     .widget-chatItem__conversation-content.me,
   .window__chat-panel[data-area="public"]
     .widget-chatItem__conversation.me
     .widget-chatItem__conversation-content {
-    background: var(--area-public);
+    background: var(--chat-bubble-public);
   }
 
   .widget-chatItem__conversation-content.other,
@@ -2439,12 +2444,11 @@
   }
 
   // ── Sender (me) bubble foreground ──────────────────────────────────────────
-  // The .me bubble is filled with the folder's AREA colour (set above), which is
-  // theme-independent. share/dmz (#ffa8dc) and public (#44b8ff) are light, so
-  // their text + attachment card must be DARK to stay legible; personal (#433cc5)
-  // is dark and keeps the chat-item default white. The chat-item / reply / card
-  // styles use theme-aware --normal-fg-* / --white that turn light in dark mode
-  // and wash out on these fixed-colour bubbles — pin them to dark constants.
+  // Every own bubble is now a LIGHT area tint (--chat-bubble-*, set above),
+  // fixed in both themes, so ALL of its text / links / attachment card / reply
+  // quote must use theme-INDEPENDENT dark constants to stay legible — the
+  // chat-item / reply / card defaults use theme-aware --normal-fg-* / --white
+  // that turn light in dark mode and wash out on the fixed light fill.
 
   // Keep the file card (direct child of the bubble) transparent so the bubble
   // tint shows through instead of the dark --normal-bg-* media-grid panel (the
@@ -2468,11 +2472,7 @@
     }
   }
 
-  .window__chat-panel[data-area="share"]
-    .widget-chatItem__conversation-content.me,
-  .window__chat-panel[data-area="dmz"]
-    .widget-chatItem__conversation-content.me,
-  .window__chat-panel[data-area="public"]
+  .window__chat-panel
     .widget-chatItem__conversation-content.me {
     color: var(--primary-purple-100);
 
@@ -2506,15 +2506,13 @@
     }
   }
 
-  // Reply quote on a light "me" bubble (share/dmz/public) — pin the quote text to
+  // Reply quote on a light "me" bubble (any area) — pin the quote text to
   // dark constants regardless of whether the quote was moved INTO the bubble or
   // left as a prepended sibling. Scoping to the quote root (not .conversation-
   // content) makes this hold in both cases. The reply skin's theme-aware
   // --normal-fg-* turn white in dark mode and wash out on the fixed light bubble;
   // covers the new file name/extension lines the meta-row pins above miss.
-  .window__chat-panel[data-area="share"] .widget-chatItem-reply__main.me,
-  .window__chat-panel[data-area="dmz"] .widget-chatItem-reply__main.me,
-  .window__chat-panel[data-area="public"] .widget-chatItem-reply__main.me {
+  .window__chat-panel .widget-chatItem-reply__main.me {
     .widget-chatItem-reply__note.name,
     .widget-chatItem-reply__note.name .note-content,
     .widget-chatItem-reply__note.filename,

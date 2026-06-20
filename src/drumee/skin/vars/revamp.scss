@@ -197,6 +197,17 @@
   --area-public: #44b8ff;
   --area-share: #ffa8dc;
   --area-dmz: #ffa8dc;
+
+  // Own ("me") chat-bubble fills — lighter, fresher tints of the folder AREA
+  // colours above. The raw --area-* are too dark/saturated to carry the pinned
+  // near-black text (--primary-purple-100 #0b0a21), so each own bubble in the
+  // folder team-chat + team window uses its area tint here instead. Kept
+  // theme-independent on purpose (the bubble is a fixed light fill in both
+  // themes, with dark text pinned on top). See folder/skin + team/skin.
+  --chat-bubble-personal: #c8c4f3; // ← --area-personal #433CC5 (indigo)
+  --chat-bubble-private: #ffb4a6;  // ← --area-private  #eb6159 (coral → fresh light)
+  --chat-bubble-public: #a3ddff;   // ← --area-public   #44b8ff (sky → fresh light)
+  --chat-bubble-share: #ffbce7;    // ← --area-share    #ffa8dc (pink, a touch lighter)
 }
 
 /* Grid tokens — compact workspace/folder rows, taller file rows for metadata */

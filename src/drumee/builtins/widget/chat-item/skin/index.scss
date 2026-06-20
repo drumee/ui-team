@@ -572,6 +572,29 @@
       & a {
         color: #e4e3ff;
       }
+
+      // Attachment card + nested reply quote sit on the indigo fill, so their
+      // text must be LIGHT too — their own skins default to theme-aware dark
+      // --normal-fg-*, which is unreadable on indigo (the body above is already
+      // white). Folder/team chat re-pin these dark because there the own bubble
+      // is a light area tint, not indigo.
+      .filename,
+      .media-grid__chatmeta,
+      .media-grid__filesize,
+      .media-grid__meta-sep,
+      .widget-chatItem-reply__note.name,
+      .widget-chatItem-reply__note.name .note-content,
+      .widget-chatItem-reply__note.filename,
+      .widget-chatItem-reply__note.filename .note-content {
+        color: var(--white) !important;
+      }
+
+      .media-grid__reveal,
+      .widget-chatItem-reply__note.conversation .note-content,
+      .widget-chatItem-reply__note.fileext,
+      .widget-chatItem-reply__note.fileext .note-content {
+        color: #e4e3ff !important;
+      }
     }
 
     &.other {
