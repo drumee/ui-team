@@ -1278,13 +1278,17 @@ class __dmz_sharebox extends LetcBox {
    * gated (caller should stop), false to proceed.
    */
   _gateInteraction(hasGrant) {
+    // Anonymous FIRST. A PUBLIC share binds the guest session to the creator, so
+    // an anonymous viewer ALSO has uid === creator_id — checking isOwner before
+    // this wrongly treated them as the owner and let edit/upload actions through
+    // (the A3 read-only ceiling then silently blocked the server write, with NO
+    // popup, so the recipient saw nothing happen). An anonymous visitor must
+    // ALWAYS meet the sign-up / login gate. is_guest is unreliable here (the
+    // server returns it FALSE for public shares); is_authenticated is true only
+    // for a real account.
+    if (!this.mget('is_authenticated')) { this.showSignupRequiredOverlay(); return true; }
     const isOwner = !!this.mget('creator_id') && (this.mget('uid') === this.mget('creator_id'));
     if (isOwner) return false;
-    // Anonymous = NOT authenticated. is_guest is unreliable here (the server returns
-    // it FALSE for public shares, since the guest session is bound to the creator),
-    // so an anonymous viewer of an edit/chat-granting public link would otherwise slip
-    // past the sign-up gate. is_authenticated is set true only for a real account.
-    if (!this.mget('is_authenticated')) { this.showSignupRequiredOverlay(); return true; }
     if (!hasGrant) { this.showRequestAccessPopup(); return true; }
     return false;
   }

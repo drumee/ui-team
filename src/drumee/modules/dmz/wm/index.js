@@ -244,6 +244,18 @@ class __dmz_wm extends winman {
    * @returns 
    */
   _upload(e) {
+    // Drag-and-drop hits this handler DIRECTLY (the drop event), bypassing the
+    // sharebox topbar gate that the Upload button / "+ Add new" go through. Re-apply
+    // that gate here so an anonymous visitor (or a signed-in non-member without the
+    // write grant) meets the sign-up / Request-Access flow instead of starting a
+    // doomed upload — otherwise the A3 read-only ceiling blocks the server write and
+    // the recipient is left staring at a stuck 100% progress window. The sharebox is
+    // stored on the model as `desk`; _gateInteraction returns true when it gated.
+    const desk = this.mget('desk');
+    if (desk && desk._gateInteraction &&
+      desk._gateInteraction(desk.havePermission(_K.permission.write, desk.mget(_a.privilege)))) {
+      return;
+    }
     return this.upload(e, this.mget(_a.token));
   }
 
