@@ -1841,6 +1841,33 @@
     }
   }
 
+  // Files tab → split the folder window 50/50 (file grid left, team chat right).
+  // The split-body is a CSS grid (Box.G, data-flow="g" → display:grid), so the
+  // two equal columns are the real lever — the base rules otherwise set a
+  // narrow-chat sidebar (`minmax(0,1fr) clamp(...)` here / group-body `2fr 1fr`).
+  // Each panel must then fill its cell:
+  //   • `margin: 0` clears the group-body `margin: 0 auto` (auto margins center
+  //     the panel inside its track → the "floating in the middle" gap);
+  //   • `max-width: none` + `width: auto` drop the chat panel's sidebar clamp
+  //     (`width: clamp(300px,24vw,360px); max-width: 380px`) so it fills its half;
+  //   • `min-width: 0` lets the file grid's wide min-content shrink to 50%.
+  // `flex: 1 1 0` keeps the split 50/50 in the flex fallback some states render.
+  // grid-template stays non-!important so the @container ≤700px
+  // `grid-template-columns: 1fr !important` compact single-column still wins.
+  &__split-body[data-view="files"] {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+
+    > .window-folder__files-panel,
+    > .window__files-panel,
+    > .window__chat-panel {
+      flex: 1 1 0 !important;
+      margin: 0 !important;
+      max-width: none !important;
+      min-width: 0 !important;
+      width: auto !important;
+    }
+  }
+
   &__files-panel {
     flex: 3 1 0;
     min-width: 0;
@@ -2155,10 +2182,11 @@
   }
 
   .window__chat-panel .widget-chat__body {
-    // No right padding so the message scrollbar sits flush against the panel
-    // edge instead of floating in a gap; per-item right padding keeps text
-    // clear of the scrollbar.
-    padding: 16px 0 16px 16px;
+    // Only a left inset (scrollbar sits flush on the right; per-item right
+    // padding keeps text clear of it). No top/bottom padding — that green band
+    // was the big empty gap between the scroll area and the input; per-message
+    // `margin-top` already spaces the rows, so vertical spacing is margin-based.
+    padding: 0 0 0 16px;
     gap: 16px;
   }
 
@@ -2166,8 +2194,9 @@
     padding-right: 12px;
   }
 
+
   .widget-chat__messenger-wrapper {
-    padding: 16px;
+    padding: 10px 12px;
     background: var(--normal-bg-90);
   }
 
@@ -2256,6 +2285,28 @@
         fill: #847eff;
       }
     }
+  }
+
+  // Reply quote shares the input's white card (Figma: the quote stacks directly
+  // above the input row inside one rounded card), instead of floating on the
+  // grey messenger area. Drop the gap margin and give it the elevated bg with
+  // only the top corners rounded.
+  .widget-chat-reply__wrapper {
+    margin: 0;
+    width: 100%;
+
+    &[data-mode="open"] {
+      background: var(--normal-bg-elevated);
+      border-radius: 8px 8px 0 0;
+      padding: 8px 12px 2px;
+    }
+  }
+
+  // While a reply is open, square the input pill's top corners so it merges
+  // seamlessly with the quote card sitting directly above it (DOM sibling).
+  .widget-chat-reply__wrapper[data-mode="open"] ~ .widget-chat__messenger .lib-messenger__container {
+    border-top-left-radius: 0;
+    border-top-right-radius: 0;
   }
 
   .widget-chatItem__ui {
