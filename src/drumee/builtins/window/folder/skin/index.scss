@@ -2350,7 +2350,10 @@
       color: var(--normal-fg-10);
       font-weight: 600;
       text-decoration: underline;
-      text-decoration-color: rgba(11, 10, 33, 0.7);
+      // Match the underline to the (theme- and area-aware) text colour instead
+      // of a fixed navy — otherwise dark mode shows a near-white name over a
+      // dark underline. currentColor tracks whichever colour wins for the name.
+      text-decoration-color: currentColor;
     }
   }
 
@@ -2432,6 +2435,74 @@
     .user-mention,
     a {
       color: var(--area-public);
+    }
+  }
+
+  // ── Sender (me) bubble foreground ──────────────────────────────────────────
+  // The .me bubble is filled with the folder's AREA colour (set above), which is
+  // theme-independent. share/dmz (#ffa8dc) and public (#44b8ff) are light, so
+  // their text + attachment card must be DARK to stay legible; personal (#433cc5)
+  // is dark and keeps the chat-item default white. The chat-item / reply / card
+  // styles use theme-aware --normal-fg-* / --white that turn light in dark mode
+  // and wash out on these fixed-colour bubbles — pin them to dark constants.
+
+  // Keep the file card (direct child of the bubble) transparent so the bubble
+  // tint shows through instead of the dark --normal-bg-* media-grid panel (the
+  // "black file frame"). Scoped to the direct-child card so the reply-quote
+  // thumbnail tile keeps its own grey fill.
+  .window__chat-panel
+    .widget-chatItem__conversation-content.me
+    > .widget-chatItem__attachment-wrapper {
+    &,
+    .widget-chatItem__attachment-wrapper-list,
+    .smart-container,
+    .list-smart,
+    .list-smart__container,
+    .media-wrapper,
+    .media-wrapper__ui,
+    .media-grid,
+    .media-grid__ui,
+    .media-grid__container,
+    .media-grid__content {
+      background-color: transparent !important;
+    }
+  }
+
+  .window__chat-panel[data-area="share"]
+    .widget-chatItem__conversation-content.me,
+  .window__chat-panel[data-area="dmz"]
+    .widget-chatItem__conversation-content.me,
+  .window__chat-panel[data-area="public"]
+    .widget-chatItem__conversation-content.me {
+    color: var(--primary-purple-100);
+
+    // Links + mentions: dark indigo reads on the light bubble.
+    .file-mention,
+    .user-mention,
+    a {
+      color: var(--primary-purple-50);
+    }
+
+    // Attachment card: filename + "<size> · Show in folder".
+    .filename,
+    .media-grid__chatmeta,
+    .media-grid__filesize,
+    .media-grid__meta-sep {
+      color: var(--primary-purple-100) !important;
+    }
+    .media-grid__reveal {
+      color: var(--primary-purple-50) !important;
+    }
+
+    // Reply quote nested in the bubble: dark name + muted-dark preview. The Note
+    // renders its text in a child .note-content, so target that too — its global
+    // colour is theme-aware (light in dark mode) and won't inherit the parent.
+    .widget-chatItem-reply__note.name,
+    .widget-chatItem-reply__note.name .note-content {
+      color: var(--primary-purple-100);
+    }
+    .widget-chatItem-reply__note.conversation .note-content {
+      color: var(--tertiary-grey-80);
     }
   }
 

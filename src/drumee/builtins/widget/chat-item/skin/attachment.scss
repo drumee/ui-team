@@ -51,6 +51,21 @@
       }
 
       & .media-grid {
+        // Kill the folder-grid hover "halo": media-grid renders a ::before that
+        // is 6px larger than the card filled with --grid-hover-bg. In the bubble
+        // the card body is transparent so that halo shows as a mismatched panel
+        // BEHIND the body, while the opaque image tile keeps its own colour — the
+        // two backgrounds the user sees on hover. The chat card needs no halo.
+        &[data-hover="on"]::before,
+        &__ui[data-hover="on"]::before,
+        &__container[data-hover="on"]::before,
+        &__content[data-hover="on"]::before {
+          display: none !important;
+        }
+        // The actual hover highlight is applied on the OUTER wrapper in the folder
+        // window skin (window/folder/skin/index.scss), where it can outrank the
+        // `.me`-bubble `transparent !important` rule that strips the card surfaces.
+
         &__ui {
           background-color: transparent;
           box-shadow: none;
@@ -92,11 +107,14 @@
           transform: none !important;
         }
 
-        // Icon / image tile — grey rounded square (Figma Grey/20). Fixed size
-        // (overflow clipped) so nothing inside can grow it on hover.
+        // Icon / image tile — grey rounded square. Theme-aware surface so it
+        // blends with the (dark) card body in dark mode instead of staying a
+        // fixed light grey: --normal-bg-90 is #f2f2f7 in light (= the old Figma
+        // Grey/20, unchanged) and #282538 in dark (a subtle tile on the elevated
+        // bubble). Fixed size (overflow clipped) so nothing inside grows on hover.
         &__background {
           align-items: center;
-          background-color: var(--tertiary-grey-20);
+          background-color: var(--normal-bg-90);
           border-radius: 4px;
           display: flex;
           flex: 0 0 auto;
