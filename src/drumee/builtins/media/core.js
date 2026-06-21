@@ -184,17 +184,33 @@ class __media_core extends DrumeeMFS {
   /**
    *
    */
+  /**
+   * Whether the current user can invite collaborators into this hub — gates the
+   * kebab "Invite" item. Mirrors DrumeeMFS.canShare() (download privilege) but
+   * widens the area set: canShare() only allows dmz/share, yet `private` hubs
+   * (the orange folder tiles — `.folder-shape.private` fills --area-private
+   * #eb6159) are equally invitable. The folder settings panel already invites
+   * into them via the same SERVICE.hub.invite endpoint; they just aren't
+   * dmz/share so canShare() returns false. Add `_a.restricted` to extend to
+   * restricted hubs too.
+   */
+  _canInviteToHub() {
+    const area = this.mget(_a.area);
+    if (!["dmz", _a.share, _a.private].includes(area)) return false;
+    return this.mget(_a.privilege) & _K.permission.download;
+  }
+
   contextmenuItemsForHub() {
     let fileItems = [];
     if (this.canOrganize() || this.isMediaOwner()) {
       fileItems = ['openInWindow', _a.separator, _a.rename, _a.upload, _a.download, _a.separator, _a.info];
-      if (this.canShare()) {
+      if (this._canInviteToHub()) {
         fileItems.push(_a.share)
       }
       fileItems.push(_a.separator, _a.trash)
     } else if (this.canDownload()) {
       fileItems = ['openInWindow', _a.separator, _a.download, _a.separator, _a.info];
-      if (this.canShare()) fileItems.push(_a.share);
+      if (this._canInviteToHub()) fileItems.push(_a.share);
       if (this.canRemove()) fileItems.push(_a.trash);
     }
     // for media files in trash
