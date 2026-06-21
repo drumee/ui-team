@@ -77,7 +77,9 @@ async function openOtpModal(widget, opts) {
 
   // dtk_otp lives in @drumee/ui-toolkit and its loadSeeds() isn't called
   // by the host bundle. Self-register on demand so Kind.waitFor resolves.
-  if (!Kind.get("dtk_otp")) {
+  // Use exists() (not get()) for the guard — get() warns "Failed to find
+  // kind for dtk_otp" the first time, before we've registered it.
+  if (!Kind.exists("dtk_otp")) {
     Kind.registerAddons({
       dtk_otp: import("@drumee/ui-toolkit/widgets/otp"),
     });
