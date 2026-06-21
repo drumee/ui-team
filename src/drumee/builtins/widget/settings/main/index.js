@@ -44,14 +44,35 @@ class settings_main extends LetcBox {
     // Load linked providers + the gdrive migration state in parallel so the
     // "Migrate from Google Drive" row reflects a running job (in-progress + %)
     // as soon as Settings opens, instead of always offering "Start".
+    // Also refresh the authoritative profile (yp.hello → get_user) BEFORE
+    // rendering: the 2FA switch reads Visitor.profile().mfa, and the local
+    // copy can be stale right after load while other services are still in
+    // flight — rendering then showed the wrong on/off state, so a click read
+    // the wrong baseline and toggled the wrong way. Awaiting here means the
+    // switch only renders once it reflects the server's stored mfa.
     const [links, gdrive] = await Promise.all([
       this._loadOauthLinks(),
       this._loadGdriveState(),
+      this._refreshVisitorProfile(),
     ]);
     this._oauthLinks = links;
     this._gdriveState = gdrive;
     this._reconcilePasswordSet();
     this.feed(require("./skeleton").default(this));
+  }
+
+  /**
+   * Pull the authoritative user record (yp.hello → get_user) and respawn it
+   * into Visitor so profile.mfa reflects the server's stored value. Best
+   * effort: on failure we keep whatever Visitor already holds.
+   */
+  async _refreshVisitorProfile() {
+    try {
+      const data = await this.fetchService(SERVICE.yp.hello, { hub_id: Visitor.id });
+      if (data) Visitor.respawn(data);
+    } catch (e) {
+      this.warn("settings_main: hello refresh failed", e);
+    }
   }
 
   /**
