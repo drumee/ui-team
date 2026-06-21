@@ -166,6 +166,11 @@ async function openOtpModal(widget, opts) {
  * spinner and locks input. Idempotent and best-effort: if the widget never
  * mounts the modal simply runs without a submit spinner.
  *
+ * dtk_otp's kind is pulled in via a dynamic import, so it mounts (and
+ * registers its part) AFTER feed() returns — we can't `ensurePart` it
+ * synchronously (its parent has no `_branches` yet). Instead we listen for the
+ * part.ready event and wrap the instance the moment it registers.
+ *
  * dtk_otp's kind is pulled in via a dynamic import, so it mounts (and registers
  * its part) AFTER feed() returns. It registers on its partHandler — which we
  * pin to `host` in the skeleton — so we listen on the host for part.ready and
