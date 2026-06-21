@@ -2176,5 +2176,7 @@
   "SECURE_SHARE_REQUESTING_ACCESS": "is requesting access to",
   "SECURE_SHARE_REQUESTING_LEVEL_ACCESS": "is requesting {level} access to",
   "SECURE_SHARE_APPROVE_TITLE": "Approve access",
-  "SECURE_SHARE_GRANT_LEVEL": "Grant access level:"
+  "SECURE_SHARE_GRANT_LEVEL": "Grant access level:",
+  "ADD_REACTION": "Add reaction",
+  "REACTION_MORE": "More emojis"
 }

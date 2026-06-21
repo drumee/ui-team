@@ -842,6 +842,9 @@ class __widget_chat extends LetcBox {
     }
     const service = args.service || cmd.get(_a.service) || cmd.get(_a.name);
     switch (service) {
+      case "react":
+        return this._sendReaction(args);
+
       case "media-file-copied":
         setTimeout(this.onFileListChange.bind(this), 1000);
         break;
@@ -2341,13 +2344,78 @@ class __widget_chat extends LetcBox {
         this._onTyping(data);
         break;
 
-      // Literal service strings (not SERVICE.* constants): the platform may not
-      // expose *.typing until env reload, which would make the constants
-      // `undefined` and wrongly match service-less messages.
-      case "chat.typing":
-      case "channel.typing":
-        this._onTyping(data);
+      // Reaction broadcast — replace chip map on the matching message item.
+      // channel.react: { message_id, reactions, key_id }
+      // chat.react:    { message_id, peer_id, reactions }
+      // Both expose the same `reactions` shape: { "<emoji>": ["uid", ...] }
+      case SERVICE.channel.react:
+      case "channel.react": {
+        if (!data || !data.message_id || !data.reactions) break;
+        var reactItem =
+          this.__list &&
+          this.__list.getItemsByAttr("message_id", data.message_id)[0];
+        if (reactItem && _.isFunction(reactItem._patchReactions)) {
+          reactItem._patchReactions(data.reactions);
+        }
         break;
+      }
+
+      case SERVICE.chat.react:
+      case "chat.react": {
+        if (!data || !data.message_id || !data.reactions) break;
+        var chatReactItem =
+          this.__list &&
+          this.__list.getItemsByAttr("message_id", data.message_id)[0];
+        if (chatReactItem && _.isFunction(chatReactItem._patchReactions)) {
+          chatReactItem._patchReactions(data.reactions);
+        }
+        break;
+      }
+    }
+  }
+
+  /**
+   * Route a reaction toggle request from a chat-item to the correct backend
+   * service depending on the conversation area (channel vs P2P).
+   * Payload from chat-item: { service:"react", message_id, emoji, socket_id }
+   * @param {Object} args
+   */
+  async _sendReaction(args) {
+    if (!args || !args.message_id || !args.emoji) return;
+    const area = this.mget(_a.area) || this.mget(_a.type);
+    const isPrivate = area === _a.personal || area === _a.privateRoom;
+    const socketId = Visitor.get(_a.socket_id) || "";
+
+    let resp;
+    if (isPrivate) {
+      if (!this.peerId) return;
+      // SERVICE.chat.react surfaces after BE phase 2 is deployed.
+      // Fallback literal keeps the call shape correct even before that.
+      const chatReactSvc = SERVICE.chat.react || "chat.react";
+      resp = await this.postService(chatReactSvc, {
+        message_id: args.message_id,
+        emoji: args.emoji,
+        entity_id: this.peerId,
+        socket_id: socketId,
+      });
+    } else {
+      // SERVICE.channel.react surfaces after BE phase 2 is deployed.
+      const channelReactSvc = SERVICE.channel.react || "channel.react";
+      resp = await this.postService(channelReactSvc, {
+        message_id: args.message_id,
+        emoji: args.emoji,
+        hub_id: this.hubId,
+        socket_id: socketId,
+      });
+    }
+
+    // The acting user is excluded from the WS broadcast, so reconcile this item
+    // from the authoritative response — corrects the optimistic chip when the
+    // server rejected the add (distinct-emoji cap / invalid emoji) or otherwise
+    // diverged. No-op when the optimistic map already matches the server.
+    if (resp && resp.reactions && this.__list && _.isFunction(this.__list.getItemsByAttr)) {
+      const item = this.__list.getItemsByAttr("message_id", args.message_id)[0];
+      if (item && _.isFunction(item._patchReactions)) item._patchReactions(resp.reactions);
     }
   }
 

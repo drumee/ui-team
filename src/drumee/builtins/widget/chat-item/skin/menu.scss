@@ -74,15 +74,9 @@
         color: var(--primary-purple-40, #5950ff);
       }
 
-      // UI-only placeholder (no backend yet): dim slightly so it reads as
-      // not-yet-active without looking broken. (The select-messages icon is now
-      // a real action, so it keeps full opacity like the others.)
+      // React/smiley icon — live action, same opacity as other action icons.
       &.react {
-        opacity: 0.55;
-
-        &:hover {
-          opacity: 1;
-        }
+        opacity: 1;
       }
     }
   }

@@ -1745,5 +1745,7 @@
   "SECURE_SHARE_REQUESTING_ACCESS": "កំពុងស្នើសុំការចូលប្រើ",
   "SECURE_SHARE_REQUESTING_LEVEL_ACCESS": "កំពុងស្នើសុំសិទ្ធិ {level} ទៅ",
   "SECURE_SHARE_APPROVE_TITLE": "អនុម័តការចូលប្រើ",
-  "SECURE_SHARE_GRANT_LEVEL": "កម្រិតការអនុញ្ញាត៖"
+  "SECURE_SHARE_GRANT_LEVEL": "កម្រិតការអនុញ្ញាត៖",
+  "ADD_REACTION": "បន្ថែមប្រតិកម្ម",
+  "REACTION_MORE": "អ៊ីម៉ូជីបន្ថែម"
 }

@@ -1745,5 +1745,7 @@
   "SECURE_SHARE_REQUESTING_ACCESS": "正在请求访问",
   "SECURE_SHARE_REQUESTING_LEVEL_ACCESS": "正在请求对其的 {level} 访问权限",
   "SECURE_SHARE_APPROVE_TITLE": "批准访问",
-  "SECURE_SHARE_GRANT_LEVEL": "授予访问级别："
+  "SECURE_SHARE_GRANT_LEVEL": "授予访问级别：",
+  "ADD_REACTION": "添加表情",
+  "REACTION_MORE": "更多表情"
 }

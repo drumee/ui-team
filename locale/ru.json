@@ -1745,5 +1745,7 @@
   "SECURE_SHARE_REQUESTING_ACCESS": "запрашивает доступ к",
   "SECURE_SHARE_REQUESTING_LEVEL_ACCESS": "запрашивает доступ {level} к",
   "SECURE_SHARE_APPROVE_TITLE": "Одобрить доступ",
-  "SECURE_SHARE_GRANT_LEVEL": "Уровень доступа:"
+  "SECURE_SHARE_GRANT_LEVEL": "Уровень доступа:",
+  "ADD_REACTION": "Добавить реакцию",
+  "REACTION_MORE": "Больше эмодзи"
 }

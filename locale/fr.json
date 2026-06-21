@@ -1745,5 +1745,7 @@
   "SECURE_SHARE_REQUESTING_ACCESS": "demande l’accès à",
   "SECURE_SHARE_REQUESTING_LEVEL_ACCESS": "demande un accès {level} à",
   "SECURE_SHARE_APPROVE_TITLE": "Approuver l’accès",
-  "SECURE_SHARE_GRANT_LEVEL": "Niveau d’accès accordé :"
+  "SECURE_SHARE_GRANT_LEVEL": "Niveau d’accès accordé :",
+  "ADD_REACTION": "Ajouter une réaction",
+  "REACTION_MORE": "Plus d’emojis"
 }

@@ -189,11 +189,20 @@ class ___widget_chatItem extends LetcBox {
         // Meeting system messages are centred notices with no actions, so they
         // get no hover menu.
         if (!this._isMeeting()) {
-          const bubble =
+          // Hovering the bubble reveals the action menu (CSS). The emoji
+          // quick-bar is opened by CLICKING the smiley in that menu (not by
+          // hover), so the hover target is the bubble body, as before.
+          const hoverTarget =
             el.querySelector(`.${this.fig.family}__conversation-content`) || el;
-          bubble.addEventListener("mouseenter", this._mouseenter.bind(this));
-          bubble.addEventListener("mouseleave", this._mouseleave.bind(this));
+          hoverTarget.addEventListener("mouseenter", this._mouseenter.bind(this));
+          hoverTarget.addEventListener("mouseleave", this._mouseleave.bind(this));
         }
+        // Render persisted reaction chips HERE — the bubble (and the
+        // reactions-<id> container inside it) is now confirmed in the DOM.
+        // Doing this from onDomRefresh raced the nested setTimeout: under a heavy
+        // folder-window (re)open, ensureElement's ~1s poll window expired before
+        // the container mounted, so saved reactions silently never showed.
+        this._renderReactions();
       });
     }, 0);
   }
@@ -238,6 +247,79 @@ class ___widget_chatItem extends LetcBox {
         if (is_seen != null) readstatus.dataset.is_seen = is_seen;
       }
     }
+    // Re-render reaction chips whenever metadata changes (reactions live inside it).
+    if (changed[_a.metadata] !== undefined) {
+      this._renderReactions();
+    }
+  }
+
+  /**
+   * Parse `metadata._reactions_` into a sorted array of chip descriptors.
+   * Shape from server: `{ "<emoji>": ["uid", ...] }`
+   * Returns: `[{ emoji, count, mine, uids }]` sorted by count descending.
+   * Returns an empty array when there are no reactions or the field is absent.
+   */
+  _parseReactions() {
+    const raw = this._metadataObject()._reactions_;
+    if (!raw || typeof raw !== "object") return [];
+    const myId = `${Visitor.id}`;
+    return Object.keys(raw)
+      .map((emoji) => {
+        const uids = (raw[emoji] || []).map(String);
+        return { emoji, count: uids.length, mine: uids.includes(myId), uids };
+      })
+      .filter((r) => r.count > 0)
+      .sort((a, b) => b.count - a.count);
+  }
+
+  /**
+   * Render (or clear) the reaction chip row below the footer line.
+   * Mirrors the imperative DOM pattern used by renderReaders() — finds the
+   * container by id, clears it, and rebuilds chips from _parseReactions().
+   * No reactions → hides the container (data-empty="1", display:none via CSS).
+   */
+  _renderReactions() {
+    const id = `reactions-${this._id}`;
+    // The reaction container is created asynchronously inside buildContent's
+    // setTimeout, AFTER onDomRefresh runs — so on (re)open the element does not
+    // exist yet when this is first called. waitElement defers until it mounts
+    // (and resolves immediately on later metadata-change re-renders), mirroring
+    // renderReaders(). This is what makes PERSISTED reactions show on reopen,
+    // not only after a live toggle.
+    this.waitElement(id, () => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      const reactions = this._parseReactions();
+      // The quick-bar lives in the message line (replacing the action menu), NOT
+      // in this chip container — so we can safely wipe and rebuild chips here.
+      el.innerHTML = "";
+      if (!reactions.length) {
+        el.dataset.empty = "1";
+        return;
+      }
+      el.dataset.empty = "0";
+      const fig = this.fig.family;
+      for (const { emoji, count, mine } of reactions) {
+        const chip = document.createElement("span");
+        chip.className = `${fig}__reaction-chip${mine ? " mine" : ""}`;
+        chip.dataset.emoji = emoji;
+        // data-service makes dispatchUiEvent pick up chip clicks as "react"
+        chip.dataset.service = "react";
+        chip.setAttribute("aria-label", `${emoji} ${count}`);
+
+        const emojiSpan = document.createElement("span");
+        emojiSpan.className = `${fig}__reaction-emoji`;
+        emojiSpan.textContent = emoji;
+
+        const countSpan = document.createElement("span");
+        countSpan.className = `${fig}__reaction-count`;
+        countSpan.textContent = count;
+
+        chip.appendChild(emojiSpan);
+        chip.appendChild(countSpan);
+        el.appendChild(chip);
+      }
+    });
   }
 
   /**
@@ -345,6 +427,9 @@ class ___widget_chatItem extends LetcBox {
     this.el.oncontextmenu = null;
     this.acknowledge();
     this.renderReaders();
+    // Reaction chips render from buildContent once the bubble's reactions-<id>
+    // container is confirmed mounted — avoids an ensureElement timeout race that
+    // left them blank on folder-window reopen. _onDataChanged covers live updates.
     let img_id = `${this.mget(_a.widgetId)}-avatar`;
     this.ensureElement(img_id)
       .then((img) => {
@@ -380,10 +465,9 @@ class ___widget_chatItem extends LetcBox {
    * @param {*} e
    */
   _mouseleave(e) {
-    // The action menu lives inside the message line and reveals via CSS :hover,
-    // so there is no floating-bar gap to bridge — just cancel a pending lazy
-    // build if the cursor leaves before it fires. (The time now sits in flow
-    // below the bubble, always visible — not hover-gated.)
+    // Cancel any pending lazy build. The action menu auto-hides via CSS :hover.
+    // The emoji bar is click-triggered and dismissed by outside-click, so it must
+    // NOT close on mouse-leave (the cursor moves onto it to pick an emoji).
     clearTimeout(this._timer.hover);
   }
 
@@ -395,18 +479,23 @@ class ___widget_chatItem extends LetcBox {
     if (!e) return;
     if (this.selectable == _a.yes) return;
     if (state != _a.on) return;
-    // Build the action menu lazily on first hover, then drop it INTO the
-    // message line so CSS lays it out on one vertically-centred row beside the
-    // bubble (time on the opposite side). Placement + reveal are pure CSS —
+    // While the emoji bar (or full picker) stands in for the action menu, don't
+    // build the menu on top of it — it rebuilds on the next hover after the bar
+    // closes (the bar destroys the menu on open; see _toggleReactionBar).
+    if (this._reactionBar && !this._reactionBar.isDestroyed()) return;
+    // Build the action menu lazily on each hover when absent, then drop it INTO
+    // the message line so CSS lays it out on one vertically-centred row beside
+    // the bubble (time on the opposite side). Placement + reveal are pure CSS —
     // see skin/index.scss (&-line / &-footer) and skin/menu.scss (&__dropdown).
     const fresh = !this.menu || this.menu.isDestroyed();
-    if (!fresh) return;
-    this.prepend(require("./skeleton/menu")(this));
-    this.menu = this.children.first();
-    const fig = this.fig.family;
-    const line = this.__main.el.querySelector(`.${fig}__message-line`);
-    if (line && this.menu && this.menu.el) {
-      line.appendChild(this.menu.el);
+    if (fresh) {
+      this.prepend(require("./skeleton/menu")(this));
+      this.menu = this.children.first();
+      const fig = this.fig.family;
+      const line = this.__main.el.querySelector(`.${fig}__message-line`);
+      if (line && this.menu && this.menu.el) {
+        line.appendChild(this.menu.el);
+      }
     }
   }
 
@@ -458,6 +547,202 @@ class ___widget_chatItem extends LetcBox {
     };
   }
 
+  // ===========================================================
+  // Emoji reaction helpers
+  // ===========================================================
+
+  /**
+   * Optimistically toggle an emoji reaction in local metadata, re-render
+   * chips immediately, then propagate upward so the parent chat widget can
+   * route to postService(channel.react / chat.react).
+   * Guards against rapid double-fires with a 300 ms debounce per emoji.
+   *
+   * One-reaction-per-user rule (#5): picking emoji X removes the user from ALL
+   * other emoji arrays first, then adds to X. Picking the user's current emoji
+   * again simply removes (toggle off). This mirrors the backend rule.
+   * @param {String} emoji
+   */
+  _toggleReaction(emoji) {
+    if (!emoji) return;
+    const now = Date.now();
+    this._reactionGuard = this._reactionGuard || {};
+    if (now - (this._reactionGuard[emoji] || 0) < 300) return;
+    this._reactionGuard[emoji] = now;
+
+    // Optimistic update — mutate local metadata and re-render chips.
+    const md = this._metadataObject();
+    const reactions = md._reactions_ || {};
+    const myId = `${Visitor.id}`;
+
+    // One-per-user: remove myId from EVERY emoji array (mirrors the SP, which
+    // also normalises any legacy state where a user sat on multiple emojis).
+    // Do NOT break early — legacy rows may have the user on more than one emoji.
+    let wasOnChosen = false;
+    for (const key of Object.keys(reactions)) {
+      const uids = (reactions[key] || []).map(String);
+      if (!uids.includes(myId)) continue;
+      if (key === emoji) wasOnChosen = true;
+      const next = uids.filter((u) => u !== myId);
+      if (next.length === 0) {
+        delete reactions[key];
+      } else {
+        reactions[key] = next;
+      }
+    }
+
+    // Re-add to the chosen emoji unless the user just toggled that same one off.
+    if (!wasOnChosen) {
+      const uids = (reactions[emoji] || []).map(String);
+      reactions[emoji] = [...uids, myId];
+    }
+
+    md._reactions_ = reactions;
+    // mset triggers _onDataChanged → _renderReactions via change event
+    this.mset(_a.metadata, JSON.stringify(md));
+
+    // Propagate to parent (chat/index.js) which routes to postService
+    this.triggerHandlers({
+      service: "react",
+      message_id: this.mget("message_id"),
+      emoji,
+      socket_id: Visitor.get(_a.socket_id) || "",
+    });
+  }
+
+  /**
+   * Replace the local reactions map with the authoritative version from the
+   * server broadcast (channel.react / chat.react). Reconciles any optimistic
+   * state — no merge, just replace.
+   * @param {Object} reactionsMap  { "<emoji>": ["uid", ...] }
+   */
+  _patchReactions(reactionsMap) {
+    if (!reactionsMap || typeof reactionsMap !== "object") return;
+    const md = this._metadataObject();
+    md._reactions_ = reactionsMap;
+    this.mset(_a.metadata, JSON.stringify(md));
+    // _onDataChanged will call _renderReactions via the change event
+  }
+
+  /**
+   * Toggle the quick-bar (6 common emojis + "+" for full picker) that appears
+   * below the message bubble when the smiley action button is clicked.
+   * Inserts the bar into the reactions container DOM element so it sits
+   * visually below the bubble and above (or replacing) any existing chips.
+   */
+  _toggleReactionBar() {
+    // Toggle: if the bar already exists as a child widget, remove it.
+    if (this._reactionBar && !this._reactionBar.isDestroyed()) {
+      this._closeReactionBar();
+      return;
+    }
+    // The emoji bar REPLACES the action menu in the same spot (floating above the
+    // bubble). DESTROY the menu outright rather than hide it: a hidden/cached menu
+    // proved fragile and stayed invisible after reacting. With it gone, the next
+    // hover rebuilds a fresh menu (see _hover), which reliably re-appears.
+    const fig = this.fig.family;
+    const line =
+      this.__main && this.__main.el.querySelector(`.${fig}__message-line`);
+    if (!line) return;
+    if (this.menu && !this.menu.isDestroyed()) this.menu.goodbye();
+    this.menu = null;
+
+    this.append(require("./skeleton/reactions")(this));
+    this._reactionBar = this.children.last();
+    if (this._reactionBar && this._reactionBar.el) {
+      line.appendChild(this._reactionBar.el);
+    }
+
+    // Close the bar (and restore the menu) when the user clicks outside the item.
+    const closeOnOutside = (ev) => {
+      if (!this.el || this.el.contains(ev.target)) return;
+      this._closeReactionBar();
+      document.removeEventListener("click", closeOnOutside, true);
+    };
+    // Delay so the current click that opened the bar doesn't immediately close it.
+    setTimeout(() => {
+      document.addEventListener("click", closeOnOutside, true);
+      this._reactionBarOutsideHandler = closeOnOutside;
+    }, 0);
+  }
+
+  /**
+   * Tear down the quick-bar (and any open picker) and restore the reaction
+   * row's empty-hidden state so it does not linger as an empty strip.
+   */
+  _closeReactionBar() {
+    this._closeEmojiPicker();
+    if (this._reactionBar && !this._reactionBar.isDestroyed()) {
+      this._reactionBar.goodbye();
+    }
+    this._reactionBar = null;
+    if (this._reactionBarOutsideHandler) {
+      document.removeEventListener("click", this._reactionBarOutsideHandler, true);
+      this._reactionBarOutsideHandler = null;
+    }
+    // The action menu was destroyed when the bar opened; the next hover rebuilds
+    // it fresh (see _hover), so there is nothing to restore here.
+  }
+
+  /**
+   * Open the full emoji picker popover, anchored in the message line next to the
+   * quick-bar it opened from. Toggle: calling again while open destroys it.
+   */
+  _openEmojiPicker() {
+    // Toggle off if already open → restore the quick-bar it replaced.
+    if (this._emojiPicker && !this._emojiPicker.isDestroyed()) {
+      this._emojiPicker.goodbye();
+      this._emojiPicker = null;
+      if (this._reactionBar && this._reactionBar.el) {
+        this._reactionBar.el.style.display = "";
+      }
+      return;
+    }
+
+    const fig = this.fig.family;
+    const container =
+      this.__main && this.__main.el.querySelector(`.${fig}__message-line`);
+    if (!container) return;
+
+    // The picker REPLACES the quick-bar in the SAME spot: hide the 6-emoji bar
+    // while the picker is open (skin positions __popover exactly where __bar sat).
+    if (this._reactionBar && this._reactionBar.el) {
+      this._reactionBar.el.style.display = "none";
+    }
+
+    this.append(require("./skeleton/emoji-picker-popover")(this));
+    this._emojiPicker = this.children.last();
+
+    // Anchor the picker in the message line, where the quick-bar it opened from sat.
+    if (this._emojiPicker && this._emojiPicker.el) {
+      container.appendChild(this._emojiPicker.el);
+    }
+
+    // Close when clicking outside the entire message item.
+    const closeOnOutside = (ev) => {
+      if (!this.el || this.el.contains(ev.target)) return;
+      this._closeEmojiPicker();
+      document.removeEventListener("click", closeOnOutside, true);
+    };
+    setTimeout(() => {
+      document.addEventListener("click", closeOnOutside, true);
+      this._pickerOutsideHandler = closeOnOutside;
+    }, 0);
+  }
+
+  /**
+   * Close the emoji picker if open, and remove its outside-click listener.
+   */
+  _closeEmojiPicker() {
+    if (this._emojiPicker && !this._emojiPicker.isDestroyed()) {
+      this._emojiPicker.goodbye();
+    }
+    this._emojiPicker = null;
+    if (this._pickerOutsideHandler) {
+      document.removeEventListener("click", this._pickerOutsideHandler, true);
+      this._pickerOutsideHandler = null;
+    }
+  }
+
   onBeforeDestroy() {
     if (this._dropdownObserver) {
       this._dropdownObserver.disconnect();
@@ -471,6 +756,19 @@ class ___widget_chatItem extends LetcBox {
       this.el.removeEventListener("click", this._selectClickCapture, true);
       this._selectClickCapture = null;
     }
+    this._closeEmojiPicker();
+    if (this._reactionBar && !this._reactionBar.isDestroyed()) {
+      this._reactionBar.goodbye();
+      this._reactionBar = null;
+    }
+    if (this._reactionBarOutsideHandler) {
+      document.removeEventListener("click", this._reactionBarOutsideHandler, true);
+      this._reactionBarOutsideHandler = null;
+    }
+    if (this._pickerOutsideHandler) {
+      document.removeEventListener("click", this._pickerOutsideHandler, true);
+      this._pickerOutsideHandler = null;
+    }
     if (super.onBeforeDestroy) super.onBeforeDestroy();
   }
 
@@ -480,24 +778,42 @@ class ___widget_chatItem extends LetcBox {
    * @returns
    */
   /**
-   * Capture-phase click handler — toggles selection on the whole row when
-   * chat is in selection mode. Runs BEFORE inner Box widgets' bubble-phase
-   * onclick so we never lose the first click to e.stopPropagation() from
-   * the framework's __handleClick on inner widgets.
+   * Capture-phase click handler. Runs BEFORE inner Box widgets' bubble-phase
+   * onclick so we never lose the first click to e.stopPropagation() from the
+   * framework's __handleClick on inner widgets. Handles two things:
+   *   1. Reaction-chip clicks (toggle / switch / remove) — caught here so a
+   *      SINGLE tap registers; the bubble path was swallowed by inner Box
+   *      onclick, which is why a chip "needed several taps".
+   *   2. Selection-mode: toggle selection on the whole row.
    *
-   * Skips when:
+   * Selection step skips when:
    *   - chat is not in selection mode
    *   - target is an interactive element (link/input/button)
    *   - target sits inside a node with its own data-service (checkbox etc.)
    */
   _handleSelectionClick(e) {
+    const target = e && e.target;
+    if (!target) return;
+
+    // (1) Reaction chip — handle on capture so inner Box onclick can't swallow
+    // it. _toggleReaction's 300ms guard dedupes any later bubble re-fire. Scoped
+    // to the chip class so the quick-bar emoji buttons (which need their own
+    // onUiEvent → _closeReactionBar) are left to the framework.
+    const chip =
+      target.closest && target.closest(".widget-chatItem__reaction-chip");
+    if (chip) {
+      const emoji = chip.dataset.emoji;
+      if (emoji) this._toggleReaction(emoji);
+      e.stopPropagation();
+      e.preventDefault();
+      return;
+    }
+
+    // (2) Selection mode.
     const chatRoot =
       this.el.closest &&
       this.el.closest('.widget-chat__main[data-selected="1"]');
     if (!chatRoot) return;
-
-    const target = e && e.target;
-    if (!target) return;
     const tag = (target.tagName || "").toUpperCase();
     if (tag === "A" || tag === "INPUT" || tag === "BUTTON") return;
     if (target.closest && target.closest("[data-service]")) return;
@@ -516,6 +832,21 @@ class ___widget_chatItem extends LetcBox {
   dispatchUiEvent(e) {
     const service = this.el.getService(e); //e.target.dataset.service
     switch (service) {
+      case "react": {
+        // Chip clicked directly in the DOM — find the chip element to read
+        // the emoji (the target might be an inner span).
+        const chip =
+          e &&
+          e.target &&
+          e.target.closest &&
+          e.target.closest("[data-service='react']");
+        if (!chip) return;
+        const emoji = chip.dataset.emoji;
+        if (!emoji) return;
+        this._toggleReaction(emoji);
+        return;
+      }
+
       case "select-message":
         this.select();
         this.triggerHandlers({ service });
@@ -588,8 +919,47 @@ class ___widget_chatItem extends LetcBox {
    */
   onUiEvent(cmd, args) {
     const service = cmd.get(_a.service) || cmd.get(_a.name);
-    console.log("[chat-item] onUiEvent", service);
     switch (service) {
+      case "react": {
+        // Skeleton button (quick-bar emoji or chip) — emoji is in cmd model.
+        const emoji = cmd.mget("emoji") || cmd.mget("dataset")?.emoji || cmd.el?.dataset?.emoji;
+        if (emoji) this._toggleReaction(emoji);
+        // A pick from the quick-bar closes it (also clears data-bar-open so the
+        // row doesn't linger empty after _renderReactions wipes its contents).
+        this._closeReactionBar();
+        return;
+      }
+
+      case "open-reaction-bar":
+        this._toggleReactionBar();
+        return;
+
+      case "open-emoji-picker":
+        this._openEmojiPicker();
+        return;
+
+      case "emoji-picked": {
+        // Full picker emitted a selection — same path as quick-bar.
+        const pickedEmoji =
+          (args && args.emoji) ||
+          cmd.mget("dataset")?.emoji ||
+          cmd.el?.dataset?.emoji;
+        if (pickedEmoji) this._toggleReaction(pickedEmoji);
+        this._closeReactionBar();
+        return;
+      }
+
+      case "picker-group": {
+        // Tab clicked — scroll the emoji group into view inside the picker.
+        const groupIdx = cmd.mget("dataset")?.groupIdx ?? cmd.el?.dataset?.groupIdx;
+        if (groupIdx == null || !this._emojiPicker) return;
+        const pickerEl = this._emojiPicker.el;
+        if (!pickerEl) return;
+        const groupEl = pickerEl.querySelector(`[data-group-idx="${groupIdx}"]`);
+        if (groupEl) groupEl.scrollIntoView({ block: "nearest", behavior: "smooth" });
+        return;
+      }
+
       case "chat-item-menu":
         /**  DO NOT REMOVE */
         return;

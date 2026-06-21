@@ -49,9 +49,15 @@ module.exports = function (ui) {
   // Read-receipt avatar row — populated imperatively by chat-item.renderReaders()
   // from metadata._seen_ (the accumulating {uid: ts} reader map the server sends).
   const readers = `<div id="readers-${m.widgetId}" class="${m.fig}__readers ${m.author}" data-empty="1"></div>`;
+  // Reaction chip row — populated imperatively by chat-item._renderReactions().
+  // Positioned absolute over the bubble's bottom corner (Messenger-style).
+  // Starts hidden (data-empty="1", no bar open); shown when reacted or quick-bar is open.
+  const reactionRow = `<div id="reactions-${m.widgetId}" class="${m.fig}__reaction-row ${m.author}" data-empty="1"></div>`;
   // The bubble sits alone on the line; the hover action bar floats on the outer
   // side (appended into the line on hover — see chat-item._hover).
-  const line = `<div class="${m.fig}__message-line ${m.author}">${body}</div>`;
+  // The reaction row is also inside the line so it can be positioned absolute
+  // relative to the bubble (position:relative on __message-line).
+  const line = `<div class="${m.fig}__message-line ${m.author}">${body}${reactionRow}</div>`;
   // Footer (date + seen tick) and readers share one row in flow below the line
   // so they're always visible (never hover-gated, covered, or clipped by the
   // message box / neighbouring messages).

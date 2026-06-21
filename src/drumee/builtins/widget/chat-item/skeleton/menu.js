@@ -54,13 +54,20 @@ const __skl_chatiItem_menu = function (_ui_) {
     uiHandler: _ui_,
   });
 
-  // UI-only placeholder (no backend yet): emoji-reaction smiley. Carries no
-  // `service`, so clicking does nothing until the reaction flow is wired up.
-  const react = Skeletons.Button.Svg({
-    className: `${chatMenuFig}__item react`,
-    ico: "chat-action-smiley",
-    uiHandler: _ui_,
-  });
+  // Emoji-reaction smiley: clicking opens the quick-bar (or full picker if
+  // already open). Hidden for system messages (call / meeting / ticket).
+  const isSystemMsg =
+    _ui_._isMeeting() ||
+    _ui_.mget("message_type") === _a.call ||
+    _ui_.mget("is_ticket");
+  const react = isSystemMsg
+    ? undefined
+    : Skeletons.Button.Svg({
+        className: `${chatMenuFig}__item react`,
+        ico: "chat-action-smiley",
+        service: "open-reaction-bar",
+        uiHandler: [_ui_],
+      });
 
   const isTicket = _ui_.mget("message_type") === _a.ticket;
 
