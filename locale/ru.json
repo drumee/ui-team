@@ -1108,6 +1108,8 @@
   "MEMBERS_SUBTITLE": "Управляйте доступом к организации и определяйте пользовательские роли.",
   "SECURITY_GOVERNANCE": "Управление безопасностью",
   "TWO_FACTOR_AUTH": "Двухфакторная аутентификация",
+  "TWO_FACTOR_ENABLED": "Двухфакторная аутентификация включена",
+  "TWO_FACTOR_DISABLED": "Двухфакторная аутентификация отключена",
   "RECOMMENDED": "РЕКОМЕНДУЕТСЯ",
   "AUTHENTICATOR_APP": "Приложение-аутентификатор",
   "AUTHENTICATOR_APP_DESC": "Используйте Google Authenticator или Authy",

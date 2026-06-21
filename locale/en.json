@@ -1189,6 +1189,8 @@
   "MEMBERS_SUBTITLE": "Manage organization access and define custom roles.",
   "SECURITY_GOVERNANCE": "Security Governance",
   "TWO_FACTOR_AUTH": "Two-Factor Authentication",
+  "TWO_FACTOR_ENABLED": "Two-factor authentication enabled",
+  "TWO_FACTOR_DISABLED": "Two-factor authentication disabled",
   "RECOMMENDED": "RECOMMENDED",
   "AUTHENTICATOR_APP": "Authenticator App",
   "AUTHENTICATOR_APP_DESC": "Use Google Authenticator or Authy",

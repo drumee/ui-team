@@ -202,6 +202,7 @@ class settings_main extends LetcBox {
 
   onBeforeDestroy() {
     clearTimeout(this._saveStatusTimer);
+    clearTimeout(this._toastTimer);
     if (super.onBeforeDestroy) super.onBeforeDestroy();
   }
 
@@ -279,7 +280,11 @@ class settings_main extends LetcBox {
   _cancelMfa(errorMessage) {
     if (this._mfaCmd) this._mfaCmd.setState(this._mfaPrev);
     this._resetMfaState();
-    if (errorMessage) this.alert(errorMessage);
+    // errorMessage is only set on a genuine failure (e.g. otp.send died);
+    // a plain user cancel passes nothing and shows no toast.
+    if (errorMessage) {
+      return this.closeOverlay().then(() => this._showToast(errorMessage, "error"));
+    }
     return this.closeOverlay();
   }
 
@@ -290,7 +295,52 @@ class settings_main extends LetcBox {
       profile: { ...current, mfa: next, otp: next ? "email" : 0 },
     });
     this._resetMfaState();
-    return this.closeOverlay();
+    // Confirm the outcome on the settings page once the OTP modal is gone.
+    return this.closeOverlay().then(() =>
+      this._showToast(
+        next
+          ? (LOCALE.TWO_FACTOR_ENABLED || "Two-factor authentication enabled")
+          : (LOCALE.TWO_FACTOR_DISABLED || "Two-factor authentication disabled"),
+        "success"
+      )
+    );
+  }
+
+  /**
+   * Show a transient toast at the top-right of the settings page.
+   * `kind` drives both the colour and the glyph: "success" → app-check,
+   * "error" → apps-warning (see the `__toast` rules in the skin).
+   */
+  _showToast(message, kind = "success") {
+    this._toast = { message, kind };
+    if (this._toastTimer) clearTimeout(this._toastTimer);
+    this._toastTimer = setTimeout(() => {
+      this._toast = null;
+      this._renderToast();
+    }, 3500);
+    return this._renderToast();
+  }
+
+  _renderToast() {
+    return this.ensurePart("settings-toast").then((part) => {
+      if (!part) return;
+      if (!this._toast) return part.feed([]);
+      const pfx = this.fig.family;
+      const { message, kind } = this._toast;
+      const ico = kind === "error" ? "apps-warning" : "app-check";
+      part.feed(
+        Skeletons.Box.X({
+          className: `${pfx}__toast ${pfx}__toast--${kind}`,
+          kids: [
+            Skeletons.Image.Svg({ ico, className: `${pfx}__toast-ico` }),
+            Skeletons.Note({
+              className: `${pfx}__toast-text`,
+              content: message,
+            }),
+          ],
+        })
+      );
+    });
   }
 
   _resetMfaState() {

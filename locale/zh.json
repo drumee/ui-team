@@ -1108,6 +1108,8 @@
   "MEMBERS_SUBTITLE": "管理组织访问权限并定义自定义角色。",
   "SECURITY_GOVERNANCE": "安全治理",
   "TWO_FACTOR_AUTH": "双因素认证",
+  "TWO_FACTOR_ENABLED": "已启用双因素认证",
+  "TWO_FACTOR_DISABLED": "已禁用双因素认证",
   "RECOMMENDED": "推荐",
   "AUTHENTICATOR_APP": "身份验证器应用",
   "AUTHENTICATOR_APP_DESC": "使用 Google Authenticator 或 Authy",

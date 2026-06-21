@@ -519,6 +519,12 @@ function settings_body(ui) {
       className: `${pfx}__overlay`,
       sys_pn: "overlay",
     }),
+    // Transient top-right toast slot (empty until _showToast feeds it). Used
+    // to confirm the 2FA enable/disable outcome once the OTP modal closes.
+    Skeletons.Box.Y({
+      className: `${pfx}__toast-slot`,
+      sys_pn: "settings-toast",
+    }),
   ];
 }
 
