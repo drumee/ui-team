@@ -278,32 +278,39 @@ class settings_main extends LetcBox {
   }
 
   _cancelMfa(errorMessage) {
-    if (this._mfaCmd) this._mfaCmd.setState(this._mfaPrev);
     this._resetMfaState();
-    // errorMessage is only set on a genuine failure (e.g. otp.send died);
-    // a plain user cancel passes nothing and shows no toast.
-    if (errorMessage) {
-      return this.closeOverlay().then(() => this._showToast(errorMessage, "error"));
-    }
-    return this.closeOverlay();
+    // Defer past the dtk_otp event dispatch (closeOverlay clears via a
+    // microtask), then rebuild from Visitor.profile(). The toggle behavior
+    // auto-flips on click, so a plain setState can be clobbered — re-rendering
+    // is the reliable way to revert the optimistic flip back to the stored
+    // (unchanged) mfa value. errorMessage is only set on a genuine failure
+    // (e.g. otp.send died); a plain user cancel passes nothing and is silent.
+    return this.closeOverlay().then(() => {
+      this.feed(require("./skeleton").default(this));
+      if (errorMessage) return this._showToast(errorMessage, "error");
+    });
   }
 
-  _finalizeMfa() {
-    const current = Visitor.profile() || {};
+  _finalizeMfa(data) {
     const next = this._mfaNext;
-    Visitor.set({
-      profile: { ...current, mfa: next, otp: next ? "email" : 0 },
-    });
+    // Sync from the authoritative set_mfa response (get_user) rather than
+    // guessing — keeps Visitor.profile().mfa in lockstep with what was
+    // actually stored, so the next toggle computes prev/next correctly.
+    if (data) Visitor.respawn(data);
     this._resetMfaState();
-    // Confirm the outcome on the settings page once the OTP modal is gone.
-    return this.closeOverlay().then(() =>
-      this._showToast(
+    // Defer past dtk_otp's event dispatch, then rebuild so the toggle reflects
+    // the stored mfa. The toggle auto-flips on click and can clobber an
+    // optimistic setState; re-rendering from Visitor.profile() is the reliable
+    // resync (and tears down the OTP overlay).
+    return this.closeOverlay().then(() => {
+      this.feed(require("./skeleton").default(this));
+      return this._showToast(
         next
           ? (LOCALE.TWO_FACTOR_ENABLED || "Two-factor authentication enabled")
           : (LOCALE.TWO_FACTOR_DISABLED || "Two-factor authentication disabled"),
         "success"
-      )
-    );
+      );
+    });
   }
 
   /**
@@ -637,7 +644,9 @@ class settings_main extends LetcBox {
         // checkForm. Filter on the discriminator so stray clicks don't
         // close the modal.
         if (!args || !args.data) return;
-        return this._finalizeMfa();
+        // args.data is the set_mfa response (get_user) — pass it through so
+        // Visitor syncs from the server's stored mfa, not a guessed value.
+        return this._finalizeMfa(args.data);
 
       case "mfa-cancel":
         return this._cancelMfa();
