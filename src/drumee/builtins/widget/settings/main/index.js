@@ -237,9 +237,14 @@ class settings_main extends LetcBox {
     if (this._mfaInFlight) return;
     this._mfaInFlight = true;
 
-    const profile = Visitor.profile() || {};
-    const prev = parseInt(profile.mfa) ? 1 : 0;
-    const next = prev ? 0 : 1;
+    // The toggle's `also:click` behavior has ALREADY flipped the switch to the
+    // user's intended state before this handler runs (see letc.js dispatch:
+    // also:click fires before the ui-event signal). Read the intent straight
+    // from the switch — deriving it from Visitor.profile().mfa is fragile
+    // because that value can drift (e.g. an unreliable server echo), which
+    // made "enable" compute next=0 and show the "disabled" toast.
+    const next = parseInt(cmd.getState()) ? 1 : 0;
+    const prev = next ? 0 : 1;
 
     cmd.setState(next);
     this._mfaCmd = cmd;
@@ -291,17 +296,17 @@ class settings_main extends LetcBox {
     });
   }
 
-  _finalizeMfa(data) {
+  _finalizeMfa() {
     const next = this._mfaNext;
-    // Sync from the authoritative set_mfa response (get_user) rather than
-    // guessing — keeps Visitor.profile().mfa in lockstep with what was
-    // actually stored, so the next toggle computes prev/next correctly.
-    if (data) Visitor.respawn(data);
+    const current = Visitor.profile() || {};
+    // Persist the value we actually sent and that set_mfa stored (`next`).
+    // Don't respawn from the get_user echo: its shape isn't reliably
+    // {profile:...}, so respawn could be a no-op and leave profile.mfa stale —
+    // the next toggle would then read a wrong prev and show the wrong toast.
+    Visitor.set({ profile: { ...current, mfa: next, otp: next ? "email" : 0 } });
     this._resetMfaState();
     // Defer past dtk_otp's event dispatch, then rebuild so the toggle reflects
-    // the stored mfa. The toggle auto-flips on click and can clobber an
-    // optimistic setState; re-rendering from Visitor.profile() is the reliable
-    // resync (and tears down the OTP overlay).
+    // the stored mfa (also tears down the OTP overlay).
     return this.closeOverlay().then(() => {
       this.feed(require("./skeleton").default(this));
       return this._showToast(
@@ -644,9 +649,7 @@ class settings_main extends LetcBox {
         // checkForm. Filter on the discriminator so stray clicks don't
         // close the modal.
         if (!args || !args.data) return;
-        // args.data is the set_mfa response (get_user) — pass it through so
-        // Visitor syncs from the server's stored mfa, not a guessed value.
-        return this._finalizeMfa(args.data);
+        return this._finalizeMfa();
 
       case "mfa-cancel":
         return this._cancelMfa();
