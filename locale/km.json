@@ -1108,6 +1108,8 @@
   "MEMBERS_SUBTITLE": "គ្រប់គ្រងការចូលប្រើប្រាស់អង្គភាព និងកំណត់តួនាទីផ្ទាល់ខ្លួន។",
   "SECURITY_GOVERNANCE": "ការគ្រប់គ្រងសន្តិសុខ",
   "TWO_FACTOR_AUTH": "ការផ្ទៀងផ្ទាត់ពីរកត្តា",
+  "TWO_FACTOR_ENABLED": "បានបើកការផ្ទៀងផ្ទាត់ពីរកត្តា",
+  "TWO_FACTOR_DISABLED": "បានបិទការផ្ទៀងផ្ទាត់ពីរកត្តា",
   "RECOMMENDED": "ត្រូវបានណែនាំ",
   "AUTHENTICATOR_APP": "កម្មវិធីផ្ទៀងផ្ទាត់",
   "AUTHENTICATOR_APP_DESC": "ប្រើ Google Authenticator ឬ Authy",

@@ -1108,6 +1108,8 @@
   "MEMBERS_SUBTITLE": "Gérez l'accès à l'organisation et définissez des rôles personnalisés.",
   "SECURITY_GOVERNANCE": "Gouvernance de la sécurité",
   "TWO_FACTOR_AUTH": "Authentification à deux facteurs",
+  "TWO_FACTOR_ENABLED": "Authentification à deux facteurs activée",
+  "TWO_FACTOR_DISABLED": "Authentification à deux facteurs désactivée",
   "RECOMMENDED": "RECOMMANDÉ",
   "AUTHENTICATOR_APP": "Application d'authentification",
   "AUTHENTICATOR_APP_DESC": "Utilisez Google Authenticator ou Authy",

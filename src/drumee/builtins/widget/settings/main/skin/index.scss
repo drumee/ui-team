@@ -786,6 +786,72 @@
     }
   }
 
+  // ── Toast (top-right) ─────────────────────────────────────
+  // Transient confirmation, fed by _showToast/_renderToast. Sits above the
+  // overlay so it remains visible even if a modal is mid-teardown. The slot
+  // collapses when empty so it never intercepts clicks.
+  &__toast-slot {
+    position: fixed;
+    top: 24px;
+    right: 24px;
+    z-index: 30000;
+    pointer-events: none;
+
+    &:empty {
+      display: none;
+    }
+  }
+
+  &__toast {
+    flex-direction: row;
+    align-items: center;
+    gap: 10px;
+    max-width: 360px;
+    padding: 12px 16px;
+    border-radius: 10px;
+    background: $row-bg;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18);
+    pointer-events: auto;
+    animation: settings-toast-in 160ms ease-out;
+
+    &-ico {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+
+      svg {
+        width: 20px;
+        height: 20px;
+      }
+    }
+
+    &-text {
+      font-size: 13px;
+      font-weight: 600;
+      line-height: 18px;
+      color: $ink-900;
+    }
+
+    &--success &-ico svg {
+      fill: $success-fg;
+
+      .icon-fill-blue,
+      .icon-fill-grey {
+        fill: $success-fg;
+      }
+    }
+
+    &--error &-ico svg {
+      fill: $danger-fg;
+
+      .icon-fill-blue,
+      .icon-fill-grey {
+        fill: $danger-fg;
+      }
+    }
+  }
+
   // ── Responsive: tablet ────────────────────────────────────
   // Two-column layout (~698 + 450 / ~375 + 773) doesn't fit at tablet
   // widths (≤ 1024). Stack rows; keep header on one line and avatar/
@@ -959,6 +1025,14 @@ html[data-theme="dark"] {
       background: var(--overlay-bg-05);
     }
 
+    &__toast {
+      background: var(--normal-bg-elevated);
+
+      &-text {
+        color: var(--normal-fg-10);
+      }
+    }
+
     &__inner {
       background: var(--normal-bg-elevated);
     }
@@ -1000,4 +1074,15 @@ html[data-theme="dark"] {
 
 @keyframes settings-main-spinner {
   to { transform: rotate(360deg); }
+}
+
+@keyframes settings-toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
