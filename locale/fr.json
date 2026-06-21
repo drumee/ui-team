@@ -50,6 +50,7 @@
   "CURRENT_PASSWORD": "Mot de passe actuel",
   "DAYS": "Jour(s)",
   "DELETE": "Supprimer",
+  "DELETE_MESSAGE_CONFIRM": "Voulez-vous supprimer ce message ?",
   "ACCOUNT_DELETE": "Supprimer mon compte",
   "DESCRIPTION": "Description",
   "GDRIVE_PICKER_CHOOSE": "Choisir depuis Google Drive",
@@ -975,6 +976,8 @@
   "UNREADS": "Non lus",
   "ALL_ACTIVITY": "Toute l'activité",
   "MENTIONS": "Mentions",
+  "MENTION_FILES": "Mentionner des fichiers",
+  "PEOPLE": "Personnes",
   "MENTIONED_YOU": "vous a mentionné",
   "FORWARD_DONE": "Message transmis",
   "SHARES": "Partages",
@@ -1338,6 +1341,8 @@
   "TASK_DESCRIPTION_PLACEHOLDER": "Add more detail…",
   "NO_TASKS": "No tasks yet",
   "REPLY": "Répondre",
+  "REPLY_TO": "Répondre à",
+  "SHOW_IN_FOLDER": "Afficher dans le dossier",
   "TASK_VIEW_BOARD": "Board",
   "TASK_VIEW_LIST": "List",
   "TASK_VIEW_SUMMARY": "Summary",
@@ -1740,5 +1745,7 @@
   "SECURE_SHARE_REQUESTING_ACCESS": "demande l’accès à",
   "SECURE_SHARE_REQUESTING_LEVEL_ACCESS": "demande un accès {level} à",
   "SECURE_SHARE_APPROVE_TITLE": "Approuver l’accès",
-  "SECURE_SHARE_GRANT_LEVEL": "Niveau d’accès accordé :"
+  "SECURE_SHARE_GRANT_LEVEL": "Niveau d’accès accordé :",
+  "ADD_REACTION": "Ajouter une réaction",
+  "REACTION_MORE": "Plus d’emojis"
 }

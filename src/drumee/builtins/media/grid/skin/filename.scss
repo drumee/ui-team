@@ -70,7 +70,12 @@
   }
 
   .filename-tooltips {
-    background: var(--default-bg-block);
+    // Theme-aware popup surface. Was --default-bg-block (#f2f2f2, theme-fixed):
+    // in dark mode that light bg paired with the light --default-text-color made
+    // the full-filename tip unreadable. --normal-bg-elevated pairs cleanly with
+    // --default-text-color in both themes.
+    background: var(--normal-bg-elevated);
+    border: 1px solid var(--border-muted);
     border-radius: var(--border-radius-bottom-smal); // 0 0 4px 4px;
     display: none;
     max-height: calc(100% - 5px);
@@ -91,7 +96,9 @@
     bottom: 10px;
 
     &[data-hover="on"] {
-      background-color: var(--multimedia-main-filename-bg);
+      // Uniform theme-aware surface for every filetype (was a mix of the
+      // undefined --multimedia-main-filename-bg and fixed --ewhite, both light).
+      background-color: var(--normal-bg-elevated);
       color: var(--default-text-color);
       display: block;
       opacity: 1;
@@ -101,16 +108,13 @@
       z-index: 20;
 
       &.image,
-      &.video {
-        background-color: var(--ewhite);
-      }
-
+      &.video,
       &.audio,
       &.document,
       &.vector,
       &.other {
         color: var(--default-text-color);
-        background-color: var(--multimedia-main-filename-bg);
+        background-color: var(--normal-bg-elevated);
       }
 
       &.document {

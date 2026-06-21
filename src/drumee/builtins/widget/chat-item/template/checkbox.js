@@ -11,7 +11,7 @@ const __chat_item_checkbox = function(m){
   const cb = `\
 <div id=\"${m.widgetId}-checkbox\" data-service=\"select-message\" class=\"${m.fig}__icon checkbox ${m.author}\"> \
 <svg class=\"${m.fig}__checkbox--icon full\"> \
-<use xmlns:xlink=\"http://www.w3.org/1999/xlink\" xlink:href=\"#--icon-checkbox\"></use> \
+<use xmlns:xlink=\"http://www.w3.org/1999/xlink\" xlink:href=\"#--icon-chat-tick\"></use> \
 </svg> \
 </div>\
 `;

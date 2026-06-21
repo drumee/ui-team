@@ -49,6 +49,7 @@
   "CURRENT_PASSWORD": "លេខសំងាត់​បច្ចុប្បន្ន",
   "DAYS": "ថ្ងៃ",
   "DELETE": "លុប",
+  "DELETE_MESSAGE_CONFIRM": "តើអ្នកចង់លុបសារនេះមែនទេ?",
   "ACCOUNT_DELETE": "លុបគណនីរបស់ខ្ញុំ",
   "DESCRIPTION": "ការពិពណ៌នា",
   "GDRIVE_PICKER_CHOOSE": "ជ្រើសរើសពី Google Drive",
@@ -975,6 +976,8 @@
   "UNREADS": "មិនទាន់អាន",
   "ALL_ACTIVITY": "សកម្មភាពទាំងអស់",
   "MENTIONS": "ការលើកឡើង",
+  "MENTION_FILES": "លើកឡើងឯកសារ",
+  "PEOPLE": "មនុស្ស",
   "MENTIONED_YOU": "បានលើកឡើងអំពីអ្នក",
   "FORWARD_DONE": "សាររំផ្ញើបានរួចរាល់",
   "SHARES": "ការចែករំលែក",
@@ -1338,6 +1341,8 @@
   "TASK_DESCRIPTION_PLACEHOLDER": "Add more detail…",
   "NO_TASKS": "No tasks yet",
   "REPLY": "ឆ្លើយតប",
+  "REPLY_TO": "ឆ្លើយតបទៅ",
+  "SHOW_IN_FOLDER": "បង្ហាញក្នុងថត",
   "TASK_VIEW_BOARD": "Board",
   "TASK_VIEW_LIST": "List",
   "TASK_VIEW_SUMMARY": "Summary",
@@ -1740,5 +1745,7 @@
   "SECURE_SHARE_REQUESTING_ACCESS": "កំពុងស្នើសុំការចូលប្រើ",
   "SECURE_SHARE_REQUESTING_LEVEL_ACCESS": "កំពុងស្នើសុំសិទ្ធិ {level} ទៅ",
   "SECURE_SHARE_APPROVE_TITLE": "អនុម័តការចូលប្រើ",
-  "SECURE_SHARE_GRANT_LEVEL": "កម្រិតការអនុញ្ញាត៖"
+  "SECURE_SHARE_GRANT_LEVEL": "កម្រិតការអនុញ្ញាត៖",
+  "ADD_REACTION": "បន្ថែមប្រតិកម្ម",
+  "REACTION_MORE": "អ៊ីម៉ូជីបន្ថែម"
 }

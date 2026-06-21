@@ -64,11 +64,8 @@ const __skl_widget_chat_footer = function (ui) {
     sys_pn: 'message-options-wrapper',
     state: 0,
     kids: [
-      Skeletons.Box.X({
-        className: `${chatFig}__message-count`,
-        sys_pn: 'selected-message-count'
-      }),
-
+      // Selected-message counter row removed — the count now lives inside the
+      // Forward/Delete button labels (see skeleton/action-buttons.js).
       Skeletons.Box.X({
         className: `${chatFig}__action-buttons`,
         sys_pn: 'message-action-buttons'

@@ -6,6 +6,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Drumee Web OS UI — a collaborative web application (v3.3.1, AGPL-3.0) built on Backbone.js/Marionette with a custom JSON-based Skeletons UI rendering framework. Do **not** generate HTML; all UI is expressed as Skeletons component trees.
 
+### Figma (design-to-code)
+
+When implementing a Figma design (or any Figma MCP output), follow `.claude/rules/figma-design-to-skeleton.md`. Figma MCP tools return HTML/React/Tailwind — that is a **reference only**; translate it into a `Skeletons.*` tree (Box.Y/X/G/Z, Button, Note, Entry, List, Image…), style with `maps.scss` tokens + BEM `${ui.fig.family}__*`, text via `LOCALE.*`, and route SVG icons through `icons/src/` + `npm run build:icons` (`ico:'name'`) — never paste markup, hex/px literals, raw strings, or inline `<svg>`.
+
 ## Commands
 
 ```bash

@@ -20,7 +20,9 @@ const __chat_dod = function(m) {
   );
 
   message = Autolinker.link(message);
-  message = message.nl2br() || ' ';
+  // Empty → '' (not ' '): a file-only message renders the bubble shell for the
+  // attachment card without a stray blank text line above it.
+  message = message.nl2br() || '';
   html = `<div data-area="${m.area}" class="${m.fig}__conversation-content selectable-text ${m.area} ${m.author}">${message}</div>`;
 
   return html;

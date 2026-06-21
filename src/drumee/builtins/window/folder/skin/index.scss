@@ -1841,6 +1841,33 @@
     }
   }
 
+  // Files tab → split the folder window 50/50 (file grid left, team chat right).
+  // The split-body is a CSS grid (Box.G, data-flow="g" → display:grid), so the
+  // two equal columns are the real lever — the base rules otherwise set a
+  // narrow-chat sidebar (`minmax(0,1fr) clamp(...)` here / group-body `2fr 1fr`).
+  // Each panel must then fill its cell:
+  //   • `margin: 0` clears the group-body `margin: 0 auto` (auto margins center
+  //     the panel inside its track → the "floating in the middle" gap);
+  //   • `max-width: none` + `width: auto` drop the chat panel's sidebar clamp
+  //     (`width: clamp(300px,24vw,360px); max-width: 380px`) so it fills its half;
+  //   • `min-width: 0` lets the file grid's wide min-content shrink to 50%.
+  // `flex: 1 1 0` keeps the split 50/50 in the flex fallback some states render.
+  // grid-template stays non-!important so the @container ≤700px
+  // `grid-template-columns: 1fr !important` compact single-column still wins.
+  &__split-body[data-view="files"] {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+
+    > .window-folder__files-panel,
+    > .window__files-panel,
+    > .window__chat-panel {
+      flex: 1 1 0 !important;
+      margin: 0 !important;
+      max-width: none !important;
+      min-width: 0 !important;
+      width: auto !important;
+    }
+  }
+
   &__files-panel {
     flex: 3 1 0;
     min-width: 0;
@@ -2155,10 +2182,11 @@
   }
 
   .window__chat-panel .widget-chat__body {
-    // No right padding so the message scrollbar sits flush against the panel
-    // edge instead of floating in a gap; per-item right padding keeps text
-    // clear of the scrollbar.
-    padding: 16px 0 16px 16px;
+    // Only a left inset (scrollbar sits flush on the right; per-item right
+    // padding keeps text clear of it). No top/bottom padding — that green band
+    // was the big empty gap between the scroll area and the input; per-message
+    // `margin-top` already spaces the rows, so vertical spacing is margin-based.
+    padding: 0 0 0 16px;
     gap: 16px;
   }
 
@@ -2166,8 +2194,9 @@
     padding-right: 12px;
   }
 
+
   .widget-chat__messenger-wrapper {
-    padding: 16px;
+    padding: 10px 12px;
     background: var(--normal-bg-90);
   }
 
@@ -2258,6 +2287,28 @@
     }
   }
 
+  // Reply quote shares the input's white card (Figma: the quote stacks directly
+  // above the input row inside one rounded card), instead of floating on the
+  // grey messenger area. Drop the gap margin and give it the elevated bg with
+  // only the top corners rounded.
+  .widget-chat-reply__wrapper {
+    margin: 0;
+    width: 100%;
+
+    &[data-mode="open"] {
+      background: var(--normal-bg-elevated);
+      border-radius: 8px 8px 0 0;
+      padding: 8px 12px 2px;
+    }
+  }
+
+  // While a reply is open, square the input pill's top corners so it merges
+  // seamlessly with the quote card sitting directly above it (DOM sibling).
+  .widget-chat-reply__wrapper[data-mode="open"] ~ .widget-chat__messenger .lib-messenger__container {
+    border-top-left-radius: 0;
+    border-top-right-radius: 0;
+  }
+
   .widget-chatItem__ui {
     margin-top: 16px;
   }
@@ -2272,40 +2323,51 @@
     max-width: 320px;
     padding: 12px;
     @include drumee.typo(
-      $size: 12px,
+      $size: 13px,
       $line: 1.4,
       $weight: 400,
       $color: var(--normal-fg-10)
     );
   }
 
+  // ── Own ("me") bubble — light area-tinted fill + pinned dark foreground ──────
+  // Every own bubble is a LIGHT tint of the folder AREA colour (--chat-bubble-*),
+  // fixed in both themes, so its text/links/mentions use theme-INDEPENDENT dark
+  // constants — the theme-aware --normal-fg-* / --white wash out on a fixed light
+  // fill in dark mode. Default fill = private (coral) tint; per-area fills below.
   .widget-chatItem__conversation-content.me,
   .widget-chatItem__conversation.me .widget-chatItem__conversation-content {
-    background: #d65f59;
+    background: var(--chat-bubble-private);
     border-radius: 16px 0 16px 16px;
     box-shadow: none;
-    color: #ffffff;
+    color: var(--primary-purple-100);
 
     .note-content,
-    a,
     .user-mention {
-      color: #ffffff;
+      color: var(--primary-purple-100);
+    }
+
+    a {
+      color: var(--primary-purple-50);
     }
 
     .file-mention {
-      color: #ffffff;
+      color: var(--primary-purple-100);
       font-weight: 600;
       text-decoration: underline;
-      text-decoration-color: rgba(255, 255, 255, 0.7);
+      // Underline tracks the (now fixed-dark) name colour via currentColor.
+      text-decoration-color: currentColor;
     }
   }
 
+  // Per-area own-bubble fill — light/fresh tint of each AREA colour (background
+  // only; the shared dark foreground above carries every area).
   .window__chat-panel[data-area="personal"]
     .widget-chatItem__conversation-content.me,
   .window__chat-panel[data-area="personal"]
     .widget-chatItem__conversation.me
     .widget-chatItem__conversation-content {
-    background: var(--area-personal);
+    background: var(--chat-bubble-personal);
   }
   .window__chat-panel[data-area="share"]
     .widget-chatItem__conversation-content.me,
@@ -2317,14 +2379,14 @@
   .window__chat-panel[data-area="dmz"]
     .widget-chatItem__conversation.me
     .widget-chatItem__conversation-content {
-    background: var(--area-share);
+    background: var(--chat-bubble-share);
   }
   .window__chat-panel[data-area="public"]
     .widget-chatItem__conversation-content.me,
   .window__chat-panel[data-area="public"]
     .widget-chatItem__conversation.me
     .widget-chatItem__conversation-content {
-    background: var(--area-public);
+    background: var(--chat-bubble-public);
   }
 
   .widget-chatItem__conversation-content.other,
@@ -2381,11 +2443,95 @@
     }
   }
 
+  // ── Sender (me) bubble foreground ──────────────────────────────────────────
+  // Every own bubble is now a LIGHT area tint (--chat-bubble-*, set above),
+  // fixed in both themes, so ALL of its text / links / attachment card / reply
+  // quote must use theme-INDEPENDENT dark constants to stay legible — the
+  // chat-item / reply / card defaults use theme-aware --normal-fg-* / --white
+  // that turn light in dark mode and wash out on the fixed light fill.
+
+  // Keep the file card (direct child of the bubble) transparent so the bubble
+  // tint shows through instead of the dark --normal-bg-* media-grid panel (the
+  // "black file frame"). Scoped to the direct-child card so the reply-quote
+  // thumbnail tile keeps its own grey fill.
+  .window__chat-panel
+    .widget-chatItem__conversation-content.me
+    > .widget-chatItem__attachment-wrapper {
+    &,
+    .widget-chatItem__attachment-wrapper-list,
+    .smart-container,
+    .list-smart,
+    .list-smart__container,
+    .media-wrapper,
+    .media-wrapper__ui,
+    .media-grid,
+    .media-grid__ui,
+    .media-grid__container,
+    .media-grid__content {
+      background-color: transparent !important;
+    }
+  }
+
+  .window__chat-panel
+    .widget-chatItem__conversation-content.me {
+    color: var(--primary-purple-100);
+
+    // Links + mentions: dark indigo reads on the light bubble.
+    .file-mention,
+    .user-mention,
+    a {
+      color: var(--primary-purple-50);
+    }
+
+    // Attachment card: filename + "<size> · Show in folder".
+    .filename,
+    .media-grid__chatmeta,
+    .media-grid__filesize,
+    .media-grid__meta-sep {
+      color: var(--primary-purple-100) !important;
+    }
+    .media-grid__reveal {
+      color: var(--primary-purple-50) !important;
+    }
+
+    // Reply quote nested in the bubble: dark name + muted-dark preview. The Note
+    // renders its text in a child .note-content, so target that too — its global
+    // colour is theme-aware (light in dark mode) and won't inherit the parent.
+    .widget-chatItem-reply__note.name,
+    .widget-chatItem-reply__note.name .note-content {
+      color: var(--primary-purple-100);
+    }
+    .widget-chatItem-reply__note.conversation .note-content {
+      color: var(--tertiary-grey-80);
+    }
+  }
+
+  // Reply quote on a light "me" bubble (any area) — pin the quote text to
+  // dark constants regardless of whether the quote was moved INTO the bubble or
+  // left as a prepended sibling. Scoping to the quote root (not .conversation-
+  // content) makes this hold in both cases. The reply skin's theme-aware
+  // --normal-fg-* turn white in dark mode and wash out on the fixed light bubble;
+  // covers the new file name/extension lines the meta-row pins above miss.
+  .window__chat-panel .widget-chatItem-reply__main.me {
+    .widget-chatItem-reply__note.name,
+    .widget-chatItem-reply__note.name .note-content,
+    .widget-chatItem-reply__note.filename,
+    .widget-chatItem-reply__note.filename .note-content {
+      color: var(--primary-purple-100) !important;
+    }
+
+    .widget-chatItem-reply__note.fileext,
+    .widget-chatItem-reply__note.fileext .note-content,
+    .widget-chatItem-reply__note.conversation .note-content {
+      color: var(--tertiary-grey-80) !important;
+    }
+  }
+
   .widget-chatItem__name,
   .widget-chatItem__username-content,
   .widget-chatItem__message-username {
     @include drumee.typo(
-      $size: 10px,
+      $size: 11px,
       $line: 1.4,
       $weight: 700,
       $color: var(--normal-fg-10)
@@ -2400,6 +2546,7 @@
   }
 
   .widget-chatItem__message-date {
+    // Grey timestamp (#84848c), slightly enlarged.
     @include drumee.typo(
       $size: 11px,
       $line: 1.4,

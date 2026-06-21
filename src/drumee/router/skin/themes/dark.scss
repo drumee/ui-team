@@ -37,6 +37,12 @@ html[data-theme="dark"] {
   --active-border: #5950ff;
   --hover-border-40: #5950ff;
 
+  /* Scrollbar — darker track + thumb so the bar reads on dark surfaces instead
+     of the light defaults (consumed by the global override in
+     router/skin/index.scss). */
+  --scrollbar-thumb: var(--border-strong);
+  --scrollbar-track: var(--normal-bg-90);
+
   /* Accent / state */
   --avatar-bg: #5950ff;
   --radio-on-bg: rgba(89, 80, 255, 0.2);

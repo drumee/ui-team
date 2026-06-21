@@ -60,6 +60,7 @@
   "CURRENT_PASSWORD_LABEL": "CURRENT PASSWORD",
   "DAYS": "DAYS",
   "DELETE": "Delete",
+  "DELETE_MESSAGE_CONFIRM": "Do you want to delete this message?",
   "ACCOUNT_DELETE": "Delete my account",
   "DESCRIPTION": "Description",
   "DETAILS": "Details",
@@ -1148,6 +1149,8 @@
   "UNREADS": "Unreads",
   "ALL_ACTIVITY": "All activity",
   "MENTIONS": "Mentions",
+  "MENTION_FILES": "Mention files",
+  "PEOPLE": "People",
   "MENTIONED_YOU": "mentioned you",
   "FORWARD_DONE": "Message forwarded",
   "FROM_DEVICE": "From device",
@@ -1357,6 +1360,8 @@
   "TASK_DESCRIPTION_PLACEHOLDER": "Add more detail…",
   "NO_TASKS": "No tasks yet",
   "REPLY": "Reply",
+  "REPLY_TO": "Reply to",
+  "SHOW_IN_FOLDER": "Show in folder",
   "TASK_VIEW_BOARD": "Board",
   "TASK_VIEW_LIST": "List",
   "TASK_VIEW_SUMMARY": "Summary",
@@ -2171,5 +2176,7 @@
   "SECURE_SHARE_REQUESTING_ACCESS": "is requesting access to",
   "SECURE_SHARE_REQUESTING_LEVEL_ACCESS": "is requesting {level} access to",
   "SECURE_SHARE_APPROVE_TITLE": "Approve access",
-  "SECURE_SHARE_GRANT_LEVEL": "Grant access level:"
+  "SECURE_SHARE_GRANT_LEVEL": "Grant access level:",
+  "ADD_REACTION": "Add reaction",
+  "REACTION_MORE": "More emojis"
 }

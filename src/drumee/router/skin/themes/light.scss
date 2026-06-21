@@ -33,6 +33,12 @@ html[data-theme="light"],
   --active-border: #5950ff;
   --hover-border-40: #847eff;
 
+  /* Scrollbar — consumed by the global .list-smart__container override in
+     router/skin/index.scss. Light keeps the current purple thumb on a clear
+     track. */
+  --scrollbar-thumb: var(--primary-400);
+  --scrollbar-track: transparent;
+
   /* Accent / state */
   --avatar-bg: #5950ff;
   --radio-on-bg: rgba(89, 80, 255, 0.1);

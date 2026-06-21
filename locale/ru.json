@@ -50,6 +50,7 @@
   "CURRENT_PASSWORD": "Текущий пароль",
   "DAYS": "День(дни)",
   "DELETE": "Удалить",
+  "DELETE_MESSAGE_CONFIRM": "Удалить это сообщение?",
   "ACCOUNT_DELETE": "Удалите мой аккаунт",
   "DESCRIPTION": "Описание",
   "GDRIVE_PICKER_CHOOSE": "Выбрать из Google Drive",
@@ -975,6 +976,8 @@
   "UNREADS": "Непрочитанные",
   "ALL_ACTIVITY": "Вся активность",
   "MENTIONS": "Упоминания",
+  "MENTION_FILES": "Упомянуть файлы",
+  "PEOPLE": "Люди",
   "MENTIONED_YOU": "упомянул вас",
   "FORWARD_DONE": "Сообщение переслано",
   "SHARES": "Общий доступ",
@@ -1338,6 +1341,8 @@
   "TASK_DESCRIPTION_PLACEHOLDER": "Add more detail…",
   "NO_TASKS": "No tasks yet",
   "REPLY": "Ответить",
+  "REPLY_TO": "Ответ для",
+  "SHOW_IN_FOLDER": "Показать в папке",
   "TASK_VIEW_BOARD": "Board",
   "TASK_VIEW_LIST": "List",
   "TASK_VIEW_SUMMARY": "Summary",
@@ -1740,5 +1745,7 @@
   "SECURE_SHARE_REQUESTING_ACCESS": "запрашивает доступ к",
   "SECURE_SHARE_REQUESTING_LEVEL_ACCESS": "запрашивает доступ {level} к",
   "SECURE_SHARE_APPROVE_TITLE": "Одобрить доступ",
-  "SECURE_SHARE_GRANT_LEVEL": "Уровень доступа:"
+  "SECURE_SHARE_GRANT_LEVEL": "Уровень доступа:",
+  "ADD_REACTION": "Добавить реакцию",
+  "REACTION_MORE": "Больше эмодзи"
 }
