@@ -276,6 +276,29 @@
 
     & .smart-container {
       height: 100%;
+      // Bottom-anchor the thread so a short conversation (e.g. a brand-new
+      // folder chat with a single message) rests just above the input instead
+      // of clinging to the top. Clinging to the top clipped the reaction
+      // hover-bar, which floats at translateY(-100%) ABOVE the first bubble and
+      // had no head-room there.
+      display: flex;
+      flex-direction: column;
+      // Children MUST keep their natural height. The chat item sets an explicit
+      // min-height:38px, which overrides flexbox's default min-height:auto
+      // shrink-protection — so without this, once the thread overflows, flexbox
+      // squeezes every message down toward 38px and the taller (multi-line)
+      // bubbles overflow their box and overlap the next message.
+      & > * {
+        flex-shrink: 0;
+      }
+      // Auto top-margin pushes the first real message down only while there is
+      // free space; once messages overflow it collapses to 0, so the scroll
+      // height / scroll-restore math (folder getChatScrollElement) is untouched.
+      // Scoped to a message item so the load spinner and the empty placeholder
+      // keep their own centring.
+      & > .widget-chatItem:first-child {
+        margin-top: auto;
+      }
     }
 
     &[data-area="personal"] {
