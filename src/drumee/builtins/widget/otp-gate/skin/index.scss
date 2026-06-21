@@ -184,6 +184,41 @@
     }
   }
 
+  // Submit in flight (see attachSubmitSpinner in index.js). otp-gate wraps the
+  // dtk_otp instance's verify POST and sets data-submitting="1" on its root
+  // while the code is being checked — lock the inputs and resend link, dim the
+  // entered digits, and spin a loader over them so the code can't be edited or
+  // double-submitted.
+  [data-submitting="1"] {
+    .dtk-otp__resend {
+      pointer-events: none;
+      opacity: 0.5;
+    }
+
+    .dtk-otp__digits {
+      pointer-events: none;
+      position: relative;
+
+      .dtk-otp__digit {
+        opacity: 0.45;
+      }
+
+      &::after {
+        content: "";
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: 20px;
+        height: 20px;
+        margin: -10px 0 0 -10px;
+        border: 2px solid rgba(67, 60, 197, 0.3);
+        border-top-color: #433cc5;
+        border-radius: 50%;
+        animation: otp-gate-spin 0.6s linear infinite;
+      }
+    }
+  }
+
   @media (max-width: 560px) {
     width: calc(100vw - 24px);
     padding: 24px;

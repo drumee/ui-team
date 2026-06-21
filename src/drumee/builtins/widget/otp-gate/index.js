@@ -90,7 +90,7 @@ async function openOtpModal(widget, opts) {
     return;
   }
 
-  overlay.feed(
+  const card = overlay.feed(
     // bubble:0 + service:"otp-gate-noop" makes the card root a click sink:
     // the framework attaches an onclick that stops propagation, so clicks
     // anywhere inside the popup (including stray bubbles from digit cells
@@ -121,6 +121,9 @@ async function openOtpModal(widget, opts) {
           // require `args.data` (present only on programmatic triggers,
           // absent on raw MouseEvents). See settings/main/index.js.
           kind: "dtk_otp",
+          // Addressable so we can grab the instance after feed() and wrap
+          // its submit (see attachSubmitSpinner below).
+          sys_pn: "otp-widget",
           payload: {
             ...payload,
             secret,
@@ -141,6 +144,56 @@ async function openOtpModal(widget, opts) {
       ],
     })
   );
+
+  // Loading-on-submit: dtk_otp self-POSTs the code from checkForm() once all
+  // six boxes are filled and exposes no "submit started" hook, so we wrap the
+  // instance's postService and flip data-submitting on its root for the
+  // duration of the verify round-trip (see the `[data-submitting]` rule in
+  // the otp-gate skin). Only the submit `api` is gated — resend already has
+  // its own [data-resending] state and is delegated to the host anyway.
+  attachSubmitSpinner(card, api, widget);
+}
+
+/**
+ * Wrap the dtk_otp instance's postService so the verify round-trip shows a
+ * spinner and locks input. Idempotent and best-effort: any failure to resolve
+ * the instance just leaves the modal without a submit spinner.
+ *
+ * @param {Backbone.View} card  the Box.Y returned by overlay.feed()
+ * @param {string}        api   the submit SERVICE (resend POSTs elsewhere)
+ * @param {Backbone.View} host  host widget, for warn()
+ */
+async function attachSubmitSpinner(card, api, host) {
+  if (!card || typeof card.ensurePart !== "function") return;
+  let otp;
+  try {
+    otp = await card.ensurePart("otp-widget");
+  } catch (e) {
+    host && host.warn && host.warn("[otp-gate] no otp-widget to gate submit", e);
+    return;
+  }
+  if (!otp || otp._otpGateSubmitWrapped || typeof otp.postService !== "function") {
+    return;
+  }
+  otp._otpGateSubmitWrapped = true;
+  const post = otp.postService.bind(otp);
+  otp.postService = function (service, ...rest) {
+    // Resend (and any non-verify POST) keeps the stock behaviour.
+    if (service !== api) return post(service, ...rest);
+    if (this.el) this.el.dataset.submitting = "1";
+    let p;
+    try {
+      p = post(service, ...rest);
+    } catch (e) {
+      if (this.el) this.el.dataset.submitting = "0";
+      throw e;
+    }
+    return Promise.resolve(p).finally(() => {
+      // On success the modal is torn down; on a rejected code dtk_otp clears
+      // the boxes for re-entry — either way the inputs unlock here.
+      if (this.el) this.el.dataset.submitting = "0";
+    });
+  };
 }
 
 /**
