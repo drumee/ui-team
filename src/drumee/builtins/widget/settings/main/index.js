@@ -305,38 +305,66 @@ class settings_main extends LetcBox {
 
   _cancelMfa(errorMessage) {
     this._resetMfaState();
-    // Defer past the dtk_otp event dispatch (closeOverlay clears via a
-    // microtask), then rebuild from Visitor.profile(). The toggle behavior
-    // auto-flips on click, so a plain setState can be clobbered — re-rendering
-    // is the reliable way to revert the optimistic flip back to the stored
-    // (unchanged) mfa value. errorMessage is only set on a genuine failure
-    // (e.g. otp.send died); a plain user cancel passes nothing and is silent.
+    // Revert the optimistic switch flip back to the stored state. Set the
+    // switch directly (not a full re-render) so a concurrent Visitor update
+    // — e.g. the websocket reconnect fired when the tab regains focus — can't
+    // race the read. errorMessage is only set on a genuine failure (e.g.
+    // otp.send died); a plain user cancel passes nothing and stays silent.
+    const mfaOn = parseInt((Visitor.profile() || {}).mfa) ? 1 : 0;
     return this.closeOverlay().then(() => {
-      this.feed(require("./skeleton").default(this));
+      this._setMfaSwitch(mfaOn);
       if (errorMessage) return this._showToast(errorMessage, "error");
     });
   }
 
-  _finalizeMfa() {
-    const next = this._mfaNext;
+  _finalizeMfa(data) {
+    // Trust the server's authoritative set_mfa response (get_user) for the
+    // result, NOT this._mfaNext. _mfaNext is mutable instance state that a
+    // concurrent cancel/reconnect (the tab-refocus handler reconnects the
+    // socket + resyncs) can reset out from under us — which made a successful
+    // "enable" toast "disabled". args.data here is the set_mfa response's own
+    // fetch result (responses are independent, never cross-wired).
+    let enabled = parseInt(this._mfaNext) ? 1 : 0;
+    const p = this._profileFromResponse(data);
+    if (p && p.mfa != null) enabled = parseInt(p.mfa) ? 1 : 0;
+
     const current = Visitor.profile() || {};
-    // Persist the value we actually sent and that set_mfa stored (`next`).
-    // Don't respawn from the get_user echo: its shape isn't reliably
-    // {profile:...}, so respawn could be a no-op and leave profile.mfa stale —
-    // the next toggle would then read a wrong prev and show the wrong toast.
-    Visitor.set({ profile: { ...current, mfa: next, otp: next ? "email" : 0 } });
+    Visitor.set({ profile: { ...current, mfa: enabled, otp: enabled ? "email" : 0 } });
     this._resetMfaState();
-    // Defer past dtk_otp's event dispatch, then rebuild so the toggle reflects
-    // the stored mfa (also tears down the OTP overlay).
     return this.closeOverlay().then(() => {
-      this.feed(require("./skeleton").default(this));
+      this._setMfaSwitch(enabled);
       return this._showToast(
-        next
+        enabled
           ? (LOCALE.TWO_FACTOR_ENABLED || "Two-factor authentication enabled")
           : (LOCALE.TWO_FACTOR_DISABLED || "Two-factor authentication disabled"),
         "success"
       );
     });
+  }
+
+  /**
+   * Set the MFA switch to a known state directly (no full re-render, which
+   * would read the mutable Visitor.profile().mfa and could race concurrent
+   * updates). Resolves the live switch part by sys_pn.
+   */
+  _setMfaSwitch(state) {
+    return this.ensurePart("toggle-mfa").then((t) => {
+      if (t && typeof t.setState === "function") t.setState(state ? 1 : 0);
+    });
+  }
+
+  /**
+   * Extract the profile object from a set_mfa (get_user) response. The profile
+   * column comes back as a JSON string; tolerate an already-parsed object.
+   */
+  _profileFromResponse(data) {
+    if (!data) return null;
+    let p = data.profile;
+    if (p == null) return null;
+    if (typeof p === "string") {
+      try { p = JSON.parse(p); } catch (e) { return null; }
+    }
+    return p;
   }
 
   /**
@@ -670,7 +698,9 @@ class settings_main extends LetcBox {
         // checkForm. Filter on the discriminator so stray clicks don't
         // close the modal.
         if (!args || !args.data) return;
-        return this._finalizeMfa();
+        // args.data is the set_mfa response (get_user) — the source of truth
+        // for the new mfa state.
+        return this._finalizeMfa(args.data);
 
       case "mfa-cancel":
         return this._cancelMfa();
