@@ -81,6 +81,9 @@ jobs:
           echo "Building $NEW for stage main UI"
           sudo bash -c "cd '$REPO_DIR' && npm install --no-audit --no-fund"
           sudo bash -c "cd '$REPO_DIR' && npm run deploy -- deploy"
+          # reload page server so it serves the new build hash (mirrors container "Start services")
+          sudo /usr/sbin/drumee start main
+          sudo /usr/sbin/drumee start main/service
 
       - name: Verify stage main UI (TEST)
         if: steps.target.outputs.mode == 'stage'
