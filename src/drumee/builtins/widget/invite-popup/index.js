@@ -32,13 +32,20 @@ class __invite_popup extends LetcBox {
     super.initialize(opt);
     this.declareHandlers();
     this._invitees = [];
-    // Don't seed hub_id from opt: the workspace input renders empty, so a
-    // pre-seeded id would make the Send button look enabled while the user
-    // sees an empty placeholder. Force an explicit pick.
+    // Pre-seed the first workspace row when the caller opened the popup from a
+    // specific workspace (the kebab "Invite" on a hub passes hub_id + hub_name).
+    // Require BOTH the id and the name: seeding only the id would enable Send
+    // while the input shows an empty placeholder. Skip the personal home
+    // (Visitor.id) — it is not an invitable workspace, so callers that fall back
+    // to it (e.g. the topbar with no current workspace) still get the picker.
+    const seedId =
+      opt.hub_id && opt.hub_name && String(opt.hub_id) !== String(Visitor.id)
+        ? opt.hub_id
+        : null;
     this._workspaces = [
       {
-        hub_id: null,
-        name: "",
+        hub_id: seedId,
+        name: seedId ? opt.hub_name : "",
         roleIds: DEFAULT_ROLE_IDS.slice(),
       },
     ];
