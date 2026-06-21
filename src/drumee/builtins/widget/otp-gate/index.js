@@ -77,7 +77,9 @@ async function openOtpModal(widget, opts) {
 
   // dtk_otp lives in @drumee/ui-toolkit and its loadSeeds() isn't called
   // by the host bundle. Self-register on demand so Kind.waitFor resolves.
-  if (!Kind.get("dtk_otp")) {
+  // Use exists() (not get()) for the guard — get() warns "Failed to find
+  // kind for dtk_otp" the first time, before we've registered it.
+  if (!Kind.exists("dtk_otp")) {
     Kind.registerAddons({
       dtk_otp: import("@drumee/ui-toolkit/widgets/otp"),
     });
@@ -90,7 +92,7 @@ async function openOtpModal(widget, opts) {
     return;
   }
 
-  const card = overlay.feed(
+  overlay.feed(
     // bubble:0 + service:"otp-gate-noop" makes the card root a click sink:
     // the framework attaches an onclick that stops propagation, so clicks
     // anywhere inside the popup (including stray bubbles from digit cells
@@ -121,9 +123,14 @@ async function openOtpModal(widget, opts) {
           // require `args.data` (present only on programmatic triggers,
           // absent on raw MouseEvents). See settings/main/index.js.
           kind: "dtk_otp",
-          // Addressable so we can grab the instance after feed() and wrap
-          // its submit (see attachSubmitSpinner below).
+          // Addressable so we can grab the instance and wrap its submit (see
+          // attachSubmitSpinner below). partHandler pins where the part
+          // registers: without it the framework registers on the nearest
+          // ancestor declaring _handledEvents.part (not this card), so the
+          // host could never resolve "otp-widget". Pinning to the host makes
+          // host.on(part.ready) / host._branches deterministic.
           sys_pn: "otp-widget",
+          partHandler: [widget],
           payload: {
             ...payload,
             secret,
@@ -151,7 +158,7 @@ async function openOtpModal(widget, opts) {
   // duration of the verify round-trip (see the `[data-submitting]` rule in
   // the otp-gate skin). Only the submit `api` is gated — resend already has
   // its own [data-resending] state and is delegated to the host anyway.
-  attachSubmitSpinner(card, api);
+  attachSubmitSpinner(widget, api);
 }
 
 /**
@@ -164,11 +171,16 @@ async function openOtpModal(widget, opts) {
  * synchronously (its parent has no `_branches` yet). Instead we listen for the
  * part.ready event and wrap the instance the moment it registers.
  *
- * @param {Backbone.View} card  the Box.Y returned by overlay.feed()
+ * dtk_otp's kind is pulled in via a dynamic import, so it mounts (and registers
+ * its part) AFTER feed() returns. It registers on its partHandler — which we
+ * pin to `host` in the skeleton — so we listen on the host for part.ready and
+ * wrap the instance the moment "otp-widget" registers.
+ *
+ * @param {Backbone.View} host  host widget (the dtk_otp partHandler)
  * @param {string}        api   the submit SERVICE (resend POSTs elsewhere)
  */
-function attachSubmitSpinner(card, api) {
-  if (!card || typeof card.on !== "function") return;
+function attachSubmitSpinner(host, api) {
+  if (!host || typeof host.on !== "function") return;
 
   const wrap = (otp) => {
     if (!otp || otp._otpGateSubmitWrapped || typeof otp.postService !== "function") {
@@ -195,18 +207,22 @@ function attachSubmitSpinner(card, api) {
     };
   };
 
-  // Fast path: already mounted (guard `_branches`, which is created lazily on
-  // the first registerPart and is undefined until then).
-  const existing = card._branches && card._branches["otp-widget"];
+  // Fast path: already registered on the host (host._branches is initialised by
+  // its own skeleton parts long before the modal opens).
+  const existing = host._branches && host._branches["otp-widget"];
   if (existing && (!existing.isDestroyed || !existing.isDestroyed())) {
     return wrap(existing);
   }
-  // Otherwise wrap as soon as dtk_otp registers itself as the "otp-widget" part.
-  card.on(_e.part.ready, (child) => {
+  // Otherwise wrap as soon as dtk_otp registers itself as the "otp-widget"
+  // part. Use a named handler + targeted off so we don't disturb the host's
+  // other part.ready listeners.
+  const onReady = (child) => {
     if (child && child.mget && child.mget(_a.sys_pn) === "otp-widget") {
+      host.off(_e.part.ready, onReady);
       wrap(child);
     }
-  });
+  };
+  host.on(_e.part.ready, onReady);
 }
 
 /**

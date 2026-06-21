@@ -371,7 +371,9 @@ class __welcome_signin extends __welcome_interact {
    * @param {Object} data
    */
   async _promptOtpReconnect(data) {
-    if (!Kind.get("dtk_otp")) {
+    // exists() (not get()) avoids a "Failed to find kind" warning before the
+    // addon is registered.
+    if (!Kind.exists("dtk_otp")) {
       Kind.registerAddons({ dtk_otp: import("@drumee/ui-toolkit/widgets/otp") });
     }
     await Kind.waitFor("dtk_otp");
