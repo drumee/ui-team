@@ -966,8 +966,21 @@ class __media_interact extends media_core {
       (typeof this.getHostId === "function" && this.getHostId()) ||
       this.mget(_a.hub_id) ||
       Visitor.id;
+    // Pre-fill the popup's workspace row with the workspace the user opened
+    // Invite from — the kebab "Invite" is a hub-only action, so this node IS
+    // that workspace and its name matches hub_id. Pass the name only when this
+    // is a hub: for a non-hub node getHostId() points at a parent hub whose
+    // name we don't have here, and a name/id mismatch would mislead the user.
+    const hub_name = this.isHub
+      ? this.mget(_a.filename) || this.mget(_a.name) || ""
+      : "";
     return Kind.waitFor("invite_popup").then(() => {
-      Wm.__wrapperModal.feed({ kind: "invite_popup", hub_id, uiHandler: [this] });
+      Wm.__wrapperModal.feed({
+        kind: "invite_popup",
+        hub_id,
+        hub_name,
+        uiHandler: [this],
+      });
     });
   }
 

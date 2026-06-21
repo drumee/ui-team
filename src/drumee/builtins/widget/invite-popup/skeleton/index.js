@@ -32,6 +32,11 @@ const summarizeRoles = (selectedIds) => {
 
 const buildWorkspaceRow = (ui, idx) => {
   const pfx = ui.fig.family;
+  // Reflect any pre-seeded workspace (e.g. opened from a hub's kebab Invite) so
+  // the input shows the workspace name instead of the empty placeholder. Empty
+  // rows (initial picker, "+ Add new") fall back to "" / default role.
+  const ws = (ui._workspaces && ui._workspaces[idx]) || {};
+  const roleIds = ws.roleIds || DEFAULT_ROLE_IDS;
   return Skeletons.Box.X({
     className: `${pfx}__workspace-row`,
     sys_pn: `workspace-row:${idx}`,
@@ -51,6 +56,7 @@ const buildWorkspaceRow = (ui, idx) => {
             partHandler: ui,
             uiHandler: [ui],
             dataset: { idx },
+            value: ws.name || "",
             placeholder:
               LOCALE.INVITE_WORKSPACE_PLACEHOLDER || "Search workspace to add",
             require: "any",
@@ -80,7 +86,7 @@ const buildWorkspaceRow = (ui, idx) => {
                 className: `${pfx}__role-select-label`,
                 sys_pn: `role-label:${idx}`,
                 partHandler: ui,
-                content: summarizeRoles(DEFAULT_ROLE_IDS),
+                content: summarizeRoles(roleIds),
               }),
               Skeletons.Button.Svg({
                 ico: "apps-caret-down",
@@ -99,7 +105,7 @@ const buildWorkspaceRow = (ui, idx) => {
                 dataset: {
                   id: r.id,
                   idx,
-                  checked: DEFAULT_ROLE_IDS.includes(r.id) ? 1 : 0,
+                  checked: roleIds.includes(r.id) ? 1 : 0,
                 },
                 content: r.label,
               }),
