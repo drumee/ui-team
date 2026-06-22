@@ -27,6 +27,11 @@
 
   &__avatar {
     position: absolute;
+    // Anchor the absolute overlay to fill the tile exactly. Without insets the
+    // box takes a *centered* static position inside the center-aligned __main
+    // flex parent, shifting the 100%x100% avatar (and the X icon it centers)
+    // off-centre. inset:0 pins it to the tile so its content is truly centred.
+    inset: 0;
     width: 100%;
     height: 100%;
     z-index: 1;
@@ -111,7 +116,10 @@
     align-items: center;
     justify-content: center;
     z-index: 10;
-    width: 300px;
+    // No fixed width: `left:8px; right:8px` already span the tile. A `width`
+    // here over-constrains the box (width wins over `right`), locking the
+    // footer to a left-anchored 300px strip so the name pill renders
+    // off-centre. Dropping it lets the mic/name/dots centre across the tile.
   }
 
   &__tile-mic {
