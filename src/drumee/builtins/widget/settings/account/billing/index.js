@@ -39,38 +39,26 @@ class settings_billing extends LetcBox {
     }
 
     this.tab = this.state.currentTab;
-    this._setupPaymentWebSocket();
+    // Subscribe to live WS via the framework channel (replaces the leaky
+    // Wm.on('ws:event') that never unsubscribed). Dispatcher calls
+    // onWsMessage(service, data, options) with the service as the FIRST arg.
+    this.bindEvent(_a.live);
   }
 
-  /**
-   * Setup WebSocket listener to receive payment events
-   */
-  _setupPaymentWebSocket() {
-    const WS_EVENT = "ws:event";
-    Wm.on(WS_EVENT, this._handlePaymentWebSocket.bind(this));
+  onBeforeDestroy() {
+    this.unbindEvent(_a.live);
   }
 
-  /**
-   * Handle WebSocket events related to payment
-   * @param {Object} args - WebSocket event arguments
-   */
-  _handlePaymentWebSocket(args = {}) {
-    const { data, options } = args || {};
-    const { service } = options || {};
-
+  onWsMessage(service, data, options = {}) {
     switch (service) {
-      case 'payment.plan_updated':
-        Visitor.respawn(data)
-        this.triggerHandlers({ service: "plan_updated" })
+      case "payment.plan_updated":
+        Visitor.respawn(data);
+        this.triggerHandlers({ service: "plan_updated" });
         break;
+      default:
+        if (super.onWsMessage) super.onWsMessage(service, data, options);
     }
   }
-
-  /**
-   * Handle payment status updates from WebSocket
-   * @param {Object} data - Payment status data
-   */
-  _handlePaymentStatus(data) { }
 
   /**
    * Return view mode for widget
@@ -396,42 +384,21 @@ class settings_billing extends LetcBox {
    * Handle proceed to checkout: call payment API and open payment window
    */
   _proceedToCheckout() {
-    const {
-      bundleStorage, seats, totalStorage, period, totalPrice, selectedPlan = "pro", extraSeats
-    }
-      = this.calculateCheckoutSummary();
-
+    // The SERVER decides the price (Stripe price_id looked up from yp.plan by
+    // plan+period); the client only declares WHAT to buy, never the amount.
     const checkout = this.state.checkout || {};
-    const billingCycle = checkout.billingCycle || "monthly";
-
-    const totalPriceDollars =
-      parseFloat(totalPrice.replace("$", "")) || 0;
-    const value = Math.round(totalPriceDollars * 100);
-    const description = `${selectedPlan.toUpperCase()} Plan - ${billingCycle} - ${checkout.seats || 5
-      } seats`;
-
-    const payment = {
-      value: value,
-      seats: seats || 0,
-      storage: totalStorage.replace(/ +.$/, '') || 0,
-      plan: selectedPlan,
-      interval: period,
-      extraSeats,
-      description,
-      bundleStorage
-    };
-    this.postService(SERVICE.payment.checkout, { payment })
+    const plan = checkout.selectedPlan || "pro";
+    const period = checkout.billingCycle === "yearly" ? "year" : "month";
+    const seats = checkout.seats || 1;
+    this.postService(SERVICE.payment.checkout, { plan, period, seats })
       .then((data) => {
-        let { url } = data;
-        this.triggerHandlers({ service: "proceed-to-payment", url })
+        const { url } = data || {};
+        if (url) window.location.assign(url); // full-page redirect to hosted Checkout
       })
       .catch((e) => {
-        this.warn("Got backend error [_proceedToCheckout]:", e)
+        this.warn("Got backend error [_proceedToCheckout]:", e);
         if (Wm && Wm.alert) {
-          Wm.alert(
-            LOCALE.SOMETHING_WENT_WRONG ||
-            "Something went wrong. Please try again."
-          );
+          Wm.alert(LOCALE.SOMETHING_WENT_WRONG || "Something went wrong. Please try again.");
         }
       });
   }
