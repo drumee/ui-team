@@ -77,7 +77,9 @@ async function openOtpModal(widget, opts) {
 
   // dtk_otp lives in @drumee/ui-toolkit and its loadSeeds() isn't called
   // by the host bundle. Self-register on demand so Kind.waitFor resolves.
-  if (!Kind.get("dtk_otp")) {
+  // Use exists() (not get()) for the guard — get() warns "Failed to find
+  // kind for dtk_otp" the first time, before we've registered it.
+  if (!Kind.exists("dtk_otp")) {
     Kind.registerAddons({
       dtk_otp: import("@drumee/ui-toolkit/widgets/otp"),
     });
@@ -121,6 +123,14 @@ async function openOtpModal(widget, opts) {
           // require `args.data` (present only on programmatic triggers,
           // absent on raw MouseEvents). See settings/main/index.js.
           kind: "dtk_otp",
+          // Addressable so we can grab the instance and wrap its submit (see
+          // attachSubmitSpinner below). partHandler pins where the part
+          // registers: without it the framework registers on the nearest
+          // ancestor declaring _handledEvents.part (not this card), so the
+          // host could never resolve "otp-widget". Pinning to the host makes
+          // host.on(part.ready) / host._branches deterministic.
+          sys_pn: "otp-widget",
+          partHandler: [widget],
           payload: {
             ...payload,
             secret,
@@ -141,6 +151,78 @@ async function openOtpModal(widget, opts) {
       ],
     })
   );
+
+  // Loading-on-submit: dtk_otp self-POSTs the code from checkForm() once all
+  // six boxes are filled and exposes no "submit started" hook, so we wrap the
+  // instance's postService and flip data-submitting on its root for the
+  // duration of the verify round-trip (see the `[data-submitting]` rule in
+  // the otp-gate skin). Only the submit `api` is gated — resend already has
+  // its own [data-resending] state and is delegated to the host anyway.
+  attachSubmitSpinner(widget, api);
+}
+
+/**
+ * Wrap the dtk_otp instance's postService so the verify round-trip shows a
+ * spinner and locks input. Idempotent and best-effort: if the widget never
+ * mounts the modal simply runs without a submit spinner.
+ *
+ * dtk_otp's kind is pulled in via a dynamic import, so it mounts (and
+ * registers its part) AFTER feed() returns — we can't `ensurePart` it
+ * synchronously (its parent has no `_branches` yet). Instead we listen for the
+ * part.ready event and wrap the instance the moment it registers.
+ *
+ * dtk_otp's kind is pulled in via a dynamic import, so it mounts (and registers
+ * its part) AFTER feed() returns. It registers on its partHandler — which we
+ * pin to `host` in the skeleton — so we listen on the host for part.ready and
+ * wrap the instance the moment "otp-widget" registers.
+ *
+ * @param {Backbone.View} host  host widget (the dtk_otp partHandler)
+ * @param {string}        api   the submit SERVICE (resend POSTs elsewhere)
+ */
+function attachSubmitSpinner(host, api) {
+  if (!host || typeof host.on !== "function") return;
+
+  const wrap = (otp) => {
+    if (!otp || otp._otpGateSubmitWrapped || typeof otp.postService !== "function") {
+      return;
+    }
+    otp._otpGateSubmitWrapped = true;
+    const post = otp.postService.bind(otp);
+    otp.postService = function (service, ...rest) {
+      // Resend (and any non-verify POST) keeps the stock behaviour.
+      if (service !== api) return post(service, ...rest);
+      if (this.el) this.el.dataset.submitting = "1";
+      let p;
+      try {
+        p = post(service, ...rest);
+      } catch (e) {
+        if (this.el) this.el.dataset.submitting = "0";
+        throw e;
+      }
+      return Promise.resolve(p).finally(() => {
+        // On success the modal is torn down; on a rejected code dtk_otp clears
+        // the boxes for re-entry — either way the inputs unlock here.
+        if (this.el) this.el.dataset.submitting = "0";
+      });
+    };
+  };
+
+  // Fast path: already registered on the host (host._branches is initialised by
+  // its own skeleton parts long before the modal opens).
+  const existing = host._branches && host._branches["otp-widget"];
+  if (existing && (!existing.isDestroyed || !existing.isDestroyed())) {
+    return wrap(existing);
+  }
+  // Otherwise wrap as soon as dtk_otp registers itself as the "otp-widget"
+  // part. Use a named handler + targeted off so we don't disturb the host's
+  // other part.ready listeners.
+  const onReady = (child) => {
+    if (child && child.mget && child.mget(_a.sys_pn) === "otp-widget") {
+      host.off(_e.part.ready, onReady);
+      wrap(child);
+    }
+  };
+  host.on(_e.part.ready, onReady);
 }
 
 /**

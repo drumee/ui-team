@@ -67,20 +67,16 @@ const __skl_chat_item_forward = function(_ui_) {
       })
     ]});
 
+  // CTA wrapped in a re-feedable part so the selection count can be baked into
+  // the label ("Forward(N)") without a separate counter line.
   const footer  = Skeletons.Box.Y({
     className   : `${chatFrwdFig}__footer`,
     kids        : [
-      Skeletons.Box.X({
-        className   : `${chatFrwdFig}__contact-count`,
-        sys_pn      : 'selected-contact-count'
-      }),
-
-      Skeletons.Note({
-        className : `${chatFrwdFig}__button-confirm button clickable`,
-        content   : LOCALE.FORWARD, //'Forward'
-        service   : 'forward-message',
-        uiHandler : _ui_
-      }) 
+      Skeletons.Box.Y({
+        className   : `${chatFrwdFig}__confirm-wrapper`,
+        sys_pn      : 'forward-button-wrap',
+        kids        : [ _ui_._buildForwardButton(0) ]
+      })
     ]});
 
   const a = Skeletons.Box.Y({

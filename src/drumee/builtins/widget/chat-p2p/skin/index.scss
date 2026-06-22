@@ -413,6 +413,15 @@
       height: 100%;
       width: 100%;
     }
+
+    // Inbox DM has no browsable folder context for its shared files, so drop the
+    // "Show in folder" reveal (and its leading "·" separator) from attachment
+    // cards — leave just the file size on the meta line. Folder team-chat and
+    // bigchat keep the reveal (the file lives in a folder there).
+    .media-grid__reveal,
+    .media-grid__meta-sep {
+      display: none;
+    }
   }
 
   &__overlay-wrapper[data-mode="open"] {

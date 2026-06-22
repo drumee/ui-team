@@ -3,6 +3,7 @@
 @include meta.load-css("attachment");
 @include meta.load-css("menu");
 @include meta.load-css("reply-message");
+@include meta.load-css("reactions");
 
 .widget-chatItem {
   &__ui {
@@ -45,14 +46,9 @@
     }
   }
 
-  // Selected-mode highlight on chat-item root (__ui) so the tint spans the full
-  // row — covers bubble + checkbox area uniformly for both "me" and "other".
-  // The root receives data-selected via chat-item.select().
-  &__ui[data-selected="1"] {
-    background-color: rgba(250, 133, 64, 0.1);
-    border-radius: 6px;
-    padding: 6px 8px;
-  }
+  // No row tint on selection (per request): a selected message is indicated by
+  // its checkbox check only, so picking messages to forward/delete no longer
+  // paints the row background.
 
   // When chat widget is in selection mode, every message becomes clickable —
   // not just the small checkbox.
@@ -106,7 +102,9 @@
       display: flex;
       flex-direction: column;
       gap: 8px;
-      max-width: min(100%, 560px);
+      // Fill the 70%-capped container; the old 560px absolute cap is dropped so
+      // the bubble can use the full 70% on wide chat frames.
+      max-width: 100%;
       min-width: 0;
 
       &.me {
@@ -122,9 +120,10 @@
     }
 
     // Bubble + action menu share one vertically-centred row (see &-line). The
-    // menu is the hover-revealed element floating on one side of the bubble
-    // (skin/menu.scss). The footer (date + seen tick) no longer lives here — it
-    // sits in flow below the bubble, always visible (see &-footer).
+    // menu / quick-bar / emoji picker are hover-revealed, floating ABOVE this
+    // line (absolute, translateY(-100%) — skin/menu.scss + reactions.scss), so
+    // overflow stays visible. The reaction chips and the footer (date + seen
+    // tick) now sit IN FLOW below this line (see &__reaction-row / &__footer-line).
     &-line {
       position: relative;
       display: flex;
@@ -132,6 +131,8 @@
       align-items: center;
       width: fit-content;
       max-width: 100%;
+      // Floating menu / quick-bar / picker protrude ABOVE the bubble.
+      overflow: visible;
 
       // Reveal the action menu while hovering anywhere on the line (the bubble
       // and the floating menu are DOM descendants, so :hover covers them).
@@ -171,11 +172,12 @@
     }
 
     &-date {
+      // Muted grey timestamp #84848c, slightly enlarged (was 8px).
       @include drumee.typo(
-        $size: 8px,
+        $size: 11px,
         $line: 1.4,
         $weight: 400,
-        $color: var(--normal-fg-10)
+        $color: var(--normal-fg-50)
       );
     }
   }
@@ -413,9 +415,11 @@
     }
   }
 
+  // Avatar sits next to the sender name (top of the column), not pushed down to
+  // the bubble. `__profile` is already align-self:flex-start, so no top offset.
   .widget-chatItem__message-container:has(.widget-chatItem__username-container) {
     .widget-chatItem__profile {
-      margin-top: 30px;
+      margin-top: 0;
     }
   }
 
@@ -425,12 +429,15 @@
     }
 
     &-content {
+      // Bolder sender name. NOTE: the typo() mixin only maps weight→font-family
+      // and never emits `font-weight`, so set it explicitly here or it stays normal.
       @include drumee.typo(
-        $size: 13px,
+        $size: 11px,
         $line: 1.4,
         $weight: 700,
         $color: var(--normal-fg-10)
       );
+      font-weight: 800;
       max-width: min(100%, 560px);
       overflow: hidden;
       text-overflow: ellipsis;
@@ -551,7 +558,7 @@
     width: fit-content;
     max-width: 100%;
     @include drumee.typo(
-      $size: 14px,
+      $size: 13px,
       $line: 1.4,
       $weight: 400,
       $color: var(--normal-fg-10)
@@ -568,6 +575,29 @@
 
       & a {
         color: #e4e3ff;
+      }
+
+      // Attachment card + nested reply quote sit on the indigo fill, so their
+      // text must be LIGHT too — their own skins default to theme-aware dark
+      // --normal-fg-*, which is unreadable on indigo (the body above is already
+      // white). Folder/team chat re-pin these dark because there the own bubble
+      // is a light area tint, not indigo.
+      .filename,
+      .media-grid__chatmeta,
+      .media-grid__filesize,
+      .media-grid__meta-sep,
+      .widget-chatItem-reply__note.name,
+      .widget-chatItem-reply__note.name .note-content,
+      .widget-chatItem-reply__note.filename,
+      .widget-chatItem-reply__note.filename .note-content {
+        color: var(--white) !important;
+      }
+
+      .media-grid__reveal,
+      .widget-chatItem-reply__note.conversation .note-content,
+      .widget-chatItem-reply__note.fileext,
+      .widget-chatItem-reply__note.fileext .note-content {
+        color: #e4e3ff !important;
       }
     }
 

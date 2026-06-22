@@ -1,3 +1,110 @@
+diff --git a/node_modules/@drumee/ui-toolkit/widgets/otp/index.js b/node_modules/@drumee/ui-toolkit/widgets/otp/index.js
+index 002f8f0..f6e7810 100644
+--- a/node_modules/@drumee/ui-toolkit/widgets/otp/index.js
++++ b/node_modules/@drumee/ui-toolkit/widgets/otp/index.js
+@@ -53,19 +53,43 @@ export default class dtk_otp extends dtk_common {
+   }
+ 
+   /**
+-   * Bind OTP-specific keydown handling directly on each box's DOM input.
+-   * Navigation and single-char entry are owned here (not the shared core Entry).
++   * Bind OTP keydown + paste directly on each box's DOM <input>. Both
++   * listeners attach in the SAME readiness callback so paste can never lose a
++   * race against keydown: previously two separate `once("input:ready")` passes
++   * (bindKeyEvents before bindPasteEvent) meant a box could fire input:ready
++   * between them, leaving paste unbound while keydown still worked — the
++   * "2FA modal won't paste" symptom. Also binds immediately when the box is
++   * already ready, since `once` would otherwise miss an already-fired event.
+    */
+-  bindKeyEvents() {
++  bindBoxEvents() {
+     this.ensurePart("digits").then(async (p) => {
+       await Kind.waitFor('entry');
+       const boxes = p.children.toArray();
++      const attach = (c) => {
++        const el = this._inputEl(c);
++        if (!el) return;
++        el.addEventListener('keydown', (e) => this._onDigitKeydown(e, c, p));
++        el.addEventListener('paste', (e) => {
++          e.preventDefault();
++          const cb = e.clipboardData || window.clipboardData;
++          const text = (cb && cb.getData ? cb.getData('text') : '') || '';
++          const chars = text.split('').filter((ch) => this._validChar(ch));
++          if (!chars.length) return;
++          const start = c.getIndex();
++          let last = start;
++          for (let k = 0; k < chars.length; k++) {
++            const box = boxes[start + k];
++            if (!box) break;
++            box.setValue(chars[k]);
++            last = start + k;
++          }
++          this._focusBox(boxes, last);
++          this.checkForm();
++        });
++      };
+       for (let c of boxes) {
+-        c.once("input:ready", () => {
+-          const el = this._inputEl(c);
+-          if (!el) return;
+-          el.addEventListener('keydown', (e) => this._onDigitKeydown(e, c, p));
+-        })
++        if (typeof c.isReaddy === 'function' && c.isReaddy()) attach(c);
++        else c.once("input:ready", () => attach(c));
+       }
+     })
+   }
+@@ -126,40 +150,6 @@ export default class dtk_otp extends dtk_common {
+     this.checkForm();
+   }
+ 
+-  /**
+-   * Bind paste on each box: distribute valid chars from the focused index,
+-   * drop invalid chars, ignore overflow, focus the last populated box.
+-   */
+-  bindPasteEvent() {
+-    this.ensurePart("digits").then(async (p) => {
+-      await Kind.waitFor('entry');
+-      const boxes = p.children.toArray();
+-      for (let c of boxes) {
+-        c.once("input:ready", () => {
+-          const el = this._inputEl(c);
+-          if (!el) return;
+-          el.addEventListener('paste', (e) => {
+-            e.preventDefault();
+-            const cb = e.clipboardData || window.clipboardData;
+-            const text = (cb && cb.getData ? cb.getData('text') : '') || '';
+-            const chars = text.split('').filter((ch) => this._validChar(ch));
+-            if (!chars.length) return;
+-            const start = c.getIndex();
+-            let last = start;
+-            for (let k = 0; k < chars.length; k++) {
+-              const box = boxes[start + k];
+-              if (!box) break;
+-              box.setValue(chars[k]);
+-              last = start + k;
+-            }
+-            this._focusBox(boxes, last);
+-            this.checkForm();
+-          })
+-        })
+-      }
+-    })
+-  }
+-
+   /**
+    * Show a transient note below the inputs (in the `tips` row). Non-error
+    * notes auto-clear after 3s; pass persist=1 to keep an error visible until
+@@ -259,8 +249,7 @@ export default class dtk_otp extends dtk_common {
+   */
+   onDomRefresh() {
+     this.feed(require("./skeleton").default(this));
+-    this.bindKeyEvents();
+-    this.bindPasteEvent();
++    this.bindBoxEvents();
+   }
+ 
+ 
 diff --git a/node_modules/@drumee/ui-toolkit/widgets/otp/skin/index.scss b/node_modules/@drumee/ui-toolkit/widgets/otp/skin/index.scss
 index b607598..043a0fb 100644
 --- a/node_modules/@drumee/ui-toolkit/widgets/otp/skin/index.scss

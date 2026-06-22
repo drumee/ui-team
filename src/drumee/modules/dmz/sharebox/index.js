@@ -1,19 +1,16 @@
 
-// Recipient email gate ("require email to view"): accept only real-looking TLDs
-// so common typos like ".con" are rejected (per Lexis 2026-06-17). Every 2-letter
-// TLD is a country code and always accepted; for longer TLDs we accept a curated
-// set of common gTLDs. Extend this set if a legitimate TLD is ever rejected.
-// SCOPED to this gate only — the app-wide Validator.email (signup/invite/…) is
-// intentionally left unchanged.
-const ACCEPTED_TLDS = new Set([
-  'com', 'net', 'org', 'edu', 'gov', 'mil', 'int', 'info', 'biz', 'name', 'pro',
-  'mobi', 'tel', 'asia', 'jobs', 'coop', 'aero', 'cat', 'travel', 'museum', 'post',
-  'app', 'dev', 'xyz', 'site', 'online', 'tech', 'store', 'shop', 'blog', 'cloud',
-  'live', 'life', 'world', 'today', 'news', 'media', 'club', 'work', 'team', 'group',
-  'company', 'agency', 'studio', 'design', 'email', 'space', 'website', 'page',
-  'link', 'wiki', 'zone', 'city', 'global', 'network', 'solutions', 'services',
-  'systems', 'center', 'expert', 'digital', 'academy', 'school', 'finance',
-  'consulting', 'marketing', 'technology'
+// Recipient email gate ("require email to view"): reject only well-known typo
+// TLDs (e.g. ".con" for ".com") so obvious mistakes are caught, while EVERY other
+// valid-format address is accepted — including less common but legitimate TLDs
+// like .law / .bank / .software (a fixed allow-list wrongly rejected those; per
+// Lexis 2026-06-17 + Codex review). Entries here MUST be non-real TLDs only; add
+// more common typos as needed. SCOPED to this gate — the app-wide Validator.email
+// (signup/invite/…) is intentionally left unchanged.
+const TLD_TYPOS = new Set([
+  // .com typos
+  'con', 'cmo', 'ocm', 'vom', 'coom', 'comm', 'ccom', 'conm', 'copm', 'vcom', 'xom',
+  // .net / .org typos
+  'nett', 'nte', 'ogr', 'orgg', 'rog'
 ]);
 
 /**
@@ -473,6 +470,16 @@ class __dmz_sharebox extends LetcBox {
       .then((data) => {
         if (data && _.isEmpty(data.status)) {
           this.__header.feed(this.headerSkeleton(this));
+          // Re-feed the top-nav (Login / Join Workspace vs the recipient's account).
+          // It was first rendered from the INITIAL login response — for a password/
+          // email-gated share that was the anonymous gate response (no
+          // is_authenticated), so it showed the guest Login / Join CTA. The gate has
+          // now passed and the model carries the authenticated identity (mset(data)
+          // in verify*), so re-render it: a logged-in recipient sees their account;
+          // an anonymous one keeps the CTA (is_authenticated still false).
+          this.ensurePart('top-nav').then((nav) => {
+            if (nav) nav.feed(this.topNavSkeleton(this));
+          });
           this.loadDeskContent();
         } else {
           this.handleInfoStatus(data)
@@ -566,6 +573,31 @@ class __dmz_sharebox extends LetcBox {
         }
         return;
 
+      // "Add new" → office document (Document / Spreadsheet / Presentation). Like
+      // add-folder, the dropdown lives in this sharebox's topbar but the create
+      // belongs to the window manager child — delegate, forwarding the cmd (it
+      // carries the template `name`). The server (euroffice.new_doc) re-gates the
+      // create to a can_edit recipient + node-scopes it; this client gate keeps a
+      // view-only recipient from even firing the request.
+      case "new-document":
+        if (this._gateInteraction(this.havePermission(_K.permission.write, this.mget(_a.privilege)))) return;
+        if (this.wm && this.wm.onUiEvent) {
+          this.wm.onUiEvent(cmd, { service: "new-document" });
+        }
+        return;
+
+      // "Add new" → markdown note. Same delegation as add-folder/new-document.
+      // The note saves via media.save as the recipient: a signed-in can_edit
+      // recipient's node-grant authorizes + node-scopes the write; anonymous is
+      // blocked by the A3 read-only ceiling. This client gate keeps a view-only
+      // recipient from firing the request.
+      case "add-note":
+        if (this._gateInteraction(this.havePermission(_K.permission.write, this.mget(_a.privilege)))) return;
+        if (this.wm && this.wm.onUiEvent) {
+          this.wm.onUiEvent(cmd, { service: "add-note" });
+        }
+        return;
+
       case 'open-signup': {
         this.closeSignupRequiredOverlay();
         const { main_domain } = bootstrap();
@@ -654,9 +686,73 @@ class __dmz_sharebox extends LetcBox {
         this.closeSignupRequiredOverlay();
         return;
 
+      // The window manager navigated a sub-folder in place (Cases 3+4) — refresh
+      // the header breadcrumb. The wm owns the nav state; the sharebox owns the topbar.
+      case 'dmz-nav-changed':
+        return this._refreshBreadcrumb();
+
+      // A header breadcrumb crumb was clicked — navigate the wm to that level.
+      case 'breadcrumb-jump':
+        if (this.wm && this.wm.navigateToStackIndex) {
+          this.wm.navigateToStackIndex(cmd.mget('stackIndex'));
+        }
+        return;
+
       default:
         if (super.onUiEvent) return super.onUiEvent(cmd, args);
     }
+  }
+
+  /**
+   * Render the header breadcrumb from the window manager's folder trail (Cases
+   * 3+4), mirroring the desk folder window (refreshBreadcrumbsUI): ancestors are
+   * clickable crumbs in `dmz-breadcrumb-path` (joined by "›", with a trailing
+   * "›"), and the CURRENT folder is the title (ref-window-name). An empty trail
+   * means we're at the share root → no crumbs, title = the share name.
+   */
+  _refreshBreadcrumb() {
+    const wm = this.wm;
+    const trail = (wm && wm.folderTrail && wm.folderTrail()) || [];
+    const depth = trail.length;
+    const rootName =
+      this.mget(_a.title) || this.mget(_a.filename) || this.mget(_a.name) || '';
+    const currentName = depth ? (trail[depth - 1].name || LOCALE.FOLDER) : rootName;
+
+    // Current folder → title.
+    this.ensurePart('ref-window-name').then((t) => {
+      if (t && _.isFunction(t.set)) t.set({ content: currentName });
+    });
+
+    // Ancestors → clickable crumbs: [share root, trail[0 .. depth-2]]. Each crumb
+    // carries the nav depth to keep (0 = root) so a click re-lists that level.
+    this.ensurePart('dmz-breadcrumb-path').then((box) => {
+      if (!box || (box.isDestroyed && box.isDestroyed())) return;
+      box.el.dataset.state = depth ? 1 : 0;
+      if (!depth) {
+        box.feed([]);
+        return;
+      }
+      const fam = this.fig.family;
+      const ancestors = [{ name: rootName, navDepth: 0 }];
+      for (let i = 0; i < depth - 1; i++) {
+        ancestors.push({ name: trail[i].name || LOCALE.FOLDER, navDepth: i + 1 });
+      }
+      const crumbs = [];
+      ancestors.forEach((a, i) => {
+        if (i > 0) {
+          crumbs.push(Skeletons.Note({ className: `${fam}__breadcrumb-sep`, content: '›' }));
+        }
+        crumbs.push(Skeletons.Note({
+          className: `${fam}__breadcrumb-crumb`,
+          content: a.name || LOCALE.FOLDER,
+          service: 'breadcrumb-jump',
+          stackIndex: a.navDepth,
+          uiHandler: [this],
+        }));
+      });
+      crumbs.push(Skeletons.Note({ className: `${fam}__breadcrumb-sep`, content: '›' }));
+      box.feed(crumbs);
+    });
   }
 
   /**
@@ -896,8 +992,9 @@ class __dmz_sharebox extends LetcBox {
 
   /**
    * Stricter email check for the recipient gate ("require email to view").
-   * Requires a valid format AND a real-looking TLD, so typos like ".con" are
-   * rejected while genuine addresses pass. Scoped to this gate — the app-wide
+   * Requires a valid format AND a TLD that is not a known typo (e.g. ".con"), so
+   * obvious mistakes are caught while every other valid address — including
+   * uncommon-but-real TLDs — passes. Scoped to this gate — the app-wide
    * Validator.email (signup/invite/…) is intentionally left unchanged.
    * @param {String} v
    * @returns {Boolean}
@@ -906,7 +1003,7 @@ class __dmz_sharebox extends LetcBox {
     const email = String(v || '').trim().toLowerCase();
     if (!Validator.email(email)) return false;
     const tld = email.slice(email.lastIndexOf('.') + 1);
-    return tld.length === 2 || ACCEPTED_TLDS.has(tld);
+    return !TLD_TYPOS.has(tld);
   }
 
   /**
@@ -1191,13 +1288,17 @@ class __dmz_sharebox extends LetcBox {
    * gated (caller should stop), false to proceed.
    */
   _gateInteraction(hasGrant) {
+    // Anonymous FIRST. A PUBLIC share binds the guest session to the creator, so
+    // an anonymous viewer ALSO has uid === creator_id — checking isOwner before
+    // this wrongly treated them as the owner and let edit/upload actions through
+    // (the A3 read-only ceiling then silently blocked the server write, with NO
+    // popup, so the recipient saw nothing happen). An anonymous visitor must
+    // ALWAYS meet the sign-up / login gate. is_guest is unreliable here (the
+    // server returns it FALSE for public shares); is_authenticated is true only
+    // for a real account.
+    if (!this.mget('is_authenticated')) { this.showSignupRequiredOverlay(); return true; }
     const isOwner = !!this.mget('creator_id') && (this.mget('uid') === this.mget('creator_id'));
     if (isOwner) return false;
-    // Anonymous = NOT authenticated. is_guest is unreliable here (the server returns
-    // it FALSE for public shares, since the guest session is bound to the creator),
-    // so an anonymous viewer of an edit/chat-granting public link would otherwise slip
-    // past the sign-up gate. is_authenticated is set true only for a real account.
-    if (!this.mget('is_authenticated')) { this.showSignupRequiredOverlay(); return true; }
     if (!hasGrant) { this.showRequestAccessPopup(); return true; }
     return false;
   }

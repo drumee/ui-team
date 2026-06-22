@@ -150,7 +150,16 @@ class __player_document extends PlayerInteract {
   }
 
   shouldOpenInEditMode() {
-    if (Visitor.inDmz) return false;
+    if (Visitor.inDmz) {
+      // Secure-share recipient (Phase 1): open office docs in the EurOffice editor
+      // instead of the flat PDFium preview, so recipients get full-fidelity
+      // rendering. The editor is forced READ-ONLY server-side from the share token
+      // (euroffice.html), so this is safe for view-only recipients; edit-grant
+      // editing is Phase 2. Non-office files keep their normal players. edit()
+      // passes the share token so the service can resolve the mode.
+      const ext = (this.mget(_a.ext) || '').toLowerCase();
+      return require('./editable').includes(ext) && !!Platform.get('doc_editor');
+    }
     if (this.mget(_a.mode) === _a.preview) return false;
     if (this.mget(_a.mode) === _a.edit) return true;
     const ext = (this.mget(_a.ext) || '').toLowerCase();
@@ -649,6 +658,13 @@ class __player_document extends PlayerInteract {
     // Forward the app theme so the editor matches it instead of defaulting to dark.
     const theme = (Visitor.wallpaper() || {}).theme || document.documentElement.dataset.theme || 'light'
     let url = `https://${host}${svc}${Platform.get('doc_editor')}.html?hub_id=${hub_id}&nid=${nid}&theme=${theme}`
+    // Secure-share recipient: pass the share token so the editor service forces
+    // read-only mode from the share's caps (Phase 1). DMZ-only; a normal desk
+    // editor request carries no token, so its URL is byte-identical.
+    if (Visitor.inDmz) {
+      const _tok = this.mget(_a.token);
+      if (_tok) url += `&token=${encodeURIComponent(_tok)}`;
+    }
 
     this._editorOrigin = new URL(url).origin;
     this._editorReady = false;
@@ -890,8 +906,26 @@ class __player_document extends PlayerInteract {
       return
     }
     this.size = this.max_size();
-    this.size.width = this.size.width * .9;
-    this.size.height = this.size.height * .9;
+    // In a DMZ/secure-share recipient session the window-manager element is the
+    // constrained share card, so max_size() is far too small — a wide document
+    // (e.g. a spreadsheet PDF) overflows and its rows/cells overlap (only fixed by
+    // going fullscreen). Size from the viewport instead (~2/3 width) so the doc
+    // opens with room to render, matching the desk experience. Gated on
+    // uiRouter.isDmz() (boot area dmz|share) → the desk path is byte-identical.
+    if (window.uiRouter && typeof window.uiRouter.isDmz === 'function' && window.uiRouter.isDmz()) {
+      this.size.width  = Math.round(window.innerWidth * 0.66);
+      this.size.height = Math.round(window.innerHeight * 0.9);
+      // v3.3.28 set this.size.width but the desktop branch below only ever
+      // applies height to the element (line ~911) — the page raster reads the
+      // element's REAL width (page/index.js: scale = canvasWrapper.width()/pageWidth),
+      // so a wide spreadsheet stayed cramped/distorted until fullscreen. Write the
+      // chosen width to the element so the viewport sizing actually takes effect.
+      // DMZ-only: the desk path keeps its existing width untouched.
+      this.$el.width(this.size.width);
+    } else {
+      this.size.width = this.size.width * .9;
+      this.size.height = this.size.height * .9;
+    }
 
 
     if (this.size.width > maxWidth) {
@@ -1022,6 +1056,13 @@ class __player_document extends PlayerInteract {
         if (this._dmzGateDownload()) return;
         this.fetchFile({ url, download: filename })
         break;
+
+      case 'dmz-request-edit':
+        // Share recipient without an edit grant asked to edit → open the share's
+        // request-access flow. Reuse the wired dmz-request-download gate (player →
+        // wm → sharebox → Request Access for signed-in non-members / sign-up for
+        // anonymous); the popup is multi-select so they pick "edit".
+        return this.triggerHandlers({ service: 'dmz-request-download' });
 
       default:
         return super.onUiEvent(cmd);

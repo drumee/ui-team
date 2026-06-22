@@ -1,0 +1,320 @@
+@use "mixins/drumee";
+
+// ---------------------------------------------------------------------------
+// Reaction chip row — IN FLOW directly below the bubble (Figma 2331:43832).
+// Collapses entirely when there are no reactions so the time stays snug under
+// the bubble. The floating quick-bar / picker are separate (appended into
+// __message-line, absolute) — not in this chip row.
+// ---------------------------------------------------------------------------
+.widget-chatItem {
+  &__reaction-row {
+    // Sits in the message-content column between the bubble line and the footer.
+    // Chips flow horizontally and wrap when they exceed the available width.
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px;
+    width: fit-content;
+    max-width: 100%;
+    // Extra vertical breathing room so the chips sit clearly apart from the
+    // bubble above and the time below: 6px padding inside the row adds to the
+    // message-content column's 8px gap (~14px effective each side). The row
+    // background is transparent, so this reads as empty space — it does NOT make
+    // the chip pill taller. Collapsed (data-empty="1" → display:none) → padding
+    // inert, so the no-reaction bubble→time spacing stays the app-standard 8px.
+    padding-top: 6px;
+    padding-bottom: 6px;
+
+    // Hug the bubble's side. The parent message-content already aligns the
+    // column (me → flex-end, other → flex-start); align-self makes it explicit.
+    &.me {
+      align-self: flex-end;
+      justify-content: flex-end;
+    }
+
+    &.other {
+      align-self: flex-start;
+      justify-content: flex-start;
+    }
+
+    // No reactions → collapse (no row, no gap) so the time sits right below the
+    // bubble. _renderReactions toggles this attribute.
+    &[data-empty="1"] {
+      display: none;
+    }
+
+    // Has reactions → show the chip row.
+    &[data-empty="0"] {
+      display: flex;
+    }
+  }
+
+  &__reaction-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 8px;
+    border-radius: 12px;
+    // Subtle neutral pill on the panel background below the bubble (Figma
+    // rgba(0,0,0,0.05)). --normal-fg-05 is the theme-aware equivalent so it stays
+    // legible in light + dark. Chips no longer overlap the bubble, so the old
+    // opaque-elevated fill is gone. Transparent border keeps the box size stable
+    // so the "mine" purple border below doesn't shift layout.
+    border: 1px solid transparent;
+    background-color: var(--normal-fg-05, rgba(0, 0, 0, 0.05));
+    cursor: pointer;
+    user-select: none;
+    // Stable height regardless of emoji width variance.
+    min-height: 24px;
+    line-height: 1;
+    transition: background-color 0.12s ease, border-color 0.12s ease;
+
+    &:hover {
+      // Surface shade, NOT a foreground token: --normal-fg-10 is the primary TEXT
+      // colour (dark in light theme, light in dark), so using it as a background
+      // turned the chip into a black/white pill on hover. --normal-bg-80 is the
+      // theme-aware hover surface used across the app (and by the original chip).
+      background-color: var(--normal-bg-80);
+    }
+
+    // Highlight the viewer's OWN reaction with the brand accent (light-lavender
+    // fill + purple border) — distinct in both themes.
+    &.mine {
+      background-color: var(--primary-purple-10);
+      border-color: var(--primary-purple-40);
+    }
+  }
+
+  &__reaction-emoji {
+    // Match the count size so emoji + count read as one tidy unit.
+    font-size: 12px;
+    line-height: 1;
+    // Prevent emoji from being treated as text — avoids any text-color
+    // inheritance clobbering the emoji rendering.
+    font-family: "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji",
+      sans-serif;
+  }
+
+  &__reaction-count {
+    // line-height MUST match the emoji's (1), not the typo default 1.4 — under the
+    // chip's align-items:center a taller count line-box made the digit sit off the
+    // emoji's centre line (the "emoji/count not on one row" misalignment).
+    @include drumee.typo(
+      $size: 12px,
+      $line: 1,
+      $weight: 500,
+      $color: var(--normal-fg-10)
+    );
+    // Digit ink rides high (baseline → cap-height) while the emoji glyph sits a
+    // touch low, so even box-centred the number looks higher. Nudge it down ~1px
+    // onto the emoji's optical centre line. Tune this value if the font changes.
+    transform: translateY(1px);
+
+    .widget-chatItem__reaction-chip.mine & {
+      // Dark purple count reads clearly on the light-lavender "mine" fill.
+      color: var(--primary-purple-50);
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Quick-bar (Phase 2) — 6 emoji buttons + "+" in a floating pill.
+// Injected into the reactions container by _toggleReactionBar().
+// ---------------------------------------------------------------------------
+.widget-chatItem-reactions {
+  &__bar {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 8px;
+    background-color: var(--normal-bg, #fff);
+    border: 1px solid var(--normal-fg-10);
+    border-radius: 24px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+    width: fit-content;
+    // Replaces the action menu in the same spot: float above the bubble's TOP
+    // edge, anchored to the outer corner (mirrors widget-chatItem-menu__dropdown:
+    // me hugs right, other hugs left, growing toward the panel interior).
+    position: absolute;
+    top: 0;
+    transform: translateY(-100%);
+    z-index: 11;
+
+    &.me {
+      right: 0;
+      left: auto;
+    }
+
+    &.other {
+      left: 0;
+      right: auto;
+    }
+  }
+
+  &__emoji-btn {
+    font-size: 18px;
+    line-height: 1;
+    cursor: pointer;
+    padding: 2px;
+    border-radius: 6px;
+    transition: transform 0.1s ease, background-color 0.1s ease;
+    user-select: none;
+    font-family: "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji",
+      sans-serif;
+
+    &:hover {
+      transform: scale(1.3);
+      background-color: var(--normal-fg-05, rgba(0, 0, 0, 0.04));
+    }
+  }
+
+  &__more-btn {
+    // "＋" uses system font so it renders crisply.
+    font-family: inherit;
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--normal-fg-50);
+    min-width: 24px;
+    text-align: center;
+    border-radius: 6px;
+
+    &:hover {
+      color: var(--normal-fg-80);
+      background-color: var(--normal-fg-05, rgba(0, 0, 0, 0.04));
+      transform: none;
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Full emoji picker popover (Phase 3).
+// Appended into the reactions container; floats below the quick-bar.
+// ---------------------------------------------------------------------------
+.widget-chatItem-emoji-picker {
+  &__popover {
+    // Opens in the SAME spot as the quick-bar it replaces — floating above the
+    // bubble's top edge, anchored to the same outer corner (the bar is hidden
+    // while the picker is open). Author class picks the side.
+    position: absolute;
+    top: 0;
+    transform: translateY(-100%);
+    z-index: 30;
+    background-color: var(--normal-bg, #fff);
+    border: 1px solid var(--normal-fg-10);
+    border-radius: 12px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.16);
+    width: 280px;
+    max-height: 300px;
+    overflow: hidden;
+    // Make sure it doesn't overflow the panel edge on narrow panels.
+    max-width: calc(100vw - 24px);
+
+    &.me {
+      right: 0;
+      left: auto;
+    }
+
+    &.other {
+      left: 0;
+      right: auto;
+    }
+  }
+
+  &__tabs {
+    display: flex;
+    flex-direction: row;
+    gap: 2px;
+    padding: 6px 8px 4px;
+    border-bottom: 1px solid var(--normal-fg-10);
+    flex-wrap: wrap;
+  }
+
+  &__tab {
+    font-size: 18px;
+    line-height: 1;
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 6px;
+    font-family: "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji",
+      sans-serif;
+    transition: background-color 0.1s ease;
+
+    &:hover {
+      background-color: var(--normal-fg-05, rgba(0, 0, 0, 0.04));
+    }
+  }
+
+  &__grid {
+    padding: 8px;
+    overflow-y: auto;
+    max-height: 230px;
+  }
+
+  &__group {
+    // Box.G renders data-flow="g" → display:grid (set by the framework, higher
+    // specificity than a plain class). A grid with no explicit column track
+    // collapses to a single column (the "1-column picker" bug); define the
+    // tracks here — grid-template-columns isn't set by the framework, so it
+    // applies without fighting it.
+    grid-template-columns: repeat(8, 1fr);
+    gap: 2px;
+    padding-bottom: 6px;
+  }
+
+  &__emoji {
+    font-size: 22px;
+    line-height: 1;
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 6px;
+    font-family: "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji",
+      sans-serif;
+    transition: transform 0.1s ease, background-color 0.1s ease;
+    user-select: none;
+
+    &:hover {
+      transform: scale(1.2);
+      background-color: var(--normal-fg-05, rgba(0, 0, 0, 0.04));
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Dark mode — quick-bar + picker stay readable on dark panel backgrounds.
+// All colors use --normal-* tokens so they auto-adapt; only overrides needed.
+// ---------------------------------------------------------------------------
+html[data-theme="dark"] {
+  // Neutral chips are theme-aware (var(--normal-*)) so they need no override. The
+  // "mine" accent uses the FIXED purple ramp, where --primary-purple-10 (#e4e3ff)
+  // is a near-white lavender that glares on a dark panel. Flip the selected chip to
+  // a dark indigo fill with a light count so it reads as accented, not blinding
+  // (border stays --primary-purple-40 from the base rule for a crisp active edge).
+  .widget-chatItem__reaction-chip.mine {
+    background-color: var(--primary-purple-80);
+
+    .widget-chatItem__reaction-count {
+      color: var(--primary-purple-20);
+    }
+  }
+
+  .widget-chatItem-reactions {
+    &__bar {
+      background-color: var(--normal-bg-90);
+      border-color: var(--normal-fg-10);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+    }
+  }
+
+  .widget-chatItem-emoji-picker {
+    &__popover {
+      background-color: var(--normal-bg-90);
+      border-color: var(--normal-fg-10);
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+    }
+
+    &__tabs {
+      border-color: var(--normal-fg-10);
+    }
+  }
+}

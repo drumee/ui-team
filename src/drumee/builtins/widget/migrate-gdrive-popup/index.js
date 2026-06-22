@@ -97,6 +97,7 @@ class __migrate_gdrive_popup extends LetcBox {
     if (this._bc) { try { this._bc.close(); } catch (e) {} this._bc = null; }
     this._stopPolling();
     this._disposePicker();
+    clearTimeout(this._saCopyTimer);
   }
 
   /**
@@ -183,8 +184,13 @@ class __migrate_gdrive_popup extends LetcBox {
       return;
     }
 
-    // 3) No active/unseen job → connect or ready as before.
-    this._state = (res && res.ok) ? 'ready' : 'not-connected';
+    // 3) No active/unseen job → go straight to the share-to-SA flow.
+    // The Google Picker was removed: its iframe needs third-party cookies that
+    // Safari blocks by default (and Chrome is dropping), so it can't work
+    // cross-browser. The SA flow needs no OAuth / Google sign-in / cookies and
+    // works on every browser, so it's now the only import path. (Falls back to
+    // the legacy connect/ready screen only if the server has no SA key.)
+    this._state = this._saAvail ? 'sa' : ((res && res.ok) ? 'ready' : 'not-connected');
     this._render();
   }
 
@@ -385,6 +391,13 @@ class __migrate_gdrive_popup extends LetcBox {
         // Cloud project NUMBER — without it Google records no per-app grant
         // and the worker 403/404s on the very ids the user just picked.
         .setAppId(String(cfg.app_id))
+        // The Picker returns the user's selection via window.postMessage.
+        // Without an explicit origin it targets a guessed one that does NOT
+        // match this deployment (custom domain + `/-/<user>/` subpath), so the
+        // PICKED message — and our _onPicked callback — is silently dropped:
+        // the picker closes but the popup never shows the staged files. Pin it
+        // to this page's real origin so the result always reaches us.
+        .setOrigin(window.location.protocol + '//' + window.location.host)
         .setCallback((data) => this._onPicked(data))
         .build();
       picker.setVisible(true);
@@ -747,7 +760,9 @@ class __migrate_gdrive_popup extends LetcBox {
     // doesn't show a stale folder name from the previous run.
     this._saFolder = null;
     this._saError = null;
-    this._state = 'ready';
+    // SA-only: "Migrate again" returns to the share-to-SA screen, not the
+    // removed Picker/ready screen.
+    this._state = this._saAvail ? 'sa' : 'ready';
     this._render();
   }
 
@@ -915,7 +930,23 @@ class __migrate_gdrive_popup extends LetcBox {
         const email = this._saEmail || '';
         try { navigator.clipboard.writeText(email); } catch (e) { /* http ctx */ }
         const b = this._getPartEl('sa-copy-btn');
-        if (b) b.dataset.copied = '1';
+        if (b) {
+          const card = b.closest(`.${this.fig.family}__sa-email-card`);
+          b.textContent = LOCALE.COPIED || 'Copied';
+          // reset → reflow → set so the green "pop" replays on every click,
+          // even rapid repeat clicks within the revert window.
+          b.dataset.copied = '';
+          if (card) card.dataset.copied = '';
+          void b.offsetWidth;
+          b.dataset.copied = '1';
+          if (card) card.dataset.copied = '1';
+          // Revert to the idle "Copy" label after a short, visible beat.
+          clearTimeout(this._saCopyTimer);
+          this._saCopyTimer = setTimeout(() => {
+            if (b.isConnected) { b.dataset.copied = ''; b.textContent = LOCALE.COPY || 'Copy'; }
+            if (card && card.isConnected) card.dataset.copied = '';
+          }, 1800);
+        }
         return;
       }
       case 'gdrive-sa-verify':

@@ -27,11 +27,13 @@ const __skl_chat_forward_list_item = function(_ui_) {
       || LOCALE.NAME_CONTACT;
 
     displayIcon = Skeletons.UserProfile({
-      className : `${chatFrwdListFig}__profile ${type}`,
-      id        : _ui_.mget(_a.id),
-      firstname : fname,
-      lastname  : lname,
-      fullname
+      className  : `${chatFrwdListFig}__profile ${type}`,
+      id         : _ui_.mget(_a.id),
+      firstname  : fname,
+      lastname   : lname,
+      fullname,
+      online     : _ui_.mget(_a.online),
+      live_status: 1
     });
 
   } else if (type === _a.shareRoom) {
@@ -48,6 +50,18 @@ const __skl_chat_forward_list_item = function(_ui_) {
     content   : displayName
   });
 
+  // Name + presence stacked (Figma 2307-52459). The presence line is appended
+  // only when there's a real status to show — getPresenceText returns '' for
+  // team rooms and for contacts without a status field, so no empty row.
+  const infoKids = [name];
+  const presenceText = _ui_.getPresenceText();
+  if (presenceText) {
+    infoKids.push(Skeletons.Note({
+      className : `${chatFrwdListFig}__presence`,
+      content   : presenceText
+    }));
+  }
+
   const _state = _ui_.getUserState();
   const checkBox = Skeletons.Button.Svg({
     className   : `${chatFrwdListFig}__icon checkbox ${type}`,
@@ -55,7 +69,7 @@ const __skl_chat_forward_list_item = function(_ui_) {
     sys_pn      : 'room-item-checkbox',
     state       : _state,
     value       : _ui_.mget(_a.id),
-    formItem    : 'selector', 
+    formItem    : 'selector',
     service     : _ui_.mget(_a.service) || 'trigger-room-select',
     uiHandler   : _ui_,
     type        : _ui_.mget(_a.type)
@@ -72,7 +86,10 @@ const __skl_chat_forward_list_item = function(_ui_) {
             className   : `${chatFrwdListFig}__list ${type}`,
             kids        : [
               displayIcon,
-              name,
+              Skeletons.Box.Y({
+                className : `${chatFrwdListFig}__info ${type}`,
+                kids      : infoKids
+              }),
               checkBox
             ]})
         ]})

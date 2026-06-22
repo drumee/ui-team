@@ -376,6 +376,7 @@ class apps_main extends LetcBox {
       const insideRow = openRow && openRow.contains(e.target);
       const insideDropdown = dropdown && dropdown.contains(e.target);
       if (!insideRow && !insideDropdown) {
+        this._cancelCountrySearch();
         this._secCtrl.countryPickerOpen = null;
         this._secCtrl.countrySearch = "";
         this._render();
@@ -457,9 +458,67 @@ class apps_main extends LetcBox {
     // offsets before the rebuild and restore them afterwards so the page stays
     // put instead of jumping to the top on each click.
     const saved = this._captureScroll();
+    // feed() recreates the country-search input, so a live-filter keystroke
+    // would otherwise drop focus mid-typing. Re-focus it after the rebuild.
+    const refocusSearch = this._countrySearchHasFocus();
     this.feed(require("./skeleton").default(this));
     this._restoreScroll(saved);
+    if (refocusSearch) this._refocusCountrySearch();
     this._scheduleTableScrollSync();
+  }
+
+  // The geo-fencing country dropdown filters as you type; its <input> is torn
+  // down and rebuilt by feed() on every keystroke. These keep focus + caret on
+  // the freshly-built field so typing is uninterrupted.
+  _countrySearchHasFocus() {
+    if (!this.el || typeof document === "undefined") return false;
+    const active = document.activeElement;
+    if (!active) return false;
+    const root = this.el.querySelector(".apps-main__ac-cdrop-search-input");
+    return !!root && (root === active || root.contains(active));
+  }
+
+  _refocusCountrySearch() {
+    if (!this.el) return;
+    const root = this.el.querySelector(".apps-main__ac-cdrop-search-input");
+    if (!root) return;
+    const input =
+      root.matches && root.matches("input, textarea")
+        ? root
+        : root.querySelector("input, textarea");
+    if (!input) return;
+    input.focus();
+    try {
+      const n = input.value.length;
+      input.setSelectionRange(n, n);
+    } catch (e) {
+      /* setSelectionRange unsupported on this input type — focus is enough */
+    }
+  }
+
+  // Coalesce rapid keystrokes into a single filter+re-render after a short
+  // idle. The committed value lands in `_secCtrl.countrySearch`; `_render`
+  // restores caret/focus so typing continues seamlessly.
+  _debounceCountrySearch(value) {
+    this._pendingCountrySearch = value;
+    if (this._countrySearchTimer) clearTimeout(this._countrySearchTimer);
+    this._countrySearchTimer = setTimeout(() => {
+      this._countrySearchTimer = null;
+      if (!this._secCtrl) return;
+      if ((this._secCtrl.countrySearch || "") === this._pendingCountrySearch) {
+        return;
+      }
+      this._secCtrl.countrySearch = this._pendingCountrySearch;
+      this._render();
+    }, 200);
+  }
+
+  _cancelCountrySearch() {
+    if (this._countrySearchTimer) {
+      clearTimeout(this._countrySearchTimer);
+      this._countrySearchTimer = null;
+    }
+    this._pendingCountrySearch = null;
   }
 
   // Page-level scroll containers whose scrollTop is lost when feed() rebuilds
@@ -1858,8 +1917,8 @@ class apps_main extends LetcBox {
           // null | "start-hour" | "start-minute" | "end-hour" | "end-minute"
           timeUnitOpen: null,
           days: { mon: true, tue: true, wed: true, thu: true, fri: true },
-          allowedCountry: null,
-          blockedCountry: null,
+          allowedCountries: [], // multi-select ISO codes
+          blockedCountries: [], // multi-select ISO codes
           countryPickerOpen: null, // null | "allowed" | "blocked"
           countrySearch: "",
           members: [],
@@ -1875,6 +1934,7 @@ class apps_main extends LetcBox {
       }
 
       case "apps-ac-close":
+        this._cancelCountrySearch();
         this._editingHub = null;
         this._secCtrl = null;
         return this._render();
@@ -1983,6 +2043,7 @@ class apps_main extends LetcBox {
         if (!this._secCtrl) return;
         const kind = cmd.mget("country_kind");
         if (kind !== "allowed" && kind !== "blocked") return;
+        this._cancelCountrySearch();
         // Toggle the picker: clicking the open row collapses it.
         this._secCtrl.countryPickerOpen =
           this._secCtrl.countryPickerOpen === kind ? null : kind;
@@ -1998,8 +2059,11 @@ class apps_main extends LetcBox {
             : cmd && cmd.mget && cmd.mget(_a.value)) || ""
         ).toString();
         if (next === (this._secCtrl.countrySearch || "")) return;
-        this._secCtrl.countrySearch = next;
-        return this._render();
+        // Debounce: the native <input> updates instantly, but defer the
+        // filter+re-render so fast typing doesn't rebuild the list (and refetch
+        // flag SVGs) on every keystroke.
+        this._debounceCountrySearch(next);
+        return;
       }
 
       case "apps-ac-select-country": {
@@ -2007,10 +2071,33 @@ class apps_main extends LetcBox {
         const kind = cmd.mget("country_kind");
         const code = cmd.mget("country_code");
         if (!code || (kind !== "allowed" && kind !== "blocked")) return;
-        if (kind === "allowed") this._secCtrl.allowedCountry = code;
-        else this._secCtrl.blockedCountry = code;
-        this._secCtrl.countryPickerOpen = null;
-        this._secCtrl.countrySearch = "";
+        const sc = this._secCtrl;
+        const sameKey = kind === "allowed" ? "allowedCountries" : "blockedCountries";
+        const otherKey = kind === "allowed" ? "blockedCountries" : "allowedCountries";
+        if (!Array.isArray(sc[sameKey])) sc[sameKey] = [];
+        if (!Array.isArray(sc[otherKey])) sc[otherKey] = [];
+        const i = sc[sameKey].indexOf(code);
+        if (i >= 0) {
+          // Toggle off.
+          sc[sameKey].splice(i, 1);
+        } else {
+          sc[sameKey].push(code);
+          // Allowed and Blocked are mutually exclusive.
+          sc[otherKey] = sc[otherKey].filter((c) => c !== code);
+        }
+        // Keep the dropdown open so several countries can be picked in a row.
+        return this._render();
+      }
+
+      case "apps-ac-remove-country": {
+        if (!this._secCtrl) return;
+        const kind = cmd.mget("country_kind");
+        const code = cmd.mget("country_code");
+        if (!code || (kind !== "allowed" && kind !== "blocked")) return;
+        const key = kind === "allowed" ? "allowedCountries" : "blockedCountries";
+        if (Array.isArray(this._secCtrl[key])) {
+          this._secCtrl[key] = this._secCtrl[key].filter((c) => c !== code);
+        }
         return this._render();
       }
 

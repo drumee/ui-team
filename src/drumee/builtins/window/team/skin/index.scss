@@ -106,7 +106,46 @@
 
   .widget-chatItem__conversation-content {
     &.me {
-      background-color: var(--area-private);
+      // Light private tint + pinned dark text — matches the folder team-chat own
+      // bubble (shared --chat-bubble-* tokens). The raw --area-private #eb6159 is
+      // too dark for the near-black body text; the tint keeps it legible and the
+      // foreground is pinned to theme-independent dark constants (the bubble fill
+      // is fixed in both themes).
+      background-color: var(--chat-bubble-private);
+      color: var(--primary-purple-100);
+
+      .note-content,
+      .user-mention {
+        color: var(--primary-purple-100);
+      }
+
+      a {
+        color: var(--primary-purple-50);
+      }
+
+      // Attachment card + reply quote on the light private tint — pin dark so
+      // they read (mirrors folder team-chat; base chat-item pins these light for
+      // the indigo inbox/bigchat bubble).
+      .filename,
+      .media-grid__chatmeta,
+      .media-grid__filesize,
+      .media-grid__meta-sep,
+      .widget-chatItem-reply__note.name,
+      .widget-chatItem-reply__note.name .note-content,
+      .widget-chatItem-reply__note.filename,
+      .widget-chatItem-reply__note.filename .note-content {
+        color: var(--primary-purple-100) !important;
+      }
+
+      .media-grid__reveal {
+        color: var(--primary-purple-50) !important;
+      }
+
+      .widget-chatItem-reply__note.conversation .note-content,
+      .widget-chatItem-reply__note.fileext,
+      .widget-chatItem-reply__note.fileext .note-content {
+        color: var(--tertiary-grey-80) !important;
+      }
     }
   }
 }

@@ -1,125 +1,167 @@
 @use "mixins/drumee";
 
 .widget-chatItem {
+  // Chat attachment = horizontal file card (Figma 2216-162714): a small icon /
+  // image tile on the left, filename + "<size> · Show in folder" on the right.
+  // The card is nested inside the message bubble (see chat-item index.js), below
+  // the text, so it spans the bubble width. Multiple files stack as rows.
   &__attachment-wrapper {
-    //height: 86px;
-    margin-bottom: 4px; //8px;
+    // Gap below the message text (Figma gap-8) now that the card sits inside
+    // the bubble. File-only messages have no text above, so no top gap.
+    margin: 8px 0 0;
+
+    &.no-text {
+      margin-top: 0;
+    }
+    // The bubble is width:fit-content; give the card a floor so a file-only
+    // message doesn't collapse the card to the tile + a sliver of filename.
+    min-width: min(220px, 100%);
+    width: 100%;
     z-index: 1 !important;
 
-    // __main là block layout (chỉ width 100%, không flex) → align-self không hoạt động.
-    // Dùng cùng kỹ thuật như __message-container.me: width co lại + margin-left auto đẩy phải.
-    &.me {
-      margin-left: auto;
-      width: fit-content;
-    }
-
-    // Square attachment thumb — same width/height keeps grid uniform between
-    // image previews (image-capable fills) and document icons (centered SVG).
-    // $attach-row = thumb + filename row below (4px margin + ~20px text).
-    $attach-size: 96px;
-    $attach-row: $attach-size + 24px;
-
     &-list {
-      flex: 1;
-      margin-top: 5px;
-      max-height: $attach-row;
-      min-height: $attach-row;
+      max-height: none;
+      min-height: 0;
       width: 100%;
 
-      & .smart-container {
-        height: 100%;
-      }
-
-      & .dialog__wrapper.box {
-        z-index: 10 !important;
-      }
-
+      & .smart-container,
+      & .list-smart,
+      & .list-smart__container,
       & .media-wrapper__ui {
         background-color: inherit;
-        height: inherit;
-        width: inherit;
+        height: auto;
+        width: 100%;
       }
 
-      & .list-smart {
-        height: inherit !important;
-        width: inherit;
+      // The attachment list must NOT be its own scroll area — size to content so
+      // the file cards sit inline in the message (no inner vertical scrollbar /
+      // always-visible rail from the smart list).
+      & .smart-container,
+      & .list-smart__container {
+        height: auto !important;
+        max-height: none !important;
+        overflow: visible !important;
+      }
+
+      & .ps__rail-x,
+      & .ps__rail-y,
+      & .ps__scrollbar-x,
+      & .ps__scrollbar-y {
+        display: none !important;
       }
 
       & .media-grid {
+        // Kill the folder-grid hover "halo": media-grid renders a ::before that
+        // is 6px larger than the card filled with --grid-hover-bg. In the bubble
+        // the card body is transparent so that halo shows as a mismatched panel
+        // BEHIND the body, while the opaque image tile keeps its own colour — the
+        // two backgrounds the user sees on hover. The chat card needs no halo.
+        &[data-hover="on"]::before,
+        &__ui[data-hover="on"]::before,
+        &__container[data-hover="on"]::before,
+        &__content[data-hover="on"]::before {
+          display: none !important;
+        }
+        // The actual hover highlight is applied on the OUTER wrapper in the folder
+        // window skin (window/folder/skin/index.scss), where it can outrank the
+        // `.me`-bubble `transparent !important` rule that strips the card surfaces.
+
         &__ui {
-          background-color: inherit;
-          border-radius: 8px;
+          background-color: transparent;
           box-shadow: none;
-          height: $attach-row;
-          margin: 0 4px;
-          min-width: $attach-size;
-          width: $attach-size;
           display: flex;
-          flex-direction: column;
+          height: auto;
+          margin: 0;
+          min-width: 0;
+          width: 100%;
+
+          // Stack multiple files as separate rows.
+          & + .media-grid__ui,
+          &:not(:first-child) {
+            margin-top: 6px;
+          }
         }
 
-        &__container {
-          // Bg + radius + overflow moved to &__background so the filename
-          // row below the thumb isn't clipped (and isn't trapped inside
-          // the colored rounded card).
-          background-color: transparent;
-          height: auto;
-          width: $attach-size;
-          display: flex;
-          flex-direction: column;
+        // Row: tile (left) + text column (right).
+        &__container,
+        &__content {
           align-items: center;
+          background-color: transparent;
+          column-gap: 9px;
+          flex-direction: row;
+          height: auto;
           justify-content: flex-start;
+          width: 100%;
 
           &[data-hover="on"] {
             box-shadow: none;
           }
-
-          & .icon {
-            height: 48px;
-            width: 48px;
-            margin: 0;
-            position: static;
-          }
         }
 
+        // Lock card geometry so the media widget's hover preview-swap
+        // (icon → poster/vignette) and grid shift-animation can't resize or
+        // translate the card and shove the chat scroll on hover.
+        &__ui,
+        &__container,
         &__content {
-          display: flex;
-          flex-direction: column;
-          align-items: center;
-          justify-content: flex-start;
-          width: $attach-size;
+          transform: none !important;
         }
 
+        // Icon / image tile — grey rounded square. Theme-aware surface so it
+        // blends with the (dark) card body in dark mode instead of staying a
+        // fixed light grey: --normal-bg-90 is #f2f2f7 in light (= the old Figma
+        // Grey/20, unchanged) and #282538 in dark (a subtle tile on the elevated
+        // bubble). Fixed size (overflow clipped) so nothing inside grows on hover.
         &__background {
-          background-color: var(--default-bg);
-          border-radius: 8px;
-          overflow: hidden;
-          display: flex;
           align-items: center;
+          background-color: var(--normal-bg-90);
+          border-radius: 4px;
+          display: flex;
+          flex: 0 0 auto;
+          height: 44px !important;
           justify-content: center;
+          max-height: 44px;
+          max-width: 44px;
+          min-height: 44px;
+          min-width: 44px;
+          overflow: hidden;
+          width: 44px !important;
         }
 
-        &-notify__container {
-          display: none;
+        // Image preview fills the tile; clipped to 44px regardless of hover.
+        & .preview,
+        & .preview-container,
+        & .preview-content {
+          height: 100% !important;
+          max-height: 44px;
+          max-width: 44px;
+          width: 100% !important;
         }
 
-        // Image fills the square preview box.
+        & .icon {
+          height: 26px;
+          margin: 0;
+          position: static;
+          width: 26px;
+        }
+
+        // Image attachments show their thumbnail in the tile.
         & .preview.image-capable {
-          height: $attach-size;
-          width: $attach-size;
+          height: 44px;
           object-fit: cover;
+          width: 44px;
         }
 
-        // Show filename below the thumb so identical-looking attachments
-        // (multiple files of the same format) stay distinguishable. Date /
-        // kebab stay hidden — they would push the row past the message
-        // bubble.
+        // Text column.
         &__meta-row {
+          align-items: flex-start;
           display: flex;
+          flex: 1 1 auto;
           flex-direction: column;
-          align-items: center;
-          width: $attach-size;
           margin-top: 0;
+          min-width: 0;
+          row-gap: 2px;
+          width: auto;
         }
 
         &__meta-row-top {
@@ -127,53 +169,59 @@
           width: 100%;
         }
 
+        // Filename on one line — clips with an ellipsis when too long (the
+        // extension is allowed to be cut off, no longer pinned). media-grid
+        // filename.scss forces a 2-line -webkit-box clamp; override to a single
+        // truncating line.
         & .filename {
-          display: block;
-          width: 100%;
-          max-width: $attach-size;
-          font-size: 11px;
-          line-height: 1.3;
-          text-align: center;
-          color: var(--normal-fg-10);
+          @include drumee.typo($size: 12px, $line: 1.4, $color: var(--normal-fg-10));
+          -webkit-line-clamp: unset;
+          display: block !important;
+          max-width: 100%;
           overflow: hidden;
+          text-align: left;
           text-overflow: ellipsis;
-          white-space: nowrap;
+          white-space: nowrap !important;
+          width: 100%;
         }
 
+        // "<size> · Show in folder" — grey, with the reveal action as a link.
+        &__chatmeta {
+          @include drumee.typo($size: 10px, $line: 1.4, $color: var(--normal-fg-50));
+          display: block;
+        }
+
+        & .media-grid__reveal {
+          color: var(--primary-purple-40, #5950ff);
+          cursor: pointer;
+
+          &:hover {
+            text-decoration: underline;
+          }
+        }
+
+        // Date / kebab / remove / notify are not shown on the chat card.
         &__date,
-        .media-context-menu__trigger {
+        & .media-context-menu__trigger,
+        &__remove,
+        &-notify__container {
           display: none !important;
-        }
-
-        // Sizing for &__background is consolidated in the earlier rule above
-        // (it also carries the bg + rounded-card clip moved off of __container).
-        &__background {
-          height: $attach-size;
-          width: $attach-size;
-        }
-
-        &__remove {
-          display: none;
         }
       }
     }
 
     .drumee-spinner {
-      top: 15px;
-      left: 15px;
-      width: 38px;
       height: 38px;
+      left: 15px;
       position: absolute;
+      top: 15px;
+      width: 38px;
     }
   }
 }
 
-// Dark mode — chat-item attachment containers and inner media-wrapper use
-// the legacy --default-bg / --default-background palette which is hardcoded
-// to white in skin/vars and never overridden by the dark theme. In dark
-// mode the freshly-sent attachment renders as a bright white card pinned
-// at the bottom of the chat (and looks like a full-width white panel).
-// Map those surfaces to the theme background.
+// Dark mode — keep inner surfaces transparent so the freshly-sent attachment
+// doesn't flash a white card; the icon tile keeps its own light fill.
 html[data-theme="dark"] {
   .widget-chatItem {
     &__attachment-wrapper {
@@ -182,10 +230,6 @@ html[data-theme="dark"] {
 
     .media-wrapper__ui {
       background-color: transparent !important;
-    }
-
-    .media-grid__container {
-      background-color: var(--normal-bg-80, #333042);
     }
 
     .media-grid__ui {

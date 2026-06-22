@@ -11,6 +11,7 @@ const {
   tabBar,
   chatPanel,
   visioMenu,
+  newFileMenu,
   getAreaLabel,
 } = require("../../../../builtins/window/skeleton/toolkit/index");
 
@@ -27,6 +28,16 @@ function dmzTopbar(ui) {
     className: `${cnTopbarTitle}__wrapper`,
     kids: [
       require("../../../../builtins/window/skeleton/topbar/folder-icon")(area),
+      // Header breadcrumb for in-place sub-folder navigation (Cases 3+4), mirroring
+      // the desk folder window's `folder-breadcrumb-path`: ancestors render here as
+      // clickable crumbs (+ a trailing "›") and the current folder is the title
+      // (ref-window-name). Empty at the share root. Fed by sharebox._refreshBreadcrumb.
+      Skeletons.Box.X({
+        className: `${ui.fig.family}__breadcrumb-path`,
+        sys_pn: "dmz-breadcrumb-path",
+        partHandler: ui,
+        dataset: { state: 0 },
+      }),
       Skeletons.Note({
         sys_pn: "ref-window-name",
         className: _a.name,
@@ -48,18 +59,27 @@ function dmzTopbar(ui) {
     className: `${cnWindowButton}__buttons-wrapper`,
     kids: [
       // visioMenu(ui),
-      // "Add new" in DMZ creates a sub-folder (media.make_dir) — a plain
-      // button, not a dropdown: __dmz_wm only supports folders here, and a
-      // direct-service button routes reliably to __dmz_wm.onUiEvent (a
-      // menu_topic item does not deliver its service through the bubble
-      // chain). Shown only to guests whose role grants write permission.
+      // "Add new" — the same dropdown the desk folder window uses (newFileMenu).
+      // A can_edit recipient can create a sub-folder, a markdown Note, or an office
+      // document (Document / Spreadsheet / Presentation) inside the share. The
+      // office editor + note editor work in the DMZ view; creates are scoped to the
+      // recipient's node-grant (+ server-gated for office via euroffice.new_doc).
+      // Each menu item dispatches its service via its own uiHandler:[ui] to this
+      // sharebox's onUiEvent, which delegates "add-folder" / "add-note" /
+      // "new-document" to the window manager. Shown only to guests whose role
+      // grants write permission.
       canEdit
-        ? Skeletons.Button.Label({
-            className: `${cnWindowButton}__label-button secondary`,
-            label: LOCALE.ADD_NEW || "Add new",
-            ico: "plus-header",
-            service: "add-folder",
-            uiHandler: ui,
+        ? newFileMenu(ui, {
+            items: ["add-folder", "add-note", "new-document"],
+            triggerIco: "plus-header",
+            // Tint the (monochrome) folder glyph with the share accent so it
+            // matches the colored office icons + the header/badge instead of the
+            // neutral "personal" default (which renders ~black). The DMZ is always
+            // a share view, so force the "dmz" accent (toolkit common.scss maps
+            // data-area=dmz -> --area-share); a non-share value wouldn't match any
+            // icon color rule and would stay dark. Office icons are brand-colored
+            // SVGs and ignore this.
+            area: _a.dmz,
           })
         : null,
       canUpload

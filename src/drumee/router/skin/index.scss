@@ -119,3 +119,25 @@
     overflow: visible;
   }
 }
+
+// Theme-aware scrollbar for every list view. The vendored `.list-smart__container`
+// rule (in @drumee/ui-core) hardcodes a light thumb (--primary-400) + white track,
+// so it never adapts to dark mode. node_modules can't be edited, so this override
+// re-points both to theme tokens. The single `html` prefix lifts specificity to
+// (0,1,2) so it outranks the vendored (0,1,1) rule regardless of bundle order.
+// Token values live in router/skin/themes/{light,dark}.scss: light = unchanged,
+// dark = darker track + thumb.
+html .list-smart__container {
+  // Fallbacks (light defaults) so a context that renders a list before/without
+  // the theme tokens still gets a styled bar instead of the browser default.
+  scrollbar-color: var(--scrollbar-thumb, var(--primary-400))
+    var(--scrollbar-track, transparent);
+
+  &::-webkit-scrollbar-track {
+    background-color: var(--scrollbar-track, transparent);
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background-color: var(--scrollbar-thumb, var(--primary-400));
+  }
+}

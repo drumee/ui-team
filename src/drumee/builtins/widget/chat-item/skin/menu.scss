@@ -2,16 +2,15 @@
 
 .widget-chatItem {
   &-menu {
-    // Floating action bar — moved into the message line on hover by chat-item
-    // _hover. Hidden until the line is hovered. It floats just above the bubble,
-    // anchored to the bubble's inner edge (me → right, other → left).
+    // Floating action chip — moved into the message line on hover by chat-item
+    // _hover. Hidden until the line is hovered. It floats just above the bubble's
+    // TOP edge, anchored to the OUTER corner: me → top-left, other → top-right.
     //
-    // It used to sit beside the bubble (me → left, other → right). In the narrow
-    // team-chat panel a wide bubble fills the width, so a beside-placement
-    // pushed the bar past the panel edge and the scroll container clipped it —
-    // only short messages left enough side room for it to show. Anchoring it to
-    // an edge that is always inside the panel keeps it visible for any message
-    // width; the per-item top margin leaves room for it to float above.
+    // The sender name only shows on "other" messages and sits at the top-LEFT,
+    // so the "other" chip goes top-RIGHT to stay clear of it. For "me" there is
+    // no name; the bubble hugs the right, so the chip goes top-LEFT (toward the
+    // panel centre) where it is always inside the narrow panel. The per-row
+    // top margin leaves room for the chip to float above without clipping.
     &__dropdown {
       position: absolute;
       z-index: 10;
@@ -22,6 +21,13 @@
       pointer-events: none;
       transition: opacity 0.12s ease;
 
+      // The chip is absolute inside the fit-content __message-line, so anchoring
+      // it to the bubble's OUTER edge let a fixed-width pill spill past the panel
+      // and get clipped by __main's overflow-x when the bubble is narrower than
+      // the chip (e.g. a 1-character message). Anchor it to grow toward the panel
+      // INTERIOR instead, so it stays inside regardless of bubble width:
+      //   me    → bubble hugs the right → pin the chip's RIGHT edge, grow left.
+      //   other → bubble hugs the left  → pin the chip's LEFT edge, grow right.
       &.me {
         right: 0;
         left: auto;
@@ -35,48 +41,42 @@
       }
     }
 
-    // The action list itself (reply / copy / forward / delete) — a compact pill.
+    // The action list itself — a fully-rounded white pill (Figma "Chat action").
+    // Box.X already sets flex-row, so only the visual tokens live here. The pill
+    // stays white in both themes (dark icons on white read fine on a dark panel),
+    // matching the mention-dropdown treatment.
     &__items-container {
-      display: flex;
-      flex-direction: row;
       align-items: center;
-      gap: 2px;
-      background-color: var(--default-bg, #ffffff);
-      border: 1px solid var(--border-default, var(--border-strong));
-      border-radius: 4px;
-      box-shadow: var(
-        --drumee-container-dropdown,
-        0 2px 8px rgba(0, 0, 0, 0.12)
-      );
-      padding: 4px 6px;
+      gap: 8px;
+      background-color: var(--white, #ffffff);
+      border-radius: 48px;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      backdrop-filter: blur(50px);
+      -webkit-backdrop-filter: blur(50px);
+      padding: 4px 8px;
     }
 
+    // Each action is a 16×16 icon in Primary/100, accenting to purple on hover.
+    // Icons keep their own aspect ratio inside the box (preserveAspectRatio), so
+    // the wider legacy forward glyph simply scales to fit.
     &__item {
-      color: var(--normal-fg-60, var(--tertiary-text-color));
+      color: var(--primary-purple-100, #0b0a21);
       cursor: pointer;
-      height: 18px;
-      width: 18px;
-      padding: 3px;
+      height: 16px;
+      width: 16px;
+      flex-shrink: 0;
       display: flex;
       align-items: center;
       justify-content: center;
-      border-radius: 50%;
-      box-sizing: content-box;
-      transition:
-        color 0.12s ease,
-        background-color 0.12s ease;
+      transition: color 0.12s ease;
 
       &:hover {
-        color: var(--eviolet);
-        background-color: var(--default-bg-hover);
+        color: var(--primary-purple-40, #5950ff);
       }
 
-      &.forward-message {
-        width: 22px;
-      }
-
-      &.delete-for-me {
-        padding: 2px;
+      // React/smiley icon — live action, same opacity as other action icons.
+      &.react {
+        opacity: 1;
       }
     }
   }

@@ -353,3 +353,38 @@
 html[data-theme="dark"] .window-confirm__title {
   color: var(--normal-fg-800, #ffffff);
 }
+
+// "Delete this message" confirm — chat select-mode Delete (Figma 2308-115578).
+// Scoped to the chat-delete-confirm modifier so ONLY this popup gets the larger
+// prompt + full-width buttons + a borderless grey Cancel; every other
+// window-confirm keeps its defaults. The card surface, danger red (#d74e49) and
+// dark theming all come from the shared window-confirm rules above.
+.chat-delete-confirm__title {
+  width: 100%;
+  text-align: left;
+  // Figma Body/Sub Title (20/600). --normal-fg-10 flips dark→light per theme.
+  @include drumee.typo($size: 20px, $line: 1.1, $weight: 600, $color: var(--normal-fg-10, #0b0a21));
+}
+
+.window-confirm__buttons.chat-delete-confirm {
+  gap: 16px;
+  justify-content: stretch;
+
+  .button {
+    border-radius: 4px;
+    flex: 1 1 0;
+    height: 48px;
+    min-width: 0;
+    @include drumee.typo($size: 16px, $line: 24px, $weight: 600); // Figma Buttons/Medium
+  }
+
+  // Cancel — borderless, grey text (Figma Grey/70 #84848c, legible in both themes).
+  .window-confirm__button-secondary {
+    border: none;
+    color: var(--normal-fg-50, #84848c);
+
+    &:hover {
+      background-color: var(--grid-card-bg, rgba(0, 0, 0, 0.05));
+    }
+  }
+}

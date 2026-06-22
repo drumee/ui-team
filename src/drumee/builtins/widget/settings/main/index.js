@@ -44,14 +44,35 @@ class settings_main extends LetcBox {
     // Load linked providers + the gdrive migration state in parallel so the
     // "Migrate from Google Drive" row reflects a running job (in-progress + %)
     // as soon as Settings opens, instead of always offering "Start".
+    // Also refresh the authoritative profile (yp.hello → get_user) BEFORE
+    // rendering: the 2FA switch reads Visitor.profile().mfa, and the local
+    // copy can be stale right after load while other services are still in
+    // flight — rendering then showed the wrong on/off state, so a click read
+    // the wrong baseline and toggled the wrong way. Awaiting here means the
+    // switch only renders once it reflects the server's stored mfa.
     const [links, gdrive] = await Promise.all([
       this._loadOauthLinks(),
       this._loadGdriveState(),
+      this._refreshVisitorProfile(),
     ]);
     this._oauthLinks = links;
     this._gdriveState = gdrive;
     this._reconcilePasswordSet();
     this.feed(require("./skeleton").default(this));
+  }
+
+  /**
+   * Pull the authoritative user record (yp.hello → get_user) and respawn it
+   * into Visitor so profile.mfa reflects the server's stored value. Best
+   * effort: on failure we keep whatever Visitor already holds.
+   */
+  async _refreshVisitorProfile() {
+    try {
+      const data = await this.fetchService(SERVICE.yp.hello, { hub_id: Visitor.id });
+      if (data) Visitor.respawn(data);
+    } catch (e) {
+      this.warn("settings_main: hello refresh failed", e);
+    }
   }
 
   /**
@@ -202,6 +223,7 @@ class settings_main extends LetcBox {
 
   onBeforeDestroy() {
     clearTimeout(this._saveStatusTimer);
+    clearTimeout(this._toastTimer);
     if (super.onBeforeDestroy) super.onBeforeDestroy();
   }
 
@@ -236,9 +258,14 @@ class settings_main extends LetcBox {
     if (this._mfaInFlight) return;
     this._mfaInFlight = true;
 
-    const profile = Visitor.profile() || {};
-    const prev = parseInt(profile.mfa) ? 1 : 0;
-    const next = prev ? 0 : 1;
+    // The toggle's `also:click` behavior has ALREADY flipped the switch to the
+    // user's intended state before this handler runs (see letc.js dispatch:
+    // also:click fires before the ui-event signal). Read the intent straight
+    // from the switch — deriving it from Visitor.profile().mfa is fragile
+    // because that value can drift (e.g. an unreliable server echo), which
+    // made "enable" compute next=0 and show the "disabled" toast.
+    const next = parseInt(cmd.getState()) ? 1 : 0;
+    const prev = next ? 0 : 1;
 
     cmd.setState(next);
     this._mfaCmd = cmd;
@@ -277,20 +304,104 @@ class settings_main extends LetcBox {
   }
 
   _cancelMfa(errorMessage) {
-    if (this._mfaCmd) this._mfaCmd.setState(this._mfaPrev);
     this._resetMfaState();
-    if (errorMessage) this.alert(errorMessage);
-    return this.closeOverlay();
+    // Revert the optimistic switch flip back to the stored state. Set the
+    // switch directly (not a full re-render) so a concurrent Visitor update
+    // — e.g. the websocket reconnect fired when the tab regains focus — can't
+    // race the read. errorMessage is only set on a genuine failure (e.g.
+    // otp.send died); a plain user cancel passes nothing and stays silent.
+    const mfaOn = parseInt((Visitor.profile() || {}).mfa) ? 1 : 0;
+    return this.closeOverlay().then(() => {
+      this._setMfaSwitch(mfaOn);
+      if (errorMessage) return this._showToast(errorMessage, "error");
+    });
   }
 
-  _finalizeMfa() {
+  _finalizeMfa(data) {
+    // Trust the server's authoritative set_mfa response (get_user) for the
+    // result, NOT this._mfaNext. _mfaNext is mutable instance state that a
+    // concurrent cancel/reconnect (the tab-refocus handler reconnects the
+    // socket + resyncs) can reset out from under us — which made a successful
+    // "enable" toast "disabled". args.data here is the set_mfa response's own
+    // fetch result (responses are independent, never cross-wired).
+    let enabled = parseInt(this._mfaNext) ? 1 : 0;
+    const p = this._profileFromResponse(data);
+    if (p && p.mfa != null) enabled = parseInt(p.mfa) ? 1 : 0;
+
     const current = Visitor.profile() || {};
-    const next = this._mfaNext;
-    Visitor.set({
-      profile: { ...current, mfa: next, otp: next ? "email" : 0 },
-    });
+    Visitor.set({ profile: { ...current, mfa: enabled, otp: enabled ? "email" : 0 } });
     this._resetMfaState();
-    return this.closeOverlay();
+    return this.closeOverlay().then(() => {
+      this._setMfaSwitch(enabled);
+      return this._showToast(
+        enabled
+          ? (LOCALE.TWO_FACTOR_ENABLED || "Two-factor authentication enabled")
+          : (LOCALE.TWO_FACTOR_DISABLED || "Two-factor authentication disabled"),
+        "success"
+      );
+    });
+  }
+
+  /**
+   * Set the MFA switch to a known state directly (no full re-render, which
+   * would read the mutable Visitor.profile().mfa and could race concurrent
+   * updates). Resolves the live switch part by sys_pn.
+   */
+  _setMfaSwitch(state) {
+    return this.ensurePart("toggle-mfa").then((t) => {
+      if (t && typeof t.setState === "function") t.setState(state ? 1 : 0);
+    });
+  }
+
+  /**
+   * Extract the profile object from a set_mfa (get_user) response. The profile
+   * column comes back as a JSON string; tolerate an already-parsed object.
+   */
+  _profileFromResponse(data) {
+    if (!data) return null;
+    let p = data.profile;
+    if (p == null) return null;
+    if (typeof p === "string") {
+      try { p = JSON.parse(p); } catch (e) { return null; }
+    }
+    return p;
+  }
+
+  /**
+   * Show a transient toast at the top-right of the settings page.
+   * `kind` drives both the colour and the glyph: "success" → app-check,
+   * "error" → apps-warning (see the `__toast` rules in the skin).
+   */
+  _showToast(message, kind = "success") {
+    this._toast = { message, kind };
+    if (this._toastTimer) clearTimeout(this._toastTimer);
+    this._toastTimer = setTimeout(() => {
+      this._toast = null;
+      this._renderToast();
+    }, 3500);
+    return this._renderToast();
+  }
+
+  _renderToast() {
+    return this.ensurePart("settings-toast").then((part) => {
+      if (!part) return;
+      if (!this._toast) return part.feed([]);
+      const pfx = this.fig.family;
+      const { message, kind } = this._toast;
+      const ico = kind === "error" ? "apps-warning" : "app-check";
+      part.feed(
+        Skeletons.Box.X({
+          className: `${pfx}__toast ${pfx}__toast--${kind}`,
+          kids: [
+            Skeletons.Image.Svg({ ico, className: `${pfx}__toast-ico` }),
+            Skeletons.Note({
+              className: `${pfx}__toast-text`,
+              content: message,
+            }),
+          ],
+        })
+      );
+    });
   }
 
   _resetMfaState() {
@@ -587,7 +698,9 @@ class settings_main extends LetcBox {
         // checkForm. Filter on the discriminator so stray clicks don't
         // close the modal.
         if (!args || !args.data) return;
-        return this._finalizeMfa();
+        // args.data is the set_mfa response (get_user) — the source of truth
+        // for the new mfa state.
+        return this._finalizeMfa(args.data);
 
       case "mfa-cancel":
         return this._cancelMfa();

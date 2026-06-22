@@ -276,6 +276,29 @@
 
     & .smart-container {
       height: 100%;
+      // Bottom-anchor the thread so a short conversation (e.g. a brand-new
+      // folder chat with a single message) rests just above the input instead
+      // of clinging to the top. Clinging to the top clipped the reaction
+      // hover-bar, which floats at translateY(-100%) ABOVE the first bubble and
+      // had no head-room there.
+      display: flex;
+      flex-direction: column;
+      // Children MUST keep their natural height. The chat item sets an explicit
+      // min-height:38px, which overrides flexbox's default min-height:auto
+      // shrink-protection — so without this, once the thread overflows, flexbox
+      // squeezes every message down toward 38px and the taller (multi-line)
+      // bubbles overflow their box and overlap the next message.
+      & > * {
+        flex-shrink: 0;
+      }
+      // Auto top-margin pushes the first real message down only while there is
+      // free space; once messages overflow it collapses to 0, so the scroll
+      // height / scroll-restore math (folder getChatScrollElement) is untouched.
+      // Scoped to a message item so the load spinner and the empty placeholder
+      // keep their own centring.
+      & > .widget-chatItem:first-child {
+        margin-top: auto;
+      }
     }
 
     &[data-area="personal"] {
@@ -685,39 +708,67 @@
       min-width: 93px;
       width: 100%;
     }
+
+    // Forward + Delete + Cancel share one pill geometry (Figma node 2308-115864):
+    // auto width so the "(N)" count fits, 24/6 padding, radius 4 — so all three
+    // buttons match in width/height. These overrides share the `.button` rule's
+    // specificity above and are declared after it, so they win. Cancel keeps its
+    // own outline colours (&__button-cancel); only its size aligns here.
+    & .button-confirm,
+    & .button-delete,
+    & .button-cancel {
+      border-radius: 4px;
+      height: auto;
+      max-width: none;
+      min-width: 0;
+      padding: 6px 24px;
+      width: auto;
+    }
+
+    & .button-confirm:hover,
+    & .button-delete:hover {
+      // Darken on hover without changing the box (no border swap) so the bar
+      // doesn't shift.
+      filter: brightness(0.93);
+    }
   }
 
   &__button-confirm {
-    background-color: var(--default-bg);
-    border: 0.5px solid var(--btn-commit-border);
+    // Forward — filled indigo (Figma Primary/50 #433cc5), white Geist SemiBold.
+    background-color: var(--primary-50);
+    border: none;
     justify-content: center;
     @include drumee.typo(
-      $size: 13px,
-      $line: 12px,
-      $color: var(--btn-commit-backgroundless-text)
+      $size: 14px,
+      $line: 20px,
+      $weight: 600,
+      $color: var(--white)
     );
 
     &:hover {
-      border: 2px solid var(--btn-commit-border-hover);
-      color: var(--btn-commit-text-hover);
+      border: none;
+      color: var(--white);
     }
   }
 
   &__button-delete {
-    border: 0.5px solid var(--btn-caution-border);
+    // Delete (For me / For all) — filled red (Figma Signal/Error #d74e49).
+    background-color: var(--signal-error);
+    border: none;
     justify-content: center;
     @include drumee.typo(
-      $size: 13px,
-      $line: 12px,
-      $color: var(--btn-caution-backgroundless-text)
+      $size: 14px,
+      $line: 20px,
+      $weight: 600,
+      $color: var(--white)
     );
 
     &:hover {
-      border: 2px solid var(--btn-caution-border-hover);
-      color: var(--btn-caution-text-hover);
+      border: none;
+      color: var(--white);
 
       svg {
-        color: var(--btn-caution-text-hover);
+        color: var(--white);
       }
     }
 
@@ -730,9 +781,13 @@
   &__button-cancel {
     border: 1px solid var(--btn-rollback-border);
     justify-content: center;
+    // Match Forward/Delete typography (14/20) so all three buttons are the same
+    // height — the geometry override in &__buttons-wrapper aligns padding/width,
+    // but height is driven by line-height, so it must match too. Cancel keeps its
+    // outline colours (secondary action).
     @include drumee.typo(
-      $size: 13px,
-      $line: 12px,
+      $size: 14px,
+      $line: 20px,
       $color: var(--btn-rollback-text)
     );
     width: 100%;
@@ -759,11 +814,17 @@
     display: none;
     position: absolute;
     bottom: calc(100% + 8px);
-    left: 0;
-    right: 0;
+    // Half the chat width, centered above the input. White card surface; text
+    // colors below are pinned to the Figma constants so it stays readable on
+    // white in both themes.
+    left: 50%;
+    transform: translateX(-50%);
+    width: 50%;
+    min-width: min(260px, 100%);
+    max-width: 100%;
     max-height: 220px;
     overflow-y: auto;
-    background: var(--normal-bg-90);
+    background: var(--white);
     border: 1px solid var(--border-muted);
     border-radius: 8px;
     margin-bottom: 4px;
@@ -791,12 +852,14 @@
       display: none;
     }
 
+    // Section label ("Mention files" / "People") — Figma Grey/80, 12px, no caps.
+    // 16px left padding aligns the label with the row content (8px row margin +
+    // 8px row padding).
     .mention-section-header {
-      padding: 4px 12px;
-      font-size: 10px;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-      color: var(--normal-fg-50);
+      padding: 4px 16px;
+      font-size: 12px;
+      line-height: 1.4;
+      color: var(--tertiary-grey-80);
       flex-shrink: 0;
       pointer-events: none;
 
@@ -805,8 +868,12 @@
       }
     }
 
+    // Row (file or contact). Figma: rounded 8px pill, 8px padding, inset 8px from
+    // the dropdown edges; active/hovered row gets a brand-tinted (10%) fill.
     .mention-item {
-      padding: 6px 12px;
+      padding: 8px;
+      margin: 0 8px;
+      border-radius: 8px;
       cursor: pointer;
       align-items: center;
       gap: 8px;
@@ -816,7 +883,7 @@
 
       &:hover,
       &[data-active="1"] {
-        background: var(--hover-bg-40);
+        background: color-mix(in srgb, var(--primary-purple-40) 10%, transparent);
       }
 
       * {
@@ -930,7 +997,7 @@
 
     .mention-item__name {
       font-size: 12px;
-      color: var(--normal-fg-10);
+      color: var(--primary-purple-100);
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
@@ -939,6 +1006,33 @@
 
       .note-content {
         color: inherit;
+      }
+    }
+
+    // Single-select cue on file rows (Figma "single select"): grey empty ring by
+    // default, filled purple ring on the active/hovered row. Visual only — the
+    // click still inserts the mention and closes the dropdown.
+    .mention-item__radio {
+      width: 14px;
+      height: 14px;
+      flex-shrink: 0;
+      box-sizing: border-box;
+      border: 1.5px solid var(--tertiary-grey-60);
+      border-radius: 50%;
+      position: relative;
+      transition: border-color 0.15s;
+    }
+
+    .mention-item:hover .mention-item__radio,
+    .mention-item[data-active="1"] .mention-item__radio {
+      border-color: var(--primary-purple-40);
+
+      &::after {
+        content: "";
+        position: absolute;
+        inset: 2px;
+        border-radius: 50%;
+        background: var(--primary-purple-40);
       }
     }
   }
@@ -1072,7 +1166,7 @@
   .widget-chatItem__conversation-content {
     padding: 12px;
     @include drumee.typo(
-      $size: 12px,
+      $size: 13px,
       $line: 1.4,
       $weight: 400,
       $color: var(--normal-fg-10)
@@ -1080,11 +1174,12 @@
   }
 
   .widget-chatItem__message-date {
+    // Muted grey timestamp (#84848c), slightly enlarged (was 8px / dark fg-10).
     @include drumee.typo(
-      $size: 8px,
+      $size: 11px,
       $line: 1.4,
       $weight: 400,
-      $color: var(--normal-fg-10)
+      $color: var(--normal-fg-50)
     );
   }
 
@@ -1103,8 +1198,15 @@
     padding: 0;
 
     .widget-chat-reply__wrapper {
-      max-height: 70px;
-      overflow: hidden;
+      // Top-align the quote and stop the column from shrinking it: as a flex
+      // child it defaults to flex-shrink:1, so the messenger (flex-shrink:0
+      // below) squeezed this down to ~1 line and overflow:hidden clipped the
+      // preview. flex-shrink:0 + height:auto lets it hug its 2-line content.
+      align-items: flex-start;
+      flex-shrink: 0;
+      height: auto;
+      max-height: none;
+      overflow: visible;
     }
 
     .widget-chat__messenger-wrapper {
