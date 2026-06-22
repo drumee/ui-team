@@ -590,9 +590,15 @@ class __dmz_wm extends winman {
     })
       .then((data) => {
         if (!data || !data.nid) return;
-        // Wait for the new tile to land in this grid (via the media.new broadcast),
-        // then open it in the editor. Cleared on success or after a 30s timeout so
-        // a missed broadcast can't leave the interval running.
+        // A file-scoped share filters the grid to the single shared file, so its
+        // newContent() never inserts the media.new broadcast and the poll below would
+        // never match. Open the created node directly from the server response instead.
+        if ((this.mget(_a.api) || {}).file_nid) {
+          return this.fetchMediaAttributes({ nid: data.nid, hub_id: data.hub_id || this.mget(_a.hub_id) });
+        }
+        // Folder share: wait for the new tile to land in this grid (via the media.new
+        // broadcast), then open it in the editor. Cleared on success or after a 30s
+        // timeout so a missed broadcast can't leave the interval running.
         const timer = setInterval(() => {
           for (let media of this.getItemsByAttr(_a.nid, data.nid)) {
             if (/^media/.test(media.mget(_a.kind))) {
