@@ -120,11 +120,10 @@
     }
 
     // Bubble + action menu share one vertically-centred row (see &-line). The
-    // menu is the hover-revealed element floating on one side of the bubble
-    // (skin/menu.scss). The footer (date + seen tick) no longer lives here — it
-    // sits in flow below the bubble, always visible (see &-footer).
-    // The reaction row is positioned absolute inside this line (bottom corner of
-    // the bubble) — overflow must be visible so it can overlap the footer-line.
+    // menu / quick-bar / emoji picker are hover-revealed, floating ABOVE this
+    // line (absolute, translateY(-100%) — skin/menu.scss + reactions.scss), so
+    // overflow stays visible. The reaction chips and the footer (date + seen
+    // tick) now sit IN FLOW below this line (see &__reaction-row / &__footer-line).
     &-line {
       position: relative;
       display: flex;
@@ -132,11 +131,8 @@
       align-items: center;
       width: fit-content;
       max-width: 100%;
-      // Allow absolutely-positioned reaction row to protrude below the bubble.
+      // Floating menu / quick-bar / picker protrude ABOVE the bubble.
       overflow: visible;
-      // Reserve vertical space below the bubble so the reaction chip (absolute,
-      // straddling the bubble's bottom edge) clears the footer-line (time) below.
-      padding-bottom: 18px;
 
       // Reveal the action menu while hovering anywhere on the line (the bubble
       // and the floating menu are DOM descendants, so :hover covers them).
@@ -144,14 +140,6 @@
         .widget-chatItem-menu__dropdown {
           opacity: 1;
           pointer-events: auto;
-        }
-
-        // On hover, make the reaction row visible so the quick-bar can show.
-        // JS (_hover) inserts the bar widget into the row and sets data-bar-open.
-        // This CSS rule covers the brief moment before JS fires (visual readiness).
-        .widget-chatItem__reaction-row[data-empty="1"] {
-          // Keep invisible until JS sets data-bar-open; CSS alone won't show it.
-          // (The JS path sets data-bar-open="1" which has its own opacity:1 rule.)
         }
       }
     }
