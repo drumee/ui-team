@@ -225,6 +225,16 @@ class __remote_user extends __stream {
     await this.ensurePart("sound");
     await this.ensurePart("video");
     await this.ensurePart("audio");
+    // feed() above rebuilt <audio output> / <video> from scratch, which detaches
+    // the live remote tracks (the Skeleton collection removes + recreates the
+    // id-less child elements). Re-attach the current tracks via the normal
+    // dispatcher so a participant-attributes update doesn't leave the tile
+    // silent / black. handleTrackEvents routes audio->attach and video->attach
+    // (with the camera/desktop/presenter logic) and is a no-op when no track.
+    const aTrack = this.getRemoteTrack(_a.audio);
+    if (aTrack) this.handleTrackEvents(aTrack);
+    const vTrack = this.getRemoteTrack(_a.video);
+    if (vTrack) this.handleTrackEvents(vTrack);
     this.updateCommandPanel(data);
   }
 

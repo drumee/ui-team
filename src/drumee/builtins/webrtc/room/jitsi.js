@@ -285,6 +285,22 @@ class __webrtc_room extends __room {
           for (let track of tracks) {
             let type = track.getType();
             let videoType = track.getVideoType();
+            // getDisplayMedia returns a system/tab AUDIO track when the user
+            // ticks "share audio" in the screen-share picker. It arrives here as
+            // a plain audio track (getType()==='audio', videoType===null). If it
+            // reached the audio handling below it would park the live mic stream
+            // in idleStreams (only stopped at call teardown), overwrite
+            // localTracks.audio, and replaceTrack(mic, desktopAudio) — cutting
+            // the user's microphone for the rest of the call (never restored,
+            // since stopPresentation only touches the desktop VIDEO track). The
+            // mic is only ever created via a NON-desktop request, so any audio
+            // track from a desktop request is this stray capture audio: drop it
+            // and leave the microphone sender untouched.
+            if (type === _a.audio && devices.includes(_a.desktop)) {
+              try { if (track.dispose) await track.dispose(); }
+              catch (e) { this.warn("drop desktop audio track failed", e); }
+              continue;
+            }
             track.addEventListener(
               JEVENTS.track.TRACK_MUTE_CHANGED,
               this.onTrackMuteChange
