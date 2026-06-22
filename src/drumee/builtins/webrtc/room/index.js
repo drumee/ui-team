@@ -323,10 +323,18 @@ class __webrtc_room extends __interact {
         );
         const currentOutputDevice =
           await JitsiMeetJS.mediaDevices.getAudioOutputDevice();
-        let currentInputDevice = null;
-        let audioTrack = this.room.getLocalAudioTrack();
-        if (audioTrack) {
-          currentInputDevice = audioTrack.deviceId;
+        // Seed the highlighted row from the user's remembered pick first; only
+        // fall back to the live track when there is no saved preference (first
+        // open of the call). getDeviceId() honours _realDeviceId, unlike the
+        // raw .deviceId property which can't round-trip the 'default' id.
+        let currentInputDevice = this.preferredInputDevice || null;
+        if (!currentInputDevice) {
+          let audioTrack = this.room.getLocalAudioTrack();
+          if (audioTrack) {
+            currentInputDevice = audioTrack.getDeviceId
+              ? audioTrack.getDeviceId()
+              : audioTrack.deviceId;
+          }
         }
         if (audioInputDevices.length > 0) {
           let view = require("../skeleton/device-list")(
@@ -334,7 +342,9 @@ class __webrtc_room extends __interact {
             audioInputDevices,
             audioOutputDevices,
             currentInputDevice,
-            (currentOutputDevice && currentOutputDevice) || "default"
+            this.preferredOutputDevice ||
+              (currentOutputDevice && currentOutputDevice) ||
+              "default"
           );
           p.feed(view);
         } else {
@@ -411,10 +421,12 @@ class __webrtc_room extends __interact {
   /**
    *
    */
-  recreateLocalTrackOnDeviceChange() {
+  async recreateLocalTrackOnDeviceChange() {
     let reqDevices = [_a.audio];
     if (this.isVideo) reqDevices = [...reqDevices, _a.video];
-    this.createLocalTracks(reqDevices, this.selectedInputDevice);
+    // replaceTrack inside createLocalTracks is async — await so the swap
+    // completes deterministically before the promise settles.
+    await this.createLocalTracks(reqDevices, this.selectedInputDevice);
   }
 
   /**
@@ -477,9 +489,15 @@ class __webrtc_room extends __interact {
         break;
       case "input-device-select":
         this.selectedInputDevice = cmd.$el.data("deviceid");
+        // Remember the user's pick so reopening the popup re-highlights it.
+        // The live-track readback alone can't round-trip the 'default'
+        // pseudo-device id, so without this the selection appears to revert
+        // to the first/Default row even though the mic actually changed.
+        this.preferredInputDevice = this.selectedInputDevice;
         break;
       case "output-device-select":
         this.selectedOutputDevice = cmd.$el.data("deviceid");
+        this.preferredOutputDevice = this.selectedOutputDevice;
         break;
       case "remote-ready":
         //this.checkQuota();

@@ -1034,13 +1034,17 @@ class __webrtc_room extends __room {
     let t = this.getLocalTrack(_a.audio);
     await this.sendRoomSignaling(SERVICE.conference.update);
     if (state) {
+      // Recreate the mic with the user's last confirmed device, not the
+      // implicit "default" — otherwise toggling mute/unmute after picking a
+      // specific microphone silently reverts capture to the default device.
+      const micId = this.preferredInputDevice || "default";
       if (!t) {
-        await this.createLocalTracks(_a.audio);
+        await this.createLocalTracks(_a.audio, micId);
       } else if (t.isActive()) {
         await t.unmute();
       } else {
         await t.dispose();
-        await this.createLocalTracks(_a.audio);
+        await this.createLocalTracks(_a.audio, micId);
       }
     } else {
       t && (await t.mute());

@@ -8,6 +8,13 @@ const __webrtc_device_list = function (_ui_, audioInput, audioOutput, inputSelec
     content: LOCALE.MICROPHONE
   })];
   
+  // When the selected id matches no enumerated device (e.g. the live track
+  // reports a raw hardware id while the list only carries the 'default'
+  // pseudo-device), highlight the 'default' row instead of leaving every row
+  // unselected — otherwise the radio group renders blank and the popup looks
+  // like it reverted to the first item.
+  const hasInputMatch = audioInput.some(e => e.deviceId === inputSelected);
+
   let inputChannel = _.uniqueId();
   audioInput.forEach(element => {
     kids.push(Skeletons.Note({
@@ -17,7 +24,8 @@ const __webrtc_device_list = function (_ui_, audioInput, audioOutput, inputSelec
       dataset: {
         deviceId: element.deviceId
       },
-      state: (inputSelected === element.deviceId) ? 1 : 0,
+      state: (inputSelected === element.deviceId ||
+        (!hasInputMatch && element.deviceId === "default")) ? 1 : 0,
       radio: inputChannel,
       content: element.label
     }));
@@ -28,6 +36,8 @@ const __webrtc_device_list = function (_ui_, audioInput, audioOutput, inputSelec
     content: LOCALE.SPEAKERS
   }));
 
+  const hasOutputMatch = audioOutput.some(e => e.deviceId === outputSelected);
+
   let outputChannel = _.uniqueId();
   audioOutput.forEach(element => {
     kids.push(Skeletons.Note({
@@ -37,7 +47,8 @@ const __webrtc_device_list = function (_ui_, audioInput, audioOutput, inputSelec
       dataset: {
         deviceId: element.deviceId
       },
-      state: (outputSelected === element.deviceId) ? 1 : 0,
+      state: (outputSelected === element.deviceId ||
+        (!hasOutputMatch && element.deviceId === "default")) ? 1 : 0,
       radio: outputChannel,
       content: element.label
     }));
