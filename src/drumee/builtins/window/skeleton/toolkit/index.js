@@ -83,11 +83,12 @@ export function tabBar(ui, opt = {}) {
     uiHandler: [ui],
   });
 
-  // Hide the Chat tab for personal areas, and (DMZ) when the share doesn't grant
-  // chat. opt.chat is only passed by the DMZ sharebox; undefined for every other
-  // caller, so their behaviour is unchanged. _dmzShareWithoutChat() additionally
-  // hides it inside nested recipient subfolders (which lose opt.chat).
-  if (ui.mget(_a.area) === _a.personal || opt.chat === false || _dmzShareWithoutChat()) {
+  // Hide the Chat tab only for DMZ shares that don't grant chat. opt.chat is passed
+  // as false by the DMZ sharebox; it is undefined for every other caller, so their
+  // chat tab is unchanged. _dmzShareWithoutChat() additionally hides it inside nested
+  // recipient subfolders (which lose opt.chat). Personal-area folders keep the chat
+  // tab — the folder team chat is identical across all areas.
+  if (opt.chat === false || _dmzShareWithoutChat()) {
     chat_label = "";
     chat_tab = "";
   }
@@ -539,8 +540,8 @@ export function folderFilesView(ui) {
     ui.getViewMode && ui.getViewMode() === _a.row
       ? folderFilesRowContainer(ui)
       : filesContainer(ui);
-  if (ui.mget(_a.area) === _a.personal) return [files];
   // Recipient subfolder of a no-chat share → files only (no conversation panel).
+  // Personal-area folders keep the chat panel — folder chat is identical across areas.
   if (_dmzShareWithoutChat()) return [files];
   return [files, chatPanel(ui)];
 }
