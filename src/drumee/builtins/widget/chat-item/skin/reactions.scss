@@ -70,7 +70,11 @@
     transition: background-color 0.12s ease, border-color 0.12s ease;
 
     &:hover {
-      background-color: var(--normal-fg-10, rgba(0, 0, 0, 0.08));
+      // Surface shade, NOT a foreground token: --normal-fg-10 is the primary TEXT
+      // colour (dark in light theme, light in dark), so using it as a background
+      // turned the chip into a black/white pill on hover. --normal-bg-80 is the
+      // theme-aware hover surface used across the app (and by the original chip).
+      background-color: var(--normal-bg-80);
     }
 
     // Highlight the viewer's OWN reaction with the brand accent (light-lavender
@@ -281,9 +285,18 @@
 // All colors use --normal-* tokens so they auto-adapt; only overrides needed.
 // ---------------------------------------------------------------------------
 html[data-theme="dark"] {
-  // Chip + count colours are theme-aware in the base rules (var(--normal-fg-*)
-  // and the fixed-accent var(--primary-purple-*) for "mine"), so the chip needs
-  // no dark-mode override. Only the floating bar/picker surfaces are tuned below.
+  // Neutral chips are theme-aware (var(--normal-*)) so they need no override. The
+  // "mine" accent uses the FIXED purple ramp, where --primary-purple-10 (#e4e3ff)
+  // is a near-white lavender that glares on a dark panel. Flip the selected chip to
+  // a dark indigo fill with a light count so it reads as accented, not blinding
+  // (border stays --primary-purple-40 from the base rule for a crisp active edge).
+  .widget-chatItem__reaction-chip.mine {
+    background-color: var(--primary-purple-80);
+
+    .widget-chatItem__reaction-count {
+      color: var(--primary-purple-20);
+    }
+  }
 
   .widget-chatItem-reactions {
     &__bar {
