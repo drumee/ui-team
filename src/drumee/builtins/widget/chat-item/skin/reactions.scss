@@ -1,77 +1,67 @@
 @use "mixins/drumee";
 
 // ---------------------------------------------------------------------------
-// Reaction widget — Messenger-style: positioned absolute over the bubble's
-// bottom corner. Visible when reacted (data-empty="0") or hovered (bar open).
-// Sits inside __message-line which has position:relative; width:fit-content.
+// Reaction chip row — IN FLOW directly below the bubble (Figma 2331:43832).
+// Collapses entirely when there are no reactions so the time stays snug under
+// the bubble. The floating quick-bar / picker are separate (appended into
+// __message-line, absolute) — not in this chip row.
 // ---------------------------------------------------------------------------
 .widget-chatItem {
   &__reaction-row {
-    // Absolute overlay straddling the bubble's bottom corner, 12px from the
-    // outer edge. A POSITIVE bottom lifts the chip up ONTO the bubble (overlapping
-    // its bottom edge) and keeps it clear of the timestamp below — a negative
-    // bottom dropped it down onto the time (the "chip over the time" bug).
-    position: absolute;
-    bottom: 8px;
-    z-index: 5;
-    display: flex;
-    // Chips sit side-by-side along the bubble's bottom edge (horizontal).
-    // No-wrap + max-content width keeps them on ONE line and lets the row extend
-    // BEYOND a short bubble's width (the row is absolute; the line is
-    // overflow:visible). Previously wrap + max-width:100% capped the row to the
-    // bubble width, so a short message re-stacked the chips into a column.
+    // Sits in the message-content column between the bubble line and the footer.
+    // Chips flow horizontally and wrap when they exceed the available width.
     flex-direction: row;
-    flex-wrap: nowrap;
-    width: max-content;
+    flex-wrap: wrap;
     align-items: center;
     gap: 4px;
-    // Prevent the row itself from catching pointer events when invisible.
-    pointer-events: none;
+    width: fit-content;
+    max-width: 100%;
+    // Extra vertical breathing room so the chips sit clearly apart from the
+    // bubble above and the time below: 6px padding inside the row adds to the
+    // message-content column's 8px gap (~14px effective each side). The row
+    // background is transparent, so this reads as empty space — it does NOT make
+    // the chip pill taller. Collapsed (data-empty="1" → display:none) → padding
+    // inert, so the no-reaction bubble→time spacing stays the app-standard 8px.
+    padding-top: 6px;
+    padding-bottom: 6px;
 
+    // Hug the bubble's side. The parent message-content already aligns the
+    // column (me → flex-end, other → flex-start); align-self makes it explicit.
     &.me {
-      right: 12px;
-      left: auto;
+      align-self: flex-end;
       justify-content: flex-end;
     }
 
     &.other {
-      left: 12px;
-      right: auto;
+      align-self: flex-start;
       justify-content: flex-start;
     }
 
-    // Hidden when there are no reactions and no bar/hover state.
+    // No reactions → collapse (no row, no gap) so the time sits right below the
+    // bubble. _renderReactions toggles this attribute.
     &[data-empty="1"] {
-      opacity: 0;
-      pointer-events: none;
+      display: none;
     }
 
-    // Has reactions → show chips, enable pointer events.
+    // Has reactions → show the chip row.
     &[data-empty="0"] {
-      opacity: 1;
-      pointer-events: auto;
-    }
-
-    // Quick-bar / full picker open → show regardless of chip state.
-    // Declared after the empty-hide rule so it wins (equal specificity,
-    // later source order) when both attrs are present.
-    &[data-bar-open="1"] {
-      opacity: 1;
-      pointer-events: auto;
+      display: flex;
     }
   }
 
   &__reaction-chip {
     display: inline-flex;
     align-items: center;
-    gap: 3px;
-    padding: 2px 7px;
+    gap: 4px;
+    padding: 2px 8px;
     border-radius: 12px;
-    // Neutral pill on an OPAQUE elevated surface so it stays legible whether it
-    // overlaps the indigo "me" bubble or the grey "other" bubble. All tokens are
-    // theme-aware (light + dark), so no dark-mode override is needed.
-    border: 1px solid var(--normal-bg-40);
-    background-color: var(--normal-bg-elevated);
+    // Subtle neutral pill on the panel background below the bubble (Figma
+    // rgba(0,0,0,0.05)). --normal-fg-05 is the theme-aware equivalent so it stays
+    // legible in light + dark. Chips no longer overlap the bubble, so the old
+    // opaque-elevated fill is gone. Transparent border keeps the box size stable
+    // so the "mine" purple border below doesn't shift layout.
+    border: 1px solid transparent;
+    background-color: var(--normal-fg-05, rgba(0, 0, 0, 0.05));
     cursor: pointer;
     user-select: none;
     // Stable height regardless of emoji width variance.
@@ -80,14 +70,11 @@
     transition: background-color 0.12s ease, border-color 0.12s ease;
 
     &:hover {
-      border-color: var(--normal-fg-50);
-      background-color: var(--normal-bg-80);
+      background-color: var(--normal-fg-10, rgba(0, 0, 0, 0.08));
     }
 
     // Highlight the viewer's OWN reaction with the brand accent (light-lavender
-    // fill + purple border) — distinct in both themes. The old fill used
-    // --normal-fg-10, a FOREGROUND colour, which rendered near-black in light
-    // mode (the "dark pill" bug) and inverted per theme.
+    // fill + purple border) — distinct in both themes.
     &.mine {
       background-color: var(--primary-purple-10);
       border-color: var(--primary-purple-40);
@@ -95,7 +82,8 @@
   }
 
   &__reaction-emoji {
-    font-size: 14px;
+    // Match the count size so emoji + count read as one tidy unit.
+    font-size: 12px;
     line-height: 1;
     // Prevent emoji from being treated as text — avoids any text-color
     // inheritance clobbering the emoji rendering.
@@ -104,12 +92,19 @@
   }
 
   &__reaction-count {
+    // line-height MUST match the emoji's (1), not the typo default 1.4 — under the
+    // chip's align-items:center a taller count line-box made the digit sit off the
+    // emoji's centre line (the "emoji/count not on one row" misalignment).
     @include drumee.typo(
-      $size: 11px,
-      $line: 1.4,
+      $size: 12px,
+      $line: 1,
       $weight: 500,
-      $color: var(--normal-fg-50)
+      $color: var(--normal-fg-10)
     );
+    // Digit ink rides high (baseline → cap-height) while the emoji glyph sits a
+    // touch low, so even box-centred the number looks higher. Nudge it down ~1px
+    // onto the emoji's optical centre line. Tune this value if the font changes.
+    transform: translateY(1px);
 
     .widget-chatItem__reaction-chip.mine & {
       // Dark purple count reads clearly on the light-lavender "mine" fill.
@@ -286,7 +281,7 @@
 // All colors use --normal-* tokens so they auto-adapt; only overrides needed.
 // ---------------------------------------------------------------------------
 html[data-theme="dark"] {
-  // Chip + count colours are theme-aware in the base rules (var(--normal-bg-*)
+  // Chip + count colours are theme-aware in the base rules (var(--normal-fg-*)
   // and the fixed-accent var(--primary-purple-*) for "mine"), so the chip needs
   // no dark-mode override. Only the floating bar/picker surfaces are tuned below.
 
