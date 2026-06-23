@@ -278,12 +278,27 @@ class __activity_item extends LetcBox {
         this.triggerHandlers({ service: 'dismiss-activity', hub_id, nid, item_type, changelog_id })
         return
 
-      case _a.teamchat:
+      case _a.teamchat: {
+        // Folder-scoped mention: the channel row carries metadata._scope_nid (the
+        // folder where the message was posted), surfaced as `scope_nid` by
+        // channel_list_notifications. Open THAT folder on its Chat tab so the
+        // click lands in the conversation it came from — not the hub root. A
+        // hub-level team-chat mention has no scope_nid and still loads the
+        // workspace root via wm/teamchat → loadWorkspace.
+        const scope_nid = this.mget('scope_nid');
+        if (scope_nid && `${scope_nid}` !== "0") {
+          hash = `#/desk/wm/open/?hub_id=${hub_id}&nid=${scope_nid}&filetype=folder&pid=${parent_id}&activeTab=${_a.chat}`;
+          if (message_id) hash = hash + `&message_id=${message_id}`;
+          location.hash = hash + `&ts=${ts}`;
+          this.triggerHandlers({ service: 'dismiss-activity', hub_id, nid: scope_nid, item_type, changelog_id })
+          break;
+        }
         hash = `#/desk/wm/${category}/?hub_id=${hub_id}&nid=0&pid=0`;
         if (message_id) hash = hash + `&message_id=${message_id}`;
         location.hash = hash + `&ts=${ts}`;
         this.triggerHandlers({ service: 'dismiss-activity', hub_id, nid, item_type, changelog_id })
         break;
+      }
       case _a.chat:
         hash = `#/desk/wm/${category}/?drumate_id=${drumate_id}`;
         if (message_id) hash = hash + `&message_id=${message_id}`;
