@@ -71,7 +71,12 @@ class settings_billing extends LetcBox {
   /**
    * Re-initialize UI when DOM is refreshed
    */
-  onDomRefresh() {
+  async onDomRefresh() {
+    // Fetch the server catalog (Stripe is the price truth) so the display
+    // reflects live prices; degrades to the hardcoded fallback if unavailable.
+    this._catalog = await this.fetchService(SERVICE.payment.catalog, { hub_id: Visitor.id })
+      .then((d) => (d && d.plans) || null)
+      .catch(() => null);
     if (this.state.currentTab === undefined || this.state.currentTab === null) {
       this.state.currentTab = TAB_MONTHLY;
     }
@@ -319,9 +324,16 @@ class settings_billing extends LetcBox {
 
     const selectedBundle = checkout.selectedBundle;
 
+    // Prices come from the server catalog (Stripe is the truth); fall back to
+    // the previous literals only if the catalog didn't load.
+    const catPrice = (code, cycle) => {
+      const period = cycle === "yearly" ? "year" : "month";
+      const row = (this._catalog || []).find((p) => p.plan_code === code && p.period === period);
+      return row && row.amount != null ? Number(row.amount) / 100 : null;
+    };
     const planPrices = {
       free: { monthly: 0, yearly: 0 },
-      pro: { monthly: 16.99, yearly: 169.9 },
+      pro: { monthly: catPrice("pro", "monthly") ?? 16.99, yearly: catPrice("pro", "yearly") ?? 169.9 },
     };
 
     const bundlePrices = {
