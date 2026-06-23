@@ -406,7 +406,9 @@ class settings_billing extends LetcBox {
     const entity_type = plan === "team" ? "org" : "user";
     const period = checkout.billingCycle === "yearly" ? "year" : "month";
     const seats = entity_type === "org" ? Math.max(1, ~~(checkout.seats || 1)) : 1;
-    this.postService(SERVICE.payment.checkout, { entity_type, plan, period, seats })
+    // Optional storage add-on: the bundle picker stores 100/500/1000 -> storage_*.
+    const bundle = checkout.selectedBundle ? `storage_${checkout.selectedBundle}` : "";
+    this.postService(SERVICE.payment.checkout, { entity_type, plan, period, seats, bundle })
       .then((data) => {
         const { url, status } = data || {};
         if (url) { window.location.assign(url); return; } // full-page redirect to hosted Checkout
