@@ -1,6 +1,9 @@
 {
   "NOT_ORG_OWNER": "Seul un administrateur d'organisation peut acheter le forfait Team",
   "MANAGE_BILLING": "Gérer la facturation",
+  "BILLING_SUBSCRIPTION": "Facturation et abonnement",
+  "BILLING_SUBSCRIPTION_SUBTITLE": "Gérez votre formule, vos sièges, vos options de stockage et vos factures.",
+  "MANAGE_SUBSCRIPTION": "Gérer l'abonnement",
   "NO_ACTIVE_SUBSCRIPTION": "Aucun abonnement actif",
   "CANCEL_ALL": "Tout annuler",
   "WINDOW_ZOOM": "Agrandir",

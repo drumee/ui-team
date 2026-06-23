@@ -1,6 +1,9 @@
 {
   "NOT_ORG_OWNER": "Solo un administrador de organización puede comprar el plan Team",
   "MANAGE_BILLING": "Gestionar facturación",
+  "BILLING_SUBSCRIPTION": "Facturación y suscripción",
+  "BILLING_SUBSCRIPTION_SUBTITLE": "Gestiona tu plan, asientos, complementos de almacenamiento y facturas.",
+  "MANAGE_SUBSCRIPTION": "Gestionar suscripción",
   "NO_ACTIVE_SUBSCRIPTION": "Sin suscripción activa",
   "CANCEL_ALL": "Cancelar todo",
   "WINDOW_ZOOM": "Ampliar",

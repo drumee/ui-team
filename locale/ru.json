@@ -1,6 +1,9 @@
 {
   "NOT_ORG_OWNER": "Только администратор организации может купить план Team",
   "MANAGE_BILLING": "Управление оплатой",
+  "BILLING_SUBSCRIPTION": "Оплата и подписка",
+  "BILLING_SUBSCRIPTION_SUBTITLE": "Управляйте тарифом, местами, дополнительным хранилищем и счетами.",
+  "MANAGE_SUBSCRIPTION": "Управление подпиской",
   "NO_ACTIVE_SUBSCRIPTION": "Нет активной подписки",
   "CANCEL_ALL": "Отменить всё",
   "WINDOW_ZOOM": "Развернуть",

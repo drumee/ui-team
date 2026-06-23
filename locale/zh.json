@@ -1,6 +1,9 @@
 {
   "NOT_ORG_OWNER": "只有组织管理员才能购买团队套餐",
   "MANAGE_BILLING": "管理账单",
+  "BILLING_SUBSCRIPTION": "账单与订阅",
+  "BILLING_SUBSCRIPTION_SUBTITLE": "管理您的套餐、席位、存储附加组件和账单。",
+  "MANAGE_SUBSCRIPTION": "管理订阅",
   "NO_ACTIVE_SUBSCRIPTION": "无有效订阅",
   "CANCEL_ALL": "全部取消",
   "WINDOW_ZOOM": "缩放",

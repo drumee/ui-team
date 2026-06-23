@@ -1,6 +1,9 @@
 {
   "NOT_ORG_OWNER": "មានតែអ្នកគ្រប់គ្រងអង្គភាពទេ ដែលអាចទិញគម្រោង Team",
   "MANAGE_BILLING": "គ្រប់គ្រងវិក្កយបត្រ",
+  "BILLING_SUBSCRIPTION": "វិក្កយបត្រ និងការជាវ",
+  "BILLING_SUBSCRIPTION_SUBTITLE": "គ្រប់គ្រងផែនការ កៅអី កម្មវិធីបន្ថែមផ្ទុក និងវិក្កយបត្ររបស់អ្នក។",
+  "MANAGE_SUBSCRIPTION": "គ្រប់គ្រងការជាវ",
   "NO_ACTIVE_SUBSCRIPTION": "គ្មានការជាវសកម្ម",
   "CANCEL_ALL": "បោះបង់ទាំងអស់",
   "WINDOW_ZOOM": "ពង្រីក",

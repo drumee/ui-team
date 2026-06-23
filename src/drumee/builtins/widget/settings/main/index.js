@@ -763,6 +763,19 @@ class settings_main extends LetcBox {
           if (p) p.set({ content: (args && args.email) || (Visitor.profile() || {}).email || "" });
         });
 
+      case "open-billing":
+        // settings_main's uiHandler is the desk *module* (_loadKind feeds it
+        // uiHandler:[desk]), which has no 'upgrade-plan' case — that lives on
+        // the window-manager. Forward straight to Wm (the same bridge the desk
+        // module uses for account/helpdesk), which feeds settings_billing into
+        // the centred wrapper-modal via upgradePlage.
+        return window.Wm && Wm.onUiEvent
+          ? Wm.onUiEvent(
+              { mget: () => "upgrade-plan" },
+              { service: "upgrade-plan" }
+            )
+          : null;
+
       case "launch-gdrive-migration":
         // Open the migrate-gdrive popup. singleton:1 + wm_unique_id auto
         // detection (per fix/multi-folder-windows) prevents duplicates.
