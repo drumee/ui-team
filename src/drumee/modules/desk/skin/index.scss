@@ -327,6 +327,17 @@ html {
       width: auto;
       max-width: none;
       height: 100%;
+      // The container now spans the whole workspace (__right-side) at
+      // z 10001. Without this it would swallow every click meant for the
+      // window manager — leaving __right-side dead to input in the
+      // 651–1024px range. Keep the container transparent to pointer
+      // events; the open panel (its child) re-enables them. Mirrors the
+      // ≤650px block above.
+      pointer-events: none;
+
+      > * {
+        pointer-events: auto;
+      }
     }
 
     // ≤ 800px the sidebar collapses to a fixed drawer and leaves the flex
