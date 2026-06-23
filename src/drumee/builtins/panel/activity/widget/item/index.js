@@ -279,18 +279,20 @@ class __activity_item extends LetcBox {
         return
 
       case _a.teamchat: {
-        // Folder-scoped mention: the channel row carries metadata._scope_nid (the
-        // folder where the message was posted), surfaced as `scope_nid` by
-        // channel_list_notifications. Open THAT folder on its Chat tab so the
-        // click lands in the conversation it came from — not the hub root. A
-        // hub-level team-chat mention has no scope_nid and still loads the
-        // workspace root via wm/teamchat → loadWorkspace.
+        // Folder-scoped team chat: the row carries the folder nid the message was
+        // posted in — as `scope_nid` (channel.list_notifications / Mentions tab) or
+        // as `nid` (notification_center_next per-folder rollup). Open that folder on
+        // its Chat tab so the click lands in the conversation it came from. A
+        // hub-level/legacy chat has neither → load the workspace root via
+        // wm/teamchat → loadWorkspace.
         const scope_nid = this.mget('scope_nid');
-        if (scope_nid && `${scope_nid}` !== "0") {
-          hash = `#/desk/wm/open/?hub_id=${hub_id}&nid=${scope_nid}&filetype=folder&pid=${parent_id}&activeTab=${_a.chat}`;
+        const folder_nid = (scope_nid && `${scope_nid}` !== "0") ? scope_nid
+          : ((nid && `${nid}` !== "0") ? nid : null);
+        if (folder_nid) {
+          hash = `#/desk/wm/open/?hub_id=${hub_id}&nid=${folder_nid}&filetype=folder&pid=${parent_id}&activeTab=${_a.chat}`;
           if (message_id) hash = hash + `&message_id=${message_id}`;
           location.hash = hash + `&ts=${ts}`;
-          this.triggerHandlers({ service: 'dismiss-activity', hub_id, nid: scope_nid, item_type, changelog_id })
+          this.triggerHandlers({ service: 'dismiss-activity', hub_id, nid: folder_nid, item_type, changelog_id })
           break;
         }
         hash = `#/desk/wm/${category}/?hub_id=${hub_id}&nid=0&pid=0`;

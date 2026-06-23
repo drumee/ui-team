@@ -2285,9 +2285,13 @@ class __widget_chat extends LetcBox {
         try {
           if (this.getHandlers(_a.ui)[0].isHidden()) return;
         } catch (e) {}
-        // Ack even when out-of-scope so unread counters in the folder feed
-        // don't accumulate while the user views a file-scoped thread.
-        if (hubMatch || privateMach || ticketMach) {
+        // Acknowledge only IN-SCOPE messages (the folder/thread currently in view) —
+        // same predicate handleReceivedMsg uses above. Hub-wide acking marked
+        // sibling-folder messages _seen_ on receipt, which suppressed their
+        // per-folder mention notifications (notification_center_next treats not-_seen_
+        // as unread). Out-of-scope folders now keep their unread state until their
+        // own chat is viewed.
+        if ((hubMatch && inScope) || privateMach || ticketMach) {
           if (area === _a.share) {
             service = SERVICE.channel.acknowledge;
           } else if (isPrivate) {
