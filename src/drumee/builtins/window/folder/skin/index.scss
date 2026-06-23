@@ -738,6 +738,145 @@
       flex: 1;
     }
 
+    // ── Overflow "More" menu ──────────────────────────────────────
+    // Mirrors the zoom menu's CSS-hover dropdown. Holds Meeting / Manage
+    // access / Settings — the controls that collapse out of the row on a
+    // narrow window. Hidden on the full-width desktop layout; the ≤700px
+    // container block shows it (as a 32×32 chip) and hides the inline
+    // video / manage-access / settings / zoom controls.
+    &__more-wrapper {
+      display: none;
+      position: relative;
+      overflow: visible;
+      flex-shrink: 0;
+      width: 20px;
+      height: 20px;
+      align-items: center;
+      justify-content: center;
+
+      &:hover .window-folder-topbar__more-menu,
+      .window-folder-topbar__more-menu:hover {
+        opacity: 1;
+        visibility: visible;
+        transform: translateY(0);
+        pointer-events: auto;
+      }
+    }
+
+    &__more-trigger {
+      width: 20px;
+      height: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--normal-fg-20, var(--normal-fg-10));
+      cursor: pointer;
+      transition:
+        color 0.15s ease,
+        transform 0.15s ease;
+
+      svg {
+        width: 18px;
+        height: 18px;
+      }
+
+      &:hover {
+        color: var(--normal-fg-10);
+        transform: scale(1.06);
+      }
+    }
+
+    &__more-menu {
+      position: absolute;
+      top: calc(100% + 8px);
+      right: -4px;
+      z-index: 1000;
+      min-width: 200px;
+      padding: 6px;
+      background-color: var(--normal-bg-elevated, #fff);
+      border: 1px solid rgba(0, 0, 0, 0.06);
+      border-radius: 10px;
+      box-shadow:
+        0 4px 8px -2px rgba(0, 0, 0, 0.08),
+        0 12px 24px -4px rgba(0, 0, 0, 0.12);
+      // Box.Y already supplies `display: flex; flex-direction: column`.
+      gap: 2px;
+
+      opacity: 0;
+      visibility: hidden;
+      transform: translateY(-4px);
+      // `visibility 0s linear 0.15s` delays the close so the cursor can
+      // cross the trigger→menu gap without the panel disappearing.
+      transition:
+        opacity 0.15s ease,
+        transform 0.15s ease,
+        visibility 0s linear 0.15s;
+      pointer-events: none;
+
+      // Invisible strip between trigger and panel — bridges the 8px gap
+      // so the cursor doesn't drop out of hover during transit.
+      &::before {
+        content: "";
+        position: absolute;
+        top: -10px;
+        left: 0;
+        right: 0;
+        height: 10px;
+      }
+    }
+
+    // Override the close-delay on `visibility` so opening is immediate.
+    &__more-wrapper:hover .window-folder-topbar__more-menu,
+    .window-folder-topbar__more-menu:hover {
+      transition:
+        opacity 0.15s ease,
+        transform 0.15s ease,
+        visibility 0s linear 0s;
+    }
+
+    &__more-item {
+      // Box.X already supplies `display: flex; flex-direction: row`.
+      align-items: center;
+      gap: 10px;
+      padding: 8px 10px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-family: "Geist", sans-serif;
+      font-size: 13px;
+      font-weight: 500;
+      line-height: 1.2;
+      color: var(--normal-fg-10);
+      white-space: nowrap;
+      transition: background-color 0.12s ease;
+
+      &:hover {
+        background-color: var(--normal-bg-90);
+      }
+    }
+
+    &__more-item-icon {
+      width: 16px;
+      height: 16px;
+      flex-shrink: 0;
+      color: var(--normal-fg-20, var(--normal-fg-10));
+
+      svg {
+        width: 16px;
+        height: 16px;
+      }
+    }
+
+    // Settings glyph is stroke-only (matches the inline control-icon).
+    &__more-item--settings .window-folder-topbar__more-item-icon svg,
+    &__more-item--settings .window-folder-topbar__more-item-icon use {
+      fill: none;
+      stroke: currentColor;
+    }
+
+    &__more-item-label {
+      flex: 1;
+    }
+
     // The window control (close ×) sits at the far right of the row.
     // Figma 272:49268 / layout_VZ2RLI: row, gap 12, height 20.
     .window-button__icon-button {
@@ -2778,7 +2917,8 @@
         height: auto;
         min-height: 52px;
         min-width: 0;
-        padding: 0 var(--spacer-3);
+        padding: 0 var(--spacer-6);
+        border-radius: 0;
       }
 
       &__left {
@@ -2795,7 +2935,7 @@
       // share the same background fill.
       &__right {
         flex: 0 1 auto;
-        gap: var(--spacer-2);
+        gap: var(--spacer-4);
         min-width: 0;
         overflow: visible;
       }
@@ -2855,10 +2995,12 @@
       // icons. Mobile unifies them: same square, same Grey/20 bg,
       // same 6px radius, flex-centered SVG. The Add-new trigger
       // keeps its purple via the .secondary override below.
-      &__video-btn,
+      // Video / manage-access / settings / zoom drop out of the row here
+      // and move into the overflow "More" menu (the only chip-styled
+      // control-icon kept is the More trigger).
       &__upload-btn,
       &__add-new-wrapper,
-      &__control-icon,
+      &__more-wrapper,
       .window-button__icon-button {
         flex: 0 0 auto;
         height: 32px;
@@ -2874,6 +3016,33 @@
         // Desktop close-button row used `gap: 12` for inline children;
         // a single-icon chip needs none.
         gap: 0;
+      }
+
+      // Collapse the standalone Meeting / Manage-access / Settings / zoom
+      // controls — they live in the overflow "More" menu at this width.
+      &__video-btn,
+      &__control-icon.share,
+      &__control-icon.settings,
+      &__zoom-wrapper {
+        display: none;
+      }
+
+      // The More trigger fills its 32×32 chip; the hover panel anchors to
+      // the chip and is width-capped to the window like the Add-new menu.
+      &__more-trigger {
+        width: 100%;
+        height: 100%;
+
+        svg {
+          width: 18px;
+          height: 18px;
+        }
+      }
+
+      &__more-menu {
+        max-width: calc(100cqw - 24px);
+        min-width: 200px;
+        right: 0;
       }
 
       // Hide the split/layout toggle on mobile — single-column layout
@@ -2951,7 +3120,8 @@
       flex-wrap: nowrap;
       gap: var(--spacer-5);
       overflow-x: auto;
-      padding: var(--spacer-2) var(--spacer-3);
+      padding: var(--spacer-4);
+      justify-content: center;
       scrollbar-width: none;
 
       &::-webkit-scrollbar {

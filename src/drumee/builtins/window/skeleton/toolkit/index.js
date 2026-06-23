@@ -778,6 +778,93 @@ export function zoomMenu(ui) {
 }
 
 /**
+ * Overflow "More" menu — an icon trigger with a CSS-hover dropdown that
+ * holds the right-cluster actions which collapse out of the row on a
+ * narrow window (≤700px container width): Meeting, Manage access, Settings.
+ *
+ * Each item carries the SAME service as the standalone button it stands in
+ * for, and is gated by the SAME condition, so the menu is a faithful mirror
+ * of the inline controls. In a share-recipient context (a window carrying a
+ * pinned share token) none of these chrome actions apply, so the helper
+ * returns "" — no orphan trigger.
+ *
+ * Always rendered into the row; CSS toggles its visibility against the inline
+ * buttons by container width (see the ≤700px block in the folder skin).
+ *
+ * @param {*} ui
+ */
+export function topbarMoreMenu(ui) {
+  const cnRoot = `${ui.fig.family}-topbar__more`;
+  const inShare = !!ui.mget(_a.token);
+  const area = ui.mget(_a.area);
+
+  const items = [];
+  if (!inShare) {
+    items.push({
+      service: "tab-meeting",
+      ico: "video-camera-header",
+      content: LOCALE.MEETING,
+      modifier: "video",
+    });
+  }
+  // Manage Access mirrors the share control-icon: share areas only.
+  if (!inShare && area === _a.share) {
+    items.push({
+      service: "folder-manage-access",
+      ico: "app-share",
+      content: LOCALE.MANAGE_ACCESS,
+      modifier: "share",
+    });
+  }
+  if (!inShare) {
+    items.push({
+      service: _e.settings,
+      ico: "gear-header",
+      content: LOCALE.SETTINGS,
+      modifier: "settings",
+    });
+  }
+
+  if (!items.length) return "";
+
+  return Skeletons.Box.X({
+    className: `${cnRoot}-wrapper`,
+    kids: [
+      Skeletons.Button.Svg({
+        ico: "apps-dots-vertical",
+        className: `${cnRoot}-trigger`,
+        sys_pn: "topbar-more",
+        uiHandler: [ui],
+        partHandler: ui,
+      }),
+      Skeletons.Box.Y({
+        className: `${cnRoot}-menu`,
+        kids: items.map(({ service, ico, content, modifier }) =>
+          Skeletons.Box.X({
+            className: `${cnRoot}-item ${cnRoot}-item--${modifier}`,
+            uiHandler: [ui],
+            service,
+            kidsOpt: { active: 0 },
+            kids: [
+              Skeletons.Button.Svg({
+                ico,
+                active: 0,
+                className: `${cnRoot}-item-icon`,
+              }),
+              Skeletons.Note({
+                content,
+                active: 0,
+                className: `${cnRoot}-item-label`,
+              }),
+            ],
+          }),
+        ),
+      }),
+    ],
+  });
+}
+
+/**
  *
  * @param {*} ui
  * @returns

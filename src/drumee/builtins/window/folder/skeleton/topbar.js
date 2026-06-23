@@ -9,7 +9,7 @@
  *   ↑ left cluster                                      ↑ right cluster (gap 13.14)
  * ==================================================================== */
 
-const { getAreaLabel, newFileMenu, zoomMenu } = require("../../skeleton/toolkit");
+const { getAreaLabel, newFileMenu, zoomMenu, topbarMoreMenu } = require("../../skeleton/toolkit");
 
 const __skl_folder_topbar = function (ui) {
   const cnFolder = `${ui.fig.family}-topbar`;
@@ -135,9 +135,14 @@ const __skl_folder_topbar = function (ui) {
 
   const zoomBtn = headless ? "" : zoomMenu(ui);
 
+  // Overflow menu for the narrow (≤700px container) layout. Holds the same
+  // actions as videoBtn / shareBtn / settingsBtn; CSS swaps it in for those
+  // inline buttons by window width. Always in the DOM (hidden on desktop).
+  const moreMenu = topbarMoreMenu(ui);
+
   const rightCluster = Skeletons.Box.X({
     className: `${cnFolder}__right`,
-    kids: [videoBtn, uploadBtn, addNew, shareBtn, settingsBtn, zoomBtn, minimizeBtn, controls],
+    kids: [videoBtn, uploadBtn, addNew, shareBtn, settingsBtn, moreMenu, zoomBtn, minimizeBtn, controls],
   });
 
   // ── Root row ─────────────────────────────────────────────────

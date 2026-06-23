@@ -61,7 +61,10 @@
     gap: 4px;
     flex: 0 1 auto;
     min-width: 0;
-    overflow: hidden;
+    overflow: auto;
+    &::-webkit-scrollbar { width: 4px; } ;
+    &::-webkit-scrollbar-track { background: rgba(0, 0, 0, 0.05); } ;
+    &::-webkit-scrollbar-thumb { background: var(--primary-40); border-radius: 4px; };
   }
 
   &__folder-tab {
@@ -291,6 +294,7 @@
   &__actions-cluster {
     align-items: center;
     gap: 12px;
+    padding-left: 12px;
   }
 
   // New workspace button
@@ -771,6 +775,14 @@
   @media (min-width: 1025px) {
     &__more-btn {
       display: none !important;
+    }
+  }
+
+  // Narrow viewports: cap the search bar so it doesn't crowd the rest of
+  // the topbar (the 192px default eats too much of a sub-650px row).
+  @media (max-width: 650px) {
+    &__search-bar {
+      max-width: 140px;
     }
   }
 
