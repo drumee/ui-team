@@ -5,8 +5,6 @@ html {
   overflow: hidden;
 }
 
-@include meta.load-css("payment/status-info");
-
 @include meta.load-css("toolkit");
 @include meta.load-css("buttons.scss");
 @include meta.load-css("topbar");

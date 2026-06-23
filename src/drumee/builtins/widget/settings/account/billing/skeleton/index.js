@@ -27,7 +27,36 @@ function getContent(ui) {
 }
 
 /**
- * Create main billing layout with header tabs and content container
+ * Popup top bar: title + close. Rendered when settings_billing is mounted as
+ * a popup over the Settings page (settings_main overlay). The close button
+ * bubbles "billing-close" up to the host, which clears the overlay.
+ * @param {Object} ui - UI instance
+ * @returns {Object} Skeletons component
+ */
+function popupHeader(ui) {
+  const fig = ui.fig.family;
+  return Skeletons.Box.X({
+    className: `${fig}__popup-header`,
+    kids: [
+      Skeletons.Note({
+        className: `${fig}__popup-title`,
+        content: LOCALE.BILLING_SUBSCRIPTION,
+      }),
+      Skeletons.Button.Svg({
+        className: `${fig}__popup-close`,
+        ico: "cross",
+        service: "billing-close",
+        uiHandler: [ui],
+        bubble: false,
+      }),
+    ],
+  });
+}
+
+/**
+ * Create main billing layout with header tabs and content container.
+ * Wrapped in a popup shell (title bar + scrollable body) so it renders as an
+ * overlay popup inside Settings.
  * @param {Object} ui - UI instance
  * @returns {Object} Skeletons component
  */
@@ -42,12 +71,20 @@ function billing(ui) {
     kids: [content],
   });
 
-  return Skeletons.Box.Y({
-    className: `${fig}__main`,
+  const body = Skeletons.Box.Y({
+    className: `${fig}__body`,
     kids: [
       header,
       contentWrapper,
     ],
+  });
+
+  return Skeletons.Box.Y({
+    className: `${fig}__main`,
+    kids: [
+      ui._popup ? popupHeader(ui) : null,
+      body,
+    ].filter(Boolean),
   });
 }
 

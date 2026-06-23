@@ -695,7 +695,7 @@ class __window_manager extends push {
    */
   upgradePlage() {
     this.ensurePart("wrapper-modal").then((p) => {
-      p.feed({ kind: "settings_pricing" });
+      p.feed({ kind: "settings_billing" });
     });
   }
 

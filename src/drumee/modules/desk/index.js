@@ -710,59 +710,6 @@ class desk_module extends LetcBox {
   }
 
   /**
-   *
-   */
-  checkForPaymentInfo(args = {}) {
-    if (_.isEmpty(args)) {
-      args = Visitor.parseModuleArgs();
-    } // do not remove
-
-    if (_.isEmpty(args.payment)) {
-      return;
-    }
-
-    // to check for successful and failed payment status
-    if (args.payment && args.success) {
-      if (!_.isEmpty(args.subscription_id)) {
-        return this.checkForPaymentStatus(args);
-      }
-    }
-
-    // to check for canceled transaction
-    if (args.payment == "false" && args.cancel) {
-      return this.showPaymentStatus({ status: _a.cancel });
-    }
-  }
-
-  /**
-   *
-   */
-  checkForPaymentStatus(args) {
-    return this.fetchService({
-      service: SERVICE.subscription.payment_status,
-      subscription_id: args.subscription_id,
-      hub_id: Visitor.id,
-    })
-      .then((data) => {
-        return this.showPaymentStatus(data);
-      })
-      .catch((e) => {
-        return Wm.alert(LOCALE.SOMETHING_WENT_WRONG);
-      });
-  }
-
-  /**
-   *
-   */
-  showPaymentStatus(data) {
-    const infoSkl = require("./skeleton/payment/status-info").default(
-      this,
-      data,
-    );
-    return this.__wrapperPopup.feed(infoSkl);
-  }
-
-  /**
    * @param {Object} c
    */
   dmzCopyMedia(c) {

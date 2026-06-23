@@ -617,6 +617,18 @@ class settings_main extends LetcBox {
   }
 
   /**
+   * Open the billing/subscription UI as a popup in the settings overlay.
+   * settings_billing renders its own popup shell (title + close) and bubbles
+   * "billing-close" back here → closeOverlay().
+   */
+  async openBilling() {
+    await Kind.waitFor("settings_billing");
+    return this.ensurePart("overlay").then((p) => {
+      p.feed({ kind: "settings_billing", uiHandler: [this], popup: 1 });
+    });
+  }
+
+  /**
    *
    */
   async confirmDeleteAccount() {
@@ -762,6 +774,15 @@ class settings_main extends LetcBox {
         return this.ensurePart("credentials-email").then((p) => {
           if (p) p.set({ content: (args && args.email) || (Visitor.profile() || {}).email || "" });
         });
+
+      case "open-billing":
+        // Open the billing UI as a popup OVER the Settings page (settings_main
+        // overlay), same mechanism as change-email/export-data. settings_billing
+        // bubbles "billing-close" back here to dismiss.
+        return this.openBilling();
+
+      case "billing-close":
+        return this.closeOverlay();
 
       case "launch-gdrive-migration":
         // Open the migrate-gdrive popup. singleton:1 + wm_unique_id auto

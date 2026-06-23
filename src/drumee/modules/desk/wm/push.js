@@ -152,18 +152,6 @@ class __push_manager extends winman {
         RADIO_BROADCAST.trigger(_e.peerData, { id: data.user_id, status: data.status });
         break;
 
-      case "subscription.paid":
-      case "subscription.failed":
-        if (!_.isEmpty(data.subscription_id)) {
-          return Desk.checkForPaymentStatus({
-            subscription_id: data.subscription_id,
-          });
-        }
-
-      case "subscription.deleted":
-        return Desk.checkForSubscriptionStatus({ status: _a.deleted });
-
-
       default:
         this.trigger(WS_EVENT, { service, data, options })
     }
