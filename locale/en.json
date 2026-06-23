@@ -142,6 +142,8 @@
   "LEFT": "Left",
   "LINKED_ACCOUNTS": "Linked accounts",
   "LINKED_ACCOUNTS_SUBTITLE": "Sign-in providers connected to your account.",
+  "IMPORT_SECTION_TITLE": "Import",
+  "IMPORT_SECTION_SUBTITLE": "Bring your existing files into Drumee.",
   "LOG_IN_TO_WORKSPACE": "Log In to Workspace",
   "LOG_IN_TO_SOVEREIGN_WORKSPACE": "Log in to your sovereign workspace",
   "LOGIN": "Log in",

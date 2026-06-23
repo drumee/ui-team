@@ -1314,6 +1314,8 @@
   "GOOGLE_MEET": "Google Meet",
   "LINKED_ACCOUNTS": "Linked accounts",
   "LINKED_ACCOUNTS_SUBTITLE": "Sign-in providers connected to your account.",
+  "IMPORT_SECTION_TITLE": "នាំចូល",
+  "IMPORT_SECTION_SUBTITLE": "នាំយកឯកសារដែលមានស្រាប់របស់អ្នកចូលទៅ Drumee។",
   "MICROSOFT_TEAMS": "Microsoft Teams",
   "CURRENT_LOCATION": "Current location:",
   "SELECT_DESTINATION": "Select a location to display the folder path",

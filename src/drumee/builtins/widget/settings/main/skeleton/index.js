@@ -486,10 +486,11 @@ function linkedAccountsCard(ui) {
     className: `${ui.fig.family}__card ${pfx}-card`,
     kids: [
       cardHeading(ui, {
-        title: LOCALE.LINKED_ACCOUNTS || "Linked accounts",
-        subtitle:
-          LOCALE.LINKED_ACCOUNTS_SUBTITLE ||
-          "Sign-in providers connected to your account.",
+        // Re-framed from "connected accounts / sign-in providers" to an
+        // import/migration heading: this card only hosts the Google Drive
+        // migration CTA, not linked sign-in accounts.
+        title: LOCALE.IMPORT_SECTION_TITLE,
+        subtitle: LOCALE.IMPORT_SECTION_SUBTITLE,
       }),
       Skeletons.Box.Y({
         className: `${pfx}-list`,

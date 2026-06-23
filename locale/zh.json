@@ -1314,6 +1314,8 @@
   "GOOGLE_MEET": "Google Meet",
   "LINKED_ACCOUNTS": "Linked accounts",
   "LINKED_ACCOUNTS_SUBTITLE": "Sign-in providers connected to your account.",
+  "IMPORT_SECTION_TITLE": "导入",
+  "IMPORT_SECTION_SUBTITLE": "将您现有的文件导入 Drumee。",
   "MICROSOFT_TEAMS": "Microsoft Teams",
   "CURRENT_LOCATION": "Current location:",
   "SELECT_DESTINATION": "Select a location to display the folder path",

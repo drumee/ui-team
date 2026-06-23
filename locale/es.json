@@ -554,6 +554,8 @@
   "LEFT": "Left",
   "LINKED_ACCOUNTS": "Linked accounts",
   "LINKED_ACCOUNTS_SUBTITLE": "Sign-in providers connected to your account.",
+  "IMPORT_SECTION_TITLE": "Importar",
+  "IMPORT_SECTION_SUBTITLE": "Lleva tus archivos existentes a Drumee.",
   "LOGIN": "Log in",
   "LOG_IN": "Log in",
   "MANAGE_ACCESS": "Manage access",
