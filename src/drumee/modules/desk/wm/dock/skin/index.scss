@@ -105,9 +105,10 @@
   }
 
   &__main {
+    // Dock bar hidden across all breakpoints.
+    display: none !important;
     background-color: var(--dock-main-background);
     border-radius: 9999px;
-    display: flex;
     align-items: center;
     justify-content: center;
     max-width: 100vw;

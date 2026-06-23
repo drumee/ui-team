@@ -561,14 +561,17 @@
 }
 
 @media (max-width: 650px) {
-  // Hide the DESKTOP sidebar column on narrow viewports. The mobile
-  // sidebar is the same widget but rendered with `data-device="mobile"`
-  // as a slide-in drawer — do NOT hide that variant or `openMobileDrawer`
-  // toggles `data-state` on a `display:none` element.
+  // Keep the DESKTOP sidebar column visible on narrow viewports too.
+  // __main is absolutely positioned INSIDE __rail, so the rail must stay
+  // displayed for __main to render — hence both are forced visible here.
+  // The mobile drawer variant (`data-device="mobile"`) keeps its own
+  // transform-based show/hide and is unaffected.
   .desk-module-sidebar {
-    &__rail,
-    &__main:not([data-device="mobile"]) {
-      display: none;
+    &__rail {
+      display: flex;
+    }
+    &__main {
+      display: flex !important;
     }
   }
 }
