@@ -1,5 +1,75 @@
 @use "mixins/drumee";
 
+// In the 768–1024px width band the rail's behavior is split by input type:
+//   desktop (pointer: fine)   → ALWAYS collapsed (mini icon-only)
+//   tablet  (pointer: coarse) → ALWAYS expanded (full column)
+// The expanded layout is the rail's natural default, so "always expanded on
+// tablet" is achieved by SUPPRESSING the attribute-driven collapse rules for
+// touch devices in this band — they then fall back to the expanded default.
+// This guard is what every collapse rule below is wrapped in: "collapse is
+// allowed on fine pointers, or anywhere outside the tablet band". Its
+// complement — coarse pointer AND inside the band — is the only case where
+// collapse never applies. The desktop force-collapse @media at the end of the
+// file (which overrides the pinned state too) is gated to `pointer: fine`.
+$rail-collapse-allowed: "(pointer: fine), (max-width: 767px), (min-width: 1025px)";
+
+// Mini icon-only rail appearance: hide every label/list/pin, center the
+// glyphs and swap the wordmark for the compact mark. Shared by the
+// collapsed (data-collapsed="1") state on desktop AND the always-collapsed
+// tablet band (768–1024px) — see both @include sites below. Uses literal
+// class selectors (no `&`) so it can be included from any nesting context.
+@mixin sidebar-mini-icons {
+  // !important is required: __item-text and __badge carry
+  // `display: flex !important` in their base rules, which a plain
+  // `display: none` can't override.
+  .desk-module-sidebar__item-text,
+  .desk-module-sidebar__header,
+  .desk-module-sidebar__workspace,
+  .desk-module-sidebar__footer-name-wrapper,
+  .desk-module-sidebar__footer-user-plan,
+  .desk-module-sidebar__logo-pin-btn,
+  .desk-module-sidebar__logo-icon {
+    display: none !important;
+  }
+
+  .desk-module-sidebar__logo-mark {
+    display: flex;
+  }
+
+  .desk-module-sidebar__logo-row {
+    justify-content: center;
+    padding: 0;
+  }
+
+  .desk-module-sidebar__item {
+    justify-content: center;
+    gap: 0;
+    padding-left: 0;
+    padding-right: 0;
+  }
+
+  // Notification count shrinks to a dot anchored on the icon.
+  .desk-module-sidebar__badge {
+    position: absolute;
+    top: 4px;
+    right: 16px;
+    min-width: 9px;
+    width: 9px;
+    height: 9px;
+    padding: 0;
+    border-radius: 50%;
+    font-size: 0;
+    line-height: 0;
+    margin-left: 0;
+  }
+
+  .desk-module-sidebar__footer-user-btn {
+    justify-content: center;
+    padding-left: 0;
+    padding-right: 0;
+  }
+}
+
 .desk-module-sidebar {
   &__main {
     justify-content: space-between;
@@ -58,8 +128,11 @@
 
     &[data-collapsed="1"] {
       // Collapsed: reserve just the mini rail. Hover expands __main as an
-      // overlay (below) without touching this reserved width.
-      flex-basis: 64px;
+      // overlay (below) without touching this reserved width. Guarded so a
+      // touch tablet in the 768–1024px band stays expanded instead.
+      @media #{$rail-collapse-allowed} {
+        flex-basis: 64px;
+      }
     }
   }
 
@@ -76,68 +149,24 @@
   }
 
   &__rail[data-collapsed="1"] &__main {
-    width: 64px;
+    @media #{$rail-collapse-allowed} {
+      width: 64px;
 
-    &:hover {
-      width: 231px;
-      // Lift the shadow while floating over the workspace.
-      box-shadow: var(--shadow-right-big, 0 1px 18px rgba(0, 0, 0, 0.18));
+      &:hover {
+        width: 231px;
+        // Lift the shadow while floating over the workspace.
+        box-shadow: var(--shadow-right-big, 0 1px 18px rgba(0, 0, 0, 0.18));
+      }
     }
   }
 
-  // Collapsed + not hovered = the mini icon-only rail. Show ONLY the icons:
-  // hide every label, the workspace list, and the pin button; center the
-  // glyphs and swap the wordmark for the compact mark. On hover the
-  // :not(:hover) selector stops matching and the full sidebar returns.
+  // Collapsed + not hovered = the mini icon-only rail. Show ONLY the icons.
+  // On hover the :not(:hover) selector stops matching and the full sidebar
+  // returns. (The tablet band forces this same mini state regardless of the
+  // data-collapsed attribute — see the @media block at the end of the file.)
   &__rail[data-collapsed="1"] &__main:not(:hover) {
-    // !important is required: __item-text and __badge carry
-    // `display: flex !important` in their base rules, which a plain
-    // `display: none` can't override.
-    .desk-module-sidebar__item-text,
-    .desk-module-sidebar__header,
-    .desk-module-sidebar__workspace,
-    .desk-module-sidebar__footer-name-wrapper,
-    .desk-module-sidebar__footer-user-plan,
-    .desk-module-sidebar__logo-pin-btn,
-    .desk-module-sidebar__logo-icon {
-      display: none !important;
-    }
-
-    .desk-module-sidebar__logo-mark {
-      display: flex;
-    }
-
-    .desk-module-sidebar__logo-row {
-      justify-content: center;
-      padding: 0;
-    }
-
-    .desk-module-sidebar__item {
-      justify-content: center;
-      gap: 0;
-      padding-left: 0;
-      padding-right: 0;
-    }
-
-    // Notification count shrinks to a dot anchored on the icon.
-    .desk-module-sidebar__badge {
-      position: absolute;
-      top: 4px;
-      right: 16px;
-      min-width: 9px;
-      width: 9px;
-      height: 9px;
-      padding: 0;
-      border-radius: 50%;
-      font-size: 0;
-      line-height: 0;
-      margin-left: 0;
-    }
-
-    .desk-module-sidebar__footer-user-btn {
-      justify-content: center;
-      padding-left: 0;
-      padding-right: 0;
+    @media #{$rail-collapse-allowed} {
+      @include sidebar-mini-icons;
     }
   }
 
@@ -557,6 +586,43 @@
       font-size: 10px;
       line-height: 1.4;
     }
+  }
+}
+
+@media (min-width: 768px) and (max-width: 1024px) and (pointer: fine) {
+  // Desktop at tablet width (fine pointer, e.g. a resized desktop window):
+  // the rail is ALWAYS collapsed to the mini icon-only column, regardless of
+  // the pinned (data-collapsed="0") preference. Mirrors the data-collapsed="1"
+  // rules above but drops the attribute requirement, so a pinned-open rail
+  // still renders mini here. Hover still expands __main as an overlay (no
+  // reflow). Touch devices (pointer: coarse) are excluded — they stay
+  // expanded via the suppressed collapse rules above.
+  .desk-module-sidebar {
+    &__rail {
+      flex-basis: 64px;
+    }
+
+    &__rail &__main {
+      width: 64px;
+
+      &:hover {
+        width: 231px;
+        box-shadow: var(--shadow-right-big, 0 1px 18px rgba(0, 0, 0, 0.18));
+      }
+    }
+
+    &__rail &__main:not(:hover) {
+      @include sidebar-mini-icons;
+    }
+  }
+}
+
+@media (min-width: 768px) and (max-width: 1024px) and (pointer: coarse) {
+  // Tablet (coarse pointer): the rail is always expanded and can't be
+  // collapsed, so the collapse/pin toggle is meaningless — hide it. (Plain
+  // display:none, matching the mobile-drawer rule above.)
+  .desk-module-sidebar__logo-pin-btn {
+    display: none;
   }
 }
 
