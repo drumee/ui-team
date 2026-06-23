@@ -639,6 +639,8 @@
   "COMPANY_NAME_REQUIRED": "Company name required",
   "NAME_REQUIRE": "Name is require",
   "SOMETHING_WENT_WRONG": "Something went wrong. Please reload and try again.",
+  "MANAGE_BILLING": "Manage billing",
+  "NO_ACTIVE_SUBSCRIPTION": "No active subscription",
   "DRUMEE_DESK_OPENING": "Your Drumee desktop opens in a few instances",
   "ENTER_OTP_RECEIVED": "<p>Enter the code received on the</p><p class = number> ****** {0}</p>",
   "CODE_REQUIRED": "Code is required",

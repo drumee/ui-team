@@ -1,4 +1,6 @@
 {
+  "MANAGE_BILLING": "Управление оплатой",
+  "NO_ACTIVE_SUBSCRIPTION": "Нет активной подписки",
   "CANCEL_ALL": "Отменить всё",
   "WINDOW_ZOOM": "Развернуть",
   "TILE_LEFT": "Закрепить слева",

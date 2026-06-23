@@ -1,4 +1,6 @@
 {
+  "MANAGE_BILLING": "Gérer la facturation",
+  "NO_ACTIVE_SUBSCRIPTION": "Aucun abonnement actif",
   "CANCEL_ALL": "Tout annuler",
   "WINDOW_ZOOM": "Agrandir",
   "TILE_LEFT": "Aligner à gauche",

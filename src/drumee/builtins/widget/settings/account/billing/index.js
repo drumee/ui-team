@@ -830,6 +830,19 @@ class settings_billing extends LetcBox {
         this._proceedToCheckout();
         return false;
 
+      case "manage-billing":
+        // Open the Stripe Billing Portal (hosted invoices/cancel/resume/card).
+        this.postService(SERVICE.payment.portal, {})
+          .then((data) => {
+            const { url, status } = data || {};
+            if (url) window.location.assign(url);
+            else if (Wm && Wm.alert) Wm.alert(LOCALE.NO_ACTIVE_SUBSCRIPTION);
+          })
+          .catch(() => {
+            if (Wm && Wm.alert) Wm.alert(LOCALE.SOMETHING_WENT_WRONG);
+          });
+        return false;
+
     }
   }
 }
