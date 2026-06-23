@@ -117,10 +117,11 @@ const __skl_folder_topbar = function (ui) {
   });
 
   // Headless = the full-area workspace pane (sidebar-driven), not a popup, so
-  // it drops the close/minimize/zoom chrome but keeps the action buttons.
+  // it drops the minimize/zoom chrome but still keeps a close (×) button so the
+  // window can be dismissed.
   const headless = ui.mget(_a.headless);
 
-  let controls = headless ? "" : require("window/skeleton/topbar/control")(ui, "c");
+  let controls = require("window/skeleton/topbar/control")(ui, "c");
 
   // Custom minimize glyph (Unicode U+2212) — thinner than the bundled
   // `window-minimize` SVG which renders as a heavy 1.6/14 vh bar.

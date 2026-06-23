@@ -67,6 +67,27 @@ class __tasks_panel extends LetcBox {
     this.unbindEvent(_a.live);
     if (this._fileSearchTimer) clearTimeout(this._fileSearchTimer);
     if (this._fileSearchBlurTimer) clearTimeout(this._fileSearchBlurTimer);
+    if (
+      this._mediaDroppableInstalled &&
+      typeof $ !== "undefined" &&
+      $.fn &&
+      $.fn.droppable &&
+      this.el
+    ) {
+      try {
+        $(this.el).droppable("destroy");
+      } catch (_) {}
+    }
+    // Release pending-file image-preview blob URLs.
+    for (const draft of [this._createDefaults, this._detailDraft]) {
+      for (const f of (draft && draft.pending_files) || []) {
+        if (f.previewUrl) {
+          try {
+            URL.revokeObjectURL(f.previewUrl);
+          } catch (_) {}
+        }
+      }
+    }
   }
 
   // ── Host-window controls (filter button lives on the tab bar) ──
@@ -120,6 +141,7 @@ class __tasks_panel extends LetcBox {
 
   async onDomRefresh() {
     this._installDnd();
+    this._installMediaDroppable();
     this._installFileSearchFocus();
     await Promise.all([
       this._loadTasks(),
@@ -127,6 +149,36 @@ class __tasks_panel extends LetcBox {
       this._loadLabels(),
     ]);
     this._render();
+  }
+
+  // Files dragged from the home grid use Drumee's internal jQuery-UI drag, not
+  // native dataTransfer — register the panel as a droppable so they attach.
+  _installMediaDroppable() {
+    if (!this.el || this._mediaDroppableInstalled) return;
+    if (typeof $ === "undefined" || !$.fn || !$.fn.droppable) return;
+    this._mediaDroppableInstalled = true;
+    $(this.el).droppable({
+      tolerance: "pointer",
+      greedy: true,
+      over: () => {
+        if (this.canAttachExisting()) this.el.dataset.fileDrag = "1";
+      },
+      out: () => {
+        delete this.el.dataset.fileDrag;
+      },
+      drop: (e, ui) => {
+        delete this.el.dataset.fileDrag;
+        if (!this.canAttachExisting()) return;
+        const selection =
+          (typeof Wm !== "undefined" &&
+            Wm.getGlobalSelection &&
+            Wm.getGlobalSelection()) ||
+          [];
+        const moving = ui && ui.helper && ui.helper.moving;
+        const nodes = selection.length ? selection : moving ? [moving] : [];
+        if (nodes.length) this.attachExistingNodes(nodes);
+      },
+    });
   }
 
   // Delegated drag-and-drop on this.el — survives every _render()'s feed() rebuild.
@@ -171,6 +223,17 @@ class __tasks_panel extends LetcBox {
     });
 
     root.addEventListener("dragover", (e) => {
+      // OS file drag → attach to the open task; preventDefault so the drop
+      // fires on us. Takes priority over the card-reorder path.
+      if (this._isFileDrag(e)) {
+        e.preventDefault();
+        const ok = !!this._activeUploadScope();
+        try {
+          e.dataTransfer.dropEffect = ok ? "copy" : "none";
+        } catch (_) {}
+        if (ok) root.dataset.fileDrag = "1";
+        return;
+      }
       const col = findColumn(e.target);
       if (!col) return;
       e.preventDefault();
@@ -195,6 +258,9 @@ class __tasks_panel extends LetcBox {
     });
 
     root.addEventListener("dragleave", (e) => {
+      if (root.dataset.fileDrag && !root.contains(e.relatedTarget)) {
+        delete root.dataset.fileDrag;
+      }
       const col = findColumn(e.target);
       // Only clear the highlight when the pointer actually leaves the column
       // body (relatedTarget outside it) — child→child transitions also fire
@@ -205,6 +271,11 @@ class __tasks_panel extends LetcBox {
     });
 
     root.addEventListener("drop", (e) => {
+      if (this._isFileDrag(e)) {
+        e.preventDefault();
+        delete root.dataset.fileDrag;
+        return this._onFilesDropped(e);
+      }
       const col = findColumn(e.target);
       if (!col) {
         this._clearDropAffordance();
@@ -668,6 +739,9 @@ class __tasks_panel extends LetcBox {
       case "unlink-attachment":
         return this._unlinkAttachment(trigger);
 
+      case "open-attachment":
+        return this._openAttachment(trigger.mget("fileNid"));
+
       default:
         if (super.onUiEvent) super.onUiEvent(trigger, args);
     }
@@ -863,10 +937,79 @@ class __tasks_panel extends LetcBox {
         hub_id: this._hubId,
         task_id: taskId,
       });
-      this._attachments[taskId] = Array.isArray(files) ? files : [];
+      const list = Array.isArray(files) ? files : [];
+      // Linked files live in this hub (cross-hub files are copied in on attach),
+      // so the preview is built from file_nid + this hub — no get_node_attr.
+      this._attachments[taskId] = list.map((f) => {
+        const { previewUrl, chartId } = this._attachmentPreview(f);
+        return { ...f, previewUrl, iconChartId: chartId };
+      });
     } catch (err) {
       this._attachments[taskId] = [];
     }
+  }
+
+  // Shared preview for dragged + committed files: mirrors media imgCapable()
+  // (poster-aware) and builds the grid's thumbnail URL (file/<fmt>/<nid>/<hub>).
+  _attachmentPreview(attr) {
+    const ext = String(attr.ext || attr.extension || "").toLowerCase();
+    const filetype = attr.filetype || attr.category || "";
+    const mimetype = attr.mimetype || "";
+    const cap = attr.capability || "";
+    const nid = attr.nid || attr.file_nid;
+    const hub = attr.hub_id || this._hubId;
+    let meta = attr.metadata;
+    if (typeof meta === "string") {
+      try {
+        meta = JSON.parse(meta);
+      } catch (_) {
+        meta = null;
+      }
+    }
+
+    let imgCapable;
+    if (meta && meta.poster) imgCapable = true;
+    else if (/^-/.test(cap)) imgCapable = false;
+    else if (ext === "svg" || ext === "pdf") imgCapable = true;
+    else if (/text/.test(mimetype)) imgCapable = false;
+    else if (/shell|script|text/.test(filetype)) imgCapable = false;
+    else if (/^r/.test(cap)) imgCapable = true;
+    else
+      imgCapable =
+        /^(png|jpe?g|gif|webp|bmp|avif|heic)$/.test(ext) ||
+        filetype === _a.image ||
+        filetype === _a.video;
+
+    let previewUrl = null;
+    if (imgCapable && nid != null && hub != null) {
+      const b = (typeof bootstrap === "function" && bootstrap()) || {};
+      const endpoint = b.endpoint || "";
+      const fmt =
+        filetype === _a.vector || ext === "svg"
+          ? "orig"
+          : ext === "pdf"
+            ? "thumb"
+            : "vignette";
+      let url = `${endpoint}file/${fmt}/${nid}/${hub}`;
+      if (b.keysel && attr.area !== "public") url += `?keysel=${b.keysel}`;
+      const changed = Math.abs((Number(attr.mtime) || 0) - (Number(attr.ctime) || 0));
+      const kc = attr.md5Hash || changed || 0;
+      if (kc) url += (url.indexOf("?") >= 0 ? "&" : "?") + "v=" + kc;
+      previewUrl = url;
+    }
+
+    let chartId = "attachment";
+    try {
+      const r = require("media/template/icon-name")({
+        filetype,
+        ext,
+        mimetype,
+        area: attr.area,
+        dataType: attr.dataType,
+      });
+      if (r && r.chartId) chartId = r.chartId;
+    } catch (_) {}
+    return { previewUrl, chartId };
   }
 
   // Read text-field values straight from the live DOM. The Entry widget only
@@ -1449,8 +1592,8 @@ class __tasks_panel extends LetcBox {
   }
 
   async _onAttachmentPicked(e) {
-    const file = e.target?.files?.[0];
-    if (!file) return;
+    const files = Array.from(e.target?.files || []);
+    if (!files.length) return;
     e.target.value = "";
     const scope = this._pendingUploadScope || "detail";
     this._pendingUploadScope = null;
@@ -1461,13 +1604,61 @@ class __tasks_panel extends LetcBox {
     const draft = scope === "create" ? this._createDefaults : this._detailDraft;
     if (!draft) return;
 
-    await this._ensureFolderFilenames();
-    const { filename, extension } = this._resolveAvailableName(file.name);
-    const localKey = `local:${Date.now()}:${file.name}`;
-    const pending = (draft.pending_files || []).slice();
-    pending.push({ localKey, file, filename, extension });
-    draft.pending_files = pending;
+    await this._stashPendingFiles(draft, files);
     return this._refreshPendingList(scope);
+  }
+
+  // True when the drag carries OS files (vs. an internal card-reorder drag).
+  _isFileDrag(e) {
+    const types = e.dataTransfer && e.dataTransfer.types;
+    if (!types) return false;
+    return Array.from(types).includes("Files");
+  }
+
+  // Which draft a dropped/picked file attaches to; null → no task being edited.
+  _activeUploadScope() {
+    if (this._creating && this._createDefaults) return "create";
+    if (this._detailId && this._detailDraft) return "detail";
+    return null;
+  }
+
+  async _onFilesDropped(e) {
+    const scope = this._activeUploadScope();
+    if (!scope) {
+      if (typeof Butler !== "undefined" && Butler.say) {
+        Butler.say(LOCALE.WRONG_DROP_AREA);
+      }
+      return;
+    }
+    const files = Array.from((e.dataTransfer && e.dataTransfer.files) || []);
+    if (!files.length) return;
+    const draft = scope === "create" ? this._createDefaults : this._detailDraft;
+    if (!draft) return;
+    await this._stashPendingFiles(draft, files);
+    this._refreshPendingList(scope);
+  }
+
+  // Queues File objects onto a draft's pending list (picker + drag-drop),
+  // resolving name collisions and caching an object URL for image previews.
+  async _stashPendingFiles(draft, files) {
+    await this._ensureFolderFilenames();
+    draft.pending_files = draft.pending_files || [];
+    let i = 0;
+    for (const file of files) {
+      const { filename, extension } = this._resolveAvailableName(file.name);
+      const localKey = `local:${Date.now()}:${i++}:${file.name}`;
+      const entry = { localKey, file, filename, extension };
+      if (this._isImageExt(extension)) {
+        try {
+          entry.previewUrl = URL.createObjectURL(file);
+        } catch (_) {}
+      }
+      draft.pending_files.push(entry);
+    }
+  }
+
+  _isImageExt(ext) {
+    return /^(png|jpe?g|gif|webp|bmp|svg|avif|heic)$/i.test(ext || "");
   }
 
   _splitFilename(name) {
@@ -1611,6 +1802,84 @@ class __tasks_panel extends LetcBox {
     this._attachments[taskId] = Array.isArray(links) ? links : [];
     this._render();
   }
+
+  // Find an attachment record by nid across committed + both pending drafts
+  // (to read its origin hub_id — a dragged file may live in another hub).
+  _findAttachmentRecord(fileNid) {
+    const lists = [
+      this._attachments[this._detailId],
+      this._detailDraft && this._detailDraft.pending_files,
+      this._createDefaults && this._createDefaults.pending_files,
+    ];
+    for (const l of lists) {
+      if (!Array.isArray(l)) continue;
+      const r = l.find((a) => (a.file_nid || a.nid) === fileNid);
+      if (r) return r;
+    }
+    return null;
+  }
+
+  // Open an attachment in its player — mirrors the desk WM's open-by-nid path:
+  // node_info → media widget from a Backbone.Model → append the app to the WM
+  // pool. (Don't call media.initData() — that throws on an unrendered widget.)
+  async _openAttachment(fileNid) {
+    if (!fileNid || typeof Wm === "undefined") return;
+    const rec = this._findAttachmentRecord(fileNid);
+    const hub = (rec && rec.hub_id) || this._hubId;
+    let r;
+    try {
+      r = await this.fetchService(
+        { service: SERVICE.media.node_info, nid: fileNid, hub_id: hub },
+        { async: 1 },
+      );
+    } catch (_) {}
+    if ((!r || !r.filetype) && rec) {
+      r = {
+        nid: rec.file_nid || rec.nid,
+        hub_id: hub,
+        filename: rec.filename,
+        filetype: rec.filetype || rec.category,
+        ext: rec.extension || rec.ext,
+      };
+    }
+    if (!r || !r.filetype) return;
+    try {
+      const application = require("builtins/window/configs/application");
+      const m = new Backbone.Model(r);
+      const fType = r.filetype;
+      const k = await Kind.waitFor(_a.media);
+      const media = new k({ model: m });
+      const preset = {
+        nid: r.nid || fileNid,
+        hub_id: r.hub_id || hub,
+        filename: r.filename,
+        filetype: fType,
+        vhost: r.vhost,
+        home_id: r.home_id,
+        holder_id: r.holder_id,
+        area: r.area,
+        privilege: r.privilege,
+        useKeyEvent: 1,
+        service: "open-node",
+        state: _a.on,
+        uiHandler: [this],
+        media,
+        trigger: media,
+        radio: _a.on,
+      };
+      let app = application(fType, preset);
+      if (_.isEmpty(app) || !app.kind) app = { ...app, kind: "props_viewer", media };
+      app.style = Wm.getWindowPosition(media);
+      await Kind.waitFor(app.kind);
+      Wm.getWindowsPool().append(app);
+    } catch (e) {
+      this.warn && this.warn("open attachment failed", e);
+    }
+  }
+
+  // No-ops: a media node opened from here may resolve us as its parent.
+  syncBounds() {}
+  syncOrder() {}
 
   async _unlinkAttachment(trigger) {
     const taskId = trigger.mget("taskId");
@@ -1795,13 +2064,108 @@ class __tasks_panel extends LetcBox {
     this._refreshFileSearchDropdown(scope);
   }
 
+  // True when a dragged workspace node can be attached now (a form is open).
+  canAttachExisting() {
+    return !!this._activeUploadScope();
+  }
+
+  // Attach dragged workspace node(s) to the open draft. Same-hub files link by
+  // nid; cross-hub files are copied in. Returns true if any node was queued.
+  attachExistingNodes(files) {
+    const scope = this._activeUploadScope();
+    if (!scope) return false;
+    const draft = scope === "create" ? this._createDefaults : this._detailDraft;
+    if (!draft) return false;
+
+    const list = Array.isArray(files) ? files : [files];
+    draft.pending_files = draft.pending_files || [];
+    const seen = new Set(
+      draft.pending_files.map((f) => f.nid || f.localKey),
+    );
+    // A drop fires through both the droppable and the folder insertMedia, so
+    // this runs twice; the per-nid timestamp stops cross-hub double-copies.
+    this._attachingNids = this._attachingNids || new Map();
+    const nowTs = Date.now();
+    let added = 0;
+    const crossHub = [];
+    for (const item of list) {
+      const isWidget = item && typeof item.mget === "function";
+      const attr = isWidget ? item.model.toJSON() : item || {};
+      const nid = attr.nid || attr.file_nid || attr.id;
+      if (!nid || seen.has(nid)) continue;
+      if (nowTs - (this._attachingNids.get(nid) || 0) < 4000) continue;
+      this._attachingNids.set(nid, nowTs);
+      if (attr.filetype === _a.hub || attr.filetype === _a.folder) continue;
+      seen.add(nid);
+
+      // A foreign-hub file can't be linked by nid (this hub 403s on it) — copy
+      // it in via the upload pipeline so it becomes a local attachment.
+      const srcHub = attr.hub_id;
+      if (srcHub && srcHub !== this._hubId) {
+        crossHub.push(attr);
+        added++;
+        continue;
+      }
+
+      const { previewUrl, chartId } = this._attachmentPreview(attr);
+      draft.pending_files.push({
+        nid,
+        hub_id: srcHub || this._hubId,
+        filename: attr.filename || attr.user_filename || "",
+        extension: attr.extension || attr.ext || "",
+        filetype: attr.filetype || attr.category,
+        previewUrl,
+        iconChartId: chartId,
+      });
+      added++;
+    }
+    if (crossHub.length) this._queueCrossHubFiles(crossHub, scope);
+    if (!added) return false;
+    this._refreshPendingList(scope);
+    this._refreshFileSearchDropdown(scope);
+    return true;
+  }
+
+  // Download each foreign-hub file and queue it as an upload into this hub.
+  async _queueCrossHubFiles(attrs, scope) {
+    const draft = scope === "create" ? this._createDefaults : this._detailDraft;
+    if (!draft) return;
+    const b = (typeof bootstrap === "function" && bootstrap()) || {};
+    const endpoint = b.endpoint || "";
+    for (const attr of attrs) {
+      try {
+        const ext = String(attr.ext || attr.extension || "");
+        let url = `${endpoint}file/orig/${attr.nid}/${attr.hub_id}`;
+        if (b.keysel) url += `?keysel=${b.keysel}`;
+        const resp = await fetch(url, { credentials: "include" });
+        if (!resp.ok) {
+          this.warn && this.warn(`cross-hub fetch failed ${resp.status}`, url);
+          continue;
+        }
+        const blob = await resp.blob();
+        const name = `${attr.filename || attr.user_filename || "file"}${ext ? "." + ext : ""}`;
+        const file = new File([blob], name, {
+          type: blob.type || attr.mimetype || "",
+        });
+        await this._stashPendingFiles(draft, [file]);
+      } catch (e) {
+        this.warn && this.warn("cross-hub attach failed", e);
+      }
+    }
+    this._refreshPendingList(scope);
+  }
+
   _removePendingFile(trigger) {
     const nid = trigger.mget("fileNid");
     const localKey = trigger.mget("localKey");
     const keep = (f) => {
-      if (localKey) return f.localKey !== localKey;
-      if (nid) return f.nid !== nid;
-      return true;
+      const drop = localKey ? f.localKey === localKey : nid ? f.nid === nid : false;
+      if (drop && f.previewUrl) {
+        try {
+          URL.revokeObjectURL(f.previewUrl);
+        } catch (_) {}
+      }
+      return !drop;
     };
     // Same row template renders in both scopes; filter both drafts and let
     // the surgical refresh skip whichever isn't mounted.

@@ -1380,6 +1380,7 @@
   "DUE_DATE": "Due date",
   "ATTACHMENTS": "Attachments",
   "ATTACH_FILE": "Attach file",
+  "DROP_FILES_TO_ATTACH": "Drop files to attach",
   "NO_ATTACHMENTS": "No attachments yet",
   "TASK_DESCRIPTION": "Description",
   "TASK_DESCRIPTION_PLACEHOLDER": "Add more detail…",

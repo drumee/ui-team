@@ -559,27 +559,7 @@ const make = function (ui) {
       });
     };
 
-    const pendingRow = (f) =>
-      Skeletons.Box.X({
-        className: `${pfx}__file-pending-row`,
-        kids: [
-          Skeletons.Note({
-            className: `${pfx}__file-result-name`,
-            content: `${f.filename || ""}${f.extension ? "." + f.extension : ""}`,
-          }),
-          Skeletons.Button.Svg({
-            className: `${pfx}__attachment-unlink`,
-            ico: "cross",
-            bubble: 0,
-            service: "remove-pending-file",
-            uiHandler: [ui],
-            // Newly-picked uploads carry localKey (no nid yet); search-picked
-            // entries carry nid. _removePendingFile matches on either.
-            fileNid: f.nid,
-            localKey: f.localKey,
-          }),
-        ],
-      });
+    const pendingRow = (f) => pendingRowDescriptor(ui, f);
 
     // data-search-focused is flipped by the focusin/focusout handlers in
     // index.js so toggling the dropdown does not re-render the panel.
@@ -665,7 +645,7 @@ const make = function (ui) {
     return Skeletons.Box.Y({
       className: `${pfx}__file-picker`,
       kids: [
-        Skeletons.Box.Y({
+        Skeletons.Box.X({
           className: `${pfx}__file-pending-list`,
           sys_pn: `file-pending-list-${scope}`,
           partHandler: ui,
@@ -852,30 +832,12 @@ const make = function (ui) {
       ],
     });
 
-    const attachmentRow = (f) =>
-      Skeletons.Box.X({
-        className: `${pfx}__attachment-row`,
-        kids: [
-          Skeletons.Note({
-            className: `${pfx}__attachment-name`,
-            content: `${f.filename || ""}${f.extension ? "." + f.extension : ""}`,
-          }),
-          Skeletons.Button.Svg({
-            className: `${pfx}__attachment-unlink`,
-            ico: "cross",
-            bubble: 0,
-            service: "unlink-attachment",
-            uiHandler: [ui],
-            taskId: detail.id,
-            fileNid: f.file_nid,
-          }),
-        ],
-      });
+    const attachmentRow = (f) => attachmentRowDescriptor(ui, f, detail.id);
 
     // Rows live in a stable sub-part so unlink can re-feed just this list
     // without re-rendering the whole detail panel (which would steal focus
     // and wipe any unsaved title/description edits).
-    const attachmentRowsContainer = Skeletons.Box.Y({
+    const attachmentRowsContainer = Skeletons.Box.X({
       className: `${pfx}__attachment-rows`,
       sys_pn: "attachment-rows",
       partHandler: ui,
@@ -1034,6 +996,7 @@ const make = function (ui) {
               ],
             }),
             actions,
+            dropOverlay(ui),
           ],
         }),
       ],
@@ -1257,7 +1220,7 @@ const make = function (ui) {
         Skeletons.Box.Y({
           className: `${pfx}__create-modal`,
           bubble: 0,
-          kids: [form],
+          kids: [form, dropOverlay(ui)],
         }),
       ],
     });
@@ -1796,28 +1759,121 @@ function buildMentionItemsContent(ui, members) {
   });
 }
 
-function buildPendingListContent(ui, pendingFiles) {
+// "Drop to attach" overlay, shown while data-file-drag="1" is set on the root.
+function dropOverlay(ui) {
   const pfx = ui.fig.family;
-  return (pendingFiles || []).map((f) =>
-    Skeletons.Box.X({
-      className: `${pfx}__file-pending-row`,
-      kids: [
-        Skeletons.Note({
-          className: `${pfx}__file-result-name`,
-          content: `${f.filename || ""}${f.extension ? "." + f.extension : ""}`,
-        }),
-        Skeletons.Button.Svg({
-          className: `${pfx}__attachment-unlink`,
-          ico: "cross",
-          bubble: 0,
-          service: "remove-pending-file",
-          uiHandler: [ui],
-          fileNid: f.nid,
-          localKey: f.localKey,
-        }),
-      ],
-    }),
-  );
+  return Skeletons.Box.Y({
+    className: `${pfx}__drop-overlay`,
+    bubble: 0,
+    kids: [
+      Skeletons.Image.Svg({
+        ico: "desktop_upload",
+        className: `${pfx}__drop-overlay-ico`,
+      }),
+      Skeletons.Note({
+        className: `${pfx}__drop-overlay-text`,
+        content: LOCALE.DROP_FILES_TO_ATTACH,
+      }),
+    ],
+  });
+}
+
+// Preview leaf: an image thumbnail when we have a URL, else a type-icon.
+function pendingPreview(ui, f) {
+  const pfx = ui.fig.family;
+  if (f.previewUrl) {
+    return Skeletons.Element({
+      tagName: "img",
+      className: `${pfx}__file-pending-thumb`,
+      attrOpt: { src: f.previewUrl },
+    });
+  }
+  return Skeletons.Image.Svg({
+    ico: f.iconChartId || "attachment",
+    className: `${pfx}__file-pending-ico`,
+  });
+}
+
+// Shared attachment card for committed and pending files. Opens on click when
+// the file has a nid; opt.committed switches the ✕ between unlink and remove.
+function fileCard(ui, f, opt = {}) {
+  const pfx = ui.fig.family;
+  const nid = f.file_nid || f.nid;
+  const openable = !!nid;
+  const filename = `${f.filename || ""}${f.extension ? "." + f.extension : ""}`;
+
+  let preview;
+  if (f.previewUrl) {
+    preview = Skeletons.Element({
+      tagName: "img",
+      className: `${pfx}__attachment-thumb`,
+      attrOpt: { src: f.previewUrl, loading: "lazy" },
+    });
+  } else {
+    let ico = f.iconChartId;
+    if (!ico) {
+      try {
+        ico = require("media/template/map")(
+          String(f.extension || "").toLowerCase(),
+        );
+      } catch (_) {}
+    }
+    preview = Skeletons.Image.Svg({
+      ico: ico || "attachment",
+      className: `${pfx}__attachment-ico`,
+    });
+  }
+
+  const removeBtn = opt.committed
+    ? Skeletons.Button.Svg({
+        className: `${pfx}__attachment-unlink`,
+        ico: "cross",
+        bubble: 0,
+        service: "unlink-attachment",
+        uiHandler: [ui],
+        taskId: opt.taskId,
+        fileNid: f.file_nid,
+      })
+    : Skeletons.Button.Svg({
+        className: `${pfx}__attachment-unlink`,
+        ico: "cross",
+        bubble: 0,
+        service: "remove-pending-file",
+        uiHandler: [ui],
+        fileNid: f.nid,
+        localKey: f.localKey,
+      });
+
+  return Skeletons.Box.Y({
+    className: `${pfx}__attachment-row has-preview`,
+    service: openable ? "open-attachment" : null,
+    uiHandler: openable ? [ui] : null,
+    fileNid: nid,
+    kids: [
+      Skeletons.Box.Y({
+        className: `${pfx}__attachment-thumb-box`,
+        kids: [preview],
+      }),
+      Skeletons.Note({
+        className: `${pfx}__attachment-name`,
+        content: filename,
+      }),
+      removeBtn,
+    ],
+  });
+}
+
+function pendingRowDescriptor(ui, f) {
+  return fileCard(ui, f, { committed: false });
+}
+
+function buildPendingListContent(ui, pendingFiles) {
+  return (pendingFiles || []).map((f) => pendingRowDescriptor(ui, f));
+}
+
+// Committed attachment on a task — same card as pending files.
+function attachmentRowDescriptor(ui, f, taskId) {
+  return fileCard(ui, f, { committed: true, taskId });
 }
 
 function buildAttachmentRowsContent(ui, attachments, taskId) {
@@ -1830,26 +1886,7 @@ function buildAttachmentRowsContent(ui, attachments, taskId) {
       }),
     ];
   }
-  return attachments.map((f) =>
-    Skeletons.Box.X({
-      className: `${pfx}__attachment-row`,
-      kids: [
-        Skeletons.Note({
-          className: `${pfx}__attachment-name`,
-          content: `${f.filename || ""}${f.extension ? "." + f.extension : ""}`,
-        }),
-        Skeletons.Button.Svg({
-          className: `${pfx}__attachment-unlink`,
-          ico: "cross",
-          bubble: 0,
-          service: "unlink-attachment",
-          uiHandler: [ui],
-          taskId,
-          fileNid: f.file_nid,
-        }),
-      ],
-    }),
-  );
+  return attachments.map((f) => attachmentRowDescriptor(ui, f, taskId));
 }
 
 make.buildFileSearchDropdownContent = buildFileSearchDropdownContent;

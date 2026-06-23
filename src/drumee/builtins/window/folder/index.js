@@ -1,6 +1,8 @@
 const mfsInteract = require("../interact");
 
 const {
+
+  
   folderFilesView,
   fileTypeFilterBar,
   gridFilesBrowser,
@@ -532,6 +534,30 @@ class __window_folder extends mfsInteract {
         this._prepareListPartition(l);
       }
     });
+  }
+
+  /**
+   * When the Task tab is showing a create/edit form, a media dragged in from
+   * the home grid / folder list attaches to that task (links the existing nid)
+   * rather than being inserted into the folder body. Otherwise fall through to
+   * the normal folder insert.
+   */
+  insertMedia(files, position = 0) {
+    // With the Task tab + a form open, the drop belongs to the task. Route it
+    // to the panel and always skip the folder insert (the droppable may have
+    // already handled it) — otherwise the file is duplicated into the folder.
+    if (
+      this.activeTab === _a.task &&
+      this._taskPanel &&
+      !(this._taskPanel.isDestroyed && this._taskPanel.isDestroyed()) &&
+      typeof this._taskPanel.canAttachExisting === "function" &&
+      this._taskPanel.canAttachExisting()
+    ) {
+      this._taskPanel.attachExistingNodes(files);
+      if (typeof this.resetShift === "function") this.resetShift();
+      return;
+    }
+    return super.insertMedia(files, position);
   }
 
   /**
