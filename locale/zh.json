@@ -1,4 +1,5 @@
 {
+  "NOT_ORG_OWNER": "只有组织管理员才能购买团队套餐",
   "MANAGE_BILLING": "管理账单",
   "NO_ACTIVE_SUBSCRIPTION": "无有效订阅",
   "CANCEL_ALL": "全部取消",

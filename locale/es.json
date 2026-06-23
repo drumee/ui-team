@@ -1,4 +1,5 @@
 {
+  "NOT_ORG_OWNER": "Solo un administrador de organización puede comprar el plan Team",
   "MANAGE_BILLING": "Gestionar facturación",
   "NO_ACTIVE_SUBSCRIPTION": "Sin suscripción activa",
   "CANCEL_ALL": "Cancelar todo",

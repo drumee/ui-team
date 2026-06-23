@@ -1,4 +1,5 @@
 {
+  "NOT_ORG_OWNER": "Seul un administrateur d'organisation peut acheter le forfait Team",
   "MANAGE_BILLING": "Gérer la facturation",
   "NO_ACTIVE_SUBSCRIPTION": "Aucun abonnement actif",
   "CANCEL_ALL": "Tout annuler",

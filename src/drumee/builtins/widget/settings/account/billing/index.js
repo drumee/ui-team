@@ -31,11 +31,13 @@ class settings_billing extends LetcBox {
     };
     this.storage = {
       free: 20,
-      pro: 20
+      pro: 20,
+      team: 50
     }
     this.seats = {
       free: 0,
-      pro: 5
+      pro: 5,
+      team: 1
     }
 
     this.tab = this.state.currentTab;
@@ -334,6 +336,7 @@ class settings_billing extends LetcBox {
     const planPrices = {
       free: { monthly: 0, yearly: 0 },
       pro: { monthly: catPrice("pro", "monthly") ?? 16.99, yearly: catPrice("pro", "yearly") ?? 169.9 },
+      team: { monthly: catPrice("team", "monthly") ?? 8, yearly: catPrice("team", "yearly") ?? 80 },
     };
 
     const bundlePrices = {
@@ -396,16 +399,18 @@ class settings_billing extends LetcBox {
    * Handle proceed to checkout: call payment API and open payment window
    */
   _proceedToCheckout() {
-    // The SERVER decides the price (Stripe price_id looked up from yp.plan by
-    // plan+period); the client only declares WHAT to buy, never the amount.
+    // The SERVER decides the price (Stripe price_id from yp.plan); the client
+    // only declares WHAT to buy. plan 'team' => org (per-seat) checkout.
     const checkout = this.state.checkout || {};
     const plan = checkout.selectedPlan || "pro";
+    const entity_type = plan === "team" ? "org" : "user";
     const period = checkout.billingCycle === "yearly" ? "year" : "month";
-    const seats = checkout.seats || 1;
-    this.postService(SERVICE.payment.checkout, { plan, period, seats })
+    const seats = entity_type === "org" ? Math.max(1, ~~(checkout.seats || 1)) : 1;
+    this.postService(SERVICE.payment.checkout, { entity_type, plan, period, seats })
       .then((data) => {
-        const { url } = data || {};
-        if (url) window.location.assign(url); // full-page redirect to hosted Checkout
+        const { url, status } = data || {};
+        if (url) { window.location.assign(url); return; } // full-page redirect to hosted Checkout
+        if (status === "NOT_ORG_OWNER" && Wm && Wm.alert) Wm.alert(LOCALE.NOT_ORG_OWNER);
       })
       .catch((e) => {
         this.warn("Got backend error [_proceedToCheckout]:", e);
@@ -764,6 +769,7 @@ class settings_billing extends LetcBox {
         if (
           planValue === "free" ||
           planValue === "pro" ||
+          planValue === "team" ||
           planValue === "enterprise"
         ) {
           if (planValue === "enterprise") {

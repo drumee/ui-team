@@ -30,6 +30,21 @@ const OPTIONS = {
       { main: "", sub: "Guest access" },
     ],
   },
+  team: {
+    title: "Team",
+    subtitle_monthly: "$8 / seat / month",
+    subtitle_yearly: "$80 / seat / year",
+    description: "Per-seat plan for your whole organization (admins only)",
+    buttonTitle: "Choose Team",
+    unit_price_monthly: 800,
+    unit_price_yearly: 8000,
+    features: [
+      { main: "50G", sub: "storage per seat" },
+      { main: "Org", sub: "domain-wide entitlement" },
+      { main: "30", sub: "days version history" },
+      { main: "", sub: "Admin-managed billing" },
+    ],
+  },
   enterprise: {
     title: "Enterprise",
     subtitle: "Contact sales",
@@ -175,6 +190,7 @@ function billing_content(ui, cycle = "monthly") {
     kids: [
       item(ui, "free", cycle),
       item(ui, "pro", cycle),
+      item(ui, "team", cycle),
       item(ui, "enterprise", cycle),
     ],
   });
