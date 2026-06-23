@@ -1,82 +1,85 @@
 const { button } = require("../../../../../skeleton/toolkit");
 
-const OPTIONS = {
-  free: {
-    title: "Free",
-    subtitle: "Free",
-    description: "",
-    buttonTitle: "",
-    unit_price: 0,
-    features: [
-      { main: "20G", sub: "storage" },
-      { main: "None", sub: "admin roles" },
-    ],
-  },
-  pro: {
-    title: "Pro",
-    subtitle_monthly: "Start from $16.99 / month",
-    subtitle_yearly: "Start from $14.44 / month",
-    description: "5 seats included, each additional seat $5",
-    buttonTitle: "Upgrade",
-    unit_price_monthly: 1699,
-    unit_price_yearly: 1444,
-    badge: 1,
-    features: [
-      { main: "20G", sub: "storage" },
-      { main: "5", sub: "editor access" },
-      { main: "1", sub: "admin role" },
-      { main: "7", sub: "days version history" },
-      { main: "", sub: "Permissions & roles" },
-      { main: "", sub: "Guest access" },
-    ],
-  },
-  team: {
-    title: "Team",
-    subtitle_monthly: "$8 / seat / month",
-    subtitle_yearly: "$80 / seat / year",
-    description: "Per-seat plan for your whole organization (admins only)",
-    buttonTitle: "Choose Team",
-    unit_price_monthly: 800,
-    unit_price_yearly: 8000,
-    features: [
-      { main: "50G", sub: "storage per seat" },
-      { main: "Org", sub: "domain-wide entitlement" },
-      { main: "30", sub: "days version history" },
-      { main: "", sub: "Admin-managed billing" },
-    ],
-  },
-  enterprise: {
-    title: "Enterprise",
-    subtitle: "Contact sales",
-    description: "Custom pricing for your team",
-    buttonTitle: "Contact sales",
-    features: [
-      { main: "Custom", sub: "storage" },
-      { main: "Custom", sub: "editor access" },
-      { main: "Yes", sub: "admin role" },
-      { main: "Up to 90 days", sub: "version history" },
-      { main: "", sub: "Permissions & roles" },
-      { main: "", sub: "Guest access" },
-      { main: "", sub: "Activity logs" },
-    ],
-  },
-};
+/**
+ * Build the plan catalogue for display. Text comes from LOCALE; prices come
+ * from the server catalog (Stripe truth) via ui._catPrice, so nothing here is
+ * hardcoded. Rebuilt per render so a language switch is reflected immediately.
+ * @param {Object} ui - UI instance
+ * @param {string} cycle - "monthly" | "yearly"
+ * @returns {Object} keyed plan options
+ */
+function getOptions(ui, cycle = "monthly") {
+  const isYear = cycle === "yearly";
+  const money = (n) => ui._money(n);
+  const proPrice = money(ui._catPrice("pro", isYear ? "year" : "month"));
+  const teamPrice = money(ui._catPrice("team", isYear ? "year" : "month"));
+
+  return {
+    free: {
+      title: LOCALE.FREE,
+      subtitle: LOCALE.FREE,
+      description: "",
+      buttonTitle: "",
+      features: [
+        { main: "20G", sub: LOCALE.FEAT_STORAGE },
+        { main: LOCALE.NONE, sub: LOCALE.FEAT_ADMIN_ROLES },
+      ],
+    },
+    pro: {
+      title: LOCALE.PRO,
+      subtitle: (isYear ? LOCALE.PRICE_FROM_PER_YEAR : LOCALE.PRICE_FROM_PER_MONTH).format(proPrice),
+      description: LOCALE.PLAN_PRO_DESC.format(money(5)),
+      buttonTitle: LOCALE.UPGRADE,
+      badge: 1,
+      features: [
+        { main: "20G", sub: LOCALE.FEAT_STORAGE },
+        { main: "5", sub: LOCALE.FEAT_EDITOR_ACCESS },
+        { main: "1", sub: LOCALE.FEAT_ADMIN_ROLE },
+        { main: "7", sub: LOCALE.FEAT_DAYS_VERSION_HISTORY },
+        { main: "", sub: LOCALE.FEAT_PERMISSIONS_ROLES },
+        { main: "", sub: LOCALE.FEAT_GUEST_ACCESS },
+      ],
+    },
+    team: {
+      title: LOCALE.TEAM,
+      subtitle: (isYear ? LOCALE.PRICE_PER_SEAT_YEAR : LOCALE.PRICE_PER_SEAT_MONTH).format(teamPrice),
+      description: LOCALE.PLAN_TEAM_DESC,
+      buttonTitle: LOCALE.CHOOSE_TEAM,
+      features: [
+        { main: "50G", sub: LOCALE.FEAT_STORAGE_PER_SEAT },
+        { main: LOCALE.ORG, sub: LOCALE.FEAT_DOMAIN_WIDE },
+        { main: "30", sub: LOCALE.FEAT_DAYS_VERSION_HISTORY },
+        { main: "", sub: LOCALE.FEAT_ADMIN_BILLING },
+      ],
+    },
+    enterprise: {
+      title: LOCALE.ENTERPRISE,
+      subtitle: LOCALE.CONTACT_SALES,
+      description: LOCALE.PLAN_ENTERPRISE_DESC,
+      buttonTitle: LOCALE.CONTACT_SALES,
+      features: [
+        { main: LOCALE.CUSTOM, sub: LOCALE.FEAT_STORAGE },
+        { main: LOCALE.CUSTOM, sub: LOCALE.FEAT_EDITOR_ACCESS },
+        { main: LOCALE.YES, sub: LOCALE.FEAT_ADMIN_ROLE },
+        { main: LOCALE.UP_TO_90_DAYS, sub: LOCALE.FEAT_VERSION_HISTORY },
+        { main: "", sub: LOCALE.FEAT_PERMISSIONS_ROLES },
+        { main: "", sub: LOCALE.FEAT_GUEST_ACCESS },
+        { main: "", sub: LOCALE.FEAT_ACTIVITY_LOGS },
+      ],
+    },
+  };
+}
 
 /**
- * Create plan item component (Free, Pro, Enterprise)
+ * Create plan item component (Free, Pro, Team, Enterprise)
  * Display title, subtitle, description, button, features list, and popular badge
  * @param {Object} ui - UI instance
- * @param {string} opt - Plan option key (free, pro, enterprise)
- * @param {string} cycle - Billing cycle (monthly or yearly)
+ * @param {string} opt - Plan option key (free, pro, team, enterprise)
+ * @param {Object} option - Pre-built option object from getOptions
  * @returns {Object} Skeletons component
  */
-function item(ui, opt, cycle = "monthly") {
-  const option = OPTIONS[opt];
-  const { title, description, buttonTitle, features, badge } = option;
-  const subtitle =
-    cycle === "yearly" && option.subtitle_yearly
-      ? option.subtitle_yearly
-      : option.subtitle_monthly || option.subtitle || "Free";
+function item(ui, opt, option) {
+  const { title, subtitle, description, buttonTitle, features, badge } = option;
   const fig = `${ui.fig.family}__plan`;
 
   let descriptionItem = "";
@@ -118,7 +121,7 @@ function item(ui, opt, cycle = "monthly") {
     });
   } else {
     buttonBtn = button(ui, {
-      label: "Get started",
+      label: LOCALE.GET_STARTED,
       className: `${fig}-button ${badge ? "popular" : ""}`,
       service: "select-plan-button",
       name: opt,
@@ -159,7 +162,7 @@ function item(ui, opt, cycle = "monthly") {
       className: `${fig} popular-badge`,
       kids: [
         Skeletons.Note({
-          content: "Most Popular",
+          content: LOCALE.MOST_POPULAR,
         }),
       ],
     });
@@ -177,21 +180,22 @@ function item(ui, opt, cycle = "monthly") {
 }
 
 /**
- * Create plans content layout with 3 plan items (Free, Pro, Enterprise)
+ * Create plans content layout with 4 plan items (Free, Pro, Team, Enterprise)
  * @param {Object} ui - UI instance
  * @param {string} cycle - Billing cycle (monthly or yearly)
  * @returns {Object} Skeletons component
  */
 function billing_content(ui, cycle = "monthly") {
   const fig = `${ui.fig.family}__plans`;
+  const options = getOptions(ui, cycle);
 
   return Skeletons.Box.G({
     className: `${fig}-main`,
     kids: [
-      item(ui, "free", cycle),
-      item(ui, "pro", cycle),
-      item(ui, "team", cycle),
-      item(ui, "enterprise", cycle),
+      item(ui, "free", options.free),
+      item(ui, "pro", options.pro),
+      item(ui, "team", options.team),
+      item(ui, "enterprise", options.enterprise),
     ],
   });
 }

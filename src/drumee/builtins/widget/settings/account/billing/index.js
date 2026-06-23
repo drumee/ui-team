@@ -10,6 +10,10 @@ class settings_billing extends LetcBox {
   initialize(opt) {
     require("./skin");
     super.initialize(opt);
+    // When opened as a popup over the Settings page (settings_main.openBilling
+    // passes popup:1) render the popup shell (title bar + close). In the other
+    // mount contexts (settings_account tab, desk wrapper-modal) stay headerless.
+    this._popup = !!(opt && parseInt(opt.popup) === 1);
     this.model.set({
       hub_id: Visitor.id,
       flow: "g",
@@ -396,6 +400,33 @@ class settings_billing extends LetcBox {
 
 
   /**
+   * Display price (in currency units) for a plan/period from the server
+   * catalog (Stripe is the truth); falls back to the previous literals so
+   * the cards never render blank if the catalog didn't load.
+   * @param {string} code - plan code ('pro' | 'team')
+   * @param {string} period - 'month' | 'year'
+   * @returns {number} amount in currency units
+   */
+  _catPrice(code, period) {
+    const row = (this._catalog || []).find(
+      (p) => p.plan_code === code && p.period === period
+    );
+    if (row && row.amount != null) return Number(row.amount) / 100;
+    const fb = { pro: { month: 16.99, year: 169.9 }, team: { month: 8, year: 80 } };
+    return (fb[code] && fb[code][period]) || 0;
+  }
+
+  /**
+   * Format a number as a display price. Mirrors formatCurrency so the
+   * skeleton modules (which can't see the module-scoped helper) can reuse it.
+   * @param {number} n
+   * @returns {string}
+   */
+  _money(n) {
+    return formatCurrency(Number(n) || 0);
+  }
+
+  /**
    * Handle proceed to checkout: call payment API and open payment window
    */
   _proceedToCheckout() {
@@ -408,7 +439,11 @@ class settings_billing extends LetcBox {
     const seats = entity_type === "org" ? Math.max(1, ~~(checkout.seats || 1)) : 1;
     // Optional storage add-on: the bundle picker stores 100/500/1000 -> storage_*.
     const bundle = checkout.selectedBundle ? `storage_${checkout.selectedBundle}` : "";
-    this.postService(SERVICE.payment.checkout, { entity_type, plan, period, seats, bundle })
+    // hub_id is REQUIRED: payment.checkout is ACL scope:hub/src:owner. Without it
+    // the server falls back to the host hub (where the caller isn't owner) and
+    // returns 403 PERMISSION_DENIED. Send the caller's own hub so the owner
+    // check resolves correctly (verified: missing hub_id -> 403, present -> 200).
+    this.postService(SERVICE.payment.checkout, { hub_id: Visitor.id, entity_type, plan, period, seats, bundle })
       .then((data) => {
         const { url, status } = data || {};
         if (url) { window.location.assign(url); return; } // full-page redirect to hosted Checkout
@@ -804,7 +839,7 @@ class settings_billing extends LetcBox {
 
       case "select-checkout-plan":
         const plan = this._getValueFromCmd(cmd, args);
-        if (plan === "free" || plan === "pro") {
+        if (plan === "free" || plan === "pro" || plan === "team") {
           this.state.checkout.selectedPlan = plan;
           // If switching to free plan, set storage to 20GB and clear bundle selection
           if (plan === "free") {
@@ -814,6 +849,12 @@ class settings_billing extends LetcBox {
           // If switching to pro plan, set seats to 5 and additional storage to 0
           if (plan === "pro") {
             this.state.checkout.seats = 5;
+            this.state.checkout.storage = 0;
+            this.state.checkout.selectedBundle = "";
+          }
+          // Team is per-seat (org): start at the team baseline seats, no add-on.
+          if (plan === "team") {
+            this.state.checkout.seats = this.seats.team || 1;
             this.state.checkout.storage = 0;
             this.state.checkout.selectedBundle = "";
           }
@@ -852,7 +893,8 @@ class settings_billing extends LetcBox {
 
       case "manage-billing":
         // Open the Stripe Billing Portal (hosted invoices/cancel/resume/card).
-        this.postService(SERVICE.payment.portal, {})
+        // hub_id REQUIRED for the scope:hub/owner ACL (see _proceedToCheckout).
+        this.postService(SERVICE.payment.portal, { hub_id: Visitor.id })
           .then((data) => {
             const { url, status } = data || {};
             if (url) window.location.assign(url);
@@ -861,6 +903,13 @@ class settings_billing extends LetcBox {
           .catch(() => {
             if (Wm && Wm.alert) Wm.alert(LOCALE.SOMETHING_WENT_WRONG);
           });
+        return false;
+
+      case "billing-close":
+        // Close the popup. settings_billing is mounted in settings_main's
+        // overlay (uiHandler:[settings_main]); bubble up so the host clears
+        // the overlay. triggerHandlers resolves the live handler at fire time.
+        this.triggerHandlers({ service: "billing-close" });
         return false;
 
     }

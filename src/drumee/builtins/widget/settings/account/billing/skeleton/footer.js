@@ -16,7 +16,7 @@ function item(ui, title, content, email) {
       kids: [
         Skeletons.Note({
           className: `${fig}-email-title`,
-          content: " Contact: ",
+          content: ` ${LOCALE.CONTACT}: `,
         }),
         Skeletons.Note({
           className: `${fig}-email`,
@@ -63,14 +63,13 @@ function billing_footer(ui) {
     kids: [
       Skeletons.Note({
         className: `${fig}-header`,
-        content: "Additional seat pricing",
+        content: LOCALE.ADDITIONAL_SEAT_PRICING,
       }),
-      item(ui, "Pro:", "5 seats included, additional seats $5/month each."),
-      // item(ui, "Start Ups:", "10 seats included, additional seats $5/month each"),
+      item(ui, `${LOCALE.PRO}:`, LOCALE.FOOTER_PRO_SEATS.format(ui._money(5))),
       item(
         ui,
-        "Enterprise:",
-        "Custom pricing for your team size.",
+        `${LOCALE.ENTERPRISE}:`,
+        LOCALE.FOOTER_ENTERPRISE_DESC,
         "frenz@drumee.org"
       ),
       // Opens the Stripe Billing Portal (invoices, cancel/resume, card, proration).
