@@ -9,8 +9,7 @@
     justify-content: flex-start;
     display: flex;
     color: #65656c;
-    min-width: 0;
-    min-width: 40px;  
+    min-width: 60px;  
   }
 
   &__main {
@@ -19,9 +18,13 @@
     flex-direction: row;
     align-items: center;
     gap: 0;
-    overflow: hidden;
+    overflow: auto;
     flex: 1;
-    min-width: 0;
+    height: 35px;
+    padding-left: 8px;
+    &::-webkit-scrollbar { width: 4px; };
+     &::-webkit-scrollbar-track { background: rgba(0, 0, 0, 0.05); };
+      &::-webkit-scrollbar-thumb { background: var(--primary-40); border-radius: 4px; }
   }
 
   &__context {
