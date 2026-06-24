@@ -172,8 +172,8 @@
   }
 
   &__devices-list {
-    padding: 10px;
-    min-width: 150px;
+    padding: 8px;
+    min-width: 132px;
     width: auto;
     height: auto;
     position: absolute;
@@ -182,7 +182,7 @@
     right: -134px;
     overflow: visible;
     border-radius: var(--border-radius);
-    max-width: 300px;
+    max-width: 240px;
 
     &::before {
       background: var(--default-bg);
@@ -198,17 +198,17 @@
     }
 
     .device-label {
-      padding: 5px 10px;
-      @include drumee.typo($size: 14px, $line: 20px, $weight: 400, $color: var(--default-text-color));
+      padding: 4px 8px;
+      @include drumee.typo($size: 13px, $line: 17px, $weight: 400, $color: var(--default-text-color));
       text-align: left;
       cursor: pointer;
-      margin-bottom: 5px;
+      margin-bottom: 3px;
       background-color: #fbfbfb;
       border-radius: var(--border-radius);
       width: 100%;
       text-align: center;
       justify-content: center;
-      min-width: 200px;
+      min-width: 150px;
 
       &:hover {
         background-color: #879bff;
@@ -235,27 +235,27 @@
       justify-content: center;
       border-radius: var(--border-radius);
       align-items: center;
-      padding: 6px;
-      margin: 0 10px;
+      padding: 4px;
+      margin: 0 5px;
 
       &.button-cancel {
-        @include drumee.typo($line: 22px, $size: 16px, $weight: 300, $color: var(--btn-rollback-text));
+        @include drumee.typo($line: 18px, $size: 13px, $weight: 300, $color: var(--btn-rollback-text));
         border: 1px solid var(--btn-rollback-border);
       }
 
       &.button-confirm {
         background-color: var(--btn-commit-background);
-        @include drumee.typo($line: 22px, $size: 16px, $weight: 300, $color: var(--btn-commit-text));
+        @include drumee.typo($line: 18px, $size: 13px, $weight: 300, $color: var(--btn-commit-text));
       }
     }
 
 
     .device-heading {
-      @include drumee.typo($size: 16px, $line: 20px, $weight: 400, $color: var(--default-text-color));
-      padding: 0 10px;
-      font-size: 14px;
+      @include drumee.typo($size: 12px, $line: 16px, $weight: 500, $color: var(--default-text-color));
+      padding: 0 6px;
       justify-content: flex-start;
-      margin-bottom: 10px;
+      margin-bottom: 4px;
+      margin-top: 2px;
     }
 
   }

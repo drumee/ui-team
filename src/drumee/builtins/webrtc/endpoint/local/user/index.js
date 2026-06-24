@@ -35,6 +35,15 @@ class __endpoint_local extends __stream {
     await this.ensurePart('avatar');
     await this.ensurePart(_a.video);
     this.showAvatar();
+    // For a VIDEO call the local camera attaches concurrently. showAvatar()
+    // above idles the local tile (sets __video data-state=0 -> CSS display:none),
+    // which RACES the camera attach and leaves the caller's OWN self-view blank
+    // until they toggle video off/on. When the call started with video, reveal
+    // the local tile here so the camera shows as soon as it attaches.
+    if (this.room && this.room.isVideo) {
+      if (this.__video) this.__video.el.dataset.state = 1;
+      this.toggleAvatarVideo(0, 1);
+    }
   }
 
   onUiEvent(cmd) {

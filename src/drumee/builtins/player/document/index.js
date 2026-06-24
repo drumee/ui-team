@@ -149,7 +149,14 @@ class __player_document extends PlayerInteract {
     this.reload(300);
   }
 
+  _docExt() {
+    return (this.mget(_a.ext) || this.mget(_a.extension) || "")
+      .toString()
+      .toLowerCase();
+  }
+
   shouldOpenInEditMode() {
+    const ext = this._docExt();
     if (Visitor.inDmz) {
       // Secure-share recipient (Phase 1): open office docs in the EurOffice editor
       // instead of the flat PDFium preview, so recipients get full-fidelity
@@ -157,12 +164,10 @@ class __player_document extends PlayerInteract {
       // (euroffice.html), so this is safe for view-only recipients; edit-grant
       // editing is Phase 2. Non-office files keep their normal players. edit()
       // passes the share token so the service can resolve the mode.
-      const ext = (this.mget(_a.ext) || '').toLowerCase();
       return require('./editable').includes(ext) && !!Platform.get('doc_editor');
     }
     if (this.mget(_a.mode) === _a.preview) return false;
     if (this.mget(_a.mode) === _a.edit) return true;
-    const ext = (this.mget(_a.ext) || '').toLowerCase();
     return this.canUpload()
       && require('./editable').includes(ext)
       && !!Platform.get('doc_editor');

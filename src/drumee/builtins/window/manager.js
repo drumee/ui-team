@@ -1023,19 +1023,6 @@ class __window_manager extends mfsInteract {
   _launchApp(media, args) {
     const item = this.getWindowPreset(media, args);
     const fType = media.mget(_a.filetype);
-    // Office documents (doc/docx/xls/odt…) are no longer auto-converted to PDF;
-    // there is no in-app PDF preview for them. Opening one downloads the
-    // ORIGINAL file (orig.<ext>). True PDFs keep the document_reader viewer.
-    if (fType === _a.document) {
-      const ext = (media.mget(_a.extension) || media.mget(_a.ext) || "")
-        .toString()
-        .toLowerCase();
-      if (ext && ext !== _a.pdf) {
-        media.download();
-        if (media.wait) media.wait(0);
-        return true;
-      }
-    }
     let app = require("./configs/application")(fType, item);
     if (_.isEmpty(app) || !app.kind) {
       app = { ...app, kind: "props_viewer", media };
