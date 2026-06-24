@@ -1169,6 +1169,12 @@ class __panel_activity extends LetcBox {
           } catch (e) {
             this.warn("Failed to parse", meeting)
           }
+        } else if (nid) {
+          // Folder-scoped post (payload carries the folder nid): open that
+          // folder on its Chat tab so the notification lands in the conversation
+          // it came from — matching the Mentions-tab item. Hub-level posts have
+          // no nid and fall through to the workspace root via wm/channel.
+          url = `${url}/open/?hub_id=${hub_id}&nid=${nid}&filetype=folder&activeTab=${_a.chat}&message_id=${message_id}&ts=${now}`
         } else {
           url = `${url}/channel/?hub_id=${hub_id}&nid=${nid}&ts=${now}`
         }
@@ -1367,8 +1373,14 @@ class __panel_activity extends LetcBox {
           keyId = args.key_id || m('drumate_id') || m('peer_id') || m('key_id');
           break;
         case 'media':
-        case 'teamchat':
           keyId = args.key_id || m('hub_id') || m('key_id');
+          break;
+        case 'teamchat':
+          // notification_center_next now keys teamchat per folder: key_id = folder
+          // nid (or hub_id for a hub-level/legacy chat with no _scope_nid).
+          // notification_dismiss matches on that, so prefer the row's key_id/nid
+          // over hub_id — otherwise a folder mention never clears.
+          keyId = args.key_id || m('key_id') || m('nid') || m('hub_id');
           break;
         case 'contact':
           keyId = args.key_id || m('contact_id') || m('key_id');
