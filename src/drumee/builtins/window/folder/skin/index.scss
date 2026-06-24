@@ -1980,30 +1980,36 @@
     }
   }
 
-  // Files tab → split the folder window 50/50 (file grid left, team chat right).
+  // Files tab → split the folder window 3:1 (file grid left ≈75%, team chat right ≈25%).
   // The split-body is a CSS grid (Box.G, data-flow="g" → display:grid), so the
-  // two equal columns are the real lever — the base rules otherwise set a
+  // column tracks are the real lever — the base rules otherwise set a
   // narrow-chat sidebar (`minmax(0,1fr) clamp(...)` here / group-body `2fr 1fr`).
   // Each panel must then fill its cell:
   //   • `margin: 0` clears the group-body `margin: 0 auto` (auto margins center
   //     the panel inside its track → the "floating in the middle" gap);
   //   • `max-width: none` + `width: auto` drop the chat panel's sidebar clamp
-  //     (`width: clamp(300px,24vw,360px); max-width: 380px`) so it fills its half;
-  //   • `min-width: 0` lets the file grid's wide min-content shrink to 50%.
-  // `flex: 1 1 0` keeps the split 50/50 in the flex fallback some states render.
+  //     (`width: clamp(300px,24vw,360px); max-width: 380px`) so it fills its track;
+  //   • `min-width: 0` lets the file grid's wide min-content shrink to its track.
+  // `flex: 3 / 1` keeps the 3:1 split in the flex fallback some states render.
   // grid-template stays non-!important so the @container ≤700px
   // `grid-template-columns: 1fr !important` compact single-column still wins.
   &__split-body[data-view="files"] {
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-columns: minmax(0, 3fr) minmax(0, 1fr);
 
     > .window-folder__files-panel,
     > .window__files-panel,
     > .window__chat-panel {
-      flex: 1 1 0 !important;
       margin: 0 !important;
       max-width: none !important;
       min-width: 0 !important;
       width: auto !important;
+    }
+    > .window-folder__files-panel,
+    > .window__files-panel {
+      flex: 3 1 0 !important;
+    }
+    > .window__chat-panel {
+      flex: 1 1 0 !important;
     }
   }
 
