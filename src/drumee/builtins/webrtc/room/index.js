@@ -430,6 +430,54 @@ class __webrtc_room extends __interact {
   }
 
   /**
+   * Apply the user's device selection deterministically: recreate the local
+   * mic track (input) and set the output device, IN ORDER, then re-apply the
+   * output sink to remote audio elements that were already attached. Doing
+   * these concurrently (the old behaviour) raced the Jingle renegotiation and
+   * the Jitsi `audioOutputChanged` flag — hence "no audio until the 2nd-3rd try".
+   */
+  async confirmDeviceSelection() {
+    // Close the picker immediately (it only fades the part out; it does NOT
+    // reset selected*), then serialize the device changes in the background.
+    this.closeInputDevicesList();
+    try {
+      if (this.selectedInputDevice) {
+        await this.recreateLocalTrackOnDeviceChange();
+      }
+      if (this.selectedOutputDevice) {
+        await JitsiMeetJS.mediaDevices.setAudioOutputDevice(
+          this.selectedOutputDevice
+        );
+        // setAudioOutputDevice only affects FUTURE attaches; remote audio
+        // elements attached before the flag flipped keep their old sink.
+        const sinkId = JitsiMeetJS.mediaDevices.getAudioOutputDevice();
+        await this.reapplyRemoteAudioSink(sinkId);
+      }
+    } catch (e) {
+      this.warn("confirmDeviceSelection failed", e);
+    }
+  }
+
+  /**
+   * Re-apply the chosen output device (setSinkId) to every already-attached
+   * remote audio element. The global Jitsi flag only helps elements attached
+   * after the change, so existing remotes need an explicit re-apply.
+   */
+  async reapplyRemoteAudioSink(deviceId) {
+    try {
+      const parts = await this.ensurePart("participants");
+      if (!parts || !parts.children) return;
+      parts.children.each((child) => {
+        if (child && typeof child.reapplyAudioSink === "function") {
+          child.reapplyAudioSink(deviceId);
+        }
+      });
+    } catch (e) {
+      this.warn("reapplyRemoteAudioSink failed", e);
+    }
+  }
+
+  /**
    * 
    */
   openChat(cmd) {
@@ -477,15 +525,10 @@ class __webrtc_room extends __interact {
         this.closeInputDevicesList();
         break;
       case "confirm-device-selection":
-        if (this.selectedInputDevice) {
-          this.recreateLocalTrackOnDeviceChange();
-        }
-        if (this.selectedOutputDevice) {
-          JitsiMeetJS.mediaDevices.setAudioOutputDevice(
-            this.selectedOutputDevice
-          );
-        }
-        this.closeInputDevicesList();
+        // Serialize the input recreate + output sink change (and re-apply the
+        // output sink to already-attached remote audio). onUiEvent stays sync;
+        // confirmDeviceSelection awaits the steps in order internally.
+        this.confirmDeviceSelection();
         break;
       case "input-device-select":
         this.selectedInputDevice = cmd.$el.data("deviceid");

@@ -313,6 +313,20 @@ class __remote_user extends __stream {
   }
 
   /**
+   * Re-point this remote's audio element at the chosen output device. Needed
+   * after the user changes the speaker, because Jitsi's global output change
+   * only applies to elements attached AFTER it — this one is already attached.
+   * An empty string is a valid setSinkId value (the system default).
+   */
+  reapplyAudioSink(deviceId) {
+    this.ensurePart("output").then((s) => {
+      if (s && s.el && typeof s.el.setSinkId === "function") {
+        s.el.setSinkId(deviceId == null ? "" : deviceId).catch(() => { });
+      }
+    });
+  }
+
+  /**
    *
    */
   handleTrackEvents(track) {

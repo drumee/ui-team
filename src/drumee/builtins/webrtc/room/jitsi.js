@@ -272,6 +272,17 @@ class __webrtc_room extends __room {
    * @param {*} tracks
    */
   createLocalTracks(devices, micDeviceId = "default") {
+    // Serialize concurrent callers (confirm-device-select, DEVICE_LIST_CHANGED,
+    // mute/unmute, init) so overlapping createLocalTracks + replaceTrack don't
+    // race the single Jingle renegotiation and leave a dead audio sender — the
+    // intermittent "no audio after changing sound device" bug.
+    this._trackOp = Promise.resolve(this._trackOp)
+      .catch(() => {})
+      .then(() => this._doCreateLocalTracks(devices, micDeviceId));
+    return this._trackOp;
+  }
+
+  _doCreateLocalTracks(devices, micDeviceId = "default") {
     if (!_.isArray(devices)) devices = [devices];
     const opt = require("./configs/tracks")({ devices, micDeviceId });
     if (this.isDestroyed()) {
@@ -344,7 +355,17 @@ class __webrtc_room extends __room {
               case _a.audio:
                 oldTrack = this.getLocalTrack(type);
                 if (oldTrack) {
-                  this.room.replaceTrack(oldTrack, track);
+                  // Await so the SDP renegotiation completes before the next
+                  // op (the serialize lock above prevents cross-call overlap).
+                  await this.room.replaceTrack(oldTrack, track);
+                  // Release the previous mic device handle now (not only at
+                  // teardown) so re-selecting the SAME device doesn't contend
+                  // for it and return a muted/failed getUserMedia.
+                  try {
+                    if (oldTrack.dispose) await oldTrack.dispose();
+                  } catch (e) {
+                    this.warn("dispose displaced audio track failed", e);
+                  }
                 } else {
                   this.room.addTrack(track);
                 }
@@ -353,7 +374,7 @@ class __webrtc_room extends __room {
                 oldTrack = this.getLocalTrack(videoType);
                 if (oldTrack) {
                   if (oldTrack.getVideoType() == videoType) {
-                    this.room.replaceTrack(oldTrack, track);
+                    await this.room.replaceTrack(oldTrack, track);
                   } else {
                     await this.room.removeTrack(oldTrack);
                     this.room.addTrack(track);
