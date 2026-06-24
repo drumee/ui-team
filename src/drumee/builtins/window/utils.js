@@ -952,6 +952,19 @@ class __window_mfs extends DrumeeMFS {
       case "media.download":
         this.downloadContent(data);
         break;
+
+      // SEO index worker finished — poster (thumb.png) may now exist for
+      // doc/xls/xlsx office files; refresh node attrs so imgCapable() picks up
+      // metadata.poster and the grid swaps icon → content thumbnail.
+      case "seo.indexed":
+        const { nid, hub_id } = data || {};
+        if (!nid || !hub_id) break;
+        this.fetchService(SERVICE.media.get_node_attr, { nid, hub_id })
+          .then((attr) => {
+            if (attr && attr.nid) this.updateContent(attr);
+          })
+          .catch(() => { });
+        break;
     }
   }
 

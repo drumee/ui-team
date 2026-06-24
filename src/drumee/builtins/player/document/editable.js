@@ -7,6 +7,7 @@ module.exports = [
   "odt",
   "ott",
   "xlsx",
+  "xls",
   "xlsm",
   "xltx",
   "xltm",
@@ -14,6 +15,7 @@ module.exports = [
   "ods",
   "ots",
   "pptx",
+  "ppt",
   "pptm",
   "potx",
   "potm",
@@ -21,4 +23,5 @@ module.exports = [
   "ppsm",
   "odp",
   "otp",
+  "rtf",
 ];

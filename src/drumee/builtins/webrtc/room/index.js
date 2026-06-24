@@ -77,6 +77,17 @@ class __webrtc_room extends __interact {
   }
 
   /**
+   * Enable/disable a call control without using data-muted (muted blocks UI via
+   * CSS strikethrough on data-state; data-disabled is the only click gate).
+   */
+  _setService(name, service) {
+    const target = this.getPart(name);
+    if (!target) return;
+    target.mset({ service });
+    target.el.dataset.disabled = service ? 0 : 1;
+  }
+
+  /**
    *
    */
   _updateElapsedTimer() {
@@ -286,10 +297,12 @@ class __webrtc_room extends __interact {
       this.__ctrlAudio.el.dataset.muted = 0;
       this.__ctrlAudio.setState(1);
       this.__ctrlAudio.mset(_a.service, _a.settings);
+      this.__ctrlAudio.el.dataset.disabled = 0;
     }
     if (this.__ctrlVideo) {
       this.__ctrlVideo.el.dataset.muted = 0;
       this.__ctrlVideo.mset(_a.service, _a.settings);
+      this.__ctrlVideo.el.dataset.disabled = 0;
     }
     if (this.__ctrlScreen) {
       this.__ctrlScreen.el.dataset.muted = 0;
@@ -430,6 +443,54 @@ class __webrtc_room extends __interact {
   }
 
   /**
+   * Apply the user's device selection deterministically: recreate the local
+   * mic track (input) and set the output device, IN ORDER, then re-apply the
+   * output sink to remote audio elements that were already attached. Doing
+   * these concurrently (the old behaviour) raced the Jingle renegotiation and
+   * the Jitsi `audioOutputChanged` flag — hence "no audio until the 2nd-3rd try".
+   */
+  async confirmDeviceSelection() {
+    // Close the picker immediately (it only fades the part out; it does NOT
+    // reset selected*), then serialize the device changes in the background.
+    this.closeInputDevicesList();
+    try {
+      if (this.selectedInputDevice) {
+        await this.recreateLocalTrackOnDeviceChange();
+      }
+      if (this.selectedOutputDevice) {
+        await JitsiMeetJS.mediaDevices.setAudioOutputDevice(
+          this.selectedOutputDevice
+        );
+        // setAudioOutputDevice only affects FUTURE attaches; remote audio
+        // elements attached before the flag flipped keep their old sink.
+        const sinkId = JitsiMeetJS.mediaDevices.getAudioOutputDevice();
+        await this.reapplyRemoteAudioSink(sinkId);
+      }
+    } catch (e) {
+      this.warn("confirmDeviceSelection failed", e);
+    }
+  }
+
+  /**
+   * Re-apply the chosen output device (setSinkId) to every already-attached
+   * remote audio element. The global Jitsi flag only helps elements attached
+   * after the change, so existing remotes need an explicit re-apply.
+   */
+  async reapplyRemoteAudioSink(deviceId) {
+    try {
+      const parts = await this.ensurePart("participants");
+      if (!parts || !parts.children) return;
+      parts.children.each((child) => {
+        if (child && typeof child.reapplyAudioSink === "function") {
+          child.reapplyAudioSink(deviceId);
+        }
+      });
+    } catch (e) {
+      this.warn("reapplyRemoteAudioSink failed", e);
+    }
+  }
+
+  /**
    * 
    */
   openChat(cmd) {
@@ -477,15 +538,10 @@ class __webrtc_room extends __interact {
         this.closeInputDevicesList();
         break;
       case "confirm-device-selection":
-        if (this.selectedInputDevice) {
-          this.recreateLocalTrackOnDeviceChange();
-        }
-        if (this.selectedOutputDevice) {
-          JitsiMeetJS.mediaDevices.setAudioOutputDevice(
-            this.selectedOutputDevice
-          );
-        }
-        this.closeInputDevicesList();
+        // Serialize the input recreate + output sink change (and re-apply the
+        // output sink to already-attached remote audio). onUiEvent stays sync;
+        // confirmDeviceSelection awaits the steps in order internally.
+        this.confirmDeviceSelection();
         break;
       case "input-device-select":
         this.selectedInputDevice = cmd.$el.data("deviceid");
@@ -603,6 +659,12 @@ class __webrtc_room extends __interact {
     }
 
     this.hasStarted = 1;
+    try {
+      console.log("[ROOMDBG] conference.join result", {
+        requested_room_id: opt.room_id, returned_room_id: c.user.room_id,
+        nid: opt.nid, hub_id: opt.hub_id, role: c.user.role,
+      });
+    } catch (e) { }
     this.mset({ room_id: c.user.room_id });
     this.mset({ quota: parseInt(c.user.quota) });
     this.mset({ permission: c.user.permission });
