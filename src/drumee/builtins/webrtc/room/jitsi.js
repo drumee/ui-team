@@ -277,18 +277,21 @@ class __webrtc_room extends __room {
    *
    * @param {*} tracks
    */
-  createLocalTracks(devices, micDeviceId = "default") {
+  createLocalTracks(devices, micDeviceId = "default", createOpt = {}) {
     // Serialize concurrent callers (confirm-device-select, DEVICE_LIST_CHANGED,
     // mute/unmute, init) so overlapping createLocalTracks + replaceTrack don't
     // race the single Jingle renegotiation and leave a dead audio sender — the
     // intermittent "no audio after changing sound device" bug.
+    // opt.silent suppresses the user-facing permission alert on failure — used
+    // for the OPTIONAL startup camera, whose failure falls back to audio-only
+    // (the caller handles the UI) and must not pop a misleading popup.
     this._trackOp = Promise.resolve(this._trackOp)
       .catch(() => {})
-      .then(() => this._doCreateLocalTracks(devices, micDeviceId));
+      .then(() => this._doCreateLocalTracks(devices, micDeviceId, createOpt));
     return this._trackOp;
   }
 
-  _doCreateLocalTracks(devices, micDeviceId = "default") {
+  _doCreateLocalTracks(devices, micDeviceId = "default", createOpt = {}) {
     if (!_.isArray(devices)) devices = [devices];
     const opt = require("./configs/tracks")({ devices, micDeviceId });
     if (this.isDestroyed()) {
@@ -415,9 +418,15 @@ class __webrtc_room extends __room {
             reject(error);
           }
           this.warn("Failed to get device permision:", error);
-          let details = error.message || `${error}`;
-          let msg = `${LOCALE.DEVICES_PERMISSION_DENIED} (${details})`;
-          Wm.alert(msg);
+          // Suppress the blocking permission popup for the optional startup
+          // camera (opt.silent): the call falls back to audio-only and the
+          // caller updates the UI itself, so an alert here would wrongly imply
+          // the whole call failed even though audio is fine.
+          if (!createOpt.silent) {
+            let details = error.message || `${error}`;
+            let msg = `${LOCALE.DEVICES_PERMISSION_DENIED} (${details})`;
+            Wm.alert(msg);
+          }
           reject(error);
         });
     });
@@ -460,6 +469,25 @@ class __webrtc_room extends __room {
     this.stateMachine("getUserDevices");
     let track = await this.createLocalTracks(_a.audio);
     if (track) {
+      // For a VIDEO call, create the camera track deterministically here.
+      // Kept SEPARATE from the audio request above so a camera failure
+      // (denied/busy/no device) can't reject the whole getUserMedia and kill an
+      // otherwise-fine audio call — but done BEFORE bindConferenceRoom so the
+      // track lands in localTracks.video and rides the initial Jingle offer
+      // (onConnectionSuccess adds it pre-join → self-view + the peer both get it
+      // immediately). Previously the camera was only ever created by the racy
+      // DEVICE_LIST_CHANGED path, so a video call frequently came up showing just
+      // the avatar with no self-view and no video sent to the remote.
+      if (this.isVideo) {
+        try {
+          await this.createLocalTracks(_a.video, "default", { silent: 1 });
+        } catch (e) {
+          this.warn("startup camera failed; continuing audio-only", e);
+          this.isVideo = false;
+          if (this.__ctrlVideo) this.__ctrlVideo.setState(0);
+          this.toggleAvatarVideo(1, 0);
+        }
+      }
       this.bindConferenceRoom(room)
         .then(() => {
           this.postOnlineState();
