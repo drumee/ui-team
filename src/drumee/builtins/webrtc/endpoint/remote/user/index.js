@@ -168,13 +168,11 @@ class __remote_user extends __stream {
    *
    */
   isMuted() {
-    let p = this.participant;
+    // Reflect ONLY the remote participant's mic. (Previously this also returned
+    // muted when the LOCAL user's own mic button was off — so muting yourself
+    // wrongly flipped every remote tile's audio indicator to "muted".)
+    const p = this.participant;
     if (!p) return true;
-
-    if (this.logicalParent.__ctrlAudio.getState() == 0) {
-      return true;
-    }
-
     return p.isAudioMuted();
   }
 
@@ -254,19 +252,24 @@ class __remote_user extends __stream {
         this.toggleAvatarVideo(1, 0);
       } else {
         setTimeout(() => {
-          /** Wait afew seconds to ensure video type is stable */
+          /** Wait a few seconds to ensure video type is stable */
+          if (this.isDestroyed && this.isDestroyed()) return;
           if (track.getVideoType() == _a.desktop) {
             this.toggleAvatarVideo(1, 0);
-          } else {
-            if (track.isMuted()) {
-              track.detach(v.el);
-              this.toggleAvatarVideo(1, 0);
-            } else {
-              this.toggleAvatarVideo(0, 1);
-              track.attach(v.el);
-              this.trigger("audio:ready");
-            }
+            return;
           }
+          if (track.isMuted()) {
+            this.toggleAvatarVideo(1, 0);
+            return;
+          }
+          // Re-resolve the <video> part: an onPropertyChanged re-feed during the
+          // settle delay rebuilds the element, so the captured `v` may be stale
+          // (attaching to it would leave the tile black). Attach to the live one.
+          this.ensurePart(_a.video).then((cur) => {
+            this.toggleAvatarVideo(0, 1);
+            track.attach(cur.el);
+            this.trigger("audio:ready");
+          });
         }, 3000);
       }
     });
@@ -340,17 +343,24 @@ class __remote_user extends __stream {
           this.toggleAvatarVideo(1, 0);
           return;
         }
-        if (track.getVideoType() == "camera") {
-          if (track.isMuted()) {
-            this.toggleAvatarVideo(1, 0);
-          } else {
-            this.handleVideoMuteChange(track);
-          }
-        } else if (track.getVideoType() == _a.desktop) {
+        if (track.getVideoType() == _a.desktop) {
+          // Explicit screenshare: keep avatar; handleVideoMuteChange attaches.
           this.toggleAvatarVideo(1, 0);
           this.handleVideoMuteChange(track);
+        } else if (track.isMuted()) {
+          // Camera (or not-yet-settled videoType) but muted -> avatar.
+          this.toggleAvatarVideo(1, 0);
         } else {
-          WAITING_SCREEN = 0;
+          // Camera OR videoType not yet settled (null/undefined — common on a
+          // mid-call UNMUTE, since camera-off only mutes the track, it doesn't
+          // remove it). An unmuted remote video defaults to the camera attach
+          // path. The previous `else` here was a dead no-op (WAITING_SCREEN),
+          // which left the tile on the avatar forever whenever getVideoType()
+          // wasn't exactly "camera" at event time — the root cause of "the
+          // receiver's camera never shows on the caller". handleVideoMuteChange
+          // re-checks for desktop after its settle delay, so an "unknown-first"
+          // screenshare is still corrected to the avatar there.
+          this.handleVideoMuteChange(track);
         }
         break;
       case _a.audio:

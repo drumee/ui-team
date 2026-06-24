@@ -175,6 +175,12 @@ class __webrtc_room extends __room {
   async onConnectionSuccess() {
     if (this.isLeaving || this.isDestroyed()) return;
     let room_id = this.mget(_a.room_id);
+    try {
+      console.log("[ROOMDBG] onConnectionSuccess -> initJitsiConference", {
+        room_id, nid: this.mget(_a.nid), service_class: this.service_class,
+        role: this.caller ? "CALLEE" : (this.callee ? "CALLER" : "?"),
+      });
+    } catch (e) { }
     this.room = this.connection.initJitsiConference(
       room_id,
       this.conferenceConfig
@@ -316,8 +322,22 @@ class __webrtc_room extends __room {
               JEVENTS.track.TRACK_MUTE_CHANGED,
               this.onTrackMuteChange
             );
-            if (this.localTracks[type])
-              this.idleStreams.push(this.localTracks[type].stream);
+            // The mute listener now persists for the track's lifetime (it no
+            // longer self-removes after one fire — see onTrackMuteChange), so the
+            // mic/camera button stays synced across repeated mute/unmute. Detach
+            // it from the track being DISPLACED here: replaceTrack does not
+            // dispose the old track, so without this a lingering camera/mic track
+            // would keep its listener and could ghost-fire onTrackMuteChange.
+            const displaced = this.localTracks[type];
+            if (displaced) {
+              if (displaced.removeEventListener) {
+                displaced.removeEventListener(
+                  JEVENTS.track.TRACK_MUTE_CHANGED,
+                  this.onTrackMuteChange
+                );
+              }
+              this.idleStreams.push(displaced.stream);
+            }
             this.localTracks[type] = track;
             switch (type) {
               case _a.video:
@@ -391,7 +411,7 @@ class __webrtc_room extends __room {
         .catch((error) => {
           if (error.name && /user_canceled/i.test(error.name)) {
             this.__ctrlScreen.setState(0);
-            this.__ctrlVideo.el.dataset.muted = 0;
+            this._setService("ctrl-video", _a.settings);
             reject(error);
           }
           this.warn("Failed to get device permision:", error);
@@ -476,7 +496,6 @@ class __webrtc_room extends __room {
         } else {
           this.isVideo = !track.isMuted();
           this.__ctrlVideo.setState(this.isVideo);
-          this.__ctrlVideo.el.dataset.muted = this.isVideo ? 0 : 1;
           if (this.isVideo) {
             this.toggleAvatarVideo(0, 1);
           } else {
@@ -489,10 +508,10 @@ class __webrtc_room extends __room {
         this.__ctrlAudio.setState(this.isAudio);
         break;
     }
-    track.removeEventListener(
-      JEVENTS.track.TRACK_MUTE_CHANGED,
-      this.onTrackMuteChange
-    );
+    // NOTE: do NOT remove the listener here. Audio mute/unmute reuses the SAME
+    // track, so self-removing after the first fire left the mic button unsynced
+    // from the 2nd toggle on. The listener is detached when the track is
+    // displaced (createLocalTracks) or disposed at teardown (unload).
   }
 
   /**
@@ -947,6 +966,15 @@ class __webrtc_room extends __room {
   async unload() {
     for (let type in this.localTracks) {
       let t = this.localTracks[type];
+      // Drop the persistent mute listener (B2) before disposing. dispose() emits
+      // LOCAL_TRACK_STOPPED, not TRACK_MUTE_CHANGED, so this is defensive rather
+      // than strictly required — but it keeps teardown explicit and future-proof.
+      if (t && t.removeEventListener) {
+        t.removeEventListener(
+          JEVENTS.track.TRACK_MUTE_CHANGED,
+          this.onTrackMuteChange
+        );
+      }
       if (!t.disposed) {
         await t.dispose();
       }
@@ -1035,7 +1063,6 @@ class __webrtc_room extends __room {
       this.toggleAvatarVideo(0, 1);
       try {
         await this.createLocalTracks(_a.video);
-        if (this.__ctrlVideo) this.__ctrlVideo.el.dataset.muted = 0;
       } catch (e) {
         this.isVideo = false;
         this.toggleAvatarVideo(1, 0);
@@ -1110,7 +1137,7 @@ class __webrtc_room extends __room {
     }
     this.toggleAvatarVideo(1, 0);
     this.stateMessage();
-    this.__ctrlVideo.el.dataset.muted = 1;
+    this._setService("ctrl-video", null);
     let payload = {
       username: Visitor.fullname(),
       uid: Visitor.id,
@@ -1129,7 +1156,7 @@ class __webrtc_room extends __room {
    *
    */
   async stopPresentation(track) {
-    this.__ctrlVideo.el.dataset.muted = 0;
+    this._setService("ctrl-video", _a.settings);
     if (!track) {
       track = this.getLocalTrack(_a.desktop);
     }

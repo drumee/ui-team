@@ -77,6 +77,17 @@ class __webrtc_room extends __interact {
   }
 
   /**
+   * Enable/disable a call control without using data-muted (muted blocks UI via
+   * CSS strikethrough on data-state; data-disabled is the only click gate).
+   */
+  _setService(name, service) {
+    const target = this.getPart(name);
+    if (!target) return;
+    target.mset({ service });
+    target.el.dataset.disabled = service ? 0 : 1;
+  }
+
+  /**
    *
    */
   _updateElapsedTimer() {
@@ -286,10 +297,12 @@ class __webrtc_room extends __interact {
       this.__ctrlAudio.el.dataset.muted = 0;
       this.__ctrlAudio.setState(1);
       this.__ctrlAudio.mset(_a.service, _a.settings);
+      this.__ctrlAudio.el.dataset.disabled = 0;
     }
     if (this.__ctrlVideo) {
       this.__ctrlVideo.el.dataset.muted = 0;
       this.__ctrlVideo.mset(_a.service, _a.settings);
+      this.__ctrlVideo.el.dataset.disabled = 0;
     }
     if (this.__ctrlScreen) {
       this.__ctrlScreen.el.dataset.muted = 0;
@@ -646,6 +659,12 @@ class __webrtc_room extends __interact {
     }
 
     this.hasStarted = 1;
+    try {
+      console.log("[ROOMDBG] conference.join result", {
+        requested_room_id: opt.room_id, returned_room_id: c.user.room_id,
+        nid: opt.nid, hub_id: opt.hub_id, role: c.user.role,
+      });
+    } catch (e) { }
     this.mset({ room_id: c.user.room_id });
     this.mset({ quota: parseInt(c.user.quota) });
     this.mset({ permission: c.user.permission });

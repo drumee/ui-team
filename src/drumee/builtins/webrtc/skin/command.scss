@@ -64,12 +64,15 @@
         opacity: 0.85;
       }
 
-      &[data-muted="1"],
       &[data-disabled="1"] {
         opacity: 0.4;
         pointer-events: none;
         filter: grayscale(0.6);
         cursor: not-allowed;
+      }
+
+      &[data-muted="1"]:not([data-disabled="1"]) {
+        opacity: 0.85;
       }
 
       &.line {
@@ -124,12 +127,6 @@
         background-color: var(--button-accept);
         color: var(--default-icon-reverse);
         fill: none;
-      }
-
-      &[data-ctrl="video"][data-state="1"] {
-        svg path:last-child {
-          display: none;
-        }
       }
 
       &[data-state="0"] {

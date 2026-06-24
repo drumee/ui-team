@@ -201,9 +201,7 @@ class __window_connect extends __room {
     let target = this.getPart(name);
     if (!target) return;
     target.mset({ service });
-    let state = 1;
-    if (service) state = 0;
-    target.el.dataset.disabled = state;
+    target.el.dataset.disabled = service ? 0 : 1;
   }
 
 
@@ -245,6 +243,11 @@ class __window_connect extends __room {
           return;
         }
         Visitor.playSound(_K.dialtones.rinback, 10);
+        try {
+          console.log("[ROOMDBG] dial: invite returned", {
+            guest_room_id: guest && guest.room_id, guest_nid: guest && guest.nid,
+          });
+        } catch (e) { }
         this.mset(guest);
         break;
 
@@ -321,6 +324,11 @@ class __window_connect extends __room {
         Visitor.muteSound();
         this.beforeLeavingState = null;
         const room_id = this.caller.room_id || this.caller.nid;
+        try {
+          console.log("[ROOMDBG] pickup: callee adopting caller room", {
+            caller_room_id: this.caller.room_id, caller_nid: this.caller.nid, room_id,
+          });
+        } catch (e) { }
         this.mset({
           room_id,
           nid: room_id,
