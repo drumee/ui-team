@@ -209,7 +209,13 @@ class __dmz_wm extends winman {
     // anonymous openers → no effect there (byte-identical behaviour).
     const _sb = this.mget('desk');
     const ownerEditToken = (_sb && _sb.mget) ? _sb.mget('owner_edit_token') : this.mget('owner_edit_token');
-    if (ownerEditToken && item.media && item.media.mset) item.media.mset('owner_edit_token', ownerEditToken);
+    if (ownerEditToken) {
+      // Set on `item` (top-level) — the launched window/player model is built from
+      // `item`, so document edit() reads it via this.mget (mirrors item.token above) —
+      // AND on item.media for grid/list consumers.
+      item.owner_edit_token = ownerEditToken;
+      if (item.media && item.media.mset) item.media.mset('owner_edit_token', ownerEditToken);
+    }
     return item;
   }
 
