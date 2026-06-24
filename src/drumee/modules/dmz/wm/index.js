@@ -202,6 +202,14 @@ class __dmz_wm extends winman {
       item.token = shareToken;
       if (item.media && item.media.mset) item.media.mset(_a.token, shareToken);
     }
+    // Pin the creator's signed owner-edit token (present ONLY when the genuine owner
+    // is previewing their own link — dmz.login mints it for is_owner) so the office
+    // editor can let the creator follow the link's edit permission. Sourced from the
+    // sharebox (`desk`), which stored the dmz.login response. Absent for recipients /
+    // anonymous openers → no effect there (byte-identical behaviour).
+    const _sb = this.mget('desk');
+    const ownerEditToken = (_sb && _sb.mget) ? _sb.mget('owner_edit_token') : this.mget('owner_edit_token');
+    if (ownerEditToken && item.media && item.media.mset) item.media.mset('owner_edit_token', ownerEditToken);
     return item;
   }
 

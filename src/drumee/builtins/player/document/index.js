@@ -669,6 +669,11 @@ class __player_document extends PlayerInteract {
     if (Visitor.inDmz) {
       const _tok = this.mget(_a.token);
       if (_tok) url += `&token=${encodeURIComponent(_tok)}`;
+      // The creator's signed owner-edit token (present ONLY for the genuine owner
+      // previewing their own link) lets the editor service grant edit per the link's
+      // caps; absent for recipients/anonymous, so their URL is byte-identical.
+      const _ot = this.mget('owner_edit_token');
+      if (_ot) url += `&otoken=${encodeURIComponent(_ot)}`;
     }
 
     this._editorOrigin = new URL(url).origin;
