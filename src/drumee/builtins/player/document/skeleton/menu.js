@@ -9,6 +9,10 @@ function tooltip(ui, content) {
   };
 }
 
+// Download / save-as-PDF / preview / print get the filled (primary) look; every
+// other action is a plain icon button.
+const PRIMARY_SERVICES = [_a.download, "download-pdf", "preview", "print", _a.edit];
+
 function action(ui, { service, ico, tip, state, icons, sys_pn }) {
   const a = {
     ico,
@@ -16,6 +20,14 @@ function action(ui, { service, ico, tip, state, icons, sys_pn }) {
     service,
     uiHandler: ui,
     tooltips: tooltip(ui, tip),
+    style: PRIMARY_SERVICES.includes(service)
+      ? {
+          "background-color": "var(--normal-bg-90)",
+          color: "var(--normal-fg-10)",
+          padding: "4px 8px",
+          "border-radius": "6px",
+        }
+      : { color: "var(--normal-fg-20)" },
   };
   if (state != null) a.state = state;
   if (icons) a.icons = icons;
@@ -57,7 +69,7 @@ module.exports = function (ui) {
       actions.push(
         action(ui, {
           service: "preview",
-          ico: "desktop_preview",
+          ico: "eye",
           tip: LOCALE.PREVIEW,
         }),
       );
