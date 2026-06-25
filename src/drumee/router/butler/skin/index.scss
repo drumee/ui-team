@@ -149,6 +149,7 @@
     .router-butler__title {
       width: 100%;
       text-align: left;
+      font-family: var(--font-bold);
       margin: 0;
       @include drumee.typo(
         $size: 16px,
@@ -202,6 +203,7 @@
     }
 
     &-text {
+      font-family: var(--font-bold);
       font-weight: bold;
       font-size: 24px;
       color: var(--normal-fg);

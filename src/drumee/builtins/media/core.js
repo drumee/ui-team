@@ -10,11 +10,8 @@ const UPLOADER = "media_uploader";
 const SEEDING = "seeding";
 const IGNORED_FILES = /Thumbs.db|.DS_Store|__MACOSX|.thumbnails|\~+/;
 const MAX_BLOB_SIZE = 100000000;
-const EDITABLE = [
-  'docx', 'docm', 'dotx', 'dotm', 'odt', 'ott', 'xlsx', 'xlsm', 'xltx',
-  'xltm', 'xlsb', 'ods', 'ots', 'pptx', 'pptm', 'potx', 'potm', 'ppsx',
-  'ppsm', 'odp', 'otp'
-];
+// Office formats that get content posters (thumb.png) via the SEO index worker.
+const DOC_EDITABLE = require('player/document/editable');
 
 /**
  * 
@@ -356,17 +353,27 @@ class __media_core extends DrumeeMFS {
   }
 
   /**
+   * Normalized file extension (ext alias from SQL, or extension field).
+   */
+  _fileExt() {
+    return (this.mget(_a.ext) || this.mget(_a.extension) || "")
+      .toString()
+      .toLowerCase();
+  }
+
+  /**
    *
    * @param {*} f
    */
   initURL() {
     let f = "vignette";
+    const ext = this._fileExt();
     if (this.mget(_a.filetype) == _a.vector) {
       f = "orig";
-    } else if (this.mget(_a.ext) == _a.pdf || EDITABLE.includes(this.mget(_a.ext))) {
+    } else if (ext === _a.pdf || DOC_EDITABLE.includes(ext)) {
       // Whole first page at natural aspect (no center-crop / no letterbox); the
       // cell crops it to cover+top in CSS so the document title stays visible.
-      // EDITABLE = office exts (docx/xlsx/pptx/odt…); only used when imgCapable
+      // DOC_EDITABLE = office exts (doc/xls/docx/xlsx…); only used when imgCapable
       // (i.e. metadata.poster is set), otherwise the icon shows instead.
       f = "thumb";
     }
@@ -1418,7 +1425,8 @@ class __media_core extends DrumeeMFS {
     const _md = this.metadata();
     if (_md && _md.poster) return 1;
     if (/^\-/.test(this.mget(_a.capability))) return 0;
-    switch (this.mget(_a.ext)) {
+    const ext = this._fileExt();
+    switch (ext) {
       case 'svg':
         return 1;
       // PDF: the server rasterizes page 1 on demand (create_document_thumb →

@@ -220,7 +220,11 @@
       min-width: 0 !important;
       overflow: hidden;
       right: auto;
-      width: 100vw !important;
+      width: 90vw !important;
+    }
+
+    &-folder__main.drive-popup{
+      border-radius: 0 !important;
     }
 
     &__content-row {

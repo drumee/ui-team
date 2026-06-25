@@ -14,18 +14,20 @@ module.exports = function (ui) {
           Skeletons.Box.X({
             className: `${fig}__header-actions`,
             kids: [
-              Skeletons.Box.X({
-                className: `${fig}__icon-btn`,
-                bubble: 0,
-                service: "open-import",
-                uiHandler: [ui],
-                kids: [
-                  Skeletons.Note({
-                    className: `${fig}__icon-btn-label`,
-                    content: LOCALE.IMPORT || "Import",
-                  }),
-                ],
-              }),
+              // Import temporarily hidden — the import-contacts flow is not
+              // working yet. Re-enable this button once it's fixed.
+              // Skeletons.Box.X({
+              //   className: `${fig}__icon-btn`,
+              //   bubble: 0,
+              //   service: "open-import",
+              //   uiHandler: [ui],
+              //   kids: [
+              //     Skeletons.Note({
+              //       className: `${fig}__icon-btn-label`,
+              //       content: LOCALE.IMPORT || "Import",
+              //     }),
+              //   ],
+              // }),
               Skeletons.Box.X({
                 className: `${fig}__add-btn`,
                 bubble: 0,

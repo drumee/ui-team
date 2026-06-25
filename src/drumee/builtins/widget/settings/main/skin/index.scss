@@ -701,6 +701,7 @@
   // tint as the "Coming soon" pill. Used by manage / action / export / migrate.
   &__preferences-manage-main,
   &__credentials-action-main,
+  &__billing-action-main,
   &__danger-export-btn-main,
   &__linked-migrate-btn-main {
     width: 120px;
@@ -734,7 +735,8 @@
   // The migrate CTA shares the same ghost look as the "Coming soon" pill in
   // every state (Start migration / View progress / Migrate again); its labels
   // are wider than the 120px tiles, so size to content.
-  &__linked-migrate-btn-main {
+  &__linked-migrate-btn-main,
+  &__billing-action-main {
     width: auto;
     min-width: 120px;
     padding: 0 var(--spacer-5);

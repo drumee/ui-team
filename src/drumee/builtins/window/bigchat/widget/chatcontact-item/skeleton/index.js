@@ -2,11 +2,15 @@
 const __skl_widget_chatcontactItem = function (ui) {
   let chat_icon, msg, state;
   const contentFig = ui.fig.family;
+  // Hoisted out of the `flag === 'contact'` branch so the name Note below can
+  // fall back the same way the chat header does (chat-header.js): a contact
+  // whose server-computed `display` is empty/blank would otherwise render a
+  // BLANK name in the inbox list while the header + avatar still show one.
+  const fname = ui.mget(_a.firstname) || '';
+  const lname = ui.mget(_a.lastname) || '';
+  const fullname = ui.mget(_a.fullname) || `${fname} ${lname}`.trim();
+  const displayName = (ui.mget('display') || '').trim() || fullname || fname || lname;
   if (ui.mget('flag') === 'contact') {
-    const fname = ui.mget(_a.firstname) || '';
-    const lname = ui.mget(_a.lastname) || '';
-    const fullname = ui.mget(_a.fullname) || (fname + " " + lname);
-
     chat_icon = Skeletons.UserProfile({
       className: `${contentFig}__profile`,
       id: ui.mget('entity_id'),
@@ -27,7 +31,7 @@ const __skl_widget_chatcontactItem = function (ui) {
 
   const name = Skeletons.Note({
     className: `${contentFig}__note name`,
-    content: ui.mget('display'),
+    content: displayName,
     escapeContextmenu: true
   });
 

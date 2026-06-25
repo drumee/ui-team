@@ -10,6 +10,10 @@ class settings_billing extends LetcBox {
   initialize(opt) {
     require("./skin");
     super.initialize(opt);
+    // When opened as a popup over the Settings page (settings_main.openBilling
+    // passes popup:1) render the popup shell (title bar + close). In the other
+    // mount contexts (settings_account tab, desk wrapper-modal) stay headerless.
+    this._popup = !!(opt && parseInt(opt.popup) === 1);
     this.model.set({
       hub_id: Visitor.id,
       flow: "g",
@@ -31,46 +35,36 @@ class settings_billing extends LetcBox {
     };
     this.storage = {
       free: 20,
-      pro: 20
+      pro: 20,
+      team: 50
     }
     this.seats = {
       free: 0,
-      pro: 5
+      pro: 5,
+      team: 1
     }
 
     this.tab = this.state.currentTab;
-    this._setupPaymentWebSocket();
+    // Subscribe to live WS via the framework channel (replaces the leaky
+    // Wm.on('ws:event') that never unsubscribed). Dispatcher calls
+    // onWsMessage(service, data, options) with the service as the FIRST arg.
+    this.bindEvent(_a.live);
   }
 
-  /**
-   * Setup WebSocket listener to receive payment events
-   */
-  _setupPaymentWebSocket() {
-    const WS_EVENT = "ws:event";
-    Wm.on(WS_EVENT, this._handlePaymentWebSocket.bind(this));
+  onBeforeDestroy() {
+    this.unbindEvent(_a.live);
   }
 
-  /**
-   * Handle WebSocket events related to payment
-   * @param {Object} args - WebSocket event arguments
-   */
-  _handlePaymentWebSocket(args = {}) {
-    const { data, options } = args || {};
-    const { service } = options || {};
-
+  onWsMessage(service, data, options = {}) {
     switch (service) {
-      case 'payment.plan_updated':
-        Visitor.respawn(data)
-        this.triggerHandlers({ service: "plan_updated" })
+      case "payment.plan_updated":
+        Visitor.respawn(data);
+        this.triggerHandlers({ service: "plan_updated" });
         break;
+      default:
+        if (super.onWsMessage) super.onWsMessage(service, data, options);
     }
   }
-
-  /**
-   * Handle payment status updates from WebSocket
-   * @param {Object} data - Payment status data
-   */
-  _handlePaymentStatus(data) { }
 
   /**
    * Return view mode for widget
@@ -83,7 +77,12 @@ class settings_billing extends LetcBox {
   /**
    * Re-initialize UI when DOM is refreshed
    */
-  onDomRefresh() {
+  async onDomRefresh() {
+    // Fetch the server catalog (Stripe is the price truth) so the display
+    // reflects live prices; degrades to the hardcoded fallback if unavailable.
+    this._catalog = await this.fetchService(SERVICE.payment.catalog, { hub_id: Visitor.id })
+      .then((d) => (d && d.plans) || null)
+      .catch(() => null);
     if (this.state.currentTab === undefined || this.state.currentTab === null) {
       this.state.currentTab = TAB_MONTHLY;
     }
@@ -331,9 +330,17 @@ class settings_billing extends LetcBox {
 
     const selectedBundle = checkout.selectedBundle;
 
+    // Prices come from the server catalog (Stripe is the truth); fall back to
+    // the previous literals only if the catalog didn't load.
+    const catPrice = (code, cycle) => {
+      const period = cycle === "yearly" ? "year" : "month";
+      const row = (this._catalog || []).find((p) => p.plan_code === code && p.period === period);
+      return row && row.amount != null ? Number(row.amount) / 100 : null;
+    };
     const planPrices = {
       free: { monthly: 0, yearly: 0 },
-      pro: { monthly: 16.99, yearly: 169.9 },
+      pro: { monthly: catPrice("pro", "monthly") ?? 16.99, yearly: catPrice("pro", "yearly") ?? 169.9 },
+      team: { monthly: catPrice("team", "monthly") ?? 8, yearly: catPrice("team", "yearly") ?? 80 },
     };
 
     const bundlePrices = {
@@ -393,45 +400,59 @@ class settings_billing extends LetcBox {
 
 
   /**
+   * Display price (in currency units) for a plan/period from the server
+   * catalog (Stripe is the truth); falls back to the previous literals so
+   * the cards never render blank if the catalog didn't load.
+   * @param {string} code - plan code ('pro' | 'team')
+   * @param {string} period - 'month' | 'year'
+   * @returns {number} amount in currency units
+   */
+  _catPrice(code, period) {
+    const row = (this._catalog || []).find(
+      (p) => p.plan_code === code && p.period === period
+    );
+    if (row && row.amount != null) return Number(row.amount) / 100;
+    const fb = { pro: { month: 16.99, year: 169.9 }, team: { month: 8, year: 80 } };
+    return (fb[code] && fb[code][period]) || 0;
+  }
+
+  /**
+   * Format a number as a display price. Mirrors formatCurrency so the
+   * skeleton modules (which can't see the module-scoped helper) can reuse it.
+   * @param {number} n
+   * @returns {string}
+   */
+  _money(n) {
+    return formatCurrency(Number(n) || 0);
+  }
+
+  /**
    * Handle proceed to checkout: call payment API and open payment window
    */
   _proceedToCheckout() {
-    const {
-      bundleStorage, seats, totalStorage, period, totalPrice, selectedPlan = "pro", extraSeats
-    }
-      = this.calculateCheckoutSummary();
-
+    // The SERVER decides the price (Stripe price_id from yp.plan); the client
+    // only declares WHAT to buy. plan 'team' => org (per-seat) checkout.
     const checkout = this.state.checkout || {};
-    const billingCycle = checkout.billingCycle || "monthly";
-
-    const totalPriceDollars =
-      parseFloat(totalPrice.replace("$", "")) || 0;
-    const value = Math.round(totalPriceDollars * 100);
-    const description = `${selectedPlan.toUpperCase()} Plan - ${billingCycle} - ${checkout.seats || 5
-      } seats`;
-
-    const payment = {
-      value: value,
-      seats: seats || 0,
-      storage: totalStorage.replace(/ +.$/, '') || 0,
-      plan: selectedPlan,
-      interval: period,
-      extraSeats,
-      description,
-      bundleStorage
-    };
-    this.postService(SERVICE.payment.checkout, { payment })
+    const plan = checkout.selectedPlan || "pro";
+    const entity_type = plan === "team" ? "org" : "user";
+    const period = checkout.billingCycle === "yearly" ? "year" : "month";
+    const seats = entity_type === "org" ? Math.max(1, ~~(checkout.seats || 1)) : 1;
+    // Optional storage add-on: the bundle picker stores 100/500/1000 -> storage_*.
+    const bundle = checkout.selectedBundle ? `storage_${checkout.selectedBundle}` : "";
+    // hub_id is REQUIRED: payment.checkout is ACL scope:hub/src:owner. Without it
+    // the server falls back to the host hub (where the caller isn't owner) and
+    // returns 403 PERMISSION_DENIED. Send the caller's own hub so the owner
+    // check resolves correctly (verified: missing hub_id -> 403, present -> 200).
+    this.postService(SERVICE.payment.checkout, { hub_id: Visitor.id, entity_type, plan, period, seats, bundle })
       .then((data) => {
-        let { url } = data;
-        this.triggerHandlers({ service: "proceed-to-payment", url })
+        const { url, status } = data || {};
+        if (url) { window.location.assign(url); return; } // full-page redirect to hosted Checkout
+        if (status === "NOT_ORG_OWNER" && Wm && Wm.alert) Wm.alert(LOCALE.NOT_ORG_OWNER);
       })
       .catch((e) => {
-        this.warn("Got backend error [_proceedToCheckout]:", e)
+        this.warn("Got backend error [_proceedToCheckout]:", e);
         if (Wm && Wm.alert) {
-          Wm.alert(
-            LOCALE.SOMETHING_WENT_WRONG ||
-            "Something went wrong. Please try again."
-          );
+          Wm.alert(LOCALE.SOMETHING_WENT_WRONG || "Something went wrong. Please try again.");
         }
       });
   }
@@ -785,6 +806,7 @@ class settings_billing extends LetcBox {
         if (
           planValue === "free" ||
           planValue === "pro" ||
+          planValue === "team" ||
           planValue === "enterprise"
         ) {
           if (planValue === "enterprise") {
@@ -817,7 +839,7 @@ class settings_billing extends LetcBox {
 
       case "select-checkout-plan":
         const plan = this._getValueFromCmd(cmd, args);
-        if (plan === "free" || plan === "pro") {
+        if (plan === "free" || plan === "pro" || plan === "team") {
           this.state.checkout.selectedPlan = plan;
           // If switching to free plan, set storage to 20GB and clear bundle selection
           if (plan === "free") {
@@ -827,6 +849,12 @@ class settings_billing extends LetcBox {
           // If switching to pro plan, set seats to 5 and additional storage to 0
           if (plan === "pro") {
             this.state.checkout.seats = 5;
+            this.state.checkout.storage = 0;
+            this.state.checkout.selectedBundle = "";
+          }
+          // Team is per-seat (org): start at the team baseline seats, no add-on.
+          if (plan === "team") {
+            this.state.checkout.seats = this.seats.team || 1;
             this.state.checkout.storage = 0;
             this.state.checkout.selectedBundle = "";
           }
@@ -861,6 +889,27 @@ class settings_billing extends LetcBox {
           return false;
         }
         this._proceedToCheckout();
+        return false;
+
+      case "manage-billing":
+        // Open the Stripe Billing Portal (hosted invoices/cancel/resume/card).
+        // hub_id REQUIRED for the scope:hub/owner ACL (see _proceedToCheckout).
+        this.postService(SERVICE.payment.portal, { hub_id: Visitor.id })
+          .then((data) => {
+            const { url, status } = data || {};
+            if (url) window.location.assign(url);
+            else if (Wm && Wm.alert) Wm.alert(LOCALE.NO_ACTIVE_SUBSCRIPTION);
+          })
+          .catch(() => {
+            if (Wm && Wm.alert) Wm.alert(LOCALE.SOMETHING_WENT_WRONG);
+          });
+        return false;
+
+      case "billing-close":
+        // Close the popup. settings_billing is mounted in settings_main's
+        // overlay (uiHandler:[settings_main]); bubble up so the host clears
+        // the overlay. triggerHandlers resolves the live handler at fire time.
+        this.triggerHandlers({ service: "billing-close" });
         return false;
 
     }

@@ -77,6 +77,17 @@ class __webrtc_room extends __interact {
   }
 
   /**
+   * Enable/disable a call control without using data-muted (muted blocks UI via
+   * CSS strikethrough on data-state; data-disabled is the only click gate).
+   */
+  _setService(name, service) {
+    const target = this.getPart(name);
+    if (!target) return;
+    target.mset({ service });
+    target.el.dataset.disabled = service ? 0 : 1;
+  }
+
+  /**
    *
    */
   _updateElapsedTimer() {
@@ -286,10 +297,12 @@ class __webrtc_room extends __interact {
       this.__ctrlAudio.el.dataset.muted = 0;
       this.__ctrlAudio.setState(1);
       this.__ctrlAudio.mset(_a.service, _a.settings);
+      this.__ctrlAudio.el.dataset.disabled = 0;
     }
     if (this.__ctrlVideo) {
       this.__ctrlVideo.el.dataset.muted = 0;
       this.__ctrlVideo.mset(_a.service, _a.settings);
+      this.__ctrlVideo.el.dataset.disabled = 0;
     }
     if (this.__ctrlScreen) {
       this.__ctrlScreen.el.dataset.muted = 0;
@@ -323,10 +336,18 @@ class __webrtc_room extends __interact {
         );
         const currentOutputDevice =
           await JitsiMeetJS.mediaDevices.getAudioOutputDevice();
-        let currentInputDevice = null;
-        let audioTrack = this.room.getLocalAudioTrack();
-        if (audioTrack) {
-          currentInputDevice = audioTrack.deviceId;
+        // Seed the highlighted row from the user's remembered pick first; only
+        // fall back to the live track when there is no saved preference (first
+        // open of the call). getDeviceId() honours _realDeviceId, unlike the
+        // raw .deviceId property which can't round-trip the 'default' id.
+        let currentInputDevice = this.preferredInputDevice || null;
+        if (!currentInputDevice) {
+          let audioTrack = this.room.getLocalAudioTrack();
+          if (audioTrack) {
+            currentInputDevice = audioTrack.getDeviceId
+              ? audioTrack.getDeviceId()
+              : audioTrack.deviceId;
+          }
         }
         if (audioInputDevices.length > 0) {
           let view = require("../skeleton/device-list")(
@@ -334,7 +355,9 @@ class __webrtc_room extends __interact {
             audioInputDevices,
             audioOutputDevices,
             currentInputDevice,
-            (currentOutputDevice && currentOutputDevice) || "default"
+            this.preferredOutputDevice ||
+              (currentOutputDevice && currentOutputDevice) ||
+              "default"
           );
           p.feed(view);
         } else {
@@ -411,10 +434,60 @@ class __webrtc_room extends __interact {
   /**
    *
    */
-  recreateLocalTrackOnDeviceChange() {
+  async recreateLocalTrackOnDeviceChange() {
     let reqDevices = [_a.audio];
     if (this.isVideo) reqDevices = [...reqDevices, _a.video];
-    this.createLocalTracks(reqDevices, this.selectedInputDevice);
+    // replaceTrack inside createLocalTracks is async — await so the swap
+    // completes deterministically before the promise settles.
+    await this.createLocalTracks(reqDevices, this.selectedInputDevice);
+  }
+
+  /**
+   * Apply the user's device selection deterministically: recreate the local
+   * mic track (input) and set the output device, IN ORDER, then re-apply the
+   * output sink to remote audio elements that were already attached. Doing
+   * these concurrently (the old behaviour) raced the Jingle renegotiation and
+   * the Jitsi `audioOutputChanged` flag — hence "no audio until the 2nd-3rd try".
+   */
+  async confirmDeviceSelection() {
+    // Close the picker immediately (it only fades the part out; it does NOT
+    // reset selected*), then serialize the device changes in the background.
+    this.closeInputDevicesList();
+    try {
+      if (this.selectedInputDevice) {
+        await this.recreateLocalTrackOnDeviceChange();
+      }
+      if (this.selectedOutputDevice) {
+        await JitsiMeetJS.mediaDevices.setAudioOutputDevice(
+          this.selectedOutputDevice
+        );
+        // setAudioOutputDevice only affects FUTURE attaches; remote audio
+        // elements attached before the flag flipped keep their old sink.
+        const sinkId = JitsiMeetJS.mediaDevices.getAudioOutputDevice();
+        await this.reapplyRemoteAudioSink(sinkId);
+      }
+    } catch (e) {
+      this.warn("confirmDeviceSelection failed", e);
+    }
+  }
+
+  /**
+   * Re-apply the chosen output device (setSinkId) to every already-attached
+   * remote audio element. The global Jitsi flag only helps elements attached
+   * after the change, so existing remotes need an explicit re-apply.
+   */
+  async reapplyRemoteAudioSink(deviceId) {
+    try {
+      const parts = await this.ensurePart("participants");
+      if (!parts || !parts.children) return;
+      parts.children.each((child) => {
+        if (child && typeof child.reapplyAudioSink === "function") {
+          child.reapplyAudioSink(deviceId);
+        }
+      });
+    } catch (e) {
+      this.warn("reapplyRemoteAudioSink failed", e);
+    }
   }
 
   /**
@@ -465,21 +538,22 @@ class __webrtc_room extends __interact {
         this.closeInputDevicesList();
         break;
       case "confirm-device-selection":
-        if (this.selectedInputDevice) {
-          this.recreateLocalTrackOnDeviceChange();
-        }
-        if (this.selectedOutputDevice) {
-          JitsiMeetJS.mediaDevices.setAudioOutputDevice(
-            this.selectedOutputDevice
-          );
-        }
-        this.closeInputDevicesList();
+        // Serialize the input recreate + output sink change (and re-apply the
+        // output sink to already-attached remote audio). onUiEvent stays sync;
+        // confirmDeviceSelection awaits the steps in order internally.
+        this.confirmDeviceSelection();
         break;
       case "input-device-select":
         this.selectedInputDevice = cmd.$el.data("deviceid");
+        // Remember the user's pick so reopening the popup re-highlights it.
+        // The live-track readback alone can't round-trip the 'default'
+        // pseudo-device id, so without this the selection appears to revert
+        // to the first/Default row even though the mic actually changed.
+        this.preferredInputDevice = this.selectedInputDevice;
         break;
       case "output-device-select":
         this.selectedOutputDevice = cmd.$el.data("deviceid");
+        this.preferredOutputDevice = this.selectedOutputDevice;
         break;
       case "remote-ready":
         //this.checkQuota();
@@ -585,6 +659,12 @@ class __webrtc_room extends __interact {
     }
 
     this.hasStarted = 1;
+    try {
+      console.log("[ROOMDBG] conference.join result", {
+        requested_room_id: opt.room_id, returned_room_id: c.user.room_id,
+        nid: opt.nid, hub_id: opt.hub_id, role: c.user.role,
+      });
+    } catch (e) { }
     this.mset({ room_id: c.user.room_id });
     this.mset({ quota: parseInt(c.user.quota) });
     this.mset({ permission: c.user.permission });

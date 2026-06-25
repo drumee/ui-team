@@ -23,7 +23,9 @@
     width: 100%;
 
     &-main {
-      grid-template-columns: repeat(3, 1fr);
+      // 4 plans (Free/Pro/Team/Enterprise): auto-fit so they sit 4-up when
+      // wide and wrap to 2-up in the narrower popup instead of an uneven row.
+      grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
       gap: var(--spacer-4);
       &[data-device="mobile"] {
         grid-template-columns: 1fr;
@@ -854,3 +856,71 @@
     }
   }
 }
+
+// ── Popup mode (mounted in settings_main's overlay) ──────────────────────────
+// settings_main.openBilling feeds settings_billing into its __overlay slot
+// (fixed full-screen backdrop + flex centering). Here the otherwise full-width
+// panel becomes a centred, scrollable card with a title bar + close. Scoped to
+// the overlay so the inline settings_account tab and the desk wrapper-modal
+// renders are untouched.
+.settings-main__overlay .settings-billing {
+  &__ui {
+    width: auto;
+    flex: 0 0 auto;
+    align-items: stretch;
+    background-color: var(--white);
+    border-radius: 12px;
+    box-shadow: 0 1px 11px rgba(0, 0, 0, 0.13);
+    overflow: hidden;
+  }
+
+  &__main {
+    width: min(980px, 92vw);
+    max-height: 88vh;
+    gap: 0;
+  }
+
+  &__popup-header {
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--spacer-5) var(--spacer-6);
+    border-bottom: 1px solid var(--neutral-200);
+  }
+
+  &__popup-title {
+    font-weight: 600;
+    font-size: 18px;
+    color: var(--neutral-900);
+  }
+
+  // cross.svg has no intrinsic size, so an unconstrained Button.Svg renders at
+  // the browser default 300x150 and blows up the header. Pin it to an icon size.
+  &__popup-close {
+    width: 20px;
+    height: 20px;
+    flex: 0 0 auto;
+    cursor: pointer;
+
+    svg {
+      width: 20px;
+      height: 20px;
+      display: block;
+    }
+  }
+
+  &__body {
+    overflow-y: auto;
+    padding: var(--spacer-6);
+    gap: var(--spacer-2);
+  }
+
+  &__content-container {
+    margin-top: var(--spacer-5);
+  }
+
+  // Keep the checkout two-column layout from overflowing a narrow popup.
+  &__checkout-main {
+    flex-wrap: wrap;
+  }
+}
+

@@ -175,6 +175,12 @@ class __webrtc_room extends __room {
   async onConnectionSuccess() {
     if (this.isLeaving || this.isDestroyed()) return;
     let room_id = this.mget(_a.room_id);
+    try {
+      console.log("[ROOMDBG] onConnectionSuccess -> initJitsiConference", {
+        room_id, nid: this.mget(_a.nid), service_class: this.service_class,
+        role: this.caller ? "CALLEE" : (this.callee ? "CALLER" : "?"),
+      });
+    } catch (e) { }
     this.room = this.connection.initJitsiConference(
       room_id,
       this.conferenceConfig
@@ -271,7 +277,21 @@ class __webrtc_room extends __room {
    *
    * @param {*} tracks
    */
-  createLocalTracks(devices, micDeviceId = "default") {
+  createLocalTracks(devices, micDeviceId = "default", createOpt = {}) {
+    // Serialize concurrent callers (confirm-device-select, DEVICE_LIST_CHANGED,
+    // mute/unmute, init) so overlapping createLocalTracks + replaceTrack don't
+    // race the single Jingle renegotiation and leave a dead audio sender — the
+    // intermittent "no audio after changing sound device" bug.
+    // opt.silent suppresses the user-facing permission alert on failure — used
+    // for the OPTIONAL startup camera, whose failure falls back to audio-only
+    // (the caller handles the UI) and must not pop a misleading popup.
+    this._trackOp = Promise.resolve(this._trackOp)
+      .catch(() => {})
+      .then(() => this._doCreateLocalTracks(devices, micDeviceId, createOpt));
+    return this._trackOp;
+  }
+
+  _doCreateLocalTracks(devices, micDeviceId = "default", createOpt = {}) {
     if (!_.isArray(devices)) devices = [devices];
     const opt = require("./configs/tracks")({ devices, micDeviceId });
     if (this.isDestroyed()) {
@@ -285,12 +305,42 @@ class __webrtc_room extends __room {
           for (let track of tracks) {
             let type = track.getType();
             let videoType = track.getVideoType();
+            // getDisplayMedia returns a system/tab AUDIO track when the user
+            // ticks "share audio" in the screen-share picker. It arrives here as
+            // a plain audio track (getType()==='audio', videoType===null). If it
+            // reached the audio handling below it would park the live mic stream
+            // in idleStreams (only stopped at call teardown), overwrite
+            // localTracks.audio, and replaceTrack(mic, desktopAudio) — cutting
+            // the user's microphone for the rest of the call (never restored,
+            // since stopPresentation only touches the desktop VIDEO track). The
+            // mic is only ever created via a NON-desktop request, so any audio
+            // track from a desktop request is this stray capture audio: drop it
+            // and leave the microphone sender untouched.
+            if (type === _a.audio && devices.includes(_a.desktop)) {
+              try { if (track.dispose) await track.dispose(); }
+              catch (e) { this.warn("drop desktop audio track failed", e); }
+              continue;
+            }
             track.addEventListener(
               JEVENTS.track.TRACK_MUTE_CHANGED,
               this.onTrackMuteChange
             );
-            if (this.localTracks[type])
-              this.idleStreams.push(this.localTracks[type].stream);
+            // The mute listener now persists for the track's lifetime (it no
+            // longer self-removes after one fire — see onTrackMuteChange), so the
+            // mic/camera button stays synced across repeated mute/unmute. Detach
+            // it from the track being DISPLACED here: replaceTrack does not
+            // dispose the old track, so without this a lingering camera/mic track
+            // would keep its listener and could ghost-fire onTrackMuteChange.
+            const displaced = this.localTracks[type];
+            if (displaced) {
+              if (displaced.removeEventListener) {
+                displaced.removeEventListener(
+                  JEVENTS.track.TRACK_MUTE_CHANGED,
+                  this.onTrackMuteChange
+                );
+              }
+              this.idleStreams.push(displaced.stream);
+            }
             this.localTracks[type] = track;
             switch (type) {
               case _a.video:
@@ -328,7 +378,17 @@ class __webrtc_room extends __room {
               case _a.audio:
                 oldTrack = this.getLocalTrack(type);
                 if (oldTrack) {
-                  this.room.replaceTrack(oldTrack, track);
+                  // Await so the SDP renegotiation completes before the next
+                  // op (the serialize lock above prevents cross-call overlap).
+                  await this.room.replaceTrack(oldTrack, track);
+                  // Release the previous mic device handle now (not only at
+                  // teardown) so re-selecting the SAME device doesn't contend
+                  // for it and return a muted/failed getUserMedia.
+                  try {
+                    if (oldTrack.dispose) await oldTrack.dispose();
+                  } catch (e) {
+                    this.warn("dispose displaced audio track failed", e);
+                  }
                 } else {
                   this.room.addTrack(track);
                 }
@@ -337,7 +397,7 @@ class __webrtc_room extends __room {
                 oldTrack = this.getLocalTrack(videoType);
                 if (oldTrack) {
                   if (oldTrack.getVideoType() == videoType) {
-                    this.room.replaceTrack(oldTrack, track);
+                    await this.room.replaceTrack(oldTrack, track);
                   } else {
                     await this.room.removeTrack(oldTrack);
                     this.room.addTrack(track);
@@ -354,13 +414,19 @@ class __webrtc_room extends __room {
         .catch((error) => {
           if (error.name && /user_canceled/i.test(error.name)) {
             this.__ctrlScreen.setState(0);
-            this.__ctrlVideo.el.dataset.muted = 0;
+            this._setService("ctrl-video", _a.settings);
             reject(error);
           }
           this.warn("Failed to get device permision:", error);
-          let details = error.message || `${error}`;
-          let msg = `${LOCALE.DEVICES_PERMISSION_DENIED} (${details})`;
-          Wm.alert(msg);
+          // Suppress the blocking permission popup for the optional startup
+          // camera (opt.silent): the call falls back to audio-only and the
+          // caller updates the UI itself, so an alert here would wrongly imply
+          // the whole call failed even though audio is fine.
+          if (!createOpt.silent) {
+            let details = error.message || `${error}`;
+            let msg = `${LOCALE.DEVICES_PERMISSION_DENIED} (${details})`;
+            Wm.alert(msg);
+          }
           reject(error);
         });
     });
@@ -403,6 +469,25 @@ class __webrtc_room extends __room {
     this.stateMachine("getUserDevices");
     let track = await this.createLocalTracks(_a.audio);
     if (track) {
+      // For a VIDEO call, create the camera track deterministically here.
+      // Kept SEPARATE from the audio request above so a camera failure
+      // (denied/busy/no device) can't reject the whole getUserMedia and kill an
+      // otherwise-fine audio call — but done BEFORE bindConferenceRoom so the
+      // track lands in localTracks.video and rides the initial Jingle offer
+      // (onConnectionSuccess adds it pre-join → self-view + the peer both get it
+      // immediately). Previously the camera was only ever created by the racy
+      // DEVICE_LIST_CHANGED path, so a video call frequently came up showing just
+      // the avatar with no self-view and no video sent to the remote.
+      if (this.isVideo) {
+        try {
+          await this.createLocalTracks(_a.video, "default", { silent: 1 });
+        } catch (e) {
+          this.warn("startup camera failed; continuing audio-only", e);
+          this.isVideo = false;
+          if (this.__ctrlVideo) this.__ctrlVideo.setState(0);
+          this.toggleAvatarVideo(1, 0);
+        }
+      }
       this.bindConferenceRoom(room)
         .then(() => {
           this.postOnlineState();
@@ -439,7 +524,6 @@ class __webrtc_room extends __room {
         } else {
           this.isVideo = !track.isMuted();
           this.__ctrlVideo.setState(this.isVideo);
-          this.__ctrlVideo.el.dataset.muted = this.isVideo ? 0 : 1;
           if (this.isVideo) {
             this.toggleAvatarVideo(0, 1);
           } else {
@@ -452,10 +536,10 @@ class __webrtc_room extends __room {
         this.__ctrlAudio.setState(this.isAudio);
         break;
     }
-    track.removeEventListener(
-      JEVENTS.track.TRACK_MUTE_CHANGED,
-      this.onTrackMuteChange
-    );
+    // NOTE: do NOT remove the listener here. Audio mute/unmute reuses the SAME
+    // track, so self-removing after the first fire left the mic button unsynced
+    // from the 2nd toggle on. The listener is detached when the track is
+    // displaced (createLocalTracks) or disposed at teardown (unload).
   }
 
   /**
@@ -910,6 +994,15 @@ class __webrtc_room extends __room {
   async unload() {
     for (let type in this.localTracks) {
       let t = this.localTracks[type];
+      // Drop the persistent mute listener (B2) before disposing. dispose() emits
+      // LOCAL_TRACK_STOPPED, not TRACK_MUTE_CHANGED, so this is defensive rather
+      // than strictly required — but it keeps teardown explicit and future-proof.
+      if (t && t.removeEventListener) {
+        t.removeEventListener(
+          JEVENTS.track.TRACK_MUTE_CHANGED,
+          this.onTrackMuteChange
+        );
+      }
       if (!t.disposed) {
         await t.dispose();
       }
@@ -998,7 +1091,6 @@ class __webrtc_room extends __room {
       this.toggleAvatarVideo(0, 1);
       try {
         await this.createLocalTracks(_a.video);
-        if (this.__ctrlVideo) this.__ctrlVideo.el.dataset.muted = 0;
       } catch (e) {
         this.isVideo = false;
         this.toggleAvatarVideo(1, 0);
@@ -1018,13 +1110,17 @@ class __webrtc_room extends __room {
     let t = this.getLocalTrack(_a.audio);
     await this.sendRoomSignaling(SERVICE.conference.update);
     if (state) {
+      // Recreate the mic with the user's last confirmed device, not the
+      // implicit "default" — otherwise toggling mute/unmute after picking a
+      // specific microphone silently reverts capture to the default device.
+      const micId = this.preferredInputDevice || "default";
       if (!t) {
-        await this.createLocalTracks(_a.audio);
+        await this.createLocalTracks(_a.audio, micId);
       } else if (t.isActive()) {
         await t.unmute();
       } else {
         await t.dispose();
-        await this.createLocalTracks(_a.audio);
+        await this.createLocalTracks(_a.audio, micId);
       }
     } else {
       t && (await t.mute());
@@ -1069,7 +1165,7 @@ class __webrtc_room extends __room {
     }
     this.toggleAvatarVideo(1, 0);
     this.stateMessage();
-    this.__ctrlVideo.el.dataset.muted = 1;
+    this._setService("ctrl-video", null);
     let payload = {
       username: Visitor.fullname(),
       uid: Visitor.id,
@@ -1088,7 +1184,7 @@ class __webrtc_room extends __room {
    *
    */
   async stopPresentation(track) {
-    this.__ctrlVideo.el.dataset.muted = 0;
+    this._setService("ctrl-video", _a.settings);
     if (!track) {
       track = this.getLocalTrack(_a.desktop);
     }

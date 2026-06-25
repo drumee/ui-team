@@ -43,7 +43,7 @@
   // Override that inside the cluster so the breadcrumb hugs its content.
   &__left-cluster {
     align-items: center;
-    gap: 8px;
+    gap: 20px;
     min-width: 0;
     flex: 0 1 auto;
     overflow: hidden;
@@ -61,7 +61,10 @@
     gap: 4px;
     flex: 0 1 auto;
     min-width: 0;
-    overflow: hidden;
+    overflow: auto;
+    &::-webkit-scrollbar { width: 4px; } ;
+    &::-webkit-scrollbar-track { background: rgba(0, 0, 0, 0.05); } ;
+    &::-webkit-scrollbar-thumb { background: var(--primary-40); border-radius: 4px; };
   }
 
   &__folder-tab {
@@ -291,6 +294,7 @@
   &__actions-cluster {
     align-items: center;
     gap: 12px;
+    padding-left: 12px;
   }
 
   // New workspace button
@@ -648,7 +652,7 @@
   }
 
   // Tablet "more" menu — collapses Add / Upload / Invite into a single
-  // icon-only dropdown between 768px and 1024px (see media query at the
+  // icon-only dropdown at 1024px and below (see media query at the
   // bottom of this block).
   &__more-wrapper {
     display: none;
@@ -747,10 +751,14 @@
     }
   }
 
-  // Tablet breakpoint: swap the three primary actions for the consolidated menu.
+  // Tablet & narrower (≤ 1024px): swap the three primary actions for the
+  // consolidated menu. This covers narrow desktop-browser widths below 768px
+  // too — there `data-device` is not "mobile" so the desktop topbar stays
+  // mounted and the inline Add / Upload / Invite buttons would otherwise
+  // reappear and overflow.
   // `!important` is required because __upload-btn ships with `display: inline-flex !important`
   // and __invite-btn is declared further down the cascade.
-  @media (min-width: 768px) and (max-width: 1024px) {
+  @media (max-width: 1024px) {
     &__add-wrapper,
     &__upload-btn,
     &__invite-btn {
@@ -767,6 +775,14 @@
   @media (min-width: 1025px) {
     &__more-btn {
       display: none !important;
+    }
+  }
+
+  // Narrow viewports: cap the search bar so it doesn't crowd the rest of
+  // the topbar (the 192px default eats too much of a sub-650px row).
+  @media (max-width: 650px) {
+    &__search-bar {
+      max-width: 140px;
     }
   }
 

@@ -486,15 +486,47 @@ function linkedAccountsCard(ui) {
     className: `${ui.fig.family}__card ${pfx}-card`,
     kids: [
       cardHeading(ui, {
-        title: LOCALE.LINKED_ACCOUNTS || "Linked accounts",
-        subtitle:
-          LOCALE.LINKED_ACCOUNTS_SUBTITLE ||
-          "Sign-in providers connected to your account.",
+        // Re-framed from "connected accounts / sign-in providers" to an
+        // import/migration heading: this card only hosts the Google Drive
+        // migration CTA, not linked sign-in accounts.
+        title: LOCALE.IMPORT_SECTION_TITLE,
+        subtitle: LOCALE.IMPORT_SECTION_SUBTITLE,
       }),
       Skeletons.Box.Y({
         className: `${pfx}-list`,
         kids: [migrateRow],
       }),
+    ],
+  });
+}
+
+function billingCard(ui) {
+  const pfx = `${ui.fig.family}__billing`;
+  const q = (Visitor.quota && Visitor.quota()) || {};
+  const plan = (q.plan || "free").toString();
+  const planLabel = plan.charAt(0).toUpperCase() + plan.slice(1);
+
+  const planRow = innerItem(ui, {
+    title: LOCALE.CURRENT_PLAN,
+    description: planLabel,
+    className: `${pfx}-row`,
+    trailing: button(ui, {
+      label: LOCALE.MANAGE_SUBSCRIPTION,
+      className: `${pfx}-action`,
+      priority: "primary",
+      // Opens settings_billing in the desk modal (wm 'upgrade-plan' -> upgradePlage).
+      service: "open-billing",
+    }),
+  });
+
+  return Skeletons.Box.Y({
+    className: `${ui.fig.family}__card ${pfx}-card`,
+    kids: [
+      cardHeading(ui, {
+        title: LOCALE.BILLING_SUBSCRIPTION,
+        subtitle: LOCALE.BILLING_SUBSCRIPTION_SUBTITLE,
+      }),
+      Skeletons.Box.Y({ className: `${pfx}-list`, kids: [planRow] }),
     ],
   });
 }
@@ -506,6 +538,10 @@ function settings_body(ui) {
     Skeletons.Box.X({
       className: `${pfx}__row ${pfx}__row-1`,
       kids: [generalProfileCard(ui), preferencesCard(ui)],
+    }),
+    Skeletons.Box.X({
+      className: `${pfx}__row ${pfx}__row-billing`,
+      kids: [billingCard(ui)],
     }),
     Skeletons.Box.X({
       className: `${pfx}__row ${pfx}__row-2`,

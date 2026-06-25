@@ -57,9 +57,9 @@ function billing_tabs_trigger(ui) {
     className: `${figTrigger}-main`,
     sys_pn: `${fig}__tabs-trigger`,
     kids: [
-      item(ui, {content:"Monthly", discountRate:0, pos:0, service:"select-plan"}), 
-      item(ui, {content:"Yearly", discountRate:15, pos:1, service:"select-plan"}), 
-      item(ui, {content:"Checkout", discountRate:0, pos:2, service:"checkout"})
+      item(ui, {content:LOCALE.MONTHLY, discountRate:0, pos:0, service:"select-plan"}),
+      item(ui, {content:LOCALE.YEARLY, discountRate:15, pos:1, service:"select-plan"}),
+      item(ui, {content:LOCALE.CHECKOUT, discountRate:0, pos:2, service:"checkout"})
     ],
   });
 }
