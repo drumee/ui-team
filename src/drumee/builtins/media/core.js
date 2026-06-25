@@ -438,6 +438,13 @@ class __media_core extends DrumeeMFS {
     const counter = this._notify;
     if (!counter) return;
     counter.dataset.refresh = 0;
+    // Keep the notify CONTAINER's data-count in sync. `_notify` is only the
+    // inner count element (`-notify-count`); the grid notify highlight in
+    // skin/index.scss keys off the container
+    // (`:has(.media-grid-notify__container:not([data-count="0"]))`), so the
+    // highlight only clears when the container's data-count reaches 0.
+    const container = document.getElementById(`${this._id}-notify`);
+    if (container) container.dataset.count = c > 0 ? c : 0;
     if (c <= 0) {
       counter.innerText = "";
       counter.style.visibility = _a.hidden;
@@ -1376,9 +1383,15 @@ class __media_core extends DrumeeMFS {
       if (_.isEmpty(this._players)) {
         this.el.dataset.opened = 0;
         this.unselect();
-        if (this.__notify) {
-          this._notify.dataset.refresh = 1;
-          this.refreshNotification();
+        // The folder/file opened from this cell (via sender / uploaded file /
+        // filename click) has now been viewed and its window closed — clear the
+        // new-file badge so the grid notify highlight is removed. `_notify` is
+        // the count element; renderNotification(0) also zeroes the container's
+        // data-count that the highlight keys off. (Was gated on `this.__notify`,
+        // which is never assigned — so this clear never ran.)
+        if (this._notify) {
+          this.mset({ new_file: 0, new_media: 0 });
+          this.renderNotification(0);
         }
       }
     });
