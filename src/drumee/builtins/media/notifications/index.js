@@ -135,7 +135,8 @@ class __media_notifications extends LetcBox {
 
       case "new-media": case "new-messages":
         //@bubbleService(service, cmd._args)
-        return this.triggerHandlers(args);
+        this.triggerHandlers(args);
+        return this.goodbye();
     }
   }
         

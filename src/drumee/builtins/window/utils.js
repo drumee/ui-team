@@ -1108,6 +1108,9 @@ class __window_mfs extends DrumeeMFS {
       data = source;
     }
     let { nid = 0, hub_id, role, pid = 0, filetype, area } = data;
+    // Notification "reveal": open the parent folder and highlight the file in
+    // context (scroll + select + flash) rather than opening it in a player.
+    const highlight = !!(data.highlight && `${data.highlight}` !== "0");
     let node;
     if (!filetype) {
       node = await this.fetchService(
@@ -1130,12 +1133,19 @@ class __window_mfs extends DrumeeMFS {
     /** Direct open from the Wm if if possible */
     let found = Wm.getItemsByAttr(_a.nid, nid)[0];
     if (found) {
+      // Already rendered in an open window: a reveal just selects/scrolls/flashes
+      // it in place; a normal open triggers the node's open action.
+      if (highlight) {
+        this._highlightNode(nid);
+        return;
+      }
       found.triggerHandlers({ service: "open-node" });
       return;
     }
 
-    /** Open the player if applicable */
-    if (opt.kind && !node) {
+    /** Open the player if applicable. A reveal (highlight) skips the player and
+     *  falls through to open the parent folder, where the file is highlighted. */
+    if (opt.kind && !node && !highlight) {
       node = await this.fetchService(
         {
           service: SERVICE.media.attributes,
@@ -1162,10 +1172,44 @@ class __window_mfs extends DrumeeMFS {
     if (!parent || !parent.nid) {
       return Wm.alert(LOCALE.FILE_NOT_FOUND);
     }
-    return Wm.launch(
+    const opened = Wm.launch(
       { ...opt, ...parent, kind: "window_folder" },
       { explicit: 1 },
     );
+    if (highlight) this._highlightNode(nid);
+    return opened;
+  }
+
+  /**
+   * Reveal a file in its folder grid: select it, scroll it into view, and play
+   * a one-off flash so the user's eye lands on it. The grid renders
+   * asynchronously after Wm.launch, so poll briefly for the item by nid. No-op
+   * if it never appears (e.g. the file opened in a player instead).
+   */
+  _highlightNode(nid, tries = 24) {
+    if (!nid || `${nid}` === "0") return;
+    const apply = (item) => {
+      if (!item || !item.el || !item.select) return;
+      try {
+        item.select({});
+        if (item.el.scrollIntoView) {
+          item.el.scrollIntoView({ behavior: "smooth", block: "center" });
+        }
+        item.el.classList.add("media-highlight");
+        setTimeout(() => {
+          if (item.el) item.el.classList.remove("media-highlight");
+        }, 2400);
+      } catch (e) {
+        if (this.warn) this.warn("[openFileLocation] highlight failed", e);
+      }
+    };
+    const seek = (n) => {
+      const item = Wm.getItemsByAttr(_a.nid, nid)[0];
+      if (item) return apply(item);
+      if (n <= 0) return;
+      setTimeout(() => seek(n - 1), 150);
+    };
+    seek(tries);
   }
 
   /**

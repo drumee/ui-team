@@ -138,6 +138,24 @@
     }
   }
 
+  // Cells carrying a visible notification badge get a persistent soft
+  // highlight (independent of hover) to draw attention to unseen activity.
+  // :not([data-selected="1"]) prevents stacking with the selected fill below.
+  &:not([data-selected="1"]):has(.media-grid-notify__container:not([data-count="0"])) {
+    &:before {
+      content: " ";
+      position: absolute;
+      top: -6px;
+      left: -6px;
+      width: calc(100% + 12px);
+      height: calc(100% + 12px);
+      background: var(--primary-10);
+      border-radius: var(--corner-radius-3);
+      pointer-events: none;
+      z-index: 0;
+    }
+  }
+
   &[data-selected="1"] {
     // Subtle fill on selected item instead of bordered frame.
     // Padding around the cell so the highlight looks like a soft shape
