@@ -199,7 +199,16 @@ class __editor_markdown extends __player {
         // the file's nid directly — no path depth restriction applies there.
         const env = bootstrap();
         const ksel = env.keysel ? `&keysel=${env.keysel}` : '';
-        url = `${env.svc}media.orig?nid=${nid}&hub_id=${hub_id}${ksel}`;
+        // actualNode() appends ?v=<md5Hash | mtime-ctime> to bust the browser cache
+        // after a save. This hand-built media.orig URL omitted it, so reopening an
+        // edited note in a share served the STALE cached body — the save looked like
+        // it never persisted (it did; the desk, which uses actualNode's ?v=, showed
+        // the new content). Mirror that cache-buster here.
+        const md5 = this.media.mget('md5Hash');
+        const changed = Math.abs(this.media.mget('mtime') - this.media.mget('ctime'));
+        const killCache = md5 || ((_.isNaN(changed) || changed === 0) ? '' : changed);
+        const ver = killCache ? `&v=${killCache}` : '';
+        url = `${env.svc}media.orig?nid=${nid}&hub_id=${hub_id}${ksel}${ver}`;
       }
       this.media.wait(0);
       this._loadContent(url)
@@ -361,14 +370,33 @@ class __editor_markdown extends __player {
     if (this.target) {
       opt.pid = this.target.mget(_a.nid);
       opt.hub_id = this.target.mget(_a.hub_id);
-      // DMZ share recipient: a non-member recipient has write only on the shared
-      // subtree (a node grant), not hub-wide. media.save's ACL authorizes the node
-      // referenced by `nid` (falling back to `p`); for a NEW note `nid` is empty so
-      // the ACL defaults to the hub HOME — which the recipient can't write → 403.
-      // Send the destination folder as `p` so the ACL authorizes against the shared
-      // folder where the grant applies (mirrors make_dir, which passes the parent as
-      // nid). DMZ-only + new files only; desk / existing-file saves are untouched.
-      if (this.target.isDmz && !opt.nid) opt.p = opt.pid;
+      if (this.target.isDmz) {
+        // DMZ share recipient: a non-member recipient has write only on the shared
+        // subtree (a node grant), not hub-wide. media.save's ACL authorizes the node
+        // referenced by `nid` (falling back to `p`); for a NEW note `nid` is empty so
+        // the ACL defaults to the hub HOME — which the recipient can't write → 403.
+        // Send the destination folder as `p` so the ACL authorizes against the shared
+        // folder where the grant applies (mirrors make_dir, which passes the parent as nid).
+        if (!opt.nid) opt.p = opt.pid;
+        // An anonymous (creator-bound) session reports a writable CLIENT privilege —
+        // so the textarea is editable and the editor's canUpload() passes — but the
+        // server's read-only ceiling blocks the write, so the save silently no-ops
+        // (edit → save → reopen → nothing). Route anonymous editors to the sign-up
+        // gate instead, mirroring the create-note / create-folder gate in the sharebox.
+        const desk = this.target.mget('desk');
+        if (desk && !desk.mget('is_authenticated')) {
+          if (desk.showSignupRequiredOverlay) desk.showSignupRequiredOverlay();
+          return;
+        }
+        // No "save to your Deck" fallback in a share: a recipient has no deck, and the
+        // creator's own folder IS the share target. The desk fallback also fired
+        // spuriously for the creator (the editor's canUpload() reads the note tile's
+        // owner privilege = editable, while the share-session wm's privilege can be
+        // view-only) → a confusing "save to your Deck?" prompt. Save straight into the
+        // shared folder; the server is the final authority on write permission and a
+        // denied save degrades gracefully via _saveContent's guard.
+        return this._saveContent(opt, this.target);
+      }
       if (!this.target.canUpload()) {
         let msg = `
         You don't have the permission to save the file into to the folder {0}.<br>
