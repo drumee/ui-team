@@ -324,7 +324,12 @@ class __editor_markdown extends __player {
       target = this.media.logicalParent;
       position = this.media.index();
     }
-    content = content || this.getData().content || "";
+    // The textarea Entry (this.__editor) is the live source of truth for the note
+    // body — _getHTML/preview/print all read it. For an opened existing note,
+    // getData().content can come back empty, which would overwrite the file with ""
+    // on save (data loss). Read the editor value first; keep `content` (passed by
+    // saveTo for html/pdf/docx) and getData() as fallbacks.
+    content = content || (this.__editor && this.__editor.getValue()) || this.getData().content || "";
     let a = content.split(/[ +\n]/);
 
     let filename = this.mget(_a.filename);
