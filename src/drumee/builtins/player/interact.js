@@ -256,6 +256,9 @@ class __window_interact_player extends __utils {
         scroll: false,
         handle: `.${this.fig.group}__header`,
         cancel: ".slidebar",
+        // Shield child iframes (e.g. OnlyOffice editor) so a fast drag over the
+        // iframe doesn't lose mouse events and stall the drag.
+        iframeFix: true,
       });
       this.setContainment();
       if (this.mget(_a.resizable) != _a.disable) {
@@ -381,14 +384,52 @@ class __window_interact_player extends __utils {
   }
 
   /**
-   * 
-   * @param {*} e 
-   * @param {*} ui 
+   * Never leave the resize shield behind if the player is torn down mid-drag —
+   * a stray full-viewport overlay would swallow every click.
+   */
+  onBeforeDestroy() {
+    this._removeResizeShield();
+    if (super.onBeforeDestroy) super.onBeforeDestroy();
+  }
+
+  /**
+   *
+   * @param {*} e
+   * @param {*} ui
    */
   _resizeStart(e, ui) {
     this.selector(0);
     this._sizeCtrl && this._sizeCtrl.changeState(0);
+    this._addResizeShield();
     super._resizeStart(e, ui);
+  }
+
+  /**
+   * jQuery UI tracks the resize via mousemove on the parent document. When the
+   * cursor passes over a child iframe (e.g. the OnlyOffice editor) the iframe
+   * captures the mouse events and the parent stops receiving them, so an edge
+   * resize stutters/freezes on fast moves while corner handles (which drag
+   * outward, away from the iframe) stay smooth. Lay a transparent full-viewport
+   * shield over everything for the duration of the drag so every mousemove/up
+   * lands on the parent document. (resizable has no `iframeFix` option — only
+   * draggable does — so this has to be manual.)
+   */
+  _addResizeShield() {
+    if (this._resizeShield) return;
+    const d = document.createElement("div");
+    d.style.cssText =
+      "position:fixed;top:0;left:0;width:100%;height:100%;z-index:2147483646;background:transparent;cursor:inherit;";
+    document.body.appendChild(d);
+    this._resizeShield = d;
+  }
+
+  /**
+   * Remove the resize shield added in _resizeStart.
+   */
+  _removeResizeShield() {
+    if (!this._resizeShield) return;
+    this._resizeShield.remove();
+    this._resizeShield = null;
   }
 
   /**
@@ -397,6 +438,7 @@ class __window_interact_player extends __utils {
    * @param {*} ui 
    */
   _resizeStop(e, ui) {
+    this._removeResizeShield();
     this.selector(1);
     this._image = null;
     this._video = null;
