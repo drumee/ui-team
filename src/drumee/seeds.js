@@ -408,6 +408,9 @@ module.exports = {
     // return import("./builtins/chat/hub");
     return import("./builtins/widget/chat");
   },
+  widget_chat_export: function () {
+    return import("./builtins/widget/chat-export");
+  },
   widget_meeting: function () {
     return import("./builtins/widget/meeting");
   },

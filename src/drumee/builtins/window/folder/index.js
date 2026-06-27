@@ -1008,6 +1008,10 @@ class __window_folder extends mfsInteract {
         this.isShowSettings = false;
         return this.dialogWrapper.clear();
 
+      case "close-export":
+        this._closeChatExportOverlay();
+        return;
+
       case "open-advanced-settings":
         return this.openAdvancedSettings(cmd);
 
@@ -1136,8 +1140,8 @@ class __window_folder extends mfsInteract {
       }
 
       case "download-chat-history":
-        // UI only for now — no export backend wired yet (per design).
-        return this._closeThreadMenu();
+        this._closeThreadMenu();
+        return this._openChatExportModal();
 
       case _a.chat: {
         const fileNid =
@@ -1289,6 +1293,92 @@ class __window_folder extends mfsInteract {
     const chat = this.getPart && this.getPart("folder-chat");
     if (chat && _.isFunction(chat.disableMessageSelection)) {
       chat.disableMessageSelection();
+    }
+  }
+
+  /**
+   * Open the "Export chat history" modal in a fixed-position viewport overlay
+   * so it is never clipped by the folder window's bounds.
+   *
+   * Root cause: wrapper-dialog is `position:absolute; top:132px` INSIDE the
+   * window container (window.scss ~line 183), so a 530px-tall card is clipped.
+   *
+   * Fix: use a dedicated `wrapper-chat-export` Wrapper appended via `this.append()`
+   * (so Marionette owns the lifecycle), with CSS `position:fixed; inset:0`
+   * (class `widget-chat-export__viewport-backdrop`) applied via `data-chat-export`.
+   * A backdrop overlay closes on click-outside. Does NOT touch `wrapper-dialog` so
+   * create-folder / rename-folder dialogs are completely unaffected.
+   */
+  _openChatExportModal() {
+    // Tear down any previous overlay first (e.g. user re-clicks menu quickly).
+    this._closeChatExportOverlay();
+
+    const folderName = this.mget(_a.name);
+    const folderColor = this._chatExportFolderColor(folderName);
+
+    // Append a dedicated Wrapper to this window so Marionette owns its lifecycle.
+    // The wrapper's __bhv_wrapper behavior auto-sets data-state="open" when it
+    // receives children, and "closed" when empty. We feed immediately after
+    // ensurePart resolves, so it will open automatically.
+    this.append(
+      Skeletons.Wrapper.Y({
+        className: "widget-chat-export__viewport-backdrop",
+        name: "chat-export",
+      }),
+    );
+
+    this.ensurePart("wrapper-chat-export").then((wrapper) => {
+      if (!wrapper || (wrapper.isDestroyed && wrapper.isDestroyed())) return;
+      this._chatExportWrapper = wrapper;
+
+      // Clicking the backdrop (not the card) closes the modal.
+      wrapper.el.addEventListener("click", (e) => {
+        if (e.target === wrapper.el) {
+          this._closeChatExportOverlay();
+        }
+      });
+
+      // Feed the export widget into the centering container.
+      wrapper.feed({
+        kind: "widget_chat_export",
+        hub_id: this.mget(_a.hub_id),
+        nid: this.mget(_a.nid),
+        name: folderName,
+        // Folder access level (private/share/public/dmz) → drives the icon
+        // colour in the modal, matching the hub icon shown outside.
+        area: this.mget(_a.area),
+        uiHandler: [this],
+      });
+    });
+  }
+
+  /**
+   * Computes the folder's representative color using the same colorFromName
+   * utility that chat-item/username uses for bubble colours, so the folder
+   * icon box in the export modal matches the hub's chat accent.
+   * @param {string} name
+   * @returns {string} hsl(...) color string
+   */
+  _chatExportFolderColor(name) {
+    try {
+      const { colorFromName } = require("@drumee/ui-essentials");
+      return colorFromName(name || "folder");
+    } catch (_) {
+      return "hsl(240, 40%, 60%)";
+    }
+  }
+
+  /**
+   * Tears down the viewport-level chat-export overlay wrapper + its child widget.
+   */
+  _closeChatExportOverlay() {
+    if (this._chatExportWrapper) {
+      if (_.isFunction(this._chatExportWrapper.goodbye)) {
+        this._chatExportWrapper.goodbye();
+      } else if (_.isFunction(this._chatExportWrapper.suppress)) {
+        this._chatExportWrapper.suppress();
+      }
+      this._chatExportWrapper = null;
     }
   }
 

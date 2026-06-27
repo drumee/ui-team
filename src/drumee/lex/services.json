@@ -87,6 +87,11 @@
     "comment_delete": "task.comment_delete",
     "comment_react": "task.comment_react"
   },
+  "channel": {
+    "export_scope": "channel.export_scope",
+    "export": "channel.export",
+    "export_fetch": "channel.export_fetch"
+  },
   "label": {
     "list": "label.list",
     "create": "label.create",
