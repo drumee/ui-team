@@ -458,6 +458,23 @@ class __media_core extends DrumeeMFS {
   }
 
   /**
+   * Toggle the UI-only notification-origin highlight on the cell. Applied to
+   * the specific file revealed from a notification item (Wm._highlightNode in
+   * window/utils.js) — NOT every new file in the folder. The attribute is
+   * decoupled from data-count so it survives mark-as-seen; it is cleared when
+   * the file is opened (wait) or its window closes (see below).
+   * @param {boolean} on
+   */
+  _setNotifyHighlight(on) {
+    if (!this.el) return;
+    if (on) {
+      this.el.dataset.uiHighlight = 1;
+    } else {
+      this.el.removeAttribute("data-ui-highlight");
+    }
+  }
+
+  /**
    *
    */
   getHubNotification(details, hub_id) {
@@ -1220,6 +1237,8 @@ class __media_core extends DrumeeMFS {
         if (this.haveSeen()) {
           this.mset({ new_file: 0 });
           this.renderNotification(0);
+          // Opening the file clears its notification-origin highlight too.
+          this._setNotifyHighlight(false);
         }
       });
     } else if (this.isHub || this.isFolder) {
@@ -1392,6 +1411,7 @@ class __media_core extends DrumeeMFS {
         if (this._notify) {
           this.mset({ new_file: 0, new_media: 0 });
           this.renderNotification(0);
+          this._setNotifyHighlight(false);
         }
       }
     });

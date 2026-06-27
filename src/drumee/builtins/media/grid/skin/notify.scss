@@ -19,7 +19,7 @@
       text-align: center;
       width: 18px;
       height: 18px;
-      background-color: var(--primary-50); //#ffffff;
+      background-color:var(--default-bg); //#ffffff;
       overflow: hidden;
       margin: -5px; //-6px;
       border-radius: 50%;
@@ -32,7 +32,7 @@
       justify-content: center;
       justify-items: center;
       flex-direction: column;
-      @include drumee.typo($line: 16px, $size: 10px, $weight: 300, $color: var(--white)); //#626262);//var(--tertiary-text-color));
+      @include drumee.typo($line: 16px, $size: 10px, $weight: 300, $color: var(--neutral-text-notification)); //#626262);//var(--tertiary-text-color));
 
       &[data-refresh="1"] {
         opacity: 0;

@@ -1131,12 +1131,12 @@ class __window_mfs extends DrumeeMFS {
     });
 
     /** Direct open from the Wm if if possible */
-    let found = Wm.getItemsByAttr(_a.nid, nid)[0];
+    let found = this._findMediaByNid(nid);
     if (found) {
-      // Already rendered in an open window: a reveal just selects/scrolls/flashes
-      // it in place; a normal open triggers the node's open action.
+      // Already rendered in an open window: a reveal just scrolls/flashes/
+      // highlights in place; a normal open triggers the node's open action.
       if (highlight) {
-        this._highlightNode(nid);
+        this._revealFromNotification(nid, filetype);
         return;
       }
       found.triggerHandlers({ service: "open-node" });
@@ -1176,40 +1176,108 @@ class __window_mfs extends DrumeeMFS {
       { ...opt, ...parent, kind: "window_folder" },
       { explicit: 1 },
     );
-    if (highlight) this._highlightNode(nid);
+    if (highlight) this._revealFromNotification(nid, filetype);
     return opened;
   }
 
   /**
-   * Reveal a file in its folder grid: select it, scroll it into view, and play
-   * a one-off flash so the user's eye lands on it. The grid renders
-   * asynchronously after Wm.launch, so poll briefly for the item by nid. No-op
-   * if it never appears (e.g. the file opened in a player instead).
+   * Reveal from a notification, dispatching on what the notification points at:
+   *  - a file  → scroll to + flash + soft-highlight that one cell.
+   *  - a folder/hub → scroll to + flash + soft-highlight the NEW files it
+   *    contains (the files the notification is about). The opened window's nid
+   *    matches the container itself, so there is no single file cell to reveal.
+   */
+  _revealFromNotification(nid, filetype) {
+    if (filetype === _a.folder || filetype === _a.hub) {
+      this._highlightFolderNewFiles(nid);
+    } else {
+      this._highlightNode(nid);
+    }
+  }
+
+  /**
+   * Soft-highlight (and scroll the eye to) a single file cell once it renders.
+   * The grid renders asynchronously after Wm.launch, so poll briefly by nid.
    */
   _highlightNode(nid, tries = 24) {
     if (!nid || `${nid}` === "0") return;
-    const apply = (item) => {
-      if (!item || !item.el || !item.select) return;
-      try {
-        item.select({});
-        if (item.el.scrollIntoView) {
-          item.el.scrollIntoView({ behavior: "smooth", block: "center" });
-        }
-        item.el.classList.add("media-highlight");
-        setTimeout(() => {
-          if (item.el) item.el.classList.remove("media-highlight");
-        }, 2400);
-      } catch (e) {
-        if (this.warn) this.warn("[openFileLocation] highlight failed", e);
-      }
-    };
     const seek = (n) => {
-      const item = Wm.getItemsByAttr(_a.nid, nid)[0];
-      if (item) return apply(item);
+      const item = this._findMediaByNid(nid);
+      // Only a real grid cell can be revealed — never the container window
+      // (which shares the folder's nid). Cells expose _setNotifyHighlight.
+      if (item && item._setNotifyHighlight) return this._applyReveal([item], true);
       if (n <= 0) return;
       setTimeout(() => seek(n - 1), 150);
     };
     seek(tries);
+  }
+
+  /**
+   * Highlight every NEW (unseen-badge) file inside an opened folder/hub window,
+   * and scroll the first into view. Polls until the grid cells render.
+   */
+  _highlightFolderNewFiles(nid, tries = 24) {
+    if (!nid || `${nid}` === "0") return;
+    const isFile = (c) => {
+      const ft = c.mget(_a.filetype);
+      return ft !== _a.folder && ft !== _a.hub;
+    };
+    const seek = (n) => {
+      const win = this._findMediaByNid(nid);
+      const cells = win && win.getItemsByKind ? win.getItemsByKind(_a.media) : [];
+      // Only NEW files (not sub-folders) — the files the notification is about.
+      const fresh = cells.filter(
+        (c) =>
+          c._setNotifyHighlight &&
+          isFile(c) &&
+          (parseInt(c.mget("new_file")) || 0) > 0,
+      );
+      if (fresh.length) return this._applyReveal(fresh, true);
+      if (n <= 0) return;
+      setTimeout(() => seek(n - 1), 150);
+    };
+    seek(tries);
+  }
+
+  /**
+   * Apply the persistent soft highlight to each cell, and (for the first) scroll
+   * it into view with a one-off flash. The highlight is cleared when the file is
+   * opened or its window closes (media/core.js).
+   */
+  _applyReveal(cells, scrollFirst) {
+    cells.forEach((item, i) => {
+      if (!item || !item.el) return;
+      try {
+        if (i === 0 && scrollFirst) {
+          if (item.el.scrollIntoView) {
+            item.el.scrollIntoView({ behavior: "smooth", block: "center" });
+          }
+          item.el.classList.add("media-highlight");
+          setTimeout(() => {
+            if (item.el) item.el.classList.remove("media-highlight");
+          }, 2400);
+        }
+        if (item._setNotifyHighlight) item._setNotifyHighlight(true);
+      } catch (e) {
+        if (this.warn) this.warn("[openFileLocation] highlight failed", e);
+      }
+    });
+  }
+
+  /**
+   * Find an open media cell by nid, robust to string/number typing. URL/hash
+   * args arrive as strings (Visitor.parseModuleArgs) while a grid cell's nid is
+   * often a number from the JSON listing — getItemsByAttr uses strict ===, so a
+   * single-type lookup silently misses the cell. Try both forms.
+   */
+  _findMediaByNid(nid) {
+    const key = `${nid}`;
+    const num = Number(key);
+    return (
+      Wm.getItemsByAttr(_a.nid, nid)[0] ||
+      Wm.getItemsByAttr(_a.nid, key)[0] ||
+      (key !== "" && !isNaN(num) ? Wm.getItemsByAttr(_a.nid, num)[0] : undefined)
+    );
   }
 
   /**
