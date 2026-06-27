@@ -18,6 +18,8 @@ module.exports = function (ui) {
 
   if (m.message_type == _a.call) {
     body = require("./call-stat")(m);
+  } else if (m.message_type === "file.thread") {
+    body = require("./file-thread-event")(m);
   } else if (isMeeting || sentinel) {
     if (sentinel) {
       let parsed = {};
