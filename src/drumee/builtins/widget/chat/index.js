@@ -104,15 +104,29 @@ class __widget_chat extends LetcBox {
       this.peerId = "";
       const nid = this.mget(_a.nid) || "";
       this.scopedNid = this.mget("scope") === _a.folder ? nid : "";
-      this.scopedFileNid = "";
-      this.storageKey = nid
-        ? `${area}-${this.hubId}-${nid}`
-        : `${area}-${this.hubId}`;
+      // Optional initial file scope: lets a second chat instance mount already
+      // scoped to a file thread (the full Chat-tab side panel) so its first
+      // list load is the thread itself — no General-then-thread flash.
+      this.scopedFileNid = this.mget("scoped_file_nid")
+        ? `${this.mget("scoped_file_nid")}`
+        : "";
+      this.scopedFileLabel = this.mget("scoped_file_label") || "";
+      this.fileThreadId = "";
+      this.fileThreadInfoLoaded = false;
+      // storage_key override keeps a coexisting second instance's messenger
+      // draft separate from the folder/General chat (same area+hub+nid would
+      // otherwise collide on one sessionStorage key).
+      this.storageKey =
+        this.mget("storage_key") ||
+        (nid ? `${area}-${this.hubId}-${nid}` : `${area}-${this.hubId}`);
     }
 
     this.hubId = this.hubId || this.mget(_a.hub_id);
     this.declareHandlers();
     this.bindEvent(_a.live);
+    // Mounted already file-scoped (side panel) → resolve the thread id up front
+    // for realtime WS matching (getCurrentApi loads the list by file_nid alone).
+    if (this.scopedFileNid) this._loadFileThreadInfo();
     this._newMsgCount = 0;
 
     // Typing indicator state.
@@ -121,6 +135,9 @@ class __widget_chat extends LetcBox {
     this._typers = new Map();
     this._typingSentAt = 0;
     this._typingIdleTimer = null;
+    // author_id of the typer whose avatar is currently shown in the bubble —
+    // lets _renderTypers skip re-feeding the avatar on every keystroke.
+    this._typingLeadId = null;
 
     // Mark this conversation read when its workspace/folder is clicked in the
     // window manager (Wm fires "chat:read" with the focused hub context).
@@ -448,7 +465,13 @@ class __widget_chat extends LetcBox {
     if (existing && existing.timer) clearTimeout(existing.timer);
     // Auto-expire in case a stop signal is lost.
     const timer = setTimeout(() => this._removeTyper(authorId), 6000);
-    this._typers.set(authorId, { name, timer });
+    this._typers.set(authorId, {
+      name,
+      authorId,
+      firstname: data.firstname,
+      lastname: data.lastname,
+      timer,
+    });
     this._renderTypers();
   }
 
@@ -476,38 +499,42 @@ class __widget_chat extends LetcBox {
   }
 
   /**
-   * Render the typing indicator from the current _typers set.
+   * Render the typing indicator (incoming-message bubble) from the current
+   * _typers set. Shows the most-recent typer's avatar beside the animated dots;
+   * the bubble itself carries no name text (Figma 2370-70205).
    */
   _renderTypers() {
     this.ensurePart("typing-indicator")
       .then((part) => {
         if (!part || !part.el) return;
-        const names = Array.from(this._typers.values()).map((t) => t.name);
-        if (!names.length) {
+        const typers = Array.from(this._typers.values());
+        if (!typers.length) {
+          this._typingLeadId = null;
           if (_.isFunction(part.setState)) part.setState(0);
           else part.el.dataset.state = "0";
           return;
         }
-        let text;
-        if (names.length === 1) {
-          text = (LOCALE.IS_TYPING || "{0} is typing…").format(names[0]);
-        } else if (names.length === 2) {
-          text = (LOCALE.TWO_TYPING || "{0} and {1} are typing…").format(
-            names[0],
-            names[1],
-          );
-        } else {
-          // 3+ typers: show at most the first two names, then "and more".
-          text = (LOCALE.MANY_TYPING || "{0}, {1} and more are typing…").format(
-            names[0],
-            names[1],
-          );
+        // Single bubble — show the most-recent typer's avatar. Re-feed only when
+        // the lead typer changes, so a burst of keystrokes doesn't thrash the
+        // UserProfile (which fetches the avatar).
+        const lead = typers[typers.length - 1];
+        if (lead && lead.authorId && lead.authorId !== this._typingLeadId) {
+          this._typingLeadId = lead.authorId;
+          this.ensurePart("typing-avatar")
+            .then((slot) => {
+              if (!slot || !slot.el || !_.isFunction(slot.feed)) return;
+              slot.feed(
+                Skeletons.UserProfile({
+                  className: `${this.fig.family}__typing-avatar-img`,
+                  id: lead.authorId,
+                  firstname: lead.firstname,
+                  lastname: lead.lastname,
+                  auto_color: 1,
+                }),
+              );
+            })
+            .catch(() => {});
         }
-        this.ensurePart("typing-text")
-          .then((t) => {
-            if (t && t.el) t.el.textContent = text;
-          })
-          .catch(() => {});
         if (_.isFunction(part.setState)) part.setState(1);
         else part.el.dataset.state = "1";
       })
@@ -1379,15 +1406,15 @@ class __widget_chat extends LetcBox {
     }
 
     if (this.scopedFileNid) {
-      // list_thread_by_file returns attachment hits UNION mention hits
-      // (server merges channel_list_by_file + channel_search on the
-      // `mention:hub_id:file_nid` literal pattern, dedupes by message_id).
-      // Large pagelength makes the list widget call `_eod` after the first page.
+      // File-thread chat: list this file thread's child messages. The server
+      // resolves the thread from file_nid and returns [] when none exists yet,
+      // so opening a file chat never creates a thread (legacy attachment/mention
+      // search list_thread_by_file is no longer used for the file chat view).
       return {
-        service: SERVICE.channel.list_thread_by_file,
+        service: this._ftSvc("messages"),
         hub_id: this.hubId,
         file_nid: this.scopedFileNid,
-        pagelength: 200,
+        order: "desc",
       };
     }
 
@@ -1434,6 +1461,12 @@ class __widget_chat extends LetcBox {
 
     this.scopedFileNid = next;
     this.scopedFileLabel = label || "";
+    // Reset file-thread state for the new file; resolve its thread id (if any)
+    // asynchronously. getCurrentApi uses file_nid directly, so the list restart
+    // below does not wait on this.
+    this.fileThreadId = "";
+    this.fileThreadInfoLoaded = false;
+    if (next) this._loadFileThreadInfo();
     this._refreshScopeChip(next, label);
     this.ensurePart(_a.list).then((list) => {
       if (!list || !_.isFunction(list.restart)) return;
@@ -1478,12 +1511,12 @@ class __widget_chat extends LetcBox {
           // only by the DMZ sharebox chatPanel for authenticated + can_chat) keeps
           // the messenger visible. Desk/channel/window-folder chats never set
           // scoped_post → behaviour is byte-identical for them.
-          // ...but NOT inside an individual FILE thread (scopedFileNid set): posting
-          // there sends the file nid as an attachment, which channel.post moves into
-          // the chat folder. Keep file threads read-only; only the folder-root
-          // conversation is postable for a secure-share recipient.
-          const keepForPost = scoped && this.mget('scoped_post') && !this.scopedFileNid;
-          footer.el.dataset.scopedHidden = (scoped && !keepForPost) ? "1" : "0";
+          // FILE-THREAD mode (scopedFileNid set) is a real per-file chat now, so
+          // the messenger stays visible there; guests are still gated in sendMessage.
+          const isFileThread = !!this.scopedFileNid;
+          const keepForPost = scoped && this.mget('scoped_post') && !isFileThread;
+          footer.el.dataset.scopedHidden =
+            scoped && !isFileThread && !keepForPost ? "1" : "0";
         }
       })
       .catch(() => {});
@@ -1609,6 +1642,46 @@ class __widget_chat extends LetcBox {
     return this.scopedNid || "";
   }
 
+  // File-thread mode = a per-file chat thread is open (scopedFileNid set).
+  // Distinct from folder scope (scopedNid): folder scope filters the hub chat to
+  // one folder; file-thread mode is a separate chat thread backed by the
+  // channel.file_thread_* services. thread_id (reply-to-message) is unrelated.
+  isFileThreadMode() {
+    return !_.isEmpty(this.scopedFileNid);
+  }
+
+  // Resolve a channel.file_thread_* service name with a literal fallback so the
+  // UI keeps working during deploy skew (new UI shipped before the backend ACL
+  // is bootstrapped into SERVICE.channel.*).
+  _ftSvc(name) {
+    const c = (SERVICE && SERVICE.channel) || {};
+    return c[`file_thread_${name}`] || `channel.file_thread_${name}`;
+  }
+
+  // Resolve thread info for the scoped file WITHOUT creating one. Stores
+  // fileThreadId when a thread already exists (used for realtime matching + the
+  // acknowledge service). Opening a file chat is side-effect free.
+  async _loadFileThreadInfo() {
+    if (_.isEmpty(this.scopedFileNid)) {
+      this.fileThreadId = "";
+      this.fileThreadInfoLoaded = false;
+      return;
+    }
+    try {
+      const info = await this.fetchService(this._ftSvc("info"), {
+        hub_id: this.hubId,
+        file_nid: this.scopedFileNid,
+      });
+      this.fileThreadId =
+        info && Number(info.exists_thread) && info.file_thread_id
+          ? `${info.file_thread_id}`
+          : "";
+    } catch (e) {
+      this.fileThreadId = "";
+    }
+    this.fileThreadInfoLoaded = true;
+  }
+
   /**
    *
    * @param {*} data
@@ -1617,15 +1690,38 @@ class __widget_chat extends LetcBox {
   matchesScopedChannel(data = {}) {
     if (_.isArray(data)) data = data[0] || {};
     if (this.scopedFileNid) {
-      const attachments = this.parseAttachmentField(data.attachment).map(
-        String,
-      );
-      if (attachments.includes(`${this.scopedFileNid}`)) return true;
-      const body = data.message || "";
-      return body.includes(`mention:${this.hubId}:${this.scopedFileNid}`);
+      // File-thread mode: a message belongs here only if it targets THIS thread.
+      // The folder-visible root card (message_type file.thread) is broadcast on
+      // channel.post but belongs in folder chat, not inside the file thread.
+      if (data.message_type === "file.thread") return false;
+      const ftid = `${data.file_thread_id ||
+        (data.file_thread && data.file_thread.file_thread_id) ||
+        ""}`;
+      if (this.fileThreadId && ftid && ftid === `${this.fileThreadId}`) {
+        return true;
+      }
+      // Until thread info resolves, accept the file's own first-post echo (the
+      // child carries file_nid) so the sender sees their message immediately.
+      if (!this.fileThreadId && `${data.file_nid}` === `${this.scopedFileNid}`) {
+        return true;
+      }
+      return false;
     }
+    // A file-thread CHILD (carries file_thread_id) belongs only in its file
+    // panel, never in folder/General. The WS path already excludes them (they
+    // post via channel.file_thread_post), but the in-client sibling-sync
+    // (chat:posted) mirrors raw post data between coexisting widgets — and the
+    // full Chat tab now keeps General + a file panel open at once — so guard
+    // here. The folder-visible root card has file_thread_id NULL → not excluded.
+    const ftChild = `${
+      data.file_thread_id ||
+      (data.file_thread && data.file_thread.file_thread_id) ||
+      ""
+    }`;
+    if (ftChild) return false;
     const nid = this.getScopedNid();
     if (!nid) return true;
+    // Folder scope: accept normal messages whose nid matches this folder.
     const messageNid = data.nid || data.parent_id || data.pid;
     return `${messageNid}` === `${nid}`;
   }
@@ -1714,11 +1810,23 @@ class __widget_chat extends LetcBox {
       case _a.private:
       case _a.ticket:
       case "supportTicket":
-        if (this.scopedFileNid) {
-          attachments = attachments || [];
-          if (!attachments.map(String).includes(`${this.scopedFileNid}`)) {
-            attachments = [this.scopedFileNid, ...attachments];
+        if (this.isFileThreadMode()) {
+          // Per-file chat thread. Do NOT prepend the file nid into attachment —
+          // the file is the thread subject, not an attachment (posting it would
+          // let channel.post move the original file into the chat folder).
+          api = {
+            service: this._ftSvc("post"),
+            file_nid: this.scopedFileNid,
+            message,
+            attachment: attachments,
+            hub_id: this.hubId,
+          };
+          const ftFolderAttachment =
+            this.getPromotableDeviceAttachmentIds(list);
+          if (!_.isEmpty(ftFolderAttachment)) {
+            api.folder_attachment = ftFolderAttachment;
           }
+          break;
         }
         api = {
           service: SERVICE.channel.post,
@@ -1726,7 +1834,7 @@ class __widget_chat extends LetcBox {
           attachment: attachments,
           hub_id: this.hubId,
         };
-        if (this.getScopedNid() && !this.scopedFileNid) {
+        if (this.getScopedNid()) {
           api.nid = this.getScopedNid();
           // Staged device uploads the server should move into the folder
           // at send time (everything else stays link-only in the sbox).
@@ -1873,6 +1981,17 @@ class __widget_chat extends LetcBox {
           return;
         }
         this._syncScopedFolderContent(data, api);
+        // First file-thread send returns the freshly-created thread id. The
+        // server suppresses our own WS echo, so adopt it from the POST response
+        // for realtime matching + subsequent sends (plan crit 4).
+        if (this.isFileThreadMode() && !this.fileThreadId) {
+          const ftid = `${
+            (data.file_thread && data.file_thread.file_thread_id) ||
+            data.file_thread_id ||
+            ""
+          }`;
+          if (ftid) this.fileThreadId = ftid;
+        }
         this.handleReceivedMsg(data);
         // Mirror to sibling chat widgets on the same channel in this client
         // (the server won't WS-echo our own post back to us).
@@ -2322,6 +2441,47 @@ class __widget_chat extends LetcBox {
         }
         break;
 
+      // File-thread child message (per-file chat). Separate service from
+      // channel.post so folder/workspace chat never receives these. Literal
+      // strings (not SERVICE.*) for deploy-skew safety, matching the typing case.
+      case "channel.file_thread_post": {
+        if (!this.isFileThreadMode()) return;
+        if (this.hubId !== data.hub_id) return;
+        const ftid = `${(data.file_thread && data.file_thread.file_thread_id) ||
+          data.file_thread_id ||
+          ""}`;
+        // Adopt the thread id on first post / echo before info resolved.
+        if (ftid) this.fileThreadId = ftid;
+        if (!this.matchesScopedChannel(data)) return;
+        this.handleReceivedMsg(data);
+        if (data && data.author_id) this._removeTyper(data.author_id);
+        // Acknowledge scoped to this thread only when the chat is visible and
+        // the message is not the caller's own.
+        try {
+          if (this.getHandlers(_a.ui)[0].isHidden()) return;
+        } catch (e) {
+          return;
+        }
+        if (Visitor.id !== data.author_id && (this.fileThreadId || ftid)) {
+          this.postService({
+            service: this._ftSvc("acknowledge"),
+            hub_id: this.hubId,
+            file_thread_id: this.fileThreadId || ftid,
+            message_id: data.message_id,
+          });
+        }
+        return;
+      }
+
+      case "channel.file_thread_acknowledge":
+        // File-thread read receipts belong only to the file-thread widget. A
+        // coexisting General chat (full Chat tab) must ignore them — acknowledge
+        // → applyReadReceipt would otherwise mis-paint unrelated General rows by
+        // ctime with that reader's avatar.
+        if (!this.isFileThreadMode()) return;
+        this.acknowledge(data, options);
+        return;
+
       case SERVICE.media.copy:
         setTimeout(() => {
           this.onFileListChange();
@@ -2337,6 +2497,10 @@ class __widget_chat extends LetcBox {
 
       case SERVICE.channel.acknowledge:
       case SERVICE.chat.acknowledge:
+        // Folder/General read receipts must not bleed into a coexisting
+        // file-thread panel (its rows would be mis-painted by ctime); the panel
+        // acks via channel.file_thread_acknowledge instead.
+        if (this.isFileThreadMode()) break;
         this.acknowledge(data, options);
         break;
 

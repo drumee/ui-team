@@ -103,28 +103,34 @@ const __skl_widget_chat = function (ui) {
     ]
   });
 
-  // Ephemeral typing indicator. Pinned just above the input by living in the
-  // footer wrapper (which sits at the panel bottom) and floating above it —
-  // see skin __typing-indicator. Anchoring it to the message viewport instead
-  // let it drift up to wherever the messages ended, because that area only
-  // grows to its content height. Hidden (state 0) until someone is typing.
+  // Ephemeral typing indicator, styled as an incoming-message bubble (Figma
+  // 2370-70205): the typer's avatar + a white bubble with three animated dots.
+  // Pinned just above the input by living in the footer wrapper (which sits at
+  // the panel bottom) and floating above it — see skin __typing-indicator — so
+  // it always reads as the last (incoming) message at the bottom of the list.
+  // The avatar slot is fed per-typer in chat._renderTypers. Hidden (state 0)
+  // until someone is typing.
   const typingIndicator = Skeletons.Box.X({
     className: `${chatFig}__typing-indicator`,
     sys_pn: 'typing-indicator',
     state: 0,
     kids: [
-      Skeletons.Box.X({
-        className: `${chatFig}__typing-dots`,
-        kids: [
-          Skeletons.Note({ className: `${chatFig}__typing-dot` }),
-          Skeletons.Note({ className: `${chatFig}__typing-dot` }),
-          Skeletons.Note({ className: `${chatFig}__typing-dot` })
-        ]
+      Skeletons.Box.Y({
+        className: `${chatFig}__typing-avatar`,
+        sys_pn: 'typing-avatar'
       }),
-      Skeletons.Note({
-        sys_pn: 'typing-text',
-        className: `${chatFig}__typing-text`,
-        content: ''
+      Skeletons.Box.X({
+        className: `${chatFig}__typing-bubble`,
+        kids: [
+          Skeletons.Box.X({
+            className: `${chatFig}__typing-dots`,
+            kids: [
+              Skeletons.Note({ className: `${chatFig}__typing-dot` }),
+              Skeletons.Note({ className: `${chatFig}__typing-dot` }),
+              Skeletons.Note({ className: `${chatFig}__typing-dot` })
+            ]
+          })
+        ]
       })
     ]
   });
