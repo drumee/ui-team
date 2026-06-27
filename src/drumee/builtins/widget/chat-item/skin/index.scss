@@ -649,7 +649,11 @@
     display: none !important;
   }
 
-  .widget-chatItem__avatar-wrapper {
+  // Hide the sender avatar on system cards (meeting / file-thread) regardless of
+  // own-vs-other side. The avatar element is `__profile` (not `__avatar-wrapper`,
+  // which matches nothing) — own messages already hide it via `__profile.me`, but
+  // the recipient's "other" side showed it until this targeted the real class.
+  .widget-chatItem__profile {
     display: none !important;
   }
 }

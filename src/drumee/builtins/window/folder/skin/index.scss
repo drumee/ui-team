@@ -3848,6 +3848,15 @@ html[data-theme="dark"] {
     min-height: 0;
     width: 100%;
     max-width: none;
+
+    // chat-item appends a second sender avatar — a Skeletons.UserProfile
+    // (confirmed `.widget-chatItem__profile.user-profile`, data-online) — on
+    // every "other" message in share-type chats. The template avatar (plain
+    // `__profile`, top-left next to the name) is the correct one; this duplicate
+    // stacked below the bubble and overlapped neighbours. Hide it in the panel.
+    .widget-chatItem__profile.user-profile {
+      display: none !important;
+    }
   }
 
   // Info card pinned at the top of the panel body (Figma 2216-165656): paperclip

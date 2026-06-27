@@ -900,8 +900,13 @@ function fileThreadChatConfig(ui, fileNid, label) {
   const cfg = {
     kind: "widget_chat",
     className: `${grp}__chat-widget ${grp}__ft-panel-chat`,
-    type: _a.share,
-    area: _a.share,
+    // Match the main #General chat (chatPanel): use the folder's real area, not
+    // a hardcoded `share`. type === share makes chat-item render an extra
+    // DMZ-share sender avatar (UserProfile, line ~211) on every "other" message,
+    // which stacked/overlapped here; the main chat avoided it by keying off the
+    // real area. area drives the bubble tint, same as the panel container.
+    type: ui.mget(_a.area),
+    area: ui.mget(_a.area),
     view: "quickChat",
     scope: _a.folder,
     hub_id: ui.mget(_a.actual_hub_id) || ui.mget(_a.hub_id),
