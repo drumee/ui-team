@@ -394,6 +394,148 @@ function getChatLabel(ui) {
 }
 
 /**
+ * Header-bar content for the folder team chat. Returns the kids for the
+ * .window__chat-header row, swapped live by the folder window
+ * (_updateChatHeader) on chat-scope change. Two modes:
+ *   folder (Figma 2216-168072) → "Team Chat" title + [3-dot, search]
+ *   file   (Figma 2216-166665) → [back] + [paperclip, filename, "File thread"
+ *                                 tag] + [3-dot, search]
+ * The 3-dot/search actions are identical in both; back reuses
+ * thread-menu-general to leave the file thread for the folder ("# General") chat.
+ * @param {Object} ui folder window
+ * @param {{ fileNid?: string, label?: string }} opt
+ */
+export function chatHeaderBar(ui, opt = {}) {
+  const grp = ui.fig.group;
+  const fileNid = opt.fileNid || "";
+  const label = opt.label || "";
+
+  // Search (Figma MagnifyingGlass) — click swaps the whole header for a search
+  // bar (chatSearchBar) that live-filters the conversation below. The same
+  // button renders in all three header modes (general / folder / file), so the
+  // search entry point is identical everywhere the icon appears.
+  const searchBtn = Skeletons.Button.Svg({
+    className: `${grp}__chat-header-btn`,
+    ico: "magnifying-glass",
+    service: "open-chat-search",
+    uiHandler: [ui],
+  });
+
+  const actions = Skeletons.Box.X({
+    className: `${grp}__chat-header-actions`,
+    kids: [
+      // 3-dot (Figma DotsThreeVertical) FIRST — opens the thread menu.
+      Skeletons.Button.Svg({
+        className: `${grp}__chat-header-btn`,
+        ico: "apps-dots-vertical",
+        service: "open-thread-menu",
+        uiHandler: [ui],
+        partHandler: ui,
+      }),
+      searchBtn,
+    ],
+  });
+
+  // Full Chat-tab middle header (Figma 2331-46821): the docked rail already is
+  // the thread switcher, so the 3-dot is dropped and the title reads "# General".
+  if (opt.general) {
+    return [
+      Skeletons.Note({
+        className: `${grp}__chat-header-title`,
+        content: `# ${LOCALE.GENERAL || "General"}`,
+      }),
+      Skeletons.Box.X({
+        className: `${grp}__chat-header-actions`,
+        kids: [searchBtn],
+      }),
+    ];
+  }
+
+  if (fileNid) {
+    return [
+      Skeletons.Button.Svg({
+        className: `${grp}__chat-header-back`,
+        ico: "caret-left",
+        service: "thread-menu-general",
+        uiHandler: [ui],
+      }),
+      Skeletons.Box.X({
+        className: `${grp}__chat-header-file`,
+        kids: [
+          // Badge wrapper so _hydrateChatHeaderFile can swap the paperclip for
+          // the file's vignette thumbnail (image/vector), like the chat card.
+          Skeletons.Box.X({
+            className: `${grp}__chat-header-file-badge`,
+            kids: [
+              Skeletons.Image.Svg({
+                ico: "app-attachment",
+                className: `${grp}__chat-header-file-ico`,
+              }),
+            ],
+          }),
+          Skeletons.Note({
+            className: `${grp}__chat-header-file-name`,
+            // Initial text; _hydrateChatHeaderFile replaces it with the file's
+            // real name. Falls back to a short nid tail so it is never nameless.
+            content: label || `#${String(fileNid).slice(-6)}`,
+          }),
+          Skeletons.Note({
+            className: `${grp}__chat-header-file-tag`,
+            content: LOCALE.FILE_THREAD || "File thread",
+          }),
+        ],
+      }),
+      actions,
+    ];
+  }
+
+  return [
+    Skeletons.Note({
+      className: `${grp}__chat-header-title`,
+      content: getChatLabel(ui),
+    }),
+    actions,
+  ];
+}
+
+/**
+ * Search-mode content for the `chat-header-bar` part: a back arrow + a single
+ * text input that replaces the whole header (Figma magnifying-glass → search).
+ * Fed by the folder window (_openChatSearch); the back button restores the
+ * previous header (_closeChatSearch) and the input live-filters the conversation
+ * below (wired via onPartReady "chat-search-input", no per-keystroke service).
+ * @param {Object} ui folder window
+ */
+export function chatSearchBar(ui) {
+  const grp = ui.fig.group;
+  return [
+    Skeletons.Button.Svg({
+      className: `${grp}__chat-header-back`,
+      ico: "caret-left",
+      service: "close-chat-search",
+      uiHandler: [ui],
+    }),
+    Skeletons.Entry({
+      className: `${grp}__chat-search-input`,
+      sys_pn: "chat-search-input",
+      partHandler: ui,
+      placeholder: LOCALE.SEARCH,
+      require: "any",
+      mode: "interactive",
+      interactive: 1,
+      bubble: 0,
+      // Live filter on each keystroke. The Entry's `<input>` is created
+      // asynchronously (waitElement), so a manual addEventListener wired in
+      // onPartReady runs before the input exists. `watch` is the framework's
+      // built-in hook: it attaches the input listener once the field is ready
+      // and fires onUiEvent("chat-search-typed", { value }) on every change.
+      watch: "chat-search-typed",
+      uiHandler: [ui],
+    }),
+  ];
+}
+
+/**
  *
  * @param {Chat Panel} ui
  * @returns
@@ -466,19 +608,158 @@ export function chatPanel(ui) {
     }
   }
 
+  // Folder window team chat gets the richer header (title + search + 3-dot menu)
+  // and the thread-switch dropdown (Figma 2216-168072 / 2216-170337). Other chat
+  // surfaces (dmz-sharebox, in-meeting, …) keep the plain label.
+  const grp = ui.fig.group;
+  const isFolderChat = ui.fig.family === "window-folder";
+  // Folder team chat: a feedable header part the folder window re-feeds via
+  // chatHeaderBar when the chat scope switches between folder and a file thread.
+  const header = isFolderChat
+    ? Skeletons.Box.X({
+        className: `${grp}__chat-label ${grp}__chat-header`,
+        sys_pn: "chat-header-bar",
+        partHandler: ui,
+        dataset: { scope: "folder" },
+        kids: chatHeaderBar(ui, {}),
+      })
+    : Skeletons.Note({
+        className: `${grp}__chat-label`,
+        content: getChatLabel(ui),
+      });
+
   return Skeletons.Box.Y({
-    className: `${ui.fig.group}__chat-panel`,
+    className: `${grp}__chat-panel`,
     sys_pn: "chat-panel",
     dataset:
       ui.fig.family === "window-folder" ? { area: ui.mget(_a.area) } : {},
     kids: [
-      Skeletons.Note({
-        className: `${ui.fig.group}__chat-label`,
-        content: getChatLabel(ui),
-      }),
+      header,
+      // File-thread info card slot (Figma 2216-165656) — the in-place (Files
+      // tab) file-thread view pins the same card the side panel shows. Empty +
+      // hidden until the folder window feeds it on file scope; stays empty for
+      // the full-tab middle #General chat (which never file-scopes in place).
+      isFolderChat
+        ? Skeletons.Box.Y({
+            className: `${grp}__chat-info-slot`,
+            sys_pn: "chat-info-card",
+            partHandler: ui,
+            dataset: { open: 0 },
+          })
+        : null,
       chat,
-    ],
+      // Backend message-search results overlay (channel.search). Covers the
+      // message list while the header search bar is open and has a query; the
+      // folder window feeds it matching previews (_runChatSearch) and toggles
+      // data-open. Hidden by SCSS until data-open="1". Folder team chat only.
+      isFolderChat
+        ? Skeletons.Box.Y({
+            className: `${grp}__search-results`,
+            sys_pn: "search-results",
+            partHandler: ui,
+            dataset: { open: 0 },
+          })
+        : null,
+      // Thread-switch dropdown overlay — populated on open (see folder
+      // _toggleThreadMenu); absolute-positioned under the header, hidden until
+      // data-open="1".
+      isFolderChat
+        ? Skeletons.Box.Z({
+            className: `${grp}__thread-menu`,
+            sys_pn: "thread-menu",
+            partHandler: ui,
+            dataset: { open: 0 },
+          })
+        : null,
+    ].filter(Boolean),
   });
+}
+
+/**
+ * Content for the chat-header search-results overlay (channel.search). Renders
+ * a "Search results" label + one row per matching message (avatar, author,
+ * relative time, 150-char preview), or a "No results" note. Each row jumps to
+ * the message (search-result-jump) on click. Newest-first (server order).
+ * @param {*} ui folder window
+ * @param {Array} rows channel.search result rows
+ */
+export function searchResults(ui, rows) {
+  const grp = ui.fig.group;
+  const list = Array.isArray(rows) ? rows : [];
+  if (!list.length) {
+    return [
+      Skeletons.Note({
+        className: `${grp}__search-results-empty`,
+        content: LOCALE.NO_RESULTS || "No results",
+      }),
+    ];
+  }
+  const row = (r) => {
+    const name = r.fullname || `${r.firstname || ""} ${r.lastname || ""}`.trim();
+    let when = "";
+    const ts = Number(r.ctime || 0);
+    if (ts) {
+      try {
+        when = Dayjs.unix(ts).fromNow();
+      } catch (e) {
+        when = "";
+      }
+    }
+    return Skeletons.Box.X({
+      className: `${grp}__search-result`,
+      service: "search-result-jump",
+      message_id: `${r.message_id || r.id || ""}`,
+      uiHandler: [ui],
+      kidsOpt: { active: 0 },
+      kids: [
+        // No avatar: the proc returns no avatar URL, so a generated placeholder
+        // (color-from-name) was misleading. Show name + time + preview only.
+        // active:0 is propagated at EVERY nesting level (kidsOpt per container):
+        // each view wires its own onclick that stopPropagation()s and trips the
+        // 300ms global click throttle, so a click landing on a nested non-active
+        // descendant would be swallowed before it bubbles to the row's service
+        // (needing several taps). active:0 leaves them handler-less → the click
+        // bubbles straight to the row.
+        Skeletons.Box.Y({
+          className: `${grp}__search-result-body`,
+          kidsOpt: { active: 0 },
+          kids: [
+            Skeletons.Box.X({
+              className: `${grp}__search-result-top`,
+              kidsOpt: { active: 0 },
+              kids: [
+                Skeletons.Note({
+                  className: `${grp}__search-result-name`,
+                  active: 0,
+                  content: name,
+                }),
+                Skeletons.Note({
+                  className: `${grp}__search-result-time`,
+                  active: 0,
+                  content: when,
+                }),
+              ],
+            }),
+            Skeletons.Note({
+              className: `${grp}__search-result-preview`,
+              active: 0,
+              content: r.preview || "",
+            }),
+          ],
+        }),
+      ],
+    });
+  };
+  return [
+    Skeletons.Note({
+      className: `${grp}__search-results-label`,
+      content: LOCALE.SEARCH_RESULTS || "Search results",
+    }),
+    Skeletons.Box.Y({
+      className: `${grp}__search-results-list`,
+      kids: list.map(row),
+    }),
+  ];
 }
 
 /**
@@ -535,6 +816,220 @@ export function folderFilesRowContainer(ui) {
   });
 }
 
+/**
+ * Persistent left rail for the full Chat tab (Figma 2328-115485) — the same
+ * thread list as the header 3-dot dropdown (This Folder → # General + File
+ * Threads + Download), but docked instead of floating. Empty feedable part; the
+ * folder window populates it (_populateThreadRail) on chat-tab open / folder
+ * nav. Only the folder team chat has file threads, so it is null elsewhere;
+ * SCSS keeps it hidden except when data-view="chat".
+ * @param {*} ui folder window
+ */
+export function threadRail(ui) {
+  if (ui.fig.family !== "window-folder") return null;
+  return Skeletons.Box.Y({
+    className: `${ui.fig.group}__thread-rail`,
+    sys_pn: "thread-rail",
+    partHandler: ui,
+  });
+}
+
+/**
+ * Header row for the full Chat-tab file-thread side panel (Figma 2331-47041):
+ * paperclip badge (→ vignette by _hydrateChatHeaderFile) + filename + "File
+ * thread" pill + X (close). Reuses the chat-header-file-* styling. The X fires
+ * close-file-thread-panel on the folder window.
+ * @param {*} ui folder window
+ * @param {{ fileNid?: string, label?: string }} opt
+ */
+function fileThreadPanelHeader(ui, opt = {}) {
+  const grp = ui.fig.group;
+  const fileNid = opt.fileNid || "";
+  const label = opt.label || "";
+  return Skeletons.Box.X({
+    className: `${grp}__chat-header ${grp}__ft-panel-header`,
+    sys_pn: "ft-panel-header",
+    partHandler: ui,
+    dataset: { scope: "file" },
+    kids: [
+      Skeletons.Box.X({
+        className: `${grp}__chat-header-file`,
+        kids: [
+          Skeletons.Box.X({
+            className: `${grp}__chat-header-file-badge`,
+            kids: [
+              Skeletons.Image.Svg({
+                ico: "app-attachment",
+                className: `${grp}__chat-header-file-ico`,
+              }),
+            ],
+          }),
+          Skeletons.Note({
+            className: `${grp}__chat-header-file-name`,
+            content: label || `#${String(fileNid).slice(-6)}`,
+          }),
+          Skeletons.Note({
+            className: `${grp}__chat-header-file-tag`,
+            content: LOCALE.FILE_THREAD || "File thread",
+          }),
+        ],
+      }),
+      Skeletons.Box.X({
+        className: `${grp}__chat-header-actions`,
+        kids: [
+          Skeletons.Button.Svg({
+            className: `${grp}__chat-header-btn`,
+            ico: "cross",
+            service: "close-file-thread-panel",
+            uiHandler: [ui],
+          }),
+        ],
+      }),
+    ],
+  });
+}
+
+/**
+ * Second chat-widget config for the file-thread side panel — a per-file chat
+ * scoped to fileNid, kept fully separate from the middle General chat (distinct
+ * storage_key for its draft; matchesScopedChannel keeps their message streams
+ * apart). Mirrors chatPanel's folder-scope + DMZ-share guest gating.
+ */
+function fileThreadChatConfig(ui, fileNid, label) {
+  const grp = ui.fig.group;
+  const cfg = {
+    kind: "widget_chat",
+    className: `${grp}__chat-widget ${grp}__ft-panel-chat`,
+    type: _a.share,
+    area: _a.share,
+    view: "quickChat",
+    scope: _a.folder,
+    hub_id: ui.mget(_a.actual_hub_id) || ui.mget(_a.hub_id),
+    nid: ui.mget(_a.nid),
+    home_id: ui.mget(_a.home_id),
+    ownpath: ui.mget(_a.ownpath),
+    privilege: ui.mget(_a.privilege) || ui.mget(_a.permission),
+    placeholder: LOCALE.TYPE_MESSAGE + "...",
+    no_emoji: false,
+    send_icon: "raw-send-chat",
+    attach_icon: "chat-link-simple",
+    scoped_file_nid: fileNid,
+    scoped_file_label: label || "",
+    storage_key: `ftpanel-${ui.mget(_a.hub_id)}-${ui.mget(_a.nid)}`,
+    sys_pn: "file-thread-chat",
+    partHandler: ui,
+  };
+  // A window/folder launched from a share carries the pinned token → recipients
+  // post only when authenticated WITH can_chat (same gate as chatPanel).
+  const inDmzShare =
+    ui.fig.family === "window-folder" && !!ui.mget(_a.token);
+  if (inDmzShare) {
+    const canPost = !!(ui.mget("is_authenticated") && ui.mget("can_chat"));
+    cfg.guest_chat = canPost ? 0 : 1;
+    cfg.scoped_post = canPost ? 1 : 0;
+    cfg.desk = ui;
+  }
+  return cfg;
+}
+
+/**
+ * Info card pinned at the top of the file-thread panel body (Figma 2216-165656)
+ * — same shape as the General chat's file-thread card, but "Open thread →" is
+ * replaced by "Open file →" (opens the file's viewer). Name / replies / time /
+ * vignette are filled by the folder window from channel.file_thread_info (the
+ * same fetch that hydrates the header); only "Open file →" is interactive.
+ * @param {*} ui folder window
+ * @param {{ fileNid: string, label?: string }} opt
+ */
+export function fileThreadInfoCard(ui, opt = {}) {
+  const grp = ui.fig.group;
+  const fileNid = opt.fileNid || "";
+  const label = opt.label || "";
+  return Skeletons.Box.X({
+    className: `${grp}__ft-info-card`,
+    kids: [
+      Skeletons.Box.X({
+        className: `${grp}__ft-info-badge`,
+        kids: [
+          Skeletons.Image.Svg({
+            ico: "app-attachment",
+            className: `${grp}__ft-info-ico`,
+          }),
+        ],
+      }),
+      Skeletons.Box.Y({
+        className: `${grp}__ft-info-body`,
+        kids: [
+          Skeletons.Box.X({
+            className: `${grp}__ft-info-top`,
+            kids: [
+              Skeletons.Note({
+                className: `${grp}__ft-info-name`,
+                content: label || `#${String(fileNid).slice(-6)}`,
+              }),
+              Skeletons.Note({
+                className: `${grp}__ft-info-open`,
+                content: `${LOCALE.OPEN_FILE || "Open file"} →`,
+                service: "open-file-from-thread",
+                file_nid: fileNid,
+                uiHandler: [ui],
+              }),
+            ],
+          }),
+          Skeletons.Box.X({
+            className: `${grp}__ft-info-meta`,
+            kids: [
+              Skeletons.Image.Svg({
+                ico: "chat-teardrop-dots",
+                className: `${grp}__ft-info-meta-ico`,
+              }),
+              // Filled by _fillFileInfoCard; empty Notes render nothing.
+              Skeletons.Note({ className: `${grp}__ft-info-replies`, content: "" }),
+              Skeletons.Note({ className: `${grp}__ft-info-dot`, content: "" }),
+              Skeletons.Note({ className: `${grp}__ft-info-time`, content: "" }),
+            ],
+          }),
+        ],
+      }),
+    ],
+  });
+}
+
+/**
+ * Content fed into the file-thread side panel when a thread opens: [header,
+ * info card, scoped chat widget]. Returned as an array (the panel part itself
+ * is the Box.Y; see fileThreadPanel).
+ * @param {*} ui folder window
+ * @param {{ fileNid: string, label?: string }} opt
+ */
+export function fileThreadPanelContent(ui, opt = {}) {
+  return [
+    fileThreadPanelHeader(ui, opt),
+    fileThreadInfoCard(ui, opt),
+    fileThreadChatConfig(ui, opt.fileNid || "", opt.label || ""),
+  ];
+}
+
+/**
+ * Empty docked side panel (3rd column of the full Chat tab) that hosts the
+ * file-thread chat. Populated lazily by the folder window (_openFileThreadPanel)
+ * and hidden by SCSS until the split-body carries data-thread="open". Only the
+ * folder team chat has file threads → null elsewhere.
+ * @param {*} ui folder window
+ */
+export function fileThreadPanel(ui) {
+  if (ui.fig.family !== "window-folder") return null;
+  return Skeletons.Box.Y({
+    className: `${ui.fig.group}__file-thread-panel`,
+    sys_pn: "file-thread-panel",
+    partHandler: ui,
+    // Carry the folder's area so the side panel's own-message bubbles get the
+    // SAME area tint as the General chat (the bubble rules key off data-area;
+    // without it the panel falls back to the saturated default fill).
+    dataset: { open: 0, area: ui.mget(_a.area) },
+  });
+}
+
 export function folderFilesView(ui) {
   const files =
     ui.getViewMode && ui.getViewMode() === _a.row
@@ -543,7 +1038,15 @@ export function folderFilesView(ui) {
   // Recipient subfolder of a no-chat share → files only (no conversation panel).
   // Personal-area folders keep the chat panel — folder chat is identical across areas.
   if (_dmzShareWithoutChat()) return [files];
-  return [files, chatPanel(ui)];
+  // [files, rail, chat, file-thread panel] — rail + panel flank the chat in the
+  // full Chat tab; both are null (filtered) on non-folder surfaces and hidden by
+  // SCSS outside their state (rail: not chat view; panel: data-thread!="open").
+  return [
+    files,
+    threadRail(ui),
+    chatPanel(ui),
+    fileThreadPanel(ui),
+  ].filter(Boolean);
 }
 
 export function folderChatView(ui) {

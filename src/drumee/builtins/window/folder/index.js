@@ -6,6 +6,11 @@ const {
   folderFilesView,
   fileTypeFilterBar,
   gridFilesBrowser,
+  chatHeaderBar,
+  chatSearchBar,
+  searchResults,
+  fileThreadPanelContent,
+  fileThreadInfoCard,
 } = require("../skeleton/toolkit");
 
 require("./skin");
@@ -391,6 +396,11 @@ class __window_folder extends mfsInteract {
       clearTimeout(this._folderGridSortTimer);
       this._folderGridSortTimer = null;
     }
+    if (this._chatSearchTimer) {
+      clearTimeout(this._chatSearchTimer);
+      this._chatSearchTimer = null;
+    }
+    this._unbindThreadMenuOutside();
     if (!this.mget(_a.headless) && window.Wm && Wm.$el) {
       Wm.$el.trigger("folder:close", this);
     } else if (this.mget(_a.headless) && window.Wm && Wm.$el) {
@@ -458,6 +468,16 @@ class __window_folder extends mfsInteract {
       this._launchMeetingStandalone();
     } else if (initialTab && initialTab !== "files") {
       this.ensurePart("folder-view").then(() => this.showFolderTab(initialTab));
+    }
+    // Honor a launch-time file-chat scope (opened from a "file.thread" card
+    // outside any folder window): scope the chat to that file IN PLACE — no
+    // auto-switch to the full Chat tab (the window opens on its default tab and
+    // the embedded chat panel shows the thread).
+    const scopedFileNid = this.mget("scopedFileNid");
+    if (scopedFileNid) {
+      this.ensurePart("folder-view").then(() => {
+        this.scopeChatToFile(scopedFileNid, this.mget("scopedFileLabel") || "");
+      });
     }
     // "Get info" launches the window with this flag to pre-select settings.
     if (this.mget("showSettings")) {
@@ -713,6 +733,24 @@ class __window_folder extends mfsInteract {
     }
     if (pn == "meeting-panel" && this.mget(_a.start_meeting)) {
       this._launchMeetingInPanel();
+      return;
+    }
+    if (pn === "search-results") {
+      this._searchResultsPart = child;
+      return;
+    }
+    if (pn === "chat-search-input") {
+      // Filtering is wired via the Entry's `watch` → onUiEvent("chat-search-typed").
+      // Here we only autofocus the field. Its <input> is created asynchronously
+      // (waitElement), so it is absent at part-ready time — poll briefly until it
+      // exists, then focus.
+      let tries = 0;
+      const focusInput = () => {
+        const inputEl = child.el && child.el.querySelector("input");
+        if (inputEl) return inputEl.focus();
+        if (tries++ < 20) setTimeout(focusInput, 25);
+      };
+      focusInput();
       return;
     }
     if (super.onPartReady) super.onPartReady(child, pn);
@@ -1030,9 +1068,76 @@ class __window_folder extends mfsInteract {
         return this.showFolderTab("files");
 
       case "tab-chat":
-        this.scopeChatToFile(null);
-        this.scopeChatToFolder(this.mget(_a.nid));
+        // Full Chat tab layout (main = #General, rail, file-thread side panel)
+        // is set up by _enterChatTabLayout inside showFolderTab.
         return this.showFolderTab(_a.chat);
+
+      // Close the full Chat-tab file-thread side panel (its X button).
+      case "close-file-thread-panel":
+        return this._closeFileThreadPanel();
+
+      // "Open file →" on the side-panel info card → open the file in its viewer.
+      // openFileLocation (window base) opens the file's grid item in a player if
+      // it is visible, else — given a filetype so it can resolve a player kind —
+      // fetches attributes and launches that player. Passing the cached filetype
+      // (from file_thread_info) avoids the no-type fallback that would otherwise
+      // open the parent folder when the grid item is not currently rendered.
+      case "open-file-from-thread": {
+        const fileNid = cmd && cmd.mget && cmd.mget("file_nid");
+        if (!fileNid) return;
+        return this.openFileLocation({
+          nid: `${fileNid}`,
+          hub_id: this.mget(_a.actual_hub_id) || this.mget(_a.hub_id),
+          pid: this.mget(_a.nid),
+          area: this.mget(_a.area),
+          // Cached from the active file thread's file_thread_info (side panel or
+          // in-place card) so an absent grid item still opens the player.
+          filetype: this._ftFiletype || undefined,
+        });
+      }
+
+      // ── Team-chat header message search ──
+      // Magnifying glass → swap the header for a search bar; back arrow restores
+      // it. Both target the single `chat-header-bar` part, which always sits
+      // above the folder-chat conversation the search filters.
+      case "open-chat-search":
+        return this._openChatSearch();
+
+      // Fired by the search Entry's `watch` on every keystroke (args.value).
+      case "chat-search-typed":
+        return this._runChatSearch((args && args.value) || "");
+
+      // A search result row → close search and scroll to the message if loaded.
+      case "search-result-jump":
+        return this._jumpToSearchResult(cmd);
+
+      case "close-chat-search":
+        return this._closeChatSearch();
+
+      // ── Team-chat header thread-switch dropdown (Figma 2216-170337) ──
+      case "open-thread-menu":
+        return this._toggleThreadMenu();
+
+      case "thread-menu-general":
+        // "# General" → folder-wide chat, scoped IN PLACE (no tab switch).
+        this._closeThreadMenu();
+        this.scopeChatToFile(null);
+        return this.scopeChatToFolder(this.mget(_a.nid));
+
+      case "thread-menu-file": {
+        // A file row → scope the (already-visible) chat to that file's thread
+        // in place. No auto-switch to the full Chat tab.
+        const fileNid = cmd && cmd.mget && cmd.mget("file_nid");
+        if (!fileNid) return this._closeThreadMenu();
+        // The skeleton always sets `filename` on the row model.
+        const fileLabel = (cmd && cmd.mget && cmd.mget("filename")) || "";
+        this._closeThreadMenu();
+        return this.scopeChatToFile(fileNid, fileLabel);
+      }
+
+      case "download-chat-history":
+        // UI only for now — no export backend wired yet (per design).
+        return this._closeThreadMenu();
 
       case _a.chat: {
         const fileNid =
@@ -1044,7 +1149,7 @@ class __window_folder extends mfsInteract {
           (cmd && cmd.mget && (cmd.mget(_a.filename) || cmd.mget(_a.name))) ||
           (cmd && _.isFunction(cmd.fullname) && cmd.fullname()) ||
           "";
-        this.showFolderTab(_a.chat);
+        // Scope in place — do not auto-open the full Chat tab.
         return this.scopeChatToFile(fileNid, fileLabel);
       }
 
@@ -1347,11 +1452,440 @@ class __window_folder extends mfsInteract {
     }
   }
 
+  // The 3-column Chat-tab layout (rail + #General + side panel) needs width; the
+  // @container query collapses it ≤700px. Below that the rail + side panel are
+  // CSS-hidden, so fall back to the single in-place chat (folder header + 3-dot
+  // dropdown still switch threads).
+  _isCompactChat() {
+    // Match the @container window-folder-w (max-width:700px) query exactly: it
+    // is anchored on the window root (.window-folder__ui = this.el), NOT the
+    // narrower split-body — measuring the split-body left a boundary band where
+    // CSS showed the 2-column layout but JS took the compact branch (empty rail).
+    const w = (this.el && this.el.offsetWidth) || 9999;
+    return w <= 700;
+  }
+
   scopeChatToFile(fileNid, fileLabel) {
+    // Full (wide) Chat tab: the file thread lives in the docked RIGHT panel; the
+    // middle chat always stays #General (Figma 2331-46821). Files tab — and the
+    // compact Chat tab — scope the single chat IN PLACE (no room for a column).
+    if (this.activeTab === _a.chat && !this._isCompactChat()) {
+      if (fileNid) return this._openFileThreadPanel(fileNid, fileLabel);
+      return this._closeFileThreadPanel();
+    }
+    // ── Files-tab in-place scoping ──
+    // Track the active file scope so folder navigation (updateTopbar) can drop
+    // it — scopedFileNid otherwise wins in the chat's getCurrentApi, pinning the
+    // old thread and leaving a stale file-thread header.
+    this._scopedFileNid = fileNid ? `${fileNid}` : "";
+    // Swap the chat header between "Team Chat" and the file-thread bar (back +
+    // filename + tag) to match the new scope (Figma 2216-166665).
+    this._updateChatHeader(fileNid, fileLabel);
+    // Pin the file-info card above the in-place chat (or clear it for General).
+    this._updateChatInfoCard(fileNid, fileLabel);
+    // Keep the docked Chat-tab rail's highlight in lockstep with the scope.
+    this._setThreadRailActive(fileNid || "");
     return this.ensurePart("folder-chat").then((chat) => {
       if (chat && _.isFunction(chat.setScopedFileNid))
         chat.setScopedFileNid(fileNid, fileLabel);
     });
+  }
+
+  // Re-feed the folder team-chat header part for the current scope:
+  //   file   → file-thread bar (back + paperclip + filename + tag),
+  //   general→ "# General" + search (full Chat-tab middle header),
+  //   folder → "Team Chat" + 3-dot + search (Files-tab default).
+  // data-scope drives the row layout in SCSS.
+  _updateChatHeader(fileNid, label, general) {
+    return this.ensurePart("chat-header-bar").then((bar) => {
+      if (!bar || (bar.isDestroyed && bar.isDestroyed()) || !bar.el) return;
+      // Re-feeding a normal header out of search mode (tab/scope switch with the
+      // search bar still open) must tear down the search results overlay so it
+      // does not linger over the restored conversation.
+      if (bar.el.dataset.scope === "search") {
+        this._chatSearchRestore = null;
+        this._hideChatSearchResults();
+      }
+      bar.el.dataset.scope = fileNid ? "file" : general ? "general" : "folder";
+      // Stamp the active file so a slow hydrate can't paint into a re-scoped header.
+      bar.el.dataset.ftNid = fileNid ? `${fileNid}` : "";
+      bar.feed(
+        chatHeaderBar(this, {
+          fileNid: fileNid || "",
+          label: label || "",
+          general: !!general && !fileNid,
+        }),
+      );
+      if (fileNid) this._hydrateChatHeaderFile(bar, `${fileNid}`);
+    });
+  }
+
+  // ── Team-chat header message search ───────────────────────────────────
+  // Swap the `chat-header-bar` content for a search bar (back + input). Snapshot
+  // the current header mode first so the back arrow can restore the exact same
+  // header (general / folder / file). The search filters the folder-chat
+  // conversation that always sits below this header.
+  _openChatSearch() {
+    return this.ensurePart("chat-header-bar").then((bar) => {
+      if (!bar || !bar.el || (bar.isDestroyed && bar.isDestroyed())) return;
+      const scope = bar.el.dataset.scope || "folder";
+      const fileNid = bar.el.dataset.ftNid || "";
+      let label = "";
+      if (fileNid) {
+        const nameEl = bar.el.querySelector(
+          `.${this.fig.group}__chat-header-file-name`,
+        );
+        label = nameEl ? nameEl.textContent || "" : "";
+      }
+      this._chatSearchRestore = {
+        fileNid,
+        label,
+        general: scope === "general",
+      };
+      bar.el.dataset.scope = "search";
+      bar.feed(chatSearchBar(this));
+    });
+  }
+
+  // Back arrow → tear down the results overlay and restore the pre-search header.
+  _closeChatSearch() {
+    this._hideChatSearchResults();
+    const r =
+      this._chatSearchRestore || { fileNid: "", label: "", general: false };
+    this._chatSearchRestore = null;
+    return this._updateChatHeader(r.fileNid, r.label, r.general);
+  }
+
+  // Run a backend message search over the FULL history of the conversation the
+  // search bar sits above (folder-chat): #General team chat when not file-scoped,
+  // else the open file thread. Debounced; queries < 2 chars hide the overlay
+  // (the server returns [] anyway). A monotonic token discards stale responses
+  // so a slower earlier query cannot overwrite a newer one.
+  _runChatSearch(text) {
+    const q = `${text || ""}`.trim();
+    if (this._chatSearchTimer) clearTimeout(this._chatSearchTimer);
+    if (q.length < 2) {
+      this._chatSearchToken = (this._chatSearchToken || 0) + 1; // cancel in-flight
+      return this._hideChatSearchResults();
+    }
+    this._chatSearchTimer = setTimeout(() => {
+      const token = (this._chatSearchToken = (this._chatSearchToken || 0) + 1);
+      // Scope = the folder-chat's current file thread (empty = team chat). Pass
+      // file_nid too: the thread id resolves asynchronously, so on an in-place
+      // file thread it can still be empty here — the server then resolves the
+      // thread from the (synchronously-known) file nid instead of falling back
+      // to the team chat.
+      this.ensurePart("folder-chat").then((chat) => {
+        const fileThreadId = (chat && chat.fileThreadId) || "";
+        const fileNid = (chat && chat.scopedFileNid) || "";
+        const svc =
+          (SERVICE.channel && SERVICE.channel.search) || "channel.search";
+        this.fetchService(
+          {
+            service: svc,
+            // hub_id is REQUIRED: a scope=hub service resolves its hub DB from
+            // the request hub_id (session.js), falling back to the host when it
+            // is absent — which targets the wrong DB and returns nothing. Same
+            // hub the folder team chat uses (_fetchThreadList / channel.messages).
+            hub_id: this.mget(_a.actual_hub_id) || this.mget(_a.hub_id),
+            pattern: q,
+            file_thread_id: fileThreadId,
+            file_nid: fileNid,
+          },
+          { async: 1 },
+        )
+          .then((res) => {
+            // Drop stale / superseded responses.
+            if (token !== this._chatSearchToken) return;
+            const rows = _.isArray(res)
+              ? res
+              : (res && (res.data || res.rows)) || [];
+            this._showChatSearchResults(rows);
+          })
+          .catch(() => {
+            if (token !== this._chatSearchToken) return;
+            this._showChatSearchResults([]);
+          });
+      });
+    }, 250);
+  }
+
+  _showChatSearchResults(rows) {
+    return this.ensurePart("search-results").then((panel) => {
+      if (!panel || !panel.el || (panel.isDestroyed && panel.isDestroyed()))
+        return;
+      panel.feed(searchResults(this, rows));
+      panel.el.dataset.open = "1";
+    });
+  }
+
+  _hideChatSearchResults() {
+    if (this._chatSearchTimer) {
+      clearTimeout(this._chatSearchTimer);
+      this._chatSearchTimer = null;
+    }
+    this._chatSearchToken = (this._chatSearchToken || 0) + 1; // cancel in-flight
+    const panel = this._searchResultsPart;
+    if (panel && panel.el && !(panel.isDestroyed && panel.isDestroyed())) {
+      panel.el.dataset.open = "0";
+      panel.feed([]);
+    }
+  }
+
+  // A result row → close the search and scroll to the message if it is currently
+  // loaded in the conversation list (older/unloaded messages just close search).
+  _jumpToSearchResult(cmd) {
+    const messageId = cmd && cmd.mget && cmd.mget("message_id");
+    this._closeChatSearch();
+    if (!messageId) return;
+    return this.ensurePart("folder-chat").then((chat) => {
+      const list = chat && chat.__list;
+      if (!list || !_.isFunction(list.getItemsByAttr)) return;
+      const hit = list.getItemsByAttr("message_id", `${messageId}`)[0];
+      if (hit && hit.el && _.isFunction(hit.el.scrollIntoView)) {
+        hit.el.scrollIntoView({ block: "center" });
+      }
+    });
+  }
+
+  // Paint a file's vignette thumbnail onto a badge element (image/vector only).
+  // Shared by the header badge and the info-card badge — only the modifier class
+  // differs. No-op for non-preview types (paperclip stays).
+  _applyVignette(badge, fileNid, hub_id, modifierClass) {
+    if (!badge) return;
+    const { mfs_base, keysel } = bootstrap();
+    let url = `${mfs_base}file/vignette/${fileNid}/${hub_id}`;
+    if (keysel) url += `?keysel=${keysel}`;
+    badge.style.backgroundImage = `url("${url}")`;
+    badge.classList.add(modifierClass);
+  }
+
+  // Apply a file thread's real name + (image/vector) vignette into a header DOM
+  // subtree. Shared by the in-place chat header and the side-panel header — the
+  // label passed in may be stale/empty (deep-link) and the paperclip should
+  // become the file's vignette (mirrors the chat-item card hydration).
+  _fillFileHeader(rootEl, fileNid, hub_id, info) {
+    const grp = this.fig.group;
+    const name = info.user_filename || info.filename || "";
+    const nameEl = rootEl.querySelector(`.${grp}__chat-header-file-name`);
+    if (nameEl && name) nameEl.textContent = name;
+    const type = info.filetype || info.category;
+    if (type === _a.image || type === _a.vector) {
+      this._applyVignette(
+        rootEl.querySelector(`.${grp}__chat-header-file-badge`),
+        fileNid,
+        hub_id,
+        `${grp}__chat-header-file-badge--image`,
+      );
+    }
+  }
+
+  // Fill the side-panel info card (Figma 2216-165656) from file_thread_info:
+  // filename, "N replies", relative time, and the image/vector vignette badge.
+  // "Open file →" is static (wired to open-file-from-thread); only the data
+  // fields are hydrated here.
+  _fillFileInfoCard(rootEl, fileNid, hub_id, info) {
+    const grp = this.fig.group;
+    const q = (cls) => rootEl.querySelector(`.${grp}__${cls}`);
+    const name = info.user_filename || info.filename || "";
+    const nameEl = q("ft-info-name");
+    if (nameEl && name) nameEl.textContent = name;
+
+    const replies = Number(info.reply_count || 0);
+    const repliesLbl =
+      replies === 1
+        ? LOCALE.REPLY_ONE || "reply"
+        : LOCALE.REPLIES || "replies";
+    const repliesEl = q("ft-info-replies");
+    if (repliesEl) repliesEl.textContent = `${replies} ${repliesLbl}`;
+
+    let when = "";
+    const mtime = Number(info.mtime || info.ctime || 0);
+    if (mtime) {
+      try {
+        when = Dayjs.unix(mtime).fromNow();
+      } catch (e) {
+        when = "";
+      }
+    }
+    const timeEl = q("ft-info-time");
+    if (timeEl) timeEl.textContent = when;
+    const dotEl = q("ft-info-dot");
+    if (dotEl) dotEl.textContent = when ? "•" : "";
+
+    const type = info.filetype || info.category;
+    if (type === _a.image || type === _a.vector) {
+      this._applyVignette(
+        q("ft-info-badge"),
+        fileNid,
+        hub_id,
+        `${grp}__ft-info-badge--image`,
+      );
+    }
+  }
+
+  _hydrateChatHeaderFile(bar, fileNid) {
+    const hub_id = this.mget(_a.actual_hub_id) || this.mget(_a.hub_id);
+    const svc =
+      (SERVICE.channel && SERVICE.channel.file_thread_info) ||
+      "channel.file_thread_info";
+    this.fetchService({ service: svc, hub_id, file_nid: fileNid }, { async: 1 })
+      .then((info) => {
+        if (!info || !bar.el || (bar.isDestroyed && bar.isDestroyed())) return;
+        // Header may have switched back to folder, or to a different file, while
+        // the fetch was in flight.
+        if (bar.el.dataset.scope !== "file") return;
+        if (bar.el.dataset.ftNid !== `${fileNid}`) return;
+        this._fillFileHeader(bar.el, fileNid, hub_id, info);
+      })
+      .catch(() => {});
+  }
+
+  // Pin (or clear) the in-place Files-tab file-thread info card above the chat —
+  // the same card the side panel shows (Figma 2216-165656). Populated on file
+  // scope, emptied on General. The full-tab middle chat never file-scopes in
+  // place, so its slot stays empty there.
+  _updateChatInfoCard(fileNid, label) {
+    // Reset the cached filetype until this file's info resolves (so "Open file →"
+    // never launches a player from a stale other-context filetype).
+    this._ftFiletype = "";
+    return this.ensurePart("chat-info-card").then((slot) => {
+      if (!slot || !slot.el || (slot.isDestroyed && slot.isDestroyed())) return;
+      if (!fileNid) {
+        slot.el.dataset.open = "0";
+        slot.el.dataset.ftNid = "";
+        slot.feed([]);
+        return;
+      }
+      slot.feed(fileThreadInfoCard(this, { fileNid: `${fileNid}`, label: label || "" }));
+      slot.el.dataset.open = "1";
+      slot.el.dataset.ftNid = `${fileNid}`;
+      this._hydrateChatInfoCard(slot, `${fileNid}`);
+    });
+  }
+
+  _hydrateChatInfoCard(slot, fileNid) {
+    const hub_id = this.mget(_a.actual_hub_id) || this.mget(_a.hub_id);
+    const svc =
+      (SERVICE.channel && SERVICE.channel.file_thread_info) ||
+      "channel.file_thread_info";
+    this.fetchService({ service: svc, hub_id, file_nid: fileNid }, { async: 1 })
+      .then((info) => {
+        if (!info || !slot.el || (slot.isDestroyed && slot.isDestroyed())) return;
+        if (slot.el.dataset.open !== "1") return;
+        if (slot.el.dataset.ftNid !== `${fileNid}`) return;
+        this._ftFiletype = `${info.filetype || info.category || ""}`;
+        this._fillFileInfoCard(slot.el, fileNid, hub_id, info);
+      })
+      .catch(() => {});
+  }
+
+  // ── Full Chat-tab file-thread side panel (Figma 2331-47041) ───────────
+  // Open (or re-scope) the docked right panel to a file thread: re-feed it with
+  // [header, scoped chat widget], reveal it (data-open + split-body
+  // data-thread="open" → 3-column grid), and hydrate the header with the file's
+  // real name + vignette. The middle #General chat is untouched.
+  _openFileThreadPanel(fileNid, fileLabel) {
+    const nid = `${fileNid}`;
+    return this.ensurePart("file-thread-panel").then((panel) => {
+      if (!panel || !panel.el || (panel.isDestroyed && panel.isDestroyed()))
+        return;
+      this._fileThreadPanelPart = panel;
+      panel.feed(fileThreadPanelContent(this, { fileNid: nid, label: fileLabel || "" }));
+      panel.el.dataset.open = "1";
+      // Stamp the active file so a slow hydrate from a previously-opened file
+      // (rapid re-scope A→B) cannot paint into B's freshly-fed card. Reset the
+      // cached filetype until this file's info resolves so "Open file →" never
+      // launches the wrong player from a stale (other-context) filetype.
+      panel.el.dataset.ftNid = nid;
+      this._ftFiletype = "";
+      this._setFolderViewThread("open");
+      this._hydrateFtPanelHeader(panel, nid);
+    });
+  }
+
+  // Hide the side panel and tear down its scoped chat widget (feed [] →
+  // onBeforeDestroy unbinds its WS), collapsing the grid back to 2 columns.
+  _closeFileThreadPanel() {
+    const panel = this._fileThreadPanelPart;
+    if (panel && panel.el && !(panel.isDestroyed && panel.isDestroyed())) {
+      panel.el.dataset.open = "0";
+      panel.feed([]);
+    }
+    this._setFolderViewThread("closed");
+  }
+
+  // Toggle the split-body's data-thread so SCSS switches between the 2-column
+  // ([rail | chat]) and 3-column ([rail | chat | file panel]) Chat-tab grids.
+  _setFolderViewThread(state) {
+    const apply = (v) => {
+      if (v && v.el && !(v.isDestroyed && v.isDestroyed()))
+        v.el.dataset.thread = state;
+    };
+    if (
+      this.__folderView &&
+      !(this.__folderView.isDestroyed && this.__folderView.isDestroyed())
+    )
+      return apply(this.__folderView);
+    return this.ensurePart("folder-view").then(apply);
+  }
+
+  // Fill the side-panel header AND the info card from one file_thread_info fetch
+  // (name + vignette for both; replies + time for the card). Guards on the panel
+  // still being open for the same file when the fetch resolves.
+  _hydrateFtPanelHeader(panel, fileNid) {
+    const hub_id = this.mget(_a.actual_hub_id) || this.mget(_a.hub_id);
+    const svc =
+      (SERVICE.channel && SERVICE.channel.file_thread_info) ||
+      "channel.file_thread_info";
+    this.fetchService({ service: svc, hub_id, file_nid: fileNid }, { async: 1 })
+      .then((info) => {
+        if (!info || !panel.el || (panel.isDestroyed && panel.isDestroyed()))
+          return;
+        // Panel may have closed, or re-scoped to a different file, while the
+        // fetch was in flight — bail so we never paint stale info into the
+        // current card.
+        if (panel.el.dataset.open !== "1") return;
+        if (panel.el.dataset.ftNid !== `${fileNid}`) return;
+        // Cache the file's type so "Open file →" can launch the right player
+        // even when the file's grid item is not currently rendered.
+        this._ftFiletype = `${info.filetype || info.category || ""}`;
+        this._fillFileHeader(panel.el, fileNid, hub_id, info);
+        this._fillFileInfoCard(panel.el, fileNid, hub_id, info);
+      })
+      .catch(() => {});
+  }
+
+  // Entering the full Chat tab: the middle chat is always #General. Drop any
+  // in-place file scope carried from the Files tab, re-assert folder scope,
+  // switch the middle header to the "# General" variant, and (re)populate the
+  // left rail. The file-thread side panel starts closed.
+  _enterChatTabLayout() {
+    // Compact: rail + side panel are CSS-hidden → keep the single in-place chat
+    // with the folder header (Team Chat + 3-dot dropdown for thread switching).
+    if (this._isCompactChat()) {
+      this._updateChatHeader(this._scopedFileNid || null, "", false);
+      this._updateChatInfoCard(this._scopedFileNid || null, "");
+      return;
+    }
+    this._scopedFileNid = "";
+    // Middle chat is #General in the full tab → drop any in-place info card.
+    this._updateChatInfoCard(null);
+    this.ensurePart("folder-chat").then((chat) => {
+      if (!chat) return;
+      if (_.isFunction(chat.setScopedFileNid)) chat.setScopedFileNid(null);
+      if (_.isFunction(chat.setScopedFolderNid))
+        chat.setScopedFolderNid(this.mget(_a.nid));
+    });
+    this._updateChatHeader(null, "", true);
+    this._populateThreadRail();
+  }
+
+  // Leaving the full Chat tab: close the side panel and restore the folder
+  // header (Team Chat + 3-dot) for the narrow Files-tab chat.
+  _exitChatTabLayout() {
+    this._closeFileThreadPanel();
+    this._updateChatHeader(null, "", false);
   }
 
   scopeChatToFolder(folderNid) {
@@ -1359,6 +1893,137 @@ class __window_folder extends mfsInteract {
       if (chat && _.isFunction(chat.setScopedFolderNid))
         chat.setScopedFolderNid(folderNid);
     });
+  }
+
+  // ── Team-chat header thread-switch dropdown ────────────────────────────
+  // Toggle the header 3-dot dropdown. On open, fetch the current folder's file
+  // threads (channel.file_thread_list_by_folder) and feed the menu part; the
+  // row matching the chat's current scope is highlighted (is-active).
+  _toggleThreadMenu() {
+    return this.ensurePart("thread-menu").then((menu) => {
+      if (!menu || (menu.isDestroyed && menu.isDestroyed())) return;
+      this._threadMenuPart = menu;
+      if (menu.el.dataset.open === "1") return this._closeThreadMenu();
+
+      const render = (items, scopedNid) => {
+        // The fetch (and ensurePart) resolve async — bail if the window or the
+        // menu part was destroyed meanwhile, so we never feed/flag a dead node
+        // or re-bind a document listener on it.
+        if (this.isDestroyed && this.isDestroyed()) return;
+        if (!menu.el || (menu.isDestroyed && menu.isDestroyed())) return;
+        menu.feed(
+          require("./skeleton/thread-menu")(this, { items, scopedNid }),
+        );
+        menu.el.dataset.open = "1";
+        this._bindThreadMenuOutside(menu);
+      };
+      // Current chat scope → highlight the matching row (file nid, or "" = General).
+      this.ensurePart("folder-chat").then((chat) => {
+        const scopedNid = chat && chat.scopedFileNid ? chat.scopedFileNid : "";
+        // Fetch failure → still open with General + Download (no file rows).
+        this._fetchThreadList().then((items) => render(items, scopedNid));
+      });
+    });
+  }
+
+  // Shared file-thread fetch for the current folder, used by both the header
+  // dropdown (_toggleThreadMenu) and the docked Chat-tab rail
+  // (_populateThreadRail). Resolves to a plain item array; never rejects (a
+  // failed/absent fetch yields [] so callers still render General + Download).
+  _fetchThreadList() {
+    const hub_id = this.mget(_a.actual_hub_id) || this.mget(_a.hub_id);
+    const folder_nid = this.mget(_a.nid);
+    const svc =
+      (SERVICE.channel && SERVICE.channel.file_thread_list_by_folder) ||
+      "channel.file_thread_list_by_folder";
+    return this.fetchService(
+      { service: svc, folder_nid, hub_id, page: 1 },
+      { async: 1 },
+    )
+      .then((res) =>
+        _.isArray(res) ? res : (res && (res.data || res.rows)) || [],
+      )
+      .catch(() => []);
+  }
+
+  // ── Full Chat-tab thread rail (Figma 2328-115485) ─────────────────────
+  // The docked left panel mirrors the header dropdown's thread list. Populate
+  // it (fetch + render) when the Chat tab opens and on folder navigation while
+  // that tab is active — the current folder's threads, highlighting the row
+  // matching the chat's live scope. Items are cached so _setThreadRailActive
+  // can move the highlight on scope change without re-fetching.
+  _populateThreadRail() {
+    if (this.fig.family !== "window-folder") return;
+    // Snapshot the folder so a slow response from a folder we already left
+    // cannot overwrite the rail with wrong-folder rows (last-writer-wins on
+    // rapid navigation). Mirrors chat/index.js's nid recheck after async.
+    const folderNid = `${this.mget(_a.nid)}`;
+    return this.ensurePart("thread-rail").then((rail) => {
+      if (!rail || !rail.el || (rail.isDestroyed && rail.isDestroyed())) return;
+      this._threadRailPart = rail;
+      return this.ensurePart("folder-chat").then((chat) => {
+        const scopedNid = chat && chat.scopedFileNid ? chat.scopedFileNid : "";
+        return this._fetchThreadList().then((items) => {
+          if (this.isDestroyed && this.isDestroyed()) return;
+          if (!rail.el || (rail.isDestroyed && rail.isDestroyed())) return;
+          // Folder changed mid-fetch → discard this stale response.
+          if (`${this.mget(_a.nid)}` !== folderNid) return;
+          this._threadRailItems = items;
+          rail.feed(
+            require("./skeleton/thread-menu")(this, {
+              items,
+              scopedNid,
+              variant: "rail",
+            }),
+          );
+        });
+      });
+    });
+  }
+
+  // Move the rail's is-active highlight to the new chat scope ("" = General)
+  // without a re-fetch — re-render the cached items. No-op until the rail has
+  // been populated (cached items absent) or while it is unmounted/destroyed.
+  _setThreadRailActive(scopedNid) {
+    const rail = this._threadRailPart;
+    if (!rail || !rail.el || (rail.isDestroyed && rail.isDestroyed())) return;
+    if (!_.isArray(this._threadRailItems)) return;
+    rail.feed(
+      require("./skeleton/thread-menu")(this, {
+        items: this._threadRailItems,
+        scopedNid: scopedNid || "",
+        variant: "rail",
+      }),
+    );
+  }
+
+  _closeThreadMenu() {
+    const menu = this._threadMenuPart;
+    if (menu && menu.el && !(menu.isDestroyed && menu.isDestroyed()))
+      menu.el.dataset.open = "0";
+    this._unbindThreadMenuOutside();
+  }
+
+  // Close the dropdown on any click outside it or its trigger. Capture phase so
+  // it runs before the menu rows' own handling; the trigger guard lets the
+  // 3-dot button toggle closed instead of immediately reopening.
+  _bindThreadMenuOutside(menu) {
+    this._unbindThreadMenuOutside();
+    this._threadMenuOutside = (ev) => {
+      const t = ev.target;
+      if (!t) return;
+      if (menu.el.contains(t)) return;
+      if (t.closest && t.closest('[data-service="open-thread-menu"]')) return;
+      this._closeThreadMenu();
+    };
+    document.addEventListener("click", this._threadMenuOutside, true);
+  }
+
+  _unbindThreadMenuOutside() {
+    if (this._threadMenuOutside) {
+      document.removeEventListener("click", this._threadMenuOutside, true);
+      this._threadMenuOutside = null;
+    }
   }
 
   // Canonical task-scoping args for the *current* folder. A hub/workspace ROOT
@@ -1408,18 +2073,40 @@ class __window_folder extends mfsInteract {
       }
     }
     super.updateTopbar(m);
+    // Navigating to another folder drops any open file thread → fall back to the
+    // folder ("# General") chat so the panel and header follow the new folder
+    // (resets scopedFileNid + the file-thread header before re-scoping below).
+    // On the Chat tab the rail shows the *current* folder's threads. Drop the
+    // previous folder's cached file rows up front and flush the rail to just
+    // General+Download, so the refetch below never flashes wrong-folder rows.
+    if (this.activeTab === _a.chat) {
+      this._threadRailItems = [];
+      this._setThreadRailActive("");
+      // The side panel shows a thread from the folder we are leaving → close it.
+      this._closeFileThreadPanel();
+    }
+    if (this._scopedFileNid) this.scopeChatToFile(null);
     this.scopeChatToFolder(this.mget(_a.nid));
+    // The rail lists the *current* folder's threads — refetch on navigation,
+    // but only while the Chat tab is showing it (else it repopulates on entry).
+    if (this.activeTab === _a.chat) this._populateThreadRail();
     this.scopeTasksToFolder();
     this.refreshBreadcrumbsUI();
   }
 
   showFolderTab(tab) {
     if (this.activeTab === tab) return;
+    const prevTab = this.activeTab;
     this.activeTab = tab;
     this.$el.find(".window-folder__tab-bar-item").attr("data-state", 0);
     this.$el
       .find(`.window-folder__tab-bar-item[data-tab='${tab}']`)
       .attr("data-state", 1);
+    // Full Chat-tab layout: entering sets up [rail | #General | side panel] and
+    // forces the middle chat to General; leaving restores the Files-tab header
+    // and closes the side panel.
+    if (tab === _a.chat) this._enterChatTabLayout();
+    else if (prevTab === _a.chat) this._exitChatTabLayout();
     // The member-filter button shares the tab line but only applies to Tasks.
     if (this._taskFilterBtn && this._taskFilterBtn.el) {
       this._taskFilterBtn.el.dataset.visible = tab === _a.task ? "1" : "0";
@@ -1438,8 +2125,11 @@ class __window_folder extends mfsInteract {
       }
       view.el.dataset.view = tab;
       switch (tab) {
-        case "files":
         case _a.chat:
+          // Rail + side-panel layout is set up by _enterChatTabLayout (called
+          // from showFolderTab); the chat panel itself is already mounted.
+          return;
+        case "files":
           return;
         case "meeting":
           this._meetingViewActive = 1;
