@@ -269,8 +269,15 @@ class __activity_item extends LetcBox {
     }
     switch (category) {
       case _a.media:
-        location.hash = `#/desk/wm/open/?hub_id=${hub_id}&nid=${target_nid}&filetype=${target_filetype}&pid=${parent_id}&ts=${ts}`;
+        // highlight=1 → reveal the file in its folder (scroll + select + flash)
+        // instead of opening it in a player. Scoped to notification clicks.
+        location.hash = `#/desk/wm/open/?hub_id=${hub_id}&nid=${target_nid}&filetype=${target_filetype}&pid=${parent_id}&highlight=1&ts=${ts}`;
         this.triggerHandlers({ service: 'dismiss-activity', hub_id, nid: target_nid, item_type, changelog_id })
+        // Opening the file is an explicit "I've handled this" → close the panel.
+        // Kept separate from dismiss-activity (the trash button uses that alone
+        // and must NOT close the panel) and from item destroy (see onDomRefresh
+        // note: list.restart()/dismiss also destroy items).
+        this.triggerHandlers({ service: 'close-activity-panel' })
         return
 
       case _a.hub_invite:

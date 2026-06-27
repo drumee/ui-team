@@ -559,6 +559,13 @@ class __window_manager extends push {
    */
   openWorkspaceFolder(node) {
     const data = node.model ? node.model.toJSON() : node || {};
+    // Close any settings/admin/apps/chat panel occluding the desk grid before
+    // navigating into a folder. Done up front so it runs on every branch —
+    // including the early return below when the target folder window is already
+    // open. (Method is `closeMainPanels`, not `_closeMainPanels`.)
+    if (window.Desk && _.isFunction(window.Desk.closeMainPanels)) {
+      window.Desk.closeMainPanels();
+    }
     let media = Wm.getItemsByAttr(_a.nid, data.nid)[0];
     if (media) {
       return media.triggerHandlers({ service: "open-node" });
@@ -571,9 +578,6 @@ class __window_manager extends push {
 
     if (!hub_id || !nid) return this.loadWorkspaceNode(node);
 
-    if (window.Desk && _.isFunction(window.Desk._closeMainPanels)) {
-      window.Desk._closeMainPanels();
-    }
     // Data provided by the trigger may not be reliable enough. Get fresh one
     this.fetchService(SERVICE.media.attributes, { hub_id, nid })
       .then((attrs) => {

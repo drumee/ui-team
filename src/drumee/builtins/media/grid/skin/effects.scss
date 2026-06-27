@@ -39,3 +39,22 @@
     }
   }
 }
+
+// One-off "reveal" flash for a file opened from a notification — toggled on the
+// media item root by Wm._highlightNode (see window/utils.js). Two quick pulses
+// of an accent ring; falls back to a blue if --main isn't themed.
+@keyframes media-highlight-flash {
+  0%,
+  100% {
+    box-shadow: 0 0 0 3px transparent;
+  }
+
+  15% {
+    box-shadow: 0 0 0 3px var(--main, #4084f7);
+  }
+}
+
+.media-highlight {
+  border-radius: 8px;
+  animation: media-highlight-flash 1.2s ease-out 2;
+}
