@@ -699,6 +699,7 @@ $drumee-link-purple: #b1adff;
       $color: $drumee-primary
     );
     width: auto;
+    font-family: var(--font-bold);
   }
 
   &__footer-links {
@@ -713,7 +714,7 @@ $drumee-link-purple: #b1adff;
     justify-content: center;
     gap: 4px;
     width: 100%;
-
+font-family: var(--font-main);
     &-text {
       @include drumee.typo(
         $size: 14px,
@@ -871,6 +872,7 @@ $drumee-link-purple: #b1adff;
       $weight: 600,
       $color: $drumee-grey-90
     );
+    font-family: var(--font-bold);
     width: 100%;
     justify-content: center;
     text-align: center;
