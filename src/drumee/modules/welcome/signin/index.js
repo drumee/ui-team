@@ -459,6 +459,7 @@ class __welcome_signin extends __welcome_interact {
    * return here from the forgot / check-inbox views.
    */
   showSignin() {
+    this._inCheckInbox = false;
     const opt = require("./skeleton/auth")(this);
     return this.feed(this._skeleton(this, opt));
   }
@@ -467,6 +468,7 @@ class __welcome_signin extends __welcome_interact {
    * Render the inline forgot-password view (email input + "Send me the link").
    */
   showForgot() {
+    this._inCheckInbox = false;
     return this.feed(this._skeleton(this, require("./skeleton/forgot")(this)));
   }
 
@@ -477,6 +479,7 @@ class __welcome_signin extends __welcome_interact {
    * disables resend when it fires — there's nothing left to resend.
    */
   showCheckInbox() {
+    this._inCheckInbox = true;
     this.feed(this._skeleton(this, require("./skeleton/check-inbox")(this)));
     this._startCooldown(COOLDOWN_SEC);
     if (!this._onResetDone) {
@@ -623,6 +626,12 @@ class __welcome_signin extends __welcome_interact {
    * Permanently disable resend (the reset was already completed in another tab).
    */
   _disableResend() {
+    // Only act while the check-inbox view is showing — the cross-tab listener
+    // outlives the view, and button-confirm is reused by the sign-in / forgot
+    // buttons, so guard against disabling the wrong button.
+    if (!this._inCheckInbox) {
+      return;
+    }
     clearInterval(this._tick);
     this._counting = true; // resendResetLink() ignores clicks while set
     this.ensurePart("button-confirm").then((b) => {
