@@ -68,6 +68,24 @@ function __skl_welcome_signin_content(ui) {
     ],
   });
 
+  // In-form "Forgot password?" link. Opens the inline forgot-password view
+  // (see ../index.js -> showForgot). Gated to cloud installs, which is where
+  // the reset-link email backend (butler.get_reset_token) is available.
+  const forgotRow =
+    Platform.get("arch") == "cloud"
+      ? Skeletons.Box.X({
+          className: `${contentFig}__forgot-row`,
+          kids: [
+            Skeletons.Note({
+              className: `${contentFig}__forgot-link`,
+              content: LOCALE.Q_FORGOT_PASSWORD || "Forgot password?",
+              service: "reset-password",
+              uiHandler: [ui],
+            }),
+          ],
+        })
+      : "";
+
   const submit = require("../../skeleton/common/button").default(
     ui,
     _e.submit,
@@ -78,25 +96,8 @@ function __skl_welcome_signin_content(ui) {
   const formSection = Skeletons.Box.Y({
     className: `${contentFig}__form-section`,
     dataset,
-    kids: [emailField, passwordField, submit, msgBox],
+    kids: [emailField, passwordField, forgotRow, submit, msgBox],
   });
-
-  // Helper links — "forgot password" stays visible always (covers reconnect too)
-  let helper = "";
-  if (Platform.get("arch") == "cloud") {
-    helper = Skeletons.Box.X({
-      className: `${contentFig}__row helper no-background`,
-      dataset,
-      kids: [
-        Skeletons.Note({
-          className: `${contentFig}__note forgot-password helper`,
-          content: LOCALE.Q_FORGOT_PASSWORD,
-          dataset,
-          href: "#/welcome/reset",
-        }),
-      ],
-    });
-  }
 
   // Reconnect mode keeps only the form + forgot-password link.
   if (isReconnect) {
@@ -104,7 +105,7 @@ function __skl_welcome_signin_content(ui) {
       debug: __filename,
       className: `${contentFig}__items content`,
       dataset,
-      kids: [formSection, helper],
+      kids: [formSection],
     });
   }
 
@@ -122,7 +123,7 @@ function __skl_welcome_signin_content(ui) {
 
   const googleButton = Skeletons.Box.X({
     className: `${contentFig}__social-button google`,
-    service: "google-signin",
+    service: "use-google",
     uiHandler: [ui],
     kids: [
       Skeletons.Button.Svg({
@@ -134,6 +135,27 @@ function __skl_welcome_signin_content(ui) {
         content: LOCALE.CONTINUE_WITH_GOOGLE,
       }),
     ],
+  });
+
+  const appleButton = Skeletons.Box.X({
+    className: `${contentFig}__social-button apple`,
+    service: "use-apple",
+    uiHandler: [ui],
+    kids: [
+      Skeletons.Button.Svg({
+        ico: "logo-apple",
+        className: `${contentFig}__social-icon apple`,
+      }),
+      Skeletons.Note({
+        className: `${contentFig}__social-label`,
+        content: LOCALE.CONTINUE_WITH_APPLEID || "Continue with Apple",
+      }),
+    ],
+  });
+
+  const socialButtons = Skeletons.Box.Y({
+    className: `${contentFig}__social-buttons`,
+    kids: [googleButton, appleButton],
   });
 
   const signupPrompt = Platform.get("isPublic")
@@ -162,33 +184,40 @@ function __skl_welcome_signin_content(ui) {
       })
     : "";
 
-  const legalLinks = Skeletons.Box.X({
-    className: `${contentFig}__legal-links`,
+  // Terms block — matches the signin app's termsAndConditions() structure.
+  // Click handlers (see ../index.js) open the privacy / terms routes.
+  const termsContainer = Skeletons.Box.X({
+    className: `${contentFig}__terms-container`,
     kids: [
       Skeletons.Note({
-        className: `${contentFig}__legal-link`,
+        className: `${contentFig}__terms-link`,
         content: LOCALE.PRIVACY_POLICY.toUpperCase(),
-        href: "#/welcome/privacy",
+        service: "see-privacy-terms",
+        uiHandler: [ui],
       }),
-      Skeletons.Box.X({ className: `${contentFig}__legal-dot` }),
+      Skeletons.Element({
+        className: `${contentFig}__terms-dot`,
+        content: "•",
+      }),
       Skeletons.Note({
-        className: `${contentFig}__legal-link`,
-        content: LOCALE.TERMS_OF_SERVICE.toUpperCase(),
-        href: "#/welcome/terms",
+        className: `${contentFig}__terms-link`,
+        content: (LOCALE.TERM_OF_SERVICE || LOCALE.TERMS_OF_SERVICE).toUpperCase(),
+        service: "see-services-terms",
+        uiHandler: [ui],
       }),
     ],
   });
 
   const footer = Skeletons.Box.Y({
     className: `${contentFig}__footer-links`,
-    kids: [signupPrompt, legalLinks],
+    kids: [signupPrompt, termsContainer],
   });
 
   return Skeletons.Box.Y({
     debug: __filename,
     className: `${contentFig}__items content`,
     dataset,
-    kids: [formSection, divider, googleButton, footer, helper],
+    kids: [formSection, divider, socialButtons, footer],
   });
 }
 
