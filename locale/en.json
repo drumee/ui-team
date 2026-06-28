@@ -2258,7 +2258,7 @@
   "CONTINUE_WITH_APPLEID": "Continue with AppleID",
   "TERM_OF_SERVICE": "TERM OF SERVICE",
   "RESET_PASSWORD_TITLE": "Forgot your password?",
-  "RESET_PASSWORD_SUBTITLE": "Enter your email and we'll send you a code to reset it",
+  "RESET_PASSWORD_SUBTITLE": "Enter your email and we'll send you a link to reset it",
   "SEND_RESET_LINK": "Send me the link",
   "REMEMBER_PASSWORD": "Remember password?",
   "LOG_IN_NOW": "Log in now →",
