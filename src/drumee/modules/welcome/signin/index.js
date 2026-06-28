@@ -244,9 +244,16 @@ class __welcome_signin extends __welcome_interact {
       case "back-to-signin":
         clearInterval(this._tick);
         this._counting = false;
-        // Point the URL at the sign-in route (mirrors the signup link) so
-        // "Log in now" lands on /welcome/signin, then render the sign-in form
-        // in place (works in both the welcome page and the reconnect popup).
+        if (this.mget(RECONNECT)) {
+          // Reconnect popup: re-rendering in place leaves the modal over the
+          // desk. Navigate to the real sign-in page so the screen matches the
+          // URL (same approach as welcome/reset's backToSignin).
+          location.hash = "#/welcome/signin";
+          location.reload();
+          return;
+        }
+        // Normal welcome page: render the sign-in form in place and keep the
+        // URL on the sign-in route.
         try {
           history.replaceState(null, "", "#/welcome/signin");
         } catch (e) { }
