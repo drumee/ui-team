@@ -244,6 +244,12 @@ class __welcome_signin extends __welcome_interact {
       case "back-to-signin":
         clearInterval(this._tick);
         this._counting = false;
+        // Point the URL at the sign-in route (mirrors the signup link) so
+        // "Log in now" lands on /welcome/signin, then render the sign-in form
+        // in place (works in both the welcome page and the reconnect popup).
+        try {
+          history.replaceState(null, "", "#/welcome/signin");
+        } catch (e) { }
         return this.showSignin();
 
       case "resend-email":
@@ -553,16 +559,20 @@ class __welcome_signin extends __welcome_interact {
     if (!email) {
       return;
     }
+    // Spinner on the resend button while send_link is in flight.
+    this.setButtonLoading(true);
     this.postService(SERVICE.otp.send_link, {
       email,
       socket_id: Visitor.get(_a.socket_id),
     }).then((data) => {
+      this.setButtonLoading(false);
       if (data && data.sent) {
         this._startCooldown(COOLDOWN_SEC);
       } else {
         this.renderMessage(LOCALE.OOPS_EMAIL_NOT_FOUND || "No account found with this email");
       }
     }).catch((e) => {
+      this.setButtonLoading(false);
       this.warn("resendResetLink: error resending reset link", e);
     });
   }
