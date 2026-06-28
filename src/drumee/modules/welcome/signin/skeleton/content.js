@@ -99,16 +99,6 @@ function __skl_welcome_signin_content(ui) {
     kids: [emailField, passwordField, forgotRow, submit, msgBox],
   });
 
-  // Reconnect mode keeps only the form + forgot-password link.
-  if (isReconnect) {
-    return Skeletons.Box.Y({
-      debug: __filename,
-      className: `${contentFig}__items content`,
-      dataset,
-      kids: [formSection],
-    });
-  }
-
   const divider = Skeletons.Box.X({
     className: `${contentFig}__divider`,
     kids: [
@@ -125,6 +115,7 @@ function __skl_welcome_signin_content(ui) {
     className: `${contentFig}__social-button google`,
     service: "use-google",
     uiHandler: [ui],
+    kidsOpt: { active: 0 },
     kids: [
       Skeletons.Button.Svg({
         ico: "logo-google",
@@ -141,6 +132,7 @@ function __skl_welcome_signin_content(ui) {
     className: `${contentFig}__social-button apple`,
     service: "use-apple",
     uiHandler: [ui],
+    kidsOpt: { active: 0 },
     kids: [
       Skeletons.Button.Svg({
         ico: "logo-apple",
@@ -157,6 +149,17 @@ function __skl_welcome_signin_content(ui) {
     className: `${contentFig}__social-buttons`,
     kids: [googleButton, appleButton],
   });
+
+  // Reconnect mode: re-auth form + social buttons, but no signup/terms footer
+  // (a disconnected, already-registered user shouldn't see "Start free").
+  if (isReconnect) {
+    return Skeletons.Box.Y({
+      debug: __filename,
+      className: `${contentFig}__items content`,
+      dataset,
+      kids: [formSection, divider, socialButtons],
+    });
+  }
 
   const signupPrompt = Platform.get("isPublic")
     ? Skeletons.Box.X({
