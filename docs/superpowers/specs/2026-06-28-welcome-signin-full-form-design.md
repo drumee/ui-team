@@ -45,7 +45,7 @@ impossible; this spec records what ports cleanly and how the gaps are adapted.
 | signin app dependency | ui-team status | adaptation |
 |---|---|---|
 | `SERVICE.google.initiate` / `SERVICE.apple.initiate` | absent from `lex/services.json`; the current `google-signin` button has **no handler** (dead placeholder) | render Google **and** Apple buttons; `use-google` / `use-apple` handlers are **no-op placeholders** pending backend |
-| `SERVICE.otp.send_link` (emails reset link) | absent | forgot view uses `SERVICE.yp.email_exists` → `SERVICE.butler.get_reset_token` (the services `welcome/reset` already uses) |
+| `SERVICE.otp.send_link` (emails reset link) | **present** at runtime via platform services (server-team `service/otp.js`), though not in static `lex/services.json` | forgot view uses `SERVICE.yp.email_exists` → `SERVICE.otp.send_link` (same flow as the signin app); send_link emails the styled `reset-password.html` template and the link lands on `#/welcome/reset/{uid}/{token}` |
 | `Platform.get('legals')` external T&C URLs | not used here | terms handlers open existing `#/welcome/privacy` / `#/welcome/terms` routes |
 | `ico: "logo-apple"` | **present** in `icons/sprites/normalized.sprite.svg` (`--icon-logo-apple`) | use directly; no asset work |
 | LOCALE keys (`CHECK_YOUR_INBOX`, `SEND_RESET_LINK`, `CONTINUE_WITH_APPLEID`, `REMEMBER_PASSWORD`, `LOG_IN_NOW`, `RESET_PASSWORD_TITLE`, `WE_SENT_LINK_TO`, `LINK_EXPIRES_NOTE`, `CHECK_SPAM_NOTE`, `TERM_OF_SERVICE`, …) | many missing from lex | use `LOCALE.X || "English fallback"` so UI degrades gracefully; adding keys to lex is a follow-up |
@@ -117,7 +117,7 @@ Add to `onUiEvent` (before `default: super.onUiEvent`):
 - `forgot-input` (only on `commit`/`Enter`) → fallthrough to `forgot-submit`
 - `forgot-submit` → `submitForgot()`
 - `back-to-signin` → clear cooldown, `showSignin()`
-- `resend-email` → guard on cooldown, resend via `get_reset_token`, restart cooldown
+- `resend-email` → guard on cooldown, resend via `otp.send_link`, restart cooldown
 - `see-privacy-terms` / `see-services-terms` → open `#/welcome/privacy` /
   `#/welcome/terms`
 - `use-google` / `use-apple` → **placeholder**: no-op or a transient
@@ -131,9 +131,9 @@ Add methods:
   `storage` listener for `drumee:password-reset:done` (already emitted by
   `welcome/reset`'s `showSuccess()`); disable resend if it fires.
 - `submitForgot()` — trim + validate email format → `yp.email_exists` → on hit,
-  `butler.get_reset_token` → `showCheckInbox()`; on miss/format error, inline
-  message + button haptic. (Mirrors the signin app's `submitForgot`, but with
-  ui-team services and **no** `socket_id`.)
+  `otp.send_link({ email, socket_id })` → on `data.sent`, `showCheckInbox()`; on
+  miss/format error, inline message. (Mirrors the signin app's `submitForgot`,
+  including `socket_id` from `Visitor.get(_a.socket_id)`.)
 - `_startCooldown(sec)` / `_endCooldown()` / `_fmt(sec)` — port the resend
   countdown, **adapted to ui-team's button**: the common button renders a
   `button-confirm` `Note` whose text content is the label, so the countdown

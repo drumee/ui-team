@@ -490,10 +490,13 @@ class __welcome_signin extends __welcome_interact {
   }
 
   /**
-   * Validate the email then request a reset link (butler.get_reset_token, which
-   * emails the styled reset-link template). Validation: (1) well-formed email,
-   * (2) the email is registered (yp.email_exists). Only then move to the
-   * check-inbox view. The reset link itself lands on the welcome/reset module.
+   * Validate the email then email the styled "Reset your Drumee password" link
+   * template via SERVICE.otp.send_link (same flow as the standalone signin app).
+   * Validation: (1) well-formed email, (2) the email is registered
+   * (yp.email_exists). send_link generates a forgot-password token, emails the
+   * reset-password.html template, and the link lands on #/welcome/reset/{uid}/
+   * {token} (the welcome/reset module). socket_id lets the server confirm a live
+   * session (best-effort). On success move to the check-inbox view.
    */
   submitForgot() {
     let username;
@@ -515,14 +518,14 @@ class __welcome_signin extends __welcome_interact {
         this.setButtonLoading(false);
         return this.renderMessage(LOCALE.OOPS_EMAIL_NOT_FOUND || "No account found with this email");
       }
-      return this.postService({
-        service: SERVICE.butler.get_reset_token,
+      return this.postService(SERVICE.otp.send_link, {
         email: username,
+        socket_id: Visitor.get(_a.socket_id),
       }).then((data) => {
         this.setButtonLoading(false);
-        // get_reset_token returns the token metadata (non-empty) once the link
-        // has been emailed; an empty response means the address was rejected.
-        if (data && !_.isEmpty(data)) {
+        // send_link returns { status, sent, email }: sent === 1 once the styled
+        // reset-link email is delivered.
+        if (data && data.sent) {
           this.mset({ email: username });
           this.showCheckInbox();
         } else {
@@ -536,8 +539,8 @@ class __welcome_signin extends __welcome_interact {
   }
 
   /**
-   * Re-request the reset link from the check-inbox view, then restart the
-   * cooldown. Ignored while the cooldown is running.
+   * Re-send the reset-link email (SERVICE.otp.send_link) from the check-inbox
+   * view, then restart the cooldown. Ignored while the cooldown is running.
    */
   resendResetLink() {
     if (this._counting) {
@@ -547,11 +550,11 @@ class __welcome_signin extends __welcome_interact {
     if (!email) {
       return;
     }
-    this.postService({
-      service: SERVICE.butler.get_reset_token,
+    this.postService(SERVICE.otp.send_link, {
       email,
+      socket_id: Visitor.get(_a.socket_id),
     }).then((data) => {
-      if (data && !_.isEmpty(data)) {
+      if (data && data.sent) {
         this._startCooldown(COOLDOWN_SEC);
       } else {
         this.renderMessage(LOCALE.OOPS_EMAIL_NOT_FOUND || "No account found with this email");
