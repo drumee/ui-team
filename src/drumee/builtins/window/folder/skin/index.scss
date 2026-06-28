@@ -2657,7 +2657,16 @@
   // content) makes this hold in both cases. The reply skin's theme-aware
   // --normal-fg-* turn white in dark mode and wash out on the fixed light bubble;
   // covers the new file name/extension lines the meta-row pins above miss.
-  .window__chat-panel .widget-chatItem-reply__main.me {
+  // EVERY folder-window chat (the #General middle column AND the file-thread side
+  // panel) uses the same light "me" bubble, so the dark override must reach the
+  // nested quote in both — otherwise it falls back to the base chat-item
+  // white-on-indigo rule and renders white (see chat-item/skin#589). Scope to the
+  // folder-window root only (this whole file is already nested under .window-folder,
+  // so the bare selector compiles to `.window-folder .widget-chatItem-reply__main.me`):
+  // the panel's own wrapper classes (`__ft-panel-chat`, `__file-thread-panel`) do NOT
+  // end up as ancestors of the rendered quote, so scoping to them never matches —
+  // the folder-window root is the only reliable shared ancestor.
+  .widget-chatItem-reply__main.me {
     .widget-chatItem-reply__note.name,
     .widget-chatItem-reply__note.name .note-content,
     .widget-chatItem-reply__note.filename,
