@@ -1,6 +1,8 @@
 /// <reference path="../../../../../@types/index.d.ts" />
 
 const RECONNECT = 'reconnect';
+// Resend cooldown for the check-inbox screen, in seconds.
+const COOLDOWN_SEC = 20;
 const __welcome_interact = require("../interact");
 
 /**
@@ -229,6 +231,50 @@ class __welcome_signin extends __welcome_interact {
         });
         return;
 
+      // ---- Inline forgot-password flow ----
+      case "reset-password":
+        return this.showForgot();
+
+      case "forgot-input":
+        if (![_e.commit, _e.Enter].includes(cmd.status)) return;
+      // fallthrough: Enter in the email field submits the forgot form
+      case "forgot-submit":
+        return this.submitForgot();
+
+      case "back-to-signin":
+        clearInterval(this._tick);
+        this._counting = false;
+        if (this.mget(RECONNECT)) {
+          // Reconnect popup: re-rendering in place leaves the modal over the
+          // desk. Navigate to the real sign-in page so the screen matches the
+          // URL (same approach as welcome/reset's backToSignin).
+          location.hash = "#/welcome/signin";
+          location.reload();
+          return;
+        }
+        // Normal welcome page: render the sign-in form in place and keep the
+        // URL on the sign-in route.
+        try {
+          history.replaceState(null, "", "#/welcome/signin");
+        } catch (e) { }
+        return this.showSignin();
+
+      case "resend-email":
+        return this.resendResetLink();
+
+      // ---- Footer terms links ----
+      case "see-privacy-terms":
+        location.hash = "#/welcome/privacy";
+        return;
+      case "see-services-terms":
+        location.hash = "#/welcome/terms";
+        return;
+
+      // ---- Social sign-in (no initiate service on this server yet) ----
+      case "use-google":
+      case "use-apple":
+        return this.renderMessage(LOCALE.COMING_SOON || "Coming soon");
+
       default:
         return super.onUiEvent(cmd, args);
     }
@@ -419,6 +465,211 @@ class __welcome_signin extends __welcome_interact {
     } else {
       delete b.el.dataset.loading;
     }
+  }
+
+  /**
+   * Render the sign-in form (default view). Factored so back-to-signin can
+   * return here from the forgot / check-inbox views.
+   */
+  showSignin() {
+    this._inCheckInbox = false;
+    const opt = require("./skeleton/auth")(this);
+    return this.feed(this._skeleton(this, opt));
+  }
+
+  /**
+   * Render the inline forgot-password view (email input + "Send me the link").
+   */
+  showForgot() {
+    this._inCheckInbox = false;
+    return this.feed(this._skeleton(this, require("./skeleton/forgot")(this)));
+  }
+
+  /**
+   * Render the check-inbox view (shown after a reset link is requested) and
+   * start the resend cooldown. Also listens for a cross-tab "reset done" signal
+   * (welcome/reset emits drumee:password-reset:done on success) and permanently
+   * disables resend when it fires — there's nothing left to resend.
+   */
+  showCheckInbox() {
+    this._inCheckInbox = true;
+    this.feed(this._skeleton(this, require("./skeleton/check-inbox")(this)));
+    this._startCooldown(COOLDOWN_SEC);
+    if (!this._onResetDone) {
+      this._onResetDone = (e) => {
+        if (e && e.key === "drumee:password-reset:done") {
+          this._disableResend();
+        }
+      };
+      window.addEventListener("storage", this._onResetDone);
+    }
+  }
+
+  /**
+   * Validate the email then email the styled "Reset your Drumee password" link
+   * template via SERVICE.otp.send_link (same flow as the standalone signin app).
+   * Validation: (1) well-formed email, (2) the email is registered
+   * (yp.email_exists). send_link generates a forgot-password token, emails the
+   * reset-password.html template, and the link lands on #/welcome/reset/{uid}/
+   * {token} (the welcome/reset module). socket_id lets the server confirm a live
+   * session (best-effort). On success move to the check-inbox view.
+   */
+  submitForgot() {
+    let username;
+    try {
+      username = this.getPart("ref-ident").getValue();
+    } catch (e) { }
+    username = (username || "").trim();
+
+    // (1) Must be a valid email format.
+    const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!username || !EMAIL_RE.test(username)) {
+      return this.renderMessage(LOCALE.INVALID_EMAIL || "Please enter a valid email address");
+    }
+
+    // (2) Must exist before we email a reset link.
+    this.setButtonLoading(true);
+    this.postService(SERVICE.yp.email_exists, { value: username }).then((res) => {
+      if (!res || !res.id) {
+        this.setButtonLoading(false);
+        return this.renderMessage(LOCALE.OOPS_EMAIL_NOT_FOUND || "No account found with this email");
+      }
+      return this.postService(SERVICE.otp.send_link, {
+        email: username,
+        socket_id: Visitor.get(_a.socket_id),
+      }).then((data) => {
+        this.setButtonLoading(false);
+        // send_link returns { status, sent, email }: sent === 1 once the styled
+        // reset-link email is delivered.
+        if (data && data.sent) {
+          this.mset({ email: username });
+          this.showCheckInbox();
+        } else {
+          this.renderMessage(LOCALE.OOPS_EMAIL_NOT_FOUND || "No account found with this email");
+        }
+      });
+    }).catch((e) => {
+      this.setButtonLoading(false);
+      this.warn("submitForgot: error requesting reset link", e);
+    });
+  }
+
+  /**
+   * Re-send the reset-link email (SERVICE.otp.send_link) from the check-inbox
+   * view, then restart the cooldown. Ignored while the cooldown is running.
+   */
+  resendResetLink() {
+    if (this._counting) {
+      return;
+    }
+    const email = this.mget(_a.email) || "";
+    if (!email) {
+      return;
+    }
+    // Spinner on the resend button while send_link is in flight.
+    this.setButtonLoading(true);
+    this.postService(SERVICE.otp.send_link, {
+      email,
+      socket_id: Visitor.get(_a.socket_id),
+    }).then((data) => {
+      this.setButtonLoading(false);
+      if (data && data.sent) {
+        this._startCooldown(COOLDOWN_SEC);
+      } else {
+        this.renderMessage(LOCALE.OOPS_EMAIL_NOT_FOUND || "No account found with this email");
+      }
+    }).catch((e) => {
+      this.setButtonLoading(false);
+      this.warn("resendResetLink: error resending reset link", e);
+    });
+  }
+
+  /**
+   * Format seconds as mm:ss for the resend countdown.
+   * @param {number} sec
+   */
+  _fmt(sec) {
+    const m = Math.floor(sec / 60);
+    const s = sec % 60;
+    return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+  }
+
+  /**
+   * Put the resend button (the check-inbox view's button-confirm) on cooldown:
+   * disable it and replace its label with a live mm:ss countdown.
+   * @param {number} seconds
+   */
+  _startCooldown(seconds) {
+    clearInterval(this._tick);
+    if (!(seconds > 0)) {
+      return this._endCooldown();
+    }
+    this._counting = true;
+    this.ensurePart("button-confirm").then((b) => {
+      if (!b || !b.el) {
+        return;
+      }
+      b.el.dataset.counting = "1";
+      let remain = seconds;
+      b.el.textContent = this._fmt(remain);
+      this._tick = setInterval(() => {
+        remain--;
+        if (remain <= 0) {
+          return this._endCooldown();
+        }
+        if (b.el) {
+          b.el.textContent = this._fmt(remain);
+        }
+      }, 1000);
+    });
+  }
+
+  /**
+   * End the cooldown: restore the resend button's label and re-enable it.
+   */
+  _endCooldown() {
+    clearInterval(this._tick);
+    this._counting = false;
+    this.ensurePart("button-confirm").then((b) => {
+      if (!b || !b.el) {
+        return;
+      }
+      b.el.textContent = LOCALE.RESEND_EMAIL || "Resend email";
+      delete b.el.dataset.counting;
+    });
+  }
+
+  /**
+   * Permanently disable resend (the reset was already completed in another tab).
+   */
+  _disableResend() {
+    // Only act while the check-inbox view is showing — the cross-tab listener
+    // outlives the view, and button-confirm is reused by the sign-in / forgot
+    // buttons, so guard against disabling the wrong button.
+    if (!this._inCheckInbox) {
+      return;
+    }
+    clearInterval(this._tick);
+    this._counting = true; // resendResetLink() ignores clicks while set
+    this.ensurePart("button-confirm").then((b) => {
+      if (!b || !b.el) {
+        return;
+      }
+      delete b.el.dataset.counting;
+      b.el.dataset.disabled = "1";
+    });
+  }
+
+  /**
+   * Clean up the cooldown timer and cross-tab listener.
+   */
+  onDestroy() {
+    clearInterval(this._tick);
+    if (this._onResetDone) {
+      window.removeEventListener("storage", this._onResetDone);
+      this._onResetDone = null;
+    }
+    return super.onDestroy && super.onDestroy();
   }
 
   /**

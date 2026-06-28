@@ -239,7 +239,7 @@
   "REQUIRE_THAT_FIELD": "{0} required",
   "REQUIRE_THIS_FIELD": "This field is required.",
   "REQ_ENTER_PAGE_NAME": "Please, enter page name",
-  "RESEND_EMAIL": "resend email",
+  "RESEND_EMAIL": "Resend email",
   "RESERVED_ACTION": "This action is effective for only authorized persons.",
   "RESET": "Reset",
   "RESET_PASSWORD": "Reset password",
@@ -2254,5 +2254,16 @@
   "SECURE_SHARE_APPROVE_TITLE": "Approve access",
   "SECURE_SHARE_GRANT_LEVEL": "Grant access level:",
   "ADD_REACTION": "Add reaction",
-  "REACTION_MORE": "More emojis"
+  "REACTION_MORE": "More emojis",
+  "CONTINUE_WITH_APPLEID": "Continue with AppleID",
+  "TERM_OF_SERVICE": "TERM OF SERVICE",
+  "RESET_PASSWORD_TITLE": "Forgot your password?",
+  "RESET_PASSWORD_SUBTITLE": "Enter your email and we'll send you a link to reset it",
+  "SEND_RESET_LINK": "Send me the link",
+  "REMEMBER_PASSWORD": "Remember password?",
+  "LOG_IN_NOW": "Log in now →",
+  "CHECK_YOUR_INBOX": "Check your inbox",
+  "WE_SENT_LINK_TO": "We've sent a password reset link to",
+  "LINK_EXPIRES_NOTE": "Link expires in 1 hour.",
+  "CHECK_SPAM_NOTE": "Check your spam folder if you don't see it."
 }
