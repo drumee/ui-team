@@ -1823,5 +1823,16 @@
   "SECURE_SHARE_APPROVE_TITLE": "Одобрить доступ",
   "SECURE_SHARE_GRANT_LEVEL": "Уровень доступа:",
   "ADD_REACTION": "Добавить реакцию",
-  "REACTION_MORE": "Больше эмодзи"
+  "REACTION_MORE": "Больше эмодзи",
+  "CONTINUE_WITH_APPLEID": "Продолжить с AppleID",
+  "TERM_OF_SERVICE": "УСЛОВИЯ ИСПОЛЬЗОВАНИЯ",
+  "RESET_PASSWORD_TITLE": "Забыли пароль?",
+  "RESET_PASSWORD_SUBTITLE": "Введите ваш e-mail, и мы отправим код для сброса пароля",
+  "SEND_RESET_LINK": "Отправить ссылку",
+  "REMEMBER_PASSWORD": "Вспомнили пароль?",
+  "LOG_IN_NOW": "Войти →",
+  "CHECK_YOUR_INBOX": "Проверьте почту",
+  "WE_SENT_LINK_TO": "Мы отправили ссылку для сброса пароля на",
+  "LINK_EXPIRES_NOTE": "Ссылка действует 1 час.",
+  "CHECK_SPAM_NOTE": "Проверьте папку «Спам», если письма нет."
 }

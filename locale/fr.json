@@ -1823,5 +1823,16 @@
   "SECURE_SHARE_APPROVE_TITLE": "Approuver l’accès",
   "SECURE_SHARE_GRANT_LEVEL": "Niveau d’accès accordé :",
   "ADD_REACTION": "Ajouter une réaction",
-  "REACTION_MORE": "Plus d’emojis"
+  "REACTION_MORE": "Plus d’emojis",
+  "CONTINUE_WITH_APPLEID": "Continuer avec AppleID",
+  "TERM_OF_SERVICE": "CONDITIONS D'UTILISATION",
+  "RESET_PASSWORD_TITLE": "Mot de passe oublié ?",
+  "RESET_PASSWORD_SUBTITLE": "Saisissez votre e-mail et nous vous enverrons un code de réinitialisation",
+  "SEND_RESET_LINK": "Envoyez-moi le lien",
+  "REMEMBER_PASSWORD": "Vous vous souvenez du mot de passe ?",
+  "LOG_IN_NOW": "Connectez-vous →",
+  "CHECK_YOUR_INBOX": "Vérifiez votre boîte de réception",
+  "WE_SENT_LINK_TO": "Nous avons envoyé un lien de réinitialisation à",
+  "LINK_EXPIRES_NOTE": "Le lien expire dans 1 heure.",
+  "CHECK_SPAM_NOTE": "Vérifiez vos spams si vous ne le voyez pas."
 }

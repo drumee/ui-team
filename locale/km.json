@@ -1823,5 +1823,16 @@
   "SECURE_SHARE_APPROVE_TITLE": "អនុម័តការចូលប្រើ",
   "SECURE_SHARE_GRANT_LEVEL": "កម្រិតការអនុញ្ញាត៖",
   "ADD_REACTION": "បន្ថែមប្រតិកម្ម",
-  "REACTION_MORE": "អ៊ីម៉ូជីបន្ថែម"
+  "REACTION_MORE": "អ៊ីម៉ូជីបន្ថែម",
+  "CONTINUE_WITH_APPLEID": "បន្តជាមួយ AppleID",
+  "TERM_OF_SERVICE": "លក្ខខណ្ឌនៃសេវាកម្ម",
+  "RESET_PASSWORD_TITLE": "ភ្លេចពាក្យសម្ងាត់?",
+  "RESET_PASSWORD_SUBTITLE": "បញ្ចូលអ៊ីមែលរបស់អ្នក នោះយើងនឹងផ្ញើលេខកូដសម្រាប់កំណត់ឡើងវិញ",
+  "SEND_RESET_LINK": "ផ្ញើតំណមកខ្ញុំ",
+  "REMEMBER_PASSWORD": "ចាំពាក្យសម្ងាត់ហើយ?",
+  "LOG_IN_NOW": "ចូលឥឡូវនេះ →",
+  "CHECK_YOUR_INBOX": "ពិនិត្យប្រអប់សំបុត្ររបស់អ្នក",
+  "WE_SENT_LINK_TO": "យើងបានផ្ញើតំណកំណត់ពាក្យសម្ងាត់ឡើងវិញទៅ",
+  "LINK_EXPIRES_NOTE": "តំណនឹងផុតកំណត់ក្នុងរយៈពេល ១ ម៉ោង។",
+  "CHECK_SPAM_NOTE": "សូមពិនិត្យថតសារឥតបានការ ប្រសិនបើអ្នកមិនឃើញវា។"
 }

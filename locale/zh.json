@@ -1823,5 +1823,16 @@
   "SECURE_SHARE_APPROVE_TITLE": "批准访问",
   "SECURE_SHARE_GRANT_LEVEL": "授予访问级别：",
   "ADD_REACTION": "添加表情",
-  "REACTION_MORE": "更多表情"
+  "REACTION_MORE": "更多表情",
+  "CONTINUE_WITH_APPLEID": "使用 Apple ID 继续",
+  "TERM_OF_SERVICE": "服务条款",
+  "RESET_PASSWORD_TITLE": "忘记密码？",
+  "RESET_PASSWORD_SUBTITLE": "输入您的邮箱，我们将向您发送重置验证码",
+  "SEND_RESET_LINK": "给我发送链接",
+  "REMEMBER_PASSWORD": "记起密码了？",
+  "LOG_IN_NOW": "立即登录 →",
+  "CHECK_YOUR_INBOX": "请查收邮件",
+  "WE_SENT_LINK_TO": "我们已将密码重置链接发送至",
+  "LINK_EXPIRES_NOTE": "链接将在 1 小时后失效。",
+  "CHECK_SPAM_NOTE": "如果没看到邮件，请检查垃圾邮件文件夹。"
 }
