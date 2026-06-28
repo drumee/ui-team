@@ -900,6 +900,8 @@
   "CHAT_THREADS": "Chat threads",
   "VIEW_CHAT_THREADS": "View chat threads",
   "DOWNLOAD_CHAT_THREADS": "Download chat threads",
+  "REPLY_IN_THREAD": "Reply in thread",
+  "IN_THREAD": "in thread",
   "CONFIM_LEAVE_MEETING": "Do you confim you wan't to leave the meeting?",
   "SHARE_SCREEN_WARNING": "you cannot share your screen when an other screen is already shared.",
   "MSG_LEAVE_HUB": "You want to leave the shared folder \"{0}\". If you confirm your departure, you will no longer be able to access the contents of this folder.",

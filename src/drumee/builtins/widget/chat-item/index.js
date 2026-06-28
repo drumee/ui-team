@@ -864,6 +864,7 @@ class ___widget_chatItem extends LetcBox {
       document.removeEventListener("click", this._pickerOutsideHandler, true);
       this._pickerOutsideHandler = null;
     }
+    this._closeThreadPicker();
     if (super.onBeforeDestroy) super.onBeforeDestroy();
   }
 
@@ -1100,6 +1101,188 @@ class ___widget_chatItem extends LetcBox {
     });
   }
 
+  // ===========================================================
+  // Reply-in-thread (team chat only)
+  // ===========================================================
+
+  /**
+   * True when this message row lives inside a folder window — i.e. the team
+   * chat. The per-file thread feature exists only there, so reply-in-thread is
+   * gated on it (p2p / share / desk chats keep the normal reply).
+   */
+  _isTeamChat() {
+    return !!(this.getParentByKind && this.getParentByKind("window_folder"));
+  }
+
+  /**
+   * Fast sync check: does this message reference a file? Either an uploaded
+   * attachment (is_attachment / non-empty attachment) or an inline file-mention
+   * anchor in the rendered bubble. Avoids the async attachment fetch for plain
+   * text messages.
+   */
+  _hasThreadableFile() {
+    if (this.mget("is_attachment") || !_.isEmpty(this.mget("attachment"))) return true;
+    return !!(this.messageEl && this.messageEl.querySelector(".file-mention"));
+  }
+
+  /**
+   * Resolve the file(s) this message references → [{ file_nid, filename }].
+   * Mentions are read from the DOM (inline anchors carry data-nid/data-filename).
+   * Uploaded attachments are fetched via the same SERVICE.chat.attachment api
+   * used to render the cards (the records carry the folder file nid). Deduped.
+   */
+  async _resolveThreadFiles() {
+    const out = [];
+    const seen = new Set();
+    const push = (nid, filename) => {
+      const id = `${nid || ""}`;
+      if (!id || seen.has(id)) return;
+      seen.add(id);
+      out.push({ file_nid: id, filename: filename || "" });
+    };
+
+    // Inline file-mentions (synchronous, already in the DOM).
+    if (this.messageEl) {
+      this.messageEl.querySelectorAll(".file-mention").forEach((a) => {
+        if (a.dataset) push(a.dataset.nid, a.dataset.filename);
+      });
+    }
+
+    // Uploaded attachments (fetched — the message model holds no file nid).
+    if (this.mget("is_attachment") || !_.isEmpty(this.mget("attachment"))) {
+      try {
+        const data = await this.fetchService(this.getAttachments());
+        (_.isArray(data) ? data : [data]).filter(Boolean).forEach((f) => {
+          // A device-uploaded attachment is a per-message sbox COPY (its own
+          // nid), but its chat thread is keyed by the FOLDER file. channel.post
+          // exposes that as folder_nid — use it so reply-in-thread opens the SAME
+          // thread as the folder's "View Chat Threads" (avoids two threads per
+          // uploaded file). Mentions already carry the folder nid directly.
+          push(f.folder_nid || f.nid, f.filename || f.user_filename);
+        });
+      } catch (e) {
+        this.warn("reply-in-thread: attachment fetch failed", e);
+      }
+    }
+    return out;
+  }
+
+  /**
+   * Entry from the reply action when the message is a file message in team chat.
+   * 1 file → reply straight into its thread; many → show a picker; none (race) →
+   * fall back to a normal reply.
+   */
+  async _startFileThreadReply(cmd, args) {
+    let files = [];
+    try {
+      files = await this._resolveThreadFiles();
+    } catch (e) {
+      files = [];
+    }
+    if (this.isDestroyed && this.isDestroyed()) return;
+    if (!files.length) {
+      // Not actually a file message → normal reply (mirror default bubble).
+      this.source = cmd;
+      this.service = _e.reply;
+      args = args || {};
+      args.service = _e.reply;
+      this.triggerHandlers(args);
+      this.service = "";
+      return;
+    }
+    if (files.length === 1) return this._emitReplyInThread(files[0]);
+    return this._openFileThreadReplyPicker(files);
+  }
+
+  /**
+   * Pull the chat into `file`'s thread (same routing as clicking the file-thread
+   * card — in-place on the Files tab, docked side panel on the full Chat tab),
+   * carrying a snapshot of THIS message so the thread composer shows the reply
+   * quote ("Reply to X in thread"). The quote is captured first because the
+   * scope reload destroys this row.
+   */
+  _emitReplyInThread(file) {
+    this._closeThreadPicker();
+    const replyData = this._captureQuoteForThread();
+    const folder =
+      this.getParentByKind && this.getParentByKind("window_folder");
+    if (folder && _.isFunction(folder.scopeChatToFile)) {
+      if (folder.raise) folder.raise();
+      folder.scopeChatToFile(file.file_nid, file.filename, { replyData });
+      return;
+    }
+    // Defensive: outside a folder window — open the thread without a quote.
+    this.triggerHandlers({
+      service: "open-file-thread",
+      file_nid: file.file_nid,
+      filename: file.filename || "",
+    });
+  }
+
+  /**
+   * Snapshot this message for the reply quote BEFORE a scope reload destroys the
+   * row. Mirrors chat/index.js#replyMessage's capture (model snapshot + each
+   * rendered attachment card's getAttr) so the thread composer's quote renders
+   * identically to a normal reply.
+   */
+  _captureQuoteForThread() {
+    const snapshot = this.model ? this.model.toJSON() : {};
+    if (snapshot) delete snapshot.is_attachment;
+    const attachments = [];
+    if (
+      (this.mget("is_attachment") || !_.isEmpty(this.mget("attachment"))) &&
+      this.__list &&
+      this.__list.children
+    ) {
+      this.__list.children.each((view) => {
+        if (view && typeof view.getAttr === "function") {
+          attachments.push(view.getAttr());
+        }
+      });
+    }
+    return { message_id: this.mget("message_id"), snapshot, attachments };
+  }
+
+  /**
+   * Multi-file message: float a small picker beside the bubble (same lazy-append
+   * + click-outside pattern as the reaction quick-bar) so the user chooses which
+   * file's thread to reply into.
+   */
+  _openFileThreadReplyPicker(files) {
+    this._closeThreadPicker();
+    const fig = this.fig.family;
+    const line =
+      this.__main && this.__main.el.querySelector(`.${fig}__message-line`);
+    if (!line) return this._emitReplyInThread(files[0]);
+
+    this.append(require("./skeleton/file-thread-reply-picker")(this, files));
+    this._threadPicker = this.children.last();
+    if (this._threadPicker && this._threadPicker.el) {
+      line.appendChild(this._threadPicker.el);
+    }
+
+    const closeOnOutside = (ev) => {
+      if (!this.el || this.el.contains(ev.target)) return;
+      this._closeThreadPicker();
+      document.removeEventListener("click", closeOnOutside, true);
+    };
+    setTimeout(() => {
+      document.addEventListener("click", closeOnOutside, true);
+      this._threadPickerOutsideHandler = closeOnOutside;
+    }, 0);
+  }
+
+  _closeThreadPicker() {
+    if (this._threadPicker && !this._threadPicker.isDestroyed()) {
+      this._threadPicker.goodbye();
+    }
+    this._threadPicker = null;
+    if (this._threadPickerOutsideHandler) {
+      document.removeEventListener("click", this._threadPickerOutsideHandler, true);
+      this._threadPickerOutsideHandler = null;
+    }
+  }
+
   /**
    *
    * @param {*} cmd
@@ -1176,6 +1359,33 @@ class ___widget_chatItem extends LetcBox {
         this.select();
         this.triggerHandlers({ service });
         return;
+
+      case _e.reply: {
+        // TEAM CHAT ONLY: replying to a message that references a file — an
+        // uploaded attachment OR an inline file-mention — posts the reply INTO
+        // that file's chat thread (keeping the reply quote), instead of the
+        // folder General chat. Any other message / any other chat context falls
+        // through to the normal reply below.
+        if (this._isTeamChat() && this._hasThreadableFile()) {
+          this._startFileThreadReply(cmd, args);
+          return;
+        }
+        // Normal reply — bubble to the chat widget (mirrors `default`).
+        this.source = cmd;
+        this.service = service;
+        args = args || {};
+        args.service = service;
+        this.triggerHandlers(args);
+        return (this.service = "");
+      }
+
+      case "pick-thread-file": {
+        // A row in the multi-file reply picker — open that file's thread.
+        const file_nid = `${cmd.mget("file_nid") || (cmd.el && cmd.el.dataset && cmd.el.dataset.file_nid) || ""}`;
+        const filename = cmd.mget("filename") || (cmd.el && cmd.el.dataset && cmd.el.dataset.filename) || "";
+        if (file_nid) this._emitReplyInThread({ file_nid, filename });
+        return;
+      }
 
       default:
         this.source = cmd;

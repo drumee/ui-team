@@ -895,7 +895,7 @@ function fileThreadPanelHeader(ui, opt = {}) {
  * storage_key for its draft; matchesScopedChannel keeps their message streams
  * apart). Mirrors chatPanel's folder-scope + DMZ-share guest gating.
  */
-function fileThreadChatConfig(ui, fileNid, label) {
+function fileThreadChatConfig(ui, fileNid, label, replyData) {
   const grp = ui.fig.group;
   const cfg = {
     kind: "widget_chat",
@@ -920,6 +920,9 @@ function fileThreadChatConfig(ui, fileNid, label) {
     attach_icon: "chat-link-simple",
     scoped_file_nid: fileNid,
     scoped_file_label: label || "",
+    // Reply-in-thread: a captured quote to restore in the panel composer once it
+    // mounts (the chat widget applies it in initialize). Null in normal opens.
+    reply_data: replyData || null,
     storage_key: `ftpanel-${ui.mget(_a.hub_id)}-${ui.mget(_a.nid)}`,
     sys_pn: "file-thread-chat",
     partHandler: ui,
@@ -1011,7 +1014,7 @@ export function fileThreadPanelContent(ui, opt = {}) {
   return [
     fileThreadPanelHeader(ui, opt),
     fileThreadInfoCard(ui, opt),
-    fileThreadChatConfig(ui, opt.fileNid || "", opt.label || ""),
+    fileThreadChatConfig(ui, opt.fileNid || "", opt.label || "", opt.replyData),
   ];
 }
 

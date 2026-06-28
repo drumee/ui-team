@@ -129,6 +129,17 @@ class __widget_chat extends LetcBox {
     if (this.scopedFileNid) this._loadFileThreadInfo();
     this._newMsgCount = 0;
 
+    // Reply-in-thread label flag: true while the current reply quote was set by a
+    // "reply in thread" action, so its header reads "Reply to X in thread".
+    this._replyInThread = false;
+
+    // A side-panel chat (full Chat tab) mounts already scoped to a file and may
+    // carry a captured reply quote to restore once its reply-wrapper is ready.
+    const replyData = this.mget("reply_data");
+    if (replyData) {
+      this.ensurePart("reply-wrapper").then(() => this._applyReplyData(replyData));
+    }
+
     // Typing indicator state.
     // _typers: author_id -> { name, timer } for remote users currently typing.
     // _typingSentAt / _typingIdleTimer: throttle + idle-stop for the local user.
@@ -1445,10 +1456,14 @@ class __widget_chat extends LetcBox {
 
   // Switch the message list to a file-scoped thread; pass falsy to leave it.
   // `label` is the visible filename used by the scope chip; falsy hides chip.
-  setScopedFileNid(fileNid, label) {
+  setScopedFileNid(fileNid, label, replyData) {
     const next = fileNid ? `${fileNid}` : "";
     if (this.scopedFileNid === next) {
       this._refreshScopeChip(next, label);
+      // Already on this file's thread → still restore the carried reply quote.
+      if (replyData) {
+        this.ensurePart("reply-wrapper").then(() => this._applyReplyData(replyData));
+      }
       return;
     }
 
@@ -1468,6 +1483,11 @@ class __widget_chat extends LetcBox {
     this.fileThreadInfoLoaded = false;
     if (next) this._loadFileThreadInfo();
     this._refreshScopeChip(next, label);
+    // Reply-in-thread: restore the captured quote on the now-scoped chat (runs
+    // after the clearReplyMessage above, so it isn't wiped by the scope switch).
+    if (replyData) {
+      this.ensurePart("reply-wrapper").then(() => this._applyReplyData(replyData));
+    }
     this.ensurePart(_a.list).then((list) => {
       if (!list || !_.isFunction(list.restart)) return;
       const prevSpinner = list.mget(_a.spinner);
@@ -2054,6 +2074,8 @@ class __widget_chat extends LetcBox {
    */
   replyMessage(cmd) {
     const replyWrapper = this.getPart("reply-wrapper");
+    // Normal reply — not a reply-in-thread action, so no "in thread" suffix.
+    this._replyInThread = false;
     this.threadId = cmd.mget("message_id");
     // Snapshot the parent so the optimistic placeholder shows the quote right
     // away. is_attachment stripped — chat-item#setThreadData would refetch.
@@ -2092,8 +2114,40 @@ class __widget_chat extends LetcBox {
     this.threadId = null;
     this.threadSnapshot = null;
     this.threadAttachments = [];
+    // Reply cleared (cancel or post-send) → drop the in-thread label too.
+    this._replyInThread = false;
     replyWrapper.feed("");
     return (replyWrapper.el.dataset.mode = _a.closed);
+  }
+
+  /**
+   * Apply a reply quote from a captured snapshot (not a live message row). Used
+   * by reply-in-thread: the original row is destroyed by the scope reload, so
+   * the chat-item snapshots {message_id, snapshot, attachments} before scoping
+   * and the now-scoped chat restores the quote here. Sets the in-thread flag so
+   * the header reads "Reply to X in thread".
+   * @param {{message_id:string, snapshot:object, attachments:array}} data
+   */
+  _applyReplyData(data) {
+    if (!data || !data.message_id) return;
+    const replyWrapper = this.getPart("reply-wrapper");
+    if (!replyWrapper || (replyWrapper.isDestroyed && replyWrapper.isDestroyed())) {
+      return;
+    }
+    this.threadId = data.message_id;
+    this.threadSnapshot = data.snapshot || null;
+    this.threadAttachments = _.isArray(data.attachments) ? data.attachments : [];
+    this._replyInThread = true;
+    // The reply-message skeleton reads the replied message via model.toJSON() /
+    // getAttr() / mget — build a lightweight stand-in over the snapshot.
+    const snap = this.threadSnapshot || {};
+    const msgLike = {
+      model: { toJSON: () => snap },
+      getAttr: () => snap,
+      mget: (k) => snap[k],
+    };
+    replyWrapper.feed(require("./skeleton/reply-message")(this, msgLike));
+    return (replyWrapper.el.dataset.mode = _a.open);
   }
 
   /**

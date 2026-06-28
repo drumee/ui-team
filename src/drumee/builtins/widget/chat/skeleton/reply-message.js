@@ -58,9 +58,12 @@ const __skl_chat_reply_message = function(_ui_, msg) {
   });
 
   // Header "Reply to {name}" — purple, replaces the old name-colored label.
+  // Reply-in-thread (team chat file message) appends " in thread" so the quote
+  // reads "Reply to {name} in thread".
+  const inThread = _ui_ && _ui_._replyInThread ? ` ${LOCALE.IN_THREAD}` : '';
   const userName = Skeletons.Note({
     className  : `${chatReplyFig}__note name ${author}`,
-    content    : `${LOCALE.REPLY_TO} ${displayName}`
+    content    : `${LOCALE.REPLY_TO} ${displayName}${inThread}`
   });
 
   // Single-line quoted preview — grey, truncated with ellipsis in skin.

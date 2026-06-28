@@ -1401,6 +1401,8 @@
   "CHAT_THREADS": "Chat threads",
   "VIEW_CHAT_THREADS": "View chat threads",
   "DOWNLOAD_CHAT_THREADS": "Download chat threads",
+  "REPLY_IN_THREAD": "Reply in thread",
+  "IN_THREAD": "in thread",
   "NEW_EMAIL_LABEL": "NEW EMAIL",
   "NEW_PASSWORD_LABEL": "NEW PASSWORD",
   "NEW_TASK": "New task",

@@ -1616,12 +1616,14 @@ class __window_folder extends mfsInteract {
     return w <= 700;
   }
 
-  scopeChatToFile(fileNid, fileLabel) {
+  scopeChatToFile(fileNid, fileLabel, opts = {}) {
     // Full (wide) Chat tab: the file thread lives in the docked RIGHT panel; the
     // middle chat always stays #General (Figma 2331-46821). Files tab — and the
     // compact Chat tab — scope the single chat IN PLACE (no room for a column).
+    // opts.replyData (optional): a captured reply quote to restore in the thread
+    // composer (reply-in-thread from a file message).
     if (this.activeTab === _a.chat && !this._isCompactChat()) {
-      if (fileNid) return this._openFileThreadPanel(fileNid, fileLabel);
+      if (fileNid) return this._openFileThreadPanel(fileNid, fileLabel, opts.replyData);
       return this._closeFileThreadPanel();
     }
     // ── Files-tab in-place scoping ──
@@ -1638,7 +1640,7 @@ class __window_folder extends mfsInteract {
     this._setThreadRailActive(fileNid || "");
     return this.ensurePart("folder-chat").then((chat) => {
       if (chat && _.isFunction(chat.setScopedFileNid))
-        chat.setScopedFileNid(fileNid, fileLabel);
+        chat.setScopedFileNid(fileNid, fileLabel, opts.replyData);
     });
   }
 
@@ -1936,13 +1938,19 @@ class __window_folder extends mfsInteract {
   // [header, scoped chat widget], reveal it (data-open + split-body
   // data-thread="open" → 3-column grid), and hydrate the header with the file's
   // real name + vignette. The middle #General chat is untouched.
-  _openFileThreadPanel(fileNid, fileLabel) {
+  _openFileThreadPanel(fileNid, fileLabel, replyData) {
     const nid = `${fileNid}`;
     return this.ensurePart("file-thread-panel").then((panel) => {
       if (!panel || !panel.el || (panel.isDestroyed && panel.isDestroyed()))
         return;
       this._fileThreadPanelPart = panel;
-      panel.feed(fileThreadPanelContent(this, { fileNid: nid, label: fileLabel || "" }));
+      panel.feed(
+        fileThreadPanelContent(this, {
+          fileNid: nid,
+          label: fileLabel || "",
+          replyData,
+        }),
+      );
       panel.el.dataset.open = "1";
       // Stamp the active file so a slow hydrate from a previously-opened file
       // (rapid re-scope A→B) cannot paint into B's freshly-fed card. Reset the

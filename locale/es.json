@@ -418,6 +418,8 @@
   "CHAT_THREADS": "Hilos de chat",
   "VIEW_CHAT_THREADS": "Ver hilos de chat",
   "DOWNLOAD_CHAT_THREADS": "Descargar hilos de chat",
+  "REPLY_IN_THREAD": "Responder en el hilo",
+  "IN_THREAD": "en el hilo",
   "LINK_EXPIRATION": "Expiración del enlace",
   "CLEAR": "Borrar",
   "APPLY_CHANGES": "Aplicar cambios",
