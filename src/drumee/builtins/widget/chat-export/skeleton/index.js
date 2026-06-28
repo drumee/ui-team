@@ -22,13 +22,17 @@ module.exports = {
   default: function chatExportSkeleton(ui) {
     const pfx = ui.fig.family; // "widget-chat-export"
 
+    // File-scope mode (single file's thread): show the file card and hide the
+    // scope picker — the scope is fixed to this file's thread.
+    const fileScope = !!ui._fileScope;
+
     return Skeletons.Box.Y({
       className: `${pfx}__card`,
       kids: [
         _header(pfx, ui),
-        _folderCard(pfx, ui),
+        fileScope ? _fileCard(pfx, ui) : _folderCard(pfx, ui),
         _formatSection(pfx, ui),
-        _scopeSection(pfx, ui),
+        fileScope ? null : _scopeSection(pfx, ui),
         _dateRangeSection(pfx, ui),
         _footer(pfx, ui),
         _downloadButton(pfx, ui),
@@ -152,6 +156,67 @@ function _folderCard(pfx, ui) {
         ],
       }),
       // Fix #2: "Open thread →" link removed per user request.
+    ],
+  });
+}
+
+// ------------------------------------------------------------------ file card
+// File-scope mode: shows the single file (instead of the folder). Reuses the
+// __folder-* classes so the layout/styling is identical — only the icon and
+// the meta source (the matched thread's reply_count) differ.
+
+function _fileCard(pfx, ui) {
+  const filename = ui.mget(_a.filename) || ui.mget(_a.name) || LOCALE.LOADING || "…";
+  const access = AREA_ACCESS[ui.mget(_a.area)] || "private";
+  const thread = ui._matchedThread;
+  const replyCount = thread ? thread.reply_count || 0 : 0;
+
+  const metaKids = [];
+  if (replyCount > 0) {
+    metaKids.push(
+      Skeletons.Image.Svg({
+        ico: "chat-teardrop-dots",
+        className: `${pfx}__folder-meta-ico`,
+      }),
+      Skeletons.Note({
+        className: `${pfx}__folder-meta-text`,
+        content: `${replyCount} ${LOCALE.MESSAGES}`,
+      }),
+    );
+  }
+
+  return Skeletons.Box.X({
+    className: `${pfx}__folder-card`,
+    kids: [
+      Skeletons.Box.X({
+        className: `${pfx}__folder-left`,
+        kids: [
+          // File-thread icon (app-attachment), coloured by access level — same
+          // light icon box as the folder card so it's always visible.
+          Skeletons.Box.Y({
+            className: `${pfx}__folder-icon-box`,
+            kids: [
+              Skeletons.Image.Svg({
+                ico: "app-attachment",
+                className: `${pfx}__folder-icon fg-${access}`,
+              }),
+            ],
+          }),
+          Skeletons.Box.Y({
+            className: `${pfx}__folder-info`,
+            kids: [
+              Skeletons.Note({
+                className: `${pfx}__folder-name`,
+                content: filename,
+              }),
+              Skeletons.Box.X({
+                className: `${pfx}__folder-meta`,
+                kids: metaKids,
+              }),
+            ],
+          }),
+        ],
+      }),
     ],
   });
 }

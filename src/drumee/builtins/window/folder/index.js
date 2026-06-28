@@ -1143,6 +1143,12 @@ class __window_folder extends mfsInteract {
         this._closeThreadMenu();
         return this._openChatExportModal();
 
+      // File kebab → "Chat Threads → Download Chat Threads". Bubbled up from the
+      // media node (cmd = that file node); open the export modal scoped to this
+      // single file's thread, with the file (not the folder) in the card.
+      case "download-file-chat":
+        return this._openFileChatExportModal(cmd);
+
       case _a.chat: {
         const fileNid =
           (cmd && cmd._args && cmd._args.nid) ||
@@ -1346,6 +1352,61 @@ class __window_folder extends mfsInteract {
         name: folderName,
         // Folder access level (private/share/public/dmz) → drives the icon
         // colour in the modal, matching the hub icon shown outside.
+        area: this.mget(_a.area),
+        uiHandler: [this],
+      });
+    });
+  }
+
+  /**
+   * Open the export modal scoped to a SINGLE file's chat thread, reusing the
+   * same viewport overlay + widget as the folder-wide export. Differences:
+   *   - card shows the file (filename) instead of the folder,
+   *   - scope picker is hidden (scope is fixed to this file's thread),
+   *   - the widget resolves the file's file_thread_id from export_scope by
+   *     matching file_nid, then exports scope_sel=[file_thread_id] — which the
+   *     offline worker treats as "this thread only" (no hub chat).
+   * @param {*} cmd the bubbled media node (carries the file's nid/filename).
+   */
+  _openFileChatExportModal(cmd) {
+    this._closeChatExportOverlay();
+
+    const fileNid =
+      (cmd && cmd._args && cmd._args.nid) ||
+      (cmd && cmd.mget && cmd.mget(_a.nid));
+    if (!fileNid) return;
+    const filename =
+      (cmd && cmd._args && (cmd._args.filename || cmd._args.name)) ||
+      (cmd && cmd.mget && (cmd.mget(_a.filename) || cmd.mget(_a.name))) ||
+      (cmd && _.isFunction(cmd.fullname) && cmd.fullname()) ||
+      "";
+
+    this.append(
+      Skeletons.Wrapper.Y({
+        className: "widget-chat-export__viewport-backdrop",
+        name: "chat-export",
+      }),
+    );
+
+    this.ensurePart("wrapper-chat-export").then((wrapper) => {
+      if (!wrapper || (wrapper.isDestroyed && wrapper.isDestroyed())) return;
+      this._chatExportWrapper = wrapper;
+
+      wrapper.el.addEventListener("click", (e) => {
+        if (e.target === wrapper.el) {
+          this._closeChatExportOverlay();
+        }
+      });
+
+      wrapper.feed({
+        kind: "widget_chat_export",
+        hub_id: this.mget(_a.hub_id),
+        nid: this.mget(_a.nid),
+        // File-scope mode: render the file card + hide the scope picker; the
+        // widget matches file_nid → file_thread_id against export_scope.
+        file_scope: 1,
+        file_nid: `${fileNid}`,
+        filename,
         area: this.mget(_a.area),
         uiHandler: [this],
       });

@@ -37,6 +37,16 @@ class __widget_chat_export extends LetcBox {
     this._fileThreads = []; // [{ file_thread_id, file_nid, filename, reply_count }]
     // Download-state guard to prevent double-fire
     this._activeZipId = null;
+
+    // File-scope mode (opened from a file's kebab → "Download Chat Threads"):
+    // the export is locked to that single file's thread. The card shows the
+    // file (not the folder) and the scope picker is hidden. _loadScope resolves
+    // the file's file_thread_id by matching file_nid.
+    this._fileScope = !!this.mget("file_scope");
+    this._matchedThread = null;
+    // Default scope to empty so an export fired before _loadScope completes
+    // sends nothing rather than "all".
+    if (this._fileScope) this._scopeSel = [];
   }
 
   onBeforeDestroy() {
@@ -105,6 +115,18 @@ class __widget_chat_export extends LetcBox {
       // Default: all thread ids checked. Normalize to strings to ensure Set.has()
       // works regardless of whether the backend sends numeric or string IDs.
       this._checkedThreadIds = new Set(this._fileThreads.map((t) => String(t.file_thread_id)));
+      // File-scope mode: lock the export to this file's own thread. Match by
+      // file_nid; scope_sel=[file_thread_id] → the offline worker exports ONLY
+      // that thread (includeHub is false for array scope). No match (file has
+      // no thread yet) → empty scope, nothing to export.
+      if (this._fileScope) {
+        const fileNid = String(this.mget("file_nid") || "");
+        const match = this._fileThreads.find(
+          (t) => String(t.file_nid) === fileNid,
+        );
+        this._matchedThread = match || null;
+        this._scopeSel = match ? [String(match.file_thread_id)] : [];
+      }
       // Re-feed the skeleton now that real data is available.
       // Fix #6: re-feeding is kept here (data load only, not on every toggle).
       this.feed(require("./skeleton").default(this));
