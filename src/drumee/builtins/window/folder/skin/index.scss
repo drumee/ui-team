@@ -1308,11 +1308,28 @@
     right: 0;
     width: 360px;
     height: 100%;
-    gap: 24px;
-    padding: 0 0 24px;
-    overflow-y: auto;
+    overflow: hidden;
     background: #f2f2f7;
     box-shadow: 0 1px 11px rgba(0, 0, 0, 0.13);
+  }
+
+  &__settings-action-header {
+    align-items: center;
+    flex: 0 0 auto;
+    min-height: 65px;
+    padding: 16px 24px 17px;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+  }
+
+  // Scrollable body — flexes to fill the space below the pinned header and
+  // scrolls the actions / invite / members sections together.
+  &__settings-action-scroll {
+    flex: 1 1 auto;
+    min-height: 0;
+    width: 100%;
+    gap: 24px;
+    padding: 24px 0;
+    overflow-y: auto;
 
     scrollbar-width: none;
     -ms-overflow-style: none;
@@ -1320,13 +1337,6 @@
     &::-webkit-scrollbar {
       display: none;
     }
-  }
-
-  &__settings-action-header {
-    align-items: center;
-    min-height: 65px;
-    padding: 16px 24px 17px;
-    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
   }
 
   &__settings-action-actions,

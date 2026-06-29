@@ -194,6 +194,129 @@
   }
 }
 
+// ── "notice" variant ────────────────────────────────────────────────────────
+// Compact card styled after window-confirm (the "We have updated your Drumee
+// desktop" prompt): a small, rounded, shadowed card with an outline secondary
+// button and a filled primary button — instead of the default 600×300 info
+// dialog. Scoped to [data-variant="notice"] (set by window/info on the
+// `variant` model field) so the standard alerts/revision dialogs are untouched.
+// Used by the folder invite-sent toast.
+.window-info__ui[data-variant="notice"] {
+  // Centre on the viewport. The windows pool is a 0×0 anchor (so the default
+  // absolute placement lands top-left); pin to the screen with !important to
+  // override the inline left/top the window manager sets on the instance.
+  position: fixed !important;
+  top: 50% !important;
+  left: 50% !important;
+  right: auto !important;
+  bottom: auto !important;
+  transform: translate(-50%, -50%) !important;
+  margin: 0 !important;
+  z-index: 100000;
+
+  min-width: 340px;
+  min-height: 0 !important;
+  width: auto;
+  height: auto;
+  max-width: 400px;
+  padding: 20px 24px 24px;
+  border-radius: var(--corner-radius-4, 16px);
+  border: 1px solid var(--border-default, rgba(0, 0, 0, 0.05));
+  box-shadow: 0 14px 42px rgba(11, 10, 33, 0.16);
+  overflow: hidden;
+
+  .window-info__main {
+    min-height: 0;
+    padding: 0;
+    gap: 16px;
+    width: 100%;
+    border: none;
+
+.window__header{
+  padding: 0;
+}
+
+  }
+
+  .window-info__topbar {
+    align-items: center;
+  }
+
+  // Message — regular body text, left-aligned, fills the card width. Reset the
+  // base rules that center the content and cap it at the default dialog size.
+  .window-info__container {
+    width: 100%;
+    height: auto;
+    justify-content: flex-start;
+    align-items: flex-start;
+  }
+
+  .window-info__message,
+  .window-info__container .note-reader {
+    width: 100%;
+    margin: 0;
+    text-align: left;
+    @include drumee.typo(
+      $weight: 400,
+      $size: 14px,
+      $line: 20px,
+      $color: var(--normal-fg)
+    );
+  }
+
+  // Right-aligned action row with confirm-style buttons. The base
+  // `__button-main` pins a flat grey background with !important, so the
+  // secondary/primary backgrounds here must also be !important to win.
+  .window-info__buttons {
+    width: 100%;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 8px;
+    margin: 0;
+  }
+
+  .window-info__button-main {
+    height: 36px;
+    width: auto;
+    min-width: 88px;
+    padding: 0 16px;
+    border-radius: var(--corner-radius-2, 8px);
+    justify-content: center;
+    align-items: center;
+    transition:
+      background-color 120ms ease,
+      border-color 120ms ease,
+      color 120ms ease;
+    @include drumee.typo($size: 14px, $line: 20px, $weight: 600);
+
+    // Label span inherits the button's text colour (the shared common-button
+    // rules can otherwise leave it grey).
+    .window-info__button.btn {
+      color: inherit;
+    }
+
+    &.secondary {
+      background-color: transparent !important;
+      border: 1px solid var(--neutral-300, rgba(0, 0, 0, 0.12));
+      color: var(--normal-fg-10);
+
+      &:hover {
+        background-color: var(--normal-bg-100) !important;
+      }
+    }
+
+    &.primary {
+      background-color: var(--primary-50, #433cc5) !important;
+      border: 0;
+      color: #fff;
+
+      &:hover {
+        background-color: var(--primary-40, #5950ff) !important;
+      }
+    }
+  }
+}
+
 // Dark-mode override — base rules use --default-text-color (#2F2F2F) which is
 // not redefined in dark.scss, so message text disappears on the dark popup
 // surface. Remap to --normal-fg-10 (light lavender in dark mode).

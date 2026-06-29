@@ -273,31 +273,39 @@ module.exports = function settingsActionPanel(ui) {
           }),
         ],
       }),
+      // Scrollable body — keeps the header pinned while the actions, invite
+      // and members sections scroll together inside a single overflow:auto
+      // container.
       Skeletons.Box.Y({
-        className: `${pfx}-actions`,
-        kids: actions.map(({ service, label, ico, destructive }) =>
-          Skeletons.Box.X({
-            className: `${pfx}-item${destructive ? " destructive" : ""}`,
-            service,
-            uiHandler: [ui],
+        className: `${pfx}-scroll`,
+        kids: [
+          Skeletons.Box.Y({
+            className: `${pfx}-actions`,
+            kids: actions.map(({ service, label, ico, destructive }) =>
+              Skeletons.Box.X({
+                className: `${pfx}-item${destructive ? " destructive" : ""}`,
+                service,
+                uiHandler: [ui],
+                kids: [
+                  Skeletons.Note({ className: `${pfx}-label`, content: label }),
+                  Skeletons.Button.Svg({ className: `${pfx}-icon`, ico }),
+                ],
+              }),
+            ),
+          }),
+          inviteSection,
+          Skeletons.Box.Y({
+            className: `${pfx}-members-section`,
             kids: [
-              Skeletons.Note({ className: `${pfx}-label`, content: label }),
-              Skeletons.Button.Svg({ className: `${pfx}-icon`, ico }),
+              Skeletons.Note({
+                className: `${pfx}-section-title`,
+                content: LOCALE.PERMISSIONS_MATRIX,
+              }),
+              ...memberRows(mappedMembers, ui, pfx, isAdmin),
             ],
           }),
-        ),
+        ].filter(Boolean),
       }),
-      inviteSection,
-      Skeletons.Box.Y({
-        className: `${pfx}-members-section`,
-        kids: [
-          Skeletons.Note({
-            className: `${pfx}-section-title`,
-            content: LOCALE.PERMISSIONS_MATRIX,
-          }),
-          ...memberRows(mappedMembers, ui, pfx, isAdmin),
-        ],
-      }),
-    ].filter(Boolean),
+    ],
   });
 };
