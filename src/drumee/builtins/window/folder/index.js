@@ -2680,12 +2680,33 @@ class __window_folder extends mfsInteract {
           return Wm.alert(r.reason || LOCALE.TRY_AGAIN);
         }
         await this._refreshFolderMembers();
-        Wm.alert(LOCALE.INVITATION_SENT_SUCCESSFULLY);
+        this._showInviteSentToast();
       })
       .catch((e) => Wm.alert(e.reason || e.error || LOCALE.TRY_AGAIN))
       .finally(() => {
         if (btn) btn.removeAttribute("data-pending");
       });
+  }
+
+  // Branded confirmation toast shown after an invitation is sent. It reuses the
+  // floating window_info component styled like window-confirm (the "notice"
+  // variant — drumee logo + a compact card) with a single Close button that
+  // dismisses the toast.
+  _showInviteSentToast() {
+    Wm.info({
+      message: LOCALE.INVITATION_SENT_SUCCESSFULLY,
+      // Compact, window-confirm styled card (see window-info skin
+      // [data-variant="notice"]).
+      variant: "notice",
+      actions: [
+        {
+          label: LOCALE.CLOSE,
+          priority: "primary",
+          // No uiHandler → handled by the toast window itself (closes it).
+          service: _e.close,
+        },
+      ],
+    });
   }
 
   // Open a destructive Wm.confirm popup; on confirm POST

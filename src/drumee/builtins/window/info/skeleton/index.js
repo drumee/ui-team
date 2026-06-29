@@ -30,28 +30,40 @@ module.exports = function (ui) {
   //     })
   //   ]
   // });
+  // Custom action buttons (e.g. the folder invite-sent toast) — each action
+  // routes its service to its own uiHandler so a button can act on the window
+  // that opened the toast rather than the toast itself. Passing the action's
+  // handler as button()'s `ui` keeps the shared button styling while still
+  // dispatching to that handler. Absent any actions, fall back to the standard
+  // single Close button.
+  const actions = ui.mget("actions");
   const footer = Skeletons.Box.X({
     className: `${fig}__buttons`,
     uiHandler: ui,
     sys_pn: _a.footer,
     dataset: { page: ui._page },
-    kids: [
-      button(ui, {
-        label: LOCALE.CLOSE,
-        type: _a.toggle,
-        className: `${fig}__button`,
-        service: _e.close,
-        priority: "secondary",
-      }),
-      // button(ui, {
-      //   label: LOCALE.CONFIRM,
-      //   type: _a.toggle,
-      //   className: `${fig}__button`,
-      //   service: "create-organization",
-      //   ico: "arrow-right",
-      //   priority: "primary",
-      // }),
-    ],
+    kids:
+      _.isArray(actions) && actions.length
+        ? actions.map((a) =>
+            button(a.uiHandler || ui, {
+              label: a.label,
+              type: _a.toggle,
+              className: `${fig}__button`,
+              service: a.service,
+              priority: a.priority || "secondary",
+              ico: a.ico,
+              dataset: a.dataset,
+            }),
+          )
+        : [
+            button(ui, {
+              label: LOCALE.CLOSE,
+              type: _a.toggle,
+              className: `${fig}__button`,
+              service: _e.close,
+              priority: "secondary",
+            }),
+          ],
   });
   const m = new RegExp(`[${mode}]`);
 

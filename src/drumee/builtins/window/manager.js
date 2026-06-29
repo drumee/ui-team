@@ -107,12 +107,20 @@ class __window_manager extends mfsInteract {
         kind: "window_info",
         message: opt,
       });
-    } else {
+    }
+    // A bare skeleton/array is treated as the window body (legacy callers).
+    if (_.isArray(opt)) {
       return this.getWindowsPool().append({
         kind: "window_info",
         body: opt,
       });
     }
+    // A plain options object forwards its fields (message/body/actions/variant/…)
+    // so callers can build a branded toast with custom footer buttons.
+    return this.getWindowsPool().append({
+      kind: "window_info",
+      ...opt,
+    });
   }
 
   /**
