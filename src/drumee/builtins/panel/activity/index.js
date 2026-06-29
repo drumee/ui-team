@@ -1373,7 +1373,11 @@ class __panel_activity extends LetcBox {
           keyId = args.key_id || m('drumate_id') || m('peer_id') || m('key_id');
           break;
         case 'media':
-          keyId = args.key_id || m('hub_id') || m('key_id');
+          // notification_center_next keys media rollups per folder (nid = the
+          // folder a file lives in). notification_dismiss(media) marks `_seen_`
+          // on the files under that folder nid, so send the folder nid — not
+          // hub_id (which the dismiss can't use). Falls back to hub_id/key_id.
+          keyId = args.key_id || m('nid') || m('hub_id') || m('key_id');
           break;
         case 'teamchat':
           // notification_center_next now keys teamchat per folder: key_id = folder
