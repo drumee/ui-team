@@ -414,7 +414,7 @@ const __skl_secure_share = function(_ui_) {
         uiHandler : [_ui_],
         kidsOpt   : { active: 0 },
         kids      : [
-          Skeletons.Note({ className: `${pfx}__events-toggle-label`, content: LOCALE.SECURE_SHARE_VIEW_ACCESS_LIST })
+          Skeletons.Note({ className: `${pfx}__events-toggle-label`, sys_pn: 'access-events-label', content: LOCALE.SECURE_SHARE_VIEW_ACCESS_LIST })
         ]
       }),
       Skeletons.Box.Y({
