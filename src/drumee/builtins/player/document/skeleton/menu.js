@@ -54,7 +54,13 @@ module.exports = function (ui) {
     }),
   );
 
-  if (ui.mget(_a.ext) != _a.pdf) {
+  // While editing an office doc, hide the three actions that surface the stale
+  // server info.pdf (the server never re-runs the conversion on demand):
+  // download-as-PDF, preview and print. They stay in view/preview mode, where the
+  // server PDF equals the displayed doc. Exit edit mode via the window close control.
+  const isEditing = ui.mget(_a.mode) == _a.edit;
+
+  if (ui.mget(_a.ext) != _a.pdf && !isEditing) {
     actions.push(
       action(ui, {
         service: "download-pdf",
@@ -65,15 +71,9 @@ module.exports = function (ui) {
   }
 
   if (ui.canUpload() && !Visitor.inDmz && EDITABLE.includes(ui.mget(_a.ext).toLowerCase())) {
-    if (ui.mget(_a.mode) == _a.edit) {
-      actions.push(
-        action(ui, {
-          service: "preview",
-          ico: "eye",
-          tip: LOCALE.PREVIEW,
-        }),
-      );
-    } else if (Platform.get("doc_editor")) {
+    // No preview toggle while editing — it reloads the stale server render. Only
+    // offer Edit when not already editing.
+    if (!isEditing && Platform.get("doc_editor")) {
       actions.push(
         action(ui, { service: _a.edit, ico: "app-edit", tip: LOCALE.EDIT }),
       );
@@ -96,9 +96,13 @@ module.exports = function (ui) {
     );
   }
 
-  actions.push(
-    action(ui, { service: "print", ico: "print", tip: LOCALE.PRINT }),
-  );
+  // Print stays hidden while editing (same stale-info.pdf reason as above); the
+  // cross-origin office editor has its own Print (#btn-print).
+  if (!isEditing) {
+    actions.push(
+      action(ui, { service: "print", ico: "print", tip: LOCALE.PRINT }),
+    );
+  }
 
   // Maximize → fills the workspace (never the header/sidebar), mirroring the
   // window-tab zoom. Icon flips per toggle.
