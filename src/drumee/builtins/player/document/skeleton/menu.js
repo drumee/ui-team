@@ -96,9 +96,16 @@ module.exports = function (ui) {
     );
   }
 
-  actions.push(
-    action(ui, { service: "print", ico: "print", tip: LOCALE.PRINT }),
-  );
+  // Hide the toolbar Print while editing an office doc: it would print the stale
+  // server info.pdf (the server never re-runs the conversion on demand) while the
+  // live document lives in the cross-origin office-editor iframe, which has its own
+  // Print (#btn-print). The icon stays in view/preview, where the server PDF equals
+  // the displayed/saved document.
+  if (ui.mget(_a.mode) != _a.edit) {
+    actions.push(
+      action(ui, { service: "print", ico: "print", tip: LOCALE.PRINT }),
+    );
+  }
 
   // Maximize → fills the workspace (never the header/sidebar), mirroring the
   // window-tab zoom. Icon flips per toggle.

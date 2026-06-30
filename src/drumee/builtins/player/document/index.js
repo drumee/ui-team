@@ -734,7 +734,7 @@ class __player_document extends PlayerInteract {
   }
 
   /**
-   * 
+   *
    */
   preview() {
     this._cleanupEditorListeners();
