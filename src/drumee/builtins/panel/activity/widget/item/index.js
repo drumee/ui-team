@@ -206,10 +206,14 @@ class __activity_item extends LetcBox {
             return
 
           case 'share_open':
-            // Share-open notification ("{email} opened {folder}"). No server-side
-            // dismiss (7-day rolling window) — trash snoozes the row for the
-            // session like access_request; the panel skips it on refresh.
-            this.triggerHandlers({ service: 'dismiss-activity', item_type, item_key })
+            // Share-open notification ("{email} opened {folder}"). Persistent dismiss
+            // via secure_share.mark_open_seen — pass token_id + recipient_email so the
+            // panel can mark THIS (token, recipient) group seen on the server.
+            this.triggerHandlers({
+              service: 'dismiss-activity', item_type, item_key,
+              token_id: this.mget('token_id'),
+              recipient_email: this.mget('recipient_email'),
+            })
             return
         }
     }
@@ -353,15 +357,18 @@ class __activity_item extends LetcBox {
         break;
 
       case 'share_open':
-        // Secure/public share-open notification ("{email} opened {folder}").
-        // Clicking opens the shared folder so the creator can see what was
-        // accessed, then dismisses the row and closes the panel — matching the
-        // media/teamchat rows. `node_id` is the shared node (the proc returns it
-        // as node_id, not nid). Dismiss is session-only: these open rows have no
-        // server read-state (7-day rolling window), so the panel just skips the
-        // dismissed key on refresh (see _dismissActivity / list_open_notifications).
+        // Secure/public share-open notification ("{email} opened {folder}"), now an
+        // ordinary feed row. Clicking opens the shared folder so the creator can see
+        // what was accessed, then marks it seen (persistent) and closes the panel —
+        // matching the media/teamchat rows. `node_id` is the shared node. Pass
+        // token_id + recipient_email so the panel persists the seen state via
+        // secure_share.mark_open_seen (so it stays out of Unread + survives reload).
         location.hash = `#/desk/wm/open/?hub_id=${hub_id}&nid=${this.mget('node_id') || nid}&filetype=folder&pid=0&ts=${ts}`;
-        this.triggerHandlers({ service: 'dismiss-activity', item_type, item_key });
+        this.triggerHandlers({
+          service: 'dismiss-activity', item_type, item_key,
+          token_id: this.mget('token_id'),
+          recipient_email: this.mget('recipient_email'),
+        });
         this.triggerHandlers({ service: 'close-activity-panel' });
         break;
     }
