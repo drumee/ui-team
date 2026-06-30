@@ -1115,6 +1115,18 @@ class ___widget_chatItem extends LetcBox {
   }
 
   /**
+   * True when this row is rendered INSIDE a chat already scoped to a file thread
+   * (the side panel or in-place Files-tab thread view). There the reply-in-thread
+   * action is meaningless (you're already in the thread), so the toolbar icon is
+   * suppressed — normal reply still applies. Detected via the parent chat
+   * widget's isFileThreadMode() (scopedFileNid set).
+   */
+  _isInFileThread() {
+    const chat = this.getParentByKind && this.getParentByKind("widget_chat");
+    return !!(chat && typeof chat.isFileThreadMode === "function" && chat.isFileThreadMode());
+  }
+
+  /**
    * Fast sync check: does this message reference a file? Either an uploaded
    * attachment (is_attachment / non-empty attachment) or an inline file-mention
    * anchor in the rendered bubble. Avoids the async attachment fetch for plain
@@ -1361,22 +1373,24 @@ class ___widget_chatItem extends LetcBox {
         return;
 
       case _e.reply: {
-        // TEAM CHAT ONLY: replying to a message that references a file — an
-        // uploaded attachment OR an inline file-mention — posts the reply INTO
-        // that file's chat thread (keeping the reply quote), instead of the
-        // folder General chat. Any other message / any other chat context falls
-        // through to the normal reply below.
-        if (this._isTeamChat() && this._hasThreadableFile()) {
-          this._startFileThreadReply(cmd, args);
-          return;
-        }
-        // Normal reply — bubble to the chat widget (mirrors `default`).
+        // Always a NORMAL reply — bubble to the chat widget (mirrors `default`).
+        // Reply-in-thread is now a separate toolbar icon (case below), shown
+        // only on file messages in team chat, so this icon never auto-routes.
         this.source = cmd;
         this.service = service;
         args = args || {};
         args.service = service;
         this.triggerHandlers(args);
         return (this.service = "");
+      }
+
+      case "reply-in-thread": {
+        // Dedicated reply-in-thread icon (file messages, team chat only — the
+        // skeleton only renders it there). Posts the reply INTO the referenced
+        // file's chat thread, keeping the reply quote: 1 file → straight in,
+        // several → file picker, none (race) → normal reply fallback.
+        this._startFileThreadReply(cmd, args);
+        return;
       }
 
       case "pick-thread-file": {

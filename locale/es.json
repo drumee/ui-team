@@ -987,6 +987,7 @@
   "RESEND_INVITE_CONFIRMATION": "An invitation was sent less than 6 hours ago. <br> Would you like to resend the invitation?",
   "INVITATION_HAS_BEEN_SENT_SUCCESSFULLY": "Invitation has been sent successfully.",
   "GO_TO_SECURITY_TAB": "To Security",
+  "SELECT": "Seleccionar",
   "SELECT_ALL": "Select all",
   "CLEAR_ALL": "Clear all",
   "INVALID_USER": "Invalid user",

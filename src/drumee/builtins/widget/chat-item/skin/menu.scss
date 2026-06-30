@@ -56,10 +56,24 @@
       padding: 4px 8px;
     }
 
+    // Divider isolating the leading reply-in-thread icon from the standard
+    // actions. The pill stays white in both themes, so a fixed faint dark rule
+    // reads correctly; the container's 8px gap gives it breathing room either
+    // side. Only rendered when the reply-in-thread icon is present.
+    &__divider {
+      align-self: stretch;
+      width: 1px;
+      min-height: 16px;
+      flex-shrink: 0;
+      background-color: var(--primary-purple-100, #0b0a21);
+      opacity: 0.15;
+    }
+
     // Each action is a 16×16 icon in Primary/100, accenting to purple on hover.
     // Icons keep their own aspect ratio inside the box (preserveAspectRatio), so
     // the wider legacy forward glyph simply scales to fit.
     &__item {
+      position: relative; // anchor for the absolute hover tooltip (&__tooltip)
       color: var(--primary-purple-100, #0b0a21);
       cursor: pointer;
       height: 16px;
@@ -77,6 +91,51 @@
       // React/smiley icon — live action, same opacity as other action icons.
       &.react {
         opacity: 1;
+      }
+
+      // Reply-in-thread uses ctxmenu-chat-thread (viewBox 13×12, glyph fills
+      // edge-to-edge) which scales up larger than the chat-action-* set (16×16
+      // viewBox with padding). Constrain its svg so it reads at the same optical
+      // size as the neighbours.
+      &.reply-in-thread svg {
+        width: 13px;
+        height: 13px;
+      }
+    }
+
+    // Hover tooltip — dark bubble floating above the icon (Figma "Forward
+    // message" style). The framework creates it from each button's `tooltips`
+    // prop and shows/hides it on pointerenter/leave (toggling inline display);
+    // here we only style + position it. Theme-aware: --normal-fg-10 is the
+    // darkest foreground (#0b0a21 navy in light theme → light lavender in dark),
+    // so the bubble inverts against the panel; text uses the matching surface.
+    // The caret reuses the bubble fill so it stays in sync across themes.
+    &__tooltip {
+      position: absolute;
+      bottom: calc(100% + 8px);
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 1000;
+      pointer-events: none;
+      white-space: nowrap;
+      padding: 6px 10px;
+      border-radius: 12px;
+      background-color: var(--normal-fg-10, #0b0a21);
+      color: var(--normal-bg-100, #ffffff);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18);
+      font-size: 12px;
+      line-height: 14px;
+      font-weight: 400;
+
+      // Downward caret pointing at the icon, same fill as the bubble.
+      &::after {
+        content: "";
+        position: absolute;
+        top: 100%;
+        left: 50%;
+        transform: translateX(-50%);
+        border: 5px solid transparent;
+        border-top-color: var(--normal-fg-10, #0b0a21);
       }
     }
   }
