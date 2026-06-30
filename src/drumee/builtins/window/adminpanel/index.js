@@ -141,9 +141,19 @@ class ___window_admin_panel extends __window_interact_singleton {
    * @param {function} callback 
   */
   getMyOrg(callback = null) {
+    const orgid = (Visitor && Visitor.get) ? Visitor.get('org_id') : null;
+    if (!orgid) {
+      // Account has no organization → nothing to administer. Render the frame
+      // (and let the page handle the empty org) instead of firing a my_organisation
+      // call with a null orgid.
+      this.warn('admin: no org_id (account has no organization)');
+      this.updateTitle && this.updateTitle();
+      callback && callback();
+      return;
+    }
     const data = {
       service: SERVICE.adminpanel.my_organisation,
-      orgid: Visitor.get('org_id')
+      orgid
     }
     this.fetchService(data, { async: 0 })
       .then((data) => {
@@ -211,10 +221,29 @@ class ___window_admin_panel extends __window_interact_singleton {
     return
   }
 
+  /**
+   * Lazy-load the admin-console plugin the first time the window opens, so the
+   * moved page/widget kinds (members_page, domain_page, …) resolve before
+   * router() feeds them. This window shell stays in the monolith as the frame;
+   * the content lives in @drumee/admin-console.
+   */
+  async ensureAdminPlugin() {
+    if (Kind.get('members_page')) return; // already registered
+    const plugins = Platform.get('plugins') || {};
+    const cfg = (plugins && plugins.admin_console) || { name: 'admin-console', kind: 'members_page' };
+    try {
+      await Kind.loadPlugin({ name: cfg.name, kind: cfg.kind });
+      await Kind.waitFor('members_page');
+    } catch (e) {
+      this.warn('admin-console plugin failed to load', e);
+    }
+  }
+
   /* *********************************************************
    * Router
    * ********************************************************* */
-  router(page = 'members_page', options = {}) {
+  async router(page = 'members_page', options = {}) {
+    await this.ensureAdminPlugin();
     let route = () => {
       this.route = page;
       this.getPart(_a.search).el.dataset.status = _a.closed //to close search-bar, if navigating through pages

@@ -856,7 +856,7 @@ class ___members_page extends LetcBox {
   */
   importAllAccounts() {
     this.postService({
-      service: SERVICE.adminpanel.members_import,
+      service: SERVICE.adminpanel.member_import,
       secret: this.importResponse.secret,
       //hub_id   : Visitor.id, 
       orgid: this.organisation.id,
