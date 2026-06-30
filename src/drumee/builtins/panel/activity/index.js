@@ -1318,11 +1318,12 @@ class __panel_activity extends LetcBox {
     }
     this._decrementBadge(1);
 
-    if (itemType === 'access_request') {
-      // Pending secure-share request: no server-side dismiss endpoint (resolved via
-      // approve/deny). Just remove the row from view; its key is already tracked in
-      // _dismissedKeys above so refreshActivity skips it this session. It reappears
-      // only on a full reload, where the sender can still approve/deny it.
+    if (itemType === 'access_request' || itemType === 'share_open') {
+      // Client-only dismiss (no server endpoint). access_request resolves via
+      // approve/deny; share_open is a 7-day rolling open-notification with no
+      // server read-state. The key is already tracked in _dismissedKeys above so
+      // refreshActivity skips it this session (the panel filters share_open:<id>
+      // and access_request:<id>). It reappears only on a full reload.
       if (cmd && cmd.goodbye) cmd.goodbye();
       return;
     }

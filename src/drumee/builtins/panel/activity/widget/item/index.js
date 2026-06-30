@@ -204,6 +204,13 @@ class __activity_item extends LetcBox {
             // row for the session; the panel removes it and skips it on refresh.
             this.triggerHandlers({ service: 'dismiss-activity', item_type, item_key })
             return
+
+          case 'share_open':
+            // Share-open notification ("{email} opened {folder}"). No server-side
+            // dismiss (7-day rolling window) — trash snoozes the row for the
+            // session like access_request; the panel skips it on refresh.
+            this.triggerHandlers({ service: 'dismiss-activity', item_type, item_key })
+            return
         }
     }
 
@@ -343,6 +350,19 @@ class __activity_item extends LetcBox {
             workspace_name : this.mget('workspace_name'),
           });
         }
+        break;
+
+      case 'share_open':
+        // Secure/public share-open notification ("{email} opened {folder}").
+        // Clicking opens the shared folder so the creator can see what was
+        // accessed, then dismisses the row and closes the panel — matching the
+        // media/teamchat rows. `node_id` is the shared node (the proc returns it
+        // as node_id, not nid). Dismiss is session-only: these open rows have no
+        // server read-state (7-day rolling window), so the panel just skips the
+        // dismissed key on refresh (see _dismissActivity / list_open_notifications).
+        location.hash = `#/desk/wm/open/?hub_id=${hub_id}&nid=${this.mget('node_id') || nid}&filetype=folder&pid=0&ts=${ts}`;
+        this.triggerHandlers({ service: 'dismiss-activity', item_type, item_key });
+        this.triggerHandlers({ service: 'close-activity-panel' });
         break;
     }
   }
