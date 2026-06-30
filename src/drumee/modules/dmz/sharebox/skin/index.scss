@@ -470,25 +470,31 @@
     white-space: nowrap;
   }
 
+  // TEMP campaign ("See more"): render the gate CTA as a white text link with a
+  // "→" arrow instead of the white pill. REVERT after campaign to the pill:
+  //   btn   → background:#fff; border-radius:999px; padding:18px 34px; hover filter:brightness(0.97)
+  //   label → color #34343a; remove the ::after arrow
+  // (the pill is pixel-matched to Figma; this is a campaign-only deviation.)
   &__gate-signup-btn {
     flex-shrink: 0;
-    background: #ffffff;
-    border-radius: 999px;
-    padding: 18px 34px;
     align-items: center;
     justify-content: center;
     cursor: pointer;
 
     &:hover {
-      filter: brightness(0.97);
+      opacity: 0.85;
     }
   }
 
   &__gate-signup-label {
-    @include drumee.typo($size: 20px, $line: 20px, $weight: 600, $color: #34343a);
+    @include drumee.typo($size: 20px, $line: 20px, $weight: 600, $color: #ffffff);
     font-family: var(--sb-font-body);
     letter-spacing: -0.4px;
     white-space: nowrap;
+
+    &::after {
+      content: " →";
+    }
   }
 }
 
