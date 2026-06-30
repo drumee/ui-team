@@ -38,7 +38,26 @@ const __button = function (ui, trigger, k) {
 
     background: button({ content: LOCALE.SET_AS_BACKGROUND, service: 'set-as-background' }),
 
-    seeChatThreads: button({ content: LOCALE.SEE_CHAT_THREADS, service: _a.chat }),
+    // "Chat Threads" parent: hover-expand submenu (same pattern as `organize`).
+    // Children → View (scope chat to this file, service _a.chat) and Download
+    // (file-scoped export modal, service 'download-file-chat'). The parent row
+    // itself is a no-op (interact.js `case 'chat-threads'`); the submenu opens on
+    // hover via CSS (.contextmenu-item:hover > &__submenu).
+    seeChatThreads: Skeletons.Box.X({
+      content: LOCALE.CHAT_THREADS,
+      service: 'chat-threads',
+      kids: [
+        Skeletons.Note({ content: LOCALE.CHAT_THREADS, className: `${pfx}__label` }),
+        Skeletons.Note({ content: '›', className: `${pfx}__chevron` }),
+        Skeletons.Box.Y({
+          className: `${pfx}__submenu`,
+          kids: [
+            button({ content: LOCALE.VIEW_CHAT_THREADS, service: _a.chat, className: `${pfx} submenu-item`, uiHandler: [ui] }),
+            button({ content: LOCALE.DOWNLOAD_CHAT_THREADS, service: 'download-file-chat', className: `${pfx} submenu-item`, uiHandler: [ui] }),
+          ],
+        }),
+      ],
+    }),
 
     copy: button({ content: LOCALE.COPY, service: _e.copy }),
 
@@ -221,11 +240,10 @@ const __button = function (ui, trigger, k) {
 
     }
 
-    // organize: already a Box.X; its first kid is the __label Note.
+    // organize / seeChatThreads: already a Box.X submenu; its first kid is the
+    // __label Note. Just prepend the icon when one is mapped.
 
-    // Just prepend the icon when one is mapped.
-
-    if (k === 'organize') {
+    if (k === 'organize' || k === 'seeChatThreads') {
 
       r.className = cls;
 

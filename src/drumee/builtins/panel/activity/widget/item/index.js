@@ -204,6 +204,17 @@ class __activity_item extends LetcBox {
             // row for the session; the panel removes it and skips it on refresh.
             this.triggerHandlers({ service: 'dismiss-activity', item_type, item_key })
             return
+
+          case 'share_open':
+            // Share-open notification ("{email} opened {folder}"). Persistent dismiss
+            // via secure_share.mark_open_seen — pass token_id + recipient_email so the
+            // panel can mark THIS (token, recipient) group seen on the server.
+            this.triggerHandlers({
+              service: 'dismiss-activity', item_type, item_key,
+              token_id: this.mget('token_id'),
+              recipient_email: this.mget('recipient_email'),
+            })
+            return
         }
     }
 
@@ -269,8 +280,15 @@ class __activity_item extends LetcBox {
     }
     switch (category) {
       case _a.media:
-        location.hash = `#/desk/wm/open/?hub_id=${hub_id}&nid=${target_nid}&filetype=${target_filetype}&pid=${parent_id}&ts=${ts}`;
+        // highlight=1 → reveal the file in its folder (scroll + select + flash)
+        // instead of opening it in a player. Scoped to notification clicks.
+        location.hash = `#/desk/wm/open/?hub_id=${hub_id}&nid=${target_nid}&filetype=${target_filetype}&pid=${parent_id}&highlight=1&ts=${ts}`;
         this.triggerHandlers({ service: 'dismiss-activity', hub_id, nid: target_nid, item_type, changelog_id })
+        // Opening the file is an explicit "I've handled this" → close the panel.
+        // Kept separate from dismiss-activity (the trash button uses that alone
+        // and must NOT close the panel) and from item destroy (see onDomRefresh
+        // note: list.restart()/dismiss also destroy items).
+        this.triggerHandlers({ service: 'close-activity-panel' })
         return
 
       case _a.hub_invite:
@@ -336,6 +354,22 @@ class __activity_item extends LetcBox {
             workspace_name : this.mget('workspace_name'),
           });
         }
+        break;
+
+      case 'share_open':
+        // Secure/public share-open notification ("{email} opened {folder}"), now an
+        // ordinary feed row. Clicking opens the shared folder so the creator can see
+        // what was accessed, then marks it seen (persistent) and closes the panel —
+        // matching the media/teamchat rows. `node_id` is the shared node. Pass
+        // token_id + recipient_email so the panel persists the seen state via
+        // secure_share.mark_open_seen (so it stays out of Unread + survives reload).
+        location.hash = `#/desk/wm/open/?hub_id=${hub_id}&nid=${this.mget('node_id') || nid}&filetype=folder&pid=0&ts=${ts}`;
+        this.triggerHandlers({
+          service: 'dismiss-activity', item_type, item_key,
+          token_id: this.mget('token_id'),
+          recipient_email: this.mget('recipient_email'),
+        });
+        this.triggerHandlers({ service: 'close-activity-panel' });
         break;
     }
   }

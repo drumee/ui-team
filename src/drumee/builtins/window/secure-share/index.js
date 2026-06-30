@@ -127,6 +127,8 @@ class __window_secure_share extends mfsInteract {
         this._accessEvents = child;
         this._loadAccessEvents();   // PRIMARY view — auto-expanded, load on render
         return;
+      case 'access-events-label':
+        return this._accessEventsLabel = child;
       case 'link-result':
         return this._linkResult = child;
       case 'approve-overlay':
@@ -510,11 +512,21 @@ class __window_secure_share extends mfsInteract {
     const nid    = this.mget(_a.nid);
     const hub_id = this.mget(_a.hub_id);
     const events_skl = require('./skeleton/access-events');
+    let list = [];
     try {
       const rows = await this.postService(SERVICE.secure_share.list_access_events, { nid, hub_id });
-      this._accessEvents.feed(events_skl(this, Array.isArray(rows) ? rows : []));
+      if (Array.isArray(rows)) list = rows;
     } catch (e) {
-      this._accessEvents.feed(events_skl(this, []));
+      list = [];
+    }
+    this._accessEvents.feed(events_skl(this, list));
+    // Reflect the access count in the toggle header (e.g. "View access list (12)"),
+    // mirroring the Shared-links label (_renderShareList). Count = rows shown =
+    // total access events. Empty/error → plain label (no "(0)"), like Shared-links.
+    if (this._accessEventsLabel) {
+      this._accessEventsLabel.el.textContent = list.length
+        ? `${LOCALE.SECURE_SHARE_VIEW_ACCESS_LIST} (${list.length})`
+        : LOCALE.SECURE_SHARE_VIEW_ACCESS_LIST;
     }
   }
 

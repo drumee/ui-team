@@ -1308,11 +1308,28 @@
     right: 0;
     width: 360px;
     height: 100%;
-    gap: 24px;
-    padding: 0 0 24px;
-    overflow-y: auto;
+    overflow: hidden;
     background: #f2f2f7;
     box-shadow: 0 1px 11px rgba(0, 0, 0, 0.13);
+  }
+
+  &__settings-action-header {
+    align-items: center;
+    flex: 0 0 auto;
+    min-height: 65px;
+    padding: 16px 24px 17px;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+  }
+
+  // Scrollable body — flexes to fill the space below the pinned header and
+  // scrolls the actions / invite / members sections together.
+  &__settings-action-scroll {
+    flex: 1 1 auto;
+    min-height: 0;
+    width: 100%;
+    gap: 24px;
+    padding: 24px 0;
+    overflow-y: auto;
 
     scrollbar-width: none;
     -ms-overflow-style: none;
@@ -1320,13 +1337,6 @@
     &::-webkit-scrollbar {
       display: none;
     }
-  }
-
-  &__settings-action-header {
-    align-items: center;
-    min-height: 65px;
-    padding: 16px 24px 17px;
-    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
   }
 
   &__settings-action-actions,
@@ -2657,7 +2667,16 @@
   // content) makes this hold in both cases. The reply skin's theme-aware
   // --normal-fg-* turn white in dark mode and wash out on the fixed light bubble;
   // covers the new file name/extension lines the meta-row pins above miss.
-  .window__chat-panel .widget-chatItem-reply__main.me {
+  // EVERY folder-window chat (the #General middle column AND the file-thread side
+  // panel) uses the same light "me" bubble, so the dark override must reach the
+  // nested quote in both — otherwise it falls back to the base chat-item
+  // white-on-indigo rule and renders white (see chat-item/skin#589). Scope to the
+  // folder-window root only (this whole file is already nested under .window-folder,
+  // so the bare selector compiles to `.window-folder .widget-chatItem-reply__main.me`):
+  // the panel's own wrapper classes (`__ft-panel-chat`, `__file-thread-panel`) do NOT
+  // end up as ancestors of the rendered quote, so scoping to them never matches —
+  // the folder-window root is the only reliable shared ancestor.
+  .widget-chatItem-reply__main.me {
     .widget-chatItem-reply__note.name,
     .widget-chatItem-reply__note.name .note-content,
     .widget-chatItem-reply__note.filename,
@@ -2701,14 +2720,30 @@
   }
 
   &__split-body[data-view="chat"] {
-    grid-template-columns: 1fr;
+    // Two columns: docked thread rail (Figma 2328-115485) + chat fills the rest.
+    grid-template-columns: clamp(240px, 22vw, 300px) minmax(0, 1fr);
 
     .window__files-panel {
       display: none;
     }
 
+    .window__thread-rail {
+      display: flex;
+    }
+
+    // File thread open → 3rd column hosts the docked file-thread chat panel
+    // (Figma 2331-46821). data-thread is toggled by the folder window.
+    &[data-thread="open"] {
+      grid-template-columns:
+        clamp(240px, 22vw, 300px) minmax(0, 1fr) clamp(300px, 26vw, 380px);
+
+      .window__file-thread-panel {
+        display: flex;
+      }
+    }
+
     .window__chat-panel {
-      flex: 1 1 100%;
+      flex: 1 1 0;
       width: 100%;
       min-width: 0;
       max-width: none;
@@ -3160,9 +3195,14 @@
       }
 
       &[data-view="chat"] {
+        // Compact (≤700px): no room for the rail/side panel beside the chat —
+        // chat goes full width, the docked thread list + file-thread panel stay
+        // hidden (header 3-dot dropdown still provides thread switching).
         .window__files-panel,
         .window__meeting-panel,
-        .window__tasks-panel {
+        .window__tasks-panel,
+        .window__thread-rail,
+        .window__file-thread-panel {
           display: none;
         }
 
@@ -3374,6 +3414,639 @@ html[data-theme="dark"] {
         background-color: var(--active-item-bg);
         color: var(--normal-fg-800);
       }
+    }
+  }
+}
+
+// ── Team-chat header (Figma 2216-168072) + thread-switch dropdown (2216-170337) ──
+// Theme-aware via runtime tokens (dark mode inherits automatically); the brand
+// tint and error-red badge are intentional fixed accents.
+.window-folder {
+  // Header shares the .window__chat-label box (height/border/mono uppercase),
+  // then lays title + actions on a row. (Box.X sets display/flex-direction.)
+  .window__chat-header {
+    justify-content: space-between;
+    gap: 8px;
+  }
+
+  .window__chat-header-title {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    // Figma 2216-168072: "Team Chat" in Geist Regular 14px, normal case —
+    // overrides the shared .window__chat-label mono/uppercase section-label style.
+    font-family: "Geist", sans-serif;
+    font-size: 14px;
+    font-weight: 400;
+    line-height: 1.4;
+    letter-spacing: 0;
+    text-transform: none;
+    color: var(--normal-fg-10, #0b0a21);
+  }
+
+  .window__chat-header-actions {
+    flex: 0 0 auto;
+    align-items: center;
+    gap: 8px; // Figma gap between the two action icons
+  }
+
+  // Figma: thin Phosphor icons in a compact 20px hit box (icon ~16px, radius 4).
+  .window__chat-header-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    border-radius: 4px;
+    cursor: pointer;
+    color: var(--normal-fg-10);
+    fill: var(--normal-fg-10);
+
+    svg {
+      width: 16px;
+      height: 16px;
+    }
+
+    &:hover {
+      background-color: var(--hover-bg-40);
+    }
+  }
+
+  // File-thread mode (Figma 2216-166665): back + paperclip + filename + tag,
+  // actions pushed right by the growing file box. data-scope is set by the
+  // folder window when it re-feeds the header part on scope change.
+  .window__chat-header[data-scope="file"] {
+    justify-content: flex-start;
+    gap: 12px;
+  }
+
+  .window__chat-header-back {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    width: 24px;
+    height: 24px;
+    border-radius: 4px;
+    cursor: pointer;
+    color: var(--normal-fg-10);
+    fill: var(--normal-fg-10);
+
+    svg {
+      width: 16px;
+      height: 16px;
+    }
+
+    &:hover {
+      background-color: var(--hover-bg-40);
+    }
+  }
+
+  // Search mode (magnifying glass → header swap, Figma): back arrow + one input
+  // filling the row. Back arrow reuses .window__chat-header-back chrome; the
+  // input sits flush like the chat-p2p compose search.
+  .window__chat-header[data-scope="search"] {
+    justify-content: flex-start;
+    gap: 8px;
+  }
+
+  .window__chat-search-input {
+    flex: 1 1 auto;
+    min-width: 0;
+
+    input {
+      width: 100%;
+      padding: 6px 10px;
+      border: 1px solid var(--border-muted);
+      border-radius: 6px;
+      background-color: var(--normal-bg-90);
+      @include drumee.typo($size: 13px, $color: var(--normal-fg-10));
+      outline: none;
+
+      &:focus {
+        border-color: var(--primary-40);
+      }
+    }
+  }
+
+  .window__chat-header-file {
+    flex: 1 1 auto;
+    min-width: 0;
+    align-items: center;
+    gap: 8px;
+    overflow: hidden;
+  }
+
+  // Badge holds the paperclip OR (image/vector) the file's vignette thumbnail —
+  // hydrated by _hydrateChatHeaderFile, mirroring the chat file-thread card.
+  .window__chat-header-file-badge {
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    border-radius: 4px;
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+  }
+
+  .window__chat-header-file-badge--image .window__chat-header-file-ico {
+    display: none; // thumbnail replaces the icon
+  }
+
+  .window__chat-header-file-ico {
+    flex: 0 0 16px;
+    width: 16px;
+    height: 16px;
+    fill: var(--primary-40, #5950ff); // paperclip in brand color (Figma)
+    color: var(--primary-40, #5950ff);
+  }
+
+  .window__chat-header-file-name {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-family: "Geist", sans-serif;
+    font-size: 14px;
+    font-weight: 400;
+    line-height: 1.4;
+    letter-spacing: 0;
+    text-transform: none;
+    color: var(--normal-fg-10, #0b0a21);
+  }
+
+  // "File thread" pill — subtle theme-aware tint, small grey label.
+  .window__chat-header-file-tag {
+    flex: 0 0 auto;
+    padding: 2px 8px;
+    border-radius: 12px;
+    background: var(--hover-bg-40);
+    font-family: "Geist", sans-serif;
+    font-size: 10px;
+    font-weight: 400;
+    line-height: 1.4;
+    letter-spacing: 0;
+    text-transform: none;
+    color: var(--normal-fg-50, #65656c);
+  }
+
+  // The header now carries the file-thread context, so the chat widget's own
+  // in-list scope chip is redundant here — hide it (folder window only).
+  .widget-chat__scope-chip-bar {
+    display: none !important;
+  }
+
+  // Anchor the absolute dropdown to the panel so it overlays the chat body.
+  .window__chat-panel {
+    position: relative;
+  }
+
+  .window__thread-menu {
+    position: absolute;
+    top: 44px;
+    right: 8px;
+    z-index: 30;
+    width: 246px;
+    max-width: calc(100% - 16px);
+
+    &[data-open="0"] {
+      display: none;
+    }
+  }
+
+  // Backend message-search results overlay (channel.search). Fills the chat
+  // panel below the header (same 44px anchor as the thread dropdown) and covers
+  // the conversation while a query is active. Toggled via data-open.
+  .window__search-results {
+    position: absolute;
+    top: 44px;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 25;
+    gap: 8px;
+    padding: 10px 8px;
+    overflow-y: auto;
+    background: var(--normal-bg-90);
+
+    &[data-open="0"] {
+      display: none;
+    }
+  }
+
+  .window__search-results-label {
+    flex: 0 0 auto;
+    padding: 2px 4px 6px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--normal-fg-50);
+  }
+
+  .window__search-results-empty {
+    padding: 16px 8px;
+    text-align: center;
+    color: var(--normal-fg-50);
+    font-size: 13px;
+  }
+
+  .window__search-results-list {
+    gap: 2px;
+  }
+
+  .window__search-result {
+    align-items: flex-start;
+    gap: 8px;
+    padding: 8px;
+    border-radius: 8px;
+    cursor: pointer;
+
+    &:hover {
+      background: var(--hover-bg-40);
+    }
+  }
+
+  .window__search-result-body {
+    flex: 1 1 auto;
+    min-width: 0;
+    gap: 2px;
+  }
+
+  .window__search-result-top {
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 8px;
+  }
+
+  .window__search-result-name {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--normal-fg-10);
+  }
+
+  .window__search-result-time {
+    flex: 0 0 auto;
+    font-size: 11px;
+    color: var(--normal-fg-50);
+  }
+
+  .window__search-result-preview {
+    font-size: 12px;
+    line-height: 1.4;
+    color: var(--normal-fg-50);
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+  }
+
+  .window__thread-menu__card {
+    gap: 8px;
+    padding: 12px;
+    border-radius: 8px;
+    background: var(--normal-bg-elevated, #fff);
+    box-shadow: 0 1px 5.5px rgba(0, 0, 0, 0.13);
+  }
+
+  .window__thread-menu__section {
+    gap: 4px;
+  }
+
+  .window__thread-menu__section-label {
+    @include drumee.typo(
+      $size: 12px,
+      $line: 1.4,
+      $weight: 400,
+      $color: var(--normal-fg-50, #65656c)
+    );
+  }
+
+  .window__thread-menu__divider {
+    height: 1px;
+    margin: 4px 0;
+    background: var(--border-muted);
+  }
+
+  .window__thread-menu__row {
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+    padding: 8px;
+    border-radius: 8px;
+    cursor: pointer;
+
+    &:hover {
+      background-color: var(--hover-bg-40);
+    }
+
+    &.is-active {
+      background-color: rgba(89, 80, 255, 0.1); // Overlay/brand tint
+    }
+  }
+
+  .window__thread-menu__row-ico {
+    flex: 0 0 17px;
+    width: 17px;
+    height: 17px;
+    fill: var(--normal-fg-10);
+    color: var(--normal-fg-10);
+  }
+
+  .window__thread-menu__row-name {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    @include drumee.typo(
+      $size: 12px,
+      $line: 1.4,
+      $weight: 400,
+      $color: var(--normal-fg-10, #0b0a21)
+    );
+  }
+
+  .window__thread-menu__badge {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    min-width: 14px;
+    height: 14px;
+    padding: 0 4px;
+    border-radius: 100px;
+    background: #d74e49; // Signal/Error
+    @include drumee.typo($size: 8px, $line: 1, $weight: 400, $color: #fff);
+  }
+
+  .window__thread-menu__download {
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 4px 0;
+    cursor: pointer;
+  }
+
+  .window__thread-menu__download-label {
+    @include drumee.typo(
+      $size: 12px,
+      $line: 1.4,
+      $weight: 400,
+      $color: var(--normal-fg-50, #65656c)
+    );
+  }
+
+  .window__thread-menu__download-ico {
+    flex: 0 0 17px;
+    width: 17px;
+    height: 17px;
+    fill: var(--normal-fg-50);
+    color: var(--normal-fg-50);
+  }
+
+  // ── Docked thread rail (full Chat tab, Figma 2328-115485) ──────────────
+  // Same thread list as the header dropdown, persistent on the left. Hidden by
+  // default; the [data-view="chat"] block above flips it to flex.
+  .window__thread-rail {
+    display: none;
+    min-height: 0;
+    padding: 16px 12px;
+    border-right: 1px solid var(--border-muted);
+    background: var(--normal-bg-90);
+    overflow-y: auto;
+  }
+
+  // Rail variant of the thread-menu card: drop the floating-card chrome (the
+  // dropdown's shadow/radius/elevated bg) and stretch full height so the
+  // Download row can pin to the bottom like the design.
+  .window__thread-menu__card--rail {
+    flex: 1 1 auto;
+    min-height: 0;
+    padding: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+  }
+
+  // Download Chat history sits at the very bottom of the rail (Figma).
+  .window__thread-menu__card--rail > .window__thread-menu__section:last-child {
+    margin-top: auto;
+  }
+
+  // ── File-thread side panel (full Chat tab 3rd column, Figma 2331-47041) ──
+  // Header (paperclip + name + "File thread" pill + X) over a scoped chat
+  // widget. Hidden until the split-body carries data-thread="open".
+  .window__file-thread-panel {
+    display: none;
+    min-height: 0;
+    border-left: 1px solid var(--border-muted);
+    background: var(--normal-bg-90);
+  }
+
+  // Panel header reuses the file-thread chat-header-* styling (data-scope="file"
+  // → paperclip badge + name + tag, X pushed right by the growing file box);
+  // only the box height/border is panel-specific.
+  .window__ft-panel-header {
+    flex: 0 0 auto;
+    min-height: 43px;
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--border-muted);
+  }
+
+  // The scoped chat widget fills the panel below its header.
+  .window__ft-panel-chat {
+    flex: 1 1 auto;
+    min-height: 0;
+    width: 100%;
+    max-width: none;
+
+    // chat-item appends a second sender avatar — a Skeletons.UserProfile
+    // (confirmed `.widget-chatItem__profile.user-profile`, data-online) — on
+    // every "other" message in share-type chats. The template avatar (plain
+    // `__profile`, top-left next to the name) is the correct one; this duplicate
+    // stacked below the bubble and overlapped neighbours. Hide it in the panel.
+    .widget-chatItem__profile.user-profile {
+      display: none !important;
+    }
+  }
+
+  // Info card pinned at the top of the panel body (Figma 2216-165656): paperclip
+  // / vignette badge | row1 filename + "Open file →" | row2 chat-icon N replies •
+  // time. Mirrors the General chat's file-thread card; only "Open file →" clicks.
+  .window__ft-info-card {
+    flex: 0 0 auto;
+    align-items: flex-start;
+    gap: 12px;
+    margin: 12px;
+    padding: 12px;
+    border-radius: 12px;
+    background: var(--normal-bg-elevated, #fff);
+  }
+
+  .window__ft-info-badge {
+    flex: 0 0 36px;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    background: rgba(89, 80, 255, 0.1); // --primary-40 @ 10%
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+  }
+
+  .window__ft-info-badge--image .window__ft-info-ico {
+    display: none; // vignette replaces the paperclip
+  }
+
+  .window__ft-info-ico {
+    flex: 0 0 20px;
+    width: 20px;
+    height: 20px;
+    fill: var(--primary-40, #5950ff);
+    color: var(--primary-40, #5950ff);
+  }
+
+  .window__ft-info-body {
+    flex: 1 1 auto;
+    min-width: 0;
+    gap: 4px;
+  }
+
+  .window__ft-info-top {
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    min-width: 0;
+  }
+
+  .window__ft-info-name {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    @include drumee.typo(
+      $size: 14px,
+      $line: 1.4,
+      $weight: 400,
+      $color: var(--normal-fg-10, #0b0a21)
+    );
+  }
+
+  .window__ft-info-open {
+    flex: 0 0 auto;
+    white-space: nowrap;
+    cursor: pointer;
+    @include drumee.typo(
+      $size: 12px,
+      $line: 1.4,
+      $weight: 400,
+      $color: var(--primary-40, #5950ff)
+    );
+
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+
+  .window__ft-info-meta {
+    align-items: center;
+    gap: 4px;
+    @include drumee.typo(
+      $size: 12px,
+      $line: 1.4,
+      $weight: 400,
+      $color: var(--normal-fg-50, #65656c)
+    );
+  }
+
+  .window__ft-info-meta-ico {
+    flex: 0 0 14px;
+    width: 14px;
+    height: 14px;
+    fill: var(--normal-fg-50, #65656c);
+    color: var(--normal-fg-50, #65656c);
+  }
+
+  .window__ft-info-dot {
+    opacity: 0.7;
+  }
+
+  // In-place (Files tab) file-thread info card slot — pinned above the chat,
+  // hidden until the folder window feeds it on file scope (data-open="1").
+  .window__chat-info-slot {
+    flex: 0 0 auto;
+
+    &[data-open="0"] {
+      display: none;
+    }
+  }
+
+  // Side-panel own-message bubbles: mirror the General chat's area-tinted fill +
+  // dark foreground (the base .me bubble is a saturated indigo, but the General
+  // chat repaints it to a light area tint via .window__chat-panel[data-area];
+  // those rules don't match the file-thread panel, so replicate them here keyed
+  // off the panel's own data-area). Both the flat and wrapped bubble structures.
+  .window__file-thread-panel[data-area="personal"]
+    .widget-chatItem__conversation-content.me,
+  .window__file-thread-panel[data-area="personal"]
+    .widget-chatItem__conversation.me
+    .widget-chatItem__conversation-content {
+    background: var(--chat-bubble-personal);
+  }
+  .window__file-thread-panel[data-area="share"]
+    .widget-chatItem__conversation-content.me,
+  .window__file-thread-panel[data-area="share"]
+    .widget-chatItem__conversation.me
+    .widget-chatItem__conversation-content,
+  .window__file-thread-panel[data-area="dmz"]
+    .widget-chatItem__conversation-content.me,
+  .window__file-thread-panel[data-area="dmz"]
+    .widget-chatItem__conversation.me
+    .widget-chatItem__conversation-content {
+    background: var(--chat-bubble-share);
+  }
+  .window__file-thread-panel[data-area="public"]
+    .widget-chatItem__conversation-content.me,
+  .window__file-thread-panel[data-area="public"]
+    .widget-chatItem__conversation.me
+    .widget-chatItem__conversation-content {
+    background: var(--chat-bubble-public);
+  }
+
+  // Dark foreground on the now-light own bubble (text + links + attachment card +
+  // reply quote), mirroring .window__chat-panel .me so nothing washes out.
+  .window__file-thread-panel .widget-chatItem__conversation-content.me {
+    color: var(--primary-purple-100);
+
+    .file-mention,
+    .user-mention,
+    a {
+      color: var(--primary-purple-50);
+    }
+
+    .filename,
+    .media-grid__chatmeta,
+    .media-grid__filesize,
+    .media-grid__meta-sep {
+      color: var(--primary-purple-100) !important;
+    }
+    .media-grid__reveal {
+      color: var(--primary-purple-50) !important;
+    }
+    .widget-chatItem-reply__note.name,
+    .widget-chatItem-reply__note.name .note-content {
+      color: var(--primary-purple-100);
     }
   }
 }

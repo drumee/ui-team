@@ -769,31 +769,12 @@ class __panel_activity extends LetcBox {
     } catch (e) {
       this.warn('[panel_activity] secure_share.list_requests failed', e);
     }
-    // Recent share-open notifications for the creator ("{email} opened {folder}").
-    // Fetched separately from secure_share_access_event; guarded so it no-ops
-    // gracefully before the backing SP is applied to the DB, and never affects the
-    // rest of the list. Deduped per recipient server-side.
-    let openNotifs = [];
-    try {
-      const on = await this.postService({
-        service: (SERVICE.secure_share && SERVICE.secure_share.list_open_notifications) || 'secure_share.list_open_notifications',
-        hub_id: Visitor.id,
-      });
-      const rows = _.isArray(on) ? on : (_.isArray(on?.data) ? on.data : []);
-      const dismissedOpen = this._dismissedKeys || new Set();
-      openNotifs = rows
-        .filter((r) => !dismissedOpen.has(`share_open:${r.id}`))
-        .map((r) => ({
-          ...r,
-          category: 'share_open',
-          key_id: r.id,
-          last_id: r.last_seen_at,
-          ctime: r.last_seen_at,
-        }));
-    } catch (e) {
-      this.warn('[panel_activity] secure_share.list_open_notifications failed', e);
-    }
-    const merged = accessReqs.concat(openNotifs, live);
+    // Share-open notifications ("{email} opened {folder}") are no longer pinned
+    // here — they now flow through activity.get_feed as ordinary, toggle-aware,
+    // persistently-dismissable feed events (the server merges secure_share_open_feed
+    // into the feed). Keeping them out of the pinned section is the whole point of
+    // that move, so do NOT re-add an open-notifications fetch here.
+    const merged = accessReqs.concat(live);
 
     const unread_count = merged.length;
     RADIO_BROADCAST.trigger('activity-update', { unread_count });
@@ -892,15 +873,9 @@ class __panel_activity extends LetcBox {
           e.sender     = it.requester_email;
           e.fullname   = it.requester_email;
           break;
-        case 'share_open':
-          // A recipient opened a secure share with notify-on-open enabled:
-          // "{email} opened {folder}". Informational — keeps the default row click.
-          e.event      = 'secure_share.opened';
-          e.action     = LOCALE.SECURE_SHARE_OPENED_ACTION;
-          e.link_label = it.node_name || it.workspace_name || '';
-          e.sender     = it.recipient_email;
-          e.fullname   = it.recipient_email;
-          break;
+        // share_open is intentionally NOT handled here anymore: share-open
+        // notifications now render as ordinary activity.get_feed rows (unpinned),
+        // mapped by the item skeleton's own 'share_open' case. See refreshActivity.
         // case 'media':
         //   e.service = 'open-folder';
         //   break;
@@ -1320,9 +1295,33 @@ class __panel_activity extends LetcBox {
 
     if (itemType === 'access_request') {
       // Pending secure-share request: no server-side dismiss endpoint (resolved via
-      // approve/deny). Just remove the row from view; its key is already tracked in
-      // _dismissedKeys above so refreshActivity skips it this session. It reappears
-      // only on a full reload, where the sender can still approve/deny it.
+      // approve/deny). Client-only — its key is tracked in _dismissedKeys above so
+      // refreshActivity skips it this session; it reappears only on a full reload.
+      if (cmd && cmd.goodbye) cmd.goodbye();
+      return;
+    }
+
+    if (itemType === 'share_open') {
+      // Persistent dismiss: mark THIS open-notification group (token + recipient)
+      // seen on the server so it stays out of the Unread feed and survives a reload
+      // (still shows under Unread OFF). Scoped server-side to the caller's own
+      // shares. Best-effort: goodbye() the row regardless so the UI feels instant.
+      const tokenId = args.token_id || (cmd && cmd.mget && cmd.mget('token_id'));
+      const recipientEmail = (args.recipient_email != null)
+        ? args.recipient_email
+        : (cmd && cmd.mget && cmd.mget('recipient_email'));
+      if (tokenId) {
+        try {
+          await this.postService({
+            service: (SERVICE.secure_share && SERVICE.secure_share.mark_open_seen) || 'secure_share.mark_open_seen',
+            hub_id: Visitor.id,
+            token_id: tokenId,
+            recipient_email: recipientEmail || null,
+          });
+        } catch (e) {
+          this.warn('[activity] mark_open_seen failed', e);
+        }
+      }
       if (cmd && cmd.goodbye) cmd.goodbye();
       return;
     }
@@ -1373,7 +1372,11 @@ class __panel_activity extends LetcBox {
           keyId = args.key_id || m('drumate_id') || m('peer_id') || m('key_id');
           break;
         case 'media':
-          keyId = args.key_id || m('hub_id') || m('key_id');
+          // notification_center_next keys media rollups per folder (nid = the
+          // folder a file lives in). notification_dismiss(media) marks `_seen_`
+          // on the files under that folder nid, so send the folder nid — not
+          // hub_id (which the dismiss can't use). Falls back to hub_id/key_id.
+          keyId = args.key_id || m('nid') || m('hub_id') || m('key_id');
           break;
         case 'teamchat':
           // notification_center_next now keys teamchat per folder: key_id = folder

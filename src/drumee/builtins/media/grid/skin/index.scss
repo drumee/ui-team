@@ -16,6 +16,21 @@
 @include meta.load-css("effects.scss");
 @include meta.load-css("forbiden.scss");
 
+// Shared soft-fill shape for the cell's :before backdrop (hover / selected /
+// notification highlights). Only the background colour differs between states.
+@mixin grid-cell-fill($bg) {
+  content: " ";
+  position: absolute;
+  top: -6px;
+  left: -6px;
+  width: calc(100% + 12px);
+  height: calc(100% + 12px);
+  background: $bg;
+  border-radius: var(--corner-radius-3);
+  pointer-events: none;
+  z-index: 0;
+}
+
 .media-grid {
   &__ui {
     position: relative;
@@ -124,36 +139,25 @@
   // the filename — replaces the legacy primary-100-5 tint over the label only.
   // :not([data-selected="1"]) prevents stacking with the selected fill below.
   &[data-hover="on"]:not([data-selected="1"]) {
-    &:before {
-      content: " ";
-      position: absolute;
-      top: -6px;
-      left: -6px;
-      width: calc(100% + 12px);
-      height: calc(100% + 12px);
-      background: var(--grid-hover-bg);
-      border-radius: var(--corner-radius-3);
-      pointer-events: none;
-      z-index: 0;
-    }
+    &:before { @include grid-cell-fill(var(--grid-hover-bg)); }
+  }
+
+  // Notification-origin highlight: a persistent soft fill on new-file cells,
+  // applied ONLY when the folder was opened by clicking a notification item.
+  // The attribute is set on the cell (media/core.js) and — unlike the badge's
+  // data-count — survives mark-as-seen, so new files stay flagged until the
+  // file is opened or the window is closed. Deliberately NOT keyed off
+  // data-count: a plain folder open shows the badge number but no backdrop.
+  // :not([data-selected="1"]) prevents stacking with the selected fill below.
+  &:not([data-selected="1"])[data-ui-highlight="1"] {
+    &:before { @include grid-cell-fill(var(--primary-10)); }
   }
 
   &[data-selected="1"] {
     // Subtle fill on selected item instead of bordered frame.
     // Padding around the cell so the highlight looks like a soft shape
     // wrapping both the icon area and the label/meta-row.
-    &:before {
-      content: " ";
-      position: absolute;
-      top: -6px;
-      left: -6px;
-      width: calc(100% + 12px);
-      height: calc(100% + 12px);
-      background: var(--grid-selected-bg);
-      border-radius: var(--corner-radius-3);
-      pointer-events: none;
-      z-index: 0;
-    }
+    &:before { @include grid-cell-fill(var(--grid-selected-bg)); }
   }
 
   .content-preview {

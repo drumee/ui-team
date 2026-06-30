@@ -31,6 +31,11 @@ class __window_info extends mfsInteract {
    * 
    */
   onDomRefresh() {
+    // A `variant` model field (e.g. "notice" for the compact, window-confirm
+    // styled invite toast) is surfaced as a data attribute so the skin can
+    // scope its layout without affecting the default info dialogs/alerts.
+    const variant = this.mget("variant");
+    if (this.el && variant) this.el.dataset.variant = variant;
     this.feed(require("./skeleton")(this));
     this.raise()
   }

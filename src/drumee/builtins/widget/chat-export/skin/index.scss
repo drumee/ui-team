@@ -1,0 +1,536 @@
+/* ============================================================ *
+ * Skin: widget-chat-export
+ * Figma node 2216-257014 — "Export chat history"
+ *
+ * Token map (Figma → CSS var):
+ *   #5950FF  → --primary-purple-40   (accent / active border)
+ *   #433CC5  → --primary-purple-50   (download button bg)
+ *   #0B0A21  → --primary-purple-100  (folder name, strong text)
+ *   #65656C  → --tertiary-grey-80    (meta / secondary text)
+ *   #847EFF  → --primary-purple-30   (date-range switch on)
+ *   #34343A  — no exact token; closest is --neutral-900 (#222732).
+ *              Hardcoded as #34343A for title text (noted: no token).
+ *   Card drop-shadow uses --primary-purple-80-5 (rgba 2d2a6a 0.37).
+ * ============================================================ */
+@use 'mixins/drumee';
+
+// Do NOT set display:flex / flex-direction here — Box.* components set them.
+
+// ── Fix #1: viewport-level overlay (fixed, z-index 99997) ───────────────────
+// Skeletons.Wrapper.Y("chat-export") is appended
+// to the folder window via this.append() so Marionette owns the lifecycle.
+// position:fixed + inset:0 escapes the window's overflow/clip and covers the
+// full viewport. z-index 99997 sits below the topbar (99999) and invite-popup
+// (99998) but above all window content. The wrapper itself IS the backdrop;
+// clicking it (not the card) fires _closeChatExportOverlay in the folder window.
+// Skeletons.Wrapper.Y auto-adds class "dialog__wrapper" — we override position
+// and z-index here because dialog__wrapper in window.scss is position:absolute.
+.widget-chat-export__viewport-backdrop {
+  position: fixed !important;  // override window.scss dialog__wrapper absolute
+  inset: 0;
+  z-index: 99997;
+  background: var(--transparency-container-overlay, rgba(137, 146, 158, 0.40));
+  display: flex !important;    // override Wrapper default (Box.Y sets flex via kind)
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  animation: _chat-export-backdrop-in 0.15s ease;
+
+  // Show when data-state=open (Wrapper toggles this).
+  &[data-state="open"] {
+    width: 100% !important;    // override dialog__wrapper width:auto
+    height: 100% !important;
+  }
+}
+
+@keyframes _chat-export-backdrop-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+// ── modal widget ──────────────────────────────────────────────────────────────
+// The widget's own root el (.widget-chat-export__ui, .widget-chat-export) sits
+// inside the viewport container — no position override needed here.
+
+.widget-chat-export {
+
+  // ── modal card ──────────────────────────────────────────────
+  &__card {
+    background: #ffffff;
+    border-radius: 24px;
+    padding: 33px;
+    gap: 24px;
+    // Figma: inner content column is 464px; card = 464 + 33*2 padding = 530px.
+    width: 530px;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 8px 40px var(--primary-purple-80-5, rgba(45, 42, 106, 0.37));
+  }
+
+  // ── header ──────────────────────────────────────────────────
+  &__header {
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  &__header-left {
+    gap: 10px;
+    align-items: center;
+  }
+
+  &__header-ico {
+    width: 32px;
+    height: 32px;
+    color: var(--primary-purple-40);
+  }
+
+  &__header-title {
+    @include drumee.typo(
+      $color: #34343a,  // no token; nearest is --neutral-900 #222732 (too dark), used Figma value
+      $size: 24px,
+      $weight: 600,
+      $line: 32px
+    );
+  }
+
+  &__header-close {
+    width: 32px;
+    height: 32px;
+    padding: 9px;
+    border-radius: 8px;
+    color: var(--neutral-700);
+    cursor: pointer;
+
+    &:hover {
+      background: var(--neutral-100);
+    }
+  }
+
+  // ── folder card ─────────────────────────────────────────────
+  // Fix #2: __folder-open-link removed from skeleton; its SCSS rule is kept
+  // here but will never match (safe to leave for any stale DOM).
+  &__folder-card {
+    border: 1px solid var(--neutral-200);
+    border-radius: 12px;
+    padding: 12px;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  &__folder-left {
+    gap: 10px;
+    align-items: center;
+  }
+
+  &__folder-icon-box {
+    width: 40px;
+    height: 40px;
+    border-radius: 8px;
+    // Default tint (purple) — overridden inline via styleOpt when folder_color
+    // is available (Fix #2: real folder color from colorFromName).
+    background: rgba(89, 80, 255, 0.1);
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  &__folder-icon {
+    width: 22px;
+    height: 22px;
+    // Default — overridden inline when folder_color is available.
+    color: var(--primary-purple-40);
+  }
+
+  &__folder-info {
+    gap: 2px;
+  }
+
+  &__folder-name {
+    @include drumee.typo(
+      $color: var(--primary-purple-100),
+      $size: 16px,
+      $line: 22px
+    );
+  }
+
+  &__folder-meta {
+    gap: 6px;
+    align-items: center;
+  }
+
+  &__folder-meta-ico {
+    width: 14px;
+    height: 14px;
+    color: var(--tertiary-grey-80);
+  }
+
+  &__folder-meta-text {
+    @include drumee.typo(
+      $color: var(--tertiary-grey-80),
+      $size: 14px,
+      $line: 20px
+    );
+  }
+
+  &__folder-meta-sep {
+    @include drumee.typo($color: var(--tertiary-grey-80), $size: 14px);
+  }
+
+  // ── sections ────────────────────────────────────────────────
+  &__section {
+    gap: 10px;
+  }
+
+  &__section-label {
+    @include drumee.typo(
+      $color: var(--primary-purple-100),
+      $size: 16px,
+      $weight: 600,
+      $line: 22px
+    );
+  }
+
+  // ── format cards ─────────────────────────────────────────────
+  &__format-row {
+    gap: 12px;
+  }
+
+  &__format-card {
+    flex: 1;
+    border: 1.5px solid rgba(0, 0, 0, 0.05);
+    border-radius: 8px;
+    padding: 12px;
+    gap: 6px;
+    cursor: pointer;
+    transition: border-color 0.15s;
+
+    &.is-active {
+      border-color: var(--primary-purple-40);
+    }
+
+    &:hover:not(.is-active) {
+      border-color: var(--neutral-300);
+    }
+  }
+
+  &__format-card-top {
+    align-items: center;
+    gap: 8px;
+  }
+
+  &__format-icon-box {
+    width: 32px;
+    height: 32px;
+    border-radius: 6px;
+    background: var(--neutral-100);
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+
+    &.is-active {
+      background: rgba(89, 80, 255, 0.1);
+    }
+  }
+
+  &__format-icon {
+    width: 18px;
+    height: 18px;
+    color: var(--neutral-600);
+
+    .is-active & {
+      color: var(--primary-purple-40);
+    }
+  }
+
+  &__format-title {
+    @include drumee.typo(
+      $color: var(--primary-purple-100),
+      $size: 16px,
+      $weight: 600,
+      $line: 24px
+    );
+
+    &.is-active {
+      color: var(--primary-purple-40);
+    }
+
+    // Fix #3: user requested visibly bolder PDF/JSON titles (700 vs 600).
+    &--bold {
+      font-weight: 700;
+    }
+  }
+
+  &__format-subtitle {
+    @include drumee.typo(
+      $color: var(--tertiary-grey-80),
+      $size: 14px,
+      $line: 20px
+    );
+  }
+
+  // ── scope list ───────────────────────────────────────────────
+  &__scope-list {
+    border: 1px solid var(--neutral-200);
+    border-radius: 12px;
+    padding: 4px 0;
+    max-height: 220px;
+    overflow-y: auto;
+  }
+
+  // Fix #6: scope rows use Box.X with service + uiHandler on the container so
+  // the entire row is the tap target. kidsOpt active:0 on child nodes ensures
+  // clicks don't stop at an inner element before reaching the row handler.
+  &__scope-row {
+    padding: 10px 14px;
+    gap: 10px;
+    align-items: center;
+    cursor: pointer;
+
+    &:hover {
+      background: var(--neutral-50);
+    }
+
+    &--child {
+      padding-left: 40px; // ~26px indent from spec + 14px base
+    }
+  }
+
+  &__checkbox {
+    width: 18px;
+    height: 18px;
+    border-radius: 4px;
+    border: 1.5px solid var(--neutral-400);
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+
+    &.is-checked {
+      background: var(--primary-purple-40);
+      border-color: var(--primary-purple-40);
+    }
+  }
+
+  // Fix #5: chat-tick is a bare stroke-only tick (no circle background).
+  // The containing __checkbox box provides the purple square; the icon is
+  // just the white tick stroke on top.
+  &__checkbox-ico {
+    width: 12px;
+    height: 12px;
+    color: #ffffff;
+    // chat-tick uses stroke, not fill — ensure currentColor flows through.
+    stroke: currentColor;
+  }
+
+  &__scope-label {
+    @include drumee.typo(
+      $color: var(--primary-purple-100),
+      $size: 14px,
+      $line: 20px
+    );
+  }
+
+  &__scope-thread-ico {
+    width: 16px;
+    height: 16px;
+    color: var(--tertiary-grey-80);
+    flex-shrink: 0;
+  }
+
+  &__scope-caret {
+    width: 16px;
+    height: 16px;
+    color: var(--tertiary-grey-80);
+    margin-left: auto;
+    transition: transform 0.15s;
+
+    &.is-expanded {
+      transform: rotate(180deg);
+    }
+  }
+
+  // ── date range ───────────────────────────────────────────────
+  &__date-header {
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  &__date-switch {
+    // Track + knob toggle (no Skeletons.Switch builder exists).
+    width: 40px;
+    height: 20px;
+    flex-shrink: 0;
+    padding: 2px;
+    border-radius: 12px;
+    background: var(--neutral-300);
+    align-items: center;
+    cursor: pointer;
+    transition: background 0.15s ease;
+
+    &[data-state="1"] {
+      background: var(--primary-purple-30);
+    }
+  }
+
+  &__date-switch-knob {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: var(--white);
+    transition: transform 0.15s ease;
+  }
+
+  &__date-switch[data-state="1"] &__date-switch-knob {
+    transform: translateX(20px);
+  }
+
+  &__date-row {
+    gap: 8px;
+    align-items: center;
+  }
+
+  // Date input: the native calendar-picker-indicator is expanded to cover the
+  // whole input so clicking anywhere opens the OS date picker reliably on every
+  // click (no showPicker() JS, which only fired once).
+  &__date-input-wrap {
+    position: relative;
+    flex: 1;
+    border: 1px solid var(--neutral-300);
+    border-radius: 8px;
+    padding: 8px 10px;
+    gap: 6px;
+    align-items: center;
+    cursor: pointer;
+
+    &:hover {
+      border-color: var(--primary-purple-40);
+    }
+  }
+
+  &__date-icon {
+    width: 16px;
+    height: 16px;
+    color: var(--tertiary-grey-80);
+    flex-shrink: 0;
+    pointer-events: none; // decorative; the indicator overlay handles clicks
+  }
+
+  &__date-input {
+    position: relative;
+    border: none;
+    outline: none;
+    flex: 1;
+    width: 100%;
+    cursor: pointer;
+    @include drumee.typo(
+      $color: var(--primary-purple-100),
+      $size: 14px,
+      $line: 20px
+    );
+    background: transparent;
+
+    // Transparent indicator stretched over the input → clicking the field
+    // opens the native picker every time.
+    &::-webkit-calendar-picker-indicator {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      width: auto;
+      height: auto;
+      margin: 0;
+      opacity: 0;
+      cursor: pointer;
+    }
+  }
+
+  &__date-arrow {
+    width: 16px;
+    height: 16px;
+    color: var(--neutral-500);
+    flex-shrink: 0;
+  }
+
+  // ── footer ───────────────────────────────────────────────────
+  &__footer {
+    gap: 6px;
+  }
+
+  &__footer-divider {
+    height: 1px;
+    background: var(--neutral-200);
+    width: 100%;
+    display: block;
+  }
+
+  &__footer-hint {
+    @include drumee.typo(
+      $color: var(--tertiary-grey-80),
+      $size: 14px,
+      $line: 20px
+    );
+  }
+
+  &__footer-filename-hint {
+    @include drumee.typo(
+      $color: var(--primary-purple-40),
+      $size: 14px,
+      $line: 20px
+    );
+  }
+
+  // ── download button ──────────────────────────────────────────
+  &__download-btn {
+    background: var(--primary-purple-50);  // #433cc5
+    border-radius: 4px;
+    padding: 12px 24px;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background 0.15s;
+
+    &:hover {
+      background: var(--primary-purple-40);
+    }
+
+    &:active {
+      background: var(--primary-purple-60);
+    }
+  }
+
+  &__download-btn-label {
+    @include drumee.typo(
+      $color: #ffffff,
+      $size: 16px,
+      $weight: 600,
+      $line: 24px
+    );
+  }
+
+  // ── progress area ────────────────────────────────────────────
+  &__progress-area {
+    min-height: 0;
+
+    &:empty {
+      display: none;
+    }
+  }
+
+  &__progress {
+    width: 100%;
+    height: 6px;
+    background: var(--neutral-200);
+    border-radius: 3px;
+    overflow: hidden;
+    transition: width 0.3s ease;
+  }
+
+  &__progress-error {
+    @include drumee.typo(
+      $color: var(--red-600),
+      $size: 13px,
+      $line: 18px
+    );
+    padding: 6px 0;
+  }
+}

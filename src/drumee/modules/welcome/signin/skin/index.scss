@@ -699,6 +699,7 @@ $drumee-link-purple: #b1adff;
       $color: $drumee-primary
     );
     width: auto;
+    font-family: var(--font-bold);
   }
 
   &__footer-links {
@@ -713,7 +714,7 @@ $drumee-link-purple: #b1adff;
     justify-content: center;
     gap: 4px;
     width: 100%;
-
+font-family: var(--font-main);
     &-text {
       @include drumee.typo(
         $size: 14px,
@@ -762,6 +763,149 @@ $drumee-link-purple: #b1adff;
     width: 4px;
     height: 4px;
     flex-shrink: 0;
+  }
+
+  // ----- Forgot-password link (in-form) -----
+  &__forgot-row {
+    width: 100%;
+    justify-content: flex-end;
+    align-items: center;
+    margin-top: -4px;
+  }
+
+  &__forgot-link {
+    @include drumee.typo(
+      $size: 12px,
+      $line: 1.4,
+      $weight: 400,
+      $color: $drumee-grey-80
+    );
+    width: auto;
+    cursor: pointer;
+    text-decoration: underline;
+    transition: color 0.2s;
+
+    &:hover {
+      color: $drumee-primary;
+    }
+  }
+
+  // ----- Social buttons cluster (Google + Apple) -----
+  &__social-buttons {
+    width: 100%;
+    gap: 12px;
+  }
+
+  // ----- Terms / legal block -----
+  &__terms-container {
+    display: flex;
+    flex-direction: row;
+    width: 100%;
+    justify-content: center;
+    align-items: center;
+    gap: 24px;
+  }
+
+  &__terms-link {
+    @include drumee.typo(
+      $size: 12px,
+      $line: 1.4,
+      $weight: 400,
+      $color: $drumee-grey-80
+    );
+    width: auto;
+    white-space: nowrap;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: color 0.2s;
+
+    &:hover {
+      color: $drumee-grey-90;
+    }
+  }
+
+  &__terms-dot {
+    @include drumee.typo(
+      $size: 12px,
+      $line: 1.4,
+      $weight: 400,
+      $color: $drumee-grey-80
+    );
+    width: auto;
+  }
+
+  // ----- Check-inbox view -----
+  &__items.check-inbox {
+    align-items: center;
+    text-align: center;
+  }
+
+  &__inbox-icon {
+    width: 72px;
+    height: 72px;
+    padding: 12px;
+    border-radius: 100px;
+    background-color: $drumee-google-bg;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    margin: 0 auto;
+  }
+
+  &__envelope {
+    width: 24px;
+    height: 24px;
+    color: $drumee-primary-hover;
+
+    svg {
+      width: 100%;
+      height: 100%;
+      fill: currentColor;
+    }
+  }
+
+  &__inbox-email {
+    @include drumee.typo(
+      $size: 18px,
+      $line: 1.2,
+      $weight: 600,
+      $color: $drumee-grey-90
+    );
+    font-family: var(--font-bold);
+    width: 100%;
+    justify-content: center;
+    text-align: center;
+    word-break: break-word;
+  }
+
+  &__inbox-footer {
+    align-items: center;
+    text-align: center;
+    width: 100%;
+    gap: 2px;
+  }
+
+  &__inbox-note {
+    @include drumee.typo(
+      $size: 12px,
+      $line: 1.4,
+      $weight: 400,
+      $color: $drumee-grey-80
+    );
+    width: 100%;
+    justify-content: center;
+    text-align: center;
+  }
+
+  // Resend button cooldown ([data-counting]) / permanently disabled
+  // ([data-disabled]) states — the check-inbox view's button-confirm.
+  &__button-confirm {
+    &[data-counting="1"],
+    &[data-disabled="1"] {
+      pointer-events: none;
+      opacity: 0.6;
+    }
   }
 
   // -----  Non-Figma states preserved for OTP / URL / cross-signin flows  -----

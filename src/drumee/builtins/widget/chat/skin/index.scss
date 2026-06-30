@@ -200,24 +200,16 @@
     }
   }
 
-  // Ephemeral typing indicator. Lives in the footer wrapper (pinned at the
-  // panel bottom) and floats just above it, so it always sits right above the
-  // input — regardless of how tall the message area is. Toggled via data-state.
+  // Ephemeral typing indicator, drawn as an incoming-message bubble (Figma
+  // 2370-70205): typer avatar + white bubble with three animated dots. Rendered
+  // as an in-flow row (NOT an overlay) — it lives at the top of the footer
+  // wrapper, so it occupies its own strip just above the input and pushes the
+  // message list up when a peer types, reading as the last incoming item at the
+  // bottom of the conversation. Toggled via data-state.
   &__typing-indicator {
-    position: absolute;
-    // Sit just above the input field. The footer's top edge is the input bar's
-    // top, which has padding/messenger chrome above the actual field, so drop
-    // down into it (negative offset) to hug the field instead of floating above.
-    bottom: calc(100% - 16px);
-    left: 12px;
-    align-items: center;
-    gap: 8px;
-    max-width: calc(100% - 24px);
-    padding: 6px 12px;
-    border-radius: 12px;
-    background-color: var(--normal-bg-90);
-    pointer-events: none;
-    z-index: 50000;
+    align-items: flex-end;
+    gap: 6px;
+    padding: 4px 12px 8px;
     &[data-state="0"] {
       display: none;
     }
@@ -227,17 +219,43 @@
     }
   }
 
+  // Avatar slot — fed a Skeletons.UserProfile of the current typer.
+  &__typing-avatar {
+    flex-shrink: 0;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    overflow: hidden;
+
+    & > * {
+      width: 100%;
+      height: 100%;
+    }
+  }
+
+  // White message bubble holding the dots (incoming-message corner: flat-ish
+  // bottom-left, matching the avatar side).
+  &__typing-bubble {
+    align-items: center;
+    padding: 10px 12px;
+    border-radius: 16px 16px 16px 4px;
+    background-color: var(--white);
+    box-shadow:
+      0 10px 15px -3px rgba(0, 0, 0, 0.08),
+      0 4px 6px -4px rgba(0, 0, 0, 0.08);
+  }
+
   &__typing-dots {
-    align-items: flex-end;
-    gap: 3px;
+    align-items: center;
+    gap: 4px;
     flex-shrink: 0;
   }
 
   &__typing-dot {
-    width: 5px;
-    height: 5px;
+    width: 6px;
+    height: 6px;
     border-radius: 50%;
-    background-color: var(--normal-fg-10);
+    background-color: var(--primary-40); // #5950ff (Figma Primary/40)
     animation: widget-chat-typing-bounce 1.2s infinite ease-in-out;
 
     &:nth-child(2) {
@@ -246,22 +264,7 @@
 
     &:nth-child(3) {
       animation-delay: 0.4s;
-    }
-  }
-
-  &__typing-text {
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    @include drumee.typo(
-      $line: 14px,
-      $size: 12px,
-      $weight: 300,
-      $color: var(--normal-fg-10)
-    );
-
-    .note-content {
-      color: inherit;
+      background-color: var(--primary-purple-20); // #b1adff (Figma Primary/20)
     }
   }
 

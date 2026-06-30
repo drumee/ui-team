@@ -41,6 +41,96 @@ class ___widget_chatItem extends LetcBox {
     return typeof msg === "string" && /^\[\[MEETING:(start|end):/.test(msg);
   }
 
+  // The folder-visible "file thread started" system card. Like meeting cards it
+  // is a centred notice with no hover reply/reaction menu; its only action is
+  // "Open" → switches the folder window to that file's chat thread.
+  _isFileThreadCard() {
+    return this.mget("message_type") === "file.thread";
+  }
+
+  // Any non-conversational system card (meeting OR file.thread) — used to gate
+  // the hover action bar.
+  _isSystemMessage() {
+    return this._isMeeting() || this._isFileThreadCard();
+  }
+
+  // Hydrate the file-thread card with the CURRENT filename + availability from
+  // file_thread_info (rename/delete/move are reflected live, not from a stored
+  // snapshot). Best-effort: a failed fetch just leaves the card as rendered.
+  async _hydrateFileThreadCard() {
+    let md = this.mget("metadata") || {};
+    if (typeof md === "string") {
+      try {
+        md = JSON.parse(md);
+      } catch (e) {
+        md = {};
+      }
+    }
+    const ftId = md._file_thread_id || this.mget("file_thread_id");
+    const fileNid = md._file_nid || this.mget("file_nid");
+    if (!ftId && !fileNid) return;
+    // The chat-item model has no hub_id of its own — without it the request
+    // goes out as hub_id=undefined and the server answers 403. Resolve it
+    // robustly: uiHandler may be a single widget OR an array ([ui]); the
+    // containing folder window carries the authoritative hub_id; Host is the
+    // last resort.
+    let uh = this.mget(_a.uiHandler);
+    if (_.isArray(uh)) uh = uh[0];
+    const folderWin =
+      this.getParentByKind && this.getParentByKind("window_folder");
+    const hubId =
+      this.mget(_a.hub_id) ||
+      (folderWin && folderWin.mget && folderWin.mget(_a.hub_id)) ||
+      (uh && uh.hubId) ||
+      (typeof Host !== "undefined" && Host.get && Host.get(_a.id)) ||
+      "";
+    let info;
+    try {
+      const svc =
+        (SERVICE.channel && SERVICE.channel.file_thread_info) ||
+        "channel.file_thread_info";
+      info = await this.fetchService(svc, {
+        hub_id: hubId,
+        file_thread_id: ftId || "",
+        file_nid: fileNid || "",
+      });
+    } catch (e) {
+      return; /* best-effort hydration */
+    }
+    if (!info) return;
+    // The card body renders asynchronously (feed → message-content), so the
+    // name/badge slots may not be in the DOM yet when this fetch resolves —
+    // retry briefly until they exist.
+    const apply = (tries) => {
+      const nameEl = this.el && this.el.querySelector(`#ftc-name-${this._id}`);
+      if (!nameEl) {
+        if (tries > 0) setTimeout(() => apply(tries - 1), 60);
+        return;
+      }
+      // Filename is the card's primary text (Figma 2216-170414) — no leading
+      // middot (that belonged to the old "X started a file chat ·").
+      nameEl.textContent = info.user_filename || info.filename || "";
+      if (info.media_status && info.media_status !== "active") {
+        this.$el.addClass("ftc-unavailable");
+      }
+      // Swap the paperclip badge for the file's vignette thumbnail (image/
+      // vector files only; others keep the icon).
+      const type = info.filetype || info.category;
+      const nid = fileNid || info.file_nid;
+      if ((type === _a.image || type === _a.vector) && nid) {
+        const badge = this.el.querySelector(`#ftc-badge-${this._id}`);
+        if (badge) {
+          const { mfs_base, keysel } = bootstrap();
+          let url = `${mfs_base}file/vignette/${nid}/${hubId}`;
+          if (keysel) url += `?keysel=${keysel}`;
+          badge.style.backgroundImage = `url("${url}")`;
+          badge.classList.add(`${this.fig.family}__ftc-badge--image`);
+        }
+      }
+    };
+    apply(20);
+  }
+
   /**
    *
    * @param {*} child
@@ -68,6 +158,7 @@ class ___widget_chatItem extends LetcBox {
         messageType === _a.call ||
         messageType === "meeting.start" ||
         messageType === "meeting.end" ||
+        messageType === "file.thread" ||
         this.mget("is_ticket");
       const hasMessageText = !_.isEmpty((this.mget("message") || "").trim());
       // Attachments now render as a card inside the bubble (Figma), so a
@@ -186,9 +277,9 @@ class ___widget_chatItem extends LetcBox {
         }
         // Open the action bar only while hovering the message bubble (the
         // conversation content), mirroring the time reveal — not the whole row.
-        // Meeting system messages are centred notices with no actions, so they
-        // get no hover menu.
-        if (!this._isMeeting()) {
+        // System messages (meeting / file-thread cards) are centred notices with
+        // no actions, so they get no hover menu.
+        if (!this._isSystemMessage()) {
           // Hovering the bubble reveals the action menu (CSS). The emoji
           // quick-bar is opened by CLICKING the smiley in that menu (not by
           // hover), so the hover target is the bubble body, as before.
@@ -394,6 +485,10 @@ class ___widget_chatItem extends LetcBox {
     this.$el.addClass(area);
     if (this._isMeeting()) {
       this.$el.addClass("meeting-event");
+    }
+    if (this._isFileThreadCard()) {
+      this.$el.addClass("file-thread-event");
+      this._hydrateFileThreadCard();
     }
     let html = "";
     let m = {
@@ -769,6 +864,7 @@ class ___widget_chatItem extends LetcBox {
       document.removeEventListener("click", this._pickerOutsideHandler, true);
       this._pickerOutsideHandler = null;
     }
+    this._closeThreadPicker();
     if (super.onBeforeDestroy) super.onBeforeDestroy();
   }
 
@@ -804,6 +900,22 @@ class ___widget_chatItem extends LetcBox {
     if (chip) {
       const emoji = chip.dataset.emoji;
       if (emoji) this._toggleReaction(emoji);
+      e.stopPropagation();
+      e.preventDefault();
+      return;
+    }
+
+    // (1.5) File-thread card — open on capture. The card HTML lives inside a
+    // framework Skeletons.Element bubble whose onclick (__handleClick →
+    // getService) stopImmediatePropagation's, so a bubble-phase click dies at
+    // the Element and never reaches our outer onclick (dispatchUiEvent) — the
+    // exact "needed several taps" trap. Capture beats it; _openFileThread's
+    // guard dedupes the rare bubble re-fire (see dispatchUiEvent fallback).
+    const ftCard =
+      target.closest &&
+      target.closest('[data-service="open-file-thread"]');
+    if (ftCard) {
+      this._openFileThread(ftCard);
       e.stopPropagation();
       e.preventDefault();
       return;
@@ -907,8 +1019,268 @@ class ___widget_chatItem extends LetcBox {
         );
         return;
       }
+
+      case "open-file-thread": {
+        // Fallback only — the reliable path is the capture handler
+        // (_handleSelectionClick → _openFileThread). This bubble case rarely
+        // runs because the inner Element swallows the bubble; _openFileThread's
+        // guard makes a double-fire a no-op.
+        const target =
+          e &&
+          e.target.closest &&
+          e.target.closest('[data-service="open-file-thread"]');
+        this._openFileThread(target);
+        return;
+      }
     }
     return false;
+  }
+
+  /**
+   * Open the per-file chat thread for a clicked file-thread card. Called from
+   * the capture-phase click handler (primary, click-reliable) and the bubble
+   * dispatchUiEvent case (fallback). A short guard dedupes the two firing for
+   * one click. Switches the containing folder window to the file-scoped Chat
+   * tab, or reuses/launches one when clicked outside a folder window.
+   * @param {HTMLElement} target the [data-service="open-file-thread"] card
+   */
+  _openFileThread(target) {
+    if (!target || !target.dataset) return;
+    if (this._openingFileThread) return; // dedupe capture + bubble for one click
+    const file_nid = target.dataset.file_nid;
+    if (!file_nid) return;
+    this._openingFileThread = true;
+    setTimeout(() => {
+      this._openingFileThread = false;
+    }, 600);
+    const filename = target.dataset.filename || "";
+    const ownFolder =
+      this.getParentByKind && this.getParentByKind("window_folder");
+    if (ownFolder && _.isFunction(ownFolder.scopeChatToFile)) {
+      // Scope the (already-visible) chat to the file IN PLACE — no auto-switch
+      // to the full Chat tab.
+      if (ownFolder.raise) ownFolder.raise();
+      ownFolder.scopeChatToFile(file_nid, filename);
+      return;
+    }
+    // Outside a folder window (e.g. workspace/bigchat root chat): reuse an open
+    // folder window for this hub, or launch one scoped to the file. Mirrors
+    // _showInFolder + join-meeting window reuse. The file chat keys off
+    // file_nid, so the hub root folder window suffices. No forced Chat tab — the
+    // window opens on its default tab with the embedded chat scoped.
+    const hub_id =
+      this.mget(_a.hub_id) ||
+      (this.mget(_a.uiHandler) && this.mget(_a.uiHandler).hubId);
+    if (hub_id && Wm.launch) {
+      const existing = (
+        (Wm.getItemsByKind && Wm.getItemsByKind("window_folder")) ||
+        []
+      ).find((w) => !w.isDestroyed() && w.mget(_a.hub_id) == hub_id);
+      if (existing && _.isFunction(existing.scopeChatToFile)) {
+        if (existing.raise) existing.raise();
+        existing.scopeChatToFile(file_nid, filename);
+        return;
+      }
+      Wm.launch(
+        {
+          kind: "window_folder",
+          hub_id,
+          scopedFileNid: file_nid,
+          scopedFileLabel: filename,
+          wm_unique_id: `window_folder-${hub_id}`,
+        },
+        { explicit: 1, singleton: 1 },
+      );
+      return;
+    }
+    // Last resort: bubble to the containing chat widget's uiHandler chain.
+    this.triggerHandlers({
+      service: "open-file-thread",
+      file_nid,
+      filename,
+    });
+  }
+
+  // ===========================================================
+  // Reply-in-thread (team chat only)
+  // ===========================================================
+
+  /**
+   * True when this message row lives inside a folder window — i.e. the team
+   * chat. The per-file thread feature exists only there, so reply-in-thread is
+   * gated on it (p2p / share / desk chats keep the normal reply).
+   */
+  _isTeamChat() {
+    return !!(this.getParentByKind && this.getParentByKind("window_folder"));
+  }
+
+  /**
+   * Fast sync check: does this message reference a file? Either an uploaded
+   * attachment (is_attachment / non-empty attachment) or an inline file-mention
+   * anchor in the rendered bubble. Avoids the async attachment fetch for plain
+   * text messages.
+   */
+  _hasThreadableFile() {
+    if (this.mget("is_attachment") || !_.isEmpty(this.mget("attachment"))) return true;
+    return !!(this.messageEl && this.messageEl.querySelector(".file-mention"));
+  }
+
+  /**
+   * Resolve the file(s) this message references → [{ file_nid, filename }].
+   * Mentions are read from the DOM (inline anchors carry data-nid/data-filename).
+   * Uploaded attachments are fetched via the same SERVICE.chat.attachment api
+   * used to render the cards (the records carry the folder file nid). Deduped.
+   */
+  async _resolveThreadFiles() {
+    const out = [];
+    const seen = new Set();
+    const push = (nid, filename) => {
+      const id = `${nid || ""}`;
+      if (!id || seen.has(id)) return;
+      seen.add(id);
+      out.push({ file_nid: id, filename: filename || "" });
+    };
+
+    // Inline file-mentions (synchronous, already in the DOM).
+    if (this.messageEl) {
+      this.messageEl.querySelectorAll(".file-mention").forEach((a) => {
+        if (a.dataset) push(a.dataset.nid, a.dataset.filename);
+      });
+    }
+
+    // Uploaded attachments (fetched — the message model holds no file nid).
+    if (this.mget("is_attachment") || !_.isEmpty(this.mget("attachment"))) {
+      try {
+        const data = await this.fetchService(this.getAttachments());
+        (_.isArray(data) ? data : [data]).filter(Boolean).forEach((f) => {
+          // A device-uploaded attachment is a per-message sbox COPY (its own
+          // nid), but its chat thread is keyed by the FOLDER file. channel.post
+          // exposes that as folder_nid — use it so reply-in-thread opens the SAME
+          // thread as the folder's "View Chat Threads" (avoids two threads per
+          // uploaded file). Mentions already carry the folder nid directly.
+          push(f.folder_nid || f.nid, f.filename || f.user_filename);
+        });
+      } catch (e) {
+        this.warn("reply-in-thread: attachment fetch failed", e);
+      }
+    }
+    return out;
+  }
+
+  /**
+   * Entry from the reply action when the message is a file message in team chat.
+   * 1 file → reply straight into its thread; many → show a picker; none (race) →
+   * fall back to a normal reply.
+   */
+  async _startFileThreadReply(cmd, args) {
+    let files = [];
+    try {
+      files = await this._resolveThreadFiles();
+    } catch (e) {
+      files = [];
+    }
+    if (this.isDestroyed && this.isDestroyed()) return;
+    if (!files.length) {
+      // Not actually a file message → normal reply (mirror default bubble).
+      this.source = cmd;
+      this.service = _e.reply;
+      args = args || {};
+      args.service = _e.reply;
+      this.triggerHandlers(args);
+      this.service = "";
+      return;
+    }
+    if (files.length === 1) return this._emitReplyInThread(files[0]);
+    return this._openFileThreadReplyPicker(files);
+  }
+
+  /**
+   * Pull the chat into `file`'s thread (same routing as clicking the file-thread
+   * card — in-place on the Files tab, docked side panel on the full Chat tab),
+   * carrying a snapshot of THIS message so the thread composer shows the reply
+   * quote ("Reply to X in thread"). The quote is captured first because the
+   * scope reload destroys this row.
+   */
+  _emitReplyInThread(file) {
+    this._closeThreadPicker();
+    const replyData = this._captureQuoteForThread();
+    const folder =
+      this.getParentByKind && this.getParentByKind("window_folder");
+    if (folder && _.isFunction(folder.scopeChatToFile)) {
+      if (folder.raise) folder.raise();
+      folder.scopeChatToFile(file.file_nid, file.filename, { replyData });
+      return;
+    }
+    // Defensive: outside a folder window — open the thread without a quote.
+    this.triggerHandlers({
+      service: "open-file-thread",
+      file_nid: file.file_nid,
+      filename: file.filename || "",
+    });
+  }
+
+  /**
+   * Snapshot this message for the reply quote BEFORE a scope reload destroys the
+   * row. Mirrors chat/index.js#replyMessage's capture (model snapshot + each
+   * rendered attachment card's getAttr) so the thread composer's quote renders
+   * identically to a normal reply.
+   */
+  _captureQuoteForThread() {
+    const snapshot = this.model ? this.model.toJSON() : {};
+    if (snapshot) delete snapshot.is_attachment;
+    const attachments = [];
+    if (
+      (this.mget("is_attachment") || !_.isEmpty(this.mget("attachment"))) &&
+      this.__list &&
+      this.__list.children
+    ) {
+      this.__list.children.each((view) => {
+        if (view && typeof view.getAttr === "function") {
+          attachments.push(view.getAttr());
+        }
+      });
+    }
+    return { message_id: this.mget("message_id"), snapshot, attachments };
+  }
+
+  /**
+   * Multi-file message: float a small picker beside the bubble (same lazy-append
+   * + click-outside pattern as the reaction quick-bar) so the user chooses which
+   * file's thread to reply into.
+   */
+  _openFileThreadReplyPicker(files) {
+    this._closeThreadPicker();
+    const fig = this.fig.family;
+    const line =
+      this.__main && this.__main.el.querySelector(`.${fig}__message-line`);
+    if (!line) return this._emitReplyInThread(files[0]);
+
+    this.append(require("./skeleton/file-thread-reply-picker")(this, files));
+    this._threadPicker = this.children.last();
+    if (this._threadPicker && this._threadPicker.el) {
+      line.appendChild(this._threadPicker.el);
+    }
+
+    const closeOnOutside = (ev) => {
+      if (!this.el || this.el.contains(ev.target)) return;
+      this._closeThreadPicker();
+      document.removeEventListener("click", closeOnOutside, true);
+    };
+    setTimeout(() => {
+      document.addEventListener("click", closeOnOutside, true);
+      this._threadPickerOutsideHandler = closeOnOutside;
+    }, 0);
+  }
+
+  _closeThreadPicker() {
+    if (this._threadPicker && !this._threadPicker.isDestroyed()) {
+      this._threadPicker.goodbye();
+    }
+    this._threadPicker = null;
+    if (this._threadPickerOutsideHandler) {
+      document.removeEventListener("click", this._threadPickerOutsideHandler, true);
+      this._threadPickerOutsideHandler = null;
+    }
   }
 
   /**
@@ -987,6 +1359,33 @@ class ___widget_chatItem extends LetcBox {
         this.select();
         this.triggerHandlers({ service });
         return;
+
+      case _e.reply: {
+        // TEAM CHAT ONLY: replying to a message that references a file — an
+        // uploaded attachment OR an inline file-mention — posts the reply INTO
+        // that file's chat thread (keeping the reply quote), instead of the
+        // folder General chat. Any other message / any other chat context falls
+        // through to the normal reply below.
+        if (this._isTeamChat() && this._hasThreadableFile()) {
+          this._startFileThreadReply(cmd, args);
+          return;
+        }
+        // Normal reply — bubble to the chat widget (mirrors `default`).
+        this.source = cmd;
+        this.service = service;
+        args = args || {};
+        args.service = service;
+        this.triggerHandlers(args);
+        return (this.service = "");
+      }
+
+      case "pick-thread-file": {
+        // A row in the multi-file reply picker — open that file's thread.
+        const file_nid = `${cmd.mget("file_nid") || (cmd.el && cmd.el.dataset && cmd.el.dataset.file_nid) || ""}`;
+        const filename = cmd.mget("filename") || (cmd.el && cmd.el.dataset && cmd.el.dataset.filename) || "";
+        if (file_nid) this._emitReplyInThread({ file_nid, filename });
+        return;
+      }
 
       default:
         this.source = cmd;
@@ -1218,6 +1617,10 @@ class ___widget_chatItem extends LetcBox {
    * avatars, then an "and more …" label when there are more than 3.
    */
   renderReaders() {
+    // File-thread cards are navigational summaries, not real messages — keep
+    // their read-receipt avatar row empty (template ships data-empty="1", which
+    // the skin hides) so no "seen" avatars hang under the card.
+    if (this._isFileThreadCard()) return;
     const id = `readers-${this._id}`;
     this.waitElement(id, () => {
       const el = document.getElementById(id);

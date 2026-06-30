@@ -1,21 +1,31 @@
 @use "mixins/drumee";
 
+// Manage-Access side panel, restyled after the folder Settings panel
+// (window-folder__settings-action-panel): a light surface, a pinned header
+// with a bottom divider, padded sections with 12px/600 labels, light-grey
+// rounded rows, white field rows, and a purple primary action.
+//
+// The folder panel hard-codes its light colors and adds a dark-mode override;
+// here the identical values come from the runtime tokens that override maps to
+// (--normal-bg-90 == #f2f2f7, --overlay-bg-05 == rgba(0,0,0,.05),
+// --normal-fg-10 == #0b0a21, --border-default, --normal-bg-elevated == #fff),
+// so a single block tracks both themes.
 .permission-share {
   &__ui {
     position: absolute;
     width: 360px;
     height: 100%;
     right: -360px;
-    bottom: 0px;
+    bottom: 0;
     top: 0;
-    background-color: var(--normal-bg-90);
     display: flex;
     flex-direction: column;
     align-items: flex-start;
-    padding: 0px;
-    box-shadow: var(--shadow-left-big);
+    padding: 0;
+    overflow: hidden;
+    background-color: var(--normal-bg-90);
+    box-shadow: 0 1px 11px rgba(0, 0, 0, 0.13);
     transition: right 0.5s;
-    border-radius: var(--spacer-4);
 
     &[data-position="out"] {
       right: -360px;
@@ -27,17 +37,24 @@
   }
 
   &__main {
+    flex-direction: column;
     width: 100%;
-    gap: var(--spacer-6);
-    padding: var(--spacer-6);
+    height: 100%;
+    padding: 0;
+    gap: 0;
+    overflow: hidden;
   }
 
-  // ── Header ──────────────────────────────────────────────────
+  // ── Header (pinned, with divider) ────────────────────────────
 
   &__header {
+    flex: 0 0 auto;
     align-items: center;
     justify-content: space-between;
     width: 100%;
+    min-height: 65px;
+    padding: 16px 24px 17px;
+    border-bottom: 1px solid var(--border-default);
   }
 
   &__title {
@@ -45,42 +62,58 @@
       $color: var(--normal-fg-10),
       $size: 18px,
       $weight: 600,
-      $line: 28px
+      $line: 24px
     );
   }
 
   &__close-btn {
-    width: 28px;
-    height: 28px;
-    padding: var(--spacer-2);
+    width: 14px;
+    height: 24px;
+    flex-shrink: 0;
+    padding: 0;
     color: var(--normal-fg-10);
     cursor: pointer;
+
+    svg {
+      width: 14px;
+      height: 24px;
+    }
+
     &:hover {
       color: var(--normal-fg-20);
     }
   }
 
-  // ── Sections ────────────────────────────────────────────────
+  // ── Scrollable body ──────────────────────────────────────────
 
   &__body {
-    gap: var(--spacer-6);
+    flex: 1 1 auto;
+    min-height: 0;
     width: 100%;
+    gap: 24px;
+    padding: 24px;
+    overflow-y: auto;
+
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+
+    &::-webkit-scrollbar {
+      display: none;
+    }
   }
 
   &__section {
-    gap: var(--spacer-4);
+    gap: 12px;
     width: 100%;
   }
 
   &__section-label {
     @include drumee.typo(
-      $color: var(--normal-fg-20),
-      $size: 11px,
+      $color: var(--normal-fg-10),
+      $size: 12px,
       $weight: 600,
-      $line: 16px
+      $line: 18px
     );
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
   }
 
   // ── Public link toggle ───────────────────────────────────────
@@ -95,7 +128,7 @@
     width: 44px;
     height: 24px;
     border-radius: 12px;
-    background-color: var(--neutral-600, #4b5563);
+    background-color: var(--neutral-400, #c3c6cc);
     cursor: pointer;
     transition: background-color 200ms ease;
     flex-shrink: 0;
@@ -107,14 +140,15 @@
       width: 18px;
       height: 18px;
       border-radius: 50%;
-      background-color: var(--white, #fff);
+      background-color: #fff;
       top: 3px;
       left: 3px;
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
       transition: transform 200ms ease;
     }
 
     &[data-state="1"] {
-      background-color: var(--primary-40);
+      background-color: var(--primary-50);
 
       &::after {
         transform: translateX(20px);
@@ -122,15 +156,17 @@
     }
   }
 
-  // ── URL row ─────────────────────────────────────────────────
+  // ── Field rows (URL + expiry) ────────────────────────────────
 
-  &__url-row {
+  &__url-row,
+  &__expiry-row {
     align-items: center;
-    gap: var(--spacer-3);
-    background-color: var(--normal-bg-100);
-    border-radius: var(--corner-radius-3);
-    padding: var(--spacer-3) var(--spacer-4);
+    gap: 12px;
     width: 100%;
+    min-height: 46px;
+    padding: 12px;
+    border-radius: 4px;
+    background-color: var(--normal-bg-elevated);
   }
 
   &__url-text {
@@ -140,159 +176,177 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    @include drumee.typo($color: var(--normal-fg-10), $size: 13px, $line: 20px);
+    @include drumee.typo(
+      $color: var(--normal-fg-10),
+      $size: 12px,
+      $line: 17px
+    );
   }
 
-  &__copy-btn {
+  &__copy-btn,
+  &__calendar-btn {
     width: 20px;
     height: 20px;
     flex-shrink: 0;
     color: var(--normal-fg-20);
+    cursor: pointer;
   }
 
-  // ── Access level ─────────────────────────────────────────────
+  &__expiry-label {
+    flex: 1;
+    @include drumee.typo(
+      $color: var(--normal-fg-10),
+      $size: 12px,
+      $weight: 400,
+      $line: 18px
+    );
+  }
+
+  &__clear-btn {
+    flex-shrink: 0;
+    padding: 4px 12px;
+    border-radius: 4px;
+    background-color: var(--primary-50);
+    cursor: pointer;
+    transition: background-color 120ms ease;
+    @include drumee.typo(
+      $color: #fff,
+      $size: 12px,
+      $weight: 600,
+      $line: 16px
+    );
+
+    &:hover {
+      background-color: var(--primary-40);
+    }
+  }
+
+  // ── Access level rows (styled like the folder action items) ──
 
   &__access-list {
-    gap: var(--spacer-4);
+    gap: 12px;
     width: 100%;
   }
 
   &__access-item {
     align-items: center;
-    gap: var(--spacer-4);
-    padding: var(--spacer-4) var(--spacer-5);
-    border-radius: var(--corner-radius-3);
-    background-color: var(--normal-bg-100);
+    gap: 12px;
+    width: 100%;
+    min-height: 32px;
+    padding: 8px 12px;
+    border-radius: 4px;
+    background-color: var(--overlay-bg-05);
+    color: var(--normal-fg-10);
     cursor: pointer;
     transition: background-color 120ms ease;
-    width: 100%;
 
     &:hover {
-      background-color: var(--primary-20);
+      background-color: var(--hover-bg-40, rgba(89, 80, 255, 0.08));
     }
   }
 
   &__access-icon {
-    width: 20px;
-    height: 20px;
+    width: 16px;
+    height: 16px;
     flex-shrink: 0;
+
+    svg {
+      width: 16px;
+      height: 16px;
+    }
+
     &[data-state="0"] {
-      color: var(--neutral-500);
+      color: var(--normal-fg-20);
     }
 
     &[data-state="1"] {
-      color: var(--primary-40);
+      color: var(--primary-50);
     }
   }
 
   &__access-label {
-    flex: 1;
-    @include drumee.typo($color: var(--normal-fg-10), $size: 14px, $line: 22px);
+    flex: 1 1 auto;
+    min-width: 0;
+    @include drumee.typo(
+      $color: var(--normal-fg-10),
+      $size: 12px,
+      $weight: 600,
+      $line: 18px
+    );
   }
 
   &__access-check {
-    width: 22px;
-    height: 22px;
+    width: 18px;
+    height: 18px;
     flex-shrink: 0;
 
     &[data-state="0"] {
-      color: var(--neutral-500);
+      color: var(--normal-fg-20);
     }
 
     &[data-state="1"] {
-      color: var(--primary-40);
+      color: var(--primary-50);
     }
   }
 
-  // ── Link expiry ──────────────────────────────────────────────
-
-  &__expiry-row {
-    align-items: center;
-    gap: var(--spacer-3);
-    background-color: var(--normal-bg-100);
-    border-radius: var(--corner-radius-3);
-    padding: var(--spacer-3) var(--spacer-4);
-    width: 100%;
-  }
-
-  &__expiry-label {
-    flex: 1;
-    @include drumee.typo($color: var(--normal-fg-10), $size: 14px, $line: 22px);
-  }
-
-  &__calendar-btn {
-    width: 20px;
-    height: 20px;
-    flex-shrink: 0;
-    color: var(--normal-fg-10);
-  }
-
-  &__clear-btn {
-    padding: var(--spacer-1) var(--spacer-4);
-    border-radius: var(--corner-radius-1);
-    background-color: var(--primary-40);
-    @include drumee.typo(
-      $color: var(--primary-10),
-      $size: 13px,
-      $weight: 500,
-      $line: 20px
-    );
-    cursor: pointer;
-    transition: background-color 120ms ease;
-    flex-shrink: 0;
-
-    &:hover {
-      background-color: var(--primary-50);
-    }
-  }
+  // ── Expiry preset menu ───────────────────────────────────────
 
   &__expiry-menu {
-    gap: var(--spacer-2);
+    gap: 4px;
     width: 100%;
-    padding: var(--spacer-2);
-    border-radius: var(--corner-radius-3);
-    background-color: var(--normal-bg-100);
-    box-shadow: var(--shadow-left-big);
+    padding: 4px;
+    border-radius: 6px;
+    background-color: var(--normal-bg-elevated);
+    border: 1px solid var(--border-default);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.18);
   }
 
   &__expiry-option {
-    padding: var(--spacer-3) var(--spacer-4);
-    border-radius: var(--corner-radius-2);
+    padding: 8px 12px;
+    border-radius: 4px;
     cursor: pointer;
     transition: background-color 120ms ease;
-    @include drumee.typo($color: var(--normal-fg-10), $size: 14px, $line: 22px);
+    @include drumee.typo(
+      $color: var(--normal-fg-10),
+      $size: 12px,
+      $weight: 400,
+      $line: 16px
+    );
 
     &:hover {
-      background-color: var(--primary-20);
+      background-color: var(--hover-bg-40, rgba(89, 80, 255, 0.08));
     }
 
     &[data-state="1"] {
-      background-color: var(--primary-20);
-      color: var(--primary-40);
+      background-color: var(--active-item-bg, rgba(89, 80, 255, 0.1));
+      color: var(--primary-50);
+      font-weight: 500;
     }
   }
 
-  // ── Apply button ─────────────────────────────────────────────
+  // ── Apply button (styled like the folder Send Invitation button) ──
 
   &__apply-btn {
-    width: 100%;
-    padding: var(--spacer-4);
-    border-radius: var(--corner-radius-2);
-    background-color: var(--primary-40);
-    @include drumee.typo(
-      $color: var(--primary-10),
-      $size: 15px,
-      $weight: 600,
-      $line: 24px
-    );
-    text-align: center;
-    cursor: pointer;
-    transition: background-color 120ms ease;
     align-items: center;
     justify-content: center;
+    flex: 0 0 auto;
+    width: auto;
+    min-height: 36px;
+    margin: 0 24px 24px;
+    padding: 8px 24px;
+    border-radius: 4px;
+    background-color: var(--primary-50);
+    cursor: pointer;
+    transition: background-color 120ms ease;
+    @include drumee.typo(
+      $color: #fff,
+      $size: 14px,
+      $weight: 600,
+      $line: 20px
+    );
 
     &:hover {
-      background-color: var(--primary-50);
+      background-color: var(--primary-40);
     }
   }
 }

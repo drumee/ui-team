@@ -209,9 +209,12 @@ function getActivityMeta(ui, data) {
 
     case 'share_open':
       // "{email} opened {folder}" — a recipient viewed a notify-on-open share.
+      // Now an ordinary feed row (activity.get_feed merges secure_share_open_feed),
+      // so the folder name arrives as `node_name`; the legacy pinned path used
+      // `link_label`. Fall back through both, and localise the verb.
       return {
-        before: data.action || 'opened ',
-        label: data.link_label || '',
+        before: data.action || LOCALE.SECURE_SHARE_OPENED_ACTION || 'opened ',
+        label: data.link_label || data.node_name || '',
         after: '',
         colorClass: 'mention',
         badge: 'mention',

@@ -839,6 +839,16 @@ class __media_interact extends media_core {
         };
         return this.bubbleService(service, cmd._args);
 
+      // "Chat Threads" submenu parent — no-op; the submenu opens on hover (CSS),
+      // mirroring `organize`. Real actions live on the child rows below.
+      case "chat-threads":
+        return;
+
+      // "Download Chat Threads" → bubble to the folder window, which opens the
+      // export modal scoped to THIS file's thread (file nid carried on the node).
+      case "download-file-chat":
+        return this.bubbleService(service, cmd._args);
+
       case _e.copy:
         Visitor.set({ clipboard: this });
         this.triggerHandlers({ service: "copy-media" });

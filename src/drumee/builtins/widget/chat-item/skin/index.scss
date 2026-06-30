@@ -610,10 +610,12 @@
   }
 }
 
-// Meeting system messages: centered row, larger text, no timestamp
-// Dual approach: class-based (.meeting-event) + CSS :has() fallback
+// Meeting / file-thread system messages: centered row, larger text, no timestamp
+// Dual approach: class-based (.meeting-event / .file-thread-event) + CSS :has() fallback
 .widget-chatItem__ui.meeting-event,
-.widget-chatItem__ui:has(.widget-chatItem__meeting-card) {
+.widget-chatItem__ui.file-thread-event,
+.widget-chatItem__ui:has(.widget-chatItem__meeting-card),
+.widget-chatItem__ui:has(.widget-chatItem__file-thread-card) {
   align-items: center !important;
   margin-top: 16px;
 
@@ -632,6 +634,10 @@
     display: flex !important;
     flex-direction: column;
     align-items: center;
+    // Give the column a stable full width so the file-thread card's
+    // percentage widths resolve against the real chat width (otherwise the
+    // column shrinks to content and width:50% collapses → text overlap).
+    width: 100%;
   }
 
   .widget-chatItem__message-footer {
@@ -643,9 +649,28 @@
     display: none !important;
   }
 
-  .widget-chatItem__avatar-wrapper {
+  // Hide the sender avatar on system cards (meeting / file-thread) regardless of
+  // own-vs-other side. The avatar element is `__profile` (not `__avatar-wrapper`,
+  // which matches nothing) — own messages already hide it via `__profile.me`, but
+  // the recipient's "other" side showed it until this targeted the real class.
+  .widget-chatItem__profile {
     display: none !important;
   }
+}
+
+// The bubble "line" wrapper is a flex item inside message-content's centered
+// column, so by default it shrinks to the card's own content width — two cards
+// with different filenames/labels then resolve different widths and look
+// misaligned. Force the line full-width so the card's width:100% (narrow panel)
+// / width:50% (full Chat tab) resolves against the real chat column and every
+// file-thread card renders the same shape. Scoped to file-thread only; meeting
+// notices intentionally stay content-width.
+.widget-chatItem__ui.file-thread-event .widget-chatItem__message-line,
+.widget-chatItem__ui:has(.widget-chatItem__file-thread-card)
+  .widget-chatItem__message-line {
+  width: 100%;
+  display: flex;
+  justify-content: center;
 }
 
 // "X started a meeting" — compact inline system note with a Join link.
@@ -697,6 +722,148 @@
 
   &:hover {
     text-decoration: underline;
+  }
+}
+
+// "File chat" folder-visible system card (Figma 2216-170414). Clickable (whole
+// card opens the file chat via data-service="open-file-thread"): paperclip
+// badge | row1: filename ........ "Open thread →" / row2: chat-icon N replies • time.
+// .ftc-name is hydrated live from file_thread_info (rename/delete aware).
+.widget-chatItem__file-thread-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  // Consistent rectangle: every card is the same width. In the narrow embedded
+  // team-chat panel (Files tab) it fills the panel; the max-width keeps it from
+  // ballooning in wider contexts so all cards match.
+  width: 100%;
+  max-width: 560px;
+  padding: 12px;
+  border-radius: 12px;
+  background: #fff;
+  cursor: pointer;
+  user-select: none;
+}
+
+// Full-screen Chat tab (folder window data-view="chat") → ~half width, but
+// floored so the content never collapses (was overlapping) and capped by the
+// 560px max-width above so it stays the same shape as the embedded panel.
+.window-folder__split-body[data-view="chat"] .widget-chatItem__file-thread-card {
+  width: 50%;
+  min-width: 360px;
+}
+
+.widget-chatItem__ftc-badge {
+  flex: 0 0 36px;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  background: rgba(89, 80, 255, 0.1); // --primary-40 @ 10% (Overlay/brand tint)
+}
+
+.widget-chatItem__ftc-badge-ico {
+  width: 20px;
+  height: 20px;
+  fill: var(--primary-40, #5950ff);
+  color: var(--primary-40, #5950ff);
+}
+
+// Image/vector files: the badge shows the file's vignette thumbnail instead of
+// the paperclip icon (set imperatively in _hydrateFileThreadCard).
+.widget-chatItem__ftc-badge--image {
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+
+  .widget-chatItem__ftc-badge-ico {
+    display: none;
+  }
+}
+
+.widget-chatItem__ftc-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+// Row 1: filename (grows, ellipsis) + "Open thread →" pinned to the right.
+.widget-chatItem__ftc-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
+}
+
+.widget-chatItem__ftc-name {
+  flex: 1 1 auto;
+  font-size: 14px;
+  line-height: 1.4;
+  color: var(--grid-color-name, #0b0a21);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.widget-chatItem__ftc-meta {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--grid-color-meta, #65656c);
+}
+
+.widget-chatItem__ftc-meta-ico {
+  flex: 0 0 14px;
+  width: 14px;
+  height: 14px;
+  fill: var(--grid-color-meta, #65656c);
+  color: var(--grid-color-meta, #65656c);
+}
+
+.widget-chatItem__ftc-dot {
+  opacity: 0.7;
+}
+
+// Sits inline on row 1 next to the filename — small, never wraps or shrinks.
+.widget-chatItem__ftc-open {
+  flex: 0 0 auto;
+  font-size: 11px;
+  line-height: 1.4;
+  color: var(--primary-40, #5950ff);
+  white-space: nowrap;
+}
+
+.widget-chatItem__file-thread-card:hover .widget-chatItem__ftc-open {
+  text-decoration: underline;
+}
+
+.widget-chatItem__ui.ftc-unavailable .widget-chatItem__ftc-name {
+  opacity: 0.55;
+  text-decoration: line-through;
+}
+
+// Dark theme: --grid-color-name (#0b0a21) would be near-invisible on a dark
+// surface, so override the card background + text for readability.
+html[data-theme="dark"] {
+  .widget-chatItem__file-thread-card {
+    background: rgba(255, 255, 255, 0.06);
+  }
+
+  .widget-chatItem__ftc-name {
+    color: #ececf0;
+  }
+
+  .widget-chatItem__ftc-meta,
+  .widget-chatItem__ftc-meta-ico {
+    color: #9a9aa3;
+    fill: #9a9aa3;
   }
 }
 
