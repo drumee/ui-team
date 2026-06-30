@@ -321,6 +321,54 @@ function auditEntry(ui, log) {
   });
 }
 
+// Audit list body: branch on ui._auditState the same way the Members tab
+// branches on ui._membersState — a Loading row while fetching, an error row
+// when get_audit_logs failed, otherwise the mapped rows (or a no-entries row).
+function auditListKids(ui) {
+  const pfx = ui.fig.family;
+  if (ui._auditState === "loading") {
+    return [
+      Skeletons.Box.X({
+        className: `${pfx}__audit-empty`,
+        kids: [
+          Skeletons.Note({
+            className: `${pfx}__audit-empty-label`,
+            content: LOCALE.LOADING || "Loading…",
+          }),
+        ],
+      }),
+    ];
+  }
+  if (ui._auditState === "error") {
+    return [
+      Skeletons.Box.X({
+        className: `${pfx}__audit-empty`,
+        kids: [
+          Skeletons.Note({
+            className: `${pfx}__audit-empty-label`,
+            content: LOCALE.AUDIT_LOAD_FAILED || "Could not load audit logs.",
+          }),
+        ],
+      }),
+    ];
+  }
+  const logs = ui._auditLogs || [];
+  if (!logs.length) {
+    return [
+      Skeletons.Box.X({
+        className: `${pfx}__audit-empty`,
+        kids: [
+          Skeletons.Note({
+            className: `${pfx}__audit-empty-label`,
+            content: LOCALE.NO_AUDIT_LOGS || "No entries",
+          }),
+        ],
+      }),
+    ];
+  }
+  return logs.map((row) => auditEntry(ui, mapAuditRow(row)));
+}
+
 function auditPagination(ui) {
   const pfx = ui.fig.family;
   const page = ui._auditPage || 1;
@@ -556,9 +604,7 @@ export default function audit_view(ui) {
             auditTableHeader(pfx),
             Skeletons.Box.Y({
               className: `${pfx}__audit-list`,
-              kids: (ui._auditLogs || []).map((row) =>
-                auditEntry(ui, mapAuditRow(row)),
-              ),
+              kids: auditListKids(ui),
             }),
             auditPagination(ui),
           ],

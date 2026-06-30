@@ -345,6 +345,21 @@
     }
   }
 
+  &__audit-empty {
+    width: 100%;
+    padding: 32px 24px;
+    align-items: center;
+    justify-content: center;
+    background: $bg;
+  }
+
+  &__audit-empty-label {
+    font-size: 13px;
+    line-height: 18px;
+    font-weight: 400;
+    color: $ink-500;
+  }
+
   &__audit-row {
     width: 100%;
     padding: 20px 32px;

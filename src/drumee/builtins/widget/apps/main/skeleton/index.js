@@ -795,21 +795,14 @@ function adminUpsellOverlay(ui) {
   });
 }
 
-function comingSoonOverlay(ui) {
-  const pfx = ui.fig.family;
-  return Skeletons.Box.Y({
-    className: `${pfx}__coming-soon-overlay`,
-    kids: [
-      Skeletons.Note({
-        className: `${pfx}__coming-soon`,
-        content: LOCALE.COMING_SOON,
-      }),
-    ],
-  });
-}
-
 export default function apps_main_skeleton(ui) {
   const pfx = ui.fig.family;
+  // Admin console is privilege-gated: only owners/admins get the layout + data.
+  // Everyone else sees the upgrade upsell only — never the admin layout, and the
+  // widget fires no admin API for them (see onDomRefresh guard).
+  if (!ui._isPrivileged) {
+    return [adminUpsellOverlay(ui)];
+  }
   let content;
   switch (ui._tab) {
     case "permissions":
@@ -850,11 +843,11 @@ export default function apps_main_skeleton(ui) {
       kids: content,
     }),
   ];
-  if (!ui._isPrivileged) {
-    root.push(adminUpsellOverlay(ui));
-  }
   if (ui._showApplyConfirm) {
     root.push(require("./apply-confirm").default(ui));
+  }
+  if (ui._confirmAction) {
+    root.push(require("./confirm-action").default(ui));
   }
   if (ui._editingMember) {
     const editOverlay = require("./edit-member").default(ui);
@@ -868,6 +861,5 @@ export default function apps_main_skeleton(ui) {
     const acOverlay = require("./access-control").default(ui);
     if (acOverlay) root.push(acOverlay);
   }
-  root.push(comingSoonOverlay(ui));
   return root;
 }

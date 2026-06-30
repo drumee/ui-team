@@ -244,6 +244,10 @@ class apps_main extends LetcBox {
     this._allowMembersView = false;
     this._allowEditorsRestore = false;
     this._showApplyConfirm = false;
+    // Pending destructive action awaiting confirmation. Holds the overlay copy
+    // ({ title, body, confirmLabel, warning }) plus a `run` thunk executed when
+    // the user confirms (apps-confirm-action-apply). Null = no overlay.
+    this._confirmAction = null;
     this._editingMember = null;
     this._activeWorkspace = null;
     this._wsDetailPage = 1;
@@ -277,7 +281,6 @@ class apps_main extends LetcBox {
     this._adminStorageView = "main"; // "main" | "all" | "detail"
     this._adminStorageState = "idle";
     this._hubStorageStats = null;
-    this._hubUserStorage = [];
     this._fileVersions = [];
     this._fileVersionsTotal = 0;
     this._fileDetail = null;
@@ -608,6 +611,9 @@ class apps_main extends LetcBox {
 
   async onDomRefresh() {
     this._render();
+    // Admin console is privilege-gated: non owners/admins see only the upsell
+    // (rendered by the skeleton) and must not fetch any admin data.
+    if (!this._isPrivileged) return;
     // Admin role's tabs are hub-scoped — load the workspace list before
     // bootstrapping so service calls have hub_id available.
     if (this._role === "admin") await this._loadAdminHubs();
@@ -998,7 +1004,6 @@ class apps_main extends LetcBox {
     this._render();
     await Promise.all([
       this._loadHubStorageStats({ skipRender: true }),
-      this._loadHubUserStorage({ skipRender: true }),
       this._loadFileVersions({ skipRender: true }),
     ]);
     this._adminStorageTabLoading = false;
@@ -1015,20 +1020,6 @@ class apps_main extends LetcBox {
       this._hubStorageStats = row && typeof row === "object" ? row : null;
     } catch (e) {
       this._hubStorageStats = null;
-    }
-    if (!opts.skipRender) this._render();
-  }
-
-  async _loadHubUserStorage(opts = {}) {
-    try {
-      const res = await this.postService(SERVICE.admin.get_hub_user_storage, {
-        hub_id: this._activeAdminHub,
-        sort_by: this._storageSort || "usage_high",
-        page: this._storagePage || 1,
-      });
-      this._hubUserStorage = Array.isArray(res) ? res : (res && res.data) || [];
-    } catch (e) {
-      this._hubUserStorage = [];
     }
     if (!opts.skipRender) this._render();
   }
@@ -1171,11 +1162,10 @@ class apps_main extends LetcBox {
 
   // ── Tabs / table chrome ──────────────────────────────────
   switchTab(tab) {
-    if (
-      this._visibleTabs &&
-      this._visibleTabs.length &&
-      !this._visibleTabs.includes(tab)
-    )
+    // Defense-in-depth: only privileged users have admin tabs, and only the
+    // role's whitelisted tabs are switchable (an empty set = nothing allowed).
+    if (!this._isPrivileged) return;
+    if (!Array.isArray(this._visibleTabs) || !this._visibleTabs.includes(tab))
       return;
     this._tab = tab;
     // Admin Member tab always re-enters at the workspace overview.
@@ -1594,6 +1584,45 @@ class apps_main extends LetcBox {
   }
 
   // ─────────────────────────────────────────────────────────
+  //  Destructive-action confirmation (reuses the apply-confirm overlay shell)
+  // ─────────────────────────────────────────────────────────
+  // Stage a destructive action behind the confirm overlay. `run` is the thunk
+  // executed only when the user confirms; nothing fires on the first click.
+  _requestConfirm({ title, body, confirmLabel, warning, run }) {
+    if (typeof run !== "function") return;
+    this._confirmAction = { title, body, confirmLabel, warning, run };
+    this._render();
+  }
+
+  _cancelConfirm() {
+    this._confirmAction = null;
+    this._render();
+  }
+
+  _runConfirm() {
+    const conf = this._confirmAction;
+    this._confirmAction = null;
+    this._render();
+    if (conf && typeof conf.run === "function") return conf.run();
+  }
+
+  // Open the billing/subscription UI. The desk window manager owns this flow
+  // (Wm 'upgrade-plan' → upgradePlage() → settings_billing in the desk modal);
+  // window.Wm is the live wm instance, called directly here as elsewhere in the
+  // codebase (window/* widgets all reach the wm via window.Wm.*).
+  _openBilling() {
+    if (typeof window !== "undefined" && window.Wm) {
+      if (typeof window.Wm.upgradePlage === "function") {
+        return window.Wm.upgradePlage();
+      }
+      if (typeof window.Wm.onUiEvent === "function") {
+        return window.Wm.onUiEvent({ service: "upgrade-plan" });
+      }
+    }
+    this.warn && this.warn("apps-admin-upgrade: no billing route available");
+  }
+
+  // ─────────────────────────────────────────────────────────
   //  Delete member
   // ─────────────────────────────────────────────────────────
   async _deleteMember(memberId) {
@@ -1644,6 +1673,10 @@ class apps_main extends LetcBox {
     switch (service) {
       case "apps-switch-tab":
         return this.switchTab(cmd.mget("tab"));
+
+      case "apps-admin-upgrade":
+        // Upsell CTA shown to non-privileged users — route to the billing flow.
+        return this._openBilling();
 
       case "apps-member-open-workspace": {
         const id = cmd.mget("workspace_id");
@@ -1701,7 +1734,6 @@ class apps_main extends LetcBox {
         this._wsFolders = [];
         this._editingFolder = null;
         this._hubStorageStats = null;
-        this._hubUserStorage = [];
         this._fileVersions = [];
         this._fvActiveFile = null;
         this._fileDetail = null;
@@ -1779,11 +1811,35 @@ class apps_main extends LetcBox {
           cmd.mget("hub_name"),
         );
 
-      case "apps-delete-member":
-        return this._deleteMember(cmd.mget("member_id"));
+      case "apps-delete-member": {
+        const memberId = cmd.mget("member_id");
+        if (memberId == null || memberId === "" || this._isSelf(memberId))
+          return;
+        return this._requestConfirm({
+          title: LOCALE.DELETE_MEMBER_CONFIRM_TITLE,
+          body: LOCALE.DELETE_MEMBER_CONFIRM_BODY,
+          confirmLabel: LOCALE.REMOVE || LOCALE.DELETE,
+          run: () => this._deleteMember(memberId),
+        });
+      }
 
-      case "apps-remove-selected":
-        return this._removeSelected();
+      case "apps-remove-selected": {
+        const ids = Array.from(this._selected).filter((id) => !this._isSelf(id));
+        if (!ids.length) return;
+        return this._requestConfirm({
+          title: LOCALE.REMOVE_SELECTED_CONFIRM_TITLE,
+          body: LOCALE.REMOVE_SELECTED_CONFIRM_BODY,
+          confirmLabel:
+            (LOCALE.REMOVE_SELECTED || "Remove selected") + ` (${ids.length})`,
+          run: () => this._removeSelected(),
+        });
+      }
+
+      case "apps-confirm-action-close":
+        return this._cancelConfirm();
+
+      case "apps-confirm-action-apply":
+        return this._runConfirm();
 
       case "apps-add-new":
       case "apps-invite":
@@ -2369,8 +2425,14 @@ class apps_main extends LetcBox {
       }
 
       case "apps-fv-delete-selected": {
-        const ids = Array.from(this._fvSelected);
-        return this._deleteOldFileVersions(ids);
+        const ids = Array.from(this._fvSelected).filter(Boolean);
+        if (!ids.length) return;
+        return this._requestConfirm({
+          title: LOCALE.DELETE_VERSIONS_CONFIRM_TITLE,
+          body: LOCALE.DELETE_VERSIONS_CONFIRM_BODY,
+          confirmLabel: LOCALE.DELETE_SELECTED || LOCALE.DELETE,
+          run: () => this._deleteOldFileVersions(ids),
+        });
       }
 
       case "apps-fv-view-all":
@@ -2415,10 +2477,16 @@ class apps_main extends LetcBox {
           return this._downloadFileVersions(this._fvActiveFile.id);
         return;
 
-      case "apps-fv-delete-old":
-        if (this._fvActiveFile)
-          return this._deleteOldFileVersions(this._fvActiveFile.id);
-        return;
+      case "apps-fv-delete-old": {
+        if (!this._fvActiveFile) return;
+        const fileId = this._fvActiveFile.id;
+        return this._requestConfirm({
+          title: LOCALE.DELETE_VERSIONS_CONFIRM_TITLE,
+          body: LOCALE.DELETE_VERSIONS_CONFIRM_BODY,
+          confirmLabel: LOCALE.DELETE_ALL_OLD_VERSIONS || LOCALE.DELETE,
+          run: () => this._deleteOldFileVersions(fileId),
+        });
+      }
 
       case "apps-fv-show-in-folder":
         return;
@@ -2434,7 +2502,13 @@ class apps_main extends LetcBox {
       }
 
       case "apps-fv-delete-all":
-        return this._deleteAllOldVersionsInHub();
+        if (!this._activeAdminHub) return;
+        return this._requestConfirm({
+          title: LOCALE.DELETE_ALL_VERSIONS_CONFIRM_TITLE,
+          body: LOCALE.DELETE_ALL_VERSIONS_CONFIRM_BODY,
+          confirmLabel: LOCALE.DELETE_ALL_OLD_VERSIONS || LOCALE.DELETE,
+          run: () => this._deleteAllOldVersionsInHub(),
+        });
 
       case "apps-fv-search": {
         const value = (cmd.mget(_a.value) || "").trim();
@@ -2444,8 +2518,16 @@ class apps_main extends LetcBox {
         return this._loadFileVersions();
       }
 
-      case "apps-fv-delete-row":
-        return this._deleteOldFileVersions(cmd.mget("file_id"));
+      case "apps-fv-delete-row": {
+        const rowFileId = cmd.mget("file_id");
+        if (!rowFileId) return;
+        return this._requestConfirm({
+          title: LOCALE.DELETE_VERSIONS_CONFIRM_TITLE,
+          body: LOCALE.DELETE_VERSIONS_CONFIRM_BODY,
+          confirmLabel: LOCALE.DELETE_ALL_OLD_VERSIONS || LOCALE.DELETE,
+          run: () => this._deleteOldFileVersions(rowFileId),
+        });
+      }
 
       case "apps-fv-row-menu":
       case "apps-fv-filter-workspace":
