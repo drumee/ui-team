@@ -1265,10 +1265,20 @@ class desk_module extends LetcBox {
         return this.togglePanel("settings_main", "settings-main-slot");
 
       case "toggle-apps":
+        // Admin Console — the full in-desk console (apps_main) now lives in the
+        // @drumee/admin-console plugin. Load it on demand, then render it in the
+        // settings-main-slot panel (full-width, in-desk). apps_main does its own
+        // privilege gating (upsell for non-admins), so the item stays visible to all.
         RADIO_BROADCAST.trigger("breadcrumb:context", {
           filename: LOCALE.ADMIN_CONSOLE,
         });
-        return this.togglePanel("apps_main", "settings-main-slot");
+        if (Kind.get("apps_main")) {
+          return this.togglePanel("apps_main", "settings-main-slot");
+        }
+        return Kind.loadPlugin({ name: "admin-console", kind: "apps_main" })
+          .then(() => Kind.waitFor("apps_main"))
+          .then(() => this.togglePanel("apps_main", "settings-main-slot"))
+          .catch((e) => this.warn && this.warn("admin-console load failed", e));
 
       case "toggle-trash":
         RADIO_BROADCAST.trigger("breadcrumb:context", {

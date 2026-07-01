@@ -141,12 +141,25 @@ class ___window_admin_panel extends __window_interact_singleton {
    * @param {function} callback 
   */
   getMyOrg(callback = null) {
-    const orgid = (Visitor && Visitor.get) ? Visitor.get('org_id') : null;
+    // The current org is the bootstrapped global Organization (has id/name/
+    // domain_id). Visitor exposes domain_id, NOT org_id, so the old
+    // Visitor.get('org_id') check always missed → this.organisation stayed null
+    // → the members page crashed on this.organisation.id. Prefer the global org;
+    // only fall back to a my_organisation fetch if it isn't populated.
+    if (typeof Organization !== 'undefined' && Organization && Organization.id) {
+      this.organisation = Organization.toJSON ? Organization.toJSON() : Organization;
+      this.updateTitle();
+      callback && callback();
+      return;
+    }
+    const orgid = (Visitor && Visitor.get)
+      ? (Visitor.get('org_id') || Visitor.get('domain_id'))
+      : null;
     if (!orgid) {
       // Account has no organization → nothing to administer. Render the frame
       // (and let the page handle the empty org) instead of firing a my_organisation
       // call with a null orgid.
-      this.warn('admin: no org_id (account has no organization)');
+      this.warn('admin: no org (account has no organization)');
       this.updateTitle && this.updateTitle();
       callback && callback();
       return;

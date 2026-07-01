@@ -314,9 +314,8 @@ module.exports = {
   settings_change_email: function () {
     return import("widget/settings/change-email");
   },
-  apps_main: function () {
-    return import("widget/apps/main");
-  },
+  // apps_main (the admin console) migrated to the @drumee/admin-console plugin —
+  // loaded on demand via Kind.loadPlugin (see modules/desk onUiEvent "toggle-apps").
   settings_filename: function () {
     return import("widget/settings/filename");
   },
