@@ -2003,8 +2003,13 @@
   // `flex: 3 / 1` keeps the 3:1 split in the flex fallback some states render.
   // grid-template stays non-!important so the @container ≤700px
   // `grid-template-columns: 1fr !important` compact single-column still wins.
+  // Files tab → file grid : resize gutter : team chat. Default 2:1 (files ≈66.7%),
+  // user-draggable via the middle gutter column within 1:1…2:1 (folder
+  // _wireFilesSplitter clamps & persists the `--files-w` % this grid reads).
+  // The gutter is a REAL grid column (not an absolute overlay) so it never gets
+  // covered by the chat panel's stacking context.
   &__split-body[data-view="files"] {
-    grid-template-columns: minmax(0, 3fr) minmax(0, 1fr);
+    grid-template-columns: var(--files-w, 66.667%) 12px minmax(0, 1fr);
 
     > .window-folder__files-panel,
     > .window__files-panel,
@@ -2016,10 +2021,58 @@
     }
     > .window-folder__files-panel,
     > .window__files-panel {
-      flex: 3 1 0 !important;
+      flex: 2 1 0 !important;
     }
     > .window__chat-panel {
       flex: 1 1 0 !important;
+    }
+    // The drag gutter occupies the middle column only on the Files tab.
+    > .window-folder__files-splitter {
+      display: block;
+    }
+  }
+
+  // Resize gutter — a real middle grid column between the file grid and the chat
+  // panel (so no overlap / stacking issues). Hidden by default; the
+  // [data-view="files"] rule above reveals it; compact ≤700px hides it again.
+  &__files-splitter {
+    display: none;
+    position: relative; // anchor for the centered dotted grip
+    align-self: stretch; // fill the full row height as a grid item
+    cursor: col-resize;
+    // No track / fill — just the dots — so it never reads as a scrollbar.
+    background-color: transparent;
+
+    // Vertical dotted grip ( · · · · ) — clearly NOT a scrollbar. Soft light
+    // grey (theme-aware via --normal-fg-10 at low opacity), darkens on
+    // hover/drag. Dots are a repeated radial-gradient down a tall thin strip.
+    &::after {
+      content: "";
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 6px;
+      height: 88px;
+      // Dots match the files/chat divider tone (--border-muted, the chat panel's
+      // border-left) at rest. currentColor lets the hover state darken them in
+      // one place (to a clear mid-grey).
+      color: var(--border-muted, rgba(0, 0, 0, 0.05));
+      background-image: radial-gradient(
+        circle,
+        currentColor 2px,
+        transparent 2.2px
+      );
+      background-size: 6px 11px; // larger dot, every 11px
+      background-repeat: repeat-y;
+      background-position: center;
+      transition: color 0.12s ease, height 0.12s ease;
+    }
+
+    &:hover::after,
+    &[data-dragging="1"]::after {
+      color: var(--normal-fg-50, #84848c); // clearly darker mid-grey on hover
+      height: 108px;
     }
   }
 
@@ -3192,6 +3245,11 @@
       .window__chat-panel,
       .window__meeting-panel {
         display: none;
+      }
+
+      // No room for the resize gutter in the single-column compact layout.
+      .window-folder__files-splitter {
+        display: none !important;
       }
 
       &[data-view="chat"] {
