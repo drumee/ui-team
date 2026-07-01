@@ -2027,8 +2027,10 @@
       flex: 1 1 0 !important;
     }
     // The drag gutter occupies the middle column only on the Files tab.
+    // !important beats the framework's Box.Y default display:flex (same reason
+    // the base hide below needs it).
     > .window-folder__files-splitter {
-      display: block;
+      display: flex !important;
     }
   }
 
@@ -2036,7 +2038,12 @@
   // panel (so no overlap / stacking issues). Hidden by default; the
   // [data-view="files"] rule above reveals it; compact ≤700px hides it again.
   &__files-splitter {
-    display: none;
+    // !important: the splitter is a Skeletons.Box.Y, and the framework forces
+    // display:flex on Box elements — a plain `display:none` loses to it, leaving
+    // the gutter visible in the Chat/Task views (it grabbed a grid cell and
+    // broke their layout). The Files-view rule above re-shows it with a more
+    // specific !important.
+    display: none !important;
     position: relative; // anchor for the centered dotted grip
     align-self: stretch; // fill the full row height as a grid item
     cursor: col-resize;
