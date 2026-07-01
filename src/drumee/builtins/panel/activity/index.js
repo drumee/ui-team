@@ -357,8 +357,27 @@ class __panel_activity extends LetcBox {
     } catch (e) {
       this.warn('mark_all_read failed', e);
     }
-    this.ensurePart('priority').then((p) => {
+    // Persist-dismiss each shown pinned rollup so "Mark all as read" survives a
+    // reload — not just a visual clear. `mark_all_read` above only clears the
+    // smart feed + share-opens; the notification_center_next rollups (media /
+    // chat / teamchat / contact / ticket) need their per-category read-state set,
+    // which is exactly what _dismissActivity already does for the trash button
+    // (media→_seen_, chat→p2p_read, teamchat→_seen_, contact→dismissed_at,
+    // ticket→pointer). The rollup list isn't paginated, so the rendered children
+    // are the complete set. Snapshot first — _dismissActivity destroys each child.
+    await this.ensurePart('priority').then(async (p) => {
       if (!p) return;
+      const items = [];
+      if (p.children && p.children.each) p.children.each((c) => { if (c) items.push(c); });
+      // Only the notification_center_next rollups reappear (they carry per-category
+      // server read-state). Leave hub_invite / contact_refused / access_request /
+      // meeting to the visual clear below — same behavior as before, no side effects.
+      const ROLLUP = ['chat', 'media', 'teamchat', 'contact', 'ticket'];
+      for (const c of items) {
+        const cat = c && c.mget && c.mget('category');
+        if (!ROLLUP.includes(cat)) continue;
+        try { await this._dismissActivity(c, {}); } catch (e) { this.warn('clear-all rollup dismiss failed', e); }
+      }
       p.feed([]);
       if (this.el && this.el.dataset) this.el.dataset.hasPriority = '0';
     });
