@@ -94,8 +94,12 @@
     color: var(--normal-fg-10, #0b0a21);
   }
 
-  // Full-width gray "Take the survey" bar (icon + label).
+  // Full-width gray "Take the survey" bar (icon + label). Button.Label's
+  // stock svg carries class "full" (100% sizing) which stacks the label
+  // under it — force the design's inline row: 20px icon beside the text.
   &__take-btn {
+    display: flex;
+    flex-direction: row;
     width: 100%;
     justify-content: center;
     align-items: center;
@@ -105,12 +109,18 @@
     border-radius: var(--corner-radius-1); // 4px
     cursor: pointer;
     color: var(--normal-fg-10, #0b0a21);
-    font-size: 14px;
-    font-weight: 600;
 
     svg {
       width: 20px;
       height: 20px;
+      flex: 0 0 auto;
+    }
+
+    .label {
+      font-size: 14px;
+      line-height: 20px;
+      font-weight: 600;
+      color: var(--normal-fg-10, #0b0a21);
     }
 
     &:hover {
