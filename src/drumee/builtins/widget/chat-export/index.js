@@ -37,6 +37,10 @@ class __widget_chat_export extends LetcBox {
     this._fileThreads = []; // [{ file_thread_id, file_nid, filename, reply_count }]
     // Download-state guard to prevent double-fire
     this._activeZipId = null;
+    // True while a PDF export is being generated server-side — flips the
+    // Download button into its spinner "Generating" state (see skeleton
+    // _downloadButton) instead of showing the old thin progress bar.
+    this._generating = false;
 
     // File-scope mode (opened from a file's kebab → "Download Chat Threads"):
     // the export is locked to that single file's thread. The card shows the
@@ -345,17 +349,21 @@ class __widget_chat_export extends LetcBox {
     // fires first wins; _activeZipId guards against a double download.
     this._activeZipId = zipid;
     this.mset({ zipid, zipname });
-    this.ensurePart("progress-area").then((area) => {
-      if (!area || (area.isDestroyed && area.isDestroyed())) return;
-      area.feed(
-        Skeletons.Progress({
-          loader: this,
-          name: zipname || "chat-export.pdf",
-          className: `${this.fig.family}__progress`,
-        }),
-      );
-    });
+    // Flip the Download button into its spinner "Generating" state (replaces
+    // the former thin progress bar). Cleared on WS "done" / poll success /
+    // error, which re-feeds the skeleton to restore the Download button.
+    this._setGenerating(true);
     this._pollDownload(data, 0);
+  }
+
+  /**
+   * Toggle the generating state and re-feed so the Download button reflects it.
+   * Mirrors the widget's existing "re-feed the whole card" pattern used by the
+   * format/scope/date toggles (the framework diffs efficiently).
+   */
+  _setGenerating(on) {
+    this._generating = !!on;
+    this.feed(require("./skeleton").default(this));
   }
 
   /**
@@ -385,8 +393,9 @@ class __widget_chat_export extends LetcBox {
           1500,
         );
       } else {
-        this._showProgressError(LOCALE.AN_ERROR_OCCURRED);
         this._activeZipId = null;
+        this._setGenerating(false); // restore Download button, then show error
+        this._showProgressError(LOCALE.AN_ERROR_OCCURRED);
       }
     };
     fetch(this._exportFetchUrl(data), { credentials: "same-origin" })
@@ -395,8 +404,7 @@ class __widget_chat_export extends LetcBox {
         if (this._activeZipId !== data.zipid) return; // WS path won the race
         if (!blob) return retry();
         this._activeZipId = null;
-        const progress = this.getPart("progress-area");
-        if (progress && !progress.isDestroyed()) progress.suppress();
+        this._setGenerating(false); // restore Download button
         this._saveBlob(blob, data.zipname);
       })
       .catch(() => retry());
@@ -454,25 +462,22 @@ class __widget_chat_export extends LetcBox {
 
   _handleExportProgress(data) {
     if (data.exit === 0) {
-      // Done — suppress the progress bar and trigger download
-      const progress = this.getPart("progress-area");
-      if (progress && !progress.isDestroyed()) progress.suppress();
+      // Done — restore the Download button and trigger download.
       this._activeZipId = null;
+      this._setGenerating(false);
       this._triggerDownload(data);
       return;
     }
     if (data.exit > 0) {
-      // Error — PDF generation failed on the server
-      this._showProgressError(LOCALE.AN_ERROR_OCCURRED);
+      // Error — PDF generation failed on the server. Restore the button, then
+      // surface the error in the progress area.
       this._activeZipId = null;
+      this._setGenerating(false);
+      this._showProgressError(LOCALE.AN_ERROR_OCCURRED);
       return;
     }
-    // In-progress — update progress bar width
-    const progress = this.getPart("progress-area");
-    if (data.message === "BEING_CREATED" && progress && !progress.isDestroyed()) {
-      const bar = progress.el && progress.el.querySelector(".progress-bar, [data-progress]");
-      if (bar) bar.style.width = `${data.progress || 0}%`;
-    }
+    // In-progress (BEING_CREATED): the button spinner is indeterminate, so
+    // there is nothing to update — just keep spinning until exit===0.
   }
 
   // ------------------------------------------------------------------ error display

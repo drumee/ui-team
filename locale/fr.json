@@ -850,6 +850,7 @@
   "JOINING_CONFERENCE": "En attente de joindre la conference",
   "CANCEL": "Annuler",
   "DOWNLOAD": "Télécharger",
+  "GENERATING": "Génération…",
   "CLOSE": "Fermer",
   "OK": "OK",
   "WAIT_UPLOAD": "Veuillez attendre. L'envoie de fichiers est en cours.",

@@ -1032,6 +1032,7 @@
   "CANCEL": "Cancel",
   "CANCEL_ALL": "Cancel all",
   "DOWNLOAD": "Download",
+  "GENERATING": "Generating",
   "CLOSE": "Close",
   "OK": "OK",
   "WAIT_UPLOAD": "Please wait. Upload is in progress.",

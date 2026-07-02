@@ -850,6 +850,7 @@
   "JOINING_CONFERENCE": "等待加入会议",
   "CANCEL": "取消",
   "DOWNLOAD": "去下载",
+  "GENERATING": "生成中",
   "CLOSE": "关",
   "OK": "好的",
   "WAIT_UPLOAD": "请稍等。 正在上传。",
