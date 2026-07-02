@@ -152,3 +152,18 @@ No test runner exists. Verification:
 - Email alerts on new responses.
 - Re-surveying per app version; localization of survey copy beyond en.
 - Editing a submitted response from the UI.
+
+## Addendum (2026-07-02): Google Sheet broadcast
+
+On every `survey.submit`, the server broadcasts the (upserted) response row to
+the team's PMF Google Sheet
+(`1_y0RZf2O3MzOwpMHjU9bpEeO-RL36KHM9SwUeL-16fQ`, tab gid=0) through a **Google
+Apps Script Web-App webhook** bound to the sheet (owner-approved choice over a
+service-account share). One row per user, upserted by UID — a score-only
+submit writes a partial row that the later full submit updates in place.
+Choice indexes are resolved server-side to the verbatim PMF-doc English labels
+(`service/lib/survey_sheet.js`); Q7 joins with `"; "`. Fire-and-forget with a
+10s timeout: webhook/config absence degrades to a warn and never fails or
+slows the user's submit. Config: `/etc/drumee/credential/google/survey-webhook.json`
+`{ url, secret }`. Setup + ready-to-paste script:
+server-team `docs/survey-sheet-webhook.md`.
