@@ -223,8 +223,32 @@
 
     &[data-on="1"] {
       border-color: var(--hover-border-40, #847eff);
+    }
 
-      .rating-survey-popup__q-mark {
+    // Checked checkbox: purple square with a white ✓ (not a plain fill).
+    &[data-kind="multi"][data-on="1"] .rating-survey-popup__q-mark {
+      background: var(--reverse-lb, #433cc5);
+      border-color: var(--reverse-lb, #433cc5);
+
+      &::after {
+        content: "";
+        width: 8px;
+        height: 4px;
+        border-left: 2px solid var(--reverse-fg, #ffffff);
+        border-bottom: 2px solid var(--reverse-fg, #ffffff);
+        transform: rotate(-45deg) translate(1px, -1px);
+      }
+    }
+
+    // Selected radio: purple ring with an inner dot (not a full fill).
+    &[data-kind="choice"][data-on="1"] .rating-survey-popup__q-mark {
+      border-color: var(--reverse-lb, #433cc5);
+
+      &::after {
+        content: "";
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
         background: var(--reverse-lb, #433cc5);
       }
     }
