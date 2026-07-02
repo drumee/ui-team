@@ -933,6 +933,12 @@ class __panel_activity extends LetcBox {
         this.refreshActivity()
         this.shouldNofity();
         break;
+      case "task.assigned":
+        // Live push when the caller is newly assigned to a task — refresh so the
+        // notification appears in the feed without waiting for the next open.
+        this.refreshActivity()
+        this.shouldNofity();
+        break;
       case "contact.invite_accept":
       case "contact.accept_informed":
         // Mark the peer dismissed before refreshing — activity.list still
