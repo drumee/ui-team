@@ -3885,7 +3885,9 @@ html[data-theme="dark"] {
     min-height: 0;
     padding: 16px 12px;
     border-right: 1px solid var(--border-muted);
-    background: var(--normal-bg-90);
+    // White surface (theme-aware: white in light, dark surface in dark) so the
+    // Chat-tab left rail reads as a clean white sidebar (per request).
+    background: var(--normal-bg-100);
     overflow-y: auto;
   }
 
