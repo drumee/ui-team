@@ -22,6 +22,9 @@ module.exports = function (ui) {
         className: `${pfx}__q-input`,
         name: q.id,
         value: ui.getAnswer(q.id) || "",
+        // Without an explicit placeholder the entry widget falls back to
+        // LOCALE.FORM_ENTRY, a key that doesn't exist -> renders "FORM_ENTRY".
+        placeholder: LOCALE.RATING_SURVEY_INPUT_PLACEHOLDER || "Type your answer…",
         rows: q.rows || 2,
         require: "any",
         ignoreEnter: true,

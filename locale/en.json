@@ -2307,7 +2307,7 @@
   "PMF_QB1_OPT_3": "Healthcare / Medical",
   "PMF_QB1_OPT_4": "Legal / Compliance",
   "PMF_QB1_OPT_5": "Freelancer / Independent",
-  "PMF_QB1_OPT_6": "Other",
+  "PMF_QB1_OPT_6": "Other (please specify)",
   "PMF_QB1_FOLLOW": "Please specify",
   "PMF_QB2_LABEL": "What is the primary way you're using Drumee?",
   "PMF_QB2_OPT_1": "Team file management + collaboration",
@@ -2335,5 +2335,6 @@
   "RATING_SURVEY_SEND": "Send feedback",
   "RATING_SURVEY_REQUIRED": "Please answer this question to continue",
   "RATING_SURVEY_THANKS_TITLE": "Thank you!",
-  "RATING_SURVEY_THANKS_SUB": "Your feedback directly shapes what we build next."
+  "RATING_SURVEY_THANKS_SUB": "Your feedback directly shapes what we build next.",
+  "RATING_SURVEY_INPUT_PLACEHOLDER": "Type your answer…"
 }

@@ -20,6 +20,9 @@
     border-radius: var(--corner-radius-4); // 12px
     box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25), 0 1px 5.5px rgba(0, 0, 0, 0.13);
     z-index: 99998;
+    // The popup is portaled to <body>, outside the app's font scope — without
+    // this, children (and textarea font-family: inherit) resolve to Times.
+    font-family: var(--font-main, sans-serif);
   }
 
   &__container {
@@ -138,7 +141,9 @@
     width: 8px;
     height: 8px;
     border-radius: 50%;
-    background: var(--normal-bg-70);
+    // Inactive dots must stay visible on the white card — design Grey/30.
+    // (--normal-bg-70 does NOT exist in the themes; it computed transparent.)
+    background: var(--border-default, #e5e5ea);
 
     &[data-on="1"] {
       background: var(--reverse-lb, #433cc5);
@@ -171,10 +176,15 @@
     textarea {
       width: 100%;
       background: var(--normal-bg-100, #ffffff);
-      border: var(--border-default, 1px solid #e5e5ea);
+      // --border-default is a COLOR token, not a border shorthand — the full
+      // `1px solid` form is required or the border silently doesn't render.
+      border: 1px solid var(--border-default);
       border-radius: var(--corner-radius-1);
       padding: var(--spacer-3);
       color: var(--normal-fg-10, #0b0a21);
+      font-family: inherit; // textareas default to monospace
+      font-size: 14px;
+      line-height: 1.4;
       resize: vertical;
 
       &:focus {
@@ -189,7 +199,7 @@
     align-items: center;
     gap: var(--spacer-3);
     padding: var(--spacer-2) var(--spacer-3);
-    border: var(--border-default, 1px solid #e5e5ea);
+    border: 1px solid var(--border-default);
     border-radius: var(--corner-radius-1);
     cursor: pointer;
 
@@ -201,7 +211,7 @@
       width: 16px;
       height: 16px;
       flex-shrink: 0;
-      border: var(--border-default, 1px solid #e5e5ea);
+      border: 1px solid var(--border-default);
       border-radius: 50%;
       justify-content: center;
       align-items: center;
