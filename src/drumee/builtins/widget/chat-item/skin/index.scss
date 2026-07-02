@@ -733,24 +733,16 @@
   display: flex;
   align-items: flex-start;
   gap: 12px;
-  // Consistent rectangle: every card is the same width. In the narrow embedded
-  // team-chat panel (Files tab) it fills the panel; the max-width keeps it from
-  // ballooning in wider contexts so all cards match.
+  // Always span the full width of the chat column, everywhere it renders — the
+  // narrow embedded team-chat panel (Files tab) AND the full-screen Chat tab.
+  // No max-width cap so the card tracks the chat panel width exactly (per
+  // request); message-content already gives it a 100%-wide centered column.
   width: 100%;
-  max-width: 560px;
   padding: 12px;
   border-radius: 12px;
   background: #fff;
   cursor: pointer;
   user-select: none;
-}
-
-// Full-screen Chat tab (folder window data-view="chat") → ~half width, but
-// floored so the content never collapses (was overlapping) and capped by the
-// 560px max-width above so it stays the same shape as the embedded panel.
-.window-folder__split-body[data-view="chat"] .widget-chatItem__file-thread-card {
-  width: 50%;
-  min-width: 360px;
 }
 
 .widget-chatItem__ftc-badge {
