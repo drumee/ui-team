@@ -236,6 +236,9 @@ module.exports = {
   migrate_gdrive_popup: function () {
     return import("./builtins/widget/migrate-gdrive-popup");
   },
+  rating_survey_popup: function () {
+    return import("./builtins/widget/rating-survey-popup");
+  },
   module_desk: function () {
     return import("./modules/desk");
   },
