@@ -1038,6 +1038,22 @@ export function fileThreadPanel(ui) {
   });
 }
 
+/**
+ * Draggable gutter between the Files-tab file grid and the team-chat panel.
+ * Absolutely positioned at the files/chat boundary (so it never participates in
+ * the split-body grid's auto-placement); the folder window wires pointer drag on
+ * it to resize within 1:1 ↔ 2:1. Hidden by SCSS outside the Files view and in
+ * the compact ≤700px single-column layout. active:0 → no click service; the drag
+ * is wired manually in folder._wireFilesSplitter. No `service` → no onUiEvent.
+ */
+export function filesSplitter(ui) {
+  return Skeletons.Box.Y({
+    className: `${ui.fig.family}__files-splitter ${ui.fig.group}__files-splitter`,
+    sys_pn: "files-splitter",
+    partHandler: ui,
+  });
+}
+
 export function folderFilesView(ui) {
   const files =
     ui.getViewMode && ui.getViewMode() === _a.row
@@ -1046,11 +1062,14 @@ export function folderFilesView(ui) {
   // Recipient subfolder of a no-chat share → files only (no conversation panel).
   // Personal-area folders keep the chat panel — folder chat is identical across areas.
   if (_dmzShareWithoutChat()) return [files];
-  // [files, rail, chat, file-thread panel] — rail + panel flank the chat in the
-  // full Chat tab; both are null (filtered) on non-folder surfaces and hidden by
-  // SCSS outside their state (rail: not chat view; panel: data-thread!="open").
+  // [files, splitter, rail, chat, file-thread panel] — the resize gutter sits
+  // BETWEEN files and chat so grid auto-placement lays it out as the middle
+  // column in the Files view (files | gutter | chat); rail + panel flank the
+  // chat in the full Chat tab. All hidden by SCSS outside their state (splitter:
+  // only files view; rail: only chat view; panel: only data-thread="open").
   return [
     files,
+    filesSplitter(ui),
     threadRail(ui),
     chatPanel(ui),
     fileThreadPanel(ui),
