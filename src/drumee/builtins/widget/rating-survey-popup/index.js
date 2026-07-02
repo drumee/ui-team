@@ -106,9 +106,20 @@ class __rating_survey_popup extends LetcBox {
       }
       case "survey-later":
         return this._dismiss();
-      case "survey-take": {
+      case "survey-confirm": {
+        // Confirm sends the rating alone (design: primary action of the card).
         if (!this._score) return;
-        this._submit(false); // score survives even if the wizard is abandoned
+        this._submit(false).then(() => {
+          this._state = "thanks";
+          this._render();
+        });
+        return;
+      }
+      case "survey-take": {
+        // Enabled with or without a star (per Figma the button always shows).
+        // With a star: persist the score now so it survives wizard abandon;
+        // without: the score (possibly 0) goes with the final send.
+        if (this._score) this._submit(false);
         this._state = "survey";
         this._page = 0;
         this._render();

@@ -1,7 +1,11 @@
 /**
- * Rating state: 5 stars; the picked star count reveals a matching message
- * (RATING_SURVEY_MSG_1..5) and enables the "Take the survey" CTA.
- * Star row mirrors window/meeting/skeleton/feedback.js.
+ * Rating state — Figma 2144-128133 (no star picked), 2144-173302 (<5 stars),
+ * 2144-173408 (5 stars):
+ *   centered title → 5-star row → per-rating message block (hidden until a
+ *   star is picked; <5 = "So sorry…", 5 = "Thankfully…" + shared subline) →
+ *   full-width "Take the survey" gray button → equal Cancel / Confirm footer.
+ * Confirm submits the rating; Cancel dismisses (7-day snooze); Take the
+ * survey opens the PMF wizard (works with or without a star picked).
  */
 module.exports = function (ui) {
   const pfx = ui.fig.family;
@@ -21,37 +25,56 @@ module.exports = function (ui) {
     );
   }
 
-  const msg = score
-    ? (LOCALE[`RATING_SURVEY_MSG_${score}`] || "")
-    : (LOCALE.RATING_SURVEY_SUBTITLE || "How would you rate your experience so far?");
-
   return Skeletons.Box.Y({
     className: `${pfx}__body ${pfx}__body--rating`,
     kids: [
-      Skeletons.Box.X({ className: `${pfx}__stars`, kids: stars }),
       Skeletons.Note({
+        className: `${pfx}__rating-title`,
+        content: LOCALE.RATING_SURVEY_TITLE || "Rate your experience with Drumee",
+      }),
+      Skeletons.Box.X({ className: `${pfx}__stars`, kids: stars }),
+      // Message block appears only once a star is picked (2 design variants).
+      score ? Skeletons.Box.Y({
         className: `${pfx}__star-msg`,
-        dataset: { picked: score ? 1 : 0 },
-        content: msg,
+        kids: [
+          Skeletons.Note({
+            className: `${pfx}__star-msg-head`,
+            content: score === 5
+              ? (LOCALE.RATING_SURVEY_MSG_HIGH || "Thankfully, you enjoyed Drumee")
+              : (LOCALE.RATING_SURVEY_MSG_LOW || "So sorry for your experience"),
+          }),
+          Skeletons.Note({
+            className: `${pfx}__star-msg-sub`,
+            content: LOCALE.RATING_SURVEY_MSG_SUB
+              || "Please fill out this survey so that Drumee improve your experience better",
+          }),
+        ],
+      }) : null,
+      Skeletons.Button.Label({
+        className: `${pfx}__take-btn`,
+        ico: "list",
+        label: LOCALE.RATING_SURVEY_TAKE || "Take the survey",
+        service: "survey-take",
+        uiHandler: [ui],
       }),
       Skeletons.Box.X({
-        className: `${pfx}__footer`,
+        className: `${pfx}__footer ${pfx}__footer--rating`,
         kids: [
           Skeletons.Note({
             className: `${pfx}__cancel`,
-            content: LOCALE.RATING_SURVEY_LATER || "Maybe later",
+            content: LOCALE.CANCEL || "Cancel",
             service: "survey-later",
             uiHandler: [ui],
           }),
           Skeletons.Note({
             className: `${pfx}__primary-btn`,
             dataset: { disabled: score ? 0 : 1 },
-            content: LOCALE.RATING_SURVEY_TAKE || "Take the survey",
-            service: score ? "survey-take" : null,
+            content: LOCALE.CONFIRM || "Confirm",
+            service: score ? "survey-confirm" : null,
             uiHandler: [ui],
           }),
         ],
       }),
-    ],
+    ].filter(Boolean),
   });
 };
