@@ -1375,6 +1375,7 @@
   "ROLE_VIEW_EDIT": "View & Edit",
   "ROLE_VIEW_CHAT": "View & Chat",
   "PERMISSIONS_MATRIX": "Permissions Matrix",
+  "CHAT_ADMIN_REQUIRED": "អ្នកត្រូវការការអនុញ្ញាតពីអ្នកគ្រប់គ្រង ដើម្បីជជែក",
   "INVITE_ADD_ROLE": "+ Add new workspace and role",
   "SEND_INVITATION": "Send Invitation",
   "INVITE_PARTIAL_FAILED": "បានផ្ញើការអញ្ជើញ {0}, បរាជ័យ {1}",

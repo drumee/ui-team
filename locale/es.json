@@ -824,6 +824,7 @@
   "ROLE_VIEW_EDIT": "View & Edit",
   "ROLE_VIEW_CHAT": "View & Chat",
   "PERMISSIONS_MATRIX": "Permissions Matrix",
+  "CHAT_ADMIN_REQUIRED": "Necesitas permiso de administrador para chatear",
   "INVITE_ADD_ROLE": "+ Add new workspace and role",
   "SEND_INVITATION": "Send Invitation",
   "INVITE_PARTIAL_FAILED": "Enviada(s) {0} invitación(es), {1} fallida(s)",

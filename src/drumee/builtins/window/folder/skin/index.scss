@@ -3703,6 +3703,70 @@ html[data-theme="dark"] {
     }
   }
 
+  // "Need permission to chat" gate — shown over window__chat-panel for a
+  // view-only member (no chat privilege). Covers the whole panel with a blurred
+  // backdrop so the conversation behind is obscured but visible; a centered
+  // drumee lockup + message explain why. Toggled via data-open by
+  // _syncChatGate (mount + live role change). z-index sits above the chat and
+  // the search-results overlay.
+  .window__chat-gate {
+    position: absolute;
+    inset: 0;
+    z-index: 30;
+    // Hidden until the panel is gated (data-chat_gated="1" below).
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    padding: 24px;
+    text-align: center;
+    background: rgba(255, 255, 255, 0.35);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+  }
+
+  // View-only member: show the card over the conversation AND blur + disable
+  // the message composer. The composer lives in a position:relative footer
+  // wrapper (margin-top:auto) that paints above the overlay, so blurring it
+  // directly is what actually gates the input.
+  .window__chat-panel[data-chat_gated="1"] {
+    .window__chat-gate {
+      display: flex;
+    }
+
+    .widget-chat__messenger-wrapper {
+      filter: blur(4px);
+      pointer-events: none;
+      user-select: none;
+    }
+  }
+
+  .window__chat-gate-logo {
+    align-items: end;
+    gap: 8px;
+  }
+
+  .window__chat-gate-logo-ico {
+    width: 40px;
+    height: 40px;
+    color: var(--primary-50);
+  }
+
+  .window__chat-gate-logo-text {
+    font-family: "Geist", sans-serif;
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--primary-50);
+  }
+
+  .window__chat-gate-text {
+    max-width: 240px;
+    font-size: 14px;
+    line-height: 1.4;
+    color: var(--normal-fg-10);
+  }
+
   .window__search-results-label {
     flex: 0 0 auto;
     padding: 2px 4px 6px;

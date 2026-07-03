@@ -1375,6 +1375,7 @@
   "ROLE_VIEW_EDIT": "View & Edit",
   "ROLE_VIEW_CHAT": "View & Chat",
   "PERMISSIONS_MATRIX": "Permissions Matrix",
+  "CHAT_ADMIN_REQUIRED": "Для общения в чате нужны права администратора",
   "INVITE_ADD_ROLE": "+ Add new workspace and role",
   "SEND_INVITATION": "Send Invitation",
   "INVITE_PARTIAL_FAILED": "Отправлено приглашений: {0}, не удалось: {1}",

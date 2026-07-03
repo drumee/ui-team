@@ -106,7 +106,6 @@
 
   .window-confirm__title {
     align-content: center;
-    justify-content: center;
     text-align: center;
     width: 100%;
     @include drumee.typo($size: 16px, $line: 25px, $color: var(--default-text-color));
