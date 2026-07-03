@@ -3010,6 +3010,10 @@ class __window_folder extends mfsInteract {
       nid      : shareNid,
       hub_id   : this.mget(_a.hub_id),
       filetype : _a.folder,
+      // Title this panel "Manage access" (workspace-root entry), not the default
+      // "Folder Secure Share" used for file/subfolder shares. Scoped: only this
+      // launch sets the flag, so subfolder/file share panels keep their title.
+      manage_access: 1,
       uiHandler: [this],
     });
     const c = this.dialogWrapper.children.last();
