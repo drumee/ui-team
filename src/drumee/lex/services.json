@@ -129,7 +129,8 @@
     "delete_file_old_versions": "admin.delete_file_old_versions",
     "download_file_versions": "admin.download_file_versions",
     "get_retention_policy": "admin.get_retention_policy",
-    "save_retention_policy": "admin.save_retention_policy"
+    "save_retention_policy": "admin.save_retention_policy",
+    "get_guest_share_events": "admin.get_guest_share_events"
   },
   "adminpanel": {
     "member_list": "adminpanel.member_list",
