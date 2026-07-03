@@ -43,9 +43,18 @@ class __tasks_panel extends LetcBox {
     this._pickerOpen = null;
     // Member filter — empty = show all. Uids stored as strings.
     this._filterUids = [];
-    // Active sub-view (board | list | summary) and the List view's sort state.
+    // Active sub-view (board | calendar | list | summary) and the List view's
+    // sort state.
     this._view = "board";
     this._sort = null; // { key, dir } — null = natural (status, rank) order
+    // Calendar view: month|week granularity + the anchor date (YYYY-MM-DD) of
+    // the displayed period. null cursor = today.
+    this._calMode = "month";
+    this._calCursor = null;
+    // Gantt view: weeks|months axis granularity + the multi-select set (task
+    // ids) backing the checkboxes / "Delete selected".
+    this._ganttMode = "weeks";
+    this._ganttSelected = new Set();
     this._fileSearch = { query: "", results: [], scope: null };
     this._fileSearchTimer = null;
     this._fileSearchBlurTimer = null;
@@ -663,6 +672,78 @@ class __tasks_panel extends LetcBox {
         return;
       }
 
+      case "set-cal-mode": {
+        const m = trigger.mget("calMode") === "week" ? "week" : "month";
+        if (m !== this._calMode) {
+          this._calMode = m;
+          this._render();
+        }
+        return;
+      }
+
+      case "cal-prev":
+        return this._calShift(-1);
+
+      case "cal-next":
+        return this._calShift(1);
+
+      case "cal-today":
+        if (this._calCursor !== null) {
+          this._calCursor = null;
+          this._render();
+        }
+        return;
+
+      case "cal-day-more": {
+        // "+N more" on a packed month cell → jump to that day's week view.
+        const day = trigger.mget("calDay");
+        if (day) {
+          this._calCursor = day;
+          this._calMode = "week";
+          this._render();
+        }
+        return;
+      }
+
+      case "cal-add": {
+        // "+" on a day cell → open the create modal pre-dated to that day.
+        const day = trigger.mget("calDay") || "";
+        this._creating = true;
+        this._createDefaults = {
+          status: "todo",
+          title: "",
+          description: "",
+          priority: "medium",
+          due_date: day,
+          assignees: [],
+          labels: [],
+          pending_files: [],
+        };
+        this._folderFilenames = null;
+        this._resetFileSearch();
+        return this._render();
+      }
+
+      case "set-gantt-mode": {
+        const m = trigger.mget("ganttMode") === "months" ? "months" : "weeks";
+        if (m !== this._ganttMode) {
+          this._ganttMode = m;
+          this._render();
+        }
+        return;
+      }
+
+      case "gantt-toggle-select": {
+        const id = trigger.mget("taskId");
+        if (!id) return;
+        if (this._ganttSelected.has(id)) this._ganttSelected.delete(id);
+        else this._ganttSelected.add(id);
+        return this._render();
+      }
+
+      case "gantt-delete-selected":
+        return this._deleteSelectedTasks();
+
       case "set-sort": {
         // Toggle direction when re-selecting the same column, else sort asc.
         const key = trigger.mget("sortKey");
@@ -800,8 +881,10 @@ class __tasks_panel extends LetcBox {
   }
 
   onWsMessage(svc, data, options = {}) {
-    const { service } = options || svc;
-    switch (service) {
+    // The WS dispatcher passes the service name as the FIRST arg — switch on it
+    // directly. Reading it from `options` (usually {}) silently skips every case
+    // and kills live task/comment refresh (framework-invariants.md §7).
+    switch (svc) {
       case SERVICE.task.create:
       case SERVICE.task.update:
       case SERVICE.task.update_status:
@@ -1391,6 +1474,41 @@ class __tasks_panel extends LetcBox {
     });
   }
 
+  // Gantt "Delete selected" — bulk-delete the checked tasks, then clear the
+  // selection. Best-effort per task; one failure doesn't abort the rest.
+  async _deleteSelectedTasks() {
+    const ids = Array.from(this._ganttSelected || []);
+    if (!ids.length) return;
+    for (const id of ids) {
+      try {
+        const resp = await this.postService({
+          service: SERVICE.task.delete,
+          hub_id: this._hubId,
+          id,
+        });
+        if (resp && (resp.affected === 1 || resp.id === id)) {
+          this._tasks = this._tasks.filter((t) => t.id !== id);
+        }
+      } catch (err) {
+        console.error("[tasks_panel] gantt bulk delete failed:", id, err);
+      }
+    }
+    this._ganttSelected = new Set();
+    this._render();
+  }
+
+  // Step the calendar cursor by ±1 month or ±1 week (per the active mode).
+  _calShift(dir) {
+    try {
+      const base = this._calCursor ? Dayjs(this._calCursor) : Dayjs();
+      const unit = this._calMode === "week" ? "week" : "month";
+      this._calCursor = base.add(dir, unit).format("YYYY-MM-DD");
+    } catch (_) {
+      this._calCursor = null;
+    }
+    this._render();
+  }
+
   async _loadComments(taskId) {
     try {
       const rows = await this.fetchService({
@@ -1411,7 +1529,11 @@ class __tasks_panel extends LetcBox {
         return { ...r, reactions: Array.isArray(reactions) ? reactions : [] };
       });
     } catch (err) {
-      this._comments = [];
+      // Don't silently blank an already-populated feed on a transient failure —
+      // that reads to the user as "others' comments disappeared". Log so the
+      // real cause (permission / hub scope / 5xx) is visible.
+      console.error("[tasks_panel] comment.list failed:", err);
+      if (!Array.isArray(this._comments)) this._comments = [];
     }
   }
 
@@ -2868,6 +2990,18 @@ class __tasks_panel extends LetcBox {
   }
   getSort() {
     return this._sort || null;
+  }
+  getCalMode() {
+    return this._calMode || "month";
+  }
+  getCalCursor() {
+    return this._calCursor;
+  }
+  getGanttMode() {
+    return this._ganttMode || "weeks";
+  }
+  getGanttSelected() {
+    return this._ganttSelected;
   }
 
   isCreating() {
