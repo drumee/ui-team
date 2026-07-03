@@ -43,25 +43,37 @@ function action(ui, { service, ico, tip, state, icons, sys_pn }) {
 module.exports = function (ui) {
   const actions = [];
 
-  // Download / download-as-PDF are always shown. In a DMZ share without the
-  // download grant, the click is gated (sign-up/login or Request Access) rather
-  // than hidden — the action handlers call _dmzGateDownload().
-  actions.push(
-    action(ui, {
-      service: _a.download,
-      ico: _a.download,
-      tip: LOCALE.DOWNLOAD_ORIG,
-    }),
-  );
+  // Every header export (download-original, download-as-PDF, print) reads what the
+  // server last persisted/built — not the live editor. While the doc is open in a
+  // WRITABLE editor those sources lag the in-editor edits: download-original waits
+  // on OnlyOffice's autosave, and download-as-PDF/print additionally wait on the
+  // server rebuilding media.pdf. So they would export a stale version. Hide them
+  // there and let the editor's own toolbar (which acts on the live model) own
+  // export/print. Preview mode, read-only (DMZ) viewing, and PDFs (never edit mode)
+  // keep them: the server source is exactly what's on screen, so it's correct.
+  const inWritableEditor = ui.mget(_a.mode) == _a.edit && ui.canUpload();
 
-  if (ui.mget(_a.ext) != _a.pdf) {
+  // Download / download-as-PDF. In a DMZ share without the download grant, the
+  // click is gated (sign-up/login or Request Access) rather than hidden — the
+  // action handlers call _dmzGateDownload().
+  if (!inWritableEditor) {
     actions.push(
       action(ui, {
-        service: "download-pdf",
-        ico: "app-pdf-file",
-        tip: LOCALE.DOWNLOAD_AS_PDF,
+        service: _a.download,
+        ico: _a.download,
+        tip: LOCALE.DOWNLOAD_ORIG,
       }),
     );
+
+    if (ui.mget(_a.ext) != _a.pdf) {
+      actions.push(
+        action(ui, {
+          service: "download-pdf",
+          ico: "app-pdf-file",
+          tip: LOCALE.DOWNLOAD_AS_PDF,
+        }),
+      );
+    }
   }
 
   if (ui.canUpload() && !Visitor.inDmz && EDITABLE.includes(ui.mget(_a.ext).toLowerCase())) {
@@ -96,9 +108,13 @@ module.exports = function (ui) {
     );
   }
 
-  actions.push(
-    action(ui, { service: "print", ico: "print", tip: LOCALE.PRINT }),
-  );
+  // Print reads the server-built media.pdf — same staleness as the downloads above
+  // while a writable editor is open, so gate it identically.
+  if (!inWritableEditor) {
+    actions.push(
+      action(ui, { service: "print", ico: "print", tip: LOCALE.PRINT }),
+    );
+  }
 
   // Maximize → fills the workspace (never the header/sidebar), mirroring the
   // window-tab zoom. Icon flips per toggle.
