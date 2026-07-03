@@ -469,6 +469,11 @@ class __window_folder extends mfsInteract {
     } else if (initialTab && initialTab !== "files") {
       this.ensurePart("folder-view").then(() => this.showFolderTab(initialTab));
     }
+    // Gate the chat panel to the viewer's current role on open (a view-only
+    // member sees the "need permission" info card instead of the conversation);
+    // live role changes re-run this via _applyLivePrivilege. Deferred until the
+    // body is rendered so the chat-panel part exists.
+    this.ensurePart("folder-view").then(() => this._syncChatGate());
     // Honor a launch-time file-chat scope (opened from a "file.thread" card
     // outside any folder window): scope the chat to that file IN PLACE — no
     // auto-switch to the full Chat tab (the window opens on its default tab and
@@ -2716,6 +2721,59 @@ class __window_folder extends mfsInteract {
     } finally {
       this._folderConfirmInFlight = false;
     }
+  }
+
+  // Realtime role change for THIS viewer. When an admin changes our privilege,
+  // the server (hub.set_privilege) pushes { privilege, hub_id, area } to our
+  // sockets. The base handleWsEvent routes set_privilege to updateContent,
+  // which matches children by nid and no-ops on this nid-less payload — so
+  // intercept it here to refresh our own chrome. mget(_a.privilege) drives
+  // canUpload/canShare/canManageAccess, so updating it fixes context-menu,
+  // drag-drop, etc. live; the topbar re-feed is needed because its buttons are
+  // conditionally created (absent when unpermitted) and can't be CSS-toggled.
+  handleWsEvent(args = {}) {
+    const { data, options } = args || {};
+    if (options && options.service === SERVICE.hub.set_privilege) {
+      this._applyLivePrivilege(data || {});
+    }
+    return super.handleWsEvent(args);
+  }
+
+  _applyLivePrivilege(data = {}) {
+    const { privilege, hub_id } = data;
+    if (privilege == null) return;
+    // A user may have several workspace windows open — only react to our own.
+    if (hub_id && hub_id !== this.mget(_a.hub_id)) return;
+    // No-op when unchanged: avoids a needless topbar flicker.
+    if (Number(this.mget(_a.privilege)) === Number(privilege)) return;
+    this.mset(_a.privilege, Number(privilege));
+    // Re-feed the header (not the topbar container) so the header element and
+    // its drag/raise wiring survive; only the topbar child rebuilds with the
+    // new privilege. The re-feed recreates the breadcrumb part, so repopulate.
+    this.feedPart("folder-header", require("./skeleton/topbar")(this));
+    this.refreshBreadcrumbsUI();
+    this._syncChatGate();
+  }
+
+  // Chat is granted at the "View & chat" tier and above — i.e. any privilege
+  // carrying the download bit. Only the bare view-only "View" role lacks it.
+  // Mirrors roleFromPrivilege's chat detection in settings-action-panel.
+  _privilegeGrantsChat(priv) {
+    return !!(Number(priv) & _K.permission.download);
+  }
+
+  // Gate window__chat-panel to the viewer's chat capability. The Chat tab stays
+  // visible; a view-only member meets the "need permission" card and a blurred,
+  // disabled composer instead of the conversation. One data-chat_gated flag on
+  // the panel drives both (CSS): the card overlay and the composer blur. Cheap
+  // attribute flip — the chat widget stays intact. Called at mount and on the
+  // live role change (hub.set_privilege) via _applyLivePrivilege.
+  _syncChatGate() {
+    if (!this.$el) return;
+    const gated = this._privilegeGrantsChat(this.mget(_a.privilege)) ? 0 : 1;
+    // Attribute is data-chat_gated (underscore): the skeleton sets it via
+    // dataset:{chat_gated}, which the framework renders literally as data-${k}.
+    this.$el.find(".window__chat-panel").attr("data-chat_gated", gated);
   }
 
   sendFolderInvitation(cmd) {
