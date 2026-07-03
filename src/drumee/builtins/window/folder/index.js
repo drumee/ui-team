@@ -634,6 +634,19 @@ class __window_folder extends mfsInteract {
           else list.append(opt);
       }
       if (this.getViewMode && this.getViewMode() !== _a.row) {
+        // Grid the new tile IMMEDIATELY. Once a folder has been partitioned,
+        // `.smart-container` is `flex-direction: column` (it stacks the
+        // workspace/folder/file sections); a freshly appended upload
+        // placeholder lands there as a raw direct child, so it renders
+        // stacked VERTICALLY until re-partition. `_scheduleAlphabeticalGridSort`
+        // only re-partitions on a debounced setTimeout(0) (and bails when
+        // `iconsList` points at another list), so during a multi-file upload
+        // the placeholders stay stacked for the whole upload, then snap into
+        // the grid on completion. Partition synchronously here — same as the
+        // base interact `_insertMedia` (Wm/DMZ) — so the placeholder drops
+        // straight into the wrapping `.file-section` grid; the scheduled sort
+        // then just reorders it alphabetically.
+        if (this._partitionFoldersAndFiles) this._partitionFoldersAndFiles(list);
         this._scheduleAlphabeticalGridSort(list);
       }
     });
