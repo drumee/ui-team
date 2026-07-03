@@ -2710,7 +2710,7 @@ class __window_folder extends mfsInteract {
           });
         }
       }
-      Wm.alert(LOCALE.ROLE_UPDATED_SUCCESSFULLY || "Role updated.");
+      this._showNoticeToast(LOCALE.ROLE_UPDATED_SUCCESSFULLY || "Role updated.");
     } catch (e) {
       Wm.alert(e?.reason || e?.error || LOCALE.TRY_AGAIN);
     } finally {
@@ -2754,15 +2754,15 @@ class __window_folder extends mfsInteract {
       });
   }
 
-  // Branded confirmation toast shown after an invitation is sent. It reuses the
-  // floating window_info component styled like window-confirm (the "notice"
-  // variant — drumee logo + a compact card) with a single Close button that
-  // dismisses the toast.
-  _showInviteSentToast() {
+  // Branded confirmation toast shown after a member-management action succeeds
+  // (invite sent, role updated, member removed, …). It reuses the floating
+  // window_info component styled like window-confirm (the "notice" variant —
+  // drumee logo + a compact card, see window-info skin [data-variant="notice"])
+  // with a single Close button that dismisses the toast. Every success
+  // confirmation goes through here so they share one consistent style.
+  _showNoticeToast(message) {
     Wm.info({
-      message: LOCALE.INVITATION_SENT_SUCCESSFULLY,
-      // Compact, window-confirm styled card (see window-info skin
-      // [data-variant="notice"]).
+      message,
       variant: "notice",
       actions: [
         {
@@ -2773,6 +2773,11 @@ class __window_folder extends mfsInteract {
         },
       ],
     });
+  }
+
+  // Confirmation toast shown after an invitation is sent.
+  _showInviteSentToast() {
+    this._showNoticeToast(LOCALE.INVITATION_SENT_SUCCESSFULLY);
   }
 
   // Open a destructive Wm.confirm popup; on confirm POST
@@ -2821,7 +2826,7 @@ class __window_folder extends mfsInteract {
         return;
       }
       await this._refreshFolderMembers();
-      Wm.alert(LOCALE.MEMBER_REMOVED_SUCCESSFULLY || "Member removed.");
+      this._showNoticeToast(LOCALE.MEMBER_REMOVED_SUCCESSFULLY || "Member removed.");
     } catch (e) {
       Wm.alert(e?.reason || e?.error || LOCALE.TRY_AGAIN);
     } finally {
@@ -2972,12 +2977,27 @@ class __window_folder extends mfsInteract {
       return this.dialogWrapper.clear();
     }
     this.isShowSettings = true;
+    // Converge the workspace "Manage access" onto secure-share v2 — the SAME panel
+    // files/subfolders use (window_secure_share) — so the workspace link gets
+    // editable permissions + logged-in-recipient recognition. The old external-room
+    // panel (permission_shared) supported neither (permission was hard-clamped to
+    // view; recipients were always guest-bound). Share the workspace ROOT node: for
+    // a hub/workspace-root window the real node id is actual_home_id (nid is the
+    // hub/0) — mirrors this window's own curNid logic; a share-area subfolder shares
+    // its own node. Rendered embedded in the same dialog drawer, matching the media
+    // 'secure-share' launch.
+    let shareNid = this.mget(_a.nid);
+    if (this.mget(_a.filetype) === _a.hub && this.mget(_a.actual_home_id)) {
+      shareNid = this.mget(_a.actual_home_id);
+    }
     this.dialogWrapper.feed({
-      kind: "permission_shared",
-      media: this.mget(_a.media) || this.media,
-      hub_id: this.mget(_a.hub_id),
+      kind     : "window_secure_share",
+      embedded : 1,
+      dataset  : { embedded: "yes" },
+      nid      : shareNid,
+      hub_id   : this.mget(_a.hub_id),
+      filetype : _a.folder,
       uiHandler: [this],
-      persistence: _a.once,
     });
     const c = this.dialogWrapper.children.last();
     if (c) {
