@@ -1377,8 +1377,11 @@ export function topbarMoreMenu(ui) {
       modifier: "video",
     });
   }
-  // Manage Access mirrors the share control-icon: share areas only.
-  if (!inShare && area === _a.share) {
+  // Manage Access mirrors the share control-icon: share areas + workspace ROOT
+  // only (filetype === hub). Sub-folders already share via their right-click
+  // "Share" menu, so this entry is redundant there — keep in sync with topbar.js.
+  const isRoot = ui.mget(_a.filetype) === _a.hub && ui.mget(_a.actual_home_id);
+  if (!inShare && area === _a.share && isRoot) {
     items.push({
       service: "folder-manage-access",
       ico: "app-share",
