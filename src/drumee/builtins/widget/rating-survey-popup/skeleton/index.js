@@ -9,9 +9,6 @@ module.exports = function (ui) {
   const pfx = ui.fig.family;
   let body;
   switch (ui.getState()) {
-    case "survey":
-      body = require("./survey")(ui);
-      break;
     case "thanks":
       body = require("./thanks")(ui);
       break;
