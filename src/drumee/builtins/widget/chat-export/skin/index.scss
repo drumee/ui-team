@@ -496,6 +496,22 @@
     &:active {
       background: var(--primary-purple-60);
     }
+
+    // Server-side PDF generation in progress: outlined pill with a spinner,
+    // non-interactive (skeleton drops the `service` so clicks are ignored).
+    // Uses an inset box-shadow (not a border) for the outline so the button
+    // keeps the exact same size as the solid Download state — no reflow.
+    &.is-generating {
+      background: #ffffff;
+      box-shadow: inset 0 0 0 1px var(--neutral-200);
+      gap: 8px;
+      cursor: default;
+
+      &:hover,
+      &:active {
+        background: #ffffff;
+      }
+    }
   }
 
   &__download-btn-label {
@@ -505,6 +521,22 @@
       $weight: 600,
       $line: 24px
     );
+  }
+
+  // Generating state: dark label on the white outlined pill.
+  &__download-btn.is-generating &__download-btn-label {
+    color: var(--neutral-800);
+  }
+
+  // Indeterminate ring spinner shown left of "Generating".
+  &__download-spinner {
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+    border-radius: 50%;
+    border: 2px solid var(--neutral-300);
+    border-top-color: var(--neutral-700);
+    animation: _chat-export-spin 0.7s linear infinite;
   }
 
   // ── progress area ────────────────────────────────────────────
@@ -532,5 +564,11 @@
       $line: 18px
     );
     padding: 6px 0;
+  }
+}
+
+@keyframes _chat-export-spin {
+  to {
+    transform: rotate(360deg);
   }
 }

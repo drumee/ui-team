@@ -249,6 +249,8 @@ const createNav = (ui) => {
             "toggle-contacts",
           ),
           createNavItem(ui, "sidebar_trash", LOCALE.TRASH, "toggle-trash"),
+          // Admin Console — the full in-desk console (apps_main), loaded from the
+          // @drumee/admin-console plugin on click (see desk onUiEvent "toggle-apps").
           createNavItem(
             ui,
             "sidebar_apps",

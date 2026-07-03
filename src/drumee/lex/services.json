@@ -127,7 +127,9 @@
     "get_file_versions": "admin.get_file_versions",
     "get_file_version_detail": "admin.get_file_version_detail",
     "delete_file_old_versions": "admin.delete_file_old_versions",
-    "download_file_versions": "admin.download_file_versions"
+    "download_file_versions": "admin.download_file_versions",
+    "get_retention_policy": "admin.get_retention_policy",
+    "save_retention_policy": "admin.save_retention_policy"
   },
   "adminpanel": {
     "member_list": "adminpanel.member_list",

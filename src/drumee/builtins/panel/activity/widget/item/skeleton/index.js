@@ -58,6 +58,20 @@ function getActivityMeta(ui, data) {
     };
   }
 
+  // 2. Task assignment ("{creator} assigned you to {task}"). A task_assigned row
+  // is a contact_activity event (category resolves to 'contact'), so without
+  // this it would fall into the contact branch and read "wants to connect". The
+  // task title is flattened onto the row server-side as `task_title`.
+  if (data.event === 'task_assigned') {
+    return {
+      before: LOCALE.TASK_ASSIGNED_ACTION || 'assigned you to ',
+      label: data.task_title || name,
+      after: '',
+      colorClass: 'mention',
+      badge: 'mention',
+    };
+  }
+
   switch (ui.mget(_a.category)) {
     case 'hub_invite':
       // Never fall back to `name` for hub_invite — that resolver chains

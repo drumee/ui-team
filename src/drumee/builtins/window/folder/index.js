@@ -697,9 +697,75 @@ class __window_folder extends mfsInteract {
     });
   }
 
+  // ---- Files-tab adjustable split (files:chat, draggable 1:1 ↔ 2:1) --------
+  // The split ratio is the files panel's width as a % of the split-body. Range:
+  // 50% (1:1) … 66.667% (2:1); default 2:1. Persisted globally in localStorage
+  // and applied as the `--files-w` CSS var the Files-view grid reads.
+  _FILES_SPLIT_MIN() { return 50; }            // 1:1
+  _FILES_SPLIT_MAX() { return 200 / 3; }       // 2:1  (≈66.667%)
+  _FILES_SPLIT_KEY() { return "folder-files-split"; }
+
+  _storedFilesSplit() {
+    const raw = parseFloat(localStorage.getItem(this._FILES_SPLIT_KEY()));
+    if (!isFinite(raw)) return this._FILES_SPLIT_MAX(); // default 2:1
+    return Math.min(this._FILES_SPLIT_MAX(), Math.max(this._FILES_SPLIT_MIN(), raw));
+  }
+
+  _applyFilesSplit(pct) {
+    const view = this.__folderView;
+    if (!view || !view.el) return;
+    const v = pct == null ? this._storedFilesSplit() : pct;
+    view.el.style.setProperty("--files-w", `${v}%`);
+  }
+
+  _wireFilesSplitter(child) {
+    if (!child || !child.el) return;
+    const handle = child.el;
+    this._applyFilesSplit(); // restore persisted value on (re)mount
+    let dragging = false;
+    const onMove = (e) => {
+      const view = this.__folderView;
+      if (!dragging || !view || !view.el) return;
+      const rect = view.el.getBoundingClientRect();
+      if (!rect.width) return;
+      let pct = ((e.clientX - rect.left) / rect.width) * 100;
+      pct = Math.min(this._FILES_SPLIT_MAX(), Math.max(this._FILES_SPLIT_MIN(), pct));
+      this._filesSplitPct = pct;
+      view.el.style.setProperty("--files-w", `${pct}%`);
+    };
+    const onUp = (e) => {
+      if (!dragging) return;
+      dragging = false;
+      handle.dataset.dragging = "0";
+      try { handle.releasePointerCapture(e.pointerId); } catch (_) {}
+      document.removeEventListener("pointermove", onMove);
+      document.removeEventListener("pointerup", onUp);
+      if (isFinite(this._filesSplitPct)) {
+        localStorage.setItem(this._FILES_SPLIT_KEY(), `${this._filesSplitPct}`);
+      }
+    };
+    handle.addEventListener("pointerdown", (e) => {
+      const view = this.__folderView;
+      // Only active on the Files tab (the only view that reads --files-w).
+      if (!view || !view.el || view.el.dataset.view !== "files") return;
+      dragging = true;
+      handle.dataset.dragging = "1";
+      try { handle.setPointerCapture(e.pointerId); } catch (_) {}
+      document.addEventListener("pointermove", onMove);
+      document.addEventListener("pointerup", onUp);
+      e.preventDefault();
+    });
+  }
+
   onPartReady(child, pn) {
     if (pn === "folder-view") {
       this.__folderView = child;
+      // Restore the user's persisted Files-tab split ratio (default 2:1).
+      this._applyFilesSplit();
+      return;
+    }
+    if (pn === "files-splitter") {
+      this._wireFilesSplitter(child);
       return;
     }
     if (pn === "file-type-filter") {

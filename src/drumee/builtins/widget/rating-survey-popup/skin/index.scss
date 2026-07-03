@@ -1,0 +1,367 @@
+// PMF rating-survey popup — Figma 2144-128133 / 2144-173302 / 2144-173408.
+// Centered white card (radius 12, pad 32, gap 32), purple stars, gray
+// "Take the survey" bar, equal Cancel/Confirm footer. All colors via theme
+// tokens whose LIGHT values match the design palette exactly:
+//   card #fff = --normal-bg-100 · gray btn #f2f2f7 = --normal-bg-90
+//   confirm #433cc5 = --reverse-lb · star #847eff = --hover-border-40
+//   title #34343a = --normal-fg-800 · body #0b0a21 = --normal-fg-10
+//   muted #84848c = --normal-fg-50   (each adapts in dark.scss)
+.rating-survey-popup {
+  &__ui {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: min(542px, calc(100vw - 32px));
+    max-height: calc(100vh - 48px);
+    overflow-y: auto;
+    background: var(--normal-bg-100, #ffffff);
+    border: 1px solid rgba(0, 0, 0, 0.05);
+    border-radius: var(--corner-radius-4); // 12px
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25), 0 1px 5.5px rgba(0, 0, 0, 0.13);
+    z-index: 99998;
+    // The popup is portaled to <body>, outside the app's font scope — without
+    // this, children (and textarea font-family: inherit) resolve to Times.
+    font-family: var(--font-main, sans-serif);
+  }
+
+  &__container {
+    padding: var(--spacer-7, 2rem); // 32px
+    gap: var(--spacer-7, 2rem);
+    align-items: center;
+  }
+
+  &__body {
+    width: 100%;
+    align-items: center;
+    gap: var(--spacer-7, 2rem);
+  }
+
+  // ── rating ──
+  &__rating-title {
+    justify-content: center;
+    text-align: center;
+    font-size: 24px;
+    line-height: 1.1;
+    font-weight: 600;
+    color: var(--normal-fg-800, #34343a);
+  }
+
+  &__stars {
+    justify-content: center;
+    gap: var(--spacer-3, 0.5rem);
+  }
+
+  &__star {
+    width: 40px;
+    height: 40px;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: #e5e5ea; // design Grey/30 — unpicked star
+
+    svg {
+      width: 34px;
+      height: 34px;
+    }
+
+    &[data-on="1"] {
+      color: var(--hover-border-40, #847eff);
+    }
+
+    &:hover {
+      transform: scale(1.08);
+    }
+  }
+
+  &__star-msg {
+    width: 100%;
+    align-items: center;
+    gap: var(--spacer-3, 0.5rem);
+  }
+
+  &__star-msg-head {
+    justify-content: center;
+    text-align: center;
+    font-size: 18px;
+    line-height: 24px;
+    font-weight: 600;
+    color: var(--normal-fg-10, #0b0a21);
+  }
+
+  &__star-msg-sub {
+    justify-content: center;
+    text-align: center;
+    font-size: 12px;
+    line-height: 1.4;
+    color: var(--normal-fg-10, #0b0a21);
+  }
+
+  // Full-width gray "Take the survey" bar (icon + label). Button.Label's
+  // stock svg carries class "full" (100% sizing) which stacks the label
+  // under it — force the design's inline row: 20px icon beside the text.
+  &__take-btn {
+    display: flex;
+    flex-direction: row;
+    width: 100%;
+    justify-content: center;
+    align-items: center;
+    gap: var(--spacer-3, 0.5rem);
+    padding: var(--spacer-5, 1rem) var(--spacer-6, 1.5rem);
+    background: var(--normal-bg-90, #f2f2f7);
+    border-radius: var(--corner-radius-1); // 4px
+    cursor: pointer;
+    color: var(--normal-fg-10, #0b0a21);
+
+    svg {
+      width: 20px;
+      height: 20px;
+      flex: 0 0 auto;
+    }
+
+    .label {
+      font-size: 14px;
+      line-height: 20px;
+      font-weight: 600;
+      color: var(--normal-fg-10, #0b0a21);
+    }
+
+    &:hover {
+      background: var(--overlay-bg-05, rgba(0, 0, 0, 0.06));
+    }
+  }
+
+  // ── wizard ──
+  &__dots {
+    justify-content: center;
+    gap: var(--spacer-2);
+  }
+
+  &__dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    // Inactive dots must stay visible on the white card — design Grey/30.
+    // (--normal-bg-70 does NOT exist in the themes; it computed transparent.)
+    background: var(--border-default, #e5e5ea);
+
+    &[data-on="1"] {
+      background: var(--reverse-lb, #433cc5);
+    }
+  }
+
+  &__questions {
+    width: 100%;
+    gap: var(--spacer-5, 1rem);
+  }
+
+  &__q {
+    width: 100%;
+    gap: var(--spacer-2);
+  }
+
+  &__q-label {
+    font-weight: 600;
+    color: var(--normal-fg-10, #0b0a21);
+
+    &[data-required="1"]::after {
+      content: " *";
+      color: var(--reverse-lb, #433cc5);
+    }
+  }
+
+  &__q-input {
+    width: 100%;
+
+    textarea {
+      width: 100%;
+      background: var(--normal-bg-100, #ffffff);
+      // --border-default is a COLOR token, not a border shorthand — the full
+      // `1px solid` form is required or the border silently doesn't render.
+      border: 1px solid var(--border-default);
+      border-radius: var(--corner-radius-1);
+      padding: var(--spacer-3);
+      color: var(--normal-fg-10, #0b0a21);
+      font-family: inherit; // textareas default to monospace
+      font-size: 14px;
+      line-height: 1.4;
+      resize: vertical;
+
+      &:focus {
+        outline: none;
+        box-shadow: 0 0 0 3px rgba(132, 126, 255, 0.25);
+      }
+    }
+  }
+
+  &__q-opt {
+    width: 100%;
+    align-items: center;
+    gap: var(--spacer-3);
+    padding: var(--spacer-2) var(--spacer-3);
+    border: 1px solid var(--border-default);
+    border-radius: var(--corner-radius-1);
+    cursor: pointer;
+
+    &:hover {
+      background: var(--overlay-bg-05);
+    }
+
+    .rating-survey-popup__q-mark {
+      width: 16px;
+      height: 16px;
+      flex-shrink: 0;
+      border: 1px solid var(--border-default);
+      border-radius: 50%;
+      justify-content: center;
+      align-items: center;
+    }
+
+    &[data-kind="multi"] .rating-survey-popup__q-mark {
+      border-radius: var(--corner-radius-1, 4px);
+    }
+
+    &[data-on="1"] {
+      border-color: var(--hover-border-40, #847eff);
+    }
+
+    // Checked checkbox: purple square with a white ✓ (not a plain fill).
+    &[data-kind="multi"][data-on="1"] .rating-survey-popup__q-mark {
+      background: var(--reverse-lb, #433cc5);
+      border-color: var(--reverse-lb, #433cc5);
+
+      &::after {
+        content: "";
+        width: 8px;
+        height: 4px;
+        border-left: 2px solid var(--reverse-fg, #ffffff);
+        border-bottom: 2px solid var(--reverse-fg, #ffffff);
+        transform: rotate(-45deg) translate(1px, -1px);
+      }
+    }
+
+    // Selected radio: purple ring with an inner dot (not a full fill).
+    &[data-kind="choice"][data-on="1"] .rating-survey-popup__q-mark {
+      border-color: var(--reverse-lb, #433cc5);
+
+      &::after {
+        content: "";
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: var(--reverse-lb, #433cc5);
+      }
+    }
+  }
+
+  &__q-error {
+    color: #e5484d; // danger — no matching token verified
+    font-size: 12px;
+  }
+
+  // ── thanks ──
+  &__thanks-ico {
+    justify-content: center;
+
+    svg {
+      width: 56px;
+      height: 56px;
+    }
+  }
+
+  &__thanks-title {
+    justify-content: center;
+    font-size: 18px;
+    line-height: 24px;
+    font-weight: 600;
+    color: var(--normal-fg-10, #0b0a21);
+  }
+
+  &__thanks-sub {
+    justify-content: center;
+    text-align: center;
+    font-size: 12px;
+    line-height: 1.4;
+    color: var(--normal-fg-10, #0b0a21);
+  }
+
+  // ── footer buttons (equal-width Cancel / Confirm per design) ──
+  &__footer {
+    width: 100%;
+    justify-content: space-between;
+    align-items: stretch;
+    gap: var(--spacer-4, 0.75rem); // 12px
+
+    &--center {
+      justify-content: center;
+    }
+  }
+
+  &__spacer {
+    flex: 1;
+  }
+
+  &__cancel,
+  &__primary-btn {
+    flex: 1;
+    justify-content: center;
+    align-items: center;
+    padding: var(--spacer-5, 1rem) var(--spacer-6, 1.5rem);
+    border-radius: var(--corner-radius-1); // 4px
+    cursor: pointer;
+    font-size: 16px;
+    line-height: 24px;
+    font-weight: 600;
+  }
+
+  &__cancel {
+    background: var(--normal-bg-90, #f2f2f7);
+    color: var(--normal-fg-50, #84848c);
+
+    &:hover {
+      color: var(--normal-fg-10, #0b0a21);
+    }
+  }
+
+  &__primary-btn {
+    background: var(--reverse-lb, #433cc5);
+    color: var(--reverse-fg, #ffffff);
+
+    &:hover {
+      filter: brightness(1.08);
+    }
+
+    &[data-disabled="1"] {
+      opacity: 0.45;
+      cursor: default;
+      pointer-events: none;
+    }
+  }
+
+  // Wizard/thanks footers keep their own sizing: Back stays compact.
+  &__body--survey &__cancel {
+    flex: 0 0 auto;
+    padding: var(--spacer-3) var(--spacer-5, 1rem);
+  }
+
+  &__body--survey &__primary-btn {
+    flex: 0 0 auto;
+    padding: var(--spacer-3) var(--spacer-6, 1.5rem);
+  }
+
+  &__body--thanks &__primary-btn {
+    flex: 0 0 auto;
+    padding: var(--spacer-3) var(--spacer-6, 1.5rem);
+  }
+}
+
+html[data-theme="dark"] .rating-survey-popup {
+  &__ui {
+    border-color: rgba(255, 255, 255, 0.08);
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.55), 0 1px 5.5px rgba(0, 0, 0, 0.35);
+  }
+
+  &__star {
+    color: var(--normal-bg-70, #3a374d); // unpicked star on dark bg
+  }
+}

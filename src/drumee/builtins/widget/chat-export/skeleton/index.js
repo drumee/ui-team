@@ -513,6 +513,25 @@ function _footer(pfx, ui) {
 // ------------------------------------------------------------------ download button
 
 function _downloadButton(pfx, ui) {
+  // While a PDF export is generating on the server, the button becomes a
+  // non-interactive "Generating" state — an outlined pill with a rotating
+  // spinner (replaces the old thin progress bar). No `service` so clicks are
+  // ignored until generation completes; the widget flips ui._generating back
+  // off (WS "done" / poll success / error) and re-feeds to restore Download.
+  if (ui._generating) {
+    return Skeletons.Box.X({
+      className: `${pfx}__download-btn is-generating`,
+      kidsOpt: { active: 0 },
+      kids: [
+        Skeletons.Box.Y({ className: `${pfx}__download-spinner` }),
+        Skeletons.Note({
+          className: `${pfx}__download-btn-label`,
+          content: LOCALE.GENERATING,
+        }),
+      ],
+    });
+  }
+
   return Skeletons.Box.Y({
     className: `${pfx}__download-btn`,
     service: "do-export",

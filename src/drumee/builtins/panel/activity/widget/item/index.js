@@ -92,8 +92,14 @@ class __activity_item extends LetcBox {
     // `event`, and must dismiss via activity.dismiss with changelog_id —
     // they MUST stay tagged as 'mfs' so the dismiss handler takes the
     // per-changelog branch.
+    // task_assigned is a contact_activity event (no `category`, event_type
+    // 'contact'); route its dismiss through contact_activity_dismiss (the
+    // 'contact_invite' branch of _dismissActivity, keyed by the row id) so it
+    // persists via dismissed_at instead of falling back to the mfs path.
     const item_type = opt.category
-      || (opt.event === 'hub.invite_received' ? 'hub_invite' : 'mfs');
+      || (opt.event === 'hub.invite_received' ? 'hub_invite'
+        : opt.event === 'task_assigned' ? 'contact_invite'
+        : 'mfs');
     const item_key = `${item_type}:${opt.id || opt.hub_id || opt.drumate_id || opt.key_id || ''}`;
     this.mset({ category, sender, autho_id, item_type, item_key })
   }
@@ -276,6 +282,20 @@ class __activity_item extends LetcBox {
     }
     if (service) {
       this._dispatchService(cmd, args)
+      return;
+    }
+    // Task assignment: a task_assigned row's category resolves to 'contact', so
+    // without this it would route to the address book. Open the task's folder on
+    // its Task tab (workspace root when the task is unscoped / task_nid is 0),
+    // then mark it read (contact_activity_dismiss via the contact_invite branch)
+    // and close the panel — mirroring the media/teamchat rows.
+    if (this.mget('event') === 'task_assigned') {
+      const tHub = this.mget('task_hub_id') || hub_id;
+      const tNidRaw = this.mget('task_nid');
+      const tNid = (tNidRaw != null && `${tNidRaw}` !== '0') ? tNidRaw : 0;
+      location.hash = `#/desk/wm/open/?hub_id=${tHub}&nid=${tNid}&filetype=folder&pid=0&activeTab=${_a.task}&ts=${ts}`;
+      this.triggerHandlers({ service: 'dismiss-activity', hub_id: tHub, item_type, item_key, changelog_id });
+      this.triggerHandlers({ service: 'close-activity-panel' });
       return;
     }
     switch (category) {

@@ -211,6 +211,10 @@ class desk_module extends LetcBox {
    *
    */
   onDestroy() {
+    if (this._usageTimer) {
+      clearInterval(this._usageTimer);
+      this._usageTimer = null;
+    }
     RADIO_BROADCAST.off("avatar-changed", this._updateAvatar);
     Visitor.off(_e.change, this._updateAvatar);
     if (this._searchInputEl && this._searchInputHandler) {
@@ -310,6 +314,8 @@ class desk_module extends LetcBox {
     // Post-onboarding handoff for users who picked Google Drive in the
     // tools step. Delayed so workspace renders first.
     setTimeout(() => this._maybeAutoLaunchGDriveMigration(), 1500);
+    // PMF rating survey: accumulate active usage; popup fires at 30 min.
+    this._initRatingSurveyTimer();
   }
 
   /**
@@ -341,6 +347,77 @@ class desk_module extends LetcBox {
       autoFromOnboarding: 1,
       wm_unique_id: "migrate_gdrive_popup",
     }, { explicit: 1, singleton: 1 });
+  }
+
+  /**
+   * PMF rating survey trigger. Server state gates everything (cross-device):
+   *   done         → user already responded — never again.
+   *   snooze_until → "remind later" active — stay silent until it passes.
+   * Eligible users accumulate ACTIVE usage time (tab visible) into
+   * localStorage across sessions; at 30 cumulative minutes the popup launches
+   * once (singleton). SERVICE.survey ships from the backend ACL — guard its
+   * absence so a UI deployed ahead of the backend fails safe (no timer).
+   */
+  async _initRatingSurveyTimer() {
+    if (!SERVICE.survey || !SERVICE.survey.get_state) return;
+    // Users still inside onboarding (profile.onboarded explicitly 0) are
+    // not surveyed; legacy accounts without the flag are eligible.
+    const profile = (Visitor.profile && Visitor.profile()) || {};
+    if (String(profile.onboarded) === "0") return;
+    let state;
+    try {
+      state = await this.fetchService(SERVICE.survey.get_state, { hub_id: Visitor.id });
+    } catch (e) {
+      return;
+    }
+    if (!state || state.done) return;
+    const now = Math.floor(Date.now() / 1000);
+    if (state.snooze_until && Number(state.snooze_until) > now) return;
+    this._startUsageAccumulator();
+  }
+
+  /**
+   * Counts ACTIVE seconds (document visible) in 5s ticks, persisted to
+   * localStorage so the total survives reloads and sessions (per device —
+   * the server `done` flag is the cross-device source of truth). At 1800s
+   * the gate is re-checked (another tab/device may have responded while we
+   * counted) before the singleton popup launches.
+   */
+  _startUsageAccumulator() {
+    const KEY = "drumee-usage-seconds";
+    const THRESHOLD = 1800;
+    const TICK = 5;
+    let seconds = parseInt(localStorage.getItem(KEY), 10) || 0;
+    if (this._usageTimer) clearInterval(this._usageTimer);
+
+    const fire = async () => {
+      clearInterval(this._usageTimer);
+      this._usageTimer = null;
+      let state;
+      try {
+        state = await this.fetchService(SERVICE.survey.get_state, { hub_id: Visitor.id });
+      } catch (e) {
+        return;
+      }
+      const now = Math.floor(Date.now() / 1000);
+      if (!state || state.done) return;
+      if (state.snooze_until && Number(state.snooze_until) > now) return;
+      await Kind.waitFor("rating_survey_popup");
+      Wm.launch({
+        kind: "rating_survey_popup",
+        hub_id: Visitor.id,
+        nid: Visitor.get(_a.home_id),
+        wm_unique_id: "rating_survey_popup",
+      }, { explicit: 1, singleton: 1 });
+    };
+
+    if (seconds >= THRESHOLD) return fire();
+    this._usageTimer = setInterval(() => {
+      if (document.hidden) return;
+      seconds += TICK;
+      try { localStorage.setItem(KEY, String(seconds)); } catch (e) { /* quota/private mode */ }
+      if (seconds >= THRESHOLD) fire();
+    }, TICK * 1000);
   }
 
   /**
@@ -1265,10 +1342,20 @@ class desk_module extends LetcBox {
         return this.togglePanel("settings_main", "settings-main-slot");
 
       case "toggle-apps":
+        // Admin Console — the full in-desk console (apps_main) now lives in the
+        // @drumee/admin-console plugin. Load it on demand, then render it in the
+        // settings-main-slot panel (full-width, in-desk). apps_main does its own
+        // privilege gating (upsell for non-admins), so the item stays visible to all.
         RADIO_BROADCAST.trigger("breadcrumb:context", {
           filename: LOCALE.ADMIN_CONSOLE,
         });
-        return this.togglePanel("apps_main", "settings-main-slot");
+        if (Kind.get("apps_main")) {
+          return this.togglePanel("apps_main", "settings-main-slot");
+        }
+        return Kind.loadPlugin({ name: "admin-console", kind: "apps_main" })
+          .then(() => Kind.waitFor("apps_main"))
+          .then(() => this.togglePanel("apps_main", "settings-main-slot"))
+          .catch((e) => this.warn && this.warn("admin-console load failed", e));
 
       case "toggle-trash":
         RADIO_BROADCAST.trigger("breadcrumb:context", {

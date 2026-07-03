@@ -38,9 +38,6 @@ module.exports = {
   admin_security_workspace: function () {
     return import("./builtins/panel/admin/security/item");
   },
-  admin_security_page: function () {
-    return import("./builtins/window/adminpanel/pages/admin-security");
-  },
   admin_log: function () {
     return import("./builtins/panel/admin/log");
   },
@@ -64,9 +61,6 @@ module.exports = {
   },
   chat_p2p_widget_notification: function () {
     return import("./builtins/widget/chat-p2p-notification");
-  },
-  broadcast_message_page: function () {
-    return import("./builtins/window/adminpanel/pages/broadcast-message");
   },
   butler: function () {
     return import("router/butler");
@@ -164,9 +158,6 @@ module.exports = {
   document_reader: function () {
     return import("./builtins/player/document");
   },
-  domain_page: function () {
-    return import("./builtins/window/adminpanel/pages/domain-page");
-  },
   drumee_background: function () {
     return import("./builtins/widget/background-image");
   },
@@ -236,12 +227,6 @@ module.exports = {
   media: function () {
     return import("./builtins/media/grid");
   },
-  members_page: function () {
-    return import("./builtins/window/adminpanel/pages/members");
-  },
-  members_room: function () {
-    return import("./builtins/window/adminpanel/pages/members/room");
-  },
   menu_input: function () {
     return import("./builtins/widget/menu-input");
   },
@@ -250,6 +235,9 @@ module.exports = {
   },
   migrate_gdrive_popup: function () {
     return import("./builtins/widget/migrate-gdrive-popup");
+  },
+  rating_survey_popup: function () {
+    return import("./builtins/widget/rating-survey-popup");
   },
   module_desk: function () {
     return import("./modules/desk");
@@ -329,9 +317,8 @@ module.exports = {
   settings_change_email: function () {
     return import("widget/settings/change-email");
   },
-  apps_main: function () {
-    return import("widget/apps/main");
-  },
+  // apps_main (the admin console) migrated to the @drumee/admin-console plugin —
+  // loaded on demand via Kind.loadPlugin (see modules/desk onUiEvent "toggle-apps").
   settings_filename: function () {
     return import("widget/settings/filename");
   },
@@ -426,9 +413,6 @@ module.exports = {
   widget_contacts: function () {
     return import("./builtins/window/addressbook/widget/contacts");
   },
-  widget_dropdown_menu: function () {
-    return import("./builtins/window/adminpanel/widget/dropdown-menu/index");
-  },
   widget_efs_list: function () {
     return import("./builtins/window/serverexplorer/widget/efs_list");
   },
@@ -449,39 +433,6 @@ module.exports = {
   },
   widget_invite_notification: function () {
     return import("./builtins/window/addressbook/widget/invite-notification");
-  },
-  widget_member_choose_admins: function () {
-    return import("./builtins/window/adminpanel/widget/member-choose-admins/index");
-  },
-  widget_member_detail: function () {
-    return import("./builtins/window/adminpanel/widget/member_detail/index");
-  },
-  widget_member_form: function () {
-    return import("./builtins/window/adminpanel/widget/member_form/index");
-  },
-  widget_member_roles_menu_items: function () {
-    return import("./builtins/window/adminpanel/widget/member-roles-menu-items/index");
-  },
-  widget_member_roles_menu: function () {
-    return import("./builtins/window/adminpanel/widget/member-roles-menu/index");
-  },
-  widget_member_tag_item: function () {
-    return import("./builtins/window/adminpanel/widget/member_tag_item/index");
-  },
-  widget_member_tags: function () {
-    return import("./builtins/window/adminpanel/widget/member_tags/index");
-  },
-  widget_member_who_can_see: function () {
-    return import("./builtins/window/adminpanel/widget/member-who-can-see/index");
-  },
-  widget_members_list_item: function () {
-    return import("./builtins/window/adminpanel/widget/members-list-item/index");
-  },
-  widget_members_list: function () {
-    return import("./builtins/window/adminpanel/widget/members_list/index");
-  },
-  widget_members_search: function () {
-    return import("./builtins/window/adminpanel/widget/members-search/index");
   },
   widget_search: function () {
     return import("./builtins/window/addressbook/widget/search");

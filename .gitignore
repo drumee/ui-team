@@ -31,3 +31,5 @@ test/
 # BMad (bmad-method) — generated, do not commit
 _bmad/
 _bmad-output/ 
+# Stray Playwright MCP screenshot saved to repo root (see also .playwright-mcp/)
+desk-current.png
