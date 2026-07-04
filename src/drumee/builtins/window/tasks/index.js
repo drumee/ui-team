@@ -429,6 +429,9 @@ class __tasks_panel extends LetcBox {
       // Refresh counts + empty-state on both affected columns in place.
       this._syncColumn(sourceBody);
       if (targetBody !== sourceBody) this._syncColumn(targetBody);
+      // The card shows its column as a status pill — retint it in place too
+      // (the drag path is surgical; nothing else re-renders the card).
+      this._syncCardStatus(card, status);
     }
 
     // Reordering within the same column has no server-side rank to persist yet,
@@ -507,6 +510,20 @@ class __tasks_panel extends LetcBox {
 
   // Keep a column's count badge and empty-state hint in sync after a surgical
   // card move (no full re-render). Mirrors what the skeleton renders initially.
+  // Update a moved card's status pill (label / dot / theme tint) in place —
+  // companion to _syncColumn for the surgical drag path.
+  _syncCardStatus(card, statusKey) {
+    if (!card) return;
+    const col = this.getColumns().find((c) => c.key === statusKey);
+    if (!col) return;
+    const pill = card.querySelector(".tasks-panel__task-status");
+    if (pill) pill.dataset.theme = col.theme || "default";
+    const dot = card.querySelector(".tasks-panel__task-status-dot");
+    if (dot) dot.style.background = col.color || "";
+    const label = card.querySelector(".tasks-panel__task-status-label");
+    if (label) label.textContent = col.name || "";
+  }
+
   _syncColumn(colBody) {
     if (!colBody) return;
     const count = colBody.querySelectorAll(".tasks-panel__task-card").length;

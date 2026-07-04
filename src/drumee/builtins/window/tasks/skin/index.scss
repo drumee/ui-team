@@ -838,6 +838,20 @@
     padding-left: 24px;
     box-sizing: border-box;
     border-left: 3px solid var(--col-primary-40, #5950ff);
+    overflow-y: auto; // short windows: sidebar scrolls alone, Save stays reachable
+  }
+
+  // Detail modal: only the LEFT column scrolls (Figma) — the shared body
+  // scrollbar dragged the sidebar along and parked an ugly bar at the panel
+  // edge. The create modal keeps the shared body scroll.
+  &__detail-panel &__modal-body {
+    overflow: hidden;
+  }
+
+  &__detail-panel &__modal-main {
+    overflow-y: auto;
+    min-height: 0;
+    padding-right: 8px; // breathing room so the scrollbar clears the content
   }
 
   @media (max-width: 650px) {
@@ -1164,13 +1178,13 @@
     animation: tasks-panel-fade-in 0.15s ease;
   }
 
-  // Near-full-window issue view (Figma 2040-14173) — much wider than the
-  // create modal so Description + Files fit side-by-side over the Activity feed.
+  // Near-full-window issue view (Figma 2040-14173) — proportional to the
+  // window (no px cap: on wide monitors a cap reads as a small dialog).
   &__detail-panel {
     position: relative; // positioning context for the file-drop overlay
-    width: 96%;
-    max-width: 1560px;
-    max-height: 92%;
+    width: calc(100% - 80px);
+    height: calc(100% - 64px);
+    max-height: none;
     padding: 32px;
     gap: 32px;
     box-sizing: border-box;
