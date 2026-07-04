@@ -70,17 +70,23 @@ module.exports = function (ui) {
     if (r.end.isAfter(maxD)) maxD = r.end;
   });
 
+  // Pad the domain well past the last bar/today so real day cells always run
+  // to (and beyond) the window's right edge — the timeline scrolls instead of
+  // showing a dead region with no dates.
   let domainStart;
   let domainEnd;
   if (mode === "weeks") {
     domainStart = minD.startOf("week");
-    domainEnd = maxD.endOf("week").startOf("day");
+    domainEnd = maxD.endOf("week").startOf("day").add(8, "week");
     while (domainEnd.diff(domainStart, "week") + 1 < MIN_WEEKS) {
       domainEnd = domainEnd.add(1, "week");
     }
   } else {
     domainStart = minD.startOf("month");
-    domainEnd = maxD.endOf("month").startOf("day");
+    domainEnd = maxD
+      .add(9, "month")
+      .endOf("month")
+      .startOf("day");
     while (domainEnd.diff(domainStart, "month") + 1 < MIN_MONTHS) {
       domainEnd = domainEnd.add(1, "month");
     }
