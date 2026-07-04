@@ -3,7 +3,7 @@ const { markerRe, uidsFromText } = require("./mention-markers");
 
 const COLUMNS = [
   { key: "todo", label: "STATUS_TODO", color: "#AEAEB2" },
-  { key: "in_progress", label: "STATUS_IN_PROGRESS", color: "#65D0EA" },
+  { key: "in_progress", label: "STATUS_IN_PROGRESS", color: "#5950FF" },
   { key: "to_review", label: "STATUS_TO_REVIEW", color: "#E8A13B" },
   { key: "complete", label: "STATUS_COMPLETE", color: "#54B684" },
 ];
@@ -61,6 +61,8 @@ class __tasks_panel extends LetcBox {
     // Active @-mention session (null when the popup is closed): the "@token"
     // range in the focused description editor + the filtered member list.
     this._mention = null;
+    // Recent-activity feed for the Project Health view (folder-scoped).
+    this._activity = [];
     // Comment feed state for the open task detail.
     this._comments = [];
     this._commentDraft = null; // composer buffer { body, mention_uids }
@@ -154,6 +156,7 @@ class __tasks_panel extends LetcBox {
     this._installFileSearchFocus();
     await Promise.all([
       this._loadTasks(),
+      this._loadActivity(),
       this._loadMembers(),
       this._loadLabels(),
     ]);
@@ -592,6 +595,9 @@ class __tasks_panel extends LetcBox {
       case "remove-task":
         return this._removeTask(trigger);
 
+      case "toggle-complete":
+        return this._toggleComplete(trigger);
+
       case "commit-description":
       case "commit-due-date":
         // Drafts stay in sync via the `task-input-changed` watch.
@@ -892,12 +898,17 @@ class __tasks_panel extends LetcBox {
       case SERVICE.task.delete:
       case SERVICE.task.link_label:
       case SERVICE.task.unlink_label:
-        this._loadTasks().then(() => this._render());
+        Promise.all([this._loadTasks(), this._loadActivity()]).then(() =>
+          this._render(),
+        );
         return;
       case SERVICE.task.link_file:
       case SERVICE.task.unlink_file:
         if (this._detailId) {
           this._refreshAttachments(this._detailId).then(() => this._render());
+        } else if (this._view === "summary") {
+          // Health view's activity feed surfaces file links even with no detail open.
+          this._loadActivity().then(() => this._render());
         }
         return;
       case SERVICE.task.comment_create:
@@ -910,6 +921,10 @@ class __tasks_panel extends LetcBox {
           this._loadComments(this._detailId).then(() => {
             if (this._detailId) this._refreshCommentList();
           });
+        }
+        // Comments also appear in the Health view's activity feed.
+        if (this._view === "summary") {
+          this._loadActivity().then(() => this._render());
         }
         return;
       default:
@@ -928,6 +943,23 @@ class __tasks_panel extends LetcBox {
       this._tasks = (Array.isArray(rows) ? rows : []).map(this._normalizeTask);
     } catch (err) {
       this._tasks = [];
+    }
+  }
+
+  // Recent activity for the current folder scope (Project Health feed). Mirrors
+  // _loadTasks' scoping. Best-effort — a failure just yields an empty feed.
+  async _loadActivity() {
+    try {
+      const rows = await this.fetchService({
+        service: SERVICE.task.activity,
+        hub_id: this._hubId,
+        nid: this._scopeNid,
+        include_unscoped: this._scopeIsRoot,
+        limit: 30,
+      });
+      this._activity = Array.isArray(rows) ? rows : [];
+    } catch (err) {
+      this._activity = [];
     }
   }
 
@@ -1262,6 +1294,32 @@ class __tasks_panel extends LetcBox {
       console.error("[tasks_panel] task.delete failed:", err);
     }
     this._render();
+  }
+
+  // List-view checkbox — toggle a task between complete and todo. Optimistic:
+  // flip locally + re-render, persist via update_status, reconcile/revert on
+  // the response. Mirrors the drag-to-column status flow.
+  async _toggleComplete(trigger) {
+    const id = trigger.mget("taskId");
+    const task = this._tasks.find((t) => t.id === id);
+    if (!task) return;
+    const originalStatus = task.status;
+    const next = originalStatus === "complete" ? "todo" : "complete";
+    task.status = next;
+    this._render();
+    try {
+      const updated = await this.postService({
+        service: SERVICE.task.update_status,
+        hub_id: this._hubId,
+        id,
+        status: next,
+      });
+      this._mergeTask(Array.isArray(updated) ? updated[0] : updated);
+    } catch (err) {
+      console.error("[tasks_panel] toggle-complete failed:", err);
+      task.status = originalStatus;
+      this._render();
+    }
   }
 
   async _commitDetail() {
@@ -2307,49 +2365,21 @@ class __tasks_panel extends LetcBox {
     this._refreshFileSearchDropdown("detail");
   }
 
+  // Colors live in the skin (keyed on data-status/data-priority + data-active);
+  // these only flip the active flag so the selected pill restyles in place.
   _updateStatusPills(modalSel, pillSel, newStatus) {
     const root = this.el && this.el.querySelector(modalSel);
     if (!root) return;
-    const cols = this.getColumns();
-    const colorByKey = {};
-    cols.forEach((c) => {
-      colorByKey[c.key] = c.color;
-    });
     root.querySelectorAll(pillSel).forEach((pill) => {
-      const status = pill.dataset.status;
-      const active = status === newStatus;
-      pill.dataset.active = active ? "1" : "0";
-      if (active) {
-        const color = colorByKey[status];
-        pill.style.borderColor = color || "";
-        pill.style.color = color || "";
-      } else {
-        pill.style.borderColor = "";
-        pill.style.color = "";
-      }
+      pill.dataset.active = pill.dataset.status === newStatus ? "1" : "0";
     });
   }
 
   _updatePriorityPills(modalSel, newPriority) {
     const root = this.el && this.el.querySelector(modalSel);
     if (!root) return;
-    const pris = this.getPriorities();
-    const colorByKey = {};
-    pris.forEach((p) => {
-      colorByKey[p.key] = p.color;
-    });
     root.querySelectorAll(".tasks-panel__priority-pill").forEach((pill) => {
-      const pri = pill.dataset.priority;
-      const active = pri === newPriority;
-      pill.dataset.active = active ? "1" : "0";
-      if (active) {
-        const color = colorByKey[pri];
-        pill.style.borderColor = color || "";
-        pill.style.color = color || "";
-      } else {
-        pill.style.borderColor = "";
-        pill.style.color = "";
-      }
+      pill.dataset.active = pill.dataset.priority === newPriority ? "1" : "0";
     });
   }
 
@@ -2983,6 +3013,17 @@ class __tasks_panel extends LetcBox {
   // Flat member-filtered task list — the dataset for the List + Summary views.
   getFilteredTasks() {
     return this._tasks.filter((t) => this._matchesFilter(t));
+  }
+
+  // Recent activity rows for the Project Health view (already folder-scoped by
+  // the server). When a member filter is active, restrict to tasks owned by the
+  // filtered members so the feed agrees with the rest of the view.
+  getActivity() {
+    const rows = Array.isArray(this._activity) ? this._activity : [];
+    const filter = this._filterUids || [];
+    if (!filter.length) return rows;
+    const allowed = new Set(this.getFilteredTasks().map((t) => t.id));
+    return rows.filter((r) => allowed.has(r.task_id));
   }
 
   getView() {

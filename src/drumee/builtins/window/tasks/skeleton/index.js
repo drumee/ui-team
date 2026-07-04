@@ -1042,7 +1042,15 @@ const make = function (ui) {
               kids: [
                 Skeletons.Box.Y({
                   className: `${pfx}__modal-main`,
-                  kids: [descriptionRow, attachmentsList, commentsSection],
+                  kids: [
+                    // Figma 2040-14173: Description and Files sit side-by-side
+                    // on top; the Activity feed spans the full width below.
+                    Skeletons.Box.X({
+                      className: `${pfx}__detail-top`,
+                      kids: [descriptionRow, attachmentsList],
+                    }),
+                    commentsSection,
+                  ],
                 }),
                 Skeletons.Box.Y({
                   className: `${pfx}__modal-side`,

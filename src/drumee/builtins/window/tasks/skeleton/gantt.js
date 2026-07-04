@@ -99,6 +99,7 @@ module.exports = function (ui) {
     let cur = domainStart;
     while (!cur.isAfter(domainEnd)) {
       const weekStart = cur;
+      const weekEnd = cur.add(6, "day");
       const dayCells = Array.from({ length: 7 }, (_, i) => {
         const d = weekStart.add(i, "day");
         return Skeletons.Note({
@@ -107,6 +108,11 @@ module.exports = function (ui) {
           content: String(d.date()),
         });
       });
+      // Cross-month weeks read "Jun / Jul" (Figma's boundary label).
+      const monthLabel =
+        weekStart.month() === weekEnd.month()
+          ? weekStart.format("MMM")
+          : `${weekStart.format("MMM")} / ${weekEnd.format("MMM")}`;
       groups.push(
         Skeletons.Box.Y({
           className: `${pfx}__gantt-axis-week`,
@@ -114,7 +120,7 @@ module.exports = function (ui) {
           kids: [
             Skeletons.Note({
               className: `${pfx}__gantt-axis-month`,
-              content: weekStart.format("MMM"),
+              content: monthLabel,
             }),
             Skeletons.Box.X({
               className: `${pfx}__gantt-axis-days`,
@@ -278,9 +284,9 @@ module.exports = function (ui) {
             service: "add-task",
             uiHandler: [ui],
             kids: [
-              Skeletons.Image.Svg({
-                ico: "plus",
+              Skeletons.Note({
                 className: `${pfx}__gantt-work-ico`,
+                content: "+",
               }),
               Skeletons.Note({
                 className: `${pfx}__gantt-work-label`,
@@ -298,13 +304,25 @@ module.exports = function (ui) {
           }),
         ],
       }),
-      Skeletons.Box.Y({ className: `${pfx}__gantt-aside-body`, kids: asideRows }),
+      Skeletons.Box.Y({
+        className: `${pfx}__gantt-aside-body`,
+        kids: asideRows.length
+          ? asideRows
+          : [
+              Skeletons.Note({
+                className: `${pfx}__gantt-empty`,
+                content: LOCALE.NO_TASKS,
+              }),
+            ],
+      }),
     ],
   });
 
+  // min-width keeps the computed timeline scrollable; the flex-grow in the
+  // skin lets the axis/tracks stretch to fill wider windows (no dead gutter).
   const main = Skeletons.Box.Y({
     className: `${pfx}__gantt-main`,
-    styleOpt: { width: `${timelineW}px`, "--gantt-day-w": `${DAY_W}px` },
+    styleOpt: { minWidth: `${timelineW}px`, "--gantt-day-w": `${DAY_W}px` },
     dataset: { mode },
     kids: [
       band,
@@ -323,7 +341,7 @@ module.exports = function (ui) {
     kids: [
       Skeletons.Box.X({
         className: `${pfx}__gantt-grid`,
-        styleOpt: { width: `${ASIDE_W + timelineW}px` },
+        styleOpt: { minWidth: `${ASIDE_W + timelineW}px` },
         kids: [aside, main],
       }),
     ],
