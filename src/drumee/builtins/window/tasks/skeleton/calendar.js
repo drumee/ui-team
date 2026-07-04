@@ -142,7 +142,7 @@ module.exports = function (ui) {
             Skeletons.Note({ className: `${pfx}__cal-card-status-dot` }),
             Skeletons.Note({
               className: `${pfx}__cal-card-status-label`,
-              content: LOCALE[sm.label] || sm.key,
+              content: sm.name || LOCALE[sm.label] || sm.key,
             }),
           ],
         }),
