@@ -339,9 +339,12 @@ module.exports = function (ui) {
   return Skeletons.Box.X({
     className: `${pfx}__gantt`,
     kids: [
+      // No inline min-width here — it would override the skin's
+      // `min-width: 100%` (same property) and stop the grid at the computed
+      // timeline width. The scroll extent comes from the children: sticky
+      // aside (300px) + main's own inline min-width.
       Skeletons.Box.X({
         className: `${pfx}__gantt-grid`,
-        styleOpt: { minWidth: `${ASIDE_W + timelineW}px` },
         kids: [aside, main],
       }),
     ],

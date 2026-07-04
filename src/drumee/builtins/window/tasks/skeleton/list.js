@@ -138,7 +138,7 @@ module.exports = function (ui) {
             Skeletons.Note({ className: `${pfx}__list-status-dot` }),
             Skeletons.Note({
               className: `${pfx}__list-status-label`,
-              content: LOCALE[s.label] || s.key,
+              content: s.name || LOCALE[s.label] || s.key,
             }),
           ],
         }),

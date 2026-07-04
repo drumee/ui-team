@@ -249,13 +249,29 @@ const make = function (ui) {
       ? Skeletons.Box.X({ className: `${pfx}__task-meta`, kids: metaKids })
       : null;
     const avatars = assigneeAvatar(task);
-    const footer =
-      meta || avatars
-        ? Skeletons.Box.X({
-            className: `${pfx}__task-foot`,
-            kids: [meta, avatars].filter(Boolean),
-          })
-        : null;
+    // Status pill row (Figma 2040-106090: "● In Progress" + avatars at the
+    // card bottom). Dot color comes from the live column set so custom
+    // columns tint correctly.
+    const cardCol =
+      ui.getColumns().find((c) => c.key === (task.status || colKey)) || {};
+    const statusPill = Skeletons.Box.X({
+      className: `${pfx}__task-status`,
+      dataset: { theme: cardCol.theme || "default" },
+      kids: [
+        Skeletons.Note({
+          className: `${pfx}__task-status-dot`,
+          styleOpt: { background: cardCol.color || "#AEAEB2" },
+        }),
+        Skeletons.Note({
+          className: `${pfx}__task-status-label`,
+          content: cardCol.name || LOCALE[cardCol.label] || task.status || "",
+        }),
+      ],
+    });
+    const footer = Skeletons.Box.X({
+      className: `${pfx}__task-foot`,
+      kids: [statusPill, avatars].filter(Boolean),
+    });
 
     // Title + description sit in a tight header block (4px gap); the 12px card
     // gap then separates it from files / meta (Figma EL-b7a7a618 / EL-6d1b5341).
@@ -302,7 +318,9 @@ const make = function (ui) {
       service: "open-detail",
       uiHandler: [ui],
       taskId: task.id,
-      kids: [labelsStrip, head, filesNode, footer].filter(Boolean),
+      // Figma card order: labels, title+desc, files, priority+due row, then
+      // the status-pill + avatars row.
+      kids: [labelsStrip, head, filesNode, meta, footer].filter(Boolean),
     });
   };
 
@@ -321,13 +339,68 @@ const make = function (ui) {
       ],
     });
 
+  // Menu popover for a CUSTOM column: rename entry + palette swatches + delete.
+  const columnMenu = (col) =>
+    Skeletons.Box.Y({
+      className: `${pfx}__col-menu`,
+      bubble: 0,
+      kids: [
+        Skeletons.Entry({
+          className: `${pfx}__col-menu-name`,
+          name: "col_rename",
+          value: col.name,
+          placeholder: LOCALE.COLUMN_NAME,
+          mode: "commit",
+          service: "col-rename-submit",
+          taskColumn: col.key,
+          uiHandler: [ui],
+        }),
+        Skeletons.Box.X({
+          className: `${pfx}__col-swatches`,
+          kids: Object.keys(ui.getColumnThemes()).map((t) =>
+            Skeletons.Note({
+              className: `${pfx}__col-swatch`,
+              styleOpt: { background: ui.getColumnThemes()[t] },
+              dataset: { active: col.theme === t ? 1 : 0 },
+              bubble: 0,
+              service: "col-theme-set",
+              uiHandler: [ui],
+              taskColumn: col.key,
+              colTheme: t,
+            }),
+          ),
+        }),
+        Skeletons.Box.X({
+          className: `${pfx}__col-menu-actions`,
+          kids: [
+            Skeletons.Note({
+              className: `${pfx}__col-menu-rename`,
+              content: LOCALE.RENAME,
+              bubble: 0,
+              service: "col-rename-submit",
+              uiHandler: [ui],
+              taskColumn: col.key,
+            }),
+            Skeletons.Note({
+              className: `${pfx}__col-menu-delete`,
+              content: LOCALE.DELETE,
+              bubble: 0,
+              service: "col-delete",
+              uiHandler: [ui],
+              taskColumn: col.key,
+            }),
+          ],
+        }),
+      ],
+    });
+
   const column = (col) =>
     Skeletons.Box.Y({
       className: `${pfx}__column`,
-      dataset: { column: col.key },
-      // Per-column accent driven by the status color (COLUMNS in index.js) so
-      // the SCSS theming (top strip, count pill, drop highlight) stays in sync
-      // with the single source of truth instead of duplicating hex values.
+      dataset: { column: col.key, theme: col.theme || "default" },
+      // Per-column accent driven by the column color (getColumns in index.js)
+      // so the SCSS theming (top strip, count pill, drop highlight) stays in
+      // sync with the single source of truth instead of duplicating hex values.
       styleOpt: { "--col-accent": col.color },
       kids: [
         Skeletons.Box.Y({
@@ -344,19 +417,18 @@ const make = function (ui) {
                 Skeletons.Box.X({
                   className: `${pfx}__column-title-group`,
                   kids: [
-                    
                     Skeletons.Box.X({
                       className: `${pfx}__column-title-dot-group`,
                       kids: [
                         Skeletons.Element({
-                      tagName: "span",
-                      className: `${pfx}__column-dot`,
-                      styleOpt: { background: col.color },
-                    }),
-                    Skeletons.Note({
-                      className: `${pfx}__column-title`,
-                      content: LOCALE[col.label] || col.key,
-                    }),
+                          tagName: "span",
+                          className: `${pfx}__column-dot`,
+                          styleOpt: { background: col.color },
+                        }),
+                        Skeletons.Note({
+                          className: `${pfx}__column-title`,
+                          content: col.name || LOCALE[col.label] || col.key,
+                        }),
                       ],
                     }),
                     Skeletons.Box.X({
@@ -370,8 +442,23 @@ const make = function (ui) {
                     }),
                   ],
                 }),
-              ],
+                // Custom columns are user-editable: "⋯" opens the rename/
+                // recolor/delete popover. Built-ins stay fixed.
+                col.custom
+                  ? Skeletons.Note({
+                      className: `${pfx}__col-menu-btn`,
+                      content: "⋯",
+                      bubble: 0,
+                      service: "col-menu",
+                      uiHandler: [ui],
+                      taskColumn: col.key,
+                    })
+                  : null,
+              ].filter(Boolean),
             }),
+            col.custom && ui.getColMenuFor() === col.key
+              ? columnMenu(col)
+              : null,
             ...(state[col.key] || []).map((t) => taskCard(col.key, t)),
             // Empty-state drop hint. Keeps an empty column an obvious, valid
             // drop target. The surgical drag handler (_syncColumn) adds/removes
@@ -387,6 +474,73 @@ const make = function (ui) {
         addButton(col.key),
       ],
     });
+
+  // Ghost column at the board's right end: "+ Add column", or the inline
+  // create form (name + palette swatches) once opened.
+  const addColumn = () => {
+    const st = ui.getColAddState();
+    if (!st.open) {
+      return Skeletons.Box.Y({
+        className: `${pfx}__col-add-ghost`,
+        bubble: 0,
+        service: "col-add-open",
+        uiHandler: [ui],
+        kids: [
+          Skeletons.Note({
+            className: `${pfx}__col-add-label`,
+            content: `+ ${LOCALE.ADD_COLUMN}`,
+          }),
+        ],
+      });
+    }
+    return Skeletons.Box.Y({
+      className: `${pfx}__col-add`,
+      bubble: 0,
+      kids: [
+        Skeletons.Entry({
+          className: `${pfx}__col-add-name`,
+          name: "col_name",
+          placeholder: LOCALE.COLUMN_NAME,
+          mode: "commit",
+          service: "col-add-submit",
+          uiHandler: [ui],
+        }),
+        Skeletons.Box.X({
+          className: `${pfx}__col-swatches`,
+          kids: Object.keys(ui.getColumnThemes()).map((t) =>
+            Skeletons.Note({
+              className: `${pfx}__col-swatch`,
+              styleOpt: { background: ui.getColumnThemes()[t] },
+              dataset: { active: st.theme === t ? 1 : 0 },
+              bubble: 0,
+              service: "col-add-theme",
+              uiHandler: [ui],
+              colTheme: t,
+            }),
+          ),
+        }),
+        Skeletons.Box.X({
+          className: `${pfx}__col-menu-actions`,
+          kids: [
+            Skeletons.Note({
+              className: `${pfx}__col-menu-rename`,
+              content: LOCALE.ADD,
+              bubble: 0,
+              service: "col-add-submit",
+              uiHandler: [ui],
+            }),
+            Skeletons.Note({
+              className: `${pfx}__col-menu-cancel`,
+              content: LOCALE.CANCEL,
+              bubble: 0,
+              service: "col-add-cancel",
+              uiHandler: [ui],
+            }),
+          ],
+        }),
+      ],
+    });
+  };
 
   // ── Reusable controls ─────────────────────────────────────────
   const priorityPills = (selected, serviceName, extra = {}) =>
@@ -713,7 +867,7 @@ const make = function (ui) {
       kids: cols.map((c) =>
         Skeletons.Note({
           className: `${pfx}__detail-status-pill`,
-          content: LOCALE[c.label] || c.key,
+          content: c.name || LOCALE[c.label] || c.key,
           // Selected/dot colors driven by `data-status` + `data-active` in skin.
           dataset: { active: dStatus === c.key ? 1 : 0, status: c.key },
           bubble: 0,
@@ -942,21 +1096,43 @@ const make = function (ui) {
             }),
           ],
         }),
-        // Composer sits directly under the Activity tabs (Figma), above the feed.
-        Skeletons.Box.Y({
+        // Composer sits directly under the Activity tabs (Figma 2034-62457):
+        // own avatar · "Write a comment…" field · paperclip / @ / send icons.
+        Skeletons.Box.X({
           className: `${pfx}__comment-composer`,
           kids: [
+            Skeletons.UserProfile({
+              className: `${pfx}__composer-avatar`,
+              id: Visitor.id,
+              firstname: Visitor.get("firstname"),
+              lastname: Visitor.get("lastname"),
+              auto_color: 1,
+              live_status: 0,
+            }),
             mentionField(ui, "comment", {
               fieldClass: `${pfx}__comment-field`,
               editorClass: `${pfx}__comment-input`,
               placeholder: LOCALE.TASK_COMMENT_PLACEHOLDER,
             }),
-            Skeletons.Note({
-              className: `${pfx}__comment-submit`,
-              content: LOCALE.COMMENT,
-              bubble: 0,
-              service: "comment-submit",
-              uiHandler: [ui],
+            Skeletons.Box.X({
+              className: `${pfx}__composer-actions`,
+              kids: [
+                Skeletons.Image.Svg({
+                  ico: "app-attachment",
+                  className: `${pfx}__composer-ico`,
+                }),
+                Skeletons.Note({
+                  className: `${pfx}__composer-at`,
+                  content: "@",
+                }),
+                Skeletons.Button.Svg({
+                  ico: "app-send",
+                  className: `${pfx}__composer-send`,
+                  bubble: 0,
+                  service: "comment-submit",
+                  uiHandler: [ui],
+                }),
+              ],
             }),
           ],
         }),
@@ -1080,7 +1256,7 @@ const make = function (ui) {
       kids: cols.map((c) =>
         Skeletons.Note({
           className: `${pfx}__create-status-pill`,
-          content: LOCALE[c.label] || c.key,
+          content: c.name || LOCALE[c.label] || c.key,
           // `data-status` + `data-active` drive pill colors via the skin and
           // let the JS update them in place without a re-render.
           dataset: { active: selectedStatus === c.key ? 1 : 0, status: c.key },
@@ -1371,7 +1547,7 @@ const make = function (ui) {
   const boardView = () =>
     Skeletons.Box.X({
       className: `${pfx}__main`,
-      kids: ui.getColumns().map(column),
+      kids: [...ui.getColumns().map(column), addColumn()],
     });
   const viewContent =
     view === "calendar"
@@ -1628,7 +1804,17 @@ function buildCommentListContent(ui) {
         emoji: g.emoji,
       }),
     );
+    // Figma action row leads with a one-tap 👍 then the ☺ palette toggle.
     kids.push(
+      Skeletons.Note({
+        className: `${pfx}__react-add`,
+        content: "👍",
+        bubble: 0,
+        service: "comment-react",
+        uiHandler: [ui],
+        commentId: c.id,
+        emoji: "👍",
+      }),
       Skeletons.Note({
         className: `${pfx}__react-add`,
         content: "☺",

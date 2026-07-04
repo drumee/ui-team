@@ -225,7 +225,7 @@ module.exports = function (ui) {
               }),
               Skeletons.Note({
                 className: `${pfx}__health-legend-name`,
-                content: `${LOCALE[c.label] || c.key}: ${v}`,
+                content: `${c.name || LOCALE[c.label] || c.key}: ${v}`,
               }),
             ],
           }),

@@ -1,11 +1,44 @@
 const { uploadFile } = require("@drumee/ui-essentials");
 const { markerRe, uidsFromText } = require("./mention-markers");
 
+// 10-swatch column palette (Figma 2040-106090). Dot/accent color per theme;
+// the skin derives the column tint from the accent (--col-accent) and pill
+// tints from data-theme.
+const COLUMN_THEMES = {
+  default: "#AEAEB2",
+  orange: "#E8A13B",
+  yellow: "#EFC443",
+  green: "#54B684",
+  cyan: "#65D0EA",
+  blue: "#71A3F4",
+  purple: "#847EFF",
+  pink: "#FFA8DC",
+  red: "#D74E49",
+};
+
+// Built-in columns — always present, not editable. User-created columns come
+// from the server (task.column_list) and follow these on the board; a custom
+// column's id doubles as the task.status key.
 const COLUMNS = [
-  { key: "todo", label: "STATUS_TODO", color: "#AEAEB2" },
-  { key: "in_progress", label: "STATUS_IN_PROGRESS", color: "#5950FF" },
-  { key: "to_review", label: "STATUS_TO_REVIEW", color: "#E8A13B" },
-  { key: "complete", label: "STATUS_COMPLETE", color: "#54B684" },
+  { key: "todo", label: "STATUS_TODO", color: "#AEAEB2", theme: "default" },
+  {
+    key: "in_progress",
+    label: "STATUS_IN_PROGRESS",
+    color: "#5950FF",
+    theme: "purple",
+  },
+  {
+    key: "to_review",
+    label: "STATUS_TO_REVIEW",
+    color: "#E8A13B",
+    theme: "orange",
+  },
+  {
+    key: "complete",
+    label: "STATUS_COMPLETE",
+    color: "#54B684",
+    theme: "green",
+  },
 ];
 
 // Signal palette (Figma): Success / Info / Warning / Error — must match the
@@ -57,6 +90,12 @@ class __tasks_panel extends LetcBox {
     // ids) backing the checkboxes / "Delete selected".
     this._ganttMode = "weeks";
     this._ganttSelected = new Set();
+    // Custom Kanban columns (server rows {id,name,theme,position}) + the
+    // board's add-column / column-menu UI state.
+    this._customColumns = [];
+    this._colAddOpen = false;
+    this._colAddTheme = "default";
+    this._colMenuFor = null; // custom column id whose menu popover is open
     this._fileSearch = { query: "", results: [], scope: null };
     this._fileSearchTimer = null;
     this._fileSearchBlurTimer = null;
@@ -149,7 +188,9 @@ class __tasks_panel extends LetcBox {
     this._pickerOpen = null;
     if (typeof this._resetFileSearch === "function") this._resetFileSearch();
     if (!this.el) return; // not mounted yet — onDomRefresh loads fresh
-    this._loadTasks().then(() => this._render());
+    Promise.all([this._loadTasks(), this._loadColumns()]).then(() =>
+      this._render(),
+    );
   }
 
   async onDomRefresh() {
@@ -158,6 +199,7 @@ class __tasks_panel extends LetcBox {
     this._installFileSearchFocus();
     await Promise.all([
       this._loadTasks(),
+      this._loadColumns(),
       this._loadActivity(),
       this._loadMembers(),
       this._loadLabels(),
@@ -752,6 +794,38 @@ class __tasks_panel extends LetcBox {
       case "gantt-delete-selected":
         return this._deleteSelectedTasks();
 
+      case "col-add-open":
+        this._colAddOpen = true;
+        this._colAddTheme = "default";
+        this._colMenuFor = null;
+        return this._render();
+
+      case "col-add-cancel":
+        this._colAddOpen = false;
+        return this._render();
+
+      case "col-add-theme":
+        this._colAddTheme = trigger.mget("colTheme") || "default";
+        return this._render();
+
+      case "col-add-submit":
+        return this._createColumn();
+
+      case "col-menu": {
+        const key = trigger.mget("taskColumn");
+        this._colMenuFor = this._colMenuFor === key ? null : key;
+        return this._render();
+      }
+
+      case "col-rename-submit":
+        return this._renameColumn(trigger);
+
+      case "col-theme-set":
+        return this._themeColumn(trigger);
+
+      case "col-delete":
+        return this._deleteColumn(trigger);
+
       case "set-sort": {
         // Toggle direction when re-selecting the same column, else sort asc.
         const key = trigger.mget("sortKey");
@@ -913,6 +987,15 @@ class __tasks_panel extends LetcBox {
           this._loadActivity().then(() => this._render());
         }
         return;
+      case SERVICE.task.column_create:
+      case SERVICE.task.column_update:
+      case SERVICE.task.column_delete:
+        // A peer changed the board's columns. Deleting a column also moves its
+        // tasks back to 'todo' server-side, so refresh both.
+        Promise.all([this._loadColumns(), this._loadTasks()]).then(() =>
+          this._render(),
+        );
+        return;
       case SERVICE.task.comment_create:
       case SERVICE.task.comment_update:
       case SERVICE.task.comment_delete:
@@ -945,6 +1028,22 @@ class __tasks_panel extends LetcBox {
       this._tasks = (Array.isArray(rows) ? rows : []).map(this._normalizeTask);
     } catch (err) {
       this._tasks = [];
+    }
+  }
+
+  // Custom Kanban columns for the current folder scope. Best-effort — a
+  // failure (e.g. server without the task_column procs yet) just leaves the
+  // four built-in columns.
+  async _loadColumns() {
+    try {
+      const rows = await this.fetchService({
+        service: SERVICE.task.column_list,
+        hub_id: this._hubId,
+        nid: this._scopeNid,
+      });
+      this._customColumns = Array.isArray(rows) ? rows : [];
+    } catch (err) {
+      this._customColumns = [];
     }
   }
 
@@ -1532,6 +1631,93 @@ class __tasks_panel extends LetcBox {
     this._loadComments(id).then(() => {
       if (this._detailId === id) this._refreshCommentList();
     });
+  }
+
+  // ── Custom Kanban columns ────────────────────────────────────
+  async _createColumn() {
+    const input =
+      this.el && this.el.querySelector('.tasks-panel__col-add input[name="col_name"]');
+    const name = input ? String(input.value || "").trim() : "";
+    if (!name) return;
+    try {
+      const row = await this.postService({
+        service: SERVICE.task.column_create,
+        hub_id: this._hubId,
+        nid: this._scopeNid,
+        name,
+        theme: this._colAddTheme || "default",
+      });
+      const rec = Array.isArray(row) ? row[0] : row;
+      if (rec && rec.id) this._customColumns.push(rec);
+    } catch (err) {
+      console.error("[tasks_panel] column.create failed:", err);
+    }
+    this._colAddOpen = false;
+    this._colAddTheme = "default";
+    this._render();
+  }
+
+  async _renameColumn(trigger) {
+    const id = trigger.mget("taskColumn") || this._colMenuFor;
+    if (!id) return;
+    const input =
+      this.el &&
+      this.el.querySelector('.tasks-panel__col-menu input[name="col_rename"]');
+    const name = input ? String(input.value || "").trim() : "";
+    if (!name) return;
+    try {
+      await this.postService({
+        service: SERVICE.task.column_update,
+        hub_id: this._hubId,
+        id,
+        name,
+      });
+      const rec = this._customColumns.find((c) => c.id === id);
+      if (rec) rec.name = name;
+    } catch (err) {
+      console.error("[tasks_panel] column.rename failed:", err);
+    }
+    this._colMenuFor = null;
+    this._render();
+  }
+
+  async _themeColumn(trigger) {
+    const id = trigger.mget("taskColumn") || this._colMenuFor;
+    const theme = trigger.mget("colTheme");
+    if (!id || !theme) return;
+    try {
+      await this.postService({
+        service: SERVICE.task.column_update,
+        hub_id: this._hubId,
+        id,
+        theme,
+      });
+      const rec = this._customColumns.find((c) => c.id === id);
+      if (rec) rec.theme = theme;
+    } catch (err) {
+      console.error("[tasks_panel] column.theme failed:", err);
+    }
+    this._render();
+  }
+
+  async _deleteColumn(trigger) {
+    const id = trigger.mget("taskColumn") || this._colMenuFor;
+    if (!id) return;
+    try {
+      const resp = await this.postService({
+        service: SERVICE.task.column_delete,
+        hub_id: this._hubId,
+        id,
+      });
+      const row = Array.isArray(resp) ? resp[0] : resp;
+      this._customColumns = this._customColumns.filter((c) => c.id !== id);
+      // The server moves the column's tasks back to 'todo' — refresh when any.
+      if (row && Number(row.moved_tasks) > 0) await this._loadTasks();
+    } catch (err) {
+      console.error("[tasks_panel] column.delete failed:", err);
+    }
+    this._colMenuFor = null;
+    this._render();
   }
 
   // Gantt "Delete selected" — bulk-delete the checked tasks, then clear the
@@ -2968,8 +3154,33 @@ class __tasks_panel extends LetcBox {
   }
 
   // ── Skeleton accessors ─────────────────────────────────────────
+  // Board columns = the four built-ins followed by this folder's custom
+  // columns. Every entry is render-ready: `name` is the display string
+  // (LOCALE for built-ins, user text for customs), `color` the accent hex,
+  // `theme` the palette key driving pill tints, `custom` marks editability.
   getColumns() {
-    return COLUMNS;
+    const builtins = COLUMNS.map((c) => ({
+      ...c,
+      name: LOCALE[c.label] || c.key,
+    }));
+    const customs = (this._customColumns || []).map((r) => ({
+      key: r.id,
+      label: "",
+      name: r.name || "",
+      theme: COLUMN_THEMES[r.theme] ? r.theme : "default",
+      color: COLUMN_THEMES[r.theme] || COLUMN_THEMES.default,
+      custom: 1,
+    }));
+    return builtins.concat(customs);
+  }
+  getColumnThemes() {
+    return COLUMN_THEMES;
+  }
+  getColAddState() {
+    return { open: this._colAddOpen, theme: this._colAddTheme };
+  }
+  getColMenuFor() {
+    return this._colMenuFor;
   }
   getPriorities() {
     return PRIORITIES;
@@ -3004,7 +3215,7 @@ class __tasks_panel extends LetcBox {
   }
 
   getState() {
-    return COLUMNS.reduce((acc, c) => {
+    return this.getColumns().reduce((acc, c) => {
       acc[c.key] = this._tasks.filter(
         (t) => t.status === c.key && this._matchesFilter(t),
       );
