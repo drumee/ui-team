@@ -8,11 +8,13 @@ const COLUMNS = [
   { key: "complete", label: "STATUS_COMPLETE", color: "#54B684" },
 ];
 
+// Signal palette (Figma): Success / Info / Warning / Error — must match the
+// skin's [data-priority] pill colors so dots and pills agree everywhere.
 const PRIORITIES = [
   { key: "low", label: "PRIORITY_LOW", color: "#54B684" },
-  { key: "medium", label: "PRIORITY_MEDIUM", color: "#65D0EA" },
+  { key: "medium", label: "PRIORITY_MEDIUM", color: "#71A3F4" },
   { key: "high", label: "PRIORITY_HIGH", color: "#E8A13B" },
-  { key: "urgent", label: "PRIORITY_URGENT", color: "#d65f59" },
+  { key: "urgent", label: "PRIORITY_URGENT", color: "#D74E49" },
 ];
 
 class __tasks_panel extends LetcBox {

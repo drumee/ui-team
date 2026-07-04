@@ -468,8 +468,8 @@
     }
 
     &:hover {
-      color: #d65f59;
-      background: rgba(214, 95, 89, 0.1);
+      color: #d74e49;
+      background: rgba(215, 78, 73, 0.1);
     }
   }
 
@@ -1254,7 +1254,7 @@
         }
 
         &:hover {
-          background: #d65f59;
+          background: #d74e49;
         }
       }
 
@@ -1296,8 +1296,8 @@
     }
 
     &:hover {
-      color: #d65f59;
-      background: rgba(214, 95, 89, 0.1);
+      color: #d74e49;
+      background: rgba(215, 78, 73, 0.1);
     }
   }
 
@@ -3433,20 +3433,21 @@
 
   // ── Status overview donut ─────────────────────────────────────────
   // Donut + fixed-width legend, grouped near the card center (Figma: 185px
-  // donut, gap ~98, 172px legend). The legend must NOT stretch to the edge.
+  // donut, gap 98, 172px legend). The legend must NOT stretch to the edge.
   &__health-donut-wrap {
     align-items: center;
     justify-content: center;
-    gap: 64px;
+    gap: 98px;
     flex-wrap: wrap;
     padding: 12px 0;
   }
 
+  // Figma: 185px donut with a 23px ring.
   &__health-donut {
     position: relative;
     flex: 0 0 auto;
-    width: 160px;
-    height: 160px;
+    width: 185px;
+    height: 185px;
     border-radius: 50%;
   }
 
@@ -3455,8 +3456,8 @@
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    width: 112px;
-    height: 112px;
+    width: 139px; // 185 − 2×23 ring
+    height: 139px;
     border-radius: 50%;
     justify-content: center;
     align-items: center;
@@ -3484,10 +3485,11 @@
   }
 
   // ── Legends (status rows + inline priority chips) ─────────────────
+  // Figma: fixed 172px block — name left, pct hugging its right edge.
   &__health-legend {
-    flex: 0 1 240px;
+    flex: 0 1 190px;
     gap: 14px;
-    min-width: 180px;
+    min-width: 172px;
   }
 
   &__health-legend-row {
