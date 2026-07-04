@@ -98,9 +98,15 @@ const __skl_folder_topbar = function (ui) {
     : "";
 
   // Share-area folders get a dedicated "Manage Access" icon next to the
-  // settings gear; other folder types do not show it.
+  // settings gear; other folder types do not show it. Restrict it to the
+  // workspace ROOT window (filetype === hub) — "Manage access" converges onto
+  // secure-share v2 for the whole workspace at its root. Sub-folders already
+  // expose secure + public share via their right-click "Share" menu, so the
+  // topbar icon there is redundant; hide it. isRoot mirrors the window's own
+  // root check (folder/index.js curNid / scopeNid logic).
+  const isRoot = ui.mget(_a.filetype) === _a.hub && ui.mget(_a.actual_home_id);
   const shareBtn =
-    (!inShare && area === _a.share)
+    (!inShare && area === _a.share && isRoot)
       ? Skeletons.Button.Svg({
         className: `${cnFolder}__control-icon share`,
         ico: "app-share",

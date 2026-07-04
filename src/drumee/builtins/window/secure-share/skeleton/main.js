@@ -18,9 +18,13 @@ const __skl_secure_share = function(_ui_) {
           Skeletons.Note({
             sys_pn    : 'window-label',
             className : _a.name,
-            content   : [_a.hub, _a.folder].includes(_ui_.mget(_a.filetype))
-              ? LOCALE.SECURE_SHARE_TITLE_FOLDER
-              : LOCALE.SECURE_SHARE_TITLE_FILE
+            // Workspace-root entry (opened via folder "Manage access") titles as
+            // "Manage access"; file/subfolder shares keep the default titles.
+            content   : _ui_.mget('manage_access')
+              ? LOCALE.MANAGE_ACCESS
+              : [_a.hub, _a.folder].includes(_ui_.mget(_a.filetype))
+                ? LOCALE.SECURE_SHARE_TITLE_FOLDER
+                : LOCALE.SECURE_SHARE_TITLE_FILE
           })
         ]
       }),

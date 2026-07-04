@@ -469,6 +469,11 @@ class __window_folder extends mfsInteract {
     } else if (initialTab && initialTab !== "files") {
       this.ensurePart("folder-view").then(() => this.showFolderTab(initialTab));
     }
+    // Gate the chat panel to the viewer's current role on open (a view-only
+    // member sees the "need permission" info card instead of the conversation);
+    // live role changes re-run this via _applyLivePrivilege. Deferred until the
+    // body is rendered so the chat-panel part exists.
+    this.ensurePart("folder-view").then(() => this._syncChatGate());
     // Honor a launch-time file-chat scope (opened from a "file.thread" card
     // outside any folder window): scope the chat to that file IN PLACE — no
     // auto-switch to the full Chat tab (the window opens on its default tab and
@@ -634,6 +639,19 @@ class __window_folder extends mfsInteract {
           else list.append(opt);
       }
       if (this.getViewMode && this.getViewMode() !== _a.row) {
+        // Grid the new tile IMMEDIATELY. Once a folder has been partitioned,
+        // `.smart-container` is `flex-direction: column` (it stacks the
+        // workspace/folder/file sections); a freshly appended upload
+        // placeholder lands there as a raw direct child, so it renders
+        // stacked VERTICALLY until re-partition. `_scheduleAlphabeticalGridSort`
+        // only re-partitions on a debounced setTimeout(0) (and bails when
+        // `iconsList` points at another list), so during a multi-file upload
+        // the placeholders stay stacked for the whole upload, then snap into
+        // the grid on completion. Partition synchronously here — same as the
+        // base interact `_insertMedia` (Wm/DMZ) — so the placeholder drops
+        // straight into the wrapping `.file-section` grid; the scheduled sort
+        // then just reorders it alphabetically.
+        if (this._partitionFoldersAndFiles) this._partitionFoldersAndFiles(list);
         this._scheduleAlphabeticalGridSort(list);
       }
     });
@@ -2710,12 +2728,65 @@ class __window_folder extends mfsInteract {
           });
         }
       }
-      Wm.alert(LOCALE.ROLE_UPDATED_SUCCESSFULLY || "Role updated.");
+      this._showNoticeToast(LOCALE.ROLE_UPDATED_SUCCESSFULLY || "Role updated.");
     } catch (e) {
       Wm.alert(e?.reason || e?.error || LOCALE.TRY_AGAIN);
     } finally {
       this._folderConfirmInFlight = false;
     }
+  }
+
+  // Realtime role change for THIS viewer. When an admin changes our privilege,
+  // the server (hub.set_privilege) pushes { privilege, hub_id, area } to our
+  // sockets. The base handleWsEvent routes set_privilege to updateContent,
+  // which matches children by nid and no-ops on this nid-less payload — so
+  // intercept it here to refresh our own chrome. mget(_a.privilege) drives
+  // canUpload/canShare/canManageAccess, so updating it fixes context-menu,
+  // drag-drop, etc. live; the topbar re-feed is needed because its buttons are
+  // conditionally created (absent when unpermitted) and can't be CSS-toggled.
+  handleWsEvent(args = {}) {
+    const { data, options } = args || {};
+    if (options && options.service === SERVICE.hub.set_privilege) {
+      this._applyLivePrivilege(data || {});
+    }
+    return super.handleWsEvent(args);
+  }
+
+  _applyLivePrivilege(data = {}) {
+    const { privilege, hub_id } = data;
+    if (privilege == null) return;
+    // A user may have several workspace windows open — only react to our own.
+    if (hub_id && hub_id !== this.mget(_a.hub_id)) return;
+    // No-op when unchanged: avoids a needless topbar flicker.
+    if (Number(this.mget(_a.privilege)) === Number(privilege)) return;
+    this.mset(_a.privilege, Number(privilege));
+    // Re-feed the header (not the topbar container) so the header element and
+    // its drag/raise wiring survive; only the topbar child rebuilds with the
+    // new privilege. The re-feed recreates the breadcrumb part, so repopulate.
+    this.feedPart("folder-header", require("./skeleton/topbar")(this));
+    this.refreshBreadcrumbsUI();
+    this._syncChatGate();
+  }
+
+  // Chat is granted at the "View & chat" tier and above — i.e. any privilege
+  // carrying the download bit. Only the bare view-only "View" role lacks it.
+  // Mirrors roleFromPrivilege's chat detection in settings-action-panel.
+  _privilegeGrantsChat(priv) {
+    return !!(Number(priv) & _K.permission.download);
+  }
+
+  // Gate window__chat-panel to the viewer's chat capability. The Chat tab stays
+  // visible; a view-only member meets the "need permission" card and a blurred,
+  // disabled composer instead of the conversation. One data-chat_gated flag on
+  // the panel drives both (CSS): the card overlay and the composer blur. Cheap
+  // attribute flip — the chat widget stays intact. Called at mount and on the
+  // live role change (hub.set_privilege) via _applyLivePrivilege.
+  _syncChatGate() {
+    if (!this.$el) return;
+    const gated = this._privilegeGrantsChat(this.mget(_a.privilege)) ? 0 : 1;
+    // Attribute is data-chat_gated (underscore): the skeleton sets it via
+    // dataset:{chat_gated}, which the framework renders literally as data-${k}.
+    this.$el.find(".window__chat-panel").attr("data-chat_gated", gated);
   }
 
   sendFolderInvitation(cmd) {
@@ -2754,15 +2825,15 @@ class __window_folder extends mfsInteract {
       });
   }
 
-  // Branded confirmation toast shown after an invitation is sent. It reuses the
-  // floating window_info component styled like window-confirm (the "notice"
-  // variant — drumee logo + a compact card) with a single Close button that
-  // dismisses the toast.
-  _showInviteSentToast() {
+  // Branded confirmation toast shown after a member-management action succeeds
+  // (invite sent, role updated, member removed, …). It reuses the floating
+  // window_info component styled like window-confirm (the "notice" variant —
+  // drumee logo + a compact card, see window-info skin [data-variant="notice"])
+  // with a single Close button that dismisses the toast. Every success
+  // confirmation goes through here so they share one consistent style.
+  _showNoticeToast(message) {
     Wm.info({
-      message: LOCALE.INVITATION_SENT_SUCCESSFULLY,
-      // Compact, window-confirm styled card (see window-info skin
-      // [data-variant="notice"]).
+      message,
       variant: "notice",
       actions: [
         {
@@ -2773,6 +2844,11 @@ class __window_folder extends mfsInteract {
         },
       ],
     });
+  }
+
+  // Confirmation toast shown after an invitation is sent.
+  _showInviteSentToast() {
+    this._showNoticeToast(LOCALE.INVITATION_SENT_SUCCESSFULLY);
   }
 
   // Open a destructive Wm.confirm popup; on confirm POST
@@ -2821,7 +2897,7 @@ class __window_folder extends mfsInteract {
         return;
       }
       await this._refreshFolderMembers();
-      Wm.alert(LOCALE.MEMBER_REMOVED_SUCCESSFULLY || "Member removed.");
+      this._showNoticeToast(LOCALE.MEMBER_REMOVED_SUCCESSFULLY || "Member removed.");
     } catch (e) {
       Wm.alert(e?.reason || e?.error || LOCALE.TRY_AGAIN);
     } finally {
@@ -2972,12 +3048,31 @@ class __window_folder extends mfsInteract {
       return this.dialogWrapper.clear();
     }
     this.isShowSettings = true;
+    // Converge the workspace "Manage access" onto secure-share v2 — the SAME panel
+    // files/subfolders use (window_secure_share) — so the workspace link gets
+    // editable permissions + logged-in-recipient recognition. The old external-room
+    // panel (permission_shared) supported neither (permission was hard-clamped to
+    // view; recipients were always guest-bound). Share the workspace ROOT node: for
+    // a hub/workspace-root window the real node id is actual_home_id (nid is the
+    // hub/0) — mirrors this window's own curNid logic; a share-area subfolder shares
+    // its own node. Rendered embedded in the same dialog drawer, matching the media
+    // 'secure-share' launch.
+    let shareNid = this.mget(_a.nid);
+    if (this.mget(_a.filetype) === _a.hub && this.mget(_a.actual_home_id)) {
+      shareNid = this.mget(_a.actual_home_id);
+    }
     this.dialogWrapper.feed({
-      kind: "permission_shared",
-      media: this.mget(_a.media) || this.media,
-      hub_id: this.mget(_a.hub_id),
+      kind     : "window_secure_share",
+      embedded : 1,
+      dataset  : { embedded: "yes" },
+      nid      : shareNid,
+      hub_id   : this.mget(_a.hub_id),
+      filetype : _a.folder,
+      // Title this panel "Manage access" (workspace-root entry), not the default
+      // "Folder Secure Share" used for file/subfolder shares. Scoped: only this
+      // launch sets the flag, so subfolder/file share panels keep their title.
+      manage_access: 1,
       uiHandler: [this],
-      persistence: _a.once,
     });
     const c = this.dialogWrapper.children.last();
     if (c) {

@@ -9,8 +9,18 @@
   }
 
   &__ui {
-    min-width: 600px;
+    // Match the confirm dialog's default width (window-confirm
+    // data-maxsize="0"): a fixed 500px card that shrinks to fit, with the same
+    // mobile clamp as window-confirm. Height is unchanged.
+    width: 500px;
+    max-width: 100%;
     min-height: 300px;
+
+    &[data-device="mobile"] {
+      min-width: unset !important;
+      width: calc(100vw - 32px) !important;
+      max-width: 340px;
+    }
   }
 
   .gradient-start-badge {
@@ -213,12 +223,16 @@
   transform: translate(-50%, -50%) !important;
   margin: 0 !important;
   z-index: 100000;
+  background-color: var(--normal-bg-90);
 
-  min-width: 340px;
+  // Match the confirm dialog's default width (500px), same as the standard
+  // info dialog above — the notice card is no longer capped at 400px. The
+  // window-info__ui[data-device="mobile"] clamp above also applies here.
+  min-width: unset;
   min-height: 0 !important;
-  width: auto;
+  width: 500px;
   height: auto;
-  max-width: 400px;
+  max-width: 100%;
   padding: 20px 24px 24px;
   border-radius: var(--corner-radius-4, 16px);
   border: 1px solid var(--border-default, rgba(0, 0, 0, 0.05));

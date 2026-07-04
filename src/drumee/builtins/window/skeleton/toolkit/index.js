@@ -628,11 +628,22 @@ export function chatPanel(ui) {
         content: getChatLabel(ui),
       });
 
+  // Chat gate for a view-only member (privilege without the download bit).
+  // Drives both the card overlay and the composer blur off a single
+  // data-chat_gated flag on the panel; the folder window re-syncs it via
+  // _syncChatGate on live role change. Computed here so there is no flash of an
+  // enabled composer before the runtime sync.
+  const chatGated =
+    isFolderChat && !(Number(ui.mget(_a.privilege)) & _K.permission.download)
+      ? 1
+      : 0;
   return Skeletons.Box.Y({
     className: `${grp}__chat-panel`,
     sys_pn: "chat-panel",
     dataset:
-      ui.fig.family === "window-folder" ? { area: ui.mget(_a.area) } : {},
+      ui.fig.family === "window-folder"
+        ? { area: ui.mget(_a.area), chat_gated: chatGated }
+        : {},
     kids: [
       header,
       // File-thread info card slot (Figma 2216-165656) — the in-place (Files
@@ -669,6 +680,34 @@ export function chatPanel(ui) {
             sys_pn: "thread-menu",
             partHandler: ui,
             dataset: { open: 0 },
+          })
+        : null,
+      // "Need permission to chat" card — the drumee lockup + message shown over
+      // the conversation for a view-only member. Always in the DOM; shown by CSS
+      // when the panel carries data-chat_gated="1" (set initially above and by
+      // _syncChatGate on live role change).
+      isFolderChat
+        ? Skeletons.Box.Y({
+            className: `${grp}__chat-gate`,
+            kids: [
+              Skeletons.Box.X({
+                className: `${grp}__chat-gate-logo`,
+                kids: [
+                  Skeletons.Image.Svg({
+                    ico: "logo-upload",
+                    className: `${grp}__chat-gate-logo-ico`,
+                  }),
+                  Skeletons.Note({
+                    className: `${grp}__chat-gate-logo-text`,
+                    content: "drumee",
+                  }),
+                ],
+              }),
+              Skeletons.Note({
+                className: `${grp}__chat-gate-text`,
+                content: LOCALE.CHAT_ADMIN_REQUIRED,
+              }),
+            ],
           })
         : null,
     ].filter(Boolean),
@@ -1338,8 +1377,11 @@ export function topbarMoreMenu(ui) {
       modifier: "video",
     });
   }
-  // Manage Access mirrors the share control-icon: share areas only.
-  if (!inShare && area === _a.share) {
+  // Manage Access mirrors the share control-icon: share areas + workspace ROOT
+  // only (filetype === hub). Sub-folders already share via their right-click
+  // "Share" menu, so this entry is redundant there — keep in sync with topbar.js.
+  const isRoot = ui.mget(_a.filetype) === _a.hub && ui.mget(_a.actual_home_id);
+  if (!inShare && area === _a.share && isRoot) {
     items.push({
       service: "folder-manage-access",
       ico: "app-share",
