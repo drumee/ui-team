@@ -108,7 +108,9 @@ module.exports = function (ui) {
                   ],
                 })
               : null,
-          ],
+            // A null here still occupies a flex slot at render, which shoves the
+            // heading to the far edge under space-between — filter it out.
+          ].filter(Boolean),
         }),
         ...body,
       ],

@@ -81,6 +81,7 @@
     "unlink_label": "task.unlink_label",
     "get_labels": "task.get_labels",
     "search_files": "task.search_files",
+    "activity": "task.activity",
     "comment_list": "task.comment_list",
     "comment_create": "task.comment_create",
     "comment_update": "task.comment_update",
