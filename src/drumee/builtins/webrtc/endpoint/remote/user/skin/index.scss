@@ -10,7 +10,7 @@
     height: 100%;
     width: 100%;
     overflow: hidden;
-    border-radius: 12px;
+    border-radius: 16px;
   }
 
   &__main {
@@ -21,7 +21,7 @@
     align-items: center;
     background-color: var(--multimedia-background);
     overflow: hidden;
-    border-radius: 12px;
+    border-radius: 16px;
     container-type: size;
   }
 
@@ -109,17 +109,14 @@
   // ── Tile footer bar (mute + name pill + dots) ──────────────────────────
   &__tile-footer {
     position: absolute;
-    bottom: 8px;
-    left: 8px;
-    right: 8px;
+    bottom: 10px;
+    left: 10px;
+    right: 10px;
     gap: 6px;
     align-items: center;
-    justify-content: center;
+    // Figma: name pill anchored bottom-left, muted-mic badge to its right.
+    justify-content: flex-start;
     z-index: 10;
-    // No fixed width: `left:8px; right:8px` already span the tile. A `width`
-    // here over-constrains the box (width wins over `right`), locking the
-    // footer to a left-anchored 300px strip so the name pill renders
-    // off-centre. Dropping it lets the mic/name/dots centre across the tile.
   }
 
   &__tile-mic {
@@ -139,23 +136,24 @@
   }
 
   &__uname {
-    flex: 1;
+    flex: 0 1 auto;
     min-width: 0;
+    max-width: 100%;
+    order: 0;
     background-color: rgba(20, 17, 35, 0.4);
     backdrop-filter: blur(5.5px);
-    border-radius: 57px;
-    padding: 6px 10px;
-    justify-content: center;
+    border-radius: 60px;
+    padding: 6px 12px;
+    justify-content: flex-start;
     overflow: hidden;
 
-    @include drumee.typo($size: 10px, $line: 1.4, $weight: 400, $color: #fff);
+    @include drumee.typo($size: 12px, $line: 1.4, $weight: 600, $color: #fff);
 
     .note-content {
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
-      text-align: center;
-      width: 100%;
+      text-align: left;
     }
 
     &[data-state="0"] {
@@ -163,16 +161,14 @@
     }
   }
 
+  // Muted-mic badge sits to the right of the name pill (Figma).
+  &__tile-mic {
+    order: 1;
+  }
+
+  // Dots menu belongs to the top-right hover cluster, not the footer.
   &__tile-dots {
-    width: 27px;
-    height: 27px;
-    min-width: 27px;
-    padding: 6px;
-    background-color: rgba(20, 17, 35, 0.4);
-    backdrop-filter: blur(4px);
-    border-radius: 50%;
-    flex-shrink: 0;
-    color: #fff;
+    display: none;
   }
 
   &__hand-raise-badge {

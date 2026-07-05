@@ -25,26 +25,26 @@ const __skl_stream_local = function (_ui_) {
       // _setMemberPresenting / _toggleHandRaise.
       Skeletons.Button.Svg({
         className: `${_ui_.fig.family}__tile-badge ${_ui_.fig.family}__tile-badge--share`,
-        ico: "presentation",
+        ico: "meet-screen",
         tooltips: LOCALE.SHARING_SCREEN || "Sharing screen",
         active: 0,
       }),
       Skeletons.Button.Svg({
         className: `${_ui_.fig.family}__tile-badge ${_ui_.fig.family}__tile-badge--hand`,
-        ico: "hand-raise",
+        ico: "meet-hand",
         tooltips: LOCALE.HAND_RAISED || "Hand raised",
         active: 0,
       }),
       Skeletons.Button.Svg({
         className: `${_ui_.fig.family}__tile-pin`,
-        ico: "drumee-tools_pin",
+        ico: "meet-pin",
         sys_pn: "tile-pin",
         service: "pin-tile",
         uiHandler: [_ui_],
       }),
       Skeletons.Button.Svg({
         className: `${_ui_.fig.family}__tile-dots`,
-        ico: "bold-dot-vertical",
+        ico: "meet-dots",
       }),
     ]
   });
@@ -54,7 +54,7 @@ const __skl_stream_local = function (_ui_) {
     kids: [
       Skeletons.Button.Svg({
         className: `${_ui_.fig.family}__tile-mic`,
-        ico: "micro",
+        ico: "meet-mic-slash",
         sys_pn: _a.audio,
         attrOpt: { id: `${_ui_.mget("participant_id")}-local-mic` }
       }),

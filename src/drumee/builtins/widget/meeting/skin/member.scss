@@ -15,10 +15,10 @@
   }
 
   &__member-avatar {
-    width: 40px;
-    height: 40px;
+    width: 36px;
+    height: 36px;
     flex-shrink: 0;
-    border-radius: 12px;
+    border-radius: 50%;
     overflow: hidden;
   }
 
@@ -38,7 +38,9 @@
     font-size: 14px;
     font-weight: 600;
     line-height: 20px;
-    color: var(--normal-fg);
+    // Panel is pinned to the light Figma design — keep text readable on white
+    // regardless of the app theme.
+    color: #0b0a21;
     font-family: var(--font-main);
     white-space: nowrap;
     overflow: hidden;
@@ -50,26 +52,31 @@
   // hover/cursor (active:0 on the source skeleton already disables
   // click). The icons are reused from the call top-bar sprite.
   &__member-badge {
-    width: 16px;
-    height: 16px;
+    // Figma "participants card" status icons: 24px, dark.
+    width: 24px;
+    height: 24px;
     flex-shrink: 0;
     cursor: default;
     pointer-events: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 
     svg {
-      width: 16px;
-      height: 16px;
+      width: 24px;
+      height: 24px;
+      fill: currentColor;
     }
 
-    &--hand svg { color: #fa8540; }      // raise-hand orange
-    &--share svg { color: #5950ff; }     // sharing-screen primary
+    &--hand svg { color: #0b0a21; }
+    &--share svg { color: #0b0a21; }
   }
 
   &__member-email {
     font-size: 12px;
     font-weight: 400;
     line-height: 16px;
-    color: var(--normal-fg-20);
+    color: #84848c;
     font-family: var(--font-main);
     white-space: nowrap;
     overflow: hidden;
@@ -77,29 +84,33 @@
   }
 
   &__member-call-btn {
+    // Figma "Call" CTA: solid primary pill, white icon + label.
     display: flex;
-    background-color: var(--active-item-bg);
+    box-sizing: border-box;
+    background-color: var(--primary-50, #433cc5);
     border-radius: 4px;
-    padding: 8px;
+    padding: 8px 16px;
     gap: 8px;
     align-items: center;
     cursor: pointer;
     flex-shrink: 0;
+    transition: background-color 0.15s ease;
 
     &:hover {
-      background-color: rgba(89, 80, 255, 0.18);
+      background-color: #37319f;
     }
 
     svg {
-      width: 20px;
-      height: 20px;
-      color: var(--primary-40);
+      width: 18px;
+      height: 18px;
+      color: #fff;
+      fill: currentColor;
     }
 
     .note-content {
-      font-size: 12px;
-      font-weight: 400;
-      color: var(--normal-fg);
+      font-size: 14px;
+      font-weight: 600;
+      color: #fff;
       white-space: nowrap;
     }
 

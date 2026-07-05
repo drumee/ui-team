@@ -801,6 +801,14 @@ class __window_folder extends mfsInteract {
       this._launchMeetingInPanel();
       return;
     }
+    if (pn === "sched-grid") {
+      // Weekly view: land the scroll on the working hours instead of 12 AM.
+      const body = child.el && child.el.querySelector(`.${this.fig.family}__meeting-sched-body`);
+      if (body && !body.classList.contains(`${this.fig.family}__meeting-sched-body--month`)) {
+        body.scrollTop = 56 * 7; // ~7 AM with 56px hour rows
+      }
+      return;
+    }
     if (pn === "search-results") {
       this._searchResultsPart = child;
       return;
@@ -1262,6 +1270,28 @@ class __window_folder extends mfsInteract {
       case "start-meeting":
         return this._launchMeetingInPanel();
 
+      // ── Meeting-tab schedule view (skeleton/meeting-schedule.js) ────────
+      case "sched-prev":
+      case "sched-next":
+      case "sched-today": {
+        const st = require("./skeleton/meeting-schedule").schedState(this);
+        const unit = st.view === "monthly" ? "month" : "week";
+        if (service === "sched-today") st.anchor = Dayjs();
+        else st.anchor = st.anchor.add(service === "sched-next" ? 1 : -1, unit);
+        return this._refreshSchedule();
+      }
+
+      case "sched-toggle-view": {
+        const st = require("./skeleton/meeting-schedule").schedState(this);
+        st.view = st.view === "monthly" ? "weekly" : "monthly";
+        return this._refreshSchedule();
+      }
+
+      case "open-schedule":
+        // Placeholder — no meeting-scheduling backend is wired yet
+        // (window_schedule is not a registered kind).
+        return;
+
       case "meeting":
       case "webinar":
       case "channel":
@@ -1610,6 +1640,17 @@ class __window_folder extends mfsInteract {
   // panel — it opens as its own free-floating window. See _launchMeetingStandalone.
   _launchMeetingInPanel() {
     return this._launchMeetingStandalone();
+  }
+
+  // Re-render the Meeting-tab schedule in place after a nav/toggle service
+  // (state lives in this._sched — see skeleton/meeting-schedule.js).
+  _refreshSchedule() {
+    const part = this.getPart && this.getPart("meeting-panel");
+    if (!part || !part.el) return;
+    const skl = require("./skeleton/meeting-schedule")(this);
+    // Feed the schedule's own children (toolbar + grid) into the existing
+    // root part so the surrounding tab view is untouched.
+    part.feed(skl.kids);
   }
 
   /**
