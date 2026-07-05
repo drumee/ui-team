@@ -2432,6 +2432,9 @@ class __window_folder extends mfsInteract {
               // Folder-scope identity for the task list/create.
               scope_nid: scopeNid,
               scope_is_root: isRoot,
+              // Deep-link from a task mention/assignment notification: the tasks
+              // panel opens this task's detail once its list has loaded.
+              open_task_id: this.mget("open_task_id"),
               // sys_pn + partHandler let the window grab a reference (for the
               // tab-bar filter button) and re-scope the panel on navigation.
               sys_pn: "folder-task-panel",

@@ -67,6 +67,9 @@ class __tasks_panel extends LetcBox {
     // tasks. Falls back to _destNid for safety if not supplied.
     this._scopeNid = this.mget("scope_nid") || this._destNid || null;
     this._scopeIsRoot = this.mget("scope_is_root") ? 1 : 0;
+    // Deep-link target from a task mention/assignment notification (forwarded by
+    // the folder window). Consumed once after the initial load in onDomRefresh.
+    this._openTaskId = this.mget("open_task_id") || null;
     this._tasks = [];
     this._members = [];
     this._labels = [];
@@ -206,6 +209,15 @@ class __tasks_panel extends LetcBox {
       this._loadLabels(),
     ]);
     this._render();
+    // Deep-link: a mention/assignment notification asked to open a specific
+    // task. Only open the detail if the task is actually in this folder's list —
+    // otherwise (legacy nid-less notification, or a task moved elsewhere) stay
+    // on the task list instead of showing an empty detail panel.
+    if (this._openTaskId) {
+      const id = this._openTaskId;
+      this._openTaskId = null;
+      if (this._tasks.some((t) => t.id === id)) this._openDetail(id);
+    }
   }
 
   // Files dragged from the home grid use Drumee's internal jQuery-UI drag, not
