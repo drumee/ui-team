@@ -391,11 +391,12 @@ module.exports.controls = function (ui) {
     ],
   });
 
+  // Filter now lives in the shared viewbar; Gantt keeps only its Detail pill.
   const pillBtn = (label) =>
     Skeletons.Note({ className: `${pfx}__gantt-ctrl`, content: label });
 
   return Skeletons.Box.X({
     className: `${pfx}__cal-controls`,
-    kids: [toggle, pillBtn(LOCALE.DETAIL), pillBtn(LOCALE.FILTER)],
+    kids: [toggle, pillBtn(LOCALE.DETAIL)],
   });
 };

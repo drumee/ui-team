@@ -91,10 +91,11 @@ class __tasks_panel extends LetcBox {
     this._ganttMode = "weeks";
     this._ganttSelected = new Set();
     // Custom Kanban columns (server rows {id,name,theme,position}) + the
-    // board's add-column / column-menu UI state.
+    // "New board" modal / column-menu UI state.
     this._customColumns = [];
-    this._colAddOpen = false;
-    this._colAddTheme = "default";
+    this._boardModalOpen = false;
+    this._boardTheme = "default";
+    this._boardDefault = true; // "Set as default" toggle (Figma default: on)
     this._colMenuFor = null; // custom column id whose menu popover is open
     this._fileSearch = { query: "", results: [], scope: null };
     this._fileSearchTimer = null;
@@ -811,21 +812,29 @@ class __tasks_panel extends LetcBox {
       case "gantt-delete-selected":
         return this._deleteSelectedTasks();
 
-      case "col-add-open":
-        this._colAddOpen = true;
-        this._colAddTheme = "default";
+      case "toggle-filter":
+        return this.toggleFilter();
+
+      case "add-board":
+        this._boardModalOpen = true;
+        this._boardTheme = "default";
+        this._boardDefault = true;
         this._colMenuFor = null;
         return this._render();
 
-      case "col-add-cancel":
-        this._colAddOpen = false;
+      case "board-cancel":
+        this._boardModalOpen = false;
         return this._render();
 
-      case "col-add-theme":
-        this._colAddTheme = trigger.mget("colTheme") || "default";
+      case "board-theme":
+        this._boardTheme = trigger.mget("colTheme") || "default";
         return this._render();
 
-      case "col-add-submit":
+      case "board-default":
+        this._boardDefault = !this._boardDefault;
+        return this._render();
+
+      case "board-submit":
         return this._createColumn();
 
       case "col-menu": {
@@ -1653,7 +1662,8 @@ class __tasks_panel extends LetcBox {
   // ── Custom Kanban columns ────────────────────────────────────
   async _createColumn() {
     const input =
-      this.el && this.el.querySelector('.tasks-panel__col-add input[name="col_name"]');
+      this.el &&
+      this.el.querySelector('.tasks-panel__board-modal input[name="board_title"]');
     const name = input ? String(input.value || "").trim() : "";
     if (!name) return;
     try {
@@ -1662,15 +1672,19 @@ class __tasks_panel extends LetcBox {
         hub_id: this._hubId,
         nid: this._scopeNid,
         name,
-        theme: this._colAddTheme || "default",
+        theme: this._boardTheme || "default",
+        // "Set as default" — sent for forward-compat; the server ignores it
+        // until a default-column field exists.
+        is_default: this._boardDefault ? 1 : 0,
       });
       const rec = Array.isArray(row) ? row[0] : row;
       if (rec && rec.id) this._customColumns.push(rec);
     } catch (err) {
       console.error("[tasks_panel] column.create failed:", err);
     }
-    this._colAddOpen = false;
-    this._colAddTheme = "default";
+    this._boardModalOpen = false;
+    this._boardTheme = "default";
+    this._boardDefault = true;
     this._render();
   }
 
@@ -3193,8 +3207,12 @@ class __tasks_panel extends LetcBox {
   getColumnThemes() {
     return COLUMN_THEMES;
   }
-  getColAddState() {
-    return { open: this._colAddOpen, theme: this._colAddTheme };
+  getBoardModalState() {
+    return {
+      open: this._boardModalOpen,
+      theme: this._boardTheme,
+      isDefault: this._boardDefault,
+    };
   }
   getColMenuFor() {
     return this._colMenuFor;
