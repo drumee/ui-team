@@ -774,7 +774,35 @@ class __panel_activity extends LetcBox {
     // persistently-dismissable feed events (the server merges secure_share_open_feed
     // into the feed). Keeping them out of the pinned section is the whole point of
     // that move, so do NOT re-add an open-notifications fetch here.
-    const merged = accessReqs.concat(live);
+    // Task @-mentions live in channel.list_notifications (type='mention'), NOT in
+    // activity.list — so without merging them here the badge + default feed never
+    // show them. Keep only event==='task_mention' rows: p2p mentions are already
+    // represented by the 'chat' rollup from activity.list and would double-count.
+    // category 'contact_invite' + key_id=id routes dismiss through
+    // activity.dismiss_contact_event (same as the Mentions tab).
+    let taskMentions = [];
+    try {
+      const tm = await this.postService({
+        service: (SERVICE.channel && SERVICE.channel.list_notifications) || 'channel.list_notifications',
+        hub_id: Visitor.id,
+        type: 'mention',
+        unread_only: this._unreadsOnly,
+      });
+      const rows = _.isArray(tm) ? tm : (_.isArray(tm?.data) ? tm.data : []);
+      const dismissedTm = this._dismissedKeys || new Set();
+      taskMentions = rows
+        .filter((r) => r && r.event === 'task_mention')
+        .filter((r) => !dismissedTm.has(`contact_invite:${r.id}`))
+        .map((r) => ({
+          ...r,
+          category: 'contact_invite',
+          key_id: String(r.id),
+          last_id: r.id,
+        }));
+    } catch (e) {
+      this.warn('[panel_activity] task mention fetch failed', e);
+    }
+    const merged = accessReqs.concat(taskMentions, live);
 
     const unread_count = merged.length;
     RADIO_BROADCAST.trigger('activity-update', { unread_count });
@@ -984,6 +1012,10 @@ class __panel_activity extends LetcBox {
       case "contact.delete_contact":
       case "media.remove":
       case "media.new":
+      // Task @-mention (server task._notifyMentions pushes options.service='task.mention').
+      // Same debounced refresh as the chat/channel mention path — refreshActivity now
+      // also pulls channel.list_notifications, where task mentions live.
+      case "task.mention":
         if (this.timer) return;
         this.timer = setTimeout(() => {
           this.refreshActivity();
