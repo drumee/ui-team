@@ -147,33 +147,11 @@ export function tabBar(ui, opt = {}) {
     );
   }
 
-  // Member-filter trigger for the Task tab — lives on the same line as the
-  // tabs (right-aligned). Hidden until the Task tab is active; the folder
-  // window toggles `data-visible` in showFolderTab and reflects the active
-  // filter via `data-active` (task-filter-state event from the task panel).
-  if (isFolder) {
-    kids.push(
-      Skeletons.Box.X({
-        className: `${ui.fig.family}__tab-filter`,
-        sys_pn: "task-filter-btn",
-        partHandler: ui,
-        dataset: { visible: 0, active: 0 },
-        bubble: 0,
-        service: "toggle-task-filter",
-        uiHandler: [ui],
-        kids: [
-          Skeletons.Image.Svg({
-            ico: "desktop_filter",
-            className: `${ui.fig.family}__tab-filter-ico`,
-          }),
-          Skeletons.Note({
-            className: `${ui.fig.family}__tab-filter-label`,
-            content: LOCALE.FILTER,
-          }),
-        ],
-      }),
-    );
-  }
+  // NOTE: the Task-tab member-filter trigger used to live here on the window
+  // tab bar. It now lives in the task panel's own secondary header (viewbar)
+  // per Figma 2040-53814, so it's rendered by the task skeleton instead. The
+  // folder window's toggle-task-filter / task-filter-state handlers remain but
+  // are simply no longer wired to a button here.
 
   // File view toggle — a segmented pill with two halves: list (row) and grid.
   // Both halves always render; the half matching the wrapper's data-state is

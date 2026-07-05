@@ -619,32 +619,6 @@
     }
   }
 
-  &__col-add-ghost {
-    flex: 0 0 220px;
-    align-self: flex-start;
-    min-height: 120px;
-    justify-content: center;
-    align-items: center;
-    border: 1px dashed var(--border-strong, rgba(0, 0, 0, 0.18));
-    border-radius: 12px;
-    cursor: pointer;
-    transition: background 0.12s;
-
-    &:hover {
-      background: var(--hover-bg-40, rgba(0, 0, 0, 0.03));
-    }
-  }
-
-  &__col-add-label {
-    @include drumee.typo(
-      $size: 14px,
-      $weight: 600,
-      $line: 20px,
-      $color: var(--normal-fg-30, #65656c)
-    );
-  }
-
-  &__col-add,
   &__col-menu {
     gap: 12px;
     padding: 12px;
@@ -657,12 +631,6 @@
       0 4px 4px -1px rgba(12, 12, 13, 0.1);
   }
 
-  &__col-add {
-    flex: 0 0 220px;
-    align-self: flex-start;
-  }
-
-  &__col-add-name input,
   &__col-menu-name input {
     width: 100%;
     height: 32px;
@@ -747,6 +715,207 @@
     &:empty,
     &[data-state="closed"] {
       display: none;
+    }
+  }
+
+  // ── New board modal (Figma 2040-53814) ───────────────────────
+  &__board-wrapper {
+    position: absolute;
+    inset: 0;
+    z-index: 11;
+
+    &:empty,
+    &[data-state="closed"] {
+      display: none;
+    }
+  }
+
+  &__board-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(250, 250, 250, 0.05);
+    backdrop-filter: blur(30px);
+    align-items: center;
+    justify-content: center;
+    animation: tasks-panel-fade-in 0.15s ease;
+  }
+
+  &__board-modal {
+    position: relative;
+    width: 520px;
+    max-width: 94%;
+    max-height: 88vh;
+    gap: 24px;
+    padding: 32px;
+    box-sizing: border-box;
+    background: var(--normal-bg-elevated, #fff);
+    border: 1px solid rgba(0, 0, 0, 0.05);
+    border-radius: 24px;
+    box-shadow:
+      0px 25px 50px -12px rgba(0, 0, 0, 0.25),
+      0px 1px 11px 0px rgba(0, 0, 0, 0.13);
+    overflow-y: auto;
+    animation: tasks-panel-pop-in 0.18s cubic-bezier(0.2, 0, 0, 1);
+  }
+
+  &__board-header {
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  &__board-title-text {
+    @include drumee.typo(
+      $size: 22px,
+      $weight: 600,
+      $line: 28px,
+      $color: var(--normal-fg-10, #0b0a21)
+    );
+  }
+
+  &__board-close {
+    flex: 0 0 24px;
+    width: 24px;
+    height: 24px;
+    cursor: pointer;
+    opacity: 0.6;
+
+    &:hover {
+      opacity: 1;
+    }
+  }
+
+  &__board-field {
+    gap: 10px;
+  }
+
+  &__board-label {
+    @include drumee.typo(
+      $size: 16px,
+      $weight: 600,
+      $line: 22px,
+      $color: var(--normal-fg-10, #0b0a21)
+    );
+  }
+
+  &__board-input input {
+    width: 100%;
+    height: 48px;
+    padding: 0 16px;
+    box-sizing: border-box;
+    border: none;
+    border-radius: 12px;
+    background: var(--border-default, rgba(0, 0, 0, 0.05));
+    @include drumee.typo(
+      $size: 14px,
+      $weight: 400,
+      $line: 20px,
+      $color: var(--normal-fg-10, #0b0a21)
+    );
+  }
+
+  // 3×3 colour grid of selectable pills.
+  &__board-colors {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+  }
+
+  &__board-color {
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    box-sizing: border-box;
+    border: 1px solid var(--border-default, rgba(0, 0, 0, 0.12));
+    border-radius: 71px;
+    cursor: pointer;
+    transition: border-color 0.12s, background 0.12s;
+
+    &:hover {
+      background: var(--hover-bg-40, rgba(0, 0, 0, 0.03));
+    }
+    &[data-active="1"] {
+      border-color: var(--col-primary-40, #5950ff);
+      background: var(--overlay-brand, rgba(89, 80, 255, 0.08));
+    }
+  }
+
+  // Hollow ring swatch — the theme colour is the border, per Figma.
+  &__board-color-dot {
+    flex: 0 0 18px;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    border: 2px solid var(--normal-bg-60, #aeaeb2);
+    box-sizing: border-box;
+  }
+
+  &__board-color-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    @include drumee.typo(
+      $size: 14px,
+      $weight: 500,
+      $line: 20px,
+      $color: var(--normal-fg-10, #0b0a21)
+    );
+  }
+
+  &__board-default-row {
+    align-items: center;
+    justify-content: space-between;
+    cursor: pointer;
+  }
+
+  &__board-default-label {
+    @include drumee.typo(
+      $size: 16px,
+      $weight: 600,
+      $line: 22px,
+      $color: var(--normal-fg-10, #0b0a21)
+    );
+  }
+
+  // Pill switch.
+  &__board-toggle {
+    position: relative;
+    flex: 0 0 40px;
+    width: 40px;
+    height: 22px;
+    border-radius: 12px;
+    background: var(--normal-bg-70, #d1d1d6);
+    transition: background 0.15s;
+
+    &[data-on="1"] {
+      background: var(--col-primary-40, #5950ff);
+    }
+  }
+
+  &__board-toggle-knob {
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: #fff;
+    transition: left 0.15s;
+  }
+
+  &__board-toggle[data-on="1"] &__board-toggle-knob {
+    left: 20px;
+  }
+
+  &__board-submit {
+    padding: 14px;
+    text-align: center;
+    border-radius: 12px;
+    cursor: pointer;
+    background: var(--col-primary-40, #5950ff);
+    @include drumee.typo($size: 16px, $weight: 600, $line: 22px, $color: #fff);
+
+    &:hover {
+      opacity: 0.92;
     }
   }
 
@@ -2291,12 +2460,20 @@
   &__viewbar {
     flex: 0 0 auto;
     align-items: center;
+    justify-content: space-between;
     flex-wrap: wrap;
     gap: 4px;
     row-gap: 8px;
     padding: 6px 12px;
     border-bottom: 1px solid var(--border-default, rgba(0, 0, 0, 0.08));
     background: var(--normal-bg-elevated, #fff);
+  }
+
+  // Right cluster: view-specific controls + New task / New board / Filter.
+  &__viewbar-right {
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
   }
 
   &__viewbar-item {
@@ -2326,7 +2503,6 @@
   }
 
   &__viewbar-new {
-    margin-left: auto;
     padding: 5px 12px;
     border-radius: 6px;
     cursor: pointer;
@@ -2338,10 +2514,71 @@
     }
   }
 
+  // "+ New board" — outlined pill (Figma 2040-53814).
+  &__viewbar-board {
+    align-items: center;
+    gap: 6px;
+    padding: 5px 12px;
+    border-radius: 71px;
+    cursor: pointer;
+    border: 1px solid var(--border-default, rgba(0, 0, 0, 0.12));
+    background: var(--normal-bg-elevated, #fff);
+
+    &:hover {
+      background: var(--hover-bg-40, rgba(0, 0, 0, 0.03));
+    }
+  }
+
+  &__viewbar-board-ico {
+    width: 14px;
+    height: 14px;
+  }
+
+  &__viewbar-board-label {
+    @include drumee.typo(
+      $size: 13px,
+      $weight: 600,
+      $line: 18px,
+      $color: var(--normal-fg-10, #0b0a21)
+    );
+  }
+
+  // "Filter" pill — moved from the window tab bar into the viewbar.
+  &__viewbar-filter {
+    align-items: center;
+    gap: 6px;
+    padding: 5px 12px;
+    border-radius: 71px;
+    cursor: pointer;
+    border: 1px solid var(--border-default, rgba(0, 0, 0, 0.12));
+    background: var(--normal-bg-elevated, #fff);
+
+    &:hover {
+      background: var(--hover-bg-40, rgba(0, 0, 0, 0.03));
+    }
+    &[data-active="1"] {
+      border-color: var(--col-primary-40, #5950ff);
+      background: var(--overlay-brand, rgba(89, 80, 255, 0.1));
+    }
+  }
+
+  &__viewbar-filter-ico {
+    width: 16px;
+    height: 16px;
+  }
+
+  &__viewbar-filter-label {
+    @include drumee.typo(
+      $size: 13px,
+      $weight: 600,
+      $line: 18px,
+      $color: var(--normal-fg-10, #0b0a21)
+    );
+  }
+
   // ── Calendar view ──────────────────────── (Figma 2042-20730 / 2045-132117)
   // Viewbar controls: Weekly/Monthly toggle + ‹ period › navigator.
   &__cal-controls {
-    margin-left: auto;
     align-items: center;
     gap: 12px;
   }

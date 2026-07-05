@@ -475,72 +475,9 @@ const make = function (ui) {
       ],
     });
 
-  // Ghost column at the board's right end: "+ Add column", or the inline
-  // create form (name + palette swatches) once opened.
-  const addColumn = () => {
-    const st = ui.getColAddState();
-    if (!st.open) {
-      return Skeletons.Box.Y({
-        className: `${pfx}__col-add-ghost`,
-        bubble: 0,
-        service: "col-add-open",
-        uiHandler: [ui],
-        kids: [
-          Skeletons.Note({
-            className: `${pfx}__col-add-label`,
-            content: `+ ${LOCALE.ADD_COLUMN}`,
-          }),
-        ],
-      });
-    }
-    return Skeletons.Box.Y({
-      className: `${pfx}__col-add`,
-      bubble: 0,
-      kids: [
-        Skeletons.Entry({
-          className: `${pfx}__col-add-name`,
-          name: "col_name",
-          placeholder: LOCALE.COLUMN_NAME,
-          mode: "commit",
-          service: "col-add-submit",
-          uiHandler: [ui],
-        }),
-        Skeletons.Box.X({
-          className: `${pfx}__col-swatches`,
-          kids: Object.keys(ui.getColumnThemes()).map((t) =>
-            Skeletons.Note({
-              className: `${pfx}__col-swatch`,
-              styleOpt: { background: ui.getColumnThemes()[t] },
-              dataset: { active: st.theme === t ? 1 : 0 },
-              bubble: 0,
-              service: "col-add-theme",
-              uiHandler: [ui],
-              colTheme: t,
-            }),
-          ),
-        }),
-        Skeletons.Box.X({
-          className: `${pfx}__col-menu-actions`,
-          kids: [
-            Skeletons.Note({
-              className: `${pfx}__col-menu-rename`,
-              content: LOCALE.ADD,
-              bubble: 0,
-              service: "col-add-submit",
-              uiHandler: [ui],
-            }),
-            Skeletons.Note({
-              className: `${pfx}__col-menu-cancel`,
-              content: LOCALE.CANCEL,
-              bubble: 0,
-              service: "col-add-cancel",
-              uiHandler: [ui],
-            }),
-          ],
-        }),
-      ],
-    });
-  };
+  // Columns are added via the "New board" modal (add-board), launched from the
+  // viewbar — see boardModal(). The board's right end no longer has an inline
+  // ghost.
 
   // ── Reusable controls ─────────────────────────────────────────
   const priorityPills = (selected, serviceName, extra = {}) =>
@@ -1242,6 +1179,127 @@ const make = function (ui) {
   };
 
   // ── Create modal ──────────────────────────────────────────────
+  // "New board" modal (Figma 2040-53814) — creates a Kanban column: title +
+  // 3×3 colour palette + "set as default" toggle.
+  const THEME_LABELS = {
+    default: LOCALE.COLOR_DEFAULT,
+    orange: LOCALE.COLOR_ORANGE,
+    yellow: LOCALE.COLOR_YELLOW,
+    green: LOCALE.COLOR_GREEN,
+    cyan: LOCALE.COLOR_CYAN,
+    blue: LOCALE.COLOR_BLUE,
+    purple: LOCALE.COLOR_PURPLE,
+    pink: LOCALE.COLOR_PINK,
+    red: LOCALE.COLOR_RED,
+  };
+  const boardModal = () => {
+    const st = ui.getBoardModalState();
+    const themes = ui.getColumnThemes();
+    return Skeletons.Box.Y({
+      className: `${pfx}__board-backdrop`,
+      bubble: 0,
+      kids: [
+        Skeletons.Box.Y({
+          className: `${pfx}__board-modal`,
+          bubble: 0,
+          kids: [
+            Skeletons.Box.X({
+              className: `${pfx}__board-header`,
+              kids: [
+                Skeletons.Note({
+                  className: `${pfx}__board-title-text`,
+                  content: LOCALE.NEW_BOARD,
+                }),
+                Skeletons.Button.Svg({
+                  className: `${pfx}__board-close`,
+                  ico: "cross",
+                  bubble: 0,
+                  service: "board-cancel",
+                  uiHandler: [ui],
+                }),
+              ],
+            }),
+            Skeletons.Box.Y({
+              className: `${pfx}__board-field`,
+              kids: [
+                Skeletons.Note({
+                  className: `${pfx}__board-label`,
+                  content: LOCALE.BOARD_TITLE,
+                }),
+                Skeletons.Entry({
+                  className: `${pfx}__board-input`,
+                  name: "board_title",
+                  placeholder: LOCALE.BOARD_TITLE,
+                  mode: "commit",
+                  service: "board-submit",
+                  uiHandler: [ui],
+                }),
+              ],
+            }),
+            Skeletons.Box.Y({
+              className: `${pfx}__board-field`,
+              kids: [
+                Skeletons.Note({
+                  className: `${pfx}__board-label`,
+                  content: LOCALE.COLORS,
+                }),
+                Skeletons.Box.G({
+                  className: `${pfx}__board-colors`,
+                  kids: Object.keys(themes).map((t) =>
+                    Skeletons.Box.X({
+                      className: `${pfx}__board-color`,
+                      dataset: { active: st.theme === t ? 1 : 0 },
+                      bubble: 0,
+                      service: "board-theme",
+                      uiHandler: [ui],
+                      colTheme: t,
+                      kids: [
+                        Skeletons.Note({
+                          className: `${pfx}__board-color-dot`,
+                          styleOpt: { borderColor: themes[t] },
+                        }),
+                        Skeletons.Note({
+                          className: `${pfx}__board-color-name`,
+                          content: THEME_LABELS[t] || t,
+                        }),
+                      ],
+                    }),
+                  ),
+                }),
+              ],
+            }),
+            Skeletons.Box.X({
+              className: `${pfx}__board-default-row`,
+              bubble: 0,
+              service: "board-default",
+              uiHandler: [ui],
+              kids: [
+                Skeletons.Note({
+                  className: `${pfx}__board-default-label`,
+                  content: LOCALE.SET_AS_DEFAULT,
+                }),
+                Skeletons.Box.X({
+                  className: `${pfx}__board-toggle`,
+                  dataset: { on: st.isDefault ? 1 : 0 },
+                  kids: [
+                    Skeletons.Note({ className: `${pfx}__board-toggle-knob` }),
+                  ],
+                }),
+              ],
+            }),
+            Skeletons.Note({
+              className: `${pfx}__board-submit`,
+              content: LOCALE.ADD_NEW_BOARD,
+              bubble: 0,
+              service: "board-submit",
+              uiHandler: [ui],
+            }),
+          ],
+        }),
+      ],
+    });
+  };
+
   const createModal = () => {
     const cols = ui.getColumns();
     const selectedStatus = draft?.status || "todo";
@@ -1547,7 +1605,7 @@ const make = function (ui) {
   const boardView = () =>
     Skeletons.Box.X({
       className: `${pfx}__main`,
-      kids: [...ui.getColumns().map(column), addColumn()],
+      kids: ui.getColumns().map(column),
     });
   const viewContent =
     view === "calendar"
@@ -1581,23 +1639,62 @@ const make = function (ui) {
     ),
   });
 
+  // Right-side controls (Figma 2040-53814): calendar/gantt granularity when
+  // those views are active, then the create buttons, then the shared Filter.
+  const newTaskBtn = Skeletons.Note({
+    className: `${pfx}__viewbar-new`,
+    content: `+ ${LOCALE.NEW_TASK}`,
+    bubble: 0,
+    service: "add-task",
+    uiHandler: [ui],
+  });
+  const newBoardBtn = Skeletons.Box.X({
+    className: `${pfx}__viewbar-board`,
+    bubble: 0,
+    service: "add-board",
+    uiHandler: [ui],
+    kids: [
+      Skeletons.Image.Svg({ ico: "plus", className: `${pfx}__viewbar-board-ico` }),
+      Skeletons.Note({
+        className: `${pfx}__viewbar-board-label`,
+        content: LOCALE.NEW_BOARD,
+      }),
+    ],
+  });
+  const filterBtn = Skeletons.Box.X({
+    className: `${pfx}__viewbar-filter`,
+    dataset: { active: filterActive ? 1 : 0 },
+    bubble: 0,
+    service: "toggle-filter",
+    uiHandler: [ui],
+    kids: [
+      Skeletons.Image.Svg({ ico: "desktop_filter", className: `${pfx}__viewbar-filter-ico` }),
+      Skeletons.Note({
+        className: `${pfx}__viewbar-filter-label`,
+        content: LOCALE.FILTER,
+      }),
+    ],
+  });
+
   const subHeader = Skeletons.Box.X({
     className: `${pfx}__viewbar`,
     kids: [
       viewTabs,
-      // Calendar / Gantt get their own granularity controls; every other view
-      // keeps the global "+ New task" (board also has per-column "+").
-      view === "calendar"
-        ? require("./calendar").controls(ui)
-        : view === "gantt"
-          ? require("./gantt").controls(ui)
-          : Skeletons.Note({
-              className: `${pfx}__viewbar-new`,
-              content: `+ ${LOCALE.NEW_TASK}`,
-              bubble: 0,
-              service: "add-task",
-              uiHandler: [ui],
-            }),
+      Skeletons.Box.X({
+        className: `${pfx}__viewbar-right`,
+        kids: [
+          view === "calendar" ? require("./calendar").controls(ui) : null,
+          view === "gantt" ? require("./gantt").controls(ui) : null,
+          // "+ New task" for the task-list views (calendar/gantt add via their
+          // own affordances — the day "+" / "+ Work").
+          view === "board" || view === "list" || view === "summary"
+            ? newTaskBtn
+            : null,
+          // "+ New board" adds a Kanban column — board view only.
+          view === "board" ? newBoardBtn : null,
+          filterBtn,
+        ].filter(Boolean),
+      }),
     ],
   });
 
@@ -1619,6 +1716,12 @@ const make = function (ui) {
         name: "task-create",
         partHandler: ui,
         kids: creating ? [createModal()] : [],
+      }),
+      Skeletons.Wrapper.Y({
+        className: `${pfx}__board-wrapper`,
+        name: "task-board-modal",
+        partHandler: ui,
+        kids: ui.getBoardModalState().open ? [boardModal()] : [],
       }),
       // sys_pn is hardcoded to "fileselector" by Skeletons.FileSelector;
       // ensurePart("fileselector") + onPartReady("fileselector") match it.
