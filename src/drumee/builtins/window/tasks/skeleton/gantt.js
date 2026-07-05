@@ -174,7 +174,6 @@ module.exports = function (ui) {
   rows.forEach(({ task, start, end }) => {
     const sel = selected && selected.has && selected.has(task.id);
     const pm = priorityMeta(ui, task.priority);
-    // Aside row.
     asideRows.push(
       Skeletons.Box.X({
         className: `${pfx}__gantt-arow`,
@@ -229,7 +228,6 @@ module.exports = function (ui) {
       }),
     );
 
-    // Timeline track + bar.
     const leftPx = px(start);
     const endPx = (dayOffset(end) + 1) * DAY_W;
     const widthPx = Math.max(DAY_W, endPx - leftPx);
