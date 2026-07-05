@@ -30,7 +30,7 @@ module.exports = function (_ui_) {
   if (handRaised) {
     badges.push(
       Skeletons.Button.Svg({
-        ico: "hand-raise",
+        ico: "meet-hand",
         className: `${pfx}__member-badge ${pfx}__member-badge--hand`,
         tooltips: LOCALE.HAND_RAISED || "Hand raised",
         active: 0,
@@ -40,7 +40,7 @@ module.exports = function (_ui_) {
   if (presenting) {
     badges.push(
       Skeletons.Button.Svg({
-        ico: "presentation",
+        ico: "meet-screen",
         className: `${pfx}__member-badge ${pfx}__member-badge--share`,
         tooltips: LOCALE.SHARING_SCREEN || "Sharing screen",
         active: 0,
@@ -57,7 +57,7 @@ module.exports = function (_ui_) {
     if (handRaised) {
       actionBtn = Skeletons.Button.Label({
         className: `${pfx}__member-call-btn`,
-        ico: "hand-raise",
+        ico: "meet-hand",
         label: LOCALE.LOWER_HAND || "Lower hand",
         service: "lower-hand-self",
         dataset: { state: "lower-hand" },
@@ -66,7 +66,7 @@ module.exports = function (_ui_) {
     } else if (presenting) {
       actionBtn = Skeletons.Button.Label({
         className: `${pfx}__member-call-btn`,
-        ico: "presentation",
+        ico: "meet-screen",
         label: LOCALE.STOP_SHARING || "Stop sharing",
         service: "stop-share-self",
         dataset: { state: "stop-share" },
@@ -88,7 +88,7 @@ module.exports = function (_ui_) {
     }
     actionBtn = Skeletons.Button.Label({
       className: `${pfx}__member-call-btn`,
-      ico: "folder-meeting",
+      ico: "meet-camera",
       label: callLabel,
       service: callService,
       dataset: btnDataset,

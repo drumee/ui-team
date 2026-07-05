@@ -1,93 +1,95 @@
-// ================================================================== *
-//   Copyright Xialia.com  2011-2021
-//   FILE : /home/somanos/devel/ui/src/drumee/builtins/window/switchcall/skeleton/index.coffee
-//   TYPE : Skelton
-// ===================================================================**/
-
-// ===========================================================
-//
-// ===========================================================
-const __skl_window_switchcall = function(_ui_) {
-  let name, text, title;
+// "Meeting Started" / incoming-call popup. Shown when someone starts a meeting
+// (dispatchRoom in desk/wm/push.js) or rings during a call (type=connect).
+// Keeps the original accept/decline services — only the card layout changed.
+const __skl_window_switchcall = function (_ui_) {
+  let title, byline;
   const data = _ui_.peerData || {};
-  const origin = data.origin || data; 
+  const origin = data.origin || data;
   const pfx = `${_ui_.fig.family}`;
-  if(_ui_.mget(_a.type) === _e.connect) {
-    name = origin.firstname || origin.lastname || origin.email;
-    title = LOCALE.X_IS_CALLING_YOU.format(name);
+  const name =
+    origin.username || origin.firstname || origin.lastname || origin.email || "";
 
-    //text = LOCALE.INFO_MULTIPLE_INBOUND_CALL
-  } else { 
-    title = LOCALE.MEETING;
-    if (data.details) {
-      title = `${LOCALE.MEETING} ${data.details.filename}`;
-    }
-    text = LOCALE.FIRST_PARTICIPANTS_ARRIVED;
+  if (_ui_.mget(_a.type) === _e.connect) {
+    title = LOCALE.X_IS_CALLING_YOU.format(name);
+    byline = LOCALE.INCOMING_CALL || "";
+  } else {
+    title = LOCALE.MEETING_STARTED;
+    const folder = (data.details && data.details.filename) || data.filename || "";
+    byline = LOCALE.X_STARTED_MEETING_IN.format(name, folder);
   }
 
+  const closeBtn = Skeletons.Button.Svg({
+    ico: "meet-x",
+    className: `${pfx}__close`,
+    service: "decline",
+    uiHandler: [_ui_],
+  });
 
-  const message = Skeletons.Box.Y({
-    className: `${pfx}__message`,
+  const brandIcon = Skeletons.Box.X({
+    className: `${pfx}__brand`,
+    kids: [
+      Skeletons.Image.Svg({ ico: "meet-camera", className: `${pfx}__brand-icon` }),
+    ],
+  });
+
+  const titleRow = Skeletons.Box.X({
+    className: `${pfx}__title-row`,
+    kids: [
+      Skeletons.Note({ className: `${pfx}__title`, content: title }),
+      Skeletons.Note({ className: `${pfx}__live-dot` }),
+    ],
+  });
+
+  const bylineRow = Skeletons.Box.X({
+    className: `${pfx}__byline-row`,
+    kids: [
+      Skeletons.UserProfile({
+        className: `${pfx}__byline-avatar`,
+        id: origin.uid || origin.drumate_id,
+        firstname: origin.firstname || name,
+        lastname: origin.lastname || "",
+        auto_color: 1,
+      }),
+      Skeletons.Note({ className: `${pfx}__byline`, content: byline }),
+    ],
+  });
+
+  const body = Skeletons.Box.Y({
+    className: `${pfx}__body`,
+    debug: __filename,
+    kids: [brandIcon, titleRow, bylineRow],
+  });
+
+  const footer = Skeletons.Box.X({
+    debug: __filename,
+    className: `${_ui_.fig.family}__commands ${pfx}__commands `,
+    kidsOpt: {
+      uiHandlers: [_ui_],
+    },
     kids: [
       Skeletons.Note({
-        className : `${pfx}__message__title`,
-        content   :  title
+        className: `ctrl-button cancel ${pfx}__dismiss-btn`,
+        service: "decline",
+        content: LOCALE.DISMISS,
       }),
       Skeletons.Note({
-        className : `${pfx}__message__name`,
-        content   : ''
+        className: `ctrl-button accept ${pfx}__join-btn`,
+        name: _a.audio,
+        content:
+          _ui_.mget(_a.type) === _e.connect
+            ? LOCALE.REJOIN
+            : LOCALE.JOIN_MEETING,
+        state: 1,
+        service: "accept",
       }),
-      Skeletons.Note({
-        className : `${pfx}__message__static`,
-        content   : text
-      })
-      //avata
-    ]});
-  
-
-  const body = Skeletons.Box.G({
-    className : `${pfx}__body`,
-    debug     : __filename,
-    kids      : [message]});
-
-  const footer= Skeletons.Box.X({
-    debug     : __filename,
-    className : `${_ui_.fig.family}__commands ${pfx}__commands `,
-    kidsOpt : { 
-      uiHandlers : [_ui_]
-    },
-    kids       : [
-      // Skeletons.Button.Svg
-      //   className : "ctrl-button accept"
-      //   ico       : "video" 
-      //   service   : 'accept'
-      //   name      : _a.video
-      //   state     : 1
-
-      Skeletons.Note({
-        className : "ctrl-button accept",
-        name      : _a.audio,
-        content   : LOCALE.REJOIN,// "Rejoindre"
-        state     : 1,
-        service   : 'accept'
-      }),
-
-      Skeletons.Note({
-        className : "ctrl-button cancel",
-        service   : 'decline',
-        content   : LOCALE.IGNORE
-      })//"Ignorer"
-    ]});
-
-  // header = Skeletons.Box.X
-  //   className : "#{_ui_.fig.family}__header #{_ui_.fig.group}__header" 
-  //   kids     : [require('./topbar')(_ui_), 'c']
-  //   sys_pn   : _a.header
+    ],
+  });
 
   const a = Skeletons.Box.Y({
-    className  : `${pfx}__main`,
-    debug      : __filename,
-    kids       : [body, footer]});
+    className: `${pfx}__main`,
+    debug: __filename,
+    kids: [closeBtn, body, footer],
+  });
 
   return a;
 };

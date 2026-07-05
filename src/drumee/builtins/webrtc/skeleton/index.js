@@ -56,6 +56,16 @@ const __webrtc_body = function (_ui_, localUser, peer) {
         kids: [presenter, participants]
       }),
 
+      // Floating dock for the live participant tiles while a screen is being
+      // shared (Figma: small tile stack overlaying the presenter stage,
+      // bottom-right). window_meeting._dockParticipants moves the live
+      // webrtc_participants element here; empty (and CSS-hidden) otherwise.
+      Skeletons.Box.Y({
+        sys_pn: "float-tiles",
+        className: `${_ui_.fig.group}__float-tiles ${_ui_.fig.family}__float-tiles`,
+        partHandler: [_ui_],
+      }),
+
       Skeletons.Wrapper.Y({
         sys_pn: "message-container",
         className: `${_ui_.fig.group}__message-container ${_ui_.fig.family}__message-container`,

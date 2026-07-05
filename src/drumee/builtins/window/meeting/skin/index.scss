@@ -93,19 +93,19 @@
     // Without this, the 340px-wide content forces the item open (min-width:auto).
     min-width: 0;
     overflow: hidden;
-    background: var(--normal-bg-elevated, #fff);
-    border-left: 1px solid var(--border-muted);
+    background: #ffffff;
+    border-left: 1px solid rgba(0, 0, 0, 0.05);
     flex-direction: column;
     transition: width 0.22s ease;
 
     // Keep inner content at full width so it doesn't reflow during the slide.
     > * {
-      width: 340px;
+      width: 420px;
       box-sizing: border-box;
     }
 
     &[data-open="1"] {
-      width: 340px;
+      width: 420px;
     }
   }
 
@@ -113,21 +113,14 @@
   // chat header lines up flush with the window title bar — one continuous row.
   &__chat-header {
     flex-shrink: 0;
-    height: 48px;
+    height: 60px;
     box-sizing: border-box;
     align-items: center;
     justify-content: space-between;
     gap: 8px;
-    padding: 0 8px 0 16px;
-    border-bottom: 1px solid var(--border-muted);
-    background: var(--normal-bg-elevated, #fff);
-  }
-
-  &__chat-title {
-    font-size: 14px;
-    font-weight: 600;
-    color: var(--normal-fg-10);
-    font-family: var(--font-main);
+    padding: 0 12px 0 16px;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+    background: #ffffff;
   }
 
   &__chat-close {
@@ -136,7 +129,7 @@
     padding: 9px;
     border-radius: 6px;
     cursor: pointer;
-    color: var(--normal-fg-20);
+    color: #65656c;
     flex-shrink: 0;
     transition:
       background 0.15s ease,
@@ -149,7 +142,7 @@
 
     &:hover {
       background: rgba(0, 0, 0, 0.06);
-      color: var(--normal-fg-10);
+      color: #0b0a21;
     }
   }
 
@@ -175,7 +168,7 @@
     padding: 0 12px;
     font-size: 14px;
     font-weight: 600;
-    color: var(--normal-fg-20);
+    color: #65656c;
     font-family: var(--font-main);
     cursor: pointer;
     border-bottom: 2px solid transparent;
@@ -184,11 +177,11 @@
       border-color 0.15s ease;
 
     &:hover {
-      color: var(--normal-fg-10);
+      color: #0b0a21;
     }
 
     &[data-state="1"] {
-      color: var(--normal-fg-10);
+      color: #0b0a21;
       border-bottom-color: var(--primary-40, #5950ff);
     }
   }
@@ -207,25 +200,94 @@
     display: none;
   }
 
-  // The People pane holds both a roster and a live-tiles dock; show one based
-  // on whether a screen is being shared. Idle → roster; sharing → tiles.
   &__pane-participants {
     flex: 1;
     min-height: 0;
   }
 
-  &__pane-tiles,
   &__pane-roster {
     flex: 1;
     min-height: 0;
   }
 
-  &__chat-panel:not([data-sharing="1"]) &__pane-tiles {
-    display: none;
+  // ── Roster toolbar (Invite people + search + sort) ──────────────────────
+  &__roster-header {
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 12px 16px;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
   }
 
-  &__chat-panel[data-sharing="1"] &__pane-roster {
-    display: none;
+  &__roster-invite {
+    display: flex;
+    box-sizing: border-box;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    border-radius: 100px;
+    background: rgba(0, 0, 0, 0.05);
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: background 0.15s ease;
+
+    svg {
+      width: 17px;
+      height: 17px;
+      flex-shrink: 0;
+      fill: currentColor;
+      color: #0b0a21;
+    }
+
+    .note-content {
+      @include drumee.typo(
+        $size: 14px,
+        $line: 20px,
+        $weight: 400,
+        $color: #0b0a21
+      );
+      white-space: nowrap;
+
+      section {
+        white-space: nowrap;
+      }
+    }
+
+    &:hover {
+      background: rgba(0, 0, 0, 0.08);
+    }
+  }
+
+  &__roster-tools {
+    align-items: center;
+    gap: 4px;
+    flex-shrink: 0;
+  }
+
+  &__roster-tool {
+    display: flex;
+    box-sizing: border-box;
+    width: 32px;
+    height: 32px;
+    padding: 7px;
+    border-radius: 8px;
+    cursor: pointer;
+    align-items: center;
+    justify-content: center;
+    color: #65656c;
+    transition: background 0.15s ease;
+
+    svg {
+      width: 18px;
+      height: 18px;
+      flex-shrink: 0;
+      fill: currentColor;
+    }
+
+    &:hover {
+      background: rgba(0, 0, 0, 0.05);
+    }
   }
 
   // Roster list scrolls within the pane.
@@ -240,7 +302,7 @@
     padding: 24px 16px;
     text-align: center;
     font-size: 12px;
-    color: var(--normal-fg-50);
+    color: #84848c;
   }
 
   // When the tiles are docked into the side panel, the stage no longer needs
@@ -251,38 +313,51 @@
     grid-template-rows: 100% !important;
   }
 
-  // While sharing, the live webrtc_participants widget is docked here. Force a
-  // single scrollable column that fills the panel width (overriding the inline
-  // grid-template the widget sets for the main-stage strip).
-  &__pane-tiles .participants-manager__ui {
-    grid-template-columns: 1fr !important;
-    grid-template-rows: unset !important;
-    grid-auto-rows: 184px !important;
-    width: 100%;
-    height: 100%;
-    padding: 12px;
-    gap: 12px;
-    overflow-y: auto;
+  // ── Floating tile stack during screen share (Figma participant view) ────
+  // The live webrtc_participants element is relocated here while a screen is
+  // shared: a compact overlay bottom-right on top of the presenter stage.
+  &__float-tiles {
+    position: absolute;
+    right: 16px;
+    bottom: 16px;
+    z-index: 80;
+    width: 240px;
+    max-height: calc(100% - 32px);
+    pointer-events: none;
 
-    // Each docked tile: rounded card filling the column width.
-    .endpoint-local,
-    .remote-user {
-      width: 100% !important;
-      height: 100% !important;
-      min-width: 0 !important;
-      min-height: 0 !important;
-      border-radius: 12px;
+    &:empty {
+      display: none;
     }
 
-    // Bigger avatar. The default sizes off the tile's shorter side (height),
-    // which is small here; size off the wider side instead so the frame is
-    // proportionate to the panel width.
-    .endpoint-local .user-profile__ui,
-    .remote-user .user-profile__ui {
-      width: min(46cqmax, 120px) !important;
-      height: min(46cqmax, 120px) !important;
-      max-width: 64%;
-      max-height: 62%;
+    .participants-manager__ui {
+      pointer-events: auto;
+      background: transparent;
+      grid-template-columns: 1fr !important;
+      grid-template-rows: unset !important;
+      grid-auto-rows: 140px !important;
+      width: 100%;
+      height: auto;
+      max-height: 100%;
+      gap: 8px;
+      overflow-y: auto;
+      position: relative;
+
+      .endpoint-local,
+      .remote-user {
+        width: 100% !important;
+        height: 100% !important;
+        min-width: 0 !important;
+        min-height: 0 !important;
+        border-radius: 12px;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+      }
+
+      // Compact avatar sizing for the small floating tiles.
+      .endpoint-local .user-profile__ui,
+      .remote-user .user-profile__ui {
+        width: min(50cqmin, 80px) !important;
+        height: min(50cqmin, 80px) !important;
+      }
     }
   }
 
@@ -329,27 +404,32 @@
     }
   }
 
+  // Narrow window: drop the secondary reactions/fullscreen buttons so the
+  // primary controls (hand, chat, people, camera, mic, screen, leave) fit.
+  &__ui[data-narrow="1"] {
+    .window-meeting__ctrl-btn.reactions,
+    .window-meeting__resize-menu,
+    .window-meeting__in-topbar-divider {
+      display: none;
+    }
+  }
+
   &__ui[data-compact="1"] {
-    // Tighten the floating control bar so 5 buttons fit without overflowing.
-    .window-meeting__commands {
-      gap: 10px;
-    }
-    .window-meeting__commands-container {
-      bottom: 10px;
-      padding: 0 8px;
-    }
-    // Tighten the (wider, labelled) leave button to save width.
-    .window-meeting__commands .ctrl-button.line {
-      padding: 0 10px;
-    }
-    // Tighten the topbar; drop the elapsed timer (least essential) so the
-    // title + action icons don't jam together.
+    // Tighten the topbar and collapse the leave button to icon-only so the
+    // control cluster fits without overflowing.
     .window-meeting__in-topbar {
-      padding: 0 6px;
+      padding: 0 8px;
       gap: 6px;
     }
-    .window-meeting__in-topbar-timer {
-      display: none;
+    .window-meeting__in-topbar-controls {
+      gap: 4px;
+    }
+    .window-meeting__leave-btn {
+      padding: 0 10px;
+
+      .note-content {
+        display: none;
+      }
     }
   }
 
@@ -387,7 +467,7 @@
 
   .widget-chat__messenger-wrapper {
     padding: 16px;
-    background: var(--normal-bg-90);
+    background: #f2f2f7;
   }
 
   .widget-chat__messenger {
@@ -400,14 +480,14 @@
       overflow: hidden;
       padding: 10px 12px;
       border-radius: 8px;
-      background: var(--normal-bg-elevated);
+      background: #ffffff;
     }
 
     .lib-messenger__icon.attach {
       display: flex;
       align-items: center;
       justify-content: center;
-      color: var(--normal-fg-20);
+      color: #65656c;
       width: 15px;
       height: 16px;
       margin: 0 4px 0 0;
@@ -415,8 +495,8 @@
       svg {
         width: 15px;
         height: 16px;
-        color: var(--normal-fg-20);
-        fill: var(--normal-fg-20);
+        color: #65656c;
+        fill: #65656c;
       }
     }
 
@@ -431,16 +511,16 @@
           $size: 12px,
           $line: 16.8px,
           $weight: 400,
-          $color: var(--normal-fg-10)
+          $color: #0b0a21
         );
 
         &::before {
-          color: var(--normal-fg-50);
+          color: #84848c;
           @include drumee.typo(
             $size: 12px,
             $line: 16.8px,
             $weight: 400,
-            $color: var(--normal-fg-50)
+            $color: #84848c
           );
         }
       }
@@ -485,6 +565,102 @@
     // Allow the stage to shrink when the chat column takes its width.
     min-width: 0;
     flex-direction: column;
+    // The topbar lives inside this column, so opening the 420px side panel
+    // narrows it — degrade the control cluster off the column's own width
+    // (a @media/window check can't see this).
+    container-type: inline-size;
+    container-name: meeting-stage;
+  }
+
+  // Stage column squeezed (side panel open on a mid-size window): drop the
+  // secondary buttons first, then collapse the leave button to icon-only.
+  @container meeting-stage (max-width: 860px) {
+    &__ctrl-btn.reactions,
+    &__resize-menu,
+    &__in-topbar-divider {
+      display: none;
+    }
+  }
+
+  // ── Window-resize dropdown ─────────────────────────────────────────────
+  &__resize-menu {
+    position: relative;
+    flex-shrink: 0;
+
+    // The menu widget wraps the trigger; keep it inline with the buttons.
+    .menu-topic-trigger {
+      display: flex;
+      align-items: center;
+    }
+
+    .menu-topic-items {
+      background: #ffffff;
+      border-radius: 8px;
+      box-shadow: 0 1px 11px rgba(0, 0, 0, 0.13);
+      z-index: 300;
+    }
+  }
+
+  &__resize-items {
+    width: 180px;
+    padding: 12px;
+    gap: 0;
+  }
+
+  &__resize-item {
+    display: flex;
+    box-sizing: border-box;
+    align-items: center;
+    gap: 8px;
+    padding: 8px;
+    border-radius: 8px;
+    cursor: pointer;
+    color: var(--primary-purple-100, #0b0a21);
+    transition: background 0.12s ease;
+
+    svg {
+      width: 17px;
+      height: 17px;
+      flex-shrink: 0;
+      fill: currentColor;
+    }
+
+    .note-content {
+      @include drumee.typo(
+        $size: 12px,
+        $line: 17px,
+        $weight: 400,
+        $color: #0b0a21
+      );
+      white-space: nowrap;
+
+      section {
+        white-space: nowrap;
+      }
+    }
+
+    &:hover {
+      background: rgba(0, 0, 0, 0.05);
+    }
+  }
+
+  @container meeting-stage (max-width: 700px) {
+    &__in-topbar {
+      padding: 0 8px;
+      gap: 6px;
+    }
+
+    &__in-topbar-controls {
+      gap: 4px;
+    }
+
+    &__leave-btn {
+      padding: 0 10px;
+
+      .note-content {
+        display: none;
+      }
+    }
   }
 
   // The speaking waveform is purely decorative and sits at the bottom of each
@@ -500,14 +676,21 @@
   &__in-topbar {
     position: relative;
     flex-shrink: 0;
-    height: 48px;
+    height: 60px;
     box-sizing: border-box;
-    background: var(--normal-bg-elevated, #fff);
-    border-bottom: 1px solid var(--border-muted);
-    padding: 0 8px 0 14px;
-    gap: 10px;
+    background: #ffffff;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+    padding: 0 16px;
+    gap: 12px;
     align-items: center;
-    z-index: auto;
+    justify-content: space-between;
+    // A global sheet wraps flex rows (seen live: controls pushed to a second
+    // clipped row) — the bar must stay a single 60px row.
+    flex-wrap: nowrap !important;
+    // Above the stage (__body renders later in the DOM) AND above the
+    // floating share tiles (z 80), so the mic device dropdown that hangs
+    // below the bar is never buried.
+    z-index: 90;
     pointer-events: auto;
     // The whole bar is the window drag handle (window__header).
     cursor: move;
@@ -543,7 +726,7 @@
       min-width: 0;
       font-size: 12px;
       font-weight: 600;
-      color: var(--normal-fg-10);
+      color: #0b0a21;
       font-family: var(--font-main);
       white-space: nowrap;
       overflow: hidden;
@@ -555,8 +738,8 @@
       align-items: center;
       gap: 5px;
       flex-shrink: 0;
-      background: var(--normal-fg-10);
-      color: var(--normal-bg-90);
+      background: #0b0a21;
+      color: #f2f2f7;
       border-radius: var(--corner-radius-1);
       padding: 3px 10px;
       font-size: 10px;
@@ -601,7 +784,7 @@
       height: 32px;
       padding: 7px;
       border-radius: 6px;
-      color: var(--normal-fg-10);
+      color: #0b0a21;
       transition: background 0.15s ease;
 
       svg {
@@ -641,7 +824,7 @@
       padding: 8px;
       border-radius: 6px;
       flex-shrink: 0;
-      color: var(--normal-fg-20);
+      color: #65656c;
       transition:
         background 0.15s ease,
         color 0.15s ease;
@@ -660,14 +843,14 @@
 
   // ── Body: column flex with padding, fills remaining height ───────────
   &__body {
-    background-color: var(--normal-bg-90);
+    background-color: #f2f2f7;
     flex: 1;
     min-height: 0;
     flex-direction: column;
     justify-content: flex-start;
     align-items: stretch;
-    padding: 10px;
-    gap: 10px;
+    padding: 12px;
+    gap: 12px;
     // Anchor for the floating (absolutely-positioned) command bar.
     position: relative;
   }
@@ -677,15 +860,6 @@
     min-height: 0;
     height: auto;
     position: relative;
-  }
-
-  // Auto-hide the floating command bar after mouse inactivity. _initIdleControls
-  // in window/meeting/index.js toggles data-idle on __ui; hovering the bar keeps
-  // it up so a slow click still lands.
-  &__ui[data-idle="1"] &__commands-container:not(:hover) {
-    opacity: 0;
-    transform: translateX(-50%) translateY(12px);
-    pointer-events: none;
   }
 
   &__presenter {
@@ -702,8 +876,8 @@
   // participants/skin selectors are stale and the widget falls back to
   // defaults unless we target the real class.
   .participants-manager__ui {
-    background-color: var(--normal-bg-90);
-    gap: 10px;
+    background-color: #f2f2f7;
+    gap: 12px;
     position: relative;
     top: auto;
     left: auto;
@@ -713,8 +887,12 @@
 
     .endpoint-local,
     .remote-user {
-      border-radius: 12px;
+      border-radius: 16px;
       overflow: hidden;
+      // Contain the tiles' internal z-indexes (footers z:99999, error overlay
+      // z:50000) so they can never paint over the topbar / device dropdown /
+      // side panel — each tile is its own stacking context.
+      isolation: isolate;
       // Active-speaker ring (Google-Meet style). data-speaking is toggled by
       // onDominantSpeaker in the webrtc room. Inset shadow follows the tile's
       // border-radius; the outer glow softens it.
@@ -826,232 +1004,60 @@
     }
   }
 
-  // ── Leave button shown during pre-join waiting states ───────────────
-  &__leave-waiting-btn {
-    margin-bottom: 12px;
-    background-color: var(--normal-fg);
-    color: var(--grey-white, #fff);
-    border-radius: 8px;
-    padding: 8px 18px;
-    gap: 8px;
-    align-items: center;
-    flex-shrink: 0;
-    cursor: pointer;
-    display: flex;
-
-    svg {
-      width: 15px;
-      height: 15px;
-      flex-shrink: 0;
-    }
-
-    .note-content {
-      @include drumee.typo(
-        $size: 12px,
-        $line: normal,
-        $weight: 600,
-        $color: var(--grey-white, #fff)
-      );
-      white-space: nowrap;
-    }
-
-    &:hover {
-      background-color: var(--normal-fg-20);
-    }
+  // ── Tile overlays, Figma "paticipant frame" ───────────────────────────
+  // Unmuted tiles show only the name pill; the mic badge appears when muted,
+  // as a dark frosted circle with a slash over the mic glyph. The badge is
+  // hidden unless EXPLICITLY muted (data-state="0") — the local tile's badge
+  // mounts with no data-state at all, so a [data-state="1"] check leaves it
+  // visible on unmuted tiles.
+  .remote-user__tile-mic:not([data-state="0"]),
+  .endpoint-local__tile-mic:not([data-state="0"]) {
+    display: none;
   }
 
-  // ── Participant name + mic overlay (frosted glass) ───────────────────
-  .endpoint-remote__name-bar,
-  .endpoint-local__name-bar {
-    backdrop-filter: blur(5px);
-    background: rgba(20, 17, 35, 0.4);
-    border-radius: 57px;
-    padding: 5px 8px;
-    font-size: 10px;
-    font-weight: 400;
-    color: var(--grey-white, #fff);
-    font-family: var(--font-main);
+  .remote-user__tile-mic,
+  .endpoint-local__tile-mic {
+    background-color: rgba(20, 17, 35, 0.4);
+    backdrop-filter: blur(4px);
+    color: #fff;
   }
 
-  .endpoint-remote__mic-indicator,
-  .endpoint-local__mic-indicator {
-    background: rgba(0, 0, 0, 0.2);
-    border-radius: 50%;
-    width: 27px;
-    height: 27px;
-    padding: 6px;
-    flex-shrink: 0;
+  // Hand raise renders as a ✋ prefix inside the name pill (Figma), replacing
+  // the legacy green pulsing badge / orange corner badge.
+  .remote-user__ui[data-raised="1"] .remote-user__hand-raise-badge,
+  .endpoint-local__ui[data-raised="1"] .endpoint-local__tile-badge--hand {
+    display: none;
   }
 
-  // ── Command bar: white rounded footer, in-flow ───────────────────────
-  &__commands-container {
-    // Floating bar that hovers over the bottom-center of the video stage
-    // (Google-Meet style), instead of an in-flow footer.
-    position: absolute;
-    bottom: 16px;
-    left: 50%;
-    transform: translateX(-50%);
-    width: auto;
-    flex-shrink: 0;
-    height: 48px;
-    background-color: var(--normal-bg-elevated);
-    border-radius: 999px;
-    box-shadow: 0 6px 28px rgba(0, 0, 0, 0.18);
-    padding: 0 12px;
-    justify-content: center;
-    align-items: center;
-    // Must stay above the participant tiles and their sound-analyzers
-    // (z-index: var(--always-visible)); the base bar uses 100000 for this.
-    z-index: 100000;
-    transition:
-      opacity 0.25s ease,
-      transform 0.25s ease;
-
-    &[data-state="0"] {
-      display: none;
-    }
-
-    // Leave button is sibling of __commands inside __commands-container.
-    // Target it directly here so its svg gets constrained.
-    > .ctrl-button.line {
-      background-color: #14111e;
-      color: #fff;
-      border: none;
-      border-radius: 8px;
-      width: auto;
-      height: calc(100% - 8px);
-      padding: 0 18px;
-      gap: 10px;
-      flex-shrink: 0;
-      display: flex;
-      align-items: center;
-      cursor: pointer;
-      margin: 0;
-
-      svg {
-        width: 15px;
-        height: 16px;
-        flex-shrink: 0;
-        transform: none;
-        color: #fff;
-        fill: currentColor;
-      }
-
-      .note-content {
-        @include drumee.typo(
-          $size: 12px,
-          $line: normal,
-          $weight: 600,
-          $color: #fff
-        );
-        white-space: nowrap;
-      }
-
-      &::before {
-        display: none;
-      }
-
-      &:hover {
-        background-color: #2a2640;
-      }
-    }
+  .remote-user__ui[data-raised="1"] .remote-user__uname .note-content::before,
+  .endpoint-local__ui[data-raised="1"] .endpoint-local__uname .note-content::before {
+    content: "✋ ";
   }
 
-  &__commands {
-    background-color: transparent;
-    border-radius: 0;
-    height: 100%;
-    padding: 0;
-    align-items: center;
-    display: flex;
-    gap: 24px;
+  // Pin / dots appear on tile hover only (Figma "hovering button" variant);
+  // a pinned tile keeps its pin visible as the state indicator.
+  .remote-user__tile-pin,
+  .endpoint-local__tile-pin,
+  .endpoint-local__tile-dots {
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.15s ease;
+  }
 
-    .device-button {
-      .audio.settings {
-        position: absolute;
-        top: -5px;
-        right: -5px;
-        width: 14px;
-        height: 14px;
-        border-radius: 50%;
-        padding: 1px;
-        color: var(--multimedia-vdo-icon);
-      }
-    }
+  .remote-user__ui:hover .remote-user__tile-pin,
+  .endpoint-local__ui:hover .endpoint-local__tile-pin,
+  .endpoint-local__ui:hover .endpoint-local__tile-dots,
+  .remote-user__ui[data-pinned="1"] .remote-user__tile-pin,
+  .endpoint-local__ui[data-pinned="1"] .endpoint-local__tile-pin {
+    opacity: 1;
+    pointer-events: auto;
+  }
 
-    .ctrl-button {
-      background-color: var(--normal-bg-90);
-      border: 1px solid var(--border-default);
-      width: 32px;
-      height: 32px;
-      padding: 4px;
-      margin: 0;
-      color: var(--primary-100, #0b0a21);
-      flex-shrink: 0;
-
-      svg {
-        width: 100%;
-        height: 100%;
-      }
-
-      &[data-muted="1"] {
-        opacity: 1;
-        pointer-events: auto;
-        color: var(--signal-error, #d74e49);
-      }
-
-      &[data-online="1"] {
-        background-color: rgba(89, 80, 255, 0.08);
-        color: var(--primary-40, #5950ff);
-      }
-
-      &.screen[data-state="0"]::before,
-      &[data-state="0"]::before {
-        display: none;
-      }
-
-      &.more {
-        color: var(--grey-80, #65656c);
-      }
-
-      // ── Leave meeting button ─────────────────────────────────────────
-      &.line {
-        background-color: var(--primary-100, #0b0a21);
-        color: var(--grey-white, #fff);
-        border-radius: 8px;
-        width: auto;
-        height: calc(100% - 8px);
-        padding: 0 18px;
-        gap: 10px;
-        flex-shrink: 0;
-        align-items: center;
-
-        svg {
-          width: 15px;
-          height: 16px;
-          flex-shrink: 0;
-          transform: none;
-        }
-
-        .note-content {
-          @include drumee.typo(
-            $size: 12px,
-            $line: normal,
-            $weight: 600,
-            $color: var(--grey-white, #fff)
-          );
-          white-space: nowrap;
-        }
-
-        &::before {
-          display: none;
-        }
-
-        &:hover {
-          background-color: #1a1930;
-        }
-      }
-    }
+  // The (empty) floating command container is kept in the tree only so
+  // ensurePart("commands") calls in webrtc/room + window/meeting resolve;
+  // meeting controls live in the top bar.
+  &__commands-container[data-empty="1"] {
+    display: none !important;
   }
 
   // ── Post-meeting feedback popup (Figma 172:100435) ───────────────────
@@ -1189,7 +1195,7 @@
 
   &__feedback-comment {
     align-self: stretch;
-    background: var(--normal-bg-90);
+    background: #f2f2f7;
     border-radius: 4px;
     padding: 8px 12px;
     border: 1px solid transparent;
@@ -1243,7 +1249,7 @@
   &__feedback-skip {
     flex: 0 1 120px;
     min-width: 80px;
-    background: var(--normal-bg-90);
+    background: #f2f2f7;
     color: var(--normal-fg);
     border: 1px solid var(--border-default);
 
@@ -1268,7 +1274,7 @@
     flex-shrink: 0;
     font-size: 11px;
     font-weight: 500;
-    color: var(--normal-fg-20);
+    color: #65656c;
     font-family: var(--font-main);
     padding: 2px 8px;
     border-radius: 4px;
@@ -1301,7 +1307,7 @@
     align-items: center;
     justify-content: center;
     background: transparent;
-    color: var(--normal-fg-10);
+    color: #0b0a21;
     transition: background 0.15s ease;
 
     svg {
@@ -1345,7 +1351,7 @@
     align-items: center;
     justify-content: center;
     background: transparent;
-    color: var(--normal-fg-10);
+    color: #0b0a21;
     transition: background 0.15s ease;
 
     svg {
@@ -1363,6 +1369,250 @@
       background: rgba(0, 0, 0, 0.06);
     }
   }
+
+  // ══ Figma meeting top bar — brand + control cluster ══════════════════════
+  &__in-topbar-brand {
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+    min-width: 0;
+  }
+
+  &__in-topbar-logo {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    background: var(--primary-40, #5950ff);
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+
+    .window-meeting__in-topbar-icon {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 16px;
+      height: 16px;
+      color: #fff;
+
+      svg {
+        width: 16px;
+        height: 16px;
+        flex-shrink: 0;
+        fill: #fff;
+      }
+    }
+  }
+
+  // Meeting title lives inside the brand group — larger than the shared default.
+  &__in-topbar-brand &__in-topbar-title {
+    flex: 0 1 auto;
+    @include drumee.typo(
+      $size: 18px,
+      $line: 24px,
+      $weight: 600,
+      $color: var(--primary-purple-100, #0b0a21)
+    );
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  // The Figma bar shows only the title + controls: hide the wired-but-unshown
+  // host label / elapsed timer / avatar strip. !important because the generic
+  // `.drumee-widget[data-flow=wrap] { display:flex }` container rule (0,2,0)
+  // outranks a plain single-class hide — the host label is a Note.
+  &__in-topbar > &__in-topbar-host,
+  &__in-topbar > &__in-topbar-timer,
+  &__in-topbar > &__in-topbar-avatars {
+    display: none !important;
+  }
+
+  &__in-topbar-controls {
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+    flex-wrap: nowrap !important;
+  }
+
+  &__in-topbar-divider {
+    width: 1px;
+    height: 30px;
+    background: rgba(0, 0, 0, 0.12);
+    flex-shrink: 0;
+    margin: 0 4px;
+  }
+
+  // Generic square icon buttons: hand / reactions / chat / people / fullscreen.
+  // Button.Svg roots are plain divs (no framework flex) — display:flex is
+  // required or the inner svg sits top-left instead of centered.
+  &__ctrl-btn {
+    display: flex;
+    box-sizing: border-box;
+    width: 32px;
+    height: 32px;
+    padding: 7px;
+    border-radius: 8px;
+    flex-shrink: 0;
+    cursor: pointer;
+    align-items: center;
+    justify-content: center;
+    background: transparent;
+    color: var(--primary-purple-100, #0b0a21);
+    transition:
+      background 0.15s ease,
+      color 0.15s ease;
+
+    svg {
+      width: 18px;
+      height: 18px;
+      flex-shrink: 0;
+      fill: currentColor;
+    }
+
+    &:hover {
+      background: rgba(0, 0, 0, 0.05);
+    }
+
+    // Fullscreen sits on a subtle filled chip (Figma Overlay/light mode).
+    &.fullscreen {
+      background: rgba(0, 0, 0, 0.05);
+    }
+
+    // Raised-hand active state (data-raised flipped by _toggleHandRaise).
+    &.hand-raise[data-raised="1"] {
+      background: rgba(89, 80, 255, 0.12);
+      color: var(--primary-40, #5950ff);
+    }
+
+    // Screen-share active (sharing) → primary highlight.
+    &.screen[data-state="1"] {
+      background: rgba(89, 80, 255, 0.12);
+      color: var(--primary-40, #5950ff);
+    }
+  }
+
+  // ── Camera / mic pills (toggle + device caret; red when muted) ───────────
+  &__ctrl-pill {
+    align-items: center;
+    border-radius: 8px;
+    background: rgba(0, 0, 0, 0.05);
+    flex-shrink: 0;
+    position: relative;
+    padding: 0 2px 0 0;
+
+    .ctrl-button {
+      display: flex;
+      box-sizing: border-box;
+      width: 32px;
+      height: 32px;
+      padding: 7px;
+      margin: 0;
+      border: 0;
+      background: transparent;
+      color: var(--primary-purple-100, #0b0a21);
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      cursor: pointer;
+
+      svg {
+        width: 18px;
+        height: 18px;
+        flex-shrink: 0;
+        fill: currentColor;
+      }
+    }
+
+    // Device caret: decorative Image on camera, interactive button on mic.
+    .window-meeting__ctrl-caret,
+    .ctrl-devicesetting {
+      display: flex;
+      box-sizing: border-box;
+      width: 14px;
+      min-width: 14px;
+      height: 32px;
+      padding: 0;
+      color: inherit;
+      align-items: center;
+      justify-content: center;
+
+      svg {
+        width: 10px;
+        height: 10px;
+        flex-shrink: 0;
+        fill: currentColor;
+      }
+    }
+
+    .ctrl-devicesetting {
+      cursor: pointer;
+    }
+
+    // The whole pill turns red when its toggle is off (Figma Overlay/red).
+    &:has(.ctrl-video[data-state="0"]),
+    &:has(.ctrl-audio[data-state="0"]) {
+      background: rgba(255, 106, 101, 0.15);
+      color: var(--signal-error, #d74e49);
+
+      .ctrl-button {
+        color: var(--signal-error, #d74e49);
+      }
+    }
+  }
+
+  // ── Leave meeting button (red pill, icon + label) ────────────────────────
+  // Button.Label roots are plain divs and the label wraps a block <section> —
+  // without display:flex the icon stacks ABOVE the text and wrecks the bar.
+  &__leave-btn {
+    display: flex;
+    box-sizing: border-box;
+    background: var(--signal-error, #d74e49);
+    border-radius: 8px;
+    height: 36px;
+    padding: 0 14px;
+    gap: 8px;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    cursor: pointer;
+    color: #fff;
+    transition: background 0.15s ease;
+
+    svg {
+      width: 18px;
+      height: 18px;
+      fill: currentColor;
+      color: #fff;
+      flex-shrink: 0;
+    }
+
+    .note-content {
+      @include drumee.typo($size: 14px, $line: 20px, $weight: 600, $color: #fff);
+      white-space: nowrap;
+
+      section {
+        white-space: nowrap;
+      }
+    }
+
+    &:hover {
+      background: #c0433e;
+    }
+  }
+
+  // The mic device dropdown now hangs *below* the topbar caret (the shared
+  // command styling opens it upward for the floating bar).
+  &__in-topbar &__devices-list.audio {
+    top: calc(100% + 8px);
+    bottom: auto;
+    right: 0;
+    left: auto;
+
+    &::before {
+      display: none;
+    }
+  }
 }
 
 .window__message-container {
@@ -1370,7 +1620,7 @@
   background-color: var(--normal-bg-80);
   padding: var(--spacer-5);
   width: 300px;
-  color: var(--normal-fg-10);
+  color: #0b0a21;
   border-radius: var(--corner-radius-3);
   align-items: center;
   top: 40px;
@@ -1398,7 +1648,7 @@
     transform: none;
     // Denied state is interactive (avatar + close X) — restore clicks.
     pointer-events: auto;
-    background: var(--normal-bg-90);
+    background: #f2f2f7;
     border-radius: 0;
     padding: 0;
     gap: var(--spacer-4);
@@ -1415,7 +1665,7 @@
     padding: 6px;
     border-radius: 50%;
     cursor: pointer;
-    color: var(--normal-fg-30);
+    color: #84848c;
     background: var(--normal-bg-80);
     box-sizing: border-box;
     z-index: 2;
@@ -1427,7 +1677,7 @@
 
     &:hover {
       background-color: var(--normal-bg-70);
-      color: var(--normal-fg-10);
+      color: #0b0a21;
     }
   }
 
@@ -1442,12 +1692,12 @@
   .message-name {
     font-size: 16px;
     font-weight: 600;
-    color: var(--normal-fg-10);
+    color: #0b0a21;
   }
 
   .message-text {
     font-size: 13px;
-    color: var(--normal-fg-30);
+    color: #84848c;
     text-align: center;
     line-height: 1.4;
     max-width: 320px;
@@ -1462,11 +1712,3 @@
   }
 }
 
-.remote-user {
-  &__tile-footer {
-    width: auto !important;
-  }
-  &__uname {
-    width: 100px !important;
-  }
-}

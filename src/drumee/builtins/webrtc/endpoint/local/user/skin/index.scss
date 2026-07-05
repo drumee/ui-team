@@ -10,7 +10,7 @@
     height: 100%;
     width: 100%;
     overflow: hidden;
-    border-radius: 12px;
+    border-radius: 16px;
   }
 
   &__main {
@@ -22,7 +22,7 @@
     align-content: center;
     background-color: var(--primary-50, #433cc5);
     overflow: hidden;
-    border-radius: 8px;
+    border-radius: 16px;
     container-type: size;
   }
 
@@ -177,12 +177,14 @@
   &__tile-footer {
     gap: 6px;
     align-items: center;
-    z-index: 10;
+    // Figma: name pill anchored bottom-left, muted-mic badge to its right.
+    justify-content: flex-start;
+    z-index: 99999;
     width: 100%;
-    padding: var(--spacer-4);
+    box-sizing: border-box;
+    padding: 10px;
     position: absolute;
     bottom: 0;
-    z-index: 99999;
   }
 
   &__tile-mic {
@@ -201,36 +203,35 @@
   }
 
   &__uname {
-    flex: 1;
+    flex: 0 1 auto;
     min-width: 0;
+    max-width: 100%;
+    order: 0;
     background-color: rgba(20, 17, 35, 0.4);
     backdrop-filter: blur(5.5px);
-    border-radius: 57px;
-    padding: 6px 10px;
-    justify-content: center;
+    border-radius: 60px;
+    padding: 6px 12px;
+    justify-content: flex-start;
     overflow: hidden;
 
-    @include drumee.typo($size: 10px, $line: 1.4, $weight: 400, $color: #fff);
+    @include drumee.typo($size: 12px, $line: 1.4, $weight: 600, $color: #fff);
 
     .note-content {
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
-      text-align: center;
-      width: 100%;
+      text-align: left;
     }
   }
 
+  // Muted-mic badge sits to the right of the name pill (Figma).
+  &__tile-mic {
+    order: 1;
+  }
+
+  // Per-tile maximize is superseded by the top-bar fullscreen control.
   &__tile-maximize {
-    width: 28px;
-    height: 28px;
-    min-width: 28px;
-    padding: 7px;
-    background-color: rgba(20, 17, 35, 0.4);
-    backdrop-filter: blur(4px);
-    border-radius: 50%;
-    color: #fff;
-    z-index: 999999;
+    display: none;
   }
 
   // ── Legacy elements (kept for audio but hidden) ──────────────────────

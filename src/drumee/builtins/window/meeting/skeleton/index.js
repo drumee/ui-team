@@ -10,11 +10,10 @@
  * no longer shares space with the main screen — the screen gets full width and
  * you toggle between the participant roster and the team chat.
  *
- * - Participants tab: a members roster (every hub member, with status + a Call
- *   button for those not yet in the room) when nobody is sharing; while a
- *   screen is shared, the live `webrtc_participants` tiles widget docks in and
- *   replaces the roster (the `data-sharing` flag flips between them). Either
- *   way the tab is never empty and the shared screen owns the full main stage.
+ * - Participants tab: a members roster — every hub member, with status icons
+ *   and a Call button for those not yet in the room. While a screen is shared
+ *   the live tiles float over the presenter stage (see _dockParticipants), so
+ *   the roster stays available here.
  * - Chat tab: widget_chat bound to the team's persisted hub channel (same
  *   conversation as the team window), so messages sent during the call live on
  *   in the team timeline.
@@ -42,8 +41,13 @@ function meetingSidePanel(_ui_) {
       content: label,
       service: "switch-tab",
       tab: id,
-      // Default active tab is Participants (see panel `data-tab` below).
-      state: id === "participants" ? 1 : 0,
+      // Default active tab is Chat (see panel `data-tab` below), matching the
+      // Figma "Chat | Participants" order.
+      state: id === "chat" ? 1 : 0,
+      // attrOpt is required for dataset to survive render (bare dataset is
+      // dropped) — _applyPanelTab reads b.dataset.tab off the DOM to set the
+      // active underline, so without it every switch zeroes both tabs.
+      attrOpt: { "data-tab": id },
       dataset: { tab: id },
       uiHandler: [_ui_],
     });
@@ -51,8 +55,11 @@ function meetingSidePanel(_ui_) {
   return Skeletons.Box.Y({
     className: `${pfx}__chat-panel`,
     sys_pn: "meeting-chat",
-    // Open by default, Participants tab active.
-    dataset: { open: 1, tab: "participants" },
+    // Open by default, Chat tab active (Figma). attrOpt carries the initial
+    // data-* to the DOM (bare dataset is dropped at render) — without it the
+    // panel mounts with no data-open/data-tab, i.e. closed and tab-less.
+    attrOpt: { "data-open": "1", "data-tab": "chat" },
+    dataset: { open: 1, tab: "chat" },
     kids: [
       Skeletons.Box.X({
         className: `${pfx}__chat-header`,
@@ -60,12 +67,12 @@ function meetingSidePanel(_ui_) {
           Skeletons.Box.X({
             className: `${pfx}__chat-tabs`,
             kids: [
-              tab("participants", LOCALE.PARTICIPANTS),
               tab("chat", LOCALE.CHAT),
+              tab("participants", LOCALE.PARTICIPANTS),
             ],
           }),
           Skeletons.Button.Svg({
-            ico: "cross",
+            ico: "meet-x",
             className: `${pfx}__chat-close`,
             // Explicit close (not a toggle) so it can never re-open itself.
             service: "close-chat",
@@ -73,16 +80,36 @@ function meetingSidePanel(_ui_) {
           }),
         ],
       }),
-      // Participants pane: roster (idle) + live-tiles dock (while sharing).
-      // CSS shows one or the other based on the panel's `data-sharing` flag.
+      // Participants pane: roster toolbar + members roster.
       Skeletons.Box.Y({
         className: `${pfx}__pane ${pfx}__pane-participants`,
         kids: [
-          // Dock target for the live webrtc_participants tiles while sharing.
-          Skeletons.Box.Y({
-            className: `${pfx}__pane-tiles`,
-            sys_pn: "participants-tiles",
-            partHandler: [_ui_],
+          // Roster toolbar (Figma): invite CTA + search / sort. Visual for now
+          // — the invite/search/sort backends are not yet wired.
+          Skeletons.Box.X({
+            className: `${pfx}__roster-header`,
+            kids: [
+              Skeletons.Button.Label({
+                className: `${pfx}__roster-invite`,
+                ico: "meet-user-plus",
+                label: LOCALE.INVITE_PEOPLE,
+                labelClass: `${pfx}__roster-invite-label`,
+                attrOpt: { title: LOCALE.INVITE_PEOPLE },
+              }),
+              Skeletons.Box.X({
+                className: `${pfx}__roster-tools`,
+                kids: [
+                  Skeletons.Button.Svg({
+                    ico: "meet-search",
+                    className: `${pfx}__roster-tool`,
+                  }),
+                  Skeletons.Button.Svg({
+                    ico: "meet-sort",
+                    className: `${pfx}__roster-tool`,
+                  }),
+                ],
+              }),
+            ],
           }),
           // Members roster (rows re-rendered in place by _refreshMember).
           Skeletons.Box.Y({
