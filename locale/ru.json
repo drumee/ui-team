@@ -1996,5 +1996,7 @@
   "REFERRAL_CODE": "Реферальный код",
   "REFERRAL_LINK": "Реферальная ссылка",
   "REFERRAL": "Реферал",
-  "REFERRAL_UNAVAILABLE": "Пока недоступно"
+  "REFERRAL_UNAVAILABLE": "Пока недоступно",
+  "REFERRAL_CODE_COPIED": "Реферальный код скопирован",
+  "REFERRAL_LINK_COPIED": "Реферальная ссылка скопирована"
 }

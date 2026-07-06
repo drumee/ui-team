@@ -1996,5 +1996,7 @@
   "REFERRAL_CODE": "កូដបញ្ជូនបន្ត",
   "REFERRAL_LINK": "តំណបញ្ជូនបន្ត",
   "REFERRAL": "ការបញ្ជូនបន្ត",
-  "REFERRAL_UNAVAILABLE": "មិនទាន់មាននៅឡើយទេ"
+  "REFERRAL_UNAVAILABLE": "មិនទាន់មាននៅឡើយទេ",
+  "REFERRAL_CODE_COPIED": "បានចម្លងកូដបញ្ជូនបន្ត",
+  "REFERRAL_LINK_COPIED": "បានចម្លងតំណបញ្ជូនបន្ត"
 }

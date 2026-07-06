@@ -2425,5 +2425,7 @@
   "REFERRAL_CODE": "Referral code",
   "REFERRAL_LINK": "Referral link",
   "REFERRAL": "Referral",
-  "REFERRAL_UNAVAILABLE": "Not available yet"
+  "REFERRAL_UNAVAILABLE": "Not available yet",
+  "REFERRAL_CODE_COPIED": "Referral code copied",
+  "REFERRAL_LINK_COPIED": "Referral link copied"
 }
