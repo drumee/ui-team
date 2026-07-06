@@ -104,6 +104,55 @@ function form(ui) {
 }
 
 /**
+ * Referral section: shows the user's code + link, each with a copy button.
+ * Reads values from the widget model (populated by account.loadReferral()).
+ */
+function referral(ui) {
+  const fig = `${ui.fig.family}__referral`;
+  const code = ui.mget("referral_code");
+  const url = ui.mget("referral_url");
+  const errored = ui.mget("referral_error");
+
+  const row = (label, value, copyService) =>
+    Skeletons.Box.Y({
+      className: `${fig}-row`,
+      kids: [
+        Skeletons.Note({ className: `${fig}-label`, content: label }),
+        Skeletons.Box.X({
+          className: `${fig}-field`,
+          kids: [
+            Skeletons.Note({ className: `${fig}-value`, content: value || "Loading…", active: 0 }),
+            value
+              ? Skeletons.Box.X({
+                  className: `${fig}-copy`,
+                  service: copyService,
+                  uiHandler: [ui],
+                  kids: [Skeletons.Note({ className: `${fig}-copy-txt`, content: LOCALE.COPY || "Copy" })],
+                })
+              : null,
+          ],
+        }),
+      ],
+    });
+
+  return Skeletons.Box.Y({
+    className: `${fig}`,
+    kids: [
+      Skeletons.Note({ className: `${fig}-title`, content: "Invite & earn" }),
+      errored
+        ? Skeletons.Note({ className: `${fig}-muted`, content: "Referral not available yet" })
+        : Skeletons.Box.Y({
+            className: `${fig}-rows`,
+            kids: [
+              row("Referral code", code, "copy-referral-code"),
+              row("Referral link", url, "copy-referral-link"),
+            ],
+          }),
+    ],
+  });
+}
+
+/**
  *
  * @param {*} ui
  * @param {*} opt
@@ -113,7 +162,9 @@ function settings_body(ui) {
   return [
     user(ui),
     Skeletons.Element({ className: `${ui.fig.family}__spacer` }),
-    form(ui)
+    form(ui),
+    Skeletons.Element({ className: `${ui.fig.family}__spacer` }),
+    referral(ui),
   ];
 }
 
