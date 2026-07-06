@@ -558,7 +558,7 @@ function referralCard(ui) {
     : [
         innerItem(ui, {
           title: LOCALE.REFERRAL || "Referral",
-          description: "Not available yet",
+          description: LOCALE.REFERRAL_UNAVAILABLE || "Not available yet",
           className: `${pfx}-row`,
         }),
       ];
@@ -566,7 +566,10 @@ function referralCard(ui) {
   return Skeletons.Box.Y({
     className: `${ui.fig.family}__card ${pfx}-card`,
     kids: [
-      cardHeading(ui, { title: "Invite & earn", subtitle: "Share your link — earn rewards" }),
+      cardHeading(ui, {
+        title: LOCALE.REFERRAL_TITLE || "Invite & earn",
+        subtitle: LOCALE.REFERRAL_SUBTITLE || "Share your link — earn rewards",
+      }),
       Skeletons.Box.Y({ className: `${pfx}-list`, kids: rows }),
     ],
   });
