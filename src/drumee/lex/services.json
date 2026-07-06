@@ -172,8 +172,5 @@
     "bind_referral": "reward_hub.bind_referral",
     "get_tasks": "reward_hub.get_tasks",
     "check_cooldown": "reward_hub.check_cooldown"
-  },
-  "drumate": {
-    "get_referral_code": "drumate.get_referral_code"
   }
 }
