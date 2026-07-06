@@ -797,13 +797,19 @@ class settings_main extends LetcBox {
 
       case "copy-referral-code": {
         const v = (this._referral || {}).referral_code;
-        if (v) copyToClipboard(v);
+        if (v) {
+          copyToClipboard(v);
+          this._showToast(LOCALE.REFERRAL_CODE_COPIED || "Referral code copied", "success");
+        }
         return;
       }
 
       case "copy-referral-link": {
         const v = (this._referral || {}).referral_url;
-        if (v) copyToClipboard(v);
+        if (v) {
+          copyToClipboard(v);
+          this._showToast(LOCALE.REFERRAL_LINK_COPIED || "Referral link copied", "success");
+        }
         return;
       }
 

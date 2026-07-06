@@ -1928,5 +1928,7 @@
   "REFERRAL_CODE": "Code de parrainage",
   "REFERRAL_LINK": "Lien de parrainage",
   "REFERRAL": "Parrainage",
-  "REFERRAL_UNAVAILABLE": "Pas encore disponible"
+  "REFERRAL_UNAVAILABLE": "Pas encore disponible",
+  "REFERRAL_CODE_COPIED": "Code de parrainage copié",
+  "REFERRAL_LINK_COPIED": "Lien de parrainage copié"
 }

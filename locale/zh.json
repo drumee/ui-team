@@ -1928,5 +1928,7 @@
   "REFERRAL_CODE": "推荐码",
   "REFERRAL_LINK": "推荐链接",
   "REFERRAL": "推荐",
-  "REFERRAL_UNAVAILABLE": "暂不可用"
+  "REFERRAL_UNAVAILABLE": "暂不可用",
+  "REFERRAL_CODE_COPIED": "推荐码已复制",
+  "REFERRAL_LINK_COPIED": "推荐链接已复制"
 }

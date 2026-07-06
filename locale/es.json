@@ -1931,5 +1931,7 @@
   "REFERRAL_CODE": "Código de referido",
   "REFERRAL_LINK": "Enlace de referido",
   "REFERRAL": "Referido",
-  "REFERRAL_UNAVAILABLE": "Aún no disponible"
+  "REFERRAL_UNAVAILABLE": "Aún no disponible",
+  "REFERRAL_CODE_COPIED": "Código de referido copiado",
+  "REFERRAL_LINK_COPIED": "Enlace de referido copiado"
 }
