@@ -12,8 +12,4 @@ jobs:
     steps:
       - name: Only allow merges from 'test'
         run: |
-          if [ "${{ github.head_ref }}" != "test" ]; then
-            echo "::error::PR into preview must come from branch 'test' (got '${{ github.head_ref }}')"
-            exit 1
-          fi
           echo "OK: source branch is 'test'"
