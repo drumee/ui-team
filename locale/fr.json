@@ -1922,5 +1922,13 @@
   "RATING_SURVEY_REQUIRED": "Merci de répondre à cette question pour continuer",
   "RATING_SURVEY_THANKS_TITLE": "Merci !",
   "RATING_SURVEY_THANKS_SUB": "Vos retours orientent directement ce que nous construisons",
-  "RATING_SURVEY_INPUT_PLACEHOLDER": "Saisissez votre réponse…"
+  "RATING_SURVEY_INPUT_PLACEHOLDER": "Saisissez votre réponse…",
+  "REFERRAL_TITLE": "Inviter des membres",
+  "REFERRAL_SUBTITLE": "Partagez votre lien",
+  "REFERRAL_CODE": "Code de parrainage",
+  "REFERRAL_LINK": "Lien de parrainage",
+  "REFERRAL": "Parrainage",
+  "REFERRAL_UNAVAILABLE": "Pas encore disponible",
+  "REFERRAL_CODE_COPIED": "Code de parrainage copié",
+  "REFERRAL_LINK_COPIED": "Lien de parrainage copié"
 }

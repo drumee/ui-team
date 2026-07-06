@@ -1922,5 +1922,13 @@
   "RATING_SURVEY_REQUIRED": "请回答此问题后继续",
   "RATING_SURVEY_THANKS_TITLE": "谢谢！",
   "RATING_SURVEY_THANKS_SUB": "你的反馈将直接决定我们接下来做什么",
-  "RATING_SURVEY_INPUT_PLACEHOLDER": "请输入你的回答…"
+  "RATING_SURVEY_INPUT_PLACEHOLDER": "请输入你的回答…",
+  "REFERRAL_TITLE": "邀请成员",
+  "REFERRAL_SUBTITLE": "分享你的链接",
+  "REFERRAL_CODE": "推荐码",
+  "REFERRAL_LINK": "推荐链接",
+  "REFERRAL": "推荐",
+  "REFERRAL_UNAVAILABLE": "暂不可用",
+  "REFERRAL_CODE_COPIED": "推荐码已复制",
+  "REFERRAL_LINK_COPIED": "推荐链接已复制"
 }

@@ -1922,5 +1922,13 @@
   "RATING_SURVEY_REQUIRED": "សូមឆ្លើយសំណួរនេះ ដើម្បីបន្ត",
   "RATING_SURVEY_THANKS_TITLE": "អរគុណ!",
   "RATING_SURVEY_THANKS_SUB": "មតិរបស់អ្នកជះឥទ្ធិពលផ្ទាល់ទៅលើអ្វីដែលយើងបង្កើតបន្ទាប់",
-  "RATING_SURVEY_INPUT_PLACEHOLDER": "វាយចម្លើយរបស់អ្នក…"
+  "RATING_SURVEY_INPUT_PLACEHOLDER": "វាយចម្លើយរបស់អ្នក…",
+  "REFERRAL_TITLE": "អញ្ជើញសមាជិក",
+  "REFERRAL_SUBTITLE": "ចែករំលែកតំណរបស់អ្នក",
+  "REFERRAL_CODE": "កូដបញ្ជូនបន្ត",
+  "REFERRAL_LINK": "តំណបញ្ជូនបន្ត",
+  "REFERRAL": "ការបញ្ជូនបន្ត",
+  "REFERRAL_UNAVAILABLE": "មិនទាន់មាននៅឡើយទេ",
+  "REFERRAL_CODE_COPIED": "បានចម្លងកូដបញ្ជូនបន្ត",
+  "REFERRAL_LINK_COPIED": "បានចម្លងតំណបញ្ជូនបន្ត"
 }

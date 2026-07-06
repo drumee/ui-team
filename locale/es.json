@@ -1925,5 +1925,13 @@
   "RATING_SURVEY_REQUIRED": "Responde esta pregunta para continuar",
   "RATING_SURVEY_THANKS_TITLE": "¡Gracias!",
   "RATING_SURVEY_THANKS_SUB": "Tus comentarios definen directamente lo que construiremos",
-  "RATING_SURVEY_INPUT_PLACEHOLDER": "Escribe tu respuesta…"
+  "RATING_SURVEY_INPUT_PLACEHOLDER": "Escribe tu respuesta…",
+  "REFERRAL_TITLE": "Invitar miembros",
+  "REFERRAL_SUBTITLE": "Comparte tu enlace",
+  "REFERRAL_CODE": "Código de referido",
+  "REFERRAL_LINK": "Enlace de referido",
+  "REFERRAL": "Referido",
+  "REFERRAL_UNAVAILABLE": "Aún no disponible",
+  "REFERRAL_CODE_COPIED": "Código de referido copiado",
+  "REFERRAL_LINK_COPIED": "Enlace de referido copiado"
 }

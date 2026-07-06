@@ -1,4 +1,4 @@
-const { uploadFile } = require("@drumee/ui-essentials");
+const { uploadFile, copyToClipboard } = require("@drumee/ui-essentials");
 const { sendOtp, openOtpModal, resendOtpGate } = require("../../otp-gate");
 
 /**
@@ -50,13 +50,15 @@ class settings_main extends LetcBox {
     // flight — rendering then showed the wrong on/off state, so a click read
     // the wrong baseline and toggled the wrong way. Awaiting here means the
     // switch only renders once it reflects the server's stored mfa.
-    const [links, gdrive] = await Promise.all([
+    const [links, gdrive, , referral] = await Promise.all([
       this._loadOauthLinks(),
       this._loadGdriveState(),
       this._refreshVisitorProfile(),
+      this._loadReferral(),
     ]);
     this._oauthLinks = links;
     this._gdriveState = gdrive;
+    this._referral = referral;
     this._reconcilePasswordSet();
     this.feed(require("./skeleton").default(this));
   }
@@ -110,6 +112,24 @@ class settings_main extends LetcBox {
 
   /** Skeleton reads this to render the Migrate row's state (running %, etc.). */
   getGdriveState() { return this._gdriveState || {}; }
+
+  /**
+   * Fetch the user's referral code + link (drumate.get_referral_code). POST to
+   * avoid HTTP-cached GETs. Returns {referral_code, referral_url} or {error},
+   * or {} on failure. Awaited in onDomRefresh so the card renders with values.
+   */
+  async _loadReferral() {
+    try {
+      const res = await this.postService(SERVICE.drumate.get_referral_code, { hub_id: Visitor.id });
+      return res || {};
+    } catch (e) {
+      this.warn("settings_main: get_referral_code failed", e);
+      return {};
+    }
+  }
+
+  /** Skeleton reads this to render the referral card. */
+  getReferral() { return this._referral || {}; }
 
   async _refreshOauthLinks() {
     this._oauthLinks = await this._loadOauthLinks();
@@ -774,6 +794,24 @@ class settings_main extends LetcBox {
         return this.ensurePart("credentials-email").then((p) => {
           if (p) p.set({ content: (args && args.email) || (Visitor.profile() || {}).email || "" });
         });
+
+      case "copy-referral-code": {
+        const v = (this._referral || {}).referral_code;
+        if (v) {
+          copyToClipboard(v);
+          this._showToast(LOCALE.REFERRAL_CODE_COPIED || "Referral code copied", "success");
+        }
+        return;
+      }
+
+      case "copy-referral-link": {
+        const v = (this._referral || {}).referral_url;
+        if (v) {
+          copyToClipboard(v);
+          this._showToast(LOCALE.REFERRAL_LINK_COPIED || "Referral link copied", "success");
+        }
+        return;
+      }
 
       case "open-billing":
         // Open the billing UI as a popup OVER the Settings page (settings_main
