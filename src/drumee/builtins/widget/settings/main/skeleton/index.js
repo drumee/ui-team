@@ -531,6 +531,47 @@ function billingCard(ui) {
   });
 }
 
+function referralCard(ui) {
+  const pfx = `${ui.fig.family}__referral`;
+  const r = (ui.getReferral && ui.getReferral()) || {};
+  const code = r.referral_code;
+  const url = r.referral_url;
+
+  const copyBtn = (service) =>
+    button(ui, { label: LOCALE.COPY || "Copy", className: `${pfx}-action`, priority: "secondary", service });
+
+  const rows = code
+    ? [
+        innerItem(ui, {
+          title: LOCALE.REFERRAL_CODE || "Referral code",
+          description: code,
+          className: `${pfx}-row`,
+          trailing: copyBtn("copy-referral-code"),
+        }),
+        innerItem(ui, {
+          title: LOCALE.REFERRAL_LINK || "Referral link",
+          description: url,
+          className: `${pfx}-row`,
+          trailing: url ? copyBtn("copy-referral-link") : null,
+        }),
+      ]
+    : [
+        innerItem(ui, {
+          title: LOCALE.REFERRAL || "Referral",
+          description: "Not available yet",
+          className: `${pfx}-row`,
+        }),
+      ];
+
+  return Skeletons.Box.Y({
+    className: `${ui.fig.family}__card ${pfx}-card`,
+    kids: [
+      cardHeading(ui, { title: "Invite & earn", subtitle: "Share your link — earn rewards" }),
+      Skeletons.Box.Y({ className: `${pfx}-list`, kids: rows }),
+    ],
+  });
+}
+
 function settings_body(ui) {
   const pfx = ui.fig.family;
   return [
@@ -541,7 +582,7 @@ function settings_body(ui) {
     }),
     Skeletons.Box.X({
       className: `${pfx}__row ${pfx}__row-billing`,
-      kids: [billingCard(ui)],
+      kids: [billingCard(ui), referralCard(ui)],
     }),
     Skeletons.Box.X({
       className: `${pfx}__row ${pfx}__row-2`,

@@ -367,35 +367,4 @@
   &__button-main {
     margin-top: auto;
   }
-
-  &__referral {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-
-    &-title { font-weight: 600; }
-    &-muted { opacity: 0.6; }
-    &-rows { display: flex; flex-direction: column; gap: 10px; }
-    &-row { display: flex; flex-direction: column; gap: 4px; }
-    &-label { font-size: 12px; opacity: 0.7; }
-    &-field {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      justify-content: space-between;
-    }
-    &-value {
-      font-family: monospace;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-    &-copy {
-      cursor: pointer;
-      padding: 4px 10px;
-      border-radius: 6px;
-      background: rgba(83, 74, 183, 0.1);
-      white-space: nowrap;
-    }
-  }
 }
