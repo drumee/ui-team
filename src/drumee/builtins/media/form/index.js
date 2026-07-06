@@ -77,14 +77,53 @@ class __form_folder extends LetcBox {
         };
         if (!post || !hub) return closeForm();
 
-        const parent = this.parent;
-        if (!parent || !_.isFunction(parent.feed)) return closeForm();
-
         // permission_* dialogs call media.mget(...); wrap the plain
         // server response in a Backbone.View to satisfy that interface.
         const mediaShim = new Backbone.View({
           model: new Backbone.Model(hub),
         });
+
+        // Share workspace: open the SAME "Manage access" panel used INSIDE the
+        // workspace (window_secure_share, secure-share v2) instead of the legacy
+        // external-room panel (permission_shared) — the new panel gives editable
+        // per-link permissions + logged-in-recipient recognition, which the old
+        // one could not. Mirrors folder/index.js openManageAccess(): share the
+        // workspace ROOT node = actual_home_id (a hub's real node id; nid is the
+        // hub/0) with a "Manage access" title. There is no host workspace window
+        // here (the create form lives on the desk), so launch the standalone
+        // right-dock panel — it self-positions via _applyRightDock, matching the
+        // right-side dock the old panel showed. The team/private branch below is
+        // unchanged (permission_restricted is workspace-membership, not sharing).
+        if (post === "permission_shared") {
+          const shareNid = hub.actual_home_id || hub.home_id;
+          Wm.launch(
+            {
+              kind         : "window_secure_share",
+              wm_unique_id : `window_secure_share-${shareNid}`,
+              nid          : shareNid,
+              hub_id       : hub.hub_id || hub.id,
+              home_id      : hub.actual_home_id,
+              filetype     : _a.folder,
+              area         : hub.area || _a.share,
+              filename     : hub.filename,
+              name         : hub.filename,
+              privilege    : ~~hub.privilege,
+              manage_access: 1,
+              useKeyEvent  : 1,
+              radio        : _a.on,
+              state        : _a.on,
+              media        : mediaShim,
+              trigger      : mediaShim,
+              source       : this,
+              uiHandler    : [Wm],
+            },
+            { explicit: 1, singleton: 1 },
+          );
+          return closeForm();
+        }
+
+        const parent = this.parent;
+        if (!parent || !_.isFunction(parent.feed)) return closeForm();
 
         parent.feed({
           kind: post,
