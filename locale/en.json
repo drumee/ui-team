@@ -2419,5 +2419,13 @@
   "ACTIVITY": "Activity",
   "HISTORY": "History",
   "SEARCH_PEOPLE": "Search for people, enter to add",
-  "NO_HISTORY": "No activity yet"
+  "NO_HISTORY": "No activity yet",
+  "REFERRAL_TITLE": "Invite members",
+  "REFERRAL_SUBTITLE": "Share your link",
+  "REFERRAL_CODE": "Referral code",
+  "REFERRAL_LINK": "Referral link",
+  "REFERRAL": "Referral",
+  "REFERRAL_UNAVAILABLE": "Not available yet",
+  "REFERRAL_CODE_COPIED": "Referral code copied",
+  "REFERRAL_LINK_COPIED": "Referral link copied"
 }

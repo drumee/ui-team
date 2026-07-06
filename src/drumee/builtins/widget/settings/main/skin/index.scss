@@ -166,6 +166,14 @@
     }
   }
 
+  &__row-billing {
+    .settings-main__billing-card,
+    .settings-main__referral-card {
+      flex: 1 1 0;
+      min-width: 0;
+    }
+  }
+
   // ── Linked accounts card ─────────────────────────────────
   &__linked {
     &-list {
@@ -221,6 +229,14 @@
           display: block;
         }
       }
+    }
+  }
+
+  // ── Referral card (beside billing, shares its row) ────────
+  &__referral {
+    &-list {
+      width: 100%;
+      gap: var(--spacer-5);
     }
   }
 
@@ -702,6 +718,7 @@
   &__preferences-manage-main,
   &__credentials-action-main,
   &__billing-action-main,
+  &__referral-action-main,
   &__danger-export-btn-main,
   &__linked-migrate-btn-main {
     width: 120px;
@@ -736,7 +753,8 @@
   // every state (Start migration / View progress / Migrate again); its labels
   // are wider than the 120px tiles, so size to content.
   &__linked-migrate-btn-main,
-  &__billing-action-main {
+  &__billing-action-main,
+  &__referral-action-main {
     width: auto;
     min-width: 120px;
     padding: 0 var(--spacer-5);

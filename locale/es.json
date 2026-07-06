@@ -1995,5 +1995,13 @@
   "ACTIVITY": "Actividad",
   "HISTORY": "Historial",
   "SEARCH_PEOPLE": "Buscar personas, Enter para añadir",
-  "NO_HISTORY": "Sin actividad"
+  "NO_HISTORY": "Sin actividad",
+  "REFERRAL_TITLE": "Invitar miembros",
+  "REFERRAL_SUBTITLE": "Comparte tu enlace",
+  "REFERRAL_CODE": "Código de referido",
+  "REFERRAL_LINK": "Enlace de referido",
+  "REFERRAL": "Referido",
+  "REFERRAL_UNAVAILABLE": "Aún no disponible",
+  "REFERRAL_CODE_COPIED": "Código de referido copiado",
+  "REFERRAL_LINK_COPIED": "Enlace de referido copiado"
 }

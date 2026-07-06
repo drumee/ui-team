@@ -1990,5 +1990,13 @@
   "ACTIVITY": "Activity",
   "HISTORY": "History",
   "SEARCH_PEOPLE": "Search for people, enter to add",
-  "NO_HISTORY": "No activity yet"
+  "NO_HISTORY": "No activity yet",
+  "REFERRAL_TITLE": "អញ្ជើញសមាជិក",
+  "REFERRAL_SUBTITLE": "ចែករំលែកតំណរបស់អ្នក",
+  "REFERRAL_CODE": "កូដបញ្ជូនបន្ត",
+  "REFERRAL_LINK": "តំណបញ្ជូនបន្ត",
+  "REFERRAL": "ការបញ្ជូនបន្ត",
+  "REFERRAL_UNAVAILABLE": "មិនទាន់មាននៅឡើយទេ",
+  "REFERRAL_CODE_COPIED": "បានចម្លងកូដបញ្ជូនបន្ត",
+  "REFERRAL_LINK_COPIED": "បានចម្លងតំណបញ្ជូនបន្ត"
 }

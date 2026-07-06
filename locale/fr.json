@@ -1990,5 +1990,13 @@
   "ACTIVITY": "Activité",
   "HISTORY": "Historique",
   "SEARCH_PEOPLE": "Rechercher des personnes, Entrée pour ajouter",
-  "NO_HISTORY": "Aucune activité"
+  "NO_HISTORY": "Aucune activité",
+  "REFERRAL_TITLE": "Inviter des membres",
+  "REFERRAL_SUBTITLE": "Partagez votre lien",
+  "REFERRAL_CODE": "Code de parrainage",
+  "REFERRAL_LINK": "Lien de parrainage",
+  "REFERRAL": "Parrainage",
+  "REFERRAL_UNAVAILABLE": "Pas encore disponible",
+  "REFERRAL_CODE_COPIED": "Code de parrainage copié",
+  "REFERRAL_LINK_COPIED": "Lien de parrainage copié"
 }
