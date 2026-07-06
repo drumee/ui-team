@@ -802,7 +802,34 @@ class __panel_activity extends LetcBox {
     } catch (e) {
       this.warn('[panel_activity] task mention fetch failed', e);
     }
-    const merged = accessReqs.concat(taskMentions, live);
+    // Task assignments ("{creator} assigned you to {task}") for the pinned section
+    // + badge, mirroring task mentions above so an assignment shows (and bumps the
+    // badge) in real time even while the panel is closed. Rows come from
+    // activity.list_task_assignments (undismissed task_assigned only). category
+    // 'contact_invite' + key_id=id routes dismiss through
+    // activity.dismiss_contact_event; the row keeps event='task_assigned' so it
+    // renders "assigned you to <task>" and opens the task on click.
+    let taskAssignments = [];
+    try {
+      const ta = await this.postService({
+        service: (SERVICE.activity && SERVICE.activity.list_task_assignments) || 'activity.list_task_assignments',
+        hub_id: Visitor.id,
+      });
+      const rows = _.isArray(ta) ? ta : (_.isArray(ta?.data) ? ta.data : []);
+      const dismissedTa = this._dismissedKeys || new Set();
+      taskAssignments = rows
+        .filter((r) => r && r.event === 'task_assigned')
+        .filter((r) => !dismissedTa.has(`contact_invite:${r.id}`))
+        .map((r) => ({
+          ...r,
+          category: 'contact_invite',
+          key_id: String(r.id),
+          last_id: r.id,
+        }));
+    } catch (e) {
+      this.warn('[panel_activity] task assignment fetch failed', e);
+    }
+    const merged = accessReqs.concat(taskMentions, taskAssignments, live);
 
     const unread_count = merged.length;
     RADIO_BROADCAST.trigger('activity-update', { unread_count });
