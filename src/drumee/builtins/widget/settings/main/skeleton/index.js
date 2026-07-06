@@ -567,8 +567,8 @@ function referralCard(ui) {
     className: `${ui.fig.family}__card ${pfx}-card`,
     kids: [
       cardHeading(ui, {
-        title: LOCALE.REFERRAL_TITLE || "Invite & earn",
-        subtitle: LOCALE.REFERRAL_SUBTITLE || "Share your link — earn rewards",
+        title: LOCALE.REFERRAL_TITLE || "Invite members",
+        subtitle: LOCALE.REFERRAL_SUBTITLE || "Share your link",
       }),
       Skeletons.Box.Y({ className: `${pfx}-list`, kids: rows }),
     ],
