@@ -533,16 +533,22 @@ function billingCard(ui) {
 
 function settings_body(ui) {
   const pfx = ui.fig.family;
+  // TEMP: Billing & Subscription card hidden on the Settings page (also removes
+  // the "Manage Subscription" entry point into settings_billing). Flip
+  // SHOW_BILLING to true to restore.
+  const SHOW_BILLING = false;
   return [
     header(ui),
     Skeletons.Box.X({
       className: `${pfx}__row ${pfx}__row-1`,
       kids: [generalProfileCard(ui), preferencesCard(ui)],
     }),
-    Skeletons.Box.X({
-      className: `${pfx}__row ${pfx}__row-billing`,
-      kids: [billingCard(ui)],
-    }),
+    SHOW_BILLING
+      ? Skeletons.Box.X({
+          className: `${pfx}__row ${pfx}__row-billing`,
+          kids: [billingCard(ui)],
+        })
+      : null,
     Skeletons.Box.X({
       className: `${pfx}__row ${pfx}__row-2`,
       kids: [accountCredentialsCard(ui), dangerZoneCard(ui)],
@@ -561,7 +567,7 @@ function settings_body(ui) {
       className: `${pfx}__toast-slot`,
       sys_pn: "settings-toast",
     }),
-  ];
+  ].filter(Boolean);
 }
 
 export default settings_body;
