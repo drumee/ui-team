@@ -1,5 +1,3 @@
-const { copyToClipboard } = require("@drumee/ui-essentials");
-
 /**
  *
  *
@@ -76,7 +74,6 @@ class settings_account extends LetcBox {
     this._page = 0;
     this._category = "*";
     this.feed(require("./skeleton").default(this));
-    this.loadReferral();
   }
 
   /**
@@ -108,32 +105,6 @@ class settings_account extends LetcBox {
       category: this._category || "*",
       list: 1,
     };
-  }
-
-  /**
-   * Fetch the user's referral code/link once, store on the model, and
-   * re-render the Profile tab so the section fills in. POST (not GET) to
-   * avoid the browser HTTP-caching stale fetchService GETs.
-   */
-  async loadReferral() {
-    if (this._referralFetched) return;
-    this._referralFetched = true;
-    try {
-      const data = await this.postService(SERVICE.drumate.get_referral_code, {
-        hub_id: Visitor.id,
-      });
-      if (data && data.referral_code) {
-        this.mset({ referral_code: data.referral_code, referral_url: data.referral_url || "" });
-      } else {
-        this.mset({ referral_error: 1 });
-      }
-    } catch (e) {
-      this.warn("[account] get_referral_code failed", e);
-      this.mset({ referral_error: 1 });
-    }
-    if (this._page === 0 && this.__content) {
-      this.__content.feed(this.skeletons[0](this));
-    }
   }
 
   /**
@@ -550,18 +521,6 @@ class settings_account extends LetcBox {
 
       case "export-data-cancel":
         return this.__overlay.clear();
-
-      case "copy-referral-code": {
-        const v = this.mget("referral_code");
-        if (v) copyToClipboard(v);
-        return;
-      }
-
-      case "copy-referral-link": {
-        const v = this.mget("referral_url");
-        if (v) copyToClipboard(v);
-        return;
-      }
 
       case "manage-seats":
         return this.handSeatsManager()
