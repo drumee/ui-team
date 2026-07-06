@@ -577,6 +577,10 @@ function referralCard(ui) {
 
 function settings_body(ui) {
   const pfx = ui.fig.family;
+  // TEMP: Billing & Subscription card hidden on the Settings page (also removes
+  // the "Manage Subscription" entry point into settings_billing). Flip
+  // SHOW_BILLING to true to restore.
+  const SHOW_BILLING = false;
   return [
     header(ui),
     Skeletons.Box.X({
@@ -605,7 +609,7 @@ function settings_body(ui) {
       className: `${pfx}__toast-slot`,
       sys_pn: "settings-toast",
     }),
-  ];
+  ].filter(Boolean);
 }
 
 export default settings_body;
