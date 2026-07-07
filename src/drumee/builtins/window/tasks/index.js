@@ -100,7 +100,18 @@ class __tasks_panel extends LetcBox {
     this._boardTheme = "default";
     this._boardDefault = true; // "Set as default" toggle (Figma default: on)
     this._colMenuFor = null; // custom column id whose menu popover is open
-    this._fileSearch = { query: "", results: [], scope: null };
+    // page/hasMore/loading drive infinite scroll of the results dropdown;
+    // an empty query lists all linkable files (most-recent first), a
+    // non-empty one searches — both paginate through the same procedure.
+    this._fileSearch = {
+      query: "",
+      results: [],
+      scope: null,
+      page: 1,
+      hasMore: false,
+      loading: false,
+      loadingMore: false,
+    };
     this._fileSearchTimer = null;
     this._fileSearchBlurTimer = null;
     // Active @-mention session (null when the popup is closed): the "@token"
@@ -973,6 +984,8 @@ class __tasks_panel extends LetcBox {
     const isSearchInput = (t) =>
       t && t.matches && t.matches('input[name^="file-search-"]');
     const fieldOf = (t) => t.closest(".tasks-panel__file-search-field");
+    const scopeOf = (input) =>
+      String(input.name || "").slice("file-search-".length);
 
     this.el.addEventListener("focusin", (e) => {
       if (!isSearchInput(e.target)) return;
@@ -983,7 +996,43 @@ class __tasks_panel extends LetcBox {
         this._fileSearchBlurTimer = null;
       }
       field.dataset.searchFocused = "1";
+
+      // Focusing the empty input lists all linkable files. Skip if we already
+      // hold the all-files results for this scope (e.g. blur then re-focus).
+      const query = String(e.target.value || "").trim();
+      if (query) return;
+      const scope = scopeOf(e.target);
+      const fs = this._fileSearch;
+      if (fs.scope === scope && fs.query === "" && fs.results.length) return;
+      fs.query = "";
+      fs.scope = scope;
+      fs.page = 1;
+      fs.hasMore = false;
+      this._runFileSearch("", scope);
     });
+
+    // Infinite scroll: `scroll` doesn't bubble, so capture it. Loads the next
+    // page when the results list nears its bottom.
+    this.el.addEventListener(
+      "scroll",
+      (e) => {
+        const list = e.target;
+        if (
+          !list ||
+          !list.classList ||
+          !list.classList.contains("tasks-panel__file-search-results")
+        ) {
+          return;
+        }
+        const fs = this._fileSearch;
+        if (fs.loading || !fs.hasMore) return;
+        const nearBottom =
+          list.scrollTop + list.clientHeight >= list.scrollHeight - 48;
+        if (!nearBottom) return;
+        this._runFileSearch(fs.query, fs.scope, { append: true });
+      },
+      true,
+    );
 
     this.el.addEventListener("focusout", (e) => {
       if (!isSearchInput(e.target)) return;
@@ -2355,7 +2404,15 @@ class __tasks_panel extends LetcBox {
       clearTimeout(this._fileSearchBlurTimer);
       this._fileSearchBlurTimer = null;
     }
-    this._fileSearch = { query: "", results: [], scope: null };
+    this._fileSearch = {
+      query: "",
+      results: [],
+      scope: null,
+      page: 1,
+      hasMore: false,
+      loading: false,
+      loadingMore: false,
+    };
   }
 
   _scheduleFileSearch(trigger) {
@@ -2365,35 +2422,81 @@ class __tasks_panel extends LetcBox {
       trigger.mget("searchScope") || (this._creating ? "create" : "detail");
     this._fileSearch.query = query;
     this._fileSearch.scope = scope;
+    // Any new query starts a fresh pagination run.
+    this._fileSearch.page = 1;
+    this._fileSearch.hasMore = false;
 
     if (this._fileSearchTimer) clearTimeout(this._fileSearchTimer);
-    if (query.length < 2) {
+    // A single character is too short to be a useful search — clear until the
+    // user types more or clears the field entirely (empty → list all below).
+    if (query.length === 1) {
       const hadResults = (this._fileSearch.results || []).length > 0;
       this._fileSearch.results = [];
       if (hadResults) this._refreshFileSearchDropdown(scope);
       return;
     }
+    // Empty query lists all files; >= 2 chars searches. Both hit the server
+    // (debounced) and page 1 replaces whatever was shown.
     this._fileSearchTimer = setTimeout(() => {
       this._runFileSearch(query, scope);
     }, 250);
   }
 
-  async _runFileSearch(query, scope) {
-    if (this._fileSearch.query !== query) return;
+  // Fetches one page of linkable files. `append` pulls the next page and
+  // concatenates it (infinite scroll); otherwise page 1 replaces the results.
+  // An empty query lists all files — the procedure returns everything the user
+  // can link, most-recent first.
+  async _runFileSearch(query, scope, { append = false } = {}) {
+    if (append && (this._fileSearch.loading || !this._fileSearch.hasMore)) {
+      return;
+    }
+    // Stale guard: bail if the active query/scope moved on before we started.
+    if (this._fileSearch.query !== query || this._fileSearch.scope !== scope) {
+      return;
+    }
+    const page = append ? this._fileSearch.page + 1 : 1;
     const taskId = scope === "detail" ? this._detailId : null;
+
+    this._fileSearch.loading = true;
+    if (append) {
+      this._fileSearch.loadingMore = true;
+      this._refreshFileSearchDropdown(scope, { preserveScroll: true });
+    }
     try {
       const rows = await this.fetchService({
         service: SERVICE.task.search_files,
         hub_id: this._hubId,
         pattern: query,
         task_id: taskId || undefined,
+        page,
       });
-      if (this._fileSearch.query !== query) return;
-      this._fileSearch.results = Array.isArray(rows) ? rows : [];
+      // The active query/scope may have changed while awaiting — drop late
+      // responses so they don't clobber a newer search.
+      if (this._fileSearch.query !== query || this._fileSearch.scope !== scope) {
+        return;
+      }
+      const list = Array.isArray(rows) ? rows : [];
+      if (append) {
+        const seen = new Set(this._fileSearch.results.map((r) => r.nid));
+        this._fileSearch.results = this._fileSearch.results.concat(
+          list.filter((r) => !seen.has(r.nid)),
+        );
+        this._fileSearch.page = page;
+      } else {
+        this._fileSearch.results = list;
+        this._fileSearch.page = 1;
+      }
+      // A full page (page_length rows) may have more behind it; a short or
+      // empty page ends the run. Worst case is one trailing empty fetch.
+      this._fileSearch.hasMore = list.length > 0;
     } catch (err) {
-      this._fileSearch.results = [];
+      if (!append) this._fileSearch.results = [];
+      this._fileSearch.hasMore = false;
+    } finally {
+      this._fileSearch.loading = false;
+      this._fileSearch.loadingMore = false;
     }
-    this._refreshFileSearchDropdown(scope);
+    this._refreshFileSearchDropdown(scope, { preserveScroll: append });
   }
 
   // Surgical update of the file-pending-list part — avoids a full _render()
@@ -2414,12 +2517,19 @@ class __tasks_panel extends LetcBox {
       });
   }
 
-  _refreshFileSearchDropdown(scope) {
+  _refreshFileSearchDropdown(scope, { preserveScroll = false } = {}) {
     if (!scope) return;
     const partName = `file-search-dropdown-${scope}`;
     this.ensurePart(partName)
       .then((dropdown) => {
         if (!dropdown || dropdown.isDestroyed?.()) return;
+        // feed() recreates the scrollable results element, resetting scrollTop
+        // to 0. On an append we capture the current position and restore it on
+        // the rebuilt element so the list doesn't jump back to the top.
+        const scroller = () =>
+          dropdown.el &&
+          dropdown.el.querySelector(".tasks-panel__file-search-results");
+        const prevScroll = preserveScroll ? scroller()?.scrollTop || 0 : 0;
         const ctx =
           scope === "create"
             ? {
@@ -2439,6 +2549,10 @@ class __tasks_panel extends LetcBox {
         const content = skel.buildFileSearchDropdownContent(this, scope, ctx);
         dropdown.feed(content);
         if (dropdown.el) dropdown.el.dataset.empty = content.length ? "0" : "1";
+        if (preserveScroll) {
+          const s = scroller();
+          if (s) s.scrollTop = prevScroll;
+        }
       })
       .catch(() => {
         /* part not mounted yet */

@@ -42,10 +42,20 @@ function buildFileSearchDropdownContent(ui, scope, ctx = {}) {
   };
 
   if (results.length) {
+    const rows = results.map(resultRow);
+    // Footer shown while the next page is loading (infinite scroll).
+    if (fileSearch && fileSearch.loadingMore) {
+      rows.push(
+        Skeletons.Note({
+          className: `${pfx}__file-search-loading`,
+          content: LOCALE.LOADING || "…",
+        }),
+      );
+    }
     return [
       Skeletons.Box.Y({
         className: `${pfx}__file-search-results`,
-        kids: results.map(resultRow),
+        kids: rows,
       }),
     ];
   }
