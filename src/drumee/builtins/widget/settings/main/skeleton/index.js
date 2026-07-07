@@ -587,12 +587,6 @@ function settings_body(ui) {
       className: `${pfx}__row ${pfx}__row-1`,
       kids: [generalProfileCard(ui), preferencesCard(ui)],
     }),
-<<<<<<< HEAD
-    Skeletons.Box.X({
-      className: `${pfx}__row ${pfx}__row-billing`,
-      kids: [billingCard(ui), referralCard(ui)],
-    }),
-=======
     SHOW_BILLING
       ? Skeletons.Box.X({
           className: `${pfx}__row ${pfx}__row-billing`,
@@ -602,7 +596,6 @@ function settings_body(ui) {
           className: `${pfx}__row ${pfx}__row-referral`,
           kids: [referralCard(ui)],
         }),
->>>>>>> feat/upload-popup-auto-minimize
     Skeletons.Box.X({
       className: `${pfx}__row ${pfx}__row-2`,
       kids: [accountCredentialsCard(ui), dangerZoneCard(ui)],
