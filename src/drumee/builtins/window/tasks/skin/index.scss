@@ -1004,9 +1004,10 @@
   &__detail-panel &__modal-side {
     flex-basis: 380px;
     width: 380px;
-    padding-left: 24px;
+    padding: 0 24px;
     box-sizing: border-box;
     border-left: 3px solid var(--col-primary-40, #5950ff);
+    max-height: 100%;
     overflow-y: auto; // short windows: sidebar scrolls alone, Save stays reachable
   }
 
