@@ -580,7 +580,7 @@ function settings_body(ui) {
   // TEMP: Billing & Subscription card hidden on the Settings page (also removes
   // the "Manage Subscription" entry point into settings_billing). Flip
   // SHOW_BILLING to true to restore.
-  const SHOW_BILLING = false;
+  const SHOW_BILLING = true;
   return [
     header(ui),
     Skeletons.Box.X({
