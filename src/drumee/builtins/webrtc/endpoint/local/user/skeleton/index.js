@@ -7,14 +7,34 @@ const __skl_stream_local = function (_ui_) {
     uiHandler: [_ui_]
   };
 
-  const uname = _ui_.mget('username') || _ui_.mget('uname') || LOCALE.ME;
+  // Source name fields exactly like broadcastJoining does (`mget || Visitor.*`)
+  // so the local tile derives its initials, color, and footer name from the
+  // SAME values the remote tiles receive. The local endpoint model is seeded
+  // only from Visitor.profile() (participants/index.js), whose lastname can be
+  // empty while Visitor.lastname() falls back to a secondary field — without
+  // the fallback the owner read "T"/"Test" here vs "TO"/"Test Owner1" remotely.
+  const firstname = _ui_.mget(_a.firstname) || Visitor.firstname() || "";
+  const lastname = _ui_.mget(_a.lastname) || Visitor.lastname() || "";
+  // Footer badge: match the remote footer, which shows the broadcast display
+  // name (Visitor.fullname() for a member). Fall back to the split name, then
+  // the old username chain, then LOCALE.ME for a nameless guest.
+  const uname =
+    Visitor.fullname() ||
+    `${firstname} ${lastname}`.trim() ||
+    _ui_.mget("username") ||
+    _ui_.mget("uname") ||
+    LOCALE.ME;
 
+  // Feed the profile widget the SAME split firstname/lastname the remote tile
+  // uses (endpoint/remote/user/skeleton) so initiales() and colorFromName()
+  // produce identical initials + color for the same person on every client.
   const avatar = {
     kind: KIND.profile,
     id: _ui_.mget('avatar_id') || Visitor.profile().id,
     type: 'thumb',
     active: 0,
-    firstname: uname
+    firstname,
+    lastname
   };
 
   const topActions = Skeletons.Box.X({
