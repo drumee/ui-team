@@ -1990,12 +1990,15 @@
   "RATING_SURVEY_THANKS_TITLE": "¡Gracias!",
   "RATING_SURVEY_THANKS_SUB": "Tus comentarios definen directamente lo que construiremos",
   "RATING_SURVEY_INPUT_PLACEHOLDER": "Escribe tu respuesta…",
+<<<<<<< HEAD
   "ADD_NEW_TASK": "Añadir tarea",
   "SAVE_CHANGE": "Guardar cambios",
   "ACTIVITY": "Actividad",
   "HISTORY": "Historial",
   "SEARCH_PEOPLE": "Buscar personas, Enter para añadir",
   "NO_HISTORY": "Sin actividad",
+=======
+>>>>>>> feat/upload-popup-auto-minimize
   "REFERRAL_TITLE": "Invitar miembros",
   "REFERRAL_SUBTITLE": "Comparte tu enlace",
   "REFERRAL_CODE": "Código de referido",

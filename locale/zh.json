@@ -1985,12 +1985,15 @@
   "RATING_SURVEY_THANKS_TITLE": "谢谢！",
   "RATING_SURVEY_THANKS_SUB": "你的反馈将直接决定我们接下来做什么",
   "RATING_SURVEY_INPUT_PLACEHOLDER": "请输入你的回答…",
+<<<<<<< HEAD
   "ADD_NEW_TASK": "添加任务",
   "SAVE_CHANGE": "保存更改",
   "ACTIVITY": "动态",
   "HISTORY": "历史",
   "SEARCH_PEOPLE": "搜索成员，回车添加",
   "NO_HISTORY": "暂无动态",
+=======
+>>>>>>> feat/upload-popup-auto-minimize
   "REFERRAL_TITLE": "邀请成员",
   "REFERRAL_SUBTITLE": "分享你的链接",
   "REFERRAL_CODE": "推荐码",

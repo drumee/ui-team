@@ -61,6 +61,7 @@ class __window_upload_progress extends __window_core {
     );
 
     this._isExpanded = true;
+    this._autoMinimizeTimer = null; // 30s auto-collapse once uploads settle (no pending)
     this._totalFiles = 0;
     this._fileProgressMap = {}; // Track progress for speed calculation
     this._pendingProgressUpdates = new Map(); // Queue progress updates when DOM not ready
@@ -349,7 +350,12 @@ class __window_upload_progress extends __window_core {
    */
   addUploadItem(file, queue = null) {
     if (!file) return;
-    
+
+    // A new upload cancels any pending auto-collapse and re-opens the popup so
+    // the incoming file is visible.
+    this._cancelAutoMinimize();
+    if (!this._isExpanded) this._isExpanded = true;
+
     const fileName = file.name || file.filename || "Unknown file";
     const fileId = `${fileName}-${Date.now()}`;
     
@@ -961,18 +967,8 @@ class __window_upload_progress extends __window_core {
     }, 200);
     
     
-    // Auto-close after a delay if all uploads are complete
-    _.delay(() => {
-      const allComplete = this._uploadItems.every(item => item.status === 'completed' || item.status === 'error');
-      if (allComplete) {
-        _.delay(() => {
-          if (this._uploadItems.every(item => item.status === 'completed' || item.status === 'error')) {
-            // Optionally close after delay
-            // this.goodbye();
-          }
-        }, 3000);
-      }
-    }, 500);
+    // When this was the last pending file, arm the 30s auto-collapse.
+    this._maybeArmAutoMinimize();
   }
 
   /**
@@ -1001,8 +997,10 @@ class __window_upload_progress extends __window_core {
     item.showCancel = isUploading;
     item.showCancelled = isCancelled;
     item.showError = isError;
-    
+
     this._refreshUI();
+    // A status change (e.g. error) may leave nothing pending → arm collapse.
+    this._maybeArmAutoMinimize();
   }
 
   /**
@@ -1087,12 +1085,55 @@ class __window_upload_progress extends __window_core {
     item.showError = false;
     
     this._refreshUI();
+    // Cancelling the last in-flight file leaves nothing pending → arm collapse.
+    this._maybeArmAutoMinimize();
+  }
+
+  /**
+   * Arm the 30s auto-collapse once uploads settle (nothing left 'uploading').
+   * Only arms while the popup is expanded and holds items; a new upload
+   * (addUploadItem) or a manual toggle (toggleExpand) cancels it. Idempotent —
+   * an already-armed countdown is left running rather than restarted.
+   */
+  _maybeArmAutoMinimize() {
+    const items = this._uploadItems || [];
+    const hasPending = items.some((i) => i.status === "uploading");
+    if (hasPending || items.length === 0 || !this._isExpanded) {
+      this._cancelAutoMinimize();
+      return;
+    }
+    if (this._autoMinimizeTimer) return; // already counting down
+    this._autoMinimizeTimer = setTimeout(() => {
+      this._autoMinimizeTimer = null;
+      // Re-check: still settled and still expanded (user may have acted).
+      const stillSettled = !(this._uploadItems || []).some(
+        (i) => i.status === "uploading"
+      );
+      if (stillSettled && this._isExpanded) this.toggleExpand();
+    }, 30000);
+  }
+
+  /**
+   * Cancel a pending auto-collapse (new upload, user interaction, destroy).
+   */
+  _cancelAutoMinimize() {
+    if (this._autoMinimizeTimer) {
+      clearTimeout(this._autoMinimizeTimer);
+      this._autoMinimizeTimer = null;
+    }
+  }
+
+  onBeforeDestroy() {
+    this._cancelAutoMinimize();
+    if (super.onBeforeDestroy) super.onBeforeDestroy();
   }
 
   /**
    * Toggle expand/collapse
    */
   toggleExpand() {
+    // A manual toggle is a user interaction — drop any pending auto-collapse.
+    this._cancelAutoMinimize();
     this._isExpanded = !this._isExpanded;
 
     // Bundle path: the legacy _refreshUI() rebuilds the file-list from the EMPTY

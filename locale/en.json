@@ -2414,12 +2414,15 @@
   "RATING_SURVEY_THANKS_TITLE": "Thank you!",
   "RATING_SURVEY_THANKS_SUB": "Your feedback directly shapes what we build next.",
   "RATING_SURVEY_INPUT_PLACEHOLDER": "Type your answer…",
+<<<<<<< HEAD
   "ADD_NEW_TASK": "Add new task",
   "SAVE_CHANGE": "Save change",
   "ACTIVITY": "Activity",
   "HISTORY": "History",
   "SEARCH_PEOPLE": "Search for people, enter to add",
   "NO_HISTORY": "No activity yet",
+=======
+>>>>>>> feat/upload-popup-auto-minimize
   "REFERRAL_TITLE": "Invite members",
   "REFERRAL_SUBTITLE": "Share your link",
   "REFERRAL_CODE": "Referral code",
