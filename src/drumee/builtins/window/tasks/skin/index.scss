@@ -4544,6 +4544,19 @@
     padding: 10px 12px;
   }
 
+  // Footer row shown while the next page loads during infinite scroll.
+  &__file-search-loading {
+    @include drumee.typo(
+      $size: 12px,
+      $weight: 400,
+      $line: 16px,
+      $color: var(--placeholder-fg, #aeaeb2)
+    );
+    font-style: italic;
+    text-align: center;
+    padding: 8px 12px;
+  }
+
   &__file-pending-list {
     // Same wrapping card strip as committed attachments.
     gap: 8px;
