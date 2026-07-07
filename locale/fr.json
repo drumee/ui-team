@@ -1985,15 +1985,12 @@
   "RATING_SURVEY_THANKS_TITLE": "Merci !",
   "RATING_SURVEY_THANKS_SUB": "Vos retours orientent directement ce que nous construisons",
   "RATING_SURVEY_INPUT_PLACEHOLDER": "Saisissez votre réponse…",
-<<<<<<< HEAD
   "ADD_NEW_TASK": "Ajouter une tâche",
   "SAVE_CHANGE": "Enregistrer",
   "ACTIVITY": "Activité",
   "HISTORY": "Historique",
   "SEARCH_PEOPLE": "Rechercher des personnes, Entrée pour ajouter",
   "NO_HISTORY": "Aucune activité",
-=======
->>>>>>> feat/upload-popup-auto-minimize
   "REFERRAL_TITLE": "Inviter des membres",
   "REFERRAL_SUBTITLE": "Partagez votre lien",
   "REFERRAL_CODE": "Code de parrainage",

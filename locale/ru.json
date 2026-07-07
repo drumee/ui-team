@@ -1985,15 +1985,12 @@
   "RATING_SURVEY_THANKS_TITLE": "Спасибо!",
   "RATING_SURVEY_THANKS_SUB": "Ваш отзыв напрямую влияет на то, что мы делаем дальше",
   "RATING_SURVEY_INPUT_PLACEHOLDER": "Введите ваш ответ…",
-<<<<<<< HEAD
   "ADD_NEW_TASK": "Добавить задачу",
-  "SAVE_CHANGE": "Сохранить",
-  "ACTIVITY": "Активность",
-  "HISTORY": "История",
+  "SAVE_CHANGE": "Сохранить изменения",
+  "ACTIVITY": "Действия",
+  "HISTORY": "Действия",
   "SEARCH_PEOPLE": "Поиск людей, Enter чтобы добавить",
-  "NO_HISTORY": "Нет активности",
-=======
->>>>>>> feat/upload-popup-auto-minimize
+  "NO_HISTORY": "Нет действий",
   "REFERRAL_TITLE": "Пригласить участников",
   "REFERRAL_SUBTITLE": "Поделитесь своей ссылкой",
   "REFERRAL_CODE": "Реферальный код",

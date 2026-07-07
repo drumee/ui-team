@@ -1985,15 +1985,12 @@
   "RATING_SURVEY_THANKS_TITLE": "អរគុណ!",
   "RATING_SURVEY_THANKS_SUB": "មតិរបស់អ្នកជះឥទ្ធិពលផ្ទាល់ទៅលើអ្វីដែលយើងបង្កើតបន្ទាប់",
   "RATING_SURVEY_INPUT_PLACEHOLDER": "វាយចម្លើយរបស់អ្នក…",
-<<<<<<< HEAD
-  "ADD_NEW_TASK": "Add new task",
-  "SAVE_CHANGE": "Save change",
-  "ACTIVITY": "Activity",
-  "HISTORY": "History",
-  "SEARCH_PEOPLE": "Search for people, enter to add",
-  "NO_HISTORY": "No activity yet",
-=======
->>>>>>> feat/upload-popup-auto-minimize
+  "ADD_NEW_TASK": "បង្កើតការងារថ្មី",
+  "SAVE_CHANGE": "រក្សាទុកការផ្លាស់ប្តូរ",
+  "ACTIVITY": "សកម្មភាព",
+  "HISTORY": "បែបលែង",
+  "SEARCH_PEOPLE": "ស្វែងយល់អ្នក, បញ្ចូលដើម្បីបង្កើត",
+  "NO_HISTORY": "មិនមានសកម្មភាពទេ",
   "REFERRAL_TITLE": "អញ្ជើញសមាជិក",
   "REFERRAL_SUBTITLE": "ចែករំលែកតំណរបស់អ្នក",
   "REFERRAL_CODE": "កូដបញ្ជូនបន្ត",
