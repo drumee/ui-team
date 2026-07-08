@@ -2530,7 +2530,14 @@
 
   // Right cluster: view-specific controls + New task / New board / Filter.
   &__viewbar-right {
+    // Always hug the right edge. The parent viewbar wraps (flex-wrap:wrap) and
+    // uses justify-content:space-between, so once this cluster drops onto its
+    // own line it would otherwise align LEFT (space-between on a lone item =
+    // start). margin-left:auto pins it right on whichever row it lands, and
+    // flex-end keeps its own buttons right-aligned when the cluster itself wraps.
+    margin-left: auto;
     align-items: center;
+    justify-content: flex-end;
     flex-wrap: wrap;
     gap: 8px;
   }
