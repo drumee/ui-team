@@ -106,9 +106,17 @@ class __window_downloader extends mfsInteract {
     let hub_id = opt.hub_id || this.mget(_a.hub_id) || Visitor.get(_a.id);
     let zip_id = opt.zipid || this._zipid;
     let { svc, keysel } = bootstrap();
-    let url = `${svc}media.zip?hub_id=${hub_id}&nid=${nid}&id=${zip_id}&keysel=${keysel}&zipname=${data.zipname}`;
+    // Two fixes here: (1) `data.zipname` was an undefined ReferenceError (should
+    // be opt.zipname) — this branch (large "Single file .zip" downloads) threw
+    // before ever starting; (2) carry the secure-share token so DMZ-share
+    // recipients pass the server download guard (mirrors media/core.js). Encode
+    // the name (archives carry spaces/colons).
+    const _sst = this._token ? `&token=${encodeURIComponent(this._token)}` : '';
+    let url = `${svc}media.zip?hub_id=${hub_id}&nid=${nid}&id=${zip_id}&keysel=${keysel}&zipname=${encodeURIComponent(opt.zipname || '')}${_sst}`;
     super.getFromUrl(url);
-    Wm.alert(LOCALE.DOWNLOAD_LONG_TIME.format(opt.zipname, filesize(this._zipsize)));
+    // Native browser download (no in-app byte progress) → simulated size-scaled
+    // progress bar instead of the plain alert. Download itself is unchanged.
+    Wm.downloadNotice(opt.zipname, this._zipsize);
     this.goodbye();
   }
 
