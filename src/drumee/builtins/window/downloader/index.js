@@ -62,7 +62,14 @@ class __window_downloader extends mfsInteract {
       socket_id: Visitor.get(_a.socket_id),
     };
     if (this.mget(_a.token)) {
-      this._api.hub_id = Host.id
+      // Use the share's CONTENT hub, not the connect host's hub. On a neutral
+      // share host (share.<domain>) Host.id is the share-host hub, NOT where the
+      // files live, so zip_size/media.zip would run against the wrong hub →
+      // size:null + 403 PERMISSION_DENIED (works on desk only because an
+      // authenticated session already resolves to its real hub). The sharebox
+      // pins the content hub as Visitor.share_hub_id; the per-node list also
+      // carries it (hub_id). Fall back to Host.id for legacy per-vhost links.
+      this._api.hub_id = Visitor.get('share_hub_id') || hub_id || Host.id;
       this._api.token = this.mget(_a.token);
     }
     this.mset({
