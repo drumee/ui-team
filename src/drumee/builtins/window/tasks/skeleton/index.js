@@ -94,6 +94,13 @@ const make = function (ui) {
     }
   };
 
+  // Due label for a task: a duration task (start_date set) shows the span
+  // "start → due"; a single-date task shows just the due date.
+  const formatTaskDue = (task) =>
+    task && task.start_date && task.due_date
+      ? `${formatDue(task.start_date)} → ${formatDue(task.due_date)}`
+      : formatDue(task && task.due_date);
+
   const isOverdue = (d) => {
     if (!d) return false;
     try {
@@ -133,8 +140,12 @@ const make = function (ui) {
   const dueBadge = (task) =>
     Skeletons.Note({
       className: `${pfx}__task-due`,
-      content: formatDue(task.due_date),
-      dataset: { overdue: isOverdue(task.due_date) ? 1 : 0 },
+      content: formatTaskDue(task),
+      // Overdue is judged on the end (due_date); range marks the span variant.
+      dataset: {
+        overdue: isOverdue(task.due_date) ? 1 : 0,
+        range: task.start_date ? 1 : 0,
+      },
     });
 
   const labelPill = (labelId, taskId) => {
@@ -902,61 +913,15 @@ const make = function (ui) {
       ],
     });
 
+    // Due-date section is a stable sub-part so the Duration toggle can re-feed
+    // just this block (swap single <-> range picker + flip the switch) without
+    // a full-panel _render() that flickers and steals focus. Content lives in
+    // buildDueSectionContent so the controller can re-feed it via ensurePart.
     const dueRow = Skeletons.Box.Y({
       className: `${pfx}__detail-row`,
-      kids: [
-        // Label row: "Due date" left, "Duration" + toggle right (toggle is
-        // visual-only for now — no duration/end-date backend yet).
-        Skeletons.Box.X({
-          className: `${pfx}__due-head`,
-          kids: [
-            Skeletons.Note({
-              className: `${pfx}__detail-label`,
-              content: LOCALE.DUE_DATE,
-            }),
-            Skeletons.Box.X({
-              className: `${pfx}__due-duration`,
-              kids: [
-                Skeletons.Note({
-                  className: `${pfx}__due-duration-label`,
-                  content: LOCALE.DURATION,
-                }),
-                Skeletons.Box.X({
-                  className: `${pfx}__toggle`,
-                  attrOpt: { "data-on": "0" },
-                  kids: [
-                    Skeletons.Box.X({ className: `${pfx}__toggle-knob` }),
-                  ],
-                }),
-              ],
-            }),
-          ],
-        }),
-        {
-          kind: "date_picker",
-          className: `${pfx}__detail-due-input`,
-          innerClass: `${pfx}__detail-due-input-inner`,
-          name: "due_date",
-          value: dDraft.due_date || "",
-          service: "task-input-changed",
-          uiHandler: [ui],
-          // appendTo: body escapes the panel's overflow clip; onReady tags
-          // the calendar so it can be themed without bleeding into other
-          // date_picker usages.
-          vendorOpt: {
-            dateFormat: "Y-m-d",
-            minDate: "today",
-            appendTo: document.body,
-            onReady: (_d, _s, instance) => {
-              if (instance && instance.calendarContainer) {
-                instance.calendarContainer.classList.add(
-                  "tasks-panel__flatpickr",
-                );
-              }
-            },
-          },
-        },
-      ],
+      sys_pn: "due-section",
+      partHandler: ui,
+      kids: buildDueSectionContent(ui),
     });
 
     const attachmentRow = (f) => attachmentRowDescriptor(ui, f, detail.id);
@@ -1401,26 +1366,6 @@ const make = function (ui) {
 
     const descControl = descEditor("create");
 
-    const dueControl = {
-      kind: "date_picker",
-      className: `${pfx}__create-input`,
-      innerClass: `${pfx}__create-input-inner`,
-      name: "due_date",
-      value: draft?.due_date || "",
-      service: "task-input-changed",
-      uiHandler: [ui],
-      vendorOpt: {
-        dateFormat: "Y-m-d",
-        minDate: "today",
-        appendTo: document.body,
-        onReady: (_d, _s, instance) => {
-          if (instance && instance.calendarContainer) {
-            instance.calendarContainer.classList.add("tasks-panel__flatpickr");
-          }
-        },
-      },
-    };
-
     const assigneeField = Skeletons.Box.Y({
       className: `${pfx}__create-field`,
       kids: [
@@ -1485,38 +1430,13 @@ const make = function (ui) {
                   priorityPills(selectedPriority, "create-priority"),
                 ),
                 assigneeField,
+                // Due-date section: same Duration UI as the detail panel. A
+                // stable sub-part so the toggle re-feeds only this block.
                 Skeletons.Box.Y({
                   className: `${pfx}__create-field`,
-                  kids: [
-                    Skeletons.Box.X({
-                      className: `${pfx}__due-head`,
-                      kids: [
-                        Skeletons.Note({
-                          className: `${pfx}__create-label`,
-                          content: LOCALE.DUE_DATE,
-                        }),
-                        Skeletons.Box.X({
-                          className: `${pfx}__due-duration`,
-                          kids: [
-                            Skeletons.Note({
-                              className: `${pfx}__due-duration-label`,
-                              content: LOCALE.DURATION,
-                            }),
-                            Skeletons.Box.X({
-                              className: `${pfx}__toggle`,
-                              attrOpt: { "data-on": "0" },
-                              kids: [
-                                Skeletons.Box.X({
-                                  className: `${pfx}__toggle-knob`,
-                                }),
-                              ],
-                            }),
-                          ],
-                        }),
-                      ],
-                    }),
-                    dueControl,
-                  ],
+                  sys_pn: "create-due-section",
+                  partHandler: ui,
+                  kids: buildDueSectionContent(ui, "create"),
                 }),
                 // Primary action lives at the foot of the right column (Figma).
                 Skeletons.Box.X({
@@ -2285,6 +2205,151 @@ function attachmentRowDescriptor(ui, f, taskId) {
   return fileCard(ui, f, { committed: true, taskId });
 }
 
+// Whole days a start..end span covers, inclusive (same day = 1); 0 if either
+// endpoint is missing/invalid.
+function dueDurationDays(startIso, endIso) {
+  if (!startIso || !endIso) return 0;
+  const s = new Date(startIso);
+  const e = new Date(endIso);
+  if (isNaN(s.getTime()) || isNaN(e.getTime())) return 0;
+  return Math.round((e - s) / 86400000) + 1;
+}
+
+// "N day(s)" readout for a range; "" when the range is incomplete.
+function dueSummaryText(startIso, endIso) {
+  if (!startIso || !endIso) return "";
+  const n = dueDurationDays(startIso, endIso);
+  return `${n} ${n === 1 ? LOCALE.DURATION_DAY : LOCALE.DURATION_DAYS}`;
+}
+
+// Kids for a Due-date section (shared by the detail panel and the create
+// modal — pass scope "detail" | "create"): the label row ("Due date" +
+// "Duration" toggle), the picker, and (range mode) a live duration readout.
+// Duration OFF → one date picker (due_date). ON → one range picker showing
+// "start → end" in a single field (per Figma), storing ISO (Y-m-d) while
+// displaying d/m/Y via altInput. New-user guidance: the range calendar shows a
+// step hint ("Select start date" → "Select end date"), and a live "N days"
+// readout beside the Duration label confirms the span. Kept standalone so the
+// Duration toggle can re-feed just this sub-part in place.
+function buildDueSectionContent(ui, scope = "detail") {
+  const pfx = ui.fig.family;
+  const isCreate = scope === "create";
+  const draft = (isCreate ? ui.getCreateDraft() : ui.getDetailDraft()) || {};
+  // Disable picking days in the past (both create and detail); flatpickr still
+  // shows an existing past due date, it just can't be (re)selected earlier.
+  const minDate = "today";
+
+  // Tag the calendar for theming; when `withHint`, also inject a step hint that
+  // guides the two-click range pick. The hint updates via a pushed onChange
+  // hook (pushed, not assigned, so the widget's own publish still fires).
+  const onReady = (withHint) => (_d, _s, instance) => {
+    const cc = instance && instance.calendarContainer;
+    if (!cc) return;
+    cc.classList.add("tasks-panel__flatpickr");
+    if (!withHint) return;
+    let hint = cc.querySelector(".tasks-panel__dp-hint");
+    if (!hint) {
+      hint = document.createElement("div");
+      hint.className = "tasks-panel__dp-hint";
+      cc.prepend(hint);
+    }
+    const sync = () => {
+      const n = instance.selectedDates.length;
+      hint.textContent =
+        n === 1
+          ? LOCALE.SELECT_END_DATE
+          : n === 0
+            ? LOCALE.SELECT_START_DATE
+            : "";
+    };
+    sync();
+    if (Array.isArray(instance.config.onChange)) {
+      instance.config.onChange.push(sync);
+    }
+  };
+
+  const picker = draft.duration_on
+    ? {
+        kind: "date_picker",
+        className: `${pfx}__due-input ${pfx}__due-input--range`,
+        innerClass: `${pfx}__due-input-inner`,
+        name: "due_range",
+        ranges: true,
+        // Seed [start, end]; a lone due_date opens the range at that day.
+        value: [draft.start_date, draft.due_date].filter(Boolean),
+        service: "task-input-changed",
+        uiHandler: [ui],
+        vendorOpt: {
+          dateFormat: "Y-m-d",
+          altInput: true,
+          altFormat: "d/m/Y",
+          rangeSeparator: "  →  ",
+          minDate,
+          appendTo: document.body,
+          onReady: onReady(true),
+        },
+      }
+    : {
+        kind: "date_picker",
+        className: `${pfx}__due-input`,
+        innerClass: `${pfx}__due-input-inner`,
+        name: "due_date",
+        value: draft.due_date || "",
+        service: "task-input-changed",
+        uiHandler: [ui],
+        // appendTo: body escapes the panel's overflow clip; onReady tags the
+        // calendar so it can be themed without bleeding into other pickers.
+        vendorOpt: {
+          dateFormat: "Y-m-d",
+          altInput: true,
+          altFormat: "d/m/Y",
+          minDate,
+          appendTo: document.body,
+          onReady: onReady(false),
+        },
+      };
+
+  return [
+    Skeletons.Box.X({
+      className: `${pfx}__due-head`,
+      kids: [
+        Skeletons.Note({
+          className: `${pfx}__${scope}-label`,
+          content: LOCALE.DUE_DATE,
+        }),
+        Skeletons.Box.X({
+          className: `${pfx}__due-duration`,
+          kids: [
+            Skeletons.Note({
+              className: `${pfx}__due-duration-label`,
+              content: LOCALE.DURATION,
+            }),
+            // Live duration readout sits beside the label (range mode only);
+            // the controller refreshes it on each pick.
+            ...(draft.duration_on
+              ? [
+                  Skeletons.Note({
+                    className: `${pfx}__due-summary`,
+                    content: dueSummaryText(draft.start_date, draft.due_date),
+                  }),
+                ]
+              : []),
+            Skeletons.Box.X({
+              className: `${pfx}__toggle`,
+              attrOpt: { "data-on": draft.duration_on ? "1" : "0" },
+              bubble: 0,
+              service: "toggle-duration",
+              uiHandler: [ui],
+              kids: [Skeletons.Box.X({ className: `${pfx}__toggle-knob` })],
+            }),
+          ],
+        }),
+      ],
+    }),
+    picker,
+  ];
+}
+
 function buildAttachmentRowsContent(ui, attachments, taskId) {
   const pfx = ui.fig.family;
   if (!attachments || !attachments.length) {
@@ -2304,4 +2369,6 @@ make.buildMentionItemsContent = buildMentionItemsContent;
 make.buildCommentListContent = buildCommentListContent;
 make.buildPendingListContent = buildPendingListContent;
 make.buildAttachmentRowsContent = buildAttachmentRowsContent;
+make.buildDueSectionContent = buildDueSectionContent;
+make.dueSummaryText = dueSummaryText;
 module.exports = make;
