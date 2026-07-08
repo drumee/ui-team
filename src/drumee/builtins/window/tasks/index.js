@@ -210,6 +210,7 @@ class __tasks_panel extends LetcBox {
 
   async onDomRefresh() {
     this._installDnd();
+    this._installBoardPan();
     this._installMediaDroppable();
     this._installFileSearchFocus();
     await Promise.all([
@@ -377,6 +378,78 @@ class __tasks_panel extends LetcBox {
       this._clearDropAffordance();
       if (!taskId || !targetStatus) return;
       this._moveTaskTo(taskId, targetStatus, afterEl);
+    });
+  }
+
+  // Click-and-drag ("grab to pan") horizontal scrolling for the board's __main.
+  // Native overflow-x only gives a scrollbar + wheel; press-and-drag panning is
+  // not a browser behavior, so we drive scrollLeft ourselves. Delegated on
+  // this.el (root) so it survives every _render()'s feed() rebuild of __main.
+  //
+  // Panning only starts on EMPTY board area: a press on a task card must still
+  // begin the native card drag-and-drop (_installDnd), and presses on the
+  // add-task box / inputs / editors keep their normal behavior. Mouse events
+  // only (not pointer) so touch keeps its native momentum panning on mobile.
+  _installBoardPan() {
+    if (!this.el || this._boardPanInstalled) return;
+    this._boardPanInstalled = true;
+    const root = this.el;
+
+    let main = null; // the __main element currently being panned
+    let startX = 0; // pointer pageX at grab
+    let startScroll = 0; // scrollLeft at grab
+    let moved = false; // crossed the drag threshold → treat as a pan
+
+    const onMove = (e) => {
+      if (!main) return;
+      const dx = e.pageX - startX;
+      // Small tolerance so a plain click isn't read as a (zero-length) pan.
+      if (!moved && Math.abs(dx) < 3) return;
+      moved = true;
+      main.scrollLeft = startScroll - dx;
+      e.preventDefault(); // suppress text selection while dragging
+    };
+
+    const end = () => {
+      if (!main) return;
+      main.classList.remove("is-panning");
+      document.removeEventListener("mousemove", onMove, true);
+      document.removeEventListener("mouseup", end, true);
+      // A real pan is followed by a click — swallow it once so releasing over a
+      // card doesn't also open its detail. A plain click (no pan) is untouched.
+      if (moved) {
+        const swallow = (ev) => {
+          ev.stopPropagation();
+          ev.preventDefault();
+        };
+        root.addEventListener("click", swallow, { capture: true, once: true });
+        setTimeout(() => root.removeEventListener("click", swallow, true), 0);
+      }
+      main = null;
+      moved = false;
+    };
+
+    root.addEventListener("mousedown", (e) => {
+      if (e.button !== 0) return; // left button only
+      const board =
+        e.target.closest && e.target.closest(".tasks-panel__main");
+      if (!board || !root.contains(board)) return;
+      // Let card DnD and interactive controls keep the press.
+      if (
+        e.target.closest(
+          ".tasks-panel__task-card, button, input, textarea, a, [contenteditable]",
+        )
+      )
+        return;
+      // Nothing to pan when the board isn't overflowing.
+      if (board.scrollWidth <= board.clientWidth) return;
+      main = board;
+      startX = e.pageX;
+      startScroll = board.scrollLeft;
+      moved = false;
+      board.classList.add("is-panning");
+      document.addEventListener("mousemove", onMove, true);
+      document.addEventListener("mouseup", end, true);
     });
   }
 

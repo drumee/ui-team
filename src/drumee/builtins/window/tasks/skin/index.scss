@@ -102,6 +102,15 @@
     box-sizing: border-box;
     overflow-x: auto;
     background-color: var(--normal-bg-elevated, #fff);
+    // Grab-to-pan affordance: empty board area shows the open hand; cards keep
+    // their own pointer/grabbing cursor (more specific selector). The panning
+    // state is toggled from JS (_installBoardPan) for the duration of a drag.
+    cursor: grab;
+
+    &.is-panning {
+      cursor: grabbing;
+      user-select: none;
+    }
   }
 
   // ── Columns ───────────────────────────────────────────────────
