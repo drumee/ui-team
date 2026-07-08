@@ -43,11 +43,11 @@ export function breadcrumbs(ui, opt) {
 export function tabBar(ui, opt = {}) {
   const cnRoot = "window-body__tab-bar";
   const isFolder = ui.fig.family === "window-folder";
-  // The folder window and the DMZ share grid use the same emoji tab icons
-  // (📄 / 💬 / 📋) — see the reference design. Other non-folder windows keep
-  // their monochrome SVG glyphs.
+  // The folder window and the DMZ share grid use the same SVG tab glyphs
+  // (Files / Chat / Tasks) — see the reference design. Other non-folder
+  // windows keep their own monochrome SVG glyphs (the non-emoji branch below).
   const useEmojiTabs = isFolder || ui.fig.family === "dmz-sharebox";
-  const folderTab = ({ icon, label, service, state, tab }) =>
+  const folderTab = ({ ico, label, service, state, tab }) =>
     Skeletons.Box.X({
       className: `${cnRoot}-item ${ui.fig.family}__tab-bar-item`,
       service,
@@ -55,9 +55,11 @@ export function tabBar(ui, opt = {}) {
       dataset: { tab },
       uiHandler: [ui],
       kids: [
-        Skeletons.Note({
+        // SVG glyph. `__tab-bar-icon` is pointer-events:none in the skin, so a
+        // click on the icon still bubbles to the tab Box.X's own `service`.
+        Skeletons.Button.Svg({
           className: `${ui.fig.family}__tab-bar-icon`,
-          content: icon,
+          ico,
         }),
         Skeletons.Note({
           className: `${ui.fig.family}__tab-bar-label`,
@@ -67,7 +69,7 @@ export function tabBar(ui, opt = {}) {
     });
 
   let chat_tab = folderTab({
-    icon: "💬",
+    ico: "meet-chat-dots",
     label: LOCALE.CHAT,
     service: "tab-chat",
     state: 0,
@@ -96,7 +98,7 @@ export function tabBar(ui, opt = {}) {
   const kids = useEmojiTabs
     ? [
         folderTab({
-          icon: "📄",
+          ico: "app-file",
           label: LOCALE.FILES,
           service: "tab-files",
           state: 1,
@@ -104,7 +106,7 @@ export function tabBar(ui, opt = {}) {
         }),
         chat_tab,
         folderTab({
-          icon: "📋",
+          ico: "app-task",
           label: LOCALE.TASK || "Tasks",
           service: "tab-task",
           state: 0,
