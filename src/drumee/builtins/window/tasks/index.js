@@ -735,16 +735,15 @@ class __tasks_panel extends LetcBox {
         return;
 
       case "toggle-duration": {
-        // Duration switch (derive-from-start_date model). ON reveals a
-        // start-date picker seeded from the due date; OFF clears start_date.
-        // Shared by the create modal and detail panel (mutually exclusive) —
-        // pick whichever draft is open.
+        // Duration switch (derive-from-start_date model). ON reveals the range
+        // picker seeded from the due date; OFF clears start_date. Shared by the
+        // create modal and detail panel (mutually exclusive) — pick the open one.
         const inCreate = this.el.querySelector(".tasks-panel__create-modal");
-        const draft =
-          this._creating && inCreate ? this._createDefaults : this._detailDraft;
+        const isCreate = !!(this._creating && inCreate);
+        const draft = isCreate ? this._createDefaults : this._detailDraft;
         if (!draft) return;
-        // Persist any in-flight date edits before the re-render rebuilds inputs.
-        if (draft === this._createDefaults) this._captureCreateDraft();
+        // Persist any in-flight date edits before the DOM is rebuilt.
+        if (isCreate) this._captureCreateDraft();
         else this._captureDetailDraft();
         draft.duration_on = !draft.duration_on;
         if (draft.duration_on) {
@@ -752,7 +751,10 @@ class __tasks_panel extends LetcBox {
         } else {
           draft.start_date = "";
         }
-        return this._render();
+        // Re-feed ONLY the due-date sub-part (create modal or detail panel) —
+        // a full _render() would flicker the whole panel, rebuild every picker,
+        // and steal focus.
+        return this._refreshDueSection(isCreate ? "create" : "detail");
       }
 
       case "commit-detail":
@@ -1427,13 +1429,43 @@ class __tasks_panel extends LetcBox {
     if (!name || !scopeEl) return;
 
     // Range picker (Duration ON): the widget carries both endpoints as Date
-    // objects. Store them as ISO start_date/due_date on the detail draft.
+    // objects. Store them as ISO start_date/due_date on whichever draft owns
+    // the field (create modal or detail panel).
     if (name === "due_range") {
-      if (!this._detailDraft || !trigger || !trigger.mget) return;
+      if (!trigger || !trigger.mget) return;
+      const inCreate = this.el.querySelector(".tasks-panel__create-modal");
+      const inDetail = this.el.querySelector(".tasks-panel__detail-panel");
+      let draft = null;
+      if (this._creating && inCreate && scopeEl && inCreate.contains(scopeEl)) {
+        draft = this._createDefaults;
+      } else if (
+        this._detailDraft &&
+        inDetail &&
+        scopeEl &&
+        inDetail.contains(scopeEl)
+      ) {
+        draft = this._detailDraft;
+      }
+      if (!draft) return;
       const start = this._isoDate(trigger.mget("startDate"));
       const end = this._isoDate(trigger.mget("endDate"));
-      this._detailDraft.start_date = start;
-      this._detailDraft.due_date = end || start;
+      draft.start_date = start;
+      draft.due_date = end || start;
+      // Live-refresh the duration readout without a re-feed that would close /
+      // rebuild the calendar mid-interaction.
+      const summary = require("./skeleton").dueSummaryText(
+        draft.start_date,
+        draft.due_date,
+      );
+      const scopeSel =
+        draft === this._createDefaults
+          ? ".tasks-panel__create-modal"
+          : ".tasks-panel__detail-panel";
+      const root = this.el.querySelector(scopeSel);
+      if (root) {
+        const sumEl = root.querySelector(".tasks-panel__due-summary");
+        if (sumEl) sumEl.textContent = summary;
+      }
       return;
     }
 
@@ -2459,6 +2491,23 @@ class __tasks_panel extends LetcBox {
       btn.dataset.loading = "0";
       if (btn.dataset.label) btn.textContent = btn.dataset.label;
     }
+  }
+
+  // Re-feeds just the Due-date sub-part (Duration toggle) of the detail panel
+  // or the create modal, so switching single <-> range picker doesn't trigger
+  // a full-panel _render() that flickers, rebuilds every picker, steals focus.
+  _refreshDueSection(scope = "detail") {
+    const isCreate = scope === "create";
+    if (isCreate ? !this._creating : !this._detailId) return;
+    const partName = isCreate ? "create-due-section" : "due-section";
+    this.ensurePart(partName)
+      .then((part) => {
+        if (!part || part.isDestroyed?.()) return;
+        part.feed(require("./skeleton").buildDueSectionContent(this, scope));
+      })
+      .catch(() => {
+        /* part not mounted yet */
+      });
   }
 
   // Re-feeds just the attachment-rows part of the detail panel.

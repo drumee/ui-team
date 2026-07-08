@@ -1475,15 +1475,13 @@
   // Due-date field (Figma): a single grey box with the date(s) left-aligned and
   // a calendar glyph pinned right. Duration OFF shows one date; ON shows the
   // range "dd/mm/yyyy  →  dd/mm/yyyy" in the same box (flatpickr range mode).
-  &__detail-due-input {
+  &__due-input {
     flex: 1 1 auto;
     position: relative;
     box-sizing: border-box;
     display: flex;
     align-items: center;
-    padding: 12px 36px 12px 12px; // right pad leaves room for the calendar icon
-    border-radius: 4px;
-    background: var(--overlay-bg-05, rgba(0, 0, 0, 0.05));
+    border-radius: 6px;
 
     &:focus-within {
       box-shadow: 0 0 0 2px rgba(67, 60, 197, 0.35);
@@ -1505,8 +1503,10 @@
 
     input {
       width: 100%;
-      padding: 0;
+      // Right pad reserves room for the calendar icon.
+      padding: 12px 36px 12px 12px;
       border: 0;
+      border-radius: 6px;
       outline: none;
       box-sizing: border-box;
       background: transparent;
@@ -1525,7 +1525,22 @@
       &[readonly] {
         cursor: pointer;
         caret-color: transparent;
+        background: var(--overlay-bg-05, rgba(0, 0, 0, 0.05));
       }
+    }
+  }
+
+  // Live duration readout ("N days"), shown beside the Duration label.
+  &__due-summary {
+    @include drumee.typo(
+      $size: 12px,
+      $weight: 500,
+      $line: 16px,
+      $color: var(--normal-fg-40, #84848c)
+    );
+
+    &:empty {
+      display: none;
     }
   }
 
@@ -4807,6 +4822,19 @@ html[data-theme="dark"] .tasks-panel {
         color: #433cc5;
       }
     }
+  }
+
+  // Step hint guiding the two-click range pick ("Select start/end date").
+  .tasks-panel__dp-hint {
+    padding: 10px 12px 0;
+    font-size: 12px;
+    font-weight: 600;
+    text-align: center;
+    color: var(--normal-fg-40, #84848c);
+  }
+
+  .tasks-panel__dp-hint:empty {
+    display: none;
   }
 }
 
