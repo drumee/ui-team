@@ -1551,20 +1551,31 @@ const make = function (ui) {
   const viewTabs = Skeletons.Box.X({
     className: `${pfx}__viewbar-tabs`,
     kids: [
-      ["board", LOCALE.TASK_VIEW_BOARD],
-      ["calendar", LOCALE.TASK_VIEW_CALENDAR],
-      ["gantt", LOCALE.TASK_VIEW_GANTT],
-      ["list", LOCALE.TASK_VIEW_LIST],
-      ["summary", LOCALE.TASK_VIEW_SUMMARY],
-    ].map(([key, label]) =>
-      Skeletons.Note({
+      ["board", LOCALE.TASK_VIEW_BOARD, "square-split-horizontal"],
+      ["calendar", LOCALE.TASK_VIEW_CALENDAR, "calendar"],
+      ["gantt", LOCALE.TASK_VIEW_GANTT, "app-task-grant"],
+      ["list", LOCALE.TASK_VIEW_LIST, "app-task-list"],
+      ["summary", LOCALE.TASK_VIEW_SUMMARY, "app-task-project-health"],
+    ].map(([key, label, ico]) =>
+      Skeletons.Box.X({
         className: `${pfx}__viewbar-item`,
-        content: label,
         attrOpt: { "data-active": view === key ? "1" : "0" },
         bubble: 0,
         service: "set-view",
         uiHandler: [ui],
         viewMode: key,
+        kids: [
+          // SVG glyph. `__viewbar-item-ico` is pointer-events:none in the skin,
+          // so a click on the icon still bubbles to this tab's set-view service.
+          Skeletons.Button.Svg({
+            className: `${pfx}__viewbar-item-ico`,
+            ico,
+          }),
+          Skeletons.Note({
+            className: `${pfx}__viewbar-item-label`,
+            content: label,
+          }),
+        ],
       }),
     ),
   });

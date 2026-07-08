@@ -2536,6 +2536,9 @@
   }
 
   &__viewbar-item {
+    // Icon + label row (was a bare text Note).
+    align-items: center;
+    gap: 6px;
     padding: 5px 12px;
     border-radius: 6px;
     cursor: pointer;
@@ -2554,6 +2557,28 @@
       color: var(--accent, #fa8540);
       background: var(--active-item-bg, rgba(250, 133, 64, 0.12));
     }
+  }
+
+  // SVG glyph in front of each view tab's label. pointer-events:none so the
+  // click lands on the __viewbar-item's set-view service; fill:currentColor so
+  // it inherits the tab's text/active color.
+  &__viewbar-item-ico {
+    width: 16px;
+    height: 16px;
+    flex: 0 0 16px;
+    color: currentColor;
+    pointer-events: none;
+
+    svg {
+      width: 16px;
+      height: 16px;
+      display: block;
+      fill: currentColor;
+    }
+  }
+
+  &__viewbar-item-label {
+    pointer-events: none;
   }
 
   &__viewbar-tabs {
