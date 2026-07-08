@@ -905,8 +905,8 @@ const make = function (ui) {
     const dueRow = Skeletons.Box.Y({
       className: `${pfx}__detail-row`,
       kids: [
-        // Label row: "Due date" left, "Duration" + toggle right (toggle is
-        // visual-only for now — no duration/end-date backend yet).
+        // Label row: "Due date" left, "Duration" + toggle right. Toggle ON
+        // reveals a start-date picker (task spans start_date .. due_date).
         Skeletons.Box.X({
           className: `${pfx}__due-head`,
           kids: [
@@ -923,7 +923,10 @@ const make = function (ui) {
                 }),
                 Skeletons.Box.X({
                   className: `${pfx}__toggle`,
-                  attrOpt: { "data-on": "0" },
+                  attrOpt: { "data-on": dDraft.duration_on ? "1" : "0" },
+                  bubble: 0,
+                  service: "toggle-duration",
+                  uiHandler: [ui],
                   kids: [
                     Skeletons.Box.X({ className: `${pfx}__toggle-knob` }),
                   ],
@@ -932,30 +935,60 @@ const make = function (ui) {
             }),
           ],
         }),
-        {
-          kind: "date_picker",
-          className: `${pfx}__detail-due-input`,
-          innerClass: `${pfx}__detail-due-input-inner`,
-          name: "due_date",
-          value: dDraft.due_date || "",
-          service: "task-input-changed",
-          uiHandler: [ui],
-          // appendTo: body escapes the panel's overflow clip; onReady tags
-          // the calendar so it can be themed without bleeding into other
-          // date_picker usages.
-          vendorOpt: {
-            dateFormat: "Y-m-d",
-            minDate: "today",
-            appendTo: document.body,
-            onReady: (_d, _s, instance) => {
-              if (instance && instance.calendarContainer) {
-                instance.calendarContainer.classList.add(
-                  "tasks-panel__flatpickr",
-                );
-              }
+        // Duration OFF → one date picker (due_date). ON → one range picker
+        // that shows "start → end" in a single field (per Figma). Both store
+        // ISO (Y-m-d) internally while displaying d/m/Y via flatpickr altInput.
+        dDraft.duration_on
+          ? {
+              kind: "date_picker",
+              className: `${pfx}__detail-due-input ${pfx}__detail-due-input--range`,
+              innerClass: `${pfx}__detail-due-input-inner`,
+              name: "due_range",
+              ranges: true,
+              // Seed [start, end]; a lone due_date opens the range at that day.
+              value: [dDraft.start_date, dDraft.due_date].filter(Boolean),
+              service: "task-input-changed",
+              uiHandler: [ui],
+              vendorOpt: {
+                dateFormat: "Y-m-d",
+                altInput: true,
+                altFormat: "d/m/Y",
+                rangeSeparator: "  →  ",
+                appendTo: document.body,
+                onReady: (_d, _s, instance) => {
+                  if (instance && instance.calendarContainer) {
+                    instance.calendarContainer.classList.add(
+                      "tasks-panel__flatpickr",
+                    );
+                  }
+                },
+              },
+            }
+          : {
+              kind: "date_picker",
+              className: `${pfx}__detail-due-input`,
+              innerClass: `${pfx}__detail-due-input-inner`,
+              name: "due_date",
+              value: dDraft.due_date || "",
+              service: "task-input-changed",
+              uiHandler: [ui],
+              // appendTo: body escapes the panel's overflow clip; onReady tags
+              // the calendar so it can be themed without bleeding into other
+              // date_picker usages.
+              vendorOpt: {
+                dateFormat: "Y-m-d",
+                altInput: true,
+                altFormat: "d/m/Y",
+                appendTo: document.body,
+                onReady: (_d, _s, instance) => {
+                  if (instance && instance.calendarContainer) {
+                    instance.calendarContainer.classList.add(
+                      "tasks-panel__flatpickr",
+                    );
+                  }
+                },
+              },
             },
-          },
-        },
       ],
     });
 
@@ -1421,6 +1454,28 @@ const make = function (ui) {
       },
     };
 
+    // Range start picker (Duration toggle ON). maxDate = due date keeps the
+    // range valid (start <= end) from the UI side.
+    const startControl = {
+      kind: "date_picker",
+      className: `${pfx}__create-input`,
+      innerClass: `${pfx}__create-input-inner`,
+      name: "start_date",
+      value: draft?.start_date || "",
+      service: "task-input-changed",
+      uiHandler: [ui],
+      vendorOpt: {
+        dateFormat: "Y-m-d",
+        maxDate: draft?.due_date || null,
+        appendTo: document.body,
+        onReady: (_d, _s, instance) => {
+          if (instance && instance.calendarContainer) {
+            instance.calendarContainer.classList.add("tasks-panel__flatpickr");
+          }
+        },
+      },
+    };
+
     const assigneeField = Skeletons.Box.Y({
       className: `${pfx}__create-field`,
       kids: [
@@ -1504,7 +1559,12 @@ const make = function (ui) {
                             }),
                             Skeletons.Box.X({
                               className: `${pfx}__toggle`,
-                              attrOpt: { "data-on": "0" },
+                              attrOpt: {
+                                "data-on": draft?.duration_on ? "1" : "0",
+                              },
+                              bubble: 0,
+                              service: "toggle-duration",
+                              uiHandler: [ui],
                               kids: [
                                 Skeletons.Box.X({
                                   className: `${pfx}__toggle-knob`,
@@ -1515,6 +1575,15 @@ const make = function (ui) {
                         }),
                       ],
                     }),
+                    ...(draft?.duration_on
+                      ? [
+                          Skeletons.Note({
+                            className: `${pfx}__create-label`,
+                            content: LOCALE.START_DATE,
+                          }),
+                          startControl,
+                        ]
+                      : []),
                     dueControl,
                   ],
                 }),

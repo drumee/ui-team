@@ -1426,6 +1426,7 @@
   "ADD_TASK": "+ Add",
   "TASK_TITLE": "Task title",
   "DUE_DATE": "Due date",
+  "START_DATE": "Start date",
   "ATTACHMENTS": "Attachments",
   "ATTACH_FILE": "Attach file",
   "DROP_FILES_TO_ATTACH": "Drop files to attach",
