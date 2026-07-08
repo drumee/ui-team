@@ -127,6 +127,33 @@ class __window_downloader extends mfsInteract {
     this.goodbye();
   }
 
+  /**
+   * Retrieve a prepared archive over the blob path (< MAX_BLOB_SIZE). Overrides
+   * ui-core's download_zip, which built the media.zip URL with `name=` — but the
+   * server does input.need('zipname') (→ 412 without it) — and sent no
+   * secure-share token (→ 403 for a signed-in non-member recipient). Mirror
+   * media/core.js: send `zipname` + the token + the CONTENT hub (this.mget
+   * (hub_id) was set to the share's content hub in onDomRefresh). Without this,
+   * "Single file .zip" of a shared folder failed even after the folder was
+   * successfully staged server-side.
+   */
+  download_zip(o = {}) {
+    let nid = o.nid || this.mget(_a.nid) || Visitor.get(_a.home_id);
+    let hub_id = o.hub_id || this.mget(_a.hub_id) || Visitor.get(_a.id);
+    let zip_id = o.zipid || this._zipid;
+    let { svc, keysel } = bootstrap();
+    let zipname =
+      o.zipname || this.mget('zipname') || this.mget(_a.filename) ||
+      Dayjs().format("[drumee]-YYYY-MM-DD");
+    const _sst = this._token ? `&token=${encodeURIComponent(this._token)}` : '';
+    let url = `${svc}media.zip?hub_id=${hub_id}&nid=${nid}&id=${zip_id}&keysel=${keysel}&zipname=${encodeURIComponent(zipname)}${_sst}`;
+    return this.fetchFile({
+      url,
+      progress: o.progress,
+      download: `${zipname}.zip`,
+    });
+  }
+
 
   /**
    * 
