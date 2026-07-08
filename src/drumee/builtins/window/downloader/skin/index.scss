@@ -81,7 +81,12 @@
     .button {
       border-radius:var(--border-radius);
       @include drumee.typo($size: 16px, $line: 19px, $color: var(--btn-commit-text));//$size: 15px,
-      background-color:var(--btn-commit-background);// var(--egreen-soft);
+      // Was var(--btn-commit-background), which resolves to the invalid token
+      // "-primary-500" (see skin/vars/default.scss) → transparent background +
+      // white text = the two action buttons ("Single file .zip" / "Multiple
+      // files") were invisible until hover. Use the valid brand commit color
+      // (--btn-commit) for the resting state; the darker hover is unchanged.
+      background-color:var(--btn-commit);// var(--egreen-soft);
       cursor: pointer;
       justify-content: center;
       padding : 10px;

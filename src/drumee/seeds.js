@@ -543,6 +543,14 @@ module.exports = {
   window_upload_progress: function () {
     return import("./builtins/window/upload-progress");
   },
+  // The progress bar widget lives in ui-core but was never registered as a kind,
+  // so skeletons that use `kind: 'progress_bar'` (the downloader's download
+  // progress, account-data export, server-explorer) rendered the failover
+  // placeholder ("Snippet **progress_bar** was not found") instead of a bar.
+  // Register it so those show a real progress bar.
+  progress_bar: function () {
+    return import("@drumee/ui-core/letc/widgets/progress/bar");
+  },
   window_wallpaper_settings: function () {
     return import("./builtins/window/wallpaper-settings");
   },

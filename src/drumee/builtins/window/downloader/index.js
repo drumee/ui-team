@@ -62,7 +62,14 @@ class __window_downloader extends mfsInteract {
       socket_id: Visitor.get(_a.socket_id),
     };
     if (this.mget(_a.token)) {
-      this._api.hub_id = Host.id
+      // Use the share's CONTENT hub, not the connect host's hub. On a neutral
+      // share host (share.<domain>) Host.id is the share-host hub, NOT where the
+      // files live, so zip_size/media.zip would run against the wrong hub →
+      // size:null + 403 PERMISSION_DENIED (works on desk only because an
+      // authenticated session already resolves to its real hub). The sharebox
+      // pins the content hub as Visitor.share_hub_id; the per-node list also
+      // carries it (hub_id). Fall back to Host.id for legacy per-vhost links.
+      this._api.hub_id = Visitor.get('share_hub_id') || hub_id || Host.id;
       this._api.token = this.mget(_a.token);
     }
     this.mset({
@@ -106,10 +113,45 @@ class __window_downloader extends mfsInteract {
     let hub_id = opt.hub_id || this.mget(_a.hub_id) || Visitor.get(_a.id);
     let zip_id = opt.zipid || this._zipid;
     let { svc, keysel } = bootstrap();
-    let url = `${svc}media.zip?hub_id=${hub_id}&nid=${nid}&id=${zip_id}&keysel=${keysel}&zipname=${data.zipname}`;
+    // Two fixes here: (1) `data.zipname` was an undefined ReferenceError (should
+    // be opt.zipname) — this branch (large "Single file .zip" downloads) threw
+    // before ever starting; (2) carry the secure-share token so DMZ-share
+    // recipients pass the server download guard (mirrors media/core.js). Encode
+    // the name (archives carry spaces/colons).
+    const _sst = this._token ? `&token=${encodeURIComponent(this._token)}` : '';
+    let url = `${svc}media.zip?hub_id=${hub_id}&nid=${nid}&id=${zip_id}&keysel=${keysel}&zipname=${encodeURIComponent(opt.zipname || '')}${_sst}`;
     super.getFromUrl(url);
-    Wm.alert(LOCALE.DOWNLOAD_LONG_TIME.format(opt.zipname, filesize(this._zipsize)));
+    // Native browser download (no in-app byte progress) → simulated size-scaled
+    // progress bar instead of the plain alert. Download itself is unchanged.
+    Wm.downloadNotice(opt.zipname, this._zipsize);
     this.goodbye();
+  }
+
+  /**
+   * Retrieve a prepared archive over the blob path (< MAX_BLOB_SIZE). Overrides
+   * ui-core's download_zip, which built the media.zip URL with `name=` — but the
+   * server does input.need('zipname') (→ 412 without it) — and sent no
+   * secure-share token (→ 403 for a signed-in non-member recipient). Mirror
+   * media/core.js: send `zipname` + the token + the CONTENT hub (this.mget
+   * (hub_id) was set to the share's content hub in onDomRefresh). Without this,
+   * "Single file .zip" of a shared folder failed even after the folder was
+   * successfully staged server-side.
+   */
+  download_zip(o = {}) {
+    let nid = o.nid || this.mget(_a.nid) || Visitor.get(_a.home_id);
+    let hub_id = o.hub_id || this.mget(_a.hub_id) || Visitor.get(_a.id);
+    let zip_id = o.zipid || this._zipid;
+    let { svc, keysel } = bootstrap();
+    let zipname =
+      o.zipname || this.mget('zipname') || this.mget(_a.filename) ||
+      Dayjs().format("[drumee]-YYYY-MM-DD");
+    const _sst = this._token ? `&token=${encodeURIComponent(this._token)}` : '';
+    let url = `${svc}media.zip?hub_id=${hub_id}&nid=${nid}&id=${zip_id}&keysel=${keysel}&zipname=${encodeURIComponent(zipname)}${_sst}`;
+    return this.fetchFile({
+      url,
+      progress: o.progress,
+      download: `${zipname}.zip`,
+    });
   }
 
 
@@ -140,15 +182,30 @@ class __window_downloader extends mfsInteract {
   /**
    * 
    */
+  // The progress bar (kind 'progress_bar', a ui-core widget) is not registered
+  // in every context — e.g. the DMZ share bundle — so ensurePart('progress')
+  // can resolve to a failover view that lacks update/setLabel/restart. Guard
+  // every call so a missing progress widget never crashes the download; the
+  // size-scaled Wm.downloadNotice still gives the user feedback for the (native)
+  // transfer. Returns the widget only when it's the real, functional one.
+  _progress(method, ...args) {
+    const p = this.__progress;
+    if (p && typeof p[method] === "function") return p[method](...args);
+  }
+
+  _hasProgress() {
+    return this.__progress && typeof this.__progress.update === "function";
+  }
+
   downloadZip(data) {
     if (this._isDownloading) return;
     if (this._zipsize > MAX_BLOB_SIZE) {
       this.getFromUrl(data);
       return;
     }
-    this.__progress.setLabel(data.zipname);
+    this._progress('setLabel', data.zipname);
     this.once(_e.eod, () => {
-      this.__progress.setLabel(LOCALE.YOUR_DATA.printf(LOCALE.HAS_BEEN_SAVED));
+      this._progress('setLabel', LOCALE.YOUR_DATA.printf(LOCALE.HAS_BEEN_SAVED));
       this.__btnCancel.suppress();
       this.__btnStatus.set({ content: LOCALE.ACK_REQ_OK });
       this.__btnAction.mset({ service: _e.close });
@@ -157,16 +214,16 @@ class __window_downloader extends mfsInteract {
       this.postService({ service: SERVICE.media.zip_release, id: data.zipid, token: this._token });
     });
     this._isDownloading = 1;
-    this.__progress.restart(this._filesize);
-    this.download_zip({ ...data, progress: this.__progress })
+    this._progress('restart', this._filesize);
+    this.download_zip({ ...data, progress: this._hasProgress() ? this.__progress : undefined })
       .then()
       .catch((e) => {
         this.warn("GOT ERRO WHILE DOWNLOADING", e);
         // this.postService({service: SERVICE.media.zip_release, id:data.zipid});
         if (/aborted/.test(e)) {
-          this.__progress.setLabel(LOCALE.CANCELED);
+          this._progress('setLabel', LOCALE.CANCELED);
         } else {
-          this.__progress.setLabel(e);
+          this._progress('setLabel', e);
         }
       });
 
@@ -249,11 +306,11 @@ class __window_downloader extends mfsInteract {
     }
     switch (phase) {
       case 'archive':
-        this.__progress.update(progress);
+        this._progress('update', progress);
         break;
       case 'exit':
         this.downloadZip(data);
-        this.__progress.setLabel(LOCALE.BACKUP_TIPS);
+        this._progress('setLabel', LOCALE.BACKUP_TIPS);
         break;
     }
   }

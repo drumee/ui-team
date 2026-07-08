@@ -16,13 +16,22 @@ const __window_downloader_progress = function(_ui_, size) {
           })
         ]})
     ]});
-  const progress = {  
+  // `size` is the wet-run zip_size response, which comes back null here (the
+  // byte total was already resolved in the downloader's onDomRefresh dry run →
+  // _ui_._zipsize). Guard it: the old `size.printf(LOCALE.BACKUP_TIPS)` threw
+  // "Cannot read properties of null (reading 'printf')" and — printf being a
+  // String method — would also throw on the numeric byte count, so the "Single
+  // file .zip" button crashed before the download started. BACKUP_TIPS is a
+  // static tip (no placeholder), so show it directly and size the bar from the
+  // known total.
+  const bytes = Number(size) || _ui_._zipsize || 0;
+  const progress = {
     kind : 'progress_bar',
     sys_pn : "progress",
     partHandler: _ui_,
     className: `${pfx}__progress`,
-    label: (size.printf(LOCALE.BACKUP_TIPS)),
-    total:filesize(size),
+    label: LOCALE.BACKUP_TIPS,
+    total:filesize(bytes),
     autoDestroy : _a.no,
     uiHandler:[_ui_],
   };
