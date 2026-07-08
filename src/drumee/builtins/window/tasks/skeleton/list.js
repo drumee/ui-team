@@ -272,6 +272,9 @@ module.exports = function (ui) {
 
   return Skeletons.Box.Y({
     className: `${pfx}__list`,
+    // Phone flag — the skin drops low-priority columns + tightens widths so the
+    // table fits without a horizontal scroll (see `[data-mobile="1"]` in skin).
+    attrOpt: { "data-mobile": Visitor.isMobile() ? "1" : "0" },
     kids: [
       header,
       Skeletons.Box.Y({

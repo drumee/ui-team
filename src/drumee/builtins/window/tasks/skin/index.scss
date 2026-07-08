@@ -65,20 +65,122 @@
   // The trigger button lives on the host window's tab bar; this dropdown is a
   // top-right overlay over the board, anchored under that button. Rows reuse
   // the shared __member-row / __member-name / __member-avatar styles.
+  // Access/member filter (Figma 2045-134011): 218px white card, 8px padding,
+  // rows of "avatar + name" with a right-side checkbox.
+  // Full-panel click-catcher so a click anywhere outside the dropdown closes
+  // it. Transparent; sits just under the dropdown's z-index.
+  &__filter-backdrop {
+    position: absolute;
+    inset: 0;
+    z-index: 29;
+    background: transparent;
+  }
+
   &__filter-picker {
     position: absolute;
     top: 12px;
     right: 12px;
     z-index: 30;
-    min-width: 220px;
-    max-height: 280px;
+    width: 218px;
+    padding: 8px;
+    gap: 4px;
+    max-height: 320px;
     overflow-y: auto;
     align-items: stretch;
-    border: 1px solid var(--border-default, #d6d6dc);
     border-radius: 8px;
     background: var(--normal-bg-elevated, #fff);
-    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.16);
-    animation: tasks-panel-pop-in 0.14s cubic-bezier(0.2, 0, 0, 1);
+    box-shadow: 0 1px 11px rgba(0, 0, 0, 0.13);
+    // No entrance animation: the panel re-renders on each pick, and replaying
+    // the pop-in on every selection read as a glitch.
+
+    // Figma row: 28px tall, name/avatar left, checkbox right, no active tint.
+    .tasks-panel__member-row {
+      justify-content: space-between;
+      gap: 8px;
+      padding: 6px 6px;
+      border-radius: 6px;
+
+      &[data-active="1"] {
+        background: transparent;
+      }
+      &:hover {
+        background: var(--hover-bg-40, rgba(0, 0, 0, 0.04));
+      }
+    }
+  }
+
+  // Small heading at the top of the filter popup.
+  &__filter-title {
+    padding: 2px 6px 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    @include drumee.typo(
+      $size: 11px,
+      $weight: 600,
+      $line: 16px,
+      $color: var(--normal-fg-40, #84848c)
+    );
+  }
+
+  // Hairline between "All members" and the member list.
+  &__filter-divider {
+    height: 1px;
+    margin: 2px 6px;
+    background: var(--border-default, rgba(0, 0, 0, 0.08));
+  }
+
+  // Left group inside a filter row: avatar + name.
+  &__filter-row-main {
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+
+    .tasks-panel__member-name {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      @include drumee.typo(
+        $size: 14px,
+        $weight: 400,
+        $line: 20px,
+        $color: var(--normal-fg-30, #65656c)
+      );
+    }
+  }
+
+  // Right-side checkbox — hollow grey outline by default, filled brand box with
+  // a white check when the row is active.
+  &__filter-check {
+    position: relative;
+    flex: 0 0 16px;
+    width: 16px;
+    height: 16px;
+    justify-content: center;
+    align-items: center;
+    box-sizing: border-box;
+    border: 1.5px solid var(--normal-fg-40, #84848c);
+    border-radius: 4px;
+    color: #fff;
+    transition: background 0.12s, border-color 0.12s;
+  }
+
+  // Centred text tick, hidden until the row is active.
+  &__filter-check-mark {
+    font-size: 11px;
+    font-weight: 700;
+    line-height: 1;
+    color: currentColor;
+    opacity: 0;
+    user-select: none;
+    transition: opacity 0.12s;
+  }
+
+  &__member-row[data-active="1"] &__filter-check {
+    background: var(--col-primary-50, #433cc5);
+    border-color: var(--col-primary-50, #433cc5);
+  }
+  &__member-row[data-active="1"] &__filter-check-mark {
+    opacity: 1;
   }
 
   &__main {
@@ -128,21 +230,28 @@
     padding: 10px;
     gap: 12px;
     border-radius: 8px;
-    background-color: rgba(0, 0, 0, 0.04);
+    // Per-board colour: the whole column takes the Figma "board color system"
+    // overlay tint (2040-106090), keyed on `data-theme` so BOTH built-in and
+    // custom columns are tinted (the old `data-column` rules never matched a
+    // custom column's id, so custom boards showed no colour).
+    background-color: rgba(0, 0, 0, 0.05);
     box-sizing: border-box;
     overflow: hidden;
 
-    &[data-column="todo"] {
-      background-color: rgba(174, 174, 178, 0.1);
-    }
-    &[data-column="in_progress"] {
-      background-color: rgba(89, 80, 255, 0.1);
-    }
-    &[data-column="to_review"] {
-      background-color: rgba(232, 161, 59, 0.15);
-    }
-    &[data-column="complete"] {
-      background-color: rgba(61, 222, 140, 0.15);
+    @each $theme, $tint in (
+      "default": rgba(0, 0, 0, 0.05),
+      "orange": rgba(232, 161, 59, 0.15),
+      "yellow": rgba(255, 225, 0, 0.15),
+      "green": rgba(61, 222, 140, 0.15),
+      "cyan": rgba(101, 208, 234, 0.16),
+      "blue": rgba(113, 163, 244, 0.1),
+      "purple": rgba(89, 80, 255, 0.1),
+      "pink": rgba(255, 168, 220, 0.15),
+      "red": rgba(255, 106, 101, 0.15)
+    ) {
+      &[data-theme="#{$theme}"] {
+        background-color: $tint;
+      }
     }
   }
 
@@ -923,6 +1032,9 @@
 
   &__board-submit {
     padding: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     text-align: center;
     border-radius: 12px;
     cursor: pointer;
@@ -1039,17 +1151,10 @@
     padding-right: 8px; // breathing room so the scrollbar clears the content
   }
 
-  @media (max-width: 650px) {
-    &__modal-body {
-      flex-direction: column;
-      overflow-y: auto;
-      gap: 16px;
-    }
-    &__modal-side {
-      flex: 1 1 auto;
-      width: 100%;
-    }
-  }
+  // Mobile refinements for the popups (plus Gantt & List) live in ONE
+  // consolidated `@media (max-width: 650px)` block at the very end of this
+  // root — placed last so it wins the source-order tie against the desktop
+  // rules below (media queries add no specificity of their own).
 
   // Title field value matches the Figma input text (16px regular).
   &__create-title-input textarea {
@@ -1071,7 +1176,9 @@
 
     .tasks-panel__desc-editor {
       height: 100%;
-      min-height: 160px;
+      // Jira-style tall description: the box takes the bulk of the modal's
+      // main column so the create form reads description-first.
+      min-height: 240px;
       max-height: none;
     }
   }
@@ -1250,6 +1357,11 @@
   }
 
   &__create-cancel {
+    flex: 1 1 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
     @include drumee.typo(
       $size: 14px,
       $weight: 600,
@@ -1257,7 +1369,9 @@
       $color: var(--normal-fg-50, #65656c)
     );
     padding: 8px 16px;
+    border: 1px solid var(--border-default, rgba(0, 0, 0, 0.12));
     border-radius: 4px;
+    box-sizing: border-box;
     cursor: pointer;
     user-select: none;
     transition:
@@ -1271,16 +1385,24 @@
   }
 
   &__create-submit {
-    flex: 1 1 auto;
+    flex: 1 1 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     text-align: center;
+    min-height: 38px;
     @include drumee.typo(
       $size: 14px,
       $weight: 600,
       $line: 20px,
       $color: #ffffff
     );
-    padding: 8px 24px;
+    padding: 8px 16px;
+    // Transparent border so the box model matches the outlined Cancel exactly
+    // (same height/width) and both read as a balanced pair.
+    border: 1px solid transparent;
     border-radius: 4px;
+    box-sizing: border-box;
     background: #433cc5;
     cursor: pointer;
     user-select: none;
@@ -2086,6 +2208,13 @@
     }
   }
 
+  // Detail-panel description: taller box (Jira issue-view ratio) filling its
+  // half of the description/files row, instead of the compact base height.
+  &__detail-top &__desc-editor {
+    min-height: 200px;
+    max-height: 340px;
+  }
+
   // The comment composer/edit/reply inputs are shorter than the description.
   &__comment-input,
   &__comment-edit-input,
@@ -2840,12 +2969,16 @@
     &[data-outside="1"] {
       background: var(--normal-bg-95, #fafafa);
     }
-    &[data-outside="1"] &__cal-day-num {
-      opacity: 0.4;
-    }
-    &:hover &__cal-day-add {
-      opacity: 1;
-    }
+  }
+
+  // Keep these at the `.tasks-panel` top level, NOT nested in `&__cal-day` —
+  // nested, `&__cal-day-add` doubles into `.tasks-panel__cal-day__cal-day-add`
+  // (a non-existent class), so the "+" never reveals and outside days never dim.
+  &__cal-day[data-outside="1"] &__cal-day-num {
+    opacity: 0.4;
+  }
+  &__cal-day:hover &__cal-day-add {
+    opacity: 1;
   }
 
   &__cal-day-head {
@@ -2855,22 +2988,30 @@
     gap: 8px;
   }
 
+  // Hover-revealed "add task on this day" affordance (top-left of the cell).
+  // Bare "+" glyph, no background — a brand-purple plus that darkens on hover.
   &__cal-day-add {
-    flex: 0 0 20px;
-    width: 20px;
-    height: 20px;
+    flex: 0 0 auto;
     justify-content: center;
     align-items: center;
-    border-radius: 24px;
     cursor: pointer;
     opacity: 0;
-    transition: opacity 0.12s;
-    background: var(--border-default, rgba(0, 0, 0, 0.05));
+    color: var(--col-primary-40, #5950ff);
+    transition: opacity 0.12s, transform 0.12s, color 0.12s;
 
-    svg {
-      width: 12px;
-      height: 12px;
+    &:hover {
+      transform: scale(1.15);
+      color: var(--col-primary-50, #433cc5);
     }
+  }
+
+  // "+" text glyph — inherits the button colour.
+  &__cal-day-add-ico {
+    font-size: 17px;
+    font-weight: 700;
+    line-height: 1;
+    color: currentColor;
+    user-select: none;
   }
 
   &__cal-day-num {
@@ -2907,6 +3048,7 @@
 
   // Task card (mirrors the board card: dot, title, desc, file chips, status).
   &__cal-card {
+    position: relative;
     flex: 0 0 auto;
     gap: 8px;
     padding: 12px;
@@ -2915,18 +3057,59 @@
     border-radius: 12px;
     background: var(--normal-bg-elevated, #fff);
     cursor: pointer;
+    transform-origin: center;
     transition: box-shadow 0.15s, transform 0.15s;
 
+    // Hover lifts the card + shadow (Figma emphasis) and reveals the delete.
+    // A scale() would widen the card past its day-cell column, making the card
+    // (and its top-right X) look like they spill outside — so lift only.
     &:hover {
-      transform: translateY(-1px);
+      transform: translateY(-2px);
       box-shadow:
-        0 4px 4px -1px rgba(12, 12, 13, 0.05),
-        0 4px 4px -1px rgba(12, 12, 13, 0.1);
+        0 6px 16px -2px rgba(12, 12, 13, 0.12),
+        0 2px 6px -1px rgba(12, 12, 13, 0.08);
+    }
+    &:hover &-remove {
+      opacity: 1;
+    }
+  }
+
+  // Hover-revealed delete — transparent by default (no visible square), a
+  // light-red pill only on its OWN hover. Inset so it never spills past the
+  // card edge, even while the card is scaled up on hover.
+  &__cal-card-remove {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    width: 18px;
+    height: 18px;
+    padding: 3px;
+    justify-content: center;
+    align-items: center;
+    border-radius: 6px;
+    color: var(--normal-fg-50, #84848c);
+    background: transparent;
+    opacity: 0;
+    cursor: pointer;
+    overflow: hidden;
+    font-size: 0;
+    transition: opacity 0.12s, color 0.12s, background 0.12s;
+
+    svg {
+      width: 12px;
+      height: 12px;
+      display: block;
+    }
+
+    &:hover {
+      color: #d74e49;
+      background: rgba(215, 78, 73, 0.12);
     }
   }
 
   // Compact month chip: status-tinted single line (dot + title).
   &__cal-chip {
+    position: relative;
     flex: 0 0 auto;
     align-items: center;
     gap: 6px;
@@ -2934,7 +3117,8 @@
     border-radius: 6px;
     cursor: pointer;
     background: rgba(174, 174, 178, 0.16);
-    transition: filter 0.12s;
+    transform-origin: left center;
+    transition: filter 0.12s, transform 0.12s;
 
     &[data-status="in_progress"] {
       background: rgba(89, 80, 255, 0.12);
@@ -2947,6 +3131,43 @@
     }
     &:hover {
       filter: brightness(0.97);
+      transform: scale(1.03);
+    }
+    &:hover &-remove {
+      opacity: 1;
+    }
+  }
+
+  // Same treatment on the compact month chip — transparent by default (the
+  // previous white fill showed as an odd square), tint red only on its hover.
+  &__cal-chip-remove {
+    position: absolute;
+    top: 50%;
+    right: 2px;
+    width: 16px;
+    height: 16px;
+    margin-top: -8px;
+    padding: 2px;
+    justify-content: center;
+    align-items: center;
+    border-radius: 4px;
+    color: var(--normal-fg-40, #84848c);
+    background: transparent;
+    opacity: 0;
+    cursor: pointer;
+    overflow: hidden;
+    font-size: 0;
+    transition: opacity 0.12s, color 0.12s, background 0.12s;
+
+    svg {
+      width: 10px;
+      height: 10px;
+      display: block;
+    }
+
+    &:hover {
+      color: #d74e49;
+      background: rgba(215, 78, 73, 0.14);
     }
   }
 
@@ -4728,6 +4949,11 @@
   }
 
   &__detail-cancel {
+    flex: 1 1 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
     @include drumee.typo(
       $size: 14px,
       $weight: 600,
@@ -4735,7 +4961,9 @@
       $color: var(--normal-fg-50, #65656c)
     );
     padding: 8px 16px;
+    border: 1px solid var(--border-default, rgba(0, 0, 0, 0.12));
     border-radius: 4px;
+    box-sizing: border-box;
     cursor: pointer;
     user-select: none;
     transition:
@@ -4749,16 +4977,23 @@
   }
 
   &__detail-submit {
-    flex: 1 1 auto;
+    flex: 1 1 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     text-align: center;
+    min-height: 38px;
     @include drumee.typo(
       $size: 14px,
       $weight: 600,
       $line: 20px,
       $color: #ffffff
     );
-    padding: 8px 24px;
+    padding: 8px 16px;
+    // Transparent border so the box model matches the outlined Cancel exactly.
+    border: 1px solid transparent;
     border-radius: 4px;
+    box-sizing: border-box;
     background: #433cc5;
     cursor: pointer;
     user-select: none;
@@ -5002,6 +5237,7 @@ html[data-theme="dark"] .tasks-panel__flatpickr.flatpickr-calendar {
       color: rgba(228, 227, 255, 0.35);
     }
   }
+
 }
 
 // `window__tasks-panel` is the grid cell folder window uses to hold
@@ -5066,5 +5302,125 @@ html[data-theme="dark"] .tasks-panel__flatpickr.flatpickr-calendar {
   .tasks-panel__cal-card-files,
   .tasks-panel__cal-card-status {
     display: none;
+  }
+}
+
+// ── Mobile refinements: task popups · Gantt · List ─────────────────────
+// TOP-LEVEL rules (not nested under `.tasks-panel`) keyed on `data-mobile="1"`,
+// which the skeleton stamps DIRECTLY on each of these roots via
+// `Visitor.isMobile()`. Deliberately NOT a viewport `@media` (the panel lives
+// in a resizable window, so the viewport is never the panel width),
+// NOT `@container` (unsupported in the target runtime), and NOT an ancestor
+// `[data-device]` selector — the flag is on the element the rule targets, so
+// matching cannot fail. IMPORTANT: these must stay at file top level. An
+// earlier version sat inside the dark-theme `.flatpickr-calendar` block, so
+// every selector compiled with that prefix and never matched — the reason
+// prior attempts appeared to "do nothing". The modal bodies + the detail
+// description|files row are switched to a column (Box.Y) in the skeleton on
+// mobile, so these rules only handle sizing, widths and list/gantt metrics.
+
+// Create popup — near full-bleed, single column.
+.tasks-panel__create-modal[data-mobile="1"] {
+  max-width: calc(100% - 16px);
+  max-height: calc(100% - 16px);
+  border-radius: 16px;
+
+  .tasks-panel__create-form {
+    padding: 16px;
+    gap: 16px;
+  }
+  .tasks-panel__create-title {
+    font-size: 20px;
+    line-height: 24px;
+  }
+  .tasks-panel__modal-body {
+    overflow-y: auto;
+    gap: 16px;
+  }
+  // In the stacked (column) body the fixed 289px side + growing main become
+  // full-width, content-height rows; the body scrolls as one.
+  .tasks-panel__modal-main,
+  .tasks-panel__modal-side {
+    flex: 0 0 auto;
+    width: 100%;
+    gap: 16px;
+  }
+}
+
+// Update/detail popup — near full-bleed, single column, rail → top divider.
+.tasks-panel__detail-panel[data-mobile="1"] {
+  width: calc(100% - 16px);
+  height: calc(100% - 16px);
+  padding: 16px;
+  gap: 16px;
+  border-radius: 16px;
+
+  .tasks-panel__detail-title input,
+  .tasks-panel__detail-title textarea {
+    font-size: 20px;
+    line-height: 24px;
+  }
+  // The whole stacked body scrolls as one (desktop scrolls each column).
+  .tasks-panel__modal-body {
+    overflow-y: auto;
+    overflow-x: hidden;
+    gap: 16px;
+  }
+  .tasks-panel__modal-main {
+    flex: 0 0 auto;
+    width: 100%;
+    overflow: visible;
+    padding-right: 0;
+  }
+  .tasks-panel__modal-side {
+    flex: 0 0 auto;
+    width: 100%;
+    padding-left: 0;
+    padding-top: 16px;
+    border-left: 0;
+    border-top: 3px solid var(--col-primary-40, #5950ff);
+    overflow: visible;
+  }
+  .tasks-panel__detail-top {
+    gap: 16px;
+  }
+}
+
+// List — drop the space-hungry Linked-files column and let the pill columns
+// shrink to their content so the essentials fit without a horizontal scroll.
+.tasks-panel__list[data-mobile="1"] {
+  .tasks-panel__list-head,
+  .tasks-panel__list-row {
+    gap: 8px;
+    padding: 0 8px;
+  }
+  .tasks-panel__list-head > *:nth-child(1),
+  .tasks-panel__list-row > *:nth-child(1) {
+    flex: 1 1 100px; // task title
+  }
+  .tasks-panel__list-head > *:nth-child(2),
+  .tasks-panel__list-head > *:nth-child(3),
+  .tasks-panel__list-head > *:nth-child(4),
+  .tasks-panel__list-head > *:nth-child(6),
+  .tasks-panel__list-row > *:nth-child(2),
+  .tasks-panel__list-row > *:nth-child(3),
+  .tasks-panel__list-row > *:nth-child(4),
+  .tasks-panel__list-row > *:nth-child(6) {
+    flex: 0 0 auto; // priority · status · due · assignee
+  }
+  .tasks-panel__list-head > *:nth-child(5),
+  .tasks-panel__list-row > *:nth-child(5) {
+    display: none; // linked files — hidden on phones
+  }
+}
+
+// Gantt — narrow the sticky task-list aside so the timeline is visible.
+.tasks-panel__gantt[data-mobile="1"] {
+  .tasks-panel__gantt-aside {
+    width: 220px !important; // beats the inline 300px width from gantt.js
+  }
+  .tasks-panel__gantt-aside-head,
+  .tasks-panel__gantt-arow {
+    padding: 0 12px;
   }
 }

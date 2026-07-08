@@ -74,6 +74,13 @@ const { stripMarkers: stripMentionMarkers } = require("../mention-markers");
 
 const make = function (ui) {
   const pfx = ui.fig.family;
+  // Phone flag stamped directly onto the popups / list / gantt roots (see
+  // `data-mobile` below). Driven from JS rather than a CSS media/container
+  // query because the panel lives in a resizable window — the viewport is
+  // never the panel width — and container queries aren't supported in the
+  // target runtime. The modal bodies also switch to a column (Box.Y) on
+  // mobile so the two-column issue layout stacks structurally.
+  const isMobile = Visitor.isMobile();
   const state = ui.getState();
   const creating = ui.isCreating();
   const draft = ui.getCreateDraft();
@@ -1057,13 +1064,21 @@ const make = function (ui) {
       ],
     });
 
-    // Figma footer is a single full-width primary button; the header X closes.
+    // Footer: a Cancel link (closes the panel, discarding edits) beside the
+    // primary Update button. The header X mirrors Cancel.
     const actions = Skeletons.Box.X({
       className: `${pfx}__detail-actions`,
       kids: [
         Skeletons.Note({
+          className: `${pfx}__detail-cancel`,
+          content: LOCALE.CANCEL,
+          bubble: 0,
+          service: "close-detail",
+          uiHandler: [ui],
+        }),
+        Skeletons.Note({
           className: `${pfx}__detail-submit`,
-          content: LOCALE.SAVE_CHANGE,
+          content: LOCALE.UPDATE,
           bubble: 0,
           service: "commit-detail",
           uiHandler: [ui],
@@ -1122,18 +1137,22 @@ const make = function (ui) {
       kids: [
         Skeletons.Box.Y({
           className: `${pfx}__detail-panel`,
+          // JS-stamped phone flag — see `isMobile` at the top of make().
+          attrOpt: { "data-mobile": isMobile ? "1" : "0" },
           bubble: 0,
           kids: [
             header,
-            Skeletons.Box.X({
+            // Column on mobile (Box.Y) so the main content + metadata side
+            // stack instead of squeezing into two narrow columns.
+            Skeletons.Box[isMobile ? "Y" : "X"]({
               className: `${pfx}__modal-body`,
               kids: [
                 Skeletons.Box.Y({
                   className: `${pfx}__modal-main`,
                   kids: [
                     // Figma 2040-14173: Description and Files sit side-by-side
-                    // on top; the Activity feed spans the full width below.
-                    Skeletons.Box.X({
+                    // on top; on mobile they stack (Box.Y) for full width.
+                    Skeletons.Box[isMobile ? "Y" : "X"]({
                       className: `${pfx}__detail-top`,
                       kids: [descriptionRow, attachmentsList],
                     }),
@@ -1204,9 +1223,13 @@ const make = function (ui) {
                 Skeletons.Entry({
                   className: `${pfx}__board-input`,
                   name: "board_title",
+                  // Bound to state so a colour pick (in-place update) or any
+                  // re-render restores the typed name instead of clearing it.
+                  value: st.title || "",
                   placeholder: LOCALE.BOARD_TITLE,
                   mode: "commit",
                   service: "board-submit",
+                  watch: "board-title-changed",
                   uiHandler: [ui],
                 }),
               ],
@@ -1223,7 +1246,10 @@ const make = function (ui) {
                   kids: Object.keys(themes).map((t) =>
                     Skeletons.Box.X({
                       className: `${pfx}__board-color`,
-                      dataset: { active: st.theme === t ? 1 : 0 },
+                      // `theme` renders as data-theme so the active swatch can
+                      // be re-flagged in place (no full re-render → no glitch,
+                      // and the typed board title survives a colour change).
+                      dataset: { active: st.theme === t ? 1 : 0, theme: t },
                       bubble: 0,
                       service: "board-theme",
                       uiHandler: [ui],
@@ -1231,7 +1257,12 @@ const make = function (ui) {
                       kids: [
                         Skeletons.Note({
                           className: `${pfx}__board-color-dot`,
-                          styleOpt: { borderColor: themes[t] },
+                          // Filled solid swatch so the colour choice is obvious
+                          // (a hollow ring reads as "no colour applied").
+                          styleOpt: {
+                            background: themes[t],
+                            borderColor: themes[t],
+                          },
                         }),
                         Skeletons.Note({
                           className: `${pfx}__board-color-name`,
@@ -1400,8 +1431,9 @@ const make = function (ui) {
           ],
         }),
         // Two-column body (Jira issue-modal layout): primary content on the
-        // left, the metadata sidebar on the right. Stacks on narrow screens.
-        Skeletons.Box.X({
+        // left, the metadata sidebar on the right. On mobile it renders as a
+        // column (Box.Y) so main + side stack — structural, no CSS needed.
+        Skeletons.Box[isMobile ? "Y" : "X"]({
           className: `${pfx}__modal-body`,
           kids: [
             Skeletons.Box.Y({
@@ -1443,8 +1475,15 @@ const make = function (ui) {
                   className: `${pfx}__create-actions`,
                   kids: [
                     Skeletons.Note({
+                      className: `${pfx}__create-cancel`,
+                      content: LOCALE.CANCEL,
+                      bubble: 0,
+                      service: "cancel-add",
+                      uiHandler: [ui],
+                    }),
+                    Skeletons.Note({
                       className: `${pfx}__create-submit`,
-                      content: LOCALE.ADD_NEW_TASK,
+                      content: LOCALE.CREATE,
                       bubble: 0,
                       service: "commit-task",
                       uiHandler: [ui],
@@ -1466,6 +1505,8 @@ const make = function (ui) {
       kids: [
         Skeletons.Box.Y({
           className: `${pfx}__create-modal`,
+          // JS-stamped phone flag — see `isMobile` at the top of make().
+          attrOpt: { "data-mobile": isMobile ? "1" : "0" },
           bubble: 0,
           kids: [form, dropOverlay(ui)],
         }),
@@ -1481,36 +1522,64 @@ const make = function (ui) {
   const filterActive = filterUids.length > 0;
   const filterOpen = pickerOpen === "filter";
 
+  // Right-side checkbox (Figma 2045-134011): filled brand box + white check
+  // when the row is active, hollow grey outline when not. Driven purely by the
+  // row's data-active, so no per-checkbox state is needed.
+  const filterCheck = () =>
+    Skeletons.Box.X({
+      className: `${pfx}__filter-check`,
+      kids: [
+        // Text tick (not a sprite icon) so it's crisp, centred, and recolourable.
+        Skeletons.Note({ className: `${pfx}__filter-check-mark`, content: "✓" }),
+      ],
+    });
+
+  const filterRow = (opt) =>
+    Skeletons.Box.X({
+      className: `${pfx}__member-row ${pfx}__filter-row`,
+      dataset: { active: opt.active ? 1 : 0, "member-uid": opt.uid },
+      // attrOpt mirrors data-active so the checked state paints on first render
+      // (plain dataset can be dropped at initial render — see project notes).
+      attrOpt: { "data-active": opt.active ? "1" : "0" },
+      bubble: 0,
+      service: "filter-member",
+      uiHandler: [ui],
+      memberUid: opt.uid,
+      kids: [
+        Skeletons.Box.X({
+          className: `${pfx}__filter-row-main`,
+          kids: opt.leftKids,
+        }),
+        filterCheck(),
+      ],
+    });
+
   const filterDropdown = Skeletons.Box.Y({
     className: `${pfx}__filter-picker`,
     kids: [
-      Skeletons.Box.X({
-        className: `${pfx}__member-row`,
-        dataset: { active: filterActive ? 0 : 1, "member-uid": "" },
-        bubble: 0,
-        service: "filter-member",
-        uiHandler: [ui],
-        memberUid: "",
-        kids: [
+      Skeletons.Note({
+        className: `${pfx}__filter-title`,
+        content: LOCALE.FILTER,
+      }),
+      filterRow({
+        uid: "",
+        active: !filterActive, // "All members" reads as checked when no filter
+        leftKids: [
           Skeletons.Note({
             className: `${pfx}__member-name`,
             content: LOCALE.ALL_MEMBERS,
           }),
         ],
       }),
+      members.length
+        ? Skeletons.Note({ className: `${pfx}__filter-divider` })
+        : null,
       ...members.map((m) => {
         const uid = String(m.id || m.uid);
-        return Skeletons.Box.X({
-          className: `${pfx}__member-row`,
-          dataset: {
-            active: filterUids.includes(uid) ? 1 : 0,
-            "member-uid": uid,
-          },
-          bubble: 0,
-          service: "filter-member",
-          uiHandler: [ui],
-          memberUid: uid,
-          kids: [
+        return filterRow({
+          uid,
+          active: filterUids.includes(uid),
+          leftKids: [
             Skeletons.UserProfile({
               className: `${pfx}__member-avatar`,
               id: uid,
@@ -1526,7 +1595,7 @@ const make = function (ui) {
           ],
         });
       }),
-    ],
+    ].filter(Boolean),
   });
 
   // Sub-views over the same folder-scoped task set. Board is rendered inline
@@ -1644,6 +1713,16 @@ const make = function (ui) {
     kids: [
       subHeader,
       viewContent,
+      // Click-catcher behind the filter dropdown: a click outside it closes
+      // the popup (sits below the dropdown's z-index). Fires toggle-filter.
+      filterOpen
+        ? Skeletons.Box.Z({
+            className: `${pfx}__filter-backdrop`,
+            bubble: 0,
+            service: "toggle-filter",
+            uiHandler: [ui],
+          })
+        : null,
       // Filter overlay (anchored top-right, below the tab bar's filter button).
       filterOpen ? filterDropdown : null,
       Skeletons.Wrapper.Y({

@@ -7,7 +7,7 @@ const { markerRe, uidsFromText } = require("./mention-markers");
 const COLUMN_THEMES = {
   default: "#AEAEB2",
   orange: "#E8A13B",
-  yellow: "#EFC443",
+  yellow: "#EBD212", // Figma Signal/Yellow (was #EFC443, an off-palette amber)
   green: "#54B684",
   cyan: "#65D0EA",
   blue: "#71A3F4",
@@ -98,6 +98,7 @@ class __tasks_panel extends LetcBox {
     this._customColumns = [];
     this._boardModalOpen = false;
     this._boardTheme = "default";
+    this._boardTitle = ""; // typed board name, kept in state so a colour pick never wipes it
     this._boardDefault = true; // "Set as default" toggle (Figma default: on)
     this._colMenuFor = null; // custom column id whose menu popover is open
     // page/hasMore/loading drive infinite scroll of the results dropdown;
@@ -329,12 +330,24 @@ class __tasks_panel extends LetcBox {
       col.classList.add("is-drop-target");
       // Show a placeholder at the exact insertion point so the drop reads as
       // precise (Jira/Trello-style) rather than "somewhere in this column".
-      const ph = this._ensurePlaceholder();
-      const after = this._dragAfterCard(col, e.clientY);
-      if (after) {
-        if (after.previousElementSibling !== ph) col.insertBefore(ph, after);
-      } else if (col.lastElementChild !== ph) {
-        col.appendChild(ph);
+      // `dragover` fires far more often than the screen refreshes, and the
+      // placeholder math (`_dragAfterCard`) reads every card's geometry — O(N).
+      // Coalesce to one run per animation frame so a packed column stays smooth.
+      this._dragOverPending = { col, y: e.clientY };
+      if (!this._dragOverRaf && typeof requestAnimationFrame === "function") {
+        this._dragOverRaf = requestAnimationFrame(() => {
+          this._dragOverRaf = 0;
+          const p = this._dragOverPending;
+          this._dragOverPending = null;
+          if (!p || !p.col.isConnected) return;
+          const ph = this._ensurePlaceholder();
+          const after = this._dragAfterCard(p.col, p.y);
+          if (after) {
+            if (after.previousElementSibling !== ph) p.col.insertBefore(ph, after);
+          } else if (p.col.lastElementChild !== ph) {
+            p.col.appendChild(ph);
+          }
+        });
       }
     });
 
@@ -477,6 +490,11 @@ class __tasks_panel extends LetcBox {
   }
 
   _clearDropAffordance() {
+    if (this._dragOverRaf && typeof cancelAnimationFrame === "function") {
+      cancelAnimationFrame(this._dragOverRaf);
+    }
+    this._dragOverRaf = 0;
+    this._dragOverPending = null;
     if (!this.el) return;
     this.el
       .querySelectorAll(".tasks-panel__column-body.is-drop-target")
@@ -522,7 +540,7 @@ class __tasks_panel extends LetcBox {
         }
         card.dataset.status = status;
         task.status = status;
-      });
+      }, [sourceBody, targetBody]);
       // Refresh counts + empty-state on both affected columns in place.
       this._syncColumn(sourceBody);
       if (targetBody !== sourceBody) this._syncColumn(targetBody);
@@ -553,7 +571,7 @@ class __tasks_panel extends LetcBox {
 
   // FLIP helper: run `mutate` (a synchronous DOM change), then transition each
   // card from its previous box to its new one. Cards with no delta are skipped.
-  _animateMove(mutate) {
+  _animateMove(mutate, scopeBodies) {
     const reduce =
       typeof window !== "undefined" &&
       window.matchMedia &&
@@ -562,21 +580,39 @@ class __tasks_panel extends LetcBox {
       mutate();
       return;
     }
-    const cards = Array.from(
-      this.el.querySelectorAll(".tasks-panel__task-card"),
-    );
+    // Only the source + target columns reflow on a move, so scope the FLIP to
+    // their cards instead of every card on the board (a board-wide O(N) scan +
+    // rect read per drop is what made a full board lag). Fall back to the whole
+    // panel if no scope is supplied.
+    let cards;
+    if (Array.isArray(scopeBodies) && scopeBodies.some(Boolean)) {
+      const seen = new Set();
+      scopeBodies.forEach((b) => {
+        if (!b) return;
+        b.querySelectorAll(".tasks-panel__task-card").forEach((c) => seen.add(c));
+      });
+      cards = Array.from(seen);
+    } else {
+      cards = Array.from(this.el.querySelectorAll(".tasks-panel__task-card"));
+    }
     const first = new Map();
     cards.forEach((c) => first.set(c, c.getBoundingClientRect()));
 
     mutate();
 
-    this.el.querySelectorAll(".tasks-panel__task-card").forEach((c) => {
+    // Two passes: read ALL new rects first, THEN write ALL transforms. Reading
+    // geometry and writing styles in the same loop forces a synchronous reflow
+    // per card (O(N²)) — the batched read/write split keeps it O(N).
+    const moves = [];
+    cards.forEach((c) => {
       const f = first.get(c);
       if (!f) return; // card wasn't present before the move
       const l = c.getBoundingClientRect();
       const dx = f.left - l.left;
       const dy = f.top - l.top;
-      if (!dx && !dy) return;
+      if (dx || dy) moves.push({ c, dx, dy });
+    });
+    moves.forEach(({ c, dx, dy }) => {
       if (Math.abs(dx) > 8) {
         // Crossed columns: a translate FLIP would be clipped by the column's
         // overflow (`overflow-y:auto` / `overflow:hidden`), so settle the card
@@ -941,21 +977,40 @@ class __tasks_panel extends LetcBox {
       case "add-board":
         this._boardModalOpen = true;
         this._boardTheme = "default";
+        this._boardTitle = "";
         this._boardDefault = true;
         this._colMenuFor = null;
         return this._render();
 
       case "board-cancel":
         this._boardModalOpen = false;
+        this._boardTitle = "";
         return this._render();
+
+      case "board-title-changed":
+        // Live-persist the typed name so a colour pick / toggle (which update
+        // in place) or any re-render restores it instead of clearing the field.
+        this._boardTitle =
+          args && args.value != null ? String(args.value) : this._boardTitle;
+        return;
 
       case "board-theme":
+        // Flip the active swatch in place — a full re-render replays the
+        // modal's pop-in animation and wipes the typed board title.
         this._boardTheme = trigger.mget("colTheme") || "default";
-        return this._render();
+        this._captureBoardTitle();
+        this._updateBoardColors(this._boardTheme);
+        return;
 
-      case "board-default":
+      case "board-default": {
+        // Same reason as board-theme: toggle the switch in place.
+        this._captureBoardTitle();
         this._boardDefault = !this._boardDefault;
-        return this._render();
+        const toggle =
+          this.el && this.el.querySelector(".tasks-panel__board-toggle");
+        if (toggle) toggle.dataset.on = this._boardDefault ? "1" : "0";
+        return;
+      }
 
       case "board-submit":
         return this._createColumn();
@@ -1914,7 +1969,10 @@ class __tasks_panel extends LetcBox {
     const input =
       this.el &&
       this.el.querySelector('.tasks-panel__board-modal input[name="board_title"]');
-    const name = input ? String(input.value || "").trim() : "";
+    // Prefer the live DOM value; fall back to the state copy (a commit-mode
+    // Entry can blank its DOM value on blur, so state is the reliable source).
+    const domName = input ? String(input.value || "").trim() : "";
+    const name = domName || String(this._boardTitle || "").trim();
     if (!name) return;
     try {
       const row = await this.postService({
@@ -1934,6 +1992,7 @@ class __tasks_panel extends LetcBox {
     }
     this._boardModalOpen = false;
     this._boardTheme = "default";
+    this._boardTitle = "";
     this._boardDefault = true;
     this._render();
   }
@@ -2498,6 +2557,49 @@ class __tasks_panel extends LetcBox {
       const fType = r.filetype;
       const k = await Kind.waitFor(_a.media);
       const media = new k({ model: m });
+      // Web-link / HTML attachments open in a new browser tab (mirrors the
+      // media browser's Wm.openContent → window.open). Drumee stores URL
+      // shortcuts as `.html` files (filetype "web"); `drumee.note` web files
+      // are real notes and fall through to the note editor below.
+      const ext = (r.ext || r.extension || "").toLowerCase();
+      const isWebLink =
+        (fType === _a.web || ext === "html" || ext === "htm") &&
+        r.dataType !== "drumee.note";
+      if (isWebLink && typeof window !== "undefined") {
+        const link = media.srcUrl && media.srcUrl();
+        if (link) {
+          window.open(link, "_blank");
+          return;
+        }
+      }
+      // Archives (zip/rar/7z/tar/gz…) have no viewer — clicking one downloads
+      // it straight away rather than opening the props viewer. Trigger a plain
+      // browser download from the file's served URL with its real filename.
+      const mime = (r.mimetype || "").toLowerCase();
+      const isArchive =
+        ["zip", "rar", "7z", "tar", "gz", "tgz", "bz2", "xz"].includes(ext) ||
+        mime.includes("zip") ||
+        mime.includes("compressed") ||
+        mime.includes("x-tar");
+      if (isArchive && typeof document !== "undefined") {
+        const href =
+          (media.srcUrl && media.srcUrl()) ||
+          (media.directUrl && media.directUrl());
+        if (href) {
+          const name =
+            (media.fullname && media.fullname()) ||
+            (ext ? `${r.filename}.${ext}` : r.filename || "");
+          const a = document.createElement("a");
+          a.href = href;
+          a.download = name;
+          a.rel = "noopener";
+          a.style.display = "none";
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          return;
+        }
+      }
       const preset = {
         nid: r.nid || fileNid,
         hub_id: r.hub_id || hub,
@@ -2931,6 +3033,27 @@ class __tasks_panel extends LetcBox {
     if (!root) return;
     root.querySelectorAll(".tasks-panel__priority-pill").forEach((pill) => {
       pill.dataset.active = pill.dataset.priority === newPriority ? "1" : "0";
+    });
+  }
+
+  // Snapshot the board-title input into state before any in-place update, so a
+  // colour pick / toggle can't lose an un-watched final keystroke.
+  _captureBoardTitle() {
+    const input =
+      this.el &&
+      this.el.querySelector(
+        '.tasks-panel__board-modal input[name="board_title"]',
+      );
+    if (input) this._boardTitle = String(input.value || "");
+  }
+
+  // New-board colour swatches — flip the active flag in place (keyed on the
+  // data-theme rendered by the skeleton) so picking a colour never re-renders.
+  _updateBoardColors(newTheme) {
+    const root = this.el && this.el.querySelector(".tasks-panel__board-modal");
+    if (!root) return;
+    root.querySelectorAll(".tasks-panel__board-color").forEach((chip) => {
+      chip.dataset.active = chip.dataset.theme === newTheme ? "1" : "0";
     });
   }
 
@@ -3543,6 +3666,7 @@ class __tasks_panel extends LetcBox {
     return {
       open: this._boardModalOpen,
       theme: this._boardTheme,
+      title: this._boardTitle,
       isDefault: this._boardDefault,
     };
   }

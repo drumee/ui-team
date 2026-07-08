@@ -342,6 +342,9 @@ module.exports = function (ui) {
 
   return Skeletons.Box.X({
     className: `${pfx}__gantt`,
+    // Phone flag — the skin narrows the sticky task-list aside so the timeline
+    // is actually visible (see `[data-mobile="1"]` in skin).
+    attrOpt: { "data-mobile": Visitor.isMobile() ? "1" : "0" },
     kids: [
       // No inline min-width here — it would override the skin's
       // `min-width: 100%` (same property) and stop the grid at the computed

@@ -88,6 +88,15 @@ module.exports = function (ui) {
           className: `${pfx}__cal-chip-title`,
           content: t.title || "",
         }),
+        // Hover delete; bubble:0 so it doesn't also open the detail panel.
+        Skeletons.Button.Svg({
+          className: `${pfx}__cal-chip-remove`,
+          ico: "cross",
+          bubble: 0,
+          service: "remove-task",
+          uiHandler: [ui],
+          taskId: t.id,
+        }),
       ],
     });
   };
@@ -120,6 +129,15 @@ module.exports = function (ui) {
       taskId: t.id,
       dataset: { priority: t.priority || "medium", status: t.status || "todo" },
       kids: [
+        // Hover delete; bubble:0 so it doesn't also open the detail panel.
+        Skeletons.Button.Svg({
+          className: `${pfx}__cal-card-remove`,
+          ico: "cross",
+          bubble: 0,
+          service: "remove-task",
+          uiHandler: [ui],
+          taskId: t.id,
+        }),
         Skeletons.Note({
           className: `${pfx}__cal-card-dot`,
           styleOpt: { background: pm.color },
@@ -203,9 +221,11 @@ module.exports = function (ui) {
               uiHandler: [ui],
               calDay: k,
               kids: [
-                Skeletons.Image.Svg({
-                  ico: "plus",
+                // Text glyph, not the `plus` sprite: the sprite symbol can't be
+                // recoloured across the <use> boundary and renders invisible.
+                Skeletons.Note({
                   className: `${pfx}__cal-day-add-ico`,
+                  content: "+",
                 }),
               ],
             }),
