@@ -94,6 +94,13 @@ const make = function (ui) {
     }
   };
 
+  // Due label for a task: a duration task (start_date set) shows the span
+  // "start → due"; a single-date task shows just the due date.
+  const formatTaskDue = (task) =>
+    task && task.start_date && task.due_date
+      ? `${formatDue(task.start_date)} → ${formatDue(task.due_date)}`
+      : formatDue(task && task.due_date);
+
   const isOverdue = (d) => {
     if (!d) return false;
     try {
@@ -133,8 +140,12 @@ const make = function (ui) {
   const dueBadge = (task) =>
     Skeletons.Note({
       className: `${pfx}__task-due`,
-      content: formatDue(task.due_date),
-      dataset: { overdue: isOverdue(task.due_date) ? 1 : 0 },
+      content: formatTaskDue(task),
+      // Overdue is judged on the end (due_date); range marks the span variant.
+      dataset: {
+        overdue: isOverdue(task.due_date) ? 1 : 0,
+        range: task.start_date ? 1 : 0,
+      },
     });
 
   const labelPill = (labelId, taskId) => {
@@ -2224,8 +2235,9 @@ function buildDueSectionContent(ui, scope = "detail") {
   const pfx = ui.fig.family;
   const isCreate = scope === "create";
   const draft = (isCreate ? ui.getCreateDraft() : ui.getDetailDraft()) || {};
-  // New tasks can't be due in the past; existing tasks may keep any date.
-  const minDate = isCreate ? "today" : undefined;
+  // Disable picking days in the past (both create and detail); flatpickr still
+  // shows an existing past due date, it just can't be (re)selected earlier.
+  const minDate = "today";
 
   // Tag the calendar for theming; when `withHint`, also inject a step hint that
   // guides the two-click range pick. The hint updates via a pushed onChange
