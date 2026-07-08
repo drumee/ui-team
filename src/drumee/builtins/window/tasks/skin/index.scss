@@ -4,6 +4,10 @@
   &__ui {
     width: 100%;
     height: 100%;
+    // Clamp to the host grid cell (folder split-body) instead of expanding to
+    // the board's content width — this is what lets __main own the horizontal
+    // overflow at every window size (not just the ≤650px case below).
+    min-width: 0;
   }
 
   // Reveal the "Drop files to attach" overlay while a file is dragged over.
@@ -52,6 +56,9 @@
     width: 100%;
     height: 100%;
     position: relative;
+    // Twin of __ui's clamp — keep the column stack from widening the root past
+    // its cell so the board's overflow-x engages.
+    min-width: 0;
   }
 
   // ── Member filter dropdown ────────────────────────────────────
@@ -83,7 +90,13 @@
     // `overflow-y: auto` never engages and tall columns simply overflow.
     // (Vertical twin of the `min-width: 0` horizontal-scroll fix below.)
     min-height: 0;
+    // Clamp horizontally too so the row of fixed-width columns overflows THIS
+    // element (which scrolls) rather than stretching the panel/window.
+    min-width: 0;
     align-items: stretch;
+    // Columns lay out in a single non-wrapping row; when their combined
+    // min-width exceeds the panel, overflow-x below turns into a scrollbar.
+    flex-wrap: nowrap;
     gap: 8px;
     padding: 16px;
     box-sizing: border-box;
@@ -96,8 +109,11 @@
     // `--col-accent` (set inline per column from the COLUMNS table) still drives
     // the drag-drop highlight; the static tints below are the exact Figma
     // per-status overlays (2021:117822) keyed on `data-column`.
-    flex: 1 1 0;
-    min-width: 220px;
+    // Grow to fill the panel when a few columns fit, but never shrink below
+    // 260px — once the columns can't all fit at that width, they stop
+    // collapsing and __main scrolls horizontally instead (at every size).
+    flex: 1 1 260px;
+    min-width: 260px;
     align-items: stretch;
     justify-content: space-between;
     padding: 10px;
@@ -121,30 +137,21 @@
     }
   }
 
-  // ── Mobile: lock columns + force horizontal scroll on board ──
-  // 4 columns × 260px = 1076px > 430px phone viewport → board needs
-  // to scroll horizontally. The previous attempt set overflow-x:auto
-  // on __main but the scroll never engaged because the ancestor chain
-  // (window__tasks-panel grid cell, tasks-panel__ui, tasks-panel__root)
-  // all default to `min-width: auto` for flex/grid items — meaning
-  // they expand to fit their content instead of clamping to their
-  // parent cell. The whole folder window then scrolled instead of
-  // the inner board. Pin every wrapper to `min-width: 0` so each
-  // level clamps to its parent, then __main's overflow-x finally
-  // becomes meaningful and the user can swipe through status columns
-  // (TO DO → IN PROGRESS → REVIEW → COMPLETE).
+  // ── Mobile refinements to the (now universal) horizontal-scroll board ──
+  // The min-width:0 clamp chain (__ui/__root/__main) and the fixed 260px
+  // columns now live in the base rules above, so the board scrolls
+  // horizontally at every size. On phones we only tweak the ergonomics:
+  // hide the scrollbar, enable momentum/touch panning, and force columns to a
+  // rigid 260px (no grow) so a swipe steps cleanly through the status columns
+  // (TO DO → IN PROGRESS → REVIEW → COMPLETE) instead of stretching to fit.
   @media (max-width: 650px) {
     &__ui,
     &__root {
-      min-width: 0;
       max-width: 100%;
     }
 
     &__main {
-      flex-wrap: nowrap;
-      min-width: 0;
       max-width: 100%;
-      overflow-x: auto !important;
       overflow-y: hidden;
       scrollbar-width: none;
       -webkit-overflow-scrolling: touch;
@@ -157,7 +164,6 @@
 
     &__column {
       flex: 0 0 260px !important;
-      min-width: 260px !important;
       width: 260px;
     }
   }
@@ -2495,7 +2501,14 @@
 
   // ── View sub-header (Board / List / Summary) ──────────────────
   &__viewbar {
+    // Pinned header: sits above the scrolling board and never scrolls with it.
+    // flex:0 0 auto keeps it its natural height inside the __root column;
+    // sticky + top:0 hold it in place against any residual scroll and keep it
+    // painted above the board's horizontal scrollbar / cards.
     flex: 0 0 auto;
+    position: sticky;
+    top: 0;
+    z-index: 5;
     align-items: center;
     justify-content: space-between;
     flex-wrap: wrap;

@@ -2726,9 +2726,11 @@
   }
 
   &__split-body[data-view="task"] {
-    grid-template-columns: 1fr;
-    // Clamp the row so the bounded grid cell isn't overflowed by the panel's
-    // content height; otherwise the board can't scroll and the + is clipped.
+    // minmax(0, …) on BOTH tracks so the cell can shrink below the board's
+    // content size: the row clamp lets tall columns scroll vertically and the
+    // + stay visible; the column clamp lets the wide row of fixed-width columns
+    // scroll horizontally inside __main instead of stretching the window.
+    grid-template-columns: minmax(0, 1fr);
     grid-template-rows: minmax(0, 1fr);
     background: var(--normal-bg-elevated);
 
