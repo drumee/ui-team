@@ -846,7 +846,7 @@
     }
   }
 
-  // Tab icon/label — same emoji glyphs as window-folder (📄 / 💬 / 📋).
+  // Tab icon/label — same SVG glyphs as window-folder (Files / Chat / Tasks).
   .dmz-sharebox__tab-bar-icon,
   .dmz-sharebox__tab-bar-label {
     display: inline-flex;
@@ -856,8 +856,17 @@
   }
 
   .dmz-sharebox__tab-bar-icon {
-    font-size: 14px;
-    transform: translateY(-0.5px);
+    width: 16px;
+    height: 16px;
+    flex: 0 0 16px;
+    color: currentColor;
+
+    svg {
+      width: 16px;
+      height: 16px;
+      display: block;
+      fill: currentColor;
+    }
   }
 }
 

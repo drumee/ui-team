@@ -1080,8 +1080,19 @@
   }
 
   &__tab-bar-icon {
-    font-size: 13px;
-    transform: translateY(-0.5px);
+    // SVG glyph (was an emoji Note). Fixed box + currentColor so it tracks the
+    // tab's text color / active state.
+    width: 16px;
+    height: 16px;
+    flex: 0 0 16px;
+    color: currentColor;
+
+    svg {
+      width: 16px;
+      height: 16px;
+      display: block;
+      fill: currentColor;
+    }
   }
 
   // Member-filter trigger — right-aligned on the tab line, shown only on the
