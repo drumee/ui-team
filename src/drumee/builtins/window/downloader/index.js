@@ -148,15 +148,30 @@ class __window_downloader extends mfsInteract {
   /**
    * 
    */
+  // The progress bar (kind 'progress_bar', a ui-core widget) is not registered
+  // in every context — e.g. the DMZ share bundle — so ensurePart('progress')
+  // can resolve to a failover view that lacks update/setLabel/restart. Guard
+  // every call so a missing progress widget never crashes the download; the
+  // size-scaled Wm.downloadNotice still gives the user feedback for the (native)
+  // transfer. Returns the widget only when it's the real, functional one.
+  _progress(method, ...args) {
+    const p = this.__progress;
+    if (p && typeof p[method] === "function") return p[method](...args);
+  }
+
+  _hasProgress() {
+    return this.__progress && typeof this.__progress.update === "function";
+  }
+
   downloadZip(data) {
     if (this._isDownloading) return;
     if (this._zipsize > MAX_BLOB_SIZE) {
       this.getFromUrl(data);
       return;
     }
-    this.__progress.setLabel(data.zipname);
+    this._progress('setLabel', data.zipname);
     this.once(_e.eod, () => {
-      this.__progress.setLabel(LOCALE.YOUR_DATA.printf(LOCALE.HAS_BEEN_SAVED));
+      this._progress('setLabel', LOCALE.YOUR_DATA.printf(LOCALE.HAS_BEEN_SAVED));
       this.__btnCancel.suppress();
       this.__btnStatus.set({ content: LOCALE.ACK_REQ_OK });
       this.__btnAction.mset({ service: _e.close });
@@ -165,16 +180,16 @@ class __window_downloader extends mfsInteract {
       this.postService({ service: SERVICE.media.zip_release, id: data.zipid, token: this._token });
     });
     this._isDownloading = 1;
-    this.__progress.restart(this._filesize);
-    this.download_zip({ ...data, progress: this.__progress })
+    this._progress('restart', this._filesize);
+    this.download_zip({ ...data, progress: this._hasProgress() ? this.__progress : undefined })
       .then()
       .catch((e) => {
         this.warn("GOT ERRO WHILE DOWNLOADING", e);
         // this.postService({service: SERVICE.media.zip_release, id:data.zipid});
         if (/aborted/.test(e)) {
-          this.__progress.setLabel(LOCALE.CANCELED);
+          this._progress('setLabel', LOCALE.CANCELED);
         } else {
-          this.__progress.setLabel(e);
+          this._progress('setLabel', e);
         }
       });
 
@@ -257,11 +272,11 @@ class __window_downloader extends mfsInteract {
     }
     switch (phase) {
       case 'archive':
-        this.__progress.update(progress);
+        this._progress('update', progress);
         break;
       case 'exit':
         this.downloadZip(data);
-        this.__progress.setLabel(LOCALE.BACKUP_TIPS);
+        this._progress('setLabel', LOCALE.BACKUP_TIPS);
         break;
     }
   }
