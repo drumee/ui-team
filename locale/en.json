@@ -1116,6 +1116,7 @@
   "WAITING_FOR_CONFIRMATION": "Waiting for confirmation",
   "ENTER_AS_PARTICIPANT": "Enter as attendee",
   "DOWNLOAD_LONG_TIME": "Downloading <u>{0}</u> for {1}. This may take a while.",
+  "DOWNLOAD_SAVING_IN_BROWSER": "Your file is saving to your browser’s downloads — you can keep working.",
   "MULTIPLE_CONNECTION": "Multiple connections",
   "DMZ_MORE_ON": "Learn more",
   "LEAVE_COMMENTS": "Leave comments",

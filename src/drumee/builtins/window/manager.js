@@ -12,6 +12,7 @@ const mfsInteract = require("./interact");
 const pseudo_media = require("media/pseudo");
 const { xhRequest, dataTransfer } = require("@drumee/ui-essentials");
 const { createQrcode } = require("@drumee/ui-essentials");
+const { filesize } = require("@drumee/ui-essentials");
 const DEFAULT_WIDTH = 800;
 const DEFAULT_HEIGHT = 600;
 
@@ -1357,6 +1358,36 @@ class __window_manager extends mfsInteract {
         resolve(s);
       });
     });
+  }
+
+  /**
+   * Notice shown when a large archive download starts. Large (>100MB) archives
+   * are fetched by the BROWSER's native download (media.zip via getFromUrl), so
+   * the app cannot read real byte progress. Instead of the old plain
+   * DOWNLOAD_LONG_TIME alert, show a window_info modal whose body is a SIMULATED
+   * size-scaled progress bar (see info/skeleton/download-progress + memory
+   * project_dmz_download_progress_2b for the real-progress design). `size` is a
+   * byte count; the body formats it. Falls back to the plain alert so a download
+   * is never left with no notice.
+   */
+  downloadNotice(zipname, size) {
+    const bytes = Number(size) || 0;
+    try {
+      const body = require("builtins/window/info/skeleton/download-progress");
+      Kind.waitFor("window_info").then(() => {
+        this.__wrapperModal.feed({
+          kind: "window_info",
+          mode: "hbf",
+          zipname: zipname || "",
+          // Computed key so it always matches the body's ui.mget(_a.filesize).
+          [_a.filesize]: bytes,
+          body,
+        });
+      });
+    } catch (e) {
+      this.warn && this.warn("downloadNotice failed; using plain alert", e);
+      this.alert(LOCALE.DOWNLOAD_LONG_TIME.format(zipname, filesize(bytes)));
+    }
   }
 
   /**

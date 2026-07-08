@@ -1,4 +1,4 @@
-const { filesize, timestamp, dataTransfer } = require("@drumee/ui-essentials")
+const { timestamp, dataTransfer } = require("@drumee/ui-essentials")
 
 const MEDIA_GRID = "media_grid";
 const MEDIA_ROW = "media_row";
@@ -2282,12 +2282,10 @@ class __media_core extends DrumeeMFS {
             const _sst = this.mget(_a.token) ? `&token=${encodeURIComponent(this.mget(_a.token))}` : '';
             let url = `${svc}media.zip?hub_id=${hub_id}&nid=${nid}&id=${zip_id}&keysel=${keysel}&zipname=${encodeURIComponent(zipname)}${_sst}`;
             this.getFromUrl(url);
-            Wm.alert(
-              LOCALE.DOWNLOAD_LONG_TIME.format(
-                zipname,
-                filesize(this._zipsize)
-              )
-            );
+            // Native browser download (no in-app byte progress possible). Show a
+            // simulated size-scaled progress bar instead of the plain alert so
+            // the user sees motion + can tell it's working. Download unchanged.
+            Wm.downloadNotice(zipname, this._zipsize);
             return;
           }
           this.append({
