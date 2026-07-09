@@ -1479,6 +1479,29 @@
     }
   }
 
+  // Inline email-validation message, directly under the invite input row.
+  // Toggled via data-state (see _setInviteError) so it takes no vertical space
+  // — and adds no section gap — while there is no error to show.
+  &__settings-action-invite-error {
+    &[data-state="closed"] {
+      display: none;
+    }
+
+    &[data-state="open"] {
+      display: flex;
+    }
+  }
+
+  &__settings-action-invite-error-message {
+    @include drumee.typo(
+      $size: 12px,
+      $line: 16px,
+      $weight: 500,
+      $color: var(--red-500)
+    );
+    padding: 0 4px;
+  }
+
   // Wrapper around the KIND.menu.topic root — must be position:relative so
   // the menu items wrapper anchors to the trigger, overflow:visible so the
   // popover can extend outside its row, and z-index high so it stacks above
