@@ -457,7 +457,10 @@ class __media_interact extends media_core {
                 this.content.el.innerHTML = this.innerContent(this);
                 this._setupInteract();
                 this.trigger("content-ready");
-                this.warn(`File not found from ${url}. Auto removed from DOM`);
+                // Missing vignette is common for stale dev data or not-yet-generated thumbs.
+                if (this.verbose) {
+                  this.verbose(`Vignette not found ${url}, showing fallback icon`);
+                }
                 return;//this.suppress();
               default:
                 if (blob.error) return;

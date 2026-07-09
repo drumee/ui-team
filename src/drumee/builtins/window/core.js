@@ -160,6 +160,9 @@ class __window_core extends __utils {
     if (this.iconsList == null || this.iconsList.isDestroyed()) {
       this.iconsList = this.findPart(_a.list);
     }
+    if (!this.iconsList || this.iconsList.isDestroyed() || !this.iconsList.collection) {
+      return;
+    }
     if (this.getViewMode() === _a.row) {
       return;
     }
@@ -684,6 +687,9 @@ class __window_core extends __utils {
    *
    */
   sortContent(cmd) {
+    if (!this.iconsList || this.iconsList.isDestroyed() || !this.iconsList.collection) {
+      return;
+    }
     let order, name;
     if (cmd) {
       name = cmd.model.get(_a.name);
@@ -692,7 +698,12 @@ class __window_core extends __utils {
       name = _a.filename;
       order = "asc";
     }
-    let cmp = modelComparator(name);
+    const baseCmp = modelComparator(name);
+    const cmp = (model) => {
+      const v = model.get(name);
+      if (v == null || v === "") return "";
+      return baseCmp(model);
+    };
     switch (name) {
       case _a.filesize:
       case _a.mtime:

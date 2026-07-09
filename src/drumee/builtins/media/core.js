@@ -754,6 +754,7 @@ class __media_core extends DrumeeMFS {
    * 
    */
   async afterUpload(c) {
+    this._uploadingInplace = false;
     this.unselect();
     this.overed(_a.off);
     this.mset(_a.phase, _a.upload);
@@ -819,7 +820,12 @@ class __media_core extends DrumeeMFS {
   uploader(isFolder = false) {
     let c;
     for (c of Array.from(this.children.toArray())) {
-      if (c.mget(_a.kind) === UPLOADER) {
+      if (c.mget(_a.kind) !== UPLOADER) continue;
+      if (c.isDestroyed && c.isDestroyed()) continue;
+      // Reuse only a live uploader — completed instances clear spoolTimer in
+      // _onCompletion() but may linger in children until softDestroy finishes.
+      if (c.spoolTimer) {
+        this._uploader = c;
         return c;
       }
     }
@@ -828,7 +834,7 @@ class __media_core extends DrumeeMFS {
     this.append({
       kind: UPLOADER,
       destination: dest,
-      mode: lp.getViewMode(),
+      mode: lp && lp.getViewMode ? lp.getViewMode() : _a.grid,
       token: lp.mget(_a.token),
       uiHandler: [this],
       echoId: this.mget(ECHO_ID),
@@ -837,6 +843,7 @@ class __media_core extends DrumeeMFS {
     });
 
     c = this.children.last();
+    this._uploader = c;
 
     c.once("quota:exceeded", () => {
       this.goodbye();
@@ -877,7 +884,9 @@ class __media_core extends DrumeeMFS {
     });
 
     c.once(_e.destroy, () => {
-      this.afterUpload(c)
+      if (this._uploader !== c) return;
+      this._uploader = null;
+      this.afterUpload(c);
     });
 
     return c;

@@ -317,15 +317,6 @@ class __window_manager extends mfsInteract {
       this.warn("drop read failed", err);
       roots = [];
     }
-    // Diagnostic: distinguishes build-loss (folders > roots) from capture/OS-loss
-    // (folders already short) when a dropped folder goes missing.
-    this.warn("bundle drop", {
-      destNid, hub_id,
-      folders: (transfer.folders || []).length,
-      files: (transfer.files || []).length,
-      roots: roots.length,
-      names: roots.map((r) => r.name),
-    });
     if (!roots.length) {
       Butler.say(LOCALE.UPLOAD_ERROR || "Nothing to upload");
       return;
@@ -639,8 +630,10 @@ class __window_manager extends mfsInteract {
         return this.buildIconsList(child, pn);
       case "windows-layer":
       case "headless-layer":
+      case "upload-progress-layer":
         if (pn === "windows-layer") this.windowsLayer = child;
         if (pn === "headless-layer") this.headlessLayer = child;
+        if (pn === "upload-progress-layer") this.uploadProgressLayer = child;
         this._responsive = () => {
           const f = () => {
             this.responsive();
@@ -1027,6 +1020,14 @@ class __window_manager extends mfsInteract {
   }
 
   /**
+   * Container for the upload-progress floater — always above folder layers,
+   * never routed through getWindowsPool() (which targets headlessLayer when open).
+   */
+  getUploadProgressPool() {
+    return this.uploadProgressLayer || this.windowsLayer;
+  }
+
+  /**
    *
    */
   _launchApp(media, args) {
@@ -1277,7 +1278,10 @@ class __window_manager extends mfsInteract {
 
     if (o.explicit || o.options === "explicit") {
       Kind.waitFor(arg.kind).then(() => {
-        this.getWindowsPool().append(arg);
+        const pool = arg.kind === "window_upload_progress"
+          ? this.getUploadProgressPool()
+          : this.getWindowsPool();
+        pool.append(arg);
       });
       return true;
     }

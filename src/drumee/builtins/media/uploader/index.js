@@ -176,25 +176,33 @@ class __media_uploader extends LetcBox {
    * 
   */
   onUploadError(item) {
-    let { file } = item;
-    this._pendingCount--;
-    this._bytesPending = this._bytesPending - file.size;
-    if (item && item.file) {
-      const key = item.ownpath || (item.file && (item.file.fullPath || item.file.name)) || String(item.position);
-      let retry = this._retried[key] || 0;
-      this.warn("Upload failed", this, item, key, retry);
-      if (retry > 1) {
-        if (!this._skipped.includes(key)) {
-          this._skipped.push(key)
-        }
-        return;
-      }
-      /** Deduplicate */
-      this._retried[key] = retry + 1;
-      if (this._failed.includes(item)) return;
-      item.replace = 1;
-      this._failed.push(item);
+    if (!item || !item.file) {
+      this._pendingCount = Math.max(0, this._pendingCount - 1);
+      this._run();
+      return;
     }
+    let { file } = item;
+    this._pendingCount = Math.max(0, this._pendingCount - 1);
+    this._bytesPending = this._bytesPending - (file.size || 0);
+    const key = item.ownpath || (item.file && (item.file.fullPath || item.file.name)) || String(item.position);
+    let retry = this._retried[key] || 0;
+    this.warn("Upload failed", this, item, key, retry);
+    if (retry > 1) {
+      if (!this._skipped.includes(key)) {
+        this._skipped.push(key)
+      }
+      this._run();
+      return;
+    }
+    /** Deduplicate */
+    this._retried[key] = retry + 1;
+    if (this._failed.includes(item)) {
+      this._run();
+      return;
+    }
+    item.replace = 1;
+    this._failed.push(item);
+    this._run();
   }
 
   /**
@@ -217,7 +225,9 @@ class __media_uploader extends LetcBox {
     if (this._canceled) {
       clearInterval(this.spoolTimer);
       this.trigger(_e.cancel);
+      return;
     }
+    this._run();
   }
 
   /**
@@ -297,7 +307,8 @@ class __media_uploader extends LetcBox {
         this._buffer.push({ ...item, file });
       }).catch((e) => {
         this._pendingCount--;
-        this._bytesPending = this._bytesPending - item.file.size;
+        const size = item.file && item.file.size != null ? item.file.size : 0;
+        this._bytesPending = this._bytesPending - size;
         this.warn("UPLOAD_ERROR", e);
       })
     };
@@ -387,6 +398,9 @@ class __media_uploader extends LetcBox {
       clearInterval(this.spoolTimer);
       return;
     }
+    // One in-flight upload per uploader — parallel XHRs were overwhelming
+    // the gateway (504) on multi-file batches.
+    if (this._pendingCount > 0) return;
     const item = this._queue.shift();
     if ((item == null)) {
       return;
