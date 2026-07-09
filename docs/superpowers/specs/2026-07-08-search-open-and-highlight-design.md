@@ -58,14 +58,20 @@ tagged by the service). They carry no chat scope.
   have no `filename` — fall back to `preview` for the row label and use a
   chat/message icon.
 - **Navigation** `modules/desk/index.js` `_openMessageHit(data)`: open the
-  hosting hub as a `window_folder`; when `file_thread_id` resolves to a file
-  thread, launch scoped to that file (reuse the existing launch-time
-  `scopedFileNid` path in `folder/index.js`); pass a launch-time
-  `jumpMessageId` so the folder chat scrolls to the message once loaded
-  (reuse the `getItemsByAttr("message_id") → scrollIntoView` pattern from
-  `_jumpToSearchResult`). **Best-effort:** a message outside the loaded chat
-  page just opens the scoped conversation without an exact scroll — the same
-  limitation the in-folder chat search already has.
+  **hosting hub** via `Wm.loadWorkspace({ hub_id })` — the same hub_id-only
+  path the deep-link flow uses, which resolves the hub root via
+  `media.attributes`. This reliably lands the user in the hub where the
+  message lives.
+
+  **Deferred (not in this change):** scrolling the chat to the exact message.
+  That needs (a) the thread's *file nid* to scope the chat — `channel_search`
+  returns `file_thread_id`, not the file nid — and (b) a launch-time jump wired
+  into `window_folder`'s chat (reusing the `getItemsByAttr("message_id") →
+  scrollIntoView` pattern from `_jumpToSearchResult`). `loadWorkspace`'s
+  `apply()` re-fetches attributes and forwards only those, so scroll hints
+  passed through it are dropped — this path is left out deliberately rather
+  than stubbed. The extra `thread_id` / `file_thread_id` columns are added now
+  so the follow-up needs no second DB patch.
 
 ## Phasing
 
