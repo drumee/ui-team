@@ -243,6 +243,21 @@ module.exports = function settingsActionPanel(ui) {
               }),
             ],
           }),
+          // Inline validation message rendered directly under the email input.
+          // Hidden (data-state=closed) until sendFolderInvitation opens it with
+          // a reason and clears it on a valid address — see _setInviteError.
+          Skeletons.Box.Y({
+            className: `${pfx}-invite-error`,
+            sys_pn: "invite-error",
+            dataset: { state: _a.closed },
+            kids: [
+              Skeletons.Note({
+                className: `${pfx}-invite-error-message`,
+                sys_pn: "invite-error-message",
+                content: "",
+              }),
+            ],
+          }),
           Skeletons.Note({
             className: `${pfx}-send-button`,
             sys_pn: "invite-send",

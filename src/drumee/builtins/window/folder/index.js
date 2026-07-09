@@ -2833,10 +2833,41 @@ class __window_folder extends mfsInteract {
     this.$el.find(".window__chat-panel").attr("data-chat_gated", gated);
   }
 
+  // Show / clear the inline validation message in the invite-error slot below
+  // the email input. Mirrors b2b-signup's showErrorMessage: toggle the
+  // wrapper's data-state and set the Note content.
+  _setInviteError(reason) {
+    const wrapper = this.getPart && this.getPart("invite-error");
+    const note = this.getPart && this.getPart("invite-error-message");
+    const entry = this.getPart && this.getPart("invite-email");
+    if (wrapper?.el) wrapper.el.dataset.state = reason ? _a.open : _a.closed;
+    if (note?.set) note.set({ content: reason || "" });
+    if (reason) {
+      if (entry?.showError) entry.showError();
+    } else if (entry?.hideError) {
+      entry.hideError();
+    }
+  }
+
   sendFolderInvitation(cmd) {
     const email = this.getInviteEmail(cmd);
     if (!email)
-      return Wm.alert(LOCALE.EMAIL_REQUIRED || LOCALE.ENTER_VALID_EMAIL);
+      return this._setInviteError(
+        LOCALE.EMAIL_REQUIRED || LOCALE.ENTER_VALID_EMAIL,
+      );
+
+    // Reject malformed addresses before hitting the server. Send is a separate
+    // Note button that reads the entry value directly, so the invite Entry
+    // never runs its own checkSanity — validate here. String.prototype.isEmail
+    // (ui-core addons/string.js) is the shared validator used across the app,
+    // same as the signup form gate.
+    if (!email.isEmail())
+      return this._setInviteError(
+        LOCALE.ENTER_VALID_EMAIL || LOCALE.INVALID_EMAIL,
+      );
+
+    // Valid address — drop any stale inline error before sending.
+    this._setInviteError();
 
     const { hub_id } = this.actualNode();
     const privilege = this._folderInviteRole?.privilege || _K.privilege.admin;
