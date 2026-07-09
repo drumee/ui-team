@@ -541,6 +541,11 @@ class __tasks_panel extends LetcBox {
         card.dataset.status = status;
         task.status = status;
       }, [sourceBody, targetBody]);
+      // Mirror the DOM move into the model so getState() — and therefore every
+      // _render() — rebuilds the column in the dropped order. Without this the
+      // move is cosmetic and the next re-render (e.g. opening the create/detail
+      // panel) reverts to the stale array order.
+      this._reorderTaskModel(taskId, status, afterEl);
       // Refresh counts + empty-state on both affected columns in place.
       this._syncColumn(sourceBody);
       if (targetBody !== sourceBody) this._syncColumn(targetBody);
@@ -549,8 +554,9 @@ class __tasks_panel extends LetcBox {
       this._syncCardStatus(card, status);
     }
 
-    // Reordering within the same column has no server-side rank to persist yet,
-    // so skip the round-trip; the visual order holds until the next reload.
+    // Same-column reorder has no server-side rank to persist yet, so skip the
+    // round-trip. The model reorder above keeps the order across re-renders; it
+    // reverts only on a server reload (_loadTasks), which returns tasks unranked.
     if (sameColumn) return;
 
     try {
@@ -567,6 +573,38 @@ class __tasks_panel extends LetcBox {
       await this._loadTasks();
       this._render();
     }
+  }
+
+  // Move `taskId` within this._tasks to match a drag drop: place it before the
+  // task the card was dropped above (afterEl's data-tid), or — when dropped at
+  // the end — after the last task already in `status`. getState() filters
+  // this._tasks by status preserving array order, so this is what makes the
+  // dropped order survive a _render() rebuild.
+  _reorderTaskModel(taskId, status, afterEl) {
+    const from = this._tasks.findIndex((t) => String(t.id) === String(taskId));
+    if (from < 0) return;
+    const [task] = this._tasks.splice(from, 1);
+    task.status = status;
+    const beforeId = afterEl && afterEl.dataset ? afterEl.dataset.tid : null;
+    let insertAt = -1;
+    if (beforeId != null) {
+      insertAt = this._tasks.findIndex(
+        (t) => String(t.id) === String(beforeId),
+      );
+    }
+    if (insertAt < 0) {
+      // Append within the column — after the last same-column task so the card
+      // lands at the column's end and stays adjacent to its peers in the flat
+      // array (keeps List/Summary ordering sensible too).
+      insertAt = this._tasks.length;
+      for (let i = this._tasks.length - 1; i >= 0; i--) {
+        if (this._tasks[i].status === status) {
+          insertAt = i + 1;
+          break;
+        }
+      }
+    }
+    this._tasks.splice(insertAt, 0, task);
   }
 
   // FLIP helper: run `mutate` (a synchronous DOM change), then transition each
