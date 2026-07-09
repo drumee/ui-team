@@ -771,7 +771,9 @@
   gap: var(--grid-gap);
   padding: 8px var(--grid-padding);
   width: 100%;
-  box-sizing: content-box;
+  // border-box: with content-box the horizontal padding made the section 80px
+  // wider than its panel, so the last column bled under the chat panel.
+  box-sizing: border-box;
   flex: 0 0 auto !important; // override framework's inline flex-grow:1
 
   &:empty,

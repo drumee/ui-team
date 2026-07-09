@@ -342,7 +342,6 @@ class __window_mfs extends DrumeeMFS {
       child.$el.removeClass("drumee-sprinner");
       if (usesPartition) {
         this._partitionFoldersAndFiles(child);
-        this._applyFolderScrollMode(child);
       }
       this.syncContent(EOD);
       this._dataReady = true;
@@ -418,31 +417,9 @@ class __window_mfs extends DrumeeMFS {
     }, 500);
   }
 
-  _applyFolderScrollMode(listPart) {
-    const scrollEl = listPart?.el?.querySelector(".smart-container");
-    const folderWrap = scrollEl?.querySelector(".folder-section");
-    if (!folderWrap || !folderWrap.children.length) return;
-    folderWrap.style.gridTemplateColumns = "";
-    folderWrap.style.gridTemplateRows = "";
-    const count = folderWrap.children.length;
-    const fs = getComputedStyle(folderWrap);
-    const gap = parseInt(fs.gap) || 24;
-    const padLR =
-      parseInt(fs.paddingLeft || 0) + parseInt(fs.paddingRight || 0);
-    const cellW = parseInt(fs.gridTemplateColumns?.split(" ")[0]) || 120;
-    const rowH = fs.gridAutoRows || "140px";
-    const availW = scrollEl.clientWidth - padLR;
-    const maxCols = Math.max(1, Math.floor((availW + gap) / (cellW + gap)));
-    if (count > maxCols * 2) {
-      const cols = Math.ceil(count / 2);
-      folderWrap.style.gridTemplateColumns = `repeat(${cols}, ${cellW}px)`;
-      folderWrap.style.gridTemplateRows = `repeat(2, ${rowH})`;
-    }
-  }
-
   /**
-   * 
-   * @param {*} listPart 
+   *
+   * @param {*} listPart
    */
   _prepareListPartition(listPart) {
     this._partitionListPart = null;
@@ -477,7 +454,6 @@ class __window_mfs extends DrumeeMFS {
       listPart.el.dataset.wait = 0;
       listPart.$el.removeClass("drumee-sprinner");
       this._partitionFoldersAndFiles(listPart);
-      this._applyFolderScrollMode(listPart);
       this.syncContent(EOD);
       this._dataReady = true;
       this.trigger(EOD);
@@ -637,7 +613,6 @@ class __window_mfs extends DrumeeMFS {
     scrollEl.style.visibility = "visible";
     scrollEl.dataset.partitioning = 0;
 
-    this._applyFolderScrollMode(listPart);
     this._partitionListPart = null;
     listPart.el.style.visibility = "visible";
     return true;
