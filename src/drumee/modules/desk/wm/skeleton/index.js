@@ -82,6 +82,12 @@ const ___window_manager = function (ui) {
       }),
 
       Skeletons.Wrapper.Y({
+        sys_pn: "upload-progress-layer",
+        className: `${ui.fig.family}__layer ${ui.fig.group}__layer upload-progress-layer`,
+        sortWithCollection: false,
+      }),
+
+      Skeletons.Wrapper.Y({
         className: `${ui.fig.family}__wrapper-tooltips ${ui.fig.group}__wrapper-tooltips`,
         name: "tooltips",
       }),

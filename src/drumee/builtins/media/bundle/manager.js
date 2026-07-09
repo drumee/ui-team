@@ -4,7 +4,8 @@
 const { ThroughputGovernor } = require("media/bundle/governor");
 const BundleJob = require("media/bundle/job");
 
-const MAX_JOBS = 3;
+// One active bundle at a time — parallel jobs were overwhelming the gateway (504).
+const MAX_JOBS = 1;
 
 class _BundleManager {
   constructor() {
@@ -45,6 +46,17 @@ class _BundleManager {
     const i = this._queue.indexOf(job);
     if (i >= 0) this._queue.splice(i, 1);
     this.pump();
+  }
+
+  /** Cancel every active and queued job (upload-progress "Cancel all"). */
+  cancelAll() {
+    for (const job of this._active) {
+      if (job.cancel) job.cancel();
+    }
+    for (const job of this._queue) {
+      if (job.cancel) job.cancel();
+    }
+    this._queue = [];
   }
 }
 

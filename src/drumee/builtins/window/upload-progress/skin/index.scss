@@ -14,7 +14,7 @@
     background: var(--white, #fff);
     border-radius: var(--corner-radius-6, 16px);
     box-shadow: 0 4px 12px rgba(34, 39, 50, 0.12);
-    z-index: 10000;
+    z-index: var(--z-index-upload-progress, 9000);
     overflow: hidden;
     border: 1px solid var(--default-border-notification, rgba(221, 223, 228, 0.5));
     transition: height 0.2s ease;
