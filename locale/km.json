@@ -1239,6 +1239,7 @@
   "FILTER_ADMIN": "អ្នកគ្រប់គ្រងកន្លែងធ្វើការ",
   "FILTER_MEMBER": "សមាជិក",
   "INVITE_MEMBER": "អញ្ជើញសមាជិក",
+  "MEMBER_ALREADY_HAS_ACCESS": "អ៊ីមែលនេះមានសិទ្ធិចូលប្រើថតនេះរួចហើយ។",
   "MEMBER": "សមាជិក",
   "ROLE": "តួនាទី",
   "LAST_ACTIVE": "សកម្មចុងក្រោយ",

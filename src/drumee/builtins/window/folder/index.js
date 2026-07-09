@@ -2895,6 +2895,15 @@ class __window_folder extends mfsInteract {
         LOCALE.ENTER_VALID_EMAIL || LOCALE.INVALID_EMAIL,
       );
 
+    // Reject addresses that already appear in the permissions matrix — the
+    // server would fail the invite anyway, but flagging it inline saves the
+    // round-trip and points the user at the email field.
+    if (this._emailIsFolderMember(email))
+      return this._setInviteError(
+        LOCALE.MEMBER_ALREADY_HAS_ACCESS ||
+          "This email already has access to this folder.",
+      );
+
     // Valid address — drop any stale inline error before sending.
     this._setInviteError();
 
@@ -3017,6 +3026,20 @@ class __window_folder extends mfsInteract {
       list.find(
         (r) => String(r.entity_id || r.drumate_id || r.id || "") === key,
       ) || null
+    );
+  }
+
+  // True when `email` already belongs to a member in the permissions matrix
+  // (this._folderMembers is the same source the matrix renders from). Compared
+  // case-insensitively and trimmed so "Foo@Bar.com " matches a stored
+  // "foo@bar.com" — the invite Entry doesn't normalize before send.
+  _emailIsFolderMember(email) {
+    const target = String(email || "")
+      .trim()
+      .toLowerCase();
+    if (!target) return false;
+    return (this._folderMembers || []).some(
+      (r) => String(r.email || "").trim().toLowerCase() === target,
     );
   }
 

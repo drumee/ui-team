@@ -435,6 +435,7 @@
   "INVITE_TEAM_HINT": "Invitees receive an email to join your workspace. Manage permissions anytime from settings.",
   "INVITE_EMAIL_LABEL": "Invite member via email",
   "INVITE_MEMBER": "Invite Member",
+  "MEMBER_ALREADY_HAS_ACCESS": "This email already has access to this folder.",
   "INVITE_WORKSPACE_PLACEHOLDER": "Search workspace to add",
   "INVITE_WORKSPACE_PICK_FIRST": "Please pick a workspace before adding another.",
   "ROLE_ADMIN": "Admin",
