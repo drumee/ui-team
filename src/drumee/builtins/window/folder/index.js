@@ -102,6 +102,8 @@ class __window_folder extends mfsInteract {
       target = { left: 0, top: 0, width: ws.width, height: ws.height };
       this._zoomed = true;
     }
+    // CSS hook: zoomed window shows the 6-per-row grid (folder skin).
+    this.el.dataset.zoomed = this._zoomed ? 1 : 0;
     // Defer the resize until after fullscreen actually exits (see helper).
     this._applyBoundsAfterFs(target);
   }
@@ -199,6 +201,7 @@ class __window_folder extends mfsInteract {
       : { left: 0, top: 0, width: leftW, height: ws.height };
     this._zoomed = false;
     this._preZoomBounds = null;
+    this.el.dataset.zoomed = 0;
     // A half-tile is narrower than the normal window minimum (760) on any
     // workspace < 1520px wide; without this override _applyBounds would clamp
     // both tiles up to 760 and they would overlap. Pass the tile's own width
@@ -212,6 +215,7 @@ class __window_folder extends mfsInteract {
     const b = this._defaultBounds();
     this._zoomed = false;
     this._preZoomBounds = null;
+    this.el.dataset.zoomed = 0;
     this._applyBoundsAfterFs({ left: b.left, top: b.top, width: b.width, height: b.height });
   }
 

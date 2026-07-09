@@ -316,7 +316,6 @@ class __dmz_wm extends winman {
           this._setupPartitionObserver(child);
           child.once(EOD, () => {
             this._partitionFoldersAndFiles(child);
-            this._applyFolderScrollMode(child);
           });
         }
         break;

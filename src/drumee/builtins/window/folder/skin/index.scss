@@ -2231,22 +2231,30 @@
     // Lock cell width only; height is owned by per-section grid-auto-rows
     // so compact workspace/folder rows and taller file rows coexist without
     // stretching when section flex:1 fires.
+    // max-width 100%: the section tracks are minmax(0,1fr), so a narrow
+    // files panel (dragged splitter) yields tracks under 120px — the card
+    // must shrink with its track instead of overflowing it.
     .media-grid__ui {
       width: var(--grid-cell-w);
-      max-width: var(--grid-cell-w);
+      max-width: 100%;
     }
 
     // After partitioning, sections get flex:1 1 auto and grow vertically.
     // Force grid content to stay at the top so empty space sits below
     // instead of stretching items vertically. 3-tier order:
     // workspace → folder → file.
+    // Fixed 5-column tracks (not auto-fill): the product spec is 5 tiles
+    // per row at normal window size, 6 when maximized/fullscreen (see the
+    // ≥701px @container block below). Rows are unbounded — overflow wraps
+    // down and scrolls vertically. The compact (≤700px) container rules
+    // later in this file still win via source order.
     .workspace-section,
     .folder-section,
     .file-section {
       align-content: start;
       align-items: start;
       justify-items: start;
-      grid-template-columns: repeat(auto-fill, var(--grid-cell-w));
+      grid-template-columns: repeat(5, minmax(0, 1fr));
       gap: var(--grid-gap);
     }
 
@@ -2259,8 +2267,26 @@
     }
 
     .file-section {
-      grid-template-columns: repeat(auto-fill, var(--grid-cell-w));
       grid-auto-rows: var(--grid-cell-h-file);
+    }
+  }
+
+  // ── Full size → 6 tiles per row ─────────────────────────────────
+  // "Full" = browser fullscreen (⤢ button, native :fullscreen), the
+  // window-zoom menu action (data-zoomed, stamped in folder/index.js
+  // toggleZoom), or the headless workspace pane (data-headless, stamped
+  // in buildContent). Scoped ≥701px so the compact (≤700px) container
+  // rules always win in a narrow window regardless of state — these
+  // selectors otherwise out-rank them on specificity.
+  @container window-folder-w (min-width: 701px) {
+    &:fullscreen,
+    &[data-zoomed="1"],
+    &[data-headless="1"] {
+      .window__icons-scroll .workspace-section,
+      .window__icons-scroll .folder-section,
+      .window__icons-scroll .file-section {
+        grid-template-columns: repeat(6, minmax(0, 1fr));
+      }
     }
   }
 
