@@ -1239,6 +1239,7 @@
   "FILTER_ADMIN": "Administrateur d'espace de travail",
   "FILTER_MEMBER": "Membre",
   "INVITE_MEMBER": "Inviter un membre",
+  "MEMBER_ALREADY_HAS_ACCESS": "Cette adresse e-mail a déjà accès à ce dossier.",
   "MEMBER": "Membre",
   "ROLE": "Rôle",
   "LAST_ACTIVE": "Dernière activité",

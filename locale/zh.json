@@ -1239,6 +1239,7 @@
   "FILTER_ADMIN": "工作区管理员",
   "FILTER_MEMBER": "成员",
   "INVITE_MEMBER": "邀请成员",
+  "MEMBER_ALREADY_HAS_ACCESS": "该电子邮件已可访问此文件夹。",
   "MEMBER": "成员",
   "ROLE": "角色",
   "LAST_ACTIVE": "最近活跃",

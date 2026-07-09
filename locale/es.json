@@ -317,6 +317,7 @@
   "FILTER_ADMIN": "Administrador del espacio de trabajo",
   "FILTER_MEMBER": "Miembro",
   "INVITE_MEMBER": "Invitar miembro",
+  "MEMBER_ALREADY_HAS_ACCESS": "Este correo electrónico ya tiene acceso a esta carpeta.",
   "MEMBER": "Miembro",
   "ROLE": "Rol",
   "LAST_ACTIVE": "Última actividad",
