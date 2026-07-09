@@ -11,7 +11,7 @@ function tooltip(ui, content) {
 
 // Download / save-as-PDF / preview / print get the filled (primary) look; every
 // other action is a plain icon button.
-const PRIMARY_SERVICES = [_a.download, "download-pdf", "preview", "print", _a.edit];
+const PRIMARY_SERVICES = ["download-pdf", "preview", "print", _a.edit];
 
 function action(ui, { service, ico, tip, state, icons, sys_pn }) {
   const a = {
@@ -43,16 +43,9 @@ function action(ui, { service, ico, tip, state, icons, sys_pn }) {
 module.exports = function (ui) {
   const actions = [];
 
-  // Download / download-as-PDF are always shown. In a DMZ share without the
-  // download grant, the click is gated (sign-up/login or Request Access) rather
-  // than hidden — the action handlers call _dmzGateDownload().
-  actions.push(
-    action(ui, {
-      service: _a.download,
-      ico: _a.download,
-      tip: LOCALE.DOWNLOAD_ORIG,
-    }),
-  );
+  // Header download icon intentionally hidden for docs (product request).
+  // download-as-PDF / print remain; DMZ download gating still lives on those
+  // handlers via _dmzGateDownload() when re-enabled.
 
   // While editing an office doc, hide the three actions that surface the stale
   // server info.pdf (the server never re-runs the conversion on demand):
