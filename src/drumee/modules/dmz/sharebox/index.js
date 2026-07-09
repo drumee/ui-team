@@ -48,6 +48,22 @@ class __dmz_sharebox extends LetcBox {
     this._requestEmailInput    = null;
     this._requestMessageInput  = null;
     this._requestSubmit        = null;
+    // Neutral share host: pin the share's CONTENT hub (the login response stores
+    // hub_id on the model) so every DMZ request targets it even when the page was
+    // opened on the neutral host (share.<domain>), whose bootstrap hub differs from
+    // the content hub. Fires on every login path (initial + gated unlock). Read by
+    // the request layer (@drumee/ui-essentials defaultPayload patch) and cleared in
+    // onBeforeDestroy, so desk / authenticated traffic is never affected.
+    this.listenTo(this.model, `change:${_a.hub_id}`, this._pinShareHub);
+  }
+
+  /**
+   * Pin the share's content hub onto Visitor for the request layer. Guarded on a
+   * real hub_id; a no-op otherwise.
+   */
+  _pinShareHub() {
+    const hubId = this.mget(_a.hub_id);
+    if (hubId) Visitor.set({ share_hub_id: hubId });
   }
 
   /**
@@ -56,6 +72,8 @@ class __dmz_sharebox extends LetcBox {
   onBeforeDestroy() {
     this.unbindEvent(_a.live);
     this._stopRevokePolling();
+    // Drop the neutral-host content-hub pin so it can never leak into desk traffic.
+    Visitor.set({ share_hub_id: null });
   }
 
   /**

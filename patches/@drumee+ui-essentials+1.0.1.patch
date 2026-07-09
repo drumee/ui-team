@@ -1,0 +1,26 @@
+diff --git a/node_modules/@drumee/ui-essentials/socket/utils.js b/node_modules/@drumee/ui-essentials/socket/utils.js
+index d64d394..9769f5c 100644
+--- a/node_modules/@drumee/ui-essentials/socket/utils.js
++++ b/node_modules/@drumee/ui-essentials/socket/utils.js
+@@ -22,10 +22,20 @@ function defultHeaders() {
+  */
+ function defaultPayload() {
+   if (typeof (Visitor) == 'object') {
+-    return {
++    const payload = {
+       socket_id: Visitor.get(_a.socket_id),
+       device_id: Visitor.deviceId(),
+     };
++    // DMZ neutral-share host: a share opened on the neutral host (share.<domain>)
++    // bootstraps a different hub than the share's CONTENT hub, so requests must
++    // carry the content hub_id or the server resolves the wrong hub (403 on
++    // media.show_node_by etc.). `share_hub_id` is set ONLY while the DMZ sharebox
++    // is mounted and cleared on destroy, so this stays a no-op for desk /
++    // authenticated traffic. An explicit hub_id in call args still wins
++    // (preparePayload spreads the caller args after defaultPayload).
++    const shareHub = Visitor.get('share_hub_id');
++    if (shareHub) payload.hub_id = shareHub;
++    return payload;
+   }
+   return {}
+ }
