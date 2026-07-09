@@ -852,8 +852,37 @@ class __window_folder extends mfsInteract {
       // DIRECTLY — calling ensurePart for this part here would replay
       // onPartReady and loop forever.
       const name = this.mget(_a.filename) || this.model.get("hub_name");
-      if (name && _.isFunction(child.set)) child.set({ content: name });
+      if (name && _.isFunction(child.set)) {
+        child.set({ content: name });
+      } else if (!name && !this.mget(_a.headless)) {
+        // Opened without a seeded name (e.g. openFileLocation revealing a hit
+        // in a hub/workspace ROOT — media.attributes carries no display name
+        // for a root). Resolve it from get_path, the same source loadWorkspace
+        // feeds to refreshBreadcrumbsUI. Headless panes are always seeded by
+        // loadWorkspace, so they never hit this branch.
+        this._resolveMissingTitle();
+      }
     }
+  }
+
+  // Resolve a blank window title from get_path. get_path returns the workspace
+  // display name as `hub_name` on every path row; refreshBreadcrumbsUI persists
+  // it (mset hub_name) which fires change:hub_name → _syncWindowTitle, painting
+  // the title. One-shot guard so a slow fetch can't stack.
+  _resolveMissingTitle() {
+    if (this._titleResolving) return;
+    const nid = this.mget(_a.nid);
+    const hub_id = this.mget(_a.hub_id);
+    if (!nid || !hub_id) return;
+    this._titleResolving = 1;
+    this.fetchService(SERVICE.media.get_path, { nid, hub_id })
+      .then((data) => {
+        if (this.isDestroyed && this.isDestroyed()) return;
+        if (!_.isEmpty(data)) this.refreshBreadcrumbsUI(data);
+      })
+      .catch((e) => {
+        if (this.warn) this.warn("_resolveMissingTitle: get_path failed", e);
+      });
   }
 
   onChildBubble(c) {
