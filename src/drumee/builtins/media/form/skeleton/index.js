@@ -102,6 +102,13 @@ module.exports = function (ui) {
         mode: "commit",
         preselect: 1,
       }),
+      // Inline validation message, rendered directly below the input. Hidden
+      // until _submit populates it (see form/index.js _setNameError).
+      Skeletons.Note({
+        className: `${pfx}__input-error`,
+        sys_pn: "name-error",
+        content: "",
+      }),
     ],
   });
 
