@@ -887,11 +887,12 @@
     display: none;
   }
 
-  // Left-aligned, full-width content (matches the design + .settings-main),
-  // capped on ultra-wide screens so the 4 cards don't stretch unboundedly.
+  // Content block centred (max-width 1600) so it doesn't hug the left with a
+  // big empty gap on the right on wide screens.
   .settings-billing__main {
     width: 100%;
     max-width: 1600px;
+    margin: 0 auto;
   }
 
   .settings-billing__page-title {
