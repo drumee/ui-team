@@ -10,10 +10,14 @@ class settings_billing extends LetcBox {
   initialize(opt) {
     require("./skin");
     super.initialize(opt);
-    // When opened as a popup over the Settings page (settings_main.openBilling
-    // passes popup:1) render the popup shell (title bar + close). In the other
-    // mount contexts (settings_account tab, desk wrapper-modal) stay headerless.
+    // Mount modes (mutually exclusive):
+    //  - popup:1  → legacy popup shell (title bar + close) over Settings.
+    //  - page:1   → full-page render inside the desk settings-main-slot (the
+    //               Figma design: a Settings sub-page with a big title +
+    //               breadcrumb "Home › Billing & Subscription", NOT a popup).
+    //  - neither  → headerless embed (settings_account Billing tab).
     this._popup = !!(opt && parseInt(opt.popup) === 1);
+    this._page = !!(opt && parseInt(opt.page) === 1);
     this.model.set({
       hub_id: Visitor.id,
       flow: "g",
@@ -78,11 +82,11 @@ class settings_billing extends LetcBox {
    * Re-initialize UI when DOM is refreshed
    */
   async onDomRefresh() {
-    // Reflect popup mode to the DOM so the popup-card styling (constrained,
-    // centred card + sized close) applies in EVERY modal mount — the
-    // settings_main overlay AND the desk wrapper-modal (sidebar "Upgrade
-    // plan"/admin upsell) — not just the settings overlay.
+    // Reflect the mount mode to the DOM so the skin can style each context:
+    //  data-popup="1" → constrained centred card (legacy popup mounts).
+    //  data-page="1"  → full-page scroll layout inside settings-main-slot.
     if (this._popup && this.el) this.el.dataset.popup = "1";
+    if (this._page && this.el) this.el.dataset.page = "1";
     // Fetch the server catalog (Stripe is the price truth) so the display
     // reflects live prices; degrades to the hardcoded fallback if unavailable.
     this._catalog = await this.fetchService(SERVICE.payment.catalog, { hub_id: Visitor.id })

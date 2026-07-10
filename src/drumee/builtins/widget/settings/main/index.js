@@ -637,15 +637,13 @@ class settings_main extends LetcBox {
   }
 
   /**
-   * Open the billing/subscription UI as a popup in the settings overlay.
-   * settings_billing renders its own popup shell (title + close) and bubbles
-   * "billing-close" back here → closeOverlay().
+   * "Manage subscription" (Settings billing card) → open the billing screen as
+   * a FULL PAGE (Figma design), not a popup. settings_main is itself mounted in
+   * the desk settings-main-slot with the desk as its uiHandler, so bubble
+   * "upgrade-plan" up to the desk, which swaps this slot to the billing page.
    */
-  async openBilling() {
-    await Kind.waitFor("settings_billing");
-    return this.ensurePart("overlay").then((p) => {
-      p.feed({ kind: "settings_billing", uiHandler: [this], popup: 1 });
-    });
+  openBilling() {
+    this.triggerHandlers({ service: "upgrade-plan" });
   }
 
   /**

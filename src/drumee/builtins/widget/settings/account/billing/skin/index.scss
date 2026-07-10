@@ -868,6 +868,47 @@
   }
 }
 
+// ── Full-page mode (Figma design) ────────────────────────────────────────────
+// settings_billing mounted with page:1 into the desk settings-main-slot renders
+// as a Settings sub-page (not a popup): the widget root IS the scroll container
+// (like .settings-main__ui), with a big page title above the tabs/plans/footer.
+.settings-billing[data-page="1"] {
+  width: 100%;
+  height: 100%;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: var(--spacer-6);
+  background-color: var(--white);
+  // Hide the scrollbar (matches .settings-main).
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
+
+  // Left-aligned, full-width content (matches the design + .settings-main),
+  // capped on ultra-wide screens so the 4 cards don't stretch unboundedly.
+  .settings-billing__main {
+    width: 100%;
+    max-width: 1600px;
+  }
+
+  .settings-billing__page-title {
+    font-family: var(--font-bold);
+    font-size: 32px;
+    line-height: 40px;
+    font-weight: 700;
+    color: var(--neutral-900);
+    margin-bottom: var(--spacer-6);
+  }
+
+  // The tab bar (max-width 400px pill) sits centred under the title (design).
+  .settings-billing__tabs-trigger-main {
+    align-self: center;
+  }
+}
+
 // ── Popup mode ───────────────────────────────────────────────────────────────
 // settings_billing renders a popup shell (title bar + close) whenever mounted
 // with popup:1 — the settings_main overlay AND the desk wrapper-modal (sidebar

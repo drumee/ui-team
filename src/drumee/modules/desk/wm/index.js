@@ -700,12 +700,12 @@ class __window_manager extends push {
   /**
    *
    */
+  // Kept for the admin-console plugin (cross-plugin caller) + any legacy
+  // reference. Billing is now a FULL PAGE in the desk settings-main-slot, not a
+  // popup — delegate to the desk module via RADIO so we don't need a direct
+  // module reference from the window manager.
   upgradePlage() {
-    // popup:1 + uiHandler so the modal mount gets the title bar + close button
-    // (billing-close is handled in onUiEvent below — it was orphaned before).
-    this.ensurePart("wrapper-modal").then((p) => {
-      p.feed({ kind: "settings_billing", popup: 1, uiHandler: [this] });
-    });
+    RADIO_BROADCAST.trigger("desk:open-billing-page");
   }
 
   /**

@@ -54,9 +54,25 @@ function popupHeader(ui) {
 }
 
 /**
- * Create main billing layout with header tabs and content container.
- * Wrapped in a popup shell (title bar + scrollable body) so it renders as an
- * overlay popup inside Settings.
+ * Full-page title header (Figma design): a big "Billing & Subscription" page
+ * title, rendered when settings_billing is mounted full-page in the desk
+ * settings-main-slot (opt.page). No close button — the page is left via the
+ * breadcrumb/sidebar like the Settings and Admin Console pages.
+ * @param {Object} ui - UI instance
+ * @returns {Object} Skeletons component
+ */
+function pageHeader(ui) {
+  const fig = ui.fig.family;
+  return Skeletons.Note({
+    className: `${fig}__page-title`,
+    content: LOCALE.BILLING_SUBSCRIPTION,
+  });
+}
+
+/**
+ * Create main billing layout with header tabs and content container. Renders a
+ * full-page title (opt.page), a popup shell (opt.popup), or headerless (the
+ * settings_account tab).
  * @param {Object} ui - UI instance
  * @returns {Object} Skeletons component
  */
@@ -74,9 +90,10 @@ function billing(ui) {
   const body = Skeletons.Box.Y({
     className: `${fig}__body`,
     kids: [
+      ui._page ? pageHeader(ui) : null,
       header,
       contentWrapper,
-    ],
+    ].filter(Boolean),
   });
 
   return Skeletons.Box.Y({
