@@ -1539,6 +1539,8 @@
   "LINKED": "Vinculado",
   "NO_FILE_RESULTS": "No hay archivos coincidentes",
   "LINKED_FILES": "Archivos",
+  "MORE_FILE": "archivo",
+  "MORE_FILES": "archivos",
   "MORE": "more",
   "ALL": "Todos",
   "PENDING": "Pendiente",
