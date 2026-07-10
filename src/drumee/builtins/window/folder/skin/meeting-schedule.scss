@@ -327,4 +327,86 @@
   &__meeting-sched-mnum {
     @include drumee.typo($size: 14px, $line: 20px, $weight: 600, $color: #0b0a21);
   }
+
+  // ── Scheduled-meeting cards (Figma "schedule card") ──────────────────────
+  // Weekly: absolutely positioned inside its start-hour cell, sized by
+  // duration; z-index lifts it above the later-painted sibling cells.
+  &__meeting-sched-card {
+    position: absolute;
+    left: 2px;
+    right: 2px;
+    z-index: 1;
+    overflow: hidden;
+    box-sizing: border-box;
+    padding: 4px 8px;
+    border-radius: 0 4px 4px 0;
+    background: rgba(89, 80, 255, 0.08);
+    border-left: 3px solid var(--primary-40, #5950ff);
+    cursor: pointer;
+
+    &:hover {
+      background: rgba(89, 80, 255, 0.16);
+    }
+  }
+
+  &__meeting-sched-card-title {
+    @include drumee.typo($size: 12px, $line: 16px, $weight: 600, $color: #0b0a21);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  // Monthly: a compact line per meeting inside the day cell.
+  &__meeting-sched-mcard {
+    margin-top: 2px;
+    padding: 2px 6px;
+    border-radius: 4px;
+    background: rgba(89, 80, 255, 0.08);
+    border-left: 3px solid var(--primary-40, #5950ff);
+    cursor: pointer;
+    @include drumee.typo($size: 11px, $line: 14px, $weight: 500, $color: #0b0a21);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+
+    &:hover {
+      background: rgba(89, 80, 255, 0.16);
+    }
+  }
+
+  // ── Narrow window: wrap the toolbar, scroll the week grid horizontally ───
+  // Keyed on the folder window's own inline width (container query), not the
+  // viewport — this is a floating/splittable panel, so @media would miss a
+  // narrow window on a wide screen (see [[windowed-panel-responsive]]). The
+  // 700px breakpoint matches the folder skin's own compact threshold.
+  @container window-folder-w (max-width: 700px) {
+    &__meeting-sched-toolbar {
+      flex-wrap: wrap !important;
+      gap: 12px 8px;
+      padding: 12px;
+    }
+
+    &__meeting-sched-toolbar-left,
+    &__meeting-sched-toolbar-right {
+      flex-wrap: wrap !important;
+      gap: 8px 12px;
+    }
+
+    &__meeting-sched-schedule-btn,
+    &__meeting-sched-start-btn {
+      padding: 0 14px;
+    }
+
+    // The 8-column week grid can't fit a phone — let it scroll sideways rather
+    // than crush the columns. Header + rows share one min-width so they track.
+    &__meeting-sched-grid {
+      padding: 0 0 12px;
+      overflow-x: auto;
+    }
+
+    &__meeting-sched-days,
+    &__meeting-sched-body {
+      min-width: 620px;
+    }
+  }
 }

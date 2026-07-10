@@ -1307,8 +1307,9 @@ class __window_folder extends mfsInteract {
         return;
 
       case "tab-meeting":
-        // The meeting opens as its own window now, not an embedded folder tab.
-        return this._launchMeetingStandalone();
+        // The Meeting tab opens the calendar view, not a live call. (Live-call
+        // joins come via activeTab:"meeting" in onDomRefresh, bypassing this.)
+        return this.showFolderTab("meeting");
 
       case "toggle-files-layout":
         return this.toggleFilesLayout(cmd);
@@ -1338,10 +1339,32 @@ class __window_folder extends mfsInteract {
         return this._refreshSchedule();
       }
 
+      // ── Meeting scheduling modal (skeleton/meeting-modal.js) ───────────
       case "open-schedule":
-        // Placeholder — no meeting-scheduling backend is wired yet
-        // (window_schedule is not a registered kind).
-        return;
+        // Calendar "Schedule" CTA → create a new meeting.
+        return this.openMeetingModal();
+
+      case "open-meeting": {
+        // A schedule card on the calendar → edit that meeting.
+        const nid = (cmd.mget && cmd.mget(_a.nid)) || (cmd.el && cmd.el.dataset.nid);
+        const meeting = (this._meetings || []).find((m) => m.id === nid);
+        return this.openMeetingModal({ meeting });
+      }
+
+      case "close-meeting-modal":
+        return this.closeMeetingModal();
+
+      case "mm-toggle-invitee":
+        return this.toggleMeetingInvitee(cmd);
+
+      case "mm-set-recur":
+        return this.setMeetingRecur(cmd);
+
+      case "meeting-modal-submit":
+        return this.submitMeetingModal();
+
+      case "meeting-modal-delete":
+        return this.deleteMeetingModal();
 
       case "meeting":
       case "webinar":
@@ -1694,14 +1717,261 @@ class __window_folder extends mfsInteract {
   }
 
   // Re-render the Meeting-tab schedule in place after a nav/toggle service
-  // (state lives in this._sched — see skeleton/meeting-schedule.js).
+  // (state lives in this._sched — see skeleton/meeting-schedule.js). Refetches
+  // the hub's meetings for the (possibly changed) visible range first, so the
+  // grid always reflects the current window.
   _refreshSchedule() {
-    const part = this.getPart && this.getPart("meeting-panel");
-    if (!part || !part.el) return;
-    const skl = require("./skeleton/meeting-schedule")(this);
-    // Feed the schedule's own children (toolbar + grid) into the existing
-    // root part so the surrounding tab view is untouched.
-    part.feed(skl.kids);
+    return this._fetchMeetings().then(() => {
+      const part = this.getPart && this.getPart("meeting-panel");
+      if (!part || !part.el) return;
+      const skl = require("./skeleton/meeting-schedule")(this);
+      part.feed(skl.kids);
+    });
+  }
+
+  // The [stime, etime] epoch bounds of the calendar's visible range, derived
+  // from the schedule view state (this._sched). Padded a week/month either side
+  // so meetings straddling the edge still surface.
+  _meetingRange() {
+    const st = require("./skeleton/meeting-schedule").schedState(this);
+    if (st.view === "monthly") {
+      const s = st.anchor.startOf("month").startOf("week").subtract(1, "day");
+      const e = st.anchor.endOf("month").endOf("week").add(1, "day");
+      return { stime: s.unix(), etime: e.unix() };
+    }
+    const s = st.anchor.startOf("week");
+    const e = s.add(7, "day");
+    return { stime: s.unix(), etime: e.unix() };
+  }
+
+  // Fetch the hub's scheduled meetings for the visible range into this._meetings.
+  // Resolves (never rejects) so callers can re-feed regardless.
+  _fetchMeetings() {
+    const { stime, etime } = this._meetingRange();
+    return this.fetchService(SERVICE.room.list || "room.list", { stime, etime })
+      .then((rows) => {
+        this._meetings = Array.isArray(rows) ? rows : [];
+      })
+      .catch(() => {
+        this._meetings = this._meetings || [];
+      });
+  }
+
+  // ── Meeting Information modal (skeleton/meeting-modal.js) ────────────────
+
+  // Normalize a room.list row into the modal's prefill shape. `stime`/`etime`
+  // are epoch seconds; `date` is a legacy display string kept for back-compat.
+  // Attendees are workspace members ({uid,name}); recur is the recurrence rule.
+  _prefillMeeting(m) {
+    if (!m) return null;
+    let content = {};
+    try {
+      const md = typeof m.metadata === "string" ? JSON.parse(m.metadata) : m.metadata || {};
+      content = typeof md.content === "string" ? JSON.parse(md.content) : md.content || {};
+    } catch (e) {
+      content = {};
+    }
+    const s = Number(m.stime || content.stime) || 0;
+    const e = Number(m.etime || content.etime) || 0;
+    const recur = content.recur || null;
+    return {
+      nid: m.id,
+      title: content.title || m.filename || "",
+      message: content.message || "",
+      date_ymd: s ? Dayjs.unix(s).format("YYYY-MM-DD") : Dayjs().format("YYYY-MM-DD"),
+      stime_hm: s ? Dayjs.unix(s).format("HH:mm") : "",
+      etime_hm: e ? Dayjs.unix(e).format("HH:mm") : "",
+      attendees: Array.isArray(content.attendees)
+        ? content.attendees.map((a) => ({ uid: a.uid || a, name: a.name || "" })).filter((a) => a.uid)
+        : [],
+      recur: {
+        freq: (recur && recur.freq) || "none",
+        until: recur && recur.until ? Dayjs.unix(Number(recur.until)).format("YYYY-MM-DD") : "",
+      },
+    };
+  }
+
+  openMeetingModal(opt = {}) {
+    const prefill = this._prefillMeeting(opt.meeting);
+    // Working state the invitee chips + recurrence row read/mutate.
+    this._mmAttendees = prefill ? prefill.attendees.slice() : [];
+    this._mmRecur = prefill ? { ...prefill.recur } : { freq: "none", until: "" };
+    this._mmEditNid = prefill ? prefill.nid : null;
+    // Fetch the workspace member pool first so the invitee chips can render.
+    const hubId = this.mget(_a.actual_hub_id) || this.mget(_a.hub_id);
+    const loadMembers = this.fetchService(SERVICE.hub.get_members_by_type, { type: "all", hub_id: hubId })
+      .then((rows) => {
+        this._hubMembers = Array.isArray(rows) ? rows : [];
+      })
+      .catch(() => {
+        this._hubMembers = this._hubMembers || [];
+      });
+    return loadMembers.then(() =>
+      this.ensurePart("wrapper-dialog").then((wrapper) => {
+        this.dialogWrapper = wrapper;
+        if (wrapper.el) {
+          wrapper.el.setAttribute("data-variant", "meeting");
+          // Glass backdrop behind the centered card (Figma 2510-145902).
+          wrapper.el.setAttribute("data-overlay", "blur");
+        }
+        wrapper.feed(require("./skeleton/meeting-modal")(this, { meeting: prefill }));
+      }),
+    );
+  }
+
+  closeMeetingModal() {
+    this._mmAttendees = [];
+    this._mmRecur = { freq: "none", until: "" };
+    this._mmEditNid = null;
+    if (this.dialogWrapper) {
+      if (this.dialogWrapper.el) {
+        this.dialogWrapper.el.removeAttribute("data-variant");
+        this.dialogWrapper.el.removeAttribute("data-overlay");
+      }
+      this.dialogWrapper.clear();
+    }
+  }
+
+  _reFeedInviteeChips() {
+    const part = this.getPart && this.getPart("mm-invitees-chips");
+    if (!part) return;
+    const pfx = `${this.fig.family}__meeting-modal`;
+    part.feed(require("./skeleton/meeting-modal").inviteesChips(this, pfx));
+  }
+
+  // Toggle a workspace member in/out of the invitee set, then re-render chips.
+  toggleMeetingInvitee(cmd) {
+    const uid = cmd && ((cmd.mget && cmd.mget("uid")) || (cmd.el && cmd.el.dataset.uid));
+    if (!uid) return;
+    const name = (cmd.mget && cmd.mget("uname")) || "";
+    this._mmAttendees = this._mmAttendees || [];
+    const i = this._mmAttendees.findIndex((a) => (a.uid || a) === uid);
+    if (i >= 0) this._mmAttendees.splice(i, 1);
+    else this._mmAttendees.push({ uid, name });
+    this._reFeedInviteeChips();
+  }
+
+  // Set the recurrence frequency, then re-feed the recurrence row (so the
+  // "Until" date shows/hides with the None ↔ repeat switch).
+  setMeetingRecur(cmd) {
+    const freq = (cmd.mget && cmd.mget("freq")) || (cmd.el && cmd.el.dataset.freq) || "none";
+    this._mmRecur = this._mmRecur || { freq: "none", until: "" };
+    // Preserve a picked "until" across toggles unless switching to None.
+    const untilEl = this.dialogWrapper && this.dialogWrapper.el
+      && this.dialogWrapper.el.querySelector('[name="mm-until"]');
+    if (untilEl) this._mmRecur.until = String(untilEl.value || "").trim();
+    this._mmRecur.freq = freq;
+    if (freq === "none") this._mmRecur.until = "";
+    const part = this.getPart && this.getPart("mm-recur");
+    if (part) {
+      const pfx = `${this.fig.family}__meeting-modal`;
+      part.feed(require("./skeleton/meeting-modal").recurRow(this, pfx));
+    }
+  }
+
+  // Read the modal form off the dialog DOM: title, message, date + start/end
+  // time → epochs, recurrence rule, and the selected member uids. Returns null
+  // if the date is missing.
+  _readMeetingForm() {
+    const root = this.dialogWrapper && this.dialogWrapper.el;
+    if (!root) return null;
+    const val = (sel) => {
+      const el = root.querySelector(sel);
+      return el ? String(el.value || "").trim() : "";
+    };
+    const title = val('[name="mm-title"]');
+    const message = val('[name="mm-message"]');
+    const dateYmd = val('[name="mm-date"]'); // Y-m-d from date_picker
+    const sHm = val('[name="mm-stime"]');
+    const eHm = val('[name="mm-etime"]');
+    if (!dateYmd) return null;
+    // Build ISO strings (YYYY-MM-DDTHH:mm) — parsed natively by Dayjs without
+    // the customParseFormat plugin, which isn't guaranteed to be loaded.
+    const stime = sHm ? Dayjs(`${dateYmd}T${sHm}`).unix() : Dayjs(dateYmd).unix();
+    const etime = eHm ? Dayjs(`${dateYmd}T${eHm}`).unix() : stime;
+
+    // Recurrence rule → { freq, until? } (epoch) or null for a one-off.
+    const rc = this._mmRecur || { freq: "none" };
+    let recur = null;
+    if (rc.freq && rc.freq !== "none") {
+      const untilYmd = val('[name="mm-until"]') || rc.until;
+      recur = { freq: rc.freq };
+      if (untilYmd) recur.until = Dayjs(`${untilYmd}T23:59`).unix();
+    }
+
+    return {
+      title,
+      message,
+      // Legacy display string (back-compat for player/schedule). Plain tokens
+      // only — no localizedFormat plugin dependency.
+      date: Dayjs.unix(stime).format("ddd, MMM D, YYYY h:mm A"),
+      stime,
+      etime,
+      recur,
+      attendees: (this._mmAttendees || []).slice(),
+    };
+  }
+
+  submitMeetingModal() {
+    if (this._mmSubmitting) return;
+    const form = this._readMeetingForm();
+    if (!form) return; // no date → do nothing (field stays open)
+    this._mmSubmitting = 1;
+    const nid = this._mmEditNid;
+    const done = () => {
+      this._mmSubmitting = 0;
+      this.closeMeetingModal();
+      this._refreshSchedule();
+    };
+    const fail = () => {
+      this._mmSubmitting = 0;
+    };
+
+    if (nid) {
+      // Edit: flag "all" updates title/agenda/when + members (uids) + recur.
+      return this.fetchService(SERVICE.room.update || "room.update", {
+        flag: "all",
+        nid,
+        title: form.title,
+        message: form.message,
+        date: form.date,
+        stime: form.stime,
+        etime: form.etime,
+        recur: form.recur,
+        attendees: form.attendees,
+      }).then(done, fail);
+    }
+
+    // Create: book the node (with recurrence), then attach the invited members
+    // via update "member" (which notifies them in-app).
+    return this.fetchService(SERVICE.room.book || "room.book", {
+      title: form.title,
+      message: form.message,
+      date: form.date,
+      stime: form.stime,
+      etime: form.etime,
+      recur: form.recur,
+    })
+      .then((node) => {
+        const newNid = node && (node.id || node.nid);
+        if (newNid && form.attendees.length) {
+          return this.fetchService(SERVICE.room.update || "room.update", {
+            flag: "member",
+            nid: newNid,
+            attendees: form.attendees,
+          });
+        }
+      })
+      .then(done, fail);
+  }
+
+  deleteMeetingModal() {
+    const nid = this._mmEditNid;
+    if (!nid) return this.closeMeetingModal();
+    return this.postService(SERVICE.room.remove || "room.remove", { nid }).then(() => {
+      this.closeMeetingModal();
+      this._refreshSchedule();
+    });
   }
 
   /**
@@ -2451,7 +2721,11 @@ class __window_folder extends mfsInteract {
         case "meeting":
           this._meetingViewActive = 1;
           this._taskPanelMounted = 0;
-          return view.feed(require("./skeleton/meeting-panel")(this));
+          view.feed(require("./skeleton/meeting-panel")(this));
+          // Then fetch the hub's meetings for the visible range and re-feed the
+          // grid with schedule cards.
+          this._refreshSchedule();
+          return;
         case _a.task:
           if (!this._taskPanelMounted) {
             this._taskPanelMounted = 1;

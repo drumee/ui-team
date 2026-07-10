@@ -1,5 +1,6 @@
 @use "mixins/drumee";
 @use "./meeting-schedule";
+@use "./meeting-modal";
 
 .window-folder {
   &__ui {
@@ -303,29 +304,6 @@
       align-items: center;
       gap: 13.14px;
       flex-shrink: 0;
-    }
-
-    &__video-btn {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      align-self: stretch;
-      padding: 4px 8px;
-      background-color: var(--normal-bg-90);
-      border-radius: 6px;
-      cursor: pointer;
-      box-sizing: border-box;
-      color: var(--normal-fg-10);
-      flex-shrink: 0;
-
-      svg {
-        width: 20px;
-        height: 20px;
-      }
-
-      &:hover {
-        background-color: var(--normal-bg-80);
-      }
     }
 
     // Upload — Grey/20 background, radius 4.38, padding 6.57 13.14.
@@ -3061,9 +3039,9 @@
         gap: 0;
       }
 
-      // Collapse the standalone Meeting / Manage-access / Settings / zoom
-      // controls — they live in the overflow "More" menu at this width.
-      &__video-btn,
+      // Collapse the standalone Manage-access / Settings / zoom controls —
+      // they live in the overflow "More" menu at this width. (Meeting is a
+      // permanent tab now, so it no longer collapses here.)
       &__control-icon.share,
       &__control-icon.settings,
       &__zoom-wrapper {

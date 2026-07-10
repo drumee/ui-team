@@ -22,7 +22,8 @@ function grid(ui) {
     className: `${ui.fig.family}__main ${ui.fig.group}__main drive-popup`,
     radio: _a.parent,
     debug: __filename,
-    kids: [header, tooltips(ui), tabBar(ui), splitBody(ui), dialog(ui)],
+    // Meeting tab (right of Tasks); hidden for share-recipient windows (token).
+    kids: [header, tooltips(ui), tabBar(ui, { meeting: !ui.mget(_a.token) }), splitBody(ui), dialog(ui)],
   });
 }
 module.exports = grid;

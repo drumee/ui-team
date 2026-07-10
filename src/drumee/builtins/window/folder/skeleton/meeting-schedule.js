@@ -1,8 +1,8 @@
 // Meeting-tab schedule view: Today/week navigation, Weekly/Monthly toggle,
-// "Start a Meeting" + "Schedule" CTAs, and a week/month grid. Client-side
-// calendar chrome only — no scheduled-meetings backend yet, so the grid
-// renders empty. View state lives on the folder window (`ui._sched`); nav and
-// toggle services are handled in window/folder/index.js, which re-feeds this.
+// "Start a Meeting" + "Schedule" CTAs, and a week/month grid populated from the
+// hub's scheduled meetings (ui._meetings, fetched via room.list). View state
+// lives on the folder window (ui._sched); nav/toggle services are handled in
+// window/folder/index.js, which re-feeds this.
 
 function schedState(ui) {
   if (!ui._sched) {
@@ -35,10 +35,92 @@ function hourLabel(h) {
   return `${h - 12} PM`;
 }
 
+const HOUR_PX = 56; // must match &__meeting-sched-row height in the skin
+
+// ui._meetings (room.list rows) → occurrences { nid, title, start, end } within
+// [rangeStart, rangeEnd). Recurring meetings are expanded across the range.
+function normalizeMeetings(ui, rangeStart, rangeEnd) {
+  const rows = Array.isArray(ui._meetings) ? ui._meetings : [];
+  const out = [];
+  const inRange = (d) =>
+    !rangeStart || (!d.isBefore(rangeStart) && d.isBefore(rangeEnd));
+
+  for (const m of rows) {
+    let content = {};
+    try {
+      const md = typeof m.metadata === "string" ? JSON.parse(m.metadata) : m.metadata || {};
+      content = typeof md.content === "string" ? JSON.parse(md.content) : md.content || {};
+    } catch (e) {
+      content = {};
+    }
+    const s = Number(m.stime || content.stime);
+    if (!s) continue; // legacy node without a queryable epoch → skip
+    const e = Number(m.etime || content.etime) || s + 3600;
+    const durMs = (e - s) * 1000;
+    const base = {
+      nid: m.id,
+      title: content.title || m.filename || LOCALE.MEETING,
+      message: content.message || "",
+    };
+    const push = (start) => out.push({ ...base, start, end: start.add(durMs, "millisecond") });
+
+    const recur = content.recur;
+    const freq = recur && recur.freq;
+    if (!freq || freq === "none") {
+      const st = Dayjs.unix(s);
+      if (inRange(st)) push(st);
+      continue;
+    }
+
+    const unit = freq === "daily" ? "day" : freq === "weekly" ? "week" : "month";
+    const until = recur.until ? Dayjs.unix(Number(recur.until)) : null;
+    let occ = Dayjs.unix(s);
+    // Jump close to the window start, then walk occurrence-by-occurrence.
+    if (rangeStart) {
+      const n = rangeStart.diff(occ, unit);
+      if (n > 0) occ = occ.add(n, unit);
+    }
+    let guard = 0;
+    while (guard++ < 400) {
+      if (until && occ.isAfter(until)) break;
+      if (rangeEnd && !occ.isBefore(rangeEnd)) break;
+      if (inRange(occ)) push(occ);
+      occ = occ.add(1, unit);
+    }
+  }
+  return out;
+}
+
+// A meeting card absolutely positioned within its start-hour cell (top/height
+// by minute so it can span rows; z-index lifts it above later sibling cells).
+function weekCard(ui, pfx, mtg) {
+  const top = (mtg.start.minute() / 60) * HOUR_PX;
+  const durMin = Math.max(30, mtg.end.diff(mtg.start, "minute"));
+  const height = Math.max(22, (durMin / 60) * HOUR_PX - 2);
+  return Skeletons.Box.Y({
+    className: `${pfx}-sched-card`,
+    styleOpt: { top: `${top}px`, height: `${height}px` },
+    service: "open-meeting",
+    nid: mtg.nid,
+    dataset: { nid: mtg.nid },
+    attrOpt: { "data-nid": mtg.nid },
+    uiHandler: [ui],
+    kids: [Skeletons.Note({ className: `${pfx}-sched-card-title`, content: mtg.title })],
+  });
+}
+
 // ── Weekly grid: day header row + 24 hour rows (85px labels + 7 columns) ──
 function weeklyGrid(ui, pfx) {
   const start = schedState(ui).anchor.startOf("week");
   const today = Dayjs().format("YYYY-MM-DD");
+  const meetings = normalizeMeetings(ui, start, start.add(7, "day"));
+  // meetings that start on day i (0-6) at hour h → cellMeetings[i][h]
+  const cellMeetings = (i, h) => {
+    const day = start.add(i, "day");
+    return meetings.filter(
+      (m) => m.start.isSame(day, "day") && m.start.hour() === h,
+    );
+  };
 
   const header = Skeletons.Box.X({
     className: `${pfx}-sched-days`,
@@ -66,8 +148,11 @@ function weeklyGrid(ui, pfx) {
           className: `${pfx}-sched-hour`,
           kids: [Skeletons.Note({ className: `${pfx}-sched-hour-label`, content: hourLabel(h) })],
         }),
-        ...Array.from({ length: 7 }, () =>
-          Skeletons.Box.Y({ className: `${pfx}-sched-cell` }),
+        ...Array.from({ length: 7 }, (_, i) =>
+          Skeletons.Box.Y({
+            className: `${pfx}-sched-cell`,
+            kids: cellMeetings(i, h).map((m) => weekCard(ui, pfx, m)),
+          }),
         ),
       ],
     }),
@@ -82,6 +167,18 @@ function monthlyGrid(ui, pfx) {
   const monthStart = anchor.startOf("month");
   const gridStart = monthStart.startOf("week");
   const today = Dayjs().format("YYYY-MM-DD");
+  const meetings = normalizeMeetings(ui, gridStart, gridStart.add(42, "day"));
+  const dayMeetings = (d) => meetings.filter((m) => m.start.isSame(d, "day"));
+  const monthCard = (m) =>
+    Skeletons.Note({
+      className: `${pfx}-sched-mcard`,
+      content: `${m.start.format("HH:mm")} ${m.title}`,
+      service: "open-meeting",
+      nid: m.nid,
+      dataset: { nid: m.nid },
+      attrOpt: { "data-nid": m.nid },
+      uiHandler: [ui],
+    });
 
   const header = Skeletons.Box.X({
     className: `${pfx}-sched-days ${pfx}-sched-days--month`,
@@ -116,6 +213,7 @@ function monthlyGrid(ui, pfx) {
             },
             kids: [
               Skeletons.Note({ className: `${pfx}-sched-mnum`, content: pad2(d.date()) }),
+              ...dayMeetings(d).map(monthCard),
             ],
           });
         }),
@@ -187,8 +285,7 @@ module.exports = function meetingSchedule(ui) {
     uiHandler: [ui],
   });
 
-  // Placeholder CTA — there is no meeting-scheduling backend wired yet
-  // (window_schedule is not a registered kind); handled as a no-op.
+  // Opens the create modal (skeleton/meeting-modal.js) via open-schedule.
   const scheduleBtn = Skeletons.Note({
     className: `${pfx}-sched-schedule-btn`,
     content: LOCALE.SCHEDULE,

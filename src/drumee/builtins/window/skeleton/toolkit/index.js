@@ -136,16 +136,25 @@ export function tabBar(ui, opt = {}) {
       ];
 
   if (opt.meeting) {
+    // Emoji-tab windows use folderTab so Meeting matches Files/Chat/Tasks.
     kids.push(
-      Skeletons.Button.Label({
-        className: `${cnRoot}-item ${ui.fig.family}__tab-bar-item`,
-        label: LOCALE.MEETING,
-        ico: "folder-meeting",
-        service: "tab-meeting",
-        state: 0,
-        dataset: { tab: "meeting" },
-        uiHandler: [ui],
-      }),
+      useEmojiTabs
+        ? folderTab({
+            ico: "folder-meeting",
+            label: LOCALE.MEETING,
+            service: "tab-meeting",
+            state: 0,
+            tab: "meeting",
+          })
+        : Skeletons.Button.Label({
+            className: `${cnRoot}-item ${ui.fig.family}__tab-bar-item`,
+            label: LOCALE.MEETING,
+            ico: "folder-meeting",
+            service: "tab-meeting",
+            state: 0,
+            dataset: { tab: "meeting" },
+            uiHandler: [ui],
+          }),
     );
   }
 
@@ -1349,14 +1358,8 @@ export function topbarMoreMenu(ui) {
   const area = ui.mget(_a.area);
 
   const items = [];
-  if (!inShare) {
-    items.push({
-      service: "tab-meeting",
-      ico: "video-camera-header",
-      content: LOCALE.MEETING,
-      modifier: "video",
-    });
-  }
+  // Meeting now lives as a permanent tab (not an overflow item). Manage Access /
+  // Settings still collapse here.
   // Manage Access mirrors the share control-icon: share areas + workspace ROOT
   // only (filetype === hub). Sub-folders already share via their right-click
   // "Share" menu, so this entry is redundant there — keep in sync with topbar.js.
