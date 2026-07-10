@@ -857,6 +857,8 @@
   "SCHEDULE_A_MEETING": "កំណត់កាលវិភាគប្រជុំ",
   "ADD_INVITEE_EMAIL": "បញ្ចូលអ៊ីមែល…",
   "NO_MEETINGS_SCHEDULED": "គ្មានការប្រជុំដែលបានកំណត់",
+  "BUSY": "រវល់",
+  "N_INVITEES_BUSY": "%s រវល់នៅពេលនេះ",
   "REPEAT": "ធ្វើម្ដងទៀត",
   "DAILY": "ប្រចាំថ្ងៃ",
   "UNTIL": "រហូតដល់",

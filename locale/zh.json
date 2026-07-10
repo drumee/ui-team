@@ -860,6 +860,8 @@
   "SCHEDULE_A_MEETING": "安排会议",
   "ADD_INVITEE_EMAIL": "添加邮箱…",
   "NO_MEETINGS_SCHEDULED": "暂无安排的会议",
+  "BUSY": "忙碌",
+  "N_INVITEES_BUSY": "%s 在此时间忙碌",
   "REPEAT": "重复",
   "DAILY": "每天",
   "UNTIL": "截止",

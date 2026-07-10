@@ -859,6 +859,8 @@
   "SCHEDULE_A_MEETING": "Запланировать встречу",
   "ADD_INVITEE_EMAIL": "Добавить эл. почту…",
   "NO_MEETINGS_SCHEDULED": "Нет запланированных встреч",
+  "BUSY": "Занят",
+  "N_INVITEES_BUSY": "%s занят(ы) в это время",
   "REPEAT": "Повтор",
   "DAILY": "Ежедневно",
   "UNTIL": "До",

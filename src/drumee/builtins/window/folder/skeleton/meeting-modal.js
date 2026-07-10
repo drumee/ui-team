@@ -6,10 +6,12 @@ function memberChip(ui, pfx, member) {
   const uid = member.uid || member.id;
   const name = member.fullname || `${member.firstname || ""} ${member.lastname || ""}`.trim() || uid;
   const selected = (ui._mmAttendees || []).some((a) => (a.uid || a) === uid);
+  // Busy = this member has a conflicting meeting at the chosen time (free/busy).
+  const busy = !!(ui._mmBusy && ui._mmBusy[uid] && ui._mmBusy[uid].length);
   return Skeletons.Box.X({
     className: `${pfx}-member-chip`,
-    dataset: { selected: selected ? 1 : 0, uid },
-    attrOpt: { "data-selected": selected ? 1 : 0, "data-uid": uid },
+    dataset: { selected: selected ? 1 : 0, busy: busy ? 1 : 0, uid },
+    attrOpt: { "data-selected": selected ? 1 : 0, "data-busy": busy ? 1 : 0, "data-uid": uid },
     service: "mm-toggle-invitee",
     uid,
     uname: name,
@@ -145,11 +147,23 @@ module.exports = function meetingModal(ui, opt = {}) {
       attrOpt: { type: "time", name: nm, value: val || "" },
     });
 
-  const invitees = Skeletons.Box.X({
-    className: `${pfx}-invitees-chips`,
-    sys_pn: "mm-invitees-chips",
-    partHandler: ui,
-    kids: inviteesChips(ui, pfx),
+  const invitees = Skeletons.Box.Y({
+    className: `${pfx}-invitees`,
+    kids: [
+      Skeletons.Box.X({
+        className: `${pfx}-invitees-chips`,
+        sys_pn: "mm-invitees-chips",
+        partHandler: ui,
+        kids: inviteesChips(ui, pfx),
+      }),
+      // Free/busy banner (warn-only) — filled by _checkAvailability.
+      Skeletons.Note({
+        className: `${pfx}-availability`,
+        sys_pn: "mm-availability",
+        partHandler: ui,
+        content: "",
+      }),
+    ],
   });
 
   const recur = Skeletons.Box.Y({

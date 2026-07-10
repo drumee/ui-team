@@ -1885,6 +1885,7 @@ class __window_folder extends mfsInteract {
     this._mmAttendees = prefill ? prefill.attendees.slice() : [];
     this._mmRecur = prefill ? { ...prefill.recur } : { freq: "none", until: "" };
     this._mmEditNid = prefill ? prefill.nid : null;
+    this._mmBusy = {};
     // Fetch the workspace member pool first so the invitee chips can render.
     const hubId = this.mget(_a.actual_hub_id) || this.mget(_a.hub_id);
     const loadMembers = this.fetchService(SERVICE.hub.get_members_by_type, { type: "all", hub_id: hubId })
@@ -1903,6 +1904,16 @@ class __window_folder extends mfsInteract {
           wrapper.el.setAttribute("data-variant", "meeting");
         }
         wrapper.feed(require("./skeleton/meeting-modal")(this, { meeting: prefill }));
+        // Re-run the free/busy check when the time changes, and once on open
+        // (edit mode arrives with attendees + a time already set).
+        const root = wrapper.el;
+        if (root) {
+          ["mm-date", "mm-stime", "mm-etime"].forEach((nm) => {
+            const el = root.querySelector(`[name="${nm}"]`);
+            if (el) el.addEventListener("change", () => this._checkAvailability());
+          });
+        }
+        _.delay(() => this._checkAvailability(), 150);
       }),
     );
   }
@@ -1911,6 +1922,7 @@ class __window_folder extends mfsInteract {
     this._mmAttendees = [];
     this._mmRecur = { freq: "none", until: "" };
     this._mmEditNid = null;
+    this._mmBusy = {};
     if (this.dialogWrapper) {
       if (this.dialogWrapper.el) {
         this.dialogWrapper.el.removeAttribute("data-variant");
@@ -1937,6 +1949,53 @@ class __window_folder extends mfsInteract {
     if (i >= 0) this._mmAttendees.splice(i, 1);
     else this._mmAttendees.push({ uid, name });
     this._reFeedInviteeChips();
+    this._checkAvailability();
+  }
+
+  // Free/busy (Tier 1, workspace-scoped): ask the server which invitees already
+  // have a meeting overlapping the chosen slot, mark their chips busy + a banner.
+  // Warn-only — never blocks the organizer from booking.
+  _checkAvailability() {
+    const root = this.dialogWrapper && this.dialogWrapper.el;
+    if (!root) return;
+    const val = (sel) => {
+      const el = root.querySelector(sel);
+      return el ? String(el.value || "").trim() : "";
+    };
+    const setBanner = (txt) => {
+      const el = root.querySelector(`.${this.fig.family}__meeting-modal-availability`);
+      if (el) el.textContent = txt || "";
+    };
+    const dateYmd = val('[name="mm-date"]');
+    const sHm = val('[name="mm-stime"]');
+    const uids = (this._mmAttendees || []).map((a) => a.uid || a).filter(Boolean);
+    if (!dateYmd || !sHm || !uids.length) {
+      this._mmBusy = {};
+      this._reFeedInviteeChips();
+      setBanner("");
+      return;
+    }
+    const eHm = val('[name="mm-etime"]');
+    const stime = Dayjs(`${dateYmd}T${sHm}`).unix();
+    const etime = eHm ? Dayjs(`${dateYmd}T${eHm}`).unix() : stime + 3600;
+    const svc = (SERVICE.room && SERVICE.room.check_availability) || "room.check_availability";
+    return this.fetchService(svc, {
+      stime,
+      etime,
+      attendees: this._mmAttendees,
+      nid: this._mmEditNid || undefined,
+    })
+      .then((rows) => {
+        const busy = {};
+        (Array.isArray(rows) ? rows : []).forEach((r) => {
+          if (r && r.busy) busy[r.uid] = r.conflicts || [];
+        });
+        this._mmBusy = busy;
+        this._reFeedInviteeChips();
+        const n = Object.keys(busy).length;
+        setBanner(n ? LOCALE.N_INVITEES_BUSY.format(n) : "");
+      })
+      .catch(() => {});
   }
 
   // Set the recurrence frequency, then re-feed the recurrence row (so the

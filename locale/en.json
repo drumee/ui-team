@@ -1016,6 +1016,8 @@
   "SCHEDULE_A_MEETING": "Schedule a meeting",
   "ADD_INVITEE_EMAIL": "Add an email…",
   "NO_MEETINGS_SCHEDULED": "No meetings scheduled",
+  "BUSY": "Busy",
+  "N_INVITEES_BUSY": "%s busy at this time",
   "REPEAT": "Repeat",
   "DAILY": "Daily",
   "UNTIL": "Until",

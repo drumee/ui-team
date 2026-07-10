@@ -139,9 +139,38 @@
       border-color: var(--primary-40, #5950ff);
     }
 
+    // Busy at the chosen time (free/busy) — amber ring + dot. Warn-only.
+    &[data-busy="1"] {
+      border-color: #e5934b;
+      background: rgba(229, 147, 75, 0.12);
+    }
+
+    &[data-busy="1"] .window-folder__meeting-modal-member-name::after {
+      content: "";
+      display: inline-block;
+      width: 6px;
+      height: 6px;
+      margin-left: 6px;
+      border-radius: 50%;
+      background: #e5934b;
+      vertical-align: middle;
+    }
+
     &:hover {
       background: rgba(0, 0, 0, 0.04);
     }
+  }
+
+  &__meeting-modal-availability {
+    @include drumee.typo($size: 12px, $line: 16px, $weight: 500, $color: #c2681f);
+
+    &:empty {
+      display: none;
+    }
+  }
+
+  &__meeting-modal-invitees {
+    gap: 8px;
   }
 
   &__meeting-modal-member-ava {

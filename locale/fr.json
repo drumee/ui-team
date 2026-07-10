@@ -860,6 +860,8 @@
   "SCHEDULE_A_MEETING": "Planifier une réunion",
   "ADD_INVITEE_EMAIL": "Ajouter un e-mail…",
   "NO_MEETINGS_SCHEDULED": "Aucune réunion planifiée",
+  "BUSY": "Occupé",
+  "N_INVITEES_BUSY": "%s occupé(s) à cette heure",
   "REPEAT": "Répéter",
   "DAILY": "Quotidien",
   "UNTIL": "Jusqu’au",

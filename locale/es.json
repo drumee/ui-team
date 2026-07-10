@@ -1271,6 +1271,8 @@
   "SCHEDULE_A_MEETING": "Programar una reunión",
   "ADD_INVITEE_EMAIL": "Añadir un correo…",
   "NO_MEETINGS_SCHEDULED": "No hay reuniones programadas",
+  "BUSY": "Ocupado",
+  "N_INVITEES_BUSY": "%s ocupado(s) a esta hora",
   "REPEAT": "Repetir",
   "DAILY": "Diariamente",
   "UNTIL": "Hasta",
