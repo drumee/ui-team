@@ -506,9 +506,13 @@ function billingCard(ui) {
   const plan = (q.plan || "free").toString();
   const planLabel = plan.charAt(0).toUpperCase() + plan.slice(1);
 
+  // Subscription status line ("renews on … " / "will be canceled on …"),
+  // fed asynchronously by _loadSubscriptionStatus() via the named part —
+  // the design's "Your subscription will be canceled on Feb 27, 2026".
   const planRow = innerItem(ui, {
     title: LOCALE.CURRENT_PLAN,
     description: planLabel,
+    descriptionPn: "billing-plan-name",
     className: `${pfx}-row`,
     trailing: button(ui, {
       label: LOCALE.MANAGE_SUBSCRIPTION,
@@ -519,6 +523,13 @@ function billingCard(ui) {
     }),
   });
 
+  const statusLine = Skeletons.Note({
+    className: `${pfx}-status`,
+    sys_pn: "billing-sub-status",
+    partHandler: ui,
+    content: "",
+  });
+
   return Skeletons.Box.Y({
     className: `${ui.fig.family}__card ${pfx}-card`,
     kids: [
@@ -526,7 +537,7 @@ function billingCard(ui) {
         title: LOCALE.BILLING_SUBSCRIPTION,
         subtitle: LOCALE.BILLING_SUBSCRIPTION_SUBTITLE,
       }),
-      Skeletons.Box.Y({ className: `${pfx}-list`, kids: [planRow] }),
+      Skeletons.Box.Y({ className: `${pfx}-list`, kids: [planRow, statusLine] }),
     ],
   });
 }

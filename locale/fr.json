@@ -2045,5 +2045,18 @@
   "REFERRAL_UNAVAILABLE": "Pas encore disponible",
   "REFERRAL_CODE_COPIED": "Code de parrainage copié",
   "REFERRAL_LINK_COPIED": "Lien de parrainage copié",
-  "STORAGE_ALERT_FEED": "vous a envoyé une alerte de stockage — votre utilisation est élevée, veuillez vérifier et supprimer les fichiers inutiles"
+  "STORAGE_ALERT_FEED": "vous a envoyé une alerte de stockage — votre utilisation est élevée, veuillez vérifier et supprimer les fichiers inutiles",
+  "SUBSCRIPTION_RENEWS_ON": "Votre abonnement sera renouvelé le {0}",
+  "SUBSCRIPTION_CANCELS_ON": "Votre abonnement sera annulé le {0}",
+  "PAYMENT_SUCCESS_TITLE": "Paiement réussi !",
+  "PAYMENT_SUCCESS_TEXT": "Mise à niveau réussie. Vous êtes maintenant sur le plan {0}.",
+  "PAYMENT_FAILURE_TITLE": "Échec du paiement !",
+  "PAYMENT_FAILURE_TEXT": "Votre paiement n'a pas pu être traité.",
+  "TOTAL_PAYMENT": "Paiement total",
+  "PAYMENT_DATE": "Date de paiement",
+  "PAYMENT_METHOD": "Moyen de paiement",
+  "UPGRADE_PLAN_MENU": "Changer d'offre",
+  "PLAN_BADGE": "Plan {0}",
+  "CONTACT_SALES_VIA": "Veuillez contacter notre équipe commerciale via {0}",
+  "SALES_CONTACT_EMAIL": "contact@drumee.org"
 }

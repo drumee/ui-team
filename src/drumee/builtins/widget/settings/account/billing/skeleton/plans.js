@@ -13,6 +13,9 @@ function getOptions(ui, cycle = "monthly") {
   const money = (n) => ui._money(n);
   const proPrice = money(ui._catPrice("pro", isYear ? "year" : "month"));
   const teamPrice = money(ui._catPrice("team", isYear ? "year" : "month"));
+  // Extra-seat price is the pro_seat catalog row (monthly figure in the card
+  // copy, matching the design's "each additional seat $5.00").
+  const seatPrice = money(ui._catPrice("pro_seat", "month"));
 
   return {
     free: {
@@ -28,7 +31,7 @@ function getOptions(ui, cycle = "monthly") {
     pro: {
       title: LOCALE.PRO,
       subtitle: (isYear ? LOCALE.PRICE_FROM_PER_YEAR : LOCALE.PRICE_FROM_PER_MONTH).format(proPrice),
-      description: LOCALE.PLAN_PRO_DESC.format(money(5)),
+      description: LOCALE.PLAN_PRO_DESC.format(seatPrice),
       buttonTitle: LOCALE.UPGRADE,
       badge: 1,
       features: [
@@ -81,6 +84,9 @@ function getOptions(ui, cycle = "monthly") {
 function item(ui, opt, option) {
   const { title, subtitle, description, buttonTitle, features, badge } = option;
   const fig = `${ui.fig.family}__plan`;
+  // Mark the caller's active plan: pill-style "Your current plan" instead of a
+  // CTA (design: the Free card shows the pill while the user is on Free).
+  const isCurrent = (ui.currentPlanName || "free") === opt;
 
   let descriptionItem = "";
 
@@ -108,7 +114,18 @@ function item(ui, opt, option) {
 
   let buttonBtn = "";
 
-  if (buttonTitle) {
+  if (isCurrent) {
+    buttonBtn = Skeletons.Box.X({
+      className: `${fig}-button current`,
+      dataset: { disabled: 1 },
+      kids: [
+        Skeletons.Note({
+          className: `${fig}-current-label`,
+          content: LOCALE.YOUR_CURRENT_PLAN || "Your current plan",
+        }),
+      ],
+    });
+  } else if (buttonTitle) {
     buttonBtn = button(ui, {
       label: buttonTitle,
       className: `${fig}-button ${badge ? "popular" : ""}`,

@@ -274,6 +274,8 @@ function checkout(ui) {
               className: `${pfx}-section-bundles-note`,
               content: LOCALE.CHOOSE_ONE_STORAGE_UPGRADE,
             }),
+            // Only bundles that exist in the catalog (storage_100/500/1000 —
+            // there is no storage_200 backend row); prices are catalog-driven.
             Skeletons.Box.Y({
               className: `${pfx}-section-bundles-list`,
               kids: [
@@ -283,14 +285,14 @@ function checkout(ui) {
                     bundleItem(ui, {
                       value: "100",
                       title: "+100GB",
-                      price: "$8 /mo",
-                      unit: "$0.080/GB",
+                      price: `${ui._money(ui._catPrice("storage_100", "month"))} /mo`,
+                      unit: `$${(ui._catPrice("storage_100", "month") / 100).toFixed(3)}/GB`,
                     }),
                     bundleItem(ui, {
-                      value: "200",
-                      title: "+200GB",
-                      price: "$14 /mo",
-                      unit: "$0.070/GB",
+                      value: "500",
+                      title: "+500GB",
+                      price: `${ui._money(ui._catPrice("storage_500", "month"))} /mo`,
+                      unit: `$${(ui._catPrice("storage_500", "month") / 500).toFixed(3)}/GB`,
                     }),
                   ],
                 }),
@@ -298,16 +300,10 @@ function checkout(ui) {
                   className: `${pfx}-section-bundles-list-item`,
                   kids: [
                     bundleItem(ui, {
-                      value: "500",
-                      title: "+500GB",
-                      price: "$30 /mo",
-                      unit: "$0.060/GB",
-                    }),
-                    bundleItem(ui, {
                       value: "1000",
                       title: "+1TB",
-                      price: "$50 /mo",
-                      unit: "$0.049/GB",
+                      price: `${ui._money(ui._catPrice("storage_1000", "month"))} /mo`,
+                      unit: `$${(ui._catPrice("storage_1000", "month") / 1000).toFixed(3)}/GB`,
                       badge: LOCALE.BEST_VALUE,
                     }),
                   ],

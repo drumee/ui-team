@@ -147,6 +147,17 @@
         }
       }
 
+      // "Your current plan" pill (design: the active plan shows a muted,
+      // non-clickable pill instead of a CTA).
+      &.current {
+        color: var(--neutral-600);
+        background-color: var(--neutral-100);
+        border: 1px solid var(--neutral-300);
+        cursor: default;
+        pointer-events: none;
+        font-weight: 600;
+      }
+
       &.secondary {
         color: black;
         border: 1px solid var(--neutral-300);
@@ -857,37 +868,40 @@
   }
 }
 
-// ── Popup mode (mounted in settings_main's overlay) ──────────────────────────
-// settings_main.openBilling feeds settings_billing into its __overlay slot
-// (fixed full-screen backdrop + flex centering). Here the otherwise full-width
-// panel becomes a centred, scrollable card with a title bar + close. Scoped to
-// the overlay so the inline settings_account tab and the desk wrapper-modal
-// renders are untouched.
-.settings-main__overlay .settings-billing {
-  &__ui {
-    width: auto;
-    flex: 0 0 auto;
-    align-items: stretch;
-    background-color: var(--white);
-    border-radius: 12px;
-    box-shadow: 0 1px 11px rgba(0, 0, 0, 0.13);
-    overflow: hidden;
-  }
+// ── Popup mode ───────────────────────────────────────────────────────────────
+// settings_billing renders a popup shell (title bar + close) whenever mounted
+// with popup:1 — the settings_main overlay AND the desk wrapper-modal (sidebar
+// "Upgrade plan" / admin upsell). onDomRefresh reflects popup mode as
+// data-popup="1" on the widget root, so this card styling is self-contained and
+// no longer depends on being nested under settings_main's overlay. The inline
+// settings_account tab (no popup:1) stays full-width and untouched.
+// NOTE: `&__x` can't nest under an attribute selector (`&` ends in `]`, so
+// `&__main` → `.settings-billing[data-popup="1"]__main`, an invalid selector
+// that fails the Sass build). Use full descendant class names instead.
+.settings-billing[data-popup="1"] {
+  width: auto;
+  flex: 0 0 auto;
+  align-items: stretch;
+  background-color: var(--white);
+  border-radius: 12px;
+  box-shadow: 0 1px 11px rgba(0, 0, 0, 0.13);
+  overflow: hidden;
+  max-height: 88vh;
 
-  &__main {
+  .settings-billing__main {
     width: min(980px, 92vw);
     max-height: 88vh;
     gap: 0;
   }
 
-  &__popup-header {
+  .settings-billing__popup-header {
     align-items: center;
     justify-content: space-between;
     padding: var(--spacer-5) var(--spacer-6);
     border-bottom: 1px solid var(--neutral-200);
   }
 
-  &__popup-title {
+  .settings-billing__popup-title {
     font-weight: 600;
     font-size: 18px;
     color: var(--neutral-900);
@@ -895,7 +909,7 @@
 
   // cross.svg has no intrinsic size, so an unconstrained Button.Svg renders at
   // the browser default 300x150 and blows up the header. Pin it to an icon size.
-  &__popup-close {
+  .settings-billing__popup-close {
     width: 20px;
     height: 20px;
     flex: 0 0 auto;
@@ -908,18 +922,18 @@
     }
   }
 
-  &__body {
+  .settings-billing__body {
     overflow-y: auto;
     padding: var(--spacer-6);
     gap: var(--spacer-2);
   }
 
-  &__content-container {
+  .settings-billing__content-container {
     margin-top: var(--spacer-5);
   }
 
   // Keep the checkout two-column layout from overflowing a narrow popup.
-  &__checkout-main {
+  .settings-billing__checkout-main {
     flex-wrap: wrap;
   }
 }

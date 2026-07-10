@@ -78,10 +78,20 @@ class settings_billing extends LetcBox {
    * Re-initialize UI when DOM is refreshed
    */
   async onDomRefresh() {
+    // Reflect popup mode to the DOM so the popup-card styling (constrained,
+    // centred card + sized close) applies in EVERY modal mount — the
+    // settings_main overlay AND the desk wrapper-modal (sidebar "Upgrade
+    // plan"/admin upsell) — not just the settings overlay.
+    if (this._popup && this.el) this.el.dataset.popup = "1";
     // Fetch the server catalog (Stripe is the price truth) so the display
     // reflects live prices; degrades to the hardcoded fallback if unavailable.
     this._catalog = await this.fetchService(SERVICE.payment.catalog, { hub_id: Visitor.id })
       .then((d) => (d && d.plans) || null)
+      .catch(() => null);
+    // Live subscription mirror (status, period_end, seats) for the status line
+    // — org-aware on the server (an org owner sees the team subscription).
+    this._subscription = await this.fetchService(SERVICE.payment.subscription_status, { hub_id: Visitor.id })
+      .then((d) => (d && d.subscription_id ? d : null))
       .catch(() => null);
     if (this.state.currentTab === undefined || this.state.currentTab === null) {
       this.state.currentTab = TAB_MONTHLY;
@@ -104,12 +114,15 @@ class settings_billing extends LetcBox {
       const planName = (plan || "pro").toLowerCase();
       // Get period from plan_detail if available, default to monthly
 
-      // Map plan names: 'advanced' -> 'free', 'pro' -> 'pro', others -> 'pro' as default
+      // Map plan names: 'advanced' -> 'free'; team/enterprise kept as-is so the
+      // current-plan marking and checkout pre-selection are correct for org subs.
       let mappedPlan = "pro";
       if (planName === "advanced" || planName === "free") {
         mappedPlan = "free";
       } else if (planName === "pro") {
         mappedPlan = "pro";
+      } else if (planName === "team") {
+        mappedPlan = "team";
       } else if (planName === "enterprise") {
         mappedPlan = "enterprise";
       }
@@ -124,11 +137,9 @@ class settings_billing extends LetcBox {
       if (mappedPlan === "free") {
         storageGB = 20;
       }
-      if (/^moth/i.test(billing_cycle)) {
-        billing_cycle = "monthly"
-      } else {
-        billing_cycle = "yearly"
-      }
+      // 'month'/'monthly' => monthly; 'year'/'yearly' => yearly. (The old
+      // /^moth/ typo never matched, so checkout always pre-selected yearly.)
+      billing_cycle = /^month/i.test(billing_cycle || "") ? "monthly" : (/^year/i.test(billing_cycle || "") ? "yearly" : "monthly");
       // Update checkout state with current plan, seats, and storage
       this.state.checkout.selectedPlan = mappedPlan;
       this.state.checkout.billingCycle = billing_cycle;
@@ -343,37 +354,29 @@ class settings_billing extends LetcBox {
       team: { monthly: catPrice("team", "monthly") ?? 8, yearly: catPrice("team", "yearly") ?? 80 },
     };
 
-    const bundlePrices = {
-      100: 8,
-      200: 14,
-      500: 30,
-      1000: 50,
-    };
-
     const basePrice = planPrices[selectedPlan]?.[billingCycle] || 0;
     const period = billingCycle === "yearly" ? "year" : "month";
-    const bundlePrice = selectedBundle ? bundlePrices[selectedBundle] || 0 : 0;
+    // Storage bundles + extra Pro seats are catalog rows (storage_*, pro_seat)
+    // with per-period Stripe prices — no more hardcoded amounts or the old
+    // yearly x10 multiplier. Fallbacks keep the panel usable offline.
+    const bundleFallback = { 100: { monthly: 8, yearly: 80 }, 500: { monthly: 30, yearly: 300 }, 1000: { monthly: 50, yearly: 500 } };
+    const bundlePrice = selectedBundle
+      ? (catPrice(`storage_${selectedBundle}`, billingCycle)
+          ?? bundleFallback[selectedBundle]?.[billingCycle] ?? 0)
+      : 0;
     const bundleStorage = selectedBundle ? parseInt(selectedBundle) : 0;
+    const seatPrice = catPrice("pro_seat", billingCycle) ?? (billingCycle === "yearly" ? 50 : 5);
 
-    // Calculate total storage based on plan
-
-    // Pro plan: base storage (50GB) + bundle storage + additional storage
+    // Pro plan: base storage + bundle storage
     let totalStorage = baseStorage + bundleStorage;
 
-    let totalPrice =
-      billingCycle === "yearly"
-        ? basePrice + bundlePrice * 10
-        : basePrice + bundlePrice;
+    let totalPrice = basePrice + bundlePrice;
     let extraSeats = 0;
     if (this.__seatsInput) {
       let value = this.__seatsInput.getValue()
       if (value > baseSeats) {
         extraSeats = value - baseSeats;
-        if (billingCycle === "yearly") {
-          totalPrice = totalPrice + extraSeats * 50;
-        } else {
-          totalPrice = totalPrice + extraSeats * 5;
-        }
+        totalPrice = totalPrice + extraSeats * seatPrice;
       }
       if (value < baseSeats) {
         this.__seatsInput.setValue(baseSeats)
@@ -412,7 +415,14 @@ class settings_billing extends LetcBox {
       (p) => p.plan_code === code && p.period === period
     );
     if (row && row.amount != null) return Number(row.amount) / 100;
-    const fb = { pro: { month: 16.99, year: 169.9 }, team: { month: 8, year: 80 } };
+    const fb = {
+      pro: { month: 16.99, year: 169.9 },
+      team: { month: 8, year: 80 },
+      pro_seat: { month: 5, year: 50 },
+      storage_100: { month: 8, year: 80 },
+      storage_500: { month: 30, year: 300 },
+      storage_1000: { month: 50, year: 500 },
+    };
     return (fb[code] && fb[code][period]) || 0;
   }
 
@@ -436,7 +446,11 @@ class settings_billing extends LetcBox {
     const plan = checkout.selectedPlan || "pro";
     const entity_type = plan === "team" ? "org" : "user";
     const period = checkout.billingCycle === "yearly" ? "year" : "month";
-    const seats = entity_type === "org" ? Math.max(1, ~~(checkout.seats || 1)) : 1;
+    // Org (team): quantity = seats. Pro per-seat: send the requested seat
+    // total too — the server turns seats beyond the plan's included 5 into a
+    // recurring pro_seat line item.
+    const requested = Math.max(1, ~~((this.__seatsInput && this.__seatsInput.getValue()) || checkout.seats || 1));
+    const seats = entity_type === "org" ? requested : (plan === "pro" ? requested : 1);
     // Optional storage add-on: the bundle picker stores 100/500/1000 -> storage_*.
     const bundle = checkout.selectedBundle ? `storage_${checkout.selectedBundle}` : "";
     // hub_id is REQUIRED: payment.checkout is ACL scope:hub/src:owner. Without it
@@ -511,11 +525,14 @@ class settings_billing extends LetcBox {
     }
 
     if (pos == null && cmd.el) {
-      const text =
-        cmd.el.textContent?.toLowerCase() || cmd.el.innerText?.toLowerCase();
-      if (text && text.includes("monthly")) {
+      // Last-resort text match against the CURRENT locale labels (the old
+      // English literals broke tab detection on non-English locales).
+      const text = (cmd.el.textContent || cmd.el.innerText || "").toLowerCase();
+      const monthly = (LOCALE.MONTHLY || "monthly").toLowerCase();
+      const yearly = (LOCALE.YEARLY || "yearly").toLowerCase();
+      if (text && text.includes(monthly)) {
         pos = TAB_MONTHLY;
-      } else if (text && text.includes("yearly")) {
+      } else if (text && text.includes(yearly)) {
         pos = TAB_YEARLY;
       }
     }
@@ -811,7 +828,10 @@ class settings_billing extends LetcBox {
         ) {
           if (planValue === "enterprise") {
             if (Wm && Wm.alert) {
-              Wm.alert("Please contact our sales team via frenz@drumee.org");
+              Wm.alert(
+                (LOCALE.CONTACT_SALES_VIA || "Please contact our sales team via {0}")
+                  .format(LOCALE.SALES_CONTACT_EMAIL || "contact@drumee.org")
+              );
             }
           } else {
             this.state.checkout.selectedPlan = planValue;

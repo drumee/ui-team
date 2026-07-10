@@ -2045,5 +2045,18 @@
   "REFERRAL_UNAVAILABLE": "暂不可用",
   "REFERRAL_CODE_COPIED": "推荐码已复制",
   "REFERRAL_LINK_COPIED": "推荐链接已复制",
-  "STORAGE_ALERT_FEED": "向你发送了存储警报——你的用量偏高，请检查并清理不必要的文件"
+  "STORAGE_ALERT_FEED": "向你发送了存储警报——你的用量偏高，请检查并清理不必要的文件",
+  "SUBSCRIPTION_RENEWS_ON": "您的订阅将于 {0} 续订",
+  "SUBSCRIPTION_CANCELS_ON": "您的订阅将于 {0} 取消",
+  "PAYMENT_SUCCESS_TITLE": "支付成功！",
+  "PAYMENT_SUCCESS_TEXT": "升级成功。您现在使用的是 {0} 套餐。",
+  "PAYMENT_FAILURE_TITLE": "支付失败！",
+  "PAYMENT_FAILURE_TEXT": "您的付款无法处理。",
+  "TOTAL_PAYMENT": "总金额",
+  "PAYMENT_DATE": "付款日期",
+  "PAYMENT_METHOD": "付款方式",
+  "UPGRADE_PLAN_MENU": "升级套餐",
+  "PLAN_BADGE": "{0} 套餐",
+  "CONTACT_SALES_VIA": "请通过 {0} 联系我们的销售团队",
+  "SALES_CONTACT_EMAIL": "contact@drumee.org"
 }

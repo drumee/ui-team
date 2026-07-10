@@ -2045,5 +2045,18 @@
   "REFERRAL_UNAVAILABLE": "មិនទាន់មាននៅឡើយទេ",
   "REFERRAL_CODE_COPIED": "បានចម្លងកូដបញ្ជូនបន្ត",
   "REFERRAL_LINK_COPIED": "បានចម្លងតំណបញ្ជូនបន្ត",
-  "STORAGE_ALERT_FEED": "បានផ្ញើការជូនដំណឹងផ្ទុកមកអ្នក — ការប្រើប្រាស់របស់អ្នកខ្ពស់ សូមពិនិត្យ និងលុបឯកសារមិនចាំបាច់"
+  "STORAGE_ALERT_FEED": "បានផ្ញើការជូនដំណឹងផ្ទុកមកអ្នក — ការប្រើប្រាស់របស់អ្នកខ្ពស់ សូមពិនិត្យ និងលុបឯកសារមិនចាំបាច់",
+  "SUBSCRIPTION_RENEWS_ON": "ការជាវរបស់អ្នកនឹងបន្តនៅ {0}",
+  "SUBSCRIPTION_CANCELS_ON": "ការជាវរបស់អ្នកនឹងបញ្ឈប់នៅ {0}",
+  "PAYMENT_SUCCESS_TITLE": "ការទូទាត់ជោគជ័យ!",
+  "PAYMENT_SUCCESS_TEXT": "ដំឡើងបានជោគជ័យ។ ឥឡូវនេះអ្នកនៅក្នុងគម្រោង {0}។",
+  "PAYMENT_FAILURE_TITLE": "ការទូទាត់បរាជ័យ!",
+  "PAYMENT_FAILURE_TEXT": "មិនអាចដំណើរការការទូទាត់របស់អ្នកបានទេ។",
+  "TOTAL_PAYMENT": "ការទូទាត់សរុប",
+  "PAYMENT_DATE": "កាលបរិច្ឆេទទូទាត់",
+  "PAYMENT_METHOD": "វិធីទូទាត់",
+  "UPGRADE_PLAN_MENU": "ដំឡើងគម្រោង",
+  "PLAN_BADGE": "គម្រោង {0}",
+  "CONTACT_SALES_VIA": "សូមទាក់ទងក្រុមលក់របស់យើងតាម {0}",
+  "SALES_CONTACT_EMAIL": "contact@drumee.org"
 }

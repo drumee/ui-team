@@ -649,6 +649,36 @@ class settings_main extends LetcBox {
   }
 
   /**
+   * Billing card status line: "Renews on …" / "Your subscription will be
+   * canceled on …" from payment.subscription_status (org-aware server-side).
+   * Fired by onPartReady("billing-sub-status") so the fetch only runs when the
+   * billing card is actually rendered.
+   */
+  onPartReady(child, pn) {
+    if (pn === "billing-sub-status") {
+      this._fillSubscriptionStatus(child);
+      return;
+    }
+    if (super.onPartReady) super.onPartReady(child, pn);
+  }
+
+  async _fillSubscriptionStatus(part) {
+    try {
+      const sub = await this.fetchService(SERVICE.payment.subscription_status, { hub_id: Visitor.id });
+      if (!part || !part.el || !sub || !sub.subscription_id) return;
+      const when = sub.period_end ? Dayjs(Number(sub.period_end) * 1000).format("MMM D, YYYY") : "";
+      if (!when) return;
+      const canceled = ["canceled", "unpaid", "incomplete_expired"].includes(sub.status);
+      const text = canceled
+        ? (LOCALE.SUBSCRIPTION_CANCELS_ON || "Your subscription will be canceled on {0}").format(when)
+        : (LOCALE.SUBSCRIPTION_RENEWS_ON || "Your subscription renews on {0}").format(when);
+      part.set({ content: text });
+    } catch (e) {
+      /* status line is cosmetic — leave empty on failure */
+    }
+  }
+
+  /**
    *
    */
   async confirmDeleteAccount() {

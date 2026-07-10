@@ -99,10 +99,23 @@ const isSidebarPinned = () => {
 
 const createFooter = (ui, username) => {
   const fig = getSidebarFig(ui);
+  // Real plan badge under the username (design: "Pro Plan"): read the live
+  // entitlement instead of the old hardcoded PRO_PLAN label.
+  const plan = (((Visitor.quota && Visitor.quota()) || {}).plan || "free").toString();
+  const planBadge = (LOCALE.PLAN_BADGE || "{0} Plan").format(
+    plan.charAt(0).toUpperCase() + plan.slice(1),
+  );
 
   return Skeletons.Box.Y({
     className: cls(fig, "footer"),
     kids: [
+      // Design: a dedicated "Upgrade plan" entry above Settings.
+      createNavItem(
+        ui,
+        "billing",
+        LOCALE.UPGRADE_PLAN_MENU || "Upgrade plan",
+        "upgrade-plan",
+      ),
       createNavItem(ui, "sidebar_settings", LOCALE.SETTINGS, "toggle-settings"),
       createNavItem(
         ui,
@@ -146,7 +159,7 @@ const createFooter = (ui, username) => {
                     sys_pn: "sidebar-username",
                     partHandler: ui,
                   }),
-                  createText(fig, "footer-user-plan", LOCALE.PRO_PLAN),
+                  createText(fig, "footer-user-plan", planBadge),
                 ],
               }),
             ],

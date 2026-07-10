@@ -2467,5 +2467,18 @@
   "REFERRAL_UNAVAILABLE": "Not available yet",
   "REFERRAL_CODE_COPIED": "Referral code copied",
   "REFERRAL_LINK_COPIED": "Referral link copied",
-  "STORAGE_ALERT_FEED": "sent you a storage alert — your usage is high, please review and clear unnecessary files"
+  "STORAGE_ALERT_FEED": "sent you a storage alert — your usage is high, please review and clear unnecessary files",
+  "SUBSCRIPTION_RENEWS_ON": "Your subscription renews on {0}",
+  "SUBSCRIPTION_CANCELS_ON": "Your subscription will be canceled on {0}",
+  "PAYMENT_SUCCESS_TITLE": "Payment Success!",
+  "PAYMENT_SUCCESS_TEXT": "Upgraded successfully. You are now in {0} plan.",
+  "PAYMENT_FAILURE_TITLE": "Payment Failure!",
+  "PAYMENT_FAILURE_TEXT": "Your payment could not be processed.",
+  "TOTAL_PAYMENT": "Total Payment",
+  "PAYMENT_DATE": "Payment date",
+  "PAYMENT_METHOD": "Payment method",
+  "UPGRADE_PLAN_MENU": "Upgrade plan",
+  "PLAN_BADGE": "{0} Plan",
+  "CONTACT_SALES_VIA": "Please contact our sales team via {0}",
+  "SALES_CONTACT_EMAIL": "contact@drumee.org"
 }
