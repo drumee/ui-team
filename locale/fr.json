@@ -2044,5 +2044,6 @@
   "REFERRAL": "Parrainage",
   "REFERRAL_UNAVAILABLE": "Pas encore disponible",
   "REFERRAL_CODE_COPIED": "Code de parrainage copié",
-  "REFERRAL_LINK_COPIED": "Lien de parrainage copié"
+  "REFERRAL_LINK_COPIED": "Lien de parrainage copié",
+  "STORAGE_ALERT_FEED": "vous a envoyé une alerte de stockage — votre utilisation est élevée, veuillez vérifier et supprimer les fichiers inutiles"
 }

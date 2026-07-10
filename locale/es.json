@@ -2049,5 +2049,6 @@
   "REFERRAL": "Referido",
   "REFERRAL_UNAVAILABLE": "Aún no disponible",
   "REFERRAL_CODE_COPIED": "Código de referido copiado",
-  "REFERRAL_LINK_COPIED": "Enlace de referido copiado"
+  "REFERRAL_LINK_COPIED": "Enlace de referido copiado",
+  "STORAGE_ALERT_FEED": "te envió una alerta de almacenamiento — tu uso es alto, revisa y elimina archivos innecesarios"
 }

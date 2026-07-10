@@ -2044,5 +2044,6 @@
   "REFERRAL": "推荐",
   "REFERRAL_UNAVAILABLE": "暂不可用",
   "REFERRAL_CODE_COPIED": "推荐码已复制",
-  "REFERRAL_LINK_COPIED": "推荐链接已复制"
+  "REFERRAL_LINK_COPIED": "推荐链接已复制",
+  "STORAGE_ALERT_FEED": "向你发送了存储警报——你的用量偏高，请检查并清理不必要的文件"
 }

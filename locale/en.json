@@ -2466,5 +2466,6 @@
   "REFERRAL": "Referral",
   "REFERRAL_UNAVAILABLE": "Not available yet",
   "REFERRAL_CODE_COPIED": "Referral code copied",
-  "REFERRAL_LINK_COPIED": "Referral link copied"
+  "REFERRAL_LINK_COPIED": "Referral link copied",
+  "STORAGE_ALERT_FEED": "sent you a storage alert — your usage is high, please review and clear unnecessary files"
 }
