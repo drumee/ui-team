@@ -155,6 +155,9 @@ const __skl_secure_share = function(_ui_) {
         sys_pn      : 'ref-chips-input',
         formItem    : 'chip_email',
         type        : _a.text,
+        // Keep Chrome from treating this as the "username" half of a login
+        // form paired with the password field below (see password-input note).
+        autocomplete: 'off',
         placeholder : LOCALE.SECURE_SHARE_ADD_EMAIL_PLACEHOLDER,
         mode        : 'commit',
         service     : 'add-email-chip',
@@ -185,6 +188,15 @@ const __skl_secure_share = function(_ui_) {
             formItem    : 'password',
             name        : 'password',
             type        : _a.password,
+            // This is a share-protection password the user CREATES — not a
+            // login. Without this, the input template falls back to
+            // autocomplete="password" (name), so Chrome's password manager
+            // treats the panel as a sign-in form, autofills the saved email
+            // into the nearest visible text field (the topbar search) and
+            // focuses it. 'new-password' declassifies it → no autofill/focus
+            // hijack. See the permission_restricted panel (no password field)
+            // which never triggers this.
+            autocomplete: 'new-password',
             placeholder : LOCALE.SECURE_SHARE_PASSWORD_PLACEHOLDER,
             uiHandler   : [_ui_],
             showError   : false
