@@ -41,12 +41,31 @@ class __form_folder extends LetcBox {
     }
   }
 
+  // Inline "required" message shown directly under the name input
+  // (.form-folder__input-error) instead of a modal alert. Pass a falsy msg to
+  // clear it; falls back to Wm.alert if the part isn't mounted.
+  _setNameError(msg) {
+    const err = this.getPart && this.getPart("name-error");
+    if (!err || !err.el) {
+      if (msg) Wm.alert(msg);
+      return;
+    }
+    if (msg) {
+      if (_.isFunction(err.set)) err.set({ content: msg });
+      else err.el.textContent = msg;
+      err.el.dataset.state = 1;
+    } else {
+      err.el.dataset.state = 0;
+    }
+  }
+
   _submit() {
     if (this._pending) return;
     const data = this.getData(_a.formItem) || {};
     const filename = (data.filename || "").trim();
+    this._setNameError(null);
     if (!filename) {
-      Wm.alert(LOCALE.REQUIRE_THIS_FIELD || "Please enter a name");
+      this._setNameError(LOCALE.REQUIRE_THIS_FIELD || "Please enter a name");
       return;
     }
 
