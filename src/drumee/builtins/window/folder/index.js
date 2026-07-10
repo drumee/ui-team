@@ -1378,10 +1378,29 @@ class __window_folder extends mfsInteract {
         return this._refreshSchedule();
       }
 
+      case "sched-set-view": {
+        const st = require("./skeleton/meeting-schedule").schedState(this);
+        const v = (cmd.mget && cmd.mget("view")) || (cmd.el && cmd.el.dataset.view);
+        if (v && v !== st.view) {
+          st.view = v;
+          return this._refreshSchedule();
+        }
+        return;
+      }
+
       // ── Meeting scheduling modal (skeleton/meeting-modal.js) ───────────
       case "open-schedule":
         // Calendar "Schedule" CTA → create a new meeting.
         return this.openMeetingModal();
+
+      case "sched-new-at": {
+        // Click an empty weekly half-slot → create a meeting prefilled at that
+        // day + half-hour.
+        const day = (cmd.mget && cmd.mget("day")) || (cmd.el && cmd.el.dataset.day);
+        const hour = Number((cmd.mget && cmd.mget("hour")) ?? (cmd.el && cmd.el.dataset.hour));
+        const min = Number((cmd.mget && cmd.mget("min")) ?? (cmd.el && cmd.el.dataset.min)) || 0;
+        return this.openMeetingModal({ at: { day, hour: isNaN(hour) ? 9 : hour, min } });
+      }
 
       case "open-meeting": {
         // A schedule card on the calendar → edit that meeting.
@@ -1389,6 +1408,11 @@ class __window_folder extends mfsInteract {
         const meeting = (this._meetings || []).find((m) => m.id === nid);
         return this.openMeetingModal({ meeting });
       }
+
+      case "join-meeting":
+        // Join the workspace meeting room (from a calendar card or the editor).
+        this.closeMeetingModal();
+        return this._launchMeetingStandalone();
 
       case "close-meeting-modal":
         return this.closeMeetingModal();
@@ -1760,12 +1784,15 @@ class __window_folder extends mfsInteract {
   // the hub's meetings for the (possibly changed) visible range first, so the
   // grid always reflects the current window.
   _refreshSchedule() {
-    return this._fetchMeetings().then(() => {
+    // Render immediately from view state (so nav/toggle work even if the fetch
+    // fails), then re-render when the fetch resolves.
+    const feed = () => {
       const part = this.getPart && this.getPart("meeting-panel");
       if (!part || !part.el) return;
-      const skl = require("./skeleton/meeting-schedule")(this);
-      part.feed(skl.kids);
-    });
+      part.feed(require("./skeleton/meeting-schedule")(this).kids);
+    };
+    feed();
+    return this._fetchMeetings().then(feed, feed);
   }
 
   // The [stime, etime] epoch bounds of the calendar's visible range, derived
@@ -1786,8 +1813,12 @@ class __window_folder extends mfsInteract {
   // Fetch the hub's scheduled meetings for the visible range into this._meetings.
   // Resolves (never rejects) so callers can re-feed regardless.
   _fetchMeetings() {
+    // Guard against SERVICE.room being absent (route not loaded) — fall back to
+    // the plain service name so this never throws synchronously.
+    const svc = (SERVICE.room && SERVICE.room.list) || "room.list";
     const { stime, etime } = this._meetingRange();
-    return this.fetchService(SERVICE.room.list || "room.list", { stime, etime })
+    return Promise.resolve()
+      .then(() => this.fetchService(svc, { stime, etime }))
       .then((rows) => {
         this._meetings = Array.isArray(rows) ? rows : [];
       })
@@ -1831,7 +1862,25 @@ class __window_folder extends mfsInteract {
   }
 
   openMeetingModal(opt = {}) {
-    const prefill = this._prefillMeeting(opt.meeting);
+    let prefill = this._prefillMeeting(opt.meeting);
+    // Create-at-slot (clicking an empty weekly cell): synthesize a create-mode
+    // prefill (nid null) seeded with the clicked day + a 1-hour slot.
+    if (!prefill && opt.at && opt.at.day) {
+      const p2 = (n) => String(n).padStart(2, "0");
+      const startMin = opt.at.hour * 60 + (opt.at.min || 0);
+      const endMin = startMin + 60; // default 1-hour slot
+      const hm = (mins) => `${p2(Math.floor(mins / 60) % 24)}:${p2(mins % 60)}`;
+      prefill = {
+        nid: null,
+        title: "",
+        message: "",
+        date_ymd: opt.at.day,
+        stime_hm: hm(startMin),
+        etime_hm: hm(endMin),
+        attendees: [],
+        recur: { freq: "none", until: "" },
+      };
+    }
     // Working state the invitee chips + recurrence row read/mutate.
     this._mmAttendees = prefill ? prefill.attendees.slice() : [];
     this._mmRecur = prefill ? { ...prefill.recur } : { freq: "none", until: "" };
@@ -1849,9 +1898,9 @@ class __window_folder extends mfsInteract {
       this.ensurePart("wrapper-dialog").then((wrapper) => {
         this.dialogWrapper = wrapper;
         if (wrapper.el) {
+          // Transparent backdrop (no blur/white wash — the content stays visible
+          // behind the centered card).
           wrapper.el.setAttribute("data-variant", "meeting");
-          // Glass backdrop behind the centered card (Figma 2510-145902).
-          wrapper.el.setAttribute("data-overlay", "blur");
         }
         wrapper.feed(require("./skeleton/meeting-modal")(this, { meeting: prefill }));
       }),
@@ -1951,6 +2000,34 @@ class __window_folder extends mfsInteract {
     };
   }
 
+  // Optimistically upsert a meeting into this._meetings from the form so it
+  // shows immediately; a later room.list fetch overwrites it.
+  _upsertLocalMeeting(nid, form) {
+    if (!nid) return;
+    this._meetings = Array.isArray(this._meetings) ? this._meetings : [];
+    const row = {
+      id: nid,
+      filename: form.title,
+      stime: form.stime,
+      etime: form.etime,
+      metadata: JSON.stringify({
+        content: {
+          title: form.title,
+          message: form.message,
+          date: form.date,
+          stime: form.stime,
+          etime: form.etime,
+          recur: form.recur,
+          attendees: form.attendees,
+          room_id: nid,
+        },
+      }),
+    };
+    const i = this._meetings.findIndex((m) => m.id === nid);
+    if (i >= 0) this._meetings[i] = row;
+    else this._meetings.push(row);
+  }
+
   submitMeetingModal() {
     if (this._mmSubmitting) return;
     const form = this._readMeetingForm();
@@ -1968,7 +2045,7 @@ class __window_folder extends mfsInteract {
 
     if (nid) {
       // Edit: flag "all" updates title/agenda/when + members (uids) + recur.
-      return this.fetchService(SERVICE.room.update || "room.update", {
+      return this.fetchService((SERVICE.room && SERVICE.room.update) || "room.update", {
         flag: "all",
         nid,
         title: form.title,
@@ -1978,12 +2055,16 @@ class __window_folder extends mfsInteract {
         etime: form.etime,
         recur: form.recur,
         attendees: form.attendees,
-      }).then(done, fail);
+      }).then(() => {
+        this._upsertLocalMeeting(nid, form);
+        done();
+      }, fail);
     }
 
     // Create: book the node (with recurrence), then attach the invited members
     // via update "member" (which notifies them in-app).
-    return this.fetchService(SERVICE.room.book || "room.book", {
+    let createdNid = null;
+    return this.fetchService((SERVICE.room && SERVICE.room.book) || "room.book", {
       title: form.title,
       message: form.message,
       date: form.date,
@@ -1992,22 +2073,31 @@ class __window_folder extends mfsInteract {
       recur: form.recur,
     })
       .then((node) => {
-        const newNid = node && (node.id || node.nid);
-        if (newNid && form.attendees.length) {
-          return this.fetchService(SERVICE.room.update || "room.update", {
+        createdNid = node && (node.id || node.nid);
+        if (createdNid && form.attendees.length) {
+          return this.fetchService((SERVICE.room && SERVICE.room.update) || "room.update", {
             flag: "member",
-            nid: newNid,
+            nid: createdNid,
             attendees: form.attendees,
           });
         }
       })
-      .then(done, fail);
+      .then(() => {
+        if (createdNid) {
+          this._upsertLocalMeeting(createdNid, form);
+          // Jump the calendar to the new meeting's week so it's visible even if
+          // it was scheduled outside the range currently in view.
+          const st = require("./skeleton/meeting-schedule").schedState(this);
+          st.anchor = Dayjs.unix(form.stime);
+        }
+        done();
+      }, fail);
   }
 
   deleteMeetingModal() {
     const nid = this._mmEditNid;
     if (!nid) return this.closeMeetingModal();
-    return this.postService(SERVICE.room.remove || "room.remove", { nid }).then(() => {
+    return this.postService((SERVICE.room && SERVICE.room.remove) || "room.remove", { nid }).then(() => {
       this.closeMeetingModal();
       this._refreshSchedule();
     });

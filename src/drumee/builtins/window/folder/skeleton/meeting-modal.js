@@ -168,6 +168,12 @@ module.exports = function meetingModal(ui, opt = {}) {
           uiHandler: [ui],
         }),
         Skeletons.Note({
+          className: `${pfx}-btn ghost`,
+          content: LOCALE.JOIN_MEETING,
+          service: "join-meeting",
+          uiHandler: [ui],
+        }),
+        Skeletons.Note({
           className: `${pfx}-btn primary`,
           content: LOCALE.UPDATE_SCHEDULE,
           service: "meeting-modal-submit",

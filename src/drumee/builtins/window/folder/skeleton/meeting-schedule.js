@@ -93,19 +93,40 @@ function normalizeMeetings(ui, rangeStart, rangeEnd) {
 
 // A meeting card absolutely positioned within its start-hour cell (top/height
 // by minute so it can span rows; z-index lifts it above later sibling cells).
-function weekCard(ui, pfx, mtg) {
+// `idx`/`count` split the cell width so meetings in the same hour sit
+// side-by-side instead of overlapping.
+function weekCard(ui, pfx, mtg, idx = 0, count = 1) {
   const top = (mtg.start.minute() / 60) * HOUR_PX;
   const durMin = Math.max(30, mtg.end.diff(mtg.start, "minute"));
   const height = Math.max(22, (durMin / 60) * HOUR_PX - 2);
+  const w = 100 / count;
   return Skeletons.Box.Y({
     className: `${pfx}-sched-card`,
-    styleOpt: { top: `${top}px`, height: `${height}px` },
+    styleOpt: {
+      top: `${top}px`,
+      height: `${height}px`,
+      left: `calc(${idx * w}% + 2px)`,
+      width: `calc(${w}% - 3px)`,
+      right: "auto",
+    },
     service: "open-meeting",
     nid: mtg.nid,
     dataset: { nid: mtg.nid },
     attrOpt: { "data-nid": mtg.nid },
+    // Don't bubble to the cell's "new meeting" click.
+    bubble: 0,
     uiHandler: [ui],
-    kids: [Skeletons.Note({ className: `${pfx}-sched-card-title`, content: mtg.title })],
+    kids: [
+      Skeletons.Note({ className: `${pfx}-sched-card-title`, content: mtg.title }),
+      Skeletons.Button.Svg({
+        className: `${pfx}-sched-card-join`,
+        ico: "meet-camera",
+        service: "join-meeting",
+        nid: mtg.nid,
+        bubble: 0,
+        uiHandler: [ui],
+      }),
+    ],
   });
 }
 
@@ -148,12 +169,26 @@ function weeklyGrid(ui, pfx) {
           className: `${pfx}-sched-hour`,
           kids: [Skeletons.Note({ className: `${pfx}-sched-hour-label`, content: hourLabel(h) })],
         }),
-        ...Array.from({ length: 7 }, (_, i) =>
-          Skeletons.Box.Y({
+        ...Array.from({ length: 7 }, (_, i) => {
+          const cm = cellMeetings(i, h);
+          const dayStr = start.add(i, "day").format("YYYY-MM-DD");
+          // Two half-hour click zones (:00 / :30) so clicking the 6:30 band
+          // schedules 6:30, not the whole 6:00 hour.
+          const slot = (min) =>
+            Skeletons.Box.Y({
+              className: `${pfx}-sched-slot`,
+              service: "sched-new-at",
+              day: dayStr,
+              hour: h,
+              min,
+              attrOpt: { "data-day": dayStr, "data-hour": h, "data-min": min },
+              uiHandler: [ui],
+            });
+          return Skeletons.Box.Y({
             className: `${pfx}-sched-cell`,
-            kids: cellMeetings(i, h).map((m) => weekCard(ui, pfx, m)),
-          }),
-        ),
+            kids: [slot(0), slot(30), ...cm.map((m, k) => weekCard(ui, pfx, m, k, cm.length))],
+          });
+        }),
       ],
     }),
   );
@@ -260,19 +295,31 @@ module.exports = function meetingSchedule(ui) {
     ],
   });
 
-  // Weekly ⬤ Monthly switch: the whole group toggles between the two views.
+  // Each label sets its view explicitly (click Monthly → monthly); the pill toggles.
   const viewToggle = Skeletons.Box.X({
     className: `${pfx}-sched-toggle`,
-    service: "sched-toggle-view",
-    uiHandler: [ui],
     attrOpt: { "data-view": view },
     kids: [
-      Skeletons.Note({ className: `${pfx}-sched-toggle-label weekly`, content: LOCALE.WEEKLY }),
+      Skeletons.Note({
+        className: `${pfx}-sched-toggle-label weekly`,
+        content: LOCALE.WEEKLY,
+        service: "sched-set-view",
+        view: "weekly",
+        uiHandler: [ui],
+      }),
       Skeletons.Box.X({
         className: `${pfx}-sched-toggle-switch`,
+        service: "sched-toggle-view",
+        uiHandler: [ui],
         kids: [Skeletons.Note({ className: `${pfx}-sched-toggle-knob` })],
       }),
-      Skeletons.Note({ className: `${pfx}-sched-toggle-label monthly`, content: LOCALE.MONTHLY }),
+      Skeletons.Note({
+        className: `${pfx}-sched-toggle-label monthly`,
+        content: LOCALE.MONTHLY,
+        service: "sched-set-view",
+        view: "monthly",
+        uiHandler: [ui],
+      }),
     ],
   });
 

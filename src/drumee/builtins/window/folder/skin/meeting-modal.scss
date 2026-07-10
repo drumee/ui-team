@@ -65,9 +65,16 @@
   }
 
   &__meeting-modal-row {
-    gap: 24px;
+    gap: 16px;
     align-items: flex-end;
-    flex-wrap: nowrap !important;
+    // Wrap instead of overflowing if the three fields can't share one line.
+    flex-wrap: wrap;
+  }
+
+  // Keep each field able to shrink + a sensible floor so the native time inputs
+  // don't force the row to overflow ("break").
+  &__meeting-modal-row &__meeting-modal-field {
+    min-width: 130px;
   }
 
   // The three input flavours (EntryBox / Textarea containers, native time
@@ -77,6 +84,8 @@
   &__meeting-modal-date input {
     box-sizing: border-box;
     width: 100%;
+    min-width: 0; // allow native time/date inputs to shrink rather than overflow
+    height: 44px;
     padding: 12px;
     border: none;
     border-radius: 8px;
@@ -105,6 +114,8 @@
 
   &__meeting-modal-time {
     cursor: text;
+    -webkit-appearance: none;
+    appearance: none;
   }
 
   // ── Invitees: workspace-member toggle chips ──────────────────────────────
@@ -213,6 +224,11 @@
 
     &.danger {
       background: #e5484d;
+    }
+
+    &.ghost {
+      background: rgba(89, 80, 255, 0.1);
+      color: var(--primary-40, #5950ff);
     }
 
     &:hover {

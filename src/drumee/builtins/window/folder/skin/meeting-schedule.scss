@@ -105,6 +105,10 @@
 
   &__meeting-sched-toggle-label {
     @include drumee.typo($size: 14px, $line: 20px, $weight: 400, $color: #84848c);
+    // Bigger, easy-to-hit target.
+    padding: 4px 6px;
+    cursor: pointer;
+    user-select: none;
   }
 
   &__meeting-sched-toggle[data-view="weekly"] &__meeting-sched-toggle-label.weekly,
@@ -244,6 +248,7 @@
   &__meeting-sched-body {
     flex: 1;
     min-height: 0;
+    position: relative; // anchors the empty-range hint
     overflow-y: auto;
     overflow-x: hidden;
 
@@ -354,6 +359,45 @@
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+  }
+
+  // Quick-join button on a card — hover-revealed to avoid crowding.
+  &__meeting-sched-card-join {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: var(--primary-40, #5950ff);
+    color: #ffffff;
+    opacity: 0;
+    transition: opacity 0.12s ease;
+
+    svg {
+      width: 12px;
+      height: 12px;
+      fill: currentColor;
+    }
+  }
+
+  &__meeting-sched-card:hover &__meeting-sched-card-join {
+    opacity: 1;
+  }
+
+  // Half-hour click zones stacked inside each cell (:00 / :30). Sit under the
+  // cards (which are position:absolute); hover hints they're clickable.
+  &__meeting-sched-slot {
+    flex: 1;
+    min-height: 0;
+    cursor: pointer;
+
+    &:hover {
+      background: rgba(89, 80, 255, 0.05);
+    }
   }
 
   // Monthly: a compact line per meeting inside the day cell.
