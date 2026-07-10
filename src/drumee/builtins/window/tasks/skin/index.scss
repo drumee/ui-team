@@ -3753,7 +3753,7 @@
     // Figma metrics: priority 141 · status 149 · due 175 · assignee 107;
     // Task grows from 320 and Linked-files takes the remaining slack.
     & > *:nth-child(1) {
-      flex: 1 1 320px; // task (checkbox + title)
+      flex: 1 1 240px; // task (checkbox + title)
       min-width: 0;
     }
     & > *:nth-child(2) {
@@ -3766,7 +3766,7 @@
       flex: 0 0 175px; // due date
     }
     & > *:nth-child(5) {
-      flex: 1 1 0; // linked files
+      flex: 2 1 0; // linked files — grows faster than task to claim the slack
       min-width: 0;
     }
     & > *:nth-child(6) {
@@ -3798,9 +3798,9 @@
     }
   }
 
-  &__list-th-assignee {
-    text-align: right;
-  }
+  // &__list-th-assignee {
+  //   text-align: center;
+  // }
 
   // "Task" header aligns over the row titles, which are offset by the
   // checkbox (16px) + gap (10px) in the first cell.
@@ -3979,6 +3979,10 @@
     padding: 4px 8px;
     border-radius: 4px;
     background: rgba(0, 0, 0, 0.05);
+    // Shrink the filename chip (so its name ellipsizes) and keep the "+N" chip
+    // at its natural size — the count must survive however long the name is.
+    flex: 0 1 auto;
+    min-width: 0;
     max-width: 100%;
     box-sizing: border-box;
   }
@@ -4003,7 +4007,6 @@
 
   // Assignee cell — overlapping avatars / unassigned badge
   &__list-assignee-cell {
-    justify-content: flex-end;
     overflow: visible;
   }
 

@@ -6,7 +6,7 @@
 const {
   PRIORITY_RANK,
   assigneeUids,
-  formatDue,
+  formatDueRange,
   isOverdue,
   priorityMeta,
   statusMeta,
@@ -146,9 +146,10 @@ module.exports = function (ui) {
     });
   };
 
-  // Due cell — overlay pill; empty when the task has no due date.
+  // Due cell — overlay pill; a duration task shows its "start → due" span, a
+  // single-day task shows one date; empty when the task has no due date.
   const dueCell = (t) => {
-    const due = formatDue(t.due_date);
+    const due = formatDueRange(t);
     return Skeletons.Box.X({
       className: `${pfx}__list-cell ${pfx}__list-due-cell`,
       kids: due
@@ -187,7 +188,7 @@ module.exports = function (ui) {
       chips.push(
         Skeletons.Note({
           className: `${pfx}__list-file-more`,
-          content: `+${more}`,
+          content: `+${more} ${more === 1 ? LOCALE.MORE_FILE : LOCALE.MORE_FILES}`,
         }),
       );
     return Skeletons.Box.X({

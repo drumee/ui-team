@@ -29,6 +29,19 @@ function formatDue(d) {
   }
 }
 
+// Due label for a task: a duration task (start_date set and distinct from the
+// due date) shows the span "start → due"; a single-day task — no start_date, or
+// a start that equals the due date — shows just the one date.
+function formatDueRange(t) {
+  if (!t) return "";
+  const start = t.start_date || "";
+  const end = t.due_date || "";
+  if (start && end && start !== end) {
+    return `${formatDue(start)} → ${formatDue(end)}`;
+  }
+  return formatDue(end);
+}
+
 function isOverdue(d) {
   if (!d) return false;
   try {
@@ -63,6 +76,7 @@ module.exports = {
   fullName,
   assigneeUids,
   formatDue,
+  formatDueRange,
   isOverdue,
   priorityMeta,
   statusMeta,

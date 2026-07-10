@@ -1562,6 +1562,8 @@
   "LINKED": "Связано",
   "NO_FILE_RESULTS": "Нет подходящих файлов",
   "LINKED_FILES": "Файлы",
+  "MORE_FILE": "файл",
+  "MORE_FILES": "файлов",
   "MORE": "more",
   "PENDING": "Ожидание",
   "DEFAULT": "Default",

@@ -1562,6 +1562,8 @@
   "LINKED": "已关联",
   "NO_FILE_RESULTS": "没有匹配的文件",
   "LINKED_FILES": "文件",
+  "MORE_FILE": "个文件",
+  "MORE_FILES": "个文件",
   "MORE": "more",
   "PENDING": "待处理",
   "DEFAULT": "Default",

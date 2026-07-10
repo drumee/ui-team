@@ -1562,6 +1562,8 @@
   "LINKED": "Lié",
   "NO_FILE_RESULTS": "Aucun fichier correspondant",
   "LINKED_FILES": "Fichiers",
+  "MORE_FILE": "fichier",
+  "MORE_FILES": "fichiers",
   "MORE": "more",
   "PENDING": "En attente",
   "DEFAULT": "Default",
