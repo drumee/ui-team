@@ -9,6 +9,7 @@ class __push_manager extends winman {
     super(...args);
     this.dispatchInboundCall = this.dispatchInboundCall.bind(this);
     this.dispatchRoom = this.dispatchRoom.bind(this);
+    this._showMeetingToast = this._showMeetingToast.bind(this);
   }
 
   initialize(opt) {
@@ -111,6 +112,13 @@ class __push_manager extends winman {
       case SERVICE.signaling.notify:
         return;
 
+      // A workspace member scheduled/invited you to a meeting (room.js
+      // _notify_invitees). Show a transient top-right toast — NOT a modal.
+      // (The persistent notification-sidebar entry is a separate follow-up
+      // that needs the notification_center_next aggregation extended.)
+      case "room.scheduled":
+        return this._showMeetingToast(data);
+
       case SERVICE.signaling.message:
         if (/pickup|cancel|reject/.test(data.type)) Visitor.muteSound();
         return
@@ -158,7 +166,65 @@ class __push_manager extends winman {
   }
 
   /**
-   * 
+   * Transient top-right toast for a meeting invite (room.scheduled push):
+   * appends a Skeletons node to the WM layer, auto-dismisses after ~6s (or on
+   * click). Not a modal; the notification-sidebar entry is a separate follow-up.
+   */
+  _showMeetingToast(data = {}) {
+    try {
+      const from = data.from || "";
+      const line = data.title
+        ? `${LOCALE.X_INVITED_YOU_TO_MEETING.format(from)} — ${data.title}`
+        : LOCALE.X_INVITED_YOU_TO_MEETING.format(from);
+      const layer = Wm && Wm.windowsLayer;
+      if (!layer || !layer.append) return;
+      // Stack toasts down the right edge so several don't overlap.
+      this._meetingToastN = (this._meetingToastN || 0) + 1;
+      const idx = this._meetingToastN;
+      const toast = layer.append(
+        Skeletons.Box.X({
+          className: "desk-meeting-toast",
+          service: "dismiss-meeting-toast",
+          uiHandler: [this],
+          styleOpt: {
+            position: "fixed",
+            top: `${72 + ((idx - 1) % 4) * 76}px`,
+            right: "24px",
+            "z-index": 100000,
+            "max-width": "320px",
+            padding: "14px 16px",
+            "border-radius": "10px",
+            background: "#0b0a21",
+            color: "#ffffff",
+            "box-shadow": "0 10px 30px rgba(0, 0, 0, 0.25)",
+            cursor: "pointer",
+          },
+          kids: [
+            Skeletons.Note({
+              content: line,
+              styleOpt: { "font-size": "14px", "line-height": "20px", color: "#ffffff" },
+            }),
+          ],
+        }),
+      );
+      const kill = () => {
+        try {
+          if (toast && (!toast.isDestroyed || !toast.isDestroyed())) {
+            if (toast.goodbye) toast.goodbye();
+            else if (toast.remove) toast.remove();
+          }
+        } catch (e) {}
+      };
+      // Click-to-dismiss + auto-dismiss.
+      if (toast && toast.el) toast.el.addEventListener("click", kill, { once: true });
+      setTimeout(kill, 6000);
+    } catch (e) {
+      this.warn && this.warn("meeting toast failed", e);
+    }
+  }
+
+  /**
+   *
    */
   dispatchInboundCall(data) {
     let o;
