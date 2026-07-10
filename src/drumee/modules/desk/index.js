@@ -53,6 +53,10 @@ class desk_module extends LetcBox {
     RADIO_BROADCAST.on("avatar-changed", this._updateAvatar);
     Visitor.on(_e.change, this._updateAvatar);
     RADIO_BROADCAST.on("activity-update", this._updateActivityBadge, this);
+    // Cross-plugin / cross-module billing entry (admin-console upsell, Wm) →
+    // open the full-page billing screen without a direct module reference.
+    this._openBillingPage = () => this.openBillingPage();
+    RADIO_BROADCAST.on("desk:open-billing-page", this._openBillingPage);
     setTimeout(this.lazyClasses, 5000);
 
     // Chrome-style folder tabs in the desk topbar. One tab per open
@@ -215,6 +219,7 @@ class desk_module extends LetcBox {
       clearInterval(this._usageTimer);
       this._usageTimer = null;
     }
+    RADIO_BROADCAST.off("desk:open-billing-page", this._openBillingPage);
     RADIO_BROADCAST.off("avatar-changed", this._updateAvatar);
     Visitor.off(_e.change, this._updateAvatar);
     if (this._searchInputEl && this._searchInputHandler) {
@@ -897,10 +902,11 @@ class desk_module extends LetcBox {
    * @param {*} kind
    * @param {*} pn  Slot name; tracked per-slot in `_pendingKinds`.
    */
-  _loadKind(p, kind, pn) {
+  _loadKind(p, kind, pn, opt = {}) {
     p.feed({
       kind,
       uiHandler: [this],
+      ...opt,
     });
     if (!this._pendingKinds) this._pendingKinds = {};
     if (pn) this._pendingKinds[pn] = kind;
@@ -1066,7 +1072,7 @@ class desk_module extends LetcBox {
   /**
    *
    */
-  togglePanel(kind, pn, openOnly) {
+  togglePanel(kind, pn, openOnly, opt) {
     // Release the wm z-30000 lift before any sidebar screen change — see
     // _dismissWmModal. Covers both the first-open (_loadKind) and the
     // keep-alive re-show (_showPanel) paths.
@@ -1129,8 +1135,25 @@ class desk_module extends LetcBox {
         this._pendingKinds[pn] = null;
       }
       this.closeOtherSidebarPanels(pn);
-      this._loadKind(p, kind, pn);
+      this._loadKind(p, kind, pn, opt);
     });
+  }
+
+  /**
+   * Open the billing/subscription screen as a FULL PAGE inside the desk
+   * settings-main-slot (Figma design), replacing whatever screen is there —
+   * NOT a popup. Every billing entry point (sidebar "Upgrade plan", the
+   * Settings "Manage subscription" card, the admin-console upsell, the desk
+   * storage "Upgrade plan" card) routes here. page:1 makes settings_billing
+   * render its full-page layout (big title + tabs + plans + footer).
+   */
+  openBillingPage() {
+    RADIO_BROADCAST.trigger("breadcrumb:context", {
+      filename: LOCALE.BILLING_SUBSCRIPTION,
+    });
+    return Kind.waitFor("settings_billing").then(() =>
+      this.togglePanel("settings_billing", "settings-main-slot", true, { page: 1 })
+    );
   }
 
   /**
@@ -1363,12 +1386,11 @@ class desk_module extends LetcBox {
         });
         return this.togglePanel("panel_trash", "trash-panel");
 
-      // Sidebar "Upgrade plan" entry → the billing popup in the desk modal.
+      // Every billing entry point (sidebar "Upgrade plan", Settings "Manage
+      // subscription" card, admin-console upsell, desk storage card) → the
+      // full-page billing screen in settings-main-slot (NOT a popup).
       case "upgrade-plan":
-        if (window.Wm && typeof Wm.upgradePlage === "function") {
-          return Wm.upgradePlage();
-        }
-        return;
+        return this.openBillingPage();
 
       // Display mode (light/dark/system) moved to Settings → Appearance.
       // See builtins/widget/settings/main + utils router/theme.js.
