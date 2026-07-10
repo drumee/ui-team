@@ -887,10 +887,11 @@
     display: none;
   }
 
+  // Left-aligned, full-width content (matches the design + .settings-main),
+  // capped on ultra-wide screens so the 4 cards don't stretch unboundedly.
   .settings-billing__main {
     width: 100%;
-    max-width: 1280px;
-    margin: 0 auto;
+    max-width: 1600px;
   }
 
   .settings-billing__page-title {
@@ -902,9 +903,9 @@
     margin-bottom: var(--spacer-6);
   }
 
-  // The tab bar sits centred under the title (design).
+  // The tab bar (max-width 400px pill) sits centred under the title (design).
   .settings-billing__tabs-trigger-main {
-    justify-content: center;
+    align-self: center;
   }
 }
 
