@@ -147,6 +147,17 @@
         }
       }
 
+      // "Your current plan" pill (design: the active plan shows a muted,
+      // non-clickable pill instead of a CTA).
+      &.current {
+        color: var(--neutral-600);
+        background-color: var(--neutral-100);
+        border: 1px solid var(--neutral-300);
+        cursor: default;
+        pointer-events: none;
+        font-weight: 600;
+      }
+
       &.secondary {
         color: black;
         border: 1px solid var(--neutral-300);

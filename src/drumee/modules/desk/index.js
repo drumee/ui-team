@@ -1363,6 +1363,13 @@ class desk_module extends LetcBox {
         });
         return this.togglePanel("panel_trash", "trash-panel");
 
+      // Sidebar "Upgrade plan" entry → the billing popup in the desk modal.
+      case "upgrade-plan":
+        if (window.Wm && typeof Wm.upgradePlage === "function") {
+          return Wm.upgradePlage();
+        }
+        return;
+
       // Display mode (light/dark/system) moved to Settings → Appearance.
       // See builtins/widget/settings/main + utils router/theme.js.
 

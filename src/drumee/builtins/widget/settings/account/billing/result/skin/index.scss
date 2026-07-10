@@ -1,0 +1,157 @@
+// Post-Checkout result modal (Payment Success / Payment Failure).
+// Rendered inside the desk wrapper-modal (centred, blurred backdrop).
+
+.settings-billing-result {
+  &__card {
+    position: relative;
+    width: 520px;
+    max-width: calc(100vw - 32px);
+    padding: 40px 48px 48px;
+    background: #ffffff;
+    border-radius: 16px;
+    box-shadow:
+      0 24px 48px rgba(11, 10, 33, 0.16),
+      0 6px 16px rgba(11, 10, 33, 0.06);
+    align-items: center;
+  }
+
+  &__close {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    width: 24px;
+    height: 24px;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+
+    &-ico {
+      width: 16px;
+      height: 16px;
+      color: rgb(101, 101, 108);
+    }
+  }
+
+  &__body {
+    width: 100%;
+    align-items: center;
+    gap: 12px;
+  }
+
+  &__icon {
+    width: 72px;
+    height: 72px;
+    border-radius: 50%;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 8px;
+
+    &.success {
+      background: rgba(63, 185, 80, 0.12);
+
+      .settings-billing-result__icon-glyph {
+        color: #3fb950;
+      }
+    }
+
+    &.failure {
+      background: rgba(214, 78, 73, 0.12);
+
+      .settings-billing-result__icon-glyph {
+        color: rgb(214, 78, 73);
+      }
+    }
+
+    &-glyph {
+      width: 32px;
+      height: 32px;
+    }
+  }
+
+  &__title {
+    font-family: var(--font-bold);
+    font-size: 28px;
+    line-height: 1.2;
+    font-weight: 700;
+    color: rgb(21, 20, 57);
+    text-align: center;
+  }
+
+  &__subtitle {
+    font-family: var(--font-main);
+    font-size: 15px;
+    line-height: 22px;
+    color: rgb(52, 52, 58);
+    text-align: center;
+  }
+
+  &__total {
+    width: 100%;
+    align-items: center;
+    gap: 4px;
+    padding: 20px 0 8px;
+    border-top: 1px solid rgba(71, 69, 84, 0.15);
+    margin-top: 16px;
+
+    &-label {
+      font-family: var(--font-main);
+      font-size: 15px;
+      color: rgb(52, 52, 58);
+    }
+
+    &-value {
+      font-family: var(--font-bold);
+      font-size: 34px;
+      font-weight: 700;
+      color: rgb(21, 20, 57);
+    }
+  }
+
+  &__details {
+    width: 100%;
+    gap: 10px;
+    padding-top: 12px;
+  }
+
+  &__row {
+    width: 100%;
+    justify-content: space-between;
+    align-items: center;
+
+    &-label {
+      font-family: var(--font-main);
+      font-size: 14px;
+      color: rgb(101, 101, 108);
+    }
+
+    &-value {
+      font-family: var(--font-medium);
+      font-size: 14px;
+      font-weight: 600;
+      color: rgb(21, 20, 57);
+    }
+  }
+
+  &__retry {
+    width: 100%;
+    height: 48px;
+    margin-top: 20px;
+    border-radius: 8px;
+    background: rgb(214, 78, 73);
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background 0.2s;
+
+    &:hover {
+      background: rgb(190, 60, 55);
+    }
+
+    &-label {
+      font-family: var(--font-medium);
+      font-size: 15px;
+      font-weight: 600;
+      color: #ffffff;
+    }
+  }
+}
