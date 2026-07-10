@@ -405,6 +405,7 @@ class __window_folder extends mfsInteract {
       this._chatSearchTimer = null;
     }
     this._unbindThreadMenuOutside();
+    this._unbindViewportReframe();
     if (!this.mget(_a.headless) && window.Wm && Wm.$el) {
       Wm.$el.trigger("folder:close", this);
     } else if (this.mget(_a.headless) && window.Wm && Wm.$el) {
@@ -462,6 +463,7 @@ class __window_folder extends mfsInteract {
     this.__content = child;
     this.setupInteract();
     this.applyDefaultBounds();
+    this._bindViewportReframe();
     if (!this._raised) this.raise();
     if (this.media && this.media.wait) this.media.wait(0);
     // Honor the launch-time `activeTab` option (e.g. opened from the,
@@ -511,6 +513,43 @@ class __window_folder extends mfsInteract {
       this.$el.resizable(_a.option, "handles", this.handles || "all");
     } catch (e) {}
     this.syncBounds();
+  }
+
+  // A non-headless folder window is sized by inline pixel geometry captured
+  // ONCE at open (applyDefaultBounds). On browser resize the WM only ever
+  // clamps windows DOWN to fit the shrunken work area and never grows them back
+  // — so after the browser shrinks then re-enlarges, the window stays stuck at
+  // the small size and its @container layout stays in the compact branch until
+  // it is reopened. Re-apply the default bounds for the CURRENT viewport when
+  // the browser stops resizing, so the window returns to its normal open size
+  // on its own — exactly as if freshly opened. Debounced so intermediate sizes
+  // mid-drag don't thrash the geometry.
+  //
+  // (Headless panes fill their layer via CSS `width/height:100% !important`, so
+  // they track the viewport already and are excluded here. Dragging a window's
+  // OWN resize handle does not fire the browser `resize` event, so a manual
+  // window resize is preserved — only a viewport change reframes.)
+  _bindViewportReframe() {
+    if (this._viewportReframeBound || Visitor.isMobile()) return;
+    if (this.mget(_a.headless)) return;
+    this._viewportReframeBound = true;
+    this._onViewportReframe = () => {
+      clearTimeout(this._viewportReframeTimer);
+      this._viewportReframeTimer = setTimeout(() => {
+        if (this.isDestroyed && this.isDestroyed()) return;
+        if (this._isResizing) return; // user is dragging a resize handle
+        if (this.mget(_a.minimize)) return; // leave minimized windows alone
+        this.reframeToDefault();
+      }, 200);
+    };
+    window.addEventListener("resize", this._onViewportReframe);
+  }
+
+  _unbindViewportReframe() {
+    if (!this._viewportReframeBound) return;
+    this._viewportReframeBound = false;
+    clearTimeout(this._viewportReframeTimer);
+    window.removeEventListener("resize", this._onViewportReframe);
   }
 
   getChatScrollElement() {
