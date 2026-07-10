@@ -868,22 +868,22 @@
   }
 }
 
-// ── Popup mode (mounted in settings_main's overlay) ──────────────────────────
-// settings_main.openBilling feeds settings_billing into its __overlay slot
-// (fixed full-screen backdrop + flex centering). Here the otherwise full-width
-// panel becomes a centred, scrollable card with a title bar + close. Scoped to
-// the overlay so the inline settings_account tab and the desk wrapper-modal
-// renders are untouched.
-.settings-main__overlay .settings-billing {
-  &__ui {
-    width: auto;
-    flex: 0 0 auto;
-    align-items: stretch;
-    background-color: var(--white);
-    border-radius: 12px;
-    box-shadow: 0 1px 11px rgba(0, 0, 0, 0.13);
-    overflow: hidden;
-  }
+// ── Popup mode ───────────────────────────────────────────────────────────────
+// settings_billing renders a popup shell (title bar + close) whenever mounted
+// with popup:1 — the settings_main overlay AND the desk wrapper-modal (sidebar
+// "Upgrade plan" / admin upsell). onDomRefresh reflects popup mode as
+// data-popup="1" on the widget root, so this card styling is self-contained and
+// no longer depends on being nested under settings_main's overlay. The inline
+// settings_account tab (no popup:1) stays full-width and untouched.
+.settings-billing[data-popup="1"] {
+  width: auto;
+  flex: 0 0 auto;
+  align-items: stretch;
+  background-color: var(--white);
+  border-radius: 12px;
+  box-shadow: 0 1px 11px rgba(0, 0, 0, 0.13);
+  overflow: hidden;
+  max-height: 88vh;
 
   &__main {
     width: min(980px, 92vw);

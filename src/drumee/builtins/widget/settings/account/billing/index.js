@@ -78,6 +78,11 @@ class settings_billing extends LetcBox {
    * Re-initialize UI when DOM is refreshed
    */
   async onDomRefresh() {
+    // Reflect popup mode to the DOM so the popup-card styling (constrained,
+    // centred card + sized close) applies in EVERY modal mount — the
+    // settings_main overlay AND the desk wrapper-modal (sidebar "Upgrade
+    // plan"/admin upsell) — not just the settings overlay.
+    if (this._popup && this.el) this.el.dataset.popup = "1";
     // Fetch the server catalog (Stripe is the price truth) so the display
     // reflects live prices; degrades to the hardcoded fallback if unavailable.
     this._catalog = await this.fetchService(SERVICE.payment.catalog, { hub_id: Visitor.id })
