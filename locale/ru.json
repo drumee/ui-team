@@ -1930,5 +1930,18 @@
   "REFERRAL": "Реферал",
   "REFERRAL_UNAVAILABLE": "Пока недоступно",
   "REFERRAL_CODE_COPIED": "Реферальный код скопирован",
-  "REFERRAL_LINK_COPIED": "Реферальная ссылка скопирована"
+  "REFERRAL_LINK_COPIED": "Реферальная ссылка скопирована",
+  "SUBSCRIPTION_RENEWS_ON": "Подписка будет продлена {0}",
+  "SUBSCRIPTION_CANCELS_ON": "Подписка будет отменена {0}",
+  "PAYMENT_SUCCESS_TITLE": "Оплата прошла успешно!",
+  "PAYMENT_SUCCESS_TEXT": "Обновление выполнено. Ваш тариф — {0}.",
+  "PAYMENT_FAILURE_TITLE": "Ошибка оплаты!",
+  "PAYMENT_FAILURE_TEXT": "Не удалось обработать платёж.",
+  "TOTAL_PAYMENT": "Итого к оплате",
+  "PAYMENT_DATE": "Дата платежа",
+  "PAYMENT_METHOD": "Способ оплаты",
+  "UPGRADE_PLAN_MENU": "Улучшить тариф",
+  "PLAN_BADGE": "Тариф {0}",
+  "CONTACT_SALES_VIA": "Свяжитесь с отделом продаж: {0}",
+  "SALES_CONTACT_EMAIL": "contact@drumee.org"
 }

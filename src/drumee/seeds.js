@@ -302,6 +302,9 @@ module.exports = {
   settings_billing: function () {
     return import("widget/settings/account/billing");
   },
+  settings_billing_result: function () {
+    return import("widget/settings/account/billing/result");
+  },
   settings_main: function () {
     return import("widget/settings/main");
   },

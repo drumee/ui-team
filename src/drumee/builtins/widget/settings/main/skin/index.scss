@@ -712,6 +712,19 @@
     flex-shrink: 0;
   }
 
+  // Subscription status line under the Current-Plan row (billing card):
+  // "Your subscription renews on …" / "… will be canceled on …".
+  &__billing-status {
+    font-size: 12px;
+    line-height: 16px;
+    color: $ink-600;
+    padding: 0 var(--spacer-4) var(--spacer-3);
+
+    &:empty {
+      display: none;
+    }
+  }
+
   // ── Ghost (light-purple) buttons used inside cards ────────
   // Shared "normal button" style for the settings cards — same light-purple
   // tint as the "Coming soon" pill. Used by manage / action / export / migrate.

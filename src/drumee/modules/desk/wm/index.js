@@ -41,6 +41,9 @@ class __window_manager extends push {
     RADIO_KBD.on(_e.keyup, this._handelKbdEvents);
     /** Preload some most used widget. Do not use await to avoid blocking */
     Kind.waitFor("window_folder");
+    // Post-Checkout return (?checkout=success|cancel) → payment result modal.
+    // Deferred so the wrapper-modal slot exists before we feed it.
+    setTimeout(() => this.checkCheckoutReturn(), 1200);
   }
 
   /**
@@ -697,9 +700,40 @@ class __window_manager extends push {
   /**
    *
    */
+  // Kept for the admin-console plugin (cross-plugin caller) + any legacy
+  // reference. Billing is now a FULL PAGE in the desk settings-main-slot, not a
+  // popup — delegate to the desk module via RADIO so we don't need a direct
+  // module reference from the window manager.
   upgradePlage() {
-    this.ensurePart("wrapper-modal").then((p) => {
-      p.feed({ kind: "settings_billing" });
+    RADIO_BROADCAST.trigger("desk:open-billing-page");
+  }
+
+  /**
+   * Stripe Checkout lands back on the app with ?checkout=success&session_id=…
+   * or ?checkout=cancel (callback.check_out_*). Surface the payment result
+   * modal (design: "Payment Success!" / "Payment Failure!") and scrub the
+   * query string so a reload doesn't replay it.
+   */
+  checkCheckoutReturn() {
+    let params;
+    try { params = new URLSearchParams(window.location.search); } catch (e) { return; }
+    const flag = params.get("checkout");
+    if (!flag) return;
+    const session_id = params.get("session_id") || "";
+    try {
+      params.delete("checkout"); params.delete("session_id");
+      const qs = params.toString();
+      history.replaceState(null, "", `${location.pathname}${qs ? "?" + qs : ""}${location.hash}`);
+    } catch (e) { /* cosmetic */ }
+    Kind.waitFor("settings_billing_result").then(() => {
+      this.ensurePart("wrapper-modal").then((p) => {
+        p.feed({
+          kind: "settings_billing_result",
+          result: flag === "success" ? "success" : "cancel",
+          session_id,
+          uiHandler: [this],
+        });
+      });
     });
   }
 
@@ -1732,6 +1766,16 @@ class __window_manager extends push {
         return this.unselect();
 
       case "upgrade-plan":
+        return this.upgradePlage(cmd);
+
+      // Billing popup close (settings_billing popup:1 bubbles billing-close)
+      // and the post-Checkout result modal actions.
+      case "billing-close":
+      case "billing-result-close":
+        return this.ensurePart("wrapper-modal").then((p) => p.clear());
+
+      case "billing-result-retry":
+        this.ensurePart("wrapper-modal").then((p) => p.clear());
         return this.upgradePlage(cmd);
 
       case _e.launch:
