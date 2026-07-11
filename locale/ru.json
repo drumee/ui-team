@@ -1917,6 +1917,7 @@
   "SECURE_SHARE_DENY_ACCESS": "Отклонить",
   "SECURE_SHARE_ACCESS_APPROVED": "Ваш запрос доступа одобрен.",
   "SECURE_SHARE_ACCESS_DENIED": "Ваш запрос доступа отклонён.",
+  "SECURE_SHARE_FILE_ONLY_NO_UPLOAD": "Здесь доступен только общий файл — загрузка файлов не разрешена.",
   "SECURE_SHARE_REQUEST_PENDING": "Ожидание",
   "SECURE_SHARE_REQUEST_MESSAGE_PLACEHOLDER": "Необязательное сообщение владельцу ресурса…",
   "SECURE_SHARE_REQUEST_LEVEL_LABEL": "Запрошено:",

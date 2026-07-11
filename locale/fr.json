@@ -1917,6 +1917,7 @@
   "SECURE_SHARE_DENY_ACCESS": "Refuser",
   "SECURE_SHARE_ACCESS_APPROVED": "Votre demande d’accès a été approuvée.",
   "SECURE_SHARE_ACCESS_DENIED": "Votre demande d’accès a été refusée.",
+  "SECURE_SHARE_FILE_ONLY_NO_UPLOAD": "Seul le fichier partagé est disponible ici — les téléversements ne sont pas autorisés.",
   "SECURE_SHARE_REQUEST_PENDING": "En attente",
   "SECURE_SHARE_REQUEST_MESSAGE_PLACEHOLDER": "Message optionnel au propriétaire du partage…",
   "SECURE_SHARE_REQUEST_LEVEL_LABEL": "Demandé :",

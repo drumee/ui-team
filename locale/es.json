@@ -1922,6 +1922,7 @@
   "SECURE_SHARE_DENY_ACCESS": "Denegar",
   "SECURE_SHARE_ACCESS_APPROVED": "Tu solicitud de acceso ha sido aprobada.",
   "SECURE_SHARE_ACCESS_DENIED": "Tu solicitud de acceso fue denegada.",
+  "SECURE_SHARE_FILE_ONLY_NO_UPLOAD": "Aquí solo está disponible el archivo compartido: no se permiten subidas.",
   "SECURE_SHARE_REQUEST_PENDING": "Pendiente",
   "SECURE_SHARE_REQUEST_MESSAGE_PLACEHOLDER": "Mensaje opcional para el propietario del recurso…",
   "SECURE_SHARE_REQUEST_LEVEL_LABEL": "Solicitado:",

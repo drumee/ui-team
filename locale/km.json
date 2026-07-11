@@ -1917,6 +1917,7 @@
   "SECURE_SHARE_DENY_ACCESS": "បដិសេធ",
   "SECURE_SHARE_ACCESS_APPROVED": "សំណើសុំសិទ្ធរបស់អ្នកត្រូវបានអនុម័ត។",
   "SECURE_SHARE_ACCESS_DENIED": "សំណើសុំសិទ្ធរបស់អ្នកត្រូវបានបដិសេធ។",
+  "SECURE_SHARE_FILE_ONLY_NO_UPLOAD": "នៅទីនេះមានតែឯកសារដែលបានចែករំលែកប៉ុណ្ណោះ — មិនអនុញ្ញាតឱ្យផ្ទុកឡើងទេ។",
   "SECURE_SHARE_REQUEST_PENDING": "រង់ចាំ",
   "SECURE_SHARE_REQUEST_MESSAGE_PLACEHOLDER": "សារស្រេចចិត្តទៅម្ចាស់ការចែករំលែក…",
   "SECURE_SHARE_REQUEST_LEVEL_LABEL": "ស្នើ:",

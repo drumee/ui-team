@@ -274,7 +274,7 @@ class __dmz_wm extends winman {
     // server also denies it; this avoids a doomed request + stuck progress window).
     // Folder/workspace shares (no file_nid) proceed unchanged.
     if (desk && desk.mget('file_nid')) {
-      return Butler.say(LOCALE.FEATURE_NOT_AVAILABLE || LOCALE.SOMETHING_WENT_WRONG);
+      return Butler.say(LOCALE.SECURE_SHARE_FILE_ONLY_NO_UPLOAD || LOCALE.SOMETHING_WENT_WRONG);
     }
     if (desk && desk._gateInteraction &&
       desk._gateInteraction(desk.havePermission(_K.permission.write, desk.mget(_a.privilege)))) {

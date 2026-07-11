@@ -2346,6 +2346,7 @@
   "SECURE_SHARE_DENY_ACCESS": "Deny",
   "SECURE_SHARE_ACCESS_APPROVED": "Your access request has been approved.",
   "SECURE_SHARE_ACCESS_DENIED": "Your access request was denied.",
+  "SECURE_SHARE_FILE_ONLY_NO_UPLOAD": "Only the shared file is available here — uploads aren't allowed.",
   "SECURE_SHARE_REQUEST_PENDING": "Pending",
   "SECURE_SHARE_REQUEST_MESSAGE_PLACEHOLDER": "Optional message to the share owner…",
   "SECURE_SHARE_REQUEST_LEVEL_LABEL": "Requesting:",
