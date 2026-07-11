@@ -23,6 +23,12 @@ function dmzTopbar(ui) {
   const name = ui.mget(_a.title) || ui.mget(_a.filename) || ui.mget(_a.name) || "";
   const canUpload = ui.havePermission(_K.permission.upload, ui.mget(_a.privilege));
   const canEdit = ui.havePermission(_K.permission.write, ui.mget(_a.privilege));
+  // A single-FILE share exposes only the shared file: the recipient may open/edit it,
+  // but "+ Add new" and Upload have no valid target (only the file was shared, not a
+  // container), so hide them. Folder/workspace shares have no file_nid → unchanged.
+  // Server enforcement (media._secureShareWriteAllowed) is the real guard; this just
+  // stops offering actions that would 403. (Download stays — it targets the shared file.)
+  const isFileShare = !!ui.mget('file_nid');
 
   const titleWrapper = Skeletons.Box.X({
     className: `${cnTopbarTitle}__wrapper`,
@@ -68,7 +74,7 @@ function dmzTopbar(ui) {
       // sharebox's onUiEvent, which delegates "add-folder" / "add-note" /
       // "new-document" to the window manager. Shown only to guests whose role
       // grants write permission.
-      canEdit
+      canEdit && !isFileShare
         ? newFileMenu(ui, {
             items: ["add-folder", "add-note", "new-document"],
             triggerIco: "plus-header",
@@ -82,7 +88,7 @@ function dmzTopbar(ui) {
             area: _a.dmz,
           })
         : null,
-      canUpload
+      canUpload && !isFileShare
         ? Skeletons.Button.Label({
             className: `${cnWindowButton}__label-button`,
             label: LOCALE.UPLOAD,
