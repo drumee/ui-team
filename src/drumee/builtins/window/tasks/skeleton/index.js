@@ -2312,6 +2312,54 @@ function dueSummaryText(startIso, endIso) {
   return `${n} ${n === 1 ? LOCALE.DURATION_DAY : LOCALE.DURATION_DAYS}`;
 }
 
+// Custom flatpickr `position` (used because the calendar is appendTo:body and
+// the due-input lives in a narrow right rail): float the calendar to the LEFT
+// of the input, beside it, so it opens into the wide center area instead of
+// dropping below and clipping at the bottom. The calendar is clamped to the
+// bounds of its host panel card (detail panel or create modal) so it can't
+// spill outside the dialog — the whole picker, footer included, stays inside
+// the card. Falls back to the viewport when no card is found. Assigned in
+// vendorOpt, so it overrides the widget's default above/below placement
+// without touching other date_picker consumers.
+function positionDueCalendarLeft(instance) {
+  const cal = instance.calendarContainer;
+  if (!cal) return;
+  const anchor = instance._positionElement || instance.altInput || instance.input;
+  if (!anchor) return;
+  const rect = anchor.getBoundingClientRect();
+  const scrollX = window.pageXOffset || document.documentElement.scrollLeft;
+  const scrollY = window.pageYOffset || document.documentElement.scrollTop;
+  const gap = 8;
+
+  // Clamp within the host panel card when present, else the viewport. Both
+  // panels tag their card with a known class (fig.family === "tasks-panel").
+  const card = anchor.closest(
+    ".tasks-panel__detail-panel, .tasks-panel__create-modal"
+  );
+  const bounds = card
+    ? card.getBoundingClientRect()
+    : { left: 0, right: window.innerWidth, top: 0, bottom: window.innerHeight };
+
+  // flatpickr's own arrow (points at the input) is meaningless when we sit
+  // beside the field, so drop the arrow classes.
+  cal.classList.remove("arrowTop", "arrowBottom", "arrowLeft", "arrowRight");
+  cal.style.position = "absolute";
+  cal.style.right = "auto";
+
+  // Prefer sitting just left of the input; never cross the card's left edge.
+  const left = Math.max(
+    bounds.left + gap,
+    rect.left - cal.offsetWidth - gap
+  );
+  // Track the input's top, but keep the whole calendar inside the card.
+  const top = Math.max(
+    bounds.top + gap,
+    Math.min(rect.top, bounds.bottom - cal.offsetHeight - gap)
+  );
+  cal.style.left = `${left + scrollX}px`;
+  cal.style.top = `${top + scrollY}px`;
+}
+
 // Kids for a Due-date section (shared by the detail panel and the create
 // modal — pass scope "detail" | "create"): the label row ("Due date" +
 // "Duration" toggle), the picker, and (range mode) a live duration readout.
@@ -2376,6 +2424,7 @@ function buildDueSectionContent(ui, scope = "detail") {
           rangeSeparator: "  →  ",
           minDate,
           appendTo: document.body,
+          position: positionDueCalendarLeft,
           onReady: onReady(true),
         },
       }
@@ -2395,6 +2444,7 @@ function buildDueSectionContent(ui, scope = "detail") {
           altFormat: "d/m/Y",
           minDate,
           appendTo: document.body,
+          position: positionDueCalendarLeft,
           onReady: onReady(false),
         },
       };
