@@ -285,6 +285,23 @@
       height: 100%;
     }
 
+    // Upload progress floater — above headless/windows layers (1300), below
+    // desk slide-out panels (chat / notification / trash at 10001).
+    &.upload-progress-layer {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 0;
+      height: 0;
+      overflow: visible;
+      z-index: var(--z-index-upload-progress, 9000);
+      pointer-events: none;
+
+      .window-upload-progress__ui {
+        pointer-events: auto;
+      }
+    }
+
     &.creating-hub {
       .window__ui {
         &[data-state="0"] {

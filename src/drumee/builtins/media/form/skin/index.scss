@@ -104,6 +104,21 @@
     }
   }
 
+  /* ── Inline validation message (below the input) ─────────── */
+  &__input-error {
+    display: none;
+    @include drumee.typo(
+      $size: 11px,
+      $weight: 400,
+      $line: 15px,
+      $color: var(--restricted, #d65f59)
+    );
+
+    &[data-state="1"] {
+      display: block;
+    }
+  }
+
   /* ── Status options container ────────────────────────────── */
   &__options {
     width: 100%;
@@ -227,10 +242,11 @@
     &::after {
       content: "";
       position: absolute;
-      left: 2px;
-      top: 2px;
-      width: 12px;
-      height: 12px;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 10px;
+      height: 10px;
       border-radius: 50%;
       background-color: transparent;
       transition: background-color 0.15s;

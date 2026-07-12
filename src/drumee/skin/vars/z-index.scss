@@ -5,6 +5,9 @@
   --z-index-high: 200;
   --z-index-higher: 1000;
   --z-index-draft: --z-index-higher;
+  // Upload progress popup: above WM folder layers (~1300), below slide-out
+  // panels (chat / notification / trash at .desk-module__panel-container 10001).
+  --z-index-upload-progress: 9000;
   --z-index-context: 50000;
   --always-visible: 50010;
   --z-index-context-upper: 50010;

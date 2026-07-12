@@ -73,12 +73,7 @@ const __skl_folder_topbar = function (ui) {
   // Add-new are already gated on canUpload, which a capped recipient lacks.
   const inShare = !!ui.mget(_a.token);
 
-  const videoBtn = inShare ? "" : Skeletons.Button.Svg({
-    className: `${cnFolder}__video-btn`,
-    ico: "video-camera-header",
-    service: "tab-meeting",
-    uiHandler: ui,
-  });
+  // Meeting moved from the header into a tab (see skeleton/index.js tabBar).
 
   let uploadBtn = canUpload
     ? Skeletons.Button.Label({
@@ -143,13 +138,13 @@ const __skl_folder_topbar = function (ui) {
   const zoomBtn = headless ? "" : zoomMenu(ui);
 
   // Overflow menu for the narrow (≤700px container) layout. Holds the same
-  // actions as videoBtn / shareBtn / settingsBtn; CSS swaps it in for those
-  // inline buttons by window width. Always in the DOM (hidden on desktop).
+  // actions as shareBtn / settingsBtn; CSS swaps it in for those inline
+  // buttons by window width. Always in the DOM (hidden on desktop).
   const moreMenu = topbarMoreMenu(ui);
 
   const rightCluster = Skeletons.Box.X({
     className: `${cnFolder}__right`,
-    kids: [videoBtn, uploadBtn, addNew, shareBtn, settingsBtn, moreMenu, zoomBtn, minimizeBtn, controls],
+    kids: [uploadBtn, addNew, shareBtn, settingsBtn, moreMenu, zoomBtn, minimizeBtn, controls],
   });
 
   // ── Root row ─────────────────────────────────────────────────

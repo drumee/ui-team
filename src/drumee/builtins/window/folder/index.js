@@ -405,6 +405,7 @@ class __window_folder extends mfsInteract {
       this._chatSearchTimer = null;
     }
     this._unbindThreadMenuOutside();
+    this._unbindViewportReframe();
     if (!this.mget(_a.headless) && window.Wm && Wm.$el) {
       Wm.$el.trigger("folder:close", this);
     } else if (this.mget(_a.headless) && window.Wm && Wm.$el) {
@@ -462,6 +463,7 @@ class __window_folder extends mfsInteract {
     this.__content = child;
     this.setupInteract();
     this.applyDefaultBounds();
+    this._bindViewportReframe();
     if (!this._raised) this.raise();
     if (this.media && this.media.wait) this.media.wait(0);
     // Honor the launch-time `activeTab` option (e.g. opened from the,
@@ -511,6 +513,43 @@ class __window_folder extends mfsInteract {
       this.$el.resizable(_a.option, "handles", this.handles || "all");
     } catch (e) {}
     this.syncBounds();
+  }
+
+  // A non-headless folder window is sized by inline pixel geometry captured
+  // ONCE at open (applyDefaultBounds). On browser resize the WM only ever
+  // clamps windows DOWN to fit the shrunken work area and never grows them back
+  // — so after the browser shrinks then re-enlarges, the window stays stuck at
+  // the small size and its @container layout stays in the compact branch until
+  // it is reopened. Re-apply the default bounds for the CURRENT viewport when
+  // the browser stops resizing, so the window returns to its normal open size
+  // on its own — exactly as if freshly opened. Debounced so intermediate sizes
+  // mid-drag don't thrash the geometry.
+  //
+  // (Headless panes fill their layer via CSS `width/height:100% !important`, so
+  // they track the viewport already and are excluded here. Dragging a window's
+  // OWN resize handle does not fire the browser `resize` event, so a manual
+  // window resize is preserved — only a viewport change reframes.)
+  _bindViewportReframe() {
+    if (this._viewportReframeBound || Visitor.isMobile()) return;
+    if (this.mget(_a.headless)) return;
+    this._viewportReframeBound = true;
+    this._onViewportReframe = () => {
+      clearTimeout(this._viewportReframeTimer);
+      this._viewportReframeTimer = setTimeout(() => {
+        if (this.isDestroyed && this.isDestroyed()) return;
+        if (this._isResizing) return; // user is dragging a resize handle
+        if (this.mget(_a.minimize)) return; // leave minimized windows alone
+        this.reframeToDefault();
+      }, 200);
+    };
+    window.addEventListener("resize", this._onViewportReframe);
+  }
+
+  _unbindViewportReframe() {
+    if (!this._viewportReframeBound) return;
+    this._viewportReframeBound = false;
+    clearTimeout(this._viewportReframeTimer);
+    window.removeEventListener("resize", this._onViewportReframe);
   }
 
   getChatScrollElement() {
@@ -823,6 +862,14 @@ class __window_folder extends mfsInteract {
       this._launchMeetingInPanel();
       return;
     }
+    if (pn === "sched-grid") {
+      // Weekly view: land the scroll on the working hours instead of 12 AM.
+      const body = child.el && child.el.querySelector(`.${this.fig.family}__meeting-sched-body`);
+      if (body && !body.classList.contains(`${this.fig.family}__meeting-sched-body--month`)) {
+        body.scrollTop = 56 * 7; // ~7 AM with 56px hour rows
+      }
+      return;
+    }
     if (pn === "search-results") {
       this._searchResultsPart = child;
       return;
@@ -848,8 +895,37 @@ class __window_folder extends mfsInteract {
       // DIRECTLY — calling ensurePart for this part here would replay
       // onPartReady and loop forever.
       const name = this.mget(_a.filename) || this.model.get("hub_name");
-      if (name && _.isFunction(child.set)) child.set({ content: name });
+      if (name && _.isFunction(child.set)) {
+        child.set({ content: name });
+      } else if (!name && !this.mget(_a.headless)) {
+        // Opened without a seeded name (e.g. openFileLocation revealing a hit
+        // in a hub/workspace ROOT — media.attributes carries no display name
+        // for a root). Resolve it from get_path, the same source loadWorkspace
+        // feeds to refreshBreadcrumbsUI. Headless panes are always seeded by
+        // loadWorkspace, so they never hit this branch.
+        this._resolveMissingTitle();
+      }
     }
+  }
+
+  // Resolve a blank window title from get_path. get_path returns the workspace
+  // display name as `hub_name` on every path row; refreshBreadcrumbsUI persists
+  // it (mset hub_name) which fires change:hub_name → _syncWindowTitle, painting
+  // the title. One-shot guard so a slow fetch can't stack.
+  _resolveMissingTitle() {
+    if (this._titleResolving) return;
+    const nid = this.mget(_a.nid);
+    const hub_id = this.mget(_a.hub_id);
+    if (!nid || !hub_id) return;
+    this._titleResolving = 1;
+    this.fetchService(SERVICE.media.get_path, { nid, hub_id })
+      .then((data) => {
+        if (this.isDestroyed && this.isDestroyed()) return;
+        if (!_.isEmpty(data)) this.refreshBreadcrumbsUI(data);
+      })
+      .catch((e) => {
+        if (this.warn) this.warn("_resolveMissingTitle: get_path failed", e);
+      });
   }
 
   onChildBubble(c) {
@@ -1270,8 +1346,9 @@ class __window_folder extends mfsInteract {
         return;
 
       case "tab-meeting":
-        // The meeting opens as its own window now, not an embedded folder tab.
-        return this._launchMeetingStandalone();
+        // The Meeting tab opens the calendar view, not a live call. (Live-call
+        // joins come via activeTab:"meeting" in onDomRefresh, bypassing this.)
+        return this.showFolderTab("meeting");
 
       case "toggle-files-layout":
         return this.toggleFilesLayout(cmd);
@@ -1283,6 +1360,74 @@ class __window_folder extends mfsInteract {
 
       case "start-meeting":
         return this._launchMeetingInPanel();
+
+      // ── Meeting-tab schedule view (skeleton/meeting-schedule.js) ────────
+      case "sched-prev":
+      case "sched-next":
+      case "sched-today": {
+        const st = require("./skeleton/meeting-schedule").schedState(this);
+        const unit = st.view === "monthly" ? "month" : "week";
+        if (service === "sched-today") st.anchor = Dayjs();
+        else st.anchor = st.anchor.add(service === "sched-next" ? 1 : -1, unit);
+        return this._refreshSchedule();
+      }
+
+      case "sched-toggle-view": {
+        const st = require("./skeleton/meeting-schedule").schedState(this);
+        st.view = st.view === "monthly" ? "weekly" : "monthly";
+        return this._refreshSchedule();
+      }
+
+      case "sched-set-view": {
+        const st = require("./skeleton/meeting-schedule").schedState(this);
+        const v = (cmd.mget && cmd.mget("view")) || (cmd.el && cmd.el.dataset.view);
+        if (v && v !== st.view) {
+          st.view = v;
+          return this._refreshSchedule();
+        }
+        return;
+      }
+
+      // ── Meeting scheduling modal (skeleton/meeting-modal.js) ───────────
+      case "open-schedule":
+        // Calendar "Schedule" CTA → create a new meeting.
+        return this.openMeetingModal();
+
+      case "sched-new-at": {
+        // Click an empty weekly half-slot → create a meeting prefilled at that
+        // day + half-hour.
+        const day = (cmd.mget && cmd.mget("day")) || (cmd.el && cmd.el.dataset.day);
+        const hour = Number((cmd.mget && cmd.mget("hour")) ?? (cmd.el && cmd.el.dataset.hour));
+        const min = Number((cmd.mget && cmd.mget("min")) ?? (cmd.el && cmd.el.dataset.min)) || 0;
+        return this.openMeetingModal({ at: { day, hour: isNaN(hour) ? 9 : hour, min } });
+      }
+
+      case "open-meeting": {
+        // A schedule card on the calendar → edit that meeting.
+        const nid = (cmd.mget && cmd.mget(_a.nid)) || (cmd.el && cmd.el.dataset.nid);
+        const meeting = (this._meetings || []).find((m) => m.id === nid);
+        return this.openMeetingModal({ meeting });
+      }
+
+      case "join-meeting":
+        // Join the workspace meeting room (from a calendar card or the editor).
+        this.closeMeetingModal();
+        return this._launchMeetingStandalone();
+
+      case "close-meeting-modal":
+        return this.closeMeetingModal();
+
+      case "mm-toggle-invitee":
+        return this.toggleMeetingInvitee(cmd);
+
+      case "mm-set-recur":
+        return this.setMeetingRecur(cmd);
+
+      case "meeting-modal-submit":
+        return this.submitMeetingModal();
+
+      case "meeting-modal-delete":
+        return this.deleteMeetingModal();
 
       case "meeting":
       case "webinar":
@@ -1632,6 +1777,389 @@ class __window_folder extends mfsInteract {
   // panel — it opens as its own free-floating window. See _launchMeetingStandalone.
   _launchMeetingInPanel() {
     return this._launchMeetingStandalone();
+  }
+
+  // Re-render the Meeting-tab schedule in place after a nav/toggle service
+  // (state lives in this._sched — see skeleton/meeting-schedule.js). Refetches
+  // the hub's meetings for the (possibly changed) visible range first, so the
+  // grid always reflects the current window.
+  _refreshSchedule() {
+    // Render immediately from view state (so nav/toggle work even if the fetch
+    // fails), then re-render when the fetch resolves.
+    const feed = () => {
+      const part = this.getPart && this.getPart("meeting-panel");
+      if (!part || !part.el) return;
+      part.feed(require("./skeleton/meeting-schedule")(this).kids);
+    };
+    feed();
+    return this._fetchMeetings().then(feed, feed);
+  }
+
+  // The [stime, etime] epoch bounds of the calendar's visible range, derived
+  // from the schedule view state (this._sched). Padded a week/month either side
+  // so meetings straddling the edge still surface.
+  _meetingRange() {
+    const st = require("./skeleton/meeting-schedule").schedState(this);
+    if (st.view === "monthly") {
+      const s = st.anchor.startOf("month").startOf("week").subtract(1, "day");
+      const e = st.anchor.endOf("month").endOf("week").add(1, "day");
+      return { stime: s.unix(), etime: e.unix() };
+    }
+    const s = st.anchor.startOf("week");
+    const e = s.add(7, "day");
+    return { stime: s.unix(), etime: e.unix() };
+  }
+
+  // Fetch the hub's scheduled meetings for the visible range into this._meetings.
+  // Resolves (never rejects) so callers can re-feed regardless.
+  _fetchMeetings() {
+    // Guard against SERVICE.room being absent (route not loaded) — fall back to
+    // the plain service name so this never throws synchronously.
+    const svc = (SERVICE.room && SERVICE.room.list) || "room.list";
+    const { stime, etime } = this._meetingRange();
+    return Promise.resolve()
+      .then(() => this.fetchService(svc, { stime, etime }))
+      .then((rows) => {
+        this._meetings = Array.isArray(rows) ? rows : [];
+      })
+      .catch(() => {
+        this._meetings = this._meetings || [];
+      });
+  }
+
+  // ── Meeting Information modal (skeleton/meeting-modal.js) ────────────────
+
+  // Normalize a room.list row into the modal's prefill shape. `stime`/`etime`
+  // are epoch seconds; `date` is a legacy display string kept for back-compat.
+  // Attendees are workspace members ({uid,name}); recur is the recurrence rule.
+  _prefillMeeting(m) {
+    if (!m) return null;
+    let content = {};
+    try {
+      const md = typeof m.metadata === "string" ? JSON.parse(m.metadata) : m.metadata || {};
+      content = typeof md.content === "string" ? JSON.parse(md.content) : md.content || {};
+    } catch (e) {
+      content = {};
+    }
+    const s = Number(m.stime || content.stime) || 0;
+    const e = Number(m.etime || content.etime) || 0;
+    const recur = content.recur || null;
+    return {
+      nid: m.id,
+      title: content.title || m.filename || "",
+      message: content.message || "",
+      date_ymd: s ? Dayjs.unix(s).format("YYYY-MM-DD") : Dayjs().format("YYYY-MM-DD"),
+      stime_hm: s ? Dayjs.unix(s).format("HH:mm") : "",
+      etime_hm: e ? Dayjs.unix(e).format("HH:mm") : "",
+      attendees: Array.isArray(content.attendees)
+        ? content.attendees.map((a) => ({ uid: a.uid || a, name: a.name || "" })).filter((a) => a.uid)
+        : [],
+      recur: {
+        freq: (recur && recur.freq) || "none",
+        until: recur && recur.until ? Dayjs.unix(Number(recur.until)).format("YYYY-MM-DD") : "",
+      },
+    };
+  }
+
+  openMeetingModal(opt = {}) {
+    let prefill = this._prefillMeeting(opt.meeting);
+    // Create-at-slot (clicking an empty weekly cell): synthesize a create-mode
+    // prefill (nid null) seeded with the clicked day + a 1-hour slot.
+    if (!prefill && opt.at && opt.at.day) {
+      const p2 = (n) => String(n).padStart(2, "0");
+      const startMin = opt.at.hour * 60 + (opt.at.min || 0);
+      const endMin = startMin + 60; // default 1-hour slot
+      const hm = (mins) => `${p2(Math.floor(mins / 60) % 24)}:${p2(mins % 60)}`;
+      prefill = {
+        nid: null,
+        title: "",
+        message: "",
+        date_ymd: opt.at.day,
+        stime_hm: hm(startMin),
+        etime_hm: hm(endMin),
+        attendees: [],
+        recur: { freq: "none", until: "" },
+      };
+    }
+    // Working state the invitee chips + recurrence row read/mutate.
+    this._mmAttendees = prefill ? prefill.attendees.slice() : [];
+    this._mmRecur = prefill ? { ...prefill.recur } : { freq: "none", until: "" };
+    this._mmEditNid = prefill ? prefill.nid : null;
+    this._mmBusy = {};
+    // Fetch the workspace member pool first so the invitee chips can render.
+    const hubId = this.mget(_a.actual_hub_id) || this.mget(_a.hub_id);
+    const loadMembers = this.fetchService(SERVICE.hub.get_members_by_type, { type: "all", hub_id: hubId })
+      .then((rows) => {
+        this._hubMembers = Array.isArray(rows) ? rows : [];
+      })
+      .catch(() => {
+        this._hubMembers = this._hubMembers || [];
+      });
+    return loadMembers.then(() =>
+      this.ensurePart("wrapper-dialog").then((wrapper) => {
+        this.dialogWrapper = wrapper;
+        if (wrapper.el) {
+          // Transparent backdrop (no blur/white wash — the content stays visible
+          // behind the centered card).
+          wrapper.el.setAttribute("data-variant", "meeting");
+        }
+        wrapper.feed(require("./skeleton/meeting-modal")(this, { meeting: prefill }));
+        // Re-run the free/busy check when the time changes, and once on open
+        // (edit mode arrives with attendees + a time already set).
+        const root = wrapper.el;
+        if (root) {
+          ["mm-date", "mm-stime", "mm-etime"].forEach((nm) => {
+            const el = root.querySelector(`[name="${nm}"]`);
+            if (el) el.addEventListener("change", () => this._checkAvailability());
+          });
+        }
+        _.delay(() => this._checkAvailability(), 150);
+      }),
+    );
+  }
+
+  closeMeetingModal() {
+    this._mmAttendees = [];
+    this._mmRecur = { freq: "none", until: "" };
+    this._mmEditNid = null;
+    this._mmBusy = {};
+    if (this.dialogWrapper) {
+      if (this.dialogWrapper.el) {
+        this.dialogWrapper.el.removeAttribute("data-variant");
+        this.dialogWrapper.el.removeAttribute("data-overlay");
+      }
+      this.dialogWrapper.clear();
+    }
+  }
+
+  _reFeedInviteeChips() {
+    const part = this.getPart && this.getPart("mm-invitees-chips");
+    if (!part) return;
+    const pfx = `${this.fig.family}__meeting-modal`;
+    part.feed(require("./skeleton/meeting-modal").inviteesChips(this, pfx));
+  }
+
+  // Toggle a workspace member in/out of the invitee set, then re-render chips.
+  toggleMeetingInvitee(cmd) {
+    const uid = cmd && ((cmd.mget && cmd.mget("uid")) || (cmd.el && cmd.el.dataset.uid));
+    if (!uid) return;
+    const name = (cmd.mget && cmd.mget("uname")) || "";
+    this._mmAttendees = this._mmAttendees || [];
+    const i = this._mmAttendees.findIndex((a) => (a.uid || a) === uid);
+    if (i >= 0) this._mmAttendees.splice(i, 1);
+    else this._mmAttendees.push({ uid, name });
+    this._reFeedInviteeChips();
+    this._checkAvailability();
+  }
+
+  // Free/busy (Tier 1, workspace-scoped): ask the server which invitees already
+  // have a meeting overlapping the chosen slot, mark their chips busy + a banner.
+  // Warn-only — never blocks the organizer from booking.
+  _checkAvailability() {
+    const root = this.dialogWrapper && this.dialogWrapper.el;
+    if (!root) return;
+    const val = (sel) => {
+      const el = root.querySelector(sel);
+      return el ? String(el.value || "").trim() : "";
+    };
+    const setBanner = (txt) => {
+      const el = root.querySelector(`.${this.fig.family}__meeting-modal-availability`);
+      if (el) el.textContent = txt || "";
+    };
+    const dateYmd = val('[name="mm-date"]');
+    const sHm = val('[name="mm-stime"]');
+    const uids = (this._mmAttendees || []).map((a) => a.uid || a).filter(Boolean);
+    if (!dateYmd || !sHm || !uids.length) {
+      this._mmBusy = {};
+      this._reFeedInviteeChips();
+      setBanner("");
+      return;
+    }
+    const eHm = val('[name="mm-etime"]');
+    const stime = Dayjs(`${dateYmd}T${sHm}`).unix();
+    const etime = eHm ? Dayjs(`${dateYmd}T${eHm}`).unix() : stime + 3600;
+    const svc = (SERVICE.room && SERVICE.room.check_availability) || "room.check_availability";
+    return this.fetchService(svc, {
+      stime,
+      etime,
+      attendees: this._mmAttendees,
+      nid: this._mmEditNid || undefined,
+    })
+      .then((rows) => {
+        const busy = {};
+        (Array.isArray(rows) ? rows : []).forEach((r) => {
+          if (r && r.busy) busy[r.uid] = r.conflicts || [];
+        });
+        this._mmBusy = busy;
+        this._reFeedInviteeChips();
+        const n = Object.keys(busy).length;
+        setBanner(n ? LOCALE.N_INVITEES_BUSY.format(n) : "");
+      })
+      .catch(() => {});
+  }
+
+  // Set the recurrence frequency, then re-feed the recurrence row (so the
+  // "Until" date shows/hides with the None ↔ repeat switch).
+  setMeetingRecur(cmd) {
+    const freq = (cmd.mget && cmd.mget("freq")) || (cmd.el && cmd.el.dataset.freq) || "none";
+    this._mmRecur = this._mmRecur || { freq: "none", until: "" };
+    // Preserve a picked "until" across toggles unless switching to None.
+    const untilEl = this.dialogWrapper && this.dialogWrapper.el
+      && this.dialogWrapper.el.querySelector('[name="mm-until"]');
+    if (untilEl) this._mmRecur.until = String(untilEl.value || "").trim();
+    this._mmRecur.freq = freq;
+    if (freq === "none") this._mmRecur.until = "";
+    const part = this.getPart && this.getPart("mm-recur");
+    if (part) {
+      const pfx = `${this.fig.family}__meeting-modal`;
+      part.feed(require("./skeleton/meeting-modal").recurRow(this, pfx));
+    }
+  }
+
+  // Read the modal form off the dialog DOM: title, message, date + start/end
+  // time → epochs, recurrence rule, and the selected member uids. Returns null
+  // if the date is missing.
+  _readMeetingForm() {
+    const root = this.dialogWrapper && this.dialogWrapper.el;
+    if (!root) return null;
+    const val = (sel) => {
+      const el = root.querySelector(sel);
+      return el ? String(el.value || "").trim() : "";
+    };
+    const title = val('[name="mm-title"]');
+    const message = val('[name="mm-message"]');
+    const dateYmd = val('[name="mm-date"]'); // Y-m-d from date_picker
+    const sHm = val('[name="mm-stime"]');
+    const eHm = val('[name="mm-etime"]');
+    if (!dateYmd) return null;
+    // Build ISO strings (YYYY-MM-DDTHH:mm) — parsed natively by Dayjs without
+    // the customParseFormat plugin, which isn't guaranteed to be loaded.
+    const stime = sHm ? Dayjs(`${dateYmd}T${sHm}`).unix() : Dayjs(dateYmd).unix();
+    const etime = eHm ? Dayjs(`${dateYmd}T${eHm}`).unix() : stime;
+
+    // Recurrence rule → { freq, until? } (epoch) or null for a one-off.
+    const rc = this._mmRecur || { freq: "none" };
+    let recur = null;
+    if (rc.freq && rc.freq !== "none") {
+      const untilYmd = val('[name="mm-until"]') || rc.until;
+      recur = { freq: rc.freq };
+      if (untilYmd) recur.until = Dayjs(`${untilYmd}T23:59`).unix();
+    }
+
+    return {
+      title,
+      message,
+      // Legacy display string (back-compat for player/schedule). Plain tokens
+      // only — no localizedFormat plugin dependency.
+      date: Dayjs.unix(stime).format("ddd, MMM D, YYYY h:mm A"),
+      stime,
+      etime,
+      recur,
+      attendees: (this._mmAttendees || []).slice(),
+    };
+  }
+
+  // Optimistically upsert a meeting into this._meetings from the form so it
+  // shows immediately; a later room.list fetch overwrites it.
+  _upsertLocalMeeting(nid, form) {
+    if (!nid) return;
+    this._meetings = Array.isArray(this._meetings) ? this._meetings : [];
+    const row = {
+      id: nid,
+      filename: form.title,
+      stime: form.stime,
+      etime: form.etime,
+      metadata: JSON.stringify({
+        content: {
+          title: form.title,
+          message: form.message,
+          date: form.date,
+          stime: form.stime,
+          etime: form.etime,
+          recur: form.recur,
+          attendees: form.attendees,
+          room_id: nid,
+        },
+      }),
+    };
+    const i = this._meetings.findIndex((m) => m.id === nid);
+    if (i >= 0) this._meetings[i] = row;
+    else this._meetings.push(row);
+  }
+
+  submitMeetingModal() {
+    if (this._mmSubmitting) return;
+    const form = this._readMeetingForm();
+    if (!form) return; // no date → do nothing (field stays open)
+    this._mmSubmitting = 1;
+    const nid = this._mmEditNid;
+    const done = () => {
+      this._mmSubmitting = 0;
+      this.closeMeetingModal();
+      this._refreshSchedule();
+    };
+    const fail = () => {
+      this._mmSubmitting = 0;
+    };
+
+    if (nid) {
+      // Edit: flag "all" updates title/agenda/when + members (uids) + recur.
+      return this.fetchService((SERVICE.room && SERVICE.room.update) || "room.update", {
+        flag: "all",
+        nid,
+        title: form.title,
+        message: form.message,
+        date: form.date,
+        stime: form.stime,
+        etime: form.etime,
+        recur: form.recur,
+        attendees: form.attendees,
+      }).then(() => {
+        this._upsertLocalMeeting(nid, form);
+        done();
+      }, fail);
+    }
+
+    // Create: book the node (with recurrence), then attach the invited members
+    // via update "member" (which notifies them in-app).
+    let createdNid = null;
+    return this.fetchService((SERVICE.room && SERVICE.room.book) || "room.book", {
+      title: form.title,
+      message: form.message,
+      date: form.date,
+      stime: form.stime,
+      etime: form.etime,
+      recur: form.recur,
+    })
+      .then((node) => {
+        createdNid = node && (node.id || node.nid);
+        if (createdNid && form.attendees.length) {
+          return this.fetchService((SERVICE.room && SERVICE.room.update) || "room.update", {
+            flag: "member",
+            nid: createdNid,
+            attendees: form.attendees,
+          });
+        }
+      })
+      .then(() => {
+        if (createdNid) {
+          this._upsertLocalMeeting(createdNid, form);
+          // Jump the calendar to the new meeting's week so it's visible even if
+          // it was scheduled outside the range currently in view.
+          const st = require("./skeleton/meeting-schedule").schedState(this);
+          st.anchor = Dayjs.unix(form.stime);
+        }
+        done();
+      }, fail);
+  }
+
+  deleteMeetingModal() {
+    const nid = this._mmEditNid;
+    if (!nid) return this.closeMeetingModal();
+    return this.postService((SERVICE.room && SERVICE.room.remove) || "room.remove", { nid }).then(() => {
+      this.closeMeetingModal();
+      this._refreshSchedule();
+    });
   }
 
   /**
@@ -2381,7 +2909,11 @@ class __window_folder extends mfsInteract {
         case "meeting":
           this._meetingViewActive = 1;
           this._taskPanelMounted = 0;
-          return view.feed(require("./skeleton/meeting-panel")(this));
+          view.feed(require("./skeleton/meeting-panel")(this));
+          // Then fetch the hub's meetings for the visible range and re-feed the
+          // grid with schedule cards.
+          this._refreshSchedule();
+          return;
         case _a.task:
           if (!this._taskPanelMounted) {
             this._taskPanelMounted = 1;
@@ -2395,6 +2927,9 @@ class __window_folder extends mfsInteract {
               // Folder-scope identity for the task list/create.
               scope_nid: scopeNid,
               scope_is_root: isRoot,
+              // Deep-link from a task mention/assignment notification: the tasks
+              // panel opens this task's detail once its list has loaded.
+              open_task_id: this.mget("open_task_id"),
               // sys_pn + partHandler let the window grab a reference (for the
               // tab-bar filter button) and re-scope the panel on navigation.
               sys_pn: "folder-task-panel",
@@ -2793,10 +3328,50 @@ class __window_folder extends mfsInteract {
     this.$el.find(".window__chat-panel").attr("data-chat_gated", gated);
   }
 
+  // Show / clear the inline validation message in the invite-error slot below
+  // the email input. Mirrors b2b-signup's showErrorMessage: toggle the
+  // wrapper's data-state and set the Note content.
+  _setInviteError(reason) {
+    const wrapper = this.getPart && this.getPart("invite-error");
+    const note = this.getPart && this.getPart("invite-error-message");
+    const entry = this.getPart && this.getPart("invite-email");
+    if (wrapper?.el) wrapper.el.dataset.state = reason ? _a.open : _a.closed;
+    if (note?.set) note.set({ content: reason || "" });
+    if (reason) {
+      if (entry?.showError) entry.showError();
+    } else if (entry?.hideError) {
+      entry.hideError();
+    }
+  }
+
   sendFolderInvitation(cmd) {
     const email = this.getInviteEmail(cmd);
     if (!email)
-      return Wm.alert(LOCALE.EMAIL_REQUIRED || LOCALE.ENTER_VALID_EMAIL);
+      return this._setInviteError(
+        LOCALE.EMAIL_REQUIRED || LOCALE.ENTER_VALID_EMAIL,
+      );
+
+    // Reject malformed addresses before hitting the server. Send is a separate
+    // Note button that reads the entry value directly, so the invite Entry
+    // never runs its own checkSanity — validate here. String.prototype.isEmail
+    // (ui-core addons/string.js) is the shared validator used across the app,
+    // same as the signup form gate.
+    if (!email.isEmail())
+      return this._setInviteError(
+        LOCALE.ENTER_VALID_EMAIL || LOCALE.INVALID_EMAIL,
+      );
+
+    // Reject addresses that already appear in the permissions matrix — the
+    // server would fail the invite anyway, but flagging it inline saves the
+    // round-trip and points the user at the email field.
+    if (this._emailIsFolderMember(email))
+      return this._setInviteError(
+        LOCALE.MEMBER_ALREADY_HAS_ACCESS ||
+          "This email already has access to this folder.",
+      );
+
+    // Valid address — drop any stale inline error before sending.
+    this._setInviteError();
 
     const { hub_id } = this.actualNode();
     const privilege = this._folderInviteRole?.privilege || _K.privilege.admin;
@@ -2917,6 +3492,20 @@ class __window_folder extends mfsInteract {
       list.find(
         (r) => String(r.entity_id || r.drumate_id || r.id || "") === key,
       ) || null
+    );
+  }
+
+  // True when `email` already belongs to a member in the permissions matrix
+  // (this._folderMembers is the same source the matrix renders from). Compared
+  // case-insensitively and trimmed so "Foo@Bar.com " matches a stored
+  // "foo@bar.com" — the invite Entry doesn't normalize before send.
+  _emailIsFolderMember(email) {
+    const target = String(email || "")
+      .trim()
+      .toLowerCase();
+    if (!target) return false;
+    return (this._folderMembers || []).some(
+      (r) => String(r.email || "").trim().toLowerCase() === target,
     );
   }
 

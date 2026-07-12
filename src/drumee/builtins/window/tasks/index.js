@@ -1,18 +1,53 @@
 const { uploadFile } = require("@drumee/ui-essentials");
 const { markerRe, uidsFromText } = require("./mention-markers");
 
+// 10-swatch column palette (Figma 2040-106090). Dot/accent color per theme;
+// the skin derives the column tint from the accent (--col-accent) and pill
+// tints from data-theme.
+const COLUMN_THEMES = {
+  default: "#AEAEB2",
+  orange: "#E8A13B",
+  yellow: "#EBD212", // Figma Signal/Yellow (was #EFC443, an off-palette amber)
+  green: "#54B684",
+  cyan: "#65D0EA",
+  blue: "#71A3F4",
+  purple: "#847EFF",
+  pink: "#FFA8DC",
+  red: "#D74E49",
+};
+
+// Built-in columns — always present, not editable. User-created columns come
+// from the server (task.column_list) and follow these on the board; a custom
+// column's id doubles as the task.status key.
 const COLUMNS = [
-  { key: "todo", label: "STATUS_TODO", color: "#AEAEB2" },
-  { key: "in_progress", label: "STATUS_IN_PROGRESS", color: "#65D0EA" },
-  { key: "to_review", label: "STATUS_TO_REVIEW", color: "#E8A13B" },
-  { key: "complete", label: "STATUS_COMPLETE", color: "#54B684" },
+  { key: "todo", label: "STATUS_TODO", color: "#AEAEB2", theme: "default" },
+  {
+    key: "in_progress",
+    label: "STATUS_IN_PROGRESS",
+    color: "#5950FF",
+    theme: "purple",
+  },
+  {
+    key: "to_review",
+    label: "STATUS_TO_REVIEW",
+    color: "#E8A13B",
+    theme: "orange",
+  },
+  {
+    key: "complete",
+    label: "STATUS_COMPLETE",
+    color: "#54B684",
+    theme: "green",
+  },
 ];
 
+// Signal palette (Figma): Success / Info / Warning / Error — must match the
+// skin's [data-priority] pill colors so dots and pills agree everywhere.
 const PRIORITIES = [
   { key: "low", label: "PRIORITY_LOW", color: "#54B684" },
-  { key: "medium", label: "PRIORITY_MEDIUM", color: "#65D0EA" },
+  { key: "medium", label: "PRIORITY_MEDIUM", color: "#71A3F4" },
   { key: "high", label: "PRIORITY_HIGH", color: "#E8A13B" },
-  { key: "urgent", label: "PRIORITY_URGENT", color: "#d65f59" },
+  { key: "urgent", label: "PRIORITY_URGENT", color: "#D74E49" },
 ];
 
 class __tasks_panel extends LetcBox {
@@ -32,6 +67,9 @@ class __tasks_panel extends LetcBox {
     // tasks. Falls back to _destNid for safety if not supplied.
     this._scopeNid = this.mget("scope_nid") || this._destNid || null;
     this._scopeIsRoot = this.mget("scope_is_root") ? 1 : 0;
+    // Deep-link target from a task mention/assignment notification (forwarded by
+    // the folder window). Consumed once after the initial load in onDomRefresh.
+    this._openTaskId = this.mget("open_task_id") || null;
     this._tasks = [];
     this._members = [];
     this._labels = [];
@@ -43,15 +81,45 @@ class __tasks_panel extends LetcBox {
     this._pickerOpen = null;
     // Member filter — empty = show all. Uids stored as strings.
     this._filterUids = [];
-    // Active sub-view (board | list | summary) and the List view's sort state.
+    // Active sub-view (board | calendar | list | summary) and the List view's
+    // sort state.
     this._view = "board";
     this._sort = null; // { key, dir } — null = natural (status, rank) order
-    this._fileSearch = { query: "", results: [], scope: null };
+    // Calendar view: month|week granularity + the anchor date (YYYY-MM-DD) of
+    // the displayed period. null cursor = today.
+    this._calMode = "month";
+    this._calCursor = null;
+    // Gantt view: weeks|months axis granularity + the multi-select set (task
+    // ids) backing the checkboxes / "Delete selected".
+    this._ganttMode = "weeks";
+    this._ganttSelected = new Set();
+    // Custom Kanban columns (server rows {id,name,theme,position}) + the
+    // "New board" modal / column-menu UI state.
+    this._customColumns = [];
+    this._boardModalOpen = false;
+    this._boardTheme = "default";
+    this._boardTitle = ""; // typed board name, kept in state so a colour pick never wipes it
+    this._boardDefault = true; // "Set as default" toggle (Figma default: on)
+    this._colMenuFor = null; // custom column id whose menu popover is open
+    // page/hasMore/loading drive infinite scroll of the results dropdown;
+    // an empty query lists all linkable files (most-recent first), a
+    // non-empty one searches — both paginate through the same procedure.
+    this._fileSearch = {
+      query: "",
+      results: [],
+      scope: null,
+      page: 1,
+      hasMore: false,
+      loading: false,
+      loadingMore: false,
+    };
     this._fileSearchTimer = null;
     this._fileSearchBlurTimer = null;
     // Active @-mention session (null when the popup is closed): the "@token"
     // range in the focused description editor + the filtered member list.
     this._mention = null;
+    // Recent-activity feed for the Project Health view (folder-scoped).
+    this._activity = [];
     // Comment feed state for the open task detail.
     this._comments = [];
     this._commentDraft = null; // composer buffer { body, mention_uids }
@@ -136,19 +204,33 @@ class __tasks_panel extends LetcBox {
     this._pickerOpen = null;
     if (typeof this._resetFileSearch === "function") this._resetFileSearch();
     if (!this.el) return; // not mounted yet — onDomRefresh loads fresh
-    this._loadTasks().then(() => this._render());
+    Promise.all([this._loadTasks(), this._loadColumns()]).then(() =>
+      this._render(),
+    );
   }
 
   async onDomRefresh() {
     this._installDnd();
+    this._installBoardPan();
     this._installMediaDroppable();
     this._installFileSearchFocus();
     await Promise.all([
       this._loadTasks(),
+      this._loadColumns(),
+      this._loadActivity(),
       this._loadMembers(),
       this._loadLabels(),
     ]);
     this._render();
+    // Deep-link: a mention/assignment notification asked to open a specific
+    // task. Only open the detail if the task is actually in this folder's list —
+    // otherwise (legacy nid-less notification, or a task moved elsewhere) stay
+    // on the task list instead of showing an empty detail panel.
+    if (this._openTaskId) {
+      const id = this._openTaskId;
+      this._openTaskId = null;
+      if (this._tasks.some((t) => t.id === id)) this._openDetail(id);
+    }
   }
 
   // Files dragged from the home grid use Drumee's internal jQuery-UI drag, not
@@ -248,12 +330,24 @@ class __tasks_panel extends LetcBox {
       col.classList.add("is-drop-target");
       // Show a placeholder at the exact insertion point so the drop reads as
       // precise (Jira/Trello-style) rather than "somewhere in this column".
-      const ph = this._ensurePlaceholder();
-      const after = this._dragAfterCard(col, e.clientY);
-      if (after) {
-        if (after.previousElementSibling !== ph) col.insertBefore(ph, after);
-      } else if (col.lastElementChild !== ph) {
-        col.appendChild(ph);
+      // `dragover` fires far more often than the screen refreshes, and the
+      // placeholder math (`_dragAfterCard`) reads every card's geometry — O(N).
+      // Coalesce to one run per animation frame so a packed column stays smooth.
+      this._dragOverPending = { col, y: e.clientY };
+      if (!this._dragOverRaf && typeof requestAnimationFrame === "function") {
+        this._dragOverRaf = requestAnimationFrame(() => {
+          this._dragOverRaf = 0;
+          const p = this._dragOverPending;
+          this._dragOverPending = null;
+          if (!p || !p.col.isConnected) return;
+          const ph = this._ensurePlaceholder();
+          const after = this._dragAfterCard(p.col, p.y);
+          if (after) {
+            if (after.previousElementSibling !== ph) p.col.insertBefore(ph, after);
+          } else if (p.col.lastElementChild !== ph) {
+            p.col.appendChild(ph);
+          }
+        });
       }
     });
 
@@ -300,6 +394,78 @@ class __tasks_panel extends LetcBox {
     });
   }
 
+  // Click-and-drag ("grab to pan") horizontal scrolling for the board's __main.
+  // Native overflow-x only gives a scrollbar + wheel; press-and-drag panning is
+  // not a browser behavior, so we drive scrollLeft ourselves. Delegated on
+  // this.el (root) so it survives every _render()'s feed() rebuild of __main.
+  //
+  // Panning only starts on EMPTY board area: a press on a task card must still
+  // begin the native card drag-and-drop (_installDnd), and presses on the
+  // add-task box / inputs / editors keep their normal behavior. Mouse events
+  // only (not pointer) so touch keeps its native momentum panning on mobile.
+  _installBoardPan() {
+    if (!this.el || this._boardPanInstalled) return;
+    this._boardPanInstalled = true;
+    const root = this.el;
+
+    let main = null; // the __main element currently being panned
+    let startX = 0; // pointer pageX at grab
+    let startScroll = 0; // scrollLeft at grab
+    let moved = false; // crossed the drag threshold → treat as a pan
+
+    const onMove = (e) => {
+      if (!main) return;
+      const dx = e.pageX - startX;
+      // Small tolerance so a plain click isn't read as a (zero-length) pan.
+      if (!moved && Math.abs(dx) < 3) return;
+      moved = true;
+      main.scrollLeft = startScroll - dx;
+      e.preventDefault(); // suppress text selection while dragging
+    };
+
+    const end = () => {
+      if (!main) return;
+      main.classList.remove("is-panning");
+      document.removeEventListener("mousemove", onMove, true);
+      document.removeEventListener("mouseup", end, true);
+      // A real pan is followed by a click — swallow it once so releasing over a
+      // card doesn't also open its detail. A plain click (no pan) is untouched.
+      if (moved) {
+        const swallow = (ev) => {
+          ev.stopPropagation();
+          ev.preventDefault();
+        };
+        root.addEventListener("click", swallow, { capture: true, once: true });
+        setTimeout(() => root.removeEventListener("click", swallow, true), 0);
+      }
+      main = null;
+      moved = false;
+    };
+
+    root.addEventListener("mousedown", (e) => {
+      if (e.button !== 0) return; // left button only
+      const board =
+        e.target.closest && e.target.closest(".tasks-panel__main");
+      if (!board || !root.contains(board)) return;
+      // Let card DnD and interactive controls keep the press.
+      if (
+        e.target.closest(
+          ".tasks-panel__task-card, button, input, textarea, a, [contenteditable]",
+        )
+      )
+        return;
+      // Nothing to pan when the board isn't overflowing.
+      if (board.scrollWidth <= board.clientWidth) return;
+      main = board;
+      startX = e.pageX;
+      startScroll = board.scrollLeft;
+      moved = false;
+      board.classList.add("is-panning");
+      document.addEventListener("mousemove", onMove, true);
+      document.addEventListener("mouseup", end, true);
+    });
+  }
+
   // Lazily-created insertion placeholder shared across columns.
   _ensurePlaceholder() {
     if (this._placeholder) return this._placeholder;
@@ -324,6 +490,11 @@ class __tasks_panel extends LetcBox {
   }
 
   _clearDropAffordance() {
+    if (this._dragOverRaf && typeof cancelAnimationFrame === "function") {
+      cancelAnimationFrame(this._dragOverRaf);
+    }
+    this._dragOverRaf = 0;
+    this._dragOverPending = null;
     if (!this.el) return;
     this.el
       .querySelectorAll(".tasks-panel__column-body.is-drop-target")
@@ -369,14 +540,23 @@ class __tasks_panel extends LetcBox {
         }
         card.dataset.status = status;
         task.status = status;
-      });
+      }, [sourceBody, targetBody]);
+      // Mirror the DOM move into the model so getState() — and therefore every
+      // _render() — rebuilds the column in the dropped order. Without this the
+      // move is cosmetic and the next re-render (e.g. opening the create/detail
+      // panel) reverts to the stale array order.
+      this._reorderTaskModel(taskId, status, afterEl);
       // Refresh counts + empty-state on both affected columns in place.
       this._syncColumn(sourceBody);
       if (targetBody !== sourceBody) this._syncColumn(targetBody);
+      // The card shows its column as a status pill — retint it in place too
+      // (the drag path is surgical; nothing else re-renders the card).
+      this._syncCardStatus(card, status);
     }
 
-    // Reordering within the same column has no server-side rank to persist yet,
-    // so skip the round-trip; the visual order holds until the next reload.
+    // Same-column reorder has no server-side rank to persist yet, so skip the
+    // round-trip. The model reorder above keeps the order across re-renders; it
+    // reverts only on a server reload (_loadTasks), which returns tasks unranked.
     if (sameColumn) return;
 
     try {
@@ -395,9 +575,41 @@ class __tasks_panel extends LetcBox {
     }
   }
 
+  // Move `taskId` within this._tasks to match a drag drop: place it before the
+  // task the card was dropped above (afterEl's data-tid), or — when dropped at
+  // the end — after the last task already in `status`. getState() filters
+  // this._tasks by status preserving array order, so this is what makes the
+  // dropped order survive a _render() rebuild.
+  _reorderTaskModel(taskId, status, afterEl) {
+    const from = this._tasks.findIndex((t) => String(t.id) === String(taskId));
+    if (from < 0) return;
+    const [task] = this._tasks.splice(from, 1);
+    task.status = status;
+    const beforeId = afterEl && afterEl.dataset ? afterEl.dataset.tid : null;
+    let insertAt = -1;
+    if (beforeId != null) {
+      insertAt = this._tasks.findIndex(
+        (t) => String(t.id) === String(beforeId),
+      );
+    }
+    if (insertAt < 0) {
+      // Append within the column — after the last same-column task so the card
+      // lands at the column's end and stays adjacent to its peers in the flat
+      // array (keeps List/Summary ordering sensible too).
+      insertAt = this._tasks.length;
+      for (let i = this._tasks.length - 1; i >= 0; i--) {
+        if (this._tasks[i].status === status) {
+          insertAt = i + 1;
+          break;
+        }
+      }
+    }
+    this._tasks.splice(insertAt, 0, task);
+  }
+
   // FLIP helper: run `mutate` (a synchronous DOM change), then transition each
   // card from its previous box to its new one. Cards with no delta are skipped.
-  _animateMove(mutate) {
+  _animateMove(mutate, scopeBodies) {
     const reduce =
       typeof window !== "undefined" &&
       window.matchMedia &&
@@ -406,21 +618,39 @@ class __tasks_panel extends LetcBox {
       mutate();
       return;
     }
-    const cards = Array.from(
-      this.el.querySelectorAll(".tasks-panel__task-card"),
-    );
+    // Only the source + target columns reflow on a move, so scope the FLIP to
+    // their cards instead of every card on the board (a board-wide O(N) scan +
+    // rect read per drop is what made a full board lag). Fall back to the whole
+    // panel if no scope is supplied.
+    let cards;
+    if (Array.isArray(scopeBodies) && scopeBodies.some(Boolean)) {
+      const seen = new Set();
+      scopeBodies.forEach((b) => {
+        if (!b) return;
+        b.querySelectorAll(".tasks-panel__task-card").forEach((c) => seen.add(c));
+      });
+      cards = Array.from(seen);
+    } else {
+      cards = Array.from(this.el.querySelectorAll(".tasks-panel__task-card"));
+    }
     const first = new Map();
     cards.forEach((c) => first.set(c, c.getBoundingClientRect()));
 
     mutate();
 
-    this.el.querySelectorAll(".tasks-panel__task-card").forEach((c) => {
+    // Two passes: read ALL new rects first, THEN write ALL transforms. Reading
+    // geometry and writing styles in the same loop forces a synchronous reflow
+    // per card (O(N²)) — the batched read/write split keeps it O(N).
+    const moves = [];
+    cards.forEach((c) => {
       const f = first.get(c);
       if (!f) return; // card wasn't present before the move
       const l = c.getBoundingClientRect();
       const dx = f.left - l.left;
       const dy = f.top - l.top;
-      if (!dx && !dy) return;
+      if (dx || dy) moves.push({ c, dx, dy });
+    });
+    moves.forEach(({ c, dx, dy }) => {
       if (Math.abs(dx) > 8) {
         // Crossed columns: a translate FLIP would be clipped by the column's
         // overflow (`overflow-y:auto` / `overflow:hidden`), so settle the card
@@ -451,6 +681,20 @@ class __tasks_panel extends LetcBox {
 
   // Keep a column's count badge and empty-state hint in sync after a surgical
   // card move (no full re-render). Mirrors what the skeleton renders initially.
+  // Update a moved card's status pill (label / dot / theme tint) in place —
+  // companion to _syncColumn for the surgical drag path.
+  _syncCardStatus(card, statusKey) {
+    if (!card) return;
+    const col = this.getColumns().find((c) => c.key === statusKey);
+    if (!col) return;
+    const pill = card.querySelector(".tasks-panel__task-status");
+    if (pill) pill.dataset.theme = col.theme || "default";
+    const dot = card.querySelector(".tasks-panel__task-status-dot");
+    if (dot) dot.style.background = col.color || "";
+    const label = card.querySelector(".tasks-panel__task-status-label");
+    if (label) label.textContent = col.name || "";
+  }
+
   _syncColumn(colBody) {
     if (!colBody) return;
     const count = colBody.querySelectorAll(".tasks-panel__task-card").length;
@@ -498,6 +742,8 @@ class __tasks_panel extends LetcBox {
           description: "",
           priority: "medium",
           due_date: "",
+          start_date: "",
+          duration_on: false,
           assignees: [],
           labels: [],
           pending_files: [],
@@ -583,6 +829,9 @@ class __tasks_panel extends LetcBox {
       case "remove-task":
         return this._removeTask(trigger);
 
+      case "toggle-complete":
+        return this._toggleComplete(trigger);
+
       case "commit-description":
       case "commit-due-date":
         // Drafts stay in sync via the `task-input-changed` watch.
@@ -632,6 +881,29 @@ class __tasks_panel extends LetcBox {
         }
         return;
 
+      case "toggle-duration": {
+        // Duration switch (derive-from-start_date model). ON reveals the range
+        // picker seeded from the due date; OFF clears start_date. Shared by the
+        // create modal and detail panel (mutually exclusive) — pick the open one.
+        const inCreate = this.el.querySelector(".tasks-panel__create-modal");
+        const isCreate = !!(this._creating && inCreate);
+        const draft = isCreate ? this._createDefaults : this._detailDraft;
+        if (!draft) return;
+        // Persist any in-flight date edits before the DOM is rebuilt.
+        if (isCreate) this._captureCreateDraft();
+        else this._captureDetailDraft();
+        draft.duration_on = !draft.duration_on;
+        if (draft.duration_on) {
+          if (!draft.start_date) draft.start_date = draft.due_date || "";
+        } else {
+          draft.start_date = "";
+        }
+        // Re-feed ONLY the due-date sub-part (create modal or detail panel) —
+        // a full _render() would flicker the whole panel, rebuild every picker,
+        // and steal focus.
+        return this._refreshDueSection(isCreate ? "create" : "detail");
+      }
+
       case "commit-detail":
         if (this._submitting) return;
         return this._commitDetail();
@@ -662,6 +934,139 @@ class __tasks_panel extends LetcBox {
         }
         return;
       }
+
+      case "set-cal-mode": {
+        const m = trigger.mget("calMode") === "week" ? "week" : "month";
+        if (m !== this._calMode) {
+          this._calMode = m;
+          this._render();
+        }
+        return;
+      }
+
+      case "cal-prev":
+        return this._calShift(-1);
+
+      case "cal-next":
+        return this._calShift(1);
+
+      case "cal-today":
+        if (this._calCursor !== null) {
+          this._calCursor = null;
+          this._render();
+        }
+        return;
+
+      case "cal-day-more": {
+        // "+N more" on a packed month cell → jump to that day's week view.
+        const day = trigger.mget("calDay");
+        if (day) {
+          this._calCursor = day;
+          this._calMode = "week";
+          this._render();
+        }
+        return;
+      }
+
+      case "cal-add": {
+        // "+" on a day cell → open the create modal pre-dated to that day.
+        const day = trigger.mget("calDay") || "";
+        this._creating = true;
+        this._createDefaults = {
+          status: "todo",
+          title: "",
+          description: "",
+          priority: "medium",
+          due_date: day,
+          start_date: "",
+          duration_on: false,
+          assignees: [],
+          labels: [],
+          pending_files: [],
+        };
+        this._folderFilenames = null;
+        this._resetFileSearch();
+        return this._render();
+      }
+
+      case "set-gantt-mode": {
+        const m = trigger.mget("ganttMode") === "months" ? "months" : "weeks";
+        if (m !== this._ganttMode) {
+          this._ganttMode = m;
+          this._render();
+        }
+        return;
+      }
+
+      case "gantt-toggle-select": {
+        const id = trigger.mget("taskId");
+        if (!id) return;
+        if (this._ganttSelected.has(id)) this._ganttSelected.delete(id);
+        else this._ganttSelected.add(id);
+        return this._render();
+      }
+
+      case "gantt-delete-selected":
+        return this._deleteSelectedTasks();
+
+      case "toggle-filter":
+        return this.toggleFilter();
+
+      case "add-board":
+        this._boardModalOpen = true;
+        this._boardTheme = "default";
+        this._boardTitle = "";
+        this._boardDefault = true;
+        this._colMenuFor = null;
+        return this._render();
+
+      case "board-cancel":
+        this._boardModalOpen = false;
+        this._boardTitle = "";
+        return this._render();
+
+      case "board-title-changed":
+        // Live-persist the typed name so a colour pick / toggle (which update
+        // in place) or any re-render restores it instead of clearing the field.
+        this._boardTitle =
+          args && args.value != null ? String(args.value) : this._boardTitle;
+        return;
+
+      case "board-theme":
+        // Flip the active swatch in place — a full re-render replays the
+        // modal's pop-in animation and wipes the typed board title.
+        this._boardTheme = trigger.mget("colTheme") || "default";
+        this._captureBoardTitle();
+        this._updateBoardColors(this._boardTheme);
+        return;
+
+      case "board-default": {
+        // Same reason as board-theme: toggle the switch in place.
+        this._captureBoardTitle();
+        this._boardDefault = !this._boardDefault;
+        const toggle =
+          this.el && this.el.querySelector(".tasks-panel__board-toggle");
+        if (toggle) toggle.dataset.on = this._boardDefault ? "1" : "0";
+        return;
+      }
+
+      case "board-submit":
+        return this._createColumn();
+
+      case "col-menu": {
+        const key = trigger.mget("taskColumn");
+        this._colMenuFor = this._colMenuFor === key ? null : key;
+        return this._render();
+      }
+
+      case "col-rename-submit":
+        return this._renameColumn(trigger);
+
+      case "col-theme-set":
+        return this._themeColumn(trigger);
+
+      case "col-delete":
+        return this._deleteColumn(trigger);
 
       case "set-sort": {
         // Toggle direction when re-selecting the same column, else sort asc.
@@ -772,6 +1177,8 @@ class __tasks_panel extends LetcBox {
     const isSearchInput = (t) =>
       t && t.matches && t.matches('input[name^="file-search-"]');
     const fieldOf = (t) => t.closest(".tasks-panel__file-search-field");
+    const scopeOf = (input) =>
+      String(input.name || "").slice("file-search-".length);
 
     this.el.addEventListener("focusin", (e) => {
       if (!isSearchInput(e.target)) return;
@@ -782,7 +1189,43 @@ class __tasks_panel extends LetcBox {
         this._fileSearchBlurTimer = null;
       }
       field.dataset.searchFocused = "1";
+
+      // Focusing the empty input lists all linkable files. Skip if we already
+      // hold the all-files results for this scope (e.g. blur then re-focus).
+      const query = String(e.target.value || "").trim();
+      if (query) return;
+      const scope = scopeOf(e.target);
+      const fs = this._fileSearch;
+      if (fs.scope === scope && fs.query === "" && fs.results.length) return;
+      fs.query = "";
+      fs.scope = scope;
+      fs.page = 1;
+      fs.hasMore = false;
+      this._runFileSearch("", scope);
     });
+
+    // Infinite scroll: `scroll` doesn't bubble, so capture it. Loads the next
+    // page when the results list nears its bottom.
+    this.el.addEventListener(
+      "scroll",
+      (e) => {
+        const list = e.target;
+        if (
+          !list ||
+          !list.classList ||
+          !list.classList.contains("tasks-panel__file-search-results")
+        ) {
+          return;
+        }
+        const fs = this._fileSearch;
+        if (fs.loading || !fs.hasMore) return;
+        const nearBottom =
+          list.scrollTop + list.clientHeight >= list.scrollHeight - 48;
+        if (!nearBottom) return;
+        this._runFileSearch(fs.query, fs.scope, { append: true });
+      },
+      true,
+    );
 
     this.el.addEventListener("focusout", (e) => {
       if (!isSearchInput(e.target)) return;
@@ -800,8 +1243,10 @@ class __tasks_panel extends LetcBox {
   }
 
   onWsMessage(svc, data, options = {}) {
-    const { service } = options || svc;
-    switch (service) {
+    // The WS dispatcher passes the service name as the FIRST arg — switch on it
+    // directly. Reading it from `options` (usually {}) silently skips every case
+    // and kills live task/comment refresh (framework-invariants.md §7).
+    switch (svc) {
       case SERVICE.task.create:
       case SERVICE.task.update:
       case SERVICE.task.update_status:
@@ -809,13 +1254,27 @@ class __tasks_panel extends LetcBox {
       case SERVICE.task.delete:
       case SERVICE.task.link_label:
       case SERVICE.task.unlink_label:
-        this._loadTasks().then(() => this._render());
+        Promise.all([this._loadTasks(), this._loadActivity()]).then(() =>
+          this._render(),
+        );
         return;
       case SERVICE.task.link_file:
       case SERVICE.task.unlink_file:
         if (this._detailId) {
           this._refreshAttachments(this._detailId).then(() => this._render());
+        } else if (this._view === "summary") {
+          // Health view's activity feed surfaces file links even with no detail open.
+          this._loadActivity().then(() => this._render());
         }
+        return;
+      case SERVICE.task.column_create:
+      case SERVICE.task.column_update:
+      case SERVICE.task.column_delete:
+        // A peer changed the board's columns. Deleting a column also moves its
+        // tasks back to 'todo' server-side, so refresh both.
+        Promise.all([this._loadColumns(), this._loadTasks()]).then(() =>
+          this._render(),
+        );
         return;
       case SERVICE.task.comment_create:
       case SERVICE.task.comment_update:
@@ -827,6 +1286,10 @@ class __tasks_panel extends LetcBox {
           this._loadComments(this._detailId).then(() => {
             if (this._detailId) this._refreshCommentList();
           });
+        }
+        // Comments also appear in the Health view's activity feed.
+        if (this._view === "summary") {
+          this._loadActivity().then(() => this._render());
         }
         return;
       default:
@@ -845,6 +1308,39 @@ class __tasks_panel extends LetcBox {
       this._tasks = (Array.isArray(rows) ? rows : []).map(this._normalizeTask);
     } catch (err) {
       this._tasks = [];
+    }
+  }
+
+  // Custom Kanban columns for the current folder scope. Best-effort — a
+  // failure (e.g. server without the task_column procs yet) just leaves the
+  // four built-in columns.
+  async _loadColumns() {
+    try {
+      const rows = await this.fetchService({
+        service: SERVICE.task.column_list,
+        hub_id: this._hubId,
+        nid: this._scopeNid,
+      });
+      this._customColumns = Array.isArray(rows) ? rows : [];
+    } catch (err) {
+      this._customColumns = [];
+    }
+  }
+
+  // Recent activity for the current folder scope (Project Health feed). Mirrors
+  // _loadTasks' scoping. Best-effort — a failure just yields an empty feed.
+  async _loadActivity() {
+    try {
+      const rows = await this.fetchService({
+        service: SERVICE.task.activity,
+        hub_id: this._hubId,
+        nid: this._scopeNid,
+        include_unscoped: this._scopeIsRoot,
+        limit: 30,
+      });
+      this._activity = Array.isArray(rows) ? rows : [];
+    } catch (err) {
+      this._activity = [];
     }
   }
 
@@ -900,6 +1396,19 @@ class __tasks_panel extends LetcBox {
         due = null;
       }
       result.due_date = due;
+    }
+
+    // Same coercion for the optional range start (Duration toggle).
+    if (has("start_date")) {
+      let start = row.start_date;
+      if (start) {
+        if (start instanceof Date) start = start.toISOString().slice(0, 10);
+        else if (typeof start === "string" && start.length >= 10)
+          start = start.slice(0, 10);
+      } else {
+        start = null;
+      }
+      result.start_date = start;
     }
 
     return result;
@@ -1021,8 +1530,10 @@ class __tasks_panel extends LetcBox {
     const draft = this._createDefaults;
     const title = root.querySelector('[name="title"]');
     const due = root.querySelector('input[name="due_date"]');
+    const start = root.querySelector('input[name="start_date"]');
     if (title) draft.title = title.value || "";
     if (due) draft.due_date = due.value || "";
+    if (start) draft.start_date = start.value || "";
     // description syncs live from the contenteditable editor (_onDescInput).
   }
 
@@ -1033,9 +1544,21 @@ class __tasks_panel extends LetcBox {
     const draft = this._detailDraft;
     const title = root.querySelector('[name="title"]');
     const due = root.querySelector('input[name="due_date"]');
+    const start = root.querySelector('input[name="start_date"]');
     if (title) draft.title = title.value || "";
     if (due) draft.due_date = due.value || "";
+    if (start) draft.start_date = start.value || "";
     // description syncs live from the contenteditable editor (_onDescInput).
+  }
+
+  // Format a Date (or date-like value) to a local ISO "YYYY-MM-DD" string.
+  // Empty string for null/invalid so callers can treat it like a cleared field.
+  _isoDate(d) {
+    if (!d) return "";
+    const dt = d instanceof Date ? d : new Date(d);
+    if (isNaN(dt.getTime())) return "";
+    const p = (n) => String(n).padStart(2, "0");
+    return `${dt.getFullYear()}-${p(dt.getMonth() + 1)}-${p(dt.getDate())}`;
   }
 
   // Push every keystroke straight into the active draft. The Entry widget
@@ -1049,10 +1572,19 @@ class __tasks_panel extends LetcBox {
     let scopeEl = null;
     const active =
       typeof document !== "undefined" ? document.activeElement : null;
-    if (active && active.getAttribute && this.el && this.el.contains(active)) {
+    // Require a `name` on the focused element — flatpickr's altInput is
+    // nameless, so date pickers must resolve their name from the trigger model.
+    if (
+      active &&
+      active.getAttribute &&
+      active.getAttribute("name") &&
+      this.el &&
+      this.el.contains(active)
+    ) {
       name = active.getAttribute("name");
       scopeEl = active;
-    } else if (trigger && trigger.mget) {
+    }
+    if (!name && trigger && trigger.mget) {
       name = trigger.mget(_a.name) || trigger.mget("name");
       if (value == null) {
         const v = trigger.mget(_a.value);
@@ -1061,6 +1593,48 @@ class __tasks_panel extends LetcBox {
       scopeEl = trigger.el;
     }
     if (!name || !scopeEl) return;
+
+    // Range picker (Duration ON): the widget carries both endpoints as Date
+    // objects. Store them as ISO start_date/due_date on whichever draft owns
+    // the field (create modal or detail panel).
+    if (name === "due_range") {
+      if (!trigger || !trigger.mget) return;
+      const inCreate = this.el.querySelector(".tasks-panel__create-modal");
+      const inDetail = this.el.querySelector(".tasks-panel__detail-panel");
+      let draft = null;
+      if (this._creating && inCreate && scopeEl && inCreate.contains(scopeEl)) {
+        draft = this._createDefaults;
+      } else if (
+        this._detailDraft &&
+        inDetail &&
+        scopeEl &&
+        inDetail.contains(scopeEl)
+      ) {
+        draft = this._detailDraft;
+      }
+      if (!draft) return;
+      const start = this._isoDate(trigger.mget("startDate"));
+      const end = this._isoDate(trigger.mget("endDate"));
+      draft.start_date = start;
+      draft.due_date = end || start;
+      // Live-refresh the duration readout without a re-feed that would close /
+      // rebuild the calendar mid-interaction.
+      const summary = require("./skeleton").dueSummaryText(
+        draft.start_date,
+        draft.due_date,
+      );
+      const scopeSel =
+        draft === this._createDefaults
+          ? ".tasks-panel__create-modal"
+          : ".tasks-panel__detail-panel";
+      const root = this.el.querySelector(scopeSel);
+      if (root) {
+        const sumEl = root.querySelector(".tasks-panel__due-summary");
+        if (sumEl) sumEl.textContent = summary;
+      }
+      return;
+    }
+
     if (value == null) value = "";
     const inCreate = this.el.querySelector(".tasks-panel__create-modal");
     const inDetail = this.el.querySelector(".tasks-panel__detail-panel");
@@ -1081,6 +1655,8 @@ class __tasks_panel extends LetcBox {
     const draft = this._createDefaults || {};
     const title = String(draft.title || "").trim();
     const dueRaw = String(draft.due_date || "").trim();
+    // start_date only when the Duration toggle is on; OFF sends null (single-date).
+    const startRaw = draft.duration_on ? String(draft.start_date || "").trim() : "";
     // Already in marker form (chips serialize to "[@Name](user:uid)").
     const description = String(draft.description || "").trim();
 
@@ -1103,6 +1679,7 @@ class __tasks_panel extends LetcBox {
         status: draft.status || "todo",
         priority: draft.priority || "medium",
         due_date: dueRaw || null,
+        start_date: startRaw || null,
         assignee_uids: Array.isArray(draft.assignees) ? draft.assignees : [],
         // Tagged members — server notifies them (excluding self).
         mention_uids: Array.isArray(draft.mention_uids)
@@ -1181,6 +1758,32 @@ class __tasks_panel extends LetcBox {
     this._render();
   }
 
+  // List-view checkbox — toggle a task between complete and todo. Optimistic:
+  // flip locally + re-render, persist via update_status, reconcile/revert on
+  // the response. Mirrors the drag-to-column status flow.
+  async _toggleComplete(trigger) {
+    const id = trigger.mget("taskId");
+    const task = this._tasks.find((t) => t.id === id);
+    if (!task) return;
+    const originalStatus = task.status;
+    const next = originalStatus === "complete" ? "todo" : "complete";
+    task.status = next;
+    this._render();
+    try {
+      const updated = await this.postService({
+        service: SERVICE.task.update_status,
+        hub_id: this._hubId,
+        id,
+        status: next,
+      });
+      this._mergeTask(Array.isArray(updated) ? updated[0] : updated);
+    } catch (err) {
+      console.error("[tasks_panel] toggle-complete failed:", err);
+      task.status = originalStatus;
+      this._render();
+    }
+  }
+
   async _commitDetail() {
     if (!this._detailId || !this._detailDraft) return;
     this._captureDetailDraft();
@@ -1213,10 +1816,15 @@ class __tasks_panel extends LetcBox {
     const draftDue = (draft.due_date || "").trim();
     const taskDue = task.due_date || "";
     const dueChanged = draftDue !== taskDue;
-    if (Object.keys(upd).length || dueChanged) {
-      // task_update SP overwrites due_date unconditionally — always send
-      // the current value or another-field update would null the date.
+    // start_date only when the Duration toggle is on; OFF ("") clears it.
+    const draftStart = draft.duration_on ? (draft.start_date || "").trim() : "";
+    const taskStart = task.start_date || "";
+    const startChanged = draftStart !== taskStart;
+    if (Object.keys(upd).length || dueChanged || startChanged) {
+      // task_update SP overwrites due_date / start_date unconditionally —
+      // always send the current values or another-field update would null them.
       upd.due_date = draftDue || null;
+      upd.start_date = draftStart || null;
       calls.push(
         this.postService({
           service: SERVICE.task.update,
@@ -1352,6 +1960,9 @@ class __tasks_panel extends LetcBox {
           // Snapshot of who was already tagged, so Update only notifies new tags.
           _mentioned_before: seededMentions,
           due_date: task.due_date || "",
+          start_date: task.start_date || "",
+          // Toggle state is derived from the stored range start.
+          duration_on: !!task.start_date,
           status: task.status || "todo",
           priority: task.priority || "medium",
           assignees: Array.isArray(task.assignee_uids)
@@ -1391,6 +2002,137 @@ class __tasks_panel extends LetcBox {
     });
   }
 
+  // ── Custom Kanban columns ────────────────────────────────────
+  async _createColumn() {
+    const input =
+      this.el &&
+      this.el.querySelector('.tasks-panel__board-modal input[name="board_title"]');
+    // Prefer the live DOM value; fall back to the state copy (a commit-mode
+    // Entry can blank its DOM value on blur, so state is the reliable source).
+    const domName = input ? String(input.value || "").trim() : "";
+    const name = domName || String(this._boardTitle || "").trim();
+    if (!name) return;
+    try {
+      const row = await this.postService({
+        service: SERVICE.task.column_create,
+        hub_id: this._hubId,
+        nid: this._scopeNid,
+        name,
+        theme: this._boardTheme || "default",
+        // "Set as default" — sent for forward-compat; the server ignores it
+        // until a default-column field exists.
+        is_default: this._boardDefault ? 1 : 0,
+      });
+      const rec = Array.isArray(row) ? row[0] : row;
+      if (rec && rec.id) this._customColumns.push(rec);
+    } catch (err) {
+      console.error("[tasks_panel] column.create failed:", err);
+    }
+    this._boardModalOpen = false;
+    this._boardTheme = "default";
+    this._boardTitle = "";
+    this._boardDefault = true;
+    this._render();
+  }
+
+  async _renameColumn(trigger) {
+    const id = trigger.mget("taskColumn") || this._colMenuFor;
+    if (!id) return;
+    const input =
+      this.el &&
+      this.el.querySelector('.tasks-panel__col-menu input[name="col_rename"]');
+    const name = input ? String(input.value || "").trim() : "";
+    if (!name) return;
+    try {
+      await this.postService({
+        service: SERVICE.task.column_update,
+        hub_id: this._hubId,
+        id,
+        name,
+      });
+      const rec = this._customColumns.find((c) => c.id === id);
+      if (rec) rec.name = name;
+    } catch (err) {
+      console.error("[tasks_panel] column.rename failed:", err);
+    }
+    this._colMenuFor = null;
+    this._render();
+  }
+
+  async _themeColumn(trigger) {
+    const id = trigger.mget("taskColumn") || this._colMenuFor;
+    const theme = trigger.mget("colTheme");
+    if (!id || !theme) return;
+    try {
+      await this.postService({
+        service: SERVICE.task.column_update,
+        hub_id: this._hubId,
+        id,
+        theme,
+      });
+      const rec = this._customColumns.find((c) => c.id === id);
+      if (rec) rec.theme = theme;
+    } catch (err) {
+      console.error("[tasks_panel] column.theme failed:", err);
+    }
+    this._render();
+  }
+
+  async _deleteColumn(trigger) {
+    const id = trigger.mget("taskColumn") || this._colMenuFor;
+    if (!id) return;
+    try {
+      const resp = await this.postService({
+        service: SERVICE.task.column_delete,
+        hub_id: this._hubId,
+        id,
+      });
+      const row = Array.isArray(resp) ? resp[0] : resp;
+      this._customColumns = this._customColumns.filter((c) => c.id !== id);
+      // The server moves the column's tasks back to 'todo' — refresh when any.
+      if (row && Number(row.moved_tasks) > 0) await this._loadTasks();
+    } catch (err) {
+      console.error("[tasks_panel] column.delete failed:", err);
+    }
+    this._colMenuFor = null;
+    this._render();
+  }
+
+  // Gantt "Delete selected" — bulk-delete the checked tasks, then clear the
+  // selection. Best-effort per task; one failure doesn't abort the rest.
+  async _deleteSelectedTasks() {
+    const ids = Array.from(this._ganttSelected || []);
+    if (!ids.length) return;
+    for (const id of ids) {
+      try {
+        const resp = await this.postService({
+          service: SERVICE.task.delete,
+          hub_id: this._hubId,
+          id,
+        });
+        if (resp && (resp.affected === 1 || resp.id === id)) {
+          this._tasks = this._tasks.filter((t) => t.id !== id);
+        }
+      } catch (err) {
+        console.error("[tasks_panel] gantt bulk delete failed:", id, err);
+      }
+    }
+    this._ganttSelected = new Set();
+    this._render();
+  }
+
+  // Step the calendar cursor by ±1 month or ±1 week (per the active mode).
+  _calShift(dir) {
+    try {
+      const base = this._calCursor ? Dayjs(this._calCursor) : Dayjs();
+      const unit = this._calMode === "week" ? "week" : "month";
+      this._calCursor = base.add(dir, unit).format("YYYY-MM-DD");
+    } catch (_) {
+      this._calCursor = null;
+    }
+    this._render();
+  }
+
   async _loadComments(taskId) {
     try {
       const rows = await this.fetchService({
@@ -1411,7 +2153,11 @@ class __tasks_panel extends LetcBox {
         return { ...r, reactions: Array.isArray(reactions) ? reactions : [] };
       });
     } catch (err) {
-      this._comments = [];
+      // Don't silently blank an already-populated feed on a transient failure —
+      // that reads to the user as "others' comments disappeared". Log so the
+      // real cause (permission / hub scope / 5xx) is visible.
+      console.error("[tasks_panel] comment.list failed:", err);
+      if (!Array.isArray(this._comments)) this._comments = [];
     }
   }
 
@@ -1849,6 +2595,49 @@ class __tasks_panel extends LetcBox {
       const fType = r.filetype;
       const k = await Kind.waitFor(_a.media);
       const media = new k({ model: m });
+      // Web-link / HTML attachments open in a new browser tab (mirrors the
+      // media browser's Wm.openContent → window.open). Drumee stores URL
+      // shortcuts as `.html` files (filetype "web"); `drumee.note` web files
+      // are real notes and fall through to the note editor below.
+      const ext = (r.ext || r.extension || "").toLowerCase();
+      const isWebLink =
+        (fType === _a.web || ext === "html" || ext === "htm") &&
+        r.dataType !== "drumee.note";
+      if (isWebLink && typeof window !== "undefined") {
+        const link = media.srcUrl && media.srcUrl();
+        if (link) {
+          window.open(link, "_blank");
+          return;
+        }
+      }
+      // Archives (zip/rar/7z/tar/gz…) have no viewer — clicking one downloads
+      // it straight away rather than opening the props viewer. Trigger a plain
+      // browser download from the file's served URL with its real filename.
+      const mime = (r.mimetype || "").toLowerCase();
+      const isArchive =
+        ["zip", "rar", "7z", "tar", "gz", "tgz", "bz2", "xz"].includes(ext) ||
+        mime.includes("zip") ||
+        mime.includes("compressed") ||
+        mime.includes("x-tar");
+      if (isArchive && typeof document !== "undefined") {
+        const href =
+          (media.srcUrl && media.srcUrl()) ||
+          (media.directUrl && media.directUrl());
+        if (href) {
+          const name =
+            (media.fullname && media.fullname()) ||
+            (ext ? `${r.filename}.${ext}` : r.filename || "");
+          const a = document.createElement("a");
+          a.href = href;
+          a.download = name;
+          a.rel = "noopener";
+          a.style.display = "none";
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          return;
+        }
+      }
       const preset = {
         nid: r.nid || fileNid,
         hub_id: r.hub_id || hub,
@@ -1917,6 +2706,23 @@ class __tasks_panel extends LetcBox {
     }
   }
 
+  // Re-feeds just the Due-date sub-part (Duration toggle) of the detail panel
+  // or the create modal, so switching single <-> range picker doesn't trigger
+  // a full-panel _render() that flickers, rebuilds every picker, steals focus.
+  _refreshDueSection(scope = "detail") {
+    const isCreate = scope === "create";
+    if (isCreate ? !this._creating : !this._detailId) return;
+    const partName = isCreate ? "create-due-section" : "due-section";
+    this.ensurePart(partName)
+      .then((part) => {
+        if (!part || part.isDestroyed?.()) return;
+        part.feed(require("./skeleton").buildDueSectionContent(this, scope));
+      })
+      .catch(() => {
+        /* part not mounted yet */
+      });
+  }
+
   // Re-feeds just the attachment-rows part of the detail panel.
   _refreshAttachmentsList() {
     const taskId = this._detailId;
@@ -1944,7 +2750,15 @@ class __tasks_panel extends LetcBox {
       clearTimeout(this._fileSearchBlurTimer);
       this._fileSearchBlurTimer = null;
     }
-    this._fileSearch = { query: "", results: [], scope: null };
+    this._fileSearch = {
+      query: "",
+      results: [],
+      scope: null,
+      page: 1,
+      hasMore: false,
+      loading: false,
+      loadingMore: false,
+    };
   }
 
   _scheduleFileSearch(trigger) {
@@ -1954,35 +2768,81 @@ class __tasks_panel extends LetcBox {
       trigger.mget("searchScope") || (this._creating ? "create" : "detail");
     this._fileSearch.query = query;
     this._fileSearch.scope = scope;
+    // Any new query starts a fresh pagination run.
+    this._fileSearch.page = 1;
+    this._fileSearch.hasMore = false;
 
     if (this._fileSearchTimer) clearTimeout(this._fileSearchTimer);
-    if (query.length < 2) {
+    // A single character is too short to be a useful search — clear until the
+    // user types more or clears the field entirely (empty → list all below).
+    if (query.length === 1) {
       const hadResults = (this._fileSearch.results || []).length > 0;
       this._fileSearch.results = [];
       if (hadResults) this._refreshFileSearchDropdown(scope);
       return;
     }
+    // Empty query lists all files; >= 2 chars searches. Both hit the server
+    // (debounced) and page 1 replaces whatever was shown.
     this._fileSearchTimer = setTimeout(() => {
       this._runFileSearch(query, scope);
     }, 250);
   }
 
-  async _runFileSearch(query, scope) {
-    if (this._fileSearch.query !== query) return;
+  // Fetches one page of linkable files. `append` pulls the next page and
+  // concatenates it (infinite scroll); otherwise page 1 replaces the results.
+  // An empty query lists all files — the procedure returns everything the user
+  // can link, most-recent first.
+  async _runFileSearch(query, scope, { append = false } = {}) {
+    if (append && (this._fileSearch.loading || !this._fileSearch.hasMore)) {
+      return;
+    }
+    // Stale guard: bail if the active query/scope moved on before we started.
+    if (this._fileSearch.query !== query || this._fileSearch.scope !== scope) {
+      return;
+    }
+    const page = append ? this._fileSearch.page + 1 : 1;
     const taskId = scope === "detail" ? this._detailId : null;
+
+    this._fileSearch.loading = true;
+    if (append) {
+      this._fileSearch.loadingMore = true;
+      this._refreshFileSearchDropdown(scope, { preserveScroll: true });
+    }
     try {
       const rows = await this.fetchService({
         service: SERVICE.task.search_files,
         hub_id: this._hubId,
         pattern: query,
         task_id: taskId || undefined,
+        page,
       });
-      if (this._fileSearch.query !== query) return;
-      this._fileSearch.results = Array.isArray(rows) ? rows : [];
+      // The active query/scope may have changed while awaiting — drop late
+      // responses so they don't clobber a newer search.
+      if (this._fileSearch.query !== query || this._fileSearch.scope !== scope) {
+        return;
+      }
+      const list = Array.isArray(rows) ? rows : [];
+      if (append) {
+        const seen = new Set(this._fileSearch.results.map((r) => r.nid));
+        this._fileSearch.results = this._fileSearch.results.concat(
+          list.filter((r) => !seen.has(r.nid)),
+        );
+        this._fileSearch.page = page;
+      } else {
+        this._fileSearch.results = list;
+        this._fileSearch.page = 1;
+      }
+      // A full page (page_length rows) may have more behind it; a short or
+      // empty page ends the run. Worst case is one trailing empty fetch.
+      this._fileSearch.hasMore = list.length > 0;
     } catch (err) {
-      this._fileSearch.results = [];
+      if (!append) this._fileSearch.results = [];
+      this._fileSearch.hasMore = false;
+    } finally {
+      this._fileSearch.loading = false;
+      this._fileSearch.loadingMore = false;
     }
-    this._refreshFileSearchDropdown(scope);
+    this._refreshFileSearchDropdown(scope, { preserveScroll: append });
   }
 
   // Surgical update of the file-pending-list part — avoids a full _render()
@@ -2003,12 +2863,19 @@ class __tasks_panel extends LetcBox {
       });
   }
 
-  _refreshFileSearchDropdown(scope) {
+  _refreshFileSearchDropdown(scope, { preserveScroll = false } = {}) {
     if (!scope) return;
     const partName = `file-search-dropdown-${scope}`;
     this.ensurePart(partName)
       .then((dropdown) => {
         if (!dropdown || dropdown.isDestroyed?.()) return;
+        // feed() recreates the scrollable results element, resetting scrollTop
+        // to 0. On an append we capture the current position and restore it on
+        // the rebuilt element so the list doesn't jump back to the top.
+        const scroller = () =>
+          dropdown.el &&
+          dropdown.el.querySelector(".tasks-panel__file-search-results");
+        const prevScroll = preserveScroll ? scroller()?.scrollTop || 0 : 0;
         const ctx =
           scope === "create"
             ? {
@@ -2028,6 +2895,10 @@ class __tasks_panel extends LetcBox {
         const content = skel.buildFileSearchDropdownContent(this, scope, ctx);
         dropdown.feed(content);
         if (dropdown.el) dropdown.el.dataset.empty = content.length ? "0" : "1";
+        if (preserveScroll) {
+          const s = scroller();
+          if (s) s.scrollTop = prevScroll;
+        }
       })
       .catch(() => {
         /* part not mounted yet */
@@ -2185,49 +3056,42 @@ class __tasks_panel extends LetcBox {
     this._refreshFileSearchDropdown("detail");
   }
 
+  // Colors live in the skin (keyed on data-status/data-priority + data-active);
+  // these only flip the active flag so the selected pill restyles in place.
   _updateStatusPills(modalSel, pillSel, newStatus) {
     const root = this.el && this.el.querySelector(modalSel);
     if (!root) return;
-    const cols = this.getColumns();
-    const colorByKey = {};
-    cols.forEach((c) => {
-      colorByKey[c.key] = c.color;
-    });
     root.querySelectorAll(pillSel).forEach((pill) => {
-      const status = pill.dataset.status;
-      const active = status === newStatus;
-      pill.dataset.active = active ? "1" : "0";
-      if (active) {
-        const color = colorByKey[status];
-        pill.style.borderColor = color || "";
-        pill.style.color = color || "";
-      } else {
-        pill.style.borderColor = "";
-        pill.style.color = "";
-      }
+      pill.dataset.active = pill.dataset.status === newStatus ? "1" : "0";
     });
   }
 
   _updatePriorityPills(modalSel, newPriority) {
     const root = this.el && this.el.querySelector(modalSel);
     if (!root) return;
-    const pris = this.getPriorities();
-    const colorByKey = {};
-    pris.forEach((p) => {
-      colorByKey[p.key] = p.color;
-    });
     root.querySelectorAll(".tasks-panel__priority-pill").forEach((pill) => {
-      const pri = pill.dataset.priority;
-      const active = pri === newPriority;
-      pill.dataset.active = active ? "1" : "0";
-      if (active) {
-        const color = colorByKey[pri];
-        pill.style.borderColor = color || "";
-        pill.style.color = color || "";
-      } else {
-        pill.style.borderColor = "";
-        pill.style.color = "";
-      }
+      pill.dataset.active = pill.dataset.priority === newPriority ? "1" : "0";
+    });
+  }
+
+  // Snapshot the board-title input into state before any in-place update, so a
+  // colour pick / toggle can't lose an un-watched final keystroke.
+  _captureBoardTitle() {
+    const input =
+      this.el &&
+      this.el.querySelector(
+        '.tasks-panel__board-modal input[name="board_title"]',
+      );
+    if (input) this._boardTitle = String(input.value || "");
+  }
+
+  // New-board colour swatches — flip the active flag in place (keyed on the
+  // data-theme rendered by the skeleton) so picking a colour never re-renders.
+  _updateBoardColors(newTheme) {
+    const root = this.el && this.el.querySelector(".tasks-panel__board-modal");
+    if (!root) return;
+    root.querySelectorAll(".tasks-panel__board-color").forEach((chip) => {
+      chip.dataset.active = chip.dataset.theme === newTheme ? "1" : "0";
     });
   }
 
@@ -2782,16 +3646,25 @@ class __tasks_panel extends LetcBox {
       }
     }
 
+    // Capture the underlying view's scroll BEFORE the DOM swap so opening the
+    // detail/create overlay (or any background re-render) doesn't reset the
+    // board/list back to the top — feed() rebuilds fresh nodes at scroll 0.
+    const savedScroll = this._captureViewScroll();
+
     this.feed(require("./skeleton")(this));
     // ui-core sets <input> values through a 200ms `waitElement` poll, so
     // the title/description start empty after each feed; pre-populate them
     // (sync + next frame as a safety net for late-mount children).
     this._prepopulateInputs();
     this._renderCommentBodies();
+    // Restore synchronously to avoid a visible jump, then again next frame in
+    // case the rebuilt content only reaches full scrollHeight after layout.
+    this._restoreViewScroll(savedScroll);
     if (typeof requestAnimationFrame === "function") {
       requestAnimationFrame(() => {
         this._prepopulateInputs();
         this._renderCommentBodies();
+        this._restoreViewScroll(savedScroll);
       });
     }
 
@@ -2813,9 +3686,88 @@ class __tasks_panel extends LetcBox {
     }
   }
 
+  // Snapshot the scroll offsets of the current view's scrollable containers,
+  // keyed by a stable selector so they reattach to the right node after the
+  // feed() rebuild. Each view has one unique-class scroll root; the board also
+  // has per-column scrollers (__column-body), keyed by data-dropcol. Skips
+  // containers still at 0.
+  _captureViewScroll() {
+    if (!this.el || typeof this.el.querySelectorAll !== "function") return [];
+    const roots = [
+      "tasks-panel__main", // board — horizontal column strip
+      "tasks-panel__list",
+      "tasks-panel__summary",
+      "tasks-panel__calendar",
+      "tasks-panel__gantt",
+    ];
+    const nodes = this.el.querySelectorAll(
+      roots.map((c) => `.${c}`).join(", ") + ", .tasks-panel__column-body",
+    );
+    const saved = [];
+    for (const node of Array.from(nodes)) {
+      const top = node.scrollTop || 0;
+      const left = node.scrollLeft || 0;
+      if (!top && !left) continue;
+      let selector;
+      if (node.classList.contains("tasks-panel__column-body")) {
+        const key = node.dataset && node.dataset.dropcol;
+        if (!key) continue;
+        selector = `.tasks-panel__column-body[data-dropcol="${key}"]`;
+      } else {
+        const cls = roots.find((c) => node.classList.contains(c));
+        if (!cls) continue;
+        selector = `.${cls}`;
+      }
+      saved.push({ selector, top, left });
+    }
+    return saved;
+  }
+
+  // Reapply offsets captured by _captureViewScroll. Best-effort: a container
+  // that no longer exists (view switched, column deleted) is simply skipped.
+  _restoreViewScroll(saved) {
+    if (!this.el || !saved || !saved.length) return;
+    for (const { selector, top, left } of saved) {
+      const node = this.el.querySelector(selector);
+      if (!node) continue;
+      if (top) node.scrollTop = top;
+      if (left) node.scrollLeft = left;
+    }
+  }
+
   // ── Skeleton accessors ─────────────────────────────────────────
+  // Board columns = the four built-ins followed by this folder's custom
+  // columns. Every entry is render-ready: `name` is the display string
+  // (LOCALE for built-ins, user text for customs), `color` the accent hex,
+  // `theme` the palette key driving pill tints, `custom` marks editability.
   getColumns() {
-    return COLUMNS;
+    const builtins = COLUMNS.map((c) => ({
+      ...c,
+      name: LOCALE[c.label] || c.key,
+    }));
+    const customs = (this._customColumns || []).map((r) => ({
+      key: r.id,
+      label: "",
+      name: r.name || "",
+      theme: COLUMN_THEMES[r.theme] ? r.theme : "default",
+      color: COLUMN_THEMES[r.theme] || COLUMN_THEMES.default,
+      custom: 1,
+    }));
+    return builtins.concat(customs);
+  }
+  getColumnThemes() {
+    return COLUMN_THEMES;
+  }
+  getBoardModalState() {
+    return {
+      open: this._boardModalOpen,
+      theme: this._boardTheme,
+      title: this._boardTitle,
+      isDefault: this._boardDefault,
+    };
+  }
+  getColMenuFor() {
+    return this._colMenuFor;
   }
   getPriorities() {
     return PRIORITIES;
@@ -2850,7 +3802,7 @@ class __tasks_panel extends LetcBox {
   }
 
   getState() {
-    return COLUMNS.reduce((acc, c) => {
+    return this.getColumns().reduce((acc, c) => {
       acc[c.key] = this._tasks.filter(
         (t) => t.status === c.key && this._matchesFilter(t),
       );
@@ -2863,11 +3815,34 @@ class __tasks_panel extends LetcBox {
     return this._tasks.filter((t) => this._matchesFilter(t));
   }
 
+  // Recent activity rows for the Project Health view (already folder-scoped by
+  // the server). When a member filter is active, restrict to tasks owned by the
+  // filtered members so the feed agrees with the rest of the view.
+  getActivity() {
+    const rows = Array.isArray(this._activity) ? this._activity : [];
+    const filter = this._filterUids || [];
+    if (!filter.length) return rows;
+    const allowed = new Set(this.getFilteredTasks().map((t) => t.id));
+    return rows.filter((r) => allowed.has(r.task_id));
+  }
+
   getView() {
     return this._view || "board";
   }
   getSort() {
     return this._sort || null;
+  }
+  getCalMode() {
+    return this._calMode || "month";
+  }
+  getCalCursor() {
+    return this._calCursor;
+  }
+  getGanttMode() {
+    return this._ganttMode || "weeks";
+  }
+  getGanttSelected() {
+    return this._ganttSelected;
   }
 
   isCreating() {

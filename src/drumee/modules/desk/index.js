@@ -1437,6 +1437,28 @@ class desk_module extends LetcBox {
       case "copy-link":
         return Wm.copyLink();
 
+      case "open-search-hit": {
+        // Topbar search result click. Reveal the hit in context rather than
+        // opening its containing hub root:
+        //   file        → open host folder (pid) + highlight the file cell
+        //   folder/hub   → open it + flash its new files
+        //   message      → open the hosting chat scope (see _openMessageHit)
+        // Files/folders reuse the notification-reveal path (openFileLocation).
+        this._hideSearchSuggestions();
+        const hit = cmd && cmd.model ? cmd.model.toJSON() : {};
+        if (hit.result_type === "message") {
+          return this._openMessageHit(hit);
+        }
+        this.closeAllPanels();
+        // A hub/workspace hit has no host folder to reveal it in (pid is 0/root)
+        // — open the hub itself. Files and sub-folders reveal in their host
+        // folder (pid) with the cell highlighted, via the notification path.
+        if (hit.filetype === _a.hub) {
+          return Wm.loadWorkspace({ ...hit });
+        }
+        return Wm.openFileLocation({ ...hit, highlight: 1 });
+      }
+
       case "load-workspace":
         this._hideSearchSuggestions();
         // Close occluding panels FIRST, then loadWorkspace. Chain via
@@ -1645,6 +1667,30 @@ class desk_module extends LetcBox {
       document.removeEventListener("mousedown", this._suggestionsDismiss);
       this._suggestionsDismiss = null;
     }
+  }
+
+  /**
+   * A message search hit was clicked. Land the user in the hub that hosts the
+   * conversation. `channel_search` gives us hub_id (tagged by the service) plus
+   * message_id / thread_id / file_thread_id, but NOT the file nid needed to
+   * scope the chat to the exact thread — so the reliable, deliverable target is
+   * the hosting hub itself, opened via the same hub_id-only path the deep-link
+   * flow uses (Wm.loadWorkspace resolves the hub root via media.attributes).
+   *
+   * Scrolling the chat to the exact message is a deliberate follow-up: it needs
+   * the thread's file nid (not currently returned by channel_search) plus a
+   * launch-time jump wired into window_folder's chat. loadWorkspace's apply()
+   * re-fetches attributes and only forwards those, so passing scroll hints here
+   * would be silently dropped — left out on purpose rather than faked.
+   */
+  _openMessageHit(data = {}) {
+    const hub_id = data.hub_id;
+    if (!hub_id) {
+      this.warn && this.warn("_openMessageHit: missing hub_id", data);
+      return;
+    }
+    this.closeAllPanels();
+    return Wm.loadWorkspace({ hub_id });
   }
 
   /** No need - use menu  widget */

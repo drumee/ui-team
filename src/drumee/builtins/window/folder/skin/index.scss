@@ -1,4 +1,6 @@
 @use "mixins/drumee";
+@use "./meeting-schedule";
+@use "./meeting-modal";
 
 .window-folder {
   &__ui {
@@ -302,29 +304,6 @@
       align-items: center;
       gap: 13.14px;
       flex-shrink: 0;
-    }
-
-    &__video-btn {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      align-self: stretch;
-      padding: 4px 8px;
-      background-color: var(--normal-bg-90);
-      border-radius: 6px;
-      cursor: pointer;
-      box-sizing: border-box;
-      color: var(--normal-fg-10);
-      flex-shrink: 0;
-
-      svg {
-        width: 20px;
-        height: 20px;
-      }
-
-      &:hover {
-        background-color: var(--normal-bg-80);
-      }
     }
 
     // Upload — Grey/20 background, radius 4.38, padding 6.57 13.14.
@@ -1079,8 +1058,19 @@
   }
 
   &__tab-bar-icon {
-    font-size: 13px;
-    transform: translateY(-0.5px);
+    // SVG glyph (was an emoji Note). Fixed box + currentColor so it tracks the
+    // tab's text color / active state.
+    width: 16px;
+    height: 16px;
+    flex: 0 0 16px;
+    color: currentColor;
+
+    svg {
+      width: 16px;
+      height: 16px;
+      display: block;
+      fill: currentColor;
+    }
   }
 
   // Member-filter trigger — right-aligned on the tab line, shown only on the
@@ -1467,6 +1457,29 @@
     }
   }
 
+  // Inline email-validation message, directly under the invite input row.
+  // Toggled via data-state (see _setInviteError) so it takes no vertical space
+  // — and adds no section gap — while there is no error to show.
+  &__settings-action-invite-error {
+    &[data-state="closed"] {
+      display: none;
+    }
+
+    &[data-state="open"] {
+      display: flex;
+    }
+  }
+
+  &__settings-action-invite-error-message {
+    @include drumee.typo(
+      $size: 12px,
+      $line: 16px,
+      $weight: 500,
+      $color: var(--red-500)
+    );
+    padding: 0 4px;
+  }
+
   // Wrapper around the KIND.menu.topic root — must be position:relative so
   // the menu items wrapper anchors to the trigger, overflow:visible so the
   // popover can extend outside its row, and z-index high so it stacks above
@@ -1689,127 +1702,6 @@
     }
   }
 
-  &__meeting-view {
-    width: 100%;
-    height: 100%;
-    overflow: auto;
-  }
-
-  &__meeting-files {
-    width: 60%;
-    min-width: 0;
-    overflow: hidden;
-  }
-
-  &__meeting-room {
-    flex: 1 1 0;
-    min-width: 0;
-    min-height: 0;
-    overflow: hidden;
-    position: relative;
-    box-sizing: border-box;
-    display: flex;
-    flex-direction: column;
-    border-left: 1px solid var(--border-default);
-
-    // Force every part of widget_meeting to fit its slot. Default skin assumes
-    // a fixed-width side dock; we use !important + maximum specificity here
-    // because flex chains with min-width:auto were leaking through and
-    // pushing the Cancel button (right of footer) past the right edge.
-    > * {
-      width: 100% !important;
-      max-width: 100% !important;
-      min-width: 0 !important;
-      box-sizing: border-box !important;
-      flex: 1 1 0 !important;
-      min-height: 0 !important;
-    }
-
-    .widget-meeting__container,
-    .widget-meeting__header,
-    .widget-meeting__section-label,
-    .widget-meeting__members-list,
-    .widget-meeting__footer,
-    .widget-meeting-member__ui,
-    .widget-meeting-member__member-row {
-      max-width: 100% !important;
-      min-width: 0 !important;
-      box-sizing: border-box !important;
-    }
-
-    .widget-meeting__ui {
-      border-left: none !important;
-    }
-
-    // Footer: predictable layout — Start grows, Cancel sits at fixed 100px on
-    // the right, gap 8 between, padding 12 inside. No flex-wrap, no spilled
-    // content; both buttons always visible.
-    .widget-meeting__footer {
-      display: flex !important;
-      flex-direction: row !important;
-      flex-wrap: nowrap !important;
-      gap: 8px !important;
-      padding: 12px !important;
-      align-items: center !important;
-    }
-
-    .widget-meeting__cancel-btn {
-      flex: 0 0 100px !important;
-      max-width: 100px !important;
-      min-width: 0 !important;
-      padding: 10px !important;
-      overflow: hidden !important;
-    }
-
-    .widget-meeting__start-btn {
-      flex: 1 1 0 !important;
-      min-width: 0 !important;
-      padding: 10px !important;
-      overflow: hidden !important;
-    }
-
-    // Member rows: avatar 36px + info (truncates) + Call (auto)
-    .widget-meeting-member__member-row {
-      display: flex !important;
-      flex-wrap: nowrap !important;
-      align-items: center !important;
-      gap: 8px !important;
-    }
-
-    .widget-meeting-member__member-avatar {
-      flex: 0 0 36px !important;
-      width: 36px !important;
-      height: 36px !important;
-    }
-
-    .widget-meeting-member__member-info {
-      flex: 1 1 0 !important;
-      min-width: 0 !important;
-      overflow: hidden !important;
-    }
-
-    .widget-meeting-member__member-call-btn {
-      flex: 0 0 auto !important;
-      max-width: 80px !important;
-    }
-
-    // Reduce paddings everywhere so 200-220px wide slots still fit content.
-    .widget-meeting__header {
-      padding: 16px 12px !important;
-    }
-
-    .widget-meeting__section-label {
-      padding: 12px 12px 4px !important;
-    }
-
-    .widget-meeting__members-list {
-      padding: 4px 8px !important;
-    }
-
-    .widget-meeting-member__ui {
-      padding: 8px !important;
-    }
-  }
 }
 
 .window-folder {
@@ -2872,9 +2764,11 @@
   }
 
   &__split-body[data-view="task"] {
-    grid-template-columns: 1fr;
-    // Clamp the row so the bounded grid cell isn't overflowed by the panel's
-    // content height; otherwise the board can't scroll and the + is clipped.
+    // minmax(0, …) on BOTH tracks so the cell can shrink below the board's
+    // content size: the row clamp lets tall columns scroll vertically and the
+    // + stay visible; the column clamp lets the wide row of fixed-width columns
+    // scroll horizontally inside __main instead of stretching the window.
+    grid-template-columns: minmax(0, 1fr);
     grid-template-rows: minmax(0, 1fr);
     background: var(--normal-bg-elevated);
 
@@ -3145,9 +3039,9 @@
         gap: 0;
       }
 
-      // Collapse the standalone Meeting / Manage-access / Settings / zoom
-      // controls — they live in the overflow "More" menu at this width.
-      &__video-btn,
+      // Collapse the standalone Manage-access / Settings / zoom controls —
+      // they live in the overflow "More" menu at this width. (Meeting is a
+      // permanent tab now, so it no longer collapses here.)
       &__control-icon.share,
       &__control-icon.settings,
       &__zoom-wrapper {

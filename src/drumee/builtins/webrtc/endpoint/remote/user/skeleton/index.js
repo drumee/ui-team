@@ -33,7 +33,7 @@ const __skl_stream_remote = function (_ui_) {
       }),
       Skeletons.Button.Svg({
         className: `${_ui_.fig.family}__tile-pin`,
-        ico: "drumee-tools_pin",
+        ico: "meet-pin",
         sys_pn: "tile-pin",
         service: "pin-tile",
         uiHandler: [_ui_],
@@ -46,7 +46,7 @@ const __skl_stream_remote = function (_ui_) {
     kids: [
       Skeletons.Button.Svg({
         className: `${_ui_.fig.family}__tile-mic`,
-        ico: "micro",
+        ico: "meet-mic-slash",
         sys_pn: "audio",
         state: _ui_.mget(_a.audio) || _ui_.mget('muted'),
         attrOpt: { id: `${id}_mic` }
@@ -59,7 +59,7 @@ const __skl_stream_remote = function (_ui_) {
       }),
       Skeletons.Button.Svg({
         className: `${_ui_.fig.family}__tile-dots`,
-        ico: "bold-dot-vertical",
+        ico: "meet-dots",
       }),
     ]
   });
@@ -109,7 +109,7 @@ const __skl_stream_remote = function (_ui_) {
 
       Skeletons.Button.Svg({
         className: `${_ui_.fig.family}__hand-raise-badge`,
-        ico: "hand-raise",
+        ico: "meet-hand",
       }),
 
       topActions,

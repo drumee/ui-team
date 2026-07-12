@@ -125,7 +125,11 @@ module.exports = function (ui) {
                     itemsOpt: {
                       kind: "workspace_item",
                       uiHandler: [ui],
-                      service: "load-workspace",
+                      // Clicking a search hit reveals it in context: files open
+                      // their host folder with the file highlighted, folders open
+                      // themselves, messages open the hosting chat. Handled by
+                      // desk/index.js onUiEvent → "open-search-hit".
+                      service: "open-search-hit",
                     },
                   }),
                 ],

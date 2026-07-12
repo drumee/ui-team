@@ -82,20 +82,36 @@ class __window_secure_share extends mfsInteract {
   }
 
   // Pin the window to the top-right corner as a full-height, fixed-width panel
-  // (Figma slide-in). Positions relative to the window-manager area (Wm.$el),
-  // NOT the full viewport — windows live inside the Wm layer, which is offset by
-  // the sidebar and narrower than window.innerWidth (the base's max_size() uses
-  // Wm.$el.width() for the same reason). Using innerWidth pushed the panel past
-  // the right edge. left is clamped so it can never overflow.
+  // (Figma slide-in). The window lives inside the WM windows-layer, so `left`
+  // is relative to that layer (offset from the viewport by the sidebar), NOT
+  // the viewport. We can't derive `left` from Wm.$el.width(): off-screen
+  // slide-out panels (chat / address-book, parked at right:-880px) inflate the
+  // reported WM width, which pushed the dock's right edge PAST the viewport so
+  // its right side (padding + the recipient toggles) got clipped. Instead,
+  // anchor the panel's RIGHT edge to the real viewport edge and translate that
+  // into layer coordinates by subtracting the layer's own viewport offset.
   _applyRightDock() {
     const wm    = (typeof Wm !== 'undefined' && Wm.$el) ? Wm.$el : null;
-    const areaW = wm ? wm.width()  : window.innerWidth;
     const areaH = wm ? wm.height() : window.innerHeight;
-    const width  = Math.min(this._dockWidth || 450, areaW);
-    const left   = Math.max(0, areaW - width);
-    this.style.set({ width, height: areaH, left, top: 0 });
+    const width = Math.min(this._dockWidth || 450, window.innerWidth);
+
+    // Apply size first so the element reflows before we read its real box.
+    this.style.set({ width, height: areaH, top: 0 });
     if (this.el) {
-      this.$el.css({ width: `${width}px`, height: `${areaH}px`, left: `${left}px`, top: '0px' });
+      this.$el.css({ width: `${width}px`, height: `${areaH}px`, top: '0px' });
+    }
+
+    // offsetParent = the windows-layer (or null when the window is fixed, in
+    // which case coordinates are already viewport-relative → offset 0).
+    // realW guards against a min-width / base sizing overriding our 450.
+    const layer     = this.el && this.el.offsetParent ? this.el.offsetParent : null;
+    const layerLeft = layer ? layer.getBoundingClientRect().left : 0;
+    const realW     = this.el ? (this.el.getBoundingClientRect().width || width) : width;
+    const left      = Math.max(0, window.innerWidth - realW - layerLeft);
+
+    this.style.set({ left });
+    if (this.el) {
+      this.$el.css({ left: `${left}px` });
     }
   }
 

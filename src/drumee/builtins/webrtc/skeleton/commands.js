@@ -28,6 +28,26 @@ function __webrtc_device(_ui_) {
 }
 
 const __window_connect_commands = function (_ui_) {
+  // Team meetings render the controls in the top bar (webrtc/skeleton/topbar.js)
+  // instead of this floating bar. Keep the `commands` container node so the
+  // ensurePart("commands") show/hide calls in webrtc/room/index.js +
+  // window/meeting/index.js still resolve, but leave it empty (no duplicate
+  // ctrl-* buttons, which would clash with the topbar ones by sys_pn).
+  const isTeamMeeting =
+    _ui_.service_class === "meeting" && _ui_.mget(_a.area) !== _a.dmz;
+  if (isTeamMeeting) {
+    return Skeletons.Box.X({
+      className: `${_ui_.fig.family}__commands-container`,
+      sys_pn: "commands",
+      state: 0,
+      // dataset alone is dropped at render unless attrOpt is present — and the
+      // [data-empty="1"] CSS is what keeps this shell invisible after the
+      // post-join ensurePart("commands").el.show() call.
+      attrOpt: { "data-empty": "1" },
+      dataset: { mode: "in-call", empty: 1 },
+    });
+  }
+
   const a = Skeletons.Box.X({
     className: `${_ui_.fig.family}__commands-container`,
     sys_pn: "commands",

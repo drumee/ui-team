@@ -1,7 +1,7 @@
 {
   "name": "@drumee/ui-team",
   "description": "Drumee Web Os User Interface with collaborative features",
-  "version": "3.3.72",
+  "version": "3.3.74",
   "homepage": "https://drumee.com",
   "author": "Somanos Sar <somanos@drumee.com> (http://drumee.com)",
   "repository": {
@@ -74,10 +74,10 @@
     "webpack-manifest-plugin": "5.0.0"
   },
   "dependencies": {
-    "@drumee/ui-core": "^1.1.44",
-    "@drumee/ui-essentials": "^1.0.1",
+    "@drumee/ui-core": "^1.1.46",
+    "@drumee/ui-essentials": "^1.0.2",
     "@drumee/ui-styles": "^1.0.6",
-    "@drumee/ui-toolkit": "^0.0.22",
+    "@drumee/ui-toolkit": "^0.0.23",
     "@embedpdf/pdfium": "^1.5.0",
     "@webcomponents/webcomponentsjs": "^2.6.0",
     "aes256": "^1.1.0",

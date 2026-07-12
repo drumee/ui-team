@@ -546,12 +546,29 @@ class __address_book extends LetcBox {
         contact_id: id,
         hub_id: Visitor.id,
       });
+      // The list merges _contacts + _invitations + _sentInvitations, and
+      // "Cancel invite" rows live in _sentInvitations — filter all three so the
+      // row disappears immediately. Relying on the WS echo to reload the lists
+      // means a stale/dropped socket leaves the canceled row on screen.
       this._contacts = this._contacts.filter((c) => idOf(c) !== id);
+      this._invitations = (this._invitations || []).filter((c) => idOf(c) !== id);
+      this._sentInvitations = (this._sentInvitations || []).filter((c) => idOf(c) !== id);
       this._selectedKey = null;
       this._refreshList();
       this._refreshDetail();
     } catch (err) {
       console.error("[address_book] delete_contact failed:", err);
+      this._showToast(LOCALE.TRY_AGAIN, "error");
+      // Resync from the server: the row may already be deleted there (second
+      // click on a row a lost WS echo left behind) — a reload clears it.
+      await Promise.all([
+        this._loadContacts(this._contactsOption || "active"),
+        this._loadInvitations(),
+        this._loadSentInvitations(),
+      ]);
+      this._selectedKey = null;
+      this._refreshList();
+      this._refreshDetail();
     }
   }
 

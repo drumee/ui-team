@@ -43,11 +43,11 @@ export function breadcrumbs(ui, opt) {
 export function tabBar(ui, opt = {}) {
   const cnRoot = "window-body__tab-bar";
   const isFolder = ui.fig.family === "window-folder";
-  // The folder window and the DMZ share grid use the same emoji tab icons
-  // (📄 / 💬 / 📋) — see the reference design. Other non-folder windows keep
-  // their monochrome SVG glyphs.
+  // The folder window and the DMZ share grid use the same SVG tab glyphs
+  // (Files / Chat / Tasks) — see the reference design. Other non-folder
+  // windows keep their own monochrome SVG glyphs (the non-emoji branch below).
   const useEmojiTabs = isFolder || ui.fig.family === "dmz-sharebox";
-  const folderTab = ({ icon, label, service, state, tab }) =>
+  const folderTab = ({ ico, label, service, state, tab }) =>
     Skeletons.Box.X({
       className: `${cnRoot}-item ${ui.fig.family}__tab-bar-item`,
       service,
@@ -55,9 +55,11 @@ export function tabBar(ui, opt = {}) {
       dataset: { tab },
       uiHandler: [ui],
       kids: [
-        Skeletons.Note({
+        // SVG glyph. `__tab-bar-icon` is pointer-events:none in the skin, so a
+        // click on the icon still bubbles to the tab Box.X's own `service`.
+        Skeletons.Button.Svg({
           className: `${ui.fig.family}__tab-bar-icon`,
-          content: icon,
+          ico,
         }),
         Skeletons.Note({
           className: `${ui.fig.family}__tab-bar-label`,
@@ -67,7 +69,7 @@ export function tabBar(ui, opt = {}) {
     });
 
   let chat_tab = folderTab({
-    icon: "💬",
+    ico: "meet-chat-dots",
     label: LOCALE.CHAT,
     service: "tab-chat",
     state: 0,
@@ -96,7 +98,7 @@ export function tabBar(ui, opt = {}) {
   const kids = useEmojiTabs
     ? [
         folderTab({
-          icon: "📄",
+          ico: "app-file",
           label: LOCALE.FILES,
           service: "tab-files",
           state: 1,
@@ -104,7 +106,7 @@ export function tabBar(ui, opt = {}) {
         }),
         chat_tab,
         folderTab({
-          icon: "📋",
+          ico: "app-task",
           label: LOCALE.TASK || "Tasks",
           service: "tab-task",
           state: 0,
@@ -134,46 +136,33 @@ export function tabBar(ui, opt = {}) {
       ];
 
   if (opt.meeting) {
+    // Emoji-tab windows use folderTab so Meeting matches Files/Chat/Tasks.
     kids.push(
-      Skeletons.Button.Label({
-        className: `${cnRoot}-item ${ui.fig.family}__tab-bar-item`,
-        label: LOCALE.MEETING,
-        ico: "folder-meeting",
-        service: "tab-meeting",
-        state: 0,
-        dataset: { tab: "meeting" },
-        uiHandler: [ui],
-      }),
+      useEmojiTabs
+        ? folderTab({
+            ico: "folder-meeting",
+            label: LOCALE.MEETING,
+            service: "tab-meeting",
+            state: 0,
+            tab: "meeting",
+          })
+        : Skeletons.Button.Label({
+            className: `${cnRoot}-item ${ui.fig.family}__tab-bar-item`,
+            label: LOCALE.MEETING,
+            ico: "folder-meeting",
+            service: "tab-meeting",
+            state: 0,
+            dataset: { tab: "meeting" },
+            uiHandler: [ui],
+          }),
     );
   }
 
-  // Member-filter trigger for the Task tab — lives on the same line as the
-  // tabs (right-aligned). Hidden until the Task tab is active; the folder
-  // window toggles `data-visible` in showFolderTab and reflects the active
-  // filter via `data-active` (task-filter-state event from the task panel).
-  if (isFolder) {
-    kids.push(
-      Skeletons.Box.X({
-        className: `${ui.fig.family}__tab-filter`,
-        sys_pn: "task-filter-btn",
-        partHandler: ui,
-        dataset: { visible: 0, active: 0 },
-        bubble: 0,
-        service: "toggle-task-filter",
-        uiHandler: [ui],
-        kids: [
-          Skeletons.Image.Svg({
-            ico: "desktop_filter",
-            className: `${ui.fig.family}__tab-filter-ico`,
-          }),
-          Skeletons.Note({
-            className: `${ui.fig.family}__tab-filter-label`,
-            content: LOCALE.FILTER,
-          }),
-        ],
-      }),
-    );
-  }
+  // NOTE: the Task-tab member-filter trigger used to live here on the window
+  // tab bar. It now lives in the task panel's own secondary header (viewbar)
+  // per Figma 2040-53814, so it's rendered by the task skeleton instead. The
+  // folder window's toggle-task-filter / task-filter-state handlers remain but
+  // are simply no longer wired to a button here.
 
   // File view toggle — a segmented pill with two halves: list (row) and grid.
   // Both halves always render; the half matching the wrapper's data-state is
@@ -1369,14 +1358,8 @@ export function topbarMoreMenu(ui) {
   const area = ui.mget(_a.area);
 
   const items = [];
-  if (!inShare) {
-    items.push({
-      service: "tab-meeting",
-      ico: "video-camera-header",
-      content: LOCALE.MEETING,
-      modifier: "video",
-    });
-  }
+  // Meeting now lives as a permanent tab (not an overflow item). Manage Access /
+  // Settings still collapse here.
   // Manage Access mirrors the share control-icon: share areas + workspace ROOT
   // only (filetype === hub). Sub-folders already share via their right-click
   // "Share" menu, so this entry is redundant there — keep in sync with topbar.js.

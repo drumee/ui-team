@@ -42,10 +42,20 @@ function buildFileSearchDropdownContent(ui, scope, ctx = {}) {
   };
 
   if (results.length) {
+    const rows = results.map(resultRow);
+    // Footer shown while the next page is loading (infinite scroll).
+    if (fileSearch && fileSearch.loadingMore) {
+      rows.push(
+        Skeletons.Note({
+          className: `${pfx}__file-search-loading`,
+          content: LOCALE.LOADING || "…",
+        }),
+      );
+    }
     return [
       Skeletons.Box.Y({
         className: `${pfx}__file-search-results`,
-        kids: results.map(resultRow),
+        kids: rows,
       }),
     ];
   }
@@ -64,6 +74,13 @@ const { stripMarkers: stripMentionMarkers } = require("../mention-markers");
 
 const make = function (ui) {
   const pfx = ui.fig.family;
+  // Phone flag stamped directly onto the popups / list / gantt roots (see
+  // `data-mobile` below). Driven from JS rather than a CSS media/container
+  // query because the panel lives in a resizable window — the viewport is
+  // never the panel width — and container queries aren't supported in the
+  // target runtime. The modal bodies also switch to a column (Box.Y) on
+  // mobile so the two-column issue layout stacks structurally.
+  const isMobile = Visitor.isMobile();
   const state = ui.getState();
   const creating = ui.isCreating();
   const draft = ui.getCreateDraft();
@@ -83,6 +100,13 @@ const make = function (ui) {
       return d;
     }
   };
+
+  // Due label for a task: a duration task (start_date set) shows the span
+  // "start → due"; a single-date task shows just the due date.
+  const formatTaskDue = (task) =>
+    task && task.start_date && task.due_date
+      ? `${formatDue(task.start_date)} → ${formatDue(task.due_date)}`
+      : formatDue(task && task.due_date);
 
   const isOverdue = (d) => {
     if (!d) return false;
@@ -123,8 +147,12 @@ const make = function (ui) {
   const dueBadge = (task) =>
     Skeletons.Note({
       className: `${pfx}__task-due`,
-      content: formatDue(task.due_date),
-      dataset: { overdue: isOverdue(task.due_date) ? 1 : 0 },
+      content: formatTaskDue(task),
+      // Overdue is judged on the end (due_date); range marks the span variant.
+      dataset: {
+        overdue: isOverdue(task.due_date) ? 1 : 0,
+        range: task.start_date ? 1 : 0,
+      },
     });
 
   const labelPill = (labelId, taskId) => {
@@ -139,8 +167,8 @@ const make = function (ui) {
   };
 
   const assigneeAvatar = (task) => {
-    // Multi-assignee: show avatar + name per assignee (up to 3) then a "+N"
-    // chip. Rendered in the card footer, wrapping to new lines as needed.
+    // Multi-assignee: overlapping avatars (up to 3) then a "+N" chip — sits
+    // bottom-right of the card meta row (matches Figma 2021:117822).
     const uids = Array.isArray(task.assignee_uids)
       ? task.assignee_uids
       : task.assignee_uid
@@ -151,35 +179,26 @@ const make = function (ui) {
     const shown = uids.slice(0, MAX);
     const overflow = uids.length - shown.length;
     const items = shown.map((uid) => {
-      const m = ui.getMember(uid);
-      return Skeletons.Box.X({
-        className: `${pfx}__task-assignee-item`,
-        kids: [
-          Skeletons.UserProfile({
-            className: `${pfx}__task-assignee`,
-            id: uid,
-            firstname: m?.firstname,
-            lastname: m?.lastname,
-            auto_color: 1,
-            live_status: 0,
-          }),
-          Skeletons.Note({
-            className: `${pfx}__task-assignee-name`,
-            content: fullName(m),
-          }),
-        ],
+      const m = ui.getMember(uid) || {};
+      return Skeletons.UserProfile({
+        className: `${pfx}__task-avatar`,
+        id: uid,
+        firstname: m.firstname,
+        lastname: m.lastname,
+        auto_color: 1,
+        live_status: 0,
       });
     });
     if (overflow > 0) {
       items.push(
         Skeletons.Note({
-          className: `${pfx}__task-assignee-more`,
+          className: `${pfx}__task-avatar-more`,
           content: `+${overflow}`,
         }),
       );
     }
     return Skeletons.Box.X({
-      className: `${pfx}__task-assignees`,
+      className: `${pfx}__task-avatars`,
       kids: items,
     });
   };
@@ -207,11 +226,11 @@ const make = function (ui) {
         })
       : null;
 
-    // Compact linked-files preview — first 2 filenames + "+N more".
-    const visibleFiles = linkedFiles.slice(0, 2);
+    // Linked-files preview — wrapping paperclip chips (first 3) + "+N".
+    const visibleFiles = linkedFiles.slice(0, 3);
     const moreFiles = Math.max(0, linkedFiles.length - visibleFiles.length);
     const filesNode = visibleFiles.length
-      ? Skeletons.Box.Y({
+      ? Skeletons.Box.X({
           className: `${pfx}__task-files`,
           kids: [
             ...visibleFiles.map((f) =>
@@ -232,28 +251,82 @@ const make = function (ui) {
             moreFiles
               ? Skeletons.Note({
                   className: `${pfx}__task-files-more`,
-                  content: `+${moreFiles} ${LOCALE.MORE || "more"}`,
+                  content: `+${moreFiles}`,
                 })
               : null,
           ].filter(Boolean),
         })
       : null;
 
-    // Footer: priority dot + due date only. Attachment count badge removed
-    // (the inline file rows above already convey the number visually).
-    // Assignees render above this row (see card kids).
+    // Footer: priority pill + due-date pill on the left, assignee avatars
+    // pushed to the right (Figma 2021:117822).
     const priorityText = LOCALE[priority.label] || priority.key;
+    // Meta row — priority pill (only when a priority is set, per Figma's
+    // `visible:Priorities`) + due-date pill. Avatars are pushed right.
+    const metaKids = [
+      task.priority
+        ? Skeletons.Note({
+            className: `${pfx}__task-priority`,
+            content: priorityText,
+            attrOpt: { "data-priority": task.priority },
+          })
+        : null,
+      task.due_date ? dueBadge(task) : null,
+    ].filter(Boolean);
+    const meta = metaKids.length
+      ? Skeletons.Box.X({ className: `${pfx}__task-meta`, kids: metaKids })
+      : null;
+    const avatars = assigneeAvatar(task);
+    // Status pill row (Figma 2040-106090: "● In Progress" + avatars at the
+    // card bottom). Dot color comes from the live column set so custom
+    // columns tint correctly.
+    const cardCol =
+      ui.getColumns().find((c) => c.key === (task.status || colKey)) || {};
+    const statusPill = Skeletons.Box.X({
+      className: `${pfx}__task-status`,
+      dataset: { theme: cardCol.theme || "default" },
+      kids: [
+        Skeletons.Note({
+          className: `${pfx}__task-status-dot`,
+          styleOpt: { background: cardCol.color || "#AEAEB2" },
+        }),
+        Skeletons.Note({
+          className: `${pfx}__task-status-label`,
+          content: cardCol.name || LOCALE[cardCol.label] || task.status || "",
+        }),
+      ],
+    });
     const footer = Skeletons.Box.X({
       className: `${pfx}__task-foot`,
+      kids: [statusPill, avatars].filter(Boolean),
+    });
+
+    // Title + description sit in a tight header block (4px gap); the 12px card
+    // gap then separates it from files / meta (Figma EL-b7a7a618 / EL-6d1b5341).
+    const head = Skeletons.Box.Y({
+      className: `${pfx}__task-head`,
       kids: [
-        // Priority chip — the status color fills it and the label reads inside
-        // (Note renders `content` as text; a bare wrapper would not).
-        Skeletons.Note({
-          className: `${pfx}__task-priority-dot`,
-          content: priorityText,
-          styleOpt: { background: priority.color },
+        Skeletons.Box.X({
+          className: `${pfx}__task-card-row`,
+          kids: [
+            titleNode(task),
+            Skeletons.Button.Svg({
+              className: `${pfx}__task-remove`,
+              ico: "cross",
+              bubble: 0,
+              service: "remove-task",
+              uiHandler: [ui],
+              taskId: task.id,
+            }),
+          ].filter(Boolean),
         }),
-        task.due_date ? dueBadge(task) : null,
+        // Description preview (clamped via CSS; omitted when empty).
+        task.description
+          ? Skeletons.Note({
+              className: `${pfx}__task-desc`,
+              content: stripMentionMarkers(task.description),
+            })
+          : null,
       ].filter(Boolean),
     });
 
@@ -273,34 +346,9 @@ const make = function (ui) {
       service: "open-detail",
       uiHandler: [ui],
       taskId: task.id,
-      kids: [
-        labelsStrip,
-        Skeletons.Box.X({
-          className: `${pfx}__task-card-row`,
-          kids: [
-            titleNode(task),
-            Skeletons.Button.Svg({
-              className: `${pfx}__task-remove`,
-              ico: "cross",
-              bubble: 0,
-              service: "remove-task",
-              uiHandler: [ui],
-              taskId: task.id,
-            }),
-          ].filter(Boolean),
-        }),
-        // Description preview (clamped to ~2 lines via CSS; omitted when empty).
-        task.description
-          ? Skeletons.Note({
-              className: `${pfx}__task-desc`,
-              content: stripMentionMarkers(task.description),
-            })
-          : null,
-        filesNode,
-        // Assignees (avatar + name) sit just above the priority/due footer row.
-        assigneeAvatar(task),
-        footer,
-      ].filter(Boolean),
+      // Figma card order: labels, title+desc, files, priority+due row, then
+      // the status-pill + avatars row.
+      kids: [labelsStrip, head, filesNode, meta, footer].filter(Boolean),
     });
   };
 
@@ -314,7 +362,62 @@ const make = function (ui) {
       kids: [
         Skeletons.Note({
           className: `${pfx}__add-label`,
-          content: LOCALE.ADD_TASK,
+          content: `+ ${LOCALE.NEW_TASK}`,
+        }),
+      ],
+    });
+
+  // Menu popover for a CUSTOM column: rename entry + palette swatches + delete.
+  const columnMenu = (col) =>
+    Skeletons.Box.Y({
+      className: `${pfx}__col-menu`,
+      bubble: 0,
+      kids: [
+        Skeletons.Entry({
+          className: `${pfx}__col-menu-name`,
+          name: "col_rename",
+          value: col.name,
+          placeholder: LOCALE.COLUMN_NAME,
+          mode: "commit",
+          service: "col-rename-submit",
+          taskColumn: col.key,
+          uiHandler: [ui],
+        }),
+        Skeletons.Box.X({
+          className: `${pfx}__col-swatches`,
+          kids: Object.keys(ui.getColumnThemes()).map((t) =>
+            Skeletons.Note({
+              className: `${pfx}__col-swatch`,
+              styleOpt: { background: ui.getColumnThemes()[t] },
+              dataset: { active: col.theme === t ? 1 : 0 },
+              bubble: 0,
+              service: "col-theme-set",
+              uiHandler: [ui],
+              taskColumn: col.key,
+              colTheme: t,
+            }),
+          ),
+        }),
+        Skeletons.Box.X({
+          className: `${pfx}__col-menu-actions`,
+          kids: [
+            Skeletons.Note({
+              className: `${pfx}__col-menu-rename`,
+              content: LOCALE.RENAME,
+              bubble: 0,
+              service: "col-rename-submit",
+              uiHandler: [ui],
+              taskColumn: col.key,
+            }),
+            Skeletons.Note({
+              className: `${pfx}__col-menu-delete`,
+              content: LOCALE.DELETE,
+              bubble: 0,
+              service: "col-delete",
+              uiHandler: [ui],
+              taskColumn: col.key,
+            }),
+          ],
         }),
       ],
     });
@@ -322,10 +425,10 @@ const make = function (ui) {
   const column = (col) =>
     Skeletons.Box.Y({
       className: `${pfx}__column`,
-      dataset: { column: col.key },
-      // Per-column accent driven by the status color (COLUMNS in index.js) so
-      // the SCSS theming (top strip, count pill, drop highlight) stays in sync
-      // with the single source of truth instead of duplicating hex values.
+      dataset: { column: col.key, theme: col.theme || "default" },
+      // Per-column accent driven by the column color (getColumns in index.js)
+      // so the SCSS theming (top strip, count pill, drop highlight) stays in
+      // sync with the single source of truth instead of duplicating hex values.
       styleOpt: { "--col-accent": col.color },
       kids: [
         Skeletons.Box.Y({
@@ -342,19 +445,18 @@ const make = function (ui) {
                 Skeletons.Box.X({
                   className: `${pfx}__column-title-group`,
                   kids: [
-                    
                     Skeletons.Box.X({
                       className: `${pfx}__column-title-dot-group`,
                       kids: [
                         Skeletons.Element({
-                      tagName: "span",
-                      className: `${pfx}__column-dot`,
-                      styleOpt: { background: col.color },
-                    }),
-                    Skeletons.Note({
-                      className: `${pfx}__column-title`,
-                      content: LOCALE[col.label] || col.key,
-                    }),
+                          tagName: "span",
+                          className: `${pfx}__column-dot`,
+                          styleOpt: { background: col.color },
+                        }),
+                        Skeletons.Note({
+                          className: `${pfx}__column-title`,
+                          content: col.name || LOCALE[col.label] || col.key,
+                        }),
                       ],
                     }),
                     Skeletons.Box.X({
@@ -368,8 +470,23 @@ const make = function (ui) {
                     }),
                   ],
                 }),
-              ],
+                // Custom columns are user-editable: "⋯" opens the rename/
+                // recolor/delete popover. Built-ins stay fixed.
+                col.custom
+                  ? Skeletons.Note({
+                      className: `${pfx}__col-menu-btn`,
+                      content: "⋯",
+                      bubble: 0,
+                      service: "col-menu",
+                      uiHandler: [ui],
+                      taskColumn: col.key,
+                    })
+                  : null,
+              ].filter(Boolean),
             }),
+            col.custom && ui.getColMenuFor() === col.key
+              ? columnMenu(col)
+              : null,
             ...(state[col.key] || []).map((t) => taskCard(col.key, t)),
             // Empty-state drop hint. Keeps an empty column an obvious, valid
             // drop target. The surgical drag handler (_syncColumn) adds/removes
@@ -386,6 +503,10 @@ const make = function (ui) {
       ],
     });
 
+  // Columns are added via the "New board" modal (add-board), launched from the
+  // viewbar — see boardModal(). The board's right end no longer has an inline
+  // ghost.
+
   // ── Reusable controls ─────────────────────────────────────────
   const priorityPills = (selected, serviceName, extra = {}) =>
     Skeletons.Box.X({
@@ -394,11 +515,9 @@ const make = function (ui) {
         Skeletons.Note({
           className: `${pfx}__priority-pill`,
           content: LOCALE[p.label] || p.key,
+          // Colors are driven by `data-priority` + `data-active` in the skin
+          // (filled-when-selected, outline otherwise) to match Figma exactly.
           dataset: { active: selected === p.key ? 1 : 0, priority: p.key },
-          styleOpt:
-            selected === p.key
-              ? { borderColor: p.color, color: p.color }
-              : null,
           bubble: 0,
           service: serviceName,
           uiHandler: [ui],
@@ -490,7 +609,11 @@ const make = function (ui) {
       service: "toggle-picker",
       uiHandler: [ui],
       pickerKind: kind,
-      kids: buildAssigneeButtonContent(ui, assignees),
+      kids: buildAssigneeButtonContent(
+        ui,
+        assignees,
+        kind === "create-assignee" ? "create-assignee" : "set-assignee",
+      ),
     });
   };
 
@@ -709,10 +832,9 @@ const make = function (ui) {
       kids: cols.map((c) =>
         Skeletons.Note({
           className: `${pfx}__detail-status-pill`,
-          content: LOCALE[c.label] || c.key,
+          content: c.name || LOCALE[c.label] || c.key,
+          // Selected/dot colors driven by `data-status` + `data-active` in skin.
           dataset: { active: dStatus === c.key ? 1 : 0, status: c.key },
-          styleOpt:
-            dStatus === c.key ? { borderColor: c.color, color: c.color } : null,
           bubble: 0,
           service: "set-status",
           uiHandler: [ui],
@@ -798,38 +920,15 @@ const make = function (ui) {
       ],
     });
 
-    const dueRow = Skeletons.Box.X({
-      className: `${pfx}__detail-due-row`,
-      kids: [
-        Skeletons.Note({
-          className: `${pfx}__detail-label`,
-          content: LOCALE.DUE_DATE,
-        }),
-        {
-          kind: "date_picker",
-          className: `${pfx}__detail-due-input`,
-          innerClass: `${pfx}__detail-due-input-inner`,
-          name: "due_date",
-          value: dDraft.due_date || "",
-          service: "task-input-changed",
-          uiHandler: [ui],
-          // appendTo: body escapes the panel's overflow clip; onReady tags
-          // the calendar so it can be themed without bleeding into other
-          // date_picker usages.
-          vendorOpt: {
-            dateFormat: "Y-m-d",
-            minDate: "today",
-            appendTo: document.body,
-            onReady: (_d, _s, instance) => {
-              if (instance && instance.calendarContainer) {
-                instance.calendarContainer.classList.add(
-                  "tasks-panel__flatpickr",
-                );
-              }
-            },
-          },
-        },
-      ],
+    // Due-date section is a stable sub-part so the Duration toggle can re-feed
+    // just this block (swap single <-> range picker + flip the switch) without
+    // a full-panel _render() that flickers and steals focus. Content lives in
+    // buildDueSectionContent so the controller can re-feed it via ensurePart.
+    const dueRow = Skeletons.Box.Y({
+      className: `${pfx}__detail-row`,
+      sys_pn: "due-section",
+      partHandler: ui,
+      kids: buildDueSectionContent(ui),
     });
 
     const attachmentRow = (f) => attachmentRowDescriptor(ui, f, detail.id);
@@ -875,12 +974,86 @@ const make = function (ui) {
     });
 
     // Comments: flat feed (a re-feedable part) + an @-mention composer.
+    // Activity header: title + All / Comments / History tabs. Tabs are
+    // visual-only for now (no history backend) — "All" reads as active and the
+    // comment feed below is the populated content.
+    const activityTab = (label, active, icon) =>
+      Skeletons.Box.X({
+        className: `${pfx}__activity-tab`,
+        dataset: { active: active ? 1 : 0 },
+        kids: [
+          icon
+            ? Skeletons.Image.Svg({
+                ico: icon,
+                className: `${pfx}__activity-tab-ico`,
+              })
+            : null,
+          Skeletons.Note({
+            className: `${pfx}__activity-tab-label`,
+            content: label,
+          }),
+        ].filter(Boolean),
+      });
+
     const commentsSection = Skeletons.Box.Y({
       className: `${pfx}__comments`,
       kids: [
-        Skeletons.Note({
-          className: `${pfx}__detail-label`,
-          content: LOCALE.COMMENTS,
+        Skeletons.Box.X({
+          className: `${pfx}__activity-head`,
+          kids: [
+            Skeletons.Note({
+              className: `${pfx}__activity-title`,
+              content: LOCALE.ACTIVITY,
+            }),
+            Skeletons.Box.X({
+              className: `${pfx}__activity-tabs`,
+              kids: [
+                activityTab(LOCALE.ALL, true),
+                activityTab(LOCALE.COMMENTS, false, "message"),
+                activityTab(LOCALE.HISTORY, false, "clock"),
+              ],
+            }),
+          ],
+        }),
+        // Composer sits directly under the Activity tabs (Figma 2034-62457):
+        // own avatar · "Write a comment…" field · paperclip / @ / send icons.
+        Skeletons.Box.X({
+          className: `${pfx}__comment-composer`,
+          kids: [
+            Skeletons.UserProfile({
+              className: `${pfx}__composer-avatar`,
+              id: Visitor.id,
+              firstname: Visitor.get("firstname"),
+              lastname: Visitor.get("lastname"),
+              auto_color: 1,
+              live_status: 0,
+            }),
+            mentionField(ui, "comment", {
+              fieldClass: `${pfx}__comment-field`,
+              editorClass: `${pfx}__comment-input`,
+              placeholder: LOCALE.TASK_COMMENT_PLACEHOLDER,
+            }),
+            Skeletons.Box.X({
+              className: `${pfx}__composer-actions`,
+              kids: [
+                Skeletons.Image.Svg({
+                  ico: "app-attachment",
+                  className: `${pfx}__composer-ico`,
+                }),
+                Skeletons.Note({
+                  className: `${pfx}__composer-at`,
+                  content: "@",
+                }),
+                Skeletons.Button.Svg({
+                  ico: "app-send",
+                  className: `${pfx}__composer-send`,
+                  bubble: 0,
+                  service: "comment-submit",
+                  uiHandler: [ui],
+                }),
+              ],
+            }),
+          ],
         }),
         Skeletons.Box.Y({
           className: `${pfx}__comment-list`,
@@ -888,26 +1061,11 @@ const make = function (ui) {
           partHandler: ui,
           kids: buildCommentListContent(ui),
         }),
-        Skeletons.Box.Y({
-          className: `${pfx}__comment-composer`,
-          kids: [
-            mentionField(ui, "comment", {
-              fieldClass: `${pfx}__comment-field`,
-              editorClass: `${pfx}__comment-input`,
-              placeholder: LOCALE.TASK_COMMENT_PLACEHOLDER,
-            }),
-            Skeletons.Note({
-              className: `${pfx}__comment-submit`,
-              content: LOCALE.COMMENT,
-              bubble: 0,
-              service: "comment-submit",
-              uiHandler: [ui],
-            }),
-          ],
-        }),
       ],
     });
 
+    // Footer: a Cancel link (closes the panel, discarding edits) beside the
+    // primary Update button. The header X mirrors Cancel.
     const actions = Skeletons.Box.X({
       className: `${pfx}__detail-actions`,
       kids: [
@@ -915,7 +1073,7 @@ const make = function (ui) {
           className: `${pfx}__detail-cancel`,
           content: LOCALE.CANCEL,
           bubble: 0,
-          service: "cancel-detail",
+          service: "close-detail",
           uiHandler: [ui],
         }),
         Skeletons.Note({
@@ -979,23 +1137,34 @@ const make = function (ui) {
       kids: [
         Skeletons.Box.Y({
           className: `${pfx}__detail-panel`,
+          // JS-stamped phone flag — see `isMobile` at the top of make().
+          attrOpt: { "data-mobile": isMobile ? "1" : "0" },
           bubble: 0,
           kids: [
             header,
-            Skeletons.Box.X({
+            // Column on mobile (Box.Y) so the main content + metadata side
+            // stack instead of squeezing into two narrow columns.
+            Skeletons.Box[isMobile ? "Y" : "X"]({
               className: `${pfx}__modal-body`,
               kids: [
                 Skeletons.Box.Y({
                   className: `${pfx}__modal-main`,
-                  kids: [descriptionRow, attachmentsList, commentsSection],
+                  kids: [
+                    // Figma 2040-14173: Description and Files sit side-by-side
+                    // on top; on mobile they stack (Box.Y) for full width.
+                    Skeletons.Box[isMobile ? "Y" : "X"]({
+                      className: `${pfx}__detail-top`,
+                      kids: [descriptionRow, attachmentsList],
+                    }),
+                    commentsSection,
+                  ],
                 }),
                 Skeletons.Box.Y({
                   className: `${pfx}__modal-side`,
-                  kids: [statusRow, priorityRow, assigneeRow, labelsRow, dueRow],
+                  kids: [statusRow, priorityRow, assigneeRow, dueRow, actions],
                 }),
               ],
             }),
-            actions,
             dropOverlay(ui),
           ],
         }),
@@ -1004,6 +1173,139 @@ const make = function (ui) {
   };
 
   // ── Create modal ──────────────────────────────────────────────
+  // "New board" modal (Figma 2040-53814) — creates a Kanban column: title +
+  // 3×3 colour palette + "set as default" toggle.
+  const THEME_LABELS = {
+    default: LOCALE.COLOR_DEFAULT,
+    orange: LOCALE.COLOR_ORANGE,
+    yellow: LOCALE.COLOR_YELLOW,
+    green: LOCALE.COLOR_GREEN,
+    cyan: LOCALE.COLOR_CYAN,
+    blue: LOCALE.COLOR_BLUE,
+    purple: LOCALE.COLOR_PURPLE,
+    pink: LOCALE.COLOR_PINK,
+    red: LOCALE.COLOR_RED,
+  };
+  const boardModal = () => {
+    const st = ui.getBoardModalState();
+    const themes = ui.getColumnThemes();
+    return Skeletons.Box.Y({
+      className: `${pfx}__board-backdrop`,
+      bubble: 0,
+      kids: [
+        Skeletons.Box.Y({
+          className: `${pfx}__board-modal`,
+          bubble: 0,
+          kids: [
+            Skeletons.Box.X({
+              className: `${pfx}__board-header`,
+              kids: [
+                Skeletons.Note({
+                  className: `${pfx}__board-title-text`,
+                  content: LOCALE.NEW_BOARD,
+                }),
+                Skeletons.Button.Svg({
+                  className: `${pfx}__board-close`,
+                  ico: "cross",
+                  bubble: 0,
+                  service: "board-cancel",
+                  uiHandler: [ui],
+                }),
+              ],
+            }),
+            Skeletons.Box.Y({
+              className: `${pfx}__board-field`,
+              kids: [
+                Skeletons.Note({
+                  className: `${pfx}__board-label`,
+                  content: LOCALE.BOARD_TITLE,
+                }),
+                Skeletons.Entry({
+                  className: `${pfx}__board-input`,
+                  name: "board_title",
+                  // Bound to state so a colour pick (in-place update) or any
+                  // re-render restores the typed name instead of clearing it.
+                  value: st.title || "",
+                  placeholder: LOCALE.BOARD_TITLE,
+                  mode: "commit",
+                  service: "board-submit",
+                  watch: "board-title-changed",
+                  uiHandler: [ui],
+                }),
+              ],
+            }),
+            Skeletons.Box.Y({
+              className: `${pfx}__board-field`,
+              kids: [
+                Skeletons.Note({
+                  className: `${pfx}__board-label`,
+                  content: LOCALE.COLORS,
+                }),
+                Skeletons.Box.G({
+                  className: `${pfx}__board-colors`,
+                  kids: Object.keys(themes).map((t) =>
+                    Skeletons.Box.X({
+                      className: `${pfx}__board-color`,
+                      // `theme` renders as data-theme so the active swatch can
+                      // be re-flagged in place (no full re-render → no glitch,
+                      // and the typed board title survives a colour change).
+                      dataset: { active: st.theme === t ? 1 : 0, theme: t },
+                      bubble: 0,
+                      service: "board-theme",
+                      uiHandler: [ui],
+                      colTheme: t,
+                      kids: [
+                        Skeletons.Note({
+                          className: `${pfx}__board-color-dot`,
+                          // Filled solid swatch so the colour choice is obvious
+                          // (a hollow ring reads as "no colour applied").
+                          styleOpt: {
+                            background: themes[t],
+                            borderColor: themes[t],
+                          },
+                        }),
+                        Skeletons.Note({
+                          className: `${pfx}__board-color-name`,
+                          content: THEME_LABELS[t] || t,
+                        }),
+                      ],
+                    }),
+                  ),
+                }),
+              ],
+            }),
+            Skeletons.Box.X({
+              className: `${pfx}__board-default-row`,
+              bubble: 0,
+              service: "board-default",
+              uiHandler: [ui],
+              kids: [
+                Skeletons.Note({
+                  className: `${pfx}__board-default-label`,
+                  content: LOCALE.SET_AS_DEFAULT,
+                }),
+                Skeletons.Box.X({
+                  className: `${pfx}__board-toggle`,
+                  dataset: { on: st.isDefault ? 1 : 0 },
+                  kids: [
+                    Skeletons.Note({ className: `${pfx}__board-toggle-knob` }),
+                  ],
+                }),
+              ],
+            }),
+            Skeletons.Note({
+              className: `${pfx}__board-submit`,
+              content: LOCALE.ADD_NEW_BOARD,
+              bubble: 0,
+              service: "board-submit",
+              uiHandler: [ui],
+            }),
+          ],
+        }),
+      ],
+    });
+  };
+
   const createModal = () => {
     const cols = ui.getColumns();
     const selectedStatus = draft?.status || "todo";
@@ -1018,14 +1320,10 @@ const make = function (ui) {
       kids: cols.map((c) =>
         Skeletons.Note({
           className: `${pfx}__create-status-pill`,
-          content: LOCALE[c.label] || c.key,
-          // `data-status` lets the JS update pills via DOM without
-          // re-rendering (see _updateStatusPills).
+          content: c.name || LOCALE[c.label] || c.key,
+          // `data-status` + `data-active` drive pill colors via the skin and
+          // let the JS update them in place without a re-render.
           dataset: { active: selectedStatus === c.key ? 1 : 0, status: c.key },
-          styleOpt:
-            selectedStatus === c.key
-              ? { borderColor: c.color, color: c.color }
-              : null,
           bubble: 0,
           service: "create-status",
           uiHandler: [ui],
@@ -1099,26 +1397,6 @@ const make = function (ui) {
 
     const descControl = descEditor("create");
 
-    const dueControl = {
-      kind: "date_picker",
-      className: `${pfx}__create-input`,
-      innerClass: `${pfx}__create-input-inner`,
-      name: "due_date",
-      value: draft?.due_date || "",
-      service: "task-input-changed",
-      uiHandler: [ui],
-      vendorOpt: {
-        dateFormat: "Y-m-d",
-        minDate: "today",
-        appendTo: document.body,
-        onReady: (_d, _s, instance) => {
-          if (instance && instance.calendarContainer) {
-            instance.calendarContainer.classList.add("tasks-panel__flatpickr");
-          }
-        },
-      },
-    };
-
     const assigneeField = Skeletons.Box.Y({
       className: `${pfx}__create-field`,
       kids: [
@@ -1153,8 +1431,9 @@ const make = function (ui) {
           ],
         }),
         // Two-column body (Jira issue-modal layout): primary content on the
-        // left, the metadata sidebar on the right. Stacks on narrow screens.
-        Skeletons.Box.X({
+        // left, the metadata sidebar on the right. On mobile it renders as a
+        // column (Box.Y) so main + side stack — structural, no CSS needed.
+        Skeletons.Box[isMobile ? "Y" : "X"]({
           className: `${pfx}__modal-body`,
           kids: [
             Skeletons.Box.Y({
@@ -1183,28 +1462,35 @@ const make = function (ui) {
                   priorityPills(selectedPriority, "create-priority"),
                 ),
                 assigneeField,
-                field(LOCALE.LABELS, labelChooser),
-                field(LOCALE.DUE_DATE, dueControl),
+                // Due-date section: same Duration UI as the detail panel. A
+                // stable sub-part so the toggle re-feeds only this block.
+                Skeletons.Box.Y({
+                  className: `${pfx}__create-field`,
+                  sys_pn: "create-due-section",
+                  partHandler: ui,
+                  kids: buildDueSectionContent(ui, "create"),
+                }),
+                // Primary action lives at the foot of the right column (Figma).
+                Skeletons.Box.X({
+                  className: `${pfx}__create-actions`,
+                  kids: [
+                    Skeletons.Note({
+                      className: `${pfx}__create-cancel`,
+                      content: LOCALE.CANCEL,
+                      bubble: 0,
+                      service: "cancel-add",
+                      uiHandler: [ui],
+                    }),
+                    Skeletons.Note({
+                      className: `${pfx}__create-submit`,
+                      content: LOCALE.CREATE,
+                      bubble: 0,
+                      service: "commit-task",
+                      uiHandler: [ui],
+                    }),
+                  ],
+                }),
               ],
-            }),
-          ],
-        }),
-        Skeletons.Box.X({
-          className: `${pfx}__create-actions`,
-          kids: [
-            Skeletons.Note({
-              className: `${pfx}__create-cancel`,
-              content: LOCALE.CANCEL,
-              bubble: 0,
-              service: "cancel-add",
-              uiHandler: [ui],
-            }),
-            Skeletons.Note({
-              className: `${pfx}__create-submit`,
-              content: LOCALE.CREATE,
-              bubble: 0,
-              service: "commit-task",
-              uiHandler: [ui],
             }),
           ],
         }),
@@ -1219,6 +1505,8 @@ const make = function (ui) {
       kids: [
         Skeletons.Box.Y({
           className: `${pfx}__create-modal`,
+          // JS-stamped phone flag — see `isMobile` at the top of make().
+          attrOpt: { "data-mobile": isMobile ? "1" : "0" },
           bubble: 0,
           kids: [form, dropOverlay(ui)],
         }),
@@ -1234,36 +1522,64 @@ const make = function (ui) {
   const filterActive = filterUids.length > 0;
   const filterOpen = pickerOpen === "filter";
 
+  // Right-side checkbox (Figma 2045-134011): filled brand box + white check
+  // when the row is active, hollow grey outline when not. Driven purely by the
+  // row's data-active, so no per-checkbox state is needed.
+  const filterCheck = () =>
+    Skeletons.Box.X({
+      className: `${pfx}__filter-check`,
+      kids: [
+        // Text tick (not a sprite icon) so it's crisp, centred, and recolourable.
+        Skeletons.Note({ className: `${pfx}__filter-check-mark`, content: "✓" }),
+      ],
+    });
+
+  const filterRow = (opt) =>
+    Skeletons.Box.X({
+      className: `${pfx}__member-row ${pfx}__filter-row`,
+      dataset: { active: opt.active ? 1 : 0, "member-uid": opt.uid },
+      // attrOpt mirrors data-active so the checked state paints on first render
+      // (plain dataset can be dropped at initial render — see project notes).
+      attrOpt: { "data-active": opt.active ? "1" : "0" },
+      bubble: 0,
+      service: "filter-member",
+      uiHandler: [ui],
+      memberUid: opt.uid,
+      kids: [
+        Skeletons.Box.X({
+          className: `${pfx}__filter-row-main`,
+          kids: opt.leftKids,
+        }),
+        filterCheck(),
+      ],
+    });
+
   const filterDropdown = Skeletons.Box.Y({
     className: `${pfx}__filter-picker`,
     kids: [
-      Skeletons.Box.X({
-        className: `${pfx}__member-row`,
-        dataset: { active: filterActive ? 0 : 1, "member-uid": "" },
-        bubble: 0,
-        service: "filter-member",
-        uiHandler: [ui],
-        memberUid: "",
-        kids: [
+      Skeletons.Note({
+        className: `${pfx}__filter-title`,
+        content: LOCALE.FILTER,
+      }),
+      filterRow({
+        uid: "",
+        active: !filterActive, // "All members" reads as checked when no filter
+        leftKids: [
           Skeletons.Note({
             className: `${pfx}__member-name`,
             content: LOCALE.ALL_MEMBERS,
           }),
         ],
       }),
+      members.length
+        ? Skeletons.Note({ className: `${pfx}__filter-divider` })
+        : null,
       ...members.map((m) => {
         const uid = String(m.id || m.uid);
-        return Skeletons.Box.X({
-          className: `${pfx}__member-row`,
-          dataset: {
-            active: filterUids.includes(uid) ? 1 : 0,
-            "member-uid": uid,
-          },
-          bubble: 0,
-          service: "filter-member",
-          uiHandler: [ui],
-          memberUid: uid,
-          kids: [
+        return filterRow({
+          uid,
+          active: filterUids.includes(uid),
+          leftKids: [
             Skeletons.UserProfile({
               className: `${pfx}__member-avatar`,
               id: uid,
@@ -1279,7 +1595,7 @@ const make = function (ui) {
           ],
         });
       }),
-    ],
+    ].filter(Boolean),
   });
 
   // Sub-views over the same folder-scoped task set. Board is rendered inline
@@ -1291,38 +1607,103 @@ const make = function (ui) {
       kids: ui.getColumns().map(column),
     });
   const viewContent =
-    view === "list"
-      ? require("./list")(ui)
-      : view === "summary"
-        ? require("./summary")(ui)
-        : boardView();
+    view === "calendar"
+      ? require("./calendar")(ui)
+      : view === "gantt"
+        ? require("./gantt")(ui)
+        : view === "list"
+          ? require("./list")(ui)
+          : view === "summary"
+            ? require("./summary")(ui)
+            : boardView();
+
+  const viewTabs = Skeletons.Box.X({
+    className: `${pfx}__viewbar-tabs`,
+    kids: [
+      ["board", LOCALE.TASK_VIEW_BOARD, "square-split-horizontal"],
+      ["calendar", LOCALE.TASK_VIEW_CALENDAR, "calendar"],
+      ["gantt", LOCALE.TASK_VIEW_GANTT, "app-task-grant"],
+      ["list", LOCALE.TASK_VIEW_LIST, "app-task-list"],
+      ["summary", LOCALE.TASK_VIEW_SUMMARY, "app-task-project-health"],
+    ].map(([key, label, ico]) =>
+      Skeletons.Box.X({
+        className: `${pfx}__viewbar-item`,
+        attrOpt: { "data-active": view === key ? "1" : "0" },
+        bubble: 0,
+        service: "set-view",
+        uiHandler: [ui],
+        viewMode: key,
+        kids: [
+          // SVG glyph. `__viewbar-item-ico` is pointer-events:none in the skin,
+          // so a click on the icon still bubbles to this tab's set-view service.
+          Skeletons.Button.Svg({
+            className: `${pfx}__viewbar-item-ico`,
+            ico,
+          }),
+          Skeletons.Note({
+            className: `${pfx}__viewbar-item-label`,
+            content: label,
+          }),
+        ],
+      }),
+    ),
+  });
+
+  // Right-side controls (Figma 2040-53814): calendar/gantt granularity when
+  // those views are active, then the create buttons, then the shared Filter.
+  const newTaskBtn = Skeletons.Note({
+    className: `${pfx}__viewbar-new`,
+    content: `+ ${LOCALE.NEW_TASK}`,
+    bubble: 0,
+    service: "add-task",
+    uiHandler: [ui],
+  });
+  const newBoardBtn = Skeletons.Box.X({
+    className: `${pfx}__viewbar-board`,
+    bubble: 0,
+    service: "add-board",
+    uiHandler: [ui],
+    kids: [
+      Skeletons.Image.Svg({ ico: "plus", className: `${pfx}__viewbar-board-ico` }),
+      Skeletons.Note({
+        className: `${pfx}__viewbar-board-label`,
+        content: LOCALE.NEW_BOARD,
+      }),
+    ],
+  });
+  const filterBtn = Skeletons.Box.X({
+    className: `${pfx}__viewbar-filter`,
+    dataset: { active: filterActive ? 1 : 0 },
+    bubble: 0,
+    service: "toggle-filter",
+    uiHandler: [ui],
+    kids: [
+      Skeletons.Image.Svg({ ico: "desktop_filter", className: `${pfx}__viewbar-filter-ico` }),
+      Skeletons.Note({
+        className: `${pfx}__viewbar-filter-label`,
+        content: LOCALE.FILTER,
+      }),
+    ],
+  });
 
   const subHeader = Skeletons.Box.X({
     className: `${pfx}__viewbar`,
     kids: [
-      ...[
-        ["board", LOCALE.TASK_VIEW_BOARD],
-        ["list", LOCALE.TASK_VIEW_LIST],
-        ["summary", LOCALE.TASK_VIEW_SUMMARY],
-      ].map(([key, label]) =>
-        Skeletons.Note({
-          className: `${pfx}__viewbar-item`,
-          content: label,
-          attrOpt: { "data-active": view === key ? "1" : "0" },
-          bubble: 0,
-          service: "set-view",
-          uiHandler: [ui],
-          viewMode: key,
-        }),
-      ),
-      // Global create — the board also has per-column "+"; this gives List and
-      // Summary a way to add a task (defaults to the "todo" column).
-      Skeletons.Note({
-        className: `${pfx}__viewbar-new`,
-        content: `+ ${LOCALE.NEW_TASK}`,
-        bubble: 0,
-        service: "add-task",
-        uiHandler: [ui],
+      viewTabs,
+      Skeletons.Box.X({
+        className: `${pfx}__viewbar-right`,
+        kids: [
+          view === "calendar" ? require("./calendar").controls(ui) : null,
+          view === "gantt" ? require("./gantt").controls(ui) : null,
+          // "+ New task" for the task-list views (calendar/gantt add via their
+          // own affordances — the day "+" / "+ Work").
+          view === "board" || view === "list" || view === "summary"
+            ? newTaskBtn
+            : null,
+          // "+ New board" adds a Kanban column — board view only.
+          view === "board" ? newBoardBtn : null,
+          filterBtn,
+        ].filter(Boolean),
       }),
     ],
   });
@@ -1332,6 +1713,16 @@ const make = function (ui) {
     kids: [
       subHeader,
       viewContent,
+      // Click-catcher behind the filter dropdown: a click outside it closes
+      // the popup (sits below the dropdown's z-index). Fires toggle-filter.
+      filterOpen
+        ? Skeletons.Box.Z({
+            className: `${pfx}__filter-backdrop`,
+            bubble: 0,
+            service: "toggle-filter",
+            uiHandler: [ui],
+          })
+        : null,
       // Filter overlay (anchored top-right, below the tab bar's filter button).
       filterOpen ? filterDropdown : null,
       Skeletons.Wrapper.Y({
@@ -1346,6 +1737,12 @@ const make = function (ui) {
         partHandler: ui,
         kids: creating ? [createModal()] : [],
       }),
+      Skeletons.Wrapper.Y({
+        className: `${pfx}__board-wrapper`,
+        name: "task-board-modal",
+        partHandler: ui,
+        kids: ui.getBoardModalState().open ? [boardModal()] : [],
+      }),
       // sys_pn is hardcoded to "fileselector" by Skeletons.FileSelector;
       // ensurePart("fileselector") + onPartReady("fileselector") match it.
       Skeletons.FileSelector({
@@ -1358,7 +1755,7 @@ const make = function (ui) {
   });
 };
 
-function buildAssigneeButtonContent(ui, assignees) {
+function buildAssigneeButtonContent(ui, assignees, removeService) {
   const pfx = ui.fig.family;
   // Accept an array of uids (multi-assignee); tolerate a single uid/null.
   const uids = Array.isArray(assignees)
@@ -1369,51 +1766,63 @@ function buildAssigneeButtonContent(ui, assignees) {
   const fullName = (m) =>
     [m.firstname, m.lastname].filter(Boolean).join(" ").trim() || m.email || "";
 
+  // Empty → Figma "blank" state: a search-style placeholder. Clicking the row
+  // still opens the member dropdown (no free-text typing).
   if (!uids.length) {
     return [
       Skeletons.Note({
-        className: `${pfx}__assignee-button-placeholder`,
-        content: "?",
-      }),
-      Skeletons.Note({
-        className: `${pfx}__assignee-button-label`,
-        content: LOCALE.UNASSIGNED,
+        className: `${pfx}__assignee-placeholder`,
+        content: LOCALE.SEARCH_PEOPLE,
       }),
     ];
   }
 
+  // Selected members render as removable chips (avatar + name + ✕), then a
+  // trailing "…" add affordance (Figma Assignee 01 / 02 / 2+ states).
   const MAX = 3;
   const shown = uids.slice(0, MAX);
   const overflow = uids.length - shown.length;
-  const avatars = shown.map((uid) => {
+  const chips = shown.map((uid) => {
     const m = ui.getMember(uid) || {};
-    return Skeletons.UserProfile({
-      className: `${pfx}__assignee-button-avatar`,
-      id: uid,
-      firstname: m.firstname,
-      lastname: m.lastname,
-      auto_color: 1,
-      live_status: 0,
+    return Skeletons.Box.X({
+      className: `${pfx}__assignee-chip`,
+      kids: [
+        Skeletons.UserProfile({
+          className: `${pfx}__assignee-chip-avatar`,
+          id: uid,
+          firstname: m.firstname,
+          lastname: m.lastname,
+          auto_color: 1,
+          live_status: 0,
+        }),
+        Skeletons.Note({
+          className: `${pfx}__assignee-chip-name`,
+          content: fullName(m) || LOCALE.UNASSIGNED,
+        }),
+        // ✕ removes this assignee; bubble:0 so it doesn't open the dropdown.
+        Skeletons.Button.Svg({
+          className: `${pfx}__assignee-chip-remove`,
+          ico: "cross",
+          bubble: 0,
+          service: removeService,
+          uiHandler: [ui],
+          memberUid: uid,
+        }),
+      ],
     });
   });
-  // Label: single → the member's name; multiple → "N assigned".
-  let label;
-  if (uids.length === 1) {
-    const m = ui.getMember(uids[0]);
-    label = m ? fullName(m) : "";
-  } else {
-    label = `${uids.length} ${LOCALE.ASSIGNEES || "Assignees"}`;
+  if (overflow > 0) {
+    chips.push(
+      Skeletons.Note({
+        className: `${pfx}__assignee-more`,
+        content: `+${overflow}`,
+      }),
+    );
   }
-  return [
-    Skeletons.Box.X({
-      className: `${pfx}__assignee-button-avatars`,
-      kids: avatars,
-    }),
-    Skeletons.Note({
-      className: `${pfx}__assignee-button-label`,
-      content: overflow > 0 ? `${label} (+${overflow})` : label,
-    }),
-  ];
+  chips.push(
+    Skeletons.Note({ className: `${pfx}__assignee-add`, content: "..." }),
+  );
+  return chips;
 }
 
 // Filtered member rows fed into the description @-mention dropdown. The panel
@@ -1518,7 +1927,17 @@ function buildCommentListContent(ui) {
         emoji: g.emoji,
       }),
     );
+    // Figma action row leads with a one-tap 👍 then the ☺ palette toggle.
     kids.push(
+      Skeletons.Note({
+        className: `${pfx}__react-add`,
+        content: "👍",
+        bubble: 0,
+        service: "comment-react",
+        uiHandler: [ui],
+        commentId: c.id,
+        emoji: "👍",
+      }),
       Skeletons.Note({
         className: `${pfx}__react-add`,
         content: "☺",
@@ -1876,6 +2295,201 @@ function attachmentRowDescriptor(ui, f, taskId) {
   return fileCard(ui, f, { committed: true, taskId });
 }
 
+// Whole days a start..end span covers, inclusive (same day = 1); 0 if either
+// endpoint is missing/invalid.
+function dueDurationDays(startIso, endIso) {
+  if (!startIso || !endIso) return 0;
+  const s = new Date(startIso);
+  const e = new Date(endIso);
+  if (isNaN(s.getTime()) || isNaN(e.getTime())) return 0;
+  return Math.round((e - s) / 86400000) + 1;
+}
+
+// "N day(s)" readout for a range; "" when the range is incomplete.
+function dueSummaryText(startIso, endIso) {
+  if (!startIso || !endIso) return "";
+  const n = dueDurationDays(startIso, endIso);
+  return `${n} ${n === 1 ? LOCALE.DURATION_DAY : LOCALE.DURATION_DAYS}`;
+}
+
+// Custom flatpickr `position` (used because the calendar is appendTo:body and
+// the due-input lives in a narrow right rail): float the calendar to the LEFT
+// of the input, beside it, so it opens into the wide center area instead of
+// dropping below and clipping at the bottom. The calendar is clamped to the
+// bounds of its host panel card (detail panel or create modal) so it can't
+// spill outside the dialog — the whole picker, footer included, stays inside
+// the card. Falls back to the viewport when no card is found. Assigned in
+// vendorOpt, so it overrides the widget's default above/below placement
+// without touching other date_picker consumers.
+function positionDueCalendarLeft(instance) {
+  const cal = instance.calendarContainer;
+  if (!cal) return;
+  const anchor = instance._positionElement || instance.altInput || instance.input;
+  if (!anchor) return;
+  const rect = anchor.getBoundingClientRect();
+  const scrollX = window.pageXOffset || document.documentElement.scrollLeft;
+  const scrollY = window.pageYOffset || document.documentElement.scrollTop;
+  const gap = 8;
+
+  // Clamp within the host panel card when present, else the viewport. Both
+  // panels tag their card with a known class (fig.family === "tasks-panel").
+  const card = anchor.closest(
+    ".tasks-panel__detail-panel, .tasks-panel__create-modal"
+  );
+  const bounds = card
+    ? card.getBoundingClientRect()
+    : { left: 0, right: window.innerWidth, top: 0, bottom: window.innerHeight };
+
+  // flatpickr's own arrow (points at the input) is meaningless when we sit
+  // beside the field, so drop the arrow classes.
+  cal.classList.remove("arrowTop", "arrowBottom", "arrowLeft", "arrowRight");
+  cal.style.position = "absolute";
+  cal.style.right = "auto";
+
+  // Prefer sitting just left of the input; never cross the card's left edge.
+  const left = Math.max(
+    bounds.left + gap,
+    rect.left - cal.offsetWidth - gap
+  );
+  // Track the input's top, but keep the whole calendar inside the card.
+  const top = Math.max(
+    bounds.top + gap,
+    Math.min(rect.top, bounds.bottom - cal.offsetHeight - gap)
+  );
+  cal.style.left = `${left + scrollX}px`;
+  cal.style.top = `${top + scrollY}px`;
+}
+
+// Kids for a Due-date section (shared by the detail panel and the create
+// modal — pass scope "detail" | "create"): the label row ("Due date" +
+// "Duration" toggle), the picker, and (range mode) a live duration readout.
+// Duration OFF → one date picker (due_date). ON → one range picker showing
+// "start → end" in a single field (per Figma), storing ISO (Y-m-d) while
+// displaying d/m/Y via altInput. New-user guidance: the range calendar shows a
+// step hint ("Select start date" → "Select end date"), and a live "N days"
+// readout beside the Duration label confirms the span. Kept standalone so the
+// Duration toggle can re-feed just this sub-part in place.
+function buildDueSectionContent(ui, scope = "detail") {
+  const pfx = ui.fig.family;
+  const isCreate = scope === "create";
+  const draft = (isCreate ? ui.getCreateDraft() : ui.getDetailDraft()) || {};
+  // Disable picking days in the past (both create and detail); flatpickr still
+  // shows an existing past due date, it just can't be (re)selected earlier.
+  const minDate = "today";
+
+  // Tag the calendar for theming; when `withHint`, also inject a step hint that
+  // guides the two-click range pick. The hint updates via a pushed onChange
+  // hook (pushed, not assigned, so the widget's own publish still fires).
+  const onReady = (withHint) => (_d, _s, instance) => {
+    const cc = instance && instance.calendarContainer;
+    if (!cc) return;
+    cc.classList.add("tasks-panel__flatpickr");
+    if (!withHint) return;
+    let hint = cc.querySelector(".tasks-panel__dp-hint");
+    if (!hint) {
+      hint = document.createElement("div");
+      hint.className = "tasks-panel__dp-hint";
+      cc.prepend(hint);
+    }
+    const sync = () => {
+      const n = instance.selectedDates.length;
+      hint.textContent =
+        n === 1
+          ? LOCALE.SELECT_END_DATE
+          : n === 0
+            ? LOCALE.SELECT_START_DATE
+            : "";
+    };
+    sync();
+    if (Array.isArray(instance.config.onChange)) {
+      instance.config.onChange.push(sync);
+    }
+  };
+
+  const picker = draft.duration_on
+    ? {
+        kind: "date_picker",
+        className: `${pfx}__due-input ${pfx}__due-input--range`,
+        innerClass: `${pfx}__due-input-inner`,
+        name: "due_range",
+        ranges: true,
+        // Seed [start, end]; a lone due_date opens the range at that day.
+        value: [draft.start_date, draft.due_date].filter(Boolean),
+        service: "task-input-changed",
+        uiHandler: [ui],
+        vendorOpt: {
+          dateFormat: "Y-m-d",
+          altInput: true,
+          altFormat: "d/m/Y",
+          rangeSeparator: "  →  ",
+          minDate,
+          appendTo: document.body,
+          position: positionDueCalendarLeft,
+          onReady: onReady(true),
+        },
+      }
+    : {
+        kind: "date_picker",
+        className: `${pfx}__due-input`,
+        innerClass: `${pfx}__due-input-inner`,
+        name: "due_date",
+        value: draft.due_date || "",
+        service: "task-input-changed",
+        uiHandler: [ui],
+        // appendTo: body escapes the panel's overflow clip; onReady tags the
+        // calendar so it can be themed without bleeding into other pickers.
+        vendorOpt: {
+          dateFormat: "Y-m-d",
+          altInput: true,
+          altFormat: "d/m/Y",
+          minDate,
+          appendTo: document.body,
+          position: positionDueCalendarLeft,
+          onReady: onReady(false),
+        },
+      };
+
+  return [
+    Skeletons.Box.X({
+      className: `${pfx}__due-head`,
+      kids: [
+        Skeletons.Note({
+          className: `${pfx}__${scope}-label`,
+          content: LOCALE.DUE_DATE,
+        }),
+        Skeletons.Box.X({
+          className: `${pfx}__due-duration`,
+          kids: [
+            Skeletons.Note({
+              className: `${pfx}__due-duration-label`,
+              content: LOCALE.DURATION,
+            }),
+            // Live duration readout sits beside the label (range mode only);
+            // the controller refreshes it on each pick.
+            ...(draft.duration_on
+              ? [
+                  Skeletons.Note({
+                    className: `${pfx}__due-summary`,
+                    content: dueSummaryText(draft.start_date, draft.due_date),
+                  }),
+                ]
+              : []),
+            Skeletons.Box.X({
+              className: `${pfx}__toggle`,
+              attrOpt: { "data-on": draft.duration_on ? "1" : "0" },
+              bubble: 0,
+              service: "toggle-duration",
+              uiHandler: [ui],
+              kids: [Skeletons.Box.X({ className: `${pfx}__toggle-knob` })],
+            }),
+          ],
+        }),
+      ],
+    }),
+    picker,
+  ];
+}
+
 function buildAttachmentRowsContent(ui, attachments, taskId) {
   const pfx = ui.fig.family;
   if (!attachments || !attachments.length) {
@@ -1895,4 +2509,6 @@ make.buildMentionItemsContent = buildMentionItemsContent;
 make.buildCommentListContent = buildCommentListContent;
 make.buildPendingListContent = buildPendingListContent;
 make.buildAttachmentRowsContent = buildAttachmentRowsContent;
+make.buildDueSectionContent = buildDueSectionContent;
+make.dueSummaryText = dueSummaryText;
 module.exports = make;

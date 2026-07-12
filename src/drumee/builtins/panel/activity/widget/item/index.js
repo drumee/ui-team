@@ -293,7 +293,28 @@ class __activity_item extends LetcBox {
       const tHub = this.mget('task_hub_id') || hub_id;
       const tNidRaw = this.mget('task_nid');
       const tNid = (tNidRaw != null && `${tNidRaw}` !== '0') ? tNidRaw : 0;
-      location.hash = `#/desk/wm/open/?hub_id=${tHub}&nid=${tNid}&filetype=folder&pid=0&activeTab=${_a.task}&ts=${ts}`;
+      // open_task_id → the tasks panel opens this task's detail after its list
+      // loads (activity.list flattens task_id alongside task_nid/task_hub_id).
+      const tTask = this.mget('task_id');
+      let tHash = `#/desk/wm/open/?hub_id=${tHub}&nid=${tNid}&filetype=folder&pid=0&activeTab=${_a.task}`;
+      if (tTask) tHash += `&open_task_id=${tTask}`;
+      location.hash = tHash + `&ts=${ts}`;
+      this.triggerHandlers({ service: 'dismiss-activity', hub_id: tHub, item_type, item_key, changelog_id });
+      this.triggerHandlers({ service: 'close-activity-panel' });
+      return;
+    }
+    // Task @-mention: same shape as task_assigned above. The row (merged into the
+    // feed from channel.list_notifications) carries task_id/hub_id/nid at top
+    // level; nid is the task's folder (null for legacy/workspace-level tasks →
+    // open the workspace root, whose task view includes nid-less tasks).
+    if (this.mget('event') === 'task_mention') {
+      const tHub = this.mget('hub_id') || hub_id;
+      const tNidRaw = this.mget('nid');
+      const tNid = (tNidRaw != null && `${tNidRaw}` !== '0') ? tNidRaw : 0;
+      const tTask = this.mget('task_id');
+      let tHash = `#/desk/wm/open/?hub_id=${tHub}&nid=${tNid}&filetype=folder&pid=0&activeTab=${_a.task}`;
+      if (tTask) tHash += `&open_task_id=${tTask}`;
+      location.hash = tHash + `&ts=${ts}`;
       this.triggerHandlers({ service: 'dismiss-activity', hub_id: tHub, item_type, item_key, changelog_id });
       this.triggerHandlers({ service: 'close-activity-panel' });
       return;

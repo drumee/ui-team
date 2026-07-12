@@ -27,10 +27,6 @@ class __window_meeting extends __room {
     if (!this.mget(_a.nid) && this.mget(_a.room_id))
       this.mset({ nid: this.mget(_a.room_id) });
     this.isVideo = this.mget(_a.video);
-    this.statusMessages = {
-      ...this.statusMessages,
-      waiting: LOCALE.WAITING_FOR_ATTENDEES,
-    };
     this.state = "initialize";
     this._memberCallStates = new Map();
     // Maps drumate uid → 1 for participants whose hand is raised or who
@@ -443,6 +439,30 @@ class __window_meeting extends __room {
         this._toggleScreenShareFullscreen();
         break;
 
+      case "toggle-fullscreen":
+        // Resize menu → Full screen: the whole meeting window fills the
+        // screen (native fullscreen on the window root).
+        this._toggleWindowFullscreen();
+        break;
+
+      case "tile-window-left":
+        this._tileWindow("left");
+        break;
+
+      case "tile-window-right":
+        this._tileWindow("right");
+        break;
+
+      case "reframe-window":
+        this._reframeWindow();
+        break;
+
+      case "reactions":
+        // Topbar reactions (smiley) button — visual placeholder from the Figma
+        // design. No emoji-reaction backend is wired yet; swallow the event so
+        // it doesn't fall through to the base room handler.
+        break;
+
       default:
         super.onUiEvent(cmd, args);
     }
@@ -454,6 +474,68 @@ class __window_meeting extends __room {
    * badge. The panel embeds widget_chat bound to the team's hub channel, so
    * it's the same persisted conversation as the team window.
    */
+  // Topbar expand button: toggle native fullscreen on the meeting window root
+  // so the whole call (stage + side panel) fills the screen. Exits if already
+  // fullscreen. Errors (e.g. gesture/permission) are swallowed — non-fatal.
+  _toggleWindowFullscreen() {
+    const doc = document;
+    if (doc.fullscreenElement || doc.webkitFullscreenElement) {
+      (doc.exitFullscreen || doc.webkitExitFullscreen || function () {}).call(doc);
+      return;
+    }
+    const el = this.el;
+    if (!el) return;
+    const req = el.requestFullscreen || el.webkitRequestFullscreen;
+    if (req) {
+      const p = req.call(el);
+      if (p && typeof p.catch === "function") p.catch(() => {});
+    }
+  }
+
+  // Resize menu → Tile left/right: snap the standalone floating window to the
+  // corresponding half of the window-manager content area (free windows are
+  // absolute inside the WM layer, so its own size is the coordinate space).
+  // No-op for embedded (fill-parent) meetings — they have no free geometry.
+  _tileWindow(side) {
+    this._exitNativeFullscreen();
+    const el = this.el;
+    if (!el || el.dataset.standalone !== "1") return;
+    const availW = (Wm.$el && Wm.$el.width()) || window.innerWidth;
+    const availH = (Wm.$el && Wm.$el.height()) || window.innerHeight;
+    const half = Math.floor(availW / 2);
+    this._applyWindowGeometry(
+      side === "right"
+        ? { top: 0, left: availW - half, width: half, height: availH }
+        : { top: 0, left: 0, width: half, height: availH },
+    );
+  }
+
+  // Resize menu → Reframe: back to the default centered popup geometry.
+  _reframeWindow() {
+    this._exitNativeFullscreen();
+    const el = this.el;
+    if (!el || el.dataset.standalone !== "1") return;
+    this._applyWindowGeometry(Wm.centeredPopupGeometry());
+  }
+
+  _exitNativeFullscreen() {
+    const doc = document;
+    if (doc.fullscreenElement || doc.webkitFullscreenElement) {
+      (doc.exitFullscreen || doc.webkitExitFullscreen || function () {}).call(doc);
+    }
+  }
+
+  _applyWindowGeometry({ top, left, width, height }) {
+    const el = this.el;
+    if (!el) return;
+    el.style.top = `${Math.round(top)}px`;
+    el.style.left = `${Math.round(left)}px`;
+    el.style.width = `${Math.round(width)}px`;
+    el.style.height = `${Math.round(height)}px`;
+    // Re-run the size-driven layout (tile grid, data-narrow/compact flags).
+    this.responsive((el.dataset && el.dataset.mode) || "normal");
+  }
+
   _chatPanelEl() {
     return this.el && this.el.querySelector(`.${this.fig.family}__chat-panel`);
   }
@@ -863,34 +945,22 @@ class __window_meeting extends __room {
       if (!this._participantsHome && participants.el.parentNode) {
         this._participantsHome = participants.el.parentNode;
       }
+      // Figma share view: the tiles float bottom-right OVER the shared screen
+      // (a small overlay stack), the panel keeps whatever tab the user had.
       const targetEl = toPanel
-        ? (await this.ensurePart("participants-tiles"))?.el
+        ? (await this.ensurePart("float-tiles"))?.el
         : this._participantsHome;
       if (!targetEl) return;
       if (participants.el.parentNode !== targetEl) {
         targetEl.appendChild(participants.el);
       }
       // Flag the stage so its grid drops the now-empty 200px participants
-      // column and the shared screen can fill the full width.
+      // column and the shared screen can fill the full width. The float
+      // container shows itself off the same flag.
       if (this._participantsHome) {
         this._participantsHome.dataset.docked = toPanel ? "1" : "0";
       }
-      // Flag the panel so CSS swaps the roster for the live tiles, switch to
-      // the Participants tab, and (on stop) restore whatever tab was active
-      // before the share started.
-      const panel = this._chatPanelEl();
-      if (toPanel) {
-        if (panel) {
-          // Remember the tab + open state once per share so we can restore it.
-          if (panel.dataset.sharing !== "1") {
-            this._tabBeforeShare = panel.dataset.tab;
-            this._panelOpenBeforeShare = panel.dataset.open === "1";
-          }
-          panel.dataset.sharing = "1";
-        }
-        this._switchPanelTab("participants");
-      } else {
-        if (panel) panel.dataset.sharing = "0";
+      if (!toPanel) {
         // Re-lay out the grid immediately. The base responsive() defers the
         // participants relayout ~1s, which leaves the tiles briefly in their
         // docked single-column form — a visible glitch right after the screen
@@ -898,10 +968,6 @@ class __window_meeting extends __room {
         if (typeof participants.responsive === "function") {
           participants.responsive("normal");
         }
-        // Restore the tab + open/closed state the panel had before the share.
-        this._applyPanelTab(this._tabBeforeShare || "chat");
-        this._setChatOpen(!!this._panelOpenBeforeShare);
-        this._tabBeforeShare = null;
       }
     } catch (e) {
       if (this.warn) this.warn("dock participants failed", e);
@@ -991,6 +1057,13 @@ class __window_meeting extends __room {
   }
 
   stateMessage(s, timeout) {
+    // No "Waiting for attendees" toast (Figma: a solo call just shows your own
+    // tile). The base stateMessage would fall back to the raw state string
+    // ("waiting"), so clear the message container and swallow the state.
+    if (s === "waiting") {
+      this.ensurePart("message-container").then((c) => c.clear());
+      return;
+    }
     const preJoinStates = [
       "initializing",
       "joining",

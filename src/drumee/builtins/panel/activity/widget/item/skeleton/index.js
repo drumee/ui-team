@@ -58,6 +58,20 @@ function getActivityMeta(ui, data) {
     };
   }
 
+  // 2b. Storage alert from the admin console ("{admin} sent you a storage
+  // alert…"). Like task_assigned, it is a contact_activity row (category
+  // resolves to 'contact') and would otherwise read "wants to connect".
+  if (data.event === 'storage_alert') {
+    return {
+      before: LOCALE.STORAGE_ALERT_FEED
+        || 'sent you a storage alert — your usage is high, please review and clear unnecessary files',
+      label: '',
+      after: '',
+      colorClass: 'mention',
+      badge: 'mention',
+    };
+  }
+
   // 2. Task assignment ("{creator} assigned you to {task}"). A task_assigned row
   // is a contact_activity event (category resolves to 'contact'), so without
   // this it would fall into the contact branch and read "wants to connect". The

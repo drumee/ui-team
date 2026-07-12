@@ -44,6 +44,7 @@ class __window_upload_progress extends __window_core {
     // Bundle staging state
     this._phase = "progress";         // default; bundle staging entry (openStaging) sets "staging"
     this._bundle = [];                // BundleEntry roots
+    this._jobs = [];                  // Active + queued bundle jobs (multi-drop)
     this._replaceExisting = false;    // bulk conflict policy (toggle in staging)
     this._bundleEntry = require("media/bundle/entry");
     this._bundleManager = require("media/bundle/manager");
@@ -61,7 +62,7 @@ class __window_upload_progress extends __window_core {
     );
 
     this._isExpanded = true;
-    this._autoMinimizeTimer = null; // 30s auto-collapse once uploads settle (no pending)
+    this._autoMinimizeTimer = null; // 30s auto-dismiss once uploads settle (no pending)
     this._totalFiles = 0;
     this._fileProgressMap = {}; // Track progress for speed calculation
     this._pendingProgressUpdates = new Map(); // Queue progress updates when DOM not ready
@@ -99,7 +100,7 @@ class __window_upload_progress extends __window_core {
       bottom: 130, // Aligned with dock launcher (60px dock bottom + ~70px height/padding)
       width: width,
       height: height,
-      zIndex: 10000,
+      zIndex: 9000,
     });
     
     // Listen to global upload events
@@ -1007,6 +1008,16 @@ class __window_upload_progress extends __window_core {
    * Cancel all uploads
    */
   cancelAll() {
+    if (this._bundleMode && this._jobs && this._jobs.length) {
+      for (const job of this._jobs) {
+        if (job && job.cancel) job.cancel();
+      }
+      if (this._bundleManager.cancelAll) this._bundleManager.cancelAll();
+      this._uploading = false;
+      this._renderAggregate();
+      this._renderProgressList();
+      return;
+    }
     if (this._job && this._job.cancel) this._job.cancel();
     // Cancel all active uploads
     this._uploadItems.forEach(item => {
@@ -1090,31 +1101,55 @@ class __window_upload_progress extends __window_core {
   }
 
   /**
-   * Arm the 30s auto-collapse once uploads settle (nothing left 'uploading').
-   * Only arms while the popup is expanded and holds items; a new upload
-   * (addUploadItem) or a manual toggle (toggleExpand) cancels it. Idempotent —
-   * an already-armed countdown is left running rather than restarted.
+   * Whether the popup is tracking at least one upload batch/item.
+   */
+  _hasTrackedUploads() {
+    if (this._bundleMode) {
+      return !!((this._bundle && this._bundle.length) ||
+        (this._jobs && this._jobs.length) ||
+        this._uploading);
+    }
+    return (this._uploadItems || []).length > 0;
+  }
+
+  /**
+   * True when nothing is still uploading (legacy items or bundle jobs/entries).
+   */
+  _isUploadSettled() {
+    if (this._bundleMode) {
+      const mgr = this._bundleManager;
+      if (this._uploading) return false;
+      if (mgr && (mgr.activeCount() > 0 || mgr.queuedCount() > 0)) return false;
+      for (const e of this._bundle || []) {
+        if (this._entryDisplayStatus(e) === "active") return false;
+      }
+      return this._hasTrackedUploads();
+    }
+    const items = this._uploadItems || [];
+    if (!items.length) return false;
+    return !items.some((i) => i.status === "uploading");
+  }
+
+  /**
+   * Arm the 30s auto-dismiss once uploads settle (nothing left 'uploading').
+   * Works for both legacy (_uploadItems) and bundle drag-drop paths.
+   * A new upload or manual toggle cancels the countdown.
    */
   _maybeArmAutoMinimize() {
-    const items = this._uploadItems || [];
-    const hasPending = items.some((i) => i.status === "uploading");
-    if (hasPending || items.length === 0 || !this._isExpanded) {
+    if (!this._isUploadSettled() || !this._hasTrackedUploads() || !this._isExpanded) {
       this._cancelAutoMinimize();
       return;
     }
     if (this._autoMinimizeTimer) return; // already counting down
     this._autoMinimizeTimer = setTimeout(() => {
       this._autoMinimizeTimer = null;
-      // Re-check: still settled and still expanded (user may have acted).
-      const stillSettled = !(this._uploadItems || []).some(
-        (i) => i.status === "uploading"
-      );
-      if (stillSettled && this._isExpanded) this.toggleExpand();
+      if (this.isDestroyed && this.isDestroyed()) return;
+      if (this._isUploadSettled() && this._isExpanded) this.goodbye();
     }, 30000);
   }
 
   /**
-   * Cancel a pending auto-collapse (new upload, user interaction, destroy).
+   * Cancel a pending auto-dismiss (new upload, user interaction, destroy).
    */
   _cancelAutoMinimize() {
     if (this._autoMinimizeTimer) {
@@ -1579,12 +1614,9 @@ class __window_upload_progress extends __window_core {
     return rows;
   }
 
-  _startBundle() {
-    if (this._uploading) return;
-    if (!this._bundle.length) return;
+  _resolveBundleDest() {
     let destNid, hub_id;
     if (this._dropDest) {
-      // Drag-drop: explicit destination (drop target dir / folder), captured at drop time.
       destNid = this._dropDest.destNid;
       hub_id = this._dropDest.hub_id;
       this._dropDest = null;
@@ -1593,20 +1625,31 @@ class __window_upload_progress extends __window_core {
       destNid = (target && typeof target.getCurrentNid === "function") ? target.getCurrentNid() : null;
       hub_id = (target && typeof target.mget === "function") ? target.mget(_a.hub_id) : null;
     }
-    if (destNid == null) {                       // no real folder/hub target (e.g. WM is active)
+    if (destNid == null) {
       destNid = Visitor.get(_a.home_id);
       hub_id = hub_id != null ? hub_id : Visitor.get(_a.id);
     }
+    return { destNid, hub_id };
+  }
+
+  /**
+   * Queue one upload batch (supports multiple drops while a prior batch is running).
+   * @param {Array} entries  top-level BundleEntry roots for THIS drop only
+   * @param {*} destNid
+   * @param {*} hub_id
+   */
+  _enqueueBundle(entries, destNid, hub_id) {
+    if (!entries || !entries.length) return;
+    this._cancelAutoMinimize();
+    if (!this._isExpanded) this._isExpanded = true;
     if (destNid == null) {
       Butler.say(LOCALE.WRONG_DROP_AREA || "Please open a folder to upload into");
       return;
     }
-    // Destination of this bundle — used by _revealInLayout to live-append only
-    // the top-level roots (nodes whose parent == this dir) to the visible grid.
-    this._bundleDest = destNid;
 
-    // Quota guard: total bundle bytes vs free disk (spec §5.8)
-    const total = this._bundleEntry.countSize(this._bundle);
+    this._bundleDest = this._bundleDest != null ? this._bundleDest : destNid;
+
+    const total = this._bundleEntry.countSize(entries);
     if (typeof Visitor.diskFree === "function" && total > Visitor.diskFree()) {
       Butler.say(LOCALE.QUOTA_EXCEEDED || "Not enough space for this upload");
       return;
@@ -1617,17 +1660,28 @@ class __window_upload_progress extends __window_core {
       skip: new Set(),
     };
 
-    const job = this._bundleManager.create({ entries: this._bundle, destNid, hub_id, resolution });
-    this._attachJob(job);            // subscribe BEFORE the job starts (manager.pump)
+    const job = this._bundleManager.create({ entries, destNid, hub_id, resolution });
+    this._jobs.push(job);
+    this._attachJob(job);
     this._uploading = true;
     this._phase = "progress";
-    this._bundleMode = true;         // route toggle/refresh through the bundle path
+    this._bundleMode = true;
+    this._resetBundleFooter();
     this._switchToProgress();
-    this._bundleManager.pump();      // now start; first events are captured
+    this._bundleManager.pump();
+    this._renderAggregate();
+    this._renderProgressList();
+  }
+
+  _startBundle() {
+    if (!this._bundle.length) return;
+    // Staging "Upload all" — only once; drag-drop uses _enqueueBundle directly.
+    if (this._uploading) return;
+    const { destNid, hub_id } = this._resolveBundleDest();
+    this._enqueueBundle(this._bundle.slice(), destNid, hub_id);
   }
 
   _attachJob(job) {
-    this._job = job;
     // Throttled renders: bursts of file-done events (thousands for a big folder)
     // coalesce instead of rebuilding the whole list on every single file.
     job.on("progress", this._renderAggregateThrottled);
@@ -1641,8 +1695,22 @@ class __window_upload_progress extends __window_core {
       this._renderProgressListThrottled();
     });
     job.on("error", this._renderProgressListThrottled);
-    job.on("done", ({ canceled }) => this._onBundleDone(canceled));
-    job.on("activated", this._renderAggregateThrottled);
+    job.on("done", ({ canceled }) => this._onBundleDone(canceled, job));
+    job.on("activated", () => {
+      this._job = job;
+      this._renderAggregateThrottled();
+    });
+    if (job.state === "active") this._job = job;
+  }
+
+  _resetBundleFooter() {
+    this.ensurePart("footer-action").then((p) => {
+      if (!p || !p.el) return;
+      p.set({ content: LOCALE.CANCEL_ALL || "Cancel all" });
+      p.el.className = `${this.fig.family}__cancel-all`;
+      p.el.setAttribute(_a.service, "cancel-all");
+      if (p.el.dataset) p.el.dataset.service = "cancel-all";
+    });
   }
 
   _switchToProgress() {
@@ -1653,16 +1721,29 @@ class __window_upload_progress extends __window_core {
   }
 
   _renderAggregate() {
-    if (!this._job) return;
+    const jobs = (this._jobs || []).filter((j) => j && !(j.isDestroyed && j.isDestroyed()));
+    if (!jobs.length) return;
     if (this.isDestroyed && this.isDestroyed()) return;
-    const pct = this._job.bytesTotal
-      ? Math.min(100, Math.round(100 * this._job.bytesDone / this._job.bytesTotal)) : 0;
+
+    let bytesTotal = 0;
+    let bytesDone = 0;
+    let filesTotal = 0;
+    let filesDone = 0;
+    for (const j of jobs) {
+      bytesTotal += j.bytesTotal || 0;
+      bytesDone += j.bytesDone || 0;
+      filesTotal += j.filesTotal || 0;
+      filesDone += j.filesDone || 0;
+    }
+
+    const pct = bytesTotal
+      ? Math.min(100, Math.round(100 * bytesDone / bytesTotal)) : 0;
     this.ensurePart("agg-fill").then((p) => { if (p.el) p.el.style.width = pct + "%"; });
     const rate = this._bundleManager.governor.currentRate();
-    const remaining = Math.max(0, this._job.bytesTotal - this._job.bytesDone);
+    const remaining = Math.max(0, bytesTotal - bytesDone);
     // Tidy aggregate line: percent + uploaded/total size only (Google-Drive style).
     this.ensurePart("agg-text").then((p) => p.set({
-      content: `${pct}% · ${filesize(this._job.bytesDone)}/${filesize(this._job.bytesTotal)}`,
+      content: `${pct}% · ${filesize(bytesDone)}/${filesize(bytesTotal)}`,
     }));
     // ETA shown in the footer next to the Cancel/Close button.
     let etaText = "";
@@ -1675,7 +1756,7 @@ class __window_upload_progress extends __window_core {
     // title would otherwise stay stuck at "Uploading 0 files". Drive it here
     // from the job's own file counters so the user sees uploaded/total files.
     this.ensurePart("upload-title").then((p) => p.set({
-      content: `${LOCALE.UPLOADING || "Uploading"} ${this._job.filesDone || 0}/${this._job.filesTotal || 0} ${LOCALE.FILES || "files"}`,
+      content: `${LOCALE.UPLOADING || "Uploading"} ${filesDone || 0}/${filesTotal || 0} ${LOCALE.FILES || "files"}`,
     }));
   }
 
@@ -1830,7 +1911,8 @@ class __window_upload_progress extends __window_core {
         tw.getCurrentNid() !== this._bundleDest) return;
     if (typeof tw.ensurePart !== "function") return;
     tw.ensurePart(_a.list).then((list) => {
-      if (!list || (list.isDestroyed && list.isDestroyed())) return;
+      if (!list || list.isDestroyed?.()) return;
+      if (!list.el || !list.el.isConnected) return;
       // Dedup: a server WS echo may have rendered it already.
       if (typeof tw.getItemsByAttr === "function" &&
           tw.getItemsByAttr(_a.nid, node.nid).length) return;
@@ -1848,10 +1930,16 @@ class __window_upload_progress extends __window_core {
     }).catch(() => {});
   }
 
-  _onBundleDone(canceled) {
-    this._uploading = false;
+  _onBundleDone(canceled, job) {
     this._renderAggregate();
     this._renderProgressList();
+
+    const mgr = this._bundleManager;
+    if (mgr.activeCount() > 0 || mgr.queuedCount() > 0) {
+      return;
+    }
+
+    this._uploading = false;
     // No reload here: each finished file/folder was already live-appended to the
     // grid by `_revealInLayout` (driven off the job's folder-created/file-done
     // events). Reloading would re-render the whole view and destroy this popup —
@@ -1867,6 +1955,7 @@ class __window_upload_progress extends __window_core {
       p.el.setAttribute(_a.service, "close");
       if (p.el.dataset) p.el.dataset.service = "close";
     });
+    this._maybeArmAutoMinimize();
   }
 
   _removeFromBundle(id) {
@@ -2213,15 +2302,17 @@ __window_upload_progress.runBundle = function(roots, destNid, hub_id, targetWind
   if (!roots || !roots.length) return Promise.resolve(null);
   return __window_upload_progress.getOrCreate().then(function(win) {
     if (!win) return null;
-    win._targetWindow = targetWindow || null;
-    win._bundle = roots;
+    win._targetWindow = targetWindow || win._targetWindow;
+    // Merge into the visible bundle list (do not replace — user may drop more
+    // files while a prior batch is still uploading).
+    const batch = roots;
+    for (const r of batch) win._mergeEntry(win._bundle, r);
     win._replaceExisting = false;
-    win._dropDest = { destNid, hub_id };
     win._phase = "progress";
     const root = win.el && win.el.querySelector(`.${win.fig.family}__container`);
     if (root && root.dataset) root.dataset.phase = "progress";
     if (win.raise) win.raise();
-    win._startBundle();
+    win._enqueueBundle(batch, destNid, hub_id);
     return win;
   });
 };

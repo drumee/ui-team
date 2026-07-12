@@ -29,11 +29,15 @@ module.exports = function (ui) {
   const fig = ui.fig.family;
   const level = ui.mget("level") || 0;
   const isSearchResult = !!ui.mget('result_type');
+  const isMessage = ui.mget('result_type') === 'message';
   const nodeRole = ui.mget("nodeRole") || (isSearchResult ? "result" : (level ? "folder" : "workspace"));
   const hasChevron = nodeRole === "folder";
   const isWorkspace = nodeRole === "workspace";
   const filetype = ui.mget(_a.filetype);
-  const isFolderLike = filetype === _a.hub || filetype === _a.folder || isWorkspace || nodeRole === "folder";
+  // Message hits carry no filename/filetype — label from the preview and show a
+  // chat glyph instead of a file/folder icon.
+  const isFolderLike = !isMessage && (filetype === _a.hub || filetype === _a.folder || isWorkspace || nodeRole === "folder");
+  const rowName = isMessage ? (ui.mget('preview') || '') : ui.mget(_a.filename);
 
   return [
     Skeletons.Box.X({
@@ -53,10 +57,10 @@ module.exports = function (ui) {
           className: `${fig}__icon ${ui.mget(_a.area) || ''}`,
           content: getFolderIcon(ui, nodeRole, isWorkspace || filetype === _a.hub),
         }) : Skeletons.Image.Svg({
-          className: `${fig}__icon file ${filetype || ''}`,
-          ico: fileIconName(filetype, ui.mget(_a.ext)),
+          className: `${fig}__icon file ${isMessage ? 'message' : (filetype || '')}`,
+          ico: isMessage ? 'apps-chat' : fileIconName(filetype, ui.mget(_a.ext)),
         }),
-        Skeletons.Note({ className: `${fig}__name`, content: ui.mget(_a.filename) }),
+        Skeletons.Note({ className: `${fig}__name`, content: rowName }),
       ],
     }),
     Skeletons.Box.Y({

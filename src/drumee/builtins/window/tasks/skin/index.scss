@@ -4,6 +4,10 @@
   &__ui {
     width: 100%;
     height: 100%;
+    // Clamp to the host grid cell (folder split-body) instead of expanding to
+    // the board's content width — this is what lets __main own the horizontal
+    // overflow at every window size (not just the ≤650px case below).
+    min-width: 0;
   }
 
   // Reveal the "Drop files to attach" overlay while a file is dragged over.
@@ -52,26 +56,131 @@
     width: 100%;
     height: 100%;
     position: relative;
+    // Twin of __ui's clamp — keep the column stack from widening the root past
+    // its cell so the board's overflow-x engages.
+    min-width: 0;
   }
 
   // ── Member filter dropdown ────────────────────────────────────
   // The trigger button lives on the host window's tab bar; this dropdown is a
   // top-right overlay over the board, anchored under that button. Rows reuse
   // the shared __member-row / __member-name / __member-avatar styles.
+  // Access/member filter (Figma 2045-134011): 218px white card, 8px padding,
+  // rows of "avatar + name" with a right-side checkbox.
+  // Full-panel click-catcher so a click anywhere outside the dropdown closes
+  // it. Transparent; sits just under the dropdown's z-index.
+  &__filter-backdrop {
+    position: absolute;
+    inset: 0;
+    z-index: 29;
+    background: transparent;
+  }
+
   &__filter-picker {
     position: absolute;
     top: 12px;
     right: 12px;
     z-index: 30;
-    min-width: 220px;
-    max-height: 280px;
+    width: 218px;
+    padding: 8px;
+    gap: 4px;
+    max-height: 320px;
     overflow-y: auto;
     align-items: stretch;
-    border: 1px solid var(--border-default, #d6d6dc);
     border-radius: 8px;
     background: var(--normal-bg-elevated, #fff);
-    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.16);
-    animation: tasks-panel-pop-in 0.14s cubic-bezier(0.2, 0, 0, 1);
+    box-shadow: 0 1px 11px rgba(0, 0, 0, 0.13);
+    // No entrance animation: the panel re-renders on each pick, and replaying
+    // the pop-in on every selection read as a glitch.
+
+    // Figma row: 28px tall, name/avatar left, checkbox right, no active tint.
+    .tasks-panel__member-row {
+      justify-content: space-between;
+      gap: 8px;
+      padding: 6px 6px;
+      border-radius: 6px;
+
+      &[data-active="1"] {
+        background: transparent;
+      }
+      &:hover {
+        background: var(--hover-bg-40, rgba(0, 0, 0, 0.04));
+      }
+    }
+  }
+
+  // Small heading at the top of the filter popup.
+  &__filter-title {
+    padding: 2px 6px 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    @include drumee.typo(
+      $size: 11px,
+      $weight: 600,
+      $line: 16px,
+      $color: var(--normal-fg-40, #84848c)
+    );
+  }
+
+  // Hairline between "All members" and the member list.
+  &__filter-divider {
+    height: 1px;
+    margin: 2px 6px;
+    background: var(--border-default, rgba(0, 0, 0, 0.08));
+  }
+
+  // Left group inside a filter row: avatar + name.
+  &__filter-row-main {
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+
+    .tasks-panel__member-name {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      @include drumee.typo(
+        $size: 14px,
+        $weight: 400,
+        $line: 20px,
+        $color: var(--normal-fg-30, #65656c)
+      );
+    }
+  }
+
+  // Right-side checkbox — hollow grey outline by default, filled brand box with
+  // a white check when the row is active.
+  &__filter-check {
+    position: relative;
+    flex: 0 0 16px;
+    width: 16px;
+    height: 16px;
+    justify-content: center;
+    align-items: center;
+    box-sizing: border-box;
+    border: 1.5px solid var(--normal-fg-40, #84848c);
+    border-radius: 4px;
+    color: #fff;
+    transition: background 0.12s, border-color 0.12s;
+  }
+
+  // Centred text tick, hidden until the row is active.
+  &__filter-check-mark {
+    font-size: 11px;
+    font-weight: 700;
+    line-height: 1;
+    color: currentColor;
+    opacity: 0;
+    user-select: none;
+    transition: opacity 0.12s;
+  }
+
+  &__member-row[data-active="1"] &__filter-check {
+    background: var(--col-primary-50, #433cc5);
+    border-color: var(--col-primary-50, #433cc5);
+  }
+  &__member-row[data-active="1"] &__filter-check-mark {
+    opacity: 1;
   }
 
   &__main {
@@ -83,58 +192,84 @@
     // `overflow-y: auto` never engages and tall columns simply overflow.
     // (Vertical twin of the `min-width: 0` horizontal-scroll fix below.)
     min-height: 0;
+    // Clamp horizontally too so the row of fixed-width columns overflows THIS
+    // element (which scrolls) rather than stretching the panel/window.
+    min-width: 0;
     align-items: stretch;
-    gap: 12px;
+    // Columns lay out in a single non-wrapping row; when their combined
+    // min-width exceeds the panel, overflow-x below turns into a scrollbar.
+    flex-wrap: nowrap;
+    gap: 8px;
     padding: 16px;
     box-sizing: border-box;
     overflow-x: auto;
-    background-color: var(--normal-bg-90, #fff);
+    background-color: var(--normal-bg-elevated, #fff);
+    // Grab-to-pan affordance: empty board area shows the open hand; cards keep
+    // their own pointer/grabbing cursor (more specific selector). The panning
+    // state is toggled from JS (_installBoardPan) for the duration of a drag.
+    cursor: grab;
+
+    &.is-panning {
+      cursor: grabbing;
+      user-select: none;
+    }
   }
 
   // ── Columns ───────────────────────────────────────────────────
   &__column {
-    // `--col-accent` is set inline per column from the status color (see the
-    // COLUMNS table in index.js). Everything below tints off this one var, so
-    // re-coloring a status only means editing that table.
-    flex: 1 1 0;
-    min-width: 220px;
+    // `--col-accent` (set inline per column from the COLUMNS table) still drives
+    // the drag-drop highlight; the static tints below are the exact Figma
+    // per-status overlays (2021:117822) keyed on `data-column`.
+    // Grow to fill the panel when a few columns fit, but never shrink below
+    // 260px — once the columns can't all fit at that width, they stop
+    // collapsing and __main scrolls horizontally instead (at every size).
+    flex: 1 1 260px;
+    min-width: 260px;
     align-items: stretch;
     justify-content: space-between;
-    padding: 12px;
-    border-radius: 10px;
-    background-color: color-mix(
-      in srgb,
-      var(--col-accent, transparent) 7%,
-      var(--normal-bg-80, rgba(0, 0, 0, 0.04))
-    );
+    padding: 10px;
+    gap: 12px;
+    border-radius: 8px;
+    // Per-board colour: the whole column takes the Figma "board color system"
+    // overlay tint (2040-106090), keyed on `data-theme` so BOTH built-in and
+    // custom columns are tinted (the old `data-column` rules never matched a
+    // custom column's id, so custom boards showed no colour).
+    background-color: rgba(0, 0, 0, 0.05);
     box-sizing: border-box;
     overflow: hidden;
+
+    @each $theme, $tint in (
+      "default": rgba(0, 0, 0, 0.05),
+      "orange": rgba(232, 161, 59, 0.15),
+      "yellow": rgba(255, 225, 0, 0.15),
+      "green": rgba(61, 222, 140, 0.15),
+      "cyan": rgba(101, 208, 234, 0.16),
+      "blue": rgba(113, 163, 244, 0.1),
+      "purple": rgba(89, 80, 255, 0.1),
+      "pink": rgba(255, 168, 220, 0.15),
+      "red": rgba(255, 106, 101, 0.15)
+    ) {
+      &[data-theme="#{$theme}"] {
+        background-color: $tint;
+      }
+    }
   }
 
-  // ── Mobile: lock columns + force horizontal scroll on board ──
-  // 4 columns × 260px = 1076px > 430px phone viewport → board needs
-  // to scroll horizontally. The previous attempt set overflow-x:auto
-  // on __main but the scroll never engaged because the ancestor chain
-  // (window__tasks-panel grid cell, tasks-panel__ui, tasks-panel__root)
-  // all default to `min-width: auto` for flex/grid items — meaning
-  // they expand to fit their content instead of clamping to their
-  // parent cell. The whole folder window then scrolled instead of
-  // the inner board. Pin every wrapper to `min-width: 0` so each
-  // level clamps to its parent, then __main's overflow-x finally
-  // becomes meaningful and the user can swipe through status columns
-  // (TO DO → IN PROGRESS → REVIEW → COMPLETE).
+  // ── Mobile refinements to the (now universal) horizontal-scroll board ──
+  // The min-width:0 clamp chain (__ui/__root/__main) and the fixed 260px
+  // columns now live in the base rules above, so the board scrolls
+  // horizontally at every size. On phones we only tweak the ergonomics:
+  // hide the scrollbar, enable momentum/touch panning, and force columns to a
+  // rigid 260px (no grow) so a swipe steps cleanly through the status columns
+  // (TO DO → IN PROGRESS → REVIEW → COMPLETE) instead of stretching to fit.
   @media (max-width: 650px) {
     &__ui,
     &__root {
-      min-width: 0;
       max-width: 100%;
     }
 
     &__main {
-      flex-wrap: nowrap;
-      min-width: 0;
       max-width: 100%;
-      overflow-x: auto !important;
       overflow-y: hidden;
       scrollbar-width: none;
       -webkit-overflow-scrolling: touch;
@@ -147,14 +282,13 @@
 
     &__column {
       flex: 0 0 260px !important;
-      min-width: 260px !important;
       width: 260px;
     }
   }
 
   &__column-body {
     align-items: stretch;
-    gap: 8px;
+    gap: 12px;
     flex: 1 1 auto;
     min-height: 0;
     overflow-y: auto;
@@ -210,42 +344,54 @@
   }
 
   &__column-title {
-    // Sentence case (no uppercase), tinted with the status color. The mix
-    // toward the base fg keeps the light-grey "Not started" and the brighter
-    // statuses both legible in either theme.
     @include drumee.typo(
-      $size: 13px,
+      $size: 14px,
       $weight: 600,
-      $line: 18px,
-      $color: var(--normal-fg-10)
+      $line: 20px,
+      $color: var(--normal-fg-10, #0b0a21)
     );
   }
 
-  &__column-title-dot-group{
+  // Title sits in a tinted pill (dot + label), radius 16, padding 4px 12px.
+  &__column-title-dot-group {
     align-items: center;
-    justify-content: center;
-    gap: 6px;
-    background-color:
-color-mix(in srgb, var(--col-accent, transparent) 60%, var(--normal-bg-80, rgba(0, 0, 0, 0.04)));
-    padding: 0 8px;
-    border-radius: 12px;
+    gap: 8px;
+    padding: 4px 12px;
+    border-radius: 16px;
+    background-color: rgba(0, 0, 0, 0.05);
+  }
+  &__column[data-column="in_progress"] &__column-title-dot-group {
+    background-color: rgba(89, 80, 255, 0.1);
+  }
+  &__column[data-column="to_review"] &__column-title-dot-group {
+    background-color: rgba(232, 161, 59, 0.15);
+  }
+  &__column[data-column="complete"] &__column-title-dot-group {
+    background-color: rgba(61, 222, 140, 0.15);
   }
 
   &__column-count {
-    margin-top: 2px;
     align-items: center;
     justify-content: center;
   }
 
+  // Count sits outside the pill, tinted with the exact per-status color.
   &__column-count-text {
     @include drumee.typo(
-      $size: 11px,
+      $size: 14px,
       $weight: 600,
-      $line: 16px,
+      $line: 20px,
       $color: var(--normal-fg-50, #65656c)
     );
-    // Pick up the status color for the number itself.
-    color: color-mix(in srgb, var(--col-accent, #65656c) 80%, var(--normal-fg-10, #0b0a21));
+  }
+  &__column[data-column="in_progress"] &__column-count-text {
+    color: #5950ff;
+  }
+  &__column[data-column="to_review"] &__column-count-text {
+    color: #e8a13b;
+  }
+  &__column[data-column="complete"] &__column-count-text {
+    color: #54b684;
   }
 
   // ── Task card (Trello-like) ───────────────────────────────────
@@ -254,22 +400,18 @@ color-mix(in srgb, var(--col-accent, transparent) 60%, var(--normal-bg-80, rgba(
   // wash, and an accent hover border.
   &__task-card {
     align-items: stretch;
-    gap: 8px;
+    gap: 12px;
     padding: 12px;
-    border-radius: 8px;
-    background-color: color-mix(in srgb, var(--col-accent, transparent) 24%, var(--normal-bg-80, rgba(0, 0, 0, 0.04)));
-    box-shadow: var(--shadow-top-tiny, 0 1px 0 rgba(9, 30, 66, 0.08));
+    border-radius: 12px;
+    background-color: var(--normal-bg-elevated, #fff);
     cursor: pointer;
     transition:
       box-shadow 0.15s,
-      border-color 0.15s,
       transform 0.1s;
     user-select: none;
 
     &:hover {
-      border-color: var(--border-strong, rgba(11, 10, 33, 0.12));
-      border-left-color: var(--col-accent, var(--border-strong, rgba(11, 10, 33, 0.12)));
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+     border: 1px solid var(--border-default);
 
       .tasks-panel__task-remove {
         opacity: 1;
@@ -286,6 +428,12 @@ color-mix(in srgb, var(--col-accent, transparent) 60%, var(--normal-bg-80, rgba(
     }
   }
 
+  // Title + description grouped tightly (Figma EL-6d1b5341: gap 4px).
+  &__task-head {
+    align-items: stretch;
+    gap: 4px;
+  }
+
   &__task-card-row {
     align-items: flex-start;
     gap: 8px;
@@ -293,9 +441,9 @@ color-mix(in srgb, var(--col-accent, transparent) 60%, var(--normal-bg-80, rgba(
 
   &__task-title {
     @include drumee.typo(
-      $size: 14px,
+      $size: 12px,
       $weight: 600,
-      $line: 20px,
+      $line: 16px,
       $color: var(--normal-fg-10, #0b0a21)
     );
     flex: 1 1 auto;
@@ -303,26 +451,25 @@ color-mix(in srgb, var(--col-accent, transparent) 60%, var(--normal-bg-80, rgba(
     word-break: break-word;
   }
 
-  // Description preview on the card — compact, muted, clamped to ~2 lines.
+  // Description preview on the card — compact, muted, clamped to ~3 lines.
   &__task-desc {
     overflow: hidden;
-    margin: 2px 0 0;
+    margin: 0;
     @include drumee.typo(
-      $size: 12px,
+      $size: 10px,
       $weight: 400,
-      $line: 16px,
-      $color: var(--normal-fg-40, #84848c)
+      $line: 14px,
+      $color: var(--normal-fg-50, #65656c)
     );
 
-    // The note widget renders text in an inner .note-content, so the 2-line
+    // The note widget renders text in an inner .note-content, so the line
     // clamp has to live there (clamping the outer wrapper never engages).
-    // max-height (line-height × 2) is the hard-cap fallback.
     .note-content {
       display: -webkit-box;
-      -webkit-line-clamp: 2;
+      -webkit-line-clamp: 3;
       -webkit-box-orient: vertical;
       overflow: hidden;
-      max-height: 32px;
+      max-height: 42px;
       overflow-wrap: anywhere; // break long unbroken tokens/URLs
       word-break: break-word;
     }
@@ -330,51 +477,109 @@ color-mix(in srgb, var(--col-accent, transparent) 60%, var(--normal-bg-80, rgba(
 
   &__task-foot {
     align-items: center;
+    justify-content: space-between;
     gap: 8px;
-    flex-wrap: wrap;
-    margin-top: 4px;
   }
 
-  // Priority chip — the status color fills the pill; the label sits inside.
-  // (Background color is set inline from `priority.color`.)
-  &__task-priority-dot {
-    display: inline-flex;
+  // Card status pill (Figma 2040-106090: "● In Progress" bottom-left).
+  // data-theme drives the tint; the dot color is inline from the column.
+  &__task-status {
     align-items: center;
-    flex-shrink: 0;
-    padding: 1px 8px;
-    border-radius: 100px;
-    // Dark text reads cleanly on every (pastel) priority color in both themes.
+    gap: 6px;
+    padding: 4px 10px;
+    border-radius: 71px;
+    background: rgba(174, 174, 178, 0.16);
+
+    @each $theme, $tint in (
+      "orange": rgba(232, 161, 59, 0.14),
+      "yellow": rgba(239, 196, 67, 0.16),
+      "green": rgba(84, 182, 132, 0.14),
+      "cyan": rgba(101, 208, 234, 0.16),
+      "blue": rgba(113, 163, 244, 0.14),
+      "purple": rgba(89, 80, 255, 0.12),
+      "pink": rgba(255, 168, 220, 0.2),
+      "red": rgba(215, 78, 73, 0.12)
+    ) {
+      &[data-theme="#{$theme}"] {
+        background: $tint;
+      }
+    }
+  }
+
+  &__task-status-dot {
+    flex: 0 0 8px;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+  }
+
+  &__task-status-label {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
     @include drumee.typo(
-      $size: 10px,
-      $weight: 700,
+      $size: 12px,
+      $weight: 600,
       $line: 16px,
-      $letter: 0.03em,
-      $color: var(--white)
+      $color: var(--normal-fg-10, #0b0a21)
     );
   }
 
-  // ── Linked-file preview on the kanban card ────────────────────
-  &__task-files {
-    align-items: stretch;
+  &__task-meta {
+    align-items: center;
     gap: 4px;
-    margin-top: 2px;
-    padding: 6px 8px;
-    border-radius: 6px;
-    background-color: color-mix(in srgb, var(--col-accent, transparent) 60%, var(--normal-bg-80, rgba(0, 0, 0, 0.04)));
-    border: 1px solid var(--border-muted, rgba(11, 10, 33, 0.04));
+    min-width: 0;
+  }
+
+  // Filled priority pill — solid bg per priority, white text (Figma priority-badge).
+  &__task-priority {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    height: 24px;
+    padding: 2px 16px;
+    border-radius: 100px;
+    box-sizing: border-box;
+    white-space: nowrap;
+    @include drumee.typo($size: 12px, $weight: 500, $line: 20px, $color: #fff);
+
+    &[data-priority="low"] {
+      background: #54b684;
+    }
+    &[data-priority="medium"] {
+      background: #71a3f4;
+    }
+    &[data-priority="high"] {
+      background: #e8a13b;
+    }
+    &[data-priority="urgent"] {
+      background: #d74e49;
+    }
+  }
+
+  // ── Linked-file preview on the kanban card — wrapping paperclip chips ──
+  &__task-files {
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 4px;
   }
 
   &__task-file {
     align-items: center;
-    gap: 6px;
+    gap: 4px;
+    padding: 4px 8px;
+    border-radius: 4px;
+    background: rgba(0, 0, 0, 0.05);
+    max-width: 100%;
+    box-sizing: border-box;
     overflow: hidden;
   }
 
   &__task-file-ico {
-    width: 12px;
-    height: 12px;
-    flex-shrink: 0;
-    color: var(--normal-fg-10);
+    width: 14px;
+    height: 14px;
+    flex: 0 0 14px;
 
     svg {
       width: 100%;
@@ -386,23 +591,22 @@ color-mix(in srgb, var(--col-accent, transparent) 60%, var(--normal-bg-80, rgba(
   &__task-file-name {
     @include drumee.typo(
       $size: 12px,
-      $weight: 500,
+      $weight: 400,
       $line: 16px,
       $color: var(--normal-fg-10, #0b0a21)
     );
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    flex: 1 1 auto;
     min-width: 0;
   }
 
   &__task-files-more {
     @include drumee.typo(
-      $size: 11px,
-      $weight: 500,
-      $line: 14px,
-      $color: var(--normal-fg-10)
+      $size: 12px,
+      $weight: 400,
+      $line: 16px,
+      $color: var(--normal-fg-50, #65656c)
     );
   }
 
@@ -430,62 +634,61 @@ color-mix(in srgb, var(--col-accent, transparent) 60%, var(--normal-bg-80, rgba(
     }
 
     &:hover {
-      color: #d65f59;
-      background: rgba(214, 95, 89, 0.1);
+      color: #d74e49;
+      background: rgba(215, 78, 73, 0.1);
     }
   }
 
   &__task-due {
-    @include drumee.typo(
-      $size: 11px,
-      $weight: 500,
-      $line: 14px,
-      $color: var(--normal-fg-10)
-    );
-    padding: 2px 8px;
+    display: inline-flex;
+    align-items: center;
+    height: 24px;
+    padding: 2px 12px;
     border-radius: 100px;
-    background-color: color-mix(in srgb, var(--col-accent, transparent) 60%, var(--normal-bg-80, rgba(0, 0, 0, 0.04)));
+    background: #f2f2f7;
+    box-sizing: border-box;
+    white-space: nowrap;
+    @include drumee.typo(
+      $size: 12px,
+      $weight: 400,
+      $line: 20px,
+      $color: var(--normal-fg-20, #34343a)
+    );
 
     &[data-overdue="1"] {
-      color: #fff;
-      background: #d65f59;
+      color: #d74e49;
+      font-weight: 600;
     }
   }
 
-  // ── Add button ────────────────────────────────────────────────
+  // ── Add button — dashed "+ New task" box (Figma Frame 130) ────
   &__add-btn {
     align-items: center;
     justify-content: center;
-    gap: 4px;
-    padding: 8px;
-    margin-top: 8px;
-    border: 1px dashed var(--col-accent);
-    border-radius: 8px;
+    padding: 12px 16px;
+    border: 1px dashed #65656c;
+    border-radius: 12px;
     background-color: transparent;
     cursor: pointer;
     flex-shrink: 0;
     transition:
       background-color 0.15s,
-      border-color 0.15s,
-      color 0.15s;
+      border-color 0.15s;
 
     &:hover {
       background-color: var(--overlay-bg-05, rgba(0, 0, 0, 0.03));
-      border-color: var(--border-strong, rgba(11, 10, 33, 0.4));
-
-      .tasks-panel__add-label {
-        color: var(--normal-fg-10, #0b0a21);
-      }
+      border-color: #0b0a21;
     }
   }
 
   &__add-label {
     @include drumee.typo(
-      $size: 12px,
-      $weight: 500,
+      $size: 11px,
+      $weight: 400,
       $line: 16px,
-      $color: var(--col-accent)
+      $color: var(--normal-fg-50, #65656c)
     );
+    text-align: center;
   }
 
   // ── Drag-and-drop affordances ─────────────────────────────────
@@ -519,6 +722,111 @@ color-mix(in srgb, var(--col-accent, transparent) 60%, var(--normal-bg-80, rgba(
     user-select: none;
   }
 
+  // ── Custom columns (add ghost / header menu) ─────────────────
+  &__col-menu-btn {
+    flex: 0 0 auto;
+    padding: 0 6px;
+    cursor: pointer;
+    opacity: 0.55;
+    @include drumee.typo(
+      $size: 16px,
+      $weight: 700,
+      $line: 20px,
+      $color: var(--normal-fg-10, #0b0a21)
+    );
+
+    &:hover {
+      opacity: 1;
+    }
+  }
+
+  &__col-menu {
+    gap: 12px;
+    padding: 12px;
+    box-sizing: border-box;
+    border: 1px solid var(--border-default, rgba(0, 0, 0, 0.08));
+    border-radius: 12px;
+    background: var(--normal-bg-elevated, #fff);
+    box-shadow:
+      0 4px 4px -1px rgba(12, 12, 13, 0.05),
+      0 4px 4px -1px rgba(12, 12, 13, 0.1);
+  }
+
+  &__col-menu-name input {
+    width: 100%;
+    height: 32px;
+    padding: 0 10px;
+    box-sizing: border-box;
+    border: 1px solid var(--border-default, rgba(0, 0, 0, 0.12));
+    border-radius: 8px;
+    background: transparent;
+    @include drumee.typo(
+      $size: 13px,
+      $weight: 500,
+      $line: 18px,
+      $color: var(--normal-fg-10, #0b0a21)
+    );
+  }
+
+  // 10-swatch palette row (Figma 2040-106090 column themes).
+  &__col-swatches {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  &__col-swatch {
+    flex: 0 0 18px;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    box-sizing: border-box;
+    cursor: pointer;
+    border: 2px solid transparent;
+    transition: transform 0.1s;
+
+    &:hover {
+      transform: scale(1.15);
+    }
+    &[data-active="1"] {
+      border-color: var(--normal-fg-10, #0b0a21);
+    }
+  }
+
+  &__col-menu-actions {
+    align-items: center;
+    justify-content: flex-end;
+    gap: 12px;
+  }
+
+  &__col-menu-rename,
+  &__col-menu-cancel,
+  &__col-menu-delete {
+    cursor: pointer;
+    @include drumee.typo(
+      $size: 13px,
+      $weight: 600,
+      $line: 18px,
+      $color: var(--normal-fg-30, #65656c)
+    );
+
+    &:hover {
+      color: var(--normal-fg-10, #0b0a21);
+    }
+  }
+
+  &__col-menu-rename {
+    color: var(--col-primary-40, #5950ff);
+  }
+
+  &__col-menu-delete {
+    color: var(--col-error, #d74e49);
+
+    &:hover {
+      color: var(--col-error, #d74e49);
+      text-decoration: underline;
+    }
+  }
+
   // ── Create modal ──────────────────────────────────────────────
   &__create-wrapper {
     position: absolute;
@@ -531,11 +839,216 @@ color-mix(in srgb, var(--col-accent, transparent) 60%, var(--normal-bg-80, rgba(
     }
   }
 
+  // ── New board modal (Figma 2040-53814) ───────────────────────
+  &__board-wrapper {
+    position: absolute;
+    inset: 0;
+    z-index: 11;
+
+    &:empty,
+    &[data-state="closed"] {
+      display: none;
+    }
+  }
+
+  &__board-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(250, 250, 250, 0.05);
+    backdrop-filter: blur(30px);
+    align-items: center;
+    justify-content: center;
+    animation: tasks-panel-fade-in 0.15s ease;
+  }
+
+  &__board-modal {
+    position: relative;
+    width: 520px;
+    max-width: 94%;
+    max-height: 88vh;
+    gap: 24px;
+    padding: 32px;
+    box-sizing: border-box;
+    background: var(--normal-bg-elevated, #fff);
+    border: 1px solid rgba(0, 0, 0, 0.05);
+    border-radius: 24px;
+    box-shadow:
+      0px 25px 50px -12px rgba(0, 0, 0, 0.25),
+      0px 1px 11px 0px rgba(0, 0, 0, 0.13);
+    overflow-y: auto;
+    animation: tasks-panel-pop-in 0.18s cubic-bezier(0.2, 0, 0, 1);
+  }
+
+  &__board-header {
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  &__board-title-text {
+    @include drumee.typo(
+      $size: 22px,
+      $weight: 600,
+      $line: 28px,
+      $color: var(--normal-fg-10, #0b0a21)
+    );
+  }
+
+  &__board-close {
+    flex: 0 0 24px;
+    width: 24px;
+    height: 24px;
+    cursor: pointer;
+    opacity: 0.6;
+
+    &:hover {
+      opacity: 1;
+    }
+  }
+
+  &__board-field {
+    gap: 10px;
+  }
+
+  &__board-label {
+    @include drumee.typo(
+      $size: 16px,
+      $weight: 600,
+      $line: 22px,
+      $color: var(--normal-fg-10, #0b0a21)
+    );
+  }
+
+  &__board-input input {
+    width: 100%;
+    height: 48px;
+    padding: 0 16px;
+    box-sizing: border-box;
+    border: none;
+    border-radius: 12px;
+    background: var(--border-default, rgba(0, 0, 0, 0.05));
+    @include drumee.typo(
+      $size: 14px,
+      $weight: 400,
+      $line: 20px,
+      $color: var(--normal-fg-10, #0b0a21)
+    );
+  }
+
+  // 3×3 colour grid of selectable pills.
+  &__board-colors {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+  }
+
+  &__board-color {
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    box-sizing: border-box;
+    border: 1px solid var(--border-default, rgba(0, 0, 0, 0.12));
+    border-radius: 71px;
+    cursor: pointer;
+    transition: border-color 0.12s, background 0.12s;
+
+    &:hover {
+      background: var(--hover-bg-40, rgba(0, 0, 0, 0.03));
+    }
+    &[data-active="1"] {
+      border-color: var(--col-primary-40, #5950ff);
+      background: var(--overlay-brand, rgba(89, 80, 255, 0.08));
+    }
+  }
+
+  // Hollow ring swatch — the theme colour is the border, per Figma.
+  &__board-color-dot {
+    flex: 0 0 18px;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    border: 2px solid var(--normal-bg-60, #aeaeb2);
+    box-sizing: border-box;
+  }
+
+  &__board-color-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    @include drumee.typo(
+      $size: 14px,
+      $weight: 500,
+      $line: 20px,
+      $color: var(--normal-fg-10, #0b0a21)
+    );
+  }
+
+  &__board-default-row {
+    align-items: center;
+    justify-content: space-between;
+    cursor: pointer;
+  }
+
+  &__board-default-label {
+    @include drumee.typo(
+      $size: 16px,
+      $weight: 600,
+      $line: 22px,
+      $color: var(--normal-fg-10, #0b0a21)
+    );
+  }
+
+  // Pill switch.
+  &__board-toggle {
+    position: relative;
+    flex: 0 0 40px;
+    width: 40px;
+    height: 22px;
+    border-radius: 12px;
+    background: var(--normal-bg-70, #d1d1d6);
+    transition: background 0.15s;
+
+    &[data-on="1"] {
+      background: var(--col-primary-40, #5950ff);
+    }
+  }
+
+  &__board-toggle-knob {
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: #fff;
+    transition: left 0.15s;
+  }
+
+  &__board-toggle[data-on="1"] &__board-toggle-knob {
+    left: 20px;
+  }
+
+  &__board-submit {
+    padding: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    border-radius: 12px;
+    cursor: pointer;
+    background: var(--col-primary-40, #5950ff);
+    @include drumee.typo($size: 16px, $weight: 600, $line: 22px, $color: #fff);
+
+    &:hover {
+      opacity: 0.92;
+    }
+  }
+
+  // Figma backdrop is a light blurred wash, not a dark scrim.
   &__create-backdrop {
     position: absolute;
     inset: 0;
-    background: var(--overlay-bg, rgba(11, 10, 33, 0.4));
-    backdrop-filter: blur(2px);
+    background: rgba(250, 250, 250, 0.05);
+    backdrop-filter: blur(30px);
     align-items: center;
     justify-content: center;
     animation: tasks-panel-fade-in 0.15s ease;
@@ -543,13 +1056,15 @@ color-mix(in srgb, var(--col-accent, transparent) 60%, var(--normal-bg-80, rgba(
 
   &__create-modal {
     position: relative; // positioning context for the file-drop overlay
-    width: 720px;
+    width: 800px;
     max-width: 94%;
-    max-height: 80vh;
-    background: var(--normal-bg-90, #f2f2f7);
-    border: 1px solid var(--border-default, rgba(0, 0, 0, 0.05));
-    border-radius: 12px;
-    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+    max-height: 88vh;
+    background: var(--normal-bg-elevated, #fff);
+    border: 1px solid rgba(0, 0, 0, 0.05);
+    border-radius: 24px;
+    box-shadow:
+      0px 25px 50px -12px rgba(0, 0, 0, 0.25),
+      0px 1px 11px 0px rgba(0, 0, 0, 0.13);
     overflow: hidden;
     animation: tasks-panel-pop-in 0.18s cubic-bezier(0.2, 0, 0, 1);
   }
@@ -557,8 +1072,8 @@ color-mix(in srgb, var(--col-accent, transparent) 60%, var(--normal-bg-80, rgba(
   &__create-form {
     flex: 1 1 auto;
     min-height: 0;
-    padding: 20px;
-    gap: 16px;
+    padding: 32px;
+    gap: 32px;
     box-sizing: border-box;
   }
 
@@ -567,7 +1082,7 @@ color-mix(in srgb, var(--col-accent, transparent) 60%, var(--normal-bg-80, rgba(
   // and a fixed footer.
   &__modal-body {
     align-items: stretch;
-    gap: 24px;
+    gap: 32px;
     flex: 1 1 auto;
     min-height: 0;
     overflow-y: auto;
@@ -588,38 +1103,61 @@ color-mix(in srgb, var(--col-accent, transparent) 60%, var(--normal-bg-80, rgba(
   &__modal-main {
     flex: 1 1 auto;
     min-width: 0;
-    gap: 16px;
+    gap: 24px;
   }
 
+  // Figma right rail is a plain column (no card border/background).
   &__modal-side {
-    flex: 0 0 256px;
-    width: 256px;
-    gap: 16px;
-    padding: 14px;
+    flex: 0 0 320px;
+    width: 320px;
+    gap: 24px;
     box-sizing: border-box;
-    border-radius: 10px;
-    border: 1px solid var(--border-muted, rgba(11, 10, 33, 0.06));
-    background: var(--normal-bg-elevated, #fff);
     align-self: flex-start;
   }
 
-  @media (max-width: 650px) {
-    &__modal-body {
-      flex-direction: column;
-      overflow-y: auto;
-      gap: 16px;
-    }
-    &__modal-side {
-      flex: 1 1 auto;
-      width: 100%;
-    }
+  // Per-modal column metrics (Figma: create 289 / gap 32, detail 358 / gap 24).
+  &__create-modal &__modal-side {
+    flex-basis: 289px;
+    width: 289px;
+    gap: 32px;
+  }
+  &__create-modal &__modal-main {
+    gap: 32px;
+  }
+  // Detail sidebar: wider than create's, with the Figma purple accent rail.
+  &__detail-panel &__modal-side {
+    flex-basis: 380px;
+    width: 380px;
+    padding: 0 24px;
+    box-sizing: border-box;
+    border-left: 3px solid var(--col-primary-40, #5950ff);
+    max-height: 100%;
+    overflow-y: auto; // short windows: sidebar scrolls alone, Save stays reachable
   }
 
-  // Prominent issue title (Jira-style) — bigger than the body inputs.
+  // Detail modal: only the LEFT column scrolls (Figma) — the shared body
+  // scrollbar dragged the sidebar along and parked an ugly bar at the panel
+  // edge. The create modal keeps the shared body scroll.
+  &__detail-panel &__modal-body {
+    overflow: hidden;
+  }
+
+  &__detail-panel &__modal-main {
+    overflow-y: auto;
+    min-height: 0;
+    padding-right: 8px; // breathing room so the scrollbar clears the content
+  }
+
+  // Mobile refinements for the popups (plus Gantt & List) live in ONE
+  // consolidated `@media (max-width: 650px)` block at the very end of this
+  // root — placed last so it wins the source-order tie against the desktop
+  // rules below (media queries add no specificity of their own).
+
+  // Title field value matches the Figma input text (16px regular).
   &__create-title-input textarea {
     @include drumee.typo(
       $size: 16px,
-      $weight: 600,
+      $weight: 400,
       $line: 22px,
       $color: var(--normal-fg-10, #0b0a21)
     );
@@ -635,7 +1173,9 @@ color-mix(in srgb, var(--col-accent, transparent) 60%, var(--normal-bg-80, rgba(
 
     .tasks-panel__desc-editor {
       height: 100%;
-      min-height: 160px;
+      // Jira-style tall description: the box takes the bulk of the modal's
+      // main column so the create form reads description-first.
+      min-height: 240px;
       max-height: none;
     }
   }
@@ -646,49 +1186,43 @@ color-mix(in srgb, var(--col-accent, transparent) 60%, var(--normal-bg-80, rgba(
   }
 
   &__create-title {
-    font-family: Manrope, system-ui, sans-serif;
-    font-weight: 700;
-    font-size: 18px;
-    line-height: 24px;
-    color: var(--normal-fg-10, #0b0a21);
+    @include drumee.typo(
+      $size: 24px,
+      $weight: 600,
+      $line: 26px,
+      $color: var(--normal-fg-20, #34343a)
+    );
   }
 
   &__create-close {
     flex-shrink: 0;
-    width: 24px;
-    height: 24px;
-    padding: 4px;
-    border-radius: 6px;
-    color: var(--normal-fg-50, #84848c);
+    color: var(--normal-fg-50, #65656c);
     cursor: pointer;
-    transition:
-      background 0.15s,
-      color 0.15s;
     overflow: hidden;
     font-size: 0;
+    transition: opacity 0.15s;
 
     svg {
-      width: 16px;
-      height: 16px;
+      width: 14px;
+      height: 14px;
       display: block;
     }
 
     &:hover {
-      color: var(--normal-fg-10, #0b0a21);
-      background: var(--overlay-bg-05, rgba(0, 0, 0, 0.06));
+      opacity: 0.7;
     }
   }
 
   &__create-field {
-    gap: 6px;
+    gap: 12px;
   }
 
   &__create-label {
     @include drumee.typo(
-      $size: 12px,
-      $weight: 500,
-      $line: 16px,
-      $color: var(--normal-fg-20, #65656c)
+      $size: 16px,
+      $weight: 400,
+      $line: 22px,
+      $color: var(--normal-fg-10, #0b0a21)
     );
   }
 
@@ -701,36 +1235,33 @@ color-mix(in srgb, var(--col-accent, transparent) 60%, var(--normal-bg-80, rgba(
     input,
     textarea {
       width: 100%;
-      padding: 8px 10px;
-      border: 1px solid var(--border-default, rgba(0, 0, 0, 0.08));
-      border-radius: 6px;
+      padding: 12px;
+      border: 0;
+      border-radius: 8px;
       outline: none;
-      background: var(--normal-bg-elevated, #ffffff);
+      background: var(--overlay-bg-05, rgba(0, 0, 0, 0.05));
       box-sizing: border-box;
       @include drumee.typo(
-        $size: 13px,
-        $weight: 500,
-        $line: 18px,
+        $size: 16px,
+        $weight: 400,
+        $line: 22px,
         $color: var(--normal-fg-10, #0b0a21)
       );
-      transition:
-        border-color 0.15s,
-        box-shadow 0.15s;
+      transition: box-shadow 0.15s;
 
       &:focus {
-        border-color: var(--active-border, #433cc5);
-        box-shadow: 0 0 0 3px rgba(67, 60, 197, 0.12);
+        box-shadow: 0 0 0 2px rgba(67, 60, 197, 0.35);
       }
 
       &::placeholder {
-        color: var(--placeholder-fg, #aeaeb2);
-        font-weight: 400;
+        color: var(--normal-fg-40, #84848c);
       }
 
       &.flatpickr-input,
       &[readonly] {
         cursor: pointer;
         caret-color: transparent;
+        border-radius: 4px;
       }
     }
 
@@ -749,45 +1280,85 @@ color-mix(in srgb, var(--col-accent, transparent) 60%, var(--normal-bg-80, rgba(
 
   &__create-status {
     flex-wrap: wrap;
-    gap: 6px;
+    gap: 8px;
   }
 
-  &__create-status-pill {
-    @include drumee.typo(
-      $size: 14px,
-      $weight: 600,
-      $line: 20px,
-      $color: var(--normal-fg-50, #65656c)
-    );
-    padding: 5px 12px;
-    border: 1px solid var(--border-default, rgba(0, 0, 0, 0.08));
-    border-radius: 100px;
-    background: var(--normal-bg-elevated, #ffffff);
+  // Status pills (create + detail) — leading dot + label, radius 16; the
+  // selected pill fills with the status overlay, the rest are outlined.
+  &__create-status-pill,
+  &__detail-status-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    height: 24px;
+    padding: 4px 12px;
+    border-radius: 16px;
+    box-sizing: border-box;
+    border: 1px solid rgba(0, 0, 0, 0.05);
+    background: transparent;
+    white-space: nowrap;
     cursor: pointer;
     user-select: none;
+    @include drumee.typo(
+      $size: 12px,
+      $weight: 500,
+      $line: 20px,
+      $color: var(--normal-fg-10, #0b0a21)
+    );
     transition:
-      border-color 0.15s,
-      color 0.15s,
-      background 0.15s;
+      background 0.15s,
+      border-color 0.15s;
+
+    &::before {
+      content: "";
+      flex: 0 0 8px;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #aeaeb2;
+    }
+    &[data-status="in_progress"]::before {
+      background: #5950ff;
+    }
+    &[data-status="to_review"]::before {
+      background: #e8a13b;
+    }
+    &[data-status="complete"]::before {
+      background: #54b684;
+    }
 
     &:hover {
-      background: var(--normal-bg-90, #f2f2f7);
+      background: rgba(0, 0, 0, 0.03);
     }
 
     &[data-active="1"] {
-      background: var(--normal-bg-elevated, #ffffff);
-      color: var(--normal-fg-10, #0b0a21);
+      border-color: transparent;
+    }
+    &[data-status="todo"][data-active="1"] {
+      background: rgba(0, 0, 0, 0.05);
+    }
+    &[data-status="in_progress"][data-active="1"] {
+      background: rgba(89, 80, 255, 0.1);
+    }
+    &[data-status="to_review"][data-active="1"] {
+      background: rgba(232, 161, 59, 0.15);
+    }
+    &[data-status="complete"][data-active="1"] {
+      background: rgba(61, 222, 140, 0.15);
     }
   }
 
   &__create-actions {
-    align-items: center;
-    justify-content: flex-end;
+    align-items: stretch;
     gap: 8px;
-    margin-top: 4px;
   }
 
   &__create-cancel {
+    flex: 1 1 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
     @include drumee.typo(
       $size: 14px,
       $weight: 600,
@@ -795,7 +1366,9 @@ color-mix(in srgb, var(--col-accent, transparent) 60%, var(--normal-bg-80, rgba(
       $color: var(--normal-fg-50, #65656c)
     );
     padding: 8px 16px;
+    border: 1px solid var(--border-default, rgba(0, 0, 0, 0.12));
     border-radius: 4px;
+    box-sizing: border-box;
     cursor: pointer;
     user-select: none;
     transition:
@@ -809,14 +1382,24 @@ color-mix(in srgb, var(--col-accent, transparent) 60%, var(--normal-bg-80, rgba(
   }
 
   &__create-submit {
+    flex: 1 1 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    min-height: 38px;
     @include drumee.typo(
       $size: 14px,
       $weight: 600,
       $line: 20px,
-      $color: #e4e3ff
+      $color: #ffffff
     );
     padding: 8px 16px;
+    // Transparent border so the box model matches the outlined Cancel exactly
+    // (same height/width) and both read as a balanced pair.
+    border: 1px solid transparent;
     border-radius: 4px;
+    box-sizing: border-box;
     background: #433cc5;
     cursor: pointer;
     user-select: none;
@@ -892,37 +1475,49 @@ color-mix(in srgb, var(--col-accent, transparent) 60%, var(--normal-bg-80, rgba(
   &__detail-backdrop {
     position: absolute;
     inset: 0;
-    background: var(--overlay-bg, rgba(11, 10, 33, 0.4));
-    backdrop-filter: blur(2px);
+    background: rgba(250, 250, 250, 0.05);
+    backdrop-filter: blur(30px);
     align-items: center;
     justify-content: center;
     animation: tasks-panel-fade-in 0.15s ease;
   }
 
+  // Near-full-window issue view (Figma 2040-14173) — proportional to the
+  // window (no px cap: on wide monitors a cap reads as a small dialog).
   &__detail-panel {
     position: relative; // positioning context for the file-drop overlay
-    width: 720px;
-    max-width: 94%;
-    max-height: 80vh;
-    padding: 20px;
-    gap: 16px;
+    width: calc(100% - 80px);
+    height: calc(100% - 64px);
+    max-height: none;
+    padding: 32px;
+    gap: 32px;
     box-sizing: border-box;
-    background: var(--normal-bg-90, #f2f2f7);
-    border: 1px solid var(--border-default, rgba(0, 0, 0, 0.05));
-    border-radius: 12px;
-    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+    background: var(--normal-bg-elevated, #fff);
+    border: 1px solid rgba(0, 0, 0, 0.05);
+    border-radius: 24px;
+    box-shadow:
+      0px 25px 50px -12px rgba(0, 0, 0, 0.25),
+      0px 1px 11px 0px rgba(0, 0, 0, 0.13);
     overflow: hidden;
     animation: tasks-panel-pop-in 0.18s cubic-bezier(0.2, 0, 0, 1);
   }
 
+  // Description | Files two-up row atop the detail main column.
+  &__detail-top {
+    flex: 0 0 auto;
+    align-items: stretch;
+    gap: 32px;
+
+    & > * {
+      flex: 1 1 0;
+      min-width: 0;
+    }
+  }
+
   &__detail-header {
-    align-items: flex-start;
+    align-items: center;
     justify-content: space-between;
-    gap: 8px;
-    // Full-bleed divider under the title (Jira-style zoned header).
-    margin: 0 -20px;
-    padding: 0 20px 14px;
-    border-bottom: 1px solid var(--border-muted, rgba(11, 10, 33, 0.08));
+    gap: 12px;
   }
 
   &__detail-title {
@@ -939,10 +1534,10 @@ color-mix(in srgb, var(--col-accent, transparent) 60%, var(--normal-bg-80, rgba(
       outline: none;
       background: transparent;
       @include drumee.typo(
-        $size: 16px,
+        $size: 24px,
         $weight: 600,
-        $line: 22px,
-        $color: var(--normal-fg-10, #0b0a21)
+        $line: 26px,
+        $color: var(--normal-fg-20, #34343a)
       );
       transition:
         background 0.15s,
@@ -973,109 +1568,113 @@ color-mix(in srgb, var(--col-accent, transparent) 60%, var(--normal-bg-80, rgba(
 
   &__detail-close {
     flex-shrink: 0;
-    width: 24px;
-    height: 24px;
-    padding: 4px;
-    border-radius: 6px;
-    color: var(--normal-fg-50, #84848c);
+    color: var(--normal-fg-50, #65656c);
     cursor: pointer;
-    transition:
-      background 0.15s,
-      color 0.15s;
     overflow: hidden;
     font-size: 0;
+    transition: opacity 0.15s;
 
     svg {
-      width: 16px;
-      height: 16px;
+      width: 14px;
+      height: 14px;
       display: block;
     }
 
     &:hover {
-      color: var(--normal-fg-10, #0b0a21);
-      background: var(--overlay-bg-05, rgba(0, 0, 0, 0.06));
+      opacity: 0.7;
     }
   }
 
   &__detail-label {
     @include drumee.typo(
-      $size: 11px,
-      $weight: 600,
-      $line: 14px,
-      $color: var(--normal-fg-50, #65656c)
+      $size: 16px,
+      $weight: 400,
+      $line: 22px,
+      $color: var(--normal-fg-10, #0b0a21)
     );
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
   }
 
   &__detail-status {
     flex-wrap: wrap;
-    gap: 6px;
+    gap: 8px;
   }
 
-  &__detail-status-pill {
-    @include drumee.typo(
-      $size: 12px,
-      $weight: 500,
-      $line: 16px,
-      $color: var(--normal-fg-50, #65656c)
-    );
-    padding: 5px 12px;
-    border: 1px solid var(--border-default, #d1d1d6);
-    border-radius: 100px;
-    cursor: pointer;
-    user-select: none;
-    transition:
-      border-color 0.15s,
-      color 0.15s,
-      background 0.15s;
-
-    &:hover {
-      background: var(--overlay-bg-05, rgba(0, 0, 0, 0.03));
-    }
-
-    &[data-active="1"] {
-      background: rgba(250, 133, 64, 0.08);
-      font-weight: 600;
-    }
-  }
+  // (status-pill styling is shared with __create-status-pill above)
 
   &__detail-due-row {
-    align-items: center;
-    gap: 10px;
+    align-items: stretch;
+    gap: 12px;
   }
 
-  &__detail-due-input {
+  // Due-date field (Figma): a single grey box with the date(s) left-aligned and
+  // a calendar glyph pinned right. Duration OFF shows one date; ON shows the
+  // range "dd/mm/yyyy  →  dd/mm/yyyy" in the same box (flatpickr range mode).
+  &__due-input {
     flex: 1 1 auto;
-    background: transparent;
     position: relative;
     box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    border-radius: 6px;
+
+    &:focus-within {
+      box-shadow: 0 0 0 2px rgba(67, 60, 197, 0.35);
+    }
+
+    // Calendar icon (decorative — clicking the field opens flatpickr anyway).
+    &::after {
+      content: "";
+      position: absolute;
+      right: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 16px;
+      height: 16px;
+      pointer-events: none;
+      background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2384848c' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='4' width='18' height='18' rx='2'/%3E%3Cline x1='16' y1='2' x2='16' y2='6'/%3E%3Cline x1='8' y1='2' x2='8' y2='6'/%3E%3Cline x1='3' y1='10' x2='21' y2='10'/%3E%3C/svg%3E")
+        no-repeat center / contain;
+    }
 
     input {
       width: 100%;
-      padding: 8px 10px;
-      border: 1px solid var(--border-default, #d1d1d6);
+      // Right pad reserves room for the calendar icon.
+      padding: 12px 36px 12px 12px;
+      border: 0;
       border-radius: 6px;
       outline: none;
       box-sizing: border-box;
-      background: var(--normal-bg-elevated, transparent);
+      background: transparent;
       @include drumee.typo(
-        $size: 13px,
-        $weight: 500,
-        $line: 18px,
+        $size: 16px,
+        $weight: 400,
+        $line: 22px,
         $color: var(--normal-fg-10, #0b0a21)
       );
 
-      &:focus {
-        border-color: #fa8540;
-        box-shadow: 0 0 0 3px rgba(250, 133, 64, 0.15);
+      &::placeholder {
+        color: var(--normal-fg-40, #84848c);
       }
 
       &.flatpickr-input,
       &[readonly] {
         cursor: pointer;
         caret-color: transparent;
+        background: var(--overlay-bg-05, rgba(0, 0, 0, 0.05));
       }
+    }
+  }
+
+  // Live duration readout ("N days"), shown beside the Duration label.
+  &__due-summary {
+    @include drumee.typo(
+      $size: 12px,
+      $weight: 500,
+      $line: 16px,
+      $color: var(--normal-fg-40, #84848c)
+    );
+
+    &:empty {
+      display: none;
     }
   }
 
@@ -1190,7 +1789,7 @@ color-mix(in srgb, var(--col-accent, transparent) 60%, var(--normal-bg-80, rgba(
         }
 
         &:hover {
-          background: #d65f59;
+          background: #d74e49;
         }
       }
 
@@ -1232,8 +1831,8 @@ color-mix(in srgb, var(--col-accent, transparent) 60%, var(--normal-bg-80, rgba(
     }
 
     &:hover {
-      color: #d65f59;
-      background: rgba(214, 95, 89, 0.1);
+      color: #d74e49;
+      background: rgba(215, 78, 73, 0.1);
     }
   }
 
@@ -1262,119 +1861,195 @@ color-mix(in srgb, var(--col-accent, transparent) 60%, var(--normal-bg-80, rgba(
     white-space: nowrap;
   }
 
-  // ── Card assignee avatar (top-right of the card) ──────────────
-  // Multi-assignee avatar stack on the card (overlapping circles + "+N").
-  // Assignee list — full-width footer block (avatar + name per person),
-  // wrapping to new lines when there are several.
-  &__task-assignees {
-    flex-direction: row;
-    flex-wrap: wrap;
+  // ── Card assignee avatars — overlapping 28px circles + "+N" chip ──
+  &__task-avatars {
     align-items: center;
-    gap: 6px 10px;
-    margin-top: 6px;
-  }
-
-  // One assignee chip: avatar next to the name.
-  &__task-assignee-item {
-    align-items: center;
-    gap: 6px;
-    min-width: 0; // let the name truncate instead of overflowing the card
-    max-width: 100%;
-  }
-
-  &__task-assignee {
-    width: 20px;
-    height: 20px;
     flex-shrink: 0;
+    margin-left: auto; // always pushed to the card's right edge
+  }
+
+  &__task-avatar {
+    flex: 0 0 28px;
+    width: 28px;
+    height: 28px;
     border-radius: 50%;
     overflow: hidden;
-  }
-
-  &__task-assignee-name {
-    min-width: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    @include drumee.typo(
-      $size: 12px,
-      $weight: 500,
-      $line: 16px,
-      $color: var(--normal-fg-20, #4a4a55)
-    );
-  }
-
-  &__task-assignee-more {
-    flex-shrink: 0;
-    height: 20px;
-    min-width: 20px;
-    padding: 0 6px;
-    border-radius: 12px;
+    border: 2px solid #fff;
     box-sizing: border-box;
-    display: flex;
+    margin-left: -8px;
+
+    &:first-child {
+      margin-left: 0;
+    }
+  }
+
+  &__task-avatar-more {
+    flex: 0 0 28px;
+    width: 28px;
+    height: 28px;
+    margin-left: -8px;
+    border-radius: 200px;
+    border: 2px solid #fff;
+    background: #e4e3ff;
+    box-sizing: border-box;
+    display: inline-flex;
     align-items: center;
     justify-content: center;
-    background: var(--normal-bg-80, rgba(0, 0, 0, 0.06));
-    @include drumee.typo(
-      $size: 11px,
-      $weight: 600,
-      $line: 1,
-      $color: var(--normal-fg-30, #5a5a66)
-    );
+    @include drumee.typo($size: 11px, $weight: 600, $line: 16px, $color: #433cc5);
   }
 
   // ── Priority pills (create + detail) ──────────────────────────
   &__priority-pills {
     flex-wrap: wrap;
-    gap: 6px;
+    gap: 8px;
   }
 
+  // Priority pills (create + detail) — radius 100; selected fills solid with
+  // white text, unselected is outlined with dark text (matches Figma).
   &__priority-pill {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: 24px;
+    padding: 2px 16px;
+    border-radius: 100px;
+    box-sizing: border-box;
+    border: 1px solid rgba(0, 0, 0, 0.05);
+    background: transparent;
+    white-space: nowrap;
+    cursor: pointer;
+    user-select: none;
     @include drumee.typo(
       $size: 12px,
       $weight: 500,
-      $line: 16px,
-      $color: var(--normal-fg-50, #84848c)
+      $line: 20px,
+      $color: var(--normal-fg-10, #0b0a21)
     );
-    padding: 4px 10px;
-    border: 1px solid var(--border-default, #d6d6dc);
-    border-radius: 12px;
-    cursor: pointer;
     transition:
+      background 0.15s,
       border-color 0.15s,
       color 0.15s;
 
-    &[data-active="1"] {
-      font-weight: 600;
-    }
     &:hover {
-      border-color: #fa8540;
-      color: #fa8540;
+      background: rgba(0, 0, 0, 0.03);
+    }
+
+    &[data-active="1"] {
+      border-color: transparent;
+      color: #ffffff;
+    }
+    &[data-priority="low"][data-active="1"] {
+      background: #54b684;
+    }
+    &[data-priority="medium"][data-active="1"] {
+      background: #71a3f4;
+    }
+    &[data-priority="high"][data-active="1"] {
+      background: #e8a13b;
+    }
+    &[data-priority="urgent"][data-active="1"] {
+      background: #d74e49;
     }
   }
 
   // ── Detail panel rows ─────────────────────────────────────────
   &__detail-row {
     align-items: stretch;
-    gap: 4px;
-    margin-top: 6px;
+    gap: 12px;
   }
 
   // ── Assignee button ───────────────────────────────────────────
+  // Figma assignee control: an underline input (bottom border only) holding
+  // chips/avatars; clicking opens the member picker.
   &__assignee-button {
     align-items: center;
+    flex-wrap: wrap;
     gap: 8px;
-    padding: 6px 10px;
-    border: 1px solid var(--border-default, #d6d6dc);
-    border-radius: 6px;
+    padding: 16px 0 4px;
+    border: 0;
+    border-bottom: 1px solid var(--normal-fg-30, #84848c);
+    border-radius: 0;
     cursor: pointer;
     transition: border-color 0.15s;
 
-    &:hover {
-      border-color: #fa8540;
-    }
+    &:hover,
     &[data-open="1"] {
-      border-color: #fa8540;
+      border-bottom-color: var(--active-border, #433cc5);
     }
+  }
+
+  // Empty-state placeholder ("Search for people, enter to add").
+  &__assignee-placeholder {
+    flex: 1 1 auto;
+    @include drumee.typo(
+      $size: 12px,
+      $weight: 400,
+      $line: 16px,
+      $color: var(--normal-fg-30, #84848c)
+    );
+  }
+
+  // Selected-member chip: avatar + name + ✕ (brand-overlay pill).
+  &__assignee-chip {
+    align-items: center;
+    gap: 8px;
+    padding: 4px 8px;
+    border-radius: 4px;
+    background: var(--hover-bg-40, rgba(89, 80, 255, 0.1));
+  }
+
+  &__assignee-chip-avatar {
+    width: 17px;
+    height: 17px;
+    border-radius: 50%;
+    overflow: hidden;
+    flex-shrink: 0;
+  }
+
+  &__assignee-chip-name {
+    @include drumee.typo(
+      $size: 12px,
+      $weight: 400,
+      $line: 16px,
+      $color: var(--accent, #433cc5)
+    );
+  }
+
+  &__assignee-chip-remove {
+    width: 14px;
+    height: 14px;
+    flex-shrink: 0;
+    cursor: pointer;
+    overflow: hidden;
+    font-size: 0;
+    color: var(--accent, #433cc5);
+
+    svg {
+      width: 10px;
+      height: 10px;
+      display: block;
+    }
+  }
+
+  &__assignee-more {
+    padding: 4px 8px;
+    border-radius: 4px;
+    background: var(--hover-bg-40, rgba(89, 80, 255, 0.1));
+    @include drumee.typo(
+      $size: 12px,
+      $weight: 600,
+      $line: 16px,
+      $color: var(--accent, #433cc5)
+    );
+  }
+
+  &__assignee-add {
+    @include drumee.typo(
+      $size: 12px,
+      $weight: 400,
+      $line: 16px,
+      $color: var(--normal-fg-30, #84848c)
+    );
   }
 
   // Stack of assignee avatars inside the picker button (overlapping).
@@ -1510,6 +2185,33 @@ color-mix(in srgb, var(--col-accent, transparent) 60%, var(--normal-bg-80, rgba(
     }
   }
 
+  // Description box matches the Figma filled input (grey fill, no border,
+  // radius 8, 12px padding, 16px text).
+  &__desc-editor {
+    border: 0;
+    border-radius: 8px;
+    padding: 12px;
+    background: var(--overlay-bg-05, rgba(0, 0, 0, 0.05));
+    @include drumee.typo(
+      $size: 16px,
+      $weight: 400,
+      $line: 22px,
+      $color: var(--normal-fg-10, #0b0a21)
+    );
+
+    &:focus {
+      border: 0;
+      box-shadow: 0 0 0 2px rgba(67, 60, 197, 0.35);
+    }
+  }
+
+  // Detail-panel description: taller box (Jira issue-view ratio) filling its
+  // half of the description/files row, instead of the compact base height.
+  &__detail-top &__desc-editor {
+    min-height: 200px;
+    max-height: 340px;
+  }
+
   // The comment composer/edit/reply inputs are shorter than the description.
   &__comment-input,
   &__comment-edit-input,
@@ -1591,10 +2293,100 @@ color-mix(in srgb, var(--col-accent, transparent) 60%, var(--normal-bg-80, rgba(
 
   // ── Comments ──────────────────────────────────────────────────
   &__comments {
-    gap: 10px;
-    margin-top: 8px;
-    padding-top: 16px;
-    border-top: 1px solid var(--border-muted, rgba(11, 10, 33, 0.08));
+    gap: 12px;
+  }
+
+  // Due-date "Duration" toggle (40×20 per Figma). ON reveals a start-date
+  // picker; the task then spans start_date .. due_date.
+  &__due-head {
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  &__due-duration {
+    align-items: center;
+    gap: 8px;
+  }
+
+  &__due-duration-label {
+    @include drumee.typo(
+      $size: 16px,
+      $weight: 400,
+      $line: 22px,
+      $color: var(--normal-fg-10, #0b0a21)
+    );
+  }
+
+  &__toggle {
+    flex: 0 0 40px;
+    width: 40px;
+    height: 20px;
+    border-radius: 12px;
+    background: var(--normal-bg-70, #d1d1d6);
+    align-items: center;
+    padding: 2px;
+    box-sizing: border-box;
+    transition: background 0.15s;
+
+    &[data-on="1"] {
+      background: var(--accent, #433cc5);
+      justify-content: flex-end;
+    }
+  }
+
+  &__toggle-knob {
+    flex: 0 0 16px;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: #fff;
+  }
+
+  // Activity header (title + All / Comments / History tabs).
+  &__activity-head {
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  &__activity-title {
+    @include drumee.typo(
+      $size: 16px,
+      $weight: 400,
+      $line: 22px,
+      $color: var(--normal-fg-10, #0b0a21)
+    );
+  }
+
+  &__activity-tabs {
+    align-items: center;
+    gap: 4px;
+  }
+
+  &__activity-tab {
+    align-items: center;
+    gap: 4px;
+    padding: 6px 12px;
+    border-radius: 71px;
+    cursor: pointer;
+    @include drumee.typo(
+      $size: 13px,
+      $weight: 600,
+      $line: 16px,
+      $color: var(--normal-fg-10, #0b0a21)
+    );
+
+    &[data-active="1"] {
+      background: var(--hover-bg-40, rgba(89, 80, 255, 0.1));
+    }
+    &:hover {
+      background: var(--overlay-bg-05, rgba(0, 0, 0, 0.04));
+    }
+  }
+
+  &__activity-tab-ico {
+    width: 16px;
+    height: 16px;
+    flex: 0 0 16px;
   }
 
   &__comment-list {
@@ -1610,15 +2402,19 @@ color-mix(in srgb, var(--col-accent, transparent) 60%, var(--normal-bg-80, rgba(
     );
   }
 
+  // Bordered comment card (Figma Activity: 1px border, radius 12, padding 16).
   &__comment-row {
-    gap: 8px;
+    gap: 12px;
     align-items: flex-start;
     min-width: 0; // let the body column shrink + wrap instead of overflowing
+    padding: 16px;
+    border: 1px solid var(--border-default, rgba(0, 0, 0, 0.1));
+    border-radius: 12px;
   }
 
   &__comment-avatar {
-    width: 28px;
-    height: 28px;
+    width: 32px;
+    height: 32px;
     border-radius: 50%;
     overflow: hidden;
     flex-shrink: 0;
@@ -1627,29 +2423,29 @@ color-mix(in srgb, var(--col-accent, transparent) 60%, var(--normal-bg-80, rgba(
   &__comment-main {
     flex: 1 1 auto;
     min-width: 0;
-    gap: 3px;
+    gap: 8px;
   }
 
   &__comment-head {
-    align-items: baseline;
+    align-items: center;
     gap: 8px;
   }
 
   &__comment-author {
     @include drumee.typo(
-      $size: 13px,
+      $size: 16px,
       $weight: 600,
-      $line: 18px,
+      $line: 22px,
       $color: var(--normal-fg-10, #0b0a21)
     );
   }
 
   &__comment-time {
     @include drumee.typo(
-      $size: 11px,
+      $size: 12px,
       $weight: 400,
       $line: 16px,
-      $color: var(--normal-fg-40, #84848c)
+      $color: var(--normal-fg-50, #65656c)
     );
   }
 
@@ -1661,9 +2457,9 @@ color-mix(in srgb, var(--col-accent, transparent) 60%, var(--normal-bg-80, rgba(
     word-break: break-word;
     overflow-wrap: anywhere; // break long unbroken strings / URLs
     @include drumee.typo(
-      $size: 13px,
+      $size: 14px,
       $weight: 400,
-      $line: 19px,
+      $line: 20px,
       $color: var(--normal-fg-10, #0b0a21)
     );
   }
@@ -1687,34 +2483,93 @@ color-mix(in srgb, var(--col-accent, transparent) 60%, var(--normal-bg-80, rgba(
     }
   }
 
+  // Composer sits at the top of the feed with a divider beneath (Figma).
+  // Composer row (Figma 2034-62457): avatar · field · paperclip/@/send.
   &__comment-composer {
-    gap: 6px;
-    margin-top: 4px;
-  }
+    align-items: center;
+    gap: 12px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--border-default, rgba(0, 0, 0, 0.1));
 
-  &__comment-submit {
-    align-self: flex-end;
-    padding: 6px 16px;
-    border-radius: 6px;
-    cursor: pointer;
-    background: var(--accent, #fa8540);
-    @include drumee.typo(
-      $size: 13px,
-      $weight: 600,
-      $line: 16px,
-      $color: #fff
-    );
-
-    &:hover {
-      opacity: 0.92;
+    // The mention field grows between the avatar and the icon cluster.
+    & > *:nth-child(2) {
+      flex: 1 1 auto;
+      min-width: 0;
     }
   }
 
-  // Replies are indented under their root comment.
+  &__composer-avatar {
+    flex: 0 0 32px;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    overflow: hidden;
+  }
+
+  &__composer-actions {
+    flex: 0 0 auto;
+    align-items: center;
+    gap: 12px;
+  }
+
+  &__composer-ico {
+    width: 18px;
+    height: 18px;
+    opacity: 0.55;
+    cursor: pointer;
+
+    &:hover {
+      opacity: 1;
+    }
+  }
+
+  &__composer-at {
+    cursor: pointer;
+    opacity: 0.55;
+    @include drumee.typo(
+      $size: 16px,
+      $weight: 600,
+      $line: 20px,
+      $color: var(--normal-fg-10, #0b0a21)
+    );
+
+    &:hover {
+      opacity: 1;
+    }
+  }
+
+  &__composer-send {
+    flex: 0 0 20px;
+    width: 20px;
+    height: 20px;
+    cursor: pointer;
+
+    svg {
+      width: 18px;
+      height: 18px;
+    }
+    &:hover {
+      opacity: 0.8;
+    }
+  }
+
+  // Replies are indented under their root comment with a Figma-style curved
+  // thread connector hanging from the parent's avatar line.
   &__comment-row[data-reply="1"] {
+    position: relative;
     margin-left: 32px;
-    padding-left: 10px;
-    border-left: 2px solid var(--border-default, rgba(0, 0, 0, 0.08));
+
+    &::before {
+      content: "";
+      position: absolute;
+      left: -18px;
+      top: -8px;
+      width: 14px;
+      height: 26px;
+      border-left: 2px solid var(--border-strong, rgba(0, 0, 0, 0.15));
+      border-bottom: 2px solid var(--border-strong, rgba(0, 0, 0, 0.15));
+      border-bottom-left-radius: 10px;
+    }
   }
 
   &__comment-replybox {
@@ -1781,15 +2636,42 @@ color-mix(in srgb, var(--col-accent, transparent) 60%, var(--normal-bg-80, rgba(
 
   // ── View sub-header (Board / List / Summary) ──────────────────
   &__viewbar {
+    // Pinned header: sits above the scrolling board and never scrolls with it.
+    // flex:0 0 auto keeps it its natural height inside the __root column;
+    // sticky + top:0 hold it in place against any residual scroll and keep it
+    // painted above the board's horizontal scrollbar / cards.
     flex: 0 0 auto;
+    position: sticky;
+    top: 0;
+    z-index: 5;
     align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
     gap: 4px;
+    row-gap: 8px;
     padding: 6px 12px;
     border-bottom: 1px solid var(--border-default, rgba(0, 0, 0, 0.08));
-    background: var(--normal-bg-90, #fff);
+    background: var(--normal-bg-elevated, #fff);
+  }
+
+  // Right cluster: view-specific controls + New task / New board / Filter.
+  &__viewbar-right {
+    // Always hug the right edge. The parent viewbar wraps (flex-wrap:wrap) and
+    // uses justify-content:space-between, so once this cluster drops onto its
+    // own line it would otherwise align LEFT (space-between on a lone item =
+    // start). margin-left:auto pins it right on whichever row it lands, and
+    // flex-end keeps its own buttons right-aligned when the cluster itself wraps.
+    margin-left: auto;
+    align-items: center;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    gap: 8px;
   }
 
   &__viewbar-item {
+    // Icon + label row (was a bare text Note).
+    align-items: center;
+    gap: 6px;
     padding: 5px 12px;
     border-radius: 6px;
     cursor: pointer;
@@ -1810,8 +2692,34 @@ color-mix(in srgb, var(--col-accent, transparent) 60%, var(--normal-bg-80, rgba(
     }
   }
 
+  // SVG glyph in front of each view tab's label. pointer-events:none so the
+  // click lands on the __viewbar-item's set-view service; fill:currentColor so
+  // it inherits the tab's text/active color.
+  &__viewbar-item-ico {
+    width: 16px;
+    height: 16px;
+    flex: 0 0 16px;
+    color: currentColor;
+    pointer-events: none;
+
+    svg {
+      width: 16px;
+      height: 16px;
+      display: block;
+      fill: currentColor;
+    }
+  }
+
+  &__viewbar-item-label {
+    pointer-events: none;
+  }
+
+  &__viewbar-tabs {
+    align-items: center;
+    gap: 4px;
+  }
+
   &__viewbar-new {
-    margin-left: auto;
     padding: 5px 12px;
     border-radius: 6px;
     cursor: pointer;
@@ -1823,41 +2731,1046 @@ color-mix(in srgb, var(--col-accent, transparent) 60%, var(--normal-bg-80, rgba(
     }
   }
 
-  // ── List view ─────────────────────────────────────────────────
+  // "+ New board" — outlined pill (Figma 2040-53814).
+  &__viewbar-board {
+    align-items: center;
+    gap: 6px;
+    padding: 5px 12px;
+    border-radius: 71px;
+    cursor: pointer;
+    border: 1px solid var(--border-default, rgba(0, 0, 0, 0.12));
+    background: var(--normal-bg-elevated, #fff);
+
+    &:hover {
+      background: var(--hover-bg-40, rgba(0, 0, 0, 0.03));
+    }
+  }
+
+  &__viewbar-board-ico {
+    width: 14px;
+    height: 14px;
+  }
+
+  &__viewbar-board-label {
+    @include drumee.typo(
+      $size: 13px,
+      $weight: 600,
+      $line: 18px,
+      $color: var(--normal-fg-10, #0b0a21)
+    );
+  }
+
+  // "Filter" pill — moved from the window tab bar into the viewbar.
+  &__viewbar-filter {
+    align-items: center;
+    gap: 6px;
+    padding: 5px 12px;
+    border-radius: 71px;
+    cursor: pointer;
+    border: 1px solid var(--border-default, rgba(0, 0, 0, 0.12));
+    background: var(--normal-bg-elevated, #fff);
+
+    &:hover {
+      background: var(--hover-bg-40, rgba(0, 0, 0, 0.03));
+    }
+    &[data-active="1"] {
+      border-color: var(--col-primary-40, #5950ff);
+      background: var(--overlay-brand, rgba(89, 80, 255, 0.1));
+    }
+  }
+
+  &__viewbar-filter-ico {
+    width: 16px;
+    height: 16px;
+  }
+
+  &__viewbar-filter-label {
+    @include drumee.typo(
+      $size: 13px,
+      $weight: 600,
+      $line: 18px,
+      $color: var(--normal-fg-10, #0b0a21)
+    );
+  }
+
+  // ── Calendar view ──────────────────────── (Figma 2042-20730 / 2045-132117)
+  // Viewbar controls: Weekly/Monthly toggle + ‹ period › navigator.
+  &__cal-controls {
+    align-items: center;
+    gap: 12px;
+  }
+
+  &__cal-toggle {
+    align-items: center;
+    gap: 8px;
+  }
+
+  &__cal-toggle-label {
+    cursor: pointer;
+    @include drumee.typo(
+      $size: 14px,
+      $weight: 400,
+      $line: 20px,
+      $color: var(--normal-fg-30, #65656c)
+    );
+
+    &[data-active="1"] {
+      font-weight: 600;
+      color: var(--normal-fg-10, #0b0a21);
+    }
+  }
+
+  // 40×20 pill switch; knob slides left (weekly) / right (monthly).
+  &__cal-switch {
+    position: relative;
+    flex: 0 0 40px;
+    width: 40px;
+    height: 20px;
+    border-radius: 12px;
+    cursor: pointer;
+    background: var(--normal-bg-70, #d1d1d6);
+    transition: background 0.15s;
+
+    &[data-mode="month"] {
+      background: var(--col-primary-40, #5950ff);
+    }
+  }
+
+  &__cal-switch-knob {
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: #fff;
+    transition: left 0.15s;
+  }
+
+  &__cal-switch[data-mode="month"] &__cal-switch-knob {
+    left: 22px;
+  }
+
+  &__cal-nav {
+    align-items: center;
+    gap: 4px;
+    padding: 4px 8px;
+    border-radius: 71px;
+    background: var(--border-default, rgba(0, 0, 0, 0.05));
+  }
+
+  &__cal-nav-arrow {
+    flex: 0 0 20px;
+    width: 20px;
+    height: 20px;
+    cursor: pointer;
+
+    svg {
+      width: 16px;
+      height: 16px;
+    }
+  }
+
+  &__cal-nav-label {
+    cursor: pointer;
+    padding: 0 4px;
+    white-space: nowrap;
+    @include drumee.typo(
+      $size: 14px,
+      $weight: 600,
+      $line: 20px,
+      $color: var(--normal-fg-10, #0b0a21)
+    );
+  }
+
+  // Grid container. container-type makes the calendar respond to the WINDOW
+  // width (the panel lives in a resizable window, not the viewport).
+  &__calendar {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    padding: 16px;
+    box-sizing: border-box;
+    background: var(--normal-bg-elevated, #fff);
+    container-type: inline-size;
+    container-name: cal;
+    animation: tasks-cal-fade 0.16s ease;
+  }
+
+  &__cal-weekdays {
+    flex: 0 0 auto;
+    padding: 0 0 12px;
+  }
+
+  &__cal-weekday {
+    flex: 1 1 0;
+    min-width: 0;
+    padding-right: 12px;
+    box-sizing: border-box;
+    text-align: right;
+    @include drumee.typo(
+      $size: 14px,
+      $weight: 400,
+      $line: 20px,
+      $color: var(--normal-fg-30, #65656c)
+    );
+  }
+
+  // Single-line gridlines: the grid/rows carry a 1px gap over a border-coloured
+  // background, so adjacent cells never double up their borders.
+  &__cal-grid {
+    flex: 1 1 auto;
+    align-items: stretch;
+    gap: 1px;
+    background: var(--border-default, rgba(0, 0, 0, 0.06));
+    border: 1px solid var(--border-default, rgba(0, 0, 0, 0.06));
+    border-radius: 8px;
+    overflow: hidden;
+  }
+
+  // Each week shares the grid height in month mode; one tall row in week mode.
+  &__cal-week-row {
+    flex: 1 1 0;
+    align-items: stretch;
+    gap: 1px;
+    min-height: 116px;
+    background: var(--border-default, rgba(0, 0, 0, 0.06));
+  }
+
+  &__calendar[data-mode="week"] &__cal-week-row {
+    flex: 1 1 auto;
+    height: 100%;
+    min-height: 0;
+    border: 1px solid var(--border-default, rgba(0, 0, 0, 0.06));
+    border-radius: 8px;
+    overflow: hidden;
+  }
+
+  &__cal-day {
+    flex: 1 1 0;
+    min-width: 0;
+    gap: 6px;
+    padding: 12px;
+    box-sizing: border-box;
+    background: var(--normal-bg-elevated, #fff);
+    overflow: hidden;
+    transition: background 0.12s;
+
+    &:hover {
+      background: var(--hover-bg-40, rgba(0, 0, 0, 0.02));
+    }
+    // Today: light-grey wash on the cell + a filled accent on the number.
+    &[data-today="1"] {
+      background: var(--normal-bg-80, rgba(0, 0, 0, 0.05));
+    }
+    &[data-outside="1"] {
+      background: var(--normal-bg-95, #fafafa);
+    }
+  }
+
+  // Keep these at the `.tasks-panel` top level, NOT nested in `&__cal-day` —
+  // nested, `&__cal-day-add` doubles into `.tasks-panel__cal-day__cal-day-add`
+  // (a non-existent class), so the "+" never reveals and outside days never dim.
+  &__cal-day[data-outside="1"] &__cal-day-num {
+    opacity: 0.4;
+  }
+  &__cal-day:hover &__cal-day-add {
+    opacity: 1;
+  }
+
+  &__cal-day-head {
+    flex: 0 0 auto;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+  }
+
+  // Hover-revealed "add task on this day" affordance (top-left of the cell).
+  // Bare "+" glyph, no background — a brand-purple plus that darkens on hover.
+  &__cal-day-add {
+    flex: 0 0 auto;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    opacity: 0;
+    color: var(--col-primary-40, #5950ff);
+    transition: opacity 0.12s, transform 0.12s, color 0.12s;
+
+    &:hover {
+      transform: scale(1.15);
+      color: var(--col-primary-50, #433cc5);
+    }
+  }
+
+  // "+" text glyph — inherits the button colour.
+  &__cal-day-add-ico {
+    font-size: 17px;
+    font-weight: 700;
+    line-height: 1;
+    color: currentColor;
+    user-select: none;
+  }
+
+  &__cal-day-num {
+    display: flex;
+    min-width: 20px;
+    height: 20px;
+    padding: 0 6px;
+    box-sizing: border-box;
+    justify-content: flex-end;
+    align-items: center;
+    border-radius: 10px;
+    @include drumee.typo(
+      $size: 14px,
+      $weight: 400,
+      $line: 20px,
+      $color: var(--normal-fg-30, #65656c)
+    );
+  }
+
+  // Today's number gets a filled brand pill (the universal "today" cue).
+  &__cal-day[data-today="1"] &__cal-day-num {
+    justify-content: center;
+    color: #fff;
+    font-weight: 600;
+    background: var(--col-primary-40, #5950ff);
+  }
+
+  &__cal-day-body {
+    flex: 1 1 auto;
+    min-height: 0;
+    gap: 6px;
+    overflow-y: auto;
+  }
+
+  // Task card (mirrors the board card: dot, title, desc, file chips, status).
+  &__cal-card {
+    position: relative;
+    flex: 0 0 auto;
+    gap: 8px;
+    padding: 12px;
+    box-sizing: border-box;
+    border: 1px solid var(--border-default, rgba(0, 0, 0, 0.05));
+    border-radius: 12px;
+    background: var(--normal-bg-elevated, #fff);
+    cursor: pointer;
+    transform-origin: center;
+    transition: box-shadow 0.15s, transform 0.15s;
+
+    // Hover lifts the card + shadow (Figma emphasis) and reveals the delete.
+    // A scale() would widen the card past its day-cell column, making the card
+    // (and its top-right X) look like they spill outside — so lift only.
+    &:hover {
+      transform: translateY(-2px);
+      box-shadow:
+        0 6px 16px -2px rgba(12, 12, 13, 0.12),
+        0 2px 6px -1px rgba(12, 12, 13, 0.08);
+    }
+    &:hover &-remove {
+      opacity: 1;
+    }
+  }
+
+  // Hover-revealed delete — transparent by default (no visible square), a
+  // light-red pill only on its OWN hover. Inset so it never spills past the
+  // card edge, even while the card is scaled up on hover.
+  &__cal-card-remove {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    width: 18px;
+    height: 18px;
+    padding: 3px;
+    justify-content: center;
+    align-items: center;
+    border-radius: 6px;
+    color: var(--normal-fg-50, #84848c);
+    background: transparent;
+    opacity: 0;
+    cursor: pointer;
+    overflow: hidden;
+    font-size: 0;
+    transition: opacity 0.12s, color 0.12s, background 0.12s;
+
+    svg {
+      width: 12px;
+      height: 12px;
+      display: block;
+    }
+
+    &:hover {
+      color: #d74e49;
+      background: rgba(215, 78, 73, 0.12);
+    }
+  }
+
+  // Compact month chip: status-tinted single line (dot + title).
+  &__cal-chip {
+    position: relative;
+    flex: 0 0 auto;
+    align-items: center;
+    gap: 6px;
+    padding: 3px 8px;
+    border-radius: 6px;
+    cursor: pointer;
+    background: rgba(174, 174, 178, 0.16);
+    transform-origin: left center;
+    transition: filter 0.12s, transform 0.12s;
+
+    &[data-status="in_progress"] {
+      background: rgba(89, 80, 255, 0.12);
+    }
+    &[data-status="to_review"] {
+      background: rgba(232, 161, 59, 0.15);
+    }
+    &[data-status="complete"] {
+      background: rgba(84, 182, 132, 0.15);
+    }
+    &:hover {
+      filter: brightness(0.97);
+      transform: scale(1.03);
+    }
+    &:hover &-remove {
+      opacity: 1;
+    }
+  }
+
+  // Same treatment on the compact month chip — transparent by default (the
+  // previous white fill showed as an odd square), tint red only on its hover.
+  &__cal-chip-remove {
+    position: absolute;
+    top: 50%;
+    right: 2px;
+    width: 16px;
+    height: 16px;
+    margin-top: -8px;
+    padding: 2px;
+    justify-content: center;
+    align-items: center;
+    border-radius: 4px;
+    color: var(--normal-fg-40, #84848c);
+    background: transparent;
+    opacity: 0;
+    cursor: pointer;
+    overflow: hidden;
+    font-size: 0;
+    transition: opacity 0.12s, color 0.12s, background 0.12s;
+
+    svg {
+      width: 10px;
+      height: 10px;
+      display: block;
+    }
+
+    &:hover {
+      color: #d74e49;
+      background: rgba(215, 78, 73, 0.14);
+    }
+  }
+
+  &__cal-chip-dot {
+    flex: 0 0 6px;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+  }
+
+  &__cal-chip-title {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    @include drumee.typo(
+      $size: 12px,
+      $weight: 500,
+      $line: 16px,
+      $color: var(--normal-fg-10, #0b0a21)
+    );
+  }
+
+  &__cal-day-more {
+    cursor: pointer;
+    padding: 1px 6px;
+    @include drumee.typo(
+      $size: 12px,
+      $weight: 600,
+      $line: 16px,
+      $color: var(--normal-fg-30, #65656c)
+    );
+
+    &:hover {
+      color: var(--col-primary-40, #5950ff);
+    }
+  }
+
+  &__cal-card-dot {
+    flex: 0 0 auto;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+  }
+
+  &__cal-card-title {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    @include drumee.typo(
+      $size: 14px,
+      $weight: 600,
+      $line: 20px,
+      $color: var(--normal-fg-10, #0b0a21)
+    );
+  }
+
+  &__cal-card-desc {
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    @include drumee.typo(
+      $size: 13px,
+      $weight: 400,
+      $line: 18px,
+      $color: var(--normal-fg-30, #65656c)
+    );
+  }
+
+  &__cal-card-files {
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  &__cal-card-file {
+    align-items: center;
+    gap: 4px;
+    max-width: 100%;
+    padding: 4px 8px;
+    border-radius: 6px;
+    background: var(--border-default, rgba(0, 0, 0, 0.05));
+  }
+
+  &__cal-card-file-ico {
+    flex: 0 0 14px;
+    width: 14px;
+    height: 14px;
+    opacity: 0.6;
+  }
+
+  &__cal-card-file-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    @include drumee.typo(
+      $size: 12px,
+      $weight: 500,
+      $line: 16px,
+      $color: var(--normal-fg-10, #0b0a21)
+    );
+  }
+
+  &__cal-card-files-more {
+    flex: 0 0 auto;
+    padding: 4px 8px;
+    border-radius: 6px;
+    background: var(--border-default, rgba(0, 0, 0, 0.05));
+    @include drumee.typo(
+      $size: 12px,
+      $weight: 500,
+      $line: 16px,
+      $color: var(--normal-fg-30, #65656c)
+    );
+  }
+
+  // Status pill — tint + dot driven by data-status (matches COLUMNS colors).
+  &__cal-card-status {
+    align-self: flex-start;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    border-radius: 71px;
+
+    &[data-status="todo"] {
+      background: rgba(174, 174, 178, 0.18);
+    }
+    &[data-status="in_progress"] {
+      background: rgba(89, 80, 255, 0.12);
+    }
+    &[data-status="to_review"] {
+      background: rgba(232, 161, 59, 0.15);
+    }
+    &[data-status="complete"] {
+      background: rgba(84, 182, 132, 0.15);
+    }
+  }
+
+  &__cal-card-status-dot {
+    flex: 0 0 8px;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #aeaeb2;
+  }
+
+  &__cal-card-status[data-status="in_progress"] &__cal-card-status-dot {
+    background: #5950ff;
+  }
+  &__cal-card-status[data-status="to_review"] &__cal-card-status-dot {
+    background: #e8a13b;
+  }
+  &__cal-card-status[data-status="complete"] &__cal-card-status-dot {
+    background: #54b684;
+  }
+
+  &__cal-card-status-label {
+    @include drumee.typo(
+      $size: 12px,
+      $weight: 600,
+      $line: 16px,
+      $color: var(--normal-fg-10, #0b0a21)
+    );
+  }
+
+  &__cal-empty {
+    padding: 24px 0;
+    text-align: center;
+    @include drumee.typo(
+      $size: 13px,
+      $weight: 400,
+      $line: 18px,
+      $color: var(--normal-fg-30, #65656c)
+    );
+  }
+
+  // ── Gantt view ───────────────────────── (Figma 2057-32279 / 2365-137835)
+  // Single scroll viewport: the aside is sticky-left, the axis sticky-top, so
+  // the timeline scrolls under both. Gridlines/today/band are absolute layers.
+  &__gantt {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: auto;
+    // Figma's canvas is plain white — the -90 token resolves grey in this theme.
+    background: var(--normal-bg-elevated, #fff);
+  }
+
+  &__gantt-grid {
+    align-items: stretch;
+    position: relative;
+    // Inline min-width carries the scroll extent; stretch to fill wide windows.
+    min-width: 100%;
+  }
+
+  // Left task list — sticky so it stays put while the timeline scrolls.
+  &__gantt-aside {
+    position: sticky;
+    left: 0;
+    z-index: 2;
+    flex: 0 0 auto;
+    align-items: stretch;
+    background: var(--normal-bg-elevated, #fff);
+    border-right: 1px solid var(--border-default, rgba(0, 0, 0, 0.08));
+  }
+
+  &__gantt-aside-head {
+    position: sticky;
+    top: 0;
+    z-index: 3;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    padding: 0 16px;
+    box-sizing: border-box;
+    background: var(--normal-bg-80, #f7f7fa);
+    border-bottom: 1px solid var(--border-default, rgba(0, 0, 0, 0.08));
+  }
+
+  &__gantt-work {
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+  }
+
+  &__gantt-work-ico {
+    @include drumee.typo(
+      $size: 16px,
+      $weight: 600,
+      $line: 20px,
+      $color: var(--normal-fg-30, #65656c)
+    );
+  }
+
+  &__gantt-work-label {
+    @include drumee.typo(
+      $size: 14px,
+      $weight: 600,
+      $line: 20px,
+      $color: var(--normal-fg-10, #0b0a21)
+    );
+  }
+
+  &__gantt-del-sel {
+    cursor: pointer;
+    opacity: 0.45;
+    pointer-events: none;
+    @include drumee.typo(
+      $size: 13px,
+      $weight: 500,
+      $line: 18px,
+      $color: var(--col-error, #d74e49)
+    );
+
+    &[data-active="1"] {
+      opacity: 1;
+      pointer-events: auto;
+    }
+  }
+
+  &__gantt-arow {
+    flex: 0 0 auto;
+    align-items: center;
+    gap: 8px;
+    padding: 0 16px;
+    box-sizing: border-box;
+    border-bottom: 1px solid var(--border-default, rgba(0, 0, 0, 0.05));
+
+    &:hover {
+      background: var(--hover-bg-40, rgba(0, 0, 0, 0.02));
+    }
+  }
+
+  &__gantt-empty {
+    padding: 32px 16px;
+    text-align: center;
+    @include drumee.typo(
+      $size: 13px,
+      $weight: 400,
+      $line: 18px,
+      $color: var(--normal-fg-30, #65656c)
+    );
+  }
+
+  &__gantt-check {
+    flex: 0 0 18px;
+    width: 18px;
+    height: 18px;
+    justify-content: center;
+    align-items: center;
+    box-sizing: border-box;
+    border: 1.5px solid var(--normal-bg-60, #aeaeb2);
+    border-radius: 4px;
+    cursor: pointer;
+
+    svg {
+      width: 11px;
+      height: 11px;
+      opacity: 0;
+    }
+    &[data-checked="1"] {
+      border-color: var(--col-primary-40, #5950ff);
+      background: var(--col-primary-40, #5950ff);
+      svg {
+        opacity: 1;
+        color: #fff;
+        fill: #fff;
+      }
+    }
+  }
+
+  &__gantt-chevron {
+    flex: 0 0 auto;
+    cursor: pointer;
+    @include drumee.typo(
+      $size: 16px,
+      $weight: 400,
+      $line: 16px,
+      $color: var(--normal-fg-40, #84848c)
+    );
+  }
+
+  &__gantt-dot {
+    flex: 0 0 8px;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+  }
+
+  &__gantt-title {
+    flex: 1 1 auto;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    cursor: pointer;
+    @include drumee.typo(
+      $size: 14px,
+      $weight: 600,
+      $line: 20px,
+      $color: var(--normal-fg-10, #0b0a21)
+    );
+  }
+
+  &__gantt-add,
+  &__gantt-del {
+    flex: 0 0 18px;
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity 0.12s;
+
+    svg {
+      width: 14px;
+      height: 14px;
+    }
+  }
+
+  &__gantt-arow:hover &__gantt-add,
+  &__gantt-arow:hover &__gantt-del {
+    opacity: 0.6;
+  }
+
+  &__gantt-add:hover {
+    opacity: 1;
+  }
+  &__gantt-del:hover {
+    opacity: 1;
+    svg {
+      color: var(--col-error, #d74e49);
+      fill: var(--col-error, #d74e49);
+    }
+  }
+
+  // Right timeline.
+  &__gantt-main {
+    position: relative;
+    flex: 1 1 auto; // grow past the computed timeline so wide windows stay filled
+    align-items: stretch;
+    background: var(--normal-bg-elevated, #fff);
+  }
+
+  // Shaded current period (week/month containing today).
+  &__gantt-band {
+    position: absolute;
+    top: 52px;
+    bottom: 0;
+    z-index: 0;
+    background: rgba(0, 0, 0, 0.04);
+  }
+
+  // Today marker — vertical line + downward cap.
+  &__gantt-today {
+    position: absolute;
+    top: 52px;
+    bottom: 0;
+    z-index: 1;
+    width: 2px;
+    margin-left: -1px;
+    background: var(--col-primary-40, #5950ff);
+  }
+
+  &__gantt-today-cap {
+    position: absolute;
+    top: 0;
+    left: -4px;
+    width: 0;
+    height: 0;
+    border-left: 5px solid transparent;
+    border-right: 5px solid transparent;
+    border-top: 6px solid var(--col-primary-40, #5950ff);
+  }
+
+  &__gantt-axis {
+    position: sticky;
+    top: 0;
+    z-index: 3;
+    flex: 0 0 auto;
+    align-items: stretch;
+    background: var(--normal-bg-80, #f7f7fa);
+    border-bottom: 1px solid var(--border-default, rgba(0, 0, 0, 0.08));
+  }
+
+  &__gantt-axis-week {
+    flex: 0 0 auto;
+    align-items: stretch;
+    border-left: 1px solid var(--border-default, rgba(0, 0, 0, 0.08));
+  }
+
+  &__gantt-axis-month {
+    padding: 6px 8px 2px;
+    @include drumee.typo(
+      $size: 13px,
+      $weight: 600,
+      $line: 18px,
+      $color: var(--normal-fg-10, #0b0a21)
+    );
+  }
+
+  &__gantt-axis-days {
+    flex: 1 1 auto;
+    align-items: stretch;
+  }
+
+  &__gantt-axis-day {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    @include drumee.typo(
+      $size: 13px,
+      $weight: 400,
+      $line: 18px,
+      $color: var(--normal-fg-30, #65656c)
+    );
+  }
+
+  &__gantt-axis-mon {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    border-left: 1px solid var(--border-default, rgba(0, 0, 0, 0.08));
+    @include drumee.typo(
+      $size: 14px,
+      $weight: 600,
+      $line: 20px,
+      $color: var(--normal-fg-10, #0b0a21)
+    );
+  }
+
+  &__gantt-tracks {
+    position: relative;
+    z-index: 2;
+    align-items: stretch;
+  }
+
+  &__gantt-track {
+    position: relative;
+    flex: 0 0 auto;
+    border-bottom: 1px solid var(--border-default, rgba(0, 0, 0, 0.05));
+  }
+
+  // Per-day gridlines (weeks mode) + heavier week boundaries.
+  &__gantt-main[data-mode="weeks"] &__gantt-track {
+    background:
+      repeating-linear-gradient(
+        90deg,
+        transparent 0,
+        transparent calc(var(--gantt-day-w) * 7 - 1px),
+        rgba(0, 0, 0, 0.08) calc(var(--gantt-day-w) * 7 - 1px),
+        rgba(0, 0, 0, 0.08) calc(var(--gantt-day-w) * 7)
+      ),
+      repeating-linear-gradient(
+        90deg,
+        transparent 0,
+        transparent calc(var(--gantt-day-w) - 1px),
+        rgba(0, 0, 0, 0.04) calc(var(--gantt-day-w) - 1px),
+        rgba(0, 0, 0, 0.04) var(--gantt-day-w)
+      );
+  }
+
+  // Task bar — gradient when started, solid when still in the future.
+  &__gantt-bar {
+    position: absolute;
+    top: 16px;
+    height: 24px;
+    z-index: 2;
+    border-radius: 6px;
+    cursor: pointer;
+    background: var(--col-primary-40, #5950ff);
+    transition: filter 0.12s;
+
+    &[data-started="1"] {
+      background: linear-gradient(
+        90deg,
+        var(--col-primary-10, #ecebff) 0%,
+        var(--col-primary-40, #5950ff) 100%
+      );
+    }
+    &:hover {
+      filter: brightness(0.95);
+    }
+  }
+
+  // Overdue tail — pink extension from due date to today, capped with a ⚠.
+  &__gantt-overdue {
+    position: absolute;
+    top: 16px;
+    height: 24px;
+    z-index: 1;
+    align-items: center;
+    justify-content: flex-end;
+    border-radius: 0 6px 6px 0;
+    background: rgba(215, 78, 73, 0.14);
+  }
+
+  &__gantt-warn {
+    flex: 0 0 16px;
+    width: 16px;
+    height: 16px;
+    margin-right: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background: var(--col-error, #d74e49);
+    @include drumee.typo($size: 11px, $weight: 700, $line: 16px, $color: #fff);
+  }
+
+  // Viewbar pill button (Detail / Filter).
+  &__gantt-ctrl {
+    padding: 5px 12px;
+    border-radius: 71px;
+    cursor: pointer;
+    background: var(--border-default, rgba(0, 0, 0, 0.05));
+    @include drumee.typo(
+      $size: 14px,
+      $weight: 600,
+      $line: 20px,
+      $color: var(--normal-fg-10, #0b0a21)
+    );
+  }
+
+  // ── List view ───────────────────────────────────── (Figma 2081:44709)
+  // `__list` is the single scroll container: the sticky header and the rows
+  // live in the SAME scrolling box, so the scrollbar narrows both equally and
+  // every column stays aligned under its header.
   &__list {
     flex: 1 1 auto;
     min-height: 0;
-    background: var(--normal-bg-90, #fff);
+    overflow-y: auto;
+    background: var(--normal-bg-elevated, #fff);
   }
 
   &__list-head,
   &__list-row {
     align-items: center;
-    border-bottom: 1px solid var(--border-default, rgba(0, 0, 0, 0.06));
+    gap: 12px;
+    padding: 0 12px;
+    box-sizing: border-box;
 
-    & > * {
-      padding: 8px 12px;
-      box-sizing: border-box;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
     // Column widths — kept identical between header and rows for alignment.
+    // Figma metrics: priority 141 · status 149 · due 175 · assignee 107;
+    // Task grows from 320 and Linked-files takes the remaining slack.
     & > *:nth-child(1) {
-      flex: 1 1 auto;
+      flex: 1 1 240px; // task (checkbox + title)
       min-width: 0;
     }
     & > *:nth-child(2) {
-      flex: 0 0 124px; // status — fits the "In progress" pill
+      flex: 0 0 141px; // priority
     }
     & > *:nth-child(3) {
-      flex: 0 0 90px;
+      flex: 0 0 149px; // status
     }
     & > *:nth-child(4) {
-      flex: 0 0 120px;
+      flex: 0 0 175px; // due date
     }
     & > *:nth-child(5) {
-      flex: 0 0 84px;
+      flex: 2 1 0; // linked files — grows faster than task to claim the slack
+      min-width: 0;
+    }
+    & > *:nth-child(6) {
+      flex: 0 0 107px; // assignee
     }
   }
 
@@ -1865,112 +3778,302 @@ color-mix(in srgb, var(--col-accent, transparent) 60%, var(--normal-bg-80, rgba(
     position: sticky;
     top: 0;
     z-index: 1;
-    background: var(--normal-bg-80, #f2f2f7);
+    flex: 0 0 56px;
+    height: 56px;
+    background: var(--normal-bg-elevated, #fff);
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
   }
 
   &__list-th {
-    @include drumee.typo(
-      $size: 11px,
-      $weight: 600,
-      $line: 16px,
-      $color: var(--normal-fg-40, #84848c)
-    );
-    text-transform: uppercase;
-    letter-spacing: 0.4px;
+    @include drumee.typo($size: 12px, $weight: 600, $line: 16px, $color: #0b0a21);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 
     &[data-sortable="1"] {
       cursor: pointer;
     }
     &[data-sortable="1"]:hover {
-      color: var(--normal-fg-10, #0b0a21);
+      opacity: 0.7;
     }
   }
 
+  // &__list-th-assignee {
+  //   text-align: center;
+  // }
+
+  // "Task" header aligns over the row titles, which are offset by the
+  // checkbox (16px) + gap (10px) in the first cell.
+  &__list-head > *:first-child {
+    padding-left: 26px;
+  }
+
   &__list-body {
-    flex: 1 1 auto;
-    min-height: 0;
-    overflow-y: auto;
+    flex: 0 0 auto; // scrolling is owned by `__list`, not the body
   }
 
   &__list-row {
+    flex: 0 0 56px;
+    height: 56px;
     cursor: pointer;
+    border-top: 1px solid rgba(0, 0, 0, 0.05);
+    border-radius: 8px;
     transition: background 0.12s;
 
+    &:first-child {
+      border-top: 0;
+    }
     &:hover {
-      background: var(--hover-bg-40, rgba(0, 0, 0, 0.04));
+      background: rgba(0, 0, 0, 0.03);
+    }
+  }
+
+  &__list-cell {
+    align-items: center;
+    min-width: 0;
+    box-sizing: border-box;
+  }
+
+  // Task cell — checkbox + title
+  &__list-title-cell {
+    gap: 10px;
+  }
+
+  &__list-check {
+    flex: 0 0 16px;
+    width: 16px;
+    height: 16px;
+    border: 1px solid #84848c;
+    border-radius: 3px;
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+
+    svg {
+      width: 10px;
+      height: 10px;
+      opacity: 0;
+      fill: #fff;
+    }
+    &[data-done="1"] {
+      background: var(--accent, #5950ff);
+      border-color: var(--accent, #5950ff);
+      svg {
+        opacity: 1;
+      }
     }
   }
 
   &__list-title {
-    @include drumee.typo(
-      $size: 13px,
-      $weight: 500,
-      $line: 18px,
-      $color: var(--normal-fg-10, #0b0a21)
-    );
-  }
-
-  // Fixed-width cell (fills its column slot) holding a tight, left-aligned pill.
-  &__list-status-cell {
-    align-items: center;
-  }
-
-  &__list-status {
-    display: inline-block;
-    max-width: 100%;
-    border: 1px solid;
-    border-radius: 11px;
-    padding: 2px 8px;
+    @include drumee.typo($size: 12px, $weight: 600, $line: 18px, $color: #0b0a21);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    @include drumee.typo($size: 11px, $weight: 600, $line: 14px);
+  }
+  &__list-row[data-done="1"] &__list-title {
+    color: #84848c;
+    text-decoration: line-through;
   }
 
+  // Priority cell — filled solid pill (outline when unset)
   &__list-priority {
-    @include drumee.typo($size: 12px, $weight: 600, $line: 16px);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: 24px;
+    padding: 2px 16px;
+    border-radius: 100px;
+    box-sizing: border-box;
+    white-space: nowrap;
+    @include drumee.typo($size: 12px, $weight: 500, $line: 20px, $color: #fff);
+
+    &[data-priority="low"] {
+      background: #54b684;
+    }
+    &[data-priority="medium"] {
+      background: #71a3f4;
+    }
+    &[data-priority="high"] {
+      background: #e8a13b;
+    }
+    &[data-priority="urgent"] {
+      background: #d74e49;
+    }
+    &[data-priority="none"] {
+      background: transparent;
+      border: 1px solid rgba(0, 0, 0, 0.05);
+      color: #0b0a21;
+    }
   }
 
-  &__list-assignees {
-    gap: 2px;
-    overflow: visible !important;
+  // Status cell — tinted pill + colored dot + dark label
+  &__list-status {
+    align-items: center;
+    gap: 8px;
+    height: 24px;
+    padding: 4px 12px;
+    border-radius: 16px;
+    box-sizing: border-box;
+    white-space: nowrap;
+    @include drumee.typo($size: 12px, $weight: 500, $line: 16px, $color: #0b0a21);
+
+    &[data-status="todo"] {
+      background: rgba(0, 0, 0, 0.05);
+    }
+    &[data-status="in_progress"] {
+      background: rgba(89, 80, 255, 0.1);
+    }
+    &[data-status="to_review"] {
+      background: rgba(232, 161, 59, 0.15);
+    }
+    &[data-status="complete"] {
+      background: rgba(61, 222, 140, 0.15);
+    }
   }
 
-  &__list-avatar {
-    width: 22px;
-    height: 22px;
+  &__list-status-dot {
+    flex: 0 0 8px;
+    width: 8px;
+    height: 8px;
     border-radius: 50%;
-    overflow: hidden;
-    flex-shrink: 0;
+    background: #aeaeb2;
+  }
+  &__list-status[data-status="in_progress"] &__list-status-dot {
+    background: #5950ff;
+  }
+  &__list-status[data-status="to_review"] &__list-status-dot {
+    background: #e8a13b;
+  }
+  &__list-status[data-status="complete"] &__list-status-dot {
+    background: #54b684;
   }
 
+  // Due cell — overlay pill
   &__list-due {
-    @include drumee.typo(
-      $size: 12px,
-      $weight: 400,
-      $line: 16px,
-      $color: var(--normal-fg-40, #84848c)
-    );
+    align-items: center;
+    height: 24px;
+    padding: 2px 12px;
+    border-radius: 100px;
+    background: rgba(0, 0, 0, 0.05);
+    box-sizing: border-box;
+    white-space: nowrap;
+    @include drumee.typo($size: 12px, $weight: 400, $line: 20px, $color: #34343a);
 
     &[data-overdue="1"] {
-      color: var(--col-urgent, #d65f59);
+      color: #d74e49;
       font-weight: 600;
     }
   }
 
-  &__list-empty,
-  &__list-assignee-empty {
-    @include drumee.typo(
-      $size: 12px,
-      $weight: 400,
-      $line: 16px,
-      $color: var(--normal-fg-40, #84848c)
-    );
+  // Linked-files cell — paperclip chips
+  &__list-files-cell {
+    gap: 4px;
+    overflow: hidden;
+  }
+
+  &__list-file {
+    align-items: center;
+    gap: 4px;
+    padding: 4px 8px;
+    border-radius: 4px;
+    background: rgba(0, 0, 0, 0.05);
+    // Shrink the filename chip (so its name ellipsizes) and keep the "+N" chip
+    // at its natural size — the count must survive however long the name is.
+    flex: 0 1 auto;
+    min-width: 0;
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+
+  &__list-file-ico {
+    flex: 0 0 14px;
+    width: 14px;
+    height: 14px;
+  }
+
+  &__list-file-name {
+    @include drumee.typo($size: 12px, $weight: 400, $line: 16px, $color: #0b0a21);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  &__list-file-more {
+    flex: 0 0 auto;
+    @include drumee.typo($size: 12px, $weight: 400, $line: 16px, $color: #65656c);
+  }
+
+  // Assignee cell — overlapping avatars / unassigned badge
+  &__list-assignee-cell {
+    overflow: visible;
+  }
+
+  &__list-avatars {
+    align-items: center;
+  }
+
+  &__list-avatar {
+    flex: 0 0 32px;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    overflow: hidden;
+    border: 2px solid #fff;
+    box-sizing: border-box;
+    margin-left: -8px;
+
+    &:first-child {
+      margin-left: 0;
+    }
+  }
+
+  &__list-avatar-more {
+    flex: 0 0 32px;
+    width: 32px;
+    height: 32px;
+    margin-left: -8px;
+    border-radius: 200px;
+    border: 2px solid #fff;
+    background: #e4e3ff;
+    box-sizing: border-box;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    @include drumee.typo($size: 12px, $weight: 600, $line: 16px, $color: #433cc5);
+  }
+
+  &__list-unassigned {
+    align-items: center;
+    gap: 4px;
+  }
+
+  &__list-unassigned-badge {
+    flex: 0 0 24px;
+    width: 24px;
+    height: 24px;
+    border-radius: 200px;
+    background: rgba(0, 0, 0, 0.05);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  &__list-unassigned-ico {
+    width: 14px;
+    height: 14px;
+  }
+
+  &__list-unassigned-label {
+    white-space: nowrap;
+    @include drumee.typo($size: 12px, $weight: 400, $line: 16px, $color: #65656c);
   }
 
   &__list-empty {
     padding: 24px 12px;
     text-align: center;
+    @include drumee.typo($size: 12px, $weight: 400, $line: 16px, $color: #84848c);
   }
 
   // ── Summary view ──────────────────────────────────────────────
@@ -1978,158 +4081,498 @@ color-mix(in srgb, var(--col-accent, transparent) 60%, var(--normal-bg-80, rgba(
     flex: 1 1 auto;
     min-height: 0;
     overflow-y: auto;
-    gap: 12px;
+    gap: 16px;
     padding: 16px;
     box-sizing: border-box;
-    background: var(--normal-bg-90, #fff);
+    background: var(--normal-bg-elevated, #fff);
   }
 
-  &__sum-grid {
-    gap: 12px;
+  // Two equal cards per row; stacks when the window narrows.
+  &__health-row {
+    gap: 16px;
     align-items: stretch;
     flex-wrap: wrap;
 
     & > * {
-      flex: 1 1 240px;
+      flex: 1 1 320px;
     }
   }
 
-  &__sum-card {
-    gap: 10px;
-    padding: 14px 16px;
-    border: 1px solid var(--border-default, rgba(0, 0, 0, 0.08));
-    border-radius: 8px;
+  // ── Headline stat cards ──────────────────────────────────────────
+  &__health-stats {
+    gap: 16px;
+    flex-wrap: wrap;
+
+    & > * {
+      flex: 1 1 180px;
+    }
+  }
+
+  &__health-stat-card {
+    align-items: center;
+    gap: 16px;
+    padding: 12px;
+    border: 1px solid var(--border-default, rgba(0, 0, 0, 0.05));
+    border-radius: 12px;
     background: var(--normal-bg-elevated, #fff);
   }
 
-  &__sum-card-title {
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
+  &__health-stat-ico {
+    flex: 0 0 41px;
+    align-self: stretch;
+    justify-content: center;
+    align-items: center;
+    border-radius: 12px;
+    background: var(--border-default, rgba(0, 0, 0, 0.05));
+
+    svg {
+      width: 20px;
+      height: 20px;
+    }
+  }
+
+  &__health-stat-text {
+    gap: 2px;
+    min-width: 0;
+  }
+
+  &__health-stat-value {
+    white-space: nowrap;
     @include drumee.typo(
-      $size: 11px,
+      $size: 16px,
       $weight: 600,
-      $line: 16px,
-      $color: var(--normal-fg-40, #84848c)
-    );
-  }
-
-  &__sum-completion {
-    align-items: baseline;
-    gap: 8px;
-  }
-
-  &__sum-pct {
-    @include drumee.typo(
-      $size: 28px,
-      $weight: 700,
-      $line: 32px,
+      $line: 24px,
       $color: var(--normal-fg-10, #0b0a21)
     );
   }
 
-  &__sum-pct-sub {
+  &__health-stat-sub {
     @include drumee.typo(
       $size: 12px,
       $weight: 400,
-      $line: 16px,
-      $color: var(--normal-fg-40, #84848c)
+      $line: 17px,
+      $color: var(--normal-fg-30, #65656c)
     );
   }
 
-  &__sum-bar-row,
-  &__sum-work-row {
+  // ── Generic card shell (status / activity / priority / workload) ──
+  &__health-card {
+    gap: 16px;
+    padding: 12px;
+    box-sizing: border-box;
+    min-width: 0;
+    border: 1px solid var(--border-default, rgba(0, 0, 0, 0.05));
+    border-radius: 12px;
+    background: var(--normal-bg-elevated, #fff);
+  }
+
+  &__health-card-head {
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  &__health-card-heading {
+    gap: 2px;
+    min-width: 0;
+    align-items: flex-start;
+    text-align: left;
+  }
+
+  &__health-card-title {
+    @include drumee.typo(
+      $size: 16px,
+      $weight: 600,
+      $line: 24px,
+      $color: var(--normal-fg-10, #0b0a21)
+    );
+  }
+
+  // Description + inline link tail share one wrapping line.
+  &__health-card-sub-row {
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 4px;
+  }
+
+  &__health-card-sub {
+    @include drumee.typo(
+      $size: 12px,
+      $weight: 400,
+      $line: 17px,
+      $color: var(--normal-fg-30, #65656c)
+    );
+  }
+
+  &__health-card-link {
+    text-decoration: underline;
+    cursor: pointer;
+    @include drumee.typo(
+      $size: 12px,
+      $weight: 400,
+      $line: 17px,
+      $color: var(--col-primary-40, #5950ff)
+    );
+  }
+
+  &__health-card-expand {
+    flex: 0 0 32px;
+    width: 32px;
+    height: 32px;
+    box-sizing: border-box;
+    padding: 6px;
+    justify-content: center;
+    align-items: center;
+    border-radius: 8px;
+    background: var(--border-default, rgba(0, 0, 0, 0.05));
+    cursor: pointer;
+  }
+
+  &__health-card-expand-ico {
+    width: 20px;
+    height: 20px;
+    opacity: 0.6;
+  }
+
+  // ── Status overview donut ─────────────────────────────────────────
+  // Donut + fixed-width legend, grouped near the card center (Figma: 185px
+  // donut, gap 98, 172px legend). The legend must NOT stretch to the edge.
+  &__health-donut-wrap {
+    align-items: center;
+    justify-content: center;
+    gap: 98px;
+    flex-wrap: wrap;
+    padding: 12px 0;
+  }
+
+  // Figma: 185px donut with a 23px ring.
+  &__health-donut {
+    position: relative;
+    flex: 0 0 auto;
+    width: 185px;
+    height: 185px;
+    border-radius: 50%;
+  }
+
+  &__health-donut-hole {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 139px; // 185 − 2×23 ring
+    height: 139px;
+    border-radius: 50%;
+    justify-content: center;
+    align-items: center;
+    gap: 2px;
+    background: var(--normal-bg-elevated, #fff);
+  }
+
+  &__health-donut-total {
+    @include drumee.typo(
+      $size: 24px,
+      $weight: 600,
+      $line: 26px,
+      $color: var(--normal-fg-10, #0b0a21)
+    );
+  }
+
+  &__health-donut-label {
+    text-align: center;
+    @include drumee.typo(
+      $size: 14px,
+      $weight: 400,
+      $line: 20px,
+      $color: var(--normal-fg-30, #65656c)
+    );
+  }
+
+  // ── Legends (status rows + inline priority chips) ─────────────────
+  // Figma: fixed 172px block — name left, pct hugging its right edge.
+  &__health-legend {
+    flex: 0 1 190px;
+    gap: 14px;
+    min-width: 172px;
+  }
+
+  &__health-legend-row {
+    justify-content: space-between;
     align-items: center;
     gap: 8px;
   }
 
-  &__sum-bar-label {
-    flex: 0 0 90px;
+  &__health-legend-info {
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+  }
+
+  // Status overview: 16×16 square colour chips.
+  &__health-legend-marker {
+    flex: 0 0 auto;
+    width: 16px;
+    height: 16px;
+  }
+
+  // Priority legend: 8×8 round colour dots.
+  &__health-legend-dot {
+    flex: 0 0 auto;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+  }
+
+  &__health-legend-name {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
     @include drumee.typo(
       $size: 12px,
       $weight: 400,
-      $line: 16px,
+      $line: 17px,
       $color: var(--normal-fg-10, #0b0a21)
     );
   }
 
-  &__sum-work-row &__sum-bar-label {
-    flex: 0 1 140px; // cap the name so the bar (flex:1) stays prominent
+  &__health-legend-pct {
+    flex: 0 0 auto;
+    @include drumee.typo(
+      $size: 12px,
+      $weight: 400,
+      $line: 17px,
+      $color: var(--normal-fg-10, #0b0a21)
+    );
+  }
+
+  // Priority legend: chips spread evenly across the card (Figma EL-36629f01 —
+  // each entry is a fill-width, center-justified group).
+  &__health-legend-inline {
+    flex-wrap: wrap;
+    gap: 16px;
+
+    & > * {
+      flex: 1 1 0;
+      justify-content: center;
+    }
+  }
+
+  &__health-legend-chip {
+    align-items: center;
+    gap: 6px;
+  }
+
+  // ── Recent activity feed ──────────────────────────────────────────
+  &__health-act-list {
+    gap: 8px;
+    max-height: 240px;
+    overflow-y: auto;
+  }
+
+  &__health-act-row {
+    align-items: center;
+    gap: 12px;
+    padding: 12px;
+    border: 1px solid var(--border-strong, rgba(0, 0, 0, 0.2));
+    border-radius: 12px;
+  }
+
+  &__health-act-avatar {
+    flex: 0 0 auto;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    overflow: hidden;
+  }
+
+  &__health-act-body {
+    flex: 1 1 auto;
+    gap: 2px;
     min-width: 0;
   }
 
-  &__sum-work-avatar--none {
-    background: var(--normal-bg-80, #ececf1);
+  &__health-act-line {
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
   }
 
-  &__sum-bar-track {
-    flex: 1 1 auto;
+  // Bold actor + verb read as one sentence (≈ a word space), then the pill.
+  &__health-act-text {
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 4px;
+    min-width: 0;
+  }
+
+  &__health-act-actor {
+    @include drumee.typo(
+      $size: 16px,
+      $weight: 600,
+      $line: 24px,
+      $color: var(--normal-fg-10, #0b0a21)
+    );
+  }
+
+  &__health-act-verb {
+    @include drumee.typo(
+      $size: 16px,
+      $weight: 400,
+      $line: 24px,
+      $color: var(--normal-fg-10, #0b0a21)
+    );
+  }
+
+  &__health-act-pill {
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+    max-width: 140px;
+    padding: 4px 8px;
+    border-radius: 8px;
+    background: var(--border-default, rgba(0, 0, 0, 0.05));
+  }
+
+  &__health-act-dot {
+    flex: 0 0 auto;
+    width: 8px;
     height: 8px;
-    border-radius: 4px;
+    border-radius: 50%;
+  }
+
+  &__health-act-title {
     overflow: hidden;
-    background: var(--normal-bg-80, #ececf1);
-  }
-
-  &__sum-bar-fill {
-    height: 100%;
-    border-radius: 4px;
-    min-width: 2px;
-    transition: width 0.2s;
-  }
-
-  &__sum-bar-count {
-    flex: 0 0 28px;
-    text-align: right;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 180px;
     @include drumee.typo(
       $size: 12px,
       $weight: 600,
       $line: 16px,
+      $color: var(--normal-fg-10, #0b0a21)
+    );
+  }
+
+  &__health-act-time {
+    @include drumee.typo(
+      $size: 12px,
+      $weight: 400,
+      $line: 17px,
       $color: var(--normal-fg-40, #84848c)
     );
   }
 
-  &__sum-work-avatar {
-    width: 22px;
-    height: 22px;
+  // ── Priority bar chart (gridded 15/10/5/0 y-axis + uniform bars) ──
+  &__health-prio-chart {
+    position: relative;
+    height: 180px;
+  }
+
+  // Y-axis tick rows; space-between pins the top (max) and 0 lines to the
+  // chart edges, leaving each line vertically centred on its row.
+  &__health-prio-grid {
+    height: 100%;
+    justify-content: space-between;
+  }
+
+  &__health-prio-grid-row {
+    align-items: center;
+    gap: 10px;
+  }
+
+  &__health-prio-axis {
+    flex: 0 0 16px;
+    text-align: right;
+    @include drumee.typo(
+      $size: 12px,
+      $weight: 400,
+      $line: 17px,
+      $color: var(--normal-fg-30, #65656c)
+    );
+  }
+
+  &__health-prio-line {
+    flex: 1 1 auto;
+    height: 1px;
+    background: var(--border-strong, rgba(0, 0, 0, 0.2));
+  }
+
+  // Bars overlay the grid: inset to sit between the top and 0 gridlines, and
+  // left-padded to clear the axis labels (16px label + 10px gap).
+  &__health-prio-bars {
+    position: absolute;
+    left: 26px;
+    right: 0;
+    top: 8px;
+    bottom: 8px;
+    align-items: flex-end;
+    justify-content: space-around;
+  }
+
+  &__health-prio-bar {
+    flex: 0 0 48px;
+    max-width: 48px;
+    min-height: 0;
+    border-radius: 2px 2px 0 0;
+    background: var(--col-primary-10, #e4e3ff);
+    transition: height 0.2s;
+  }
+
+  // ── Team workload ─────────────────────────────────────────────────
+  &__health-work-list {
+    gap: 16px;
+  }
+
+  &__health-work-row {
+    align-items: center;
+    gap: 24px;
+  }
+
+  &__health-work-who {
+    flex: 0 0 154px;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+  }
+
+  &__health-work-avatar {
+    flex: 0 0 auto;
+    width: 20px;
+    height: 20px;
     border-radius: 50%;
     overflow: hidden;
-    flex-shrink: 0;
-  }
 
-  &__sum-stat-row {
-    gap: 18px;
-  }
-
-  &__sum-stat {
-    align-items: center;
-    gap: 2px;
-  }
-
-  &__sum-stat-num {
-    @include drumee.typo(
-      $size: 24px,
-      $weight: 700,
-      $line: 28px,
-      $color: var(--normal-fg-10, #0b0a21)
-    );
-
-    &[data-tone="overdue"] {
-      color: var(--col-urgent, #d65f59);
+    &--none {
+      background: var(--normal-bg-80, #ececf1);
     }
   }
 
-  &__sum-stat-label {
+  &__health-work-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
     @include drumee.typo(
-      $size: 11px,
-      $weight: 400,
-      $line: 14px,
-      $color: var(--normal-fg-40, #84848c)
+      $size: 14px,
+      $weight: 600,
+      $line: 20px,
+      $color: var(--normal-fg-10, #0b0a21)
     );
   }
 
-  &__sum-empty {
+  &__health-work-track {
+    flex: 1 1 auto;
+    height: 20px;
+    border-radius: 4px;
+  }
+
+  &__health-work-fill {
+    height: 100%;
+    min-width: 2px;
+    border-radius: 4px;
+    background: var(--col-primary-10, #e4e3ff);
+    transition: width 0.2s;
+  }
+
+  &__health-empty {
     padding: 24px 0;
     text-align: center;
     @include drumee.typo(
@@ -2413,6 +4856,19 @@ color-mix(in srgb, var(--col-accent, transparent) 60%, var(--normal-bg-80, rgba(
     padding: 10px 12px;
   }
 
+  // Footer row shown while the next page loads during infinite scroll.
+  &__file-search-loading {
+    @include drumee.typo(
+      $size: 12px,
+      $weight: 400,
+      $line: 16px,
+      $color: var(--placeholder-fg, #aeaeb2)
+    );
+    font-style: italic;
+    text-align: center;
+    padding: 8px 12px;
+  }
+
   &__file-pending-list {
     // Same wrapping card strip as committed attachments.
     gap: 8px;
@@ -2486,19 +4942,18 @@ color-mix(in srgb, var(--col-accent, transparent) 60%, var(--normal-bg-80, rgba(
     }
   }
 
-  // ── Detail-panel footer (Cancel + Update) ─────────────────────
+  // ── Detail-panel footer — single full-width primary button ────
   &__detail-actions {
-    align-items: center;
-    justify-content: flex-end;
+    align-items: stretch;
     gap: 8px;
-    // Full-bleed footer bar pinned to the panel's bottom edge.
-    margin: 8px -20px -20px;
-    padding: 14px 20px;
-    border-top: 1px solid var(--border-muted, rgba(0, 0, 0, 0.06));
-    background: var(--normal-bg-90, #f2f2f7);
   }
 
   &__detail-cancel {
+    flex: 1 1 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
     @include drumee.typo(
       $size: 14px,
       $weight: 600,
@@ -2506,7 +4961,9 @@ color-mix(in srgb, var(--col-accent, transparent) 60%, var(--normal-bg-80, rgba(
       $color: var(--normal-fg-50, #65656c)
     );
     padding: 8px 16px;
+    border: 1px solid var(--border-default, rgba(0, 0, 0, 0.12));
     border-radius: 4px;
+    box-sizing: border-box;
     cursor: pointer;
     user-select: none;
     transition:
@@ -2520,14 +4977,23 @@ color-mix(in srgb, var(--col-accent, transparent) 60%, var(--normal-bg-80, rgba(
   }
 
   &__detail-submit {
+    flex: 1 1 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    min-height: 38px;
     @include drumee.typo(
       $size: 14px,
       $weight: 600,
       $line: 20px,
-      $color: #e4e3ff
+      $color: #ffffff
     );
     padding: 8px 16px;
+    // Transparent border so the box model matches the outlined Cancel exactly.
+    border: 1px solid transparent;
     border-radius: 4px;
+    box-sizing: border-box;
     background: #433cc5;
     cursor: pointer;
     user-select: none;
@@ -2582,11 +5048,6 @@ html[data-theme="dark"] .tasks-panel {
     box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.6);
   }
 
-  &__modal-side {
-    background: var(--normal-bg-80, #333042);
-    border-color: var(--border-default, rgba(71, 69, 84, 0.4));
-  }
-
   &__file-search-dropdown,
   &__filter-picker {
     box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
@@ -2602,8 +5063,12 @@ html[data-theme="dark"] .tasks-panel {
     }
   }
 
-  &__priority-pill {
-    border-color: var(--border-strong, #4642a9);
+  // Outlined (unselected) pills get a lighter border on dark; selected pills
+  // keep their solid/overlay fills from the base rules.
+  &__priority-pill[data-active="0"],
+  &__create-status-pill[data-active="0"],
+  &__detail-status-pill[data-active="0"] {
+    border-color: rgba(255, 255, 255, 0.12);
   }
 
   &__task-label-pill {
@@ -2646,6 +5111,19 @@ html[data-theme="dark"] .tasks-panel {
         color: #433cc5;
       }
     }
+  }
+
+  // Step hint guiding the two-click range pick ("Select start/end date").
+  .tasks-panel__dp-hint {
+    padding: 10px 12px 0;
+    font-size: 12px;
+    font-weight: 600;
+    text-align: center;
+    color: var(--normal-fg-40, #84848c);
+  }
+
+  .tasks-panel__dp-hint:empty {
+    display: none;
   }
 }
 
@@ -2759,6 +5237,7 @@ html[data-theme="dark"] .tasks-panel__flatpickr.flatpickr-calendar {
       color: rgba(228, 227, 255, 0.35);
     }
   }
+
 }
 
 // `window__tasks-panel` is the grid cell folder window uses to hold
@@ -2773,5 +5252,175 @@ html[data-theme="dark"] .tasks-panel__flatpickr.flatpickr-calendar {
     min-width: 0;
     max-width: 100%;
     overflow: hidden;
+  }
+}
+
+@keyframes tasks-cal-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+// Responsive: react to the WINDOW (container) width, not the viewport — the
+// task panel lives in a resizable window. Tighten the calendar as it narrows.
+@container cal (max-width: 820px) {
+  .tasks-panel__calendar {
+    padding: 12px;
+  }
+  .tasks-panel__cal-day {
+    padding: 8px;
+    gap: 4px;
+  }
+  .tasks-panel__cal-week-row {
+    min-height: 96px;
+  }
+  // Week-mode full cards drop their description to stay legible when narrow.
+  .tasks-panel__cal-card-desc {
+    display: none;
+  }
+  .tasks-panel__cal-weekday {
+    padding-right: 8px;
+    font-size: 12px;
+  }
+}
+
+@container cal (max-width: 560px) {
+  .tasks-panel__cal-day {
+    padding: 6px;
+  }
+  .tasks-panel__cal-week-row {
+    min-height: 76px;
+  }
+  // Week-mode cards collapse to the essentials on very narrow windows.
+  .tasks-panel__cal-card {
+    padding: 8px;
+    gap: 4px;
+  }
+  .tasks-panel__cal-card-files,
+  .tasks-panel__cal-card-status {
+    display: none;
+  }
+}
+
+// ── Mobile refinements: task popups · Gantt · List ─────────────────────
+// TOP-LEVEL rules (not nested under `.tasks-panel`) keyed on `data-mobile="1"`,
+// which the skeleton stamps DIRECTLY on each of these roots via
+// `Visitor.isMobile()`. Deliberately NOT a viewport `@media` (the panel lives
+// in a resizable window, so the viewport is never the panel width),
+// NOT `@container` (unsupported in the target runtime), and NOT an ancestor
+// `[data-device]` selector — the flag is on the element the rule targets, so
+// matching cannot fail. IMPORTANT: these must stay at file top level. An
+// earlier version sat inside the dark-theme `.flatpickr-calendar` block, so
+// every selector compiled with that prefix and never matched — the reason
+// prior attempts appeared to "do nothing". The modal bodies + the detail
+// description|files row are switched to a column (Box.Y) in the skeleton on
+// mobile, so these rules only handle sizing, widths and list/gantt metrics.
+
+// Create popup — near full-bleed, single column.
+.tasks-panel__create-modal[data-mobile="1"] {
+  max-width: calc(100% - 16px);
+  max-height: calc(100% - 16px);
+  border-radius: 16px;
+
+  .tasks-panel__create-form {
+    padding: 16px;
+    gap: 16px;
+  }
+  .tasks-panel__create-title {
+    font-size: 20px;
+    line-height: 24px;
+  }
+  .tasks-panel__modal-body {
+    overflow-y: auto;
+    gap: 16px;
+  }
+  // In the stacked (column) body the fixed 289px side + growing main become
+  // full-width, content-height rows; the body scrolls as one.
+  .tasks-panel__modal-main,
+  .tasks-panel__modal-side {
+    flex: 0 0 auto;
+    width: 100%;
+    gap: 16px;
+  }
+}
+
+// Update/detail popup — near full-bleed, single column, rail → top divider.
+.tasks-panel__detail-panel[data-mobile="1"] {
+  width: calc(100% - 16px);
+  height: calc(100% - 16px);
+  padding: 16px;
+  gap: 16px;
+  border-radius: 16px;
+
+  .tasks-panel__detail-title input,
+  .tasks-panel__detail-title textarea {
+    font-size: 20px;
+    line-height: 24px;
+  }
+  // The whole stacked body scrolls as one (desktop scrolls each column).
+  .tasks-panel__modal-body {
+    overflow-y: auto;
+    overflow-x: hidden;
+    gap: 16px;
+  }
+  .tasks-panel__modal-main {
+    flex: 0 0 auto;
+    width: 100%;
+    overflow: visible;
+    padding-right: 0;
+  }
+  .tasks-panel__modal-side {
+    flex: 0 0 auto;
+    width: 100%;
+    padding-left: 0;
+    padding-top: 16px;
+    border-left: 0;
+    border-top: 3px solid var(--col-primary-40, #5950ff);
+    overflow: visible;
+  }
+  .tasks-panel__detail-top {
+    gap: 16px;
+  }
+}
+
+// List — drop the space-hungry Linked-files column and let the pill columns
+// shrink to their content so the essentials fit without a horizontal scroll.
+.tasks-panel__list[data-mobile="1"] {
+  .tasks-panel__list-head,
+  .tasks-panel__list-row {
+    gap: 8px;
+    padding: 0 8px;
+  }
+  .tasks-panel__list-head > *:nth-child(1),
+  .tasks-panel__list-row > *:nth-child(1) {
+    flex: 1 1 100px; // task title
+  }
+  .tasks-panel__list-head > *:nth-child(2),
+  .tasks-panel__list-head > *:nth-child(3),
+  .tasks-panel__list-head > *:nth-child(4),
+  .tasks-panel__list-head > *:nth-child(6),
+  .tasks-panel__list-row > *:nth-child(2),
+  .tasks-panel__list-row > *:nth-child(3),
+  .tasks-panel__list-row > *:nth-child(4),
+  .tasks-panel__list-row > *:nth-child(6) {
+    flex: 0 0 auto; // priority · status · due · assignee
+  }
+  .tasks-panel__list-head > *:nth-child(5),
+  .tasks-panel__list-row > *:nth-child(5) {
+    display: none; // linked files — hidden on phones
+  }
+}
+
+// Gantt — narrow the sticky task-list aside so the timeline is visible.
+.tasks-panel__gantt[data-mobile="1"] {
+  .tasks-panel__gantt-aside {
+    width: 220px !important; // beats the inline 300px width from gantt.js
+  }
+  .tasks-panel__gantt-aside-head,
+  .tasks-panel__gantt-arow {
+    padding: 0 12px;
   }
 }

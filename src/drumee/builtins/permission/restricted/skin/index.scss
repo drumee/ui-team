@@ -1,11 +1,15 @@
 @use "mixins/drumee";
 
 .permission-restricted {
+  // Frame mirrors window-secure-share (full-height 450px right dock, square
+  // edge with a thin left border + subtle shadow) so both share panels read as
+  // one system. This outer element carries the panel chrome; __main is just the
+  // padded scroll body (the analog of secure-share's __main + __scroll).
   &__ui {
     position: absolute;
-    width: 360px;
+    width: 450px;
     height: 100%;
-    right: -360px;
+    right: -450px;
     bottom: 0px;
     top: 0;
     background-color: var(--normal-bg-90);
@@ -13,12 +17,13 @@
     flex-direction: column;
     align-items: flex-start;
     padding: 0px;
-    box-shadow: var(--shadow-left-big);
+    border-left: 1px solid var(--border-default);
+    box-shadow: 0 1px 11px rgba(0, 0, 0, 0.13);
     transition: right 0.5s;
-    border-radius: var(--spacer-4);
+    border-radius: 0;
 
     &[data-position="0"] {
-      right: -360px;
+      right: -450px;
     }
 
     &[data-position="1"] {
@@ -27,6 +32,9 @@
   }
 
   // ── Main wrapper ──────────────────────────────────────────────
+  // Scroll body inside the __ui frame (mirrors secure-share's __main+__scroll).
+  // The panel chrome (border-left / shadow / square edge) lives on __ui, so
+  // __main just handles layout + scrolling.
   &__main {
     display: flex;
     flex-direction: column;
@@ -34,7 +42,9 @@
     height: 100%;
     padding: 24px 20px;
     box-sizing: border-box;
+    position: relative;
     overflow: auto;
+    background: var(--normal-bg-90);
 
     &::-webkit-scrollbar {
       display: none;
@@ -112,13 +122,9 @@
     margin-bottom: 24px;
   }
 
+  // Match window-secure-share__section-label (14px / 600, sentence case).
   &__section-label {
-    font-size: 11px;
-    font-weight: 600;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    color: var(--normal-fg-10);
-    margin-bottom: 2px;
+    @include drumee.typo($size: 14px, $line: 20px, $weight: 600, $color: var(--default-text-color));
   }
 
   // ── Invite row (email + role dropdown) ───────────────────────
@@ -159,9 +165,11 @@
     flex-shrink: 0;
   }
 
+  // Inline dropdown trigger — same brand color scheme as the CTA
+  // (primary-50 → primary-40 hover); size stays compact.
   &__role-trigger {
     align-items: center;
-    background-color: var(--primary-40);
+    background-color: var(--primary-50);
     border-radius: 6px;
     cursor: pointer;
     display: flex;
@@ -171,7 +179,7 @@
     white-space: nowrap;
 
     &:hover {
-      background-color: var(--primary-50);
+      background-color: var(--primary-40);
     }
   }
 
@@ -242,25 +250,25 @@
     width: 14px;
   }
 
+  // Primary CTA — matches window-secure-share__button.submit ("Get link"):
+  // primary-50 fill → primary-40 on hover, 14px/600 white, spacer-3/spacer-6
+  // padding, corner-radius-3.
   &__send-btn {
     width: 100%;
-    padding: 12px 14px;
-    background-color: var(--primary-40);
-    color: var(--primary-10);
-    font-size: 15px;
-    font-weight: 600;
-    line-height: 20px;
-    text-align: center;
-    border-radius: var(--corner-radius-2);
-    cursor: pointer;
-    transition: background-color 120ms ease;
     box-sizing: border-box;
     display: flex;
     align-items: center;
     justify-content: center;
+    gap: var(--spacer-3);
+    padding: var(--spacer-3) var(--spacer-6);
+    border-radius: var(--corner-radius-3);
+    background-color: var(--primary-50);
+    cursor: pointer;
+    transition: background-color 120ms ease;
+    @include drumee.typo($size: 14px, $line: 20px, $weight: 600, $color: var(--white));
 
     &:hover {
-      background-color: var(--primary-50);
+      background-color: var(--primary-40);
     }
   }
 
