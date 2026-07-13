@@ -9,8 +9,10 @@ const { Autolinker } = require("autolinker");
 // Mirrors `chat-item/template/conversation.js` mention decode for the preview.
 const decodeMentions = (raw) => {
   if (!raw) return raw;
+  // Lazy label (.+?) so a filename containing "]" still decodes (see
+  // chat-item/template/conversation.js).
   let text = raw.replace(
-    /\[@([^\]]+)\]\(mention:([^:]+):([^)]+)\)/g,
+    /\[@(.+?)\]\(mention:([^:]+):([^)]+)\)/g,
     '<a class="file-mention" data-hub_id="$2" data-nid="$3">@$1</a>'
   );
   text = text.replace(

@@ -251,7 +251,8 @@ class ___widget_chatcontactList extends LetcBox {
           msg = '_';
         }
         if (msg && typeof msg === 'string') {
-          msg = msg.replace(/\[@([^\]]+)\]\((?:user|mention)[^)]*\)/g, '@$1');
+          // Lazy label (.+?) so a filename containing "]" still strips to @name.
+          msg = msg.replace(/\[@(.+?)\]\((?:user|mention)[^)]*\)/g, '@$1');
         }
 
         item.mset(_a.message, msg);
@@ -314,7 +315,8 @@ class ___widget_chatcontactList extends LetcBox {
           msg = LOCALE.ATTACHMENT;
         }
         if (msg && typeof msg === 'string') {
-          msg = msg.replace(/\[@([^\]]+)\]\((?:user|mention)[^)]*\)/g, '@$1');
+          // Lazy label (.+?) so a filename containing "]" still strips to @name.
+          msg = msg.replace(/\[@(.+?)\]\((?:user|mention)[^)]*\)/g, '@$1');
         }
 
         item.mset('room_count', room_count);
