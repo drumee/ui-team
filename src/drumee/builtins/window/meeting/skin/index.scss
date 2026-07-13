@@ -407,7 +407,7 @@
   // Narrow window: drop the secondary reactions/fullscreen buttons so the
   // primary controls (hand, chat, people, camera, mic, screen, leave) fit.
   &__ui[data-narrow="1"] {
-    .window-meeting__ctrl-btn.reactions,
+    .window-meeting__reactions-menu,
     .window-meeting__resize-menu,
     .window-meeting__in-topbar-divider {
       display: none;
@@ -572,13 +572,210 @@
     container-name: meeting-stage;
   }
 
-  // Stage column squeezed (side panel open on a mid-size window): drop the
-  // secondary buttons first, then collapse the leave button to icon-only.
-  @container meeting-stage (max-width: 860px) {
-    &__ctrl-btn.reactions,
+  // Stage column squeezed: drop the secondary buttons first, then collapse the
+  // leave button to icon-only. NB: `meeting-stage` is the stage column ALONE
+  // (the 420px chat panel is a flex sibling outside it), so this width is the
+  // space left AFTER the panel — keep the threshold low enough that simply
+  // opening the panel doesn't hide reactions on a normal-width window.
+  @container meeting-stage (max-width: 480px) {
+    &__reactions-menu,
     &__resize-menu,
     &__in-topbar-divider {
       display: none;
+    }
+  }
+
+  // ── Reactions quick-bar (topbar smiley → menu.topic opening upward) ─────
+  // The smiley is a KIND.menu.topic trigger; its items are the emoji bar that
+  // floats above the topbar (Figma "reaction-hovering" popover).
+  &__reactions-menu {
+    position: relative;
+    flex-shrink: 0;
+  }
+
+  &__reactions-bar {
+    align-items: center;
+    gap: 4px;
+    padding: 8px;
+    background: #ffffff;
+    border-radius: 8px;
+    box-shadow: 0 1px 11px rgba(0, 0, 0, 0.13);
+  }
+
+  &__reaction-emoji {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    font-size: 18px;
+    line-height: 1;
+    cursor: pointer;
+    user-select: none;
+    transition:
+      background 0.15s ease,
+      transform 0.1s ease;
+
+    &:hover {
+      background: rgba(0, 0, 0, 0.06);
+      transform: scale(1.2);
+    }
+  }
+
+  &__reactions-more {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    font-size: 20px;
+    line-height: 1;
+    color: #65656c;
+    cursor: pointer;
+    user-select: none;
+
+    &:hover {
+      background: rgba(0, 0, 0, 0.06);
+    }
+  }
+
+  // Floating reaction glyph that rises and fades over a participant tile.
+  // Appended to the tile root (.endpoint-local / .remote-user, position:
+  // relative) by meeting._floatReaction; the tile clips it (overflow:hidden),
+  // so it reads as rising from within the tile.
+  // Stage-wide, click-through layer holding the rising reactions. Anchored to
+  // __main (position: relative), so floats sit over the video stage; the panel
+  // (higher z-index) stays clear.
+  &__reaction-stack {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 60;
+    overflow: hidden;
+  }
+
+  // Floating "reaction-sent" element: emoji on top, a rounded name pill below,
+  // rising and fading from the stage's bottom-left corner (Figma node
+  // 2578-31083). Horizontal drift is applied inline via margin-left.
+  &__reaction-float {
+    position: absolute;
+    left: 80px;
+    bottom: 24px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    pointer-events: none;
+    will-change: transform, opacity;
+    // 4s sits in the spec's 3–5s auto-clear window (node 2517-15617).
+    animation: window-meeting-reaction-rise 4s ease-out forwards;
+  }
+
+  &__reaction-float-emoji {
+    font-size: 28px;
+    line-height: 1;
+  }
+
+  &__reaction-float-name {
+    display: inline-flex;
+    align-items: center;
+    max-width: 140px;
+    padding: 4px 12px;
+    border-radius: 60px;
+    background: var(--overlay, rgba(20, 17, 35, 0.4));
+    backdrop-filter: blur(2.77px);
+    -webkit-backdrop-filter: blur(2.77px);
+    color: #ffffff;
+    font-family: var(--font-main);
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  // Full emoji picker for the reactions "…" button (reused assets/emojis).
+  // Styled to match the chat messenger's emoji popup 1:1
+  // (lib-messenger__wrapper-popup.dialog__wrapper) so the two pickers are
+  // visually identical. The messenger anchors bottom-right above its composer;
+  // here the trigger sits at the top edge, so we anchor from the top-left just
+  // under the topbar (the wrapper is a child of __main, position: relative).
+  &__reactions-picker.dialog__wrapper {
+    position: absolute;
+    // Fallback anchor; _positionReactionsPicker overrides top/left inline to
+    // sit directly below the open reactions bar.
+    top: 64px;
+    left: 16px;
+    z-index: 200;
+    // Same box as lib-messenger__wrapper-popup.dialog__wrapper[data-state=open]
+    // (width/min-height that the messenger applies on open). We toggle
+    // visibility with :empty on feed/clear instead of a data-state flag.
+    width: 319px;
+    min-height: 180px;
+    background: var(--default-bg);
+    box-shadow: var(--drumee-shadow-box);
+    border-radius: var(--border-radius);
+    padding: 5px 5px 0px 5px;
+
+    &:empty {
+      display: none;
+    }
+  }
+
+  // Emoji grid content (rendered by assets/emojis with the window-meeting
+  // prefix) — ported verbatim from the messenger skin so the roll, grid,
+  // spans and "recent" row render identically.
+  &__emojis-roll {
+    height: 170px;
+
+    .list-smart__container {
+      display: flex;
+      padding: 10px;
+      flex-direction: column;
+    }
+  }
+
+  &__container-emojis {
+    width: 100%;
+    background: var(--default-bg);
+  }
+
+  &__emojis-item {
+    justify-items: center;
+    justify-content: center;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, 28px) minmax(28px, 30px);
+    grid-auto-rows: 28px;
+    grid-gap: 0.1rem;
+    align-items: center;
+    border: 1px lightgrey solid;
+    margin-top: 7px;
+    padding: 5px;
+    border-radius: var(--border-radius);
+
+    span {
+      width: 100%;
+      cursor: pointer;
+      height: 100%;
+      font-size: 28px;
+    }
+  }
+
+  &__emojis-latest {
+    font-size: 33px;
+    width: calc(100% - 25px);
+    margin: 0 auto 0 11px;
+    overflow: hidden;
+    padding: 5px;
+    border-radius: var(--border-radius);
+    background: var(--default-bg);
+    border: 1px lightgrey solid;
+
+    span {
+      cursor: pointer;
     }
   }
 
@@ -1709,6 +1906,26 @@
     height: 100%;
     top: 0;
     border-radius: 0;
+  }
+}
+
+// Floating reaction: rise from the tile bottom, hold, then fade out at the top.
+@keyframes window-meeting-reaction-rise {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, 10px) scale(0.6);
+  }
+  12% {
+    opacity: 1;
+    transform: translate(-50%, 0) scale(1);
+  }
+  70% {
+    opacity: 1;
+    transform: translate(-50%, -150px) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -220px) scale(1.1);
   }
 }
 
