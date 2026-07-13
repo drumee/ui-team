@@ -591,6 +591,14 @@
   &__reactions-menu {
     position: relative;
     flex-shrink: 0;
+
+    // Lift the popup above the shared screen during a screen share; the
+    // topbar's own z-index leaves the items buried otherwise (same fix the
+    // resize menu uses for its dropdown).
+    .menu-topic-items__wrapper,
+    .menu-topic-items {
+      z-index: 300;
+    }
   }
 
   &__reactions-bar {
@@ -652,7 +660,12 @@
     position: absolute;
     inset: 0;
     pointer-events: none;
-    z-index: 60;
+    // Sit above the shared screen. z:60 was below its effective stacking level
+    // during a share; the reactions picker (a sibling at this same __main
+    // level) clears the share at z:200, so match that. Still below the topbar
+    // and bottom command controls, and pointer-events:none, so it never blocks
+    // anything.
+    z-index: 100000;
     overflow: hidden;
   }
 
@@ -884,10 +897,16 @@
     // A global sheet wraps flex rows (seen live: controls pushed to a second
     // clipped row) — the bar must stay a single 60px row.
     flex-wrap: nowrap !important;
-    // Above the stage (__body renders later in the DOM) AND above the
-    // floating share tiles (z 80), so the mic device dropdown that hangs
-    // below the bar is never buried.
-    z-index: 90;
+    // The topbar forms its own stacking context, so its hanging dropdowns
+    // (mic/camera device lists, resize menu, reactions bar) can only rise as
+    // high as this value relative to the shared screen — a sibling inside
+    // __shell that outranks the old z:90 during a screen share and buried them.
+    // Lift the whole bar above it, matching the bottom command controls
+    // (z 100000) which already sit above the share — so the share is below
+    // this. Safe: __shell sits at z:auto within __main, so this never lets the
+    // topbar cover the chat panel (z 140) or the reactions picker (z 200),
+    // which live at __main level.
+    z-index: 100000;
     pointer-events: auto;
     // The whole bar is the window drag handle (window__header).
     cursor: move;
