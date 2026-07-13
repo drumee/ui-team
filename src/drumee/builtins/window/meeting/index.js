@@ -210,6 +210,9 @@ class __window_meeting extends __room {
     clearTimeout(this._idleTimer);
     if (this.el && this._wakeControls)
       this.el.removeEventListener("mousemove", this._wakeControls);
+    // Drop the reactions-picker click-outside listener if the window is torn
+    // down while the picker is open (removeEventListener is a no-op otherwise).
+    this._closeReactionsPicker();
     // Covers teardown paths that bypass _closeFeedbackAndLeave (tab close,
     // error teardown). _meetingEndedBroadcast keeps it idempotent.
     if (this._isHost && !this._meetingEndedBroadcast && !this._meetingEndedRemote) {
@@ -298,6 +301,10 @@ class __window_meeting extends __room {
       }
       if (sameRoom && options.event === "HAND_RAISE") {
         this._applyRemoteHandRaise(data);
+        return;
+      }
+      if (sameRoom && options.event === "REACTION") {
+        this._applyRemoteReaction(data);
         return;
       }
     }
@@ -457,10 +464,31 @@ class __window_meeting extends __room {
         this._reframeWindow();
         break;
 
-      case "reactions":
-        // Topbar reactions (smiley) button — visual placeholder from the Figma
-        // design. No emoji-reaction backend is wired yet; swallow the event so
-        // it doesn't fall through to the base room handler.
+      case "react":
+        // A quick-reaction emoji from the topbar bar was clicked. Read the
+        // glyph off the button (model attr first, DOM text as fallback) and
+        // broadcast it. The bar is a menu.topic (persistence:once) so it
+        // closes itself on selection.
+        this._sendReaction(
+          (cmd.mget && cmd.mget("emoji")) ||
+            (cmd.el && cmd.el.textContent && cmd.el.textContent.trim()),
+        );
+        // Picking a quick emoji closes the bar (persistence:once); close the
+        // full picker with it so the whole reactions surface dismisses.
+        this._closeReactionsPicker();
+        break;
+
+      case "reactions-more":
+        // "…" opens the full emoji picker; any glyph picked there is sent as
+        // a reaction (handled via the "insert" case below).
+        this._toggleReactionsPicker();
+        break;
+
+      case _a.insert:
+        // Fired by the shared assets/emojis picker (reactions "more"). Only
+        // acts while our reactions picker is open, so it never interferes with
+        // other insert sources.
+        this._pickReaction(args);
         break;
 
       default:
@@ -796,6 +824,132 @@ class __window_meeting extends __room {
     endpoint.el.dataset.raised = data.state ? 1 : 0;
     const uid = (data.uid != null) ? data.uid : this._uidForParticipant(pid);
     this._setMemberHandRaised(uid, !!data.state);
+  }
+
+  // Send a reaction: float it on our own tile immediately and broadcast it to
+  // every peer (mirrors the HAND_RAISE broadcast). No-op on an empty glyph.
+  _sendReaction(emoji) {
+    if (!emoji) return;
+    const localTile = this._tileForPin(null, true);
+    if (localTile && localTile.el) this._floatReaction(localTile.el, emoji);
+    try {
+      this.sendRoomSignaling(SERVICE.conference.broadcast, {
+        event: "REACTION",
+        payload: {
+          room_id: this.mget(_a.room_id),
+          participant_id: this.room && this.room.myUserId && this.room.myUserId(),
+          uid: Visitor.id,
+          emoji,
+        },
+      });
+    } catch (e) {
+      if (this.warn) this.warn("reaction broadcast failed", e);
+    }
+  }
+
+  // A peer's reaction arrived — float it on their tile. Guard against our own
+  // echo (we already floated it locally in _sendReaction).
+  _applyRemoteReaction(data) {
+    if (!data || !data.emoji) return;
+    const myId = this.room && this.room.myUserId && this.room.myUserId();
+    if (data.participant_id === myId || data.uid === Visitor.id) return;
+    const pid = data.participant_id;
+    const endpoint = pid && this.endpoints ? this.endpoints[pid] : null;
+    if (!endpoint || endpoint.isDestroyed() || !endpoint.el) return;
+    this._floatReaction(endpoint.el, data.emoji);
+  }
+
+  // Spawn a transient emoji that rises and fades over a participant tile
+  // (Google-Meet style). The CSS animation drives it; we just clean up after.
+  _floatReaction(tileEl, emoji) {
+    if (!tileEl || !emoji) return;
+    const span = document.createElement("span");
+    span.className = `${this.fig.family}__reaction-float`;
+    span.textContent = emoji;
+    tileEl.appendChild(span);
+    const done = () => { if (span.parentNode) span.parentNode.removeChild(span); };
+    span.addEventListener("animationend", done);
+    // Fallback removal in case animationend never fires (tile destroyed, etc.).
+    setTimeout(done, 3000);
+  }
+
+  // Toggle the full emoji picker for the reactions "…" button, reusing the
+  // shared assets/emojis picker. Fed into the __wrapperReactions wrapper.
+  _toggleReactionsPicker() {
+    const w = this.__wrapperReactions;
+    if (!w) return;
+    if (w.isEmpty()) {
+      w.feed(require("assets/emojis")(this));
+      this._positionReactionsPicker();
+      this._bindReactionsPickerDismiss();
+    } else {
+      this._closeReactionsPicker();
+    }
+  }
+
+  // Anchor the picker directly below the open reactions bar. The bar is the
+  // menu.topic items (a separate DOM subtree from the picker's __main-anchored
+  // wrapper), so we measure it and set the picker's top/left relative to
+  // __main (its positioned ancestor). Falls back to the CSS default if either
+  // element is missing.
+  _positionReactionsPicker() {
+    const w = this.__wrapperReactions;
+    const fam = this.fig.family;
+    const bar = this.el && this.el.querySelector(`.${fam}__reactions-bar`);
+    const main = this.el && this.el.querySelector(`.${fam}__main`);
+    if (!w || !w.el || !bar || !main) return;
+    const b = bar.getBoundingClientRect();
+    const m = main.getBoundingClientRect();
+    w.el.style.top = `${Math.round(b.bottom - m.top + 8)}px`;
+    w.el.style.left = `${Math.round(b.left - m.left)}px`;
+  }
+
+  // Give the picker the same click-outside dismissal the reactions bar has, so
+  // the whole reactions surface closes together. A click inside the picker or
+  // the reactions menu (bar + smiley trigger) is left to their own handlers;
+  // anything else — the same outside-click that closes the bar — closes the
+  // picker. Bound on the next tick so the "…" click that opened it doesn't
+  // immediately dismiss it.
+  _bindReactionsPickerDismiss() {
+    if (this._reactionsPickerDismiss) return;
+    this._reactionsPickerDismiss = (e) => {
+      const w = this.__wrapperReactions;
+      if (!w || w.isEmpty() || !w.el) {
+        this._closeReactionsPicker();
+        return;
+      }
+      const t = e.target;
+      if (w.el.contains(t)) return;
+      const menu =
+        this.el && this.el.querySelector(`.${this.fig.family}__reactions-menu`);
+      if (menu && menu.contains(t)) return;
+      this._closeReactionsPicker();
+    };
+    setTimeout(() => {
+      if (this._reactionsPickerDismiss) {
+        document.addEventListener("click", this._reactionsPickerDismiss, true);
+      }
+    }, 0);
+  }
+
+  _closeReactionsPicker() {
+    if (this._reactionsPickerDismiss) {
+      document.removeEventListener("click", this._reactionsPickerDismiss, true);
+      this._reactionsPickerDismiss = null;
+    }
+    if (this.__wrapperReactions && !this.__wrapperReactions.isEmpty()) {
+      this.__wrapperReactions.clear();
+    }
+  }
+
+  // A glyph was clicked in the reactions "more" picker. The picker's rows
+  // dispatch service "insert" with the clicked <span> as args.target; send
+  // that glyph as a reaction and close the picker.
+  _pickReaction(args) {
+    const target = args && args.target;
+    if (!target || !target.dataset || target.dataset.service !== "emoji") return;
+    this._sendReaction(target.innerText && target.innerText.trim());
+    this._closeReactionsPicker();
   }
 
   _toggleHandRaise(cmd) {

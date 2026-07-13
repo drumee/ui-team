@@ -168,6 +168,16 @@ const __skl_window_meeting = function (_ui_, localUser) {
   const panel = meetingSidePanel(_ui_);
   if (panel) kids.push(panel);
 
+  // Full emoji picker for the reactions "…" (more) button. Mounted empty and
+  // fed on demand from meeting._toggleReactionsPicker (reuses the shared
+  // assets/emojis picker); a picked glyph is broadcast as a reaction.
+  kids.push(
+    Skeletons.Wrapper.Y({
+      className: `${_ui_.fig.family}__reactions-picker`,
+      name: "reactions",
+    }),
+  );
+
   const a = Skeletons.Box.X({
     debug: __filename,
     sys_pn: 'xxcontent',
