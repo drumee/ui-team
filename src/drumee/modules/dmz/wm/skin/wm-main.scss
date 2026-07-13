@@ -194,15 +194,22 @@
     .workspace-section,
     .folder-section {
       grid-auto-rows: var(--grid-cell-h-folder);
+    }
 
-      // Match the desk (fd6): a long folder/workspace name truncates to a
-      // SINGLE line with an ellipsis instead of wrapping to a 2nd line that the
-      // compact 144px cell then clips (Lexis 2026-07-13, fd1/fd2). One line
-      // fits the cell with room to spare. Scoped to the DMZ share folder grid.
-      .media-grid .filename {
-        -webkit-line-clamp: 1;
-        max-height: calc(14px * 1.4); // one line (matches filename.scss basis)
-      }
+    // Match the desk (fd6): a long folder/workspace name truncates to a SINGLE
+    // line + ellipsis instead of wrapping to a 2nd line the compact 144px cell
+    // clips (Lexis 2026-07-13, fd1/fd2/fd7). filename.scss renders the label as
+    // a 2-line -webkit-box; override to the desk's plain single-line truncation
+    // (white-space:nowrap + ellipsis). Target the label by its filetype class so
+    // it applies regardless of the partition/section wrapping. DMZ share only.
+    .filename.folder,
+    .filename.hub {
+      display: block;
+      -webkit-line-clamp: unset;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-height: none;
     }
 
     .file-section {
