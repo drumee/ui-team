@@ -135,7 +135,11 @@ module.exports = function (ui) {
       ],
     });
 
-  if (!total) {
+  // Empty state only when the folder truly has no tasks. With a member filter
+  // active, an empty *filtered* set must still render the dashboard — the
+  // activity feed is actor-based, so a member with no assigned tasks can still
+  // have activity worth showing (zeroed stats are correct, not a blank page).
+  if (!total && !(ui.getFilterUids() || []).length) {
     return Skeletons.Box.Y({
       className: `${pfx}__summary`,
       kids: [
