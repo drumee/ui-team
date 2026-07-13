@@ -76,6 +76,15 @@ class __panel_trash extends mfsInteract {
 
   _wsRefresh() {
     if (!this.el || this.isDestroyed()) return;
+    // Don't clobber the empty-bin confirm overlay mid-decision — feed()
+    // replaces the whole subtree, overlay included. Flag it and replay once
+    // the overlay closes (cancel handler; confirm re-feeds anyway).
+    const overlay = this.getPart && this.getPart('overlay');
+    if (overlay && overlay.children && overlay.children.length) {
+      this._pendingWsRefresh = true;
+      return;
+    }
+    this._pendingWsRefresh = false;
     this.feed(require('./skeleton')(this));
   }
 
@@ -130,9 +139,10 @@ class __panel_trash extends mfsInteract {
     requestAnimationFrame(() => {
       if (this.el) this.el.dataset.anim = "in";
     });
+    // off() first so a re-render never stacks duplicate subscriptions.
+    RADIO_CLICK.off(_e.click, this._onOutsideClick);
     RADIO_CLICK.on(_e.click, this._onOutsideClick);
-    // Listen to the Wm websocket relay (see handleWsEvent). off() first so a
-    // re-render never stacks a duplicate subscription.
+    // Listen to the Wm websocket relay (see handleWsEvent).
     Wm.off(WS_EVENT, this.handleWsEvent);
     Wm.on(WS_EVENT, this.handleWsEvent);
 
@@ -233,6 +243,9 @@ class __panel_trash extends mfsInteract {
     const overlay = await this.ensurePart('overlay');
     overlay.clear();
     if (data) RADIO_MEDIA.trigger(_a.free, data);
+    // Full re-feed below IS the freshest state — drop any reload held back
+    // while the confirm overlay was open.
+    this._pendingWsRefresh = false;
     this.feed(require('./skeleton')(this));
   }
 
@@ -245,7 +258,12 @@ class __panel_trash extends mfsInteract {
       case 'confirm-empty-bin':
         return this._confirmEmptyBin();
       case 'cancel-empty-bin':
-        this.ensurePart('overlay').then(p => p.clear());
+        this.ensurePart('overlay').then(p => {
+          p.clear();
+          // Replay a websocket reload that was held back while the confirm
+          // overlay was open (see _wsRefresh).
+          if (this._pendingWsRefresh) this._wsRefresh();
+        });
         return;
       case 'delete-permanently':
         return this.deleteFilePermanently(args.media || cmd);
