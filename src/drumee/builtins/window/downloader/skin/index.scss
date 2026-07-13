@@ -172,13 +172,13 @@
       // Figma "Body/Sub Title": Geist 600, 20/1.1. Theme-aware near-black —
       // NOT --primary-100: revamp.scss redefines that token to a pale lavender
       // (#f4e7ff) later in :root, which rendered the text almost invisible.
-      @include drumee.typo($size: 20px, $line: 1.1, $weight: 600, $color: var(--default-text-color));
+      @include drumee.typo($size: 20px, $line: 1.1, $weight: 700, $color: var(--default-text-color));
       text-align: center;
     }
 
     &-method {
       // Figma "Buttons/Large Button": Geist 600, 18/24, brand color.
-      @include drumee.typo($size: 18px, $line: 24px, $weight: 600, $color: var(--primary-40));
+      @include drumee.typo($size: 18px, $line: 24px, $weight: 700, $color: var(--primary-40));
       text-align: center;
       margin-top: 32px;
     }
@@ -208,7 +208,7 @@
     // the brand --primary-40 (#5950ff) used for the badge/subtitle.
     background-color: var(--primary-50);
     // Figma "Buttons/Medium Button": Geist 600, 16/24.
-    @include drumee.typo($size: 16px, $line: 24px, $weight: 600, $color: var(--btn-commit-text));
+    @include drumee.typo($size: 16px, $line: 24px, $weight: 700, $color: var(--btn-commit-text));
 
     svg {
       width: 24px;
@@ -230,7 +230,7 @@
     cursor: pointer;
     background-color: var(--tertiary-grey-20);
     // Figma "Buttons/Medium Button": Geist 600, 16/24.
-    @include drumee.typo($size: 16px, $line: 24px, $weight: 600, $color: var(--tertiary-grey-70));
+    @include drumee.typo($size: 16px, $line: 24px, $weight: 700, $color: var(--tertiary-grey-70));
 
     &:hover {
       background-color: var(--tertiary-grey-30);
