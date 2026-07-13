@@ -156,22 +156,23 @@
 
   &__prompt {
     align-items: center;
-    gap: 12px;
+    gap: 0; // size + hint are one paragraph (Figma has them as a single node)
     width: 100%;
 
     &-size,
     &-hint {
-      // Theme-aware near-black. NOT --primary-100: revamp.scss redefines that
-      // token to a pale lavender (#f4e7ff) later in :root, which rendered the
-      // text almost invisible.
-      @include drumee.typo($size: 16px, $line: 1.4, $weight: 600, $color: var(--default-text-color));
+      // Figma "Body/Sub Title": Geist 600, 20/1.1. Theme-aware near-black —
+      // NOT --primary-100: revamp.scss redefines that token to a pale lavender
+      // (#f4e7ff) later in :root, which rendered the text almost invisible.
+      @include drumee.typo($size: 20px, $line: 1.1, $weight: 600, $color: var(--default-text-color));
       text-align: center;
     }
 
     &-method {
-      @include drumee.typo($size: 16px, $line: 1.4, $weight: 600, $color: var(--primary-40));
+      // Figma "Buttons/Large Button": Geist 600, 18/24, brand color.
+      @include drumee.typo($size: 18px, $line: 24px, $weight: 600, $color: var(--primary-40));
       text-align: center;
-      margin-top: 8px;
+      margin-top: 32px;
     }
   }
 
@@ -196,11 +197,12 @@
     border-radius: 4px;
     cursor: pointer;
     background-color: var(--primary-40);
-    @include drumee.typo($size: 14px, $line: 20px, $weight: 600, $color: var(--btn-commit-text));
+    // Figma "Buttons/Medium Button": Geist 600, 16/24.
+    @include drumee.typo($size: 16px, $line: 24px, $weight: 600, $color: var(--btn-commit-text));
 
     svg {
-      width: 20px;
-      height: 20px;
+      width: 24px;
+      height: 24px;
       fill: var(--btn-commit-text);
       color: var(--btn-commit-text);
     }
@@ -217,7 +219,8 @@
     border-radius: 4px;
     cursor: pointer;
     background-color: var(--tertiary-grey-20);
-    @include drumee.typo($size: 14px, $line: 20px, $weight: 600, $color: var(--tertiary-grey-70));
+    // Figma "Buttons/Medium Button": Geist 600, 16/24.
+    @include drumee.typo($size: 16px, $line: 24px, $weight: 600, $color: var(--tertiary-grey-70));
 
     &:hover {
       background-color: var(--tertiary-grey-30);
