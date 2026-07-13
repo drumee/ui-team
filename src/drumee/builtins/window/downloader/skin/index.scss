@@ -5,6 +5,14 @@
     background-color: var(--default-bg);//var(--ewhite);
     box-shadow: var(--shadow-main);
     border-radius: 12px; // Figma modal card
+    // The shared .window__ui floor is min-width:600px, which overrode the inline
+    // 520px width (min-width beats width) and made the card too wide. Pin it to
+    // the Figma 520px card. Compound selector (.window-downloader__ui.window__ui,
+    // 0,2,0) beats the base .window__ui (0,1,0) regardless of load order; min()
+    // keeps it inside the viewport on narrow screens.
+    &.window__ui {
+      min-width: min(520px, 100%);
+    }
     &[data-state="0"]{
       display: none;
     }
@@ -196,7 +204,9 @@
     padding: 16px 24px;
     border-radius: 4px;
     cursor: pointer;
-    background-color: var(--primary-40);
+    // Figma primary button fill = Primary/50 (#433cc5), a deeper indigo than
+    // the brand --primary-40 (#5950ff) used for the badge/subtitle.
+    background-color: var(--primary-50);
     // Figma "Buttons/Medium Button": Geist 600, 16/24.
     @include drumee.typo($size: 16px, $line: 24px, $weight: 600, $color: var(--btn-commit-text));
 
@@ -208,7 +218,7 @@
     }
 
     &:hover {
-      background-color: var(--primary-50);
+      background-color: var(--primary-60);
     }
   }
 
