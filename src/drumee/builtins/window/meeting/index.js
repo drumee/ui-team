@@ -346,7 +346,17 @@ class __window_meeting extends __room {
       if (this._memberCallStates) this._memberCallStates.delete(key);
       if (this._memberHandRaised) this._memberHandRaised.delete(key);
       if (this._memberPresenting) this._memberPresenting.delete(key);
+      // Drop stale spotlight refs so focus doesn't stick to a gone tile.
+      if (this._lastRaisedUid === key) this._lastRaisedUid = null;
+      if (this._dominantPid === id) this._dominantPid = null;
+      // If the presenter left without a clean STOP_REMOTE_SCREEN, release the
+      // share lock so the rest of the room can present again.
+      if (this._currentPresenterUid && key === this._currentPresenterUid) {
+        this._currentPresenterUid = null;
+        this._setShareLocked(false);
+      }
       this._refreshMember(uid);
+      this._updateFloatFocus();
     }
   }
 
@@ -435,6 +445,15 @@ class __window_meeting extends __room {
 
       case "pin-tile":
         this._togglePinnedTile(args);
+        break;
+
+      case "start-screenshare":
+      case "stop-screenshare":
+        // One screen at a time: block starting a share while a remote is
+        // presenting (belt-and-suspenders with the disabled button). The
+        // active local presenter is never locked, so they can still stop.
+        if (this._shareLocked && !this._presentingLocally) return;
+        super.onUiEvent(cmd, args);
         break;
 
       case "togglefullscreen":
@@ -713,7 +732,10 @@ class __window_meeting extends __room {
     if (on) this._memberHandRaised.set(key, 1);
     else this._memberHandRaised.delete(key);
     this._applyTileDataset(uid, "raised", on);
+    // Remember the most recent raiser so the float overlay can spotlight them.
+    if (on) this._lastRaisedUid = key;
     this._refreshMember(uid);
+    this._updateFloatFocus();
   }
 
   _setMemberPresenting(uid, on) {
@@ -749,6 +771,106 @@ class __window_meeting extends __room {
       if (ep.el) ep.el.dataset[attr] = value;
       break;
     }
+  }
+
+  // ── Float-overlay focus (single-participant view while sharing) ──────────
+  // The float overlay stacks every tile at full frame; whichever tile carries
+  // data-focused="1" is raised to the front (skin z-index). This picks WHO to
+  // show: the most recent hand-raiser, else the dominant speaker, else the
+  // local self-view. Only meaningful while the tiles are docked (a share is on).
+
+  // Jitsi dominant-speaker changed. Keep the base behavior (per-tile
+  // data-speaking ring), then re-point the float spotlight at the speaker.
+  onDominantSpeaker(id) {
+    if (super.onDominantSpeaker) super.onDominantSpeaker(id);
+    this._dominantPid = id || null;
+    this._updateFloatFocus();
+  }
+
+  // True while the live tiles are docked into the float overlay (i.e. a screen
+  // is being shared) — the only time focus switching is visible.
+  _floatDocked() {
+    return !!(
+      this._participantsHome && this._participantsHome.dataset.docked === "1"
+    );
+  }
+
+  _myParticipantId() {
+    return this.room && this.room.myUserId ? this.room.myUserId() : null;
+  }
+
+  // uid of the participant to spotlight for a raised hand: the most recent
+  // raiser still raised, else any remaining raised hand, else null.
+  _activeRaisedUid() {
+    if (!this._memberHandRaised || !this._memberHandRaised.size) return null;
+    if (this._lastRaisedUid && this._memberHandRaised.has(this._lastRaisedUid)) {
+      return this._lastRaisedUid;
+    }
+    const keys = Array.from(this._memberHandRaised.keys());
+    return keys[keys.length - 1] || null;
+  }
+
+  // Priority: raised hand > dominant speaker > local self-view.
+  _updateFloatFocus() {
+    if (!this._floatDocked()) return;
+    const raisedUid = this._activeRaisedUid();
+    if (raisedUid != null) return this._focusByUid(raisedUid);
+    if (this._dominantPid) return this._focusByPid(this._dominantPid);
+    return this._focusLocalTile();
+  }
+
+  _focusByUid(uid) {
+    if (String(uid) === String(Visitor.id)) return this._focusLocalTile();
+    if (this.endpoints) {
+      for (const pid of Object.keys(this.endpoints)) {
+        const ep = this.endpoints[pid];
+        if (!ep || ep.isDestroyed()) continue;
+        if (String(ep.mget(_a.uid)) !== String(uid)) continue;
+        return this._applyFloatFocus(ep.el);
+      }
+    }
+    // Raiser has no live tile (edge) — fall back so the overlay isn't blank.
+    return this._focusLocalTile();
+  }
+
+  _focusByPid(pid) {
+    if (pid === this._myParticipantId()) return this._focusLocalTile();
+    const ep = this.endpoints && this.endpoints[pid];
+    if (ep && !ep.isDestroyed() && ep.el) return this._applyFloatFocus(ep.el);
+    return this._focusLocalTile();
+  }
+
+  _focusLocalTile() {
+    if (typeof this.getLocalParts !== "function") return;
+    this.getLocalParts()
+      .then((parts) => {
+        const local = parts && parts.local;
+        if (local && !local.isDestroyed() && local.el) {
+          this._applyFloatFocus(local.el);
+        }
+      })
+      .catch(() => {});
+  }
+
+  // Move data-focused onto `el`, clearing it from every other tile in the
+  // float overlay so exactly one participant is spotlighted.
+  _applyFloatFocus(el) {
+    if (!el || !this.el) return;
+    const float = this.el.querySelector(`.${this.fig.family}__float-tiles`);
+    if (!float || !float.contains(el)) return;
+    float
+      .querySelectorAll('[data-focused="1"]')
+      .forEach((n) => { n.dataset.focused = "0"; });
+    el.dataset.focused = "1";
+  }
+
+  _clearFloatFocus() {
+    if (!this.el) return;
+    const float = this.el.querySelector(`.${this.fig.family}__float-tiles`);
+    if (!float) return;
+    float
+      .querySelectorAll('[data-focused="1"]')
+      .forEach((n) => { n.dataset.focused = "0"; });
   }
 
   // Toggle pin on a participant's tile. Only one pinned tile at a time —
@@ -1034,6 +1156,9 @@ class __window_meeting extends __room {
     // Viewer side: dock the tiles into the panel as soon as the share is
     // announced, so the strip never lingers in the main stage.
     this._dockParticipants(true);
+    // Only one screen at a time — lock our own share control while a remote
+    // is presenting (only the viewers hit this hook, never the sharer).
+    this._setShareLocked(true);
     const uid = (args && args.uid) || this._uidForParticipant(args && args.id);
     if (uid) {
       this._currentPresenterUid = String(uid);
@@ -1047,15 +1172,54 @@ class __window_meeting extends __room {
   onRemoteScreenStart(size) {
     if (super.onRemoteScreenStart) super.onRemoteScreenStart(size);
     this._dockParticipants(true);
+    this._setShareLocked(true);
   }
 
   onRemoteScreenStop() {
     if (super.onRemoteScreenStop) super.onRemoteScreenStop();
     this._dockParticipants(false);
+    // Remote share ended — let everyone start their own again.
+    this._setShareLocked(false);
     if (this._currentPresenterUid) {
       this._setMemberPresenting(this._currentPresenterUid, false);
       this._currentPresenterUid = null;
     }
+  }
+
+  // Catch-all unlock: the base tears the presenter down here whenever a peer
+  // leaves (remote-gone / disconnect), which can bypass onRemoteScreenStop —
+  // notably for a late joiner who never tracked `_currentPresenterUid`. Release
+  // the share lock whenever the peer being removed WAS the active presenter.
+  removePresenter(peer) {
+    const wasPresenter = !!(
+      this.__presenter &&
+      typeof this.__presenter.getItemsByAttr === "function" &&
+      peer &&
+      this.__presenter.getItemsByAttr("participant_id", peer.participant_id)[0]
+    );
+    if (super.removePresenter) super.removePresenter(peer);
+    if (wasPresenter) {
+      this._setShareLocked(false);
+      this._currentPresenterUid = null;
+    }
+  }
+
+  // Lock/unlock the local "share screen" control. While a remote participant
+  // is presenting, other participants can't start their own share (one screen
+  // at a time); the presenter's own button is never touched (they never hit
+  // the remote-screen hooks), so they can still stop. Visual disable + a guard
+  // in onUiEvent both key off `_shareLocked`.
+  _setShareLocked(locked) {
+    this._shareLocked = !!locked;
+    const btn = this.__ctrlScreen;
+    if (!btn || !btn.el || (btn.isDestroyed && btn.isDestroyed())) return;
+    btn.el.dataset.disabled = locked ? "1" : "0";
+    btn.el.setAttribute(
+      "title",
+      locked
+        ? (LOCALE.SCREEN_SHARE_BUSY || "Someone is already sharing their screen")
+        : (LOCALE.SHARE_SCREEN || "Share screen"),
+    );
   }
 
   // Local desktop track mute/unmute is the only signal we get for our own
@@ -1139,11 +1303,16 @@ class __window_meeting extends __room {
       if (this._participantsHome) {
         this._participantsHome.dataset.docked = toPanel ? "1" : "0";
       }
-      if (!toPanel) {
+      if (toPanel) {
+        // Now that the tiles live in the overlay, pick the initial spotlight
+        // (defaults to the local self-view until someone talks / raises a hand).
+        this._updateFloatFocus();
+      } else {
         // Re-lay out the grid immediately. The base responsive() defers the
         // participants relayout ~1s, which leaves the tiles briefly in their
         // docked single-column form — a visible glitch right after the screen
         // closes. Doing it now makes the return to the grid clean.
+        this._clearFloatFocus();
         if (typeof participants.responsive === "function") {
           participants.responsive("normal");
         }
