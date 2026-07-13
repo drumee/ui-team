@@ -193,7 +193,13 @@
 
     .workspace-section,
     .folder-section {
-      grid-auto-rows: var(--grid-cell-h-folder);
+      // --grid-cell-h-folder (144px) is a hair short for a folder/workspace
+      // label that wraps to 2 lines: folder art 93px + 8px gap + 8px label
+      // margin + two 14px/1.4 lines ≈ 150px+, so the 2nd line's descenders
+      // were clipped for long share-folder names (Lexis 2026-07-13, fd1/fd2).
+      // Add the shortfall so both lines show fully. Scoped to the DMZ share
+      // grid — the desk/folder grids keep the compact token untouched.
+      grid-auto-rows: calc(var(--grid-cell-h-folder) + 12px);
     }
 
     .file-section {
