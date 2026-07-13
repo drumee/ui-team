@@ -2,6 +2,7 @@
 const mfsInteract = require('../../window/utils');
 const { filesize } = require('@drumee/ui-essentials');
 require('./skin');
+const WS_EVENT = "ws:event";
 class __panel_trash extends mfsInteract {
 
   initialize(opt = {}) {
@@ -19,6 +20,9 @@ class __panel_trash extends mfsInteract {
     window.Trash = this;
     this._refreshStorageUsed = _.debounce(this._refreshStorageUsed.bind(this), 3000, { leading: true, trailing: false });
     this._onOutsideClick = this._onOutsideClick.bind(this);
+    // Trash/restore/purge echoes can arrive in bursts (multi-select) — one
+    // list reload per burst is enough.
+    this._wsRefresh = _.debounce(this._wsRefresh.bind(this), 400);
 
   }
 
@@ -38,10 +42,41 @@ class __panel_trash extends mfsInteract {
   }
 
   /**
-   * 
+   *
    */
   onDestroy() {
     RADIO_CLICK.off(_e.click, this._onOutsideClick);
+    Wm.off(WS_EVENT, this.handleWsEvent);
+  }
+
+  /**
+   * The base class (window/utils) subscribes to Wm's ws:event relay in ITS
+   * onDomRefresh, which this panel overrides without calling super (the rest
+   * of that hook is window-specific), so the panel never heard websocket
+   * traffic — deleting an item with the trash already open left the list
+   * stale until a full page reload. Override with bin semantics: the base
+   * mapping is for FOLDER views (media.remove → removeContent), which is
+   * exactly backwards here — a removed node ENTERS the bin. Reload the list
+   * on any event that changes bin content; everything else is ignored on
+   * purpose (no super call).
+   */
+  handleWsEvent(args = {}) {
+    const { options } = args || {};
+    const service = options && options.service;
+    switch (service) {
+      case "media.remove":            // node moved to trash (server echo of media.trash)
+      case SERVICE.media.trash:       // local Wm echoes use the request name
+      case SERVICE.media.restore:     // restored from another window/session
+      case SERVICE.media.restore_into:
+      case "media.purge":             // purged / bin emptied elsewhere
+        this._wsRefresh();
+        break;
+    }
+  }
+
+  _wsRefresh() {
+    if (!this.el || this.isDestroyed()) return;
+    this.feed(require('./skeleton')(this));
   }
 
   _refreshStorageUsed() {
@@ -95,7 +130,11 @@ class __panel_trash extends mfsInteract {
     requestAnimationFrame(() => {
       if (this.el) this.el.dataset.anim = "in";
     });
-    RADIO_CLICK.on(_e.click, this._onOutsideClick)
+    RADIO_CLICK.on(_e.click, this._onOutsideClick);
+    // Listen to the Wm websocket relay (see handleWsEvent). off() first so a
+    // re-render never stacks a duplicate subscription.
+    Wm.off(WS_EVENT, this.handleWsEvent);
+    Wm.on(WS_EVENT, this.handleWsEvent);
 
   }
 
