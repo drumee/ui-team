@@ -193,13 +193,16 @@
 
     .workspace-section,
     .folder-section {
-      // --grid-cell-h-folder (144px) is too short for a folder/workspace label
-      // that wraps to 2 lines (folder art + gaps + 2 lines exceeds it), which
-      // clipped long share-folder names (Lexis 2026-07-13, fd1/fd2). Let the
-      // row grow to fit its content while keeping the compact height as the
-      // floor for single-line labels — robust to the exact label height.
-      // Scoped to the DMZ share grid; the desk/folder grids are untouched.
-      grid-auto-rows: minmax(var(--grid-cell-h-folder), auto);
+      grid-auto-rows: var(--grid-cell-h-folder);
+
+      // Match the desk (fd6): a long folder/workspace name truncates to a
+      // SINGLE line with an ellipsis instead of wrapping to a 2nd line that the
+      // compact 144px cell then clips (Lexis 2026-07-13, fd1/fd2). One line
+      // fits the cell with room to spare. Scoped to the DMZ share folder grid.
+      .media-grid .filename {
+        -webkit-line-clamp: 1;
+        max-height: calc(14px * 1.4); // one line (matches filename.scss basis)
+      }
     }
 
     .file-section {

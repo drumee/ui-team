@@ -30,7 +30,7 @@ const __desk_confirm_download = function(_ui_) {
         className : `${pfx}__badge`,
         kids      : [
           Skeletons.Image.Svg({
-            ico       : 'app-download',
+            ico       : 'dl-download-simple',
             className : `${pfx}__badge-icon`
           })
         ]}),
@@ -66,7 +66,7 @@ const __desk_confirm_download = function(_ui_) {
             className : `${pfx}__actions-row`,
             kids      : [
               Skeletons.Button.Label({
-                ico       : 'app-file',
+                ico       : 'dl-file',
                 label     : LOCALE.MULTIPLE_FILES,
                 service   : 'download-files',
                 uiHandler : [_ui_],
@@ -74,7 +74,7 @@ const __desk_confirm_download = function(_ui_) {
               }),
 
               Skeletons.Button.Label({
-                ico       : 'dock-folder',
+                ico       : 'dl-folder',
                 label     : LOCALE.SINGLE_FILE,
                 service   : 'prepare-zip',
                 uiHandler : [_ui_],

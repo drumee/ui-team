@@ -19,7 +19,7 @@ class __window_downloader extends mfsInteract {
     // Compact confirm-download modal (Figma 2914:186797 — 520px card). Fixed
     // size + centered so the redesigned card doesn't float in an oversized
     // window; the download-in-progress view reuses the same window/size.
-    const W = 520, H = 460;
+    const W = 520, H = 440;
     this.style.set({
       width: W,
       height: H,
