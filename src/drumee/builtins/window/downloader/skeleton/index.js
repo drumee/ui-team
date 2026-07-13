@@ -23,7 +23,7 @@ const __desk_confirm_download = function(_ui_) {
     // the modal layout so it never touches skeleton/progress.js.
     className : `${pfx}__main ${pfx}__confirm`,
     kids      : [
-      Preset.Button.Close(_ui_),
+      // Figma has no close glyph — Cancel dismisses the modal.
 
       // Brand download badge — 56px circle, 10% brand fill (Figma 2914:206117).
       Skeletons.Box.X({
@@ -66,7 +66,7 @@ const __desk_confirm_download = function(_ui_) {
             className : `${pfx}__actions-row`,
             kids      : [
               Skeletons.Button.Label({
-                ico       : 'app-doc-file',
+                ico       : 'app-file',
                 label     : LOCALE.MULTIPLE_FILES,
                 service   : 'download-files',
                 uiHandler : [_ui_],
