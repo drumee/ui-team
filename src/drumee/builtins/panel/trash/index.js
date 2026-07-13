@@ -187,12 +187,16 @@ class __panel_trash extends mfsInteract {
 
     if (data.parent_missing) {
       // Original parent folder is gone — ask user before falling back to home
+      // No || fallbacks: LOCALE is a createSafeObject — a missing key comes
+      // back as the truthy key STRING, so the fallback branch can never run
+      // (the dialog used to literally display "Q_RESTORE_TO_HOME" because the
+      // key was absent from every locale file).
       const confirmed = await Wm.confirm({
         title: LOCALE.RESTORE,
-        message: LOCALE.Q_RESTORE_TO_HOME || 'Original folder no longer exists. Restore to home folder instead?',
-        confirm: LOCALE.RESTORE || 'Restore',
+        message: LOCALE.Q_RESTORE_TO_HOME,
+        confirm: LOCALE.RESTORE,
         confirm_type: 'primary',
-        cancel: LOCALE.CANCEL || 'Cancel',
+        cancel: LOCALE.CANCEL,
         cancel_type: 'secondary',
         mode: 'hbf',
       }).then(() => true).catch(() => false);
@@ -244,7 +248,10 @@ class __panel_trash extends mfsInteract {
     overlay.clear();
     if (data) RADIO_MEDIA.trigger(_a.free, data);
     // Full re-feed below IS the freshest state — drop any reload held back
-    // while the confirm overlay was open.
+    // while the confirm overlay was open, including a debounce timer still
+    // queued (a WS echo landing <400ms ago would otherwise re-feed AGAIN
+    // right after this one: duplicate show_bin + visible flicker).
+    if (this._wsRefresh.cancel) this._wsRefresh.cancel();
     this._pendingWsRefresh = false;
     this.feed(require('./skeleton')(this));
   }
