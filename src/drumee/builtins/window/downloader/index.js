@@ -16,10 +16,15 @@ class __window_downloader extends mfsInteract {
     require('./skin');
     super.initialize(opt);
     this.declareHandlers();
+    // Compact confirm-download modal (Figma 2914:186797 — 520px card). Fixed
+    // size + centered so the redesigned card doesn't float in an oversized
+    // window; the download-in-progress view reuses the same window/size.
+    const W = 520, H = 460;
     this.style.set({
-      width: this.size.width,
-      height: this.size.height,
-      left: window.innerWidth / 2 - this.size.width / 2
+      width: W,
+      height: H,
+      left: Math.max(0, window.innerWidth / 2 - W / 2),
+      top: Math.max(20, window.innerHeight / 2 - H / 2)
     });
     this._token = this.mget(_a.token) || ''
   }
