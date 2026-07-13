@@ -467,28 +467,20 @@ class __window_meeting extends __room {
       case "react":
         // A quick-reaction emoji from the topbar bar was clicked. Read the
         // glyph off the button (model attr first, DOM text as fallback) and
-        // broadcast it. The bar is a menu.topic (persistence:once) so it
-        // closes itself on selection.
+        // broadcast it. The emoji button uses bubble:0, so the bar stays open
+        // (send several reactions without reopening); it dismisses only via
+        // click-outside or the smiley trigger.
         this._sendReaction(
           (cmd.mget && cmd.mget("emoji")) ||
             (cmd.el && cmd.el.textContent && cmd.el.textContent.trim()),
         );
-        // Picking a quick emoji closes the bar (persistence:once); close the
-        // full picker with it so the whole reactions surface dismisses.
-        this._closeReactionsPicker();
         break;
 
       case "reactions-more":
-        // "…" opens the full emoji picker; any glyph picked there is sent as
-        // a reaction (handled via the "insert" case below).
+        // "…" opens the full emoji picker; glyph picks there are handled by the
+        // picker's own capture-phase click listener (_bindReactionsPickerDismiss),
+        // which sends the reaction and keeps the bar + picker open.
         this._toggleReactionsPicker();
-        break;
-
-      case _a.insert:
-        // Fired by the shared assets/emojis picker (reactions "more"). Only
-        // acts while our reactions picker is open, so it never interferes with
-        // other insert sources.
-        this._pickReaction(args);
         break;
 
       default:
@@ -935,12 +927,13 @@ class __window_meeting extends __room {
     w.el.style.left = `${Math.round(b.left - m.left)}px`;
   }
 
-  // Give the picker the same click-outside dismissal the reactions bar has, so
-  // the whole reactions surface closes together. A click inside the picker or
-  // the reactions menu (bar + smiley trigger) is left to their own handlers;
-  // anything else — the same outside-click that closes the bar — closes the
-  // picker. Bound on the next tick so the "…" click that opened it doesn't
-  // immediately dismiss it.
+  // Document-capture click handler while the picker is open. It (a) picks a
+  // glyph and (b) dismisses on a true outside click. Capture phase matters:
+  // for a glyph we send the reaction and stopImmediatePropagation, so the click
+  // never reaches the emoji row's view handler — that handler fires RADIO_CLICK
+  // which the reactions bar treats as an outside click and closes on. Swallowing
+  // it keeps BOTH the bar and the picker open. Bound on the next tick so the "…"
+  // click that opened the picker doesn't immediately dismiss it.
   _bindReactionsPickerDismiss() {
     if (this._reactionsPickerDismiss) return;
     this._reactionsPickerDismiss = (e) => {
@@ -950,10 +943,21 @@ class __window_meeting extends __room {
         return;
       }
       const t = e.target;
-      if (w.el.contains(t)) return;
+      // Any click inside the picker keeps it (and the bar) open.
+      if (w.el.contains(t)) {
+        const span = t.closest && t.closest('[data-service="emoji"]');
+        if (span) {
+          e.stopImmediatePropagation();
+          e.preventDefault();
+          this._sendReaction(span.textContent && span.textContent.trim());
+        }
+        return;
+      }
+      // Clicks in the reactions menu (bar + smiley) are the menu's business.
       const menu =
         this.el && this.el.querySelector(`.${this.fig.family}__reactions-menu`);
       if (menu && menu.contains(t)) return;
+      // Anything else is a true outside click — dismiss the picker.
       this._closeReactionsPicker();
     };
     setTimeout(() => {
@@ -971,16 +975,6 @@ class __window_meeting extends __room {
     if (this.__wrapperReactions && !this.__wrapperReactions.isEmpty()) {
       this.__wrapperReactions.clear();
     }
-  }
-
-  // A glyph was clicked in the reactions "more" picker. The picker's rows
-  // dispatch service "insert" with the clicked <span> as args.target; send
-  // that glyph as a reaction and close the picker.
-  _pickReaction(args) {
-    const target = args && args.target;
-    if (!target || !target.dataset || target.dataset.service !== "emoji") return;
-    this._sendReaction(target.innerText && target.innerText.trim());
-    this._closeReactionsPicker();
   }
 
   _toggleHandRaise(cmd) {

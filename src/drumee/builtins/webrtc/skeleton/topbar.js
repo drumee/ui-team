@@ -96,6 +96,10 @@ module.exports = function (_ui_) {
       emoji: glyph,
       service: "react",
       uiHandler: [_ui_],
+      // Keep the bar open on click (like "…"): bubble:0 stops the click
+      // reaching the menu's onChildBubble → _closeItems, while still
+      // dispatching "react". Lets the user fire several reactions in a row.
+      bubble: 0,
     });
 
   // Reactions smiley: a KIND.menu.topic that drops the quick-reaction bar just
