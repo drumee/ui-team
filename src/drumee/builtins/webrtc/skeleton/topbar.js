@@ -125,7 +125,7 @@ module.exports = function (_ui_) {
       kids: [
         reactionEmoji("👋"),
         reactionEmoji("👍"),
-        reactionEmoji("🍔"),
+        reactionEmoji("😂"),
         reactionEmoji("😮"),
         reactionEmoji("❤️"),
         reactionEmoji("🎉"),
