@@ -2846,6 +2846,15 @@ class __widget_chat extends LetcBox {
     }
     const dropdown = { el: dropdownEl };
 
+    // Staleness guard. File search fans out over many async fetchService calls
+    // and every keystroke starts a fresh, uncancelable request. Without a token
+    // an older (slower) search resolves AFTER the user already picked a file and
+    // closed the dropdown, re-opening it with no new input — forcing a second
+    // Enter and a duplicate mention. Capture the current sequence; the resolve
+    // handler bails if a newer request (or a close) has since bumped it.
+    const requestSeq = (this._mentionRequestSeq || 0) + 1;
+    this._mentionRequestSeq = requestSeq;
+
     const hubId = this.hubId;
     // `home` may be unset in folder-chat (toolkit/index.js passes `home_id`
     // as a primitive, not the full `home` object). Don't early-return —
@@ -2925,6 +2934,10 @@ class __widget_chat extends LetcBox {
 
     Promise.all([filesPromise, contactsPromise])
       .then(([filesData, contactsData]) => {
+        // A newer search started, or the dropdown was closed (e.g. the user
+        // already selected a file), while this request was in flight — drop the
+        // stale result instead of re-opening the popup.
+        if (this._mentionRequestSeq !== requestSeq) return;
         console.log("[mention] fetch resolved", {
           filesRaw: filesData,
           contactsRaw: contactsData,
@@ -3096,6 +3109,9 @@ class __widget_chat extends LetcBox {
    * Close mention dropdown
    */
   _closeMentionDropdown() {
+    // Invalidate any in-flight file search so a late resolve can't re-open the
+    // popup after the dropdown is closed (see _showMentionFiles staleness guard).
+    this._mentionRequestSeq = (this._mentionRequestSeq || 0) + 1;
     const dropdownEl = this._getMentionDropdownEl();
     if (!dropdownEl) return;
     this._mentionDropdownIndex = -1;
