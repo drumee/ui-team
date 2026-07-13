@@ -161,7 +161,10 @@
 
     &-size,
     &-hint {
-      @include drumee.typo($size: 16px, $line: 1.4, $weight: 600, $color: var(--primary-100));
+      // Theme-aware near-black. NOT --primary-100: revamp.scss redefines that
+      // token to a pale lavender (#f4e7ff) later in :root, which rendered the
+      // text almost invisible.
+      @include drumee.typo($size: 16px, $line: 1.4, $weight: 600, $color: var(--default-text-color));
       text-align: center;
     }
 
