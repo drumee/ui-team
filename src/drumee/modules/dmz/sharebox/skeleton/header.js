@@ -1,8 +1,10 @@
+const { isSharedArea } = require('../area');
+
 function __skl_dmz_sharebox_header(ui) {
   const headerFig = `${ui.fig.family}-header`;
   const area = ui.mget(_a.area) || _a.share;
-  // Restricted workspace (anything but share/dmz) → lock glyph; shared → link glyph.
-  const restricted = !(area === _a.share || area === 'dmz');
+  // Restricted workspace → lock glyph; shared/public/dmz link → link glyph.
+  const restricted = !isSharedArea(area);
 
   const folderIcon = Skeletons.Box.X({
     className: `${headerFig}__folder-icon`,

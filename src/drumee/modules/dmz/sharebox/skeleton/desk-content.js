@@ -15,6 +15,8 @@ const {
   getAreaLabel,
 } = require("../../../../builtins/window/skeleton/toolkit/index");
 
+const { isSharedArea } = require("../area");
+
 function dmzTopbar(ui) {
   const cnWindowButton = `${ui.fig.group}-button`;
   const cnTopbarTitle = `${ui.fig.group}-topbar-title`;
@@ -53,7 +55,12 @@ function dmzTopbar(ui) {
         className: `${ui.fig.family}__badge`,
         kids: [
           Skeletons.Note({
-            content: getAreaLabel(area) || LOCALE.SHARED || "Shared",
+            // Public/shared/dmz links show the "SHARED" badge; only true
+            // restricted workspaces fall back to their own (e.g. "RESTRICTED")
+            // label. Keeps prod (area='public') matching test (area='share').
+            content: isSharedArea(area)
+              ? (LOCALE.SHARED || "Shared")
+              : (getAreaLabel(area) || LOCALE.SHARED || "Shared"),
           }),
         ],
       }),

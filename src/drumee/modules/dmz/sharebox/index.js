@@ -13,6 +13,9 @@ const TLD_TYPOS = new Set([
   'nett', 'nte', 'ogr', 'orgg', 'rog'
 ]);
 
+// Display-only helper: which hub areas render with the pink "shared" chrome.
+const { isSharedArea } = require('./area');
+
 /**
  * Class representing the dmz sharebox module.
  * @class __dmz_sharebox
@@ -265,10 +268,11 @@ class __dmz_sharebox extends LetcBox {
 
     this.mset(data);
     // Accent the share UI by workspace area (same rule as the server's
-    // workspace_restricted): anything but share/dmz is "restricted" and turns the
-    // header / badge / folder art red; shared stays pink. Missing area (e.g.
-    // file-only shares) defaults to the shared look.
-    const _restricted = data.area && !(data.area === 'share' || data.area === 'dmz');
+    // workspace_restricted): a public/shared/dmz link stays pink; any true
+    // restricted workspace turns the header / badge / folder art red. Missing
+    // area (e.g. file-only shares) defaults to the shared look. `public` MUST
+    // stay in the shared set — prod returns area='public' for open links.
+    const _restricted = !isSharedArea(data.area);
     this._areaTag = _restricted ? 'restricted' : 'shared';
     this.el.dataset.area = this._areaTag;
     if (loginOpt.file_nid) this.mset({ file_nid: loginOpt.file_nid });
