@@ -346,6 +346,12 @@ class __window_meeting extends __room {
       if (this._memberCallStates) this._memberCallStates.delete(key);
       if (this._memberHandRaised) this._memberHandRaised.delete(key);
       if (this._memberPresenting) this._memberPresenting.delete(key);
+      // If the presenter left without a clean STOP_REMOTE_SCREEN, release the
+      // share lock so the rest of the room can present again.
+      if (this._currentPresenterUid && key === this._currentPresenterUid) {
+        this._currentPresenterUid = null;
+        this._setShareLocked(false);
+      }
       this._refreshMember(uid);
     }
   }
@@ -435,6 +441,15 @@ class __window_meeting extends __room {
 
       case "pin-tile":
         this._togglePinnedTile(args);
+        break;
+
+      case "start-screenshare":
+      case "stop-screenshare":
+        // One screen at a time: block starting a share while a remote is
+        // presenting (belt-and-suspenders with the disabled button). The
+        // active local presenter is never locked, so they can still stop.
+        if (this._shareLocked && !this._presentingLocally) return;
+        super.onUiEvent(cmd, args);
         break;
 
       case "togglefullscreen":
@@ -1034,6 +1049,9 @@ class __window_meeting extends __room {
     // Viewer side: dock the tiles into the panel as soon as the share is
     // announced, so the strip never lingers in the main stage.
     this._dockParticipants(true);
+    // Only one screen at a time — lock our own share control while a remote
+    // is presenting (only the viewers hit this hook, never the sharer).
+    this._setShareLocked(true);
     const uid = (args && args.uid) || this._uidForParticipant(args && args.id);
     if (uid) {
       this._currentPresenterUid = String(uid);
@@ -1047,15 +1065,54 @@ class __window_meeting extends __room {
   onRemoteScreenStart(size) {
     if (super.onRemoteScreenStart) super.onRemoteScreenStart(size);
     this._dockParticipants(true);
+    this._setShareLocked(true);
   }
 
   onRemoteScreenStop() {
     if (super.onRemoteScreenStop) super.onRemoteScreenStop();
     this._dockParticipants(false);
+    // Remote share ended — let everyone start their own again.
+    this._setShareLocked(false);
     if (this._currentPresenterUid) {
       this._setMemberPresenting(this._currentPresenterUid, false);
       this._currentPresenterUid = null;
     }
+  }
+
+  // Catch-all unlock: the base tears the presenter down here whenever a peer
+  // leaves (remote-gone / disconnect), which can bypass onRemoteScreenStop —
+  // notably for a late joiner who never tracked `_currentPresenterUid`. Release
+  // the share lock whenever the peer being removed WAS the active presenter.
+  removePresenter(peer) {
+    const wasPresenter = !!(
+      this.__presenter &&
+      typeof this.__presenter.getItemsByAttr === "function" &&
+      peer &&
+      this.__presenter.getItemsByAttr("participant_id", peer.participant_id)[0]
+    );
+    if (super.removePresenter) super.removePresenter(peer);
+    if (wasPresenter) {
+      this._setShareLocked(false);
+      this._currentPresenterUid = null;
+    }
+  }
+
+  // Lock/unlock the local "share screen" control. While a remote participant
+  // is presenting, other participants can't start their own share (one screen
+  // at a time); the presenter's own button is never touched (they never hit
+  // the remote-screen hooks), so they can still stop. Visual disable + a guard
+  // in onUiEvent both key off `_shareLocked`.
+  _setShareLocked(locked) {
+    this._shareLocked = !!locked;
+    const btn = this.__ctrlScreen;
+    if (!btn || !btn.el || (btn.isDestroyed && btn.isDestroyed())) return;
+    btn.el.dataset.disabled = locked ? "1" : "0";
+    btn.el.setAttribute(
+      "title",
+      locked
+        ? (LOCALE.SCREEN_SHARE_BUSY || "Someone is already sharing their screen")
+        : (LOCALE.SHARE_SCREEN || "Share screen"),
+    );
   }
 
   // Local desktop track mute/unmute is the only signal we get for our own
