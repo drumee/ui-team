@@ -481,7 +481,7 @@
   "CALLING": "Call in progress",
   "MISSED_CALL": "Missed call",
   "MIGRATE_GDRIVE_TITLE": "Migrate from Google Drive",
-  "MIGRATE_GDRIVE_HINT": "Imports files and folders from your Google Drive into Drumee. Google Workspace files (Docs, Sheets, Slides) are exported as PDF/XLSX/PPTX.",
+  "MIGRATE_GDRIVE_HINT": "Imports files and folders from your Google Drive into Drumee. Google Workspace files (Docs, Sheets, Slides) are exported as DOCX/XLSX/PPTX.",
   "GDRIVE_PICKER_CHOOSE": "Choose from Google Drive",
   "GDRIVE_PICKER_HINT": "Open a folder and select the files inside — Drumee can only access the files you pick.",
   "GDRIVE_PICKER_UNAVAILABLE": "The Google Drive picker is not available right now. Please try again later.",
