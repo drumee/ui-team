@@ -349,7 +349,7 @@
       height: 100% !important;
       max-height: 100%;
       overflow: hidden;
-      border-radius: 12px;
+      border-radius: 8px;
       box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
 
       // Local self-view OR remote — the shown participant fills the full frame.
@@ -361,16 +361,24 @@
         height: 100% !important;
         min-width: 0 !important;
         min-height: 0 !important;
-        border-radius: 12px;
+        border-radius: 8px;
       }
 
-      // Only one participant is visible: the local self-view sits above any
-      // remote tiles (which fill the same frame beneath it).
+      // Only one participant is visible: by default the local self-view sits
+      // above any remote tiles (which fill the same frame beneath it).
       .endpoint-local {
         z-index: 2;
       }
       .remote-user {
         z-index: 1;
+      }
+
+      // Dynamic spotlight: window_meeting._updateFloatFocus flips
+      // data-focused="1" onto whoever is talking / raising a hand, bringing
+      // that tile to the very front (above the default local self-view).
+      .endpoint-local[data-focused="1"],
+      .remote-user[data-focused="1"] {
+        z-index: 5 !important;
       }
 
       // Compact avatar sizing for the floating tile. The tile skins cap the

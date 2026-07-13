@@ -346,6 +346,9 @@ class __window_meeting extends __room {
       if (this._memberCallStates) this._memberCallStates.delete(key);
       if (this._memberHandRaised) this._memberHandRaised.delete(key);
       if (this._memberPresenting) this._memberPresenting.delete(key);
+      // Drop stale spotlight refs so focus doesn't stick to a gone tile.
+      if (this._lastRaisedUid === key) this._lastRaisedUid = null;
+      if (this._dominantPid === id) this._dominantPid = null;
       // If the presenter left without a clean STOP_REMOTE_SCREEN, release the
       // share lock so the rest of the room can present again.
       if (this._currentPresenterUid && key === this._currentPresenterUid) {
@@ -353,6 +356,7 @@ class __window_meeting extends __room {
         this._setShareLocked(false);
       }
       this._refreshMember(uid);
+      this._updateFloatFocus();
     }
   }
 
@@ -728,7 +732,10 @@ class __window_meeting extends __room {
     if (on) this._memberHandRaised.set(key, 1);
     else this._memberHandRaised.delete(key);
     this._applyTileDataset(uid, "raised", on);
+    // Remember the most recent raiser so the float overlay can spotlight them.
+    if (on) this._lastRaisedUid = key;
     this._refreshMember(uid);
+    this._updateFloatFocus();
   }
 
   _setMemberPresenting(uid, on) {
@@ -764,6 +771,106 @@ class __window_meeting extends __room {
       if (ep.el) ep.el.dataset[attr] = value;
       break;
     }
+  }
+
+  // ── Float-overlay focus (single-participant view while sharing) ──────────
+  // The float overlay stacks every tile at full frame; whichever tile carries
+  // data-focused="1" is raised to the front (skin z-index). This picks WHO to
+  // show: the most recent hand-raiser, else the dominant speaker, else the
+  // local self-view. Only meaningful while the tiles are docked (a share is on).
+
+  // Jitsi dominant-speaker changed. Keep the base behavior (per-tile
+  // data-speaking ring), then re-point the float spotlight at the speaker.
+  onDominantSpeaker(id) {
+    if (super.onDominantSpeaker) super.onDominantSpeaker(id);
+    this._dominantPid = id || null;
+    this._updateFloatFocus();
+  }
+
+  // True while the live tiles are docked into the float overlay (i.e. a screen
+  // is being shared) — the only time focus switching is visible.
+  _floatDocked() {
+    return !!(
+      this._participantsHome && this._participantsHome.dataset.docked === "1"
+    );
+  }
+
+  _myParticipantId() {
+    return this.room && this.room.myUserId ? this.room.myUserId() : null;
+  }
+
+  // uid of the participant to spotlight for a raised hand: the most recent
+  // raiser still raised, else any remaining raised hand, else null.
+  _activeRaisedUid() {
+    if (!this._memberHandRaised || !this._memberHandRaised.size) return null;
+    if (this._lastRaisedUid && this._memberHandRaised.has(this._lastRaisedUid)) {
+      return this._lastRaisedUid;
+    }
+    const keys = Array.from(this._memberHandRaised.keys());
+    return keys[keys.length - 1] || null;
+  }
+
+  // Priority: raised hand > dominant speaker > local self-view.
+  _updateFloatFocus() {
+    if (!this._floatDocked()) return;
+    const raisedUid = this._activeRaisedUid();
+    if (raisedUid != null) return this._focusByUid(raisedUid);
+    if (this._dominantPid) return this._focusByPid(this._dominantPid);
+    return this._focusLocalTile();
+  }
+
+  _focusByUid(uid) {
+    if (String(uid) === String(Visitor.id)) return this._focusLocalTile();
+    if (this.endpoints) {
+      for (const pid of Object.keys(this.endpoints)) {
+        const ep = this.endpoints[pid];
+        if (!ep || ep.isDestroyed()) continue;
+        if (String(ep.mget(_a.uid)) !== String(uid)) continue;
+        return this._applyFloatFocus(ep.el);
+      }
+    }
+    // Raiser has no live tile (edge) — fall back so the overlay isn't blank.
+    return this._focusLocalTile();
+  }
+
+  _focusByPid(pid) {
+    if (pid === this._myParticipantId()) return this._focusLocalTile();
+    const ep = this.endpoints && this.endpoints[pid];
+    if (ep && !ep.isDestroyed() && ep.el) return this._applyFloatFocus(ep.el);
+    return this._focusLocalTile();
+  }
+
+  _focusLocalTile() {
+    if (typeof this.getLocalParts !== "function") return;
+    this.getLocalParts()
+      .then((parts) => {
+        const local = parts && parts.local;
+        if (local && !local.isDestroyed() && local.el) {
+          this._applyFloatFocus(local.el);
+        }
+      })
+      .catch(() => {});
+  }
+
+  // Move data-focused onto `el`, clearing it from every other tile in the
+  // float overlay so exactly one participant is spotlighted.
+  _applyFloatFocus(el) {
+    if (!el || !this.el) return;
+    const float = this.el.querySelector(`.${this.fig.family}__float-tiles`);
+    if (!float || !float.contains(el)) return;
+    float
+      .querySelectorAll('[data-focused="1"]')
+      .forEach((n) => { n.dataset.focused = "0"; });
+    el.dataset.focused = "1";
+  }
+
+  _clearFloatFocus() {
+    if (!this.el) return;
+    const float = this.el.querySelector(`.${this.fig.family}__float-tiles`);
+    if (!float) return;
+    float
+      .querySelectorAll('[data-focused="1"]')
+      .forEach((n) => { n.dataset.focused = "0"; });
   }
 
   // Toggle pin on a participant's tile. Only one pinned tile at a time —
@@ -1196,11 +1303,16 @@ class __window_meeting extends __room {
       if (this._participantsHome) {
         this._participantsHome.dataset.docked = toPanel ? "1" : "0";
       }
-      if (!toPanel) {
+      if (toPanel) {
+        // Now that the tiles live in the overlay, pick the initial spotlight
+        // (defaults to the local self-view until someone talks / raises a hand).
+        this._updateFloatFocus();
+      } else {
         // Re-lay out the grid immediately. The base responsive() defers the
         // participants relayout ~1s, which leaves the tiles briefly in their
         // docked single-column form — a visible glitch right after the screen
         // closes. Doing it now makes the return to the grid clean.
+        this._clearFloatFocus();
         if (typeof participants.responsive === "function") {
           participants.responsive("normal");
         }
