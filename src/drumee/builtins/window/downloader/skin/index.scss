@@ -4,6 +4,7 @@
   &__ui {
     background-color: var(--default-bg);//var(--ewhite);
     box-shadow: var(--shadow-main);
+    border-radius: 12px; // Figma modal card
     &[data-state="0"]{
       display: none;
     }
@@ -115,6 +116,108 @@
     color:var(--default-thinline-icon);
     :hover{
       color:var(--default-thinline-icon-hover);
+    }
+  }
+
+  /* ---- Confirm-download modal (Figma 2914:186797) -------------------------
+     Scoped to __confirm so the download-in-progress view (skeleton/progress.js,
+     which reuses __main / __labels / __buttons) is untouched. Tokens only. */
+  &__confirm {
+    box-sizing: border-box;
+    align-items: center;
+    justify-content: center;
+    gap: 32px;
+    padding: 32px;
+    text-align: center;
+  }
+
+  &__badge {
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    width: 56px;
+    height: 56px;
+    border-radius: 100px;
+    // Overlay/brand: 10% of the brand accent (no dedicated token → derive it
+    // from --primary-40 so it tracks the brand color and both themes).
+    background-color: color-mix(in srgb, var(--primary-40) 10%, transparent);
+  }
+
+  &__badge-icon {
+    width: 32px;
+    height: 32px;
+    svg {
+      width: 32px;
+      height: 32px;
+      color: var(--primary-40);
+      fill: var(--primary-40);
+    }
+  }
+
+  &__prompt {
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+
+    &-size,
+    &-hint {
+      @include drumee.typo($size: 16px, $line: 1.4, $weight: 600, $color: var(--primary-100));
+      text-align: center;
+    }
+
+    &-method {
+      @include drumee.typo($size: 16px, $line: 1.4, $weight: 600, $color: var(--primary-40));
+      text-align: center;
+      margin-top: 8px;
+    }
+  }
+
+  &__actions {
+    align-items: stretch;
+    gap: 24px;
+    width: 100%;
+  }
+
+  &__actions-row {
+    gap: 8px;
+    width: 100%;
+  }
+
+  &__action {
+    flex: 1 1 0;
+    min-width: 0;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 16px 24px;
+    border-radius: 4px;
+    cursor: pointer;
+    background-color: var(--primary-40);
+    @include drumee.typo($size: 14px, $line: 20px, $weight: 600, $color: var(--btn-commit-text));
+
+    svg {
+      width: 20px;
+      height: 20px;
+      fill: var(--btn-commit-text);
+      color: var(--btn-commit-text);
+    }
+
+    &:hover {
+      background-color: var(--primary-50);
+    }
+  }
+
+  &__cancel {
+    width: 100%;
+    justify-content: center;
+    padding: 16px 24px;
+    border-radius: 4px;
+    cursor: pointer;
+    background-color: var(--tertiary-grey-20);
+    @include drumee.typo($size: 14px, $line: 20px, $weight: 600, $color: var(--tertiary-grey-70));
+
+    &:hover {
+      background-color: var(--tertiary-grey-30);
     }
   }
 }

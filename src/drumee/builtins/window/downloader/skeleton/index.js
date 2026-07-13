@@ -6,60 +6,86 @@
 
 //
 // ===========================================================
+// Confirm-download modal (Figma 2914:186797): brand download badge, the size
+// hint, "How do you want to download?", then two primary action buttons side by
+// side (Multiple files / Single file .zip) with a full-width Cancel beneath.
+// Uses confirm-only class names (__badge / __prompt / __actions) so it never
+// collides with the download-in-progress view (skeleton/progress.js), which
+// keeps reusing __labels / __buttons / __header. Preserved contracts: the size
+// line keeps sys_pn 'filesize' (onDomRefresh swaps PREPARING → real total) and
+// the button services stay 'download-files' / 'prepare-zip' / close.
 const __desk_confirm_download = function(_ui_) {
   const pfx = `${_ui_.fig.family}`;
 
   const a = Skeletons.Box.Y({
-    className : `${pfx}__main`, 
+    debug     : __filename,
+    // __main = shared base (also used by the progress view); __confirm scopes
+    // the modal layout so it never touches skeleton/progress.js.
+    className : `${pfx}__main ${pfx}__confirm`,
     kids      : [
       Preset.Button.Close(_ui_),
 
-      Skeletons.Box.Y({
-        className : `${pfx}__labels`, 
+      // Brand download badge — 56px circle, 10% brand fill (Figma 2914:206117).
+      Skeletons.Box.X({
+        className : `${pfx}__badge`,
         kids      : [
-          Skeletons.Note({ 
-            className : 'line one',
+          Skeletons.Image.Svg({
+            ico       : 'app-download',
+            className : `${pfx}__badge-icon`
+          })
+        ]}),
+
+      // Size hint + question.
+      Skeletons.Box.Y({
+        className : `${pfx}__prompt`,
+        kids      : [
+          Skeletons.Note({
+            className : `${pfx}__prompt-size`,
             sys_pn    : 'filesize',
             content   : LOCALE.PREPARING
-          }), //TOTAL_SIZE_OF_FILES.format('')
-          
-          Skeletons.Note({ 
-            className : 'line two',
+          }),
+
+          Skeletons.Note({
+            className : `${pfx}__prompt-hint`,
             content   : LOCALE.THIS_MAY_TAKE_A_WHILE
           }),
-          
-          Skeletons.Note({ 
-            className : 'line three',
+
+          Skeletons.Note({
+            className : `${pfx}__prompt-method`,
             sys_pn    : 'method',
             content   : LOCALE.DOWNLOAD_METHOD
           })
         ]}),
-      
-      Skeletons.Wrapper.Y({
-        className : `${pfx}__wrapper`,
-        name      : 'status'
-      }),
-      
-      Skeletons.Box.X({
-        className : `${pfx}__buttons`,
+
+      // Actions: two primary buttons in a row, Cancel full-width below.
+      Skeletons.Box.Y({
+        className : `${pfx}__actions`,
         sys_pn    : 'body',
         kids      : [
-          Skeletons.Note({
-            service   : 'download-files',
-            content   : LOCALE.MULTIPLE_FILES,
-            className : 'button submit'
-          }),
+          Skeletons.Box.X({
+            className : `${pfx}__actions-row`,
+            kids      : [
+              Skeletons.Button.Label({
+                ico       : 'app-doc-file',
+                label     : LOCALE.MULTIPLE_FILES,
+                service   : 'download-files',
+                uiHandler : [_ui_],
+                className : `${pfx}__action`
+              }),
 
-          Skeletons.Note({
-            service   : 'prepare-zip',
-            content   : LOCALE.SINGLE_FILE,
-            className : 'button submit'
-          }),
+              Skeletons.Button.Label({
+                ico       : 'dock-folder',
+                label     : LOCALE.SINGLE_FILE,
+                service   : 'prepare-zip',
+                uiHandler : [_ui_],
+                className : `${pfx}__action`
+              })
+            ]}),
 
           Skeletons.Note({
             service   : _e.close,
             content   : LOCALE.CANCEL,
-            className : 'button cancel'
+            className : `${pfx}__cancel`
           })
         ]})
     ]});
