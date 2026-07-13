@@ -4,6 +4,15 @@
   &__ui {
     background-color: var(--default-bg);//var(--ewhite);
     box-shadow: var(--shadow-main);
+    border-radius: 12px; // Figma modal card
+    // The shared .window__ui floor is min-width:600px, which overrode the inline
+    // 520px width (min-width beats width) and made the card too wide. Pin it to
+    // the Figma 520px card. Compound selector (.window-downloader__ui.window__ui,
+    // 0,2,0) beats the base .window__ui (0,1,0) regardless of load order; min()
+    // keeps it inside the viewport on narrow screens.
+    &.window__ui {
+      min-width: min(520px, 100%);
+    }
     &[data-state="0"]{
       display: none;
     }
@@ -115,6 +124,116 @@
     color:var(--default-thinline-icon);
     :hover{
       color:var(--default-thinline-icon-hover);
+    }
+  }
+
+  /* ---- Confirm-download modal (Figma 2914:186797) -------------------------
+     Scoped to __confirm so the download-in-progress view (skeleton/progress.js,
+     which reuses __main / __labels / __buttons) is untouched. Tokens only. */
+  &__confirm {
+    box-sizing: border-box;
+    align-items: center;
+    justify-content: center;
+    gap: 32px;
+    padding: 32px;
+    text-align: center;
+  }
+
+  &__badge {
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    width: 56px;
+    height: 56px;
+    border-radius: 100px;
+    // Overlay/brand: 10% of the brand accent (no dedicated token → derive it
+    // from --primary-40 so it tracks the brand color and both themes).
+    background-color: color-mix(in srgb, var(--primary-40) 10%, transparent);
+  }
+
+  &__badge-icon {
+    width: 32px;
+    height: 32px;
+    svg {
+      width: 32px;
+      height: 32px;
+      color: var(--primary-40);
+      fill: var(--primary-40);
+    }
+  }
+
+  &__prompt {
+    align-items: center;
+    gap: 0; // size + hint are one paragraph (Figma has them as a single node)
+    width: 100%;
+
+    &-size,
+    &-hint {
+      // Figma "Body/Sub Title": Geist 600, 20/1.1. Theme-aware near-black —
+      // NOT --primary-100: revamp.scss redefines that token to a pale lavender
+      // (#f4e7ff) later in :root, which rendered the text almost invisible.
+      @include drumee.typo($size: 20px, $line: 1.1, $weight: 700, $color: var(--default-text-color));
+      text-align: center;
+    }
+
+    &-method {
+      // Figma "Buttons/Large Button": Geist 600, 18/24, brand color.
+      @include drumee.typo($size: 18px, $line: 24px, $weight: 700, $color: var(--primary-40));
+      text-align: center;
+      margin-top: 32px;
+    }
+  }
+
+  &__actions {
+    align-items: stretch;
+    gap: 24px;
+    width: 100%;
+  }
+
+  &__actions-row {
+    gap: 8px;
+    width: 100%;
+  }
+
+  &__action {
+    flex: 1 1 0;
+    min-width: 0;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 16px 24px;
+    border-radius: 4px;
+    cursor: pointer;
+    // Figma primary button fill = Primary/50 (#433cc5), a deeper indigo than
+    // the brand --primary-40 (#5950ff) used for the badge/subtitle.
+    background-color: var(--primary-50);
+    // Figma "Buttons/Medium Button": Geist 600, 16/24.
+    @include drumee.typo($size: 16px, $line: 24px, $weight: 700, $color: var(--btn-commit-text));
+
+    svg {
+      width: 24px;
+      height: 24px;
+      fill: var(--btn-commit-text);
+      color: var(--btn-commit-text);
+    }
+
+    &:hover {
+      background-color: var(--primary-60);
+    }
+  }
+
+  &__cancel {
+    width: 100%;
+    justify-content: center;
+    padding: 16px 24px;
+    border-radius: 4px;
+    cursor: pointer;
+    background-color: var(--tertiary-grey-20);
+    // Figma "Buttons/Medium Button": Geist 600, 16/24.
+    @include drumee.typo($size: 16px, $line: 24px, $weight: 700, $color: var(--tertiary-grey-70));
+
+    &:hover {
+      background-color: var(--tertiary-grey-30);
     }
   }
 }
