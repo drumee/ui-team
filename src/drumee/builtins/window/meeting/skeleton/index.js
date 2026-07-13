@@ -178,6 +178,17 @@ const __skl_window_meeting = function (_ui_, localUser) {
     }),
   );
 
+  // Bottom-left overlay where sent reactions rise (Figma "reaction-sent",
+  // node 2578-31083). A single stage-wide, click-through layer; every
+  // reaction — local or from a peer — floats here, labelled with the sender's
+  // name, regardless of whose tile they're on.
+  kids.push(
+    Skeletons.Box.Y({
+      className: `${_ui_.fig.family}__reaction-stack`,
+      sys_pn: "reaction-stack",
+    }),
+  );
+
   const a = Skeletons.Box.X({
     debug: __filename,
     sys_pn: 'xxcontent',

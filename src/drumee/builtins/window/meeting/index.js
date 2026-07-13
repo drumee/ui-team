@@ -828,10 +828,12 @@ class __window_meeting extends __room {
 
   // Send a reaction: float it on our own tile immediately and broadcast it to
   // every peer (mirrors the HAND_RAISE broadcast). No-op on an empty glyph.
+  // The sender's name rides along so peers can label the float (Figma
+  // "reaction-sent": emoji above a pill with the sender's name).
   _sendReaction(emoji) {
     if (!emoji) return;
-    const localTile = this._tileForPin(null, true);
-    if (localTile && localTile.el) this._floatReaction(localTile.el, emoji);
+    const name = (Visitor.fullname && Visitor.fullname()) || "";
+    this._floatReaction(this._reactionStackEl(), emoji, name);
     try {
       this.sendRoomSignaling(SERVICE.conference.broadcast, {
         event: "REACTION",
@@ -839,6 +841,7 @@ class __window_meeting extends __room {
           room_id: this.mget(_a.room_id),
           participant_id: this.room && this.room.myUserId && this.room.myUserId(),
           uid: Visitor.id,
+          username: name,
           emoji,
         },
       });
@@ -847,30 +850,58 @@ class __window_meeting extends __room {
     }
   }
 
-  // A peer's reaction arrived — float it on their tile. Guard against our own
-  // echo (we already floated it locally in _sendReaction).
+  // The bottom-left overlay layer where every reaction floats up.
+  _reactionStackEl() {
+    return this.el && this.el.querySelector(`.${this.fig.family}__reaction-stack`);
+  }
+
+  // A peer's reaction arrived — float it on the shared stack. Guard against our
+  // own echo (already floated locally in _sendReaction) and drop reactions from
+  // participants who have already left (spec edge case).
   _applyRemoteReaction(data) {
     if (!data || !data.emoji) return;
     const myId = this.room && this.room.myUserId && this.room.myUserId();
     if (data.participant_id === myId || data.uid === Visitor.id) return;
     const pid = data.participant_id;
     const endpoint = pid && this.endpoints ? this.endpoints[pid] : null;
-    if (!endpoint || endpoint.isDestroyed() || !endpoint.el) return;
-    this._floatReaction(endpoint.el, data.emoji);
+    if (!endpoint || endpoint.isDestroyed()) return;
+    this._floatReaction(this._reactionStackEl(), data.emoji, data.username);
   }
 
-  // Spawn a transient emoji that rises and fades over a participant tile
-  // (Google-Meet style). The CSS animation drives it; we just clean up after.
-  _floatReaction(tileEl, emoji) {
-    if (!tileEl || !emoji) return;
-    const span = document.createElement("span");
-    span.className = `${this.fig.family}__reaction-float`;
-    span.textContent = emoji;
-    tileEl.appendChild(span);
-    const done = () => { if (span.parentNode) span.parentNode.removeChild(span); };
-    span.addEventListener("animationend", done);
-    // Fallback removal in case animationend never fires (tile destroyed, etc.).
-    setTimeout(done, 3000);
+  // Spawn a transient reaction that rises and fades on the bottom-left stack
+  // (Figma "reaction-sent": emoji on top, a rounded name pill below). Each
+  // call is independent — rapid/repeat reactions stack without a limit and a
+  // small horizontal drift (via margin, so the keyframe's centering transform
+  // is untouched) keeps them from perfectly overlapping. The CSS animation
+  // drives it; we just clean up when it ends.
+  _floatReaction(container, emoji, name) {
+    if (!container || !emoji) return;
+    const fam = this.fig.family;
+
+    const wrap = document.createElement("div");
+    wrap.className = `${fam}__reaction-float`;
+    // ± up to 24px so simultaneous floats fan out instead of overlapping.
+    const drift = Math.round((Math.random() - 0.5) * 48);
+    wrap.style.marginLeft = `${drift}px`;
+
+    const glyph = document.createElement("span");
+    glyph.className = `${fam}__reaction-float-emoji`;
+    glyph.textContent = emoji;
+    wrap.appendChild(glyph);
+
+    if (name) {
+      const pill = document.createElement("span");
+      pill.className = `${fam}__reaction-float-name`;
+      pill.textContent = name;
+      wrap.appendChild(pill);
+    }
+
+    container.appendChild(wrap);
+    const done = () => { if (wrap.parentNode) wrap.parentNode.removeChild(wrap); };
+    wrap.addEventListener("animationend", done);
+    // Fallback removal in case animationend never fires (layer torn down, etc.);
+    // must exceed the CSS rise duration (4s).
+    setTimeout(done, 5000);
   }
 
   // Toggle the full emoji picker for the reactions "…" button, reusing the
