@@ -65,21 +65,25 @@ const __desk_confirm_download = function(_ui_) {
           Skeletons.Box.X({
             className : `${pfx}__actions-row`,
             kids      : [
-              Skeletons.Button.Label({
-                ico       : 'dl-file',
-                label     : LOCALE.MULTIPLE_FILES,
+              // Icon BESIDE the label (Figma: horizontal), so build the button
+              // as a Box.X rather than Button.Label (which stacks icon/label).
+              Skeletons.Box.X({
+                className : `${pfx}__action`,
                 service   : 'download-files',
                 uiHandler : [_ui_],
-                className : `${pfx}__action`
-              }),
+                kids      : [
+                  Skeletons.Image.Svg({ ico: 'dl-file', className: `${pfx}__action-icon` }),
+                  Skeletons.Note({ className: `${pfx}__action-label`, content: LOCALE.MULTIPLE_FILES })
+                ]}),
 
-              Skeletons.Button.Label({
-                ico       : 'dl-folder',
-                label     : LOCALE.SINGLE_FILE,
+              Skeletons.Box.X({
+                className : `${pfx}__action`,
                 service   : 'prepare-zip',
                 uiHandler : [_ui_],
-                className : `${pfx}__action`
-              })
+                kids      : [
+                  Skeletons.Image.Svg({ ico: 'dl-folder', className: `${pfx}__action-icon` }),
+                  Skeletons.Note({ className: `${pfx}__action-label`, content: LOCALE.SINGLE_FILE })
+                ]})
             ]}),
 
           Skeletons.Note({
