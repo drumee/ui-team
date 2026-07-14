@@ -98,7 +98,7 @@ class __activity_item extends LetcBox {
     // persists via dismissed_at instead of falling back to the mfs path.
     const item_type = opt.category
       || (opt.event === 'hub.invite_received' ? 'hub_invite'
-        : (opt.event === 'task_assigned' || opt.event === 'task_column_change') ? 'contact_invite'
+        : (opt.event === 'task_assigned' || opt.event === 'task_column_change' || opt.event === 'task_mention') ? 'contact_invite'
         : 'mfs');
     const item_key = `${item_type}:${opt.id || opt.hub_id || opt.drumate_id || opt.key_id || ''}`;
     this.mset({ category, sender, autho_id, item_type, item_key })

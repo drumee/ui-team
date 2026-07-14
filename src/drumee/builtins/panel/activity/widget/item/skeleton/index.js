@@ -98,6 +98,21 @@ function getActivityMeta(ui, data) {
     };
   }
 
+  // 2c. Task @-mention ("{author} mentioned you in {task}"). Like task_assigned
+  // it is a contact_activity row (category resolves to 'contact'); without this
+  // branch a feed-sourced task_mention would fall into the contact branch and
+  // wrongly read "wants to connect". The task title is flattened onto the row
+  // server-side as `task_title`.
+  if (data.event === 'task_mention') {
+    return {
+      before: LOCALE.TASK_MENTION_ACTION || 'mentioned you in ',
+      label: data.task_title || name,
+      after: '',
+      colorClass: 'mention',
+      badge: 'mention',
+    };
+  }
+
   switch (ui.mget(_a.category)) {
     case 'hub_invite':
       // Never fall back to `name` for hub_invite — that resolver chains

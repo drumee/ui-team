@@ -878,6 +878,29 @@ class __panel_activity extends LetcBox {
     }
     const list = [];
     for (const it of dedupedItems) {
+      // Everything except pending access-requests is no longer pinned here: the
+      // server now interleaves the rollups (chat/media/teamchat/contact/ticket +
+      // hub-invites + refused) AND the task @-mention / assignment notifications
+      // chronologically into the activity feed (activity.get_feed), so the panel
+      // shows one single time-sorted list (product request). Rendering any of
+      // them in this pinned box too would double-show them. Only a pending
+      // secure-share access request stays pinned (it's actionable — approve/deny
+      // — with a lasting state). Live meeting invites are added separately below
+      // (this._meetingItems). The unread badge is unchanged: refreshActivity
+      // still fetches all of these (activity.list / list_task_assignments /
+      // channel.list_notifications) for the count — this filter only changes what
+      // renders in the pinned section.
+      //
+      // TEST-ONLY carve-out: task_column_change (bell-watch, still unreleased on
+      // this branch) is NOT yet merged into the Unread-ON feed server-side, so it
+      // must stay pinned here or it would vanish under Unread ON. Drop this line
+      // when task_column_change is folded like the other task notifications. (The
+      // preview-bound hotfix keeps the plain `!== 'access_request'` — preview has
+      // no task_column_change.)
+      if (
+        it.category !== 'access_request' &&
+        !(it.category === 'contact_invite' && it.event === 'task_column_change')
+      ) continue;
       if (it.category === 'chat' && activeChats.includes(it.drumate_id)) continue;
       const e = { ...it };
       e.kind = 'activity_item';

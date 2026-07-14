@@ -464,6 +464,7 @@
   "WANTS_TO_CONNECT": "wants to connect",
   "ACCEPTED_YOUR_INVITATION": "accepted your invitation",
   "TASK_ASSIGNED_ACTION": "assigned you to ",
+  "TASK_MENTION_ACTION": "mentioned you in ",
   "DECLINED_YOUR_INVITATION": "declined your contact invitation",
   "CREATE_SHARED_FOLDER": "Create an external folder",
   "NOTES": "Notes:",
