@@ -441,7 +441,7 @@ class __window_meeting extends __room {
         break;
 
       case "hand-raise":
-        this._raiseOwnHand(cmd);
+        this._toggleHandRaise(cmd);
         break;
 
       case "lower-hand-self":
@@ -1190,15 +1190,23 @@ class __window_meeting extends __room {
     }
   }
 
-  // Top-bar Raise-hand control: raise, or if already raised just reset the 30s
-  // timer (re-raise). It never lowers — the hand auto-clears on timeout, and a
-  // manual lower stays available from the member card (_lowerOwnHand). Mirrors
-  // the state on our own dashboard card and broadcasts a raise to peers.
-  _raiseOwnHand(cmd) {
+  // Top-bar Raise-hand control: a toggle. Click raises (and starts the 30s
+  // auto-clear timer); click again lowers. Mirrors the state on our own
+  // dashboard card and broadcasts to peers. The 30s timeout still lowers it
+  // automatically if the user never toggles it back.
+  _toggleHandRaise(cmd) {
     const el = cmd && cmd.el;
+    const raised = el
+      ? el.dataset.raised === "1"
+      : !!(this._memberHandRaised &&
+          this._memberHandRaised.has(String(Visitor.id)));
+    if (raised) {
+      this._lowerOwnHand();
+      return;
+    }
     if (el) {
       el.dataset.raised = 1;
-      el.setAttribute("title", LOCALE.RAISE_HAND || "Raise hand");
+      el.setAttribute("title", LOCALE.LOWER_HAND || "Lower hand");
     }
     this._setMemberHandRaised(Visitor.id, true, { isLocal: true });
     this._broadcastHandRaise(1);

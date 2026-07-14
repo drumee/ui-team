@@ -42,7 +42,7 @@ const __skl_stream_local = function (_ui_) {
     kids: [
       // Status badges — visibility driven by data-attrs on the tile root
       // (data-presenting, data-raised) which window_meeting flips from
-      // _setMemberPresenting / _raiseOwnHand.
+      // _setMemberPresenting / _toggleHandRaise.
       Skeletons.Button.Svg({
         className: `${_ui_.fig.family}__tile-badge ${_ui_.fig.family}__tile-badge--share`,
         ico: "meet-screen",
