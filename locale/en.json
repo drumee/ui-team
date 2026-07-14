@@ -1,4 +1,6 @@
 {
+  "NOTIFY_COLUMN": "Notify me of changes in this column",
+  "TASK_COLUMN_CHANGE_ACTION": "updated a task you follow: ",
   "OVERDUE": "Overdue",
   "THIS_WEEK": "This week",
   "THIS_MONTH": "This month",

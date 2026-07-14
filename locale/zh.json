@@ -1,4 +1,6 @@
 {
+  "NOTIFY_COLUMN": "通知我此列的变更",
+  "TASK_COLUMN_CHANGE_ACTION": "更新了你关注的任务：",
   "OVERDUE": "已逾期",
   "THIS_WEEK": "本周",
   "THIS_MONTH": "本月",

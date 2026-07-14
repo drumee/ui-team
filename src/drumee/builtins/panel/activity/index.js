@@ -818,7 +818,11 @@ class __panel_activity extends LetcBox {
       const rows = _.isArray(ta) ? ta : (_.isArray(ta?.data) ? ta.data : []);
       const dismissedTa = this._dismissedKeys || new Set();
       taskAssignments = rows
-        .filter((r) => r && r.event === 'task_assigned')
+        .filter(
+          (r) =>
+            r &&
+            (r.event === 'task_assigned' || r.event === 'task_column_change'),
+        )
         .filter((r) => !dismissedTa.has(`contact_invite:${r.id}`))
         .map((r) => ({
           ...r,
@@ -991,6 +995,12 @@ class __panel_activity extends LetcBox {
       case "task.assigned":
         // Live push when the caller is newly assigned to a task — refresh so the
         // notification appears in the feed without waiting for the next open.
+        this.refreshActivity()
+        this.shouldNofity();
+        break;
+      case "task.column_change":
+        // Live push when a task changed in a column the caller is watching
+        // (bell on) — refresh the feed + bump the badge.
         this.refreshActivity()
         this.shouldNofity();
         break;

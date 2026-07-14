@@ -470,18 +470,37 @@ const make = function (ui) {
                     }),
                   ],
                 }),
-                // Custom columns are user-editable: "⋯" opens the rename/
-                // recolor/delete popover. Built-ins stay fixed.
-                col.custom
-                  ? Skeletons.Note({
-                      className: `${pfx}__col-menu-btn`,
-                      content: "⋯",
+                // Right-side actions: notification bell (all columns) + the
+                // custom-column "⋯" editor popover (custom columns only).
+                Skeletons.Box.X({
+                  className: `${pfx}__col-actions`,
+                  kids: [
+                    // Bell toggle — off by default; on = notify me of any task
+                    // change in this column (Figma 2041-20161).
+                    Skeletons.Button.Svg({
+                      className: `${pfx}__col-bell`,
+                      ico: "bell",
                       bubble: 0,
-                      service: "col-menu",
+                      service: "col-watch-toggle",
                       uiHandler: [ui],
                       taskColumn: col.key,
-                    })
-                  : null,
+                      tooltips: LOCALE.NOTIFY_COLUMN,
+                      attrOpt: {
+                        "data-active": ui.isColumnWatched(col.key) ? "1" : "0",
+                      },
+                    }),
+                    col.custom
+                      ? Skeletons.Note({
+                          className: `${pfx}__col-menu-btn`,
+                          content: "⋯",
+                          bubble: 0,
+                          service: "col-menu",
+                          uiHandler: [ui],
+                          taskColumn: col.key,
+                        })
+                      : null,
+                  ].filter(Boolean),
+                }),
               ].filter(Boolean),
             }),
             col.custom && ui.getColMenuFor() === col.key
@@ -1598,6 +1617,194 @@ const make = function (ui) {
     ].filter(Boolean),
   });
 
+  // ── List-view multi-dimension filter (Figma 2099-50501) ───────
+  // Accordion of filter categories; tapping a row expands its value picker
+  // inline. Categories AND together, values within a category OR together.
+  // Assignee reuses the shared member filter (applies on every view); the rest
+  // apply on the List view only.
+  const filters = ui.getFilters();
+  const filterCats = [
+    { dim: "keyword", ico: "tags", label: LOCALE.TASK },
+    { dim: "priority", ico: "apps-warning", label: LOCALE.PRIORITY },
+    { dim: "status", ico: "checked-circle", label: LOCALE.STATUS },
+    { dim: "due", ico: "calendar", label: LOCALE.DUE_DATE },
+    { dim: "files", ico: "app-attachment", label: LOCALE.LINKED_FILES },
+    { dim: "assignee", ico: "two-users", label: LOCALE.ASSIGNEE },
+  ];
+
+  // A value row inside a category body: left content + a check box. Toggles a
+  // value via filter-set (assignee rows use filter-member instead).
+  const filterValueRow = (opt) =>
+    Skeletons.Box.X({
+      className: `${pfx}__member-row ${pfx}__filter-row`,
+      dataset: { active: opt.active ? 1 : 0 },
+      attrOpt: { "data-active": opt.active ? "1" : "0" },
+      bubble: 0,
+      service: opt.service || "filter-set",
+      uiHandler: [ui],
+      filterDim: opt.dim,
+      filterVal: opt.val,
+      memberUid: opt.memberUid,
+      kids: [
+        Skeletons.Box.X({ className: `${pfx}__filter-row-main`, kids: opt.leftKids }),
+        filterCheck(),
+      ],
+    });
+
+  const dot = (color) =>
+    Skeletons.Note({ className: `${pfx}__filter-dot`, styleOpt: { background: color } });
+  const nameNote = (content) =>
+    Skeletons.Note({ className: `${pfx}__member-name`, content });
+
+  const catBody = (dim) => {
+    switch (dim) {
+      case "keyword":
+        return [
+          Skeletons.Entry({
+            className: `${pfx}__filter-search`,
+            name: "filter_keyword",
+            value: filters.keyword || "",
+            placeholder: LOCALE.SEARCH_TASK,
+            watch: "filter-keyword",
+            uiHandler: [ui],
+          }),
+        ];
+      case "priority":
+        return (ui.getPriorities() || []).map((p) =>
+          filterValueRow({
+            dim: "priority",
+            val: p.key,
+            active: (filters.priority || []).includes(p.key),
+            leftKids: [dot(p.color), nameNote(LOCALE[p.label] || p.key)],
+          }),
+        );
+      case "status":
+        return (ui.getColumns() || []).map((c) =>
+          filterValueRow({
+            dim: "status",
+            val: c.key,
+            active: (filters.status || []).includes(c.key),
+            leftKids: [dot(c.color), nameNote(c.name || LOCALE[c.label] || c.key)],
+          }),
+        );
+      case "due":
+        return [
+          ["overdue", LOCALE.OVERDUE],
+          ["today", LOCALE.TODAY],
+          ["week", LOCALE.THIS_WEEK],
+          ["month", LOCALE.THIS_MONTH],
+          ["none", LOCALE.NO_DATE],
+        ].map(([val, label]) =>
+          filterValueRow({
+            dim: "due",
+            val,
+            active: filters.due === val,
+            leftKids: [nameNote(label)],
+          }),
+        );
+      case "files":
+        return [
+          ["has", LOCALE.WITH_FILES],
+          ["none", LOCALE.WITHOUT_FILES],
+        ].map(([val, label]) =>
+          filterValueRow({
+            dim: "files",
+            val,
+            active: filters.files === val,
+            leftKids: [nameNote(label)],
+          }),
+        );
+      case "assignee":
+        return [
+          filterValueRow({
+            service: "filter-member",
+            memberUid: "",
+            active: !filterActive,
+            leftKids: [nameNote(LOCALE.ALL_MEMBERS)],
+          }),
+          ...members.map((m) => {
+            const uid = String(m.id || m.uid);
+            return filterValueRow({
+              service: "filter-member",
+              memberUid: uid,
+              active: filterUids.includes(uid),
+              leftKids: [
+                Skeletons.UserProfile({
+                  className: `${pfx}__member-avatar`,
+                  id: uid,
+                  firstname: m.firstname,
+                  lastname: m.lastname,
+                  auto_color: 1,
+                  live_status: 0,
+                }),
+                nameNote(fullName(m)),
+              ],
+            });
+          }),
+        ];
+      default:
+        return [];
+    }
+  };
+
+  const filterCategory = (c) =>
+    Skeletons.Box.Y({
+      className: `${pfx}__filter-cat`,
+      dataset: { dim: c.dim, open: ui.isFilterCatOpen(c.dim) ? 1 : 0 },
+      attrOpt: {
+        "data-dim": c.dim,
+        "data-open": ui.isFilterCatOpen(c.dim) ? "1" : "0",
+      },
+      kids: [
+        Skeletons.Box.X({
+          className: `${pfx}__filter-cat-head`,
+          bubble: 0,
+          service: "filter-cat",
+          uiHandler: [ui],
+          filterDim: c.dim,
+          attrOpt: { "data-active": ui.isFilterDimActive(c.dim) ? "1" : "0" },
+          kids: [
+            Skeletons.Image.Svg({ ico: c.ico, className: `${pfx}__filter-cat-ico` }),
+            Skeletons.Note({ className: `${pfx}__filter-cat-label`, content: c.label }),
+            Skeletons.Box.X({
+              className: `${pfx}__filter-check`,
+              attrOpt: { "data-active": ui.isFilterDimActive(c.dim) ? "1" : "0" },
+              kids: [
+                Skeletons.Note({ className: `${pfx}__filter-check-mark`, content: "✓" }),
+              ],
+            }),
+            Skeletons.Note({ className: `${pfx}__filter-cat-chev`, content: "›" }),
+          ],
+        }),
+        Skeletons.Box.Y({
+          className: `${pfx}__filter-cat-body`,
+          kids: catBody(c.dim),
+        }),
+      ],
+    });
+
+  const listFilterDropdown = Skeletons.Box.Y({
+    className: `${pfx}__filter-picker ${pfx}__filter-picker--list`,
+    kids: [
+      Skeletons.Box.X({
+        className: `${pfx}__filter-head`,
+        kids: [
+          Skeletons.Note({ className: `${pfx}__filter-title`, content: LOCALE.FILTER }),
+          ui.isFilterActive()
+            ? Skeletons.Note({
+                className: `${pfx}__filter-clear`,
+                content: LOCALE.CLEAR,
+                bubble: 0,
+                service: "filter-clear",
+                uiHandler: [ui],
+              })
+            : null,
+        ].filter(Boolean),
+      }),
+      ...filterCats.map(filterCategory),
+    ],
+  });
+
   // Sub-views over the same folder-scoped task set. Board is rendered inline
   // (its columns + DnD); List/Summary are separate modules fed the same data.
   const view = ui.getView();
@@ -1673,7 +1880,9 @@ const make = function (ui) {
   });
   const filterBtn = Skeletons.Box.X({
     className: `${pfx}__viewbar-filter`,
-    dataset: { active: filterActive ? 1 : 0 },
+    // Highlight when ANY filter is active on the current view (member filter
+    // everywhere; the richer dimensions additionally count on the List view).
+    dataset: { active: ui.isFilterActive() ? 1 : 0 },
     bubble: 0,
     service: "toggle-filter",
     uiHandler: [ui],
@@ -1724,7 +1933,9 @@ const make = function (ui) {
           })
         : null,
       // Filter overlay (anchored top-right, below the tab bar's filter button).
-      filterOpen ? filterDropdown : null,
+      // List view gets the rich multi-dimension accordion; other views keep the
+      // member-only picker.
+      filterOpen ? (view === "list" ? listFilterDropdown : filterDropdown) : null,
       Skeletons.Wrapper.Y({
         className: `${pfx}__detail-wrapper`,
         name: "task-detail",

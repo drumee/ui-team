@@ -1,4 +1,6 @@
 {
+  "NOTIFY_COLUMN": "Me notifier des changements dans cette colonne",
+  "TASK_COLUMN_CHANGE_ACTION": "a modifié une tâche que vous suivez : ",
   "OVERDUE": "En retard",
   "THIS_WEEK": "Cette semaine",
   "THIS_MONTH": "Ce mois-ci",
