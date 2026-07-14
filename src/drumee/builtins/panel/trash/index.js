@@ -21,8 +21,10 @@ class __panel_trash extends mfsInteract {
     this._refreshStorageUsed = _.debounce(this._refreshStorageUsed.bind(this), 3000, { leading: true, trailing: false });
     this._onOutsideClick = this._onOutsideClick.bind(this);
     // Trash/restore/purge echoes can arrive in bursts (multi-select) — one
-    // list reload per burst is enough.
-    this._wsRefresh = _.debounce(this._wsRefresh.bind(this), 400);
+    // list reload per burst is enough. 600ms (was 400) coalesces echoes that
+    // trickle ~half a second apart as the server processes each file, so a
+    // multi-file delete triggers a single reload instead of one per echo.
+    this._wsRefresh = _.debounce(this._wsRefresh.bind(this), 600);
 
   }
 
@@ -76,7 +78,7 @@ class __panel_trash extends mfsInteract {
 
   _wsRefresh() {
     if (!this.el || this.isDestroyed()) return;
-    // Don't clobber the empty-bin confirm overlay mid-decision — feed()
+    // Don't clobber the empty-bin confirm overlay mid-decision — a rebuild
     // replaces the whole subtree, overlay included. Flag it and replay once
     // the overlay closes (cancel handler; confirm re-feeds anyway).
     const overlay = this.getPart && this.getPart('overlay');
@@ -85,7 +87,21 @@ class __panel_trash extends mfsInteract {
       return;
     }
     this._pendingWsRefresh = false;
-    this.feed(require('./skeleton')(this));
+    // Reload the LIST in place instead of re-feeding the whole panel. A full
+    // feed() tore down + rebuilt the topbar/list/footer scaffold on every WS
+    // echo, so deleting several files (each purge/restore echo lands more than
+    // one debounce window apart) blinked the entire layout repeatedly — the
+    // empty-state placeholder flickered out and back on each rebuild. restart()
+    // re-fetches the bin while the panel frame stays put (topbar/footer keep
+    // their DOM nodes); refresh the count once the reload settles.
+    const list = this.getPart && this.getPart(_a.list);
+    if (list && typeof list.restart === 'function') {
+      list.once(_e.eod, () => this._updateItemsCount());
+      list.restart();
+    } else {
+      // List not mounted yet (first render / mid-teardown) — fall back.
+      this.feed(require('./skeleton')(this));
+    }
   }
 
   _refreshStorageUsed() {
