@@ -93,6 +93,13 @@ class __window_connect extends __room {
    */
   onWsMessage(service, data, options = {}) {
     this.verbose("AAA:292 459", this.el, service, data, options);
+    // Peer reaction float (shared reactions feature). _applyRemoteReaction
+    // ignores our own echo, so handle it before the base self-filter.
+    if (options.service === SERVICE.conference.broadcast &&
+        options.event === "REACTION") {
+      this._applyRemoteReaction(data);
+      return;
+    }
     switch (options.service) {
       case SERVICE.conference.cancel:
         this.goodbye()
@@ -511,9 +518,27 @@ class __window_connect extends __room {
         break;
 
 
+      case "react":
+        // Quick-reaction emoji from the topbar bar (shared reactions feature).
+        this._sendReaction(
+          (cmd.mget && cmd.mget("emoji")) ||
+            (cmd.el && cmd.el.textContent && cmd.el.textContent.trim()),
+        );
+        break;
+
+      case "reactions-more":
+        this._toggleReactionsPicker();
+        break;
+
       default:
         super.onUiEvent(cmd, args);
     }
+  }
+
+  onBeforeDestroy(opt) {
+    // Drop the reactions picker's document click-listener if open at teardown.
+    this._closeReactionsPicker();
+    if (super.onBeforeDestroy) return super.onBeforeDestroy(opt);
   }
 
   // ===========================================================
@@ -559,6 +584,9 @@ class __window_connect extends __room {
 
 
 }
+
+// Shared in-call reactions behavior (same module the meeting uses).
+Object.assign(__window_connect.prototype, require("builtins/webrtc/reactions"));
 
 // __window_connect.initClass();
 module.exports = __window_connect;
