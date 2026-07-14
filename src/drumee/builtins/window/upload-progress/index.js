@@ -1016,6 +1016,11 @@ class __window_upload_progress extends __window_core {
       this._uploading = false;
       this._renderAggregate();
       this._renderProgressList();
+      // Dismiss the popup after cancelling — the X, footer "Close" and
+      // "Cancel all" all route here, and this bundle-mode path used to return
+      // without ever calling goodbye(), so none of them could close the window
+      // (the non-bundle path below already closes via the delayed goodbye).
+      _.delay(() => this.goodbye(), 500);
       return;
     }
     if (this._job && this._job.cancel) this._job.cancel();
@@ -1421,6 +1426,10 @@ class __window_upload_progress extends __window_core {
         if (actionPart.el.dataset) {
           actionPart.el.dataset.service = newService;
         }
+        // Keep the widget model in sync — onUiEvent resolves the service from
+        // the model first, so a DOM-only update left "Close" firing the stale
+        // "cancel-all" service.
+        if (actionPart.mset) actionPart.mset(_a.service, newService);
       }
     } else {
       // If element not ready, just update the part
@@ -1954,6 +1963,10 @@ class __window_upload_progress extends __window_core {
       p.el.className = `${this.fig.family}__close`;
       p.el.setAttribute(_a.service, "close");
       if (p.el.dataset) p.el.dataset.service = "close";
+      // Also flip the widget MODEL — onUiEvent resolves the service from the
+      // model before the DOM attribute, so without this the relabeled "Close"
+      // button still fired the stale "cancel-all" service.
+      if (p.mset) p.mset(_a.service, "close");
     });
     this._maybeArmAutoMinimize();
   }
