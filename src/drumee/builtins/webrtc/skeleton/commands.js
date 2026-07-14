@@ -33,8 +33,12 @@ const __window_connect_commands = function (_ui_) {
   // ensurePart("commands") show/hide calls in webrtc/room/index.js +
   // window/meeting/index.js still resolve, but leave it empty (no duplicate
   // ctrl-* buttons, which would clash with the topbar ones by sys_pn).
+  // Team meetings AND the 1:1 connect window render controls in the top bar
+  // (webrtc/skeleton/topbar.js), so keep this floating bar empty for them —
+  // avoids duplicate ctrl-* buttons clashing with the topbar ones by sys_pn.
   const isTeamMeeting =
-    _ui_.service_class === "meeting" && _ui_.mget(_a.area) !== _a.dmz;
+    (_ui_.service_class === "meeting" && _ui_.mget(_a.area) !== _a.dmz) ||
+    _ui_.service_class === "connect";
   if (isTeamMeeting) {
     return Skeletons.Box.X({
       className: `${_ui_.fig.family}__commands-container`,

@@ -7,8 +7,15 @@ module.exports = function (_ui_) {
   const pfx = _ui_.fig.family;
   const name = _ui_.mget(_a.name) || _ui_.mget(_a.filename) || "";
 
+  // Carry the full control cluster in the top bar for the team meeting AND the
+  // 1:1 connect window (both use the redesigned meeting shell). Other rooms
+  // (dmz / sharebox) keep the original minimal bar + floating command bar.
   const isTeamMeeting =
-    _ui_.service_class === "meeting" && _ui_.mget(_a.area) !== _a.dmz;
+    (_ui_.service_class === "meeting" && _ui_.mget(_a.area) !== _a.dmz) ||
+    _ui_.service_class === "connect";
+  // 1:1 connect (P2P) call: drop the meeting-only controls (hand-raise / chat /
+  // people) and label the leave button "End Call".
+  const isP2P = _ui_.service_class === "connect";
 
   const brand = Skeletons.Box.X({
     className: `${pfx}__in-topbar-brand`,
@@ -291,7 +298,7 @@ module.exports = function (_ui_) {
   const leaveBtn = Skeletons.Button.Label({
     className: `${pfx}__leave-btn`,
     ico: "meet-leave",
-    label: LOCALE.LEAVE_MEETING,
+    label: isP2P ? (LOCALE.END_CALL || "End Call") : LOCALE.LEAVE_MEETING,
     labelClass: `${pfx}__leave-label`,
     sys_pn: "ctrl-line",
     service: _e.close,
@@ -309,18 +316,19 @@ module.exports = function (_ui_) {
       avatars,
       Skeletons.Box.X({
         className: `${pfx}__in-topbar-controls`,
+        // P2P connect calls omit hand-raise / chat / people.
         kids: [
-          handWrap,
+          isP2P ? null : handWrap,
           reactionsBtn,
-          chatWrap,
-          peopleBtn,
+          isP2P ? null : chatWrap,
+          isP2P ? null : peopleBtn,
           fullscreenBtn,
           divider,
           cameraPill,
           micPill,
           screenBtn,
           leaveBtn,
-        ],
+        ].filter(Boolean),
       }),
     ],
   });

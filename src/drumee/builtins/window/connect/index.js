@@ -19,6 +19,15 @@ class __window_connect extends __room {
       area: _a.private
     });
     if (this.mget(_a.video) == null) this.mset({ video: 0 });
+    // Meeting-style standalone window: a resizable, meeting-sized floating popup
+    // (replaces the old fixed 440x480 box). header/resizable enable the base
+    // window drag handle + jQuery-UI resize handles; _setSize seeds the default
+    // geometry. onDomRefresh flags data-standalone="1" so the shared shell skin
+    // floats it as a free window in the Wm pool with a grabbable resize frame.
+    this.model.atLeast({ header: 1, resizable: 1 });
+    if (typeof this._setSize === "function") {
+      this._setSize({ width: 720, height: 560, minWidth: 480, minHeight: 360 });
+    }
     this._state = 0;
     this.declareHandlers();
     this.statusMessages = {
@@ -98,6 +107,9 @@ class __window_connect extends __room {
    */
   async onDomRefresh() {
     this.raise();
+    // Standalone floating popup: the shared meeting-shell skin keys its absolute
+    // frame + grabbable resize handles off data-standalone="1" (same as meeting).
+    if (this.el) this.el.dataset.standalone = "1";
     await super.onDomRefresh();
     this.verbose("AAAX:204 -- onDomRefresh", this.callee, this.caller);
     if (this.callee) {
