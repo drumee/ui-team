@@ -108,10 +108,11 @@ class settings_billing extends LetcBox {
       const usedGB = Math.round(usedBytes / 1000000000);
       lines.push((LOCALE.CANCEL_OVER_LIMIT || "Your current usage ({0} GB) is over the Free 20 GB limit — you won't be able to upload new files until you free up space.").format(usedGB));
     }
-    // Team seats warning.
+    // Team seats warning — only for a real ORG/team subscription. entity_type
+    // is injected by the server ('org') for team subs; the quota 'organization'
+    // flag is 1 for personal Pro too, so it must NOT drive this line.
     const seats = parseInt(sub.seats, 10) || 0;
-    const isOrg = (parseInt(sub.organization, 10) || 0) === 1 || sub.entity_type === "org";
-    if (isOrg && seats > 0) {
+    if (sub.entity_type === "org" && seats > 0) {
       lines.push((LOCALE.CANCEL_TEAM_SEATS || "Your team's {0} member seats will be removed and each member drops to their own Free plan.").format(seats));
     }
     return lines.join("\n\n");
