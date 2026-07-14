@@ -1749,6 +1749,40 @@
     }
   }
 
+  // ── Raised-hand count badge on the hand control ──────────────────────────
+  // Wrap positions the badge over the button's top-right corner (mirrors
+  // &__in-topbar-chat-wrap / &__in-topbar-chat-badge). Shown only when more
+  // than one hand is up — window_meeting._updateHandRaiseBadge flips data-state.
+  &__ctrl-hand-wrap {
+    position: relative;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    align-self: center;
+    height: 32px;
+  }
+
+  &__ctrl-hand-badge {
+    position: absolute;
+    bottom: -2px;
+    right: -2px;
+    min-width: 16px;
+    height: 16px;
+    padding: 1px 5px;
+    border-radius: 8px;
+    background: var(--signal-error, #d74e49);
+    color: #fff;
+    font-size: 10px;
+    font-weight: 600;
+    line-height: 16px;
+    text-align: center;
+    pointer-events: none;
+
+    &[data-state="0"] {
+      display: none;
+    }
+  }
+
   // ── Camera / mic pills (toggle + device caret; red when muted) ───────────
   &__ctrl-pill {
     align-items: center;

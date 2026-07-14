@@ -85,6 +85,22 @@ module.exports = function (_ui_) {
     dataset: { raised: 0 },
   });
 
+  // Wrap so a raised-hand count badge can sit on the corner of the button.
+  // window_meeting._updateHandRaiseBadge shows the count (via sys_pn
+  // "hand-count") once more than one participant has a hand up.
+  const handWrap = Skeletons.Box.X({
+    className: `${pfx}__ctrl-hand-wrap`,
+    kids: [
+      handBtn,
+      Skeletons.Note({
+        className: `${pfx}__ctrl-hand-badge`,
+        sys_pn: "hand-count",
+        state: 0,
+        content: "",
+      }),
+    ],
+  });
+
   // Quick-reaction glyph: a clickable emoji that broadcasts a floating
   // reaction to every peer (handled by meeting.onUiEvent "react"). The glyph
   // is carried both as the visible content and an `emoji` attr so the handler
@@ -294,7 +310,7 @@ module.exports = function (_ui_) {
       Skeletons.Box.X({
         className: `${pfx}__in-topbar-controls`,
         kids: [
-          handBtn,
+          handWrap,
           reactionsBtn,
           chatWrap,
           peopleBtn,

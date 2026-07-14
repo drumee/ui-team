@@ -751,6 +751,29 @@ class __window_meeting extends __room {
     }
     this._refreshMember(uid);
     this._updateFloatFocus();
+    this._updateHandRaiseBadge();
+  }
+
+  // Count badge on the top-bar hand control: shows how many participants have a
+  // hand up (local + remotes, from _memberHandRaised), and is hidden until more
+  // than one hand is raised (Figma 2596-129355 / 2502-72231). The badge is a
+  // Note (sys_pn "hand-count" → __handCount); setting textContent on a Note el
+  // matches the host-label pattern.
+  _updateHandRaiseBadge() {
+    const count = this._memberHandRaised ? this._memberHandRaised.size : 0;
+    const badge = this.__handCount;
+    const el =
+      (badge && badge.el) ||
+      (this.el &&
+        this.el.querySelector(`.${this.fig.family}__ctrl-hand-badge`));
+    if (!el) return;
+    if (count > 1) {
+      el.textContent = String(count);
+      el.dataset.state = 1;
+    } else {
+      el.textContent = "";
+      el.dataset.state = 0;
+    }
   }
 
   // ── Raise-hand 30s lifecycle (Figma spec 2517-15617) ────────────────────
