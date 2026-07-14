@@ -1685,7 +1685,7 @@
   &__in-topbar-brand &__in-topbar-title {
     flex: 0 1 auto;
     @include drumee.typo(
-      $size: 18px,
+      $size: 14px,
       $line: 24px,
       $weight: 600,
       $color: var(--primary-purple-100, #0b0a21)

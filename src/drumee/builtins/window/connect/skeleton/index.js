@@ -21,7 +21,20 @@ const __skl_window_connect = function(_ui_, localUser, peer) {
     // the window (meeting-sized stage) without disturbing the pre-call grid
     // layout that shares the plain `__main` class.
     className   : `${_ui_.fig.family}__main ${_ui_.fig.family}__main--call`,
-    kids        : [body]
+    kids        : [
+      body,
+      // Reactions (shared feature): the "…" more-picker wrapper (fed on demand
+      // by _toggleReactionsPicker → __wrapperReactions) and the bottom-left
+      // stack every sent/received reaction floats up from.
+      Skeletons.Wrapper.Y({
+        className: `${_ui_.fig.family}__reactions-picker`,
+        name: "reactions",
+      }),
+      Skeletons.Box.Y({
+        className: `${_ui_.fig.family}__reaction-stack`,
+        sys_pn: "reaction-stack",
+      }),
+    ],
   });
 
   return a;
