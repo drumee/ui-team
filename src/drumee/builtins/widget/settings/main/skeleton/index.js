@@ -228,10 +228,13 @@ function toggle(ui, opt) {
   });
 }
 
-// Three-way display-mode selector (Light / Dark / System). Replaces the
-// old binary toggle that lived on the desk sidebar footer. Selecting an
-// option fires "set-theme" with theme_mode; settings_main applies it via
-// the shared router/theme helper and updates the highlight in place.
+// Display-mode selector. Dark mode is disabled product-wide (see
+// router/theme.js DARK_MODE_ENABLED) — only the Light option is offered, so
+// there is no path to switch into dark/system. Restore the Dark/System
+// options here together with the theme.js flag to re-enable dark mode.
+// getThemePreference is light-locked while disabled, so Light is always
+// active. Selecting it fires "set-theme"; settings_main applies it via the
+// shared router/theme helper and updates the highlight in place.
 function themeControl(ui) {
   const pfx = `${ui.fig.family}__theme`;
   const current = require("router/theme").getThemePreference();
@@ -258,8 +261,6 @@ function themeControl(ui) {
     className: `${pfx}-control`,
     kids: [
       opt("light", "raw-light", LOCALE.LIGHT || "Light"),
-      opt("dark", "raw-dark", LOCALE.DARK || "Dark"),
-      opt("system", "apps-laptop", LOCALE.SYSTEM || "System"),
     ],
   });
 }
