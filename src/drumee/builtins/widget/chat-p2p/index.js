@@ -33,6 +33,17 @@ class __chat_p2p extends LetcBox {
     // here and have togglePanel read it as closed and reopen).
     const svc = source && source.mget && source.mget(_a.service);
     if (typeof svc === "string" && svc.startsWith("toggle-")) return;
+    // A click inside an active call window (window_connect for 1:1, window_meeting
+    // for share rooms) must not dismiss the chat panel — the call is usually
+    // started from this very panel (_startCall → Wm.launch), and the two are
+    // meant to stay open together. Without this the panel reads the call-window
+    // click as "outside" and closes.
+    if (
+      e.target &&
+      e.target.closest &&
+      e.target.closest(".window-connect, .window-meeting")
+    )
+      return;
     // Opening the desk's mobile sidebar/drawer via a topbar button must not
     // dismiss the chat panel — the drawer overlays on top and the chat
     // stays open behind it. Bail on those clicks (they read as "outside").

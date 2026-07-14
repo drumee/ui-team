@@ -461,6 +461,22 @@ class __window_connect extends __room {
    * @param {*} args 
    * @returns 
    */
+  // Screen-share must NOT resize the 1:1 call window. The base fitScreenSize/
+  // change_size animate the window to ~full viewport (innerWidth-200 ×
+  // innerHeight-42); we only want the presenter LAYOUT to change. Mirror the
+  // meeting: flip data-mode and let CSS own the layout (the presenter grid is
+  // driven by responsive() → __endpoints[data-mode=presenter]), never touch
+  // the window geometry.
+  fitScreenSize(mode) {
+    if (this.el) this.el.dataset.mode = mode;
+    if (this.responsive) this.responsive(mode);
+  }
+
+  change_size(cmd, max_size) {
+    const mode = (this.el && this.el.dataset.mode) || "normal";
+    if (this.responsive) this.responsive(mode);
+  }
+
   async onUiEvent(cmd, args = {}) {
     const service = args.service || cmd.get(_a.service)
     this.verbose(`AAA:438 -- onUiEvent service=${service}`, args, cmd, this);
@@ -530,6 +546,21 @@ class __window_connect extends __room {
         this._toggleReactionsPicker();
         break;
 
+      case "start-screenshare":
+      case "stop-screenshare":
+        // One screen at a time: block starting a share while the peer is
+        // presenting (belt-and-suspenders with the disabled button). The
+        // active local presenter is never locked, so they can still stop.
+        if (this._shareLocked && !this._presentingLocally) return;
+        super.onUiEvent(cmd, args);
+        break;
+
+      case "togglefullscreen":
+        // Only expand the screen-share widget itself, not the whole host page
+        // (the base handler fullscreens document.body). Shared with the meeting.
+        this._toggleScreenShareFullscreen();
+        break;
+
       default:
         super.onUiEvent(cmd, args);
     }
@@ -587,6 +618,9 @@ class __window_connect extends __room {
 
 // Shared in-call reactions behavior (same module the meeting uses).
 Object.assign(__window_connect.prototype, require("builtins/webrtc/reactions"));
+// Shared in-call screen-share behavior (own screen on stage, tile docking,
+// one-at-a-time lock, fullscreen). Meeting-only hooks it calls are optional.
+Object.assign(__window_connect.prototype, require("builtins/webrtc/screenshare"));
 
 // __window_connect.initClass();
 module.exports = __window_connect;
