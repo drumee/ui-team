@@ -1737,7 +1737,7 @@
       background: rgba(0, 0, 0, 0.05);
     }
 
-    // Raised-hand active state (data-raised flipped by _raiseOwnHand / _lowerOwnHand).
+    // Raised-hand active state (data-raised flipped by _toggleHandRaise / _lowerOwnHand).
     &.hand-raise[data-raised="1"] {
       background: rgba(89, 80, 255, 0.12);
       color: var(--primary-40, #5950ff);
