@@ -99,11 +99,24 @@ class desk_module extends LetcBox {
       win: winInstance,
       minimized: !!winInstance.mget(_a.minimize),
     });
+    // A folder opened from a notification (or any deep-link) launches before its
+    // real name is known — the window resolves its title asynchronously
+    // (get_path → change:hub_name/filename → _syncWindowTitle). Re-render the tab
+    // when that lands so it stops showing the generic LOCALE.FOLDER fallback.
+    // listenTo is auto-scoped to this view + released in _onFolderClose.
+    if (winInstance.model) {
+      this.listenTo(
+        winInstance.model,
+        "change:filename change:hub_name change:name",
+        this._renderFolderTabs,
+      );
+    }
     this._renderFolderTabs();
   }
 
   _onFolderClose(event, winInstance) {
     if (!winInstance) return;
+    if (winInstance.model) this.stopListening(winInstance.model);
     if (this._openFolders.delete(winInstance.cid)) {
       this._renderFolderTabs();
     }
@@ -168,9 +181,13 @@ class desk_module extends LetcBox {
 
   _buildFolderTab(winInstance, minimized, pfx) {
     const cn = `${pfx}__folder-tab`;
+    // Mirror the window's own title resolution (_syncWindowTitle uses
+    // filename || hub_name) so an empty-filename workspace root shows its
+    // workspace name here too, instead of the generic LOCALE.FOLDER fallback.
     const name =
       winInstance.mget(_a.filename) ||
       winInstance.mget(_a.name) ||
+      winInstance.mget("hub_name") ||
       LOCALE.FOLDER ||
       "Folder";
     const area = winInstance.mget(_a.area);
