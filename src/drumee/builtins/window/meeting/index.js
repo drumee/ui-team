@@ -208,6 +208,12 @@ class __window_meeting extends __room {
 
   onBeforeDestroy() {
     clearTimeout(this._idleTimer);
+    // Cancel any pending hand-raise auto-clear timers so they can't fire after
+    // teardown.
+    if (this._handTimers) {
+      for (const t of this._handTimers.values()) clearTimeout(t);
+      this._handTimers.clear();
+    }
     if (this.el && this._wakeControls)
       this.el.removeEventListener("mousemove", this._wakeControls);
     // Drop the reactions-picker click-outside listener if the window is torn
@@ -346,6 +352,9 @@ class __window_meeting extends __room {
       if (this._memberCallStates) this._memberCallStates.delete(key);
       if (this._memberHandRaised) this._memberHandRaised.delete(key);
       if (this._memberPresenting) this._memberPresenting.delete(key);
+      // Leaving with a hand raised clears immediately (not on timeout) — drop
+      // the pending auto-clear timer along with the state.
+      this._clearHandTimer(key);
       // Drop stale spotlight refs so focus doesn't stick to a gone tile.
       if (this._lastRaisedUid === key) this._lastRaisedUid = null;
       if (this._dominantPid === id) this._dominantPid = null;
@@ -432,7 +441,7 @@ class __window_meeting extends __room {
         break;
 
       case "hand-raise":
-        this._toggleHandRaise(cmd);
+        this._raiseOwnHand(cmd);
         break;
 
       case "lower-hand-self":
@@ -726,16 +735,73 @@ class __window_meeting extends __room {
     return ep.mget && ep.mget(_a.uid);
   }
 
-  _setMemberHandRaised(uid, on) {
+  _setMemberHandRaised(uid, on, opts = {}) {
     if (!uid) return;
     const key = String(uid);
     if (on) this._memberHandRaised.set(key, 1);
     else this._memberHandRaised.delete(key);
     this._applyTileDataset(uid, "raised", on);
-    // Remember the most recent raiser so the float overlay can spotlight them.
-    if (on) this._lastRaisedUid = key;
+    if (on) {
+      // Remember the most recent raiser so the float overlay can spotlight
+      // them, and (re)start the 30s auto-clear timer — a re-raise resets it.
+      this._lastRaisedUid = key;
+      this._startHandTimer(key, !!opts.isLocal);
+    } else {
+      this._clearHandTimer(key);
+    }
     this._refreshMember(uid);
     this._updateFloatFocus();
+  }
+
+  // ── Raise-hand 30s lifecycle (Figma spec 2517-15617) ────────────────────
+  // A raised hand auto-clears after 30s; re-raising resets the timer. Every
+  // client runs its own per-uid timer (keyed like _memberHandRaised) so a
+  // missed clear broadcast still self-heals. The local user's expiry also
+  // syncs the top-bar control and tells peers.
+  _startHandTimer(uid, isLocal) {
+    if (!this._handTimers) this._handTimers = new Map();
+    this._clearHandTimer(uid);
+    this._handTimers.set(
+      String(uid),
+      setTimeout(() => this._expireHand(uid, isLocal), 30000),
+    );
+  }
+
+  _clearHandTimer(uid) {
+    const key = String(uid);
+    if (this._handTimers && this._handTimers.has(key)) {
+      clearTimeout(this._handTimers.get(key));
+      this._handTimers.delete(key);
+    }
+  }
+
+  _expireHand(uid, isLocal) {
+    const key = String(uid);
+    this._clearHandTimer(key);
+    // Already lowered (manual lower / leave beat the timer) — nothing to do.
+    if (!this._memberHandRaised || !this._memberHandRaised.has(key)) return;
+    if (isLocal) {
+      this._lowerOwnHand();
+    } else {
+      this._setMemberHandRaised(uid, false);
+    }
+  }
+
+  _broadcastHandRaise(state) {
+    try {
+      this.sendRoomSignaling(SERVICE.conference.broadcast, {
+        event: "HAND_RAISE",
+        payload: {
+          room_id: this.mget(_a.room_id),
+          participant_id:
+            this.room && this.room.myUserId && this.room.myUserId(),
+          uid: Visitor.id,
+          state,
+        },
+      });
+    } catch (e) {
+      if (this.warn) this.warn("hand-raise broadcast failed", e);
+    }
   }
 
   _setMemberPresenting(uid, on) {
@@ -937,7 +1003,9 @@ class __window_meeting extends __room {
     if (!endpoint || endpoint.isDestroyed() || !endpoint.el) return;
     endpoint.el.dataset.raised = data.state ? 1 : 0;
     const uid = (data.uid != null) ? data.uid : this._uidForParticipant(pid);
-    this._setMemberHandRaised(uid, !!data.state);
+    // state:1 (re)starts this client's safety timer for the raiser; state:0
+    // (the raiser's own auto-clear/manual-lower) cancels it.
+    this._setMemberHandRaised(uid, !!data.state, { isLocal: false });
   }
 
   // Send a reaction: float it on our own tile immediately and broadcast it to
@@ -1099,42 +1167,44 @@ class __window_meeting extends __room {
     }
   }
 
-  _toggleHandRaise(cmd) {
-    const raised = cmd.el.dataset.raised === "1" ? 0 : 1;
-    cmd.el.dataset.raised = raised;
-    if (cmd.el) {
-      cmd.el.setAttribute("title", raised ? (LOCALE.LOWER_HAND || "Lower hand") : (LOCALE.RAISE_HAND || "Raise hand"));
+  // Top-bar Raise-hand control: raise, or if already raised just reset the 30s
+  // timer (re-raise). It never lowers — the hand auto-clears on timeout, and a
+  // manual lower stays available from the member card (_lowerOwnHand). Mirrors
+  // the state on our own dashboard card and broadcasts a raise to peers.
+  _raiseOwnHand(cmd) {
+    const el = cmd && cmd.el;
+    if (el) {
+      el.dataset.raised = 1;
+      el.setAttribute("title", LOCALE.RAISE_HAND || "Raise hand");
     }
-    // Mirror the new state for the local user on the dashboard card. The
-    // broadcast below tells other peers; this updates our own UI.
-    this._setMemberHandRaised(Visitor.id, !!raised);
-    try {
-      this.sendRoomSignaling(SERVICE.conference.broadcast, {
-        event: "HAND_RAISE",
-        payload: {
-          room_id: this.mget(_a.room_id),
-          participant_id: this.room && this.room.myUserId && this.room.myUserId(),
-          uid: Visitor.id,
-          state: raised,
-        },
-      });
-    } catch (e) {
-      if (this.warn) this.warn("hand-raise broadcast failed", e);
-    }
+    this._setMemberHandRaised(Visitor.id, true, { isLocal: true });
+    this._broadcastHandRaise(1);
   }
 
-  // Triggered from a member card's "Lower hand" action. The local
-  // raise-hand button lives in __ctrlHandRaise (the top-bar control); we
-  // toggle through it so its dataset and the broadcast payload stay in
-  // sync with `_toggleHandRaise` above.
+  // Manual lower — kept as a convenience alongside the 30s auto-clear. Fired
+  // from the member card's "Lower hand" action and from the local hand timer's
+  // expiry. Syncs the top-bar control, clears state (which cancels the timer),
+  // and tells peers.
   _lowerOwnHand() {
-    const cmd = this.__ctrlHandRaise;
-    if (!cmd || !cmd.el) {
-      this._setMemberHandRaised(Visitor.id, false);
-      return;
+    // Source of truth is the state map; the top-bar control (sys_pn
+    // "ctrl-hand" → __ctrlHand) is just UI to sync. Guarding on the map (not
+    // the button dataset) is what lets the 30s auto-clear reliably drop the
+    // button's active state.
+    const key = String(Visitor.id);
+    if (this._memberHandRaised && !this._memberHandRaised.has(key)) return;
+    // Resolve the button via its part, falling back to a DOM lookup so the
+    // active state clears even if the part isn't bound.
+    const cmd = this.__ctrlHand;
+    const btnEl =
+      (cmd && cmd.el) ||
+      (this.el &&
+        this.el.querySelector(`.${this.fig.family}__ctrl-btn.hand-raise`));
+    if (btnEl) {
+      btnEl.dataset.raised = 0;
+      btnEl.setAttribute("title", LOCALE.RAISE_HAND || "Raise hand");
     }
-    if (cmd.el.dataset.raised !== "1") return;
-    this._toggleHandRaise(cmd);
+    this._setMemberHandRaised(Visitor.id, false);
+    this._broadcastHandRaise(0);
   }
 
   // Triggered from the local member card's "Stop sharing" action. Defers
