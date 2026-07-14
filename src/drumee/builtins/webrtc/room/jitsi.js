@@ -553,6 +553,15 @@ class __webrtc_room extends __room {
    * 
    */
   attachLocalEndpoint(track) {
+    // Only the local AUDIO track drives the sound analyzer + mic control.
+    // onStreamReceived calls this for EVERY local track added — including the
+    // desktop track that screen share adds. Without this guard the block below
+    // force-reset the mic control to unmuted, flipping a muted mic back on when
+    // the user started sharing their screen.
+    if (track && typeof track.getType === "function" &&
+        track.getType() !== _a.audio) {
+      return;
+    }
     this.getLocalParts().then((parts) => {
       let { sound, audio } = parts;
       sound.plug(track.stream);
