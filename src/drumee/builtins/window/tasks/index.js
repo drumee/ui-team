@@ -79,8 +79,16 @@ class __tasks_panel extends LetcBox {
     this._detailDraft = null;
     this._attachments = {};
     this._pickerOpen = null;
-    // Member filter — empty = show all. Uids stored as strings.
+    // Member filter — empty = show all. Uids stored as strings. Shared across
+    // every view (it drives the Assignee dimension of the List filter too).
     this._filterUids = [];
+    // List-view multi-dimension filter (Figma 2099-50501). Applies only while
+    // the List view is active; other views keep the member-only filter.
+    // priority/status hold arrays (OR within), due/files are single-select,
+    // keyword is a title substring.
+    this._filters = { keyword: "", priority: [], status: [], due: null, files: null };
+    // Accordion open-state for the List filter popup (dimension key -> bool).
+    this._filterExpanded = {};
     // Active sub-view (board | calendar | list | summary) and the List view's
     // sort state.
     this._view = "board";
@@ -96,6 +104,9 @@ class __tasks_panel extends LetcBox {
     // Custom Kanban columns (server rows {id,name,theme,position}) + the
     // "New board" modal / column-menu UI state.
     this._customColumns = [];
+    // Column keys (built-in status strings or custom column ids) this user has
+    // subscribed to via the header bell — server-backed, folder-scoped.
+    this._columnWatches = new Set();
     this._boardModalOpen = false;
     this._boardTheme = "default";
     this._boardTitle = ""; // typed board name, kept in state so a colour pick never wipes it
@@ -135,6 +146,7 @@ class __tasks_panel extends LetcBox {
     this.unbindEvent(_a.live);
     if (this._fileSearchTimer) clearTimeout(this._fileSearchTimer);
     if (this._fileSearchBlurTimer) clearTimeout(this._fileSearchBlurTimer);
+    if (this._filterKwTimer) clearTimeout(this._filterKwTimer);
     if (
       this._mediaDroppableInstalled &&
       typeof $ !== "undefined" &&
@@ -166,7 +178,48 @@ class __tasks_panel extends LetcBox {
   }
 
   isFilterActive() {
-    return (this._filterUids || []).length > 0;
+    if ((this._filterUids || []).length > 0) return true;
+    if (this._view === "list") {
+      const f = this._filters || {};
+      return !!(
+        f.keyword ||
+        (f.priority && f.priority.length) ||
+        (f.status && f.status.length) ||
+        f.due ||
+        f.files
+      );
+    }
+    return false;
+  }
+
+  // Which List filter dimensions currently hold a value (drives the accordion
+  // row's "active" tick). Assignee reads the shared member filter.
+  isFilterDimActive(dim) {
+    const f = this._filters || {};
+    switch (dim) {
+      case "assignee":
+        return (this._filterUids || []).length > 0;
+      case "keyword":
+        return !!f.keyword;
+      case "priority":
+        return !!(f.priority && f.priority.length);
+      case "status":
+        return !!(f.status && f.status.length);
+      case "due":
+        return !!f.due;
+      case "files":
+        return !!f.files;
+      default:
+        return false;
+    }
+  }
+
+  getFilters() {
+    return this._filters;
+  }
+
+  isFilterCatOpen(dim) {
+    return !!(this._filterExpanded && this._filterExpanded[dim]);
   }
 
   // Let the host window reflect the active filter on its tab-bar button.
@@ -204,9 +257,11 @@ class __tasks_panel extends LetcBox {
     this._pickerOpen = null;
     if (typeof this._resetFileSearch === "function") this._resetFileSearch();
     if (!this.el) return; // not mounted yet — onDomRefresh loads fresh
-    Promise.all([this._loadTasks(), this._loadColumns()]).then(() =>
-      this._render(),
-    );
+    Promise.all([
+      this._loadTasks(),
+      this._loadColumns(),
+      this._loadColumnWatches(),
+    ]).then(() => this._render());
   }
 
   async onDomRefresh() {
@@ -217,6 +272,7 @@ class __tasks_panel extends LetcBox {
     await Promise.all([
       this._loadTasks(),
       this._loadColumns(),
+      this._loadColumnWatches(),
       this._loadActivity(),
       this._loadMembers(),
       this._loadLabels(),
@@ -826,6 +882,69 @@ class __tasks_panel extends LetcBox {
         return this._render();
       }
 
+      case "filter-cat": {
+        // Accordion expand/collapse of a List-filter dimension — toggle in
+        // place (no re-render), so opening a section doesn't rebuild the list.
+        const dim = trigger.mget("filterDim");
+        if (!dim) return;
+        this._filterExpanded[dim] = !this._filterExpanded[dim];
+        const cat =
+          this.el &&
+          this.el.querySelector(
+            `.tasks-panel__filter-cat[data-dim="${dim}"]`,
+          );
+        if (cat) cat.dataset.open = this._filterExpanded[dim] ? "1" : "0";
+        return;
+      }
+
+      case "filter-set": {
+        // Set/toggle a value in a List-filter dimension, then re-filter.
+        const dim = trigger.mget("filterDim");
+        const val = trigger.mget("filterVal");
+        if (!dim) return;
+        const f = this._filters;
+        if (dim === "priority" || dim === "status") {
+          const arr = Array.isArray(f[dim]) ? f[dim].slice() : [];
+          const i = arr.indexOf(val);
+          if (i >= 0) arr.splice(i, 1);
+          else arr.push(val);
+          f[dim] = arr;
+        } else {
+          // Single-select (due / files): tapping the active value clears it.
+          f[dim] = f[dim] === val ? null : val;
+        }
+        this._notifyFilterState();
+        return this._render();
+      }
+
+      case "filter-keyword": {
+        // Live task-title search — debounce so fast typing doesn't rebuild the
+        // list on every keystroke.
+        this._filters.keyword =
+          args && args.value != null ? String(args.value) : "";
+        if (this._filterKwTimer) clearTimeout(this._filterKwTimer);
+        this._filterKwTimer = setTimeout(() => {
+          this._filterKwTimer = null;
+          this._notifyFilterState();
+          this._render();
+        }, 200);
+        return;
+      }
+
+      case "filter-clear": {
+        // Reset every List dimension (and the shared member filter).
+        this._filters = {
+          keyword: "",
+          priority: [],
+          status: [],
+          due: null,
+          files: null,
+        };
+        this._filterUids = [];
+        this._notifyFilterState();
+        return this._render();
+      }
+
       case "remove-task":
         return this._removeTask(trigger);
 
@@ -1058,6 +1177,9 @@ class __tasks_panel extends LetcBox {
         this._colMenuFor = this._colMenuFor === key ? null : key;
         return this._render();
       }
+
+      case "col-watch-toggle":
+        return this._toggleColumnWatch(trigger);
 
       case "col-rename-submit":
         return this._renameColumn(trigger);
@@ -1324,6 +1446,51 @@ class __tasks_panel extends LetcBox {
       this._customColumns = Array.isArray(rows) ? rows : [];
     } catch (err) {
       this._customColumns = [];
+    }
+  }
+
+  // Load which columns the user has the bell on for, in this folder scope.
+  async _loadColumnWatches() {
+    try {
+      const rows = await this.fetchService({
+        service: SERVICE.task.column_watch_list,
+        hub_id: this._hubId,
+        nid: this._scopeNid,
+      });
+      this._columnWatches = new Set((Array.isArray(rows) ? rows : []).map(String));
+    } catch (err) {
+      this._columnWatches = new Set();
+    }
+  }
+
+  isColumnWatched(key) {
+    return this._columnWatches.has(String(key));
+  }
+
+  // Bell toggle in a column header — subscribe/unsubscribe to change-notifications
+  // for that column. Flips the bell in place (no re-render) then persists.
+  async _toggleColumnWatch(trigger) {
+    const key = trigger && trigger.mget("taskColumn");
+    if (!key) return;
+    const k = String(key);
+    const on = !this._columnWatches.has(k);
+    if (on) this._columnWatches.add(k);
+    else this._columnWatches.delete(k);
+    if (trigger.el) trigger.el.dataset.active = on ? "1" : "0";
+    try {
+      await this.postService({
+        service: on
+          ? SERVICE.task.column_watch_set
+          : SERVICE.task.column_watch_unset,
+        hub_id: this._hubId,
+        nid: this._scopeNid,
+        column_key: k,
+      });
+    } catch (err) {
+      // Revert the optimistic flip on failure.
+      if (on) this._columnWatches.delete(k);
+      else this._columnWatches.add(k);
+      if (trigger.el) trigger.el.dataset.active = on ? "0" : "1";
     }
   }
 
@@ -3789,16 +3956,65 @@ class __tasks_panel extends LetcBox {
     return this._filterUids;
   }
 
-  // Member-filter predicate shared by every view (board / list / summary).
+  // Filter predicate. The Assignee (member) dimension applies on every view;
+  // the richer dimensions (keyword/priority/status/due/files) apply only on the
+  // List view (Figma 2099-50501). Dimensions AND together; values within a
+  // dimension OR together.
   _matchesFilter(t) {
-    const filter = this._filterUids || [];
-    if (!filter.length) return true;
     const uids = Array.isArray(t.assignee_uids)
       ? t.assignee_uids.map(String)
       : t.assignee_uid
         ? [String(t.assignee_uid)]
         : [];
-    return uids.some((u) => filter.includes(u));
+    const members = this._filterUids || [];
+    if (members.length && !uids.some((u) => members.includes(u))) return false;
+
+    if (this._view !== "list") return true;
+
+    const f = this._filters || {};
+    if (f.keyword) {
+      const kw = f.keyword.toLowerCase();
+      if (!String(t.title || "").toLowerCase().includes(kw)) return false;
+    }
+    if (f.priority && f.priority.length) {
+      if (!f.priority.includes(t.priority || "medium")) return false;
+    }
+    if (f.status && f.status.length) {
+      if (!f.status.includes(t.status)) return false;
+    }
+    if (f.files) {
+      const has = Array.isArray(t.linked_files) && t.linked_files.length > 0;
+      if (f.files === "has" && !has) return false;
+      if (f.files === "none" && has) return false;
+    }
+    if (f.due && !this._matchesDue(t, f.due)) return false;
+    return true;
+  }
+
+  // Due-date bucket match for the List filter.
+  _matchesDue(t, due) {
+    if (due === "none") return !t.due_date;
+    if (!t.due_date) return false;
+    let d, now;
+    try {
+      d = Dayjs(t.due_date);
+      now = Dayjs();
+      if (!d.isValid()) return false;
+    } catch {
+      return false;
+    }
+    switch (due) {
+      case "overdue":
+        return d.isBefore(now, "day") && t.status !== "complete";
+      case "today":
+        return d.isSame(now, "day");
+      case "week":
+        return d.isSame(now, "week");
+      case "month":
+        return d.isSame(now, "month");
+      default:
+        return true;
+    }
   }
 
   getState() {

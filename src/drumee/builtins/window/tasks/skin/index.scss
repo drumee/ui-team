@@ -182,6 +182,127 @@
   &__member-row[data-active="1"] &__filter-check-mark {
     opacity: 1;
   }
+  // The category-head flag drives its own checkbox off data-active on the box.
+  &__filter-check[data-active="1"] {
+    background: var(--col-primary-50, #433cc5);
+    border-color: var(--col-primary-50, #433cc5);
+  }
+  &__filter-check[data-active="1"] &__filter-check-mark {
+    opacity: 1;
+  }
+
+  // ── List-view multi-dimension filter (Figma 2099-50501) ───────
+  &__filter-picker--list {
+    width: 244px;
+  }
+
+  &__filter-head {
+    align-items: center;
+    justify-content: space-between;
+    padding: 2px 6px 4px;
+  }
+
+  &__filter-clear {
+    cursor: pointer;
+    @include drumee.typo(
+      $size: 12px,
+      $weight: 600,
+      $line: 16px,
+      $color: var(--col-primary-40, #5950ff)
+    );
+  }
+
+  // Accordion category (row + collapsible value body).
+  &__filter-cat {
+    align-items: stretch;
+  }
+
+  &__filter-cat-head {
+    align-items: center;
+    gap: 8px;
+    padding: 6px 8px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background 0.12s;
+
+    &:hover {
+      background: var(--hover-bg-40, rgba(0, 0, 0, 0.04));
+    }
+  }
+
+  &__filter-cat-ico {
+    flex: 0 0 16px;
+    width: 16px;
+    height: 16px;
+    color: var(--normal-fg-30, #65656c);
+  }
+
+  &__filter-cat-label {
+    flex: 1 1 auto;
+    min-width: 0;
+    @include drumee.typo(
+      $size: 14px,
+      $weight: 400,
+      $line: 20px,
+      $color: var(--normal-fg-10, #0b0a21)
+    );
+  }
+
+  // Chevron rotates down when the section is open.
+  &__filter-cat-chev {
+    flex: 0 0 auto;
+    color: var(--normal-fg-40, #84848c);
+    transition: transform 0.15s;
+    transform: rotate(0deg);
+  }
+  &__filter-cat[data-open="1"] &__filter-cat-chev {
+    transform: rotate(90deg);
+  }
+
+  // Collapsed by default; max-height (not display) so it works regardless of
+  // the Box.Y flex display the engine sets.
+  &__filter-cat-body {
+    max-height: 0;
+    overflow: hidden;
+    gap: 2px;
+    padding-left: 6px;
+  }
+  &__filter-cat[data-open="1"] &__filter-cat-body {
+    max-height: 320px;
+    overflow-y: auto;
+    padding-top: 2px;
+    padding-bottom: 4px;
+  }
+
+  // Keyword search input inside the Task category.
+  &__filter-search {
+    input {
+      width: 100%;
+      box-sizing: border-box;
+      padding: 6px 10px;
+      border: 1px solid var(--border-default, rgba(0, 0, 0, 0.12));
+      border-radius: 6px;
+      outline: none;
+      @include drumee.typo(
+        $size: 13px,
+        $weight: 400,
+        $line: 18px,
+        $color: var(--normal-fg-10, #0b0a21)
+      );
+
+      &:focus {
+        border-color: var(--col-primary-40, #5950ff);
+      }
+    }
+  }
+
+  // Colour dot for priority / status value rows.
+  &__filter-dot {
+    flex: 0 0 10px;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+  }
 
   &__main {
     width: 100%;
@@ -737,6 +858,45 @@
 
     &:hover {
       opacity: 1;
+    }
+  }
+
+  // Column-header action cluster (bell + optional ⋯).
+  &__col-actions {
+    flex: 0 0 auto;
+    align-items: center;
+    gap: 4px;
+  }
+
+  // Notification bell toggle (Figma 2041-20161): 28×28, off by default (muted
+  // grey), brand-filled when the user is watching the column.
+  &__col-bell {
+    flex: 0 0 28px;
+    width: 28px;
+    height: 28px;
+    padding: 6px;
+    justify-content: center;
+    align-items: center;
+    box-sizing: border-box;
+    border-radius: 8px;
+    cursor: pointer;
+    color: var(--normal-fg-40, #84848c);
+    background: var(--overlay-bg-05, rgba(0, 0, 0, 0.05));
+    transition: color 0.12s, background 0.12s;
+
+    svg {
+      width: 16px;
+      height: 16px;
+      display: block;
+    }
+
+    &:hover {
+      color: var(--normal-fg-20, #34343a);
+    }
+
+    &[data-active="1"] {
+      color: #fff;
+      background: var(--col-primary-40, #5950ff);
     }
   }
 
@@ -3347,6 +3507,10 @@
   &__gantt {
     flex: 1 1 auto;
     min-height: 0;
+    // Clamp to the host cell (like __main) so the wide timeline overflows THIS
+    // container and `overflow: auto` turns into a horizontal scrollbar instead
+    // of stretching the panel — otherwise the later days can't be scrolled to.
+    min-width: 0;
     overflow: auto;
     // Figma's canvas is plain white — the -90 token resolves grey in this theme.
     background: var(--normal-bg-elevated, #fff);
@@ -3508,7 +3672,6 @@
     );
   }
 
-  &__gantt-add,
   &__gantt-del {
     flex: 0 0 18px;
     width: 18px;
@@ -3523,14 +3686,10 @@
     }
   }
 
-  &__gantt-arow:hover &__gantt-add,
   &__gantt-arow:hover &__gantt-del {
     opacity: 0.6;
   }
 
-  &__gantt-add:hover {
-    opacity: 1;
-  }
   &__gantt-del:hover {
     opacity: 1;
     svg {

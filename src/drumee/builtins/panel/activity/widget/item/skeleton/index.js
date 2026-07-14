@@ -86,6 +86,18 @@ function getActivityMeta(ui, data) {
     };
   }
 
+  // Column-watch notification ("{actor} updated a task you follow: {title}").
+  // Shares the task_assigned row shape (task_title flattened server-side).
+  if (data.event === 'task_column_change') {
+    return {
+      before: LOCALE.TASK_COLUMN_CHANGE_ACTION || 'updated a task you follow: ',
+      label: data.task_title || name,
+      after: '',
+      colorClass: 'mention',
+      badge: 'mention',
+    };
+  }
+
   switch (ui.mget(_a.category)) {
     case 'hub_invite':
       // Never fall back to `name` for hub_invite — that resolver chains

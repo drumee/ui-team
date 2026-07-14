@@ -322,4 +322,14 @@
       &:hover { background: var(--primary-50, #433cc5); }
     }
   }
+
+  // Phones: the 520px card + viewport-centered offset would overflow; fit it
+  // to the screen with a small margin instead.
+  @media (max-width: 560px) {
+    &__ui {
+      width: calc(100vw - 24px);
+      left: 12px;
+      right: 12px;
+    }
+  }
 }

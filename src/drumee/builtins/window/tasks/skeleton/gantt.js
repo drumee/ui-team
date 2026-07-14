@@ -40,7 +40,8 @@ module.exports = function (ui) {
   }
 
   // Resolve each task's [start, end] window. end = due_date (required); start =
-  // created time, clamped to be ≤ end. Tasks with no due_date are dropped.
+  // the task's start_date (Duration toggle) when set, else its created time as
+  // a fallback. Clamped to ≤ end. Tasks with no due_date are dropped.
   const rows = [];
   (ui.getFilteredTasks() || []).forEach((t) => {
     if (!t.due_date) return;
@@ -53,9 +54,16 @@ module.exports = function (ui) {
     }
     let start;
     try {
-      const ct = Number(t.ctime) || 0;
-      start = ct ? Dayjs(ct * 1000).startOf("day") : end;
-      if (!start.isValid() || start.isAfter(end)) start = end;
+      let s = null;
+      if (t.start_date) {
+        const sd = Dayjs(t.start_date).startOf("day");
+        if (sd.isValid()) s = sd;
+      }
+      if (!s) {
+        const ct = Number(t.ctime) || 0;
+        s = ct ? Dayjs(ct * 1000).startOf("day") : end;
+      }
+      start = !s.isValid() || s.isAfter(end) ? end : s;
     } catch {
       start = end;
     }
@@ -210,13 +218,6 @@ module.exports = function (ui) {
             taskId: task.id,
           }),
           Skeletons.Button.Svg({
-            className: `${pfx}__gantt-add`,
-            ico: "plus",
-            bubble: 0,
-            service: "add-task",
-            uiHandler: [ui],
-          }),
-          Skeletons.Button.Svg({
             className: `${pfx}__gantt-del`,
             ico: "cross",
             bubble: 0,
@@ -294,7 +295,7 @@ module.exports = function (ui) {
               }),
               Skeletons.Note({
                 className: `${pfx}__gantt-work-label`,
-                content: LOCALE.WORK,
+                content: LOCALE.TASK,
               }),
             ],
           }),

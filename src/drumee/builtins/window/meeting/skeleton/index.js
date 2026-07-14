@@ -35,6 +35,11 @@ function meetingSidePanel(_ui_) {
   const isTeamChannel = !!teamChatNid;
   const chatArea = isTeamChannel ? _a.share : (_ui_.mget(_a.area) || _a.share);
 
+  // On a phone the meeting stage is what matters — start with the side panel
+  // CLOSED so the call (video + controls) is the default view, not chat. On
+  // desktop it stays open (Figma). The topbar Chat/People buttons still open it.
+  const startOpen = !Visitor.isMobile();
+
   const tab = (id, label) =>
     Skeletons.Note({
       className: `${pfx}__chat-tab`,
@@ -55,11 +60,12 @@ function meetingSidePanel(_ui_) {
   return Skeletons.Box.Y({
     className: `${pfx}__chat-panel`,
     sys_pn: "meeting-chat",
-    // Open by default, Chat tab active (Figma). attrOpt carries the initial
-    // data-* to the DOM (bare dataset is dropped at render) — without it the
-    // panel mounts with no data-open/data-tab, i.e. closed and tab-less.
-    attrOpt: { "data-open": "1", "data-tab": "chat" },
-    dataset: { open: 1, tab: "chat" },
+    // Open by default on desktop, Chat tab active (Figma); closed on mobile so
+    // the call stage is what shows first. attrOpt carries the initial data-* to
+    // the DOM (bare dataset is dropped at render) — without it the panel mounts
+    // with no data-open/data-tab, i.e. closed and tab-less.
+    attrOpt: { "data-open": startOpen ? "1" : "0", "data-tab": "chat" },
+    dataset: { open: startOpen ? 1 : 0, tab: "chat" },
     kids: [
       Skeletons.Box.X({
         className: `${pfx}__chat-header`,
