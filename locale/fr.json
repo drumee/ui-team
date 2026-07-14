@@ -1216,7 +1216,7 @@
   "MISSING_SOCKET_ID": "Connexion non prête. Veuillez actualiser la page et réessayer.",
   "INVITE_MEMBERS": "Inviter des membres",
   "DISPLAY_MODE": "Mode d'affichage",
-  "DISPLAY_MODE_DESC": "Choisissez l'apparence de Drumee. Le mode Système suit le réglage de votre appareil.",
+  "DISPLAY_MODE_DESC": "Choisissez l'apparence de Drumee.",
   "LIGHT": "Clair",
   "DARK": "Sombre",
   "SYSTEM": "Système",

@@ -21,6 +21,15 @@
 const STORAGE_KEY = "drumee.theme";
 const VALID = ["light", "dark", "system"];
 
+// Dark mode is disabled product-wide — the app is light-only. This single
+// switch forces every path below to "light": boot (initTheme), the Settings
+// → Appearance control (which also hides the Dark/System options), and any
+// legacy stored "dark"/"system" preference. It guarantees nobody is stranded
+// in dark with no visible toggle to escape. Flip to true to restore the full
+// light/dark/system behavior (and un-hide the options in
+// settings/main/skeleton themeControl).
+const DARK_MODE_ENABLED = false;
+
 let _mql = null; // cached MediaQueryList for prefers-color-scheme
 let _mqlListener = null; // active OS-change listener (only while pref === "system")
 
@@ -81,6 +90,7 @@ function _bindSystemListener(active) {
  * @returns {"light"|"dark"|"system"}
  */
 function getThemePreference() {
+  if (!DARK_MODE_ENABLED) return "light";
   const stored = _readStored();
   return VALID.includes(stored) ? stored : "light";
 }
@@ -91,6 +101,7 @@ function getThemePreference() {
  * @returns {"light"|"dark"}
  */
 function resolveTheme(pref = getThemePreference()) {
+  if (!DARK_MODE_ENABLED) return "light";
   if (pref === "system") return _systemPrefersDark() ? "dark" : "light";
   return pref === "dark" ? "dark" : "light";
 }
@@ -101,7 +112,8 @@ function resolveTheme(pref = getThemePreference()) {
  * @returns {"light"|"dark"} the resolved theme now in effect
  */
 function setThemePreference(pref) {
-  if (!VALID.includes(pref)) pref = "light";
+  if (!DARK_MODE_ENABLED) pref = "light";
+  else if (!VALID.includes(pref)) pref = "light";
   _writeStored(pref);
   _bindSystemListener(pref === "system");
   const resolved = resolveTheme(pref);

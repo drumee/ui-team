@@ -1216,7 +1216,7 @@
   "MISSING_SOCKET_ID": "连接未就绪，请刷新页面后重试。",
   "INVITE_MEMBERS": "邀请成员",
   "DISPLAY_MODE": "显示模式",
-  "DISPLAY_MODE_DESC": "选择 Drumee 的外观。“系统”将跟随您的设备设置。",
+  "DISPLAY_MODE_DESC": "选择 Drumee 的外观。",
   "LIGHT": "浅色",
   "DARK": "深色",
   "SYSTEM": "系统",

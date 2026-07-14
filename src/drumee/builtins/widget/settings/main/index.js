@@ -719,11 +719,13 @@ class settings_main extends LetcBox {
    */
   setThemeMode(mode) {
     if (!mode) return;
-    require("router/theme").setThemePreference(mode);
-    ["light", "dark", "system"].forEach((m) => {
-      this.ensurePart(`theme-opt-${m}`).then((p) => {
-        if (p && p.el) p.el.dataset.active = m === mode ? "1" : "0";
-      });
+    // theme.js is light-locked (dark mode disabled), so the helper coerces
+    // whatever comes in to "light" and the skeleton only renders the Light
+    // option. Only sync the parts that actually exist — ensurePart on a
+    // never-rendered "theme-opt-dark"/"-system" would hang forever.
+    const applied = require("router/theme").setThemePreference(mode);
+    this.ensurePart(`theme-opt-${applied}`).then((p) => {
+      if (p && p.el) p.el.dataset.active = "1";
     });
   }
 
