@@ -241,6 +241,65 @@
     }
   }
 
+  // Subscription status banner (renews-on / cancel + ends-on / resume).
+  &__sub-banner {
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--spacer-4);
+    margin-top: var(--spacer-4);
+    padding: var(--spacer-4) var(--spacer-5);
+    border-radius: 12px;
+    border: 1px solid var(--neutral-200);
+    background: var(--neutral-50);
+
+    &--canceling {
+      border-color: var(--orange-lighter, #f5c37a);
+      background: var(--orange-lighter, #fff8ec);
+    }
+
+    &-text {
+      gap: 2px;
+    }
+
+    &-title {
+      font-weight: 600;
+      font-size: 14px;
+      color: var(--neutral-900);
+    }
+
+    &-desc {
+      font-size: 12px;
+      color: var(--neutral-500);
+    }
+
+    &-action {
+      flex-shrink: 0;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 13px;
+      padding: 8px 16px;
+      border-radius: 8px;
+      white-space: nowrap;
+    }
+
+    &-cancel {
+      color: var(--error-500);
+
+      &:hover {
+        text-decoration: underline;
+      }
+    }
+
+    &-resume {
+      color: var(--white);
+      background: var(--primary-500);
+
+      &:hover {
+        opacity: 0.9;
+      }
+    }
+  }
+
   &__footer {
     &-main {
       margin-top: var(--spacer-5);

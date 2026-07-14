@@ -57,17 +57,107 @@ class settings_billing extends LetcBox {
 
   onBeforeDestroy() {
     this.unbindEvent(_a.live);
+    if (this._onVisibility) {
+      document.removeEventListener("visibilitychange", this._onVisibility);
+      this._onVisibility = null;
+    }
   }
 
   onWsMessage(service, data, options = {}) {
     switch (service) {
       case "payment.plan_updated":
         Visitor.respawn(data);
+        // Refresh our own subscription mirror + re-render so a pending cancel
+        // (or a resume) confirmed by the webhook lands in realtime; then bubble
+        // up so the Settings card status line refreshes too.
+        this._loadSubscription().then(() => { if (!this.isDestroyed()) this.fetchPlanData(); });
         this.triggerHandlers({ service: "plan_updated" });
         break;
       default:
         if (super.onWsMessage) super.onWsMessage(service, data, options);
     }
+  }
+
+  // Fetch the caller's subscription mirror and derive the pending-cancel flags
+  // the banner + cancel/resume actions read. A hard cancel removes the mirror
+  // row → _subscription null → no banner (workspace already on Free).
+  async _loadSubscription() {
+    this._subscription = await this.fetchService(SERVICE.payment.subscription_status, { hub_id: Visitor.id })
+      .then((d) => (d && d.subscription_id ? d : null))
+      .catch(() => null);
+    const sub = this._subscription;
+    const now = Math.floor(Date.now() / 1000);
+    this._periodEnd = (sub && Number(sub.period_end)) || 0;
+    // Pending cancel = mirror status 'canceled' with the paid period still in
+    // the future (access retained until period_end). Distinct from a terminated
+    // sub, whose row is gone.
+    this._isCanceling = !!(sub && sub.status === "canceled" && this._periodEnd > now);
+    this._hasPaidSub = !!(sub && sub.subscription_id);
+    return sub;
+  }
+
+  // Human-readable consequence list for the cancel-confirm modal.
+  _cancelConsequences() {
+    const sub = this._subscription || {};
+    const lines = [];
+    const when = this._periodEnd ? Dayjs(this._periodEnd * 1000).format("MMM D, YYYY") : "";
+    lines.push((LOCALE.CANCEL_KEEP_UNTIL || "You'll keep your current plan until {0}. After that your workspace returns to the Free plan (20 GB).").format(when));
+    // Over-the-free-limit warning (Free = 20 GB, decimal).
+    const usedBytes = (Visitor.diskUsed && Visitor.diskUsed()) || 0;
+    if (usedBytes > 20000000000) {
+      const usedGB = Math.round(usedBytes / 1000000000);
+      lines.push((LOCALE.CANCEL_OVER_LIMIT || "Your current usage ({0} GB) is over the Free 20 GB limit — you won't be able to upload new files until you free up space.").format(usedGB));
+    }
+    // Team seats warning — only for a real ORG/team subscription. entity_type
+    // is injected by the server ('org') for team subs; the quota 'organization'
+    // flag is 1 for personal Pro too, so it must NOT drive this line.
+    const seats = parseInt(sub.seats, 10) || 0;
+    if (sub.entity_type === "org" && seats > 0) {
+      lines.push((LOCALE.CANCEL_TEAM_SEATS || "Your team's {0} member seats will be removed and each member drops to their own Free plan.").format(seats));
+    }
+    return lines.join("\n\n");
+  }
+
+  async _confirmCancel() {
+    if (!this._hasPaidSub || this._isCanceling) return;
+    const ok = await Wm.confirm({
+      title: LOCALE.CANCEL_SUBSCRIPTION || "Cancel subscription",
+      message: this._cancelConsequences(),
+      confirm: LOCALE.CANCEL_CONFIRM || "Cancel plan",
+      confirm_type: "danger",
+      cancel: LOCALE.KEEP_PLAN || "Keep plan",
+      cancel_type: "secondary",
+      mode: "hbf",
+    }).then(() => true).catch(() => false);
+    if (!ok) return;
+    const data = await this.postService(SERVICE.payment.cancel_subscription, { hub_id: Visitor.id }).catch(() => null);
+    if (!data || /FAILED|NO_SUBSCRIPTION|NOT_CONFIGURED/.test(data.status || "")) {
+      if (Wm && Wm.alert) Wm.alert(LOCALE.SOMETHING_WENT_WRONG);
+      return;
+    }
+    // Optimistic: reflect the pending cancel immediately from the endpoint's
+    // return; the webhook confirms/persists it shortly after.
+    if (this._subscription) {
+      this._subscription.status = "canceled";
+      this._subscription.period_end = data.period_end || this._subscription.period_end;
+    }
+    this._periodEnd = Number(data.period_end) || this._periodEnd;
+    this._isCanceling = true;
+    if (typeof Butler !== "undefined" && Butler.say) Butler.say(LOCALE.SUBSCRIPTION_CANCELED_TOAST || "Your plan will be canceled at the end of the period.");
+    this.fetchPlanData();
+  }
+
+  async _resumeSubscription() {
+    if (!this._isCanceling) return;
+    const data = await this.postService(SERVICE.payment.resume_subscription, { hub_id: Visitor.id }).catch(() => null);
+    if (!data || /FAILED|NO_SUBSCRIPTION|NOT_CONFIGURED/.test(data.status || "")) {
+      if (Wm && Wm.alert) Wm.alert(LOCALE.SOMETHING_WENT_WRONG);
+      return;
+    }
+    if (this._subscription) this._subscription.status = "active";
+    this._isCanceling = false;
+    if (typeof Butler !== "undefined" && Butler.say) Butler.say(LOCALE.SUBSCRIPTION_RESUMED_TOAST || "Your subscription has been resumed.");
+    this.fetchPlanData();
   }
 
   /**
@@ -92,11 +182,21 @@ class settings_billing extends LetcBox {
     this._catalog = await this.fetchService(SERVICE.payment.catalog, { hub_id: Visitor.id })
       .then((d) => (d && d.plans) || null)
       .catch(() => null);
-    // Live subscription mirror (status, period_end, seats) for the status line
-    // — org-aware on the server (an org owner sees the team subscription).
-    this._subscription = await this.fetchService(SERVICE.payment.subscription_status, { hub_id: Visitor.id })
-      .then((d) => (d && d.subscription_id ? d : null))
-      .catch(() => null);
+    // Live subscription mirror (status, period_end, seats) — org-aware on the
+    // server (an org owner sees the team subscription). Also computes the
+    // pending-cancel flags the banner + cancel/resume actions key off.
+    await this._loadSubscription();
+    // Re-sync the subscription when the tab regains focus — covers a return
+    // from the Stripe Billing Portal (a full-page redirect back to the desk
+    // root, so this widget re-mounts) and any change made in another tab.
+    if (!this._onVisibility) {
+      this._onVisibility = () => {
+        if (document.visibilityState === "visible" && !this.isDestroyed()) {
+          this._loadSubscription().then(() => { if (!this.isDestroyed()) this.fetchPlanData(); });
+        }
+      };
+      document.addEventListener("visibilitychange", this._onVisibility);
+    }
     if (this.state.currentTab === undefined || this.state.currentTab === null) {
       this.state.currentTab = TAB_MONTHLY;
     }
@@ -913,6 +1013,17 @@ class settings_billing extends LetcBox {
           return false;
         }
         this._proceedToCheckout();
+        return false;
+
+      case "cancel-subscription":
+        // Native in-app cancel: confirm + consequences, then cancel at period
+        // end via SERVICE.payment.cancel_subscription (keeps access until then).
+        this._confirmCancel();
+        return false;
+
+      case "resume-subscription":
+        // Undo a scheduled cancellation.
+        this._resumeSubscription();
         return false;
 
       case "manage-billing":
