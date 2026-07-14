@@ -3816,14 +3816,14 @@ class __tasks_panel extends LetcBox {
   }
 
   // Recent activity rows for the Project Health view (already folder-scoped by
-  // the server). When a member filter is active, restrict to tasks owned by the
-  // filtered members so the feed agrees with the rest of the view.
+  // the server). When a member filter is active, show the filtered members' OWN
+  // actions (actor-based) — filtering by task assignee kept surfacing other
+  // people's activity on the selected member's tasks.
   getActivity() {
     const rows = Array.isArray(this._activity) ? this._activity : [];
     const filter = this._filterUids || [];
     if (!filter.length) return rows;
-    const allowed = new Set(this.getFilteredTasks().map((t) => t.id));
-    return rows.filter((r) => allowed.has(r.task_id));
+    return rows.filter((r) => filter.includes(String(r.actor_uid)));
   }
 
   getView() {

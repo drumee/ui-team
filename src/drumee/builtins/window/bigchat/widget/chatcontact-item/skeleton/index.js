@@ -63,7 +63,8 @@ const __skl_widget_chatcontactItem = function (ui) {
   }
 
   if (msg && typeof msg === 'string') {
-    msg = msg.replace(/\[@([^\]]+)\]\((?:user|mention)[^)]*\)/g, '@$1');
+    // Lazy label (.+?) so a filename containing "]" still strips to @name.
+    msg = msg.replace(/\[@(.+?)\]\((?:user|mention)[^)]*\)/g, '@$1');
   }
 
   const chatMessage = Skeletons.Note({

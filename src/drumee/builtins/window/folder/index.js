@@ -404,6 +404,7 @@ class __window_folder extends mfsInteract {
       clearTimeout(this._chatSearchTimer);
       this._chatSearchTimer = null;
     }
+    this._stopAwaitMeetingReady();
     this._unbindThreadMenuOutside();
     this._unbindViewportReframe();
     if (!this.mget(_a.headless) && window.Wm && Wm.$el) {
@@ -2171,6 +2172,9 @@ class __window_folder extends mfsInteract {
   _launchMeetingStandalone() {
     if (this._launchingMeeting) return;
     this._launchingMeeting = true;
+    const startBtn =
+      this.el &&
+      this.el.querySelector(`.${this.fig.family}__meeting-sched-start-btn`);
     try {
       const existing =
         Wm.getItemByKind("window_meeting") || Wm.getItemByKind("window_connect");
@@ -2186,6 +2190,11 @@ class __window_folder extends mfsInteract {
       // Center within the WM content area (right of the sidebar), not the raw
       // viewport — see Wm.centeredPopupGeometry.
       const { top, left, width, height } = Wm.centeredPopupGeometry();
+
+      // Immediate click feedback: spin the Start button until the meeting
+      // window is live (or we time out) — see _awaitMeetingReady.
+      this._setMeetingStartLoading(true, startBtn);
+      this._awaitMeetingReady(startBtn);
 
       return Wm.launch(
         {
@@ -2214,8 +2223,58 @@ class __window_folder extends mfsInteract {
         },
         { explicit: 1, singleton: 1 },
       );
+    } catch (e) {
+      // Launch failed synchronously — drop the spinner immediately.
+      this._setMeetingStartLoading(false, startBtn);
+      this._stopAwaitMeetingReady();
+      if (this.warn) this.warn("start meeting failed", e);
     } finally {
       this._launchingMeeting = false;
+    }
+  }
+
+  // Toggle the Start-meeting button's loading (spinner + click-block) state.
+  // The element is resolved lazily so callers don't have to hold a reference.
+  _setMeetingStartLoading(on, btnEl) {
+    const el =
+      btnEl ||
+      (this.el &&
+        this.el.querySelector(`.${this.fig.family}__meeting-sched-start-btn`));
+    if (el) el.dataset.loading = on ? "1" : "0";
+  }
+
+  // Keep the Start button spinning until the meeting window is actually live
+  // (its root flips data-ready="1" once join() resolves), then clear it. Also
+  // clears if the window never appears / is closed, and after a hard cap so the
+  // spinner can never stick. Same-document lookup — Wm windows share the page.
+  _awaitMeetingReady(btnEl) {
+    this._stopAwaitMeetingReady();
+    let ticks = 0;
+    const finish = () => {
+      this._stopAwaitMeetingReady();
+      this._setMeetingStartLoading(false, btnEl);
+    };
+    this._meetingReadyPoll = setInterval(() => {
+      ticks += 1;
+      const w = Wm.getItemByKind("window_meeting");
+      const gone = !w || (w.isDestroyed && w.isDestroyed());
+      const ready = !gone && w.el && w.el.dataset.ready === "1";
+      // `ticks > 2` gives the singleton launch a moment to register before we
+      // treat a missing window as "gone".
+      if (ready || (gone && ticks > 2)) finish();
+    }, 200);
+    // Safety cap — never leave the button spinning indefinitely.
+    this._meetingReadyCap = setTimeout(finish, 20000);
+  }
+
+  _stopAwaitMeetingReady() {
+    if (this._meetingReadyPoll) {
+      clearInterval(this._meetingReadyPoll);
+      this._meetingReadyPoll = null;
+    }
+    if (this._meetingReadyCap) {
+      clearTimeout(this._meetingReadyCap);
+      this._meetingReadyCap = null;
     }
   }
 

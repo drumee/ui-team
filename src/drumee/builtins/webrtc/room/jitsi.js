@@ -413,9 +413,13 @@ class __webrtc_room extends __room {
         })
         .catch((error) => {
           if (error.name && /user_canceled/i.test(error.name)) {
+            // Canceling the screen-share picker is not an error — reset the
+            // share control and bail WITHOUT the permission-denied popup.
+            // (Missing return here made the cancel fall through to Wm.alert.)
             this.__ctrlScreen.setState(0);
             this._setService("ctrl-video", _a.settings);
             reject(error);
+            return;
           }
           this.warn("Failed to get device permision:", error);
           // Suppress the blocking permission popup for the optional startup
@@ -553,6 +557,15 @@ class __webrtc_room extends __room {
    * 
    */
   attachLocalEndpoint(track) {
+    // Only the local AUDIO track drives the sound analyzer + mic control.
+    // onStreamReceived calls this for EVERY local track added — including the
+    // desktop track that screen share adds. Without this guard the block below
+    // force-reset the mic control to unmuted, flipping a muted mic back on when
+    // the user started sharing their screen.
+    if (track && typeof track.getType === "function" &&
+        track.getType() !== _a.audio) {
+      return;
+    }
     this.getLocalParts().then((parts) => {
       let { sound, audio } = parts;
       sound.plug(track.stream);
@@ -1158,7 +1171,16 @@ class __webrtc_room extends __room {
     this.stateMessage(LOCALE.PREPARING_PRESENTATION);
     this.isVideo = false;
     await this.sendRoomSignaling(SERVICE.conference.update);
-    let tracks = await this.createLocalTracks(_a.desktop);
+    let tracks;
+    try {
+      tracks = await this.createLocalTracks(_a.desktop);
+    } catch (e) {
+      // Cancel or device failure — clear the "preparing" overlay that was shown
+      // above (the clear below is unreachable once the await throws), then let
+      // the caller handle it (meeting.startPresentation catches → returns false).
+      this.stateMessage();
+      throw e;
+    }
     if (_.isEmpty(tracks)) {
       this.stateMessage("Failed to prepare screen share");
       return false;

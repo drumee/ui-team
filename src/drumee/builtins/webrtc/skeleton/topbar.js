@@ -85,13 +85,82 @@ module.exports = function (_ui_) {
     dataset: { raised: 0 },
   });
 
-  const reactionsBtn = Skeletons.Button.Svg({
-    ico: "meet-smiley",
-    service: "reactions",
-    uiHandler: [_ui_],
-    className: `${pfx}__ctrl-btn reactions`,
-    attrOpt: { title: LOCALE.REACTIONS },
+  // Wrap so a raised-hand count badge can sit on the corner of the button.
+  // window_meeting._updateHandRaiseBadge shows the count (via sys_pn
+  // "hand-count") once more than one participant has a hand up.
+  const handWrap = Skeletons.Box.X({
+    className: `${pfx}__ctrl-hand-wrap`,
+    kids: [
+      handBtn,
+      Skeletons.Note({
+        className: `${pfx}__ctrl-hand-badge`,
+        sys_pn: "hand-count",
+        state: 0,
+        content: "",
+      }),
+    ],
   });
+
+  // Quick-reaction glyph: a clickable emoji that broadcasts a floating
+  // reaction to every peer (handled by meeting.onUiEvent "react"). The glyph
+  // is carried both as the visible content and an `emoji` attr so the handler
+  // can read it back regardless of how the DOM trims the text node.
+  const reactionEmoji = (glyph) =>
+    Skeletons.Note({
+      className: `${pfx}__reaction-emoji`,
+      content: glyph,
+      emoji: glyph,
+      service: "react",
+      uiHandler: [_ui_],
+      // Keep the bar open on click (like "…"): bubble:0 stops the click
+      // reaching the menu's onChildBubble → _closeItems, while still
+      // dispatching "react". Lets the user fire several reactions in a row.
+      bubble: 0,
+    });
+
+  // Reactions smiley: a KIND.menu.topic that drops the quick-reaction bar just
+  // below the topbar (default downward direction, like the resize menu — the
+  // button sits at the top edge so opening upward would clip). persistence:
+  // once closes it on selection or click-outside. The six quick emoji match
+  // the Figma "reaction-hovering" popover; the trailing "…" opens the full
+  // emoji picker (service: reactions-more).
+  const reactionsBtn = {
+    kind: KIND.menu.topic,
+    className: `${pfx}__reactions-menu`,
+    flow: _a.y,
+    opening: _e.click,
+    persistence: _a.once,
+    offsetY: 8,
+    trigger: Skeletons.Button.Svg({
+      ico: "meet-smiley",
+      className: `${pfx}__ctrl-btn reactions`,
+      attrOpt: { title: LOCALE.REACTIONS },
+    }),
+    items: Skeletons.Box.X({
+      className: `${pfx}__reactions-bar`,
+      kids: [
+        reactionEmoji("👋"),
+        reactionEmoji("👍"),
+        reactionEmoji("😂"),
+        reactionEmoji("😮"),
+        reactionEmoji("❤️"),
+        reactionEmoji("🎉"),
+        Skeletons.Note({
+          className: `${pfx}__reactions-more`,
+          content: "⋯",
+          service: "reactions-more",
+          uiHandler: [_ui_],
+          // Keep the bar open when "…" is clicked: bubble:0 stops the click
+          // reaching the menu's onChildBubble → _closeItems (which
+          // persistence:once would otherwise run), while still dispatching
+          // "reactions-more" to the meeting. Emoji glyphs keep bubbling, so
+          // picking a reaction still closes the bar.
+          bubble: 0,
+          attrOpt: { title: LOCALE.MORE || "More" },
+        }),
+      ],
+    }),
+  };
 
   const chatWrap = Skeletons.Box.X({
     className: `${pfx}__in-topbar-chat-wrap`,
@@ -241,7 +310,7 @@ module.exports = function (_ui_) {
       Skeletons.Box.X({
         className: `${pfx}__in-topbar-controls`,
         kids: [
-          handBtn,
+          handWrap,
           reactionsBtn,
           chatWrap,
           peopleBtn,
