@@ -34,6 +34,14 @@ class __media_uploader extends LetcBox {
     this._bytesPending = 0;
     this._filesSent = 0;
     this._pendingCount = 0;
+    /**
+     * Max concurrent uploads. Serial (1) meant 200 files ran one-at-a-time —
+     * each file's full network + server round-trip serialized into 20-30 min.
+     * A small pool overlaps that latency across files. Kept bounded because a
+     * flood of parallel XHRs previously 504'd the gateway; the server-side
+     * file move is now async (non-blocking), so 4 in flight is safe.
+     */
+    this._maxParallel = 4;
   }
 
   /**
@@ -398,14 +406,21 @@ class __media_uploader extends LetcBox {
       clearInterval(this.spoolTimer);
       return;
     }
-    // One in-flight upload per uploader — parallel XHRs were overwhelming
-    // the gateway (504) on multi-file batches.
-    if (this._pendingCount > 0) return;
-    const item = this._queue.shift();
-    if ((item == null)) {
-      return;
+    // Bounded concurrency: keep up to _maxParallel uploads in flight so the
+    // network + server round-trip of separate files overlap instead of
+    // serializing. add() seeds only _queue[0] and parks the rest in _buffer
+    // (spool drains it one-per-200ms), so top the queue up from _buffer here
+    // to keep the pool full between spool ticks.
+    while (this._pendingCount < this._maxParallel) {
+      if (this._queue.length === 0 && this._buffer.length) {
+        this._queue.push(this._buffer.shift());
+      }
+      const item = this._queue.shift();
+      if (item == null) {
+        return;
+      }
+      this._send(item);
     }
-    this._send(item);
   }
 
   /**
