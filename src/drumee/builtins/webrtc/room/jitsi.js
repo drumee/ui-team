@@ -210,7 +210,11 @@ class __webrtc_room extends __room {
       catch (e) { this.warn("addTrack(video) failed", e); }
     }
 
-    this.stateMessage(LOCALE.JOINING_CONFERENCE);
+    this.stateMessage(
+      this.service_class === "connect"
+        ? LOCALE.CONNECTING
+        : LOCALE.JOINING_CONFERENCE,
+    );
     this.room.join();
   }
 
@@ -851,7 +855,9 @@ class __webrtc_room extends __room {
       if (!this._joining) this.stateMessage("waiting");
     }
     this.stateMessage(
-      LOCALE.X_HAS_JOINED_MEETING.format(participant.getDisplayName(), ""),
+      this.service_class === "connect"
+        ? LOCALE.X_HAS_JOINED_CALL.format(participant.getDisplayName())
+        : LOCALE.X_HAS_JOINED_MEETING.format(participant.getDisplayName(), ""),
       3000
     );
     this.__participants.append(
