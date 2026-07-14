@@ -216,13 +216,29 @@ html {
   }
 }
 
-// Lift window_manager above the settings/apps slot (z 1500–20001) while
-// its modal is open; otherwise the modal stays trapped behind Settings/Apps.
+// A WM modal (Wm.confirm/alert wrapper-modal, z 20000) lives inside
+// `.window-manager__ui`, which is `isolation: isolate` — so the modal is
+// trapped behind the settings/apps slot (z 1500) that covers the workspace
+// (e.g. the full-page Billing screen). Lifting the whole `__ui` to z 30000
+// freed the modal but dragged the folder GRID (`__main`) up with it, so the
+// grid painted OVER the Billing/Settings layout behind the modal.
+//
+// Same fix as the window-connect case above: DISSOLVE `__ui`'s stacking
+// context instead of lifting it, so its children resolve at the document root
+// — the grid (`__main`, z auto) falls BELOW the slot (1500) and stops
+// bleeding over the settings page. Then lift ONLY the modal (not the grid) so
+// it still clears the slot in every state, including the slot's own
+// overlay-open lift (20001).
 .desk-module__wm-container:has(
   .window-manager__wrapper-modal[data-state="open"]
 ) {
   .window-manager__ui {
-    z-index: 30000 !important;
+    isolation: auto;
+    z-index: auto;
+  }
+
+  .window-manager__wrapper-modal[data-state="open"] {
+    z-index: 30000;
   }
 }
 
