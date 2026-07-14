@@ -70,6 +70,66 @@ function pageHeader(ui) {
 }
 
 /**
+ * Subscription status banner — the single cancel-aware surface on the billing
+ * page. Shown only when the caller has a paid subscription (ui._hasPaidSub):
+ *  - pending cancel (ui._isCanceling): "ends on {date}, access kept" + Resume.
+ *  - active: "renews on {date}" + Cancel plan.
+ * A hard-cancelled sub has no mirror row → no banner (workspace on Free).
+ * @param {Object} ui - UI instance
+ * @returns {Object|null} Skeletons component
+ */
+function subscriptionBanner(ui) {
+  if (!ui._hasPaidSub) return null;
+  const fig = `${ui.fig.family}__sub-banner`;
+  const when = ui._periodEnd ? Dayjs(ui._periodEnd * 1000).format("MMM D, YYYY") : "";
+
+  if (ui._isCanceling) {
+    return Skeletons.Box.X({
+      className: `${fig} ${fig}--canceling`,
+      kids: [
+        Skeletons.Box.Y({
+          className: `${fig}-text`,
+          kids: [
+            Skeletons.Note({
+              className: `${fig}-title`,
+              content: (LOCALE.SUBSCRIPTION_ENDS_ON || "Your plan ends on {0}").format(when),
+            }),
+            Skeletons.Note({
+              className: `${fig}-desc`,
+              content: LOCALE.SUBSCRIPTION_ENDS_DESC || "You keep full access until then, after which your workspace returns to the Free plan.",
+            }),
+          ],
+        }),
+        Skeletons.Note({
+          className: `${fig}-action ${fig}-resume`,
+          content: LOCALE.RESUME_SUBSCRIPTION || "Resume plan",
+          service: "resume-subscription",
+          uiHandler: [ui],
+          bubble: false,
+        }),
+      ],
+    });
+  }
+
+  return Skeletons.Box.X({
+    className: `${fig} ${fig}--active`,
+    kids: [
+      Skeletons.Note({
+        className: `${fig}-title`,
+        content: (LOCALE.SUBSCRIPTION_RENEWS_ON || "Your subscription renews on {0}").format(when),
+      }),
+      Skeletons.Note({
+        className: `${fig}-action ${fig}-cancel`,
+        content: LOCALE.CANCEL_PLAN || "Cancel plan",
+        service: "cancel-subscription",
+        uiHandler: [ui],
+        bubble: false,
+      }),
+    ],
+  });
+}
+
+/**
  * Create main billing layout with header tabs and content container. Renders a
  * full-page title (opt.page), a popup shell (opt.popup), or headerless (the
  * settings_account tab).
@@ -92,6 +152,7 @@ function billing(ui) {
     kids: [
       ui._page ? pageHeader(ui) : null,
       header,
+      subscriptionBanner(ui),
       contentWrapper,
     ].filter(Boolean),
   });
