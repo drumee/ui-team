@@ -241,8 +241,16 @@
       }
 
       &.button-confirm {
-        background-color: var(--btn-commit-background);
+        // --btn-commit-background is malformed in skin/vars/default.scss
+        // (`-primary-500` instead of `var(--primary-500)`) so it computes to
+        // transparent — the Confirm button then rendered white-on-white on the
+        // popup and looked blank. Use the intended commit accent directly.
+        background-color: var(--primary-500);
         @include drumee.typo($line: 18px, $size: 13px, $weight: 300, $color: var(--btn-commit-text));
+
+        &:hover {
+          background-color: var(--primary-600);
+        }
       }
     }
 
