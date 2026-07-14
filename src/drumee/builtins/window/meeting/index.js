@@ -1257,9 +1257,11 @@ class __window_meeting extends __room {
     // Viewer side: dock the tiles into the panel as soon as the share is
     // announced, so the strip never lingers in the main stage.
     this._dockParticipants(true);
-    // Only one screen at a time — lock our own share control while a remote
-    // is presenting (only the viewers hit this hook, never the sharer).
-    this._setShareLocked(true);
+    // Only one screen at a time — lock our own share control while a REMOTE
+    // participant is presenting. Never lock when we're the presenter (our own
+    // screen renders through the same webrtc_remote_display, which also drives
+    // these hooks — locking there disabled the sharer's own button).
+    if (!this._presentingLocally) this._setShareLocked(true);
     const uid = (args && args.uid) || this._uidForParticipant(args && args.id);
     if (uid) {
       this._currentPresenterUid = String(uid);
@@ -1273,10 +1275,18 @@ class __window_meeting extends __room {
   onRemoteScreenStart(size) {
     if (super.onRemoteScreenStart) super.onRemoteScreenStart(size);
     this._dockParticipants(true);
-    this._setShareLocked(true);
+    // Our own presentation display fires start-remote-screen too — only lock
+    // the button for a genuine REMOTE share, never our own (see prepareRemoteScreen).
+    if (!this._presentingLocally) this._setShareLocked(true);
   }
 
   onRemoteScreenStop() {
+    // Never let a remote peer's stop (notably the base STOP_REMOTE_SCREEN 5s
+    // safety timer) tear down OUR own active share — that cleared __presenter /
+    // reset the screen button mid-share, leaving us unable to stop it. A legit
+    // self-stop routes through stopPresentation, which clears _presentingLocally
+    // BEFORE calling this, so the teardown below still runs there.
+    if (this._presentingLocally) return;
     if (super.onRemoteScreenStop) super.onRemoteScreenStop();
     this._dockParticipants(false);
     // Remote share ended — let everyone start their own again.
