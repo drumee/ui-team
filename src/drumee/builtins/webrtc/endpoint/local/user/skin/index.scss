@@ -127,7 +127,7 @@
   // Status badges (share-screen, hand-raise) live alongside pin/dots. They
   // stay hidden by default and the meeting window flips them visible via
   // `data-presenting` / `data-raised` set on the tile root by
-  // window_meeting._setMemberPresenting / _toggleHandRaise.
+  // window_meeting._setMemberPresenting / _raiseOwnHand.
   &__tile-badge {
     width: 28px;
     height: 28px;

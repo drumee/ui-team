@@ -1111,6 +1111,15 @@
     position: relative;
   }
 
+  // The timer overlay is a full-stage (position:absolute; 100%x100%) layer that
+  // only displays a centered countdown. Without this it sits above the remote
+  // tiles (z:auto) — the local tile escapes only because it carries z-index:10 —
+  // and its pointer-events:auto swallows hover on the remote tiles, so their
+  // top-actions never reveal. It's purely presentational: make it click-through.
+  &__timer-container {
+    pointer-events: none;
+  }
+
   &__presenter {
     width: 100%;
     height: 100%;
@@ -1728,7 +1737,7 @@
       background: rgba(0, 0, 0, 0.05);
     }
 
-    // Raised-hand active state (data-raised flipped by _toggleHandRaise).
+    // Raised-hand active state (data-raised flipped by _raiseOwnHand / _lowerOwnHand).
     &.hand-raise[data-raised="1"] {
       background: rgba(89, 80, 255, 0.12);
       color: var(--primary-40, #5950ff);
@@ -1746,6 +1755,40 @@
       opacity: 0.4;
       pointer-events: none;
       cursor: not-allowed;
+    }
+  }
+
+  // ── Raised-hand count badge on the hand control ──────────────────────────
+  // Wrap positions the badge over the button's top-right corner (mirrors
+  // &__in-topbar-chat-wrap / &__in-topbar-chat-badge). Shown only when more
+  // than one hand is up — window_meeting._updateHandRaiseBadge flips data-state.
+  &__ctrl-hand-wrap {
+    position: relative;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    align-self: center;
+    height: 32px;
+  }
+
+  &__ctrl-hand-badge {
+    position: absolute;
+    bottom: -2px;
+    right: -2px;
+    min-width: 16px;
+    height: 16px;
+    padding: 1px 5px;
+    border-radius: 8px;
+    background: var(--signal-error, #d74e49);
+    color: #fff;
+    font-size: 10px;
+    font-weight: 600;
+    line-height: 16px;
+    text-align: center;
+    pointer-events: none;
+
+    &[data-state="0"] {
+      display: none;
     }
   }
 
