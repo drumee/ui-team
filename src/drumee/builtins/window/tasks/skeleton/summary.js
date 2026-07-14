@@ -28,8 +28,8 @@ module.exports = function (ui) {
   let overdue = 0;
   let created7d = 0;
   let completed7d = 0;
-  let cycleSum = 0; // sum of (completed_at − ctime) in seconds, completed tasks
-  let cycleCount = 0;
+  let durSum = 0; // sum of task durations in days (start_date → due_date, inclusive)
+  let durCount = 0;
 
   let nowSec = 0;
   try {
@@ -50,18 +50,31 @@ module.exports = function (ui) {
     const ct = Number(t.ctime) || 0;
     if (ct && weekAgo && ct >= weekAgo) created7d++;
     const done = Number(t.completed_at) || 0;
-    if (t.status === "complete" && done) {
-      if (weekAgo && done >= weekAgo) completed7d++;
-      if (ct && done >= ct) {
-        cycleSum += done - ct;
-        cycleCount++;
+    if (t.status === "complete" && done && weekAgo && done >= weekAgo)
+      completed7d++;
+
+    // Avg time per task = mean planned duration. A Duration task spans
+    // start_date → due_date inclusive (13 → 17 July = 5 days, matching the
+    // detail panel's "5 days" chip); a single-date task counts as 1 day;
+    // tasks with no due date don't contribute.
+    if (t.due_date) {
+      let days = 1;
+      if (t.start_date) {
+        try {
+          const span = Dayjs(t.due_date)
+            .startOf("day")
+            .diff(Dayjs(t.start_date).startOf("day"), "day");
+          days = Math.max(1, span + 1);
+        } catch {
+          days = 1;
+        }
       }
+      durSum += days;
+      durCount++;
     }
   });
 
-  const avgDays = cycleCount
-    ? Math.round((cycleSum / cycleCount / 86400) * 10) / 10
-    : 0;
+  const avgDays = durCount ? Math.round((durSum / durCount) * 10) / 10 : 0;
 
   // ── Shared builders ──────────────────────────────────────────────────────
   // Figma renders the card sub-text as one paragraph with an optional inline
@@ -91,6 +104,12 @@ module.exports = function (ui) {
                       ? Skeletons.Note({
                           className: `${pfx}__health-card-link`,
                           content: link,
+                          // Figma flow: every health-card link tail drills into
+                          // the flat List view of the same filtered task set.
+                          bubble: 0,
+                          service: "set-view",
+                          uiHandler: [ui],
+                          viewMode: "list",
                         })
                       : null,
                   ],
@@ -116,7 +135,11 @@ module.exports = function (ui) {
       ],
     });
 
-  if (!total) {
+  // Empty state only when the folder truly has no tasks. With a member filter
+  // active, an empty *filtered* set must still render the dashboard — the
+  // activity feed is actor-based, so a member with no assigned tasks can still
+  // have activity worth showing (zeroed stats are correct, not a blank page).
+  if (!total && !(ui.getFilterUids() || []).length) {
     return Skeletons.Box.Y({
       className: `${pfx}__summary`,
       kids: [

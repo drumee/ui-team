@@ -4,9 +4,12 @@ const { Autolinker } = require("autolinker");
 const __chat_dod = function(m) {
   let message = m.message || '';
 
-  // Decode file mentions: [@filename](mention:hub_id:nid) → clickable <a> tag
+  // Decode file mentions: [@filename](mention:hub_id:nid) → clickable <a> tag.
+  // Label is lazy (.+?) not [^\]]+ so a filename containing "]" (e.g.
+  // "[Launch] Strategy") still matches — [^\]]+ stopped at the first "]" and
+  // dropped the whole mention to raw text.
   message = message.replace(
-    /\[@([^\]]+)\]\(mention:([^:]+):([^)]+)\)/g,
+    /\[@(.+?)\]\(mention:([^:]+):([^)]+)\)/g,
     '<a class="file-mention" data-hub_id="$2" data-nid="$3">@$1</a>'
   );
 

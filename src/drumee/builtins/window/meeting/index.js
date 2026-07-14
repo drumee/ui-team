@@ -208,8 +208,17 @@ class __window_meeting extends __room {
 
   onBeforeDestroy() {
     clearTimeout(this._idleTimer);
+    // Cancel any pending hand-raise auto-clear timers so they can't fire after
+    // teardown.
+    if (this._handTimers) {
+      for (const t of this._handTimers.values()) clearTimeout(t);
+      this._handTimers.clear();
+    }
     if (this.el && this._wakeControls)
       this.el.removeEventListener("mousemove", this._wakeControls);
+    // Drop the reactions-picker click-outside listener if the window is torn
+    // down while the picker is open (removeEventListener is a no-op otherwise).
+    this._closeReactionsPicker();
     // Covers teardown paths that bypass _closeFeedbackAndLeave (tab close,
     // error teardown). _meetingEndedBroadcast keeps it idempotent.
     if (this._isHost && !this._meetingEndedBroadcast && !this._meetingEndedRemote) {
@@ -300,6 +309,10 @@ class __window_meeting extends __room {
         this._applyRemoteHandRaise(data);
         return;
       }
+      if (sameRoom && options.event === "REACTION") {
+        this._applyRemoteReaction(data);
+        return;
+      }
     }
     if (super.onWsMessage) return super.onWsMessage(service, data, options);
   }
@@ -339,7 +352,20 @@ class __window_meeting extends __room {
       if (this._memberCallStates) this._memberCallStates.delete(key);
       if (this._memberHandRaised) this._memberHandRaised.delete(key);
       if (this._memberPresenting) this._memberPresenting.delete(key);
+      // Leaving with a hand raised clears immediately (not on timeout) — drop
+      // the pending auto-clear timer along with the state.
+      this._clearHandTimer(key);
+      // Drop stale spotlight refs so focus doesn't stick to a gone tile.
+      if (this._lastRaisedUid === key) this._lastRaisedUid = null;
+      if (this._dominantPid === id) this._dominantPid = null;
+      // If the presenter left without a clean STOP_REMOTE_SCREEN, release the
+      // share lock so the rest of the room can present again.
+      if (this._currentPresenterUid && key === this._currentPresenterUid) {
+        this._currentPresenterUid = null;
+        this._setShareLocked(false);
+      }
       this._refreshMember(uid);
+      this._updateFloatFocus();
     }
   }
 
@@ -430,6 +456,15 @@ class __window_meeting extends __room {
         this._togglePinnedTile(args);
         break;
 
+      case "start-screenshare":
+      case "stop-screenshare":
+        // One screen at a time: block starting a share while a remote is
+        // presenting (belt-and-suspenders with the disabled button). The
+        // active local presenter is never locked, so they can still stop.
+        if (this._shareLocked && !this._presentingLocally) return;
+        super.onUiEvent(cmd, args);
+        break;
+
       case "togglefullscreen":
         // The base webrtc room handler calls `document.body.requestFullscreen()`,
         // which puts the entire host page into fullscreen — including the
@@ -457,10 +492,23 @@ class __window_meeting extends __room {
         this._reframeWindow();
         break;
 
-      case "reactions":
-        // Topbar reactions (smiley) button — visual placeholder from the Figma
-        // design. No emoji-reaction backend is wired yet; swallow the event so
-        // it doesn't fall through to the base room handler.
+      case "react":
+        // A quick-reaction emoji from the topbar bar was clicked. Read the
+        // glyph off the button (model attr first, DOM text as fallback) and
+        // broadcast it. The emoji button uses bubble:0, so the bar stays open
+        // (send several reactions without reopening); it dismisses only via
+        // click-outside or the smiley trigger.
+        this._sendReaction(
+          (cmd.mget && cmd.mget("emoji")) ||
+            (cmd.el && cmd.el.textContent && cmd.el.textContent.trim()),
+        );
+        break;
+
+      case "reactions-more":
+        // "…" opens the full emoji picker; glyph picks there are handled by the
+        // picker's own capture-phase click listener (_bindReactionsPickerDismiss),
+        // which sends the reaction and keeps the bar + picker open.
+        this._toggleReactionsPicker();
         break;
 
       default:
@@ -687,13 +735,96 @@ class __window_meeting extends __room {
     return ep.mget && ep.mget(_a.uid);
   }
 
-  _setMemberHandRaised(uid, on) {
+  _setMemberHandRaised(uid, on, opts = {}) {
     if (!uid) return;
     const key = String(uid);
     if (on) this._memberHandRaised.set(key, 1);
     else this._memberHandRaised.delete(key);
     this._applyTileDataset(uid, "raised", on);
+    if (on) {
+      // Remember the most recent raiser so the float overlay can spotlight
+      // them, and (re)start the 30s auto-clear timer — a re-raise resets it.
+      this._lastRaisedUid = key;
+      this._startHandTimer(key, !!opts.isLocal);
+    } else {
+      this._clearHandTimer(key);
+    }
     this._refreshMember(uid);
+    this._updateFloatFocus();
+    this._updateHandRaiseBadge();
+  }
+
+  // Count badge on the top-bar hand control: shows how many participants have a
+  // hand up (local + remotes, from _memberHandRaised), and is hidden until more
+  // than one hand is raised (Figma 2596-129355 / 2502-72231). The badge is a
+  // Note (sys_pn "hand-count" → __handCount); setting textContent on a Note el
+  // matches the host-label pattern.
+  _updateHandRaiseBadge() {
+    const count = this._memberHandRaised ? this._memberHandRaised.size : 0;
+    const badge = this.__handCount;
+    const el =
+      (badge && badge.el) ||
+      (this.el &&
+        this.el.querySelector(`.${this.fig.family}__ctrl-hand-badge`));
+    if (!el) return;
+    if (count > 1) {
+      el.textContent = String(count);
+      el.dataset.state = 1;
+    } else {
+      el.textContent = "";
+      el.dataset.state = 0;
+    }
+  }
+
+  // ── Raise-hand 30s lifecycle (Figma spec 2517-15617) ────────────────────
+  // A raised hand auto-clears after 30s; re-raising resets the timer. Every
+  // client runs its own per-uid timer (keyed like _memberHandRaised) so a
+  // missed clear broadcast still self-heals. The local user's expiry also
+  // syncs the top-bar control and tells peers.
+  _startHandTimer(uid, isLocal) {
+    if (!this._handTimers) this._handTimers = new Map();
+    this._clearHandTimer(uid);
+    this._handTimers.set(
+      String(uid),
+      setTimeout(() => this._expireHand(uid, isLocal), 30000),
+    );
+  }
+
+  _clearHandTimer(uid) {
+    const key = String(uid);
+    if (this._handTimers && this._handTimers.has(key)) {
+      clearTimeout(this._handTimers.get(key));
+      this._handTimers.delete(key);
+    }
+  }
+
+  _expireHand(uid, isLocal) {
+    const key = String(uid);
+    this._clearHandTimer(key);
+    // Already lowered (manual lower / leave beat the timer) — nothing to do.
+    if (!this._memberHandRaised || !this._memberHandRaised.has(key)) return;
+    if (isLocal) {
+      this._lowerOwnHand();
+    } else {
+      this._setMemberHandRaised(uid, false);
+    }
+  }
+
+  _broadcastHandRaise(state) {
+    try {
+      this.sendRoomSignaling(SERVICE.conference.broadcast, {
+        event: "HAND_RAISE",
+        payload: {
+          room_id: this.mget(_a.room_id),
+          participant_id:
+            this.room && this.room.myUserId && this.room.myUserId(),
+          uid: Visitor.id,
+          state,
+        },
+      });
+    } catch (e) {
+      if (this.warn) this.warn("hand-raise broadcast failed", e);
+    }
   }
 
   _setMemberPresenting(uid, on) {
@@ -729,6 +860,106 @@ class __window_meeting extends __room {
       if (ep.el) ep.el.dataset[attr] = value;
       break;
     }
+  }
+
+  // ── Float-overlay focus (single-participant view while sharing) ──────────
+  // The float overlay stacks every tile at full frame; whichever tile carries
+  // data-focused="1" is raised to the front (skin z-index). This picks WHO to
+  // show: the most recent hand-raiser, else the dominant speaker, else the
+  // local self-view. Only meaningful while the tiles are docked (a share is on).
+
+  // Jitsi dominant-speaker changed. Keep the base behavior (per-tile
+  // data-speaking ring), then re-point the float spotlight at the speaker.
+  onDominantSpeaker(id) {
+    if (super.onDominantSpeaker) super.onDominantSpeaker(id);
+    this._dominantPid = id || null;
+    this._updateFloatFocus();
+  }
+
+  // True while the live tiles are docked into the float overlay (i.e. a screen
+  // is being shared) — the only time focus switching is visible.
+  _floatDocked() {
+    return !!(
+      this._participantsHome && this._participantsHome.dataset.docked === "1"
+    );
+  }
+
+  _myParticipantId() {
+    return this.room && this.room.myUserId ? this.room.myUserId() : null;
+  }
+
+  // uid of the participant to spotlight for a raised hand: the most recent
+  // raiser still raised, else any remaining raised hand, else null.
+  _activeRaisedUid() {
+    if (!this._memberHandRaised || !this._memberHandRaised.size) return null;
+    if (this._lastRaisedUid && this._memberHandRaised.has(this._lastRaisedUid)) {
+      return this._lastRaisedUid;
+    }
+    const keys = Array.from(this._memberHandRaised.keys());
+    return keys[keys.length - 1] || null;
+  }
+
+  // Priority: raised hand > dominant speaker > local self-view.
+  _updateFloatFocus() {
+    if (!this._floatDocked()) return;
+    const raisedUid = this._activeRaisedUid();
+    if (raisedUid != null) return this._focusByUid(raisedUid);
+    if (this._dominantPid) return this._focusByPid(this._dominantPid);
+    return this._focusLocalTile();
+  }
+
+  _focusByUid(uid) {
+    if (String(uid) === String(Visitor.id)) return this._focusLocalTile();
+    if (this.endpoints) {
+      for (const pid of Object.keys(this.endpoints)) {
+        const ep = this.endpoints[pid];
+        if (!ep || ep.isDestroyed()) continue;
+        if (String(ep.mget(_a.uid)) !== String(uid)) continue;
+        return this._applyFloatFocus(ep.el);
+      }
+    }
+    // Raiser has no live tile (edge) — fall back so the overlay isn't blank.
+    return this._focusLocalTile();
+  }
+
+  _focusByPid(pid) {
+    if (pid === this._myParticipantId()) return this._focusLocalTile();
+    const ep = this.endpoints && this.endpoints[pid];
+    if (ep && !ep.isDestroyed() && ep.el) return this._applyFloatFocus(ep.el);
+    return this._focusLocalTile();
+  }
+
+  _focusLocalTile() {
+    if (typeof this.getLocalParts !== "function") return;
+    this.getLocalParts()
+      .then((parts) => {
+        const local = parts && parts.local;
+        if (local && !local.isDestroyed() && local.el) {
+          this._applyFloatFocus(local.el);
+        }
+      })
+      .catch(() => {});
+  }
+
+  // Move data-focused onto `el`, clearing it from every other tile in the
+  // float overlay so exactly one participant is spotlighted.
+  _applyFloatFocus(el) {
+    if (!el || !this.el) return;
+    const float = this.el.querySelector(`.${this.fig.family}__float-tiles`);
+    if (!float || !float.contains(el)) return;
+    float
+      .querySelectorAll('[data-focused="1"]')
+      .forEach((n) => { n.dataset.focused = "0"; });
+    el.dataset.focused = "1";
+  }
+
+  _clearFloatFocus() {
+    if (!this.el) return;
+    const float = this.el.querySelector(`.${this.fig.family}__float-tiles`);
+    if (!float) return;
+    float
+      .querySelectorAll('[data-focused="1"]')
+      .forEach((n) => { n.dataset.focused = "0"; });
   }
 
   // Toggle pin on a participant's tile. Only one pinned tile at a time —
@@ -795,45 +1026,216 @@ class __window_meeting extends __room {
     if (!endpoint || endpoint.isDestroyed() || !endpoint.el) return;
     endpoint.el.dataset.raised = data.state ? 1 : 0;
     const uid = (data.uid != null) ? data.uid : this._uidForParticipant(pid);
-    this._setMemberHandRaised(uid, !!data.state);
+    // state:1 (re)starts this client's safety timer for the raiser; state:0
+    // (the raiser's own auto-clear/manual-lower) cancels it.
+    this._setMemberHandRaised(uid, !!data.state, { isLocal: false });
   }
 
-  _toggleHandRaise(cmd) {
-    const raised = cmd.el.dataset.raised === "1" ? 0 : 1;
-    cmd.el.dataset.raised = raised;
-    if (cmd.el) {
-      cmd.el.setAttribute("title", raised ? (LOCALE.LOWER_HAND || "Lower hand") : (LOCALE.RAISE_HAND || "Raise hand"));
-    }
-    // Mirror the new state for the local user on the dashboard card. The
-    // broadcast below tells other peers; this updates our own UI.
-    this._setMemberHandRaised(Visitor.id, !!raised);
+  // Send a reaction: float it on our own tile immediately and broadcast it to
+  // every peer (mirrors the HAND_RAISE broadcast). No-op on an empty glyph.
+  // The sender's name rides along so peers can label the float (Figma
+  // "reaction-sent": emoji above a pill with the sender's name).
+  _sendReaction(emoji) {
+    if (!emoji) return;
+    const name = (Visitor.fullname && Visitor.fullname()) || "";
+    this._floatReaction(this._reactionStackEl(), emoji, name);
     try {
       this.sendRoomSignaling(SERVICE.conference.broadcast, {
-        event: "HAND_RAISE",
+        event: "REACTION",
         payload: {
           room_id: this.mget(_a.room_id),
           participant_id: this.room && this.room.myUserId && this.room.myUserId(),
           uid: Visitor.id,
-          state: raised,
+          username: name,
+          emoji,
         },
       });
     } catch (e) {
-      if (this.warn) this.warn("hand-raise broadcast failed", e);
+      if (this.warn) this.warn("reaction broadcast failed", e);
     }
   }
 
-  // Triggered from a member card's "Lower hand" action. The local
-  // raise-hand button lives in __ctrlHandRaise (the top-bar control); we
-  // toggle through it so its dataset and the broadcast payload stay in
-  // sync with `_toggleHandRaise` above.
-  _lowerOwnHand() {
-    const cmd = this.__ctrlHandRaise;
-    if (!cmd || !cmd.el) {
-      this._setMemberHandRaised(Visitor.id, false);
+  // The bottom-left overlay layer where every reaction floats up.
+  _reactionStackEl() {
+    return this.el && this.el.querySelector(`.${this.fig.family}__reaction-stack`);
+  }
+
+  // A peer's reaction arrived — float it on the shared stack. Guard against our
+  // own echo (already floated locally in _sendReaction) and drop reactions from
+  // participants who have already left (spec edge case).
+  _applyRemoteReaction(data) {
+    if (!data || !data.emoji) return;
+    const myId = this.room && this.room.myUserId && this.room.myUserId();
+    if (data.participant_id === myId || data.uid === Visitor.id) return;
+    const pid = data.participant_id;
+    const endpoint = pid && this.endpoints ? this.endpoints[pid] : null;
+    if (!endpoint || endpoint.isDestroyed()) return;
+    this._floatReaction(this._reactionStackEl(), data.emoji, data.username);
+  }
+
+  // Spawn a transient reaction that rises and fades on the bottom-left stack
+  // (Figma "reaction-sent": emoji on top, a rounded name pill below). Each
+  // call is independent — rapid/repeat reactions stack without a limit and a
+  // small horizontal drift (via margin, so the keyframe's centering transform
+  // is untouched) keeps them from perfectly overlapping. The CSS animation
+  // drives it; we just clean up when it ends.
+  _floatReaction(container, emoji, name) {
+    if (!container || !emoji) return;
+    const fam = this.fig.family;
+
+    const wrap = document.createElement("div");
+    wrap.className = `${fam}__reaction-float`;
+    // ± up to 24px so simultaneous floats fan out instead of overlapping.
+    const drift = Math.round((Math.random() - 0.5) * 48);
+    wrap.style.marginLeft = `${drift}px`;
+
+    const glyph = document.createElement("span");
+    glyph.className = `${fam}__reaction-float-emoji`;
+    glyph.textContent = emoji;
+    wrap.appendChild(glyph);
+
+    if (name) {
+      const pill = document.createElement("span");
+      pill.className = `${fam}__reaction-float-name`;
+      pill.textContent = name;
+      wrap.appendChild(pill);
+    }
+
+    container.appendChild(wrap);
+    const done = () => { if (wrap.parentNode) wrap.parentNode.removeChild(wrap); };
+    wrap.addEventListener("animationend", done);
+    // Fallback removal in case animationend never fires (layer torn down, etc.);
+    // must exceed the CSS rise duration (4s).
+    setTimeout(done, 5000);
+  }
+
+  // Toggle the full emoji picker for the reactions "…" button, reusing the
+  // shared assets/emojis picker. Fed into the __wrapperReactions wrapper.
+  _toggleReactionsPicker() {
+    const w = this.__wrapperReactions;
+    if (!w) return;
+    if (w.isEmpty()) {
+      w.feed(require("assets/emojis")(this));
+      this._positionReactionsPicker();
+      this._bindReactionsPickerDismiss();
+    } else {
+      this._closeReactionsPicker();
+    }
+  }
+
+  // Anchor the picker directly below the open reactions bar. The bar is the
+  // menu.topic items (a separate DOM subtree from the picker's __main-anchored
+  // wrapper), so we measure it and set the picker's top/left relative to
+  // __main (its positioned ancestor). Falls back to the CSS default if either
+  // element is missing.
+  _positionReactionsPicker() {
+    const w = this.__wrapperReactions;
+    const fam = this.fig.family;
+    const bar = this.el && this.el.querySelector(`.${fam}__reactions-bar`);
+    const main = this.el && this.el.querySelector(`.${fam}__main`);
+    if (!w || !w.el || !bar || !main) return;
+    const b = bar.getBoundingClientRect();
+    const m = main.getBoundingClientRect();
+    w.el.style.top = `${Math.round(b.bottom - m.top + 8)}px`;
+    w.el.style.left = `${Math.round(b.left - m.left)}px`;
+  }
+
+  // Document-capture click handler while the picker is open. It (a) picks a
+  // glyph and (b) dismisses on a true outside click. Capture phase matters:
+  // for a glyph we send the reaction and stopImmediatePropagation, so the click
+  // never reaches the emoji row's view handler — that handler fires RADIO_CLICK
+  // which the reactions bar treats as an outside click and closes on. Swallowing
+  // it keeps BOTH the bar and the picker open. Bound on the next tick so the "…"
+  // click that opened the picker doesn't immediately dismiss it.
+  _bindReactionsPickerDismiss() {
+    if (this._reactionsPickerDismiss) return;
+    this._reactionsPickerDismiss = (e) => {
+      const w = this.__wrapperReactions;
+      if (!w || w.isEmpty() || !w.el) {
+        this._closeReactionsPicker();
+        return;
+      }
+      const t = e.target;
+      // Any click inside the picker keeps it (and the bar) open.
+      if (w.el.contains(t)) {
+        const span = t.closest && t.closest('[data-service="emoji"]');
+        if (span) {
+          e.stopImmediatePropagation();
+          e.preventDefault();
+          this._sendReaction(span.textContent && span.textContent.trim());
+        }
+        return;
+      }
+      // Clicks in the reactions menu (bar + smiley) are the menu's business.
+      const menu =
+        this.el && this.el.querySelector(`.${this.fig.family}__reactions-menu`);
+      if (menu && menu.contains(t)) return;
+      // Anything else is a true outside click — dismiss the picker.
+      this._closeReactionsPicker();
+    };
+    setTimeout(() => {
+      if (this._reactionsPickerDismiss) {
+        document.addEventListener("click", this._reactionsPickerDismiss, true);
+      }
+    }, 0);
+  }
+
+  _closeReactionsPicker() {
+    if (this._reactionsPickerDismiss) {
+      document.removeEventListener("click", this._reactionsPickerDismiss, true);
+      this._reactionsPickerDismiss = null;
+    }
+    if (this.__wrapperReactions && !this.__wrapperReactions.isEmpty()) {
+      this.__wrapperReactions.clear();
+    }
+  }
+
+  // Top-bar Raise-hand control: a toggle. Click raises (and starts the 30s
+  // auto-clear timer); click again lowers. Mirrors the state on our own
+  // dashboard card and broadcasts to peers. The 30s timeout still lowers it
+  // automatically if the user never toggles it back.
+  _toggleHandRaise(cmd) {
+    const el = cmd && cmd.el;
+    const raised = el
+      ? el.dataset.raised === "1"
+      : !!(this._memberHandRaised &&
+          this._memberHandRaised.has(String(Visitor.id)));
+    if (raised) {
+      this._lowerOwnHand();
       return;
     }
-    if (cmd.el.dataset.raised !== "1") return;
-    this._toggleHandRaise(cmd);
+    if (el) {
+      el.dataset.raised = 1;
+      el.setAttribute("title", LOCALE.LOWER_HAND || "Lower hand");
+    }
+    this._setMemberHandRaised(Visitor.id, true, { isLocal: true });
+    this._broadcastHandRaise(1);
+  }
+
+  // Manual lower — kept as a convenience alongside the 30s auto-clear. Fired
+  // from the member card's "Lower hand" action and from the local hand timer's
+  // expiry. Syncs the top-bar control, clears state (which cancels the timer),
+  // and tells peers.
+  _lowerOwnHand() {
+    // Source of truth is the state map; the top-bar control (sys_pn
+    // "ctrl-hand" → __ctrlHand) is just UI to sync. Guarding on the map (not
+    // the button dataset) is what lets the 30s auto-clear reliably drop the
+    // button's active state.
+    const key = String(Visitor.id);
+    if (this._memberHandRaised && !this._memberHandRaised.has(key)) return;
+    // Resolve the button via its part, falling back to a DOM lookup so the
+    // active state clears even if the part isn't bound.
+    const cmd = this.__ctrlHand;
+    const btnEl =
+      (cmd && cmd.el) ||
+      (this.el &&
+        this.el.querySelector(`.${this.fig.family}__ctrl-btn.hand-raise`));
+    if (btnEl) {
+      btnEl.dataset.raised = 0;
+      btnEl.setAttribute("title", LOCALE.RAISE_HAND || "Raise hand");
+    }
+    this._setMemberHandRaised(Visitor.id, false);
+    this._broadcastHandRaise(0);
   }
 
   // Triggered from the local member card's "Stop sharing" action. Defers
@@ -855,6 +1257,11 @@ class __window_meeting extends __room {
     // Viewer side: dock the tiles into the panel as soon as the share is
     // announced, so the strip never lingers in the main stage.
     this._dockParticipants(true);
+    // Only one screen at a time — lock our own share control while a REMOTE
+    // participant is presenting. Never lock when we're the presenter (our own
+    // screen renders through the same webrtc_remote_display, which also drives
+    // these hooks — locking there disabled the sharer's own button).
+    if (!this._presentingLocally) this._setShareLocked(true);
     const uid = (args && args.uid) || this._uidForParticipant(args && args.id);
     if (uid) {
       this._currentPresenterUid = String(uid);
@@ -868,15 +1275,62 @@ class __window_meeting extends __room {
   onRemoteScreenStart(size) {
     if (super.onRemoteScreenStart) super.onRemoteScreenStart(size);
     this._dockParticipants(true);
+    // Our own presentation display fires start-remote-screen too — only lock
+    // the button for a genuine REMOTE share, never our own (see prepareRemoteScreen).
+    if (!this._presentingLocally) this._setShareLocked(true);
   }
 
   onRemoteScreenStop() {
+    // Never let a remote peer's stop (notably the base STOP_REMOTE_SCREEN 5s
+    // safety timer) tear down OUR own active share — that cleared __presenter /
+    // reset the screen button mid-share, leaving us unable to stop it. A legit
+    // self-stop routes through stopPresentation, which clears _presentingLocally
+    // BEFORE calling this, so the teardown below still runs there.
+    if (this._presentingLocally) return;
     if (super.onRemoteScreenStop) super.onRemoteScreenStop();
     this._dockParticipants(false);
+    // Remote share ended — let everyone start their own again.
+    this._setShareLocked(false);
     if (this._currentPresenterUid) {
       this._setMemberPresenting(this._currentPresenterUid, false);
       this._currentPresenterUid = null;
     }
+  }
+
+  // Catch-all unlock: the base tears the presenter down here whenever a peer
+  // leaves (remote-gone / disconnect), which can bypass onRemoteScreenStop —
+  // notably for a late joiner who never tracked `_currentPresenterUid`. Release
+  // the share lock whenever the peer being removed WAS the active presenter.
+  removePresenter(peer) {
+    const wasPresenter = !!(
+      this.__presenter &&
+      typeof this.__presenter.getItemsByAttr === "function" &&
+      peer &&
+      this.__presenter.getItemsByAttr("participant_id", peer.participant_id)[0]
+    );
+    if (super.removePresenter) super.removePresenter(peer);
+    if (wasPresenter) {
+      this._setShareLocked(false);
+      this._currentPresenterUid = null;
+    }
+  }
+
+  // Lock/unlock the local "share screen" control. While a remote participant
+  // is presenting, other participants can't start their own share (one screen
+  // at a time); the presenter's own button is never touched (they never hit
+  // the remote-screen hooks), so they can still stop. Visual disable + a guard
+  // in onUiEvent both key off `_shareLocked`.
+  _setShareLocked(locked) {
+    this._shareLocked = !!locked;
+    const btn = this.__ctrlScreen;
+    if (!btn || !btn.el || (btn.isDestroyed && btn.isDestroyed())) return;
+    btn.el.dataset.disabled = locked ? "1" : "0";
+    btn.el.setAttribute(
+      "title",
+      locked
+        ? (LOCALE.SCREEN_SHARE_BUSY || "Someone is already sharing their screen")
+        : (LOCALE.SHARE_SCREEN || "Share screen"),
+    );
   }
 
   // Local desktop track mute/unmute is the only signal we get for our own
@@ -885,10 +1339,37 @@ class __window_meeting extends __room {
   onTrackMuteChange(track) {
     if (super.onTrackMuteChange) super.onTrackMuteChange(track);
     if (!track || typeof track.getType !== "function") return;
-    if (track.getType() !== _a.video) return;
+    const type = track.getType();
+    if (type === _a.audio) {
+      // The base handler only syncs the top-bar mic pill; the local self-tile's
+      // mic badge (unlike the remote one) is never seeded or updated, so its
+      // muted state never shows. Reflect it here — data-state "0" = muted,
+      // which the skin reveals; "1" = live, hidden.
+      this._setLocalTileMic(!track.isMuted());
+      return;
+    }
+    if (type !== _a.video) return;
     if (typeof track.getVideoType !== "function") return;
     if (track.getVideoType() !== _a.desktop) return;
     this._setMemberPresenting(Visitor.id, !track.isMuted());
+  }
+
+  // Set the local self-tile mic badge's data-state. Target it by class within
+  // the local tile — its sys_pn ("audio") collides with the tile's <audio>
+  // element, so a part lookup would be ambiguous.
+  _setLocalTileMic(isLive) {
+    if (typeof this.getLocalParts !== "function") return;
+    this.getLocalParts()
+      .then((parts) => {
+        const local = parts && parts.local;
+        if (!local || (local.isDestroyed && local.isDestroyed()) || !local.el) {
+          return;
+        }
+        const fam = (local.fig && local.fig.family) || "endpoint-local";
+        const mic = local.el.querySelector(`.${fam}__tile-mic`);
+        if (mic) mic.dataset.state = isLive ? 1 : 0;
+      })
+      .catch(() => {});
   }
 
   async _inviteToRoom(callee) {
@@ -960,11 +1441,16 @@ class __window_meeting extends __room {
       if (this._participantsHome) {
         this._participantsHome.dataset.docked = toPanel ? "1" : "0";
       }
-      if (!toPanel) {
+      if (toPanel) {
+        // Now that the tiles live in the overlay, pick the initial spotlight
+        // (defaults to the local self-view until someone talks / raises a hand).
+        this._updateFloatFocus();
+      } else {
         // Re-lay out the grid immediately. The base responsive() defers the
         // participants relayout ~1s, which leaves the tiles briefly in their
         // docked single-column form — a visible glitch right after the screen
         // closes. Doing it now makes the return to the grid clean.
+        this._clearFloatFocus();
         if (typeof participants.responsive === "function") {
           participants.responsive("normal");
         }

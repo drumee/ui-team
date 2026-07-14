@@ -2191,6 +2191,12 @@
   .window__content-row {
     height: 100%;
     min-width: 0;
+    // Row-view body is a flex item under content-main. Without min-height:0 its
+    // min-content floor equals every file row stacked, so a long list refuses
+    // to shrink and squeezes the fixed header (which has overflow:hidden) down
+    // to nothing — the column titles vanish once the list needs to scroll.
+    // Clamping the floor lets the list scroll internally and keeps the header.
+    min-height: 0;
 
     .smart-container {
       direction: ltr;
@@ -2207,6 +2213,8 @@
 
   .window__filter__main {
     height: 36px;
+    // Pin the column-title row so a scrolling file list can't squeeze it away.
+    flex-shrink: 0;
     box-shadow: 0 1px 2px rgba(63, 79, 117, 0.16);
     overflow: hidden;
   }
