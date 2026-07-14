@@ -1111,6 +1111,15 @@
     position: relative;
   }
 
+  // The timer overlay is a full-stage (position:absolute; 100%x100%) layer that
+  // only displays a centered countdown. Without this it sits above the remote
+  // tiles (z:auto) — the local tile escapes only because it carries z-index:10 —
+  // and its pointer-events:auto swallows hover on the remote tiles, so their
+  // top-actions never reveal. It's purely presentational: make it click-through.
+  &__timer-container {
+    pointer-events: none;
+  }
+
   &__presenter {
     width: 100%;
     height: 100%;
