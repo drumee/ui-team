@@ -325,6 +325,24 @@ class __webrtc_room extends __interact {
       }),
     ];
 
+    // Enumerate only AFTER permission is granted — otherwise the list rows carry
+    // empty deviceIds and every pick silently fails on Save (see
+    // ensureMediaPermission). Surface a clear note when it's denied.
+    if (!(await this.ensureMediaPermission())) {
+      p.feed([
+        Skeletons.Note({
+          className: `device-heading`,
+          content: LOCALE.MICROPHONE,
+        }),
+        Skeletons.Note({
+          className: `device-label`,
+          content: LOCALE.DEVICES_PERMISSION_DENIED,
+        }),
+      ]);
+      p.$el.fadeIn();
+      return;
+    }
+
     if (JitsiMeetJS.mediaDevices.isDeviceChangeAvailable("input")) {
       JitsiMeetJS.mediaDevices.enumerateDevices(async (devices) => {
         console.log(devices);
@@ -449,10 +467,46 @@ class __webrtc_room extends __interact {
    * these concurrently (the old behaviour) raced the Jingle renegotiation and
    * the Jitsi `audioOutputChanged` flag — hence "no audio until the 2nd-3rd try".
    */
+  /**
+   * enumerateDevices() only fills in real deviceId + label once MICROPHONE
+   * permission is granted; before that every row carries an EMPTY deviceId, so
+   * picking a mic/speaker stores "" and Save silently no-ops on BOTH input and
+   * output (the guards below skip a falsy id) — the "can't change voice setting,
+   * no error" bug. Verify the grant is in place: query first, and only fall
+   * back to a short-lived getUserMedia probe (which triggers the prompt and
+   * refreshes the device ids/labels) when it isn't already granted.
+   */
+  async ensureMediaPermission() {
+    try {
+      if (navigator.permissions && navigator.permissions.query) {
+        const st = await navigator.permissions.query({ name: "microphone" });
+        if (st && st.state === "granted") return true;
+        if (st && st.state === "denied") return false;
+      }
+    } catch (e) {
+      // 'microphone' not queryable on this browser — fall through to the probe.
+    }
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      // Release the probe stream immediately; the call keeps its own tracks.
+      stream.getTracks().forEach((t) => t.stop());
+      return true;
+    } catch (e) {
+      this.warn("media permission not granted", e);
+      return false;
+    }
+  }
+
   async confirmDeviceSelection() {
     // Close the picker immediately (it only fades the part out; it does NOT
     // reset selected*), then serialize the device changes in the background.
     this.closeInputDevicesList();
+    // Applying the change re-acquires the device (getUserMedia / setSinkId),
+    // which needs permission — verify up front and fail LOUDLY, not silently.
+    if (!(await this.ensureMediaPermission())) {
+      Wm.alert(LOCALE.DEVICES_PERMISSION_DENIED);
+      return;
+    }
     try {
       if (this.selectedInputDevice) {
         await this.recreateLocalTrackOnDeviceChange();
@@ -468,6 +522,10 @@ class __webrtc_room extends __interact {
       }
     } catch (e) {
       this.warn("confirmDeviceSelection failed", e);
+      // Was silently swallowed before — surface it so a failed change isn't
+      // mistaken for "nothing happened".
+      const details = (e && e.message) || `${e}`;
+      Wm.alert(`${LOCALE.DEVICES_PERMISSION_DENIED} (${details})`);
     }
   }
 
