@@ -4,6 +4,11 @@ const { button } = require("../../../../../skeleton/toolkit");
  * Build the plan catalogue for display. Text comes from LOCALE; prices come
  * from the server catalog (Stripe truth) via ui._catPrice, so nothing here is
  * hardcoded. Rebuilt per render so a language switch is reflected immediately.
+ *
+ * Layout follows Figma 3050-96140: each card has a tinted price-header box
+ * (title + optional "Start from" label + big amount + period, or a plain
+ * "Contact sales" text), a full-width pill CTA, a sub-text line, then the
+ * feature list. The Pro card carries the "Popular" badge on its header box.
  * @param {Object} ui - UI instance
  * @param {string} cycle - "monthly" | "yearly"
  * @returns {Object} keyed plan options
@@ -17,25 +22,35 @@ function getOptions(ui, cycle = "monthly") {
   // copy, matching the design's "each additional seat $5.00").
   const seatPrice = money(ui._catPrice("pro_seat", "month"));
 
+  const perMonth = LOCALE.PER_MONTH;
+  const perYear = LOCALE.PER_YEAR;
+  const perSeatMonth = LOCALE.PER_SEAT_MONTH;
+  const perSeatYear = LOCALE.PER_SEAT_YEAR;
+
   return {
     free: {
       title: LOCALE.FREE,
-      subtitle: LOCALE.FREE,
-      description: "",
-      buttonTitle: "",
+      priceAmount: money(0),
+      pricePeriod: perMonth,
+      buttonTitle: LOCALE.GET_STARTED,
+      buttonKind: "secondary",
+      subText: "",
       features: [
-        { main: "20G", sub: LOCALE.FEAT_STORAGE },
+        { main: "20 GB", sub: LOCALE.FEAT_STORAGE },
         { main: LOCALE.NONE, sub: LOCALE.FEAT_ADMIN_ROLES },
       ],
     },
     pro: {
       title: LOCALE.PRO,
-      subtitle: (isYear ? LOCALE.PRICE_FROM_PER_YEAR : LOCALE.PRICE_FROM_PER_MONTH).format(proPrice),
-      description: LOCALE.PLAN_PRO_DESC.format(seatPrice),
+      priceLabel: LOCALE.START_FROM,
+      priceAmount: proPrice,
+      pricePeriod: isYear ? perYear : perMonth,
       buttonTitle: LOCALE.UPGRADE,
+      buttonKind: "primary",
       badge: 1,
+      subText: LOCALE.PLAN_PRO_DESC.format(seatPrice),
       features: [
-        { main: "20G", sub: LOCALE.FEAT_STORAGE },
+        { main: "20 GB", sub: LOCALE.FEAT_STORAGE },
         { main: "5", sub: LOCALE.FEAT_EDITOR_ACCESS },
         { main: "1", sub: LOCALE.FEAT_ADMIN_ROLE },
         { main: "7", sub: LOCALE.FEAT_DAYS_VERSION_HISTORY },
@@ -45,11 +60,13 @@ function getOptions(ui, cycle = "monthly") {
     },
     team: {
       title: LOCALE.TEAM,
-      subtitle: (isYear ? LOCALE.PRICE_PER_SEAT_YEAR : LOCALE.PRICE_PER_SEAT_MONTH).format(teamPrice),
-      description: LOCALE.PLAN_TEAM_DESC,
+      priceAmount: teamPrice,
+      pricePeriod: isYear ? perSeatYear : perSeatMonth,
       buttonTitle: LOCALE.CHOOSE_TEAM,
+      buttonKind: "dark",
+      subText: LOCALE.PLAN_TEAM_DESC,
       features: [
-        { main: "50G", sub: LOCALE.FEAT_STORAGE_PER_SEAT },
+        { main: "50 GB", sub: LOCALE.FEAT_STORAGE_PER_SEAT },
         { main: LOCALE.ORG, sub: LOCALE.FEAT_DOMAIN_WIDE },
         { main: "30", sub: LOCALE.FEAT_DAYS_VERSION_HISTORY },
         { main: "", sub: LOCALE.FEAT_ADMIN_BILLING },
@@ -57,9 +74,10 @@ function getOptions(ui, cycle = "monthly") {
     },
     enterprise: {
       title: LOCALE.ENTERPRISE,
-      subtitle: LOCALE.CONTACT_SALES,
-      description: LOCALE.PLAN_ENTERPRISE_DESC,
+      priceText: LOCALE.CONTACT_SALES,
       buttonTitle: LOCALE.CONTACT_SALES,
+      buttonKind: "dark",
+      subText: LOCALE.PLAN_ENTERPRISE_DESC,
       features: [
         { main: LOCALE.CUSTOM, sub: LOCALE.FEAT_STORAGE },
         { main: LOCALE.CUSTOM, sub: LOCALE.FEAT_EDITOR_ACCESS },
@@ -74,46 +92,76 @@ function getOptions(ui, cycle = "monthly") {
 }
 
 /**
- * Create plan item component (Free, Pro, Team, Enterprise)
- * Display title, subtitle, description, button, features list, and popular badge
+ * Price-header box: tinted rounded panel holding the plan name, price (label +
+ * amount + period) or a plain "Contact sales" line, and the Popular badge.
+ * @param {Object} ui - UI instance
+ * @param {string} fig - BEM prefix
+ * @param {Object} option - plan option
+ * @returns {Object} Skeletons component
+ */
+function priceHeader(ui, fig, option) {
+  const { title, priceLabel, priceAmount, pricePeriod, priceText, badge } = option;
+
+  const priceKids = [];
+  if (priceLabel) {
+    priceKids.push(
+      Skeletons.Note({ className: `${fig}-price-label`, content: priceLabel }),
+    );
+  }
+  if (priceAmount) {
+    priceKids.push(
+      Skeletons.Box.X({
+        className: `${fig}-price-row`,
+        kids: [
+          Skeletons.Note({ className: `${fig}-price-amount`, content: priceAmount }),
+          pricePeriod
+            ? Skeletons.Note({ className: `${fig}-price-period`, content: pricePeriod })
+            : null,
+        ].filter(Boolean),
+      }),
+    );
+  } else if (priceText) {
+    priceKids.push(
+      Skeletons.Note({ className: `${fig}-price-text`, content: priceText }),
+    );
+  }
+
+  const badgeEl = badge
+    ? Skeletons.Box.X({
+        className: `${fig}-badge`,
+        kids: [
+          Skeletons.Image.Svg({ ico: "rating-star", className: `${fig}-badge-icon` }),
+          Skeletons.Note({ content: LOCALE.POPULAR }),
+        ],
+      })
+    : null;
+
+  return Skeletons.Box.Y({
+    className: `${fig}-header ${badge ? "popular" : ""}`,
+    kids: [
+      Skeletons.Note({ className: `${fig}-title`, content: title }),
+      Skeletons.Box.Y({ className: `${fig}-price`, kids: priceKids }),
+      badgeEl,
+    ].filter(Boolean),
+  });
+}
+
+/**
+ * Create plan item component (Free, Pro, Team, Enterprise): price-header box →
+ * pill CTA → sub-text → feature list. Follows Figma 3050-96140.
  * @param {Object} ui - UI instance
  * @param {string} opt - Plan option key (free, pro, team, enterprise)
  * @param {Object} option - Pre-built option object from getOptions
  * @returns {Object} Skeletons component
  */
 function item(ui, opt, option) {
-  const { title, subtitle, description, buttonTitle, features, badge } = option;
+  const { buttonTitle, buttonKind, subText, features, badge } = option;
   const fig = `${ui.fig.family}__plan`;
   // Mark the caller's active plan: pill-style "Your current plan" instead of a
   // CTA (design: the Free card shows the pill while the user is on Free).
   const isCurrent = (ui.currentPlanName || "free") === opt;
 
-  let descriptionItem = "";
-
-  if (description) {
-    descriptionItem = Skeletons.Note({
-      className: `${fig}-description`,
-      content: description,
-    });
-  }
-
-  const header = Skeletons.Box.Y({
-    className: `${fig}-header`,
-    kids: [
-      Skeletons.Note({
-        className: `${fig}-title`,
-        content: title,
-      }),
-      Skeletons.Note({
-        className: `${fig}-subtitle`,
-        content: subtitle,
-      }),
-      descriptionItem,
-    ],
-  });
-
-  let buttonBtn = "";
-
+  let buttonBtn;
   if (isCurrent) {
     buttonBtn = Skeletons.Box.X({
       className: `${fig}-button current`,
@@ -121,69 +169,49 @@ function item(ui, opt, option) {
       kids: [
         Skeletons.Note({
           className: `${fig}-current-label`,
-          content: LOCALE.YOUR_CURRENT_PLAN || "Your current plan",
+          content: LOCALE.YOUR_CURRENT_PLAN,
         }),
       ],
     });
-  } else if (buttonTitle) {
-    buttonBtn = button(ui, {
-      label: buttonTitle,
-      className: `${fig}-button ${badge ? "popular" : ""}`,
-      service: "select-plan-button",
-      value: opt,
-      name: opt,
-      formItem: 1,
-      priority: "primary",
-      uiHandler: [ui],
-    });
   } else {
     buttonBtn = button(ui, {
-      label: LOCALE.GET_STARTED,
-      className: `${fig}-button ${badge ? "popular" : ""}`,
+      label: buttonTitle,
+      className: `${fig}-button ${buttonKind}`,
       service: "select-plan-button",
+      value: opt,
       name: opt,
       formItem: 1,
-      value: opt,
-      priority: "secondary",
+      priority: buttonKind === "primary" ? "primary" : "secondary",
       uiHandler: [ui],
     });
   }
+
+  const subTextItem = subText
+    ? Skeletons.Note({ className: `${fig}-subtext`, content: subText })
+    : null;
 
   const featureItems = features.map((f) => {
     const feature = typeof f === "string" ? { main: f, sub: "" } : f;
     const { main, sub } = feature;
 
     return Skeletons.Box.X({
-      className: `${fig}-features item`,
-      uiHandler: [ui],
+      className: `${fig}-feature`,
       kids: [
-        Skeletons.Button.Label({
-          flow: _a.x,
-          ico: "available",
-          label: main,
-        }),
-        sub
-          ? Skeletons.Note({
-              className: `${fig}-features-sub`,
-              content: sub,
-            })
-          : null,
-      ].filter(Boolean),
-    });
-  });
-
-  let popularBadge = "";
-
-  if (badge) {
-    popularBadge = Skeletons.Box.X({
-      className: `${fig} popular-badge`,
-      kids: [
-        Skeletons.Note({
-          content: LOCALE.MOST_POPULAR,
+        Skeletons.Image.Svg({ ico: "available", className: `${fig}-feature-icon` }),
+        Skeletons.Box.X({
+          className: `${fig}-feature-text`,
+          kids: [
+            main
+              ? Skeletons.Note({ className: `${fig}-feature-main`, content: main })
+              : null,
+            sub
+              ? Skeletons.Note({ className: `${fig}-feature-sub`, content: sub })
+              : null,
+          ].filter(Boolean),
         }),
       ],
     });
-  }
+  });
 
   const featuresWrapper = Skeletons.Box.Y({
     className: `${fig}-features`,
@@ -192,7 +220,12 @@ function item(ui, opt, option) {
 
   return Skeletons.Box.Y({
     className: `${fig}-item ${badge ? "popular" : ""}`,
-    kids: [header, buttonBtn, featuresWrapper, popularBadge],
+    kids: [
+      priceHeader(ui, fig, option),
+      buttonBtn,
+      subTextItem,
+      featuresWrapper,
+    ].filter(Boolean),
   });
 }
 
