@@ -840,7 +840,13 @@ export function folderFilesRowContainer(ui) {
     className: `${ui.fig.family}__files-panel ${ui.fig.group}__files-panel`,
     sys_pn: _a.content,
     type: _a.type,
-    kids: [require("../content/row")(ui)],
+    // Row/list view must carry the same file-type filter bar (All/Docs/PDF/
+    // Images/Other) as the grid view (see filesContainer) — it was missing in
+    // list mode. The filter is view-agnostic: clicking a tab sets _filterType
+    // and loadContent() re-fetches via getCurrentApi(), which the row list's
+    // `() => ui.getCurrentApi()` api already honors. content/row supplies the
+    // column-title header + list below the bar.
+    kids: [fileTypeFilterBar(ui), require("../content/row")(ui)],
   });
 }
 
