@@ -1133,7 +1133,13 @@ class __window_folder extends mfsInteract {
       // swaps the visible glyph. (The old splitBtn used changeState, which only
       // exists on the svg widget — the box needs setState.)
       if (mode === _a.row) {
-        content.feed(require("../skeleton/content/row")(this));
+        // Keep the file-type filter bar (All/Docs/PDF/Images/Other) in list
+        // view too — mirrors the grid branch below and the initial-render
+        // folderFilesRowContainer. content/row adds the column header + list.
+        content.feed([
+          fileTypeFilterBar(this),
+          require("../skeleton/content/row")(this),
+        ]);
         cmd?.setState?.(1);
         return;
       }
