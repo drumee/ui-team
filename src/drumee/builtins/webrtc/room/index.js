@@ -294,8 +294,12 @@ class __webrtc_room extends __interact {
    */
   initCommadPanel(args) {
     if (this.__ctrlAudio) {
-      this.__ctrlAudio.el.dataset.muted = 0;
-      this.__ctrlAudio.setState(1);
+      // Reflect the ACTUAL mic state instead of hardcoding unmuted. This runs
+      // once, from the one-shot "online" watchdog, when the call first goes
+      // online — i.e. when the 2nd participant joins. Forcing setState(1)/
+      // muted=0 here flipped an already-muted user's mic back on at that exact
+      // moment (and only then, because the watchdog is guarded to fire once).
+      this.updateMicroState();
       this.__ctrlAudio.mset(_a.service, _a.settings);
       this.__ctrlAudio.el.dataset.disabled = 0;
     }
