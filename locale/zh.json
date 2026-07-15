@@ -1548,6 +1548,7 @@
   "COMMENTS": "评论",
   "NO_COMMENTS": "暂无评论",
   "TASK_COMMENT_PLACEHOLDER": "写评论…",
+  "REPLYING_TO": "回复",
   "EDITED": "已编辑",
   "STATUS_TODO": "To do",
   "STATUS_IN_PROGRESS": "In progress",

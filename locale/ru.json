@@ -1548,6 +1548,7 @@
   "COMMENTS": "Комментарии",
   "NO_COMMENTS": "Пока нет комментариев",
   "TASK_COMMENT_PLACEHOLDER": "Написать комментарий…",
+  "REPLYING_TO": "Ответ для",
   "EDITED": "изменено",
   "STATUS_TODO": "To do",
   "STATUS_IN_PROGRESS": "In progress",

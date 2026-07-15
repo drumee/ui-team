@@ -2625,6 +2625,7 @@
   }
 
   &__comment-actions {
+    align-items: center;
     gap: 12px;
     margin-top: 2px;
   }
@@ -2713,28 +2714,79 @@
     }
   }
 
-  // Replies are indented under their root comment with a Figma-style curved
-  // thread connector hanging from the parent's avatar line.
-  &__comment-row[data-reply="1"] {
+  // A root comment and its replies form one thread group joined by a single
+  // vertical connector: it starts at the parent card's bottom border, runs down
+  // the replies container's left edge, branches into each reply with a curved
+  // elbow, and ends at the last reply's avatar. $spine-x is the root avatar's
+  // centre (16px card padding + 16px half of the 32px avatar).
+  $spine-x: 32px;
+  $spine-color: var(--border-strong, rgba(0, 0, 0, 0.15));
+
+  &__comment-thread {
+    gap: 0; // the connector starts flush with the parent card's bottom border
+  }
+
+  // Replies container carries the connector as its left border; its top sits at
+  // the parent's bottom border, padding-top restores the inter-card spacing, and
+  // its left edge aligns to the root avatar centre.
+  &__comment-thread-replies {
+    gap: 12px;
+    margin-left: $spine-x - 1px;
+    padding-left: 25px;
+    padding-top: 12px;
     position: relative;
-    margin-left: 32px;
+    border-left: 1px solid $spine-color;
+  }
+
+  // Curved elbow branching from the connector into each reply / the composer,
+  // meeting the card at the avatar's vertical centre.
+  &__comment-thread-replies &__comment-row[data-reply="1"],
+  &__comment-thread-replies &__comment-replybox {
+    position: relative;
 
     &::before {
       content: "";
       position: absolute;
-      left: -18px;
-      top: -8px;
-      width: 14px;
-      height: 26px;
-      border-left: 2px solid var(--border-strong, rgba(0, 0, 0, 0.15));
-      border-bottom: 2px solid var(--border-strong, rgba(0, 0, 0, 0.15));
-      border-bottom-left-radius: 10px;
+      left: -25px; // back to the connector (= padding-left + border)
+      top: 0;
+      width: 25px;
+      height: 32px; // down to the avatar centre
+      border-bottom: 1px solid $spine-color;
+      border-bottom-left-radius: 12px;
+    }
+  }
+
+  // The last item terminates the connector: mask the vertical trunk below the
+  // elbow's curve so the line reads as curving into that item rather than
+  // trailing past it. The mask is kept narrow (trunk width only) so it never
+  // clips the elbow's rounded corner.
+  &__comment-thread-replies > &__comment-row[data-reply="1"]:last-child,
+  &__comment-thread-replies > &__comment-replybox:last-child {
+    &::after {
+      content: "";
+      position: absolute;
+      left: -27px; // over the trunk (border sits ~2px right of here)
+      top: 22px; // just below where the curve meets the trunk
+      bottom: -8px; // past the container's bottom edge
+      width: 3px; // trunk only — clear of the rounded elbow
+      background: var(--normal-bg-elevated, #fff);
     }
   }
 
   &__comment-replybox {
-    margin-left: 32px;
     gap: 6px;
+  }
+
+  // "Replying to @Name" hint above the composer when answering a child comment
+  // (the composer renders at the thread's end, detached from the target).
+  &__comment-replying-to {
+    font-style: italic;
+    @include drumee.typo(
+      $size: 12px,
+      $weight: 400,
+      $line: 16px,
+      $color: var(--normal-fg-50, #65656c)
+    );
   }
 
   &__comment-action--primary {

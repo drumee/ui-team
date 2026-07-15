@@ -1029,7 +1029,7 @@ const make = function (ui) {
               kids: [
                 activityTab(LOCALE.ALL, true),
                 activityTab(LOCALE.COMMENTS, false, "message"),
-                activityTab(LOCALE.HISTORY, false, "clock"),
+                activityTab(LOCALE.HISTORY, false, "apps-clock"),
               ],
             }),
           ],
@@ -1055,14 +1055,7 @@ const make = function (ui) {
             Skeletons.Box.X({
               className: `${pfx}__composer-actions`,
               kids: [
-                Skeletons.Image.Svg({
-                  ico: "app-attachment",
-                  className: `${pfx}__composer-ico`,
-                }),
-                Skeletons.Note({
-                  className: `${pfx}__composer-at`,
-                  content: "@",
-                }),
+                ...composerTools(ui, "comment"),
                 Skeletons.Button.Svg({
                   ico: "app-send",
                   className: `${pfx}__composer-send`,
@@ -2054,6 +2047,31 @@ function mentionDropdown(ui, scope) {
   });
 }
 
+// Attachment (paperclip) + @-mention buttons shared by the main comment
+// composer and the inline edit / reply composers. The paperclip attaches a file
+// to the open task (the existing task-attachment flow); "@" focuses the scope's
+// editor, inserts an "@" and opens the mention popup.
+function composerTools(ui, scope) {
+  const pfx = ui.fig.family;
+  return [
+    Skeletons.Button.Svg({
+      ico: "app-attachment",
+      className: `${pfx}__composer-ico`,
+      bubble: 0,
+      service: "pick-attachment",
+      uiHandler: [ui],
+    }),
+    Skeletons.Note({
+      className: `${pfx}__composer-at`,
+      content: "@",
+      bubble: 0,
+      service: "comment-mention-insert",
+      mentionScope: scope,
+      uiHandler: [ui],
+    }),
+  ];
+}
+
 // Reusable contenteditable mention editor. `scope` keys the panel's editor
 // logic + dropdown part; opt overrides the field/editor classes + placeholder
 // so the description and the comment composer/editor each style their own.
@@ -2221,6 +2239,7 @@ function buildCommentListContent(ui) {
               Skeletons.Box.X({
                 className: `${pfx}__comment-actions`,
                 kids: [
+                  ...composerTools(ui, "comment-edit"),
                   Skeletons.Note({
                     className: `${pfx}__comment-action ${pfx}__comment-action--primary`,
                     content: LOCALE.SAVE,
@@ -2243,19 +2262,20 @@ function buildCommentListContent(ui) {
       });
     }
 
-    // Action row: Reply (root only) + Edit/Delete (own).
+    // Action row: Reply (any comment) + Edit/Delete (own). A reply to a child is
+    // flattened to a sibling under the same root (1-level threads), so Reply is
+    // offered on children too.
     const actions = [];
-    if (!isReply)
-      actions.push(
-        Skeletons.Note({
-          className: `${pfx}__comment-action`,
-          content: LOCALE.REPLY,
-          bubble: 0,
-          service: "comment-reply",
-          uiHandler: [ui],
-          commentId: c.id,
-        }),
-      );
+    actions.push(
+      Skeletons.Note({
+        className: `${pfx}__comment-action`,
+        content: LOCALE.REPLY,
+        bubble: 0,
+        service: "comment-reply",
+        uiHandler: [ui],
+        commentId: c.id,
+      }),
+    );
     if (isOwn) {
       actions.push(
         Skeletons.Note({
@@ -2320,45 +2340,100 @@ function buildCommentListContent(ui) {
     }
   });
 
-  const out = [];
-  roots.forEach((root) => {
-    out.push(commentBlock(root, false));
-    (repliesByParent[root.id] || []).forEach((rep) =>
-      out.push(commentBlock(rep, true)),
-    );
-    if (String(replyingTo || "") === String(root.id)) {
-      out.push(
-        Skeletons.Box.Y({
-          className: `${pfx}__comment-replybox`,
+  // The reply composer can be opened from a root OR a child. Resolve the clicked
+  // comment to its root so the composer renders once, at the tail of that root's
+  // thread, and the reply attaches as a sibling (parent_id = root). Mirror the
+  // orphan fallback above: a reply whose parent is gone counts as its own root.
+  const replyTarget = replyingTo
+    ? comments.find((c) => String(c.id) === String(replyingTo))
+    : null;
+  const replyingToRootId = replyTarget
+    ? replyTarget.parent_id && ids.has(String(replyTarget.parent_id))
+      ? String(replyTarget.parent_id)
+      : String(replyTarget.id)
+    : null;
+  // Show "Replying to @Name" only when answering a child, since the composer is
+  // visually detached from it (it renders at the end of the thread).
+  const replyingToChild =
+    !!replyTarget && String(replyTarget.id) !== replyingToRootId;
+
+  const composerBlock = () =>
+    Skeletons.Box.Y({
+      className: `${pfx}__comment-replybox`,
+      kids: [
+        replyingToChild
+          ? Skeletons.Note({
+              className: `${pfx}__comment-replying-to`,
+              content: `${LOCALE.REPLYING_TO || "Replying to"} ${
+                fullName(ui.getMember(replyTarget.author_uid) || {}) ||
+                replyTarget.author_uid
+              }`,
+            })
+          : null,
+        mentionField(ui, "comment-reply", {
+          fieldClass: `${pfx}__comment-field`,
+          editorClass: `${pfx}__comment-reply-input`,
+          placeholder: LOCALE.TASK_COMMENT_PLACEHOLDER,
+        }),
+        Skeletons.Box.X({
+          className: `${pfx}__comment-actions`,
           kids: [
-            mentionField(ui, "comment-reply", {
-              fieldClass: `${pfx}__comment-field`,
-              editorClass: `${pfx}__comment-reply-input`,
-              placeholder: LOCALE.TASK_COMMENT_PLACEHOLDER,
+            ...composerTools(ui, "comment-reply"),
+            Skeletons.Note({
+              className: `${pfx}__comment-action ${pfx}__comment-action--primary`,
+              content: LOCALE.REPLY,
+              bubble: 0,
+              service: "comment-reply-submit",
+              uiHandler: [ui],
             }),
-            Skeletons.Box.X({
-              className: `${pfx}__comment-actions`,
-              kids: [
-                Skeletons.Note({
-                  className: `${pfx}__comment-action ${pfx}__comment-action--primary`,
-                  content: LOCALE.REPLY,
-                  bubble: 0,
-                  service: "comment-reply-submit",
-                  uiHandler: [ui],
-                }),
-                Skeletons.Note({
-                  className: `${pfx}__comment-action`,
-                  content: LOCALE.CANCEL,
-                  bubble: 0,
-                  service: "comment-reply-cancel",
-                  uiHandler: [ui],
-                }),
-              ],
+            Skeletons.Note({
+              className: `${pfx}__comment-action`,
+              content: LOCALE.CANCEL,
+              bubble: 0,
+              service: "comment-reply-cancel",
+              uiHandler: [ui],
             }),
           ],
         }),
+      ].filter(Boolean),
+    });
+
+  // Each root + its replies (+ the open composer) form one thread group. The
+  // replies live in their own container so a continuous vertical spine (the
+  // container's left border, styled in the skin) can connect them to the root,
+  // with a curved elbow branching into each reply.
+  const out = [];
+  roots.forEach((root) => {
+    const showComposer = replyingToRootId === String(root.id);
+    const clickedId = showComposer ? String(replyingTo) : null;
+    // The composer renders directly below the comment whose Reply was clicked:
+    // right under the root when replying to it, otherwise right under that child.
+    const replyKids = [];
+    if (showComposer && clickedId === String(root.id)) {
+      replyKids.push(composerBlock());
+    }
+    (repliesByParent[root.id] || []).forEach((rep) => {
+      replyKids.push(commentBlock(rep, true));
+      if (showComposer && clickedId === String(rep.id)) {
+        replyKids.push(composerBlock());
+      }
+    });
+    const threadKids = [commentBlock(root, false)];
+    if (replyKids.length) {
+      threadKids.push(
+        Skeletons.Box.Y({
+          className: `${pfx}__comment-thread-replies`,
+          kids: replyKids,
+        }),
       );
     }
+    out.push(
+      Skeletons.Box.Y({
+        className: `${pfx}__comment-thread`,
+        attrOpt: { "data-has-replies": replyKids.length ? "1" : "0" },
+        kids: threadKids,
+      }),
+    );
   });
   return out;
 }

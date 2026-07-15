@@ -136,7 +136,7 @@ class __tasks_panel extends LetcBox {
     this._commentDraft = null; // composer buffer { body, mention_uids }
     this._editingCommentId = null;
     this._commentEditDraft = null; // inline-edit buffer { body, mention_uids }
-    this._replyingTo = null; // root comment id whose reply composer is open
+    this._replyingTo = null; // id of the comment (root or child) being replied to
     this._replyDraft = null; // reply buffer { body, mention_uids }
     this._reactPickerFor = null; // comment id whose reaction palette is open
     this.bindEvent(_a.live);
@@ -1240,6 +1240,9 @@ class __tasks_panel extends LetcBox {
 
       case "comment-reply-submit":
         return this._submitReply();
+
+      case "comment-mention-insert":
+        return this._insertMentionTrigger(trigger.mget("mentionScope"));
 
       case "comment-react":
         return this._toggleReaction(trigger);
@@ -2403,11 +2406,27 @@ class __tasks_panel extends LetcBox {
   }
 
   async _submitReply() {
-    const rootId = this._replyingTo;
-    if (!rootId || !this._detailId) return;
+    const clickedId = this._replyingTo;
+    if (!clickedId || !this._detailId) return;
     const draft = this._replyDraft;
     const body = String((draft && draft.body) || "").trim();
     if (!body) return;
+    // A reply may target a root or a child. Flatten it to a sibling under the
+    // root (parent_id = root) so threads stay 1-level, mirroring the skeleton's
+    // orphan fallback (a reply whose parent is gone counts as its own root).
+    // When answering a child, also notify that child's author — the backend
+    // only auto-notifies the parent_id (root) author.
+    const ids = new Set((this._comments || []).map((c) => String(c.id)));
+    const clicked = (this._comments || []).find(
+      (c) => String(c.id) === String(clickedId),
+    );
+    const repliesToChild =
+      !!clicked && !!clicked.parent_id && ids.has(String(clicked.parent_id));
+    const rootId = repliesToChild ? clicked.parent_id : clickedId;
+    const mentions = Array.isArray(draft.mention_uids)
+      ? draft.mention_uids.slice()
+      : [];
+    if (repliesToChild && clicked.author_uid) mentions.push(clicked.author_uid);
     const taskId = this._detailId;
     try {
       await this.postService({
@@ -2416,7 +2435,7 @@ class __tasks_panel extends LetcBox {
         task_id: taskId,
         parent_id: rootId,
         body,
-        mention_uids: Array.isArray(draft.mention_uids) ? draft.mention_uids : [],
+        mention_uids: [...new Set(mentions)],
       });
       this._replyingTo = null;
       this._replyDraft = null;
@@ -3424,6 +3443,31 @@ class __tasks_panel extends LetcBox {
     return t && this.el && this.el.querySelector(t.editorSelector);
   }
 
+  // "@" toolbar button: focus the scope's editor, insert an "@" at the caret
+  // (or at the end if the caret isn't inside it), then run the normal mention
+  // flow so the popup opens — same path as typing "@".
+  _insertMentionTrigger(scope) {
+    const editorEl = this._descEditorEl(scope);
+    if (!editorEl) return;
+    // Clicking the button blurs the editor, which scheduled a _closeMention;
+    // cancel it so the popup we open below stays open.
+    if (this._mentionCloseTimer) {
+      clearTimeout(this._mentionCloseTimer);
+      this._mentionCloseTimer = null;
+    }
+    editorEl.focus();
+    const sel = window.getSelection();
+    if (!sel.rangeCount || !editorEl.contains(sel.anchorNode)) {
+      const range = document.createRange();
+      range.selectNodeContents(editorEl);
+      range.collapse(false); // caret at end
+      sel.removeAllRanges();
+      sel.addRange(range);
+    }
+    document.execCommand("insertText", false, "@");
+    this._onDescInput(scope, editorEl);
+  }
+
   // Build a contenteditable=false chip node for a mention.
   _makeMentionChip(uid, name) {
     const chip = document.createElement("span");
@@ -3514,7 +3558,12 @@ class __tasks_panel extends LetcBox {
     }
     editorEl.oninput = () => this._onDescInput(scope, editorEl);
     editorEl.onkeydown = (e) => this._onDescKeydown(e, scope);
-    editorEl.onblur = () => setTimeout(() => this._closeMention(), 150);
+    // Store the timer so the "@" toolbar button can cancel it — clicking the
+    // button blurs the editor, which would otherwise close the popup we're about
+    // to open (see _insertMentionTrigger).
+    editorEl.onblur = () => {
+      this._mentionCloseTimer = setTimeout(() => this._closeMention(), 150);
+    };
   }
 
   _onDescInput(scope, editorEl) {
