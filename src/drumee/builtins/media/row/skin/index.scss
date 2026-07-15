@@ -191,14 +191,20 @@
         margin-right: 10px;
 
         &.icon {
-          fill: white;
+          // Was `fill: white` → invisible on the white row background. Use the
+          // dark default icon/text colour so the edit pencil is visible.
+          fill: var(--default-text-color);
           padding: 5px;
           margin-left: 0px;
-          margin-top: 4px;
+          // The .edit wrapper is already vertically centred in the 32px row; a
+          // 4px top margin here pushed the 24px svg 4px below that centre, so
+          // the pencil sat lower than the filename/date/size columns. Drop it
+          // so the icon lines up with the row content.
+          margin-top: 0;
           cursor: pointer;
 
           &:hover {
-            fill: white;
+            fill: var(--default-icon-hover);
             visibility: visible;
             z-index: 100;
           }
