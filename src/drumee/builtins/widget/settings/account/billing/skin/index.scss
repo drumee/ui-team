@@ -438,19 +438,22 @@
       }
     }
 
+    // Figma: flat grey-filled field (no border) — icon + value, generous padding.
     &-input-wrapper {
       width: 100%;
-      height: 48px;
-      border-radius: var(--corner-radius-4);
-      border: 1px solid var(--neutral-200);
+      height: 54px;
+      border-radius: var(--corner-radius-5); // 12px
+      background-color: var(--tertiary-grey-20);
+      border: none;
       align-items: center;
-      gap: 0;
+      gap: var(--spacer-3);
+      padding: 0 var(--spacer-6);
 
       .settings-billing__entry-icon {
         flex-shrink: 0;
-        width: 40px;
-        height: 40px;
-        padding: 10px;
+        width: 22px;
+        height: 22px;
+        padding: 0;
         display: flex;
         align-items: center;
         justify-content: center;
@@ -462,13 +465,16 @@
       .settings-billing__entry-input {
         flex: 1;
         border: none;
-        padding: 0 var(--spacer-2);
+        background: transparent;
+        padding: 0;
         height: 100%;
 
         input {
           width: 100%;
           border: none;
+          background: transparent;
           padding: 0;
+          color: var(--tertiary-grey-80);
         }
       }
 
@@ -532,11 +538,12 @@
     }
 
     &-right {
-      width: 400px;
+      width: 480px;
       gap: var(--spacer-5);
       padding: var(--spacer-6);
-      background-color: var(--neutral-100);
-      border-radius: var(--corner-radius-4);
+      background-color: var(--white);
+      border: 1px solid rgba(0, 0, 0, 0.2);
+      border-radius: var(--corner-radius-5); // 16px
     }
 
     &-section {
@@ -549,14 +556,53 @@
       color: var(--neutral-900);
     }
 
-    &-plan-buttons,
     &-storage-buttons,
     &-billing-buttons {
       width: 100%;
       gap: var(--spacer-3);
     }
 
-    &-plan-button,
+    // Segmented pill bar (Current plan, Billing Cycle) — Figma 2769-279246.
+    &-pill-bar {
+      width: 100%;
+      padding: var(--spacer-1);
+      border-radius: var(--corner-radius-5); // 12px
+      background-color: var(--tertiary-grey-20);
+      gap: 0;
+    }
+
+    &-pill-item {
+      flex: 1;
+      justify-content: center;
+      align-items: center;
+      padding: var(--spacer-2) var(--spacer-6);
+      border-radius: var(--corner-radius-max);
+      cursor: pointer;
+      gap: 4px;
+
+      &[data-state="1"] {
+        background-color: var(--primary-40);
+
+        .settings-billing__checkout-pill-text {
+          color: var(--white);
+        }
+      }
+    }
+
+    &-pill-text {
+      font-size: 16px;
+      line-height: 1.4;
+      color: var(--tertiary-grey-80);
+      white-space: nowrap;
+    }
+
+    &-pill-discount {
+      font-weight: 600;
+      font-size: 14px;
+      line-height: 24px;
+      color: var(--success);
+    }
+
     &-storage-button {
       &-main {
         flex: 1;
@@ -582,77 +628,6 @@
           color: var(--neutral-600);
           border-color: var(--transparent);
           background-color: var(--white);
-        }
-      }
-    }
-
-    &-billing-cycle-buttons {
-      width: 100%;
-      gap: var(--spacer-3);
-      background-color: var(--neutral-200);
-      padding: var(--spacer-2);
-      border-radius: var(--corner-radius-3);
-
-      &-main {
-        flex: 1;
-        width: 50%;
-        padding: var(--spacer-3);
-        border: 2px solid var(--transparent);
-        border-radius: var(--corner-radius-3);
-        background-color: var(--white);
-        cursor: pointer;
-        transition: all 0.2s;
-        align-items: center;
-        justify-content: center;
-
-        &[data-state="1"] {
-          background-color: var(--primary-100);
-          color: var(--neutral-900);
-          border-radius: var(--corner-radius-3);
-          border: 2px solid var(--primary-400);
-        }
-
-        &[data-state="0"] {
-          color: var(--neutral-600);
-          border-color: var(--transparent);
-          background-color: var(--white);
-        }
-      }
-    }
-
-    &-billing-cycle-button {
-      &-main {
-        flex: 1;
-        width: 50%;
-        padding: var(--spacer-3);
-        border: none;
-        border-radius: var(--corner-radius-3);
-        background-color: var(--transparent);
-        cursor: pointer;
-        transition: all 0.2s;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 8px;
-
-        &[data-state="1"] {
-          background-color: var(--white);
-          color: var(--neutral-900);
-        }
-
-        &[data-state="0"] {
-          color: var(--neutral-600);
-          background-color: var(--transparent);
-        }
-
-        &-title {
-          font-size: 14px;
-          color: var(--neutral-900);
-        }
-
-        &-title-discount {
-          font-size: 10px;
-          color: #00a63e;
         }
       }
     }
@@ -909,14 +884,15 @@
       gap: var(--spacer-3);
     }
 
+    // Figma: primary-tinted box (primary-40 @10%), plain dark text — not green.
     &-breakdown-total-storage {
-      background-color: var(--green-100);
+      background-color: rgba(89, 80, 255, 0.1);
       padding: var(--spacer-3);
       border-radius: var(--corner-radius-3);
       justify-content: space-between;
 
       &-label {
-        color: var(--green-600);
+        color: var(--neutral-900);
         font-weight: 600;
         font-size: 13px;
         line-height: 20px;
@@ -925,15 +901,20 @@
         text-align: left;
       }
       &-value {
-        color: var(--green-600);
+        color: var(--neutral-900);
         text-align: right;
       }
     }
 
+    // Figma: cyan-tinted box (secondary-blue-50 @16%), not the old blue-100.
     &-breakdown-effective-price-per-seat {
-      background-color: var(--blue-100);
+      background-color: rgba(101, 208, 234, 0.16);
       justify-content: start;
       border-radius: var(--corner-radius-3);
+
+      .settings-billing__checkout-breakdown-value-effective-price-per-seat {
+        color: var(--secondary-blue-80);
+      }
     }
 
     &-breakdown-icon {
@@ -944,10 +925,12 @@
       }
     }
 
+    // Figma CTA colour is primary-50 (#433cc5) — was the unrelated legacy
+    // --primary-500 (#b251fb) purple.
     &-checkout-button {
       width: 100%;
       padding: var(--spacer-4);
-      background-color: var(--primary-500);
+      background-color: var(--primary-50);
       color: var(--white);
       border-radius: var(--corner-radius-max);
       font-weight: 600;
@@ -960,7 +943,7 @@
       flex-direction: row;
 
       &:hover {
-        background-color: var(--primary-600);
+        background-color: var(--primary-90);
       }
 
       &[data-state="0"],
