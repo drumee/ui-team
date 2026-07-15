@@ -371,12 +371,14 @@
       }
     }
 
+    // Figma 3050-96156: Resume Subscription CTA is primary-50 (#433cc5) —
+    // was the unrelated legacy --primary-500 (#b251fb) purple.
     &-resume {
       color: var(--white);
-      background: var(--primary-500);
+      background: var(--primary-50);
 
       &:hover {
-        opacity: 0.9;
+        background: var(--primary-90);
       }
     }
   }
