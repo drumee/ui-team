@@ -136,7 +136,7 @@ class __tasks_panel extends LetcBox {
     this._commentDraft = null; // composer buffer { body, mention_uids }
     this._editingCommentId = null;
     this._commentEditDraft = null; // inline-edit buffer { body, mention_uids }
-    this._replyingTo = null; // root comment id whose reply composer is open
+    this._replyingTo = null; // id of the comment (root or child) being replied to
     this._replyDraft = null; // reply buffer { body, mention_uids }
     this._reactPickerFor = null; // comment id whose reaction palette is open
     this.bindEvent(_a.live);
@@ -2403,11 +2403,27 @@ class __tasks_panel extends LetcBox {
   }
 
   async _submitReply() {
-    const rootId = this._replyingTo;
-    if (!rootId || !this._detailId) return;
+    const clickedId = this._replyingTo;
+    if (!clickedId || !this._detailId) return;
     const draft = this._replyDraft;
     const body = String((draft && draft.body) || "").trim();
     if (!body) return;
+    // A reply may target a root or a child. Flatten it to a sibling under the
+    // root (parent_id = root) so threads stay 1-level, mirroring the skeleton's
+    // orphan fallback (a reply whose parent is gone counts as its own root).
+    // When answering a child, also notify that child's author — the backend
+    // only auto-notifies the parent_id (root) author.
+    const ids = new Set((this._comments || []).map((c) => String(c.id)));
+    const clicked = (this._comments || []).find(
+      (c) => String(c.id) === String(clickedId),
+    );
+    const repliesToChild =
+      !!clicked && !!clicked.parent_id && ids.has(String(clicked.parent_id));
+    const rootId = repliesToChild ? clicked.parent_id : clickedId;
+    const mentions = Array.isArray(draft.mention_uids)
+      ? draft.mention_uids.slice()
+      : [];
+    if (repliesToChild && clicked.author_uid) mentions.push(clicked.author_uid);
     const taskId = this._detailId;
     try {
       await this.postService({
@@ -2416,7 +2432,7 @@ class __tasks_panel extends LetcBox {
         task_id: taskId,
         parent_id: rootId,
         body,
-        mention_uids: Array.isArray(draft.mention_uids) ? draft.mention_uids : [],
+        mention_uids: [...new Set(mentions)],
       });
       this._replyingTo = null;
       this._replyDraft = null;
