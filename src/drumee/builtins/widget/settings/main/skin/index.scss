@@ -828,11 +828,19 @@
     font-weight: 600;
   }
 
-  &__billing-row &__inner-description {
+  // "Pro" + status line, paired tightly (Figma "Frame 1618872891", gap 4px) —
+  // a separate block below the title row, NOT the title row's own
+  // description (that put "Pro" 4px from "Current Plan" and the status line
+  // a mismatched 24px further down instead of right under "Pro").
+  &__billing-plan-block {
+    gap: 4px;
+  }
+
+  &__billing-plan-name {
     font-size: 18px;
     line-height: 24px;
     font-weight: 600;
-    color: $purple-base; // Primary/40 #5950ff — "Pro" plan-name colour
+    color: $purple-base; // Primary/40 #5950ff
   }
 
   &__danger-export-btn-main {
