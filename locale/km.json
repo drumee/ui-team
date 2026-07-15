@@ -2079,6 +2079,7 @@
   "PAYMENT_FAILURE_TEXT": "មិនអាចដំណើរការការទូទាត់របស់អ្នកបានទេ។",
   "TOTAL_PAYMENT": "ការទូទាត់សរុប",
   "PAYMENT_DATE": "កាលបរិច្ឆេទទូទាត់",
+  "PAYMENT_TIME": "ពេលវេលាទូទាត់",
   "PAYMENT_METHOD": "វិធីទូទាត់",
   "UPGRADE_PLAN_MENU": "ដំឡើងគម្រោង",
   "PLAN_BADGE": "គម្រោង {0}",

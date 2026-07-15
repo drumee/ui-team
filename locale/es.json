@@ -2084,6 +2084,7 @@
   "PAYMENT_FAILURE_TEXT": "No se pudo procesar tu pago.",
   "TOTAL_PAYMENT": "Pago total",
   "PAYMENT_DATE": "Fecha de pago",
+  "PAYMENT_TIME": "Hora de pago",
   "PAYMENT_METHOD": "Método de pago",
   "UPGRADE_PLAN_MENU": "Mejorar plan",
   "PLAN_BADGE": "Plan {0}",
