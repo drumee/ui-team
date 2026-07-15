@@ -1241,6 +1241,9 @@ class __tasks_panel extends LetcBox {
       case "comment-reply-submit":
         return this._submitReply();
 
+      case "comment-mention-insert":
+        return this._insertMentionTrigger(trigger.mget("mentionScope"));
+
       case "comment-react":
         return this._toggleReaction(trigger);
 
@@ -3440,6 +3443,31 @@ class __tasks_panel extends LetcBox {
     return t && this.el && this.el.querySelector(t.editorSelector);
   }
 
+  // "@" toolbar button: focus the scope's editor, insert an "@" at the caret
+  // (or at the end if the caret isn't inside it), then run the normal mention
+  // flow so the popup opens — same path as typing "@".
+  _insertMentionTrigger(scope) {
+    const editorEl = this._descEditorEl(scope);
+    if (!editorEl) return;
+    // Clicking the button blurs the editor, which scheduled a _closeMention;
+    // cancel it so the popup we open below stays open.
+    if (this._mentionCloseTimer) {
+      clearTimeout(this._mentionCloseTimer);
+      this._mentionCloseTimer = null;
+    }
+    editorEl.focus();
+    const sel = window.getSelection();
+    if (!sel.rangeCount || !editorEl.contains(sel.anchorNode)) {
+      const range = document.createRange();
+      range.selectNodeContents(editorEl);
+      range.collapse(false); // caret at end
+      sel.removeAllRanges();
+      sel.addRange(range);
+    }
+    document.execCommand("insertText", false, "@");
+    this._onDescInput(scope, editorEl);
+  }
+
   // Build a contenteditable=false chip node for a mention.
   _makeMentionChip(uid, name) {
     const chip = document.createElement("span");
@@ -3530,7 +3558,12 @@ class __tasks_panel extends LetcBox {
     }
     editorEl.oninput = () => this._onDescInput(scope, editorEl);
     editorEl.onkeydown = (e) => this._onDescKeydown(e, scope);
-    editorEl.onblur = () => setTimeout(() => this._closeMention(), 150);
+    // Store the timer so the "@" toolbar button can cancel it — clicking the
+    // button blurs the editor, which would otherwise close the popup we're about
+    // to open (see _insertMentionTrigger).
+    editorEl.onblur = () => {
+      this._mentionCloseTimer = setTimeout(() => this._closeMention(), 150);
+    };
   }
 
   _onDescInput(scope, editorEl) {

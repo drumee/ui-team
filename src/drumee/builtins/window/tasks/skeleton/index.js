@@ -1055,14 +1055,7 @@ const make = function (ui) {
             Skeletons.Box.X({
               className: `${pfx}__composer-actions`,
               kids: [
-                Skeletons.Image.Svg({
-                  ico: "app-attachment",
-                  className: `${pfx}__composer-ico`,
-                }),
-                Skeletons.Note({
-                  className: `${pfx}__composer-at`,
-                  content: "@",
-                }),
+                ...composerTools(ui, "comment"),
                 Skeletons.Button.Svg({
                   ico: "app-send",
                   className: `${pfx}__composer-send`,
@@ -2054,6 +2047,31 @@ function mentionDropdown(ui, scope) {
   });
 }
 
+// Attachment (paperclip) + @-mention buttons shared by the main comment
+// composer and the inline edit / reply composers. The paperclip attaches a file
+// to the open task (the existing task-attachment flow); "@" focuses the scope's
+// editor, inserts an "@" and opens the mention popup.
+function composerTools(ui, scope) {
+  const pfx = ui.fig.family;
+  return [
+    Skeletons.Button.Svg({
+      ico: "app-attachment",
+      className: `${pfx}__composer-ico`,
+      bubble: 0,
+      service: "pick-attachment",
+      uiHandler: [ui],
+    }),
+    Skeletons.Note({
+      className: `${pfx}__composer-at`,
+      content: "@",
+      bubble: 0,
+      service: "comment-mention-insert",
+      mentionScope: scope,
+      uiHandler: [ui],
+    }),
+  ];
+}
+
 // Reusable contenteditable mention editor. `scope` keys the panel's editor
 // logic + dropdown part; opt overrides the field/editor classes + placeholder
 // so the description and the comment composer/editor each style their own.
@@ -2221,6 +2239,7 @@ function buildCommentListContent(ui) {
               Skeletons.Box.X({
                 className: `${pfx}__comment-actions`,
                 kids: [
+                  ...composerTools(ui, "comment-edit"),
                   Skeletons.Note({
                     className: `${pfx}__comment-action ${pfx}__comment-action--primary`,
                     content: LOCALE.SAVE,
@@ -2359,6 +2378,7 @@ function buildCommentListContent(ui) {
         Skeletons.Box.X({
           className: `${pfx}__comment-actions`,
           kids: [
+            ...composerTools(ui, "comment-reply"),
             Skeletons.Note({
               className: `${pfx}__comment-action ${pfx}__comment-action--primary`,
               content: LOCALE.REPLY,
