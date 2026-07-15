@@ -507,13 +507,13 @@ function billingCard(ui) {
   const plan = (q.plan || "free").toString();
   const planLabel = plan.charAt(0).toUpperCase() + plan.slice(1);
 
-  // Subscription status line ("renews on … " / "will be canceled on …"),
-  // fed asynchronously by _loadSubscriptionStatus() via the named part —
-  // the design's "Your subscription will be canceled on Feb 27, 2026".
+  // Title row: "Current Plan" + "Manage subscription" (Figma 2769-213367,
+  // "Frame 1618872890"). The plan name is a SEPARATE block below it, paired
+  // tightly with the status line — not this row's description — so the
+  // 24px row-to-row gap lands between the title row and the Pro/status
+  // pair, not between "Pro" and its own status line.
   const planRow = innerItem(ui, {
     title: LOCALE.CURRENT_PLAN,
-    description: planLabel,
-    descriptionPn: "billing-plan-name",
     className: `${pfx}-row`,
     trailing: button(ui, {
       label: LOCALE.MANAGE_SUBSCRIPTION,
@@ -524,11 +524,25 @@ function billingCard(ui) {
     }),
   });
 
+  const planNameLine = Skeletons.Note({
+    className: `${pfx}-plan-name`,
+    sys_pn: "billing-plan-name",
+    content: planLabel,
+  });
+
+  // Subscription status line ("renews on … " / "will be canceled on …"),
+  // fed asynchronously by _loadSubscriptionStatus() via the named part —
+  // the design's "Your subscription will be canceled on Feb 27, 2026".
   const statusLine = Skeletons.Note({
     className: `${pfx}-status`,
     sys_pn: "billing-sub-status",
     partHandler: ui,
     content: "",
+  });
+
+  const planBlock = Skeletons.Box.Y({
+    className: `${pfx}-plan-block`,
+    kids: [planNameLine, statusLine],
   });
 
   return Skeletons.Box.Y({
@@ -538,7 +552,7 @@ function billingCard(ui) {
         title: LOCALE.BILLING_SUBSCRIPTION,
         subtitle: LOCALE.BILLING_SUBSCRIPTION_SUBTITLE,
       }),
-      Skeletons.Box.Y({ className: `${pfx}-list`, kids: [planRow, statusLine] }),
+      Skeletons.Box.Y({ className: `${pfx}-list`, kids: [planRow, planBlock] }),
     ],
   });
 }
