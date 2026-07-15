@@ -544,6 +544,12 @@
       gap: var(--spacer-6);
     }
 
+    // Sticky order-summary panel: the left column grows tall once the
+    // storage-bundles section renders (Pro/Team), pushing "Proceed to
+    // Checkout" below the fold on shorter viewports with no obvious scroll
+    // affordance — users clicking where the button *used to be* land on
+    // nothing and nothing happens. Pinning the panel keeps the CTA reachable
+    // regardless of how long the left column gets.
     &-right {
       width: 480px;
       gap: var(--spacer-5);
@@ -551,6 +557,11 @@
       background-color: var(--white);
       border: 1px solid rgba(0, 0, 0, 0.2);
       border-radius: var(--corner-radius-5); // 16px
+      position: sticky;
+      top: var(--spacer-6);
+      align-self: flex-start;
+      max-height: calc(100vh - var(--spacer-6) * 2);
+      overflow-y: auto;
     }
 
     &-section {
