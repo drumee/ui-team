@@ -477,6 +477,36 @@ class __window_connect extends __room {
     if (this.responsive) this.responsive(mode);
   }
 
+  // The base onTrackMuteChange only syncs the top-bar mic pill; the local
+  // self-tile's mic badge (unlike the remote one) is never seeded or updated,
+  // so its muted state never shows. Reflect it here on audio mute/unmute.
+  onTrackMuteChange(track) {
+    if (super.onTrackMuteChange) super.onTrackMuteChange(track);
+    if (!track || typeof track.getType !== "function") return;
+    if (track.getType() === _a.audio) {
+      // data-state "0" = muted (skin reveals the badge); "1" = live (hidden).
+      this._setLocalTileMic(!track.isMuted());
+    }
+  }
+
+  // Set the local self-tile mic badge's data-state. Target it by class within
+  // the local tile — its sys_pn ("audio") collides with the tile's <audio>
+  // element, so a part lookup would be ambiguous.
+  _setLocalTileMic(isLive) {
+    if (typeof this.getLocalParts !== "function") return;
+    this.getLocalParts()
+      .then((parts) => {
+        const local = parts && parts.local;
+        if (!local || (local.isDestroyed && local.isDestroyed()) || !local.el) {
+          return;
+        }
+        const fam = (local.fig && local.fig.family) || "endpoint-local";
+        const mic = local.el.querySelector(`.${fam}__tile-mic`);
+        if (mic) mic.dataset.state = isLive ? 1 : 0;
+      })
+      .catch(() => {});
+  }
+
   async onUiEvent(cmd, args = {}) {
     const service = args.service || cmd.get(_a.service)
     this.verbose(`AAA:438 -- onUiEvent service=${service}`, args, cmd, this);
