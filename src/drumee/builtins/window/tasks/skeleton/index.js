@@ -2385,10 +2385,19 @@ function buildCommentListContent(ui) {
   const out = [];
   roots.forEach((root) => {
     const showComposer = replyingToRootId === String(root.id);
-    const replyKids = (repliesByParent[root.id] || []).map((rep) =>
-      commentBlock(rep, true),
-    );
-    if (showComposer) replyKids.push(composerBlock());
+    const clickedId = showComposer ? String(replyingTo) : null;
+    // The composer renders directly below the comment whose Reply was clicked:
+    // right under the root when replying to it, otherwise right under that child.
+    const replyKids = [];
+    if (showComposer && clickedId === String(root.id)) {
+      replyKids.push(composerBlock());
+    }
+    (repliesByParent[root.id] || []).forEach((rep) => {
+      replyKids.push(commentBlock(rep, true));
+      if (showComposer && clickedId === String(rep.id)) {
+        replyKids.push(composerBlock());
+      }
+    });
     const threadKids = [commentBlock(root, false)];
     if (replyKids.length) {
       threadKids.push(
