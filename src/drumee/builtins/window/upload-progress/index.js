@@ -62,7 +62,7 @@ class __window_upload_progress extends __window_core {
     );
 
     this._isExpanded = true;
-    this._autoMinimizeTimer = null; // 30s auto-dismiss once uploads settle (no pending)
+    this._autoMinimizeTimer = null; // 5s auto-dismiss once uploads settle (no pending)
     this._totalFiles = 0;
     this._fileProgressMap = {}; // Track progress for speed calculation
     this._pendingProgressUpdates = new Map(); // Queue progress updates when DOM not ready
@@ -968,7 +968,7 @@ class __window_upload_progress extends __window_core {
     }, 200);
     
     
-    // When this was the last pending file, arm the 30s auto-collapse.
+    // When this was the last pending file, arm the 5s auto-collapse.
     this._maybeArmAutoMinimize();
   }
 
@@ -1136,7 +1136,7 @@ class __window_upload_progress extends __window_core {
   }
 
   /**
-   * Arm the 30s auto-dismiss once uploads settle (nothing left 'uploading').
+   * Arm the 5s auto-dismiss once uploads settle (nothing left 'uploading').
    * Works for both legacy (_uploadItems) and bundle drag-drop paths.
    * A new upload or manual toggle cancels the countdown.
    */
@@ -1150,7 +1150,7 @@ class __window_upload_progress extends __window_core {
       this._autoMinimizeTimer = null;
       if (this.isDestroyed && this.isDestroyed()) return;
       if (this._isUploadSettled() && this._isExpanded) this.goodbye();
-    }, 30000);
+    }, 5000);
   }
 
   /**
