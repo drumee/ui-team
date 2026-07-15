@@ -130,7 +130,7 @@ function priceHeader(ui, fig, option) {
     ? Skeletons.Box.X({
         className: `${fig}-badge`,
         kids: [
-          Skeletons.Image.Svg({ ico: "rating-star", className: `${fig}-badge-icon` }),
+          Skeletons.Image.Svg({ ico: "crown", className: `${fig}-badge-icon` }),
           Skeletons.Note({ content: LOCALE.POPULAR }),
         ],
       })

@@ -1,4 +1,39 @@
-const { button, entry } = require("../../../../../skeleton/toolkit");
+const { entry } = require("../../../../../skeleton/toolkit");
+
+/**
+ * Segmented-pill selector (Figma 2769-279246): a grey track holding one or
+ * more equal-width segments; the active segment is a solid filled pill. Same
+ * visual pattern as the plans-header cycle tabs — used here for "Current
+ * plan" (Free/Pro/Team) and "Billing Cycle" (Monthly/Yearly) so the checkout
+ * form matches the rest of the billing page instead of the old bordered-card
+ * selector.
+ * @param {Object} ui - UI instance
+ * @param {Array<Object>} segments - { content, discount, state, service, value, radio }
+ * @returns {Object} Skeletons component
+ */
+function pillBar(ui, segments) {
+  const pfx = `${ui.fig.family}__checkout-pill`;
+  return Skeletons.Box.X({
+    className: `${pfx}-bar`,
+    kids: segments.map((seg) => {
+      const kids = [Skeletons.Note({ className: `${pfx}-text`, content: seg.content })];
+      if (seg.discount) {
+        kids.push(Skeletons.Note({ className: `${pfx}-discount`, content: seg.discount }));
+      }
+      return Skeletons.Box.X({
+        className: `${pfx}-item`,
+        state: seg.state,
+        kidsOpt: { active: 0 },
+        radio: seg.radio,
+        service: seg.service,
+        value: seg.value,
+        bubble: false,
+        uiHandler: [ui],
+        kids,
+      });
+    }),
+  });
+}
 
 /**
  * Create bundle item component for storage upgrade options
@@ -125,38 +160,11 @@ function checkout(ui) {
             className: `${pfx}-section-title`,
             content: LOCALE.CURRENT_PLAN,
           }),
-          Skeletons.Box.X({
-            className: `${pfx}-plan-buttons`,
-            kids: [
-              button(ui, {
-                label: LOCALE.FREE,
-                className: `${pfx}-plan-button`,
-                service: "select-checkout-plan",
-                priority: "secondary",
-                state: selectedPlan === "free" ? 1 : 0,
-                radio: `checkout-plan-${ui._id}`,
-                value: "free",
-              }),
-              button(ui, {
-                label: LOCALE.PRO,
-                className: `${pfx}-plan-button`,
-                service: "select-checkout-plan",
-                priority: "secondary",
-                state: selectedPlan === "pro" ? 1 : 0,
-                radio: `checkout-plan-${ui._id}`,
-                value: "pro",
-              }),
-              button(ui, {
-                label: LOCALE.TEAM,
-                className: `${pfx}-plan-button`,
-                service: "select-checkout-plan",
-                priority: "secondary",
-                state: selectedPlan === "team" ? 1 : 0,
-                radio: `checkout-plan-${ui._id}`,
-                value: "team",
-              }),
-            ],
-          }),
+          pillBar(ui, [
+            { content: LOCALE.FREE, state: selectedPlan === "free" ? 1 : 0, service: "select-checkout-plan", value: "free", radio: `checkout-plan-${ui._id}` },
+            { content: LOCALE.PRO, state: selectedPlan === "pro" ? 1 : 0, service: "select-checkout-plan", value: "pro", radio: `checkout-plan-${ui._id}` },
+            { content: LOCALE.TEAM, state: selectedPlan === "team" ? 1 : 0, service: "select-checkout-plan", value: "team", radio: `checkout-plan-${ui._id}` },
+          ]),
         ],
       }),
 
@@ -205,41 +213,10 @@ function checkout(ui) {
             className: `${pfx}-section-title`,
             content: LOCALE.BILLING_CYCLE,
           }),
-          Skeletons.Box.X({
-            className: `${pfx}-billing-cycle-buttons`,
-            kids: [
-              button(ui, {
-                label: LOCALE.MONTHLY,
-                className: `${pfx}-billing-cycle-button`,
-                service: "select-billing-cycle",
-                priority: "secondary",
-                state: billingCycle === "monthly" ? 1 : 0,
-                radio: `checkout-billing-cycle-${ui._id}`,
-                value: "monthly",
-              }),
-              Skeletons.Box.X({
-                className: `${pfx}-billing-cycle-button-main`,
-                state: billingCycle === "yearly" ? 1 : 0,
-                service: "select-billing-cycle",
-                uiHandler: [ui],
-                radio: `checkout-billing-cycle-${ui._id}`,
-                value: "yearly",
-                kids: [
-                  Skeletons.Note({
-                    className: `${pfx}-billing-cycle-button-main-title`,
-                    content: LOCALE.YEARLY,
-                    active: 0,
-                  }),
-
-                  Skeletons.Note({
-                    className: `${pfx}-billing-cycle-button-main-title-discount`,
-                    content: `-15%`,
-                    active: 0,
-                  }),
-                ],
-              }),
-            ],
-          }),
+          pillBar(ui, [
+            { content: LOCALE.MONTHLY, state: billingCycle === "monthly" ? 1 : 0, service: "select-billing-cycle", value: "monthly", radio: `checkout-billing-cycle-${ui._id}` },
+            { content: `${LOCALE.YEARLY} - `, discount: `${LOCALE.SAVED} 15%`, state: billingCycle === "yearly" ? 1 : 0, service: "select-billing-cycle", value: "yearly", radio: `checkout-billing-cycle-${ui._id}` },
+          ]),
         ],
       }),
 
