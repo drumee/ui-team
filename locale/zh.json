@@ -2075,6 +2075,7 @@
   "PAYMENT_FAILURE_TEXT": "您的付款无法处理。",
   "TOTAL_PAYMENT": "总金额",
   "PAYMENT_DATE": "付款日期",
+  "PAYMENT_TIME": "付款时间",
   "PAYMENT_METHOD": "付款方式",
   "UPGRADE_PLAN_MENU": "升级套餐",
   "PLAN_BADGE": "{0} 套餐",
