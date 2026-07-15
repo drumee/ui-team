@@ -97,147 +97,228 @@
       gap: var(--spacer-6);
     }
 
+    // ── Card ──────────────────────────────────────────────────────────────
     &-item {
-      border: 1px solid var(--neutral-300);
-      border-radius: var(--corner-radius-4);
+      border: 1px solid var(--tertiary-grey-30);
+      border-radius: var(--corner-radius-6); // 24px
       padding: var(--spacer-6);
-      gap: var(--spacer-5);
+      gap: var(--spacer-6);
+      overflow: hidden;
 
+      // Pro card is highlighted with a primary-tinted border (Figma #847eff).
       &.popular {
-        border: 1px solid #b251fb;
+        border-color: var(--primary-30);
       }
     }
 
+    // ── Price-header box (title + price, with the Popular badge) ──────────
     &-header {
-      gap: var(--spacer-4);
+      position: relative;
+      width: 100%;
+      min-height: 164px;
+      padding: var(--spacer-4);
+      border-radius: var(--corner-radius-5); // 16px
+      background-color: var(--tertiary-grey-20);
+      justify-content: space-between;
+      overflow: hidden;
+
+      // primary-30 (#847eff) @ 16% for the Pro card box.
+      &.popular {
+        background-color: rgba(132, 126, 255, 0.16);
+      }
     }
 
     &-title {
-      color: var(--neutral-900);
       font-weight: 600;
-      font-size: 19px;
+      font-size: 20px;
+      line-height: 1.1;
+      color: var(--tertiary-grey-80);
+
+      .settings-billing__plan-header.popular & {
+        color: var(--primary-50);
+      }
     }
 
-    &-subtitle {
+    &-price {
+      width: 100%;
+
+      &-label {
+        font-size: 14px;
+        line-height: 1.4;
+        color: var(--neutral-900);
+      }
+
+      &-row {
+        align-items: flex-end;
+        gap: var(--spacer-2);
+        width: 100%;
+      }
+
+      &-amount {
+        font-weight: 600;
+        font-size: 40px;
+        line-height: 1.1;
+        letter-spacing: -0.8px;
+        color: var(--tertiary-grey-80);
+
+        .settings-billing__plan-header.popular & {
+          color: var(--primary-50);
+        }
+      }
+
+      &-period {
+        font-weight: 500;
+        font-size: 20px;
+        line-height: 1.1;
+        letter-spacing: -0.4px;
+        color: var(--tertiary-grey-80);
+
+        .settings-billing__plan-header.popular & {
+          color: var(--primary-50);
+        }
+      }
+
+      &-text {
+        font-weight: 500;
+        font-size: 20px;
+        line-height: 1.1;
+        letter-spacing: -0.4px;
+        color: var(--tertiary-grey-80);
+      }
+    }
+
+    // ── Popular badge (star + label), pinned top-right of the price box ───
+    &-badge {
+      position: absolute;
+      top: var(--spacer-4);
+      right: var(--spacer-4);
+      align-items: center;
+      gap: var(--spacer-1);
+      padding: var(--spacer-1) var(--spacer-3);
+      border-radius: var(--corner-radius-max);
+      background-color: var(--primary-30);
+      color: var(--white);
       font-weight: 600;
-      color: var(--neutral-900);
       font-size: 14px;
+      line-height: 20px;
+      white-space: nowrap;
+
+      &-icon {
+        width: 16px;
+        height: 16px;
+
+        svg {
+          width: 16px;
+          height: 16px;
+          fill: var(--white);
+          color: var(--white);
+        }
+      }
     }
 
-    &-description {
-      color: var(--neutral-600);
-      font-size: 11px;
-    }
-
+    // ── CTA button (full-width pill) ──────────────────────────────────────
     &-button {
       width: 100%;
       justify-content: center;
       align-items: center;
       cursor: pointer;
-      padding: var(--spacer-2);
+      padding: var(--spacer-3) var(--spacer-6);
       border-radius: var(--corner-radius-max);
+      border: none;
+      font-weight: 600;
+      font-size: 16px;
+      line-height: 24px;
 
       &.primary {
-        color: white;
-        background-color: black;
-        border: none;
+        color: var(--white);
+        background-color: var(--primary-40);
 
-        &.popular-main {
-          background-color: #b251fb;
+        &:hover {
+          background-color: var(--primary-50);
         }
       }
 
-      // "Your current plan" pill (design: the active plan shows a muted,
-      // non-clickable pill instead of a CTA).
-      &.current {
-        color: var(--neutral-600);
-        background-color: var(--neutral-100);
-        border: 1px solid var(--neutral-300);
-        cursor: default;
-        pointer-events: none;
-        font-weight: 600;
+      // Team / Enterprise dark pill (Figma #282538 / text #e4e3ff).
+      &.dark {
+        color: var(--primary-10);
+        background-color: var(--primary-90);
+
+        &:hover {
+          opacity: 0.92;
+        }
       }
 
       &.secondary {
-        color: black;
-        border: 1px solid var(--neutral-300);
-        background-color: transparent;
+        color: var(--neutral-900);
+        background-color: var(--tertiary-grey-20);
 
-        &.popular-main {
-          background-color: #b251fb;
-          color: white;
-          border: none;
+        &:hover {
+          background-color: var(--tertiary-grey-30);
         }
+      }
+
+      // "Your current plan" pill (muted, non-clickable).
+      &.current {
+        color: var(--tertiary-grey-80);
+        background-color: var(--tertiary-grey-20);
+        cursor: default;
+        pointer-events: none;
+      }
+
+      .note-content,
+      .label,
+      .inner {
+        color: inherit;
       }
     }
 
+    // ── Sub-text under the button ─────────────────────────────────────────
+    &-subtext {
+      font-size: 18px;
+      line-height: 1.4;
+      color: var(--neutral-900);
+    }
+
+    // ── Feature list ──────────────────────────────────────────────────────
     &-features {
-      gap: var(--spacer-5);
+      gap: var(--spacer-3);
+    }
 
-      &.item {
-        gap: var(--spacer-2);
-        font-size: 11px;
-        align-items: center;
-        justify-content: flex-start;
+    &-feature {
+      align-items: center;
+      gap: var(--spacer-3);
 
-        .svg-wrapper {
-          display: flex;
-          align-items: center;
-          line-height: 1.2;
+      &-icon {
+        flex-shrink: 0;
+        width: 20px;
+        height: 20px;
 
-          .label {
-            line-height: 1.2;
-          }
+        svg {
+          width: 20px;
+          height: 20px;
+          color: var(--success);
+          fill: var(--success);
         }
+      }
+
+      &-text {
+        align-items: baseline;
+        gap: 4px;
+        flex-wrap: wrap;
+        font-size: 14px;
+        line-height: 1.4;
+        color: var(--neutral-900);
+      }
+
+      &-main {
+        font-weight: 600;
+        line-height: 20px;
       }
 
       &-sub {
-        font-size: 11px;
-        color: #64748b;
-        line-height: 1.2;
-        display: flex;
-        align-items: center;
-
-        .note-content {
-          line-height: 1.2;
-        }
+        font-weight: 400;
+        line-height: 1.4;
       }
-
-      &.icon {
-        width: 16px;
-        height: 16px;
-      }
-
-      .svg-wrapper {
-        gap: var(--spacer-3);
-      }
-
-      svg {
-        width: 16px;
-        height: 16px;
-        color: var(--green-400);
-      }
-
-      &.description {
-        font-size: 13px;
-        padding-bottom: 4px;
-        color: var(--neutral-600);
-      }
-    }
-
-    &.popular-badge {
-      background-color: var(--primary-500);
-      color: white;
-      border: 1px solid #b251fb;
-      border-radius: 24px;
-      align-items: center;
-      justify-content: center;
-      position: absolute;
-      padding: 6px;
-      top: -14px;
-      left: 50%;
-      font-size: 10px;
-      transform: translateX(-50%);
     }
   }
 
