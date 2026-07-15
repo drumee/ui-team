@@ -2624,6 +2624,19 @@
     );
   }
 
+  // React bar and actions share one horizontal footer row.
+  &__comment-footer {
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 16px;
+    margin-top: 4px;
+
+    > .tasks-panel__react-bar,
+    > .tasks-panel__comment-actions {
+      margin-top: 0;
+    }
+  }
+
   &__comment-actions {
     align-items: center;
     gap: 12px;
@@ -2641,6 +2654,24 @@
 
     &:hover {
       color: var(--accent, #fa8540);
+    }
+  }
+
+  // Icon variant of the comment action triggers (reply · like · react · edit ·
+  // delete). Dimmed by default, accent on hover.
+  &__comment-action-ico {
+    width: 18px;
+    height: 18px;
+    opacity: 0.55;
+    cursor: pointer;
+
+    svg {
+      width: 18px;
+      height: 18px;
+    }
+
+    &:hover {
+      opacity: 1;
     }
   }
 
@@ -2818,20 +2849,6 @@
     &[data-own="1"] {
       border-color: var(--accent, #fa8540);
       background: var(--active-item-bg, rgba(250, 133, 64, 0.12));
-    }
-  }
-
-  &__react-add {
-    width: 22px;
-    height: 20px;
-    text-align: center;
-    border-radius: 11px;
-    cursor: pointer;
-    border: 1px solid var(--border-default, rgba(0, 0, 0, 0.1));
-    color: var(--normal-fg-40, #84848c);
-
-    &:hover {
-      background: var(--hover-bg-40, rgba(0, 0, 0, 0.04));
     }
   }
 

@@ -2143,6 +2143,7 @@ function buildCommentListContent(ui) {
   const fullName = (m) =>
     [m.firstname, m.lastname].filter(Boolean).join(" ").trim() || m.email || "";
 
+  // Existing reactions shown as emoji+count chips (null when a comment has none).
   const reactBar = (c) => {
     const kids = groupReactions(c.reactions).map((g) =>
       Skeletons.Note({
@@ -2156,42 +2157,54 @@ function buildCommentListContent(ui) {
         emoji: g.emoji,
       }),
     );
-    // Figma action row leads with a one-tap 👍 then the ☺ palette toggle.
-    kids.push(
-      Skeletons.Note({
-        className: `${pfx}__react-add`,
-        content: "👍",
-        bubble: 0,
-        service: "comment-react",
-        uiHandler: [ui],
-        commentId: c.id,
-        emoji: "👍",
-      }),
-      Skeletons.Note({
-        className: `${pfx}__react-add`,
-        content: "☺",
-        bubble: 0,
-        service: "comment-react-toggle",
-        uiHandler: [ui],
-        commentId: c.id,
-      }),
-    );
-    if (String(pickerFor || "") === String(c.id)) {
-      REACT_EMOJIS.forEach((e) =>
-        kids.push(
-          Skeletons.Note({
-            className: `${pfx}__react-pick`,
-            content: e,
-            bubble: 0,
-            service: "comment-react",
-            uiHandler: [ui],
-            commentId: c.id,
-            emoji: e,
-          }),
-        ),
+    if (!kids.length) return null;
+    return Skeletons.Box.X({ className: `${pfx}__react-bar`, kids });
+  };
+
+  // Emoji palette row, shown below the action icons when the ☺ toggle is open.
+  const pickerRow = (c) => {
+    if (String(pickerFor || "") !== String(c.id)) return null;
+    return Skeletons.Box.X({
+      className: `${pfx}__react-bar`,
+      kids: REACT_EMOJIS.map((e) =>
+        Skeletons.Note({
+          className: `${pfx}__react-pick`,
+          content: e,
+          bubble: 0,
+          service: "comment-react",
+          uiHandler: [ui],
+          commentId: c.id,
+          emoji: e,
+        }),
+      ),
+    });
+  };
+
+  // Comment action triggers, rendered as icons in a fixed order:
+  //   reply · 👍 quick-react · ☺ reaction palette · edit · delete
+  // (edit/delete only on one's own comments).
+  const actionIcon = (ico, service, extra) =>
+    Skeletons.Button.Svg({
+      ico,
+      className: `${pfx}__comment-action-ico`,
+      bubble: 0,
+      service,
+      uiHandler: [ui],
+      ...extra,
+    });
+  const commentActions = (c, isOwn) => {
+    const kids = [
+      actionIcon("app-reply", "comment-reply", { commentId: c.id }),
+      actionIcon("app-like", "comment-react", { commentId: c.id, emoji: "👍" }),
+      actionIcon("meet-smiley", "comment-react-toggle", { commentId: c.id }),
+    ];
+    if (isOwn) {
+      kids.push(
+        actionIcon("app-edit", "comment-edit", { commentId: c.id }),
+        actionIcon("chat-action-trash", "comment-delete", { commentId: c.id }),
       );
     }
-    return Skeletons.Box.X({ className: `${pfx}__react-bar`, kids });
+    return Skeletons.Box.X({ className: `${pfx}__comment-actions`, kids });
   };
 
   const commentBlock = (c, isReply) => {
@@ -2262,41 +2275,6 @@ function buildCommentListContent(ui) {
       });
     }
 
-    // Action row: Reply (any comment) + Edit/Delete (own). A reply to a child is
-    // flattened to a sibling under the same root (1-level threads), so Reply is
-    // offered on children too.
-    const actions = [];
-    actions.push(
-      Skeletons.Note({
-        className: `${pfx}__comment-action`,
-        content: LOCALE.REPLY,
-        bubble: 0,
-        service: "comment-reply",
-        uiHandler: [ui],
-        commentId: c.id,
-      }),
-    );
-    if (isOwn) {
-      actions.push(
-        Skeletons.Note({
-          className: `${pfx}__comment-action`,
-          content: LOCALE.EDIT,
-          bubble: 0,
-          service: "comment-edit",
-          uiHandler: [ui],
-          commentId: c.id,
-        }),
-        Skeletons.Note({
-          className: `${pfx}__comment-action`,
-          content: LOCALE.DELETE,
-          bubble: 0,
-          service: "comment-delete",
-          uiHandler: [ui],
-          commentId: c.id,
-        }),
-      );
-    }
-
     return Skeletons.Box.X({
       className: `${pfx}__comment-row`,
       attrOpt: { "data-reply": isReply ? "1" : "0" },
@@ -2312,13 +2290,13 @@ function buildCommentListContent(ui) {
               flow: "none",
               attrOpt: { "data-comment-id": c.id },
             }),
-            reactBar(c),
-            actions.length
-              ? Skeletons.Box.X({
-                  className: `${pfx}__comment-actions`,
-                  kids: actions,
-                })
-              : null,
+            // Reaction chips + action icons share one horizontal footer row.
+            Skeletons.Box.X({
+              className: `${pfx}__comment-footer`,
+              kids: [reactBar(c), commentActions(c, isOwn)].filter(Boolean),
+            }),
+            // Emoji palette opens on its own row below the icons.
+            pickerRow(c),
           ].filter(Boolean),
         }),
       ],
