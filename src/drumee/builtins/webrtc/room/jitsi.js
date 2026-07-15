@@ -561,29 +561,24 @@ class __webrtc_room extends __room {
    * 
    */
   attachLocalEndpoint(track) {
-    // Only the local AUDIO track drives the sound analyzer + mic control.
-    // onStreamReceived calls this for EVERY local track added — including the
-    // desktop track that screen share adds. Without this guard the block below
-    // force-reset the mic control to unmuted, flipping a muted mic back on when
-    // the user started sharing their screen.
+    // Only the local AUDIO track drives the sound analyzer.
     if (track && typeof track.getType === "function" &&
         track.getType() !== _a.audio) {
       return;
     }
     this.getLocalParts().then((parts) => {
-      let { sound, audio } = parts;
+      let { sound } = parts;
       sound.plug(track.stream);
     });
 
-    this.ensurePart("ctrl-audio").then((p) => {
-      if (track.isMuted()) {
-        p.setState(1);
-        p.el.dataset.muted = "0";
-      } else {
-        p.setState(1);
-        p.el.dataset.muted = "0";
-      }
-    });
+    // NOTE: deliberately does NOT set the mic control state here. This runs on
+    // EVERY local TRACK_ADDED — including the renegotiation Jitsi performs when
+    // a second participant joins — and re-deriving mic state from the transient
+    // event track flipped an already-muted mic pill (window-meeting__ctrl-pill
+    // mic) back to unmuted on join. The mic pill and the self-tile mic badge
+    // are owned solely by the initial render + onTrackMuteChange (real
+    // mute/unmute events), which a peer joining does not trigger — so leaving
+    // the state untouched here keeps a muted mic muted when someone joins.
   }
 
 
