@@ -160,17 +160,15 @@ class __panel_activity extends LetcBox {
       case 'open-activity-panel':
         this.activityState = 1;
         this.setState(1);
-        // The feed list (activity.get_feed) only re-fetches via refreshActivity
-        // while the panel is OPEN; refreshActivity called while CLOSED updates the
-        // badge/pinned box but skips the list restart (and flags _feedDirty). The
-        // panel is hidden — not destroyed — on close, so without this a
-        // notification that arrived while closed (e.g. a folder created by a
-        // member) stays absent from the list until a full page reload. On open,
-        // re-fetch the list once if anything changed while it was closed.
-        if (this._feedDirty && this.__list && !this.__list.isDestroyed()) {
-          this._feedDirty = false;
-          this.__list.restart();
-        }
+        // Always re-fetch the feed list on open. The panel is hidden (not
+        // destroyed) on close, and the list is otherwise only refreshed by
+        // refreshActivity WHILE open — and not every notification source pushes a
+        // WS event this panel listens for (a member's folder-create pushes
+        // media.new to the folder view, not reliably to the bell) — so without
+        // this a notification that arrived while the bell was closed only showed
+        // after a full page reload. Same restart the unread toggle uses; a cheap
+        // page-1 re-fetch that respects the current filter/unread state.
+        this.ensurePart(_a.list).then((list) => { if (list && list.restart) list.restart(); });
         return '';
 
       case 'close-activity-panel':
@@ -908,12 +906,7 @@ class __panel_activity extends LetcBox {
     const unread_count = merged.length;
     RADIO_BROADCAST.trigger('activity-update', { unread_count });
     this.updatePriorityListUnified(merged);
-    // Panel closed: the badge + pinned box are already updated above; skip the
-    // (hidden) list restart but remember the feed changed so the next open
-    // re-fetches it (see 'open-activity-panel'). This is what makes a
-    // notification arriving while the bell is closed show on open, not only
-    // after a full page reload.
-    if (!this.mget(_a.state)) { this._feedDirty = true; return; }
+    if (!this.mget(_a.state)) return;
     if (this.__list && !this.__list.isDestroyed()) {
       this.__list.restart()
       return
