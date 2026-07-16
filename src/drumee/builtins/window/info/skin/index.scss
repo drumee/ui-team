@@ -11,10 +11,14 @@
   &__ui {
     // Match the confirm dialog's default width (window-confirm
     // data-maxsize="0"): a fixed 500px card that shrinks to fit, with the same
-    // mobile clamp as window-confirm. Height is unchanged.
+    // mobile clamp as window-confirm.
     width: 500px;
     max-width: 100%;
-    min-height: 300px;
+    // Dynamic height: the card hugs its content (header + message + actions).
+    // The old fixed 300px minimum left ~120px of dead space under the button
+    // on one-line alerts; long messages still grow the card naturally.
+    min-height: 0;
+    height: auto;
 
     &[data-device="mobile"] {
       min-width: unset !important;
@@ -47,7 +51,8 @@
 
   &__main {
     padding: var(--spacer-5);
-    min-height: 300px;
+    // Height follows the card (see __ui): no fixed minimum.
+    min-height: 0;
     gap: 12px;
   }
 
@@ -92,14 +97,10 @@
   }
 
   &__container {
-    // Absorb the card's free vertical space so short alerts stay balanced:
-    // the message centres in the middle region and the action row lands at
-    // the bottom. The old `height: 100%` did neither — as a flex item it
-    // collapsed to its content height (~26px for a one-liner), stacking
-    // message + button at the top of the 300px card with ~120px of dead
-    // space underneath.
+    // Natural content height — the card is now dynamically sized (see __ui),
+    // so the message simply stacks between the header and the action row.
+    // (The old `height: 100%` was a no-op as a flex item anyway.)
     height: auto;
-    flex: 1 1 auto;
     min-height: 0;
     justify-content: center;
 
