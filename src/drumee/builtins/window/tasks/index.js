@@ -1052,7 +1052,10 @@ class __tasks_panel extends LetcBox {
         const v = trigger.mget("viewMode");
         if (v && v !== this._view) {
           this._view = v;
-          this._render();
+          // Deferred: paint the loading veil THIS frame so the click gets
+          // instant feedback (Project Health links / viewbar tabs felt dead
+          // while the synchronous full re-feed built the new view).
+          this._renderDeferred();
         }
         return;
       }
@@ -3989,6 +3992,30 @@ class __tasks_panel extends LetcBox {
     const idx = this._tasks.findIndex((t) => t.id === row.id);
     if (idx === -1) this._tasks.push(normalized);
     else this._tasks[idx] = { ...this._tasks[idx], ...normalized };
+  }
+
+  // Heavy view switches: _render() re-feeds the WHOLE panel synchronously, so
+  // on a big task set the browser paints nothing between the click and the
+  // finished new view — the link feels dead. Flag data-view-loading (the skin
+  // shows a veil + spinner over the current view), let that frame PAINT (double
+  // rAF), then run the full render and clear the flag. The attribute lives on
+  // this.el, which feed() never replaces, so the veil survives until cleared.
+  _renderDeferred() {
+    if (this.isDestroyed && this.isDestroyed()) return;
+    if (this.el) this.el.dataset.viewLoading = 1;
+    const run = () => {
+      if (this.isDestroyed && this.isDestroyed()) return;
+      try {
+        this._render();
+      } finally {
+        if (this.el) this.el.dataset.viewLoading = 0;
+      }
+    };
+    if (typeof requestAnimationFrame === "function") {
+      requestAnimationFrame(() => requestAnimationFrame(run));
+    } else {
+      setTimeout(run, 16);
+    }
   }
 
   _render() {
