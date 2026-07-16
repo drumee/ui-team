@@ -160,15 +160,6 @@ class __panel_activity extends LetcBox {
       case 'open-activity-panel':
         this.activityState = 1;
         this.setState(1);
-        // Always re-fetch the feed list on open. The panel is hidden (not
-        // destroyed) on close, and the list is otherwise only refreshed by
-        // refreshActivity WHILE open — and not every notification source pushes a
-        // WS event this panel listens for (a member's folder-create pushes
-        // media.new to the folder view, not reliably to the bell) — so without
-        // this a notification that arrived while the bell was closed only showed
-        // after a full page reload. Same restart the unread toggle uses; a cheap
-        // page-1 re-fetch that respects the current filter/unread state.
-        this.ensurePart(_a.list).then((list) => { if (list && list.restart) list.restart(); });
         return '';
 
       case 'close-activity-panel':
@@ -775,6 +766,19 @@ class __panel_activity extends LetcBox {
    * (chat, contact, media, teamchat, ticket, hub_invite). The badge count is
    * the sum of cnt across all undismissed rows.
    */
+  // Re-fetch the chronological feed list (activity.get_feed). Called when the
+  // bell is opened (desk toggle-activity) so a notification that arrived while
+  // the panel was closed shows immediately — the panel is hidden, not destroyed,
+  // on close, and the list is otherwise only restarted by refreshActivity WHILE
+  // already open. Same restart the unread toggle uses; a cheap page-1 re-fetch
+  // that respects the current filter/unread state. Safe no-op if the list part
+  // isn't mounted yet (first open renders it fresh anyway).
+  refreshFeed() {
+    return this.ensurePart(_a.list).then((list) => {
+      if (list && list.restart && !list.isDestroyed()) list.restart();
+    });
+  }
+
   async refreshActivity(timeout = 2000) {
     if (!Visitor.id || !Visitor.isOnline()) {
       Visitor.once('online', () => {
