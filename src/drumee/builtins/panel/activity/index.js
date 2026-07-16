@@ -347,6 +347,53 @@ class __panel_activity extends LetcBox {
         this.setState(0);
         return;
       }
+
+      case 'open-meeting-chat': {
+        // Row click on a meeting notification (NOT the green Join button): open the
+        // folder CHAT tab where the meeting is happening (the meeting-start card's
+        // own Join button lets the user join when ready) — do NOT join the call.
+        // If that folder window is already open, raise it and switch to Chat;
+        // otherwise open a fresh window on the Chat tab. Reuse the window rather
+        // than a location.hash reveal, so an already-open folder actually switches
+        // to the conversation instead of just re-focusing whatever tab was showing
+        // (that "reveal a nid" route was why the row appeared to do nothing when a
+        // folder for the hub was already open). The folder window self-heals its
+        // chat-gate privilege on open (see window/folder _healChatPrivilege), so a
+        // full-permission member is never wrongly shown "need admin permission".
+        const item = this._findActivityItem(cmd);
+        const hub_id = (args && args.hub_id) || (item && item.mget && item.mget('hub_id'));
+        const details = (item && item.mget && item.mget('details')) || {};
+        const folderNid = details.nid || details.actual_home_id
+          || (item && item.mget && item.mget('room_id')) || 0;
+        if (hub_id && typeof Wm !== 'undefined') {
+          try {
+            const open = ((Wm.getItemsByKind && Wm.getItemsByKind('window_folder')) || [])
+              .find((w) => !w.isDestroyed() && w.mget(_a.hub_id) == hub_id
+                && `${w.mget(_a.nid)}` === `${folderNid}`);
+            if (open) {
+              if (open.raise) open.raise();
+              if (open.showFolderTab) open.showFolderTab(_a.chat);
+            } else if (Wm.addWindow) {
+              Wm.addWindow({
+                kind: 'window_folder',
+                hub_id,
+                nid: folderNid,
+                filename: details.filename || details.user_filename || '',
+                area: details.area,
+                activeTab: _a.chat,
+              });
+            }
+          } catch (e) { this.warn('open-meeting-chat: open folder failed', e); }
+        }
+        const item_key = item && item.mget && item.mget('item_key');
+        if (item_key) {
+          this._meetingItems = (this._meetingItems || []).filter(m => m.item_key !== item_key);
+          this.refreshActivity(0);
+        }
+        this.activityState = 0;
+        this.setState(0);
+        return;
+      }
     }
   }
 
@@ -719,6 +766,19 @@ class __panel_activity extends LetcBox {
    * (chat, contact, media, teamchat, ticket, hub_invite). The badge count is
    * the sum of cnt across all undismissed rows.
    */
+  // Re-fetch the chronological feed list (activity.get_feed). Called when the
+  // bell is opened (desk toggle-activity) so a notification that arrived while
+  // the panel was closed shows immediately — the panel is hidden, not destroyed,
+  // on close, and the list is otherwise only restarted by refreshActivity WHILE
+  // already open. Same restart the unread toggle uses; a cheap page-1 re-fetch
+  // that respects the current filter/unread state. Safe no-op if the list part
+  // isn't mounted yet (first open renders it fresh anyway).
+  refreshFeed() {
+    return this.ensurePart(_a.list).then((list) => {
+      if (list && list.restart && !list.isDestroyed()) list.restart();
+    });
+  }
+
   async refreshActivity(timeout = 2000) {
     if (!Visitor.id || !Visitor.isOnline()) {
       Visitor.once('online', () => {
@@ -1196,7 +1256,13 @@ class __panel_activity extends LetcBox {
       event_type: 'meeting',
       item_type: 'meeting',
       item_key: key,
-      service: 'join-meeting',
+      // NOTE: do NOT set a model-level `service` here. The item's onUiEvent
+      // resolves `args.service || this.get('service') || cmd.get('service')`, so
+      // a model `service` would SHADOW the per-element service and every click
+      // (row + green button) would resolve to it. The two triggers carry their
+      // own services in the skeleton — the row text = 'open-meeting-chat' (open
+      // the folder chat), the green button = 'join-meeting' (join the call) —
+      // so leaving this unset lets each element route correctly.
       timestamp: Math.floor(Date.now() / 1000),
       uiHandler: this,
       logicalParent: this,

@@ -1111,7 +1111,7 @@ class __window_mfs extends DrumeeMFS {
       // Already rendered in an open window: a reveal just scrolls/flashes/
       // highlights in place; a normal open triggers the node's open action.
       if (highlight) {
-        this._revealFromNotification(nid, filetype);
+        this._revealFromNotification(nid, filetype, pid);
         return;
       }
       found.triggerHandlers({ service: "open-node" });
@@ -1151,7 +1151,7 @@ class __window_mfs extends DrumeeMFS {
       { ...opt, ...parent, kind: "window_folder" },
       { explicit: 1 },
     );
-    if (highlight) this._revealFromNotification(nid, filetype);
+    if (highlight) this._revealFromNotification(nid, filetype, pid);
     return opened;
   }
 
@@ -1162,8 +1162,21 @@ class __window_mfs extends DrumeeMFS {
    *    contains (the files the notification is about). The opened window's nid
    *    matches the container itself, so there is no single file cell to reveal.
    */
-  _revealFromNotification(nid, filetype) {
-    if (filetype === _a.folder || filetype === _a.hub) {
+  _revealFromNotification(nid, filetype, pid) {
+    // The reveal always opens the PARENT folder (pid). When the notification
+    // target is a distinct child of that parent (nid !== pid) — a created file
+    // OR a created sub-folder — it is a single grid cell inside the opened
+    // parent, so highlight that one cell (works for files and folder cells
+    // alike; both extend media_core and expose _setNotifyHighlight). Only when
+    // the opened window IS the target container itself (nid === pid, e.g.
+    // "uploaded N files in <folder>") do we highlight the NEW files it contains.
+    // Previously a folder target always took the _highlightFolderNewFiles branch,
+    // so a created sub-folder (nid !== pid) matched no open window and nothing
+    // was highlighted.
+    const isContainer = filetype === _a.folder || filetype === _a.hub;
+    const targetIsChildCell = nid && pid
+      && `${nid}` !== '0' && `${pid}` !== '0' && `${nid}` !== `${pid}`;
+    if (isContainer && !targetIsChildCell) {
       this._highlightFolderNewFiles(nid);
     } else {
       this._highlightNode(nid);

@@ -302,7 +302,9 @@ module.exports = function (ui) {
 
   const textBlockService = data.category === 'access_request'
     ? 'open-access-request'
-    : data.service;
+    : data.category === 'meeting'
+      ? 'open-meeting-chat'
+      : data.service;
   const textBlock = Skeletons.Box.Y({
     className: `${pfx}__text-block`,
     // Access-request rows open the approve popup; other rows route by category.

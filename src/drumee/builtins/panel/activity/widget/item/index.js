@@ -281,6 +281,17 @@ class __activity_item extends LetcBox {
       }
       return;
     }
+    if (service === 'join-meeting' || service === 'open-meeting-chat') {
+      // Meeting notification. The green button joins the call directly
+      // ('join-meeting'); clicking the row opens the folder chat where the
+      // meeting is happening ('open-meeting-chat'). Both are owned by the
+      // activity panel (logicalParent) — it holds the live meeting-item list —
+      // so forward via triggerHandlers to navigate + clear the item there.
+      // (Previously these fell through to _dispatchService, which handles only
+      // toggle-favorite/dismiss-activity, so the click did nothing.)
+      this.triggerHandlers({ service, hub_id: this.mget('hub_id') });
+      return;
+    }
     if (service) {
       this._dispatchService(cmd, args)
       return;
@@ -321,6 +332,18 @@ class __activity_item extends LetcBox {
       return;
     }
     switch (category) {
+      case 'meeting':
+        // A meeting-notification ROW click lands on a serviceless inner Note
+        // (same as access_request below), so `service` is undefined and routing
+        // falls through to here. Open the folder chat where the meeting is
+        // happening — NOT join the call. (Joining is the GREEN button, a Button
+        // leaf that carries its own 'join-meeting' service and is handled by the
+        // forward branch above; the row must never join.) Forward to the panel
+        // (logicalParent), which owns the live meeting-item list and opens the
+        // folder on its Chat tab.
+        this.triggerHandlers({ service: 'open-meeting-chat', hub_id });
+        break;
+
       case _a.media:
         // highlight=1 → reveal the file in its folder (scroll + select + flash)
         // instead of opening it in a player. Scoped to notification clicks.
