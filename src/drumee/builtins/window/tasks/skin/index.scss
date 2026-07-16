@@ -16,6 +16,37 @@
     visibility: visible;
   }
 
+  // Instant feedback for heavy view switches (Project Health links, viewbar
+  // tabs): data-view-loading is set by _renderDeferred the moment the link is
+  // clicked and painted BEFORE the full skeleton rebuild runs — a translucent
+  // veil + spinner over the outgoing view instead of a dead unresponsive click.
+  &[data-view-loading="1"] {
+    position: relative;
+
+    &::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: rgba(255, 255, 255, 0.55);
+      z-index: 60;
+    }
+
+    &::before {
+      content: "";
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 28px;
+      height: 28px;
+      margin: -14px 0 0 -14px;
+      border-radius: 50%;
+      border: 3px solid rgba(89, 80, 255, 0.2);
+      border-top-color: var(--primary-40, #5950ff);
+      animation: tasks-panel-view-spin 0.7s linear infinite;
+      z-index: 61;
+    }
+  }
+
   // Purely visual overlay (toggled via opacity/visibility, not display, since
   // a Box.Y is forced display:flex). pointer-events:none in both states so it
   // never intercepts the drag — the panel-root listener catches the drop.
@@ -5422,5 +5453,13 @@ html[data-theme="dark"] .tasks-panel__flatpickr.flatpickr-calendar {
   .tasks-panel__gantt-aside-head,
   .tasks-panel__gantt-arow {
     padding: 0 12px;
+  }
+}
+
+// Spinner for the view-switch loading veil (data-view-loading, see the
+// .tasks-panel block above).
+@keyframes tasks-panel-view-spin {
+  to {
+    transform: rotate(360deg);
   }
 }
