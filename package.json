@@ -74,7 +74,7 @@
     "webpack-manifest-plugin": "5.0.0"
   },
   "dependencies": {
-    "@drumee/ui-core": "^1.1.46",
+    "@drumee/ui-core": "^1.1.47",
     "@drumee/ui-essentials": "^1.0.2",
     "@drumee/ui-styles": "^1.0.6",
     "@drumee/ui-toolkit": "^0.0.23",
