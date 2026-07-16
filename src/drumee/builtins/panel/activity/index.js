@@ -1241,7 +1241,13 @@ class __panel_activity extends LetcBox {
       event_type: 'meeting',
       item_type: 'meeting',
       item_key: key,
-      service: 'join-meeting',
+      // NOTE: do NOT set a model-level `service` here. The item's onUiEvent
+      // resolves `args.service || this.get('service') || cmd.get('service')`, so
+      // a model `service` would SHADOW the per-element service and every click
+      // (row + green button) would resolve to it. The two triggers carry their
+      // own services in the skeleton — the row text = 'open-meeting-chat' (open
+      // the folder chat), the green button = 'join-meeting' (join the call) —
+      // so leaving this unset lets each element route correctly.
       timestamp: Math.floor(Date.now() / 1000),
       uiHandler: this,
       logicalParent: this,
