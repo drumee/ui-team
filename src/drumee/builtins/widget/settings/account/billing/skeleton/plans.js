@@ -50,7 +50,8 @@ function getOptions(ui, cycle = "monthly") {
       badge: 1,
       subText: LOCALE.PLAN_PRO_DESC.format(seatPrice),
       features: [
-        { main: "20 GB", sub: LOCALE.FEAT_STORAGE },
+        // Match yp.plan seed: pro quota.disk = 50e9 (50 GB).
+        { main: "50 GB", sub: LOCALE.FEAT_STORAGE },
         { main: "5", sub: LOCALE.FEAT_EDITOR_ACCESS },
         { main: "1", sub: LOCALE.FEAT_ADMIN_ROLE },
         { main: "7", sub: LOCALE.FEAT_DAYS_VERSION_HISTORY },
@@ -155,11 +156,22 @@ function priceHeader(ui, fig, option) {
  * @returns {Object} Skeletons component
  */
 function item(ui, opt, option) {
-  const { buttonTitle, buttonKind, subText, features, badge } = option;
+  const { buttonKind, subText, features, badge } = option;
+  let { buttonTitle } = option;
   const fig = `${ui.fig.family}__plan`;
   // Mark the caller's active plan: pill-style "Your current plan" instead of a
   // CTA (design: the Free card shows the pill while the user is on Free).
   const isCurrent = (ui.currentPlanName || "free") === opt;
+
+  // Paid subscriber CTAs: Free → cancel at period end; other paid plans →
+  // Billing Portal (upgrade/change). Avoid implying a second Checkout.
+  if (!isCurrent && ui._hasPaidSub) {
+    if (opt === "free") {
+      buttonTitle = LOCALE.CANCEL_PLAN || "Cancel plan";
+    } else if (opt === "pro" || opt === "team") {
+      buttonTitle = LOCALE.MANAGE_SUBSCRIPTION || LOCALE.UPGRADE || buttonTitle;
+    }
+  }
 
   let buttonBtn;
   if (isCurrent) {

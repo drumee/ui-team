@@ -37,9 +37,11 @@ class settings_billing extends LetcBox {
         selectedBundle: null,
       },
     };
+    // Disk GB baselines — must match yp.plan seed quota.disk
+    // (free=20e9, pro=50e9, team=50e9 per seat).
     this.storage = {
       free: 20,
-      pro: 20,
+      pro: 50,
       team: 50
     }
     this.seats = {
@@ -553,8 +555,50 @@ class settings_billing extends LetcBox {
    * Handle proceed to checkout: call payment API and open payment window
    */
   _proceedToCheckout() {
-    // The SERVER decides the price (Stripe price_id from yp.plan); the client
-    // only declares WHAT to buy. plan 'team' => org (per-seat) checkout.
+    // Already subscribed → do NOT open a second Checkout session (would create
+    // a duplicate Stripe subscription). Plan changes, seats, period, add-ons and
+    // cancel/resume go through the Billing Portal (or native cancel/resume).
+    if (this._hasPaidSub) {
+      this._openBillingPortal();
+      return;
+    }
+    this._startCheckoutSession();
+  }
+
+  /**
+   * Open Stripe Billing Portal for the caller's customer (invoices, plan change,
+   * cancel/resume, card). Returns true when a URL was opened.
+   */
+  async _openBillingPortal() {
+    try {
+      const data = await this.postService(SERVICE.payment.portal, { hub_id: Visitor.id });
+      const { url, status } = data || {};
+      if (url) {
+        window.location.assign(url);
+        return true;
+      }
+      if (Wm && Wm.alert) {
+        Wm.alert(
+          status === "NO_CUSTOMER"
+            ? (LOCALE.NO_ACTIVE_SUBSCRIPTION || "No active subscription.")
+            : (LOCALE.SOMETHING_WENT_WRONG || "Something went wrong. Please try again.")
+        );
+      }
+    } catch (e) {
+      this.warn("Got backend error [_openBillingPortal]:", e);
+      if (Wm && Wm.alert) {
+        Wm.alert(LOCALE.SOMETHING_WENT_WRONG || "Something went wrong. Please try again.");
+      }
+    }
+    return false;
+  }
+
+  /**
+   * Free → paid: create a hosted Checkout session. The SERVER decides the price
+   * (Stripe price_id from yp.plan); the client only declares WHAT to buy.
+   * plan 'team' => org (per-seat) checkout.
+   */
+  _startCheckoutSession() {
     const checkout = this.state.checkout || {};
     const plan = checkout.selectedPlan || "pro";
     const entity_type = plan === "team" ? "org" : "user";
@@ -577,7 +621,7 @@ class settings_billing extends LetcBox {
         if (status === "NOT_ORG_OWNER" && Wm && Wm.alert) Wm.alert(LOCALE.NOT_ORG_OWNER);
       })
       .catch((e) => {
-        this.warn("Got backend error [_proceedToCheckout]:", e);
+        this.warn("Got backend error [_startCheckoutSession]:", e);
         if (Wm && Wm.alert) {
           Wm.alert(LOCALE.SOMETHING_WENT_WRONG || "Something went wrong. Please try again.");
         }
@@ -946,12 +990,23 @@ class settings_billing extends LetcBox {
                   .format(LOCALE.SALES_CONTACT_EMAIL || "contact@drumee.org")
               );
             }
-          } else {
-            this.state.checkout.selectedPlan = planValue;
-            this.state.currentTab = TAB_CHECKOUT;
-            this.tab = TAB_CHECKOUT;
-            this.renderContent();
+            return false;
           }
+          // Paid subscriber picking Free → in-app cancel (period-end), not Checkout.
+          if (planValue === "free" && this._hasPaidSub) {
+            this._confirmCancel();
+            return false;
+          }
+          // Paid subscriber picking another paid plan (Pro↔Team, seats, period)
+          // → Billing Portal. A second Checkout would create a duplicate sub.
+          if (this._hasPaidSub && planValue !== (this.currentPlanName || "free")) {
+            this._openBillingPortal();
+            return false;
+          }
+          this.state.checkout.selectedPlan = planValue;
+          this.state.currentTab = TAB_CHECKOUT;
+          this.tab = TAB_CHECKOUT;
+          this.renderContent();
         }
         return false;
       case "storage-changes":
@@ -1037,16 +1092,8 @@ class settings_billing extends LetcBox {
 
       case "manage-billing":
         // Open the Stripe Billing Portal (hosted invoices/cancel/resume/card).
-        // hub_id REQUIRED for the scope:hub/owner ACL (see _proceedToCheckout).
-        this.postService(SERVICE.payment.portal, { hub_id: Visitor.id })
-          .then((data) => {
-            const { url, status } = data || {};
-            if (url) window.location.assign(url);
-            else if (Wm && Wm.alert) Wm.alert(LOCALE.NO_ACTIVE_SUBSCRIPTION);
-          })
-          .catch(() => {
-            if (Wm && Wm.alert) Wm.alert(LOCALE.SOMETHING_WENT_WRONG);
-          });
+        // hub_id REQUIRED for the scope:hub/owner ACL (see _startCheckoutSession).
+        this._openBillingPortal();
         return false;
 
       case "billing-close":
