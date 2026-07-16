@@ -61,12 +61,9 @@ class __permission_restricted extends DrumeeMFS {
         this.ensurePart("ref-invite-email").then((entry) => {
           const email = entry.el.querySelector("input")?.value?.trim();
           if (!email) return;
-          const rolePrivilege = {
-            admin: _K.privilege.admin,
-            edit: _K.privilege.write,
-            view: _K.privilege.read,
-          };
-          const privilege = rolePrivilege[this._inviteRole] || _K.privilege.admin;
+          const { roleByValue } = require("../../../builtins/skeleton/toolkit");
+          const privilege =
+            roleByValue(this._inviteRole)?.privilege || _K.privilege.admin;
           this.postService(SERVICE.hub.invite, {
             hub_id: this.mget(_a.hub_id),
             invitees: [email],

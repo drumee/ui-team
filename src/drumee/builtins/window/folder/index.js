@@ -3187,15 +3187,10 @@ class __window_folder extends mfsInteract {
   }
 
   getFolderRoleOptions() {
-    return [
-      { label: LOCALE.ROLE_ADMIN, privilege: _K.privilege.admin },
-      { label: LOCALE.ROLE_VIEW_EDIT, privilege: _K.privilege.write },
-      { label: LOCALE.ROLE_VIEW_CHAT, privilege: _K.privilege.chat },
-      {
-        label: LOCALE.VIEW,
-        privilege: _K.privilege.guest || _K.privilege.read,
-      },
-    ];
+    // Shared 4-level list (View → Chat → Edit → Admin) — same source the
+    // settings panel and invite popup render from.
+    const { roleItems } = require("builtins/skeleton/toolkit/permission");
+    return roleItems;
   }
 
   getNextFolderRole(role) {
@@ -3439,7 +3434,8 @@ class __window_folder extends mfsInteract {
     this._setInviteError();
 
     const { hub_id } = this.actualNode();
-    const privilege = this._folderInviteRole?.privilege || _K.privilege.admin;
+    // Default matches the invite row's displayed default role (Edit).
+    const privilege = this._folderInviteRole?.privilege || _K.privilege.write;
 
     const btn = cmd?.el;
     if (btn?.getAttribute("data-pending") === "1") return;
@@ -3644,7 +3640,7 @@ class __window_folder extends mfsInteract {
     this.isShowSettings = true;
     this._folderMembers = [];
     this._folderMembersLoaded = false;
-    // Reset invite role to default (Admin) on every open — otherwise a prior
+    // Reset invite role to default (Edit) on every open — otherwise a prior
     // session's pick persists silently and the next invite uses the stale
     // privilege even though the trigger label visually shows the default.
     this._folderInviteRole = null;

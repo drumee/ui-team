@@ -11,21 +11,13 @@ const actions = [
   },
 ];
 
-const roleOptions = [
-  { label: LOCALE.ROLE_ADMIN, privilege: _K.privilege.admin },
-  { label: LOCALE.ROLE_VIEW_EDIT, privilege: _K.privilege.write },
-  { label: LOCALE.ROLE_VIEW_CHAT, privilege: _K.privilege.chat },
-  { label: LOCALE.VIEW, privilege: _K.privilege.guest || _K.privilege.read },
-];
-
-// Map a hub.get_members_by_type privilege bitmask to one of roleOptions.
-function roleFromPrivilege(priv) {
-  const p = ~~priv;
-  if (p & _K.permission.admin) return roleOptions[0];
-  if (p & _K.permission.write) return roleOptions[1];
-  if (p & _K.permission.download) return roleOptions[2];
-  return roleOptions[3];
-}
+// Shared 4-level role list (View → Chat → Edit → Admin, weakest first) +
+// bitmask↔role mapping — single source of truth for every role selector.
+const {
+  roleItems: roleOptions,
+  roleFromPrivilege,
+  roleByValue,
+} = require("builtins/skeleton/toolkit/permission");
 
 // Map a hub.get_members_by_type row to the member-row view shape.
 // The stored procedure personalizes firstname/lastname/fullname/surname from
@@ -95,6 +87,11 @@ function roleDropdown(pfx, role, service, extra = {}) {
         service,
         radio: radioGroup,
         name: opt.label,
+        // Hover description ("Can only View", …) — positioned beside the
+        // row by the skin (.role-option-tooltip).
+        tooltips: opt.description
+          ? { content: opt.description, className: "role-option-tooltip" }
+          : undefined,
         uiHandler: ui ? [ui] : undefined,
         dataset: {
           ...(memberId ? { member_id: memberId } : {}),
@@ -210,7 +207,8 @@ function memberRows(list, ui, pfx, isAdmin) {
 
 module.exports = function settingsActionPanel(ui) {
   const pfx = `${ui.fig.family}__settings-action`;
-  const inviteRole = ui._folderInviteRole || roleOptions[0];
+  // Default pending-invite role: Edit (same default as the invite popup).
+  const inviteRole = ui._folderInviteRole || roleByValue("edit");
 
   // Filter link/anonymous rows then map once; reuse for both the admin gate
   // and the rendered rows so they can't diverge.
