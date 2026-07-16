@@ -177,15 +177,28 @@ class settings_billing extends LetcBox {
     //  data-page="1"  → full-page scroll layout inside settings-main-slot.
     if (this._popup && this.el) this.el.dataset.popup = "1";
     if (this._page && this.el) this.el.dataset.page = "1";
-    // Fetch the server catalog (Stripe is the price truth) so the display
-    // reflects live prices; degrades to the hardcoded fallback if unavailable.
-    this._catalog = await this.fetchService(SERVICE.payment.catalog, { hub_id: Visitor.id })
-      .then((d) => (d && d.plans) || null)
-      .catch(() => null);
-    // Live subscription mirror (status, period_end, seats) — org-aware on the
-    // server (an org owner sees the team subscription). Also computes the
-    // pending-cancel flags the banner + cancel/resume actions key off.
-    await this._loadSubscription();
+    if (this.state.currentTab === undefined || this.state.currentTab === null) {
+      this.state.currentTab = TAB_MONTHLY;
+    }
+    this.tab = this.state.currentTab;
+    // Render immediately with Visitor.quota()'s cached plan/seats/storage and
+    // the hardcoded fallback catalog prices — was two sequential awaited
+    // fetches (catalog, then subscription) BEFORE the first feed(), so the
+    // whole screen sat blank for both round-trips back to back. First paint
+    // no longer waits on the network at all; the catalog/subscription fetch
+    // below re-renders in place once it lands.
+    this.fetchPlanData();
+    // Catalog (live Stripe prices) and subscription mirror (status,
+    // period_end, seats — also computes the pending-cancel banner flags) are
+    // independent reads; fetch them concurrently instead of one after the
+    // other and re-render once both are in.
+    const [catalog] = await Promise.all([
+      this.fetchService(SERVICE.payment.catalog, { hub_id: Visitor.id })
+        .then((d) => (d && d.plans) || null)
+        .catch(() => null),
+      this._loadSubscription(),
+    ]);
+    this._catalog = catalog;
     // Re-sync the subscription when the tab regains focus — covers a return
     // from the Stripe Billing Portal (a full-page redirect back to the desk
     // root, so this widget re-mounts) and any change made in another tab.
@@ -197,10 +210,6 @@ class settings_billing extends LetcBox {
       };
       document.addEventListener("visibilitychange", this._onVisibility);
     }
-    if (this.state.currentTab === undefined || this.state.currentTab === null) {
-      this.state.currentTab = TAB_MONTHLY;
-    }
-    this.tab = this.state.currentTab;
     return this.fetchPlanData();
   }
 

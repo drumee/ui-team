@@ -323,60 +323,67 @@
   }
 
   // Subscription status banner (renews-on / cancel + ends-on / resume).
+  // Figma 3050-96156: flat Grey/20 (#f2f2f7) panel, no border — was a
+  // bordered neutral-50 box that additionally switched to an orange/cream
+  // tint for the canceling state (no such treatment exists in the design;
+  // both the active and pending-cancel banners share this same grey).
   &__sub-banner {
     align-items: center;
     justify-content: space-between;
     gap: var(--spacer-4);
     margin-top: var(--spacer-4);
-    padding: var(--spacer-4) var(--spacer-5);
-    border-radius: 12px;
-    border: 1px solid var(--neutral-200);
-    background: var(--neutral-50);
-
-    &--canceling {
-      border-color: var(--orange-lighter, #f5c37a);
-      background: var(--orange-lighter, #fff8ec);
-    }
+    padding: 16px 16px 16px 24px;
+    border-radius: 16px;
+    background: var(--tertiary-grey-20);
 
     &-text {
-      gap: 2px;
+      gap: 4px;
     }
 
     &-title {
       font-weight: 600;
-      font-size: 14px;
-      color: var(--neutral-900);
+      font-size: 18px;
+      line-height: 24px;
+      color: var(--tertiary-grey-100); // Grey/black #000000
     }
 
     &-desc {
-      font-size: 12px;
-      color: var(--neutral-500);
+      font-size: 16px;
+      line-height: 1.4;
+      color: var(--primary-purple-100); // Primary/100 #0b0a21
     }
 
     &-action {
       flex-shrink: 0;
       cursor: pointer;
-      font-weight: 600;
-      font-size: 13px;
-      padding: 8px 16px;
-      border-radius: 8px;
       white-space: nowrap;
     }
 
     &-cancel {
       color: var(--error-500);
+      font-weight: 600;
+      font-size: 13px;
+      padding: 8px 16px;
+      border-radius: 8px;
 
       &:hover {
         text-decoration: underline;
       }
     }
 
+    // Figma 3050-96156: Resume Subscription CTA is primary-50 (#433cc5) —
+    // was the unrelated legacy --primary-500 (#b251fb) purple.
     &-resume {
       color: var(--white);
-      background: var(--primary-500);
+      background: var(--primary-50);
+      font-weight: 600;
+      font-size: 16px;
+      line-height: 24px;
+      padding: 12px 24px;
+      border-radius: 4px;
 
       &:hover {
-        opacity: 0.9;
+        background: var(--primary-90);
       }
     }
   }
@@ -537,6 +544,12 @@
       gap: var(--spacer-6);
     }
 
+    // Sticky order-summary panel: the left column grows tall once the
+    // storage-bundles section renders (Pro/Team), pushing "Proceed to
+    // Checkout" below the fold on shorter viewports with no obvious scroll
+    // affordance — users clicking where the button *used to be* land on
+    // nothing and nothing happens. Pinning the panel keeps the CTA reachable
+    // regardless of how long the left column gets.
     &-right {
       width: 480px;
       gap: var(--spacer-5);
@@ -544,6 +557,11 @@
       background-color: var(--white);
       border: 1px solid rgba(0, 0, 0, 0.2);
       border-radius: var(--corner-radius-5); // 16px
+      position: sticky;
+      top: var(--spacer-6);
+      align-self: flex-start;
+      max-height: calc(100vh - var(--spacer-6) * 2);
+      overflow-y: auto;
     }
 
     &-section {

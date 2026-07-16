@@ -713,12 +713,12 @@
   }
 
   // Subscription status line under the Current-Plan row (billing card):
-  // "Your subscription renews on …" / "… will be canceled on …".
+  // "Your subscription renews on …" / "… will be canceled on …". Sits inside
+  // &__billing-list's own 24px padding now — no extra padding of its own.
   &__billing-status {
     font-size: 12px;
-    line-height: 16px;
+    line-height: 16.8px;
     color: $ink-600;
-    padding: 0 var(--spacer-4) var(--spacer-3);
 
     &:empty {
       display: none;
@@ -728,9 +728,11 @@
   // ── Ghost (light-purple) buttons used inside cards ────────
   // Shared "normal button" style for the settings cards — same light-purple
   // tint as the "Coming soon" pill. Used by manage / action / export / migrate.
+  // NOTE: billing's action button is NOT part of this group — Figma
+  // (2769-213367) shows it as a solid filled CTA, not a ghost tint; see its
+  // own rule below.
   &__preferences-manage-main,
   &__credentials-action-main,
-  &__billing-action-main,
   &__referral-action-main,
   &__danger-export-btn-main,
   &__linked-migrate-btn-main {
@@ -766,11 +768,79 @@
   // every state (Start migration / View progress / Migrate again); its labels
   // are wider than the 120px tiles, so size to content.
   &__linked-migrate-btn-main,
-  &__billing-action-main,
   &__referral-action-main {
     width: auto;
     min-width: 120px;
     padding: 0 var(--spacer-5);
+  }
+
+  // ── Billing card CTA (solid, Figma 2769-213367) ───────────
+  &__billing-action-main {
+    width: auto;
+    padding: 6px 24px;
+    border-radius: 4px;
+    background: $purple-deep; // #433cc5
+    cursor: pointer;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+
+    .btn {
+      color: var(--white);
+      font-size: 14px;
+      line-height: 20px;
+      font-weight: 600;
+    }
+
+    &:hover {
+      opacity: 0.9;
+    }
+  }
+
+  // ── Billing card: white panel wrapping plan-row + status,
+  // matching Figma's single unified card surface (not per-row boxes) ──
+  &__billing-list {
+    width: 100%;
+    background: $row-bg;
+    border-radius: 8px;
+    padding: var(--spacer-6);
+    flex: 1;
+    justify-content: space-between;
+    gap: var(--spacer-6);
+  }
+
+  // The plan-row already carries the generic &__inner white/padded box —
+  // reset it here so it doesn't nest a second white box inside the panel
+  // above (Figma's title+button sit flush on the panel's own padding).
+  &__billing-row.settings-main__inner {
+    background: transparent;
+    padding: 0;
+    border-radius: 0;
+  }
+
+  &__billing-card &__card-subtitle {
+    color: $ink-600; // Grey/80 #65656c
+  }
+
+  &__billing-row &__inner-title {
+    font-size: 18px;
+    line-height: 24px;
+    font-weight: 600;
+  }
+
+  // "Pro" + status line, paired tightly (Figma "Frame 1618872891", gap 4px) —
+  // a separate block below the title row, NOT the title row's own
+  // description (that put "Pro" 4px from "Current Plan" and the status line
+  // a mismatched 24px further down instead of right under "Pro").
+  &__billing-plan-block {
+    gap: 4px;
+  }
+
+  &__billing-plan-name {
+    font-size: 18px;
+    line-height: 24px;
+    font-weight: 600;
+    color: $purple-base; // Primary/40 #5950ff
   }
 
   &__danger-export-btn-main {

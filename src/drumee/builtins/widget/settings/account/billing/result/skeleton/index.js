@@ -35,7 +35,9 @@ function billing_result(ui) {
   const total = money(r.amount_total, r.currency);
   const details = [
     detailRow(fig, LOCALE.INVOICE_NUMBER || "Invoice number", r.invoice_number),
-    detailRow(fig, LOCALE.PAYMENT_DATE || "Payment date", paidAt),
+    // Figma: success shows "Payment date", failure shows "Payment time" —
+    // same field, different label per state.
+    detailRow(fig, (ok ? LOCALE.PAYMENT_DATE : LOCALE.PAYMENT_TIME) || "Payment date", paidAt),
     detailRow(fig, LOCALE.PAYMENT_METHOD || "Payment method", card),
   ].filter(Boolean);
 

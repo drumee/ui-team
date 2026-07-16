@@ -2075,6 +2075,7 @@
   "PAYMENT_FAILURE_TEXT": "Не удалось обработать платёж.",
   "TOTAL_PAYMENT": "Итого к оплате",
   "PAYMENT_DATE": "Дата платежа",
+  "PAYMENT_TIME": "Время платежа",
   "PAYMENT_METHOD": "Способ оплаты",
   "UPGRADE_PLAN_MENU": "Улучшить тариф",
   "PLAN_BADGE": "Тариф {0}",

@@ -2075,6 +2075,7 @@
   "PAYMENT_FAILURE_TEXT": "Votre paiement n'a pas pu être traité.",
   "TOTAL_PAYMENT": "Paiement total",
   "PAYMENT_DATE": "Date de paiement",
+  "PAYMENT_TIME": "Heure de paiement",
   "PAYMENT_METHOD": "Moyen de paiement",
   "UPGRADE_PLAN_MENU": "Changer d'offre",
   "PLAN_BADGE": "Plan {0}",
