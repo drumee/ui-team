@@ -92,7 +92,15 @@
   }
 
   &__container {
-    height: 100%;
+    // Absorb the card's free vertical space so short alerts stay balanced:
+    // the message centres in the middle region and the action row lands at
+    // the bottom. The old `height: 100%` did neither — as a flex item it
+    // collapsed to its content height (~26px for a one-liner), stacking
+    // message + button at the top of the 300px card with ~120px of dead
+    // space underneath.
+    height: auto;
+    flex: 1 1 auto;
+    min-height: 0;
     justify-content: center;
 
     & .center-text {
