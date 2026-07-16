@@ -349,19 +349,41 @@ class __panel_activity extends LetcBox {
       }
 
       case 'open-meeting-chat': {
-        // Row click on a meeting notification (NOT the green Join button): open
-        // the folder chat where the meeting is happening — the folder's Chat tab
-        // renders the meeting-start card whose own Join button lets the user join
-        // when ready. Uses the same desk "open" route as the teamchat row. Clears
-        // the live meeting item + closes the panel, mirroring join-meeting.
+        // Row click on a meeting notification (NOT the green Join button): open the
+        // folder CHAT tab where the meeting is happening (the meeting-start card's
+        // own Join button lets the user join when ready) — do NOT join the call.
+        // If that folder window is already open, raise it and switch to Chat;
+        // otherwise open a fresh window on the Chat tab. Reuse the window rather
+        // than a location.hash reveal, so an already-open folder actually switches
+        // to the conversation instead of just re-focusing whatever tab was showing
+        // (that "reveal a nid" route was why the row appeared to do nothing when a
+        // folder for the hub was already open). The folder window self-heals its
+        // chat-gate privilege on open (see window/folder _healChatPrivilege), so a
+        // full-permission member is never wrongly shown "need admin permission".
         const item = this._findActivityItem(cmd);
         const hub_id = (args && args.hub_id) || (item && item.mget && item.mget('hub_id'));
         const details = (item && item.mget && item.mget('details')) || {};
         const folderNid = details.nid || details.actual_home_id
           || (item && item.mget && item.mget('room_id')) || 0;
-        if (hub_id) {
-          const ts = new Date().getTime();
-          location.hash = `#/desk/wm/open/?hub_id=${hub_id}&nid=${folderNid}&filetype=folder&pid=0&activeTab=${_a.chat}&ts=${ts}`;
+        if (hub_id && typeof Wm !== 'undefined') {
+          try {
+            const open = ((Wm.getItemsByKind && Wm.getItemsByKind('window_folder')) || [])
+              .find((w) => !w.isDestroyed() && w.mget(_a.hub_id) == hub_id
+                && `${w.mget(_a.nid)}` === `${folderNid}`);
+            if (open) {
+              if (open.raise) open.raise();
+              if (open.showFolderTab) open.showFolderTab(_a.chat);
+            } else if (Wm.addWindow) {
+              Wm.addWindow({
+                kind: 'window_folder',
+                hub_id,
+                nid: folderNid,
+                filename: details.filename || details.user_filename || '',
+                area: details.area,
+                activeTab: _a.chat,
+              });
+            }
+          } catch (e) { this.warn('open-meeting-chat: open folder failed', e); }
         }
         const item_key = item && item.mget && item.mget('item_key');
         if (item_key) {
