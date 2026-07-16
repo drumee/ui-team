@@ -2194,14 +2194,30 @@ function buildCommentListContent(ui) {
     });
   const commentActions = (c, isOwn) => {
     const kids = [
-      actionIcon("app-reply", "comment-reply", { commentId: c.id }),
-      actionIcon("app-like", "comment-react", { commentId: c.id, emoji: "👍" }),
-      actionIcon("meet-smiley", "comment-react-toggle", { commentId: c.id }),
+      actionIcon("app-reply", "comment-reply", {
+        commentId: c.id,
+        tooltips: LOCALE.REPLY,
+      }),
+      actionIcon("app-like", "comment-react", {
+        commentId: c.id,
+        emoji: "👍",
+        tooltips: LOCALE.LIKE || "Thumbs up",
+      }),
+      actionIcon("meet-smiley", "comment-react-toggle", {
+        commentId: c.id,
+        tooltips: LOCALE.ADD_REACTION,
+      }),
     ];
     if (isOwn) {
       kids.push(
-        actionIcon("app-edit", "comment-edit", { commentId: c.id }),
-        actionIcon("chat-action-trash", "comment-delete", { commentId: c.id }),
+        actionIcon("app-edit", "comment-edit", {
+          commentId: c.id,
+          tooltips: LOCALE.EDIT,
+        }),
+        actionIcon("chat-action-trash", "comment-delete", {
+          commentId: c.id,
+          tooltips: LOCALE.DELETE,
+        }),
       );
     }
     return Skeletons.Box.X({ className: `${pfx}__comment-actions`, kids });
