@@ -8,21 +8,23 @@
  *  - "+ Add new workspace and role" link
  *  - Send Invitation button
  */
-const ROLES = [
-  { id: "admin", label: LOCALE.ROLE_ADMIN || "Admin", bit: 0b0011111 },
-  {
-    id: "edit",
-    label: LOCALE.ROLE_VIEW_EDIT || LOCALE.EDIT || "Edit",
-    bit: 0b0000111,
-  },
-  { id: "view", label: LOCALE.VIEW || "View", bit: 0b0000011 },
-];
+// Same 4-level list every role selector renders (View → Chat → Edit →
+// Admin, weakest first, with hover descriptions) — adapted to this
+// popup's historical {id, label, bit} shape. Fixes the old hardcoded
+// table where "View & Edit" sent the CHAT-level bitmask (0b0000111).
+const { roleItems } = require("builtins/skeleton/toolkit/permission");
+const ROLES = roleItems.map((r) => ({
+  id: r.value,
+  label: r.label,
+  bit: r.privilege,
+  description: r.description,
+}));
 
 const DEFAULT_ROLE_IDS = ["edit"];
 
 const computePrivilege = (selectedIds) => {
   const role = ROLES.find((r) => selectedIds.includes(r.id));
-  return role?.bit || 0b0000011;
+  return role?.bit || ROLES.find((r) => r.id === "edit").bit;
 };
 
 const summarizeRoles = (selectedIds) => {
@@ -102,6 +104,11 @@ const buildWorkspaceRow = (ui, idx) => {
             kids: ROLES.map((r) =>
               Skeletons.Note({
                 className: `${pfx}__role-option`,
+                // Hover description ("Can only View", …) — positioned
+                // beside the row by the skin (.role-option-tooltip).
+                tooltips: r.description
+                  ? { content: r.description, className: "role-option-tooltip" }
+                  : undefined,
                 dataset: {
                   id: r.id,
                   idx,
