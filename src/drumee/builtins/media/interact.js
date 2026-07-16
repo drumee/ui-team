@@ -875,7 +875,14 @@ class __media_interact extends media_core {
         break;
 
       case _e.upload:
+        // Route through the same BundleJob path as the Upload button / drag-drop
+        // (mobile multi-select is a change event — legacy uploadInplace spawned
+        // one uploader per file and flooded the gateway).
         Wm.__fileselector.open((e) => {
+          if (Wm && typeof Wm._bundleDrop === "function") {
+            Wm._bundleDrop(this, e);
+            return;
+          }
           this.uploadInplace(e);
         });
         break;
