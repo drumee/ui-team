@@ -45,6 +45,19 @@ class __window_interact_player extends __utils {
       top: 0,
     };
     this._lastX = 0;
+    // Deterministic cascade: every player centers on the same workspace
+    // point, and the legacy anti-overlap layers never move them apart
+    // (the `_lastX` term is never incremented and `anti_overlap` only
+    // matches exact positions). Step each new player down-right like OS
+    // windows so simultaneous opens stay individually reachable.
+    try {
+      const siblings = Wm.getWindowsPool().children.filter(
+        (w) => w.isPlayer && !w.isDestroyed()
+      ).length;
+      this._stackShift = (siblings % 8) * 28;
+    } catch (e) {
+      this._stackShift = 0;
+    }
     this.model.set({
       radio: Env.get("wm-radio"),
     });
@@ -75,6 +88,10 @@ class __window_interact_player extends __utils {
       height,
       position: _a.absolute,
       opacity: 0,
+      // While invisible (until display() reveals it) the player must not
+      // hit-test: a stuck opacity-0 player parked over the folder grid
+      // swallows every click on the tiles beneath it.
+      pointerEvents: "none",
       transformOrigin: `-${this.offset.left}px -${this.offset.top}px`,
     });
 
@@ -614,9 +631,17 @@ class __window_interact_player extends __utils {
    * @param {*} from 
    */
   display(size, cb, from = { scale: 0.15, opacity: 0 }) {
-    this.raise();
+    // Raise once when the player first becomes visible. Re-raising from
+    // every async load callback lets the last-LOADED window steal the top
+    // spot, scrambling z-order by network timing when several files are
+    // opened in a row.
+    if (!this._raisedOnDisplay) {
+      this._raisedOnDisplay = 1;
+      this.raise();
+    }
     let o = require("window/configs/default")();
     this.el.dataset.ready = 1;
+    this.el.style.pointerEvents = "";
     if (this._isPlaying) this.size = this.max_size();
     this.size = this.size || o.imagePlayer;
     size = size || o.imagePlayer;
@@ -650,8 +675,8 @@ class __window_interact_player extends __utils {
     // container offset conversion is needed.
     const ws_width = Wm.$el ? Wm.$el.width() : window.innerWidth;
     const ws_height = Wm.$el ? Wm.$el.height() : window.innerHeight;
-    let x = (ws_width - s.width) / 2 + this._lastX;
-    let y = (ws_height - height) / 2;
+    let x = (ws_width - s.width) / 2 + (this._stackShift || 0);
+    let y = (ws_height - height) / 2 + (this._stackShift || 0);
     let pos = {};
     let pin = this.mget("pin") || {};
     if (Visitor.isMobile()) {

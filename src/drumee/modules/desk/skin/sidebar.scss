@@ -19,15 +19,26 @@ $rail-collapse-allowed: "(pointer: fine), (max-width: 767px), (min-width: 1025px
 // tablet band (768–1024px) — see both @include sites below. Uses literal
 // class selectors (no `&`) so it can be included from any nesting context.
 @mixin sidebar-mini-icons {
-  // !important is required: __item-text and __badge carry
-  // `display: flex !important` in their base rules, which a plain
-  // `display: none` can't override.
+  // Labels and sections FADE out instead of display:none-flipping. Two
+  // reasons (both were user-visible jank): a display flip forces a large
+  // synchronous style+layout pass on the hover-boundary frame and makes
+  // the text POP in/out, and — combined with the width transition — every
+  // label used to reflow on each animation frame. Keeping the elements in
+  // flow at their expanded metrics (the rail scope pins __nav/__footer at
+  // 231px) means the width animation only clips: icons never jump, text
+  // never reflows, and opacity/visibility are animatable.
+  // !important mirrors the old rules: some of these carry
+  // `display: flex !important` bases that historically fought overrides.
   .desk-module-sidebar__item-text,
   .desk-module-sidebar__header,
   .desk-module-sidebar__workspace,
   .desk-module-sidebar__footer-name-wrapper,
   .desk-module-sidebar__footer-user-plan,
-  .desk-module-sidebar__logo-pin-btn,
+  .desk-module-sidebar__logo-pin-btn {
+    visibility: hidden !important;
+    opacity: 0 !important;
+  }
+
   .desk-module-sidebar__logo-icon {
     display: none !important;
   }
@@ -36,23 +47,14 @@ $rail-collapse-allowed: "(pointer: fine), (max-width: 767px), (min-width: 1025px
     display: flex;
   }
 
-  .desk-module-sidebar__logo-row {
-    justify-content: center;
-    padding: 0;
-  }
-
-  .desk-module-sidebar__item {
-    justify-content: center;
-    gap: 0;
-    padding-left: 0;
-    padding-right: 0;
-  }
-
-  // Notification count shrinks to a dot anchored on the icon.
+  // Notification count shrinks to a dot anchored on the icon (anchor from
+  // the LEFT — the row is 231px wide and clipped to 64px, so a right-based
+  // offset would put the dot outside the visible strip).
   .desk-module-sidebar__badge {
     position: absolute;
     top: 4px;
-    right: 16px;
+    left: 40px;
+    right: auto;
     min-width: 9px;
     width: 9px;
     height: 9px;
@@ -61,12 +63,6 @@ $rail-collapse-allowed: "(pointer: fine), (max-width: 767px), (min-width: 1025px
     font-size: 0;
     line-height: 0;
     margin-left: 0;
-  }
-
-  .desk-module-sidebar__footer-user-btn {
-    justify-content: center;
-    padding-left: 0;
-    padding-right: 0;
   }
 }
 
@@ -146,6 +142,31 @@ $rail-collapse-allowed: "(pointer: fine), (max-width: 767px), (min-width: 1025px
     height: auto;
     width: 231px;
     transition: width 0.18s ease;
+
+    // Pin the content columns at the EXPANDED width. The hover animation
+    // then only moves __main's clipping edge (overflow: hidden above) —
+    // without this, every label in the nav + workspace list + footer
+    // re-wraps on each of the ~11 width-transition frames, which is the
+    // main-thread cost behind the reported hover stutter.
+    .desk-module-sidebar__nav,
+    .desk-module-sidebar__footer {
+      width: 231px;
+      min-width: 231px;
+      box-sizing: border-box;
+      flex-shrink: 0;
+    }
+
+    // Fade metrics for the mini-mode labels (see sidebar-mini-icons):
+    // visibility participates in the transition so hidden labels are
+    // also removed from hit-testing once the fade completes.
+    .desk-module-sidebar__item-text,
+    .desk-module-sidebar__header,
+    .desk-module-sidebar__workspace,
+    .desk-module-sidebar__footer-name-wrapper,
+    .desk-module-sidebar__footer-user-plan,
+    .desk-module-sidebar__logo-pin-btn {
+      transition: opacity 0.15s ease, visibility 0.15s;
+    }
   }
 
   &__rail[data-collapsed="1"] &__main {
