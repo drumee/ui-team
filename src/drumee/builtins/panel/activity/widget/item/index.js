@@ -280,6 +280,17 @@ class __activity_item extends LetcBox {
       }
       return;
     }
+    if (service === 'join-meeting' || service === 'open-meeting-chat') {
+      // Meeting notification. The green button joins the call directly
+      // ('join-meeting'); clicking the row opens the folder chat where the
+      // meeting is happening ('open-meeting-chat'). Both are owned by the
+      // activity panel (logicalParent) — it holds the live meeting-item list —
+      // so forward via triggerHandlers to navigate + clear the item there.
+      // (Previously these fell through to _dispatchService, which handles only
+      // toggle-favorite/dismiss-activity, so the click did nothing.)
+      this.triggerHandlers({ service, hub_id: this.mget('hub_id') });
+      return;
+    }
     if (service) {
       this._dispatchService(cmd, args)
       return;

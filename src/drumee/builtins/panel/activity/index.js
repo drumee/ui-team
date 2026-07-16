@@ -347,6 +347,31 @@ class __panel_activity extends LetcBox {
         this.setState(0);
         return;
       }
+
+      case 'open-meeting-chat': {
+        // Row click on a meeting notification (NOT the green Join button): open
+        // the folder chat where the meeting is happening — the folder's Chat tab
+        // renders the meeting-start card whose own Join button lets the user join
+        // when ready. Uses the same desk "open" route as the teamchat row. Clears
+        // the live meeting item + closes the panel, mirroring join-meeting.
+        const item = this._findActivityItem(cmd);
+        const hub_id = (args && args.hub_id) || (item && item.mget && item.mget('hub_id'));
+        const details = (item && item.mget && item.mget('details')) || {};
+        const folderNid = details.nid || details.actual_home_id
+          || (item && item.mget && item.mget('room_id')) || 0;
+        if (hub_id) {
+          const ts = new Date().getTime();
+          location.hash = `#/desk/wm/open/?hub_id=${hub_id}&nid=${folderNid}&filetype=folder&pid=0&activeTab=${_a.chat}&ts=${ts}`;
+        }
+        const item_key = item && item.mget && item.mget('item_key');
+        if (item_key) {
+          this._meetingItems = (this._meetingItems || []).filter(m => m.item_key !== item_key);
+          this.refreshActivity(0);
+        }
+        this.activityState = 0;
+        this.setState(0);
+        return;
+      }
     }
   }
 
