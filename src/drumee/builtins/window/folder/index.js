@@ -481,6 +481,17 @@ class __window_folder extends mfsInteract {
     // live role changes re-run this via _applyLivePrivilege. Deferred until the
     // body is rendered so the chat-panel part exists.
     this.ensurePart("folder-view").then(() => this._syncChatGate());
+    // A folder opened WITHOUT a privilege value gates the chat for everyone —
+    // even a full-permission member — because _privilegeGrantsChat reads
+    // mget(privilege). This happens when the window is opened from a context
+    // whose payload carries no privilege (e.g. a meeting notification, whose
+    // mfs_node_attr payload has no privilege field). Self-heal: fetch this
+    // node's attributes for the CURRENT viewer (mfs_access_node → their real
+    // privilege) and re-sync the gate. Guarded to run ONLY when privilege is
+    // missing, so normally-opened folders (which already carry privilege) are
+    // untouched — no extra request, no behaviour change, and it can never grant
+    // more than the viewer actually has (view-only members stay correctly gated).
+    if (this.mget(_a.privilege) == null) this._healChatPrivilege();
     // Honor a launch-time file-chat scope (opened from a "file.thread" card
     // outside any folder window): scope the chat to that file IN PLACE — no
     // auto-switch to the full Chat tab (the window opens on its default tab and
@@ -3386,6 +3397,32 @@ class __window_folder extends mfsInteract {
     // Attribute is data-chat_gated (underscore): the skeleton sets it via
     // dataset:{chat_gated}, which the framework renders literally as data-${k}.
     this.$el.find(".window__chat-panel").attr("data-chat_gated", gated);
+  }
+
+  // Resolve the viewer's real privilege for this node when the window opened
+  // without one (see buildContent), then re-sync the chat gate. Uses the same
+  // read-only node-attributes fetch the desk reveal path uses
+  // (media.attributes → mfs_access_node → user_permission(this.uid, node)); it
+  // returns THIS viewer's own privilege only, so it can never elevate access —
+  // a view-only member still resolves a non-chat privilege and stays gated.
+  async _healChatPrivilege() {
+    const nid = this.mget(_a.nid);
+    const hub_id = this.mget(_a.hub_id);
+    if (nid == null || `${nid}` === "" || `${nid}` === "0") return;
+    try {
+      const node = await this.fetchService(
+        { service: SERVICE.media.attributes, nid, hub_id },
+        { async: 1 },
+      );
+      // Apply only if a real bitmask came back AND privilege is still unset
+      // (don't clobber a value a live set_privilege may have set meanwhile).
+      if (node && node.privilege != null && this.mget(_a.privilege) == null) {
+        this.mset(_a.privilege, Number(node.privilege));
+        this.ensurePart("folder-view").then(() => this._syncChatGate());
+      }
+    } catch (e) {
+      if (this.warn) this.warn("[folder] chat-privilege heal failed", e && e.message);
+    }
   }
 
   // Show / clear the inline validation message in the invite-error slot below

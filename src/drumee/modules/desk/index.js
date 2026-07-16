@@ -1359,6 +1359,11 @@ class desk_module extends LetcBox {
           p.setState(state);
           if (state) {
             this.closeOtherSidebarPanels("activity-panel");
+            // Bell opened: re-fetch the feed so a notification that arrived while
+            // it was closed shows without a full page reload. Opening goes through
+            // this desk toggle (setState directly), not the panel's own open
+            // handler, so the refresh must be triggered here.
+            if (typeof p.refreshFeed === "function") p.refreshFeed();
           }
         });
 
