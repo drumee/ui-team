@@ -183,9 +183,9 @@ class __window_manager extends mfsInteract {
       this.captured = this._target.captured;
     }
     if (this.captured && this.captured.over) {
-      // Drop onto a folder tile -> upload INTO that folder.
+      // Drop / pick onto a folder tile -> upload INTO that folder.
       const dest = this.captured.over;
-      if (e.type === _e.drop) {
+      if (e.type === _e.drop || e.type === _e.change) {
         this._bundleDrop(dest, e, token);
         if (dest.on) dest.on(_e.reset, () => (this.captured.over = null));
         setTimeout(this.resetShift.bind(this), 300);
@@ -221,9 +221,11 @@ class __window_manager extends mfsInteract {
       return;
     }
 
-    // Drag-drop (file + folder, mixed) -> route through the proven make_dir-first
-    // bundle orchestrator (BundleJob) instead of legacy per-pseudo upload.
-    if (e.type === _e.drop) {
+    // Drag-drop AND file-picker (mobile / Upload button) -> proven make_dir-first
+    // BundleJob. Mobile multi-select is a `change` event from <input multiple>;
+    // the legacy sendTo path spawned one media_uploader per file and flooded
+    // the gateway. Non-file drops still fall through to sendTo inside _bundleDrop.
+    if (e.type === _e.drop || e.type === _e.change) {
       this._bundleDrop(target, e, token);
       setTimeout(this.resetShift.bind(this), 300);
       return;
@@ -283,44 +285,59 @@ class __window_manager extends mfsInteract {
   }
 
   /**
-   * Read a file/folder drop into a stable BundleEntry tree and run it through the
-   * bundle orchestrator (make_dir-first, sequential upload, shared-hub safe).
-   * Handles mixed file+folder drops uniformly. Falls back to the legacy sendTo
-   * for non-file drops (text, links).
+   * Read a file/folder drop OR a file-picker selection into a stable BundleEntry
+   * tree and run it through the bundle orchestrator (make_dir-first, shared-hub
+   * safe). Handles mixed file+folder drops and mobile multi-select uniformly.
+   * Falls back to the legacy sendTo for non-file drops (text, links).
    * @param {*} target  drop destination (folder window or folder tile)
-   * @param {*} e       the drop event
+   * @param {*} e       the drop or change (FileSelector) event
    * @param {*} token
    */
   async _bundleDrop(target, e, token) {
-    let transfer;
-    try {
-      transfer = dataTransfer(e); // synchronous: captures FileSystemEntry items NOW
-    } catch (err) {
-      transfer = null;
+    const Entry = require("media/bundle/entry");
+    const UploadProgress = require("./upload-progress");
+    let roots = [];
+
+    if (e && e.type === _e.change) {
+      // Capture FileList immediately — iOS/Android can empty e.target.files
+      // after the change handler returns (or after the input is reused).
+      const fileList = e.target && e.target.files;
+      if (!fileList || !fileList.length) return;
+      try {
+        roots = Entry.entriesFromFileList(Array.from(fileList));
+      } catch (err) {
+        this.warn("picker read failed", err);
+        roots = [];
+      }
+    } else {
+      let transfer;
+      try {
+        transfer = dataTransfer(e); // synchronous: captures FileSystemEntry items NOW
+      } catch (err) {
+        transfer = null;
+      }
+      if (!transfer || (!transfer.files.length && !transfer.folders.length)) {
+        if (target && target.acceptMedia) this.sendTo(target, e, 0, token); // non-file drop -> legacy
+        return;
+      }
+      try {
+        roots = await Entry.entriesFromDataTransfer(transfer);
+      } catch (err) {
+        this.warn("drop read failed", err);
+        roots = [];
+      }
     }
-    if (!transfer || (!transfer.files.length && !transfer.folders.length)) {
-      if (target && target.acceptMedia) this.sendTo(target, e, 0, token); // non-file drop -> legacy
-      return;
-    }
+
     if (!this._canUploadToTarget(target)) {
       this._rejectUploadTarget();
       return;
-    }
-    const destNid = (target && typeof target.getCurrentNid === "function") ? target.getCurrentNid() : null;
-    const hub_id = (target && typeof target.mget === "function") ? target.mget(_a.hub_id) : null;
-    const Entry = require("media/bundle/entry");
-    const UploadProgress = require("./upload-progress");
-    let roots;
-    try {
-      roots = await Entry.entriesFromDataTransfer(transfer);
-    } catch (err) {
-      this.warn("drop read failed", err);
-      roots = [];
     }
     if (!roots.length) {
       Butler.say(LOCALE.UPLOAD_ERROR || "Nothing to upload");
       return;
     }
+    const destNid = (target && typeof target.getCurrentNid === "function") ? target.getCurrentNid() : null;
+    const hub_id = (target && typeof target.mget === "function") ? target.mget(_a.hub_id) : null;
     UploadProgress.runBundle(roots, destNid, hub_id, (target && target.acceptMedia) ? target : null);
   }
 
