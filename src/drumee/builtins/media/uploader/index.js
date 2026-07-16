@@ -49,6 +49,7 @@ class __media_uploader extends LetcBox {
    */
   onDestroy() {
     clearInterval(this.spoolTimer);
+    this.spoolTimer = null;
   }
 
   /**
@@ -56,6 +57,7 @@ class __media_uploader extends LetcBox {
    */
   _onCompletion() {
     clearInterval(this.spoolTimer);
+    this.spoolTimer = null;
     this.status = _a.end;
     this.trigger(_e.eod);
     this.softDestroy();
@@ -232,6 +234,7 @@ class __media_uploader extends LetcBox {
     this._pendingCount--;
     if (this._canceled) {
       clearInterval(this.spoolTimer);
+      this.spoolTimer = null;
       this.trigger(_e.cancel);
       return;
     }
@@ -404,6 +407,7 @@ class __media_uploader extends LetcBox {
   _run() {
     if (this._canceled) {
       clearInterval(this.spoolTimer);
+      this.spoolTimer = null;
       return;
     }
     // Bounded concurrency: keep up to _maxParallel uploads in flight so the
