@@ -979,19 +979,26 @@ class ___widget_chatItem extends LetcBox {
           this._joiningMeeting = false;
         }, 800);
 
-        // Prefer to switch the tab on the folder window the user is already in.
-        // Walk up to the containing window_folder; if it matches, just switch
-        // to the meeting tab — no Wm.launch, no reload.
+        // Reuse the folder window the user is already in (or any open one for
+        // the same hub) — but actually JOIN the live room. showFolderTab
+        // ("meeting") only renders the schedule calendar, so members of a
+        // shared folder who clicked Join with the folder open got a tab
+        // switch instead of the call — and a dead click once already on the
+        // meeting tab. _launchMeetingInPanel is re-click safe: it raises the
+        // existing call window (with an "already in a call" alert) when one
+        // is open, and debounces via _launchingMeeting.
+        const joinVia = (folder) => {
+          if (folder.raise) folder.raise();
+          if (typeof folder._launchMeetingInPanel === "function") {
+            folder._launchMeetingInPanel();
+          } else if (folder.showFolderTab) {
+            folder.showFolderTab("meeting"); // legacy fallback
+          }
+        };
         const ownFolder =
           this.getParentByKind && this.getParentByKind("window_folder");
-        if (
-          ownFolder &&
-          ownFolder.mget(_a.hub_id) == hub_id &&
-          ownFolder.showFolderTab
-        ) {
-          if (ownFolder.activeTab === "meeting") return;
-          ownFolder.showFolderTab("meeting");
-          if (ownFolder.raise) ownFolder.raise();
+        if (ownFolder && ownFolder.mget(_a.hub_id) == hub_id) {
+          joinVia(ownFolder);
           return;
         }
 
@@ -1001,9 +1008,8 @@ class ___widget_chatItem extends LetcBox {
           (Wm.getItemsByKind && Wm.getItemsByKind("window_folder")) ||
           []
         ).find((w) => !w.isDestroyed() && w.mget(_a.hub_id) == hub_id);
-        if (existing && existing.showFolderTab) {
-          existing.showFolderTab("meeting");
-          if (existing.raise) existing.raise();
+        if (existing) {
+          joinVia(existing);
           return;
         }
 

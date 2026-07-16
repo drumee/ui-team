@@ -314,16 +314,28 @@ class __panel_activity extends LetcBox {
         if (hub_id && typeof Wm !== 'undefined' && Wm.addWindow) {
           const folderNid = details.nid || details.actual_home_id || room_id;
           try {
-            Wm.addWindow({
-              kind: 'window_folder',
-              hub_id,
-              nid: folderNid,
-              filename: details.filename || details.user_filename || '',
-              area: details.area,
-              activeTab: 'meeting',
-              room_id,
-              room_type,
-            });
+            // Reuse an already-open folder window for this hub and JOIN the
+            // live room on it — addWindow has no dedup, so it used to stack a
+            // duplicate folder window; and only a fresh window's buildContent
+            // honors activeTab:'meeting', so the duplicate was also the only
+            // reason the join fired at all.
+            const open = ((Wm.getItemsByKind && Wm.getItemsByKind('window_folder')) || [])
+              .find((w) => !w.isDestroyed() && w.mget(_a.hub_id) == hub_id);
+            if (open && typeof open._launchMeetingInPanel === 'function') {
+              if (open.raise) open.raise();
+              open._launchMeetingInPanel();
+            } else {
+              Wm.addWindow({
+                kind: 'window_folder',
+                hub_id,
+                nid: folderNid,
+                filename: details.filename || details.user_filename || '',
+                area: details.area,
+                activeTab: 'meeting',
+                room_id,
+                room_type,
+              });
+            }
           } catch (e) { this.warn('join-meeting: addWindow failed', e); }
         }
         const item_key = item && item.mget && item.mget('item_key');
