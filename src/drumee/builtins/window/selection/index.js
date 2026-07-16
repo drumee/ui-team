@@ -9,9 +9,10 @@ class desk_selection extends Rectangle {
     this.enable = this.enable.bind(this);
     this.disable = this.disable.bind(this);
     this.onDomRefresh = this.onDomRefresh.bind(this);
-    this._pointerdown = this._pointerdown.bind(this);
-    this._pointermove = this._pointermove.bind(this);
-    this._pointerup = this._pointerup.bind(this);
+    // NB: the pointer handlers are bound in initialize(), NOT here —
+    // Backbone runs initialize() inside super() BEFORE this constructor
+    // body, so bindings made here would come too late for the .on()
+    // registrations (and a second bind would break off() matching again).
   }
 
   /**
@@ -20,9 +21,14 @@ class desk_selection extends Rectangle {
    */
   initialize(opt) {
     super.initialize(opt);
-    // Use the constructor-bound refs (see constructor) — a fresh `.bind()`
-    // here would create a wrapper off() can never match, permanently
-    // leaking 3 global pointer listeners on every Wm.reload() cycle.
+    // Bind ONCE onto the instance, then register the same refs — inline
+    // `.bind()` calls in on()/off() create wrappers Backbone's off() can
+    // never match, permanently leaking 3 global pointer listeners on every
+    // Wm.reload() cycle. (Binding must happen HERE: initialize runs inside
+    // super() before the constructor body.)
+    this._pointermove = this._pointermove.bind(this);
+    this._pointerdown = this._pointerdown.bind(this);
+    this._pointerup = this._pointerup.bind(this);
     RADIO_POINTER.on(_e.pointermove, this._pointermove);
     RADIO_POINTER.on(_e.pointerdown, this._pointerdown);
     RADIO_POINTER.on(_e.pointerup, this._pointerup);

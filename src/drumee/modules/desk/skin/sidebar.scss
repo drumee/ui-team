@@ -148,12 +148,14 @@ $rail-collapse-allowed: "(pointer: fine), (max-width: 767px), (min-width: 1025px
     // without this, every label in the nav + workspace list + footer
     // re-wraps on each of the ~11 width-transition frames, which is the
     // main-thread cost behind the reported hover stutter.
+    // Width only — no flex properties: __main is a COLUMN, so a
+    // flex-shrink here would act on the vertical axis and stop the nav
+    // from yielding height to the footer on short viewports.
     .desk-module-sidebar__nav,
     .desk-module-sidebar__footer {
       width: 231px;
       min-width: 231px;
       box-sizing: border-box;
-      flex-shrink: 0;
     }
 
     // Fade metrics for the mini-mode labels (see sidebar-mini-icons):
@@ -389,6 +391,10 @@ $rail-collapse-allowed: "(pointer: fine), (max-width: 767px), (min-width: 1025px
     width: 100%;
     padding: 0 24px;
     box-sizing: border-box;
+    // The mini rail swaps the 20px wordmark for the 28px compact mark —
+    // reserve the taller height so the row doesn't shift 8px at the
+    // hover boundary.
+    min-height: 28px;
   }
 
   &__logo {

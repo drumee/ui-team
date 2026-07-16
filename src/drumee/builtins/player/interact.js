@@ -88,10 +88,6 @@ class __window_interact_player extends __utils {
       height,
       position: _a.absolute,
       opacity: 0,
-      // While invisible (until display() reveals it) the player must not
-      // hit-test: a stuck opacity-0 player parked over the folder grid
-      // swallows every click on the tiles beneath it.
-      pointerEvents: "none",
       transformOrigin: `-${this.offset.left}px -${this.offset.top}px`,
     });
 
