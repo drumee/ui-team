@@ -240,28 +240,34 @@ class __tasks_panel extends LetcBox {
     const nextScope = scopeNid != null ? scopeNid : null;
     const nextRoot = isRoot ? 1 : 0;
     const nextDest = destNid != null ? destNid : this._destNid;
-    if (
+    const sameScope =
       this._scopeNid === nextScope &&
       this._scopeIsRoot === nextRoot &&
-      this._destNid === nextDest &&
-      // Same scope but the last list fetch failed silently: without this
-      // bypass, reopening the Tasks tab (which re-calls setScope with
-      // identical args) would latch the empty board until page reload.
-      !this._loadFailed
-    ) {
+      this._destNid === nextDest;
+    // Same scope and the last fetch succeeded: nothing to do. When the last
+    // list fetch failed silently, fall through to refetch — otherwise
+    // reopening the Tasks tab (which re-calls setScope with identical args)
+    // would latch the empty board until page reload.
+    if (sameScope && !this._loadFailed) {
       return;
     }
     this._scopeNid = nextScope;
     this._scopeIsRoot = nextRoot;
     this._destNid = nextDest;
-    // The create/detail popups and any pending file search belong to the
-    // folder we just left — close them so nothing commits into the new scope.
-    this._creating = false;
-    this._createDefaults = null;
-    this._detailId = null;
-    this._detailDraft = null;
-    this._pickerOpen = null;
-    if (typeof this._resetFileSearch === "function") this._resetFileSearch();
+    if (!sameScope) {
+      // The create/detail popups, pending file search AND the loaded rows
+      // belong to the folder we just left — close/drop them so nothing
+      // commits into (or renders on) the new scope. On a failed-load RETRY
+      // of the SAME scope, keep all of it: wiping here would discard the
+      // user's open draft just because the board needed a refetch.
+      this._creating = false;
+      this._createDefaults = null;
+      this._detailId = null;
+      this._detailDraft = null;
+      this._pickerOpen = null;
+      this._tasks = [];
+      if (typeof this._resetFileSearch === "function") this._resetFileSearch();
+    }
     if (!this.el) return; // not mounted yet — onDomRefresh loads fresh
     Promise.all([
       this._loadTasks(),

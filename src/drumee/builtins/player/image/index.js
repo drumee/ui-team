@@ -15,6 +15,12 @@ class __player_image extends __core {
   initialize(opt) {
     super.initialize(opt);
     this.style.set(_K.imagePlayer);
+    // While invisible (opacity:0 until display() reveals it) the player
+    // must not hit-test: a stuck hidden player parked over the folder grid
+    // swallows every click on the tiles beneath it. Scoped to the image
+    // player — its display() and load-failsafe are the only reveal paths;
+    // other players (e.g. props_viewer) reveal without calling display().
+    this.style.set({ pointerEvents: "none" });
     this.contentKind = "image_smart";
     const { url } = this.actualNode();
     this._play = this._play.bind(this);
@@ -37,7 +43,10 @@ class __player_image extends __core {
  * @param {*} pn 
  */
   onPartReady(child, pn) {
-    this.raise();
+    // Raise only while the window is being brought up — a late async
+    // re-feed (rotate, WS refresh) must not steal the top spot from
+    // whatever window the user is focused on.
+    if (!this._raisedOnDisplay) this.raise();
     switch (pn) {
       case "slider-content":
         if (child._loaded) {
@@ -735,7 +744,25 @@ class __player_image extends __core {
     };
     this._loadErrorTarget = child.el;
     child.el.addEventListener(_e.error, this._loadErrorHandler, true);
-    this._loadWatchdog = setTimeout(() => fail("image load stalled"), 30000);
+    // Stall watchdog: only kill genuinely dead loads. An image whose bytes
+    // already arrived (naturalWidth > 0) but whose 'loaded' signal was
+    // missed (image_smart's 200ms poll race) gets revealed instead of
+    // killed; an <img> still transferring on a slow network gets one more
+    // grace period instead of a misleading network-error teardown.
+    const onWatchdog = (attempt) => {
+      if (this.isDestroyed() || this.el.dataset.ready == 1) return;
+      const el = child.el;
+      if (el && el.naturalWidth > 0) {
+        this.display(child);
+        return;
+      }
+      if (el && !el.complete && attempt < 2) {
+        this._loadWatchdog = setTimeout(() => onWatchdog(attempt + 1), 30000);
+        return;
+      }
+      fail("image load stalled");
+    };
+    this._loadWatchdog = setTimeout(() => onWatchdog(1), 30000);
   }
 
   /**
