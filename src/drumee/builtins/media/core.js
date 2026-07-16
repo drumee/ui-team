@@ -1254,6 +1254,11 @@ class __media_core extends DrumeeMFS {
     }
     this.spinner(state, timeout);
     this._isWaiting = state;
+    // Stamp the latch so interact's click guard can expire it: nothing
+    // guarantees the opener calls wait(0) on failure (e.g. a player that
+    // never finishes loading), and a stuck _isWaiting makes the tile
+    // permanently unopenable until page reload.
+    this._waitingSince = state ? timestamp() : 0;
   }
 
   /**

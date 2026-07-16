@@ -747,22 +747,76 @@ class __window_core extends __utils {
     const { nid, hub_id } = aw.getCurrentApi();
     const name = cmd && cmd.mget && cmd.mget(_a.name);
 
+    // Immediate feedback: the add-menu closes on click and, until the tile
+    // used to land via the media.new WS broadcast, nothing at all rendered —
+    // on a slow round-trip the flow looked dead for many seconds. NB: no
+    // timeout arg — spinner(state, timeout) DELAYS the spinner by timeout
+    // instead of auto-clearing it; the resolve/reject paths below clear it.
+    aw.spinner(1);
     this.postService(service, { nid, hub_id, name })
       .then((data) => {
-        if (!data || !data.nid) return;
-        const timer = setInterval(() => {
+        aw.spinner(0);
+        if (!data || !data.nid) {
+          Wm.alert(LOCALE.ERROR_NETWORK);
+          return;
+        }
+        // Open the editor straight from the response (like the DMZ
+        // file-share branch) instead of gating it behind the media.new
+        // broadcast + a 500ms poll: a delayed or dropped broadcast used to
+        // dead-end the whole flow silently after 30s. Build a detached
+        // media widget from node_info and run it through openContent — the
+        // same route a tile takes — so the app kind resolves from filetype
+        // (fetchMediaAttributes/launch would need a `kind` we don't have).
+        const openDirect = async () => {
+          try {
+            const r = await this.fetchService(
+              {
+                service: SERVICE.media.node_info,
+                nid: data.nid,
+                hub_id: data.hub_id || hub_id,
+              },
+              { async: 1 },
+            );
+            if (!r || !r.nid) return;
+            const k = await Kind.waitFor(_a.media);
+            const media = new k({ model: new Backbone.Model(r) });
+            this.openContent(media, { service: "open-node", mode: _a.edit });
+          } catch (e) {
+            this.warn("newDocument: direct open failed", e);
+          }
+        };
+        // Prefer the grid tile when the broadcast already delivered it —
+        // opening through the tile keeps its state wiring (seen/spinner).
+        const opened = { done: 0 };
+        const openFromTile = () => {
           for (let media of aw.getItemsByAttr(_a.nid, data.nid)) {
             if (/^media/.test(media.mget(_a.kind))) {
-              clearInterval(timer);
+              opened.done = 1;
               media.wait(1);
               this.openContent(media, { service: "open-node", mode: _a.edit });
+              return true;
             }
           }
+          return false;
+        };
+        if (openFromTile()) return;
+        const timer = setInterval(() => {
+          if (openFromTile()) clearInterval(timer);
         }, 500);
-        setTimeout(() => clearInterval(timer), 30000);
+        // The tile normally lands within a couple of WS round-trips; if it
+        // hasn't after 4s, stop waiting and open from the response directly.
+        setTimeout(() => {
+          clearInterval(timer);
+          if (!opened.done) {
+            opened.done = 1;
+            openDirect();
+          }
+        }, 4000);
       })
       .catch((e) => {
+        aw.spinner(0);
         this.warn("newDocument: server error", e);
+        Wm.alert(LOCALE.ERROR_NETWORK);
         if (this.onServerError) this.onServerError(e);
       });
   }
