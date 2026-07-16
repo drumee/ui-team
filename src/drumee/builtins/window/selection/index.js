@@ -20,9 +20,12 @@ class desk_selection extends Rectangle {
    */
   initialize(opt) {
     super.initialize(opt);
-    RADIO_POINTER.on(_e.pointermove, this._pointermove.bind(this));
-    RADIO_POINTER.on(_e.pointerdown, this._pointerdown.bind(this));
-    RADIO_POINTER.on(_e.pointerup, this._pointerup.bind(this));
+    // Use the constructor-bound refs (see constructor) — a fresh `.bind()`
+    // here would create a wrapper off() can never match, permanently
+    // leaking 3 global pointer listeners on every Wm.reload() cycle.
+    RADIO_POINTER.on(_e.pointermove, this._pointermove);
+    RADIO_POINTER.on(_e.pointerdown, this._pointerdown);
+    RADIO_POINTER.on(_e.pointerup, this._pointerup);
 
     this.enable();
     window.Selector = this;
@@ -53,9 +56,9 @@ class desk_selection extends Rectangle {
    * 
    */
   onDestroy() {
-    RADIO_POINTER.off(_e.pointermove, this._pointermove.bind(this));
-    RADIO_POINTER.off(_e.pointerdown, this._pointerdown.bind(this));
-    RADIO_POINTER.off(_e.pointerup, this._pointerup.bind(this));
+    RADIO_POINTER.off(_e.pointermove, this._pointermove);
+    RADIO_POINTER.off(_e.pointerdown, this._pointerdown);
+    RADIO_POINTER.off(_e.pointerup, this._pointerup);
   }
 
   /**

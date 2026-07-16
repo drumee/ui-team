@@ -243,7 +243,11 @@ class __tasks_panel extends LetcBox {
     if (
       this._scopeNid === nextScope &&
       this._scopeIsRoot === nextRoot &&
-      this._destNid === nextDest
+      this._destNid === nextDest &&
+      // Same scope but the last list fetch failed silently: without this
+      // bypass, reopening the Tasks tab (which re-calls setScope with
+      // identical args) would latch the empty board until page reload.
+      !this._loadFailed
     ) {
       return;
     }
@@ -1450,9 +1454,21 @@ class __tasks_panel extends LetcBox {
         nid: this._scopeNid,
         include_unscoped: this._scopeIsRoot,
       });
-      this._tasks = (Array.isArray(rows) ? rows : []).map(this._normalizeTask);
+      // fetchService never rejects (doRequest swallows every failure via
+      // onServerComplain and resolves undefined / the raw error payload), so
+      // a non-array IS the error path. Don't blank an already-loaded board
+      // over a transient failure — keep the previous rows and flag the load
+      // so the next tab visit retries instead of latching empty.
+      if (Array.isArray(rows)) {
+        this._tasks = rows.map(this._normalizeTask);
+        this._loadFailed = 0;
+      } else {
+        this._loadFailed = 1;
+        if (!Array.isArray(this._tasks)) this._tasks = [];
+      }
     } catch (err) {
-      this._tasks = [];
+      this._loadFailed = 1;
+      if (!Array.isArray(this._tasks)) this._tasks = [];
     }
   }
 
@@ -1912,16 +1928,21 @@ class __tasks_panel extends LetcBox {
           ),
           ...pendingFiles.map(linkPending),
         ]);
+        // Tear down the form only after a successful create — postService
+        // resolves undefined (or an error payload with no id) on failure, so
+        // the teardown must live INSIDE this success branch or a failed
+        // create silently closes the modal and discards the user's draft.
+        this._creating = false;
+        this._createDefaults = null;
+        this._pickerOpen = null;
+        this._resetFileSearch();
+        await this._loadTasks();
+      } else {
+        Wm.alert(LOCALE.ERROR_NETWORK);
       }
-      // Tear down the form only after a successful create — failures keep
-      // the modal open with the user's input intact.
-      this._creating = false;
-      this._createDefaults = null;
-      this._pickerOpen = null;
-      this._resetFileSearch();
-      await this._loadTasks();
     } catch (err) {
       console.error("[tasks_panel] task.create failed:", err);
+      Wm.alert(LOCALE.ERROR_NETWORK);
     }
     this._setSubmitting(".tasks-panel__create-submit", false);
     this._render();
@@ -1936,7 +1957,12 @@ class __tasks_panel extends LetcBox {
         hub_id: this._hubId,
         id,
       });
-      if (!resp || (resp.affected !== 1 && resp.id !== id)) return;
+      if (!resp || (resp.affected !== 1 && resp.id !== id)) {
+        // postService resolves falsy/error-payload on failure (it never
+        // rejects) — surface it instead of silently ignoring the delete.
+        Wm.alert(LOCALE.ERROR_NETWORK);
+        return;
+      }
       this._tasks = this._tasks.filter((t) => t.id !== id);
       if (this._detailId === id) {
         this._detailId = null;
@@ -1966,7 +1992,15 @@ class __tasks_panel extends LetcBox {
         id,
         status: next,
       });
-      this._mergeTask(Array.isArray(updated) ? updated[0] : updated);
+      const row = Array.isArray(updated) ? updated[0] : updated;
+      if (row && row.id) {
+        this._mergeTask(row);
+      } else {
+        // Failed silently (postService never rejects): revert the
+        // optimistic flip instead of leaving unsaved state on screen.
+        task.status = originalStatus;
+        this._render();
+      }
     } catch (err) {
       console.error("[tasks_panel] toggle-complete failed:", err);
       task.status = originalStatus;

@@ -46,6 +46,7 @@ class __player_image extends __core {
         child.on(_e.loaded, (image) => {
           this.display(image)
         });
+        this._armLoadFailsafe(child);
         break;
       case _a.content:
         /** DO NOT REMOVE */
@@ -123,6 +124,7 @@ class __player_image extends __core {
   */
   onDestroy() {
     RADIO_KBD.off(_e.keyup, this._keyup_bind);
+    this._disarmLoadFailsafe();
   }
 
 
@@ -663,6 +665,14 @@ class __player_image extends __core {
     const naturalH = el.naturalHeight;
     if (!naturalW || !naturalH) return;
 
+    // The image made it: disarm the load failsafe and make the (until now
+    // opacity-0, non-interactive) window real. The base display() does this
+    // for other players; this override must mirror it, otherwise the player
+    // stays an invisible click-trap over the folder grid.
+    this._disarmLoadFailsafe();
+    this.el.dataset.ready = 1;
+    this.el.style.pointerEvents = "";
+
     // Reserve vertical space for the player chrome (topbar + bottom controls).
     const CHROME_H = 132;
     const max_w = window.innerWidth - 100;
@@ -681,8 +691,9 @@ class __player_image extends __core {
       const canvasSide = Math.min(naturalMax, max_w, max_h);
       width = canvasSide;
       height = canvasSide + CHROME_H;
-      left = Math.max(20, (window.innerWidth - width) / 2);
-      top = Math.max(20, (window.innerHeight - height) / 2);
+      const shift = this._stackShift || 0;
+      left = Math.max(20, (window.innerWidth - width) / 2) + shift;
+      top = Math.max(20, (window.innerHeight - height) / 2) + shift;
     }
 
     this.size = { width, height };
@@ -690,10 +701,59 @@ class __player_image extends __core {
     this.anti_overlap(this._pos);
 
     if (this._isPlaying) {
-      TweenMax.to(this.$el, 1.5, { width, height });
+      // Keep `alpha: 1` here too: `_play()` can flip `_isPlaying` before the
+      // first image finishes loading, and this branch used to leave the
+      // window permanently invisible in that race.
+      TweenMax.to(this.$el, 1.5, { width, height, alpha: 1 });
     } else {
       this.$el.css({ width, height, ...this._pos });
       TweenMax.to(this.$el, 0.5, { alpha: 1 });
+    }
+  }
+
+  /**
+   * The window is revealed only by display(), which fires only when the
+   * <img> actually loads — ui-core's image_smart installs no onerror and
+   * its high-quality poll never resolves on a 404. If the preview/slide
+   * asset fails, the player would otherwise stay a permanent invisible
+   * overlay and the source tile would keep its wait-latch. Watch for load
+   * errors (capture phase — error events don't bubble) plus a generous
+   * stall timeout, and tear the player down cleanly via failedToStart()
+   * (suppress + media.wait(0) + network alert).
+   */
+  _armLoadFailsafe(child) {
+    this._disarmLoadFailsafe();
+    const fail = (reason) => {
+      if (this.isDestroyed() || this.el.dataset.ready == 1) return;
+      this.failedToStart(reason);
+    };
+    this._loadErrorHandler = (e) => {
+      const img = e.target;
+      if (!img || img.tagName !== "IMG") return;
+      // Only fatal while nothing has been displayed yet.
+      if (this.el.dataset.ready != 1) fail(`image failed to load: ${img.src}`);
+    };
+    this._loadErrorTarget = child.el;
+    child.el.addEventListener(_e.error, this._loadErrorHandler, true);
+    this._loadWatchdog = setTimeout(() => fail("image load stalled"), 30000);
+  }
+
+  /**
+   *
+   */
+  _disarmLoadFailsafe() {
+    if (this._loadWatchdog) {
+      clearTimeout(this._loadWatchdog);
+      this._loadWatchdog = null;
+    }
+    if (this._loadErrorTarget && this._loadErrorHandler) {
+      this._loadErrorTarget.removeEventListener(
+        _e.error,
+        this._loadErrorHandler,
+        true
+      );
+      this._loadErrorTarget = null;
+      this._loadErrorHandler = null;
     }
   }
 

@@ -4,6 +4,23 @@ const { timestamp, loadJS, toggleState } = require("@drumee/ui-essentials")
 const Rectangle = require('rectangle-node');
 const OPEN_NODE = "open-node";
 const ECHO_ID = "echoId";
+
+// Vignette cache, shared by every media tile. Each render used to re-XHR its
+// thumbnail blob — and Wm.reload() (every Home click) re-renders EVERY tile,
+// re-downloading all thumbs and re-firing a 404 per missing one. Hits are
+// keyed by the versioned URL, so a content change (new mtime → new URL)
+// naturally misses. Misses are remembered only briefly: thumbs are generated
+// asynchronously after upload, so a 404 must be retried on a later render.
+const VIGNETTE_CACHE_MAX = 600;
+const VIGNETTE_MISS_TTL = 60000;
+const _vignetteCache = new Map();
+function _vignetteRemember(url, entry) {
+  if (_vignetteCache.size >= VIGNETTE_CACHE_MAX) {
+    const first = _vignetteCache.keys().next().value;
+    _vignetteCache.delete(first);
+  }
+  _vignetteCache.set(url, entry);
+}
 require("./skin");
 const media_core = require("./core");
 const { copyToClipboard } = require("@drumee/ui-essentials")
@@ -289,7 +306,14 @@ class __media_interact extends media_core {
     if (service != "tick") {
       let delay = 1000;
       if (this.mget(_a.filetype) === _a.document) delay = 5000;
-      if (this._isWaiting || timestamp() - this._clickTimestap < delay)
+      // The wait-latch expires after 30s: openers are supposed to call
+      // wait(0), but a failed open (player never loads) may not, and a
+      // stale latch would otherwise lock this tile until page reload.
+      const stillWaiting =
+        this._isWaiting &&
+        this._waitingSince &&
+        timestamp() - this._waitingSince < 30000;
+      if (stillWaiting || timestamp() - this._clickTimestap < delay)
         return;
     }
     this._clickTimestap = timestamp();
@@ -444,7 +468,26 @@ class __media_interact extends media_core {
     switch (filetype) {
       case _a.video:
       case _a.image:
-      case _a.vector:
+      case _a.vector: {
+        const showMissing = () => {
+          this.mset(_a.capability, 0);
+          this.content.el.innerHTML = this.innerContent(this);
+          this._setupInteract();
+          this.trigger("content-ready");
+        };
+        const showThumb = (blobUrl) => {
+          this.mset(_a.url, blobUrl);
+          this.content.el.innerHTML = this.innerContent(this, blobUrl);
+          this._setupInteract();
+          this.trigger("content-ready");
+        };
+        const cached = _vignetteCache.get(url);
+        if (cached) {
+          if (cached.blobUrl) return showThumb(cached.blobUrl);
+          if (timestamp() - cached.missedAt < VIGNETTE_MISS_TTL)
+            return showMissing();
+          _vignetteCache.delete(url);
+        }
         this.fetchFile({ url })
           .then(async (blob) => {
             if (!blob) {
@@ -453,10 +496,8 @@ class __media_interact extends media_core {
             }
             switch (blob.error) {
               case 404:
-                this.mset(_a.capability, 0);
-                this.content.el.innerHTML = this.innerContent(this);
-                this._setupInteract();
-                this.trigger("content-ready");
+                _vignetteRemember(url, { missedAt: timestamp() });
+                showMissing();
                 // Missing vignette is common for stale dev data or not-yet-generated thumbs.
                 if (this.verbose) {
                   this.verbose(`Vignette not found ${url}, showing fallback icon`);
@@ -467,10 +508,8 @@ class __media_interact extends media_core {
             }
 
             let u = URL.createObjectURL(blob);
-            this.mset(_a.url, u);
-            this.content.el.innerHTML = this.innerContent(this, u);
-            this._setupInteract();
-            this.trigger("content-ready");
+            _vignetteRemember(url, { blobUrl: u });
+            showThumb(u);
           })
           .catch((e) => {
             this.mset({ filetype: _a.error });
@@ -478,6 +517,7 @@ class __media_interact extends media_core {
             this._setupInteract();
           });
         break;
+      }
       default:
         this.content.el.innerHTML = this.innerContent(this);
         this._setupInteract();
