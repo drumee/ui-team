@@ -1248,8 +1248,17 @@ class __tasks_panel extends LetcBox {
       case "comment-mention-insert":
         return this._insertMentionTrigger(trigger.mget("mentionScope"));
 
-      case "comment-react":
-        return this._toggleReaction(trigger);
+      case "comment-react-add":
+        return this._addReaction(
+          trigger.mget("commentId"),
+          trigger.mget("emoji"),
+        );
+
+      case "comment-react-remove":
+        return this._removeReaction(
+          trigger.mget("commentId"),
+          trigger.mget("emoji"),
+        );
 
       case "comment-react-toggle": {
         const cid = trigger.mget("commentId");
@@ -2455,15 +2464,62 @@ class __tasks_panel extends LetcBox {
     if (this._detailId === taskId) this._refreshCommentList();
   }
 
-  _toggleReaction(trigger) {
-    return this._reactOnComment(
-      trigger.mget("commentId"),
-      trigger.mget("emoji"),
+  // True when the current user already has this emoji on the comment.
+  _userHasReaction(commentId, emoji) {
+    const c = (this._comments || []).find(
+      (x) => String(x.id) === String(commentId),
+    );
+    return !!(
+      c &&
+      (c.reactions || []).some(
+        (r) => r && r.emoji === emoji && String(r.uid) === String(Visitor.id),
+      )
     );
   }
 
-  // Toggle one emoji reaction on a comment (add/remove); reused by the quick
-  // reactions, the reaction chips, and the full-picker pick handler.
+  // Add-only (like button + reaction picker). If the user already has this
+  // emoji, don't toggle it off — instead close the pickers and flash the
+  // existing chip so it's clear the reaction is already there.
+  _addReaction(commentId, emoji) {
+    if (!commentId || !emoji) return;
+    if (this._userHasReaction(commentId, emoji)) {
+      this._reactPickerFor = null;
+      this._closeCommentReactionsPicker();
+      this._refreshCommentList().then(() =>
+        this._flashReactionChip(commentId, emoji),
+      );
+      return;
+    }
+    return this._reactOnComment(commentId, emoji);
+  }
+
+  // Briefly highlight a comment's existing reaction chip (feedback when the
+  // user re-picks an emoji they've already reacted with).
+  _flashReactionChip(commentId, emoji) {
+    if (!this.el) return;
+    const pfx = this.fig.family;
+    const sel = `.${pfx}__detail-panel .${pfx}__react-chip[data-comment-id="${commentId}"][data-emoji="${emoji}"]`;
+    const chip = this.el.querySelector(sel);
+    if (!chip) return;
+    const cls = `${pfx}__react-chip--flash`;
+    chip.classList.remove(cls);
+    // reflow so re-adding the class restarts the animation
+    void chip.offsetWidth;
+    chip.classList.add(cls);
+    setTimeout(() => chip.classList.remove(cls), 900);
+  }
+
+  // Remove-only (chip click): drop the user's own reaction. Non-own chips are
+  // rendered non-clickable, so this only fires for the user's own reactions.
+  _removeReaction(commentId, emoji) {
+    if (!commentId || !emoji) return;
+    if (!this._userHasReaction(commentId, emoji)) return;
+    return this._reactOnComment(commentId, emoji);
+  }
+
+  // Send one comment-react toggle to the server, then reload + refresh. Callers
+  // (_addReaction / _removeReaction) guard the direction so this only ever adds
+  // or only ever removes.
   async _reactOnComment(commentId, emoji) {
     if (!commentId || !emoji || !this._detailId) return;
     const taskId = this._detailId;
@@ -2540,7 +2596,7 @@ class __tasks_panel extends LetcBox {
           const cid = this._emojiPickerFor;
           const glyph = span.textContent && span.textContent.trim();
           this._closeCommentReactionsPicker();
-          this._reactOnComment(cid, glyph);
+          this._addReaction(cid, glyph);
         }
         return;
       }
@@ -2584,7 +2640,7 @@ class __tasks_panel extends LetcBox {
   // Surgical comment-feed refresh (no full _render) so a peer's WS comment
   // doesn't disturb an in-progress composer. Mirrors _refreshAttachmentsList.
   _refreshCommentList() {
-    this.ensurePart("comment-list")
+    return this.ensurePart("comment-list")
       .then((p) => {
         if (!p || (p.isDestroyed && p.isDestroyed())) return;
         p.feed(require("./skeleton").buildCommentListContent(this));

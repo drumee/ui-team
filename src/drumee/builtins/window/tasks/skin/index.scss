@@ -2891,7 +2891,7 @@
   &__react-chip {
     padding: 1px 8px;
     border-radius: 11px;
-    cursor: pointer;
+    cursor: default; // only the user's own chip is interactive (removable)
     border: 1px solid var(--border-default, rgba(0, 0, 0, 0.1));
     background: var(--normal-bg-80, #f2f2f7);
     @include drumee.typo(
@@ -2905,11 +2905,37 @@
       border-color 0.15s ease,
       background-color 0.15s ease;
 
-    &:hover {
+    // Own reaction: highlighted + clickable to remove.
+    &[data-own="1"] {
+      cursor: pointer;
       border-color: var(--accent, #fa8540);
+      background: var(--active-item-bg, rgba(250, 133, 64, 0.12));
+
+      &:hover {
+        border-color: var(--accent, #fa8540);
+        background: var(--hover-bg-40, rgba(250, 133, 64, 0.18));
+      }
     }
 
-    &[data-own="1"] {
+    // Flash when the user re-picks an emoji they already reacted with.
+    &--flash {
+      animation: tasks-panel-chip-flash 0.9s ease;
+    }
+  }
+
+  @keyframes tasks-panel-chip-flash {
+    0% {
+      transform: scale(1);
+      border-color: var(--accent, #fa8540);
+      background: var(--active-item-bg, rgba(250, 133, 64, 0.12));
+    }
+    30% {
+      transform: scale(1.18);
+      border-color: var(--accent, #fa8540);
+      background: var(--accent, #fa8540);
+    }
+    100% {
+      transform: scale(1);
       border-color: var(--accent, #fa8540);
       background: var(--active-item-bg, rgba(250, 133, 64, 0.12));
     }

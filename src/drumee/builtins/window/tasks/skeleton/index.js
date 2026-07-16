@@ -2166,10 +2166,16 @@ function buildCommentListContent(ui) {
       Skeletons.Note({
         className: `${pfx}__react-chip`,
         content: `${g.emoji} ${g.count}`,
-        attrOpt: { "data-own": g.own ? "1" : "0" },
+        attrOpt: {
+          "data-own": g.own ? "1" : "0",
+          "data-comment-id": c.id,
+          "data-emoji": g.emoji,
+        },
         bubble: 0,
-        service: "comment-react",
-        uiHandler: [ui],
+        // Clicking a chip only removes YOUR OWN reaction; others' chips do
+        // nothing. Adding is via the like button / add-reaction picker.
+        service: g.own ? "comment-react-remove" : null,
+        uiHandler: g.own ? [ui] : null,
         commentId: c.id,
         emoji: g.emoji,
       }),
@@ -2183,7 +2189,7 @@ function buildCommentListContent(ui) {
       className: `${pfx}__react-pick`,
       content: e,
       bubble: 0,
-      service: "comment-react",
+      service: "comment-react-add",
       uiHandler: [ui],
       commentId: c.id,
       emoji: e,
@@ -2238,7 +2244,7 @@ function buildCommentListContent(ui) {
       }),
       hasLike
         ? null
-        : actionIcon("app-like", "comment-react", {
+        : actionIcon("app-like", "comment-react-add", {
             commentId: c.id,
             emoji: LIKE_EMOJI,
             tooltips: LOCALE.LIKE || "Thumbs up",
