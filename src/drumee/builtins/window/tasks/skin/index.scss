@@ -2660,18 +2660,73 @@
   // Icon variant of the comment action triggers (reply · like · react · edit ·
   // delete). Dimmed by default, accent on hover.
   &__comment-action-ico {
+    position: relative; // anchors the hover highlight + flyover tooltip
     width: 18px;
     height: 18px;
-    opacity: 0.55;
     cursor: pointer;
 
+    // Soft rounded highlight behind the glyph on hover (no layout shift).
+    &::before {
+      content: "";
+      position: absolute;
+      inset: -5px;
+      border-radius: 8px;
+      background: transparent;
+      transition: background-color 0.15s ease;
+      z-index: 0;
+    }
+
+    // Dim the glyph only (not the whole node) so the tooltip stays full-opacity.
     svg {
+      position: relative;
+      z-index: 1;
       width: 18px;
       height: 18px;
+      opacity: 0.55;
+      transition: opacity 0.15s ease;
     }
 
     &:hover {
-      opacity: 1;
+      svg {
+        opacity: 1;
+      }
+
+      &::before {
+        background: var(--overlay-bg-05, rgba(0, 0, 0, 0.06));
+      }
+    }
+
+    // Flyover tooltip: the framework appends it as a child and shows it on
+    // hover. A small dark pill centred below the icon.
+    .tooltips {
+      position: absolute;
+      top: calc(100% + 8px);
+      left: 50%;
+      transform: translateX(-50%);
+      padding: 4px 8px;
+      border-radius: 6px;
+      white-space: nowrap;
+      pointer-events: none;
+      z-index: 20;
+      background: var(--tooltip-bg, #1f1f28);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.18);
+      @include drumee.typo(
+        $size: 11px,
+        $weight: 500,
+        $line: 14px,
+        $color: var(--tooltip-fg, #ffffff)
+      );
+
+      // Small caret pointing up at the icon.
+      &::before {
+        content: "";
+        position: absolute;
+        bottom: 100%;
+        left: 50%;
+        transform: translateX(-50%);
+        border: 4px solid transparent;
+        border-bottom-color: var(--tooltip-bg, #1f1f28);
+      }
     }
   }
 
@@ -2846,6 +2901,14 @@
       $color: var(--normal-fg-10, #0b0a21)
     );
 
+    transition:
+      border-color 0.15s ease,
+      background-color 0.15s ease;
+
+    &:hover {
+      border-color: var(--accent, #fa8540);
+    }
+
     &[data-own="1"] {
       border-color: var(--accent, #fa8540);
       background: var(--active-item-bg, rgba(250, 133, 64, 0.12));
@@ -2860,6 +2923,99 @@
 
     &:hover {
       background: var(--hover-bg-40, rgba(0, 0, 0, 0.04));
+    }
+  }
+
+  // "…" more button in the quick-react bar (opens the full grid below).
+  &__react-more {
+    padding: 1px 6px;
+    border-radius: 8px;
+    cursor: pointer;
+    color: var(--normal-fg-40, #84848c);
+    @include drumee.typo($size: 15px, $weight: 600, $line: 18px);
+
+    &:hover {
+      background: var(--hover-bg-40, rgba(0, 0, 0, 0.04));
+    }
+  }
+
+  // Quick-react bar (six emojis + "…"); the "…" opens the floating picker.
+  &__react-picker-wrap {
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  // Floating full emoji picker (assets/emojis), modeled on the meeting
+  // reactions picker. Anchored directly above the "…" more button by
+  // _positionCommentReactionsPicker; hidden via :empty until fed. Emoji-grid
+  // rules ported from the meeting skin so the roll / grid / spans render
+  // identically under the tasks-panel prefix.
+  &__reactions-picker {
+    position: absolute;
+    top: 64px; // fallback; inline top/left set on open
+    left: 16px;
+    z-index: 200;
+    width: 319px;
+    min-height: 180px;
+    background: var(--default-bg, #fff);
+    box-shadow: var(--drumee-shadow-box, 0 8px 24px rgba(0, 0, 0, 0.18));
+    border-radius: var(--border-radius, 10px);
+    padding: 5px 5px 0 5px;
+
+    &:empty {
+      display: none;
+    }
+  }
+
+  &__emojis-roll {
+    height: 170px;
+
+    .list-smart__container {
+      display: flex;
+      padding: 10px;
+      flex-direction: column;
+    }
+  }
+
+  &__container-emojis {
+    width: 100%;
+    background: var(--default-bg, #fff);
+  }
+
+  &__emojis-item {
+    justify-items: center;
+    justify-content: center;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, 28px) minmax(28px, 30px);
+    grid-auto-rows: 28px;
+    grid-gap: 0.1rem;
+    align-items: center;
+    border: 1px lightgrey solid;
+    margin-top: 7px;
+    padding: 5px;
+    border-radius: var(--border-radius, 10px);
+
+    span {
+      width: 100%;
+      height: 100%;
+      cursor: pointer;
+      font-size: 28px;
+    }
+  }
+
+  &__emojis-latest {
+    font-size: 33px;
+    width: calc(100% - 25px);
+    margin: 0 auto 0 11px;
+    overflow: hidden;
+    padding: 5px;
+    border-radius: var(--border-radius, 10px);
+    background: var(--default-bg, #fff);
+    border: 1px lightgrey solid;
+
+    span {
+      cursor: pointer;
     }
   }
 

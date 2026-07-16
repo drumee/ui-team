@@ -1178,6 +1178,14 @@ const make = function (ui) {
               ],
             }),
             dropOverlay(ui),
+            // Floating full emoji picker for the comment "…" more button, fed
+            // on demand (assets/emojis) and positioned below the react bar —
+            // modeled on the meeting reactions picker. Anchored to the
+            // position:relative detail-panel.
+            Skeletons.Wrapper.Y({
+              className: `${pfx}__reactions-picker`,
+              name: "reactions",
+            }),
           ],
         }),
       ],
@@ -2111,7 +2119,16 @@ function commentTimeAgo(ts) {
 // edited renders an inline mention editor instead. Exported so the panel can
 // surgically re-feed the list on a peer's WS change without a full re-render.
 // Quick-react palette (also the set offered by the "add reaction" button).
-const REACT_EMOJIS = ["👍", "❤️", "🎉", "👀", "✅"];
+// Emoji owned by the one-tap "like" button (and its chip). Once a 👍 chip
+// exists (which toggles it) the standalone button is hidden. It is also
+// excluded from the add-reaction picker below, so picking a reaction is purely
+// additive and never toggles an existing like off.
+const LIKE_EMOJI = "👍";
+// Six quick reactions shown when the ☺ toggle opens the react bar (no 👍 — that
+// is the like button's job). The "…" button opens the full assets/emojis picker.
+const QUICK_REACTIONS = ["❤️", "😂", "🎉", "😮", "😢", "🔥"].filter(
+  (e) => e !== LIKE_EMOJI,
+);
 
 // Group a comment's raw [{emoji, uid}] reactions into [{emoji, count, own}].
 function groupReactions(reactions) {
@@ -2161,22 +2178,36 @@ function buildCommentListContent(ui) {
     return Skeletons.Box.X({ className: `${pfx}__react-bar`, kids });
   };
 
-  // Emoji palette row, shown below the action icons when the ☺ toggle is open.
+  const reactPick = (c, e) =>
+    Skeletons.Note({
+      className: `${pfx}__react-pick`,
+      content: e,
+      bubble: 0,
+      service: "comment-react",
+      uiHandler: [ui],
+      commentId: c.id,
+      emoji: e,
+    });
+
+  // Reaction bar, shown below the action icons when the ☺ toggle is open: six
+  // quick reactions + a "…" button. "…" opens the full emoji picker (the
+  // floating __reactions-picker wrapper, fed with assets/emojis on demand).
   const pickerRow = (c) => {
     if (String(pickerFor || "") !== String(c.id)) return null;
     return Skeletons.Box.X({
-      className: `${pfx}__react-bar`,
-      kids: REACT_EMOJIS.map((e) =>
+      className: `${pfx}__react-picker-wrap`,
+      kids: [
+        ...QUICK_REACTIONS.map((e) => reactPick(c, e)),
         Skeletons.Note({
-          className: `${pfx}__react-pick`,
-          content: e,
+          className: `${pfx}__react-more`,
+          content: "⋯",
           bubble: 0,
-          service: "comment-react",
+          service: "comment-react-more",
           uiHandler: [ui],
           commentId: c.id,
-          emoji: e,
+          attrOpt: { title: LOCALE.MORE || "More" },
         }),
-      ),
+      ],
     });
   };
 
@@ -2193,21 +2224,30 @@ function buildCommentListContent(ui) {
       ...extra,
     });
   const commentActions = (c, isOwn) => {
+    // Hide the quick 👍 button only for the user who already liked this comment
+    // (their own 👍 chip is then the toggle affordance). Others still see the
+    // button so they can add their own like.
+    const hasLike = (c.reactions || []).some(
+      (r) =>
+        r && r.emoji === LIKE_EMOJI && String(r.uid) === String(Visitor.id),
+    );
     const kids = [
       actionIcon("app-reply", "comment-reply", {
         commentId: c.id,
         tooltips: LOCALE.REPLY,
       }),
-      actionIcon("app-like", "comment-react", {
-        commentId: c.id,
-        emoji: "👍",
-        tooltips: LOCALE.LIKE || "Thumbs up",
-      }),
+      hasLike
+        ? null
+        : actionIcon("app-like", "comment-react", {
+            commentId: c.id,
+            emoji: LIKE_EMOJI,
+            tooltips: LOCALE.LIKE || "Thumbs up",
+          }),
       actionIcon("meet-smiley", "comment-react-toggle", {
         commentId: c.id,
         tooltips: LOCALE.ADD_REACTION,
       }),
-    ];
+    ].filter(Boolean);
     if (isOwn) {
       kids.push(
         actionIcon("app-edit", "comment-edit", {

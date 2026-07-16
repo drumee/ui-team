@@ -139,11 +139,13 @@ class __tasks_panel extends LetcBox {
     this._replyingTo = null; // id of the comment (root or child) being replied to
     this._replyDraft = null; // reply buffer { body, mention_uids }
     this._reactPickerFor = null; // comment id whose reaction palette is open
+    this._emojiPickerFor = null; // comment id whose full emoji grid is open
     this.bindEvent(_a.live);
   }
 
   onBeforeDestroy() {
     this.unbindEvent(_a.live);
+    this._closeCommentReactionsPicker();
     if (this._fileSearchTimer) clearTimeout(this._fileSearchTimer);
     if (this._fileSearchBlurTimer) clearTimeout(this._fileSearchBlurTimer);
     if (this._filterKwTimer) clearTimeout(this._filterKwTimer);
@@ -1039,6 +1041,7 @@ class __tasks_panel extends LetcBox {
         this._replyingTo = null;
         this._replyDraft = null;
         this._reactPickerFor = null;
+        this._closeCommentReactionsPicker();
         this._resetFileSearch();
         return this._render();
 
@@ -1231,6 +1234,7 @@ class __tasks_panel extends LetcBox {
         this._replyingTo = trigger.mget("commentId");
         this._replyDraft = null;
         this._reactPickerFor = null;
+        this._emojiPickerFor = null;
         return this._refreshCommentList();
 
       case "comment-reply-cancel":
@@ -1250,8 +1254,12 @@ class __tasks_panel extends LetcBox {
       case "comment-react-toggle": {
         const cid = trigger.mget("commentId");
         this._reactPickerFor = this._reactPickerFor === cid ? null : cid;
+        this._emojiPickerFor = null;
         return this._refreshCommentList();
       }
+
+      case "comment-react-more":
+        return this._toggleCommentReactionsPicker(trigger);
 
       case "file-search-input":
         return this._scheduleFileSearch(trigger);
@@ -2154,6 +2162,7 @@ class __tasks_panel extends LetcBox {
     this._replyingTo = null;
     this._replyDraft = null;
     this._reactPickerFor = null;
+    this._emojiPickerFor = null;
     // Re-fetch folder filenames so collision preview (a → a(1)) reflects
     // the folder's current state.
     this._folderFilenames = null;
@@ -2446,12 +2455,20 @@ class __tasks_panel extends LetcBox {
     if (this._detailId === taskId) this._refreshCommentList();
   }
 
-  async _toggleReaction(trigger) {
-    const commentId = trigger.mget("commentId");
-    const emoji = trigger.mget("emoji");
+  _toggleReaction(trigger) {
+    return this._reactOnComment(
+      trigger.mget("commentId"),
+      trigger.mget("emoji"),
+    );
+  }
+
+  // Toggle one emoji reaction on a comment (add/remove); reused by the quick
+  // reactions, the reaction chips, and the full-picker pick handler.
+  async _reactOnComment(commentId, emoji) {
     if (!commentId || !emoji || !this._detailId) return;
     const taskId = this._detailId;
     this._reactPickerFor = null;
+    this._emojiPickerFor = null;
     try {
       await this.postService({
         service: SERVICE.task.comment_react,
@@ -2465,6 +2482,89 @@ class __tasks_panel extends LetcBox {
       console.error("[tasks_panel] comment react failed:", err);
     }
     if (this._detailId === taskId) this._refreshCommentList();
+  }
+
+  // ── Full emoji picker (comment "…" more button) ────────────────
+  // Modeled on the meeting reactions picker (builtins/webrtc/reactions.js):
+  // the shared assets/emojis picker is fed into the __wrapperReactions wrapper,
+  // positioned below the open react bar, and dismissed via a capture-phase
+  // click handler that also captures the emoji pick.
+  _toggleCommentReactionsPicker(trigger) {
+    const w = this.__wrapperReactions;
+    if (!w) return;
+    if (w.isEmpty()) {
+      this._emojiPickerFor = trigger.mget("commentId");
+      w.feed(require("assets/emojis")(this));
+      this._positionCommentReactionsPicker();
+      this._bindCommentReactionsPickerDismiss();
+    } else {
+      this._closeCommentReactionsPicker();
+    }
+  }
+
+  // Anchor the picker directly above the "…" more button, left-aligned with it,
+  // relative to the position:relative detail-panel (the wrapper's positioned
+  // ancestor). Anchored by `bottom` so its height doesn't need measuring.
+  _positionCommentReactionsPicker() {
+    const w = this.__wrapperReactions;
+    const pfx = this.fig.family;
+    if (!w || !w.el || !this.el) return;
+    const more = this.el.querySelector(`.${pfx}__react-more`);
+    const host = this.el.querySelector(`.${pfx}__detail-panel`);
+    if (!more || !host) return;
+    const b = more.getBoundingClientRect();
+    const h = host.getBoundingClientRect();
+    w.el.style.top = "auto";
+    w.el.style.bottom = `${Math.round(h.bottom - b.top + 8)}px`;
+    w.el.style.left = `${Math.round(b.left - h.left)}px`;
+  }
+
+  // Capture-phase: a glyph click reacts (and swallows the event so the picker
+  // stays put); a click inside the picker or the react bar is kept; anything
+  // else is a true outside click that dismisses. Bound on the next tick so the
+  // "…" click that opened it doesn't immediately dismiss it.
+  _bindCommentReactionsPickerDismiss() {
+    if (this._commentPickerDismiss) return;
+    this._commentPickerDismiss = (e) => {
+      const w = this.__wrapperReactions;
+      if (!w || w.isEmpty() || !w.el) {
+        this._closeCommentReactionsPicker();
+        return;
+      }
+      const t = e.target;
+      if (w.el.contains(t)) {
+        const span = t.closest && t.closest('[data-service="emoji"]');
+        if (span) {
+          e.stopImmediatePropagation();
+          e.preventDefault();
+          const cid = this._emojiPickerFor;
+          const glyph = span.textContent && span.textContent.trim();
+          this._closeCommentReactionsPicker();
+          this._reactOnComment(cid, glyph);
+        }
+        return;
+      }
+      const bar =
+        this.el && this.el.querySelector(`.${this.fig.family}__react-picker-wrap`);
+      if (bar && bar.contains(t)) return;
+      this._closeCommentReactionsPicker();
+    };
+    setTimeout(() => {
+      if (this._commentPickerDismiss) {
+        document.addEventListener("click", this._commentPickerDismiss, true);
+      }
+    }, 0);
+  }
+
+  _closeCommentReactionsPicker() {
+    if (this._commentPickerDismiss) {
+      document.removeEventListener("click", this._commentPickerDismiss, true);
+      this._commentPickerDismiss = null;
+    }
+    this._emojiPickerFor = null;
+    if (this.__wrapperReactions && !this.__wrapperReactions.isEmpty()) {
+      this.__wrapperReactions.clear();
+    }
   }
 
   // Read-only render of each comment body into its <div> (reuses the editor's
