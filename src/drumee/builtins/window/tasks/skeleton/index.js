@@ -409,15 +409,18 @@ const make = function (ui) {
               uiHandler: [ui],
               taskColumn: col.key,
             }),
-            Skeletons.Note({
-              className: `${pfx}__col-menu-delete`,
-              content: LOCALE.DELETE,
-              bubble: 0,
-              service: "col-delete",
-              uiHandler: [ui],
-              taskColumn: col.key,
-            }),
-          ],
+            // A board must keep at least one column — hide delete on the last.
+            ui.getColumns().length > 1
+              ? Skeletons.Note({
+                  className: `${pfx}__col-menu-delete`,
+                  content: LOCALE.DELETE,
+                  bubble: 0,
+                  service: "col-delete",
+                  uiHandler: [ui],
+                  taskColumn: col.key,
+                })
+              : null,
+          ].filter(Boolean),
         }),
       ],
     });
@@ -441,6 +444,11 @@ const make = function (ui) {
           kids: [
             Skeletons.Box.X({
               className: `${pfx}__column-header`,
+              // Custom columns are drag-reorderable by their header (built-ins
+              // stay pinned). data-coldrag marks the drag source for _installDnd.
+              attrOpt: col.custom
+                ? { draggable: "true", "data-coldrag": col.key }
+                : undefined,
               kids: [
                 Skeletons.Box.X({
                   className: `${pfx}__column-title-group`,
@@ -484,7 +492,7 @@ const make = function (ui) {
                       service: "col-watch-toggle",
                       uiHandler: [ui],
                       taskColumn: col.key,
-                      tooltips: LOCALE.NOTIFY_COLUMN,
+                      tooltips: { content: LOCALE.NOTIFY_COLUMN, className: `${pfx}__tip` },
                       attrOpt: {
                         "data-active": ui.isColumnWatched(col.key) ? "1" : "0",
                       },
@@ -950,6 +958,38 @@ const make = function (ui) {
       kids: buildDueSectionContent(ui),
     });
 
+    // Reporter — who created the task (task.created_by, set server-side at
+    // create time). Read-only: creation is immutable.
+    const reporter = ui.getMember(detail.created_by) || {};
+    const reporterRow = detail.created_by
+      ? Skeletons.Box.Y({
+          className: `${pfx}__detail-row`,
+          kids: [
+            Skeletons.Note({
+              className: `${pfx}__detail-label`,
+              content: LOCALE.REPORTER,
+            }),
+            Skeletons.Box.X({
+              className: `${pfx}__detail-reporter`,
+              kids: [
+                Skeletons.UserProfile({
+                  className: `${pfx}__detail-reporter-avatar`,
+                  id: detail.created_by,
+                  firstname: reporter.firstname,
+                  lastname: reporter.lastname,
+                  auto_color: 1,
+                  live_status: 0,
+                }),
+                Skeletons.Note({
+                  className: `${pfx}__detail-reporter-name`,
+                  content: fullName(reporter) || detail.created_by,
+                }),
+              ],
+            }),
+          ],
+        })
+      : null;
+
     const attachmentRow = (f) => attachmentRowDescriptor(ui, f, detail.id);
 
     // Rows live in a stable sub-part so unlink can re-feed just this list
@@ -1161,19 +1201,21 @@ const make = function (ui) {
               kids: [
                 Skeletons.Box.Y({
                   className: `${pfx}__modal-main`,
-                  kids: [
-                    // Figma 2040-14173: Description and Files sit side-by-side
-                    // on top; on mobile they stack (Box.Y) for full width.
-                    Skeletons.Box[isMobile ? "Y" : "X"]({
-                      className: `${pfx}__detail-top`,
-                      kids: [descriptionRow, attachmentsList],
-                    }),
-                    commentsSection,
-                  ],
+                  // Description, then Attachments beneath it, then the Activity
+                  // feed — a single stacked column (Attachments no longer sits
+                  // to the right of the Description).
+                  kids: [descriptionRow, attachmentsList, commentsSection],
                 }),
                 Skeletons.Box.Y({
                   className: `${pfx}__modal-side`,
-                  kids: [statusRow, priorityRow, assigneeRow, dueRow, actions],
+                  kids: [
+                    statusRow,
+                    priorityRow,
+                    assigneeRow,
+                    dueRow,
+                    reporterRow,
+                    actions,
+                  ].filter(Boolean),
                 }),
               ],
             }),

@@ -233,7 +233,7 @@ module.exports = function (ui) {
     const endPx = (dayOffset(end) + 1) * DAY_W;
     const widthPx = Math.max(DAY_W, endPx - leftPx);
     const started = !start.isAfter(today);
-    const overdue = task.status !== "complete" && end.isBefore(today);
+    const overdue = !ui.isDoneStatus(task.status) && end.isBefore(today);
     const barKids = [];
     if (overdue) {
       const tailLeft = leftPx + widthPx;

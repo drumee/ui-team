@@ -1,5 +1,10 @@
 const { uploadFile } = require("@drumee/ui-essentials");
-const { markerRe, uidsFromText } = require("./mention-markers");
+const {
+  markerRe,
+  contentTokenRe,
+  imgMarker,
+  uidsFromText,
+} = require("./mention-markers");
 
 // 10-swatch column palette (Figma 2040-106090). Dot/accent color per theme;
 // the skin derives the column tint from the accent (--col-accent) and pill
@@ -16,9 +21,12 @@ const COLUMN_THEMES = {
   red: "#D74E49",
 };
 
-// Built-in columns — always present, not editable. User-created columns come
-// from the server (task.column_list) and follow these on the board; a custom
-// column's id doubles as the task.status key.
+// Built-in columns. These are the DEFAULTS the server seeds as real task_column
+// rows (with these exact ids) the first time a folder scope is opened — after
+// which they are ordinary rows: reorderable, renamable, recolourable and
+// deletable like any custom column (see getColumns). This array is used only as
+// a pre-load placeholder before task.column_list resolves; a column's id
+// doubles as the task.status key.
 const COLUMNS = [
   { key: "todo", label: "STATUS_TODO", color: "#AEAEB2", theme: "default" },
   {
@@ -40,6 +48,16 @@ const COLUMNS = [
     theme: "green",
   },
 ];
+
+// Canonical built-in ids → { locale label, seeded English name }. Used so an
+// UNTOUCHED built-in still shows a localized title, while a user-renamed one
+// shows the stored name verbatim (the seed name equals the English default).
+const BUILTIN_META = {
+  todo: { label: "STATUS_TODO", seed: "To do" },
+  in_progress: { label: "STATUS_IN_PROGRESS", seed: "In progress" },
+  to_review: { label: "STATUS_TO_REVIEW", seed: "To review" },
+  complete: { label: "STATUS_COMPLETE", seed: "Complete" },
+};
 
 // Signal palette (Figma): Success / Info / Warning / Error — must match the
 // skin's [data-priority] pill colors so dots and pills agree everywhere.
@@ -350,7 +368,28 @@ class __tasks_panel extends LetcBox {
       return n && root.contains(n) ? n : null;
     };
 
+    // Column reorder: a draggable custom-column header (data-coldrag) starts a
+    // column drag, kept separate from the card drag below (cards live in the
+    // column body, headers don't).
+    const findColHeader = (target) => {
+      if (!target || !target.closest) target = target && target.parentElement;
+      if (!target || !target.closest) return null;
+      const n = target.closest("[data-coldrag]");
+      return n && root.contains(n) ? n : null;
+    };
+
     root.addEventListener("dragstart", (e) => {
+      const colHead = findColHeader(e.target);
+      if (colHead) {
+        this._dragColKey = colHead.dataset.coldrag;
+        const colEl = colHead.closest("[data-column]");
+        if (colEl) colEl.classList.add("is-col-dragging");
+        try {
+          e.dataTransfer.setData("text/plain", "col:" + this._dragColKey);
+          e.dataTransfer.effectAllowed = "move";
+        } catch (_) {}
+        return;
+      }
       const card = findCard(e.target);
       if (!card) return;
       const tid = card.dataset.tid;
@@ -366,6 +405,13 @@ class __tasks_panel extends LetcBox {
     });
 
     root.addEventListener("dragend", (e) => {
+      if (this._dragColKey) {
+        this._dragColKey = null;
+        this._colDropEl = null;
+        root
+          .querySelectorAll(".tasks-panel__column.is-col-dragging, .tasks-panel__column.is-col-drop")
+          .forEach((n) => n.classList.remove("is-col-dragging", "is-col-drop"));
+      }
       const card = findCard(e.target);
       if (card) card.classList.remove("is-dragging");
       this._dragTaskId = null;
@@ -373,6 +419,26 @@ class __tasks_panel extends LetcBox {
     });
 
     root.addEventListener("dragover", (e) => {
+      // Column reorder in progress → highlight the column under the pointer as
+      // the drop target; the card-reorder path below is skipped.
+      if (this._dragColKey) {
+        const colEl =
+          e.target && e.target.closest && e.target.closest("[data-column]");
+        e.preventDefault();
+        try {
+          e.dataTransfer.dropEffect = "move";
+        } catch (_) {}
+        // Track the highlighted column instead of sweeping the whole panel —
+        // dragover fires at pointer rate, so a per-event querySelectorAll
+        // over a packed board is real work.
+        const next = colEl && root.contains(colEl) ? colEl : null;
+        if (this._colDropEl !== next) {
+          if (this._colDropEl) this._colDropEl.classList.remove("is-col-drop");
+          if (next) next.classList.add("is-col-drop");
+          this._colDropEl = next;
+        }
+        return;
+      }
       // OS file drag → attach to the open task; preventDefault so the drop
       // fires on us. Takes priority over the card-reorder path.
       if (this._isFileDrag(e)) {
@@ -390,12 +456,15 @@ class __tasks_panel extends LetcBox {
       try {
         e.dataTransfer.dropEffect = "move";
       } catch (_) {}
-      root
-        .querySelectorAll(".tasks-panel__column-body.is-drop-target")
-        .forEach((n) => {
-          if (n !== col) n.classList.remove("is-drop-target");
-        });
-      col.classList.add("is-drop-target");
+      // Track the active drop column instead of querySelectorAll-ing the
+      // whole panel per event — dragover fires at pointer rate (100+/s) and
+      // a full-board subtree scan each time is measurable on packed boards.
+      if (this._dropTargetEl !== col) {
+        if (this._dropTargetEl)
+          this._dropTargetEl.classList.remove("is-drop-target");
+        this._dropTargetEl = col;
+        col.classList.add("is-drop-target");
+      }
       // Show a placeholder at the exact insertion point so the drop reads as
       // precise (Jira/Trello-style) rather than "somewhere in this column".
       // `dragover` fires far more often than the screen refreshes, and the
@@ -429,10 +498,35 @@ class __tasks_panel extends LetcBox {
       // dragleave and would otherwise strobe the outline + placeholder.
       if (col && !col.contains(e.relatedTarget)) {
         col.classList.remove("is-drop-target");
+        if (this._dropTargetEl === col) this._dropTargetEl = null;
       }
     });
 
     root.addEventListener("drop", (e) => {
+      // Column reorder drop → place the dragged column before/after the target
+      // depending on which half of it the pointer is over.
+      if (this._dragColKey) {
+        e.preventDefault();
+        const dragId = this._dragColKey;
+        // Prefer the column the dragover pass tracked — at drop time e.target is
+        // frequently a card, gap, or placeholder that has no [data-column]
+        // ancestor, so re-resolving from it misses ~half the time. Fall back to
+        // the pointer resolution only if nothing was tracked.
+        const colEl =
+          (this._colDropEl && root.contains(this._colDropEl) && this._colDropEl) ||
+          (e.target && e.target.closest && e.target.closest("[data-column]"));
+        this._dragColKey = null;
+        this._colDropEl = null;
+        root
+          .querySelectorAll(".tasks-panel__column.is-col-drop, .tasks-panel__column.is-col-dragging")
+          .forEach((n) => n.classList.remove("is-col-drop", "is-col-dragging"));
+        if (colEl && root.contains(colEl)) {
+          const rect = colEl.getBoundingClientRect();
+          const before = e.clientX < rect.left + rect.width / 2;
+          this._reorderColumn(dragId, colEl.dataset.column, before);
+        }
+        return;
+      }
       if (this._isFileDrag(e)) {
         e.preventDefault();
         delete root.dataset.fileDrag;
@@ -547,10 +641,14 @@ class __tasks_panel extends LetcBox {
   // null → append to the end of the column. Excludes the in-flight card and
   // the placeholder itself so geometry stays stable mid-drag.
   _dragAfterCard(colBody, y) {
-    const cards = Array.from(
-      colBody.querySelectorAll(".tasks-panel__task-card"),
-    ).filter((c) => !c.classList.contains("is-dragging"));
-    for (const c of cards) {
+    // Runs on every animation frame of a drag. Cards are DIRECT children of
+    // the column body, so walk children instead of querySelectorAll — the
+    // selector scan descends into every card's ~30-node subtree and was the
+    // per-frame hot spot on packed columns. Early-exits on the first hit.
+    for (const c of colBody.children) {
+      const cl = c.classList;
+      if (!cl.contains("tasks-panel__task-card")) continue;
+      if (cl.contains("is-dragging")) continue;
       const r = c.getBoundingClientRect();
       if (y < r.top + r.height / 2) return c;
     }
@@ -563,6 +661,7 @@ class __tasks_panel extends LetcBox {
     }
     this._dragOverRaf = 0;
     this._dragOverPending = null;
+    this._dropTargetEl = null;
     if (!this.el) return;
     this.el
       .querySelectorAll(".tasks-panel__column-body.is-drop-target")
@@ -709,6 +808,22 @@ class __tasks_panel extends LetcBox {
     // Two passes: read ALL new rects first, THEN write ALL transforms. Reading
     // geometry and writing styles in the same loop forces a synchronous reflow
     // per card (O(N²)) — the batched read/write split keeps it O(N).
+    //
+    // Only animate cards actually visible in their column's scrollport: a
+    // transform transition promotes each card to its own compositor layer,
+    // and dropping into a packed column rasterized every shifted card below
+    // the insertion point at once — the visible drop hitch. Offscreen cards
+    // just take their new position instantly; nobody sees the jump.
+    const vpCache = new Map();
+    const viewportOf = (el) => {
+      if (!el) return null;
+      let r = vpCache.get(el);
+      if (r === undefined) {
+        r = el.getBoundingClientRect();
+        vpCache.set(el, r);
+      }
+      return r;
+    };
     const moves = [];
     cards.forEach((c) => {
       const f = first.get(c);
@@ -716,7 +831,10 @@ class __tasks_panel extends LetcBox {
       const l = c.getBoundingClientRect();
       const dx = f.left - l.left;
       const dy = f.top - l.top;
-      if (dx || dy) moves.push({ c, dx, dy });
+      if (!dx && !dy) return;
+      const vp = viewportOf(c.parentElement);
+      if (vp && (l.bottom < vp.top || l.top > vp.bottom)) return;
+      moves.push({ c, dx, dy });
     });
     moves.forEach(({ c, dx, dy }) => {
       if (Math.abs(dx) > 8) {
@@ -1980,15 +2098,24 @@ class __tasks_panel extends LetcBox {
     this._render();
   }
 
-  // List-view checkbox — toggle a task between complete and todo. Optimistic:
-  // flip locally + re-render, persist via update_status, reconcile/revert on
-  // the response. Mirrors the drag-to-column status flow.
+  // List-view checkbox — toggle a task between a done and a not-done column.
+  // Completion is column-driven (is_done), not the literal "complete" key, so
+  // pick the target from the actual columns: checking moves to the first done
+  // column, unchecking to the first not-done column. Optimistic: flip locally +
+  // re-render, persist via update_status, reconcile/revert on the response.
   async _toggleComplete(trigger) {
     const id = trigger.mget("taskId");
     const task = this._tasks.find((t) => t.id === id);
     if (!task) return;
     const originalStatus = task.status;
-    const next = originalStatus === "complete" ? "todo" : "complete";
+    const cols = this.getColumns();
+    const target = this.isDoneStatus(originalStatus)
+      ? cols.find((c) => !c.is_done)
+      : cols.find((c) => c.is_done);
+    // No valid destination (e.g. no done column exists on this board) — nothing
+    // sensible to toggle to.
+    if (!target || target.key === originalStatus) return;
+    const next = target.key;
     task.status = next;
     this._render();
     try {
@@ -2320,13 +2447,47 @@ class __tasks_panel extends LetcBox {
       });
       const row = Array.isArray(resp) ? resp[0] : resp;
       this._customColumns = this._customColumns.filter((c) => c.id !== id);
-      // The server moves the column's tasks back to 'todo' — refresh when any.
+      // The server re-homes the column's tasks onto the first surviving column
+      // — refresh when any moved.
       if (row && Number(row.moved_tasks) > 0) await this._loadTasks();
     } catch (err) {
       console.error("[tasks_panel] column.delete failed:", err);
     }
     this._colMenuFor = null;
     this._render();
+  }
+
+  // Drag-reorder columns. dragId/targetKey are column keys; `before` says which
+  // side of the target to drop on. All columns (built-in + custom) are stored
+  // rows in _customColumns now, so any can move. Optimistic + persisted.
+  _reorderColumn(dragId, targetKey, before) {
+    const cc = this._customColumns || [];
+    const from = cc.findIndex((c) => String(c.id) === String(dragId));
+    if (from < 0) return; // unknown column — nothing to reorder
+    if (String(dragId) === String(targetKey)) return;
+    const [moved] = cc.splice(from, 1);
+    let to = cc.findIndex((c) => String(c.id) === String(targetKey));
+    if (to < 0) to = 0; // target not found → front (defensive; shouldn't happen)
+    else if (!before) to += 1;
+    cc.splice(to, 0, moved);
+    cc.forEach((c, i) => (c.position = i));
+    this._render();
+    this._persistColumnOrder();
+  }
+
+  // Persist the custom-column order (best-effort; the in-session reorder holds
+  // even if the server lacks task.column_reorder yet).
+  async _persistColumnOrder() {
+    try {
+      await this.postService({
+        service: SERVICE.task.column_reorder,
+        hub_id: this._hubId,
+        nid: this._scopeNid,
+        order: (this._customColumns || []).map((c) => c.id).join(","),
+      });
+    } catch (err) {
+      console.error("[tasks_panel] column.reorder failed:", err);
+    }
   }
 
   // Gantt "Delete selected" — bulk-delete the checked tasks, then clear the
@@ -2913,9 +3074,13 @@ class __tasks_panel extends LetcBox {
   }
 
   async onUploadResponse(data) {
-    // _commit scope is resolved directly in _uploadPendingFile via the xhr
-    // listener — skip the global handler so we don't double-link.
-    if (this._pendingUploadScope === "_commit") return;
+    // _commit / _inline scopes are resolved directly via their xhr readystate
+    // listeners — skip the global handler so we don't double-link.
+    if (
+      this._pendingUploadScope === "_commit" ||
+      this._pendingUploadScope === "_inline"
+    )
+      return;
     this._pendingUploadScope = null;
 
     const taskId = this._pendingLinkTaskId;
@@ -3678,22 +3843,64 @@ class __tasks_panel extends LetcBox {
     return chip;
   }
 
-  // Render stored marker text into the editor as text nodes + chip spans.
+  // Served URL for an inline image node (mirrors _attachmentPreview's endpoint
+  // logic; "orig" so the pasted image renders full-resolution inline).
+  _imageUrlForNid(nid, hub) {
+    const h = hub || this._hubId;
+    const b = (typeof bootstrap === "function" && bootstrap()) || {};
+    const endpoint = b.endpoint || "";
+    let url = `${endpoint}file/orig/${nid}/${h}`;
+    if (b.keysel) url += `?keysel=${b.keysel}`;
+    return url;
+  }
+
+  // Build an inline image node. In an editable editor it's a resizable wrapper
+  // (contenteditable=false span with a native CSS resize handle); on read-only
+  // surfaces (comment bodies) it's a plain, non-resizable <img>.
+  _makeInlineImage(nid, hub, width, editable) {
+    const img = document.createElement("img");
+    img.src = this._imageUrlForNid(nid, hub);
+    img.setAttribute("draggable", "false");
+    img.alt = "";
+    if (!editable) {
+      img.className = `${this.fig.family}__inline-img-static`;
+      if (width) img.style.width = `${width}px`;
+      return img;
+    }
+    const wrap = document.createElement("span");
+    wrap.className = `${this.fig.family}__inline-img`;
+    wrap.setAttribute("contenteditable", "false");
+    wrap.dataset.nid = String(nid);
+    if (hub) wrap.dataset.hub = String(hub);
+    if (width) wrap.style.width = `${width}px`;
+    wrap.appendChild(img);
+    return wrap;
+  }
+
+  // Render stored marker text into the editor as text nodes, chip spans, and
+  // inline images.
   _renderEditorContent(editorEl, markerText) {
     editorEl.textContent = "";
     const text = String(markerText || "");
+    const editable = editorEl.getAttribute("contenteditable") === "true";
     const appendText = (str) => {
       str.split("\n").forEach((part, i) => {
         if (i > 0) editorEl.appendChild(document.createElement("br"));
         if (part) editorEl.appendChild(document.createTextNode(part));
       });
     };
-    const re = markerRe();
+    const re = contentTokenRe();
     let last = 0;
     let m;
     while ((m = re.exec(text))) {
       if (m.index > last) appendText(text.slice(last, m.index));
-      editorEl.appendChild(this._makeMentionChip(m[2], m[1]));
+      if (m[2] != null) {
+        editorEl.appendChild(this._makeMentionChip(m[2], m[1]));
+      } else if (m[3] != null) {
+        editorEl.appendChild(
+          this._makeInlineImage(m[3], m[4], m[5], editable),
+        );
+      }
       last = re.lastIndex;
     }
     if (last < text.length) appendText(text.slice(last));
@@ -3703,6 +3910,7 @@ class __tasks_panel extends LetcBox {
   // boundaries become newlines.
   _serializeEditor(editorEl) {
     const chipClass = `${this.fig.family}__mention-chip`;
+    const imgClass = `${this.fig.family}__inline-img`;
     let out = "";
     const walk = (node) => {
       node.childNodes.forEach((n) => {
@@ -3713,6 +3921,9 @@ class __tasks_panel extends LetcBox {
             const uid = n.dataset.uid;
             const name = n.dataset.name || n.textContent.replace(/^@/, "");
             out += `[@${name}](user:${uid})`;
+          } else if (n.classList && n.classList.contains(imgClass)) {
+            const w = parseInt(n.style.width, 10) || 0;
+            out += imgMarker(n.dataset.nid, n.dataset.hub, w || undefined);
           } else if (n.tagName === "BR") {
             out += "\n";
           } else if (n.tagName === "DIV") {
@@ -3763,14 +3974,119 @@ class __tasks_panel extends LetcBox {
     editorEl.onblur = () => {
       this._mentionCloseTimer = setTimeout(() => this._closeMention(), 150);
     };
+    editorEl.onpaste = (e) => this._onEditorPaste(e, scope, editorEl);
+  }
+
+  // Intercept paste of a clipboard image (screenshot / copied external image):
+  // upload it, then insert a resizable inline image at the caret. Non-image
+  // pastes fall through to the browser's default text paste.
+  _onEditorPaste(e, scope, editorEl) {
+    const dt = e.clipboardData;
+    if (!dt) return;
+    let file = null;
+    const items = dt.items || [];
+    for (let i = 0; i < items.length; i++) {
+      const it = items[i];
+      if (it.kind === "file" && /^image\//.test(it.type || "")) {
+        file = it.getAsFile();
+        break;
+      }
+    }
+    if (!file) return; // let the default text/HTML paste proceed
+    e.preventDefault();
+    // Capture the caret now — the async upload would otherwise lose it.
+    const sel = window.getSelection();
+    let range = null;
+    if (sel && sel.rangeCount && editorEl.contains(sel.anchorNode)) {
+      range = sel.getRangeAt(0).cloneRange();
+    }
+    this._insertPastedImage(file, scope, editorEl, range);
+  }
+
+  async _insertPastedImage(file, scope, editorEl, range) {
+    let res;
+    try {
+      res = await this._uploadInlineImage(file);
+    } catch (err) {
+      console.error("[tasks_panel] inline image upload failed:", err);
+      return;
+    }
+    if (!editorEl.isConnected) return;
+    const node = this._makeInlineImage(res.nid, res.hub, null, true);
+    if (range && editorEl.contains(range.startContainer)) {
+      range.deleteContents();
+      range.insertNode(node);
+      range.setStartAfter(node);
+      range.collapse(true);
+      const sel = window.getSelection();
+      sel.removeAllRanges();
+      sel.addRange(range);
+    } else {
+      editorEl.appendChild(node);
+    }
+    // Pasted images default to a small size (still resizable up via the handle).
+    // Cap at the image's natural width so a small image isn't upscaled, then
+    // re-sync so the width is stored in the draft marker.
+    const DEFAULT_W = 220;
+    const img = node.querySelector && node.querySelector("img");
+    const applySmall = () => {
+      if (!node.isConnected) return;
+      const nat = img && img.naturalWidth ? img.naturalWidth : DEFAULT_W;
+      node.style.width = `${Math.min(DEFAULT_W, nat)}px`;
+      this._onDescInput(scope, editorEl);
+    };
+    if (img && img.complete && img.naturalWidth) applySmall();
+    else if (img) img.addEventListener("load", applySmall, { once: true });
+    else node.style.width = `${DEFAULT_W}px`;
+    // Sync the draft from the mutated editor (initial; width sync follows onload).
+    this._onDescInput(scope, editorEl);
+  }
+
+  // Promise-wrapped upload for a raw clipboard image File. Tags scope so the
+  // global onUploadResponse skips it (resolved here via the readystate listener).
+  _uploadInlineImage(file) {
+    return new Promise((resolve, reject) => {
+      this._pendingUploadScope = "_inline";
+      const params = { hub_id: this._hubId, nid: this._destNid };
+      let xhr;
+      try {
+        xhr = this.uploadFile(file, params);
+      } catch (e) {
+        this._pendingUploadScope = null;
+        return reject(e);
+      }
+      if (!xhr) {
+        this._pendingUploadScope = null;
+        return reject(new Error("upload failed to start"));
+      }
+      xhr.addEventListener("readystatechange", () => {
+        if (xhr.readyState !== 4) return;
+        this._pendingUploadScope = null;
+        if (xhr.status >= 200 && xhr.status < 300) {
+          try {
+            const { data } = JSON.parse(xhr.responseText);
+            const nid = data?.nid || data?.id;
+            if (!nid) return reject(new Error("no nid in upload response"));
+            resolve({ nid, hub: data?.hub_id || this._hubId });
+          } catch (err) {
+            reject(err);
+          }
+        } else {
+          reject(new Error(`upload http ${xhr.status}`));
+        }
+      });
+    });
   }
 
   _onDescInput(scope, editorEl) {
     // Browsers leave a stray <br> when the field is cleared, which defeats the
-    // :empty placeholder — strip it back to truly empty.
+    // :empty placeholder — strip it back to truly empty. But an image-only
+    // editor has no text content, so guard on chips AND inline images too,
+    // otherwise a freshly pasted (text-less) image would be wiped here.
     if (
       !editorEl.textContent.trim() &&
-      !editorEl.querySelector(`.${this.fig.family}__mention-chip`)
+      !editorEl.querySelector(`.${this.fig.family}__mention-chip`) &&
+      !editorEl.querySelector(`.${this.fig.family}__inline-img`)
     ) {
       editorEl.innerHTML = "";
     }
@@ -4180,19 +4496,45 @@ class __tasks_panel extends LetcBox {
   // (LOCALE for built-ins, user text for customs), `color` the accent hex,
   // `theme` the palette key driving pill tints, `custom` marks editability.
   getColumns() {
-    const builtins = COLUMNS.map((c) => ({
-      ...c,
-      name: LOCALE[c.label] || c.key,
-    }));
-    const customs = (this._customColumns || []).map((r) => ({
-      key: r.id,
-      label: "",
-      name: r.name || "",
-      theme: COLUMN_THEMES[r.theme] ? r.theme : "default",
-      color: COLUMN_THEMES[r.theme] || COLUMN_THEMES.default,
-      custom: 1,
-    }));
-    return builtins.concat(customs);
+    const rows = this._customColumns || [];
+    // Before column_list resolves there are no rows yet — show the built-in
+    // defaults as non-editable placeholders so the board isn't momentarily
+    // empty. Once the server seeds + returns rows, every column is editable.
+    if (!rows.length) {
+      return COLUMNS.map((c, i) => ({
+        key: c.key,
+        name: LOCALE[c.label] || c.key,
+        theme: c.theme,
+        color: COLUMN_THEMES[c.theme] || COLUMN_THEMES.default,
+        is_done: c.key === "complete" ? 1 : 0,
+        position: i,
+        custom: 0, // placeholder — no DB row to reorder/rename/delete yet
+      }));
+    }
+    // All columns (built-in + custom) are stored rows now, so all are uniformly
+    // editable. A built-in id left at its seeded English name shows a localized
+    // title; a renamed one shows the stored name.
+    return rows.map((r) => {
+      const bi = BUILTIN_META[r.id];
+      const name = bi && r.name === bi.seed ? LOCALE[bi.label] || r.name : r.name || "";
+      return {
+        key: r.id,
+        name,
+        theme: COLUMN_THEMES[r.theme] ? r.theme : "default",
+        color: COLUMN_THEMES[r.theme] || COLUMN_THEMES.default,
+        is_done: Number(r.is_done) ? 1 : 0,
+        position: r.position,
+        custom: 1,
+      };
+    });
+  }
+
+  // Completion is column-driven: a task is "done" when its column has is_done.
+  // Replaces scattered `status === "complete"` literals so renamed/custom done
+  // columns are honored everywhere (list, gantt, project health).
+  isDoneStatus(status) {
+    const c = this.getColumns().find((x) => String(x.key) === String(status));
+    return !!(c && c.is_done);
   }
   getColumnThemes() {
     return COLUMN_THEMES;
@@ -4277,7 +4619,7 @@ class __tasks_panel extends LetcBox {
     }
     switch (due) {
       case "overdue":
-        return d.isBefore(now, "day") && t.status !== "complete";
+        return d.isBefore(now, "day") && !this.isDoneStatus(t.status);
       case "today":
         return d.isSame(now, "day");
       case "week":
@@ -4290,12 +4632,19 @@ class __tasks_panel extends LetcBox {
   }
 
   getState() {
-    return this.getColumns().reduce((acc, c) => {
-      acc[c.key] = this._tasks.filter(
-        (t) => t.status === c.key && this._matchesFilter(t),
-      );
-      return acc;
-    }, {});
+    const cols = this.getColumns();
+    const keys = new Set(cols.map((c) => c.key));
+    const firstKey = cols.length ? cols[0].key : null;
+    const state = cols.reduce((acc, c) => ((acc[c.key] = []), acc), {});
+    // Bucket by column; a task whose status matches no column (e.g. its column
+    // was just deleted by a peer) falls into the first column so it's never
+    // hidden until the next list refresh.
+    this._tasks.forEach((t) => {
+      if (!this._matchesFilter(t)) return;
+      const k = keys.has(t.status) ? t.status : firstKey;
+      if (k != null) state[k].push(t);
+    });
+    return state;
   }
 
   // Flat member-filtered task list — the dataset for the List + Summary views.
