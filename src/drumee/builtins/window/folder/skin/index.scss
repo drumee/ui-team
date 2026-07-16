@@ -1577,6 +1577,7 @@
     padding: 8px 12px;
     transition: background-color 120ms ease;
     white-space: nowrap;
+    position: relative;
     @include drumee.typo(
       $size: 12px,
       $line: 16px,
@@ -1592,6 +1593,29 @@
       background-color: rgba(29, 138, 234, 0.12);
       color: #1d8aea;
       font-weight: 500;
+    }
+
+    // Hover description ("Can only View", …) injected by the framework
+    // `tooltips` prop — a small card beside the menu, vertically centered
+    // on the hovered row. Placed on the LEFT: the settings panel hugs the
+    // right screen edge, so a right-side card would overflow the viewport
+    // on the longer descriptions.
+    .role-option-tooltip {
+      position: absolute;
+      right: calc(100% + 10px);
+      top: 50%;
+      transform: translateY(-50%);
+      white-space: nowrap;
+      pointer-events: none;
+      padding: 6px 10px;
+      border-radius: 6px;
+      background-color: var(--normal-fg, #2f2f36);
+      color: var(--white, #fff);
+      font-size: 12px;
+      font-weight: 400;
+      line-height: 16px;
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18);
+      z-index: 100000;
     }
   }
 
