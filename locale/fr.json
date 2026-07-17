@@ -452,6 +452,8 @@
   "CAMERA": "Caméra",
   "MICROPHONE": "Micro",
   "SPEAKERS": "Haut-parleurs",
+  "BLUR_BACKGROUND": "Flou d'arrière-plan",
+  "UPLOAD_BACKGROUND": "Importer un arrière-plan",
   "CHAT_VIDEO": "Tchat/Visio interne",
   "CONNECTING": "Connexion en cours",
   "YOUR_MESSAGE": "Votre message :",
