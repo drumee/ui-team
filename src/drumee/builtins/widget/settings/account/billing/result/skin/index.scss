@@ -159,4 +159,30 @@
       color: #ffffff;
     }
   }
+
+  // Resume-confirmation Done CTA (Figma 3050-96691): full-width primary pill,
+  // 16/24 padding, 4px radius — body gap 12 + this margin ≈ the 32px block gap.
+  &__done {
+    width: 100%;
+    margin-top: 20px;
+    padding: 16px 24px;
+    border-radius: 4px;
+    background: var(--primary-50);
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background 0.2s;
+
+    &:hover {
+      background: var(--primary-60);
+    }
+
+    &-label {
+      font-family: var(--font-medium);
+      font-size: 16px;
+      line-height: 24px;
+      font-weight: 600;
+      color: var(--white);
+    }
+  }
 }
