@@ -626,6 +626,13 @@
     // affordance — users clicking where the button *used to be* land on
     // nothing and nothing happens. Pinning the panel keeps the CTA reachable
     // regardless of how long the left column gets.
+    // No independent max-height/overflow here: the panel's own content
+    // (price + a handful of breakdown rows) never grows tall enough to need
+    // its own scroll, and giving it one nested a scrollable region inside
+    // the page's own scroll container — the mouse wheel would get captured
+    // by this panel and the storage-bundles content below the left column
+    // became unreachable. Position: sticky alone keeps it pinned while the
+    // OUTER page scrolls.
     &-right {
       width: 480px;
       gap: var(--spacer-5);
@@ -636,8 +643,6 @@
       position: sticky;
       top: var(--spacer-6);
       align-self: flex-start;
-      max-height: calc(100vh - var(--spacer-6) * 2);
-      overflow-y: auto;
     }
 
     &-section {
@@ -1131,11 +1136,11 @@
     display: none;
   }
 
-  // Content block centred (max-width 1600) so it doesn't hug the left with a
-  // big empty gap on the right on wide screens.
+  // Content block centred (max-width 1280) so it doesn't hug the left with a
+  // big empty gap on the right, or overflow, on wide screens.
   .settings-billing__main {
     width: 100%;
-    max-width: 1600px;
+    max-width: 1280px;
     margin: 0 auto;
   }
 
@@ -1209,6 +1214,13 @@
   }
 
   .settings-billing__body {
+    // flex:1 + min-height:0 is what actually lets overflow-y:auto engage:
+    // without it, a flex column child sizes to its own content height and
+    // never shrinks to the space __main's max-height leaves it, so this
+    // never becomes a scroll container and content past the popup-header
+    // is clipped (by the root's overflow:hidden) with no way to reach it.
+    flex: 1 1 0;
+    min-height: 0;
     overflow-y: auto;
     padding: var(--spacer-6);
     gap: var(--spacer-2);
