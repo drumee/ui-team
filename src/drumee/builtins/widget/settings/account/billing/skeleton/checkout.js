@@ -169,7 +169,9 @@ function checkout(ui) {
             name: "org_name",
             type: "text",
             placeholder: LOCALE.ORG_NAME_LABEL,
-            value: String(ui.state?.checkout?.orgName || ""),
+            // Auto organization name ("<user> Team") — editable; the submit
+            // path falls back to the same default if the field is cleared.
+            value: String(ui.state?.checkout?.orgName || ui._defaultOrgName() || ""),
             sys_pn: `${pfx}-org-name-input`,
             interactive: 1,
           }),
@@ -181,7 +183,9 @@ function checkout(ui) {
                 name: "org_ident",
                 type: "text",
                 placeholder: LOCALE.ORG_SUBDOMAIN_LABEL,
-                value: String(ui.state?.checkout?.orgIdent || ""),
+                // Auto subdomain suggestion (slugged username) — editable;
+                // availability is still checked by validate_org_ident.
+                value: String(ui.state?.checkout?.orgIdent || ui._defaultOrgIdent() || ""),
                 sys_pn: `${pfx}-org-ident-input`,
                 interactive: 1,
               }),

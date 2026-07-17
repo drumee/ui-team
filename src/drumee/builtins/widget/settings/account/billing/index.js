@@ -575,6 +575,32 @@ class settings_billing extends LetcBox {
   /**
    * Handle proceed to checkout: call payment API and open payment window
    */
+  // Auto organization name for the TEAM bootstrap: "<user's name> Team".
+  // Pre-fills the checkout org-name input and backs the submit fallback, so
+  // switching to the Team plan never blocks on an empty field.
+  _defaultOrgName() {
+    const name = String(
+      Visitor.get(_a.fullname)
+      || `${Visitor.get(_a.firstname) || ""} ${Visitor.get(_a.lastname) || ""}`.trim()
+      || Visitor.get(_a.username)
+      || "",
+    ).trim();
+    return name ? `${name} Team` : "";
+  }
+
+  // Auto subdomain suggestion: the username slugged down to a DNS label
+  // (lowercase alnum + inner dashes, max 63) — same shape validate_org_ident
+  // accepts. The user can still type their own; collisions surface via the
+  // existing server-side validation.
+  _defaultOrgIdent() {
+    return String(Visitor.get(_a.username) || "")
+      .toLowerCase()
+      .replace(/[^a-z0-9-]+/g, "-")
+      .replace(/^-+|-+$/g, "")
+      .slice(0, 63)
+      .replace(/-+$/g, "");
+  }
+
   // Map an org-ident validation status to its user-facing message.
   _orgIdentError(status) {
     switch (status) {
@@ -610,8 +636,12 @@ class settings_billing extends LetcBox {
     // ident server-side BEFORE the Stripe redirect (product decision: prompt
     // before checkout; the webhook provisions the org after payment).
     if (entity_type === "org" && ~~Visitor.get("domain_id") <= 1) {
-      const org_name = String((this.__orgNameInput && this.__orgNameInput.getValue()) || "").trim();
-      const ident = String((this.__orgIdentInput && this.__orgIdentInput.getValue()) || "").trim().toLowerCase();
+      // Auto-derived defaults back the pre-filled inputs, so a cleared field
+      // falls back instead of blocking the plan change with ORG_IDENT_REQUIRED.
+      const org_name = String((this.__orgNameInput && this.__orgNameInput.getValue()) || "").trim()
+        || this._defaultOrgName();
+      const ident = (String((this.__orgIdentInput && this.__orgIdentInput.getValue()) || "").trim().toLowerCase()
+        || this._defaultOrgIdent());
       // Keep the typed values across checkout re-renders (plan/cycle switch).
       checkout.orgName = org_name;
       checkout.orgIdent = ident;
