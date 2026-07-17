@@ -291,18 +291,19 @@ function _formatCard(pfx, ui, fmt, active) {
 // ------------------------------------------------------------------ scope section
 // Fix #4: redesigned checkbox state machine.
 function _scopeSection(pfx, ui) {
-  // Fix #4: true state derivation — each checkbox reflects real independent state.
-  // _allChecked = hub checked AND all threads checked (derived).
-  // _hubChecked = hub row's own state.
-  // thread checked = _checkedThreadIds.has(id).
+  // Each checkbox reflects real independent state:
+  //   _allChecked           = every folder AND every thread checked (derived).
+  //   folder checked        = _checkedFolderNids.has(nid).
+  //   thread checked        = _checkedThreadIds.has(id).
   const allChecked = ui._allChecked;
-  const hubChecked = ui._hubChecked;
+  const hasFolders = ui._folders && ui._folders.length > 0;
+  const foldersExpanded = ui._foldersExpanded;
   const hasThreads = ui._fileThreads && ui._fileThreads.length > 0;
   const expanded = ui._threadsExpanded;
 
-  // Fix #6: rows use Box.X with service + uiHandler on the container so the
-  // entire row is clickable. kidsOpt active:0 prevents inner child nodes from
-  // intercepting the click before it bubbles to the row's uiHandler.
+  // Rows use Box.X with service + uiHandler on the container so the entire row
+  // is clickable. kidsOpt active:0 prevents inner child nodes from intercepting
+  // the click before it bubbles to the row's uiHandler.
   const rows = [
     // "All" row
     Skeletons.Box.X({
@@ -318,22 +319,57 @@ function _scopeSection(pfx, ui) {
         }),
       ],
     }),
-    // "This folder only" row — Fix #4: checkbox reflects _hubChecked directly
-    // (was `hubChecked && !allChecked` before, which hid the check when All was on).
-    Skeletons.Box.X({
-      className: `${pfx}__scope-row`,
-      service: "scope-hub-only",
-      uiHandler: [ui],
-      kidsOpt: { active: 0 },
-      kids: [
-        _checkbox(pfx, hubChecked),
-        Skeletons.Note({
-          className: `${pfx}__scope-label`,
-          content: `${ui.mget(_a.name) || ui._hubName || ""} ${LOCALE.THIS_FOLDER_ONLY}`,
-        }),
-      ],
-    }),
   ];
+
+  // "Folders" parent row (collapsible) + per-folder child checkboxes. Replaces
+  // the old single "this folder only" row so each subfolder can be picked.
+  if (hasFolders) {
+    rows.push(
+      Skeletons.Box.X({
+        className: `${pfx}__scope-row`,
+        service: "toggle-folders",
+        uiHandler: [ui],
+        kidsOpt: { active: 0 },
+        kids: [
+          Skeletons.Image.Svg({
+            ico: "dock-folder",
+            className: `${pfx}__scope-thread-ico`,
+          }),
+          Skeletons.Note({
+            className: `${pfx}__scope-label`,
+            content: LOCALE.FOLDERS,
+          }),
+          Skeletons.Image.Svg({
+            ico: "apps-caret-down",
+            className: `${pfx}__scope-caret${foldersExpanded ? " is-expanded" : ""}`,
+          }),
+        ],
+      }),
+    );
+
+    if (foldersExpanded) {
+      ui._folders.forEach((folder) => {
+        const nidStr = String(folder.nid);
+        const checked = ui._checkedFolderNids.has(nidStr);
+        rows.push(
+          Skeletons.Box.X({
+            className: `${pfx}__scope-row ${pfx}__scope-row--child`,
+            service: "scope-folder-toggle",
+            folder_nid: nidStr,
+            uiHandler: [ui],
+            kidsOpt: { active: 0 },
+            kids: [
+              _checkbox(pfx, checked),
+              Skeletons.Note({
+                className: `${pfx}__scope-label`,
+                content: folder.path || folder.name || nidStr,
+              }),
+            ],
+          }),
+        );
+      });
+    }
+  }
 
   if (hasThreads) {
     // "File Threads" parent row (collapsible)

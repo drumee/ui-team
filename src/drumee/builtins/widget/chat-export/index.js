@@ -16,16 +16,18 @@ class __widget_chat_export extends LetcBox {
 
     // --- internal state ---
     this._format = "json"; // 'pdf' | 'json'
-    // Scope selection. Mirrors the contract:
-    //   'all' | 'hub_chat_only' | array of file_thread_id numbers
-    this._scopeSel = "all";
-    // Which file-thread ids are individually checked (used when _scopeSel is an array).
+    // Two independent scope axes sent to the backend:
+    //   _folderSel : 'all' | array of folder nids | 'none'
+    //   _threadSel : 'all' | array of file_thread_ids | 'none'
+    this._folderSel = "all";
+    this._threadSel = "all";
+    // Which folder nids / file-thread ids are individually checked.
+    this._checkedFolderNids = new Set();
     this._checkedThreadIds = new Set();
-    // Fix #4: _hubChecked and _allChecked are independent flags:
-    //   _hubChecked  = whether "This folder" row is on
-    //   _allChecked  = derived: hub + all threads checked (computed in _syncScopeFromChildren)
-    this._hubChecked = true;
+    // _allChecked = every folder AND every thread checked (derived in
+    // _syncScopeFromChildren) — drives the "All" row's checkbox.
     this._allChecked = true;
+    this._foldersExpanded = false;
     this._threadsExpanded = false;
     this._dateEnabled = false;
     this._startDate = null;
@@ -34,6 +36,7 @@ class __widget_chat_export extends LetcBox {
     this._hubName = "";
     this._messageCount = 0;
     this._hubMtime = null;
+    this._folders = []; // [{ nid, name, path }] — subtree folders (per-folder scope)
     this._fileThreads = []; // [{ file_thread_id, file_nid, filename, reply_count }]
     // Download-state guard to prevent double-fire
     this._activeZipId = null;
@@ -48,9 +51,12 @@ class __widget_chat_export extends LetcBox {
     // the file's file_thread_id by matching file_nid.
     this._fileScope = !!this.mget("file_scope");
     this._matchedThread = null;
-    // Default scope to empty so an export fired before _loadScope completes
-    // sends nothing rather than "all".
-    if (this._fileScope) this._scopeSel = [];
+    // File-scope: no folder chat, only this file's thread (resolved in
+    // _loadScope). Default to empty so an export fired before load sends nothing.
+    if (this._fileScope) {
+      this._folderSel = "none";
+      this._threadSel = [];
+    }
   }
 
   onBeforeDestroy() {
@@ -114,25 +120,29 @@ class __widget_chat_export extends LetcBox {
       // export (message count, file threads, sections) to its subtree.
       const nid = this.mget(_a.nid) || null;
       const data = await this.fetchService(SERVICE.channel.export_scope, { hub_id, nid });
-      const { hub = {}, file_threads = [] } = data || {};
+      const { hub = {}, folders = [], file_threads = [] } = data || {};
       this._hubName = hub.name || "";
       this._messageCount = hub.message_count || 0;
       this._hubMtime = hub.mtime || null;
+      this._folders = Array.isArray(folders) ? folders : [];
       this._fileThreads = Array.isArray(file_threads) ? file_threads : [];
-      // Default: all thread ids checked. Normalize to strings to ensure Set.has()
-      // works regardless of whether the backend sends numeric or string IDs.
+      // Default: every folder + every thread checked. Normalize to strings so
+      // Set.has() works regardless of whether the backend sends numeric/string IDs.
+      this._checkedFolderNids = new Set(this._folders.map((f) => String(f.nid)));
       this._checkedThreadIds = new Set(this._fileThreads.map((t) => String(t.file_thread_id)));
       // File-scope mode: lock the export to this file's own thread. Match by
-      // file_nid; scope_sel=[file_thread_id] → the offline worker exports ONLY
-      // that thread (includeHub is false for array scope). No match (file has
-      // no thread yet) → empty scope, nothing to export.
+      // file_nid; thread_sel=[file_thread_id] + folder_sel='none' → export ONLY
+      // that thread. No match (file has no thread yet) → nothing to export.
       if (this._fileScope) {
         const fileNid = String(this.mget("file_nid") || "");
         const match = this._fileThreads.find(
           (t) => String(t.file_nid) === fileNid,
         );
         this._matchedThread = match || null;
-        this._scopeSel = match ? [String(match.file_thread_id)] : [];
+        this._checkedFolderNids = new Set();
+        this._checkedThreadIds = new Set(match ? [String(match.file_thread_id)] : []);
+        this._folderSel = "none";
+        this._threadSel = match ? [String(match.file_thread_id)] : [];
       }
       // Re-feed the skeleton now that real data is available.
       // Fix #6: re-feeding is kept here (data load only, not on every toggle).
@@ -153,8 +163,11 @@ class __widget_chat_export extends LetcBox {
       case "scope-all":
         return this._setScopeAll();
 
-      case "scope-hub-only":
-        return this._setScopeHubOnly();
+      case "scope-folder-toggle":
+        return this._toggleFolderScope(cmd.mget("folder_nid"));
+
+      case "toggle-folders":
+        return this._toggleFoldersExpand();
 
       case "scope-thread-toggle":
         return this._toggleThreadScope(cmd.mget("file_thread_id"));
@@ -183,19 +196,20 @@ class __widget_chat_export extends LetcBox {
   }
 
   // ------------------------------------------------------------------ scope state machine
-  // Fix #4: redesigned state machine — each row's checkbox reflects real state.
+  // Two independent axes: which folders (per-folder chat) and which file
+  // threads. Each checkbox reflects real state; _folderSel/_threadSel/_allChecked
+  // are derived in _syncScopeFromChildren.
 
   /**
-   * "All" checkbox: TOGGLE everything. If currently all-checked → uncheck hub
-   * + every thread; otherwise → check hub + all threads. _allChecked/_scopeSel
-   * are then derived in _syncScopeFromChildren.
+   * "All" checkbox: TOGGLE everything. All-checked → clear both sets; otherwise
+   * → check every folder + every thread.
    */
   _setScopeAll() {
     if (this._allChecked) {
-      this._hubChecked = false;
+      this._checkedFolderNids = new Set();
       this._checkedThreadIds = new Set();
     } else {
-      this._hubChecked = true;
+      this._checkedFolderNids = new Set(this._folders.map((f) => String(f.nid)));
       this._checkedThreadIds = new Set(
         this._fileThreads.map((t) => String(t.file_thread_id)),
       );
@@ -203,13 +217,14 @@ class __widget_chat_export extends LetcBox {
     this._syncScopeFromChildren();
   }
 
-  /**
-   * "This folder" button: toggle _hubChecked independently, then re-derive _allChecked.
-   * Fix #4: was incorrectly setting _allChecked = false then toggling hubChecked,
-   * causing the hub-row checkbox to appear unchecked while "All" was active.
-   */
-  _setScopeHubOnly() {
-    this._hubChecked = !this._hubChecked;
+  _toggleFolderScope(folderNid) {
+    if (!folderNid) return;
+    const id = String(folderNid);
+    if (this._checkedFolderNids.has(id)) {
+      this._checkedFolderNids.delete(id);
+    } else {
+      this._checkedFolderNids.add(id);
+    }
     this._syncScopeFromChildren();
   }
 
@@ -227,29 +242,33 @@ class __widget_chat_export extends LetcBox {
   }
 
   /**
-   * Derives _scopeSel + _allChecked from the current child checkbox state
-   * and triggers a targeted UI refresh.
-   * Fix #4: _allChecked = hub AND all threads; _hubChecked is independent.
+   * Derives _folderSel + _threadSel + _allChecked from the current checkbox
+   * state and triggers a targeted UI refresh. Each axis: 'all' when every item
+   * is checked, an array when a subset is, 'none' when empty.
    */
   _syncScopeFromChildren() {
-    // Normalize to strings so Set.has() works regardless of server JSON integer type.
+    const allFolderNids = this._folders.map((f) => String(f.nid));
     const allThreadIds = this._fileThreads.map((t) => String(t.file_thread_id));
+
+    const allFoldersChecked =
+      allFolderNids.length > 0 &&
+      allFolderNids.every((id) => this._checkedFolderNids.has(id));
     const allThreadsChecked =
       allThreadIds.length === 0 ||
       allThreadIds.every((id) => this._checkedThreadIds.has(id));
 
-    if (this._hubChecked && allThreadsChecked) {
-      this._allChecked = true;
-      this._scopeSel = "all";
-    } else if (this._hubChecked && this._checkedThreadIds.size === 0) {
-      this._allChecked = false;
-      this._scopeSel = "hub_chat_only";
-    } else {
-      this._allChecked = false;
-      // Mixed: include hub + selected threads
-      const selected = [...this._checkedThreadIds];
-      this._scopeSel = selected.length > 0 ? selected : "hub_chat_only";
-    }
+    this._folderSel = allFoldersChecked
+      ? "all"
+      : (this._checkedFolderNids.size > 0 ? [...this._checkedFolderNids] : "none");
+    this._threadSel = allThreadsChecked
+      ? "all"
+      : (this._checkedThreadIds.size > 0 ? [...this._checkedThreadIds] : "none");
+
+    // "All" is on only when every folder AND every thread is checked. When there
+    // are no folders at all, fall back to threads-only for the derived flag.
+    const foldersFull = allFolderNids.length === 0 || allFoldersChecked;
+    this._allChecked = foldersFull && allThreadsChecked;
+
     this._refreshScopeUI();
   }
 
@@ -272,7 +291,12 @@ class __widget_chat_export extends LetcBox {
     this.feed(require("./skeleton").default(this));
   }
 
-  // ------------------------------------------------------------------ file-threads collapse
+  // ------------------------------------------------------------------ groups collapse
+
+  _toggleFoldersExpand() {
+    this._foldersExpanded = !this._foldersExpanded;
+    this.feed(require("./skeleton").default(this));
+  }
 
   _toggleFileThreadsExpand() {
     this._threadsExpanded = !this._threadsExpanded;
@@ -305,18 +329,17 @@ class __widget_chat_export extends LetcBox {
     const hub_id = this.mget(_a.hub_id);
     if (!hub_id) return;
 
+    // Two independent scope axes. Arrays are JSON-stringified so they survive
+    // the POST as a scalar param the backend re-parses (parseSel handles both).
+    const encSel = (sel) => (Array.isArray(sel) ? JSON.stringify(sel) : sel);
     const payload = {
       hub_id,
       // Subtree root — must match the nid sent to export_scope so the export
       // covers exactly what the modal showed.
       nid: this.mget(_a.nid) || null,
       format: this._format,
-      scope_sel: this._scopeSel,
-      // When scope_sel is an explicit thread array, tell the backend whether to
-      // ALSO include folder/general chat. File-scope (single file) → false;
-      // folder modal → follows the "This folder" checkbox, so unchecking a
-      // subset of threads keeps the folder chat. Ignored for 'all'/'hub_chat_only'.
-      include_folders: this._fileScope ? 0 : (this._hubChecked ? 1 : 0),
+      folder_sel: encSel(this._folderSel), // 'all' | JSON array of folder nids | 'none'
+      thread_sel: encSel(this._threadSel), // 'all' | JSON array of thread ids | 'none'
       start_date: this._dateEnabled ? this._startDate : null,
       end_date: this._dateEnabled ? this._endDate : null,
     };
