@@ -440,6 +440,21 @@
       color: var(--primary-500);
       margin-left: var(--spacer-3);
     }
+
+    // "Manage billing" → Stripe portal: plain text hyperlink, matching the
+    // revamp primary (same hue as the current-plan highlight).
+    &-manage-billing {
+      align-self: flex-start;
+      cursor: pointer;
+      text-decoration: underline;
+      text-underline-offset: 2px;
+      color: var(--primary-50);
+      font-weight: 500;
+
+      &:hover {
+        color: var(--primary-60);
+      }
+    }
   }
 
   &__entry {
