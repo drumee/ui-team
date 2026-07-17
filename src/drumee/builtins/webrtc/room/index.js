@@ -12,6 +12,7 @@ class __webrtc_room extends __interact {
     this.attendees = {};
     this.selectedInputDevice = "";
     this.selectedOutputDevice = "";
+    this.selectedVideoDevice = "";
     RADIO_NETWORK.once(_e.offline, this.handleError.bind(this));
     this.model.set({
       mode: "normal",
@@ -406,6 +407,286 @@ class __webrtc_room extends __interact {
   }
 
   /**
+   * Camera twin of updateAudioDevicesList: enumerate video inputs (after the
+   * camera permission is granted) and feed the picker into the "video-devices"
+   * wrapper on the camera pill. Camera has no output-sink half, so only the
+   * videoinput side is built.
+   */
+  async updateVideoDevicesList(refresh = 0) {
+    let p = await this.ensurePart("video-devices");
+    let noDevice = [
+      Skeletons.Note({
+        className: `device-heading`,
+        content: LOCALE.CAMERA,
+      }),
+      Skeletons.Note({
+        className: `device-label`,
+        content: "No camera device",
+      }),
+    ];
+
+    // Enumerate only AFTER permission is granted — otherwise the list rows carry
+    // empty deviceIds and every pick silently fails on Save (see
+    // ensureMediaPermission). Surface a clear note when it's denied.
+    if (!(await this.ensureMediaPermission("video"))) {
+      p.feed([
+        Skeletons.Note({
+          className: `device-heading`,
+          content: LOCALE.CAMERA,
+        }),
+        Skeletons.Note({
+          className: `device-label`,
+          content: LOCALE.DEVICES_PERMISSION_DENIED,
+        }),
+      ]);
+      p.$el.fadeIn();
+      return;
+    }
+
+    if (JitsiMeetJS.mediaDevices.isDeviceChangeAvailable("input")) {
+      JitsiMeetJS.mediaDevices.enumerateDevices(async (devices) => {
+        const videoInputDevices = devices.filter(
+          (d) => d.kind === "videoinput"
+        );
+        // Seed the highlighted row from the user's remembered pick first; only
+        // fall back to the live track when there is no saved preference (first
+        // open of the call). getDeviceId() honours _realDeviceId, unlike the
+        // raw .deviceId property.
+        let currentInputDevice = this.preferredVideoInputDevice || null;
+        if (!currentInputDevice && this.room) {
+          let videoTrack = this.room.getLocalVideoTrack();
+          if (videoTrack) {
+            currentInputDevice = videoTrack.getDeviceId
+              ? videoTrack.getDeviceId()
+              : videoTrack.deviceId;
+          }
+        }
+        if (videoInputDevices.length > 0) {
+          let view = require("../skeleton/video-device-list")(
+            this,
+            videoInputDevices,
+            currentInputDevice
+          );
+          p.feed(view);
+        } else {
+          p.feed(noDevice);
+        }
+        p.$el.fadeIn();
+      });
+    } else {
+      p.feed(noDevice);
+      p.$el.fadeIn();
+    }
+  }
+
+  /**
+   *
+   */
+  closeVideoDevicesList() {
+    // The effects panel hangs off the same picker — close it alongside.
+    this.closeBgEffectsPanel();
+    let p = this.getPart("video-devices");
+    if (!p) return;
+    p.$el.fadeOut();
+    setTimeout(() => {
+      p.clear();
+    }, 1000);
+  }
+
+  /**
+   * The current background effect: { type: "none"|"blur"|"image", level?,
+   * id?, image? }. `bgEffect` is the source of truth; applyBackgroundEffect
+   * attaches it to the live camera track and is re-run after the camera is
+   * (re)created (enable / device switch) so the effect survives those.
+   */
+  setBackgroundEffect(spec, cmd) {
+    this.bgEffect = spec || { type: "none" };
+    this._syncBgUi();
+    // Turning an effect ON needs a live camera track. Key off the actual track,
+    // not this.isVideo (which can be stale either way): with no track, applying
+    // silently no-ops, so auto-enable the camera — changeLocalVideo's enable
+    // path re-applies the current bgEffect once the new track exists.
+    const hasCamera = !!(this.room && this.room.getLocalVideoTrack
+      && this.room.getLocalVideoTrack());
+    if (this.bgEffect.type !== "none" && !hasCamera) {
+      return this.enableCameraForEffect();
+    }
+    return this.applyBackgroundEffect();
+  }
+
+  /** Turn the camera on so a just-selected background effect has a track. */
+  async enableCameraForEffect() {
+    if (this.__ctrlVideo) this.__ctrlVideo.setState(1);
+    await this.changeLocalVideo(1);
+  }
+
+  /** Blur Background row in the device list — toggles blur on/off. */
+  async toggleBackgroundBlur(cmd) {
+    const on = !(this.bgEffect && this.bgEffect.type === "blur");
+    await this.setBackgroundEffect(on ? { type: "blur", level: "light" } : { type: "none" }, cmd);
+  }
+
+  /**
+   * The Blur toggle exists in TWO places at once — the device-list "Blur
+   * Background" row (.blur-background-ctrl) and the effects-panel blur tile
+   * (.bg-effect-tile.blur) — likewise Upload/image (.upload-background-ctrl /
+   * .bg-effect-tile.upload). Collect the matching elements across whichever of
+   * the two popups are currently open so their active/loading state stays in
+   * sync no matter which one was clicked.
+   */
+  _bgFind(selector) {
+    const res = [];
+    ["video-devices", "bg-effects"].forEach((n) => {
+      const p = this.getPart && this.getPart(n);
+      if (p && p.$el && p.$el.find) {
+        const f = p.$el.find(selector);
+        if (f && f.length) res.push(f);
+      }
+    });
+    return res;
+  }
+
+  /**
+   * Reflect this.bgEffect on the controls: blur controls active when blurring;
+   * the active image's preview thumbnail active when an image is applied. The
+   * Upload (+) tile is an "add" button and never shows active.
+   */
+  _syncBgUi() {
+    const e = this.bgEffect || { type: "none" };
+    this._bgFind(".blur-background-ctrl, .bg-effect-tile.blur")
+      .forEach((f) => f.attr("data-state", e.type === "blur" ? 1 : 0));
+    const id = e.type === "image" ? String(e.id) : null;
+    this._bgFind(".bg-effect-tile.thumb").forEach((set) =>
+      set.each(function () {
+        this.setAttribute(
+          "data-state", this.getAttribute("data-bgid") === id ? "1" : "0"
+        );
+      })
+    );
+  }
+
+  /**
+   * Effect status → loading spinner on the control(s) for the active effect.
+   * "loading" while the segmentation model downloads (a few seconds on first
+   * use), cleared on "ready" (first processed frame) or "failed".
+   */
+  _onBgStatus(status) {
+    const loading = status === "loading" ? 1 : 0;
+    const e = this.bgEffect || { type: "none" };
+    const sel = e.type === "image"
+      ? `.bg-effect-tile.thumb[data-bgid="${e.id}"]`
+      : ".blur-background-ctrl, .bg-effect-tile.blur";
+    this._bgFind(sel).forEach((f) => f.attr("data-loading", loading));
+  }
+
+  /**
+   * Attach / detach the MediaPipe background effect on the local camera track to
+   * match this.bgEffect. No-ops (but keeps the spec) when the camera is off —
+   * changeLocalVideo / recreateLocalVideoOnDeviceChange call this again once a
+   * fresh track exists. A new effect instance is created per apply so its
+   * canvas/segmenter don't leak across tracks.
+   */
+  async applyBackgroundEffect() {
+    const track = this.room && this.room.getLocalVideoTrack();
+    if (!track || !track.setEffect) return;
+    const spec = this.bgEffect || { type: "none" };
+    try {
+      if (spec.type && spec.type !== "none") {
+        const BackgroundEffect = require("./effects/background-effect");
+        this._bgFx = new BackgroundEffect({
+          type: spec.type,
+          blurValue: spec.level === "strong" ? 18 : 8,
+          image: spec.image,
+          onStatus: (s) => this._onBgStatus(s),
+        });
+        await track.setEffect(this._bgFx);
+      } else {
+        await track.setEffect(undefined);
+        this._bgFx = null;
+        this._onBgStatus("ready"); // clear any lingering spinner
+      }
+    } catch (e) {
+      this.warn("applyBackgroundEffect failed", e);
+      this._onBgStatus("failed");
+    }
+  }
+
+  /** Open (or refresh) the backgrounds & effects panel next to the list. */
+  async updateBgEffectsPanel() {
+    const p = await this.ensurePart("bg-effects");
+    if (!p) return;
+    const view = require("../skeleton/bg-effects")(this, {
+      current: this.bgEffect || { type: "none" },
+      backgrounds: (this.backgrounds || []).map((b) => ({ id: b.id, url: b.url })),
+    });
+    p.feed(view);
+    p.$el.fadeIn();
+  }
+
+  /**
+   *
+   */
+  closeBgEffectsPanel() {
+    const p = this.getPart("bg-effects");
+    if (!p) return;
+    p.$el.fadeOut();
+    setTimeout(() => p.clear(), 1000);
+  }
+
+  /**
+   * Prompt for an image file, register it as a selectable background and apply
+   * it immediately. Object URLs are kept for the call's lifetime (revoked on
+   * teardown) so the thumbnail and the effect can both reference them.
+   */
+  pickBackgroundImage(cmd) {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = "image/*";
+    input.addEventListener("change", () => {
+      const file = input.files && input.files[0];
+      if (!file) return;
+      const url = URL.createObjectURL(file);
+      const img = new Image();
+      img.onload = async () => {
+        const id = `bg-${(this.backgrounds || []).length + 1}-${file.size}`;
+        this.backgrounds = this.backgrounds || [];
+        this.backgrounds.push({ id, url, img });
+        // Mark it current + render the thumbnail (active) FIRST, so the async
+        // "applying" loading spinner (_onBgStatus) has a DOM target on the new
+        // tile, then apply the effect — the spinner shows on it until ready.
+        this.bgEffect = { type: "image", id, image: img };
+        await this.updateBgEffectsPanel();
+        this.setBackgroundEffect({ type: "image", id, image: img }, cmd);
+      };
+      img.src = url;
+    });
+    input.click();
+  }
+
+  /**
+   * Remove an uploaded background (its hover close badge). Drops it from the
+   * list, frees its object URL, turns the effect off if it was the active one,
+   * then re-renders the panel row.
+   */
+  removeBackground(cmd) {
+    const id = cmd && cmd.$el && cmd.$el.data("bgid");
+    if (id == null) return;
+    const list = this.backgrounds || [];
+    const idx = list.findIndex((b) => String(b.id) === String(id));
+    if (idx < 0) return;
+    const [removed] = list.splice(idx, 1);
+    if (removed && removed.url) {
+      try { URL.revokeObjectURL(removed.url); } catch (e) { /* already freed */ }
+    }
+    // If the removed image was the active background, drop the effect.
+    if (this.bgEffect && this.bgEffect.type === "image"
+        && String(this.bgEffect.id) === String(id)) {
+      this.setBackgroundEffect({ type: "none" });
+    }
+    this.updateBgEffectsPanel();
+  }
+
+  /**
  * 
  */
   async displayPresentation(fullscreen) {
@@ -459,9 +740,30 @@ class __webrtc_room extends __interact {
   async recreateLocalTrackOnDeviceChange() {
     let reqDevices = [_a.audio];
     if (this.isVideo) reqDevices = [...reqDevices, _a.video];
+    // Keep the user's chosen camera when this path rebuilds the video track
+    // (mic change / hardware hotplug) — otherwise it would silently revert to
+    // the default camera.
+    const createOpt = this.preferredVideoInputDevice
+      ? { cameraDeviceId: this.preferredVideoInputDevice }
+      : {};
     // replaceTrack inside createLocalTracks is async — await so the swap
     // completes deterministically before the promise settles.
-    await this.createLocalTracks(reqDevices, this.selectedInputDevice);
+    await this.createLocalTracks(reqDevices, this.selectedInputDevice, createOpt);
+  }
+
+  /**
+   * Camera twin of recreateLocalTrackOnDeviceChange: rebuild the local video
+   * track on the chosen camera. Threaded through createLocalTracks' createOpt
+   * (cameraDeviceId), since the 2nd positional arg is the mic device id.
+   */
+  async recreateLocalVideoOnDeviceChange() {
+    await this.createLocalTracks(_a.video, "default", {
+      cameraDeviceId: this.selectedVideoDevice,
+    });
+    // The new track has no effect attached — re-apply the background effect.
+    if (this.bgEffect && this.bgEffect.type && this.bgEffect.type !== "none") {
+      await this.applyBackgroundEffect();
+    }
   }
 
   /**
@@ -480,18 +782,20 @@ class __webrtc_room extends __interact {
    * back to a short-lived getUserMedia probe (which triggers the prompt and
    * refreshes the device ids/labels) when it isn't already granted.
    */
-  async ensureMediaPermission() {
+  async ensureMediaPermission(kind = "audio") {
+    const permName = kind === "video" ? "camera" : "microphone";
+    const constraints = kind === "video" ? { video: true } : { audio: true };
     try {
       if (navigator.permissions && navigator.permissions.query) {
-        const st = await navigator.permissions.query({ name: "microphone" });
+        const st = await navigator.permissions.query({ name: permName });
         if (st && st.state === "granted") return true;
         if (st && st.state === "denied") return false;
       }
     } catch (e) {
-      // 'microphone' not queryable on this browser — fall through to the probe.
+      // permission name not queryable on this browser — fall through to the probe.
     }
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const stream = await navigator.mediaDevices.getUserMedia(constraints);
       // Release the probe stream immediately; the call keeps its own tracks.
       stream.getTracks().forEach((t) => t.stop());
       return true;
@@ -528,6 +832,30 @@ class __webrtc_room extends __interact {
       this.warn("confirmDeviceSelection failed", e);
       // Was silently swallowed before — surface it so a failed change isn't
       // mistaken for "nothing happened".
+      const details = (e && e.message) || `${e}`;
+      Wm.alert(`${LOCALE.DEVICES_PERMISSION_DENIED} (${details})`);
+    }
+  }
+
+  /**
+   * Camera twin of confirmDeviceSelection. Closes the picker, re-checks the
+   * camera permission, then recreates the local video track on the chosen
+   * device — but only when the camera is currently ON. When it's off the pick
+   * is just remembered (preferredVideoInputDevice) and applied on next enable,
+   * so confirming a camera doesn't force the camera on.
+   */
+  async confirmCameraSelection() {
+    this.closeVideoDevicesList();
+    if (!(await this.ensureMediaPermission("video"))) {
+      Wm.alert(LOCALE.DEVICES_PERMISSION_DENIED);
+      return;
+    }
+    try {
+      if (this.selectedVideoDevice && this.isVideo) {
+        await this.recreateLocalVideoOnDeviceChange();
+      }
+    } catch (e) {
+      this.warn("confirmCameraSelection failed", e);
       const details = (e && e.message) || `${e}`;
       Wm.alert(`${LOCALE.DEVICES_PERMISSION_DENIED} (${details})`);
     }
@@ -617,6 +945,57 @@ class __webrtc_room extends __interact {
         this.selectedOutputDevice = cmd.$el.data("deviceid");
         this.preferredOutputDevice = this.selectedOutputDevice;
         break;
+      case "close-camera-select":
+        this.selectedVideoDevice = null;
+        this.closeVideoDevicesList();
+        break;
+      case "confirm-camera-selection":
+        this.confirmCameraSelection();
+        break;
+      case "video-device-select":
+        this.selectedVideoDevice = cmd.$el.data("deviceid");
+        // Remember the pick so reopening re-highlights it and toggling the
+        // camera off/on re-acquires this device (see changeLocalVideo).
+        this.preferredVideoInputDevice = this.selectedVideoDevice;
+        break;
+      case "blur-background":
+        this.toggleBackgroundBlur(cmd);
+        break;
+      case "upload-background":
+        // Open the backgrounds & effects panel beside the device list.
+        this.updateBgEffectsPanel();
+        break;
+      // ── Backgrounds & effects panel tiles ──────────────────────────────
+      case "bg-none":
+        this.setBackgroundEffect({ type: "none" }, cmd);
+        break;
+      case "bg-blur":
+        // Panel blur tile toggles on/off, same as the device-list blur row.
+        this.toggleBackgroundBlur(cmd);
+        break;
+      case "bg-upload":
+        this.pickBackgroundImage(cmd);
+        break;
+      case "bg-select": {
+        // Toggle: clicking the active background image turns it off; clicking
+        // another applies it. (The × badge fully removes it from the row.)
+        const id = cmd.$el.data("bgid");
+        const isActive = this.bgEffect && this.bgEffect.type === "image"
+          && String(this.bgEffect.id) === String(id);
+        if (isActive) {
+          this.setBackgroundEffect({ type: "none" }, cmd);
+        } else {
+          const bg = (this.backgrounds || []).find((b) => String(b.id) === String(id));
+          if (bg) this.setBackgroundEffect({ type: "image", id, image: bg.img }, cmd);
+        }
+        break;
+      }
+      case "bg-remove":
+        this.removeBackground(cmd);
+        break;
+      case "close-bg-effects":
+        this.closeBgEffectsPanel();
+        break;
       case "remote-ready":
         //this.checkQuota();
         this.updateAttendees(args);
@@ -661,11 +1040,23 @@ class __webrtc_room extends __interact {
 
       case "device-setting":
         this.audioSettingsOpen = 1;
+        // Only one picker open at a time — close the camera list if it's showing.
+        this.closeVideoDevicesList();
         if (this.__audioDevices && !this.__audioDevices.isEmpty()) {
           this.closeInputDevicesList();
           return;
         }
         this.updateAudioDevicesList();
+        break;
+      case "camera-setting":
+        this.cameraSettingsOpen = 1;
+        // Only one picker open at a time — close the mic list if it's showing.
+        this.closeInputDevicesList();
+        if (this.__videoDevices && !this.__videoDevices.isEmpty()) {
+          this.closeVideoDevicesList();
+          return;
+        }
+        this.updateVideoDevicesList();
         break;
       case _a.settings:
         let name = cmd.mget(_a.name);

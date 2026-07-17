@@ -233,7 +233,9 @@ module.exports = function (_ui_) {
 
   const divider = Skeletons.Note({ className: `${pfx}__in-topbar-divider` });
 
-  // Camera pill: toggle + decorative caret (video-input switching not wired).
+  // Camera pill: toggle + device caret + video-input picker (twin of the mic
+  // pill below). The caret opens the camera list (camera-setting), which is fed
+  // into the "video-devices" wrapper by updateVideoDevicesList.
   const cameraPill = Skeletons.Box.X({
     className: `${pfx}__ctrl-pill camera`,
     kids: [
@@ -248,9 +250,24 @@ module.exports = function (_ui_) {
         service: _a.settings,
         dataset: { muted: 1, ctrl: "video" },
       }),
-      Skeletons.Image.Svg({
+      Skeletons.Button.Svg({
+        className: "ctrl-button settings video ctrl-devicesetting",
         ico: "meet-caret-down",
-        className: `${pfx}__ctrl-caret`,
+        sys_pn: "ctrl-camerasetting",
+        name: _a.devicesettings,
+        service: "camera-setting",
+      }),
+      Skeletons.Wrapper.Y({
+        className: `${pfx}__devices-list video`,
+        sys_pn: "video-devices",
+        partHandler: [_ui_],
+      }),
+      // Backgrounds & effects panel, docked to the left of the device list;
+      // fed by updateBgEffectsPanel when "Upload Background" is clicked.
+      Skeletons.Wrapper.Y({
+        className: `${pfx}__bg-effects`,
+        sys_pn: "bg-effects",
+        partHandler: [_ui_],
       }),
     ],
   });

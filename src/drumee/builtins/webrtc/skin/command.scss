@@ -230,7 +230,7 @@
       height: auto;
       border-radius: 6px;
       justify-content: center;
-      border-radius: var(--border-radius);
+      border-radius: var(--corner-radius-1);
       align-items: center;
       padding: 4px;
       margin: 0 5px;
@@ -263,5 +263,301 @@
       margin-top: 2px;
     }
 
+    // ── Camera picker (Figma camera-dropdown, node 2568:29800) ──────────────
+    // Transparent rows with a brand-tint active item, a camera icon in the
+    // heading, and the Blur / Upload background actions with leading icons.
+    // Scoped to `.video` so the audio picker keeps its existing look.
+    &.video {
+      width: 220px; // fixed so the effects panel can dock to its left
+
+      .device-heading {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        @include drumee.typo($size: 12px, $line: 16px, $weight: 600, $color: var(--normal-fg-10));
+
+        svg {
+          width: 17px;
+          height: 17px;
+          flex-shrink: 0;
+        }
+      }
+
+      .device-label {
+        background-color: transparent;
+        text-align: left;
+        justify-content: flex-start;
+        padding: 8px;
+        font-size: 12px; // Figma Body/Mini Body
+        color: var(--normal-fg-10);
+
+        &:hover {
+          background-color: #879bff;
+    color: var(--default-bg);
+        }
+
+        // Highlight the active camera (Figma Overlay/brand @ 10%).
+        &[data-state="1"] {
+          background-color: #6178d8;
+    color: var(--default-bg);
+        }
+      }
+
+      // Blur / Upload rows: leading icon + label, left aligned like the rows.
+      // (Button.Label roots are plain divs, so flex is required — otherwise the
+      // icon stacks above the label.)
+      .device-action {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+
+        svg {
+          width: 17px;
+          height: 17px;
+          flex-shrink: 0;
+        }
+
+        .device-action-label {
+          text-align: left;
+        }
+
+        // While the segmentation model downloads (first Blur use), show a
+        // trailing spinner and block re-clicks until it's ready / failed.
+        &[data-loading="1"] {
+          pointer-events: none;
+
+          &::after {
+            content: "";
+            width: 13px;
+            height: 13px;
+            margin-left: auto;
+            flex-shrink: 0;
+            border: 2px solid currentColor;
+            border-top-color: transparent;
+            border-radius: 50%;
+            opacity: 0.7;
+            animation: window-meeting-load-spin 0.8s linear infinite;
+          }
+        }
+      }
+    }
+
+  }
+
+  // ── Backgrounds & effects panel (opens beside the camera device list) ──────
+  // Docked to the LEFT of the 220px-wide video device list (both are absolute
+  // children of the camera pill), matching the Figma "blur & personal
+  // background" strip: a titled row of blue rounded tiles.
+  &__bg-effects {
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 228px; // 220px list + 8px gap
+    z-index: 1000;
+    padding: 12px;
+    background-color: var(--default-bg);
+    border-radius: 8px;
+    box-shadow: 0 1px 11px rgba(0, 0, 0, 0.13);
+
+    .bg-effects-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 10px;
+    }
+
+    .bg-effects-title {
+      @include drumee.typo($size: 12px, $line: 16px, $weight: 600, $color: var(--normal-fg-10));
+      white-space: nowrap;
+    }
+
+    .bg-effects-close {
+      display: flex;
+      box-sizing: border-box;
+      flex-shrink: 0;
+      width: 20px;
+      height: 20px;
+      padding: 0;
+      border-radius: 4px;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      color: var(--normal-fg-10);
+
+      svg {
+        width: 12px;
+        height: 12px;
+        flex-shrink: 0;
+        fill: currentColor;
+      }
+
+      &:hover {
+        background-color: rgba(0, 0, 0, 0.06);
+      }
+    }
+
+    .bg-effects-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      max-width: 264px; // ~4 tiles per row, then wrap
+    }
+
+    .bg-effect-tile {
+      position: relative;
+      box-sizing: border-box;
+      display: flex; // Button.Svg root is a plain div — center the glyph
+      width: 56px;
+      height: 56px;
+      flex-shrink: 0;
+      border-radius: 4px;
+      overflow: visible; // let the hover tooltip escape the tile
+      cursor: pointer;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      transition: filter 0.15s ease;
+      border: 1px solid var(--border-default);
+
+      svg {
+        width: 22px;
+        height: 22px;
+        flex-shrink: 0;
+        fill: currentColor;
+      }
+
+      img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        border-radius: inherit; // stay rounded (tile overflow is visible)
+      }
+
+      &:hover {
+        filter: brightness(1.06);
+      }
+
+      // Blur + Upload tiles are neutral when OFF and filled brand-blue when ON
+      // (mirrors the device-list "Blur Background" row's off/on look).
+      &.blur,
+      &.upload {
+        background-color: #f0f0f2;
+        color: var(--normal-fg-10);
+
+        &:hover {
+          filter: none;
+          background-color: #e6e6ea;
+        }
+
+        &[data-state="1"] {
+          background-color: #2f5bd7;
+          color: #fff;
+
+          &:hover {
+            filter: brightness(1.06);
+            background-color: #2f5bd7;
+          }
+        }
+      }
+
+      // Active effect: brand ring (in addition to any fill above).
+      &[data-state="1"] {
+        outline: 2px solid var(--primary-40, #5950ff);
+        outline-offset: 2px;
+      }
+
+      // Model loading (first use): centered spinner, block re-clicks.
+      // currentColor so it's visible on both the neutral and filled states.
+      &[data-loading="1"] {
+        pointer-events: none;
+
+        // Hide the glyph so only the spinner shows (keep its box for layout).
+        svg {
+          visibility: hidden;
+        }
+
+        &::after {
+          content: "";
+          position: absolute;
+          top: calc(50% - 8px);
+          left: calc(50% - 8px);
+          width: 16px;
+          height: 16px;
+          border: 2px solid currentColor;
+          border-top-color: transparent;
+          border-radius: 50%;
+          opacity: 0.8;
+          animation: window-meeting-load-spin 0.8s linear infinite;
+        }
+      }
+
+      // Uploaded-background remove badge: top-right corner, shown on hover.
+      .bg-thumb-close {
+        position: absolute;
+        top: -6px;
+        right: -6px;
+        display: none;
+        box-sizing: border-box;
+        width: 18px;
+        min-width: 18px;
+        height: 18px;
+        padding: 0;
+        border-radius: 50%;
+        align-items: center;
+        justify-content: center;
+        background-color: #1f2130;
+        color: #fff;
+        cursor: pointer;
+        z-index: 5;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+
+        svg {
+          width: 8px;
+          height: 8px;
+          flex-shrink: 0;
+          fill: currentColor;
+        }
+
+        &:hover {
+          background-color: #33344a;
+        }
+      }
+
+      &.thumb:hover .bg-thumb-close {
+        display: flex;
+      }
+
+      // Dim the image while its background effect is applying so the (white)
+      // loading spinner stays visible over the picture.
+      &.thumb[data-loading="1"] img {
+        opacity: 0.45;
+      }
+    }
+  }
+
+  // ── Styled hover tooltip (dark pill) for controls carrying data-tip ─────────
+  // Used on the blur controls (device-list row + panel tile) and the upload
+  // tile. ::before is free here (the loading spinner uses ::after).
+  [data-tip] {
+    position: relative;
+  }
+
+  [data-tip]:hover::before {
+    content: attr(data-tip);
+    position: absolute;
+    bottom: calc(100% + 8px);
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 5px 10px;
+    border-radius: 8px;
+    background-color: #1f2130;
+    color: #fff;
+    font-size: 12px;
+    line-height: 14px;
+    font-weight: 500;
+    white-space: nowrap;
+    pointer-events: none;
+    z-index: 3000;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
   }
 }
