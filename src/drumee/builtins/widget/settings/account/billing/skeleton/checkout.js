@@ -465,7 +465,6 @@ function checkout(ui) {
       Skeletons.Button.Label({
         label: LOCALE.PROCEED_TO_CHECKOUT,
         className: `${pfx}-checkout-button`,
-        ico: "raw-cart",
         service: isFreePlan ? null : "proceed-checkout-billing",
         priority: "primary",
         uiHandler: [ui],
@@ -588,7 +587,6 @@ function rightPanelContent(ui) {
       Skeletons.Button.Label({
         label: LOCALE.PROCEED_TO_CHECKOUT,
         className: `${pfx}-checkout-button`,
-        ico: "raw-cart",
         service: isFreePlan ? null : "proceed-checkout-billing",
         priority: "primary",
         uiHandler: [ui],
