@@ -297,7 +297,12 @@ class __webrtc_room extends __room {
 
   _doCreateLocalTracks(devices, micDeviceId = "default", createOpt = {}) {
     if (!_.isArray(devices)) devices = [devices];
-    const opt = require("./configs/tracks")({ devices, micDeviceId });
+    const trackOpt = { devices, micDeviceId };
+    // Camera device is threaded via createOpt (the 2nd positional arg is the
+    // mic id). configs/tracks spreads it straight through to lib-jitsi-meet's
+    // createLocalTracks, which honours a top-level cameraDeviceId.
+    if (createOpt.cameraDeviceId) trackOpt.cameraDeviceId = createOpt.cameraDeviceId;
+    const opt = require("./configs/tracks")(trackOpt);
     if (this.isDestroyed()) {
       this.warn("Attemptiing to create tracks with destroyed view");
       console.trace();
@@ -1104,7 +1109,16 @@ class __webrtc_room extends __room {
       this.isVideo = true;
       this.toggleAvatarVideo(0, 1);
       try {
-        await this.createLocalTracks(_a.video);
+        // Recreate the camera with the user's last confirmed device, not the
+        // implicit default — otherwise toggling the camera off/on after picking
+        // a specific camera silently reverts capture to the default device
+        // (mirrors changeLocalAudio's preferredInputDevice handling).
+        const camId = this.preferredVideoInputDevice;
+        await this.createLocalTracks(
+          _a.video,
+          "default",
+          camId ? { cameraDeviceId: camId } : {}
+        );
       } catch (e) {
         this.isVideo = false;
         this.toggleAvatarVideo(1, 0);

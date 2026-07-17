@@ -12,6 +12,7 @@ class __webrtc_room extends __interact {
     this.attendees = {};
     this.selectedInputDevice = "";
     this.selectedOutputDevice = "";
+    this.selectedVideoDevice = "";
     RADIO_NETWORK.once(_e.offline, this.handleError.bind(this));
     this.model.set({
       mode: "normal",
@@ -406,6 +407,125 @@ class __webrtc_room extends __interact {
   }
 
   /**
+   * Camera twin of updateAudioDevicesList: enumerate video inputs (after the
+   * camera permission is granted) and feed the picker into the "video-devices"
+   * wrapper on the camera pill. Camera has no output-sink half, so only the
+   * videoinput side is built.
+   */
+  async updateVideoDevicesList(refresh = 0) {
+    let p = await this.ensurePart("video-devices");
+    let noDevice = [
+      Skeletons.Note({
+        className: `device-heading`,
+        content: LOCALE.CAMERA,
+      }),
+      Skeletons.Note({
+        className: `device-label`,
+        content: "No camera device",
+      }),
+    ];
+
+    // Enumerate only AFTER permission is granted — otherwise the list rows carry
+    // empty deviceIds and every pick silently fails on Save (see
+    // ensureMediaPermission). Surface a clear note when it's denied.
+    if (!(await this.ensureMediaPermission("video"))) {
+      p.feed([
+        Skeletons.Note({
+          className: `device-heading`,
+          content: LOCALE.CAMERA,
+        }),
+        Skeletons.Note({
+          className: `device-label`,
+          content: LOCALE.DEVICES_PERMISSION_DENIED,
+        }),
+      ]);
+      p.$el.fadeIn();
+      return;
+    }
+
+    if (JitsiMeetJS.mediaDevices.isDeviceChangeAvailable("input")) {
+      JitsiMeetJS.mediaDevices.enumerateDevices(async (devices) => {
+        const videoInputDevices = devices.filter(
+          (d) => d.kind === "videoinput"
+        );
+        // Seed the highlighted row from the user's remembered pick first; only
+        // fall back to the live track when there is no saved preference (first
+        // open of the call). getDeviceId() honours _realDeviceId, unlike the
+        // raw .deviceId property.
+        let currentInputDevice = this.preferredVideoInputDevice || null;
+        if (!currentInputDevice && this.room) {
+          let videoTrack = this.room.getLocalVideoTrack();
+          if (videoTrack) {
+            currentInputDevice = videoTrack.getDeviceId
+              ? videoTrack.getDeviceId()
+              : videoTrack.deviceId;
+          }
+        }
+        if (videoInputDevices.length > 0) {
+          let view = require("../skeleton/video-device-list")(
+            this,
+            videoInputDevices,
+            currentInputDevice
+          );
+          p.feed(view);
+        } else {
+          p.feed(noDevice);
+        }
+        p.$el.fadeIn();
+      });
+    } else {
+      p.feed(noDevice);
+      p.$el.fadeIn();
+    }
+  }
+
+  /**
+   *
+   */
+  closeVideoDevicesList() {
+    let p = this.getPart("video-devices");
+    if (!p) return;
+    p.$el.fadeOut();
+    setTimeout(() => {
+      p.clear();
+    }, 1000);
+  }
+
+  /**
+   * Virtual-background actions from the camera picker (Figma camera-dropdown).
+   * NB: the bundled lib-jitsi-meet ships no segmentation / background-effect
+   * module, so these only manage UI state / file selection for now — actually
+   * compositing the blur / image onto the local video track is a TODO that
+   * needs an effect module (e.g. a JitsiStreamBackgroundEffect equivalent)
+   * added to the vendored stack.
+   */
+  toggleBackgroundBlur(cmd) {
+    this.backgroundBlur = this.backgroundBlur ? 0 : 1;
+    // Reflect the on/off state on the row (reuses the [data-state] highlight).
+    if (cmd && cmd.$el) cmd.$el.attr("data-state", this.backgroundBlur);
+    // TODO: apply/remove a background-blur effect on the local video track.
+    this.warn("background blur toggled (not yet applied):", this.backgroundBlur);
+  }
+
+  /**
+   *
+   */
+  pickBackgroundImage() {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = "image/*";
+    input.addEventListener("change", () => {
+      const file = input.files && input.files[0];
+      if (!file) return;
+      this.selectedBackgroundImage = file;
+      // TODO: apply the chosen image as a virtual background on the local video
+      // track (needs a background-effect module not present in the vendored lib).
+      this.warn("background image selected (not yet applied):", file.name);
+    });
+    input.click();
+  }
+
+  /**
  * 
  */
   async displayPresentation(fullscreen) {
@@ -459,9 +579,26 @@ class __webrtc_room extends __interact {
   async recreateLocalTrackOnDeviceChange() {
     let reqDevices = [_a.audio];
     if (this.isVideo) reqDevices = [...reqDevices, _a.video];
+    // Keep the user's chosen camera when this path rebuilds the video track
+    // (mic change / hardware hotplug) — otherwise it would silently revert to
+    // the default camera.
+    const createOpt = this.preferredVideoInputDevice
+      ? { cameraDeviceId: this.preferredVideoInputDevice }
+      : {};
     // replaceTrack inside createLocalTracks is async — await so the swap
     // completes deterministically before the promise settles.
-    await this.createLocalTracks(reqDevices, this.selectedInputDevice);
+    await this.createLocalTracks(reqDevices, this.selectedInputDevice, createOpt);
+  }
+
+  /**
+   * Camera twin of recreateLocalTrackOnDeviceChange: rebuild the local video
+   * track on the chosen camera. Threaded through createLocalTracks' createOpt
+   * (cameraDeviceId), since the 2nd positional arg is the mic device id.
+   */
+  async recreateLocalVideoOnDeviceChange() {
+    await this.createLocalTracks(_a.video, "default", {
+      cameraDeviceId: this.selectedVideoDevice,
+    });
   }
 
   /**
@@ -480,18 +617,20 @@ class __webrtc_room extends __interact {
    * back to a short-lived getUserMedia probe (which triggers the prompt and
    * refreshes the device ids/labels) when it isn't already granted.
    */
-  async ensureMediaPermission() {
+  async ensureMediaPermission(kind = "audio") {
+    const permName = kind === "video" ? "camera" : "microphone";
+    const constraints = kind === "video" ? { video: true } : { audio: true };
     try {
       if (navigator.permissions && navigator.permissions.query) {
-        const st = await navigator.permissions.query({ name: "microphone" });
+        const st = await navigator.permissions.query({ name: permName });
         if (st && st.state === "granted") return true;
         if (st && st.state === "denied") return false;
       }
     } catch (e) {
-      // 'microphone' not queryable on this browser — fall through to the probe.
+      // permission name not queryable on this browser — fall through to the probe.
     }
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const stream = await navigator.mediaDevices.getUserMedia(constraints);
       // Release the probe stream immediately; the call keeps its own tracks.
       stream.getTracks().forEach((t) => t.stop());
       return true;
@@ -528,6 +667,30 @@ class __webrtc_room extends __interact {
       this.warn("confirmDeviceSelection failed", e);
       // Was silently swallowed before — surface it so a failed change isn't
       // mistaken for "nothing happened".
+      const details = (e && e.message) || `${e}`;
+      Wm.alert(`${LOCALE.DEVICES_PERMISSION_DENIED} (${details})`);
+    }
+  }
+
+  /**
+   * Camera twin of confirmDeviceSelection. Closes the picker, re-checks the
+   * camera permission, then recreates the local video track on the chosen
+   * device — but only when the camera is currently ON. When it's off the pick
+   * is just remembered (preferredVideoInputDevice) and applied on next enable,
+   * so confirming a camera doesn't force the camera on.
+   */
+  async confirmCameraSelection() {
+    this.closeVideoDevicesList();
+    if (!(await this.ensureMediaPermission("video"))) {
+      Wm.alert(LOCALE.DEVICES_PERMISSION_DENIED);
+      return;
+    }
+    try {
+      if (this.selectedVideoDevice && this.isVideo) {
+        await this.recreateLocalVideoOnDeviceChange();
+      }
+    } catch (e) {
+      this.warn("confirmCameraSelection failed", e);
       const details = (e && e.message) || `${e}`;
       Wm.alert(`${LOCALE.DEVICES_PERMISSION_DENIED} (${details})`);
     }
@@ -617,6 +780,25 @@ class __webrtc_room extends __interact {
         this.selectedOutputDevice = cmd.$el.data("deviceid");
         this.preferredOutputDevice = this.selectedOutputDevice;
         break;
+      case "close-camera-select":
+        this.selectedVideoDevice = null;
+        this.closeVideoDevicesList();
+        break;
+      case "confirm-camera-selection":
+        this.confirmCameraSelection();
+        break;
+      case "video-device-select":
+        this.selectedVideoDevice = cmd.$el.data("deviceid");
+        // Remember the pick so reopening re-highlights it and toggling the
+        // camera off/on re-acquires this device (see changeLocalVideo).
+        this.preferredVideoInputDevice = this.selectedVideoDevice;
+        break;
+      case "blur-background":
+        this.toggleBackgroundBlur(cmd);
+        break;
+      case "upload-background":
+        this.pickBackgroundImage(cmd);
+        break;
       case "remote-ready":
         //this.checkQuota();
         this.updateAttendees(args);
@@ -661,11 +843,23 @@ class __webrtc_room extends __interact {
 
       case "device-setting":
         this.audioSettingsOpen = 1;
+        // Only one picker open at a time — close the camera list if it's showing.
+        this.closeVideoDevicesList();
         if (this.__audioDevices && !this.__audioDevices.isEmpty()) {
           this.closeInputDevicesList();
           return;
         }
         this.updateAudioDevicesList();
+        break;
+      case "camera-setting":
+        this.cameraSettingsOpen = 1;
+        // Only one picker open at a time — close the mic list if it's showing.
+        this.closeInputDevicesList();
+        if (this.__videoDevices && !this.__videoDevices.isEmpty()) {
+          this.closeVideoDevicesList();
+          return;
+        }
+        this.updateVideoDevicesList();
         break;
       case _a.settings:
         let name = cmd.mget(_a.name);

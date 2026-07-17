@@ -230,7 +230,7 @@
       height: auto;
       border-radius: 6px;
       justify-content: center;
-      border-radius: var(--border-radius);
+      border-radius: var(--corner-radius-1);
       align-items: center;
       padding: 4px;
       margin: 0 5px;
@@ -261,6 +261,64 @@
       justify-content: flex-start;
       margin-bottom: 4px;
       margin-top: 2px;
+    }
+
+    // ── Camera picker (Figma camera-dropdown, node 2568:29800) ──────────────
+    // Transparent rows with a brand-tint active item, a camera icon in the
+    // heading, and the Blur / Upload background actions with leading icons.
+    // Scoped to `.video` so the audio picker keeps its existing look.
+    &.video {
+      .device-heading {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        @include drumee.typo($size: 12px, $line: 16px, $weight: 600, $color: var(--normal-fg-10));
+
+        svg {
+          width: 17px;
+          height: 17px;
+          flex-shrink: 0;
+        }
+      }
+
+      .device-label {
+        background-color: transparent;
+        text-align: left;
+        justify-content: flex-start;
+        padding: 8px;
+        font-size: 12px; // Figma Body/Mini Body
+        color: var(--normal-fg-10);
+
+        &:hover {
+          background-color: #879bff;
+    color: var(--default-bg);
+        }
+
+        // Highlight the active camera (Figma Overlay/brand @ 10%).
+        &[data-state="1"] {
+          background-color: #6178d8;
+    color: var(--default-bg);
+        }
+      }
+
+      // Blur / Upload rows: leading icon + label, left aligned like the rows.
+      // (Button.Label roots are plain divs, so flex is required — otherwise the
+      // icon stacks above the label.)
+      .device-action {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+
+        svg {
+          width: 17px;
+          height: 17px;
+          flex-shrink: 0;
+        }
+
+        .device-action-label {
+          text-align: left;
+        }
+      }
     }
 
   }

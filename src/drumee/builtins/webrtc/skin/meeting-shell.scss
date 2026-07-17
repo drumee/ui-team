@@ -1843,7 +1843,7 @@
       }
     }
 
-    // Device caret: decorative Image on camera, interactive button on mic.
+    // Device caret: interactive button on both camera and mic pills.
     .#{$pfx}__ctrl-caret,
     .ctrl-devicesetting {
       display: flex;
@@ -1920,13 +1920,15 @@
     }
   }
 
-  // The mic device dropdown now hangs *below* the topbar caret (the shared
-  // command styling opens it upward for the floating bar).
-  &__in-topbar &__devices-list.audio {
+  // The mic / camera device dropdowns now hang *below* the topbar caret (the
+  // shared command styling opens them upward for the floating bar).
+  &__in-topbar &__devices-list.audio,
+  &__in-topbar &__devices-list.video {
     top: calc(100% + 8px);
     bottom: auto;
     right: 0;
     left: auto;
+    border: 1px solid var(--border-default);
 
     &::before {
       display: none;
