@@ -590,6 +590,47 @@ class __webrtc_room extends __interact {
       ? `.bg-effect-tile.thumb[data-bgid="${e.id}"]`
       : ".blur-background-ctrl, .bg-effect-tile.blur";
     this._bgFind(sel).forEach((f) => f.attr("data-loading", loading));
+    // Also overlay the video tiles: our own self-view (endpoint-local__main),
+    // and — via the BG_UPDATING broadcast — our tile on every peer's screen
+    // (remote-user__main), while the effect is applying.
+    this._setLocalTileBgLoading(loading);
+    this._broadcastBgLoading(loading);
+  }
+
+  /** Toggle the "applying background" spinner overlay on the local self-tile. */
+  _setLocalTileBgLoading(on) {
+    if (typeof this.getLocalParts !== "function") return;
+    this.getLocalParts().then((parts) => {
+      const local = parts && parts.local;
+      if (!local || !local.el || (local.isDestroyed && local.isDestroyed())) return;
+      const fam = (local.fig && local.fig.family) || "endpoint-local";
+      const main = local.el.querySelector(`.${fam}__main`) || local.el;
+      main.setAttribute("data-bg-loading", on ? "1" : "0");
+    }).catch(() => {});
+  }
+
+  /** Toggle the overlay on a peer's tile (driven by the BG_UPDATING signal). */
+  _setRemoteTileBgLoading(participantId, on) {
+    if (!this.__participants || !participantId) return;
+    const items = this.__participants.getItemsByAttr("participant_id", participantId) || [];
+    const tile = items[0];
+    if (!tile || !tile.el) return;
+    const fam = (tile.fig && tile.fig.family) || "remote-user";
+    const main = tile.el.querySelector(`.${fam}__main`) || tile.el;
+    main.setAttribute("data-bg-loading", on ? "1" : "0");
+  }
+
+  /** Tell peers our background is (un)applying so they can overlay our tile. */
+  _broadcastBgLoading(on) {
+    try {
+      if (!this.room || !this.room.isJoined()) return;
+      this.sendRoomSignaling(SERVICE.conference.broadcast, {
+        event: "BG_UPDATING",
+        payload: { id: this.room.myUserId(), updating: on ? 1 : 0 },
+      });
+    } catch (e) {
+      this.warn("BG_UPDATING broadcast failed", e);
+    }
   }
 
   /**

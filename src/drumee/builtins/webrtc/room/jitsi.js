@@ -375,7 +375,12 @@ class __webrtc_room extends __room {
             // it from the track being DISPLACED here: replaceTrack does not
             // dispose the old track, so without this a lingering camera/mic track
             // would keep its listener and could ghost-fire onTrackMuteChange.
-            const displaced = this.localTracks[type];
+            // Camera and desktop are both getType()==='video'; key them apart by
+            // videoType so a screen share is stored ALONGSIDE the camera instead
+            // of displacing it (camera + screen run simultaneously).
+            const slot = (type === _a.video && videoType === _a.desktop)
+              ? _a.desktop : type;
+            const displaced = this.localTracks[slot];
             if (displaced) {
               if (displaced.removeEventListener) {
                 displaced.removeEventListener(
@@ -385,18 +390,17 @@ class __webrtc_room extends __room {
               }
               this.idleStreams.push(displaced.stream);
             }
-            this.localTracks[type] = track;
+            this.localTracks[slot] = track;
             switch (type) {
               case _a.video:
-                track.addEventListener(
-                  JEVENTS.track.LOCAL_TRACK_STOPPED,
-                  this.stopPresentation
-                );
                 if (videoType == _a.desktop) {
-                  this.toggleAvatarVideo(1, 0);
-                  this.ensurePart(_a.video).then((el) => {
-                    el.setState(0);
-                  });
+                  // Screen share: stop the presentation when the OS "Stop
+                  // sharing" ends the track. Leave the camera self-view + camera
+                  // button untouched so the camera keeps running alongside it.
+                  track.addEventListener(
+                    JEVENTS.track.LOCAL_TRACK_STOPPED,
+                    this.stopPresentation
+                  );
                 } else {
                   this.getLocalParts().then((parts) => {
                     let { video } = parts;
@@ -1253,9 +1257,11 @@ class __webrtc_room extends __room {
       this.__ctrlScreen.setState(0);
       return;
     }
-    this.videoPaused = this.isVideo;
+    // Camera + screen run simultaneously: keep the camera on (don't force
+    // isVideo=false) and its toggle enabled. The screen is added as a SECOND
+    // video track — remote peers route camera → tile, desktop → presenter
+    // (see onStreamReceived), and the local self-view keeps showing the camera.
     this.stateMessage(LOCALE.PREPARING_PRESENTATION);
-    this.isVideo = false;
     await this.sendRoomSignaling(SERVICE.conference.update);
     let tracks;
     try {
@@ -1271,9 +1277,7 @@ class __webrtc_room extends __room {
       this.stateMessage("Failed to prepare screen share");
       return false;
     }
-    this.toggleAvatarVideo(1, 0);
     this.stateMessage();
-    this._setService("ctrl-video", null);
     let payload = {
       username: Visitor.fullname(),
       uid: Visitor.id,
@@ -1348,6 +1352,10 @@ class __webrtc_room extends __room {
         for (track of this.room.getLocalVideoTracks()) {
           if (track.getVideoType() == type) return track;
         }
+        // No track of this videoType — return null. (Previously fell through to
+        // getLocalVideoTrack(), which returned the CAMERA for a 'desktop' lookup
+        // and made screen-share remove the camera.)
+        return null;
       case _a.video:
         return this.room.getLocalVideoTrack();
     }
@@ -1411,6 +1419,13 @@ class __webrtc_room extends __room {
           }
           this.onRemoteScreenStop();
         }, 5000);
+        break;
+
+      case "BG_UPDATING":
+        // A peer is (un)applying a background effect — overlay their tile.
+        if (this._setRemoteTileBgLoading) {
+          this._setRemoteTileBgLoading(data.id, data.updating);
+        }
         break;
 
       case "HELLO":

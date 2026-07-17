@@ -30,12 +30,14 @@ module.exports = {
       return false;
     }
     if (r === true) {
-      // The desktop track is stored synchronously under `localTracks.video`
-      // (createLocalTracks keys by getType(), "video" for a desktop track)
-      // BEFORE addTrack runs; getLocalTrack(desktop) can miss it, so fall back.
+      // The desktop track is stored synchronously under `localTracks.desktop`
+      // (createLocalTracks now keys video tracks by videoType so the screen
+      // share coexists with the camera). getLocalTrack(desktop) resolves it once
+      // addTrack has run; fall back to the desktop slot otherwise. NB: do NOT
+      // fall back to localTracks.video — that is the CAMERA when it's on.
       const track =
         this.getLocalTrack(_a.desktop) ||
-        (this.localTracks && this.localTracks.video);
+        (this.localTracks && this.localTracks.desktop);
       if (track) {
         try {
           this._presentingLocally = true;
