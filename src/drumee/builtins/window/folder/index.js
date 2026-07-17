@@ -1570,7 +1570,12 @@ class __window_folder extends mfsInteract {
     // Tear down any previous overlay first (e.g. user re-clicks menu quickly).
     this._closeChatExportOverlay();
 
-    const folderName = this.mget(_a.name);
+    // Current NAVIGATED folder name — `filename` follows navigation (like the
+    // window title, see _syncWindowTitle); `_a.name` keeps the launch-time
+    // workspace name and would show the root instead of the open subfolder.
+    // Empty filename = workspace root → hub_name.
+    const folderName =
+      this.mget(_a.filename) || this.model.get("hub_name") || this.mget(_a.name);
     const folderColor = this._chatExportFolderColor(folderName);
 
     // Append a dedicated Wrapper to this window so Marionette owns its lifecycle.

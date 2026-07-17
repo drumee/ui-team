@@ -110,7 +110,10 @@ class __widget_chat_export extends LetcBox {
     const hub_id = this.mget(_a.hub_id);
     if (!hub_id) return;
     try {
-      const data = await this.fetchService(SERVICE.channel.export_scope, { hub_id });
+      // nid = the folder this modal was opened in — the backend scopes the
+      // export (message count, file threads, sections) to its subtree.
+      const nid = this.mget(_a.nid) || null;
+      const data = await this.fetchService(SERVICE.channel.export_scope, { hub_id, nid });
       const { hub = {}, file_threads = [] } = data || {};
       this._hubName = hub.name || "";
       this._messageCount = hub.message_count || 0;
@@ -304,8 +307,16 @@ class __widget_chat_export extends LetcBox {
 
     const payload = {
       hub_id,
+      // Subtree root — must match the nid sent to export_scope so the export
+      // covers exactly what the modal showed.
+      nid: this.mget(_a.nid) || null,
       format: this._format,
       scope_sel: this._scopeSel,
+      // When scope_sel is an explicit thread array, tell the backend whether to
+      // ALSO include folder/general chat. File-scope (single file) → false;
+      // folder modal → follows the "This folder" checkbox, so unchecking a
+      // subset of threads keeps the folder chat. Ignored for 'all'/'hub_chat_only'.
+      include_folders: this._fileScope ? 0 : (this._hubChecked ? 1 : 0),
       start_date: this._dateEnabled ? this._startDate : null,
       end_date: this._dateEnabled ? this._endDate : null,
     };
