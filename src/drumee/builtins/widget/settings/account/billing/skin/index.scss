@@ -109,6 +109,13 @@
       &.popular {
         border-color: var(--primary-30);
       }
+
+      // The user's CURRENT plan is the focused/active card — it outranks
+      // the "Popular" highlight so the eye lands on where the user IS.
+      &.current {
+        border: 2px solid var(--primary-50);
+        box-shadow: 0 8px 24px rgba(89, 80, 255, 0.14);
+      }
     }
 
     // ── Price-header box (title + price, with the Popular badge) ──────────
@@ -122,8 +129,10 @@
       justify-content: space-between;
       overflow: hidden;
 
-      // primary-30 (#847eff) @ 16% for the Pro card box.
-      &.popular {
+      // primary-30 (#847eff) @ 16% for the Pro card box — and for the
+      // CURRENT plan's card (the focused one).
+      &.popular,
+      &.current {
         background-color: rgba(132, 126, 255, 0.16);
       }
     }
@@ -134,7 +143,8 @@
       line-height: 1.1;
       color: var(--tertiary-grey-80);
 
-      .settings-billing__plan-header.popular & {
+      .settings-billing__plan-header.popular &,
+      .settings-billing__plan-header.current & {
         color: var(--primary-50);
       }
     }
@@ -161,7 +171,8 @@
         letter-spacing: -0.8px;
         color: var(--tertiary-grey-80);
 
-        .settings-billing__plan-header.popular & {
+        .settings-billing__plan-header.popular &,
+        .settings-billing__plan-header.current & {
           color: var(--primary-50);
         }
       }
@@ -173,7 +184,8 @@
         letter-spacing: -0.4px;
         color: var(--tertiary-grey-80);
 
-        .settings-billing__plan-header.popular & {
+        .settings-billing__plan-header.popular &,
+        .settings-billing__plan-header.current & {
           color: var(--primary-50);
         }
       }
@@ -257,10 +269,12 @@
         }
       }
 
-      // "Your current plan" pill (muted, non-clickable).
+      // "Your current plan" pill — ACTIVE look (primary tint), still
+      // non-clickable: it marks where the user is, it isn't an action.
       &.current {
-        color: var(--tertiary-grey-80);
-        background-color: var(--tertiary-grey-20);
+        color: var(--primary-50);
+        background-color: rgba(132, 126, 255, 0.16);
+        border: 1px solid var(--primary-30);
         cursor: default;
         pointer-events: none;
       }
@@ -426,6 +440,21 @@
       color: var(--primary-500);
       margin-left: var(--spacer-3);
     }
+
+    // "Manage billing" → Stripe portal: plain text hyperlink, matching the
+    // revamp primary (same hue as the current-plan highlight).
+    &-manage-billing {
+      align-self: flex-start;
+      cursor: pointer;
+      text-decoration: underline;
+      text-underline-offset: 2px;
+      color: var(--primary-50);
+      font-weight: 500;
+
+      &:hover {
+        color: var(--primary-60);
+      }
+    }
   }
 
   &__entry {
@@ -537,6 +566,41 @@
           fill: none;
         }
       }
+    }
+
+    // TEAM bootstrap: organization name + subdomain collected before the
+    // Stripe redirect (the webhook provisions the org after payment).
+    &-org-section {
+      gap: var(--spacer-3);
+    }
+
+    &-org-ident-row {
+      align-items: flex-end;
+      gap: var(--spacer-2);
+
+      > :first-child {
+        flex: 1;
+      }
+    }
+
+    &-org-ident-suffix {
+      padding-bottom: 12px;
+      white-space: nowrap;
+      @include drumee.typo(
+        $size: 14px,
+        $line: 20px,
+        $weight: 500,
+        $color: var(--normal-fg-50)
+      );
+    }
+
+    &-org-ident-hint {
+      @include drumee.typo(
+        $size: 12px,
+        $line: 16px,
+        $weight: 400,
+        $color: var(--normal-fg-50)
+      );
     }
 
     &-left {

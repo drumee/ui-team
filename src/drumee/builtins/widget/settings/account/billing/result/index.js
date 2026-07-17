@@ -9,7 +9,9 @@ class settings_billing_result extends LetcBox {
   initialize(opt = {}) {
     require("./skin");
     super.initialize(opt);
-    this._result = opt.result === "success" ? "success" : "cancel";
+    // "resume" (Figma 3050-96691): confirmation after a subscription resume —
+    // check icon + "Resume Subscription" + a single Done button, no receipt.
+    this._result = /^(success|resume)$/.test(opt.result) ? opt.result : "cancel";
     this._sessionId = opt.session_id || "";
     this._receipt = null;
   }

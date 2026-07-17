@@ -14,8 +14,54 @@ function detailRow(fig, label, value) {
   });
 }
 
+/**
+ * Resume-confirmation variant (Figma 3050-96691): green check circle,
+ * "Resume Subscription" heading, one-line body, full-width primary Done.
+ * No receipt rows and no corner close — Done is the only way out.
+ */
+function resumeCard(ui) {
+  const fig = ui.fig.family;
+  return Skeletons.Box.Y({
+    className: `${fig}__card`,
+    kids: [
+      Skeletons.Box.Y({
+        className: `${fig}__body`,
+        kids: [
+          Skeletons.Box.X({
+            className: `${fig}__icon success`,
+            kids: [
+              Skeletons.Image.Svg({ ico: "available", className: `${fig}__icon-glyph` }),
+            ],
+          }),
+          Skeletons.Note({
+            className: `${fig}__title`,
+            content: LOCALE.RESUME_SUBSCRIPTION || "Resume Subscription",
+          }),
+          Skeletons.Note({
+            className: `${fig}__subtitle`,
+            content: LOCALE.SUBSCRIPTION_RESUMED_TOAST || "Your subscription has been resumed.",
+          }),
+          Skeletons.Box.X({
+            className: `${fig}__done`,
+            service: "billing-result-close",
+            uiHandler: [ui],
+            kidsOpt: { active: 0 },
+            kids: [
+              Skeletons.Note({
+                className: `${fig}__done-label`,
+                content: LOCALE.DONE || "Done",
+              }),
+            ],
+          }),
+        ],
+      }),
+    ],
+  });
+}
+
 function billing_result(ui) {
   const fig = ui.fig.family;
+  if (ui._result === "resume") return resumeCard(ui);
   const ok = ui._result === "success";
   const r = ui._receipt || {};
 
