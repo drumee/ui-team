@@ -73,6 +73,14 @@ class settings_billing extends LetcBox {
         this._loadSubscription().then(() => { if (!this.isDestroyed()) this.fetchPlanData(); });
         this.triggerHandlers({ service: "plan_updated" });
         break;
+      case "payment.org_provisioned":
+        // TEAM bootstrap completed server-side: the payer now lives on the
+        // new org domain (drumate/vhost/entity dom moved by org_provision).
+        // Everything bootstrap-frozen (Visitor, Organization, endpoints) is
+        // stale — a full reload lands the session on its new home.
+        if (Wm && Wm.alert) Wm.alert(LOCALE.ORG_PROVISIONED);
+        setTimeout(() => window.location.reload(), 2500);
+        break;
       default:
         if (super.onWsMessage) super.onWsMessage(service, data, options);
     }
@@ -295,6 +303,12 @@ class settings_billing extends LetcBox {
         // this._setupInputChangeListener(child, "seats");
         // this._restoreInputFocus(child, "seats");
         this.__seatsInput = child;
+        break;
+      case `${this.fig.family}__checkout-org-name-input`:
+        this.__orgNameInput = child;
+        break;
+      case `${this.fig.family}__checkout-org-ident-input`:
+        this.__orgIdentInput = child;
         break;
         // case `${this.fig.family}__checkout-storage-input`:
         //   this._setupInputChangeListener(child, "storage");
@@ -552,7 +566,18 @@ class settings_billing extends LetcBox {
   /**
    * Handle proceed to checkout: call payment API and open payment window
    */
-  _proceedToCheckout() {
+  // Map an org-ident validation status to its user-facing message.
+  _orgIdentError(status) {
+    switch (status) {
+      case "IDENT_INVALID": return LOCALE.ORG_IDENT_INVALID;
+      case "IDENT_NOT_AVAILABLE": return LOCALE.ORG_IDENT_TAKEN;
+      case "ALREADY_IN_OTHER_DOMAIN": return LOCALE.ORG_ALREADY_IN_DOMAIN;
+      case "ORG_IDENT_REQUIRED": return LOCALE.ORG_IDENT_REQUIRED;
+      default: return LOCALE.SOMETHING_WENT_WRONG;
+    }
+  }
+
+  async _proceedToCheckout() {
     // The SERVER decides the price (Stripe price_id from yp.plan); the client
     // only declares WHAT to buy. plan 'team' => org (per-seat) checkout.
     const checkout = this.state.checkout || {};
@@ -570,11 +595,38 @@ class settings_billing extends LetcBox {
     // the server falls back to the host hub (where the caller isn't owner) and
     // returns 403 PERMISSION_DENIED. Send the caller's own hub so the owner
     // check resolves correctly (verified: missing hub_id -> 403, present -> 200).
-    this.postService(SERVICE.payment.checkout, { hub_id: Visitor.id, entity_type, plan, period, seats, bundle })
+    const payload = { hub_id: Visitor.id, entity_type, plan, period, seats, bundle };
+    // TEAM bootstrap: the payer is still on the default domain — the org
+    // name + subdomain were collected in the checkout form; validate the
+    // ident server-side BEFORE the Stripe redirect (product decision: prompt
+    // before checkout; the webhook provisions the org after payment).
+    if (entity_type === "org" && ~~Visitor.get("domain_id") <= 1) {
+      const org_name = String((this.__orgNameInput && this.__orgNameInput.getValue()) || "").trim();
+      const ident = String((this.__orgIdentInput && this.__orgIdentInput.getValue()) || "").trim().toLowerCase();
+      // Keep the typed values across checkout re-renders (plan/cycle switch).
+      checkout.orgName = org_name;
+      checkout.orgIdent = ident;
+      if (!org_name || !ident) {
+        if (Wm && Wm.alert) Wm.alert(LOCALE.ORG_IDENT_REQUIRED);
+        return;
+      }
+      const v = await this.postService(SERVICE.payment.validate_org_ident, {
+        hub_id: Visitor.id,
+        ident,
+      }).catch(() => null);
+      if (!v || v.status !== "OK") {
+        if (Wm && Wm.alert) Wm.alert(this._orgIdentError(v && v.status));
+        return;
+      }
+      payload.ident = v.ident;
+      payload.org_name = org_name;
+    }
+    this.postService(SERVICE.payment.checkout, payload)
       .then((data) => {
         const { url, status } = data || {};
         if (url) { window.location.assign(url); return; } // full-page redirect to hosted Checkout
         if (status === "NOT_ORG_OWNER" && Wm && Wm.alert) Wm.alert(LOCALE.NOT_ORG_OWNER);
+        else if (status && status !== "OK" && Wm && Wm.alert) Wm.alert(this._orgIdentError(status));
       })
       .catch((e) => {
         this.warn("Got backend error [_proceedToCheckout]:", e);
