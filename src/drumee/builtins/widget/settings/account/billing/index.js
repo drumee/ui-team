@@ -164,7 +164,16 @@ class settings_billing extends LetcBox {
     }
     if (this._subscription) this._subscription.status = "active";
     this._isCanceling = false;
-    if (typeof Butler !== "undefined" && Butler.say) Butler.say(LOCALE.SUBSCRIPTION_RESUMED_TOAST || "Your subscription has been resumed.");
+    // Confirmation modal (Figma 3050-96691) in the desk wrapper-modal — the
+    // same shell as the post-Checkout result; Done bubbles billing-result-close
+    // to the window manager, which clears the wrapper.
+    Kind.waitFor("settings_billing_result").then(() => {
+      Wm.ensurePart("wrapper-modal").then((p) => {
+        p.feed({ kind: "settings_billing_result", result: "resume", uiHandler: [Wm] });
+      });
+    }).catch(() => {
+      if (typeof Butler !== "undefined" && Butler.say) Butler.say(LOCALE.SUBSCRIPTION_RESUMED_TOAST || "Your subscription has been resumed.");
+    });
     this.fetchPlanData();
   }
 
