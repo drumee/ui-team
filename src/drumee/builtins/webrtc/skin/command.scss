@@ -318,6 +318,25 @@
         .device-action-label {
           text-align: left;
         }
+
+        // While the segmentation model downloads (first Blur use), show a
+        // trailing spinner and block re-clicks until it's ready / failed.
+        &[data-loading="1"] {
+          pointer-events: none;
+
+          &::after {
+            content: "";
+            width: 13px;
+            height: 13px;
+            margin-left: auto;
+            flex-shrink: 0;
+            border: 2px solid currentColor;
+            border-top-color: transparent;
+            border-radius: 50%;
+            opacity: 0.7;
+            animation: window-meeting-load-spin 0.8s linear infinite;
+          }
+        }
       }
     }
 

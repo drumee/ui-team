@@ -492,19 +492,58 @@ class __webrtc_room extends __interact {
   }
 
   /**
-   * Virtual-background actions from the camera picker (Figma camera-dropdown).
-   * NB: the bundled lib-jitsi-meet ships no segmentation / background-effect
-   * module, so these only manage UI state / file selection for now — actually
-   * compositing the blur / image onto the local video track is a TODO that
-   * needs an effect module (e.g. a JitsiStreamBackgroundEffect equivalent)
-   * added to the vendored stack.
+   * Toggle background blur from the camera picker (Figma camera-dropdown).
+   * Flips the flag + row highlight, then (re)applies the effect to the live
+   * camera track. applyBackgroundBlur is also called after the camera is
+   * (re)created (enable / device switch) so the blur survives those.
    */
-  toggleBackgroundBlur(cmd) {
+  async toggleBackgroundBlur(cmd) {
     this.backgroundBlur = this.backgroundBlur ? 0 : 1;
     // Reflect the on/off state on the row (reuses the [data-state] highlight).
-    if (cmd && cmd.$el) cmd.$el.attr("data-state", this.backgroundBlur);
-    // TODO: apply/remove a background-blur effect on the local video track.
-    this.warn("background blur toggled (not yet applied):", this.backgroundBlur);
+    // Keep a handle on the row so the async model-load status can toggle its
+    // loading spinner (see _onBlurStatus).
+    this._blurRow = cmd && cmd.$el;
+    if (this._blurRow) this._blurRow.attr("data-state", this.backgroundBlur);
+    await this.applyBackgroundBlur();
+  }
+
+  /**
+   * Effect status → loading spinner on the Blur Background row.
+   * "loading" while the segmentation model downloads (a few seconds on first
+   * use), cleared on "ready" (first blurred frame) or "failed".
+   */
+  _onBlurStatus(status) {
+    if (this._blurRow && this._blurRow.attr) {
+      this._blurRow.attr("data-loading", status === "loading" ? 1 : 0);
+    }
+  }
+
+  /**
+   * Attach / detach the MediaPipe background-blur effect on the local camera
+   * track to match this.backgroundBlur. No-ops (but keeps the flag) when the
+   * camera is off — changeLocalVideo / recreateLocalVideoOnDeviceChange call
+   * this again once a fresh track exists. A new effect instance is created per
+   * enable so its canvas/segmenter don't leak across tracks.
+   */
+  async applyBackgroundBlur() {
+    const track = this.room && this.room.getLocalVideoTrack();
+    if (!track || !track.setEffect) return;
+    try {
+      if (this.backgroundBlur) {
+        const BackgroundBlurEffect = require("./effects/background-blur");
+        this._blurEffect = new BackgroundBlurEffect({
+          onStatus: (s) => this._onBlurStatus(s),
+        });
+        await track.setEffect(this._blurEffect);
+      } else {
+        await track.setEffect(undefined);
+        this._blurEffect = null;
+        this._onBlurStatus("ready"); // clear any lingering spinner
+      }
+    } catch (e) {
+      this.warn("applyBackgroundBlur failed", e);
+      this._onBlurStatus("failed");
+    }
   }
 
   /**
@@ -599,6 +638,8 @@ class __webrtc_room extends __interact {
     await this.createLocalTracks(_a.video, "default", {
       cameraDeviceId: this.selectedVideoDevice,
     });
+    // The new track has no effect attached — re-apply blur if it was on.
+    if (this.backgroundBlur) await this.applyBackgroundBlur();
   }
 
   /**

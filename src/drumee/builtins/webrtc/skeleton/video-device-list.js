@@ -38,9 +38,9 @@ const __webrtc_video_device_list = function (_ui_, videoInput, inputSelected) {
     }));
   });
 
-  // Virtual-background actions. Wired to services now; the actual video effect
-  // pipeline is a TODO — the bundled lib-jitsi-meet has no segmentation /
-  // background-effect module (see room/index.js handlers).
+  // Virtual-background actions. Blur Background applies a real MediaPipe
+  // segmentation blur effect (see room/effects/background-blur.js); Upload
+  // Background is still a file-pick stub (no custom-image compositing yet).
   kids.push(Skeletons.Button.Label({
     className: `device-label device-action`,
     ico: "sparkle",
