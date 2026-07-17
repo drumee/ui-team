@@ -179,8 +179,11 @@ function item(ui, opt, option) {
 
   let buttonBtn;
   if (isCurrent) {
+    // Flat pill (no button() helper — a single element, so there's no
+    // outer/inner split to keep in sync). "-main" matches the family the
+    // button() helper's outer box uses below, so both share one CSS block.
     buttonBtn = Skeletons.Box.X({
-      className: `${fig}-button current`,
+      className: `${fig}-button-main current`,
       dataset: { disabled: 1 },
       kids: [
         Skeletons.Note({
@@ -190,14 +193,27 @@ function item(ui, opt, option) {
       ],
     });
   } else {
+    // The button() toolkit helper renders an OUTER full-width clickable box
+    // (className `${pfx}-main ${priority}`) wrapping an INNER text span
+    // (className `${pfx} btn`) — two elements, not one. Passing buttonKind
+    // embedded in className (`${fig}-button ${buttonKind}`) broke this: pfx
+    // itself became a two-token string, so appending "-main" landed after
+    // the LAST token ("...button dark" + "-main" = "...button dark-main"),
+    // never producing the outer's intended "${fig}-button-main" class. The
+    // outer ended up matching only `priority`'s class, always "secondary"
+    // for non-primary kinds — a full-width grey box with the real (dark)
+    // colour only on the inner, text-width span. Keep className to the bare
+    // base class and let `priority` carry buttonKind directly so BOTH the
+    // outer (`-main` + priority) and inner (bare pfx + priority, still
+    // embedded via pfx here) resolve to real, matching selectors.
     buttonBtn = button(ui, {
       label: buttonTitle,
-      className: `${fig}-button ${buttonKind}`,
+      className: `${fig}-button`,
       service: "select-plan-button",
       value: opt,
       name: opt,
       formItem: 1,
-      priority: buttonKind === "primary" ? "primary" : "secondary",
+      priority: buttonKind,
       uiHandler: [ui],
     });
   }
