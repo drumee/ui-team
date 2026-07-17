@@ -228,8 +228,16 @@
       }
     }
 
-    // ── CTA button (full-width pill) ──────────────────────────────────────
-    &-button {
+    // ── CTA button (full-width pill) ────────────────────────────────────────
+    // The button() toolkit helper renders TWO elements: an outer full-width
+    // clickable box (`&-button-main`, carries the priority/kind class) and an
+    // inner text span (`&-button`, plain — see the .btn rule below). The
+    // "current" pill is the one exception: a flat Box.X with no inner span,
+    // given the SAME `-main` class so it shares this block. Colour/chrome
+    // must live on `-main` — it's the element that's actually width:100%;
+    // putting it on the bare `&-button` only painted the inner, text-width
+    // span, leaving the real full-width box a plain "secondary" grey.
+    &-button-main {
       width: 100%;
       justify-content: center;
       align-items: center;
@@ -278,6 +286,14 @@
         cursor: default;
         pointer-events: none;
       }
+    }
+
+    // Inner text span (button() helper only) — no chrome of its own, just
+    // inherits the outer -main's colour so the label reads correctly
+    // against whichever variant (primary/dark/secondary) is active.
+    &-button.btn {
+      background: transparent;
+      color: inherit;
 
       .note-content,
       .label,
