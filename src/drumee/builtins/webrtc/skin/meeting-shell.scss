@@ -1150,6 +1150,34 @@
     gap: 12px;
     // Anchor for the floating (absolutely-positioned) command bar.
     position: relative;
+
+    // Loading overlay while a remote presentation is being prepared (notably a
+    // late joiner catching an in-progress share, or the layout switch) — cleared
+    // when the shared screen's first frame shows (onRemoteScreenStart) or the
+    // share stops. Toggled by _setBodyPreparing.
+    &[data-preparing="1"]::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      z-index: 400;
+      background: rgba(0, 0, 0, 0.25);
+      pointer-events: none;
+    }
+
+    &[data-preparing="1"]::before {
+      content: "";
+      position: absolute;
+      top: calc(50% - 16px);
+      left: calc(50% - 16px);
+      width: 32px;
+      height: 32px;
+      z-index: 401;
+      border: 3px solid rgba(255, 255, 255, 0.9);
+      border-top-color: transparent;
+      border-radius: 50%;
+      animation: window-meeting-load-spin 0.8s linear infinite;
+      pointer-events: none;
+    }
   }
 
   &__endpoints {

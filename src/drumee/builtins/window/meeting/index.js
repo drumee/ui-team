@@ -820,6 +820,13 @@ class __window_meeting extends __room {
     if (!this._floatDocked()) return;
     const raisedUid = this._activeRaisedUid();
     if (raisedUid != null) return this._focusByUid(raisedUid);
+    // While a REMOTE peer is presenting, spotlight THEIR camera tile — the float
+    // stacks every tile in one frame with the local self-view on top (z-index),
+    // so without this the sharing user's camera stays hidden beneath it.
+    if (this._currentPresenterUid &&
+        String(this._currentPresenterUid) !== String(Visitor.id)) {
+      return this._focusByUid(this._currentPresenterUid);
+    }
     if (this._dominantPid) return this._focusByPid(this._dominantPid);
     return this._focusLocalTile();
   }

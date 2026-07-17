@@ -339,10 +339,11 @@ class __remote_user extends __stream {
     }
     switch (track.getType()) {
       case _a.video:
-        if (this.logicalParent.presenterId) {
-          this.toggleAvatarVideo(1, 0);
-          return;
-        }
+        // NB: do NOT force the avatar just because someone is presenting. A
+        // participant's CAMERA runs alongside a screen share (the desktop track
+        // is routed to the presenter stage, never here), so the tile must still
+        // attach the camera. The videoType checks below already send desktop →
+        // avatar and camera → attach.
         if (track.getVideoType() == _a.desktop) {
           // Explicit screenshare: keep avatar; handleVideoMuteChange attaches.
           this.toggleAvatarVideo(1, 0);

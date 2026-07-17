@@ -678,7 +678,9 @@ class __webrtc_room extends __room {
     }
 
     if (track.getVideoType() == _a.desktop) {
-      this.loadRemotePresentation(track, 1);
+      // Anchor presenterId + switch to presenter layout immediately (works for
+      // late joiners who missed START_REMOTE_SCREEN), then attach the track.
+      this._enterRemotePresentation(track);
       return;
     }
 
@@ -848,6 +850,9 @@ class __webrtc_room extends __room {
     this.stateMessage();
     this.__ctrlScreen.el.dataset.muted = 1;
     this.responsive("presenter");
+    // Show the "preparing screen" loading overlay on the meeting body until the
+    // shared screen's first frame arrives (onRemoteScreenStart clears it).
+    if (this._setBodyPreparing) this._setBodyPreparing(1);
     if (args.username) {
       this.__presenter.feed([
         Skeletons.Note({
@@ -1030,19 +1035,48 @@ class __webrtc_room extends __room {
   }
 
   /**
+   * Enter presenter mode from a remote DESKTOP track — the late-joiner /
+   * lost-broadcast path. A participant who joins after START_REMOTE_SCREEN was
+   * broadcast never sets presenterId, so relying on the broadcast (or on the
+   * video's onloadeddata) leaves them stuck in grid layout. This mirrors the
+   * START_REMOTE_SCREEN handler: anchor presenterId, switch the layout
+   * immediately (prepareRemoteScreen), and attach the track. Idempotent —
+   * prepareRemoteScreen only runs when the presenter actually changes.
+   */
+  _enterRemotePresentation(track) {
+    const pid = track && track.getParticipantId();
+    if (!pid) return;
+    if (this.presenterId !== pid) {
+      this.presenterId = pid;
+      const tile = this.__participants &&
+        this.__participants.getItemsByAttr("participant_id", pid)[0];
+      this.prepareRemoteScreen({
+        id: pid,
+        room_id: this.mget(_a.room_id),
+        username: tile && tile.mget(_a.username),
+      });
+    }
+    this.loadRemotePresentation(track, 1);
+  }
+
+  /**
    * In case where the event were lost, catch up from stat
    */
   onStatsReceived(p) {
     if (this.presentation && !this.presentation.isDestroyed()) return;
     for (let t of p.getTracks()) {
       if (t.getVideoType() != _a.desktop) continue;
-      if (!this.presenterId) continue;
-      if (t.getParticipantId() != this.presenterId) continue;
+      // Recover the presentation from the desktop track ITSELF — do NOT require
+      // presenterId here. A late joiner never received START_REMOTE_SCREEN, so
+      // presenterId is unset; the old `if (!this.presenterId) continue` made
+      // this catch-up path a no-op for exactly the case it exists to handle.
       if (t.isMuted()) {
-        this.presenterId = null;
-        this.onRemoteScreenStop();
+        if (this.presenterId === t.getParticipantId()) {
+          this.presenterId = null;
+          this.onRemoteScreenStop();
+        }
       } else {
-        this.loadRemotePresentation(t);
+        this._enterRemotePresentation(t);
       }
     }
   }

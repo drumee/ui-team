@@ -893,12 +893,14 @@ class __webrtc_room extends __interact {
     this.__ctrlScreen.el.dataset.muted = 1;
     this.responsive("presenter");
     this.isScreenShare = true;
+    this._setBodyPreparing(0); // shared screen is live now
   }
 
   /**
    *
    */
   onRemoteScreenStop() {
+    this._setBodyPreparing(0);
     this.__presenter.clear();
     this.responsive("normal");
     this.change_size(0);
@@ -907,6 +909,32 @@ class __webrtc_room extends __interact {
     setTimeout(() => {
       this.__ctrlScreen.el.dataset.muted = 0;
     }, 2000);
+  }
+
+  /**
+   * Toggle a loading overlay on window-meeting__body while a remote
+   * presentation is being prepared (from prepareRemoteScreen until the shared
+   * screen's first frame — onRemoteScreenStart — or the share stops). A safety
+   * timer clears it if the video never arrives so the overlay can't get stuck.
+   */
+  _setBodyPreparing(on) {
+    const fam = this.fig && this.fig.family;
+    if (!fam) return;
+    let body = null;
+    if (this.__endpoints && this.__endpoints.el && this.__endpoints.el.closest) {
+      body = this.__endpoints.el.closest(`.${fam}__body`);
+    }
+    if (!body && this.el && this.el.querySelector) {
+      body = this.el.querySelector(`.${fam}__body`);
+    }
+    if (body) body.setAttribute("data-preparing", on ? "1" : "0");
+    if (this._bodyPreparingTimer) {
+      clearTimeout(this._bodyPreparingTimer);
+      this._bodyPreparingTimer = null;
+    }
+    if (on) {
+      this._bodyPreparingTimer = setTimeout(() => this._setBodyPreparing(0), 12000);
+    }
   }
 
   /**
