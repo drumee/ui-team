@@ -616,6 +616,29 @@ class settings_billing extends LetcBox {
     }
   }
 
+  // True when the caller currently pays for a PERSONAL Pro subscription (so
+  // moving to Team replaces it). Guards the upgrade-confirm popup. Uses the
+  // synchronous quota plan as the primary signal — _hasPaidSub is filled
+  // asynchronously by _loadSubscription() and may still be false on an early
+  // click. NB: the quota `organization` flag is 1 for personal Pro TOO, so it
+  // can't distinguish an org — use domain_id (org owners are on a domain > 1;
+  // a personal Pro is on the default domain 1), matching the same
+  // domain_id <= 1 gate the org-bootstrap checkout uses.
+  _isPaidPro() {
+    const plan = String(((Visitor.quota && Visitor.quota()) || {}).plan || "").toLowerCase();
+    return plan === "pro" && ~~Visitor.get("domain_id") <= 1;
+  }
+
+  // Switch to the in-app checkout tab pre-selected on a plan. Shared by the
+  // plan-card CTAs so the Team confirm-popup path and the direct paths render
+  // identically.
+  _enterCheckoutFor(planValue) {
+    this.state.checkout.selectedPlan = planValue;
+    this.state.currentTab = TAB_CHECKOUT;
+    this.tab = TAB_CHECKOUT;
+    this.renderContent();
+  }
+
   async _proceedToCheckout() {
     // The SERVER decides the price (Stripe price_id from yp.plan); the client
     // only declares WHAT to buy. plan 'team' => org (per-seat) checkout.
@@ -1041,11 +1064,28 @@ class settings_billing extends LetcBox {
                   .format(LOCALE.SALES_CONTACT_EMAIL || "contact@drumee.org")
               );
             }
+          } else if (planValue === "team" && this._isPaidPro()) {
+            // A paying Pro user upgrading to Team: warn first that their
+            // current Pro plan is replaced by Team. Team is an org (per-seat)
+            // subscription; the Stripe webhook cancels the personal Pro sub
+            // automatically once the Team payment completes
+            // (_cancelSupersededPersonalSubscription). So DON'T cancel here —
+            // if the user abandons the Stripe checkout they keep their Pro.
+            // Yes → proceed to the Team checkout; No → stay on the current plan.
+            Wm.confirm({
+              title: LOCALE.UPGRADE_TO_TEAM_CONFIRM_TITLE || "Upgrade to Team",
+              message: LOCALE.UPGRADE_TO_TEAM_CONFIRM_MESSAGE
+                || "Upgrading to Team will cancel your current Pro plan when you complete checkout. Continue?",
+              confirm: LOCALE.YES || "Yes",
+              confirm_type: "primary",
+              cancel: LOCALE.NO || "No",
+              cancel_type: "secondary",
+              mode: "hbf",
+            })
+              .then(() => this._enterCheckoutFor("team"))
+              .catch(() => { /* No → stay on the current plan */ });
           } else {
-            this.state.checkout.selectedPlan = planValue;
-            this.state.currentTab = TAB_CHECKOUT;
-            this.tab = TAB_CHECKOUT;
-            this.renderContent();
+            this._enterCheckoutFor(planValue);
           }
         }
         return false;

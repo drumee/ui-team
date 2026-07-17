@@ -2502,6 +2502,8 @@
   "CANCEL_SUBSCRIPTION": "Cancel subscription",
   "CANCEL_CONFIRM": "Cancel plan",
   "KEEP_PLAN": "Keep plan",
+  "UPGRADE_TO_TEAM_CONFIRM_TITLE": "Upgrade to Team",
+  "UPGRADE_TO_TEAM_CONFIRM_MESSAGE": "Upgrading to Team will cancel your current Pro plan once you complete checkout. Do you want to continue?",
   "CANCEL_KEEP_UNTIL": "You'll keep your current plan until {0}. After that your workspace returns to the Free plan (20 GB).",
   "CANCEL_OVER_LIMIT": "Your current usage ({0} GB) is over the Free 20 GB limit — you won't be able to upload new files until you free up space.",
   "CANCEL_TEAM_SEATS": "Your team's {0} member seats will be removed and each member drops to their own Free plan.",

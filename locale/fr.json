@@ -2079,6 +2079,8 @@
   "CANCEL_SUBSCRIPTION": "Annuler l'abonnement",
   "CANCEL_CONFIRM": "Annuler l'offre",
   "KEEP_PLAN": "Conserver l'offre",
+  "UPGRADE_TO_TEAM_CONFIRM_TITLE": "Passer à Team",
+  "UPGRADE_TO_TEAM_CONFIRM_MESSAGE": "Passer à Team annulera votre offre Pro actuelle une fois le paiement finalisé. Voulez-vous continuer ?",
   "CANCEL_KEEP_UNTIL": "Vous conservez votre offre actuelle jusqu'au {0}. Ensuite, votre espace repasse à l'offre Gratuite (20 Go).",
   "CANCEL_OVER_LIMIT": "Votre utilisation actuelle ({0} Go) dépasse la limite gratuite de 20 Go — vous ne pourrez plus téléverser de fichiers tant que vous n'aurez pas libéré de l'espace.",
   "CANCEL_TEAM_SEATS": "Les {0} sièges de votre équipe seront supprimés et chaque membre repassera à sa propre offre Gratuite.",
