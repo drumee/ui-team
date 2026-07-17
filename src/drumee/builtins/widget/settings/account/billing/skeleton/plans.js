@@ -93,6 +93,19 @@ function getOptions(ui, cycle = "monthly") {
 }
 
 /**
+ * The "Popular" highlight is an upsell cue aimed at users below Pro. Once the
+ * user sits on a higher tier (team/enterprise) the Pro card must not carry the
+ * active/focused look — only the current plan's card does. The badge chip
+ * itself stays; only the tinted/primary styling is suppressed.
+ * @param {Object} ui - UI instance
+ * @param {number} badge - the option's badge flag
+ * @returns {boolean} whether the popular styling applies
+ */
+function popularHighlight(ui, badge) {
+  return !!badge && !/^(team|enterprise)$/i.test(ui.currentPlanName || "");
+}
+
+/**
  * Price-header box: tinted rounded panel holding the plan name, price (label +
  * amount + period) or a plain "Contact sales" line, and the Popular badge.
  * @param {Object} ui - UI instance
@@ -141,7 +154,7 @@ function priceHeader(ui, fig, option, isCurrent) {
     // The CURRENT plan's card is the focused/active one — it takes the
     // primary-tinted header (and border, see -item.current) even when it
     // isn't the "Popular" card.
-    className: `${fig}-header ${badge ? "popular" : ""} ${isCurrent ? "current" : ""}`,
+    className: `${fig}-header ${popularHighlight(ui, badge) ? "popular" : ""} ${isCurrent ? "current" : ""}`,
     kids: [
       Skeletons.Note({ className: `${fig}-title`, content: title }),
       Skeletons.Box.Y({ className: `${fig}-price`, kids: priceKids }),
@@ -234,7 +247,7 @@ function item(ui, opt, option) {
   });
 
   return Skeletons.Box.Y({
-    className: `${fig}-item ${badge ? "popular" : ""} ${isCurrent ? "current" : ""}`,
+    className: `${fig}-item ${popularHighlight(ui, badge) ? "popular" : ""} ${isCurrent ? "current" : ""}`,
     kids: [
       priceHeader(ui, fig, option, isCurrent),
       buttonBtn,
