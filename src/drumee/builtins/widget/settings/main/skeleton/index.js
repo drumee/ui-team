@@ -603,28 +603,22 @@ function referralCard(ui) {
 
 function settings_body(ui) {
   const pfx = ui.fig.family;
-  // TEMP: Billing & Subscription card hidden on the Settings page (also removes
-  // the "Manage Subscription" entry point into settings_billing). Flip
-  // SHOW_BILLING to true to restore.
-  const SHOW_BILLING = true;
   return [
     header(ui),
     Skeletons.Box.X({
       className: `${pfx}__row ${pfx}__row-1`,
       kids: [generalProfileCard(ui), preferencesCard(ui)],
     }),
-    SHOW_BILLING
-      ? Skeletons.Box.X({
-          className: `${pfx}__row ${pfx}__row-billing`,
-          kids: [billingCard(ui), referralCard(ui)],
-        })
-      : Skeletons.Box.X({
-          className: `${pfx}__row ${pfx}__row-referral`,
-          kids: [referralCard(ui)],
-        }),
+    // Figma 2769-277671: Billing, Account Credentials and Danger zone sit in
+    // ONE 3-column row. Referral/invite isn't part of that frame — kept as
+    // its own full-width row instead of crowding the trio.
     Skeletons.Box.X({
       className: `${pfx}__row ${pfx}__row-2`,
-      kids: [accountCredentialsCard(ui), dangerZoneCard(ui)],
+      kids: [billingCard(ui), accountCredentialsCard(ui), dangerZoneCard(ui)],
+    }),
+    Skeletons.Box.X({
+      className: `${pfx}__row ${pfx}__row-referral`,
+      kids: [referralCard(ui)],
     }),
     Skeletons.Box.X({
       className: `${pfx}__row ${pfx}__row-3`,
