@@ -100,7 +100,7 @@ function getOptions(ui, cycle = "monthly") {
  * @param {Object} option - plan option
  * @returns {Object} Skeletons component
  */
-function priceHeader(ui, fig, option) {
+function priceHeader(ui, fig, option, isCurrent) {
   const { title, priceLabel, priceAmount, pricePeriod, priceText, badge } = option;
 
   const priceKids = [];
@@ -138,7 +138,10 @@ function priceHeader(ui, fig, option) {
     : null;
 
   return Skeletons.Box.Y({
-    className: `${fig}-header ${badge ? "popular" : ""}`,
+    // The CURRENT plan's card is the focused/active one — it takes the
+    // primary-tinted header (and border, see -item.current) even when it
+    // isn't the "Popular" card.
+    className: `${fig}-header ${badge ? "popular" : ""} ${isCurrent ? "current" : ""}`,
     kids: [
       Skeletons.Note({ className: `${fig}-title`, content: title }),
       Skeletons.Box.Y({ className: `${fig}-price`, kids: priceKids }),
@@ -231,9 +234,9 @@ function item(ui, opt, option) {
   });
 
   return Skeletons.Box.Y({
-    className: `${fig}-item ${badge ? "popular" : ""}`,
+    className: `${fig}-item ${badge ? "popular" : ""} ${isCurrent ? "current" : ""}`,
     kids: [
-      priceHeader(ui, fig, option),
+      priceHeader(ui, fig, option, isCurrent),
       buttonBtn,
       subTextItem,
       featuresWrapper,
