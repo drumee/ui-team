@@ -657,6 +657,29 @@ class settings_billing extends LetcBox {
     }
   }
 
+  // True when the caller currently pays for a PERSONAL Pro subscription (so
+  // moving to Team replaces it). Guards the upgrade-confirm popup. Uses the
+  // synchronous quota plan as the primary signal — _hasPaidSub is filled
+  // asynchronously by _loadSubscription() and may still be false on an early
+  // click. NB: the quota `organization` flag is 1 for personal Pro TOO, so it
+  // can't distinguish an org — use domain_id (org owners are on a domain > 1;
+  // a personal Pro is on the default domain 1), matching the same
+  // domain_id <= 1 gate the org-bootstrap checkout uses.
+  _isPaidPro() {
+    const plan = String(((Visitor.quota && Visitor.quota()) || {}).plan || "").toLowerCase();
+    return plan === "pro" && ~~Visitor.get("domain_id") <= 1;
+  }
+
+  // Switch to the in-app checkout tab pre-selected on a plan. Shared by the
+  // plan-card CTAs so the Team confirm-popup path and the direct paths render
+  // identically.
+  _enterCheckoutFor(planValue) {
+    this.state.checkout.selectedPlan = planValue;
+    this.state.currentTab = TAB_CHECKOUT;
+    this.tab = TAB_CHECKOUT;
+    this.renderContent();
+  }
+
   /**
    * Free → paid: create a hosted Checkout session. The SERVER decides the price
    * (Stripe price_id from yp.plan); the client only declares WHAT to buy.
@@ -1087,21 +1110,45 @@ class settings_billing extends LetcBox {
             }
             return false;
           }
+          // A paying Pro user upgrading to Team: warn first that their current
+          // Pro plan is replaced by Team, then proceed to the Team (org)
+          // checkout — NOT the Billing Portal. The portal has no way to buy
+          // Team (it only shows the current plan / invoices / cancel), which
+          // is the "no upgrade path" dead-end. Team is a NEW org subscription,
+          // so a fresh Checkout is correct; the Stripe webhook
+          // (_cancelSupersededPersonalSubscription) cancels the personal Pro
+          // automatically once the Team payment completes, so we DON'T cancel
+          // here — abandoning the Stripe checkout leaves the user's Pro intact.
+          // Yes → Team checkout; No → stay on the current plan.
+          if (planValue === "team" && this._isPaidPro()) {
+            Wm.confirm({
+              title: LOCALE.UPGRADE_TO_TEAM_CONFIRM_TITLE || "Upgrade to Team",
+              message: LOCALE.UPGRADE_TO_TEAM_CONFIRM_MESSAGE
+                || "Upgrading to Team will cancel your current Pro plan when you complete checkout. Continue?",
+              confirm: LOCALE.YES || "Yes",
+              confirm_type: "primary",
+              cancel: LOCALE.NO || "No",
+              cancel_type: "secondary",
+              mode: "hbf",
+            })
+              .then(() => this._enterCheckoutFor("team"))
+              .catch(() => { /* No → stay on the current plan */ });
+            return false;
+          }
           // Paid subscriber picking Free → in-app cancel (period-end), not Checkout.
           if (planValue === "free" && this._hasPaidSub) {
             this._confirmCancel();
             return false;
           }
-          // Paid subscriber picking another paid plan (Pro↔Team, seats, period)
-          // → Billing Portal. A second Checkout would create a duplicate sub.
+          // Paid subscriber picking another paid plan (seats/period changes on
+          // the SAME tier, etc.) → Billing Portal. A second Checkout would
+          // create a duplicate sub. Team is already handled above, so it never
+          // reaches this portal guard.
           if (this._hasPaidSub && planValue !== (this.currentPlanName || "free")) {
             this._openBillingPortal();
             return false;
           }
-          this.state.checkout.selectedPlan = planValue;
-          this.state.currentTab = TAB_CHECKOUT;
-          this.tab = TAB_CHECKOUT;
-          this.renderContent();
+          this._enterCheckoutFor(planValue);
         }
         return false;
       case "storage-changes":

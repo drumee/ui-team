@@ -2090,6 +2090,8 @@
   "CANCEL_SUBSCRIPTION": "取消订阅",
   "CANCEL_CONFIRM": "取消套餐",
   "KEEP_PLAN": "保留套餐",
+  "UPGRADE_TO_TEAM_CONFIRM_TITLE": "升级到 Team",
+  "UPGRADE_TO_TEAM_CONFIRM_MESSAGE": "升级到 Team 会在您完成结账后取消当前的 Pro 套餐。是否继续？",
   "CANCEL_KEEP_UNTIL": "您将保留当前套餐至 {0}。之后工作区将恢复为免费套餐（20 GB）。",
   "CANCEL_OVER_LIMIT": "您当前的使用量（{0} GB）已超过免费的 20 GB 限制——在释放空间之前您将无法上传新文件。",
   "CANCEL_TEAM_SEATS": "您团队的 {0} 个席位将被移除，每位成员将转为各自的免费套餐。",

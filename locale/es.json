@@ -2095,6 +2095,8 @@
   "CANCEL_SUBSCRIPTION": "Cancelar suscripción",
   "CANCEL_CONFIRM": "Cancelar plan",
   "KEEP_PLAN": "Mantener plan",
+  "UPGRADE_TO_TEAM_CONFIRM_TITLE": "Cambiar a Team",
+  "UPGRADE_TO_TEAM_CONFIRM_MESSAGE": "Al cambiar a Team se cancelará tu plan Pro actual cuando completes el pago. ¿Quieres continuar?",
   "CANCEL_KEEP_UNTIL": "Conservas tu plan actual hasta el {0}. Después tu espacio vuelve al plan Gratis (20 GB).",
   "CANCEL_OVER_LIMIT": "Tu uso actual ({0} GB) supera el límite gratuito de 20 GB — no podrás subir archivos nuevos hasta que liberes espacio.",
   "CANCEL_TEAM_SEATS": "Se eliminarán los {0} asientos de tu equipo y cada miembro pasará a su propio plan Gratis.",
