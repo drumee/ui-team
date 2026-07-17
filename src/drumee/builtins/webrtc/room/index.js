@@ -546,25 +546,35 @@ class __webrtc_room extends __interact {
     return res;
   }
 
-  /** Reflect this.bgEffect on both blur controls and both upload controls. */
+  /**
+   * Reflect this.bgEffect on the controls: blur controls active when blurring;
+   * the active image's preview thumbnail active when an image is applied. The
+   * Upload (+) tile is an "add" button and never shows active.
+   */
   _syncBgUi() {
-    const t = (this.bgEffect && this.bgEffect.type) || "none";
+    const e = this.bgEffect || { type: "none" };
     this._bgFind(".blur-background-ctrl, .bg-effect-tile.blur")
-      .forEach((f) => f.attr("data-state", t === "blur" ? 1 : 0));
-    this._bgFind(".upload-background-ctrl, .bg-effect-tile.upload")
-      .forEach((f) => f.attr("data-state", t === "image" ? 1 : 0));
+      .forEach((f) => f.attr("data-state", e.type === "blur" ? 1 : 0));
+    const id = e.type === "image" ? String(e.id) : null;
+    this._bgFind(".bg-effect-tile.thumb").forEach((set) =>
+      set.each(function () {
+        this.setAttribute(
+          "data-state", this.getAttribute("data-bgid") === id ? "1" : "0"
+        );
+      })
+    );
   }
 
   /**
-   * Effect status → loading spinner on BOTH controls for the active effect
-   * type. "loading" while the segmentation model downloads (a few seconds on
-   * first use), cleared on "ready" (first processed frame) or "failed".
+   * Effect status → loading spinner on the control(s) for the active effect.
+   * "loading" while the segmentation model downloads (a few seconds on first
+   * use), cleared on "ready" (first processed frame) or "failed".
    */
   _onBgStatus(status) {
     const loading = status === "loading" ? 1 : 0;
-    const t = (this.bgEffect && this.bgEffect.type) || "none";
-    const sel = t === "image"
-      ? ".upload-background-ctrl, .bg-effect-tile.upload"
+    const e = this.bgEffect || { type: "none" };
+    const sel = e.type === "image"
+      ? `.bg-effect-tile.thumb[data-bgid="${e.id}"]`
       : ".blur-background-ctrl, .bg-effect-tile.blur";
     this._bgFind(sel).forEach((f) => f.attr("data-loading", loading));
   }
@@ -637,16 +647,43 @@ class __webrtc_room extends __interact {
       if (!file) return;
       const url = URL.createObjectURL(file);
       const img = new Image();
-      img.onload = () => {
+      img.onload = async () => {
         const id = `bg-${(this.backgrounds || []).length + 1}-${file.size}`;
         this.backgrounds = this.backgrounds || [];
         this.backgrounds.push({ id, url, img });
-        this.updateBgEffectsPanel(); // show the new thumbnail (active)
+        // Mark it current + render the thumbnail (active) FIRST, so the async
+        // "applying" loading spinner (_onBgStatus) has a DOM target on the new
+        // tile, then apply the effect — the spinner shows on it until ready.
+        this.bgEffect = { type: "image", id, image: img };
+        await this.updateBgEffectsPanel();
         this.setBackgroundEffect({ type: "image", id, image: img }, cmd);
       };
       img.src = url;
     });
     input.click();
+  }
+
+  /**
+   * Remove an uploaded background (its hover close badge). Drops it from the
+   * list, frees its object URL, turns the effect off if it was the active one,
+   * then re-renders the panel row.
+   */
+  removeBackground(cmd) {
+    const id = cmd && cmd.$el && cmd.$el.data("bgid");
+    if (id == null) return;
+    const list = this.backgrounds || [];
+    const idx = list.findIndex((b) => String(b.id) === String(id));
+    if (idx < 0) return;
+    const [removed] = list.splice(idx, 1);
+    if (removed && removed.url) {
+      try { URL.revokeObjectURL(removed.url); } catch (e) { /* already freed */ }
+    }
+    // If the removed image was the active background, drop the effect.
+    if (this.bgEffect && this.bgEffect.type === "image"
+        && String(this.bgEffect.id) === String(id)) {
+      this.setBackgroundEffect({ type: "none" });
+    }
+    this.updateBgEffectsPanel();
   }
 
   /**
@@ -940,11 +977,25 @@ class __webrtc_room extends __interact {
         this.pickBackgroundImage(cmd);
         break;
       case "bg-select": {
+        // Toggle: clicking the active background image turns it off; clicking
+        // another applies it. (The × badge fully removes it from the row.)
         const id = cmd.$el.data("bgid");
-        const bg = (this.backgrounds || []).find((b) => b.id === id);
-        if (bg) this.setBackgroundEffect({ type: "image", id, image: bg.img }, cmd);
+        const isActive = this.bgEffect && this.bgEffect.type === "image"
+          && String(this.bgEffect.id) === String(id);
+        if (isActive) {
+          this.setBackgroundEffect({ type: "none" }, cmd);
+        } else {
+          const bg = (this.backgrounds || []).find((b) => String(b.id) === String(id));
+          if (bg) this.setBackgroundEffect({ type: "image", id, image: bg.img }, cmd);
+        }
         break;
       }
+      case "bg-remove":
+        this.removeBackground(cmd);
+        break;
+      case "close-bg-effects":
+        this.closeBgEffectsPanel();
+        break;
       case "remote-ready":
         //this.checkQuota();
         this.updateAttendees(args);
