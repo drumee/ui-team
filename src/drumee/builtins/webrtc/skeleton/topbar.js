@@ -262,6 +262,13 @@ module.exports = function (_ui_) {
         sys_pn: "video-devices",
         partHandler: [_ui_],
       }),
+      // Backgrounds & effects panel, docked to the left of the device list;
+      // fed by updateBgEffectsPanel when "Upload Background" is clicked.
+      Skeletons.Wrapper.Y({
+        className: `${pfx}__bg-effects`,
+        sys_pn: "bg-effects",
+        partHandler: [_ui_],
+      }),
     ],
   });
 

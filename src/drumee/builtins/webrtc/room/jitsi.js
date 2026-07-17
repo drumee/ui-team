@@ -1119,9 +1119,10 @@ class __webrtc_room extends __room {
           "default",
           camId ? { cameraDeviceId: camId } : {}
         );
-        // Re-attach background blur to the freshly created camera track.
-        if (this.backgroundBlur && this.applyBackgroundBlur) {
-          await this.applyBackgroundBlur();
+        // Re-attach the background effect to the freshly created camera track.
+        if (this.bgEffect && this.bgEffect.type && this.bgEffect.type !== "none"
+            && this.applyBackgroundEffect) {
+          await this.applyBackgroundEffect();
         }
       } catch (e) {
         this.isVideo = false;

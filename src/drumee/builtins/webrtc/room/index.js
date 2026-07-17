@@ -483,6 +483,8 @@ class __webrtc_room extends __interact {
    *
    */
   closeVideoDevicesList() {
+    // The effects panel hangs off the same picker — close it alongside.
+    this.closeBgEffectsPanel();
     let p = this.getPart("video-devices");
     if (!p) return;
     p.$el.fadeOut();
@@ -492,74 +494,122 @@ class __webrtc_room extends __interact {
   }
 
   /**
-   * Toggle background blur from the camera picker (Figma camera-dropdown).
-   * Flips the flag + row highlight, then (re)applies the effect to the live
-   * camera track. applyBackgroundBlur is also called after the camera is
-   * (re)created (enable / device switch) so the blur survives those.
+   * The current background effect: { type: "none"|"blur"|"image", level?,
+   * id?, image? }. `bgEffect` is the source of truth; applyBackgroundEffect
+   * attaches it to the live camera track and is re-run after the camera is
+   * (re)created (enable / device switch) so the effect survives those.
    */
+  setBackgroundEffect(spec, cmd) {
+    this.bgEffect = spec || { type: "none" };
+    // Row/tile that triggered it — its loading spinner tracks the async load.
+    this._bgStatusEl = cmd && cmd.$el;
+    // Keep the Blur Background row's on/off highlight in sync.
+    const p = this.getPart && this.getPart("video-devices");
+    if (this.__videoDevices || p) {
+      const list = (p && p.$el) || (this.__videoDevices && this.__videoDevices.$el);
+      if (list && list.find) {
+        list.find('[service="blur-background"]').attr(
+          "data-state", this.bgEffect.type === "blur" ? 1 : 0
+        );
+      }
+    }
+    return this.applyBackgroundEffect();
+  }
+
+  /** Blur Background row in the device list — toggles blur on/off. */
   async toggleBackgroundBlur(cmd) {
-    this.backgroundBlur = this.backgroundBlur ? 0 : 1;
-    // Reflect the on/off state on the row (reuses the [data-state] highlight).
-    // Keep a handle on the row so the async model-load status can toggle its
-    // loading spinner (see _onBlurStatus).
-    this._blurRow = cmd && cmd.$el;
-    if (this._blurRow) this._blurRow.attr("data-state", this.backgroundBlur);
-    await this.applyBackgroundBlur();
+    const on = !(this.bgEffect && this.bgEffect.type === "blur");
+    if (cmd && cmd.$el) cmd.$el.attr("data-state", on ? 1 : 0);
+    await this.setBackgroundEffect(on ? { type: "blur", level: "light" } : { type: "none" }, cmd);
   }
 
   /**
-   * Effect status → loading spinner on the Blur Background row.
+   * Effect status → loading spinner on the triggering row/tile.
    * "loading" while the segmentation model downloads (a few seconds on first
-   * use), cleared on "ready" (first blurred frame) or "failed".
+   * use), cleared on "ready" (first processed frame) or "failed".
    */
-  _onBlurStatus(status) {
-    if (this._blurRow && this._blurRow.attr) {
-      this._blurRow.attr("data-loading", status === "loading" ? 1 : 0);
+  _onBgStatus(status) {
+    if (this._bgStatusEl && this._bgStatusEl.attr) {
+      this._bgStatusEl.attr("data-loading", status === "loading" ? 1 : 0);
     }
   }
 
   /**
-   * Attach / detach the MediaPipe background-blur effect on the local camera
-   * track to match this.backgroundBlur. No-ops (but keeps the flag) when the
-   * camera is off — changeLocalVideo / recreateLocalVideoOnDeviceChange call
-   * this again once a fresh track exists. A new effect instance is created per
-   * enable so its canvas/segmenter don't leak across tracks.
+   * Attach / detach the MediaPipe background effect on the local camera track to
+   * match this.bgEffect. No-ops (but keeps the spec) when the camera is off —
+   * changeLocalVideo / recreateLocalVideoOnDeviceChange call this again once a
+   * fresh track exists. A new effect instance is created per apply so its
+   * canvas/segmenter don't leak across tracks.
    */
-  async applyBackgroundBlur() {
+  async applyBackgroundEffect() {
     const track = this.room && this.room.getLocalVideoTrack();
     if (!track || !track.setEffect) return;
+    const spec = this.bgEffect || { type: "none" };
     try {
-      if (this.backgroundBlur) {
-        const BackgroundBlurEffect = require("./effects/background-blur");
-        this._blurEffect = new BackgroundBlurEffect({
-          onStatus: (s) => this._onBlurStatus(s),
+      if (spec.type && spec.type !== "none") {
+        const BackgroundEffect = require("./effects/background-effect");
+        this._bgFx = new BackgroundEffect({
+          type: spec.type,
+          blurValue: spec.level === "strong" ? 18 : 8,
+          image: spec.image,
+          onStatus: (s) => this._onBgStatus(s),
         });
-        await track.setEffect(this._blurEffect);
+        await track.setEffect(this._bgFx);
       } else {
         await track.setEffect(undefined);
-        this._blurEffect = null;
-        this._onBlurStatus("ready"); // clear any lingering spinner
+        this._bgFx = null;
+        this._onBgStatus("ready"); // clear any lingering spinner
       }
     } catch (e) {
-      this.warn("applyBackgroundBlur failed", e);
-      this._onBlurStatus("failed");
+      this.warn("applyBackgroundEffect failed", e);
+      this._onBgStatus("failed");
     }
+  }
+
+  /** Open (or refresh) the backgrounds & effects panel next to the list. */
+  async updateBgEffectsPanel() {
+    const p = await this.ensurePart("bg-effects");
+    if (!p) return;
+    const view = require("../skeleton/bg-effects")(this, {
+      current: this.bgEffect || { type: "none" },
+      backgrounds: (this.backgrounds || []).map((b) => ({ id: b.id, url: b.url })),
+    });
+    p.feed(view);
+    p.$el.fadeIn();
   }
 
   /**
    *
    */
-  pickBackgroundImage() {
+  closeBgEffectsPanel() {
+    const p = this.getPart("bg-effects");
+    if (!p) return;
+    p.$el.fadeOut();
+    setTimeout(() => p.clear(), 1000);
+  }
+
+  /**
+   * Prompt for an image file, register it as a selectable background and apply
+   * it immediately. Object URLs are kept for the call's lifetime (revoked on
+   * teardown) so the thumbnail and the effect can both reference them.
+   */
+  pickBackgroundImage(cmd) {
     const input = document.createElement("input");
     input.type = "file";
     input.accept = "image/*";
     input.addEventListener("change", () => {
       const file = input.files && input.files[0];
       if (!file) return;
-      this.selectedBackgroundImage = file;
-      // TODO: apply the chosen image as a virtual background on the local video
-      // track (needs a background-effect module not present in the vendored lib).
-      this.warn("background image selected (not yet applied):", file.name);
+      const url = URL.createObjectURL(file);
+      const img = new Image();
+      img.onload = () => {
+        const id = `bg-${(this.backgrounds || []).length + 1}-${file.size}`;
+        this.backgrounds = this.backgrounds || [];
+        this.backgrounds.push({ id, url, img });
+        this.updateBgEffectsPanel(); // show the new thumbnail (active)
+        this.setBackgroundEffect({ type: "image", id, image: img }, cmd);
+      };
+      img.src = url;
     });
     input.click();
   }
@@ -638,8 +688,10 @@ class __webrtc_room extends __interact {
     await this.createLocalTracks(_a.video, "default", {
       cameraDeviceId: this.selectedVideoDevice,
     });
-    // The new track has no effect attached — re-apply blur if it was on.
-    if (this.backgroundBlur) await this.applyBackgroundBlur();
+    // The new track has no effect attached — re-apply the background effect.
+    if (this.bgEffect && this.bgEffect.type && this.bgEffect.type !== "none") {
+      await this.applyBackgroundEffect();
+    }
   }
 
   /**
@@ -838,8 +890,27 @@ class __webrtc_room extends __interact {
         this.toggleBackgroundBlur(cmd);
         break;
       case "upload-background":
+        // Open the backgrounds & effects panel beside the device list.
+        this.updateBgEffectsPanel();
+        break;
+      // ── Backgrounds & effects panel tiles ──────────────────────────────
+      case "bg-none":
+        this.setBackgroundEffect({ type: "none" }, cmd);
+        break;
+      case "bg-blur":
+        this.setBackgroundEffect(
+          { type: "blur", level: cmd.$el.data("level") || "light" }, cmd
+        );
+        break;
+      case "bg-upload":
         this.pickBackgroundImage(cmd);
         break;
+      case "bg-select": {
+        const id = cmd.$el.data("bgid");
+        const bg = (this.backgrounds || []).find((b) => b.id === id);
+        if (bg) this.setBackgroundEffect({ type: "image", id, image: bg.img }, cmd);
+        break;
+      }
       case "remote-ready":
         //this.checkQuota();
         this.updateAttendees(args);
