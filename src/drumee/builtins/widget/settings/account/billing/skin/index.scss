@@ -539,6 +539,41 @@
       }
     }
 
+    // TEAM bootstrap: organization name + subdomain collected before the
+    // Stripe redirect (the webhook provisions the org after payment).
+    &-org-section {
+      gap: var(--spacer-3);
+    }
+
+    &-org-ident-row {
+      align-items: flex-end;
+      gap: var(--spacer-2);
+
+      > :first-child {
+        flex: 1;
+      }
+    }
+
+    &-org-ident-suffix {
+      padding-bottom: 12px;
+      white-space: nowrap;
+      @include drumee.typo(
+        $size: 14px,
+        $line: 20px,
+        $weight: 500,
+        $color: var(--normal-fg-50)
+      );
+    }
+
+    &-org-ident-hint {
+      @include drumee.typo(
+        $size: 12px,
+        $line: 16px,
+        $weight: 400,
+        $color: var(--normal-fg-50)
+      );
+    }
+
     &-left {
       flex: 1;
       gap: var(--spacer-6);

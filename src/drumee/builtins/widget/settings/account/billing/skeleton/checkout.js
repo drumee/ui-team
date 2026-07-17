@@ -150,6 +150,54 @@ function checkout(ui) {
     min = 5;
     max = 1000;
   }
+  // TEAM bootstrap: a payer still on the default domain has no organisation
+  // yet — collect the org name + subdomain BEFORE Stripe Checkout (the
+  // webhook provisions the org after payment). Members of an existing org
+  // domain never see this (move-semantics membership).
+  const needsOrgBootstrap =
+    selectedPlan === "team" && ~~Visitor.get("domain_id") <= 1;
+  const orgSection = needsOrgBootstrap
+    ? Skeletons.Box.Y({
+        className: `${pfx}-section ${pfx}-org-section`,
+        kids: [
+          Skeletons.Note({
+            className: `${pfx}-section-title`,
+            content: LOCALE.ORG_URL_TITLE,
+          }),
+          entry(ui, {
+            label: LOCALE.ORG_NAME_LABEL,
+            name: "org_name",
+            type: "text",
+            placeholder: LOCALE.ORG_NAME_LABEL,
+            value: String(ui.state?.checkout?.orgName || ""),
+            sys_pn: `${pfx}-org-name-input`,
+            interactive: 1,
+          }),
+          Skeletons.Box.X({
+            className: `${pfx}-org-ident-row`,
+            kids: [
+              entry(ui, {
+                label: LOCALE.ORG_SUBDOMAIN_LABEL,
+                name: "org_ident",
+                type: "text",
+                placeholder: LOCALE.ORG_SUBDOMAIN_LABEL,
+                value: String(ui.state?.checkout?.orgIdent || ""),
+                sys_pn: `${pfx}-org-ident-input`,
+                interactive: 1,
+              }),
+              Skeletons.Note({
+                className: `${pfx}-org-ident-suffix`,
+                content: `.${bootstrap().main_domain}`,
+              }),
+            ],
+          }),
+          Skeletons.Note({
+            className: `${pfx}-org-ident-hint`,
+            content: LOCALE.ORG_URL_HINT,
+          }),
+        ],
+      })
+    : null;
   const leftPanel = Skeletons.Box.Y({
     className: `${pfx}-left`,
     kids: [
@@ -167,6 +215,8 @@ function checkout(ui) {
           ]),
         ],
       }),
+
+      ...(orgSection ? [orgSection] : []),
 
       Skeletons.Box.Y({
         className: `${pfx}-section`,
