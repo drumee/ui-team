@@ -6,6 +6,15 @@
 
 const pfx = (ui) => `${ui.fig.family}__sb`;
 
+// Live plan badge, same derivation as the real sidebar footer
+// (desk/skeleton/sidebar.js createFooter).
+const planBadge = () => {
+  const plan = (((Visitor.quota && Visitor.quota()) || {}).plan || "free").toString();
+  return (LOCALE.PLAN_BADGE || "{0} Plan").format(
+    plan.charAt(0).toUpperCase() + plan.slice(1),
+  );
+};
+
 const navItem = (ui, ico, label, opts = {}) => {
   const p = pfx(ui);
   return Skeletons.Box.X({
@@ -98,7 +107,11 @@ const footer = (ui, username) => {
                   }),
                   Skeletons.Note({
                     className: `${p}-footer-user-plan`,
-                    content: LOCALE.PRO_PLAN,
+                    // The tour's sidebar mirrors the real sidebar footer
+                    // (desk/skeleton/sidebar.js) — read the live entitlement.
+                    // Hardcoding PRO_PLAN told every new free user, mid-tour,
+                    // that they were on Pro.
+                    content: planBadge(),
                   }),
                 ],
               }),

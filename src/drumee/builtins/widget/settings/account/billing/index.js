@@ -620,12 +620,16 @@ class settings_billing extends LetcBox {
   // Pre-fills the checkout org-name input and backs the submit fallback, so
   // switching to the Team plan never blocks on an empty field.
   _defaultOrgName() {
-    const name = String(
-      Visitor.get(_a.fullname)
-      || `${Visitor.get(_a.firstname) || ""} ${Visitor.get(_a.lastname) || ""}`.trim()
+    const raw = String(
+      `${Visitor.get(_a.firstname) || ""} ${Visitor.get(_a.lastname) || ""}`.trim()
+      || Visitor.get(_a.fullname)
       || Visitor.get(_a.username)
       || "",
     ).trim();
+    // An email-signup account with no profile name carries the address itself
+    // as fullname — "user@host.com Team" is not a workspace name. Keep the
+    // local part only.
+    const name = raw.includes("@") ? raw.split("@")[0] : raw;
     return name ? `${name} Team` : "";
   }
 
