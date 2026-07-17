@@ -148,13 +148,13 @@
     }
   }
 
+  // Figma 2769-277671: Billing + Account Credentials + Danger zone are one
+  // 3-column row, equal thirds.
   &__row-2 {
-    .settings-main__credentials-card {
-      flex: 375 1 0;
-      min-width: 0;
-    }
+    .settings-main__billing-card,
+    .settings-main__credentials-card,
     .settings-main__danger-card {
-      flex: 773 1 0;
+      flex: 1 1 0;
       min-width: 0;
     }
   }
@@ -166,8 +166,8 @@
     }
   }
 
-  &__row-billing {
-    .settings-main__billing-card,
+  // Referral/invite isn't part of the Figma frame — its own full-width row.
+  &__row-referral {
     .settings-main__referral-card {
       flex: 1 1 0;
       min-width: 0;
@@ -468,6 +468,26 @@
       width: 100%;
       gap: var(--spacer-5);
     }
+
+    // Figma 2769-277772/277786: these rows are label-over-value, the
+    // opposite emphasis from the Preferences toggle rows (bold title,
+    // muted description) — the small grey text is the FIELD LABEL
+    // ("Email Address"/"Password") and the bold dark text is the VALUE.
+    &-row {
+      .settings-main__inner-title {
+        font-size: 12px;
+        line-height: 16px;
+        font-weight: 600;
+        color: $ink-600;
+      }
+      .settings-main__inner-description {
+        font-size: 14px;
+        line-height: 20px;
+        font-weight: 600;
+        color: $ink-900;
+      }
+    }
+
     &-row.email-row {
       .settings-main__inner-description {
         max-width: 150px;
