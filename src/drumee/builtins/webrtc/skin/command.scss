@@ -374,17 +374,19 @@
     .bg-effect-tile {
       position: relative;
       box-sizing: border-box;
+      display: flex; // Button.Svg root is a plain div — center the glyph
       width: 56px;
       height: 56px;
       flex-shrink: 0;
-      border-radius: 12px;
-      overflow: hidden;
+      border-radius: 5px;
+      overflow: visible; // let the hover tooltip escape the tile
       cursor: pointer;
       align-items: center;
       justify-content: center;
       background-color: #2f5bd7; // Figma tile blue
       color: #fff;
       transition: filter 0.15s ease;
+      border: 1px solid var(--border-default);
 
       svg {
         width: 22px;
@@ -403,21 +405,44 @@
         filter: brightness(1.06);
       }
 
-      // "No effect" tile reads as neutral, not a coloured effect.
-      &.none {
+      // Blur + Upload tiles are neutral when OFF and filled brand-blue when ON
+      // (mirrors the device-list "Blur Background" row's off/on look).
+      &.blur,
+      &.upload {
         background-color: #f0f0f2;
         color: var(--normal-fg-10);
+
+        &:hover {
+          filter: none;
+          background-color: #e6e6ea;
+        }
+
+        &[data-state="1"] {
+          background-color: #2f5bd7;
+          color: #fff;
+
+          &:hover {
+            filter: brightness(1.06);
+            background-color: #2f5bd7;
+          }
+        }
       }
 
-      // Active effect: brand ring.
+      // Active effect: brand ring (in addition to any fill above).
       &[data-state="1"] {
         outline: 2px solid var(--primary-40, #5950ff);
         outline-offset: 2px;
       }
 
       // Model loading (first use): centered spinner, block re-clicks.
+      // currentColor so it's visible on both the neutral and filled states.
       &[data-loading="1"] {
         pointer-events: none;
+
+        // Hide the glyph so only the spinner shows (keep its box for layout).
+        svg {
+          visibility: hidden;
+        }
 
         &::after {
           content: "";
@@ -426,12 +451,39 @@
           left: calc(50% - 8px);
           width: 16px;
           height: 16px;
-          border: 2px solid #fff;
+          border: 2px solid currentColor;
           border-top-color: transparent;
           border-radius: 50%;
+          opacity: 0.8;
           animation: window-meeting-load-spin 0.8s linear infinite;
         }
       }
     }
+  }
+
+  // ── Styled hover tooltip (dark pill) for controls carrying data-tip ─────────
+  // Used on the blur controls (device-list row + panel tile) and the upload
+  // tile. ::before is free here (the loading spinner uses ::after).
+  [data-tip] {
+    position: relative;
+  }
+
+  [data-tip]:hover::before {
+    content: attr(data-tip);
+    position: absolute;
+    bottom: calc(100% + 8px);
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 5px 10px;
+    border-radius: 8px;
+    background-color: #1f2130;
+    color: #fff;
+    font-size: 12px;
+    line-height: 14px;
+    font-weight: 500;
+    white-space: nowrap;
+    pointer-events: none;
+    z-index: 3000;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
   }
 }

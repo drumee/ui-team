@@ -501,37 +501,72 @@ class __webrtc_room extends __interact {
    */
   setBackgroundEffect(spec, cmd) {
     this.bgEffect = spec || { type: "none" };
-    // Row/tile that triggered it — its loading spinner tracks the async load.
-    this._bgStatusEl = cmd && cmd.$el;
-    // Keep the Blur Background row's on/off highlight in sync.
-    const p = this.getPart && this.getPart("video-devices");
-    if (this.__videoDevices || p) {
-      const list = (p && p.$el) || (this.__videoDevices && this.__videoDevices.$el);
-      if (list && list.find) {
-        list.find('[service="blur-background"]').attr(
-          "data-state", this.bgEffect.type === "blur" ? 1 : 0
-        );
-      }
+    this._syncBgUi();
+    // Turning an effect ON needs a live camera track. Key off the actual track,
+    // not this.isVideo (which can be stale either way): with no track, applying
+    // silently no-ops, so auto-enable the camera — changeLocalVideo's enable
+    // path re-applies the current bgEffect once the new track exists.
+    const hasCamera = !!(this.room && this.room.getLocalVideoTrack
+      && this.room.getLocalVideoTrack());
+    if (this.bgEffect.type !== "none" && !hasCamera) {
+      return this.enableCameraForEffect();
     }
     return this.applyBackgroundEffect();
+  }
+
+  /** Turn the camera on so a just-selected background effect has a track. */
+  async enableCameraForEffect() {
+    if (this.__ctrlVideo) this.__ctrlVideo.setState(1);
+    await this.changeLocalVideo(1);
   }
 
   /** Blur Background row in the device list — toggles blur on/off. */
   async toggleBackgroundBlur(cmd) {
     const on = !(this.bgEffect && this.bgEffect.type === "blur");
-    if (cmd && cmd.$el) cmd.$el.attr("data-state", on ? 1 : 0);
     await this.setBackgroundEffect(on ? { type: "blur", level: "light" } : { type: "none" }, cmd);
   }
 
   /**
-   * Effect status → loading spinner on the triggering row/tile.
-   * "loading" while the segmentation model downloads (a few seconds on first
-   * use), cleared on "ready" (first processed frame) or "failed".
+   * The Blur toggle exists in TWO places at once — the device-list "Blur
+   * Background" row (.blur-background-ctrl) and the effects-panel blur tile
+   * (.bg-effect-tile.blur) — likewise Upload/image (.upload-background-ctrl /
+   * .bg-effect-tile.upload). Collect the matching elements across whichever of
+   * the two popups are currently open so their active/loading state stays in
+   * sync no matter which one was clicked.
+   */
+  _bgFind(selector) {
+    const res = [];
+    ["video-devices", "bg-effects"].forEach((n) => {
+      const p = this.getPart && this.getPart(n);
+      if (p && p.$el && p.$el.find) {
+        const f = p.$el.find(selector);
+        if (f && f.length) res.push(f);
+      }
+    });
+    return res;
+  }
+
+  /** Reflect this.bgEffect on both blur controls and both upload controls. */
+  _syncBgUi() {
+    const t = (this.bgEffect && this.bgEffect.type) || "none";
+    this._bgFind(".blur-background-ctrl, .bg-effect-tile.blur")
+      .forEach((f) => f.attr("data-state", t === "blur" ? 1 : 0));
+    this._bgFind(".upload-background-ctrl, .bg-effect-tile.upload")
+      .forEach((f) => f.attr("data-state", t === "image" ? 1 : 0));
+  }
+
+  /**
+   * Effect status → loading spinner on BOTH controls for the active effect
+   * type. "loading" while the segmentation model downloads (a few seconds on
+   * first use), cleared on "ready" (first processed frame) or "failed".
    */
   _onBgStatus(status) {
-    if (this._bgStatusEl && this._bgStatusEl.attr) {
-      this._bgStatusEl.attr("data-loading", status === "loading" ? 1 : 0);
-    }
+    const loading = status === "loading" ? 1 : 0;
+    const t = (this.bgEffect && this.bgEffect.type) || "none";
+    const sel = t === "image"
+      ? ".upload-background-ctrl, .bg-effect-tile.upload"
+      : ".blur-background-ctrl, .bg-effect-tile.blur";
+    this._bgFind(sel).forEach((f) => f.attr("data-loading", loading));
   }
 
   /**
@@ -898,9 +933,8 @@ class __webrtc_room extends __interact {
         this.setBackgroundEffect({ type: "none" }, cmd);
         break;
       case "bg-blur":
-        this.setBackgroundEffect(
-          { type: "blur", level: cmd.$el.data("level") || "light" }, cmd
-        );
+        // Panel blur tile toggles on/off, same as the device-list blur row.
+        this.toggleBackgroundBlur(cmd);
         break;
       case "bg-upload":
         this.pickBackgroundImage(cmd);

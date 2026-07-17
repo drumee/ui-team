@@ -42,16 +42,19 @@ const __webrtc_video_device_list = function (_ui_, videoInput, inputSelected) {
   // room/effects/background-effect.js). Blur Background toggles blur; Upload
   // Background opens the backgrounds & effects panel beside this list.
   kids.push(Skeletons.Button.Label({
-    className: `device-label device-action`,
+    // blur-background-ctrl: marker so the room can sync this row's active/
+    // loading state with the effects-panel blur tile (see _syncBgUi).
+    className: `device-label device-action blur-background-ctrl`,
     ico: "sparkle",
     label: LOCALE.BLUR_BACKGROUND,
     labelClass: `device-action-label`,
     service: 'blur-background',
     uiHandler: [_ui_],
+    dataset: { tip: LOCALE.BLUR_BACKGROUND }, // styled hover tooltip
   }));
 
   kids.push(Skeletons.Button.Label({
-    className: `device-label device-action`,
+    className: `device-label device-action upload-background-ctrl`,
     ico: "upload-simple",
     label: LOCALE.UPLOAD_BACKGROUND,
     labelClass: `device-action-label`,
