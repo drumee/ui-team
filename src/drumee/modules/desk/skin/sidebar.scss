@@ -190,6 +190,22 @@ $rail-collapse-allowed: "(pointer: fine), (max-width: 767px), (min-width: 1025px
   &__rail[data-collapsed="1"] &__main:not(:hover) {
     @media #{$rail-collapse-allowed} {
       @include sidebar-mini-icons;
+
+      // The footer/nav rows stay pinned at their expanded 231px width (see
+      // "Pin the content columns" above) and are just visually clipped to
+      // the 64px rail — every row's icon sits at its normal padding-left:24
+      // offset from that wider row's left edge, which happens to read as
+      // roughly centered for a 20px nav icon (24px vs 16px margins) but
+      // puts the 40px avatar chip flush against the clip window's right
+      // edge (24px vs 0px — no room left). Re-anchor the avatar's own
+      // left offset for the 64px strip specifically: (64 - 40) / 2 = 12px
+      // each side.
+      // Plain descendant selector, not `&__x` — the parent selector here
+      // ends in the pseudo-class :not(:hover), and Sass rejects suffixing
+      // a pseudo-class ("Selector :not(:hover) can't have a suffix").
+      .desk-module-sidebar__footer-user-btn {
+        padding-left: 12px;
+      }
     }
   }
 
