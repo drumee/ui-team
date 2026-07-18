@@ -470,6 +470,10 @@ class __window_folder extends mfsInteract {
     // Honor the launch-time `activeTab` option (e.g. opened from the,
     // sidebar live-meeting badge with activeTab: "meeting"). A meeting request
     // now opens a standalone call window rather than an embedded folder tab.
+    // Track live meetings in this room so the schedule Start button can show
+    // "Join Meeting" to members while a host is in the call (chat meeting.start/
+    // meeting.end sentinels — realtime + an initial history scan).
+    this._initMeetingPresence();
     const initialTab = this.mget("activeTab");
     if (initialTab === "meeting" || this.mget(_a.start_meeting)) {
       this._launchMeetingStandalone();
@@ -2275,28 +2279,133 @@ class __window_folder extends mfsInteract {
     return !!(w && !(w.isDestroyed && w.isDestroyed()));
   }
 
-  // Toggle the Start-meeting button's "joined" state: while the user is in the
-  // live meeting the button is locked (see the [data-joined="1"] rule), painted
-  // brand-purple, and relabelled "Joined" — restored to "Start a Meeting" once
-  // the meeting window closes. `_meetingJoined` persists the state so a schedule
-  // re-render keeps it (skeleton/meeting-schedule reads it); the DOM is resolved
-  // fresh each call so a rebuilt button is still updated.
-  _setMeetingJoined(on) {
-    this._meetingJoined = on ? 1 : 0;
+  // The Start-meeting button label reflects three states, in priority order:
+  //   1. `_meetingJoined` — the local user is in the meeting → locked "Joined"
+  //   2. `_meetingActive` — a meeting is live in this room (host present) but the
+  //      viewer isn't in it → "Join Meeting"
+  //   3. idle → "Start a Meeting"
+  _startBtnLabel() {
+    if (this._meetingJoined) return LOCALE.JOINED || "Joined";
+    if (this._meetingActive) return LOCALE.JOIN_MEETING || "Join meeting";
+    return LOCALE.START_A_MEETING || "Start a Meeting";
+  }
+
+  // Apply the current button state to the DOM. Resolved fresh each call so a
+  // rebuilt button (schedule re-render) is still updated; the skeleton reads the
+  // same flags so an initial render is already correct. Only the "Joined" state
+  // locks + paints the button ([data-joined="1"]); "Join Meeting" is clickable.
+  _applyStartBtnState() {
     const el =
       this.el &&
       this.el.querySelector(`.${this.fig.family}__meeting-sched-start-btn`);
     if (!el) return;
-    el.dataset.joined = on ? "1" : "0";
+    el.dataset.joined = this._meetingJoined ? "1" : "0";
     const label =
       el.querySelector(
         `.${this.fig.family}__meeting-sched-start-label .note-content`,
       ) || el.querySelector(".note-content");
-    if (label) {
-      label.textContent = on
-        ? LOCALE.JOINED || "Joined"
-        : LOCALE.START_A_MEETING || "Start a Meeting";
+    if (label) label.textContent = this._startBtnLabel();
+  }
+
+  // Local user's in-meeting state. `_meetingJoined` persists so a schedule
+  // re-render keeps it (skeleton/meeting-schedule reads it).
+  _setMeetingJoined(on) {
+    this._meetingJoined = on ? 1 : 0;
+    this._applyStartBtnState();
+  }
+
+  // "A meeting is currently live in this room" — driven by the meeting.start /
+  // meeting.end chat sentinels (see onWsMessage + _refreshMeetingActiveState).
+  _setMeetingActive(on) {
+    const v = on ? 1 : 0;
+    if (this._meetingActive === v) return;
+    this._meetingActive = v;
+    this._applyStartBtnState();
+  }
+
+  // This folder's meeting room nid (matches how _launchMeetingStandalone and the
+  // meeting window derive room_id).
+  _meetingRoomNid() {
+    return `${this.mget(_a.actual_home_id) || this.mget(_a.nid) || ""}`;
+  }
+
+  // Parse a chat message body carrying the `[[MEETING:start|end:{json}]]`
+  // sentinel that window_meeting posts on join/leave. Returns null otherwise.
+  _parseMeetingSentinel(message) {
+    if (typeof message !== "string") return null;
+    const m = message.match(/^\[\[MEETING:(start|end):([\s\S]*)\]\]$/);
+    if (!m) return null;
+    let payload = {};
+    try {
+      payload = JSON.parse(m[2]);
+    } catch (e) {
+      payload = {};
     }
+    return { action: m[1], payload };
+  }
+
+  // Does a meeting sentinel payload belong to this folder's room?
+  _meetingMsgForMyRoom(payload) {
+    if (!payload) return false;
+    const mine = new Set(
+      [
+        `${this.mget(_a.actual_home_id) || ""}`,
+        `${this.mget(_a.nid) || ""}`,
+      ].filter(Boolean),
+    );
+    return [payload.room_id, payload.nid].some((x) => mine.has(`${x || ""}`));
+  }
+
+  // Subscribe to live channel posts (for realtime meeting.start/end) and seed
+  // the current active state from recent history (folder opened mid-meeting).
+  // Bound once; bindEvent auto-unbinds on destroy.
+  _initMeetingPresence() {
+    if (this._meetingPresenceInit) return;
+    this._meetingPresenceInit = 1;
+    this.bindEvent(_a.live);
+    this._refreshMeetingActiveState();
+  }
+
+  // Best-effort initial scan: fetch this room's recent messages (newest first)
+  // and adopt the most recent meeting sentinel — a `start` with no later `end`
+  // means a meeting is live right now. Never throws; a failure leaves the button
+  // in its default state and realtime updates still apply.
+  _refreshMeetingActiveState() {
+    const svc = (SERVICE.channel && SERVICE.channel.messages) || "channel.messages";
+    const hub_id = this.mget(_a.hub_id);
+    if (!hub_id) return;
+    const api = { service: svc, hub_id, order: "desc" };
+    const roomNid = this._meetingRoomNid();
+    if (roomNid) api.nid = roomNid;
+    Promise.resolve()
+      .then(() => this.fetchService(api))
+      .then((rows) => {
+        if (!Array.isArray(rows)) return;
+        for (const r of rows) {
+          const p = this._parseMeetingSentinel(r && r.message);
+          if (!p || !this._meetingMsgForMyRoom(p.payload)) continue;
+          this._setMeetingActive(p.action === "start");
+          return;
+        }
+        this._setMeetingActive(false);
+      })
+      .catch(() => {});
+  }
+
+  // Live channel traffic — react only to this room's meeting.start/end sentinels
+  // and ignore everything else (this window also receives unrelated live posts).
+  onWsMessage(service, data, options = {}) {
+    const svc = options.service || service;
+    const postSvc = (SERVICE.channel && SERVICE.channel.post) || "channel.post";
+    if (svc !== postSvc || !data) return;
+    if (`${data.hub_id || ""}` !== `${this.mget(_a.hub_id) || ""}`) return;
+    const p = this._parseMeetingSentinel(data.message);
+    if (!p) return;
+    const payload = Object.assign({}, p.payload);
+    if (data.room_id != null && payload.room_id == null) payload.room_id = data.room_id;
+    if (data.nid != null && payload.nid == null) payload.nid = data.nid;
+    if (!this._meetingMsgForMyRoom(payload)) return;
+    this._setMeetingActive(p.action === "start");
   }
 
   // Show the Start button spinning until the meeting window actually mounts,
