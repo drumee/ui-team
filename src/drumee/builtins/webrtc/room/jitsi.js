@@ -680,7 +680,13 @@ class __webrtc_room extends __room {
     if (track.getVideoType() == _a.desktop) {
       // Anchor presenterId + switch to presenter layout immediately (works for
       // late joiners who missed START_REMOTE_SCREEN), then attach the track.
-      this._enterRemotePresentation(track);
+      // Only for a LIVE track: a stopped share is MUTED, not disposed
+      // (stopLocalTrack mutes the desktop track), so a rejoiner who was absent
+      // when STOP_REMOTE_SCREEN was broadcast still receives the muted desktop
+      // track here. Entering presentation for it shows the "preparing screen"
+      // loading layout that never resolves — no frame ever arrives. Mirror the
+      // onStatsReceived isMuted() guard; a later unmute is recovered there.
+      if (!track.isMuted()) this._enterRemotePresentation(track);
       return;
     }
 
@@ -701,7 +707,10 @@ class __webrtc_room extends __room {
           JEVENTS.track.TRACK_VIDEOTYPE_CHANGED,
           onVideoTypeChange
         );
-        this._enterRemotePresentation(track);
+        // Same guard as the settled-desktop branch above: a stopped share is
+        // muted (not disposed), so don't switch a rejoiner into the presenter
+        // layout for it. Stats catch-up recovers a later unmute.
+        if (!track.isMuted()) this._enterRemotePresentation(track);
       };
       track.addEventListener(
         JEVENTS.track.TRACK_VIDEOTYPE_CHANGED,
