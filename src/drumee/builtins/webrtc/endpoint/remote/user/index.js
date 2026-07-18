@@ -345,9 +345,28 @@ class __remote_user extends __stream {
         // attach the camera. The videoType checks below already send desktop →
         // avatar and camera → attach.
         if (track.getVideoType() == _a.desktop) {
-          // Explicit screenshare: keep avatar; handleVideoMuteChange attaches.
-          this.toggleAvatarVideo(1, 0);
-          this.handleVideoMuteChange(track);
+          // The desktop (screen-share) track belongs to the presenter stage,
+          // NOT this tile — this tile's single <video> mirrors the CAMERA only.
+          // A desktop event still reaches us via the room's TRACK_MUTE_CHANGED
+          // (and stats). If we forced the avatar here, stopping a share (which
+          // arrives as a desktop MUTE) would hide the still-live camera and pin
+          // the avatar forever — user 1 stops sharing, user 2 loses user 1's
+          // camera. Never touch the tile for the desktop track's own state;
+          // re-assert the tile from the CAMERA instead: show the camera if it's
+          // live, avatar only when there is no live camera (camera-off share).
+          const cam = this.tracks.find(
+            (t) =>
+              t && t.isActive() && t.getType() == _a.video &&
+              t.getVideoType() != _a.desktop && !t.isMuted()
+          );
+          if (cam) {
+            this.ensurePart(_a.video).then((v) => {
+              cam.attach(v.el);
+              this.toggleAvatarVideo(0, 1);
+            });
+          } else {
+            this.toggleAvatarVideo(1, 0);
+          }
         } else if (track.isMuted()) {
           // Camera (or not-yet-settled videoType) but muted -> avatar.
           this.toggleAvatarVideo(1, 0);
