@@ -7,7 +7,28 @@ const __webrtc_device_list = function (_ui_, audioInput, audioOutput, inputSelec
     className: `device-heading`,
     content: LOCALE.MICROPHONE
   })];
-  
+
+  // Live mic-level meter — the room widget (webrtc/room) drives the segments
+  // imperatively from an AnalyserNode on a preview stream of the selected input
+  // device (see _startMicMeter), so the user can confirm the mic they pick is
+  // actually picking up their voice before hitting Confirm.
+  const MIC_METER_SEGMENTS = 14;
+  kids.push(Skeletons.Box.Y({
+    className: `device-mic-test`,
+    kids: [
+      Skeletons.Box.X({
+        className: `device-mic-meter`,
+        kids: Array.from({ length: MIC_METER_SEGMENTS }, () =>
+          Skeletons.Box.Y({ className: `device-mic-meter-seg` })
+        )
+      }),
+      Skeletons.Note({
+        className: `device-mic-test-hint`,
+        content: LOCALE.SPEAK_TO_TEST_MIC
+      })
+    ]
+  }));
+
   // When the selected id matches no enumerated device (e.g. the live track
   // reports a raw hardware id while the list only carries the 'default'
   // pseudo-device), highlight the 'default' row instead of leaving every row

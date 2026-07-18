@@ -71,6 +71,7 @@
   "IMPORT_FROM_SERVER": "Importar desde el servidor",
   "EXPORT_TO_SERVER": "Exportar al servidor",
   "MICROPHONE": "Microphone",
+  "SPEAK_TO_TEST_MIC": "Habla para probar tu micrófono",
   "TRY_DRUMEE": "Accederá a su escritorio de prueba de Drumee. Simplemente ingrese su correo electrónico que se mantendrá totalmente {0}.",
   "INTRO_POPUP_TITLE": "¡Bienvenido a su mesa de pruebas de Drumee!",
   "DMZ_SHAREBOX_FOOTER_TITLE": "Tú también únete a la revolución de \"Nube Independiente\"",

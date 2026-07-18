@@ -36,6 +36,7 @@ class __webrtc_room extends __interact {
    */
   onBeforeDestroy() {
     Visitor.muteSound();
+    this._stopMicMeter();
     this.unbindEvent("conference");
     if (this._onFullScreenChange)
       document.removeEventListener("fullscreenchange", this._onFullScreenChange);
@@ -116,14 +117,24 @@ class __webrtc_room extends __interact {
         if (!this._timerInterval) {
           this._timerInterval = setInterval(() => this._updateElapsedTimer(), 1000);
         }
-        let wd = setInterval(() => {
-          let t = this.getLocalTrack(_a.audio);
-          if (t && t.isActive()) {
-            clearInterval(wd);
-            this.initCommadPanel({});
-          }
-        }, 1000);
-        this.watchdog = wd;
+        // Enable the call controls as soon as the local audio track is live —
+        // check immediately, then every 250ms. The old 1s interval left the
+        // controls disabled for up to a full second after the call was online.
+        const enableControls = () => {
+          const t = this.getLocalTrack(_a.audio);
+          if (!t || !t.isActive()) return false;
+          this.initCommadPanel({});
+          return true;
+        };
+        if (enableControls()) {
+          // Sentinel so the `if (this.watchdog) return` guard above still
+          // holds (clearInterval on it at teardown is a harmless no-op).
+          this.watchdog = 1;
+        } else {
+          this.watchdog = setInterval(() => {
+            if (enableControls()) clearInterval(this.watchdog);
+          }, 250);
+        }
         break;
       case "nop":
         this.stateMessage(s);
@@ -383,6 +394,7 @@ class __webrtc_room extends __interact {
               "default"
           );
           p.feed(view);
+          this._startMicMeter(currentInputDevice);
         } else {
           p.feed(noDevice);
         }
@@ -398,6 +410,7 @@ class __webrtc_room extends __interact {
    *
    */
   closeInputDevicesList() {
+    this._stopMicMeter();
     let p = this.getPart("audio-devices");
     if (!p) return;
     p.$el.fadeOut();
@@ -687,6 +700,127 @@ class __webrtc_room extends __interact {
   }
 
   /**
+   * Start the live mic-level meter inside the audio-devices popup. Opens a
+   * short-lived preview getUserMedia stream for `deviceId` (independent of the
+   * call's own track, so it reflects the picked device and works even while the
+   * call mic is muted), routes it through a Web Audio AnalyserNode, and lights
+   * the popup's `.device-mic-meter-seg` segments from the signal RMS each
+   * animation frame. Safe to call repeatedly — it tears down any previous meter
+   * first, so switching input device just re-points the meter.
+   */
+  async _startMicMeter(deviceId) {
+    this._stopMicMeter();
+    const p = this.getPart("audio-devices");
+    if (!p || !p.el) return;
+
+    // Invalidation token: any later start/stop bumps it, so a stream that
+    // resolves after the popup closed (or after a newer pick) is discarded.
+    const token = this._micMeterToken;
+    let stream;
+    try {
+      const useExact = deviceId && deviceId !== "default";
+      stream = await navigator.mediaDevices.getUserMedia({
+        audio: useExact ? { deviceId: { exact: deviceId } } : true,
+        video: false,
+      });
+    } catch (e) {
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({
+          audio: true,
+          video: false,
+        });
+      } catch (e2) {
+        if (this.warn) this.warn("mic meter: getUserMedia failed", e2);
+        return;
+      }
+    }
+    if (token !== this._micMeterToken) {
+      stream.getTracks().forEach((t) => t.stop());
+      return;
+    }
+
+    // Query segments AFTER the await so the fed skeleton has rendered.
+    const segs = Array.prototype.slice.call(
+      p.el.querySelectorAll(".device-mic-meter-seg")
+    );
+    if (!segs.length) {
+      stream.getTracks().forEach((t) => t.stop());
+      return;
+    }
+
+    let ctx, analyser, data, raf;
+    try {
+      const Ctx = window.AudioContext || window.webkitAudioContext;
+      ctx = new Ctx();
+      // The getUserMedia await can break the click gesture chain, leaving the
+      // context suspended (→ a flat, dead meter); resume is a no-op if running.
+      if (ctx.state === "suspended" && ctx.resume) ctx.resume().catch(() => {});
+      const source = ctx.createMediaStreamSource(stream);
+      analyser = ctx.createAnalyser();
+      analyser.fftSize = 256;
+      analyser.smoothingTimeConstant = 0.6;
+      // Analyse only — never connect to ctx.destination or the mic echoes back.
+      source.connect(analyser);
+      data = new Uint8Array(analyser.fftSize);
+    } catch (e) {
+      stream.getTracks().forEach((t) => t.stop());
+      if (this.warn) this.warn("mic meter: audio graph failed", e);
+      return;
+    }
+
+    const total = segs.length;
+    const tick = () => {
+      if (token !== this._micMeterToken) return;
+      analyser.getByteTimeDomainData(data);
+      let sum = 0;
+      for (let i = 0; i < data.length; i++) {
+        const x = (data[i] - 128) / 128;
+        sum += x * x;
+      }
+      const rms = Math.sqrt(sum / data.length);
+      const level = Math.min(1, rms * 3.6); // gentle gain so speech reads well
+      const lit = Math.round(level * total);
+      for (let i = 0; i < total; i++) {
+        const on = i < lit ? "1" : "0";
+        if (segs[i].dataset.on !== on) segs[i].dataset.on = on;
+      }
+      raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+
+    this._micMeter = {
+      stop: () => {
+        if (raf) cancelAnimationFrame(raf);
+        try {
+          stream.getTracks().forEach((t) => t.stop());
+        } catch (e) {}
+        try {
+          if (ctx && ctx.state !== "closed") ctx.close();
+        } catch (e) {}
+        segs.forEach((s) => {
+          s.dataset.on = "0";
+        });
+      },
+    };
+  }
+
+  /**
+   * Tear down the mic-level meter: stop the rAF loop, release the preview
+   * stream, and close the AudioContext. Bumping the token also invalidates any
+   * getUserMedia that's still resolving. Called on device switch, popup
+   * close/confirm, and window destroy.
+   */
+  _stopMicMeter() {
+    this._micMeterToken = (this._micMeterToken || 0) + 1;
+    if (this._micMeter) {
+      try {
+        this._micMeter.stop();
+      } catch (e) {}
+      this._micMeter = null;
+    }
+  }
+
+  /**
  * 
  */
   async displayPresentation(fullscreen) {
@@ -940,6 +1074,9 @@ class __webrtc_room extends __interact {
         // pseudo-device id, so without this the selection appears to revert
         // to the first/Default row even though the mic actually changed.
         this.preferredInputDevice = this.selectedInputDevice;
+        // Re-point the live meter at the newly picked mic so the level bar
+        // previews it before the user commits with Confirm.
+        this._startMicMeter(this.selectedInputDevice);
         break;
       case "output-device-select":
         this.selectedOutputDevice = cmd.$el.data("deviceid");

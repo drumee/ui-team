@@ -105,6 +105,30 @@ class __webrtc_room extends __room {
     this.idleStreams = [];
     this._kicked = {};
     this._guests = new Map();
+    // Start fetching the conference widget chunks the moment ANY room window
+    // exists (dialing, ringing, opening a meeting) so they're already loaded
+    // by the time prepareConference needs them — instead of five serialized
+    // chunk fetches sitting between pickup and first audio.
+    this.warmConferenceKinds();
+  }
+
+  /**
+   * Fire the dynamic imports for every widget kind the conference needs, in
+   * parallel, memoized. prepareConference awaits this instead of calling
+   * Kind.waitFor one by one (which serialized five network round trips).
+   */
+  warmConferenceKinds() {
+    if (!this._warmKinds) {
+      this._warmKinds = Promise.all([
+        "webrtc_participants",
+        "webrtc_local_user",
+        "webrtc_remote_user",
+        "webrtc_attendee",
+        "sound_analyzer",
+      ].map((name) => Kind.waitFor(name)));
+      this._warmKinds.catch((e) => this.warn("kind warmup failed", e));
+    }
+    return this._warmKinds;
   }
 
   /**
@@ -174,6 +198,17 @@ class __webrtc_room extends __room {
    */
   async onConnectionSuccess() {
     if (this.isLeaving || this.isDestroyed()) return;
+    // Local media is acquired IN PARALLEL with this XMPP connection
+    // (prepareConference). Wait for it here so the local tracks are still
+    // added BEFORE join() and ride the initial Jingle offer — the exact
+    // ordering contract the old serialized flow guaranteed.
+    if (this._startupTracks) {
+      try { await this._startupTracks; } catch (e) { }
+      if (this.isLeaving || this.isDestroyed()) return;
+      // Media never came up (mic denied/missing): don't join a conference we
+      // can't publish to — prepareConference surfaces the permission error.
+      if (this._startupMediaFailed) return;
+    }
     let room_id = this.mget(_a.room_id);
     try {
       console.log("[ROOMDBG] onConnectionSuccess -> initJitsiConference", {
@@ -451,12 +486,13 @@ class __webrtc_room extends __room {
    */
   async prepareConference(room) {
     this.stateMachine("waiting");
-    await Kind.waitFor("webrtc_participants");
-    await Kind.waitFor("webrtc_local_user");
-    await Kind.waitFor("webrtc_remote_user");
-    await Kind.waitFor("webrtc_attendee");
-    await Kind.waitFor("sound_analyzer");
-    await uiRouter.ensureWebsocket();
+    // All prerequisites in parallel. The kinds were awaited one by one here
+    // (5 serialized chunk fetches); warmConferenceKinds started them at
+    // initialize time, so this await is usually already settled.
+    await Promise.all([
+      this.warmConferenceKinds(),
+      uiRouter.ensureWebsocket(),
+    ]);
 
     JitsiMeetJS.mediaDevices.addEventListener(
       JEVENTS.mediaDevices.DEVICE_LIST_CHANGED,
@@ -480,38 +516,67 @@ class __webrtc_room extends __room {
     });
     await this.getLocalParts();
     this.stateMachine("getUserDevices");
-    let track = await this.createLocalTracks(_a.audio);
-    if (track) {
-      // For a VIDEO call, create the camera track deterministically here.
-      // Kept SEPARATE from the audio request above so a camera failure
-      // (denied/busy/no device) can't reject the whole getUserMedia and kill an
-      // otherwise-fine audio call — but done BEFORE bindConferenceRoom so the
-      // track lands in localTracks.video and rides the initial Jingle offer
-      // (onConnectionSuccess adds it pre-join → self-view + the peer both get it
-      // immediately). Previously the camera was only ever created by the racy
-      // DEVICE_LIST_CHANGED path, so a video call frequently came up showing just
-      // the avatar with no self-view and no video sent to the remote.
-      if (this.isVideo) {
-        try {
-          await this.createLocalTracks(_a.video, "default", { silent: 1 });
-        } catch (e) {
-          this.warn("startup camera failed; continuing audio-only", e);
-          this.isVideo = false;
-          if (this.__ctrlVideo) this.__ctrlVideo.setState(0);
-          this.toggleAvatarVideo(1, 0);
-        }
-      }
-      this.bindConferenceRoom(room)
-        .then(() => {
-          this.postOnlineState();
-        })
-        .catch((e) => {
-          this.stateMessage(LOCALE.INTERNAL_ERROR);
-          this.warn("ERROR:[133]:", e);
-        });
-    } else {
+    // Acquire local media and open the XMPP signaling connection IN PARALLEL
+    // (they were strictly serialized: getUserMedia audio → getUserMedia video
+    // → connect — each step hundreds of ms to seconds). The tracks-before-join
+    // ordering contract is preserved: onConnectionSuccess awaits
+    // _startupTracks before initJitsiConference/join, so local tracks still
+    // ride the initial Jingle offer and a media failure still aborts the join
+    // (via _startupMediaFailed).
+    this._startupTracks = this._createStartupTracks();
+    this.bindConferenceRoom(room)
+      .then(() => {
+        this.postOnlineState();
+      })
+      .catch((e) => {
+        this.stateMessage(LOCALE.INTERNAL_ERROR);
+        this.warn("ERROR:[133]:", e);
+      });
+    // Rejection (mic denied) propagates to the caller exactly like the old
+    // serialized `await createLocalTracks(audio)` did.
+    let track = await this._startupTracks;
+    if (!track) {
       this.stateMessage(LOCALE.DEVICES_PERMISSION_DENIED);
     }
+  }
+
+  /**
+   * Startup local-media acquisition.
+   * Video call: request mic+camera in a SINGLE getUserMedia instead of two
+   * serialized acquisitions (the camera alone often takes ~1s to spin up).
+   * If the combined request fails (camera denied/busy/missing), fall back to
+   * the audio-only request so a camera problem still can't kill an
+   * otherwise-fine audio call — the same resilience the old two-step flow
+   * had, but the failure path is now the only path that pays for two
+   * round trips. The tracks land in localTracks.* before join (see
+   * onConnectionSuccess) so self-view + the peer get them immediately.
+   */
+  async _createStartupTracks() {
+    let tracks = null;
+    if (this.isVideo) {
+      try {
+        tracks = await this.createLocalTracks(
+          [_a.audio, _a.video],
+          "default",
+          { silent: 1 }
+        );
+      } catch (e) {
+        this.warn("startup camera+mic failed; retrying audio-only", e);
+        this.isVideo = false;
+        if (this.__ctrlVideo) this.__ctrlVideo.setState(0);
+        this.toggleAvatarVideo(1, 0);
+      }
+    }
+    if (!tracks || !tracks.length) {
+      try {
+        tracks = await this.createLocalTracks(_a.audio);
+      } catch (e) {
+        this._startupMediaFailed = 1;
+        throw e;
+      }
+    }
+    if (!tracks || !tracks.length) this._startupMediaFailed = 1;
+    return tracks;
   }
 
   /**
@@ -1043,12 +1108,13 @@ class __webrtc_room extends __room {
     this.room = null;
     this.connection = null;
     setTimeout(async () => {
-      if (room) {
-        try {
-          await room.leave();
-          await connection.disconnect();
-        } catch (e) { }
-      }
+      // Disconnect even when the room never came up (e.g. media permission
+      // denied after the XMPP connection was opened in parallel) — otherwise
+      // the signaling websocket leaks until page unload.
+      try {
+        if (room) await room.leave();
+        if (connection) await connection.disconnect();
+      } catch (e) { }
     }, 0);
     if (this.retryTimer) clearInterval(this.retryTimer);
   }

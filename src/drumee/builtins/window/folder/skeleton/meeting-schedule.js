@@ -118,6 +118,9 @@ function weekCard(ui, pfx, mtg, idx = 0, count = 1) {
     uiHandler: [ui],
     kids: [
       Skeletons.Note({ className: `${pfx}-sched-card-title`, content: mtg.title }),
+      mtg.message
+        ? Skeletons.Note({ className: `${pfx}-sched-card-desc`, content: mtg.message })
+        : null,
       Skeletons.Button.Svg({
         className: `${pfx}-sched-card-join`,
         ico: "meet-camera",
