@@ -219,7 +219,7 @@ module.exports = function meetingModal(ui, opt = {}) {
             className: `${pfx}-row`,
             kids: [
               field(LOCALE.DATE, date),
-              field(LOCALE.ENTER_TIME, timeInput("mm-stime", m && m.stime_hm)),
+              field(LOCALE.START_TIME, timeInput("mm-stime", m && m.stime_hm)),
               field(LOCALE.END_TIME, timeInput("mm-etime", m && m.etime_hm)),
             ],
           }),

@@ -114,8 +114,42 @@
 
   &__meeting-modal-time {
     cursor: text;
-    -webkit-appearance: none;
-    appearance: none;
+    // Keep the browser's native internal layout for the time field. Stripping it
+    // with `appearance: none` broke the arrangement — the clock/picker indicator
+    // floated into the middle and the HH:MM digits crammed to its left. Instead
+    // leave the appearance intact, drop the spin buttons, and pin the picker
+    // indicator to the far right so HH:MM fills the left.
+    &::-webkit-datetime-edit {
+      padding: 0;
+    }
+
+    &::-webkit-inner-spin-button,
+    &::-webkit-clear-button {
+      display: none;
+      -webkit-appearance: none;
+    }
+
+    &::-webkit-calendar-picker-indicator {
+      margin-left: auto;
+      cursor: pointer;
+      opacity: 0.55;
+    }
+  }
+
+  // The date_picker widget also carries the `.datepicker` class, whose own skin
+  // styles its input as a 36px white bordered box — equal specificity to the
+  // shared grey-field rule above, so load order decides and the date control
+  // renders taller/shorter and mismatched, misaligning the row. Out-specify it
+  // (two classes) so the date field always matches the grey 44px time fields.
+  &__meeting-modal-date.datepicker input {
+    height: 44px;
+    padding: 12px;
+    border: none;
+    border-radius: 8px;
+    background: rgba(0, 0, 0, 0.04);
+    color: #0b0a21;
+    font-size: 13px;
+    cursor: pointer;
   }
 
   // ── Invitees: workspace-member toggle chips ──────────────────────────────
