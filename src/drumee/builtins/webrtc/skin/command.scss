@@ -622,8 +622,9 @@
   }
 
   // ── Styled hover tooltip (dark pill) for controls carrying data-tip ─────────
-  // Used on the blur controls (device-list row + panel tile) and the upload
-  // tile. ::before is free here (the loading spinner uses ::after).
+  // Used on the blur controls (device-list row + panel tile), the upload tile,
+  // and the in-topbar controls (hand / reactions / chat / people / fullscreen /
+  // screen-share). ::before is free here (the loading spinner uses ::after).
   [data-tip] {
     position: relative;
   }
@@ -635,7 +636,7 @@
     left: 50%;
     transform: translateX(-50%);
     padding: 5px 10px;
-    border-radius: 8px;
+    border-radius: 4px;
     background-color: #1f2130;
     color: #fff;
     font-size: 12px;
@@ -645,5 +646,12 @@
     pointer-events: none;
     z-index: 3000;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+  }
+
+  // In-topbar controls sit at the very top of the window, so their tooltip must
+  // drop BELOW the control instead of above (which would clip off-screen).
+  &__in-topbar-controls [data-tip]:hover::before {
+    top: calc(100% + 8px);
+    bottom: auto;
   }
 }
