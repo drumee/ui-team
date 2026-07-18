@@ -91,32 +91,33 @@ function meetingSidePanel(_ui_) {
         className: `${pfx}__pane ${pfx}__pane-participants`,
         kids: [
           // Roster toolbar (Figma): invite CTA + search / sort. Visual for now
-          // — the invite/search/sort backends are not yet wired.
-          Skeletons.Box.X({
-            className: `${pfx}__roster-header`,
-            kids: [
-              Skeletons.Button.Label({
-                className: `${pfx}__roster-invite`,
-                ico: "meet-user-plus",
-                label: LOCALE.INVITE_PEOPLE,
-                labelClass: `${pfx}__roster-invite-label`,
-                attrOpt: { title: LOCALE.INVITE_PEOPLE },
-              }),
-              Skeletons.Box.X({
-                className: `${pfx}__roster-tools`,
-                kids: [
-                  Skeletons.Button.Svg({
-                    ico: "meet-search",
-                    className: `${pfx}__roster-tool`,
-                  }),
-                  Skeletons.Button.Svg({
-                    ico: "meet-sort",
-                    className: `${pfx}__roster-tool`,
-                  }),
-                ],
-              }),
-            ],
-          }),
+          // — the invite/search/sort backends are not yet wired, so the whole
+          // toolbar is hidden until then. Keep the markup for the re-enable.
+          // Skeletons.Box.X({
+          //   className: `${pfx}__roster-header`,
+          //   kids: [
+          //     Skeletons.Button.Label({
+          //       className: `${pfx}__roster-invite`,
+          //       ico: "meet-user-plus",
+          //       label: LOCALE.INVITE_PEOPLE,
+          //       labelClass: `${pfx}__roster-invite-label`,
+          //       attrOpt: { title: LOCALE.INVITE_PEOPLE },
+          //     }),
+          //     Skeletons.Box.X({
+          //       className: `${pfx}__roster-tools`,
+          //       kids: [
+          //         Skeletons.Button.Svg({
+          //           ico: "meet-search",
+          //           className: `${pfx}__roster-tool`,
+          //         }),
+          //         Skeletons.Button.Svg({
+          //           ico: "meet-sort",
+          //           className: `${pfx}__roster-tool`,
+          //         }),
+          //       ],
+          //     }),
+          //   ],
+          // }),
           // Members roster (rows re-rendered in place by _refreshMember).
           Skeletons.Box.Y({
             className: `${pfx}__pane-roster`,
