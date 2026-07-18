@@ -334,13 +334,32 @@ module.exports = function meetingSchedule(ui) {
     ],
   });
 
+  // Render the button state up-front so a schedule re-render (fetch resolve,
+  // nav/toggle) doesn't reset it — driven by the folder's flags:
+  //   joined  → locked "Joined"       (local user is in the meeting)
+  //   active  → "Join Meeting"        (a host is in the room, viewer isn't)
+  //   else    → "Start a Meeting"
+  const joined = !!(
+    ui._meetingJoined ||
+    (ui._meetingWindowLive && ui._meetingWindowLive())
+  );
+  const active = !joined && !!ui._meetingActive;
+  const startLabel = joined
+    ? LOCALE.JOINED || "Joined"
+    : active
+      ? LOCALE.JOIN_MEETING || "Join meeting"
+      : LOCALE.START_A_MEETING;
   const startBtn = Skeletons.Button.Label({
     className: `${pfx}-sched-start-btn`,
     ico: "meet-camera",
-    label: LOCALE.START_A_MEETING,
+    label: startLabel,
     labelClass: `${pfx}-sched-start-label`,
     service: "start-meeting",
     uiHandler: [ui],
+    // attrOpt (not dataset) — the builder only applies `dataset` when an
+    // attrOpt/attribute is also present (see addons/letc.js). Only "Joined"
+    // locks/paints the button; "Join Meeting" stays a normal clickable button.
+    attrOpt: joined ? { "data-joined": "1" } : undefined,
   });
 
   // Opens the create modal (skeleton/meeting-modal.js) via open-schedule.

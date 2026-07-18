@@ -50,7 +50,6 @@ const __webrtc_video_device_list = function (_ui_, videoInput, inputSelected) {
     labelClass: `device-action-label`,
     service: 'blur-background',
     uiHandler: [_ui_],
-    dataset: { tip: LOCALE.BLUR_BACKGROUND }, // styled hover tooltip
   }));
 
   kids.push(Skeletons.Button.Label({
