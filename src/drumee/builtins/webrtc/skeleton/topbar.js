@@ -88,7 +88,7 @@ module.exports = function (_ui_) {
     service: "hand-raise",
     uiHandler: [_ui_],
     className: `${pfx}__ctrl-btn hand-raise`,
-    attrOpt: { title: LOCALE.RAISE_HAND },
+    attrOpt: { "data-tip": LOCALE.RAISE_HAND },
     dataset: { raised: 0 },
   });
 
@@ -141,7 +141,7 @@ module.exports = function (_ui_) {
     trigger: Skeletons.Button.Svg({
       ico: "meet-smiley",
       className: `${pfx}__ctrl-btn reactions`,
-      attrOpt: { title: LOCALE.REACTIONS },
+      attrOpt: { "data-tip": LOCALE.REACTIONS },
     }),
     items: Skeletons.Box.X({
       className: `${pfx}__reactions-bar`,
@@ -177,7 +177,7 @@ module.exports = function (_ui_) {
         service: _a.chat,
         uiHandler: [_ui_],
         className: `${pfx}__ctrl-btn chat`,
-        attrOpt: { title: LOCALE.CHAT },
+        attrOpt: { "data-tip": LOCALE.CHAT },
       }),
       Skeletons.Note({
         className: `${pfx}__in-topbar-chat-badge`,
@@ -193,7 +193,7 @@ module.exports = function (_ui_) {
     service: "show-people",
     uiHandler: [_ui_],
     className: `${pfx}__ctrl-btn people`,
-    attrOpt: { title: LOCALE.PARTICIPANTS },
+    attrOpt: { "data-tip": LOCALE.PARTICIPANTS },
   });
 
   // Window-resize dropdown: Full screen / Tile left / Tile right / Reframe.
@@ -218,7 +218,7 @@ module.exports = function (_ui_) {
     trigger: Skeletons.Button.Svg({
       ico: "meet-expand",
       className: `${pfx}__ctrl-btn fullscreen`,
-      attrOpt: { title: LOCALE.FULL_SCREEN },
+      attrOpt: { "data-tip": LOCALE.FULL_SCREEN },
     }),
     items: Skeletons.Box.Y({
       className: `${pfx}__resize-items`,
@@ -307,7 +307,7 @@ module.exports = function (_ui_) {
     sys_pn: "ctrl-screen",
     name: _a.screen,
     service: "start-screenshare",
-    attrOpt: { title: LOCALE.SHARE_SCREEN },
+    attrOpt: { "data-tip": LOCALE.SHARE_SCREEN },
     dataset: { muted: 1 },
   });
 
