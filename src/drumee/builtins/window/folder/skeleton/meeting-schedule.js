@@ -334,13 +334,23 @@ module.exports = function meetingSchedule(ui) {
     ],
   });
 
+  // Render the button in its "Joined" state when a meeting is already live, so a
+  // schedule re-render (fetch resolve, nav/toggle) doesn't reset it — the state
+  // is driven by the folder's _setMeetingJoined / _meetingWindowLive.
+  const joined = !!(
+    ui._meetingJoined ||
+    (ui._meetingWindowLive && ui._meetingWindowLive())
+  );
   const startBtn = Skeletons.Button.Label({
     className: `${pfx}-sched-start-btn`,
     ico: "meet-camera",
-    label: LOCALE.START_A_MEETING,
+    label: joined ? LOCALE.JOINED || "Joined" : LOCALE.START_A_MEETING,
     labelClass: `${pfx}-sched-start-label`,
     service: "start-meeting",
     uiHandler: [ui],
+    // attrOpt (not dataset) — the builder only applies `dataset` when an
+    // attrOpt/attribute is also present (see addons/letc.js).
+    attrOpt: joined ? { "data-joined": "1" } : undefined,
   });
 
   // Opens the create modal (skeleton/meeting-modal.js) via open-schedule.

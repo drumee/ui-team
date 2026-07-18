@@ -2267,28 +2267,74 @@ class __window_folder extends mfsInteract {
     if (el) el.dataset.loading = on ? "1" : "0";
   }
 
-  // Keep the Start button spinning until the meeting window is actually live
-  // (its root flips data-ready="1" once join() resolves), then clear it. Also
-  // clears if the window never appears / is closed, and after a hard cap so the
-  // spinner can never stick. Same-document lookup — Wm windows share the page.
+  // Is a standalone meeting window currently live? Meetings are a global Wm
+  // singleton (a second launch is blocked with "already another call"), so any
+  // window_meeting means the user is in a meeting launched from here.
+  _meetingWindowLive() {
+    const w = Wm.getItemByKind("window_meeting");
+    return !!(w && !(w.isDestroyed && w.isDestroyed()));
+  }
+
+  // Toggle the Start-meeting button's "joined" state: while the user is in the
+  // live meeting the button is locked (see the [data-joined="1"] rule), painted
+  // brand-purple, and relabelled "Joined" — restored to "Start a Meeting" once
+  // the meeting window closes. `_meetingJoined` persists the state so a schedule
+  // re-render keeps it (skeleton/meeting-schedule reads it); the DOM is resolved
+  // fresh each call so a rebuilt button is still updated.
+  _setMeetingJoined(on) {
+    this._meetingJoined = on ? 1 : 0;
+    const el =
+      this.el &&
+      this.el.querySelector(`.${this.fig.family}__meeting-sched-start-btn`);
+    if (!el) return;
+    el.dataset.joined = on ? "1" : "0";
+    const label =
+      el.querySelector(
+        `.${this.fig.family}__meeting-sched-start-label .note-content`,
+      ) || el.querySelector(".note-content");
+    if (label) {
+      label.textContent = on
+        ? LOCALE.JOINED || "Joined"
+        : LOCALE.START_A_MEETING || "Start a Meeting";
+    }
+  }
+
+  // Show the Start button spinning until the meeting window actually mounts,
+  // then swap the spinner for the locked "Joined" state and keep polling so the
+  // button is restored the moment that window closes. Keys off the window's
+  // existence (not its internal data-ready, which is async and lives on a
+  // sibling window) and re-resolves the button each tick, so it survives a cold
+  // module load and a schedule re-render. A hard cap clears a stuck spinner if
+  // the window never appears. Same-document lookup — Wm windows share the page.
   _awaitMeetingReady(btnEl) {
     this._stopAwaitMeetingReady();
-    let ticks = 0;
-    const finish = () => {
-      this._stopAwaitMeetingReady();
-      this._setMeetingStartLoading(false, btnEl);
-    };
+    let sawWindow = false;
     this._meetingReadyPoll = setInterval(() => {
-      ticks += 1;
-      const w = Wm.getItemByKind("window_meeting");
-      const gone = !w || (w.isDestroyed && w.isDestroyed());
-      const ready = !gone && w.el && w.el.dataset.ready === "1";
-      // `ticks > 2` gives the singleton launch a moment to register before we
-      // treat a missing window as "gone".
-      if (ready || (gone && ticks > 2)) finish();
+      if (this._meetingWindowLive()) {
+        if (!sawWindow) {
+          // Window mounted → the user is joining. Drop the spinner and lock the
+          // button into its "Joined" state.
+          sawWindow = true;
+          this._setMeetingStartLoading(false, btnEl);
+          this._setMeetingJoined(true);
+        }
+        return;
+      }
+      if (sawWindow) {
+        // The meeting window we were tracking has closed → restore the button.
+        this._stopAwaitMeetingReady();
+        this._setMeetingJoined(false);
+      }
     }, 200);
-    // Safety cap — never leave the button spinning indefinitely.
-    this._meetingReadyCap = setTimeout(finish, 20000);
+    // Safety cap — if the window never mounts, clear the spinner so it can't
+    // stick. Once joined, the poll keeps running to watch for the close.
+    this._meetingReadyCap = setTimeout(() => {
+      this._meetingReadyCap = null;
+      if (!sawWindow) {
+        this._stopAwaitMeetingReady();
+        this._setMeetingStartLoading(false, btnEl);
+      }
+    }, 20000);
   }
 
   _stopAwaitMeetingReady() {

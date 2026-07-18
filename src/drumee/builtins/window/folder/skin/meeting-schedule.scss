@@ -199,6 +199,19 @@
         animation: window-folder-meeting-start-spin 0.8s linear infinite;
       }
     }
+
+    // Joined: the user is in the live meeting. Lock the button and paint it as
+    // the active brand state (label swapped to "Joined" in _setMeetingJoined);
+    // restored to the idle look once the meeting window closes.
+    &[data-joined="1"] {
+      pointer-events: none;
+      background: var(--primary-40, #5950ff);
+      color: #ffffff;
+
+      .note-content {
+        color: #ffffff;
+      }
+    }
   }
 
   &__meeting-sched-schedule-btn {
