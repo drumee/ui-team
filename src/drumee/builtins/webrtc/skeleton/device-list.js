@@ -75,13 +75,27 @@ const __webrtc_device_list = function (_ui_, audioInput, audioOutput, inputSelec
     }));
   });
 
-  kids.push(Preset.ConfirmButtons(_ui_, {
-    cancelLabel: LOCALE.CANCEL || '',
-    cancelService: 'close-device-select',
-    confirmLabel: LOCALE.CONFIRM,
-    confirmService: 'confirm-device-selection',
-    cancelBtnClass: 'mic-selection',
-    confirmBtnClass: 'mic-selection',
+  // Design order: primary [Save] first, then [Cancel]. The shared
+  // Preset.ConfirmButtons is hard-coded Cancel-first, so build the pair here
+  // with the same class recipe to keep its styling.
+  kids.push(Skeletons.Box.X({
+    className: `${_ui_.fig.family}__buttons-wrapper buttons u-ai-center`,
+    kids: [
+      Skeletons.Note({
+        content: LOCALE.SAVE,
+        service: 'confirm-device-selection',
+        className: `${_ui_.fig.family}__button-confirm mic-selection button-confirm button clickable`,
+        uiHandler: _ui_,
+        haptic: 300,
+        dataset: { error: 0 }
+      }),
+      Skeletons.Note({
+        content: LOCALE.CANCEL || '',
+        service: 'close-device-select',
+        className: `${_ui_.fig.family}__button-cancel mic-selection button-cancel button clickable`,
+        uiHandler: _ui_
+      })
+    ]
   }))
 
 

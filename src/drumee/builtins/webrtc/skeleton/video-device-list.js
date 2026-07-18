@@ -61,13 +61,26 @@ const __webrtc_video_device_list = function (_ui_, videoInput, inputSelected) {
     uiHandler: [_ui_],
   }));
 
-  kids.push(Preset.ConfirmButtons(_ui_, {
-    cancelLabel: LOCALE.CANCEL || '',
-    cancelService: 'close-camera-select',
-    confirmLabel: LOCALE.CONFIRM,
-    confirmService: 'confirm-camera-selection',
-    cancelBtnClass: 'mic-selection',
-    confirmBtnClass: 'mic-selection',
+  // Design order: primary [Save] first, then [Cancel] — mirrors the audio
+  // device picker (device-list.js).
+  kids.push(Skeletons.Box.X({
+    className: `${_ui_.fig.family}__buttons-wrapper buttons u-ai-center`,
+    kids: [
+      Skeletons.Note({
+        content: LOCALE.SAVE,
+        service: 'confirm-camera-selection',
+        className: `${_ui_.fig.family}__button-confirm mic-selection button-confirm button clickable`,
+        uiHandler: _ui_,
+        haptic: 300,
+        dataset: { error: 0 }
+      }),
+      Skeletons.Note({
+        content: LOCALE.CANCEL || '',
+        service: 'close-camera-select',
+        className: `${_ui_.fig.family}__button-cancel mic-selection button-cancel button clickable`,
+        uiHandler: _ui_
+      })
+    ]
   }))
 
 
