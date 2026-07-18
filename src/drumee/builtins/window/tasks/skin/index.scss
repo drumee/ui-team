@@ -1307,6 +1307,7 @@
     min-height: 0;
     overflow-y: auto;
     padding: 2px;
+    padding-right: 12px; // gutter so the scrollbar clears the content
     margin: -2px; // keep focus rings from clipping against the scroll edge
 
     scrollbar-width: thin;
@@ -1340,6 +1341,11 @@
     flex-basis: 289px;
     width: 289px;
     gap: 32px;
+    // Stretch to the (taller) main column so `margin-top: auto` on the actions
+    // can push them to the column foot, level with the left column's file bar.
+    // (The shared __modal-side sets align-self: flex-start, which would keep
+    // this column short and float the actions up above the file bar.)
+    align-self: stretch;
   }
   &__create-modal &__modal-main {
     gap: 32px;
@@ -1365,7 +1371,18 @@
   &__detail-panel &__modal-main {
     overflow-y: auto;
     min-height: 0;
-    padding-right: 8px; // breathing room so the scrollbar clears the content
+    // Thin scrollbar + gutter so the bar clears the description box instead of
+    // sitting flush against it (the default wide scrollbar overran the 8px).
+    padding-right: 12px;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border-strong, rgba(0, 0, 0, 0.15)) transparent;
+    &::-webkit-scrollbar {
+      width: 6px;
+    }
+    &::-webkit-scrollbar-thumb {
+      background-color: var(--border-strong, rgba(0, 0, 0, 0.15));
+      border-radius: 6px;
+    }
   }
 
   // Mobile refinements for the popups (plus Gantt & List) live in ONE
@@ -1568,13 +1585,24 @@
     }
   }
 
+  // Left column: pin the file search/upload field to the column foot so its bar
+  // lines up with the actions in the right column. (The grow description above
+  // already pushes it down; this keeps it anchored if the description is short.)
+  &__create-files {
+    margin-top: auto;
+  }
+
   &__create-actions {
     align-items: stretch;
     gap: 8px;
+    // Right column: pin to the foot so the buttons sit at the same level as the
+    // left column's search/upload bar.
+    margin-top: auto;
   }
 
   &__create-cancel {
     flex: 1 1 0;
+    min-height: 40px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -1607,7 +1635,7 @@
     align-items: center;
     justify-content: center;
     text-align: center;
-    min-height: 38px;
+    min-height: 40px;
     @include drumee.typo(
       $size: 14px,
       $weight: 600,
@@ -4866,11 +4894,16 @@
     );
   }
 
-  // Priority legend: chips spread evenly across the card (Figma EL-36629f01 —
-  // each entry is a fill-width, center-justified group).
+  // Priority legend: one center-justified chip per bar, sharing the bars'
+  // exact column geometry so each label sits under its bar. The bars live in
+  // `__health-prio-bars` (inset `left: 26px` to clear the axis labels, then
+  // `space-around`), which centres 4 equal columns at W·(2i+1)/8. Matching
+  // that here needs the same 26px left inset AND zero gap — with `flex: 1 1 0`
+  // and no gap the columns are exactly W/4 and centre at the same positions;
+  // any gap would shift every label off its bar.
   &__health-legend-inline {
-    flex-wrap: wrap;
-    gap: 16px;
+    padding-left: 26px;
+    gap: 0;
 
     & > * {
       flex: 1 1 0;
@@ -5198,6 +5231,10 @@
   &__file-search-input {
     flex: 1 1 auto;
     min-width: 0;
+    // Match the action buttons' height so the bar and the buttons read level.
+    min-height: 40px;
+    display: flex;
+    align-items: center;
     padding: 8px 12px;
     border: 1px solid var(--border-default, rgba(0, 0, 0, 0.08));
     border-radius: 8px;

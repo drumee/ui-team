@@ -1507,11 +1507,14 @@ const make = function (ui) {
                   descControl,
                   `${pfx}__create-field-grow`,
                 ),
+                // Pinned to the column foot (see skin __create-files) so the
+                // search/upload bar lines up with the actions in the right column.
                 field(
                   LOCALE.LINKED_FILES,
                   filePickerBlock("create", {
                     pendingFiles: draft?.pending_files || [],
                   }),
+                  `${pfx}__create-files`,
                 ),
               ],
             }),
@@ -1532,7 +1535,8 @@ const make = function (ui) {
                   partHandler: ui,
                   kids: buildDueSectionContent(ui, "create"),
                 }),
-                // Primary action lives at the foot of the right column (Figma).
+                // Pinned to the column foot (see skin __create-actions) so it
+                // lines up with the file search/upload bar in the left column.
                 Skeletons.Box.X({
                   className: `${pfx}__create-actions`,
                   kids: [
