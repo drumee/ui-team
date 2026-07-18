@@ -737,7 +737,9 @@
 .widget-chatItem__meeting-card-title {
   flex: 1 1 auto;
   min-width: 0;
-  @include drumee.typo($size: 14px, $line: 20px, $weight: 600, $color: #0b0a21);
+  // drumee.typo doesn't emit font-weight — set it explicitly for the SemiBold title.
+  @include drumee.typo($size: 14px, $line: 20px, $color: #0b0a21);
+  font-weight: 600;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;

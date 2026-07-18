@@ -379,7 +379,10 @@
   }
 
   &__meeting-sched-card-title {
-    @include drumee.typo($size: 12px, $line: 16px, $weight: 700, $color: #0b0a21);
+    // NB: drumee.typo does NOT emit font-weight (it only maps weight→font-family),
+    // so boldness must be set explicitly here.
+    @include drumee.typo($size: 14px, $line: 18px, $color: #0b0a21);
+    font-weight: 700;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -445,7 +448,8 @@
     background: rgba(89, 80, 255, 0.08);
     border-left: 3px solid var(--primary-40, #5950ff);
     cursor: pointer;
-    @include drumee.typo($size: 11px, $line: 14px, $weight: 500, $color: #0b0a21);
+    @include drumee.typo($size: 12px, $line: 15px, $color: #0b0a21);
+    font-weight: 600;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
