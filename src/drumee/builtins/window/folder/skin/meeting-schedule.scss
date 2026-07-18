@@ -26,6 +26,11 @@
     flex-wrap: nowrap !important;
   }
 
+  // Anchors the mini-calendar dropdown under the range label.
+  &__meeting-sched-toolbar-left {
+    position: relative;
+  }
+
   &__meeting-sched-nav {
     align-items: center;
     gap: 4px;
@@ -73,6 +78,17 @@
   &__meeting-sched-label-wrap {
     align-items: center;
     gap: 6px;
+    padding: 4px;
+    border-radius: 6px;
+    cursor: pointer;
+
+    &:hover {
+      background: rgba(0, 0, 0, 0.05);
+    }
+
+    &[data-open="1"] .window-folder__meeting-sched-label-caret {
+      transform: rotate(180deg);
+    }
   }
 
   &__meeting-sched-label {
@@ -87,11 +103,103 @@
     color: #0b0a21;
     align-items: center;
     justify-content: center;
+    // Purely visual — clicks must reach the wrap's picker-toggle service.
+    pointer-events: none;
 
     svg {
       width: 12px;
       height: 12px;
       fill: currentColor;
+    }
+  }
+
+  // ── Mini-calendar dropdown (caret next to the range label) ──────────────
+  &__meeting-sched-picker {
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 0;
+    z-index: 120;
+    width: 264px;
+    padding: 12px;
+    border-radius: 8px;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    background: #ffffff;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  }
+
+  &__meeting-sched-picker-head {
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
+  }
+
+  &__meeting-sched-picker-month {
+    @include drumee.typo($size: 14px, $line: 20px, $weight: 600, $color: #0b0a21);
+  }
+
+  &__meeting-sched-picker-nav {
+    display: flex;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: #0b0a21;
+
+    svg {
+      width: 12px;
+      height: 12px;
+      fill: currentColor;
+    }
+
+    &.next svg {
+      transform: rotate(180deg);
+    }
+
+    &:hover {
+      background: rgba(0, 0, 0, 0.06);
+    }
+  }
+
+  &__meeting-sched-picker-dows,
+  &__meeting-sched-picker-week {
+    flex-wrap: nowrap !important;
+  }
+
+  &__meeting-sched-picker-dow {
+    flex: 1;
+    justify-content: center;
+    padding: 2px 0;
+    @include drumee.typo($size: 11px, $line: 16px, $weight: 600, $color: #84848c);
+  }
+
+  &__meeting-sched-picker-day {
+    flex: 1;
+    height: 30px;
+    align-items: center;
+    justify-content: center;
+    border-radius: 6px;
+    cursor: pointer;
+    @include drumee.typo($size: 13px, $line: 18px, $weight: 400, $color: #0b0a21);
+
+    &:hover {
+      background: rgba(0, 0, 0, 0.06);
+    }
+
+    &[data-in="0"] {
+      color: #c7c7cc;
+    }
+
+    // Current selection: the anchor week (weekly) / anchor day (monthly).
+    &[data-sel="1"] {
+      background: rgba(89, 80, 255, 0.12);
+      color: var(--primary-40, #5950ff);
+      font-weight: 600;
+    }
+
+    &[data-today="1"] {
+      font-weight: 700;
     }
   }
 

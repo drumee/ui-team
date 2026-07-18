@@ -16,10 +16,11 @@ function pad2(n) {
 }
 
 // "June 07-13, 2026" (same month) / "Jun 28 - Jul 04, 2026" (cross-month) /
-// "June 2026" (monthly view).
+// "June 2026" (monthly view) / "June 16, 2026" (day view).
 function rangeLabel(ui) {
   const { anchor, view } = schedState(ui);
   if (view === "monthly") return anchor.format("MMMM YYYY");
+  if (view === "daily") return anchor.format("MMMM DD, YYYY");
   const start = anchor.startOf("week");
   const end = start.add(6, "day");
   if (start.month() === end.month()) {
@@ -133,12 +134,17 @@ function weekCard(ui, pfx, mtg, idx = 0, count = 1) {
   });
 }
 
-// ── Weekly grid: day header row + 24 hour rows (85px labels + 7 columns) ──
+// ── Weekly / Day grid: day header row + 24 hour rows (85px labels + N day
+// columns). The "daily" view (picked from the label's mini-calendar) is the
+// same hourly grid over a single Google-Calendar-style day column.
 function weeklyGrid(ui, pfx) {
-  const start = schedState(ui).anchor.startOf("week");
+  const st = schedState(ui);
+  const daily = st.view === "daily";
+  const start = daily ? st.anchor.startOf("day") : st.anchor.startOf("week");
+  const nDays = daily ? 1 : 7;
   const today = Dayjs().format("YYYY-MM-DD");
-  const meetings = normalizeMeetings(ui, start, start.add(7, "day"));
-  // meetings that start on day i (0-6) at hour h → cellMeetings[i][h]
+  const meetings = normalizeMeetings(ui, start, start.add(nDays, "day"));
+  // meetings that start on day i (0..nDays-1) at hour h → cellMeetings[i][h]
   const cellMeetings = (i, h) => {
     const day = start.add(i, "day");
     return meetings.filter(
@@ -150,7 +156,7 @@ function weeklyGrid(ui, pfx) {
     className: `${pfx}-sched-days`,
     kids: [
       Skeletons.Box.Y({ className: `${pfx}-sched-corner` }),
-      ...Array.from({ length: 7 }, (_, i) => {
+      ...Array.from({ length: nDays }, (_, i) => {
         const d = start.add(i, "day");
         return Skeletons.Box.Y({
           className: `${pfx}-sched-day`,
@@ -172,7 +178,7 @@ function weeklyGrid(ui, pfx) {
           className: `${pfx}-sched-hour`,
           kids: [Skeletons.Note({ className: `${pfx}-sched-hour-label`, content: hourLabel(h) })],
         }),
-        ...Array.from({ length: 7 }, (_, i) => {
+        ...Array.from({ length: nDays }, (_, i) => {
           const cm = cellMeetings(i, h);
           const dayStr = start.add(i, "day").format("YYYY-MM-DD");
           // Two half-hour click zones (:00 / :30) so clicking the 6:30 band
@@ -262,10 +268,93 @@ function monthlyGrid(ui, pfx) {
   return [header, Skeletons.Box.Y({ className: `${pfx}-sched-body ${pfx}-sched-body--month`, kids: weeks })];
 }
 
+// ── Mini-calendar dropdown (caret next to the range label) ────────────────
+// One month (st.pickerCursor, ‹ › to move it) of pickable days. The current
+// selection is brand-tinted: the anchor week in weekly view, the anchor day in
+// monthly view. Picking a day re-anchors the schedule onto it.
+function pickerCal(ui, pfx) {
+  const st = schedState(ui);
+  const cursor = st.pickerCursor || st.anchor;
+  const gridStart = cursor.startOf("month").startOf("week");
+  const today = Dayjs().format("YYYY-MM-DD");
+  // Weekly highlights the anchor week band; monthly / day view just the day.
+  const weekBand = st.view === "weekly";
+  const selStart = weekBand ? st.anchor.startOf("week") : st.anchor.startOf("day");
+  const selEnd = weekBand
+    ? st.anchor.startOf("week").add(6, "day").endOf("day")
+    : st.anchor.endOf("day");
+
+  const head = Skeletons.Box.X({
+    className: `${pfx}-sched-picker-head`,
+    kids: [
+      Skeletons.Button.Svg({
+        ico: "caret-left",
+        className: `${pfx}-sched-picker-nav prev`,
+        service: "sched-picker-prev",
+        bubble: 0,
+        uiHandler: [ui],
+      }),
+      Skeletons.Note({
+        className: `${pfx}-sched-picker-month`,
+        content: cursor.format("MMMM YYYY"),
+      }),
+      Skeletons.Button.Svg({
+        ico: "caret-left",
+        className: `${pfx}-sched-picker-nav next`,
+        service: "sched-picker-next",
+        bubble: 0,
+        uiHandler: [ui],
+      }),
+    ],
+  });
+
+  const dows = Skeletons.Box.X({
+    className: `${pfx}-sched-picker-dows`,
+    kids: Array.from({ length: 7 }, (_, i) =>
+      Skeletons.Note({
+        className: `${pfx}-sched-picker-dow`,
+        content: gridStart.add(i, "day").format("dd"),
+      }),
+    ),
+  });
+
+  const weeks = Array.from({ length: 6 }, (_, w) =>
+    Skeletons.Box.X({
+      className: `${pfx}-sched-picker-week`,
+      kids: Array.from({ length: 7 }, (_, i) => {
+        const d = gridStart.add(w * 7 + i, "day");
+        const ds = d.format("YYYY-MM-DD");
+        const selected = !d.isBefore(selStart) && !d.isAfter(selEnd);
+        return Skeletons.Note({
+          className: `${pfx}-sched-picker-day`,
+          content: String(d.date()),
+          service: "sched-pick-day",
+          schedDay: ds,
+          dataset: { day: ds },
+          attrOpt: {
+            "data-in": d.month() === cursor.month() ? "1" : "0",
+            "data-sel": selected ? "1" : "0",
+            "data-today": ds === today ? "1" : "0",
+          },
+          bubble: 0,
+          uiHandler: [ui],
+        });
+      }),
+    }),
+  );
+
+  return Skeletons.Box.Y({
+    className: `${pfx}-sched-picker`,
+    kids: [head, dows, ...weeks],
+  });
+}
+
 module.exports = function meetingSchedule(ui) {
   const pfx = `${ui.fig.family}__meeting`;
-  const { view } = schedState(ui);
+  const { view, pickerOpen } = schedState(ui);
 
+  // [ ‹ range-label › ] — the label sits between the arrows (Figma pass);
+  // Today is hidden until the design brings it back.
   const navPill = Skeletons.Box.X({
     className: `${pfx}-sched-nav`,
     kids: [
@@ -275,12 +364,13 @@ module.exports = function meetingSchedule(ui) {
         service: "sched-prev",
         uiHandler: [ui],
       }),
-      Skeletons.Note({
-        className: `${pfx}-sched-nav-today`,
-        content: LOCALE.TODAY,
-        service: "sched-today",
-        uiHandler: [ui],
-      }),
+      // Skeletons.Note({
+      //   className: `${pfx}-sched-nav-today`,
+      //   content: LOCALE.TODAY,
+      //   service: "sched-today",
+      //   uiHandler: [ui],
+      // }),
+      Skeletons.Note({ className: `${pfx}-sched-label`, content: rangeLabel(ui) }),
       Skeletons.Button.Svg({
         ico: "caret-left",
         className: `${pfx}-sched-nav-btn next`,
@@ -292,8 +382,10 @@ module.exports = function meetingSchedule(ui) {
 
   const label = Skeletons.Box.X({
     className: `${pfx}-sched-label-wrap`,
+    attrOpt: { "data-open": pickerOpen ? "1" : "0" },
+    service: "sched-toggle-picker",
+    uiHandler: [ui],
     kids: [
-      Skeletons.Note({ className: `${pfx}-sched-label`, content: rangeLabel(ui) }),
       Skeletons.Image.Svg({ ico: "meet-caret-down", className: `${pfx}-sched-label-caret` }),
     ],
   });
@@ -373,7 +465,10 @@ module.exports = function meetingSchedule(ui) {
   const toolbar = Skeletons.Box.X({
     className: `${pfx}-sched-toolbar`,
     kids: [
-      Skeletons.Box.X({ className: `${pfx}-sched-toolbar-left`, kids: [navPill, label] }),
+      Skeletons.Box.X({
+        className: `${pfx}-sched-toolbar-left`,
+        kids: [navPill, label, pickerOpen ? pickerCal(ui, pfx) : null].filter(Boolean),
+      }),
       Skeletons.Box.X({
         className: `${pfx}-sched-toolbar-right`,
         kids: [viewToggle, startBtn, scheduleBtn],

@@ -1388,7 +1388,8 @@ class __window_folder extends mfsInteract {
       case "sched-next":
       case "sched-today": {
         const st = require("./skeleton/meeting-schedule").schedState(this);
-        const unit = st.view === "monthly" ? "month" : "week";
+        const unit =
+          st.view === "monthly" ? "month" : st.view === "daily" ? "day" : "week";
         if (service === "sched-today") st.anchor = Dayjs();
         else st.anchor = st.anchor.add(service === "sched-next" ? 1 : -1, unit);
         return this._refreshSchedule();
@@ -1407,6 +1408,40 @@ class __window_folder extends mfsInteract {
           (cmd.el && cmd.el.dataset.view);
         if (v && v !== st.view) {
           st.view = v;
+          return this._refreshSchedule();
+        }
+        return;
+      }
+
+      // ── Mini-calendar dropdown on the range label's caret ──────────────
+      case "sched-toggle-picker": {
+        const st = require("./skeleton/meeting-schedule").schedState(this);
+        st.pickerOpen = !st.pickerOpen;
+        // Re-open on the month currently in view, not where it was left.
+        if (st.pickerOpen) st.pickerCursor = st.anchor;
+        return this._refreshSchedule();
+      }
+
+      case "sched-picker-prev":
+      case "sched-picker-next": {
+        const st = require("./skeleton/meeting-schedule").schedState(this);
+        st.pickerCursor = (st.pickerCursor || st.anchor).add(
+          service === "sched-picker-next" ? 1 : -1,
+          "month",
+        );
+        return this._refreshSchedule();
+      }
+
+      case "sched-pick-day": {
+        // Picking a day drills into the single-day hourly view of that day
+        // (Google-Calendar style); the Weekly/Monthly toggle exits it.
+        const st = require("./skeleton/meeting-schedule").schedState(this);
+        const d =
+          (cmd.mget && cmd.mget("schedDay")) || (cmd.el && cmd.el.dataset.day);
+        if (d) {
+          st.anchor = Dayjs(d);
+          st.view = "daily";
+          st.pickerOpen = false;
           return this._refreshSchedule();
         }
         return;
