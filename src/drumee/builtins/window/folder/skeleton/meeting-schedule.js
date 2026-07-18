@@ -298,20 +298,27 @@ module.exports = function meetingSchedule(ui) {
     ],
   });
 
-  // Each label sets its view explicitly (click Monthly → monthly); the pill toggles.
+  // Each label sets its view explicitly (click Monthly → monthly); the pill —
+  // and any other spot of the toggle (container catches the leftovers) —
+  // toggles. `schedView`, not `view`: the widget factory consumes `view`, so
+  // it never reaches the handler's mget.
   const viewToggle = Skeletons.Box.X({
     className: `${pfx}-sched-toggle`,
     attrOpt: { "data-view": view },
+    service: "sched-toggle-view",
+    uiHandler: [ui],
     kids: [
       Skeletons.Note({
         className: `${pfx}-sched-toggle-label weekly`,
         content: LOCALE.WEEKLY,
+        bubble: 0,
         service: "sched-set-view",
-        view: "weekly",
+        schedView: "weekly",
         uiHandler: [ui],
       }),
       Skeletons.Box.X({
         className: `${pfx}-sched-toggle-switch`,
+        bubble: 0,
         service: "sched-toggle-view",
         uiHandler: [ui],
         kids: [Skeletons.Note({ className: `${pfx}-sched-toggle-knob` })],
@@ -319,8 +326,9 @@ module.exports = function meetingSchedule(ui) {
       Skeletons.Note({
         className: `${pfx}-sched-toggle-label monthly`,
         content: LOCALE.MONTHLY,
+        bubble: 0,
         service: "sched-set-view",
-        view: "monthly",
+        schedView: "monthly",
         uiHandler: [ui],
       }),
     ],

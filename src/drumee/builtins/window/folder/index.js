@@ -1398,7 +1398,9 @@ class __window_folder extends mfsInteract {
 
       case "sched-set-view": {
         const st = require("./skeleton/meeting-schedule").schedState(this);
-        const v = (cmd.mget && cmd.mget("view")) || (cmd.el && cmd.el.dataset.view);
+        const v =
+          (cmd.mget && (cmd.mget("schedView") || cmd.mget("view"))) ||
+          (cmd.el && cmd.el.dataset.view);
         if (v && v !== st.view) {
           st.view = v;
           return this._refreshSchedule();

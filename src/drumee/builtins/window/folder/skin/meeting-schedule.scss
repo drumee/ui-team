@@ -135,6 +135,8 @@
     background: #ffffff;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
     transition: transform 0.15s ease;
+    // Purely visual — let clicks on the knob reach the switch's toggle service.
+    pointer-events: none;
   }
 
   &__meeting-sched-toggle[data-view="monthly"] &__meeting-sched-toggle-knob {
