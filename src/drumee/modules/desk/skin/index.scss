@@ -128,6 +128,23 @@ html {
     display: none;
   }
 
+  // Strip-only mode: with 2+ windows open the active one fully covers the
+  // rest, so the tab strip is the only way to reach a covered window. Bring
+  // the bar back but keep breadcrumb/actions hidden — the workspace pane
+  // carries its own topbar for those. (data-tabstrip set in
+  // `_syncWorkspaceTopbar`; !important because Box children are forced
+  // display:flex by the framework.)
+  // :not(mobile) — this 2-attr selector would otherwise out-specify the
+  // mobile hide rule above (1 attr); mobile keeps its own __mobile-topbar.
+  &__topbar[data-headless="1"][data-tabstrip="1"]:not([data-device="mobile"]) {
+    display: flex;
+
+    .desk-module-topbar__breadcrumb,
+    .desk-module-topbar__actions-cluster {
+      display: none !important;
+    }
+  }
+
   // Left panel-container hosts trash / activity (notifications) /
   // settings slide-outs that anchor to the desktop sidebar column. On
   // mobile that column doesn't exist (sidebar is a drawer overlay), so

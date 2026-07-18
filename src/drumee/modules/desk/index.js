@@ -125,11 +125,31 @@ class desk_module extends LetcBox {
   _onWorkspaceOpen(event, winInstance) {
     if (!winInstance) return;
     this._openWorkspaces.add(winInstance.cid);
-    this._syncWorkspaceTopbar();
+    // The headless pane gets a tab too: every open window (workspace pane or
+    // popup) must stay reachable once another window covers it, and the tab
+    // strip is the only switch affordance while the pane hides the home topbar.
+    if (!this._openFolders.has(winInstance.cid)) {
+      this._openFolders.set(winInstance.cid, {
+        win: winInstance,
+        minimized: !!winInstance.mget(_a.minimize),
+      });
+      if (winInstance.model) {
+        this.listenTo(
+          winInstance.model,
+          "change:filename change:hub_name change:name",
+          this._renderFolderTabs,
+        );
+      }
+    }
+    this._renderFolderTabs();
   }
 
   _onWorkspaceClose(event, winInstance) {
     if (!winInstance) return;
+    if (winInstance.model) this.stopListening(winInstance.model);
+    if (this._openFolders.delete(winInstance.cid)) {
+      this._renderFolderTabs();
+    }
     if (this._openWorkspaces.delete(winInstance.cid)) {
       this._syncWorkspaceTopbar();
     }
@@ -138,14 +158,23 @@ class desk_module extends LetcBox {
   // The home-section topbar is only meaningful on the home grid. A headless
   // workspace pane fills the desk body and brings its own window topbar, so
   // hide the home topbar while any workspace pane is open and restore it once
-  // the last one closes (back to home).
+  // the last one closes (back to home). With more than one window open the
+  // bar comes back in strip-only mode (data-tabstrip): every non-active
+  // window is fully covered by the active one, so the tab strip is the only
+  // way to reach it — breadcrumb/actions stay hidden (the pane has its own).
   _syncWorkspaceTopbar() {
     const part = this.getPart("top-bar");
     if (!part || !part.el) return;
     if (this._openWorkspaces.size) {
       part.el.dataset.headless = "1";
+      if (this._openFolders.size > 1) {
+        part.el.dataset.tabstrip = "1";
+      } else {
+        delete part.el.dataset.tabstrip;
+      }
     } else {
       delete part.el.dataset.headless;
+      delete part.el.dataset.tabstrip;
     }
   }
 
@@ -166,6 +195,10 @@ class desk_module extends LetcBox {
   }
 
   _renderFolderTabs() {
+    // Tab-count changes flip the strip-only topbar on/off (see
+    // _syncWorkspaceTopbar). Sync here so the popup open/close path
+    // (folder:open / folder:close) updates it too, not just workspace events.
+    this._syncWorkspaceTopbar();
     if (!this._folderTabsBox || (this._folderTabsBox.isDestroyed && this._folderTabsBox.isDestroyed())) {
       return;
     }
@@ -256,6 +289,8 @@ class desk_module extends LetcBox {
     if (this._folderTabsBound && window.Wm && Wm.$el) {
       Wm.$el.off("folder:open", this._onFolderOpen);
       Wm.$el.off("folder:close", this._onFolderClose);
+      Wm.$el.off("workspace:open", this._onWorkspaceOpen);
+      Wm.$el.off("workspace:close", this._onWorkspaceClose);
       Wm.$el.off(_e.minimize, this._onWmMinimize);
       Wm.$el.off(_e.wake, this._onWmWake);
       this._folderTabsBound = false;
@@ -1298,9 +1333,9 @@ class desk_module extends LetcBox {
         const win = entry && entry.win;
         if (!win || win.isDestroyed()) return;
         // {now:true} bypasses goodbye()'s default 2s timeout + scale/opacity
-        // animation so the floating window closes the moment the user clicks
-        // × on the header tab. The folder's onBeforeDestroy still fires
-        // folder:close, which removes the tab.
+        // animation so the window closes the moment the user clicks × on the
+        // header tab. The window's onBeforeDestroy still fires folder:close
+        // (popup) or workspace:close (headless pane), which removes the tab.
         if (typeof win.goodbye === "function") win.goodbye({ now: true });
         else if (typeof win.destroy === "function") win.destroy();
         return;

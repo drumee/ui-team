@@ -285,6 +285,20 @@
       height: 100%;
     }
 
+    // When both layers are non-empty they resolve to the same z-index (the
+    // global [data-state="open"] lift), so paint order falls back to DOM
+    // order and headless-layer — later in the DOM — fully covers windowsLayer
+    // popups. The active-window lift (z 10000) cannot cross sibling stacking
+    // contexts, so raising a covered popup changed its state but stayed
+    // hidden. Lift whichever layer hosts the active window instead: direct
+    // children of a layer are only top-level windows/players, and the shared
+    // radio channel keeps at most one at data-state="1" app-wide.
+    // !important to out-cascade the global [data-state="open"] lift;
+    // upload-progress keeps its own fixed z-index.
+    &:not(.upload-progress-layer):has(> [data-state="1"]) {
+      z-index: 50001 !important;
+    }
+
     // Upload progress floater — above headless/windows layers (1300), below
     // desk slide-out panels (chat / notification / trash at 10001).
     &.upload-progress-layer {
