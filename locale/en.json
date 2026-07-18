@@ -919,6 +919,7 @@
   "CREATE_SHAREBOX_SEND_A_NOTIFICATION": "You have created a new external sharing box. Do you want to send a notification to recipients?",
   "ENTER_YOUR_NAME": "Enter your name",
   "JOIN_MEETING": "Join meeting",
+  "MEETING_STARTING_NOW": "Your meeting is starting now",
   "JOIN": "Join",
   "OPEN": "Open",
   "FILE_CHAT_STARTED": "started a file chat",

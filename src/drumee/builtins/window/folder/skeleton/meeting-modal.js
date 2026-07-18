@@ -213,8 +213,8 @@ module.exports = function meetingModal(ui, opt = {}) {
       Skeletons.Box.Y({
         className: `${pfx}-body`,
         kids: [
+          // Order follows how you schedule: what → when → recurrence → who → notes.
           field(LOCALE.TITLE, title),
-          field(LOCALE.DESCRIPTION_AGENDA, description, "grow"),
           Skeletons.Box.X({
             className: `${pfx}-row`,
             kids: [
@@ -225,6 +225,7 @@ module.exports = function meetingModal(ui, opt = {}) {
           }),
           field(LOCALE.REPEAT, recur),
           field(LOCALE.INVITEES, invitees),
+          field(LOCALE.DESCRIPTION_AGENDA, description),
         ],
       }),
       Skeletons.Box.X({ className: `${pfx}-footer`, kids: footerKids }),

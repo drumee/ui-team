@@ -404,7 +404,7 @@
 
   &__meeting-sched-row {
     flex-shrink: 0;
-    height: 56px;
+    height: 72px; // must match HOUR_PX in skeleton/meeting-schedule.js
     flex-wrap: nowrap !important;
   }
 
@@ -500,8 +500,11 @@
   }
 
   &__meeting-sched-card-title {
-    // NB: drumee.typo does NOT emit font-weight (it only maps weight→font-family),
-    // so boldness must be set explicitly here.
+    // Never shrinks → the title stays visible and the description clips instead.
+    flex: 0 0 auto;
+    padding-right: 22px; // clear of the hover join button
+    pointer-events: none; // clicks fall through to the card (it carries the nid)
+    // drumee.typo emits no font-weight (maps weight→font-family only) — set it here.
     @include drumee.typo($size: 14px, $line: 18px, $color: #0b0a21);
     font-weight: 700;
     white-space: nowrap;
@@ -509,10 +512,11 @@
     text-overflow: ellipsis;
   }
 
-  // Description / agenda under the title — dims relative to the bold title and
-  // clamps to two lines so it fills whatever vertical room the card's duration
-  // allows (short meetings clip it via the card's overflow:hidden).
+  // Takes only the room the title leaves; clamps to 2 lines, clipped on short cards.
   &__meeting-sched-card-desc {
+    flex: 1 1 auto;
+    min-height: 0;
+    pointer-events: none;
     margin-top: 1px;
     @include drumee.typo($size: 11px, $line: 14px, $weight: 400, $color: #65656c);
     display: -webkit-box;
@@ -522,7 +526,8 @@
     overflow-wrap: anywhere;
   }
 
-  // Quick-join button on a card — hover-revealed to avoid crowding.
+  // Hover-revealed. When hidden it must NOT capture clicks (opacity:0 still
+  // receives them) or its corner swallows clicks meant to open the meeting.
   &__meeting-sched-card-join {
     display: flex;
     align-items: center;
@@ -536,6 +541,7 @@
     background: var(--primary-40, #5950ff);
     color: #ffffff;
     opacity: 0;
+    pointer-events: none;
     transition: opacity 0.12s ease;
 
     svg {
@@ -547,6 +553,7 @@
 
   &__meeting-sched-card:hover &__meeting-sched-card-join {
     opacity: 1;
+    pointer-events: auto;
   }
 
   // Half-hour click zones stacked inside each cell (:00 / :30). Sit under the

@@ -766,6 +766,7 @@
   "CREATE_SHAREBOX_SEND_A_NOTIFICATION": "您已经创建了一个新的外部共享框。 您想向收件人发送通知吗？",
   "ENTER_YOUR_NAME": "輸入你的名字",
   "JOIN_MEETING": "參加會議",
+  "MEETING_STARTING_NOW": "您的会议即将开始",
   "CHOOSE_PASSWORD": "请选择您的帐号密码",
   "LEAVE_MEETING": "離開會議",
   "END_CALL": "結束通話",

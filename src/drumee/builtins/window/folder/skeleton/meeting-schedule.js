@@ -36,7 +36,7 @@ function hourLabel(h) {
   return `${h - 12} PM`;
 }
 
-const HOUR_PX = 56; // must match &__meeting-sched-row height in the skin
+const HOUR_PX = 72; // must match &__meeting-sched-row height in the skin
 
 // ui._meetings (room.list rows) → occurrences { nid, title, start, end } within
 // [rangeStart, rangeEnd). Recurring meetings are expanded across the range.

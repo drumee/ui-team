@@ -766,6 +766,7 @@
   "CREATE_SHAREBOX_SEND_A_NOTIFICATION": "Vous avez créé une nouvelle boîte de partage externe. Voulez-vous envoyer une notification aux destinataires ?",
   "ENTER_YOUR_NAME": "Entrez votre nom",
   "JOIN_MEETING": "Rejoindre la réunion",
+  "MEETING_STARTING_NOW": "Votre réunion va commencer",
   "CHOOSE_PASSWORD": "Veuillez choisir le mot de passe de votre compte",
   "LEAVE_MEETING": "Quitter la réunion",
   "END_CALL": "Terminer l'appel",
