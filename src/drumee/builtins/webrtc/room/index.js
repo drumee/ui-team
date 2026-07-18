@@ -19,9 +19,17 @@ class __webrtc_room extends __interact {
     });
     this.statusMessages = {
       initializing: LOCALE.INITIALIZING,
-      joining: LOCALE.WAITING_FOR_X.format(LOCALE.PERMISSION.toLowerCase()),
+      // "joining" covers the server conference.join round-trip (before any
+      // device/host gate) — it is a connection step, not a "waiting for
+      // someone's permission" step, so the generic "Waiting for permission"
+      // wording (identical to getUserDevices below) misled users into thinking
+      // they were being held for admission. Split the two: this one reads as a
+      // connection, the device one names the actual camera/mic request.
+      joining: LOCALE.CONNECTING,
       permissionDenied: LOCALE.WEAK_PRIVILEGE,
-      getUserDevices: LOCALE.WAITING_FOR_X.format(LOCALE.PERMISSION.toLowerCase()),
+      getUserDevices: LOCALE.WAITING_FOR_X.format(
+        `${LOCALE.CAMERA} & ${LOCALE.MICROPHONE}`.toLowerCase()
+      ),
     };
     this.isAudio = this.mget(_a.audio) > 0;
     this.isVideo = this.mget(_a.video) > 0;
