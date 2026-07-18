@@ -875,9 +875,15 @@ class __webrtc_room extends __room {
     this.stateMessage();
     this.__ctrlScreen.el.dataset.muted = 1;
     this.responsive("presenter");
-    // Show the "preparing screen" loading overlay on the meeting body until the
-    // shared screen's first frame arrives (onRemoteScreenStart clears it).
-    if (this._setBodyPreparing) this._setBodyPreparing(1);
+    // Show the full-window "preparing screen" loading overlay on the meeting
+    // shell until the shared screen's first frame arrives (onRemoteScreenStart
+    // clears it). The branded caption names the presenter when we know them.
+    if (this._setShellPreparing) {
+      this._setShellPreparing(
+        1,
+        args.username ? LOCALE.X_SCREEN_PREPARING.format(args.username) : null
+      );
+    }
     if (args.username) {
       this.__presenter.feed([
         Skeletons.Note({

@@ -893,14 +893,14 @@ class __webrtc_room extends __interact {
     this.__ctrlScreen.el.dataset.muted = 1;
     this.responsive("presenter");
     this.isScreenShare = true;
-    this._setBodyPreparing(0); // shared screen is live now
+    this._setShellPreparing(0); // shared screen is live now
   }
 
   /**
    *
    */
   onRemoteScreenStop() {
-    this._setBodyPreparing(0);
+    this._setShellPreparing(0);
     this.__presenter.clear();
     this.responsive("normal");
     this.change_size(0);
@@ -912,28 +912,36 @@ class __webrtc_room extends __interact {
   }
 
   /**
-   * Toggle a loading overlay on window-meeting__body while a remote
-   * presentation is being prepared (from prepareRemoteScreen until the shared
-   * screen's first frame — onRemoteScreenStart — or the share stops). A safety
-   * timer clears it if the video never arrives so the overlay can't get stuck.
+   * Toggle a full-window loading screen on window-meeting__shell (topbar +
+   * body) while a remote presentation is being prepared — notably a late joiner
+   * catching an in-progress share, when the layout switches to the sharing
+   * (presenter) view. Runs from prepareRemoteScreen until the shared screen's
+   * first frame (onRemoteScreenStart) or the share stops. `label` fills the
+   * branded caption ("<user> is preparing to share…"); a safety timer clears it
+   * if the video never arrives so the screen can't get stuck.
    */
-  _setBodyPreparing(on) {
+  _setShellPreparing(on, label) {
     const fam = this.fig && this.fig.family;
     if (!fam) return;
-    let body = null;
+    let shell = null;
     if (this.__endpoints && this.__endpoints.el && this.__endpoints.el.closest) {
-      body = this.__endpoints.el.closest(`.${fam}__body`);
+      shell = this.__endpoints.el.closest(`.${fam}__shell`);
     }
-    if (!body && this.el && this.el.querySelector) {
-      body = this.el.querySelector(`.${fam}__body`);
+    if (!shell && this.el && this.el.querySelector) {
+      shell = this.el.querySelector(`.${fam}__shell`);
     }
-    if (body) body.setAttribute("data-preparing", on ? "1" : "0");
-    if (this._bodyPreparingTimer) {
-      clearTimeout(this._bodyPreparingTimer);
-      this._bodyPreparingTimer = null;
+    if (shell) {
+      shell.setAttribute("data-preparing", on ? "1" : "0");
+      if (on) {
+        shell.setAttribute("data-preparing-label", label || LOCALE.LOADING);
+      }
+    }
+    if (this._shellPreparingTimer) {
+      clearTimeout(this._shellPreparingTimer);
+      this._shellPreparingTimer = null;
     }
     if (on) {
-      this._bodyPreparingTimer = setTimeout(() => this._setBodyPreparing(0), 12000);
+      this._shellPreparingTimer = setTimeout(() => this._setShellPreparing(0), 12000);
     }
   }
 
