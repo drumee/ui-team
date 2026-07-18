@@ -1205,11 +1205,11 @@ class __webrtc_room extends __room {
   async changeLocalVideo(state) {
     await this.sendRoomSignaling(SERVICE.conference.update);
     if (state) {
-      if (this.isSharingScreen()) {
-        this.stateMessage(LOCALE.SCREEN_BEING_SHARED, Visitor.timeout());
-        this.__ctrlVideo.setState(0);
-        return;
-      }
+      // Camera + screen run simultaneously: the camera is a SECOND video track
+      // (videoType 'camera') stored alongside the desktop track, so opening the
+      // camera while sharing is fine. (Previously an isSharingScreen() guard here
+      // blocked camera-on during a share and snapped the button back off — a stale
+      // leftover from when screen and camera were mutually exclusive.)
       this.isVideo = true;
       this.toggleAvatarVideo(0, 1);
       try {
