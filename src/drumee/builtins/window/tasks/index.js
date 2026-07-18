@@ -3198,7 +3198,11 @@ class __tasks_panel extends LetcBox {
       .then((btn) => {
         if (!btn || btn.isDestroyed?.()) return;
         btn.feed(
-          require("./skeleton").buildAssigneeButtonContent(this, assignees),
+          require("./skeleton").buildAssigneeButtonContent(
+            this,
+            assignees,
+            kind === "create-assignee" ? "create-assignee" : "set-assignee",
+          ),
         );
       })
       .catch(() => {
