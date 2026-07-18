@@ -343,7 +343,12 @@
     // heading, and the Blur / Upload background actions with leading icons.
     // Scoped to `.video` so the audio picker keeps its existing look.
     &.video {
-      width: 220px; // fixed so the effects panel can dock to its left
+      // Pin to a true 220px: the base rule's min-width:248/max-width:300 would
+      // otherwise win over `width` and widen the list, making the bg-effects
+      // panel (docked at right:228px) overlap it.
+      width: 220px;
+      min-width: 220px;
+      max-width: 220px;
 
       .device-heading {
         display: flex;
