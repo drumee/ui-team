@@ -120,6 +120,17 @@ class __window_meeting extends __room {
     // positioning; embedded meetings (folder tab) stay relative/fill-parent.
     if (this.el) this.el.dataset.standalone = this.mget("standalone") ? "1" : "0";
     if (this.el) this.el.dataset.ready = "0";
+    // Lock the in-topbar controls for the whole pre-join phase: while the
+    // startup state messages ("Connection in progress", "Waiting for camera &
+    // microphone", "Waiting to join the conference") are showing, the meeting
+    // is not live yet, so the camera/mic/screen/hand/chat/people/fullscreen
+    // controls must not be operable. Flagged on the window ROOT (which exists
+    // from the very first render, unlike the controls — those only mount with
+    // the real skeleton below), so the CSS lock applies the instant they
+    // appear. Cleared in onLocalUserJoined, the exact point these messages
+    // clear and the conference goes live. The Leave button is exempted in CSS
+    // so the user always has an escape hatch. Mirrors the data-denied pattern.
+    if (this.el) this.el.dataset.startingUp = "1";
     this.feed(require("./skeleton/init")(this));
     this.stateMachine("initializing");
     // Any rejection from join() / prepareConference() (privilege denial that
@@ -160,6 +171,16 @@ class __window_meeting extends __room {
     } finally {
       if (this.el) this.el.dataset.ready = "1";
     }
+  }
+
+  // CONFERENCE_JOINED — the local user is now actually in the conference, so
+  // the pre-join state messages have cleared (base calls stateMessage("waiting")
+  // → the meeting override empties the container). Unlock the in-topbar controls
+  // that onDomRefresh locked for the startup phase. On a failed startup this
+  // never fires, so the controls stay locked (leave stays clickable via CSS).
+  async onLocalUserJoined(...args) {
+    await super.onLocalUserJoined(...args);
+    if (this.el) this.el.dataset.startingUp = "0";
   }
 
   _announceHostIfNeeded() {
@@ -820,6 +841,13 @@ class __window_meeting extends __room {
     if (!this._floatDocked()) return;
     const raisedUid = this._activeRaisedUid();
     if (raisedUid != null) return this._focusByUid(raisedUid);
+    // While a REMOTE peer is presenting, spotlight THEIR camera tile — the float
+    // stacks every tile in one frame with the local self-view on top (z-index),
+    // so without this the sharing user's camera stays hidden beneath it.
+    if (this._currentPresenterUid &&
+        String(this._currentPresenterUid) !== String(Visitor.id)) {
+      return this._focusByUid(this._currentPresenterUid);
+    }
     if (this._dominantPid) return this._focusByPid(this._dominantPid);
     return this._focusLocalTile();
   }

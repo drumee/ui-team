@@ -19,9 +19,17 @@ class __webrtc_room extends __interact {
     });
     this.statusMessages = {
       initializing: LOCALE.INITIALIZING,
-      joining: LOCALE.WAITING_FOR_X.format(LOCALE.PERMISSION.toLowerCase()),
+      // "joining" covers the server conference.join round-trip (before any
+      // device/host gate) — it is a connection step, not a "waiting for
+      // someone's permission" step, so the generic "Waiting for permission"
+      // wording (identical to getUserDevices below) misled users into thinking
+      // they were being held for admission. Split the two: this one reads as a
+      // connection, the device one names the actual camera/mic request.
+      joining: LOCALE.CONNECTING,
       permissionDenied: LOCALE.WEAK_PRIVILEGE,
-      getUserDevices: LOCALE.WAITING_FOR_X.format(LOCALE.PERMISSION.toLowerCase()),
+      getUserDevices: LOCALE.WAITING_FOR_X.format(
+        `${LOCALE.CAMERA} & ${LOCALE.MICROPHONE}`.toLowerCase()
+      ),
     };
     this.isAudio = this.mget(_a.audio) > 0;
     this.isVideo = this.mget(_a.video) > 0;
@@ -590,6 +598,47 @@ class __webrtc_room extends __interact {
       ? `.bg-effect-tile.thumb[data-bgid="${e.id}"]`
       : ".blur-background-ctrl, .bg-effect-tile.blur";
     this._bgFind(sel).forEach((f) => f.attr("data-loading", loading));
+    // Also overlay the video tiles: our own self-view (endpoint-local__main),
+    // and — via the BG_UPDATING broadcast — our tile on every peer's screen
+    // (remote-user__main), while the effect is applying.
+    this._setLocalTileBgLoading(loading);
+    this._broadcastBgLoading(loading);
+  }
+
+  /** Toggle the "applying background" spinner overlay on the local self-tile. */
+  _setLocalTileBgLoading(on) {
+    if (typeof this.getLocalParts !== "function") return;
+    this.getLocalParts().then((parts) => {
+      const local = parts && parts.local;
+      if (!local || !local.el || (local.isDestroyed && local.isDestroyed())) return;
+      const fam = (local.fig && local.fig.family) || "endpoint-local";
+      const main = local.el.querySelector(`.${fam}__main`) || local.el;
+      main.setAttribute("data-bg-loading", on ? "1" : "0");
+    }).catch(() => {});
+  }
+
+  /** Toggle the overlay on a peer's tile (driven by the BG_UPDATING signal). */
+  _setRemoteTileBgLoading(participantId, on) {
+    if (!this.__participants || !participantId) return;
+    const items = this.__participants.getItemsByAttr("participant_id", participantId) || [];
+    const tile = items[0];
+    if (!tile || !tile.el) return;
+    const fam = (tile.fig && tile.fig.family) || "remote-user";
+    const main = tile.el.querySelector(`.${fam}__main`) || tile.el;
+    main.setAttribute("data-bg-loading", on ? "1" : "0");
+  }
+
+  /** Tell peers our background is (un)applying so they can overlay our tile. */
+  _broadcastBgLoading(on) {
+    try {
+      if (!this.room || !this.room.isJoined()) return;
+      this.sendRoomSignaling(SERVICE.conference.broadcast, {
+        event: "BG_UPDATING",
+        payload: { id: this.room.myUserId(), updating: on ? 1 : 0 },
+      });
+    } catch (e) {
+      this.warn("BG_UPDATING broadcast failed", e);
+    }
   }
 
   /**
@@ -852,12 +901,14 @@ class __webrtc_room extends __interact {
     this.__ctrlScreen.el.dataset.muted = 1;
     this.responsive("presenter");
     this.isScreenShare = true;
+    this._setShellPreparing(0); // shared screen is live now
   }
 
   /**
    *
    */
   onRemoteScreenStop() {
+    this._setShellPreparing(0);
     this.__presenter.clear();
     this.responsive("normal");
     this.change_size(0);
@@ -866,6 +917,40 @@ class __webrtc_room extends __interact {
     setTimeout(() => {
       this.__ctrlScreen.el.dataset.muted = 0;
     }, 2000);
+  }
+
+  /**
+   * Toggle a full-window loading screen on window-meeting__shell (topbar +
+   * body) while a remote presentation is being prepared — notably a late joiner
+   * catching an in-progress share, when the layout switches to the sharing
+   * (presenter) view. Runs from prepareRemoteScreen until the shared screen's
+   * first frame (onRemoteScreenStart) or the share stops. `label` fills the
+   * branded caption ("<user> is preparing to share…"); a safety timer clears it
+   * if the video never arrives so the screen can't get stuck.
+   */
+  _setShellPreparing(on, label) {
+    const fam = this.fig && this.fig.family;
+    if (!fam) return;
+    let shell = null;
+    if (this.__endpoints && this.__endpoints.el && this.__endpoints.el.closest) {
+      shell = this.__endpoints.el.closest(`.${fam}__shell`);
+    }
+    if (!shell && this.el && this.el.querySelector) {
+      shell = this.el.querySelector(`.${fam}__shell`);
+    }
+    if (shell) {
+      shell.setAttribute("data-preparing", on ? "1" : "0");
+      if (on) {
+        shell.setAttribute("data-preparing-label", label || LOCALE.LOADING);
+      }
+    }
+    if (this._shellPreparingTimer) {
+      clearTimeout(this._shellPreparingTimer);
+      this._shellPreparingTimer = null;
+    }
+    if (on) {
+      this._shellPreparingTimer = setTimeout(() => this._setShellPreparing(0), 12000);
+    }
   }
 
   /**

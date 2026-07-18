@@ -607,6 +607,37 @@
     }
   }
 
+  // ── Background-effect "applying" overlay on a participant tile ────────────
+  // Shown while a background effect is being applied: on your own self-view
+  // (endpoint-local__main) as you update it, and on a peer's tile
+  // (remote-user__main) via the BG_UPDATING broadcast. Toggled by
+  // data-bg-loading (see _setLocalTileBgLoading / _setRemoteTileBgLoading).
+  .endpoint-local__main,
+  .remote-user__main {
+    &[data-bg-loading="1"]::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      z-index: 6;
+      background: rgba(0, 0, 0, 0.35);
+      border-radius: inherit;
+    }
+
+    &[data-bg-loading="1"]::after {
+      content: "";
+      position: absolute;
+      top: calc(50% - 14px);
+      left: calc(50% - 14px);
+      width: 28px;
+      height: 28px;
+      z-index: 7;
+      border: 3px solid rgba(255, 255, 255, 0.9);
+      border-top-color: transparent;
+      border-radius: 50%;
+      animation: window-meeting-load-spin 0.8s linear infinite;
+    }
+  }
+
   // ── Shell: column flex, fills __ui ──────────────────────────────────
   &__shell {
     flex: 1;
@@ -618,6 +649,53 @@
     // (a @media/window check can't see this).
     container-type: inline-size;
     container-name: meeting-stage;
+    // Anchor for the full-window loading screen (below).
+    position: relative;
+  }
+
+  // ── Preparing loading screen (full window: topbar + body) ────────────────
+  // Opaque branded screen shown while a remote presentation is being prepared —
+  // notably a late joiner catching an in-progress share, as the layout switches
+  // to the sharing (presenter) view. Runs from prepareRemoteScreen until the
+  // shared screen's first frame (onRemoteScreenStart) or the share stops.
+  // Toggled by _setShellPreparing; the caption text is carried in
+  // data-preparing-label. z-index clears the topbar and bottom command controls
+  // (both z:100000), which are siblings inside this shell.
+  &__shell[data-preparing="1"] {
+    &::before {
+      content: attr(data-preparing-label);
+      position: absolute;
+      inset: 0;
+      z-index: 100001;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      // Sit the caption just below the centered spinner.
+      padding-top: 76px;
+      background: #f2f2f7;
+      color: #65656c;
+      font-family: var(--font-main);
+      font-size: 14px;
+      font-weight: 600;
+      text-align: center;
+      // Block interaction with the layout while it switches under the screen.
+      pointer-events: auto;
+    }
+
+    &::after {
+      content: "";
+      position: absolute;
+      top: calc(50% - 30px);
+      left: calc(50% - 16px);
+      width: 32px;
+      height: 32px;
+      z-index: 100002;
+      border: 3px solid var(--default-icon-neutral, #89929e);
+      border-top-color: transparent;
+      border-radius: 50%;
+      animation: window-meeting-load-spin 0.8s linear infinite;
+      pointer-events: none;
+    }
   }
 
   // Stage column squeezed: drop the secondary buttons first, then collapse the

@@ -93,6 +93,30 @@
     padding: 0 var(--spacer-5);
   }
 }
+// Control lock — the in-topbar controls are shown but inert during two phases
+// where operating camera/mic/screen/hand/chat/people/fullscreen is meaningless:
+//   1. Startup, before the local user joins the conference —
+//      window/meeting/index.js sets data-starting-up="1" on __ui until
+//      onLocalUserJoined.
+//   2. A late joiner catching an in-progress screen share, while the presenter
+//      layout loads — room `_setShellPreparing` sets data-preparing="1" on
+//      __shell until the shared screen's first frame (onRemoteScreenStart).
+// Both dim + block the controls; the Leave button is exempted below so there's
+// always an escape hatch.
+.window-meeting__ui[data-starting-up="1"] .window-meeting__in-topbar-controls > *,
+.window-meeting__shell[data-preparing="1"] .window-meeting__in-topbar-controls > * {
+  pointer-events: none;
+  opacity: 0.45;
+}
+
+// Escape hatch: Leave stays fully interactive during both locked phases. Same
+// specificity as the rule above but ordered after it, so it wins.
+.window-meeting__ui[data-starting-up="1"] .window-meeting__leave-btn,
+.window-meeting__shell[data-preparing="1"] .window-meeting__leave-btn {
+  pointer-events: auto;
+  opacity: 1;
+}
+
 .window__dialog-overlay {
   &[data-state="open"] {
     height: 100%;
