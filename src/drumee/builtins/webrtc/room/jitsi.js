@@ -684,6 +684,31 @@ class __webrtc_room extends __room {
       return;
     }
 
+    // Late-join race: a remote screen-share track can arrive here BEFORE its
+    // videoType has settled to 'desktop' (lib-jitsi-meet creates the remote
+    // track, then resolves camera-vs-desktop from source signaling a beat
+    // later). The one-shot getVideoType() check above then misses it, so the
+    // late joiner falls through to the camera/tile path and never switches to
+    // presenter layout. Watch the track: if its videoType later resolves to
+    // 'desktop', enter the presentation then. _enterRemotePresentation is
+    // idempotent (guards on presenterId), so it's safe even if another path
+    // (stats catch-up) also fires.
+    if (track.getType() == _a.video) {
+      const onVideoTypeChange = () => {
+        if (this.isDestroyed() || !this.room) return;
+        if (track.getVideoType() != _a.desktop) return;
+        track.removeEventListener(
+          JEVENTS.track.TRACK_VIDEOTYPE_CHANGED,
+          onVideoTypeChange
+        );
+        this._enterRemotePresentation(track);
+      };
+      track.addEventListener(
+        JEVENTS.track.TRACK_VIDEOTYPE_CHANGED,
+        onVideoTypeChange
+      );
+    }
+
     // Let remote-user widgets attach without waiting for ENDPOINT_STATS_RECEIVED.
     this.trigger("TRACK_ADDED", track);
 
