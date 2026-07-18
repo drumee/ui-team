@@ -1,7 +1,6 @@
 require("./skin");
 const { copyToClipboard } = require("@drumee/ui-essentials");
 const { TweenLite, gsap } = require("@drumee/ui-core/vendor");
-let lastClickTime = new Date().getTime();
 const push = require("./push");
 // Same channel the websocket dispatcher triggers on Wm — windows and the
 // sidebar workspace list subscribe to it (window/utils.js, workspace-list).
@@ -1746,13 +1745,30 @@ class __window_manager extends push {
         }
         return;
 
-      case "open-node":
-        let now = new Date().getTime();
-        if (now - lastClickTime < 1000) return; /** Prevent too fast click */
-
-        lastClickTime = now;
+      case "open-node": {
+        // Debounce per NODE, not globally: a double-click on the same tile
+        // must not spawn twice, but rapid clicks on DIFFERENT tiles must all
+        // open. A global timestamp here silently swallowed every other tile
+        // clicked within 1s — after the tile had already lit its spinner
+        // (media defaultTrigger fires wait(1) before this handler runs), so
+        // the tile looked stuck loading and its window never opened.
+        const now = new Date().getTime();
+        const nodeKey =
+          (cmd.mget && (cmd.mget(_a.nid) || cmd.mget(_a.hub_id))) || "";
+        if (
+          this._lastOpenNode &&
+          this._lastOpenNode.key === nodeKey &&
+          now - this._lastOpenNode.at < 1000
+        ) {
+          // Swallowed duplicate — release the tile's spinner latch so the
+          // tile doesn't look stuck and stays clickable.
+          if (cmd.wait) cmd.wait(0);
+          return;
+        }
+        this._lastOpenNode = { key: nodeKey, at: now };
         this.openContent(cmd, args);
         return this.unselect();
+      }
 
       case "upgrade-plan":
         return this.upgradePlage(cmd);
