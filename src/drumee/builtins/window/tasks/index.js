@@ -130,6 +130,7 @@ class __tasks_panel extends LetcBox {
     this._boardTitle = ""; // typed board name, kept in state so a colour pick never wipes it
     this._boardDefault = true; // "Set as default" toggle (Figma default: on)
     this._colMenuFor = null; // custom column id whose menu popover is open
+    this._colRenameDraft = null; // typed draft for the rename field, kept so a re-render never wipes it
     // page/hasMore/loading drive infinite scroll of the results dropdown;
     // an empty query lists all linkable files (most-recent first), a
     // non-empty one searches — both paginate through the same procedure.
@@ -1271,6 +1272,7 @@ class __tasks_panel extends LetcBox {
         this._boardTitle = "";
         this._boardDefault = true;
         this._colMenuFor = null;
+        this._colRenameDraft = null;
         return this._render();
 
       case "board-cancel":
@@ -1308,15 +1310,39 @@ class __tasks_panel extends LetcBox {
 
       case "col-menu": {
         const key = trigger.mget("taskColumn");
-        this._colMenuFor = this._colMenuFor === key ? null : key;
+        const opening = this._colMenuFor !== key;
+        this._colMenuFor = opening ? key : null;
+        // Seed the draft with the current name on open; clear on close.
+        this._colRenameDraft = opening
+          ? (this._customColumns.find((c) => c.id === key) || {}).name || ""
+          : null;
         return this._render();
       }
 
       case "col-watch-toggle":
         return this._toggleColumnWatch(trigger);
 
-      case "col-rename-submit":
+      case "col-rename-changed":
+        // Live-persist the typed name so any re-render restores it instead of
+        // clearing the field (same pattern as board-title-changed).
+        this._colRenameDraft =
+          args && args.value != null ? String(args.value) : this._colRenameDraft;
+        return;
+
+      case "col-rename-submit": {
+        // The framework fires a widget's `service` on a plain click too, not
+        // only on the Entry's Enter-commit (letc.js: el.onclick → triggerHandlers).
+        // A bare click that just focuses the name-seeded input must not
+        // submit-and-close the popover — only Enter or the Rename button should.
+        const isEntryFocusClick =
+          args &&
+          args.type === "click" &&
+          trigger &&
+          trigger.mget &&
+          trigger.mget("name") === "col_rename";
+        if (isEntryFocusClick) return;
         return this._renameColumn(trigger);
+      }
 
       case "col-theme-set":
         return this._themeColumn(trigger);
@@ -2399,7 +2425,11 @@ class __tasks_panel extends LetcBox {
     const input =
       this.el &&
       this.el.querySelector('.tasks-panel__col-menu input[name="col_rename"]');
-    const name = input ? String(input.value || "").trim() : "";
+    // Live DOM value is authoritative; fall back to the draft if the input
+    // was already torn down by a re-render.
+    const name = String(
+      input ? input.value || "" : this._colRenameDraft || "",
+    ).trim();
     if (!name) return;
     try {
       await this.postService({
@@ -2414,6 +2444,7 @@ class __tasks_panel extends LetcBox {
       console.error("[tasks_panel] column.rename failed:", err);
     }
     this._colMenuFor = null;
+    this._colRenameDraft = null;
     this._render();
   }
 
@@ -2454,6 +2485,7 @@ class __tasks_panel extends LetcBox {
       console.error("[tasks_panel] column.delete failed:", err);
     }
     this._colMenuFor = null;
+    this._colRenameDraft = null;
     this._render();
   }
 
@@ -4553,6 +4585,9 @@ class __tasks_panel extends LetcBox {
   }
   getColMenuFor() {
     return this._colMenuFor;
+  }
+  getColRenameDraft() {
+    return this._colRenameDraft;
   }
   getPriorities() {
     return PRIORITIES;

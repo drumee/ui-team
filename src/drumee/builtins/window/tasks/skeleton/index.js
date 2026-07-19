@@ -376,10 +376,13 @@ const make = function (ui) {
         Skeletons.Entry({
           className: `${pfx}__col-menu-name`,
           name: "col_rename",
-          value: col.name,
+          // Bound to a draft so an in-place re-render keeps the typed name
+          // (mirrors the board-title input).
+          value: ui.getColRenameDraft() != null ? ui.getColRenameDraft() : col.name,
           placeholder: LOCALE.COLUMN_NAME,
           mode: "commit",
           service: "col-rename-submit",
+          watch: "col-rename-changed",
           taskColumn: col.key,
           uiHandler: [ui],
         }),
@@ -500,7 +503,7 @@ const make = function (ui) {
                     col.custom
                       ? Skeletons.Note({
                           className: `${pfx}__col-menu-btn`,
-                          content: "⋯",
+                          content: "⋮",
                           bubble: 0,
                           service: "col-menu",
                           uiHandler: [ui],
