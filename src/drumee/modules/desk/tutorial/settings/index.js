@@ -1,7 +1,7 @@
 const BADGE = {
   badge_text: 'STEP 3/5',
   title: 'Set who sees what',
-  desc: 'Precision control at your fingertips. Choose between private, restricted, or open collaboration for every folder you curate.',
+  desc: 'Precision control at your fingertips. Choose between personal, internal, or external collaboration for every folder you curate.',
 };
 
 class __tutorial_settings extends LetcBox {
