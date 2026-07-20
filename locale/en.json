@@ -1942,6 +1942,7 @@
   "ONBOARDING_SHAPES_WORKSPACE": "This shapes your workspace setup.",
   "ONBOARDING_WORKSPACE_READY": "Your workspace is ready. Bring your team in.",
   "ONBOARDING_NAME_PLACEHOLDER": "Alex",
+  "ONBOARDING_OTHER_PLACEHOLDER": "Please specify…",
   "ONBOARDING_ADD": "+ Add",
   "ONBOARDING_TELL_ME_LATER": "Tell me later",
   "ONBOARDING_SKIP_THIS_STEP": "Skip this step",

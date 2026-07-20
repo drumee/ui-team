@@ -1840,6 +1840,7 @@
   "ONBOARDING_SHAPES_WORKSPACE": "Это определяет настройку вашего пространства.",
   "ONBOARDING_WORKSPACE_READY": "Ваше пространство готово. Пригласите команду.",
   "ONBOARDING_NAME_PLACEHOLDER": "Alex",
+  "ONBOARDING_OTHER_PLACEHOLDER": "Уточните…",
   "ONBOARDING_ADD": "+ Добавить",
   "ONBOARDING_TELL_ME_LATER": "Позже",
   "ONBOARDING_SKIP_THIS_STEP": "Пропустить этот шаг",
