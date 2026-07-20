@@ -703,6 +703,41 @@ class __widget_chat extends LetcBox {
         });
         break;
       case _a.list:
+        // Personal-hub folder chat: channel.messages keeps legacy rows with
+        // no metadata._scope_nid visible in EVERY folder (workspace
+        // back-compat), but in the user's own hub those rows are hub-level
+        // invites/calls that belong to no folder — every personal folder
+        // rendered the same conversation. Drop them so the initial load
+        // matches the WS filter (matchesScopedChannel), which already
+        // rejects nid mismatches. Workspace hubs keep the back-compat
+        // pass-through; file-thread mode uses its own service and metadata
+        // shape, so it must bypass this filter.
+        if (
+          this.getScopedNid() &&
+          `${this.hubId}` === `${Visitor.id}` &&
+          !child._strictScopeInstalled
+        ) {
+          child._strictScopeInstalled = 1;
+          const original = child.prepareData.bind(child);
+          const chat = this;
+          child.prepareData = function (data) {
+            const prepared = original(data) || [];
+            const nid = chat.getScopedNid();
+            if (!nid || chat.isFileThreadMode()) return prepared;
+            return prepared.filter((m) => {
+              if (!m) return false;
+              try {
+                const meta =
+                  typeof m.metadata === "string"
+                    ? JSON.parse(m.metadata)
+                    : m.metadata || {};
+                return `${meta._scope_nid}` === `${nid}`;
+              } catch (e) {
+                return false;
+              }
+            });
+          };
+        }
         child.onAddKid = this.handleScroll.bind(this);
         child.once(_e.ready, () => {
           this.scrollMessagesToBottom(child);
