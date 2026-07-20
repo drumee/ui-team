@@ -1,9 +1,8 @@
 const { button } = require("../../../skeleton/toolkit/buttons");
 
 const AREA_LABELS = {
+  // Personal workspaces are personal-area folders at the home root.
   personal: LOCALE.PERSONAL,
-  // `private` covers both Internal and Personal workspaces (they share the
-  // area value); the badge shows "Internal" — accepted product trade-off.
   private: LOCALE.INTERNAL,
   share: LOCALE.EXTERNAL,
   dmz: LOCALE.RESTRICTED,
