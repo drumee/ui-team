@@ -1840,6 +1840,7 @@
   "ONBOARDING_SHAPES_WORKSPACE": "Cela determine la configuration de votre espace.",
   "ONBOARDING_WORKSPACE_READY": "Votre espace est pret. Invitez votre equipe.",
   "ONBOARDING_NAME_PLACEHOLDER": "Alex",
+  "ONBOARDING_OTHER_PLACEHOLDER": "Veuillez préciser…",
   "ONBOARDING_ADD": "+ Ajouter",
   "ONBOARDING_TELL_ME_LATER": "Plus tard",
   "ONBOARDING_SKIP_THIS_STEP": "Passer cette etape",

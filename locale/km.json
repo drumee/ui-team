@@ -1840,6 +1840,7 @@
   "ONBOARDING_SHAPES_WORKSPACE": "នេះកំណត់ការរៀបចំទីតាំងការងាររបស់អ្នក។",
   "ONBOARDING_WORKSPACE_READY": "ទីតាំងការងាររបស់អ្នករួចរាល់ហើយ។",
   "ONBOARDING_NAME_PLACEHOLDER": "Alex",
+  "ONBOARDING_OTHER_PLACEHOLDER": "សូមបញ្ជាក់…",
   "ONBOARDING_ADD": "+ បន្ថែម",
   "ONBOARDING_TELL_ME_LATER": "ប្រាប់ខ្ញុំពេលក្រោយ",
   "ONBOARDING_SKIP_THIS_STEP": "រំលងជំហាននេះ",
