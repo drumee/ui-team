@@ -1,17 +1,24 @@
 const STATUS_OPTIONS = [
   {
     ico: "desktop_group",
-    label: LOCALE.RESTRICTED_SHARE,
-    desc: LOCALE.RESTRICTED_SHARE_HINT,
+    label: LOCALE.INTERNAL_WORKSPACE,
+    desc: LOCALE.INTERNAL_WORKSPACE_HINT,
     initial: 1,
     name: "team",
   },
   {
     ico: "desktop_sharing",
-    label: LOCALE.LINK_SHARED,
-    desc: LOCALE.LINK_SHARED_HINT,
+    label: LOCALE.EXTERNAL_WORKSPACE,
+    desc: LOCALE.EXTERNAL_WORKSPACE_HINT,
     initial: 0,
     name: "share",
+  },
+  {
+    ico: "account_padlock",
+    label: LOCALE.PERSONAL_WORKSPACE,
+    desc: LOCALE.PERSONAL_WORKSPACE_HINT,
+    initial: 0,
+    name: "personal",
   },
 ];
 
@@ -117,7 +124,7 @@ module.exports = function (ui) {
     kids: [
       Skeletons.Note({
         className: `${pfx}__field-label`,
-        content: LOCALE.STATUS,
+        content: LOCALE.WORKSPACE_TYPE,
       }),
       Skeletons.Box.Y({
         className: `${pfx}__options`,

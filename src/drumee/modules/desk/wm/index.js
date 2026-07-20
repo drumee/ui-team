@@ -179,7 +179,6 @@ class __window_manager extends push {
   }
 
   closeCreateFolderDialog() {
-    this._pendingFolderArea = null;
     return this.ensurePart("wrapper-modal").then((p) => {
       p.el.dataset.mode = "";
       p.clear();
@@ -198,34 +197,6 @@ class __window_manager extends push {
     if (/^(\.+|.+\/.+| +|\-{1,1})$/.test(filename)) {
       this._creatingFolder = 0;
       return this.alert(LOCALE.INVALID_FILENAME);
-    }
-
-    // "Private folder" (Add-new menu) → create a private hub via
-    // desk.create_hub. media.make_dir cannot create a top-level private
-    // directory; _pendingFolderArea is set by the add-private-folder handler.
-    if (this._pendingFolderArea === _a.private) {
-      this._pendingFolderArea = null;
-      return this.postService(SERVICE.desk.create_hub, {
-        area: _a.private,
-        filename,
-        hub_id: Visitor.id,
-        pid: Visitor.id,
-      })
-        .then((res) => {
-          const hub = Array.isArray(res) ? res[0] : res;
-          if (hub && (hub.error || hub.error_code)) {
-            return this.alert(LOCALE[hub.error] || hub.reason || hub.error);
-          }
-          this.closeCreateFolderDialog();
-          RADIO_BROADCAST.trigger("workspace:refresh");
-        })
-        .catch((e) => {
-          this.warn("Failed to create private folder", e);
-          this.alert(e.reason || e.error || LOCALE.TRY_AGAIN);
-        })
-        .finally(() => {
-          this._creatingFolder = 0;
-        });
     }
 
     const onHome = !this._curWorkspace;
@@ -1919,14 +1890,9 @@ class __window_manager extends push {
         return this.closeDialog();
 
       case "add-folder":
-        this._pendingFolderArea = null;
-        return this.openCreateFolderDialog();
-
-      case "add-private-folder":
         return this.openCreateFolderDialog();
 
       case "create-folder-submit":
-        this._pendingFolderArea = _a.personal;
         return this.createFolderFromDialog(cmd);
 
       case "close-folder-dialog":

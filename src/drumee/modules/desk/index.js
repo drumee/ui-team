@@ -1529,9 +1529,6 @@ class desk_module extends LetcBox {
       case "new-workspace":
         return Wm.onUiEvent(cmd, { ...args, service: "new-workspace" });
 
-      case "add-private-folder":
-        return Wm.onUiEvent(cmd, { ...args, service: "add-private-folder" });
-
       case "new-note":
         Wm.windowsLayer.append({
           kind: "editor_markdown",
