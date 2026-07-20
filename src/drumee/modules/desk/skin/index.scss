@@ -254,8 +254,21 @@ html {
     z-index: auto;
   }
 
+  // 30000 was enough to clear the settings/apps slot, but NOT the window
+  // layer: `.window-manager__layer:has(> [data-state="1"])` lifts to
+  // `50001 !important` (wm/skin) while it hosts the focused window. That layer
+  // carries the window's own `dialog__wrapper` — transparent, `inset: 0`, so it
+  // covers the whole work area without being visible. The confirm therefore
+  // PAINTS (you can see it) but every click lands on that wrapper instead of
+  // the Confirm button: Wm.confirm can be raised from inside a window but never
+  // answered, so the awaited action silently never runs (folder settings →
+  // change member role did nothing).
+  //
+  // `!important` is required to out-cascade the global
+  // `[data-state="open"] { z-index: var(--z-index-context) !important }` in
+  // skin/lib/utils.scss, which otherwise pins this wrapper to 50000.
   .window-manager__wrapper-modal[data-state="open"] {
-    z-index: 30000;
+    z-index: var(--z-index-modal, 100000) !important;
   }
 }
 
