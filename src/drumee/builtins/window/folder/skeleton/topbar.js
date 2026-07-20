@@ -9,7 +9,7 @@
  *   ↑ left cluster                                      ↑ right cluster (gap 13.14)
  * ==================================================================== */
 
-const { getAreaLabel, newFileMenu, zoomMenu, topbarMoreMenu } = require("../../skeleton/toolkit");
+const { getAreaLabel, zoomMenu, topbarMoreMenu } = require("../../skeleton/toolkit");
 
 const __skl_folder_topbar = function (ui) {
   const cnFolder = `${ui.fig.family}-topbar`;
@@ -65,32 +65,16 @@ const __skl_folder_topbar = function (ui) {
   });
 
   // ── Right cluster ────────────────────────────────────────────
-  const canUpload = ui.canUpload && ui.canUpload();
   // Secure-share recipient context: a folder window opened from a share carries the
   // pinned share token (dmz/wm getWindowPreset). Such a window is a restricted VIEWER —
   // owner/member chrome (call, Manage Access, settings) must NOT appear, at any nesting
-  // depth. A normal desk folder has no share token → full chrome (unchanged). Upload/
-  // Add-new are already gated on canUpload, which a capped recipient lacks.
+  // depth. A normal desk folder has no share token → full chrome (unchanged).
   const inShare = !!ui.mget(_a.token);
 
   // Meeting moved from the header into a tab (see skeleton/index.js tabBar).
-
-  let uploadBtn = canUpload
-    ? Skeletons.Button.Label({
-      className: `${cnFolder}__upload-btn`,
-      label: LOCALE.UPLOAD,
-      ico: "app-upload",
-      service: _e.upload,
-      uiHandler: ui,
-    })
-    : "";
-
-  let addNew = canUpload
-    ? Skeletons.Box.X({
-      className: `${cnFolder}__add-new-wrapper`,
-      kids: [newFileMenu(ui, { triggerIco: "plus-header" })],
-    })
-    : "";
+  // Upload + Add-new moved out of the header into the merged "+ New" menu on the
+  // Files tab-bar (see skeleton/toolkit newMenu / tabBar) so those actions sit
+  // next to the file-view toggle and only show on the Files tab.
 
   // Share-area folders get a dedicated "Manage Access" icon next to the
   // settings gear; other folder types do not show it. Restrict it to the
@@ -144,7 +128,7 @@ const __skl_folder_topbar = function (ui) {
 
   const rightCluster = Skeletons.Box.X({
     className: `${cnFolder}__right`,
-    kids: [uploadBtn, addNew, shareBtn, settingsBtn, moreMenu, zoomBtn, minimizeBtn, controls],
+    kids: [shareBtn, settingsBtn, moreMenu, zoomBtn, minimizeBtn, controls],
   });
 
   // ── Root row ─────────────────────────────────────────────────

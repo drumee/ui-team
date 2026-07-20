@@ -306,109 +306,93 @@
       flex-shrink: 0;
     }
 
-    // Upload — Grey/20 background, radius 4.38, padding 6.57 13.14.
-    // (Figma 272:49261 / layout_VBYAYT)
-    &__upload-btn {
-      display: flex;
-      align-items: center;
-      gap: 6.57px;
-      padding: 6.57px 13.14px;
-      background-color: var(--normal-bg-90); // Grey/20
-      border-radius: 4.38px;
-      cursor: pointer;
-      font-family: "Geist", sans-serif;
-      font-weight: 500;
-      font-size: 13.14px;
-      line-height: 1;
-      color: var(--normal-fg-10);
-      flex-shrink: 0;
-      white-space: nowrap;
-
-      svg {
-        width: 13.14px;
-        height: 13.14px;
-      }
-
-      &:hover {
-        background-color: var(--normal-bg-80);
-      }
-    }
-
-    // Add new — Figma 272:49267 master button (102.93 × 30.66, Primary/20
-    // pill). dropdownMenuButton renders a chain of wrappers around the
-    // Button.Label trigger; relative+visible at every level so the
-    // dropdown can escape downward.
-    &__add-new-wrapper {
+    // Merged "+ New" control — lives on the Files tab-bar next to the view
+    // toggle (not in the header). Reuses the well-tested dropdown chain that
+    // the old header Add-new button used. Height matches the adjacent view
+    // toggle (28px); width hugs the "New" label. Hidden off the Files tab via
+    // data-visible (toggled by showFolderTab, same as view-ctrl).
+    &__new-ctrl {
       position: relative;
       overflow: visible;
       flex-shrink: 0;
-      width: 102.93px;
-      height: 30.66px;
+      // The pill itself owns its height (label-button min-height below). This
+      // wrapper + the menu chain only center it — no height:100% chain through
+      // the <li> menu-topic (that chain collapsed a level and left the pill
+      // shorter than the view toggle, so it rode ~3px high). align-self:center
+      // pins it to the row's centre-line next to the toggle.
+      display: flex;
+      align-items: center;
+      align-self: center;
 
-      .window-split-body__buttons-container {
-        padding: 0;
-        background: transparent;
-        width: 100%;
-        height: 100%;
+      &[data-visible="0"] {
+        display: none;
       }
 
       .window-button__dropdown-menu__wrapper,
       .menu-topic,
       .menu-topic__ui {
         position: relative;
-        width: 100%;
-        height: 100%;
+        margin: 0;
+        list-style: none;
+        display: flex;
+        align-items: center;
         background: transparent;
         overflow: visible;
       }
 
       .menu-trigger {
-        width: 100%;
-        height: 100%;
         display: flex;
         align-items: center;
         justify-content: center;
       }
 
       .window-button__label-button {
-        width: 100%;
-        height: 100%;
-        background-color: #b1adff; // Primary/20
-        border-radius: 6px;
-        padding: 0 12px;
-        gap: 4px;
+        // Fixed height matching the view toggle's OUTER box (28px content + 2px
+        // border = 30px) so both pills share top/bottom edges, independent of
+        // any parent height. box-sizing:border-box keeps 30px total.
+        height: 30px;
+        min-height: 30px;
+        // Soft primary tint: light lavender fill (Primary/10) with an indigo
+        // label (Primary/50) instead of the heavier solid fill + black text —
+        // reads calmer while still standing out as the primary action. Hex
+        // literals (not var(--primary-*)) on purpose: that token has a
+        // duplicate :root def that resolves to the wrong shade.
+        background-color: #e4e3ff; // Primary/10
+        border-radius: 999px; // pill, matches the adjacent view toggle
+        padding: 0 18px; // roomier horizontal padding
         font-family: "Inter", sans-serif;
+        // The "+" is part of the label text now (no SVG icon), so its stroke
+        // weight follows this font-weight — matching the "New" text as the user
+        // asked, instead of the heavy filled plus glyph.
         font-weight: 500;
-        font-size: 13.14px;
-        line-height: 17.52px;
-        color: #000;
+        font-size: 13px;
+        line-height: 1;
+        color: #433cc5; // Primary/50
         cursor: pointer;
         white-space: nowrap;
         display: flex;
         align-items: center;
         justify-content: center;
+        text-align: center; // centre the "+ New" text node inside the pill
         box-sizing: border-box;
 
-        svg {
-          width: 13.14px;
-          height: 13.14px;
-        }
-
         &:hover {
-          background-color: #847eff; // Primary/30
-          color: #fff;
+          background-color: #bebbff; // Primary/20 — a touch deeper on hover
+          color: #2d2a6a; // Primary/80
         }
       }
 
       // dropdownMenuButton doesn't pass direction:"down", so the
       // framework leaves the popup wrapper unpositioned. Anchor it
-      // below the trigger ourselves.
+      // below the trigger ourselves. max-content so the panel sizes to its
+      // widest row ("Migrate from Google Drive") instead of shrinking to the
+      // narrow trigger's width and clipping that label.
       .menu-topic-items__wrapper {
         position: absolute;
         top: calc(100% + 6px);
         right: 0;
         z-index: 1000;
-        width: auto;
+        width: max-content;
         min-width: 200px;
       }
 
@@ -420,6 +404,12 @@
           0 4px 6px -4px rgba(0, 0, 0, 0.1),
           0 10px 15px -3px rgba(0, 0, 0, 0.1);
         padding: 6px;
+        // max-content so the panel itself grows to its widest row ("Migrate
+        // from Google Drive"). Without this the panel stays at min-width and
+        // the nowrap label overflows, then gets clipped by items-wrapper's
+        // inline overflow:hidden (set by the menu widget). min-width is the
+        // floor for short menus.
+        width: max-content;
         min-width: 200px;
         display: flex;
         flex-direction: column;
@@ -457,6 +447,14 @@
           height: 16px;
           flex-shrink: 0;
         }
+      }
+
+      // Divider between the Import group (From device / Migrate GDrive) and the
+      // Create group (Workspace / Note / Document / …) in the "+ New" menu.
+      .window-button__dropdown-menu__divider {
+        height: 1px;
+        margin: 4px 6px;
+        background-color: var(--border-muted, rgba(0, 0, 0, 0.12));
       }
     }
 
@@ -995,6 +993,10 @@
   &__tab-bar-wrapper {
     align-items: center;
     justify-content: space-between;
+    // Gap keeps the right-side controls ([+New] and the view toggle) from
+    // touching. The tabs group has flex:1 so it absorbs the rest of the row;
+    // this gap is only visible between [+New] and the view toggle.
+    gap: 10px;
     padding: 8px 16px 8.5px;
     background-color: var(--normal-bg-90);
     border-bottom: 1px solid var(--border-muted, rgba(0, 0, 0, 0.2));
@@ -3042,17 +3044,13 @@
       }
 
       // All right-cluster icons collapse to a uniform 32×32 chip on
-      // compact. Desktop styled video/upload/add-new with a Grey/20
-      // background and left settings/share/close bare — on small
+      // compact. Desktop left settings/share/close bare — on small
       // screens this mix reads as "loaded" buttons next to floating
       // icons. Mobile unifies them: same square, same Grey/20 bg,
-      // same 6px radius, flex-centered SVG. The Add-new trigger
-      // keeps its purple via the .secondary override below.
+      // same 6px radius, flex-centered SVG.
       // Video / manage-access / settings / zoom drop out of the row here
       // and move into the overflow "More" menu (the only chip-styled
       // control-icon kept is the More trigger).
-      &__upload-btn,
-      &__add-new-wrapper,
       &__more-wrapper,
       .window-button__icon-button {
         flex: 0 0 auto;
@@ -3103,47 +3101,6 @@
       // reclaim the slot next to ×.
       &__control-icon.split {
         display: none;
-      }
-
-      &__upload-btn {
-        justify-content: center;
-        padding: 0;
-
-        span.label,
-        section.label,
-        .note-content {
-          display: none !important;
-        }
-      }
-
-      &__add-new-wrapper {
-        // The shared `.window-button__label-button.secondary` rule
-        // (line ~1448, outside this container query) pins the button
-        // to `min-width: 103px`, which kept the pill wide even after
-        // the wrapper was locked to 32×32 — the child overflowed the
-        // wrapper. Neutralize that here so the trigger collapses with
-        // its parent.
-        .window-button__label-button,
-        .window-button__label-button.secondary {
-          min-width: 0 !important;
-          min-height: 0 !important;
-          width: 100% !important;
-          height: 100% !important;
-          padding: 0 !important;
-          border-radius: 6px;
-
-          span.label,
-          section.label,
-          .note-content {
-            display: none !important;
-          }
-        }
-
-        .menu-topic-items__wrapper {
-          max-width: calc(100cqw - 24px);
-          min-width: 200px;
-          right: 0;
-        }
       }
     }
 

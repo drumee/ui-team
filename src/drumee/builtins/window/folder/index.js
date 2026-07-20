@@ -1184,6 +1184,28 @@ class __window_folder extends mfsInteract {
           uiHandler: [this],
         });
 
+      case "launch-gdrive-migration":
+        // "Migrate from Google Drive" row of the merged "+ New" menu. Opens the
+        // full migration popup (connect → pick → migrate → progress); the widget
+        // + google_drive.* backend already exist. singleton + wm_unique_id (per
+        // the multi-folder-windows fix) prevents a duplicate popup on re-click.
+        // hub_id/nid target THIS folder window (import lands in the open
+        // workspace), falling back to the visitor home like settings does.
+        return Kind.waitFor("migrate_gdrive_popup").then(() => {
+          Wm.launch(
+            {
+              kind: "migrate_gdrive_popup",
+              hub_id: this.mget(_a.hub_id) || Visitor.id,
+              nid:
+                this.mget(_a.actual_home_id) ||
+                this.mget(_a.nid) ||
+                Visitor.get(_a.home_id),
+              wm_unique_id: "migrate_gdrive_popup",
+            },
+            { explicit: 1, singleton: 1 },
+          );
+        });
+
       case "new-document":
         return this.newDocument(cmd);
 
@@ -3163,6 +3185,13 @@ class __window_folder extends mfsInteract {
     const viewCtrl = this.getPart("view-ctrl");
     if (viewCtrl && viewCtrl.el) {
       viewCtrl.el.dataset.visible = tab === "files" ? "1" : "0";
+    }
+    // The merged "+ New" button also lives on the tab line but only operates on
+    // Files (upload / create / gdrive-import) — hide it off the Files tab so it
+    // can't be mistaken for a Chat/Task/Meeting action.
+    const newCtrl = this.getPart("new-ctrl");
+    if (newCtrl && newCtrl.el) {
+      newCtrl.el.dataset.visible = tab === "files" ? "1" : "0";
     }
 
     const switchView = (view) => {

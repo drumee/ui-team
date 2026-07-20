@@ -1,9 +1,11 @@
 const { button } = require("../../../skeleton/toolkit/buttons");
 
 const AREA_LABELS = {
-  personal: LOCALE.PRIVATE,
-  private: LOCALE.RESTRICTED,
-  share: LOCALE.SHARED,
+  personal: LOCALE.PERSONAL,
+  // `private` covers both Internal and Personal workspaces (they share the
+  // area value); the badge shows "Internal" — accepted product trade-off.
+  private: LOCALE.INTERNAL,
+  share: LOCALE.EXTERNAL,
   dmz: LOCALE.RESTRICTED,
   restricted: LOCALE.RESTRICTED,
   public: LOCALE.PUBLIC,
@@ -218,8 +220,22 @@ export function tabBar(ui, opt = {}) {
       })
     : "";
 
+  // Merged "+ New" button (folder Files tab only) — replaces the old header
+  // Upload + Add-new buttons. Gated on canUpload like those were, and folder-
+  // only. Wrapped in a `new-ctrl` part with data-visible so showFolderTab can
+  // hide it off the Files tab, exactly like the view-toggle (view-ctrl).
+  const newBtn =
+    isFolder && ui.canUpload && ui.canUpload()
+      ? Skeletons.Box.X({
+          className: `${cnTopbar}__new-ctrl`,
+          sys_pn: "new-ctrl",
+          dataset: { visible: 1 },
+          kids: [newMenu(ui)],
+        })
+      : "";
+
   // Tab bar lays out as flex space-between: the tab items group on the left,
-  // the view-toggle splitBtn on the right.
+  // the [+New] + view-toggle controls on the right.
   return Skeletons.Box.X({
     className: `${cnRoot}-wrapper ${ui.fig.family}__tab-bar-wrapper`,
     dataset: isFolder ? { area: ui.mget(_a.area) } : {},
@@ -228,6 +244,7 @@ export function tabBar(ui, opt = {}) {
         className: `${cnRoot}-tabs ${ui.fig.family}__tab-bar-tabs`,
         kids,
       }),
+      newBtn,
       splitBtn,
     ],
   });
@@ -1148,6 +1165,152 @@ export function windowHeader(ui, topbar) {
     service: _e.raise,
     kids: [topbar],
   });
+}
+
+/**
+ * Merged "+ New" menu for the folder window Files tab (replaces the separate
+ * header Upload + Add-new buttons). A single flat `menu_topic` with a divider
+ * splitting two groups:
+ *   Import  → From device (_e.upload) · Migrate from Google Drive
+ *   Create  → Workspace · Note · Document · Spreadsheet · Presentation
+ *
+ * Flat (not a nested flyout submenu) on purpose: the menu widget wraps its
+ * items in an overflow:hidden box and only supports vertical (down/up)
+ * direction, so a right-side flyout would be clipped and has no precedent in
+ * this codebase. A divider conveys the same Import-vs-Create grouping with one
+ * click to every item.
+ *
+ * Kept separate from `newFileMenu` (still used by team/sharebox/dmz windows) so
+ * those callers are untouched.
+ *
+ * @param {*} ui folder window
+ * @param {{ triggerIco?: string }} opt
+ */
+export function newMenu(ui, opt = {}) {
+  const cnWindowButton = `${ui.fig.group}-button`;
+  const cnDropdown = `${cnWindowButton}__dropdown-menu`;
+  const cnItem = `${cnDropdown}__item`;
+
+  // Build one menu row (icon + label) that carries a `service`. Mirrors the row
+  // shape used by dropdownMenuButton: active:0 on the row's kids so a click on
+  // the icon/label bubbles to the row (which owns the service) rather than being
+  // swallowed by the interactive Button.Svg / Note.
+  const row = ({ service, ico, content, area, name, className }) =>
+    Skeletons.Box.X({
+      className: className ? `${cnItem} ${className}` : cnItem,
+      uiHandler: [ui],
+      service,
+      // `name` rides along so new-document rows carry their filename
+      // (document.docx / spreadsheet.xlsx / presentation.pptx) — newDocument()
+      // reads cmd.mget(_a.name).
+      name,
+      kidsOpt: { active: 0 },
+      kids: [
+        Skeletons.Button.Svg({
+          ico,
+          active: 0,
+          className: `${cnDropdown}__icon`,
+          dataset: area ? { area } : undefined,
+        }),
+        Skeletons.Note({
+          content,
+          active: 0,
+          className: `${cnDropdown}__name`,
+        }),
+      ],
+    });
+
+  const importRows = [
+    row({
+      service: _e.upload,
+      ico: "app-upload",
+      content: LOCALE.FROM_DEVICE,
+      className: `${cnItem}--from-device`,
+    }),
+    row({
+      service: "launch-gdrive-migration",
+      ico: "logo-google",
+      content: LOCALE.MIGRATE_GDRIVE_TITLE,
+      className: `${cnItem}--gdrive`,
+    }),
+  ];
+
+  const divider = Skeletons.Note({
+    className: `${cnDropdown}__divider`,
+    active: 0,
+  });
+
+  // Create group mirrors the historical newFileMenu items; the Folder entry is
+  // relabelled "Workspace" but keeps the `add-folder` service (adaptive: creates
+  // a hub at the workspace root, a sub-folder otherwise).
+  const createRows = [
+    row({
+      service: "add-folder",
+      ico: "folder-header",
+      content: LOCALE.WORKSPACE,
+      area: ui.mget(_a.area) || _a.personal,
+      className: `${cnItem}--add-folder`,
+    }),
+    row({
+      service: "add-note",
+      ico: "raw-note",
+      content: LOCALE.NOTE,
+      className: `${cnItem}--add-note white`,
+    }),
+    row({
+      service: "new-document",
+      name: "document.docx",
+      ico: "raw-documents_word",
+      content: LOCALE.DOCUMENT,
+      className: `${cnItem}--document white`,
+    }),
+    row({
+      service: "new-document",
+      name: "spreadsheet.xlsx",
+      ico: "raw-documents_excel",
+      content: LOCALE.SPREADSHEET,
+      className: `${cnItem}--spreadsheet white`,
+    }),
+    row({
+      service: "new-document",
+      name: "presentation.pptx",
+      ico: "raw-documents_powerpoint",
+      content: LOCALE.PRESENTATION,
+      className: `${cnItem}--presentation white`,
+    }),
+  ];
+
+  const items = Skeletons.Box.Y({
+    className: `${cnDropdown}__items`,
+    kids: [...importRows, divider, ...createRows],
+  });
+
+  // Trigger is a plain Note (single text node), NOT Button.Label: Button.Label
+  // always renders an icon slot beside the label, and with no `ico` that empty
+  // slot still reserves width (global `.window-button__label-button svg{width:14px}`),
+  // pushing the text off-centre in the pill. A Note has no slot, so the text
+  // centres cleanly.
+  // "+" is a text glyph, not an SVG icon: the plus-header sprite (and every
+  // other plus icon here) is a heavy filled plus; as a character its stroke
+  // weight follows the label font-weight — light, matching "New" (same trick
+  // the topbar minimize "−" uses). LOCALE.NEW supplies the word; "+ " is a
+  // symbol prefix, not translatable copy.
+  const trigger = Skeletons.Note({
+    className: `${cnWindowButton}__label-button primary`,
+    content: `+ ${LOCALE.NEW}`,
+    uiHandler: ui,
+    partHandler: ui,
+  });
+
+  return {
+    kind: KIND.menu.topic,
+    className: `${cnDropdown}__wrapper`,
+    flow: _a.y,
+    opening: _e.click,
+    persistence: _a.none,
+    trigger,
+    items,
+  };
 }
 
 /**
