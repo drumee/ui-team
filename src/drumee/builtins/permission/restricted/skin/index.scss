@@ -222,14 +222,17 @@
     transition: background-color 120ms ease;
 
     // Hover description ("Can only View", …) injected by the framework
-    // `tooltips` prop — a small card beside the menu, vertically centered
-    // on the hovered row.
+    // `tooltips` prop — a small card on the RIGHT of the hovered row,
+    // vertically centered. max-width keeps ~4-5 words per line so long
+    // descriptions wrap to two lines (user decision 2026-07-20).
     .role-option-tooltip {
       position: absolute;
       left: calc(100% + 10px);
       top: 50%;
       transform: translateY(-50%);
-      white-space: nowrap;
+      white-space: normal;
+      width: max-content;
+      max-width: 180px;
       pointer-events: none;
       padding: 6px 10px;
       border-radius: 6px;

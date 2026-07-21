@@ -1598,16 +1598,20 @@
     }
 
     // Hover description ("Can only View", …) injected by the framework
-    // `tooltips` prop — a small card beside the menu, vertically centered
-    // on the hovered row. Placed on the LEFT: the settings panel hugs the
-    // right screen edge, so a right-side card would overflow the viewport
-    // on the longer descriptions.
+    // `tooltips` prop — a small card beside the hovered row, wrapped to
+    // ~4-5 words per line (user decision 2026-07-20). The other role menus
+    // put this card on the RIGHT; here it must stay on the LEFT because the
+    // settings panel hugs the right screen edge — the row's right edge sits
+    // ~2px from the viewport, so a right-side card is fully clipped
+    // (verified live at 1785px viewport).
     .role-option-tooltip {
       position: absolute;
       right: calc(100% + 10px);
       top: 50%;
       transform: translateY(-50%);
-      white-space: nowrap;
+      white-space: normal;
+      width: max-content;
+      max-width: 180px;
       pointer-events: none;
       padding: 6px 10px;
       border-radius: 6px;
@@ -2715,7 +2719,7 @@
   }
 
   .widget-chatItem__username-content {
-    max-width: 160px;
+    max-width: 180px;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
