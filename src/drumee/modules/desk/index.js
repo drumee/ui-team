@@ -75,6 +75,13 @@ class desk_module extends LetcBox {
     this._onWorkspaceOpen = this._onWorkspaceOpen.bind(this);
     this._onWorkspaceClose = this._onWorkspaceClose.bind(this);
     this._bindFolderTabs();
+
+    // [Reload] Persist which sidebar screen is on top so a browser reload
+    // lands back on it instead of always resetting to Home (see
+    // _restoreLastScreen, called from loadDefault). Written on pagehide —
+    // the one hook that reliably fires right before a reload.
+    this._persistLastScreen = this._persistLastScreen.bind(this);
+    window.addEventListener("pagehide", this._persistLastScreen);
   }
 
   _bindFolderTabs() {
@@ -236,6 +243,7 @@ class desk_module extends LetcBox {
       clearInterval(this._usageTimer);
       this._usageTimer = null;
     }
+    window.removeEventListener("pagehide", this._persistLastScreen);
     RADIO_BROADCAST.off("desk:open-billing-page", this._openBillingPage);
     RADIO_BROADCAST.off("avatar-changed", this._updateAvatar);
     Visitor.off(_e.change, this._updateAvatar);
@@ -270,10 +278,200 @@ class desk_module extends LetcBox {
     await Kind.waitFor("window_manager");
     await Kind.waitFor("panel_activity");
     await Kind.waitFor("activity_item");
+    // Raise the restore flag BEFORE feeding the skeleton: the breadcrumb's
+    // mount-time loadHome({initial:1}) fires during the render pass and
+    // must know a saved screen is about to be restored (see loadHome).
+    this._restoreInFlight = !!this._savedScreenService();
     this.feed(require("./skeleton")(this));
     await this.ensurePart("desk-content");
+    // NOTE: keep the restore BEFORE the wrapper-popup await — the current
+    // skeleton has no "wrapper-popup" part, so that promise never resolves
+    // and anything after it is dead code.
+    this._restoreLastScreen();
     await this.ensurePart("wrapper-popup");
     this.trigger(_e.ready);
+  }
+
+  // ── [Reload] keep the current sidebar screen across a browser reload ──
+  //
+  // The sidebar never writes location.hash: panels are just fed into named
+  // slots, so a reload used to always land on Home. We snapshot which screen
+  // is on top right before the page unloads (pagehide) and replay the exact
+  // sidebar service after loadDefault re-renders the desk. sessionStorage is
+  // deliberate: it survives reloads of THIS tab but a brand-new tab still
+  // starts on Home, and two different tabs never overwrite each other.
+
+  /** service string ↔ sidebar nav item (sys_pn) for the restorable screens */
+  static get _RESTORABLE_SCREENS() {
+    return {
+      "toggle-apps": "sidebar-apps",
+      "toggle-settings": "sidebar-settings",
+      "upgrade-plan": "sidebar-upgrade",
+      "toggle-trash": "sidebar-trash",
+      "toggle-contacts": "sidebar-contacts",
+      "toggle-inbox": "sidebar-inbox",
+      "toggle-activity": "sidebar-notifications",
+    };
+  }
+
+  /**
+   * Which sidebar screen is currently on top? Reads the live slot state
+   * (not just _pendingKinds — keep-alive slots stay mounted when closed
+   * with data-anim="out", and destroy-on-close children may already be
+   * goodbye()'d while their pending kind lingers). Returns the sidebar
+   * service string, or null when the user is on plain Home.
+   */
+  _currentScreenService() {
+    const kinds = this._pendingKinds || {};
+    const topChild = (pn) => {
+      const p = this.getPart && this.getPart(pn);
+      const child = p && p.children && p.children.last && p.children.last();
+      if (!child || (child.isDestroyed && child.isDestroyed()) || !child.el)
+        return null;
+      return child;
+    };
+
+    // Full-page slot (Apps / Settings / Billing) — destroyed on close, so a
+    // live child that isn't animating out means the screen is showing.
+    const mainChild = topChild("settings-main-slot");
+    if (mainChild && mainChild.el.dataset.anim !== "out") {
+      switch (kinds["settings-main-slot"]) {
+        case "apps_main":
+          return "toggle-apps";
+        case "settings_main":
+          return "toggle-settings";
+        case "settings_billing":
+          return "upgrade-plan";
+      }
+    }
+
+    // Keep-alive slots — widget stays mounted when hidden; only
+    // data-anim="in" means visible.
+    const trashChild = topChild("trash-panel");
+    if (trashChild && trashChild.el.dataset.anim === "in") {
+      return "toggle-trash";
+    }
+    const chatChild = topChild("chat-panel");
+    if (chatChild && chatChild.el.dataset.anim === "in") {
+      if (kinds["chat-panel"] === "address_book") return "toggle-contacts";
+      if (kinds["chat-panel"] === "chat_p2p") return "toggle-inbox";
+    }
+
+    // Notifications side panel (predates the anim pattern, uses data-state).
+    const act = this.getPart && this.getPart("activity-panel");
+    if (act && ~~act.mget(_a.state) === 1) {
+      return "toggle-activity";
+    }
+
+    return null;
+  }
+
+  /**
+   * The saved sidebar service from the previous page load, or null when
+   * nothing valid was saved / a deep-link must win. Pure read, no side
+   * effects — used both by loadDefault (to flag the restore before the
+   * skeleton renders) and by _restoreLastScreen (to replay it).
+   */
+  _savedScreenService() {
+    let saved = null;
+    try {
+      saved = JSON.parse(
+        sessionStorage.getItem("drumee.desk.lastScreen") || "null",
+      );
+    } catch (e) {
+      return null;
+    }
+    const service = saved && saved.service;
+    if (!desk_module._RESTORABLE_SCREENS[service]) return null;
+    if (this._hasDeepLink()) return null;
+    return service;
+  }
+
+  /** pagehide hook — must stay synchronous. */
+  _persistLastScreen() {
+    try {
+      const service = this._currentScreenService();
+      if (service) {
+        sessionStorage.setItem(
+          "drumee.desk.lastScreen",
+          JSON.stringify({ service }),
+        );
+      } else {
+        sessionStorage.removeItem("drumee.desk.lastScreen");
+      }
+    } catch (e) {
+      /* private mode / quota — reload will just land on Home */
+    }
+  }
+
+  /**
+   * True when the current URL / session carries a real deep-link that must
+   * win over the remembered screen. `#/desk/wm/home` is NOT a deep-link —
+   * wm.route() rewrites the hash to it a few seconds after any navigation,
+   * so it's the resting hash of a normal session.
+   */
+  _hasDeepLink() {
+    try {
+      if (
+        sessionStorage.getItem("drumee_hubDeepLink") ||
+        sessionStorage.getItem("drumee_secure_share_return")
+      ) {
+        return true;
+      }
+    } catch (e) {
+      /* sessionStorage unavailable — fall through to the hash check */
+    }
+    const path = Visitor.parseModule() || [];
+    if (path[1] === "wm") {
+      return !!(path[2] && path[2] !== _a.home);
+    }
+    // e.g. #@desk/folder?hub_id=… (direct folder URL handled by wm)
+    return !!(path[1] && path[1] !== _a.home);
+  }
+
+  /**
+   * Replay the persisted sidebar screen after the desk skeleton mounts.
+   * No-ops (leaving Home showing) when: nothing was saved, the saved value
+   * is not a known screen, the URL carries a real deep-link (deep links
+   * win), or a restore already ran for this page load.
+   */
+  async _restoreLastScreen() {
+    if (this._screenRestored) return;
+    this._screenRestored = true;
+
+    const service = this._savedScreenService();
+    if (!service) {
+      this._restoreInFlight = false;
+      return;
+    }
+    const sidebarPn = desk_module._RESTORABLE_SCREENS[service];
+
+    try {
+      // onUiEvent bails without window.Wm; the wm widget registers the
+      // global when its view initializes, shortly after the skeleton is fed.
+      for (let i = 0; i < 50 && !window.Wm; i++) {
+        await new Promise((r) => setTimeout(r, 100));
+      }
+      if (!window.Wm || (this.isDestroyed && this.isDestroyed())) return;
+
+      // Let the mount-time renders (breadcrumb loadHome, wm skeleton) settle
+      // before feeding the panel, so nothing re-clears the slot afterwards.
+      await new Promise((r) => setTimeout(r, 300));
+
+      await this.onUiEvent({ mget: () => null }, { service });
+
+      // Mirror the click on the sidebar: light up the restored item through
+      // the shared radio channel (also clears the Home default highlight).
+      this.ensurePart(sidebarPn).then((p) => {
+        if (p) RADIO_BROADCAST.trigger("sidebar-radio", p);
+      });
+    } finally {
+      // Hold the flag a beat longer than the feed so late mount-time
+      // loadHome stragglers (breadcrumb renders async) stay suppressed.
+      setTimeout(() => {
+        this._restoreInFlight = false;
+      }, 2000);
+    }
   }
 
   /**
@@ -503,6 +701,12 @@ class desk_module extends LetcBox {
    *
    */
   loadHome(data = {}) {
+    // [Reload] The breadcrumb calls Desk.loadHome() when it mounts, which
+    // happens WHILE loadDefault is restoring the pre-reload screen — its
+    // closeMainPanels() promises would resolve after the restored panel is
+    // fed and wipe it. Skip this mount-time reset when a restore is in
+    // flight; the restore path drives the panels itself.
+    if (this._restoreInFlight) return;
     this._dismissWmModal();
     this.closeMainPanels();
     this.ensurePart("action-cluster").then((p) => p && p.setState(1));
