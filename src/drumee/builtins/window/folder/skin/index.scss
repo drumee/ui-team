@@ -1558,6 +1558,16 @@
   }
 
   // Popover menu shown when the user clicks the role pill. Positioned by the
+  // The framework sets `overflow: hidden` INLINE on the menu wrapper (it
+  // hides the pre-rendered items while the menu is closed — the closed
+  // wrapper is zero-height, so un-clipping it globally would reveal every
+  // closed menu). Open state needs `visible` though: the hover description
+  // card hangs below the hovered option, outside the wrapper's box, and was
+  // fully clipped — the folder-settings role tooltip never showed at all.
+  &__settings-action-role-dropdown .menu-topic-items__wrapper[data-state="open"] {
+    overflow: visible !important;
+  }
+
   // KIND.menu.topic framework via offsetY:4; styles below cover the menu
   // surface and per-option layout (radio-style row).
   &__settings-action-role-menu {
@@ -1598,17 +1608,17 @@
     }
 
     // Hover description ("Can only View", …) injected by the framework
-    // `tooltips` prop — a small card beside the hovered row, wrapped to
-    // ~4-5 words per line (user decision 2026-07-20). The other role menus
-    // put this card on the RIGHT; here it must stay on the LEFT because the
-    // settings panel hugs the right screen edge — the row's right edge sits
-    // ~2px from the viewport, so a right-side card is fully clipped
-    // (verified live at 1785px viewport).
+    // `tooltips` prop, wrapped to ~4-5 words per line (user decision
+    // 2026-07-20). The other role menus put this card BESIDE the row; here
+    // neither side has room — the panel hugs the right screen edge (right
+    // side is off-viewport) and the menu sits ~155px from the panel's left
+    // edge (left side is clipped by the panel's overflow) — so the card
+    // drops BELOW the hovered option, right-aligned, staying inside the
+    // panel. Geometry verified live at 1785px viewport.
     .role-option-tooltip {
       position: absolute;
-      right: calc(100% + 10px);
-      top: 50%;
-      transform: translateY(-50%);
+      top: calc(100% + 4px);
+      right: 0;
       white-space: normal;
       width: max-content;
       max-width: 180px;
