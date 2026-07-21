@@ -20,7 +20,9 @@ const intEnv = function () {
   let domain = "drumee.com";
   let endpointName = "main";
   let endpointPath = "/-/";
-  let language = 'fr'
+  // Default English (product decision 2026-07-21) — matches the server-side
+  // default; the real value comes from <html lang> two lines down.
+  let language = 'en'
   let d = {};
   try {
     d = document.getElementById('drumee-api').dataset;
