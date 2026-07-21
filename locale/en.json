@@ -1593,6 +1593,7 @@
   "COMMENTS": "Comments",
   "NO_COMMENTS": "No comments yet",
   "TASK_COMMENT_PLACEHOLDER": "Write a comment…",
+  "TASK_REPLY_PLACEHOLDER": "Reply…",
   "REPLYING_TO": "Replying to",
   "EDITED": "edited",
   "STATUS_TODO": "To do",

@@ -2446,6 +2446,10 @@ function buildCommentListContent(ui) {
   const replyingToChild =
     !!replyTarget && String(replyTarget.id) !== replyingToRootId;
 
+  // Reply composer (Figma 2037-14883, "Comment" variant): a single grey rounded
+  // pill — the input on the left, the paperclip / @ / send icons inline on the
+  // right. No separate Reply/Cancel text row; send submits, and clicking the
+  // comment's reply icon again toggles the composer closed.
   const composerBlock = () =>
     Skeletons.Box.Y({
       className: `${pfx}__comment-replybox`,
@@ -2459,28 +2463,26 @@ function buildCommentListContent(ui) {
               }`,
             })
           : null,
-        mentionField(ui, "comment-reply", {
-          fieldClass: `${pfx}__comment-field`,
-          editorClass: `${pfx}__comment-reply-input`,
-          placeholder: LOCALE.TASK_COMMENT_PLACEHOLDER,
-        }),
         Skeletons.Box.X({
-          className: `${pfx}__comment-actions`,
+          className: `${pfx}__comment-reply-pill`,
           kids: [
-            ...composerTools(ui, "comment-reply"),
-            Skeletons.Note({
-              className: `${pfx}__comment-action ${pfx}__comment-action--primary`,
-              content: LOCALE.REPLY,
-              bubble: 0,
-              service: "comment-reply-submit",
-              uiHandler: [ui],
+            mentionField(ui, "comment-reply", {
+              fieldClass: `${pfx}__comment-reply-field`,
+              editorClass: `${pfx}__comment-reply-input`,
+              placeholder: LOCALE.TASK_REPLY_PLACEHOLDER || "Reply...",
             }),
-            Skeletons.Note({
-              className: `${pfx}__comment-action`,
-              content: LOCALE.CANCEL,
-              bubble: 0,
-              service: "comment-reply-cancel",
-              uiHandler: [ui],
+            Skeletons.Box.X({
+              className: `${pfx}__comment-reply-tools`,
+              kids: [
+                ...composerTools(ui, "comment-reply"),
+                Skeletons.Button.Svg({
+                  ico: "app-send",
+                  className: `${pfx}__comment-reply-send`,
+                  bubble: 0,
+                  service: "comment-reply-submit",
+                  uiHandler: [ui],
+                }),
+              ],
             }),
           ],
         }),

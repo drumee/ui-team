@@ -3003,6 +3003,66 @@
     gap: 6px;
   }
 
+  // Reply composer pill (Figma 2037-14883): a grey rounded field with the
+  // input on the left and the paperclip / @ / send icons inline on the right.
+  &__comment-reply-pill {
+    align-items: center;
+    gap: 12px;
+    padding: 8px 16px;
+    border-radius: 8px;
+    background: var(--overlay-bg-05, rgba(0, 0, 0, 0.05));
+
+    // The mention field grows; the tool cluster stays at its natural size.
+    .tasks-panel__comment-reply-field {
+      flex: 1 1 auto;
+      min-width: 0;
+    }
+  }
+
+  // Inside the pill the input is borderless/transparent — the pill provides the
+  // grey fill and padding; it reads as one control.
+  &__comment-reply-pill &__comment-reply-input {
+    border: 0;
+    background: transparent;
+    padding: 6px 0;
+    min-height: 20px;
+    max-height: 140px;
+    border-radius: 0;
+    @include drumee.typo(
+      $size: 14px,
+      $weight: 400,
+      $line: 20px,
+      $color: var(--normal-fg-10, #0b0a21)
+    );
+
+    &:focus {
+      border: 0;
+      box-shadow: none;
+    }
+  }
+
+  &__comment-reply-tools {
+    flex: 0 0 auto;
+    align-items: center;
+    gap: 12px;
+  }
+
+  &__comment-reply-send {
+    flex: 0 0 20px;
+    width: 20px;
+    height: 20px;
+    cursor: pointer;
+
+    svg {
+      width: 18px;
+      height: 18px;
+    }
+
+    &:hover {
+      opacity: 0.8;
+    }
+  }
+
   // "Replying to @Name" hint above the composer when answering a child comment
   // (the composer renders at the thread's end, detached from the target).
   &__comment-replying-to {

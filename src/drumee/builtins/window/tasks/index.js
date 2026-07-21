@@ -1387,12 +1387,17 @@ class __tasks_panel extends LetcBox {
       case "comment-delete":
         return this._deleteComment(trigger);
 
-      case "comment-reply":
-        this._replyingTo = trigger.mget("commentId");
+      case "comment-reply": {
+        // Toggle: clicking Reply on the comment already being answered closes the
+        // composer (the redesigned reply pill has no separate Cancel button).
+        const cid = trigger.mget("commentId");
+        this._replyingTo =
+          String(this._replyingTo) === String(cid) ? null : cid;
         this._replyDraft = null;
         this._reactPickerFor = null;
         this._emojiPickerFor = null;
         return this._refreshCommentList();
+      }
 
       case "comment-reply-cancel":
         this._replyingTo = null;
