@@ -2143,6 +2143,23 @@
     justify-content: flex-start;
     justify-items: flex-start;
     padding: 24px;
+
+    // Structural guard against the "files stack in one vertical column for a
+    // couple of seconds, then snap into the grid" flash. Items stream into
+    // the smart-container as RAW direct children and only look right once
+    // _doPartition moves them into the workspace/folder/file sections. The
+    // JS hide (visibility:hidden at buildContent) only fires when
+    // .smart-container already exists at setup time — on a fresh window the
+    // list may still be mounting, so early items painted unpartitioned.
+    // Hide raw direct children by STRUCTURE instead of timing: no attribute
+    // (fresh container) or data-partitioning="1" → not painted; once
+    // partitioned they live inside the sections so this selector no longer
+    // matches. The partition give-up path sets data-partitioning="0" on the
+    // raw container, which re-shows them — files are never lost if
+    // partitioning can't complete.
+    &:not([data-partitioning="0"]) > [data-filetype] {
+      visibility: hidden;
+    }
   }
 
   .window__icons-scroll {
