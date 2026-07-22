@@ -86,6 +86,13 @@
       left: calc(100% - 8px);
       min-width: 220px;
       min-height: 84px;
+      // The submenu's className derives from the shared item pfx, so it ALSO
+      // carries `{group}__contextmenu-item` — and per-group ITEM rules like
+      // `.window__contextmenu-item { height: 36px }` clamp the PANEL itself.
+      // Rows then overflow the painted background (visible page-bg stripes
+      // between items once the list is taller than ~2 rows). Force content
+      // sizing; this selector out-specifies the group rule.
+      height: auto;
       // Same edge-to-edge treatment as the root menu: vertical padding only,
       // submenu items carry their own horizontal inset (8px 16px below).
       padding: 8px 0;
