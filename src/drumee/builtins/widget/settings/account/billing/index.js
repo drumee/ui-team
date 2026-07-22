@@ -629,6 +629,16 @@ class settings_billing extends LetcBox {
     return plan === "pro" && ~~Visitor.get("domain_id") <= 1;
   }
 
+  // True when the caller currently pays for an ORG/Team subscription (so
+  // moving to Pro is a plan SWITCH that ends the Team plan). Guards the
+  // switch-confirm popup. Synchronous — quota is cached, so the guard works
+  // on the very first click, before _loadSubscription() lands.
+  _isPaidTeam() {
+    const quota = (Visitor.quota && Visitor.quota()) || {};
+    const plan = String(quota.plan || "").toLowerCase();
+    return plan === "team" && ~~quota.domain_id > 1;
+  }
+
   // Switch to the in-app checkout tab pre-selected on a plan. Shared by the
   // plan-card CTAs so the Team confirm-popup path and the direct paths render
   // identically.
@@ -658,6 +668,13 @@ class settings_billing extends LetcBox {
     // returns 403 PERMISSION_DENIED. Send the caller's own hub so the owner
     // check resolves correctly (verified: missing hub_id -> 403, present -> 200).
     const payload = { hub_id: Visitor.id, entity_type, plan, period, seats, bundle };
+    // Team→Pro switch (confirmed in the select-plan popup): flag the checkout
+    // so the Stripe webhook cancels the org's Team subscription (at period
+    // end) once THIS personal payment completes. Only meaningful for a
+    // personal purchase by a paying Team owner — never set otherwise.
+    if (entity_type === "user" && this._switchFromTeam && this._isPaidTeam()) {
+      payload.supersede = "org";
+    }
     // TEAM bootstrap: the payer is still on the default domain — the org
     // name + subdomain were collected in the checkout form; validate the
     // ident server-side BEFORE the Stripe redirect (product decision: prompt
@@ -1083,6 +1100,28 @@ class settings_billing extends LetcBox {
               mode: "hbf",
             })
               .then(() => this._enterCheckoutFor("team"))
+              .catch(() => { /* No → stay on the current plan */ });
+          } else if (planValue === "pro" && this._isPaidTeam()) {
+            // A paying Team owner switching to Pro: confirm first — the Team
+            // plan gets cancelled (at period end) once the Pro checkout
+            // completes, handled by the Stripe webhook via the `supersede`
+            // metadata flag set in _proceedToCheckout. DON'T cancel here —
+            // abandoning the checkout must keep the Team plan untouched.
+            // Yes → proceed to the Pro checkout; No → stay on Team.
+            Wm.confirm({
+              title: LOCALE.SWITCH_TO_PRO_CONFIRM_TITLE || "Switch to Pro",
+              message: LOCALE.SWITCH_TO_PRO_CONFIRM_MESSAGE
+                || "Switching to Pro will cancel your current Team plan, once you complete checkout. Do you want to continue?",
+              confirm: LOCALE.YES || "Yes",
+              confirm_type: "primary",
+              cancel: LOCALE.NO || "No",
+              cancel_type: "secondary",
+              mode: "hbf",
+            })
+              .then(() => {
+                this._switchFromTeam = true;
+                this._enterCheckoutFor("pro");
+              })
               .catch(() => { /* No → stay on the current plan */ });
           } else {
             this._enterCheckoutFor(planValue);
