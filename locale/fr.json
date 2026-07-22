@@ -404,6 +404,8 @@
   "NEW_IDENT": "Nouvel identifiant",
   "PROTECTED": "Protéger",
   "FILE_NOT_FOUND": "Oups... Le fichier que vous avez demandé n'existe pas ou a été supprimé.",
+  "FILE_CREATED": "Fichier créé",
+  "CLICK_TO_OPEN": "Cliquer pour ouvrir",
   "VIDEO_CONFERENCE": "Visioconférence de {0}",
   "CLEAR_NOTIFICATIONS": "Effacer les notifications",
   "NEW_MESSAGES": "Nouveaux messages",
