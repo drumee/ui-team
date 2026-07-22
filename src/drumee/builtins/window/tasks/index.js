@@ -2440,6 +2440,10 @@ class __tasks_panel extends LetcBox {
       await this.postService({
         service: SERVICE.task.column_update,
         hub_id: this._hubId,
+        // Column ids are folder-scoped: the built-ins share their status keys
+        // across boards, so without nid the server would rename this column on
+        // every board in the workspace.
+        nid: this._scopeNid,
         id,
         name,
       });
@@ -2461,6 +2465,8 @@ class __tasks_panel extends LetcBox {
       await this.postService({
         service: SERVICE.task.column_update,
         hub_id: this._hubId,
+        // Folder-scoped — see _renameColumn.
+        nid: this._scopeNid,
         id,
         theme,
       });
@@ -2479,6 +2485,9 @@ class __tasks_panel extends LetcBox {
       const resp = await this.postService({
         service: SERVICE.task.column_delete,
         hub_id: this._hubId,
+        // Folder-scoped — without nid the server would delete this column from
+        // every board in the workspace (see _renameColumn).
+        nid: this._scopeNid,
         id,
       });
       const row = Array.isArray(resp) ? resp[0] : resp;
