@@ -2779,7 +2779,7 @@
 
   &__comment-actions {
     align-items: center;
-    gap: 12px;
+    gap: 8px;
     margin-top: 2px;
   }
 
@@ -2801,8 +2801,8 @@
   // delete). Dimmed by default, accent on hover.
   &__comment-action-ico {
     position: relative; // anchors the hover highlight + flyover tooltip
-    width: 18px;
-    height: 18px;
+    width: 16px;
+    height: 16px;
     cursor: pointer;
 
     // Soft rounded highlight behind the glyph on hover (no layout shift).
@@ -2820,8 +2820,8 @@
     svg {
       position: relative;
       z-index: 1;
-      width: 18px;
-      height: 18px;
+      width: 16px;
+      height: 16px;
       opacity: 0.55;
       transition: opacity 0.15s ease;
     }
