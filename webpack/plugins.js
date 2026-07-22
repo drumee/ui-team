@@ -4,9 +4,18 @@ const { DuplicatesPlugin } = require("inspectpack/plugin");
 const { CleanWebpackPlugin } = require('clean-webpack-plugin');
 const { WebpackManifestPlugin } = require('webpack-manifest-plugin');
 const { StatsWriterPlugin } = require("webpack-stats-plugin");
+const CopyPlugin = require('copy-webpack-plugin');
 
-const { join } = require('path')
+const { join, dirname } = require('path')
 const Sync = require('./sync');
+
+// MediaPipe Selfie Segmentation ships its wasm/model/loader files as siblings
+// that its runtime fetches by name via locateFile(). Bundling can't inline
+// them, so copy them next to the bundle (served at `${publicPath}mediapipe/`)
+// and point the background-blur effect's locateFile there.
+const mediapipeDir = dirname(
+  require.resolve('@mediapipe/selfie_segmentation/package.json')
+);
 
 
 const { exec } = require("shelljs");
@@ -56,6 +65,14 @@ module.exports = function (webpack, opt) {
       stats: {
         source: true // Needed for webpack5+
       }
+    }),
+    new CopyPlugin({
+      patterns: [{
+        from: mediapipeDir,
+        to: 'mediapipe',
+        globOptions: { ignore: ['**/package.json', '**/README.md', '**/*.d.ts'] },
+        noErrorOnMissing: true,
+      }]
     }),
     new Sync(opt)
   ];

@@ -105,6 +105,30 @@ class __webrtc_room extends __room {
     this.idleStreams = [];
     this._kicked = {};
     this._guests = new Map();
+    // Start fetching the conference widget chunks the moment ANY room window
+    // exists (dialing, ringing, opening a meeting) so they're already loaded
+    // by the time prepareConference needs them — instead of five serialized
+    // chunk fetches sitting between pickup and first audio.
+    this.warmConferenceKinds();
+  }
+
+  /**
+   * Fire the dynamic imports for every widget kind the conference needs, in
+   * parallel, memoized. prepareConference awaits this instead of calling
+   * Kind.waitFor one by one (which serialized five network round trips).
+   */
+  warmConferenceKinds() {
+    if (!this._warmKinds) {
+      this._warmKinds = Promise.all([
+        "webrtc_participants",
+        "webrtc_local_user",
+        "webrtc_remote_user",
+        "webrtc_attendee",
+        "sound_analyzer",
+      ].map((name) => Kind.waitFor(name)));
+      this._warmKinds.catch((e) => this.warn("kind warmup failed", e));
+    }
+    return this._warmKinds;
   }
 
   /**
@@ -174,6 +198,17 @@ class __webrtc_room extends __room {
    */
   async onConnectionSuccess() {
     if (this.isLeaving || this.isDestroyed()) return;
+    // Local media is acquired IN PARALLEL with this XMPP connection
+    // (prepareConference). Wait for it here so the local tracks are still
+    // added BEFORE join() and ride the initial Jingle offer — the exact
+    // ordering contract the old serialized flow guaranteed.
+    if (this._startupTracks) {
+      try { await this._startupTracks; } catch (e) { }
+      if (this.isLeaving || this.isDestroyed()) return;
+      // Media never came up (mic denied/missing): don't join a conference we
+      // can't publish to — prepareConference surfaces the permission error.
+      if (this._startupMediaFailed) return;
+    }
     let room_id = this.mget(_a.room_id);
     try {
       console.log("[ROOMDBG] onConnectionSuccess -> initJitsiConference", {
@@ -210,7 +245,11 @@ class __webrtc_room extends __room {
       catch (e) { this.warn("addTrack(video) failed", e); }
     }
 
-    this.stateMessage(LOCALE.JOINING_CONFERENCE);
+    this.stateMessage(
+      this.service_class === "connect"
+        ? LOCALE.CONNECTING
+        : LOCALE.JOINING_CONFERENCE,
+    );
     this.room.join();
   }
 
@@ -293,7 +332,12 @@ class __webrtc_room extends __room {
 
   _doCreateLocalTracks(devices, micDeviceId = "default", createOpt = {}) {
     if (!_.isArray(devices)) devices = [devices];
-    const opt = require("./configs/tracks")({ devices, micDeviceId });
+    const trackOpt = { devices, micDeviceId };
+    // Camera device is threaded via createOpt (the 2nd positional arg is the
+    // mic id). configs/tracks spreads it straight through to lib-jitsi-meet's
+    // createLocalTracks, which honours a top-level cameraDeviceId.
+    if (createOpt.cameraDeviceId) trackOpt.cameraDeviceId = createOpt.cameraDeviceId;
+    const opt = require("./configs/tracks")(trackOpt);
     if (this.isDestroyed()) {
       this.warn("Attemptiing to create tracks with destroyed view");
       console.trace();
@@ -331,7 +375,12 @@ class __webrtc_room extends __room {
             // it from the track being DISPLACED here: replaceTrack does not
             // dispose the old track, so without this a lingering camera/mic track
             // would keep its listener and could ghost-fire onTrackMuteChange.
-            const displaced = this.localTracks[type];
+            // Camera and desktop are both getType()==='video'; key them apart by
+            // videoType so a screen share is stored ALONGSIDE the camera instead
+            // of displacing it (camera + screen run simultaneously).
+            const slot = (type === _a.video && videoType === _a.desktop)
+              ? _a.desktop : type;
+            const displaced = this.localTracks[slot];
             if (displaced) {
               if (displaced.removeEventListener) {
                 displaced.removeEventListener(
@@ -341,18 +390,17 @@ class __webrtc_room extends __room {
               }
               this.idleStreams.push(displaced.stream);
             }
-            this.localTracks[type] = track;
+            this.localTracks[slot] = track;
             switch (type) {
               case _a.video:
-                track.addEventListener(
-                  JEVENTS.track.LOCAL_TRACK_STOPPED,
-                  this.stopPresentation
-                );
                 if (videoType == _a.desktop) {
-                  this.toggleAvatarVideo(1, 0);
-                  this.ensurePart(_a.video).then((el) => {
-                    el.setState(0);
-                  });
+                  // Screen share: stop the presentation when the OS "Stop
+                  // sharing" ends the track. Leave the camera self-view + camera
+                  // button untouched so the camera keeps running alongside it.
+                  track.addEventListener(
+                    JEVENTS.track.LOCAL_TRACK_STOPPED,
+                    this.stopPresentation
+                  );
                 } else {
                   this.getLocalParts().then((parts) => {
                     let { video } = parts;
@@ -442,12 +490,13 @@ class __webrtc_room extends __room {
    */
   async prepareConference(room) {
     this.stateMachine("waiting");
-    await Kind.waitFor("webrtc_participants");
-    await Kind.waitFor("webrtc_local_user");
-    await Kind.waitFor("webrtc_remote_user");
-    await Kind.waitFor("webrtc_attendee");
-    await Kind.waitFor("sound_analyzer");
-    await uiRouter.ensureWebsocket();
+    // All prerequisites in parallel. The kinds were awaited one by one here
+    // (5 serialized chunk fetches); warmConferenceKinds started them at
+    // initialize time, so this await is usually already settled.
+    await Promise.all([
+      this.warmConferenceKinds(),
+      uiRouter.ensureWebsocket(),
+    ]);
 
     JitsiMeetJS.mediaDevices.addEventListener(
       JEVENTS.mediaDevices.DEVICE_LIST_CHANGED,
@@ -471,38 +520,67 @@ class __webrtc_room extends __room {
     });
     await this.getLocalParts();
     this.stateMachine("getUserDevices");
-    let track = await this.createLocalTracks(_a.audio);
-    if (track) {
-      // For a VIDEO call, create the camera track deterministically here.
-      // Kept SEPARATE from the audio request above so a camera failure
-      // (denied/busy/no device) can't reject the whole getUserMedia and kill an
-      // otherwise-fine audio call — but done BEFORE bindConferenceRoom so the
-      // track lands in localTracks.video and rides the initial Jingle offer
-      // (onConnectionSuccess adds it pre-join → self-view + the peer both get it
-      // immediately). Previously the camera was only ever created by the racy
-      // DEVICE_LIST_CHANGED path, so a video call frequently came up showing just
-      // the avatar with no self-view and no video sent to the remote.
-      if (this.isVideo) {
-        try {
-          await this.createLocalTracks(_a.video, "default", { silent: 1 });
-        } catch (e) {
-          this.warn("startup camera failed; continuing audio-only", e);
-          this.isVideo = false;
-          if (this.__ctrlVideo) this.__ctrlVideo.setState(0);
-          this.toggleAvatarVideo(1, 0);
-        }
-      }
-      this.bindConferenceRoom(room)
-        .then(() => {
-          this.postOnlineState();
-        })
-        .catch((e) => {
-          this.stateMessage(LOCALE.INTERNAL_ERROR);
-          this.warn("ERROR:[133]:", e);
-        });
-    } else {
+    // Acquire local media and open the XMPP signaling connection IN PARALLEL
+    // (they were strictly serialized: getUserMedia audio → getUserMedia video
+    // → connect — each step hundreds of ms to seconds). The tracks-before-join
+    // ordering contract is preserved: onConnectionSuccess awaits
+    // _startupTracks before initJitsiConference/join, so local tracks still
+    // ride the initial Jingle offer and a media failure still aborts the join
+    // (via _startupMediaFailed).
+    this._startupTracks = this._createStartupTracks();
+    this.bindConferenceRoom(room)
+      .then(() => {
+        this.postOnlineState();
+      })
+      .catch((e) => {
+        this.stateMessage(LOCALE.INTERNAL_ERROR);
+        this.warn("ERROR:[133]:", e);
+      });
+    // Rejection (mic denied) propagates to the caller exactly like the old
+    // serialized `await createLocalTracks(audio)` did.
+    let track = await this._startupTracks;
+    if (!track) {
       this.stateMessage(LOCALE.DEVICES_PERMISSION_DENIED);
     }
+  }
+
+  /**
+   * Startup local-media acquisition.
+   * Video call: request mic+camera in a SINGLE getUserMedia instead of two
+   * serialized acquisitions (the camera alone often takes ~1s to spin up).
+   * If the combined request fails (camera denied/busy/missing), fall back to
+   * the audio-only request so a camera problem still can't kill an
+   * otherwise-fine audio call — the same resilience the old two-step flow
+   * had, but the failure path is now the only path that pays for two
+   * round trips. The tracks land in localTracks.* before join (see
+   * onConnectionSuccess) so self-view + the peer get them immediately.
+   */
+  async _createStartupTracks() {
+    let tracks = null;
+    if (this.isVideo) {
+      try {
+        tracks = await this.createLocalTracks(
+          [_a.audio, _a.video],
+          "default",
+          { silent: 1 }
+        );
+      } catch (e) {
+        this.warn("startup camera+mic failed; retrying audio-only", e);
+        this.isVideo = false;
+        if (this.__ctrlVideo) this.__ctrlVideo.setState(0);
+        this.toggleAvatarVideo(1, 0);
+      }
+    }
+    if (!tracks || !tracks.length) {
+      try {
+        tracks = await this.createLocalTracks(_a.audio);
+      } catch (e) {
+        this._startupMediaFailed = 1;
+        throw e;
+      }
+    }
+    if (!tracks || !tracks.length) this._startupMediaFailed = 1;
+    return tracks;
   }
 
   /**
@@ -557,29 +635,24 @@ class __webrtc_room extends __room {
    * 
    */
   attachLocalEndpoint(track) {
-    // Only the local AUDIO track drives the sound analyzer + mic control.
-    // onStreamReceived calls this for EVERY local track added — including the
-    // desktop track that screen share adds. Without this guard the block below
-    // force-reset the mic control to unmuted, flipping a muted mic back on when
-    // the user started sharing their screen.
+    // Only the local AUDIO track drives the sound analyzer.
     if (track && typeof track.getType === "function" &&
         track.getType() !== _a.audio) {
       return;
     }
     this.getLocalParts().then((parts) => {
-      let { sound, audio } = parts;
+      let { sound } = parts;
       sound.plug(track.stream);
     });
 
-    this.ensurePart("ctrl-audio").then((p) => {
-      if (track.isMuted()) {
-        p.setState(1);
-        p.el.dataset.muted = "0";
-      } else {
-        p.setState(1);
-        p.el.dataset.muted = "0";
-      }
-    });
+    // NOTE: deliberately does NOT set the mic control state here. This runs on
+    // EVERY local TRACK_ADDED — including the renegotiation Jitsi performs when
+    // a second participant joins — and re-deriving mic state from the transient
+    // event track flipped an already-muted mic pill (window-meeting__ctrl-pill
+    // mic) back to unmuted on join. The mic pill and the self-tile mic badge
+    // are owned solely by the initial render + onTrackMuteChange (real
+    // mute/unmute events), which a peer joining does not trigger — so leaving
+    // the state untouched here keeps a muted mic muted when someone joins.
   }
 
 
@@ -605,8 +678,44 @@ class __webrtc_room extends __room {
     }
 
     if (track.getVideoType() == _a.desktop) {
-      this.loadRemotePresentation(track, 1);
+      // Anchor presenterId + switch to presenter layout immediately (works for
+      // late joiners who missed START_REMOTE_SCREEN), then attach the track.
+      // Only for a LIVE track: a stopped share is MUTED, not disposed
+      // (stopLocalTrack mutes the desktop track), so a rejoiner who was absent
+      // when STOP_REMOTE_SCREEN was broadcast still receives the muted desktop
+      // track here. Entering presentation for it shows the "preparing screen"
+      // loading layout that never resolves — no frame ever arrives. Mirror the
+      // onStatsReceived isMuted() guard; a later unmute is recovered there.
+      if (!track.isMuted()) this._enterRemotePresentation(track);
       return;
+    }
+
+    // Late-join race: a remote screen-share track can arrive here BEFORE its
+    // videoType has settled to 'desktop' (lib-jitsi-meet creates the remote
+    // track, then resolves camera-vs-desktop from source signaling a beat
+    // later). The one-shot getVideoType() check above then misses it, so the
+    // late joiner falls through to the camera/tile path and never switches to
+    // presenter layout. Watch the track: if its videoType later resolves to
+    // 'desktop', enter the presentation then. _enterRemotePresentation is
+    // idempotent (guards on presenterId), so it's safe even if another path
+    // (stats catch-up) also fires.
+    if (track.getType() == _a.video) {
+      const onVideoTypeChange = () => {
+        if (this.isDestroyed() || !this.room) return;
+        if (track.getVideoType() != _a.desktop) return;
+        track.removeEventListener(
+          JEVENTS.track.TRACK_VIDEOTYPE_CHANGED,
+          onVideoTypeChange
+        );
+        // Same guard as the settled-desktop branch above: a stopped share is
+        // muted (not disposed), so don't switch a rejoiner into the presenter
+        // layout for it. Stats catch-up recovers a later unmute.
+        if (!track.isMuted()) this._enterRemotePresentation(track);
+      };
+      track.addEventListener(
+        JEVENTS.track.TRACK_VIDEOTYPE_CHANGED,
+        onVideoTypeChange
+      );
     }
 
     // Let remote-user widgets attach without waiting for ENDPOINT_STATS_RECEIVED.
@@ -775,6 +884,15 @@ class __webrtc_room extends __room {
     this.stateMessage();
     this.__ctrlScreen.el.dataset.muted = 1;
     this.responsive("presenter");
+    // Show the full-window "preparing screen" loading overlay on the meeting
+    // shell until the shared screen's first frame arrives (onRemoteScreenStart
+    // clears it). The branded caption names the presenter when we know them.
+    if (this._setShellPreparing) {
+      this._setShellPreparing(
+        1,
+        args.username ? LOCALE.X_SCREEN_PREPARING.format(args.username) : null
+      );
+    }
     if (args.username) {
       this.__presenter.feed([
         Skeletons.Note({
@@ -851,7 +969,9 @@ class __webrtc_room extends __room {
       if (!this._joining) this.stateMessage("waiting");
     }
     this.stateMessage(
-      LOCALE.X_HAS_JOINED_MEETING.format(participant.getDisplayName(), ""),
+      this.service_class === "connect"
+        ? LOCALE.X_HAS_JOINED_CALL.format(participant.getDisplayName())
+        : LOCALE.X_HAS_JOINED_MEETING.format(participant.getDisplayName(), ""),
       3000
     );
     this.__participants.append(
@@ -955,19 +1075,48 @@ class __webrtc_room extends __room {
   }
 
   /**
+   * Enter presenter mode from a remote DESKTOP track — the late-joiner /
+   * lost-broadcast path. A participant who joins after START_REMOTE_SCREEN was
+   * broadcast never sets presenterId, so relying on the broadcast (or on the
+   * video's onloadeddata) leaves them stuck in grid layout. This mirrors the
+   * START_REMOTE_SCREEN handler: anchor presenterId, switch the layout
+   * immediately (prepareRemoteScreen), and attach the track. Idempotent —
+   * prepareRemoteScreen only runs when the presenter actually changes.
+   */
+  _enterRemotePresentation(track) {
+    const pid = track && track.getParticipantId();
+    if (!pid) return;
+    if (this.presenterId !== pid) {
+      this.presenterId = pid;
+      const tile = this.__participants &&
+        this.__participants.getItemsByAttr("participant_id", pid)[0];
+      this.prepareRemoteScreen({
+        id: pid,
+        room_id: this.mget(_a.room_id),
+        username: tile && tile.mget(_a.username),
+      });
+    }
+    this.loadRemotePresentation(track, 1);
+  }
+
+  /**
    * In case where the event were lost, catch up from stat
    */
   onStatsReceived(p) {
     if (this.presentation && !this.presentation.isDestroyed()) return;
     for (let t of p.getTracks()) {
       if (t.getVideoType() != _a.desktop) continue;
-      if (!this.presenterId) continue;
-      if (t.getParticipantId() != this.presenterId) continue;
+      // Recover the presentation from the desktop track ITSELF — do NOT require
+      // presenterId here. A late joiner never received START_REMOTE_SCREEN, so
+      // presenterId is unset; the old `if (!this.presenterId) continue` made
+      // this catch-up path a no-op for exactly the case it exists to handle.
       if (t.isMuted()) {
-        this.presenterId = null;
-        this.onRemoteScreenStop();
+        if (this.presenterId === t.getParticipantId()) {
+          this.presenterId = null;
+          this.onRemoteScreenStop();
+        }
       } else {
-        this.loadRemotePresentation(t);
+        this._enterRemotePresentation(t);
       }
     }
   }
@@ -1037,12 +1186,13 @@ class __webrtc_room extends __room {
     this.room = null;
     this.connection = null;
     setTimeout(async () => {
-      if (room) {
-        try {
-          await room.leave();
-          await connection.disconnect();
-        } catch (e) { }
-      }
+      // Disconnect even when the room never came up (e.g. media permission
+      // denied after the XMPP connection was opened in parallel) — otherwise
+      // the signaling websocket leaks until page unload.
+      try {
+        if (room) await room.leave();
+        if (connection) await connection.disconnect();
+      } catch (e) { }
     }, 0);
     if (this.retryTimer) clearInterval(this.retryTimer);
   }
@@ -1095,15 +1245,29 @@ class __webrtc_room extends __room {
   async changeLocalVideo(state) {
     await this.sendRoomSignaling(SERVICE.conference.update);
     if (state) {
-      if (this.isSharingScreen()) {
-        this.stateMessage(LOCALE.SCREEN_BEING_SHARED, Visitor.timeout());
-        this.__ctrlVideo.setState(0);
-        return;
-      }
+      // Camera + screen run simultaneously: the camera is a SECOND video track
+      // (videoType 'camera') stored alongside the desktop track, so opening the
+      // camera while sharing is fine. (Previously an isSharingScreen() guard here
+      // blocked camera-on during a share and snapped the button back off — a stale
+      // leftover from when screen and camera were mutually exclusive.)
       this.isVideo = true;
       this.toggleAvatarVideo(0, 1);
       try {
-        await this.createLocalTracks(_a.video);
+        // Recreate the camera with the user's last confirmed device, not the
+        // implicit default — otherwise toggling the camera off/on after picking
+        // a specific camera silently reverts capture to the default device
+        // (mirrors changeLocalAudio's preferredInputDevice handling).
+        const camId = this.preferredVideoInputDevice;
+        await this.createLocalTracks(
+          _a.video,
+          "default",
+          camId ? { cameraDeviceId: camId } : {}
+        );
+        // Re-attach the background effect to the freshly created camera track.
+        if (this.bgEffect && this.bgEffect.type && this.bgEffect.type !== "none"
+            && this.applyBackgroundEffect) {
+          await this.applyBackgroundEffect();
+        }
       } catch (e) {
         this.isVideo = false;
         this.toggleAvatarVideo(1, 0);
@@ -1167,9 +1331,11 @@ class __webrtc_room extends __room {
       this.__ctrlScreen.setState(0);
       return;
     }
-    this.videoPaused = this.isVideo;
+    // Camera + screen run simultaneously: keep the camera on (don't force
+    // isVideo=false) and its toggle enabled. The screen is added as a SECOND
+    // video track — remote peers route camera → tile, desktop → presenter
+    // (see onStreamReceived), and the local self-view keeps showing the camera.
     this.stateMessage(LOCALE.PREPARING_PRESENTATION);
-    this.isVideo = false;
     await this.sendRoomSignaling(SERVICE.conference.update);
     let tracks;
     try {
@@ -1185,9 +1351,7 @@ class __webrtc_room extends __room {
       this.stateMessage("Failed to prepare screen share");
       return false;
     }
-    this.toggleAvatarVideo(1, 0);
     this.stateMessage();
-    this._setService("ctrl-video", null);
     let payload = {
       username: Visitor.fullname(),
       uid: Visitor.id,
@@ -1262,6 +1426,10 @@ class __webrtc_room extends __room {
         for (track of this.room.getLocalVideoTracks()) {
           if (track.getVideoType() == type) return track;
         }
+        // No track of this videoType — return null. (Previously fell through to
+        // getLocalVideoTrack(), which returned the CAMERA for a 'desktop' lookup
+        // and made screen-share remove the camera.)
+        return null;
       case _a.video:
         return this.room.getLocalVideoTrack();
     }
@@ -1325,6 +1493,13 @@ class __webrtc_room extends __room {
           }
           this.onRemoteScreenStop();
         }, 5000);
+        break;
+
+      case "BG_UPDATING":
+        // A peer is (un)applying a background effect — overlay their tile.
+        if (this._setRemoteTileBgLoading) {
+          this._setRemoteTileBgLoading(data.id, data.updating);
+        }
         break;
 
       case "HELLO":

@@ -1,5 +1,10 @@
 const { uploadFile } = require("@drumee/ui-essentials");
-const { markerRe, uidsFromText } = require("./mention-markers");
+const {
+  markerRe,
+  contentTokenRe,
+  imgMarker,
+  uidsFromText,
+} = require("./mention-markers");
 
 // 10-swatch column palette (Figma 2040-106090). Dot/accent color per theme;
 // the skin derives the column tint from the accent (--col-accent) and pill
@@ -16,9 +21,12 @@ const COLUMN_THEMES = {
   red: "#D74E49",
 };
 
-// Built-in columns — always present, not editable. User-created columns come
-// from the server (task.column_list) and follow these on the board; a custom
-// column's id doubles as the task.status key.
+// Built-in columns. These are the DEFAULTS the server seeds as real task_column
+// rows (with these exact ids) the first time a folder scope is opened — after
+// which they are ordinary rows: reorderable, renamable, recolourable and
+// deletable like any custom column (see getColumns). This array is used only as
+// a pre-load placeholder before task.column_list resolves; a column's id
+// doubles as the task.status key.
 const COLUMNS = [
   { key: "todo", label: "STATUS_TODO", color: "#AEAEB2", theme: "default" },
   {
@@ -40,6 +48,16 @@ const COLUMNS = [
     theme: "green",
   },
 ];
+
+// Canonical built-in ids → { locale label, seeded English name }. Used so an
+// UNTOUCHED built-in still shows a localized title, while a user-renamed one
+// shows the stored name verbatim (the seed name equals the English default).
+const BUILTIN_META = {
+  todo: { label: "STATUS_TODO", seed: "To do" },
+  in_progress: { label: "STATUS_IN_PROGRESS", seed: "In progress" },
+  to_review: { label: "STATUS_TO_REVIEW", seed: "To review" },
+  complete: { label: "STATUS_COMPLETE", seed: "Complete" },
+};
 
 // Signal palette (Figma): Success / Info / Warning / Error — must match the
 // skin's [data-priority] pill colors so dots and pills agree everywhere.
@@ -79,8 +97,16 @@ class __tasks_panel extends LetcBox {
     this._detailDraft = null;
     this._attachments = {};
     this._pickerOpen = null;
-    // Member filter — empty = show all. Uids stored as strings.
+    // Member filter — empty = show all. Uids stored as strings. Shared across
+    // every view (it drives the Assignee dimension of the List filter too).
     this._filterUids = [];
+    // List-view multi-dimension filter (Figma 2099-50501). Applies only while
+    // the List view is active; other views keep the member-only filter.
+    // priority/status hold arrays (OR within), due/files are single-select,
+    // keyword is a title substring.
+    this._filters = { keyword: "", priority: [], status: [], due: null, files: null };
+    // Accordion open-state for the List filter popup (dimension key -> bool).
+    this._filterExpanded = {};
     // Active sub-view (board | calendar | list | summary) and the List view's
     // sort state.
     this._view = "board";
@@ -96,11 +122,15 @@ class __tasks_panel extends LetcBox {
     // Custom Kanban columns (server rows {id,name,theme,position}) + the
     // "New board" modal / column-menu UI state.
     this._customColumns = [];
+    // Column keys (built-in status strings or custom column ids) this user has
+    // subscribed to via the header bell — server-backed, folder-scoped.
+    this._columnWatches = new Set();
     this._boardModalOpen = false;
     this._boardTheme = "default";
     this._boardTitle = ""; // typed board name, kept in state so a colour pick never wipes it
     this._boardDefault = true; // "Set as default" toggle (Figma default: on)
     this._colMenuFor = null; // custom column id whose menu popover is open
+    this._colRenameDraft = null; // typed draft for the rename field, kept so a re-render never wipes it
     // page/hasMore/loading drive infinite scroll of the results dropdown;
     // an empty query lists all linkable files (most-recent first), a
     // non-empty one searches — both paginate through the same procedure.
@@ -125,16 +155,19 @@ class __tasks_panel extends LetcBox {
     this._commentDraft = null; // composer buffer { body, mention_uids }
     this._editingCommentId = null;
     this._commentEditDraft = null; // inline-edit buffer { body, mention_uids }
-    this._replyingTo = null; // root comment id whose reply composer is open
+    this._replyingTo = null; // id of the comment (root or child) being replied to
     this._replyDraft = null; // reply buffer { body, mention_uids }
     this._reactPickerFor = null; // comment id whose reaction palette is open
+    this._emojiPickerFor = null; // comment id whose full emoji grid is open
     this.bindEvent(_a.live);
   }
 
   onBeforeDestroy() {
     this.unbindEvent(_a.live);
+    this._closeCommentReactionsPicker();
     if (this._fileSearchTimer) clearTimeout(this._fileSearchTimer);
     if (this._fileSearchBlurTimer) clearTimeout(this._fileSearchBlurTimer);
+    if (this._filterKwTimer) clearTimeout(this._filterKwTimer);
     if (
       this._mediaDroppableInstalled &&
       typeof $ !== "undefined" &&
@@ -166,7 +199,48 @@ class __tasks_panel extends LetcBox {
   }
 
   isFilterActive() {
-    return (this._filterUids || []).length > 0;
+    if ((this._filterUids || []).length > 0) return true;
+    if (this._view === "list") {
+      const f = this._filters || {};
+      return !!(
+        f.keyword ||
+        (f.priority && f.priority.length) ||
+        (f.status && f.status.length) ||
+        f.due ||
+        f.files
+      );
+    }
+    return false;
+  }
+
+  // Which List filter dimensions currently hold a value (drives the accordion
+  // row's "active" tick). Assignee reads the shared member filter.
+  isFilterDimActive(dim) {
+    const f = this._filters || {};
+    switch (dim) {
+      case "assignee":
+        return (this._filterUids || []).length > 0;
+      case "keyword":
+        return !!f.keyword;
+      case "priority":
+        return !!(f.priority && f.priority.length);
+      case "status":
+        return !!(f.status && f.status.length);
+      case "due":
+        return !!f.due;
+      case "files":
+        return !!f.files;
+      default:
+        return false;
+    }
+  }
+
+  getFilters() {
+    return this._filters;
+  }
+
+  isFilterCatOpen(dim) {
+    return !!(this._filterExpanded && this._filterExpanded[dim]);
   }
 
   // Let the host window reflect the active filter on its tab-bar button.
@@ -214,9 +288,11 @@ class __tasks_panel extends LetcBox {
       if (typeof this._resetFileSearch === "function") this._resetFileSearch();
     }
     if (!this.el) return; // not mounted yet — onDomRefresh loads fresh
-    Promise.all([this._loadTasks(), this._loadColumns()]).then(() =>
-      this._render(),
-    );
+    Promise.all([
+      this._loadTasks(),
+      this._loadColumns(),
+      this._loadColumnWatches(),
+    ]).then(() => this._render());
   }
 
   async onDomRefresh() {
@@ -227,6 +303,7 @@ class __tasks_panel extends LetcBox {
     await Promise.all([
       this._loadTasks(),
       this._loadColumns(),
+      this._loadColumnWatches(),
       this._loadActivity(),
       this._loadMembers(),
       this._loadLabels(),
@@ -292,7 +369,28 @@ class __tasks_panel extends LetcBox {
       return n && root.contains(n) ? n : null;
     };
 
+    // Column reorder: a draggable custom-column header (data-coldrag) starts a
+    // column drag, kept separate from the card drag below (cards live in the
+    // column body, headers don't).
+    const findColHeader = (target) => {
+      if (!target || !target.closest) target = target && target.parentElement;
+      if (!target || !target.closest) return null;
+      const n = target.closest("[data-coldrag]");
+      return n && root.contains(n) ? n : null;
+    };
+
     root.addEventListener("dragstart", (e) => {
+      const colHead = findColHeader(e.target);
+      if (colHead) {
+        this._dragColKey = colHead.dataset.coldrag;
+        const colEl = colHead.closest("[data-column]");
+        if (colEl) colEl.classList.add("is-col-dragging");
+        try {
+          e.dataTransfer.setData("text/plain", "col:" + this._dragColKey);
+          e.dataTransfer.effectAllowed = "move";
+        } catch (_) {}
+        return;
+      }
       const card = findCard(e.target);
       if (!card) return;
       const tid = card.dataset.tid;
@@ -308,6 +406,13 @@ class __tasks_panel extends LetcBox {
     });
 
     root.addEventListener("dragend", (e) => {
+      if (this._dragColKey) {
+        this._dragColKey = null;
+        this._colDropEl = null;
+        root
+          .querySelectorAll(".tasks-panel__column.is-col-dragging, .tasks-panel__column.is-col-drop")
+          .forEach((n) => n.classList.remove("is-col-dragging", "is-col-drop"));
+      }
       const card = findCard(e.target);
       if (card) card.classList.remove("is-dragging");
       this._dragTaskId = null;
@@ -315,6 +420,26 @@ class __tasks_panel extends LetcBox {
     });
 
     root.addEventListener("dragover", (e) => {
+      // Column reorder in progress → highlight the column under the pointer as
+      // the drop target; the card-reorder path below is skipped.
+      if (this._dragColKey) {
+        const colEl =
+          e.target && e.target.closest && e.target.closest("[data-column]");
+        e.preventDefault();
+        try {
+          e.dataTransfer.dropEffect = "move";
+        } catch (_) {}
+        // Track the highlighted column instead of sweeping the whole panel —
+        // dragover fires at pointer rate, so a per-event querySelectorAll
+        // over a packed board is real work.
+        const next = colEl && root.contains(colEl) ? colEl : null;
+        if (this._colDropEl !== next) {
+          if (this._colDropEl) this._colDropEl.classList.remove("is-col-drop");
+          if (next) next.classList.add("is-col-drop");
+          this._colDropEl = next;
+        }
+        return;
+      }
       // OS file drag → attach to the open task; preventDefault so the drop
       // fires on us. Takes priority over the card-reorder path.
       if (this._isFileDrag(e)) {
@@ -332,12 +457,15 @@ class __tasks_panel extends LetcBox {
       try {
         e.dataTransfer.dropEffect = "move";
       } catch (_) {}
-      root
-        .querySelectorAll(".tasks-panel__column-body.is-drop-target")
-        .forEach((n) => {
-          if (n !== col) n.classList.remove("is-drop-target");
-        });
-      col.classList.add("is-drop-target");
+      // Track the active drop column instead of querySelectorAll-ing the
+      // whole panel per event — dragover fires at pointer rate (100+/s) and
+      // a full-board subtree scan each time is measurable on packed boards.
+      if (this._dropTargetEl !== col) {
+        if (this._dropTargetEl)
+          this._dropTargetEl.classList.remove("is-drop-target");
+        this._dropTargetEl = col;
+        col.classList.add("is-drop-target");
+      }
       // Show a placeholder at the exact insertion point so the drop reads as
       // precise (Jira/Trello-style) rather than "somewhere in this column".
       // `dragover` fires far more often than the screen refreshes, and the
@@ -371,10 +499,35 @@ class __tasks_panel extends LetcBox {
       // dragleave and would otherwise strobe the outline + placeholder.
       if (col && !col.contains(e.relatedTarget)) {
         col.classList.remove("is-drop-target");
+        if (this._dropTargetEl === col) this._dropTargetEl = null;
       }
     });
 
     root.addEventListener("drop", (e) => {
+      // Column reorder drop → place the dragged column before/after the target
+      // depending on which half of it the pointer is over.
+      if (this._dragColKey) {
+        e.preventDefault();
+        const dragId = this._dragColKey;
+        // Prefer the column the dragover pass tracked — at drop time e.target is
+        // frequently a card, gap, or placeholder that has no [data-column]
+        // ancestor, so re-resolving from it misses ~half the time. Fall back to
+        // the pointer resolution only if nothing was tracked.
+        const colEl =
+          (this._colDropEl && root.contains(this._colDropEl) && this._colDropEl) ||
+          (e.target && e.target.closest && e.target.closest("[data-column]"));
+        this._dragColKey = null;
+        this._colDropEl = null;
+        root
+          .querySelectorAll(".tasks-panel__column.is-col-drop, .tasks-panel__column.is-col-dragging")
+          .forEach((n) => n.classList.remove("is-col-drop", "is-col-dragging"));
+        if (colEl && root.contains(colEl)) {
+          const rect = colEl.getBoundingClientRect();
+          const before = e.clientX < rect.left + rect.width / 2;
+          this._reorderColumn(dragId, colEl.dataset.column, before);
+        }
+        return;
+      }
       if (this._isFileDrag(e)) {
         e.preventDefault();
         delete root.dataset.fileDrag;
@@ -489,10 +642,14 @@ class __tasks_panel extends LetcBox {
   // null → append to the end of the column. Excludes the in-flight card and
   // the placeholder itself so geometry stays stable mid-drag.
   _dragAfterCard(colBody, y) {
-    const cards = Array.from(
-      colBody.querySelectorAll(".tasks-panel__task-card"),
-    ).filter((c) => !c.classList.contains("is-dragging"));
-    for (const c of cards) {
+    // Runs on every animation frame of a drag. Cards are DIRECT children of
+    // the column body, so walk children instead of querySelectorAll — the
+    // selector scan descends into every card's ~30-node subtree and was the
+    // per-frame hot spot on packed columns. Early-exits on the first hit.
+    for (const c of colBody.children) {
+      const cl = c.classList;
+      if (!cl.contains("tasks-panel__task-card")) continue;
+      if (cl.contains("is-dragging")) continue;
       const r = c.getBoundingClientRect();
       if (y < r.top + r.height / 2) return c;
     }
@@ -505,6 +662,7 @@ class __tasks_panel extends LetcBox {
     }
     this._dragOverRaf = 0;
     this._dragOverPending = null;
+    this._dropTargetEl = null;
     if (!this.el) return;
     this.el
       .querySelectorAll(".tasks-panel__column-body.is-drop-target")
@@ -651,6 +809,22 @@ class __tasks_panel extends LetcBox {
     // Two passes: read ALL new rects first, THEN write ALL transforms. Reading
     // geometry and writing styles in the same loop forces a synchronous reflow
     // per card (O(N²)) — the batched read/write split keeps it O(N).
+    //
+    // Only animate cards actually visible in their column's scrollport: a
+    // transform transition promotes each card to its own compositor layer,
+    // and dropping into a packed column rasterized every shifted card below
+    // the insertion point at once — the visible drop hitch. Offscreen cards
+    // just take their new position instantly; nobody sees the jump.
+    const vpCache = new Map();
+    const viewportOf = (el) => {
+      if (!el) return null;
+      let r = vpCache.get(el);
+      if (r === undefined) {
+        r = el.getBoundingClientRect();
+        vpCache.set(el, r);
+      }
+      return r;
+    };
     const moves = [];
     cards.forEach((c) => {
       const f = first.get(c);
@@ -658,7 +832,10 @@ class __tasks_panel extends LetcBox {
       const l = c.getBoundingClientRect();
       const dx = f.left - l.left;
       const dy = f.top - l.top;
-      if (dx || dy) moves.push({ c, dx, dy });
+      if (!dx && !dy) return;
+      const vp = viewportOf(c.parentElement);
+      if (vp && (l.bottom < vp.top || l.top > vp.bottom)) return;
+      moves.push({ c, dx, dy });
     });
     moves.forEach(({ c, dx, dy }) => {
       if (Math.abs(dx) > 8) {
@@ -836,6 +1013,69 @@ class __tasks_panel extends LetcBox {
         return this._render();
       }
 
+      case "filter-cat": {
+        // Accordion expand/collapse of a List-filter dimension — toggle in
+        // place (no re-render), so opening a section doesn't rebuild the list.
+        const dim = trigger.mget("filterDim");
+        if (!dim) return;
+        this._filterExpanded[dim] = !this._filterExpanded[dim];
+        const cat =
+          this.el &&
+          this.el.querySelector(
+            `.tasks-panel__filter-cat[data-dim="${dim}"]`,
+          );
+        if (cat) cat.dataset.open = this._filterExpanded[dim] ? "1" : "0";
+        return;
+      }
+
+      case "filter-set": {
+        // Set/toggle a value in a List-filter dimension, then re-filter.
+        const dim = trigger.mget("filterDim");
+        const val = trigger.mget("filterVal");
+        if (!dim) return;
+        const f = this._filters;
+        if (dim === "priority" || dim === "status") {
+          const arr = Array.isArray(f[dim]) ? f[dim].slice() : [];
+          const i = arr.indexOf(val);
+          if (i >= 0) arr.splice(i, 1);
+          else arr.push(val);
+          f[dim] = arr;
+        } else {
+          // Single-select (due / files): tapping the active value clears it.
+          f[dim] = f[dim] === val ? null : val;
+        }
+        this._notifyFilterState();
+        return this._render();
+      }
+
+      case "filter-keyword": {
+        // Live task-title search — debounce so fast typing doesn't rebuild the
+        // list on every keystroke.
+        this._filters.keyword =
+          args && args.value != null ? String(args.value) : "";
+        if (this._filterKwTimer) clearTimeout(this._filterKwTimer);
+        this._filterKwTimer = setTimeout(() => {
+          this._filterKwTimer = null;
+          this._notifyFilterState();
+          this._render();
+        }, 200);
+        return;
+      }
+
+      case "filter-clear": {
+        // Reset every List dimension (and the shared member filter).
+        this._filters = {
+          keyword: "",
+          priority: [],
+          status: [],
+          due: null,
+          files: null,
+        };
+        this._filterUids = [];
+        this._notifyFilterState();
+        return this._render();
+      }
+
       case "remove-task":
         return this._removeTask(trigger);
 
@@ -930,6 +1170,7 @@ class __tasks_panel extends LetcBox {
         this._replyingTo = null;
         this._replyDraft = null;
         this._reactPickerFor = null;
+        this._closeCommentReactionsPicker();
         this._resetFileSearch();
         return this._render();
 
@@ -1031,6 +1272,7 @@ class __tasks_panel extends LetcBox {
         this._boardTitle = "";
         this._boardDefault = true;
         this._colMenuFor = null;
+        this._colRenameDraft = null;
         return this._render();
 
       case "board-cancel":
@@ -1068,12 +1310,39 @@ class __tasks_panel extends LetcBox {
 
       case "col-menu": {
         const key = trigger.mget("taskColumn");
-        this._colMenuFor = this._colMenuFor === key ? null : key;
+        const opening = this._colMenuFor !== key;
+        this._colMenuFor = opening ? key : null;
+        // Seed the draft with the current name on open; clear on close.
+        this._colRenameDraft = opening
+          ? (this._customColumns.find((c) => c.id === key) || {}).name || ""
+          : null;
         return this._render();
       }
 
-      case "col-rename-submit":
+      case "col-watch-toggle":
+        return this._toggleColumnWatch(trigger);
+
+      case "col-rename-changed":
+        // Live-persist the typed name so any re-render restores it instead of
+        // clearing the field (same pattern as board-title-changed).
+        this._colRenameDraft =
+          args && args.value != null ? String(args.value) : this._colRenameDraft;
+        return;
+
+      case "col-rename-submit": {
+        // The framework fires a widget's `service` on a plain click too, not
+        // only on the Entry's Enter-commit (letc.js: el.onclick → triggerHandlers).
+        // A bare click that just focuses the name-seeded input must not
+        // submit-and-close the popover — only Enter or the Rename button should.
+        const isEntryFocusClick =
+          args &&
+          args.type === "click" &&
+          trigger &&
+          trigger.mget &&
+          trigger.mget("name") === "col_rename";
+        if (isEntryFocusClick) return;
         return this._renameColumn(trigger);
+      }
 
       case "col-theme-set":
         return this._themeColumn(trigger);
@@ -1118,11 +1387,17 @@ class __tasks_panel extends LetcBox {
       case "comment-delete":
         return this._deleteComment(trigger);
 
-      case "comment-reply":
-        this._replyingTo = trigger.mget("commentId");
+      case "comment-reply": {
+        // Toggle: clicking Reply on the comment already being answered closes the
+        // composer (the redesigned reply pill has no separate Cancel button).
+        const cid = trigger.mget("commentId");
+        this._replyingTo =
+          String(this._replyingTo) === String(cid) ? null : cid;
         this._replyDraft = null;
         this._reactPickerFor = null;
+        this._emojiPickerFor = null;
         return this._refreshCommentList();
+      }
 
       case "comment-reply-cancel":
         this._replyingTo = null;
@@ -1132,14 +1407,30 @@ class __tasks_panel extends LetcBox {
       case "comment-reply-submit":
         return this._submitReply();
 
-      case "comment-react":
-        return this._toggleReaction(trigger);
+      case "comment-mention-insert":
+        return this._insertMentionTrigger(trigger.mget("mentionScope"));
+
+      case "comment-react-add":
+        return this._addReaction(
+          trigger.mget("commentId"),
+          trigger.mget("emoji"),
+        );
+
+      case "comment-react-remove":
+        return this._removeReaction(
+          trigger.mget("commentId"),
+          trigger.mget("emoji"),
+        );
 
       case "comment-react-toggle": {
         const cid = trigger.mget("commentId");
         this._reactPickerFor = this._reactPickerFor === cid ? null : cid;
+        this._emojiPickerFor = null;
         return this._refreshCommentList();
       }
+
+      case "comment-react-more":
+        return this._toggleCommentReactionsPicker(trigger);
 
       case "file-search-input":
         return this._scheduleFileSearch(trigger);
@@ -1349,6 +1640,51 @@ class __tasks_panel extends LetcBox {
       this._customColumns = Array.isArray(rows) ? rows : [];
     } catch (err) {
       this._customColumns = [];
+    }
+  }
+
+  // Load which columns the user has the bell on for, in this folder scope.
+  async _loadColumnWatches() {
+    try {
+      const rows = await this.fetchService({
+        service: SERVICE.task.column_watch_list,
+        hub_id: this._hubId,
+        nid: this._scopeNid,
+      });
+      this._columnWatches = new Set((Array.isArray(rows) ? rows : []).map(String));
+    } catch (err) {
+      this._columnWatches = new Set();
+    }
+  }
+
+  isColumnWatched(key) {
+    return this._columnWatches.has(String(key));
+  }
+
+  // Bell toggle in a column header — subscribe/unsubscribe to change-notifications
+  // for that column. Flips the bell in place (no re-render) then persists.
+  async _toggleColumnWatch(trigger) {
+    const key = trigger && trigger.mget("taskColumn");
+    if (!key) return;
+    const k = String(key);
+    const on = !this._columnWatches.has(k);
+    if (on) this._columnWatches.add(k);
+    else this._columnWatches.delete(k);
+    if (trigger.el) trigger.el.dataset.active = on ? "1" : "0";
+    try {
+      await this.postService({
+        service: on
+          ? SERVICE.task.column_watch_set
+          : SERVICE.task.column_watch_unset,
+        hub_id: this._hubId,
+        nid: this._scopeNid,
+        column_key: k,
+      });
+    } catch (err) {
+      // Revert the optimistic flip on failure.
+      if (on) this._columnWatches.delete(k);
+      else this._columnWatches.add(k);
+      if (trigger.el) trigger.el.dataset.active = on ? "0" : "1";
     }
   }
 
@@ -1793,15 +2129,24 @@ class __tasks_panel extends LetcBox {
     this._render();
   }
 
-  // List-view checkbox — toggle a task between complete and todo. Optimistic:
-  // flip locally + re-render, persist via update_status, reconcile/revert on
-  // the response. Mirrors the drag-to-column status flow.
+  // List-view checkbox — toggle a task between a done and a not-done column.
+  // Completion is column-driven (is_done), not the literal "complete" key, so
+  // pick the target from the actual columns: checking moves to the first done
+  // column, unchecking to the first not-done column. Optimistic: flip locally +
+  // re-render, persist via update_status, reconcile/revert on the response.
   async _toggleComplete(trigger) {
     const id = trigger.mget("taskId");
     const task = this._tasks.find((t) => t.id === id);
     if (!task) return;
     const originalStatus = task.status;
-    const next = originalStatus === "complete" ? "todo" : "complete";
+    const cols = this.getColumns();
+    const target = this.isDoneStatus(originalStatus)
+      ? cols.find((c) => !c.is_done)
+      : cols.find((c) => c.is_done);
+    // No valid destination (e.g. no done column exists on this board) — nothing
+    // sensible to toggle to.
+    if (!target || target.key === originalStatus) return;
+    const next = target.key;
     task.status = next;
     this._render();
     try {
@@ -2027,6 +2372,7 @@ class __tasks_panel extends LetcBox {
     this._replyingTo = null;
     this._replyDraft = null;
     this._reactPickerFor = null;
+    this._emojiPickerFor = null;
     // Re-fetch folder filenames so collision preview (a → a(1)) reflects
     // the folder's current state.
     this._folderFilenames = null;
@@ -2084,7 +2430,11 @@ class __tasks_panel extends LetcBox {
     const input =
       this.el &&
       this.el.querySelector('.tasks-panel__col-menu input[name="col_rename"]');
-    const name = input ? String(input.value || "").trim() : "";
+    // Live DOM value is authoritative; fall back to the draft if the input
+    // was already torn down by a re-render.
+    const name = String(
+      input ? input.value || "" : this._colRenameDraft || "",
+    ).trim();
     if (!name) return;
     try {
       await this.postService({
@@ -2099,6 +2449,7 @@ class __tasks_panel extends LetcBox {
       console.error("[tasks_panel] column.rename failed:", err);
     }
     this._colMenuFor = null;
+    this._colRenameDraft = null;
     this._render();
   }
 
@@ -2132,13 +2483,48 @@ class __tasks_panel extends LetcBox {
       });
       const row = Array.isArray(resp) ? resp[0] : resp;
       this._customColumns = this._customColumns.filter((c) => c.id !== id);
-      // The server moves the column's tasks back to 'todo' — refresh when any.
+      // The server re-homes the column's tasks onto the first surviving column
+      // — refresh when any moved.
       if (row && Number(row.moved_tasks) > 0) await this._loadTasks();
     } catch (err) {
       console.error("[tasks_panel] column.delete failed:", err);
     }
     this._colMenuFor = null;
+    this._colRenameDraft = null;
     this._render();
+  }
+
+  // Drag-reorder columns. dragId/targetKey are column keys; `before` says which
+  // side of the target to drop on. All columns (built-in + custom) are stored
+  // rows in _customColumns now, so any can move. Optimistic + persisted.
+  _reorderColumn(dragId, targetKey, before) {
+    const cc = this._customColumns || [];
+    const from = cc.findIndex((c) => String(c.id) === String(dragId));
+    if (from < 0) return; // unknown column — nothing to reorder
+    if (String(dragId) === String(targetKey)) return;
+    const [moved] = cc.splice(from, 1);
+    let to = cc.findIndex((c) => String(c.id) === String(targetKey));
+    if (to < 0) to = 0; // target not found → front (defensive; shouldn't happen)
+    else if (!before) to += 1;
+    cc.splice(to, 0, moved);
+    cc.forEach((c, i) => (c.position = i));
+    this._render();
+    this._persistColumnOrder();
+  }
+
+  // Persist the custom-column order (best-effort; the in-session reorder holds
+  // even if the server lacks task.column_reorder yet).
+  async _persistColumnOrder() {
+    try {
+      await this.postService({
+        service: SERVICE.task.column_reorder,
+        hub_id: this._hubId,
+        nid: this._scopeNid,
+        order: (this._customColumns || []).map((c) => c.id).join(","),
+      });
+    } catch (err) {
+      console.error("[tasks_panel] column.reorder failed:", err);
+    }
   }
 
   // Gantt "Delete selected" — bulk-delete the checked tasks, then clear the
@@ -2279,11 +2665,27 @@ class __tasks_panel extends LetcBox {
   }
 
   async _submitReply() {
-    const rootId = this._replyingTo;
-    if (!rootId || !this._detailId) return;
+    const clickedId = this._replyingTo;
+    if (!clickedId || !this._detailId) return;
     const draft = this._replyDraft;
     const body = String((draft && draft.body) || "").trim();
     if (!body) return;
+    // A reply may target a root or a child. Flatten it to a sibling under the
+    // root (parent_id = root) so threads stay 1-level, mirroring the skeleton's
+    // orphan fallback (a reply whose parent is gone counts as its own root).
+    // When answering a child, also notify that child's author — the backend
+    // only auto-notifies the parent_id (root) author.
+    const ids = new Set((this._comments || []).map((c) => String(c.id)));
+    const clicked = (this._comments || []).find(
+      (c) => String(c.id) === String(clickedId),
+    );
+    const repliesToChild =
+      !!clicked && !!clicked.parent_id && ids.has(String(clicked.parent_id));
+    const rootId = repliesToChild ? clicked.parent_id : clickedId;
+    const mentions = Array.isArray(draft.mention_uids)
+      ? draft.mention_uids.slice()
+      : [];
+    if (repliesToChild && clicked.author_uid) mentions.push(clicked.author_uid);
     const taskId = this._detailId;
     try {
       await this.postService({
@@ -2292,7 +2694,7 @@ class __tasks_panel extends LetcBox {
         task_id: taskId,
         parent_id: rootId,
         body,
-        mention_uids: Array.isArray(draft.mention_uids) ? draft.mention_uids : [],
+        mention_uids: [...new Set(mentions)],
       });
       this._replyingTo = null;
       this._replyDraft = null;
@@ -2303,12 +2705,67 @@ class __tasks_panel extends LetcBox {
     if (this._detailId === taskId) this._refreshCommentList();
   }
 
-  async _toggleReaction(trigger) {
-    const commentId = trigger.mget("commentId");
-    const emoji = trigger.mget("emoji");
+  // True when the current user already has this emoji on the comment.
+  _userHasReaction(commentId, emoji) {
+    const c = (this._comments || []).find(
+      (x) => String(x.id) === String(commentId),
+    );
+    return !!(
+      c &&
+      (c.reactions || []).some(
+        (r) => r && r.emoji === emoji && String(r.uid) === String(Visitor.id),
+      )
+    );
+  }
+
+  // Add-only (like button + reaction picker). If the user already has this
+  // emoji, don't toggle it off — instead close the pickers and flash the
+  // existing chip so it's clear the reaction is already there.
+  _addReaction(commentId, emoji) {
+    if (!commentId || !emoji) return;
+    if (this._userHasReaction(commentId, emoji)) {
+      this._reactPickerFor = null;
+      this._closeCommentReactionsPicker();
+      this._refreshCommentList().then(() =>
+        this._flashReactionChip(commentId, emoji),
+      );
+      return;
+    }
+    return this._reactOnComment(commentId, emoji);
+  }
+
+  // Briefly highlight a comment's existing reaction chip (feedback when the
+  // user re-picks an emoji they've already reacted with).
+  _flashReactionChip(commentId, emoji) {
+    if (!this.el) return;
+    const pfx = this.fig.family;
+    const sel = `.${pfx}__detail-panel .${pfx}__react-chip[data-comment-id="${commentId}"][data-emoji="${emoji}"]`;
+    const chip = this.el.querySelector(sel);
+    if (!chip) return;
+    const cls = `${pfx}__react-chip--flash`;
+    chip.classList.remove(cls);
+    // reflow so re-adding the class restarts the animation
+    void chip.offsetWidth;
+    chip.classList.add(cls);
+    setTimeout(() => chip.classList.remove(cls), 900);
+  }
+
+  // Remove-only (chip click): drop the user's own reaction. Non-own chips are
+  // rendered non-clickable, so this only fires for the user's own reactions.
+  _removeReaction(commentId, emoji) {
+    if (!commentId || !emoji) return;
+    if (!this._userHasReaction(commentId, emoji)) return;
+    return this._reactOnComment(commentId, emoji);
+  }
+
+  // Send one comment-react toggle to the server, then reload + refresh. Callers
+  // (_addReaction / _removeReaction) guard the direction so this only ever adds
+  // or only ever removes.
+  async _reactOnComment(commentId, emoji) {
     if (!commentId || !emoji || !this._detailId) return;
     const taskId = this._detailId;
     this._reactPickerFor = null;
+    this._emojiPickerFor = null;
     try {
       await this.postService({
         service: SERVICE.task.comment_react,
@@ -2322,6 +2779,89 @@ class __tasks_panel extends LetcBox {
       console.error("[tasks_panel] comment react failed:", err);
     }
     if (this._detailId === taskId) this._refreshCommentList();
+  }
+
+  // ── Full emoji picker (comment "…" more button) ────────────────
+  // Modeled on the meeting reactions picker (builtins/webrtc/reactions.js):
+  // the shared assets/emojis picker is fed into the __wrapperReactions wrapper,
+  // positioned below the open react bar, and dismissed via a capture-phase
+  // click handler that also captures the emoji pick.
+  _toggleCommentReactionsPicker(trigger) {
+    const w = this.__wrapperReactions;
+    if (!w) return;
+    if (w.isEmpty()) {
+      this._emojiPickerFor = trigger.mget("commentId");
+      w.feed(require("assets/emojis")(this));
+      this._positionCommentReactionsPicker();
+      this._bindCommentReactionsPickerDismiss();
+    } else {
+      this._closeCommentReactionsPicker();
+    }
+  }
+
+  // Anchor the picker directly above the "…" more button, left-aligned with it,
+  // relative to the position:relative detail-panel (the wrapper's positioned
+  // ancestor). Anchored by `bottom` so its height doesn't need measuring.
+  _positionCommentReactionsPicker() {
+    const w = this.__wrapperReactions;
+    const pfx = this.fig.family;
+    if (!w || !w.el || !this.el) return;
+    const more = this.el.querySelector(`.${pfx}__react-more`);
+    const host = this.el.querySelector(`.${pfx}__detail-panel`);
+    if (!more || !host) return;
+    const b = more.getBoundingClientRect();
+    const h = host.getBoundingClientRect();
+    w.el.style.top = "auto";
+    w.el.style.bottom = `${Math.round(h.bottom - b.top + 8)}px`;
+    w.el.style.left = `${Math.round(b.left - h.left)}px`;
+  }
+
+  // Capture-phase: a glyph click reacts (and swallows the event so the picker
+  // stays put); a click inside the picker or the react bar is kept; anything
+  // else is a true outside click that dismisses. Bound on the next tick so the
+  // "…" click that opened it doesn't immediately dismiss it.
+  _bindCommentReactionsPickerDismiss() {
+    if (this._commentPickerDismiss) return;
+    this._commentPickerDismiss = (e) => {
+      const w = this.__wrapperReactions;
+      if (!w || w.isEmpty() || !w.el) {
+        this._closeCommentReactionsPicker();
+        return;
+      }
+      const t = e.target;
+      if (w.el.contains(t)) {
+        const span = t.closest && t.closest('[data-service="emoji"]');
+        if (span) {
+          e.stopImmediatePropagation();
+          e.preventDefault();
+          const cid = this._emojiPickerFor;
+          const glyph = span.textContent && span.textContent.trim();
+          this._closeCommentReactionsPicker();
+          this._addReaction(cid, glyph);
+        }
+        return;
+      }
+      const bar =
+        this.el && this.el.querySelector(`.${this.fig.family}__react-picker-wrap`);
+      if (bar && bar.contains(t)) return;
+      this._closeCommentReactionsPicker();
+    };
+    setTimeout(() => {
+      if (this._commentPickerDismiss) {
+        document.addEventListener("click", this._commentPickerDismiss, true);
+      }
+    }, 0);
+  }
+
+  _closeCommentReactionsPicker() {
+    if (this._commentPickerDismiss) {
+      document.removeEventListener("click", this._commentPickerDismiss, true);
+      this._commentPickerDismiss = null;
+    }
+    this._emojiPickerFor = null;
+    if (this.__wrapperReactions && !this.__wrapperReactions.isEmpty()) {
+      this.__wrapperReactions.clear();
+    }
   }
 
   // Read-only render of each comment body into its <div> (reuses the editor's
@@ -2341,7 +2881,7 @@ class __tasks_panel extends LetcBox {
   // Surgical comment-feed refresh (no full _render) so a peer's WS comment
   // doesn't disturb an in-progress composer. Mirrors _refreshAttachmentsList.
   _refreshCommentList() {
-    this.ensurePart("comment-list")
+    return this.ensurePart("comment-list")
       .then((p) => {
         if (!p || (p.isDestroyed && p.isDestroyed())) return;
         p.feed(require("./skeleton").buildCommentListContent(this));
@@ -2571,9 +3111,13 @@ class __tasks_panel extends LetcBox {
   }
 
   async onUploadResponse(data) {
-    // _commit scope is resolved directly in _uploadPendingFile via the xhr
-    // listener — skip the global handler so we don't double-link.
-    if (this._pendingUploadScope === "_commit") return;
+    // _commit / _inline scopes are resolved directly via their xhr readystate
+    // listeners — skip the global handler so we don't double-link.
+    if (
+      this._pendingUploadScope === "_commit" ||
+      this._pendingUploadScope === "_inline"
+    )
+      return;
     this._pendingUploadScope = null;
 
     const taskId = this._pendingLinkTaskId;
@@ -3304,6 +3848,31 @@ class __tasks_panel extends LetcBox {
     return t && this.el && this.el.querySelector(t.editorSelector);
   }
 
+  // "@" toolbar button: focus the scope's editor, insert an "@" at the caret
+  // (or at the end if the caret isn't inside it), then run the normal mention
+  // flow so the popup opens — same path as typing "@".
+  _insertMentionTrigger(scope) {
+    const editorEl = this._descEditorEl(scope);
+    if (!editorEl) return;
+    // Clicking the button blurs the editor, which scheduled a _closeMention;
+    // cancel it so the popup we open below stays open.
+    if (this._mentionCloseTimer) {
+      clearTimeout(this._mentionCloseTimer);
+      this._mentionCloseTimer = null;
+    }
+    editorEl.focus();
+    const sel = window.getSelection();
+    if (!sel.rangeCount || !editorEl.contains(sel.anchorNode)) {
+      const range = document.createRange();
+      range.selectNodeContents(editorEl);
+      range.collapse(false); // caret at end
+      sel.removeAllRanges();
+      sel.addRange(range);
+    }
+    document.execCommand("insertText", false, "@");
+    this._onDescInput(scope, editorEl);
+  }
+
   // Build a contenteditable=false chip node for a mention.
   _makeMentionChip(uid, name) {
     const chip = document.createElement("span");
@@ -3315,22 +3884,64 @@ class __tasks_panel extends LetcBox {
     return chip;
   }
 
-  // Render stored marker text into the editor as text nodes + chip spans.
+  // Served URL for an inline image node (mirrors _attachmentPreview's endpoint
+  // logic; "orig" so the pasted image renders full-resolution inline).
+  _imageUrlForNid(nid, hub) {
+    const h = hub || this._hubId;
+    const b = (typeof bootstrap === "function" && bootstrap()) || {};
+    const endpoint = b.endpoint || "";
+    let url = `${endpoint}file/orig/${nid}/${h}`;
+    if (b.keysel) url += `?keysel=${b.keysel}`;
+    return url;
+  }
+
+  // Build an inline image node. In an editable editor it's a resizable wrapper
+  // (contenteditable=false span with a native CSS resize handle); on read-only
+  // surfaces (comment bodies) it's a plain, non-resizable <img>.
+  _makeInlineImage(nid, hub, width, editable) {
+    const img = document.createElement("img");
+    img.src = this._imageUrlForNid(nid, hub);
+    img.setAttribute("draggable", "false");
+    img.alt = "";
+    if (!editable) {
+      img.className = `${this.fig.family}__inline-img-static`;
+      if (width) img.style.width = `${width}px`;
+      return img;
+    }
+    const wrap = document.createElement("span");
+    wrap.className = `${this.fig.family}__inline-img`;
+    wrap.setAttribute("contenteditable", "false");
+    wrap.dataset.nid = String(nid);
+    if (hub) wrap.dataset.hub = String(hub);
+    if (width) wrap.style.width = `${width}px`;
+    wrap.appendChild(img);
+    return wrap;
+  }
+
+  // Render stored marker text into the editor as text nodes, chip spans, and
+  // inline images.
   _renderEditorContent(editorEl, markerText) {
     editorEl.textContent = "";
     const text = String(markerText || "");
+    const editable = editorEl.getAttribute("contenteditable") === "true";
     const appendText = (str) => {
       str.split("\n").forEach((part, i) => {
         if (i > 0) editorEl.appendChild(document.createElement("br"));
         if (part) editorEl.appendChild(document.createTextNode(part));
       });
     };
-    const re = markerRe();
+    const re = contentTokenRe();
     let last = 0;
     let m;
     while ((m = re.exec(text))) {
       if (m.index > last) appendText(text.slice(last, m.index));
-      editorEl.appendChild(this._makeMentionChip(m[2], m[1]));
+      if (m[2] != null) {
+        editorEl.appendChild(this._makeMentionChip(m[2], m[1]));
+      } else if (m[3] != null) {
+        editorEl.appendChild(
+          this._makeInlineImage(m[3], m[4], m[5], editable),
+        );
+      }
       last = re.lastIndex;
     }
     if (last < text.length) appendText(text.slice(last));
@@ -3340,6 +3951,7 @@ class __tasks_panel extends LetcBox {
   // boundaries become newlines.
   _serializeEditor(editorEl) {
     const chipClass = `${this.fig.family}__mention-chip`;
+    const imgClass = `${this.fig.family}__inline-img`;
     let out = "";
     const walk = (node) => {
       node.childNodes.forEach((n) => {
@@ -3350,6 +3962,9 @@ class __tasks_panel extends LetcBox {
             const uid = n.dataset.uid;
             const name = n.dataset.name || n.textContent.replace(/^@/, "");
             out += `[@${name}](user:${uid})`;
+          } else if (n.classList && n.classList.contains(imgClass)) {
+            const w = parseInt(n.style.width, 10) || 0;
+            out += imgMarker(n.dataset.nid, n.dataset.hub, w || undefined);
           } else if (n.tagName === "BR") {
             out += "\n";
           } else if (n.tagName === "DIV") {
@@ -3394,15 +4009,125 @@ class __tasks_panel extends LetcBox {
     }
     editorEl.oninput = () => this._onDescInput(scope, editorEl);
     editorEl.onkeydown = (e) => this._onDescKeydown(e, scope);
-    editorEl.onblur = () => setTimeout(() => this._closeMention(), 150);
+    // Store the timer so the "@" toolbar button can cancel it — clicking the
+    // button blurs the editor, which would otherwise close the popup we're about
+    // to open (see _insertMentionTrigger).
+    editorEl.onblur = () => {
+      this._mentionCloseTimer = setTimeout(() => this._closeMention(), 150);
+    };
+    editorEl.onpaste = (e) => this._onEditorPaste(e, scope, editorEl);
+  }
+
+  // Intercept paste of a clipboard image (screenshot / copied external image):
+  // upload it, then insert a resizable inline image at the caret. Non-image
+  // pastes fall through to the browser's default text paste.
+  _onEditorPaste(e, scope, editorEl) {
+    const dt = e.clipboardData;
+    if (!dt) return;
+    let file = null;
+    const items = dt.items || [];
+    for (let i = 0; i < items.length; i++) {
+      const it = items[i];
+      if (it.kind === "file" && /^image\//.test(it.type || "")) {
+        file = it.getAsFile();
+        break;
+      }
+    }
+    if (!file) return; // let the default text/HTML paste proceed
+    e.preventDefault();
+    // Capture the caret now — the async upload would otherwise lose it.
+    const sel = window.getSelection();
+    let range = null;
+    if (sel && sel.rangeCount && editorEl.contains(sel.anchorNode)) {
+      range = sel.getRangeAt(0).cloneRange();
+    }
+    this._insertPastedImage(file, scope, editorEl, range);
+  }
+
+  async _insertPastedImage(file, scope, editorEl, range) {
+    let res;
+    try {
+      res = await this._uploadInlineImage(file);
+    } catch (err) {
+      console.error("[tasks_panel] inline image upload failed:", err);
+      return;
+    }
+    if (!editorEl.isConnected) return;
+    const node = this._makeInlineImage(res.nid, res.hub, null, true);
+    if (range && editorEl.contains(range.startContainer)) {
+      range.deleteContents();
+      range.insertNode(node);
+      range.setStartAfter(node);
+      range.collapse(true);
+      const sel = window.getSelection();
+      sel.removeAllRanges();
+      sel.addRange(range);
+    } else {
+      editorEl.appendChild(node);
+    }
+    // Pasted images default to a small size (still resizable up via the handle).
+    // Cap at the image's natural width so a small image isn't upscaled, then
+    // re-sync so the width is stored in the draft marker.
+    const DEFAULT_W = 220;
+    const img = node.querySelector && node.querySelector("img");
+    const applySmall = () => {
+      if (!node.isConnected) return;
+      const nat = img && img.naturalWidth ? img.naturalWidth : DEFAULT_W;
+      node.style.width = `${Math.min(DEFAULT_W, nat)}px`;
+      this._onDescInput(scope, editorEl);
+    };
+    if (img && img.complete && img.naturalWidth) applySmall();
+    else if (img) img.addEventListener("load", applySmall, { once: true });
+    else node.style.width = `${DEFAULT_W}px`;
+    // Sync the draft from the mutated editor (initial; width sync follows onload).
+    this._onDescInput(scope, editorEl);
+  }
+
+  // Promise-wrapped upload for a raw clipboard image File. Tags scope so the
+  // global onUploadResponse skips it (resolved here via the readystate listener).
+  _uploadInlineImage(file) {
+    return new Promise((resolve, reject) => {
+      this._pendingUploadScope = "_inline";
+      const params = { hub_id: this._hubId, nid: this._destNid };
+      let xhr;
+      try {
+        xhr = this.uploadFile(file, params);
+      } catch (e) {
+        this._pendingUploadScope = null;
+        return reject(e);
+      }
+      if (!xhr) {
+        this._pendingUploadScope = null;
+        return reject(new Error("upload failed to start"));
+      }
+      xhr.addEventListener("readystatechange", () => {
+        if (xhr.readyState !== 4) return;
+        this._pendingUploadScope = null;
+        if (xhr.status >= 200 && xhr.status < 300) {
+          try {
+            const { data } = JSON.parse(xhr.responseText);
+            const nid = data?.nid || data?.id;
+            if (!nid) return reject(new Error("no nid in upload response"));
+            resolve({ nid, hub: data?.hub_id || this._hubId });
+          } catch (err) {
+            reject(err);
+          }
+        } else {
+          reject(new Error(`upload http ${xhr.status}`));
+        }
+      });
+    });
   }
 
   _onDescInput(scope, editorEl) {
     // Browsers leave a stray <br> when the field is cleared, which defeats the
-    // :empty placeholder — strip it back to truly empty.
+    // :empty placeholder — strip it back to truly empty. But an image-only
+    // editor has no text content, so guard on chips AND inline images too,
+    // otherwise a freshly pasted (text-less) image would be wiped here.
     if (
       !editorEl.textContent.trim() &&
-      !editorEl.querySelector(`.${this.fig.family}__mention-chip`)
+      !editorEl.querySelector(`.${this.fig.family}__mention-chip`) &&
+      !editorEl.querySelector(`.${this.fig.family}__inline-img`)
     ) {
       editorEl.innerHTML = "";
     }
@@ -3812,19 +4537,45 @@ class __tasks_panel extends LetcBox {
   // (LOCALE for built-ins, user text for customs), `color` the accent hex,
   // `theme` the palette key driving pill tints, `custom` marks editability.
   getColumns() {
-    const builtins = COLUMNS.map((c) => ({
-      ...c,
-      name: LOCALE[c.label] || c.key,
-    }));
-    const customs = (this._customColumns || []).map((r) => ({
-      key: r.id,
-      label: "",
-      name: r.name || "",
-      theme: COLUMN_THEMES[r.theme] ? r.theme : "default",
-      color: COLUMN_THEMES[r.theme] || COLUMN_THEMES.default,
-      custom: 1,
-    }));
-    return builtins.concat(customs);
+    const rows = this._customColumns || [];
+    // Before column_list resolves there are no rows yet — show the built-in
+    // defaults as non-editable placeholders so the board isn't momentarily
+    // empty. Once the server seeds + returns rows, every column is editable.
+    if (!rows.length) {
+      return COLUMNS.map((c, i) => ({
+        key: c.key,
+        name: LOCALE[c.label] || c.key,
+        theme: c.theme,
+        color: COLUMN_THEMES[c.theme] || COLUMN_THEMES.default,
+        is_done: c.key === "complete" ? 1 : 0,
+        position: i,
+        custom: 0, // placeholder — no DB row to reorder/rename/delete yet
+      }));
+    }
+    // All columns (built-in + custom) are stored rows now, so all are uniformly
+    // editable. A built-in id left at its seeded English name shows a localized
+    // title; a renamed one shows the stored name.
+    return rows.map((r) => {
+      const bi = BUILTIN_META[r.id];
+      const name = bi && r.name === bi.seed ? LOCALE[bi.label] || r.name : r.name || "";
+      return {
+        key: r.id,
+        name,
+        theme: COLUMN_THEMES[r.theme] ? r.theme : "default",
+        color: COLUMN_THEMES[r.theme] || COLUMN_THEMES.default,
+        is_done: Number(r.is_done) ? 1 : 0,
+        position: r.position,
+        custom: 1,
+      };
+    });
+  }
+
+  // Completion is column-driven: a task is "done" when its column has is_done.
+  // Replaces scattered `status === "complete"` literals so renamed/custom done
+  // columns are honored everywhere (list, gantt, project health).
+  isDoneStatus(status) {
+    const c = this.getColumns().find((x) => String(x.key) === String(status));
+    return !!(c && c.is_done);
   }
   getColumnThemes() {
     return COLUMN_THEMES;
@@ -3839,6 +4590,9 @@ class __tasks_panel extends LetcBox {
   }
   getColMenuFor() {
     return this._colMenuFor;
+  }
+  getColRenameDraft() {
+    return this._colRenameDraft;
   }
   getPriorities() {
     return PRIORITIES;
@@ -3860,25 +4614,81 @@ class __tasks_panel extends LetcBox {
     return this._filterUids;
   }
 
-  // Member-filter predicate shared by every view (board / list / summary).
+  // Filter predicate. The Assignee (member) dimension applies on every view;
+  // the richer dimensions (keyword/priority/status/due/files) apply only on the
+  // List view (Figma 2099-50501). Dimensions AND together; values within a
+  // dimension OR together.
   _matchesFilter(t) {
-    const filter = this._filterUids || [];
-    if (!filter.length) return true;
     const uids = Array.isArray(t.assignee_uids)
       ? t.assignee_uids.map(String)
       : t.assignee_uid
         ? [String(t.assignee_uid)]
         : [];
-    return uids.some((u) => filter.includes(u));
+    const members = this._filterUids || [];
+    if (members.length && !uids.some((u) => members.includes(u))) return false;
+
+    if (this._view !== "list") return true;
+
+    const f = this._filters || {};
+    if (f.keyword) {
+      const kw = f.keyword.toLowerCase();
+      if (!String(t.title || "").toLowerCase().includes(kw)) return false;
+    }
+    if (f.priority && f.priority.length) {
+      if (!f.priority.includes(t.priority || "medium")) return false;
+    }
+    if (f.status && f.status.length) {
+      if (!f.status.includes(t.status)) return false;
+    }
+    if (f.files) {
+      const has = Array.isArray(t.linked_files) && t.linked_files.length > 0;
+      if (f.files === "has" && !has) return false;
+      if (f.files === "none" && has) return false;
+    }
+    if (f.due && !this._matchesDue(t, f.due)) return false;
+    return true;
+  }
+
+  // Due-date bucket match for the List filter.
+  _matchesDue(t, due) {
+    if (due === "none") return !t.due_date;
+    if (!t.due_date) return false;
+    let d, now;
+    try {
+      d = Dayjs(t.due_date);
+      now = Dayjs();
+      if (!d.isValid()) return false;
+    } catch {
+      return false;
+    }
+    switch (due) {
+      case "overdue":
+        return d.isBefore(now, "day") && !this.isDoneStatus(t.status);
+      case "today":
+        return d.isSame(now, "day");
+      case "week":
+        return d.isSame(now, "week");
+      case "month":
+        return d.isSame(now, "month");
+      default:
+        return true;
+    }
   }
 
   getState() {
-    return this.getColumns().reduce((acc, c) => {
-      acc[c.key] = this._tasks.filter(
-        (t) => t.status === c.key && this._matchesFilter(t),
-      );
-      return acc;
-    }, {});
+    const cols = this.getColumns();
+    const keys = new Set(cols.map((c) => c.key));
+    const firstKey = cols.length ? cols[0].key : null;
+    const state = cols.reduce((acc, c) => ((acc[c.key] = []), acc), {});
+    // Bucket by column; a task whose status matches no column (e.g. its column
+    // was just deleted by a peer) falls into the first column so it's never
+    // hidden until the next list refresh.
+    this._tasks.forEach((t) => {
+      if (!this._matchesFilter(t)) return;
+      const k = keys.has(t.status) ? t.status : firstKey;
+      if (k != null) state[k].push(t);
+    });
+    return state;
   }
 
   // Flat member-filtered task list — the dataset for the List + Summary views.

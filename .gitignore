@@ -33,3 +33,5 @@ _bmad/
 _bmad-output/ 
 # Stray Playwright MCP screenshot saved to repo root (see also .playwright-mcp/)
 desk-current.png
+.tmp-*/*
+/tmp-*

@@ -19,6 +19,15 @@ class __window_connect extends __room {
       area: _a.private
     });
     if (this.mget(_a.video) == null) this.mset({ video: 0 });
+    // Meeting-style standalone window: a resizable, meeting-sized floating popup
+    // (replaces the old fixed 440x480 box). header/resizable enable the base
+    // window drag handle + jQuery-UI resize handles; _setSize seeds the default
+    // geometry. onDomRefresh flags data-standalone="1" so the shared shell skin
+    // floats it as a free window in the Wm pool with a grabbable resize frame.
+    this.model.atLeast({ header: 1, resizable: 1 });
+    if (typeof this._setSize === "function") {
+      this._setSize({ width: 720, height: 560, minWidth: 480, minHeight: 360 });
+    }
     this._state = 0;
     this.declareHandlers();
     this.statusMessages = {
@@ -84,6 +93,13 @@ class __window_connect extends __room {
    */
   onWsMessage(service, data, options = {}) {
     this.verbose("AAA:292 459", this.el, service, data, options);
+    // Peer reaction float (shared reactions feature). _applyRemoteReaction
+    // ignores our own echo, so handle it before the base self-filter.
+    if (options.service === SERVICE.conference.broadcast &&
+        options.event === "REACTION") {
+      this._applyRemoteReaction(data);
+      return;
+    }
     switch (options.service) {
       case SERVICE.conference.cancel:
         this.goodbye()
@@ -98,6 +114,9 @@ class __window_connect extends __room {
    */
   async onDomRefresh() {
     this.raise();
+    // Standalone floating popup: the shared meeting-shell skin keys its absolute
+    // frame + grabbable resize handles off data-standalone="1" (same as meeting).
+    if (this.el) this.el.dataset.standalone = "1";
     await super.onDomRefresh();
     this.verbose("AAAX:204 -- onDomRefresh", this.callee, this.caller);
     if (this.callee) {
@@ -442,6 +461,52 @@ class __window_connect extends __room {
    * @param {*} args 
    * @returns 
    */
+  // Screen-share must NOT resize the 1:1 call window. The base fitScreenSize/
+  // change_size animate the window to ~full viewport (innerWidth-200 ×
+  // innerHeight-42); we only want the presenter LAYOUT to change. Mirror the
+  // meeting: flip data-mode and let CSS own the layout (the presenter grid is
+  // driven by responsive() → __endpoints[data-mode=presenter]), never touch
+  // the window geometry.
+  fitScreenSize(mode) {
+    if (this.el) this.el.dataset.mode = mode;
+    if (this.responsive) this.responsive(mode);
+  }
+
+  change_size(cmd, max_size) {
+    const mode = (this.el && this.el.dataset.mode) || "normal";
+    if (this.responsive) this.responsive(mode);
+  }
+
+  // The base onTrackMuteChange only syncs the top-bar mic pill; the local
+  // self-tile's mic badge (unlike the remote one) is never seeded or updated,
+  // so its muted state never shows. Reflect it here on audio mute/unmute.
+  onTrackMuteChange(track) {
+    if (super.onTrackMuteChange) super.onTrackMuteChange(track);
+    if (!track || typeof track.getType !== "function") return;
+    if (track.getType() === _a.audio) {
+      // data-state "0" = muted (skin reveals the badge); "1" = live (hidden).
+      this._setLocalTileMic(!track.isMuted());
+    }
+  }
+
+  // Set the local self-tile mic badge's data-state. Target it by class within
+  // the local tile — its sys_pn ("audio") collides with the tile's <audio>
+  // element, so a part lookup would be ambiguous.
+  _setLocalTileMic(isLive) {
+    if (typeof this.getLocalParts !== "function") return;
+    this.getLocalParts()
+      .then((parts) => {
+        const local = parts && parts.local;
+        if (!local || (local.isDestroyed && local.isDestroyed()) || !local.el) {
+          return;
+        }
+        const fam = (local.fig && local.fig.family) || "endpoint-local";
+        const mic = local.el.querySelector(`.${fam}__tile-mic`);
+        if (mic) mic.dataset.state = isLive ? 1 : 0;
+      })
+      .catch(() => {});
+  }
+
   async onUiEvent(cmd, args = {}) {
     const service = args.service || cmd.get(_a.service)
     this.verbose(`AAA:438 -- onUiEvent service=${service}`, args, cmd, this);
@@ -499,9 +564,42 @@ class __window_connect extends __room {
         break;
 
 
+      case "react":
+        // Quick-reaction emoji from the topbar bar (shared reactions feature).
+        this._sendReaction(
+          (cmd.mget && cmd.mget("emoji")) ||
+            (cmd.el && cmd.el.textContent && cmd.el.textContent.trim()),
+        );
+        break;
+
+      case "reactions-more":
+        this._toggleReactionsPicker();
+        break;
+
+      case "start-screenshare":
+      case "stop-screenshare":
+        // One screen at a time: block starting a share while the peer is
+        // presenting (belt-and-suspenders with the disabled button). The
+        // active local presenter is never locked, so they can still stop.
+        if (this._shareLocked && !this._presentingLocally) return;
+        super.onUiEvent(cmd, args);
+        break;
+
+      case "togglefullscreen":
+        // Only expand the screen-share widget itself, not the whole host page
+        // (the base handler fullscreens document.body). Shared with the meeting.
+        this._toggleScreenShareFullscreen();
+        break;
+
       default:
         super.onUiEvent(cmd, args);
     }
+  }
+
+  onBeforeDestroy(opt) {
+    // Drop the reactions picker's document click-listener if open at teardown.
+    this._closeReactionsPicker();
+    if (super.onBeforeDestroy) return super.onBeforeDestroy(opt);
   }
 
   // ===========================================================
@@ -547,6 +645,12 @@ class __window_connect extends __room {
 
 
 }
+
+// Shared in-call reactions behavior (same module the meeting uses).
+Object.assign(__window_connect.prototype, require("builtins/webrtc/reactions"));
+// Shared in-call screen-share behavior (own screen on stage, tile docking,
+// one-at-a-time lock, fullscreen). Meeting-only hooks it calls are optional.
+Object.assign(__window_connect.prototype, require("builtins/webrtc/screenshare"));
 
 // __window_connect.initClass();
 module.exports = __window_connect;

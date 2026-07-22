@@ -32,11 +32,19 @@ const __remote_screen = function(_ui_) {
         dataset   : {
           presenter : _ui_.mget("isPresenter")
         },
-        attrOpt: { 
+        attrOpt: {
           autoplay : "true",
           id : `${id}-remote-video`,
           playsinline : "true"
         }
+      }),
+
+      // Spinner shown while the shared screen is loading (from the display
+      // appearing until the desktop video's first frame — onloadeddata hides
+      // it). Covers the black gap for viewers, notably late joiners.
+      Skeletons.Box.Y({
+        className : `${_ui_.fig.family}__loading`,
+        sys_pn    : "screen-loading"
       }),
 
       fullscreen

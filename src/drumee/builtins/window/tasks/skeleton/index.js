@@ -376,10 +376,13 @@ const make = function (ui) {
         Skeletons.Entry({
           className: `${pfx}__col-menu-name`,
           name: "col_rename",
-          value: col.name,
+          // Bound to a draft so an in-place re-render keeps the typed name
+          // (mirrors the board-title input).
+          value: ui.getColRenameDraft() != null ? ui.getColRenameDraft() : col.name,
           placeholder: LOCALE.COLUMN_NAME,
           mode: "commit",
           service: "col-rename-submit",
+          watch: "col-rename-changed",
           taskColumn: col.key,
           uiHandler: [ui],
         }),
@@ -409,15 +412,18 @@ const make = function (ui) {
               uiHandler: [ui],
               taskColumn: col.key,
             }),
-            Skeletons.Note({
-              className: `${pfx}__col-menu-delete`,
-              content: LOCALE.DELETE,
-              bubble: 0,
-              service: "col-delete",
-              uiHandler: [ui],
-              taskColumn: col.key,
-            }),
-          ],
+            // A board must keep at least one column — hide delete on the last.
+            ui.getColumns().length > 1
+              ? Skeletons.Note({
+                  className: `${pfx}__col-menu-delete`,
+                  content: LOCALE.DELETE,
+                  bubble: 0,
+                  service: "col-delete",
+                  uiHandler: [ui],
+                  taskColumn: col.key,
+                })
+              : null,
+          ].filter(Boolean),
         }),
       ],
     });
@@ -441,6 +447,11 @@ const make = function (ui) {
           kids: [
             Skeletons.Box.X({
               className: `${pfx}__column-header`,
+              // Custom columns are drag-reorderable by their header (built-ins
+              // stay pinned). data-coldrag marks the drag source for _installDnd.
+              attrOpt: col.custom
+                ? { draggable: "true", "data-coldrag": col.key }
+                : undefined,
               kids: [
                 Skeletons.Box.X({
                   className: `${pfx}__column-title-group`,
@@ -470,18 +481,37 @@ const make = function (ui) {
                     }),
                   ],
                 }),
-                // Custom columns are user-editable: "⋯" opens the rename/
-                // recolor/delete popover. Built-ins stay fixed.
-                col.custom
-                  ? Skeletons.Note({
-                      className: `${pfx}__col-menu-btn`,
-                      content: "⋯",
+                // Right-side actions: notification bell (all columns) + the
+                // custom-column "⋯" editor popover (custom columns only).
+                Skeletons.Box.X({
+                  className: `${pfx}__col-actions`,
+                  kids: [
+                    // Bell toggle — off by default; on = notify me of any task
+                    // change in this column (Figma 2041-20161).
+                    Skeletons.Button.Svg({
+                      className: `${pfx}__col-bell`,
+                      ico: "bell",
                       bubble: 0,
-                      service: "col-menu",
+                      service: "col-watch-toggle",
                       uiHandler: [ui],
                       taskColumn: col.key,
-                    })
-                  : null,
+                      tooltips: { content: LOCALE.NOTIFY_COLUMN, className: `${pfx}__tip` },
+                      attrOpt: {
+                        "data-active": ui.isColumnWatched(col.key) ? "1" : "0",
+                      },
+                    }),
+                    col.custom
+                      ? Skeletons.Note({
+                          className: `${pfx}__col-menu-btn`,
+                          content: "⋮",
+                          bubble: 0,
+                          service: "col-menu",
+                          uiHandler: [ui],
+                          taskColumn: col.key,
+                        })
+                      : null,
+                  ].filter(Boolean),
+                }),
               ].filter(Boolean),
             }),
             col.custom && ui.getColMenuFor() === col.key
@@ -931,6 +961,38 @@ const make = function (ui) {
       kids: buildDueSectionContent(ui),
     });
 
+    // Reporter — who created the task (task.created_by, set server-side at
+    // create time). Read-only: creation is immutable.
+    const reporter = ui.getMember(detail.created_by) || {};
+    const reporterRow = detail.created_by
+      ? Skeletons.Box.Y({
+          className: `${pfx}__detail-row`,
+          kids: [
+            Skeletons.Note({
+              className: `${pfx}__detail-label`,
+              content: LOCALE.REPORTER,
+            }),
+            Skeletons.Box.X({
+              className: `${pfx}__detail-reporter`,
+              kids: [
+                Skeletons.UserProfile({
+                  className: `${pfx}__detail-reporter-avatar`,
+                  id: detail.created_by,
+                  firstname: reporter.firstname,
+                  lastname: reporter.lastname,
+                  auto_color: 1,
+                  live_status: 0,
+                }),
+                Skeletons.Note({
+                  className: `${pfx}__detail-reporter-name`,
+                  content: fullName(reporter) || detail.created_by,
+                }),
+              ],
+            }),
+          ],
+        })
+      : null;
+
     const attachmentRow = (f) => attachmentRowDescriptor(ui, f, detail.id);
 
     // Rows live in a stable sub-part so unlink can re-feed just this list
@@ -1010,7 +1072,7 @@ const make = function (ui) {
               kids: [
                 activityTab(LOCALE.ALL, true),
                 activityTab(LOCALE.COMMENTS, false, "message"),
-                activityTab(LOCALE.HISTORY, false, "clock"),
+                activityTab(LOCALE.HISTORY, false, "apps-clock"),
               ],
             }),
           ],
@@ -1036,14 +1098,7 @@ const make = function (ui) {
             Skeletons.Box.X({
               className: `${pfx}__composer-actions`,
               kids: [
-                Skeletons.Image.Svg({
-                  ico: "app-attachment",
-                  className: `${pfx}__composer-ico`,
-                }),
-                Skeletons.Note({
-                  className: `${pfx}__composer-at`,
-                  content: "@",
-                }),
+                ...composerTools(ui, "comment"),
                 Skeletons.Button.Svg({
                   ico: "app-send",
                   className: `${pfx}__composer-send`,
@@ -1149,23 +1204,33 @@ const make = function (ui) {
               kids: [
                 Skeletons.Box.Y({
                   className: `${pfx}__modal-main`,
-                  kids: [
-                    // Figma 2040-14173: Description and Files sit side-by-side
-                    // on top; on mobile they stack (Box.Y) for full width.
-                    Skeletons.Box[isMobile ? "Y" : "X"]({
-                      className: `${pfx}__detail-top`,
-                      kids: [descriptionRow, attachmentsList],
-                    }),
-                    commentsSection,
-                  ],
+                  // Description, then Attachments beneath it, then the Activity
+                  // feed — a single stacked column (Attachments no longer sits
+                  // to the right of the Description).
+                  kids: [descriptionRow, attachmentsList, commentsSection],
                 }),
                 Skeletons.Box.Y({
                   className: `${pfx}__modal-side`,
-                  kids: [statusRow, priorityRow, assigneeRow, dueRow, actions],
+                  kids: [
+                    statusRow,
+                    priorityRow,
+                    assigneeRow,
+                    dueRow,
+                    reporterRow,
+                    actions,
+                  ].filter(Boolean),
                 }),
               ],
             }),
             dropOverlay(ui),
+            // Floating full emoji picker for the comment "…" more button, fed
+            // on demand (assets/emojis) and positioned below the react bar —
+            // modeled on the meeting reactions picker. Anchored to the
+            // position:relative detail-panel.
+            Skeletons.Wrapper.Y({
+              className: `${pfx}__reactions-picker`,
+              name: "reactions",
+            }),
           ],
         }),
       ],
@@ -1445,11 +1510,14 @@ const make = function (ui) {
                   descControl,
                   `${pfx}__create-field-grow`,
                 ),
+                // Pinned to the column foot (see skin __create-files) so the
+                // search/upload bar lines up with the actions in the right column.
                 field(
                   LOCALE.LINKED_FILES,
                   filePickerBlock("create", {
                     pendingFiles: draft?.pending_files || [],
                   }),
+                  `${pfx}__create-files`,
                 ),
               ],
             }),
@@ -1470,7 +1538,8 @@ const make = function (ui) {
                   partHandler: ui,
                   kids: buildDueSectionContent(ui, "create"),
                 }),
-                // Primary action lives at the foot of the right column (Figma).
+                // Pinned to the column foot (see skin __create-actions) so it
+                // lines up with the file search/upload bar in the left column.
                 Skeletons.Box.X({
                   className: `${pfx}__create-actions`,
                   kids: [
@@ -1598,6 +1667,194 @@ const make = function (ui) {
     ].filter(Boolean),
   });
 
+  // ── List-view multi-dimension filter (Figma 2099-50501) ───────
+  // Accordion of filter categories; tapping a row expands its value picker
+  // inline. Categories AND together, values within a category OR together.
+  // Assignee reuses the shared member filter (applies on every view); the rest
+  // apply on the List view only.
+  const filters = ui.getFilters();
+  const filterCats = [
+    { dim: "keyword", ico: "tags", label: LOCALE.TASK },
+    { dim: "priority", ico: "apps-warning", label: LOCALE.PRIORITY },
+    { dim: "status", ico: "checked-circle", label: LOCALE.STATUS },
+    { dim: "due", ico: "calendar", label: LOCALE.DUE_DATE },
+    { dim: "files", ico: "app-attachment", label: LOCALE.LINKED_FILES },
+    { dim: "assignee", ico: "two-users", label: LOCALE.ASSIGNEE },
+  ];
+
+  // A value row inside a category body: left content + a check box. Toggles a
+  // value via filter-set (assignee rows use filter-member instead).
+  const filterValueRow = (opt) =>
+    Skeletons.Box.X({
+      className: `${pfx}__member-row ${pfx}__filter-row`,
+      dataset: { active: opt.active ? 1 : 0 },
+      attrOpt: { "data-active": opt.active ? "1" : "0" },
+      bubble: 0,
+      service: opt.service || "filter-set",
+      uiHandler: [ui],
+      filterDim: opt.dim,
+      filterVal: opt.val,
+      memberUid: opt.memberUid,
+      kids: [
+        Skeletons.Box.X({ className: `${pfx}__filter-row-main`, kids: opt.leftKids }),
+        filterCheck(),
+      ],
+    });
+
+  const dot = (color) =>
+    Skeletons.Note({ className: `${pfx}__filter-dot`, styleOpt: { background: color } });
+  const nameNote = (content) =>
+    Skeletons.Note({ className: `${pfx}__member-name`, content });
+
+  const catBody = (dim) => {
+    switch (dim) {
+      case "keyword":
+        return [
+          Skeletons.Entry({
+            className: `${pfx}__filter-search`,
+            name: "filter_keyword",
+            value: filters.keyword || "",
+            placeholder: LOCALE.SEARCH_TASK,
+            watch: "filter-keyword",
+            uiHandler: [ui],
+          }),
+        ];
+      case "priority":
+        return (ui.getPriorities() || []).map((p) =>
+          filterValueRow({
+            dim: "priority",
+            val: p.key,
+            active: (filters.priority || []).includes(p.key),
+            leftKids: [dot(p.color), nameNote(LOCALE[p.label] || p.key)],
+          }),
+        );
+      case "status":
+        return (ui.getColumns() || []).map((c) =>
+          filterValueRow({
+            dim: "status",
+            val: c.key,
+            active: (filters.status || []).includes(c.key),
+            leftKids: [dot(c.color), nameNote(c.name || LOCALE[c.label] || c.key)],
+          }),
+        );
+      case "due":
+        return [
+          ["overdue", LOCALE.OVERDUE],
+          ["today", LOCALE.TODAY],
+          ["week", LOCALE.THIS_WEEK],
+          ["month", LOCALE.THIS_MONTH],
+          ["none", LOCALE.NO_DATE],
+        ].map(([val, label]) =>
+          filterValueRow({
+            dim: "due",
+            val,
+            active: filters.due === val,
+            leftKids: [nameNote(label)],
+          }),
+        );
+      case "files":
+        return [
+          ["has", LOCALE.WITH_FILES],
+          ["none", LOCALE.WITHOUT_FILES],
+        ].map(([val, label]) =>
+          filterValueRow({
+            dim: "files",
+            val,
+            active: filters.files === val,
+            leftKids: [nameNote(label)],
+          }),
+        );
+      case "assignee":
+        return [
+          filterValueRow({
+            service: "filter-member",
+            memberUid: "",
+            active: !filterActive,
+            leftKids: [nameNote(LOCALE.ALL_MEMBERS)],
+          }),
+          ...members.map((m) => {
+            const uid = String(m.id || m.uid);
+            return filterValueRow({
+              service: "filter-member",
+              memberUid: uid,
+              active: filterUids.includes(uid),
+              leftKids: [
+                Skeletons.UserProfile({
+                  className: `${pfx}__member-avatar`,
+                  id: uid,
+                  firstname: m.firstname,
+                  lastname: m.lastname,
+                  auto_color: 1,
+                  live_status: 0,
+                }),
+                nameNote(fullName(m)),
+              ],
+            });
+          }),
+        ];
+      default:
+        return [];
+    }
+  };
+
+  const filterCategory = (c) =>
+    Skeletons.Box.Y({
+      className: `${pfx}__filter-cat`,
+      dataset: { dim: c.dim, open: ui.isFilterCatOpen(c.dim) ? 1 : 0 },
+      attrOpt: {
+        "data-dim": c.dim,
+        "data-open": ui.isFilterCatOpen(c.dim) ? "1" : "0",
+      },
+      kids: [
+        Skeletons.Box.X({
+          className: `${pfx}__filter-cat-head`,
+          bubble: 0,
+          service: "filter-cat",
+          uiHandler: [ui],
+          filterDim: c.dim,
+          attrOpt: { "data-active": ui.isFilterDimActive(c.dim) ? "1" : "0" },
+          kids: [
+            Skeletons.Image.Svg({ ico: c.ico, className: `${pfx}__filter-cat-ico` }),
+            Skeletons.Note({ className: `${pfx}__filter-cat-label`, content: c.label }),
+            Skeletons.Box.X({
+              className: `${pfx}__filter-check`,
+              attrOpt: { "data-active": ui.isFilterDimActive(c.dim) ? "1" : "0" },
+              kids: [
+                Skeletons.Note({ className: `${pfx}__filter-check-mark`, content: "✓" }),
+              ],
+            }),
+            Skeletons.Note({ className: `${pfx}__filter-cat-chev`, content: "›" }),
+          ],
+        }),
+        Skeletons.Box.Y({
+          className: `${pfx}__filter-cat-body`,
+          kids: catBody(c.dim),
+        }),
+      ],
+    });
+
+  const listFilterDropdown = Skeletons.Box.Y({
+    className: `${pfx}__filter-picker ${pfx}__filter-picker--list`,
+    kids: [
+      Skeletons.Box.X({
+        className: `${pfx}__filter-head`,
+        kids: [
+          Skeletons.Note({ className: `${pfx}__filter-title`, content: LOCALE.FILTER }),
+          ui.isFilterActive()
+            ? Skeletons.Note({
+                className: `${pfx}__filter-clear`,
+                content: LOCALE.CLEAR,
+                bubble: 0,
+                service: "filter-clear",
+                uiHandler: [ui],
+              })
+            : null,
+        ].filter(Boolean),
+      }),
+      ...filterCats.map(filterCategory),
+    ],
+  });
+
   // Sub-views over the same folder-scoped task set. Board is rendered inline
   // (its columns + DnD); List/Summary are separate modules fed the same data.
   const view = ui.getView();
@@ -1673,7 +1930,9 @@ const make = function (ui) {
   });
   const filterBtn = Skeletons.Box.X({
     className: `${pfx}__viewbar-filter`,
-    dataset: { active: filterActive ? 1 : 0 },
+    // Highlight when ANY filter is active on the current view (member filter
+    // everywhere; the richer dimensions additionally count on the List view).
+    dataset: { active: ui.isFilterActive() ? 1 : 0 },
     bubble: 0,
     service: "toggle-filter",
     uiHandler: [ui],
@@ -1724,7 +1983,9 @@ const make = function (ui) {
           })
         : null,
       // Filter overlay (anchored top-right, below the tab bar's filter button).
-      filterOpen ? filterDropdown : null,
+      // List view gets the rich multi-dimension accordion; other views keep the
+      // member-only picker.
+      filterOpen ? (view === "list" ? listFilterDropdown : filterDropdown) : null,
       Skeletons.Wrapper.Y({
         className: `${pfx}__detail-wrapper`,
         name: "task-detail",
@@ -1843,6 +2104,31 @@ function mentionDropdown(ui, scope) {
   });
 }
 
+// Attachment (paperclip) + @-mention buttons shared by the main comment
+// composer and the inline edit / reply composers. The paperclip attaches a file
+// to the open task (the existing task-attachment flow); "@" focuses the scope's
+// editor, inserts an "@" and opens the mention popup.
+function composerTools(ui, scope) {
+  const pfx = ui.fig.family;
+  return [
+    Skeletons.Button.Svg({
+      ico: "app-attachment",
+      className: `${pfx}__composer-ico`,
+      bubble: 0,
+      service: "pick-attachment",
+      uiHandler: [ui],
+    }),
+    Skeletons.Note({
+      className: `${pfx}__composer-at`,
+      content: "@",
+      bubble: 0,
+      service: "comment-mention-insert",
+      mentionScope: scope,
+      uiHandler: [ui],
+    }),
+  ];
+}
+
 // Reusable contenteditable mention editor. `scope` keys the panel's editor
 // logic + dropdown part; opt overrides the field/editor classes + placeholder
 // so the description and the comment composer/editor each style their own.
@@ -1882,7 +2168,16 @@ function commentTimeAgo(ts) {
 // edited renders an inline mention editor instead. Exported so the panel can
 // surgically re-feed the list on a peer's WS change without a full re-render.
 // Quick-react palette (also the set offered by the "add reaction" button).
-const REACT_EMOJIS = ["👍", "❤️", "🎉", "👀", "✅"];
+// Emoji owned by the one-tap "like" button (and its chip). Once a 👍 chip
+// exists (which toggles it) the standalone button is hidden. It is also
+// excluded from the add-reaction picker below, so picking a reaction is purely
+// additive and never toggles an existing like off.
+const LIKE_EMOJI = "👍";
+// Six quick reactions shown when the ☺ toggle opens the react bar (no 👍 — that
+// is the like button's job). The "…" button opens the full assets/emojis picker.
+const QUICK_REACTIONS = ["❤️", "😂", "🎉", "😮", "😢", "🔥"].filter(
+  (e) => e !== LIKE_EMOJI,
+);
 
 // Group a comment's raw [{emoji, uid}] reactions into [{emoji, count, own}].
 function groupReactions(reactions) {
@@ -1914,55 +2209,113 @@ function buildCommentListContent(ui) {
   const fullName = (m) =>
     [m.firstname, m.lastname].filter(Boolean).join(" ").trim() || m.email || "";
 
+  // Existing reactions shown as emoji+count chips (null when a comment has none).
   const reactBar = (c) => {
     const kids = groupReactions(c.reactions).map((g) =>
       Skeletons.Note({
         className: `${pfx}__react-chip`,
         content: `${g.emoji} ${g.count}`,
-        attrOpt: { "data-own": g.own ? "1" : "0" },
+        attrOpt: {
+          "data-own": g.own ? "1" : "0",
+          "data-comment-id": c.id,
+          "data-emoji": g.emoji,
+        },
         bubble: 0,
-        service: "comment-react",
-        uiHandler: [ui],
+        // Clicking a chip only removes YOUR OWN reaction; others' chips do
+        // nothing. Adding is via the like button / add-reaction picker.
+        service: g.own ? "comment-react-remove" : null,
+        uiHandler: g.own ? [ui] : null,
         commentId: c.id,
         emoji: g.emoji,
       }),
     );
-    // Figma action row leads with a one-tap 👍 then the ☺ palette toggle.
-    kids.push(
-      Skeletons.Note({
-        className: `${pfx}__react-add`,
-        content: "👍",
-        bubble: 0,
-        service: "comment-react",
-        uiHandler: [ui],
-        commentId: c.id,
-        emoji: "👍",
-      }),
-      Skeletons.Note({
-        className: `${pfx}__react-add`,
-        content: "☺",
-        bubble: 0,
-        service: "comment-react-toggle",
-        uiHandler: [ui],
-        commentId: c.id,
-      }),
+    if (!kids.length) return null;
+    return Skeletons.Box.X({ className: `${pfx}__react-bar`, kids });
+  };
+
+  const reactPick = (c, e) =>
+    Skeletons.Note({
+      className: `${pfx}__react-pick`,
+      content: e,
+      bubble: 0,
+      service: "comment-react-add",
+      uiHandler: [ui],
+      commentId: c.id,
+      emoji: e,
+    });
+
+  // Reaction bar, shown below the action icons when the ☺ toggle is open: six
+  // quick reactions + a "…" button. "…" opens the full emoji picker (the
+  // floating __reactions-picker wrapper, fed with assets/emojis on demand).
+  const pickerRow = (c) => {
+    if (String(pickerFor || "") !== String(c.id)) return null;
+    return Skeletons.Box.X({
+      className: `${pfx}__react-picker-wrap`,
+      kids: [
+        ...QUICK_REACTIONS.map((e) => reactPick(c, e)),
+        Skeletons.Note({
+          className: `${pfx}__react-more`,
+          content: "⋯",
+          bubble: 0,
+          service: "comment-react-more",
+          uiHandler: [ui],
+          commentId: c.id,
+          attrOpt: { title: LOCALE.MORE || "More" },
+        }),
+      ],
+    });
+  };
+
+  // Comment action triggers, rendered as icons in a fixed order:
+  //   reply · 👍 quick-react · ☺ reaction palette · edit · delete
+  // (edit/delete only on one's own comments).
+  const actionIcon = (ico, service, extra) =>
+    Skeletons.Button.Svg({
+      ico,
+      className: `${pfx}__comment-action-ico`,
+      bubble: 0,
+      service,
+      uiHandler: [ui],
+      ...extra,
+    });
+  const commentActions = (c, isOwn) => {
+    // Hide the quick 👍 button only for the user who already liked this comment
+    // (their own 👍 chip is then the toggle affordance). Others still see the
+    // button so they can add their own like.
+    const hasLike = (c.reactions || []).some(
+      (r) =>
+        r && r.emoji === LIKE_EMOJI && String(r.uid) === String(Visitor.id),
     );
-    if (String(pickerFor || "") === String(c.id)) {
-      REACT_EMOJIS.forEach((e) =>
-        kids.push(
-          Skeletons.Note({
-            className: `${pfx}__react-pick`,
-            content: e,
-            bubble: 0,
-            service: "comment-react",
-            uiHandler: [ui],
+    const kids = [
+      actionIcon("app-reply", "comment-reply", {
+        commentId: c.id,
+        tooltips: LOCALE.REPLY,
+      }),
+      hasLike
+        ? null
+        : actionIcon("app-like", "comment-react-add", {
             commentId: c.id,
-            emoji: e,
+            emoji: LIKE_EMOJI,
+            tooltips: LOCALE.LIKE || "Thumbs up",
           }),
-        ),
+      actionIcon("meet-smiley", "comment-react-toggle", {
+        commentId: c.id,
+        tooltips: LOCALE.ADD_REACTION,
+      }),
+    ].filter(Boolean);
+    if (isOwn) {
+      kids.push(
+        actionIcon("app-edit", "comment-edit", {
+          commentId: c.id,
+          tooltips: LOCALE.EDIT,
+        }),
+        actionIcon("chat-action-trash", "comment-delete", {
+          commentId: c.id,
+          tooltips: LOCALE.DELETE,
+        }),
       );
     }
-    return Skeletons.Box.X({ className: `${pfx}__react-bar`, kids });
+    return Skeletons.Box.X({ className: `${pfx}__comment-actions`, kids });
   };
 
   const commentBlock = (c, isReply) => {
@@ -2010,6 +2363,7 @@ function buildCommentListContent(ui) {
               Skeletons.Box.X({
                 className: `${pfx}__comment-actions`,
                 kids: [
+                  ...composerTools(ui, "comment-edit"),
                   Skeletons.Note({
                     className: `${pfx}__comment-action ${pfx}__comment-action--primary`,
                     content: LOCALE.SAVE,
@@ -2032,40 +2386,6 @@ function buildCommentListContent(ui) {
       });
     }
 
-    // Action row: Reply (root only) + Edit/Delete (own).
-    const actions = [];
-    if (!isReply)
-      actions.push(
-        Skeletons.Note({
-          className: `${pfx}__comment-action`,
-          content: LOCALE.REPLY,
-          bubble: 0,
-          service: "comment-reply",
-          uiHandler: [ui],
-          commentId: c.id,
-        }),
-      );
-    if (isOwn) {
-      actions.push(
-        Skeletons.Note({
-          className: `${pfx}__comment-action`,
-          content: LOCALE.EDIT,
-          bubble: 0,
-          service: "comment-edit",
-          uiHandler: [ui],
-          commentId: c.id,
-        }),
-        Skeletons.Note({
-          className: `${pfx}__comment-action`,
-          content: LOCALE.DELETE,
-          bubble: 0,
-          service: "comment-delete",
-          uiHandler: [ui],
-          commentId: c.id,
-        }),
-      );
-    }
-
     return Skeletons.Box.X({
       className: `${pfx}__comment-row`,
       attrOpt: { "data-reply": isReply ? "1" : "0" },
@@ -2081,13 +2401,13 @@ function buildCommentListContent(ui) {
               flow: "none",
               attrOpt: { "data-comment-id": c.id },
             }),
-            reactBar(c),
-            actions.length
-              ? Skeletons.Box.X({
-                  className: `${pfx}__comment-actions`,
-                  kids: actions,
-                })
-              : null,
+            // Reaction chips + action icons share one horizontal footer row.
+            Skeletons.Box.X({
+              className: `${pfx}__comment-footer`,
+              kids: [reactBar(c), commentActions(c, isOwn)].filter(Boolean),
+            }),
+            // Emoji palette opens on its own row below the icons.
+            pickerRow(c),
           ].filter(Boolean),
         }),
       ],
@@ -2109,45 +2429,102 @@ function buildCommentListContent(ui) {
     }
   });
 
-  const out = [];
-  roots.forEach((root) => {
-    out.push(commentBlock(root, false));
-    (repliesByParent[root.id] || []).forEach((rep) =>
-      out.push(commentBlock(rep, true)),
-    );
-    if (String(replyingTo || "") === String(root.id)) {
-      out.push(
-        Skeletons.Box.Y({
-          className: `${pfx}__comment-replybox`,
+  // The reply composer can be opened from a root OR a child. Resolve the clicked
+  // comment to its root so the composer renders once, at the tail of that root's
+  // thread, and the reply attaches as a sibling (parent_id = root). Mirror the
+  // orphan fallback above: a reply whose parent is gone counts as its own root.
+  const replyTarget = replyingTo
+    ? comments.find((c) => String(c.id) === String(replyingTo))
+    : null;
+  const replyingToRootId = replyTarget
+    ? replyTarget.parent_id && ids.has(String(replyTarget.parent_id))
+      ? String(replyTarget.parent_id)
+      : String(replyTarget.id)
+    : null;
+  // Show "Replying to @Name" only when answering a child, since the composer is
+  // visually detached from it (it renders at the end of the thread).
+  const replyingToChild =
+    !!replyTarget && String(replyTarget.id) !== replyingToRootId;
+
+  // Reply composer (Figma 2037-14883, "Comment" variant): a single grey rounded
+  // pill — the input on the left, the paperclip / @ / send icons inline on the
+  // right. No separate Reply/Cancel text row; send submits, and clicking the
+  // comment's reply icon again toggles the composer closed.
+  const composerBlock = () =>
+    Skeletons.Box.Y({
+      className: `${pfx}__comment-replybox`,
+      kids: [
+        replyingToChild
+          ? Skeletons.Note({
+              className: `${pfx}__comment-replying-to`,
+              content: `${LOCALE.REPLYING_TO || "Replying to"} ${
+                fullName(ui.getMember(replyTarget.author_uid) || {}) ||
+                replyTarget.author_uid
+              }`,
+            })
+          : null,
+        Skeletons.Box.X({
+          className: `${pfx}__comment-reply-pill`,
           kids: [
             mentionField(ui, "comment-reply", {
-              fieldClass: `${pfx}__comment-field`,
+              fieldClass: `${pfx}__comment-reply-field`,
               editorClass: `${pfx}__comment-reply-input`,
-              placeholder: LOCALE.TASK_COMMENT_PLACEHOLDER,
+              placeholder: LOCALE.TASK_REPLY_PLACEHOLDER || "Reply...",
             }),
             Skeletons.Box.X({
-              className: `${pfx}__comment-actions`,
+              className: `${pfx}__comment-reply-tools`,
               kids: [
-                Skeletons.Note({
-                  className: `${pfx}__comment-action ${pfx}__comment-action--primary`,
-                  content: LOCALE.REPLY,
+                ...composerTools(ui, "comment-reply"),
+                Skeletons.Button.Svg({
+                  ico: "app-send",
+                  className: `${pfx}__comment-reply-send`,
                   bubble: 0,
                   service: "comment-reply-submit",
-                  uiHandler: [ui],
-                }),
-                Skeletons.Note({
-                  className: `${pfx}__comment-action`,
-                  content: LOCALE.CANCEL,
-                  bubble: 0,
-                  service: "comment-reply-cancel",
                   uiHandler: [ui],
                 }),
               ],
             }),
           ],
         }),
+      ].filter(Boolean),
+    });
+
+  // Each root + its replies (+ the open composer) form one thread group. The
+  // replies live in their own container so a continuous vertical spine (the
+  // container's left border, styled in the skin) can connect them to the root,
+  // with a curved elbow branching into each reply.
+  const out = [];
+  roots.forEach((root) => {
+    const showComposer = replyingToRootId === String(root.id);
+    const clickedId = showComposer ? String(replyingTo) : null;
+    // The composer renders directly below the comment whose Reply was clicked:
+    // right under the root when replying to it, otherwise right under that child.
+    const replyKids = [];
+    if (showComposer && clickedId === String(root.id)) {
+      replyKids.push(composerBlock());
+    }
+    (repliesByParent[root.id] || []).forEach((rep) => {
+      replyKids.push(commentBlock(rep, true));
+      if (showComposer && clickedId === String(rep.id)) {
+        replyKids.push(composerBlock());
+      }
+    });
+    const threadKids = [commentBlock(root, false)];
+    if (replyKids.length) {
+      threadKids.push(
+        Skeletons.Box.Y({
+          className: `${pfx}__comment-thread-replies`,
+          kids: replyKids,
+        }),
       );
     }
+    out.push(
+      Skeletons.Box.Y({
+        className: `${pfx}__comment-thread`,
+        attrOpt: { "data-has-replies": replyKids.length ? "1" : "0" },
+        kids: threadKids,
+      }),
+    );
   });
   return out;
 }

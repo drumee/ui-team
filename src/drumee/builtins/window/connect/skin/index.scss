@@ -1,35 +1,32 @@
 @use "mixins/drumee";
-@use "builtins/webrtc/skin/index" as *;
-@use "builtins/webrtc/skin/topbar" as *;
-@use "builtins/webrtc/skin/command" as *;
-@use "builtins/webrtc/skin/attendee" as *;
-@use "builtins/webrtc/skin/sound-analyzer" as *;
-@use "builtins/webrtc/skin/remote" as *;
+@use "builtins/webrtc/skin/meeting-shell" as *;
 
+// Reuse the redesigned meeting shell (top bar + video stage + tiles + floating
+// controls). $chat: false drops the meeting-only chat-panel / widget-chat /
+// in-topbar-chat rules — the 1:1 call has no in-call chat. This also pulls in
+// the shared webrtc-* base styling (ui/topbar/command/attendee/sound-analyzer/
+// remote) that connect used to @include directly.
 .window-connect {
-  @include webrtc-ui;
-  @include webrtc-topbar;
-  @include webrtc-command;
-  @include webrtc-attendee;
-  @include webrtc-sound-analyzer;
-  @include webrtc-remote;
+  @include meeting-shell($chat: false, $pfx: "window-connect");
 }
 
 .window-connect {
+  // The meeting-shell mixin already makes __ui fill its parent and, when
+  // data-standalone="1" is set (connect/index.js onDomRefresh), float as a
+  // resizable free window in the Wm pool — same pattern as the meeting. Only
+  // the connect-specific chrome remains here; the old fixed 440x480 popup box
+  // (width/height/position:fixed) is gone.
   &__ui {
     background-color: var(--normal-bg);
-    width: 440px;
-    height: 480px;
-    top: 85px;
-    left: calc(50vw - 220px);
-    box-shadow: var(--shadow-container);
-    overflow: visible;
     flex-direction: column;
     display: flex;
-    position: fixed;
     z-index: 100100 !important;
-    border: 1px solid var(--border-default);
 
+    &[data-standalone="1"] {
+      border: 1px solid var(--border-default);
+    }
+
+    // Mobile: fill the viewport instead of a floating frame.
     &[data-device="mobile"] {
       width: 100vw;
       height: 100vh;
@@ -86,7 +83,10 @@
     }
   }
 
-  &__body {
+  // Pre-call body only (dial / ring / pickup): centered avatar + status. The
+  // in-call shell body carries `singleton` and keeps the shared meeting stage
+  // styling (gray, top-aligned, padded) from the mixin.
+  &__body:not(.singleton) {
     align-items: center;
     justify-content: center;
     background-color: var(--normal-bg);
@@ -108,29 +108,8 @@
     }
   }
 
-  &__endpoints {
-    width: 100%;
-    height: 100%;
-    display: grid;
-    // Default to participants-fills-100% so the body never splits top/bottom
-    // halves before participants/index.js sets data-mode on its own element.
-    grid-template-columns: 0 minmax(0, 1fr);
-    grid-template-rows: 100%;
-
-    &[data-mode="normal"] {
-      grid-template-columns: 0 100%;
-      grid-template-rows: 100%;
-    }
-    &[data-mode="presenter"] {
-      grid-template-columns: calc(100% - 200px) 200px;
-      grid-template-rows: 100%;
-    }
-  }
-
-  // Lift remote-tile footer above the in-call command bar so it isn't covered.
-  .remote-user__tile-footer {
-    bottom: 86px;
-  }
+  // __endpoints / participant-tile grid now comes from the shared meeting shell
+  // (data-mode driven by participants/index.js), matching the meeting stage.
 
   // status.scss (which would have positioned it as an absolute overlay) is never
   // imported, so peer-container flows below the local-user tile and creates a
@@ -435,11 +414,21 @@
     }
   }
 
+  // Pre-call __main: header + body stacked in a grid.
   &__main {
     display: grid;
     grid-auto-flow: row;
     height: 100%;
     width: 100%;
+  }
+
+  // In-call __main: a single shared shell child that fills the window like the
+  // meeting stage (overrides the pre-call grid above).
+  &__main--call {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    min-height: 0;
   }
 
   &__main-content {
@@ -565,16 +554,48 @@
   }
 }
 
-.window__message-container {
+// Center the call status message in the middle of the connect window. Scoped
+// under __ui so it outranks the generic .window__message-container (top:40px)
+// the meeting skin defines globally.
+.window-connect__ui .window-connect__message-container {
   position: absolute;
-  background-color: var(--normal-bg-80);
-  padding: var(--spacer-5);
+  top: 15%;
+  left: 50%;
+  right: auto;
+  transform: translate(-50%, -50%);
   width: 300px;
+  max-width: calc(100% - 32px);
+  box-sizing: border-box;
+  padding: var(--spacer-5);
+  background-color: var(--normal-bg-80);
   color: var(--normal-fg-10);
   border-radius: var(--corner-radius-3);
   align-items: center;
-  top: 40px;
+  gap: var(--spacer-3);
+  pointer-events: none;
+
   .message-text {
     text-align: center;
+  }
+}
+
+// Resolve the reactions float animation name the shared shell references (the
+// keyframe lives at file scope in the meeting skin, which connect doesn't use).
+@keyframes window-meeting-reaction-rise {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, 10px) scale(0.6);
+  }
+  12% {
+    opacity: 1;
+    transform: translate(-50%, 0) scale(1);
+  }
+  70% {
+    opacity: 1;
+    transform: translate(-50%, -150px) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -220px) scale(1.1);
   }
 }

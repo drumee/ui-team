@@ -56,6 +56,18 @@ const __skl_chatiItem_menu = function (_ui_) {
     tooltips: tip(LOCALE.COPY),
   });
 
+  // Copy the message's attachment OUT to the OS clipboard (image → image blob,
+  // other file → link). Only on messages that carry an uploaded attachment.
+  const copyImage = _ui_._hasAttachment && _ui_._hasAttachment()
+    ? Skeletons.Button.Svg({
+        className: `${chatMenuFig}__item copy-attachment`,
+        ico: "image",
+        service: "copy-attachment",
+        uiHandler: _ui_,
+        tooltips: tip(LOCALE.COPY_ATTACHMENT),
+      })
+    : undefined;
+
   let forwardMsg;
   if (handler.type === _a.share && handler.view === "quickChat") {
     forwardMsg = undefined;
@@ -125,6 +137,7 @@ const __skl_chatiItem_menu = function (_ui_) {
           threadDivider,
           reply,
           copyText,
+          copyImage,
           isTicket ? undefined : forwardMsg,
           isTicket ? undefined : deleteMsg,
           selectMsg,

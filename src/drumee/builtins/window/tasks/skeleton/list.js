@@ -88,7 +88,7 @@ module.exports = function (ui) {
 
   // Task cell — leading checkbox (toggles complete) + title.
   const titleCell = (t) => {
-    const done = t.status === "complete";
+    const done = ui.isDoneStatus(t.status);
     return Skeletons.Box.X({
       className: `${pfx}__list-cell ${pfx}__list-title-cell`,
       kids: [
@@ -260,7 +260,7 @@ module.exports = function (ui) {
       service: "open-detail",
       uiHandler: [ui],
       taskId: t.id,
-      attrOpt: { "data-done": t.status === "complete" ? "1" : "0" },
+      attrOpt: { "data-done": ui.isDoneStatus(t.status) ? "1" : "0" },
       kids: [
         titleCell(t),
         priorityCell(t),

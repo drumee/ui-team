@@ -213,6 +213,127 @@
   &__member-row[data-active="1"] &__filter-check-mark {
     opacity: 1;
   }
+  // The category-head flag drives its own checkbox off data-active on the box.
+  &__filter-check[data-active="1"] {
+    background: var(--col-primary-50, #433cc5);
+    border-color: var(--col-primary-50, #433cc5);
+  }
+  &__filter-check[data-active="1"] &__filter-check-mark {
+    opacity: 1;
+  }
+
+  // ── List-view multi-dimension filter (Figma 2099-50501) ───────
+  &__filter-picker--list {
+    width: 244px;
+  }
+
+  &__filter-head {
+    align-items: center;
+    justify-content: space-between;
+    padding: 2px 6px 4px;
+  }
+
+  &__filter-clear {
+    cursor: pointer;
+    @include drumee.typo(
+      $size: 12px,
+      $weight: 600,
+      $line: 16px,
+      $color: var(--col-primary-40, #5950ff)
+    );
+  }
+
+  // Accordion category (row + collapsible value body).
+  &__filter-cat {
+    align-items: stretch;
+  }
+
+  &__filter-cat-head {
+    align-items: center;
+    gap: 8px;
+    padding: 6px 8px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background 0.12s;
+
+    &:hover {
+      background: var(--hover-bg-40, rgba(0, 0, 0, 0.04));
+    }
+  }
+
+  &__filter-cat-ico {
+    flex: 0 0 16px;
+    width: 16px;
+    height: 16px;
+    color: var(--normal-fg-30, #65656c);
+  }
+
+  &__filter-cat-label {
+    flex: 1 1 auto;
+    min-width: 0;
+    @include drumee.typo(
+      $size: 14px,
+      $weight: 400,
+      $line: 20px,
+      $color: var(--normal-fg-10, #0b0a21)
+    );
+  }
+
+  // Chevron rotates down when the section is open.
+  &__filter-cat-chev {
+    flex: 0 0 auto;
+    color: var(--normal-fg-40, #84848c);
+    transition: transform 0.15s;
+    transform: rotate(0deg);
+  }
+  &__filter-cat[data-open="1"] &__filter-cat-chev {
+    transform: rotate(90deg);
+  }
+
+  // Collapsed by default; max-height (not display) so it works regardless of
+  // the Box.Y flex display the engine sets.
+  &__filter-cat-body {
+    max-height: 0;
+    overflow: hidden;
+    gap: 2px;
+    padding-left: 6px;
+  }
+  &__filter-cat[data-open="1"] &__filter-cat-body {
+    max-height: 320px;
+    overflow-y: auto;
+    padding-top: 2px;
+    padding-bottom: 4px;
+  }
+
+  // Keyword search input inside the Task category.
+  &__filter-search {
+    input {
+      width: 100%;
+      box-sizing: border-box;
+      padding: 6px 10px;
+      border: 1px solid var(--border-default, rgba(0, 0, 0, 0.12));
+      border-radius: 6px;
+      outline: none;
+      @include drumee.typo(
+        $size: 13px,
+        $weight: 400,
+        $line: 18px,
+        $color: var(--normal-fg-10, #0b0a21)
+      );
+
+      &:focus {
+        border-color: var(--col-primary-40, #5950ff);
+      }
+    }
+  }
+
+  // Colour dot for priority / status value rows.
+  &__filter-dot {
+    flex: 0 0 10px;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+  }
 
   &__main {
     width: 100%;
@@ -359,6 +480,21 @@
     width: 100%;
     flex-shrink: 0;
     margin-bottom: 4px;
+
+    // Custom columns are drag-reorderable by their header.
+    &[draggable="true"] {
+      cursor: grab;
+    }
+  }
+
+  // Column being dragged (dimmed) + the drop-target column (brand outline).
+  &__column.is-col-dragging {
+    opacity: 0.4;
+  }
+  &__column.is-col-drop {
+    outline: 2px dashed var(--col-primary-40, #5950ff);
+    outline-offset: -2px;
+    border-radius: 8px;
   }
 
   &__column-title-group {
@@ -434,15 +570,28 @@
     gap: 12px;
     padding: 12px;
     border-radius: 12px;
+    // Transparent placeholder border: hover only recolors it. A border
+    // appearing on hover used to grow the card by 2px and relayout the
+    // whole column every time the pointer crossed a card.
+    border: 1px solid transparent;
     background-color: var(--normal-bg-elevated, #fff);
     cursor: pointer;
     transition:
       box-shadow 0.15s,
+      border-color 0.15s,
       transform 0.1s;
     user-select: none;
+    // Perf: isolate each card's layout, and let offscreen cards skip layout
+    // and paint entirely (content-visibility) — a packed column then costs
+    // what's on screen, not its total card count, both at first render and
+    // on every placeholder move during a drag. intrinsic-size `auto` keeps
+    // the real height once a card has been rendered.
+    contain: layout style;
+    content-visibility: auto;
+    contain-intrinsic-size: auto 120px;
 
     &:hover {
-     border: 1px solid var(--border-default);
+      border-color: var(--border-default);
 
       .tasks-panel__task-remove {
         opacity: 1;
@@ -768,6 +917,46 @@
 
     &:hover {
       opacity: 1;
+    }
+  }
+
+  // Column-header action cluster (bell + optional ⋯).
+  &__col-actions {
+    flex: 0 0 auto;
+    align-items: center;
+    gap: 4px;
+  }
+
+  // Notification bell toggle (Figma 2041-20161): 28×28, off by default (muted
+  // grey), brand-filled when the user is watching the column.
+  &__col-bell {
+    position: relative; // anchor for the hover tooltip (&__tip)
+    flex: 0 0 28px;
+    width: 28px;
+    height: 28px;
+    padding: 6px;
+    justify-content: center;
+    align-items: center;
+    box-sizing: border-box;
+    border-radius: 8px;
+    cursor: pointer;
+    color: var(--normal-fg-40, #84848c);
+    background: var(--overlay-bg-05, rgba(0, 0, 0, 0.05));
+    transition: color 0.12s, background 0.12s;
+
+    svg {
+      width: 16px;
+      height: 16px;
+      display: block;
+    }
+
+    &:hover {
+      color: var(--normal-fg-20, #34343a);
+    }
+
+    &[data-active="1"] {
+      color: #fff;
+      background: var(--col-primary-40, #5950ff);
     }
   }
 
@@ -1118,6 +1307,7 @@
     min-height: 0;
     overflow-y: auto;
     padding: 2px;
+    padding-right: 12px; // gutter so the scrollbar clears the content
     margin: -2px; // keep focus rings from clipping against the scroll edge
 
     scrollbar-width: thin;
@@ -1151,6 +1341,11 @@
     flex-basis: 289px;
     width: 289px;
     gap: 32px;
+    // Stretch to the (taller) main column so `margin-top: auto` on the actions
+    // can push them to the column foot, level with the left column's file bar.
+    // (The shared __modal-side sets align-self: flex-start, which would keep
+    // this column short and float the actions up above the file bar.)
+    align-self: stretch;
   }
   &__create-modal &__modal-main {
     gap: 32px;
@@ -1176,7 +1371,18 @@
   &__detail-panel &__modal-main {
     overflow-y: auto;
     min-height: 0;
-    padding-right: 8px; // breathing room so the scrollbar clears the content
+    // Thin scrollbar + gutter so the bar clears the description box instead of
+    // sitting flush against it (the default wide scrollbar overran the 8px).
+    padding-right: 12px;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border-strong, rgba(0, 0, 0, 0.15)) transparent;
+    &::-webkit-scrollbar {
+      width: 6px;
+    }
+    &::-webkit-scrollbar-thumb {
+      background-color: var(--border-strong, rgba(0, 0, 0, 0.15));
+      border-radius: 6px;
+    }
   }
 
   // Mobile refinements for the popups (plus Gantt & List) live in ONE
@@ -1379,13 +1585,24 @@
     }
   }
 
+  // Left column: pin the file search/upload field to the column foot so its bar
+  // lines up with the actions in the right column. (The grow description above
+  // already pushes it down; this keeps it anchored if the description is short.)
+  &__create-files {
+    margin-top: auto;
+  }
+
   &__create-actions {
     align-items: stretch;
     gap: 8px;
+    // Right column: pin to the foot so the buttons sit at the same level as the
+    // left column's search/upload bar.
+    margin-top: auto;
   }
 
   &__create-cancel {
     flex: 1 1 0;
+    min-height: 40px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -1418,7 +1635,7 @@
     align-items: center;
     justify-content: center;
     text-align: center;
-    min-height: 38px;
+    min-height: 40px;
     @include drumee.typo(
       $size: 14px,
       $weight: 600,
@@ -1534,15 +1751,30 @@
   }
 
   // Description | Files two-up row atop the detail main column.
-  &__detail-top {
-    flex: 0 0 auto;
-    align-items: stretch;
-    gap: 32px;
+  // Reporter (task creator) — avatar + name, read-only.
+  &__detail-reporter {
+    align-items: center;
+    gap: 8px;
+  }
 
-    & > * {
-      flex: 1 1 0;
-      min-width: 0;
-    }
+  &__detail-reporter-avatar {
+    flex: 0 0 24px;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    overflow: hidden;
+  }
+
+  &__detail-reporter-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    @include drumee.typo(
+      $size: 14px,
+      $weight: 500,
+      $line: 20px,
+      $color: var(--normal-fg-10, #0b0a21)
+    );
   }
 
   &__detail-header {
@@ -2232,13 +2464,18 @@
 
     &:focus {
       border: 0;
-      box-shadow: 0 0 0 2px rgba(67, 60, 197, 0.35);
+      // Inset ring: an outer box-shadow (0 0 0 2px) extends 2px beyond the box
+      // on every side, and since the editor sits flush against its container's
+      // left edge that overflow-clips it, the left side of the ring gets cut
+      // off (reads as a missing/enlarged left border). Drawing it inset keeps
+      // the ring inside the box — never clipped, no apparent size change.
+      box-shadow: inset 0 0 0 2px rgba(67, 60, 197, 0.35);
     }
   }
 
-  // Detail-panel description: taller box (Jira issue-view ratio) filling its
-  // half of the description/files row, instead of the compact base height.
-  &__detail-top &__desc-editor {
+  // Detail-panel description: taller box (Jira issue-view ratio) than the
+  // compact base height.
+  &__detail-panel &__desc-editor {
     min-height: 200px;
     max-height: 340px;
   }
@@ -2261,6 +2498,38 @@
     color: var(--accent, #fa8540);
     font-weight: 600;
     cursor: default;
+  }
+
+  // Inline pasted image in an editable description/comment editor. The wrapper
+  // is contenteditable=false and uses the browser's native CSS resize handle
+  // (bottom-right) to make the image width adjustable; the <img> fills it.
+  &__inline-img {
+    display: inline-block;
+    resize: horizontal;
+    overflow: hidden;
+    max-width: 100%;
+    min-width: 60px;
+    margin: 4px 2px;
+    vertical-align: bottom;
+    border-radius: 8px;
+    line-height: 0;
+
+    img {
+      width: 100%;
+      height: auto;
+      display: block;
+      pointer-events: none;
+      border-radius: 8px;
+    }
+  }
+
+  // Read-only inline image (comment bodies) — not resizable.
+  &__inline-img-static {
+    max-width: 100%;
+    height: auto;
+    margin: 4px 2px;
+    vertical-align: bottom;
+    border-radius: 8px;
   }
 
   &__mention-dropdown {
@@ -2495,7 +2764,21 @@
     );
   }
 
+  // React bar and actions share one horizontal footer row.
+  &__comment-footer {
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 16px;
+    margin-top: 4px;
+
+    > .tasks-panel__react-bar,
+    > .tasks-panel__comment-actions {
+      margin-top: 0;
+    }
+  }
+
   &__comment-actions {
+    align-items: center;
     gap: 12px;
     margin-top: 2px;
   }
@@ -2511,6 +2794,79 @@
 
     &:hover {
       color: var(--accent, #fa8540);
+    }
+  }
+
+  // Icon variant of the comment action triggers (reply · like · react · edit ·
+  // delete). Dimmed by default, accent on hover.
+  &__comment-action-ico {
+    position: relative; // anchors the hover highlight + flyover tooltip
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+
+    // Soft rounded highlight behind the glyph on hover (no layout shift).
+    &::before {
+      content: "";
+      position: absolute;
+      inset: -5px;
+      border-radius: 8px;
+      background: transparent;
+      transition: background-color 0.15s ease;
+      z-index: 0;
+    }
+
+    // Dim the glyph only (not the whole node) so the tooltip stays full-opacity.
+    svg {
+      position: relative;
+      z-index: 1;
+      width: 18px;
+      height: 18px;
+      opacity: 0.55;
+      transition: opacity 0.15s ease;
+    }
+
+    &:hover {
+      svg {
+        opacity: 1;
+      }
+
+      &::before {
+        background: var(--overlay-bg-05, rgba(0, 0, 0, 0.06));
+      }
+    }
+
+    // Flyover tooltip: the framework appends it as a child and shows it on
+    // hover. A small dark pill centred below the icon.
+    .tooltips {
+      position: absolute;
+      top: calc(100% + 8px);
+      left: 50%;
+      transform: translateX(-50%);
+      padding: 4px 8px;
+      border-radius: 6px;
+      white-space: nowrap;
+      pointer-events: none;
+      z-index: 20;
+      background: var(--tooltip-bg, #1f1f28);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.18);
+      @include drumee.typo(
+        $size: 11px,
+        $weight: 500,
+        $line: 14px,
+        $color: var(--tooltip-fg, #ffffff)
+      );
+
+      // Small caret pointing up at the icon.
+      &::before {
+        content: "";
+        position: absolute;
+        bottom: 100%;
+        left: 50%;
+        transform: translateX(-50%);
+        border: 4px solid transparent;
+        border-bottom-color: var(--tooltip-bg, #1f1f28);
+      }
     }
   }
 
@@ -2584,28 +2940,139 @@
     }
   }
 
-  // Replies are indented under their root comment with a Figma-style curved
-  // thread connector hanging from the parent's avatar line.
-  &__comment-row[data-reply="1"] {
+  // A root comment and its replies form one thread group joined by a single
+  // vertical connector: it starts at the parent card's bottom border, runs down
+  // the replies container's left edge, branches into each reply with a curved
+  // elbow, and ends at the last reply's avatar. $spine-x is the root avatar's
+  // centre (16px card padding + 16px half of the 32px avatar).
+  $spine-x: 32px;
+  $spine-color: var(--border-strong, rgba(0, 0, 0, 0.15));
+
+  &__comment-thread {
+    gap: 0; // the connector starts flush with the parent card's bottom border
+  }
+
+  // Replies container carries the connector as its left border; its top sits at
+  // the parent's bottom border, padding-top restores the inter-card spacing, and
+  // its left edge aligns to the root avatar centre.
+  &__comment-thread-replies {
+    gap: 12px;
+    margin-left: $spine-x - 1px;
+    padding-left: 25px;
+    padding-top: 12px;
     position: relative;
-    margin-left: 32px;
+    border-left: 1px solid $spine-color;
+  }
+
+  // Curved elbow branching from the connector into each reply / the composer,
+  // meeting the card at the avatar's vertical centre.
+  &__comment-thread-replies &__comment-row[data-reply="1"],
+  &__comment-thread-replies &__comment-replybox {
+    position: relative;
 
     &::before {
       content: "";
       position: absolute;
-      left: -18px;
-      top: -8px;
-      width: 14px;
-      height: 26px;
-      border-left: 2px solid var(--border-strong, rgba(0, 0, 0, 0.15));
-      border-bottom: 2px solid var(--border-strong, rgba(0, 0, 0, 0.15));
-      border-bottom-left-radius: 10px;
+      left: -25px; // back to the connector (= padding-left + border)
+      top: 0;
+      width: 25px;
+      height: 32px; // down to the avatar centre
+      border-bottom: 1px solid $spine-color;
+      border-bottom-left-radius: 12px;
+    }
+  }
+
+  // The last item terminates the connector: mask the vertical trunk below the
+  // elbow's curve so the line reads as curving into that item rather than
+  // trailing past it. The mask is kept narrow (trunk width only) so it never
+  // clips the elbow's rounded corner.
+  &__comment-thread-replies > &__comment-row[data-reply="1"]:last-child,
+  &__comment-thread-replies > &__comment-replybox:last-child {
+    &::after {
+      content: "";
+      position: absolute;
+      left: -27px; // over the trunk (border sits ~2px right of here)
+      top: 22px; // just below where the curve meets the trunk
+      bottom: -8px; // past the container's bottom edge
+      width: 3px; // trunk only — clear of the rounded elbow
+      background: var(--normal-bg-elevated, #fff);
     }
   }
 
   &__comment-replybox {
-    margin-left: 32px;
     gap: 6px;
+  }
+
+  // Reply composer pill (Figma 2037-14883): a grey rounded field with the
+  // input on the left and the paperclip / @ / send icons inline on the right.
+  &__comment-reply-pill {
+    align-items: center;
+    gap: 12px;
+    padding: 8px 16px;
+    border-radius: 8px;
+    background: var(--overlay-bg-05, rgba(0, 0, 0, 0.05));
+
+    // The mention field grows; the tool cluster stays at its natural size.
+    .tasks-panel__comment-reply-field {
+      flex: 1 1 auto;
+      min-width: 0;
+    }
+  }
+
+  // Inside the pill the input is borderless/transparent — the pill provides the
+  // grey fill and padding; it reads as one control.
+  &__comment-reply-pill &__comment-reply-input {
+    border: 0;
+    background: transparent;
+    padding: 6px 0;
+    min-height: 20px;
+    max-height: 140px;
+    border-radius: 0;
+    @include drumee.typo(
+      $size: 14px,
+      $weight: 400,
+      $line: 20px,
+      $color: var(--normal-fg-10, #0b0a21)
+    );
+
+    &:focus {
+      border: 0;
+      box-shadow: none;
+    }
+  }
+
+  &__comment-reply-tools {
+    flex: 0 0 auto;
+    align-items: center;
+    gap: 12px;
+  }
+
+  &__comment-reply-send {
+    flex: 0 0 20px;
+    width: 20px;
+    height: 20px;
+    cursor: pointer;
+
+    svg {
+      width: 18px;
+      height: 18px;
+    }
+
+    &:hover {
+      opacity: 0.8;
+    }
+  }
+
+  // "Replying to @Name" hint above the composer when answering a child comment
+  // (the composer renders at the thread's end, detached from the target).
+  &__comment-replying-to {
+    font-style: italic;
+    @include drumee.typo(
+      $size: 12px,
+      $weight: 400,
+      $line: 16px,
+      $color: var(--normal-fg-50, #65656c)
+    );
   }
 
   &__comment-action--primary {
@@ -2624,7 +3091,7 @@
   &__react-chip {
     padding: 1px 8px;
     border-radius: 11px;
-    cursor: pointer;
+    cursor: default; // only the user's own chip is interactive (removable)
     border: 1px solid var(--border-default, rgba(0, 0, 0, 0.1));
     background: var(--normal-bg-80, #f2f2f7);
     @include drumee.typo(
@@ -2634,23 +3101,43 @@
       $color: var(--normal-fg-10, #0b0a21)
     );
 
+    transition:
+      border-color 0.15s ease,
+      background-color 0.15s ease;
+
+    // Own reaction: highlighted + clickable to remove.
     &[data-own="1"] {
+      cursor: pointer;
       border-color: var(--accent, #fa8540);
       background: var(--active-item-bg, rgba(250, 133, 64, 0.12));
+
+      &:hover {
+        border-color: var(--accent, #fa8540);
+        background: var(--hover-bg-40, rgba(250, 133, 64, 0.18));
+      }
+    }
+
+    // Flash when the user re-picks an emoji they already reacted with.
+    &--flash {
+      animation: tasks-panel-chip-flash 0.9s ease;
     }
   }
 
-  &__react-add {
-    width: 22px;
-    height: 20px;
-    text-align: center;
-    border-radius: 11px;
-    cursor: pointer;
-    border: 1px solid var(--border-default, rgba(0, 0, 0, 0.1));
-    color: var(--normal-fg-40, #84848c);
-
-    &:hover {
-      background: var(--hover-bg-40, rgba(0, 0, 0, 0.04));
+  @keyframes tasks-panel-chip-flash {
+    0% {
+      transform: scale(1);
+      border-color: var(--accent, #fa8540);
+      background: var(--active-item-bg, rgba(250, 133, 64, 0.12));
+    }
+    30% {
+      transform: scale(1.18);
+      border-color: var(--accent, #fa8540);
+      background: var(--accent, #fa8540);
+    }
+    100% {
+      transform: scale(1);
+      border-color: var(--accent, #fa8540);
+      background: var(--active-item-bg, rgba(250, 133, 64, 0.12));
     }
   }
 
@@ -2662,6 +3149,99 @@
 
     &:hover {
       background: var(--hover-bg-40, rgba(0, 0, 0, 0.04));
+    }
+  }
+
+  // "…" more button in the quick-react bar (opens the full grid below).
+  &__react-more {
+    padding: 1px 6px;
+    border-radius: 8px;
+    cursor: pointer;
+    color: var(--normal-fg-40, #84848c);
+    @include drumee.typo($size: 15px, $weight: 600, $line: 18px);
+
+    &:hover {
+      background: var(--hover-bg-40, rgba(0, 0, 0, 0.04));
+    }
+  }
+
+  // Quick-react bar (six emojis + "…"); the "…" opens the floating picker.
+  &__react-picker-wrap {
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  // Floating full emoji picker (assets/emojis), modeled on the meeting
+  // reactions picker. Anchored directly above the "…" more button by
+  // _positionCommentReactionsPicker; hidden via :empty until fed. Emoji-grid
+  // rules ported from the meeting skin so the roll / grid / spans render
+  // identically under the tasks-panel prefix.
+  &__reactions-picker {
+    position: absolute;
+    top: 64px; // fallback; inline top/left set on open
+    left: 16px;
+    z-index: 200;
+    width: 319px;
+    min-height: 180px;
+    background: var(--default-bg, #fff);
+    box-shadow: var(--drumee-shadow-box, 0 8px 24px rgba(0, 0, 0, 0.18));
+    border-radius: var(--border-radius, 10px);
+    padding: 5px 5px 0 5px;
+
+    &:empty {
+      display: none;
+    }
+  }
+
+  &__emojis-roll {
+    height: 170px;
+
+    .list-smart__container {
+      display: flex;
+      padding: 10px;
+      flex-direction: column;
+    }
+  }
+
+  &__container-emojis {
+    width: 100%;
+    background: var(--default-bg, #fff);
+  }
+
+  &__emojis-item {
+    justify-items: center;
+    justify-content: center;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, 28px) minmax(28px, 30px);
+    grid-auto-rows: 28px;
+    grid-gap: 0.1rem;
+    align-items: center;
+    border: 1px lightgrey solid;
+    margin-top: 7px;
+    padding: 5px;
+    border-radius: var(--border-radius, 10px);
+
+    span {
+      width: 100%;
+      height: 100%;
+      cursor: pointer;
+      font-size: 28px;
+    }
+  }
+
+  &__emojis-latest {
+    font-size: 33px;
+    width: calc(100% - 25px);
+    margin: 0 auto 0 11px;
+    overflow: hidden;
+    padding: 5px;
+    border-radius: var(--border-radius, 10px);
+    background: var(--default-bg, #fff);
+    border: 1px lightgrey solid;
+
+    span {
+      cursor: pointer;
     }
   }
 
@@ -3378,6 +3958,10 @@
   &__gantt {
     flex: 1 1 auto;
     min-height: 0;
+    // Clamp to the host cell (like __main) so the wide timeline overflows THIS
+    // container and `overflow: auto` turns into a horizontal scrollbar instead
+    // of stretching the panel — otherwise the later days can't be scrolled to.
+    min-width: 0;
     overflow: auto;
     // Figma's canvas is plain white — the -90 token resolves grey in this theme.
     background: var(--normal-bg-elevated, #fff);
@@ -3539,7 +4123,6 @@
     );
   }
 
-  &__gantt-add,
   &__gantt-del {
     flex: 0 0 18px;
     width: 18px;
@@ -3554,14 +4137,10 @@
     }
   }
 
-  &__gantt-arow:hover &__gantt-add,
   &__gantt-arow:hover &__gantt-del {
     opacity: 0.6;
   }
 
-  &__gantt-add:hover {
-    opacity: 1;
-  }
   &__gantt-del:hover {
     opacity: 1;
     svg {
@@ -4375,11 +4954,16 @@
     );
   }
 
-  // Priority legend: chips spread evenly across the card (Figma EL-36629f01 —
-  // each entry is a fill-width, center-justified group).
+  // Priority legend: one center-justified chip per bar, sharing the bars'
+  // exact column geometry so each label sits under its bar. The bars live in
+  // `__health-prio-bars` (inset `left: 26px` to clear the axis labels, then
+  // `space-around`), which centres 4 equal columns at W·(2i+1)/8. Matching
+  // that here needs the same 26px left inset AND zero gap — with `flex: 1 1 0`
+  // and no gap the columns are exactly W/4 and centre at the same positions;
+  // any gap would shift every label off its bar.
   &__health-legend-inline {
-    flex-wrap: wrap;
-    gap: 16px;
+    padding-left: 26px;
+    gap: 0;
 
     & > * {
       flex: 1 1 0;
@@ -4590,9 +5174,12 @@
   }
 
   &__health-work-track {
+    position: relative; // anchor for the hover tooltip (&__tip)
     flex: 1 1 auto;
     height: 20px;
     border-radius: 4px;
+    // Faint rail so a zero-task member still shows an (empty) bar, not a gap.
+    background: var(--border-default, rgba(0, 0, 0, 0.05));
   }
 
   &__health-work-fill {
@@ -4601,6 +5188,29 @@
     border-radius: 4px;
     background: var(--col-primary-10, #e4e3ff);
     transition: width 0.2s;
+  }
+
+  // Shared floating hover tooltip (workload track task-count + column bell).
+  // The engine appends this <div> inside the hovered widget; anchor it centered
+  // just above, with compact type so it reads as a label, not a block of text.
+  &__tip {
+    position: absolute;
+    bottom: calc(100% + 6px);
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 1000;
+    padding: 3px 8px;
+    border-radius: 6px;
+    white-space: nowrap;
+    pointer-events: none;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18);
+    background: var(--normal-fg-10, rgba(28, 28, 30, 0.92));
+    @include drumee.typo(
+      $size: 11px,
+      $weight: 600,
+      $line: 16px,
+      $color: var(--normal-bg-elevated, #fff)
+    );
   }
 
   &__health-empty {
@@ -4681,6 +5291,10 @@
   &__file-search-input {
     flex: 1 1 auto;
     min-width: 0;
+    // Match the action buttons' height so the bar and the buttons read level.
+    min-height: 40px;
+    display: flex;
+    align-items: center;
     padding: 8px 12px;
     border: 1px solid var(--border-default, rgba(0, 0, 0, 0.08));
     border-radius: 8px;
@@ -5411,9 +6025,6 @@ html[data-theme="dark"] .tasks-panel__flatpickr.flatpickr-calendar {
     border-left: 0;
     border-top: 3px solid var(--col-primary-40, #5950ff);
     overflow: visible;
-  }
-  .tasks-panel__detail-top {
-    gap: 16px;
   }
 }
 

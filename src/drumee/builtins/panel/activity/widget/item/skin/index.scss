@@ -132,32 +132,33 @@
   &__actions {
     align-items: center;
     flex-shrink: 0;
-    gap: 6px;
-    height: 20px;
+    gap: 8px;
     justify-content: flex-end;
-    width: 45px;
   }
 
   &__join {
+    box-sizing: border-box;
     align-items: center;
-    background: #28a745;
+    background: var(--button-accept, #18ac72);
     border-radius: 50%;
     color: #fff;
     cursor: pointer;
     display: flex;
     flex-shrink: 0;
-    height: 20px;
+    height: 28px;
+    width: 28px;
+    padding: 7px;
     justify-content: center;
-    transition: background-color 0.15s ease;
-    width: 20px;
+    transition: opacity 0.15s ease;
 
     svg {
-      height: 12px;
-      width: 12px;
+      height: 100%;
+      width: 100%;
+      fill: currentColor;
     }
 
     &:hover {
-      background: #218838;
+      opacity: 0.85;
     }
   }
 

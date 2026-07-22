@@ -1,18 +1,18 @@
 const BADGES = [
   {
     badge_text: 'STEP 1/5',
-    title: 'This is Private',
-    desc: 'You and only you can access its content. If you want to share, make a copy into the desired Worksapces',
+    title: 'This is your Personal Workspace',
+    desc: 'Only you can access this workspace. If you want to share, make a copy into the desired workspace.',
   },
   {
     badge_text: 'STEP 1/5',
-    title: 'This is Restricted Workspace',
-    desc: 'Reserved only for explicitly designated people.',
+    title: 'This is an Internal Workspace',
+    desc: 'Restricted to only your internal team.',
   },
   {
     badge_text: 'STEP 1/5',
-    title: 'This is Shared Worksapce',
-    desc: 'Allowing anyone with the link to access it, allowing guests to view the folder structure and chat without logging in.',
+    title: 'This is an External Workspace',
+    desc: 'Open to share externally with your clients — anyone with the link can view the folder structure and chat without logging in.',
   },
 ];
 
@@ -49,7 +49,8 @@ class __tutorial_workspace extends LetcBox {
     this.triggerHandlers({
       service: 'spotlight:focus',
       target: card.el,
-      tooltip: step,
+      // Hide the Back button on the very first badge — nothing precedes it.
+      tooltip: { ...step, hide_back: this._stepIndex === 0 },
       direction: 'north',
       owner: this,
     });
@@ -67,8 +68,12 @@ class __tutorial_workspace extends LetcBox {
         }
         this._showBadge();
         break;
-      case 'skip-tour':
-        this.triggerHandlers({ service: 'skip-tour' });
+      case 'back-step':
+        // Walk back through the workspace sub-badges. Badge 0 hides Back, so
+        // this only fires on badges 1+; guard anyway.
+        if (this._stepIndex <= 0) return;
+        this._stepIndex = this._stepIndex - 1;
+        this._showBadge();
         break;
       default:
         if (super.onUiEvent) super.onUiEvent(trigger, args);

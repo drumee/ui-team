@@ -16,7 +16,7 @@ const { fileItem } = require("./folder")
  *   east  = connector right of card (dot at right, points to target right)
  *   west  = connector left of card (dot at left, points to target left)
  */
-export function tooltipBadge(ui, { title, desc, badge_text, style, direction = 'north' }) {
+export function tooltipBadge(ui, { title, desc, badge_text, style, direction = 'north', hide_back = false }) {
   const fig = ui.fig.family;
   const p = `${ui.fig.group}__s1`;
 
@@ -59,12 +59,17 @@ export function tooltipBadge(ui, { title, desc, badge_text, style, direction = '
       Skeletons.Box.X({
         className: `${p}-footer`,
         kids: [
-          Skeletons.Note({
-            className: `${p}-skip`,
-            content: LOCALE.SKIP_TOUR || 'Skip tour',
-            service: 'skip-tour',
-            uiHandler: [ui],
-          }),
+          // On the very first step there is nothing to go back to: render an
+          // empty spacer so `justify-content: space-between` still pushes Next
+          // to the right edge.
+          hide_back
+            ? Skeletons.Box.Y({ className: `${p}-back-spacer` })
+            : Skeletons.Note({
+              className: `${p}-back`,
+              content: `← ${LOCALE.BACK || 'Back'}`,
+              service: 'back-step',
+              uiHandler: [ui],
+            }),
           Skeletons.Note({
             className: `${p}-next`,
             content: `${LOCALE.NEXT || 'Next'} →`,

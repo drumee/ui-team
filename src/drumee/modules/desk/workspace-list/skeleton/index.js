@@ -27,14 +27,16 @@ module.exports = function (ui) {
       level: 0,
       radio: `sidebar-radio`, /** Shaed with sidebar items */
     },
+    partHandler: ui,
     api: {
       service: SERVICE.desk.home,
       hub_id: Visitor.id,
-      type: _a.hub
+      // hubs AND home-root folders — Personal workspaces are personal-area
+      // folders, not hubs. Row filtering lives in the widget's onPartReady
+      // (prepareData) because the mix needs per-filetype rules that the flat
+      // `skip` regex cannot express.
+      type: "node"
     },
-    // Collaborative workspaces only — `private` is the UX "restricted".
-    // Excludes personal hub and the default dmz/wicket.
-    skip: { area: /^(?!(share|private|restricted|public)$).*$/ },
   });
 
   return list;

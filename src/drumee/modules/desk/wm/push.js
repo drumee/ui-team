@@ -119,6 +119,12 @@ class __push_manager extends winman {
       case "room.scheduled":
         return this._showMeetingToast(data);
 
+      // A scheduled meeting's start time has arrived (reminderWorker →
+      // meeting_schedule_due). Show the same toast, flavoured as a reminder
+      // with a Join button that opens the meeting.
+      case "room.reminder":
+        return this._showMeetingToast(data, { reminder: 1 });
+
       case SERVICE.signaling.message:
         if (/pickup|cancel|reject/.test(data.type)) Visitor.muteSound();
         return
@@ -170,25 +176,58 @@ class __push_manager extends winman {
    * appends a Skeletons node to the WM layer, auto-dismisses after ~6s (or on
    * click). Not a modal; the notification-sidebar entry is a separate follow-up.
    */
-  _showMeetingToast(data = {}) {
+  _showMeetingToast(data = {}, opt = {}) {
     try {
-      const from = data.from || "";
-      const line = data.title
-        ? `${LOCALE.X_INVITED_YOU_TO_MEETING.format(from)} — ${data.title}`
-        : LOCALE.X_INVITED_YOU_TO_MEETING.format(from);
+      const isReminder = !!opt.reminder;
       const layer = Wm && Wm.windowsLayer;
       if (!layer || !layer.append) return;
+
+      let kids;
+      if (isReminder) {
+        // "<title>" / "Your meeting is starting now" + a Join button.
+        kids = [
+          Skeletons.Note({
+            content: data.title || LOCALE.MEETING,
+            styleOpt: { "font-size": "14px", "line-height": "20px", "font-weight": "600", color: "#ffffff" },
+          }),
+          Skeletons.Note({
+            content: LOCALE.MEETING_STARTING_NOW,
+            styleOpt: { "font-size": "12px", "line-height": "17px", color: "rgba(255,255,255,0.75)", "margin-top": "2px" },
+          }),
+          Skeletons.Note({
+            className: "desk-meeting-toast__join",
+            content: LOCALE.JOIN_MEETING,
+            styleOpt: {
+              "margin-top": "10px", "align-self": "flex-start", padding: "6px 16px",
+              "border-radius": "6px", background: "#5950ff", color: "#ffffff",
+              "font-size": "13px", "font-weight": "600", cursor: "pointer",
+            },
+          }),
+        ];
+      } else {
+        const from = data.from || "";
+        const line = data.title
+          ? `${LOCALE.X_INVITED_YOU_TO_MEETING.format(from)} — ${data.title}`
+          : LOCALE.X_INVITED_YOU_TO_MEETING.format(from);
+        kids = [
+          Skeletons.Note({
+            content: line,
+            styleOpt: { "font-size": "14px", "line-height": "20px", color: "#ffffff" },
+          }),
+        ];
+      }
+
       // Stack toasts down the right edge so several don't overlap.
       this._meetingToastN = (this._meetingToastN || 0) + 1;
       const idx = this._meetingToastN;
       const toast = layer.append(
-        Skeletons.Box.X({
+        Skeletons.Box.Y({
           className: "desk-meeting-toast",
           service: "dismiss-meeting-toast",
           uiHandler: [this],
           styleOpt: {
             position: "fixed",
-            top: `${72 + ((idx - 1) % 4) * 76}px`,
+            top: `${72 + ((idx - 1) % 4) * 96}px`,
             right: "24px",
             "z-index": 100000,
             "max-width": "320px",
@@ -199,12 +238,7 @@ class __push_manager extends winman {
             "box-shadow": "0 10px 30px rgba(0, 0, 0, 0.25)",
             cursor: "pointer",
           },
-          kids: [
-            Skeletons.Note({
-              content: line,
-              styleOpt: { "font-size": "14px", "line-height": "20px", color: "#ffffff" },
-            }),
-          ],
+          kids,
         }),
       );
       const kill = () => {
@@ -215,11 +249,55 @@ class __push_manager extends winman {
           }
         } catch (e) {}
       };
-      // Click-to-dismiss + auto-dismiss.
+      // Reminder: the Join button joins the meeting (and dismisses); clicking
+      // elsewhere on the toast just dismisses. stopPropagation keeps the two apart.
+      if (isReminder && toast && toast.el) {
+        const joinEl = toast.el.querySelector(".desk-meeting-toast__join");
+        if (joinEl) {
+          joinEl.addEventListener("click", (e) => {
+            e.stopPropagation();
+            this._joinMeetingFromData(data);
+            kill();
+          });
+        }
+      }
+      // Click-to-dismiss + auto-dismiss (reminders linger longer).
       if (toast && toast.el) toast.el.addEventListener("click", kill, { once: true });
-      setTimeout(kill, 6000);
+      setTimeout(kill, isReminder ? 15000 : 6000);
     } catch (e) {
       this.warn && this.warn("meeting toast failed", e);
+    }
+  }
+
+  /**
+   * Open (or reuse) the folder window for a meeting's hub and join the live room
+   * on its meeting tab. Mirrors the activity-panel "join-meeting" handler so a
+   * reminder toast's Join button behaves identically.
+   */
+  _joinMeetingFromData(data = {}) {
+    try {
+      const hub_id = data.hub_id;
+      if (!hub_id || typeof Wm === "undefined") return;
+      const room_id = data.room_id || data.nid;
+      const folderNid = data.nid || room_id;
+      const open = ((Wm.getItemsByKind && Wm.getItemsByKind("window_folder")) || [])
+        .find((w) => !w.isDestroyed() && w.mget(_a.hub_id) == hub_id);
+      if (open && typeof open._launchMeetingInPanel === "function") {
+        if (open.raise) open.raise();
+        open._launchMeetingInPanel();
+      } else if (Wm.addWindow) {
+        Wm.addWindow({
+          kind: "window_folder",
+          hub_id,
+          nid: folderNid,
+          filename: data.title || "",
+          activeTab: "meeting",
+          room_id,
+          room_type: "meeting",
+        });
+      }
+    } catch (e) {
+      this.warn && this.warn("_joinMeetingFromData failed", e);
     }
   }
 

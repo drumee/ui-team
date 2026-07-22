@@ -72,6 +72,7 @@ class __widget_chat extends LetcBox {
     this.removeUploadFromChat = this.removeUploadFromChat.bind(this);
     this._onMentionDropdownKeydown = this._onMentionDropdownKeydown.bind(this);
     this._onMentionDropdownKeyup = this._onMentionDropdownKeyup.bind(this);
+    this._onClipboardPaste = this._onClipboardPaste.bind(this);
     this.initStorage();
   }
 
@@ -202,6 +203,10 @@ class __widget_chat extends LetcBox {
       this.el.removeEventListener("keydown", this._onMentionDropdownKeydown, true);
       this.el.removeEventListener("keyup", this._onMentionDropdownKeyup, true);
       this._mentionKeyboardBound = false;
+    }
+    if (this._clipboardPasteBound && this.el) {
+      this.el.removeEventListener("paste", this._onClipboardPaste, true);
+      this._clipboardPasteBound = false;
     }
   }
 
@@ -698,6 +703,41 @@ class __widget_chat extends LetcBox {
         });
         break;
       case _a.list:
+        // Personal-hub folder chat: channel.messages keeps legacy rows with
+        // no metadata._scope_nid visible in EVERY folder (workspace
+        // back-compat), but in the user's own hub those rows are hub-level
+        // invites/calls that belong to no folder — every personal folder
+        // rendered the same conversation. Drop them so the initial load
+        // matches the WS filter (matchesScopedChannel), which already
+        // rejects nid mismatches. Workspace hubs keep the back-compat
+        // pass-through; file-thread mode uses its own service and metadata
+        // shape, so it must bypass this filter.
+        if (
+          this.getScopedNid() &&
+          `${this.hubId}` === `${Visitor.id}` &&
+          !child._strictScopeInstalled
+        ) {
+          child._strictScopeInstalled = 1;
+          const original = child.prepareData.bind(child);
+          const chat = this;
+          child.prepareData = function (data) {
+            const prepared = original(data) || [];
+            const nid = chat.getScopedNid();
+            if (!nid || chat.isFileThreadMode()) return prepared;
+            return prepared.filter((m) => {
+              if (!m) return false;
+              try {
+                const meta =
+                  typeof m.metadata === "string"
+                    ? JSON.parse(m.metadata)
+                    : m.metadata || {};
+                return `${meta._scope_nid}` === `${nid}`;
+              } catch (e) {
+                return false;
+              }
+            });
+          };
+        }
         child.onAddKid = this.handleScroll.bind(this);
         child.once(_e.ready, () => {
           this.scrollMessagesToBottom(child);
@@ -848,7 +888,46 @@ class __widget_chat extends LetcBox {
       }
       this.feed(require("./skeleton")(this));
       this._bindMentionKeyboard();
+      this._bindClipboardPaste();
     });
+  }
+
+  /**
+   * Capture-phase paste listener on the chat root. Runs BEFORE the composer's
+   * contenteditable `_onpaste` (ui-core text/editable), which bails on
+   * `text/html` first and so drops images copied from a web page (they arrive
+   * as an image blob alongside an HTML snippet). Here we look for an image item
+   * regardless of any accompanying html/text and stage it as an attachment;
+   * when there is no image we let the event fall through so normal text paste
+   * keeps working.
+   */
+  _bindClipboardPaste() {
+    if (this._clipboardPasteBound || !this.el) return;
+    this.el.addEventListener("paste", this._onClipboardPaste, true);
+    this._clipboardPasteBound = true;
+  }
+
+  /**
+   * @param {ClipboardEvent} e
+   */
+  _onClipboardPaste(e) {
+    const cd = e.clipboardData || window.clipboardData;
+    if (!cd || !cd.items) return;
+    // Collect image blobs only. A screenshot / "copy image" gives an image
+    // item; a file copy gives kind==="file" with an image type too — both ok.
+    const files = [];
+    for (const item of cd.items) {
+      if (item.kind === "file" && /^image\//.test(item.type || "")) {
+        const f = item.getAsFile();
+        if (f) files.push(f);
+      }
+    }
+    if (!files.length) return; // no image → let text paste proceed as usual
+    // We handled it: stop the contenteditable paste so the raw <img>/markup
+    // never lands in the input, and stage each image into the attachment tray.
+    e.preventDefault();
+    e.stopPropagation();
+    for (const f of files) this.pasteFile(f);
   }
 
   /**
@@ -926,6 +1005,15 @@ class __widget_chat extends LetcBox {
 
       case _e.copy:
         return this.copyMessage(cmd);
+
+      case "attachment-copied":
+        // Bubbled up from a chat-item after it copied an attachment to the OS
+        // clipboard (image blob or link) — show the same ack toast as text copy.
+        return this._showAck(
+          args.copied === "link"
+            ? LOCALE.LINK_COPIED_CLIPBOARD
+            : LOCALE.IMAGE_COPIED_CLIPBOARD,
+        );
 
       case _e.reply:
         return this.replyMessage(cmd);
@@ -2037,8 +2125,17 @@ class __widget_chat extends LetcBox {
    */
   copyMessage(cmd) {
     const _message = cmd.mget(_a.message);
-    const ackMsg = LOCALE.MESSAGE_COPIED_CLIPBOARD;
     copyToClipboard(_message);
+    return this._showAck(LOCALE.MESSAGE_COPIED_CLIPBOARD);
+  }
+
+  /**
+   * Transient "copied" acknowledgement toast, reused by copyMessage (text) and
+   * the copy-attachment (image/link) flow bubbled up from a chat-item.
+   * @param {string} ackMsg
+   */
+  _showAck(ackMsg) {
+    if (!this.__wrapperAck) return;
     this.__wrapperAck.feed(
       require("@drumee/ui-core/letc/preset/ack")(this, ackMsg, {
         height: this.$el.height(),
@@ -2405,7 +2502,24 @@ class __widget_chat extends LetcBox {
     if (!list) return;
     let media = list.getItemsByAttr(_a.nid, data.nid)[0];
     if (!media) return;
-    media.goodbye();
+    // `now:1` destroys the card immediately. Passing an opts object WITHOUT
+    // `now` would drop goodbye()'s default `timeout:2` and fall back to
+    // selfDestroy's 2000ms delay — the card would linger ~2.5s, reading as
+    // "the X did nothing" and (because each re-click restarts that timer) the
+    // reported "must click several times to delete".
+    //
+    // goodbye()/selfDestroy remove the model with {silent:true}, so
+    // media-wrapper's onRemoveChild (rebuild persisted list + collapse tray)
+    // never fires and its `_e.update` is a no-op. Do that work in the callback,
+    // after the card has actually left the collection.
+    media.goodbye({
+      now: 1,
+      callback: () => {
+        if (_.isFunction(list.isDestroyed) && list.isDestroyed()) return;
+        if (_.isFunction(list.updateAttachment)) list.updateAttachment();
+        this.checkPendingContent();
+      },
+    });
   }
 
   /**

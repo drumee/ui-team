@@ -667,62 +667,151 @@
 // notices intentionally stay content-width.
 .widget-chatItem__ui.file-thread-event .widget-chatItem__message-line,
 .widget-chatItem__ui:has(.widget-chatItem__file-thread-card)
+  .widget-chatItem__message-line,
+.widget-chatItem__ui.meeting-event .widget-chatItem__message-line,
+.widget-chatItem__ui:has(.widget-chatItem__meeting-card)
   .widget-chatItem__message-line {
   width: 100%;
   display: flex;
   justify-content: center;
 }
 
-// "X started a meeting" — compact inline system note with a Join link.
+// "X started a meeting" — self-contained meeting-event card (Figma 2507-137937):
+// video badge + bold title + live dot | subtitle | primary action button.
 .widget-chatItem__meeting-card {
-  display: inline-flex;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+  max-width: 320px;
+  padding: 12px;
+  border-radius: 12px;
+  background: var(--card-bg, #ffffff);
+  border: 1px solid var(--overlay-light-mode, rgba(0, 0, 0, 0.05));
+  box-shadow: 0 1px 3px rgba(11, 10, 33, 0.06);
+  text-align: left;
+
+  // Ended meetings read as muted/archived.
+  &.end {
+    .widget-chatItem__meeting-card-badge {
+      background: var(--overlay-light-mode, rgba(0, 0, 0, 0.05));
+    }
+    .widget-chatItem__meeting-card-ico {
+      fill: var(--grey-70, #84848c);
+    }
+    .widget-chatItem__meeting-card-live {
+      border-color: var(--grey-70, #84848c);
+    }
+    .widget-chatItem__meeting-card-dot {
+      background: var(--grey-70, #84848c);
+    }
+  }
+}
+
+.widget-chatItem__meeting-card-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.widget-chatItem__meeting-card-badge {
+  box-sizing: border-box;
+  display: flex;
   align-items: center;
   justify-content: center;
-  // Stay within the chat column (narrow in the in-meeting panel) and wrap
-  // long names instead of overflowing — keeps every notice the same shape.
-  flex-wrap: wrap;
-  max-width: 100%;
-  gap: 6px;
-  padding: 4px 8px;
-  border-radius: 6px;
-  background: transparent;
-  font-size: 12px;
-  line-height: 1.4;
-  color: var(--normal-fg-10);
-  opacity: 0.85;
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  padding: 4px;
+  border-radius: 8px;
+  background: var(--overlay-brand, rgba(89, 80, 255, 0.1));
+}
 
-  &.end .widget-chatItem__meeting-card-dot {
-    background-color: var(--default-icon-neutral, #89929e);
-    animation: none;
-  }
+.widget-chatItem__meeting-card-ico {
+  width: 16px;
+  height: 16px;
+  fill: var(--primary-40, #5950ff);
+}
+
+.widget-chatItem__meeting-card-title {
+  flex: 1 1 auto;
+  min-width: 0;
+  // drumee.typo doesn't emit font-weight — set it explicitly for the SemiBold title.
+  @include drumee.typo($size: 14px, $line: 20px, $color: #0b0a21);
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+// Live-status dot inside a hairline pill.
+.widget-chatItem__meeting-card-live {
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 10px;
+  height: 10px;
+  border: 0.5px solid var(--primary-40, #5950ff);
+  border-radius: 12px;
 }
 
 .widget-chatItem__meeting-card-dot {
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background-color: var(--default-border-caution, #ea4d44);
+  background: var(--primary-40, #5950ff);
   flex-shrink: 0;
 }
 
-.widget-chatItem__meeting-card-text {
-  // Wrap (and break overly long names) so the notice never overflows the
-  // chat column; centered to read as a tidy system line.
+.widget-chatItem__meeting-card-sub {
+  @include drumee.typo($size: 12px, $line: 17px, $weight: 400, $color: #65656c);
   white-space: normal;
   overflow-wrap: anywhere;
-  text-align: center;
 }
 
-.widget-chatItem__meeting-card-action {
-  margin-left: 4px;
-  color: var(--button-accept, #18ac72);
-  font-weight: 600;
+.widget-chatItem__meeting-card-foot {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+// Primary action button. Live → "Join meeting" (brand); ended → disabled.
+.widget-chatItem__meeting-card-btn {
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 6px 24px;
+  border-radius: 4px;
+  background: var(--primary-40, #5950ff);
   cursor: pointer;
   user-select: none;
+  @include drumee.typo($size: 14px, $line: 20px, $weight: 600, $color: #ffffff);
+  transition: background 0.12s ease;
 
   &:hover {
-    text-decoration: underline;
+    background: var(--primary-50, #433cc5);
   }
+
+  &.is-disabled {
+    background: var(--grey-20, #f2f2f7);
+    color: var(--grey-70, #84848c);
+    cursor: default;
+
+    &:hover {
+      background: var(--grey-20, #f2f2f7);
+    }
+  }
+}
+
+.widget-chatItem__meeting-card-btn-ico {
+  width: 20px;
+  height: 20px;
+  fill: var(--grey-70, #84848c);
 }
 
 // "File chat" folder-visible system card (Figma 2216-170414). Clickable (whole

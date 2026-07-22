@@ -1,7 +1,6 @@
 require("./skin");
 const { copyToClipboard } = require("@drumee/ui-essentials");
 const { TweenLite, gsap } = require("@drumee/ui-core/vendor");
-let lastClickTime = new Date().getTime();
 const push = require("./push");
 // Same channel the websocket dispatcher triggers on Wm — windows and the
 // sidebar workspace list subscribe to it (window/utils.js, workspace-list).
@@ -180,7 +179,6 @@ class __window_manager extends push {
   }
 
   closeCreateFolderDialog() {
-    this._pendingFolderArea = null;
     return this.ensurePart("wrapper-modal").then((p) => {
       p.el.dataset.mode = "";
       p.clear();
@@ -199,34 +197,6 @@ class __window_manager extends push {
     if (/^(\.+|.+\/.+| +|\-{1,1})$/.test(filename)) {
       this._creatingFolder = 0;
       return this.alert(LOCALE.INVALID_FILENAME);
-    }
-
-    // "Private folder" (Add-new menu) → create a private hub via
-    // desk.create_hub. media.make_dir cannot create a top-level private
-    // directory; _pendingFolderArea is set by the add-private-folder handler.
-    if (this._pendingFolderArea === _a.private) {
-      this._pendingFolderArea = null;
-      return this.postService(SERVICE.desk.create_hub, {
-        area: _a.private,
-        filename,
-        hub_id: Visitor.id,
-        pid: Visitor.id,
-      })
-        .then((res) => {
-          const hub = Array.isArray(res) ? res[0] : res;
-          if (hub && (hub.error || hub.error_code)) {
-            return this.alert(LOCALE[hub.error] || hub.reason || hub.error);
-          }
-          this.closeCreateFolderDialog();
-          RADIO_BROADCAST.trigger("workspace:refresh");
-        })
-        .catch((e) => {
-          this.warn("Failed to create private folder", e);
-          this.alert(e.reason || e.error || LOCALE.TRY_AGAIN);
-        })
-        .finally(() => {
-          this._creatingFolder = 0;
-        });
     }
 
     const onHome = !this._curWorkspace;
@@ -330,6 +300,11 @@ class __window_manager extends push {
       this._curWorkspace.hub_id == hub_id &&
       this._curWorkspace.nid == nid
     ) {
+      // Already the current workspace — but its pane may be covered by a
+      // popup folder window (the active window fully occludes the rest).
+      // Raise it so re-clicking the sidebar item always brings it back.
+      const pane = this._findWorkspaceWindow(hub_id);
+      if (pane && pane.el.dataset.state !== "1") pane.raise();
       return;
     }
     Desk.closeAllPanels();
@@ -368,7 +343,14 @@ class __window_manager extends push {
       this.ensurePart("wrapper-modal").then((p) => p.clear());
       let cur = this.headlessLayer.children.last();
       cur.once(_a.destroy, () => {
-        this._curWorkspace = null;
+        // On a workspace switch the OLD pane's destroy fires after the new
+        // context is already applied — only clear when this pane still owns it,
+        // else rapid switching leaves _curWorkspace null for the live pane.
+        // hub_id-only match is enough here: headlessLayer is a singleton pool
+        // and a hub's workspace root nid never changes.
+        if (this._curWorkspace && this._curWorkspace.hub_id == hub_id) {
+          this._curWorkspace = null;
+        }
       });
       // Drive the VISIBLE desk topbar breadcrumb (desk_breadcrumb) on the
       // workspace switch. The get_path → refreshBreadcrumbsUI call below also
@@ -410,6 +392,10 @@ class __window_manager extends push {
             hub_id,
             attrs,
           });
+          // The pane never mounted but _curWorkspace was already set above —
+          // release it so re-clicking the sidebar item can retry the mount
+          // instead of hitting the same-workspace early-return.
+          this._releaseWorkspaceContext(hub_id, nid);
           return;
         }
         try {
@@ -417,7 +403,23 @@ class __window_manager extends push {
         } catch (e) { }
         apply(attrs);
       })
-      .catch((e) => this.warn("loadWorkspace: get_attributes failed", e));
+      .catch((e) => {
+        this.warn("loadWorkspace: get_attributes failed", e);
+        this._releaseWorkspaceContext(hub_id, nid);
+      });
+  }
+
+  // Clear _curWorkspace only if it still points at the given workspace —
+  // used by loadWorkspace's failure paths so a failed mount never blocks
+  // re-opening, without clobbering a newer workspace's context.
+  _releaseWorkspaceContext(hub_id, nid) {
+    if (
+      this._curWorkspace &&
+      this._curWorkspace.hub_id == hub_id &&
+      this._curWorkspace.nid == nid
+    ) {
+      this._curWorkspace = null;
+    }
   }
 
   /**
@@ -450,49 +452,6 @@ class __window_manager extends push {
 
     // Clicking/raising a workspace marks its chat as read.
     RADIO_BROADCAST.trigger("chat:read", { hub_id, nid, area });
-
-    if (!sameContext) {
-      RADIO_BROADCAST.trigger("workspace:focus", { hub_id, nid, area });
-      this.updateBreadcrumb(
-        {
-          hub_id,
-          nid,
-          area,
-          filename: win.mget(_a.filename) || win.mget(_a.name),
-          service: "change-workspace",
-        },
-        this,
-      );
-    }
-  }
-
-  /**
-   * Called by a headless `window_folder` when it gains focus (state→1).
-   * Mirrors the window's stored context into the globals every other
-   * subsystem reads from (`_curWorkspace`, `Wm.mset`, sidebar highlight,
-   * breadcrumb) so all existing consumers keep working as today — they
-   * just now reflect whichever workspace tab is on top.
-   */
-  onWorkspaceRaised(win) {
-    if (!win || win.isDestroyed()) return;
-    if (win.mget(_a.kind) !== "window_folder" || !win.mget(_a.headless)) return;
-
-    const hub_id = win.mget(_a.hub_id);
-    if (!hub_id) return;
-
-    const nid =
-      win.mget(_a.nid) || win.mget(_a.actual_home_id) || win.mget(_a.home_id);
-    const area = win.mget(_a.area);
-    const ownpath = win.mget(_a.ownpath) || "/";
-    const home_id = win.mget(_a.actual_home_id) || win.mget(_a.home_id) || nid;
-
-    // Idempotent: skip the broadcast if globals already reflect this window.
-    const cur = this._curWorkspace;
-    const sameContext =
-      cur && cur.hub_id == hub_id && cur.nid == nid && cur.area == area;
-
-    this._curWorkspace = { hub_id, nid, area };
-    this.mset({ hub_id, nid, nodeId: nid, area, ownpath, home_id });
 
     if (!sameContext) {
       RADIO_BROADCAST.trigger("workspace:focus", { hub_id, nid, area });
@@ -1757,13 +1716,30 @@ class __window_manager extends push {
         }
         return;
 
-      case "open-node":
-        let now = new Date().getTime();
-        if (now - lastClickTime < 1000) return; /** Prevent too fast click */
-
-        lastClickTime = now;
+      case "open-node": {
+        // Debounce per NODE, not globally: a double-click on the same tile
+        // must not spawn twice, but rapid clicks on DIFFERENT tiles must all
+        // open. A global timestamp here silently swallowed every other tile
+        // clicked within 1s — after the tile had already lit its spinner
+        // (media defaultTrigger fires wait(1) before this handler runs), so
+        // the tile looked stuck loading and its window never opened.
+        const now = new Date().getTime();
+        const nodeKey =
+          (cmd.mget && (cmd.mget(_a.nid) || cmd.mget(_a.hub_id))) || "";
+        if (
+          this._lastOpenNode &&
+          this._lastOpenNode.key === nodeKey &&
+          now - this._lastOpenNode.at < 1000
+        ) {
+          // Swallowed duplicate — release the tile's spinner latch so the
+          // tile doesn't look stuck and stays clickable.
+          if (cmd.wait) cmd.wait(0);
+          return;
+        }
+        this._lastOpenNode = { key: nodeKey, at: now };
         this.openContent(cmd, args);
         return this.unselect();
+      }
 
       case "upgrade-plan":
         return this.upgradePlage(cmd);
@@ -1914,14 +1890,9 @@ class __window_manager extends push {
         return this.closeDialog();
 
       case "add-folder":
-        this._pendingFolderArea = null;
-        return this.openCreateFolderDialog();
-
-      case "add-private-folder":
         return this.openCreateFolderDialog();
 
       case "create-folder-submit":
-        this._pendingFolderArea = _a.personal;
         return this.createFolderFromDialog(cmd);
 
       case "close-folder-dialog":
