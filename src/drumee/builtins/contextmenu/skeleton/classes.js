@@ -5,10 +5,13 @@
 // ==================================================================== *
 
 const __classname = function(_ui_, trigger, k){
-  const cn = { 
+  const cn = {
     account: 'account',
+    addNew: 'add-new',
     background: 'desk-background',
     copy: 'copy',
+    createWorkspace: 'create-workspace blue',
+    inviteMember: 'invite-member',
     download:'download',
     fullscreen: 'fullscreen',
     exitFullScreen: 'exit-fullscreen',

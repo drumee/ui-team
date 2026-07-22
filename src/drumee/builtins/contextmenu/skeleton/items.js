@@ -36,6 +36,42 @@ const __button = function (ui, trigger, k) {
 
     account: button({ content: LOCALE.MY_ACCOUNT, service: _a.account }),
 
+    // "+ New" parent: hover-expand submenu (same pattern as `organize`).
+    // Mirrors the topbar's "Add new" menu item-for-item so the desk
+    // background right-click offers the same creation flows. Services are
+    // Desk flows — Wm.onUiEvent delegates them up (wm/index.js).
+    addNew: Skeletons.Box.X({
+      content: LOCALE.ADD_NEW,
+      service: 'add-new',
+      kids: [
+        Skeletons.Note({ content: LOCALE.ADD_NEW, className: `${pfx}__label` }),
+        Skeletons.Note({ content: '›', className: `${pfx}__chevron` }),
+        Skeletons.Box.Y({
+          className: `${pfx}__submenu`,
+          // Same icons as the topbar Add-new menu (addmenu-* sprites carry
+          // their own colors). Interaction props live on the Box.X row;
+          // kids are inert (active: 0) so clicks resolve to the row.
+          kids: [
+            { ico: 'addmenu-folder', label: LOCALE.WORKSPACE, service: 'new-workspace' },
+            { ico: 'addmenu-note', label: LOCALE.NOTE, service: 'new-note' },
+            { ico: 'addmenu-document', label: LOCALE.DOCUMENT, service: 'new-document', name: 'document.docx' },
+            { ico: 'addmenu-spreadsheet', label: LOCALE.SPREADSHEET, service: 'new-spreadsheet', name: 'spreadsheet.xlsx' },
+            { ico: 'addmenu-presentation', label: LOCALE.PRESENTATION, service: 'new-presentation', name: 'presentation.pptx' },
+          ].map((it) => Skeletons.Box.X({
+            className: `${pfx} submenu-item`,
+            service: it.service,
+            name: it.name,
+            uiHandler: [ui],
+            kidsOpt: { active: 0 },
+            kids: [
+              Skeletons.Image.Svg({ ico: it.ico, className: `${pfx}__icon` }),
+              Skeletons.Note({ content: it.label, className: `${pfx}__label` }),
+            ],
+          })),
+        }),
+      ],
+    }),
+
     background: button({ content: LOCALE.SET_AS_BACKGROUND, service: 'set-as-background' }),
 
     // "Chat Threads" parent: hover-expand submenu (same pattern as `organize`).
@@ -60,6 +96,10 @@ const __button = function (ui, trigger, k) {
     }),
 
     copy: button({ content: LOCALE.COPY, service: _e.copy }),
+
+    // Opens the create-workspace modal (media_form: internal / external /
+    // personal type options) — the same flow as the topbar +New → Workspace.
+    createWorkspace: button({ content: LOCALE.CREATE_WORKSPACE, service: 'new-workspace' }),
 
     delete: button({ content: LOCALE.DELETE, service: _e.delete }),
 
@@ -94,6 +134,10 @@ const __button = function (ui, trigger, k) {
     importHidden: button({ content: LOCALE.IMPORT_FROM_SERVER, service: _a.none, type: _a.import, dataset: { state: _a.disable } }),
 
     info: button({ content: LOCALE.GET_INFO, service: _e.settings, type: _a.info }),
+
+    // Desk-background variant of the topbar Invite button: opens the
+    // invite-members popup (Desk._openInvitePopup via wm delegation).
+    inviteMember: button({ content: LOCALE.INVITE, service: 'invite-member' }),
 
     link: button({ content: LOCALE.SHARE_LINK, service: _a.link }),
 
@@ -240,10 +284,10 @@ const __button = function (ui, trigger, k) {
 
     }
 
-    // organize / seeChatThreads: already a Box.X submenu; its first kid is the
+    // organize / seeChatThreads / addNew: already a Box.X submenu; its first kid is the
     // __label Note. Just prepend the icon when one is mapped.
 
-    if (k === 'organize' || k === 'seeChatThreads') {
+    if (k === 'organize' || k === 'seeChatThreads' || k === 'addNew') {
 
       r.className = cls;
 

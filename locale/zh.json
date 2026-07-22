@@ -1202,6 +1202,7 @@
   "NEW_FILE": "新文件",
   "NEW_WORKSPACE": "新工作区",
   "CREATE_NEW_WORKSPACE": "创建新工作区",
+  "CREATE_WORKSPACE": "创建工作区",
   "CREATE_NEW_WORKSPACE_HINT": "为您的新组织单位指定名称。",
   "WORKSPACE_NAME_PLACEHOLDER": "例如 Q4 战略",
   "INTERNAL_WORKSPACE": "内部工作区",
