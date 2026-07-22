@@ -48,13 +48,26 @@ const __button = function (ui, trigger, k) {
         Skeletons.Note({ content: '›', className: `${pfx}__chevron` }),
         Skeletons.Box.Y({
           className: `${pfx}__submenu`,
+          // Same icons as the topbar Add-new menu (addmenu-* sprites carry
+          // their own colors). Interaction props live on the Box.X row;
+          // kids are inert (active: 0) so clicks resolve to the row.
           kids: [
-            button({ content: LOCALE.WORKSPACE, service: 'new-workspace', className: `${pfx} submenu-item`, uiHandler: [ui] }),
-            button({ content: LOCALE.NOTE, service: 'new-note', className: `${pfx} submenu-item`, uiHandler: [ui] }),
-            button({ content: LOCALE.DOCUMENT, service: 'new-document', name: 'document.docx', className: `${pfx} submenu-item`, uiHandler: [ui] }),
-            button({ content: LOCALE.SPREADSHEET, service: 'new-spreadsheet', name: 'spreadsheet.xlsx', className: `${pfx} submenu-item`, uiHandler: [ui] }),
-            button({ content: LOCALE.PRESENTATION, service: 'new-presentation', name: 'presentation.pptx', className: `${pfx} submenu-item`, uiHandler: [ui] }),
-          ],
+            { ico: 'addmenu-folder', label: LOCALE.WORKSPACE, service: 'new-workspace' },
+            { ico: 'addmenu-note', label: LOCALE.NOTE, service: 'new-note' },
+            { ico: 'addmenu-document', label: LOCALE.DOCUMENT, service: 'new-document', name: 'document.docx' },
+            { ico: 'addmenu-spreadsheet', label: LOCALE.SPREADSHEET, service: 'new-spreadsheet', name: 'spreadsheet.xlsx' },
+            { ico: 'addmenu-presentation', label: LOCALE.PRESENTATION, service: 'new-presentation', name: 'presentation.pptx' },
+          ].map((it) => Skeletons.Box.X({
+            className: `${pfx} submenu-item`,
+            service: it.service,
+            name: it.name,
+            uiHandler: [ui],
+            kidsOpt: { active: 0 },
+            kids: [
+              Skeletons.Image.Svg({ ico: it.ico, className: `${pfx}__icon` }),
+              Skeletons.Note({ content: it.label, className: `${pfx}__label` }),
+            ],
+          })),
         }),
       ],
     }),
