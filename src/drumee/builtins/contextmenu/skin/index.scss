@@ -70,6 +70,17 @@
       height: 16px;
       flex-shrink: 0;
       fill: currentColor;
+
+      // The window-group rule (.window__contextmenu-item svg → 20×20 +
+      // margin-right) leaks into these icons, so each sprite rendered at a
+      // different visual size inside the 16px box. Normalize: the inner svg
+      // fills the box exactly (this selector out-specifies the group rule).
+      svg {
+        width: 100%;
+        height: 100%;
+        margin: 0;
+        display: block;
+      }
     }
 
     &__label {
