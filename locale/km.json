@@ -402,6 +402,8 @@
   "NEW_IDENT": "អត្តសញ្ញាណថ្មី។",
   "PROTECTED": "ការពារ",
   "FILE_NOT_FOUND": "អូ៎... ឯកសារដែលអ្នកបានស្នើសុំមិនមានទេ ឬត្រូវបានលុបចេញ។",
+  "FILE_CREATED": "បានបង្កើតឯកសារ",
+  "CLICK_TO_OPEN": "ចុចដើម្បីបើក",
   "VIDEO_CONFERENCE": "{0} សន្និសីទវីដេអូ",
   "CLEAR_NOTIFICATIONS": "ជម្រះការជូនដំណឹង",
   "NEW_MESSAGES": "សារថ្មី។\n",

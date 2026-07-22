@@ -87,6 +87,14 @@ const ___window_manager = function (ui) {
         sortWithCollection: false,
       }),
 
+      // Transient "file created" card (bottom-right). Fed by
+      // notifyFileCreated (wm/index.js) when a new document / spreadsheet /
+      // presentation is created — the file no longer opens by itself.
+      Skeletons.Box.Y({
+        sys_pn: "file-created-layer",
+        className: `${ui.fig.family}__file-created-layer`,
+      }),
+
       Skeletons.Wrapper.Y({
         className: `${ui.fig.family}__wrapper-tooltips ${ui.fig.group}__wrapper-tooltips`,
         name: "tooltips",

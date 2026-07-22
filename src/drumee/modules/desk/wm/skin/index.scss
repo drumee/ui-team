@@ -256,6 +256,76 @@
     }
   }
 
+  // "File created" card, shown after a new document / spreadsheet /
+  // presentation is created (notifyFileCreated). Bottom-right, same corner
+  // as upload progress and one step above it so the card is never buried.
+  &__file-created-layer {
+    position: fixed;
+    right: 24px;
+    bottom: 24px;
+    z-index: calc(var(--z-index-upload-progress, 9000) + 1);
+
+    &:empty,
+    &[data-state="closed"] {
+      display: none;
+    }
+  }
+
+  &__file-created {
+    align-items: center;
+    gap: 12px;
+    padding: 12px 14px;
+    border-radius: 8px;
+    background-color: var(--normal-bg);
+    box-shadow: 0 4px 18px 0 rgba(0, 0, 0, 0.18);
+    min-width: 260px;
+
+    &-body {
+      align-items: center;
+      gap: 12px;
+      cursor: pointer;
+      flex: 1;
+    }
+
+    &-ico {
+      width: 32px;
+      height: 32px;
+      flex-shrink: 0;
+
+      svg {
+        width: 100%;
+        height: 100%;
+        display: block;
+      }
+    }
+
+    &-title {
+      @include drumee.typo($color: var(--normal-fg-10), $weight: 700, $size: 13px, $line: 1.3);
+    }
+
+    &-name {
+      @include drumee.typo($color: var(--normal-fg-30), $weight: 500, $size: 12px, $line: 1.3);
+      word-break: break-all;
+    }
+
+    &-hint {
+      @include drumee.typo($color: var(--normal-fg-50), $weight: 500, $size: 11px, $line: 1.3);
+    }
+
+    &-close {
+      flex-shrink: 0;
+      cursor: pointer;
+      width: 16px;
+      height: 16px;
+
+      svg {
+        width: 100%;
+        height: 100%;
+        fill: var(--normal-fg-50);
+      }
+    }
+  }
+
   &__layer {
     position: absolute;
     top: 0;

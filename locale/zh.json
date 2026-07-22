@@ -404,6 +404,8 @@
   "NEW_IDENT": "新标识符",
   "PROTECTED": "受保护的",
   "FILE_NOT_FOUND": "糟糕...您请求的文件不存在或已被删除。",
+  "FILE_CREATED": "文件已创建",
+  "CLICK_TO_OPEN": "点击打开",
   "VIDEO_CONFERENCE": "{0}视讯会议",
   "CLEAR_NOTIFICATIONS": "清除通知",
   "NEW_MESSAGES": "新讯息",
