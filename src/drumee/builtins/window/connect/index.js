@@ -117,6 +117,16 @@ class __window_connect extends __room {
     // Standalone floating popup: the shared meeting-shell skin keys its absolute
     // frame + grabbable resize handles off data-standalone="1" (same as meeting).
     if (this.el) this.el.dataset.standalone = "1";
+    // Lock the in-topbar controls for the whole connecting phase (dial / ring /
+    // pickup → online): the in-call top-bar controls (camera/mic/screen/
+    // reactions/fullscreen) mount with the shared shell but the call is not live
+    // yet, so they must not be operable. Flagged on the window ROOT (which exists
+    // from the very first render, unlike the controls — those only mount with the
+    // in-call skeleton in startConnection), so the CSS lock applies the instant
+    // they appear. Cleared in onLocalUserJoined, when CONFERENCE_JOINED fires and
+    // the call goes live. The Leave button is exempted in CSS so the user always
+    // has an escape hatch. Mirrors the meeting window's startup lock.
+    if (this.el) this.el.dataset.startingUp = "1";
     await super.onDomRefresh();
     this.verbose("AAAX:204 -- onDomRefresh", this.callee, this.caller);
     if (this.callee) {
@@ -128,6 +138,15 @@ class __window_connect extends __room {
         this.stateMachine('ring');
       }
     }
+  }
+
+  // CONFERENCE_JOINED — the local user is now actually in the conference, so the
+  // call is live. Unlock the in-topbar controls that onDomRefresh locked for the
+  // connecting phase. On a failed/aborted call this never fires, so the controls
+  // stay locked (Leave stays clickable via CSS). Mirrors the meeting window.
+  async onLocalUserJoined(...args) {
+    await super.onLocalUserJoined(...args);
+    if (this.el) this.el.dataset.startingUp = "0";
   }
 
 
@@ -505,6 +524,85 @@ class __window_connect extends __room {
         if (mic) mic.dataset.state = isLive ? 1 : 0;
       })
       .catch(() => {});
+  }
+
+  // ── Float-overlay focus (single-participant view while a screen is shared) ──
+  // While a screen is shared the participant tiles dock into the float overlay,
+  // where the skin stacks both tiles in one 16:9 frame (local self-view on top
+  // of the remote by z-index). Spotlight whoever is TALKING by flipping
+  // data-focused="1" onto their tile — the shared shell raises it to the very
+  // front, so the active speaker's avatar/camera (endpoint-local__avatar /
+  // remote-user__avatar) is the one visible over the shared screen. Mirrors the
+  // meeting window's float focus, minus hand-raise (the 1:1 call has none).
+  // Only meaningful while docked; _dockParticipants calls _updateFloatFocus /
+  // _clearFloatFocus on dock / undock.
+
+  // Jitsi dominant-speaker changed. Keep the base behavior (per-tile
+  // data-speaking ring), then re-point the float spotlight at the speaker.
+  onDominantSpeaker(id) {
+    if (super.onDominantSpeaker) super.onDominantSpeaker(id);
+    this._dominantPid = id || null;
+    this._updateFloatFocus();
+  }
+
+  // True while the live tiles are docked into the float overlay (a screen is
+  // being shared) — the only time focus switching is visible.
+  _floatDocked() {
+    return !!(
+      this._participantsHome && this._participantsHome.dataset.docked === "1"
+    );
+  }
+
+  _myParticipantId() {
+    return this.room && this.room.myUserId ? this.room.myUserId() : null;
+  }
+
+  // Spotlight the dominant speaker's tile; fall back to the local self-view when
+  // nobody is talking (or the speaker has no live tile).
+  _updateFloatFocus() {
+    if (!this._floatDocked()) return;
+    if (this._dominantPid) return this._focusByPid(this._dominantPid);
+    return this._focusLocalTile();
+  }
+
+  _focusByPid(pid) {
+    if (!pid || pid === this._myParticipantId()) return this._focusLocalTile();
+    const ep = this.endpoints && this.endpoints[pid];
+    if (ep && !ep.isDestroyed() && ep.el) return this._applyFloatFocus(ep.el);
+    return this._focusLocalTile();
+  }
+
+  _focusLocalTile() {
+    if (typeof this.getLocalParts !== "function") return;
+    this.getLocalParts()
+      .then((parts) => {
+        const local = parts && parts.local;
+        if (local && !local.isDestroyed() && local.el) {
+          this._applyFloatFocus(local.el);
+        }
+      })
+      .catch(() => {});
+  }
+
+  // Move data-focused onto `el`, clearing it from every other tile in the float
+  // overlay so exactly one participant is spotlighted.
+  _applyFloatFocus(el) {
+    if (!el || !this.el) return;
+    const float = this.el.querySelector(`.${this.fig.family}__float-tiles`);
+    if (!float || !float.contains(el)) return;
+    float
+      .querySelectorAll('[data-focused="1"]')
+      .forEach((n) => { n.dataset.focused = "0"; });
+    el.dataset.focused = "1";
+  }
+
+  _clearFloatFocus() {
+    if (!this.el) return;
+    const float = this.el.querySelector(`.${this.fig.family}__float-tiles`);
+    if (!float) return;
+    float
+      .querySelectorAll('[data-focused="1"]')
+      .forEach((n) => { n.dataset.focused = "0"; });
   }
 
   async onUiEvent(cmd, args = {}) {

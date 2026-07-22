@@ -554,6 +554,30 @@
   }
 }
 
+// Control lock — the in-topbar controls are shown but inert during two phases
+// where operating camera/mic/screen/reactions/fullscreen is meaningless:
+//   1. Connecting, before the local user joins the conference —
+//      window/connect/index.js sets data-starting-up="1" on __ui until
+//      onLocalUserJoined.
+//   2. A late joiner catching an in-progress screen share, while the presenter
+//      layout loads — the shared shell sets data-preparing="1" on __shell until
+//      the shared screen's first frame (onRemoteScreenStart).
+// Both dim + block the controls; the Leave button is exempted below so there's
+// always an escape hatch. Mirrors the meeting window's control lock.
+.window-connect__ui[data-starting-up="1"] .window-connect__in-topbar-controls > *,
+.window-connect__shell[data-preparing="1"] .window-connect__in-topbar-controls > * {
+  pointer-events: none;
+  opacity: 0.45;
+}
+
+// Escape hatch: Leave stays fully interactive during both locked phases. Same
+// specificity as the rule above but ordered after it, so it wins.
+.window-connect__ui[data-starting-up="1"] .window-connect__leave-btn,
+.window-connect__shell[data-preparing="1"] .window-connect__leave-btn {
+  pointer-events: auto;
+  opacity: 1;
+}
+
 // Center the call status message in the middle of the connect window. Scoped
 // under __ui so it outranks the generic .window__message-container (top:40px)
 // the meeting skin defines globally.
