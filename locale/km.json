@@ -1202,6 +1202,7 @@
   "NEW_FILE": "ឯកសារថ្មី",
   "NEW_WORKSPACE": "កន្លែងធ្វើការថ្មី",
   "CREATE_NEW_WORKSPACE": "បង្កើតកន្លែងធ្វើការថ្មី",
+  "CREATE_WORKSPACE": "បង្កើតកន្លែងធ្វើការ",
   "CREATE_NEW_WORKSPACE_HINT": "បញ្ជាក់ឈ្មោះសម្រាប់ឯកតាអង្គការថ្មីរបស់អ្នក។",
   "WORKSPACE_NAME_PLACEHOLDER": "ឧ. យុទ្ធសាស្ត្រ Q4",
   "INTERNAL_WORKSPACE": "កន្លែងធ្វើការផ្ទៃក្នុង",
