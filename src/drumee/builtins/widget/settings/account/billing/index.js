@@ -126,8 +126,19 @@ class settings_billing extends LetcBox {
     return lines.join("\n\n");
   }
 
+  // Synchronous "does the caller currently pay" signal — mirrors the quota
+  // check the banner skeleton uses (subscriptionBanner) so the "Cancel plan"
+  // banner button is clickable the instant it's visible. Without this, the
+  // banner (now rendered from quota on the very first paint, ticket
+  // 2026-07-22) showed "Cancel plan" for the ~1 round-trip _hasPaidSub is
+  // still async-false, and clicking it during that window silently no-opped.
+  _isPaidByQuota() {
+    const plan = String(((Visitor.quota && Visitor.quota()) || {}).plan || "").toLowerCase();
+    return /^(pro|team|enterprise)$/.test(plan);
+  }
+
   async _confirmCancel() {
-    if (!this._hasPaidSub || this._isCanceling) return;
+    if ((!this._hasPaidSub && !this._isPaidByQuota()) || this._isCanceling) return;
     const ok = await Wm.confirm({
       title: LOCALE.CANCEL_SUBSCRIPTION || "Cancel subscription",
       message: this._cancelConsequences(),
@@ -671,10 +682,15 @@ class settings_billing extends LetcBox {
     // Team→Pro switch (confirmed in the select-plan popup): flag the checkout
     // so the Stripe webhook cancels the org's Team subscription (at period
     // end) once THIS personal payment completes. Only meaningful for a
-    // personal purchase by a paying Team owner — never set otherwise.
-    if (entity_type === "user" && this._switchFromTeam && this._isPaidTeam()) {
+    // personal Pro purchase by a still-paying Team owner — never set
+    // otherwise. Single-use: cleared right after so a leftover flag can't
+    // attach to an unrelated later checkout in the same widget session (e.g.
+    // the user backs out to the plan picker and buys a plain Pro seat add-on
+    // afterwards).
+    if (entity_type === "user" && plan === "pro" && this._switchFromTeam && this._isPaidTeam()) {
       payload.supersede = "org";
     }
+    this._switchFromTeam = false;
     // TEAM bootstrap: the payer is still on the default domain — the org
     // name + subdomain were collected in the checkout form; validate the
     // ident server-side BEFORE the Stripe redirect (product decision: prompt
