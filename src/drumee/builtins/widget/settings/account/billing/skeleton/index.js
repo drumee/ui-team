@@ -85,7 +85,9 @@ function subscriptionBanner(ui) {
   // render the banner from the very first paint and let the renew date fill
   // in once the mirror lands (ticket 2026-07-22).
   const quotaPlan = String(((Visitor.quota && Visitor.quota()) || {}).plan || "").toLowerCase();
-  const paidByQuota = /^(pro|team|enterprise)$/.test(quotaPlan);
+  // Shared with the "Cancel plan" click guard (_isPaidByQuota) so the button
+  // is never rendered clickable without also being armed.
+  const paidByQuota = ui._isPaidByQuota ? ui._isPaidByQuota() : /^(pro|team|enterprise)$/.test(quotaPlan);
   if (!ui._hasPaidSub && !paidByQuota) return null;
   const fig = `${ui.fig.family}__sub-banner`;
   const when = ui._periodEnd ? Dayjs(ui._periodEnd * 1000).format("MMM D, YYYY") : "";
