@@ -155,9 +155,10 @@ class __panel_trash extends mfsInteract {
     requestAnimationFrame(() => {
       if (this.el) this.el.dataset.anim = "in";
     });
+    // off() first so a re-render never stacks duplicate subscriptions.
+    RADIO_CLICK.off(_e.click, this._onOutsideClick);
     RADIO_CLICK.on(_e.click, this._onOutsideClick);
-    // Listen to the Wm websocket relay (see handleWsEvent). off() first so a
-    // re-render never stacks a duplicate subscription.
+    // Listen to the Wm websocket relay (see handleWsEvent).
     Wm.off(WS_EVENT, this.handleWsEvent);
     Wm.on(WS_EVENT, this.handleWsEvent);
 
@@ -202,12 +203,16 @@ class __panel_trash extends mfsInteract {
 
     if (data.parent_missing) {
       // Original parent folder is gone — ask user before falling back to home
+      // No || fallbacks: LOCALE is a createSafeObject — a missing key comes
+      // back as the truthy key STRING, so the fallback branch can never run
+      // (the dialog used to literally display "Q_RESTORE_TO_HOME" because the
+      // key was absent from every locale file).
       const confirmed = await Wm.confirm({
         title: LOCALE.RESTORE,
-        message: LOCALE.Q_RESTORE_TO_HOME || 'Original folder no longer exists. Restore to home folder instead?',
-        confirm: LOCALE.RESTORE || 'Restore',
+        message: LOCALE.Q_RESTORE_TO_HOME,
+        confirm: LOCALE.RESTORE,
         confirm_type: 'primary',
-        cancel: LOCALE.CANCEL || 'Cancel',
+        cancel: LOCALE.CANCEL,
         cancel_type: 'secondary',
         mode: 'hbf',
       }).then(() => true).catch(() => false);
@@ -258,6 +263,12 @@ class __panel_trash extends mfsInteract {
     const overlay = await this.ensurePart('overlay');
     overlay.clear();
     if (data) RADIO_MEDIA.trigger(_a.free, data);
+    // Full re-feed below IS the freshest state — drop any reload held back
+    // while the confirm overlay was open, including a debounce timer still
+    // queued (a WS echo landing <400ms ago would otherwise re-feed AGAIN
+    // right after this one: duplicate show_bin + visible flicker).
+    if (this._wsRefresh.cancel) this._wsRefresh.cancel();
+    this._pendingWsRefresh = false;
     this.feed(require('./skeleton')(this));
   }
 
@@ -270,7 +281,12 @@ class __panel_trash extends mfsInteract {
       case 'confirm-empty-bin':
         return this._confirmEmptyBin();
       case 'cancel-empty-bin':
-        this.ensurePart('overlay').then(p => p.clear());
+        this.ensurePart('overlay').then(p => {
+          p.clear();
+          // Replay a websocket reload that was held back while the confirm
+          // overlay was open (see _wsRefresh).
+          if (this._pendingWsRefresh) this._wsRefresh();
+        });
         return;
       case 'delete-permanently':
         return this.deleteFilePermanently(args.media || cmd);

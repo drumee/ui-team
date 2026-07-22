@@ -263,6 +263,7 @@
   "EXPORT_BACKUP_PREPARING": "Your backup is being prepared. This may take a long time. You will receive an email with a download link when it is ready.",
   "Q_DELETE_ALL_FILES": "<p>Voulez-vous supprimer</p><p> tous les fichiers de la poubelle ?</p>",
   "Q_FORGOT_PASSWORD": "Mot de passe oublié?",
+  "Q_RESTORE_TO_HOME": "Le dossier d'origine n'existe plus. Restaurer dans le dossier personnel ?",
   "REMOVE": "Supprimer",
   "RENAME": "Renommer",
   "REPLACE": "Remplacer",

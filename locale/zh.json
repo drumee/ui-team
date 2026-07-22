@@ -263,6 +263,7 @@
   "EXPORT_BACKUP_PREPARING": "Your backup is being prepared. This may take a long time. You will receive an email with a download link when it is ready.",
   "Q_DELETE_ALL_FILES": "<p>是否要删除</p><p>回收站中的所有文件？</p>",
   "Q_FORGOT_PASSWORD": "丢失了密码?",
+  "Q_RESTORE_TO_HOME": "原文件夹已不存在。要恢复到主文件夹吗？",
   "REMOVE": "删除",
   "RENAME": "重命名",
   "REPLACE": "更换",

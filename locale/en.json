@@ -241,6 +241,7 @@
   "Q_DELETE_ACCOUNT": "Delete account and all data?",
   "Q_DELETE_ALL_FILES": "<p>Do you want to delete </p><p>all files in the trash? </p>",
   "Q_FORGOT_PASSWORD": "Forgot password?",
+  "Q_RESTORE_TO_HOME": "Original folder no longer exists. Restore to home folder instead?",
   "REMOVE": "Remove",
   "RENAME": "Rename",
   "REPLACE": "Replace",

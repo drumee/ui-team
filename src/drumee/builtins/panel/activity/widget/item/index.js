@@ -98,7 +98,8 @@ class __activity_item extends LetcBox {
     // persists via dismissed_at instead of falling back to the mfs path.
     const item_type = opt.category
       || (opt.event === 'hub.invite_received' ? 'hub_invite'
-        : (opt.event === 'task_assigned' || opt.event === 'task_column_change' || opt.event === 'task_mention') ? 'contact_invite'
+        : opt.event === 'task_assigned' ? 'contact_invite'
+        : opt.event === 'task_mention' ? 'contact_invite'
         : 'mfs');
     const item_key = `${item_type}:${opt.id || opt.hub_id || opt.drumate_id || opt.key_id || ''}`;
     this.mset({ category, sender, autho_id, item_type, item_key })
@@ -300,12 +301,7 @@ class __activity_item extends LetcBox {
     // its Task tab (workspace root when the task is unscoped / task_nid is 0),
     // then mark it read (contact_activity_dismiss via the contact_invite branch)
     // and close the panel — mirroring the media/teamchat rows.
-    // task_column_change (bell watch) shares the task_assigned row shape
-    // (flattened task_hub_id/task_nid/task_id) — open the task's folder Task tab.
-    if (
-      this.mget('event') === 'task_assigned' ||
-      this.mget('event') === 'task_column_change'
-    ) {
+    if (this.mget('event') === 'task_assigned') {
       const tHub = this.mget('task_hub_id') || hub_id;
       const tNidRaw = this.mget('task_nid');
       const tNid = (tNidRaw != null && `${tNidRaw}` !== '0') ? tNidRaw : 0;

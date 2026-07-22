@@ -86,18 +86,6 @@ function getActivityMeta(ui, data) {
     };
   }
 
-  // Column-watch notification ("{actor} updated a task you follow: {title}").
-  // Shares the task_assigned row shape (task_title flattened server-side).
-  if (data.event === 'task_column_change') {
-    return {
-      before: LOCALE.TASK_COLUMN_CHANGE_ACTION || 'updated a task you follow: ',
-      label: data.task_title || name,
-      after: '',
-      colorClass: 'mention',
-      badge: 'mention',
-    };
-  }
-
   // 2c. Task @-mention ("{author} mentioned you in {task}"). Like task_assigned
   // it is a contact_activity row (category resolves to 'contact'); without this
   // branch a feed-sourced task_mention would fall into the contact branch and

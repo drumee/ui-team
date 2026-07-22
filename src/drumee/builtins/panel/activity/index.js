@@ -890,11 +890,7 @@ class __panel_activity extends LetcBox {
       const rows = _.isArray(ta) ? ta : (_.isArray(ta?.data) ? ta.data : []);
       const dismissedTa = this._dismissedKeys || new Set();
       taskAssignments = rows
-        .filter(
-          (r) =>
-            r &&
-            (r.event === 'task_assigned' || r.event === 'task_column_change'),
-        )
+        .filter((r) => r && r.event === 'task_assigned')
         .filter((r) => !dismissedTa.has(`contact_invite:${r.id}`))
         .map((r) => ({
           ...r,
@@ -962,17 +958,7 @@ class __panel_activity extends LetcBox {
       // still fetches all of these (activity.list / list_task_assignments /
       // channel.list_notifications) for the count — this filter only changes what
       // renders in the pinned section.
-      //
-      // TEST-ONLY carve-out: task_column_change (bell-watch, still unreleased on
-      // this branch) is NOT yet merged into the Unread-ON feed server-side, so it
-      // must stay pinned here or it would vanish under Unread ON. Drop this line
-      // when task_column_change is folded like the other task notifications. (The
-      // preview-bound hotfix keeps the plain `!== 'access_request'` — preview has
-      // no task_column_change.)
-      if (
-        it.category !== 'access_request' &&
-        !(it.category === 'contact_invite' && it.event === 'task_column_change')
-      ) continue;
+      if (it.category !== 'access_request') continue;
       if (it.category === 'chat' && activeChats.includes(it.drumate_id)) continue;
       const e = { ...it };
       e.kind = 'activity_item';
@@ -1090,12 +1076,6 @@ class __panel_activity extends LetcBox {
       case "task.assigned":
         // Live push when the caller is newly assigned to a task — refresh so the
         // notification appears in the feed without waiting for the next open.
-        this.refreshActivity()
-        this.shouldNofity();
-        break;
-      case "task.column_change":
-        // Live push when a task changed in a column the caller is watching
-        // (bell on) — refresh the feed + bump the badge.
         this.refreshActivity()
         this.shouldNofity();
         break;

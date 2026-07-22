@@ -37,11 +37,9 @@ class settings_billing extends LetcBox {
         selectedBundle: null,
       },
     };
-    // Disk GB baselines — must match yp.plan seed quota.disk
-    // (free=20e9, pro=50e9, team=50e9 per seat).
     this.storage = {
       free: 20,
-      pro: 50,
+      pro: 20,
       team: 50
     }
     this.seats = {
@@ -577,45 +575,6 @@ class settings_billing extends LetcBox {
   /**
    * Handle proceed to checkout: call payment API and open payment window
    */
-  _proceedToCheckout() {
-    // Already subscribed → do NOT open a second Checkout session (would create
-    // a duplicate Stripe subscription). Plan changes, seats, period, add-ons and
-    // cancel/resume go through the Billing Portal (or native cancel/resume).
-    if (this._hasPaidSub) {
-      this._openBillingPortal();
-      return;
-    }
-    this._startCheckoutSession();
-  }
-
-  /**
-   * Open Stripe Billing Portal for the caller's customer (invoices, plan change,
-   * cancel/resume, card). Returns true when a URL was opened.
-   */
-  async _openBillingPortal() {
-    try {
-      const data = await this.postService(SERVICE.payment.portal, { hub_id: Visitor.id });
-      const { url, status } = data || {};
-      if (url) {
-        window.location.assign(url);
-        return true;
-      }
-      if (Wm && Wm.alert) {
-        Wm.alert(
-          status === "NO_CUSTOMER"
-            ? (LOCALE.NO_ACTIVE_SUBSCRIPTION || "No active subscription.")
-            : (LOCALE.SOMETHING_WENT_WRONG || "Something went wrong. Please try again.")
-        );
-      }
-    } catch (e) {
-      this.warn("Got backend error [_openBillingPortal]:", e);
-      if (Wm && Wm.alert) {
-        Wm.alert(LOCALE.SOMETHING_WENT_WRONG || "Something went wrong. Please try again.");
-      }
-    }
-    return false;
-  }
-
   // Auto organization name for the TEAM bootstrap: "<user's name> Team".
   // Pre-fills the checkout org-name input and backs the submit fallback, so
   // switching to the Team plan never blocks on an empty field.
@@ -680,12 +639,9 @@ class settings_billing extends LetcBox {
     this.renderContent();
   }
 
-  /**
-   * Free → paid: create a hosted Checkout session. The SERVER decides the price
-   * (Stripe price_id from yp.plan); the client only declares WHAT to buy.
-   * plan 'team' => org (per-seat) checkout.
-   */
-  async _startCheckoutSession() {
+  async _proceedToCheckout() {
+    // The SERVER decides the price (Stripe price_id from yp.plan); the client
+    // only declares WHAT to buy. plan 'team' => org (per-seat) checkout.
     const checkout = this.state.checkout || {};
     const plan = checkout.selectedPlan || "pro";
     const entity_type = plan === "team" ? "org" : "user";
@@ -739,7 +695,7 @@ class settings_billing extends LetcBox {
         else if (status && status !== "OK" && Wm && Wm.alert) Wm.alert(this._orgIdentError(status));
       })
       .catch((e) => {
-        this.warn("Got backend error [_startCheckoutSession]:", e);
+        this.warn("Got backend error [_proceedToCheckout]:", e);
         if (Wm && Wm.alert) {
           Wm.alert(LOCALE.SOMETHING_WENT_WRONG || "Something went wrong. Please try again.");
         }
@@ -1108,19 +1064,14 @@ class settings_billing extends LetcBox {
                   .format(LOCALE.SALES_CONTACT_EMAIL || "contact@drumee.org")
               );
             }
-            return false;
-          }
-          // A paying Pro user upgrading to Team: warn first that their current
-          // Pro plan is replaced by Team, then proceed to the Team (org)
-          // checkout — NOT the Billing Portal. The portal has no way to buy
-          // Team (it only shows the current plan / invoices / cancel), which
-          // is the "no upgrade path" dead-end. Team is a NEW org subscription,
-          // so a fresh Checkout is correct; the Stripe webhook
-          // (_cancelSupersededPersonalSubscription) cancels the personal Pro
-          // automatically once the Team payment completes, so we DON'T cancel
-          // here — abandoning the Stripe checkout leaves the user's Pro intact.
-          // Yes → Team checkout; No → stay on the current plan.
-          if (planValue === "team" && this._isPaidPro()) {
+          } else if (planValue === "team" && this._isPaidPro()) {
+            // A paying Pro user upgrading to Team: warn first that their
+            // current Pro plan is replaced by Team. Team is an org (per-seat)
+            // subscription; the Stripe webhook cancels the personal Pro sub
+            // automatically once the Team payment completes
+            // (_cancelSupersededPersonalSubscription). So DON'T cancel here —
+            // if the user abandons the Stripe checkout they keep their Pro.
+            // Yes → proceed to the Team checkout; No → stay on the current plan.
             Wm.confirm({
               title: LOCALE.UPGRADE_TO_TEAM_CONFIRM_TITLE || "Upgrade to Team",
               message: LOCALE.UPGRADE_TO_TEAM_CONFIRM_MESSAGE
@@ -1133,22 +1084,9 @@ class settings_billing extends LetcBox {
             })
               .then(() => this._enterCheckoutFor("team"))
               .catch(() => { /* No → stay on the current plan */ });
-            return false;
+          } else {
+            this._enterCheckoutFor(planValue);
           }
-          // Paid subscriber picking Free → in-app cancel (period-end), not Checkout.
-          if (planValue === "free" && this._hasPaidSub) {
-            this._confirmCancel();
-            return false;
-          }
-          // Paid subscriber picking another paid plan (seats/period changes on
-          // the SAME tier, etc.) → Billing Portal. A second Checkout would
-          // create a duplicate sub. Team is already handled above, so it never
-          // reaches this portal guard.
-          if (this._hasPaidSub && planValue !== (this.currentPlanName || "free")) {
-            this._openBillingPortal();
-            return false;
-          }
-          this._enterCheckoutFor(planValue);
         }
         return false;
       case "storage-changes":
@@ -1234,8 +1172,16 @@ class settings_billing extends LetcBox {
 
       case "manage-billing":
         // Open the Stripe Billing Portal (hosted invoices/cancel/resume/card).
-        // hub_id REQUIRED for the scope:hub/owner ACL (see _startCheckoutSession).
-        this._openBillingPortal();
+        // hub_id REQUIRED for the scope:hub/owner ACL (see _proceedToCheckout).
+        this.postService(SERVICE.payment.portal, { hub_id: Visitor.id })
+          .then((data) => {
+            const { url, status } = data || {};
+            if (url) window.location.assign(url);
+            else if (Wm && Wm.alert) Wm.alert(LOCALE.NO_ACTIVE_SUBSCRIPTION);
+          })
+          .catch(() => {
+            if (Wm && Wm.alert) Wm.alert(LOCALE.SOMETHING_WENT_WRONG);
+          });
         return false;
 
       case "billing-close":

@@ -49,58 +49,46 @@
     gap: 10px;
   }
 
-  // Segmented "filter-bar" (Figma 2769-276990): grey track, pill-shaped
-  // inactive segments, active segment fills flush to the track's own radius
-  // (primary-40, not a separate white pill) — matches the Current-plan /
-  // Billing-cycle pill bars in the checkout tab exactly (same component).
   &__tabs-trigger {
     &-main {
-      background-color: var(--tertiary-grey-20);
+      background-color: var(--neutral-200);
       align-items: center;
       justify-content: space-around;
       height: 42px;
-      border-radius: var(--corner-radius-5); // 12px — active item matches this
-      padding: var(--spacer-1);
+      border-radius: var(--corner-radius-3);
+      padding: var(--spacer-1) var(--spacer-6);
       align-items: center;
-      gap: 0;
-      // Content-sized (Figma has no fixed cap) — a hard max-width wrapped
-      // "Yearly - Saved 15%" onto 2 lines once the label grew to 18px.
-      width: fit-content;
+      gap: var(--spacer-6);
+      max-width: 400px;
     }
 
     &-item {
       cursor: pointer;
       display: flex;
-      padding: var(--spacer-2) var(--spacer-6);
+      padding: var(--spacer-3) var(--spacer-4);
       justify-content: center;
       align-items: center;
-      gap: var(--spacer-1);
+      gap: var(--spacer-2);
       text-align: center;
-      font-size: 18px;
-      line-height: 1.4;
-      color: var(--tertiary-grey-80);
-      border-radius: var(--corner-radius-max); // full pill when inactive
-      transition: background-color 0.15s ease, color 0.15s ease, border-radius 0.15s ease;
-
-      // Inactive tab only — the active one already reads as selected and
-      // shouldn't shift on hover.
-      &:not([data-state="1"]):hover {
-        background-color: rgba(255, 255, 255, 0.55);
-        color: var(--neutral-900);
-      }
+      font-size: 12px;
+      font-weight: 500;
+      line-height: 18px;
+      letter-spacing: -0.132px;
+      border-radius: var(--corner-radius-2);
 
       &[data-state="1"] {
-        background-color: var(--primary-40);
-        color: var(--white);
-        border-radius: var(--corner-radius-5); // flush to the track, not a pill
+        background-color: white;
+        color: var(--neutral-900);
       }
     }
 
     &-discount {
-      color: var(--success);
-      font-weight: 600;
-      font-size: 16px;
-      line-height: 24px;
+      color: #00a63e;
+      font-weight: 700;
+      font-style: Bold;
+      font-size: 12.25px;
+      line-height: 18.38px;
+      letter-spacing: -0.13px;
     }
   }
 
@@ -691,18 +679,12 @@
       justify-content: center;
       align-items: center;
       padding: var(--spacer-2) var(--spacer-6);
-      border-radius: var(--corner-radius-max); // full pill when inactive
+      border-radius: var(--corner-radius-max);
       cursor: pointer;
       gap: 4px;
-      transition: background-color 0.15s ease, border-radius 0.15s ease;
-
-      &:not([data-state="1"]):hover {
-        background-color: var(--tertiary-grey-30);
-      }
 
       &[data-state="1"] {
         background-color: var(--primary-40);
-        border-radius: var(--corner-radius-5); // flush to the track (Figma), not a pill
 
         .settings-billing__checkout-pill-text {
           color: var(--white);
@@ -711,7 +693,7 @@
     }
 
     &-pill-text {
-      font-size: 18px;
+      font-size: 16px;
       line-height: 1.4;
       color: var(--tertiary-grey-80);
       white-space: nowrap;
@@ -719,7 +701,7 @@
 
     &-pill-discount {
       font-weight: 600;
-      font-size: 16px;
+      font-size: 14px;
       line-height: 24px;
       color: var(--success);
     }
@@ -749,10 +731,6 @@
           color: var(--neutral-600);
           border-color: var(--transparent);
           background-color: var(--white);
-
-          &:hover {
-            background-color: var(--neutral-100);
-          }
         }
       }
     }
@@ -950,11 +928,9 @@
       color: var(--neutral-600);
     }
 
-    // Figma 2769-277025: "Total outcome" label + big price row.
     &-total-label {
-      font-size: 18px;
-      line-height: 1.4;
-      color: var(--tertiary-grey-80);
+      font-size: 14px;
+      color: var(--neutral-600);
     }
 
     &-total-price {
@@ -962,17 +938,17 @@
       gap: var(--spacer-2);
 
       &-amount {
-        font-weight: 600;
-        font-size: 40px;
-        letter-spacing: -0.8px;
-        color: var(--primary-purple-100);
+        font-weight: 700;
+        font-size: 24px;
+        color: var(--neutral-900);
       }
 
       &-period {
-        font-weight: 500;
-        font-size: 20px;
-        letter-spacing: -0.4px;
-        color: var(--tertiary-grey-80);
+        font-weight: 700;
+        font-size: 14px;
+        line-height: 20px;
+        letter-spacing: -0.85px;
+        color: var(--neutral-600);
       }
     }
 
@@ -989,20 +965,16 @@
       justify-content: space-between;
     }
 
-    // Figma 2769-277031: "Base price:" / "Included seats:" rows — label
-    // regular grey-80, value semibold near-black, both 18px.
     &-breakdown-label {
       flex: 1;
-      font-size: 18px;
-      line-height: 1.4;
-      color: var(--tertiary-grey-80);
+      font-size: 13px;
+      color: var(--neutral-600);
     }
 
     &-breakdown-value {
-      font-weight: 600;
-      font-size: 18px;
-      line-height: 24px;
-      color: var(--primary-purple-100);
+      font-weight: 700;
+      font-size: 13px;
+      color: var(--neutral-900);
 
       &-effective-price-per-seat {
         color: var(--blue-600);
@@ -1015,8 +987,7 @@
       gap: var(--spacer-3);
     }
 
-    // Figma: primary-tinted box (primary-40 @10%). Label regular, value
-    // semibold — both near-black (not grey; this sits on a tinted box).
+    // Figma: primary-tinted box (primary-40 @10%), plain dark text — not green.
     &-breakdown-total-storage {
       background-color: rgba(89, 80, 255, 0.1);
       padding: var(--spacer-3);
@@ -1024,57 +995,47 @@
       justify-content: space-between;
 
       &-label {
-        color: var(--primary-purple-100);
-        font-weight: 400;
-        font-size: 18px;
-        line-height: 1.4;
+        color: var(--neutral-900);
+        font-weight: 600;
+        font-size: 13px;
+        line-height: 20px;
+        letter-spacing: -0.85px;
         flex: 1;
         text-align: left;
       }
       &-value {
-        color: var(--primary-purple-100);
-        font-weight: 600;
-        font-size: 18px;
-        line-height: 24px;
+        color: var(--neutral-900);
         text-align: right;
       }
     }
 
     // Figma: cyan-tinted box (secondary-blue-50 @16%), not the old blue-100.
-    // Label is near-black regular 18px here too (not the plain-row grey).
     &-breakdown-effective-price-per-seat {
       background-color: rgba(101, 208, 234, 0.16);
       justify-content: start;
       border-radius: var(--corner-radius-3);
-
-      .settings-billing__checkout-breakdown-label {
-        color: var(--primary-purple-100);
-      }
 
       .settings-billing__checkout-breakdown-value-effective-price-per-seat {
         color: var(--secondary-blue-80);
       }
     }
 
-    // Figma icons in the tinted summary rows are 32x32; 16px read as barely
-    // visible specks next to 18px text.
     &-breakdown-icon {
-      width: 24px;
-      height: 24px;
+      width: 16px;
+      height: 16px;
       svg.drumee-picto {
         fill: none;
       }
     }
 
-    // Figma "Button Lightmode" component (2769-277048) — 4px radius, not a
-    // pill; CTA colour is primary-50 (#433cc5), was the unrelated legacy
-    // --primary-500 (#b251fb) purple. No leading icon in this design.
+    // Figma CTA colour is primary-50 (#433cc5) — was the unrelated legacy
+    // --primary-500 (#b251fb) purple.
     &-checkout-button {
       width: 100%;
       padding: var(--spacer-4);
       background-color: var(--primary-50);
       color: var(--white);
-      border-radius: 4px;
+      border-radius: var(--corner-radius-max);
       font-weight: 600;
       justify-content: center;
       align-items: center;

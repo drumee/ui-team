@@ -75,6 +75,13 @@ class desk_module extends LetcBox {
     this._onWorkspaceOpen = this._onWorkspaceOpen.bind(this);
     this._onWorkspaceClose = this._onWorkspaceClose.bind(this);
     this._bindFolderTabs();
+
+    // [Reload] Persist desk UI (sidebar screen + workspace + floating
+    // folder windows) so a browser reload lands back where the user was.
+    // Written on pagehide — the one hook that reliably fires right before
+    // a reload. See _restoreDeskState, called from loadDefault.
+    this._persistDeskState = this._persistDeskState.bind(this);
+    window.addEventListener("pagehide", this._persistDeskState);
   }
 
   _bindFolderTabs() {
@@ -269,6 +276,11 @@ class desk_module extends LetcBox {
       clearInterval(this._usageTimer);
       this._usageTimer = null;
     }
+    window.removeEventListener("pagehide", this._persistDeskState);
+    if (this._restoreClearTimer) {
+      clearTimeout(this._restoreClearTimer);
+      this._restoreClearTimer = null;
+    }
     RADIO_BROADCAST.off("desk:open-billing-page", this._openBillingPage);
     RADIO_BROADCAST.off("avatar-changed", this._updateAvatar);
     Visitor.off(_e.change, this._updateAvatar);
@@ -305,10 +317,483 @@ class desk_module extends LetcBox {
     await Kind.waitFor("window_manager");
     await Kind.waitFor("panel_activity");
     await Kind.waitFor("activity_item");
+    // Snapshot once before feed: Wm.onDomRefresh may consume hubDeepLink /
+    // secure-share keys, and a second read later would wrongly treat a
+    // deep-link boot as a plain restore.
+    this._bootDeepLink = this._hasDeepLink();
+    this._bootSavedState = this._readSavedDeskState();
+    // Raise the restore flag BEFORE feeding the skeleton: the breadcrumb's
+    // mount-time loadHome() fires during the render pass and must know a
+    // saved screen / workspace / deep-link is about to be restored (see
+    // loadHome) — otherwise Wm.reload() wipes the target we just opened.
+    this._restoreInFlight = !!(
+      this._bootDeepLink || this._savedStateIsRestorable(this._bootSavedState)
+    );
     this.feed(require("./skeleton")(this));
     await this.ensurePart("desk-content");
+    // NOTE: keep the restore BEFORE the wrapper-popup await — the current
+    // skeleton has no "wrapper-popup" part, so that promise never resolves
+    // and anything after it is dead code.
+    this._restoreDeskState().catch((e) => {
+      this._restoreInFlight = false;
+      this.warn && this.warn("[Reload] restore failed", e);
+    });
     await this.ensurePart("wrapper-popup");
     this.trigger(_e.ready);
+  }
+
+  // ── [Reload] keep the desk where the user left it across a browser reload ──
+  //
+  // Sidebar panels never write location.hash, and workspace / folder windows
+  // live only in RAM (Wm.headlessLayer / windowsLayer). A reload used to always
+  // land on Home. We snapshot the live desk on pagehide into sessionStorage
+  // and replay it after loadDefault remounts the skeleton.
+  //
+  // sessionStorage is deliberate: reload of THIS tab restores; a brand-new tab
+  // still starts on Home; two tabs never overwrite each other.
+
+  static get _DESK_STATE_KEY() {
+    return "drumee.desk.lastScreen";
+  }
+
+  /** service string ↔ sidebar nav item (sys_pn) for the restorable screens */
+  static get _RESTORABLE_SCREENS() {
+    return {
+      "toggle-apps": "sidebar-apps",
+      "toggle-settings": "sidebar-settings",
+      "upgrade-plan": "sidebar-upgrade",
+      "toggle-trash": "sidebar-trash",
+      "toggle-contacts": "sidebar-contacts",
+      "toggle-inbox": "sidebar-inbox",
+      "toggle-activity": "sidebar-notifications",
+    };
+  }
+
+  /**
+   * Which sidebar screen is currently on top? Reads the live slot state
+   * (not just _pendingKinds — keep-alive slots stay mounted when closed
+   * with data-anim="out", and destroy-on-close children may already be
+   * goodbye()'d while their pending kind lingers). Returns the sidebar
+   * service string, or null when the user is on plain Home.
+   */
+  _currentScreenService() {
+    const kinds = this._pendingKinds || {};
+    const topChild = (pn) => {
+      const p = this.getPart && this.getPart(pn);
+      const child = p && p.children && p.children.last && p.children.last();
+      if (!child || (child.isDestroyed && child.isDestroyed()) || !child.el)
+        return null;
+      return child;
+    };
+    const childKind = (child, pendingKey) =>
+      (child && child.mget && child.mget(_a.kind)) ||
+      (child && child.el && child.el.dataset && child.el.dataset.kind) ||
+      kinds[pendingKey];
+
+    // Full-page slot (Apps / Settings / Billing) — destroyed on close, so a
+    // live child that isn't animating out means the screen is showing.
+    const mainChild = topChild("settings-main-slot");
+    if (mainChild && mainChild.el.dataset.anim !== "out") {
+      switch (childKind(mainChild, "settings-main-slot")) {
+        case "apps_main":
+          return "toggle-apps";
+        case "settings_main":
+          return "toggle-settings";
+        case "settings_billing":
+          return "upgrade-plan";
+      }
+    }
+
+    // Keep-alive slots — widget stays mounted when hidden; only
+    // data-anim="in" means visible.
+    const trashChild = topChild("trash-panel");
+    if (trashChild && trashChild.el.dataset.anim === "in") {
+      return "toggle-trash";
+    }
+    const chatChild = topChild("chat-panel");
+    if (chatChild && chatChild.el.dataset.anim === "in") {
+      const kind = childKind(chatChild, "chat-panel");
+      if (kind === "address_book") return "toggle-contacts";
+      if (kind === "chat_p2p") return "toggle-inbox";
+    }
+
+    // Notifications side panel (predates the anim pattern, uses data-state).
+    const act = this.getPart && this.getPart("activity-panel");
+    if (act && ~~act.mget(_a.state) === 1) {
+      return "toggle-activity";
+    }
+
+    return null;
+  }
+
+  /** Headless workspace pane currently mounted in Wm, or null. */
+  _snapshotWorkspace() {
+    if (!window.Wm || !Wm.headlessLayer || !Wm.headlessLayer.children) {
+      return null;
+    }
+    const views = Wm.headlessLayer.children.toArray().filter((view) => {
+      if (!view || (view.isDestroyed && view.isDestroyed())) return false;
+      return (
+        view.mget(_a.kind) === "window_folder" && !!view.mget(_a.headless)
+      );
+    });
+    const view = views[views.length - 1];
+    if (!view) return null;
+    const hub_id = view.mget(_a.hub_id);
+    const nid =
+      view.mget(_a.nid) ||
+      view.mget(_a.actual_home_id) ||
+      view.mget(_a.home_id);
+    if (!hub_id || !nid) return null;
+    return {
+      hub_id,
+      nid,
+      area: view.mget(_a.area),
+      filename:
+        view.mget(_a.filename) ||
+        view.mget(_a.name) ||
+        view.mget("hub_name") ||
+        "",
+    };
+  }
+
+  /** Floating (non-headless) folder windows currently open. */
+  _snapshotFloatingWindows() {
+    if (!window.Wm || !Wm.windowsLayer || !Wm.windowsLayer.children) {
+      return [];
+    }
+    const out = [];
+    for (const view of Wm.windowsLayer.children.toArray()) {
+      if (!view || (view.isDestroyed && view.isDestroyed())) continue;
+      if (view.mget(_a.kind) !== "window_folder") continue;
+      if (view.mget(_a.headless)) continue;
+      const hub_id = view.mget(_a.hub_id);
+      const nid =
+        view.mget(_a.nid) ||
+        view.mget(_a.actual_home_id) ||
+        view.mget(_a.home_id);
+      if (!hub_id || !nid) continue;
+      out.push({
+        kind: "window_folder",
+        hub_id,
+        nid,
+        area: view.mget(_a.area),
+        filename:
+          view.mget(_a.filename) ||
+          view.mget(_a.name) ||
+          view.mget("hub_name") ||
+          "",
+        minimize: ~~view.mget(_a.minimize) ? 1 : 0,
+        focused:
+          view.el && view.el.dataset && view.el.dataset.state === "1" ? 1 : 0,
+        wm_unique_id:
+          view.mget("wm_unique_id") || `window_folder-${hub_id}-${nid}`,
+      });
+    }
+    return out;
+  }
+
+  _savedStateIsRestorable(state) {
+    if (!state || typeof state !== "object") return false;
+    if (
+      state.service &&
+      desk_module._RESTORABLE_SCREENS[state.service]
+    ) {
+      return true;
+    }
+    if (state.workspace && state.workspace.hub_id && state.workspace.nid) {
+      return true;
+    }
+    if (Array.isArray(state.windows) && state.windows.length) return true;
+    return false;
+  }
+
+  /**
+   * Pure read of the persisted desk snapshot. Does NOT apply deep-link
+   * gating — callers decide whether deep-link wins.
+   */
+  _readSavedDeskState() {
+    try {
+      const raw = sessionStorage.getItem(desk_module._DESK_STATE_KEY);
+      if (!raw) return null;
+      const saved = JSON.parse(raw);
+      return saved && typeof saved === "object" ? saved : null;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  /**
+   * The saved sidebar service from the previous page load, or null when
+   * nothing valid was saved / a deep-link must win.
+   */
+  _savedScreenService() {
+    const saved = this._bootSavedState || this._readSavedDeskState();
+    const service = saved && saved.service;
+    if (!desk_module._RESTORABLE_SCREENS[service]) return null;
+    if (this._bootDeepLink || this._hasDeepLink()) return null;
+    return service;
+  }
+
+  /** pagehide hook — must stay synchronous. */
+  _persistDeskState() {
+    try {
+      const service = this._currentScreenService();
+      const workspace = this._snapshotWorkspace();
+      const windows = this._snapshotFloatingWindows();
+      const state = {};
+      if (service) state.service = service;
+      if (workspace) state.workspace = workspace;
+      if (windows.length) state.windows = windows;
+      if (Object.keys(state).length) {
+        sessionStorage.setItem(
+          desk_module._DESK_STATE_KEY,
+          JSON.stringify(state),
+        );
+      } else {
+        sessionStorage.removeItem(desk_module._DESK_STATE_KEY);
+      }
+    } catch (e) {
+      /* private mode / quota — reload will just land on Home */
+    }
+  }
+
+  /** Backward-compatible alias used by older call sites / tests. */
+  _persistLastScreen() {
+    return this._persistDeskState();
+  }
+
+  /**
+   * True when the current URL / session carries a real deep-link that must
+   * win over the remembered screen. `#/desk/wm/home` is NOT a deep-link —
+   * wm.route() rewrites the hash to it a few seconds after any navigation,
+   * so it's the resting hash of a normal session.
+   */
+  _hasDeepLink() {
+    try {
+      if (
+        sessionStorage.getItem("drumee_hubDeepLink") ||
+        sessionStorage.getItem("drumee_secure_share_return")
+      ) {
+        return true;
+      }
+    } catch (e) {
+      /* sessionStorage unavailable — fall through to the hash check */
+    }
+    const path = Visitor.parseModule() || [];
+    if (path[1] === "wm") {
+      // Compare against the literal resting segment — `_a.home` is not
+      // always defined in the attribute lex.
+      return !!(path[2] && path[2] !== "home" && path[2] !== _a.home);
+    }
+    // e.g. #@desk/folder?hub_id=… (direct folder URL handled by wm)
+    return !!(path[1] && path[1] !== "home" && path[1] !== _a.home);
+  }
+
+  _clearRestoreInFlight(delayMs = 0) {
+    if (this._restoreClearTimer) {
+      clearTimeout(this._restoreClearTimer);
+      this._restoreClearTimer = null;
+    }
+    if (!delayMs) {
+      this._restoreInFlight = false;
+      return;
+    }
+    this._restoreClearTimer = setTimeout(() => {
+      this._restoreClearTimer = null;
+      this._restoreInFlight = false;
+    }, delayMs);
+  }
+
+  async _waitForWm(maxTries = 50) {
+    for (let i = 0; i < maxTries && !window.Wm; i++) {
+      if (this.isDestroyed && this.isDestroyed()) return null;
+      await new Promise((r) => setTimeout(r, 100));
+    }
+    return window.Wm || null;
+  }
+
+  /**
+   * Restore floating folder windows into windowsLayer (never via
+   * getWindowsPool — that routes into headlessLayer when a workspace is
+   * already open).
+   */
+  async _restoreFloatingWindows(windows = []) {
+    if (!windows.length || !window.Wm || !Wm.windowsLayer) return;
+    await Kind.waitFor("window_folder");
+    if (this.isDestroyed && this.isDestroyed()) return;
+
+    const ordered = [...windows];
+    // Launch unfocused first, focused last so raise() wins Z-order.
+    ordered.sort((a, b) => (a.focused ? 1 : 0) - (b.focused ? 1 : 0));
+
+    for (const item of ordered) {
+      if (!item || !item.hub_id || !item.nid) continue;
+      const payload = {
+        kind: "window_folder",
+        hub_id: item.hub_id,
+        nid: item.nid,
+        area: item.area,
+        filename: item.filename,
+        headless: 0,
+        wm_unique_id:
+          item.wm_unique_id || `window_folder-${item.hub_id}-${item.nid}`,
+      };
+      Wm.windowsLayer.append(payload);
+    }
+
+    // Let folder:open handlers register tabs, then apply minimize / focus.
+    await new Promise((r) => setTimeout(r, 400));
+    if (!window.Wm || !Wm.windowsLayer) return;
+
+    for (const item of windows) {
+      const view = Wm.windowsLayer.children.toArray().find((v) => {
+        if (!v || (v.isDestroyed && v.isDestroyed())) return false;
+        return (
+          v.mget(_a.kind) === "window_folder" &&
+          v.mget(_a.hub_id) === item.hub_id &&
+          (v.mget(_a.nid) === item.nid ||
+            v.mget(_a.actual_home_id) === item.nid ||
+            v.mget(_a.home_id) === item.nid)
+        );
+      });
+      if (!view) continue;
+      if (item.minimize && typeof view.minimize === "function") {
+        view.minimize();
+      } else if (item.focused && typeof view.raise === "function") {
+        view.raise();
+      }
+    }
+  }
+
+  async _restoreWorkspace(workspace) {
+    if (!workspace || !workspace.hub_id || !workspace.nid || !window.Wm) {
+      return;
+    }
+    await Kind.waitFor("window_folder");
+    if (this.isDestroyed && this.isDestroyed()) return;
+    // loadWorkspace accepts any nid (root or subfolder) and mounts a
+    // headless window_folder at that node — enough to restore both a
+    // workspace root and an in-workspace folder navigation. Server-side
+    // media.attributes fills actual_home_id / home_id correctly.
+    Wm.loadWorkspace({
+      hub_id: workspace.hub_id,
+      nid: workspace.nid,
+      area: workspace.area,
+      filename: workspace.filename,
+      name: workspace.filename,
+      hub_name: workspace.filename,
+    });
+    // Wait until the headless pane is actually mounted before returning so
+    // a subsequent sidebar restore (Settings over workspace) doesn't race.
+    for (let i = 0; i < 40; i++) {
+      if (this.isDestroyed && this.isDestroyed()) return;
+      const ready =
+        Wm.headlessLayer &&
+        Wm.headlessLayer.children &&
+        Wm.headlessLayer.children.toArray().some(
+          (v) =>
+            v &&
+            v.mget(_a.kind) === "window_folder" &&
+            v.mget(_a.headless) &&
+            v.mget(_a.hub_id) === workspace.hub_id,
+        );
+      if (ready) break;
+      await new Promise((r) => setTimeout(r, 100));
+    }
+  }
+
+  async _restoreSidebarService(service) {
+    if (!service || !desk_module._RESTORABLE_SCREENS[service]) return;
+    const sidebarPn = desk_module._RESTORABLE_SCREENS[service];
+
+    if (service === "toggle-activity") {
+      // Open-only: the live toggle would close the panel if state is already 1.
+      this._dismissWmModal();
+      const p = await this.ensurePart("activity-panel");
+      if (p && ~~p.mget(_a.state) !== 1) {
+        p.activityState = 1;
+        p.setState(1);
+        this.closeOtherSidebarPanels("activity-panel");
+        if (typeof p.refreshFeed === "function") p.refreshFeed();
+      }
+    } else {
+      await this.onUiEvent({ mget: () => null }, { service });
+    }
+
+    this.ensurePart(sidebarPn)
+      .then((p) => {
+        if (p) RADIO_BROADCAST.trigger("sidebar-radio", p);
+      })
+      .catch(() => {});
+  }
+
+  /**
+   * Replay the persisted desk state after the skeleton mounts.
+   * Deep-links win over saved workspace/windows. Sidebar panels can still
+   * restore on top when there is no deep-link.
+   */
+  async _restoreDeskState() {
+    if (this._screenRestored) {
+      // A second loadDefault in the same page must not leave the suppress
+      // flag stuck true (which would permanently no-op loadHome).
+      this._clearRestoreInFlight(0);
+      return;
+    }
+    this._screenRestored = true;
+
+    const deepLink = this._bootDeepLink;
+    const saved = this._bootSavedState;
+    const hasSaved = this._savedStateIsRestorable(saved);
+
+    if (!deepLink && !hasSaved) {
+      this._clearRestoreInFlight(0);
+      return;
+    }
+
+    try {
+      const wm = await this._waitForWm();
+      if (!wm || (this.isDestroyed && this.isDestroyed())) return;
+
+      // Let mount-time renders (breadcrumb loadHome, wm skeleton) settle
+      // before feeding panels / windows, so nothing re-clears afterwards.
+      await new Promise((r) => setTimeout(r, 300));
+      if (this.isDestroyed && this.isDestroyed()) return;
+
+      if (deepLink) {
+        // Cold boot often reaches loadDefault before window.Wm exists, so
+        // desk.route() skipped Wm.route(). Re-dispatch now that Wm is ready.
+        // Suppressing loadHome above keeps Wm.reload() from wiping the
+        // workspace / folder that route() (or onDomRefresh hub bootstrap)
+        // opens.
+        if (typeof wm.route === "function") wm.route();
+        // Hold suppress a bit so async media.attributes + headless feed finish
+        // before a late breadcrumb loadHome can run.
+        this._clearRestoreInFlight(2500);
+        return;
+      }
+
+      // Order matters: floating windows first (windowsLayer), then headless
+      // workspace, then sidebar overlay on top.
+      if (saved.windows && saved.windows.length) {
+        await this._restoreFloatingWindows(saved.windows);
+      }
+      if (saved.workspace) {
+        await this._restoreWorkspace(saved.workspace);
+      }
+      if (saved.service) {
+        await this._restoreSidebarService(saved.service);
+      }
+    } finally {
+      // Hold the flag a beat longer than the feed so late mount-time
+      // loadHome stragglers (breadcrumb renders async) stay suppressed.
+      this._clearRestoreInFlight(2000);
+    }
+  }
+
+  /** Backward-compatible alias. */
+  _restoreLastScreen() {
+    return this._restoreDeskState();
   }
 
   /**
@@ -538,6 +1023,12 @@ class desk_module extends LetcBox {
    *
    */
   loadHome(data = {}) {
+    // [Reload] The breadcrumb calls Desk.loadHome() when it mounts, which
+    // happens WHILE loadDefault is restoring the pre-reload desk state —
+    // its closeMainPanels() / Wm.reload() would wipe the restored
+    // workspace, folder windows, or deep-link target. Skip this mount-time
+    // reset when a restore is in flight; the restore path drives the desk.
+    if (this._restoreInFlight) return;
     this._dismissWmModal();
     this.closeMainPanels();
     this.ensurePart("action-cluster").then((p) => p && p.setState(1));

@@ -50,8 +50,7 @@ function getOptions(ui, cycle = "monthly") {
       badge: 1,
       subText: LOCALE.PLAN_PRO_DESC.format(seatPrice),
       features: [
-        // Match yp.plan seed: pro quota.disk = 50e9 (50 GB).
-        { main: "50 GB", sub: LOCALE.FEAT_STORAGE },
+        { main: "20 GB", sub: LOCALE.FEAT_STORAGE },
         { main: "5", sub: LOCALE.FEAT_EDITOR_ACCESS },
         { main: "1", sub: LOCALE.FEAT_ADMIN_ROLE },
         { main: "7", sub: LOCALE.FEAT_DAYS_VERSION_HISTORY },
@@ -172,29 +171,11 @@ function priceHeader(ui, fig, option, isCurrent) {
  * @returns {Object} Skeletons component
  */
 function item(ui, opt, option) {
-  const { buttonKind, subText, features, badge } = option;
-  let { buttonTitle } = option;
+  const { buttonTitle, buttonKind, subText, features, badge } = option;
   const fig = `${ui.fig.family}__plan`;
   // Mark the caller's active plan: pill-style "Your current plan" instead of a
   // CTA (design: the Free card shows the pill while the user is on Free).
   const isCurrent = (ui.currentPlanName || "free") === opt;
-
-  // Paid subscriber CTAs: Free → cancel at period end; Pro → Billing Portal
-  // (manage/change). Avoid implying a second Checkout.
-  // TEAM is deliberately EXCLUDED: for a paying Pro user, Team is a real
-  // upgrade path (a brand-new org subscription via a fresh Checkout, gated by
-  // the confirm popup in onUiEvent) — NOT a "manage subscription" portal jump.
-  // Relabelling it to "Manage subscription" (which only happened after
-  // _loadSubscription() flipped _hasPaidSub true ~5s in, so the button
-  // visibly changed from "Choose Team") both mislabelled the action and
-  // implied the portal. Keep its "Choose Team" CTA.
-  if (!isCurrent && ui._hasPaidSub) {
-    if (opt === "free") {
-      buttonTitle = LOCALE.CANCEL_PLAN || "Cancel plan";
-    } else if (opt === "pro") {
-      buttonTitle = LOCALE.MANAGE_SUBSCRIPTION || LOCALE.UPGRADE || buttonTitle;
-    }
-  }
 
   let buttonBtn;
   if (isCurrent) {

@@ -156,6 +156,7 @@
   "PASSWORD_AT_LEAST": "La contraseña debe tener al menos {0} caracteres.",
   "WE_HAVE_SENT_CODE": "Nos enviaremos un código a su dirección {0} para que pueda definir una nueva contraseña.",
   "Q_FORGOT_PASSWORD": "¿Has olvidado tu contraseña?",
+  "Q_RESTORE_TO_HOME": "La carpeta original ya no existe. ¿Restaurar en la carpeta principal?",
   "NEW_PASSWORD": "Nueva contraseña",
   "RESET_PASSWORD": "Restablecer contraseña",
   "UNKNOWN_ERROR": "Error desconocido",
