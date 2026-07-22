@@ -101,24 +101,35 @@ const createFooter = (ui, username) => {
   const fig = getSidebarFig(ui);
   // Real plan badge under the username (design: "Pro Plan"): read the live
   // entitlement instead of the old hardcoded PRO_PLAN label.
-  const plan = (((Visitor.quota && Visitor.quota()) || {}).plan || "free").toString();
+  const quota = (Visitor.quota && Visitor.quota()) || {};
+  const plan = (quota.plan || "free").toString();
   const planBadge = (LOCALE.PLAN_BADGE || "{0} Plan").format(
     plan.charAt(0).toUpperCase() + plan.slice(1),
   );
+  // Billing is owner-managed: inside an organization (domain_id > 1) only the
+  // org OWNER can change the plan — a member/workspace-admin clicking through
+  // to the plans page could at best bootstrap a stray second org. Personal
+  // users (domain 1) always see it: they upgrade themselves.
+  const canUpgrade =
+    ~~quota.domain_id <= 1 ||
+    !!(Visitor.domainCan && Visitor.domainCan(_K.permission.owner));
 
   return Skeletons.Box.Y({
     className: cls(fig, "footer"),
     kids: [
-      // Design: a dedicated "Upgrade plan" entry above Settings.
-      createNavItem(
-        ui,
-        "billing",
-        LOCALE.UPGRADE_PLAN_MENU || "Upgrade plan",
-        "upgrade-plan",
-        "",
-        null,
-        "sidebar-upgrade",
-      ),
+      // Design: a dedicated "Upgrade plan" entry above Settings (org owners
+      // and personal accounts only — see canUpgrade above).
+      canUpgrade
+        ? createNavItem(
+            ui,
+            "billing",
+            LOCALE.UPGRADE_PLAN_MENU || "Upgrade plan",
+            "upgrade-plan",
+            "",
+            null,
+            "sidebar-upgrade",
+          )
+        : null,
       createNavItem(
         ui,
         "sidebar_settings",
