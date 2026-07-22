@@ -375,6 +375,8 @@
   "ARCHIVE_OLD_PROJECTS": "Archivar proyectos antiguos",
   "BROWSE": "Explorar",
   "FILE_VERSIONING": "Control de versiones de archivos",
+  "FILE_CREATED": "Archivo creado",
+  "CLICK_TO_OPEN": "Haz clic para abrir",
   "FILE_VERSIONING_DESC": "Haga clic en cualquier documento para ver su historial de versiones.",
   "ALL_WORKSPACE": "Todos los espacios",
   "SEARCH_FILE": "Buscar archivo",

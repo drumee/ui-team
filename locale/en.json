@@ -403,6 +403,8 @@
   "NEW_IDENT": "New ident ",
   "PROTECTED": "Protected",
   "FILE_NOT_FOUND": "Ooops ... The file you requested does not exist or has been deleted.",
+  "FILE_CREATED": "File created",
+  "CLICK_TO_OPEN": "Click to open",
   "VIDEO_CONFERENCE": "{0} videoconference",
   "CLEAR_NOTIFICATIONS": "Clear notifications",
   "NEW_MESSAGES": "New messages\n",

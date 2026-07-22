@@ -88,6 +88,60 @@ class __window_manager extends push {
   }
 
   /**
+   * Transient bottom-right "file created" card. Shown after a new
+   * document / spreadsheet / presentation is created (newDocument in
+   * window/core.js) — the file no longer opens automatically. Clicking
+   * the card opens it; the × or the timer dismisses it.
+   */
+  notifyFileCreated(data = {}) {
+    this._createdFile = data;
+    clearTimeout(this._createdFileTimer);
+    this._createdFileTimer = setTimeout(() => this.dismissFileCreated(), 12000);
+    this.ensurePart("file-created-layer").then((p) => {
+      p.feed(require("./skeleton/file-created")(this, data));
+      p.el.dataset.state = "open";
+    });
+  }
+
+  dismissFileCreated() {
+    clearTimeout(this._createdFileTimer);
+    this._createdFile = null;
+    this.ensurePart("file-created-layer").then((p) => {
+      p.feed([]);
+      p.el.dataset.state = "closed";
+    });
+  }
+
+  /**
+   * Open the file announced by the card — the same route newDocument used
+   * when it still auto-opened: prefer the grid tile (keeps its seen/spinner
+   * wiring), fall back to a detached media widget built from node_info.
+   */
+  openCreatedFile() {
+    const data = this._createdFile || {};
+    this.dismissFileCreated();
+    if (!data.nid) return;
+    const aw = this.getActiveWindow() || this;
+    for (let media of aw.getItemsByAttr(_a.nid, data.nid)) {
+      if (/^media/.test(media.mget(_a.kind))) {
+        media.wait(1);
+        return this.openContent(media, { service: "open-node", mode: _a.edit });
+      }
+    }
+    return this.fetchService(
+      { service: SERVICE.media.node_info, nid: data.nid, hub_id: data.hub_id },
+      { async: 1 },
+    )
+      .then(async (r) => {
+        if (!r || !r.nid) return;
+        const k = await Kind.waitFor(_a.media);
+        const media = new k({ model: new Backbone.Model(r) });
+        this.openContent(media, { service: "open-node", mode: _a.edit });
+      })
+      .catch((e) => this.warn("openCreatedFile failed", e));
+  }
+
+  /**
    *
    * @param {*} l
    * @returns
@@ -1794,6 +1848,13 @@ class __window_manager extends push {
           area: _a.personal,
           filename: LOCALE.NEW_FOLDER,
         });
+
+      // "File created" card (see notifyFileCreated above).
+      case "open-created-file":
+        return this.openCreatedFile();
+
+      case "dismiss-created-file":
+        return this.dismissFileCreated();
 
       // Desk-background context menu (+ New submenu / Invite): these are
       // Desk-owned flows — same handlers the topbar buttons hit — so
