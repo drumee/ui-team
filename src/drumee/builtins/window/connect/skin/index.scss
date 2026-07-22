@@ -578,6 +578,41 @@
   opacity: 1;
 }
 
+// Control loading — while a camera / mic / screen-share toggle's async work is
+// in flight, window/connect/index.js flags data-loading="1" on the camera or
+// mic pill (or the screen-share button). Block clicks and overlay a spinner on
+// the primary toggle icon (the ".accept" button inside a pill, or the screen
+// button itself), dimming the icon underneath. Reuses the meeting shell's
+// load-spin keyframe (emitted by the meeting-shell mixin include above).
+.window-connect__ctrl-pill[data-loading="1"],
+.window-connect__ctrl-btn.screen[data-loading="1"] {
+  pointer-events: none;
+}
+
+.window-connect__ctrl-pill[data-loading="1"] .ctrl-button.accept,
+.window-connect__ctrl-btn.screen[data-loading="1"] {
+  position: relative;
+
+  svg {
+    opacity: 0.25;
+  }
+
+  &::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    margin: auto;
+    width: 16px;
+    height: 16px;
+    border: 2px solid var(--default-icon-neutral, #89929e);
+    border-top-color: transparent;
+    border-radius: 50%;
+    animation: window-meeting-load-spin 0.8s linear infinite;
+    pointer-events: none;
+    z-index: 3;
+  }
+}
+
 // Center the call status message in the middle of the connect window. Scoped
 // under __ui so it outranks the generic .window__message-container (top:40px)
 // the meeting skin defines globally.

@@ -605,6 +605,57 @@ class __window_connect extends __room {
       .forEach((n) => { n.dataset.focused = "0"; });
   }
 
+  // ── Control-pill loading state ───────────────────────────────────────────
+  // Toggling the camera, mic, or screen share is async — create/dispose the
+  // local track, or open the screen picker and publish the desktop track. Flag
+  // the relevant control with data-loading while that work is in flight; the
+  // skin overlays a spinner and blocks further clicks so the toggle can't be
+  // spammed mid-flight. Bracketed around the shared base toggles; the finally
+  // always clears the flag, even on cancel/failure.
+
+  // The camera / mic controls live inside a .ctrl-pill; the screen share is a
+  // lone .ctrl-btn — flag whichever wraps the clicked control.
+  _ctrlLoadingEl(kind) {
+    const btn =
+      kind === _a.video ? this.__ctrlVideo :
+      kind === _a.audio ? this.__ctrlAudio :
+      this.__ctrlScreen;
+    if (!btn || !btn.el || (btn.isDestroyed && btn.isDestroyed())) return null;
+    return btn.el.closest(`.${this.fig.family}__ctrl-pill`) || btn.el;
+  }
+
+  _setCtrlLoading(kind, loading) {
+    const el = this._ctrlLoadingEl(kind);
+    if (el) el.dataset.loading = loading ? "1" : "0";
+  }
+
+  async changeLocalVideo(state) {
+    this._setCtrlLoading(_a.video, true);
+    try {
+      return await super.changeLocalVideo(state);
+    } finally {
+      this._setCtrlLoading(_a.video, false);
+    }
+  }
+
+  async changeLocalAudio(state) {
+    this._setCtrlLoading(_a.audio, true);
+    try {
+      return await super.changeLocalAudio(state);
+    } finally {
+      this._setCtrlLoading(_a.audio, false);
+    }
+  }
+
+  async changePresentation(state) {
+    this._setCtrlLoading(_a.screen, true);
+    try {
+      return await super.changePresentation(state);
+    } finally {
+      this._setCtrlLoading(_a.screen, false);
+    }
+  }
+
   async onUiEvent(cmd, args = {}) {
     const service = args.service || cmd.get(_a.service)
     this.verbose(`AAA:438 -- onUiEvent service=${service}`, args, cmd, this);
