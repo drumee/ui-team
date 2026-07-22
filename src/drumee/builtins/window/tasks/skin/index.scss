@@ -2723,7 +2723,7 @@
   &__comment-main {
     flex: 1 1 auto;
     min-width: 0;
-    gap: 8px;
+    gap: 12px; // matches Figma comment column (Activity detail 2037-14883)
   }
 
   &__comment-head {
@@ -2769,7 +2769,7 @@
     align-items: center;
     flex-wrap: wrap;
     gap: 16px;
-    margin-top: 4px;
+    // Vertical rhythm comes from __comment-main's 12px column gap (Figma).
 
     > .tasks-panel__react-bar,
     > .tasks-panel__comment-actions {
@@ -2801,8 +2801,8 @@
   // delete). Dimmed by default, accent on hover.
   &__comment-action-ico {
     position: relative; // anchors the hover highlight + flyover tooltip
-    width: 16px;
-    height: 16px;
+    width: 14px;
+    height: 14px;
     cursor: pointer;
 
     // Soft rounded highlight behind the glyph on hover (no layout shift).
@@ -2820,8 +2820,8 @@
     svg {
       position: relative;
       z-index: 1;
-      width: 16px;
-      height: 16px;
+      width: 14px;
+      height: 14px;
       opacity: 0.55;
       transition: opacity 0.15s ease;
     }

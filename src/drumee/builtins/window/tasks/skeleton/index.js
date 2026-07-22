@@ -2286,30 +2286,34 @@ function buildCommentListContent(ui) {
       (r) =>
         r && r.emoji === LIKE_EMOJI && String(r.uid) === String(Visitor.id),
     );
+    // Icon order + glyphs mirror the Figma design (Activity detail 2037-14883):
+    //   👍 like · ☺ react · 💬 reply · ✏️ edit · 🗑 delete.
+    // All five are Phosphor "regular" icons (same 256 grid + stroke) so they
+    // render at a uniform visual size, unlike the mixed-family icons before.
     const kids = [
-      actionIcon("app-reply", "comment-reply", {
-        commentId: c.id,
-        tooltips: LOCALE.REPLY,
-      }),
       hasLike
         ? null
-        : actionIcon("app-like", "comment-react-add", {
+        : actionIcon("ph-thumbs-up", "comment-react-add", {
             commentId: c.id,
             emoji: LIKE_EMOJI,
             tooltips: LOCALE.LIKE || "Thumbs up",
           }),
-      actionIcon("meet-smiley", "comment-react-toggle", {
+      actionIcon("ph-smiley-sticker", "comment-react-toggle", {
         commentId: c.id,
         tooltips: LOCALE.ADD_REACTION,
+      }),
+      actionIcon("ph-chat-teardrop-text", "comment-reply", {
+        commentId: c.id,
+        tooltips: LOCALE.REPLY,
       }),
     ].filter(Boolean);
     if (isOwn) {
       kids.push(
-        actionIcon("app-edit", "comment-edit", {
+        actionIcon("ph-pencil-simple-line", "comment-edit", {
           commentId: c.id,
           tooltips: LOCALE.EDIT,
         }),
-        actionIcon("chat-action-trash", "comment-delete", {
+        actionIcon("ph-trash", "comment-delete", {
           commentId: c.id,
           tooltips: LOCALE.DELETE,
         }),
