@@ -52,6 +52,19 @@ class tutorial_main extends LetcBox {
   }
 
   /**
+   * Step back to the previous tutorial step. No-op on the first step,
+   * where there is nothing to go back to.
+   */
+  _prevStep() {
+    if (this._stepIndex <= 0) return;
+    this._stepIndex--;
+    this.ensurePart('spotlight').then((s) => s.clear && s.clear());
+    this.ensurePart(_a.content).then((p) => {
+      p.feed(this._widgets[this._stepIndex])
+    })
+  }
+
+  /**
    * Exit the tutorial and record that the user has seen it so it doesn't
    * auto-show again on subsequent sessions via a forced URL param.
    */
@@ -71,8 +84,8 @@ class tutorial_main extends LetcBox {
       case 'next-step':
         this._nextStep()
         break;
-      case 'skip-tour':
-        this._enterWorkspace();
+      case 'back-step':
+        this._prevStep();
         break;
       case 'spotlight:focus':
         this.ensurePart('spotlight').then((s) => s.focus(args));
