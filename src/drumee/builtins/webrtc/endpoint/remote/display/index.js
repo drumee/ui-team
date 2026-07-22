@@ -87,6 +87,10 @@ class __remote_display extends __stream {
         this.waitElement(child.el, () => {
           this.track.attach(child.el);
           child.el.onloadeddata = () => {
+            // First frame is in — hide the "loading screen" spinner overlay.
+            const loader = this.el &&
+              this.el.querySelector(`.${this.fig.family}__loading`);
+            if (loader) loader.style.display = "none";
             let size = this.track.track.getSettings();
             this.triggerHandlers({ service: "start-remote-screen", size });
           };

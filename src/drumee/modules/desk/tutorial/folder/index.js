@@ -42,8 +42,8 @@ class __tutorial_folder extends LetcBox {
     switch (service) {
       case 'next-step':
         return this.triggerHandlers();
-      case 'skip-tour':
-        return this.triggerHandlers({ service: 'skip-tour' });
+      case 'back-step':
+        return this.triggerHandlers({ service: 'back-step' });
     }
   }
 }

@@ -11,8 +11,8 @@
     box-sizing: border-box;
     // Never taller than the window; the body scrolls if the fields overflow.
     max-height: 88vh;
-    padding: 32px;
-    gap: 24px;
+    padding: 28px 32px;
+    gap: 18px;
     background: #ffffff;
     border: 1px solid rgba(0, 0, 0, 0.08);
     border-radius: 16px;
@@ -49,13 +49,13 @@
   }
 
   &__meeting-modal-body {
-    gap: 20px;
+    gap: 16px;
     min-height: 0;
     overflow-y: auto;
   }
 
   &__meeting-modal-field {
-    gap: 8px;
+    gap: 6px;
     flex: 1;
     min-width: 0;
   }
@@ -108,14 +108,63 @@
     }
 
     &.message {
-      min-height: 84px;
+      min-height: 64px;
     }
   }
 
+  // Native ::-webkit time layout is unreliable (flex/margin-auto don't push the
+  // clock right). Draw our own clock as a right-aligned background icon and make
+  // the native picker indicator a full transparent overlay (same as chat-export)
+  // so a click anywhere opens the picker; HH:MM keeps its natural left position.
   &__meeting-modal-time {
-    cursor: text;
-    -webkit-appearance: none;
-    appearance: none;
+    position: relative;
+    cursor: pointer;
+    padding-right: 34px; // keep HH:MM clear of the clock icon
+    background-image: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2024%2024'%20fill='none'%20stroke='%2365656c'%20stroke-width='2'%20stroke-linecap='round'%20stroke-linejoin='round'%3E%3Ccircle%20cx='12'%20cy='12'%20r='9'/%3E%3Cpath%20d='M12%207v5l3%202'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    background-size: 16px 16px;
+
+    &::-webkit-datetime-edit {
+      padding: 0;
+    }
+
+    &::-webkit-inner-spin-button,
+    &::-webkit-clear-button {
+      display: none;
+      -webkit-appearance: none;
+    }
+
+    // Transparent overlay → clicking anywhere (incl. the drawn clock) opens the picker.
+    &::-webkit-calendar-picker-indicator {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      width: auto;
+      height: auto;
+      margin: 0;
+      padding: 0;
+      opacity: 0;
+      cursor: pointer;
+    }
+  }
+
+  // The date_picker widget also carries the `.datepicker` class, whose own skin
+  // styles its input as a 36px white bordered box — equal specificity to the
+  // shared grey-field rule above, so load order decides and the date control
+  // renders taller/shorter and mismatched, misaligning the row. Out-specify it
+  // (two classes) so the date field always matches the grey 44px time fields.
+  &__meeting-modal-date.datepicker input {
+    height: 44px;
+    padding: 12px;
+    border: none;
+    border-radius: 8px;
+    background: rgba(0, 0, 0, 0.04);
+    color: #0b0a21;
+    font-size: 13px;
+    cursor: pointer;
   }
 
   // ── Invitees: workspace-member toggle chips ──────────────────────────────
@@ -202,7 +251,12 @@
   }
 
   &__meeting-modal-recur-seg {
-    padding: 6px 14px;
+    // Stretch the four options to fill the row as one segmented control instead
+    // of small pills bunched on the left with dead space to the right.
+    flex: 1 1 auto;
+    justify-content: center;
+    text-align: center;
+    padding: 7px 14px;
     border-radius: 999px;
     border: 1px solid rgba(0, 0, 0, 0.1);
     cursor: pointer;
@@ -231,7 +285,9 @@
 
   // ── Footer buttons ───────────────────────────────────────────────────────
   &__meeting-modal-footer {
-    padding-top: 12px;
+    align-items: center;
+    padding-top: 16px;
+    border-top: 1px solid rgba(0, 0, 0, 0.06);
     gap: 12px;
     justify-content: flex-end;
   }
@@ -251,7 +307,9 @@
       background: var(--primary-50, #433cc5);
     }
 
+    // Destructive action sits apart on the left; confirm actions stay right.
     &.danger {
+      margin-right: auto;
       background: #e5484d;
     }
 

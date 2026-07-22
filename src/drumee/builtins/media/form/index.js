@@ -72,6 +72,19 @@ class __form_folder extends LetcBox {
     const target = Wm.getActiveWindow(1);
     const status = this._status || "team";
 
+    // Personal workspace is NOT a hub: it is the legacy private folder at
+    // the home root, only presented as a workspace type. Reuse the window
+    // manager's create-folder flow (media.make_dir + home-grid append +
+    // error alerts) instead of desk.create_hub, which would add membership
+    // and sidebar semantics this type must not have.
+    if (status === "personal") {
+      this._pending = 1;
+      const req = Wm.createFolderFromDialog({ getValue: () => filename });
+      return Promise.resolve(req).finally(() => {
+        this._pending = 0;
+      });
+    }
+
     const FLOW = {
       team: { area: "private", post: "permission_restricted" },
       share: { area: "share", post: "permission_shared" },
@@ -86,8 +99,15 @@ class __form_folder extends LetcBox {
       pid: target ? target.getCurrentNid() : Visitor.id,
     })
       .then((res) => {
-        RADIO_BROADCAST.trigger("workspace:refresh");
         const hub = _.isArray(res) ? res[0] : res;
+        // desk.create_hub can resolve with an in-band error payload instead
+        // of rejecting; surface it inline and keep the form open for retry.
+        if (hub && (hub.error || hub.error_code)) {
+          this._pending = 0;
+          this._setNameError(LOCALE[hub.error] || hub.reason || hub.error);
+          return;
+        }
+        RADIO_BROADCAST.trigger("workspace:refresh");
         const closeForm = () => {
           if (this.parent && _.isFunction(this.parent.clear)) {
             return this.parent.clear();

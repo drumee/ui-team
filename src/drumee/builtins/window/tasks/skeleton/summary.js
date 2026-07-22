@@ -45,12 +45,12 @@ module.exports = function (ui) {
     const uids = assigneeUids(t);
     if (!uids.length) unassigned++;
     else uids.forEach((u) => (byAssignee[u] = (byAssignee[u] || 0) + 1));
-    if (t.status !== "complete" && t.due_date && isOverdue(t.due_date)) overdue++;
+    if (!ui.isDoneStatus(t.status) && t.due_date && isOverdue(t.due_date)) overdue++;
 
     const ct = Number(t.ctime) || 0;
     if (ct && weekAgo && ct >= weekAgo) created7d++;
     const done = Number(t.completed_at) || 0;
-    if (t.status === "complete" && done && weekAgo && done >= weekAgo)
+    if (ui.isDoneStatus(t.status) && done && weekAgo && done >= weekAgo)
       completed7d++;
 
     // Avg time per task = mean planned duration. A Duration task spans
@@ -433,11 +433,29 @@ module.exports = function (ui) {
     LOCALE.TASK_HEALTH_MANAGE_PRIORITIES,
   );
 
-  // ── 5. Team workload (horizontal bars per assignee) ─────────────────────────
-  const work = Object.keys(byAssignee)
-    .map((uid) => ({ uid, count: byAssignee[uid] }))
-    .sort((a, b) => b.count - a.count);
+  // ── 5. Team workload (horizontal bars per member) ───────────────────────────
+  // Every hub member appears — members with no tasks yet show an empty bar
+  // (they're still part of the team). Sorted busiest-first; ties keep member
+  // order. Hovering a bar reveals the exact task count.
+  const work = [];
+  const seenUids = new Set();
+  (ui.getMembers() || []).forEach((m) => {
+    const uid = String(m.id || m.uid || "");
+    if (!uid || seenUids.has(uid)) return;
+    seenUids.add(uid);
+    work.push({ uid, m, count: byAssignee[uid] || 0 });
+  });
+  // Defensive: an assignee uid not in the member list (e.g. a removed member
+  // still on tasks) is still surfaced so their tasks aren't silently hidden.
+  Object.keys(byAssignee).forEach((uid) => {
+    if (seenUids.has(String(uid))) return;
+    seenUids.add(String(uid));
+    work.push({ uid, m: ui.getMember(uid) || {}, count: byAssignee[uid] });
+  });
+  work.sort((a, b) => b.count - a.count);
   const maxWork = Math.max(1, unassigned, ...work.map((e) => e.count));
+  const taskCountLabel = (n) =>
+    `${n} ${n === 1 ? LOCALE.TASK_ONE : LOCALE.TASK_MANY}`;
   const workRow = (avatarNode, label, count) =>
     Skeletons.Box.X({
       className: `${pfx}__health-work-row`,
@@ -454,30 +472,33 @@ module.exports = function (ui) {
         }),
         Skeletons.Box.X({
           className: `${pfx}__health-work-track`,
-          kids: [
-            Skeletons.Box.X({
-              className: `${pfx}__health-work-fill`,
-              styleOpt: { width: `${Math.round((count / maxWork) * 100)}%` },
-            }),
-          ],
+          // Hover shows the member's current task count (empty bar = 0 tasks).
+          tooltips: { content: taskCountLabel(count), className: `${pfx}__tip` },
+          kids: count
+            ? [
+                Skeletons.Box.X({
+                  className: `${pfx}__health-work-fill`,
+                  styleOpt: { width: `${Math.round((count / maxWork) * 100)}%` },
+                }),
+              ]
+            : [],
         }),
       ],
     });
-  const workRows = work.map((e) => {
-    const m = ui.getMember(e.uid) || {};
-    return workRow(
+  const workRows = work.map((e) =>
+    workRow(
       Skeletons.UserProfile({
         className: `${pfx}__health-work-avatar`,
         id: e.uid,
-        firstname: m.firstname,
-        lastname: m.lastname,
+        firstname: e.m.firstname,
+        lastname: e.m.lastname,
         auto_color: 1,
         live_status: 0,
       }),
-      fullName(m) || e.uid,
+      fullName(e.m) || e.uid,
       e.count,
-    );
-  });
+    ),
+  );
   if (unassigned) {
     workRows.push(
       workRow(

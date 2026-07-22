@@ -29,14 +29,14 @@ const MESSAGES = [
 ];
 
 const WORKSPACES = [
-  { name: "Private Folder", area: _a.personal, variant: "purple", state: 1 },
+  { name: "Personal Workspace", area: _a.personal, variant: "purple", state: 1 },
   {
-    name: "Restricted Workspace",
+    name: "Internal Workspace",
     area: _a.private,
     variant: "salmon",
     state: 0,
   },
-  { name: "Shared Workspace", area: _a.share, variant: "pink", state: 0 },
+  { name: "External Workspace", area: _a.share, variant: "pink", state: 0 },
 ];
 
 /**
@@ -123,7 +123,7 @@ export function folderHeader(ui, pfx) {
           }),
           Skeletons.Note({
             className: `${pfx}__header-restricted`,
-            content: LOCALE.RESTRICTED || "RESTRICTED",
+            content: LOCALE.INTERNAL || "INTERNAL",
             sys_pn: "restricted-badge",
           }),
         ],

@@ -120,6 +120,17 @@ class __window_meeting extends __room {
     // positioning; embedded meetings (folder tab) stay relative/fill-parent.
     if (this.el) this.el.dataset.standalone = this.mget("standalone") ? "1" : "0";
     if (this.el) this.el.dataset.ready = "0";
+    // Lock the in-topbar controls for the whole pre-join phase: while the
+    // startup state messages ("Connection in progress", "Waiting for camera &
+    // microphone", "Waiting to join the conference") are showing, the meeting
+    // is not live yet, so the camera/mic/screen/hand/chat/people/fullscreen
+    // controls must not be operable. Flagged on the window ROOT (which exists
+    // from the very first render, unlike the controls — those only mount with
+    // the real skeleton below), so the CSS lock applies the instant they
+    // appear. Cleared in onLocalUserJoined, the exact point these messages
+    // clear and the conference goes live. The Leave button is exempted in CSS
+    // so the user always has an escape hatch. Mirrors the data-denied pattern.
+    if (this.el) this.el.dataset.startingUp = "1";
     this.feed(require("./skeleton/init")(this));
     this.stateMachine("initializing");
     // Any rejection from join() / prepareConference() (privilege denial that
@@ -160,6 +171,16 @@ class __window_meeting extends __room {
     } finally {
       if (this.el) this.el.dataset.ready = "1";
     }
+  }
+
+  // CONFERENCE_JOINED — the local user is now actually in the conference, so
+  // the pre-join state messages have cleared (base calls stateMessage("waiting")
+  // → the meeting override empties the container). Unlock the in-topbar controls
+  // that onDomRefresh locked for the startup phase. On a failed startup this
+  // never fires, so the controls stay locked (leave stays clickable via CSS).
+  async onLocalUserJoined(...args) {
+    await super.onLocalUserJoined(...args);
+    if (this.el) this.el.dataset.startingUp = "0";
   }
 
   _announceHostIfNeeded() {
@@ -640,90 +661,6 @@ class __window_meeting extends __room {
     return true;
   }
 
-  // Google Meet behavior for the sharer's own view: render our shared screen
-  // on the big presenter stage, with the participant tiles (including our own
-  // avatar) collapsed into the side strip via presenter mode. Jitsi never
-  // echoes our own desktop track back as a remote track, so we feed the *live
-  // local* track into the same `webrtc_remote_display` widget that viewers
-  // use. Attaching a local track to a <video> is display-only and does not
-  // affect the stream published to peers.
-  async startPresentation() {
-    let r;
-    try {
-      r = await super.startPresentation();
-    } catch (e) {
-      // User canceled the screen-picker (gum.screensharing_user_canceled) or a
-      // device error — already warned by the base layer. Swallow it so it
-      // doesn't surface as an uncaught promise rejection.
-      return false;
-    }
-    // Only mount the stage when sharing actually started (super returns true);
-    // the bail-out branches return false/undefined.
-    if (r === true) {
-      // The desktop track is stored synchronously under `localTracks.video`
-      // (createLocalTracks keys by `track.getType()`, which is "video" for a
-      // desktop track) BEFORE `room.addTrack` runs. `getLocalTrack(desktop)`
-      // scans the room's tracks and can miss it if addTrack hasn't registered
-      // it yet, and `localTracks.desktop` never exists — so fall back to
-      // `localTracks.video`, which is the live desktop track while sharing.
-      const track =
-        this.getLocalTrack(_a.desktop) ||
-        (this.localTracks && this.localTracks.video);
-      if (track) {
-        try {
-          // Render our own screen on the presenter stage (Jitsi never echoes
-          // our desktop track back as a remote track), switch to presenter
-          // mode, and dock the tiles into the side panel.
-          this._presentingLocally = true;
-          await this.loadRemotePresentation(track);
-          this.responsive("presenter");
-          this._dockParticipants(true);
-        } catch (e) {
-          if (this.warn) this.warn("own screen presentation failed", e);
-        }
-      } else if (this.warn) {
-        this.warn("own screen presentation: no desktop track");
-      }
-    }
-    return r;
-  }
-
-  async stopPresentation(track) {
-    // Tear our own screen off the presenter stage and drop back to the grid.
-    // onRemoteScreenStop clears __presenter and returns to "normal" mode; it's
-    // idempotent, so a double-fire from the track-stopped path is harmless.
-    if (this._presentingLocally) {
-      this._presentingLocally = false;
-      if (typeof this.onRemoteScreenStop === "function") this.onRemoteScreenStop();
-    }
-    return super.stopPresentation(track);
-  }
-
-  _toggleScreenShareFullscreen() {
-    if (document.fullscreenElement) {
-      document.exitFullscreen().catch(() => {});
-      return;
-    }
-    if (!this.__presenter || this.__presenter.isEmpty()) {
-      // Nothing is being presented — clicking fullscreen on an empty slot
-      // would maximize a black void. Bail.
-      return;
-    }
-    const child = this.__presenter.children && this.__presenter.children.last();
-    if (!child || child.isDestroyed()) return;
-    // Fullscreen the <video> element itself, not the widget root. The meeting
-    // window is Wm-positioned under an absolutely-placed, transformed ancestor;
-    // fullscreening a nested <div> in that context makes Chrome enter and
-    // instantly drop fullscreen (the "flash"). A <video> is promoted to the
-    // browser's top layer and is immune to ancestor transforms, so it stays
-    // fullscreen reliably. ESC exits.
-    const target = (child.__video && child.__video.el) || child.el;
-    if (!target || typeof target.requestFullscreen !== "function") return;
-    target.requestFullscreen().catch((e) => {
-      if (this.warn) this.warn("requestFullscreen failed", e);
-    });
-  }
-
   // participant_id (jitsi) -> drumate uid. The dashboard cards are keyed
   // by uid, and HAND_RAISE/screen-share events carry participant_id, so
   // every state map update goes through this. Returns null for the local
@@ -904,6 +841,13 @@ class __window_meeting extends __room {
     if (!this._floatDocked()) return;
     const raisedUid = this._activeRaisedUid();
     if (raisedUid != null) return this._focusByUid(raisedUid);
+    // While a REMOTE peer is presenting, spotlight THEIR camera tile — the float
+    // stacks every tile in one frame with the local self-view on top (z-index),
+    // so without this the sharing user's camera stays hidden beneath it.
+    if (this._currentPresenterUid &&
+        String(this._currentPresenterUid) !== String(Visitor.id)) {
+      return this._focusByUid(this._currentPresenterUid);
+    }
     if (this._dominantPid) return this._focusByPid(this._dominantPid);
     return this._focusLocalTile();
   }
@@ -1031,165 +975,6 @@ class __window_meeting extends __room {
     this._setMemberHandRaised(uid, !!data.state, { isLocal: false });
   }
 
-  // Send a reaction: float it on our own tile immediately and broadcast it to
-  // every peer (mirrors the HAND_RAISE broadcast). No-op on an empty glyph.
-  // The sender's name rides along so peers can label the float (Figma
-  // "reaction-sent": emoji above a pill with the sender's name).
-  _sendReaction(emoji) {
-    if (!emoji) return;
-    const name = (Visitor.fullname && Visitor.fullname()) || "";
-    this._floatReaction(this._reactionStackEl(), emoji, name);
-    try {
-      this.sendRoomSignaling(SERVICE.conference.broadcast, {
-        event: "REACTION",
-        payload: {
-          room_id: this.mget(_a.room_id),
-          participant_id: this.room && this.room.myUserId && this.room.myUserId(),
-          uid: Visitor.id,
-          username: name,
-          emoji,
-        },
-      });
-    } catch (e) {
-      if (this.warn) this.warn("reaction broadcast failed", e);
-    }
-  }
-
-  // The bottom-left overlay layer where every reaction floats up.
-  _reactionStackEl() {
-    return this.el && this.el.querySelector(`.${this.fig.family}__reaction-stack`);
-  }
-
-  // A peer's reaction arrived — float it on the shared stack. Guard against our
-  // own echo (already floated locally in _sendReaction) and drop reactions from
-  // participants who have already left (spec edge case).
-  _applyRemoteReaction(data) {
-    if (!data || !data.emoji) return;
-    const myId = this.room && this.room.myUserId && this.room.myUserId();
-    if (data.participant_id === myId || data.uid === Visitor.id) return;
-    const pid = data.participant_id;
-    const endpoint = pid && this.endpoints ? this.endpoints[pid] : null;
-    if (!endpoint || endpoint.isDestroyed()) return;
-    this._floatReaction(this._reactionStackEl(), data.emoji, data.username);
-  }
-
-  // Spawn a transient reaction that rises and fades on the bottom-left stack
-  // (Figma "reaction-sent": emoji on top, a rounded name pill below). Each
-  // call is independent — rapid/repeat reactions stack without a limit and a
-  // small horizontal drift (via margin, so the keyframe's centering transform
-  // is untouched) keeps them from perfectly overlapping. The CSS animation
-  // drives it; we just clean up when it ends.
-  _floatReaction(container, emoji, name) {
-    if (!container || !emoji) return;
-    const fam = this.fig.family;
-
-    const wrap = document.createElement("div");
-    wrap.className = `${fam}__reaction-float`;
-    // ± up to 24px so simultaneous floats fan out instead of overlapping.
-    const drift = Math.round((Math.random() - 0.5) * 48);
-    wrap.style.marginLeft = `${drift}px`;
-
-    const glyph = document.createElement("span");
-    glyph.className = `${fam}__reaction-float-emoji`;
-    glyph.textContent = emoji;
-    wrap.appendChild(glyph);
-
-    if (name) {
-      const pill = document.createElement("span");
-      pill.className = `${fam}__reaction-float-name`;
-      pill.textContent = name;
-      wrap.appendChild(pill);
-    }
-
-    container.appendChild(wrap);
-    const done = () => { if (wrap.parentNode) wrap.parentNode.removeChild(wrap); };
-    wrap.addEventListener("animationend", done);
-    // Fallback removal in case animationend never fires (layer torn down, etc.);
-    // must exceed the CSS rise duration (4s).
-    setTimeout(done, 5000);
-  }
-
-  // Toggle the full emoji picker for the reactions "…" button, reusing the
-  // shared assets/emojis picker. Fed into the __wrapperReactions wrapper.
-  _toggleReactionsPicker() {
-    const w = this.__wrapperReactions;
-    if (!w) return;
-    if (w.isEmpty()) {
-      w.feed(require("assets/emojis")(this));
-      this._positionReactionsPicker();
-      this._bindReactionsPickerDismiss();
-    } else {
-      this._closeReactionsPicker();
-    }
-  }
-
-  // Anchor the picker directly below the open reactions bar. The bar is the
-  // menu.topic items (a separate DOM subtree from the picker's __main-anchored
-  // wrapper), so we measure it and set the picker's top/left relative to
-  // __main (its positioned ancestor). Falls back to the CSS default if either
-  // element is missing.
-  _positionReactionsPicker() {
-    const w = this.__wrapperReactions;
-    const fam = this.fig.family;
-    const bar = this.el && this.el.querySelector(`.${fam}__reactions-bar`);
-    const main = this.el && this.el.querySelector(`.${fam}__main`);
-    if (!w || !w.el || !bar || !main) return;
-    const b = bar.getBoundingClientRect();
-    const m = main.getBoundingClientRect();
-    w.el.style.top = `${Math.round(b.bottom - m.top + 8)}px`;
-    w.el.style.left = `${Math.round(b.left - m.left)}px`;
-  }
-
-  // Document-capture click handler while the picker is open. It (a) picks a
-  // glyph and (b) dismisses on a true outside click. Capture phase matters:
-  // for a glyph we send the reaction and stopImmediatePropagation, so the click
-  // never reaches the emoji row's view handler — that handler fires RADIO_CLICK
-  // which the reactions bar treats as an outside click and closes on. Swallowing
-  // it keeps BOTH the bar and the picker open. Bound on the next tick so the "…"
-  // click that opened the picker doesn't immediately dismiss it.
-  _bindReactionsPickerDismiss() {
-    if (this._reactionsPickerDismiss) return;
-    this._reactionsPickerDismiss = (e) => {
-      const w = this.__wrapperReactions;
-      if (!w || w.isEmpty() || !w.el) {
-        this._closeReactionsPicker();
-        return;
-      }
-      const t = e.target;
-      // Any click inside the picker keeps it (and the bar) open.
-      if (w.el.contains(t)) {
-        const span = t.closest && t.closest('[data-service="emoji"]');
-        if (span) {
-          e.stopImmediatePropagation();
-          e.preventDefault();
-          this._sendReaction(span.textContent && span.textContent.trim());
-        }
-        return;
-      }
-      // Clicks in the reactions menu (bar + smiley) are the menu's business.
-      const menu =
-        this.el && this.el.querySelector(`.${this.fig.family}__reactions-menu`);
-      if (menu && menu.contains(t)) return;
-      // Anything else is a true outside click — dismiss the picker.
-      this._closeReactionsPicker();
-    };
-    setTimeout(() => {
-      if (this._reactionsPickerDismiss) {
-        document.addEventListener("click", this._reactionsPickerDismiss, true);
-      }
-    }, 0);
-  }
-
-  _closeReactionsPicker() {
-    if (this._reactionsPickerDismiss) {
-      document.removeEventListener("click", this._reactionsPickerDismiss, true);
-      this._reactionsPickerDismiss = null;
-    }
-    if (this.__wrapperReactions && !this.__wrapperReactions.isEmpty()) {
-      this.__wrapperReactions.clear();
-    }
-  }
-
   // Top-bar Raise-hand control: a toggle. Click raises (and starts the 30s
   // auto-clear timer); click again lowers. Mirrors the state on our own
   // dashboard card and broadcasts to peers. The 30s timeout still lowers it
@@ -1236,101 +1021,6 @@ class __window_meeting extends __room {
     }
     this._setMemberHandRaised(Visitor.id, false);
     this._broadcastHandRaise(0);
-  }
-
-  // Triggered from the local member card's "Stop sharing" action. Defers
-  // to the inherited stopPresentation() which already publishes the
-  // STOP_REMOTE_SCREEN broadcast.
-  _stopOwnPresentation() {
-    if (typeof this.stopPresentation === "function") {
-      try { this.stopPresentation(); } catch (e) { if (this.warn) this.warn(e); }
-    }
-    this._setMemberPresenting(Visitor.id, false);
-  }
-
-  // Override: remote user just started screen sharing. The base impl
-  // sets `this.presenterId = data.id` before invoking this; we capture
-  // the corresponding uid so STOP_REMOTE_SCREEN (which nulls presenterId
-  // before calling onRemoteScreenStop) can still clear the right entry.
-  prepareRemoteScreen(args) {
-    if (super.prepareRemoteScreen) super.prepareRemoteScreen(args);
-    // Viewer side: dock the tiles into the panel as soon as the share is
-    // announced, so the strip never lingers in the main stage.
-    this._dockParticipants(true);
-    // Only one screen at a time — lock our own share control while a REMOTE
-    // participant is presenting. Never lock when we're the presenter (our own
-    // screen renders through the same webrtc_remote_display, which also drives
-    // these hooks — locking there disabled the sharer's own button).
-    if (!this._presentingLocally) this._setShareLocked(true);
-    const uid = (args && args.uid) || this._uidForParticipant(args && args.id);
-    if (uid) {
-      this._currentPresenterUid = String(uid);
-      this._setMemberPresenting(uid, true);
-    }
-  }
-
-  // The one dock hook a late joiner hits: they miss the START_REMOTE_SCREEN
-  // broadcast (so prepareRemoteScreen never runs) and discover the share via
-  // onStreamReceived → loadRemotePresentation → here. Idempotent.
-  onRemoteScreenStart(size) {
-    if (super.onRemoteScreenStart) super.onRemoteScreenStart(size);
-    this._dockParticipants(true);
-    // Our own presentation display fires start-remote-screen too — only lock
-    // the button for a genuine REMOTE share, never our own (see prepareRemoteScreen).
-    if (!this._presentingLocally) this._setShareLocked(true);
-  }
-
-  onRemoteScreenStop() {
-    // Never let a remote peer's stop (notably the base STOP_REMOTE_SCREEN 5s
-    // safety timer) tear down OUR own active share — that cleared __presenter /
-    // reset the screen button mid-share, leaving us unable to stop it. A legit
-    // self-stop routes through stopPresentation, which clears _presentingLocally
-    // BEFORE calling this, so the teardown below still runs there.
-    if (this._presentingLocally) return;
-    if (super.onRemoteScreenStop) super.onRemoteScreenStop();
-    this._dockParticipants(false);
-    // Remote share ended — let everyone start their own again.
-    this._setShareLocked(false);
-    if (this._currentPresenterUid) {
-      this._setMemberPresenting(this._currentPresenterUid, false);
-      this._currentPresenterUid = null;
-    }
-  }
-
-  // Catch-all unlock: the base tears the presenter down here whenever a peer
-  // leaves (remote-gone / disconnect), which can bypass onRemoteScreenStop —
-  // notably for a late joiner who never tracked `_currentPresenterUid`. Release
-  // the share lock whenever the peer being removed WAS the active presenter.
-  removePresenter(peer) {
-    const wasPresenter = !!(
-      this.__presenter &&
-      typeof this.__presenter.getItemsByAttr === "function" &&
-      peer &&
-      this.__presenter.getItemsByAttr("participant_id", peer.participant_id)[0]
-    );
-    if (super.removePresenter) super.removePresenter(peer);
-    if (wasPresenter) {
-      this._setShareLocked(false);
-      this._currentPresenterUid = null;
-    }
-  }
-
-  // Lock/unlock the local "share screen" control. While a remote participant
-  // is presenting, other participants can't start their own share (one screen
-  // at a time); the presenter's own button is never touched (they never hit
-  // the remote-screen hooks), so they can still stop. Visual disable + a guard
-  // in onUiEvent both key off `_shareLocked`.
-  _setShareLocked(locked) {
-    this._shareLocked = !!locked;
-    const btn = this.__ctrlScreen;
-    if (!btn || !btn.el || (btn.isDestroyed && btn.isDestroyed())) return;
-    btn.el.dataset.disabled = locked ? "1" : "0";
-    btn.el.setAttribute(
-      "title",
-      locked
-        ? (LOCALE.SCREEN_SHARE_BUSY || "Someone is already sharing their screen")
-        : (LOCALE.SHARE_SCREEN || "Share screen"),
-    );
   }
 
   // Local desktop track mute/unmute is the only signal we get for our own
@@ -1408,56 +1098,6 @@ class __window_meeting extends __room {
         item.onDomRefresh();
       }
     });
-  }
-
-  // Move the live webrtc_participants tiles widget between the main stage
-  // (__endpoints) and the side panel's Participants pane. While a screen is
-  // shared we dock the tiles into the panel so the shared screen owns the full
-  // main stage; when sharing stops we move them back into the grid. The same
-  // widget element is relocated (never re-mounted), so video tracks stay
-  // attached. No-op on DMZ (no side panel).
-  async _dockParticipants(toPanel) {
-    if (this.mget(_a.area) === _a.dmz) return;
-    try {
-      const participants = this.__participants;
-      if (!participants || participants.isDestroyed() || !participants.el) return;
-      // Remember the tiles' original home (the __endpoints grid — which isn't a
-      // registered part) the first time we move them, so we can put them back.
-      if (!this._participantsHome && participants.el.parentNode) {
-        this._participantsHome = participants.el.parentNode;
-      }
-      // Figma share view: the tiles float bottom-right OVER the shared screen
-      // (a small overlay stack), the panel keeps whatever tab the user had.
-      const targetEl = toPanel
-        ? (await this.ensurePart("float-tiles"))?.el
-        : this._participantsHome;
-      if (!targetEl) return;
-      if (participants.el.parentNode !== targetEl) {
-        targetEl.appendChild(participants.el);
-      }
-      // Flag the stage so its grid drops the now-empty 200px participants
-      // column and the shared screen can fill the full width. The float
-      // container shows itself off the same flag.
-      if (this._participantsHome) {
-        this._participantsHome.dataset.docked = toPanel ? "1" : "0";
-      }
-      if (toPanel) {
-        // Now that the tiles live in the overlay, pick the initial spotlight
-        // (defaults to the local self-view until someone talks / raises a hand).
-        this._updateFloatFocus();
-      } else {
-        // Re-lay out the grid immediately. The base responsive() defers the
-        // participants relayout ~1s, which leaves the tiles briefly in their
-        // docked single-column form — a visible glitch right after the screen
-        // closes. Doing it now makes the return to the grid clean.
-        this._clearFloatFocus();
-        if (typeof participants.responsive === "function") {
-          participants.responsive("normal");
-        }
-      }
-    } catch (e) {
-      if (this.warn) this.warn("dock participants failed", e);
-    }
   }
 
   /**
@@ -1614,6 +1254,14 @@ class __window_meeting extends __room {
     };
   }
 }
+
+// Shared in-call reactions behavior (also used by window_connect).
+Object.assign(__window_meeting.prototype, require("builtins/webrtc/reactions"));
+// Shared in-call screen-share behavior (also used by window_connect). Its
+// meeting-only touchpoints (_setMemberPresenting / _updateFloatFocus /
+// _clearFloatFocus / _uidForParticipant) stay defined below and are called
+// through optional guards, so meeting behavior is unchanged.
+Object.assign(__window_meeting.prototype, require("builtins/webrtc/screenshare"));
 
 //__window_meeting.initClass();
 

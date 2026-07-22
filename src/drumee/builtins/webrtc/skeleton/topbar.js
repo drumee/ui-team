@@ -7,8 +7,15 @@ module.exports = function (_ui_) {
   const pfx = _ui_.fig.family;
   const name = _ui_.mget(_a.name) || _ui_.mget(_a.filename) || "";
 
+  // Carry the full control cluster in the top bar for the team meeting AND the
+  // 1:1 connect window (both use the redesigned meeting shell). Other rooms
+  // (dmz / sharebox) keep the original minimal bar + floating command bar.
   const isTeamMeeting =
-    _ui_.service_class === "meeting" && _ui_.mget(_a.area) !== _a.dmz;
+    (_ui_.service_class === "meeting" && _ui_.mget(_a.area) !== _a.dmz) ||
+    _ui_.service_class === "connect";
+  // 1:1 connect (P2P) call: drop the meeting-only controls (hand-raise / chat /
+  // people) and label the leave button "End Call".
+  const isP2P = _ui_.service_class === "connect";
 
   const brand = Skeletons.Box.X({
     className: `${pfx}__in-topbar-brand`,
@@ -81,7 +88,7 @@ module.exports = function (_ui_) {
     service: "hand-raise",
     uiHandler: [_ui_],
     className: `${pfx}__ctrl-btn hand-raise`,
-    attrOpt: { title: LOCALE.RAISE_HAND },
+    attrOpt: { "data-tip": LOCALE.RAISE_HAND },
     dataset: { raised: 0 },
   });
 
@@ -134,7 +141,7 @@ module.exports = function (_ui_) {
     trigger: Skeletons.Button.Svg({
       ico: "meet-smiley",
       className: `${pfx}__ctrl-btn reactions`,
-      attrOpt: { title: LOCALE.REACTIONS },
+      attrOpt: { "data-tip": LOCALE.REACTIONS },
     }),
     items: Skeletons.Box.X({
       className: `${pfx}__reactions-bar`,
@@ -170,7 +177,7 @@ module.exports = function (_ui_) {
         service: _a.chat,
         uiHandler: [_ui_],
         className: `${pfx}__ctrl-btn chat`,
-        attrOpt: { title: LOCALE.CHAT },
+        attrOpt: { "data-tip": LOCALE.CHAT },
       }),
       Skeletons.Note({
         className: `${pfx}__in-topbar-chat-badge`,
@@ -186,7 +193,7 @@ module.exports = function (_ui_) {
     service: "show-people",
     uiHandler: [_ui_],
     className: `${pfx}__ctrl-btn people`,
-    attrOpt: { title: LOCALE.PARTICIPANTS },
+    attrOpt: { "data-tip": LOCALE.PARTICIPANTS },
   });
 
   // Window-resize dropdown: Full screen / Tile left / Tile right / Reframe.
@@ -211,7 +218,7 @@ module.exports = function (_ui_) {
     trigger: Skeletons.Button.Svg({
       ico: "meet-expand",
       className: `${pfx}__ctrl-btn fullscreen`,
-      attrOpt: { title: LOCALE.FULL_SCREEN },
+      attrOpt: { "data-tip": LOCALE.FULL_SCREEN },
     }),
     items: Skeletons.Box.Y({
       className: `${pfx}__resize-items`,
@@ -226,7 +233,9 @@ module.exports = function (_ui_) {
 
   const divider = Skeletons.Note({ className: `${pfx}__in-topbar-divider` });
 
-  // Camera pill: toggle + decorative caret (video-input switching not wired).
+  // Camera pill: toggle + device caret + video-input picker (twin of the mic
+  // pill below). The caret opens the camera list (camera-setting), which is fed
+  // into the "video-devices" wrapper by updateVideoDevicesList.
   const cameraPill = Skeletons.Box.X({
     className: `${pfx}__ctrl-pill camera`,
     kids: [
@@ -241,9 +250,24 @@ module.exports = function (_ui_) {
         service: _a.settings,
         dataset: { muted: 1, ctrl: "video" },
       }),
-      Skeletons.Image.Svg({
+      Skeletons.Button.Svg({
+        className: "ctrl-button settings video ctrl-devicesetting",
         ico: "meet-caret-down",
-        className: `${pfx}__ctrl-caret`,
+        sys_pn: "ctrl-camerasetting",
+        name: _a.devicesettings,
+        service: "camera-setting",
+      }),
+      Skeletons.Wrapper.Y({
+        className: `${pfx}__devices-list video`,
+        sys_pn: "video-devices",
+        partHandler: [_ui_],
+      }),
+      // Backgrounds & effects panel, docked to the left of the device list;
+      // fed by updateBgEffectsPanel when "Upload Background" is clicked.
+      Skeletons.Wrapper.Y({
+        className: `${pfx}__bg-effects`,
+        sys_pn: "bg-effects",
+        partHandler: [_ui_],
       }),
     ],
   });
@@ -283,7 +307,7 @@ module.exports = function (_ui_) {
     sys_pn: "ctrl-screen",
     name: _a.screen,
     service: "start-screenshare",
-    attrOpt: { title: LOCALE.SHARE_SCREEN },
+    attrOpt: { "data-tip": LOCALE.SHARE_SCREEN },
     dataset: { muted: 1 },
   });
 
@@ -291,7 +315,7 @@ module.exports = function (_ui_) {
   const leaveBtn = Skeletons.Button.Label({
     className: `${pfx}__leave-btn`,
     ico: "meet-leave",
-    label: LOCALE.LEAVE_MEETING,
+    label: isP2P ? (LOCALE.END_CALL || "End Call") : LOCALE.LEAVE_MEETING,
     labelClass: `${pfx}__leave-label`,
     sys_pn: "ctrl-line",
     service: _e.close,
@@ -309,18 +333,19 @@ module.exports = function (_ui_) {
       avatars,
       Skeletons.Box.X({
         className: `${pfx}__in-topbar-controls`,
+        // P2P connect calls omit hand-raise / chat / people.
         kids: [
-          handWrap,
+          isP2P ? null : handWrap,
           reactionsBtn,
-          chatWrap,
-          peopleBtn,
+          isP2P ? null : chatWrap,
+          isP2P ? null : peopleBtn,
           fullscreenBtn,
           divider,
           cameraPill,
           micPill,
           screenBtn,
           leaveBtn,
-        ],
+        ].filter(Boolean),
       }),
     ],
   });

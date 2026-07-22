@@ -7,7 +7,28 @@ const __webrtc_device_list = function (_ui_, audioInput, audioOutput, inputSelec
     className: `device-heading`,
     content: LOCALE.MICROPHONE
   })];
-  
+
+  // Live mic-level meter — the room widget (webrtc/room) drives the segments
+  // imperatively from an AnalyserNode on a preview stream of the selected input
+  // device (see _startMicMeter), so the user can confirm the mic they pick is
+  // actually picking up their voice before hitting Confirm.
+  const MIC_METER_SEGMENTS = 14;
+  kids.push(Skeletons.Box.Y({
+    className: `device-mic-test`,
+    kids: [
+      Skeletons.Box.X({
+        className: `device-mic-meter`,
+        kids: Array.from({ length: MIC_METER_SEGMENTS }, () =>
+          Skeletons.Box.Y({ className: `device-mic-meter-seg` })
+        )
+      }),
+      Skeletons.Note({
+        className: `device-mic-test-hint`,
+        content: LOCALE.SPEAK_TO_TEST_MIC
+      })
+    ]
+  }));
+
   // When the selected id matches no enumerated device (e.g. the live track
   // reports a raw hardware id while the list only carries the 'default'
   // pseudo-device), highlight the 'default' row instead of leaving every row
@@ -54,13 +75,27 @@ const __webrtc_device_list = function (_ui_, audioInput, audioOutput, inputSelec
     }));
   });
 
-  kids.push(Preset.ConfirmButtons(_ui_, {
-    cancelLabel: LOCALE.CANCEL || '',
-    cancelService: 'close-device-select',
-    confirmLabel: LOCALE.CONFIRM,
-    confirmService: 'confirm-device-selection',
-    cancelBtnClass: 'mic-selection',
-    confirmBtnClass: 'mic-selection',
+  // Design order: primary [Save] first, then [Cancel]. The shared
+  // Preset.ConfirmButtons is hard-coded Cancel-first, so build the pair here
+  // with the same class recipe to keep its styling.
+  kids.push(Skeletons.Box.X({
+    className: `${_ui_.fig.family}__buttons-wrapper buttons u-ai-center`,
+    kids: [
+      Skeletons.Note({
+        content: LOCALE.SAVE,
+        service: 'confirm-device-selection',
+        className: `${_ui_.fig.family}__button-confirm mic-selection button-confirm button clickable`,
+        uiHandler: _ui_,
+        haptic: 300,
+        dataset: { error: 0 }
+      }),
+      Skeletons.Note({
+        content: LOCALE.CANCEL || '',
+        service: 'close-device-select',
+        className: `${_ui_.fig.family}__button-cancel mic-selection button-cancel button clickable`,
+        uiHandler: _ui_
+      })
+    ]
   }))
 
 

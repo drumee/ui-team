@@ -63,6 +63,12 @@ class __desk_workspace extends LetcBox {
   }
 
   getWorkspaceKey(item) {
+    // Personal workspaces are home-root folders: they all share the user's
+    // own hub_id, so the key must be the folder's nid or every personal
+    // row would collapse into one highlight slot.
+    if (item.mget(_a.filetype) === _a.folder) {
+      return item.mget(_a.nid) || item.mget(_a.id);
+    }
     return (
       item.mget(_a.hub_id) ||
       item.mget(_a.home_id) ||
@@ -96,6 +102,54 @@ class __desk_workspace extends LetcBox {
   }
 
   /**
+   * Sidebar rows come from desk.home type=node (hubs + home-root folders
+   * mixed) so Personal workspaces — personal-area FOLDERS at the home root —
+   * can list alongside hub workspaces. Per-filetype rules the flat `skip`
+   * regex can't express: hubs keep the collaborative-area gate (drops the
+   * personal hub itself and the auto dmz/wicket), folders always pass and
+   * get area=personal stamped (desk.home leaves it null) so the icon tint
+   * and the Personal badge resolve.
+   *
+   * Ordering: hub workspaces (Internal/External) on top, Personal folders
+   * always below. The payload is paginated and interleaves the two types by
+   * rank, so sorting inside prepareData would only order within a page. A
+   * Marionette viewComparator re-sorts the rendered rows on every collection
+   * add/reset/update (including the second page and live appends), grouping
+   * hubs above folders and keeping the server rank order within each group.
+   */
+  onPartReady(child, pn) {
+    if (pn === _a.list && child && !child._workspaceMixFilterInstalled) {
+      child._workspaceMixFilterInstalled = 1;
+      const original = child.prepareData.bind(child);
+      child.prepareData = function (data) {
+        const prepared = original(data) || [];
+        return prepared
+          .filter((it) => {
+            if (!it) return false;
+            if (it.filetype === _a.folder) return true;
+            if (it.filetype === _a.hub) {
+              return /^(share|private|restricted|public)$/.test(it.area);
+            }
+            return false;
+          })
+          .map((it) =>
+            it.filetype === _a.folder && !it.area
+              ? { ...it, area: _a.personal }
+              : it,
+          );
+      };
+
+      // arity-1 comparator → Marionette runs a STABLE _.sortBy, so hubs and
+      // folders each keep their server rank order; only the group rank (hub 0,
+      // folder 1) moves Personal folders below the workspaces.
+      child.setComparator((view) =>
+        view.mget(_a.filetype) === _a.folder ? 1 : 0,
+      );
+    }
+    if (super.onPartReady) super.onPartReady(child, pn);
+  }
+
+  /**
    * @param {View} trigger
    * @param {Object} args
    */
@@ -103,7 +157,20 @@ class __desk_workspace extends LetcBox {
     const service = args.service || trigger.mget(_a.service);
     switch (service) {
       case "load-workspace": {
-        const result = Wm.loadWorkspace(trigger);
+        // Personal workspace rows are home-root folders. Pass an explicit
+        // shape: a folder row's home_id/actual_home_id point at the hub's
+        // home ROOT, which loadWorkspace would otherwise prefer over the
+        // folder's own nid and open Home instead of the folder.
+        const target =
+          trigger.mget(_a.filetype) === _a.folder
+            ? {
+                hub_id: trigger.mget(_a.hub_id) || Visitor.id,
+                nid: trigger.mget(_a.nid) || trigger.mget(_a.id),
+                filename: trigger.mget(_a.filename),
+                area: _a.personal,
+              }
+            : trigger;
+        const result = Wm.loadWorkspace(target);
         if (result && result.then)
           return result.then(() => this.openWorkspace(trigger));
         return this.openWorkspace(trigger);
@@ -150,7 +217,13 @@ class __desk_workspace extends LetcBox {
 
     // const args = (data.args && data.args.dest) || data;
     const filetype = args.filetype || data.filetype;
-    if (/^media/.test(service) && filetype !== _a.hub) {
+    // Home-root folders are Personal workspace rows — let their media.*
+    // mutations through so the sidebar live-updates like it does for hubs.
+    // Anything deeper (a folder inside a workspace) is not a sidebar row.
+    const isHomeRootFolder =
+      filetype === _a.folder &&
+      `${data.pid || data.parent_id || ""}` === `${Visitor.get(_a.home_id)}`;
+    if (/^media/.test(service) && filetype !== _a.hub && !isHomeRootFolder) {
       if (super.onWsMessage) super.onWsMessage(service, data, options);
       return;
     }
@@ -182,12 +255,23 @@ class __desk_workspace extends LetcBox {
     });
   }
 
-  // Match strictly by hub_id / home_id only — files and folders share
+  // Hub rows match strictly by hub_id / home_id — files and folders share
   // `nid` with their parent hub which would cause false-positive matches
-  // (a file delete inside workspace would remove the workspace itself).
+  // (a file delete inside a workspace would remove the workspace itself).
+  // Personal-workspace rows are home-root folders: those match by their own
+  // nid, and only against folder models so a hub whose ids collide is safe.
   _findHubModel(list, data) {
     const col = list && list.collection;
     if (!col) return null;
+    if (data.filetype === _a.folder) {
+      const nid = data.nid || data.id;
+      if (!nid) return null;
+      return col.find(
+        (m) =>
+          m.get(_a.filetype) === _a.folder &&
+          (m.get(_a.nid) === nid || m.get(_a.id) === nid),
+      );
+    }
     const hubId = data.hub_id || data.home_id;
     if (!hubId) return null;
     return col.find(
@@ -200,11 +284,22 @@ class __desk_workspace extends LetcBox {
 
   _addHub(data) {
     const area = data && data.area;
-    if (area !== _a.share && area !== _a.private && area !== _a.restricted)
+    const isHomeRootFolder =
+      data &&
+      data.filetype === _a.folder &&
+      `${data.pid || data.parent_id || ""}` === `${Visitor.get(_a.home_id)}`;
+    if (
+      !isHomeRootFolder &&
+      area !== _a.share &&
+      area !== _a.private &&
+      area !== _a.restricted
+    )
       return;
     this._withList((list) => {
       if (this._findHubModel(list, data)) return;
-      list.append(data);
+      list.append(
+        isHomeRootFolder ? { ...data, area: data.area || _a.personal } : data,
+      );
     });
   }
 

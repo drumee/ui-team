@@ -34,6 +34,12 @@ class __workspace_item extends LetcBox {
   }
 
   getNodeId() {
+    // Personal workspaces are home-root FOLDERS listed as workspace rows:
+    // their own nid is the node id. home_id/actual_home_id on a folder row
+    // point at the hub's home root, which would expand the wrong tree.
+    if (this.mget(_a.filetype) === _a.folder) {
+      return this.mget(_a.nid) || this.mget(_a.id);
+    }
     const role = this.mget("nodeRole");
     if (role === "workspace") {
       return this.mget(_a.actual_home_id) || this.mget(_a.home_id) || this.mget(_a.nid);

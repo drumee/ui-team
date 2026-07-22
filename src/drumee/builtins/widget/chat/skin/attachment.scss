@@ -117,34 +117,44 @@
         display: none !important;
       }
 
+      // Remove ("X") button — drops a queued attachment before the message is
+      // sent. Dark filled circle + white ring so it stays visible on the light
+      // card tint AND on image thumbnails; ALWAYS shown (no hover gate) and
+      // pinned above the preview. Turns alert-red on hover to signal delete.
       &__remove {
-        background-color: var(--background-chatmessenger);
+        // Neutral grey chip that blends with the theme — soft ring + light
+        // shadow keep it legible over both the card tint and image thumbnails
+        // without the heavy black look. Always visible; hover flips to alert.
+        background-color: var(--default-icon-neutral);
         border-radius: 50%;
-        border: 1.5px solid var(--dgc-attachment-close-border);
-        color: var(--default-text-color);
-        height: 13px;
-        line-height: 16px;
+        border: 1px solid var(--default-text-reverse);
+        box-shadow: 0 1px 2px rgb(0 0 0 / 18%);
+        color: var(--default-text-reverse);
+        height: 18px;
+        width: 18px;
         position: absolute;
-        right: 0px;
-        top: 0px;
-        visibility: hidden;
-        width: 13px;
+        right: 3px;
+        top: 3px;
+        z-index: 10;
+        opacity: 0.85;
+        visibility: visible;
+        cursor: pointer;
         display: flex;
-        align-content: center;
-        flex-wrap: wrap;
+        align-items: center;
+        justify-content: center;
+        transition: opacity 0.15s ease, background-color 0.15s ease;
 
         &--icon {
-          color: var(--default-thinline-icon);
-          padding: 0.5px;
-
-          &:hover,
-          :focus {
-            color: var(--default-thinline-icon-hover);
-          }
+          color: var(--default-text-reverse);
+          fill: var(--default-text-reverse);
+          height: 8px;
+          width: 8px;
         }
 
-        &[data-hover="on"] {
-          visibility: visible;
+        &:hover {
+          opacity: 1;
+          background-color: var(--default-bg-alert);
+          border-color: var(--default-bg-alert);
         }
       }
 
@@ -205,18 +215,16 @@ html[data-theme="dark"] {
         background-color: var(--normal-bg-80, #333042);
       }
 
+      // Dark surface + light ring/icon so the always-visible X reads on the
+      // dark card. Hover still flips to alert-red (inherited from light rule).
       &__remove {
-        background-color: var(--normal-bg-80, #333042);
-        border-color: var(--border-default, rgba(255, 255, 255, 0.2));
-        color: var(--normal-fg-10, #e4e3ff);
+        background-color: var(--normal-fg-10, #e4e3ff);
+        border-color: var(--normal-bg-80, #333042);
+        color: var(--normal-bg-90, #282538);
 
         &--icon {
-          color: var(--normal-fg-50, #c7c7cc);
-
-          &:hover,
-          &:focus {
-            color: var(--normal-fg-10, #ffffff);
-          }
+          color: var(--normal-bg-90, #282538);
+          fill: var(--normal-bg-90, #282538);
         }
       }
     }

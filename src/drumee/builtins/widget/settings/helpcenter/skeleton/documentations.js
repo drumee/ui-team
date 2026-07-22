@@ -210,13 +210,13 @@ const DOCS = {
       ],
     },
 
-    // Folder Types
+    // Workspace Types
     {
-      title: "Folder Types",
-      paragraphs: [{ text: "Private Folder", isBold: true }],
+      title: "Workspace Types",
+      paragraphs: [{ text: "Personal Workspace", isBold: true }],
       bullets: [
-        { type: "line", parts: [{ text: "Only visible to you" }] },
-        { type: "line", parts: [{ text: "No one else can access it" }] },
+        { type: "line", parts: [{ text: "Only you can access this workspace" }] },
+        { type: "line", parts: [{ text: "No one else can see its content" }] },
         {
           type: "line",
           parts: [
@@ -226,10 +226,21 @@ const DOCS = {
       ],
     },
     {
-      paragraphs: [{ text: "External Folder", isBold: true }],
+      paragraphs: [{ text: "Internal Workspace", isBold: true }],
       bullets: [
-        { type: "line", parts: [{ text: "Can be shared with other users" }] },
-        { type: "line", parts: [{ text: "Used for collaboration" }] },
+        { type: "line", parts: [{ text: "Restricted to only your internal team" }] },
+        { type: "line", parts: [{ text: "Members must be explicitly invited" }] },
+        {
+          type: "line",
+          parts: [{ text: "Used for day-to-day team collaboration" }],
+        },
+      ],
+    },
+    {
+      paragraphs: [{ text: "External Workspace", isBold: true }],
+      bullets: [
+        { type: "line", parts: [{ text: "Open to share externally with your clients" }] },
+        { type: "line", parts: [{ text: "Anyone with the link can access it" }] },
         {
           type: "line",
           parts: [{ text: "Includes both files and chat messages" }],
@@ -237,7 +248,7 @@ const DOCS = {
       ],
       after: [
         {
-          text: "When you create a folder, you choose its type based on how you want to use it.",
+          text: "When you create a workspace, you choose its type based on how you want to use it.",
         },
       ],
     },
@@ -464,11 +475,11 @@ const DOCS = {
         { text: "Key rules:" },
       ],
       bullets: [
-        { type: "line", parts: [{ text: "Private folders are never shared" }] },
+        { type: "line", parts: [{ text: "Personal workspaces are never shared" }] },
         {
           type: "line",
           parts: [
-            { text: "External folders are accessible only to invited users" },
+            { text: "Internal workspaces are accessible only to invited users" },
           ],
         },
         {
@@ -489,7 +500,7 @@ const DOCS = {
       title: "Typical Use Cases",
       paragraphs: [{ text: "Personal Workspace", isBold: true }],
       bullets: [
-        { type: "line", parts: [{ text: "Private folders for documents" }] },
+        { type: "line", parts: [{ text: "A workspace only you can access" }] },
         { type: "line", parts: [{ text: "Notes for daily planning" }] },
         { type: "line", parts: [{ text: "Customized background" }] },
       ],

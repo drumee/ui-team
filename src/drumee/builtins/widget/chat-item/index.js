@@ -1,4 +1,4 @@
-const { toggleState, colorFromName } = require("@drumee/ui-essentials");
+const { toggleState, colorFromName, copyToClipboard } = require("@drumee/ui-essentials");
 require("./skin");
 class ___widget_chatItem extends LetcBox {
   /**
@@ -1144,6 +1144,110 @@ class ___widget_chatItem extends LetcBox {
   }
 
   /**
+   * True when the message carries an uploaded attachment (image or any file).
+   * Gates the "copy attachment" menu icon. A plain file-mention (no upload
+   * record) is excluded — there is nothing to fetch a blob/link for.
+   */
+  _hasAttachment() {
+    return !!(this.mget("is_attachment") || !_.isEmpty(this.mget("attachment")));
+  }
+
+  /**
+   * Copy this message's attachment(s) OUT to the OS clipboard. Fetches the
+   * attachment records (same SERVICE.chat.attachment api the cards use), then
+   * for the first image writes an image blob via the async Clipboard API so it
+   * pastes into Files / another browser / an image editor; a non-image file
+   * falls back to copying its direct link as text. Clipboard image write needs
+   * a secure context (stage is https) and a real image blob, so we fetch the
+   * original then normalise to PNG on a canvas (Chrome only accepts image/png
+   * in ClipboardItem).
+   */
+  async copyAttachment() {
+    let files;
+    try {
+      files = await this.fetchService(this.getAttachments());
+    } catch (e) {
+      this.warn && this.warn("[chat-item] copyAttachment fetch failed", e);
+      return;
+    }
+    files = (_.isArray(files) ? files : [files]).filter(Boolean);
+    if (_.isEmpty(files)) return;
+
+    const { mfs_base, keysel, protocol } = bootstrap();
+    const { hubId } = this.mget(_a.uiHandler) || {};
+    const isImage = (f) =>
+      (f.ftype || f.filetype || f.category) === _a.image ||
+      /^image\//.test(f.mimetype || "");
+
+    const image = files.find(isImage);
+    if (image && navigator.clipboard && window.ClipboardItem) {
+      const nid = image.nid || image.file_nid;
+      const hub = image.hub_id || hubId;
+      let url = `${mfs_base}file/orig/${nid}/${hub}`;
+      if (keysel) url += `?keysel=${keysel}`;
+      try {
+        const blob = await fetch(url).then((r) => r.blob());
+        const png = await this._toPngBlob(blob);
+        await navigator.clipboard.write([
+          new ClipboardItem({ "image/png": png }),
+        ]);
+        this.triggerHandlers({ service: "attachment-copied", copied: "image" });
+        return;
+      } catch (e) {
+        this.warn && this.warn("[chat-item] copy image failed, falling back to link", e);
+      }
+    }
+
+    // No image (or image copy unsupported/failed) → copy the first file's link.
+    const f = files[0];
+    const nid = f.nid || f.file_nid;
+    const hub = f.hub_id || hubId;
+    const host = f.vhost ? `${protocol}://${f.vhost}` : "";
+    const link = f.ownpath
+      ? `${host}${f.ownpath}`
+      : `${mfs_base}file/orig/${nid}/${hub}`;
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(link);
+      } else {
+        copyToClipboard(link);
+      }
+      this.triggerHandlers({ service: "attachment-copied", copied: "link" });
+    } catch (e) {
+      this.warn && this.warn("[chat-item] copy link failed", e);
+    }
+  }
+
+  /**
+   * Re-encode any image blob to PNG via a canvas. ClipboardItem in Chrome only
+   * reliably accepts image/png; a jpeg/webp/gif blob would otherwise be
+   * rejected. Returns the original blob unchanged if it is already PNG.
+   */
+  _toPngBlob(blob) {
+    if (blob.type === "image/png") return Promise.resolve(blob);
+    return new Promise((resolve, reject) => {
+      const url = URL.createObjectURL(blob);
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement("canvas");
+        canvas.width = img.naturalWidth;
+        canvas.height = img.naturalHeight;
+        canvas.getContext("2d").drawImage(img, 0, 0);
+        URL.revokeObjectURL(url);
+        canvas.toBlob(
+          (out) => (out ? resolve(out) : reject(new Error("toBlob null"))),
+          "image/png",
+        );
+      };
+      img.onerror = (e) => {
+        URL.revokeObjectURL(url);
+        reject(e);
+      };
+      img.src = url;
+    });
+  }
+
+  /**
    * Resolve the file(s) this message references → [{ file_nid, filename }].
    * Mentions are read from the DOM (inline anchors carry data-nid/data-filename).
    * Uploaded attachments are fetched via the same SERVICE.chat.attachment api
@@ -1396,6 +1500,14 @@ class ___widget_chatItem extends LetcBox {
         // file's chat thread, keeping the reply quote: 1 file → straight in,
         // several → file picker, none (race) → normal reply fallback.
         this._startFileThreadReply(cmd, args);
+        return;
+      }
+
+      case "copy-attachment": {
+        // Copy this message's attachment(s) to the OS clipboard so they can be
+        // pasted into Files / another browser: images go in as an image blob,
+        // other files fall back to copying their link text.
+        this.copyAttachment();
         return;
       }
 

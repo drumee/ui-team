@@ -65,6 +65,12 @@ const __media_tpl_grid = function (ui) {
     // instead of the date. Regular file grids keep the date.
     let secondLine;
     let metaTop = filenameHtml;
+    // Attachment cards get a remove ("X") button so a queued file can be
+    // dropped before the message is sent. command.js returns the shared
+    // remove markup (data-service="remove-upload") when m.isAttachment; the
+    // whole downstream chain (getService → media/interact removeMedia →
+    // chat removeUpload → SERVICE.chat.upload_remove) already exists.
+    let removeBtn = '';
     if (m.isAttachment) {
       const size = humanFileSize(m.filesize);
       const sizeHtml = size ? `<span class="media-grid__filesize">${size}</span>` : '';
@@ -74,6 +80,7 @@ const __media_tpl_grid = function (ui) {
           `${sizeHtml}${sep}` +
           `<a class="media-grid__reveal" data-service="show-in-folder">${LOCALE.SHOW_IN_FOLDER}</a>` +
         `</span>`;
+      removeBtn = require('../../template/command')(m);
 
       // Filename uses the default single-line render (metaTop = filenameHtml);
       // it truncates with an ellipsis and the extension is allowed to be clipped
@@ -82,7 +89,7 @@ const __media_tpl_grid = function (ui) {
       secondLine = dateText ? `<span class="media-grid__date">${dateText}</span>` : '';
     }
     html =
-      `<div class="media-grid__background">${preview}</div>` +
+      `<div class="media-grid__background">${preview}${removeBtn}</div>` +
       `<div class="media-grid__meta-row">` +
         `<div class="media-grid__meta-row-top">${metaTop}</div>` +
         `${secondLine}` +

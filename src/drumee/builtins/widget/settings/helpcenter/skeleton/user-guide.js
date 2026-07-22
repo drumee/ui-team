@@ -171,19 +171,19 @@ const GUIDE = {
       bullets: [
         {
           type: "block",
-          head: [{ text: "Create an external folder", bold: true }],
+          head: [{ text: "Create an external workspace", bold: true }],
           body: [
             {
-              text: "Use this when you want to share files with people outside your workspace.",
+              text: "Use this when you want to share files externally with your clients.",
             },
           ],
         },
         {
           type: "block",
-          head: [{ text: "Create a private folder", bold: true }],
+          head: [{ text: "Create a personal workspace", bold: true }],
           body: [
             {
-              text: "Only you can access this folder. Ideal for personal or sensitive documents.",
+              text: "Only you can access this workspace. Ideal for personal or sensitive documents.",
             },
           ],
         },
@@ -551,7 +551,7 @@ const GUIDE = {
           type: "line",
           parts: [
             { text: "Use " },
-            { text: "private folders", bold: true },
+            { text: "personal workspaces", bold: true },
             { text: " for sensitive files." },
           ],
         },
@@ -559,7 +559,7 @@ const GUIDE = {
           type: "line",
           parts: [
             { text: "Use " },
-            { text: "external folders", bold: true },
+            { text: "external workspaces", bold: true },
             { text: " for collaboration with outside users." },
           ],
         },
