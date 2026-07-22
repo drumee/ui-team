@@ -45,7 +45,13 @@ function getOptions(ui, cycle = "monthly") {
       priceLabel: LOCALE.START_FROM,
       priceAmount: proPrice,
       pricePeriod: isYear ? perYear : perMonth,
-      buttonTitle: LOCALE.UPGRADE,
+      // From a HIGHER tier (team/enterprise) moving to Pro is a switch, not
+      // an upgrade — "Choose Pro Plan" (ticket 2026-07-22). currentPlanName
+      // comes synchronously from Visitor.quota(), so the label is right from
+      // the very first paint — no async flash.
+      buttonTitle: /^(team|enterprise)$/i.test(ui.currentPlanName || "")
+        ? (LOCALE.CHOOSE_PRO || "Choose Pro Plan")
+        : LOCALE.UPGRADE,
       buttonKind: "primary",
       badge: 1,
       subText: LOCALE.PLAN_PRO_DESC.format(seatPrice),
