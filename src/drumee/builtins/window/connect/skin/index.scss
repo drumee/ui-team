@@ -554,6 +554,65 @@
   }
 }
 
+// Control lock — the in-topbar controls are shown but inert during two phases
+// where operating camera/mic/screen/reactions/fullscreen is meaningless:
+//   1. Connecting, before the local user joins the conference —
+//      window/connect/index.js sets data-starting-up="1" on __ui until
+//      onLocalUserJoined.
+//   2. A late joiner catching an in-progress screen share, while the presenter
+//      layout loads — the shared shell sets data-preparing="1" on __shell until
+//      the shared screen's first frame (onRemoteScreenStart).
+// Both dim + block the controls; the Leave button is exempted below so there's
+// always an escape hatch. Mirrors the meeting window's control lock.
+.window-connect__ui[data-starting-up="1"] .window-connect__in-topbar-controls > *,
+.window-connect__shell[data-preparing="1"] .window-connect__in-topbar-controls > * {
+  pointer-events: none;
+  opacity: 0.45;
+}
+
+// Escape hatch: Leave stays fully interactive during both locked phases. Same
+// specificity as the rule above but ordered after it, so it wins.
+.window-connect__ui[data-starting-up="1"] .window-connect__leave-btn,
+.window-connect__shell[data-preparing="1"] .window-connect__leave-btn {
+  pointer-events: auto;
+  opacity: 1;
+}
+
+// Control loading — while a camera / mic / screen-share toggle's async work is
+// in flight, window/connect/index.js flags data-loading="1" on the camera or
+// mic pill (or the screen-share button). Block clicks and overlay a spinner on
+// the primary toggle icon (the ".accept" button inside a pill, or the screen
+// button itself), dimming the icon underneath. Reuses the meeting shell's
+// load-spin keyframe (emitted by the meeting-shell mixin include above).
+.window-connect__ctrl-pill[data-loading="1"],
+.window-connect__ctrl-btn.screen[data-loading="1"] {
+  pointer-events: none;
+}
+
+.window-connect__ctrl-pill[data-loading="1"] .ctrl-button.accept,
+.window-connect__ctrl-btn.screen[data-loading="1"] {
+  position: relative;
+
+  svg {
+    opacity: 0.25;
+  }
+
+  &::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    margin: auto;
+    width: 16px;
+    height: 16px;
+    border: 2px solid var(--default-icon-neutral, #89929e);
+    border-top-color: transparent;
+    border-radius: 50%;
+    animation: window-meeting-load-spin 0.8s linear infinite;
+    pointer-events: none;
+    z-index: 3;
+  }
+}
+
 // Center the call status message in the middle of the connect window. Scoped
 // under __ui so it outranks the generic .window__message-container (top:40px)
 // the meeting skin defines globally.
