@@ -58,9 +58,14 @@ class tutorial_main extends LetcBox {
   _prevStep() {
     if (this._stepIndex <= 0) return;
     this._stepIndex--;
+    // The workspace step (index 0) has internal sub-badges; when re-entered via
+    // Back it must land on its LAST badge (where it left off), not the first.
+    const widget = this._stepIndex === 0
+      ? { ...this._widgets[0], enter_at_last: true }
+      : this._widgets[this._stepIndex];
     this.ensurePart('spotlight').then((s) => s.clear && s.clear());
     this.ensurePart(_a.content).then((p) => {
-      p.feed(this._widgets[this._stepIndex])
+      p.feed(widget)
     })
   }
 

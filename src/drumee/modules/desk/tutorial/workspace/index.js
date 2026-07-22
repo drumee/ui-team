@@ -26,6 +26,8 @@ class __tutorial_workspace extends LetcBox {
   }
 
   onDomRefresh() {
+    // When re-entered via Back from step 2, resume on the last sub-badge.
+    if (this.mget('enter_at_last')) this._stepIndex = BADGES.length - 1;
     this.feed(require('./skeleton')(this));
     this._showBadge();
   }
