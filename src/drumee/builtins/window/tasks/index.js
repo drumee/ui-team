@@ -4538,24 +4538,18 @@ class __tasks_panel extends LetcBox {
   // `theme` the palette key driving pill tints, `custom` marks editability.
   getColumns() {
     const rows = this._customColumns || [];
-    // Before column_list resolves there are no rows yet — show the built-in
-    // defaults as non-editable placeholders so the board isn't momentarily
-    // empty. Once the server seeds + returns rows, every column is editable.
-    if (!rows.length) {
-      return COLUMNS.map((c, i) => ({
-        key: c.key,
-        name: LOCALE[c.label] || c.key,
-        theme: c.theme,
-        color: COLUMN_THEMES[c.theme] || COLUMN_THEMES.default,
-        is_done: c.key === "complete" ? 1 : 0,
-        position: i,
-        custom: 0, // placeholder — no DB row to reorder/rename/delete yet
-      }));
-    }
-    // All columns (built-in + custom) are stored rows now, so all are uniformly
-    // editable. A built-in id left at its seeded English name shows a localized
-    // title; a renamed one shows the stored name.
-    return rows.map((r) => {
+    // Has this scope been seeded? A single stored built-in row proves it has —
+    // and once seeded, a MISSING built-in means the user DELETED it, so it must
+    // stay deleted. Only when NO built-in row exists at all (column_list has
+    // not resolved yet, or the scope was never seeded) do we fall back to the
+    // defaults. Without that fallback a scope holding only custom columns
+    // renders those alone and silently hides every task whose status is a
+    // built-in key.
+    const seeded = rows.some((r) => BUILTIN_META[r.id]);
+    // Stored columns (built-in + custom) are uniformly editable. A built-in id
+    // left at its seeded English name shows a localized title; a renamed one
+    // shows the stored name.
+    const customs = rows.map((r) => {
       const bi = BUILTIN_META[r.id];
       const name = bi && r.name === bi.seed ? LOCALE[bi.label] || r.name : r.name || "";
       return {
@@ -4568,6 +4562,16 @@ class __tasks_panel extends LetcBox {
         custom: 1,
       };
     });
+    if (seeded) return customs;
+    return COLUMNS.map((c, i) => ({
+      key: c.key,
+      name: LOCALE[c.label] || c.key,
+      theme: c.theme,
+      color: COLUMN_THEMES[c.theme] || COLUMN_THEMES.default,
+      is_done: c.key === "complete" ? 1 : 0,
+      position: i,
+      custom: 0, // placeholder — no DB row to reorder/rename/delete yet
+    })).concat(customs);
   }
 
   // Completion is column-driven: a task is "done" when its column has is_done.
