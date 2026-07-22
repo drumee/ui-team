@@ -79,9 +79,17 @@ function pageHeader(ui) {
  * @returns {Object|null} Skeletons component
  */
 function subscriptionBanner(ui) {
-  if (!ui._hasPaidSub) return null;
+  // _hasPaidSub is filled asynchronously by _loadSubscription(); waiting for
+  // it left the banner (current plan + Cancel) invisible for the whole first
+  // round-trip. The synchronous quota plan already tells us the caller pays —
+  // render the banner from the very first paint and let the renew date fill
+  // in once the mirror lands (ticket 2026-07-22).
+  const quotaPlan = String(((Visitor.quota && Visitor.quota()) || {}).plan || "").toLowerCase();
+  const paidByQuota = /^(pro|team|enterprise)$/.test(quotaPlan);
+  if (!ui._hasPaidSub && !paidByQuota) return null;
   const fig = `${ui.fig.family}__sub-banner`;
   const when = ui._periodEnd ? Dayjs(ui._periodEnd * 1000).format("MMM D, YYYY") : "";
+  const planLabel = quotaPlan ? quotaPlan.charAt(0).toUpperCase() + quotaPlan.slice(1) : "";
 
   if (ui._isCanceling) {
     return Skeletons.Box.X({
@@ -116,7 +124,11 @@ function subscriptionBanner(ui) {
     kids: [
       Skeletons.Note({
         className: `${fig}-title`,
-        content: (LOCALE.SUBSCRIPTION_RENEWS_ON || "Your subscription renews on {0}").format(when),
+        // Renew date comes from the async mirror; until it lands, announce
+        // the current plan instead of rendering an empty date.
+        content: when
+          ? (LOCALE.SUBSCRIPTION_RENEWS_ON || "Your subscription renews on {0}").format(when)
+          : (LOCALE.CURRENT_PLAN_BANNER || "You are on the {0} plan").format(planLabel),
       }),
       Skeletons.Note({
         className: `${fig}-action ${fig}-cancel`,
