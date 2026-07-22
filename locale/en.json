@@ -1477,6 +1477,7 @@
   "NEW_FILE": "New file",
   "NEW_WORKSPACE": "New Workspace",
   "CREATE_NEW_WORKSPACE": "Create new workspace",
+  "CREATE_WORKSPACE": "Create workspace",
   "CREATE_NEW_WORKSPACE_HINT": "Specify a name for your new organization unit.",
   "WORKSPACE_NAME_PLACEHOLDER": "e.g. Q4 Strategy",
   "INTERNAL_WORKSPACE": "Internal Workspace",

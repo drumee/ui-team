@@ -2,8 +2,10 @@
 const __icon = function (_ui_) {
   const a = {
     account: "desktop_account--white",
+    addNew: "topbar-add",
     background: "desktop_picture",
     copy: "desktop_copy",
+    createWorkspace: "addmenu-folder",
     delete: "ctxmenu-delete",
     duplicate: "file-copy",
     designationLink: "ctxmenu-designation-link",
@@ -19,6 +21,7 @@ const __icon = function (_ui_) {
     import: "server-import",
     importHidden: "server-import",
     info: "ctxmenu-info",
+    inviteMember: "topbar-invite",
     link: "editbox_link",
     lock: "protected-lock",
     makeACopy: "ctxmenu-copy",

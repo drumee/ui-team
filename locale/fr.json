@@ -1202,6 +1202,7 @@
   "NEW_FILE": "Nouveau fichier",
   "NEW_WORKSPACE": "Nouvel espace de travail",
   "CREATE_NEW_WORKSPACE": "Créer un nouvel espace de travail",
+  "CREATE_WORKSPACE": "Créer un espace de travail",
   "CREATE_NEW_WORKSPACE_HINT": "Spécifiez un nom pour votre nouvelle unité organisationnelle.",
   "WORKSPACE_NAME_PLACEHOLDER": "ex. Stratégie Q4",
   "INTERNAL_WORKSPACE": "Espace de travail interne",

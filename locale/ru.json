@@ -1202,6 +1202,7 @@
   "NEW_FILE": "Новый файл",
   "NEW_WORKSPACE": "Новое рабочее пространство",
   "CREATE_NEW_WORKSPACE": "Создать новое рабочее пространство",
+  "CREATE_WORKSPACE": "Создать рабочее пространство",
   "CREATE_NEW_WORKSPACE_HINT": "Укажите название для вашей новой организационной единицы.",
   "WORKSPACE_NAME_PLACEHOLDER": "напр. Стратегия Q4",
   "INTERNAL_WORKSPACE": "Внутреннее рабочее пространство",

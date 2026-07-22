@@ -393,6 +393,7 @@
   "STORAGE_GB": "Almacenamiento (GB)",
   "NO_USERS": "No se encontraron usuarios",
   "CREATE_NEW_WORKSPACE": "Crear nuevo espacio de trabajo",
+  "CREATE_WORKSPACE": "Crear espacio de trabajo",
   "CREATE_NEW_WORKSPACE_HINT": "Especifica un nombre para tu nueva unidad organizativa.",
   "WORKSPACE_NAME_PLACEHOLDER": "ej. Estrategia Q4",
   "INTERNAL_WORKSPACE": "Espacio de trabajo interno",

@@ -29,12 +29,14 @@ class __window_manager extends push {
     if (Visitor.canServerImpExp()) {
       exportMenu = [_a.separator, _a.import];
     }
+    // Desk-background right-click mirrors the topbar actions: Create
+    // workspace (media_form modal), + New (same submenu as the topbar
+    // Add-new menu) and Invite (invite-members popup).
     this.contextmenuItems = [
-      _a.newFolder,
-      _a.paste,
-      _a.upload,
+      _a.createWorkspace,
+      _a.addNew,
       _a.separator,
-      _a.preferences,
+      _a.inviteMember,
     ];
     this._handelKbdEvents = this._handelKbdEvents.bind(this);
     RADIO_KBD.on(_e.keyup, this._handelKbdEvents);
@@ -1792,6 +1794,18 @@ class __window_manager extends push {
           area: _a.personal,
           filename: LOCALE.NEW_FOLDER,
         });
+
+      // Desk-background context menu (+ New submenu / Invite): these are
+      // Desk-owned flows — same handlers the topbar buttons hit — so
+      // delegate up instead of duplicating them here.
+      case "new-note":
+      case "new-document":
+      case "new-spreadsheet":
+      case "new-presentation":
+      case "invite-member":
+        return window.Desk
+          ? Desk.onUiEvent(cmd, { ...args, service })
+          : null;
 
       case _a.helpdesk:
         return this.launch(
