@@ -131,12 +131,10 @@ exit        →  reward_flow_done = "1"; reward_step removed.
                drumee_utm is left alone — it is not ours to clear.
 ```
 
-**Risk to verify first:** `localStorage` is per-origin. This works only if the
-signup page and the desk are served from the same origin. If signup lives on a
-different host or subdomain, `drumee_utm` will not be visible to the desk and
-the gate needs a different carrier — most likely a `?reward=1` param appended to
-the post-signup redirect. Confirm the origins before building; the rest of the
-design is unaffected either way.
+**Origin — resolved.** `localStorage` is per-origin, so this only works if
+signup and the desk share one. They do: signup is a *plugin* loaded into the
+same app shell via `Kind.loadPlugin` from `modules/welcome/index.js:125`, not a
+separate site. `drumee_utm` written during signup is visible to the desk.
 
 `reward_flow_done` is the permanent latch — once set, the flow never mounts
 again on that browser. A dev override `?reward=1` read through
@@ -159,7 +157,7 @@ index reached, which drives the progress bar).
 | `step1` | *Continue* | `step2` |
 | `step2` | *Upload* — fires `_e.upload` at the desk | `step2_waiting` |
 | `step2_waiting` | `RADIO_MEDIA` `_e.uploaded` | `step3` |
-| `step2_waiting` | uploader closed with no upload | `step2` |
+| `step2_waiting` | *Back* | `step2` |
 | `step3` | *Invite member* — opens `invite_popup` with `uiHandler: [this]` | `step3_waiting` |
 | `step3_waiting` | `invitation-sent` | `congrats` |
 | `step3_waiting` | invite popup destroyed without sending | `step3` |
@@ -169,8 +167,9 @@ index reached, which drives the progress bar).
 | `drop` | *Drop anyway* | done |
 | `congrats` | *Go to dashboard* | done |
 
-`step1` renders without a *Back* button, matching Figma. Waiting states have no
-buttons.
+`step1` renders without a *Back* button, matching Figma. Waiting states drop
+their primary button but keep *Back*, so a user who changes their mind is never
+trapped.
 
 **Back is navigation only.** Completed steps stay completed: going back from
 step 3 to step 2 does not require re-uploading, and *Continue* returns straight
@@ -182,10 +181,17 @@ the arrow points at that control. Any `_e.uploaded` broadcast completes the
 step, including one from a drag-drop the user did instead.
 
 **Waiting states must not block the app.** On entering `step2_waiting` or
-`step3_waiting` the host gets `data-state="waiting"`: the vignette and card go
-`pointer-events: none` and dim, so the uploader and the invite popup are fully
-usable. Restoring on cancel is what the two "closed without succeeding" rows
-above cover.
+`step3_waiting` the root gets `data-waiting="1"`: the vignette fades to
+transparent and stops intercepting clicks, so the real uploader and invite
+popup are fully usable. The card itself stays interactive, showing a "waiting
+for…" hint and its *Back* button.
+
+Cancellation is handled asymmetrically, on purpose. The invite popup is a
+widget, so its destroy event reliably signals "closed without sending" and
+re-arms step 3. An upload starts with a *native* file dialog, whose dismissal
+the page cannot observe — so step 2 has no cancel detection, and *Back* is the
+user's way out instead. Building a heuristic for a signal the browser does not
+expose would be guesswork.
 
 ## Rendering
 
@@ -203,40 +209,48 @@ above cover.
 
 ## Copy
 
-All strings go through `LOCALE`; nothing is hardcoded. New keys, added to
-`en.json` first and then the other five locale files:
+All strings go through `LOCALE`; nothing is hardcoded. 19 new keys, added to
+all six locale files. They are prefixed `REWARD_FLOW_` rather than `REWARD_`
+because `REWARD_HUB` and `REWARD_HUB_DESC` already exist
+(`locale/en.json:1344-1345`) for an unrelated feature:
 
 ```
-REWARD_STEP1_TITLE   "Step 1: Create your Workspace"
-REWARD_STEP1_DESC    "You're already in! Your workspace is ready for action."
-REWARD_STEP2_TITLE   "Step 2: Upload your first file"
-REWARD_STEP2_DESC    "Upload any file, and activate your storage instantly."
-REWARD_STEP3_TITLE   "Step 3: Invite a teammate"
-REWARD_STEP3_DESC    "Click Invite and add at least 1 member. Real collaboration starts now!"
-REWARD_DROP_TITLE    "Don't drop now"
-REWARD_DROP_DESC     "You are super close to the reward."
-REWARD_DROP_LEAVE    "Drop anyway"
-REWARD_CONGRATS_TITLE "Congratulations!"
-REWARD_CONGRATS_DESC  "You've successfully claimed your 5 years of unlimited storage! Welcome to Drumee."
-REWARD_GO_DASHBOARD  "Go to dashboard"
-REWARD_CONTINUE      "Continue"
-REWARD_UPLOAD        "Upload"
-REWARD_INVITE        "Invite member"
+REWARD_FLOW_STEP1_TITLE     "Step 1: Create your Workspace"
+REWARD_FLOW_STEP1_DESC      "You're already in! Your workspace is ready for action."
+REWARD_FLOW_STEP2_TITLE     "Step 2: Upload your first file"
+REWARD_FLOW_STEP2_DESC      "Upload any file, and activate your storage instantly."
+REWARD_FLOW_STEP3_TITLE     "Step 3: Invite a teammate"
+REWARD_FLOW_STEP3_DESC      "Click Invite and add at least 1 member. Real collaboration starts now!"
+REWARD_FLOW_CONTINUE        "Continue"
+REWARD_FLOW_UPLOAD          "Upload"
+REWARD_FLOW_INVITE          "Invite member"
+REWARD_FLOW_WAITING_UPLOAD  "Waiting for your first upload…"
+REWARD_FLOW_WAITING_INVITE  "Waiting for your first invitation…"
+REWARD_FLOW_DROP_TITLE      "Don't drop now"
+REWARD_FLOW_DROP_DESC       "You are super close to the reward."
+REWARD_FLOW_DROP_LEAVE      "Drop anyway"
+REWARD_FLOW_CONGRATS_TITLE  "Congratulations!"
+REWARD_FLOW_CONGRATS_LEAD   "You've successfully claimed your"
+REWARD_FLOW_CONGRATS_PRIZE  "5 years of unlimited storage!"
+REWARD_FLOW_CONGRATS_TAIL   "Welcome to Drumee."
+REWARD_FLOW_GO_DASHBOARD    "Go to dashboard"
 ```
 
 `BACK` already exists (`locale/en.json:26`) and is reused.
 
-The congratulations line renders "5 years of unlimited storage" in the accent
-colour, per Figma. It is a styled span within the localised string, so
-translators keep control of word order.
+The congratulations line renders "5 years of unlimited storage!" in the accent
+colour, per Figma. It is split into three separate keys laid out in a wrapping
+flex row, so the prize can be styled while each segment stays a whole
+translatable phrase. The trade-off, accepted deliberately: segment *order* is
+fixed across languages.
 
 ## Edge cases
 
 | Case | Behaviour |
 |---|---|
 | Page reloaded mid-flow | `localStorage.reward_step` is written on every transition; the flow resumes at that step. Waiting states resume as their base step. |
-| `Wm.__wrapperModal` unavailable | Drop and congrats fall back to an inline card on the vignette. |
-| Invite popup already open when step 3 starts | Do not open a second one; attach to the existing instance. |
+| `Wm.__wrapperModal` unavailable | The drop modal is skipped (the user simply stays on their step). On the congratulations path the flow finishes and latches instead, so a missing modal host can never strand someone in a waiting state. A second inline render path is not worth building for a host that is always present in the desk. |
+| Invite popup already open when step 3 starts | Desk's `_openInvitePopup` toggles, so the open popup closes. This self-heals: the popup's destroy relay calls `onInvitePopupClosed()`, which returns the flow to step 3 ready to try again. |
 | Upload fails or is cancelled | Stays on step 2, card restored. No error surfaced by the flow — the uploader owns that. |
 | Invite partially fails | `invitation-sent` still fires (invite-popup surfaces the partial failure itself), so the step completes. |
 | Tutorial still running | The flow waits for `desk_tutorial` to destroy before mounting. |
@@ -245,11 +259,19 @@ translators keep control of word order.
 
 ## Verification
 
-`ui-team` has no test runner, so verification is compile + visual + manual:
+`ui-team` has no configured test runner, but Node 22 ships `node:test` — so the
+pure skeletons and the whole state machine get real unit tests with **no new
+dependencies**. Globals (`Skeletons`, `LOCALE`, `_a`, `_e`, `Wm`,
+`RADIO_MEDIA`, `LetcBox`) are stubbed in the test file, and `.scss` imports are
+neutralised via `require.extensions`. Verified working before the plan was
+written.
 
-1. **SCSS compiles standalone** — `sass -I . -I skin` on the new stylesheet.
-2. **Visual check** — headless chromium harness rendering the card, vignette,
-   progress bar at all three fill levels, and both modals.
+1. **Unit tests** — `node --test test/reward-flow/`: locale completeness, card
+   and modal structure per step, and every transition in the table above
+   including the gate, the latch, resume and Back-does-not-rewind.
+2. **SCSS compiles standalone** —
+   `sass --load-path=src/drumee/skin --load-path=node_modules` on the new
+   stylesheet.
 3. **Manual click-through** on local.drumee with `?reward=1`:
    step 1 → 2 → real upload → 3 → real invite → congrats; then Back from 3 to 2
    and forward again (progress must not rewind); then Esc at each step to
