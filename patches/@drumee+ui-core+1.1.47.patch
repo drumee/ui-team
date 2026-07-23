@@ -1,0 +1,41 @@
+diff --git a/node_modules/@drumee/ui-core/letc/widgets/list/index.js b/node_modules/@drumee/ui-core/letc/widgets/list/index.js
+index 46969b0..838406c 100644
+--- a/node_modules/@drumee/ui-core/letc/widgets/list/index.js
++++ b/node_modules/@drumee/ui-core/letc/widgets/list/index.js
+@@ -149,6 +149,9 @@ class __list extends LetcBox {
+    */
+   start(reset = 0) {
+     this._curPage = 1;
++    // Invalidate any in-flight request issued before this (re)start — see the
++    // stale-response guard in fetch().
++    this._reqGen = (this._reqGen || 0) + 1;
+     this._waiting = false; // wait util data received
+     this._scrollY = 0;
+     this._lastScrollTop = 0;
+@@ -436,9 +439,24 @@ class __list extends LetcBox {
+     } else {
+       this.checkSpinner();
+     }
++    // Stale-response guard. restart()/start() resets the collection and
++    // refetches, but an in-flight request from the PREVIOUS api (e.g. the
++    // folder the user just navigated away from) is never cancelled — when it
++    // lands it would renderData() the old folder's rows into the new folder's
++    // list ("wrong subfolder shown"), and its _eod() would set
++    // _end_of_data = true, blocking every later fetch so the correct rows
++    // only appear seconds later, or not at all. Tie each request to the
++    // generation that issued it and drop anything from an older one.
++    const gen = this._reqGen;
+     this.fetchService(service, opt)
+-      .then(this.handleResponse.bind(this))
+-      .catch(this.onServerComplain.bind(this));
++      .then((data) => {
++        if (gen !== this._reqGen || this.isDestroyed()) return;
++        this.handleResponse(data);
++      })
++      .catch((e) => {
++        if (gen !== this._reqGen || this.isDestroyed()) return;
++        this.onServerComplain(e);
++      });
+     return opt;
+   }
+ 
