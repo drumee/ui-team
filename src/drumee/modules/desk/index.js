@@ -1172,6 +1172,12 @@ class desk_module extends LetcBox {
           setTimeout(() => {
             this._showTutorial();
           }, 2000);
+        } else {
+          // No tutorial this session — the reward flow gates itself, so it is
+          // safe to always ask.
+          setTimeout(() => {
+            this._maybeStartRewardFlow();
+          }, 2000);
         }
         return;
     }
@@ -1267,7 +1273,43 @@ class desk_module extends LetcBox {
   _showTutorial() {
     this.ensurePart("overlay").then((p) => {
       p.feed({ kind: "desk_tutorial" });
+      this._chainRewardFlowAfterTutorial(p.children.last());
     });
+  }
+
+  /**
+   * Reward onboarding flow (Figma 3275:236091). Runs AFTER the 5-step
+   * tutorial, and only for users who arrived from the campaign email —
+   * `reward_flow.isEligible()` reads the utm the signup plugin persisted.
+   * `?reward=1` forces it for local testing; the forced run is not latched,
+   * so it stays repeatable and cannot mask a real campaign run.
+   */
+  async _maybeStartRewardFlow() {
+    const forced = !!Visitor.parseModuleArgs().reward;
+    if (this._rewardFlow && !this._rewardFlow.isDestroyed()) return;
+    await Kind.waitFor("reward_flow");
+    const Flow = Kind.get("reward_flow");
+    if (!forced && !(Flow && Flow.isEligible && Flow.isEligible())) return;
+    this.ensurePart("overlay").then((p) => {
+      p.feed({ kind: "reward_flow", uiHandler: [this] });
+      this._rewardFlow = p.children.last();
+      this._rewardFlow.once(_e.destroy, () => {
+        this._rewardFlow = null;
+      });
+    });
+  }
+
+  /**
+   * The tutorial owns the screen while it runs, so the reward flow waits for
+   * it to tear down. When there is no tutorial (already seen, or not
+   * triggered) this starts the flow straight away.
+   */
+  _chainRewardFlowAfterTutorial(tutorial) {
+    if (tutorial && _.isFunction(tutorial.once)) {
+      tutorial.once(_e.destroy, () => this._maybeStartRewardFlow());
+      return;
+    }
+    this._maybeStartRewardFlow();
   }
 
   /**
@@ -2149,6 +2191,15 @@ class desk_module extends LetcBox {
       case "invite-member":
         return this._openInvitePopup(cmd);
 
+      // Relayed to the reward flow: it opened this popup through the
+      // "invite-member" service above, so the popup's uiHandler is the desk,
+      // not the flow.
+      case "invitation-sent":
+        if (this._rewardFlow && !this._rewardFlow.isDestroyed()) {
+          this._rewardFlow.onInvitationSent();
+        }
+        return;
+
       case "toggle-user-menu":
         return this._toggleUserMenu();
 
@@ -2278,6 +2329,9 @@ class desk_module extends LetcBox {
       this._invitePopup = Wm.__wrapperModal.children.last();
       this._invitePopup.once(_e.destroy, () => {
         this._invitePopup = null;
+        if (this._rewardFlow && !this._rewardFlow.isDestroyed()) {
+          this._rewardFlow.onInvitePopupClosed();
+        }
       });
     });
   }
