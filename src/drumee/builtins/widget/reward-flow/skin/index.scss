@@ -121,7 +121,7 @@ $success-soft: rgba(46, 179, 122, 0.14);
   &__desc {
     font-size: 14px;
     line-height: 1.45;
-    color: var(--soft-fg, var(--normal-fg));
+    color: var(--normal-fg-20);
   }
 
   &__waiting {
@@ -157,9 +157,9 @@ $success-soft: rgba(46, 179, 122, 0.14);
     }
 
     &--ghost {
-      color: var(--soft-fg, var(--normal-fg));
-      background-color: var(--soft-bg, rgba(0, 0, 0, 0.05));
-      &:hover { background-color: rgba(0, 0, 0, 0.09); }
+      color: var(--normal-fg-20);
+      background-color: var(--normal-bg-90);
+      &:hover { background-color: var(--normal-bg-80); }
     }
   }
 
@@ -197,7 +197,7 @@ $success-soft: rgba(46, 179, 122, 0.14);
 
   &__modal-desc {
     font-size: 14px;
-    color: var(--soft-fg, var(--normal-fg));
+    color: var(--normal-fg-20);
   }
 
   &__congrats-copy {
@@ -208,7 +208,7 @@ $success-soft: rgba(46, 179, 122, 0.14);
 
   &__congrats-seg {
     font-size: 14px;
-    color: var(--soft-fg, var(--normal-fg));
+    color: var(--normal-fg-20);
   }
 
   &__congrats-prize {
