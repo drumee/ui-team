@@ -16,7 +16,6 @@
 // step name → { index, ico, title, desc, primaryLabel, primaryService, waitingHint }
 const STEPS = {
   step1: {
-    index: 1,
     ico: "folder-header",
     title: () => LOCALE.REWARD_FLOW_STEP1_TITLE || "Step 1: Create your Workspace",
     desc: () => LOCALE.REWARD_FLOW_STEP1_DESC
@@ -26,7 +25,6 @@ const STEPS = {
     back: false,
   },
   step2: {
-    index: 2,
     ico: "upload-simple",
     title: () => LOCALE.REWARD_FLOW_STEP2_TITLE || "Step 2: Upload your first file",
     desc: () => LOCALE.REWARD_FLOW_STEP2_DESC
@@ -36,7 +34,6 @@ const STEPS = {
     back: true,
   },
   step3: {
-    index: 3,
     ico: "drumee-add-contact",
     title: () => LOCALE.REWARD_FLOW_STEP3_TITLE || "Step 3: Invite a teammate",
     desc: () => LOCALE.REWARD_FLOW_STEP3_DESC

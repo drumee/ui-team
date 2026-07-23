@@ -67,6 +67,24 @@ test("every className is derived from fig.family", () => {
     getStep: () => "step2",
     getFurthest: () => 2,
   });
+
   const bad = byClass(tree, "reward-flow");
   assert.equal(bad.length, 0, "found a hardcoded reward-flow prefix");
+
+  const card = byClass(tree, "__card");
+  const segs = byClass(tree, "__progress-seg");
+  const title = byClass(tree, "__title");
+  const buttons = byClass(tree, "__btn");
+
+  assert.equal(card.length, 1, "expected the card root node");
+  assert.equal(segs.length, 3, "expected 3 progress segments");
+  assert.equal(title.length, 1, "expected the title node");
+  assert.equal(buttons.length, 2, "expected the back and primary footer buttons");
+
+  for (const n of [...card, ...segs, ...title, ...buttons]) {
+    assert.ok(
+      n.className.startsWith("xx-yy__"),
+      `expected className "${n.className}" to start with "xx-yy__", got a hardcoded prefix instead`,
+    );
+  }
 });
