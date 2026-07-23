@@ -181,6 +181,8 @@ class __reward_flow extends LetcBox {
     const service = args.service || (cmd && cmd.mget && cmd.mget(_a.service));
     switch (service) {
       case "reward-continue": {
+        // Inert while the user is being handed off to a real surface.
+        if (this._isWaiting()) return;
         // From step1, or returning forward after a Back.
         const next = STEPS[STEPS.indexOf(this._step) + 1];
         if (next) this._goto(next);

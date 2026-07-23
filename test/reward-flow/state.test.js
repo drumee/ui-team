@@ -163,6 +163,15 @@ test("closing the invite popup without sending returns to step3", () => {
   assert.equal(f.getStep(), "step3");
 });
 
+test("continue is a no-op while a waiting state is active", () => {
+  const f = makeFlow();
+  click(f, "reward-continue");
+  click(f, "reward-upload");
+  assert.equal(f.getStep(), "step2_waiting");
+  click(f, "reward-continue");
+  assert.equal(f.getStep(), "step2_waiting", "continue must not fire while waiting");
+});
+
 // ── back navigation ─────────────────────────────────────────────────────────
 
 test("back is navigation only and never rewinds progress", () => {
@@ -225,6 +234,15 @@ test("the vignette is inert during a waiting state", () => {
   assert.equal(modal.fed, null, "no drop modal while waiting");
 });
 
+test("a second vignette click while the drop modal is already open does not feed it again", () => {
+  const f = makeFlow();
+  click(f, "reward-vignette-click");
+  assert.ok(modal.fed, "the drop modal should have been fed");
+  modal.fed = "SENTINEL";
+  click(f, "reward-vignette-click");
+  assert.equal(modal.fed, "SENTINEL", "the modal host must not be fed a second time");
+});
+
 // ── exit ────────────────────────────────────────────────────────────────────
 
 test("dropping out latches the flow off and destroys it", () => {
@@ -246,6 +264,20 @@ test("finishing latches the flow off and destroys it", () => {
   click(f, "reward-finish");
   assert.equal(store.reward_flow_done, "1");
   assert.equal(f.destroyed, true);
+});
+
+test("finishing clears the modal host so no stale modal outlives the flow", () => {
+  const f = makeFlow();
+  click(f, "reward-continue");
+  click(f, "reward-upload");
+  f.onUploadDone();
+  click(f, "reward-invite");
+  f.onInvitationSent();
+  assert.ok(modal.fed, "the congratulations modal should have been fed");
+  click(f, "reward-finish");
+  assert.equal(modal.cleared, 1, "the modal host must be cleared");
+  assert.equal(modal.fed, null, "clear() resets the fed tree");
+  assert.equal(modal.el.dataset.state, "closed", "the modal host must be marked closed");
 });
 
 test("exiting unsubscribes from the media radio", () => {
