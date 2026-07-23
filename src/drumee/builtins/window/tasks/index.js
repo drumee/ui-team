@@ -2712,8 +2712,12 @@ class __tasks_panel extends LetcBox {
     // A reply may target a root or a child. Flatten it to a sibling under the
     // root (parent_id = root) so threads stay 1-level, mirroring the skeleton's
     // orphan fallback (a reply whose parent is gone counts as its own root).
-    // When answering a child, also notify that child's author — the backend
-    // only auto-notifies the parent_id (root) author.
+    // When answering a child, that child's author is invisible to the backend
+    // (it only sees parent_id = root), so name them via reply_to_uid — the new
+    // server notifies them as a REPLY (not a mention) and pulls them back out of
+    // mention_uids. They stay in mention_uids as well so an OLD server (deployed
+    // before this) still notifies them exactly as it did before — the two
+    // deploys are independent in either order.
     const ids = new Set((this._comments || []).map((c) => String(c.id)));
     const clicked = (this._comments || []).find(
       (c) => String(c.id) === String(clickedId),
@@ -2724,7 +2728,8 @@ class __tasks_panel extends LetcBox {
     const mentions = Array.isArray(draft.mention_uids)
       ? draft.mention_uids.slice()
       : [];
-    if (repliesToChild && clicked.author_uid) mentions.push(clicked.author_uid);
+    const replyToUid = repliesToChild ? clicked.author_uid : null;
+    if (replyToUid) mentions.push(replyToUid);
     const taskId = this._detailId;
     try {
       await this.postService({
@@ -2734,6 +2739,7 @@ class __tasks_panel extends LetcBox {
         parent_id: rootId,
         body,
         mention_uids: [...new Set(mentions)],
+        ...(replyToUid ? { reply_to_uid: replyToUid } : {}),
       });
       this._replyingTo = null;
       this._replyDraft = null;
