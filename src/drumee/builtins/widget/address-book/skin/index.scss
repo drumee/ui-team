@@ -216,22 +216,87 @@
     }
   }
 
-  &__avatar {
-    width: 32px;
-    height: 32px;
-    border-radius: 50%;
-    align-items: center;
-    justify-content: center;
+  // Mirrors widget-chatcontactItem__avatar-wrapper: relative host that never
+  // shrinks, and transparent to clicks so the whole row keeps firing
+  // `select-contact` even though the avatar may be a widget of its own. It
+  // also owns the avatar size, so both branches of contact-list's `avatar()`
+  // — the UserProfile widget and the plain initials chip — fill the same box
+  // and only one rule has to change per breakpoint.
+  &__avatar-wrapper {
+    position: relative;
     flex-shrink: 0;
     pointer-events: none;
+    width: 32px;
+    height: 32px;
+    // Never clip here: the online badge is a `:before` anchored to the
+    // avatar's bottom-right corner and overhangs the box.
+    overflow: visible;
   }
 
-  &__avatar-text {
+  // The widget variant carries `.user-profile__ui` too; restating the compound
+  // selector is how chatcontactItem__profile beats the widget's own 40px/50%
+  // defaults. Rounded square keeps the base's 48/12 ratio at this size (32/8).
+  // Rounding is clipped on the inner `.user-profile__main` (and on the chip's
+  // own background), NOT here — the root carries the online `:before`, so
+  // `overflow: hidden` at this level would cut the badge off.
+  &__avatar,
+  &__avatar.user-profile__ui {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    min-width: 0;
+    border: none;
+    border-radius: 8px;
+    overflow: visible;
+    align-items: center;
+    justify-content: center;
+  }
+
+  // The chip branch has no inner box to clip against, so it rounds itself.
+  &__avatar:not(.user-profile__ui) {
+    overflow: hidden;
+  }
+
+  &__avatar.user-profile__ui {
+    .user-profile__main,
+    & > .user-profile__main {
+      border-radius: 8px !important;
+      overflow: hidden;
+
+      img {
+        border-radius: 8px;
+      }
+    }
+
+    // Online dot: the widget default sits at a hardcoded left/top meant for
+    // 40px, so re-anchor it bottom-right like the chat inbox does. Kept inside
+    // the box (0/0, not negative) so it survives any clipping ancestor.
+    &[data-online="1"]:before,
+    &[data-online="2"]:before {
+      background-color: #847eff;
+      border-radius: 50%;
+      box-shadow: 0 0 0 2px var(--normal-bg);
+      content: " ";
+      height: 8px;
+      width: 8px;
+      position: absolute;
+      right: 0;
+      bottom: 0;
+      left: auto;
+      top: auto;
+      z-index: 9;
+    }
+  }
+
+  // Initials: `__avatar-text` is the chip we draw, `.user-profile__initiales`
+  // the one the widget draws. Same type scale on both.
+  &__avatar-text,
+  &__avatar .user-profile__initiales .note-content {
     @include drumee.typo(
       $size: 12px,
       $weight: 600,
       $line: 16px,
-      $color: var(--primary-purple-100, #0b0a21)
+      $color: var(--ewhite, #fff)
     );
     text-transform: uppercase;
   }
@@ -1389,12 +1454,29 @@
       padding: 12px 14px;
     }
 
-    &__avatar {
+    &__avatar-wrapper {
       width: 44px;
       height: 44px;
     }
 
-    &__avatar-text {
+    &__avatar,
+    &__avatar.user-profile__ui {
+      border-radius: 11px;
+    }
+
+    &__avatar.user-profile__ui {
+      .user-profile__main,
+      & > .user-profile__main {
+        border-radius: 11px !important;
+
+        img {
+          border-radius: 11px;
+        }
+      }
+    }
+
+    &__avatar-text,
+    &__avatar .user-profile__initiales .note-content {
       font-size: 16px;
       line-height: 20px;
     }
