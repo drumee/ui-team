@@ -310,13 +310,14 @@ class __tasks_panel extends LetcBox {
     ]);
     this._render();
     // Deep-link: a mention/assignment notification asked to open a specific
-    // task. Only open the detail if the task is actually in this folder's list —
-    // otherwise (legacy nid-less notification, or a task moved elsewhere) stay
-    // on the task list instead of showing an empty detail panel.
+    // task. Routed through openTaskById so this path also recovers when the
+    // task is missing from the load that just finished (it can be newer than
+    // the rows this panel was serving) instead of silently staying on the
+    // board. It still refuses to open a task belonging to another folder.
     if (this._openTaskId) {
       const id = this._openTaskId;
       this._openTaskId = null;
-      if (this._tasks.some((t) => t.id === id)) this._openDetail(id);
+      this.openTaskById(id);
     }
   }
 
@@ -324,13 +325,25 @@ class __tasks_panel extends LetcBox {
   // mount-time `open_task_id` is consumed once in onDomRefresh, so a second
   // notification click (folder already open) has to reach the detail this way.
   // Called by the folder window's openTaskDeepLink.
-  openTaskById(id) {
+  async openTaskById(id) {
     if (!id) return;
-    // Not rendered yet, or the list is still loading: hand it back to the
-    // mount-time path, which opens the detail as soon as the list lands.
-    if (!this.el || !this._tasks || !this._tasks.length) {
+    // Not rendered yet: hand it back to the mount-time path, which opens the
+    // detail as soon as the first load lands.
+    if (!this.el) {
       this._openTaskId = id;
       return;
+    }
+    // The board routinely PREDATES the task the notification points at: the
+    // panel caches its rows, and reopening the Task tab calls setScope, which
+    // skips the refetch when the scope has not changed. So a task created after
+    // this panel last loaded is simply absent — it only appeared after a full
+    // page reload, and the deep link below then found nothing to open. Refresh
+    // once before concluding the task is not in this folder.
+    if (!Array.isArray(this._tasks) || !this._tasks.some((t) => t.id === id)) {
+      await this._loadTasks();
+      // The window can be closed while the refetch is in flight.
+      if (!this.el || (this.isDestroyed && this.isDestroyed())) return;
+      this._render();
     }
     // Same guard as onDomRefresh — only open a task that really belongs to this
     // folder's list, never an empty detail panel.
