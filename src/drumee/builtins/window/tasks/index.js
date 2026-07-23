@@ -320,6 +320,23 @@ class __tasks_panel extends LetcBox {
     }
   }
 
+  // Same deep link as above, but for a panel that is ALREADY mounted: the
+  // mount-time `open_task_id` is consumed once in onDomRefresh, so a second
+  // notification click (folder already open) has to reach the detail this way.
+  // Called by the folder window's openTaskDeepLink.
+  openTaskById(id) {
+    if (!id) return;
+    // Not rendered yet, or the list is still loading: hand it back to the
+    // mount-time path, which opens the detail as soon as the list lands.
+    if (!this.el || !this._tasks || !this._tasks.length) {
+      this._openTaskId = id;
+      return;
+    }
+    // Same guard as onDomRefresh — only open a task that really belongs to this
+    // folder's list, never an empty detail panel.
+    if (this._tasks.some((t) => t.id === id)) this._openDetail(id);
+  }
+
   // Files dragged from the home grid use Drumee's internal jQuery-UI drag, not
   // native dataTransfer — register the panel as a droppable so they attach.
   _installMediaDroppable() {

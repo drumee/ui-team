@@ -367,9 +367,9 @@ class __panel_activity extends LetcBox {
           || (item && item.mget && item.mget('room_id')) || 0;
         if (hub_id && typeof Wm !== 'undefined') {
           try {
-            const open = ((Wm.getItemsByKind && Wm.getItemsByKind('window_folder')) || [])
-              .find((w) => !w.isDestroyed() && w.mget(_a.hub_id) == hub_id
-                && `${w.mget(_a.nid)}` === `${folderNid}`);
+            // Same "the window already showing this exact folder" lookup the
+            // notification tab deep link uses — one definition, in window/utils.
+            const open = Wm._findFolderWindow(hub_id, folderNid);
             if (open) {
               if (open.raise) open.raise();
               if (open.showFolderTab) open.showFolderTab(_a.chat);

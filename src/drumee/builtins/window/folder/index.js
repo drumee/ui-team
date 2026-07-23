@@ -3126,6 +3126,28 @@ class __window_folder extends mfsInteract {
     });
   }
 
+  // Deep link from a task mention/assignment notification on a window that is
+  // ALREADY open: show the Task tab and open that task's detail. The mount-time
+  // `open_task_id` (read in the tasks panel's initialize) only ever fires on a
+  // fresh mount, so a panel that is already mounted has to be told directly.
+  openTaskDeepLink(task_id) {
+    const mounted = this._taskPanelMounted;
+    // Not mounted yet → the panel picks the id up from the model as it mounts,
+    // exactly like a freshly launched window does.
+    if (task_id && !mounted) this.mset("open_task_id", task_id);
+    const shown = this.showFolderTab(_a.task);
+    if (!task_id) return shown;
+    return Promise.resolve(shown).then(() => {
+      const p = this._taskPanel;
+      if (p && !(p.isDestroyed && p.isDestroyed()) && _.isFunction(p.openTaskById)) {
+        p.openTaskById(task_id);
+      }
+      // Consumed: a later remount of the panel (the Meeting view resets it)
+      // must not reopen this task out of the blue.
+      if (!mounted) this.mset("open_task_id", null);
+    });
+  }
+
   // Keep folder-chat scope in sync with the navigated folder so the right-side
   // chat panel reflects the current folder's messages even on the Files tab.
   // Snapshot must run before super (which overwrites the model via

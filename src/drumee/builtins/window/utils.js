@@ -1105,9 +1105,40 @@ class __window_mfs extends DrumeeMFS {
       ...node,
     });
 
+    // Deep link from a notification that targets a specific TAB of the folder
+    // (task mention/assignment → Task, team chat → Chat). The generic
+    // "already rendered → open-node" shortcut below cannot carry a tab: it only
+    // re-focuses the node — or, when the match is the folder's CELL in an open
+    // parent window, opens a second window on Files — silently dropping
+    // activeTab/open_task_id. That is why these notifications only landed
+    // correctly while the folder was closed. So when a tab was asked for, reuse
+    // the folder's own window and switch it there; if no such window is open,
+    // fall through to the normal launch path, which already carries activeTab
+    // and open_task_id through `opt`.
+    const wantTab = data.activeTab;
+
     /** Direct open from the Wm if if possible */
     let found = this._findMediaByNid(nid);
-    if (found) {
+    if (wantTab && !highlight) {
+      // The folder's own window — matched on hub+nid, or the already-rendered
+      // node itself when that node IS a tab-capable window (a grid cell is not).
+      // The second form guarantees we can never open a duplicate window for a
+      // folder that is demonstrably already on screen.
+      const win =
+        this._findFolderWindow(hub_id, nid) ||
+        (found && _.isFunction(found.showFolderTab) ? found : null);
+      if (win) {
+        if (win.raise) win.raise();
+        // A task deep link carries the task to open; openTaskDeepLink switches
+        // to the Task tab itself. Anything else just switches tab.
+        if (data.open_task_id && _.isFunction(win.openTaskDeepLink)) {
+          win.openTaskDeepLink(data.open_task_id);
+        } else if (_.isFunction(win.showFolderTab)) {
+          win.showFolderTab(wantTab);
+        }
+        return win;
+      }
+    } else if (found) {
       // Already rendered in an open window: a reveal just scrolls/flashes/
       // highlights in place; a normal open triggers the node's open action.
       if (highlight) {
@@ -1266,6 +1297,32 @@ class __window_mfs extends DrumeeMFS {
       Wm.getItemsByAttr(_a.nid, key)[0] ||
       (key !== "" && !isNaN(num) ? Wm.getItemsByAttr(_a.nid, num)[0] : undefined)
     );
+  }
+
+  /**
+   * The open `window_folder` showing exactly this folder (same hub, same nid),
+   * or null. Lets a notification deep link reuse the window the user already
+   * has open — raising it and switching its tab — instead of stacking a second
+   * window on the same folder. Shared by the tab deep link in openFileLocation
+   * and the activity panel's meeting-row handler.
+   */
+  _findFolderWindow(hub_id, nid) {
+    if (typeof Wm === "undefined" || !_.isFunction(Wm.getItemsByKind)) return null;
+    try {
+      const open = Wm.getItemsByKind("window_folder") || [];
+      return (
+        open.find(
+          (w) =>
+            w &&
+            !(w.isDestroyed && w.isDestroyed()) &&
+            w.mget(_a.hub_id) == hub_id &&
+            `${w.mget(_a.nid)}` === `${nid}`,
+        ) || null
+      );
+    } catch (e) {
+      if (this.warn) this.warn("[_findFolderWindow] lookup failed", e);
+      return null;
+    }
   }
 
   /**
