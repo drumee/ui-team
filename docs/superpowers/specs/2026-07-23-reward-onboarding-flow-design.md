@@ -266,7 +266,7 @@ dependencies**. Globals (`Skeletons`, `LOCALE`, `_a`, `_e`, `Wm`,
 neutralised via `require.extensions`. Verified working before the plan was
 written.
 
-1. **Unit tests** — `node --test test/reward-flow/`: locale completeness, card
+1. **Unit tests** — `node --test "test/reward-flow/*.test.js"`: locale completeness, card
    and modal structure per step, and every transition in the table above
    including the gate, the latch, resume and Back-does-not-rewind.
 2. **SCSS compiles standalone** —
