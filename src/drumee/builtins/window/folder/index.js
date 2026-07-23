@@ -3102,12 +3102,27 @@ class __window_folder extends mfsInteract {
   // uses its own nid. `isRoot` also lets the panel surface legacy (nid-less)
   // tasks at the root only. Mirrors the breadcrumb's curNid resolution.
   _taskScopeArgs() {
-    const isRoot =
-      this.mget(_a.filetype) === _a.hub && this.mget(_a.actual_home_id);
+    const nid = this.mget(_a.nid);
+    const homeId = this.mget(_a.actual_home_id);
+    const isHubWindow = this.mget(_a.filetype) === _a.hub && homeId;
+    // A workspace window KEEPS filetype 'hub' after navigating into a subfolder
+    // (only its nid/filename follow the navigation), so filetype alone reported
+    // "I am the root" while the window was showing a subfolder — scoping the
+    // task panel to the workspace root and hiding that subfolder's tasks. Treat
+    // it as the root only while it is actually showing the root node; anything
+    // else is a real subfolder and scopes to its own nid, exactly like a
+    // plain folder window already does.
+    const inSubfolder =
+      isHubWindow &&
+      nid &&
+      `${nid}` !== "0" &&
+      `${nid}` !== `${homeId}` &&
+      `${nid}` !== `${this.mget(_a.hub_id)}`;
+    const isRoot = isHubWindow && !inSubfolder;
     return {
-      scopeNid: isRoot ? this.mget(_a.actual_home_id) : this.mget(_a.nid),
+      scopeNid: isRoot ? homeId : nid,
       isRoot: isRoot ? 1 : 0,
-      destNid: this.mget(_a.actual_home_id) || this.mget(_a.nid),
+      destNid: homeId || nid,
     };
   }
 
@@ -3123,6 +3138,35 @@ class __window_folder extends mfsInteract {
     return this.ensurePart("folder-task-panel").then((p) => {
       this._taskPanel = p;
       apply(p);
+    });
+  }
+
+  // Deep link from a task mention/assignment notification on a window that is
+  // ALREADY open: show the Task tab and open that task's detail. The mount-time
+  // `open_task_id` (read in the tasks panel's initialize) only ever fires on a
+  // fresh mount, so a panel that is already mounted has to be told directly.
+  openTaskDeepLink(task_id) {
+    const mounted = this._taskPanelMounted;
+    // Not mounted yet → the panel picks the id up from the model as it mounts,
+    // exactly like a freshly launched window does.
+    if (task_id && !mounted) this.mset("open_task_id", task_id);
+    const shown = this.showFolderTab(_a.task);
+    // showFolderTab returns early when the Task tab is ALREADY the active one,
+    // so the panel would keep the scope it was mounted with — the workspace
+    // root, when the tab was first opened while this window sat at the root.
+    // Re-assert the scope of the folder the window is on NOW. setScope is a
+    // no-op when the scope is unchanged, so this costs nothing in the common
+    // case (switching tabs already re-scopes via showFolderTab).
+    if (mounted) this.scopeTasksToFolder();
+    if (!task_id) return shown;
+    return Promise.resolve(shown).then(() => {
+      const p = this._taskPanel;
+      if (p && !(p.isDestroyed && p.isDestroyed()) && _.isFunction(p.openTaskById)) {
+        p.openTaskById(task_id);
+      }
+      // Consumed: a later remount of the panel (the Meeting view resets it)
+      // must not reopen this task out of the blue.
+      if (!mounted) this.mset("open_task_id", null);
     });
   }
 

@@ -310,14 +310,44 @@ class __tasks_panel extends LetcBox {
     ]);
     this._render();
     // Deep-link: a mention/assignment notification asked to open a specific
-    // task. Only open the detail if the task is actually in this folder's list —
-    // otherwise (legacy nid-less notification, or a task moved elsewhere) stay
-    // on the task list instead of showing an empty detail panel.
+    // task. Routed through openTaskById so this path also recovers when the
+    // task is missing from the load that just finished (it can be newer than
+    // the rows this panel was serving) instead of silently staying on the
+    // board. It still refuses to open a task belonging to another folder.
     if (this._openTaskId) {
       const id = this._openTaskId;
       this._openTaskId = null;
-      if (this._tasks.some((t) => t.id === id)) this._openDetail(id);
+      this.openTaskById(id);
     }
+  }
+
+  // Same deep link as above, but for a panel that is ALREADY mounted: the
+  // mount-time `open_task_id` is consumed once in onDomRefresh, so a second
+  // notification click (folder already open) has to reach the detail this way.
+  // Called by the folder window's openTaskDeepLink.
+  async openTaskById(id) {
+    if (!id) return;
+    // Not rendered yet: hand it back to the mount-time path, which opens the
+    // detail as soon as the first load lands.
+    if (!this.el) {
+      this._openTaskId = id;
+      return;
+    }
+    // The board routinely PREDATES the task the notification points at: the
+    // panel caches its rows, and reopening the Task tab calls setScope, which
+    // skips the refetch when the scope has not changed. So a task created after
+    // this panel last loaded is simply absent — it only appeared after a full
+    // page reload, and the deep link below then found nothing to open. Refresh
+    // once before concluding the task is not in this folder.
+    if (!Array.isArray(this._tasks) || !this._tasks.some((t) => t.id === id)) {
+      await this._loadTasks();
+      // The window can be closed while the refetch is in flight.
+      if (!this.el || (this.isDestroyed && this.isDestroyed())) return;
+      this._render();
+    }
+    // Same guard as onDomRefresh — only open a task that really belongs to this
+    // folder's list, never an empty detail panel.
+    if (this._tasks.some((t) => t.id === id)) this._openDetail(id);
   }
 
   // Files dragged from the home grid use Drumee's internal jQuery-UI drag, not
@@ -2682,8 +2712,12 @@ class __tasks_panel extends LetcBox {
     // A reply may target a root or a child. Flatten it to a sibling under the
     // root (parent_id = root) so threads stay 1-level, mirroring the skeleton's
     // orphan fallback (a reply whose parent is gone counts as its own root).
-    // When answering a child, also notify that child's author — the backend
-    // only auto-notifies the parent_id (root) author.
+    // When answering a child, that child's author is invisible to the backend
+    // (it only sees parent_id = root), so name them via reply_to_uid — the new
+    // server notifies them as a REPLY (not a mention) and pulls them back out of
+    // mention_uids. They stay in mention_uids as well so an OLD server (deployed
+    // before this) still notifies them exactly as it did before — the two
+    // deploys are independent in either order.
     const ids = new Set((this._comments || []).map((c) => String(c.id)));
     const clicked = (this._comments || []).find(
       (c) => String(c.id) === String(clickedId),
@@ -2694,7 +2728,8 @@ class __tasks_panel extends LetcBox {
     const mentions = Array.isArray(draft.mention_uids)
       ? draft.mention_uids.slice()
       : [];
-    if (repliesToChild && clicked.author_uid) mentions.push(clicked.author_uid);
+    const replyToUid = repliesToChild ? clicked.author_uid : null;
+    if (replyToUid) mentions.push(replyToUid);
     const taskId = this._detailId;
     try {
       await this.postService({
@@ -2704,6 +2739,7 @@ class __tasks_panel extends LetcBox {
         parent_id: rootId,
         body,
         mention_uids: [...new Set(mentions)],
+        ...(replyToUid ? { reply_to_uid: replyToUid } : {}),
       });
       this._replyingTo = null;
       this._replyDraft = null;
