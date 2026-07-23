@@ -47,6 +47,21 @@ function getActivityMeta(ui, data) {
     data.event === 'mention'
     || getMentionIds(data).some((id) => String(id) === String(Visitor.id));
 
+  // 0. Reply to your task comment ("{author} replied to your comment in {task}").
+  // It rides the same task_mention row (data.kind='reply' → task_kind), so it
+  // MUST be checked before the mention branch below: channel.list_notifications
+  // synthesises mention_ids for every task row, which would otherwise label a
+  // plain reply "mentioned you in" — a claim the sender never made.
+  if (data.event === 'task_mention' && data.task_kind === 'reply') {
+    return {
+      before: LOCALE.TASK_COMMENT_REPLY_ACTION || 'replied to your comment in ',
+      label: data.task_title || name,
+      after: '',
+      colorClass: 'mention',
+      badge: 'mention',
+    };
+  }
+
   // 1. Mention is special — overrides any category branch.
   if (mentioned) {
     return {
