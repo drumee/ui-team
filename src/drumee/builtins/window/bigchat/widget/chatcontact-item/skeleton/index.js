@@ -39,7 +39,11 @@ const __skl_widget_chatcontactItem = function (ui) {
   if (md && (md.message_type === 'call')) {
     switch (md.call_status) {
       case _e.leave:
-        if (md.role === _a.caller) {
+        // This row comes from p2p_time.metadata, which is a single shared
+        // record for both parties — its `role` is always the writer's
+        // ("caller"). caller_id is the side-independent field; fall back to
+        // role for conversations whose last event predates it.
+        if (md.caller_id ? md.caller_id === Visitor.id : md.role === _a.caller) {
           msg = LOCALE.OUTGOING_CALL;
         } else {
           msg = LOCALE.INCOMING_CALL;

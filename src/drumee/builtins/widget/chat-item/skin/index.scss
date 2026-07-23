@@ -814,6 +814,143 @@
   fill: var(--grey-70, #84848c);
 }
 
+// ── Call event card ──────────────────────────────────────────────────────
+// Same shell as the ENDED meeting-event card above (__meeting-card.end): grey
+// badge, bold title, hairline grey status dot, muted subtitle, disabled pill.
+// A logged call is always a past event, so the brand-coloured "live" variant
+// has no equivalent here and the greys are baked in rather than gated on a
+// modifier class.
+//
+// Sits inside __conversation.call-type, which keeps the row in the normal
+// bubble flow (left for `.other`, right for `.me`) — unlike meeting cards,
+// which the `.meeting-event` root class centres.
+.widget-chatItem__call-card {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+  max-width: 320px;
+  padding: 12px;
+  border-radius: 12px;
+  background: var(--card-bg, #ffffff);
+  border: 1px solid var(--border-default);
+  box-shadow: 0 1px 3px rgba(11, 10, 33, 0.06);
+  text-align: left;
+}
+
+.widget-chatItem__call-card-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.widget-chatItem__call-card-badge {
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  padding: 4px;
+  border-radius: 8px;
+  background: var(--overlay-light-mode, rgba(0, 0, 0, 0.05));
+
+  // Declined call — filled red badge with a white glyph, instead of the muted
+  // default. The glyph only takes this fill because the template feeds the
+  // NORMALIZED `app-call-end` symbol here; the `raw-` build keeps the source
+  // `fill="black"` on the path, which <use>'s shadow tree puts out of CSS reach.
+  &.declined {
+    background: var(--red-300, #ff6785);
+
+    .widget-chatItem__call-card-ico {
+      fill: var(--white, #ffffff);
+    }
+  }
+}
+
+.widget-chatItem__call-card-ico {
+  width: 16px;
+  height: 16px;
+  fill: var(--grey-70, #84848c);
+}
+
+// Title + duration stack as a column beside the badge, so the duration reads as
+// a caption under the outcome rather than sitting inline with it. The head row
+// stays a flex row; this wrapper is the flexible item within it.
+.widget-chatItem__call-card-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.widget-chatItem__call-card-title {
+  min-width: 0;
+  // drumee.typo doesn't emit font-weight — set it explicitly for the SemiBold title.
+  @include drumee.typo($size: 14px, $line: 20px, $color: #0b0a21);
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.widget-chatItem__call-card-live {
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 10px;
+  height: 10px;
+  border: 0.5px solid var(--grey-70, #84848c);
+  border-radius: 12px;
+}
+
+.widget-chatItem__call-card-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--grey-70, #84848c);
+  flex-shrink: 0;
+}
+
+.widget-chatItem__call-card-sub {
+  @include drumee.typo($size: 12px, $line: 17px, $weight: 400, $color: #65656c);
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.widget-chatItem__call-card-foot {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+// Outcome pill — always the disabled/archived treatment; the call is over, so
+// there is nothing to act on (contrast the meeting card's live "Join meeting").
+.widget-chatItem__call-card-btn {
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 6px 24px;
+  border-radius: 4px;
+  background: var(--grey-20, #f2f2f7);
+  cursor: default;
+  user-select: none;
+  @include drumee.typo($size: 14px, $line: 20px, $weight: 600, $color: #84848c);
+}
+
+.widget-chatItem__call-card-btn-ico {
+  width: 20px;
+  height: 20px;
+  fill: var(--grey-70, #84848c);
+}
+
 // "File chat" folder-visible system card (Figma 2216-170414). Clickable (whole
 // card opens the file chat via data-service="open-file-thread"): paperclip
 // badge | row1: filename ........ "Open thread →" / row2: chat-icon N replies • time.
