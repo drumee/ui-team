@@ -1,0 +1,241 @@
+@use "mixins/drumee";
+
+// Brand accent — same design-system tokens migrate-gdrive-popup uses.
+// --primary-purple-40 is the brand button colour; it is identical in light
+// and dark themes, so the rgba tints below are theme-safe.
+$accent: var(--primary-purple-40);
+$accent-strong: var(--primary-purple-50);
+$accent-soft: rgba(89, 80, 255, 0.12);
+$success-soft: rgba(46, 179, 122, 0.14);
+
+.reward-flow {
+  // Icons nested inside clickable Notes must not swallow the click.
+  &__btn > * { pointer-events: none !important; }
+
+  // ───────── shell ─────────
+  &__root {
+    position: fixed;
+    inset: 0;
+    // Above the desk overlay (z-index 10010) so the card is never occluded.
+    z-index: 10020;
+    pointer-events: none;   // only the vignette + card opt back in
+  }
+
+  &__vignette {
+    position: absolute;
+    inset: 0;
+    background-color: var(--overlay-bg, rgba(0, 0, 0, 0.4));
+    opacity: 1;
+    pointer-events: auto;
+    transition: opacity 0.2s ease;
+  }
+
+  // Waiting: the user has been handed off to the real uploader / invite popup.
+  // The scrim fades out and stops intercepting clicks; the card stays live.
+  &__root[data-waiting="1"] &__vignette {
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  &__anchor {
+    position: absolute;
+    pointer-events: auto;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+
+    // Step 1 is centred — it has no target control to point at.
+    &[data-step="step1"] {
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      align-items: center;
+    }
+
+    // Steps 2 and 3 sit top-right, pointing back at the top bar.
+    &[data-step="step2"],
+    &[data-step="step3"] { top: 72px; right: 100px; }
+  }
+
+  &__root[data-waiting="1"] &__anchor { opacity: 0.92; }
+
+  &__arrow {
+    width: 16px;
+    height: 20px;
+    margin: 0 32px 8px 0;
+    background-color: $accent;
+    // Curved connector pointing up at the topbar control.
+    clip-path: polygon(50% 0, 100% 45%, 68% 45%, 68% 100%, 32% 100%, 32% 45%, 0 45%);
+  }
+
+  // ───────── card ─────────
+  &__card {
+    width: 340px;
+    box-sizing: border-box;
+    padding: 24px;
+    gap: 16px;
+    align-items: center;
+    text-align: center;
+    border-radius: 16px;
+    background-color: var(--normal-bg);
+    box-shadow: 0 18px 48px rgba(0, 0, 0, 0.22);
+  }
+
+  &__progress {
+    width: 100%;
+    gap: 8px;
+    justify-content: center;
+  }
+
+  &__progress-seg {
+    height: 4px;
+    flex: 1 1 0;
+    border-radius: 2px;
+    background-color: $accent-soft;
+    transition: background-color 0.2s ease;
+
+    &[data-on="1"] { background-color: $accent; }
+  }
+
+  &__chip {
+    width: 56px;
+    height: 56px;
+    border-radius: 16px;
+    align-items: center;
+    justify-content: center;
+    background-color: $accent-soft;
+  }
+
+  &__chip-ico {
+    width: 26px;
+    height: 26px;
+    color: $accent;
+  }
+
+  &__title {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--normal-fg);
+  }
+
+  &__desc {
+    font-size: 14px;
+    line-height: 1.45;
+    color: var(--soft-fg, var(--normal-fg));
+  }
+
+  &__waiting {
+    font-size: 13px;
+    font-style: italic;
+    color: $accent;
+  }
+
+  &__footer {
+    width: 100%;
+    gap: 12px;
+    justify-content: space-between;
+  }
+
+  // ───────── buttons ─────────
+  &__btn {
+    flex: 1 1 0;
+    padding: 11px 16px;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 600;
+    text-align: center;
+    cursor: pointer;
+    user-select: none;
+    transition: background-color 0.15s ease;
+
+    &[data-solo="1"] { flex: 1 1 100%; }
+
+    &--primary {
+      color: #fff;
+      background-color: $accent;
+      &:hover { background-color: $accent-strong; }
+    }
+
+    &--ghost {
+      color: var(--soft-fg, var(--normal-fg));
+      background-color: var(--soft-bg, rgba(0, 0, 0, 0.05));
+      &:hover { background-color: rgba(0, 0, 0, 0.09); }
+    }
+  }
+
+  // ───────── modals (fed into Wm.__wrapperModal) ─────────
+  &__modal {
+    width: 380px;
+    box-sizing: border-box;
+    padding: 28px 24px 24px;
+    gap: 14px;
+    align-items: center;
+    text-align: center;
+    border-radius: 16px;
+    background-color: var(--normal-bg);
+  }
+
+  &__modal-ico {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    align-items: center;
+    justify-content: center;
+
+    &--brand { background-color: transparent; }
+    &--success { background-color: $success-soft; }
+  }
+
+  &__modal-ico-svg { width: 40px; height: 40px; }
+  &__modal-ico--success &__modal-ico-svg { width: 28px; height: 28px; }
+
+  &__modal-title {
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--normal-fg);
+  }
+
+  &__modal-desc {
+    font-size: 14px;
+    color: var(--soft-fg, var(--normal-fg));
+  }
+
+  &__congrats-copy {
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0 5px;
+  }
+
+  &__congrats-seg {
+    font-size: 14px;
+    color: var(--soft-fg, var(--normal-fg));
+  }
+
+  &__congrats-prize {
+    font-weight: 700;
+    color: $accent;
+  }
+
+  &__modal-footer {
+    width: 100%;
+    gap: 12px;
+    margin-top: 6px;
+    justify-content: space-between;
+  }
+
+  // ───────── mobile ─────────
+  @media (max-width: 767px) {
+    &__anchor {
+      top: 50% !important;
+      left: 50% !important;
+      right: auto !important;
+      transform: translate(-50%, -50%);
+      align-items: center;
+      width: calc(100vw - 32px);
+    }
+
+    &__arrow { display: none; }
+    &__card { width: 100%; }
+    &__modal { width: calc(100vw - 32px); }
+  }
+}
