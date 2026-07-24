@@ -311,7 +311,13 @@ module.exports = function (ui) {
         Skeletons.Box.X({
           className: `${pfx}__sa-email-card`,
           kids: [
-            Skeletons.Note({ className: `${pfx}__sa-email`, content: email }),
+            // Same reason as the link input below: keep the browser's own
+            // menu so the address can be copied with the mouse too.
+            Skeletons.Note({
+              className: `${pfx}__sa-email`,
+              content: email,
+              escapeContextmenu: true,
+            }),
             Skeletons.Note({
               className: `${pfx}__sa-copy`,
               dataset: { partname: 'sa-copy-btn' },
@@ -331,6 +337,11 @@ module.exports = function (ui) {
               mode: 'commit',
               service: 'gdrive-sa-verify',
               uiHandler: [ui],
+              // Right-click must give the browser's own Cut/Copy/Paste menu:
+              // without this the handler walks up to the desk/home manager,
+              // opens ITS context menu under the popup and preventDefault()s
+              // the native one — so users cannot paste the Drive link.
+              escapeContextmenu: true,
             }),
           ],
         }),
