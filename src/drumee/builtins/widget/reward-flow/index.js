@@ -87,7 +87,42 @@ class __reward_flow extends LetcBox {
   }
 
   onDomRefresh() {
+    this._openHostClickThrough();
     this._render();
+  }
+
+  /**
+   * The flow is fed into the desk's `overlay` part — a full-viewport backdrop
+   * (z-index 10010) that sits ABOVE the main content (z 10001, which holds the
+   * topbar). The desk opens it (`data-state="open"`) so we're visible, but
+   * "open" also makes it `pointer-events:auto`, so that backdrop swallows every
+   * click meant for the real desk chrome our Step 1 spotlight points at — the
+   * vignette is `pointer-events:none` and passes the click down, but the
+   * overlay element itself then catches it. Force the host visible-but-
+   * click-through; our own card / coach opt pointer events back in. Restored on
+   * teardown so the desk's backdrop behaves normally afterwards.
+   */
+  _openHostClickThrough() {
+    if (!this.el) return;
+    // Target the desk backdrop specifically (it carries the blocking
+    // pointer-events), through any intermediate wrapper the part feed adds.
+    const host =
+      (this.el.closest && this.el.closest(".desk-module__overlay")) ||
+      this.el.parentElement;
+    if (!host || !host.style) return;
+    this._host = host;
+    this._hostPE = host.style.pointerEvents;
+    this._hostOpacity = host.style.opacity;
+    host.style.pointerEvents = "none";
+    host.style.opacity = "1";
+  }
+
+  _restoreHost() {
+    const host = this._host;
+    if (!host || !host.style) return;
+    host.style.pointerEvents = this._hostPE || "";
+    host.style.opacity = this._hostOpacity || "";
+    this._host = null;
   }
 
   onBeforeDestroy() {
@@ -104,6 +139,7 @@ class __reward_flow extends LetcBox {
       this._onWorkspaceRefresh = null;
     }
     this._stopGuide();
+    this._restoreHost();
   }
 
   // ───────── step 1 guided walkthrough ─────────
