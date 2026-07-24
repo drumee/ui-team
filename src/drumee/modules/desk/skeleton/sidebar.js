@@ -1,4 +1,5 @@
 const { userMenu } = require("../../../builtins/skeleton/toolkit/user");
+const { canUpgradePlan } = require("libs/billing");
 
 /**
  * Sidebar module (refactored)
@@ -106,13 +107,10 @@ const createFooter = (ui, username) => {
   const planBadge = (LOCALE.PLAN_BADGE || "{0} Plan").format(
     plan.charAt(0).toUpperCase() + plan.slice(1),
   );
-  // Billing is owner-managed: inside an organization (domain_id > 1) only the
-  // org OWNER can change the plan — a member/workspace-admin clicking through
-  // to the plans page could at best bootstrap a stray second org. Personal
-  // users (domain 1) always see it: they upgrade themselves.
-  const canUpgrade =
-    ~~quota.domain_id <= 1 ||
-    !!(Visitor.domainCan && Visitor.domainCan(_K.permission.owner));
+  // Environment (does this install sell plans at all?) + ownership rule —
+  // see libs/billing. Shared with the upgrade-plan service handler so the
+  // entry and its action can never disagree.
+  const canUpgrade = canUpgradePlan();
 
   return Skeletons.Box.Y({
     className: cls(fig, "footer"),

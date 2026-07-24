@@ -1,5 +1,6 @@
 require("welcome/skin");
 require("builtins/window/confirm/skin");
+const { canUpgradePlan } = require("libs/billing");
 
 class desk_module extends LetcBox {
   constructor(...args) {
@@ -1937,17 +1938,12 @@ class desk_module extends LetcBox {
       // Every billing entry point (sidebar "Upgrade plan", Settings "Manage
       // subscription" card, admin-console upsell, desk storage card) → the
       // full-page billing screen in settings-main-slot (NOT a popup).
-      case "upgrade-plan": {
-        // Defense in depth behind the sidebar gating: billing is owner-managed
-        // inside an organization — ignore stray triggers (deep links, stale
-        // UI) from members/workspace admins who cannot change the org plan.
-        const quota = (Visitor.quota && Visitor.quota()) || {};
-        const canUpgrade =
-          ~~quota.domain_id <= 1 ||
-          !!(Visitor.domainCan && Visitor.domainCan(_K.permission.owner));
-        if (!canUpgrade) return;
+      case "upgrade-plan":
+        // Defense in depth behind the sidebar gating — same rule, one source
+        // (libs/billing): ignore stray triggers (deep links, stale UI, an
+        // install with no payment backend) that could otherwise dead-end.
+        if (!canUpgradePlan()) return;
         return this.openBillingPage();
-      }
 
       // Display mode (light/dark/system) moved to Settings → Appearance.
       // See builtins/widget/settings/main + utils router/theme.js.
