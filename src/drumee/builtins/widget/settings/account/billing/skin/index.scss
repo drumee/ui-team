@@ -1225,62 +1225,104 @@
   }
 }
 
-// Desktop comparison table: a leading label column plus one column per plan.
-// Built by skeleton/plans.js comparisonTable(); mobile keeps the stacked cards.
+// Comparison table (desktop) vs stacked cards (narrow). skeleton/plans.js
+// renders BOTH; the media query at the bottom decides which one is shown, so
+// the layout follows the WINDOW. Branching on Visitor.isMobile() instead read
+// the device, so a narrowed desktop window kept the wide table and nothing
+// reflowed on resize.
+.settings-billing__plans {
+  &-wide { width: 100%; }
+  &-narrow { width: 100%; display: none !important; }
+}
+
 .settings-billing__compare {
   &-main {
     width: 100%;
-    overflow-x: auto; // never let a wide table push the page sideways
+    // A wide table scrolls inside itself rather than pushing the settings page
+    // sideways.
+    overflow-x: auto;
   }
 
   &-row {
     width: 100%;
     align-items: stretch;
-    border-bottom: 1px solid var(--normal-bg-10, rgba(0, 0, 0, 0.06));
 
-    &:last-child {
-      border-bottom: none;
+    &:last-child .settings-billing__compare-col {
+      border-radius: 0 0 10px 10px;
+      border-bottom: 1px solid var(--normal-bg-20, rgba(0, 0, 0, 0.10));
     }
   }
 
   &-header {
-    border-bottom: 1px solid var(--normal-bg-20, rgba(0, 0, 0, 0.12));
-    align-items: flex-end;
+    align-items: stretch;
   }
 
   &-cell {
     flex: 1 1 0;
-    min-width: 120px;
+    min-width: 116px;
     align-items: center;
     justify-content: center;
-    padding: 10px 12px;
+    padding: 9px 10px;
     box-sizing: border-box;
   }
 
-  // The label column is the header column the plan columns are read against,
-  // so it is left-aligned and slightly wider than a value cell.
+  // The label column names the row the four plan columns answer. Kept narrow
+  // and snug against the first column — at flex 1.4 / 273px the label text sat
+  // ~200px away from the value it labels, which is what made the table read as
+  // two disconnected halves.
   &-label {
-    flex: 1.4 1 0;
-    min-width: 150px;
+    flex: 0 0 168px;
+    min-width: 168px;
     align-items: flex-start;
     justify-content: center;
+    padding-right: 4px;
   }
 
   &-label-text {
-    @include drumee.typo($size: 13px, $line: 20px, $weight: 400, $color: var(--normal-fg));
+    @include drumee.typo($size: 13px, $line: 18px, $weight: 400, $color: var(--normal-fg-10));
     font-weight: 500;
     text-align: left;
   }
 
-  &-corner {
-    border-bottom: none;
+  // Every cell of a plan column carries -col, so the column reads as one
+  // continuous surface down the table: shared tint, side borders, and a row
+  // separator that stops at the column edge.
+  &-col {
+    background-color: var(--normal-bg-100, rgba(0, 0, 0, 0.02));
+    border-left: 1px solid var(--normal-bg-20, rgba(0, 0, 0, 0.10));
+    border-top: 1px solid transparent;
+
+    & + .settings-billing__compare-col:last-child,
+    &:last-child {
+      border-right: 1px solid var(--normal-bg-20, rgba(0, 0, 0, 0.10));
+    }
+  }
+
+  &-row:not(:last-child) &-col {
+    box-shadow: inset 0 -1px 0 var(--normal-bg-20, rgba(0, 0, 0, 0.06));
+  }
+
+  // The recommended column is lifted out of the row of four.
+  &-col-team {
+    background-color: var(--primary-95, rgba(67, 60, 197, 0.06));
+    border-left-color: var(--primary-50, #433cc5);
+    border-right: 1px solid var(--primary-50, #433cc5);
+  }
+
+  &-header &-col {
+    border-radius: 10px 10px 0 0;
+    border-top: 1px solid var(--normal-bg-20, rgba(0, 0, 0, 0.10));
+  }
+
+  &-header &-col-team {
+    border-top-color: var(--primary-50, #433cc5);
   }
 
   &-plan {
     align-items: center;
     justify-content: flex-end;
-    gap: 10px;
-    padding: 12px;
+    gap: 8px;
+    padding: 14px 12px;
   }
 
   &-tagline {
@@ -1289,19 +1331,14 @@
     text-align: center;
   }
 
-  &-value {
-    gap: 6px;
-  }
+  &-value { gap: 6px; }
 
   &-mark {
-    width: 16px;
-    height: 16px;
+    width: 15px;
+    height: 15px;
     flex-shrink: 0;
 
-    svg {
-      width: 100%;
-      height: 100%;
-    }
+    svg { width: 100%; height: 100%; }
   }
 
   &-text {
@@ -1315,8 +1352,14 @@
   &-value.excluded {
     opacity: 0.45;
 
-    .settings-billing__compare-text {
-      text-decoration: line-through;
-    }
+    .settings-billing__compare-text { text-decoration: line-through; }
   }
+}
+
+// Below the point where five columns stop fitting, swap to the stacked cards.
+// 168px label + 4 x 116px minimum = ~632px before padding, so 900px keeps the
+// columns comfortable rather than merely possible.
+@media screen and (max-width: 900px) {
+  .settings-billing__plans-wide { display: none !important; }
+  .settings-billing__plans-narrow { display: flex !important; }
 }
