@@ -82,6 +82,36 @@ $success-soft: rgba(46, 179, 122, 0.14);
       --spot-radius 280ms ease;
   }
 
+  // Rect cutout (large panels — form / permission panels): a transparent box
+  // sized to the panel whose huge box-shadow dims everything around it, so the
+  // panel stays clear with no bright "focus" highlight. Hidden by default; the
+  // orchestrator shows it via data-guide-mode="rect" and positions it with the
+  // --cut-* vars.
+  &__cutout {
+    display: none;
+    position: fixed;
+    left: var(--cut-x, 0);
+    top: var(--cut-y, 0);
+    width: var(--cut-w, 0);
+    height: var(--cut-h, 0);
+    border-radius: 12px;
+    pointer-events: none;
+    box-shadow: 0 0 0 100vmax var(--overlay-bg, rgba(0, 0, 0, 0.4));
+    transition: left 200ms ease, top 200ms ease, width 200ms ease,
+      height 200ms ease;
+  }
+
+  // In rect mode the box-shadow cutout provides the dim, so the radial vignette
+  // must go transparent (otherwise the panel gets double-dimmed) and the cutout
+  // is shown.
+  &__root[data-guiding="1"][data-guide-mode="rect"] &__vignette {
+    background-image: none;
+    background-color: transparent;
+  }
+  &__root[data-guiding="1"][data-guide-mode="rect"] &__cutout {
+    display: block;
+  }
+
   // Callout host for the coach tooltip — spans the viewport but never blocks
   // (the coach itself opts pointer events back in).
   &__guide-callout {

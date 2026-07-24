@@ -163,16 +163,29 @@ class __reward_flow extends LetcBox {
    * Paint the spotlight cutout over `rect` (a viewport-space DOMRect) and feed
    * the coach tooltip. Called by the guide as it walks the live desk chrome.
    */
-  spotlight(rect, text, showBack = true) {
+  spotlight(rect, text, showBack = true, mode = "circle") {
     if (!this.el) return;
     const cx = rect.left + rect.width / 2;
-    const cy = rect.top + rect.height / 2;
-    const halfDiag =
-      Math.sqrt(rect.width * rect.width + rect.height * rect.height) / 2;
-    const r = Math.max(120, halfDiag + 40);
-    this.el.style.setProperty("--spot-x", `${cx}px`);
-    this.el.style.setProperty("--spot-y", `${cy}px`);
-    this.el.style.setProperty("--spot-radius", `${r}px`);
+    if (mode === "rect") {
+      // Large panels (form / permission panels): clear the panel rect and dim
+      // only the rest — no circular highlight. The box-shadow cutout does the
+      // dimming (see skin __cutout); a little padding gives the panel breathing
+      // room.
+      const pad = 6;
+      this.el.style.setProperty("--cut-x", `${rect.left - pad}px`);
+      this.el.style.setProperty("--cut-y", `${rect.top - pad}px`);
+      this.el.style.setProperty("--cut-w", `${rect.width + 2 * pad}px`);
+      this.el.style.setProperty("--cut-h", `${rect.height + 2 * pad}px`);
+    } else {
+      const cy = rect.top + rect.height / 2;
+      const halfDiag =
+        Math.sqrt(rect.width * rect.width + rect.height * rect.height) / 2;
+      const r = Math.max(120, halfDiag + 40);
+      this.el.style.setProperty("--spot-x", `${cx}px`);
+      this.el.style.setProperty("--spot-y", `${cy}px`);
+      this.el.style.setProperty("--spot-radius", `${r}px`);
+    }
+    this.el.dataset.guideMode = mode;
     const anchor = this._coachAnchor(rect, cx);
     this.ensurePart("guide-callout").then((p) => {
       if (!p) return;

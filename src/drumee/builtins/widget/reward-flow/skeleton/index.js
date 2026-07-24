@@ -35,7 +35,12 @@ module.exports = function (ui) {
 
   if (guiding) {
     // No card while guiding — the spotlight + coach tooltip carry the step.
+    // The cutout is the alternative to the radial vignette for large panels
+    // (form / permission panels): a transparent box sized to the panel with a
+    // huge box-shadow, so the panel reads clear and only the rest is dimmed —
+    // no bright "focus" ring. Which one shows is picked by data-guide-mode.
     kids.push(
+      Skeletons.Box.Y({ className: `${pfx}__cutout` }),
       Skeletons.Box.Y({
         className: `${pfx}__guide-callout`,
         sys_pn: "guide-callout",
