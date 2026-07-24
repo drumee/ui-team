@@ -41,6 +41,10 @@ const SEL = {
   wsItem: ".desk-module-topbar__add-menu-item.ico-workspace",
   otherItems: ".desk-module-topbar__add-menu-item:not(.ico-workspace)",
   form: ".form-folder__main",
+  // The visible card is the widget ROOT (__ui) — it carries the background,
+  // border-radius and shadow; __main is an inner box with no rounding. Spotlight
+  // the card so the cutout wraps exactly what the user sees.
+  formCard: ".form-folder__ui",
   // Follow-up permission panels: internal (team) → permission_restricted fed
   // into the wrapper-modal; external (share) → window_secure_share window.
   permPanels: ".permission-restricted__main, .window-secure-share__main",
@@ -312,7 +316,9 @@ class RewardGuide {
       // The window_info confirmation sits on top of the permission panel, so
       // spotlight it when present, else the panel itself.
       case "perm": return firstVisible(SEL.windowInfo) || firstVisible(SEL.permPanels);
-      case "form": return document.querySelector(SEL.form);
+      // Prefer the card root so the cutout wraps the whole visible form.
+      case "form":
+        return firstVisible(SEL.formCard) || document.querySelector(SEL.form);
       case "menu": return document.querySelector(SEL.wsItem);
       case "add": return document.querySelector(SEL.addBtn);
       default: return null;
@@ -416,9 +422,14 @@ class RewardGuide {
     ].join(":");
     if (sig === this._lastSig) return;
     this._lastSig = sig;
+    // Mirror the target's own rounding so the cutout hugs it instead of
+    // overshooting rounded corners with square ones.
+    const radius =
+      (typeof getComputedStyle === "function" &&
+        getComputedStyle(el).borderRadius) || "";
     // No Back in the perm phase: the workspace already exists, so retreating to
     // the Step 1 card would be a lie. The user closes the panel to continue.
-    this._ui.spotlight(rect, tooltipFor(this._sub), this._sub !== "perm");
+    this._ui.spotlight(rect, tooltipFor(this._sub), this._sub !== "perm", radius);
   }
 
   // ───────── foreign-DOM sibling disabling ─────────

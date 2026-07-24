@@ -193,17 +193,19 @@ class __reward_flow extends LetcBox {
    * Paint the spotlight cutout over `rect` (a viewport-space DOMRect) and feed
    * the coach tooltip. Called by the guide as it walks the live desk chrome.
    */
-  spotlight(rect, text, showBack = true) {
+  spotlight(rect, text, showBack = true, radius = "") {
     if (!this.el) return;
     const cx = rect.left + rect.width / 2;
     // Rectangular cutout for every sub-step: clear the target's rect and dim
     // only the rest — no highlight ring. The box-shadow cutout does the dimming
-    // (see skin __cutout); a little padding gives the target breathing room.
-    const pad = 6;
-    this.el.style.setProperty("--cut-x", `${rect.left - pad}px`);
-    this.el.style.setProperty("--cut-y", `${rect.top - pad}px`);
-    this.el.style.setProperty("--cut-w", `${rect.width + 2 * pad}px`);
-    this.el.style.setProperty("--cut-h", `${rect.height + 2 * pad}px`);
+    // (see skin __cutout). The cutout matches the target's box and rounding
+    // EXACTLY: padding it out would leak an undimmed ring of background around
+    // the target, and a mismatched radius would show bright corners.
+    this.el.style.setProperty("--cut-x", `${rect.left}px`);
+    this.el.style.setProperty("--cut-y", `${rect.top}px`);
+    this.el.style.setProperty("--cut-w", `${rect.width}px`);
+    this.el.style.setProperty("--cut-h", `${rect.height}px`);
+    this.el.style.setProperty("--cut-radius", radius || "4px");
     const anchor = this._coachAnchor(rect, cx);
     this.ensurePart("guide-callout").then((p) => {
       if (!p) return;

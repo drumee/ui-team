@@ -76,7 +76,9 @@ $success-soft: rgba(46, 179, 122, 0.14);
     top: var(--cut-y, 0);
     width: var(--cut-w, 0);
     height: var(--cut-h, 0);
-    border-radius: 4px;
+    // Mirrors the spotlighted target's own rounding (set with the --cut-* vars)
+    // so the cutout hugs it exactly.
+    border-radius: var(--cut-radius, 4px);
     pointer-events: none;
     box-shadow: 0 0 0 100vmax var(--overlay-bg, rgba(0, 0, 0, 0.4));
     transition: left 200ms ease, top 200ms ease, width 200ms ease,
