@@ -169,6 +169,10 @@ $success-soft: rgba(46, 179, 122, 0.14);
     display: flex;
     flex-direction: column;
     align-items: flex-end;
+    // Eases the move between steps when the anchor element survives the
+    // re-render (step 2/3 are placed inline under their topbar control, step 1
+    // is centred by the rules below).
+    transition: left 260ms ease, top 260ms ease;
 
     // Step 1 is centred — it has no target control to point at.
     &[data-step="step1"] {
@@ -200,8 +204,24 @@ $success-soft: rgba(46, 179, 122, 0.14);
   }
 
   // ───────── card ─────────
+  // Each step change re-feeds the skeleton, so the card is a NEW element and
+  // cannot transition from the old one's position — it would otherwise pop into
+  // place (most visibly stepping back from 2 to 1, where it jumps from under
+  // the Upload button to screen centre). Fade + settle it in instead.
+  @keyframes reward-flow-card-in {
+    from {
+      opacity: 0;
+      transform: translateY(-6px) scale(0.98);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
   &__card {
     font-family: var(--font-main);
+    animation: reward-flow-card-in 220ms ease both;
     width: 340px;
     box-sizing: border-box;
     padding: 24px;
@@ -362,6 +382,13 @@ $success-soft: rgba(46, 179, 122, 0.14);
     gap: 12px;
     margin-top: 6px;
     justify-content: space-between;
+  }
+
+  // Respect a reduced-motion preference: keep the step change instant.
+  @media (prefers-reduced-motion: reduce) {
+    &__card { animation: none; }
+    &__anchor,
+    &__cutout { transition: none; }
   }
 
   // ───────── mobile ─────────

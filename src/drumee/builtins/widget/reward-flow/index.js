@@ -316,7 +316,18 @@ class __reward_flow extends LetcBox {
     if (!this.el) return;
     const sel = STEP_TARGET[this._step];
     const anchor = this.el.querySelector(`.${this.fig.family}__anchor`);
-    if (!sel) return;
+    if (!sel) {
+      // Steps with no topbar target (step 1) are centred by the stylesheet.
+      // Clear any inline placement left over from step 2/3, otherwise a reused
+      // anchor element keeps the card pinned under the Upload/Invite button.
+      if (anchor && anchor.style) {
+        anchor.style.left = "";
+        anchor.style.top = "";
+        anchor.style.right = "";
+        anchor.style.transform = "";
+      }
+      return;
+    }
     const el = document.querySelector(sel);
     if (!el || typeof el.getBoundingClientRect !== "function") return;
     const rect = el.getBoundingClientRect();
