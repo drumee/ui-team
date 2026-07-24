@@ -1,6 +1,6 @@
 require("welcome/skin");
 require("builtins/window/confirm/skin");
-const { canUpgradePlan } = require("libs/billing");
+const { canUpgradePlan, billingAvailable, needsAdminConsoleUpgrade } = require("libs/billing");
 
 class desk_module extends LetcBox {
   constructor(...args) {
@@ -1701,53 +1701,81 @@ class desk_module extends LetcBox {
   }
 
   /**
-   * "Unlock Admin Console" upsell shown when a Free-plan user clicks the
-   * sidebar Admin Console entry. A confirm modal (Wm.confirm → wrapper-modal)
-   * whose body is the branded card (cloud-pause icon + title + pitch) and whose
-   * footer offers "Later" / "Upgrade plan". Confirm → the billing page. The
-   * copy mirrors the admin-console plugin's own in-console upsell so both
-   * surfaces read the same. Caller already checked plan === 'free' &&
-   * canUpgradePlan(), so the button always has somewhere to go.
+   * "Unlock Admin Console" upsell when a personal-plan user (free / pro /
+   * legacy advanced) clicks the sidebar Admin Console entry. Centered body
+   * (icon / title / desc) + a single Upgrade CTA underneath — no "Later".
+   *
+   * The modal itself always shows: the plan simply doesn't include the console,
+   * whatever the billing setup. Only the CTA is conditional — it is dropped
+   * where the deployment doesn't sell plans (`billing_upgrade: 0` in
+   * myDrumee.json, or no payment backend at all), because an Upgrade button
+   * that cannot reach checkout is worse than no button.
+   *
+   * The close X is rendered here, in the card, rather than coming from the
+   * shared confirm header: `mode: "b"` drops that header to keep the drumee
+   * logo out of this design, and the header is where the X normally lives
+   * (window/confirm/skeleton/header.js). Without it the only way out is the
+   * Escape key — which touch devices don't have, so a phone user tapping Admin
+   * Console would be trapped in the modal (backdrop clicks don't dismiss it).
    */
   _showAdminUnlockModal() {
-    const body = () =>
+    // See above: no checkout reachable → no CTA, but the card still explains why.
+    const canBuy = billingAvailable();
+    const body = (confirmUi) =>
       Skeletons.Box.Y({
         className: "desk-module__admin-unlock",
-        kidsOpt: { active: 0 },
+        // Do not use kidsOpt.active:0 — it would zero out the CTA click handler.
         kids: [
+          Skeletons.Box.X({
+            className: "desk-module__admin-unlock-close",
+            signal: _e.cancel,
+            uiHandler: [confirmUi],
+            bubble: 0,
+            kidsOpt: { active: 0 },
+            kids: [
+              Skeletons.Image.Svg({
+                ico: "cross",
+                className: "desk-module__admin-unlock-close-ico",
+              }),
+            ],
+          }),
           Skeletons.Image.Svg({
             ico: "cloud-pause",
             className: "desk-module__admin-unlock-icon",
+            active: 0,
           }),
           Skeletons.Note({
             className: "desk-module__admin-unlock-title",
             content: LOCALE.UNLOCK_ADMIN_CONSOLE,
+            active: 0,
           }),
           Skeletons.Note({
             className: "desk-module__admin-unlock-desc",
             content: LOCALE.UNLOCK_ADMIN_DESC,
+            active: 0,
           }),
+          canBuy
+            ? Skeletons.Note({
+                className: "desk-module__admin-unlock-cta",
+                content: LOCALE.UPGRADE_PLAN_MENU || "Upgrade plan",
+                signal: _e.confirm,
+                uiHandler: [confirmUi],
+              })
+            : null,
         ],
       });
     return Wm.confirm({
-      mode: "hbf",
+      // Body only — no logo/drumee header (matches unlock card design).
+      mode: "b",
       body,
-      confirm: LOCALE.UPGRADE_PLAN_MENU || "Upgrade plan",
-      confirm_type: "primary",
-      cancel: LOCALE.LATER || "Later",
-      cancel_type: "secondary",
     })
       .then(() => {
-        // Re-check at click time: the modal could outlive an env/quota change.
-        if (!canUpgradePlan()) return this._restoreCurrentSidebarHighlight();
+        if (!billingAvailable()) return this._restoreCurrentSidebarHighlight();
         return this.openBillingPage().then(() =>
           this._restoreCurrentSidebarHighlight()
         );
       })
       .catch(() => {
-        // Later / dismissed — nothing opened, so the sidebar's radio (which
-        // highlighted "Admin console" on click, via onAlsoClick) would stay
-        // stuck. Restore it to whatever screen is actually showing.
         this._restoreCurrentSidebarHighlight();
       });
   }
@@ -1755,7 +1783,7 @@ class desk_module extends LetcBox {
   /**
    * Re-assert the sidebar radio highlight for the screen currently on top,
    * or Home when nothing is open. Used after a sidebar item runs a transient
-   * action (e.g. the Free-plan Admin Console modal) instead of opening its
+   * action (e.g. the personal-plan Admin Console modal) instead of opening its
    * panel — the click already highlighted that item (onAlsoClick broadcasts
    * `sidebar-radio`), so without this it stays lit over the wrong content.
    */
@@ -1984,15 +2012,12 @@ class desk_module extends LetcBox {
         return this.togglePanel("settings_main", "settings-main-slot");
 
       case "toggle-apps": {
-        // Free plan can't use the admin console — short-circuit with an
-        // "Unlock" upsell modal instead of loading the whole plugin just to
-        // show its in-console upsell. Gated on canUpgradePlan() so it never
-        // appears where upgrading is impossible (billing off, or a member who
-        // can't act): there the plugin still loads and shows its own state.
-        const plan = String(
-          ((Visitor.quota && Visitor.quota()) || {}).plan || "free"
-        ).toLowerCase();
-        if (plan === "free" && canUpgradePlan()) {
+        // Personal plans (free / pro / legacy advanced — yp.plan entity_type=user)
+        // cannot use Admin Console; short-circuit with the Unlock upsell instead
+        // of loading the plugin. Org tiers (team, …) fall through. quota.organization
+        // is NOT used: Pro also seeds organization:1. Modal always shows; its
+        // Upgrade button is gated solely by billingAvailable() (billing_upgrade).
+        if (needsAdminConsoleUpgrade()) {
           return this._showAdminUnlockModal();
         }
         // Admin Console — the full in-desk console (apps_main) now lives in the
