@@ -1378,3 +1378,85 @@
     .settings-billing__plans-narrow { display: flex !important; }
   }
 }
+
+// Header type inside the comparison table.
+//
+// The price/title/CTA elements are reused from the card design, which was
+// sized for a full-width card: a 40px price and a 16px CTA. In a ~240px table
+// column that price ("$499.00" measured 145px) crowds the cell and the CTA
+// wraps to three lines — "Get your sovereign node" measured 64px tall, and the
+// whole header ran to 289px. Scale the type to the column instead. Scoped to
+// the table, so the mobile cards keep the original display sizes.
+.settings-billing__compare-plan {
+  padding: 12px 8px;
+  gap: 6px;
+
+  .settings-billing__plan-header {
+    padding: 8px 6px;
+    gap: 2px;
+  }
+
+  .settings-billing__plan-title {
+    font-size: 16px;
+    line-height: 22px;
+  }
+
+  .settings-billing__plan-price-amount {
+    font-size: 26px;
+    line-height: 32px;
+  }
+
+  .settings-billing__plan-price-period,
+  .settings-billing__plan-price-label {
+    font-size: 11px;
+    line-height: 15px;
+  }
+
+  .settings-billing__plan-button-main {
+    min-width: 0;
+    width: 100%;
+    padding: 7px 8px;
+    font-size: 13px;
+    line-height: 17px;
+  }
+
+  .settings-billing__plan-button,
+  .settings-billing__plan-current-label {
+    font-size: 13px;
+    line-height: 17px;
+    text-align: center;
+  }
+
+  .settings-billing__plan-badge {
+    font-size: 10px;
+    line-height: 14px;
+    padding: 1px 6px;
+  }
+}
+
+// Narrower columns: drop to the smallest comfortable type and let the tagline
+// go — the row labels already say what each column is.
+@container billing-plans (max-width: 1020px) {
+  .settings-billing__compare-plan {
+    .settings-billing__plan-price-amount {
+      font-size: 21px;
+      line-height: 27px;
+    }
+
+    .settings-billing__plan-title {
+      font-size: 14px;
+      line-height: 19px;
+    }
+
+    .settings-billing__plan-button-main,
+    .settings-billing__plan-button,
+    .settings-billing__plan-current-label {
+      font-size: 12px;
+      line-height: 16px;
+    }
+  }
+
+  .settings-billing__compare-tagline {
+    display: none !important;
+  }
+}
