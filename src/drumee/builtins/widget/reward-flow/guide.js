@@ -41,6 +41,11 @@ const SEL = {
   // Follow-up permission panels: internal (team) → permission_restricted fed
   // into the wrapper-modal; external (share) → window_secure_share window.
   permPanels: ".permission-restricted__main, .window-secure-share__main",
+  // The confirmation shown after an action inside those panels — e.g. sending
+  // an invitation in permission_restricted pops Wm.alert → window_info. It
+  // appears ON TOP while the panel stays open; closing it is the user's cue
+  // that the step is done.
+  windowInfo: ".window-info__main",
 };
 
 const DISABLED_CLASS = "reward-guide-disabled";
@@ -110,6 +115,7 @@ class RewardGuide {
     this._lastSig = null;       // last painted spotlight signature (dedup)
     this._created = false;      // workspace created → perm phase active
     this._permSeen = false;     // the permission panel has appeared at least once
+    this._infoSeen = false;     // the window_info confirmation has appeared
     this._completed = false;    // guard: onGuideComplete fired once
     this._permTimer = null;
     this._reconcile = this._reconcile.bind(this);
@@ -147,6 +153,7 @@ class RewardGuide {
     // perm-phase flags so a prior completion can't short-circuit this one.
     this._created = false;
     this._permSeen = false;
+    this._infoSeen = false;
     this._completed = false;
     this._reconcile();
   }
@@ -174,6 +181,7 @@ class RewardGuide {
     this._lastSig = null;
     this._created = false;
     this._permSeen = false;
+    this._infoSeen = false;
     this._clearSpot();
   }
 
@@ -191,12 +199,21 @@ class RewardGuide {
   _reconcile() {
     if (!hasDom() || !this._observer) return;
 
-    // Post-creation: spotlight the permission panel, complete once it closes.
+    // Post-creation: spotlight the follow-up panel(s), complete when the user
+    // has closed the relevant one. Two panel kinds can appear:
+    //   - the permission panel (permission_restricted / secure_share)
+    //   - a window_info confirmation popped ON TOP after an action inside it
+    //     (e.g. sending an invitation), which stays until closed.
+    // The window_info takes priority: once it has been shown and then closed,
+    // the step is done — the permission panel may still be open behind it, and
+    // the user's request is that closing the confirmation advances to Step 2.
     if (this._created) {
+      const info = firstVisible(SEL.windowInfo);
       const perm = firstVisible(SEL.permPanels);
-      if (perm) {
-        this._permSeen = true;
-        // The panel is up — cancel the "no panel appeared" safety timer so it
+      if (info || perm) {
+        if (info) this._infoSeen = true;
+        else this._permSeen = true;
+        // A panel is up — cancel the "no panel appeared" safety timer so it
         // can't auto-advance while the user is still reviewing/closing it.
         if (this._permTimer) {
           clearTimeout(this._permTimer);
@@ -206,9 +223,11 @@ class RewardGuide {
         this._position();
         return;
       }
-      // The panel opens a tick after workspace:refresh; only treat "gone" as
-      // done once we have actually seen it, otherwise keep waiting.
-      if (this._permSeen) this._complete();
+      // Nothing visible now. Panels open a tick after their trigger, so only
+      // treat "gone" as done once we have actually seen one close:
+      //   - window_info was shown and dismissed  → done (panel may linger), or
+      //   - the permission panel was shown and closed with no confirmation.
+      if (this._infoSeen || this._permSeen) this._complete();
       return;
     }
 
@@ -231,7 +250,9 @@ class RewardGuide {
 
   _targetEl() {
     switch (this._sub) {
-      case "perm": return firstVisible(SEL.permPanels);
+      // The window_info confirmation sits on top of the permission panel, so
+      // spotlight it when present, else the panel itself.
+      case "perm": return firstVisible(SEL.windowInfo) || firstVisible(SEL.permPanels);
       case "form": return document.querySelector(SEL.form);
       case "menu": return document.querySelector(SEL.wsItem);
       case "add": return document.querySelector(SEL.addBtn);
