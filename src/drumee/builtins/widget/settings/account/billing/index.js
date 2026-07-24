@@ -487,7 +487,7 @@ class settings_billing extends LetcBox {
   calculateCheckoutSummary() {
     let state = this.state;
     const checkout = state?.checkout || {};
-    const selectedPlan = checkout.selectedPlan || "pro";
+    const selectedPlan = checkout.selectedPlan || "team";
     const billingCycle = checkout.billingCycle || "monthly";
 
     const baseStorage = this.storage[selectedPlan];
@@ -505,10 +505,8 @@ class settings_billing extends LetcBox {
       }
     }
 
-    const selectedBundle = checkout.selectedBundle;
-
     // Prices come from the server catalog (Stripe is the truth); fall back to
-    // the previous literals only if the catalog didn't load.
+    // the published figures only if the catalog didn't load.
     const catPrice = (code, cycle) => {
       const period = cycle === "yearly" ? "year" : "month";
       const row = (this._catalog || []).find((p) => p.plan_code === code && p.period === period);
@@ -524,49 +522,31 @@ class settings_billing extends LetcBox {
 
     const basePrice = planPrices[selectedPlan]?.[billingCycle] || 0;
     const period = billingCycle === "yearly" ? "year" : "month";
-    // Storage bundles + extra Pro seats are catalog rows (storage_*, pro_seat)
-    // with per-period Stripe prices — no more hardcoded amounts or the old
-    // yearly x10 multiplier. Fallbacks keep the panel usable offline.
-    const bundleFallback = { 100: { monthly: 8, yearly: 80 }, 500: { monthly: 30, yearly: 300 }, 1000: { monthly: 50, yearly: 500 } };
-    const bundlePrice = selectedBundle
-      ? (catPrice(`storage_${selectedBundle}`, billingCycle)
-          ?? bundleFallback[selectedBundle]?.[billingCycle] ?? 0)
-      : 0;
-    const bundleStorage = selectedBundle ? parseInt(selectedBundle) : 0;
-    const seatPrice = catPrice("pro_seat", billingCycle) ?? (billingCycle === "yearly" ? 50 : 5);
 
-    // Pro plan: base storage + bundle storage
-    let totalStorage = baseStorage + bundleStorage;
-
-    let totalPrice = basePrice + bundlePrice;
-    let extraSeats = 0;
-    if (this.__seatsInput) {
-      let value = this.__seatsInput.getValue()
-      if (value > baseSeats) {
-        extraSeats = value - baseSeats;
-        totalPrice = totalPrice + extraSeats * seatPrice;
-      }
-      if (value < baseSeats) {
-        this.__seatsInput.setValue(baseSeats)
-      }
-    }
-    let seats = baseSeats + extraSeats
-    const effectivePricePerSeat = totalPrice / seats;
-
-    let r = {
+    // FLAT since the 2026-07 pricing rebuild: the plan price IS the total, and
+    // the storage/seat figures come straight from the plan. The storage
+    // bundles (storage_*) and extra-seat (pro_seat) catalog rows that used to
+    // be added on top are retired with the B2C Pro tier, and `seats` is the
+    // plan's member CAP now, not a quantity the buyer picks — so there is
+    // nothing left to accumulate here.
+    //
+    // The zeroed bundle/extra-seat fields are kept in the returned shape on
+    // purpose: skeleton/checkout.js still reads them, and dropping the keys
+    // would render "undefined" rather than simply nothing.
+    const seats = baseSeats;
+    return {
       basePrice: formatCurrency(basePrice),
-      bundlePrice: formatCurrency(bundlePrice),
-      totalPrice: formatCurrency(totalPrice),
-      period: period,
+      bundlePrice: formatCurrency(0),
+      totalPrice: formatCurrency(basePrice),
+      period,
       seats,
-      totalStorage: `${totalStorage} GB`,
-      effectivePricePerSeat: formatCurrency(effectivePricePerSeat),
+      totalStorage: `${baseStorage} GB`,
+      effectivePricePerSeat: formatCurrency(seats > 0 ? basePrice / seats : basePrice),
       selectedPlan,
       billingCycle,
-      extraSeats,
-      bundleStorage
+      extraSeats: 0,
+      bundleStorage: 0,
     };
-    return r
   }
 
 
@@ -685,33 +665,21 @@ class settings_billing extends LetcBox {
     // The SERVER decides the price (Stripe price_id from yp.plan); the client
     // only declares WHAT to buy. plan 'team' => org (per-seat) checkout.
     const checkout = this.state.checkout || {};
-    const plan = checkout.selectedPlan || "pro";
+    const plan = checkout.selectedPlan || "team";
+    // Team is an ORGANISATION plan; it is also the only self-serve tier left,
+    // so 'org' is the only paid entity_type that reaches checkout.
     const entity_type = plan === "team" ? "org" : "user";
     const period = checkout.billingCycle === "yearly" ? "year" : "month";
-    // Org (team): quantity = seats. Pro per-seat: send the requested seat
-    // total too — the server turns seats beyond the plan's included 5 into a
-    // recurring pro_seat line item.
-    const requested = Math.max(1, ~~((this.__seatsInput && this.__seatsInput.getValue()) || checkout.seats || 1));
-    const seats = entity_type === "org" ? requested : (plan === "pro" ? requested : 1);
-    // Optional storage add-on: the bundle picker stores 100/500/1000 -> storage_*.
-    const bundle = checkout.selectedBundle ? `storage_${checkout.selectedBundle}` : "";
+    // No seats, no bundle. Every plan is flat since the 2026-07 rebuild: Team
+    // is $29 for 100 GB and up to 10 members, so the seat count is a cap, not
+    // a purchased quantity — the server sends quantity 1 and would multiply
+    // the bill if we passed a seat total. The storage bundles and the
+    // extra-seat add-on are retired along with the B2C Pro tier.
     // hub_id is REQUIRED: payment.checkout is ACL scope:hub/src:owner. Without it
     // the server falls back to the host hub (where the caller isn't owner) and
     // returns 403 PERMISSION_DENIED. Send the caller's own hub so the owner
     // check resolves correctly (verified: missing hub_id -> 403, present -> 200).
-    const payload = { hub_id: Visitor.id, entity_type, plan, period, seats, bundle };
-    // Team→Pro switch (confirmed in the select-plan popup): flag the checkout
-    // so the Stripe webhook cancels the org's Team subscription (at period
-    // end) once THIS personal payment completes. Only meaningful for a
-    // personal Pro purchase by a still-paying Team owner — never set
-    // otherwise. Single-use: cleared right after so a leftover flag can't
-    // attach to an unrelated later checkout in the same widget session (e.g.
-    // the user backs out to the plan picker and buys a plain Pro seat add-on
-    // afterwards).
-    if (entity_type === "user" && plan === "pro" && this._switchFromTeam && this._isPaidTeam()) {
-      payload.supersede = "org";
-    }
-    this._switchFromTeam = false;
+    const payload = { hub_id: Visitor.id, entity_type, plan, period };
     // TEAM bootstrap: the payer is still on the default domain — the org
     // name + subdomain were collected in the checkout form; validate the
     // ident server-side BEFORE the Stripe redirect (product decision: prompt
