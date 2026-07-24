@@ -208,16 +208,18 @@ class __reward_flow extends LetcBox {
     const clampX = (x) => Math.min(Math.max(x, M + half), vw - M - half);
     const clampY = (y) => Math.min(Math.max(y, TOP), vh - CH - M);
 
-    // Tall panel: place the coach beside it, in whichever margin is wide enough.
+    // Tall panel: place the coach in whichever margin is wide enough, sitting
+    // just OUTSIDE the panel's near edge (not centred in the gap) so it reads as
+    // attached to the panel it points at, vertically centred on the panel.
     if (rect.height > vh * 0.6) {
       const leftGap = rect.left;
       const rightGap = vw - rect.right;
-      const midY = clampY(vh / 2 - CH / 2);
+      const midY = clampY(rect.top + rect.height / 2 - CH / 2);
       if (leftGap >= CW + 2 * M && leftGap >= rightGap) {
-        return { side: "left", style: { left: `${clampX(leftGap / 2)}px`, top: `${midY}px` } };
+        return { side: "left", style: { left: `${clampX(rect.left - M - half)}px`, top: `${midY}px` } };
       }
       if (rightGap >= CW + 2 * M) {
-        return { side: "right", style: { left: `${clampX(rect.right + rightGap / 2)}px`, top: `${midY}px` } };
+        return { side: "right", style: { left: `${clampX(rect.right + M + half)}px`, top: `${midY}px` } };
       }
       // Full-width: pin under the topbar, centred on the panel.
       return { side: "below", style: { left: `${clampX(cx)}px`, top: `${TOP}px` } };
