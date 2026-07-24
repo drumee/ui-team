@@ -149,9 +149,17 @@ test("a sent invitation opens the congratulations modal", () => {
   f.onUploadDone();
   click(f, "reward-invite");
   f.onInvitationSent();
+  // The invite popup's own close (which the real popup fires right after a
+  // successful send, clearing the shared host on its way out) has not
+  // happened yet, so the congrats modal must not be fed yet — this proves
+  // the deferral, i.e. the fix for the shared-host race.
+  assert.equal(modal.fed, null, "onInvitationSent alone must not feed the modal");
+  assert.equal(f.getStep(), "step3_waiting", "the step must not move until the popup closes");
+
+  f.onInvitePopupClosed();
   assert.ok(modal.fed, "the congratulations modal should have been fed");
   assert.equal(modal.el.dataset.state, "open");
-  assert.equal(f.getStep(), "congrats", "onInvitationSent must latch off step3_waiting");
+  assert.equal(f.getStep(), "congrats", "onInvitePopupClosed must latch off step3_waiting");
 });
 
 test("getFurthest stays at 3 once the flow reaches the congrats state", () => {
@@ -161,6 +169,7 @@ test("getFurthest stays at 3 once the flow reaches the congrats state", () => {
   f.onUploadDone();
   click(f, "reward-invite");
   f.onInvitationSent();
+  f.onInvitePopupClosed();
   assert.equal(f.getStep(), "congrats");
   assert.equal(f.getFurthest(), 3);
 });
@@ -172,14 +181,18 @@ test("a trailing invite-popup close after a successful send does not disturb the
   f.onUploadDone();
   click(f, "reward-invite");
   f.onInvitationSent();
-  const fedAfterInvite = modal.fed;
-  assert.ok(fedAfterInvite, "the congratulations modal should have been fed");
   // The desk relays the invite popup's destroy (which fires immediately
-  // after a successful send) to onInvitePopupClosed(). It must be a no-op
-  // now that onInvitationSent() has moved _step off "step3_waiting".
+  // after a successful send) to onInvitePopupClosed(). This is the real
+  // trigger that opens the congrats modal now that the host is free.
+  f.onInvitePopupClosed();
+  const fedAfterClose = modal.fed;
+  assert.ok(fedAfterClose, "the congratulations modal should have been fed");
+  // A second, stray close (e.g. a duplicate desk relay) must be a no-op:
+  // _inviteSucceeded is already consumed and _step is the terminal
+  // "congrats" marker, not "step3_waiting".
   f.onInvitePopupClosed();
   assert.equal(f.getStep(), "congrats", "the trailing popup-close must not move the step back");
-  assert.equal(modal.fed, fedAfterInvite, "the congrats modal must not be replaced");
+  assert.equal(modal.fed, fedAfterClose, "the congrats modal must not be replaced");
   assert.equal(modal.cleared, 0, "the congrats modal must not be cleared by the trailing close");
 });
 
@@ -298,6 +311,7 @@ test("finishing latches the flow off and destroys it", () => {
   f.onUploadDone();
   click(f, "reward-invite");
   f.onInvitationSent();
+  f.onInvitePopupClosed();
   click(f, "reward-finish");
   assert.equal(store.reward_flow_done, "1");
   assert.equal(f.destroyed, true);
@@ -310,6 +324,7 @@ test("finishing clears the modal host so no stale modal outlives the flow", () =
   f.onUploadDone();
   click(f, "reward-invite");
   f.onInvitationSent();
+  f.onInvitePopupClosed();
   assert.ok(modal.fed, "the congratulations modal should have been fed");
   click(f, "reward-finish");
   assert.equal(modal.cleared, 1, "the modal host must be cleared");
@@ -363,6 +378,7 @@ test("with no modal host, a sent invitation still finishes the flow", () => {
     f.onUploadDone();
     click(f, "reward-invite");
     f.onInvitationSent();
+    f.onInvitePopupClosed();
     assert.equal(store.reward_flow_done, "1", "user must not be stranded");
     assert.equal(f.destroyed, true);
   } finally {

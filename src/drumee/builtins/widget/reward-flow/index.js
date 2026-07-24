@@ -70,6 +70,7 @@ class __reward_flow extends LetcBox {
     this._furthest = STEPS.indexOf(this._step) + 1;
     this._modalOpen = false;
     this._dropReturnStep = null;
+    this._inviteSucceeded = false;
 
     this._onUploaded = () => this.onUploadDone();
     if (typeof RADIO_MEDIA !== "undefined") {
@@ -125,24 +126,25 @@ class __reward_flow extends LetcBox {
     this._goto("step3");
   }
 
-  /**
-   * An invitation was sent successfully. Advances step 3 only while waiting.
-   * If the modal host is unavailable the user has still earned the ending, so
-   * finish rather than stranding them in a waiting state with no way out.
-   */
+  /** An invitation was sent successfully. The invite popup closes right after
+   *  this (clearing the shared modal host on its way out), so we only LATCH the
+   *  success here and defer opening the congrats modal until onInvitePopupClosed
+   *  fires — by then the host is free. */
   onInvitationSent() {
     if (this._step !== "step3_waiting") return;
-    // "congrats" is a terminal marker, not a member of STEPS: it must not
-    // perturb _furthest/the progress bar. Setting it here (before opening
-    // the modal) makes onInvitePopupClosed()'s "!== step3_waiting" guard
-    // reject the popup-destroy that follows a successful send, so it can no
-    // longer re-render the vignette over the congrats modal.
-    this._step = "congrats";
-    if (!this._openModal(congratsModal(this))) this._finish();
+    this._inviteSucceeded = true;
   }
 
-  /** The invite popup closed without sending — re-arm step 3. */
+  /** The invite popup closed. Two cases:
+   *  - it closed because the send succeeded → open congrats now (host is free);
+   *  - it closed without sending → re-arm step 3 so the user can retry. */
   onInvitePopupClosed() {
+    if (this._inviteSucceeded) {
+      this._inviteSucceeded = false;
+      this._step = "congrats";
+      if (!this._openModal(congratsModal(this))) this._finish();
+      return;
+    }
     if (this._step !== "step3_waiting") return;
     this._goto("step3");
   }
