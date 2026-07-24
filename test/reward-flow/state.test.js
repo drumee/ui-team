@@ -151,6 +151,43 @@ test("a sent invitation opens the congratulations modal", () => {
   f.onInvitationSent();
   assert.ok(modal.fed, "the congratulations modal should have been fed");
   assert.equal(modal.el.dataset.state, "open");
+  assert.equal(f.getStep(), "congrats", "onInvitationSent must latch off step3_waiting");
+});
+
+test("getFurthest stays at 3 once the flow reaches the congrats state", () => {
+  const f = makeFlow();
+  click(f, "reward-continue");
+  click(f, "reward-upload");
+  f.onUploadDone();
+  click(f, "reward-invite");
+  f.onInvitationSent();
+  assert.equal(f.getStep(), "congrats");
+  assert.equal(f.getFurthest(), 3);
+});
+
+test("a trailing invite-popup close after a successful send does not disturb the congrats modal", () => {
+  const f = makeFlow();
+  click(f, "reward-continue");
+  click(f, "reward-upload");
+  f.onUploadDone();
+  click(f, "reward-invite");
+  f.onInvitationSent();
+  const fedAfterInvite = modal.fed;
+  assert.ok(fedAfterInvite, "the congratulations modal should have been fed");
+  // The desk relays the invite popup's destroy (which fires immediately
+  // after a successful send) to onInvitePopupClosed(). It must be a no-op
+  // now that onInvitationSent() has moved _step off "step3_waiting".
+  f.onInvitePopupClosed();
+  assert.equal(f.getStep(), "congrats", "the trailing popup-close must not move the step back");
+  assert.equal(modal.fed, fedAfterInvite, "the congrats modal must not be replaced");
+  assert.equal(modal.cleared, 0, "the congrats modal must not be cleared by the trailing close");
+});
+
+test("a stored 'congrats' terminal marker is not resumable and falls back to step1", () => {
+  store.reward_step = "congrats";
+  const f = makeFlow();
+  assert.equal(f.getStep(), "step1");
+  assert.equal(f.getFurthest(), 1);
 });
 
 test("closing the invite popup without sending returns to step3", () => {

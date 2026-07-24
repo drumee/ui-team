@@ -1287,15 +1287,33 @@ class desk_module extends LetcBox {
   async _maybeStartRewardFlow() {
     const forced = !!Visitor.parseModuleArgs().reward;
     if (this._rewardFlow && !this._rewardFlow.isDestroyed()) return;
-    await Kind.waitFor("reward_flow");
-    const Flow = Kind.get("reward_flow");
-    if (!forced && !(Flow && Flow.isEligible && Flow.isEligible())) return;
+    // Synchronous in-flight latch: onPartReady("overlay") can fire more than
+    // once (e.g. re-navigation re-feeding the same module), and the guard
+    // above cannot see a mount that is still pending past the await below.
+    // Held until the attempt bails out or the flow is actually mounted, so a
+    // concurrent call always lands on either the mounted-flow guard above or
+    // this latch, never on the gap between them.
+    if (this._rewardFlowInFlight) return;
+    this._rewardFlowInFlight = true;
+    let Flow;
+    try {
+      await Kind.waitFor("reward_flow");
+      Flow = Kind.get("reward_flow");
+    } catch (e) {
+      this._rewardFlowInFlight = false;
+      return;
+    }
+    if (!forced && !(Flow && Flow.isEligible && Flow.isEligible())) {
+      this._rewardFlowInFlight = false;
+      return;
+    }
     this.ensurePart("overlay").then((p) => {
       p.feed({ kind: "reward_flow", uiHandler: [this] });
       this._rewardFlow = p.children.last();
       this._rewardFlow.once(_e.destroy, () => {
         this._rewardFlow = null;
       });
+      this._rewardFlowInFlight = false;
     });
   }
 

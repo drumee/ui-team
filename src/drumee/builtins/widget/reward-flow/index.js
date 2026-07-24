@@ -132,6 +132,12 @@ class __reward_flow extends LetcBox {
    */
   onInvitationSent() {
     if (this._step !== "step3_waiting") return;
+    // "congrats" is a terminal marker, not a member of STEPS: it must not
+    // perturb _furthest/the progress bar. Setting it here (before opening
+    // the modal) makes onInvitePopupClosed()'s "!== step3_waiting" guard
+    // reject the popup-destroy that follows a successful send, so it can no
+    // longer re-render the vignette over the congrats modal.
+    this._step = "congrats";
     if (!this._openModal(congratsModal(this))) this._finish();
   }
 
