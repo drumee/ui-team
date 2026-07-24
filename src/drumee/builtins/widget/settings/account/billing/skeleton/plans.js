@@ -358,7 +358,7 @@ function item(ui, opt, option) {
  * @param {Object} cell - { value, included }
  * @returns {Object} Skeletons component
  */
-function compareCell(ui, fig, cell) {
+function compareCell(ui, fig, cell, colKey) {
   const included = cell.included !== false;
   // The mark carries meaning only where the table itself uses one. On a value
   // row the value IS the answer, so a leading tick beside "SaaS" or "Trust
@@ -367,7 +367,7 @@ function compareCell(ui, fig, cell) {
   // the tier stops.
   const showMark = cell.tick || !included;
   return Skeletons.Box.X({
-    className: `${fig}-cell ${fig}-value ${included ? "" : "excluded"}`,
+    className: `${fig}-cell ${fig}-value ${fig}-col ${fig}-col-${colKey} ${included ? "" : "excluded"}`,
     kids: [
       showMark
         ? Skeletons.Image.Svg({
@@ -408,7 +408,7 @@ function comparisonTable(ui, options) {
       Skeletons.Box.Y({ className: `${fig}-cell ${fig}-label ${fig}-corner` }),
       ...keys.map((k, i) =>
         Skeletons.Box.Y({
-          className: `${fig}-cell ${fig}-plan`,
+          className: `${fig}-cell ${fig}-plan ${fig}-col ${fig}-col-${k}`,
           kids: [
             priceHeader(ui, `${ui.fig.family}__plan`, cols[i], (ui.currentPlanName || "free") === k),
             ctaButton(ui, `${ui.fig.family}__plan`, k, cols[i]),
@@ -429,7 +429,7 @@ function comparisonTable(ui, options) {
           className: `${fig}-cell ${fig}-label`,
           kids: [Skeletons.Note({ className: `${fig}-label-text`, content: label })],
         }),
-        ...cols.map((c) => compareCell(ui, fig, c.features[i])),
+        ...cols.map((c, ci) => compareCell(ui, fig, c.features[i], keys[ci])),
       ],
     })
   );
@@ -449,22 +449,34 @@ function billing_content(ui, cycle = "monthly") {
   const fig = `${ui.fig.family}__plans`;
   const options = getOptions(ui, cycle);
 
-  // Mobile keeps the stacked cards: one plan at a time, every row labelled in
-  // place, which is the only readable shape on a narrow screen. Desktop gets
-  // the comparison table. Same data either way — see comparisonTable.
-  if (Visitor.isMobile && Visitor.isMobile()) {
-    return Skeletons.Box.G({
-      className: `${fig}-main`,
-      kids: [
-        item(ui, "free", options.free),
-        item(ui, "team", options.team),
-        item(ui, "business", options.business),
-        item(ui, "sovereign", options.sovereign),
-      ],
-    });
-  }
-
-  return comparisonTable(ui, options);
+  // BOTH layouts are rendered and CSS picks one, deliberately.
+  //
+  // The previous cut branched on Visitor.isMobile(), which reads the DEVICE
+  // (user agent) rather than the window: a desktop browser narrowed to 500px
+  // still got the 1079px-wide table, and nothing reflowed on resize because
+  // the choice was frozen at render time. A width media query is the only
+  // thing that actually tracks the viewport.
+  //
+  // Narrow screens keep the stacked cards — one plan at a time, every row
+  // labelled in place, the only readable shape when the columns won't fit.
+  return Skeletons.Box.Y({
+    className: `${fig}-main`,
+    kids: [
+      Skeletons.Box.Y({
+        className: `${fig}-wide`,
+        kids: [comparisonTable(ui, options)],
+      }),
+      Skeletons.Box.G({
+        className: `${fig}-narrow`,
+        kids: [
+          item(ui, "free", options.free),
+          item(ui, "team", options.team),
+          item(ui, "business", options.business),
+          item(ui, "sovereign", options.sovereign),
+        ],
+      }),
+    ],
+  });
 }
 
 export default billing_content;
