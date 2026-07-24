@@ -621,6 +621,22 @@ class settings_billing extends LetcBox {
 
   // Map an org-ident validation status to its user-facing message.
   _orgIdentError(status) {
+    // Inside an organisation these two stop meaning what they say and start
+    // meaning "you are not this org's BILLING owner".
+    //
+    // The server resolves the payer through organisation.owner_id, while the
+    // client only knows the domain permission bit — a member can hold `owner`
+    // on the domain and still not be the owner_id row. For them the checkout
+    // answers ORG_IDENT_REQUIRED (payment_get_org found no org they own) or,
+    // once a bootstrap is supplied, ALREADY_IN_OTHER_DOMAIN (the
+    // move-semantics guard refuses a second org). Reporting those verbatim
+    // told the user to fill in an org name and subdomain — fields that are
+    // only rendered for a personal account (domain_id <= 1), so the advice was
+    // impossible to act on. Say who can actually do it instead.
+    const inOrg = ~~Visitor.get("domain_id") > 1;
+    if (inOrg && (status === "ORG_IDENT_REQUIRED" || status === "ALREADY_IN_OTHER_DOMAIN")) {
+      return LOCALE.NOT_ORG_OWNER;
+    }
     switch (status) {
       case "IDENT_INVALID": return LOCALE.ORG_IDENT_INVALID;
       case "IDENT_NOT_AVAILABLE": return LOCALE.ORG_IDENT_TAKEN;
