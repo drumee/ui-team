@@ -118,10 +118,9 @@ test("corrupt utm json does not throw", () => {
 
 // ── forward transitions ─────────────────────────────────────────────────────
 
-test("starts at step1 with the first segment filled", () => {
+test("starts at step1", () => {
   const f = makeFlow();
   assert.equal(f.getStep(), "step1");
-  assert.equal(f.getFurthest(), 1);
 });
 
 test("continue starts the guided walkthrough without firing a service", () => {
@@ -146,7 +145,6 @@ test("a Personal workspace finishes the guide and advances to step2", () => {
   assert.equal(f.getStep(), "step1_guide");
   RADIO_BROADCAST.trigger("workspace:refresh", { personal: 1 });
   assert.equal(f.getStep(), "step2");
-  assert.equal(f.getFurthest(), 2);
 });
 
 test("an internal/external workspace keeps guiding until the panel is closed", () => {
@@ -159,7 +157,6 @@ test("an internal/external workspace keeps guiding until the panel is closed", (
   // The guide reports the panel closed → advance.
   f.onGuideComplete();
   assert.equal(f.getStep(), "step2");
-  assert.equal(f.getFurthest(), 2);
 });
 
 test("onGuideComplete outside the guided state is ignored", () => {
@@ -196,7 +193,6 @@ test("a completed upload advances to step3", () => {
   click(f, "reward-upload");
   RADIO_MEDIA.trigger(_e.uploaded, {});
   assert.equal(f.getStep(), "step3");
-  assert.equal(f.getFurthest(), 3);
 });
 
 test("an upload completing outside the waiting state is ignored", () => {
@@ -238,7 +234,7 @@ test("a sent invitation opens the congratulations modal", async () => {
   assert.equal(f.getStep(), "congrats", "onInvitePopupClosed must latch off step3_waiting");
 });
 
-test("getFurthest stays at 3 once the flow reaches the congrats state", () => {
+test("the flow reaches the congrats state after a sent invitation", () => {
   const f = makeFlow();
   toStep2(f);
   click(f, "reward-upload");
@@ -247,7 +243,6 @@ test("getFurthest stays at 3 once the flow reaches the congrats state", () => {
   f.onInvitationSent();
   f.onInvitePopupClosed();
   assert.equal(f.getStep(), "congrats");
-  assert.equal(f.getFurthest(), 3);
 });
 
 test("a trailing invite-popup close after a successful send does not disturb the congrats modal", async () => {
@@ -280,7 +275,6 @@ test("a stored 'congrats' terminal marker is not resumable and falls back to ste
   store.reward_step = "congrats";
   const f = makeFlow();
   assert.equal(f.getStep(), "step1");
-  assert.equal(f.getFurthest(), 1);
 });
 
 test("closing the invite popup without sending returns to step3", () => {
@@ -304,7 +298,7 @@ test("continue is a no-op while a waiting state is active", () => {
 
 // ── back navigation ─────────────────────────────────────────────────────────
 
-test("back is navigation only and never rewinds progress", () => {
+test("back returns to the previous step", () => {
   const f = makeFlow();
   toStep2(f);
   click(f, "reward-upload");
@@ -312,7 +306,6 @@ test("back is navigation only and never rewinds progress", () => {
   assert.equal(f.getStep(), "step3");
   click(f, "reward-back");
   assert.equal(f.getStep(), "step2");
-  assert.equal(f.getFurthest(), 3, "progress must not rewind");
 });
 
 test("back from step2 lands on step1", () => {
@@ -442,14 +435,12 @@ test("a stored 'step1_guide' resumes as the step1 card, not mid-guide", () => {
   store.reward_step = "step1_guide";
   const f = makeFlow();
   assert.equal(f.getStep(), "step1");
-  assert.equal(f.getFurthest(), 1);
 });
 
 test("a stored step is resumed on mount", () => {
   store.reward_step = "step3";
   const f = makeFlow();
   assert.equal(f.getStep(), "step3");
-  assert.equal(f.getFurthest(), 3);
 });
 
 test("a stored waiting step resumes as its base step", () => {

@@ -12,12 +12,16 @@
  * whose active card has none — so a user who changes their mind is never
  * trapped.
  *
- * Pure function of `ui` — reads only fig.family, getStep() and getFurthest().
+ * The progress bar fills to the CURRENT step — step 1 lights 1 segment, step 2
+ * lights 2, step 3 lights 3 — so stepping back rewinds it too.
+ *
+ * Pure function of `ui` — reads only fig.family and getStep().
  */
 
 // step name → { index, ico, title, desc, primaryLabel, primaryService, waitingHint }
 const STEPS = {
   step1: {
+    index: 1,
     ico: "folder-header",
     title: () => LOCALE.REWARD_FLOW_STEP1_TITLE || "Step 1: Create your Workspace",
     desc: () => LOCALE.REWARD_FLOW_STEP1_DESC
@@ -27,6 +31,7 @@ const STEPS = {
     back: false,
   },
   step2: {
+    index: 2,
     ico: "upload-simple",
     title: () => LOCALE.REWARD_FLOW_STEP2_TITLE || "Step 2: Upload your first file",
     desc: () => LOCALE.REWARD_FLOW_STEP2_DESC
@@ -36,6 +41,7 @@ const STEPS = {
     back: true,
   },
   step3: {
+    index: 3,
     ico: "drumee-add-contact",
     title: () => LOCALE.REWARD_FLOW_STEP3_TITLE || "Step 3: Invite a teammate",
     desc: () => LOCALE.REWARD_FLOW_STEP3_DESC
@@ -61,14 +67,13 @@ module.exports = function stepCard(ui) {
   const waiting = step.endsWith("_waiting");
   const base = waiting ? step.replace("_waiting", "") : step;
   const cfg = STEPS[base];
-  const furthest = ui.getFurthest();
 
   const progress = Skeletons.Box.X({
     className: `${pfx}__progress`,
     kids: [1, 2, 3].map((i) =>
       Skeletons.Box.Y({
         className: `${pfx}__progress-seg`,
-        dataset: { on: i <= furthest ? "1" : "0" },
+        dataset: { on: i <= cfg.index ? "1" : "0" },
       }),
     ),
   });

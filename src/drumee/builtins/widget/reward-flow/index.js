@@ -12,8 +12,8 @@
  *   congrats       → modal, then the flow latches itself off for good
  *
  * A drop modal intercepts clicks on the vignette during the active steps.
- * Back is navigation only: `_furthest` never rewinds, so a user who steps
- * back does not have to redo a completed action.
+ * The progress bar tracks the CURRENT step (step N lights N segments), so Back
+ * rewinds it too.
  *
  * UI-only: nothing is granted server-side. See
  * docs/superpowers/specs/2026-07-23-reward-onboarding-flow-design.md
@@ -74,7 +74,6 @@ class __reward_flow extends LetcBox {
     // step: the uploader/invite popup they were handed off to is long gone.
     const stored = (lsGet(KEY_STEP) || "").replace("_waiting", "");
     this._step = STEPS.includes(stored) ? stored : "step1";
-    this._furthest = STEPS.indexOf(this._step) + 1;
     this._modalOpen = false;
     this._dropReturnStep = null;
     this._inviteSucceeded = false;
@@ -287,7 +286,6 @@ class __reward_flow extends LetcBox {
   // ───────── skeleton accessors ─────────
 
   getStep() { return this._step; }
-  getFurthest() { return this._furthest; }
 
   // ───────── state ─────────
 
@@ -350,14 +348,9 @@ class __reward_flow extends LetcBox {
     anchor.style.transform = "translateX(-50%)";
   }
 
-  /**
-   * Move to `step` and re-render. `_furthest` is a high-water mark, so Back
-   * navigation never rewinds the progress bar.
-   */
+  /** Move to `step`, persist it and re-render. */
   _goto(step) {
     this._step = step;
-    const idx = STEPS.indexOf(step.replace("_waiting", "")) + 1;
-    if (idx > this._furthest) this._furthest = idx;
     lsSet(KEY_STEP, step);
     this._render();
   }
