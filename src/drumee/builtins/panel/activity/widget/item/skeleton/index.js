@@ -235,9 +235,16 @@ function getActivityMeta(ui, data) {
       {
         const itemFiletype = data.item_filetype || data.uploaded_filetype || ui.mget('item_filetype');
         const createdFolder = itemFiletype ? itemFiletype === _a.folder : ui.isFolder();
+        // A single-file upload shows the file's OWN name (item_filename, carried
+        // by the server rollup); a multi-file rollup keeps the destination
+        // folder/workspace name with "and N more". `name` (getItemName) is the
+        // folder/workspace; item_filename is absent on raw feed rows (which
+        // already resolve `name` to the file), so this only refines the rollup.
+        const single = cnt <= 1;
+        const label = (!createdFolder && single && data.item_filename) ? data.item_filename : name;
         return {
           before: createdFolder ? 'created folder ' : 'uploaded file ',
-          label: name,
+          label,
           after: cnt > 1 ? ` and ${cnt - 1} more` : '',
           colorClass: 'mention',
           badge: 'mention',
