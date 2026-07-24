@@ -87,65 +87,51 @@ class __reward_flow extends LetcBox {
   }
 
   onDomRefresh() {
-    this._openHostClickThrough();
+    this._captureHost();
+    this._portalToBody();
     this._render();
   }
 
   /**
-   * The flow is fed into the desk's `overlay` part — a full-viewport backdrop
-   * (z-index 10010) that sits ABOVE the main content (z 10001, which holds the
-   * topbar). The desk opens it (`data-state="open"`) so we're visible, but
-   * "open" also makes it `pointer-events:auto`, so that backdrop swallows every
-   * click meant for the real desk chrome our Step 1 spotlight points at — the
-   * vignette is `pointer-events:none` and passes the click down, but the
-   * overlay element itself then catches it. Force the host visible-but-
-   * click-through; our own card / coach opt pointer events back in. Restored on
-   * teardown so the desk's backdrop behaves normally afterwards.
+   * The flow is fed into the desk `overlay` part — a full-viewport backdrop
+   * that, when open, is `pointer-events:auto` and would swallow clicks meant for
+   * the real desk chrome our Step 1 spotlight points at (the vignette/cutout are
+   * `pointer-events:none` and pass the click down, but the overlay element then
+   * catches it). Neutralise its pointer-events while we're active. Captured
+   * BEFORE the portal below, while our root is still inside it.
    */
-  _openHostClickThrough() {
-    if (!this.el) return;
-    // Target the desk backdrop specifically (it carries the blocking
-    // pointer-events), through any intermediate wrapper the part feed adds.
-    const host =
-      (this.el.closest && this.el.closest(".desk-module__overlay")) ||
-      this.el.parentElement;
+  _captureHost() {
+    if (!this.el || !this.el.closest) return;
+    const host = this.el.closest(".desk-module__overlay");
     if (!host || !host.style) return;
     this._host = host;
     this._hostPE = host.style.pointerEvents;
-    this._hostOpacity = host.style.opacity;
     host.style.pointerEvents = "none";
-    host.style.opacity = "1";
+  }
+
+  /**
+   * Re-parent our root to document.body. The desk `overlay` part is a stacking
+   * context nested (z 10010) far below the window-manager wrapper-modal that
+   * hosts the workspace form / internal permission panel (--z-index-modal,
+   * 100000). Trapped inside the overlay, NO z-index on our flow can lift the
+   * coach above that modal, so its Back was unclickable. At document.body our
+   * root escapes every desk stacking context and its own z-index competes at
+   * the true document root — guiding lifts it above the modal (see skin). Event
+   * routing is unaffected (uiHandler is a JS reference). Mirrors
+   * rating-survey-popup's _portalToBody.
+   */
+  _portalToBody() {
+    if (!this.el || typeof document === "undefined") return;
+    if (this.el.parentElement !== document.body) {
+      document.body.appendChild(this.el);
+    }
   }
 
   _restoreHost() {
     const host = this._host;
     if (!host || !host.style) return;
     host.style.pointerEvents = this._hostPE || "";
-    host.style.opacity = this._hostOpacity || "";
-    host.style.zIndex = this._hostZ || "";
     this._host = null;
-  }
-
-  /**
-   * Lift the host overlay above the window-manager wrapper-modal while guiding.
-   * The walkthrough's workspace form and internal permission panel live in that
-   * modal at --z-index-modal (100000). The reward-flow is trapped in this
-   * overlay's stacking context (z 10010), so no z-index ON the flow can clear
-   * the modal — the coach renders behind it and its Back is unclickable. The
-   * overlay and the modal both resolve at the document root, so raising the
-   * overlay above the modal lifts the whole flow (and its clickable coach) over
-   * it. Restored when guiding ends, so the step 2/3 drop/congrats modals — in
-   * that same modal layer — stay above the flow.
-   */
-  _raiseHost(on) {
-    if (!this._host || !this._host.style) return;
-    if (on) {
-      if (this._hostZ == null) this._hostZ = this._host.style.zIndex;
-      this._host.style.zIndex = "200000"; // > --z-index-modal (100000)
-    } else {
-      this._host.style.zIndex = this._hostZ || "";
-      this._hostZ = null;
-    }
   }
 
   onBeforeDestroy() {
@@ -175,12 +161,10 @@ class __reward_flow extends LetcBox {
       const RewardGuide = require("./guide");
       this._guide = new RewardGuide(this);
     }
-    this._raiseHost(true);
     this._guide.start();
   }
 
   _stopGuide() {
-    this._raiseHost(false);
     if (this._guide) this._guide.stop();
   }
 

@@ -22,12 +22,25 @@ $success-soft: rgba(46, 179, 122, 0.14);
   &__btn > * { pointer-events: none !important; }
 
   // ───────── shell ─────────
+  // The root is portaled to document.body (see index.js _portalToBody), so
+  // these z-indexes compete at the true document root.
   &__root {
     position: fixed;
     inset: 0;
-    // Above the desk overlay (z-index 10010) so the card is never occluded.
+    // Above the desk chrome but BELOW the window-manager wrapper-modal
+    // (--z-index-modal, 100000) so the step 2/3 drop/congrats modals fed into
+    // it stay on top of the flow.
     z-index: 10020;
-    pointer-events: none;   // only the vignette + card opt back in
+    pointer-events: none;   // only the vignette / card / coach opt back in
+  }
+
+  // While guiding, the walkthrough targets the workspace form and internal
+  // permission panel, which live in that wrapper-modal at --z-index-modal
+  // (100000). Lift the whole flow above it so the coach is clickable and the
+  // cutout dims that layer too. Guiding only, so the drop/congrats modals stay
+  // above the active/waiting states.
+  &__root[data-guiding="1"] {
+    z-index: 1000000;
   }
 
 
