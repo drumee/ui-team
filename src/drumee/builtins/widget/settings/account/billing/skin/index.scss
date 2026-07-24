@@ -1529,3 +1529,42 @@
     }
   }
 }
+
+// Wide containers: the header type was tuned to survive a ~200px column, which
+// left it undersized once the columns get roomy (243px at a 1161 container).
+// Step it back up — the threshold is 1100 so the common desk width is already
+// on the larger scale, not just unusually wide windows.
+@container billing-plans (min-width: 1100px) {
+  .settings-billing__compare-plan {
+    padding: 16px 10px;
+    gap: 8px;
+
+    .settings-billing__plan-title {
+      font-size: 19px;
+      line-height: 26px;
+    }
+
+    .settings-billing__plan-price-amount {
+      font-size: 32px;
+      line-height: 40px;
+    }
+
+    .settings-billing__plan-price-period,
+    .settings-billing__plan-price-label {
+      font-size: 12px;
+      line-height: 16px;
+    }
+
+    .settings-billing__plan-button-main,
+    .settings-billing__plan-button,
+    .settings-billing__plan-current-label {
+      font-size: 14px;
+      line-height: 19px;
+    }
+  }
+
+  .settings-billing__compare-tagline {
+    font-size: 13px;
+    line-height: 18px;
+  }
+}
