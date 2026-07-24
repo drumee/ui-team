@@ -2216,16 +2216,28 @@ class desk_module extends LetcBox {
       case "reward-set-add-menu":
         return this.ensurePart("addmenu").then((p) => {
           if (!p || !_.isFunction(p.changeState)) return;
-          if (args.open) {
-            // menu_topic._openItems() early-returns on a truthy `isOpen`, and
-            // `isOpen` is only cleared by _onClosed — the close ANIMATION's
-            // completion callback. Opening the create-modal over the dropdown
-            // interrupts that animation, so `isOpen` is left stale true and
-            // every later open silently no-ops. Clear the stale state first.
-            p.isOpen = false;
-            if (p.model && _.isFunction(p.model.set)) p.model.set(_a.state, 0);
-          }
-          p.changeState(!!args.open);
+          if (!args.open) return p.changeState(false);
+
+          // Opening this menu programmatically can't rely on changeState alone:
+          //   - _openItems() early-returns on a truthy `isOpen`, and `isOpen` is
+          //     only cleared by _onClosed — the CLOSE animation's completion
+          //     callback. Opening the create-modal over the dropdown interrupts
+          //     that animation, leaving `isOpen` stale true so every later open
+          //     silently no-ops.
+          //   - even when it does run, the dropdown only becomes VISIBLE once
+          //     the OPEN animation completes (_onOpen sets data-state="1" on the
+          //     menu root, which the topbar CSS keys visibility off).
+          // So: clear the stale flag, ask it to open (this runs the animation
+          // that slides the items into place), then set data-state="1" on the
+          // root ourselves — per topbar.scss that alone un-hides the items, so
+          // the walkthrough no longer depends on the animation landing.
+          // `isOpen` is deliberately NOT set here: _openItems() awaits its
+          // coordinates and re-checks the flag, so setting it would abort the
+          // animation and leave the items parked off-position.
+          p.isOpen = false;
+          if (p.model && _.isFunction(p.model.set)) p.model.set(_a.state, 0);
+          p.changeState(true);
+          if (p.el && p.el.dataset) p.el.dataset.state = 1;
         });
 
       // Relayed to the reward flow: it opened this popup through the
