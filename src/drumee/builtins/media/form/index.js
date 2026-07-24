@@ -80,9 +80,18 @@ class __form_folder extends LetcBox {
     if (status === "personal") {
       this._pending = 1;
       const req = Wm.createFolderFromDialog({ getValue: () => filename });
-      return Promise.resolve(req).finally(() => {
-        this._pending = 0;
-      });
+      return Promise.resolve(req)
+        .then(() => {
+          // Personal is a folder, not a hub, so it takes the create-folder path
+          // above and never fires the workspace:refresh that team/share do.
+          // Fire it (flagged personal) so listeners — e.g. the reward-flow
+          // Step 1 guide — can react; this type has no follow-up permission
+          // panel, so the flag tells them to finish rather than wait for one.
+          RADIO_BROADCAST.trigger("workspace:refresh", { personal: 1 });
+        })
+        .finally(() => {
+          this._pending = 0;
+        });
     }
 
     const FLOW = {

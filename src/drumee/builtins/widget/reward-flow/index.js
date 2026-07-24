@@ -80,7 +80,7 @@ class __reward_flow extends LetcBox {
     // media_form broadcasts "workspace:refresh" after desk.create_hub succeeds
     // — the completion signal that advances step 1, mirroring the upload signal
     // for step 2.
-    this._onWorkspaceRefresh = () => this.onWorkspaceCreated();
+    this._onWorkspaceRefresh = (payload) => this.onWorkspaceCreated(payload);
     if (typeof RADIO_BROADCAST !== "undefined") {
       RADIO_BROADCAST.on("workspace:refresh", this._onWorkspaceRefresh);
     }
@@ -230,10 +230,26 @@ class __reward_flow extends LetcBox {
 
   // ───────── external completion signals ─────────
 
-  /** A workspace was created (form-folder → desk.create_hub → the
-   *  RADIO_BROADCAST "workspace:refresh" this subscribes to). Ends the Step 1
-   *  guided walkthrough and advances. Only fires while guiding. */
-  onWorkspaceCreated() {
+  /**
+   * A workspace was created (form-folder → the RADIO_BROADCAST
+   * "workspace:refresh" this subscribes to). Only meaningful while guiding.
+   *   - Personal (payload.personal): a folder, no follow-up panel → finish now.
+   *   - Internal/External: a permission panel opens next; hand off to the guide
+   *     to spotlight it and finish when the user closes it (onGuideComplete).
+   */
+  onWorkspaceCreated(payload) {
+    if (this._step !== "step1_guide") return;
+    if (payload && payload.personal) {
+      this._stopGuide();
+      this._goto("step2");
+      return;
+    }
+    if (this._guide) this._guide.onWorkspaceCreated();
+    else this.onGuideComplete();
+  }
+
+  /** The guide finished its perm phase (permission panel closed) → Step 2. */
+  onGuideComplete() {
     if (this._step !== "step1_guide") return;
     this._stopGuide();
     this._goto("step2");

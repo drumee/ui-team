@@ -8,15 +8,23 @@
  *   menu  → spotlight the "Workspace" dropdown item,      → user clicks it
  *           grey-out + disable the sibling items
  *   form  → spotlight the workspace form (form-folder)    → user submits it
+ *   perm  → after create: spotlight the follow-up permission panel that opens
+ *           for internal (permission-restricted) / external (window-secure-
+ *           share) workspaces  → user closes it → done
  *
  * Advancement is driven by observing the live DOM, not by intercepting clicks:
  * a single MutationObserver calls _reconcile(), which reads what is actually
  * on screen and re-points the spotlight at the correct sub-step. That makes
  * every off-path case self-healing — close the dropdown and it re-guides to
  * the Add button; cancel the form and it re-guides from the top — without any
- * per-event handlers. Final completion (workspace created) is signalled to the
- * orchestrator out-of-band via RADIO_BROADCAST "workspace:refresh", so the
- * guide never has to detect success itself; the orchestrator calls stop().
+ * per-event handlers.
+ *
+ * The orchestrator tells the guide when the workspace was created (via
+ * RADIO_BROADCAST "workspace:refresh" → onWorkspaceCreated). From there the
+ * guide waits for the permission panel to appear and then be closed, and calls
+ * back ui.onGuideComplete() to advance to Step 2. (A Personal workspace opens
+ * no panel; the orchestrator completes that case directly and never enters the
+ * perm phase.)
  *
  * All DOM work is guarded on `typeof document` so the module stays requirable
  * (and the orchestrator stays unit-testable) under Node.
@@ -30,10 +38,16 @@ const SEL = {
   wsItem: ".desk-module-topbar__add-menu-item.ico-workspace",
   otherItems: ".desk-module-topbar__add-menu-item:not(.ico-workspace)",
   form: ".form-folder__main",
+  // Follow-up permission panels: internal (team) → permission_restricted fed
+  // into the wrapper-modal; external (share) → window_secure_share window.
+  permPanels: ".permission-restricted__main, .window-secure-share__main",
 };
 
 const DISABLED_CLASS = "reward-guide-disabled";
 const RECONCILE_DEBOUNCE_MS = 30;
+// Safety net for the perm phase: team/share always open a panel, but if one
+// never appears (unexpected), don't wedge the guide — complete after this.
+const PERM_TIMEOUT_MS = 2500;
 
 function hasDom() {
   return typeof document !== "undefined" && !!document.querySelector;
@@ -68,21 +82,51 @@ function tooltipFor(sub) {
     case "form":
       return LOCALE.REWARD_FLOW_GUIDE_FORM
         || "Pick a workspace type, name it, and click Create.";
+    case "perm":
+      return LOCALE.REWARD_FLOW_GUIDE_PERM
+        || "Review who can access it, then close to continue.";
     default:
       return "";
   }
 }
 
+/** First matching element that is actually on screen, else null. */
+function firstVisible(selector) {
+  if (!hasDom()) return null;
+  const els = document.querySelectorAll(selector);
+  for (let i = 0; i < els.length; i++) {
+    if (visible(els[i])) return els[i];
+  }
+  return null;
+}
+
 class RewardGuide {
   constructor(ui) {
     this._ui = ui;              // the reward_flow orchestrator
-    this._sub = null;           // "add" | "menu" | "form" | null
+    this._sub = null;           // "add" | "menu" | "form" | "perm" | null
     this._observer = null;
     this._reconcileTimer = null;
     this._onResize = null;
     this._lastSig = null;       // last painted spotlight signature (dedup)
+    this._created = false;      // workspace created → perm phase active
+    this._permSeen = false;     // the permission panel has appeared at least once
+    this._completed = false;    // guard: onGuideComplete fired once
+    this._permTimer = null;
     this._reconcile = this._reconcile.bind(this);
     this._scheduleReconcile = this._scheduleReconcile.bind(this);
+  }
+
+  /**
+   * The workspace was created (team/share). Enter the perm phase: wait for the
+   * follow-up permission panel to appear, spotlight it, and complete once the
+   * user closes it. Called by the orchestrator from workspace:refresh.
+   */
+  onWorkspaceCreated() {
+    this._created = true;
+    this._permSeen = false;
+    if (!hasDom()) return;  // Node/tests: the caller drives completion directly.
+    this._permTimer = setTimeout(() => this._complete(), PERM_TIMEOUT_MS);
+    this._reconcile();
   }
 
   /** Begin guiding. No-op (safe) when there is no DOM. */
@@ -99,6 +143,11 @@ class RewardGuide {
     this._onResize = () => this._position();
     window.addEventListener("resize", this._onResize, { passive: true });
     this._sub = null;
+    // Fresh run (the guide instance is reused across Back → Continue): clear the
+    // perm-phase flags so a prior completion can't short-circuit this one.
+    this._created = false;
+    this._permSeen = false;
+    this._completed = false;
     this._reconcile();
   }
 
@@ -112,6 +161,10 @@ class RewardGuide {
       clearTimeout(this._reconcileTimer);
       this._reconcileTimer = null;
     }
+    if (this._permTimer) {
+      clearTimeout(this._permTimer);
+      this._permTimer = null;
+    }
     if (this._onResize && typeof window !== "undefined") {
       window.removeEventListener("resize", this._onResize);
       this._onResize = null;
@@ -119,6 +172,8 @@ class RewardGuide {
     this._enableOthers();
     this._sub = null;
     this._lastSig = null;
+    this._created = false;
+    this._permSeen = false;
     this._clearSpot();
   }
 
@@ -135,29 +190,55 @@ class RewardGuide {
   /** Read the live DOM and make the spotlight match reality. Idempotent. */
   _reconcile() {
     if (!hasDom() || !this._observer) return;
-    const form = document.querySelector(SEL.form);
-    const wsItem = document.querySelector(SEL.wsItem);
+
+    // Post-creation: spotlight the permission panel, complete once it closes.
+    if (this._created) {
+      const perm = firstVisible(SEL.permPanels);
+      if (perm) {
+        this._permSeen = true;
+        this._setSub("perm");
+        this._position();
+        return;
+      }
+      // The panel opens a tick after workspace:refresh; only treat "gone" as
+      // done once we have actually seen it, otherwise keep waiting.
+      if (this._permSeen) this._complete();
+      return;
+    }
 
     let sub;
-    if (visible(form)) sub = "form";
-    else if (visible(wsItem)) sub = "menu";
+    if (visible(document.querySelector(SEL.form))) sub = "form";
+    else if (visible(document.querySelector(SEL.wsItem))) sub = "menu";
     else sub = "add";
-
-    if (sub !== this._sub) {
-      // Leaving "menu" for anywhere else must restore the siblings we dimmed.
-      if (this._sub === "menu") this._enableOthers();
-      this._sub = sub;
-      if (sub === "menu") this._disableOthers();
-    }
+    this._setSub(sub);
     this._position();
+  }
+
+  /** Switch the active sub-step, running the menu-disable side effects. */
+  _setSub(sub) {
+    if (sub === this._sub) return;
+    // Leaving "menu" for anywhere else must restore the siblings we dimmed.
+    if (this._sub === "menu") this._enableOthers();
+    this._sub = sub;
+    if (sub === "menu") this._disableOthers();
   }
 
   _targetEl() {
     switch (this._sub) {
+      case "perm": return firstVisible(SEL.permPanels);
       case "form": return document.querySelector(SEL.form);
       case "menu": return document.querySelector(SEL.wsItem);
       case "add": return document.querySelector(SEL.addBtn);
       default: return null;
+    }
+  }
+
+  /** Perm phase done (panel closed, or safety timeout) → advance to Step 2. */
+  _complete() {
+    if (this._completed) return;
+    this._completed = true;
+    if (this._ui && typeof this._ui.onGuideComplete === "function") {
+      this._ui.onGuideComplete();
     }
   }
 

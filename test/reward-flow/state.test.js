@@ -73,11 +73,12 @@ function makeFlow() {
 const click = (f, service) => f.onUiEvent({ mget: () => null }, { service });
 
 // Reach step 2 the way the real flow does: Continue starts the Step 1 guided
-// walkthrough (step1_guide), and form-folder's "workspace:refresh" broadcast —
-// fired after desk.create_hub succeeds — ends the guide and advances to step 2.
+// walkthrough (step1_guide). A Personal workspace fires "workspace:refresh"
+// flagged {personal:1} and finishes immediately (no follow-up panel), which is
+// the simplest deterministic way to land on step 2 in a headless test.
 function toStep2(f) {
   click(f, "reward-continue");
-  RADIO_BROADCAST.trigger("workspace:refresh", {});
+  RADIO_BROADCAST.trigger("workspace:refresh", { personal: 1 });
 }
 
 beforeEach(() => {
@@ -139,18 +140,37 @@ test("continue is inert while already guiding", () => {
   assert.equal(f.getStep(), "step1_guide");
 });
 
-test("a created workspace ends the guide and advances to step2", () => {
+test("a Personal workspace finishes the guide and advances to step2", () => {
   const f = makeFlow();
   click(f, "reward-continue");
   assert.equal(f.getStep(), "step1_guide");
-  RADIO_BROADCAST.trigger("workspace:refresh", {});
+  RADIO_BROADCAST.trigger("workspace:refresh", { personal: 1 });
   assert.equal(f.getStep(), "step2");
   assert.equal(f.getFurthest(), 2);
 });
 
+test("an internal/external workspace keeps guiding until the panel is closed", () => {
+  const f = makeFlow();
+  click(f, "reward-continue");
+  // No `personal` flag → a permission panel opens next; the guide must stay
+  // active (spotlighting the panel), not jump to step2 yet.
+  RADIO_BROADCAST.trigger("workspace:refresh");
+  assert.equal(f.getStep(), "step1_guide", "must wait for the permission panel");
+  // The guide reports the panel closed → advance.
+  f.onGuideComplete();
+  assert.equal(f.getStep(), "step2");
+  assert.equal(f.getFurthest(), 2);
+});
+
+test("onGuideComplete outside the guided state is ignored", () => {
+  const f = makeFlow();
+  f.onGuideComplete();
+  assert.equal(f.getStep(), "step1");
+});
+
 test("a workspace:refresh outside the guided state is ignored", () => {
   const f = makeFlow();
-  RADIO_BROADCAST.trigger("workspace:refresh", {});
+  RADIO_BROADCAST.trigger("workspace:refresh", { personal: 1 });
   assert.equal(f.getStep(), "step1");
 });
 

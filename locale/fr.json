@@ -2200,6 +2200,7 @@
   "REWARD_FLOW_GUIDE_ADD": "Cliquez sur « Ajouter » pour commencer.",
   "REWARD_FLOW_GUIDE_MENU": "Choisissez « Espace de travail » dans le menu.",
   "REWARD_FLOW_GUIDE_FORM": "Choisissez un type d'espace, nommez-le, puis cliquez sur Créer.",
+  "REWARD_FLOW_GUIDE_PERM": "Vérifiez qui peut y accéder, puis fermez pour continuer.",
   "REWARD_FLOW_DROP_TITLE": "N'abandonnez pas maintenant",
   "REWARD_FLOW_DROP_DESC": "Vous êtes tout près de la récompense.",
   "REWARD_FLOW_DROP_LEAVE": "Abandonner quand même",
