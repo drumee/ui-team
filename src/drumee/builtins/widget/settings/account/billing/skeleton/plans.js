@@ -193,9 +193,19 @@ function priceHeader(ui, fig, option, isCurrent) {
  * @param {Object} option - Pre-built option object from getOptions
  * @returns {Object} Skeletons component
  */
-function item(ui, opt, option) {
-  const { buttonTitle, buttonKind, subText, features, badge } = option;
-  const fig = `${ui.fig.family}__plan`;
+
+/**
+ * The card's call to action. Shared by the mobile cards and the desktop
+ * comparison table so both surfaces show the same state — current plan,
+ * owner-locked, or an actionable CTA — and can never drift apart.
+ * @param {Object} ui - UI instance
+ * @param {string} fig - BEM prefix
+ * @param {string} opt - plan key
+ * @param {Object} option - plan option
+ * @returns {Object} Skeletons component
+ */
+function ctaButton(ui, fig, opt, option) {
+  const { buttonTitle, buttonKind } = option;
   // Mark the caller's active plan: pill-style "Your current plan" instead of a
   // CTA (design: the Free card shows the pill while the user is on Free).
   const isCurrent = (ui.currentPlanName || "free") === opt;
@@ -263,6 +273,24 @@ function item(ui, opt, option) {
     });
   }
 
+  return buttonBtn;
+}
+
+/**
+ * Create plan item component (Free, Team, Business, Sovereign): price-header
+ * box → pill CTA → sub-text → feature list. Follows Figma 3050-96140.
+ * @param {Object} ui - UI instance
+ * @param {string} opt - Plan option key (free, team, business, sovereign)
+ * @param {Object} option - Pre-built option object from getOptions
+ * @returns {Object} Skeletons component
+ */
+function item(ui, opt, option) {
+  const { buttonTitle, buttonKind, subText, features, badge } = option;
+  const fig = `${ui.fig.family}__plan`;
+  const isCurrent = (ui.currentPlanName || "free") === opt;
+
+  const buttonBtn = ctaButton(ui, fig, opt, option);
+
   const subTextItem = subText
     ? Skeletons.Note({ className: `${fig}-subtext`, content: subText })
     : null;
@@ -318,6 +346,90 @@ function item(ui, opt, option) {
 }
 
 /**
+ * One cell of the comparison table.
+ *
+ * A tick-only row (Files + folder chat, Guest access, SSO/SAML) renders just
+ * the mark — repeating the feature name in all four columns is what the label
+ * column exists to avoid. Rows carrying a value show the value next to the
+ * mark, and a row the plan does not get shows a cross, so the eye can run down
+ * a column and see where the tier stops.
+ * @param {Object} ui - UI instance
+ * @param {string} fig - BEM prefix
+ * @param {Object} cell - { value, included }
+ * @returns {Object} Skeletons component
+ */
+function compareCell(ui, fig, cell) {
+  const included = cell.included !== false;
+  return Skeletons.Box.X({
+    className: `${fig}-cell ${fig}-value ${included ? "" : "excluded"}`,
+    kids: [
+      Skeletons.Image.Svg({
+        ico: included ? "available" : "cross",
+        className: `${fig}-mark`,
+      }),
+      cell.value
+        ? Skeletons.Note({ className: `${fig}-text`, content: cell.value })
+        : null,
+    ].filter(Boolean),
+  });
+}
+
+/**
+ * Desktop layout: a real comparison table — a leading label column plus one
+ * column per plan, so the four offers line up on the same rows and can be read
+ * across. The stacked cards repeat every label four times, which is fine on a
+ * phone (one column at a time) but makes comparison hard on a wide screen.
+ *
+ * Both layouts are built from the SAME getOptions data, in the same row order,
+ * so they can never disagree about what a plan includes.
+ * @param {Object} ui - UI instance
+ * @param {Object} options - keyed plan options
+ * @returns {Object} Skeletons component
+ */
+function comparisonTable(ui, options) {
+  const fig = `${ui.fig.family}__compare`;
+  const keys = ["free", "team", "business", "sovereign"];
+  const cols = keys.map((k) => options[k]);
+  const labels = cols[0].features.map((f) => f.label);
+
+  // Header: an empty corner over the label column, then each plan's price
+  // header and its CTA.
+  const header = Skeletons.Box.X({
+    className: `${fig}-row ${fig}-header`,
+    kids: [
+      Skeletons.Box.Y({ className: `${fig}-cell ${fig}-label ${fig}-corner` }),
+      ...keys.map((k, i) =>
+        Skeletons.Box.Y({
+          className: `${fig}-cell ${fig}-plan`,
+          kids: [
+            priceHeader(ui, `${ui.fig.family}__plan`, cols[i], (ui.currentPlanName || "free") === k),
+            ctaButton(ui, `${ui.fig.family}__plan`, k, cols[i]),
+            cols[i].subText
+              ? Skeletons.Note({ className: `${fig}-tagline`, content: cols[i].subText })
+              : null,
+          ].filter(Boolean),
+        })
+      ),
+    ],
+  });
+
+  const body = labels.map((label, i) =>
+    Skeletons.Box.X({
+      className: `${fig}-row`,
+      kids: [
+        Skeletons.Box.Y({
+          className: `${fig}-cell ${fig}-label`,
+          kids: [Skeletons.Note({ className: `${fig}-label-text`, content: label })],
+        }),
+        ...cols.map((c) => compareCell(ui, fig, c.features[i])),
+      ],
+    })
+  );
+
+  return Skeletons.Box.Y({ className: `${fig}-main`, kids: [header, ...body] });
+}
+
+/**
  * Create plans content layout with 4 plan items (Free, Team, Business,
  * Sovereign). Only Team reaches Stripe Checkout; Business and Sovereign are
  * sales-led and their CTA opens the contact-sales notice instead.
@@ -329,15 +441,22 @@ function billing_content(ui, cycle = "monthly") {
   const fig = `${ui.fig.family}__plans`;
   const options = getOptions(ui, cycle);
 
-  return Skeletons.Box.G({
-    className: `${fig}-main`,
-    kids: [
-      item(ui, "free", options.free),
-      item(ui, "team", options.team),
-      item(ui, "business", options.business),
-      item(ui, "sovereign", options.sovereign),
-    ],
-  });
+  // Mobile keeps the stacked cards: one plan at a time, every row labelled in
+  // place, which is the only readable shape on a narrow screen. Desktop gets
+  // the comparison table. Same data either way — see comparisonTable.
+  if (Visitor.isMobile && Visitor.isMobile()) {
+    return Skeletons.Box.G({
+      className: `${fig}-main`,
+      kids: [
+        item(ui, "free", options.free),
+        item(ui, "team", options.team),
+        item(ui, "business", options.business),
+        item(ui, "sovereign", options.sovereign),
+      ],
+    });
+  }
+
+  return comparisonTable(ui, options);
 }
 
 export default billing_content;
