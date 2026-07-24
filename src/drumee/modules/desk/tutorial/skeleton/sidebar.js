@@ -8,12 +8,10 @@ const pfx = (ui) => `${ui.fig.family}__sb`;
 
 // Live plan badge, same derivation as the real sidebar footer
 // (desk/skeleton/sidebar.js createFooter).
-const planBadge = () => {
-  const plan = (((Visitor.quota && Visitor.quota()) || {}).plan || "free").toString();
-  return (LOCALE.PLAN_BADGE || "{0} Plan").format(
-    plan.charAt(0).toUpperCase() + plan.slice(1),
+const planBadge = () =>
+  (LOCALE.PLAN_BADGE || "{0} Plan").format(
+    require("libs/billing").planLabel(),
   );
-};
 
 const navItem = (ui, ico, label, opts = {}) => {
   const p = pfx(ui);

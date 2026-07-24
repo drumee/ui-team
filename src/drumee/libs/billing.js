@@ -118,4 +118,59 @@ function needsAdminConsoleUpgrade(plan) {
   return /^(free|advanced)$/.test(name);
 }
 
-module.exports = { billingAvailable, canUpgradePlan, needsAdminConsoleUpgrade };
+/**
+ * Normalise whatever sits in `quota.plan` onto one of the four plan keys the
+ * product actually has: free | team | business | sovereign.
+ *
+ * Needed because quota.plan is NOT a closed set. Alongside the current codes
+ * it still carries the retired B2C tier ('pro') and hand-granted free-text
+ * names from before the Stripe catalog ('Pro', 'Drumee Plus', 'advanced').
+ * The 2026-07 pricing rebuild moves those onto the Team entitlement, so they
+ * must READ as Team everywhere too — otherwise the sidebar badge and the
+ * settings card would name a plan that no longer exists.
+ *
+ * Defaults to 'free': an unknown name must never imply a paid tier.
+ */
+function planKey(plan) {
+  const raw =
+    plan != null && String(plan).trim() !== ""
+      ? plan
+      : (typeof Visitor !== "undefined" && Visitor && Visitor.quota
+          ? (Visitor.quota() || {}).plan
+          : null);
+  const name = String(raw || "free").trim().toLowerCase();
+  if (/^(team|pro|drumee plus)$/.test(name)) return "team";
+  if (name === "business") return "business";
+  if (name === "sovereign" || name === "enterprise") return "sovereign";
+  return "free";
+}
+
+/**
+ * Display name for a plan, localised. Single source of truth for every badge
+ * and card, so they can't drift apart or capitalise a raw DB value.
+ */
+function planLabel(plan) {
+  const key = planKey(plan);
+  return (
+    {
+      free: LOCALE.FREE,
+      team: LOCALE.TEAM,
+      business: LOCALE.BUSINESS,
+      sovereign: LOCALE.SOVEREIGN,
+    }[key] || LOCALE.FREE
+  );
+}
+
+/** Does this plan sit on a paid tier? */
+function isPaidPlan(plan) {
+  return planKey(plan) !== "free";
+}
+
+module.exports = {
+  billingAvailable,
+  canUpgradePlan,
+  needsAdminConsoleUpgrade,
+  planKey,
+  planLabel,
+  isPaidPlan,
+};
