@@ -23,6 +23,11 @@ module.exports = function (ui) {
   const step = ui.getStep();
   const waiting = step.endsWith("_waiting");
   const guiding = step === "step1_guide";
+  const base = waiting ? step.replace("_waiting", "") : step;
+  // Steps 2 and 3 point at a real topbar control, so they get a cutout over it.
+  // Not while waiting: there the user is operating the real UI and nothing
+  // should be dimmed.
+  const targeted = !waiting && (base === "step2" || base === "step3");
 
   const kids = [];
 
@@ -47,25 +52,33 @@ module.exports = function (ui) {
         service: "reward-vignette-click",
         uiHandler: [ui],
       }),
+    );
+    if (targeted) {
+      // Cutout over the step's topbar control (Upload on step 2, Invite on
+      // step 3), positioned imperatively by _positionStepTarget. It replaces
+      // the old connector arrow: the control reads clear, the rest stays
+      // dimmed — matching how Step 1's walkthrough points at things.
+      kids.push(Skeletons.Box.Y({ className: `${pfx}__cutout` }));
+    }
+    kids.push(
       Skeletons.Box.Y({
         className: `${pfx}__anchor`,
-        dataset: { step: waiting ? step.replace("_waiting", "") : step },
-        kids: [
-          // The connector arrow points at the step's target control: the
-          // topbar upload button on step 2, the invite control on step 3.
-          // Step 1 is centred and has no target.
-          step.startsWith("step1")
-            ? null
-            : Skeletons.Box.Y({ className: `${pfx}__arrow` }),
-          stepCard(ui),
-        ].filter(Boolean),
+        dataset: { step: base },
+        kids: [stepCard(ui)],
       }),
     );
   }
 
   return Skeletons.Box.Y({
     className: `${pfx}__root`,
-    dataset: { step, waiting: waiting ? "1" : "0", guiding: guiding ? "1" : "0" },
+    dataset: {
+      step,
+      waiting: waiting ? "1" : "0",
+      guiding: guiding ? "1" : "0",
+      // Tells the stylesheet the cutout is doing the dimming, so the flat
+      // vignette must go transparent (it stays for the drop-modal click).
+      cutout: targeted ? "1" : "0",
+    },
     debug: __filename,
     kids,
   });

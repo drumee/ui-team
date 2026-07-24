@@ -27,6 +27,13 @@ const KEY_STEP = "reward_step";
 
 const STEPS = ["step1", "step2", "step3"];
 
+// The live topbar control each step points at. The cutout is laid over it and
+// the card anchored beneath it (see _applyStepTarget).
+const STEP_TARGET = {
+  step2: ".desk-module-topbar__upload-btn",
+  step3: ".desk-module-topbar__invite-btn",
+};
+
 /** localStorage is unavailable in private mode — never let it break the desk. */
 function lsGet(key) {
   try { return localStorage.getItem(key); } catch (e) { return null; }
@@ -146,6 +153,10 @@ class __reward_flow extends LetcBox {
     if (this._onWorkspaceRefresh && typeof RADIO_BROADCAST !== "undefined") {
       RADIO_BROADCAST.off("workspace:refresh", this._onWorkspaceRefresh);
       this._onWorkspaceRefresh = null;
+    }
+    if (this._onStepResize && typeof window !== "undefined") {
+      window.removeEventListener("resize", this._onStepResize);
+      this._onStepResize = null;
     }
     this._stopGuide();
     this._restoreHost();
@@ -282,6 +293,61 @@ class __reward_flow extends LetcBox {
 
   _render() {
     this.feed(require("./skeleton")(this));
+    this._positionStepTarget();
+  }
+
+  /**
+   * Steps 2 and 3 point at a real topbar control (Upload / Invite). Measure it,
+   * lay the cutout over it so it reads clear while the rest stays dimmed, and
+   * anchor the card just beneath it. Replaces the old fixed-position card and
+   * connector arrow, which only lined up by luck.
+   *
+   * Deferred a frame so the freshly-fed skeleton is in the DOM, and re-run on
+   * resize since the topbar reflows.
+   */
+  _positionStepTarget() {
+    if (typeof document === "undefined" || typeof requestAnimationFrame !== "function") return;
+    requestAnimationFrame(() => this._applyStepTarget());
+    if (!this._onStepResize && typeof window !== "undefined") {
+      this._onStepResize = () => this._applyStepTarget();
+      window.addEventListener("resize", this._onStepResize, { passive: true });
+    }
+  }
+
+  _applyStepTarget() {
+    if (!this.el) return;
+    const sel = STEP_TARGET[this._step];
+    const anchor = this.el.querySelector(`.${this.fig.family}__anchor`);
+    if (!sel) return;
+    const el = document.querySelector(sel);
+    if (!el || typeof el.getBoundingClientRect !== "function") return;
+    const rect = el.getBoundingClientRect();
+    if (!rect.width || !rect.height) return;
+
+    // Cutout hugs the control exactly, mirroring its own rounding.
+    const radius =
+      (typeof getComputedStyle === "function" && getComputedStyle(el).borderRadius) || "";
+    this.el.style.setProperty("--cut-x", `${rect.left}px`);
+    this.el.style.setProperty("--cut-y", `${rect.top}px`);
+    this.el.style.setProperty("--cut-w", `${rect.width}px`);
+    this.el.style.setProperty("--cut-h", `${rect.height}px`);
+    this.el.style.setProperty("--cut-radius", radius || "8px");
+
+    // Card sits under the control, centred on it and kept on screen.
+    if (!anchor || !anchor.style) return;
+    const vw = (typeof window !== "undefined" && window.innerWidth) || 1280;
+    const vh = (typeof window !== "undefined" && window.innerHeight) || 800;
+    const M = 12;
+    const CARD_W = 340;
+    const CARD_H = 340;
+    const half = CARD_W / 2;
+    const cx = rect.left + rect.width / 2;
+    const left = Math.min(Math.max(cx, M + half), vw - M - half);
+    const top = Math.min(Math.max(rect.bottom + 16, 64), vh - CARD_H - M);
+    anchor.style.left = `${left}px`;
+    anchor.style.top = `${top}px`;
+    anchor.style.right = "auto";
+    anchor.style.transform = "translateX(-50%)";
   }
 
   /**
