@@ -1,3 +1,5 @@
+const { canUpgradePlan } = require("libs/billing");
+
 const TAB_MONTHLY = 0;
 const TAB_YEARLY = 1;
 const TAB_CHECKOUT = 2;
@@ -1085,6 +1087,10 @@ class settings_billing extends LetcBox {
                 .format(LOCALE.SALES_CONTACT_EMAIL || "contact@drumee.org")
             );
           }
+        } else if (!canUpgradePlan()) {
+          // Defense in depth behind the disabled card CTA: a stale render or a
+          // deep link must not reach a checkout that can only dead-end.
+          if (Wm && Wm.alert) Wm.alert(LOCALE.ONLY_OWNER_CAN_CHANGE_PLAN);
         } else if (planValue === "free" || planValue === "team") {
           // Team is the only self-serve tier now. The old Pro<->Team switch
           // confirmations went with the B2C Pro plan: there is no longer a

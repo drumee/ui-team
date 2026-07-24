@@ -1,4 +1,5 @@
 const { button } = require("../../../../../skeleton/toolkit");
+const { canUpgradePlan } = require("libs/billing");
 
 /**
  * Build the plan catalogue for display. Text comes from LOCALE; prices come
@@ -185,6 +186,15 @@ function item(ui, opt, option) {
   // CTA (design: the Free card shows the pill while the user is on Free).
   const isCurrent = (ui.currentPlanName || "free") === opt;
 
+  // Billing is owner-managed: inside an org (domain_id > 1) only the OWNER may
+  // change the plan. Without this the CTA looked live for every member and only
+  // failed at the very last step, where payment.checkout answers
+  // ORG_IDENT_REQUIRED (they own no org) or ALREADY_IN_OTHER_DOMAIN (they
+  // cannot bootstrap a second one) — a raw status code after a full checkout
+  // walk. Same rule as the sidebar entry, from the same helper, so the two can
+  // never disagree.
+  const locked = !isCurrent && !canUpgradePlan();
+
   let buttonBtn;
   if (isCurrent) {
     // Flat pill (no button() helper — a single element, so there's no
@@ -197,6 +207,19 @@ function item(ui, opt, option) {
         Skeletons.Note({
           className: `${fig}-current-label`,
           content: LOCALE.YOUR_CURRENT_PLAN,
+        }),
+      ],
+    });
+  } else if (locked) {
+    // Same flat pill as the current-plan marker, carrying the reason instead of
+    // an action — the ladder stays readable, it just isn't actionable here.
+    buttonBtn = Skeletons.Box.X({
+      className: `${fig}-button-main locked`,
+      dataset: { disabled: 1 },
+      kids: [
+        Skeletons.Note({
+          className: `${fig}-current-label`,
+          content: LOCALE.ONLY_OWNER_CAN_CHANGE_PLAN,
         }),
       ],
     });
