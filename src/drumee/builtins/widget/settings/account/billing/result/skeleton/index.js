@@ -106,7 +106,7 @@ function billing_result(ui) {
     Skeletons.Note({
       className: `${fig}__subtitle`,
       content: ok
-        ? (LOCALE.PAYMENT_SUCCESS_TEXT || "Upgraded successfully. You are now in {0} plan.").format(planName || (LOCALE.PRO || "Pro"))
+        ? (LOCALE.PAYMENT_SUCCESS_TEXT || "Upgraded successfully. You are now in {0} plan.").format(planName || LOCALE.TEAM)
         : LOCALE.PAYMENT_FAILURE_TEXT || "Your payment could not be processed.",
     }),
   ];

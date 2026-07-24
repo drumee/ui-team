@@ -166,6 +166,22 @@ function getActivityMeta(ui, data) {
       };
 
     case 'teamchat':
+      // A folder-chat rollup whose latest unread meeting event is a start/end
+      // (notification_center_next surfaces it as meeting_action, giving meetings
+      // priority over plain chat). Render "<actor> started/ended a meeting in
+      // <folder>" — actor name + avatar come from the same author fields. No count
+      // suffix here (a meeting event is a single fact, not a message tally).
+      if (data.meeting_action === 'start' || data.meeting_action === 'end') {
+        return {
+          before: data.meeting_action === 'start'
+            ? (LOCALE.STARTED_MEETING_ACTION || 'started a meeting in ')
+            : (LOCALE.ENDED_MEETING_ACTION || 'ended a meeting in '),
+          label: name,
+          after: '',
+          colorClass: 'mention',
+          badge: 'mention',
+        };
+      }
       return {
         before: 'posted in ',
         label: name,

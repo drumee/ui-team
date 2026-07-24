@@ -1,3 +1,5 @@
+const { canUpgradePlan, billingAvailable } = require("libs/billing");
+
 const TAB_MONTHLY = 0;
 const TAB_YEARLY = 1;
 const TAB_CHECKOUT = 2;
@@ -37,15 +39,20 @@ class settings_billing extends LetcBox {
         selectedBundle: null,
       },
     };
+    // Storage in GB and the member CAP per plan, mirroring yp.plan's quota
+    // JSON (2026-07 pricing rebuild). `seats` is a cap, not a purchased
+    // quantity — free stays 0 because existing code reads 0 as "cannot
+    // invite", and business uses a real large number rather than 0, which
+    // would read as no seats at all.
     this.storage = {
-      free: 20,
-      pro: 20,
-      team: 50
+      free: 5,
+      team: 100,
+      business: 1000
     }
     this.seats = {
       free: 0,
-      pro: 5,
-      team: 1
+      team: 10,
+      business: 100000
     }
 
     this.tab = this.state.currentTab;
@@ -90,9 +97,13 @@ class settings_billing extends LetcBox {
   // the banner + cancel/resume actions read. A hard cancel removes the mirror
   // row → _subscription null → no banner (workspace already on Free).
   async _loadSubscription() {
-    this._subscription = await this.fetchService(SERVICE.payment.subscription_status, { hub_id: Visitor.id })
-      .then((d) => (d && d.subscription_id ? d : null))
+    const raw = await this.fetchService(SERVICE.payment.subscription_status, { hub_id: Visitor.id })
       .catch(() => null);
+    // Read the server's checkout verdict BEFORE the row is discarded below. A
+    // caller with no subscription still gets a can_buy answer, and that is
+    // exactly the case that used to walk into a dead end.
+    this._canBuy = raw && typeof raw.can_buy === "boolean" ? raw.can_buy : null;
+    this._subscription = raw && raw.subscription_id ? raw : null;
     const sub = this._subscription;
     const now = Math.floor(Date.now() / 1000);
     this._periodEnd = (sub && Number(sub.period_end)) || 0;
@@ -134,7 +145,7 @@ class settings_billing extends LetcBox {
   // still async-false, and clicking it during that window silently no-opped.
   _isPaidByQuota() {
     const plan = String(((Visitor.quota && Visitor.quota()) || {}).plan || "").toLowerCase();
-    return /^(pro|team|enterprise)$/.test(plan);
+    return /^(team|business|sovereign|enterprise)$/.test(plan);
   }
 
   async _confirmCancel() {
@@ -252,20 +263,23 @@ class settings_billing extends LetcBox {
       // Structure: {plan: 'free', organization: 0, seat: 0, storage: 20000000000}
       let { total_seat, plan = "free", billing_cycle = "monthly", storage } = Visitor.quota() || {}
       // Get plan name from quota.plan (primary source)
-      const planName = (plan || "pro").toLowerCase();
+      const planName = (plan || "free").toLowerCase();
       // Get period from plan_detail if available, default to monthly
 
-      // Map plan names: 'advanced' -> 'free'; team/enterprise kept as-is so the
-      // current-plan marking and checkout pre-selection are correct for org subs.
-      let mappedPlan = "pro";
-      if (planName === "advanced" || planName === "free") {
-        mappedPlan = "free";
-      } else if (planName === "pro") {
-        mappedPlan = "pro";
-      } else if (planName === "team") {
+      // Normalise quota.plan onto a card key. Legacy hand-granted rows carry
+      // free-text names from before the Stripe catalog — 'Pro', 'Drumee Plus'
+      // — and the retired B2C 'pro' tier; the schemas patch moves all of them
+      // onto the Team entitlement, so they must READ as Team here too, or the
+      // banner and the current-plan marking would point at a plan that no
+      // longer exists. Default is 'free', not 'pro': an unknown name must
+      // never imply a paid tier.
+      let mappedPlan = "free";
+      if (/^(team|pro|drumee plus)$/.test(planName)) {
         mappedPlan = "team";
-      } else if (planName === "enterprise") {
-        mappedPlan = "enterprise";
+      } else if (planName === "business") {
+        mappedPlan = "business";
+      } else if (planName === "sovereign" || planName === "enterprise") {
+        mappedPlan = "sovereign";
       }
 
       // Get seat from quota
@@ -476,10 +490,31 @@ class settings_billing extends LetcBox {
    * @param {Object} state - Component state
    * @returns {Object} Summary object with formatted values
    */
+  /**
+   * May this caller reach checkout? One answer for the plan cards, the
+   * select-plan handler and anything else that offers to start a purchase.
+   *
+   * The SERVER decides ownership: it resolves the payer through
+   * organisation.owner_id, which the client cannot see. The client only knows
+   * the domain permission bit, and a member can hold `owner` on the domain
+   * without being the owner_id row — that mismatch is what let a non-owner
+   * walk to the pay step and get ORG_IDENT_REQUIRED. Until the verdict arrives
+   * we fall back to the local rule so the first paint is not wrong in the
+   * common case.
+   * @returns {boolean}
+   */
+  _mayCheckout() {
+    // Does this deployment sell plans at all — nothing overrides that.
+    if (!billingAvailable()) return false;
+    if (this._canBuy === false) return false;
+    if (this._canBuy === true) return true;
+    return canUpgradePlan();
+  }
+
   calculateCheckoutSummary() {
     let state = this.state;
     const checkout = state?.checkout || {};
-    const selectedPlan = checkout.selectedPlan || "pro";
+    const selectedPlan = checkout.selectedPlan || "team";
     const billingCycle = checkout.billingCycle || "monthly";
 
     const baseStorage = this.storage[selectedPlan];
@@ -497,66 +532,48 @@ class settings_billing extends LetcBox {
       }
     }
 
-    const selectedBundle = checkout.selectedBundle;
-
     // Prices come from the server catalog (Stripe is the truth); fall back to
-    // the previous literals only if the catalog didn't load.
+    // the published figures only if the catalog didn't load.
     const catPrice = (code, cycle) => {
       const period = cycle === "yearly" ? "year" : "month";
       const row = (this._catalog || []).find((p) => p.plan_code === code && p.period === period);
       return row && row.amount != null ? Number(row.amount) / 100 : null;
     };
     const planPrices = {
+      // Yearly is 11 x monthly (one month free). Only team has a Stripe price
+      // to read; business is sales-led, so its figure is the published one.
       free: { monthly: 0, yearly: 0 },
-      pro: { monthly: catPrice("pro", "monthly") ?? 16.99, yearly: catPrice("pro", "yearly") ?? 169.9 },
-      team: { monthly: catPrice("team", "monthly") ?? 8, yearly: catPrice("team", "yearly") ?? 80 },
+      team: { monthly: catPrice("team", "monthly") ?? 29, yearly: catPrice("team", "yearly") ?? 319 },
+      business: { monthly: catPrice("business", "monthly") ?? 99, yearly: catPrice("business", "yearly") ?? 1089 },
     };
 
     const basePrice = planPrices[selectedPlan]?.[billingCycle] || 0;
     const period = billingCycle === "yearly" ? "year" : "month";
-    // Storage bundles + extra Pro seats are catalog rows (storage_*, pro_seat)
-    // with per-period Stripe prices — no more hardcoded amounts or the old
-    // yearly x10 multiplier. Fallbacks keep the panel usable offline.
-    const bundleFallback = { 100: { monthly: 8, yearly: 80 }, 500: { monthly: 30, yearly: 300 }, 1000: { monthly: 50, yearly: 500 } };
-    const bundlePrice = selectedBundle
-      ? (catPrice(`storage_${selectedBundle}`, billingCycle)
-          ?? bundleFallback[selectedBundle]?.[billingCycle] ?? 0)
-      : 0;
-    const bundleStorage = selectedBundle ? parseInt(selectedBundle) : 0;
-    const seatPrice = catPrice("pro_seat", billingCycle) ?? (billingCycle === "yearly" ? 50 : 5);
 
-    // Pro plan: base storage + bundle storage
-    let totalStorage = baseStorage + bundleStorage;
-
-    let totalPrice = basePrice + bundlePrice;
-    let extraSeats = 0;
-    if (this.__seatsInput) {
-      let value = this.__seatsInput.getValue()
-      if (value > baseSeats) {
-        extraSeats = value - baseSeats;
-        totalPrice = totalPrice + extraSeats * seatPrice;
-      }
-      if (value < baseSeats) {
-        this.__seatsInput.setValue(baseSeats)
-      }
-    }
-    let seats = baseSeats + extraSeats
-    const effectivePricePerSeat = totalPrice / seats;
-
-    let r = {
+    // FLAT since the 2026-07 pricing rebuild: the plan price IS the total, and
+    // the storage/seat figures come straight from the plan. The storage
+    // bundles (storage_*) and extra-seat (pro_seat) catalog rows that used to
+    // be added on top are retired with the B2C Pro tier, and `seats` is the
+    // plan's member CAP now, not a quantity the buyer picks — so there is
+    // nothing left to accumulate here.
+    //
+    // The zeroed bundle/extra-seat fields are kept in the returned shape on
+    // purpose: skeleton/checkout.js still reads them, and dropping the keys
+    // would render "undefined" rather than simply nothing.
+    const seats = baseSeats;
+    return {
       basePrice: formatCurrency(basePrice),
-      bundlePrice: formatCurrency(bundlePrice),
-      totalPrice: formatCurrency(totalPrice),
-      period: period,
+      bundlePrice: formatCurrency(0),
+      totalPrice: formatCurrency(basePrice),
+      period,
       seats,
-      totalStorage: `${totalStorage} GB`,
-      effectivePricePerSeat: formatCurrency(effectivePricePerSeat),
+      totalStorage: `${baseStorage} GB`,
+      effectivePricePerSeat: formatCurrency(seats > 0 ? basePrice / seats : basePrice),
       selectedPlan,
       billingCycle,
-      extraSeats,
-      bundleStorage
+      extraSeats: 0,
+      bundleStorage: 0,
     };
-    return r
   }
 
 
@@ -573,13 +590,13 @@ class settings_billing extends LetcBox {
       (p) => p.plan_code === code && p.period === period
     );
     if (row && row.amount != null) return Number(row.amount) / 100;
+    // Offline fallbacks only — the catalog above is the truth. Yearly is
+    // 11 x monthly (one month free). Business is sales-led so it never has a
+    // Stripe row; its figure is the published one. The retired B2C entries
+    // (pro, pro_seat, storage_*) are gone with the plans themselves.
     const fb = {
-      pro: { month: 16.99, year: 169.9 },
-      team: { month: 8, year: 80 },
-      pro_seat: { month: 5, year: 50 },
-      storage_100: { month: 8, year: 80 },
-      storage_500: { month: 30, year: 300 },
-      storage_1000: { month: 50, year: 500 },
+      team: { month: 29, year: 319 },
+      business: { month: 99, year: 1089 },
     };
     return (fb[code] && fb[code][period]) || 0;
   }
@@ -629,6 +646,22 @@ class settings_billing extends LetcBox {
 
   // Map an org-ident validation status to its user-facing message.
   _orgIdentError(status) {
+    // Inside an organisation these two stop meaning what they say and start
+    // meaning "you are not this org's BILLING owner".
+    //
+    // The server resolves the payer through organisation.owner_id, while the
+    // client only knows the domain permission bit — a member can hold `owner`
+    // on the domain and still not be the owner_id row. For them the checkout
+    // answers ORG_IDENT_REQUIRED (payment_get_org found no org they own) or,
+    // once a bootstrap is supplied, ALREADY_IN_OTHER_DOMAIN (the
+    // move-semantics guard refuses a second org). Reporting those verbatim
+    // told the user to fill in an org name and subdomain — fields that are
+    // only rendered for a personal account (domain_id <= 1), so the advice was
+    // impossible to act on. Say who can actually do it instead.
+    const inOrg = ~~Visitor.get("domain_id") > 1;
+    if (inOrg && (status === "ORG_IDENT_REQUIRED" || status === "ALREADY_IN_OTHER_DOMAIN")) {
+      return LOCALE.NOT_ORG_OWNER;
+    }
     switch (status) {
       case "IDENT_INVALID": return LOCALE.ORG_IDENT_INVALID;
       case "IDENT_NOT_AVAILABLE": return LOCALE.ORG_IDENT_TAKEN;
@@ -646,10 +679,6 @@ class settings_billing extends LetcBox {
   // can't distinguish an org — use domain_id (org owners are on a domain > 1;
   // a personal Pro is on the default domain 1), matching the same
   // domain_id <= 1 gate the org-bootstrap checkout uses.
-  _isPaidPro() {
-    const plan = String(((Visitor.quota && Visitor.quota()) || {}).plan || "").toLowerCase();
-    return plan === "pro" && ~~Visitor.get("domain_id") <= 1;
-  }
 
   // True when the caller currently pays for an ORG/Team subscription (so
   // moving to Pro is a plan SWITCH that ends the Team plan). Guards the
@@ -675,33 +704,21 @@ class settings_billing extends LetcBox {
     // The SERVER decides the price (Stripe price_id from yp.plan); the client
     // only declares WHAT to buy. plan 'team' => org (per-seat) checkout.
     const checkout = this.state.checkout || {};
-    const plan = checkout.selectedPlan || "pro";
+    const plan = checkout.selectedPlan || "team";
+    // Team is an ORGANISATION plan; it is also the only self-serve tier left,
+    // so 'org' is the only paid entity_type that reaches checkout.
     const entity_type = plan === "team" ? "org" : "user";
     const period = checkout.billingCycle === "yearly" ? "year" : "month";
-    // Org (team): quantity = seats. Pro per-seat: send the requested seat
-    // total too — the server turns seats beyond the plan's included 5 into a
-    // recurring pro_seat line item.
-    const requested = Math.max(1, ~~((this.__seatsInput && this.__seatsInput.getValue()) || checkout.seats || 1));
-    const seats = entity_type === "org" ? requested : (plan === "pro" ? requested : 1);
-    // Optional storage add-on: the bundle picker stores 100/500/1000 -> storage_*.
-    const bundle = checkout.selectedBundle ? `storage_${checkout.selectedBundle}` : "";
+    // No seats, no bundle. Every plan is flat since the 2026-07 rebuild: Team
+    // is $29 for 100 GB and up to 10 members, so the seat count is a cap, not
+    // a purchased quantity — the server sends quantity 1 and would multiply
+    // the bill if we passed a seat total. The storage bundles and the
+    // extra-seat add-on are retired along with the B2C Pro tier.
     // hub_id is REQUIRED: payment.checkout is ACL scope:hub/src:owner. Without it
     // the server falls back to the host hub (where the caller isn't owner) and
     // returns 403 PERMISSION_DENIED. Send the caller's own hub so the owner
     // check resolves correctly (verified: missing hub_id -> 403, present -> 200).
-    const payload = { hub_id: Visitor.id, entity_type, plan, period, seats, bundle };
-    // Team→Pro switch (confirmed in the select-plan popup): flag the checkout
-    // so the Stripe webhook cancels the org's Team subscription (at period
-    // end) once THIS personal payment completes. Only meaningful for a
-    // personal Pro purchase by a still-paying Team owner — never set
-    // otherwise. Single-use: cleared right after so a leftover flag can't
-    // attach to an unrelated later checkout in the same widget session (e.g.
-    // the user backs out to the plan picker and buys a plain Pro seat add-on
-    // afterwards).
-    if (entity_type === "user" && plan === "pro" && this._switchFromTeam && this._isPaidTeam()) {
-      payload.supersede = "org";
-    }
-    this._switchFromTeam = false;
+    const payload = { hub_id: Visitor.id, entity_type, plan, period };
     // TEAM bootstrap: the payer is still on the default domain — the org
     // name + subdomain were collected in the checkout form; validate the
     // ident server-side BEFORE the Stripe redirect (product decision: prompt
@@ -1093,68 +1110,32 @@ class settings_billing extends LetcBox {
       case "select-plan":
         return this.handleSelectPlan(cmd);
 
-      case "select-plan-button":
+      case "select-plan-button": {
         const planValue = this._getValueFromCmd(cmd, args);
-        if (
-          planValue === "free" ||
-          planValue === "pro" ||
-          planValue === "team" ||
-          planValue === "enterprise"
-        ) {
-          if (planValue === "enterprise") {
-            if (Wm && Wm.alert) {
-              Wm.alert(
-                (LOCALE.CONTACT_SALES_VIA || "Please contact our sales team via {0}")
-                  .format(LOCALE.SALES_CONTACT_EMAIL || "contact@drumee.org")
-              );
-            }
-          } else if (planValue === "team" && this._isPaidPro()) {
-            // A paying Pro user upgrading to Team: warn first that their
-            // current Pro plan is replaced by Team. Team is an org (per-seat)
-            // subscription; the Stripe webhook cancels the personal Pro sub
-            // automatically once the Team payment completes
-            // (_cancelSupersededPersonalSubscription). So DON'T cancel here —
-            // if the user abandons the Stripe checkout they keep their Pro.
-            // Yes → proceed to the Team checkout; No → stay on the current plan.
-            Wm.confirm({
-              title: LOCALE.UPGRADE_TO_TEAM_CONFIRM_TITLE || "Upgrade to Team",
-              message: LOCALE.UPGRADE_TO_TEAM_CONFIRM_MESSAGE
-                || "Upgrading to Team will cancel your current Pro plan when you complete checkout. Continue?",
-              confirm: LOCALE.YES || "Yes",
-              confirm_type: "primary",
-              cancel: LOCALE.NO || "No",
-              cancel_type: "secondary",
-              mode: "hbf",
-            })
-              .then(() => this._enterCheckoutFor("team"))
-              .catch(() => { /* No → stay on the current plan */ });
-          } else if (planValue === "pro" && this._isPaidTeam()) {
-            // A paying Team owner switching to Pro: confirm first — the Team
-            // plan gets cancelled (at period end) once the Pro checkout
-            // completes, handled by the Stripe webhook via the `supersede`
-            // metadata flag set in _proceedToCheckout. DON'T cancel here —
-            // abandoning the checkout must keep the Team plan untouched.
-            // Yes → proceed to the Pro checkout; No → stay on Team.
-            Wm.confirm({
-              title: LOCALE.SWITCH_TO_PRO_CONFIRM_TITLE || "Switch to Pro",
-              message: LOCALE.SWITCH_TO_PRO_CONFIRM_MESSAGE
-                || "Switching to Pro will cancel your current Team plan, once you complete checkout. Do you want to continue?",
-              confirm: LOCALE.YES || "Yes",
-              confirm_type: "primary",
-              cancel: LOCALE.NO || "No",
-              cancel_type: "secondary",
-              mode: "hbf",
-            })
-              .then(() => {
-                this._switchFromTeam = true;
-                this._enterCheckoutFor("pro");
-              })
-              .catch(() => { /* No → stay on the current plan */ });
-          } else {
-            this._enterCheckoutFor(planValue);
+        // Business and Sovereign are sales-led since the 2026-07 pricing
+        // rebuild — they carry no Stripe price, so there is no checkout to
+        // enter and sending them there would dead-end on NO_PRICE. Point the
+        // caller at sales instead. ('enterprise' is the retired name for the
+        // same idea, matched so a stale card cannot fall through.)
+        if (/^(business|sovereign|enterprise)$/.test(planValue)) {
+          if (Wm && Wm.alert) {
+            Wm.alert(
+              (LOCALE.CONTACT_SALES_VIA || "Please contact our sales team via {0}")
+                .format(LOCALE.SALES_CONTACT_EMAIL || "contact@drumee.org")
+            );
           }
+        } else if (!this._mayCheckout()) {
+          // Defense in depth behind the disabled card CTA: a stale render or a
+          // deep link must not reach a checkout that can only dead-end.
+          if (Wm && Wm.alert) Wm.alert(LOCALE.ONLY_OWNER_CAN_CHANGE_PLAN);
+        } else if (planValue === "free" || planValue === "team") {
+          // Team is the only self-serve tier now. The old Pro<->Team switch
+          // confirmations went with the B2C Pro plan: there is no longer a
+          // personal subscription for a Team purchase to supersede.
+          this._enterCheckoutFor(planValue);
         }
         return false;
+      }
       case "storage-changes":
         this.state.checkout.storage = args.value;
         this._updateRightPanelContent()
@@ -1173,25 +1154,12 @@ class settings_billing extends LetcBox {
 
       case "select-checkout-plan":
         const plan = this._getValueFromCmd(cmd, args);
-        if (plan === "free" || plan === "pro" || plan === "team") {
+        if (plan === "free" || plan === "team") {
+          // Storage and seats are fixed per plan now (flat pricing), so they
+          // are read straight off the plan rather than nudged per branch.
           this.state.checkout.selectedPlan = plan;
-          // If switching to free plan, set storage to 20GB and clear bundle selection
-          if (plan === "free") {
-            this.state.checkout.storage = 20;
-            this.state.checkout.selectedBundle = "";
-          }
-          // If switching to pro plan, set seats to 5 and additional storage to 0
-          if (plan === "pro") {
-            this.state.checkout.seats = 5;
-            this.state.checkout.storage = 0;
-            this.state.checkout.selectedBundle = "";
-          }
-          // Team is per-seat (org): start at the team baseline seats, no add-on.
-          if (plan === "team") {
-            this.state.checkout.seats = this.seats.team || 1;
-            this.state.checkout.storage = 0;
-            this.state.checkout.selectedBundle = "";
-          }
+          this.state.checkout.storage = this.storage[plan] || 0;
+          this.state.checkout.seats = this.seats[plan] || 0;
           this.renderContent();
         }
         return false;
