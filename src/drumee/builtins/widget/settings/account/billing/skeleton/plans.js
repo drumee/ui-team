@@ -28,15 +28,16 @@ function getOptions(ui, cycle = "monthly") {
   );
   const sovereignPrice = money(isYear ? 5489 : 499);
 
-  const perMonth = LOCALE.PER_MONTH;
-  const perYear = LOCALE.PER_YEAR;
-  const per = isYear ? perYear : perMonth;
+  const per = isYear ? LOCALE.PER_YEAR : LOCALE.PER_MONTH;
 
   return {
     free: {
       title: LOCALE.FREE,
       priceAmount: money(0),
-      pricePeriod: perMonth,
+      // Follows the cycle toggle like every other card: $0 is $0 either way,
+      // but leaving it pinned to "/ month" made the Free card look stale next
+      // to three cards that had just switched to "/ year".
+      pricePeriod: per,
       buttonTitle: LOCALE.CTA_START_FREE,
       buttonKind: "secondary",
       subText: LOCALE.PLAN_FREE_DESC,
