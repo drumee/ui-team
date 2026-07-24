@@ -1702,6 +1702,17 @@ class __window_upload_progress extends __window_core {
       this._revealInLayout(ev && ev.data, ev && ev.parent);
       this._renderAggregateThrottled();
       this._renderProgressListThrottled();
+      // Global "a file was uploaded" signal. The BundleJob path (topbar Upload
+      // button / file picker) only emits Backbone events on the job, so it
+      // never fired the RADIO_MEDIA `_e.uploaded` that the legacy media_uploader
+      // does — leaving global listeners (e.g. the reward-flow Step 2 gate)
+      // stuck. Mirror it here, once per job: file-done repeats per file
+      // (thousands for a big folder), and one signal is all a "did they upload
+      // anything" consumer needs.
+      if (!job._uploadedBroadcast && typeof RADIO_MEDIA !== "undefined") {
+        job._uploadedBroadcast = 1;
+        RADIO_MEDIA.trigger(_e.uploaded, ev && ev.data);
+      }
     });
     job.on("error", this._renderProgressListThrottled);
     job.on("done", ({ canceled }) => this._onBundleDone(canceled, job));
