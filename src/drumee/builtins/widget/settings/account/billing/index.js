@@ -281,11 +281,22 @@ class settings_billing extends LetcBox {
       // 'month'/'monthly' => monthly; 'year'/'yearly' => yearly. (The old
       // /^moth/ typo never matched, so checkout always pre-selected yearly.)
       billing_cycle = /^month/i.test(billing_cycle || "") ? "monthly" : (/^year/i.test(billing_cycle || "") ? "yearly" : "monthly");
-      // Update checkout state with current plan, seats, and storage
-      this.state.checkout.selectedPlan = mappedPlan;
-      this.state.checkout.billingCycle = billing_cycle;
-      this.state.checkout.seats = total_seat || 0;
-      this.state.checkout.storage = storageGB;
+      // Seed the checkout form from the CURRENT plan — but ONLY while the user
+      // isn't already in the checkout tab. fetchPlanData re-runs on every
+      // subscription re-sync (the initial load's slow ~5s round-trip, a
+      // payment.plan_updated WS event, a visibilitychange), and each run used
+      // to overwrite the checkout selection with the current plan. So a Team
+      // owner who clicked "Choose Pro" → confirm → checkout would, ~5s later,
+      // have selectedPlan silently reverted from 'pro' back to 'team': the
+      // payment form flips to their existing plan and the switch is lost
+      // (QA: "clicking checkout bounces back to subscription management"). The
+      // user's active checkout selection must win over a background re-sync.
+      if (this.state.currentTab !== TAB_CHECKOUT) {
+        this.state.checkout.selectedPlan = mappedPlan;
+        this.state.checkout.billingCycle = billing_cycle;
+        this.state.checkout.seats = total_seat || 0;
+        this.state.checkout.storage = storageGB;
+      }
       // Store plan data for reference
       this.currentPlan = {
         plan: planName,
