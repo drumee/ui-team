@@ -3,12 +3,14 @@
  * 3275:236421 (step 3).
  *
  * Layout: 3-segment progress bar → icon chip → title → description → footer.
- * Step 1 has a single full-width primary button and no Back (nothing to go
- * back to). Steps 2 and 3 pair Back with their primary action.
+ * Active Step 1 has a single full-width primary button and no Back (nothing to
+ * go back to). Steps 2 and 3 pair Back with their primary action.
  *
- * The `*_waiting` variants render the same card minus the primary button,
- * plus a hint line: the user has been handed off to the real uploader or the
- * real invite popup, and Back is their way out if they change their mind.
+ * The `*_waiting` variants render the same card minus the primary button, plus
+ * a hint line: the user has been handed off to the real new-workspace dialog,
+ * uploader, or invite popup. Every waiting state keeps Back — even step1's,
+ * whose active card has none — so a user who changes their mind is never
+ * trapped.
  *
  * Pure function of `ui` — reads only fig.family, getStep() and getFurthest().
  */
@@ -19,7 +21,7 @@ const STEPS = {
     ico: "folder-header",
     title: () => LOCALE.REWARD_FLOW_STEP1_TITLE || "Step 1: Create your Workspace",
     desc: () => LOCALE.REWARD_FLOW_STEP1_DESC
-      || "You're already in! Your workspace is ready for action.",
+      || "Set up your first workspace to get started.",
     primaryLabel: () => LOCALE.REWARD_FLOW_CONTINUE || "Continue",
     primaryService: "reward-continue",
     back: false,
@@ -45,6 +47,8 @@ const STEPS = {
 };
 
 const WAITING_HINT = {
+  step1_waiting: () => LOCALE.REWARD_FLOW_WAITING_WORKSPACE
+    || "Waiting for your workspace…",
   step2_waiting: () => LOCALE.REWARD_FLOW_WAITING_UPLOAD
     || "Waiting for your first upload…",
   step3_waiting: () => LOCALE.REWARD_FLOW_WAITING_INVITE
@@ -70,7 +74,9 @@ module.exports = function stepCard(ui) {
   });
 
   const footerKids = [];
-  if (cfg.back) {
+  // Waiting states always show Back — even step1's, whose active card has none —
+  // so the user handed off to a real surface can always retreat.
+  if (cfg.back || waiting) {
     footerKids.push(
       Skeletons.Note({
         className: `${pfx}__btn ${pfx}__btn--ghost`,

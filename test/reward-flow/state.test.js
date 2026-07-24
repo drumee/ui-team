@@ -19,6 +19,15 @@ global.RADIO_MEDIA = {
   trigger: (evt, d) => (radio.handlers[evt] || []).forEach((f) => f(d)),
 };
 
+const bcast = { handlers: {} };
+global.RADIO_BROADCAST = {
+  on: (evt, cb) => { (bcast.handlers[evt] = bcast.handlers[evt] || []).push(cb); },
+  off: (evt, cb) => {
+    bcast.handlers[evt] = (bcast.handlers[evt] || []).filter((f) => f !== cb);
+  },
+  trigger: (evt, d) => (bcast.handlers[evt] || []).forEach((f) => f(d)),
+};
+
 const modal = { fed: null, cleared: 0, el: { dataset: {} } };
 global.Wm = {
   __wrapperModal: {
@@ -60,9 +69,18 @@ function makeFlow() {
 
 const click = (f, service) => f.onUiEvent({ mget: () => null }, { service });
 
+// Reach step 2 the way the real flow does: Continue opens the new-workspace
+// dialog (step1_waiting), and media_form's "workspace:refresh" broadcast —
+// fired after desk.create_hub succeeds — advances the wizard to step 2.
+function toStep2(f) {
+  click(f, "reward-continue");
+  RADIO_BROADCAST.trigger("workspace:refresh", {});
+}
+
 beforeEach(() => {
   for (const k of Object.keys(store)) delete store[k];
   radio.handlers = {};
+  bcast.handlers = {};
   modal.fed = null;
   modal.cleared = 0;
 });
@@ -102,24 +120,46 @@ test("starts at step1 with the first segment filled", () => {
   assert.equal(f.getFurthest(), 1);
 });
 
-test("continue advances to step2", () => {
+test("continue fires the desk new-workspace service and enters the waiting state", () => {
   const f = makeFlow();
   click(f, "reward-continue");
+  assert.equal(f.getStep(), "step1_waiting");
+  assert.deepEqual(f.sent, [{ service: "new-workspace" }]);
+});
+
+test("a created workspace advances to step2", () => {
+  const f = makeFlow();
+  click(f, "reward-continue");
+  RADIO_BROADCAST.trigger("workspace:refresh", {});
   assert.equal(f.getStep(), "step2");
   assert.equal(f.getFurthest(), 2);
 });
 
-test("upload fires the desk upload service and enters the waiting state", () => {
+test("a workspace:refresh outside the waiting state is ignored", () => {
+  const f = makeFlow();
+  RADIO_BROADCAST.trigger("workspace:refresh", {});
+  assert.equal(f.getStep(), "step1");
+});
+
+test("back from step1's waiting state returns to step1", () => {
   const f = makeFlow();
   click(f, "reward-continue");
+  assert.equal(f.getStep(), "step1_waiting");
+  click(f, "reward-back");
+  assert.equal(f.getStep(), "step1");
+});
+
+test("upload fires the desk upload service and enters the waiting state", () => {
+  const f = makeFlow();
+  toStep2(f);
   click(f, "reward-upload");
   assert.equal(f.getStep(), "step2_waiting");
-  assert.deepEqual(f.sent, [{ service: _e.upload }]);
+  assert.deepEqual(f.sent.at(-1), { service: _e.upload });
 });
 
 test("a completed upload advances to step3", () => {
   const f = makeFlow();
-  click(f, "reward-continue");
+  toStep2(f);
   click(f, "reward-upload");
   RADIO_MEDIA.trigger(_e.uploaded, {});
   assert.equal(f.getStep(), "step3");
@@ -134,7 +174,7 @@ test("an upload completing outside the waiting state is ignored", () => {
 
 test("invite fires the desk invite service and enters the waiting state", () => {
   const f = makeFlow();
-  click(f, "reward-continue");
+  toStep2(f);
   click(f, "reward-upload");
   f.onUploadDone();
   click(f, "reward-invite");
@@ -144,7 +184,7 @@ test("invite fires the desk invite service and enters the waiting state", () => 
 
 test("a sent invitation opens the congratulations modal", async () => {
   const f = makeFlow();
-  click(f, "reward-continue");
+  toStep2(f);
   click(f, "reward-upload");
   f.onUploadDone();
   click(f, "reward-invite");
@@ -167,7 +207,7 @@ test("a sent invitation opens the congratulations modal", async () => {
 
 test("getFurthest stays at 3 once the flow reaches the congrats state", () => {
   const f = makeFlow();
-  click(f, "reward-continue");
+  toStep2(f);
   click(f, "reward-upload");
   f.onUploadDone();
   click(f, "reward-invite");
@@ -179,7 +219,7 @@ test("getFurthest stays at 3 once the flow reaches the congrats state", () => {
 
 test("a trailing invite-popup close after a successful send does not disturb the congrats modal", async () => {
   const f = makeFlow();
-  click(f, "reward-continue");
+  toStep2(f);
   click(f, "reward-upload");
   f.onUploadDone();
   click(f, "reward-invite");
@@ -212,7 +252,7 @@ test("a stored 'congrats' terminal marker is not resumable and falls back to ste
 
 test("closing the invite popup without sending returns to step3", () => {
   const f = makeFlow();
-  click(f, "reward-continue");
+  toStep2(f);
   click(f, "reward-upload");
   f.onUploadDone();
   click(f, "reward-invite");
@@ -222,7 +262,7 @@ test("closing the invite popup without sending returns to step3", () => {
 
 test("continue is a no-op while a waiting state is active", () => {
   const f = makeFlow();
-  click(f, "reward-continue");
+  toStep2(f);
   click(f, "reward-upload");
   assert.equal(f.getStep(), "step2_waiting");
   click(f, "reward-continue");
@@ -233,20 +273,18 @@ test("continue is a no-op while a waiting state is active", () => {
 
 test("back is navigation only and never rewinds progress", () => {
   const f = makeFlow();
-  click(f, "reward-continue");
+  toStep2(f);
   click(f, "reward-upload");
   f.onUploadDone();
   assert.equal(f.getStep(), "step3");
   click(f, "reward-back");
   assert.equal(f.getStep(), "step2");
   assert.equal(f.getFurthest(), 3, "progress must not rewind");
-  click(f, "reward-continue");
-  assert.equal(f.getStep(), "step3", "continue returns straight to step3");
 });
 
 test("back from step2 lands on step1", () => {
   const f = makeFlow();
-  click(f, "reward-continue");
+  toStep2(f);
   click(f, "reward-back");
   assert.equal(f.getStep(), "step1");
 });
@@ -259,7 +297,7 @@ test("back on step1 is a no-op", () => {
 
 test("back from a waiting state returns to its own step", () => {
   const f = makeFlow();
-  click(f, "reward-continue");
+  toStep2(f);
   click(f, "reward-upload");
   assert.equal(f.getStep(), "step2_waiting");
   click(f, "reward-back");
@@ -276,7 +314,7 @@ test("clicking the vignette opens the drop modal", () => {
 
 test("staying closes the modal and keeps the same step", () => {
   const f = makeFlow();
-  click(f, "reward-continue");
+  toStep2(f);
   click(f, "reward-vignette-click");
   click(f, "reward-drop-stay");
   assert.equal(modal.cleared, 1);
@@ -285,7 +323,7 @@ test("staying closes the modal and keeps the same step", () => {
 
 test("the vignette is inert during a waiting state", () => {
   const f = makeFlow();
-  click(f, "reward-continue");
+  toStep2(f);
   click(f, "reward-upload");
   click(f, "reward-vignette-click");
   assert.equal(modal.fed, null, "no drop modal while waiting");
@@ -313,7 +351,7 @@ test("dropping out latches the flow off and destroys it", () => {
 
 test("finishing latches the flow off and destroys it", async () => {
   const f = makeFlow();
-  click(f, "reward-continue");
+  toStep2(f);
   click(f, "reward-upload");
   f.onUploadDone();
   click(f, "reward-invite");
@@ -329,7 +367,7 @@ test("finishing latches the flow off and destroys it", async () => {
 
 test("finishing clears the modal host so no stale modal outlives the flow", async () => {
   const f = makeFlow();
-  click(f, "reward-continue");
+  toStep2(f);
   click(f, "reward-upload");
   f.onUploadDone();
   click(f, "reward-invite");
@@ -352,12 +390,19 @@ test("exiting unsubscribes from the media radio", () => {
   assert.equal((radio.handlers[_e.uploaded] || []).length, 0);
 });
 
+test("exiting unsubscribes from the workspace:refresh broadcast", () => {
+  const f = makeFlow();
+  click(f, "reward-vignette-click");
+  click(f, "reward-drop-leave");
+  assert.equal((bcast.handlers["workspace:refresh"] || []).length, 0);
+});
+
 // ── resume ──────────────────────────────────────────────────────────────────
 
 test("every transition persists the step", () => {
   const f = makeFlow();
   click(f, "reward-continue");
-  assert.equal(store.reward_step, "step2");
+  assert.equal(store.reward_step, "step1_waiting");
 });
 
 test("a stored step is resumed on mount", () => {
@@ -386,7 +431,7 @@ test("with no modal host, a sent invitation still finishes the flow", async () =
   global.Wm = {};
   try {
     const f = makeFlow();
-    click(f, "reward-continue");
+    toStep2(f);
     click(f, "reward-upload");
     f.onUploadDone();
     click(f, "reward-invite");

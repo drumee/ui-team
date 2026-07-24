@@ -46,11 +46,18 @@ test("progress segments fill up to furthest, never beyond", () => {
 });
 
 test("waiting states keep back but drop the primary action", () => {
+  // step1's active card has no Back, but its waiting card must still show one
+  // (the user has been handed off to the real new-workspace dialog).
+  assert.deepEqual(services(stepCard(ui("step1_waiting", 1))), ["reward-back"]);
   assert.deepEqual(services(stepCard(ui("step2_waiting", 2))), ["reward-back"]);
   assert.deepEqual(services(stepCard(ui("step3_waiting", 3))), ["reward-back"]);
 });
 
 test("waiting states show the waiting hint", () => {
+  assert.ok(
+    contents(stepCard(ui("step1_waiting", 1)))
+      .includes(LOCALE.REWARD_FLOW_WAITING_WORKSPACE),
+  );
   assert.ok(
     contents(stepCard(ui("step2_waiting", 2)))
       .includes(LOCALE.REWARD_FLOW_WAITING_UPLOAD),

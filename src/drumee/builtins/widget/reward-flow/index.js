@@ -76,6 +76,14 @@ class __reward_flow extends LetcBox {
     if (typeof RADIO_MEDIA !== "undefined") {
       RADIO_MEDIA.on(_e.uploaded, this._onUploaded);
     }
+
+    // media_form broadcasts "workspace:refresh" after desk.create_hub succeeds
+    // — the completion signal that advances step 1, mirroring the upload signal
+    // for step 2.
+    this._onWorkspaceRefresh = () => this.onWorkspaceCreated();
+    if (typeof RADIO_BROADCAST !== "undefined") {
+      RADIO_BROADCAST.on("workspace:refresh", this._onWorkspaceRefresh);
+    }
   }
 
   onDomRefresh() {
@@ -90,6 +98,10 @@ class __reward_flow extends LetcBox {
     if (this._onUploaded && typeof RADIO_MEDIA !== "undefined") {
       RADIO_MEDIA.off(_e.uploaded, this._onUploaded);
       this._onUploaded = null;
+    }
+    if (this._onWorkspaceRefresh && typeof RADIO_BROADCAST !== "undefined") {
+      RADIO_BROADCAST.off("workspace:refresh", this._onWorkspaceRefresh);
+      this._onWorkspaceRefresh = null;
     }
   }
 
@@ -118,7 +130,15 @@ class __reward_flow extends LetcBox {
 
   _isWaiting() { return this._step.endsWith("_waiting"); }
 
-  // ───────── external completion signals (called by modules/desk) ─────────
+  // ───────── external completion signals ─────────
+
+  /** A workspace was created (media_form → desk.create_hub → the
+   *  RADIO_BROADCAST "workspace:refresh" this subscribes to). Advances step 1
+   *  only while it is waiting. */
+  onWorkspaceCreated() {
+    if (this._step !== "step1_waiting") return;
+    this._goto("step2");
+  }
 
   /** A file upload completed. Advances step 2 only while it is waiting. */
   onUploadDone() {
@@ -195,14 +215,16 @@ class __reward_flow extends LetcBox {
   onUiEvent(cmd, args = {}) {
     const service = args.service || (cmd && cmd.mget && cmd.mget(_a.service));
     switch (service) {
-      case "reward-continue": {
-        // Inert while the user is being handed off to a real surface.
+      case "reward-continue":
+        // step1's primary action: open the real new-workspace dialog and wait
+        // for a workspace to be created (onWorkspaceCreated), mirroring how
+        // reward-upload/reward-invite hand off to real surfaces. Inert while
+        // already waiting.
         if (this._isWaiting()) return;
-        // From step1, or returning forward after a Back.
-        const next = STEPS[STEPS.indexOf(this._step) + 1];
-        if (next) this._goto(next);
+        this._goto("step1_waiting");
+        // Reaches modules/desk -> Wm.onUiEvent "new-workspace" -> media_form.
+        this.triggerHandlers({ service: "new-workspace" });
         return;
-      }
 
       case "reward-upload":
         this._goto("step2_waiting");

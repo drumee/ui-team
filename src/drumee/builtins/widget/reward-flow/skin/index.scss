@@ -139,6 +139,12 @@ $success-soft: rgba(46, 179, 122, 0.14);
   // ───────── buttons ─────────
   &__btn {
     flex: 1 1 0;
+    // Flex-center the label so it sits dead-center regardless of the button's
+    // width (solo full-width primary or half-width paired) — text-align alone
+    // does not center the Note's inline-block content box.
+    display: flex;
+    align-items: center;
+    justify-content: center;
     padding: 11px 16px;
     border-radius: 10px;
     font-size: 14px;
