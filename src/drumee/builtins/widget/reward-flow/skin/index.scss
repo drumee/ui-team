@@ -57,7 +57,7 @@ $success-soft: rgba(46, 179, 122, 0.14);
     top: var(--cut-y, 0);
     width: var(--cut-w, 0);
     height: var(--cut-h, 0);
-    border-radius: 12px;
+    border-radius: 4px;
     pointer-events: none;
     box-shadow: 0 0 0 100vmax var(--overlay-bg, rgba(0, 0, 0, 0.4));
     transition: left 200ms ease, top 200ms ease, width 200ms ease,
@@ -72,34 +72,73 @@ $success-soft: rgba(46, 179, 122, 0.14);
     pointer-events: none;
   }
 
-  // ───────── coach tooltip (guided walkthrough) ─────────
+  // ───────── coach tooltip (guided walkthrough) — styled after window_confirm ─────────
   &__coach {
     position: fixed;
     transform: translateX(-50%);
     box-sizing: border-box;
-    max-width: 260px;
-    padding: 12px 16px;
-    gap: 8px;
-    border-radius: 12px;
-    background-color: var(--normal-bg);
-    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.28);
+    width: 300px;
+    max-width: calc(100vw - 24px);
+    padding: 16px 20px 18px;
+    gap: 12px;
+    border-radius: var(--corner-radius-4, 12px);
+    background-color: var(--normal-bg-90);
+    border: 1px solid var(--border-default);
+    box-shadow: 0 14px 42px rgba(11, 10, 33, 0.16);
     pointer-events: auto;
     z-index: 10021;
   }
 
-  &__coach-text {
-    font-size: 13px;
-    line-height: 1.4;
+  // Branded header: drumee cloud + wordmark, mirroring window-confirm's topbar.
+  &__coach-brand {
+    align-items: flex-end;
+    gap: 8px;
+  }
+
+  &__coach-logo {
+    width: 32px;
+    height: 32px;
+    color: var(--primary-50);
+  }
+
+  &__coach-name {
+    font-size: 20px;
+    font-weight: 700;
+    line-height: 1;
     color: var(--normal-fg);
   }
 
+  &__coach-text {
+    font-size: 13px;
+    line-height: 1.45;
+    color: var(--normal-fg);
+  }
+
+  &__coach-footer {
+    width: 100%;
+    justify-content: flex-end;
+    padding-top: 2px;
+  }
+
+  // Back styled as window-confirm's secondary button.
   &__coach-back {
-    align-self: flex-start;
-    font-size: 12px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 84px;
+    height: 34px;
+    padding: 0 14px;
+    border-radius: var(--corner-radius-2, 8px);
+    font-size: 13px;
     font-weight: 600;
-    color: $accent;
+    color: var(--normal-fg);
+    background-color: var(--normal-bg);
+    border: 1px solid var(--border-default);
     cursor: pointer;
     user-select: none;
+    transition: background-color 120ms ease;
+
+    &:hover { background-color: var(--normal-bg-80); }
   }
 
   &__anchor {

@@ -203,8 +203,8 @@ class __reward_flow extends LetcBox {
     const vh = (win && win.innerHeight) || 800;
     const M = 12;       // viewport margin
     const TOP = 64;     // keep clear of the ~52px topbar
-    const CH = 104;     // approx coach height
-    const CW = 260;     // coach max-width (see skin __coach)
+    const CH = 156;     // approx coach height (brand header + text + button)
+    const CW = 300;     // coach width (see skin __coach)
     const half = CW / 2;
     const clampX = (x) => Math.min(Math.max(x, M + half), vw - M - half);
     const clampY = (y) => Math.min(Math.max(y, TOP), vh - CH - M);
