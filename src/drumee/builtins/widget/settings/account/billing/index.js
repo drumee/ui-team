@@ -1,4 +1,4 @@
-const { canUpgradePlan } = require("libs/billing");
+const { canUpgradePlan, billingAvailable } = require("libs/billing");
 
 const TAB_MONTHLY = 0;
 const TAB_YEARLY = 1;
@@ -97,9 +97,13 @@ class settings_billing extends LetcBox {
   // the banner + cancel/resume actions read. A hard cancel removes the mirror
   // row → _subscription null → no banner (workspace already on Free).
   async _loadSubscription() {
-    this._subscription = await this.fetchService(SERVICE.payment.subscription_status, { hub_id: Visitor.id })
-      .then((d) => (d && d.subscription_id ? d : null))
+    const raw = await this.fetchService(SERVICE.payment.subscription_status, { hub_id: Visitor.id })
       .catch(() => null);
+    // Read the server's checkout verdict BEFORE the row is discarded below. A
+    // caller with no subscription still gets a can_buy answer, and that is
+    // exactly the case that used to walk into a dead end.
+    this._canBuy = raw && typeof raw.can_buy === "boolean" ? raw.can_buy : null;
+    this._subscription = raw && raw.subscription_id ? raw : null;
     const sub = this._subscription;
     const now = Math.floor(Date.now() / 1000);
     this._periodEnd = (sub && Number(sub.period_end)) || 0;
@@ -486,6 +490,27 @@ class settings_billing extends LetcBox {
    * @param {Object} state - Component state
    * @returns {Object} Summary object with formatted values
    */
+  /**
+   * May this caller reach checkout? One answer for the plan cards, the
+   * select-plan handler and anything else that offers to start a purchase.
+   *
+   * The SERVER decides ownership: it resolves the payer through
+   * organisation.owner_id, which the client cannot see. The client only knows
+   * the domain permission bit, and a member can hold `owner` on the domain
+   * without being the owner_id row — that mismatch is what let a non-owner
+   * walk to the pay step and get ORG_IDENT_REQUIRED. Until the verdict arrives
+   * we fall back to the local rule so the first paint is not wrong in the
+   * common case.
+   * @returns {boolean}
+   */
+  _mayCheckout() {
+    // Does this deployment sell plans at all — nothing overrides that.
+    if (!billingAvailable()) return false;
+    if (this._canBuy === false) return false;
+    if (this._canBuy === true) return true;
+    return canUpgradePlan();
+  }
+
   calculateCheckoutSummary() {
     let state = this.state;
     const checkout = state?.checkout || {};
@@ -1099,7 +1124,7 @@ class settings_billing extends LetcBox {
                 .format(LOCALE.SALES_CONTACT_EMAIL || "contact@drumee.org")
             );
           }
-        } else if (!canUpgradePlan()) {
+        } else if (!this._mayCheckout()) {
           // Defense in depth behind the disabled card CTA: a stale render or a
           // deep link must not reach a checkout that can only dead-end.
           if (Wm && Wm.alert) Wm.alert(LOCALE.ONLY_OWNER_CAN_CHANGE_PLAN);

@@ -217,7 +217,10 @@ function ctaButton(ui, fig, opt, option) {
   // cannot bootstrap a second one) — a raw status code after a full checkout
   // walk. Same rule as the sidebar entry, from the same helper, so the two can
   // never disagree.
-  const locked = !isCurrent && !canUpgradePlan();
+  // Prefer the widget's resolved verdict (server-backed) over the local
+  // ownership guess — see settings_billing._mayCheckout.
+  const locked =
+    !isCurrent && !(ui._mayCheckout ? ui._mayCheckout() : canUpgradePlan());
 
   let buttonBtn;
   if (isCurrent) {
