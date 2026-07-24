@@ -2199,7 +2199,7 @@
   "REWARD_FLOW_GUIDE_ADD": "点击“新建”开始。",
   "REWARD_FLOW_GUIDE_MENU": "从菜单中选择“工作区”。",
   "REWARD_FLOW_GUIDE_FORM": "选择工作区类型，命名后点击“创建”。",
-  "REWARD_FLOW_GUIDE_PERM": "查看谁可以访问，然后关闭以继续。",
+  "REWARD_FLOW_GUIDE_PERM": "关闭以继续",
   "REWARD_FLOW_DROP_TITLE": "别现在放弃",
   "REWARD_FLOW_DROP_DESC": "你离奖励非常近了。",
   "REWARD_FLOW_DROP_LEAVE": "仍然放弃",

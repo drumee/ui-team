@@ -2199,7 +2199,7 @@
   "REWARD_FLOW_GUIDE_ADD": "Нажмите «Добавить», чтобы начать.",
   "REWARD_FLOW_GUIDE_MENU": "Выберите «Рабочее пространство» в меню.",
   "REWARD_FLOW_GUIDE_FORM": "Выберите тип пространства, назовите его и нажмите «Создать».",
-  "REWARD_FLOW_GUIDE_PERM": "Проверьте, у кого есть доступ, затем закройте, чтобы продолжить.",
+  "REWARD_FLOW_GUIDE_PERM": "Закройте, чтобы продолжить",
   "REWARD_FLOW_DROP_TITLE": "Не бросайте сейчас",
   "REWARD_FLOW_DROP_DESC": "Вы совсем близко к награде.",
   "REWARD_FLOW_DROP_LEAVE": "Всё равно выйти",

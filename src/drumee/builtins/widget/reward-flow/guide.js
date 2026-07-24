@@ -93,8 +93,7 @@ function tooltipFor(sub) {
       return LOCALE.REWARD_FLOW_GUIDE_FORM
         || "Pick a workspace type, name it, and click Create.";
     case "perm":
-      return LOCALE.REWARD_FLOW_GUIDE_PERM
-        || "Review who can access it, then close to continue.";
+      return LOCALE.REWARD_FLOW_GUIDE_PERM || "Close to continue";
     default:
       return "";
   }
