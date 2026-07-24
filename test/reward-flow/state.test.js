@@ -55,6 +55,9 @@ global.LetcBox = class {
   feed(tree) { this.lastTree = tree; }
   softDestroy() { this.destroyed = true; }
   triggerHandlers(args) { (this.sent = this.sent || []).push(args); }
+  // The real framework resolves a named part; headless there is no DOM, so the
+  // guide's spotlight/clearSpotlight calls resolve to null and no-op.
+  ensurePart() { return Promise.resolve(null); }
   warn() {}
 };
 
@@ -69,9 +72,9 @@ function makeFlow() {
 
 const click = (f, service) => f.onUiEvent({ mget: () => null }, { service });
 
-// Reach step 2 the way the real flow does: Continue opens the new-workspace
-// dialog (step1_waiting), and media_form's "workspace:refresh" broadcast —
-// fired after desk.create_hub succeeds — advances the wizard to step 2.
+// Reach step 2 the way the real flow does: Continue starts the Step 1 guided
+// walkthrough (step1_guide), and form-folder's "workspace:refresh" broadcast —
+// fired after desk.create_hub succeeds — ends the guide and advances to step 2.
 function toStep2(f) {
   click(f, "reward-continue");
   RADIO_BROADCAST.trigger("workspace:refresh", {});
@@ -120,31 +123,41 @@ test("starts at step1 with the first segment filled", () => {
   assert.equal(f.getFurthest(), 1);
 });
 
-test("continue fires the desk new-workspace service and enters the waiting state", () => {
+test("continue starts the guided walkthrough without firing a service", () => {
   const f = makeFlow();
   click(f, "reward-continue");
-  assert.equal(f.getStep(), "step1_waiting");
-  assert.deepEqual(f.sent, [{ service: "new-workspace" }]);
+  assert.equal(f.getStep(), "step1_guide");
+  // The user creates the workspace themselves via the spotlighted real UI, so
+  // the flow fires nothing here (contrast reward-upload / reward-invite).
+  assert.equal(f.sent, undefined);
 });
 
-test("a created workspace advances to step2", () => {
+test("continue is inert while already guiding", () => {
   const f = makeFlow();
   click(f, "reward-continue");
+  click(f, "reward-continue");
+  assert.equal(f.getStep(), "step1_guide");
+});
+
+test("a created workspace ends the guide and advances to step2", () => {
+  const f = makeFlow();
+  click(f, "reward-continue");
+  assert.equal(f.getStep(), "step1_guide");
   RADIO_BROADCAST.trigger("workspace:refresh", {});
   assert.equal(f.getStep(), "step2");
   assert.equal(f.getFurthest(), 2);
 });
 
-test("a workspace:refresh outside the waiting state is ignored", () => {
+test("a workspace:refresh outside the guided state is ignored", () => {
   const f = makeFlow();
   RADIO_BROADCAST.trigger("workspace:refresh", {});
   assert.equal(f.getStep(), "step1");
 });
 
-test("back from step1's waiting state returns to step1", () => {
+test("back from the guided walkthrough returns to step1", () => {
   const f = makeFlow();
   click(f, "reward-continue");
-  assert.equal(f.getStep(), "step1_waiting");
+  assert.equal(f.getStep(), "step1_guide");
   click(f, "reward-back");
   assert.equal(f.getStep(), "step1");
 });
@@ -402,7 +415,14 @@ test("exiting unsubscribes from the workspace:refresh broadcast", () => {
 test("every transition persists the step", () => {
   const f = makeFlow();
   click(f, "reward-continue");
-  assert.equal(store.reward_step, "step1_waiting");
+  assert.equal(store.reward_step, "step1_guide");
+});
+
+test("a stored 'step1_guide' resumes as the step1 card, not mid-guide", () => {
+  store.reward_step = "step1_guide";
+  const f = makeFlow();
+  assert.equal(f.getStep(), "step1");
+  assert.equal(f.getFurthest(), 1);
 });
 
 test("a stored step is resumed on mount", () => {

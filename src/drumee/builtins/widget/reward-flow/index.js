@@ -103,6 +103,68 @@ class __reward_flow extends LetcBox {
       RADIO_BROADCAST.off("workspace:refresh", this._onWorkspaceRefresh);
       this._onWorkspaceRefresh = null;
     }
+    this._stopGuide();
+  }
+
+  // ───────── step 1 guided walkthrough ─────────
+
+  /** Lazily build and start the guide. `./guide` is required lazily so the
+   *  orchestrator stays requirable (and unit-testable) under Node — the guide
+   *  no-ops when there is no DOM. */
+  _startGuide() {
+    if (!this._guide) {
+      const RewardGuide = require("./guide");
+      this._guide = new RewardGuide(this);
+    }
+    this._guide.start();
+  }
+
+  _stopGuide() {
+    if (this._guide) this._guide.stop();
+  }
+
+  /**
+   * Paint the spotlight cutout over `rect` (a viewport-space DOMRect) and feed
+   * the coach tooltip. Called by the guide as it walks the live desk chrome.
+   */
+  spotlight(rect, text) {
+    if (!this.el) return;
+    const cx = rect.left + rect.width / 2;
+    const cy = rect.top + rect.height / 2;
+    const halfDiag =
+      Math.sqrt(rect.width * rect.width + rect.height * rect.height) / 2;
+    const r = Math.max(120, halfDiag + 40);
+    this.el.style.setProperty("--spot-x", `${cx}px`);
+    this.el.style.setProperty("--spot-y", `${cy}px`);
+    this.el.style.setProperty("--spot-radius", `${r}px`);
+    const anchor = this._coachAnchor(rect, cx);
+    this.ensurePart("guide-callout").then((p) => {
+      if (!p) return;
+      p.feed(
+        require("./skeleton/coach")(this, {
+          text,
+          style: anchor.style,
+          side: anchor.side,
+        }),
+      );
+    });
+  }
+
+  /** Place the coach below the target, or above it when there is no room. */
+  _coachAnchor(rect, cx) {
+    const vh = (typeof window !== "undefined" && window.innerHeight) || 800;
+    const below = rect.bottom + 12;
+    if (below + 96 < vh) {
+      return { side: "below", style: { left: `${cx}px`, top: `${below}px` } };
+    }
+    return {
+      side: "above",
+      style: { left: `${cx}px`, bottom: `${vh - rect.top + 12}px` },
+    };
+  }
+
+  clearSpotlight() {
+    this.ensurePart("guide-callout").then((p) => p && p.feed(null));
   }
 
   // ───────── skeleton accessors ─────────
@@ -132,11 +194,12 @@ class __reward_flow extends LetcBox {
 
   // ───────── external completion signals ─────────
 
-  /** A workspace was created (media_form → desk.create_hub → the
-   *  RADIO_BROADCAST "workspace:refresh" this subscribes to). Advances step 1
-   *  only while it is waiting. */
+  /** A workspace was created (form-folder → desk.create_hub → the
+   *  RADIO_BROADCAST "workspace:refresh" this subscribes to). Ends the Step 1
+   *  guided walkthrough and advances. Only fires while guiding. */
   onWorkspaceCreated() {
-    if (this._step !== "step1_waiting") return;
+    if (this._step !== "step1_guide") return;
+    this._stopGuide();
     this._goto("step2");
   }
 
@@ -216,14 +279,13 @@ class __reward_flow extends LetcBox {
     const service = args.service || (cmd && cmd.mget && cmd.mget(_a.service));
     switch (service) {
       case "reward-continue":
-        // step1's primary action: open the real new-workspace dialog and wait
-        // for a workspace to be created (onWorkspaceCreated), mirroring how
-        // reward-upload/reward-invite hand off to real surfaces. Inert while
-        // already waiting.
-        if (this._isWaiting()) return;
-        this._goto("step1_waiting");
-        // Reaches modules/desk -> Wm.onUiEvent "new-workspace" -> media_form.
-        this.triggerHandlers({ service: "new-workspace" });
+        // step1's primary action: start the guided walkthrough that spotlights
+        // the real desk chrome (Add new → Workspace item → the form) and lets
+        // the user create the workspace themselves. onWorkspaceCreated ends it.
+        // Inert if already waiting or guiding.
+        if (this._isWaiting() || this._step === "step1_guide") return;
+        this._goto("step1_guide");
+        this._startGuide();
         return;
 
       case "reward-upload":
@@ -239,6 +301,12 @@ class __reward_flow extends LetcBox {
         return;
 
       case "reward-back": {
+        // Back out of the Step 1 walkthrough → tear the guide down and return
+        // to the Step 1 card.
+        if (this._step === "step1_guide") {
+          this._stopGuide();
+          return this._goto("step1");
+        }
         const base = this._step.replace("_waiting", "");
         if (this._isWaiting()) return this._goto(base);
         const prev = STEPS[STEPS.indexOf(base) - 1];

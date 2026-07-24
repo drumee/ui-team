@@ -1,5 +1,33 @@
 @use "mixins/drumee";
 
+// Animatable spotlight-cutout vars for the Step 1 guided walkthrough. Declared
+// as @property so the radial-gradient centre/radius tween when the guide moves
+// the spotlight from one target to the next.
+@property --spot-x {
+  syntax: "<length-percentage>";
+  inherits: true;
+  initial-value: 50%;
+}
+@property --spot-y {
+  syntax: "<length-percentage>";
+  inherits: true;
+  initial-value: 50%;
+}
+@property --spot-radius {
+  syntax: "<length>";
+  inherits: true;
+  initial-value: 160px;
+}
+
+// Foreign-DOM annotation: the guide adds this to the topbar Add-menu items it
+// wants disabled (everything but "Workspace") while it holds the dropdown open,
+// and removes it on teardown. Global (not nested) because it lands on desk
+// chrome the reward flow does not own.
+.reward-guide-disabled {
+  opacity: 0.4 !important;
+  pointer-events: none !important;
+}
+
 // Brand accent — same design-system tokens migrate-gdrive-popup uses.
 // --primary-purple-40 is the brand button colour; it is identical in light
 // and dark themes, so the rgba tints below are theme-safe.
@@ -35,6 +63,61 @@ $success-soft: rgba(46, 179, 122, 0.14);
   &__root[data-waiting="1"] &__vignette {
     opacity: 0;
     pointer-events: none;
+  }
+
+  // Guiding (Step 1 walkthrough): the scrim becomes a spotlight cutout — dark
+  // everywhere except a transparent circle over the target the guide is
+  // pointing at — and stays click-through so the user can operate the real
+  // desk chrome underneath.
+  &__root[data-guiding="1"] &__vignette {
+    pointer-events: none;
+    background-color: transparent;
+    background-image: radial-gradient(
+      circle var(--spot-radius) at var(--spot-x) var(--spot-y),
+      rgba(0, 0, 0, 0) 0%,
+      rgba(0, 0, 0, 0) 55%,
+      var(--overlay-bg, rgba(0, 0, 0, 0.5)) 100%
+    );
+    transition: --spot-x 280ms ease, --spot-y 280ms ease,
+      --spot-radius 280ms ease;
+  }
+
+  // Callout host for the coach tooltip — spans the viewport but never blocks
+  // (the coach itself opts pointer events back in).
+  &__guide-callout {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+  }
+
+  // ───────── coach tooltip (guided walkthrough) ─────────
+  &__coach {
+    position: fixed;
+    transform: translateX(-50%);
+    box-sizing: border-box;
+    max-width: 260px;
+    padding: 12px 16px;
+    gap: 8px;
+    border-radius: 12px;
+    background-color: var(--normal-bg);
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.28);
+    pointer-events: auto;
+    z-index: 10021;
+  }
+
+  &__coach-text {
+    font-size: 13px;
+    line-height: 1.4;
+    color: var(--normal-fg);
+  }
+
+  &__coach-back {
+    align-self: flex-start;
+    font-size: 12px;
+    font-weight: 600;
+    color: $accent;
+    cursor: pointer;
+    user-select: none;
   }
 
   &__anchor {
