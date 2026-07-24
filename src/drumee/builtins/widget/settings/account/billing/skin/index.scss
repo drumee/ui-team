@@ -1460,3 +1460,72 @@
     display: none !important;
   }
 }
+
+// The stacked-card layout, and its type.
+//
+// Two faults this fixes, both measured:
+//
+// 1. The cards never stacked. Box.G keeps its four columns and merely squeezes
+//    them, so at a 420px container each card was 98px wide — with a 40px price
+//    inside it, which is what overflowed. They now wrap, and go full width once
+//    even two columns stop making sense.
+//
+// 2. Type jumped UP as space ran out. The earlier pass scaled the TABLE header
+//    down to its column but left the cards on the original card scale, so
+//    folding at 820px snapped the price from 21px straight to 40px — bigger
+//    text in less room. The card scale now starts near where the table leaves
+//    off and steps down again with the container, so the size never increases
+//    as the viewport shrinks.
+.settings-billing__plans-narrow {
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: stretch;
+
+  > * {
+    flex: 1 1 260px;
+    min-width: 0; // let a flex item shrink below its content width
+  }
+
+  .settings-billing__plan-title {
+    font-size: 17px;
+    line-height: 23px;
+  }
+
+  .settings-billing__plan-price-amount {
+    font-size: 28px;
+    line-height: 34px;
+  }
+
+  .settings-billing__plan-price-period,
+  .settings-billing__plan-price-label {
+    font-size: 12px;
+    line-height: 16px;
+  }
+
+  .settings-billing__plan-button-main,
+  .settings-billing__plan-button,
+  .settings-billing__plan-current-label {
+    font-size: 14px;
+    line-height: 19px;
+  }
+}
+
+// One card per row: below this two columns leave too little for the price and
+// the CTA to sit on one line each.
+@container billing-plans (max-width: 620px) {
+  .settings-billing__plans-narrow > * {
+    flex: 1 1 100%;
+  }
+
+  .settings-billing__plans-narrow {
+    .settings-billing__plan-price-amount {
+      font-size: 24px;
+      line-height: 30px;
+    }
+
+    .settings-billing__plan-title {
+      font-size: 16px;
+      line-height: 22px;
+    }
+  }
+}
