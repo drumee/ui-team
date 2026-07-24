@@ -288,10 +288,7 @@ class RewardGuide {
     this._lastSig = sig;
     // No Back in the perm phase: the workspace already exists, so retreating to
     // the Step 1 card would be a lie. The user closes the panel to continue.
-    // Large panels (form / permission panels) get a clean rectangular cutout
-    // instead of the circular highlight — the panel reads clear, the rest dims.
-    const mode = this._sub === "form" || this._sub === "perm" ? "rect" : "circle";
-    this._ui.spotlight(rect, tooltipFor(this._sub), this._sub !== "perm", mode);
+    this._ui.spotlight(rect, tooltipFor(this._sub), this._sub !== "perm");
   }
 
   // ───────── foreign-DOM sibling disabling ─────────

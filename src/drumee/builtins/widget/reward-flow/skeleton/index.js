@@ -11,9 +11,10 @@
  *     the vignette fades to transparent and click-through so the user can reach
  *     the real uploader / invite popup; only the card stays interactive.
  *   guiding      (data-guiding="1", Step 1's live-desk walkthrough)
- *     the vignette becomes a spotlight cutout (positioned imperatively by the
- *     guide via --spot-* vars) and click-through; there is no card, just the
- *     coach-tooltip callout the guide feeds into `guide-callout`.
+ *     a rectangular cutout dims everything except the target (topbar button /
+ *     dropdown item / form / permission panel), which reads fully clear; the
+ *     guide sizes it imperatively via the --cut-* vars. There is no card, just
+ *     the coach-tooltip callout the guide feeds into `guide-callout`.
  */
 const stepCard = require("./card");
 
@@ -23,22 +24,12 @@ module.exports = function (ui) {
   const waiting = step.endsWith("_waiting");
   const guiding = step === "step1_guide";
 
-  const kids = [
-    Skeletons.Box.Y({
-      className: `${pfx}__vignette`,
-      // Only wired while a step is active; in waiting/guiding states CSS turns
-      // off pointer events so this never fires.
-      service: "reward-vignette-click",
-      uiHandler: [ui],
-    }),
-  ];
+  const kids = [];
 
   if (guiding) {
-    // No card while guiding — the spotlight + coach tooltip carry the step.
-    // The cutout is the alternative to the radial vignette for large panels
-    // (form / permission panels): a transparent box sized to the panel with a
-    // huge box-shadow, so the panel reads clear and only the rest is dimmed —
-    // no bright "focus" ring. Which one shows is picked by data-guide-mode.
+    // Guiding uses the rectangular cutout for every sub-step (a transparent box
+    // sized to the target with a huge box-shadow) — the target reads clear and
+    // only the rest is dimmed. No card; the coach tooltip carries the step.
     kids.push(
       Skeletons.Box.Y({ className: `${pfx}__cutout` }),
       Skeletons.Box.Y({
@@ -49,6 +40,13 @@ module.exports = function (ui) {
     );
   } else {
     kids.push(
+      Skeletons.Box.Y({
+        className: `${pfx}__vignette`,
+        // Only wired while a step is active; in waiting states CSS turns off
+        // pointer events so this never fires.
+        service: "reward-vignette-click",
+        uiHandler: [ui],
+      }),
       Skeletons.Box.Y({
         className: `${pfx}__anchor`,
         dataset: { step: waiting ? step.replace("_waiting", "") : step },

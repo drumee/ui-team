@@ -1,24 +1,5 @@
 @use "mixins/drumee";
 
-// Animatable spotlight-cutout vars for the Step 1 guided walkthrough. Declared
-// as @property so the radial-gradient centre/radius tween when the guide moves
-// the spotlight from one target to the next.
-@property --spot-x {
-  syntax: "<length-percentage>";
-  inherits: true;
-  initial-value: 50%;
-}
-@property --spot-y {
-  syntax: "<length-percentage>";
-  inherits: true;
-  initial-value: 50%;
-}
-@property --spot-radius {
-  syntax: "<length>";
-  inherits: true;
-  initial-value: 160px;
-}
-
 // Foreign-DOM annotation: the guide adds this to the topbar Add-menu items it
 // wants disabled (everything but "Workspace") while it holds the dropdown open,
 // and removes it on teardown. Global (not nested) because it lands on desk
@@ -65,30 +46,12 @@ $success-soft: rgba(46, 179, 122, 0.14);
     pointer-events: none;
   }
 
-  // Guiding (Step 1 walkthrough): the scrim becomes a spotlight cutout — dark
-  // everywhere except a transparent circle over the target the guide is
-  // pointing at — and stays click-through so the user can operate the real
-  // desk chrome underneath.
-  &__root[data-guiding="1"] &__vignette {
-    pointer-events: none;
-    background-color: transparent;
-    background-image: radial-gradient(
-      circle var(--spot-radius) at var(--spot-x) var(--spot-y),
-      rgba(0, 0, 0, 0) 0%,
-      rgba(0, 0, 0, 0) 55%,
-      var(--overlay-bg, rgba(0, 0, 0, 0.5)) 100%
-    );
-    transition: --spot-x 280ms ease, --spot-y 280ms ease,
-      --spot-radius 280ms ease;
-  }
-
-  // Rect cutout (large panels — form / permission panels): a transparent box
-  // sized to the panel whose huge box-shadow dims everything around it, so the
-  // panel stays clear with no bright "focus" highlight. Hidden by default; the
-  // orchestrator shows it via data-guide-mode="rect" and positions it with the
-  // --cut-* vars.
+  // Guiding (Step 1 walkthrough): a rectangular cutout — a transparent box
+  // sized to the target whose huge box-shadow dims everything around it, so the
+  // target (topbar button / dropdown item / form / permission panel) reads
+  // fully clear with no highlight ring. Click-through, so the user operates the
+  // real desk chrome underneath. The guide positions it with the --cut-* vars.
   &__cutout {
-    display: none;
     position: fixed;
     left: var(--cut-x, 0);
     top: var(--cut-y, 0);
@@ -99,17 +62,6 @@ $success-soft: rgba(46, 179, 122, 0.14);
     box-shadow: 0 0 0 100vmax var(--overlay-bg, rgba(0, 0, 0, 0.4));
     transition: left 200ms ease, top 200ms ease, width 200ms ease,
       height 200ms ease;
-  }
-
-  // In rect mode the box-shadow cutout provides the dim, so the radial vignette
-  // must go transparent (otherwise the panel gets double-dimmed) and the cutout
-  // is shown.
-  &__root[data-guiding="1"][data-guide-mode="rect"] &__vignette {
-    background-image: none;
-    background-color: transparent;
-  }
-  &__root[data-guiding="1"][data-guide-mode="rect"] &__cutout {
-    display: block;
   }
 
   // Callout host for the coach tooltip — spans the viewport but never blocks
