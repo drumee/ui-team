@@ -142,7 +142,14 @@ class __reward_flow extends LetcBox {
     if (this._inviteSucceeded) {
       this._inviteSucceeded = false;
       this._step = "congrats";
-      if (!this._openModal(congratsModal(this))) this._finish();
+      // The invite popup's close cleared Wm.__wrapperModal via collection.reset(),
+      // and this callback runs DURING that reset's synchronous unwind. Feeding
+      // congrats back in now would leave an orphaned, untracked view in the shared
+      // host. Defer one microtask so the reset fully settles first.
+      Promise.resolve().then(() => {
+        if (this.isDestroyed && this.isDestroyed()) return;
+        if (!this._openModal(congratsModal(this))) this._finish();
+      });
       return;
     }
     if (this._step !== "step3_waiting") return;

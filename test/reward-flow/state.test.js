@@ -142,7 +142,7 @@ test("invite fires the desk invite service and enters the waiting state", () => 
   assert.deepEqual(f.sent.at(-1), { service: "invite-member" });
 });
 
-test("a sent invitation opens the congratulations modal", () => {
+test("a sent invitation opens the congratulations modal", async () => {
   const f = makeFlow();
   click(f, "reward-continue");
   click(f, "reward-upload");
@@ -157,6 +157,9 @@ test("a sent invitation opens the congratulations modal", () => {
   assert.equal(f.getStep(), "step3_waiting", "the step must not move until the popup closes");
 
   f.onInvitePopupClosed();
+  // The congrats-modal open is deferred by one microtask so the shared
+  // host's collection.reset() can fully unwind first.
+  await new Promise((r) => setTimeout(r, 0));
   assert.ok(modal.fed, "the congratulations modal should have been fed");
   assert.equal(modal.el.dataset.state, "open");
   assert.equal(f.getStep(), "congrats", "onInvitePopupClosed must latch off step3_waiting");
@@ -174,7 +177,7 @@ test("getFurthest stays at 3 once the flow reaches the congrats state", () => {
   assert.equal(f.getFurthest(), 3);
 });
 
-test("a trailing invite-popup close after a successful send does not disturb the congrats modal", () => {
+test("a trailing invite-popup close after a successful send does not disturb the congrats modal", async () => {
   const f = makeFlow();
   click(f, "reward-continue");
   click(f, "reward-upload");
@@ -185,12 +188,16 @@ test("a trailing invite-popup close after a successful send does not disturb the
   // after a successful send) to onInvitePopupClosed(). This is the real
   // trigger that opens the congrats modal now that the host is free.
   f.onInvitePopupClosed();
+  // The congrats-modal open is deferred by one microtask so the shared
+  // host's collection.reset() can fully unwind first.
+  await new Promise((r) => setTimeout(r, 0));
   const fedAfterClose = modal.fed;
   assert.ok(fedAfterClose, "the congratulations modal should have been fed");
   // A second, stray close (e.g. a duplicate desk relay) must be a no-op:
   // _inviteSucceeded is already consumed and _step is the terminal
   // "congrats" marker, not "step3_waiting".
   f.onInvitePopupClosed();
+  await new Promise((r) => setTimeout(r, 0));
   assert.equal(f.getStep(), "congrats", "the trailing popup-close must not move the step back");
   assert.equal(modal.fed, fedAfterClose, "the congrats modal must not be replaced");
   assert.equal(modal.cleared, 0, "the congrats modal must not be cleared by the trailing close");
@@ -304,7 +311,7 @@ test("dropping out latches the flow off and destroys it", () => {
   assert.equal(f.destroyed, true);
 });
 
-test("finishing latches the flow off and destroys it", () => {
+test("finishing latches the flow off and destroys it", async () => {
   const f = makeFlow();
   click(f, "reward-continue");
   click(f, "reward-upload");
@@ -312,12 +319,15 @@ test("finishing latches the flow off and destroys it", () => {
   click(f, "reward-invite");
   f.onInvitationSent();
   f.onInvitePopupClosed();
+  // The congrats-modal open is deferred by one microtask so the shared
+  // host's collection.reset() can fully unwind first.
+  await new Promise((r) => setTimeout(r, 0));
   click(f, "reward-finish");
   assert.equal(store.reward_flow_done, "1");
   assert.equal(f.destroyed, true);
 });
 
-test("finishing clears the modal host so no stale modal outlives the flow", () => {
+test("finishing clears the modal host so no stale modal outlives the flow", async () => {
   const f = makeFlow();
   click(f, "reward-continue");
   click(f, "reward-upload");
@@ -325,6 +335,9 @@ test("finishing clears the modal host so no stale modal outlives the flow", () =
   click(f, "reward-invite");
   f.onInvitationSent();
   f.onInvitePopupClosed();
+  // The congrats-modal open is deferred by one microtask so the shared
+  // host's collection.reset() can fully unwind first.
+  await new Promise((r) => setTimeout(r, 0));
   assert.ok(modal.fed, "the congratulations modal should have been fed");
   click(f, "reward-finish");
   assert.equal(modal.cleared, 1, "the modal host must be cleared");
@@ -368,7 +381,7 @@ test("a corrupt stored step falls back to step1", () => {
 
 // ── degraded host ───────────────────────────────────────────────────────────
 
-test("with no modal host, a sent invitation still finishes the flow", () => {
+test("with no modal host, a sent invitation still finishes the flow", async () => {
   const saved = global.Wm;
   global.Wm = {};
   try {
@@ -379,6 +392,9 @@ test("with no modal host, a sent invitation still finishes the flow", () => {
     click(f, "reward-invite");
     f.onInvitationSent();
     f.onInvitePopupClosed();
+    // The congrats-modal open is deferred by one microtask so the shared
+    // host's collection.reset() can fully unwind first.
+    await new Promise((r) => setTimeout(r, 0));
     assert.equal(store.reward_flow_done, "1", "user must not be stranded");
     assert.equal(f.destroyed, true);
   } finally {
