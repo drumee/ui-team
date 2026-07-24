@@ -41,7 +41,6 @@ const SEL = {
   wsItem: ".desk-module-topbar__add-menu-item.ico-workspace",
   otherItems: ".desk-module-topbar__add-menu-item:not(.ico-workspace)",
   form: ".form-folder__main",
-  formClose: ".form-folder__close",
   // Follow-up permission panels: internal (team) → permission_restricted fed
   // into the wrapper-modal; external (share) → window_secure_share window.
   permPanels: ".permission-restricted__main, .window-secure-share__main",
@@ -272,9 +271,12 @@ class RewardGuide {
    *   2 menu → close the dropdown                              → 1 add
    *   1 add  → nothing earlier; the orchestrator exits the guide
    *
-   * Each transition just drives the REAL controls (the modal's close button,
-   * the Add-new trigger — which toggles) and lets the observer reconcile to the
-   * resulting sub-step, so this needs no state of its own.
+   * Each transition drives the real widgets THROUGH the orchestrator (Wm's
+   * wrapper-modal part, the desk's addmenu part) and lets the observer
+   * reconcile to the resulting sub-step, so this needs no state of its own.
+   * Synthetic clicks can't be used here: the framework debounces every widget
+   * click globally for 300ms, so a click issued from inside the user's own Back
+   * click is swallowed.
    *
    * Returns true when it handled a step-back, false when the guide should exit.
    */
@@ -287,31 +289,22 @@ class RewardGuide {
         return true;
 
       case "form": {
-        // Closing the form alone would reconcile to "add" (the dropdown shut
-        // when the form opened). Re-open the dropdown in the SAME tick so the
-        // debounced reconcile sees the final state and lands straight on
-        // "menu", with no "add" flash in between.
-        if (!this._click(SEL.formClose)) return false;
-        this._click(SEL.addBtn);
+        // Re-open the dropdown BEFORE closing the form: while the form is still
+        // up, reconcile keeps reporting "form", so when the form then goes away
+        // it lands straight on "menu" with no "add" flash in between.
+        this._ui.setAddMenu(true);
+        this._ui.closeCreateForm();
         return true;
       }
 
       case "menu":
-        // The Add-new trigger toggles, so clicking it while the dropdown is
-        // open closes it → reconcile falls back to "add".
-        return this._click(SEL.addBtn);
+        // Close the dropdown → reconcile falls back to "add".
+        this._ui.setAddMenu(false);
+        return true;
 
       default:
         return false;
     }
-  }
-
-  /** Click a live-desk control by selector. Returns false when it isn't there. */
-  _click(selector) {
-    const el = document.querySelector(selector);
-    if (!el || typeof el.click !== "function") return false;
-    el.click();
-    return true;
   }
 
   /** Perm phase done (panel closed, or safety timeout) → advance to Step 2. */

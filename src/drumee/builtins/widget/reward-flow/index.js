@@ -169,6 +169,27 @@ class __reward_flow extends LetcBox {
   }
 
   /**
+   * Close the create-workspace modal. The form is fed into Wm's `wrapper-modal`
+   * part, so clearing that part closes it.
+   *
+   * Driven directly rather than by clicking the form's close button: the
+   * framework debounces EVERY widget click globally for 300ms (letc
+   * __handleClick shares one `_clickTimestap`), so a synthetic click issued
+   * from within the user's own Back click is silently swallowed.
+   */
+  closeCreateForm() {
+    if (typeof Wm === "undefined" || typeof Wm.ensurePart !== "function") return;
+    Wm.ensurePart("wrapper-modal").then((p) => {
+      if (p && typeof p.clear === "function") p.clear();
+    });
+  }
+
+  /** Open/close the topbar Add-new dropdown (the desk owns the `addmenu` part). */
+  setAddMenu(open) {
+    this.triggerHandlers({ service: "reward-set-add-menu", open: !!open });
+  }
+
+  /**
    * Paint the spotlight cutout over `rect` (a viewport-space DOMRect) and feed
    * the coach tooltip. Called by the guide as it walks the live desk chrome.
    */

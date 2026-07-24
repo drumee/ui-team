@@ -2209,6 +2209,15 @@ class desk_module extends LetcBox {
       case "invite-member":
         return this._openInvitePopup(cmd);
 
+      // Reward-flow Step 1 walkthrough: open/close the topbar Add-new dropdown
+      // on its behalf (the desk owns the `addmenu` part). Used by the guide's
+      // Back to step from the create-modal back to the dropdown, and from the
+      // dropdown back to the Add-new button.
+      case "reward-set-add-menu":
+        return this.ensurePart("addmenu").then((p) => {
+          if (p && _.isFunction(p.changeState)) p.changeState(!!args.open);
+        });
+
       // Relayed to the reward flow: it opened this popup through the
       // "invite-member" service above, so the popup's uiHandler is the desk,
       // not the flow.
