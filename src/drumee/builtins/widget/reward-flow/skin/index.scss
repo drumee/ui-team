@@ -18,6 +18,11 @@ $accent-soft: rgba(89, 80, 255, 0.12);
 $success-soft: rgba(46, 179, 122, 0.14);
 
 .reward-flow {
+  // Every text element in the flow uses the app font. Set on the root so the
+  // card and coach inherit it; the modal is fed into Wm.__wrapperModal (outside
+  // this root) so it declares its own below.
+  font-family: var(--font-main);
+
   // Icons nested inside clickable Notes must not swallow the click.
   &__btn > * { pointer-events: none !important; }
 
@@ -88,6 +93,7 @@ $success-soft: rgba(46, 179, 122, 0.14);
 
   // ───────── coach tooltip (guided walkthrough) — styled after window_confirm ─────────
   &__coach {
+    font-family: var(--font-main);
     position: fixed;
     transform: translateX(-50%);
     box-sizing: border-box;
@@ -188,6 +194,7 @@ $success-soft: rgba(46, 179, 122, 0.14);
 
   // ───────── card ─────────
   &__card {
+    font-family: var(--font-main);
     width: 340px;
     box-sizing: border-box;
     padding: 24px;
@@ -288,7 +295,10 @@ $success-soft: rgba(46, 179, 122, 0.14);
   }
 
   // ───────── modals (fed into Wm.__wrapperModal) ─────────
+  // Fed into Wm.__wrapperModal, outside the .reward-flow root — so it can't
+  // inherit the root's font and declares it here.
   &__modal {
+    font-family: var(--font-main);
     width: 380px;
     box-sizing: border-box;
     padding: 28px 24px 24px;
