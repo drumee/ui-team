@@ -38,6 +38,7 @@ const SEL = {
   wsItem: ".desk-module-topbar__add-menu-item.ico-workspace",
   otherItems: ".desk-module-topbar__add-menu-item:not(.ico-workspace)",
   form: ".form-folder__main",
+  formClose: ".form-folder__close",
   // Follow-up permission panels: internal (team) → permission_restricted fed
   // into the wrapper-modal; external (share) → window_secure_share window.
   permPanels: ".permission-restricted__main, .window-secure-share__main",
@@ -258,6 +259,25 @@ class RewardGuide {
       case "add": return document.querySelector(SEL.addBtn);
       default: return null;
     }
+  }
+
+  /**
+   * Back within the walkthrough. Instead of exiting to the Step 1 card, step
+   * back one sub-step: at the form, close the form so the observer reconciles
+   * back to "add" (the Add-new button). Returns true when it handled a
+   * step-back, false when there is nothing earlier (at "add") — then the
+   * orchestrator exits the guide.
+   */
+  back() {
+    if (!hasDom()) return false;
+    if (this._sub === "form") {
+      const close = document.querySelector(SEL.formClose);
+      if (close && typeof close.click === "function") {
+        close.click();
+        return true;
+      }
+    }
+    return false;
   }
 
   /** Perm phase done (panel closed, or safety timeout) → advance to Step 2. */

@@ -400,9 +400,12 @@ class __reward_flow extends LetcBox {
         return;
 
       case "reward-back": {
-        // Back out of the Step 1 walkthrough → tear the guide down and return
-        // to the Step 1 card.
+        // In the walkthrough, Back steps back one sub-step where it can (at the
+        // form it closes the form so the guide reconciles to the Add-new
+        // button). Only when there is nothing earlier does it tear the guide
+        // down and return to the Step 1 card.
         if (this._step === "step1_guide") {
+          if (this._guide && this._guide.back()) return;
           this._stopGuide();
           return this._goto("step1");
         }
