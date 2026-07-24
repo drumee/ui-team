@@ -214,6 +214,14 @@ $success-soft: rgba(46, 179, 122, 0.14);
     cursor: pointer;
   }
 
+  // Waiting: the cutout stays (so the overlay and the highlighted control don't
+  // vanish mid-upload) but stops intercepting — the user is operating the real
+  // uploader / invite popup underneath.
+  &__root[data-waiting="1"] &__cutout {
+    pointer-events: none;
+    cursor: default;
+  }
+
   // ───────── card ─────────
   // Each step change re-feeds the skeleton, so the card is a NEW element and
   // cannot transition from the old one's position — it would otherwise pop into

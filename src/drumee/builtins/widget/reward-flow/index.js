@@ -314,7 +314,9 @@ class __reward_flow extends LetcBox {
 
   _applyStepTarget() {
     if (!this.el) return;
-    const sel = STEP_TARGET[this._step];
+    // Resolved from the BASE step, so entering a waiting state keeps the cutout
+    // and the card exactly where they were instead of snapping to the fallback.
+    const sel = STEP_TARGET[this._step.replace("_waiting", "")];
     const anchor = this.el.querySelector(`.${this.fig.family}__anchor`);
     if (!sel) {
       // Steps with no topbar target (step 1) are centred by the stylesheet.

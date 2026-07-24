@@ -25,9 +25,10 @@ module.exports = function (ui) {
   const guiding = step === "step1_guide";
   const base = waiting ? step.replace("_waiting", "") : step;
   // Steps 2 and 3 point at a real topbar control, so they get a cutout over it.
-  // Not while waiting: there the user is operating the real UI and nothing
-  // should be dimmed.
-  const targeted = !waiting && (base === "step2" || base === "step3");
+  // Kept through the waiting state too, so the overlay and the card's position
+  // don't change underneath the user the moment they start an upload — only the
+  // cutout's interactivity does (see below and the stylesheet).
+  const targeted = base === "step2" || base === "step3";
 
   const kids = [];
 
@@ -64,11 +65,19 @@ module.exports = function (ui) {
       // does the dimming, isn't hit-testable), so firing the step's primary
       // service here makes clicking the spotlighted Upload/Invite button behave
       // exactly like clicking the card's primary button.
+      //
+      // Only on the ACTIVE step though: while waiting, the user is operating
+      // the real uploader / invite popup, so the cutout keeps dimming and
+      // highlighting the control but must not intercept its clicks.
       kids.push(
         Skeletons.Box.Y({
           className: `${pfx}__cutout`,
-          service: stepCard.primaryServiceFor(base),
-          uiHandler: [ui],
+          ...(waiting
+            ? {}
+            : {
+              service: stepCard.primaryServiceFor(base),
+              uiHandler: [ui],
+            }),
         }),
       );
     }
