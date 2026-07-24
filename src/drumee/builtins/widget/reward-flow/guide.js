@@ -39,10 +39,24 @@ function hasDom() {
   return typeof document !== "undefined" && !!document.querySelector;
 }
 
-/** Visible = in the DOM and not display:none/detached (offsetParent is null for
- *  both, and for position:fixed — which none of our targets use). */
+/**
+ * Truly on screen right now. offsetParent is NOT enough: the topbar dropdown
+ * renders its items at mount and merely toggles `visibility:hidden` when closed
+ * (see topbar.scss `.menu-topic-items__wrapper`), which offsetParent can't see —
+ * and it is also null for the position:fixed modal that hosts the form, which
+ * we DO want to treat as visible. So:
+ *   - getClientRects().length === 0  → display:none or detached  (not visible)
+ *   - computed visibility === hidden → the closed dropdown         (not visible)
+ * Everything else, including position:fixed, is visible.
+ */
 function visible(el) {
-  return !!el && el.offsetParent !== null;
+  if (!el || typeof el.getClientRects !== "function") return false;
+  if (el.getClientRects().length === 0) return false;
+  if (typeof getComputedStyle === "function") {
+    const s = getComputedStyle(el);
+    if (s && (s.visibility === "hidden" || s.display === "none")) return false;
+  }
+  return true;
 }
 
 function tooltipFor(sub) {
@@ -66,6 +80,7 @@ class RewardGuide {
     this._observer = null;
     this._reconcileTimer = null;
     this._onResize = null;
+    this._lastSig = null;       // last painted spotlight signature (dedup)
     this._reconcile = this._reconcile.bind(this);
     this._scheduleReconcile = this._scheduleReconcile.bind(this);
   }
@@ -103,6 +118,7 @@ class RewardGuide {
     }
     this._enableOthers();
     this._sub = null;
+    this._lastSig = null;
     this._clearSpot();
   }
 
@@ -145,13 +161,23 @@ class RewardGuide {
     }
   }
 
-  /** Measure the current sub-step's target and paint the spotlight + tooltip. */
+  /** Measure the current sub-step's target and paint the spotlight + tooltip.
+   *  Deduped: the body-wide observer fires on unrelated desk activity (chat,
+   *  badges), so only actually repaint when the target's position/size or the
+   *  sub-step changed — otherwise the coach tooltip flickers on every mutation. */
   _position() {
     if (!hasDom() || !this._sub) return;
     const el = this._targetEl();
     if (!visible(el)) return;
     const rect = el.getBoundingClientRect();
     if (!rect.width || !rect.height) return;
+    const sig = [
+      this._sub,
+      Math.round(rect.left), Math.round(rect.top),
+      Math.round(rect.width), Math.round(rect.height),
+    ].join(":");
+    if (sig === this._lastSig) return;
+    this._lastSig = sig;
     this._ui.spotlight(rect, tooltipFor(this._sub));
   }
 

@@ -19,7 +19,7 @@ module.exports = function coach(ui, { text, style, side }) {
       Skeletons.Note({ className: `${pfx}__coach-text`, content: text }),
       Skeletons.Note({
         className: `${pfx}__coach-back`,
-        content: `← ${LOCALE.BACK || "Back"}`,
+        content: LOCALE.BACK || "Back",
         service: "reward-back",
         uiHandler: [ui],
       }),

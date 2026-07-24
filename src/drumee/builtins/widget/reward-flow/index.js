@@ -315,8 +315,11 @@ class __reward_flow extends LetcBox {
       }
 
       case "reward-vignette-click":
-        // Inert while the user is being handed off to a real surface.
-        if (this._isWaiting() || this._modalOpen) return;
+        // Inert while the user is being handed off to a real surface. The CSS
+        // already makes the vignette click-through when waiting/guiding, but
+        // guard explicitly too — consistent with reward-continue/reward-back.
+        if (this._isWaiting() || this._step === "step1_guide" || this._modalOpen)
+          return;
         this._dropReturnStep = this._step;
         this._openModal(dropModal(this));
         return;
