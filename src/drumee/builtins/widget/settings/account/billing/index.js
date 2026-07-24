@@ -37,15 +37,20 @@ class settings_billing extends LetcBox {
         selectedBundle: null,
       },
     };
+    // Storage in GB and the member CAP per plan, mirroring yp.plan's quota
+    // JSON (2026-07 pricing rebuild). `seats` is a cap, not a purchased
+    // quantity — free stays 0 because existing code reads 0 as "cannot
+    // invite", and business uses a real large number rather than 0, which
+    // would read as no seats at all.
     this.storage = {
-      free: 20,
-      pro: 20,
-      team: 50
+      free: 5,
+      team: 100,
+      business: 1000
     }
     this.seats = {
       free: 0,
-      pro: 5,
-      team: 1
+      team: 10,
+      business: 100000
     }
 
     this.tab = this.state.currentTab;
@@ -134,7 +139,7 @@ class settings_billing extends LetcBox {
   // still async-false, and clicking it during that window silently no-opped.
   _isPaidByQuota() {
     const plan = String(((Visitor.quota && Visitor.quota()) || {}).plan || "").toLowerCase();
-    return /^(pro|team|enterprise)$/.test(plan);
+    return /^(team|business|sovereign|enterprise)$/.test(plan);
   }
 
   async _confirmCancel() {
@@ -255,17 +260,20 @@ class settings_billing extends LetcBox {
       const planName = (plan || "pro").toLowerCase();
       // Get period from plan_detail if available, default to monthly
 
-      // Map plan names: 'advanced' -> 'free'; team/enterprise kept as-is so the
-      // current-plan marking and checkout pre-selection are correct for org subs.
-      let mappedPlan = "pro";
-      if (planName === "advanced" || planName === "free") {
-        mappedPlan = "free";
-      } else if (planName === "pro") {
-        mappedPlan = "pro";
-      } else if (planName === "team") {
+      // Normalise quota.plan onto a card key. Legacy hand-granted rows carry
+      // free-text names from before the Stripe catalog — 'Pro', 'Drumee Plus'
+      // — and the retired B2C 'pro' tier; the schemas patch moves all of them
+      // onto the Team entitlement, so they must READ as Team here too, or the
+      // banner and the current-plan marking would point at a plan that no
+      // longer exists. Default is 'free', not 'pro': an unknown name must
+      // never imply a paid tier.
+      let mappedPlan = "free";
+      if (/^(team|pro|drumee plus)$/.test(planName)) {
         mappedPlan = "team";
-      } else if (planName === "enterprise") {
-        mappedPlan = "enterprise";
+      } else if (planName === "business") {
+        mappedPlan = "business";
+      } else if (planName === "sovereign" || planName === "enterprise") {
+        mappedPlan = "sovereign";
       }
 
       // Get seat from quota
@@ -507,9 +515,11 @@ class settings_billing extends LetcBox {
       return row && row.amount != null ? Number(row.amount) / 100 : null;
     };
     const planPrices = {
+      // Yearly is 11 x monthly (one month free). Only team has a Stripe price
+      // to read; business is sales-led, so its figure is the published one.
       free: { monthly: 0, yearly: 0 },
-      pro: { monthly: catPrice("pro", "monthly") ?? 16.99, yearly: catPrice("pro", "yearly") ?? 169.9 },
-      team: { monthly: catPrice("team", "monthly") ?? 8, yearly: catPrice("team", "yearly") ?? 80 },
+      team: { monthly: catPrice("team", "monthly") ?? 29, yearly: catPrice("team", "yearly") ?? 319 },
+      business: { monthly: catPrice("business", "monthly") ?? 99, yearly: catPrice("business", "yearly") ?? 1089 },
     };
 
     const basePrice = planPrices[selectedPlan]?.[billingCycle] || 0;
@@ -573,13 +583,13 @@ class settings_billing extends LetcBox {
       (p) => p.plan_code === code && p.period === period
     );
     if (row && row.amount != null) return Number(row.amount) / 100;
+    // Offline fallbacks only — the catalog above is the truth. Yearly is
+    // 11 x monthly (one month free). Business is sales-led so it never has a
+    // Stripe row; its figure is the published one. The retired B2C entries
+    // (pro, pro_seat, storage_*) are gone with the plans themselves.
     const fb = {
-      pro: { month: 16.99, year: 169.9 },
-      team: { month: 8, year: 80 },
-      pro_seat: { month: 5, year: 50 },
-      storage_100: { month: 8, year: 80 },
-      storage_500: { month: 30, year: 300 },
-      storage_1000: { month: 50, year: 500 },
+      team: { month: 29, year: 319 },
+      business: { month: 99, year: 1089 },
     };
     return (fb[code] && fb[code][period]) || 0;
   }
@@ -1093,68 +1103,28 @@ class settings_billing extends LetcBox {
       case "select-plan":
         return this.handleSelectPlan(cmd);
 
-      case "select-plan-button":
+      case "select-plan-button": {
         const planValue = this._getValueFromCmd(cmd, args);
-        if (
-          planValue === "free" ||
-          planValue === "pro" ||
-          planValue === "team" ||
-          planValue === "enterprise"
-        ) {
-          if (planValue === "enterprise") {
-            if (Wm && Wm.alert) {
-              Wm.alert(
-                (LOCALE.CONTACT_SALES_VIA || "Please contact our sales team via {0}")
-                  .format(LOCALE.SALES_CONTACT_EMAIL || "contact@drumee.org")
-              );
-            }
-          } else if (planValue === "team" && this._isPaidPro()) {
-            // A paying Pro user upgrading to Team: warn first that their
-            // current Pro plan is replaced by Team. Team is an org (per-seat)
-            // subscription; the Stripe webhook cancels the personal Pro sub
-            // automatically once the Team payment completes
-            // (_cancelSupersededPersonalSubscription). So DON'T cancel here —
-            // if the user abandons the Stripe checkout they keep their Pro.
-            // Yes → proceed to the Team checkout; No → stay on the current plan.
-            Wm.confirm({
-              title: LOCALE.UPGRADE_TO_TEAM_CONFIRM_TITLE || "Upgrade to Team",
-              message: LOCALE.UPGRADE_TO_TEAM_CONFIRM_MESSAGE
-                || "Upgrading to Team will cancel your current Pro plan when you complete checkout. Continue?",
-              confirm: LOCALE.YES || "Yes",
-              confirm_type: "primary",
-              cancel: LOCALE.NO || "No",
-              cancel_type: "secondary",
-              mode: "hbf",
-            })
-              .then(() => this._enterCheckoutFor("team"))
-              .catch(() => { /* No → stay on the current plan */ });
-          } else if (planValue === "pro" && this._isPaidTeam()) {
-            // A paying Team owner switching to Pro: confirm first — the Team
-            // plan gets cancelled (at period end) once the Pro checkout
-            // completes, handled by the Stripe webhook via the `supersede`
-            // metadata flag set in _proceedToCheckout. DON'T cancel here —
-            // abandoning the checkout must keep the Team plan untouched.
-            // Yes → proceed to the Pro checkout; No → stay on Team.
-            Wm.confirm({
-              title: LOCALE.SWITCH_TO_PRO_CONFIRM_TITLE || "Switch to Pro",
-              message: LOCALE.SWITCH_TO_PRO_CONFIRM_MESSAGE
-                || "Switching to Pro will cancel your current Team plan, once you complete checkout. Do you want to continue?",
-              confirm: LOCALE.YES || "Yes",
-              confirm_type: "primary",
-              cancel: LOCALE.NO || "No",
-              cancel_type: "secondary",
-              mode: "hbf",
-            })
-              .then(() => {
-                this._switchFromTeam = true;
-                this._enterCheckoutFor("pro");
-              })
-              .catch(() => { /* No → stay on the current plan */ });
-          } else {
-            this._enterCheckoutFor(planValue);
+        // Business and Sovereign are sales-led since the 2026-07 pricing
+        // rebuild — they carry no Stripe price, so there is no checkout to
+        // enter and sending them there would dead-end on NO_PRICE. Point the
+        // caller at sales instead. ('enterprise' is the retired name for the
+        // same idea, matched so a stale card cannot fall through.)
+        if (/^(business|sovereign|enterprise)$/.test(planValue)) {
+          if (Wm && Wm.alert) {
+            Wm.alert(
+              (LOCALE.CONTACT_SALES_VIA || "Please contact our sales team via {0}")
+                .format(LOCALE.SALES_CONTACT_EMAIL || "contact@drumee.org")
+            );
           }
+        } else if (planValue === "free" || planValue === "team") {
+          // Team is the only self-serve tier now. The old Pro<->Team switch
+          // confirmations went with the B2C Pro plan: there is no longer a
+          // personal subscription for a Team purchase to supersede.
+          this._enterCheckoutFor(planValue);
         }
         return false;
+      }
       case "storage-changes":
         this.state.checkout.storage = args.value;
         this._updateRightPanelContent()

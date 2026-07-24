@@ -16,16 +16,20 @@ const { button } = require("../../../../../skeleton/toolkit");
 function getOptions(ui, cycle = "monthly") {
   const isYear = cycle === "yearly";
   const money = (n) => ui._money(n);
-  const proPrice = money(ui._catPrice("pro", isYear ? "year" : "month"));
-  const teamPrice = money(ui._catPrice("team", isYear ? "year" : "month"));
-  // Extra-seat price is the pro_seat catalog row (monthly figure in the card
-  // copy, matching the design's "each additional seat $5.00").
-  const seatPrice = money(ui._catPrice("pro_seat", "month"));
+  const period = isYear ? "year" : "month";
+  // Team is the only self-serve tier, so it is the only one with a Stripe
+  // price to read. Business and Sovereign are sales-led: their amounts are
+  // published figures, shown so the ladder reads as a ladder, with a
+  // "Contact sales" CTA instead of checkout — hence the literal fallbacks.
+  const teamPrice = money(ui._catPrice("team", period));
+  const businessPrice = money(
+    ui._catPrice("business", period) ?? (isYear ? 1089 : 99),
+  );
+  const sovereignPrice = money(isYear ? 5489 : 499);
 
   const perMonth = LOCALE.PER_MONTH;
   const perYear = LOCALE.PER_YEAR;
-  const perSeatMonth = LOCALE.PER_SEAT_MONTH;
-  const perSeatYear = LOCALE.PER_SEAT_YEAR;
+  const per = isYear ? perYear : perMonth;
 
   return {
     free: {
@@ -34,63 +38,61 @@ function getOptions(ui, cycle = "monthly") {
       pricePeriod: perMonth,
       buttonTitle: LOCALE.GET_STARTED,
       buttonKind: "secondary",
-      subText: "",
+      subText: LOCALE.PLAN_FREE_DESC,
       features: [
-        { main: "20 GB", sub: LOCALE.FEAT_STORAGE },
+        { main: "5 GB", sub: LOCALE.FEAT_STORAGE },
+        { main: "1", sub: LOCALE.FEAT_MEMBERS },
         { main: LOCALE.NONE, sub: LOCALE.FEAT_ADMIN_ROLES },
       ],
     },
-    pro: {
-      title: LOCALE.PRO,
-      priceLabel: LOCALE.START_FROM,
-      priceAmount: proPrice,
-      pricePeriod: isYear ? perYear : perMonth,
-      // From a HIGHER tier (team/enterprise) moving to Pro is a switch, not
-      // an upgrade — "Choose Pro Plan" (ticket 2026-07-22). currentPlanName
-      // comes synchronously from Visitor.quota(), so the label is right from
-      // the very first paint — no async flash.
-      buttonTitle: /^(team|enterprise)$/i.test(ui.currentPlanName || "")
-        ? (LOCALE.CHOOSE_PRO || "Choose Pro Plan")
-        : LOCALE.UPGRADE,
-      buttonKind: "primary",
-      badge: 1,
-      subText: LOCALE.PLAN_PRO_DESC.format(seatPrice),
-      features: [
-        { main: "20 GB", sub: LOCALE.FEAT_STORAGE },
-        { main: "5", sub: LOCALE.FEAT_EDITOR_ACCESS },
-        { main: "1", sub: LOCALE.FEAT_ADMIN_ROLE },
-        { main: "7", sub: LOCALE.FEAT_DAYS_VERSION_HISTORY },
-        { main: "", sub: LOCALE.FEAT_PERMISSIONS_ROLES },
-        { main: "", sub: LOCALE.FEAT_GUEST_ACCESS },
-      ],
-    },
+    // The entry paid tier, and the only one that reaches Stripe Checkout.
     team: {
       title: LOCALE.TEAM,
       priceAmount: teamPrice,
-      pricePeriod: isYear ? perSeatYear : perSeatMonth,
+      pricePeriod: per,
       buttonTitle: LOCALE.CHOOSE_TEAM,
-      buttonKind: "dark",
+      buttonKind: "primary",
+      badge: 1,
       subText: LOCALE.PLAN_TEAM_DESC,
       features: [
-        { main: "50 GB", sub: LOCALE.FEAT_STORAGE_PER_SEAT },
-        { main: LOCALE.ORG, sub: LOCALE.FEAT_DOMAIN_WIDE },
+        { main: "100 GB", sub: LOCALE.FEAT_STORAGE },
+        { main: "10", sub: LOCALE.FEAT_MEMBERS },
         { main: "30", sub: LOCALE.FEAT_DAYS_VERSION_HISTORY },
+        { main: "", sub: LOCALE.FEAT_PERMISSIONS_ROLES },
+        { main: "", sub: LOCALE.FEAT_GUEST_ACCESS },
         { main: "", sub: LOCALE.FEAT_ADMIN_BILLING },
       ],
     },
-    enterprise: {
-      title: LOCALE.ENTERPRISE,
-      priceText: LOCALE.CONTACT_SALES,
+    business: {
+      title: LOCALE.BUSINESS,
+      priceAmount: businessPrice,
+      pricePeriod: per,
       buttonTitle: LOCALE.CONTACT_SALES,
       buttonKind: "dark",
-      subText: LOCALE.PLAN_ENTERPRISE_DESC,
+      subText: LOCALE.PLAN_BUSINESS_DESC,
+      features: [
+        { main: "1 TB", sub: LOCALE.FEAT_STORAGE },
+        { main: LOCALE.UNLIMITED, sub: LOCALE.FEAT_MEMBERS },
+        { main: "365", sub: LOCALE.FEAT_DAYS_VERSION_HISTORY },
+        { main: "", sub: LOCALE.FEAT_PERMISSIONS_ROLES },
+        { main: "", sub: LOCALE.FEAT_ACTIVITY_LOGS },
+        { main: "", sub: LOCALE.FEAT_API_SSO },
+      ],
+    },
+    sovereign: {
+      title: LOCALE.SOVEREIGN,
+      priceLabel: LOCALE.START_FROM,
+      priceAmount: sovereignPrice,
+      pricePeriod: per,
+      buttonTitle: LOCALE.CONTACT_SALES,
+      buttonKind: "dark",
+      subText: LOCALE.PLAN_SOVEREIGN_DESC,
       features: [
         { main: LOCALE.CUSTOM, sub: LOCALE.FEAT_STORAGE },
-        { main: LOCALE.CUSTOM, sub: LOCALE.FEAT_EDITOR_ACCESS },
-        { main: LOCALE.YES, sub: LOCALE.FEAT_ADMIN_ROLE },
-        { main: LOCALE.UP_TO_90_DAYS, sub: LOCALE.FEAT_VERSION_HISTORY },
-        { main: "", sub: LOCALE.FEAT_PERMISSIONS_ROLES },
-        { main: "", sub: LOCALE.FEAT_GUEST_ACCESS },
+        { main: LOCALE.UNLIMITED, sub: LOCALE.FEAT_MEMBERS },
+        { main: LOCALE.UNLIMITED, sub: LOCALE.FEAT_VERSION_HISTORY },
+        { main: "", sub: LOCALE.FEAT_SELF_HOSTED },
+        { main: "", sub: LOCALE.FEAT_API_SSO },
         { main: "", sub: LOCALE.FEAT_ACTIVITY_LOGS },
       ],
     },
@@ -98,16 +100,16 @@ function getOptions(ui, cycle = "monthly") {
 }
 
 /**
- * The "Popular" highlight is an upsell cue aimed at users below Pro. Once the
- * user sits on a higher tier (team/enterprise) the Pro card must not carry the
- * active/focused look — only the current plan's card does. The badge chip
- * itself stays; only the tinted/primary styling is suppressed.
+ * The "Popular" highlight is an upsell cue aimed at users below Team. Once the
+ * user sits on a higher tier the Team card must not carry the active/focused
+ * look — only the current plan's card does. The badge chip itself stays; only
+ * the tinted/primary styling is suppressed.
  * @param {Object} ui - UI instance
  * @param {number} badge - the option's badge flag
  * @returns {boolean} whether the popular styling applies
  */
 function popularHighlight(ui, badge) {
-  return !!badge && !/^(team|enterprise)$/i.test(ui.currentPlanName || "");
+  return !!badge && !/^(business|sovereign|enterprise)$/i.test(ui.currentPlanName || "");
 }
 
 /**
@@ -169,10 +171,10 @@ function priceHeader(ui, fig, option, isCurrent) {
 }
 
 /**
- * Create plan item component (Free, Pro, Team, Enterprise): price-header box →
- * pill CTA → sub-text → feature list. Follows Figma 3050-96140.
+ * Create plan item component (Free, Team, Business, Sovereign): price-header
+ * box → pill CTA → sub-text → feature list. Follows Figma 3050-96140.
  * @param {Object} ui - UI instance
- * @param {string} opt - Plan option key (free, pro, team, enterprise)
+ * @param {string} opt - Plan option key (free, team, business, sovereign)
  * @param {Object} option - Pre-built option object from getOptions
  * @returns {Object} Skeletons component
  */
@@ -268,7 +270,9 @@ function item(ui, opt, option) {
 }
 
 /**
- * Create plans content layout with 4 plan items (Free, Pro, Team, Enterprise)
+ * Create plans content layout with 4 plan items (Free, Team, Business,
+ * Sovereign). Only Team reaches Stripe Checkout; Business and Sovereign are
+ * sales-led and their CTA opens the contact-sales notice instead.
  * @param {Object} ui - UI instance
  * @param {string} cycle - Billing cycle (monthly or yearly)
  * @returns {Object} Skeletons component
@@ -281,9 +285,9 @@ function billing_content(ui, cycle = "monthly") {
     className: `${fig}-main`,
     kids: [
       item(ui, "free", options.free),
-      item(ui, "pro", options.pro),
       item(ui, "team", options.team),
-      item(ui, "enterprise", options.enterprise),
+      item(ui, "business", options.business),
+      item(ui, "sovereign", options.sovereign),
     ],
   });
 }
