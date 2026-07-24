@@ -30,6 +30,18 @@ $success-soft: rgba(46, 179, 122, 0.14);
     pointer-events: none;   // only the vignette + card opt back in
   }
 
+  // While guiding, the walkthrough targets the workspace form and the internal
+  // permission panel, which live in the window-manager wrapper-modal at
+  // --z-index-modal (100000) — far above z 10020. The coach is trapped in this
+  // root's stacking context, so it renders BEHIND that modal and its Back
+  // becomes unclickable. Lift the whole guiding layer just above the modal so
+  // the coach is interactive and the cutout dims that layer too. Guiding only:
+  // the step 2/3 drop/congrats modals use that same modal layer and must stay
+  // above the flow, so the active/waiting states keep the lower z-10020.
+  &__root[data-guiding="1"] {
+    z-index: calc(var(--z-index-modal, 100000) + 100);
+  }
+
   &__vignette {
     position: absolute;
     inset: 0;
