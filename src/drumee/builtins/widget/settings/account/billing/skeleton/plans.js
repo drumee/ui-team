@@ -28,26 +28,42 @@ function getOptions(ui, cycle = "monthly") {
   );
   const sovereignPrice = money(isYear ? 5489 : 499);
 
-  const per = isYear ? LOCALE.PER_YEAR : LOCALE.PER_MONTH;
+  const perMonth = LOCALE.PER_MONTH;
+  const perYear = LOCALE.PER_YEAR;
+  const per = isYear ? perYear : perMonth;
+
+  // Transcribed row-for-row from tmp/THE FINAL TABLE — Publish This.md.
+  // Same rows, same order, every card: the table IS the spec.
+  const rows = (col) => [
+    { label: LOCALE.FEAT_DEPLOYMENT, value: col.deployment },
+    { label: LOCALE.FEAT_WORKSPACES, value: col.workspaces },
+    { label: LOCALE.FEAT_MEMBERS, value: col.members },
+    { label: LOCALE.FEAT_STORAGE, value: col.storage },
+    { label: LOCALE.FEAT_FILES_CHAT, value: "" },
+    { label: LOCALE.FEAT_PERMISSIONS, value: col.permissions, included: col.permissions !== LOCALE.NONE },
+    { label: LOCALE.FEAT_VERSION_HISTORY, value: col.history, included: col.history !== LOCALE.NONE },
+    { label: LOCALE.FEAT_GUEST_ACCESS, value: "", included: col.guest },
+    { label: LOCALE.FEAT_ADMIN_PANEL, value: col.admin || "", included: col.admin !== false },
+    { label: LOCALE.FEAT_API_ACCESS, value: col.api || "", included: col.api !== false },
+    { label: LOCALE.FEAT_SSO_SAML, value: "", included: col.sso },
+    { label: LOCALE.FEAT_SUPPORT, value: col.support },
+    { label: LOCALE.FEAT_DATA_CONTROL, value: col.data },
+  ];
 
   return {
     free: {
       title: LOCALE.FREE,
       priceAmount: money(0),
-      // Follows the cycle toggle like every other card: $0 is $0 either way,
-      // but leaving it pinned to "/ month" made the Free card look stale next
-      // to three cards that had just switched to "/ year".
       pricePeriod: per,
       buttonTitle: LOCALE.CTA_START_FREE,
       buttonKind: "secondary",
       subText: LOCALE.PLAN_FREE_DESC,
-      features: [
-        { main: "5 GB", sub: LOCALE.FEAT_STORAGE },
-        { main: "1", sub: LOCALE.FEAT_MEMBER_SOLO },
-        { main: "1", sub: LOCALE.FEAT_WORKSPACE },
-        { main: "", sub: LOCALE.FEAT_FILES_CHAT },
-        { main: LOCALE.SUPPORT_COMMUNITY, sub: LOCALE.FEAT_SUPPORT },
-      ],
+      features: rows({
+        deployment: LOCALE.SAAS, workspaces: "1", members: LOCALE.ONE_SOLO, storage: "5 GB",
+        permissions: LOCALE.NONE, history: LOCALE.NONE, guest: false,
+        admin: false, api: false, sso: false,
+        support: LOCALE.SUPPORT_COMMUNITY, data: LOCALE.TRUST_DRUMEE,
+      }),
     },
     // The entry paid tier, and the only one that reaches Stripe Checkout.
     team: {
@@ -58,17 +74,12 @@ function getOptions(ui, cycle = "monthly") {
       buttonKind: "primary",
       badge: 1,
       subText: LOCALE.PLAN_TEAM_DESC,
-      features: [
-        { main: "100 GB", sub: LOCALE.FEAT_STORAGE },
-        { main: LOCALE.UP_TO_10, sub: LOCALE.FEAT_MEMBERS },
-        { main: "1", sub: LOCALE.FEAT_WORKSPACE },
-        { main: LOCALE.GRANULAR, sub: LOCALE.FEAT_PERMISSIONS_ROLES },
-        { main: "30", sub: LOCALE.FEAT_DAYS_VERSION_HISTORY },
-        { main: "", sub: LOCALE.FEAT_FILES_CHAT },
-        { main: "", sub: LOCALE.FEAT_GUEST_ACCESS },
-        { main: "", sub: LOCALE.FEAT_ADMIN_PANEL },
-        { main: LOCALE.SUPPORT_EMAIL, sub: LOCALE.FEAT_SUPPORT },
-      ],
+      features: rows({
+        deployment: LOCALE.SAAS, workspaces: "1", members: LOCALE.UP_TO_10, storage: "100 GB",
+        permissions: LOCALE.GRANULAR_ROLE_BASED, history: LOCALE.DAYS_30, guest: true,
+        admin: "", api: false, sso: false,
+        support: LOCALE.SUPPORT_EMAIL, data: LOCALE.TRUST_DRUMEE,
+      }),
     },
     business: {
       title: LOCALE.BUSINESS,
@@ -77,18 +88,12 @@ function getOptions(ui, cycle = "monthly") {
       buttonTitle: LOCALE.CTA_TALK_TO_SALES,
       buttonKind: "dark",
       subText: LOCALE.PLAN_BUSINESS_DESC,
-      features: [
-        { main: "1 TB", sub: LOCALE.FEAT_STORAGE },
-        { main: LOCALE.UNLIMITED, sub: LOCALE.FEAT_MEMBERS },
-        { main: LOCALE.MULTIPLE, sub: LOCALE.FEAT_WORKSPACES },
-        { main: LOCALE.GRANULAR_AUDIT, sub: LOCALE.FEAT_PERMISSIONS },
-        { main: LOCALE.ONE_YEAR, sub: LOCALE.FEAT_VERSION_HISTORY },
-        { main: "", sub: LOCALE.FEAT_FILES_CHAT },
-        { main: "", sub: LOCALE.FEAT_GUEST_ACCESS },
-        { main: "", sub: LOCALE.FEAT_ADMIN_PANEL_AUDIT },
-        { main: "", sub: LOCALE.FEAT_API_SSO },
-        { main: LOCALE.SUPPORT_PRIORITY_SLA, sub: LOCALE.FEAT_SUPPORT },
-      ],
+      features: rows({
+        deployment: LOCALE.SAAS, workspaces: LOCALE.MULTIPLE, members: LOCALE.UNLIMITED, storage: "1 TB",
+        permissions: LOCALE.GRANULAR_AUDIT, history: LOCALE.ONE_YEAR, guest: true,
+        admin: LOCALE.PLUS_AUDIT_LOGS, api: "", sso: true,
+        support: LOCALE.SUPPORT_PRIORITY_SLA, data: LOCALE.TRUST_DRUMEE,
+      }),
     },
     sovereign: {
       title: LOCALE.SOVEREIGN,
@@ -98,20 +103,13 @@ function getOptions(ui, cycle = "monthly") {
       buttonTitle: LOCALE.CTA_GET_SOVEREIGN_NODE,
       buttonKind: "dark",
       subText: LOCALE.PLAN_SOVEREIGN_DESC,
-      features: [
-        { main: "", sub: LOCALE.FEAT_SELF_HOSTED },
-        { main: LOCALE.YOUR_INFRASTRUCTURE, sub: LOCALE.FEAT_STORAGE },
-        { main: LOCALE.UNLIMITED, sub: LOCALE.FEAT_MEMBERS },
-        { main: LOCALE.FULL_OS, sub: LOCALE.FEAT_WORKSPACES },
-        { main: LOCALE.FULL_ACL, sub: LOCALE.FEAT_PERMISSIONS },
-        { main: LOCALE.UNLIMITED, sub: LOCALE.FEAT_VERSION_HISTORY },
-        { main: "", sub: LOCALE.FEAT_FILES_CHAT },
-        { main: "", sub: LOCALE.FEAT_GUEST_ACCESS },
-        { main: "", sub: LOCALE.FEAT_ADMIN_PANEL_SDK },
-        { main: "", sub: LOCALE.FEAT_API_SSO_SDK },
-        { main: LOCALE.SUPPORT_DEDICATED_SLA, sub: LOCALE.FEAT_SUPPORT },
-        { main: LOCALE.ZERO_TRUST, sub: LOCALE.FEAT_DATA_CONTROL },
-      ],
+      features: rows({
+        deployment: LOCALE.SELF_HOSTED, workspaces: LOCALE.FULL_OS, members: LOCALE.UNLIMITED,
+        storage: LOCALE.YOUR_INFRASTRUCTURE,
+        permissions: LOCALE.FULL_ACL, history: LOCALE.UNLIMITED, guest: true,
+        admin: LOCALE.PLUS_SDK, api: LOCALE.PLUS_SDK, sso: true,
+        support: LOCALE.SUPPORT_DEDICATED_SLA, data: LOCALE.ZERO_TRUST,
+      }),
     },
   };
 }
@@ -269,22 +267,33 @@ function item(ui, opt, option) {
     ? Skeletons.Note({ className: `${fig}-subtext`, content: subText })
     : null;
 
+  // One row per row of the published pricing table, in the table's order, on
+  // every card — that is what makes the four cards comparable. Rows the plan
+  // does NOT get are shown struck through rather than dropped: a buyer needs
+  // to see where a tier stops, and silently omitting them hid exactly that.
+  //
+  // Label first, value second (the table reads "Storage | 5 GB"). The previous
+  // value-first order worked for quantities but broke everything else —
+  // "SaaS Deployment", "Trust Drumee Data control", "Your infrastructure
+  // storage".
   const featureItems = features.map((f) => {
-    const feature = typeof f === "string" ? { main: f, sub: "" } : f;
-    const { main, sub } = feature;
+    const feature = typeof f === "string" ? { label: f, value: "", included: true } : f;
+    const { label, value } = feature;
+    const included = feature.included !== false;
 
     return Skeletons.Box.X({
-      className: `${fig}-feature`,
+      className: `${fig}-feature ${included ? "" : "excluded"}`,
       kids: [
-        Skeletons.Image.Svg({ ico: "available", className: `${fig}-feature-icon` }),
+        Skeletons.Image.Svg({
+          ico: included ? "available" : "cross",
+          className: `${fig}-feature-icon`,
+        }),
         Skeletons.Box.X({
           className: `${fig}-feature-text`,
           kids: [
-            main
-              ? Skeletons.Note({ className: `${fig}-feature-main`, content: main })
-              : null,
-            sub
-              ? Skeletons.Note({ className: `${fig}-feature-sub`, content: sub })
+            Skeletons.Note({ className: `${fig}-feature-sub`, content: label }),
+            value
+              ? Skeletons.Note({ className: `${fig}-feature-main`, content: value })
               : null,
           ].filter(Boolean),
         }),

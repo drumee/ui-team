@@ -1213,3 +1213,14 @@
   }
 }
 
+
+// A row the plan does NOT include. Kept visible (the table shows where a tier
+// stops) but clearly inactive, so it can't be mistaken for an entitlement.
+.settings-billing__plan-feature.excluded {
+  opacity: 0.45;
+
+  .settings-billing__plan-feature-sub,
+  .settings-billing__plan-feature-main {
+    text-decoration: line-through;
+  }
+}
