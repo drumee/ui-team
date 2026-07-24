@@ -163,7 +163,7 @@ class __reward_flow extends LetcBox {
    * Paint the spotlight cutout over `rect` (a viewport-space DOMRect) and feed
    * the coach tooltip. Called by the guide as it walks the live desk chrome.
    */
-  spotlight(rect, text) {
+  spotlight(rect, text, showBack = true) {
     if (!this.el) return;
     const cx = rect.left + rect.width / 2;
     const cy = rect.top + rect.height / 2;
@@ -181,6 +181,7 @@ class __reward_flow extends LetcBox {
           text,
           style: anchor.style,
           side: anchor.side,
+          showBack,
         }),
       );
     });

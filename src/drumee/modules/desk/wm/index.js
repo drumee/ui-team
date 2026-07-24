@@ -299,6 +299,11 @@ class __window_manager extends push {
             this._partitionFoldersAndFiles(list);
           }
         });
+        // Resolve to the created folder so callers can tell success from the
+        // handled-failure paths (invalid name / server error) that resolve
+        // undefined — the reward-flow Step 1 guide relies on this to avoid
+        // advancing when nothing was actually created.
+        return data;
       })
       .catch((e) => {
         this.warn("Failed to create folder", e);

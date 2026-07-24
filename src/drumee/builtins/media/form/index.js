@@ -81,7 +81,12 @@ class __form_folder extends LetcBox {
       this._pending = 1;
       const req = Wm.createFolderFromDialog({ getValue: () => filename });
       return Promise.resolve(req)
-        .then(() => {
+        .then((created) => {
+          // createFolderFromDialog resolves to the folder on success and
+          // undefined on the handled-failure paths (invalid name / server
+          // error). Only broadcast on real success, else the reward-flow Step 1
+          // guide would advance though nothing was created.
+          if (!created || created.error) return;
           // Personal is a folder, not a hub, so it takes the create-folder path
           // above and never fires the workspace:refresh that team/share do.
           // Fire it (flagged personal) so listeners — e.g. the reward-flow

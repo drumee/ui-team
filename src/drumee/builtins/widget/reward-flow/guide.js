@@ -196,6 +196,12 @@ class RewardGuide {
       const perm = firstVisible(SEL.permPanels);
       if (perm) {
         this._permSeen = true;
+        // The panel is up — cancel the "no panel appeared" safety timer so it
+        // can't auto-advance while the user is still reviewing/closing it.
+        if (this._permTimer) {
+          clearTimeout(this._permTimer);
+          this._permTimer = null;
+        }
         this._setSub("perm");
         this._position();
         return;
@@ -259,7 +265,9 @@ class RewardGuide {
     ].join(":");
     if (sig === this._lastSig) return;
     this._lastSig = sig;
-    this._ui.spotlight(rect, tooltipFor(this._sub));
+    // No Back in the perm phase: the workspace already exists, so retreating to
+    // the Step 1 card would be a lie. The user closes the panel to continue.
+    this._ui.spotlight(rect, tooltipFor(this._sub), this._sub !== "perm");
   }
 
   // ───────── foreign-DOM sibling disabling ─────────

@@ -7,22 +7,28 @@
  * form). Back is the only control — it retreats to the Step 1 card.
  *
  * Pure function of `ui` plus a positioned `style`. `side` ("below" | "above")
- * lets the stylesheet flip the connector.
+ * lets the stylesheet flip the connector. `showBack` is false in the perm
+ * phase — the workspace already exists, so there is nothing to go back to.
  */
-module.exports = function coach(ui, { text, style, side }) {
+module.exports = function coach(ui, { text, style, side, showBack = true }) {
   const pfx = ui.fig.family;
-  return Skeletons.Box.Y({
-    className: `${pfx}__coach`,
-    dataset: { side: side || "below" },
-    style,
-    kids: [
-      Skeletons.Note({ className: `${pfx}__coach-text`, content: text }),
+  const kids = [
+    Skeletons.Note({ className: `${pfx}__coach-text`, content: text }),
+  ];
+  if (showBack !== false) {
+    kids.push(
       Skeletons.Note({
         className: `${pfx}__coach-back`,
         content: LOCALE.BACK || "Back",
         service: "reward-back",
         uiHandler: [ui],
       }),
-    ],
+    );
+  }
+  return Skeletons.Box.Y({
+    className: `${pfx}__coach`,
+    dataset: { side: side || "below" },
+    style,
+    kids,
   });
 };
