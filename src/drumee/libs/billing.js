@@ -93,4 +93,25 @@ function canUpgradePlan() {
   return !!(Visitor && Visitor.domainCan && Visitor.domainCan(_K.permission.owner));
 }
 
-module.exports = { billingAvailable, canUpgradePlan };
+/**
+ * Admin Console is an org-tier feature (yp.plan entity_type=org → `team`).
+ * Personal plans must upsell first.
+ *
+ * Gate by plan NAME, not `quota.organization`: Pro seeds organization:1 /
+ * seat:5 too (live Pro accounts show organization=1), so that flag cannot
+ * separate personal from org. Blacklist personal codes so future org tiers
+ * (business / company / …) keep access without a FE whitelist update.
+ * Legacy `advanced` maps to free in billing UI.
+ */
+function needsAdminConsoleUpgrade(plan) {
+  const fromVisitor =
+    typeof Visitor !== "undefined" && Visitor && Visitor.quota
+      ? (Visitor.quota() || {}).plan
+      : null;
+  const raw =
+    plan != null && String(plan).trim() !== "" ? plan : fromVisitor;
+  const name = String(raw || "free").toLowerCase();
+  return /^(free|pro|advanced)$/.test(name);
+}
+
+module.exports = { billingAvailable, canUpgradePlan, needsAdminConsoleUpgrade };
