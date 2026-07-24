@@ -259,7 +259,7 @@ class settings_billing extends LetcBox {
       // Structure: {plan: 'free', organization: 0, seat: 0, storage: 20000000000}
       let { total_seat, plan = "free", billing_cycle = "monthly", storage } = Visitor.quota() || {}
       // Get plan name from quota.plan (primary source)
-      const planName = (plan || "pro").toLowerCase();
+      const planName = (plan || "free").toLowerCase();
       // Get period from plan_detail if available, default to monthly
 
       // Normalise quota.plan onto a card key. Legacy hand-granted rows carry
@@ -638,10 +638,6 @@ class settings_billing extends LetcBox {
   // can't distinguish an org — use domain_id (org owners are on a domain > 1;
   // a personal Pro is on the default domain 1), matching the same
   // domain_id <= 1 gate the org-bootstrap checkout uses.
-  _isPaidPro() {
-    const plan = String(((Visitor.quota && Visitor.quota()) || {}).plan || "").toLowerCase();
-    return plan === "pro" && ~~Visitor.get("domain_id") <= 1;
-  }
 
   // True when the caller currently pays for an ORG/Team subscription (so
   // moving to Pro is a plan SWITCH that ends the Team plan). Guards the
@@ -1117,25 +1113,12 @@ class settings_billing extends LetcBox {
 
       case "select-checkout-plan":
         const plan = this._getValueFromCmd(cmd, args);
-        if (plan === "free" || plan === "pro" || plan === "team") {
+        if (plan === "free" || plan === "team") {
+          // Storage and seats are fixed per plan now (flat pricing), so they
+          // are read straight off the plan rather than nudged per branch.
           this.state.checkout.selectedPlan = plan;
-          // If switching to free plan, set storage to 20GB and clear bundle selection
-          if (plan === "free") {
-            this.state.checkout.storage = 20;
-            this.state.checkout.selectedBundle = "";
-          }
-          // If switching to pro plan, set seats to 5 and additional storage to 0
-          if (plan === "pro") {
-            this.state.checkout.seats = 5;
-            this.state.checkout.storage = 0;
-            this.state.checkout.selectedBundle = "";
-          }
-          // Team is per-seat (org): start at the team baseline seats, no add-on.
-          if (plan === "team") {
-            this.state.checkout.seats = this.seats.team || 1;
-            this.state.checkout.storage = 0;
-            this.state.checkout.selectedBundle = "";
-          }
+          this.state.checkout.storage = this.storage[plan] || 0;
+          this.state.checkout.seats = this.seats[plan] || 0;
           this.renderContent();
         }
         return false;
