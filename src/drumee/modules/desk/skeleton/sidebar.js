@@ -1,5 +1,5 @@
 const { userMenu } = require("../../../builtins/skeleton/toolkit/user");
-const { canUpgradePlan } = require("libs/billing");
+const { canUpgradePlan, planLabel } = require("libs/billing");
 
 /**
  * Sidebar module (refactored)
@@ -100,13 +100,11 @@ const isSidebarPinned = () => {
 
 const createFooter = (ui, username) => {
   const fig = getSidebarFig(ui);
-  // Real plan badge under the username (design: "Pro Plan"): read the live
-  // entitlement instead of the old hardcoded PRO_PLAN label.
-  const quota = (Visitor.quota && Visitor.quota()) || {};
-  const plan = (quota.plan || "free").toString();
-  const planBadge = (LOCALE.PLAN_BADGE || "{0} Plan").format(
-    plan.charAt(0).toUpperCase() + plan.slice(1),
-  );
+  // Real plan badge under the username. planLabel (libs/billing) resolves it
+  // rather than capitalising quota.plan: that field still carries retired and
+  // hand-granted names ('pro', 'Drumee Plus'), which would print a plan that
+  // no longer exists.
+  const planBadge = (LOCALE.PLAN_BADGE || "{0} Plan").format(planLabel());
   // Environment (does this install sell plans at all?) + ownership rule —
   // see libs/billing. Shared with the upgrade-plan service handler so the
   // entry and its action can never disagree.

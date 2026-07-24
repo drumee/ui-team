@@ -38,10 +38,11 @@ class settings_account extends LetcBox {
    *
    */
   canAdmin() {
-    // Paid tiers that can manage seats/members: pro (personal per-seat) and
-    // team/enterprise (org owners — the target model's actual admins; the
-    // old /^pro$/ gate hid this tab from the very users who own an org).
-    if (!/^(pro|team|enterprise)$/i.test(Visitor.quota()?.plan)) return false;
+    // Any paid tier can manage members. Resolved through libs/billing so the
+    // retired 'pro' code and the hand-granted legacy names still map onto Team
+    // rather than silently failing a literal match and hiding this tab from
+    // people who own an org.
+    if (!require("libs/billing").isPaidPlan()) return false;
     return Visitor.domainCan(_K.permission.admin_member) || Visitor.get("domain_id") == 1
   }
   /**

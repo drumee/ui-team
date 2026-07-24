@@ -29,10 +29,6 @@ function item(ui, title, description) {
 export default function (ui) {
   const pfx = `${ui.fig.family}-seats`;
 
-  if (Visitor.quota().plan !== 'pro') {
-
-  }
-
   if (Visitor.get('domain_id') == 1) {
     { return { kind: "organization_form", uiHandler: [ui] } }
   }

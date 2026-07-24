@@ -503,9 +503,10 @@ function linkedAccountsCard(ui) {
 
 function billingCard(ui) {
   const pfx = `${ui.fig.family}__billing`;
-  const q = (Visitor.quota && Visitor.quota()) || {};
-  const plan = (q.plan || "free").toString();
-  const planLabel = plan.charAt(0).toUpperCase() + plan.slice(1);
+  // Resolved through libs/billing, not capitalised from quota.plan — that
+  // field still carries retired ('pro') and hand-granted ('Drumee Plus')
+  // names, which would name a plan that no longer exists.
+  const planLabel = require("libs/billing").planLabel();
 
   // Title row: "Current Plan" + "Manage subscription" (Figma 2769-213367,
   // "Frame 1618872890"). The plan name is a SEPARATE block below it, paired
