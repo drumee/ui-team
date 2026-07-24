@@ -2139,7 +2139,7 @@
   "SOVEREIGN": "Sovereign Node",
   "FEAT_MEMBERS": "members",
   "FEAT_API_SSO": "API access & SSO/SAML",
-  "FEAT_SELF_HOSTED": "Runs on your own infrastructure",
+  "FEAT_SELF_HOSTED": "Self-hosted deployment",
   "PLAN_FREE_DESC": "Try it solo.",
   "PLAN_BUSINESS_DESC": "Bridge to sovereignty.",
   "PLAN_SOVEREIGN_DESC": "You run it. You own it.",
@@ -2167,10 +2167,11 @@
   "FULL_OS": "Full OS",
   "MULTIPLE": "Multiple",
   "ONE_YEAR": "1 year",
-  "YOUR_INFRASTRUCTURE": "Yours",
+  "YOUR_INFRASTRUCTURE": "Your infrastructure",
   "ZERO_TRUST": "Zero trust",
   "SUPPORT_COMMUNITY": "Community",
   "SUPPORT_EMAIL": "Email",
   "SUPPORT_PRIORITY_SLA": "Priority + SLA",
-  "SUPPORT_DEDICATED_SLA": "Dedicated SLA"
+  "SUPPORT_DEDICATED_SLA": "Dedicated SLA",
+  "UP_TO_10": "Up to 10"
 }
