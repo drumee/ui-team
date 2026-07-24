@@ -39,13 +39,13 @@ function getOptions(ui, cycle = "monthly") {
     { label: LOCALE.FEAT_WORKSPACES, value: col.workspaces },
     { label: LOCALE.FEAT_MEMBERS, value: col.members },
     { label: LOCALE.FEAT_STORAGE, value: col.storage },
-    { label: LOCALE.FEAT_FILES_CHAT, value: "" },
+    { label: LOCALE.FEAT_FILES_CHAT, value: "", tick: true },
     { label: LOCALE.FEAT_PERMISSIONS, value: col.permissions, included: col.permissions !== LOCALE.NONE },
     { label: LOCALE.FEAT_VERSION_HISTORY, value: col.history, included: col.history !== LOCALE.NONE },
-    { label: LOCALE.FEAT_GUEST_ACCESS, value: "", included: col.guest },
-    { label: LOCALE.FEAT_ADMIN_PANEL, value: col.admin || "", included: col.admin !== false },
-    { label: LOCALE.FEAT_API_ACCESS, value: col.api || "", included: col.api !== false },
-    { label: LOCALE.FEAT_SSO_SAML, value: "", included: col.sso },
+    { label: LOCALE.FEAT_GUEST_ACCESS, value: "", included: col.guest, tick: true },
+    { label: LOCALE.FEAT_ADMIN_PANEL, value: col.admin || "", included: col.admin !== false, tick: true },
+    { label: LOCALE.FEAT_API_ACCESS, value: col.api || "", included: col.api !== false, tick: true },
+    { label: LOCALE.FEAT_SSO_SAML, value: "", included: col.sso, tick: true },
     { label: LOCALE.FEAT_SUPPORT, value: col.support },
     { label: LOCALE.FEAT_DATA_CONTROL, value: col.data },
   ];
@@ -360,13 +360,21 @@ function item(ui, opt, option) {
  */
 function compareCell(ui, fig, cell) {
   const included = cell.included !== false;
+  // The mark carries meaning only where the table itself uses one. On a value
+  // row the value IS the answer, so a leading tick beside "SaaS" or "Trust
+  // Drumee" is pure noise — it was on every row and made the columns hard to
+  // scan. A cross always shows, though: that is how a column tells you where
+  // the tier stops.
+  const showMark = cell.tick || !included;
   return Skeletons.Box.X({
     className: `${fig}-cell ${fig}-value ${included ? "" : "excluded"}`,
     kids: [
-      Skeletons.Image.Svg({
-        ico: included ? "available" : "cross",
-        className: `${fig}-mark`,
-      }),
+      showMark
+        ? Skeletons.Image.Svg({
+            ico: included ? "available" : "cross",
+            className: `${fig}-mark`,
+          })
+        : null,
       cell.value
         ? Skeletons.Note({ className: `${fig}-text`, content: cell.value })
         : null,
