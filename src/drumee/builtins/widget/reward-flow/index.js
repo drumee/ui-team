@@ -122,7 +122,30 @@ class __reward_flow extends LetcBox {
     if (!host || !host.style) return;
     host.style.pointerEvents = this._hostPE || "";
     host.style.opacity = this._hostOpacity || "";
+    host.style.zIndex = this._hostZ || "";
     this._host = null;
+  }
+
+  /**
+   * Lift the host overlay above the window-manager wrapper-modal while guiding.
+   * The walkthrough's workspace form and internal permission panel live in that
+   * modal at --z-index-modal (100000). The reward-flow is trapped in this
+   * overlay's stacking context (z 10010), so no z-index ON the flow can clear
+   * the modal — the coach renders behind it and its Back is unclickable. The
+   * overlay and the modal both resolve at the document root, so raising the
+   * overlay above the modal lifts the whole flow (and its clickable coach) over
+   * it. Restored when guiding ends, so the step 2/3 drop/congrats modals — in
+   * that same modal layer — stay above the flow.
+   */
+  _raiseHost(on) {
+    if (!this._host || !this._host.style) return;
+    if (on) {
+      if (this._hostZ == null) this._hostZ = this._host.style.zIndex;
+      this._host.style.zIndex = "200000"; // > --z-index-modal (100000)
+    } else {
+      this._host.style.zIndex = this._hostZ || "";
+      this._hostZ = null;
+    }
   }
 
   onBeforeDestroy() {
@@ -152,10 +175,12 @@ class __reward_flow extends LetcBox {
       const RewardGuide = require("./guide");
       this._guide = new RewardGuide(this);
     }
+    this._raiseHost(true);
     this._guide.start();
   }
 
   _stopGuide() {
+    this._raiseHost(false);
     if (this._guide) this._guide.stop();
   }
 
