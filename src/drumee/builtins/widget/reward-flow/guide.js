@@ -58,6 +58,11 @@ const RECONCILE_DEBOUNCE_MS = 30;
 const PERM_TIMEOUT_MS = 2500;
 // How long Back may hold the guide on a sub-step while its surface animates in.
 const PIN_TIMEOUT_MS = 1200;
+// Sub-step order. Moving forward applies at once; moving backward waits (see
+// _reconcile) because it is nearly always just the gap between one surface
+// closing and the next opening.
+const ORDER = { add: 1, menu: 2, form: 3, perm: 4 };
+const BACKWARD_GRACE_MS = 500;
 
 function hasDom() {
   return typeof document !== "undefined" && !!document.querySelector;
@@ -124,6 +129,7 @@ class RewardGuide {
     this._permTimer = null;
     this._pinned = null;        // Back transition in flight → hold this sub-step
     this._pinTimer = null;
+    this._backwardTimer = null; // grace before accepting a backward sub-step
     this._reconcile = this._reconcile.bind(this);
     this._scheduleReconcile = this._scheduleReconcile.bind(this);
   }
@@ -183,6 +189,7 @@ class RewardGuide {
       this._onResize = null;
     }
     this._unpin();
+    this._clearBackward();
     this._enableOthers();
     this._sub = null;
     this._lastSig = null;
@@ -202,8 +209,12 @@ class RewardGuide {
     }, RECONCILE_DEBOUNCE_MS);
   }
 
-  /** Read the live DOM and make the spotlight match reality. Idempotent. */
-  _reconcile() {
+  /**
+   * Read the live DOM and make the spotlight match reality. Idempotent.
+   * `force` accepts a backward move without the grace delay (used when a pinned
+   * transition has landed, or when the grace has already elapsed).
+   */
+  _reconcile(force) {
     if (!hasDom() || !this._observer) return;
 
     // Post-creation: spotlight the follow-up panel(s), complete when the user
@@ -250,14 +261,41 @@ class RewardGuide {
         (this._pinned === "add" && !formVisible && !menuVisible);
       if (!ready) return;
       this._unpin();
+      // The pinned target is what we asked for — take it without the grace.
+      force = true;
     }
 
-    let sub;
-    if (formVisible) sub = "form";
-    else if (menuVisible) sub = "menu";
-    else sub = "add";
+    const sub = formVisible ? "form" : menuVisible ? "menu" : "add";
+
+    // Forward moves apply at once. A backward one is nearly always the gap
+    // between one surface closing and the next opening — clicking "Workspace"
+    // shuts the dropdown a beat before the form mounts, and reconciling that
+    // instant would bounce the cutout back to the Add-new button on the way to
+    // the form. Hold it briefly instead: if the next surface shows up, that
+    // forward move lands immediately and cancels this; if nothing does, the
+    // grace elapses and we accept the backward move.
+    if (!force && ORDER[sub] < ORDER[this._sub]) {
+      this._scheduleBackward();
+      return;
+    }
+    this._clearBackward();
     this._setSub(sub);
     this._position();
+  }
+
+  _scheduleBackward() {
+    if (this._backwardTimer) return;
+    this._backwardTimer = setTimeout(() => {
+      this._backwardTimer = null;
+      this._reconcile(true);
+    }, BACKWARD_GRACE_MS);
+  }
+
+  _clearBackward() {
+    if (this._backwardTimer) {
+      clearTimeout(this._backwardTimer);
+      this._backwardTimer = null;
+    }
   }
 
   /** Switch the active sub-step, running the menu-disable side effects. */
