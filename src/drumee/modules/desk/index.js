@@ -1701,6 +1701,76 @@ class desk_module extends LetcBox {
   }
 
   /**
+   * "Unlock Admin Console" upsell shown when a Free-plan user clicks the
+   * sidebar Admin Console entry. A confirm modal (Wm.confirm → wrapper-modal)
+   * whose body is the branded card (cloud-pause icon + title + pitch) and whose
+   * footer offers "Later" / "Upgrade plan". Confirm → the billing page. The
+   * copy mirrors the admin-console plugin's own in-console upsell so both
+   * surfaces read the same. Caller already checked plan === 'free' &&
+   * canUpgradePlan(), so the button always has somewhere to go.
+   */
+  _showAdminUnlockModal() {
+    const body = () =>
+      Skeletons.Box.Y({
+        className: "desk-module__admin-unlock",
+        kidsOpt: { active: 0 },
+        kids: [
+          Skeletons.Image.Svg({
+            ico: "cloud-pause",
+            className: "desk-module__admin-unlock-icon",
+          }),
+          Skeletons.Note({
+            className: "desk-module__admin-unlock-title",
+            content: LOCALE.UNLOCK_ADMIN_CONSOLE,
+          }),
+          Skeletons.Note({
+            className: "desk-module__admin-unlock-desc",
+            content: LOCALE.UNLOCK_ADMIN_DESC,
+          }),
+        ],
+      });
+    return Wm.confirm({
+      mode: "hbf",
+      body,
+      confirm: LOCALE.UPGRADE_PLAN_MENU || "Upgrade plan",
+      confirm_type: "primary",
+      cancel: LOCALE.LATER || "Later",
+      cancel_type: "secondary",
+    })
+      .then(() => {
+        // Re-check at click time: the modal could outlive an env/quota change.
+        if (!canUpgradePlan()) return this._restoreCurrentSidebarHighlight();
+        return this.openBillingPage().then(() =>
+          this._restoreCurrentSidebarHighlight()
+        );
+      })
+      .catch(() => {
+        // Later / dismissed — nothing opened, so the sidebar's radio (which
+        // highlighted "Admin console" on click, via onAlsoClick) would stay
+        // stuck. Restore it to whatever screen is actually showing.
+        this._restoreCurrentSidebarHighlight();
+      });
+  }
+
+  /**
+   * Re-assert the sidebar radio highlight for the screen currently on top,
+   * or Home when nothing is open. Used after a sidebar item runs a transient
+   * action (e.g. the Free-plan Admin Console modal) instead of opening its
+   * panel — the click already highlighted that item (onAlsoClick broadcasts
+   * `sidebar-radio`), so without this it stays lit over the wrong content.
+   */
+  _restoreCurrentSidebarHighlight() {
+    const service = this._currentScreenService();
+    const pn =
+      (service && desk_module._RESTORABLE_SCREENS[service]) || "sidebar-home";
+    this.ensurePart(pn)
+      .then((p) => {
+        if (p) RADIO_BROADCAST.trigger("sidebar-radio", p);
+      })
+      .catch(() => {});
+  }
+
+  /**
    * Enforce mutual exclusion between sidebar panels. Keep-alive slots
    * just flip `data-anim` to "out"; other slots get cleared. Activity
    * panel uses `setState` because it predates the anim pattern.
@@ -1913,7 +1983,18 @@ class desk_module extends LetcBox {
         // handles closing.
         return this.togglePanel("settings_main", "settings-main-slot");
 
-      case "toggle-apps":
+      case "toggle-apps": {
+        // Free plan can't use the admin console — short-circuit with an
+        // "Unlock" upsell modal instead of loading the whole plugin just to
+        // show its in-console upsell. Gated on canUpgradePlan() so it never
+        // appears where upgrading is impossible (billing off, or a member who
+        // can't act): there the plugin still loads and shows its own state.
+        const plan = String(
+          ((Visitor.quota && Visitor.quota()) || {}).plan || "free"
+        ).toLowerCase();
+        if (plan === "free" && canUpgradePlan()) {
+          return this._showAdminUnlockModal();
+        }
         // Admin Console — the full in-desk console (apps_main) now lives in the
         // @drumee/admin-console plugin. Load it on demand, then render it in the
         // settings-main-slot panel (full-width, in-desk). apps_main does its own
@@ -1928,6 +2009,7 @@ class desk_module extends LetcBox {
           .then(() => Kind.waitFor("apps_main"))
           .then(() => this.togglePanel("apps_main", "settings-main-slot"))
           .catch((e) => this.warn && this.warn("admin-console load failed", e));
+      }
 
       case "toggle-trash":
         RADIO_BROADCAST.trigger("breadcrumb:context", {
