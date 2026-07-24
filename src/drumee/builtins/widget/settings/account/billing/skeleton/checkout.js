@@ -36,101 +36,6 @@ function pillBar(ui, segments) {
 }
 
 /**
- * Create bundle item component for storage upgrade options
- * Display title, price, unit and badge (if available)
- * @param {Object} ui - UI instance
- * @param {Object} opt - Options: value, title, price, unit, badge
- * @returns {Object} Skeletons component
- */
-function bundleItem(ui, opt) {
-  const { value, title, price, unit, badge } = opt;
-  const pfx = `${ui.fig.family}__checkout`;
-  const selectedBundle = String(ui.state?.checkout?.selectedBundle || "");
-  const bundleValue = String(value || "");
-  const isSelected = selectedBundle !== "" && selectedBundle === bundleValue;
-  const isFreePlan = ui.state?.checkout?.selectedPlan === "free";
-
-  const titleContent = badge
-    ? Skeletons.Box.X({
-      className: `${pfx}-bundle-header`,
-      active: 0,
-      kids: [
-        Skeletons.Note({
-          className: `${pfx}-bundle-title`,
-          content: title,
-          active: 0,
-        }),
-        Skeletons.Note({
-          className: `${pfx}-bundle-badge`,
-          content: badge,
-          active: 0,
-        }),
-      ],
-    })
-    : Skeletons.Note({
-      className: `${pfx}-bundle-title`,
-      content: title,
-      active: 0,
-    });
-
-  const priceMatch = String(price || "").match(/^(.+?)\s*(\/mo)$/);
-  const priceAmount = priceMatch ? priceMatch[1] : price;
-  const pricePeriod = priceMatch ? priceMatch[2] : "";
-
-  return Skeletons.Box.X({
-    className: `${pfx}-bundle-item`,
-    radio: `checkout-bundle-${ui._id}`,
-    service: "select-bundle",
-    name: "select-bundle",
-    value: value,
-    formItem: 1,
-    state: isSelected ? 1 : 0,
-    active: isFreePlan ? 0 : 1,
-    bubble: false,
-    uiHandler: [ui],
-    radioRecursive: true,
-    kids: [
-      Skeletons.Box.X({
-        className: `${pfx}-bundle-radio`,
-        state: isSelected ? 1 : 0,
-        active: 0
-      }),
-      Skeletons.Box.Y({
-        className: `${pfx}-bundle-content`,
-        active: 0,
-        kids: [
-          titleContent,
-          Skeletons.Box.X({
-            className: `${pfx}-bundle-price`,
-            active: 0,
-            kids: [
-              Skeletons.Note({
-                className: `${pfx}-bundle-price-amount`,
-                content: priceAmount,
-                active: 0,
-              }),
-              pricePeriod
-                ? Skeletons.Note({
-                  className: `${pfx}-bundle-price-period`,
-                  content: pricePeriod,
-                  active: 0,
-                })
-                : null,
-            ].filter(Boolean),
-          }),
-          Skeletons.Note({
-            className: `${pfx}-bundle-unit`,
-            content: unit,
-            active: 0,
-          }),
-        ],
-      }),
-    ],
-  });
-}
-
-
-/**
  * Create checkout layout with left panel (form) and right panel (summary)
  * Left panel: plan selection, seats, storage, billing cycle, storage bundles
  * Right panel: total price, breakdown, checkout button
@@ -214,7 +119,6 @@ function checkout(ui) {
           }),
           pillBar(ui, [
             { content: LOCALE.FREE, state: selectedPlan === "free" ? 1 : 0, service: "select-checkout-plan", value: "free", radio: `checkout-plan-${ui._id}` },
-            { content: LOCALE.PRO, state: selectedPlan === "pro" ? 1 : 0, service: "select-checkout-plan", value: "pro", radio: `checkout-plan-${ui._id}` },
             { content: LOCALE.TEAM, state: selectedPlan === "team" ? 1 : 0, service: "select-checkout-plan", value: "team", radio: `checkout-plan-${ui._id}` },
           ]),
         ],
@@ -225,125 +129,17 @@ function checkout(ui) {
       Skeletons.Box.Y({
         className: `${pfx}-section`,
         kids: [
-          entry(ui, {
-            label: LOCALE.NUMBER_OF_SEATS,
-            name: "seats",
-            ico: "raw-number-seat",
-            icoPosition: "left",
-            type: "number",
-            placeholder: "0",
-            value: String(seats || 0),
-            // watch: "seats-changes",
-            sys_pn: `${pfx}-seats-input`,
-            service: "input-seats",
-            readonly: selectedPlan === "free" ? true : false,
-            interactive: selectedPlan === "free" ? 0 : 1,
-          }),
-        ],
-      }),
-
-      Skeletons.Box.Y({
-        className: `${pfx}-section`,
-        kids: [
-          entry(ui, {
-            label: LOCALE.ADDITIONAL_STORAGE_GB,
-            name: "storage",
-            ico: "raw-hard-drive",
-            icoPosition: "left",
-            type: "text",
-            placeholder: "0",
-            readonly: 1,
-            value: String(storage || 0),
-            sys_pn: `${pfx}-storage-input`,
-            interactive: selectedPlan === "free" ? 0 : 1,
-          }),
-        ],
-      }),
-
-      Skeletons.Box.Y({
-        className: `${pfx}-section`,
-        kids: [
           Skeletons.Note({
             className: `${pfx}-section-title`,
             content: LOCALE.BILLING_CYCLE,
           }),
           pillBar(ui, [
             { content: LOCALE.MONTHLY, state: billingCycle === "monthly" ? 1 : 0, service: "select-billing-cycle", value: "monthly", radio: `checkout-billing-cycle-${ui._id}` },
-            { content: `${LOCALE.YEARLY} - `, discount: `${LOCALE.SAVED} 15%`, state: billingCycle === "yearly" ? 1 : 0, service: "select-billing-cycle", value: "yearly", radio: `checkout-billing-cycle-${ui._id}` },
+            { content: `${LOCALE.YEARLY} - `, discount: LOCALE.ONE_MONTH_FREE, state: billingCycle === "yearly" ? 1 : 0, service: "select-billing-cycle", value: "yearly", radio: `checkout-billing-cycle-${ui._id}` },
           ]),
         ],
       }),
 
-      // Only show storage bundles section if plan is not "free"
-      ...(isFreePlan ? [] : [
-        Skeletons.Box.Y({
-          className: `${pfx}-section-bundles`,
-          kids: [
-            Skeletons.Box.X({
-              className: `${pfx}-section-bundles-header`,
-              kids: [
-                Skeletons.Note({
-                  className: `${pfx}-section-bundles-header-title`,
-                  content: LOCALE.STORAGE_BUNDLES,
-                }),
-              ],
-            }),
-            Skeletons.Box.X({
-              className: `${pfx}-section-bundles-subtitle`,
-              kids: [
-                Skeletons.Button.Icon({
-                  className: `${pfx}-section-bundles-icon`,
-                  ico: "raw-hard-drive-blue",
-                }),
-                Skeletons.Note({
-                  className: `${pfx}-section-bundles-subtitle`,
-                  content: LOCALE.STORAGE_ADD_ON,
-                }),
-              ],
-            }),
-            Skeletons.Note({
-              className: `${pfx}-section-bundles-note`,
-              content: LOCALE.CHOOSE_ONE_STORAGE_UPGRADE,
-            }),
-            // Only bundles that exist in the catalog (storage_100/500/1000 —
-            // there is no storage_200 backend row); prices are catalog-driven.
-            Skeletons.Box.Y({
-              className: `${pfx}-section-bundles-list`,
-              kids: [
-                Skeletons.Box.X({
-                  className: `${pfx}-section-bundles-list-item`,
-                  kids: [
-                    bundleItem(ui, {
-                      value: "100",
-                      title: "+100GB",
-                      price: `${ui._money(ui._catPrice("storage_100", "month"))} /mo`,
-                      unit: `$${(ui._catPrice("storage_100", "month") / 100).toFixed(3)}/GB`,
-                    }),
-                    bundleItem(ui, {
-                      value: "500",
-                      title: "+500GB",
-                      price: `${ui._money(ui._catPrice("storage_500", "month"))} /mo`,
-                      unit: `$${(ui._catPrice("storage_500", "month") / 500).toFixed(3)}/GB`,
-                    }),
-                  ],
-                }),
-                Skeletons.Box.X({
-                  className: `${pfx}-section-bundles-list-item`,
-                  kids: [
-                    bundleItem(ui, {
-                      value: "1000",
-                      title: "+1TB",
-                      price: `${ui._money(ui._catPrice("storage_1000", "month"))} /mo`,
-                      unit: `$${(ui._catPrice("storage_1000", "month") / 1000).toFixed(3)}/GB`,
-                      badge: LOCALE.BEST_VALUE,
-                    }),
-                  ],
-                }),
-              ],
-            }),
-          ],
-        }),
-      ]),
     ],
   });
 

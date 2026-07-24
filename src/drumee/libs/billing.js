@@ -111,7 +111,11 @@ function needsAdminConsoleUpgrade(plan) {
   const raw =
     plan != null && String(plan).trim() !== "" ? plan : fromVisitor;
   const name = String(raw || "free").toLowerCase();
-  return /^(free|pro|advanced)$/.test(name);
+  // Only Free is below the console now. `pro` was the B2C tier; the 2026-07
+  // pricing rebuild retired it and moved every legacy Pro / Drumee Plus row
+  // onto the Team entitlement, so those users DO get the console — keeping
+  // 'pro' here would upsell people who are already entitled.
+  return /^(free|advanced)$/.test(name);
 }
 
 module.exports = { billingAvailable, canUpgradePlan, needsAdminConsoleUpgrade };
