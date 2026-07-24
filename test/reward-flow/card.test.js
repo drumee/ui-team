@@ -99,3 +99,21 @@ test("every className is derived from fig.family", () => {
     );
   }
 });
+
+test("primaryServiceFor resolves a step's primary button service", () => {
+  assert.equal(stepCard.primaryServiceFor("step2"), "reward-upload");
+  assert.equal(stepCard.primaryServiceFor("step3"), "reward-invite");
+  // Waiting variants resolve to their base step's service.
+  assert.equal(stepCard.primaryServiceFor("step2_waiting"), "reward-upload");
+  assert.equal(stepCard.primaryServiceFor("nope"), undefined);
+});
+
+test("primaryServiceFor matches what the card's primary button fires", () => {
+  // The cutout over the step's topbar control fires this service so clicking
+  // the spotlighted button behaves exactly like clicking the card's button —
+  // these two must not drift apart.
+  for (const step of ["step2", "step3"]) {
+    const fired = services(stepCard(ui(step)));
+    assert.equal(stepCard.primaryServiceFor(step), fired.at(-1));
+  }
+});

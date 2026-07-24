@@ -58,7 +58,19 @@ module.exports = function (ui) {
       // step 3), positioned imperatively by _positionStepTarget. It replaces
       // the old connector arrow: the control reads clear, the rest stays
       // dimmed — matching how Step 1's walkthrough points at things.
-      kids.push(Skeletons.Box.Y({ className: `${pfx}__cutout` }));
+      //
+      // It also IS the click target for that control: the cutout is a
+      // transparent box sitting exactly over the button (its box-shadow, which
+      // does the dimming, isn't hit-testable), so firing the step's primary
+      // service here makes clicking the spotlighted Upload/Invite button behave
+      // exactly like clicking the card's primary button.
+      kids.push(
+        Skeletons.Box.Y({
+          className: `${pfx}__cutout`,
+          service: stepCard.primaryServiceFor(base),
+          uiHandler: [ui],
+        }),
+      );
     }
     kids.push(
       Skeletons.Box.Y({

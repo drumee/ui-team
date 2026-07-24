@@ -61,6 +61,17 @@ const WAITING_HINT = {
     || "Waiting for your first invitation…",
 };
 
+/**
+ * The service a step's primary button fires ("reward-upload" / "reward-invite").
+ * Exposed so the cutout laid over that step's topbar control can fire the SAME
+ * service — clicking the spotlighted Upload/Invite button then behaves exactly
+ * like clicking the card's button, from one source of truth.
+ */
+function primaryServiceFor(step) {
+  const cfg = STEPS[String(step).replace("_waiting", "")];
+  return cfg && cfg.primaryService;
+}
+
 module.exports = function stepCard(ui) {
   const pfx = ui.fig.family;
   const step = ui.getStep();
@@ -124,3 +135,5 @@ module.exports = function stepCard(ui) {
     ].filter(Boolean),
   });
 };
+
+module.exports.primaryServiceFor = primaryServiceFor;

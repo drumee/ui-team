@@ -203,6 +203,17 @@ $success-soft: rgba(46, 179, 122, 0.14);
     background-color: transparent;
   }
 
+  // On steps 2/3 the cutout doubles as the spotlighted control's click target
+  // (see skeleton), so it opts pointer events back in. Only the hole itself is
+  // hit-testable — the box-shadow doing the dimming is not — so clicks outside
+  // still fall through to the scrim and its "Don't drop now". The guiding
+  // cutout (data-cutout="0") stays click-through: there the user operates the
+  // real desk chrome underneath.
+  &__root[data-cutout="1"] &__cutout {
+    pointer-events: auto;
+    cursor: pointer;
+  }
+
   // ───────── card ─────────
   // Each step change re-feeds the skeleton, so the card is a NEW element and
   // cannot transition from the old one's position — it would otherwise pop into
