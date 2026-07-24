@@ -4,13 +4,16 @@
  * Walks the user through the REAL desk chrome to create a workspace, rather
  * than opening the form programmatically:
  *
- *   add   → spotlight the topbar "Add new" button        → user clicks it
- *   menu  → spotlight the "Workspace" dropdown item,      → user clicks it
- *           grey-out + disable the sibling items
- *   form  → spotlight the workspace form (form-folder)    → user submits it
- *   perm  → after create: spotlight the follow-up permission panel that opens
- *           for internal (permission-restricted) / external (window-secure-
- *           share) workspaces  → user closes it → done
+ *   1 add   → spotlight the topbar "Add new" button       → user clicks it
+ *   2 menu  → spotlight the "Workspace" dropdown item,    → user clicks it
+ *             grey-out + disable the sibling items
+ *   3 form  → spotlight the create-workspace modal         → user submits it
+ *             (form-folder)
+ *   4 perm  → optional: after create, spotlight the follow-up permission panel
+ *             that opens for internal (permission-restricted) / external
+ *             (window-secure-share) workspaces → user closes it → done
+ *
+ * Back steps backwards through these; see back().
  *
  * Advancement is driven by observing the live DOM, not by intercepting clicks:
  * a single MutationObserver calls _reconcile(), which reads what is actually
@@ -262,22 +265,53 @@ class RewardGuide {
   }
 
   /**
-   * Back within the walkthrough. Instead of exiting to the Step 1 card, step
-   * back one sub-step: at the form, close the form so the observer reconciles
-   * back to "add" (the Add-new button). Returns true when it handled a
-   * step-back, false when there is nothing earlier (at "add") — then the
-   * orchestrator exits the guide.
+   * Back within the walkthrough — step back one sub-step rather than exiting:
+   *
+   *   4 perm → nothing (the workspace exists; Back is hidden there anyway)
+   *   3 form → close the create modal + re-open the dropdown  → 2 menu
+   *   2 menu → close the dropdown                              → 1 add
+   *   1 add  → nothing earlier; the orchestrator exits the guide
+   *
+   * Each transition just drives the REAL controls (the modal's close button,
+   * the Add-new trigger — which toggles) and lets the observer reconcile to the
+   * resulting sub-step, so this needs no state of its own.
+   *
+   * Returns true when it handled a step-back, false when the guide should exit.
    */
   back() {
     if (!hasDom()) return false;
-    if (this._sub === "form") {
-      const close = document.querySelector(SEL.formClose);
-      if (close && typeof close.click === "function") {
-        close.click();
+    switch (this._sub) {
+      case "perm":
+        // The workspace already exists — swallow Back rather than reverting to
+        // a card that would misrepresent state.
+        return true;
+
+      case "form": {
+        // Closing the form alone would reconcile to "add" (the dropdown shut
+        // when the form opened). Re-open the dropdown in the SAME tick so the
+        // debounced reconcile sees the final state and lands straight on
+        // "menu", with no "add" flash in between.
+        if (!this._click(SEL.formClose)) return false;
+        this._click(SEL.addBtn);
         return true;
       }
+
+      case "menu":
+        // The Add-new trigger toggles, so clicking it while the dropdown is
+        // open closes it → reconcile falls back to "add".
+        return this._click(SEL.addBtn);
+
+      default:
+        return false;
     }
-    return false;
+  }
+
+  /** Click a live-desk control by selector. Returns false when it isn't there. */
+  _click(selector) {
+    const el = document.querySelector(selector);
+    if (!el || typeof el.click !== "function") return false;
+    el.click();
+    return true;
   }
 
   /** Perm phase done (panel closed, or safety timeout) → advance to Step 2. */
