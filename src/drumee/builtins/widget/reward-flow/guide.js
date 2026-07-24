@@ -56,6 +56,8 @@ const RECONCILE_DEBOUNCE_MS = 30;
 // Safety net for the perm phase: team/share always open a panel, but if one
 // never appears (unexpected), don't wedge the guide — complete after this.
 const PERM_TIMEOUT_MS = 2500;
+// How long Back may hold the guide on a sub-step while its surface animates in.
+const PIN_TIMEOUT_MS = 1200;
 
 function hasDom() {
   return typeof document !== "undefined" && !!document.querySelector;
@@ -121,6 +123,8 @@ class RewardGuide {
     this._infoSeen = false;     // the window_info confirmation has appeared
     this._completed = false;    // guard: onGuideComplete fired once
     this._permTimer = null;
+    this._pinned = null;        // Back transition in flight → hold this sub-step
+    this._pinTimer = null;
     this._reconcile = this._reconcile.bind(this);
     this._scheduleReconcile = this._scheduleReconcile.bind(this);
   }
@@ -179,6 +183,7 @@ class RewardGuide {
       window.removeEventListener("resize", this._onResize);
       this._onResize = null;
     }
+    this._unpin();
     this._enableOthers();
     this._sub = null;
     this._lastSig = null;
@@ -234,9 +239,23 @@ class RewardGuide {
       return;
     }
 
+    const formVisible = visible(document.querySelector(SEL.form));
+    const menuVisible = visible(document.querySelector(SEL.wsItem));
+
+    // A Back transition is in flight: hold this sub-step until its surface is
+    // actually on screen, so the animating gap doesn't report an earlier one.
+    if (this._pinned) {
+      const ready =
+        (this._pinned === "menu" && menuVisible) ||
+        (this._pinned === "form" && formVisible) ||
+        (this._pinned === "add" && !formVisible && !menuVisible);
+      if (!ready) return;
+      this._unpin();
+    }
+
     let sub;
-    if (visible(document.querySelector(SEL.form))) sub = "form";
-    else if (visible(document.querySelector(SEL.wsItem))) sub = "menu";
+    if (formVisible) sub = "form";
+    else if (menuVisible) sub = "menu";
     else sub = "add";
     this._setSub(sub);
     this._position();
@@ -289,11 +308,14 @@ class RewardGuide {
         return true;
 
       case "form": {
-        // Re-open the dropdown BEFORE closing the form: while the form is still
-        // up, reconcile keeps reporting "form", so when the form then goes away
-        // it lands straight on "menu" with no "add" flash in between.
-        this._ui.setAddMenu(true);
+        // Close the modal and re-open the dropdown. The dropdown only becomes
+        // visible when its open ANIMATION completes, so pin the sub-step to
+        // "menu" until it actually appears — otherwise the reconcile in the gap
+        // (form gone, dropdown not yet visible) would drop the guide to "add",
+        // which is exactly the 3 → 1 bug.
+        this._pin("menu");
         this._ui.closeCreateForm();
+        this._ui.setAddMenu(true);
         return true;
       }
 
@@ -304,6 +326,30 @@ class RewardGuide {
 
       default:
         return false;
+    }
+  }
+
+  /**
+   * Hold the guide on `sub` until that sub-step's surface actually appears.
+   * Back's transitions animate (the dropdown only becomes visible when its open
+   * animation completes), so without this the reconcile fired in the gap would
+   * report the earlier sub-step. Self-releases after PIN_TIMEOUT_MS so a
+   * surface that never shows can't wedge the guide.
+   */
+  _pin(sub) {
+    this._pinned = sub;
+    if (this._pinTimer) clearTimeout(this._pinTimer);
+    this._pinTimer = setTimeout(() => {
+      this._unpin();
+      this._reconcile();
+    }, PIN_TIMEOUT_MS);
+  }
+
+  _unpin() {
+    this._pinned = null;
+    if (this._pinTimer) {
+      clearTimeout(this._pinTimer);
+      this._pinTimer = null;
     }
   }
 

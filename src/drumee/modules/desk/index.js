@@ -2215,7 +2215,17 @@ class desk_module extends LetcBox {
       // dropdown back to the Add-new button.
       case "reward-set-add-menu":
         return this.ensurePart("addmenu").then((p) => {
-          if (p && _.isFunction(p.changeState)) p.changeState(!!args.open);
+          if (!p || !_.isFunction(p.changeState)) return;
+          if (args.open) {
+            // menu_topic._openItems() early-returns on a truthy `isOpen`, and
+            // `isOpen` is only cleared by _onClosed — the close ANIMATION's
+            // completion callback. Opening the create-modal over the dropdown
+            // interrupts that animation, so `isOpen` is left stale true and
+            // every later open silently no-ops. Clear the stale state first.
+            p.isOpen = false;
+            if (p.model && _.isFunction(p.model.set)) p.model.set(_a.state, 0);
+          }
+          p.changeState(!!args.open);
         });
 
       // Relayed to the reward flow: it opened this popup through the
