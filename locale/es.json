@@ -2142,5 +2142,6 @@
   "FEAT_SELF_HOSTED": "Runs on your own infrastructure",
   "PLAN_FREE_DESC": "Try Drumee solo, free forever.",
   "PLAN_BUSINESS_DESC": "For organisations that need scale, audit and SSO.",
-  "PLAN_SOVEREIGN_DESC": "You run it. You own it. Your infrastructure, your data."
+  "PLAN_SOVEREIGN_DESC": "You run it. You own it. Your infrastructure, your data.",
+  "ONE_MONTH_FREE": "1 month free"
 }
