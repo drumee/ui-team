@@ -1,40 +1,75 @@
 /**
  * Billing availability — reads the deployment environment so an install that
- * cannot sell plans never renders an upgrade CTA.
+ * cannot (or should not) sell plans never renders an upgrade CTA.
  *
- * Two independent signals, both required:
+ * Decided in this order:
  *
- *  1. `Platform.arch` — the product-level discriminator already used across the
- *     app for cloud-only features (signin "forgot password", member password
- *     reset…). `cloud` = the hosted SaaS that sells plans; `pod` = a
- *     self-hosted install, which has no Stripe account behind it.
+ *  1. `SERVICE.payment` — capability floor. The runtime signal that the
+ *     payment BACKEND is actually loaded here: `SERVICE` is merged at
+ *     bootstrap from `Platform.get('services')` (drumee.js `init_globals`)
+ *     and the local `lex/services.json` fallback carries no `payment` entry,
+ *     so the key exists only when the server really exposes the module. No
+ *     backend, no CTA — nothing below can override this.
  *
- *  2. `SERVICE.payment` — the runtime signal that the payment BACKEND is
- *     actually loaded here. `SERVICE` is merged at bootstrap from
- *     `Platform.get('services')` (drumee.js `init_globals`) and the local
- *     `lex/services.json` fallback carries no `payment` entry, so this key
- *     exists only when the server really exposes the module. It is what
- *     decides whether `payment.checkout` can succeed at all.
+ *  2. `Platform.billing_upgrade` — the operator's explicit on/off switch,
+ *     set as `billing_upgrade` in /etc/drumee/conf.d/myDrumee.json. Wins over
+ *     the arch rule so a pod that DOES have Stripe can turn billing on, and a
+ *     cloud install can be switched off without touching anything else.
  *
- * Signal 2 alone would be enough to avoid a hard dead-end, but 1 keeps the
- * product decision explicit and consistent with the rest of the codebase.
- *
- * `arch` defaults to 'cloud' when the platform payload is incomplete: the
- * hosted install is the common case, and signal 2 still gates the CTA, so the
- * default cannot surface a button that has no backend behind it.
+ *  3. `Platform.arch` — the fallback when the switch is unset: the
+ *     product-level discriminator already used across the app for cloud-only
+ *     features (signin "forgot password", member password reset…). `cloud` =
+ *     the hosted SaaS that sells plans; `pod` = self-hosted, no Stripe behind
+ *     it. Defaults to 'cloud' when the payload is incomplete — the hosted
+ *     install is the common case, and step 1 still gates the CTA.
  */
 function billingAvailable() {
-  const arch =
-    (typeof Platform !== "undefined" && Platform && Platform.get
-      ? Platform.get("arch")
-      : null) || "cloud";
-  if (arch !== "cloud") return false;
-  return !!(
+  // Capability floor: without the payment backend nothing can be bought here,
+  // whatever the operator asked for. Checked first so an explicit ON can never
+  // surface a CTA that is guaranteed to dead-end.
+  const hasBackend = !!(
     typeof SERVICE !== "undefined" &&
     SERVICE &&
     SERVICE.payment &&
     SERVICE.payment.checkout
   );
+  if (!hasBackend) return false;
+
+  // Explicit operator switch — `billing_upgrade` in the deployment's
+  // /etc/drumee/conf.d/myDrumee.json, forwarded by the server in the platform
+  // payload. Unset (the default) means "decide from arch below", so existing
+  // installs keep today's behaviour without setting anything.
+  const flag = envFlag();
+  if (flag !== null) return flag;
+
+  const arch =
+    (typeof Platform !== "undefined" && Platform && Platform.get
+      ? Platform.get("arch")
+      : null) || "cloud";
+  return arch === "cloud";
+}
+
+/**
+ * The `billing_upgrade` switch as a tri-state: true (force on), false (force
+ * off), or null (unset — fall back to the arch rule).
+ *
+ * Tolerant on purpose: myDrumee.json is hand-edited, so 1 / "1" / true /
+ * "true" / "on" / "yes" all mean on and 0 / "0" / false / "false" / "off" /
+ * "no" all mean off. An unrecognised value is treated as unset rather than
+ * silently disabling billing — a typo must not take the CTA away.
+ */
+function envFlag() {
+  const raw =
+    typeof Platform !== "undefined" && Platform && Platform.get
+      ? Platform.get("billing_upgrade")
+      : undefined;
+  if (raw === undefined || raw === null || raw === "") return null;
+  if (typeof raw === "boolean") return raw;
+  if (typeof raw === "number") return raw !== 0;
+  const s = String(raw).trim().replace(/^"|"$/g, "").toLowerCase();
+  if (["1", "true", "on", "yes", "enabled"].includes(s)) return true;
+  if (["0", "false", "off", "no", "disabled"].includes(s)) return false;
+  return null;
 }
 
 /**
