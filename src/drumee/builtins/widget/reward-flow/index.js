@@ -187,17 +187,51 @@ class __reward_flow extends LetcBox {
     });
   }
 
-  /** Place the coach below the target, or above it when there is no room. */
+  /**
+   * Position the coach as a viewport-space {left, top}, always fully on screen
+   * and clear of the topbar. Small targets (add / menu / form) get the coach
+   * just below (or above) them. Tall panels (the perm-phase permission panels /
+   * secure-share dock, which can fill most of the height) can't be cleared
+   * vertically, so the coach drops into the widest empty margin beside the
+   * panel — or, when the panel is effectively full-width, pins just under the
+   * topbar. This is what fixes the coach being clipped off the top edge.
+   */
   _coachAnchor(rect, cx) {
-    const vh = (typeof window !== "undefined" && window.innerHeight) || 800;
-    const below = rect.bottom + 12;
-    if (below + 96 < vh) {
-      return { side: "below", style: { left: `${cx}px`, top: `${below}px` } };
+    const win = typeof window !== "undefined" ? window : null;
+    const vw = (win && win.innerWidth) || 1280;
+    const vh = (win && win.innerHeight) || 800;
+    const M = 12;       // viewport margin
+    const TOP = 64;     // keep clear of the ~52px topbar
+    const CH = 104;     // approx coach height
+    const CW = 260;     // coach max-width (see skin __coach)
+    const half = CW / 2;
+    const clampX = (x) => Math.min(Math.max(x, M + half), vw - M - half);
+    const clampY = (y) => Math.min(Math.max(y, TOP), vh - CH - M);
+
+    // Tall panel: place the coach beside it, in whichever margin is wide enough.
+    if (rect.height > vh * 0.6) {
+      const leftGap = rect.left;
+      const rightGap = vw - rect.right;
+      const midY = clampY(vh / 2 - CH / 2);
+      if (leftGap >= CW + 2 * M && leftGap >= rightGap) {
+        return { side: "left", style: { left: `${clampX(leftGap / 2)}px`, top: `${midY}px` } };
+      }
+      if (rightGap >= CW + 2 * M) {
+        return { side: "right", style: { left: `${clampX(rect.right + rightGap / 2)}px`, top: `${midY}px` } };
+      }
+      // Full-width: pin under the topbar, centred on the panel.
+      return { side: "below", style: { left: `${clampX(cx)}px`, top: `${TOP}px` } };
     }
-    return {
-      side: "above",
-      style: { left: `${cx}px`, bottom: `${vh - rect.top + 12}px` },
-    };
+
+    // Small target: below if it fits, else above, else clamped.
+    const below = rect.bottom + M;
+    const above = rect.top - M - CH;
+    let top;
+    let side;
+    if (below + CH + M <= vh) { top = below; side = "below"; }
+    else if (above >= TOP) { top = above; side = "above"; }
+    else { top = TOP; side = "below"; }
+    return { side, style: { left: `${clampX(cx)}px`, top: `${clampY(top)}px` } };
   }
 
   clearSpotlight() {
