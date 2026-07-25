@@ -1391,21 +1391,47 @@
   padding: 12px 8px;
   gap: 6px;
 
-  // The tinted price-header box hugs its content: less padding of its own (the
-  // card's 164px min-height and spacer-4 padding made it a tall panel), so the
-  // background sits close around the title and price.
+  // The tinted price-header box, resized for a table column.
+  //
+  // The card version is a 164px-tall panel with space-between, sized for a
+  // full-width card. Squeezed into a ~240px column it broke in three ways, all
+  // visible in a screenshot and none of them in the computed values: the 26px
+  // price overflowed the tint's bottom edge, the "/ month" suffix ran out past
+  // its right edge, and the absolutely-positioned Popular badge landed on top
+  // of the title.
+  //
+  // One even padding fixes all three — the box simply has to be big enough for
+  // what is inside it. Text insets come from that padding, so the title and
+  // price carry none of their own; adding per-element padding on top is what
+  // made the earlier attempts drift.
   .settings-billing__plan-header {
-    padding: 4px;
+    padding: 14px;
     min-height: 0;
-    gap: 2px;
+    gap: 6px;
+    justify-content: flex-start;
+    overflow: visible;
   }
 
-  // The title text gets its own breathing room from that tighter background —
-  // a left inset so "Free" / "Team" / ... aren't glued to the tint edge.
   .settings-billing__plan-title {
-    padding-left: 10px;
     font-size: 16px;
     line-height: 22px;
+    // Only the Team card carries the Popular badge; keep the title clear of it.
+    padding-right: 8px;
+  }
+
+  // The amount and its "/ month" must stay on one line inside the box: let the
+  // row shrink rather than push the suffix past the tint.
+  .settings-billing__plan-price-row {
+    align-items: baseline;
+    flex-wrap: nowrap;
+    min-width: 0;
+    gap: 4px;
+  }
+
+  // Pull the badge into the trimmed corner so it clears the title line.
+  .settings-billing__plan-badge {
+    top: 10px;
+    right: 10px;
   }
 
   .settings-billing__plan-price-amount {
