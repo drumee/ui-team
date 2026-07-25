@@ -350,6 +350,31 @@ test("step-1 walkthrough: Continue resumes the walkthrough, Drop anyway ends it"
   assert.equal(leave.destroyed, true, "Drop anyway must finish and tear the flow down");
 });
 
+test("step-1 walkthrough: Continue empties the guide-modal via collection.reset (not feed(null))", async () => {
+  const f = makeFlow();
+  click(f, "reward-continue");
+  // A stand-in guide-modal part with a collection + el, capturing how it clears.
+  let resets = 0;
+  let fedNull = 0;
+  const part = {
+    el: { dataset: {} },
+    collection: { reset: () => { resets++; } },
+    feed: (tree) => { if (tree === null) fedNull++; },
+  };
+  f.ensurePart = () => Promise.resolve(part);
+
+  click(f, "reward-vignette-click");
+  await Promise.resolve();
+  assert.equal(part.el.dataset.open, "1", "opening flags the host backdrop dim");
+
+  click(f, "reward-drop-stay");
+  await Promise.resolve();
+  assert.equal(f._guideDropOpen, false, "Continue closes the guard");
+  assert.equal(resets, 1, "Continue must reset the collection to actually remove the modal");
+  assert.equal(fedNull, 0, "feed(null) must not be used — it leaves the modal in place");
+  assert.equal(part.el.dataset.open, undefined, "Continue clears the backdrop flag");
+});
+
 test("a stored 'congrats' terminal marker is not resumable and falls back to step1", () => {
   store.reward_step = "congrats";
   const f = makeFlow();

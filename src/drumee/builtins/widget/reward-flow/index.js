@@ -563,7 +563,13 @@ class __reward_flow extends LetcBox {
     this._guideDropOpen = false;
     this.ensurePart("guide-modal").then((p) => {
       if (!p) return;
-      p.feed(null);
+      // feed(null) does NOT empty a part: prepareData wraps null into [null], so
+      // the modal is left in place. Reset the collection to actually remove it.
+      if (p.collection && typeof p.collection.reset === "function") {
+        p.collection.reset();
+      } else if (typeof p.feed === "function") {
+        p.feed(null);
+      }
       if (p.el && p.el.dataset) delete p.el.dataset.open;
     });
   }
