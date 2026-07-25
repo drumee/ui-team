@@ -192,16 +192,6 @@ $success-soft: rgba(46, 179, 122, 0.14);
     color: var(--normal-fg);
   }
 
-  // Optional heading above the instruction (perm phase). Bold, a touch larger
-  // than the body, tight to the "Close to continue" line beneath it.
-  &__coach-title {
-    font-size: 15px;
-    font-weight: 700;
-    line-height: 1.3;
-    color: var(--normal-fg);
-    margin-bottom: -4px;
-  }
-
   &__coach-text {
     font-size: 13px;
     line-height: 1.45;

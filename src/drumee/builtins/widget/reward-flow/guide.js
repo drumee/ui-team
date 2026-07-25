@@ -48,7 +48,7 @@ const SEL = {
   // Follow-up permission panels: internal (team) → permission_restricted fed
   // into the wrapper-modal; external (share) → window_secure_share window.
   permPanels: ".permission-restricted__main, .window-secure-share__main",
-  // External (share) branch only — used to pick the perm-phase coach title.
+  // External (share) branch only — used to pick the perm-phase coach text.
   permShare: ".window-secure-share__main",
   // The confirmation shown after an action inside those panels — e.g. sending
   // an invitation in permission_restricted pops Wm.alert → window_info, which
@@ -112,15 +112,15 @@ function tooltipFor(sub) {
   }
 }
 
-/** Perm-phase heading: names the panel the user is being asked to close, which
- *  differs for an internal (permission_restricted) vs external (secure_share)
- *  workspace. Empty for every other sub-step (they carry no title). */
-function titleFor(sub) {
-  if (sub !== "perm") return "";
+/** Perm-phase instruction — one uniform line (no separate heading), specific to
+ *  the branch: internal (permission_restricted) vs external (secure_share). */
+function permText() {
   if (firstVisible(SEL.permShare)) {
-    return LOCALE.REWARD_FLOW_GUIDE_PERM_EXTERNAL || "Set who can access your share";
+    return LOCALE.REWARD_FLOW_GUIDE_PERM_EXTERNAL
+      || "Open to share externally with your clients. Close to continue";
   }
-  return LOCALE.REWARD_FLOW_GUIDE_PERM_INTERNAL || "Review who has access";
+  return LOCALE.REWARD_FLOW_GUIDE_PERM_INTERNAL
+    || "Add team members or Close to continue";
 }
 
 /** First matching element that is actually on screen, else null. */
@@ -444,13 +444,8 @@ class RewardGuide {
         getComputedStyle(el).borderRadius) || "";
     // No Back in the perm phase: the workspace already exists, so retreating to
     // the Step 1 card would be a lie. The user closes the panel to continue.
-    this._ui.spotlight(
-      rect,
-      tooltipFor(this._sub),
-      this._sub !== "perm",
-      radius,
-      titleFor(this._sub),
-    );
+    const text = this._sub === "perm" ? permText() : tooltipFor(this._sub);
+    this._ui.spotlight(rect, text, this._sub !== "perm", radius);
   }
 
   // ───────── foreign-DOM sibling disabling ─────────
