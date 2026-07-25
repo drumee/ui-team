@@ -1339,7 +1339,15 @@
     text-align: center;
   }
 
-  &-value { gap: 6px; }
+  // Body cells align to the SAME left edge as the header, so within a coloured
+  // column the value rows line up under the plan name instead of the header
+  // sitting at the left while the values float in the centre. 16px matches the
+  // header column's inset (.compare-plan padding-left, below).
+  &-value {
+    gap: 6px;
+    justify-content: flex-start;
+    padding-left: 16px;
+  }
 
   &-mark {
     width: 15px;
@@ -1587,6 +1595,10 @@
   .settings-billing__plan-header {
     width: 100%;
     align-items: flex-start;
+    // No extra left padding of its own: the title then starts at the column's
+    // 16px inset, the same edge the body value cells align to.
+    padding-left: 0;
+    padding-right: 0;
   }
 
   .settings-billing__plan-title {
