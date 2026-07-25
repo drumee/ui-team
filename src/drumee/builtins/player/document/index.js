@@ -783,22 +783,23 @@ class __player_document extends PlayerInteract {
   /**
    * One-per-change notice that the role was downgraded.
    *
-   * Wm.info has no self-dismiss (window/info only feeds and raises), so the
-   * timer lives here. The [x] the user can click comes from the action below.
+   * The dismissal timer rides along as `dismiss_after` rather than living here.
+   * Holding Wm.info's return value looks right but is not: it ends in
+   * box.append(), which returns `children.last()` — the pool's last child at
+   * call time, while Marionette builds the toast asynchronously afterwards. So
+   * that handle is a different window, or undefined, and the timer either never
+   * armed or would have closed the wrong thing. window_info arms it on itself
+   * in onDomRefresh instead, where the view is real.
    */
   _showRoleDowngradeNotice() {
     const now = Date.now();
     if (now - lastRoleNoticeAt < ROLE_NOTICE_DEDUP_MS) return;
     lastRoleNoticeAt = now;
 
-    // Wm.info returns the window it appended — keep that handle. Do NOT go
-    // looking for it via Wm.getActiveWindow(): that only considers windows
-    // carrying acceptMedia (set in window/core), which window_info does not
-    // have, so it would hand back the user's workspace window instead and the
-    // timer below would close THAT.
-    const notice = Wm.info({
+    Wm.info({
       message: LOCALE.ROLE_CHANGED_TO_VIEW,
       variant: 'notice',
+      dismiss_after: ROLE_NOTICE_MS,
       actions: [
         {
           label: LOCALE.CLOSE,
@@ -808,15 +809,6 @@ class __player_document extends PlayerInteract {
         },
       ],
     });
-
-    if (!notice || typeof notice.goodbye !== 'function') return;
-    clearTimeout(this._roleNoticeTimer);
-    this._roleNoticeTimer = setTimeout(() => {
-      this._roleNoticeTimer = null;
-      // The user may have closed it already, or opened something else on top.
-      if (notice.isDestroyed && notice.isDestroyed()) return;
-      try { notice.goodbye(); } catch (e) { /* already gone */ }
-    }, ROLE_NOTICE_MS);
   }
 
   /**
@@ -856,10 +848,6 @@ class __player_document extends PlayerInteract {
     if (this._editorReadyFallback) {
       clearTimeout(this._editorReadyFallback);
       this._editorReadyFallback = null;
-    }
-    if (this._roleNoticeTimer) {
-      clearTimeout(this._roleNoticeTimer);
-      this._roleNoticeTimer = null;
     }
   }
 
