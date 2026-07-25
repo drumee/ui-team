@@ -948,6 +948,12 @@ class __window_folder extends mfsInteract {
     if (c != null && c.logicalParent === this && c.service === _e.select) {
       return;
     }
+    // A re-feed driven by a remote event (see _applyLivePrivilege) spawns
+    // children that bubble through here, and the base implementation answers by
+    // raising this window. The user did not touch anything — an admin did,
+    // elsewhere — so raising would bury whatever they have on top of this
+    // workspace, e.g. a document they are reading.
+    if (this._suppressRaise) return;
     super.onChildBubble(c);
     if (_.isEmpty(Wm.clipboard)) {
       return this.unselect();
@@ -3643,7 +3649,17 @@ class __window_folder extends mfsInteract {
     // Re-feed the header (not the topbar container) so the header element and
     // its drag/raise wiring survive; only the topbar child rebuilds with the
     // new privilege. The re-feed recreates the breadcrumb part, so repopulate.
-    this.feedPart("folder-header", require("./skeleton/topbar")(this));
+    //
+    // Feeding the header spawns children that bubble up through onChildBubble,
+    // which raises this window (window/core: triggerMethod('change:radio')).
+    // That is right for a click, but here the user did not touch anything — an
+    // admin did, elsewhere — and stealing focus would bury whatever they have
+    // open on top of this workspace, e.g. a document they are editing. Suppress
+    // the raise for the duration of the re-feed instead.
+    this._suppressRaise = 1;
+    this.feedPart("folder-header", require("./skeleton/topbar")(this))
+      .catch(() => { })
+      .then(() => { this._suppressRaise = 0; });
     this.refreshBreadcrumbsUI();
     this._syncChatGate();
   }
