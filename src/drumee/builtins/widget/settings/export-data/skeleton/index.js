@@ -1,3 +1,5 @@
+const { filesize } = require("@drumee/ui-essentials");
+
 function exportItem(ui, { key, title, size }) {
   const pfx = ui.fig.family;
   const checked = ui._selected.has(key);
@@ -47,26 +49,36 @@ function footerButton(ui, opt) {
 export default function export_data_skeleton(ui) {
   const pfx = ui.fig.family;
 
+  // Real per-category bytes from drumate.backup_size, counted off the same
+  // rows the archiver walks. These were hardcoded — every account saw
+  // "240 MB / 12 MB / 88 MB / 2 MB" no matter what it held, which is why the
+  // 342 MB shown here didn't match the 585 MB that came down. Until the
+  // figures arrive (or if the call fails) show a dash: a placeholder number
+  // is worse than admitting we don't know yet.
+  const sizes = ui._sizes || {};
+  const shown = (key) =>
+    sizes[key] == null ? "—" : filesize(sizes[key]);
+
   const items = [
     {
       key: "files",
       title: LOCALE.DELETE_ACCOUNT_EXPORT_FILES || "Files & Uploads",
-      size: "240 MB",
+      size: shown("files"),
     },
     {
       key: "chat",
       title: LOCALE.DELETE_ACCOUNT_EXPORT_CHAT || "Chat history",
-      size: "12 MB",
+      size: shown("chat"),
     },
     {
       key: "workspace",
       title: LOCALE.DELETE_ACCOUNT_EXPORT_WORKSPACE || "Workspace data",
-      size: "88 MB",
+      size: shown("workspace"),
     },
     {
       key: "activity",
       title: LOCALE.DELETE_ACCOUNT_EXPORT_ACTIVITY || "Activity log",
-      size: "2 MB",
+      size: shown("activity"),
     },
   ];
 
