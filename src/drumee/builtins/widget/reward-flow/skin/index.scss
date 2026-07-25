@@ -1,0 +1,535 @@
+@use "mixins/drumee";
+
+// Foreign-DOM annotation: the guide adds this to the topbar Add-menu items it
+// wants disabled (everything but "Workspace") while it holds the dropdown open,
+// and removes it on teardown. Global (not nested) because it lands on desk
+// chrome the reward flow does not own.
+.reward-guide-disabled {
+  opacity: 0.4 !important;
+  pointer-events: none !important;
+}
+
+// Step 3 marks the wrapper-modal hosting the invite popup (see index.js
+// _markInviteOverlay) so its backdrop matches the flow's own dim (--overlay-bg)
+// instead of the app's frosted-glass overlay. Global (not nested) because it
+// lands on desk chrome the reward flow does not own; !important to out-cascade
+// the glass-overlay mixin. Removed when the invite closes.
+.window-manager__wrapper-modal[data-reward-overlay="1"],
+.window-manager__wrapper-modal[data-reward-overlay="1"][data-overlay="blur"] {
+  background-color: var(--overlay-bg, rgba(0, 0, 0, 0.4)) !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+
+// glass-overlay also stacks a blurred ::before layer (blur(60px)); neutralise it
+// too, otherwise the backdrop stays frosted despite the flat colour above.
+.window-manager__wrapper-modal[data-reward-overlay="1"]::before,
+.window-manager__wrapper-modal[data-reward-overlay="1"][data-overlay="blur"]::before {
+  content: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  background: transparent !important;
+}
+
+// Brand accent — same design-system tokens migrate-gdrive-popup uses.
+// --primary-purple-40 is the brand button colour; it is identical in light
+// and dark themes, so the rgba tints below are theme-safe.
+$accent: var(--primary-purple-40);
+$accent-strong: var(--primary-purple-50);
+$accent-soft: rgba(89, 80, 255, 0.12);
+$success-soft: rgba(46, 179, 122, 0.14);
+
+.reward-flow {
+  // Every text element in the flow uses the app font. Set on the root so the
+  // card and coach inherit it; the modal is fed into Wm.__wrapperModal (outside
+  // this root) so it declares its own below.
+  font-family: var(--font-main);
+
+  // Icons nested inside clickable Notes must not swallow the click.
+  &__btn > * { pointer-events: none !important; }
+
+  // ───────── shell ─────────
+  // The root is portaled to document.body (see index.js _portalToBody), so
+  // these z-indexes compete at the true document root.
+  &__root {
+    position: fixed;
+    inset: 0;
+    // Above the desk chrome but BELOW the window-manager wrapper-modal
+    // (--z-index-modal, 100000) so the step 2/3 drop/congrats modals fed into
+    // it stay on top of the flow.
+    z-index: 10020;
+    pointer-events: none;   // only the vignette / card / coach opt back in
+  }
+
+  // While guiding, the walkthrough targets the workspace form and internal
+  // permission panel, which live in that wrapper-modal at --z-index-modal
+  // (100000). Lift the whole flow above it so the coach is clickable and the
+  // cutout dims that layer too. Guiding only, so the drop/congrats modals stay
+  // above the active/waiting states.
+  &__root[data-guiding="1"] {
+    z-index: 1000000;
+  }
+
+
+  &__vignette {
+    position: absolute;
+    inset: 0;
+    background-color: var(--overlay-bg, rgba(0, 0, 0, 0.4));
+    opacity: 1;
+    pointer-events: auto;
+    transition: opacity 0.2s ease;
+  }
+
+  // Waiting: the user has been handed off to the real uploader / invite popup.
+  // The scrim fades out and stops intercepting clicks; the card stays live.
+  &__root[data-waiting="1"] &__vignette {
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  // Guiding (Step 1 walkthrough): a rectangular cutout — a transparent box
+  // sized to the target whose huge box-shadow dims everything around it, so the
+  // target (topbar button / dropdown item / form / permission panel) reads
+  // fully clear with no highlight ring. Click-through, so the user operates the
+  // real desk chrome underneath. The guide positions it with the --cut-* vars.
+  &__cutout {
+    position: fixed;
+    left: var(--cut-x, 0);
+    top: var(--cut-y, 0);
+    width: var(--cut-w, 0);
+    height: var(--cut-h, 0);
+    // Mirrors the spotlighted target's own rounding (set with the --cut-* vars)
+    // so the cutout hugs it exactly.
+    border-radius: var(--cut-radius, 4px);
+    pointer-events: none;
+    box-shadow: 0 0 0 100vmax var(--overlay-bg, rgba(0, 0, 0, 0.4));
+    transition: left 200ms ease, top 200ms ease, width 200ms ease,
+      height 200ms ease;
+  }
+
+  // Clickable frame around the spotlight hole (guided walkthrough). Transparent
+  // — the cutout above provides the dim — but hit-testable everywhere EXCEPT the
+  // hole, which is punched out with the same --cut-* vars the cutout uses (a
+  // self-intersecting polygon = evenodd hole). Clicking the frame asks "Don't
+  // drop now"; the spotlighted target stays clickable through the hole. Sits
+  // below the coach so the coach's own controls win.
+  &__guide-scrim {
+    position: fixed;
+    inset: 0;
+    pointer-events: auto;
+    background: transparent;
+    z-index: 10018;
+    clip-path: polygon(
+      0 0, 100% 0, 100% 100%, 0 100%, 0 0,
+      var(--cut-x, 0) var(--cut-y, 0),
+      var(--cut-x, 0) calc(var(--cut-y, 0) + var(--cut-h, 0)),
+      calc(var(--cut-x, 0) + var(--cut-w, 0)) calc(var(--cut-y, 0) + var(--cut-h, 0)),
+      calc(var(--cut-x, 0) + var(--cut-w, 0)) var(--cut-y, 0),
+      var(--cut-x, 0) var(--cut-y, 0)
+    );
+  }
+
+  // Callout host for the coach tooltip — spans the viewport but never blocks
+  // (the coach itself opts pointer events back in).
+  &__guide-callout {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+  }
+
+  // Host for the "Don't drop now" modal shown during the walkthrough. Inert
+  // until populated; then it dims the whole layer and centres the modal above
+  // the coach so only it is interactive (the guided surfaces stay untouched
+  // underneath — see index.js _openGuideDrop).
+  &__guide-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 10030;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+
+    &[data-open="1"] {
+      pointer-events: auto;
+      background-color: var(--overlay-bg, rgba(0, 0, 0, 0.4));
+    }
+  }
+
+  // ───────── coach tooltip (guided walkthrough) — styled after window_confirm ─────────
+  &__coach {
+    font-family: var(--font-main);
+    position: fixed;
+    transform: translateX(-50%);
+    box-sizing: border-box;
+    width: 300px;
+    max-width: calc(100vw - 24px);
+    padding: 16px 20px 18px;
+    gap: 12px;
+    border-radius: var(--corner-radius-2);
+    background-color: var(--normal-bg-90);
+    border: 1px solid var(--border-default);
+    box-shadow: 0 14px 42px rgba(11, 10, 33, 0.16);
+    pointer-events: auto;
+    z-index: 10021;
+  }
+
+  // Branded header: drumee cloud + wordmark, mirroring window-confirm's topbar.
+  &__coach-brand {
+    align-items: flex-end;
+    gap: 8px;
+  }
+
+  &__coach-logo {
+    width: 32px;
+    height: 32px;
+    color: var(--primary-50);
+  }
+
+  &__coach-name {
+    font-size: 20px;
+    font-weight: 700;
+    line-height: 1;
+    color: var(--normal-fg);
+  }
+
+  &__coach-text {
+    font-size: 13px;
+    line-height: 1.45;
+    color: var(--normal-fg);
+  }
+
+  &__coach-footer {
+    width: 100%;
+    justify-content: flex-end;
+    padding-top: 2px;
+  }
+
+  // Back styled as window-confirm's secondary button.
+  &__coach-back {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 84px;
+    height: 34px;
+    padding: 0 14px;
+    border-radius: var(--corner-radius-2, 8px);
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--normal-fg);
+    background-color: var(--normal-bg);
+    border: 1px solid var(--border-default);
+    cursor: pointer;
+    user-select: none;
+    transition: background-color 120ms ease;
+
+    &:hover { background-color: var(--normal-bg-80); }
+  }
+
+  &__anchor {
+    position: absolute;
+    pointer-events: auto;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    // Eases the move between steps when the anchor element survives the
+    // re-render (step 2/3 are placed inline under their topbar control, step 1
+    // is centred by the rules below).
+    transition: left 260ms ease, top 260ms ease;
+
+    // Step 1 is centred — it has no target control to point at.
+    &[data-step="step1"] {
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      align-items: center;
+    }
+
+    // Steps 2 and 3 are anchored under their topbar control by
+    // _positionStepTarget (inline left/top). These are only the fallback used
+    // until that measurement lands, or if the control isn't on screen.
+    &[data-step="step2"],
+    &[data-step="step3"] {
+      top: 96px;
+      left: 50%;
+      transform: translateX(-50%);
+      align-items: center;
+    }
+  }
+
+  &__root[data-waiting="1"] &__anchor { opacity: 0.92; }
+
+  // Steps 2/3 dim via the cutout over their topbar control, so the flat scrim
+  // must go transparent — it stays in place (and clickable) purely to catch the
+  // "Don't drop now" click.
+  &__root[data-cutout="1"] &__vignette {
+    background-color: transparent;
+  }
+
+  // On steps 2/3 the cutout doubles as the spotlighted control's click target
+  // (see skeleton), so it opts pointer events back in. Only the hole itself is
+  // hit-testable — the box-shadow doing the dimming is not — so clicks outside
+  // still fall through to the scrim and its "Don't drop now". The guiding
+  // cutout (data-cutout="0") stays click-through: there the user operates the
+  // real desk chrome underneath.
+  &__root[data-cutout="1"] &__cutout {
+    pointer-events: auto;
+    cursor: pointer;
+  }
+
+  // Waiting: the cutout stays (so the overlay and the highlighted control don't
+  // vanish mid-upload) but stops intercepting — the user is operating the real
+  // uploader / invite popup underneath.
+  &__root[data-waiting="1"] &__cutout {
+    pointer-events: none;
+    cursor: default;
+  }
+
+  // ───────── card ─────────
+  // Each step change re-feeds the skeleton, so the card is a NEW element and
+  // cannot transition from the old one's position — it would otherwise pop into
+  // place (most visibly stepping back from 2 to 1, where it jumps from under
+  // the Upload button to screen centre). Fade + settle it in instead.
+  @keyframes reward-flow-card-in {
+    from {
+      opacity: 0;
+      transform: translateY(-6px) scale(0.98);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  &__card {
+    font-family: var(--font-main);
+    animation: reward-flow-card-in 220ms ease both;
+    width: 340px;
+    box-sizing: border-box;
+    padding: 24px;
+    gap: 16px;
+    align-items: center;
+    text-align: center;
+    border-radius: 6px;
+    background-color: var(--normal-bg);
+    box-shadow: 0 18px 48px rgba(0, 0, 0, 0.22);
+  }
+
+  &__progress {
+    width: 100%;
+    gap: 8px;
+    justify-content: center;
+  }
+
+  &__progress-seg {
+    height: 4px;
+    flex: 1 1 0;
+    border-radius: 2px;
+    background-color: $accent-soft;
+    transition: background-color 0.2s ease;
+
+    &[data-on="1"] { background-color: $accent; }
+  }
+
+  &__chip {
+    width: 56px;
+    height: 56px;
+    border-radius: 16px;
+    align-items: center;
+    justify-content: center;
+    background-color: $accent-soft;
+  }
+
+  &__chip-ico {
+    width: 26px;
+    height: 26px;
+    color: $accent;
+  }
+
+  &__title {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--normal-fg);
+  }
+
+  &__desc {
+    font-size: 14px;
+    line-height: 1.45;
+    color: var(--normal-fg-20);
+  }
+
+  &__waiting {
+    font-size: 13px;
+    font-style: italic;
+    color: $accent;
+  }
+
+  &__footer {
+    width: 100%;
+    gap: 12px;
+    justify-content: space-between;
+  }
+
+  // ───────── buttons ─────────
+  &__btn {
+    flex: 1 1 0;
+    // Flex-center the label so it sits dead-center regardless of the button's
+    // width (solo full-width primary or half-width paired) — text-align alone
+    // does not center the Note's inline-block content box.
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 11px 16px;
+    border-radius: 4px;
+    font-size: 14px;
+    font-weight: 600;
+    text-align: center;
+    cursor: pointer;
+    user-select: none;
+    transition: background-color 0.15s ease;
+
+    // Solo (congrats "Go to dashboard") — full-width, larger per Figma
+    // 3275:236473 (Medium Button 16 / padding 24×12).
+    &[data-solo="1"] {
+      flex: 1 1 100%;
+      font-size: 16px;
+      padding: 12px 24px;
+    }
+
+    &--primary {
+      color: #fff;
+      // Figma Primary/50 (#433cc5); brighten to Primary/40 on hover — same
+      // lockup as the notice toast's primary button.
+      background-color: $accent-strong;
+      &:hover { background-color: $accent; }
+    }
+
+    &--ghost {
+      color: var(--normal-fg-20);
+      background-color: var(--normal-bg-90);
+      &:hover { background-color: var(--normal-bg-80); }
+    }
+  }
+
+  // ───────── modals (fed into Wm.__wrapperModal) ─────────
+  // Fed into Wm.__wrapperModal, outside the .reward-flow root — so it can't
+  // inherit the root's font and declares it here.
+  &__modal {
+    font-family: var(--font-main);
+    // Opt pointer events back in on the modal ITSELF (the root is pe:none, like
+    // the coach does). When shown during the walkthrough it lives inside the
+    // pe:none guide layer, so without this its buttons never receive clicks.
+    pointer-events: auto;
+    width: 440px;
+    box-sizing: border-box;
+    padding: 40px;
+    gap: 20px;
+    align-items: center;
+    text-align: center;
+    border-radius: 6px;
+    background-color: var(--normal-bg);
+  }
+
+  &__modal-ico {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    align-items: center;
+    justify-content: center;
+
+    &--brand { background-color: transparent; }
+    // Figma 3275:236467 — soft-green disc (Overlay/green #3DDE8C @ 15%).
+    &--success { background-color: rgba(61, 222, 140, 0.15); }
+  }
+
+  &__modal-ico-svg { width: 40px; height: 40px; }
+  // Green check-circle (Signal/Success). checked-circle.svg carries its own
+  // green fill, but set currentColor too in case the pipeline inlines it.
+  &__modal-ico--success &__modal-ico-svg {
+    width: 36px;
+    height: 36px;
+    color: var(--green-400, #10b667);
+  }
+
+  // Branded drumee logo + wordmark header (drop modal) — same lockup as the
+  // coach header, sized for the modal.
+  &__modal-brand {
+    align-items: flex-end;
+    justify-content: center;
+    gap: 8px;
+  }
+
+  &__modal-brand-logo {
+    width: 40px;
+    height: 40px;
+    color: var(--primary-50);
+  }
+
+  &__modal-brand-name {
+    font-size: 24px;
+    font-weight: 700;
+    line-height: 1;
+    color: var(--normal-fg);
+  }
+
+  &__modal-title {
+    // Figma H6 — Geist SemiBold 24 / line-height 1.1.
+    font-size: 24px;
+    line-height: 1.1;
+    font-weight: 700;
+    color: var(--normal-fg);
+  }
+
+  &__modal-desc {
+    font-size: 18px;
+    line-height: 1.4;
+    color: var(--normal-fg);
+  }
+
+  // Congrats copy — Figma Large Body (18px), centred, wrapping so the accent
+  // prize phrase can sit on its own line.
+  &__congrats-copy {
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0 5px;
+  }
+
+  &__congrats-seg {
+    font-size: 18px;
+    line-height: 1.4;
+    color: var(--normal-fg);
+  }
+
+  &__congrats-prize {
+    font-weight: 600;
+    color: $accent;
+  }
+
+  &__modal-footer {
+    width: 100%;
+    gap: 12px;
+    margin-top: 12px;
+    justify-content: space-between;
+  }
+
+  // Respect a reduced-motion preference: keep the step change instant.
+  @media (prefers-reduced-motion: reduce) {
+    &__card { animation: none; }
+    &__anchor,
+    &__cutout { transition: none; }
+  }
+
+  // ───────── mobile ─────────
+  @media (max-width: 767px) {
+    &__anchor {
+      top: 50% !important;
+      left: 50% !important;
+      right: auto !important;
+      transform: translate(-50%, -50%);
+      align-items: center;
+      width: calc(100vw - 32px);
+    }
+
+    &__card { width: 100%; }
+    &__modal { width: calc(100vw - 32px); }
+  }
+}

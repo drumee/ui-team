@@ -76,7 +76,27 @@ class __permission_restricted extends DrumeeMFS {
             if (r.status === "failed") {
               return Wm.alert(r.reason || LOCALE.TRY_AGAIN);
             }
-            Wm.alert(LOCALE.INVITATION_SENT_SUCCESSFULLY);
+            // Branded "notice" toast — the compact drumee-logo card with a
+            // single primary Close button. Feed it through Wm.alert (into the
+            // wrapper-modal) rather than Wm.info (the windows pool): alert
+            // REPLACES this permission panel with the toast, so the toast is the
+            // sole thing in the modal. Wm.info instead leaves the toast
+            // coexisting with the still-open panel, where the panel's
+            // full-viewport wrapper sat over the toast and swallowed its
+            // X / Close clicks. `kind` is set so alert feeds the object verbatim
+            // (variant + actions) instead of wrapping it as a plain body.
+            Wm.alert({
+              kind: "window_info",
+              message: LOCALE.INVITATION_SENT_SUCCESSFULLY,
+              variant: "notice",
+              actions: [
+                {
+                  label: LOCALE.CLOSE,
+                  priority: "primary",
+                  service: _e.close,
+                },
+              ],
+            });
           }).catch((e) => Wm.alert(e.reason || e.error || LOCALE.TRY_AGAIN));
         });
         break;
