@@ -2129,5 +2129,6 @@
   "UPGRADE_PLAN_MENU": "升级套餐",
   "PLAN_BADGE": "{0} 套餐",
   "CONTACT_SALES_VIA": "请通过 {0} 联系我们的销售团队",
-  "SALES_CONTACT_EMAIL": "contact@drumee.org"
+  "SALES_CONTACT_EMAIL": "contact@drumee.org",
+  "MAIL_SALES_SUBJECT": "Drumee {0} plan enquiry"
 }

@@ -628,6 +628,39 @@ class settings_billing extends LetcBox {
   }
 
   // Map an org-ident validation status to its user-facing message.
+  /**
+   * Open the user's mail client addressed to sales.
+   *
+   * The sales-led plans have no checkout to enter, so their CTA has to hand
+   * the conversation over. It used to show the address in an alert, which left
+   * the user to copy it out by hand to do the very thing the button offered.
+   * The subject carries the plan so the enquiry arrives already identified.
+   *
+   * mailto is opened via location.assign rather than window.open: a popup
+   * blocker silently swallows the latter when the click has already been
+   * through a confirm dialog, and the user is left thinking nothing happened.
+   */
+  _openSalesMail(plan) {
+    const to = LOCALE.SALES_CONTACT_EMAIL || "contact@drumee.org";
+    const planName = String(plan || "").replace(/^./, (c) => c.toUpperCase());
+    const subject = (LOCALE.MAIL_SALES_SUBJECT || "Drumee {0} plan enquiry")
+      .format(planName);
+    try {
+      window.location.assign(
+        `mailto:${to}?subject=${encodeURIComponent(subject)}`
+      );
+    } catch (e) {
+      // No mail handler registered: fall back to showing the address so the
+      // path is never a dead end.
+      if (Wm && Wm.alert) {
+        Wm.alert(
+          (LOCALE.CONTACT_SALES_VIA || "Please contact our sales team via {0}")
+            .format(to)
+        );
+      }
+    }
+  }
+
   _orgIdentError(status) {
     switch (status) {
       case "IDENT_INVALID": return LOCALE.ORG_IDENT_INVALID;
@@ -1102,12 +1135,11 @@ class settings_billing extends LetcBox {
           planValue === "enterprise"
         ) {
           if (planValue === "enterprise") {
-            if (Wm && Wm.alert) {
-              Wm.alert(
-                (LOCALE.CONTACT_SALES_VIA || "Please contact our sales team via {0}")
-                  .format(LOCALE.SALES_CONTACT_EMAIL || "contact@drumee.org")
-              );
-            }
+            // Open the mail client straight away. Showing the address in an
+            // alert made the user copy it out by hand to do the one thing the
+            // button promised; the subject line carries the plan so sales know
+            // what the enquiry is about.
+            this._openSalesMail(planValue);
           } else if (planValue === "team" && this._isPaidPro()) {
             // A paying Pro user upgrading to Team: warn first that their
             // current Pro plan is replaced by Team. Team is an org (per-seat)

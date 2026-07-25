@@ -72,15 +72,6 @@ function billing_footer(ui) {
         LOCALE.FOOTER_ENTERPRISE_DESC,
         LOCALE.SALES_CONTACT_EMAIL || "contact@drumee.org"
       ),
-      // Opens the Stripe Billing Portal (invoices, cancel/resume, card, proration).
-      // portal() returns NO_CUSTOMER gracefully for users without a subscription.
-      Skeletons.Note({
-        className: `${fig}-manage-billing`,
-        content: LOCALE.MANAGE_BILLING,
-        service: "manage-billing",
-        uiHandler: [ui],
-        bubble: false,
-      }),
     ],
   });
 }

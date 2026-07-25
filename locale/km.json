@@ -2129,5 +2129,6 @@
   "UPGRADE_PLAN_MENU": "ដំឡើងគម្រោង",
   "PLAN_BADGE": "គម្រោង {0}",
   "CONTACT_SALES_VIA": "សូមទាក់ទងក្រុមលក់របស់យើងតាម {0}",
-  "SALES_CONTACT_EMAIL": "contact@drumee.org"
+  "SALES_CONTACT_EMAIL": "contact@drumee.org",
+  "MAIL_SALES_SUBJECT": "Drumee {0} plan enquiry"
 }

@@ -2134,5 +2134,6 @@
   "UPGRADE_PLAN_MENU": "Mejorar plan",
   "PLAN_BADGE": "Plan {0}",
   "CONTACT_SALES_VIA": "Contacta con nuestro equipo de ventas en {0}",
-  "SALES_CONTACT_EMAIL": "contact@drumee.org"
+  "SALES_CONTACT_EMAIL": "contact@drumee.org",
+  "MAIL_SALES_SUBJECT": "Drumee {0} plan enquiry"
 }
