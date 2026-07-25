@@ -7,16 +7,16 @@
  * uiHandler so clicks route back to the orchestrator.
  */
 
-/** Shared modal shell: icon → title → description block → footer buttons. */
-function shell(ui, { ico, icoClass, title, body, footer }) {
+/** Shared modal shell: header → title → description block → footer buttons.
+ *  `header` is the top block: either the branded drumee logo (drop modal) or a
+ *  single status icon (congrats). Passing it pre-built keeps this shell generic.
+ */
+function shell(ui, { header, title, body, footer }) {
   const pfx = ui.fig.family;
   return Skeletons.Box.Y({
     className: `${pfx}__modal`,
     kids: [
-      Skeletons.Box.Y({
-        className: `${pfx}__modal-ico ${icoClass}`,
-        kids: [Skeletons.Image.Svg({ className: `${pfx}__modal-ico-svg`, ico })],
-      }),
+      header,
       Skeletons.Note({ className: `${pfx}__modal-title`, content: title }),
       body,
       Skeletons.Box.X({ className: `${pfx}__modal-footer`, kids: footer }),
@@ -24,11 +24,31 @@ function shell(ui, { ico, icoClass, title, body, footer }) {
   });
 }
 
+/** A single circular status icon (congrats' success check). */
+function iconHeader(ui, { ico, icoClass }) {
+  const pfx = ui.fig.family;
+  return Skeletons.Box.Y({
+    className: `${pfx}__modal-ico ${icoClass}`,
+    kids: [Skeletons.Image.Svg({ className: `${pfx}__modal-ico-svg`, ico })],
+  });
+}
+
+/** Branded drumee logo + wordmark — same lockup as the coach header. */
+function brandHeader(ui) {
+  const pfx = ui.fig.family;
+  return Skeletons.Box.X({
+    className: `${pfx}__modal-brand`,
+    kids: [
+      Skeletons.Image.Svg({ className: `${pfx}__modal-brand-logo`, ico: "logo-upload" }),
+      Skeletons.Note({ className: `${pfx}__modal-brand-name`, content: "drumee" }),
+    ],
+  });
+}
+
 function dropModal(ui) {
   const pfx = ui.fig.family;
   return shell(ui, {
-    ico: "logo",
-    icoClass: `${pfx}__modal-ico--brand`,
+    header: brandHeader(ui),
     title: LOCALE.REWARD_FLOW_DROP_TITLE || "Don't drop now",
     body: Skeletons.Note({
       className: `${pfx}__modal-desc`,
@@ -76,8 +96,10 @@ function congratsModal(ui) {
   });
 
   return shell(ui, {
-    ico: "apps-check-circle",
-    icoClass: `${pfx}__modal-ico--success`,
+    header: iconHeader(ui, {
+      ico: "apps-check-circle",
+      icoClass: `${pfx}__modal-ico--success`,
+    }),
     title: LOCALE.REWARD_FLOW_CONGRATS_TITLE || "Congratulations!",
     body,
     footer: [

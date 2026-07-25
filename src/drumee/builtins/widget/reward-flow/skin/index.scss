@@ -21,6 +21,16 @@
   -webkit-backdrop-filter: none !important;
 }
 
+// glass-overlay also stacks a blurred ::before layer (blur(60px)); neutralise it
+// too, otherwise the backdrop stays frosted despite the flat colour above.
+.window-manager__wrapper-modal[data-reward-overlay="1"]::before,
+.window-manager__wrapper-modal[data-reward-overlay="1"][data-overlay="blur"]::before {
+  content: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  background: transparent !important;
+}
+
 // Brand accent — same design-system tokens migrate-gdrive-popup uses.
 // --primary-purple-40 is the brand button colour; it is identical in light
 // and dark themes, so the rgba tints below are theme-safe.
@@ -380,6 +390,27 @@ $success-soft: rgba(46, 179, 122, 0.14);
 
   &__modal-ico-svg { width: 40px; height: 40px; }
   &__modal-ico--success &__modal-ico-svg { width: 28px; height: 28px; }
+
+  // Branded drumee logo + wordmark header (drop modal) — same lockup as the
+  // coach header, sized for the modal.
+  &__modal-brand {
+    align-items: flex-end;
+    justify-content: center;
+    gap: 8px;
+  }
+
+  &__modal-brand-logo {
+    width: 40px;
+    height: 40px;
+    color: var(--primary-50);
+  }
+
+  &__modal-brand-name {
+    font-size: 24px;
+    font-weight: 700;
+    line-height: 1;
+    color: var(--normal-fg);
+  }
 
   &__modal-title {
     font-size: 20px;

@@ -466,6 +466,11 @@ class __reward_flow extends LetcBox {
     Wm.__wrapperModal.feed(tree);
     Wm.__wrapperModal.el.dataset.state = "open";
     Wm.__wrapperModal.el.dataset.overlay = "blur";
+    // Align the drop/congrats backdrop with the flow's own dim (--overlay-bg)
+    // instead of the app's frosted-glass blur, so these reward-flow modals read
+    // as part of the same overlay as the vignette/spotlight (same marker Step 3
+    // uses for the invite popup — see _markInviteOverlay).
+    Wm.__wrapperModal.el.dataset.rewardOverlay = "1";
     this._modalOpen = true;
     return true;
   }
@@ -476,6 +481,7 @@ class __reward_flow extends LetcBox {
       Wm.__wrapperModal.clear();
       Wm.__wrapperModal.el.dataset.state = "closed";
       delete Wm.__wrapperModal.el.dataset.overlay;
+      delete Wm.__wrapperModal.el.dataset.rewardOverlay;
     }
     this._modalOpen = false;
   }
