@@ -1346,7 +1346,7 @@
   &-value {
     gap: 6px;
     justify-content: flex-start;
-    padding-left: 16px;
+    padding-left: 22px;
   }
 
   &-mark {
@@ -1588,17 +1588,24 @@
 // column is what pushes that start point in. Scoped to the table, so the mobile
 // cards are untouched.
 .settings-billing__compare-plan {
-  padding-left: 16px;
-  padding-right: 16px;
+  padding-left: 22px;
+  padding-right: 22px;
   align-items: stretch;
 
+  // The card wraps the title+price in a tinted, rounded price-header box with a
+  // 164px min-height. Nested inside the already-tinted table column that box
+  // was a second background the text sat hard against (title leftGap 0), and it
+  // made the header ~260px tall. In the table the column tint IS the header
+  // background, so the box is flattened: no fill, no min-height, no padding of
+  // its own — the text insets come from the column's 22px padding, the same
+  // edge the body values align to.
   .settings-billing__plan-header {
     width: 100%;
     align-items: flex-start;
-    // No extra left padding of its own: the title then starts at the column's
-    // 16px inset, the same edge the body value cells align to.
-    padding-left: 0;
-    padding-right: 0;
+    background: transparent;
+    min-height: 0;
+    padding: 0;
+    border-radius: 0;
   }
 
   .settings-billing__plan-title {
