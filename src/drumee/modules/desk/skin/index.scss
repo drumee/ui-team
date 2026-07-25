@@ -207,6 +207,34 @@ html {
   }
 }
 
+// While an upload is running, its progress floater must stay visible over the
+// folder windows — that popup is the only thing telling the user how far along
+// a multi-gigabyte upload is, and burying it behind the window they clicked
+// makes it useless.
+//
+// Third instance of the same trap as the two cases below: `.window-manager__ui`
+// is `isolation: isolate` (wm/skin), so every z-index inside it is only ever
+// compared with its siblings. Dissolving the context lets its children resolve
+// at the document root instead:
+//   • folder grid (`__main`, z auto)      → stays below panels/sidebar   ✓
+//   • upload-progress-layer (z 50002)     → clears the desk slide-out
+//     panels (chat / notification / trash at 10001) too                  ✓
+//
+// This is NOT what made the floater rise above folder windows — that was a
+// missing `!important` on the layer's own z-index (see wm/skin), since the
+// wrapper behavior stamps `data-state="open"` and a global rule then pins any
+// such element to 50000 `!important`. Ordering *within* the WM never needed
+// this rule. It earns its place only for the panels, which live outside the WM.
+//
+// Scoped to `:has(...)` so the context is only dissolved while a floater is
+// actually mounted — the WM keeps its normal isolation the rest of the time.
+.desk-module__body:has(.window-upload-progress) {
+  .window-manager__ui {
+    isolation: auto;
+    z-index: auto;
+  }
+}
+
 // While a window-connect (call popup) is open, the call must float above the
 // slide-out panels (chat-p2p inbox / Notification / Trash, z 10001) and the
 // sidebar (z 10002) — while the workspace folder GRID stays BELOW those panels.

@@ -5,9 +5,17 @@
   --z-index-high: 200;
   --z-index-higher: 1000;
   --z-index-draft: --z-index-higher;
-  // Upload progress popup: above WM folder layers (~1300), below slide-out
-  // panels (chat / notification / trash at .desk-module__panel-container 10001).
-  --z-index-upload-progress: 9000;
+  // Upload progress popup. Must clear BOTH window lifts, not just the base
+  // layers: `.window__ui[data-state="1"]` goes to 10000 (window/skin/window.scss)
+  // and the layer hosting the focused window goes to 50001 (desk/wm/skin), so
+  // anything below that gets buried the moment the user clicks a window — while
+  // the upload it reports is still running. Above --z-index-context (50000) for
+  // the same reason.
+  //
+  // This IS the value the app uses. The `var(--z-index-upload-progress, N)`
+  // fallbacks elsewhere only apply when this declaration is absent, so editing
+  // them alone changes nothing.
+  --z-index-upload-progress: 50002;
   --z-index-context: 50000;
   --always-visible: 50010;
   --z-index-context-upper: 50010;
