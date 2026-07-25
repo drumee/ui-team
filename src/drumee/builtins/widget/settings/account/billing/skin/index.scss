@@ -1423,9 +1423,15 @@
     justify-content: space-between;
   }
 
+  // --plan-title-lh is the title's line box. The Popular badge is absolutely
+  // positioned, so it has no way to know where that line sits; publishing the
+  // height lets it match instead of guessing. Set wherever the title's type
+  // changes, so the two stay aligned across every breakpoint.
+  --plan-title-lh: 22px;
+
   .settings-billing__plan-title {
     font-size: 16px;
-    line-height: 22px;
+    line-height: var(--plan-title-lh);
     // Only the Team card carries the Popular badge; keep the title clear of it.
     padding-right: 8px;
   }
@@ -1439,10 +1445,17 @@
     gap: 4px;
   }
 
-  // Pull the badge into the trimmed corner so it clears the title line.
+  // Sit the badge ON the title's line rather than near it: same top as the
+  // title (the header's padding) and the same height as its line box, with the
+  // label centred inside. A fixed top of its own left the badge 8px higher
+  // than the plan name — the two read as misaligned.
   .settings-billing__plan-badge {
-    top: 10px;
+    top: 14px;
     right: 10px;
+    height: var(--plan-title-lh);
+    box-sizing: border-box;
+    align-items: center;
+    padding: 0 8px;
   }
 
   .settings-billing__plan-price-amount {
@@ -1493,9 +1506,11 @@
       line-height: 27px;
     }
 
+    --plan-title-lh: 19px;
+
     .settings-billing__plan-title {
       font-size: 14px;
-      line-height: 19px;
+      line-height: var(--plan-title-lh);
     }
 
     .settings-billing__plan-button-main,
@@ -1589,9 +1604,11 @@
     padding: 16px 10px;
     gap: 8px;
 
+    --plan-title-lh: 26px;
+
     .settings-billing__plan-title {
       font-size: 19px;
-      line-height: 26px;
+      line-height: var(--plan-title-lh);
     }
 
     .settings-billing__plan-price-amount {
