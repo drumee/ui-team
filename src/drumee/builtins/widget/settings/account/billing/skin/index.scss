@@ -1568,3 +1568,33 @@
     line-height: 18px;
   }
 }
+
+// Centre the header content in each plan column.
+//
+// The title/price elements come from the card design, where they sit in a
+// full-width card and read fine. In a narrow table column the title — a flex
+// Note — left-aligned its text inside a box that had stretched to the column
+// width, so "Free" / "Team" / "Business" sat against the left padding, out of
+// balance with the right. text-align does not fix a flex Note (the text lives
+// in an inner child); justify-content does. Scoped to the table, so the mobile
+// cards are untouched.
+.settings-billing__compare-plan {
+  .settings-billing__plan-header {
+    width: 100%;
+    align-items: center;
+  }
+
+  .settings-billing__plan-title {
+    width: 100%;
+    justify-content: center;
+    text-align: center;
+  }
+
+  .settings-billing__plan-price {
+    align-items: center;
+  }
+
+  .settings-billing__plan-price-row {
+    justify-content: center;
+  }
+}
