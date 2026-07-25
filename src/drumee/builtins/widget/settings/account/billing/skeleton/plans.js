@@ -222,8 +222,37 @@ function ctaButton(ui, fig, opt, option) {
   const locked =
     !isCurrent && !(ui._mayCheckout ? ui._mayCheckout() : canUpgradePlan());
 
+  // A Team owner can buy extra members from their own plan card — the pill
+  // that just says "Your current plan" is the only thing sitting where they'd
+  // look for it, and before this there was no route to more seats at all
+  // short of moving to Business. Team only: Free has no seats to extend and
+  // Business is already unlimited.
+  const canManageSeats =
+    isCurrent && opt === "team" &&
+    (ui._mayCheckout ? ui._mayCheckout() : canUpgradePlan());
+
   let buttonBtn;
-  if (isCurrent) {
+  if (canManageSeats) {
+    // Same pill, two labels: the state at rest, the action on hover (CSS
+    // swaps them — see &-button-main.current.manageable in the skin). Keeping
+    // one element means the card doesn't shift when the label changes.
+    buttonBtn = Skeletons.Box.X({
+      className: `${fig}-button-main current manageable`,
+      service: "manage-seats",
+      uiHandler: [ui],
+      kidsOpt: { active: 0 },
+      kids: [
+        Skeletons.Note({
+          className: `${fig}-current-label`,
+          content: LOCALE.YOUR_CURRENT_PLAN,
+        }),
+        Skeletons.Note({
+          className: `${fig}-manage-seats-label`,
+          content: LOCALE.MANAGE_SEATS || "Manage seats",
+        }),
+      ],
+    });
+  } else if (isCurrent) {
     // Flat pill (no button() helper — a single element, so there's no
     // outer/inner split to keep in sync). "-main" matches the family the
     // button() helper's outer box uses below, so both share one CSS block.
