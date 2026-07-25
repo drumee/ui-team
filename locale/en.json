@@ -2628,6 +2628,8 @@
   "REWARD_FLOW_GUIDE_MENU": "Choose “Workspace” from the menu.",
   "REWARD_FLOW_GUIDE_FORM": "Pick a workspace type, name it, and click Create.",
   "REWARD_FLOW_GUIDE_PERM": "Close to continue",
+  "REWARD_FLOW_GUIDE_PERM_INTERNAL": "Review who has access",
+  "REWARD_FLOW_GUIDE_PERM_EXTERNAL": "Set who can access your share",
   "REWARD_FLOW_DROP_TITLE": "Don't drop now",
   "REWARD_FLOW_DROP_DESC": "You are super close to the reward.",
   "REWARD_FLOW_DROP_LEAVE": "Drop anyway",

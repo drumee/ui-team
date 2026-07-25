@@ -206,7 +206,7 @@ class __reward_flow extends LetcBox {
    * Paint the spotlight cutout over `rect` (a viewport-space DOMRect) and feed
    * the coach tooltip. Called by the guide as it walks the live desk chrome.
    */
-  spotlight(rect, text, showBack = true, radius = "") {
+  spotlight(rect, text, showBack = true, radius = "", title = "") {
     if (!this.el) return;
     const cx = rect.left + rect.width / 2;
     // Rectangular cutout for every sub-step: clear the target's rect and dim
@@ -225,6 +225,7 @@ class __reward_flow extends LetcBox {
       p.feed(
         require("./skeleton/coach")(this, {
           text,
+          title,
           style: anchor.style,
           side: anchor.side,
           showBack,

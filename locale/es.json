@@ -2205,6 +2205,8 @@
   "REWARD_FLOW_GUIDE_MENU": "Elige «Espacio de trabajo» en el menú.",
   "REWARD_FLOW_GUIDE_FORM": "Elige un tipo de espacio, ponle nombre y haz clic en Crear.",
   "REWARD_FLOW_GUIDE_PERM": "Cierra para continuar",
+  "REWARD_FLOW_GUIDE_PERM_INTERNAL": "Revisa quién tiene acceso",
+  "REWARD_FLOW_GUIDE_PERM_EXTERNAL": "Define quién puede acceder al recurso compartido",
   "REWARD_FLOW_DROP_TITLE": "No lo dejes ahora",
   "REWARD_FLOW_DROP_DESC": "Estás muy cerca de la recompensa.",
   "REWARD_FLOW_DROP_LEAVE": "Salir de todos modos",

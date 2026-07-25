@@ -48,6 +48,8 @@ const SEL = {
   // Follow-up permission panels: internal (team) → permission_restricted fed
   // into the wrapper-modal; external (share) → window_secure_share window.
   permPanels: ".permission-restricted__main, .window-secure-share__main",
+  // External (share) branch only — used to pick the perm-phase coach title.
+  permShare: ".window-secure-share__main",
   // The confirmation shown after an action inside those panels — e.g. sending
   // an invitation in permission_restricted pops Wm.alert → window_info, which
   // REPLACES the panel in the wrapper-modal. Spotlight the card ROOT (__ui) —
@@ -108,6 +110,17 @@ function tooltipFor(sub) {
     default:
       return "";
   }
+}
+
+/** Perm-phase heading: names the panel the user is being asked to close, which
+ *  differs for an internal (permission_restricted) vs external (secure_share)
+ *  workspace. Empty for every other sub-step (they carry no title). */
+function titleFor(sub) {
+  if (sub !== "perm") return "";
+  if (firstVisible(SEL.permShare)) {
+    return LOCALE.REWARD_FLOW_GUIDE_PERM_EXTERNAL || "Set who can access your share";
+  }
+  return LOCALE.REWARD_FLOW_GUIDE_PERM_INTERNAL || "Review who has access";
 }
 
 /** First matching element that is actually on screen, else null. */
@@ -431,7 +444,13 @@ class RewardGuide {
         getComputedStyle(el).borderRadius) || "";
     // No Back in the perm phase: the workspace already exists, so retreating to
     // the Step 1 card would be a lie. The user closes the panel to continue.
-    this._ui.spotlight(rect, tooltipFor(this._sub), this._sub !== "perm", radius);
+    this._ui.spotlight(
+      rect,
+      tooltipFor(this._sub),
+      this._sub !== "perm",
+      radius,
+      titleFor(this._sub),
+    );
   }
 
   // ───────── foreign-DOM sibling disabling ─────────

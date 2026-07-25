@@ -12,7 +12,7 @@
  * in the perm phase — the workspace already exists, so there is nothing to go
  * back to.
  */
-module.exports = function coach(ui, { text, style, side, showBack = true }) {
+module.exports = function coach(ui, { text, title, style, side, showBack = true }) {
   const pfx = ui.fig.family;
   const kids = [
     Skeletons.Box.X({
@@ -22,8 +22,13 @@ module.exports = function coach(ui, { text, style, side, showBack = true }) {
         Skeletons.Note({ className: `${pfx}__coach-name`, content: "drumee" }),
       ],
     }),
-    Skeletons.Note({ className: `${pfx}__coach-text`, content: text }),
   ];
+  // Optional heading above the instruction (perm phase uses it to name the panel
+  // the user is closing — "Who has access" / "Manage access").
+  if (title) {
+    kids.push(Skeletons.Note({ className: `${pfx}__coach-title`, content: title }));
+  }
+  kids.push(Skeletons.Note({ className: `${pfx}__coach-text`, content: text }));
   if (showBack !== false) {
     kids.push(
       Skeletons.Box.X({
