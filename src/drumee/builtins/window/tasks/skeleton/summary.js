@@ -436,7 +436,7 @@ module.exports = function (ui) {
   // ── 5. Team workload (horizontal bars per member) ───────────────────────────
   // Every hub member appears — members with no tasks yet show an empty bar
   // (they're still part of the team). Sorted busiest-first; ties keep member
-  // order. Hovering a bar reveals the exact task count.
+  // order. Each row shows its exact task count next to the bar.
   const work = [];
   const seenUids = new Set();
   (ui.getMembers() || []).forEach((m) => {
@@ -453,7 +453,13 @@ module.exports = function (ui) {
     work.push({ uid, m: ui.getMember(uid) || {}, count: byAssignee[uid] });
   });
   work.sort((a, b) => b.count - a.count);
-  const maxWork = Math.max(1, unassigned, ...work.map((e) => e.count));
+  // Share of the whole workload, not of the busiest member: a row is only full
+  // when that member holds every assignment. The denominator counts each
+  // assignment (a task with 2 assignees weighs on both rows), so bars sum to 100%.
+  const totalWork = Math.max(
+    1,
+    unassigned + work.reduce((s, e) => s + e.count, 0),
+  );
   const taskCountLabel = (n) =>
     `${n} ${n === 1 ? LOCALE.TASK_ONE : LOCALE.TASK_MANY}`;
   const workRow = (avatarNode, label, count) =>
@@ -472,16 +478,21 @@ module.exports = function (ui) {
         }),
         Skeletons.Box.X({
           className: `${pfx}__health-work-track`,
-          // Hover shows the member's current task count (empty bar = 0 tasks).
-          tooltips: { content: taskCountLabel(count), className: `${pfx}__tip` },
           kids: count
             ? [
                 Skeletons.Box.X({
                   className: `${pfx}__health-work-fill`,
-                  styleOpt: { width: `${Math.round((count / maxWork) * 100)}%` },
+                  styleOpt: {
+                    width: `${Math.round((count / totalWork) * 100)}%`,
+                  },
                 }),
               ]
             : [],
+        }),
+        // Always visible (empty bar = 0 tasks), not hover-only.
+        Skeletons.Note({
+          className: `${pfx}__health-work-count`,
+          content: taskCountLabel(count),
         }),
       ],
     });

@@ -125,10 +125,43 @@ class __window_manager extends mfsInteract {
   }
 
   /**
+   * True when an in-app widget started this drag and handles its own drop
+   * (it tags the dataTransfer with _K.internalDragType).
+   *
+   * These handlers are delegated on the Wm root, so EVERY native drag bubbles
+   * here — including a Kanban card crossing columns. capture() then writes
+   * data-selected/data-over on every window and reads getComputedStyle (forced
+   * style recalc), and seek_insertion() calls $el.offset() plus a geometry test
+   * per child (forced layout) — on each of the 60-125 dragover events a second.
+   *
+   * NOT "does the drag carry files": an external text/link drag carries none
+   * and still needs the pass, so a drop onto a folder tile lands in it.
+   *
+   * @param {*} e
+   * @returns {boolean}
+   */
+  _isInternalDrag(e) {
+    const dt =
+      (e && e.dataTransfer) ||
+      (e && e.originalEvent && e.originalEvent.dataTransfer);
+    const types = dt && dt.types;
+    if (!types) return false;
+    // DOMStringList (legacy) exposes contains(); a plain array does not.
+    if (typeof types.contains === "function") {
+      return types.contains(_K.internalDragType);
+    }
+    for (let i = 0; i < types.length; i++) {
+      if (types[i] === _K.internalDragType) return true;
+    }
+    return false;
+  }
+
+  /**
    *
    * @param {*} e
    */
   fileDragEnter(e) {
+    if (this._isInternalDrag(e)) return;
     this.pseudo_media.dragEnter(e);
   }
 
@@ -137,6 +170,7 @@ class __window_manager extends mfsInteract {
    * @param {*} e
    */
   fileDragOver(e) {
+    if (this._isInternalDrag(e)) return;
     this.capture(this.pseudo_media.dragOver(e));
   }
 
