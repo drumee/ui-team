@@ -159,6 +159,7 @@ class __reward_flow extends LetcBox {
     }
     this._stopGuide();
     this._restoreHost();
+    this._markInviteOverlay(false);
   }
 
   // ───────── step 1 guided walkthrough ─────────
@@ -365,7 +366,25 @@ class __reward_flow extends LetcBox {
   _goto(step) {
     this._step = step;
     lsSet(KEY_STEP, step);
+    // While the invite popup is open (step3_waiting), tint its wrapper-modal
+    // backdrop to match the flow's own dim instead of the default frosted glass.
+    this._markInviteOverlay(step === "step3_waiting");
     this._render();
+  }
+
+  /**
+   * Mark the shared wrapper-modal that hosts the invite popup so its backdrop
+   * uses the flow's --overlay-bg (see skin) instead of the app's glass overlay.
+   * Scoped to the reward flow — the topbar Invite button, which shares
+   * _openInvitePopup, is left with the default look.
+   */
+  _markInviteOverlay(on) {
+    if (typeof Wm === "undefined" || !Wm.__wrapperModal || !Wm.__wrapperModal.el) {
+      return;
+    }
+    const ds = Wm.__wrapperModal.el.dataset;
+    if (on) ds.rewardOverlay = "1";
+    else delete ds.rewardOverlay;
   }
 
   _isWaiting() { return this._step.endsWith("_waiting"); }
@@ -416,6 +435,9 @@ class __reward_flow extends LetcBox {
    *  - it closed because the send succeeded → open congrats now (host is free);
    *  - it closed without sending → re-arm step 3 so the user can retry. */
   onInvitePopupClosed() {
+    // The invite popup is gone now — drop the backdrop tint so the congrats
+    // modal (fed into the same wrapper-modal next) keeps its own overlay.
+    this._markInviteOverlay(false);
     if (this._inviteSucceeded) {
       this._inviteSucceeded = false;
       this._step = "congrats";
