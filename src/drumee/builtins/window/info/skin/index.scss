@@ -209,7 +209,20 @@
     border-radius: var(--corner-radius-2);
     padding: var(--spacer-4) var(--spacer-6);
     cursor: pointer;
-    background-color: var(--normal-bg-80) !important;
+    // Default (secondary custom actions): light neutral surface.
+    background-color: var(--normal-bg-80);
+
+    // Primary action — the default Close, and any primary custom action: the
+    // brand indigo button, matching the reward flow's --primary-purple-40.
+    &.primary {
+      grid-template-columns: none; // no icon slot → centre the label
+      justify-content: center;
+      background: var(--primary-purple-40);
+      color: var(--white);
+      transition: background-color 120ms ease;
+
+      &:hover { background: var(--primary-purple-50); }
+    }
   }
 
   // ── Simulated download-progress bar (window_info `body` = download-progress) ──
