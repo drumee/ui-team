@@ -1569,32 +1569,37 @@
   }
 }
 
-// Centre the header content in each plan column.
+// Header content is left-aligned in each plan column, but padded off the edge.
 //
-// The title/price elements come from the card design, where they sit in a
-// full-width card and read fine. In a narrow table column the title — a flex
-// Note — left-aligned its text inside a box that had stretched to the column
-// width, so "Free" / "Team" / "Business" sat against the left padding, out of
-// balance with the right. text-align does not fix a flex Note (the text lives
-// in an inner child); justify-content does. Scoped to the table, so the mobile
+// The complaint was that "Free" / "Team" / "Business" / "Sovereign Node" sat
+// hard against the left edge, so the left had no breathing room while the right
+// did. The fix is NOT to centre them — they stay start-aligned — it is to give
+// the column symmetric horizontal padding so the text starts inset from the
+// edge by the same amount it clears on the right. The title is a flex Note, so
+// it fills the column and its text sits at flex-start; the padding on the
+// column is what pushes that start point in. Scoped to the table, so the mobile
 // cards are untouched.
 .settings-billing__compare-plan {
+  padding-left: 16px;
+  padding-right: 16px;
+  align-items: stretch;
+
   .settings-billing__plan-header {
     width: 100%;
-    align-items: center;
+    align-items: flex-start;
   }
 
   .settings-billing__plan-title {
     width: 100%;
-    justify-content: center;
-    text-align: center;
+    justify-content: flex-start;
+    text-align: left;
   }
 
   .settings-billing__plan-price {
-    align-items: center;
+    align-items: flex-start;
   }
 
   .settings-billing__plan-price-row {
-    justify-content: center;
+    justify-content: flex-start;
   }
 }
