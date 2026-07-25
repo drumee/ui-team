@@ -15,15 +15,14 @@
     gap: var(--spacer-2);
   }
 
-  &__content-container {
-    margin-top: var(--spacer-6);
-  }
-
   // Measure the space the billing content actually gets, not the window: this
   // page sits inside the settings panel, so the viewport is consistently wider
-  // than the room available (1280 of content inside a 1679 viewport). Same
-  // reasoning as the plans table's own container.
-  &__content-wrapper {
+  // than the room available (1280 of content inside a 1679 viewport). Declared
+  // on content-container because that is the one wrapper present in BOTH tabs
+  // — content-wrapper only exists on the plans tab, so a container declared
+  // there never matched anything while the checkout tab was open.
+  &__content-container {
+    margin-top: var(--spacer-6);
     container-type: inline-size;
     container-name: billing-content;
   }
@@ -657,7 +656,9 @@
     // became unreachable. Position: sticky alone keeps it pinned while the
     // OUTER page scrolls.
     &-right {
-      flex: 0 1 480px;
+      // grow (not just shrink): once this wraps below the form it should take
+      // the full row rather than sitting at 480px with dead space beside it.
+      flex: 1 1 480px;
       min-width: 0;
       gap: var(--spacer-5);
       padding: var(--spacer-6);
