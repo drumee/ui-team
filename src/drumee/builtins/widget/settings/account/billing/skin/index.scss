@@ -1415,9 +1415,12 @@
     // the row of four read as ragged. flex:1 equalises them without hardcoding
     // a height that a longer label or another language would break.
     flex: 1;
-    // With the box now taller than its text, centre the content rather than
-    // leaving it stranded at the top.
-    justify-content: center;
+    // Title pinned to the top, price to the bottom — the card's own
+    // arrangement, and what the extra height from flex:1 is for. Centring it
+    // (an earlier attempt) floated both away from the edges they belong on.
+    // The Popular badge is absolute, so it sits on the title's line at the
+    // top-right without taking part in this distribution.
+    justify-content: space-between;
   }
 
   .settings-billing__plan-title {
