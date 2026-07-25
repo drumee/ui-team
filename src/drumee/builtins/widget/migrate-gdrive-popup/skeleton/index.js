@@ -311,7 +311,13 @@ module.exports = function (ui) {
         Skeletons.Box.X({
           className: `${pfx}__sa-email-card`,
           kids: [
-            Skeletons.Note({ className: `${pfx}__sa-email`, content: email }),
+            // Same reason as the link input below: keep the browser's own
+            // menu so the address can be copied with the mouse too.
+            Skeletons.Note({
+              className: `${pfx}__sa-email`,
+              content: email,
+              escapeContextmenu: true,
+            }),
             Skeletons.Note({
               className: `${pfx}__sa-copy`,
               dataset: { partname: 'sa-copy-btn' },
@@ -331,6 +337,11 @@ module.exports = function (ui) {
               mode: 'commit',
               service: 'gdrive-sa-verify',
               uiHandler: [ui],
+              // Right-click must give the browser's own Cut/Copy/Paste menu:
+              // without this the handler walks up to the desk/home manager,
+              // opens ITS context menu under the popup and preventDefault()s
+              // the native one — so users cannot paste the Drive link.
+              escapeContextmenu: true,
             }),
           ],
         }),
@@ -496,30 +507,80 @@ module.exports = function (ui) {
     const summaryBase = (LOCALE.MIGRATE_GDRIVE_SUMMARY_BASE || 'Imported {0} files in {1} folders.')
       .replace('{0}', snap.processed_files || 0)
       .replace('{1}', snap.total_folders || 0);
-    const summaryErr = (LOCALE.MIGRATE_GDRIVE_SUMMARY_ERRORS || '{0} errors.')
-      .replace('{0}', errors.length);
+    // Not every entry in `errors` is a failure. The importer reports skipped
+    // items through the same channel — a Drive SHORTCUT is deliberately not
+    // followed, and a real run of a shared folder produced 30 of them against
+    // 140 imported files. Counting those as "30 errors" told the user their
+    // migration was broken when nothing was lost, so the two are separated and
+    // only genuine failures are coloured as errors.
+    const SKIP_CODES = ['SHORTCUT_SKIPPED'];
+    const skipped = errors.filter((e) => SKIP_CODES.includes(e.code));
+    const failures = errors.filter((e) => !SKIP_CODES.includes(e.code));
+    const summaryErr = failures.length
+      ? (LOCALE.MIGRATE_GDRIVE_SUMMARY_ERRORS || '{0} errors.').replace('{0}', failures.length)
+      : (skipped.length
+          ? (LOCALE.MIGRATE_GDRIVE_SUMMARY_SKIPPED || '{0} skipped.').replace('{0}', skipped.length)
+          : '');
     const summaryRow = Skeletons.Box.X({
       className: `${pfx}__summary`,
       kids: [
         Skeletons.Note({ content: summaryBase }),
-        Skeletons.Note({
+        summaryErr ? Skeletons.Note({
           className: `${pfx}__summary-errors`,
-          dataset: { kind: errors.length ? 'error' : '' },
+          // Only real failures read as an error; skipped items stay neutral.
+          dataset: { kind: failures.length ? 'error' : 'skipped' },
           content: summaryErr,
-        }),
+        }) : null,
       ],
     });
-    // Error detail list (first few) when present. NOT_GRANTED is the
-    // drive.file grant gap (children of a picked folder the Picker never
-    // "saw") — show the re-pick hint instead of the raw axios message
-    // ("Not Found"), which reads like the file was deleted.
-    const errorList = errors.length ? Skeletons.Box.Y({
+    /**
+     * Human reason for one reported item. NOT_GRANTED is the drive.file grant
+     * gap (children of a picked folder the Picker never "saw") — show the
+     * re-pick hint rather than the raw axios "Not Found", which reads as if
+     * the file had been deleted.
+     */
+    const reasonOf = (e) => {
+      if (e.code === 'NOT_GRANTED') return LOCALE.GDRIVE_NOT_GRANTED;
+      if (e.code === 'SHORTCUT_SKIPPED') {
+        return LOCALE.GDRIVE_SHORTCUT_SKIPPED || 'Google Drive shortcut — not copied';
+      }
+      return e.reason || e.code || LOCALE.ERROR || 'error';
+    };
+
+    // Detail list, grouped by reason. Previously this printed the first five
+    // raw lines and stopped — with 30 shortcuts the user saw five names, no
+    // reason they could act on, and no hint that 25 more existed. Grouping
+    // states the cause once and names the items under it, failures first so
+    // anything actionable is at the top.
+    const GROUP_LIMIT = 8;
+    const groups = [];
+    [...failures, ...skipped].forEach((e) => {
+      const reason = reasonOf(e);
+      const g = groups.find((x) => x.reason === reason);
+      const name = e.file || e.folder || '?';
+      if (g) g.items.push(name);
+      else groups.push({ reason, items: [name], isFailure: !SKIP_CODES.includes(e.code) });
+    });
+
+    const errorList = groups.length ? Skeletons.Box.Y({
       className: `${pfx}__error-list`,
-      kids: errors.slice(0, 5).map((e) => Skeletons.Note({
-        className: `${pfx}__error-item`,
-        content: `${e.file || e.folder || '?'} — ${e.code === 'NOT_GRANTED'
-          ? LOCALE.GDRIVE_NOT_GRANTED
-          : (e.reason || e.code || 'error')}`,
+      kids: groups.map((g) => Skeletons.Box.Y({
+        className: `${pfx}__error-group`,
+        dataset: { kind: g.isFailure ? 'error' : 'skipped' },
+        kids: [
+          Skeletons.Note({
+            className: `${pfx}__error-reason`,
+            content: `${g.reason} (${g.items.length})`,
+          }),
+          Skeletons.Note({
+            className: `${pfx}__error-item`,
+            content: g.items.slice(0, GROUP_LIMIT).join(', ')
+              + (g.items.length > GROUP_LIMIT
+                  ? ' ' + (LOCALE.MIGRATE_GDRIVE_MORE_ITEMS || '+{0} more')
+                      .replace('{0}', g.items.length - GROUP_LIMIT)
+                  : ''),
+          }),
+        ],
       })),
     }) : null;
 
@@ -545,7 +606,16 @@ module.exports = function (ui) {
                     kids: [
                       Skeletons.Note({ className: `${pfx}__destination`, content: ui._destinationName }),
                       Skeletons.Note({ className: `${pfx}__dest-sub`, content: summaryBase }),
-                    ],
+                      // A successful run can still have skipped or failed
+                      // items. The done screen used to show only the imported
+                      // count, so the reasons below appeared with nothing
+                      // stating how many there were.
+                      summaryErr ? Skeletons.Note({
+                        className: `${pfx}__dest-sub ${pfx}__summary-errors`,
+                        dataset: { kind: failures.length ? 'error' : 'skipped' },
+                        content: summaryErr,
+                      }) : null,
+                    ].filter(Boolean),
                   }),
                 ],
               }),

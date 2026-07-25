@@ -32,13 +32,13 @@ export default function (ui) {
             value: "free",
           }),
           button(ui, {
-            label: LOCALE.PRO,
+            label: LOCALE.TEAM,
             className: `${pfx}-plan-button`,
             service: "select-checkout-plan",
             priority: "secondary",
-            state: ui.state?.checkout?.selectedPlan === "pro" ? 1 : 0,
+            state: ui.state?.checkout?.selectedPlan === "team" ? 1 : 0,
             radio: `checkout-plan-${ui._id}`,
-            value: "pro",
+            value: "team",
           }),
         ],
       })

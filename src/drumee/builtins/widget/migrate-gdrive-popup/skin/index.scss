@@ -586,21 +586,41 @@ $danger-soft: rgba(246, 81, 75, 0.12);
     justify-content: center;
   }
 
+  // Report panel. Neutral by default: it also carries items that were merely
+  // SKIPPED (Drive shortcuts), and painting those red said "your migration
+  // broke" about a run that lost nothing.
   &__error-list {
-    gap: var(--spacer-2);
-    max-height: 132px;
+    gap: var(--spacer-3);
+    max-height: 168px;
     overflow-y: auto;
     padding: var(--spacer-3) var(--spacer-4);
-    background: rgba(246, 81, 75, 0.07);
-    border: 1px solid rgba(246, 81, 75, 0.18);
+    background: var(--normal-bg-100, rgba(0, 0, 0, 0.03));
+    border: 1px solid var(--normal-bg-20, rgba(0, 0, 0, 0.10));
     border-radius: var(--corner-radius-2);
   }
 
+  // One group per reason: the cause stated once, the affected names under it.
+  &__error-group {
+    gap: 2px;
+  }
+
+  &__error-reason {
+    @include drumee.typo($size: 12px, $line: 16px, $weight: 400, $color: var(--normal-fg));
+    font-weight: 600;
+  }
+
+  // Only genuine failures are red; skipped groups stay neutral.
+  &__error-group[data-kind="error"] &__error-reason,
+  &__error-group[data-kind="error"] .migrate-gdrive-popup__error-reason {
+    color: var(--error);
+  }
+
+  // The names wrap: this is a comma list of everything in the group, so
+  // clipping it to one ellipsised line hid most of what it reports.
   &__error-item {
-    @include drumee.typo($size: 12px, $weight: 400, $line: 16px, $color: var(--error));
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    @include drumee.typo($size: 12px, $weight: 400, $line: 16px, $color: var(--normal-fg-10));
+    white-space: normal;
+    word-break: break-word;
   }
 
   // ───────── skip link ─────────
@@ -701,6 +721,8 @@ $danger-soft: rgba(246, 81, 75, 0.12);
   }
 
   &__summary-errors[data-kind="error"] { color: var(--red-500); }
+  // Skipped is information, not a fault — keep it in the normal text colour.
+  &__summary-errors[data-kind="skipped"] { color: var(--normal-fg-10); }
 
   &__dest-block { gap: var(--spacer-2); }
 

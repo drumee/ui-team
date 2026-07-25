@@ -1,4 +1,5 @@
 const { button } = require("../../../../../skeleton/toolkit");
+const { canUpgradePlan } = require("libs/billing");
 
 /**
  * Build the plan catalogue for display. Text comes from LOCALE; prices come
@@ -16,98 +17,114 @@ const { button } = require("../../../../../skeleton/toolkit");
 function getOptions(ui, cycle = "monthly") {
   const isYear = cycle === "yearly";
   const money = (n) => ui._money(n);
-  const proPrice = money(ui._catPrice("pro", isYear ? "year" : "month"));
-  const teamPrice = money(ui._catPrice("team", isYear ? "year" : "month"));
-  // Extra-seat price is the pro_seat catalog row (monthly figure in the card
-  // copy, matching the design's "each additional seat $5.00").
-  const seatPrice = money(ui._catPrice("pro_seat", "month"));
+  const period = isYear ? "year" : "month";
+  // Team is the only self-serve tier, so it is the only one with a Stripe
+  // price to read. Business and Sovereign are sales-led: their amounts are
+  // published figures, shown so the ladder reads as a ladder, with a
+  // "Contact sales" CTA instead of checkout — hence the literal fallbacks.
+  const teamPrice = money(ui._catPrice("team", period));
+  const businessPrice = money(
+    ui._catPrice("business", period) ?? (isYear ? 1089 : 99),
+  );
+  const sovereignPrice = money(isYear ? 5489 : 499);
 
   const perMonth = LOCALE.PER_MONTH;
   const perYear = LOCALE.PER_YEAR;
-  const perSeatMonth = LOCALE.PER_SEAT_MONTH;
-  const perSeatYear = LOCALE.PER_SEAT_YEAR;
+  const per = isYear ? perYear : perMonth;
+
+  // Transcribed row-for-row from tmp/THE FINAL TABLE — Publish This.md.
+  // Same rows, same order, every card: the table IS the spec.
+  const rows = (col) => [
+    { label: LOCALE.FEAT_DEPLOYMENT, value: col.deployment },
+    { label: LOCALE.FEAT_WORKSPACES, value: col.workspaces },
+    { label: LOCALE.FEAT_MEMBERS, value: col.members },
+    { label: LOCALE.FEAT_STORAGE, value: col.storage },
+    { label: LOCALE.FEAT_FILES_CHAT, value: "", tick: true },
+    { label: LOCALE.FEAT_PERMISSIONS, value: col.permissions, included: col.permissions !== LOCALE.NONE },
+    { label: LOCALE.FEAT_VERSION_HISTORY, value: col.history, included: col.history !== LOCALE.NONE },
+    { label: LOCALE.FEAT_GUEST_ACCESS, value: "", included: col.guest, tick: true },
+    { label: LOCALE.FEAT_ADMIN_PANEL, value: col.admin || "", included: col.admin !== false, tick: true },
+    { label: LOCALE.FEAT_API_ACCESS, value: col.api || "", included: col.api !== false, tick: true },
+    { label: LOCALE.FEAT_SSO_SAML, value: "", included: col.sso, tick: true },
+    { label: LOCALE.FEAT_SUPPORT, value: col.support },
+    { label: LOCALE.FEAT_DATA_CONTROL, value: col.data },
+  ];
 
   return {
     free: {
       title: LOCALE.FREE,
       priceAmount: money(0),
-      pricePeriod: perMonth,
-      buttonTitle: LOCALE.GET_STARTED,
+      pricePeriod: per,
+      buttonTitle: LOCALE.CTA_START_FREE,
       buttonKind: "secondary",
-      subText: "",
-      features: [
-        { main: "20 GB", sub: LOCALE.FEAT_STORAGE },
-        { main: LOCALE.NONE, sub: LOCALE.FEAT_ADMIN_ROLES },
-      ],
+      subText: LOCALE.PLAN_FREE_DESC,
+      features: rows({
+        deployment: LOCALE.SAAS, workspaces: "1", members: LOCALE.ONE_SOLO, storage: "5 GB",
+        permissions: LOCALE.NONE, history: LOCALE.NONE, guest: false,
+        admin: false, api: false, sso: false,
+        support: LOCALE.SUPPORT_COMMUNITY, data: LOCALE.TRUST_DRUMEE,
+      }),
     },
-    pro: {
-      title: LOCALE.PRO,
-      priceLabel: LOCALE.START_FROM,
-      priceAmount: proPrice,
-      pricePeriod: isYear ? perYear : perMonth,
-      // From a HIGHER tier (team/enterprise) moving to Pro is a switch, not
-      // an upgrade — "Choose Pro Plan" (ticket 2026-07-22). currentPlanName
-      // comes synchronously from Visitor.quota(), so the label is right from
-      // the very first paint — no async flash.
-      buttonTitle: /^(team|enterprise)$/i.test(ui.currentPlanName || "")
-        ? (LOCALE.CHOOSE_PRO || "Choose Pro Plan")
-        : LOCALE.UPGRADE,
-      buttonKind: "primary",
-      badge: 1,
-      subText: LOCALE.PLAN_PRO_DESC.format(seatPrice),
-      features: [
-        { main: "20 GB", sub: LOCALE.FEAT_STORAGE },
-        { main: "5", sub: LOCALE.FEAT_EDITOR_ACCESS },
-        { main: "1", sub: LOCALE.FEAT_ADMIN_ROLE },
-        { main: "7", sub: LOCALE.FEAT_DAYS_VERSION_HISTORY },
-        { main: "", sub: LOCALE.FEAT_PERMISSIONS_ROLES },
-        { main: "", sub: LOCALE.FEAT_GUEST_ACCESS },
-      ],
-    },
+    // The entry paid tier, and the only one that reaches Stripe Checkout.
     team: {
       title: LOCALE.TEAM,
       priceAmount: teamPrice,
-      pricePeriod: isYear ? perSeatYear : perSeatMonth,
-      buttonTitle: LOCALE.CHOOSE_TEAM,
-      buttonKind: "dark",
+      pricePeriod: per,
+      buttonTitle: LOCALE.CTA_START_WORKSPACE,
+      buttonKind: "primary",
+      badge: 1,
       subText: LOCALE.PLAN_TEAM_DESC,
-      features: [
-        { main: "50 GB", sub: LOCALE.FEAT_STORAGE_PER_SEAT },
-        { main: LOCALE.ORG, sub: LOCALE.FEAT_DOMAIN_WIDE },
-        { main: "30", sub: LOCALE.FEAT_DAYS_VERSION_HISTORY },
-        { main: "", sub: LOCALE.FEAT_ADMIN_BILLING },
-      ],
+      features: rows({
+        deployment: LOCALE.SAAS, workspaces: "1", members: LOCALE.UP_TO_10, storage: "100 GB",
+        permissions: LOCALE.GRANULAR_ROLE_BASED, history: LOCALE.DAYS_30, guest: true,
+        admin: "", api: false, sso: false,
+        support: LOCALE.SUPPORT_EMAIL, data: LOCALE.TRUST_DRUMEE,
+      }),
     },
-    enterprise: {
-      title: LOCALE.ENTERPRISE,
-      priceText: LOCALE.CONTACT_SALES,
-      buttonTitle: LOCALE.CONTACT_SALES,
+    business: {
+      title: LOCALE.BUSINESS,
+      priceAmount: businessPrice,
+      pricePeriod: per,
+      buttonTitle: LOCALE.CTA_TALK_TO_SALES,
       buttonKind: "dark",
-      subText: LOCALE.PLAN_ENTERPRISE_DESC,
-      features: [
-        { main: LOCALE.CUSTOM, sub: LOCALE.FEAT_STORAGE },
-        { main: LOCALE.CUSTOM, sub: LOCALE.FEAT_EDITOR_ACCESS },
-        { main: LOCALE.YES, sub: LOCALE.FEAT_ADMIN_ROLE },
-        { main: LOCALE.UP_TO_90_DAYS, sub: LOCALE.FEAT_VERSION_HISTORY },
-        { main: "", sub: LOCALE.FEAT_PERMISSIONS_ROLES },
-        { main: "", sub: LOCALE.FEAT_GUEST_ACCESS },
-        { main: "", sub: LOCALE.FEAT_ACTIVITY_LOGS },
-      ],
+      subText: LOCALE.PLAN_BUSINESS_DESC,
+      features: rows({
+        deployment: LOCALE.SAAS, workspaces: LOCALE.MULTIPLE, members: LOCALE.UNLIMITED, storage: "1 TB",
+        permissions: LOCALE.GRANULAR_AUDIT, history: LOCALE.ONE_YEAR, guest: true,
+        admin: LOCALE.PLUS_AUDIT_LOGS, api: "", sso: true,
+        support: LOCALE.SUPPORT_PRIORITY_SLA, data: LOCALE.TRUST_DRUMEE,
+      }),
+    },
+    sovereign: {
+      title: LOCALE.SOVEREIGN,
+      priceLabel: LOCALE.START_FROM,
+      priceAmount: sovereignPrice,
+      pricePeriod: per,
+      buttonTitle: LOCALE.CTA_GET_SOVEREIGN_NODE,
+      buttonKind: "dark",
+      subText: LOCALE.PLAN_SOVEREIGN_DESC,
+      features: rows({
+        deployment: LOCALE.SELF_HOSTED, workspaces: LOCALE.FULL_OS, members: LOCALE.UNLIMITED,
+        storage: LOCALE.YOUR_INFRASTRUCTURE,
+        permissions: LOCALE.FULL_ACL, history: LOCALE.UNLIMITED, guest: true,
+        admin: LOCALE.PLUS_SDK, api: LOCALE.PLUS_SDK, sso: true,
+        support: LOCALE.SUPPORT_DEDICATED_SLA, data: LOCALE.ZERO_TRUST,
+      }),
     },
   };
 }
 
 /**
- * The "Popular" highlight is an upsell cue aimed at users below Pro. Once the
- * user sits on a higher tier (team/enterprise) the Pro card must not carry the
- * active/focused look — only the current plan's card does. The badge chip
- * itself stays; only the tinted/primary styling is suppressed.
+ * The "Popular" highlight is an upsell cue aimed at users below Team. Once the
+ * user sits on a higher tier the Team card must not carry the active/focused
+ * look — only the current plan's card does. The badge chip itself stays; only
+ * the tinted/primary styling is suppressed.
  * @param {Object} ui - UI instance
  * @param {number} badge - the option's badge flag
  * @returns {boolean} whether the popular styling applies
  */
 function popularHighlight(ui, badge) {
-  return !!badge && !/^(team|enterprise)$/i.test(ui.currentPlanName || "");
+  return !!badge && !/^(business|sovereign|enterprise)$/i.test(ui.currentPlanName || "");
 }
 
 /**
@@ -169,19 +186,41 @@ function priceHeader(ui, fig, option, isCurrent) {
 }
 
 /**
- * Create plan item component (Free, Pro, Team, Enterprise): price-header box →
- * pill CTA → sub-text → feature list. Follows Figma 3050-96140.
+ * Create plan item component (Free, Team, Business, Sovereign): price-header
+ * box → pill CTA → sub-text → feature list. Follows Figma 3050-96140.
  * @param {Object} ui - UI instance
- * @param {string} opt - Plan option key (free, pro, team, enterprise)
+ * @param {string} opt - Plan option key (free, team, business, sovereign)
  * @param {Object} option - Pre-built option object from getOptions
  * @returns {Object} Skeletons component
  */
-function item(ui, opt, option) {
-  const { buttonTitle, buttonKind, subText, features, badge } = option;
-  const fig = `${ui.fig.family}__plan`;
+
+/**
+ * The card's call to action. Shared by the mobile cards and the desktop
+ * comparison table so both surfaces show the same state — current plan,
+ * owner-locked, or an actionable CTA — and can never drift apart.
+ * @param {Object} ui - UI instance
+ * @param {string} fig - BEM prefix
+ * @param {string} opt - plan key
+ * @param {Object} option - plan option
+ * @returns {Object} Skeletons component
+ */
+function ctaButton(ui, fig, opt, option) {
+  const { buttonTitle, buttonKind } = option;
   // Mark the caller's active plan: pill-style "Your current plan" instead of a
   // CTA (design: the Free card shows the pill while the user is on Free).
   const isCurrent = (ui.currentPlanName || "free") === opt;
+
+  // Billing is owner-managed: inside an org (domain_id > 1) only the OWNER may
+  // change the plan. Without this the CTA looked live for every member and only
+  // failed at the very last step, where payment.checkout answers
+  // ORG_IDENT_REQUIRED (they own no org) or ALREADY_IN_OTHER_DOMAIN (they
+  // cannot bootstrap a second one) — a raw status code after a full checkout
+  // walk. Same rule as the sidebar entry, from the same helper, so the two can
+  // never disagree.
+  // Prefer the widget's resolved verdict (server-backed) over the local
+  // ownership guess — see settings_billing._mayCheckout.
+  const locked =
+    !isCurrent && !(ui._mayCheckout ? ui._mayCheckout() : canUpgradePlan());
 
   let buttonBtn;
   if (isCurrent) {
@@ -195,6 +234,19 @@ function item(ui, opt, option) {
         Skeletons.Note({
           className: `${fig}-current-label`,
           content: LOCALE.YOUR_CURRENT_PLAN,
+        }),
+      ],
+    });
+  } else if (locked) {
+    // Same flat pill as the current-plan marker, carrying the reason instead of
+    // an action — the ladder stays readable, it just isn't actionable here.
+    buttonBtn = Skeletons.Box.X({
+      className: `${fig}-button-main locked`,
+      dataset: { disabled: 1 },
+      kids: [
+        Skeletons.Note({
+          className: `${fig}-current-label`,
+          content: LOCALE.ONLY_OWNER_CAN_CHANGE_PLAN,
         }),
       ],
     });
@@ -224,26 +276,55 @@ function item(ui, opt, option) {
     });
   }
 
+  return buttonBtn;
+}
+
+/**
+ * Create plan item component (Free, Team, Business, Sovereign): price-header
+ * box → pill CTA → sub-text → feature list. Follows Figma 3050-96140.
+ * @param {Object} ui - UI instance
+ * @param {string} opt - Plan option key (free, team, business, sovereign)
+ * @param {Object} option - Pre-built option object from getOptions
+ * @returns {Object} Skeletons component
+ */
+function item(ui, opt, option) {
+  const { buttonTitle, buttonKind, subText, features, badge } = option;
+  const fig = `${ui.fig.family}__plan`;
+  const isCurrent = (ui.currentPlanName || "free") === opt;
+
+  const buttonBtn = ctaButton(ui, fig, opt, option);
+
   const subTextItem = subText
     ? Skeletons.Note({ className: `${fig}-subtext`, content: subText })
     : null;
 
+  // One row per row of the published pricing table, in the table's order, on
+  // every card — that is what makes the four cards comparable. Rows the plan
+  // does NOT get are shown struck through rather than dropped: a buyer needs
+  // to see where a tier stops, and silently omitting them hid exactly that.
+  //
+  // Label first, value second (the table reads "Storage | 5 GB"). The previous
+  // value-first order worked for quantities but broke everything else —
+  // "SaaS Deployment", "Trust Drumee Data control", "Your infrastructure
+  // storage".
   const featureItems = features.map((f) => {
-    const feature = typeof f === "string" ? { main: f, sub: "" } : f;
-    const { main, sub } = feature;
+    const feature = typeof f === "string" ? { label: f, value: "", included: true } : f;
+    const { label, value } = feature;
+    const included = feature.included !== false;
 
     return Skeletons.Box.X({
-      className: `${fig}-feature`,
+      className: `${fig}-feature ${included ? "" : "excluded"}`,
       kids: [
-        Skeletons.Image.Svg({ ico: "available", className: `${fig}-feature-icon` }),
+        Skeletons.Image.Svg({
+          ico: included ? "available" : "cross",
+          className: `${fig}-feature-icon`,
+        }),
         Skeletons.Box.X({
           className: `${fig}-feature-text`,
           kids: [
-            main
-              ? Skeletons.Note({ className: `${fig}-feature-main`, content: main })
-              : null,
-            sub
-              ? Skeletons.Note({ className: `${fig}-feature-sub`, content: sub })
+            Skeletons.Note({ className: `${fig}-feature-sub`, content: label }),
+            value
+              ? Skeletons.Note({ className: `${fig}-feature-main`, content: value })
               : null,
           ].filter(Boolean),
         }),
@@ -268,7 +349,101 @@ function item(ui, opt, option) {
 }
 
 /**
- * Create plans content layout with 4 plan items (Free, Pro, Team, Enterprise)
+ * One cell of the comparison table.
+ *
+ * A tick-only row (Files + folder chat, Guest access, SSO/SAML) renders just
+ * the mark — repeating the feature name in all four columns is what the label
+ * column exists to avoid. Rows carrying a value show the value next to the
+ * mark, and a row the plan does not get shows a cross, so the eye can run down
+ * a column and see where the tier stops.
+ * @param {Object} ui - UI instance
+ * @param {string} fig - BEM prefix
+ * @param {Object} cell - { value, included }
+ * @returns {Object} Skeletons component
+ */
+function compareCell(ui, fig, cell, colKey) {
+  const included = cell.included !== false;
+  // The mark carries meaning only where the table itself uses one. On a value
+  // row the value IS the answer, so a leading tick beside "SaaS" or "Trust
+  // Drumee" is pure noise — it was on every row and made the columns hard to
+  // scan. A cross always shows, though: that is how a column tells you where
+  // the tier stops.
+  const showMark = cell.tick || !included;
+  return Skeletons.Box.X({
+    className: `${fig}-cell ${fig}-value ${fig}-col ${fig}-col-${colKey} ${included ? "" : "excluded"}`,
+    kids: [
+      showMark
+        ? Skeletons.Image.Svg({
+            ico: included ? "available" : "cross",
+            className: `${fig}-mark`,
+          })
+        : null,
+      cell.value
+        ? Skeletons.Note({ className: `${fig}-text`, content: cell.value })
+        : null,
+    ].filter(Boolean),
+  });
+}
+
+/**
+ * Desktop layout: a real comparison table — a leading label column plus one
+ * column per plan, so the four offers line up on the same rows and can be read
+ * across. The stacked cards repeat every label four times, which is fine on a
+ * phone (one column at a time) but makes comparison hard on a wide screen.
+ *
+ * Both layouts are built from the SAME getOptions data, in the same row order,
+ * so they can never disagree about what a plan includes.
+ * @param {Object} ui - UI instance
+ * @param {Object} options - keyed plan options
+ * @returns {Object} Skeletons component
+ */
+function comparisonTable(ui, options) {
+  const fig = `${ui.fig.family}__compare`;
+  const keys = ["free", "team", "business", "sovereign"];
+  const cols = keys.map((k) => options[k]);
+  const labels = cols[0].features.map((f) => f.label);
+
+  // Header: an empty corner over the label column, then each plan's price
+  // header and its CTA.
+  const header = Skeletons.Box.X({
+    className: `${fig}-row ${fig}-header`,
+    kids: [
+      Skeletons.Box.Y({ className: `${fig}-cell ${fig}-label ${fig}-corner` }),
+      ...keys.map((k, i) =>
+        Skeletons.Box.Y({
+          className: `${fig}-cell ${fig}-plan ${fig}-col ${fig}-col-${k}`,
+          kids: [
+            priceHeader(ui, `${ui.fig.family}__plan`, cols[i], (ui.currentPlanName || "free") === k),
+            ctaButton(ui, `${ui.fig.family}__plan`, k, cols[i]),
+            cols[i].subText
+              ? Skeletons.Note({ className: `${fig}-tagline`, content: cols[i].subText })
+              : null,
+          ].filter(Boolean),
+        })
+      ),
+    ],
+  });
+
+  const body = labels.map((label, i) =>
+    Skeletons.Box.X({
+      className: `${fig}-row`,
+      kids: [
+        Skeletons.Box.Y({
+          className: `${fig}-cell ${fig}-label`,
+          kids: [Skeletons.Note({ className: `${fig}-label-text`, content: label })],
+        }),
+        ...cols.map((c, ci) => compareCell(ui, fig, c.features[i], keys[ci])),
+      ],
+    })
+  );
+
+  return Skeletons.Box.Y({ className: `${fig}-main`, kids: [header, ...body] });
+}
+
+/**
+ * Create plans content layout with 4 plan items (Free, Team, Business,
+ * Sovereign). Only Team reaches Stripe Checkout; Business and Sovereign are
+ * sales-led and their CTA opens the contact-sales notice instead.
  * @param {Object} ui - UI instance
  * @param {string} cycle - Billing cycle (monthly or yearly)
  * @returns {Object} Skeletons component
@@ -277,13 +452,32 @@ function billing_content(ui, cycle = "monthly") {
   const fig = `${ui.fig.family}__plans`;
   const options = getOptions(ui, cycle);
 
-  return Skeletons.Box.G({
+  // BOTH layouts are rendered and CSS picks one, deliberately.
+  //
+  // The previous cut branched on Visitor.isMobile(), which reads the DEVICE
+  // (user agent) rather than the window: a desktop browser narrowed to 500px
+  // still got the 1079px-wide table, and nothing reflowed on resize because
+  // the choice was frozen at render time. A width media query is the only
+  // thing that actually tracks the viewport.
+  //
+  // Narrow screens keep the stacked cards — one plan at a time, every row
+  // labelled in place, the only readable shape when the columns won't fit.
+  return Skeletons.Box.Y({
     className: `${fig}-main`,
     kids: [
-      item(ui, "free", options.free),
-      item(ui, "pro", options.pro),
-      item(ui, "team", options.team),
-      item(ui, "enterprise", options.enterprise),
+      Skeletons.Box.Y({
+        className: `${fig}-wide`,
+        kids: [comparisonTable(ui, options)],
+      }),
+      Skeletons.Box.G({
+        className: `${fig}-narrow`,
+        kids: [
+          item(ui, "free", options.free),
+          item(ui, "team", options.team),
+          item(ui, "business", options.business),
+          item(ui, "sovereign", options.sovereign),
+        ],
+      }),
     ],
   });
 }
