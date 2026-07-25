@@ -49,10 +49,12 @@ const SEL = {
   // into the wrapper-modal; external (share) → window_secure_share window.
   permPanels: ".permission-restricted__main, .window-secure-share__main",
   // The confirmation shown after an action inside those panels — e.g. sending
-  // an invitation in permission_restricted pops Wm.alert → window_info. It
-  // appears ON TOP while the panel stays open; closing it is the user's cue
-  // that the step is done.
-  windowInfo: ".window-info__main",
+  // an invitation in permission_restricted pops Wm.alert → window_info, which
+  // REPLACES the panel in the wrapper-modal. Spotlight the card ROOT (__ui) —
+  // it carries the notice card's real width, background, rounding and shadow;
+  // __main is an inner box, so cutting it out leaves the visible card edges
+  // outside the hole. (Same rationale as formCard above.)
+  windowInfo: ".window-info__ui",
 };
 
 const DISABLED_CLASS = "reward-guide-disabled";
