@@ -1453,10 +1453,16 @@
     line-height: 15px;
   }
 
+  // Fixed height, border included: the "Your current plan" pill carries a
+  // border the other CTAs don't, so it measured 2px taller and stole that much
+  // from its column's header box — leaving one plan's tint 2px short of the
+  // rest. Equal CTAs keep the headers equal.
   .settings-billing__plan-button-main {
     min-width: 0;
     width: 100%;
-    padding: 7px 8px;
+    height: 36px;
+    padding: 0 8px;
+    box-sizing: border-box;
     font-size: 13px;
     line-height: 17px;
   }
