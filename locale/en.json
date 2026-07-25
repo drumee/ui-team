@@ -1462,6 +1462,8 @@
   "SET_LIMIT_DESCRIPTION": "Members will only be able to access the folder during specific times.",
   "DAY": "Day",
   "HOUR": "Hour",
+  "AM": "AM",
+  "PM": "PM",
   "APPLY_ALL_SAVE": "Apply all & Save",
   "PUBLIC_ANYONE": "Public, anyone",
   "KICK_OUT_MEMBER": "Kick this member out",

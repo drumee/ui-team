@@ -3,6 +3,7 @@
 // hub's scheduled meetings (ui._meetings, fetched via room.list). View state
 // lives on the folder window (ui._sched); nav/toggle services are handled in
 // window/folder/index.js, which re-feeds this.
+const { stripMarkers } = require("../meeting-markers");
 
 function schedState(ui) {
   if (!ui._sched) {
@@ -120,7 +121,7 @@ function weekCard(ui, pfx, mtg, idx = 0, count = 1) {
     kids: [
       Skeletons.Note({ className: `${pfx}-sched-card-title`, content: mtg.title }),
       mtg.message
-        ? Skeletons.Note({ className: `${pfx}-sched-card-desc`, content: mtg.message })
+        ? Skeletons.Note({ className: `${pfx}-sched-card-desc`, content: stripMarkers(mtg.message) })
         : null,
       Skeletons.Button.Svg({
         className: `${pfx}-sched-card-join`,

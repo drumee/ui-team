@@ -320,6 +320,12 @@ class __window_folder extends mfsInteract {
   initialize(opt) {
     this.isFolder = 1;
     super.initialize(opt);
+    // Bind uploadFile for the meeting description's inline image paste/drop
+    // (mfsInteract doesn't provide it — same pattern as the tasks widget).
+    if (!this.uploadFile) {
+      const { uploadFile } = require("@drumee/ui-essentials");
+      this.uploadFile = uploadFile.bind(this);
+    }
     this._path = [];
     this._navStack = [];
     // Active file-type filter (Docs/PDF/Images/…), scoped to the current
@@ -1514,11 +1520,17 @@ class __window_folder extends mfsInteract {
       case "close-meeting-modal":
         return this.closeMeetingModal();
 
-      case "mm-toggle-invitee":
-        return this.toggleMeetingInvitee(cmd);
+      case "mm-add-invitee":
+        return this._addInvitee(cmd);
+
+      case "mm-remove-invitee":
+        return this._removeInvitee(cmd);
 
       case "mm-set-recur":
         return this.setMeetingRecur(cmd);
+
+      case "mm-set-ampm":
+        return this._setMeetingAmpm(cmd);
 
       case "meeting-modal-submit":
         return this.submitMeetingModal();
@@ -2014,6 +2026,36 @@ class __window_folder extends mfsInteract {
             const el = root.querySelector(`[name="${nm}"]`);
             if (el) el.addEventListener("change", () => this._checkAvailability());
           });
+          // Type-to-search invitees: filter the member pool live as the user types.
+          const inviteeSearch = root.querySelector('[name="mm-invitee-search"]');
+          if (inviteeSearch) {
+            inviteeSearch.addEventListener("input", () =>
+              this._filterInvitees(inviteeSearch.value),
+            );
+          }
+          // Custom time picker: keep the hidden HH:mm in sync with the Hour/Minute
+          // boxes; pad + recheck availability on blur.
+          ["stime", "etime"].forEach((which) => {
+            root
+              .querySelectorAll(`[data-timefor="${which}"][data-timepart]`)
+              .forEach((el) => {
+                el.addEventListener("input", () => this._recomputeTime(which));
+                el.addEventListener("blur", () => {
+                  const v = parseInt(el.value, 10);
+                  if (!isNaN(v)) el.value = String(v).padStart(2, "0");
+                  this._recomputeTime(which);
+                  this._checkAvailability();
+                });
+              });
+          });
+          // Rich description editor: seed from the meeting's stored markers + wire
+          // @-mention / /-file / image paste-drop.
+          const descEditor = root.querySelector(
+            `.${this.fig.family}__meeting-modal-desc-editor`,
+          );
+          if (descEditor) {
+            this._mmInitDescEditor(descEditor, prefill ? prefill.message : "");
+          }
         }
         _.delay(() => this._checkAvailability(), 150);
       }),
@@ -2041,16 +2083,98 @@ class __window_folder extends mfsInteract {
     part.feed(require("./skeleton/meeting-modal").inviteesChips(this, pfx));
   }
 
-  // Toggle a workspace member in/out of the invitee set, then re-render chips.
-  toggleMeetingInvitee(cmd) {
+  // Live-filter the member pool by the typed query into the suggestions dropdown
+  // (empty query clears it).
+  _filterInvitees(query) {
+    const part = this.getPart && this.getPart("mm-invitees-suggestions");
+    if (!part) return;
+    const pfx = `${this.fig.family}__meeting-modal`;
+    const rows = require("./skeleton/meeting-modal").inviteesSuggestions(this, pfx, query);
+    part.feed(rows);
+    if (part.el) part.el.dataset.open = rows.length ? 1 : 0;
+  }
+
+  _mmSearchInput() {
+    return (
+      this.dialogWrapper &&
+      this.dialogWrapper.el &&
+      this.dialogWrapper.el.querySelector('[name="mm-invitee-search"]')
+    );
+  }
+
+  // Recompute the hidden 24h "HH:mm" value (name mm-stime / mm-etime) from the
+  // custom time picker's Hour/Minute boxes + AM/PM toggle, so the submit +
+  // free/busy read paths stay unchanged.
+  _recomputeTime(which) {
+    const root = this.dialogWrapper && this.dialogWrapper.el;
+    if (!root) return;
+    const fig = this.fig.family;
+    const picker = root.querySelector(
+      `.${fig}__meeting-modal-time-picker[data-timefor="${which}"]`,
+    );
+    if (!picker) return;
+    const p2 = (n) => String(n).padStart(2, "0");
+    const hourEl = picker.querySelector('[data-timepart="hour"]');
+    const minEl = picker.querySelector('[data-timepart="minute"]');
+    const active = picker.querySelector(
+      `.${fig}__meeting-modal-time-seg[data-active="1"]`,
+    );
+    let h = parseInt((hourEl && hourEl.value) || "", 10);
+    if (isNaN(h) || h < 1) h = 12;
+    if (h > 12) h = 12;
+    let mi = parseInt((minEl && minEl.value) || "", 10);
+    if (isNaN(mi) || mi < 0) mi = 0;
+    if (mi > 59) mi = 59;
+    const ampm = active ? active.dataset.ampm : "am";
+    let h24 = h % 12;
+    if (ampm === "pm") h24 += 12;
+    const hidden = picker.querySelector(`[name="mm-${which}"]`);
+    if (hidden) hidden.value = `${p2(h24)}:${p2(mi)}`;
+  }
+
+  // AM/PM toggle: activate the clicked segment, resync the hidden value, recheck.
+  _setMeetingAmpm(cmd) {
+    const which = cmd && cmd.mget && cmd.mget("which");
+    const ampm = cmd && cmd.mget && cmd.mget("ampm");
+    const root = this.dialogWrapper && this.dialogWrapper.el;
+    if (!root || !which || !ampm) return;
+    const fig = this.fig.family;
+    const picker = root.querySelector(
+      `.${fig}__meeting-modal-time-picker[data-timefor="${which}"]`,
+    );
+    if (!picker) return;
+    picker.querySelectorAll(`.${fig}__meeting-modal-time-seg`).forEach((s) => {
+      s.dataset.active = s.dataset.ampm === ampm ? "1" : "0";
+    });
+    this._recomputeTime(which);
+    this._checkAvailability();
+  }
+
+  // Add a searched member to the invitee set; clear the search box + dropdown.
+  _addInvitee(cmd) {
     const uid = cmd && ((cmd.mget && cmd.mget("uid")) || (cmd.el && cmd.el.dataset.uid));
     if (!uid) return;
     const name = (cmd.mget && cmd.mget("uname")) || "";
     this._mmAttendees = this._mmAttendees || [];
-    const i = this._mmAttendees.findIndex((a) => (a.uid || a) === uid);
-    if (i >= 0) this._mmAttendees.splice(i, 1);
-    else this._mmAttendees.push({ uid, name });
+    if (!this._mmAttendees.some((a) => (a.uid || a) === uid)) {
+      this._mmAttendees.push({ uid, name });
+    }
+    const search = this._mmSearchInput();
+    if (search) search.value = "";
+    this._filterInvitees("");
     this._reFeedInviteeChips();
+    this._checkAvailability();
+  }
+
+  // Remove an invitee chip; re-run the current query so the member reappears as
+  // a suggestion if it still matches.
+  _removeInvitee(cmd) {
+    const uid = cmd && ((cmd.mget && cmd.mget("uid")) || (cmd.el && cmd.el.dataset.uid));
+    if (!uid) return;
+    this._mmAttendees = (this._mmAttendees || []).filter((a) => (a.uid || a) !== uid);
+    this._reFeedInviteeChips();
+    const search = this._mmSearchInput();
+    this._filterInvitees(search ? search.value : "");
     this._checkAvailability();
   }
 
@@ -2129,7 +2253,13 @@ class __window_folder extends mfsInteract {
       return el ? String(el.value || "").trim() : "";
     };
     const title = val('[name="mm-title"]');
-    const message = val('[name="mm-message"]');
+    // Description is the rich contenteditable → serialize to marker text + the
+    // mentioned person uids (for server-side notify).
+    const descEditor = root.querySelector(
+      `.${this.fig.family}__meeting-modal-desc-editor`,
+    );
+    const message = descEditor ? this._mmSerializeEditor(descEditor) : "";
+    const mention_uids = descEditor ? this._mmCollectMentionUids(descEditor) : [];
     const dateYmd = val('[name="mm-date"]'); // Y-m-d from date_picker
     const sHm = val('[name="mm-stime"]');
     const eHm = val('[name="mm-etime"]');
@@ -2151,6 +2281,7 @@ class __window_folder extends mfsInteract {
     return {
       title,
       message,
+      mention_uids,
       // Legacy display string (back-compat for player/schedule). Plain tokens
       // only — no localizedFormat plugin dependency.
       date: Dayjs.unix(stime).format("ddd, MMM D, YYYY h:mm A"),
@@ -4158,5 +4289,8 @@ class __window_folder extends mfsInteract {
     list.collection.set(found);
   }
 }
+
+// Rich meeting-description editor methods (@-mention, /-file, inline images).
+Object.assign(__window_folder.prototype, require("./meeting-desc-editor"));
 
 module.exports = __window_folder;

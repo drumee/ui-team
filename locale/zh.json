@@ -1184,6 +1184,8 @@
   "SET_LIMIT_DESCRIPTION": "成员仅能在特定时间内访问文件夹。",
   "DAY": "天",
   "HOUR": "小时",
+  "AM": "AM",
+  "PM": "PM",
   "APPLY_ALL_SAVE": "应用全部并保存",
   "PUBLIC_ANYONE": "公众，任何人",
   "KICK_OUT_MEMBER": "将此成员踢出",
