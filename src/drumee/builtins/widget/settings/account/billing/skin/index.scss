@@ -15,8 +15,16 @@
     gap: var(--spacer-2);
   }
 
+  // Measure the space the billing content actually gets, not the window: this
+  // page sits inside the settings panel, so the viewport is consistently wider
+  // than the room available (1280 of content inside a 1679 viewport). Declared
+  // on content-container because that is the one wrapper present in BOTH tabs
+  // — content-wrapper only exists on the plans tab, so a container declared
+  // there never matched anything while the checkout tab was open.
   &__content-container {
     margin-top: var(--spacer-6);
+    container-type: inline-size;
+    container-name: billing-content;
   }
 
   &__plans {
@@ -579,6 +587,12 @@
       width: 100%;
       gap: var(--spacer-8);
       align-items: flex-start;
+      // The two columns were locked to one row (nowrap) with a fixed 480px
+      // summary, so as the panel narrowed the form column was squeezed to its
+      // min-content and then the whole row overflowed — measured: 300px of
+      // form at an 820px container, and real overflow by 420px. Wrapping lets
+      // the summary drop below the form before anything is crushed.
+      flex-wrap: wrap;
     }
 
     &-section {
@@ -628,7 +642,11 @@
     }
 
     &-left {
-      flex: 1;
+      // min-width:0 lets the column actually shrink — a flex item defaults to
+      // min-width:auto, which is what pinned it at min-content and pushed the
+      // overflow onto the row. The 320px basis is the wrap trigger.
+      flex: 1 1 320px;
+      min-width: 0;
       gap: var(--spacer-6);
     }
 
@@ -646,7 +664,12 @@
     // became unreachable. Position: sticky alone keeps it pinned while the
     // OUTER page scrolls.
     &-right {
-      width: 480px;
+      // Side by side the summary keeps its 480px and lets the form take the
+      // rest, so it must NOT grow here — allowing that made the summary wider
+      // than the form (700 vs 540 at a 1280 container). The stacked case is
+      // handled by the container query, which gives it the full row.
+      flex: 0 1 480px;
+      min-width: 0;
       gap: var(--spacer-5);
       padding: var(--spacer-6);
       background-color: var(--white);
@@ -1221,3 +1244,463 @@
   }
 }
 
+
+// A row the plan does NOT include. Kept visible (the table shows where a tier
+// stops) but clearly inactive, so it can't be mistaken for an entitlement.
+.settings-billing__plan-feature.excluded {
+  opacity: 0.45;
+
+  .settings-billing__plan-feature-sub,
+  .settings-billing__plan-feature-main {
+    text-decoration: line-through;
+  }
+}
+
+// Comparison table (wide) vs stacked cards (narrow). skeleton/plans.js renders
+// BOTH and CSS picks one.
+//
+// The switch is a CONTAINER query, not a viewport media query. The billing
+// page sits inside the settings panel, so the space the table actually gets is
+// consistently ~160px narrower than the window (measured: 1280 inside a 1440
+// viewport). A viewport breakpoint therefore fires at the wrong moment — it
+// cannot know how much room is left after the sidebar — which is why the table
+// stayed cramped instead of folding. Querying the container measures the real
+// available width.
+.settings-billing__plans {
+  &-main {
+    width: 100%;
+    container-type: inline-size;
+    container-name: billing-plans;
+  }
+
+  &-wide { width: 100%; }
+  &-narrow { width: 100%; display: none !important; }
+}
+
+.settings-billing__compare {
+  &-main {
+    width: 100%;
+    // Last-resort escape hatch; the container query should fold the layout
+    // before this ever engages.
+    overflow-x: auto;
+  }
+
+  &-row {
+    width: 100%;
+    align-items: stretch;
+    // Breathing room between plan columns so each reads as its own surface
+    // rather than one banded block.
+    gap: 6px;
+  }
+
+  &-header {
+    align-items: stretch;
+  }
+
+  &-cell {
+    flex: 1 1 0;
+    min-width: 108px;
+    align-items: center;
+    justify-content: center;
+    padding: 9px 10px;
+    box-sizing: border-box;
+  }
+
+  // The label column names the row the four plan columns answer. Kept narrow
+  // and snug against the first column — at flex 1.4 / 273px the label text sat
+  // ~200px from the value it labels, so the table read as two loose halves.
+  &-label {
+    flex: 0 0 164px;
+    min-width: 164px;
+    align-items: flex-start;
+    justify-content: center;
+    padding-right: 2px;
+  }
+
+  &-label-text {
+    @include drumee.typo($size: 13px, $line: 18px, $weight: 400, $color: var(--normal-fg-10));
+    font-weight: 500;
+    text-align: left;
+  }
+
+  // Every cell of a plan column carries -col, so the column reads as one
+  // continuous strip down the table: shared tint, side borders, and a row
+  // separator that stops at the column edge instead of running across.
+  &-col {
+    background-color: var(--normal-bg-100, rgba(0, 0, 0, 0.02));
+    border-left: 1px solid var(--normal-bg-20, rgba(0, 0, 0, 0.10));
+    border-right: 1px solid var(--normal-bg-20, rgba(0, 0, 0, 0.10));
+  }
+
+  &-row:not(:last-child) &-col {
+    box-shadow: inset 0 -1px 0 var(--normal-bg-20, rgba(0, 0, 0, 0.06));
+  }
+
+  &-row:last-child &-col {
+    border-bottom: 1px solid var(--normal-bg-20, rgba(0, 0, 0, 0.10));
+    border-radius: 0 0 10px 10px;
+  }
+
+  // The recommended column is lifted out of the row of four.
+  &-col-team {
+    background-color: var(--primary-95, rgba(67, 60, 197, 0.06));
+    border-left-color: var(--primary-50, #433cc5);
+    border-right-color: var(--primary-50, #433cc5);
+  }
+
+  &-header &-col {
+    border-radius: 10px 10px 0 0;
+    border-top: 1px solid var(--normal-bg-20, rgba(0, 0, 0, 0.10));
+  }
+
+  &-header &-col-team {
+    border-top-color: var(--primary-50, #433cc5);
+  }
+
+  &-plan {
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+    padding: 14px 10px;
+  }
+
+  &-tagline {
+    @include drumee.typo($size: 12px, $line: 16px, $weight: 400, $color: var(--normal-fg-10));
+    font-weight: 400;
+    text-align: center;
+  }
+
+  &-value { gap: 6px; }
+
+  &-mark {
+    width: 15px;
+    height: 15px;
+    flex-shrink: 0;
+
+    svg { width: 100%; height: 100%; }
+  }
+
+  &-text {
+    @include drumee.typo($size: 13px, $line: 18px, $weight: 400, $color: var(--normal-fg));
+    font-weight: 400;
+    text-align: center;
+  }
+
+  &-value.excluded {
+    opacity: 0.45;
+
+    .settings-billing__compare-text { text-decoration: line-through; }
+  }
+}
+
+// 164px of label + four columns that need ~150px each to stay legible, plus
+// gaps and padding, is about 800. Below that the table stops being comparable
+// and the stacked cards read better.
+@container billing-plans (max-width: 820px) {
+  .settings-billing__plans-wide { display: none !important; }
+  .settings-billing__plans-narrow { display: flex !important; }
+}
+
+// Fallback for engines without container queries: approximate the same point
+// from the viewport, allowing for the settings sidebar.
+@supports not (container-type: inline-size) {
+  @media screen and (max-width: 980px) {
+    .settings-billing__plans-wide { display: none !important; }
+    .settings-billing__plans-narrow { display: flex !important; }
+  }
+}
+
+// Header type inside the comparison table.
+//
+// The price/title/CTA elements are reused from the card design, which was
+// sized for a full-width card: a 40px price and a 16px CTA. In a ~240px table
+// column that price ("$499.00" measured 145px) crowds the cell and the CTA
+// wraps to three lines — "Get your sovereign node" measured 64px tall, and the
+// whole header ran to 289px. Scale the type to the column instead. Scoped to
+// the table, so the mobile cards keep the original display sizes.
+.settings-billing__compare-plan {
+  padding: 12px 8px;
+  gap: 6px;
+
+  // The tinted price-header box, resized for a table column.
+  //
+  // The card version is a 164px-tall panel with space-between, sized for a
+  // full-width card. Squeezed into a ~240px column it broke in three ways, all
+  // visible in a screenshot and none of them in the computed values: the 26px
+  // price overflowed the tint's bottom edge, the "/ month" suffix ran out past
+  // its right edge, and the absolutely-positioned Popular badge landed on top
+  // of the title.
+  //
+  // One even padding fixes all three — the box simply has to be big enough for
+  // what is inside it. Text insets come from that padding, so the title and
+  // price carry none of their own; adding per-element padding on top is what
+  // made the earlier attempts drift.
+  .settings-billing__plan-header {
+    padding: 14px;
+    min-height: 0;
+    gap: 6px;
+    overflow: visible;
+    // Fill the space the cell has left over, so every plan's tinted box ends
+    // up the same height. Sizing to content made Sovereign's box 16px taller
+    // than the rest — it carries a "Start from" line the others don't — and
+    // the row of four read as ragged. flex:1 equalises them without hardcoding
+    // a height that a longer label or another language would break.
+    flex: 1;
+    // Title pinned to the top, price to the bottom — the card's own
+    // arrangement, and what the extra height from flex:1 is for. Centring it
+    // (an earlier attempt) floated both away from the edges they belong on.
+    // The Popular badge is absolute, so it sits on the title's line at the
+    // top-right without taking part in this distribution.
+    justify-content: space-between;
+  }
+
+  // --plan-title-lh is the title's line box. The Popular badge is absolutely
+  // positioned, so it has no way to know where that line sits; publishing the
+  // height lets it match instead of guessing. Set wherever the title's type
+  // changes, so the two stay aligned across every breakpoint.
+  --plan-title-lh: 22px;
+
+  .settings-billing__plan-title {
+    font-size: 16px;
+    line-height: var(--plan-title-lh);
+    // Only the Team card carries the Popular badge; keep the title clear of it.
+    padding-right: 8px;
+  }
+
+  // The amount and its "/ month" must stay on one line inside the box: let the
+  // row shrink rather than push the suffix past the tint.
+  .settings-billing__plan-price-row {
+    align-items: baseline;
+    flex-wrap: nowrap;
+    min-width: 0;
+    gap: 4px;
+  }
+
+  // Sit the badge ON the title's line rather than near it: same top as the
+  // title (the header's padding) and the same height as its line box, with the
+  // label centred inside. A fixed top of its own left the badge 8px higher
+  // than the plan name — the two read as misaligned.
+  .settings-billing__plan-badge {
+    top: 14px;
+    right: 10px;
+    height: var(--plan-title-lh);
+    box-sizing: border-box;
+    align-items: center;
+    padding: 0 8px;
+  }
+
+  .settings-billing__plan-price-amount {
+    font-size: 26px;
+    line-height: 32px;
+  }
+
+  .settings-billing__plan-price-period,
+  .settings-billing__plan-price-label {
+    font-size: 11px;
+    line-height: 15px;
+  }
+
+  // Fixed height, border included: the "Your current plan" pill carries a
+  // border the other CTAs don't, so it measured 2px taller and stole that much
+  // from its column's header box — leaving one plan's tint 2px short of the
+  // rest. Equal CTAs keep the headers equal.
+  .settings-billing__plan-button-main {
+    min-width: 0;
+    width: 100%;
+    height: 36px;
+    padding: 0 8px;
+    box-sizing: border-box;
+    font-size: 13px;
+    line-height: 17px;
+  }
+
+  .settings-billing__plan-button,
+  .settings-billing__plan-current-label {
+    font-size: 13px;
+    line-height: 17px;
+    text-align: center;
+  }
+
+  .settings-billing__plan-badge {
+    font-size: 10px;
+    line-height: 14px;
+    padding: 1px 6px;
+  }
+}
+
+// Narrower columns: drop to the smallest comfortable type and let the tagline
+// go — the row labels already say what each column is.
+@container billing-plans (max-width: 1020px) {
+  .settings-billing__compare-plan {
+    .settings-billing__plan-price-amount {
+      font-size: 21px;
+      line-height: 27px;
+    }
+
+    --plan-title-lh: 19px;
+
+    .settings-billing__plan-title {
+      font-size: 14px;
+      line-height: var(--plan-title-lh);
+    }
+
+    .settings-billing__plan-button-main,
+    .settings-billing__plan-button,
+    .settings-billing__plan-current-label {
+      font-size: 12px;
+      line-height: 16px;
+    }
+  }
+
+  .settings-billing__compare-tagline {
+    display: none !important;
+  }
+}
+
+// The stacked-card layout, and its type.
+//
+// Two faults this fixes, both measured:
+//
+// 1. The cards never stacked. Box.G keeps its four columns and merely squeezes
+//    them, so at a 420px container each card was 98px wide — with a 40px price
+//    inside it, which is what overflowed. They now wrap, and go full width once
+//    even two columns stop making sense.
+//
+// 2. Type jumped UP as space ran out. The earlier pass scaled the TABLE header
+//    down to its column but left the cards on the original card scale, so
+//    folding at 820px snapped the price from 21px straight to 40px — bigger
+//    text in less room. The card scale now starts near where the table leaves
+//    off and steps down again with the container, so the size never increases
+//    as the viewport shrinks.
+.settings-billing__plans-narrow {
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: stretch;
+
+  > * {
+    flex: 1 1 260px;
+    min-width: 0; // let a flex item shrink below its content width
+  }
+
+  .settings-billing__plan-title {
+    font-size: 17px;
+    line-height: 23px;
+  }
+
+  .settings-billing__plan-price-amount {
+    font-size: 28px;
+    line-height: 34px;
+  }
+
+  .settings-billing__plan-price-period,
+  .settings-billing__plan-price-label {
+    font-size: 12px;
+    line-height: 16px;
+  }
+
+  .settings-billing__plan-button-main,
+  .settings-billing__plan-button,
+  .settings-billing__plan-current-label {
+    font-size: 14px;
+    line-height: 19px;
+  }
+}
+
+// One card per row: below this two columns leave too little for the price and
+// the CTA to sit on one line each.
+@container billing-plans (max-width: 620px) {
+  .settings-billing__plans-narrow > * {
+    flex: 1 1 100%;
+  }
+
+  .settings-billing__plans-narrow {
+    .settings-billing__plan-price-amount {
+      font-size: 24px;
+      line-height: 30px;
+    }
+
+    .settings-billing__plan-title {
+      font-size: 16px;
+      line-height: 22px;
+    }
+  }
+}
+
+// Wide containers: the header type was tuned to survive a ~200px column, which
+// left it undersized once the columns get roomy (243px at a 1161 container).
+// Step it back up — the threshold is 1100 so the common desk width is already
+// on the larger scale, not just unusually wide windows.
+@container billing-plans (min-width: 1100px) {
+  .settings-billing__compare-plan {
+    padding: 16px 10px;
+    gap: 8px;
+
+    --plan-title-lh: 26px;
+
+    .settings-billing__plan-title {
+      font-size: 19px;
+      line-height: var(--plan-title-lh);
+    }
+
+    .settings-billing__plan-price-amount {
+      font-size: 32px;
+      line-height: 40px;
+    }
+
+    .settings-billing__plan-price-period,
+    .settings-billing__plan-price-label {
+      font-size: 12px;
+      line-height: 16px;
+    }
+
+    .settings-billing__plan-button-main,
+    .settings-billing__plan-button,
+    .settings-billing__plan-current-label {
+      font-size: 14px;
+      line-height: 19px;
+    }
+  }
+
+  .settings-billing__compare-tagline {
+    font-size: 13px;
+    line-height: 18px;
+  }
+}
+
+// Checkout: below the point where a form column and a 480px summary stop
+// fitting side by side, stack them. The summary also drops its sticky pinning
+// — once it sits under the form there is nothing left to scroll past, and a
+// stuck panel would just hover over the page.
+@container billing-content (max-width: 900px) {
+  .settings-billing__checkout-left,
+  .settings-billing__checkout-right {
+    flex: 1 1 100%;
+    width: 100%;
+  }
+
+  .settings-billing__checkout-right {
+    position: static;
+    top: auto;
+  }
+
+  .settings-billing__checkout-main {
+    gap: var(--spacer-6);
+  }
+}
+
+// Fallback for engines without container queries: approximate from the
+// viewport, allowing for the settings sidebar.
+@supports not (container-type: inline-size) {
+  @media screen and (max-width: 1080px) {
+    .settings-billing__checkout-left,
+    .settings-billing__checkout-right {
+      flex: 1 1 100%;
+      width: 100%;
+    }
+
+    .settings-billing__checkout-right {
+      position: static;
+      top: auto;
+    }
+  }
+}

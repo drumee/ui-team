@@ -65,7 +65,6 @@ function billing_footer(ui) {
         className: `${fig}-header`,
         content: LOCALE.ADDITIONAL_SEAT_PRICING,
       }),
-      item(ui, `${LOCALE.PRO}:`, LOCALE.FOOTER_PRO_SEATS.format(ui._money(ui._catPrice("pro_seat", "month")))),
       item(
         ui,
         `${LOCALE.ENTERPRISE}:`,
