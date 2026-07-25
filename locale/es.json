@@ -2184,5 +2184,8 @@
   "DAYS_30": "30 days",
   "PLUS_AUDIT_LOGS": "+ audit logs",
   "PLUS_SDK": "+ SDK",
-  "TRUST_DRUMEE": "Trust Drumee"
+  "TRUST_DRUMEE": "Trust Drumee",
+  "MIGRATE_GDRIVE_SUMMARY_SKIPPED": "{0} skipped.",
+  "MIGRATE_GDRIVE_MORE_ITEMS": "+{0} more",
+  "GDRIVE_SHORTCUT_SKIPPED": "Google Drive shortcut — not copied"
 }
