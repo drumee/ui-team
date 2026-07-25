@@ -550,8 +550,12 @@ class __reward_flow extends LetcBox {
     this._guideDropOpen = true;
     this.ensurePart("guide-modal").then((p) => {
       if (!p) return;
-      if (p.el && p.el.dataset) p.el.dataset.open = "1";
+      // Feed first, then flag open — the modal opts its own pointer events back
+      // in (see skin __modal), so it stays clickable regardless; data-open only
+      // drives the host's backdrop dim, and setting it after feed keeps a
+      // re-render from wiping it.
       p.feed(dropModal(this));
+      if (p.el && p.el.dataset) p.el.dataset.open = "1";
     });
   }
 

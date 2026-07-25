@@ -415,6 +415,10 @@ $success-soft: rgba(46, 179, 122, 0.14);
   // inherit the root's font and declares it here.
   &__modal {
     font-family: var(--font-main);
+    // Opt pointer events back in on the modal ITSELF (the root is pe:none, like
+    // the coach does). When shown during the walkthrough it lives inside the
+    // pe:none guide layer, so without this its buttons never receive clicks.
+    pointer-events: auto;
     width: 440px;
     box-sizing: border-box;
     padding: 40px;
