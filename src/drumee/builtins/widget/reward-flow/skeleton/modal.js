@@ -109,7 +109,7 @@ function congratsModal(ui) {
       Skeletons.Note({
         className: `${pfx}__btn ${pfx}__btn--primary`,
         dataset: { solo: "1" },
-        content: LOCALE.REWARD_FLOW_GO_DASHBOARD || "Go to dashboard",
+        content: LOCALE.REWARD_FLOW_GO_DASHBOARD || "Back to home",
         service: "reward-finish",
         uiHandler: [ui],
       }),
