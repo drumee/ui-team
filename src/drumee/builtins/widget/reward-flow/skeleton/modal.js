@@ -96,8 +96,11 @@ function congratsModal(ui) {
   });
 
   return shell(ui, {
+    // Figma 3275:236468 — a green outline check-circle in a soft-green disc.
+    // checked-circle.svg is that outline glyph (apps-check-circle is a filled
+    // disc that reads as a dark blob at this size).
     header: iconHeader(ui, {
-      ico: "apps-check-circle",
+      ico: "checked-circle",
       icoClass: `${pfx}__modal-ico--success`,
     }),
     title: LOCALE.REWARD_FLOW_CONGRATS_TITLE || "Congratulations!",

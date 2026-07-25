@@ -347,12 +347,20 @@ $success-soft: rgba(46, 179, 122, 0.14);
     user-select: none;
     transition: background-color 0.15s ease;
 
-    &[data-solo="1"] { flex: 1 1 100%; }
+    // Solo (congrats "Go to dashboard") — full-width, larger per Figma
+    // 3275:236473 (Medium Button 16 / padding 24×12).
+    &[data-solo="1"] {
+      flex: 1 1 100%;
+      font-size: 16px;
+      padding: 12px 24px;
+    }
 
     &--primary {
       color: #fff;
-      background-color: $accent;
-      &:hover { background-color: $accent-strong; }
+      // Figma Primary/50 (#433cc5); brighten to Primary/40 on hover — same
+      // lockup as the notice toast's primary button.
+      background-color: $accent-strong;
+      &:hover { background-color: $accent; }
     }
 
     &--ghost {
@@ -367,29 +375,36 @@ $success-soft: rgba(46, 179, 122, 0.14);
   // inherit the root's font and declares it here.
   &__modal {
     font-family: var(--font-main);
-    width: 380px;
+    width: 440px;
     box-sizing: border-box;
-    padding: 28px 24px 24px;
-    gap: 14px;
+    padding: 40px;
+    gap: 20px;
     align-items: center;
     text-align: center;
-    border-radius: 16px;
+    border-radius: 6px;
     background-color: var(--normal-bg);
   }
 
   &__modal-ico {
-    width: 64px;
-    height: 64px;
+    width: 60px;
+    height: 60px;
     border-radius: 50%;
     align-items: center;
     justify-content: center;
 
     &--brand { background-color: transparent; }
-    &--success { background-color: $success-soft; }
+    // Figma 3275:236467 — soft-green disc (Overlay/green #3DDE8C @ 15%).
+    &--success { background-color: rgba(61, 222, 140, 0.15); }
   }
 
   &__modal-ico-svg { width: 40px; height: 40px; }
-  &__modal-ico--success &__modal-ico-svg { width: 28px; height: 28px; }
+  // Green check-circle (Signal/Success). checked-circle.svg carries its own
+  // green fill, but set currentColor too in case the pipeline inlines it.
+  &__modal-ico--success &__modal-ico-svg {
+    width: 36px;
+    height: 36px;
+    color: var(--green-400, #10b667);
+  }
 
   // Branded drumee logo + wordmark header (drop modal) — same lockup as the
   // coach header, sized for the modal.
@@ -413,16 +428,21 @@ $success-soft: rgba(46, 179, 122, 0.14);
   }
 
   &__modal-title {
-    font-size: 20px;
+    // Figma H6 — Geist SemiBold 24 / line-height 1.1.
+    font-size: 24px;
+    line-height: 1.1;
     font-weight: 700;
     color: var(--normal-fg);
   }
 
   &__modal-desc {
-    font-size: 14px;
-    color: var(--normal-fg-20);
+    font-size: 18px;
+    line-height: 1.4;
+    color: var(--normal-fg);
   }
 
+  // Congrats copy — Figma Large Body (18px), centred, wrapping so the accent
+  // prize phrase can sit on its own line.
   &__congrats-copy {
     flex-wrap: wrap;
     justify-content: center;
@@ -430,19 +450,20 @@ $success-soft: rgba(46, 179, 122, 0.14);
   }
 
   &__congrats-seg {
-    font-size: 14px;
-    color: var(--normal-fg-20);
+    font-size: 18px;
+    line-height: 1.4;
+    color: var(--normal-fg);
   }
 
   &__congrats-prize {
-    font-weight: 700;
+    font-weight: 600;
     color: $accent;
   }
 
   &__modal-footer {
     width: 100%;
     gap: 12px;
-    margin-top: 6px;
+    margin-top: 12px;
     justify-content: space-between;
   }
 
