@@ -461,8 +461,16 @@
     &-email {
       cursor: pointer;
       text-decoration: underline;
-      color: var(--primary-500);
+      // --primary-500 is #b251fb, a pink-violet from the revamp scale that
+      // matches nothing else on this page; every other link and CTA here uses
+      // --primary-50 (#433cc5). The single stray digit made the contact
+      // address read as a different kind of link.
+      color: var(--primary-50);
       margin-left: var(--spacer-3);
+
+      &:hover {
+        color: var(--primary-60);
+      }
     }
 
     // "Manage billing" → Stripe portal: plain text hyperlink, matching the
