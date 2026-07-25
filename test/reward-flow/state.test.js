@@ -271,6 +271,47 @@ test("a trailing invite-popup close after a successful send does not disturb the
   assert.equal(modal.cleared, 0, "the congrats modal must not be cleared by the trailing close");
 });
 
+test("step-3 congrats waits for the invite-sent toast to be dismissed", async () => {
+  // Exercise the observer path (a real DOM has MutationObserver + a host that
+  // can report the toast present/absent). The fallback path — no
+  // MutationObserver — is what every other test above runs.
+  const prevMO = global.MutationObserver;
+  const prevQS = modal.el.querySelector;
+  let toastPresent = true;
+  let fire = null;
+  modal.el.querySelector = () => (toastPresent ? {} : null);
+  global.MutationObserver = class {
+    constructor(cb) { fire = cb; }
+    observe() {}
+    disconnect() {}
+  };
+  try {
+    const f = makeFlow();
+    toStep2(f);
+    click(f, "reward-upload");
+    f.onUploadDone();
+    click(f, "reward-invite");
+    f.onInvitationSent();
+    f.onInvitePopupClosed();
+    // The step latches to the terminal marker immediately, but the congrats
+    // screen must NOT open while the success toast is still on screen.
+    assert.equal(f.getStep(), "congrats");
+    fire(); // a mutation while the toast is present
+    await new Promise((r) => setTimeout(r, 0));
+    assert.equal(modal.fed, null, "congrats must not open while the toast is up");
+
+    // The user dismisses the toast (X / Close) → it leaves the host → congrats.
+    toastPresent = false;
+    fire();
+    await new Promise((r) => setTimeout(r, 0));
+    assert.ok(modal.fed, "congrats opens once the toast is dismissed");
+    assert.equal(modal.el.dataset.state, "open");
+  } finally {
+    global.MutationObserver = prevMO;
+    modal.el.querySelector = prevQS;
+  }
+});
+
 test("a stored 'congrats' terminal marker is not resumable and falls back to step1", () => {
   store.reward_step = "congrats";
   const f = makeFlow();

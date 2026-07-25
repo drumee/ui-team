@@ -158,6 +158,7 @@ class __reward_flow extends LetcBox {
       this._onStepResize = null;
     }
     this._stopGuide();
+    this._stopToastWatch();
     this._restoreHost();
     this._markInviteOverlay(false);
   }
@@ -435,24 +436,78 @@ class __reward_flow extends LetcBox {
    *  - it closed because the send succeeded → open congrats now (host is free);
    *  - it closed without sending → re-arm step 3 so the user can retry. */
   onInvitePopupClosed() {
-    // The invite popup is gone now — drop the backdrop tint so the congrats
-    // modal (fed into the same wrapper-modal next) keeps its own overlay.
-    this._markInviteOverlay(false);
     if (this._inviteSucceeded) {
       this._inviteSucceeded = false;
       this._step = "congrats";
-      // The invite popup's close cleared Wm.__wrapperModal via collection.reset(),
-      // and this callback runs DURING that reset's synchronous unwind. Feeding
-      // congrats back in now would leave an orphaned, untracked view in the shared
-      // host. Defer one microtask so the reset fully settles first.
+      // The invite popup closed because the send succeeded. Its success toast
+      // (invite-popup's Wm.alert notice) is about to take the shared wrapper-
+      // modal's place. Keep the flow's backdrop tint on for it and HOLD: the
+      // congrats screen opens only once the user dismisses that toast (X /
+      // Close), so the confirmation isn't instantly replaced.
+      this._awaitToastThenCongrats();
+      return;
+    }
+    // Closed without sending — drop the tint and re-arm step 3 to retry.
+    this._markInviteOverlay(false);
+    if (this._step !== "step3_waiting") return;
+    this._goto("step3");
+  }
+
+  /** Watch the shared wrapper-modal for the invite-sent toast to appear and
+   *  then be dismissed by the user, and only then open congrats. The toast is
+   *  fed asynchronously by invite-popup's Wm.alert AFTER this runs, so we wait
+   *  for it to show (seen) before treating its absence as "closed". */
+  _awaitToastThenCongrats() {
+    const openCongrats = () => {
+      // The observer fires DURING the toast's removal unwind; defer a microtask
+      // so that collection reset settles before we feed congrats into the same
+      // host (otherwise it lands as an orphaned, untracked view).
       Promise.resolve().then(() => {
         if (this.isDestroyed && this.isDestroyed()) return;
         if (!this._openModal(congratsModal(this))) this._finish();
       });
-      return;
+    };
+    const host =
+      (typeof Wm !== "undefined" && Wm.__wrapperModal && Wm.__wrapperModal.el) ||
+      null;
+    if (!host || typeof MutationObserver === "undefined") {
+      return openCongrats(); // nothing to watch → don't strand the flow
     }
-    if (this._step !== "step3_waiting") return;
-    this._goto("step3");
+    const TOAST = ".window-info__ui, .window-info__main";
+    let seen = false;
+    const check = () => {
+      if (host.querySelector(TOAST)) {
+        seen = true;
+        return;
+      }
+      // The toast has appeared and is now gone → the user closed it → congrats.
+      if (seen) {
+        this._stopToastWatch();
+        openCongrats();
+      }
+    };
+    this._toastObs = new MutationObserver(check);
+    this._toastObs.observe(host, { childList: true, subtree: true });
+    // Fallback: if the toast never shows (Wm.alert failed / kind not loaded),
+    // don't strand the user on step 3 — advance to congrats after a short grace.
+    this._toastTimer = setTimeout(() => {
+      if (!seen) {
+        this._stopToastWatch();
+        openCongrats();
+      }
+    }, 4000);
+    check(); // the toast may already be present
+  }
+
+  _stopToastWatch() {
+    if (this._toastObs) {
+      this._toastObs.disconnect();
+      this._toastObs = null;
+    }
+    if (this._toastTimer) {
+      clearTimeout(this._toastTimer);
+      this._toastTimer = null;
+    }
   }
 
   // ───────── modals ─────────
