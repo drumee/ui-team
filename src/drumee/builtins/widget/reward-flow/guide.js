@@ -113,8 +113,13 @@ function tooltipFor(sub) {
 }
 
 /** Perm-phase instruction — one uniform line (no separate heading), specific to
- *  the branch: internal (permission_restricted) vs external (secure_share). */
+ *  the branch: internal (permission_restricted) vs external (secure_share).
+ *  Once a confirmation (window_info) sits on top — e.g. "The invitation was sent
+ *  successfully" after inviting a member to an internal workspace — the branch
+ *  advice is stale: the invite has already been sent and the panel behind is
+ *  unreachable, so the only thing left to do is close the notice. */
 function permText() {
+  if (firstVisible(SEL.windowInfo)) return tooltipFor("perm");
   if (firstVisible(SEL.permShare)) {
     return LOCALE.REWARD_FLOW_GUIDE_PERM_EXTERNAL
       || "Open to share externally with your clients. Close to continue";
