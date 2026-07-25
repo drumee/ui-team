@@ -16,6 +16,25 @@ class settings_export_data extends LetcBox {
 
   onDomRefresh() {
     this.feed(require("./skeleton").default(this));
+    this._loadSizes();
+  }
+
+  /**
+   * Real byte sizes per category, so the dialog states what the download will
+   * actually contain instead of the fixed placeholders it used to print. Fire
+   * and forget: the dialog is usable while this is in flight (each row shows a
+   * dash), and a failure just leaves the dashes rather than blocking the export.
+   */
+  _loadSizes() {
+    this.fetchService(SERVICE.drumate.backup_size, { hub_id: Visitor.id })
+      .then((data) => {
+        if (!data || this.isDestroyed()) return;
+        this._sizes = data;
+        this.feed(require("./skeleton").default(this));
+      })
+      .catch((e) => {
+        this.warn("export-data: backup_size failed", e);
+      });
   }
 
   toggleSelection(key) {
@@ -38,23 +57,38 @@ class settings_export_data extends LetcBox {
         progress.suppress();
       }
       this._isDownloading = data.zipid;
+      this._pendingBackup = false;
       let { svc, keysel } = bootstrap();
       let hub_id = this.mget(_a.hub_id);
       let nid = this.mget(_a.nid) || 0;
       let url = `${svc}media.zip?hub_id=${hub_id}&nid=${nid}&id=${data.zipid}&keysel=${keysel}&zipname=${data.zipname}`;
+      // The `download` attribute OVERRIDES the server's
+      // Content-Disposition filename, and data.zipname arrives without a
+      // suffix ("Snake1-__drumee.in"). The browser therefore saved an
+      // extension-less file that the OS could not open — the archive was
+      // there, but to the user "the download didn't work". Re-attach .zip.
+      const zipname = data.zipname || "backup";
       let a = document.createElement("a");
       a.href = url;
-      a.download = data.zipname || "backup.zip";
+      a.download = /\.zip$/i.test(zipname) ? zipname : `${zipname}.zip`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
-      if (this._zipsize > MAX_BLOB_SIZE) {
-        Wm.alert(LOCALE.DOWNLOAD_LONG_TIME.format(data.zipname, filesize(this._zipsize)));
+      // Warn on a big archive. The size has to come off the completion event:
+      // drumate.backup answers {zipid, status:'queued'} before anything is
+      // compressed, so the old `this._zipsize = data.size` was always 0 and
+      // this warning never fired once — not even for the 585 MB archive this
+      // was reproduced with, leaving the user staring at a screen that looked
+      // like nothing had happened.
+      const zipsize = data.size || data.zipsize || this._zipsize || 0;
+      if (zipsize > MAX_BLOB_SIZE) {
+        Wm.alert(LOCALE.DOWNLOAD_LONG_TIME.format(a.download, filesize(zipsize)));
       }
       return;
     }
 
     if (data.exit > 0) {
+      this._pendingBackup = false;
       if (progress && !progress.isDestroyed()) {
         progress.feed(
           Skeletons.Note({
@@ -132,6 +166,11 @@ class settings_export_data extends LetcBox {
   }
 
   downloadAll() {
+    // One archive at a time. Every click spawns a server-side compression of
+    // the entire account (585 MB in testing); with no feedback for the minute
+    // or two that takes, an impatient second click used to start a second one.
+    if (this._pendingBackup) return;
+    this._pendingBackup = true;
     this.postService(SERVICE.drumate.backup, {
       hub_id: Visitor.id,
       flags: ["files", "chat", "workspace", "activity"],
@@ -152,7 +191,11 @@ class settings_export_data extends LetcBox {
         });
       })
       .catch((e) => {
+        this._pendingBackup = false;
         this.warn("downloadAll: backup failed", e);
+        if (Wm && Wm.alert) {
+          Wm.alert(LOCALE.SOMETHING_WENT_WRONG || "Something went wrong. Please try again.");
+        }
       });
   }
 }
