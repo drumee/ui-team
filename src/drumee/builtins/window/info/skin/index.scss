@@ -276,7 +276,12 @@
   bottom: auto !important;
   transform: translate(-50%, -50%) !important;
   margin: 0 !important;
-  z-index: 100000;
+  // ABOVE the wrapper-modal (--z-index-modal, 100000). A notice toast can be
+  // raised while a modal panel is still open — e.g. the invite-sent toast over
+  // permission_restricted — and at an equal z the modal's transparent
+  // full-viewport dialog__wrapper swallowed the toast's X / Close clicks,
+  // leaving it stuck open.
+  z-index: calc(var(--z-index-modal, 100000) + 100);
   background-color: var(--normal-bg-90);
 
   // Match the confirm dialog's default width (500px), same as the standard
