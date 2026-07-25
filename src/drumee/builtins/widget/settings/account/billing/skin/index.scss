@@ -1408,8 +1408,16 @@
     padding: 14px;
     min-height: 0;
     gap: 6px;
-    justify-content: flex-start;
     overflow: visible;
+    // Fill the space the cell has left over, so every plan's tinted box ends
+    // up the same height. Sizing to content made Sovereign's box 16px taller
+    // than the rest — it carries a "Start from" line the others don't — and
+    // the row of four read as ragged. flex:1 equalises them without hardcoding
+    // a height that a longer label or another language would break.
+    flex: 1;
+    // With the box now taller than its text, centre the content rather than
+    // leaving it stranded at the top.
+    justify-content: center;
   }
 
   .settings-billing__plan-title {
