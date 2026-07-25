@@ -867,6 +867,12 @@ class __window_folder extends mfsInteract {
       }
       return;
     }
+    if (pn === "new-ctrl") {
+      // The button renders hidden (the skeleton is built before the window has
+      // a privilege). Now that it is mounted, resolve the real answer once.
+      this.syncNewCtrlVisibility();
+      return;
+    }
     if (pn === _a.list) {
       this.iconsList = child;
       if (this.getViewMode && this.getViewMode() !== _a.row) {
@@ -1036,6 +1042,10 @@ class __window_folder extends mfsInteract {
       this._navRestoring = 0;
     }
     this.refreshBreadcrumbsUI();
+    // _captureNavState snapshots privilege and mset(state) above restores it,
+    // so walking BACK to an ancestor can change our rights just as walking in
+    // does (updateTopbar handles the forward case; _navRestoring skips it here).
+    this.syncNewCtrlVisibility();
   }
 
   refreshBreadcrumbsUI(stack) {
@@ -3212,6 +3222,10 @@ class __window_folder extends mfsInteract {
     if (this.activeTab === _a.chat) this._populateThreadRail();
     this.scopeTasksToFolder();
     this.refreshBreadcrumbsUI();
+    // super.updateTopbar → copyPropertiesFrom carries the destination node's
+    // privilege into our model, so a subfolder that grants different rights
+    // than its parent is already reflected there — re-read it for the button.
+    this.syncNewCtrlVisibility();
   }
 
   showFolderTab(tab) {
@@ -3239,10 +3253,7 @@ class __window_folder extends mfsInteract {
     // The merged "+ New" button also lives on the tab line but only operates on
     // Files (upload / create / gdrive-import) — hide it off the Files tab so it
     // can't be mistaken for a Chat/Task/Meeting action.
-    const newCtrl = this.getPart("new-ctrl");
-    if (newCtrl && newCtrl.el) {
-      newCtrl.el.dataset.visible = tab === "files" ? "1" : "0";
-    }
+    this.syncNewCtrlVisibility();
 
     const switchView = (view) => {
       if (this._meetingViewActive && tab !== "meeting") {
@@ -3628,8 +3639,13 @@ class __window_folder extends mfsInteract {
   // which matches children by nid and no-ops on this nid-less payload — so
   // intercept it here to refresh our own chrome. mget(_a.privilege) drives
   // canUpload/canShare/canManageAccess, so updating it fixes context-menu,
-  // drag-drop, etc. live; the topbar re-feed is needed because its buttons are
-  // conditionally created (absent when unpermitted) and can't be CSS-toggled.
+  // drag-drop, etc. live.
+  //
+  // Two kinds of chrome need different treatment, and both must be handled:
+  //  - topbar buttons (Manage access, settings) are conditionally CREATED, so
+  //    they cannot be CSS-toggled — the header is re-fed to rebuild them.
+  //  - the tab-bar [+ New] button always exists and is CSS-toggled instead, and
+  //    it is NOT inside the re-fed header — syncNewCtrlVisibility covers it.
   handleWsEvent(args = {}) {
     const { data, options } = args || {};
     if (options && options.service === SERVICE.hub.set_privilege) {
@@ -3662,6 +3678,11 @@ class __window_folder extends mfsInteract {
       .then(() => { this._suppressRaise = 0; });
     this.refreshBreadcrumbsUI();
     this._syncChatGate();
+    // The [+ New] button lives on the tab bar, NOT in the topbar re-fed above,
+    // so the re-feed does not reach it. Sync it explicitly, or an admin's
+    // demotion leaves a working create/upload menu on a view-only member's
+    // screen (and a promotion leaves them without one until they reopen).
+    this.syncNewCtrlVisibility();
   }
 
   // Chat is granted at the "View & chat" tier and above — i.e. any privilege
@@ -3685,6 +3706,32 @@ class __window_folder extends mfsInteract {
     this.$el.find(".window__chat-panel").attr("data-chat_gated", gated);
   }
 
+  // Gate the merged "+ New" button (upload / create / gdrive-import) on BOTH
+  // the active tab and the viewer's current write permission.
+  //
+  // The button is always in the tree (see skeleton/toolkit tabBar) because the
+  // skeleton is built before the window knows its privilege, and because a
+  // build-time gate cannot react to anything afterwards. Every source of truth
+  // for "may this viewer create things here?" therefore converges on this one
+  // runtime read of mget(privilege):
+  //   - open             → onPartReady("new-ctrl")
+  //   - opened w/o a priv → _healChatPrivilege, once the real value resolves
+  //   - tab switch       → showFolderTab
+  //   - live role change → _applyLivePrivilege (admin changed our role)
+  //   - walk in          → updateTopbar (a subfolder may grant other rights)
+  //   - walk back        → _restoreNavState (so may an ancestor)
+  //
+  // Off the Files tab it hides regardless of permission: the actions only apply
+  // to files, so showing it on Chat/Task/Meeting would misrepresent what it does.
+  syncNewCtrlVisibility() {
+    const newCtrl = this.getPart && this.getPart("new-ctrl");
+    if (!newCtrl || !newCtrl.el) return;
+    const onFiles = (this.activeTab || "files") === "files";
+    // canUpload() returns the masked bitmask (truthy number), not a boolean.
+    const mayCreate = !!(this.canUpload && this.canUpload());
+    newCtrl.el.dataset.visible = onFiles && mayCreate ? "1" : "0";
+  }
+
   // Resolve the viewer's real privilege for this node when the window opened
   // without one (see buildContent), then re-sync the chat gate. Uses the same
   // read-only node-attributes fetch the desk reveal path uses
@@ -3705,6 +3752,10 @@ class __window_folder extends mfsInteract {
       if (node && node.privilege != null && this.mget(_a.privilege) == null) {
         this.mset(_a.privilege, Number(node.privilege));
         this.ensurePart("folder-view").then(() => this._syncChatGate());
+        // The [+ New] button reads the same privilege — a window that opened
+        // without one renders it hidden, so re-resolve once the real value
+        // lands or a full member would be left with no way to create anything.
+        this.ensurePart("new-ctrl").then(() => this.syncNewCtrlVisibility());
       }
     } catch (e) {
       if (this.warn) this.warn("[folder] chat-privilege heal failed", e && e.message);

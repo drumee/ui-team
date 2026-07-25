@@ -220,18 +220,32 @@ export function tabBar(ui, opt = {}) {
     : "";
 
   // Merged "+ New" button (folder Files tab only) — replaces the old header
-  // Upload + Add-new buttons. Gated on canUpload like those were, and folder-
-  // only. Wrapped in a `new-ctrl` part with data-visible so showFolderTab can
-  // hide it off the Files tab, exactly like the view-toggle (view-ctrl).
-  const newBtn =
-    isFolder && ui.canUpload && ui.canUpload()
-      ? Skeletons.Box.X({
-          className: `${cnTopbar}__new-ctrl`,
-          sys_pn: "new-ctrl",
-          dataset: { visible: 1 },
-          kids: [newMenu(ui)],
-        })
-      : "";
+  // Upload + Add-new buttons. Folder-only; write-permission gating happens at
+  // RUNTIME via data-visible, not here.
+  //
+  // Why the element always exists for a folder window instead of being gated on
+  // canUpload() like the old header buttons were: this factory runs once, from
+  // `this.skeleton = require('./skeleton')(this)` in folder/index.js — a line
+  // that executes BEFORE the window seeds its privilege from the launching
+  // trigger. canUpload() would read an undefined privilege and evaluate 0, so
+  // an Edit member got no button at all. Worse, a build-time gate can never
+  // answer a live role change (hub.set_privilege) or a walk into a subfolder
+  // with different rights: the node is either in the tree or it isn't.
+  //
+  // Rendering it unconditionally and letting syncNewCtrlVisibility() own
+  // data-visible makes one runtime read the single source of truth for all
+  // three cases. Same mechanism the view toggle already uses (view-ctrl).
+  const newBtn = isFolder
+    ? Skeletons.Box.X({
+        className: `${cnTopbar}__new-ctrl`,
+        sys_pn: "new-ctrl",
+        // Start hidden: the window calls syncNewCtrlVisibility() once the part
+        // mounts, by which time the real privilege is known. Defaulting to 1
+        // would flash the button at view-only members on every open.
+        dataset: { visible: 0 },
+        kids: [newMenu(ui)],
+      })
+    : "";
 
   // Tab bar lays out as flex space-between: the tab items group on the left,
   // the [+New] + view-toggle controls on the right.
