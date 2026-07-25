@@ -1807,6 +1807,7 @@
   "REMOVE_MEMBER_TITLE": "Remove member",
   "REMOVE_MEMBER_MESSAGE": "Remove {name} from this folder? They will lose all access.",
   "ROLE_UPDATED_SUCCESSFULLY": "Role updated.",
+  "ROLE_CHANGED_TO_VIEW": "You can't edit now because admin has changed your role from Edit to View",
   "MEMBER_REMOVED_SUCCESSFULLY": "Member removed.",
   "AUDIT_RISK_DESC": "Mainly involving external folder sharing.",
   "AUDIT_STORAGE_DESC": "Total data logged in last 30 days.",

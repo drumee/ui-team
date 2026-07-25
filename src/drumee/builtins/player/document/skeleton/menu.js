@@ -63,12 +63,22 @@ module.exports = function (ui) {
     );
   }
 
-  if (ui.canUpload() && !Visitor.inDmz && EDITABLE.includes(ui.mget(_a.ext).toLowerCase())) {
+  if (!Visitor.inDmz && EDITABLE.includes(ui.mget(_a.ext).toLowerCase())) {
     // No preview toggle while editing — it reloads the stale server render. Only
     // offer Edit when not already editing.
+    //
+    // Offered regardless of canUpload(): the editor service resolves edit vs
+    // read-only from the privilege server-side, so a view-only member gets the
+    // read-only editor. Without this, a viewer who switched to Preview had no
+    // way back to the editor and was stuck on the PDF render — which is blank
+    // for a file whose preview was never generated.
     if (!isEditing && Platform.get("doc_editor")) {
       actions.push(
-        action(ui, { service: _a.edit, ico: "app-edit", tip: LOCALE.EDIT }),
+        action(ui, {
+          service: _a.edit,
+          ico: "app-edit",
+          tip: ui.canUpload() ? LOCALE.EDIT : LOCALE.OPEN,
+        }),
       );
     }
   } else if (

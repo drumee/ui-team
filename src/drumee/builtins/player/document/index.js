@@ -3,9 +3,26 @@ const { filesize, fitBoxes } = require("@drumee/ui-essentials")
 const { TweenMax, Expo } = require("@drumee/ui-core/vendor");
 const PlayerInteract = require('player/interact');
 const { loadPdfDocument, getCurrentPdfiumDocumentBlob } = require('./pdfium-wrapper')
+const { applyLivePrivilege, hasWriteBit } = require('window/live-privilege');
 const WS_EVENT = "ws:event";
 const EDITOR_READY_FALLBACK_MS = 2500;
 const EDITOR_READY_EVENTS = new Set(['onDocumentReady', 'onAppReady', 'docEditorReady']);
+
+// hub.set_privilege is supplied by the backend service map (Platform.get
+// ('services')), not by the local lex/services.json placeholder — see
+// .claude/rules/api-services.md. Reading it defensively means a deploy where
+// the backend map lags still matches on the literal name instead of comparing
+// against undefined and silently skipping the case.
+const SVC_SET_PRIVILEGE =
+  (SERVICE.hub && SERVICE.hub.set_privilege) || 'hub.set_privilege';
+
+// How long the "your role changed" notice stays up before it dismisses itself.
+const ROLE_NOTICE_MS = 5000;
+// A user can have the same document open in several windows, and every one of
+// them hears the privilege push. The notice is about the account, not the
+// document, so it is shown once per change — module scope, not instance.
+const ROLE_NOTICE_DEDUP_MS = 3000;
+let lastRoleNoticeAt = 0;
 
 let editorPrewarmed = false;
 function prewarmEditor() {
@@ -106,12 +123,56 @@ class __player_document extends PlayerInteract {
    * @param {*} args 
    */
   onWsMessage(args) {
-    let { service, data, options } = args
-    switch (options.service) {
+    let { service, data, options = {} } = args
+    // This handler is fed by Wm's ws:event relay (desk/wm/push.js dispatches the
+    // raw socket message, then re-triggers unhandled services as a single
+    // { service, data, options } object), not by router/websocket's
+    // onWsMessage(service, model, options) call. push.js switches on
+    // options.service and forwards both, so options.service is what carries the
+    // name here — the arg is kept as a fallback in case the relay shape changes.
+    const svc = options.service || service;
+    switch (svc) {
       case "media.status":
         this.checkPreview(args)
         break;
+
+      case SVC_SET_PRIVILEGE:
+        this._onLivePrivilege(data || {});
+        break;
     }
+  }
+
+  /**
+   * An admin changed OUR role on this hub while the document is open.
+   *
+   * Either direction needs the frame reloaded, because the editor mode is baked
+   * into the config the service handed out when the frame loaded: losing write
+   * leaves an editor that still accepts keystrokes the server will refuse,
+   * gaining it leaves a read-only frame that ignores them. Reloading is what
+   * makes the service re-read the privilege and hand back the right mode.
+   *
+   * Only the downgrade explains itself with a notice — being handed more access
+   * needs no apology, and the frame silently becoming editable is what the user
+   * just asked for.
+   */
+  _onLivePrivilege(data = {}) {
+    const syncEditor = (notify) => {
+      // A PDF preview has no editor session to re-sync, and reloading it would
+      // just flash the page. Its menu still needs refreshing: the Edit action
+      // appears or disappears with the privilege.
+      if (this.mget(_a.mode) !== _a.edit) {
+        this.updateMenu();
+        return;
+      }
+      if (notify) this._showRoleDowngradeNotice();
+      this._reloadEditorMode();
+      this.updateMenu();
+    };
+
+    applyLivePrivilege(this, data, {
+      onDowngrade: () => syncEditor(true),
+      onUpgrade: () => syncEditor(false),
+    });
   }
 
   // Load a PDF file
@@ -168,8 +229,16 @@ class __player_document extends PlayerInteract {
     }
     if (this.mget(_a.mode) === _a.preview) return false;
     if (this.mget(_a.mode) === _a.edit) return true;
-    return this.canUpload()
-      && require('./editable').includes(ext)
+    // Office file + an editor configured → open the editor, whatever the
+    // viewer's privilege is. The editor service decides edit vs read-only from
+    // the privilege it reads server-side, so a view-only member lands in a
+    // read-only editor and still sees the document as it really looks.
+    //
+    // Gating this on canUpload() sent them down the PDFium branch instead,
+    // which renders the generated preview PDF — and for a file that has only
+    // ever been opened in the editor, that preview was never generated, so
+    // they got a blank page.
+    return require('./editable').includes(ext)
       && !!Platform.get('doc_editor');
   }
 
@@ -711,6 +780,74 @@ class __player_document extends PlayerInteract {
     });
   }
 
+  /**
+   * One-per-change notice that the role was downgraded.
+   *
+   * Wm.info has no self-dismiss (window/info only feeds and raises), so the
+   * timer lives here. The [x] the user can click comes from the action below.
+   */
+  _showRoleDowngradeNotice() {
+    const now = Date.now();
+    if (now - lastRoleNoticeAt < ROLE_NOTICE_DEDUP_MS) return;
+    lastRoleNoticeAt = now;
+
+    // Wm.info returns the window it appended — keep that handle. Do NOT go
+    // looking for it via Wm.getActiveWindow(): that only considers windows
+    // carrying acceptMedia (set in window/core), which window_info does not
+    // have, so it would hand back the user's workspace window instead and the
+    // timer below would close THAT.
+    const notice = Wm.info({
+      message: LOCALE.ROLE_CHANGED_TO_VIEW,
+      variant: 'notice',
+      actions: [
+        {
+          label: LOCALE.CLOSE,
+          priority: 'primary',
+          // No uiHandler → the toast window closes itself.
+          service: _e.close,
+        },
+      ],
+    });
+
+    if (!notice || typeof notice.goodbye !== 'function') return;
+    clearTimeout(this._roleNoticeTimer);
+    this._roleNoticeTimer = setTimeout(() => {
+      this._roleNoticeTimer = null;
+      // The user may have closed it already, or opened something else on top.
+      if (notice.isDestroyed && notice.isDestroyed()) return;
+      try { notice.goodbye(); } catch (e) { /* already gone */ }
+    }, ROLE_NOTICE_MS);
+  }
+
+  /**
+   * Ask the editor service for a fresh config now that our privilege changed.
+   *
+   * The service derives the editor mode from the privilege it re-reads per
+   * request, so reloading the frame is what re-syncs it in either direction —
+   * no plugin change needed, and the document keeps its real formatting instead
+   * of falling back to a flat render.
+   *
+   * Not guaranteed to take effect on the spot: the collaborative session key is
+   * built from the file's mtime, so an unchanged file may rejoin the session
+   * that is already open and keep its config. Reopening the document always
+   * lands on the current privilege, because that starts a new session.
+   *
+   * Blocking input locally was considered and dropped: the editor is
+   * cross-origin, so key events raised inside the frame never reach this
+   * document, and an overlay that could actually intercept them would also take
+   * away scrolling and text selection — i.e. reading, which view-only users are
+   * explicitly meant to keep. The save path is guarded server-side regardless.
+   */
+  _reloadEditorMode() {
+    const iframe = this.el && this.el.querySelector('iframe');
+    if (!iframe || !iframe.src) return;
+    try {
+      iframe.src = iframe.src;
+    } catch (e) {
+      if (this.warn) this.warn('[document] read-only reload failed', e && e.message);
+    }
+  }
+
   _cleanupEditorListeners() {
     if (this._onEditorMessage) {
       window.removeEventListener('message', this._onEditorMessage);
@@ -719,6 +856,10 @@ class __player_document extends PlayerInteract {
     if (this._editorReadyFallback) {
       clearTimeout(this._editorReadyFallback);
       this._editorReadyFallback = null;
+    }
+    if (this._roleNoticeTimer) {
+      clearTimeout(this._roleNoticeTimer);
+      this._roleNoticeTimer = null;
     }
   }
 
