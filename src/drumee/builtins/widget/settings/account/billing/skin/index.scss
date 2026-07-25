@@ -1339,15 +1339,7 @@
     text-align: center;
   }
 
-  // Body cells align to the SAME left edge as the header, so within a coloured
-  // column the value rows line up under the plan name instead of the header
-  // sitting at the left while the values float in the centre. 16px matches the
-  // header column's inset (.compare-plan padding-left, below).
-  &-value {
-    gap: 6px;
-    justify-content: flex-start;
-    padding-left: 22px;
-  }
+  &-value { gap: 6px; }
 
   &-mark {
     width: 15px;
@@ -1399,12 +1391,19 @@
   padding: 12px 8px;
   gap: 6px;
 
+  // The tinted price-header box hugs its content: less padding of its own (the
+  // card's 164px min-height and spacer-4 padding made it a tall panel), so the
+  // background sits close around the title and price.
   .settings-billing__plan-header {
-    padding: 8px 6px;
+    padding: 4px;
+    min-height: 0;
     gap: 2px;
   }
 
+  // The title text gets its own breathing room from that tighter background —
+  // a left inset so "Free" / "Team" / ... aren't glued to the tint edge.
   .settings-billing__plan-title {
+    padding-left: 10px;
     font-size: 16px;
     line-height: 22px;
   }
@@ -1574,51 +1573,5 @@
   .settings-billing__compare-tagline {
     font-size: 13px;
     line-height: 18px;
-  }
-}
-
-// Header content is left-aligned in each plan column, but padded off the edge.
-//
-// The complaint was that "Free" / "Team" / "Business" / "Sovereign Node" sat
-// hard against the left edge, so the left had no breathing room while the right
-// did. The fix is NOT to centre them — they stay start-aligned — it is to give
-// the column symmetric horizontal padding so the text starts inset from the
-// edge by the same amount it clears on the right. The title is a flex Note, so
-// it fills the column and its text sits at flex-start; the padding on the
-// column is what pushes that start point in. Scoped to the table, so the mobile
-// cards are untouched.
-.settings-billing__compare-plan {
-  padding-left: 22px;
-  padding-right: 22px;
-  align-items: stretch;
-
-  // The card wraps the title+price in a tinted, rounded price-header box with a
-  // 164px min-height. Nested inside the already-tinted table column that box
-  // was a second background the text sat hard against (title leftGap 0), and it
-  // made the header ~260px tall. In the table the column tint IS the header
-  // background, so the box is flattened: no fill, no min-height, no padding of
-  // its own — the text insets come from the column's 22px padding, the same
-  // edge the body values align to.
-  .settings-billing__plan-header {
-    width: 100%;
-    align-items: flex-start;
-    background: transparent;
-    min-height: 0;
-    padding: 0;
-    border-radius: 0;
-  }
-
-  .settings-billing__plan-title {
-    width: 100%;
-    justify-content: flex-start;
-    text-align: left;
-  }
-
-  .settings-billing__plan-price {
-    align-items: flex-start;
-  }
-
-  .settings-billing__plan-price-row {
-    justify-content: flex-start;
   }
 }
