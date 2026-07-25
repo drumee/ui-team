@@ -76,7 +76,21 @@ class __permission_restricted extends DrumeeMFS {
             if (r.status === "failed") {
               return Wm.alert(r.reason || LOCALE.TRY_AGAIN);
             }
-            Wm.alert(LOCALE.INVITATION_SENT_SUCCESSFULLY);
+            // Branded "notice" toast — identical to the folder window's
+            // invite-sent confirmation (window/folder _showNoticeToast): the
+            // compact drumee-logo card with a single primary Close button,
+            // instead of the plain grey Wm.alert.
+            Wm.info({
+              message: LOCALE.INVITATION_SENT_SUCCESSFULLY,
+              variant: "notice",
+              actions: [
+                {
+                  label: LOCALE.CLOSE,
+                  priority: "primary",
+                  service: _e.close,
+                },
+              ],
+            });
           }).catch((e) => Wm.alert(e.reason || e.error || LOCALE.TRY_AGAIN));
         });
         break;

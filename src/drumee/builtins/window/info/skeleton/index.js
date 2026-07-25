@@ -61,8 +61,7 @@ module.exports = function (ui) {
               type: _a.toggle,
               className: `${fig}__button`,
               service: _e.close,
-              // The default alert action reads as the primary (brand) button.
-              priority: "primary",
+              priority: "secondary",
             }),
           ],
   });
