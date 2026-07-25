@@ -656,9 +656,11 @@
     // became unreachable. Position: sticky alone keeps it pinned while the
     // OUTER page scrolls.
     &-right {
-      // grow (not just shrink): once this wraps below the form it should take
-      // the full row rather than sitting at 480px with dead space beside it.
-      flex: 1 1 480px;
+      // Side by side the summary keeps its 480px and lets the form take the
+      // rest, so it must NOT grow here — allowing that made the summary wider
+      // than the form (700 vs 540 at a 1280 container). The stacked case is
+      // handled by the container query, which gives it the full row.
+      flex: 0 1 480px;
       min-width: 0;
       gap: var(--spacer-5);
       padding: var(--spacer-6);
