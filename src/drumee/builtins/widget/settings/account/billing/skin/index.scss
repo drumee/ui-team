@@ -19,6 +19,15 @@
     margin-top: var(--spacer-6);
   }
 
+  // Measure the space the billing content actually gets, not the window: this
+  // page sits inside the settings panel, so the viewport is consistently wider
+  // than the room available (1280 of content inside a 1679 viewport). Same
+  // reasoning as the plans table's own container.
+  &__content-wrapper {
+    container-type: inline-size;
+    container-name: billing-content;
+  }
+
   &__plans {
     width: 100%;
 
@@ -571,6 +580,12 @@
       width: 100%;
       gap: var(--spacer-8);
       align-items: flex-start;
+      // The two columns were locked to one row (nowrap) with a fixed 480px
+      // summary, so as the panel narrowed the form column was squeezed to its
+      // min-content and then the whole row overflowed — measured: 300px of
+      // form at an 820px container, and real overflow by 420px. Wrapping lets
+      // the summary drop below the form before anything is crushed.
+      flex-wrap: wrap;
     }
 
     &-section {
@@ -620,7 +635,11 @@
     }
 
     &-left {
-      flex: 1;
+      // min-width:0 lets the column actually shrink — a flex item defaults to
+      // min-width:auto, which is what pinned it at min-content and pushed the
+      // overflow onto the row. The 320px basis is the wrap trigger.
+      flex: 1 1 320px;
+      min-width: 0;
       gap: var(--spacer-6);
     }
 
@@ -638,7 +657,8 @@
     // became unreachable. Position: sticky alone keeps it pinned while the
     // OUTER page scrolls.
     &-right {
-      width: 480px;
+      flex: 0 1 480px;
+      min-width: 0;
       gap: var(--spacer-5);
       padding: var(--spacer-6);
       background-color: var(--white);
@@ -1633,5 +1653,43 @@
   .settings-billing__compare-tagline {
     font-size: 13px;
     line-height: 18px;
+  }
+}
+
+// Checkout: below the point where a form column and a 480px summary stop
+// fitting side by side, stack them. The summary also drops its sticky pinning
+// — once it sits under the form there is nothing left to scroll past, and a
+// stuck panel would just hover over the page.
+@container billing-content (max-width: 900px) {
+  .settings-billing__checkout-left,
+  .settings-billing__checkout-right {
+    flex: 1 1 100%;
+    width: 100%;
+  }
+
+  .settings-billing__checkout-right {
+    position: static;
+    top: auto;
+  }
+
+  .settings-billing__checkout-main {
+    gap: var(--spacer-6);
+  }
+}
+
+// Fallback for engines without container queries: approximate from the
+// viewport, allowing for the settings sidebar.
+@supports not (container-type: inline-size) {
+  @media screen and (max-width: 1080px) {
+    .settings-billing__checkout-left,
+    .settings-billing__checkout-right {
+      flex: 1 1 100%;
+      width: 100%;
+    }
+
+    .settings-billing__checkout-right {
+      position: static;
+      top: auto;
+    }
   }
 }
