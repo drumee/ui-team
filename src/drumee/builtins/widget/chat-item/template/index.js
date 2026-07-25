@@ -30,6 +30,20 @@ module.exports = function (ui) {
       }
       m.message_type =
         sentinel[1] === "start" ? "meeting.start" : "meeting.end";
+      // The lifecycle status lives in the ROW metadata (meeting_status, set by
+      // channel.meeting_end); carry it across before the sentinel payload
+      // replaces m.metadata, so a flipped start card renders ended.
+      let rowMeta = m.metadata;
+      if (typeof rowMeta === "string") {
+        try {
+          rowMeta = JSON.parse(rowMeta);
+        } catch (e) {
+          rowMeta = {};
+        }
+      }
+      if (rowMeta && rowMeta.meeting_status) {
+        parsed.meeting_status = rowMeta.meeting_status;
+      }
       m.metadata = parsed;
     }
     body = require("./meeting-event")(m);

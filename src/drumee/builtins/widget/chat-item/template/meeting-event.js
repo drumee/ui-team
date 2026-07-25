@@ -22,7 +22,11 @@ module.exports = function (m) {
 
   const fig = m.fig;
   const xlink = 'xmlns:xlink="http://www.w3.org/1999/xlink"';
-  const isStart = m.message_type === 'meeting.start';
+  // One card transitions in place: a start message flipped to
+  // meeting_status='ended' renders like a legacy "meeting.end" card.
+  const isEnded =
+    m.message_type === 'meeting.end' || md.meeting_status === 'ended';
+  const isStart = !isEnded;
 
   const by = md.by || m.fullname || 'Someone';
   const title = md.filename || LOCALE.MEETING || 'Meeting';

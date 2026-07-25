@@ -164,7 +164,9 @@ class __window_meeting extends __room {
       this._announceHostIfNeeded();
       this._meetingStartedAt = Date.now();
       this._maxParticipants = 1;
-      this._postMeetingSystemMessage("meeting.start");
+      // Host-only, so exactly ONE card exists per meeting — the one the host
+      // later flips to "ended" in place (rather than posting a second card).
+      if (this._isHost) this._postMeetingSystemMessage();
     } catch (e) {
       if (this.warn) this.warn("meeting onDomRefresh failed", e);
       this.stateMachine("permissionDenied");
@@ -251,25 +253,25 @@ class __window_meeting extends __room {
         });
       } catch (e) { }
     }
-    this._postMeetingSystemMessage("meeting.end");
+    // Host-only: flip the single start card to "ended" in place.
+    if (this._isHost) this._endMeetingCard();
     if (super.onBeforeDestroy) super.onBeforeDestroy();
   }
 
   /**
-   * Post a "X started/ended a meeting" system message into the folder's chat
-   * so members discover the meeting from chat history. The backend doesn't
-   * preserve custom `message_type`/`metadata` fields on regular channel.post,
-   * so we encode the payload into the `message` field with a sentinel prefix
-   * (`[[MEETING:start:{json}]]`) which chat-item parses on render.
-   * Skipped on DMZ rooms (no chat channel) and when nid is missing.
+   * Post the single "X started a meeting" card into the folder chat and remember
+   * its message_id so onBeforeDestroy can flip THAT card to "ended". The backend
+   * drops custom message_type/metadata on channel.post, so the payload is
+   * encoded into the message body as a `[[MEETING:start:{json}]]` sentinel that
+   * chat-item parses on render. Host-only. Skipped on DMZ / when nid is missing.
    */
-  _postMeetingSystemMessage(type) {
+  _postMeetingSystemMessage() {
     if (this.mget(_a.area) === _a.dmz) return;
     const hub_id = this.mget(_a.hub_id);
     const nid = this.mget(_a.nid) || this.mget(_a.actual_home_id);
     if (!hub_id || !nid) return;
-    if (type === "meeting.start" && this._meetingMessagePosted) return;
-    if (type === "meeting.start") this._meetingMessagePosted = true;
+    if (this._meetingMessagePosted) return;
+    this._meetingMessagePosted = true;
 
     const payload = {
       hub_id,
@@ -278,19 +280,50 @@ class __window_meeting extends __room {
       filename: this.mget(_a.filename),
       by: (Visitor.fullname && Visitor.fullname()) || "",
     };
-    const action = type === "meeting.start" ? "start" : "end";
-    const message = `[[MEETING:${action}:${JSON.stringify(payload)}]]`;
+    const message = `[[MEETING:start:${JSON.stringify(payload)}]]`;
 
     try {
-      this.postService({
+      // Keep the POST promise: the meeting can end before this resolves, so the
+      // end-flip chains on it to read the real message_id (below).
+      this._meetingCardPost = this.postService({
         service: SERVICE.channel.post,
         hub_id,
         nid,
         message,
-      });
+      })
+        .then((data) => {
+          const row = Array.isArray(data) ? data[0] : data;
+          return (row && row.message_id) || null;
+        })
+        .catch((e) => {
+          if (this.warn) this.warn("Failed to post meeting start message", e);
+          return null;
+        });
     } catch (e) {
-      if (this.warn) this.warn("Failed to post meeting system message", e);
+      if (this.warn) this.warn("Failed to post meeting start message", e);
     }
+  }
+
+  /**
+   * Flip the meeting's start card to "ended" (no second card). Chains on the
+   * start POST so it still works when the meeting ends before that POST resolves;
+   * fire-and-forget, the closure outlives the window teardown in onBeforeDestroy.
+   */
+  _endMeetingCard() {
+    if (!this._meetingCardPost) return;
+    const hub_id = this.mget(_a.hub_id);
+    const nid = this.mget(_a.nid) || this.mget(_a.actual_home_id);
+    if (!hub_id || !nid) return;
+    const service =
+      (SERVICE.channel && SERVICE.channel.meeting_end) || "channel.meeting_end";
+    this._meetingCardPost.then((message_id) => {
+      if (!message_id) return;
+      try {
+        this.postService({ service, hub_id, nid, message_id });
+      } catch (e) {
+        if (this.warn) this.warn("Failed to end meeting card", e);
+      }
+    });
   }
 
   /**
