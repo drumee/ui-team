@@ -2188,5 +2188,10 @@
   "MIGRATE_GDRIVE_SUMMARY_SKIPPED": "{0} skipped.",
   "MIGRATE_GDRIVE_MORE_ITEMS": "+{0} more",
   "GDRIVE_SHORTCUT_SKIPPED": "Google Drive shortcut — not copied",
-  "MAIL_SALES_SUBJECT": "Drumee {0} plan enquiry"
+  "MAIL_SALES_SUBJECT": "Drumee {0} plan enquiry",
+  "MANAGE_SEATS": "Manage seats",
+  "ADDITIONAL_SEATS": "Additional members",
+  "SEAT_TIER_BASE": "$3.00 per member — $2.90 from 10",
+  "SEAT_TIER_BULK": "$2.90 per member",
+  "SEATS_LINE": "{0} extra members"
 }
