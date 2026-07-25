@@ -312,6 +312,44 @@ test("step-3 congrats waits for the invite-sent toast to be dismissed", async ()
   }
 });
 
+// ── Step 1 walkthrough drop-guard ────────────────────────────────────────────
+
+test("step-1 walkthrough: the dimmed frame opens the drop guard without the wrapper-modal", () => {
+  const f = makeFlow();
+  click(f, "reward-continue");
+  assert.equal(f.getStep(), "step1_guide");
+  click(f, "reward-vignette-click");
+  assert.equal(f._guideDropOpen, true, "the walkthrough drop guard must be open");
+  // It must NOT feed the shared wrapper-modal — that host may hold the create-form.
+  assert.equal(modal.fed, null, "the walkthrough drop guard must not use Wm.__wrapperModal");
+  assert.equal(f.getStep(), "step1_guide", "opening the guard must not change the step");
+});
+
+test("step-1 walkthrough: a second frame click is inert while the guard is open", () => {
+  const f = makeFlow();
+  click(f, "reward-continue");
+  click(f, "reward-vignette-click");
+  click(f, "reward-vignette-click"); // must not re-open / stack
+  assert.equal(f._guideDropOpen, true);
+  assert.equal(modal.fed, null);
+});
+
+test("step-1 walkthrough: Continue resumes the walkthrough, Drop anyway ends it", () => {
+  const stay = makeFlow();
+  click(stay, "reward-continue");
+  click(stay, "reward-vignette-click");
+  click(stay, "reward-drop-stay");
+  assert.equal(stay._guideDropOpen, false, "Continue must close the guard");
+  assert.equal(stay.getStep(), "step1_guide", "Continue must resume the walkthrough, not exit");
+  assert.equal(modal.cleared, 0, "no wrapper-modal was opened, so none is cleared");
+
+  const leave = makeFlow();
+  click(leave, "reward-continue");
+  click(leave, "reward-vignette-click");
+  click(leave, "reward-drop-leave");
+  assert.equal(leave.destroyed, true, "Drop anyway must finish and tear the flow down");
+});
+
 test("a stored 'congrats' terminal marker is not resumable and falls back to step1", () => {
   store.reward_step = "congrats";
   const f = makeFlow();

@@ -77,6 +77,7 @@ class __reward_flow extends LetcBox {
     this._modalOpen = false;
     this._dropReturnStep = null;
     this._inviteSucceeded = false;
+    this._guideDropOpen = false;
 
     this._onUploaded = () => this.onUploadDone();
     if (typeof RADIO_MEDIA !== "undefined") {
@@ -541,6 +542,28 @@ class __reward_flow extends LetcBox {
     this._modalOpen = false;
   }
 
+  /** Open the "Don't drop now" modal DURING the Step 1 walkthrough. Rendered
+   *  into the flow's own `guide-modal` part (not Wm.__wrapperModal), so the
+   *  guided create-form / permission panel underneath is left untouched — a
+   *  "Continue" simply closes this and the guide resumes. */
+  _openGuideDrop() {
+    this._guideDropOpen = true;
+    this.ensurePart("guide-modal").then((p) => {
+      if (!p) return;
+      if (p.el && p.el.dataset) p.el.dataset.open = "1";
+      p.feed(dropModal(this));
+    });
+  }
+
+  _closeGuideDrop() {
+    this._guideDropOpen = false;
+    this.ensurePart("guide-modal").then((p) => {
+      if (!p) return;
+      p.feed(null);
+      if (p.el && p.el.dataset) delete p.el.dataset.open;
+    });
+  }
+
   /** Final exit — from "Drop anyway" or "Go to dashboard". Never shown again. */
   _finish() {
     lsSet(KEY_DONE, "1");
@@ -595,16 +618,27 @@ class __reward_flow extends LetcBox {
       }
 
       case "reward-vignette-click":
-        // Inert while the user is being handed off to a real surface. The CSS
-        // already makes the vignette click-through when waiting/guiding, but
-        // guard explicitly too — consistent with reward-continue/reward-back.
-        if (this._isWaiting() || this._step === "step1_guide" || this._modalOpen)
+        // Inert while the user is being handed off to a real surface, or when a
+        // drop modal is already up.
+        if (this._isWaiting() || this._modalOpen || this._guideDropOpen) return;
+        // During the Step 1 walkthrough the dimmed frame (__guide-scrim) fires
+        // this too: guard the walkthrough without tearing it down or touching
+        // the wrapper-modal that may hold the create-form.
+        if (this._step === "step1_guide") {
+          this._openGuideDrop();
           return;
+        }
         this._dropReturnStep = this._step;
         this._openModal(dropModal(this));
         return;
 
       case "reward-drop-stay":
+        // In the walkthrough the drop modal lives in our own root; closing it
+        // just resumes the guide (nothing was torn down).
+        if (this._guideDropOpen) {
+          this._closeGuideDrop();
+          return;
+        }
         this._closeModal();
         if (this._dropReturnStep) this._goto(this._dropReturnStep);
         this._dropReturnStep = null;

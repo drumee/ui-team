@@ -107,12 +107,52 @@ $success-soft: rgba(46, 179, 122, 0.14);
       height 200ms ease;
   }
 
+  // Clickable frame around the spotlight hole (guided walkthrough). Transparent
+  // — the cutout above provides the dim — but hit-testable everywhere EXCEPT the
+  // hole, which is punched out with the same --cut-* vars the cutout uses (a
+  // self-intersecting polygon = evenodd hole). Clicking the frame asks "Don't
+  // drop now"; the spotlighted target stays clickable through the hole. Sits
+  // below the coach so the coach's own controls win.
+  &__guide-scrim {
+    position: fixed;
+    inset: 0;
+    pointer-events: auto;
+    background: transparent;
+    z-index: 10018;
+    clip-path: polygon(
+      0 0, 100% 0, 100% 100%, 0 100%, 0 0,
+      var(--cut-x, 0) var(--cut-y, 0),
+      var(--cut-x, 0) calc(var(--cut-y, 0) + var(--cut-h, 0)),
+      calc(var(--cut-x, 0) + var(--cut-w, 0)) calc(var(--cut-y, 0) + var(--cut-h, 0)),
+      calc(var(--cut-x, 0) + var(--cut-w, 0)) var(--cut-y, 0),
+      var(--cut-x, 0) var(--cut-y, 0)
+    );
+  }
+
   // Callout host for the coach tooltip — spans the viewport but never blocks
   // (the coach itself opts pointer events back in).
   &__guide-callout {
     position: absolute;
     inset: 0;
     pointer-events: none;
+  }
+
+  // Host for the "Don't drop now" modal shown during the walkthrough. Inert
+  // until populated; then it dims the whole layer and centres the modal above
+  // the coach so only it is interactive (the guided surfaces stay untouched
+  // underneath — see index.js _openGuideDrop).
+  &__guide-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 10030;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+
+    &[data-open="1"] {
+      pointer-events: auto;
+      background-color: var(--overlay-bg, rgba(0, 0, 0, 0.4));
+    }
   }
 
   // ───────── coach tooltip (guided walkthrough) — styled after window_confirm ─────────

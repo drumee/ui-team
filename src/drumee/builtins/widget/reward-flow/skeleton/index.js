@@ -38,9 +38,29 @@ module.exports = function (ui) {
     // only the rest is dimmed. No card; the coach tooltip carries the step.
     kids.push(
       Skeletons.Box.Y({ className: `${pfx}__cutout` }),
+      // Clickable frame around the spotlight hole: clicking the dimmed area
+      // (anywhere but the spotlighted target) asks "Don't drop now" — the same
+      // abandon-guard the vignette gives steps 2/3. The hole is punched with the
+      // same --cut-* vars the cutout uses, so the target stays operable through
+      // it while every other click is caught here.
+      Skeletons.Box.Y({
+        className: `${pfx}__guide-scrim`,
+        service: "reward-vignette-click",
+        uiHandler: [ui],
+      }),
       Skeletons.Box.Y({
         className: `${pfx}__guide-callout`,
         sys_pn: "guide-callout",
+        partHandler: ui,
+      }),
+      // Host for the "Don't drop now" modal DURING the walkthrough. It lives in
+      // the flow's own root — not Wm.__wrapperModal — so opening it never
+      // clobbers the guided create-form / permission panel that occupy that
+      // wrapper-modal on the form/perm sub-steps. Inert until the orchestrator
+      // feeds the drop modal into it (see _openGuideDrop).
+      Skeletons.Box.Y({
+        className: `${pfx}__guide-modal`,
+        sys_pn: "guide-modal",
         partHandler: ui,
       }),
     );
