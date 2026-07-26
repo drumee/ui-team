@@ -105,8 +105,8 @@ function tooltipFor(sub) {
     case "form":
       return LOCALE.REWARD_FLOW_GUIDE_FORM
         || "Pick a workspace type, name it, and click Create.";
-    case "perm":
-      return LOCALE.REWARD_FLOW_GUIDE_PERM || "Close to continue";
+    // "perm" is not handled here — the perm phase goes through permText(), which
+    // picks the internal/external wording, or shows no coach at all.
     default:
       return "";
   }
@@ -114,12 +114,9 @@ function tooltipFor(sub) {
 
 /** Perm-phase instruction — one uniform line (no separate heading), specific to
  *  the branch: internal (permission_restricted) vs external (secure_share).
- *  Once a confirmation (window_info) sits on top — e.g. "The invitation was sent
- *  successfully" after inviting a member to an internal workspace — the branch
- *  advice is stale: the invite has already been sent and the panel behind is
- *  unreachable, so the only thing left to do is close the notice. */
+ *  Not consulted once a confirmation (window_info) sits on top — that card
+ *  speaks for itself, so _position spotlights it with no coach at all. */
 function permText() {
-  if (firstVisible(SEL.windowInfo)) return tooltipFor("perm");
   if (firstVisible(SEL.permShare)) {
     return LOCALE.REWARD_FLOW_GUIDE_PERM_EXTERNAL
       || "Open to share externally with your clients. Close to continue";
@@ -447,9 +444,14 @@ class RewardGuide {
     const radius =
       (typeof getComputedStyle === "function" &&
         getComputedStyle(el).borderRadius) || "";
+    // The invite-sent confirmation (window_info) carries its own message and
+    // Close button, so spotlight it bare: an empty text tells the orchestrator
+    // to paint the cutout without a coach, which would otherwise sit under the
+    // notice repeating it as a second, stray drumee card.
+    const bare = this._sub === "perm" && !!firstVisible(SEL.windowInfo);
     // No Back in the perm phase: the workspace already exists, so retreating to
     // the Step 1 card would be a lie. The user closes the panel to continue.
-    const text = this._sub === "perm" ? permText() : tooltipFor(this._sub);
+    const text = bare ? "" : this._sub === "perm" ? permText() : tooltipFor(this._sub);
     this._ui.spotlight(rect, text, this._sub !== "perm", radius);
   }
 

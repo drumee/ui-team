@@ -219,6 +219,10 @@ class __reward_flow extends LetcBox {
     this.el.style.setProperty("--cut-w", `${rect.width}px`);
     this.el.style.setProperty("--cut-h", `${rect.height}px`);
     this.el.style.setProperty("--cut-radius", radius || "4px");
+    // No text → cutout only, no coach. Used when the spotlighted surface already
+    // carries its own message and dismiss button (the invite-sent confirmation),
+    // where a coach beneath it would just repeat it as a second stray card.
+    if (!text) return this.clearSpotlight();
     const anchor = this._coachAnchor(rect, cx);
     this.ensurePart("guide-callout").then((p) => {
       if (!p) return;
@@ -282,8 +286,18 @@ class __reward_flow extends LetcBox {
     return { side, style: { left: `${clampX(cx)}px`, top: `${clampY(top)}px` } };
   }
 
+  /** Remove the coach callout. feed(null) does NOT empty a part — prepareData
+   *  wraps null into [null], so the coach would be left on screen. Reset the
+   *  collection instead (same rationale as _closeGuideDrop). */
   clearSpotlight() {
-    this.ensurePart("guide-callout").then((p) => p && p.feed(null));
+    this.ensurePart("guide-callout").then((p) => {
+      if (!p) return;
+      if (p.collection && typeof p.collection.reset === "function") {
+        p.collection.reset();
+      } else if (typeof p.feed === "function") {
+        p.feed(null);
+      }
+    });
   }
 
   // ───────── skeleton accessors ─────────
