@@ -731,7 +731,12 @@ class __player_document extends PlayerInteract {
     let host = user_domain || location.host
     // Forward the app theme so the editor matches it instead of defaulting to dark.
     const theme = (Visitor.wallpaper() || {}).theme || document.documentElement.dataset.theme || 'light'
-    let url = `https://${host}${svc}${Platform.get('doc_editor')}.html?hub_id=${hub_id}&nid=${nid}&theme=${theme}`
+    // Forward the app language too — OnlyOffice's editor UI is driven by
+    // editorConfig.lang and otherwise falls back to its own default,
+    // detached from the Drumee session language.
+    let lang = Visitor.language();
+    if (!/^(en|fr|es|ru|km|zh)$/.test(lang)) lang = 'en';
+    let url = `https://${host}${svc}${Platform.get('doc_editor')}.html?hub_id=${hub_id}&nid=${nid}&theme=${theme}&lang=${lang}`
     // Secure-share recipient: pass the share token so the editor service forces
     // read-only mode from the share's caps (Phase 1). DMZ-only; a normal desk
     // editor request carries no token, so its URL is byte-identical.

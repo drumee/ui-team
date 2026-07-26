@@ -670,6 +670,19 @@ class __window_folder extends mfsInteract {
     if (this.captured && this.captured.over && opt.phase === _a.upload) {
       return;
     }
+    // Under the modified-newest-first default a freshly inserted node
+    // (upload, paste, move-in) belongs at the TOP of its section, not the
+    // bottom — append-at-end matched the old rank-asc order. The partition
+    // observer files the tile into the right section either way and keeps
+    // the relative position it was inserted at.
+    if (
+      position === 0 &&
+      this._currentApi &&
+      this._currentApi.name === _a.mtime &&
+      this._currentApi.order === _K.order.descending
+    ) {
+      position = -1;
+    }
 
     if (
       opt.phase === _a.upload &&

@@ -1,0 +1,210 @@
+name: Claude QC
+
+# Advisory AI quality-control review on PRs into test/preview, gated behind the
+# static code-quality checks (code-quality.yml) so Claude only reviews code that
+# passes lint/secret-scan. Posts a
+# structured QC report (bugs/regressions, impact analysis, test recommendations,
+# Drumee rule violations) as a PR comment; continue-on-error keeps it non-blocking
+# and it never touches the deploy pipeline (deploy.yml). Auth uses the
+# CLAUDE_CODE_OAUTH_TOKEN repo secret (generated via `claude setup-token`).
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+    branches: [test, preview]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: claude-qc-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality:
+    name: Code quality gate
+    uses: ./.github/workflows/code-quality.yml
+    secrets: inherit
+
+  review:
+    name: AI QC report (advisory)
+    needs: quality
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+      issues: write
+    timeout-minutes: 25
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: anthropics/claude-code-action@e0cf66d1d257526b5d07f141838c338921cb8455 # v1
+        id: qc
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          track_progress: true
+          use_sticky_comment: true
+          prompt: |
+            You are the quality-control reviewer for this pull request. The checkout
+            is the PR merge commit, so `git diff HEAD^1 HEAD` is the exact change
+            set of this PR against its base branch — use that as the diff (do NOT
+            diff against origin/branch names; they can lack a merge base after a
+            force-push). Analyze it together with the surrounding code. Write
+            everything in English.
+
+            Your PRIMARY goal is regression detection: finding OTHER functions and
+            features — ones NOT edited in this PR — whose behavior can change
+            because of it. A finding of the form "this PR can break a feature it
+            never touched" is worth more than anything else in your report. Spend
+            most of your effort on task 2, especially 2c.
+
+            Perform these tasks in order:
+
+            1. BUGS & POTENTIAL REGRESSIONS — logic errors, unhandled promise
+               rejections, missing permission checks, and behavior changes that can
+               break existing callers or widget contracts.
+            2. IMPACT ANALYSIS — map the ripple effect of the change onto the rest
+               of the codebase, not just the edited lines:
+               a. Direct callers: search the repository for every call site of each
+                  added/changed/removed function and list them.
+               b. Transitive impact: follow the callers up to their entry points —
+                  the widget/kind registries (seeds.js, kind.js), window/module entry
+                  points, and live WebSocket handlers (onWsMessage / bindEvent)
+                  — and list every entry point whose behavior can change.
+               c. Shared-state siblings: list OTHER functions that are NOT in the
+                  diff but share state with the changed code — same model or
+                  collection, same Radio channel or broadcast event, same shared
+                  global (Visitor, Host, Env, ...) — and can therefore change
+                  behavior without being edited.
+               d. Contract changes: if a function's parameters, return shape, or
+                  thrown errors changed, verify EVERY call site still matches and
+                  flag each one that does not.
+            3. TEST RECOMMENDATIONS — based on the impact analysis, name the exact
+               functions that should be tested before merging, each with concrete
+               test cases (input -> expected outcome), highest risk first.
+            4. DRUMEE UI RULES — flag violations of:
+               - Skeletons SDK only: views must be Skeletons component trees;
+                 flag raw HTML strings or direct DOM manipulation.
+               - Event plumbing: UI events must go through uiHandler/onUiEvent
+                 and partHandler/onPartReady; flag bypasses of the framework.
+               - API calls must use fetchService/postService, never raw
+                 fetch/XMLHttpRequest.
+               - User-visible strings must come from LOCALE.* keys, never
+                 hardcoded.
+
+            Then publish the report by updating your tracking comment on the pull
+            request (use the update_claude_comment tool) — one single report, do
+            not create additional comments. Keep it SHORT: the reader only needs
+            to know which functions/features are affected and how to test them.
+            The audience is QA testers who do not read code — name things by their
+            user-facing feature (meetings, chat, file sharing, sign-up, quota,
+            admin console, ...) using the widget and module names as a guide,
+            plain language, no developer jargon outside the appendix. Write the
+            report in English first, then a full Vietnamese translation of it
+            below. Use exactly this structure:
+
+            ## Claude QC Report
+            **Verdict:** either "PASS - nothing affected" or "N functions/features affected"
+
+            ### Affected functions & test flow
+            | # | Affected function / feature | Impact | Test flow (steps -> expected result) |
+            Include BOTH the functions directly changed by this PR and the ones
+            NOT in the diff that share data or plumbing with the change — mark
+            those "indirect" in the Impact column (this regression radar matters
+            most). Order rows by risk, highest first. "Test flow" is concrete
+            manual steps anyone can follow in the app.
+
+            ### Báo cáo tiếng Việt
+            The same verdict and the same table, fully translated into
+            Vietnamese — same rows, same order.
+
+            <details>
+            <summary>Technical appendix (for developers, English only)</summary>
+
+            - Bugs with file:line and the technical cause.
+            - Impact detail: | Changed function | Affected function / endpoint /
+              worker | How affected (caller / transitive / shared state /
+              contract) | Risk |
+            - Drumee rule violations with file:line.
+
+            </details>
+
+            Rules for the report: write "None" instead of an empty table or empty
+            section; in the appendix reference only real file paths and line
+            numbers from this repository; keep each language section under 250
+            words; do not modify any files.
+
+            Finally, end the comment with EXACTLY ONE hidden machine-readable
+            line (CI parses it for a Telegram notification; humans never see it):
+            <!-- QC_SUMMARY {"verdict":"pass","critical":0,"major":0,"minor":0,"impact":["Feature A","Feature B"]} -->
+            where verdict is "pass" only when the Verdict above is PASS and
+            "attention" otherwise; critical/major/minor are the counts of
+            possible bugs by severity from your report; impact lists at most 5
+            affected features or functions, most important first, as short
+            strings with no curly braces. Keep the JSON on one single line.
+          claude_args: |
+            --model claude-sonnet-5
+            --max-turns 25
+            --allowedTools "Bash(git diff:*),Bash(git log:*),Bash(git show:*)"
+
+      # Skips silently when TELEGRAM_BOT_TOKEN is not set; a Telegram outage
+      # never fails the QC job.
+      - name: Notify Telegram
+        if: always()
+        env:
+          TG_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TG_CHAT: ${{ secrets.TELEGRAM_CHAT_ID }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          QC_OUTCOME: ${{ steps.qc.outcome }}
+          REPO: ${{ github.event.repository.name }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          PR_AUTHOR: ${{ github.event.pull_request.user.login }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          [ -n "$TG_TOKEN" ] || { echo "no TELEGRAM_BOT_TOKEN secret, skip"; exit 0; }
+          esc() { sed 's/&/\&amp;/g; s/</\&lt;/g; s/>/\&gt;/g'; }
+          TITLE=$(printf '%s' "$PR_TITLE" | esc)
+          SUMMARY=""
+          if [ "$QC_OUTCOME" = "success" ]; then
+            SUMMARY=$(gh api "repos/${{ github.repository }}/issues/${PR_NUMBER}/comments" --paginate \
+              --jq '.[] | select(.body | contains("QC_SUMMARY")) | .body' 2>/dev/null \
+              | grep -o 'QC_SUMMARY {.*}' | tail -n1 | sed 's/^QC_SUMMARY //' || true)
+          fi
+          VERDICT=""; IMPACT=""
+          if [ "$QC_OUTCOME" != "success" ]; then
+            H="🔴 QC $REPO PR #$PR_NUMBER — FAILED (job error, no report)"
+          elif [ -z "$SUMMARY" ]; then
+            H="🤖 QC $REPO PR #$PR_NUMBER — DONE"
+          else
+            VERDICT=$(printf '%s' "$SUMMARY" | jq -r '.verdict // "attention"' 2>/dev/null || echo "")
+            CRIT=$(printf '%s' "$SUMMARY" | jq -r '.critical // 0' 2>/dev/null || echo 0)
+            MAJ=$(printf '%s' "$SUMMARY"  | jq -r '.major // 0'    2>/dev/null || echo 0)
+            MIN=$(printf '%s' "$SUMMARY"  | jq -r '.minor // 0'    2>/dev/null || echo 0)
+            IMPACT=$(printf '%s' "$SUMMARY" | jq -r '(.impact // [])[:5] | join(" · ")' 2>/dev/null || echo "")
+            if [ "$VERDICT" = "pass" ]; then
+              H="🤖 QC $REPO PR #$PR_NUMBER — PASSED"
+            elif [ "${CRIT:-0}" -gt 0 ] 2>/dev/null; then
+              H="🔴 QC $REPO PR #$PR_NUMBER — ISSUES FOUND"
+            else
+              H="⚠️ QC $REPO PR #$PR_NUMBER — NEEDS ATTENTION"
+            fi
+          fi
+          MSG=$(printf '%s\n' "$H" "\"$TITLE\"")
+          if [ -n "$IMPACT" ]; then MSG="$MSG"$'\n'"Impact: $(printf '%s' "$IMPACT" | esc)"; fi
+          if [ -n "$VERDICT" ]; then MSG="$MSG"$'\n'"Issues: ${CRIT} critical · ${MAJ} major · ${MIN} minor"; fi
+          if [ "$QC_OUTCOME" = "success" ]; then
+            MSG="$MSG"$'\n'"by $PR_AUTHOR · <a href=\"$PR_URL\">View report</a>"
+          else
+            MSG="$MSG"$'\n'"by $PR_AUTHOR · <a href=\"$RUN_URL\">View run</a>"
+          fi
+          curl -sf --max-time 10 "https://api.telegram.org/bot${TG_TOKEN}/sendMessage" \
+            -d chat_id="$TG_CHAT" -d parse_mode=HTML -d disable_web_page_preview=true \
+            --data-urlencode text="$MSG" \
+            && echo "telegram notification sent" \
+            || echo "telegram send failed (non-blocking)"

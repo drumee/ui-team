@@ -46,9 +46,14 @@ class __window_core extends __utils {
   initialize(opt) {
     super.initialize(opt);
     this._uid = Visitor.id;
+    // Default listing order: most recently MODIFIED first (was rank asc —
+    // the manual arrangement order). Paired with the proc's folder-first
+    // paging, page 1 now carries every subfolder plus the newest files, so
+    // active content is visible immediately instead of trickling in from
+    // later pages.
     this._currentApi = {
-      name: _a.rank,
-      order: _K.order.ascending,
+      name: _a.mtime,
+      order: _K.order.descending,
     };
     this.model.set({
       flow: _a.y,
@@ -167,6 +172,14 @@ class __window_core extends __utils {
       return;
     }
     if (!(_K.permission.modify & this.mget(_a.privilege))) {
+      return;
+    }
+    // Persisting rank = displayed index only makes sense while the display
+    // IS the rank order. Under any other sort (the default is now mtime
+    // desc) this would overwrite the whole folder's manual arrangement with
+    // the current sort order — for every member — after any routine upload
+    // or drop.
+    if (this._currentApi && this._currentApi.name !== _a.rank) {
       return;
     }
     const list = [];
@@ -1095,6 +1108,11 @@ class __window_core extends __utils {
           service: SERVICE.media.show_node_by,
           page: 1,
           type: f,
+          // Explicit: without a sort the server falls back to rank, which
+          // combined with DESC yielded reverse-manual-order — meaningless.
+          // Filtered views follow the same modified-newest-first contract
+          // as the default listing.
+          sort: _a.mtime,
           order: _K.order.descending,
           hub_id,
           nid,
@@ -1109,6 +1127,7 @@ class __window_core extends __utils {
           service: SERVICE.media.show_node_by,
           page: 1,
           type: f,
+          sort: _a.mtime,
           order: _K.order.descending,
           hub_id,
           nid,

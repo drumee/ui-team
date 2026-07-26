@@ -676,6 +676,10 @@ class __dmz_wm extends winman {
     const base = {
       service: SERVICE.media.show_node_by,
       page: 1,
+      // Explicit sort: without it the server falls back to rank, which with
+      // DESC yielded reverse-manual-order. Same modified-newest-first
+      // contract as the desk default listing.
+      sort: _a.mtime,
       order: _K.order.descending,
       hub_id: this.mget(_a.hub_id),
       nid: this.mget(_a.nid),

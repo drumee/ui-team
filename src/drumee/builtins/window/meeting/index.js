@@ -1,5 +1,11 @@
 const __room = require("builtins/webrtc/room/jitsi");
 
+// Join/leave toasts stop once this many remote participants are already in the
+// room — past a handful, individual arrivals are noise.
+const PARTY_TOAST_MAX = 3;
+// Matches the window-meeting-party-toast fade-out tail.
+const PARTY_TOAST_MS = 4000;
+
 class __window_meeting extends __room {
   /**
    *
@@ -50,7 +56,9 @@ class __window_meeting extends __room {
       });
     }
 
-    this.once("user-left", (id) => {
+    // `on`, not `once` — this fired for the FIRST departure only, so after one
+    // person had left the "back to waiting" restore never ran again.
+    this.on("user-left", (id) => {
       if (this.__participants.collection.length > 2) {
         this.stateMessage();
       } else {
@@ -399,6 +407,51 @@ class __window_meeting extends __room {
       Wm.alert(LOCALE.MEETING_ENDED_BY_HOST || "Meeting ended by host");
     } catch (e) { }
     this._closeFeedbackAndLeave();
+  }
+
+  // ── Participant arrival / departure notices ───────────────────────────────
+  // Routed to the bottom-left toast stack, not the top-center status panel the
+  // base uses — that one is the connection surface (initializing / joining /
+  // failed / device denied), and a 300px box over the video for "someone walked
+  // in" read as an alert.
+
+  // Silent: an intermediate state the viewer can't act on, and the real
+  // "X joined" toast lands a second later — every arrival was announced twice.
+  notifyParticipantConnecting() { }
+
+  notifyParticipantJoined(name) {
+    if (name) this._partyToast(LOCALE.X_JOINED.format(name));
+  }
+
+  notifyParticipantLeft(name) {
+    if (name) this._partyToast(LOCALE.X_LEFT.format(name));
+  }
+
+  // Transient bottom-left notice that removes itself. Suppressed once the
+  // meeting is big enough that individual comings and goings stop being
+  // interesting (Meet/Teams roll up at scale; here the People panel is the
+  // roster). Counted before the joiner is appended / the leaver removed, so
+  // either way the test is "is this still a small meeting".
+  _partyToast(text) {
+    // Ending the meeting fires USER_LEFT for everyone still in it; the
+    // feedback popup is already up by then and this layer outranks it.
+    if (!text || this.isLeaving || this.isDestroyed()) return;
+    const others =
+      (this.__participants && this.__participants.collection.length) || 0;
+    if (others > PARTY_TOAST_MAX) return;
+    this.ensurePart("party-toasts").then((stack) => {
+      if (!stack || stack.isDestroyed()) return;
+      const toast = stack.append(
+        Skeletons.Note({
+          className: `${this.fig.family}__party-toast`,
+          content: text,
+        }),
+      );
+      if (!toast) return;
+      setTimeout(() => {
+        if (!toast.isDestroyed || !toast.isDestroyed()) toast.goodbye();
+      }, PARTY_TOAST_MS);
+    });
   }
 
   async onRemoteDrumateJoined(data) {

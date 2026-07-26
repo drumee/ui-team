@@ -1,0 +1,132 @@
+name: Code Quality
+
+# Static quality checks that run on EVERY commit pushed to any branch, and are
+# also invoked (workflow_call) as the gate in front of the Claude QC review on
+# PRs. Zero external accounts required: ESLint runs with an inline, bug-only
+# ruleset (no style noise), npm audit is advisory, TruffleHog scans for leaked
+# credentials.
+
+on:
+  push:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    name: Lint (bug rules only)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Run ESLint on changed files (correctness rules, no style)
+        run: |
+          npm i --no-save --no-audit --no-fund --ignore-scripts eslint@9.39.5
+          cat > /tmp/eslint.config.mjs <<'EOF'
+          export default [
+            {
+              files: ["**/*.js"],
+              languageOptions: {
+                ecmaVersion: 2022,
+                sourceType: "commonjs",
+              },
+              rules: {
+                "no-dupe-args": "error",
+                "no-dupe-keys": "error",
+                "no-dupe-else-if": "error",
+                "no-duplicate-case": "error",
+                "no-unreachable": "error",
+                "no-unsafe-negation": "error",
+                "no-cond-assign": "error",
+                "constructor-super": "error",
+                "no-this-before-super": "error",
+                "no-class-assign": "error",
+                "no-const-assign": "error",
+                "no-func-assign": "error",
+                "getter-return": "error",
+                "no-setter-return": "error",
+                "no-obj-calls": "error",
+                "no-sparse-arrays": "error",
+                "use-isnan": "error",
+                "valid-typeof": "error",
+                "no-async-promise-executor": "error",
+                "for-direction": "error",
+                "no-self-assign": "error",
+                "no-self-compare": "error",
+              },
+            },
+          ];
+          EOF
+          # Lint only the files this push/PR actually changed: the codebase has
+          # ~56 pre-existing violations (tracked separately); new code must be clean.
+          if [ "${{ github.event_name }}" = "push" ]; then
+            base="${{ github.event.before }}"
+            if [ "$base" = "0000000000000000000000000000000000000000" ] || ! git cat-file -e "$base" 2>/dev/null; then
+              base=$(git rev-parse HEAD^ 2>/dev/null || echo "")
+            fi
+          else
+            base=$(git rev-parse HEAD^1 2>/dev/null || echo "")
+          fi
+          if [ -n "$base" ]; then
+            files=$(git diff --name-only --diff-filter=ACMR "$base" HEAD -- '*.js')
+          else
+            files=$(git ls-files '*.js')
+          fi
+          if [ -z "$files" ]; then
+            echo "No JS files changed - nothing to lint."
+            exit 0
+          fi
+          echo "Linting changed files:"; echo "$files"
+          echo "$files" | xargs npx eslint --no-config-lookup -c /tmp/eslint.config.mjs
+
+  audit:
+    name: Dependency audit (advisory)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: npm audit (high and above, prod deps)
+        run: |
+          if [ ! -f package-lock.json ]; then
+            echo "No package-lock.json in this repo - skipping audit."
+            exit 0
+          fi
+          npm audit --package-lock-only --omit=dev --audit-level=high || {
+            echo "::warning title=npm audit::High-severity vulnerabilities in production dependencies (advisory - see job log)"
+            exit 0
+          }
+
+  sonar:
+    name: SonarCloud scan
+    if: github.event_name == 'pull_request' || contains(fromJSON('["test","preview","main"]'), github.ref_name)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: SonarSource/sonarqube-scan-action@2f77a1ec69fb1d595b06f35ab27e97605bdef703 # v5
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+
+  secrets:
+    name: Secret scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: TruffleHog (verified credentials only)
+        uses: trufflesecurity/trufflehog@6f3c981e7b77f235fd2702dd74af25fc4b72bf11 # v3.96.0
+        with:
+          extra_args: --results=verified
