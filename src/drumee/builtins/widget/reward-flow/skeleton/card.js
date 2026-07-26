@@ -1,6 +1,6 @@
 /**
- * Reward flow step card — Figma 3275:236196 (step 1), 3275:236332 (step 2),
- * 3275:236421 (step 3).
+ * Reward flow step card — Figma 3275:236196 (step 1), 3275:236421 (step 2,
+ * invite), 3275:236332 (step 3, upload).
  *
  * Layout: 3-segment progress bar → icon chip → title → description → footer.
  * Active Step 1 has a single full-width primary button and no Back (nothing to
@@ -8,7 +8,7 @@
  *
  * The `*_waiting` variants render the same card minus the primary button, plus
  * a hint line: the user has been handed off to the real new-workspace dialog,
- * uploader, or invite popup. Every waiting state keeps Back — even step1's,
+ * invite popup, or uploader. Every waiting state keeps Back — even step1's,
  * whose active card has none — so a user who changes their mind is never
  * trapped.
  *
@@ -32,22 +32,22 @@ const STEPS = {
   },
   step2: {
     index: 2,
-    ico: "upload-simple",
-    title: () => LOCALE.REWARD_FLOW_STEP2_TITLE || "Step 2: Upload your first file",
+    ico: "drumee-add-contact",
+    title: () => LOCALE.REWARD_FLOW_STEP2_TITLE || "Step 2: Invite a teammate",
     desc: () => LOCALE.REWARD_FLOW_STEP2_DESC
-      || "Upload any file, and activate your storage instantly.",
-    primaryLabel: () => LOCALE.REWARD_FLOW_UPLOAD || "Upload",
-    primaryService: "reward-upload",
+      || "Click Invite and add at least 1 member. Real collaboration starts now!",
+    primaryLabel: () => LOCALE.REWARD_FLOW_INVITE || "Invite member",
+    primaryService: "reward-invite",
     back: true,
   },
   step3: {
     index: 3,
-    ico: "drumee-add-contact",
-    title: () => LOCALE.REWARD_FLOW_STEP3_TITLE || "Step 3: Invite a teammate",
+    ico: "upload-simple",
+    title: () => LOCALE.REWARD_FLOW_STEP3_TITLE || "Step 3: Upload your first file",
     desc: () => LOCALE.REWARD_FLOW_STEP3_DESC
-      || "Click Invite and add at least 1 member. Real collaboration starts now!",
-    primaryLabel: () => LOCALE.REWARD_FLOW_INVITE || "Invite member",
-    primaryService: "reward-invite",
+      || "Upload any file, and activate your storage instantly.",
+    primaryLabel: () => LOCALE.REWARD_FLOW_UPLOAD || "Upload",
+    primaryService: "reward-upload",
     back: true,
   },
 };
@@ -55,10 +55,10 @@ const STEPS = {
 const WAITING_HINT = {
   step1_waiting: () => LOCALE.REWARD_FLOW_WAITING_WORKSPACE
     || "Waiting for your workspace…",
-  step2_waiting: () => LOCALE.REWARD_FLOW_WAITING_UPLOAD
-    || "Waiting for your first upload…",
-  step3_waiting: () => LOCALE.REWARD_FLOW_WAITING_INVITE
+  step2_waiting: () => LOCALE.REWARD_FLOW_WAITING_INVITE
     || "Waiting for your first invitation…",
+  step3_waiting: () => LOCALE.REWARD_FLOW_WAITING_UPLOAD
+    || "Waiting for your first upload…",
 };
 
 /**

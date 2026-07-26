@@ -75,7 +75,7 @@ module.exports = function (ui) {
       }),
     );
     if (targeted) {
-      // Cutout over the step's topbar control (Upload on step 2, Invite on
+      // Cutout over the step's topbar control (Invite on step 2, Upload on
       // step 3), positioned imperatively by _positionStepTarget. It replaces
       // the old connector arrow: the control reads clear, the rest stays
       // dimmed — matching how Step 1's walkthrough points at things.
@@ -87,7 +87,7 @@ module.exports = function (ui) {
       // exactly like clicking the card's primary button.
       //
       // Only on the ACTIVE step though: while waiting, the user is operating
-      // the real uploader / invite popup, so the cutout keeps dimming and
+      // the real invite popup / uploader, so the cutout keeps dimming and
       // highlighting the control but must not intercept its clicks.
       kids.push(
         Skeletons.Box.Y({

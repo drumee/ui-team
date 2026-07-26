@@ -9,7 +9,7 @@
   pointer-events: none !important;
 }
 
-// Step 3 marks the wrapper-modal hosting the invite popup (see index.js
+// Step 2 marks the wrapper-modal hosting the invite popup (see index.js
 // _markInviteOverlay) so its backdrop matches the flow's own dim (--overlay-bg)
 // instead of the app's frosted-glass overlay. Global (not nested) because it
 // lands on desk chrome the reward flow does not own; !important to out-cascade

@@ -5,10 +5,10 @@
  * Storage" marketing email:
  *
  *   step1          → "your workspace is ready", informational
- *   step2          → "Upload" fires the desk's _e.upload service
- *   step2_waiting  → the real uploader is open; RADIO_MEDIA _e.uploaded advances
- *   step3          → "Invite member" fires the desk's "invite-member" service
- *   step3_waiting  → the real invite popup is open; onInvitationSent() advances
+ *   step2          → "Invite member" fires the desk's "invite-member" service
+ *   step2_waiting  → the real invite popup is open; onInvitationSent() advances
+ *   step3          → "Upload" fires the desk's _e.upload service
+ *   step3_waiting  → the real uploader is open; RADIO_MEDIA _e.uploaded advances
  *   congrats       → modal, then the flow latches itself off for good
  *
  * A drop modal intercepts clicks on the vignette during the active steps.
@@ -30,8 +30,8 @@ const STEPS = ["step1", "step2", "step3"];
 // The live topbar control each step points at. The cutout is laid over it and
 // the card anchored beneath it (see _applyStepTarget).
 const STEP_TARGET = {
-  step2: ".desk-module-topbar__upload-btn",
-  step3: ".desk-module-topbar__invite-btn",
+  step2: ".desk-module-topbar__invite-btn",
+  step3: ".desk-module-topbar__upload-btn",
 };
 
 /** localStorage is unavailable in private mode — never let it break the desk. */
@@ -85,8 +85,8 @@ class __reward_flow extends LetcBox {
     }
 
     // media_form broadcasts "workspace:refresh" after desk.create_hub succeeds
-    // — the completion signal that advances step 1, mirroring the upload signal
-    // for step 2.
+    // — the completion signal that advances step 1, mirroring the invite signal
+    // for step 2 and the upload signal for step 3.
     this._onWorkspaceRefresh = (payload) => this.onWorkspaceCreated(payload);
     if (typeof RADIO_BROADCAST !== "undefined") {
       RADIO_BROADCAST.on("workspace:refresh", this._onWorkspaceRefresh);
@@ -368,9 +368,9 @@ class __reward_flow extends LetcBox {
   _goto(step) {
     this._step = step;
     lsSet(KEY_STEP, step);
-    // While the invite popup is open (step3_waiting), tint its wrapper-modal
+    // While the invite popup is open (step2_waiting), tint its wrapper-modal
     // backdrop to match the flow's own dim instead of the default frosted glass.
-    this._markInviteOverlay(step === "step3_waiting");
+    this._markInviteOverlay(step === "step2_waiting");
     this._render();
   }
 
@@ -418,61 +418,64 @@ class __reward_flow extends LetcBox {
     this._goto("step2");
   }
 
-  /** A file upload completed. Advances step 2 only while it is waiting. */
+  /** A file upload completed — the LAST step. Only while step 3 is waiting.
+   *  The uploader is the OS file picker plus a progress window, so nothing else
+   *  is holding the shared modal host: congrats can open straight away. */
   onUploadDone() {
-    if (this._step !== "step2_waiting") return;
-    this._goto("step3");
+    if (this._step !== "step3_waiting") return;
+    this._step = "congrats";
+    if (!this._openModal(congratsModal(this))) this._finish();
   }
 
   /** An invitation was sent successfully. The invite popup closes right after
-   *  this (clearing the shared modal host on its way out), so we only LATCH the
-   *  success here and defer opening the congrats modal until onInvitePopupClosed
-   *  fires — by then the host is free. */
+   *  this, so we only LATCH the success here and let onInvitePopupClosed drive
+   *  the advance to step 3. */
   onInvitationSent() {
-    if (this._step !== "step3_waiting") return;
+    if (this._step !== "step2_waiting") return;
     this._inviteSucceeded = true;
   }
 
   /** The invite popup closed. Two cases:
-   *  - it closed because the send succeeded → open congrats now (host is free);
-   *  - it closed without sending → re-arm step 3 so the user can retry. */
+   *  - it closed because the send succeeded → advance to step 3 (upload);
+   *  - it closed without sending → re-arm step 2 so the user can retry. */
   onInvitePopupClosed() {
     if (this._inviteSucceeded) {
       this._inviteSucceeded = false;
-      this._step = "congrats";
-      // The invite popup closed because the send succeeded. Its success toast
-      // (invite-popup's Wm.alert notice) is about to take the shared wrapper-
-      // modal's place. Keep the flow's backdrop tint on for it and HOLD: the
-      // congrats screen opens only once the user dismisses that toast (X /
-      // Close), so the confirmation isn't instantly replaced.
-      this._awaitToastThenCongrats();
+      // The success toast (invite-popup's Wm.alert notice) is about to take the
+      // shared wrapper-modal's place. Keep the flow's backdrop tint on for it
+      // and HOLD: step 3 only takes over once the user dismisses that toast
+      // (X / Close), so the confirmation isn't buried under the step card's own
+      // vignette the instant it appears.
+      this._awaitToastDismissed(() => {
+        this._markInviteOverlay(false);
+        this._goto("step3");
+      });
       return;
     }
-    // Closed without sending — drop the tint and re-arm step 3 to retry.
+    // Closed without sending — drop the tint and re-arm step 2 to retry.
     this._markInviteOverlay(false);
-    if (this._step !== "step3_waiting") return;
-    this._goto("step3");
+    if (this._step !== "step2_waiting") return;
+    this._goto("step2");
   }
 
   /** Watch the shared wrapper-modal for the invite-sent toast to appear and
-   *  then be dismissed by the user, and only then open congrats. The toast is
-   *  fed asynchronously by invite-popup's Wm.alert AFTER this runs, so we wait
-   *  for it to show (seen) before treating its absence as "closed". */
-  _awaitToastThenCongrats() {
-    const openCongrats = () => {
+   *  then be dismissed by the user, and only then run `done`. The toast is fed
+   *  asynchronously by invite-popup's Wm.alert AFTER this runs, so we wait for
+   *  it to show (seen) before treating its absence as "closed". */
+  _awaitToastDismissed(done) {
+    const advance = () => {
       // The observer fires DURING the toast's removal unwind; defer a microtask
-      // so that collection reset settles before we feed congrats into the same
-      // host (otherwise it lands as an orphaned, untracked view).
+      // so that collection reset settles before we touch the same host.
       Promise.resolve().then(() => {
         if (this.isDestroyed && this.isDestroyed()) return;
-        if (!this._openModal(congratsModal(this))) this._finish();
+        done();
       });
     };
     const host =
       (typeof Wm !== "undefined" && Wm.__wrapperModal && Wm.__wrapperModal.el) ||
       null;
     if (!host || typeof MutationObserver === "undefined") {
-      return openCongrats(); // nothing to watch → don't strand the flow
+      return advance(); // nothing to watch → don't strand the flow
     }
     const TOAST = ".window-info__ui, .window-info__main";
     let seen = false;
@@ -481,20 +484,20 @@ class __reward_flow extends LetcBox {
         seen = true;
         return;
       }
-      // The toast has appeared and is now gone → the user closed it → congrats.
+      // The toast has appeared and is now gone → the user closed it → advance.
       if (seen) {
         this._stopToastWatch();
-        openCongrats();
+        advance();
       }
     };
     this._toastObs = new MutationObserver(check);
     this._toastObs.observe(host, { childList: true, subtree: true });
     // Fallback: if the toast never shows (Wm.alert failed / kind not loaded),
-    // don't strand the user on step 3 — advance to congrats after a short grace.
+    // don't strand the user on step 2 — advance after a short grace.
     this._toastTimer = setTimeout(() => {
       if (!seen) {
         this._stopToastWatch();
-        openCongrats();
+        advance();
       }
     }, 4000);
     check(); // the toast may already be present
@@ -524,7 +527,7 @@ class __reward_flow extends LetcBox {
     Wm.__wrapperModal.el.dataset.overlay = "blur";
     // Align the drop/congrats backdrop with the flow's own dim (--overlay-bg)
     // instead of the app's frosted-glass blur, so these reward-flow modals read
-    // as part of the same overlay as the vignette/spotlight (same marker Step 3
+    // as part of the same overlay as the vignette/spotlight (same marker Step 2
     // uses for the invite popup — see _markInviteOverlay).
     Wm.__wrapperModal.el.dataset.rewardOverlay = "1";
     this._modalOpen = true;
@@ -598,16 +601,16 @@ class __reward_flow extends LetcBox {
         this._startGuide();
         return;
 
-      case "reward-upload":
-        this._goto("step2_waiting");
-        // Reaches modules/desk through the uiHandler chain -> Wm.handleUpload().
-        this.triggerHandlers({ service: _e.upload });
-        return;
-
       case "reward-invite":
-        this._goto("step3_waiting");
+        this._goto("step2_waiting");
         // Reaches modules/desk -> _openInvitePopup().
         this.triggerHandlers({ service: "invite-member" });
+        return;
+
+      case "reward-upload":
+        this._goto("step3_waiting");
+        // Reaches modules/desk through the uiHandler chain -> Wm.handleUpload().
+        this.triggerHandlers({ service: _e.upload });
         return;
 
       case "reward-back": {
