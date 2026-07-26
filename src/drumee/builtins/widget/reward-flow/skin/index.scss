@@ -254,6 +254,16 @@ $success-soft: rgba(46, 179, 122, 0.14);
       transform: translateX(-50%);
       align-items: center;
     }
+
+    // Step 2 whose invite was already satisfied in Step 1 has no control to
+    // point at — _applyStepTarget leaves its inline placement cleared, so
+    // centre it like Step 1. Must out-specify the step2 rule above.
+    &[data-step="step2"][data-notarget="1"] {
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      align-items: center;
+    }
   }
 
   &__root[data-waiting="1"] &__anchor { opacity: 0.92; }

@@ -52,6 +52,19 @@ const STEPS = {
   },
 };
 
+/**
+ * Step 2 when the user already invited a member from the Step 1 permission
+ * panel: the ask is met, so the card explains why and offers a plain Continue
+ * to Step 3 instead of re-opening the invite popup. Overlays the step2 entry
+ * above — everything it does not name (index, icon, title, Back) is inherited.
+ */
+const STEP2_SATISFIED = {
+  desc: () => LOCALE.REWARD_FLOW_STEP2_DONE_DESC
+    || "You've already invited a member in the permission panel at step 1.",
+  primaryLabel: () => LOCALE.REWARD_FLOW_CONTINUE || "Continue",
+  primaryService: "reward-invite-done",
+};
+
 const WAITING_HINT = {
   step1_waiting: () => LOCALE.REWARD_FLOW_WAITING_WORKSPACE
     || "Waiting for your workspace…",
@@ -62,13 +75,19 @@ const WAITING_HINT = {
 };
 
 /**
- * The service a step's primary button fires ("reward-upload" / "reward-invite").
- * Exposed so the cutout laid over that step's topbar control can fire the SAME
- * service — clicking the spotlighted Upload/Invite button then behaves exactly
- * like clicking the card's button, from one source of truth.
+ * The service a step's primary button fires ("reward-invite" / "reward-upload",
+ * or "reward-invite-done" for an already-satisfied Step 2). Exposed so the
+ * cutout laid over that step's topbar control can fire the SAME service —
+ * clicking the spotlighted Invite/Upload button then behaves exactly like
+ * clicking the card's button, from one source of truth. `ui` is optional; pass
+ * it so the satisfied Step 2 resolves correctly.
  */
-function primaryServiceFor(step) {
-  const cfg = STEPS[String(step).replace("_waiting", "")];
+function primaryServiceFor(step, ui) {
+  const base = String(step).replace("_waiting", "");
+  if (base === "step2" && ui && ui.inviteSatisfied && ui.inviteSatisfied()) {
+    return STEP2_SATISFIED.primaryService;
+  }
+  const cfg = STEPS[base];
   return cfg && cfg.primaryService;
 }
 
@@ -77,7 +96,11 @@ module.exports = function stepCard(ui) {
   const step = ui.getStep();
   const waiting = step.endsWith("_waiting");
   const base = waiting ? step.replace("_waiting", "") : step;
-  const cfg = STEPS[base];
+  const satisfied =
+    base === "step2" && ui.inviteSatisfied && ui.inviteSatisfied();
+  const cfg = satisfied
+    ? { ...STEPS[base], ...STEP2_SATISFIED }
+    : STEPS[base];
 
   const progress = Skeletons.Box.X({
     className: `${pfx}__progress`,

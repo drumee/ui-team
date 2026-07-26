@@ -5,7 +5,10 @@
  * Storage" marketing email:
  *
  *   step1          → "your workspace is ready", informational
- *   step2          → "Invite member" fires the desk's "invite-member" service
+ *   step2          → "Invite member" fires the desk's "invite-member" service.
+ *                    If the user ALREADY invited someone from the Step 1
+ *                    permission panel, this becomes a plain "Continue" that
+ *                    goes straight to step3 (see onPanelInvitation).
  *   step2_waiting  → the real invite popup is open; onInvitationSent() advances
  *   step3          → "Upload" fires the desk's _e.upload service
  *   step3_waiting  → the real uploader is open; RADIO_MEDIA _e.uploaded advances
@@ -24,6 +27,10 @@ const CAMPAIGN = "free-storage";
 const KEY_UTM = "drumee_utm";
 const KEY_DONE = "reward_flow_done";
 const KEY_STEP = "reward_step";
+// Latched when the user invites a member from the Step 1 permission panel, so
+// Step 2 has nothing left to ask for. Persisted alongside the step so a reload
+// mid-flow doesn't send them back to the invite popup.
+const KEY_INVITED = "reward_invited";
 
 const STEPS = ["step1", "step2", "step3"];
 
@@ -78,6 +85,7 @@ class __reward_flow extends LetcBox {
     this._dropReturnStep = null;
     this._inviteSucceeded = false;
     this._guideDropOpen = false;
+    this._inviteDone = lsGet(KEY_INVITED) === "1";
 
     this._onUploaded = () => this.onUploadDone();
     if (typeof RADIO_MEDIA !== "undefined") {
@@ -88,8 +96,12 @@ class __reward_flow extends LetcBox {
     // — the completion signal that advances step 1, mirroring the invite signal
     // for step 2 and the upload signal for step 3.
     this._onWorkspaceRefresh = (payload) => this.onWorkspaceCreated(payload);
+    // permission_restricted broadcasts this when a member is really invited
+    // from the Step 1 permission panel — see onPanelInvitation.
+    this._onPanelInvitation = () => this.onPanelInvitation();
     if (typeof RADIO_BROADCAST !== "undefined") {
       RADIO_BROADCAST.on("workspace:refresh", this._onWorkspaceRefresh);
+      RADIO_BROADCAST.on("invitation:sent", this._onPanelInvitation);
     }
   }
 
@@ -153,6 +165,10 @@ class __reward_flow extends LetcBox {
     if (this._onWorkspaceRefresh && typeof RADIO_BROADCAST !== "undefined") {
       RADIO_BROADCAST.off("workspace:refresh", this._onWorkspaceRefresh);
       this._onWorkspaceRefresh = null;
+    }
+    if (this._onPanelInvitation && typeof RADIO_BROADCAST !== "undefined") {
+      RADIO_BROADCAST.off("invitation:sent", this._onPanelInvitation);
+      this._onPanelInvitation = null;
     }
     if (this._onStepResize && typeof window !== "undefined") {
       window.removeEventListener("resize", this._onStepResize);
@@ -333,7 +349,10 @@ class __reward_flow extends LetcBox {
     if (!this.el) return;
     // Resolved from the BASE step, so entering a waiting state keeps the cutout
     // and the card exactly where they were instead of snapping to the fallback.
-    const sel = STEP_TARGET[this._step.replace("_waiting", "")];
+    const base = this._step.replace("_waiting", "");
+    // A Step 2 already satisfied in Step 1 points at nothing: its card just
+    // offers Continue, so it is centred like Step 1 (see skin __anchor).
+    const sel = base === "step2" && this._inviteDone ? null : STEP_TARGET[base];
     const anchor = this.el.querySelector(`.${this.fig.family}__anchor`);
     if (!sel) {
       // Steps with no topbar target (step 1) are centred by the stylesheet.
@@ -424,6 +443,26 @@ class __reward_flow extends LetcBox {
     if (this._guide) this._guide.onWorkspaceCreated();
     else this.onGuideComplete();
   }
+
+  /**
+   * A member was invited from the Step 1 permission panel (permission_restricted
+   * broadcasts "invitation:sent"). Only counted DURING the walkthrough: an
+   * invitation sent later, from the topbar or a settings panel, is not what
+   * Step 2 is asking for.
+   *
+   * Latching this makes Step 2 offer a plain Continue instead of re-opening the
+   * invite popup — the user has already done the thing it asks for.
+   */
+  onPanelInvitation() {
+    if (this._step !== "step1_guide") return;
+    this._inviteDone = true;
+    lsSet(KEY_INVITED, "1");
+  }
+
+  /** True when Step 2's invite was already satisfied during Step 1. Read by the
+   *  step card (Continue instead of Invite) and by the skeleton, which then
+   *  drops the topbar cutout — there is no control left to point at. */
+  inviteSatisfied() { return !!this._inviteDone; }
 
   /** The guide finished its perm phase (permission panel closed) → Step 2. */
   onGuideComplete() {
@@ -595,6 +634,7 @@ class __reward_flow extends LetcBox {
   _finish() {
     lsSet(KEY_DONE, "1");
     lsDel(KEY_STEP);
+    lsDel(KEY_INVITED);
     this._closeModal();
     this._unbind();
     this.softDestroy();
@@ -619,6 +659,12 @@ class __reward_flow extends LetcBox {
         this._goto("step2_waiting");
         // Reaches modules/desk -> _openInvitePopup().
         this.triggerHandlers({ service: "invite-member" });
+        return;
+
+      case "reward-invite-done":
+        // Step 2's Continue, shown only when the user already invited someone
+        // from the Step 1 permission panel. Nothing to open — just move on.
+        this._goto("step3");
         return;
 
       case "reward-upload":

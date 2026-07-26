@@ -28,7 +28,11 @@ module.exports = function (ui) {
   // Kept through the waiting state too, so the overlay and the card's position
   // don't change underneath the user the moment they start an upload — only the
   // cutout's interactivity does (see below and the stylesheet).
-  const targeted = base === "step2" || base === "step3";
+  // Except a Step 2 already satisfied during Step 1: its card offers a plain
+  // Continue, so there is no topbar control to spotlight and the card is
+  // centred like Step 1 (data-notarget, see skin __anchor).
+  const satisfied = base === "step2" && ui.inviteSatisfied && ui.inviteSatisfied();
+  const targeted = (base === "step2" || base === "step3") && !satisfied;
 
   const kids = [];
 
@@ -95,7 +99,7 @@ module.exports = function (ui) {
           ...(waiting
             ? {}
             : {
-              service: stepCard.primaryServiceFor(base),
+              service: stepCard.primaryServiceFor(base, ui),
               uiHandler: [ui],
             }),
         }),
@@ -104,7 +108,7 @@ module.exports = function (ui) {
     kids.push(
       Skeletons.Box.Y({
         className: `${pfx}__anchor`,
-        dataset: { step: base },
+        dataset: { step: base, notarget: satisfied ? "1" : "0" },
         kids: [stepCard(ui)],
       }),
     );

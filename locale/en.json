@@ -2644,6 +2644,7 @@
   "REWARD_FLOW_STEP1_DESC": "Set up your first workspace to get started.",
   "REWARD_FLOW_STEP2_TITLE": "Step 2: Invite a teammate",
   "REWARD_FLOW_STEP2_DESC": "Click Invite and add at least 1 member. Real collaboration starts now!",
+  "REWARD_FLOW_STEP2_DONE_DESC": "You've already invited a member in the permission panel at step 1.",
   "REWARD_FLOW_STEP3_TITLE": "Step 3: Upload your first file",
   "REWARD_FLOW_STEP3_DESC": "Upload any file, and activate your storage instantly.",
   "REWARD_FLOW_CONTINUE": "Continue",

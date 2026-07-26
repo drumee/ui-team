@@ -76,6 +76,15 @@ class __permission_restricted extends DrumeeMFS {
             if (r.status === "failed") {
               return Wm.alert(r.reason || LOCALE.TRY_AGAIN);
             }
+            // A member was really invited from this panel. Broadcast it so
+            // flows that only observe the desk can react — the reward flow's
+            // Step 1 walkthrough uses this to skip its own invite step.
+            // RADIO_BROADCAST rather than triggerHandlers: this panel is fed
+            // into the shared wrapper-modal, so its uiHandler chain never
+            // reaches them.
+            RADIO_BROADCAST.trigger("invitation:sent", {
+              hub_id: this.mget(_a.hub_id),
+            });
             // Branded "notice" toast — the compact drumee-logo card with a
             // single primary Close button. Feed it through Wm.alert (into the
             // wrapper-modal) rather than Wm.info (the windows pool): alert
