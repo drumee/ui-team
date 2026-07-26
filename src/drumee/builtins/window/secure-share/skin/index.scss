@@ -956,8 +956,30 @@
     }
   }
 
-  // Shown in place of the ⊖ once the row's link is revoked. Muted, not red: it
-  // reports a state, it is not an action.
+  // Link glyph in front of a row's "shared with" label, so a row reads as a link
+  // rather than as a person.
+  &__events-link-icon {
+    width: 12px;
+    height: 12px;
+    flex-shrink: 0;
+    svg { width: 12px; height: 12px; fill: var(--tertiary-grey-80); }
+  }
+
+  // Per-link Revoke. Same outlined-caution treatment as the shared-links row it
+  // replaces, sized down to sit inside the access table.
+  &__events-revoke-btn {
+    cursor: pointer;
+    padding: 0 var(--spacer-2);
+    border-radius: var(--corner-radius-2);
+    border: 1px solid var(--btn-caution-background);
+    @include drumee.typo($size: 10px, $line: 16px, $color: var(--btn-caution-background));
+    white-space: nowrap;
+
+    &:hover { background: var(--btn-caution-background); color: var(--white); }
+  }
+
+  // Shown in place of the Revoke button once the link is revoked or expired.
+  // Muted, not red: it reports a state, it is not an action.
   &__events-revoked {
     @include drumee.typo($size: 10px, $line: 14px, $color: var(--tertiary-text-color));
     white-space: nowrap;
