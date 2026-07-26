@@ -69,7 +69,6 @@ class __player_document extends PlayerInteract {
     this.information = require('../skeleton/file-info');
     this.contextmenuItems = [_a.link];
     //this.bindEvent("live");
-    this.scaleFactor = 2;
 
     this.checkPreview = this.checkPreview.bind(this);
     this.onWsMessage = this.onWsMessage.bind(this);
@@ -108,6 +107,11 @@ class __player_document extends PlayerInteract {
       this._wsObserver.disconnect();
       this._wsObserver = null;
     }
+    if (this._pageWidthObserver) {
+      this._pageWidthObserver.disconnect();
+      this._pageWidthObserver = null;
+    }
+    cancelAnimationFrame(this._pageWidthRaf);
     if (super.onBeforeDestroy) {
       super.onBeforeDestroy()
     }
@@ -650,6 +654,36 @@ class __player_document extends PlayerInteract {
   }
 
   /**
+   * Re-fit the rendered pages whenever the page list's own width changes.
+   *
+   * A PDF page is a canvas with an inline pixel width, so — unlike the image and
+   * video players, which fit with `object-fit` — it cannot reflow through CSS and
+   * has to be re-rasterized. Watching the list element covers every way its width
+   * can change with one listener: the zoom button, browser fullscreen, a browser
+   * window resize, a sidebar collapse, and the drag handles. Previously only the
+   * drag handles re-fitted (they alone emit `_e.resize` on release), so
+   * maximizing left the pages at their old width, neither filling nor centered.
+   *
+   * Emitting the same `_e.resize` the pages already listen for keeps one reflow
+   * path; each page skips the work when its width is unchanged.
+   */
+  _observePageWidth(el) {
+    if (!el || this._pageWidthObserver || typeof ResizeObserver === 'undefined') {
+      return;
+    }
+    this._pageWidthObserver = new ResizeObserver(() => {
+      // Coalesce to the next frame: a maximize animates width over ~200 ms and
+      // would otherwise queue a raster per frame.
+      cancelAnimationFrame(this._pageWidthRaf);
+      this._pageWidthRaf = requestAnimationFrame(() => {
+        if (this.isDestroyed()) return;
+        this.trigger(_e.resize);
+      });
+    });
+    this._pageWidthObserver.observe(el);
+  }
+
+  /**
    * Toggle maximize-to-workspace, like the window-tab zoom: maximize fills the
    * workspace (and keeps tracking it on resize); the next call restores the
    * prior bounds.
@@ -960,6 +994,7 @@ class __player_document extends PlayerInteract {
           if (this.timer || list.scrollDir != _a.down) return;
           this.nextPages()
         }))
+        this._observePageWidth(child.el);
         break;
       case "navbar":
         return this.navbar = child;
@@ -969,55 +1004,18 @@ class __player_document extends PlayerInteract {
   }
 
 
-  /**
-   * 
-   * @param {*} e 
-   * @param {*} ui 
-   * @returns 
-   */
-  resizeStart(e, ui) {
-    this.size = {
-      width: ui.size.width,
-      height: ui.size.height - this.offsetY
-    };
-    const p = this.pagesList.children.first();
-    return this.innserSize = {
-      width: p.size.width,
-      height: p.size.height
-    };
-  }
+  // No resizeStart/resizeStop/resizeX here: the page list fills its container
+  // through CSS (`__list { width: 100% }`) and the pages re-raster from the
+  // width observer in _observePageWidth. The base only probes those hooks on
+  // `__content`'s children (a Wrapper and the List), never on the player, so the
+  // versions that used to live here were unreachable anyway — and they sized the
+  // list off a single shared page width, which is what rendered differently-sized
+  // pages at different widths.
 
   /**
-   * 
-   * @param {*} e 
-   * @param {*} ui 
-   */
-  resizeStop(e, ui) {
-    const s = ui.size.width / this.size.width;
-    this.size = {
-      width: ui.size.width,
-      height: ui.size.height - this.offsetY
-    };
-    this.pagesList.setSize(this.size.width, this.size.height, 1);
-
-  }
-
-
-  /**
-   * 
-   * @param {*} w 
-   */
-  resizeX(w) {
-    const s = w / this.size.width;
-    this.size.width = w;
-    this.size.height = this.scaleFactor * s * this.size.height;
-    this.pagesList.setSize(w, this.size.height, 1);
-  }
-
-  /**
-   * 
-   * @param {*} size 
-   * @param {*} cb 
+   *
+   * @param {*} size
+   * @param {*} cb
    */
   initSize(size, cb) {
     this.raise();

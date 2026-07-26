@@ -18,9 +18,14 @@
     z-index: 10;
   }
 
+  // The canvas carries an inline pixel width from the renderer, so it does not
+  // stretch on its own — center it here. Without this it sits flush left
+  // whenever the raster is narrower than the wrapper (a page smaller than the
+  // rest of the document, or a capped raster on a very wide window).
   &__canvas-wrapper {
     width: 100%;
     height: auto;
+    align-items: center;
   }
 
   &__text-layer {
