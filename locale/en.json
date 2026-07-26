@@ -56,6 +56,7 @@
   "COUNTRY": "Country",
   "CREATE": "Create",
   "CREATED": "created",
+  "CREATED_BY": "Created by",
   "CREATE_NEW_FOLDER": "Create new folder",
   "CREATE_FOLDER_DESCRIPTION": "Specify a name for your new organization unit.",
   "CREATE_FROM_MODELS": "Create from models",

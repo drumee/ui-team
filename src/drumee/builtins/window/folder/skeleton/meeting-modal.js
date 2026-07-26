@@ -124,6 +124,25 @@ function recurRow(ui, pfx) {
   return kids;
 }
 
+// Read-only "Created by" chip. The creator uid lives in the meeting's
+// metadata (written by room.book) and is resolved to a name/avatar by
+// ui.meetingCreator. Create mode shows the current user — they become the
+// creator on submit.
+function creatorChip(ui, pfx, m) {
+  const creator = ui.meetingCreator(m);
+  return Skeletons.Box.X({
+    className: `${pfx}-creator`,
+    attrOpt: { "data-uid": creator.uid || "" },
+    kids: [
+      Skeletons.Avatar(creator.avatar || "default", `${pfx}-creator-ava`, creator.name),
+      Skeletons.Note({ className: `${pfx}-creator-name`, content: creator.name }),
+      creator.isMe
+        ? Skeletons.Note({ className: `${pfx}-creator-you`, content: LOCALE.YOU })
+        : null,
+    ].filter(Boolean),
+  });
+}
+
 function pad2(n) {
   return String(n).padStart(2, "0");
 }
@@ -260,12 +279,14 @@ module.exports = function meetingModal(ui, opt = {}) {
   });
 
   // altInput shows d/m/Y; the named input keeps the Y-m-d value read on submit.
+  // Create mode with no prefill defaults to today — the value must be in the
+  // vendorOpt `dateFormat` (Y-m-d) or flatpickr can't parse it.
   const date = {
     kind: "date_picker",
     className: `${pfx}-date`,
     innerClass: `${pfx}-date-inner`,
     name: "mm-date",
-    value: (m && m.date_ymd) || "",
+    value: (m && m.date_ymd) || Dayjs().format("YYYY-MM-DD"),
     vendorOpt: {
       dateFormat: "Y-m-d",
       altInput: true,
@@ -322,27 +343,35 @@ module.exports = function meetingModal(ui, opt = {}) {
     kids: recurRow(ui, pfx),
   });
 
+  // Non-creators get Join only: room.update / room.remove reject them with
+  // NOT_MEETING_OWNER, so showing Update/Delete would only produce an error.
+  const canEdit = ui.canEditMeeting(m);
+
   const footerKids = isEdit
     ? [
-        Skeletons.Note({
-          className: `${pfx}-btn danger`,
-          content: LOCALE.DELETE_SCHEDULE,
-          service: "meeting-modal-delete",
-          uiHandler: [ui],
-        }),
+        canEdit
+          ? Skeletons.Note({
+              className: `${pfx}-btn danger`,
+              content: LOCALE.DELETE_SCHEDULE,
+              service: "meeting-modal-delete",
+              uiHandler: [ui],
+            })
+          : null,
         Skeletons.Note({
           className: `${pfx}-btn ghost`,
           content: LOCALE.JOIN_MEETING,
           service: "join-meeting",
           uiHandler: [ui],
         }),
-        Skeletons.Note({
-          className: `${pfx}-btn primary`,
-          content: LOCALE.UPDATE_SCHEDULE,
-          service: "meeting-modal-submit",
-          uiHandler: [ui],
-        }),
-      ]
+        canEdit
+          ? Skeletons.Note({
+              className: `${pfx}-btn primary`,
+              content: LOCALE.UPDATE_SCHEDULE,
+              service: "meeting-modal-submit",
+              uiHandler: [ui],
+            })
+          : null,
+      ].filter(Boolean)
     : [
         Skeletons.Note({
           className: `${pfx}-btn primary`,
@@ -385,7 +414,13 @@ module.exports = function meetingModal(ui, opt = {}) {
               field(LOCALE.END_TIME, timePicker(ui, pfx, "etime", m && m.etime_hm)),
             ],
           }),
-          field(LOCALE.REPEAT, recur),
+          Skeletons.Box.X({
+            className: `${pfx}-row`,
+            kids: [
+              field(LOCALE.REPEAT, recur),
+              field(LOCALE.CREATED_BY, creatorChip(ui, pfx, m)),
+            ],
+          }),
         ],
       }),
       Skeletons.Box.X({ className: `${pfx}-footer`, kids: footerKids }),

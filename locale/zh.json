@@ -105,6 +105,7 @@
   "COUNTRY": "国家",
   "CREATE": "创建",
   "CREATED": "创建",
+  "CREATED_BY": "创建者",
   "CREATE_FROM_MODELS": "从模板创建",
   "CREATE_NEW_WEBSITE": "创建一个新网站",
   "CREATE_PUBLIC_LINK": "创建公共链接",

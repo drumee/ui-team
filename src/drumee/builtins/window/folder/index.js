@@ -891,11 +891,7 @@ class __window_folder extends mfsInteract {
       return;
     }
     if (pn === "sched-grid") {
-      // Weekly view: land the scroll on the working hours instead of 12 AM.
-      const body = child.el && child.el.querySelector(`.${this.fig.family}__meeting-sched-body`);
-      if (body && !body.classList.contains(`${this.fig.family}__meeting-sched-body--month`)) {
-        body.scrollTop = 56 * 7; // ~7 AM with 56px hour rows
-      }
+      this._scrollScheduleIntoView(child);
       return;
     }
     if (pn === "search-results") {
@@ -1909,6 +1905,28 @@ class __window_folder extends mfsInteract {
     return this._fetchMeetings().then(feed, feed);
   }
 
+  // Week/day grids render all 24 hours, so an unscrolled grid opens on empty
+  // night hours. Land on the earliest meeting in view (one row of context
+  // above it), or on the working hours when the range is empty. Month view
+  // doesn't scroll.
+  _scrollScheduleIntoView(part) {
+    const fig = this.fig.family;
+    const body = part && part.el && part.el.querySelector(`.${fig}__meeting-sched-body`);
+    if (!body || body.classList.contains(`${fig}__meeting-sched-body--month`)) return;
+
+    const sched = require("./skeleton/meeting-schedule");
+    const st = sched.schedState(this);
+    const daily = st.view === "daily";
+    const start = daily ? st.anchor.startOf("day") : st.anchor.startOf("week");
+    const range = sched.normalizeMeetings(this, start, start.add(daily ? 1 : 7, "day"));
+    const DEFAULT_HOUR = 8;
+    const hour = range.length
+      ? Math.min(...range.map((m) => m.start.hour()))
+      : DEFAULT_HOUR;
+    // One row of context above the first meeting, clamped to the top.
+    body.scrollTop = Math.max(0, (hour - 1) * sched.HOUR_PX);
+  }
+
   // The [stime, etime] epoch bounds of the calendar's visible range, derived
   // from the schedule view state (this._sched). Padded a week/month either side
   // so meetings straddling the edge still surface.
@@ -1962,6 +1980,10 @@ class __window_folder extends mfsInteract {
       nid: m.id,
       title: content.title || m.filename || "",
       message: content.message || "",
+      // Creator uid — written server-side by room.book (metadata.content
+      // .created_by). Legacy meetings predate it, so fall back to the node's
+      // owner_id; both may be absent, which the UI treats as "unknown".
+      created_by: content.created_by || m.owner_id || null,
       date_ymd: s ? Dayjs.unix(s).format("YYYY-MM-DD") : Dayjs().format("YYYY-MM-DD"),
       stime_hm: s ? Dayjs.unix(s).format("HH:mm") : "",
       etime_hm: e ? Dayjs.unix(e).format("HH:mm") : "",
@@ -1973,6 +1995,44 @@ class __window_folder extends mfsInteract {
         until: recur && recur.until ? Dayjs.unix(Number(recur.until)).format("YYYY-MM-DD") : "",
       },
     };
+  }
+
+  // Resolve a meeting's creator uid into a display chip. The uid is all the
+  // server stores, so the name/avatar come from the workspace member pool
+  // (_hubMembers, loaded with the modal); an unresolvable uid — a former
+  // member, or a legacy meeting with no creator recorded — degrades to the raw
+  // uid rather than rendering blank. No `created_by` in create mode means the
+  // current user, who becomes the creator on submit.
+  meetingCreator(m) {
+    const uid = m && m.created_by;
+    if (!uid || String(uid) === String(Visitor.id)) {
+      return {
+        uid: Visitor.id,
+        // Never empty: Skeletons.Avatar hashes the name to build the fallback
+        // colour swatch and would throw on undefined.
+        name: Visitor.fullname() || String(Visitor.id || ""),
+        avatar: Visitor.avatar(),
+        isMe: true,
+      };
+    }
+    const member = (this._hubMembers || []).find(
+      (x) => String(x.uid || x.id) === String(uid),
+    );
+    if (!member) return { uid, name: String(uid), avatar: "default", isMe: false };
+    const name =
+      member.fullname ||
+      `${member.firstname || ""} ${member.lastname || ""}`.trim() ||
+      member.email ||
+      String(uid);
+    return { uid, name, avatar: member.avatar || "default", isMe: false };
+  }
+
+  // Only the creator may edit or delete — room.update/room.remove reject anyone
+  // else with NOT_MEETING_OWNER. Meetings with no recorded creator stay open to
+  // everyone, matching the server's back-compat rule.
+  canEditMeeting(m) {
+    const uid = m && m.created_by;
+    return !uid || String(uid) === String(Visitor.id);
   }
 
   openMeetingModal(opt = {}) {
@@ -1988,6 +2048,7 @@ class __window_folder extends mfsInteract {
         nid: null,
         title: "",
         message: "",
+        created_by: null,
         date_ymd: opt.at.day,
         stime_hm: hm(startMin),
         etime_hm: hm(endMin),
@@ -1999,6 +2060,9 @@ class __window_folder extends mfsInteract {
     this._mmAttendees = prefill ? prefill.attendees.slice() : [];
     this._mmRecur = prefill ? { ...prefill.recur } : { freq: "none", until: "" };
     this._mmEditNid = prefill ? prefill.nid : null;
+    // Creator of the meeting being edited (null while creating — the current
+    // user becomes the creator on submit).
+    this._mmCreatedBy = prefill ? prefill.created_by : null;
     this._mmBusy = {};
     // Fetch the workspace member pool first so the invitee chips can render.
     const hubId = this.mget(_a.actual_hub_id) || this.mget(_a.hub_id);
@@ -2289,6 +2353,11 @@ class __window_folder extends mfsInteract {
       etime,
       recur,
       attendees: (this._mmAttendees || []).slice(),
+      // Creating → the current user is the creator. Editing → keep whoever
+      // created it (null for legacy meetings; never claim authorship). The
+      // server owns this field — it's carried here only so the optimistic
+      // local row matches what room.list will return.
+      created_by: this._mmEditNid ? this._mmCreatedBy : Visitor.id,
     };
   }
 
@@ -2302,6 +2371,7 @@ class __window_folder extends mfsInteract {
       filename: form.title,
       stime: form.stime,
       etime: form.etime,
+      owner_id: form.created_by,
       metadata: JSON.stringify({
         content: {
           title: form.title,
@@ -2311,6 +2381,7 @@ class __window_folder extends mfsInteract {
           etime: form.etime,
           recur: form.recur,
           attendees: form.attendees,
+          created_by: form.created_by,
           room_id: nid,
         },
       }),

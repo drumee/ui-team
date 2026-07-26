@@ -452,14 +452,28 @@
     flex-wrap: nowrap !important;
   }
 
+  // A busy day used to overflow the week row and get clipped by the month
+  // body — scroll the day cell instead so every meeting stays reachable.
   &__meeting-sched-mcell {
     flex: 1;
     min-width: 0;
+    min-height: 0;
+    overflow-y: auto;
     padding: 8px 10px;
+    gap: 2px;
     border: 1px solid rgba(0, 0, 0, 0.05);
     border-top: none;
     border-left: none;
     background: #ffffff;
+
+    &::-webkit-scrollbar {
+      width: 4px;
+    }
+
+    &::-webkit-scrollbar-thumb {
+      border-radius: 2px;
+      background: rgba(0, 0, 0, 0.18);
+    }
 
     &:first-child {
       border-left: 1px solid rgba(0, 0, 0, 0.05);
@@ -475,12 +489,16 @@
   }
 
   &__meeting-sched-mnum {
+    flex-shrink: 0; // stays put when the day cell scrolls
     @include drumee.typo($size: 14px, $line: 20px, $weight: 600, $color: #0b0a21);
   }
 
   // ── Scheduled-meeting cards (Figma "schedule card") ──────────────────────
   // Weekly: absolutely positioned inside its start-hour cell, sized by
   // duration; z-index lifts it above the later-painted sibling cells.
+  // `height` / `min-height` / `left` / `width` come from the skeleton (time and
+  // overlap lane). Hovering lifts the card and lets it grow past its slot so a
+  // short meeting can show its full title and agenda.
   &__meeting-sched-card {
     position: absolute;
     left: 2px;
@@ -496,6 +514,13 @@
 
     &:hover {
       background: rgba(89, 80, 255, 0.16);
+      // Above neighbouring cards while expanded (they sit at z-index 1).
+      z-index: 6;
+      // The skeleton sets `height` inline; !important is what lets the card
+      // grow to its content. `min-height` (also inline) keeps the slot size.
+      height: auto !important;
+      overflow: visible;
+      box-shadow: 0 6px 16px rgba(11, 10, 33, 0.18);
     }
   }
 
@@ -507,14 +532,17 @@
     // drumee.typo emits no font-weight (maps weight→font-family only) — set it here.
     @include drumee.typo($size: 14px, $line: 18px, $color: #0b0a21);
     font-weight: 700;
+    // One line while the card is at slot size (matches the CARD_TITLE_PX the
+    // skeleton budgets); the hover state below releases it.
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
   }
 
-  // Takes only the room the title leaves; clamps to 2 lines, clipped on short cards.
+  // Line count + max-height are set inline from the card's real height, so only
+  // whole lines ever render — no half-clipped last line.
   &__meeting-sched-card-desc {
-    flex: 1 1 auto;
+    flex: 0 1 auto;
     min-height: 0;
     pointer-events: none;
     margin-top: 1px;
@@ -524,6 +552,19 @@
     -webkit-box-orient: vertical;
     overflow: hidden;
     overflow-wrap: anywhere;
+  }
+
+  // Hover reveals the text the slot-sized card had to cut: the title wraps and
+  // the description un-clamps. Both override inline styles set by the skeleton.
+  &__meeting-sched-card:hover &__meeting-sched-card-title {
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  &__meeting-sched-card:hover &__meeting-sched-card-desc {
+    -webkit-line-clamp: unset !important;
+    max-height: none !important;
+    display: block;
   }
 
   // Hover-revealed. When hidden it must NOT capture clicks (opacity:0 still
@@ -570,6 +611,7 @@
 
   // Monthly: a compact line per meeting inside the day cell.
   &__meeting-sched-mcard {
+    flex-shrink: 0; // don't squash the line list when the day cell scrolls
     margin-top: 2px;
     padding: 2px 6px;
     border-radius: 4px;

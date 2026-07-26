@@ -479,6 +479,37 @@
     flex-shrink: 0;
   }
 
+  // ── Created by: read-only organizer chip (avatar + name, "You" badge) ─────
+  &__meeting-modal-creator {
+    align-items: center;
+    gap: 8px;
+    min-height: 40px;
+  }
+
+  &__meeting-modal-creator-ava {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    background-size: cover;
+    background-position: center;
+  }
+
+  &__meeting-modal-creator-name {
+    @include drumee.typo($size: 14px, $line: 20px, $weight: 400, $color: #0b0a21);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  &__meeting-modal-creator-you {
+    flex-shrink: 0;
+    padding: 2px 8px;
+    border-radius: 999px;
+    background: var(--overlay-brand, rgba(89, 80, 255, 0.1));
+    @include drumee.typo($size: 12px, $line: 16px, $weight: 500, $color: var(--primary-50, #433cc5));
+  }
+
   // ── Footer buttons ───────────────────────────────────────────────────────
   &__meeting-modal-footer {
     align-items: center;

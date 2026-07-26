@@ -1,6 +1,4 @@
 
-const { today } = require("@drumee/ui-essentials");
-
 class __datepicker extends LetcBox {
   constructor(...args) {
     super(...args);
@@ -20,7 +18,6 @@ class __datepicker extends LetcBox {
       justify: _a.left,
       innerClass: "",
       name: "daterange",
-      value: today(),
     });
     this.declareHandlers();
     this._id = _.uniqueId("dp-");
@@ -83,7 +80,12 @@ class __datepicker extends LetcBox {
             defaultDate: this.mget(_a.value) || [],
           }
         : {
-            defaultDate: this.mget(_a.value) || today(),
+            // No explicit value → today, as a Date. It must NOT be a
+            // preformatted string: consumers override `dateFormat` via
+            // vendorOpt (e.g. "Y-m-d"), and flatpickr parses `defaultDate`
+            // with that format. A string in another format matches no token
+            // and silently falls back to Jan 1 of the current year.
+            defaultDate: this.mget(_a.value) || new Date(),
           }),
       ...this.mget(_a.vendorOpt),
     };
