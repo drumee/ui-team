@@ -1238,6 +1238,7 @@
   "HUMAN_READABLE": "Lisible par l'humain",
   "RAW_DATA": "Données brutes",
   "CHAT_SCOPE": "Portée du chat",
+  "CHAT_SCOPE_MOVED": "Le chat n'est plus disponible dans ce dossier",
   "ALL_HUB_AND_THREADS": "Tout (chat du hub + fils de fichier)",
   "THIS_FOLDER_ONLY": "(ce dossier uniquement)",
   "DATE_RANGE": "Plage de dates",

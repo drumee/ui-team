@@ -437,6 +437,7 @@
   "HUMAN_READABLE": "Legible por humanos",
   "RAW_DATA": "Datos sin formato",
   "CHAT_SCOPE": "Alcance del chat",
+  "CHAT_SCOPE_MOVED": "El chat ya no está disponible en esta carpeta",
   "ALL_HUB_AND_THREADS": "Todo (chat del hub + hilos de archivo)",
   "THIS_FOLDER_ONLY": "(solo esta carpeta)",
   "DATE_RANGE": "Intervalo de fechas",

@@ -1238,6 +1238,7 @@
   "HUMAN_READABLE": "人类可读",
   "RAW_DATA": "原始数据",
   "CHAT_SCOPE": "聊天范围",
+  "CHAT_SCOPE_MOVED": "此文件夹中的聊天已不可用",
   "ALL_HUB_AND_THREADS": "全部（Hub 聊天 + 文件讨论）",
   "THIS_FOLDER_ONLY": "（仅此文件夹）",
   "DATE_RANGE": "日期范围",

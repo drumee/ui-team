@@ -1516,6 +1516,7 @@
   "HUMAN_READABLE": "Human readable",
   "RAW_DATA": "Raw data",
   "CHAT_SCOPE": "Chat scope",
+  "CHAT_SCOPE_MOVED": "Chat is no longer available in this folder",
   "ALL_HUB_AND_THREADS": "All (hub chat + file threads)",
   "THIS_FOLDER_ONLY": "(this folder only)",
   "DATE_RANGE": "Date range",
