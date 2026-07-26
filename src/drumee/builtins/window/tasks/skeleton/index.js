@@ -2086,8 +2086,62 @@ function mentionField(ui, scope, opt = {}) {
         },
       }),
       mentionDropdown(ui, scope),
+      linkPrompt(ui, scope),
     ],
   });
+}
+
+// Ctrl+K target: an empty caret-anchored shell, filled and positioned by the
+// panel (_openLinkPrompt) exactly like the mention dropdown above it.
+function linkPrompt(ui, scope) {
+  const pfx = ui.fig.family;
+  return Skeletons.Box.Y({
+    className: `${pfx}__link-prompt`,
+    sys_pn: `${scope}-link`,
+    partHandler: ui,
+    // dataset is dropped at render unless attrOpt is also set — use attrOpt.
+    attrOpt: { "data-open": "0" },
+    bubble: 0,
+    kids: [],
+  });
+}
+
+// Body of the link prompt. The panel wires the input and the buttons natively
+// (data-act), so no service round-trip while the caret is parked in the
+// editor. "Remove" only appears when the caret sits in an existing link.
+function buildLinkPromptContent(ui, opt = {}) {
+  const pfx = ui.fig.family;
+  const btn = (act, label, mod) =>
+    Skeletons.Note({
+      className: `${pfx}__link-prompt-btn${mod ? ` ${pfx}__link-prompt-btn--${mod}` : ""}`,
+      content: label,
+      attrOpt: { "data-act": act },
+      bubble: 0,
+    });
+  return [
+    // A bare <input>, not Skeletons.Entry: the panel wires this element the
+    // instant feed() returns, and Entry builds its input in its own render
+    // pass — plus its Enter/commit handling would race the prompt's own.
+    Skeletons.Element({
+      tagName: "input",
+      className: `${pfx}__link-prompt-input`,
+      flow: "none",
+      attrOpt: {
+        type: "url",
+        spellcheck: "false",
+        placeholder: LOCALE.TASK_LINK_PLACEHOLDER,
+        value: opt.url || "",
+      },
+    }),
+    Skeletons.Box.X({
+      className: `${pfx}__link-prompt-actions`,
+      kids: [
+        opt.url ? btn("remove", LOCALE.REMOVE) : null,
+        btn("cancel", LOCALE.CANCEL),
+        btn("apply", LOCALE.APPLY, "primary"),
+      ].filter(Boolean),
+    }),
+  ];
 }
 
 function commentTimeAgo(ts) {
@@ -2339,6 +2393,10 @@ function buildCommentListContent(ui) {
               tagName: "div",
               className: `${pfx}__comment-body`,
               flow: "none",
+              // Let the browser's own menu open on a comment — otherwise the
+              // engine hands contextmenu to the nearest ancestor offering one,
+              // taking "Copy link address" off a link in the body.
+              escapeContextmenu: 1,
               attrOpt: { "data-comment-id": c.id },
             }),
             // Reaction chips + action icons share one horizontal footer row.
@@ -2824,6 +2882,7 @@ make.buildFileSearchDropdownContent = buildFileSearchDropdownContent;
 make.buildAssigneeChips = buildAssigneeChips;
 make.buildAssigneeSuggestions = buildAssigneeSuggestions;
 make.buildMentionItemsContent = buildMentionItemsContent;
+make.buildLinkPromptContent = buildLinkPromptContent;
 make.buildCommentListContent = buildCommentListContent;
 make.buildPendingListContent = buildPendingListContent;
 make.buildAttachmentRowsContent = buildAttachmentRowsContent;

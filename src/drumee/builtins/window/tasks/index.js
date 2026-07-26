@@ -3,6 +3,9 @@ const {
   markerRe,
   contentTokenRe,
   imgMarker,
+  linkMarker,
+  linkifyTokens,
+  safeUrl,
   uidsFromText,
 } = require("./mention-markers");
 
@@ -148,6 +151,9 @@ class __tasks_panel extends LetcBox {
     // Active @-mention session (null when the popup is closed): the "@token"
     // range in the focused description editor + the filtered member list.
     this._mention = null;
+    // Active Ctrl+K session (null when the prompt is closed): the caret range
+    // it will wrap, plus the link being edited when the caret sits in one.
+    this._linkPrompt = null;
     // Recent-activity feed for the Project Health view (folder-scoped).
     this._activity = [];
     // Comment feed state for the open task detail.
@@ -4006,8 +4012,28 @@ class __tasks_panel extends LetcBox {
     return wrap;
   }
 
-  // Render stored marker text into the editor as text nodes, chip spans, and
-  // inline images.
+  // Anchor node for a hyperlink. In an editor it is contenteditable=false so it
+  // behaves as one atomic chip, like a mention.
+  _makeLinkNode(label, href, editable) {
+    const a = document.createElement("a");
+    a.className = `${this.fig.family}__link`;
+    a.href = href;
+    a.target = "_blank";
+    a.rel = "noopener noreferrer";
+    a.dataset.href = href; // serialize from this, not the browser-normalised href
+    a.textContent = label;
+    if (editable) {
+      a.setAttribute("contenteditable", "false");
+      // While writing, a click places the caret; Ctrl/Cmd+click opens.
+      a.onclick = (ev) => {
+        if (!ev.ctrlKey && !ev.metaKey) ev.preventDefault();
+      };
+    }
+    return a;
+  }
+
+  // Render stored marker text into the editor as text nodes, chip spans,
+  // inline images, and links.
   _renderEditorContent(editorEl, markerText) {
     editorEl.textContent = "";
     const text = String(markerText || "");
@@ -4015,7 +4041,20 @@ class __tasks_panel extends LetcBox {
     const appendText = (str) => {
       str.split("\n").forEach((part, i) => {
         if (i > 0) editorEl.appendChild(document.createElement("br"));
-        if (part) editorEl.appendChild(document.createTextNode(part));
+        if (!part) return;
+        // Read-only only: linkifying in an editor would turn every half-typed
+        // address into an atomic chip under the caret. There, Ctrl+K does it.
+        if (editable) {
+          editorEl.appendChild(document.createTextNode(part));
+          return;
+        }
+        linkifyTokens(part).forEach((tok) => {
+          editorEl.appendChild(
+            tok.url
+              ? this._makeLinkNode(tok.label, tok.url, false)
+              : document.createTextNode(tok.text),
+          );
+        });
       });
     };
     const re = contentTokenRe();
@@ -4028,6 +4067,14 @@ class __tasks_panel extends LetcBox {
       } else if (m[3] != null) {
         editorEl.appendChild(
           this._makeInlineImage(m[3], m[4], m[5], editable),
+        );
+      } else if (m[7] != null) {
+        // A rejected scheme renders as its label, never as a live href.
+        const href = safeUrl(m[7]);
+        editorEl.appendChild(
+          href
+            ? this._makeLinkNode(m[6], href, editable)
+            : document.createTextNode(m[6]),
         );
       }
       last = re.lastIndex;
@@ -4053,6 +4100,14 @@ class __tasks_panel extends LetcBox {
           } else if (n.classList && n.classList.contains(imgClass)) {
             const w = parseInt(n.style.width, 10) || 0;
             out += imgMarker(n.dataset.nid, n.dataset.hub, w || undefined);
+          } else if (n.tagName === "A") {
+            const href = safeUrl(n.dataset.href || n.getAttribute("href"));
+            const label = (n.textContent || "").trim();
+            if (!href || !label) walk(n);
+            // A link that reads as its own target needs no marker — read-only
+            // rendering re-links the bare URL anyway.
+            else if (label === href) out += label;
+            else out += linkMarker(label, href);
           } else if (n.tagName === "BR") {
             out += "\n";
           } else if (n.tagName === "DIV") {
@@ -4106,9 +4161,10 @@ class __tasks_panel extends LetcBox {
     editorEl.onpaste = (e) => this._onEditorPaste(e, scope, editorEl);
   }
 
-  // Intercept paste of a clipboard image (screenshot / copied external image):
-  // upload it, then insert a resizable inline image at the caret. Non-image
-  // pastes fall through to the browser's default text paste.
+  // Clipboard image (screenshot / copied external image): upload it, then
+  // insert a resizable inline image at the caret. Rich text is rebuilt as text
+  // + links rather than left to the browser, which would drop a document's
+  // worth of foreign markup into the editor for the serializer to throw away.
   _onEditorPaste(e, scope, editorEl) {
     const dt = e.clipboardData;
     if (!dt) return;
@@ -4121,15 +4177,108 @@ class __tasks_panel extends LetcBox {
         break;
       }
     }
-    if (!file) return; // let the default text/HTML paste proceed
-    e.preventDefault();
-    // Capture the caret now — the async upload would otherwise lose it.
-    const sel = window.getSelection();
-    let range = null;
-    if (sel && sel.rangeCount && editorEl.contains(sel.anchorNode)) {
-      range = sel.getRangeAt(0).cloneRange();
+    if (file) {
+      e.preventDefault();
+      // Capture the caret now — the async upload would otherwise lose it.
+      const sel = window.getSelection();
+      let range = null;
+      if (sel && sel.rangeCount && editorEl.contains(sel.anchorNode)) {
+        range = sel.getRangeAt(0).cloneRange();
+      }
+      return this._insertPastedImage(file, scope, editorEl, range);
     }
-    this._insertPastedImage(file, scope, editorEl, range);
+
+    const html = dt.getData("text/html");
+    const plain = (dt.getData("text/plain") || "").trim();
+    if (!html && !plain) return;
+
+    // Pasting a URL onto selected words hyperlinks them instead of replacing.
+    const url = /\s/.test(plain) ? null : safeUrl(plain);
+    const sel = window.getSelection();
+    const selected =
+      sel && sel.rangeCount && editorEl.contains(sel.anchorNode)
+        ? sel.getRangeAt(0).toString().trim()
+        : "";
+    if (url && selected) {
+      e.preventDefault();
+      const frag = document.createDocumentFragment();
+      frag.appendChild(this._makeLinkNode(selected, url, true));
+      this._insertAtCaret(frag, editorEl);
+      return this._onDescInput(scope, editorEl);
+    }
+
+    // Plain text carries no markup to sanitise, so leave it to the browser —
+    // that keeps it on the native undo stack, which a scripted insert isn't.
+    if (!html) return;
+
+    e.preventDefault();
+    this._insertAtCaret(this._pasteFragment(html, plain), editorEl);
+    this._onDescInput(scope, editorEl);
+  }
+
+  // Clipboard payload → a fragment of what this editor can store: text, line
+  // breaks and links. Everything else collapses to its text, which is all the
+  // serializer would have kept anyway.
+  _pasteFragment(html, plain) {
+    const frag = document.createDocumentFragment();
+    const addText = (str, collapse) => {
+      // HTML source whitespace is collapsed by the renderer; plain text is not.
+      const s = collapse ? String(str).replace(/[\t\r\n]+/g, " ") : String(str);
+      if (!s) return;
+      s.split("\n").forEach((part, i) => {
+        if (i > 0) frag.appendChild(document.createElement("br"));
+        if (part) frag.appendChild(document.createTextNode(part));
+      });
+    };
+    if (!html) {
+      addText(plain, false);
+      return frag;
+    }
+    const BLOCK = /^(?:DIV|P|LI|TR|H[1-6]|BLOCKQUOTE|SECTION|ARTICLE|UL|OL)$/;
+    const doc = new DOMParser().parseFromString(html, "text/html");
+    const walk = (node) => {
+      node.childNodes.forEach((n) => {
+        if (n.nodeType === 3) return addText(n.textContent, true);
+        if (n.nodeType !== 1) return;
+        if (n.tagName === "A") {
+          const href = safeUrl(n.getAttribute("href"));
+          const label = (n.textContent || "").replace(/\s+/g, " ").trim();
+          if (href && label) frag.appendChild(this._makeLinkNode(label, href, true));
+          else addText(n.textContent, true);
+          return;
+        }
+        if (n.tagName === "BR") return frag.appendChild(document.createElement("br"));
+        if (n.tagName === "SCRIPT" || n.tagName === "STYLE") return;
+        if (BLOCK.test(n.tagName) && frag.lastChild) {
+          frag.appendChild(document.createElement("br"));
+        }
+        walk(n);
+      });
+    };
+    walk(doc.body);
+    // An HTML flavour that sanitises to nothing (wrapper-only markup) must not
+    // swallow the paste — and _insertAtCaret would still drop the selection.
+    if (!frag.firstChild) addText(plain, false);
+    return frag;
+  }
+
+  // Drop a fragment where the caret is, then put the caret after it.
+  _insertAtCaret(frag, editorEl) {
+    const last = frag.lastChild;
+    const sel = window.getSelection();
+    if (!sel || !sel.rangeCount || !editorEl.contains(sel.anchorNode)) {
+      editorEl.appendChild(frag);
+      return;
+    }
+    const range = sel.getRangeAt(0);
+    range.deleteContents();
+    range.insertNode(frag);
+    if (last) {
+      range.setStartAfter(last);
+      range.collapse(true);
+      sel.removeAllRanges();
+      sel.addRange(range);
+    }
   }
 
   async _insertPastedImage(file, scope, editorEl, range) {
@@ -4230,6 +4379,13 @@ class __tasks_panel extends LetcBox {
   }
 
   _onDescKeydown(e, scope) {
+    // Before the mention guard — Ctrl/Cmd+K works whether or not a mention
+    // popup happens to be open.
+    if ((e.ctrlKey || e.metaKey) && !e.altKey && (e.key === "k" || e.key === "K")) {
+      e.preventDefault();
+      this._closeMention();
+      return this._openLinkPrompt(scope);
+    }
     const ref = this._mention;
     if (!ref || ref.scope !== scope) return;
     if (e.key === "Escape") {
@@ -4321,11 +4477,6 @@ class __tasks_panel extends LetcBox {
   // caret rect comes from the @token range (a collapsed-caret rect is often
   // empty); coordinates are field-relative, so transforms cancel out.
   _positionMentionAtCaret(el, editorEl) {
-    // The editor's wrapper is the positioning context (position: relative); the
-    // dropdown is its sibling. Using the parent (not a fixed class) keeps this
-    // generic across the description field and the comment composer.
-    const field = editorEl.parentNode;
-    if (!field) return;
     const ref = this._mention;
     let caret = null;
     if (ref && ref.node && ref.node.isConnected) {
@@ -4342,6 +4493,16 @@ class __tasks_panel extends LetcBox {
       const sel = window.getSelection();
       if (sel && sel.rangeCount) caret = sel.getRangeAt(0).getBoundingClientRect();
     }
+    this._positionPopupAtCaret(el, editorEl, caret);
+  }
+
+  // Shared by the mention dropdown and the link prompt.
+  _positionPopupAtCaret(el, editorEl, caret) {
+    // The editor's wrapper is the positioning context (position: relative); the
+    // popup is its sibling. Using the parent (not a fixed class) keeps this
+    // generic across the description field and the comment composer.
+    const field = editorEl.parentNode;
+    if (!field) return;
     if (!caret || (!caret.width && !caret.height && !caret.left && !caret.top)) {
       caret = editorEl.getBoundingClientRect();
     }
@@ -4373,6 +4534,147 @@ class __tasks_panel extends LetcBox {
     if (!this.el) return;
     this.el
       .querySelectorAll(`.${this.fig.family}__mention-dropdown`)
+      .forEach((d) => {
+        d.dataset.open = "0";
+      });
+  }
+
+  // The link node the caret sits in, if any (Ctrl+K then edits it in place).
+  _closestLink(node, editorEl) {
+    let n = node;
+    while (n && n !== editorEl) {
+      if (n.nodeType === 1 && n.tagName === "A") return n;
+      n = n.parentNode;
+    }
+    return null;
+  }
+
+  // Ctrl+K. Remembers the caret range up front — focusing the prompt's input
+  // blurs the editor and drops the live selection.
+  _openLinkPrompt(scope) {
+    const editorEl = this._descEditorEl(scope);
+    if (!editorEl) return;
+    const sel = window.getSelection();
+    if (!sel || !sel.rangeCount || !editorEl.contains(sel.anchorNode)) return;
+    const range = sel.getRangeAt(0).cloneRange();
+    const anchor = this._closestLink(sel.anchorNode, editorEl);
+    const ref = {
+      scope,
+      range,
+      anchor,
+      label: range.toString().trim(),
+      rect: range.getBoundingClientRect(),
+    };
+    this._linkPrompt = ref;
+    const skel = require("./skeleton");
+    this.ensurePart(`${scope}-link`)
+      .then((part) => {
+        if (!part || (part.isDestroyed && part.isDestroyed())) return;
+        if (this._linkPrompt !== ref) return;
+        part.feed(
+          skel.buildLinkPromptContent(this, {
+            url: anchor ? anchor.dataset.href || anchor.href : "",
+          }),
+        );
+        const root = part.el;
+        if (!root) return;
+        ref.rootEl = root;
+        root.querySelectorAll(`.${this.fig.family}__link-prompt-btn`).forEach(
+          (el) => {
+            // Keep the editor's stored range intact through the click.
+            el.onmousedown = (ev) => ev.preventDefault();
+            el.onclick = (ev) => {
+              ev.preventDefault();
+              ev.stopPropagation();
+              const act = el.dataset.act;
+              if (act === "apply") this._applyLinkPrompt();
+              else if (act === "remove") this._removeLinkPrompt();
+              else this._closeLinkPrompt();
+            };
+          },
+        );
+        const input = root.querySelector("input");
+        if (input) {
+          ref.inputEl = input;
+          input.onkeydown = (ev) => {
+            if (ev.key !== "Enter" && ev.key !== "Escape") return;
+            ev.preventDefault();
+            ev.stopPropagation(); // don't let the editor/panel also act on it
+            if (ev.key === "Enter") this._applyLinkPrompt();
+            else this._closeLinkPrompt();
+          };
+        }
+        this._positionPopupAtCaret(root, editorEl, ref.rect);
+        root.dataset.open = "1";
+        if (input) {
+          input.focus();
+          input.select();
+        }
+      })
+      .catch(() => {
+        /* not mounted yet */
+      });
+  }
+
+  _applyLinkPrompt() {
+    const ref = this._linkPrompt;
+    if (!ref) return;
+    const href = safeUrl(ref.inputEl ? ref.inputEl.value : "");
+    const editorEl = this._descEditorEl(ref.scope);
+    // Empty or refused scheme: close rather than write a dead link.
+    if (!href || !editorEl) return this._closeLinkPrompt();
+    if (ref.anchor && ref.anchor.isConnected) {
+      ref.anchor.href = href;
+      ref.anchor.dataset.href = href;
+    } else {
+      const node = this._makeLinkNode(ref.label || href, href, true);
+      const range = ref.range;
+      // The remembered range dies if the panel re-rendered while the prompt was
+      // open — append rather than write into a detached tree.
+      if (range && editorEl.contains(range.startContainer)) {
+        range.deleteContents();
+        range.insertNode(node);
+      } else {
+        editorEl.appendChild(node);
+      }
+      // A trailing space so the next keystroke isn't typed into the link.
+      const tail = document.createTextNode(" ");
+      node.parentNode.insertBefore(tail, node.nextSibling);
+      const sel = window.getSelection();
+      const after = document.createRange();
+      after.setStart(tail, 1);
+      after.collapse(true);
+      sel.removeAllRanges();
+      sel.addRange(after);
+    }
+    const scope = ref.scope;
+    this._closeLinkPrompt();
+    editorEl.focus();
+    this._onDescInput(scope, editorEl);
+  }
+
+  _removeLinkPrompt() {
+    const ref = this._linkPrompt;
+    if (!ref) return;
+    const editorEl = this._descEditorEl(ref.scope);
+    if (ref.anchor && ref.anchor.isConnected) {
+      // Unwrap: the words survive, only the link goes.
+      ref.anchor.replaceWith(document.createTextNode(ref.anchor.textContent));
+    }
+    const scope = ref.scope;
+    this._closeLinkPrompt();
+    if (editorEl) {
+      editorEl.focus();
+      this._onDescInput(scope, editorEl);
+    }
+  }
+
+  _closeLinkPrompt() {
+    if (!this._linkPrompt) return;
+    this._linkPrompt = null;
+    if (!this.el) return;
+    this.el
+      .querySelectorAll(`.${this.fig.family}__link-prompt`)
       .forEach((d) => {
         d.dataset.open = "0";
       });

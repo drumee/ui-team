@@ -2549,6 +2549,96 @@
     display: none;
   }
 
+  // ── Hyperlinks (comment / description bodies and their editors) ───
+  // Bare URLs are auto-linked on read-only surfaces; Ctrl+K and pasted rich
+  // links also land here. In an editor the node is contenteditable=false, so
+  // it needs the text cursor back — it sits in a line of editable text.
+  &__link {
+    color: var(--col-primary-40, #5950ff);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+    cursor: pointer;
+    word-break: break-all; // a long URL must wrap, not widen the comment row
+
+    &:hover {
+      color: var(--col-primary-50, #433cc5);
+    }
+  }
+
+  [contenteditable="true"] &__link {
+    cursor: text;
+  }
+
+  // ── Ctrl+K link prompt ────────────────────────────────────────────
+  // Same caret-anchored shell as __mention-dropdown (see the note there on
+  // absolute-vs-fixed inside a transformed window).
+  &__link-prompt {
+    position: absolute;
+    z-index: 1000;
+    width: 260px;
+    gap: 8px;
+    padding: 8px;
+    border: 1px solid var(--border-default, #d6d6dc);
+    border-radius: 6px;
+    background: var(--normal-bg-elevated, #fff);
+    box-shadow: var(--shadow-top-tiny, 0 4px 16px rgba(0, 0, 0, 0.12));
+    flex-direction: column;
+  }
+
+  &__link-prompt:not([data-open="1"]) {
+    display: none;
+  }
+
+  // The <input> itself, not a wrapper — the skeleton renders the element.
+  &__link-prompt-input {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 6px 8px;
+    border: 1px solid var(--border-default, #d6d6dc);
+    border-radius: 4px;
+    outline: none;
+    @include drumee.typo(
+      $size: 13px,
+      $weight: 400,
+      $line: 18px,
+      $color: var(--normal-fg-10, #0b0a21)
+    );
+
+    &:focus {
+      border-color: var(--col-primary-40, #5950ff);
+    }
+  }
+
+  &__link-prompt-actions {
+    justify-content: flex-end;
+    gap: 8px;
+  }
+
+  &__link-prompt-btn {
+    padding: 4px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    @include drumee.typo(
+      $size: 12px,
+      $weight: 500,
+      $line: 16px,
+      $color: var(--normal-fg-40, #84848c)
+    );
+
+    &:hover {
+      background: var(--hover-bg-40, rgba(0, 0, 0, 0.04));
+    }
+
+    &--primary {
+      color: #fff;
+      background: var(--col-primary-40, #5950ff);
+
+      &:hover {
+        background: var(--col-primary-50, #433cc5);
+      }
+    }
+  }
+
   &__mention-item {
     align-items: center;
     gap: 8px;
@@ -2748,6 +2838,7 @@
     white-space: pre-wrap;
     word-break: break-word;
     overflow-wrap: anywhere; // break long unbroken strings / URLs
+    user-select: text; // a comment is there to be read and copied out of
     @include drumee.typo(
       $size: 14px,
       $weight: 400,
