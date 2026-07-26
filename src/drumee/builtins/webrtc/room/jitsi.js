@@ -475,9 +475,10 @@ class __webrtc_room extends __room {
           // caller updates the UI itself, so an alert here would wrongly imply
           // the whole call failed even though audio is fine.
           if (!createOpt.silent) {
-            let details = error.message || `${error}`;
-            let msg = `${LOCALE.DEVICES_PERMISSION_DENIED} (${details})`;
-            Wm.alert(msg);
+            // Classified cause, not the raw DOMException: "(NotAllowedError:
+            // Permission denied)" told the user nothing about what to do. The
+            // raw error is still in the warn() above for support.
+            Wm.alert(this.mediaErrorMessage(error));
           }
           reject(error);
         });
@@ -540,7 +541,7 @@ class __webrtc_room extends __room {
     // serialized `await createLocalTracks(audio)` did.
     let track = await this._startupTracks;
     if (!track) {
-      this.stateMessage(LOCALE.DEVICES_PERMISSION_DENIED);
+      this.stateMessage(this.mediaErrorMessage(this._mediaError));
     }
   }
 
@@ -576,6 +577,10 @@ class __webrtc_room extends __room {
         tracks = await this.createLocalTracks(_a.audio);
       } catch (e) {
         this._startupMediaFailed = 1;
+        // Remember WHY, so the terminal panel can say "your browser is
+        // blocking the microphone" instead of the account-privilege message
+        // the generic catch would otherwise pick (see window/meeting).
+        this.setMediaError(e);
         throw e;
       }
     }

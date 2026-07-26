@@ -1,5 +1,6 @@
 const JitsiMeetJS = require('vendor/lib/jitsi/lib-jitsi-meet.min.js');
 const { timestamp } = require("@drumee/ui-essentials")
+const { mediaErrorMessage } = require("builtins/webrtc/media-error");
 
 const __interact = require("window/interact/webrtc");
 class __webrtc_room extends __interact {
@@ -19,7 +20,13 @@ class __webrtc_room extends __interact {
     this.statusMessages = {
       initializing: LOCALE.INITIALIZING,
       joining: LOCALE.WAITING_FOR_X.format(LOCALE.PERMISSION.toLowerCase()),
+      // The account/room privilege the SERVER refused (conference.join returned
+      // no user permission). NOT for a blocked mic or camera — that is
+      // `mediaDenied`, which mediaErrorMessage() replaces with the real cause.
       permissionDenied: LOCALE.WEAK_PRIVILEGE,
+      mediaDenied: LOCALE.DEVICES_PERMISSION_DENIED.format(
+        `${LOCALE.MICROPHONE.toLowerCase()} / ${LOCALE.CAMERA.toLowerCase()}`,
+      ),
       getUserDevices: LOCALE.WAITING_FOR_X.format(LOCALE.PERMISSION.toLowerCase()),
     };
     this.isAudio = this.mget(_a.audio) > 0;
@@ -336,7 +343,9 @@ class __webrtc_room extends __interact {
         }),
         Skeletons.Note({
           className: `device-label`,
-          content: LOCALE.DEVICES_PERMISSION_DENIED,
+          content: LOCALE.MEDIA_BLOCKED_BY_BROWSER.format(
+            LOCALE.MICROPHONE.toLowerCase(),
+          ),
         }),
       ]);
       p.$el.fadeIn();
@@ -497,6 +506,24 @@ class __webrtc_room extends __interact {
     }
   }
 
+  // Actionable text for a local-media failure ("blocked in the browser" /
+  // "no device" / "in use by another app"), see webrtc/media-error.
+  mediaErrorMessage(error) {
+    return mediaErrorMessage(error);
+  }
+
+  // Record a local-media failure and point the `mediaDenied` state at its real
+  // cause. Callers that end the startup read `hasMediaError()` to pick the
+  // terminal state.
+  setMediaError(error) {
+    this._mediaError = error || null;
+    if (error) this.statusMessages.mediaDenied = this.mediaErrorMessage(error);
+  }
+
+  hasMediaError() {
+    return !!this._mediaError;
+  }
+
   async confirmDeviceSelection() {
     // Close the picker immediately (it only fades the part out; it does NOT
     // reset selected*), then serialize the device changes in the background.
@@ -504,7 +531,9 @@ class __webrtc_room extends __interact {
     // Applying the change re-acquires the device (getUserMedia / setSinkId),
     // which needs permission — verify up front and fail LOUDLY, not silently.
     if (!(await this.ensureMediaPermission())) {
-      Wm.alert(LOCALE.DEVICES_PERMISSION_DENIED);
+      Wm.alert(
+        LOCALE.MEDIA_BLOCKED_BY_BROWSER.format(LOCALE.MICROPHONE.toLowerCase()),
+      );
       return;
     }
     try {
@@ -523,9 +552,9 @@ class __webrtc_room extends __interact {
     } catch (e) {
       this.warn("confirmDeviceSelection failed", e);
       // Was silently swallowed before — surface it so a failed change isn't
-      // mistaken for "nothing happened".
-      const details = (e && e.message) || `${e}`;
-      Wm.alert(`${LOCALE.DEVICES_PERMISSION_DENIED} (${details})`);
+      // mistaken for "nothing happened". The raw exception stays in the log;
+      // the user gets the classified cause.
+      Wm.alert(this.mediaErrorMessage(e));
     }
   }
 

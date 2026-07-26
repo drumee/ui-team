@@ -1,4 +1,5 @@
 const JitsiMeetJS = require('vendor/lib/jitsi/lib-jitsi-meet.min.js');
+const { mediaErrorMessage } = require('builtins/webrtc/media-error');
 class __dmz_meeting extends LetcBox {
 
   /**
@@ -379,9 +380,10 @@ class __dmz_meeting extends LetcBox {
         })
         .catch((error) => {
           this.warn("Failed to get device permision:", error);
-          let details = error.message || `${error}`;
-          let msg = `${LOCALE.DEVICES_PERMISSION_DENIED} (${details})`;
-          reject(msg);
+          // Classified cause instead of the raw DOMException — and the
+          // {0} device placeholder actually substituted (it used to render
+          // literally). See builtins/webrtc/media-error.
+          reject(mediaErrorMessage(error));
         });
     });
   }

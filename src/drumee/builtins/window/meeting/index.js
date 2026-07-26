@@ -169,7 +169,11 @@ class __window_meeting extends __room {
       if (this._isHost) this._postMeetingSystemMessage();
     } catch (e) {
       if (this.warn) this.warn("meeting onDomRefresh failed", e);
-      this.stateMachine("permissionDenied");
+      // A blocked/missing/busy mic or camera is NOT an account-privilege
+      // problem. Both used to land on "Your privilege is insufficient to
+      // perform this action", which reads as "ask your admin" for what is
+      // really a one-click browser permission — see setMediaError.
+      this.stateMachine(this.hasMediaError() ? "mediaDenied" : "permissionDenied");
     } finally {
       if (this.el) this.el.dataset.ready = "1";
     }
@@ -1279,17 +1283,18 @@ class __window_meeting extends __room {
       "joining",
       "getUserDevices",
       "permissionDenied",
+      "mediaDenied",
     ];
     if (!s || !preJoinStates.includes(s)) {
       return super.stateMessage(s, timeout);
     }
     const message = this.statusMessages[s] || s;
-    // permissionDenied is terminal — the conference never bound, so the
-    // real local-user webrtc widget can't render. Build a static "solo
-    // call" preview (Visitor avatar + name) and overlay the denial text,
+    // permissionDenied / mediaDenied are terminal — the conference never
+    // bound, so the real local-user webrtc widget can't render. Build a static
+    // "solo call" preview (Visitor avatar + name) and overlay the denial text,
     // matching the look of a normal 1-participant call. A small icon-only
     // X in the corner exits back to the widget_meeting panel.
-    if (s === "permissionDenied") {
+    if (s === "permissionDenied" || s === "mediaDenied") {
       const fullname = (Visitor.fullname && Visitor.fullname())
         || `${Visitor.get(_a.firstname) || ""} ${Visitor.get(_a.lastname) || ""}`.trim()
         || Visitor.get(_a.username) || "";
