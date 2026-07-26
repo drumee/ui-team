@@ -46,9 +46,14 @@ class __window_core extends __utils {
   initialize(opt) {
     super.initialize(opt);
     this._uid = Visitor.id;
+    // Default listing order: most recently MODIFIED first (was rank asc —
+    // the manual arrangement order). Paired with the proc's folder-first
+    // paging, page 1 now carries every subfolder plus the newest files, so
+    // active content is visible immediately instead of trickling in from
+    // later pages.
     this._currentApi = {
-      name: _a.rank,
-      order: _K.order.ascending,
+      name: _a.mtime,
+      order: _K.order.descending,
     };
     this.model.set({
       flow: _a.y,
