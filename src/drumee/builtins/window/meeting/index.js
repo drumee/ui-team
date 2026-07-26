@@ -269,6 +269,23 @@ class __window_meeting extends __room {
    * encoded into the message body as a `[[MEETING:start:{json}]]` sentinel that
    * chat-item parses on render. Host-only. Skipped on DMZ / when nid is missing.
    */
+  /**
+   * Display name to freeze into the card's `by` field. Visitor.fullname() falls
+   * back to the email when the profile has not finished loading, and the value
+   * is persisted with the message — so a card posted during that window showed
+   * an email address forever while a later card by the SAME user showed the real
+   * name. Read the name parts directly and return "" rather than an email when
+   * they are not ready yet; the renderer then resolves the author from the
+   * message row (see chat-item/template/meeting-event.js).
+   */
+  _meetingCardAuthor() {
+    const p = (Visitor.profile && Visitor.profile()) || {};
+    const name = `${p.firstname || ""} ${p.lastname || ""}`.trim();
+    if (name) return name;
+    const full = p.fullname || "";
+    return full && !full.includes("@") ? full : "";
+  }
+
   _postMeetingSystemMessage() {
     if (this.mget(_a.area) === _a.dmz) return;
     const hub_id = this.mget(_a.hub_id);
@@ -282,7 +299,7 @@ class __window_meeting extends __room {
       nid,
       room_id: this.mget(_a.room_id) || nid,
       filename: this.mget(_a.filename),
-      by: (Visitor.fullname && Visitor.fullname()) || "",
+      by: this._meetingCardAuthor(),
     };
     const message = `[[MEETING:start:${JSON.stringify(payload)}]]`;
 
