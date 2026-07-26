@@ -174,6 +174,14 @@ class __window_core extends __utils {
     if (!(_K.permission.modify & this.mget(_a.privilege))) {
       return;
     }
+    // Persisting rank = displayed index only makes sense while the display
+    // IS the rank order. Under any other sort (the default is now mtime
+    // desc) this would overwrite the whole folder's manual arrangement with
+    // the current sort order — for every member — after any routine upload
+    // or drop.
+    if (this._currentApi && this._currentApi.name !== _a.rank) {
+      return;
+    }
     const list = [];
     let i = 0;
     for (let m of Array.from(this.iconsList.collection.models)) {
@@ -1094,6 +1102,11 @@ class __window_core extends __utils {
           service: SERVICE.media.show_node_by,
           page: 1,
           type: f,
+          // Explicit: without a sort the server falls back to rank, which
+          // combined with DESC yielded reverse-manual-order — meaningless.
+          // Filtered views follow the same modified-newest-first contract
+          // as the default listing.
+          sort: _a.mtime,
           order: _K.order.descending,
           hub_id,
           nid,
@@ -1108,6 +1121,7 @@ class __window_core extends __utils {
           service: SERVICE.media.show_node_by,
           page: 1,
           type: f,
+          sort: _a.mtime,
           order: _K.order.descending,
           hub_id,
           nid,
