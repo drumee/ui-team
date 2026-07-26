@@ -4,21 +4,25 @@ const { Autolinker } = require("autolinker");
 const __chat_dod = function(m) {
   let message = m.message || '';
 
-  // Decode file mentions: [@filename](mention:hub_id:nid) → clickable <a> tag.
-  // Label is lazy (.+?) not [^\]]+ so a filename containing "]" (e.g.
-  // "[Launch] Strategy") still matches — [^\]]+ stopped at the first "]" and
-  // dropped the whole mention to raw text.
+  // Decode both mention kinds in ONE left-to-right pass:
+  //   [@filename](mention:hub_id:nid)  → file mention
+  //   [@name](user:drumate_id)         → contact mention
+  // A single alternating pattern is required, not two sequential replaces. The
+  // label is lazy (.*?) so a filename containing "]" (e.g. "[Launch] Strategy")
+  // still matches, but "." also matches "[" — so a file-mention-only pass would
+  // swallow a preceding contact mention when the two are adjacent with no space
+  // ("[@Huynh](user:ID)text[@img.png](mention:H:N)" collapsed into one broken
+  // link). Matching both kinds together makes the regex engine stop at the first
+  // complete mention it meets, so neither kind can eat the other.
   message = message.replace(
-    /\[@(.+?)\]\(mention:([^:]+):([^)]+)\)/g,
-    '<a class="file-mention" data-hub_id="$2" data-nid="$3">@$1</a>'
-  );
-
-  // Decode contact mentions; fall back to "Unknown" so the link isn't dropped.
-  message = message.replace(
-    /\[@([^\]]*)\]\(user:([^)]+)\)/g,
-    (match, name, drumateId) => {
-      const label = (name || '').trim() || 'Unknown';
-      return `<a class="user-mention" data-drumate_id="${drumateId}">@${label}</a>`;
+    /\[@(.*?)\]\((?:user:([^)]+)|mention:([^:)]+):([^)]+))\)/g,
+    (match, label, drumateId, hubId, nid) => {
+      if (drumateId) {
+        // Fall back to "Unknown" so the link isn't dropped.
+        const name = (label || '').trim() || 'Unknown';
+        return `<a class="user-mention" data-drumate_id="${drumateId}">@${name}</a>`;
+      }
+      return `<a class="file-mention" data-hub_id="${hubId}" data-nid="${nid}">@${label}</a>`;
     }
   );
 

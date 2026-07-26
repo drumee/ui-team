@@ -3,20 +3,19 @@ const { Autolinker } = require("autolinker");
 // Mirrors `template/conversation.js` mention decode for the quoted parent.
 const decodeMentions = (raw) => {
   if (!raw) return raw;
-  // Lazy label (.+?) so a filename containing "]" still decodes (see
-  // template/conversation.js).
-  let text = raw.replace(
-    /\[@(.+?)\]\(mention:([^:]+):([^)]+)\)/g,
-    '<a class="file-mention" data-hub_id="$2" data-nid="$3">@$1</a>'
-  );
-  text = text.replace(
-    /\[@([^\]]*)\]\(user:([^)]+)\)/g,
-    (match, name, drumateId) => {
-      const label = (name || '').trim() || 'Unknown';
-      return `<a class="user-mention" data-drumate_id="${drumateId}">@${label}</a>`;
+  // Single left-to-right pass over both mention kinds — see
+  // template/conversation.js for why they cannot be two sequential replaces
+  // (adjacent mentions with no space between them get swallowed).
+  return raw.replace(
+    /\[@(.*?)\]\((?:user:([^)]+)|mention:([^:)]+):([^)]+))\)/g,
+    (match, label, drumateId, hubId, nid) => {
+      if (drumateId) {
+        const name = (label || '').trim() || 'Unknown';
+        return `<a class="user-mention" data-drumate_id="${drumateId}">@${name}</a>`;
+      }
+      return `<a class="file-mention" data-hub_id="${hubId}" data-nid="${nid}">@${label}</a>`;
     }
   );
-  return text;
 };
 
 // Resolve the quoted sender's display name like chat-item/template/username.js:
