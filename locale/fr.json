@@ -1184,6 +1184,8 @@
   "SET_LIMIT_DESCRIPTION": "Les membres ne pourront accéder au dossier qu'à des moments précis.",
   "DAY": "Jour",
   "HOUR": "Heure",
+  "AM": "AM",
+  "PM": "PM",
   "APPLY_ALL_SAVE": "Tout appliquer et enregistrer",
   "PUBLIC_ANYONE": "Public, n'importe qui",
   "KICK_OUT_MEMBER": "Expulser ce membre",

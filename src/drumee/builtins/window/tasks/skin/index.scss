@@ -222,7 +222,7 @@
     opacity: 1;
   }
 
-  // ── List-view multi-dimension filter (Figma 2099-50501) ───────
+  // ── Multi-dimension filter popup, shared by every view (Figma 2099-50501) ──
   &__filter-picker--list {
     width: 244px;
   }
@@ -1276,9 +1276,10 @@
 
   &__create-modal {
     position: relative; // positioning context for the file-drop overlay
-    width: 800px;
-    max-width: 94%;
-    max-height: 88vh;
+    // Match the update/detail popup's near-full-window footprint.
+    width: calc(100% - 80px);
+    height: calc(100% - 64px);
+    max-height: none;
     background: var(--normal-bg-elevated, #fff);
     border: 1px solid rgba(0, 0, 0, 0.05);
     border-radius: 24px;
@@ -2221,34 +2222,100 @@
     gap: 12px;
   }
 
-  // ── Assignee button ───────────────────────────────────────────
-  // Figma assignee control: an underline input (bottom border only) holding
-  // chips/avatars; clicking opens the member picker.
-  &__assignee-button {
+  // ── Assignee type-to-search ───────────────────────────────────
+  // Underline row of chips + inline search, with an absolutely-positioned
+  // suggestion dropdown (same control as the meeting-schedule invitee field).
+  &__assignee-picker {
+    position: relative; // anchors the suggestions dropdown
+    gap: 6px;
+  }
+
+  &__assignee-control {
     align-items: center;
     flex-wrap: wrap;
     gap: 8px;
-    padding: 16px 0 4px;
-    border: 0;
+    padding: 8px 0 4px;
     border-bottom: 1px solid var(--normal-fg-30, #84848c);
-    border-radius: 0;
-    cursor: pointer;
     transition: border-color 0.15s;
 
     &:hover,
-    &[data-open="1"] {
+    &:focus-within {
       border-bottom-color: var(--active-border, #433cc5);
     }
   }
 
-  // Empty-state placeholder ("Search for people, enter to add").
-  &__assignee-placeholder {
-    flex: 1 1 auto;
+  &__assignee-chips {
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  // Inline search input — grows to fill the rest of the row.
+  &__assignee-search {
+    flex: 1 1 120px;
+    min-width: 120px;
+
+    input {
+      width: 100%;
+      border: none;
+      outline: none;
+      background: transparent;
+      @include drumee.typo(
+        $size: 12px,
+        $weight: 400,
+        $line: 16px,
+        $color: var(--normal-fg-10, #0b0a21)
+      );
+    }
+  }
+
+  // Shown only when the query has matches (data-open="1").
+  &__assignee-suggestions {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    z-index: 20;
+    margin-top: 4px;
+    max-height: 220px;
+    overflow-y: auto;
+    background: var(--normal-bg-elevated, #fff);
+    border: 1px solid var(--border-default, #d6d6dc);
+    border-radius: 8px;
+    box-shadow: 0 8px 24px rgba(11, 10, 33, 0.16);
+
+    &:not([data-open="1"]) {
+      display: none;
+    }
+  }
+
+  &__assignee-option {
+    align-items: center;
+    gap: 8px;
+    padding: 8px 10px;
+    cursor: pointer;
+
+    &:hover {
+      background: var(--hover-bg-40, rgba(89, 80, 255, 0.08));
+    }
+  }
+
+  &__assignee-option-avatar {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    overflow: hidden;
+    flex-shrink: 0;
+  }
+
+  &__assignee-option-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
     @include drumee.typo(
-      $size: 12px,
+      $size: 13px,
       $weight: 400,
-      $line: 16px,
-      $color: var(--normal-fg-30, #84848c)
+      $line: 18px,
+      $color: var(--normal-fg-10, #0b0a21)
     );
   }
 
@@ -2292,81 +2359,6 @@
       height: 10px;
       display: block;
     }
-  }
-
-  &__assignee-more {
-    padding: 4px 8px;
-    border-radius: 4px;
-    background: var(--hover-bg-40, rgba(89, 80, 255, 0.1));
-    @include drumee.typo(
-      $size: 12px,
-      $weight: 600,
-      $line: 16px,
-      $color: var(--accent, #433cc5)
-    );
-  }
-
-  &__assignee-add {
-    @include drumee.typo(
-      $size: 12px,
-      $weight: 400,
-      $line: 16px,
-      $color: var(--normal-fg-30, #84848c)
-    );
-  }
-
-  // Stack of assignee avatars inside the picker button (overlapping).
-  &__assignee-button-avatars {
-    flex-direction: row;
-    align-items: center;
-    flex-shrink: 0;
-  }
-
-  &__assignee-button-avatar {
-    width: 24px;
-    height: 24px;
-    border-radius: 50%;
-    overflow: hidden;
-    flex-shrink: 0;
-    box-shadow: 0 0 0 2px var(--normal-bg-elevated, #fff);
-
-    & + & {
-      margin-left: -8px;
-    }
-  }
-
-  &__assignee-button-placeholder {
-    width: 24px;
-    height: 24px;
-    border-radius: 50%;
-    background: var(--normal-bg-80, #ebebeb);
-    color: var(--normal-fg-50, #84848c);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-weight: 600;
-    font-size: 13px;
-  }
-
-  &__assignee-button-label {
-    @include drumee.typo(
-      $size: 13px,
-      $weight: 500,
-      $line: 18px,
-      $color: var(--normal-fg-10, #0b0a21)
-    );
-  }
-
-  // ── Member picker dropdown ────────────────────────────────────
-  &__member-picker {
-    align-items: stretch;
-    gap: 0;
-    margin-top: 6px;
-    max-height: 180px;
-    overflow-y: auto;
-    border: 1px solid var(--border-default, #d6d6dc);
-    border-radius: 6px;
-    background: var(--normal-bg-elevated, #fff);
   }
 
   &__member-row {
@@ -2551,7 +2543,7 @@
   }
 
   // Hide unless open. The compound selector out-specifies the framework's flex
-  // on Box.Y (same approach as __member-picker), so no !important needed —
+  // on Box.Y (same approach as __assignee-suggestions), so no !important needed —
   // otherwise the empty dropdown lingers as a stray box at the field's top-left.
   &__mention-dropdown:not([data-open="1"]) {
     display: none;
@@ -5174,8 +5166,9 @@
   }
 
   &__health-work-track {
-    position: relative; // anchor for the hover tooltip (&__tip)
+    position: relative;
     flex: 1 1 auto;
+    min-width: 40px; // never collapse to nothing in a narrow card
     height: 20px;
     border-radius: 4px;
     // Faint rail so a zero-task member still shows an (empty) bar, not a gap.
@@ -5190,7 +5183,20 @@
     transition: width 0.2s;
   }
 
-  // Shared floating hover tooltip (workload track task-count + column bell).
+  &__health-work-count {
+    flex: 0 0 auto;
+    min-width: 56px;
+    text-align: right;
+    white-space: nowrap;
+    @include drumee.typo(
+      $size: 12px,
+      $weight: 500,
+      $line: 20px,
+      $color: var(--normal-fg-40, #84848c)
+    );
+  }
+
+  // Shared floating hover tooltip (column bell).
   // The engine appends this <div> inside the hovered widget; anchor it centered
   // just above, with compact type so it reads as a label, not a block of text.
   &__tip {
@@ -5275,10 +5281,6 @@
   }
 
   &__file-search-dropdown[data-empty="1"] {
-    display: none;
-  }
-
-  &__member-picker:not([data-open="1"]) {
     display: none;
   }
 
@@ -5694,7 +5696,8 @@ html[data-theme="dark"] .tasks-panel {
   }
 
   &__file-search-dropdown,
-  &__filter-picker {
+  &__filter-picker,
+  &__assignee-suggestions {
     box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5);
   }
 

@@ -340,8 +340,25 @@ class ___widget_chatItem extends LetcBox {
     }
     // Re-render reaction chips whenever metadata changes (reactions live inside it).
     if (changed[_a.metadata] !== undefined) {
-      this._renderReactions();
+      // A meeting card has no reactions; its metadata change is the live→ended
+      // flip, so re-render its body instead ("Join meeting" → "Meeting ended").
+      if (this._isMeeting()) this._reRenderMeetingCard();
+      else this._renderReactions();
     }
+  }
+
+  /**
+   * Re-render the meeting system card in place after its status flips to ended.
+   * Safe to replace innerHTML: system cards hold no reaction/reader DOM state.
+   */
+  _reRenderMeetingCard() {
+    if (!this.el) return;
+    const container = this.el.querySelector(
+      `.${this.fig.family}__message-container`,
+    );
+    if (!container) return;
+    this.innerContent = require("./template")(this);
+    container.innerHTML = this.innerContent;
   }
 
   /**
