@@ -320,6 +320,13 @@ class __window_folder extends mfsInteract {
   initialize(opt) {
     this.isFolder = 1;
     super.initialize(opt);
+    // `data-visible` is derived from privilege. Keep it in sync even when a
+    // caller updates the model outside the explicit navigation/live-role paths.
+    this.listenTo(
+      this.model,
+      `change:${_a.privilege}`,
+      this.syncNewCtrlVisibility,
+    );
     // Bind uploadFile for the meeting description's inline image paste/drop
     // (mfsInteract doesn't provide it — same pattern as the tasks widget).
     if (!this.uploadFile) {
@@ -3456,7 +3463,10 @@ class __window_folder extends mfsInteract {
   }
 
   showFolderTab(tab) {
-    if (this.activeTab === tab) return;
+    if (this.activeTab === tab) {
+      this.syncNewCtrlVisibility();
+      return;
+    }
     const prevTab = this.activeTab;
     this.activeTab = tab;
     this.$el.find(".window-folder__tab-bar-item").attr("data-state", 0);
@@ -3886,8 +3896,12 @@ class __window_folder extends mfsInteract {
     if (privilege == null) return;
     // A user may have several workspace windows open — only react to our own.
     if (hub_id && hub_id !== this.mget(_a.hub_id)) return;
-    // No-op when unchanged: avoids a needless topbar flicker.
-    if (Number(this.mget(_a.privilege)) === Number(privilege)) return;
+    // A repeated payload should not rebuild the topbar, but it can still repair
+    // derived chrome left stale by an earlier lifecycle transition.
+    if (Number(this.mget(_a.privilege)) === Number(privilege)) {
+      this.syncNewCtrlVisibility();
+      return;
+    }
     this.mset(_a.privilege, Number(privilege));
     // Re-feed the header (not the topbar container) so the header element and
     // its drag/raise wiring survive; only the topbar child rebuilds with the
@@ -3962,6 +3976,7 @@ class __window_folder extends mfsInteract {
   //   - open             → onPartReady("new-ctrl")
   //   - opened w/o a priv → _healChatPrivilege, once the real value resolves
   //   - tab switch       → showFolderTab
+  //   - model priv change → initialize's change:privilege listener
   //   - live role change → _applyLivePrivilege (admin changed our role)
   //   - walk in          → updateTopbar (a subfolder may grant other rights)
   //   - walk back        → _restoreNavState (so may an ancestor)
@@ -3974,7 +3989,17 @@ class __window_folder extends mfsInteract {
     const onFiles = (this.activeTab || "files") === "files";
     // canUpload() returns the masked bitmask (truthy number), not a boolean.
     const mayCreate = !!(this.canUpload && this.canUpload());
-    newCtrl.el.dataset.visible = onFiles && mayCreate ? "1" : "0";
+    const visible = onFiles && mayCreate ? 1 : 0;
+
+    // ui-core registers sys_pn parts during onBeforeRender, before its onRender
+    // reapplies the skeleton's original dataset. Persist the derived value on
+    // the part model as well as the element, otherwise first mount is reset to
+    // the safe skeleton default (0) immediately after this callback returns.
+    const dataset = (newCtrl.mget && newCtrl.mget(_a.dataset)) || {};
+    if (newCtrl.mset) {
+      newCtrl.mset(_a.dataset, { ...dataset, visible });
+    }
+    newCtrl.el.dataset.visible = `${visible}`;
   }
 
   // Resolve the viewer's real privilege for this node when the window opened

@@ -239,6 +239,9 @@ export function tabBar(ui, opt = {}) {
     ? Skeletons.Box.X({
         className: `${cnTopbar}__new-ctrl`,
         sys_pn: "new-ctrl",
+        // Make the owner explicit: window_folder resolves the safe default
+        // against the live permission and persists it through first render.
+        partHandler: ui,
         // Start hidden: the window calls syncNewCtrlVisibility() once the part
         // mounts, by which time the real privilege is known. Defaulting to 1
         // would flash the button at view-only members on every open.
