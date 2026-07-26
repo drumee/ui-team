@@ -163,6 +163,27 @@ class Drumee extends Marionette.Application {
     Visitor.listenChanges();
     Organization.listenChanges();
     if (user.id) {
+      // Self-heal the language storage. Older builds persisted the
+      // navigator-derived language here (French on a French OS/browser), and
+      // localStorage.pagelang outranks the served <html lang> in
+      // Visitor.pagelang() forever once written. For a signed-in user the
+      // server profile is the source of truth: mirror an explicit stored
+      // choice into both keys, and drop residue when the profile has none.
+      try {
+        let plang = user.lang;
+        if (!plang && user.profile) {
+          const p = typeof user.profile === 'string' ? JSON.parse(user.profile) : user.profile;
+          plang = p && p.lang;
+        }
+        if (plang && !/^(en|fr|es|km|ru|zh)$/.test(plang)) plang = null;
+        if (plang) {
+          localStorage.pagelang = plang;
+          localStorage.setItem('UIlanguage', plang);
+        } else {
+          delete localStorage.pagelang;
+          localStorage.removeItem('UIlanguage');
+        }
+      } catch (e) { /* storage unavailable — nothing to heal */ }
       Visitor.respawn(user);
     }
     const gw = require('./router');

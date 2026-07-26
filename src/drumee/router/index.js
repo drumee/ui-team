@@ -242,7 +242,11 @@ class drumee_router extends LetcBox {
       case "acknowledge":
         return this.getPart(_a.tooltips).clear();
       case "set-lang":
-        return Visitor.changePagelang(c.mget(_a.value));
+        // Visitor (ui-core __core_user) defines changePageLang — capital L;
+        // changePagelang exists only on Host. The old call threw TypeError,
+        // so a user flipped into the wrong language could never switch back
+        // through this control.
+        return Visitor.changePageLang(c.mget(_a.value));
     }
   }
 

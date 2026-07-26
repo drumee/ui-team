@@ -1,0 +1,65 @@
+diff --git a/node_modules/@drumee/ui-core/letc/user.js b/node_modules/@drumee/ui-core/letc/user.js
+index 5b8de5c..6e084f2 100644
+--- a/node_modules/@drumee/ui-core/letc/user.js
++++ b/node_modules/@drumee/ui-core/letc/user.js
+@@ -86,19 +86,25 @@ class __core_user extends Backbone.Model {
+    * 
+    */
+   language() {
+-    let l = localStorage.lang;
++    // Server-stored preference first, then the explicit in-app choice
++    // (account preferences writes localStorage.lang), then the language the
++    // page was served in. The old flow read localStorage.lang only to
++    // unconditionally overwrite it (profile() returns a plain object, so
++    // .lang never throws), then fell back to navigator.language — which is
++    // how a French browser/OS silently flipped an English session to
++    // French. No navigator fallback: the product default is English.
++    let l = null;
+     try {
+       l = this.profile().lang;
+     } catch (error) {
+-      l = this.get(_a.lang);
+-    }
+-    if ((l == null)) {
+-      l = navigator.language.split('-');
+-      l = l[0] || '';
+-    }
+-    switch (l.toLowerCase()) {
+-      case 'en': case 'fr': case 'km': case 'ru': case 'zh':
+-        l = l;
++      l = null;
++    }
++    if (l == null) l = localStorage.lang;
++    if (l == null) l = this.get(_a.lang);
++    if (l == null) l = 'en';
++    switch (String(l).toLowerCase()) {
++      case 'en': case 'fr': case 'es': case 'km': case 'ru': case 'zh':
++        l = String(l).toLowerCase();
+         break;
+       default:
+         l = 'en';
+@@ -234,14 +240,16 @@ class __core_user extends Backbone.Model {
+    */
+   pagelang(l) {
+     const o = Visitor.parseLocation();
+-    l = o.lang || o.language || o.pagelang || localStorage.pagelang || bootstrap().lang || localStorage.getItem('UIlanguage');
+-    if ((l == null)) {
+-      l = navigator.language.split('-');
+-    }
+-    if (_.isString(l) && !_.isEmpty(l)) {
+-      return l;
+-    }
+-    return l[0] || 'en';
++    l = o.lang || o.language || o.pagelang || localStorage.pagelang || bootstrap().lang || localStorage.getItem('UIlanguage') || 'en';
++    // Normalize ('fr-FR' → 'fr') and whitelist: this value selects the
++    // LOCALE table and rides the x-param-page-language header on every
++    // request, so garbage or an unsupported language must resolve to the
++    // product default (English), never leak through raw. The old
++    // navigator.language fallback made a fresh tab adopt the browser/OS
++    // language, which is how new tabs launched in French.
++    l = String(l).toLowerCase().split(/[-_.]/)[0];
++    if (!['en', 'fr', 'es', 'km', 'ru', 'zh'].includes(l)) l = 'en';
++    return l;
+   }
+ 
+   /**

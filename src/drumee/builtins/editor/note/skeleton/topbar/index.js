@@ -3,7 +3,9 @@ module.exports = function (ui, icon) {
   if (ui.media) {
     filename = ui.media.mget(_a.filename);
   } else if (!filename) {
-    const now = Dayjs().format("DD-MMM-YYYY à HH:MM");
+    // Was "DD-MMM-YYYY à HH:MM" — a hardcoded French 'à' shown in every
+    // language, and MM is the MONTH token (minutes is mm).
+    const now = Dayjs().format("DD-MMM-YYYY HH:mm");
     filename = LOCALE.NOTE_ON_DATE_X.format(now);
   }
 

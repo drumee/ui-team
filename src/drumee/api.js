@@ -30,7 +30,12 @@ const intEnv = function () {
 
   }
   try {
-    language = document.documentElement.lang.toLowerCase().split('-')[0];
+    // A page without <html lang> reflects "" (no exception), which used to
+    // clobber the 'en' default with an empty string — falsy in the
+    // pagelang() chain, so lookup fell through to a possibly-poisoned
+    // localStorage.UIlanguage / navigator.language. Keep 'en' unless the
+    // page carries a real value.
+    language = document.documentElement.lang.toLowerCase().split('-')[0] || 'en';
   } catch (e) {
 
   }
