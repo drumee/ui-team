@@ -2330,6 +2330,7 @@
   "SECURE_SHARE_VIEW_ACCESS_LIST": "View access list",
   "SECURE_SHARE_NO_ACCESS_EVENTS": "No one has opened this share yet",
   "SECURE_SHARE_REVOKE_RECIPIENT": "Revoke this recipient's access",
+  "SECURE_SHARE_LINK_REVOKED": "Link revoked — everyone who used this link has lost access",
   "SECURE_SHARE_CREATE": "Get link",
   "SECURE_SHARE_DOMAIN_HINT": "Access restricted to authorized emails only",
   "SECURE_SHARE_DOMAIN_RESTRICTION": "Domain restriction (optional)",

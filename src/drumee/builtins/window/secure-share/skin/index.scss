@@ -886,8 +886,11 @@
   &__events-col.col-duration,
   &__events-cell.col-duration { width: 50px; flex-shrink: 0; }
   // overflow:visible so the revoke button's hover tooltip can escape the cell.
+  // 64px (was 30px): wide enough for the "Revoked" state label as well as the
+  // ⊖ glyph, so neither clips. Header and rows share this rule, so the columns
+  // stay aligned; the email column is flex:1 and simply gives up the 34px.
   &__events-col.col-action,
-  &__events-cell.col-action   { width: 30px; flex-shrink: 0; justify-content: flex-end; text-align: right; overflow: visible; }
+  &__events-cell.col-action   { width: 64px; flex-shrink: 0; justify-content: flex-end; text-align: right; overflow: visible; }
 
   // Figma: avatar 16px, round.
   &__events-avatar {
@@ -951,6 +954,13 @@
         border-left-color: var(--bg-tooltips);
       }
     }
+  }
+
+  // Shown in place of the ⊖ once the row's link is revoked. Muted, not red: it
+  // reports a state, it is not an action.
+  &__events-revoked {
+    @include drumee.typo($size: 10px, $line: 14px, $color: var(--tertiary-text-color));
+    white-space: nowrap;
   }
 
   &__events-empty {

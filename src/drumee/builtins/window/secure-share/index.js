@@ -555,7 +555,16 @@ class __window_secure_share extends mfsInteract {
     const token  = cmd.mget(_a.token) || '';
     if (!token) return;
     const hub_id = this.mget(_a.hub_id);
-    await this.postService(SERVICE.secure_share.revoke, { token, hub_id });
+    // The revoke itself always worked, but nothing on screen said so: the access
+    // list is a history of opens, so the row stays after its link is revoked.
+    // Confirm the outcome explicitly — and say that the whole LINK went, since
+    // one link can have been used by several people.
+    const res = await this.postService(SERVICE.secure_share.revoke, { token, hub_id });
+    if (res && res.revoked_at) {
+      Butler.say(LOCALE.SECURE_SHARE_LINK_REVOKED);
+    } else {
+      Butler.say(LOCALE.SOMETHING_WENT_WRONG);
+    }
     this._loadShares();
     this._loadAccessEvents();
   }

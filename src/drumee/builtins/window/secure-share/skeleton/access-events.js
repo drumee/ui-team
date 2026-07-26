@@ -62,7 +62,11 @@ const __skl_secure_share_access_events = function(_ui_, rows) {
           // ⊖ revokes the share link (token) this recipient came through — same
           // effect as the Revoke button in the Shared-links list. token_id from the
           // access-event SP IS the share id that secure_share_revoke matches on.
-          kids      : r.token_id ? [
+          // Revoking a link does not delete its access events (they are a history
+          // of opens), so once the token carries revoked_at the row shows that
+          // state instead of a revoke action that has already been taken —
+          // otherwise a successful revoke looked like it did nothing.
+          kids      : (r.token_id && !r.revoked_at) ? [
             Skeletons.Button.Svg({
               ico       : 'ban',
               className : `${pfx}__events-revoke`,
@@ -71,7 +75,12 @@ const __skl_secure_share_access_events = function(_ui_, rows) {
               token     : r.token_id,
               uiHandler : [_ui_],
             })
-          ] : []
+          ] : (r.revoked_at ? [
+            Skeletons.Note({
+              className : `${pfx}__events-revoked`,
+              content   : LOCALE.SECURE_SHARE_STATUS_REVOKED
+            })
+          ] : [])
         })
       ]
     });
