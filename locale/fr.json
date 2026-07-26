@@ -409,6 +409,8 @@
   "NEW_IDENT": "Nouvel identifiant",
   "PROTECTED": "Protéger",
   "FILE_NOT_FOUND": "Oups... Le fichier que vous avez demandé n'existe pas ou a été supprimé.",
+  "PREVIEW_FILE_DELETED_BY": "Vous ne pouvez plus consulter ce fichier car il a été supprimé par {0}.",
+  "PREVIEW_FILE_DELETED": "Vous ne pouvez plus consulter ce fichier car il a été supprimé.",
   "FILE_CREATED": "Fichier créé",
   "CLICK_TO_OPEN": "Cliquer pour ouvrir",
   "VIDEO_CONFERENCE": "Visioconférence de {0}",

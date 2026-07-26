@@ -832,6 +832,8 @@
   "NEW_IDENT": "New ident ",
   "PROTECTED": "Protected",
   "FILE_NOT_FOUND": "Ooops ... The file you requested does not exist or has been deleted.",
+  "PREVIEW_FILE_DELETED_BY": "Ya no puedes ver este archivo porque ha sido eliminado por {0}.",
+  "PREVIEW_FILE_DELETED": "Ya no puedes ver este archivo porque ha sido eliminado.",
   "VIDEO_CONFERENCE": "{0} videoconference",
   "CLEAR_NOTIFICATIONS": "Clear notifications",
   "NEW_MESSAGES": "New messages\n",

@@ -360,6 +360,86 @@ class __window_interact_player extends __utils {
   }
 
   /**
+   * A player shows exactly one node, but the base class handles trash pushes
+   * as a list window would: its "remove self" test compares the hub-prefixed
+   * filepath the server sends against this widget's own filepath, and a
+   * player's model (copied from the grid tile) never matches — so a file
+   * deleted by someone else stayed happily on screen. Intercept the deletion
+   * services here, where options.sender (who deleted it) is still available,
+   * and freeze the view instead.
+   */
+  handleWsEvent(args = {}) {
+    const { data, options = {} } = args || {};
+    const service = options.service;
+    const removals = _.compact(["media.remove", SERVICE.media.trash, "media.purge"]);
+    if (service && removals.includes(service)) {
+      const rows = _.isArray(data) ? data : [data];
+      const hit = rows.find((r) => r && this._isViewedNode(r));
+      if (hit) return this._freezeDeletedView(hit, options.sender);
+    }
+    return super.handleWsEvent(args);
+  }
+
+  /**
+   * Does this deletion row concern the node on display? Exact nid match
+   * covers the file itself; the path-prefix test covers a parent folder
+   * being trashed. The prefix test reads whichever path field the model
+   * happens to carry — when none is present we simply don't detect the
+   * ancestor case, which is no worse than before.
+   * @param {*} row one node from the media.remove payload
+   */
+  _isViewedNode(row) {
+    let cur = {};
+    try { cur = this.actualNode() || {}; } catch (e) { /* not fed yet */ }
+    const curNid = cur.nid != null ? cur.nid : this.mget(_a.nid);
+    if (row.nid != null && curNid != null && `${row.nid}` === `${curNid}`) {
+      return true;
+    }
+    const curHub = cur.hub_id != null ? cur.hub_id : this.mget(_a.hub_id);
+    if (row.hub_id == null || curHub == null) return false;
+    if (`${row.hub_id}` !== `${curHub}`) return false;
+    const own = this.mget("ownpath") || this.mget(_a.filepath) || this.mget("file_path");
+    if (!own) return false;
+    for (const p of [row.ownpath, row.filepath]) {
+      if (p && p !== "/" && own.startsWith(`${p}/`)) return true;
+    }
+    return false;
+  }
+
+  /**
+   * The node on display no longer exists: stop playback, blur the content
+   * out of reach, and tell the user who deleted it. The window itself stays
+   * up until they acknowledge (Ok → file-deleted-ack → goodbye) so the
+   * explanation isn't a window vanishing under their cursor.
+   * @param {*} row the deleted node's payload row
+   * @param {*} sender who performed the deletion (from ws options)
+   */
+  _freezeDeletedView(row, sender) {
+    if (this._fileGone) return;
+    this._fileGone = 1;
+    // Slideshow timers live on the window (image player); real <video>/<audio>
+    // elements are stopped directly since each player wires playback its own way.
+    try { if (_.isFunction(this.pause)) this.pause(); } catch (e) { /* no slideshow */ }
+    for (const m of this.el.querySelectorAll("video,audio")) {
+      try { m.pause(); } catch (e) { /* already stopped */ }
+    }
+    if (this.__content && this.__content.el) {
+      const el = this.__content.el;
+      el.style.filter = "blur(6px)";
+      el.style.pointerEvents = "none";
+      el.style.userSelect = "none";
+    }
+    // Server-built fullname is `firstname + " " + lastname` even when the
+    // lastname is empty — trim so the sentence doesn't read "by Name .".
+    const who = sender && `${sender.fullname ||
+      _.compact([sender.firstname, sender.lastname]).join(" ")}`.trim();
+    const msg = who
+      ? LOCALE.PREVIEW_FILE_DELETED_BY.format(who)
+      : LOCALE.PREVIEW_FILE_DELETED;
+    this.warning(msg, "file-deleted-ack");
+  }
+
+  /**
    * 
    */
   _showInfo() {
@@ -583,6 +663,11 @@ class __window_interact_player extends __utils {
     const service = args.service || cmd.get(_a.service) || cmd.get(_a.name);
     switch (service) {
       case _e.close:
+        return this.goodbye();
+
+      // Ok on the "file was deleted" overlay: the node is gone, so a window
+      // showing its ghost has nothing left to offer — close it outright.
+      case "file-deleted-ack":
         return this.goodbye();
 
       case _e.raise:

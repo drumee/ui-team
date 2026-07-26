@@ -404,6 +404,8 @@
   "NEW_IDENT": "New ident ",
   "PROTECTED": "Protected",
   "FILE_NOT_FOUND": "Ooops ... The file you requested does not exist or has been deleted.",
+  "PREVIEW_FILE_DELETED_BY": "You can no longer view this file because it has been deleted by {0}.",
+  "PREVIEW_FILE_DELETED": "You can no longer view this file because it has been deleted.",
   "FILE_CREATED": "File created",
   "CLICK_TO_OPEN": "Click to open",
   "VIDEO_CONFERENCE": "{0} videoconference",

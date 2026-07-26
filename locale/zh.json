@@ -409,6 +409,8 @@
   "NEW_IDENT": "新标识符",
   "PROTECTED": "受保护的",
   "FILE_NOT_FOUND": "糟糕...您请求的文件不存在或已被删除。",
+  "PREVIEW_FILE_DELETED_BY": "您无法再查看此文件，因为它已被 {0} 删除。",
+  "PREVIEW_FILE_DELETED": "您无法再查看此文件，因为它已被删除。",
   "FILE_CREATED": "文件已创建",
   "CLICK_TO_OPEN": "点击打开",
   "VIDEO_CONFERENCE": "{0}视讯会议",
