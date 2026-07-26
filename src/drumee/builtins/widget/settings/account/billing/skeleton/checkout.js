@@ -49,7 +49,7 @@ function checkout(ui) {
   const summary = ui.calculateCheckoutSummary();
 
   const isFreePlan = ui.state?.checkout?.selectedPlan === "free";
-  let { seats, selectedPlan, storage, billingCycle, extraSeats } = summary
+  let { seats, selectedPlan, storage, billingCycle } = summary
   let min, max;
   if (seats > 1) {
     min = 5;
@@ -125,50 +125,6 @@ function checkout(ui) {
       }),
 
       ...(orgSection ? [orgSection] : []),
-
-      // Extra members, Team only. Free has no seats to extend and Business is
-      // already unlimited, so the stepper would be meaningless on either.
-      ...(selectedPlan === "team" ? [Skeletons.Box.Y({
-        className: `${pfx}-section`,
-        kids: [
-          Skeletons.Note({
-            className: `${pfx}-section-title`,
-            content: LOCALE.ADDITIONAL_SEATS || "Additional members",
-          }),
-          Skeletons.Box.X({
-            className: `${pfx}-seats-row`,
-            kids: [
-              Skeletons.Note({
-                className: `${pfx}-seats-step`,
-                content: "−",
-                service: "seats-dec",
-                uiHandler: [ui],
-                // Nothing to remove at one — this checkout exists to add seats.
-                dataset: { disabled: extraSeats <= 1 ? 1 : 0 },
-              }),
-              Skeletons.Note({
-                className: `${pfx}-seats-count`,
-                content: String(extraSeats),
-              }),
-              Skeletons.Note({
-                className: `${pfx}-seats-step`,
-                content: "+",
-                service: "seats-inc",
-                uiHandler: [ui],
-              }),
-              Skeletons.Note({
-                className: `${pfx}-seats-hint`,
-                // States the tier the buyer is actually on, and what it takes
-                // to reach the cheaper one — the discount is invisible
-                // otherwise, since Stripe only applies it at ten.
-                content: extraSeats >= 10
-                  ? (LOCALE.SEAT_TIER_BULK || "$2.90 per member")
-                  : (LOCALE.SEAT_TIER_BASE || "$3.00 per member — $2.90 from 10"),
-              }),
-            ],
-          }),
-        ],
-      })] : []),
 
       Skeletons.Box.Y({
         className: `${pfx}-section`,

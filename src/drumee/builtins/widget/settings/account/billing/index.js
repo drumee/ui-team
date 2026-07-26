@@ -550,53 +550,30 @@ class settings_billing extends LetcBox {
     const basePrice = planPrices[selectedPlan]?.[billingCycle] || 0;
     const period = billingCycle === "yearly" ? "year" : "month";
 
-    // Storage is flat — the plan's allowance is the whole allowance, and the
-    // retired storage_* bundles no longer add to it. SEATS are the one thing
-    // the buyer can still add: extras are billed through the team_seat add-on
-    // on top of the plan's included members.
-    const extraSeats = selectedPlan === "team"
-      ? Math.max(0, ~~checkout.extraSeats)
-      : 0;
-    const seatsPrice = extraSeats * this._seatUnitPrice(extraSeats, billingCycle);
-    const totalPrice = basePrice + seatsPrice;
-    const seats = baseSeats + extraSeats;
-
-    // bundlePrice/bundleStorage stay in the shape at zero: skeleton/checkout.js
-    // still reads them, and dropping the keys renders "undefined" rather than
-    // nothing.
+    // FLAT since the 2026-07 pricing rebuild: the plan price IS the total, and
+    // the storage/seat figures come straight from the plan. The storage
+    // bundles (storage_*) and extra-seat (pro_seat) catalog rows that used to
+    // be added on top are retired with the B2C Pro tier, and `seats` is the
+    // plan's member CAP now, not a quantity the buyer picks — so there is
+    // nothing left to accumulate here.
+    //
+    // The zeroed bundle/extra-seat fields are kept in the returned shape on
+    // purpose: skeleton/checkout.js still reads them, and dropping the keys
+    // would render "undefined" rather than simply nothing.
+    const seats = baseSeats;
     return {
       basePrice: formatCurrency(basePrice),
       bundlePrice: formatCurrency(0),
-      seatsPrice: formatCurrency(seatsPrice),
-      totalPrice: formatCurrency(totalPrice),
+      totalPrice: formatCurrency(basePrice),
       period,
       seats,
       totalStorage: `${baseStorage} GB`,
-      effectivePricePerSeat: formatCurrency(seats > 0 ? totalPrice / seats : totalPrice),
+      effectivePricePerSeat: formatCurrency(seats > 0 ? basePrice / seats : basePrice),
       selectedPlan,
       billingCycle,
-      extraSeats,
+      extraSeats: 0,
       bundleStorage: 0,
     };
-  }
-
-  /**
-   * Price of ONE extra seat at a given quantity.
-   *
-   * Volume-tiered: buying fewer than ten extra seats costs $3.00 each, ten or
-   * more $2.90 each — and the cheaper rate applies to the whole quantity, not
-   * just the seats past the tenth. Stripe holds the authoritative tiers on the
-   * team_seat price; this mirrors them so the checkout panel can show a total
-   * before the buyer is redirected. Any disagreement is settled by Stripe at
-   * payment time, which is why the amount is never sent to the server.
-   * @param {number} qty - how many extra seats
-   * @param {string} cycle - "monthly" | "yearly"
-   * @returns {number} unit price in currency units
-   */
-  _seatUnitPrice(qty, cycle) {
-    const monthly = ~~qty >= 10 ? 2.9 : 3;
-    // Yearly is 11 x monthly across this catalog (one month free).
-    return cycle === "yearly" ? monthly * 11 : monthly;
   }
 
 
@@ -756,17 +733,6 @@ class settings_billing extends LetcBox {
     this.renderContent();
   }
 
-  /**
-   * "Manage seats" on the current Team card: same checkout, opened on the plan
-   * they already have, with the seat stepper primed at one extra. Starting at
-   * zero would show a checkout that charges the plan again for nothing, which
-   * reads like a mistake.
-   */
-  _manageSeats() {
-    this.state.checkout.extraSeats = Math.max(1, ~~this.state.checkout.extraSeats);
-    this._enterCheckoutFor("team");
-  }
-
   async _proceedToCheckout() {
     // The SERVER decides the price (Stripe price_id from yp.plan); the client
     // only declares WHAT to buy. plan 'team' => org (per-seat) checkout.
@@ -786,11 +752,6 @@ class settings_billing extends LetcBox {
     // returns 403 PERMISSION_DENIED. Send the caller's own hub so the owner
     // check resolves correctly (verified: missing hub_id -> 403, present -> 200).
     const payload = { hub_id: Visitor.id, entity_type, plan, period };
-    // Extra members ride along as the team_seat add-on line. Only the COUNT
-    // goes over the wire — Stripe owns the tiered price, so the client never
-    // sends an amount it could disagree with.
-    const extraSeats = plan === "team" ? Math.max(0, ~~checkout.extraSeats) : 0;
-    if (extraSeats > 0) payload.extra_seats = extraSeats;
     // TEAM bootstrap: the payer is still on the default domain — the org
     // name + subdomain were collected in the checkout form; validate the
     // ident server-side BEFORE the Stripe redirect (product decision: prompt
@@ -1181,23 +1142,6 @@ class settings_billing extends LetcBox {
     switch (service) {
       case "select-plan":
         return this.handleSelectPlan(cmd);
-
-      case "manage-seats":
-        // From the current-plan pill: buy members beyond the included ten.
-        this._manageSeats();
-        return false;
-
-      case "seats-inc":
-      case "seats-dec": {
-        const step = service === "seats-inc" ? 1 : -1;
-        // Floor at 1, not 0: this checkout exists to add seats, and letting it
-        // reach zero leaves a panel that charges the plan again for nothing.
-        this.state.checkout.extraSeats =
-          Math.max(1, (~~this.state.checkout.extraSeats) + step);
-        this._updateRightPanelContent();
-        this.renderContent();
-        return false;
-      }
 
       case "select-plan-button": {
         const planValue = this._getValueFromCmd(cmd, args);

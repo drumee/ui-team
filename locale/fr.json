@@ -2210,10 +2210,5 @@
   "REWARD_FLOW_CONGRATS_LEAD": "Vous avez bien réclamé vos",
   "REWARD_FLOW_CONGRATS_PRIZE": "5 ans de stockage illimité !",
   "REWARD_FLOW_CONGRATS_TAIL": "Bienvenue sur Drumee.",
-  "REWARD_FLOW_GO_DASHBOARD": "Retour à l'accueil",
-  "MANAGE_SEATS": "Manage seats",
-  "ADDITIONAL_SEATS": "Additional members",
-  "SEAT_TIER_BASE": "$3.00 per member — $2.90 from 10",
-  "SEAT_TIER_BULK": "$2.90 per member",
-  "SEATS_LINE": "{0} extra members"
+  "REWARD_FLOW_GO_DASHBOARD": "Retour à l'accueil"
 }
