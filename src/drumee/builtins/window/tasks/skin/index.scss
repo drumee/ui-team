@@ -5129,13 +5129,16 @@
     gap: 16px;
   }
 
+  // Fixed name + count columns: every row must hand the track the same width,
+  // or equal counts draw unequal bars. The card sits two-up at 320px, so the
+  // gaps stay tight to leave the track as much of the row as possible.
   &__health-work-row {
     align-items: center;
-    gap: 24px;
+    gap: 12px;
   }
 
   &__health-work-who {
-    flex: 0 0 154px;
+    flex: 0 1 120px;
     align-items: center;
     gap: 8px;
     min-width: 0;
@@ -5165,14 +5168,13 @@
     );
   }
 
+  // Unpainted measuring lane. A rail behind the fill is the same length on
+  // every row and reads as the bar itself — don't re-add a background.
   &__health-work-track {
     position: relative;
     flex: 1 1 auto;
-    min-width: 40px; // never collapse to nothing in a narrow card
+    min-width: 72px; // narrower than this and the bars stop being comparable
     height: 20px;
-    border-radius: 4px;
-    // Faint rail so a zero-task member still shows an (empty) bar, not a gap.
-    background: var(--border-default, rgba(0, 0, 0, 0.05));
   }
 
   &__health-work-fill {
@@ -5180,14 +5182,17 @@
     min-width: 2px;
     border-radius: 4px;
     background: var(--col-primary-10, #e4e3ff);
-    transition: width 0.2s;
+    transition: flex-basis 0.2s; // the fill is sized by flex-basis, not width
   }
 
+  // Fixed, not content-sized — "12 tasks" is wider than "1 task" and would
+  // leave that row a shorter track.
   &__health-work-count {
-    flex: 0 0 auto;
-    min-width: 56px;
+    flex: 0 0 68px;
     text-align: right;
     white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
     @include drumee.typo(
       $size: 12px,
       $weight: 500,

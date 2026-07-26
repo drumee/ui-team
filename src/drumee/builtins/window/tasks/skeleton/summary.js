@@ -434,9 +434,9 @@ module.exports = function (ui) {
   );
 
   // ── 5. Team workload (horizontal bars per member) ───────────────────────────
-  // Every hub member appears — members with no tasks yet show an empty bar
-  // (they're still part of the team). Sorted busiest-first; ties keep member
-  // order. Each row shows its exact task count next to the bar.
+  // Every hub member appears — a member with no tasks yet draws no bar at all,
+  // but keeps their row (they're still part of the team). Sorted busiest-first;
+  // ties keep member order. Each row shows its exact task count next to the bar.
   const work = [];
   const seenUids = new Set();
   (ui.getMembers() || []).forEach((m) => {
@@ -453,13 +453,9 @@ module.exports = function (ui) {
     work.push({ uid, m: ui.getMember(uid) || {}, count: byAssignee[uid] });
   });
   work.sort((a, b) => b.count - a.count);
-  // Share of the whole workload, not of the busiest member: a row is only full
-  // when that member holds every assignment. The denominator counts each
-  // assignment (a task with 2 assignees weighs on both rows), so bars sum to 100%.
-  const totalWork = Math.max(
-    1,
-    unassigned + work.reduce((s, e) => s + e.count, 0),
-  );
+  // Normalised to the busiest row so the chart spans the whole track; the count
+  // on each row carries the absolute number.
+  const maxWork = Math.max(1, unassigned, ...work.map((e) => e.count));
   const taskCountLabel = (n) =>
     `${n} ${n === 1 ? LOCALE.TASK_ONE : LOCALE.TASK_MANY}`;
   const workRow = (avatarNode, label, count) =>
@@ -483,13 +479,16 @@ module.exports = function (ui) {
                 Skeletons.Box.X({
                   className: `${pfx}__health-work-fill`,
                   styleOpt: {
-                    width: `${Math.round((count / totalWork) * 100)}%`,
+                    // flex-basis, not width — the fill is a flex item of the
+                    // track. One decimal: whole percents quantise to ~1px steps
+                    // on a narrow track and merge adjacent counts.
+                    flex: `0 0 ${Math.round((count / maxWork) * 1000) / 10}%`,
                   },
                 }),
               ]
             : [],
         }),
-        // Always visible (empty bar = 0 tasks), not hover-only.
+        // Always visible, not hover-only — and the only cue on a 0-task row.
         Skeletons.Note({
           className: `${pfx}__health-work-count`,
           content: taskCountLabel(count),
