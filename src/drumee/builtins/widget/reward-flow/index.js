@@ -85,7 +85,12 @@ class __reward_flow extends LetcBox {
     this._dropReturnStep = null;
     this._inviteSucceeded = false;
     this._guideDropOpen = false;
-    this._inviteDone = lsGet(KEY_INVITED) === "1";
+    // Only trust a persisted latch when RESUMING a run that already reached
+    // Step 2. Landing on Step 1 means this is a fresh walkthrough, so whatever
+    // an earlier — abandoned — run invited says nothing about this one; a key
+    // left behind by that run would otherwise pre-answer Step 2 forever.
+    this._inviteDone = this._step !== "step1" && lsGet(KEY_INVITED) === "1";
+    if (!this._inviteDone) lsDel(KEY_INVITED);
 
     this._onUploaded = () => this.onUploadDone();
     if (typeof RADIO_MEDIA !== "undefined") {
@@ -186,6 +191,10 @@ class __reward_flow extends LetcBox {
    *  orchestrator stays requirable (and unit-testable) under Node — the guide
    *  no-ops when there is no DOM. */
   _startGuide() {
+    // Each walkthrough run answers Step 2 for itself. Back → Continue restarts
+    // Step 1 and the user may pick a different workspace type this time, so the
+    // previous attempt's answer must not carry over.
+    this._resetInviteLatch();
     if (!this._guide) {
       const RewardGuide = require("./guide");
       this._guide = new RewardGuide(this);
@@ -457,6 +466,15 @@ class __reward_flow extends LetcBox {
     if (this._step !== "step1_guide") return;
     this._inviteDone = true;
     lsSet(KEY_INVITED, "1");
+  }
+
+  /** Forget the "already invited during Step 1" latch. It belongs to a single
+   *  walkthrough run: only permission_restricted (internal/team workspaces)
+   *  ever sets it, and every other case — personal, external/secure-share, or
+   *  internal with no invite — must reach Step 2 with its Invite button. */
+  _resetInviteLatch() {
+    this._inviteDone = false;
+    lsDel(KEY_INVITED);
   }
 
   /** True when Step 2's invite was already satisfied during Step 1. Read by the
