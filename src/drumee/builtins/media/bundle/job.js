@@ -81,10 +81,38 @@ class __bundle_job extends LetcBox {
     }
   }
 
-  cancel() {
+  /**
+   * Stop this bundle and settle every entry that had not finished.
+   *
+   * @param {string} [reason] why it stopped, e.g. "permission" when the viewer
+   *        lost write access mid-upload. Stored on each cancelled entry so the
+   *        UI can explain the row rather than just marking it failed.
+   */
+  cancel(reason) {
     this._canceled = true;
+    this._cancelReason = reason || null;
     this._clearWatchdog();
     if (this._currentXhr && this._currentXhr.abort) this._currentXhr.abort();
+    // Aborting the live XHR settles ONE entry (via onAbort). Everything else in
+    // the tree is still sitting at its pre-cancel status: entries the loop had
+    // not reached yet are "queued" (their spinner would keep turning forever),
+    // and folders mid-recursion are "creating"/"uploading". Walk the whole tree
+    // and settle them, or the popup keeps promising work that will never run.
+    this._markCanceled(this._entries);
+  }
+
+  /** Depth-first: mark every non-terminal entry as cancelled. */
+  _markCanceled(list) {
+    for (const e of list || []) {
+      if (e.kind === "folder") this._markCanceled(e.children);
+      // "done"/"skipped"/"error" are final — a file that finished before the
+      // cancel really did upload, and must keep saying so.
+      if (e.status === "done" || e.status === "skipped" || e.status === "error") {
+        continue;
+      }
+      e.status = "canceled";
+      e.cancelReason = this._cancelReason;
+    }
   }
 
   /** Manually re-run a single failed entry (file or folder) into its stored parent nid. */
@@ -146,7 +174,10 @@ class __bundle_job extends LetcBox {
 
   async _uploadOneFile(entry, destNid) {
     await this._governor.gateBeforeFile();
-    if (this._canceled) { entry.status = "skipped"; return; }
+    // The governor gate can hold a file for a while, so the job may have been
+    // cancelled meanwhile. _markCanceled has already given this entry its
+    // verdict — don't overwrite it with the softer "skipped".
+    if (this._canceled) return;
     return new Promise((resolve) => {
       entry.status = "uploading";
       const opt = {
@@ -242,7 +273,11 @@ class __bundle_job extends LetcBox {
     if (!this._current) return;
     this._clearWatchdog();
     const { entry, resolve } = this._current;
-    entry.status = "skipped";
+    // An abort means one of two very different things, and the UI shows them
+    // differently: cancel() aborts the live XHR, so a cancelled job lands here
+    // a tick after _markCanceled already settled this entry — leave that verdict
+    // alone. Any other abort (the idle watchdog) is a plain skip.
+    if (!this._canceled) entry.status = "skipped";
     this._current = null; this._currentXhr = null;
     resolve();
   }

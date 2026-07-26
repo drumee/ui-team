@@ -200,20 +200,17 @@ class __tasks_panel extends LetcBox {
 
   isFilterActive() {
     if ((this._filterUids || []).length > 0) return true;
-    if (this._view === "list") {
-      const f = this._filters || {};
-      return !!(
-        f.keyword ||
-        (f.priority && f.priority.length) ||
-        (f.status && f.status.length) ||
-        f.due ||
-        f.files
-      );
-    }
-    return false;
+    const f = this._filters || {};
+    return !!(
+      f.keyword ||
+      (f.priority && f.priority.length) ||
+      (f.status && f.status.length) ||
+      f.due ||
+      f.files
+    );
   }
 
-  // Which List filter dimensions currently hold a value (drives the accordion
+  // Which filter dimensions currently hold a value (drives the accordion
   // row's "active" tick). Assignee reads the shared member filter.
   isFilterDimActive(dim) {
     const f = this._filters || {};
@@ -300,6 +297,7 @@ class __tasks_panel extends LetcBox {
     this._installBoardPan();
     this._installMediaDroppable();
     this._installFileSearchFocus();
+    this._installAssigneeSearch();
     await Promise.all([
       this._loadTasks(),
       this._loadColumns(),
@@ -380,6 +378,18 @@ class __tasks_panel extends LetcBox {
     });
   }
 
+  // Flag a native drag as in-app so Wm skips its file-drop targeting pass —
+  // a document-wide style recalc + layout on every dragover event
+  // (window/manager.js _isInternalDrag). Own try/catch so an engine refusing a
+  // custom MIME type can't also drop the text/plain payload or effectAllowed.
+  _tagInternalDrag(e) {
+    try {
+      e.dataTransfer.setData(_K.internalDragType, "1");
+    } catch (_) {
+      /* the stopPropagation guard below still holds */
+    }
+  }
+
   // Delegated drag-and-drop on this.el — survives every _render()'s feed() rebuild.
   _installDnd() {
     if (!this.el || this._dndInstalled) return;
@@ -419,6 +429,7 @@ class __tasks_panel extends LetcBox {
           e.dataTransfer.setData("text/plain", "col:" + this._dragColKey);
           e.dataTransfer.effectAllowed = "move";
         } catch (_) {}
+        this._tagInternalDrag(e);
         return;
       }
       const card = findCard(e.target);
@@ -433,6 +444,7 @@ class __tasks_panel extends LetcBox {
       } catch (_) {
         /* ignore */
       }
+      this._tagInternalDrag(e);
     });
 
     root.addEventListener("dragend", (e) => {
@@ -449,7 +461,20 @@ class __tasks_panel extends LetcBox {
       this._clearDropAffordance();
     });
 
+    // A card / column drag is ours alone — keep it off the desk's file-drop
+    // machinery, whose per-dragover targeting pass (Wm.fileDragOver → capture)
+    // forces a document-wide style recalc + layout and made dragging a card
+    // between columns stutter. Belt and braces with the _K.internalDragType tag
+    // set in dragstart: that covers the drag once it leaves this panel.
+    // A real file drag is left alone: it must still reach Wm for upload.
+    const isOurDrag = () => !!(this._dragTaskId || this._dragColKey);
+
+    root.addEventListener("dragenter", (e) => {
+      if (isOurDrag()) e.stopPropagation();
+    });
+
     root.addEventListener("dragover", (e) => {
+      if (isOurDrag()) e.stopPropagation();
       // Column reorder in progress → highlight the column under the pointer as
       // the drop target; the card-reorder path below is skipped.
       if (this._dragColKey) {
@@ -520,6 +545,7 @@ class __tasks_panel extends LetcBox {
     });
 
     root.addEventListener("dragleave", (e) => {
+      if (isOurDrag()) e.stopPropagation();
       if (root.dataset.fileDrag && !root.contains(e.relatedTarget)) {
         delete root.dataset.fileDrag;
       }
@@ -534,6 +560,10 @@ class __tasks_panel extends LetcBox {
     });
 
     root.addEventListener("drop", (e) => {
+      // Same reasoning as dragover: a card/column drop is fully handled here,
+      // so it must not also land in the desk's upload path (the DMZ Wm binds
+      // native `drop` too — modules/dmz/wm/index.js).
+      if (isOurDrag()) e.stopPropagation();
       // Column reorder drop → place the dragged column before/after the target
       // depending on which half of it the pointer is over.
       if (this._dragColKey) {
@@ -1026,13 +1056,6 @@ class __tasks_panel extends LetcBox {
         }
         return;
 
-      case "toggle-picker": {
-        const kind = trigger.mget("pickerKind");
-        this._pickerOpen = this._pickerOpen === kind ? null : kind;
-        this._applyPickerOpen(kind, this._pickerOpen === kind);
-        return;
-      }
-
       case "filter-member": {
         // Empty uid ("All members") clears; any other uid multi-toggles. The
         // dropdown stays open so several members can be picked in a row.
@@ -1044,7 +1067,7 @@ class __tasks_panel extends LetcBox {
       }
 
       case "filter-cat": {
-        // Accordion expand/collapse of a List-filter dimension — toggle in
+        // Accordion expand/collapse of a filter dimension — toggle in
         // place (no re-render), so opening a section doesn't rebuild the list.
         const dim = trigger.mget("filterDim");
         if (!dim) return;
@@ -1059,7 +1082,7 @@ class __tasks_panel extends LetcBox {
       }
 
       case "filter-set": {
-        // Set/toggle a value in a List-filter dimension, then re-filter.
+        // Set/toggle a value in a filter dimension, then re-filter.
         const dim = trigger.mget("filterDim");
         const val = trigger.mget("filterVal");
         if (!dim) return;
@@ -1093,7 +1116,7 @@ class __tasks_panel extends LetcBox {
       }
 
       case "filter-clear": {
-        // Reset every List dimension (and the shared member filter).
+        // Reset every filter dimension (and the shared member filter).
         this._filters = {
           keyword: "",
           priority: [],
@@ -1498,6 +1521,57 @@ class __tasks_panel extends LetcBox {
       return;
     }
     if (super.onPartReady) super.onPartReady(child, pn);
+  }
+
+  // Assignee type-to-search (create modal + detail panel). Delegated on the
+  // persistent root because the Entry is rebuilt on every _render(), so a
+  // per-input listener would be lost.
+  _installAssigneeSearch() {
+    if (this._assigneeSearchInstalled || !this.el) return;
+    this._assigneeSearchInstalled = true;
+    this.el.addEventListener("input", (e) => {
+      const t = e.target;
+      // Entry renders an inner <input name="assignee-search-{scope}">.
+      if (!t || !t.matches || !t.matches('input[name^="assignee-search-"]'))
+        return;
+      const scope = String(t.name || "").slice("assignee-search-".length);
+      this._filterAssignees(scope, t.value);
+    });
+  }
+
+  _assigneeScopeService(scope) {
+    return scope === "create" ? "create-assignee" : "set-assignee";
+  }
+
+  _assigneeSelection(scope) {
+    const draft = scope === "create" ? this._createDefaults : this._detailDraft;
+    return (draft && draft.assignees) || [];
+  }
+
+  _assigneeSearchInput(scope) {
+    return (
+      this.el &&
+      this.el.querySelector(`input[name="assignee-search-${scope}"]`)
+    );
+  }
+
+  // Feed the suggestion dropdown for one scope; an empty result set closes it.
+  _filterAssignees(scope, query) {
+    const rows = require("./skeleton").buildAssigneeSuggestions(
+      this,
+      query,
+      this._assigneeSelection(scope),
+      this._assigneeScopeService(scope),
+    );
+    this.ensurePart(`${scope}-assignee-suggestions`)
+      .then((part) => {
+        if (!part || part.isDestroyed?.()) return;
+        part.feed(rows);
+        if (part.el) part.el.dataset.open = rows.length ? "1" : "0";
+      })
+      .catch(() => {
+        /* not mounted yet */
+      });
   }
 
   // Delegated focusin/focusout on the persistent root: the search input is
@@ -3764,60 +3838,29 @@ class __tasks_panel extends LetcBox {
     return list;
   }
 
-  // Reflect the current assignee set in the picker rows + button, in place.
-  // The picker stays OPEN so the user can pick several members in a row.
+  // Reflect the current assignee set in place: re-feed the chips row, clear the
+  // search box and close the dropdown (the picked member must leave it).
+  // `kind` is "create-assignee" | "detail-assignee".
   _applyAssigneeChange(kind, assignees) {
     if (!this.el) return;
-    const set = new Set((assignees || []).map(String));
-    const picker = this._findPickerEl(kind);
-    if (picker) {
-      picker.querySelectorAll(".tasks-panel__member-row").forEach((row) => {
-        const uid = row.getAttribute("data-member-uid") || "";
-        // The "Unassigned" row (uid === "") is active only when the set is empty.
-        row.dataset.active = uid
-          ? set.has(uid)
-            ? "1"
-            : "0"
-          : set.size
-            ? "0"
-            : "1";
-      });
-    }
-    this.ensurePart(`${kind}-button`)
-      .then((btn) => {
-        if (!btn || btn.isDestroyed?.()) return;
-        btn.feed(
-          require("./skeleton").buildAssigneeButtonContent(
+    const scope = kind === "create-assignee" ? "create" : "detail";
+    this.ensurePart(`${scope}-assignee-chips`)
+      .then((chips) => {
+        if (!chips || chips.isDestroyed?.()) return;
+        chips.feed(
+          require("./skeleton").buildAssigneeChips(
             this,
             assignees,
-            kind === "create-assignee" ? "create-assignee" : "set-assignee",
+            this._assigneeScopeService(scope),
           ),
         );
       })
       .catch(() => {
         /* not mounted yet */
       });
-  }
-
-  _applyPickerOpen(kind, isOpen) {
-    if (!this.el || !kind) return;
-    this._setPickerOpenInDom(kind, isOpen);
-  }
-
-  _setPickerOpenInDom(kind, isOpen) {
-    const btn = this.el.querySelector(
-      `.tasks-panel__assignee-button[data-picker-kind="${kind}"]`,
-    );
-    if (btn) btn.dataset.open = isOpen ? "1" : "0";
-    const picker = this._findPickerEl(kind);
-    if (picker) picker.dataset.open = isOpen ? "1" : "0";
-  }
-
-  _findPickerEl(kind) {
-    if (!this.el || !kind) return null;
-    return this.el.querySelector(
-      `.tasks-panel__member-picker[data-picker-kind="${kind}"]`,
-    );
+    const input = this._assigneeSearchInput(scope);
+    if (input) input.value = "";
+    this._filterAssignees(scope, "");
   }
 
   // ── @-mention (contenteditable description editor) ─────────────
@@ -4663,10 +4706,9 @@ class __tasks_panel extends LetcBox {
     return this._filterUids;
   }
 
-  // Filter predicate. The Assignee (member) dimension applies on every view;
-  // the richer dimensions (keyword/priority/status/due/files) apply only on the
-  // List view (Figma 2099-50501). Dimensions AND together; values within a
-  // dimension OR together.
+  // Filter predicate — the same multi-dimension filter on every view (board,
+  // calendar, gantt, list, project health). Dimensions AND together; values
+  // within a dimension OR together.
   _matchesFilter(t) {
     const uids = Array.isArray(t.assignee_uids)
       ? t.assignee_uids.map(String)
@@ -4675,8 +4717,6 @@ class __tasks_panel extends LetcBox {
         : [];
     const members = this._filterUids || [];
     if (members.length && !uids.some((u) => members.includes(u))) return false;
-
-    if (this._view !== "list") return true;
 
     const f = this._filters || {};
     if (f.keyword) {

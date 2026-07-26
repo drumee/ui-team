@@ -57,6 +57,7 @@ jobs:
           echo "pub_path=$PUB_PATH" >> "$GITHUB_OUTPUT"
           echo "branch=$BRANCH"     >> "$GITHUB_OUTPUT"
           echo "mode=$MODE"         >> "$GITHUB_OUTPUT"
+          echo "target=$TARGET"     >> "$GITHUB_OUTPUT"
           echo "::notice::Target $TARGET -> endpoint $EP (branch $BRANCH, mode $MODE)"
 
       # ---------------- TEST: build + deploy to drumee.in (stage) `main` UI ----------------
@@ -78,6 +79,20 @@ jobs:
           sudo git -C "$REPO_DIR" clean -fd -e .dev-tools.rc || true
           NEW=$(sudo git -C "$REPO_DIR" rev-parse --short HEAD)
           echo "new=$NEW" >> "$GITHUB_OUTPUT"
+          # Change summary for the Telegram notification (best effort — PREV may
+          # be missing from the shallow history on a fresh runner).
+          NEW_FULL=$(sudo git -C "$REPO_DIR" rev-parse HEAD)
+          CHANGES=""; IMPACT=""
+          if [ -n "$PREV" ] && sudo git -C "$REPO_DIR" cat-file -e "$PREV" 2>/dev/null; then
+            FILES=$(sudo git -C "$REPO_DIR" diff --name-only "$PREV" "$NEW_FULL" | wc -l | tr -d ' ')
+            COMMITS=$(sudo git -C "$REPO_DIR" rev-list --count "$PREV..$NEW_FULL" 2>/dev/null || echo "")
+            if [ -n "$COMMITS" ]; then CHANGES="$COMMITS commits · $FILES files"; else CHANGES="$FILES files"; fi
+            IMPACT=$(sudo git -C "$REPO_DIR" diff --name-only "$PREV" "$NEW_FULL" \
+              | awk -F/ '{ if (NF>1) print $1"/"$2; else print $1 }' \
+              | sort | uniq -c | sort -rn | head -4 | awk '{print $2}' | paste -sd ', ' -)
+          fi
+          echo "changes=$CHANGES" >> "$GITHUB_OUTPUT"
+          echo "impact=$IMPACT"   >> "$GITHUB_OUTPUT"
           echo "Building $NEW for stage main UI"
           sudo bash -c "cd '$REPO_DIR' && npm install --no-audit --no-fund"
           sudo bash -c "cd '$REPO_DIR' && npm run deploy -- deploy"
@@ -101,6 +116,7 @@ jobs:
           echo "Verified stage main UI"
 
       - name: Rollback stage (on failure)
+        id: rollback_stage
         if: failure() && steps.target.outputs.mode == 'stage' && steps.stage.outputs.prev != ''
         env:
           REPO_DIR: /usr/src/drumee/ui-team
@@ -129,12 +145,27 @@ jobs:
           git clean -fd --quiet >/dev/null 2>&1 || true
           NEW=\$(git rev-parse HEAD)
           echo "NEW=\$NEW"
+          CHANGES=""; IMPACT=""
+          if git cat-file -e "\$PREV" 2>/dev/null; then
+            FILES=\$(git diff --name-only "\$PREV" "\$NEW" | wc -l | tr -d ' ')
+            COMMITS=\$(git rev-list --count "\$PREV..\$NEW" 2>/dev/null || echo "")
+            if [ -n "\$COMMITS" ]; then CHANGES="\$COMMITS commits · \$FILES files"; else CHANGES="\$FILES files"; fi
+            IMPACT=\$(git diff --name-only "\$PREV" "\$NEW" \
+              | awk -F/ '{ if (NF>1) print \$1"/"\$2; else print \$1 }' \
+              | sort | uniq -c | sort -rn | head -4 | awk '{print \$2}' | paste -sd ', ' -)
+          fi
+          echo "CHANGES=\$CHANGES"
+          echo "IMPACT=\$IMPACT"
           EOSSH
           )
           PREV=$(echo "$OUTPUT" | grep '^PREV=' | cut -d= -f2)
           NEW=$(echo "$OUTPUT"  | grep '^NEW='  | cut -d= -f2)
+          CHANGES=$(echo "$OUTPUT" | grep '^CHANGES=' | cut -d= -f2- || true)
+          IMPACT=$(echo "$OUTPUT"  | grep '^IMPACT='  | cut -d= -f2- || true)
           echo "prev=$PREV" >> "$GITHUB_OUTPUT"
           echo "new=$NEW"   >> "$GITHUB_OUTPUT"
+          echo "changes=$CHANGES" >> "$GITHUB_OUTPUT"
+          echo "impact=$IMPACT"   >> "$GITHUB_OUTPUT"
           echo "Previous: ${PREV:0:8}"
           echo "New     : ${NEW:0:8}"
 
@@ -209,6 +240,7 @@ jobs:
           EOSSH
 
       - name: Rollback (on failure)
+        id: rollback_container
         if: failure() && steps.target.outputs.mode == 'container' && steps.fetch.outputs.prev != ''
         env:
           ENV_FILE: ${{ steps.target.outputs.env_file }}
@@ -228,3 +260,47 @@ jobs:
             exit 1
           fi
           EOSSH
+
+      # ---------------- Telegram notification (all targets) ----------------
+      # Skips silently when TELEGRAM_BOT_TOKEN is not set; a Telegram outage
+      # never fails the deploy.
+      - name: Notify Telegram
+        if: always()
+        env:
+          TG_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TG_CHAT: ${{ secrets.TELEGRAM_CHAT_ID }}
+          JOB_STATUS: ${{ job.status }}
+          ROLLED_BACK: ${{ steps.rollback_stage.outcome == 'success' || steps.rollback_container.outcome == 'success' }}
+          TARGET: ${{ steps.target.outputs.target }}
+          BRANCH: ${{ steps.target.outputs.branch }}
+          NEW_SHA: ${{ steps.stage.outputs.new || steps.fetch.outputs.new || github.sha }}
+          CHANGES: ${{ steps.stage.outputs.changes || steps.fetch.outputs.changes }}
+          IMPACT: ${{ steps.stage.outputs.impact || steps.fetch.outputs.impact }}
+          COMMIT_MSG: ${{ github.event.head_commit.message }}
+          ACTOR: ${{ github.actor }}
+          REPO: ${{ github.event.repository.name }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          RUN_NUM: ${{ github.run_number }}
+        run: |
+          [ -n "$TG_TOKEN" ] || { echo "no TELEGRAM_BOT_TOKEN secret, skip"; exit 0; }
+          esc() { sed 's/&/\&amp;/g; s/</\&lt;/g; s/>/\&gt;/g'; }
+          case "$JOB_STATUS" in
+            success)   H="✅ DEPLOY $REPO → $TARGET — SUCCESS" ;;
+            cancelled) H="⏹ DEPLOY $REPO → $TARGET — CANCELLED" ;;
+            *) if [ "$ROLLED_BACK" = "true" ]; then
+                 H="🔴 DEPLOY $REPO → $TARGET — FAILED (rolled back)"
+               else
+                 H="🔴 DEPLOY $REPO → $TARGET — FAILED"
+               fi ;;
+          esac
+          SUBJECT=$(printf '%s' "$COMMIT_MSG" | head -n1 | esc)
+          if [ -z "$SUBJECT" ]; then SUBJECT="manual dispatch"; fi
+          MSG=$(printf '%s\n' "$H" "Branch: $BRANCH · ${NEW_SHA:0:8}" "$SUBJECT")
+          if [ -n "$CHANGES" ]; then MSG="$MSG"$'\n'"Changes: $CHANGES"; fi
+          if [ -n "$IMPACT" ];  then MSG="$MSG"$'\n'"Impact: $(printf '%s' "$IMPACT" | esc)"; fi
+          MSG="$MSG"$'\n'"by $ACTOR · <a href=\"$RUN_URL\">Run #$RUN_NUM</a>"
+          curl -sf --max-time 10 "https://api.telegram.org/bot${TG_TOKEN}/sendMessage" \
+            -d chat_id="$TG_CHAT" -d parse_mode=HTML -d disable_web_page_preview=true \
+            --data-urlencode text="$MSG" \
+            && echo "telegram notification sent" \
+            || echo "telegram send failed (non-blocking)"

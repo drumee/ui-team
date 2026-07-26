@@ -263,7 +263,7 @@
     position: fixed;
     right: 24px;
     bottom: 24px;
-    z-index: calc(var(--z-index-upload-progress, 9000) + 1);
+    z-index: calc(var(--z-index-upload-progress, 50002) + 1);
 
     &:empty,
     &[data-state="closed"] {
@@ -364,13 +364,35 @@
     // children of a layer are only top-level windows/players, and the shared
     // radio channel keeps at most one at data-state="1" app-wide.
     // !important to out-cascade the global [data-state="open"] lift;
-    // upload-progress keeps its own fixed z-index.
+    // upload-progress is excluded because it carries its own fixed z-index,
+    // set ABOVE this one so the floater stays visible over any raised window.
     &:not(.upload-progress-layer):has(> [data-state="1"]) {
       z-index: 50001 !important;
     }
 
-    // Upload progress floater — above headless/windows layers (1300), below
-    // desk slide-out panels (chat / notification / trash at 10001).
+    // Upload progress floater — above EVERY window layer, including the
+    // active-window lift right above (50001) and the per-window lift in
+    // window/skin/window.scss (`[data-state="1"]` → 10000 !important).
+    //
+    // It used to sit at 9000, i.e. below both, so the moment the user clicked
+    // any window the floater disappeared behind it — the popup reporting an
+    // upload is exactly what you want to keep watching while you carry on
+    // working. This layer is excluded from the lift rule above, so it cannot
+    // ride up on its own; the number has to clear the lift by itself.
+    //
+    // `!important` is not optional here. This layer is a Wrapper, whose
+    // `wrapper` behavior stamps `data-state="open"` on the element as soon as
+    // it holds a child — and skin/lib/utils.scss carries a global
+    // `[data-state="open"] { z-index: var(--z-index-context) !important }`
+    // (50000). A plain declaration loses to it, so the floater was pinned at
+    // 50000 alongside every other populated layer, and the lift above then put
+    // the focused window's layer at 50001 on top of it. That is the whole bug:
+    // the number here never applied at all.
+    //
+    // Trade-off: this also clears the desk slide-out panels (chat /
+    // notification / trash at 10001), so an open panel is overlapped in the
+    // bottom-right corner where the floater sits. Accepted — an upload in
+    // flight outranks a panel, and the floater is small and dismissible.
     &.upload-progress-layer {
       position: absolute;
       top: 0;
@@ -378,7 +400,7 @@
       width: 0;
       height: 0;
       overflow: visible;
-      z-index: var(--z-index-upload-progress, 9000);
+      z-index: var(--z-index-upload-progress, 50002) !important;
       pointer-events: none;
 
       .window-upload-progress__ui {

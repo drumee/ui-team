@@ -236,6 +236,12 @@ class __window_core extends __utils {
    * @returns
    */
   restart(w, type) {
+    // Not every window on this base browses files. The upload-progress floater
+    // extends window/core for its chrome but never builds an iconsList, and a
+    // caller reaching for restart() on it (see utils.js updateContent) would
+    // throw here — inside a WS event handler, where the exception takes down
+    // the remaining listeners with it. Nothing to restart is not an error.
+    if (!this.iconsList) return;
     return this.iconsList.restart();
   }
 

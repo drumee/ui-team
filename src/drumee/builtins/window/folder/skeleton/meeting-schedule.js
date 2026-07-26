@@ -3,6 +3,7 @@
 // hub's scheduled meetings (ui._meetings, fetched via room.list). View state
 // lives on the folder window (ui._sched); nav/toggle services are handled in
 // window/folder/index.js, which re-feeds this.
+const { stripMarkers } = require("../meeting-markers");
 
 function schedState(ui) {
   if (!ui._sched) {
@@ -37,6 +38,19 @@ function hourLabel(h) {
 }
 
 const HOUR_PX = 72; // must match &__meeting-sched-row height in the skin
+
+// Weekly-card text metrics — must match &__meeting-sched-card* in the skin.
+// Used to decide how much of the description actually fits, so a card never
+// renders a half-clipped line of text.
+const CARD_PAD_PX = 8; // 4px top + 4px bottom
+const CARD_TITLE_PX = 18; // title line-height
+const CARD_DESC_PX = 14; // description line-height
+const CARD_DESC_MAX_LINES = 3;
+// Shortest slot a card is laid out against (height and overlap lanes alike).
+const MIN_SLOT_MIN = 15;
+// Floor tall enough for the title + one description line: a 15/30-minute
+// meeting is otherwise ~34px, which clips both.
+const CARD_MIN_PX = CARD_PAD_PX + CARD_TITLE_PX + CARD_DESC_PX; // 40
 
 // ui._meetings (room.list rows) → occurrences { nid, title, start, end } within
 // [rangeStart, rangeEnd). Recurring meetings are expanded across the range.
@@ -92,21 +106,80 @@ function normalizeMeetings(ui, rangeStart, rangeEnd) {
   return out;
 }
 
+// Side-by-side columns for meetings that genuinely overlap in time. Splitting
+// by start-hour alone halved every card in a busy hour even when the meetings
+// ran back-to-back (09:00-09:30 then 09:30-10:00 each got 50% width). Walks one
+// day's meetings in start order, groups transitively-overlapping ones into a
+// cluster, and packs each cluster into the fewest lanes. Annotates every
+// meeting with `lane` / `lanes` (mutating the per-render objects built by
+// normalizeMeetings) and returns the list.
+function layoutDay(list) {
+  const sorted = list.slice().sort((a, b) => a.start - b.start || a.end - b.end);
+  // A meeting saved with end == start still takes the card's minimum slot, so
+  // pack lanes against the same floor weekCard draws with — otherwise two
+  // zero-length meetings at one time share a lane and land on top of each other.
+  const endOf = (m) =>
+    m.end.diff(m.start, "minute") >= MIN_SLOT_MIN ? m.end : m.start.add(MIN_SLOT_MIN, "minute");
+  let cluster = [];
+  let clusterEnd = null;
+
+  const flush = () => {
+    if (!cluster.length) return;
+    const laneEnds = []; // laneEnds[k] = end of the last meeting placed in lane k
+    for (const m of cluster) {
+      // Reuse the first lane already free at this meeting's start time.
+      let k = laneEnds.findIndex((end) => !m.start.isBefore(end));
+      if (k < 0) k = laneEnds.length;
+      laneEnds[k] = endOf(m);
+      m.lane = k;
+    }
+    for (const m of cluster) m.lanes = laneEnds.length;
+    cluster = [];
+    clusterEnd = null;
+  };
+
+  for (const m of sorted) {
+    if (clusterEnd && m.start.isBefore(clusterEnd)) {
+      cluster.push(m);
+      if (endOf(m).isAfter(clusterEnd)) clusterEnd = endOf(m);
+    } else {
+      flush();
+      cluster = [m];
+      clusterEnd = endOf(m);
+    }
+  }
+  flush();
+  return sorted;
+}
+
 // A meeting card absolutely positioned within its start-hour cell (top/height
 // by minute so it can span rows; z-index lifts it above later sibling cells).
-// `idx`/`count` split the cell width so meetings in the same hour sit
-// side-by-side instead of overlapping.
-function weekCard(ui, pfx, mtg, idx = 0, count = 1) {
+// `lane`/`lanes` (from layoutDay) split the width across overlapping meetings.
+function weekCard(ui, pfx, mtg) {
   const top = (mtg.start.minute() / 60) * HOUR_PX;
-  const durMin = Math.max(30, mtg.end.diff(mtg.start, "minute"));
-  const height = Math.max(22, (durMin / 60) * HOUR_PX - 2);
-  const w = 100 / count;
+  const durMin = Math.max(MIN_SLOT_MIN, mtg.end.diff(mtg.start, "minute"));
+  // Duration drives the height, but never below the floor that keeps the title
+  // and one description line readable.
+  const height = Math.max(CARD_MIN_PX, (durMin / 60) * HOUR_PX - 2);
+  const desc = mtg.message ? stripMarkers(mtg.message) : "";
+  // Whole description lines that fit under the title — rendering more would
+  // clip the last one mid-glyph, which is the "cut-off" look.
+  const descLines = Math.min(
+    CARD_DESC_MAX_LINES,
+    Math.floor((height - CARD_PAD_PX - CARD_TITLE_PX) / CARD_DESC_PX),
+  );
+  const lanes = mtg.lanes || 1;
+  const lane = mtg.lane || 0;
+  const w = 100 / lanes;
   return Skeletons.Box.Y({
     className: `${pfx}-sched-card`,
     styleOpt: {
       top: `${top}px`,
       height: `${height}px`,
-      left: `calc(${idx * w}% + 2px)`,
+      // Hover expands the card to its full text (see the skin) — never past
+      // the size the duration already gives it.
+      minHeight: `${height}px`,
+      left: `calc(${lane * w}% + 2px)`,
       width: `calc(${w}% - 3px)`,
       right: "auto",
     },
@@ -119,8 +192,17 @@ function weekCard(ui, pfx, mtg, idx = 0, count = 1) {
     uiHandler: [ui],
     kids: [
       Skeletons.Note({ className: `${pfx}-sched-card-title`, content: mtg.title }),
-      mtg.message
-        ? Skeletons.Note({ className: `${pfx}-sched-card-desc`, content: mtg.message })
+      desc && descLines > 0
+        ? Skeletons.Note({
+            className: `${pfx}-sched-card-desc`,
+            content: desc,
+            // Clamp AND cap the height: the cap still holds if the browser
+            // drops -webkit-line-clamp, so no partial line either way.
+            styleOpt: {
+              "-webkit-line-clamp": String(descLines),
+              maxHeight: `${descLines * CARD_DESC_PX}px`,
+            },
+          })
         : null,
       Skeletons.Button.Svg({
         className: `${pfx}-sched-card-join`,
@@ -130,7 +212,7 @@ function weekCard(ui, pfx, mtg, idx = 0, count = 1) {
         bubble: 0,
         uiHandler: [ui],
       }),
-    ],
+    ].filter(Boolean),
   });
 }
 
@@ -144,6 +226,12 @@ function weeklyGrid(ui, pfx) {
   const nDays = daily ? 1 : 7;
   const today = Dayjs().format("YYYY-MM-DD");
   const meetings = normalizeMeetings(ui, start, start.add(nDays, "day"));
+  // Column layout is per day (overlaps only matter within one day column), so
+  // resolve it once here rather than per hour cell.
+  for (let i = 0; i < nDays; i++) {
+    const day = start.add(i, "day");
+    layoutDay(meetings.filter((m) => m.start.isSame(day, "day")));
+  }
   // meetings that start on day i (0..nDays-1) at hour h → cellMeetings[i][h]
   const cellMeetings = (i, h) => {
     const day = start.add(i, "day");
@@ -195,7 +283,7 @@ function weeklyGrid(ui, pfx) {
             });
           return Skeletons.Box.Y({
             className: `${pfx}-sched-cell`,
-            kids: [slot(0), slot(30), ...cm.map((m, k) => weekCard(ui, pfx, m, k, cm.length))],
+            kids: [slot(0), slot(30), ...cm.map((m) => weekCard(ui, pfx, m))],
           });
         }),
       ],
@@ -497,3 +585,5 @@ module.exports = function meetingSchedule(ui) {
 
 module.exports.rangeLabel = rangeLabel;
 module.exports.schedState = schedState;
+module.exports.HOUR_PX = HOUR_PX;
+module.exports.normalizeMeetings = normalizeMeetings;

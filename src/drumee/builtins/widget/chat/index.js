@@ -91,6 +91,11 @@ class __widget_chat extends LetcBox {
     this.peer = this.mget("peer") || null;
     this.updateChatUserStatus();
     this.queue = [];
+    // SCOPE_GONE freeze state (chat-scope-cross-hub-move phase 3): set to the
+    // frozen scope key (see _currentScopeKey) once a post reports the scoped
+    // folder/file no longer exists; cleared when the user navigates to a
+    // different scope (setScopedFileNid/setScopedFolderNid).
+    this._scopeFrozen = null;
     const area = this.mget(_a.area) || this.mget(_a.type);
     if (area === _a.personal || area === _a.privateRoom) {
       this.hubId = Visitor.id;
@@ -1528,11 +1533,25 @@ class __widget_chat extends LetcBox {
     return api;
   }
 
+  // Un-freeze once the user navigates away from the SCOPE_GONE scope (e.g.
+  // back to General or a different folder/file). Restores the composer.
+  _unfreezeIfScopeChanged() {
+    if (!this._scopeFrozen) return;
+    if (this._scopeFrozen === this._currentScopeKey()) return;
+    this._scopeFrozen = null;
+    this.ensurePart("chat-footer")
+      .then((footer) => {
+        if (footer && footer.el) footer.el.dataset.scopedHidden = "0";
+      })
+      .catch(() => {});
+  }
+
   // Update the folder scope so messages are filtered to a specific sub-folder.
   setScopedFolderNid(folderNid) {
     const next = folderNid ? `${folderNid}` : "";
     if (this.scopedNid === next) return;
     this.scopedNid = next;
+    this._unfreezeIfScopeChanged();
     this.ensurePart(_a.list).then((list) => {
       if (!list || !_.isFunction(list.restart)) return;
       const prevSpinner = list.mget(_a.spinner);
@@ -1564,6 +1583,7 @@ class __widget_chat extends LetcBox {
 
     this.scopedFileNid = next;
     this.scopedFileLabel = label || "";
+    this._unfreezeIfScopeChanged();
     // Reset file-thread state for the new file; resolve its thread id (if any)
     // asynchronously. getCurrentApi uses file_nid directly, so the list restart
     // below does not wait on this.
@@ -1750,6 +1770,14 @@ class __widget_chat extends LetcBox {
     return this.scopedNid || "";
   }
 
+  // Scope identity used by the SCOPE_GONE freeze machinery: a file-thread
+  // takes precedence over a folder scope (mirrors getCurrentApi/matchesScopedChannel
+  // precedence). Empty string means "unscoped" — sendMessage never freezes
+  // the unscoped/General view.
+  _currentScopeKey() {
+    return this.scopedFileNid || this.getScopedNid() || "";
+  }
+
   // File-thread mode = a per-file chat thread is open (scopedFileNid set).
   // Distinct from folder scope (scopedNid): folder scope filters the hub chat to
   // one folder; file-thread mode is a separate chat thread backed by the
@@ -1855,6 +1883,13 @@ class __widget_chat extends LetcBox {
    * @returns
    */
   sendMessage(args = {}) {
+    // SCOPE_GONE freeze (plan chat-scope-cross-hub-move phase 3): once a post
+    // to this exact scope has reported the folder/file no longer exists, stop
+    // accepting new sends into it silently — no repeat popup, no queue growth.
+    // Un-frozen by navigating to a different scope (setScopedFileNid/Folder).
+    if (this._scopeFrozen && this._scopeFrozen === this._currentScopeKey()) {
+      return;
+    }
     // DMZ guest gate (Figma "user chat → sign in required", screen 57): an
     // anonymous recipient of a shared link may READ the conversation but must
     // sign up / log in to post. On a send attempt, open the sharebox's sign-up
@@ -1985,7 +2020,15 @@ class __widget_chat extends LetcBox {
     }
 
     this.echoId = _.uniqueId();
-    this.queue.push({ ...api, echoId: this.echoId });
+    // Capture the composer text + scope BEFORE clearMessageBlock (postMessageAPI
+    // :~2093) wipes the live editor. SCOPE_GONE needs the exact text back to
+    // restore it, and the scope key to drain sibling queued sends on freeze.
+    this.queue.push({
+      ...api,
+      echoId: this.echoId,
+      _restoreText: message,
+      _scopeKey: this._currentScopeKey(),
+    });
     this.postMessageAPI();
   }
 
@@ -2066,6 +2109,14 @@ class __widget_chat extends LetcBox {
       tmp.thread = this.threadSnapshot;
     }
     delete tmp.service;
+    // UI-only fields carried on the queue entry for the SCOPE_GONE path below —
+    // never send them to the server or leave them on the rendered bubble model.
+    const restoreText = api._restoreText || "";
+    const scopeKeyAtSend = api._scopeKey || "";
+    delete tmp._restoreText;
+    delete tmp._scopeKey;
+    delete api._restoreText;
+    delete api._scopeKey;
     if (this.__list) {
       this.__list.append(tmp);
       this.__list.scrollToBottom();
@@ -2078,6 +2129,21 @@ class __widget_chat extends LetcBox {
     this.postService(api)
       .then((data) => {
         this._sendingNids = null;
+        // SCOPE_GONE (chat-scope-cross-hub-move phase 3): the folder/file this
+        // message targeted no longer exists — server wrote 0 rows and purged
+        // any staged uploads. Must run BEFORE clearAttachment/checkPendingContent
+        // and BEFORE _syncScopedFolderContent/handleReceivedMsg below, since none
+        // of those apply to a post the server refused. Order matters (red-team F8).
+        if (data && data.status === "SCOPE_GONE") {
+          // Server purges staged uploads on SCOPE_GONE (Phase 2 contract) — the
+          // local attachment tray must follow, or it shows stale pending files
+          // that already vanished server-side.
+          this.attachmentList.clearAttachment();
+          this.checkPendingContent();
+          this._removeOptimistic(api.echoId);
+          this._freezeScope(scopeKeyAtSend, restoreText);
+          return;
+        }
         this.attachmentList.clearAttachment();
         // Deterministic — drive `data-has-attachment` directly instead of
         // relying on the `_e.update` event chain, which raced with Backbone's
@@ -2111,11 +2177,124 @@ class __widget_chat extends LetcBox {
       })
       .catch((error) => {
         this._sendingNids = null;
+        // Re-attach the UI-only fields stripped above (:2116-2119) before
+        // re-queuing — a retry that later resolves SCOPE_GONE needs
+        // _restoreText/_scopeKey to give the user's text back and key the
+        // freeze/drain to the right scope (red-team H3). Without this the
+        // retried api carries neither field, so a later SCOPE_GONE would
+        // restore '' (text lost) and freeze/drain against '' (mis-key).
+        api._restoreText = restoreText;
+        api._scopeKey = scopeKeyAtSend;
         this.queue.unshift(api);
         let errMessage = error.message || LOCALE.MESSAGE_NOT_SENT_RETRY;
         this.showError(errMessage);
         this.warn("Server error sending message", error);
       });
+  }
+
+  /**
+   * Remove a locally-appended optimistic bubble by its echoId. There is no
+   * existing removal path for optimistic rows (handleReceivedMsg only ever
+   * mset()s or appends — see :2024/:2062) — SCOPE_GONE is the first caller
+   * that needs one (red-team F8).
+   *
+   * goodbye()/selfDestroy remove the model with `{silent:true}` (see
+   * removeUploadFromChat above), so anything relying on the collection's
+   * `update`/`remove` event (e.g. `_e.update` listeners) will NOT fire.
+   * `now:1` skips the fade animation + 2s delay so the bubble disappears
+   * immediately — required for drain-queue, where several bubbles may be
+   * removed back-to-back.
+   * @param {String} echoId
+   */
+  _removeOptimistic(echoId) {
+    if (!echoId || !this.__list) return;
+    const items = this.__list.getItemsByAttr("echoId", echoId);
+    for (const item of items) {
+      if (item && _.isFunction(item.goodbye)) {
+        item.goodbye({ now: 1 });
+      }
+    }
+  }
+
+  /**
+   * Enter the SCOPE_GONE frozen state for `scopeKey` (the scope the rejected
+   * post targeted): drain every other queued send for the same scope (removing
+   * their optimistic bubbles too — they will never be delivered either, since
+   * the scope is gone), restore all the drained text into the composer, hide
+   * the messenger via the existing scope-chip visibility mechanism, and show
+   * a neutral one-shot popup. No WS proactive hook exists or is wanted here
+   * (Q4) — this is reachable only from the postMessageAPI response branch.
+   * @param {String} scopeKey
+   * @param {String} firstText text of the post that got SCOPE_GONE
+   */
+  _freezeScope(scopeKey, firstText) {
+    // An empty scopeKey means the post targeted no scope at all (General
+    // chat — see _currentScopeKey). SCOPE_GONE is only meaningful for an
+    // actual folder/file scope: `this._scopeFrozen === ''` would be falsy
+    // and never match the sendMessage guard (`if (this._scopeFrozen && ...)`),
+    // so freezing would silently no-op the intended block, and the drain
+    // filter `(queued._scopeKey || '') !== scopeKey` would match every
+    // OTHER unscoped queued send and kill them too (red-team H3). Treat it
+    // as a plain error instead: no freeze, no drain, just restore this one
+    // message's text so the user doesn't lose it.
+    if (!scopeKey) {
+      const messenger = this.__message;
+      if (firstText && messenger && messenger.__content && messenger.__content.content) {
+        const current = messenger.__content.getText();
+        const combined = current ? `${firstText}\n${current}` : firstText;
+        messenger.__content.content.innerText = combined;
+        messenger.__content.sync();
+        this.saveMessage(combined);
+        this.showSend();
+      }
+      this.showError(LOCALE.MESSAGE_NOT_SENT_RETRY);
+      return;
+    }
+    // Already frozen for this exact scope (e.g. a second queued send for the
+    // same scope resolves SCOPE_GONE too) — don't re-drain/re-popup.
+    const alreadyFrozen = this._scopeFrozen === scopeKey;
+    this._scopeFrozen = scopeKey;
+
+    // Drain same-scope queued sends: they target a scope that no longer
+    // exists, so they can never succeed — remove their optimistic bubbles and
+    // fold their text back into the composer instead of silently posting them
+    // (and getting another SCOPE_GONE) or leaving them stuck in the queue.
+    const drainedTexts = [firstText].filter((t) => t);
+    this.queue = this.queue.filter((queued) => {
+      if ((queued._scopeKey || "") !== scopeKey) return true;
+      this._removeOptimistic(queued.echoId);
+      if (queued._restoreText) drainedTexts.push(queued._restoreText);
+      return false;
+    });
+
+    if (drainedTexts.length) {
+      const restored = drainedTexts.join("\n");
+      const messenger = this.__message;
+      if (messenger && messenger.__content && messenger.__content.content) {
+        // Prepend to whatever the user is currently typing — never overwrite
+        // in-progress input (risk noted in the phase plan).
+        const current = messenger.__content.getText();
+        const combined = current ? `${restored}\n${current}` : restored;
+        messenger.__content.content.innerText = combined;
+        messenger.__content.sync();
+      }
+      this.saveMessage(restored);
+      this.showSend();
+    }
+
+    // Hide the composer through the same data-attribute the folder scope-chip
+    // already uses (chat/skin/index.scss `[data-scoped-hidden="1"]`) — no
+    // parallel CSS path (spec constraint). This piggybacks on _refreshScopeChip's
+    // footer element rather than duplicating its ensurePart/dataset logic.
+    this.ensurePart("chat-footer")
+      .then((footer) => {
+        if (footer && footer.el) footer.el.dataset.scopedHidden = "1";
+      })
+      .catch(() => {});
+
+    if (!alreadyFrozen) {
+      Wm.alert(LOCALE.CHAT_SCOPE_MOVED);
+    }
   }
 
   /**

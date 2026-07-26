@@ -1,5 +1,11 @@
 const __room = require("builtins/webrtc/room/jitsi");
 
+// Join/leave toasts stop once this many remote participants are already in the
+// room — past a handful, individual arrivals are noise.
+const PARTY_TOAST_MAX = 3;
+// Matches the window-meeting-party-toast fade-out tail.
+const PARTY_TOAST_MS = 4000;
+
 class __window_meeting extends __room {
   /**
    *
@@ -50,7 +56,9 @@ class __window_meeting extends __room {
       });
     }
 
-    this.once("user-left", (id) => {
+    // `on`, not `once` — this fired for the FIRST departure only, so after one
+    // person had left the "back to waiting" restore never ran again.
+    this.on("user-left", (id) => {
       if (this.__participants.collection.length > 2) {
         this.stateMessage();
       } else {
@@ -164,10 +172,16 @@ class __window_meeting extends __room {
       this._announceHostIfNeeded();
       this._meetingStartedAt = Date.now();
       this._maxParticipants = 1;
-      this._postMeetingSystemMessage("meeting.start");
+      // Host-only, so exactly ONE card exists per meeting — the one the host
+      // later flips to "ended" in place (rather than posting a second card).
+      if (this._isHost) this._postMeetingSystemMessage();
     } catch (e) {
       if (this.warn) this.warn("meeting onDomRefresh failed", e);
-      this.stateMachine("permissionDenied");
+      // A blocked/missing/busy mic or camera is NOT an account-privilege
+      // problem. Both used to land on "Your privilege is insufficient to
+      // perform this action", which reads as "ask your admin" for what is
+      // really a one-click browser permission — see setMediaError.
+      this.stateMachine(this.hasMediaError() ? "mediaDenied" : "permissionDenied");
     } finally {
       if (this.el) this.el.dataset.ready = "1";
     }
@@ -251,46 +265,94 @@ class __window_meeting extends __room {
         });
       } catch (e) { }
     }
-    this._postMeetingSystemMessage("meeting.end");
+    // Host-only: flip the single start card to "ended" in place.
+    if (this._isHost) this._endMeetingCard();
     if (super.onBeforeDestroy) super.onBeforeDestroy();
   }
 
   /**
-   * Post a "X started/ended a meeting" system message into the folder's chat
-   * so members discover the meeting from chat history. The backend doesn't
-   * preserve custom `message_type`/`metadata` fields on regular channel.post,
-   * so we encode the payload into the `message` field with a sentinel prefix
-   * (`[[MEETING:start:{json}]]`) which chat-item parses on render.
-   * Skipped on DMZ rooms (no chat channel) and when nid is missing.
+   * Post the single "X started a meeting" card into the folder chat and remember
+   * its message_id so onBeforeDestroy can flip THAT card to "ended". The backend
+   * drops custom message_type/metadata on channel.post, so the payload is
+   * encoded into the message body as a `[[MEETING:start:{json}]]` sentinel that
+   * chat-item parses on render. Host-only. Skipped on DMZ / when nid is missing.
    */
-  _postMeetingSystemMessage(type) {
+  /**
+   * Display name to freeze into the card's `by` field. Visitor.fullname() falls
+   * back to the email when the profile has not finished loading, and the value
+   * is persisted with the message — so a card posted during that window showed
+   * an email address forever while a later card by the SAME user showed the real
+   * name. Read the name parts directly and return "" rather than an email when
+   * they are not ready yet; the renderer then resolves the author from the
+   * message row (see chat-item/template/meeting-event.js).
+   */
+  _meetingCardAuthor() {
+    const p = (Visitor.profile && Visitor.profile()) || {};
+    const name = `${p.firstname || ""} ${p.lastname || ""}`.trim();
+    if (name) return name;
+    const full = p.fullname || "";
+    return full && !full.includes("@") ? full : "";
+  }
+
+  _postMeetingSystemMessage() {
     if (this.mget(_a.area) === _a.dmz) return;
     const hub_id = this.mget(_a.hub_id);
     const nid = this.mget(_a.nid) || this.mget(_a.actual_home_id);
     if (!hub_id || !nid) return;
-    if (type === "meeting.start" && this._meetingMessagePosted) return;
-    if (type === "meeting.start") this._meetingMessagePosted = true;
+    if (this._meetingMessagePosted) return;
+    this._meetingMessagePosted = true;
 
     const payload = {
       hub_id,
       nid,
       room_id: this.mget(_a.room_id) || nid,
       filename: this.mget(_a.filename),
-      by: (Visitor.fullname && Visitor.fullname()) || "",
+      by: this._meetingCardAuthor(),
     };
-    const action = type === "meeting.start" ? "start" : "end";
-    const message = `[[MEETING:${action}:${JSON.stringify(payload)}]]`;
+    const message = `[[MEETING:start:${JSON.stringify(payload)}]]`;
 
     try {
-      this.postService({
+      // Keep the POST promise: the meeting can end before this resolves, so the
+      // end-flip chains on it to read the real message_id (below).
+      this._meetingCardPost = this.postService({
         service: SERVICE.channel.post,
         hub_id,
         nid,
         message,
-      });
+      })
+        .then((data) => {
+          const row = Array.isArray(data) ? data[0] : data;
+          return (row && row.message_id) || null;
+        })
+        .catch((e) => {
+          if (this.warn) this.warn("Failed to post meeting start message", e);
+          return null;
+        });
     } catch (e) {
-      if (this.warn) this.warn("Failed to post meeting system message", e);
+      if (this.warn) this.warn("Failed to post meeting start message", e);
     }
+  }
+
+  /**
+   * Flip the meeting's start card to "ended" (no second card). Chains on the
+   * start POST so it still works when the meeting ends before that POST resolves;
+   * fire-and-forget, the closure outlives the window teardown in onBeforeDestroy.
+   */
+  _endMeetingCard() {
+    if (!this._meetingCardPost) return;
+    const hub_id = this.mget(_a.hub_id);
+    const nid = this.mget(_a.nid) || this.mget(_a.actual_home_id);
+    if (!hub_id || !nid) return;
+    const service =
+      (SERVICE.channel && SERVICE.channel.meeting_end) || "channel.meeting_end";
+    this._meetingCardPost.then((message_id) => {
+      if (!message_id) return;
+      try {
+        this.postService({ service, hub_id, nid, message_id });
+      } catch (e) {
+        if (this.warn) this.warn("Failed to end meeting card", e);
+      }
+    });
   }
 
   /**
@@ -345,6 +407,51 @@ class __window_meeting extends __room {
       Wm.alert(LOCALE.MEETING_ENDED_BY_HOST || "Meeting ended by host");
     } catch (e) { }
     this._closeFeedbackAndLeave();
+  }
+
+  // ── Participant arrival / departure notices ───────────────────────────────
+  // Routed to the bottom-left toast stack, not the top-center status panel the
+  // base uses — that one is the connection surface (initializing / joining /
+  // failed / device denied), and a 300px box over the video for "someone walked
+  // in" read as an alert.
+
+  // Silent: an intermediate state the viewer can't act on, and the real
+  // "X joined" toast lands a second later — every arrival was announced twice.
+  notifyParticipantConnecting() { }
+
+  notifyParticipantJoined(name) {
+    if (name) this._partyToast(LOCALE.X_JOINED.format(name));
+  }
+
+  notifyParticipantLeft(name) {
+    if (name) this._partyToast(LOCALE.X_LEFT.format(name));
+  }
+
+  // Transient bottom-left notice that removes itself. Suppressed once the
+  // meeting is big enough that individual comings and goings stop being
+  // interesting (Meet/Teams roll up at scale; here the People panel is the
+  // roster). Counted before the joiner is appended / the leaver removed, so
+  // either way the test is "is this still a small meeting".
+  _partyToast(text) {
+    // Ending the meeting fires USER_LEFT for everyone still in it; the
+    // feedback popup is already up by then and this layer outranks it.
+    if (!text || this.isLeaving || this.isDestroyed()) return;
+    const others =
+      (this.__participants && this.__participants.collection.length) || 0;
+    if (others > PARTY_TOAST_MAX) return;
+    this.ensurePart("party-toasts").then((stack) => {
+      if (!stack || stack.isDestroyed()) return;
+      const toast = stack.append(
+        Skeletons.Note({
+          className: `${this.fig.family}__party-toast`,
+          content: text,
+        }),
+      );
+      if (!toast) return;
+      setTimeout(() => {
+        if (!toast.isDestroyed || !toast.isDestroyed()) toast.goodbye();
+      }, PARTY_TOAST_MS);
+    });
   }
 
   async onRemoteDrumateJoined(data) {
@@ -1246,17 +1353,18 @@ class __window_meeting extends __room {
       "joining",
       "getUserDevices",
       "permissionDenied",
+      "mediaDenied",
     ];
     if (!s || !preJoinStates.includes(s)) {
       return super.stateMessage(s, timeout);
     }
     const message = this.statusMessages[s] || s;
-    // permissionDenied is terminal — the conference never bound, so the
-    // real local-user webrtc widget can't render. Build a static "solo
-    // call" preview (Visitor avatar + name) and overlay the denial text,
+    // permissionDenied / mediaDenied are terminal — the conference never
+    // bound, so the real local-user webrtc widget can't render. Build a static
+    // "solo call" preview (Visitor avatar + name) and overlay the denial text,
     // matching the look of a normal 1-participant call. A small icon-only
     // X in the corner exits back to the widget_meeting panel.
-    if (s === "permissionDenied") {
+    if (s === "permissionDenied" || s === "mediaDenied") {
       const fullname = (Visitor.fullname && Visitor.fullname())
         || `${Visitor.get(_a.firstname) || ""} ${Visitor.get(_a.lastname) || ""}`.trim()
         || Visitor.get(_a.username) || "";

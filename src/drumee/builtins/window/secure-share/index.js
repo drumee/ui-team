@@ -190,8 +190,6 @@ class __window_secure_share extends mfsInteract {
         return this._toggleAccessList();
       case 'toggle-shared-links':
         return this._toggleSharedLinks();
-      case 'revoke-access-recipient':
-        return this._revokeRecipient(cmd);
       case 'select-grant-level':
         return this._selectGrantLevel(cmd);
       case 'approve-access-request':
@@ -523,41 +521,39 @@ class __window_secure_share extends mfsInteract {
     if (open) this._loadAccessEvents();
   }
 
+  // The access table is keyed on LINKS, with each link's visits counted next to
+  // it — so it needs both lists: the links themselves (which carries the ones
+  // nobody has opened yet, and each link's status) and the visit log to count and
+  // date them. Fetched together; a failure of either leaves the other usable.
   async _loadAccessEvents() {
     if (!this._accessEvents) return;
     const nid    = this.mget(_a.nid);
     const hub_id = this.mget(_a.hub_id);
     const events_skl = require('./skeleton/access-events');
-    let list = [];
-    try {
-      const rows = await this.postService(SERVICE.secure_share.list_access_events, { nid, hub_id });
-      if (Array.isArray(rows)) list = rows;
-    } catch (e) {
-      list = [];
+
+    const [links, events] = await Promise.all([
+      this.postService(SERVICE.secure_share.list, { nid, hub_id }).catch(() => []),
+      this.postService(SERVICE.secure_share.list_access_events, { nid, hub_id }).catch(() => []),
+    ]);
+    const list = Array.isArray(links) ? links : [];
+
+    // Group the visits under the link they came through.
+    const byToken = {};
+    if (Array.isArray(events)) {
+      for (const ev of events) {
+        if (!ev || !ev.token_id) continue;
+        (byToken[ev.token_id] = byToken[ev.token_id] || []).push(ev);
+      }
     }
-    this._accessEvents.feed(events_skl(this, list));
-    // Reflect the access count in the toggle header (e.g. "View access list (12)"),
-    // mirroring the Shared-links label (_renderShareList). Count = rows shown =
-    // total access events. Empty/error → plain label (no "(0)"), like Shared-links.
+
+    this._accessEvents.feed(events_skl(this, list, byToken));
+    // Count in the toggle header is now the number of links, matching the rows
+    // shown. Empty/error → plain label (no "(0)"), like Shared-links.
     if (this._accessEventsLabel) {
       this._accessEventsLabel.el.textContent = list.length
         ? `${LOCALE.SECURE_SHARE_VIEW_ACCESS_LIST} (${list.length})`
         : LOCALE.SECURE_SHARE_VIEW_ACCESS_LIST;
     }
-  }
-
-  // ⊖ revoke from the access list now revokes the share LINK (token) the recipient
-  // came through — identical to the Shared-links Revoke. The old revoke_recipient
-  // only dropped a node permission grant (which a token/gate viewer never had) and
-  // cleared the access-event rows, so the recipient kept access via the still-valid
-  // token. Revoking the token is the only thing that actually cuts token-based access.
-  async _revokeRecipient(cmd) {
-    const token  = cmd.mget(_a.token) || '';
-    if (!token) return;
-    const hub_id = this.mget(_a.hub_id);
-    await this.postService(SERVICE.secure_share.revoke, { token, hub_id });
-    this._loadShares();
-    this._loadAccessEvents();
   }
 
   async _createShare() {
@@ -718,14 +714,26 @@ class __window_secure_share extends mfsInteract {
     if (notifyToggle) notifyToggle.dataset.on = 'yes';
   }
 
+  // Single revoke path for the whole panel: the access table's per-link Revoke,
+  // and the just-generated link's own Revoke. Revoking cuts EVERYONE using that
+  // link, so the confirmation says so — previously nothing on screen acknowledged
+  // the action at all, which is what made a revoke that had worked look like a
+  // no-op.
   async _revokeShare(cmd) {
     const token  = cmd.mget(_a.token);
+    if (!token) return;
     const hub_id = this.mget(_a.hub_id);
-    await this.postService(SERVICE.secure_share.revoke, { token, hub_id });
+    const res = await this.postService(SERVICE.secure_share.revoke, { token, hub_id });
+    if (res && res.revoked_at) {
+      Butler.say(LOCALE.SECURE_SHARE_LINK_REVOKED);
+    } else {
+      Butler.say(LOCALE.SOMETHING_WENT_WRONG);
+    }
     // Figma revoke → disable: the generated-link row collapses and "Get link"
     // reappears. Harmless when revoking from a share-list row (already closed).
     if (this._linkResult) this._linkResult.el.dataset.mode = _a.closed;
     this._loadShares();
+    this._loadAccessEvents();
   }
 
   _copyLink(cmd) {

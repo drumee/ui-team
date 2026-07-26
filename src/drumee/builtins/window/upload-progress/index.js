@@ -1,11 +1,17 @@
 const { filesize, dataTransfer } = require("@drumee/ui-essentials");
 const __window_core = require("../core");
+const { hasWriteBit } = require("window/live-privilege");
+const { roleFromPrivilege } = require("builtins/skeleton/toolkit/permission");
 
 // Cap the number of per-entry rows rendered in the bundle progress list. A
 // dropped folder can hold tens of thousands of files; rendering one DOM row each
 // (repeatedly, per file-done) exhausts memory. Show at most this many plus a
 // "+N more" summary — the aggregate bar still reflects the true overall progress.
 const MAX_PROGRESS_ROWS = 200;
+
+// How long the "you can no longer upload here" notice stays up before it
+// self-dismisses. Mirrors the document player's role-change notice.
+const ROLE_NOTICE_MS = 5000;
 
 /**
  * @class __window_upload_progress
@@ -48,6 +54,9 @@ class __window_upload_progress extends __window_core {
     this._replaceExisting = false;    // bulk conflict policy (toggle in staging)
     this._bundleEntry = require("media/bundle/entry");
     this._bundleManager = require("media/bundle/manager");
+    // hub_id → last privilege seen for it, so a role-change notice can name
+    // where the user came FROM (the server only ever sends the new value).
+    this._lastPrivilege = {};
     this._targetWindow = opt && opt.targetWindow ? opt.targetWindow : null; // folder window
 
     // Large drops (10k–20k files) fire file-done/folder-created thousands of
@@ -100,7 +109,11 @@ class __window_upload_progress extends __window_core {
       bottom: 130, // Aligned with dock launcher (60px dock bottom + ~70px height/padding)
       width: width,
       height: height,
-      zIndex: 9000,
+      // Third place this number lives, and the one that decides: an inline
+      // style beats both stylesheets. Keep it equal to the --z-index-upload-progress
+      // fallback in this widget's skin/ and in desk/wm/skin (.upload-progress-layer).
+      // Above every window layer so a raised window can't bury the floater.
+      zIndex: 50002,
     });
     
     // Listen to global upload events
@@ -1062,11 +1075,201 @@ class __window_upload_progress extends __window_core {
     });
     
     this._refreshUI();
-    
+
     // Close window after delay
     _.delay(() => {
       this.goodbye();
     }, 500);
+  }
+
+  /**
+   * Realtime role change for THIS viewer, while an upload is running.
+   *
+   * The server already refuses the upload once the write bit is gone
+   * (acl/media.json declares media.upload with `"src": "write"`), so this is a
+   * UX fix, not a security one — but the UX it replaces is bad: each queued
+   * file kept its turn, burned its bandwidth, came back 403, and landed in the
+   * list as a red error with a Retry button that could only ever 403 again.
+   *
+   * A bundle job outlives the folder window that started it (it belongs to the
+   * `media/bundle/manager` singleton), so the folder window is the wrong place
+   * to catch this — close the window mid-upload and nobody would be listening.
+   * This widget lives exactly as long as the jobs it displays.
+   *
+   * WS wiring is inherited: window/utils binds Wm.on(WS_EVENT, handleWsEvent)
+   * in onBeforeRender and unbinds it in onBeforeDestroy, so there is nothing to
+   * subscribe or clean up here.
+   */
+  handleWsEvent(args = {}) {
+    const { data, options } = args || {};
+    if (options && options.service === SERVICE.hub.set_privilege) {
+      this._freezeUploadsForHub(data || {});
+    }
+    // The base implementation reads `data.args` without guarding, so a payload
+    // that has no `args` (set_privilege sends { privilege, hub_id, area })
+    // throws there. That must not take this handler down with it — the freeze
+    // above has already run, and every other window has its own subscription.
+    try {
+      return super.handleWsEvent(args);
+    } catch (e) {
+      if (this.warn) this.warn("[upload-progress] base ws handler failed", e);
+    }
+  }
+
+  /**
+   * Stop the in-flight uploads targeting one workspace after its role dropped
+   * below "may write", and tell the user why.
+   *
+   * Scoped to the pushed hub on purpose: a user can be uploading into two
+   * workspaces at once, and losing write on one says nothing about the other.
+   * That is also why this does NOT reuse cancelAll() — that cancels every job
+   * through the shared manager and closes this popup 500ms later, which would
+   * both overreach and hide the very list explaining what just stopped.
+   *
+   * @param {Object} payload WS body: { privilege, hub_id, ... }
+   */
+  _freezeUploadsForHub(payload = {}) {
+    const { privilege, hub_id } = payload;
+    if (privilege == null || hub_id == null) return;
+
+    // Only a LOST write bit blocks uploading. Admin → Edit is a demotion too,
+    // but it keeps the bit, so the upload is still perfectly legal.
+    const next = Number(privilege);
+    if (hasWriteBit(next)) return;
+
+    // `_jobs` is append-only (nothing prunes it when a job finishes) and
+    // job.state never advances past "active", so neither can tell us whether a
+    // job still matters. `_canceled` is the one honest signal, and cancelling a
+    // job that already finished is a no-op in practice: _markCanceled skips
+    // entries in a terminal state, so a fully-uploaded bundle keeps every tick.
+    const hit = (this._jobs || []).filter(
+      (j) => j && !j._canceled && `${j._hubId}` === `${hub_id}`,
+    );
+    if (!hit.length) return;
+
+    // cancel() aborts the live XHR and walks the entry tree, settling every
+    // unfinished file as "canceled" — a failure state, shown with a warning
+    // glyph and no Retry (retrying would 403). Files that had already uploaded
+    // keep their tick: they really are on the server.
+    for (const job of hit) {
+      if (job.cancel) job.cancel("permission");
+    }
+
+    this._uploading = false;
+    this._renderAggregate();
+    this._renderProgressList();
+
+    // Name both ends of the change — "from Edit to View" is more use than "your
+    // permission changed", and it stays right for Admin → Chat too.
+    //
+    // roleFromPrivilege(undefined) silently answers "View", so an unknown prior
+    // would print the nonsense "from View to View". Send the generic wording
+    // instead when we genuinely don't know where the user came from.
+    const prior = this._priorPrivilege(hub_id);
+    const prevRole = prior != null ? roleFromPrivilege(prior) : null;
+    const nextRole = roleFromPrivilege(next);
+    this._showUploadBlockedNotice(
+      // Equal ends are also nonsense; treat them as unknown.
+      prevRole && prevRole.value !== nextRole.value ? prevRole : null,
+      nextRole,
+    );
+    this._lastPrivilege[hub_id] = next;
+  }
+
+  /**
+   * Record the privilege this viewer currently holds in `hub_id`.
+   *
+   * Called when a bundle is queued — the one moment we can be sure the value
+   * is the pre-change one, because the upload is starting and has not been
+   * blocked. Read back by _priorPrivilege when a demotion arrives.
+   *
+   * @param {string|number} hub_id
+   */
+  _rememberPrivilege(hub_id) {
+    if (hub_id == null) return;
+    if (!this._lastPrivilege) this._lastPrivilege = {};
+    const priv = this._readHubPrivilege(hub_id);
+    if (priv != null) this._lastPrivilege[hub_id] = Number(priv);
+  }
+
+  /**
+   * The privilege held in `hub_id` before the push being handled, or undefined.
+   *
+   * Only the snapshot counts. Reading live at push time — off this widget (a
+   * progress floater is not a node, so mget returns undefined and
+   * roleFromPrivilege maps that to the weakest role, hence "from View to View")
+   * or off the folder window (which subscribes to WS_EVENT first and has
+   * already stored the NEW value by then) — both give the wrong answer.
+   *
+   * @param {string|number} hub_id
+   * @returns {number|undefined}
+   */
+  _priorPrivilege(hub_id) {
+    return this._lastPrivilege ? this._lastPrivilege[hub_id] : undefined;
+  }
+
+  /**
+   * This viewer's privilege in `hub_id`, from whichever open folder window is
+   * showing that workspace. Safe to call at upload time; misleading later (see
+   * _priorPrivilege).
+   *
+   * @param {string|number} hub_id
+   * @returns {number|undefined}
+   */
+  _readHubPrivilege(hub_id) {
+    if (typeof Wm === "undefined" || !_.isFunction(Wm.getItemsByKind)) return;
+    try {
+      const win = (Wm.getItemsByKind("window_folder") || []).find(
+        (w) =>
+          w &&
+          !(w.isDestroyed && w.isDestroyed()) &&
+          `${w.mget(_a.hub_id)}` === `${hub_id}` &&
+          w.mget(_a.privilege) != null,
+      );
+      return win ? win.mget(_a.privilege) : undefined;
+    } catch (e) {
+      return undefined;
+    }
+  }
+
+  /**
+   * Toast explaining the frozen upload: self-dismisses, plus an [x] to close
+   * it sooner.
+   *
+   * The timer rides along as `dismiss_after` instead of being held here: the
+   * value Wm.info returns is box.append()'s `children.last()`, i.e. the pool's
+   * last child at call time, while Marionette builds this toast asynchronously
+   * afterwards — so it is some other window, or undefined. window_info arms the
+   * timer on itself in onDomRefresh, where the view definitely exists.
+   *
+   * @param {Object|null} prevRole role item before the change, or null when
+   *                               the previous level could not be determined
+   * @param {Object} nextRole role item after it
+   */
+  _showUploadBlockedNotice(prevRole, nextRole) {
+    // Without a trustworthy "from", say only what we know rather than invent a
+    // level — a wrong role name reads as a bug to the user.
+    const message = prevRole
+      ? LOCALE.UPLOAD_BLOCKED_ROLE_CHANGED.format(
+          prevRole.label || "",
+          (nextRole && nextRole.label) || "",
+        )
+      : LOCALE.UPLOAD_BLOCKED_ROLE_CHANGED_TO.format(
+          (nextRole && nextRole.label) || "",
+        );
+    Wm.info({
+      message,
+      variant: "notice",
+      dismiss_after: ROLE_NOTICE_MS,
+      actions: [
+        {
+          label: LOCALE.CLOSE,
+          priority: "primary",
+          // No uiHandler → the toast closes itself.
+          service: _e.close,
+        },
+      ],
+    });
   }
 
   /**
@@ -1670,6 +1873,16 @@ class __window_upload_progress extends __window_core {
     };
 
     const job = this._bundleManager.create({ entries, destNid, hub_id, resolution });
+    // Snapshot the privilege the viewer holds in this hub RIGHT NOW, while the
+    // upload is being accepted — so it is by definition the level that allowed
+    // it. A later demotion notice needs this to say what the user came FROM;
+    // the server's push carries only the new value.
+    //
+    // It has to be captured here, not read when the push arrives: the folder
+    // window subscribes to WS_EVENT before this popup exists (you open a folder
+    // to start an upload), so by the time this widget handles the event that
+    // window has already overwritten its own privilege with the new one.
+    this._rememberPrivilege(hub_id);
     this._jobs.push(job);
     this._attachJob(job);
     this._uploading = true;
@@ -1702,6 +1915,17 @@ class __window_upload_progress extends __window_core {
       this._revealInLayout(ev && ev.data, ev && ev.parent);
       this._renderAggregateThrottled();
       this._renderProgressListThrottled();
+      // Global "a file was uploaded" signal. The BundleJob path (topbar Upload
+      // button / file picker) only emits Backbone events on the job, so it
+      // never fired the RADIO_MEDIA `_e.uploaded` that the legacy media_uploader
+      // does — leaving global listeners (e.g. the reward-flow Step 2 gate)
+      // stuck. Mirror it here, once per job: file-done repeats per file
+      // (thousands for a big folder), and one signal is all a "did they upload
+      // anything" consumer needs.
+      if (!job._uploadedBroadcast && typeof RADIO_MEDIA !== "undefined") {
+        job._uploadedBroadcast = 1;
+        RADIO_MEDIA.trigger(_e.uploaded, ev && ev.data);
+      }
     });
     job.on("error", this._renderProgressListThrottled);
     job.on("done", ({ canceled }) => this._onBundleDone(canceled, job));
@@ -1806,11 +2030,19 @@ class __window_upload_progress extends __window_core {
   _entryDisplayStatus(e) {
     if (e.kind !== "folder") {
       if (e.status === "error") return "error";
+      // "canceled" is a failure, not a completion — the file is NOT on the
+      // server. It gets its own bucket rather than reusing "error" so the row
+      // can drop the Retry button: the usual cause is a lost permission, and
+      // retrying would just 403. Note this is distinct from "skipped", which
+      // means the user deliberately passed on a name conflict — that IS a
+      // resolved outcome and keeps the tick.
+      if (e.status === "canceled") return "canceled";
       if (e.status === "done" || e.status === "skipped") return "done";
       return "active";
     }
     const s = this._folderStats(e);
     if (e.status === "error" || s.hasError) return "error";
+    if (e.status === "canceled" || s.hasCanceled) return "canceled";
     if (s.total > 0 && s.done >= s.total) return "done";
     if (e.status === "done") return "done";
     return "active";
@@ -1819,21 +2051,25 @@ class __window_upload_progress extends __window_core {
   // One cheap walk over a folder subtree (ints/refs only, no UI) returning
   // { done, total, hasError }. Bounded work: only called for shown folder rows.
   _folderStats(folder) {
-    let done = 0, total = 0, hasError = false;
+    let done = 0, total = 0, hasError = false, hasCanceled = false;
     const walk = (l) => {
       for (const e of l || []) {
         if (e.kind === "folder") {
           if (e.status === "error") hasError = true;
+          else if (e.status === "canceled") hasCanceled = true;
           walk(e.children);
         } else {
           total += 1;
           if (e.status === "done" || e.status === "skipped") done += 1;
           else if (e.status === "error") hasError = true;
+          // Deliberately NOT counted toward `done`: a cancelled file never
+          // reached the server, so "3 / 10" must keep reading 3.
+          else if (e.status === "canceled") hasCanceled = true;
         }
       }
     };
     walk(folder.children);
-    return { done, total, hasError };
+    return { done, total, hasError, hasCanceled };
   }
 
   _buildProgressRow(e) {
@@ -1845,13 +2081,22 @@ class __window_upload_progress extends __window_core {
     // so Button.Svg can't render them). File: derive from name via getFileIcon.
     const ico = isFolder ? "dock-folder" : getFileIcon({ name: e.name });
 
-    // Right-hand status indicator: Retry (error) · check (done) · spinner (active).
+    // Right-hand status indicator: Retry (error) · warning (canceled) ·
+    // check (done) · spinner (active).
     let statusEl;
     if (st === "error") {
       statusEl = Skeletons.Note({
         className: `${pfx}__progress-retry`,
         content: LOCALE.RETRY || "Retry",
         service: `retry:${e.id}`, uiHandler: [this],
+      });
+    } else if (st === "canceled") {
+      // A warning glyph, NOT the Retry affordance: this file stopped because
+      // the viewer lost the right to upload here, so retrying can only 403.
+      // Offering the button would invite a click that silently fails.
+      statusEl = Skeletons.Button.Svg({
+        className: `${pfx}__progress-canceled`, ico: "apps-warning", active: 0,
+        tooltips: LOCALE.UPLOAD_CANCELED,
       });
     } else if (st === "done") {
       statusEl = Skeletons.Button.Svg({

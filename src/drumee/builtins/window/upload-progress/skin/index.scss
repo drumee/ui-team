@@ -14,7 +14,11 @@
     background: var(--white, #fff);
     border-radius: var(--corner-radius-6, 16px);
     box-shadow: 0 4px 12px rgba(34, 39, 50, 0.12);
-    z-index: var(--z-index-upload-progress, 9000);
+    // Must match the layer's z-index (desk/wm/skin/index.scss
+    // `.upload-progress-layer`) — both read the same custom property, so the
+    // fallbacks have to agree or the two disagree wherever the property is
+    // unset. Above every window layer; see that file for the trade-off.
+    z-index: var(--z-index-upload-progress, 50002);
     overflow: hidden;
     border: 1px solid var(--default-border-notification, rgba(221, 223, 228, 0.5));
     transition: height 0.2s ease;
@@ -639,6 +643,28 @@
     // checked-circle is a self-coloured filled icon (green circle + cut-out tick);
     // do NOT force fill/stroke or the tick blob-fills. Just size it.
     svg { width: 100%; height: 100%; display: block; }
+  }
+
+  // Upload stopped before this file reached the server (the viewer lost write
+  // access mid-bundle). Sits where the tick would be, in the error colour, so
+  // the row cannot be mistaken for a success — but with no Retry affordance,
+  // since retrying would only 403 again.
+  &__progress-canceled {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px; height: 20px; flex-shrink: 0;
+    // --default-text-error is the theme-aware error colour used elsewhere in
+    // the app; the neighbouring rules here reach for --success-500 /
+    // --neutral-200, which are not defined anywhere and silently fall back.
+    color: var(--default-text-error, #ef4444);
+
+    svg {
+      width: 100%; height: 100%; display: block;
+      // apps-warning is a monochrome outline glyph, so it takes the colour
+      // above — unlike checked-circle, which carries its own fill.
+      fill: currentColor;
+    }
   }
 
   &__progress-spinner {

@@ -41,6 +41,9 @@ const a = {
     cdn: 'tunnel',
     sections_repo: 'tunnel'
   },
+  // dataTransfer tag set by widgets running their own native HTML5 drag; Wm
+  // skips its file-drop targeting pass for those (manager.js _isInternalDrag).
+  internalDragType: 'application/x-drumee-internal',
   module: {
     account: "#/desk/account",
     admin: "#/admin",   // Unstable

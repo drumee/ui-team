@@ -759,6 +759,17 @@ class __window_mfs extends DrumeeMFS {
    */
   updateContent(args) {
     let { nid } = args;
+    // A payload with no nid matches every widget that also has none — and
+    // hub.set_privilege is exactly that shape ({ privilege, hub_id, area }),
+    // so this used to sweep in windows that have nothing to do with a node.
+    // The upload-progress floater was one of them: window/core's restart() is
+    // `return this.iconsList.restart()`, and a floater has no iconsList, so it
+    // threw. That exception escaped Wm.handleWsEvent, and because Backbone's
+    // trigger runs listeners in sequence, every WS_EVENT subscriber registered
+    // after Wm silently stopped receiving the event.
+    //
+    // "Update the node with id X" is meaningless without an X, so bail.
+    if (nid == null) return;
     this.getItemsByAttr(_a.nid, nid).filter((c) => {
       if (!c) return false;
       c.mset(args);

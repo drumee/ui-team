@@ -406,7 +406,7 @@ const make = function (ui) {
           kids: [
             Skeletons.Note({
               className: `${pfx}__col-menu-rename`,
-              content: LOCALE.RENAME,
+              content: LOCALE.SAVE,
               bubble: 0,
               service: "col-rename-submit",
               uiHandler: [ui],
@@ -557,93 +557,49 @@ const make = function (ui) {
       ),
     });
 
-  // Always rendered; CSS hides via data-open. data-member-uid lets the JS
-  // re-target data-active after an assignee selection.
-  const memberPicker = (selectedUids, serviceName, extra = {}) => {
-    // Multi-select: selectedUids is the array of currently-assigned uids. Rows
-    // toggle membership and the picker stays open; the "Unassigned" row clears
-    // the whole set and is active only when nothing is selected.
+  // Assignee control — same interaction as the meeting-schedule invitee field:
+  // chips + inline search, suggestions fed live by _filterAssignees. No
+  // always-on member list. `scope` is "create" | "detail".
+  const assigneeSearchField = (selectedUids, scope) => {
     const selected = Array.isArray(selectedUids)
       ? selectedUids.map(String)
       : selectedUids
         ? [String(selectedUids)]
         : [];
-    const items = [
-      Skeletons.Box.X({
-        className: `${pfx}__member-row`,
-        dataset: { active: !selected.length ? 1 : 0, "member-uid": "" },
-        bubble: 0,
-        service: serviceName,
-        uiHandler: [ui],
-        memberUid: "",
-        ...extra,
-        kids: [
-          Skeletons.Note({
-            className: `${pfx}__member-name`,
-            content: LOCALE.UNASSIGNED,
-          }),
-        ],
-      }),
-      ...members.map((m) =>
+    const service = scope === "create" ? "create-assignee" : "set-assignee";
+    return Skeletons.Box.Y({
+      className: `${pfx}__assignee-picker`,
+      kids: [
         Skeletons.Box.X({
-          className: `${pfx}__member-row`,
-          dataset: {
-            active: selected.includes(String(m.id || m.uid)) ? 1 : 0,
-            "member-uid": m.id || m.uid,
-          },
-          bubble: 0,
-          service: serviceName,
-          uiHandler: [ui],
-          memberUid: m.id || m.uid,
-          ...extra,
+          className: `${pfx}__assignee-control`,
           kids: [
-            Skeletons.UserProfile({
-              className: `${pfx}__member-avatar`,
-              id: m.id || m.uid,
-              firstname: m.firstname,
-              lastname: m.lastname,
-              auto_color: 1,
-              live_status: 0,
+            Skeletons.Box.X({
+              className: `${pfx}__assignee-chips`,
+              sys_pn: `${scope}-assignee-chips`,
+              partHandler: ui,
+              kids: buildAssigneeChips(ui, selected, service),
             }),
-            Skeletons.Note({
-              className: `${pfx}__member-name`,
-              content: fullName(m),
+            // Entry (not a bare input) so the framework keeps it typeable.
+            Skeletons.Entry({
+              className: `${pfx}__assignee-search`,
+              name: `assignee-search-${scope}`,
+              placeholder: LOCALE.SEARCH_PEOPLE,
+              require: "any",
+              bubble: 0,
+              uiHandler: [ui],
             }),
           ],
         }),
-      ),
-    ];
-    const kind = extra.pickerKind || null;
-    return Skeletons.Box.Y({
-      className: `${pfx}__member-picker`,
-      dataset: {
-        "picker-kind": kind || "",
-        open: kind && pickerOpen === kind ? 1 : 0,
-      },
-      kids: items,
-    });
-  };
-
-  const assigneeButton = (task, kind) => {
-    const assignees = Array.isArray(task.assignees)
-      ? task.assignees
-      : task.assignee_uid
-        ? [task.assignee_uid]
-        : [];
-    return Skeletons.Box.X({
-      className: `${pfx}__assignee-button`,
-      sys_pn: `${kind}-button`,
-      partHandler: ui,
-      dataset: { open: pickerOpen === kind ? 1 : 0, "picker-kind": kind },
-      bubble: 0,
-      service: "toggle-picker",
-      uiHandler: [ui],
-      pickerKind: kind,
-      kids: buildAssigneeButtonContent(
-        ui,
-        assignees,
-        kind === "create-assignee" ? "create-assignee" : "set-assignee",
-      ),
+        Skeletons.Box.Y({
+          className: `${pfx}__assignee-suggestions`,
+          sys_pn: `${scope}-assignee-suggestions`,
+          partHandler: ui,
+          // dataset is dropped at render unless attrOpt is also set.
+          attrOpt: { "data-open": "0" },
+          bubble: 0,
+          kids: [],
+        }),
+      ],
     });
   };
 
@@ -902,10 +858,7 @@ const make = function (ui) {
           className: `${pfx}__detail-label`,
           content: LOCALE.ASSIGNEE,
         }),
-        assigneeButton({ assignees: dAssignees }, "detail-assignee"),
-        memberPicker(dAssignees, "set-assignee", {
-          pickerKind: "detail-assignee",
-        }),
+        assigneeSearchField(dAssignees, "detail"),
       ],
     });
 
@@ -1215,8 +1168,8 @@ const make = function (ui) {
                     statusRow,
                     priorityRow,
                     assigneeRow,
-                    dueRow,
                     reporterRow,
+                    dueRow,
                     actions,
                   ].filter(Boolean),
                 }),
@@ -1423,15 +1376,6 @@ const make = function (ui) {
           content: LOCALE.NO_LABELS,
         });
 
-    // Use the shared factory so the create-modal button registers
-    // sys_pn:"create-assignee-button" + partHandler:ui — without that,
-    // _applyAssigneeChange's ensurePart(...) never resolves and the button
-    // stays blank until the next full render.
-    const assigneeButtonNode = assigneeButton(
-      { assignees: selectedAssignees },
-      "create-assignee",
-    );
-
     // Labeled field shell. extraCn lets a field opt into grow/scroll behaviour.
     const field = (labelText, control, extraCn = "") =>
       Skeletons.Box.Y({
@@ -1469,9 +1413,39 @@ const make = function (ui) {
           className: `${pfx}__create-label`,
           content: LOCALE.ASSIGNEE,
         }),
-        assigneeButtonNode,
-        memberPicker(selectedAssignees, "create-assignee", {
-          pickerKind: "create-assignee",
+        assigneeSearchField(selectedAssignees, "create"),
+      ],
+    });
+
+    // Reporter — the current user (set server-side as created_by on submit).
+    // Read-only, mirroring the detail panel's reporter row (shares its skin).
+    const createReporter = ui.getMember(Visitor.id) || {
+      firstname: Visitor.get("firstname"),
+      lastname: Visitor.get("lastname"),
+    };
+    const reporterField = Skeletons.Box.Y({
+      className: `${pfx}__create-field`,
+      kids: [
+        Skeletons.Note({
+          className: `${pfx}__create-label`,
+          content: LOCALE.REPORTER,
+        }),
+        Skeletons.Box.X({
+          className: `${pfx}__detail-reporter`,
+          kids: [
+            Skeletons.UserProfile({
+              className: `${pfx}__detail-reporter-avatar`,
+              id: Visitor.id,
+              firstname: createReporter.firstname,
+              lastname: createReporter.lastname,
+              auto_color: 1,
+              live_status: 0,
+            }),
+            Skeletons.Note({
+              className: `${pfx}__detail-reporter-name`,
+              content: fullName(createReporter) || Visitor.id,
+            }),
+          ],
         }),
       ],
     });
@@ -1530,6 +1504,7 @@ const make = function (ui) {
                   priorityPills(selectedPriority, "create-priority"),
                 ),
                 assigneeField,
+                reporterField,
                 // Due-date section: same Duration UI as the detail panel. A
                 // stable sub-part so the toggle re-feeds only this block.
                 Skeletons.Box.Y({
@@ -1583,7 +1558,7 @@ const make = function (ui) {
     });
   };
 
-  // ── Member filter dropdown ────────────────────────────────────
+  // ── Filter dropdown (shared by every view) ────────────────────
   // The trigger button lives on the host window's tab bar (same line as
   // Files / Chat / Tasks); this panel owns the members + filter state and
   // renders the dropdown as a top-right overlay when opened via toggleFilter().
@@ -1603,75 +1578,11 @@ const make = function (ui) {
       ],
     });
 
-  const filterRow = (opt) =>
-    Skeletons.Box.X({
-      className: `${pfx}__member-row ${pfx}__filter-row`,
-      dataset: { active: opt.active ? 1 : 0, "member-uid": opt.uid },
-      // attrOpt mirrors data-active so the checked state paints on first render
-      // (plain dataset can be dropped at initial render — see project notes).
-      attrOpt: { "data-active": opt.active ? "1" : "0" },
-      bubble: 0,
-      service: "filter-member",
-      uiHandler: [ui],
-      memberUid: opt.uid,
-      kids: [
-        Skeletons.Box.X({
-          className: `${pfx}__filter-row-main`,
-          kids: opt.leftKids,
-        }),
-        filterCheck(),
-      ],
-    });
-
-  const filterDropdown = Skeletons.Box.Y({
-    className: `${pfx}__filter-picker`,
-    kids: [
-      Skeletons.Note({
-        className: `${pfx}__filter-title`,
-        content: LOCALE.FILTER,
-      }),
-      filterRow({
-        uid: "",
-        active: !filterActive, // "All members" reads as checked when no filter
-        leftKids: [
-          Skeletons.Note({
-            className: `${pfx}__member-name`,
-            content: LOCALE.ALL_MEMBERS,
-          }),
-        ],
-      }),
-      members.length
-        ? Skeletons.Note({ className: `${pfx}__filter-divider` })
-        : null,
-      ...members.map((m) => {
-        const uid = String(m.id || m.uid);
-        return filterRow({
-          uid,
-          active: filterUids.includes(uid),
-          leftKids: [
-            Skeletons.UserProfile({
-              className: `${pfx}__member-avatar`,
-              id: uid,
-              firstname: m.firstname,
-              lastname: m.lastname,
-              auto_color: 1,
-              live_status: 0,
-            }),
-            Skeletons.Note({
-              className: `${pfx}__member-name`,
-              content: fullName(m),
-            }),
-          ],
-        });
-      }),
-    ].filter(Boolean),
-  });
-
-  // ── List-view multi-dimension filter (Figma 2099-50501) ───────
+  // ── Multi-dimension filter (Figma 2099-50501) ─────────────────
   // Accordion of filter categories; tapping a row expands its value picker
   // inline. Categories AND together, values within a category OR together.
-  // Assignee reuses the shared member filter (applies on every view); the rest
-  // apply on the List view only.
+  // Every dimension applies on every view (board / calendar / gantt / list /
+  // project health) — Assignee reuses the shared member filter.
   const filters = ui.getFilters();
   const filterCats = [
     { dim: "keyword", ico: "tags", label: LOCALE.TASK },
@@ -1833,7 +1744,7 @@ const make = function (ui) {
       ],
     });
 
-  const listFilterDropdown = Skeletons.Box.Y({
+  const filterDropdown = Skeletons.Box.Y({
     className: `${pfx}__filter-picker ${pfx}__filter-picker--list`,
     kids: [
       Skeletons.Box.X({
@@ -1983,9 +1894,8 @@ const make = function (ui) {
           })
         : null,
       // Filter overlay (anchored top-right, below the tab bar's filter button).
-      // List view gets the rich multi-dimension accordion; other views keep the
-      // member-only picker.
-      filterOpen ? (view === "list" ? listFilterDropdown : filterDropdown) : null,
+      // Every view gets the same multi-dimension accordion.
+      filterOpen ? filterDropdown : null,
       Skeletons.Wrapper.Y({
         className: `${pfx}__detail-wrapper`,
         name: "task-detail",
@@ -2016,7 +1926,15 @@ const make = function (ui) {
   });
 };
 
-function buildAssigneeButtonContent(ui, assignees, removeService) {
+const memberLabel = (m) =>
+  m.fullname ||
+  [m.firstname, m.lastname].filter(Boolean).join(" ").trim() ||
+  m.email ||
+  String(m.id || m.uid || "");
+
+// Selected assignees as removable chips. Exported so the panel can re-feed
+// just the chips row after a pick/removal.
+function buildAssigneeChips(ui, assignees, service) {
   const pfx = ui.fig.family;
   // Accept an array of uids (multi-assignee); tolerate a single uid/null.
   const uids = Array.isArray(assignees)
@@ -2024,29 +1942,11 @@ function buildAssigneeButtonContent(ui, assignees, removeService) {
     : assignees
       ? [assignees]
       : [];
-  const fullName = (m) =>
-    [m.firstname, m.lastname].filter(Boolean).join(" ").trim() || m.email || "";
-
-  // Empty → Figma "blank" state: a search-style placeholder. Clicking the row
-  // still opens the member dropdown (no free-text typing).
-  if (!uids.length) {
-    return [
-      Skeletons.Note({
-        className: `${pfx}__assignee-placeholder`,
-        content: LOCALE.SEARCH_PEOPLE,
-      }),
-    ];
-  }
-
-  // Selected members render as removable chips (avatar + name + ✕), then a
-  // trailing "…" add affordance (Figma Assignee 01 / 02 / 2+ states).
-  const MAX = 3;
-  const shown = uids.slice(0, MAX);
-  const overflow = uids.length - shown.length;
-  const chips = shown.map((uid) => {
+  return uids.map((uid) => {
     const m = ui.getMember(uid) || {};
     return Skeletons.Box.X({
       className: `${pfx}__assignee-chip`,
+      attrOpt: { "data-uid": uid },
       kids: [
         Skeletons.UserProfile({
           className: `${pfx}__assignee-chip-avatar`,
@@ -2058,32 +1958,68 @@ function buildAssigneeButtonContent(ui, assignees, removeService) {
         }),
         Skeletons.Note({
           className: `${pfx}__assignee-chip-name`,
-          content: fullName(m) || LOCALE.UNASSIGNED,
+          content: memberLabel(m) || String(uid),
         }),
-        // ✕ removes this assignee; bubble:0 so it doesn't open the dropdown.
+        // ✕ toggles this member back out of the set.
         Skeletons.Button.Svg({
           className: `${pfx}__assignee-chip-remove`,
           ico: "cross",
           bubble: 0,
-          service: removeService,
+          service,
           uiHandler: [ui],
           memberUid: uid,
         }),
       ],
     });
   });
-  if (overflow > 0) {
-    chips.push(
-      Skeletons.Note({
-        className: `${pfx}__assignee-more`,
-        content: `+${overflow}`,
-      }),
-    );
-  }
-  chips.push(
-    Skeletons.Note({ className: `${pfx}__assignee-add`, content: "..." }),
-  );
-  return chips;
+}
+
+// Members matching `query`, minus the already-selected ones. Empty query → no
+// suggestions: nothing shows until the user types.
+function buildAssigneeSuggestions(ui, query, selected, service) {
+  const pfx = ui.fig.family;
+  const q = String(query || "")
+    .trim()
+    .toLowerCase();
+  if (!q) return [];
+  const chosen = new Set((selected || []).map(String));
+  return (ui.getMembers() || [])
+    .filter((m) => {
+      const uid = String(m.id || m.uid || "");
+      if (!uid || chosen.has(uid)) return false;
+      return (
+        memberLabel(m).toLowerCase().includes(q) ||
+        String(m.email || "")
+          .toLowerCase()
+          .includes(q)
+      );
+    })
+    .slice(0, 8)
+    .map((m) => {
+      const uid = String(m.id || m.uid);
+      return Skeletons.Box.X({
+        className: `${pfx}__assignee-option`,
+        attrOpt: { "data-uid": uid },
+        bubble: 0,
+        service,
+        uiHandler: [ui],
+        memberUid: uid,
+        kids: [
+          Skeletons.UserProfile({
+            className: `${pfx}__assignee-option-avatar`,
+            id: uid,
+            firstname: m.firstname,
+            lastname: m.lastname,
+            auto_color: 1,
+            live_status: 0,
+          }),
+          Skeletons.Note({
+            className: `${pfx}__assignee-option-name`,
+            content: memberLabel(m),
+          }),
+        ],
+      });
+    });
 }
 
 // Filtered member rows fed into the description @-mention dropdown. The panel
@@ -2885,7 +2821,8 @@ function buildAttachmentRowsContent(ui, attachments, taskId) {
 }
 
 make.buildFileSearchDropdownContent = buildFileSearchDropdownContent;
-make.buildAssigneeButtonContent = buildAssigneeButtonContent;
+make.buildAssigneeChips = buildAssigneeChips;
+make.buildAssigneeSuggestions = buildAssigneeSuggestions;
 make.buildMentionItemsContent = buildMentionItemsContent;
 make.buildCommentListContent = buildCommentListContent;
 make.buildPendingListContent = buildPendingListContent;

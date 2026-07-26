@@ -1292,7 +1292,15 @@ class __panel_activity extends LetcBox {
           meeting = meeting.replace(/(\]\]$)/, '')
           try {
             meeting = JSON.parse(meeting)
-            opt.message = LOCALE.X_JOINED_MEETING_X.format(meeting.by, meeting.filename)
+            // `meeting.by` may be "" (poster's profile not loaded yet) or a raw
+            // email frozen by an older client — prefer the sender name the
+            // server stamps on every channel.post payload so the notification
+            // never shows a blank or an email address.
+            const senderName =
+              (meeting.by && !`${meeting.by}`.includes('@') && meeting.by) ||
+              [opt.firstname, opt.lastname].filter(Boolean).join(' ') ||
+              meeting.by || ''
+            opt.message = LOCALE.X_JOINED_MEETING_X.format(senderName, meeting.filename)
             const { hub_id, nid } = meeting;
             if (hub_id) {
               url = `${url}/meeting/?nid=${hub_id}&ts=${now}`

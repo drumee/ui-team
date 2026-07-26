@@ -320,6 +320,12 @@ class __window_folder extends mfsInteract {
   initialize(opt) {
     this.isFolder = 1;
     super.initialize(opt);
+    // Bind uploadFile for the meeting description's inline image paste/drop
+    // (mfsInteract doesn't provide it — same pattern as the tasks widget).
+    if (!this.uploadFile) {
+      const { uploadFile } = require("@drumee/ui-essentials");
+      this.uploadFile = uploadFile.bind(this);
+    }
     this._path = [];
     this._navStack = [];
     // Active file-type filter (Docs/PDF/Images/…), scoped to the current
@@ -880,6 +886,12 @@ class __window_folder extends mfsInteract {
       }
       return;
     }
+    if (pn === "new-ctrl") {
+      // The button renders hidden (the skeleton is built before the window has
+      // a privilege). Now that it is mounted, resolve the real answer once.
+      this.syncNewCtrlVisibility();
+      return;
+    }
     if (pn === _a.list) {
       this.iconsList = child;
       if (this.getViewMode && this.getViewMode() !== _a.row) {
@@ -892,11 +904,7 @@ class __window_folder extends mfsInteract {
       return;
     }
     if (pn === "sched-grid") {
-      // Weekly view: land the scroll on the working hours instead of 12 AM.
-      const body = child.el && child.el.querySelector(`.${this.fig.family}__meeting-sched-body`);
-      if (body && !body.classList.contains(`${this.fig.family}__meeting-sched-body--month`)) {
-        body.scrollTop = 56 * 7; // ~7 AM with 56px hour rows
-      }
+      this._scrollScheduleIntoView(child);
       return;
     }
     if (pn === "search-results") {
@@ -961,6 +969,12 @@ class __window_folder extends mfsInteract {
     if (c != null && c.logicalParent === this && c.service === _e.select) {
       return;
     }
+    // A re-feed driven by a remote event (see _applyLivePrivilege) spawns
+    // children that bubble through here, and the base implementation answers by
+    // raising this window. The user did not touch anything — an admin did,
+    // elsewhere — so raising would bury whatever they have on top of this
+    // workspace, e.g. a document they are reading.
+    if (this._suppressRaise) return;
     super.onChildBubble(c);
     if (_.isEmpty(Wm.clipboard)) {
       return this.unselect();
@@ -1043,6 +1057,10 @@ class __window_folder extends mfsInteract {
       this._navRestoring = 0;
     }
     this.refreshBreadcrumbsUI();
+    // _captureNavState snapshots privilege and mset(state) above restores it,
+    // so walking BACK to an ancestor can change our rights just as walking in
+    // does (updateTopbar handles the forward case; _navRestoring skips it here).
+    this.syncNewCtrlVisibility();
   }
 
   refreshBreadcrumbsUI(stack) {
@@ -1511,11 +1529,17 @@ class __window_folder extends mfsInteract {
       case "close-meeting-modal":
         return this.closeMeetingModal();
 
-      case "mm-toggle-invitee":
-        return this.toggleMeetingInvitee(cmd);
+      case "mm-add-invitee":
+        return this._addInvitee(cmd);
+
+      case "mm-remove-invitee":
+        return this._removeInvitee(cmd);
 
       case "mm-set-recur":
         return this.setMeetingRecur(cmd);
+
+      case "mm-set-ampm":
+        return this._setMeetingAmpm(cmd);
 
       case "meeting-modal-submit":
         return this.submitMeetingModal();
@@ -1894,6 +1918,28 @@ class __window_folder extends mfsInteract {
     return this._fetchMeetings().then(feed, feed);
   }
 
+  // Week/day grids render all 24 hours, so an unscrolled grid opens on empty
+  // night hours. Land on the earliest meeting in view (one row of context
+  // above it), or on the working hours when the range is empty. Month view
+  // doesn't scroll.
+  _scrollScheduleIntoView(part) {
+    const fig = this.fig.family;
+    const body = part && part.el && part.el.querySelector(`.${fig}__meeting-sched-body`);
+    if (!body || body.classList.contains(`${fig}__meeting-sched-body--month`)) return;
+
+    const sched = require("./skeleton/meeting-schedule");
+    const st = sched.schedState(this);
+    const daily = st.view === "daily";
+    const start = daily ? st.anchor.startOf("day") : st.anchor.startOf("week");
+    const range = sched.normalizeMeetings(this, start, start.add(daily ? 1 : 7, "day"));
+    const DEFAULT_HOUR = 8;
+    const hour = range.length
+      ? Math.min(...range.map((m) => m.start.hour()))
+      : DEFAULT_HOUR;
+    // One row of context above the first meeting, clamped to the top.
+    body.scrollTop = Math.max(0, (hour - 1) * sched.HOUR_PX);
+  }
+
   // The [stime, etime] epoch bounds of the calendar's visible range, derived
   // from the schedule view state (this._sched). Padded a week/month either side
   // so meetings straddling the edge still surface.
@@ -1947,6 +1993,10 @@ class __window_folder extends mfsInteract {
       nid: m.id,
       title: content.title || m.filename || "",
       message: content.message || "",
+      // Creator uid — written server-side by room.book (metadata.content
+      // .created_by). Legacy meetings predate it, so fall back to the node's
+      // owner_id; both may be absent, which the UI treats as "unknown".
+      created_by: content.created_by || m.owner_id || null,
       date_ymd: s ? Dayjs.unix(s).format("YYYY-MM-DD") : Dayjs().format("YYYY-MM-DD"),
       stime_hm: s ? Dayjs.unix(s).format("HH:mm") : "",
       etime_hm: e ? Dayjs.unix(e).format("HH:mm") : "",
@@ -1958,6 +2008,44 @@ class __window_folder extends mfsInteract {
         until: recur && recur.until ? Dayjs.unix(Number(recur.until)).format("YYYY-MM-DD") : "",
       },
     };
+  }
+
+  // Resolve a meeting's creator uid into a display chip. The uid is all the
+  // server stores, so the name/avatar come from the workspace member pool
+  // (_hubMembers, loaded with the modal); an unresolvable uid — a former
+  // member, or a legacy meeting with no creator recorded — degrades to the raw
+  // uid rather than rendering blank. No `created_by` in create mode means the
+  // current user, who becomes the creator on submit.
+  meetingCreator(m) {
+    const uid = m && m.created_by;
+    if (!uid || String(uid) === String(Visitor.id)) {
+      return {
+        uid: Visitor.id,
+        // Never empty: Skeletons.Avatar hashes the name to build the fallback
+        // colour swatch and would throw on undefined.
+        name: Visitor.fullname() || String(Visitor.id || ""),
+        avatar: Visitor.avatar(),
+        isMe: true,
+      };
+    }
+    const member = (this._hubMembers || []).find(
+      (x) => String(x.uid || x.id) === String(uid),
+    );
+    if (!member) return { uid, name: String(uid), avatar: "default", isMe: false };
+    const name =
+      member.fullname ||
+      `${member.firstname || ""} ${member.lastname || ""}`.trim() ||
+      member.email ||
+      String(uid);
+    return { uid, name, avatar: member.avatar || "default", isMe: false };
+  }
+
+  // Only the creator may edit or delete — room.update/room.remove reject anyone
+  // else with NOT_MEETING_OWNER. Meetings with no recorded creator stay open to
+  // everyone, matching the server's back-compat rule.
+  canEditMeeting(m) {
+    const uid = m && m.created_by;
+    return !uid || String(uid) === String(Visitor.id);
   }
 
   openMeetingModal(opt = {}) {
@@ -1973,6 +2061,7 @@ class __window_folder extends mfsInteract {
         nid: null,
         title: "",
         message: "",
+        created_by: null,
         date_ymd: opt.at.day,
         stime_hm: hm(startMin),
         etime_hm: hm(endMin),
@@ -1984,6 +2073,9 @@ class __window_folder extends mfsInteract {
     this._mmAttendees = prefill ? prefill.attendees.slice() : [];
     this._mmRecur = prefill ? { ...prefill.recur } : { freq: "none", until: "" };
     this._mmEditNid = prefill ? prefill.nid : null;
+    // Creator of the meeting being edited (null while creating — the current
+    // user becomes the creator on submit).
+    this._mmCreatedBy = prefill ? prefill.created_by : null;
     this._mmBusy = {};
     // Fetch the workspace member pool first so the invitee chips can render.
     const hubId = this.mget(_a.actual_hub_id) || this.mget(_a.hub_id);
@@ -2011,6 +2103,36 @@ class __window_folder extends mfsInteract {
             const el = root.querySelector(`[name="${nm}"]`);
             if (el) el.addEventListener("change", () => this._checkAvailability());
           });
+          // Type-to-search invitees: filter the member pool live as the user types.
+          const inviteeSearch = root.querySelector('[name="mm-invitee-search"]');
+          if (inviteeSearch) {
+            inviteeSearch.addEventListener("input", () =>
+              this._filterInvitees(inviteeSearch.value),
+            );
+          }
+          // Custom time picker: keep the hidden HH:mm in sync with the Hour/Minute
+          // boxes; pad + recheck availability on blur.
+          ["stime", "etime"].forEach((which) => {
+            root
+              .querySelectorAll(`[data-timefor="${which}"][data-timepart]`)
+              .forEach((el) => {
+                el.addEventListener("input", () => this._recomputeTime(which));
+                el.addEventListener("blur", () => {
+                  const v = parseInt(el.value, 10);
+                  if (!isNaN(v)) el.value = String(v).padStart(2, "0");
+                  this._recomputeTime(which);
+                  this._checkAvailability();
+                });
+              });
+          });
+          // Rich description editor: seed from the meeting's stored markers + wire
+          // @-mention / /-file / image paste-drop.
+          const descEditor = root.querySelector(
+            `.${this.fig.family}__meeting-modal-desc-editor`,
+          );
+          if (descEditor) {
+            this._mmInitDescEditor(descEditor, prefill ? prefill.message : "");
+          }
         }
         _.delay(() => this._checkAvailability(), 150);
       }),
@@ -2038,16 +2160,98 @@ class __window_folder extends mfsInteract {
     part.feed(require("./skeleton/meeting-modal").inviteesChips(this, pfx));
   }
 
-  // Toggle a workspace member in/out of the invitee set, then re-render chips.
-  toggleMeetingInvitee(cmd) {
+  // Live-filter the member pool by the typed query into the suggestions dropdown
+  // (empty query clears it).
+  _filterInvitees(query) {
+    const part = this.getPart && this.getPart("mm-invitees-suggestions");
+    if (!part) return;
+    const pfx = `${this.fig.family}__meeting-modal`;
+    const rows = require("./skeleton/meeting-modal").inviteesSuggestions(this, pfx, query);
+    part.feed(rows);
+    if (part.el) part.el.dataset.open = rows.length ? 1 : 0;
+  }
+
+  _mmSearchInput() {
+    return (
+      this.dialogWrapper &&
+      this.dialogWrapper.el &&
+      this.dialogWrapper.el.querySelector('[name="mm-invitee-search"]')
+    );
+  }
+
+  // Recompute the hidden 24h "HH:mm" value (name mm-stime / mm-etime) from the
+  // custom time picker's Hour/Minute boxes + AM/PM toggle, so the submit +
+  // free/busy read paths stay unchanged.
+  _recomputeTime(which) {
+    const root = this.dialogWrapper && this.dialogWrapper.el;
+    if (!root) return;
+    const fig = this.fig.family;
+    const picker = root.querySelector(
+      `.${fig}__meeting-modal-time-picker[data-timefor="${which}"]`,
+    );
+    if (!picker) return;
+    const p2 = (n) => String(n).padStart(2, "0");
+    const hourEl = picker.querySelector('[data-timepart="hour"]');
+    const minEl = picker.querySelector('[data-timepart="minute"]');
+    const active = picker.querySelector(
+      `.${fig}__meeting-modal-time-seg[data-active="1"]`,
+    );
+    let h = parseInt((hourEl && hourEl.value) || "", 10);
+    if (isNaN(h) || h < 1) h = 12;
+    if (h > 12) h = 12;
+    let mi = parseInt((minEl && minEl.value) || "", 10);
+    if (isNaN(mi) || mi < 0) mi = 0;
+    if (mi > 59) mi = 59;
+    const ampm = active ? active.dataset.ampm : "am";
+    let h24 = h % 12;
+    if (ampm === "pm") h24 += 12;
+    const hidden = picker.querySelector(`[name="mm-${which}"]`);
+    if (hidden) hidden.value = `${p2(h24)}:${p2(mi)}`;
+  }
+
+  // AM/PM toggle: activate the clicked segment, resync the hidden value, recheck.
+  _setMeetingAmpm(cmd) {
+    const which = cmd && cmd.mget && cmd.mget("which");
+    const ampm = cmd && cmd.mget && cmd.mget("ampm");
+    const root = this.dialogWrapper && this.dialogWrapper.el;
+    if (!root || !which || !ampm) return;
+    const fig = this.fig.family;
+    const picker = root.querySelector(
+      `.${fig}__meeting-modal-time-picker[data-timefor="${which}"]`,
+    );
+    if (!picker) return;
+    picker.querySelectorAll(`.${fig}__meeting-modal-time-seg`).forEach((s) => {
+      s.dataset.active = s.dataset.ampm === ampm ? "1" : "0";
+    });
+    this._recomputeTime(which);
+    this._checkAvailability();
+  }
+
+  // Add a searched member to the invitee set; clear the search box + dropdown.
+  _addInvitee(cmd) {
     const uid = cmd && ((cmd.mget && cmd.mget("uid")) || (cmd.el && cmd.el.dataset.uid));
     if (!uid) return;
     const name = (cmd.mget && cmd.mget("uname")) || "";
     this._mmAttendees = this._mmAttendees || [];
-    const i = this._mmAttendees.findIndex((a) => (a.uid || a) === uid);
-    if (i >= 0) this._mmAttendees.splice(i, 1);
-    else this._mmAttendees.push({ uid, name });
+    if (!this._mmAttendees.some((a) => (a.uid || a) === uid)) {
+      this._mmAttendees.push({ uid, name });
+    }
+    const search = this._mmSearchInput();
+    if (search) search.value = "";
+    this._filterInvitees("");
     this._reFeedInviteeChips();
+    this._checkAvailability();
+  }
+
+  // Remove an invitee chip; re-run the current query so the member reappears as
+  // a suggestion if it still matches.
+  _removeInvitee(cmd) {
+    const uid = cmd && ((cmd.mget && cmd.mget("uid")) || (cmd.el && cmd.el.dataset.uid));
+    if (!uid) return;
+    this._mmAttendees = (this._mmAttendees || []).filter((a) => (a.uid || a) !== uid);
+    this._reFeedInviteeChips();
+    const search = this._mmSearchInput();
+    this._filterInvitees(search ? search.value : "");
     this._checkAvailability();
   }
 
@@ -2126,7 +2330,13 @@ class __window_folder extends mfsInteract {
       return el ? String(el.value || "").trim() : "";
     };
     const title = val('[name="mm-title"]');
-    const message = val('[name="mm-message"]');
+    // Description is the rich contenteditable → serialize to marker text + the
+    // mentioned person uids (for server-side notify).
+    const descEditor = root.querySelector(
+      `.${this.fig.family}__meeting-modal-desc-editor`,
+    );
+    const message = descEditor ? this._mmSerializeEditor(descEditor) : "";
+    const mention_uids = descEditor ? this._mmCollectMentionUids(descEditor) : [];
     const dateYmd = val('[name="mm-date"]'); // Y-m-d from date_picker
     const sHm = val('[name="mm-stime"]');
     const eHm = val('[name="mm-etime"]');
@@ -2148,6 +2358,7 @@ class __window_folder extends mfsInteract {
     return {
       title,
       message,
+      mention_uids,
       // Legacy display string (back-compat for player/schedule). Plain tokens
       // only — no localizedFormat plugin dependency.
       date: Dayjs.unix(stime).format("ddd, MMM D, YYYY h:mm A"),
@@ -2155,6 +2366,11 @@ class __window_folder extends mfsInteract {
       etime,
       recur,
       attendees: (this._mmAttendees || []).slice(),
+      // Creating → the current user is the creator. Editing → keep whoever
+      // created it (null for legacy meetings; never claim authorship). The
+      // server owns this field — it's carried here only so the optimistic
+      // local row matches what room.list will return.
+      created_by: this._mmEditNid ? this._mmCreatedBy : Visitor.id,
     };
   }
 
@@ -2168,6 +2384,7 @@ class __window_folder extends mfsInteract {
       filename: form.title,
       stime: form.stime,
       etime: form.etime,
+      owner_id: form.created_by,
       metadata: JSON.stringify({
         content: {
           title: form.title,
@@ -2177,6 +2394,7 @@ class __window_folder extends mfsInteract {
           etime: form.etime,
           recur: form.recur,
           attendees: form.attendees,
+          created_by: form.created_by,
           room_id: nid,
         },
       }),
@@ -3219,6 +3437,10 @@ class __window_folder extends mfsInteract {
     if (this.activeTab === _a.chat) this._populateThreadRail();
     this.scopeTasksToFolder();
     this.refreshBreadcrumbsUI();
+    // super.updateTopbar → copyPropertiesFrom carries the destination node's
+    // privilege into our model, so a subfolder that grants different rights
+    // than its parent is already reflected there — re-read it for the button.
+    this.syncNewCtrlVisibility();
   }
 
   showFolderTab(tab) {
@@ -3246,10 +3468,7 @@ class __window_folder extends mfsInteract {
     // The merged "+ New" button also lives on the tab line but only operates on
     // Files (upload / create / gdrive-import) — hide it off the Files tab so it
     // can't be mistaken for a Chat/Task/Meeting action.
-    const newCtrl = this.getPart("new-ctrl");
-    if (newCtrl && newCtrl.el) {
-      newCtrl.el.dataset.visible = tab === "files" ? "1" : "0";
-    }
+    this.syncNewCtrlVisibility();
 
     const switchView = (view) => {
       if (this._meetingViewActive && tab !== "meeting") {
@@ -3635,8 +3854,13 @@ class __window_folder extends mfsInteract {
   // which matches children by nid and no-ops on this nid-less payload — so
   // intercept it here to refresh our own chrome. mget(_a.privilege) drives
   // canUpload/canShare/canManageAccess, so updating it fixes context-menu,
-  // drag-drop, etc. live; the topbar re-feed is needed because its buttons are
-  // conditionally created (absent when unpermitted) and can't be CSS-toggled.
+  // drag-drop, etc. live.
+  //
+  // Two kinds of chrome need different treatment, and both must be handled:
+  //  - topbar buttons (Manage access, settings) are conditionally CREATED, so
+  //    they cannot be CSS-toggled — the header is re-fed to rebuild them.
+  //  - the tab-bar [+ New] button always exists and is CSS-toggled instead, and
+  //    it is NOT inside the re-fed header — syncNewCtrlVisibility covers it.
   handleWsEvent(args = {}) {
     const { data, options } = args || {};
     if (options && options.service === SERVICE.hub.set_privilege) {
@@ -3656,9 +3880,24 @@ class __window_folder extends mfsInteract {
     // Re-feed the header (not the topbar container) so the header element and
     // its drag/raise wiring survive; only the topbar child rebuilds with the
     // new privilege. The re-feed recreates the breadcrumb part, so repopulate.
-    this.feedPart("folder-header", require("./skeleton/topbar")(this));
+    //
+    // Feeding the header spawns children that bubble up through onChildBubble,
+    // which raises this window (window/core: triggerMethod('change:radio')).
+    // That is right for a click, but here the user did not touch anything — an
+    // admin did, elsewhere — and stealing focus would bury whatever they have
+    // open on top of this workspace, e.g. a document they are editing. Suppress
+    // the raise for the duration of the re-feed instead.
+    this._suppressRaise = 1;
+    this.feedPart("folder-header", require("./skeleton/topbar")(this))
+      .catch(() => { })
+      .then(() => { this._suppressRaise = 0; });
     this.refreshBreadcrumbsUI();
     this._syncChatGate();
+    // The [+ New] button lives on the tab bar, NOT in the topbar re-fed above,
+    // so the re-feed does not reach it. Sync it explicitly, or an admin's
+    // demotion leaves a working create/upload menu on a view-only member's
+    // screen (and a promotion leaves them without one until they reopen).
+    this.syncNewCtrlVisibility();
   }
 
   // Chat is granted at the "View & chat" tier and above — i.e. any privilege
@@ -3682,6 +3921,32 @@ class __window_folder extends mfsInteract {
     this.$el.find(".window__chat-panel").attr("data-chat_gated", gated);
   }
 
+  // Gate the merged "+ New" button (upload / create / gdrive-import) on BOTH
+  // the active tab and the viewer's current write permission.
+  //
+  // The button is always in the tree (see skeleton/toolkit tabBar) because the
+  // skeleton is built before the window knows its privilege, and because a
+  // build-time gate cannot react to anything afterwards. Every source of truth
+  // for "may this viewer create things here?" therefore converges on this one
+  // runtime read of mget(privilege):
+  //   - open             → onPartReady("new-ctrl")
+  //   - opened w/o a priv → _healChatPrivilege, once the real value resolves
+  //   - tab switch       → showFolderTab
+  //   - live role change → _applyLivePrivilege (admin changed our role)
+  //   - walk in          → updateTopbar (a subfolder may grant other rights)
+  //   - walk back        → _restoreNavState (so may an ancestor)
+  //
+  // Off the Files tab it hides regardless of permission: the actions only apply
+  // to files, so showing it on Chat/Task/Meeting would misrepresent what it does.
+  syncNewCtrlVisibility() {
+    const newCtrl = this.getPart && this.getPart("new-ctrl");
+    if (!newCtrl || !newCtrl.el) return;
+    const onFiles = (this.activeTab || "files") === "files";
+    // canUpload() returns the masked bitmask (truthy number), not a boolean.
+    const mayCreate = !!(this.canUpload && this.canUpload());
+    newCtrl.el.dataset.visible = onFiles && mayCreate ? "1" : "0";
+  }
+
   // Resolve the viewer's real privilege for this node when the window opened
   // without one (see buildContent), then re-sync the chat gate. Uses the same
   // read-only node-attributes fetch the desk reveal path uses
@@ -3702,6 +3967,10 @@ class __window_folder extends mfsInteract {
       if (node && node.privilege != null && this.mget(_a.privilege) == null) {
         this.mset(_a.privilege, Number(node.privilege));
         this.ensurePart("folder-view").then(() => this._syncChatGate());
+        // The [+ New] button reads the same privilege — a window that opened
+        // without one renders it hidden, so re-resolve once the real value
+        // lands or a full member would be left with no way to create anything.
+        this.ensurePart("new-ctrl").then(() => this.syncNewCtrlVisibility());
       }
     } catch (e) {
       if (this.warn) this.warn("[folder] chat-privilege heal failed", e && e.message);
@@ -4104,5 +4373,8 @@ class __window_folder extends mfsInteract {
     list.collection.set(found);
   }
 }
+
+// Rich meeting-description editor methods (@-mention, /-file, inline images).
+Object.assign(__window_folder.prototype, require("./meeting-desc-editor"));
 
 module.exports = __window_folder;

@@ -1,7 +1,8 @@
 @use 'mixins/drumee';
 
 .window-warning,
-.player-warning {
+.player-warning,
+.editor-warning {
   &__main {
     width: 100%;
     height: 100%;
@@ -81,9 +82,41 @@
   }
 }
 
+// The warning() overlay wrapper is classed `${fig.group}__dialog-overlay`.
+// `.window` (window.scss) and `.player` (player/skin) have their own overlay
+// rules, but editors (note/markdown/diagram extend the player base, group
+// "editor") had none — without positioning the overlay lands in normal flow
+// below the content instead of covering it.
+.editor__dialog-overlay {
+  background-color: rgba(0, 0, 0, 0.3);
+  height: calc(100% - 44px);
+  position: absolute;
+  top: 44px;
+  width: 100%;
+}
+
+// The shared 60%-of-window body above is proportioned for folder windows;
+// players and editors can span the whole workspace, where 60% reads as a
+// second window rather than a popup. Keep their notices compact, sized by
+// their text like the app's other confirm dialogs.
+.player-warning,
+.editor-warning {
+  &__body {
+    height: auto;
+    min-height: 0;
+    width: auto;
+    max-width: 440px;
+  }
+
+  &__content {
+    height: auto;
+  }
+}
+
 @media (max-width: 650px) {
   .window-warning,
-  .player-warning {
+  .player-warning,
+  .editor-warning {
     &__body {
       max-height: calc(100vh - 32px);
       max-height: calc(100dvh - 32px);

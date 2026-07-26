@@ -739,7 +739,22 @@ class __invite_popup extends LetcBox {
             ),
           );
         } else {
-          Wm.alert(LOCALE.INVITATION_SENT_SUCCESSFULLY);
+          // Branded "notice" toast (the drumee-logo card with a primary Close),
+          // matching the permission panel's invite-sent confirmation. `kind` is
+          // set so Wm.alert feeds the object verbatim (variant + actions) into
+          // the wrapper-modal instead of wrapping it as a plain grey alert.
+          Wm.alert({
+            kind: "window_info",
+            message: LOCALE.INVITATION_SENT_SUCCESSFULLY,
+            variant: "notice",
+            actions: [
+              {
+                label: LOCALE.CLOSE,
+                priority: "primary",
+                service: _e.close,
+              },
+            ],
+          });
         }
         this._closePopup();
       })

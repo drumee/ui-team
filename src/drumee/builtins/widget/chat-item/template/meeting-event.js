@@ -14,6 +14,33 @@
  *   - metadata (JSON): { hub_id, nid, filename, by }
  *   - fullname: poster's display name
  */
+const isEmail = (v) => !!v && String(v).includes('@');
+
+/**
+ * Who started/ended the meeting. `md.by` is frozen into the message when the
+ * card is posted, and cards written before the poster's profile had loaded
+ * carry an email address instead of a name — which is why the same person
+ * showed up as "Lexis" on one card and "lexis@example.com" on another. Skip an
+ * emailish `by` and rebuild the name from the message row (same fallback chain
+ * as template/username.js), keeping the email only as a last resort so the
+ * subtitle is never empty.
+ */
+const resolveAuthor = (md, m) => {
+  const e = m.entity || m;
+  if (md.by && !isEmail(md.by)) return md.by;
+  const lastname = e.lastname || m.lastname || '';
+  const surname = e.surname || m.surname || '';
+  const firstname = e.firstname || m.firstname || surname || '';
+  const nonEmail = (v) => (v && !isEmail(v) ? v : '');
+  const name =
+    `${firstname} ${lastname}`.trim() ||
+    nonEmail(e.fullname) ||
+    nonEmail(m.fullname) ||
+    nonEmail(e.name) ||
+    nonEmail(m.name);
+  return name || md.by || e.email || m.email || 'Someone';
+};
+
 module.exports = function (m) {
   let md = m.metadata || {};
   if (typeof md === 'string') {
@@ -22,9 +49,13 @@ module.exports = function (m) {
 
   const fig = m.fig;
   const xlink = 'xmlns:xlink="http://www.w3.org/1999/xlink"';
-  const isStart = m.message_type === 'meeting.start';
+  // One card transitions in place: a start message flipped to
+  // meeting_status='ended' renders like a legacy "meeting.end" card.
+  const isEnded =
+    m.message_type === 'meeting.end' || md.meeting_status === 'ended';
+  const isStart = !isEnded;
 
-  const by = md.by || m.fullname || 'Someone';
+  const by = resolveAuthor(md, m);
   const title = md.filename || LOCALE.MEETING || 'Meeting';
   const verb = isStart ? LOCALE.STARTED_A_MEETING : LOCALE.ENDED_THE_MEETING;
 

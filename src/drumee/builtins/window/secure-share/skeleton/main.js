@@ -1,4 +1,12 @@
 
+// The SHARED LINKS list is hidden in every secure-share panel — for the creator
+// too (Lexis, 2026-07-25): it confused people about what "access" means while the
+// section gets reworked. Hidden, not removed: flip this flag back to true to
+// restore it exactly as it was. Everything below it (the list skeleton, its
+// loader and its revoke) is left intact and still guarded on its parts, so
+// nothing runs while the section is not rendered.
+const SHOW_SHARED_LINKS = false;
+
 const __skl_secure_share = function(_ui_) {
   const pfx   = _ui_.fig.family;
   const group = _ui_.fig.group;
@@ -453,7 +461,7 @@ const __skl_secure_share = function(_ui_) {
         kids      : [
           body,
           accessListSection,
-          listSection,
+          ...(SHOW_SHARED_LINKS ? [listSection] : []),
         ]
       }),
       Skeletons.Box.Z({
