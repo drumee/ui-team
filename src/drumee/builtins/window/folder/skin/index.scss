@@ -2279,21 +2279,42 @@
   .window__filter__column {
     height: 36px;
     min-width: 0;
-    padding: 0 6px;
+    // No left padding: the header cell and its media-row counterpart share the
+    // same grid track, but the data cells have no padding, so any inset here
+    // pushes the title off its own column. Right padding keeps adjacent titles
+    // from touching.
+    padding: 0 6px 0 0;
     flex-wrap: nowrap;
-    overflow: hidden;
+    // Visible, not hidden: the sort arrow hangs left of this box (see the svg
+    // rule below) and would otherwise be clipped away. Long titles still
+    // ellipsize — .label carries its own overflow — and .window__filter__main
+    // clips the row as a whole.
+    overflow: visible;
+    // Centre the sort arrow + label vertically in the 36px bar. Horizontal
+    // alignment stays leading so each title sits over its own data column
+    // (the media-row fields below are left-aligned).
+    align-items: center;
+    // Drumee brand indigo. NOT --primary-400: revamp.scss declares two
+    // --primary-* scales in the same :root, and the later (lilac) one wins, so
+    // that token resolved to #c781ff. --primary-purple-40 is the same value as
+    // the first scale's --primary-40 and has no duplicate overriding it.
     @include drumee.typo(
       $size: 12px,
       $line: 16px,
       $weight: 700,
-      $color: var(--primary-400, #4a90e2)
+      $color: var(--primary-purple-40)
     );
 
+    // The sort arrow precedes the label in the DOM, so its box would shift the
+    // title right by its own width and leave every header 20px off its column.
+    // Hang it in the gutter (negative margin equal to width + gap) so the
+    // LABEL, not the icon, starts at the column edge — matching the data below.
     svg {
       width: 16px;
       height: 16px;
       padding: 2px;
       margin-right: 4px;
+      margin-left: -20px;
       flex-shrink: 0;
     }
 
