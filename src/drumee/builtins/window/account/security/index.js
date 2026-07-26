@@ -121,8 +121,14 @@ class __account_security extends LetcBox {
       case 'close-log-details':
         return this.__logDetails.clear();
 
-      case _a.unlock:
-        return this.__wrapperPopup.feed(require('./skeleton/popup/fr/confirm')(this));
+      case _a.unlock: {
+        // This dialog ships one skeleton per language but used to require
+        // the French one unconditionally — English sessions always saw a
+        // French confirm. Pick the session language, default English.
+        let lang = Visitor.language();
+        if (!/^(en|fr|ru|zh)$/.test(lang)) lang = 'en';
+        return this.__wrapperPopup.feed(require(`./skeleton/popup/${lang}/confirm`)(this));
+      }
     }
   }
 
