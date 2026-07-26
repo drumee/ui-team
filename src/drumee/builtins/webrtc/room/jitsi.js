@@ -1,4 +1,7 @@
 let CAMERA = "camera";
+// Auto-clear for participant arrival/departure notices. Sits in the 3–5s
+// window every major client uses (Meet/Teams/Zoom all auto-dismiss).
+const PARTY_NOTICE_MS = 4000;
 const JitsiMeetJS = require('vendor/lib/jitsi/lib-jitsi-meet.min.js');
 const { events: JEVENTS } = JitsiMeetJS;
 const { fitBoxes } = require("@drumee/ui-essentials")
@@ -956,8 +959,32 @@ class __webrtc_room extends __room {
    */
   async onRemoteDrumateJoined(data) {
     this._joining = 1;
-    this.stateMessage(LOCALE.X_IS_CONNECTING.format(data.username));
+    this.notifyParticipantConnecting(data.username);
   }
+
+  // ── Participant arrival / departure notices ───────────────────────────────
+  // Overridable so each window picks its own surface: the 1:1 call keeps the
+  // top-center status panel, the team meeting uses a corner toast.
+
+  // Always pass a timeout — this was the one message without one, so a peer
+  // whose Jitsi join never landed left it on screen for the rest of the call.
+  notifyParticipantConnecting(name) {
+    if (!name) return;
+    this.stateMessage(LOCALE.X_IS_CONNECTING.format(name), PARTY_NOTICE_MS);
+  }
+
+  notifyParticipantJoined(name) {
+    if (!name) return;
+    this.stateMessage(
+      this.service_class === "connect"
+        ? LOCALE.X_HAS_JOINED_CALL.format(name)
+        : LOCALE.X_HAS_JOINED_MEETING.format(name, ""),
+      PARTY_NOTICE_MS,
+    );
+  }
+
+  // Silent in the 1:1 call: the window tears down when the peer leaves.
+  notifyParticipantLeft(name) { }
 
   /**
    * That function is executed when the conference is joined by the remote user
@@ -973,12 +1000,15 @@ class __webrtc_room extends __room {
     if (this.__participants.isEmpty()) {
       if (!this._joining) this.stateMessage("waiting");
     }
-    this.stateMessage(
-      this.service_class === "connect"
-        ? LOCALE.X_HAS_JOINED_CALL.format(participant.getDisplayName())
-        : LOCALE.X_HAS_JOINED_MEETING.format(participant.getDisplayName(), ""),
-      3000
-    );
+    // Was set once and never cleared, leaving the `if (!this._joining)` guards
+    // here and in broadcastJoining dead for the rest of the call.
+    this._joining = 0;
+    const displayName = participant.getDisplayName();
+    // USER_LEFT carries only the participant id, and the Jitsi participant
+    // object is gone by then.
+    this._partyNames = this._partyNames || {};
+    this._partyNames[id] = displayName;
+    this.notifyParticipantJoined(displayName);
     this.__participants.append(
       require("builtins/webrtc/skeleton/remote-user")(this, {
         participant,
@@ -1133,9 +1163,12 @@ class __webrtc_room extends __room {
   onUserLeft(id) {
     let endpoint = this.endpoints[id];
     this.trigger("user-left", { id });
+    const name = this._partyNames && this._partyNames[id];
+    if (this._partyNames) delete this._partyNames[id];
     if (!endpoint) {
       return;
     }
+    this.notifyParticipantLeft(name);
     endpoint.goodbye();
     this._guests.delete(id)
   }

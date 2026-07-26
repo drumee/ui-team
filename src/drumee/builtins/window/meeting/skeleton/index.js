@@ -196,6 +196,16 @@ const __skl_window_meeting = function (_ui_, localUser) {
     }),
   );
 
+  // Bottom-left stack of transient "X joined" / "X left" notices, kept out of
+  // the top-center message-container (the connection-status surface).
+  // See _partyToast in window/meeting/index.js.
+  kids.push(
+    Skeletons.Box.Y({
+      className: `${_ui_.fig.family}__party-toasts`,
+      sys_pn: "party-toasts",
+    }),
+  );
+
   const a = Skeletons.Box.X({
     debug: __filename,
     sys_pn: 'xxcontent',

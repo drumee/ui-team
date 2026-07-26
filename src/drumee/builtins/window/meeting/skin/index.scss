@@ -160,6 +160,28 @@
   }
 }
 
+// Join/leave toast: slide up from below, hold, fade out in place. Total
+// duration matches PARTY_TOAST_MS in window/meeting/index.js, which removes
+// the element just as the fade completes.
+@keyframes window-meeting-party-toast {
+  0% {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  10% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  80% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}
+
 // Floating reaction: rise from the tile bottom, hold, then fade out at the top.
 @keyframes window-meeting-reaction-rise {
   0% {
