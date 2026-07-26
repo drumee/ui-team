@@ -49,11 +49,13 @@ function initialize() {
 
   window.Visitor = require('core/user')(user);
   
-  let l = Visitor.pagelang();
-
-  if (!['en', 'fr', 'ru', 'zh'].includes(l)) l = 'en';
-
-  window.LOCALE = require("locale")(l);
+  // locale/index.js stopped exporting a selector function when the entries
+  // were split into separate bundles (commit 2eeeb731) — require("locale")(l)
+  // has thrown TypeError ever since, killing everything below this line on
+  // the embed arch. English table per the product default; the desk app gets
+  // its table from the locale entry bundle, not from here.
+  const { createSafeObject } = require("@drumee/ui-essentials");
+  window.LOCALE = createSafeObject(require("locale/en.json"));
 
   let nodes = __parse();
   for (let node of nodes) {

@@ -37,9 +37,18 @@ class __welcome_feedback extends __welcome_interact {
       service : SERVICE.locale.group,
       name    : '_account'
     }).then((data)=>{
+      // These rows carry one column per language. This used to index them
+      // with the raw Visitor.language() — whose fallback was
+      // navigator.language — and wrote the result into the SHARED LOCALE
+      // safe-object, so a French-configured browser injected French values
+      // for every _account key into an English session (they stayed there
+      // for every widget rendered afterwards). Resolve the column with a
+      // whitelist and an English default, and fall back to the English
+      // column when the chosen one is empty.
+      let key = Visitor.language();
+      if (!/^(en|fr|es|ru|km|zh)$/.test(key)) key = 'en';
       for(let row of data){
-        let key = Visitor.language();
-        LOCALE[row.key_code]= row[key];  
+        LOCALE[row.key_code] = row[key] || row.en;
       }
       this.feed(require('./skeleton').default(this));
     })
