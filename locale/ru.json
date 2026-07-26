@@ -1490,6 +1490,7 @@
   "ROLE_ADMIN_DESC": "Can View, Chat, Edit & Manage member permission",
   "PERMISSIONS_MATRIX": "Permissions Matrix",
   "CHAT_ADMIN_REQUIRED": "Для общения в чате нужны права администратора",
+  "CHAT_PERMISSION_REQUIRED": "У вас нет прав на просмотр этой беседы и участие в ней. Запросите у администратора доступ «Просмотр и чат».",
   "INVITE_ADD_ROLE": "+ Add new workspace and role",
   "SEND_INVITATION": "Send Invitation",
   "INVITE_PARTIAL_FAILED": "Отправлено приглашений: {0}, не удалось: {1}",

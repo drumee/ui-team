@@ -1490,6 +1490,7 @@
   "ROLE_ADMIN_DESC": "Can View, Chat, Edit & Manage member permission",
   "PERMISSIONS_MATRIX": "Permissions Matrix",
   "CHAT_ADMIN_REQUIRED": "អ្នកត្រូវការការអនុញ្ញាតពីអ្នកគ្រប់គ្រង ដើម្បីជជែក",
+  "CHAT_PERMISSION_REQUIRED": "អ្នកគ្មានសិទ្ធិមើល ឬចូលរួមការសន្ទនានេះទេ។ សូមស្នើសុំសិទ្ធិ «មើល និងជជែក» ពីអ្នកគ្រប់គ្រង។",
   "INVITE_ADD_ROLE": "+ Add new workspace and role",
   "SEND_INVITATION": "Send Invitation",
   "INVITE_PARTIAL_FAILED": "បានផ្ញើការអញ្ជើញ {0}, បរាជ័យ {1}",

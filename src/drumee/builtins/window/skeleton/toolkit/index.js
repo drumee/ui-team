@@ -724,7 +724,9 @@ export function chatPanel(ui) {
               }),
               Skeletons.Note({
                 className: `${grp}__chat-gate-text`,
-                content: LOCALE.CHAT_ADMIN_REQUIRED,
+                // NOT admin-only: chat opens at the "View & chat" tier, so the
+                // old ADMIN wording named the wrong role to ask for.
+                content: LOCALE.CHAT_PERMISSION_REQUIRED,
               }),
             ],
           })
@@ -1098,7 +1100,15 @@ export function fileThreadPanel(ui) {
     // Carry the folder's area so the side panel's own-message bubbles get the
     // SAME area tint as the General chat (the bubble rules key off data-area;
     // without it the panel falls back to the saturated default fill).
-    dataset: { open: 0, area: ui.mget(_a.area) },
+    //
+    // chat_gated mirrors chatPanel's: this panel hosts its own chat widget, so
+    // a view-only member must meet a blurred composer here too. Seeded at build
+    // time so there is no flash of a live composer before _syncChatGate runs.
+    dataset: {
+      open: 0,
+      area: ui.mget(_a.area),
+      chat_gated: Number(ui.mget(_a.privilege)) & _K.permission.download ? 0 : 1,
+    },
   });
 }
 

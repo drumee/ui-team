@@ -1490,6 +1490,7 @@
   "ROLE_ADMIN_DESC": "Can View, Chat, Edit & Manage member permission",
   "PERMISSIONS_MATRIX": "Permissions Matrix",
   "CHAT_ADMIN_REQUIRED": "您需要管理员权限才能聊天",
+  "CHAT_PERMISSION_REQUIRED": "您没有权限查看或参与此对话。请向管理员申请“查看并聊天”权限。",
   "INVITE_ADD_ROLE": "+ Add new workspace and role",
   "SEND_INVITATION": "Send Invitation",
   "INVITE_PARTIAL_FAILED": "已发送 {0} 个邀请，{1} 个失败",

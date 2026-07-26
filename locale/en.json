@@ -477,6 +477,7 @@
   "ROLE_ADMIN_DESC": "Can View, Chat, Edit & Manage member permission",
   "PERMISSIONS_MATRIX": "Permissions Matrix",
   "CHAT_ADMIN_REQUIRED": "You need admin permission to chat",
+  "CHAT_PERMISSION_REQUIRED": "You don't have permission to view or join this conversation. Ask an admin for \"View & chat\" access.",
   "INVITE_ADD_ROLE": "+ Add new workspace and role",
   "SEND_INVITATION": "Send Invitation",
   "INVITE_PARTIAL_FAILED": "Sent {0} invitation(s), {1} failed",

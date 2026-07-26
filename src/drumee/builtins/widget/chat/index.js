@@ -1878,6 +1878,29 @@ class __widget_chat extends LetcBox {
   }
 
   /**
+   * May this viewer post into the conversation this widget is showing?
+   *
+   * Chat is granted at the "View & chat" tier and above — i.e. any privilege
+   * carrying the download bit (roles compose as view 0b0011 · chat 0b0111 ·
+   * edit 0b1111 · admin 0b11111, so only bare View lacks it). Mirrors the
+   * folder window's _privilegeGrantsChat, which drives the visual gate.
+   *
+   * Scoped to workspace conversations. A P2P/personal chat, a support ticket
+   * and a DMZ share have their own rules (the share's is the `guest_chat` /
+   * `scoped_post` pair set by toolkit chatPanel), and their privilege values
+   * do not follow the workspace role scale — gating them on it would silence
+   * conversations that are working today.
+   */
+  _mayChatHere() {
+    const area = this.mget(_a.area) || this.mget(_a.type);
+    if (![_a.private, _a.public].includes(area)) return true;
+    // A share-scoped folder window (pinned token) posts under the secure-share
+    // rules above, not the member role scale.
+    if (this.mget(_a.token)) return true;
+    return !!(Number(this._scopePrivilege()) & _K.permission.download);
+  }
+
+  /**
    *
    * @param {*} args
    * @returns
@@ -1901,6 +1924,17 @@ class __widget_chat extends LetcBox {
         desk.showSignupRequiredOverlay();
       }
       return;
+    }
+    // Workspace chat requires the "View & chat" tier or above. The folder
+    // window covers this visually (blurred composer + "need permission" card),
+    // but a cover is not a gate: the blur is pointer-events only, so a member
+    // downgraded WHILE typing still has keyboard focus in the composer and
+    // Enter would post. Refuse here, where every send path converges.
+    //
+    // _scopePrivilege reads through to the folder window, so a live
+    // hub.set_privilege push is reflected without this widget subscribing.
+    if (!this._mayChatHere()) {
+      return this.showError(LOCALE.CHAT_PERMISSION_REQUIRED);
     }
     // Sending ends the typing session.
     this._stopTyping();

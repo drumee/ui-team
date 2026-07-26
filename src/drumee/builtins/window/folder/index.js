@@ -3081,6 +3081,11 @@ class __window_folder extends mfsInteract {
   // data-thread="open" → 3-column grid), and hydrate the header with the file's
   // real name + vignette. The middle #General chat is untouched.
   _openFileThreadPanel(fileNid, fileLabel, replyData) {
+    // No chat access → no thread to open. Feeding the panel would mount a chat
+    // widget that fetches and renders the conversation behind the CSS gate.
+    if (!this._privilegeGrantsChat(this.mget(_a.privilege))) {
+      return Promise.resolve();
+    }
     const nid = `${fileNid}`;
     return this.ensurePart("file-thread-panel").then((panel) => {
       if (!panel || !panel.el || (panel.isDestroyed && panel.isDestroyed()))
@@ -3232,6 +3237,13 @@ class __window_folder extends mfsInteract {
   // (_populateThreadRail). Resolves to a plain item array; never rejects (a
   // failed/absent fetch yields [] so callers still render General + Download).
   _fetchThreadList() {
+    // A member without chat access must not read the thread list. The CSS gate
+    // only obscures it; not asking for it in the first place is what keeps the
+    // filenames off their screen (they are conversation content too, and some
+    // are named after things the member cannot otherwise see).
+    if (!this._privilegeGrantsChat(this.mget(_a.privilege))) {
+      return Promise.resolve([]);
+    }
     const hub_id = this.mget(_a.actual_hub_id) || this.mget(_a.hub_id);
     const folder_nid = this.mget(_a.nid);
     const svc =
@@ -3893,6 +3905,15 @@ class __window_folder extends mfsInteract {
       .then(() => { this._suppressRaise = 0; });
     this.refreshBreadcrumbsUI();
     this._syncChatGate();
+    // Losing chat access with a thread already open leaves its conversation
+    // mounted behind the gate — tear it down (feed [] unbinds the widget's WS,
+    // so no new messages arrive either) and drop the rail's cached rows so a
+    // re-render cannot repaint the thread list from memory.
+    if (!this._privilegeGrantsChat(this.mget(_a.privilege))) {
+      this._closeFileThreadPanel();
+      this._threadRailItems = [];
+      this._populateThreadRail();
+    }
     // The [+ New] button lives on the tab bar, NOT in the topbar re-fed above,
     // so the re-feed does not reach it. Sync it explicitly, or an admin's
     // demotion leaves a working create/upload menu on a view-only member's
@@ -3918,7 +3939,16 @@ class __window_folder extends mfsInteract {
     const gated = this._privilegeGrantsChat(this.mget(_a.privilege)) ? 0 : 1;
     // Attribute is data-chat_gated (underscore): the skeleton sets it via
     // dataset:{chat_gated}, which the framework renders literally as data-${k}.
-    this.$el.find(".window__chat-panel").attr("data-chat_gated", gated);
+    //
+    // The thread rail and the file-thread side panel are SIBLINGS of the chat
+    // panel in the Chat-tab grid (their own columns), not descendants — gating
+    // only .window__chat-panel left a downgraded member able to read the file
+    // thread list and, on opening one, its whole conversation. Flag all three.
+    this.$el
+      .find(
+        ".window__chat-panel, .window__file-thread-panel, .window__thread-rail",
+      )
+      .attr("data-chat_gated", gated);
   }
 
   // Gate the merged "+ New" button (upload / create / gdrive-import) on BOTH

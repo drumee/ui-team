@@ -3682,6 +3682,24 @@ html[data-theme="dark"] {
     }
   }
 
+  // Same downgrade, for the Chat tab's other two columns. They are sibling
+  // columns, so the rule above does not reach them, and neither hosts a gate
+  // card of its own — the card in the middle #General panel, visible at the
+  // same time, carries the explanation for all three.
+  //
+  // These blur the WHOLE column, not just the composer: the file-thread list
+  // and an opened thread's messages are conversation content, and a member
+  // without chat access should not be able to read them either. Blur radius
+  // matches the middle panel's gate backdrop so the columns read as one
+  // obscured surface; pointer-events off also stops the rail from switching
+  // threads behind the gate.
+  .window__thread-rail[data-chat_gated="1"],
+  .window__file-thread-panel[data-chat_gated="1"] {
+    filter: blur(4px);
+    pointer-events: none;
+    user-select: none;
+  }
+
   .window__chat-gate-logo {
     align-items: end;
     gap: 8px;

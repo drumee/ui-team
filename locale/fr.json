@@ -1490,6 +1490,7 @@
   "ROLE_ADMIN_DESC": "Can View, Chat, Edit & Manage member permission",
   "PERMISSIONS_MATRIX": "Permissions Matrix",
   "CHAT_ADMIN_REQUIRED": "Vous avez besoin d'une autorisation d'administrateur pour discuter",
+  "CHAT_PERMISSION_REQUIRED": "Vous n'avez pas l'autorisation de voir cette conversation ni d'y participer. Demandez l'accès « Voir et discuter » à un administrateur.",
   "INVITE_ADD_ROLE": "+ Add new workspace and role",
   "SEND_INVITATION": "Send Invitation",
   "INVITE_PARTIAL_FAILED": "{0} invitation(s) envoyée(s), {1} échec(s)",
