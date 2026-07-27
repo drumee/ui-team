@@ -483,47 +483,30 @@ $success-soft: rgba(46, 179, 122, 0.14);
   // ───────── modals (fed into Wm.__wrapperModal) ─────────
   // Fed into Wm.__wrapperModal, outside the .reward-flow root — so it can't
   // inherit the root's font and declares it here.
-  // Deliberately the SAME shell as __card: the modals are the last screens of
-  // the same flow, so they carry the step card's width, padding, rhythm,
-  // rounding and shadow rather than a second, larger scale of their own.
+  // The modals ARE step cards — skeleton/modal.js gives them the __card class
+  // and the card's __title / __desc / __footer / __chip inside, so the shell,
+  // type scale and buttons come from one place instead of a parallel set of
+  // rules kept in sync by hand. Only what being fed OUTSIDE the flow root
+  // requires is declared here.
   &__modal {
+    // Fed into Wm.__wrapperModal, so it cannot inherit the root's font.
     font-family: var(--font-main);
     // Opt pointer events back in on the modal ITSELF (the root is pe:none, like
     // the coach does). When shown during the walkthrough it lives inside the
     // pe:none guide layer, so without this its buttons never receive clicks.
     pointer-events: auto;
-    width: 340px;
-    box-sizing: border-box;
-    padding: 24px;
-    gap: 16px;
-    align-items: center;
-    text-align: center;
-    border-radius: 6px;
-    background-color: var(--normal-bg);
-    box-shadow: 0 18px 48px rgba(0, 0, 0, 0.22);
   }
 
-  // Mirrors __chip: same 56px rounded square the step cards use, so the success
-  // tick reads as the same component family rather than a bigger disc.
-  &__modal-ico {
-    width: 56px;
-    height: 56px;
-    border-radius: 16px;
-    align-items: center;
-    justify-content: center;
-
-    &--brand { background-color: transparent; }
-    // Figma 3275:236467 — soft-green fill (Overlay/green #3DDE8C @ 15%).
-    &--success { background-color: rgba(61, 222, 140, 0.15); }
+  // Congrats' success tick sits on the step card's own chip, tinted green
+  // instead of the flow's accent. Figma 3275:236467 — Overlay/green #3DDE8C
+  // at 15%.
+  &__chip--success {
+    background-color: $success-soft;
   }
 
-  &__modal-ico-svg { width: 32px; height: 32px; }
-  // Green check-circle (Signal/Success). checked-circle.svg carries its own
-  // green fill, but set currentColor too in case the pipeline inlines it.
-  // 26px matches __chip-ico.
-  &__modal-ico--success &__modal-ico-svg {
-    width: 26px;
-    height: 26px;
+  // checked-circle.svg carries its own green fill, but set currentColor too in
+  // case the pipeline inlines it.
+  &__chip--success &__chip-ico {
     color: var(--green-400, #10b667);
   }
 
@@ -550,45 +533,17 @@ $success-soft: rgba(46, 179, 122, 0.14);
     color: var(--normal-fg);
   }
 
-  // Same type scale as __title / __desc on the step cards.
-  &__modal-title {
-    font-size: 18px;
-    line-height: 1.2;
-    font-weight: 700;
-    color: var(--normal-fg);
-  }
-
-  &__modal-desc {
-    font-size: 14px;
-    line-height: 1.45;
-    color: var(--normal-fg-20);
-  }
-
-  // Congrats copy — centred and wrapping so the accent prize phrase can sit on
-  // its own line. Same size as __desc; only the prize is lifted.
+  // Congrats copy — the three segments each carry __desc for their type, and
+  // wrap so the accent prize phrase can sit on its own line.
   &__congrats-copy {
     flex-wrap: wrap;
     justify-content: center;
     gap: 0 5px;
   }
 
-  &__congrats-seg {
-    font-size: 14px;
-    line-height: 1.45;
-    color: var(--normal-fg-20);
-  }
-
   &__congrats-prize {
     font-weight: 600;
     color: $accent;
-  }
-
-  // No margin-top: the shell's 16px gap already sets the rhythm, exactly as it
-  // does for __footer on the step cards.
-  &__modal-footer {
-    width: 100%;
-    gap: 12px;
-    justify-content: space-between;
   }
 
   // Respect a reduced-motion preference: keep the step change instant.
@@ -610,6 +565,9 @@ $success-soft: rgba(46, 179, 122, 0.14);
     }
 
     &__card { width: 100%; }
+    // A modal carries BOTH classes, so this must stay AFTER __card to win at
+    // equal specificity: it is centred in the wrapper-modal rather than in an
+    // anchor, so it needs its own gutter instead of filling the parent.
     &__modal { width: calc(100vw - 32px); }
   }
 }
