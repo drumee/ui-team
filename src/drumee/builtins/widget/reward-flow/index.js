@@ -22,7 +22,7 @@
  * docs/superpowers/specs/2026-07-23-reward-onboarding-flow-design.md
  */
 const { dropModal, congratsModal } = require("./skeleton/modal");
-const { STEPS, baseStep, isWaiting } = require("./steps");
+const { STEPS, baseStep, isWaiting, isGuiding } = require("./steps");
 const { readDescriptor } = require("./workspace");
 
 const CAMPAIGN = "free-storage";
@@ -36,6 +36,11 @@ const KEY_INVITED = "reward_invited";
 // The workspace created in Step 1. Step 3 reopens it, so it must survive a
 // reload the same way the step itself does.
 const KEY_WORKSPACE = "reward_workspace";
+
+// How long "Open workspace" waits for the workspace window before giving up and
+// dropping Step 3 to its legacy topbar-upload variant. Loading is a fetch plus
+// a mount; anything past this is a failure, not slowness.
+const OPEN_WORKSPACE_TIMEOUT_MS = 4000;
 
 // The live topbar control each step points at. The cutout is laid over it and
 // the card anchored beneath it (see _applyStepTarget).
@@ -190,6 +195,8 @@ class __reward_flow extends LetcBox {
       this._onStepResize = null;
     }
     this._stopGuide();
+    this._stopUploadGuide();
+    this._clearOpenTimer();
     this._stopToastWatch();
     this._restoreHost();
     this._markInviteOverlay(false);
@@ -214,6 +221,44 @@ class __reward_flow extends LetcBox {
 
   _stopGuide() {
     if (this._guide) this._guide.stop();
+  }
+
+  /** Lazily build and start the Step 3 walkthrough. Required lazily for the
+   *  same reason as the Step 1 guide: the orchestrator stays requirable under
+   *  Node, and the guide no-ops when there is no DOM. */
+  _startUploadGuide() {
+    if (!this._uploadGuide) {
+      const { RewardUploadGuide } = require("./guide-upload");
+      this._uploadGuide = new RewardUploadGuide(this);
+    }
+    this._uploadGuide.start();
+  }
+
+  _stopUploadGuide() {
+    if (this._uploadGuide) this._uploadGuide.stop();
+  }
+
+  /** Give up on a workspace window that never appeared and fall back to the
+   *  legacy Step 3 rather than stranding the user on a dead card. */
+  _armOpenTimer() {
+    this._clearOpenTimer();
+    this._openTimer = setTimeout(() => {
+      this._openTimer = null;
+      if (this._step !== "step3_guide") return;
+      if (this._uploadGuide && this._uploadGuide._sub) return; // it landed
+      this._stopUploadGuide();
+      // Drop the descriptor: whatever is stored no longer opens.
+      this._workspace = null;
+      lsDel(KEY_WORKSPACE);
+      this._goto("step3");
+    }, OPEN_WORKSPACE_TIMEOUT_MS);
+  }
+
+  _clearOpenTimer() {
+    if (this._openTimer) {
+      clearTimeout(this._openTimer);
+      this._openTimer = null;
+    }
   }
 
   /**
@@ -529,7 +574,9 @@ class __reward_flow extends LetcBox {
    *  The uploader is the OS file picker plus a progress window, so nothing else
    *  is holding the shared modal host: congrats can open straight away. */
   onUploadDone() {
-    if (this._step !== "step3_waiting") return;
+    if (this._step !== "step3_waiting" && this._step !== "step3_guide") return;
+    this._stopUploadGuide();
+    this._clearOpenTimer();
     this._step = "congrats";
     if (!this._openModal(congratsModal(this))) this._finish();
   }
@@ -730,6 +777,15 @@ class __reward_flow extends LetcBox {
         if (typeof Wm !== "undefined" && typeof Wm.loadWorkspace === "function") {
           Wm.loadWorkspace({ ...this._workspace });
         }
+        this._goto("step3_guide");
+        this._startUploadGuide();
+        this._armOpenTimer();
+        return;
+
+      case "reward-guide-next":
+        // Step 3's "folder" beat has no real action to observe, so its coach
+        // carries a Next.
+        if (this._uploadGuide) this._uploadGuide.onNext();
         return;
 
       case "reward-upload":
@@ -748,6 +804,13 @@ class __reward_flow extends LetcBox {
           this._stopGuide();
           return this._goto("step1");
         }
+        if (this._step === "step3_guide") {
+          // The Step 3 guide has no step-back (see guide-upload): Back leaves
+          // the walkthrough for the card, workspace still open.
+          this._stopUploadGuide();
+          this._clearOpenTimer();
+          return this._goto("step3");
+        }
         const base = baseStep(this._step);
         if (this._isWaiting()) return this._goto(base);
         const prev = STEPS[STEPS.indexOf(base) - 1];
@@ -759,10 +822,10 @@ class __reward_flow extends LetcBox {
         // Inert while the user is being handed off to a real surface, or when a
         // drop modal is already up.
         if (this._isWaiting() || this._modalOpen || this._guideDropOpen) return;
-        // During the Step 1 walkthrough the dimmed frame (__guide-scrim) fires
-        // this too: guard the walkthrough without tearing it down or touching
-        // the wrapper-modal that may hold the create-form.
-        if (this._step === "step1_guide") {
+        // During either walkthrough the dimmed frame (__guide-scrim) fires this
+        // too: guard the walkthrough without tearing it down or touching the
+        // wrapper-modal that may hold the create-form.
+        if (isGuiding(this._step)) {
           this._openGuideDrop();
           return;
         }

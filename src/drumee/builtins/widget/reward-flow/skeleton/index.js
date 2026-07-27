@@ -20,10 +20,13 @@ const stepCard = require("./card");
 
 module.exports = function (ui) {
   const pfx = ui.fig.family;
+  const { baseStep, isWaiting, isGuiding } = require("../steps");
   const step = ui.getStep();
-  const waiting = step.endsWith("_waiting");
-  const guiding = step === "step1_guide";
-  const base = waiting ? step.replace("_waiting", "") : step;
+  const waiting = isWaiting(step);
+  // Both walkthroughs render the same way: cutout + scrim + coach, no card.
+  // Step 1 walks the desk chrome, Step 3 the workspace window.
+  const guiding = isGuiding(step);
+  const base = baseStep(step);
   // Steps 2 and 3 point at a real topbar control, so they get a cutout over it.
   // Kept through the waiting state too, so the overlay and the card's position
   // don't change underneath the user the moment they start an upload — only the

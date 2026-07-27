@@ -200,8 +200,15 @@ $success-soft: rgba(46, 179, 122, 0.14);
 
   &__coach-footer {
     width: 100%;
-    justify-content: flex-end;
+    // Back left, Next right when both are present. A lone button keeps the
+    // right-aligned look this replaced (see the :only-child rule below).
+    justify-content: space-between;
+    gap: 8px;
     padding-top: 2px;
+  }
+
+  &__coach-footer > *:only-child {
+    margin-left: auto;
   }
 
   // Back styled as window-confirm's secondary button.
@@ -223,6 +230,27 @@ $success-soft: rgba(46, 179, 122, 0.14);
     transition: background-color 120ms ease;
 
     &:hover { background-color: var(--normal-bg-80); }
+  }
+
+  // Primary twin of __coach-back. Same metrics so the pair reads as one row.
+  &__coach-next {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 84px;
+    height: 34px;
+    padding: 0 14px;
+    border-radius: var(--corner-radius-2, 8px);
+    font-size: 13px;
+    font-weight: 600;
+    color: #fff;
+    background-color: $accent;
+    border: 1px solid $accent;
+    cursor: pointer;
+    user-select: none;
+    transition: filter 120ms ease;
+
+    &:hover { filter: brightness(1.08); }
   }
 
   &__anchor {
