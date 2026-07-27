@@ -9,6 +9,8 @@
   "WITHOUT_FILES": "无文件",
   "SEARCH_TASK": "搜索任务",
   "NOT_ORG_OWNER": "只有组织管理员才能购买团队套餐",
+  "ALREADY_SUBSCRIBED": "您已订阅此方案。",
+  "CHANGE_CYCLE_VIA_PORTAL": "如需在按月与按年计费之间切换，请使用“管理账单”。",
   "MANAGE_BILLING": "管理账单",
   "BILLING_SUBSCRIPTION": "账单与订阅",
   "BILLING_SUBSCRIPTION_SUBTITLE": "管理您的套餐、席位、存储附加组件和账单。",

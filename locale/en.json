@@ -9,6 +9,8 @@
   "WITHOUT_FILES": "No files",
   "SEARCH_TASK": "Search tasks",
   "NOT_ORG_OWNER": "Only an organization admin can buy the Team plan",
+  "ALREADY_SUBSCRIBED": "You're already subscribed to this plan.",
+  "CHANGE_CYCLE_VIA_PORTAL": "To switch between monthly and yearly billing, use Manage billing.",
   "WINDOW_ZOOM": "Zoom",
   "km": "Khmer",
   "ACCESS_PERMISSION": "Access permission",
