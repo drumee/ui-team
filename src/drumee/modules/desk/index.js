@@ -1,6 +1,7 @@
 require("welcome/skin");
 require("builtins/window/confirm/skin");
 const { canUpgradePlan, billingAvailable, needsAdminConsoleUpgrade } = require("libs/billing");
+const { captureUtm } = require("libs/campaign");
 
 class desk_module extends LetcBox {
   constructor(...args) {
@@ -852,6 +853,12 @@ class desk_module extends LetcBox {
    *
    */
   async onDomRefresh() {
+    // Campaign attribution for a signed-IN click on a marketing CTA — the
+    // common case for the claim-reward mail, whose recipients all have
+    // accounts and so never pass through the welcome/signup routers. Must land
+    // before onPartReady("overlay") gets to _maybeStartRewardFlow(), which it
+    // does comfortably: that call is delayed 2s.
+    captureUtm();
     this.route();
     RADIO_BROADCAST.on("breadcrumb:content", this._updateAddmenu);
     // Post-onboarding handoff for users who picked Google Drive in the

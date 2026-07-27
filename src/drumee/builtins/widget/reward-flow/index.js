@@ -25,6 +25,9 @@ const { dropModal, congratsModal } = require("./skeleton/modal");
 const { STEPS, baseStep, isWaiting, isGuiding } = require("./steps");
 const { readDescriptor } = require("./workspace");
 
+// Must match the utm_campaign that analytics-server puts on the claim-reward
+// email CTA (service/index.js _rewardCtaLink). The marker reaches localStorage
+// via libs/campaign captureUtm(), called from the welcome and desk routers.
 const CAMPAIGN = "free-storage";
 const KEY_UTM = "drumee_utm";
 const KEY_DONE = "reward_flow_done";

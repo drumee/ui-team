@@ -1,4 +1,6 @@
 
+const { captureUtm } = require('libs/campaign');
+
 /**
  * Class representing the Welcome module.
  * @class __welcome_router
@@ -23,6 +25,10 @@ class __welcome_router extends LetcBox {
    */
   onDomRefresh() {
     const args = Visitor.parseModuleArgs() || {};
+    // Campaign attribution for a signed-OUT click on a marketing CTA. Recorded
+    // before anything can navigate away; localStorage carries it across the
+    // full page reload that signin triggers, so the desk sees it after auth.
+    captureUtm();
     if (args.invite) {
       this._inviteToken = args.invite;
       RADIO_BROADCAST.once('user:signed:in', () => {
