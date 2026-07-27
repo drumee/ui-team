@@ -242,8 +242,12 @@ class settings_billing extends LetcBox {
     const lines = [];
     const capGB = this.storage[targetPlan] || 0;
     const capSeats = this.seats[targetPlan] || 0;
-    const quota = (Visitor.quota && Visitor.quota()) || {};
-    const usedBytes = (Visitor.diskUsed && Visitor.diskUsed()) || 0;
+    // Org-wide usage when the server reports it. Visitor.diskUsed() is only the
+    // signed-in user's share, so an org far over the target plan's allowance
+    // looked fine to an owner who personally stores little — the warning never
+    // fired for the case it was written for.
+    const usedBytes = Number((this._subscription || {}).disk_used)
+      || (Visitor.diskUsed && Visitor.diskUsed()) || 0;
     if (capGB && usedBytes > capGB * 1000000000) {
       lines.push((LOCALE.DOWNGRADE_OVER_STORAGE
         || "Your workspace uses {0} GB, over the {1} GB this plan includes — you won't be able to upload new files until you free up space.")
@@ -294,7 +298,12 @@ class settings_billing extends LetcBox {
     const price = this._money(this._catPrice(targetPlan, period));
     const per = period === "year" ? LOCALE.PER_YEAR : LOCALE.PER_MONTH;
     const planTitle = targetPlan === "business" ? LOCALE.BUSINESS : LOCALE.TEAM;
-    const currentPlan = this.currentPlanName || String(sub.plan || "");
+    // The RAW subscription plan, not the display mapping. fetchPlanData maps
+    // the retired 'pro'/'drumee plus' rows onto 'team' so the cards mark the
+    // right one current, but a pro holder clicking Team is changing plan, not
+    // rhythm — reading currentPlanName here told them "Switch to Monthly
+    // billing" for a move between two different products.
+    const currentPlan = String(sub.plan || "") || this.currentPlanName || "";
     // Three shapes, because they are three different decisions: same plan on a
     // different rhythm, a bigger plan, a smaller one. Calling a cycle switch
     // "Downgrade to Team" (which is what deriving up/down from the plan name
@@ -347,16 +356,22 @@ class settings_billing extends LetcBox {
       });
       return;
     }
+    if (status === "PLAN_ENTITY_MISMATCH") {
+      // This subscription's entity kind cannot hold the target plan — a legacy
+      // personal Pro reaching for an org plan. It is not a dead end: checkout()
+      // admits exactly this case as a supersede purchase, and the webhook ends
+      // the old subscription once the new one is paid. Take them there rather
+      // than naming a tab that is hidden while a subscription is live.
+      if (Wm && Wm.alert) Wm.alert(LOCALE.PLAN_SWITCH_VIA_CHECKOUT);
+      this._enterCheckoutFor(targetPlan);
+      return;
+    }
     if (status !== "OK") {
       if (Wm && Wm.alert) {
         Wm.alert(
           // The bank wants the cardholder: retrying changes nothing, so say
           // what does — a different card, via Manage billing.
           status === "PAYMENT_ACTION_REQUIRED" ? LOCALE.PAYMENT_ACTION_REQUIRED
-            // This subscription's entity kind cannot hold the target plan
-            // (legacy personal Pro reaching for an org plan). checkout() lets
-            // that caller through as a supersede purchase.
-            : status === "PLAN_ENTITY_MISMATCH" ? LOCALE.PLAN_SWITCH_VIA_CHECKOUT
             : status === "NO_SUBSCRIPTION" ? LOCALE.NO_ACTIVE_SUBSCRIPTION
             : LOCALE.SOMETHING_WENT_WRONG);
       }
@@ -385,7 +400,7 @@ class settings_billing extends LetcBox {
     // OLD plan until that webhook lands, so repainting from them would flip
     // the cards back to the plan the user just left.
     this.renderContent();
-    this._awaitPlanSync(targetPlan);
+    this._awaitPlanSync(targetPlan, period);
   }
 
   // Wait for the webhook to catch up, then repaint from server truth.
@@ -397,19 +412,32 @@ class settings_billing extends LetcBox {
   // never arrives still reconciles rather than leaving the UI asserting a
   // change forever. The WS payment.plan_updated handler does the same repaint
   // and usually wins the race; this is the fallback for a missed event.
-  _awaitPlanSync(expected, tries = 10) {
+  _awaitPlanSync(expected, expectedPeriod, tries = 10) {
+    // A generation counter, because clearTimeout only cancels a PENDING timer:
+    // once the callback has fired it is awaiting the fetch, and a second plan
+    // change started in that window would be silently dropped by the first
+    // chain's recursion. Whoever bumps the counter last owns the poll.
+    const gen = (this._planSyncGen = (this._planSyncGen || 0) + 1);
     if (this._planSyncTimer) clearTimeout(this._planSyncTimer);
     this._planSyncTimer = setTimeout(() => {
       this._planSyncTimer = null;
       if (this.isDestroyed && this.isDestroyed()) return;
       this._loadSubscription().then(() => {
         if (this.isDestroyed && this.isDestroyed()) return;
-        const mirrored = String((this._subscription || {}).plan || "");
-        if (mirrored === expected || tries <= 1) {
+        if (gen !== this._planSyncGen) return; // superseded by a newer change
+        const sub = this._subscription || {};
+        // Period as well as plan: a month<->year switch leaves the plan
+        // unchanged, so matching on the plan alone declared victory on the
+        // first poll and repainted from the still-stale mirror — exactly the
+        // revert this method exists to avoid.
+        const planOk = String(sub.plan || "") === expected;
+        const periodOk = !expectedPeriod
+          || (/^year/.test(String(sub.period || "")) ? "year" : "month") === expectedPeriod;
+        if ((planOk && periodOk) || tries <= 1) {
           this.fetchPlanData();
           return;
         }
-        this._awaitPlanSync(expected, tries - 1);
+        this._awaitPlanSync(expected, expectedPeriod, tries - 1);
       });
     }, 3000);
   }
@@ -525,6 +553,19 @@ class settings_billing extends LetcBox {
         this.state.checkout.billingCycle = billing_cycle;
         this.state.checkout.seats = total_seat || 0;
         this.state.checkout.storage = storageGB;
+        // Open the plans view on the cycle the caller actually pays on. The
+        // tab defaulted to Monthly regardless, so a yearly subscriber landed on
+        // a view where — now that "current" means plan AND cycle — no card was
+        // marked as theirs and their own plan's CTA read "Switch to Monthly
+        // billing", offering to move them off the cycle they had chosen. Only
+        // on the FIRST paint: after that the tab is the user's own choice.
+        if (!this._cycleSeeded && this._hasPaidSub) {
+          this._cycleSeeded = true;
+          this.state.plansTab.cycle = billing_cycle;
+          const cycleTab = billing_cycle === "yearly" ? TAB_YEARLY : TAB_MONTHLY;
+          this.state.currentTab = cycleTab;
+          this.tab = cycleTab;
+        }
       }
       // Store plan data for reference
       this.currentPlan = {
@@ -811,6 +852,22 @@ class settings_billing extends LetcBox {
    * @param {string} period - 'month' | 'year'
    * @returns {number} amount in currency units
    */
+  // Is this plan actually purchasable HERE — a catalog row with a Stripe price?
+  // Price ids are seeded per environment (sandbox and live are separate Stripe
+  // accounts and their ids are not portable), so a plan can be in the catalog
+  // with no price. Offering its CTA anyway dead-ends on NO_PRICE, which the
+  // client can only report as a generic failure — after the buyer has confirmed
+  // a priced dialog. The catalog is the authority; the hardcoded fallbacks
+  // below exist to keep the ladder readable, not to promise a sale.
+  _catSellable(code) {
+    // Until the catalog lands, assume the tiers that were sellable before it
+    // did — a blank first paint must not hide the CTA from everyone.
+    if (!this._catalog) return code === "team" || code === "business";
+    return (this._catalog || []).some(
+      (p) => p.plan_code === code && p.stripe_price_id
+    );
+  }
+
   _catPrice(code, period) {
     const row = (this._catalog || []).find(
       (p) => p.plan_code === code && p.period === period

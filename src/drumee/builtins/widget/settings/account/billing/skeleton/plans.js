@@ -251,8 +251,15 @@ function ctaButton(ui, fig, opt, option) {
   // never disagree.
   // Prefer the widget's resolved verdict (server-backed) over the local
   // ownership guess — see settings_billing._mayCheckout.
+  //
+  // A card showing the caller's OWN plan is never "locked": making isCurrent
+  // cycle-aware meant a non-owner member viewing the other cycle tab saw their
+  // own plan's card turn into "Only the owner can change the plan" — a
+  // permissions answer to a question they had not asked, replacing the one
+  // useful fact on the page. Same plan, whatever the cycle, is not a change.
+  const ownPlan = (ui.currentPlanName || "free") === opt;
   const locked =
-    !isCurrent && !(ui._mayCheckout ? ui._mayCheckout() : canUpgradePlan());
+    !ownPlan && !(ui._mayCheckout ? ui._mayCheckout() : canUpgradePlan());
 
   let buttonBtn;
   if (isCurrent) {
@@ -279,6 +286,21 @@ function ctaButton(ui, fig, opt, option) {
         Skeletons.Note({
           className: `${fig}-current-label`,
           content: LOCALE.ONLY_OWNER_CAN_CHANGE_PLAN,
+        }),
+      ],
+    });
+  } else if (/^(team|business)$/.test(opt) && ui._catSellable && !ui._catSellable(opt)) {
+    // The catalog has no Stripe price for this plan in this environment, so
+    // there is nothing to sell: both checkout and change_plan answer NO_PRICE.
+    // Say that instead of taking the buyer through a priced confirm dialog to
+    // a generic failure.
+    buttonBtn = Skeletons.Box.X({
+      className: `${fig}-button-main locked`,
+      dataset: { disabled: 1 },
+      kids: [
+        Skeletons.Note({
+          className: `${fig}-current-label`,
+          content: LOCALE.PLAN_NOT_AVAILABLE_HERE,
         }),
       ],
     });
