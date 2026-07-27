@@ -55,12 +55,13 @@ function checkout(ui) {
     min = 5;
     max = 1000;
   }
-  // TEAM bootstrap: a payer still on the default domain has no organisation
+  // ORG bootstrap: a payer still on the default domain has no organisation
   // yet — collect the org name + subdomain BEFORE Stripe Checkout (the
-  // webhook provisions the org after payment). Members of an existing org
-  // domain never see this (move-semantics membership).
+  // webhook provisions the org after payment). Team AND Business are both
+  // org plans, so either needs it. Members of an existing org domain never
+  // see this (move-semantics membership).
   const needsOrgBootstrap =
-    selectedPlan === "team" && ~~Visitor.get("domain_id") <= 1;
+    /^(team|business)$/.test(selectedPlan) && ~~Visitor.get("domain_id") <= 1;
   const orgSection = needsOrgBootstrap
     ? Skeletons.Box.Y({
         className: `${pfx}-section ${pfx}-org-section`,
@@ -120,6 +121,7 @@ function checkout(ui) {
           pillBar(ui, [
             { content: LOCALE.FREE, state: selectedPlan === "free" ? 1 : 0, service: "select-checkout-plan", value: "free", radio: `checkout-plan-${ui._id}` },
             { content: LOCALE.TEAM, state: selectedPlan === "team" ? 1 : 0, service: "select-checkout-plan", value: "team", radio: `checkout-plan-${ui._id}` },
+            { content: LOCALE.BUSINESS, state: selectedPlan === "business" ? 1 : 0, service: "select-checkout-plan", value: "business", radio: `checkout-plan-${ui._id}` },
           ]),
         ],
       }),
@@ -228,36 +230,41 @@ function checkout(ui) {
         ],
       }),
 
-      Skeletons.Box.X({
-        className: `${pfx}-breakdown`,
-      }),
+      // A plan with an unlimited member cap has no per-seat price; the summary
+      // returns '' for it, and both the row and its divider drop out rather
+      // than showing an empty line under a label.
+      ...(summary.effectivePricePerSeat ? [
+        Skeletons.Box.X({
+          className: `${pfx}-breakdown`,
+        }),
 
-      Skeletons.Box.Y({
-        kids: [
-          Skeletons.Box.X({
-            className: `${pfx}-breakdown-item ${pfx}-breakdown-items ${pfx}-breakdown-effective-price-per-seat `,
-            kids: [
-              Skeletons.Button.Icon({
-                className: `${pfx}-breakdown-icon`,
-                ico: "raw-trending-up",
-              }),
-              Skeletons.Box.Y({
-                className: `${pfx}-breakdown-label-container`,
-                kids: [
-                  Skeletons.Note({
-                    className: `${pfx}-breakdown-label`,
-                    content: LOCALE.EFFECTIVE_PRICE_PER_SEAT,
-                  }),
-                  Skeletons.Note({
-                    className: `${pfx}-breakdown-value-effective-price-per-seat`,
-                    content: summary.effectivePricePerSeat,
-                  }),
-                ],
-              }),
-            ],
-          }),
-        ],
-      }),
+        Skeletons.Box.Y({
+          kids: [
+            Skeletons.Box.X({
+              className: `${pfx}-breakdown-item ${pfx}-breakdown-items ${pfx}-breakdown-effective-price-per-seat `,
+              kids: [
+                Skeletons.Button.Icon({
+                  className: `${pfx}-breakdown-icon`,
+                  ico: "raw-trending-up",
+                }),
+                Skeletons.Box.Y({
+                  className: `${pfx}-breakdown-label-container`,
+                  kids: [
+                    Skeletons.Note({
+                      className: `${pfx}-breakdown-label`,
+                      content: LOCALE.EFFECTIVE_PRICE_PER_SEAT,
+                    }),
+                    Skeletons.Note({
+                      className: `${pfx}-breakdown-value-effective-price-per-seat`,
+                      content: summary.effectivePricePerSeat,
+                    }),
+                  ],
+                }),
+              ],
+            }),
+          ],
+        }),
+      ] : []),
       Skeletons.Button.Label({
         label: LOCALE.PROCEED_TO_CHECKOUT,
         className: `${pfx}-checkout-button`,
@@ -356,7 +363,8 @@ function rightPanelContent(ui) {
               }),
             ],
           }),
-          Skeletons.Box.X({
+          // Dropped for unlimited-member plans — see the left panel.
+          summary.effectivePricePerSeat ? Skeletons.Box.X({
             className: `${pfx}-breakdown-item ${pfx}-breakdown-items ${pfx}-breakdown-effective-price-per-seat`,
             kids: [
               Skeletons.Button.Icon({
@@ -377,8 +385,8 @@ function rightPanelContent(ui) {
                 ],
               }),
             ],
-          }),
-        ],
+          }) : null,
+        ].filter(Boolean),
       }),
       Skeletons.Button.Label({
         label: LOCALE.PROCEED_TO_CHECKOUT,

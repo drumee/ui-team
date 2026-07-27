@@ -117,7 +117,8 @@ function subscriptionBanner(ui) {
           uiHandler: [ui],
           bubble: false,
         }),
-      ],
+        manageBillingAction(ui, fig),
+      ].filter(Boolean),
     });
   }
 
@@ -132,6 +133,7 @@ function subscriptionBanner(ui) {
           ? (LOCALE.SUBSCRIPTION_RENEWS_ON || "Your subscription renews on {0}").format(when)
           : (LOCALE.CURRENT_PLAN_BANNER || "You are on the {0} plan").format(planLabel),
       }),
+      manageBillingAction(ui, fig),
       Skeletons.Note({
         className: `${fig}-action ${fig}-cancel`,
         content: LOCALE.CANCEL_PLAN || "Cancel plan",
@@ -139,7 +141,32 @@ function subscriptionBanner(ui) {
         uiHandler: [ui],
         bubble: false,
       }),
-    ],
+    ].filter(Boolean),
+  });
+}
+
+/**
+ * "Manage billing" — opens the Stripe Billing Portal (invoices, card, cancel
+ * and resume). The onUiEvent handler and the skin rule for it have existed
+ * since the portal endpoint was added, but nothing ever rendered the control,
+ * so every message telling a user to "update your payment method in Manage
+ * billing" — including the one shown when a plan change is refused for 3DS —
+ * pointed at something that was not on the page.
+ *
+ * Only shown with a real Stripe subscription: the portal needs a customer id,
+ * and payment.portal answers NO_CUSTOMER without one.
+ * @param {Object} ui - UI instance
+ * @param {string} fig - BEM prefix
+ * @returns {Object|null} Skeletons component
+ */
+function manageBillingAction(ui, fig) {
+  if (!ui._hasPaidSub) return null;
+  return Skeletons.Note({
+    className: `${fig}-action ${fig}-manage-billing`,
+    content: LOCALE.MANAGE_BILLING || "Manage billing",
+    service: "manage-billing",
+    uiHandler: [ui],
+    bubble: false,
   });
 }
 
