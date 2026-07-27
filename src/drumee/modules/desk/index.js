@@ -1,6 +1,7 @@
 require("welcome/skin");
 require("builtins/window/confirm/skin");
 const { canUpgradePlan, billingAvailable, needsAdminConsoleUpgrade } = require("libs/billing");
+const { captureUtm } = require("libs/campaign");
 
 class desk_module extends LetcBox {
   constructor(...args) {
@@ -852,6 +853,12 @@ class desk_module extends LetcBox {
    *
    */
   async onDomRefresh() {
+    // Campaign attribution for a signed-IN click on a marketing CTA — the
+    // common case for the claim-reward mail, whose recipients all have
+    // accounts and so never pass through the welcome/signup routers. Must land
+    // before onPartReady("overlay") gets to _maybeStartRewardFlow(), which it
+    // does comfortably: that call is delayed 2s.
+    captureUtm();
     this.route();
     RADIO_BROADCAST.on("breadcrumb:content", this._updateAddmenu);
     // Post-onboarding handoff for users who picked Google Drive in the
@@ -1308,7 +1315,11 @@ class desk_module extends LetcBox {
       return;
     }
     this.ensurePart("overlay").then((p) => {
-      p.feed({ kind: "reward_flow", uiHandler: [this] });
+      // Hand `forced` to the widget so a ?reward=1 test run can decline to
+      // latch itself off — without it the flow cannot tell a dev poking at the
+      // screen from a real campaign arrival, and the docblock's "cannot mask a
+      // real campaign run" promise above is not kept.
+      p.feed({ kind: "reward_flow", uiHandler: [this], forced: forced ? 1 : 0 });
       this._rewardFlow = p.children.last();
       this._rewardFlow.once(_e.destroy, () => {
         this._rewardFlow = null;
@@ -2280,9 +2291,6 @@ class desk_module extends LetcBox {
       case "close-info-popup":
         // this.__wrapperPopup.clear();
         return Backbone.history.navigate(_K.module.desk);
-
-      case "close-popup":
-        return;
 
       case "open-settings":
         return this.loadOverlay("window_wallpaper_settings");

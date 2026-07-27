@@ -1,4 +1,6 @@
 
+const { captureUtm } = require('libs/campaign');
+
 /**
  * Class representing the Welcome module.
  * @class __welcome_router
@@ -23,6 +25,10 @@ class __welcome_router extends LetcBox {
    */
   onDomRefresh() {
     const args = Visitor.parseModuleArgs() || {};
+    // Campaign attribution for a signed-OUT click on a marketing CTA. Recorded
+    // before anything can navigate away; localStorage carries it across the
+    // full page reload that signin triggers, so the desk sees it after auth.
+    captureUtm();
     if (args.invite) {
       this._inviteToken = args.invite;
       RADIO_BROADCAST.once('user:signed:in', () => {
@@ -236,14 +242,12 @@ class __welcome_router extends LetcBox {
    *
   */
   route() {
-    let opt;
     const args = Visitor.parseModule();
     this.tab = args[1] || 'hello';
 
     this.waitElement(this.el, () => {
       this.el.dataset.tab = this.tab;
     });
-    let require_logout = 0;
     switch (this.tab) {
       case 'signup':
         return this.loadSignup();
@@ -262,22 +266,6 @@ class __welcome_router extends LetcBox {
       default:
         return this.loadSignin()
     }
-
-    if (Visitor.isOnline()) {
-      if (require_logout) {
-        this.postService(SERVICE.drumate.logout, { hub_id: Visitor.id }, { async: 1 }).then(() => {
-          location.reload();
-        }).catch(noOperation);
-        return;
-      }
-      const f = () => {
-        location.hash = _K.module.desk;
-      }
-      setTimeout(f, Visitor.timeout(700));
-      return
-    }
-    this.feed(require('./skeleton').default(this, opt));
-
   }
 
 

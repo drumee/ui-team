@@ -25,6 +25,9 @@ const { dropModal, congratsModal } = require("./skeleton/modal");
 const { STEPS, baseStep, isWaiting, isGuiding } = require("./steps");
 const { readDescriptor } = require("./workspace");
 
+// Must match the utm_campaign that analytics-server puts on the claim-reward
+// email CTA (service/index.js _rewardCtaLink). The marker reaches localStorage
+// via libs/campaign captureUtm(), called from the welcome and desk routers.
 const CAMPAIGN = "free-storage";
 const KEY_UTM = "drumee_utm";
 const KEY_DONE = "reward_flow_done";
@@ -84,6 +87,10 @@ class __reward_flow extends LetcBox {
   initialize(opt = {}) {
     super.initialize(opt);
     this.declareHandlers();
+
+    // A ?reward=1 run was forced past the eligibility gate for testing. It must
+    // not latch itself off on exit — see _finish.
+    this._forced = !!opt.forced;
 
     // Resume where the user left off. baseStep strips BOTH _waiting and
     // _guide: the uploader / invite popup / walkthrough the user was handed off
@@ -810,9 +817,16 @@ class __reward_flow extends LetcBox {
     });
   }
 
-  /** Final exit — from "Drop anyway" or "Go to dashboard". Never shown again. */
+  /**
+   * Final exit — from "Drop anyway" or "Go to dashboard". Never shown again,
+   * EXCEPT for a ?reward=1 run: that one was forced past the eligibility gate
+   * for testing, and latching it would write reward_flow_done into the tester's
+   * browser and permanently suppress the real campaign arrival for them. The
+   * per-run progress keys are still cleared either way, so a forced run leaves
+   * nothing behind to resume from.
+   */
   _finish() {
-    lsSet(KEY_DONE, "1");
+    if (!this._forced) lsSet(KEY_DONE, "1");
     lsDel(KEY_STEP);
     lsDel(KEY_INVITED);
     lsDel(KEY_WORKSPACE);
