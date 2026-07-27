@@ -1315,7 +1315,11 @@ class desk_module extends LetcBox {
       return;
     }
     this.ensurePart("overlay").then((p) => {
-      p.feed({ kind: "reward_flow", uiHandler: [this] });
+      // Hand `forced` to the widget so a ?reward=1 test run can decline to
+      // latch itself off — without it the flow cannot tell a dev poking at the
+      // screen from a real campaign arrival, and the docblock's "cannot mask a
+      // real campaign run" promise above is not kept.
+      p.feed({ kind: "reward_flow", uiHandler: [this], forced: forced ? 1 : 0 });
       this._rewardFlow = p.children.last();
       this._rewardFlow.once(_e.destroy, () => {
         this._rewardFlow = null;

@@ -88,6 +88,10 @@ class __reward_flow extends LetcBox {
     super.initialize(opt);
     this.declareHandlers();
 
+    // A ?reward=1 run was forced past the eligibility gate for testing. It must
+    // not latch itself off on exit — see _finish.
+    this._forced = !!opt.forced;
+
     // Resume where the user left off. baseStep strips BOTH _waiting and
     // _guide: the uploader / invite popup / walkthrough the user was handed off
     // to is long gone after a reload, so every transient state resumes as its
@@ -813,9 +817,16 @@ class __reward_flow extends LetcBox {
     });
   }
 
-  /** Final exit — from "Drop anyway" or "Go to dashboard". Never shown again. */
+  /**
+   * Final exit — from "Drop anyway" or "Go to dashboard". Never shown again,
+   * EXCEPT for a ?reward=1 run: that one was forced past the eligibility gate
+   * for testing, and latching it would write reward_flow_done into the tester's
+   * browser and permanently suppress the real campaign arrival for them. The
+   * per-run progress keys are still cleared either way, so a forced run leaves
+   * nothing behind to resume from.
+   */
   _finish() {
-    lsSet(KEY_DONE, "1");
+    if (!this._forced) lsSet(KEY_DONE, "1");
     lsDel(KEY_STEP);
     lsDel(KEY_INVITED);
     lsDel(KEY_WORKSPACE);
