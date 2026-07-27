@@ -137,7 +137,6 @@ class __webrtc_room extends __interact {
       case "nop":
         this.stateMessage(s);
         break;
-        break;
       default:
         this.stateMessage(s);
     }

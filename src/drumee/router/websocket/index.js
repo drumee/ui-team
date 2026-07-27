@@ -226,7 +226,7 @@ class __router_websocket extends LetcBox {
   _bind(client) {
     this.resetSocket(client);
     this._reconnect_count++;
-    return new Promise(async (resolve, reject) => {
+    return new Promise((resolve, reject) => {
       if (!client) {
         reject({ error: "got undefined socket" });
         this.warn("ERROR:166 - got undefined socket");
@@ -315,7 +315,7 @@ class __router_websocket extends LetcBox {
    * @returns
    */
   connect(force = 0) {
-    return new Promise(async (resolve, reject) => {
+    return new Promise((resolve, reject) => {
       const { endpoint, main_domain } = bootstrap();
       if (!endpoint || !main_domain) {
         return resolve(0);
@@ -370,14 +370,19 @@ class __router_websocket extends LetcBox {
    */
   restart(force = 0) {
     if (force) this._reconnect_count = 0;
-    return new Promise(async (resolve, reject) => {
+    return new Promise((resolve, reject) => {
       if (!force && this.isOk()) return resolve();
-      let o = await this.connect(force)
-      this.debug("AAAA:318", o)
-      if (o) {
-        return resolve()
-      }
-      return reject()
+      /**
+       * An async executor swallows a rejection from connect() and leaves this
+       * promise pending for good, so settle it explicitly instead.
+       */
+      this.connect(force).then((o) => {
+        this.debug("AAAA:318", o)
+        if (o) {
+          return resolve()
+        }
+        return reject()
+      }).catch(reject)
     })
   }
 
