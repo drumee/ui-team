@@ -98,6 +98,17 @@ $success-soft: rgba(46, 179, 122, 0.14);
     z-index: 1000000;
   }
 
+  // The in-root "Don't drop now" guard is up. It guards surfaces that live in
+  // the wrapper-modal (--z-index-modal, 100000) — the guided create-form, the
+  // Step 2 invite popup — and the root owns the flow's stacking context, so no
+  // z-index on the host inside it can climb over them on its own. Lift the root
+  // for as long as the guard is showing; set imperatively by _markRootDrop, so
+  // raising the guard never re-renders the flow. Last, so it wins over both
+  // lifts above at equal specificity.
+  &__root[data-drop="1"] {
+    z-index: 1000000;
+  }
+
 
   &__vignette {
     position: absolute;
@@ -165,11 +176,12 @@ $success-soft: rgba(46, 179, 122, 0.14);
     pointer-events: none;
   }
 
-  // Host for the "Don't drop now" modal shown during the walkthrough. Inert
-  // until populated; then it dims the whole layer and centres the modal above
-  // the coach so only it is interactive (the guided surfaces stay untouched
-  // underneath — see index.js _openGuideDrop).
-  &__guide-modal {
+  // Host for the "Don't drop now" modal in the states that cannot use the
+  // wrapper-modal — the walkthrough, and step2_waiting with the invite popup in
+  // it. Inert until populated; then it dims the whole layer and centres the
+  // modal above the coach so only it is interactive (whatever it guards stays
+  // untouched underneath — see index.js _openDropGuard).
+  &__drop-modal {
     position: fixed;
     inset: 0;
     z-index: 10030;

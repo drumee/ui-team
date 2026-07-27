@@ -74,7 +74,7 @@ class __reward_flow extends LetcBox {
     this._modalOpen = false;
     this._dropReturnStep = null;
     this._inviteSucceeded = false;
-    this._guideDropOpen = false;
+    this._dropGuardOpen = false;
     // Furthest card step already reported to the server this session — see
     // _trackStep. Not persisted: re-posting a step after a reload is harmless
     // (the server keeps the furthest one) and losing one is not.
@@ -186,6 +186,7 @@ class __reward_flow extends LetcBox {
     this._clearOpenTimer();
     this._stopToastWatch();
     this._restoreHost();
+    this._watchInviteBackdrop(false);
     this._markInviteOverlay(false);
   }
 
@@ -425,7 +426,7 @@ class __reward_flow extends LetcBox {
 
   /** Remove the coach callout. feed(null) does NOT empty a part — prepareData
    *  wraps null into [null], so the coach would be left on screen. Reset the
-   *  collection instead (same rationale as _closeGuideDrop). */
+   *  collection instead (same rationale as _closeDropGuard). */
   clearSpotlight() {
     this.ensurePart("guide-callout").then((p) => {
       if (!p) return;
@@ -577,8 +578,10 @@ class __reward_flow extends LetcBox {
     this._step = step;
     this._trackStep(baseStep(step));
     // While the invite popup is open (step2_waiting), tint its wrapper-modal
-    // backdrop to match the flow's own dim instead of the default frosted glass.
+    // backdrop to match the flow's own dim instead of the default frosted glass,
+    // and guard the dim against a stray click abandoning the flow.
     this._markInviteOverlay(step === "step2_waiting");
+    this._watchInviteBackdrop(step === "step2_waiting");
     this._render();
   }
 
@@ -595,6 +598,51 @@ class __reward_flow extends LetcBox {
     const ds = Wm.__wrapperModal.el.dataset;
     if (on) ds.rewardOverlay = "1";
     else delete ds.rewardOverlay;
+  }
+
+  /**
+   * Guard the dimmed area around the invite popup (step2_waiting).
+   *
+   * Every other surface of the flow already asks "Don't drop now" before it is
+   * abandoned — the vignette on an active step, __guide-scrim during the
+   * walkthrough. This sub-step had nothing: our own vignette is transparent and
+   * click-through so the user can operate the popup, and the wrapper-modal
+   * hosting it carries no click service, so clicking beside the popup did
+   * nothing at all.
+   *
+   * A listener on the HOST rather than a scrim of our own: the popup owns that
+   * wrapper-modal at z 100000, so anything we rendered would have to be lifted
+   * above it AND punched with a hole tracking the popup's rect (the --cut-*
+   * dance Step 1 does). Asking `closest` whether the click landed in the popup
+   * is exact by construction and measures nothing.
+   *
+   * Capture phase, so the guard lands before any handler inside the
+   * wrapper-modal gets to act on the same click.
+   */
+  _watchInviteBackdrop(on) {
+    const host =
+      (typeof Wm !== "undefined" && Wm.__wrapperModal?.el) || null;
+    if (on) {
+      if (this._onInviteBackdrop || !host) return;
+      this._inviteBackdropHost = host;
+      this._onInviteBackdrop = (e) => {
+        // The popup itself, and the guard once it is up (it renders in our own
+        // root, but a click that started there must never re-open it).
+        if (this._dropGuardOpen) return;
+        const t = e.target;
+        if (t?.closest && t.closest(".invite-popup__container")) return;
+        e.stopPropagation();
+        this._openDropGuard();
+      };
+      host.addEventListener("click", this._onInviteBackdrop, true);
+      return;
+    }
+    if (!this._onInviteBackdrop) return;
+    this._inviteBackdropHost?.removeEventListener(
+      "click", this._onInviteBackdrop, true,
+    );
+    this._onInviteBackdrop = null;
+    this._inviteBackdropHost = null;
   }
 
   _isWaiting() { return isWaiting(this._step); }
@@ -708,6 +756,8 @@ class __reward_flow extends LetcBox {
    *  - it closed because the send succeeded → advance to step 3 (upload);
    *  - it closed without sending → re-arm step 2 so the user can retry. */
   onInvitePopupClosed() {
+    // We are the ones closing it, on the way out (see _finish).
+    if (this._finishing) return;
     if (this._inviteSucceeded) {
       this._inviteSucceeded = false;
       // The success toast (invite-popup's Wm.alert notice) is about to take the
@@ -818,13 +868,26 @@ class __reward_flow extends LetcBox {
     this._modalOpen = false;
   }
 
-  /** Open the "Don't drop now" modal DURING the Step 1 walkthrough. Rendered
-   *  into the flow's own `guide-modal` part (not Wm.__wrapperModal), so the
-   *  guided create-form / permission panel underneath is left untouched — a
-   *  "Continue" simply closes this and the guide resumes. */
-  _openGuideDrop() {
-    this._guideDropOpen = true;
-    this.ensurePart("guide-modal").then((p) => {
+  /**
+   * Open the "Don't drop now" modal into the flow's OWN `drop-modal` part
+   * rather than Wm.__wrapperModal, for the two states where something else
+   * already occupies that wrapper-modal:
+   *   - the Step 1 walkthrough (guided create-form / permission panel),
+   *   - step2_waiting (the invite popup) — feeding the wrapper-modal there
+   *     would replace the popup and discard the emails the user typed, which is
+   *     precisely what a "Continue" has to preserve.
+   * Either way "Continue" just closes this and what was underneath resumes
+   * untouched.
+   *
+   * The root sits below the wrapper-modal (z 10020 vs 100000), so lift it while
+   * the guard is up or the modal paints UNDER the very surface it is guarding.
+   * Set imperatively, like the --cut-* vars: raising the guard must not
+   * re-render the flow.
+   */
+  _openDropGuard() {
+    this._dropGuardOpen = true;
+    this._markRootDrop(true);
+    this.ensurePart("drop-modal").then((p) => {
       if (!p) return;
       // Feed first, then flag open — the modal opts its own pointer events back
       // in (see skin __modal), so it stays clickable regardless; data-open only
@@ -835,9 +898,10 @@ class __reward_flow extends LetcBox {
     });
   }
 
-  _closeGuideDrop() {
-    this._guideDropOpen = false;
-    this.ensurePart("guide-modal").then((p) => {
+  _closeDropGuard() {
+    this._dropGuardOpen = false;
+    this._markRootDrop(false);
+    this.ensurePart("drop-modal").then((p) => {
       if (!p) return;
       // feed(null) does NOT empty a part: prepareData wraps null into [null], so
       // the modal is left in place. Reset the collection to actually remove it.
@@ -848,6 +912,22 @@ class __reward_flow extends LetcBox {
       }
       if (p.el?.dataset) delete p.el.dataset.open;
     });
+  }
+
+  /** Flag the flow ROOT while the in-root guard is up — the z-index lift is
+   *  keyed off `__root[data-drop]` (the lift has to sit on the root: it owns
+   *  the flow's stacking context, so no z-index on the host inside it can
+   *  escape the wrapper-modal above). The skeleton's root box is fed as a child
+   *  of our element; falling back to the element itself keeps this working if
+   *  it is ever the root, since the rule matches on the class either way. */
+  _markRootDrop(on) {
+    const root =
+      (this.el?.querySelector
+        && this.el.querySelector(`.${this.fig.family}__root`))
+      || this.el;
+    if (!root || !root.dataset) return;
+    if (on) root.dataset.drop = "1";
+    else delete root.dataset.drop;
   }
 
   /**
@@ -861,11 +941,32 @@ class __reward_flow extends LetcBox {
    * walkthrough and mean nothing once it ends.
    */
   _finish() {
+    // Latched BEFORE the popup below is cleared: clearing it fires the desk's
+    // destroy hook, which calls straight back into onInvitePopupClosed — and
+    // that would read step2_waiting and _goto("step2"), re-rendering a flow
+    // that is on its way out.
+    this._finishing = true;
     runDel(KEY_INVITED);
     runDel(KEY_WORKSPACE);
     this._closeModal();
+    this._closeInvitePopup();
     this._unbind();
     this.softDestroy();
+  }
+
+  /** Take the invite popup down with us. Reached when "Drop anyway" is pressed
+   *  on the step2_waiting guard: the popup is not ours, but it was opened on
+   *  the flow's behalf, so leaving it behind would strand it on a desk whose
+   *  flow no longer exists. No-op on every other exit — by then the
+   *  wrapper-modal holds our own modal, or nothing. */
+  _closeInvitePopup() {
+    if (this._step !== "step2_waiting") return;
+    if (typeof Wm === "undefined" || !Wm.__wrapperModal) return;
+    Wm.__wrapperModal.clear();
+    if (Wm.__wrapperModal.el?.dataset) {
+      Wm.__wrapperModal.el.dataset.state = "closed";
+      delete Wm.__wrapperModal.el.dataset.rewardOverlay;
+    }
   }
 
   // ───────── event routing ─────────
@@ -946,13 +1047,15 @@ class __reward_flow extends LetcBox {
 
       case "reward-vignette-click":
         // Inert while the user is being handed off to a real surface, or when a
-        // drop modal is already up.
-        if (this._isWaiting() || this._modalOpen || this._guideDropOpen) return;
+        // drop modal is already up. A waiting step is not unguarded, though:
+        // step2_waiting raises the same guard from the invite popup's own
+        // backdrop (see _watchInviteBackdrop).
+        if (this._isWaiting() || this._modalOpen || this._dropGuardOpen) return;
         // During either walkthrough the dimmed frame (__guide-scrim) fires this
         // too: guard the walkthrough without tearing it down or touching the
         // wrapper-modal that may hold the create-form.
         if (isGuiding(this._step)) {
-          this._openGuideDrop();
+          this._openDropGuard();
           return;
         }
         this._dropReturnStep = this._step;
@@ -960,10 +1063,12 @@ class __reward_flow extends LetcBox {
         return;
 
       case "reward-drop-stay":
-        // In the walkthrough the drop modal lives in our own root; closing it
-        // just resumes the guide (nothing was torn down).
-        if (this._guideDropOpen) {
-          this._closeGuideDrop();
+        // In the walkthrough — and on step2_waiting — the guard lives in our
+        // own root, so closing it just hands the user back what was underneath:
+        // the guide resumes, or the invite popup is still there with whatever
+        // they had typed. Nothing was torn down.
+        if (this._dropGuardOpen) {
+          this._closeDropGuard();
           return;
         }
         this._closeModal();
