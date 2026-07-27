@@ -1,6 +1,6 @@
 /**
- * Reward flow step card — Figma 3275:236196 (step 1), 3275:236332 (step 2),
- * 3275:236421 (step 3).
+ * Reward flow step card — Figma 3275:236196 (step 1), 3275:236421 (step 2,
+ * invite), 3275:236332 (step 3, upload).
  *
  * Layout: 3-segment progress bar → icon chip → title → description → footer.
  * Active Step 1 has a single full-width primary button and no Back (nothing to
@@ -8,7 +8,7 @@
  *
  * The `*_waiting` variants render the same card minus the primary button, plus
  * a hint line: the user has been handed off to the real new-workspace dialog,
- * uploader, or invite popup. Every waiting state keeps Back — even step1's,
+ * invite popup, or uploader. Every waiting state keeps Back — even step1's,
  * whose active card has none — so a user who changes their mind is never
  * trapped.
  *
@@ -32,44 +32,92 @@ const STEPS = {
   },
   step2: {
     index: 2,
-    ico: "upload-simple",
-    title: () => LOCALE.REWARD_FLOW_STEP2_TITLE || "Step 2: Upload your first file",
-    desc: () => LOCALE.REWARD_FLOW_STEP2_DESC
-      || "Upload any file, and activate your storage instantly.",
-    primaryLabel: () => LOCALE.REWARD_FLOW_UPLOAD || "Upload",
-    primaryService: "reward-upload",
-    back: true,
-  },
-  step3: {
-    index: 3,
     ico: "drumee-add-contact",
-    title: () => LOCALE.REWARD_FLOW_STEP3_TITLE || "Step 3: Invite a teammate",
-    desc: () => LOCALE.REWARD_FLOW_STEP3_DESC
+    title: () => LOCALE.REWARD_FLOW_STEP2_TITLE || "Step 2: Invite a teammate",
+    desc: () => LOCALE.REWARD_FLOW_STEP2_DESC
       || "Click Invite and add at least 1 member. Real collaboration starts now!",
     primaryLabel: () => LOCALE.REWARD_FLOW_INVITE || "Invite member",
     primaryService: "reward-invite",
     back: true,
   },
+  step3: {
+    index: 3,
+    ico: "upload-simple",
+    title: () => LOCALE.REWARD_FLOW_STEP3_TITLE || "Step 3: Upload your first file",
+    desc: () => LOCALE.REWARD_FLOW_STEP3_DESC
+      || "Upload any file, and activate your storage instantly.",
+    primaryLabel: () => LOCALE.REWARD_FLOW_UPLOAD || "Upload",
+    primaryService: "reward-upload",
+    back: true,
+  },
+};
+
+/**
+ * Step 2 when the user already invited a member from the Step 1 permission
+ * panel: the ask is met, so the card explains why and offers a plain Continue
+ * to Step 3 instead of re-opening the invite popup. Overlays the step2 entry
+ * above — everything it does not name (index, icon, title, Back) is inherited.
+ */
+const STEP2_SATISFIED = {
+  desc: () => LOCALE.REWARD_FLOW_STEP2_DONE_DESC
+    || "You've already invited a member in the permission panel at step 1.",
+  primaryLabel: () => LOCALE.REWARD_FLOW_CONTINUE || "Continue",
+  primaryService: "reward-invite-done",
+};
+
+/**
+ * Step 3 when Step 1 left us a workspace to reopen: instead of pointing at the
+ * desk topbar's Upload button — which drops the file wherever the desk happens
+ * to point, usually Home — the card opens that workspace and the walkthrough
+ * takes over inside it. Overlays the step3 entry above; index, icon, title and
+ * Back are inherited.
+ */
+const STEP3_GUIDED = {
+  desc: () => LOCALE.REWARD_FLOW_STEP3_GUIDED_DESC
+    || "Open the workspace you just created and upload your first file into it.",
+  primaryLabel: () => LOCALE.REWARD_FLOW_OPEN_WORKSPACE || "Open workspace",
+  primaryService: "reward-open-workspace",
 };
 
 const WAITING_HINT = {
   step1_waiting: () => LOCALE.REWARD_FLOW_WAITING_WORKSPACE
     || "Waiting for your workspace…",
-  step2_waiting: () => LOCALE.REWARD_FLOW_WAITING_UPLOAD
-    || "Waiting for your first upload…",
-  step3_waiting: () => LOCALE.REWARD_FLOW_WAITING_INVITE
+  step2_waiting: () => LOCALE.REWARD_FLOW_WAITING_INVITE
     || "Waiting for your first invitation…",
+  step3_waiting: () => LOCALE.REWARD_FLOW_WAITING_UPLOAD
+    || "Waiting for your first upload…",
 };
 
 /**
- * The service a step's primary button fires ("reward-upload" / "reward-invite").
- * Exposed so the cutout laid over that step's topbar control can fire the SAME
- * service — clicking the spotlighted Upload/Invite button then behaves exactly
- * like clicking the card's button, from one source of truth.
+ * The step's config, with any active variant overlaid. One source of truth for
+ * the card body, the primary button and the cutout's service, so they can never
+ * disagree about which variant is showing.
  */
-function primaryServiceFor(step) {
-  const cfg = STEPS[String(step).replace("_waiting", "")];
-  return cfg && cfg.primaryService;
+function configFor(step, ui) {
+  const base = String(step).replace(/_(waiting|guide)$/, "");
+  const cfg = STEPS[base];
+  if (!cfg) return null;
+  if (base === "step2" && ui?.inviteSatisfied?.()) {
+    return { ...cfg, ...STEP2_SATISFIED };
+  }
+  if (base === "step3" && ui?.hasStep1Workspace?.()) {
+    return { ...cfg, ...STEP3_GUIDED };
+  }
+  return cfg;
+}
+
+/**
+ * The service a step's primary button fires ("reward-invite" / "reward-upload",
+ * or a variant's "reward-invite-done" / "reward-open-workspace"). Exposed so
+ * the cutout laid over that step's topbar control can fire the SAME service —
+ * clicking the spotlighted Invite/Upload button then behaves exactly like
+ * clicking the card's button. `ui` is optional; pass it so variants resolve.
+ */
+function primaryServiceFor(step, ui) {
+  const cfg = configFor(step, ui);
+  // undefined, never null: this lands in a skeleton `service:` key, and an
+  // explicit null is not the same as an absent property to the framework.
+  return cfg ? cfg.primaryService : undefined;
 }
 
 module.exports = function stepCard(ui) {
@@ -77,7 +125,7 @@ module.exports = function stepCard(ui) {
   const step = ui.getStep();
   const waiting = step.endsWith("_waiting");
   const base = waiting ? step.replace("_waiting", "") : step;
-  const cfg = STEPS[base];
+  const cfg = configFor(base, ui);
 
   const progress = Skeletons.Box.X({
     className: `${pfx}__progress`,
@@ -137,3 +185,4 @@ module.exports = function stepCard(ui) {
 };
 
 module.exports.primaryServiceFor = primaryServiceFor;
+module.exports.configFor = configFor;

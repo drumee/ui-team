@@ -5,10 +5,13 @@
  * Storage" marketing email:
  *
  *   step1          → "your workspace is ready", informational
- *   step2          → "Upload" fires the desk's _e.upload service
- *   step2_waiting  → the real uploader is open; RADIO_MEDIA _e.uploaded advances
- *   step3          → "Invite member" fires the desk's "invite-member" service
- *   step3_waiting  → the real invite popup is open; onInvitationSent() advances
+ *   step2          → "Invite member" fires the desk's "invite-member" service.
+ *                    If the user ALREADY invited someone from the Step 1
+ *                    permission panel, this becomes a plain "Continue" that
+ *                    goes straight to step3 (see onPanelInvitation).
+ *   step2_waiting  → the real invite popup is open; onInvitationSent() advances
+ *   step3          → "Upload" fires the desk's _e.upload service
+ *   step3_waiting  → the real uploader is open; RADIO_MEDIA _e.uploaded advances
  *   congrats       → modal, then the flow latches itself off for good
  *
  * A drop modal intercepts clicks on the vignette during the active steps.
@@ -19,19 +22,31 @@
  * docs/superpowers/specs/2026-07-23-reward-onboarding-flow-design.md
  */
 const { dropModal, congratsModal } = require("./skeleton/modal");
+const { STEPS, baseStep, isWaiting, isGuiding } = require("./steps");
+const { readDescriptor } = require("./workspace");
 
 const CAMPAIGN = "free-storage";
 const KEY_UTM = "drumee_utm";
 const KEY_DONE = "reward_flow_done";
 const KEY_STEP = "reward_step";
+// Latched when the user invites a member from the Step 1 permission panel, so
+// Step 2 has nothing left to ask for. Persisted alongside the step so a reload
+// mid-flow doesn't send them back to the invite popup.
+const KEY_INVITED = "reward_invited";
+// The workspace created in Step 1. Step 3 reopens it, so it must survive a
+// reload the same way the step itself does.
+const KEY_WORKSPACE = "reward_workspace";
 
-const STEPS = ["step1", "step2", "step3"];
+// How long "Open workspace" waits for the workspace window before giving up and
+// dropping Step 3 to its legacy topbar-upload variant. Loading is a fetch plus
+// a mount; anything past this is a failure, not slowness.
+const OPEN_WORKSPACE_TIMEOUT_MS = 4000;
 
 // The live topbar control each step points at. The cutout is laid over it and
 // the card anchored beneath it (see _applyStepTarget).
 const STEP_TARGET = {
-  step2: ".desk-module-topbar__upload-btn",
-  step3: ".desk-module-topbar__invite-btn",
+  step2: ".desk-module-topbar__invite-btn",
+  step3: ".desk-module-topbar__upload-btn",
 };
 
 /** localStorage is unavailable in private mode — never let it break the desk. */
@@ -63,21 +78,34 @@ class __reward_flow extends LetcBox {
     } catch (e) {
       return false;
     }
-    return !!utm && utm.utm_campaign === CAMPAIGN;
+    return utm?.utm_campaign === CAMPAIGN;
   }
 
   initialize(opt = {}) {
     super.initialize(opt);
     this.declareHandlers();
 
-    // Resume where the user left off. Waiting states resume as their base
-    // step: the uploader/invite popup they were handed off to is long gone.
-    const stored = (lsGet(KEY_STEP) || "").replace("_waiting", "");
+    // Resume where the user left off. baseStep strips BOTH _waiting and
+    // _guide: the uploader / invite popup / walkthrough the user was handed off
+    // to is long gone after a reload, so every transient state resumes as its
+    // card step.
+    const stored = baseStep(lsGet(KEY_STEP));
     this._step = STEPS.includes(stored) ? stored : "step1";
     this._modalOpen = false;
     this._dropReturnStep = null;
     this._inviteSucceeded = false;
     this._guideDropOpen = false;
+    // Only trust a persisted latch when RESUMING a run that already reached
+    // Step 2. Landing on Step 1 means this is a fresh walkthrough, so whatever
+    // an earlier — abandoned — run invited says nothing about this one; a key
+    // left behind by that run would otherwise pre-answer Step 2 forever.
+    this._inviteDone = this._step !== "step1" && lsGet(KEY_INVITED) === "1";
+    if (!this._inviteDone) lsDel(KEY_INVITED);
+    // Same reasoning: a descriptor left by an abandoned run must not pre-answer
+    // this one. A run that starts at Step 1 will create its own workspace.
+    this._workspace =
+      this._step !== "step1" ? readDescriptor(lsGet(KEY_WORKSPACE)) : null;
+    if (!this._workspace) lsDel(KEY_WORKSPACE);
 
     this._onUploaded = () => this.onUploadDone();
     if (typeof RADIO_MEDIA !== "undefined") {
@@ -85,11 +113,15 @@ class __reward_flow extends LetcBox {
     }
 
     // media_form broadcasts "workspace:refresh" after desk.create_hub succeeds
-    // — the completion signal that advances step 1, mirroring the upload signal
-    // for step 2.
+    // — the completion signal that advances step 1, mirroring the invite signal
+    // for step 2 and the upload signal for step 3.
     this._onWorkspaceRefresh = (payload) => this.onWorkspaceCreated(payload);
+    // permission_restricted broadcasts this when a member is really invited
+    // from the Step 1 permission panel — see onPanelInvitation.
+    this._onPanelInvitation = () => this.onPanelInvitation();
     if (typeof RADIO_BROADCAST !== "undefined") {
       RADIO_BROADCAST.on("workspace:refresh", this._onWorkspaceRefresh);
+      RADIO_BROADCAST.on("invitation:sent", this._onPanelInvitation);
     }
   }
 
@@ -154,11 +186,17 @@ class __reward_flow extends LetcBox {
       RADIO_BROADCAST.off("workspace:refresh", this._onWorkspaceRefresh);
       this._onWorkspaceRefresh = null;
     }
+    if (this._onPanelInvitation && typeof RADIO_BROADCAST !== "undefined") {
+      RADIO_BROADCAST.off("invitation:sent", this._onPanelInvitation);
+      this._onPanelInvitation = null;
+    }
     if (this._onStepResize && typeof window !== "undefined") {
       window.removeEventListener("resize", this._onStepResize);
       this._onStepResize = null;
     }
     this._stopGuide();
+    this._stopUploadGuide();
+    this._clearOpenTimer();
     this._stopToastWatch();
     this._restoreHost();
     this._markInviteOverlay(false);
@@ -170,6 +208,10 @@ class __reward_flow extends LetcBox {
    *  orchestrator stays requirable (and unit-testable) under Node — the guide
    *  no-ops when there is no DOM. */
   _startGuide() {
+    // Each walkthrough run answers Step 2 for itself. Back → Continue restarts
+    // Step 1 and the user may pick a different workspace type this time, so the
+    // previous attempt's answer must not carry over.
+    this._resetGuideResults();
     if (!this._guide) {
       const RewardGuide = require("./guide");
       this._guide = new RewardGuide(this);
@@ -179,6 +221,68 @@ class __reward_flow extends LetcBox {
 
   _stopGuide() {
     if (this._guide) this._guide.stop();
+  }
+
+  /** Lazily build and start the Step 3 walkthrough. Required lazily for the
+   *  same reason as the Step 1 guide: the orchestrator stays requirable under
+   *  Node, and the guide no-ops when there is no DOM. */
+  _startUploadGuide() {
+    if (!this._uploadGuide) {
+      const { RewardUploadGuide } = require("./guide-upload");
+      this._uploadGuide = new RewardUploadGuide(this);
+    }
+    this._uploadGuide.start();
+  }
+
+  _stopUploadGuide() {
+    if (this._uploadGuide) this._uploadGuide.stop();
+  }
+
+  /**
+   * Close the workspace the flow opened in Step 3, as congrats appears.
+   *
+   * Drives the window's OWN close service rather than calling
+   * Desk.onWorkspaceClosed() or clearing headlessLayer directly: window_folder
+   * counts the surviving workspace tabs first and only tears the desk back down
+   * to "no workspace open" (breadcrumb, sidebar tree, layer) when this was the
+   * last one. A user who already had other workspaces open keeps them.
+   *
+   * No-ops on the legacy Step 3 path, which has no _workspace — there the user
+   * uploaded from the desk topbar and nothing was opened on their behalf.
+   */
+  _closeStep3Workspace() {
+    if (!this._workspace || typeof Wm === "undefined") return;
+    if (typeof Wm._findWorkspaceWindow !== "function") return;
+    const pane = Wm._findWorkspaceWindow(this._workspace.hub_id);
+    if (!pane || pane.isDestroyed?.()) return;
+    if (typeof pane.onUiEvent !== "function") return;
+    // `cmd` is never dereferenced on this path: folder/index.js resolves the
+    // service from args first (`args.service || cmd.service || cmd.mget(...)`),
+    // and the base handler reads only `this`.
+    pane.onUiEvent({}, { service: _e.close });
+  }
+
+  /** Give up on a workspace window that never appeared and fall back to the
+   *  legacy Step 3 rather than stranding the user on a dead card. */
+  _armOpenTimer() {
+    this._clearOpenTimer();
+    this._openTimer = setTimeout(() => {
+      this._openTimer = null;
+      if (this._step !== "step3_guide") return;
+      if (this._uploadGuide?._sub) return; // it landed
+      this._stopUploadGuide();
+      // Drop the descriptor: whatever is stored no longer opens.
+      this._workspace = null;
+      lsDel(KEY_WORKSPACE);
+      this._goto("step3");
+    }, OPEN_WORKSPACE_TIMEOUT_MS);
+  }
+
+  _clearOpenTimer() {
+    if (this._openTimer) {
+      clearTimeout(this._openTimer);
+      this._openTimer = null;
+    }
   }
 
   /**
@@ -193,7 +297,7 @@ class __reward_flow extends LetcBox {
   closeCreateForm() {
     if (typeof Wm === "undefined" || typeof Wm.ensurePart !== "function") return;
     Wm.ensurePart("wrapper-modal").then((p) => {
-      if (p && typeof p.clear === "function") p.clear();
+      if (typeof p?.clear === "function") p.clear();
     });
   }
 
@@ -204,22 +308,50 @@ class __reward_flow extends LetcBox {
 
   /**
    * Paint the spotlight cutout over `rect` (a viewport-space DOMRect) and feed
-   * the coach tooltip. Called by the guide as it walks the live desk chrome.
+   * the coach tooltip. Called by a guide as it walks the live desk chrome.
+   *
+   * @param {DOMRect} rect
+   * @param {{text: string, showBack?: boolean, showNext?: boolean,
+   *          radius?: string}} opt
    */
-  spotlight(rect, text, showBack = true, radius = "") {
+  spotlight(rect, opt = {}) {
     if (!this.el) return;
+    const {
+      text, showBack = true, showNext = false, radius = "", hole = true,
+    } = opt;
     const cx = rect.left + rect.width / 2;
-    // Rectangular cutout for every sub-step: clear the target's rect and dim
-    // only the rest — no highlight ring. The box-shadow cutout does the dimming
-    // (see skin __cutout). The cutout matches the target's box and rounding
-    // EXACTLY: padding it out would leak an undimmed ring of background around
-    // the target, and a mismatched radius would show bright corners.
-    this.el.style.setProperty("--cut-x", `${rect.left}px`);
-    this.el.style.setProperty("--cut-y", `${rect.top}px`);
-    this.el.style.setProperty("--cut-w", `${rect.width}px`);
-    this.el.style.setProperty("--cut-h", `${rect.height}px`);
-    this.el.style.setProperty("--cut-radius", radius || "4px");
-    const anchor = this._coachAnchor(rect, cx);
+    if (hole === false) {
+      // Dim EVERYTHING, spotlight nothing. A zero-size cutout still spreads its
+      // 100vmax box-shadow over the whole viewport (see skin __cutout), and the
+      // guide-scrim's clip-path hole collapses with it so every click is caught.
+      // For a sub-step that only asks the user to read: cutting the surface out
+      // would leave it fully lit — and when that surface is a workspace window
+      // filling the screen, nothing would be dimmed at all.
+      this.el.style.setProperty("--cut-x", "50vw");
+      this.el.style.setProperty("--cut-y", "50vh");
+      this.el.style.setProperty("--cut-w", "0px");
+      this.el.style.setProperty("--cut-h", "0px");
+      this.el.style.setProperty("--cut-radius", "0px");
+    } else {
+      // Rectangular cutout: clear the target's rect and dim only the rest — no
+      // highlight ring. The box-shadow cutout does the dimming (see skin
+      // __cutout). It matches the target's box and rounding EXACTLY: padding it
+      // out would leak an undimmed ring of background around the target, and a
+      // mismatched radius would show bright corners.
+      this.el.style.setProperty("--cut-x", `${rect.left}px`);
+      this.el.style.setProperty("--cut-y", `${rect.top}px`);
+      this.el.style.setProperty("--cut-w", `${rect.width}px`);
+      this.el.style.setProperty("--cut-h", `${rect.height}px`);
+      this.el.style.setProperty("--cut-radius", radius || "4px");
+    }
+    // No text → cutout only, no coach. Used when the spotlighted surface already
+    // carries its own message and dismiss button (the invite-sent confirmation),
+    // where a coach beneath it would just repeat it as a second stray card.
+    if (!text) return this.clearSpotlight();
+    // Nothing is spotlighted → there is no target to sit beside, so centre it.
+    const anchor = hole === false
+      ? this._coachCenter()
+      : this._coachAnchor(rect, cx);
     this.ensurePart("guide-callout").then((p) => {
       if (!p) return;
       p.feed(
@@ -228,6 +360,7 @@ class __reward_flow extends LetcBox {
           style: anchor.style,
           side: anchor.side,
           showBack,
+          showNext,
         }),
       );
     });
@@ -242,10 +375,31 @@ class __reward_flow extends LetcBox {
    * panel — or, when the panel is effectively full-width, pins just under the
    * topbar. This is what fixes the coach being clipped off the top edge.
    */
+  /**
+   * Centre the coach in the viewport. Used when nothing is spotlighted (see
+   * spotlight's `hole: false`): with the whole screen dimmed there is no target
+   * to sit beside, so the callout becomes the only thing on screen.
+   */
+  _coachCenter() {
+    const win = typeof window !== "undefined" ? window : null;
+    const vw = win?.innerWidth || 1280;
+    const vh = win?.innerHeight || 800;
+    const CH = 156;   // approx coach height — same figure _coachAnchor uses
+    const TOP = 64;   // keep clear of the ~52px topbar
+    // `left` is the coach's CENTRE: the skin translates it -50% on X.
+    return {
+      side: "below",
+      style: {
+        left: `${vw / 2}px`,
+        top: `${Math.max(TOP, (vh - CH) / 2)}px`,
+      },
+    };
+  }
+
   _coachAnchor(rect, cx) {
     const win = typeof window !== "undefined" ? window : null;
-    const vw = (win && win.innerWidth) || 1280;
-    const vh = (win && win.innerHeight) || 800;
+    const vw = win?.innerWidth || 1280;
+    const vh = win?.innerHeight || 800;
     const M = 12;       // viewport margin
     const TOP = 64;     // keep clear of the ~52px topbar
     const CH = 156;     // approx coach height (brand header + text + button)
@@ -282,8 +436,18 @@ class __reward_flow extends LetcBox {
     return { side, style: { left: `${clampX(cx)}px`, top: `${clampY(top)}px` } };
   }
 
+  /** Remove the coach callout. feed(null) does NOT empty a part — prepareData
+   *  wraps null into [null], so the coach would be left on screen. Reset the
+   *  collection instead (same rationale as _closeGuideDrop). */
   clearSpotlight() {
-    this.ensurePart("guide-callout").then((p) => p && p.feed(null));
+    this.ensurePart("guide-callout").then((p) => {
+      if (!p) return;
+      if (typeof p.collection?.reset === "function") {
+        p.collection.reset();
+      } else if (typeof p.feed === "function") {
+        p.feed(null);
+      }
+    });
   }
 
   // ───────── skeleton accessors ─────────
@@ -319,13 +483,20 @@ class __reward_flow extends LetcBox {
     if (!this.el) return;
     // Resolved from the BASE step, so entering a waiting state keeps the cutout
     // and the card exactly where they were instead of snapping to the fallback.
-    const sel = STEP_TARGET[this._step.replace("_waiting", "")];
+    const base = baseStep(this._step);
+    // Two variants point at nothing and are centred like Step 1 (see skin
+    // __anchor): a Step 2 already satisfied in Step 1, and a Step 3 that will
+    // guide the user inside the workspace rather than at the desk topbar.
+    const notarget =
+      (base === "step2" && this._inviteDone) ||
+      (base === "step3" && !!this._workspace);
+    const sel = notarget ? null : STEP_TARGET[base];
     const anchor = this.el.querySelector(`.${this.fig.family}__anchor`);
     if (!sel) {
       // Steps with no topbar target (step 1) are centred by the stylesheet.
       // Clear any inline placement left over from step 2/3, otherwise a reused
       // anchor element keeps the card pinned under the Upload/Invite button.
-      if (anchor && anchor.style) {
+      if (anchor?.style) {
         anchor.style.left = "";
         anchor.style.top = "";
         anchor.style.right = "";
@@ -368,9 +539,9 @@ class __reward_flow extends LetcBox {
   _goto(step) {
     this._step = step;
     lsSet(KEY_STEP, step);
-    // While the invite popup is open (step3_waiting), tint its wrapper-modal
+    // While the invite popup is open (step2_waiting), tint its wrapper-modal
     // backdrop to match the flow's own dim instead of the default frosted glass.
-    this._markInviteOverlay(step === "step3_waiting");
+    this._markInviteOverlay(step === "step2_waiting");
     this._render();
   }
 
@@ -389,7 +560,7 @@ class __reward_flow extends LetcBox {
     else delete ds.rewardOverlay;
   }
 
-  _isWaiting() { return this._step.endsWith("_waiting"); }
+  _isWaiting() { return isWaiting(this._step); }
 
   // ───────── external completion signals ─────────
 
@@ -402,7 +573,15 @@ class __reward_flow extends LetcBox {
    */
   onWorkspaceCreated(payload) {
     if (this._step !== "step1_guide") return;
-    if (payload && payload.personal) {
+    // Remember it for Step 3, which reopens this exact workspace. media_form
+    // sends the descriptor on both creation paths; a payload without one just
+    // leaves Step 3 on its legacy variant.
+    const ws = readDescriptor(payload?.workspace);
+    if (ws) {
+      this._workspace = ws;
+      lsSet(KEY_WORKSPACE, JSON.stringify(ws));
+    }
+    if (payload?.personal) {
       this._stopGuide();
       this._goto("step2");
       return;
@@ -411,6 +590,43 @@ class __reward_flow extends LetcBox {
     else this.onGuideComplete();
   }
 
+  /**
+   * A member was invited from the Step 1 permission panel (permission_restricted
+   * broadcasts "invitation:sent"). Only counted DURING the walkthrough: an
+   * invitation sent later, from the topbar or a settings panel, is not what
+   * Step 2 is asking for.
+   *
+   * Latching this makes Step 2 offer a plain Continue instead of re-opening the
+   * invite popup — the user has already done the thing it asks for.
+   */
+  onPanelInvitation() {
+    if (this._step !== "step1_guide") return;
+    this._inviteDone = true;
+    lsSet(KEY_INVITED, "1");
+  }
+
+  /** Forget everything the Step 1 walkthrough established. It belongs to a
+   *  single run: the user may pick a different workspace type this time, so
+   *  Step 2 must re-earn its Continue (only permission_restricted, i.e.
+   *  internal/team, ever sets that latch — personal, external/secure-share and
+   *  internal-with-no-invite must all reach Step 2 with an Invite button), and
+   *  Step 3 must open the workspace THIS run created. */
+  _resetGuideResults() {
+    this._inviteDone = false;
+    lsDel(KEY_INVITED);
+    this._workspace = null;
+    lsDel(KEY_WORKSPACE);
+  }
+
+  /** True when Step 2's invite was already satisfied during Step 1. Read by the
+   *  step card (Continue instead of Invite) and by the skeleton, which then
+   *  drops the topbar cutout — there is no control left to point at. */
+  inviteSatisfied() { return !!this._inviteDone; }
+
+  /** True when Step 1 handed us a workspace to reopen. Read by the step card
+   *  and the skeleton to pick the guided Step 3 over the legacy one. */
+  hasStep1Workspace() { return !!this._workspace; }
+
   /** The guide finished its perm phase (permission panel closed) → Step 2. */
   onGuideComplete() {
     if (this._step !== "step1_guide") return;
@@ -418,61 +634,77 @@ class __reward_flow extends LetcBox {
     this._goto("step2");
   }
 
-  /** A file upload completed. Advances step 2 only while it is waiting. */
+  /** A file upload completed — the LAST step. Only while step 3 is waiting.
+   *  The uploader is the OS file picker plus a progress window, so nothing else
+   *  is holding the shared modal host: congrats can open straight away. */
   onUploadDone() {
-    if (this._step !== "step2_waiting") return;
-    this._goto("step3");
+    if (this._step !== "step3_waiting" && this._step !== "step3_guide") return;
+    this._stopUploadGuide();
+    this._clearOpenTimer();
+    // The reward is claimed, so hand the desk back at Home rather than leaving
+    // the user to dismiss a workspace the flow walked them into.
+    this._closeStep3Workspace();
+    this._step = "congrats";
+    // Re-render BEFORE opening the modal. stop() only clears the coach; the
+    // cutout and the full-viewport __guide-scrim stay in the markup, and a
+    // guiding root outranks the wrapper-modal that hosts congrats — leaving
+    // them would grey the confirmation out and eat its button. Deliberately not
+    // _goto: "congrats" must not be persisted as a resumable step.
+    this._render();
+    // "bare": the re-render above leaves a full-viewport vignette behind the
+    // modal, so the wrapper-modal must not stack a second dim on top of it.
+    if (!this._openModal(congratsModal(this), "bare")) this._finish();
   }
 
   /** An invitation was sent successfully. The invite popup closes right after
-   *  this (clearing the shared modal host on its way out), so we only LATCH the
-   *  success here and defer opening the congrats modal until onInvitePopupClosed
-   *  fires — by then the host is free. */
+   *  this, so we only LATCH the success here and let onInvitePopupClosed drive
+   *  the advance to step 3. */
   onInvitationSent() {
-    if (this._step !== "step3_waiting") return;
+    if (this._step !== "step2_waiting") return;
     this._inviteSucceeded = true;
   }
 
   /** The invite popup closed. Two cases:
-   *  - it closed because the send succeeded → open congrats now (host is free);
-   *  - it closed without sending → re-arm step 3 so the user can retry. */
+   *  - it closed because the send succeeded → advance to step 3 (upload);
+   *  - it closed without sending → re-arm step 2 so the user can retry. */
   onInvitePopupClosed() {
     if (this._inviteSucceeded) {
       this._inviteSucceeded = false;
-      this._step = "congrats";
-      // The invite popup closed because the send succeeded. Its success toast
-      // (invite-popup's Wm.alert notice) is about to take the shared wrapper-
-      // modal's place. Keep the flow's backdrop tint on for it and HOLD: the
-      // congrats screen opens only once the user dismisses that toast (X /
-      // Close), so the confirmation isn't instantly replaced.
-      this._awaitToastThenCongrats();
+      // The success toast (invite-popup's Wm.alert notice) is about to take the
+      // shared wrapper-modal's place. Keep the flow's backdrop tint on for it
+      // and HOLD: step 3 only takes over once the user dismisses that toast
+      // (X / Close), so the confirmation isn't buried under the step card's own
+      // vignette the instant it appears.
+      this._awaitToastDismissed(() => {
+        this._markInviteOverlay(false);
+        this._goto("step3");
+      });
       return;
     }
-    // Closed without sending — drop the tint and re-arm step 3 to retry.
+    // Closed without sending — drop the tint and re-arm step 2 to retry.
     this._markInviteOverlay(false);
-    if (this._step !== "step3_waiting") return;
-    this._goto("step3");
+    if (this._step !== "step2_waiting") return;
+    this._goto("step2");
   }
 
   /** Watch the shared wrapper-modal for the invite-sent toast to appear and
-   *  then be dismissed by the user, and only then open congrats. The toast is
-   *  fed asynchronously by invite-popup's Wm.alert AFTER this runs, so we wait
-   *  for it to show (seen) before treating its absence as "closed". */
-  _awaitToastThenCongrats() {
-    const openCongrats = () => {
+   *  then be dismissed by the user, and only then run `done`. The toast is fed
+   *  asynchronously by invite-popup's Wm.alert AFTER this runs, so we wait for
+   *  it to show (seen) before treating its absence as "closed". */
+  _awaitToastDismissed(done) {
+    const advance = () => {
       // The observer fires DURING the toast's removal unwind; defer a microtask
-      // so that collection reset settles before we feed congrats into the same
-      // host (otherwise it lands as an orphaned, untracked view).
+      // so that collection reset settles before we touch the same host.
       Promise.resolve().then(() => {
-        if (this.isDestroyed && this.isDestroyed()) return;
-        if (!this._openModal(congratsModal(this))) this._finish();
+        if (this.isDestroyed?.()) return;
+        done();
       });
     };
     const host =
-      (typeof Wm !== "undefined" && Wm.__wrapperModal && Wm.__wrapperModal.el) ||
+      (typeof Wm !== "undefined" && Wm.__wrapperModal?.el) ||
       null;
     if (!host || typeof MutationObserver === "undefined") {
-      return openCongrats(); // nothing to watch → don't strand the flow
+      return advance(); // nothing to watch → don't strand the flow
     }
     const TOAST = ".window-info__ui, .window-info__main";
     let seen = false;
@@ -481,20 +713,20 @@ class __reward_flow extends LetcBox {
         seen = true;
         return;
       }
-      // The toast has appeared and is now gone → the user closed it → congrats.
+      // The toast has appeared and is now gone → the user closed it → advance.
       if (seen) {
         this._stopToastWatch();
-        openCongrats();
+        advance();
       }
     };
     this._toastObs = new MutationObserver(check);
     this._toastObs.observe(host, { childList: true, subtree: true });
     // Fallback: if the toast never shows (Wm.alert failed / kind not loaded),
-    // don't strand the user on step 3 — advance to congrats after a short grace.
+    // don't strand the user on step 2 — advance after a short grace.
     this._toastTimer = setTimeout(() => {
       if (!seen) {
         this._stopToastWatch();
-        openCongrats();
+        advance();
       }
     }, 4000);
     check(); // the toast may already be present
@@ -517,16 +749,20 @@ class __reward_flow extends LetcBox {
    * @returns {boolean} false when there is no modal host to render into —
    *   callers decide whether that is fatal for their step.
    */
-  _openModal(tree) {
+  _openModal(tree, overlay = "1") {
     if (typeof Wm === "undefined" || !Wm.__wrapperModal) return false;
     Wm.__wrapperModal.feed(tree);
     Wm.__wrapperModal.el.dataset.state = "open";
     Wm.__wrapperModal.el.dataset.overlay = "blur";
-    // Align the drop/congrats backdrop with the flow's own dim (--overlay-bg)
-    // instead of the app's frosted-glass blur, so these reward-flow modals read
-    // as part of the same overlay as the vignette/spotlight (same marker Step 3
-    // uses for the invite popup — see _markInviteOverlay).
-    Wm.__wrapperModal.el.dataset.rewardOverlay = "1";
+    // Align the backdrop with the flow's own dim (--overlay-bg) instead of the
+    // app's frosted-glass blur, so these modals read as part of the same
+    // overlay as the vignette/spotlight (same marker Step 2 uses for the invite
+    // popup — see _markInviteOverlay).
+    //
+    // "bare" when the flow root is ALREADY painting a full-viewport vignette
+    // behind the modal (congrats): the glass still has to go, but a second dim
+    // of the same colour would just double the darkness. See the skin.
+    Wm.__wrapperModal.el.dataset.rewardOverlay = overlay;
     this._modalOpen = true;
     return true;
   }
@@ -555,7 +791,7 @@ class __reward_flow extends LetcBox {
       // drives the host's backdrop dim, and setting it after feed keeps a
       // re-render from wiping it.
       p.feed(dropModal(this));
-      if (p.el && p.el.dataset) p.el.dataset.open = "1";
+      if (p.el?.dataset) p.el.dataset.open = "1";
     });
   }
 
@@ -565,12 +801,12 @@ class __reward_flow extends LetcBox {
       if (!p) return;
       // feed(null) does NOT empty a part: prepareData wraps null into [null], so
       // the modal is left in place. Reset the collection to actually remove it.
-      if (p.collection && typeof p.collection.reset === "function") {
+      if (typeof p.collection?.reset === "function") {
         p.collection.reset();
       } else if (typeof p.feed === "function") {
         p.feed(null);
       }
-      if (p.el && p.el.dataset) delete p.el.dataset.open;
+      if (p.el?.dataset) delete p.el.dataset.open;
     });
   }
 
@@ -578,6 +814,8 @@ class __reward_flow extends LetcBox {
   _finish() {
     lsSet(KEY_DONE, "1");
     lsDel(KEY_STEP);
+    lsDel(KEY_INVITED);
+    lsDel(KEY_WORKSPACE);
     this._closeModal();
     this._unbind();
     this.softDestroy();
@@ -586,7 +824,7 @@ class __reward_flow extends LetcBox {
   // ───────── event routing ─────────
 
   onUiEvent(cmd, args = {}) {
-    const service = args.service || (cmd && cmd.mget && cmd.mget(_a.service));
+    const service = args.service || cmd?.mget?.(_a.service);
     switch (service) {
       case "reward-continue":
         // step1's primary action: start the guided walkthrough that spotlights
@@ -598,16 +836,41 @@ class __reward_flow extends LetcBox {
         this._startGuide();
         return;
 
-      case "reward-upload":
-        this._goto("step2_waiting");
-        // Reaches modules/desk through the uiHandler chain -> Wm.handleUpload().
-        this.triggerHandlers({ service: _e.upload });
-        return;
-
       case "reward-invite":
-        this._goto("step3_waiting");
+        this._goto("step2_waiting");
         // Reaches modules/desk -> _openInvitePopup().
         this.triggerHandlers({ service: "invite-member" });
+        return;
+
+      case "reward-invite-done":
+        // Step 2's Continue, shown only when the user already invited someone
+        // from the Step 1 permission panel. Nothing to open — just move on.
+        this._goto("step3");
+        return;
+
+      case "reward-open-workspace":
+        // Guided Step 3: reopen the workspace created in Step 1 so the upload
+        // lands there. loadWorkspace is the same entry point the sidebar rows
+        // use; it resolves the root and mounts the workspace pane.
+        if (!this._workspace) return;
+        if (typeof Wm !== "undefined" && typeof Wm.loadWorkspace === "function") {
+          Wm.loadWorkspace({ ...this._workspace });
+        }
+        this._goto("step3_guide");
+        this._startUploadGuide();
+        this._armOpenTimer();
+        return;
+
+      case "reward-guide-next":
+        // Step 3's "folder" beat has no real action to observe, so its coach
+        // carries a Next.
+        if (this._uploadGuide) this._uploadGuide.onNext();
+        return;
+
+      case "reward-upload":
+        this._goto("step3_waiting");
+        // Reaches modules/desk through the uiHandler chain -> Wm.handleUpload().
+        this.triggerHandlers({ service: _e.upload });
         return;
 
       case "reward-back": {
@@ -616,11 +879,18 @@ class __reward_flow extends LetcBox {
         // button). Only when there is nothing earlier does it tear the guide
         // down and return to the Step 1 card.
         if (this._step === "step1_guide") {
-          if (this._guide && this._guide.back()) return;
+          if (this._guide?.back()) return;
           this._stopGuide();
           return this._goto("step1");
         }
-        const base = this._step.replace("_waiting", "");
+        if (this._step === "step3_guide") {
+          // The Step 3 guide has no step-back (see guide-upload): Back leaves
+          // the walkthrough for the card, workspace still open.
+          this._stopUploadGuide();
+          this._clearOpenTimer();
+          return this._goto("step3");
+        }
+        const base = baseStep(this._step);
         if (this._isWaiting()) return this._goto(base);
         const prev = STEPS[STEPS.indexOf(base) - 1];
         if (prev) this._goto(prev);
@@ -631,10 +901,10 @@ class __reward_flow extends LetcBox {
         // Inert while the user is being handed off to a real surface, or when a
         // drop modal is already up.
         if (this._isWaiting() || this._modalOpen || this._guideDropOpen) return;
-        // During the Step 1 walkthrough the dimmed frame (__guide-scrim) fires
-        // this too: guard the walkthrough without tearing it down or touching
-        // the wrapper-modal that may hold the create-form.
-        if (this._step === "step1_guide") {
+        // During either walkthrough the dimmed frame (__guide-scrim) fires this
+        // too: guard the walkthrough without tearing it down or touching the
+        // wrapper-modal that may hold the create-form.
+        if (isGuiding(this._step)) {
           this._openGuideDrop();
           return;
         }
