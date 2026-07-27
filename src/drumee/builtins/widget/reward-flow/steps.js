@@ -12,7 +12,9 @@ const STEPS = ["step1", "step2", "step3"];
 
 /** Trailing state suffixes. `_waiting` = handed off to a real surface,
  *  `_guide` = a live-desk walkthrough is running. */
-const SUFFIX = /_(waiting|guide)$/;
+const WAITING = "_waiting";
+const GUIDE = "_guide";
+const SUFFIX = new RegExp(`(${WAITING}|${GUIDE})$`);
 
 /**
  * The card step underlying `step`.
@@ -26,17 +28,17 @@ const SUFFIX = /_(waiting|guide)$/;
  * @returns {string} the base step, or "" when there is nothing to read
  */
 function baseStep(step) {
-  return String(step == null ? "" : step).replace(SUFFIX, "");
+  return String(step ?? "").replace(SUFFIX, "");
 }
 
 /** @returns {boolean} the user has been handed off to a real surface. */
 function isWaiting(step) {
-  return /_waiting$/.test(String(step == null ? "" : step));
+  return String(step ?? "").endsWith(WAITING);
 }
 
 /** @returns {boolean} a live-desk walkthrough owns the screen. */
 function isGuiding(step) {
-  return /_guide$/.test(String(step == null ? "" : step));
+  return String(step ?? "").endsWith(GUIDE);
 }
 
 module.exports = { STEPS, baseStep, isWaiting, isGuiding };

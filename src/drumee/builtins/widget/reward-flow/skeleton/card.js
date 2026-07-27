@@ -97,10 +97,10 @@ function configFor(step, ui) {
   const base = String(step).replace(/_(waiting|guide)$/, "");
   const cfg = STEPS[base];
   if (!cfg) return null;
-  if (base === "step2" && ui && ui.inviteSatisfied && ui.inviteSatisfied()) {
+  if (base === "step2" && ui?.inviteSatisfied?.()) {
     return { ...cfg, ...STEP2_SATISFIED };
   }
-  if (base === "step3" && ui && ui.hasStep1Workspace && ui.hasStep1Workspace()) {
+  if (base === "step3" && ui?.hasStep1Workspace?.()) {
     return { ...cfg, ...STEP3_GUIDED };
   }
   return cfg;

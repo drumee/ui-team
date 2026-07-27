@@ -18,8 +18,10 @@
  * Deliberately simpler than Step 1's step-back, which drives the desk's addmenu
  * part through the orchestrator: the equivalent here means reaching into
  * window_folder's `new-ctrl` part, and there is nothing destructive to undo.
+ * The orchestrator does that directly in its `reward-back` case and never
+ * consults back(), so this guide just inherits GuideCore's, which returns false.
  */
-const { GuideCore, hasDom, firstVisible } = require("./guide-core");
+const { GuideCore, firstVisible } = require("./guide-core");
 
 // Live workspace-window selectors. Single source of truth for what this guide
 // reaches into — see window/skeleton/toolkit/index.js, which builds them.
@@ -132,12 +134,6 @@ class RewardUploadGuide extends GuideCore {
       // nothing would be dimmed at all.
       hole: sub !== "folder",
     };
-  }
-
-  /** Back exits the walkthrough — see the class comment. */
-  back() {
-    if (!hasDom()) return false;
-    return false;
   }
 }
 

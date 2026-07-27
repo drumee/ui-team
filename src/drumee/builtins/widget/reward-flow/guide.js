@@ -154,9 +154,11 @@ class RewardGuide extends GuideCore {
       return null;
     }
 
-    const formVisible = visible(document.querySelector(SEL.form));
-    const menuVisible = visible(document.querySelector(SEL.wsItem));
-    return formVisible ? "form" : menuVisible ? "menu" : "add";
+    // Innermost surface wins: the form covers the dropdown, which covers the
+    // Add-new button.
+    if (visible(document.querySelector(SEL.form))) return "form";
+    if (visible(document.querySelector(SEL.wsItem))) return "menu";
+    return "add";
   }
 
   _pinReady() {
@@ -251,7 +253,7 @@ class RewardGuide extends GuideCore {
   _complete() {
     if (this._completed) return;
     this._completed = true;
-    if (this._ui && typeof this._ui.onGuideComplete === "function") {
+    if (typeof this._ui?.onGuideComplete === "function") {
       this._ui.onGuideComplete();
     }
   }

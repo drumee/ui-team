@@ -51,7 +51,7 @@ function visible(el) {
   if (el.getClientRects().length === 0) return false;
   if (typeof getComputedStyle === "function") {
     const s = getComputedStyle(el);
-    if (s && (s.visibility === "hidden" || s.display === "none")) return false;
+    if (s?.visibility === "hidden" || s?.display === "none") return false;
   }
   return true;
 }
@@ -59,9 +59,8 @@ function visible(el) {
 /** First matching element that is actually on screen, else null. */
 function firstVisible(selector) {
   if (!hasDom()) return null;
-  const els = document.querySelectorAll(selector);
-  for (let i = 0; i < els.length; i++) {
-    if (visible(els[i])) return els[i];
+  for (const el of document.querySelectorAll(selector)) {
+    if (visible(el)) return el;
   }
   return null;
 }
@@ -97,8 +96,14 @@ class GuideCore {
   back() { return false; }
   /** @returns {boolean} the pinned sub-step's surface is actually on screen. */
   _pinReady() { return true; }
-  /** Clear subclass-owned flags. Called by both start() and stop(). */
-  _resetState() {}
+  /**
+   * Clear subclass-owned flags. Called unconditionally by both start() and
+   * stop(), so it must exist here — a guide with no per-run state of its own
+   * simply inherits this no-op rather than being forced to declare one.
+   */
+  _resetState() {
+    // Intentionally empty: see above.
+  }
 
   // ───────── lifecycle ─────────
 
@@ -294,7 +299,7 @@ class GuideCore {
   // ───────── foreign-DOM sibling greying ─────────
 
   _disableOthers() {
-    if (!hasDom() || !this.SEL || !this.SEL.otherItems) return;
+    if (!hasDom() || !this.SEL?.otherItems) return;
     document.querySelectorAll(this.SEL.otherItems).forEach((el) => {
       el.classList.add(DISABLED_CLASS);
     });
@@ -308,7 +313,7 @@ class GuideCore {
   }
 
   _clearSpot() {
-    if (this._ui && typeof this._ui.clearSpotlight === "function") {
+    if (typeof this._ui?.clearSpotlight === "function") {
       this._ui.clearSpotlight();
     }
   }

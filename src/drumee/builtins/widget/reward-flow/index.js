@@ -78,7 +78,7 @@ class __reward_flow extends LetcBox {
     } catch (e) {
       return false;
     }
-    return !!utm && utm.utm_campaign === CAMPAIGN;
+    return utm?.utm_campaign === CAMPAIGN;
   }
 
   initialize(opt = {}) {
@@ -254,7 +254,7 @@ class __reward_flow extends LetcBox {
     if (!this._workspace || typeof Wm === "undefined") return;
     if (typeof Wm._findWorkspaceWindow !== "function") return;
     const pane = Wm._findWorkspaceWindow(this._workspace.hub_id);
-    if (!pane || (pane.isDestroyed && pane.isDestroyed())) return;
+    if (!pane || pane.isDestroyed?.()) return;
     if (typeof pane.onUiEvent !== "function") return;
     // `cmd` is never dereferenced on this path: folder/index.js resolves the
     // service from args first (`args.service || cmd.service || cmd.mget(...)`),
@@ -269,7 +269,7 @@ class __reward_flow extends LetcBox {
     this._openTimer = setTimeout(() => {
       this._openTimer = null;
       if (this._step !== "step3_guide") return;
-      if (this._uploadGuide && this._uploadGuide._sub) return; // it landed
+      if (this._uploadGuide?._sub) return; // it landed
       this._stopUploadGuide();
       // Drop the descriptor: whatever is stored no longer opens.
       this._workspace = null;
@@ -297,7 +297,7 @@ class __reward_flow extends LetcBox {
   closeCreateForm() {
     if (typeof Wm === "undefined" || typeof Wm.ensurePart !== "function") return;
     Wm.ensurePart("wrapper-modal").then((p) => {
-      if (p && typeof p.clear === "function") p.clear();
+      if (typeof p?.clear === "function") p.clear();
     });
   }
 
@@ -382,8 +382,8 @@ class __reward_flow extends LetcBox {
    */
   _coachCenter() {
     const win = typeof window !== "undefined" ? window : null;
-    const vw = (win && win.innerWidth) || 1280;
-    const vh = (win && win.innerHeight) || 800;
+    const vw = win?.innerWidth || 1280;
+    const vh = win?.innerHeight || 800;
     const CH = 156;   // approx coach height — same figure _coachAnchor uses
     const TOP = 64;   // keep clear of the ~52px topbar
     // `left` is the coach's CENTRE: the skin translates it -50% on X.
@@ -398,8 +398,8 @@ class __reward_flow extends LetcBox {
 
   _coachAnchor(rect, cx) {
     const win = typeof window !== "undefined" ? window : null;
-    const vw = (win && win.innerWidth) || 1280;
-    const vh = (win && win.innerHeight) || 800;
+    const vw = win?.innerWidth || 1280;
+    const vh = win?.innerHeight || 800;
     const M = 12;       // viewport margin
     const TOP = 64;     // keep clear of the ~52px topbar
     const CH = 156;     // approx coach height (brand header + text + button)
@@ -442,7 +442,7 @@ class __reward_flow extends LetcBox {
   clearSpotlight() {
     this.ensurePart("guide-callout").then((p) => {
       if (!p) return;
-      if (p.collection && typeof p.collection.reset === "function") {
+      if (typeof p.collection?.reset === "function") {
         p.collection.reset();
       } else if (typeof p.feed === "function") {
         p.feed(null);
@@ -496,7 +496,7 @@ class __reward_flow extends LetcBox {
       // Steps with no topbar target (step 1) are centred by the stylesheet.
       // Clear any inline placement left over from step 2/3, otherwise a reused
       // anchor element keeps the card pinned under the Upload/Invite button.
-      if (anchor && anchor.style) {
+      if (anchor?.style) {
         anchor.style.left = "";
         anchor.style.top = "";
         anchor.style.right = "";
@@ -576,12 +576,12 @@ class __reward_flow extends LetcBox {
     // Remember it for Step 3, which reopens this exact workspace. media_form
     // sends the descriptor on both creation paths; a payload without one just
     // leaves Step 3 on its legacy variant.
-    const ws = readDescriptor(payload && payload.workspace);
+    const ws = readDescriptor(payload?.workspace);
     if (ws) {
       this._workspace = ws;
       lsSet(KEY_WORKSPACE, JSON.stringify(ws));
     }
-    if (payload && payload.personal) {
+    if (payload?.personal) {
       this._stopGuide();
       this._goto("step2");
       return;
@@ -696,12 +696,12 @@ class __reward_flow extends LetcBox {
       // The observer fires DURING the toast's removal unwind; defer a microtask
       // so that collection reset settles before we touch the same host.
       Promise.resolve().then(() => {
-        if (this.isDestroyed && this.isDestroyed()) return;
+        if (this.isDestroyed?.()) return;
         done();
       });
     };
     const host =
-      (typeof Wm !== "undefined" && Wm.__wrapperModal && Wm.__wrapperModal.el) ||
+      (typeof Wm !== "undefined" && Wm.__wrapperModal?.el) ||
       null;
     if (!host || typeof MutationObserver === "undefined") {
       return advance(); // nothing to watch → don't strand the flow
@@ -791,7 +791,7 @@ class __reward_flow extends LetcBox {
       // drives the host's backdrop dim, and setting it after feed keeps a
       // re-render from wiping it.
       p.feed(dropModal(this));
-      if (p.el && p.el.dataset) p.el.dataset.open = "1";
+      if (p.el?.dataset) p.el.dataset.open = "1";
     });
   }
 
@@ -801,12 +801,12 @@ class __reward_flow extends LetcBox {
       if (!p) return;
       // feed(null) does NOT empty a part: prepareData wraps null into [null], so
       // the modal is left in place. Reset the collection to actually remove it.
-      if (p.collection && typeof p.collection.reset === "function") {
+      if (typeof p.collection?.reset === "function") {
         p.collection.reset();
       } else if (typeof p.feed === "function") {
         p.feed(null);
       }
-      if (p.el && p.el.dataset) delete p.el.dataset.open;
+      if (p.el?.dataset) delete p.el.dataset.open;
     });
   }
 
@@ -824,7 +824,7 @@ class __reward_flow extends LetcBox {
   // ───────── event routing ─────────
 
   onUiEvent(cmd, args = {}) {
-    const service = args.service || (cmd && cmd.mget && cmd.mget(_a.service));
+    const service = args.service || cmd?.mget?.(_a.service);
     switch (service) {
       case "reward-continue":
         // step1's primary action: start the guided walkthrough that spotlights
@@ -879,7 +879,7 @@ class __reward_flow extends LetcBox {
         // button). Only when there is nothing earlier does it tear the guide
         // down and return to the Step 1 card.
         if (this._step === "step1_guide") {
-          if (this._guide && this._guide.back()) return;
+          if (this._guide?.back()) return;
           this._stopGuide();
           return this._goto("step1");
         }
