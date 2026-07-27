@@ -26,19 +26,21 @@ module.exports = function (ui) {
   // Congrats keeps only the vignette. It must NOT stay guiding: that root sits
   // at z-index 1000000 against the wrapper-modal's 100000, and its
   // pointer-events:auto __guide-scrim would grey the confirmation out and
-  // swallow its button. Dropping to the plain root puts the vignette under the
-  // modal but over everything else — and because the root is position:fixed and
-  // portaled to document.body, that dim is genuinely full-viewport: sidebar,
-  // topbar and any open dropdown included. The wrapper-modal contributes no
-  // backdrop of its own here (see index.js _openModal's "bare" mode), so the
-  // dim stays one layer deep.
+  // swallow its button. A plain root puts the vignette under the modal and over
+  // everything else, and because the root is position:fixed and portaled to
+  // document.body that dim is genuinely full-viewport — but only once
+  // over-window lifts it clear of the open workspace (see the skin). The
+  // wrapper-modal contributes no backdrop of its own here (index.js
+  // _openModal's "bare" mode), so the dim stays one layer deep.
   //
   // No `service` on it: this is a terminal state, so a click should do nothing
   // rather than raise "Don't drop now".
   if (step === "congrats") {
     return Skeletons.Box.Y({
       className: `${pfx}__root`,
-      dataset: { step, waiting: "0", guiding: "0", cutout: "0" },
+      dataset: {
+        step, waiting: "0", guiding: "0", cutout: "0", overWindow: "1",
+      },
       debug: __filename,
       kids: [Skeletons.Box.Y({ className: `${pfx}__vignette` })],
     });
@@ -153,6 +155,11 @@ module.exports = function (ui) {
       // Tells the stylesheet the cutout is doing the dimming, so the flat
       // vignette must go transparent (it stays for the drop-modal click).
       cutout: targeted ? "1" : "0",
+      // The guided Step 3 card is the one card state reached with a workspace
+      // WINDOW on screen (the user may have opened it, then pressed Back out of
+      // the walkthrough). Windows outrank the flow's default layer, so this
+      // asks the skin to lift the root clear of them.
+      overWindow: guided ? "1" : "0",
     },
     debug: __filename,
     kids,

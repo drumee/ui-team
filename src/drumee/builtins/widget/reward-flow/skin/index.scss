@@ -76,22 +76,26 @@ $success-soft: rgba(46, 179, 122, 0.14);
     pointer-events: none;   // only the vignette / card / coach opt back in
   }
 
+  // States that coexist with an OPEN workspace window — the guided Step 3 card
+  // and congrats, both reached with the step-1 workspace on screen. 10020 is
+  // above the bare desk, but nowhere near a window: `.window__ui[data-state=1]`
+  // is 10000 and the layer hosting the focused window goes to 50001 (see
+  // desk/wm/skin and skin/vars/z-index.scss), so at 10020 the workspace and its
+  // "+ New" dropdown paint straight over the dim. Sit just under
+  // --z-index-modal instead: above every desk layer including preview (80000),
+  // still below the wrapper-modal that hosts the congrats card.
+  &__root[data-over-window="1"] {
+    z-index: calc(var(--z-index-modal, 100000) - 1);
+  }
+
   // While guiding, the walkthrough targets the workspace form and internal
   // permission panel, which live in that wrapper-modal at --z-index-modal
   // (100000). Lift the whole flow above it so the coach is clickable and the
   // cutout dims that layer too. Guiding only, so the drop/congrats modals stay
-  // above the active/waiting states.
+  // above the active/waiting states. Declared last so it outranks the
+  // over-window lift above at equal specificity.
   &__root[data-guiding="1"] {
     z-index: 1000000;
-  }
-
-  // Congrats must never inherit the guiding lift: at 1000000 the root outranks
-  // the wrapper-modal hosting the confirmation, and the walkthrough's
-  // pointer-events:auto scrim would grey it out and swallow its button. The
-  // skeleton already drops to a plain root here (see skeleton/index.js); this
-  // guarantees it even if a stale attribute survived a re-render.
-  &__root[data-step="congrats"] {
-    z-index: 10020;
   }
 
 
@@ -307,10 +311,14 @@ $success-soft: rgba(46, 179, 122, 0.14);
       align-items: center;
     }
 
-    // Step 2 whose invite was already satisfied in Step 1 has no control to
-    // point at — _applyStepTarget leaves its inline placement cleared, so
-    // centre it like Step 1. Must out-specify the step2 rule above.
-    &[data-step="step2"][data-notarget="1"] {
+    // Any step with no control to point at — a Step 2 whose invite was already
+    // satisfied in Step 1, or a Step 3 that opens the workspace instead of the
+    // topbar uploader. _applyStepTarget leaves their inline placement cleared,
+    // so centre them like Step 1. Keyed on data-notarget alone, NOT on the step:
+    // scoping it to step2 left the guided Step 3 card falling through to the
+    // 96px topbar fallback above, pinned under a control it does not point at.
+    // Declared last so it wins over that rule at equal specificity.
+    &[data-notarget="1"] {
       top: 50%;
       left: 50%;
       transform: translate(-50%, -50%);
