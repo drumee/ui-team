@@ -164,6 +164,8 @@ class __tasks_panel extends LetcBox {
     this._replyingTo = null; // id of the comment (root or child) being replied to
     this._replyDraft = null; // reply buffer { body, mention_uids }
     this._reactPickerFor = null; // comment id whose reaction palette is open
+    this._activityTab = "all"; // detail popup: all | comments | history
+    this._taskActivity = []; // change-log rows for the open task
     this._emojiPickerFor = null; // comment id whose full emoji grid is open
     this.bindEvent(_a.live);
   }
@@ -1497,6 +1499,9 @@ class __tasks_panel extends LetcBox {
       case "link-search-result":
         return this._linkSearchResult(trigger);
 
+      case "activity-tab":
+        return this._switchActivityTab(trigger.mget("activityTab"));
+
       case "remove-pending-file":
         return this._removePendingFile(trigger);
 
@@ -2483,6 +2488,8 @@ class __tasks_panel extends LetcBox {
     this._replyDraft = null;
     this._reactPickerFor = null;
     this._emojiPickerFor = null;
+    this._activityTab = "all";
+    this._taskActivity = [];
     // Re-fetch folder filenames so collision preview (a → a(1)) reflects
     // the folder's current state.
     this._folderFilenames = null;
@@ -2499,6 +2506,35 @@ class __tasks_panel extends LetcBox {
     this._loadComments(id).then(() => {
       if (this._detailId === id) this._refreshCommentList();
     });
+    // "All" (the default tab) interleaves the change log with the comments, so
+    // it is fetched on open rather than on first switch.
+    this._loadTaskHistory(id).then(() => {
+      if (this._detailId === id) this._refreshCommentList();
+    });
+  }
+
+  // Change-log rows for one task. task.activity is folder-scoped (there is no
+  // per-task endpoint), so this pulls a deeper window and filters — in a very
+  // busy folder a task whose entries fall outside those rows logs partially.
+  async _loadTaskHistory(taskId) {
+    const id = taskId || this._detailId;
+    if (!id) return;
+    const HISTORY_SCAN = 300;
+    try {
+      const rows = await this.fetchService({
+        service: SERVICE.task.activity,
+        hub_id: this._hubId,
+        nid: this._scopeNid,
+        include_unscoped: this._scopeIsRoot,
+        limit: HISTORY_SCAN,
+      });
+      const list = Array.isArray(rows) ? rows : [];
+      this._taskActivity = list.filter(
+        (r) => String(r.task_id) === String(id),
+      );
+    } catch (err) {
+      this._taskActivity = [];
+    }
   }
 
   // ── Custom Kanban columns ────────────────────────────────────
@@ -5096,6 +5132,68 @@ class __tasks_panel extends LetcBox {
     const filter = this._filterUids || [];
     if (!filter.length) return rows;
     return rows.filter((r) => filter.includes(String(r.actor_uid)));
+  }
+
+  getActivityTab() {
+    return this._activityTab || "all";
+  }
+
+  getTaskHistory() {
+    return Array.isArray(this._taskActivity) ? this._taskActivity : [];
+  }
+
+  // Flips data-active in place and re-feeds only the list part: a full
+  // _render() would rebuild the composer and drop the caret mid-comment.
+  _switchActivityTab(tab) {
+    const next = ["all", "comments", "history"].includes(tab) ? tab : "all";
+    if (next === this._activityTab) return;
+    this._activityTab = next;
+    if (this.el) {
+      this.el
+        .querySelectorAll(`.${this.fig.family}__activity-tab`)
+        .forEach((el) => {
+          el.dataset.active = el.dataset.tab === next ? "1" : "0";
+        });
+    }
+    this._refreshCommentList();
+    // Nothing fetched yet (the open-time load failed or is still in flight) —
+    // try again so History isn't permanently empty.
+    if (next !== "comments" && !this.getTaskHistory().length) {
+      const id = this._detailId;
+      this._loadTaskHistory(id).then(() => {
+        if (this._detailId === id && this.getTaskHistory().length) {
+          this._refreshCommentList();
+        }
+      });
+    }
+  }
+
+  // "Organize → Link to task tracker" (folder window → linkFilesToTask): open
+  // the create modal on a fresh To Do / Medium draft with these files queued.
+  // They already live in the workspace, so attachExistingNodes stages them to
+  // link by nid on Update — no re-upload.
+  openTaskWithFiles(nodes) {
+    this._creating = true;
+    this._createDefaults = {
+      status: "todo",
+      title: "",
+      description: "",
+      priority: "medium",
+      due_date: "",
+      start_date: "",
+      duration_on: false,
+      assignees: [],
+      labels: [],
+      pending_files: [],
+    };
+    this._folderFilenames = null;
+    this._resetFileSearch();
+    // Clear the drag dedupe window — it swallows a drop's double event, but
+    // here it would skip a file linked, cancelled and linked again in seconds.
+    this._attachingNids = null;
+    // Queue before the first render so the modal paints with the files listed.
+    this.attachExistingNodes(nodes);
+    this._render();
   }
 
   getView() {

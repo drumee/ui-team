@@ -185,13 +185,11 @@ const __button = function (ui, trigger, k) {
 
               content: LOCALE.LINK_TO_TASK_TRACKER,
 
-              service: _a.none,
+              service: 'link-to-task-tracker',
 
               className: `${pfx} submenu-item`,
 
               uiHandler: [ui],
-
-              dataset: { state: _a.disable }
 
             }),
 

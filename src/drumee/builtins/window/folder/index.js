@@ -493,6 +493,13 @@ class __window_folder extends mfsInteract {
     } else if (initialTab && initialTab !== "files") {
       this.ensurePart("folder-view").then(() => this.showFolderTab(initialTab));
     }
+    // Launched by "Link to task tracker" from outside a folder window. Consumed
+    // once, so a later remount doesn't reopen the draft out of the blue.
+    const taskFiles = this.mget("link_task_files");
+    if (taskFiles && taskFiles.length) {
+      this.mset("link_task_files", null);
+      this.ensurePart("folder-view").then(() => this.linkFilesToTask(taskFiles));
+    }
     // Gate the chat panel to the viewer's current role on open (a view-only
     // member sees the "need permission" info card instead of the conversation);
     // live role changes re-run this via _applyLivePrivilege. Deferred until the
@@ -3389,6 +3396,30 @@ class __window_folder extends mfsInteract {
       this._taskPanel = p;
       apply(p);
     });
+  }
+
+  // "Organize → Link to task tracker" on one or more files: show the Task tab
+  // and open a new task draft with those files already attached. Mirrors
+  // openTaskDeepLink — showFolderTab returns early when the tab is already
+  // active, so the scope has to be re-asserted for the mounted case.
+  linkFilesToTask(nodes) {
+    const files = (Array.isArray(nodes) ? nodes : [nodes]).filter(Boolean);
+    if (!files.length) return;
+    const mounted = this._taskPanelMounted;
+    const shown = this.showFolderTab(_a.task);
+    if (mounted) this.scopeTasksToFolder();
+    return Promise.resolve(shown)
+      .then(() => this._taskPanel || this.ensurePart("folder-task-panel"))
+      .then((p) => {
+        this._taskPanel = p;
+        if (
+          p &&
+          !(p.isDestroyed && p.isDestroyed()) &&
+          _.isFunction(p.openTaskWithFiles)
+        ) {
+          p.openTaskWithFiles(files);
+        }
+      });
   }
 
   // Deep link from a task mention/assignment notification on a window that is

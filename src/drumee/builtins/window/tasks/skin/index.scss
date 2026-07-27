@@ -1359,7 +1359,7 @@
     box-sizing: border-box;
     border-left: 3px solid var(--col-primary-40, #5950ff);
     max-height: 100%;
-    overflow-y: auto; // short windows: sidebar scrolls alone, Save stays reachable
+    overflow-y: auto; // short windows: the sidebar scrolls on its own
   }
 
   // Detail modal: only the LEFT column scrolls (Figma) — the shared body
@@ -2765,14 +2765,76 @@
     }
   }
 
+  // Both children are pointer-events: none (as on __viewbar-item) so a click
+  // lands on the tab row: the label is its own widget, with no service of its
+  // own, and would otherwise swallow it.
   &__activity-tab-ico {
     width: 16px;
     height: 16px;
     flex: 0 0 16px;
+    pointer-events: none;
+  }
+
+  &__activity-tab-label {
+    pointer-events: none;
   }
 
   &__comment-list {
     gap: 12px;
+  }
+
+  // ── Change-log line (History / All tabs) ──────────────────────────
+  // Lighter than a comment row — no card, small avatar, one line — so a run of
+  // them reads as a log beside the comment cards.
+  &__history-row {
+    align-items: center;
+    gap: 8px;
+    padding: 4px 2px;
+  }
+
+  &__history-avatar {
+    flex: 0 0 auto;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    overflow: hidden;
+  }
+
+  &__history-text {
+    flex: 1 1 auto;
+    min-width: 0;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+
+  &__history-actor {
+    @include drumee.typo(
+      $size: 13px,
+      $weight: 600,
+      $line: 18px,
+      $color: var(--normal-fg-10, #0b0a21)
+    );
+  }
+
+  &__history-verb {
+    @include drumee.typo(
+      $size: 13px,
+      $weight: 400,
+      $line: 18px,
+      $color: var(--normal-fg-30, #65656c)
+    );
+  }
+
+  &__history-time {
+    flex: 0 0 auto;
+    white-space: nowrap;
+    @include drumee.typo(
+      $size: 11px,
+      $weight: 400,
+      $line: 16px,
+      $color: var(--normal-fg-40, #84848c)
+    );
   }
 
   &__comments-empty {
@@ -5685,14 +5747,21 @@
     }
   }
 
-  // ── Detail-panel footer — single full-width primary button ────
+  // ── Detail-panel footer ───────────────────────────────────────
+  // Pinned as the panel's last row: 0 0 auto so a tall body can't shrink it.
   &__detail-actions {
-    align-items: stretch;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: flex-end;
     gap: 8px;
+    // The panel's own 32px gap sits above the rule; this is the space under it.
+    padding-top: 16px;
+    border-top: 1px solid var(--border-default, rgba(0, 0, 0, 0.08));
   }
 
   &__detail-cancel {
-    flex: 1 1 0;
+    flex: 0 0 auto;
+    min-width: 132px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -5720,7 +5789,8 @@
   }
 
   &__detail-submit {
-    flex: 1 1 0;
+    flex: 0 0 auto;
+    min-width: 132px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -6124,6 +6194,15 @@ html[data-theme="dark"] .tasks-panel__flatpickr.flatpickr-calendar {
     border-left: 0;
     border-top: 3px solid var(--col-primary-40, #5950ff);
     overflow: visible;
+  }
+  // Full-width thumb targets on a phone.
+  .tasks-panel__detail-actions {
+    padding-top: 12px;
+  }
+  .tasks-panel__detail-cancel,
+  .tasks-panel__detail-submit {
+    flex: 1 1 0;
+    min-width: 0;
   }
 }
 
