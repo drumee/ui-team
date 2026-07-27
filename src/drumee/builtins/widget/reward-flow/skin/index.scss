@@ -70,6 +70,16 @@ $success-soft: rgba(46, 179, 122, 0.14);
     z-index: 1000000;
   }
 
+  // Congrats is hosted in the wrapper-modal, and the flow itself has nothing
+  // left to paint. Take the whole layer out rather than trusting it to be
+  // empty: reaching congrats from a walkthrough means the root was at
+  // z-index 1000000 with a pointer-events:auto scrim, which greyed the
+  // confirmation out and swallowed its button. The skeleton already renders no
+  // children here (see skeleton/index.js) — this guarantees it.
+  &__root[data-step="congrats"] {
+    display: none;
+  }
+
 
   &__vignette {
     position: absolute;

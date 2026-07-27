@@ -578,6 +578,12 @@ class __reward_flow extends LetcBox {
     this._stopUploadGuide();
     this._clearOpenTimer();
     this._step = "congrats";
+    // Re-render BEFORE opening the modal. stop() only clears the coach; the
+    // cutout and the full-viewport __guide-scrim stay in the markup, and a
+    // guiding root outranks the wrapper-modal that hosts congrats — leaving
+    // them would grey the confirmation out and eat its button. Deliberately not
+    // _goto: "congrats" must not be persisted as a resumable step.
+    this._render();
     if (!this._openModal(congratsModal(this))) this._finish();
   }
 

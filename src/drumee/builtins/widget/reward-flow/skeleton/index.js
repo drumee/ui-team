@@ -22,6 +22,22 @@ module.exports = function (ui) {
   const pfx = ui.fig.family;
   const { baseStep, isWaiting, isGuiding } = require("../steps");
   const step = ui.getStep();
+
+  // Congrats renders NOTHING of its own. The modal lives in Wm's wrapper-modal
+  // (--z-index-modal, 100000); a guiding root sits at 1000000 and its
+  // full-viewport __guide-scrim is pointer-events:auto, so leaving the
+  // walkthrough's markup in place would grey the confirmation out and swallow
+  // its button. The root's own pointer-events:none makes this inert, and the
+  // wrapper-modal supplies the backdrop via data-reward-overlay.
+  if (step === "congrats") {
+    return Skeletons.Box.Y({
+      className: `${pfx}__root`,
+      dataset: { step, waiting: "0", guiding: "0", cutout: "0" },
+      debug: __filename,
+      kids: [],
+    });
+  }
+
   const waiting = isWaiting(step);
   // Both walkthroughs render the same way: cutout + scrim + coach, no card.
   // Step 1 walks the desk chrome, Step 3 the workspace window.
