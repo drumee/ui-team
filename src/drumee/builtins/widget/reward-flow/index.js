@@ -24,21 +24,17 @@
 const { dropModal, congratsModal } = require("./skeleton/modal");
 const { STEPS, baseStep, isWaiting, isGuiding } = require("./steps");
 const { readDescriptor } = require("./workspace");
+// Per-user run state — see storage.js. Split out so it is testable under Node.
+const {
+  KEY_DONE, KEY_STEP, KEY_INVITED, KEY_WORKSPACE,
+  lsGet, runGet, runSet, runDel, migrateLegacyDone,
+} = require("./storage");
 
 // Must match the utm_campaign that analytics-server puts on the claim-reward
 // email CTA (service/index.js _rewardCtaLink). The marker reaches localStorage
 // via libs/campaign captureUtm(), called from the welcome and desk routers.
 const CAMPAIGN = "free-storage";
 const KEY_UTM = "drumee_utm";
-const KEY_DONE = "reward_flow_done";
-const KEY_STEP = "reward_step";
-// Latched when the user invites a member from the Step 1 permission panel, so
-// Step 2 has nothing left to ask for. Persisted alongside the step so a reload
-// mid-flow doesn't send them back to the invite popup.
-const KEY_INVITED = "reward_invited";
-// The workspace created in Step 1. Step 3 reopens it, so it must survive a
-// reload the same way the step itself does.
-const KEY_WORKSPACE = "reward_workspace";
 
 // How long "Open workspace" waits for the workspace window before giving up and
 // dropping Step 3 to its legacy topbar-upload variant. Loading is a fetch plus
@@ -52,17 +48,6 @@ const STEP_TARGET = {
   step3: ".desk-module-topbar__upload-btn",
 };
 
-/** localStorage is unavailable in private mode — never let it break the desk. */
-function lsGet(key) {
-  try { return localStorage.getItem(key); } catch (e) { return null; }
-}
-function lsSet(key, value) {
-  try { localStorage.setItem(key, value); } catch (e) { /* quota/private mode */ }
-}
-function lsDel(key) {
-  try { localStorage.removeItem(key); } catch (e) { /* quota/private mode */ }
-}
-
 class __reward_flow extends LetcBox {
   static initClass() {
     require("./skin");
@@ -74,7 +59,10 @@ class __reward_flow extends LetcBox {
    *   and has not yet finished (or abandoned) the flow.
    */
   static isEligible() {
-    if (lsGet(KEY_DONE) === "1") return false;
+    // Fold any pre-scoping latch into this user's own key before reading it,
+    // so an earlier completion is neither lost nor inherited by everyone else.
+    migrateLegacyDone();
+    if (runGet(KEY_DONE) === "1") return false;
     let utm;
     try {
       utm = JSON.parse(lsGet(KEY_UTM) || "{}");
@@ -96,7 +84,7 @@ class __reward_flow extends LetcBox {
     // _guide: the uploader / invite popup / walkthrough the user was handed off
     // to is long gone after a reload, so every transient state resumes as its
     // card step.
-    const stored = baseStep(lsGet(KEY_STEP));
+    const stored = baseStep(runGet(KEY_STEP));
     this._step = STEPS.includes(stored) ? stored : "step1";
     this._modalOpen = false;
     this._dropReturnStep = null;
@@ -110,13 +98,13 @@ class __reward_flow extends LetcBox {
     // Step 2. Landing on Step 1 means this is a fresh walkthrough, so whatever
     // an earlier — abandoned — run invited says nothing about this one; a key
     // left behind by that run would otherwise pre-answer Step 2 forever.
-    this._inviteDone = this._step !== "step1" && lsGet(KEY_INVITED) === "1";
-    if (!this._inviteDone) lsDel(KEY_INVITED);
+    this._inviteDone = this._step !== "step1" && runGet(KEY_INVITED) === "1";
+    if (!this._inviteDone) runDel(KEY_INVITED);
     // Same reasoning: a descriptor left by an abandoned run must not pre-answer
     // this one. A run that starts at Step 1 will create its own workspace.
     this._workspace =
-      this._step !== "step1" ? readDescriptor(lsGet(KEY_WORKSPACE)) : null;
-    if (!this._workspace) lsDel(KEY_WORKSPACE);
+      this._step !== "step1" ? readDescriptor(runGet(KEY_WORKSPACE)) : null;
+    if (!this._workspace) runDel(KEY_WORKSPACE);
 
     this._onUploaded = () => this.onUploadDone();
     if (typeof RADIO_MEDIA !== "undefined") {
@@ -287,7 +275,7 @@ class __reward_flow extends LetcBox {
       this._stopUploadGuide();
       // Drop the descriptor: whatever is stored no longer opens.
       this._workspace = null;
-      lsDel(KEY_WORKSPACE);
+      runDel(KEY_WORKSPACE);
       this._goto("step3");
     }, OPEN_WORKSPACE_TIMEOUT_MS);
   }
@@ -600,7 +588,7 @@ class __reward_flow extends LetcBox {
   /** Move to `step`, persist it and re-render. */
   _goto(step) {
     this._step = step;
-    lsSet(KEY_STEP, step);
+    runSet(KEY_STEP, step);
     this._trackStep(baseStep(step));
     // While the invite popup is open (step2_waiting), tint its wrapper-modal
     // backdrop to match the flow's own dim instead of the default frosted glass.
@@ -642,7 +630,7 @@ class __reward_flow extends LetcBox {
     const ws = readDescriptor(payload?.workspace);
     if (ws) {
       this._workspace = ws;
-      lsSet(KEY_WORKSPACE, JSON.stringify(ws));
+      runSet(KEY_WORKSPACE, JSON.stringify(ws));
     }
     if (payload?.personal) {
       this._stopGuide();
@@ -665,7 +653,7 @@ class __reward_flow extends LetcBox {
   onPanelInvitation() {
     if (this._step !== "step1_guide") return;
     this._inviteDone = true;
-    lsSet(KEY_INVITED, "1");
+    runSet(KEY_INVITED, "1");
   }
 
   /** Forget everything the Step 1 walkthrough established. It belongs to a
@@ -676,9 +664,9 @@ class __reward_flow extends LetcBox {
    *  Step 3 must open the workspace THIS run created. */
   _resetGuideResults() {
     this._inviteDone = false;
-    lsDel(KEY_INVITED);
+    runDel(KEY_INVITED);
     this._workspace = null;
-    lsDel(KEY_WORKSPACE);
+    runDel(KEY_WORKSPACE);
   }
 
   /** True when Step 2's invite was already satisfied during Step 1. Read by the
@@ -885,10 +873,10 @@ class __reward_flow extends LetcBox {
    * nothing behind to resume from.
    */
   _finish() {
-    if (!this._forced) lsSet(KEY_DONE, "1");
-    lsDel(KEY_STEP);
-    lsDel(KEY_INVITED);
-    lsDel(KEY_WORKSPACE);
+    if (!this._forced) runSet(KEY_DONE, "1");
+    runDel(KEY_STEP);
+    runDel(KEY_INVITED);
+    runDel(KEY_WORKSPACE);
     this._closeModal();
     this._unbind();
     this.softDestroy();
