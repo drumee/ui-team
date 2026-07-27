@@ -1,15 +1,25 @@
 @use "mixins/drumee";
 
+// Workspace-members panel, restyled after the folder Settings panel
+// (window-folder__settings-action-panel), the same base its Manage-Access
+// sibling was moved onto (see permission/share/skin): a 360px light surface, a
+// PINNED header with a bottom divider, and a scrolling body of 24px-padded
+// sections with 12px/600 labels.
+//
+// The folder panel hard-codes its light colors and adds a dark-mode override;
+// here the values come from the runtime tokens that override maps to, so a
+// single block tracks both themes: --normal-bg-90 is #f2f2f7 and --normal-fg-10
+// is #0b0a21 exactly, and --border-default (#e5e5ea) is what that panel's
+// rgba(0, 0, 0, 0.05) rule composites to over the surface.
 .permission-restricted {
-  // Frame mirrors window-secure-share (full-height 450px right dock, square
-  // edge with a thin left border + subtle shadow) so both share panels read as
-  // one system. This outer element carries the panel chrome; __main is just the
-  // padded scroll body (the analog of secure-share's __main + __scroll).
+  // Right dock. The chrome lives here — surface, shadow, square edge — and
+  // __main is the layout inside it. No left border: the base panel separates
+  // itself from the window with its shadow alone.
   &__ui {
     position: absolute;
-    width: 450px;
+    width: 360px;
     height: 100%;
-    right: -450px;
+    right: -360px;
     bottom: 0px;
     top: 0;
     background-color: var(--normal-bg-90);
@@ -17,13 +27,13 @@
     flex-direction: column;
     align-items: flex-start;
     padding: 0px;
-    border-left: 1px solid var(--border-default);
+    overflow: hidden;
     box-shadow: 0 1px 11px rgba(0, 0, 0, 0.13);
     transition: right 0.5s;
     border-radius: 0;
 
     &[data-position="0"] {
-      right: -450px;
+      right: -360px;
     }
 
     &[data-position="1"] {
@@ -32,62 +42,92 @@
   }
 
   // ── Main wrapper ──────────────────────────────────────────────
-  // Scroll body inside the __ui frame (mirrors secure-share's __main+__scroll).
-  // The panel chrome (border-left / shadow / square edge) lives on __ui, so
-  // __main just handles layout + scrolling.
+  // The shell, not the scroller: header pinned at the top, body scrolling
+  // beneath it. It used to be the scroll container itself, which carried the
+  // side padding and took the header down with the content.
   &__main {
     display: flex;
     flex-direction: column;
     width: 100%;
     height: 100%;
-    padding: 24px 20px;
+    padding: 0;
+    gap: 0;
     box-sizing: border-box;
     position: relative;
-    overflow: auto;
+    overflow: hidden;
     background: var(--normal-bg-90);
-
-    &::-webkit-scrollbar {
-      display: none;
-    }
-
-    scrollbar-width: none;
-
-    -ms-overflow-style: none;
   }
 
-  // ── Header ────────────────────────────────────────────────────
+  // ── Header (pinned, with divider) ─────────────────────────────
   &__header {
     display: flex;
     flex-direction: row;
-    align-items: flex-start;
+    flex: 0 0 auto;
+    align-items: center;
     justify-content: space-between;
     width: 100%;
-    margin-bottom: 16px;
+    min-height: 65px;
+    padding: 16px 24px 17px;
+    box-sizing: border-box;
+    border-bottom: 1px solid var(--border-default);
   }
 
   &__header-text {
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    gap: 2px;
     flex: 1;
+    min-width: 0;
   }
 
+  // 18/24 like the base panel's __settings-action-title. The weight is set
+  // OUTRIGHT: drumee.typo emits font-size / line-height / color only — it never
+  // emits font-weight, and 600 is not even a branch of its $weight chain — so
+  // passing $weight there would silently drop this title to regular.
   &__title {
-    font-size: 20px;
-    font-weight: 700;
-    line-height: 28px;
-    color: var(--normal-fg-10);
+    @include drumee.typo(
+      $size: 18px,
+      $line: 24px,
+      $color: var(--normal-fg-10)
+    );
+    font-weight: 600;
   }
 
   &__subtitle {
-    font-size: 13px;
-    font-weight: 400;
-    line-height: 18px;
-    color: var(--neutral-600);
+    @include drumee.typo(
+      $size: 12px,
+      $line: 18px,
+      $weight: 400,
+      $color: var(--neutral-600)
+    );
+  }
+
+  // ── Scrollable body ───────────────────────────────────────────
+  // Mirrors __settings-action-scroll: the sections carry the side padding, so
+  // the header's divider above can span the full width of the panel.
+  &__body {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    min-height: 0;
+    width: 100%;
+    gap: 24px;
+    padding: 24px 0;
+    box-sizing: border-box;
+    overflow-y: auto;
+
+    scrollbar-width: none;
+
+    -ms-overflow-style: none;
+
+    &::-webkit-scrollbar {
+      display: none;
+    }
   }
 
   &__close {
     flex-shrink: 0;
+    margin-left: 12px;
     width: 32px;
     height: 32px;
     display: flex;
@@ -106,25 +146,32 @@
     }
   }
 
-  // ── Divider ───────────────────────────────────────────────────
-  &__divider {
-    border: none;
-    border-top: 1px solid var(--normal-bg-100);
-    margin: 0 0 20px 0;
+  // ── Sections ──────────────────────────────────────────────────
+  // Side padding lives here rather than on the scroller, per the base panel
+  // (__settings-action-actions / -invite-section / -members-section). The 24px
+  // between them is the body's gap, not a margin of their own.
+  &__invite-section,
+  &__matrix-section {
     width: 100%;
+    padding: 0 24px;
+    box-sizing: border-box;
   }
 
-  // ── Invite section ────────────────────────────────────────────
   &__invite-section {
     display: flex;
     flex-direction: column;
-    gap: 10px;
-    margin-bottom: 24px;
+    gap: 12px;
   }
 
-  // Match window-secure-share__section-label (14px / 600, sentence case).
+  // Base panel's section titles (__settings-action-section-title): 12px / 600.
+  // Weight set outright, for the reason given on __title.
   &__section-label {
-    @include drumee.typo($size: 14px, $line: 20px, $weight: 600, $color: var(--default-text-color));
+    @include drumee.typo(
+      $size: 12px,
+      $line: 18px,
+      $color: var(--normal-fg-10)
+    );
+    font-weight: 600;
   }
 
   // ── Invite row (email + role dropdown) ───────────────────────
@@ -299,11 +346,13 @@
   }
 
   // ── Permissions matrix section ────────────────────────────────
+  // 16px label-to-list, matching the base panel's members section (the invite
+  // section above sits at 12px, as its counterpart there does).
   &__matrix-section {
     display: flex;
     flex-direction: column;
-    gap: 12px;
-    flex: 1;
+    gap: 16px;
+    flex: 0 0 auto;
   }
 
   // ── Member list ───────────────────────────────────────────────

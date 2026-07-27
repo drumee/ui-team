@@ -114,12 +114,13 @@ module.exports = function (ui) {
     ]
   });
 
-  return Skeletons.Box.Y({
-    className: `${fig}__main`,
-    debug: __filename,
+  // Pinned header + scrolling body, after the folder Settings panel (see skin).
+  // The header used to scroll away with the content, and the rule under it was
+  // an <hr>; it is the header's own bottom border now, so it stays put and
+  // spans the full panel width instead of the padded column.
+  const body = Skeletons.Box.Y({
+    className: `${fig}__body`,
     kids: [
-      header,
-      Skeletons.Element({ tagName: 'hr', className: `${fig}__divider` }),
       inviteSection,
       permissionSection,
       Skeletons.Wrapper.Y({
@@ -128,5 +129,11 @@ module.exports = function (ui) {
         uiHandler: [ui],
       }),
     ]
+  });
+
+  return Skeletons.Box.Y({
+    className: `${fig}__main`,
+    debug: __filename,
+    kids: [header, body]
   });
 };
