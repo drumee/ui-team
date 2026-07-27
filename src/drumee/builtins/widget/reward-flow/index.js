@@ -23,6 +23,7 @@
  */
 const { dropModal, congratsModal } = require("./skeleton/modal");
 const { STEPS, baseStep, isWaiting } = require("./steps");
+const { readDescriptor } = require("./workspace");
 
 const CAMPAIGN = "free-storage";
 const KEY_UTM = "drumee_utm";
@@ -32,6 +33,9 @@ const KEY_STEP = "reward_step";
 // Step 2 has nothing left to ask for. Persisted alongside the step so a reload
 // mid-flow doesn't send them back to the invite popup.
 const KEY_INVITED = "reward_invited";
+// The workspace created in Step 1. Step 3 reopens it, so it must survive a
+// reload the same way the step itself does.
+const KEY_WORKSPACE = "reward_workspace";
 
 // The live topbar control each step points at. The cutout is laid over it and
 // the card anchored beneath it (see _applyStepTarget).
@@ -92,6 +96,11 @@ class __reward_flow extends LetcBox {
     // left behind by that run would otherwise pre-answer Step 2 forever.
     this._inviteDone = this._step !== "step1" && lsGet(KEY_INVITED) === "1";
     if (!this._inviteDone) lsDel(KEY_INVITED);
+    // Same reasoning: a descriptor left by an abandoned run must not pre-answer
+    // this one. A run that starts at Step 1 will create its own workspace.
+    this._workspace =
+      this._step !== "step1" ? readDescriptor(lsGet(KEY_WORKSPACE)) : null;
+    if (!this._workspace) lsDel(KEY_WORKSPACE);
 
     this._onUploaded = () => this.onUploadDone();
     if (typeof RADIO_MEDIA !== "undefined") {
@@ -195,7 +204,7 @@ class __reward_flow extends LetcBox {
     // Each walkthrough run answers Step 2 for itself. Back → Continue restarts
     // Step 1 and the user may pick a different workspace type this time, so the
     // previous attempt's answer must not carry over.
-    this._resetInviteLatch();
+    this._resetGuideResults();
     if (!this._guide) {
       const RewardGuide = require("./guide");
       this._guide = new RewardGuide(this);
@@ -451,6 +460,14 @@ class __reward_flow extends LetcBox {
    */
   onWorkspaceCreated(payload) {
     if (this._step !== "step1_guide") return;
+    // Remember it for Step 3, which reopens this exact workspace. media_form
+    // sends the descriptor on both creation paths; a payload without one just
+    // leaves Step 3 on its legacy variant.
+    const ws = readDescriptor(payload && payload.workspace);
+    if (ws) {
+      this._workspace = ws;
+      lsSet(KEY_WORKSPACE, JSON.stringify(ws));
+    }
     if (payload && payload.personal) {
       this._stopGuide();
       this._goto("step2");
@@ -475,19 +492,27 @@ class __reward_flow extends LetcBox {
     lsSet(KEY_INVITED, "1");
   }
 
-  /** Forget the "already invited during Step 1" latch. It belongs to a single
-   *  walkthrough run: only permission_restricted (internal/team workspaces)
-   *  ever sets it, and every other case — personal, external/secure-share, or
-   *  internal with no invite — must reach Step 2 with its Invite button. */
-  _resetInviteLatch() {
+  /** Forget everything the Step 1 walkthrough established. It belongs to a
+   *  single run: the user may pick a different workspace type this time, so
+   *  Step 2 must re-earn its Continue (only permission_restricted, i.e.
+   *  internal/team, ever sets that latch — personal, external/secure-share and
+   *  internal-with-no-invite must all reach Step 2 with an Invite button), and
+   *  Step 3 must open the workspace THIS run created. */
+  _resetGuideResults() {
     this._inviteDone = false;
     lsDel(KEY_INVITED);
+    this._workspace = null;
+    lsDel(KEY_WORKSPACE);
   }
 
   /** True when Step 2's invite was already satisfied during Step 1. Read by the
    *  step card (Continue instead of Invite) and by the skeleton, which then
    *  drops the topbar cutout — there is no control left to point at. */
   inviteSatisfied() { return !!this._inviteDone; }
+
+  /** True when Step 1 handed us a workspace to reopen. Read by the step card
+   *  and the skeleton to pick the guided Step 3 over the legacy one. */
+  hasStep1Workspace() { return !!this._workspace; }
 
   /** The guide finished its perm phase (permission panel closed) → Step 2. */
   onGuideComplete() {
@@ -660,6 +685,7 @@ class __reward_flow extends LetcBox {
     lsSet(KEY_DONE, "1");
     lsDel(KEY_STEP);
     lsDel(KEY_INVITED);
+    lsDel(KEY_WORKSPACE);
     this._closeModal();
     this._unbind();
     this.softDestroy();
