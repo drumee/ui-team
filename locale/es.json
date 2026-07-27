@@ -10,6 +10,7 @@
   "SEARCH_TASK": "Buscar tareas",
   "NOT_ORG_OWNER": "Solo un administrador de organización puede comprar el plan Team",
   "ALREADY_SUBSCRIBED": "Ya está suscrito a este plan.",
+  "RESUME_INSTEAD_OF_BUYING": "Su plan está programado para cancelarse: reanúdelo en lugar de volver a comprarlo.",
   "CHANGE_CYCLE_VIA_PORTAL": "Para cambiar entre facturación mensual y anual, use Gestionar facturación.",
   "MANAGE_BILLING": "Gestionar facturación",
   "BILLING_SUBSCRIPTION": "Facturación y suscripción",

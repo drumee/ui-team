@@ -115,9 +115,13 @@ class settings_billing extends LetcBox {
     // Live subscription = nothing left to buy self-serve. The tier ladder is
     // free < team < (business | sovereign = sales-led), so a Team subscriber
     // has no higher self-serve tier to reach and no reason to re-buy the one
-    // they hold. A pending cancel is deliberately NOT "active" here: that
-    // caller may resume, and once the period lapses they can buy again.
-    this._hasActiveSub = !!(sub && /^(active|trialing)$/.test(sub.status || ""));
+    // they hold. "Live" includes the PENDING-CANCEL window: it mirrors as
+    // 'canceled' but Stripe still holds an active subscription carrying
+    // cancel_at_period_end, so buying now would run two paid subscriptions at
+    // once. That caller resumes (the banner offers it); only once the paid
+    // period lapses may they buy again.
+    this._hasActiveSub =
+      !!(sub && /^(active|trialing)$/.test(sub.status || "")) || this._isCanceling;
     return sub;
   }
 
@@ -806,10 +810,13 @@ class settings_billing extends LetcBox {
         // actually applies instead of the generic failure: nothing to buy, or
         // "that's a cycle change, not a new purchase". Re-sync so the tab and
         // the banner reflect the subscription the server just told us about.
-        if (status === "ALREADY_SUBSCRIBED" || status === "USE_SUBSCRIPTION_UPDATE") {
+        if (status === "ALREADY_SUBSCRIBED" ||
+            status === "USE_SUBSCRIPTION_UPDATE" ||
+            status === "PENDING_CANCEL_RESUME_INSTEAD") {
           if (Wm && Wm.alert) {
-            Wm.alert(status === "ALREADY_SUBSCRIBED"
-              ? LOCALE.ALREADY_SUBSCRIBED
+            Wm.alert(
+              status === "ALREADY_SUBSCRIBED" ? LOCALE.ALREADY_SUBSCRIBED
+              : status === "PENDING_CANCEL_RESUME_INSTEAD" ? LOCALE.RESUME_INSTEAD_OF_BUYING
               : LOCALE.CHANGE_CYCLE_VIA_PORTAL);
           }
           this._loadSubscription().then(() => {

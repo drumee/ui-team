@@ -10,6 +10,7 @@
   "SEARCH_TASK": "Search tasks",
   "NOT_ORG_OWNER": "Only an organization admin can buy the Team plan",
   "ALREADY_SUBSCRIBED": "You're already subscribed to this plan.",
+  "RESUME_INSTEAD_OF_BUYING": "Your plan is set to cancel — resume it instead of buying again.",
   "CHANGE_CYCLE_VIA_PORTAL": "To switch between monthly and yearly billing, use Manage billing.",
   "WINDOW_ZOOM": "Zoom",
   "km": "Khmer",

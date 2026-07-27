@@ -10,6 +10,7 @@
   "SEARCH_TASK": "Rechercher des tâches",
   "NOT_ORG_OWNER": "Seul un administrateur d'organisation peut acheter le forfait Team",
   "ALREADY_SUBSCRIBED": "Vous êtes déjà abonné à ce forfait.",
+  "RESUME_INSTEAD_OF_BUYING": "Votre forfait est en cours d'annulation — reprenez-le au lieu d'en racheter un.",
   "CHANGE_CYCLE_VIA_PORTAL": "Pour passer de la facturation mensuelle à annuelle, utilisez Gérer la facturation.",
   "MANAGE_BILLING": "Gérer la facturation",
   "BILLING_SUBSCRIPTION": "Facturation et abonnement",
