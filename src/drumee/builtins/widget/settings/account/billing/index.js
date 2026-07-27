@@ -124,8 +124,12 @@ class settings_billing extends LetcBox {
     // cancel_at_period_end, so buying now would run two paid subscriptions at
     // once. That caller resumes (the banner offers it); only once the paid
     // period lapses may they buy again.
+    // past_due is live as well: Stripe retries that invoice for weeks before
+    // giving up, so the caller still holds a subscription and must not be sent
+    // to checkout to buy a second one. Counting it here routes them to the
+    // in-place switch (which the server accepts while past_due) instead.
     this._hasActiveSub =
-      !!(sub && /^(active|trialing)$/.test(sub.status || "")) || this._isCanceling;
+      !!(sub && /^(active|trialing|past_due)$/.test(sub.status || "")) || this._isCanceling;
     return sub;
   }
 
@@ -1020,10 +1024,12 @@ class settings_billing extends LetcBox {
         // longer a dead end — offer the in-place switch right away.
         if (status === "ALREADY_SUBSCRIBED" ||
             status === "USE_SUBSCRIPTION_UPDATE" ||
+            status === "SUBSCRIPTION_PAST_DUE" ||
             status === "PENDING_CANCEL_RESUME_INSTEAD") {
           if (status !== "USE_SUBSCRIPTION_UPDATE" && Wm && Wm.alert) {
             Wm.alert(
               status === "ALREADY_SUBSCRIBED" ? LOCALE.ALREADY_SUBSCRIBED
+              : status === "SUBSCRIPTION_PAST_DUE" ? LOCALE.SUBSCRIPTION_PAST_DUE
               : LOCALE.RESUME_INSTEAD_OF_BUYING);
           }
           this._loadSubscription().then(() => {

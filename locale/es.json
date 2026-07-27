@@ -2182,6 +2182,7 @@
   "DOWNGRADE_NEW_LIMITS": "Este plan incluye {0} GB de almacenamiento y hasta {1} miembros.",
   "PAYMENT_ACTION_REQUIRED": "Tu banco necesita confirmar este pago, así que el cambio no se completó. Actualiza tu método de pago en Gestionar facturación e inténtalo de nuevo.",
   "PLAN_SWITCH_VIA_CHECKOUT": "Este plan se vende a organizaciones. Inícialo desde la pestaña Pago — tu suscripción actual termina automáticamente cuando se pague la nueva.",
+  "SUBSCRIPTION_PAST_DUE": "Tu último pago falló, así que tu suscripción está en espera. Actualiza tu método de pago en Gestionar facturación — volver a comprar te cobraría dos veces.",
   "CTA_GET_SOVEREIGN_NODE": "Get your sovereign node",
   "FEAT_MEMBER_SOLO": "member (solo)",
   "FEAT_MEMBERS_UP_TO": "members (up to)",
