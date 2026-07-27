@@ -230,10 +230,15 @@ class __reward_flow extends LetcBox {
 
   /**
    * Paint the spotlight cutout over `rect` (a viewport-space DOMRect) and feed
-   * the coach tooltip. Called by the guide as it walks the live desk chrome.
+   * the coach tooltip. Called by a guide as it walks the live desk chrome.
+   *
+   * @param {DOMRect} rect
+   * @param {{text: string, showBack?: boolean, showNext?: boolean,
+   *          radius?: string}} opt
    */
-  spotlight(rect, text, showBack = true, radius = "") {
+  spotlight(rect, opt = {}) {
     if (!this.el) return;
+    const { text, showBack = true, showNext = false, radius = "" } = opt;
     const cx = rect.left + rect.width / 2;
     // Rectangular cutout for every sub-step: clear the target's rect and dim
     // only the rest — no highlight ring. The box-shadow cutout does the dimming
@@ -258,6 +263,7 @@ class __reward_flow extends LetcBox {
           style: anchor.style,
           side: anchor.side,
           showBack,
+          showNext,
         }),
       );
     });
