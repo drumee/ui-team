@@ -68,6 +68,10 @@ class settings_billing extends LetcBox {
       document.removeEventListener("visibilitychange", this._onVisibility);
       this._onVisibility = null;
     }
+    if (this._planSyncTimer) {
+      clearTimeout(this._planSyncTimer);
+      this._planSyncTimer = null;
+    }
   }
 
   onWsMessage(service, data, options = {}) {
@@ -220,30 +224,97 @@ class settings_billing extends LetcBox {
     this.fetchPlanData();
   }
 
-  // Switch the LIVE subscription to another plan (Team <-> Business) after an
+  // What a downgrade actually costs the workspace, beyond the money. The
+  // billing wording alone ("the unused time becomes a credit") reads as
+  // harmless, while the webhook applies the lower plan's quota with no usage
+  // check — an org above the target's storage or member cap is over-quota the
+  // moment it lands. Same consequences the cancel flow spells out, because it
+  // is the same kind of loss.
+  _downgradeConsequences(targetPlan) {
+    const lines = [];
+    const capGB = this.storage[targetPlan] || 0;
+    const capSeats = this.seats[targetPlan] || 0;
+    const quota = (Visitor.quota && Visitor.quota()) || {};
+    const usedBytes = (Visitor.diskUsed && Visitor.diskUsed()) || 0;
+    if (capGB && usedBytes > capGB * 1000000000) {
+      lines.push((LOCALE.DOWNGRADE_OVER_STORAGE
+        || "Your workspace uses {0} GB, over the {1} GB this plan includes — you won't be able to upload new files until you free up space.")
+        .format(Math.round(usedBytes / 1000000000), capGB));
+    }
+    const seatsUsed = parseInt(quota.total_seat, 10)
+      || parseInt((this._subscription || {}).seats, 10) || 0;
+    if (capSeats && seatsUsed > capSeats) {
+      lines.push((LOCALE.DOWNGRADE_OVER_SEATS
+        || "Your team has {0} members, over the {1} this plan allows — members beyond the limit lose access.")
+        .format(seatsUsed, capSeats));
+    }
+    // Always state the ceiling being moved to, even when today's usage fits:
+    // the buyer is choosing a smaller workspace, not just a smaller bill.
+    lines.push((LOCALE.DOWNGRADE_NEW_LIMITS
+      || "This plan includes {0} GB of storage and up to {1} members.")
+      .format(capGB, capSeats));
+    return lines.join("\n\n");
+  }
+
+  // 'month' | 'year' for the cycle the plan cards are currently priced in.
+  // Mirrors skeleton/index.js: plansTab.cycle when set, else the tab index.
+  _selectedCycle() {
+    const cycle = (this.state && this.state.plansTab && this.state.plansTab.cycle)
+      || (this.state.currentTab === TAB_YEARLY ? "yearly" : "monthly");
+    return /^year/.test(cycle) ? "year" : "month";
+  }
+
+  // Switch the LIVE subscription to another plan and/or billing cycle after an
   // explicit confirm. This is the client of payment.change_plan: a price swap
   // on the existing Stripe subscription — never a second checkout, which the
-  // server refuses to protect against double-billing. The billing interval is
-  // kept as-is on purpose: a plan switch must not silently change when the
-  // caller is charged.
-  async _confirmPlanChange(targetPlan) {
+  // server refuses to protect against double-billing.
+  //
+  // targetPeriod is the cycle the caller CHOSE ('month'|'year'); it defaults to
+  // the current one. It has to be a parameter: the server answers
+  // USE_SUBSCRIPTION_UPDATE for a cycle switch as well as a plan switch, and
+  // deriving the period from the current subscription there silently dropped
+  // the very change the user had just configured.
+  async _confirmPlanChange(targetPlan, targetPeriod) {
     const sub = this._subscription || {};
-    const period = /^year/.test(String(sub.period || "")) ? "year" : "month";
+    const current = /^year/.test(String(sub.period || "")) ? "year" : "month";
+    const period = /^(month|year)$/.test(targetPeriod || "") ? targetPeriod : current;
     const price = this._money(this._catPrice(targetPlan, period));
     const per = period === "year" ? LOCALE.PER_YEAR : LOCALE.PER_MONTH;
     const planTitle = targetPlan === "business" ? LOCALE.BUSINESS : LOCALE.TEAM;
-    // Ladder: free < team < business. Only the wording changes — the server
-    // call is the same either way.
-    const up = targetPlan === "business";
+    const currentPlan = this.currentPlanName || String(sub.plan || "");
+    // Three shapes, because they are three different decisions: same plan on a
+    // different rhythm, a bigger plan, a smaller one. Calling a cycle switch
+    // "Downgrade to Team" (which is what deriving up/down from the plan name
+    // alone did) describes something that isn't happening.
+    const cycleOnly = targetPlan === currentPlan;
+    const up = !cycleOnly && targetPlan === "business";
+    let title;
+    let message;
+    if (cycleOnly) {
+      title = (LOCALE.PLAN_CHANGE_TITLE_CYCLE || "Switch to {0} billing")
+        .format(period === "year" ? LOCALE.YEARLY : LOCALE.MONTHLY);
+      message = (LOCALE.PLAN_CHANGE_CONFIRM_CYCLE
+        || "Bill {0} at {1}{2} from today? The unused time on your current cycle is credited against it.")
+        .format(period === "year" ? LOCALE.YEARLY : LOCALE.MONTHLY, price, per);
+    } else if (up) {
+      title = (LOCALE.PLAN_CHANGE_TITLE_UPGRADE || "Upgrade to {0}").format(planTitle);
+      message = (LOCALE.PLAN_CHANGE_CONFIRM_UPGRADE
+        || "Switch your subscription to {0} at {1}{2}? The unused time on your current plan is credited and the difference is charged now.")
+        .format(planTitle, price, per);
+    } else {
+      title = (LOCALE.PLAN_CHANGE_TITLE_DOWNGRADE || "Downgrade to {0}").format(planTitle);
+      message = [
+        (LOCALE.PLAN_CHANGE_CONFIRM_DOWNGRADE
+          || "Switch your subscription to {0} at {1}{2}? The unused time on your current plan becomes a credit on your next payments.")
+          .format(planTitle, price, per),
+        this._downgradeConsequences(targetPlan),
+      ].filter(Boolean).join("\n\n");
+    }
     const ok = await Wm.confirm({
-      title: (up
-        ? (LOCALE.PLAN_CHANGE_TITLE_UPGRADE || "Upgrade to {0}")
-        : (LOCALE.PLAN_CHANGE_TITLE_DOWNGRADE || "Downgrade to {0}")).format(planTitle),
-      message: (up
-        ? (LOCALE.PLAN_CHANGE_CONFIRM_UPGRADE || "Switch your subscription to {0} at {1}{2}? The unused time on your current plan is credited and the difference is charged now.")
-        : (LOCALE.PLAN_CHANGE_CONFIRM_DOWNGRADE || "Switch your subscription to {0} at {1}{2}? The unused time on your current plan becomes a credit on your next payments.")
-      ).format(planTitle, price, per),
+      title,
+      message,
       confirm: LOCALE.CONFIRM || "Confirm",
+      ...(up || cycleOnly ? {} : { confirm_type: "danger" }),
       cancel: LOCALE.CANCEL || "Cancel",
       cancel_type: "secondary",
       mode: "hbf",
@@ -253,8 +324,29 @@ class settings_billing extends LetcBox {
       hub_id: Visitor.id, plan: targetPlan, period,
     }).catch(() => null);
     const status = (data && data.status) || "";
-    if (status !== "OK" && status !== "NOTHING_TO_CHANGE") {
-      if (Wm && Wm.alert) Wm.alert(LOCALE.SOMETHING_WENT_WRONG);
+    if (status === "NOTHING_TO_CHANGE") {
+      // The subscription is already exactly this. Claiming success here (the
+      // first cut did) told users a switch had happened when nothing had.
+      if (Wm && Wm.alert) Wm.alert(LOCALE.ALREADY_SUBSCRIBED);
+      this._loadSubscription().then(() => {
+        if (this.isDestroyed && this.isDestroyed()) return;
+        this.fetchPlanData();
+      });
+      return;
+    }
+    if (status !== "OK") {
+      if (Wm && Wm.alert) {
+        Wm.alert(
+          // The bank wants the cardholder: retrying changes nothing, so say
+          // what does — a different card, via Manage billing.
+          status === "PAYMENT_ACTION_REQUIRED" ? LOCALE.PAYMENT_ACTION_REQUIRED
+            // This subscription's entity kind cannot hold the target plan
+            // (legacy personal Pro reaching for an org plan). checkout() lets
+            // that caller through as a supersede purchase.
+            : status === "PLAN_ENTITY_MISMATCH" ? LOCALE.PLAN_SWITCH_VIA_CHECKOUT
+            : status === "NO_SUBSCRIPTION" ? LOCALE.NO_ACTIVE_SUBSCRIPTION
+            : LOCALE.SOMETHING_WENT_WRONG);
+      }
       return;
     }
     // Optimistic flip from the endpoint's return; the webhook then re-mirrors
@@ -262,6 +354,7 @@ class settings_billing extends LetcBox {
     // payment.plan_updated WS refresh / the next re-sync).
     if (this._subscription) {
       this._subscription.plan = data.plan || targetPlan;
+      this._subscription.period = data.period || period;
       this._subscription.status = data.subscription_status || "active";
       this._subscription.period_end = data.period_end || this._subscription.period_end;
     }
@@ -269,21 +362,43 @@ class settings_billing extends LetcBox {
     this._hasActiveSub = true;
     this.currentPlanName = targetPlan;
     if (typeof Butler !== "undefined" && Butler.say) {
-      Butler.say((LOCALE.PLAN_CHANGE_DONE || "Your subscription is now on the {0} plan.").format(planTitle));
+      Butler.say(cycleOnly
+        ? (LOCALE.CYCLE_CHANGE_DONE || "Your billing cycle has been updated.")
+        : (LOCALE.PLAN_CHANGE_DONE || "Your subscription is now on the {0} plan.").format(planTitle));
     }
-    // renderContent NOW, full re-sync LATER. fetchPlanData recomputes
-    // currentPlanName from Visitor.quota(), and the subscription mirror is
-    // rewritten by the webhook — both still carry the OLD plan for the first
-    // second or two, so an immediate re-fetch would flip the cards back. The
-    // optimistic state above is newer; converge once the webhook has landed.
+    // Repaint from the optimistic state NOW, converge on the server LATER.
+    // fetchPlanData recomputes currentPlanName from Visitor.quota(), and the
+    // subscription mirror is rewritten by the webhook — both still carry the
+    // OLD plan until that webhook lands, so repainting from them would flip
+    // the cards back to the plan the user just left.
     this.renderContent();
-    setTimeout(() => {
+    this._awaitPlanSync(targetPlan);
+  }
+
+  // Wait for the webhook to catch up, then repaint from server truth.
+  //
+  // A single fixed delay was wrong in both directions: too early and it
+  // overwrites the (newer) optimistic state with pre-webhook data; too late
+  // and the screen sits on an unverified claim. Poll the mirror instead and
+  // repaint when it agrees — or when the attempts run out, so a webhook that
+  // never arrives still reconciles rather than leaving the UI asserting a
+  // change forever. The WS payment.plan_updated handler does the same repaint
+  // and usually wins the race; this is the fallback for a missed event.
+  _awaitPlanSync(expected, tries = 10) {
+    if (this._planSyncTimer) clearTimeout(this._planSyncTimer);
+    this._planSyncTimer = setTimeout(() => {
+      this._planSyncTimer = null;
       if (this.isDestroyed && this.isDestroyed()) return;
       this._loadSubscription().then(() => {
         if (this.isDestroyed && this.isDestroyed()) return;
-        this.fetchPlanData();
+        const mirrored = String((this._subscription || {}).plan || "");
+        if (mirrored === expected || tries <= 1) {
+          this.fetchPlanData();
+          return;
+        }
+        this._awaitPlanSync(expected, tries - 1);
       });
-    }, 4000);
+    }, 3000);
   }
 
   /**
@@ -647,15 +762,26 @@ class settings_billing extends LetcBox {
     // The zeroed bundle/extra-seat fields are kept in the returned shape on
     // purpose: skeleton/checkout.js still reads them, and dropping the keys
     // would render "undefined" rather than simply nothing.
+    // Display, not arithmetic. Business's caps are sentinels chosen so code
+    // reading them as numbers behaves (see this.seats/this.storage): printing
+    // them raw put "Included seats 100000", "1000 GB" and an
+    // "Effective price per seat $0.00" in front of the buyer. Say what the
+    // published table says instead — Unlimited members, 1 TB — and drop the
+    // per-seat line where a per-seat price is not a thing.
     const seats = baseSeats;
+    const unlimitedSeats = seats >= 100000;
     return {
       basePrice: formatCurrency(basePrice),
       bundlePrice: formatCurrency(0),
       totalPrice: formatCurrency(basePrice),
       period,
-      seats,
-      totalStorage: `${baseStorage} GB`,
-      effectivePricePerSeat: formatCurrency(seats > 0 ? basePrice / seats : basePrice),
+      seats: unlimitedSeats ? LOCALE.UNLIMITED : `${seats}`,
+      totalStorage: baseStorage >= 1000
+        ? `${baseStorage / 1000} TB`
+        : `${baseStorage} GB`,
+      effectivePricePerSeat: unlimitedSeats
+        ? ""
+        : formatCurrency(seats > 0 ? basePrice / seats : basePrice),
       selectedPlan,
       billingCycle,
       extraSeats: 0,
@@ -701,9 +827,12 @@ class settings_billing extends LetcBox {
   /**
    * Handle proceed to checkout: call payment API and open payment window
    */
-  // Auto organization name for the TEAM bootstrap: "<user's name> Team".
+  // Auto organization name for the org bootstrap: "<user's name> Workspace".
   // Pre-fills the checkout org-name input and backs the submit fallback, so
-  // switching to the Team plan never blocks on an empty field.
+  // starting an org plan never blocks on an empty field. It used to append the
+  // plan name ("… Team"), which named the workspace after a subscription tier
+  // — wrong the moment Business became purchasable, and wrong again the day
+  // the org changes plan.
   _defaultOrgName() {
     const raw = String(
       `${Visitor.get(_a.firstname) || ""} ${Visitor.get(_a.lastname) || ""}`.trim()
@@ -712,10 +841,10 @@ class settings_billing extends LetcBox {
       || "",
     ).trim();
     // An email-signup account with no profile name carries the address itself
-    // as fullname — "user@host.com Team" is not a workspace name. Keep the
-    // local part only.
+    // as fullname — "user@host.com Workspace" is not a workspace name. Keep
+    // the local part only.
     const name = raw.includes("@") ? raw.split("@")[0] : raw;
-    return name ? `${name} Team` : "";
+    return name ? `${name} ${LOCALE.WORKSPACE || "Workspace"}` : "";
   }
 
   // Auto subdomain suggestion: the username slugged down to a DNS label
@@ -893,7 +1022,12 @@ class settings_billing extends LetcBox {
             this.state.currentTab = TAB_MONTHLY;
             this.tab = TAB_MONTHLY;
             this.renderContent();
-            if (status === "USE_SUBSCRIPTION_UPDATE") this._confirmPlanChange(plan);
+            // Carry the cycle the checkout form was on: the server answers
+            // USE_SUBSCRIPTION_UPDATE for a cycle switch too, and dropping it
+            // here turned "Team yearly" into a no-op reported as success.
+            if (status === "USE_SUBSCRIPTION_UPDATE") {
+              this._confirmPlanChange(plan, period);
+            }
           });
           return;
         }
@@ -1282,8 +1416,16 @@ class settings_billing extends LetcBox {
           // purchase: the server refuses a second checkout (double-billing),
           // so the price is swapped on the existing subscription instead
           // (payment.change_plan). With nothing live it is a normal checkout.
-          if (this._hasActiveSub) this._confirmPlanChange(planValue);
-          else if (this._checkoutTabAllowed()) this._enterCheckoutFor(planValue);
+          //
+          // The card shows the price for the cycle the Monthly/Yearly tab is
+          // on, so that cycle is part of what was clicked — pass it through
+          // rather than silently keeping the old one and charging a price the
+          // card never displayed.
+          if (this._hasActiveSub) {
+            this._confirmPlanChange(planValue, this._selectedCycle());
+          } else if (this._checkoutTabAllowed()) {
+            this._enterCheckoutFor(planValue);
+          }
         }
         return false;
       }

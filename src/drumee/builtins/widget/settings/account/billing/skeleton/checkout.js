@@ -230,36 +230,41 @@ function checkout(ui) {
         ],
       }),
 
-      Skeletons.Box.X({
-        className: `${pfx}-breakdown`,
-      }),
+      // A plan with an unlimited member cap has no per-seat price; the summary
+      // returns '' for it, and both the row and its divider drop out rather
+      // than showing an empty line under a label.
+      ...(summary.effectivePricePerSeat ? [
+        Skeletons.Box.X({
+          className: `${pfx}-breakdown`,
+        }),
 
-      Skeletons.Box.Y({
-        kids: [
-          Skeletons.Box.X({
-            className: `${pfx}-breakdown-item ${pfx}-breakdown-items ${pfx}-breakdown-effective-price-per-seat `,
-            kids: [
-              Skeletons.Button.Icon({
-                className: `${pfx}-breakdown-icon`,
-                ico: "raw-trending-up",
-              }),
-              Skeletons.Box.Y({
-                className: `${pfx}-breakdown-label-container`,
-                kids: [
-                  Skeletons.Note({
-                    className: `${pfx}-breakdown-label`,
-                    content: LOCALE.EFFECTIVE_PRICE_PER_SEAT,
-                  }),
-                  Skeletons.Note({
-                    className: `${pfx}-breakdown-value-effective-price-per-seat`,
-                    content: summary.effectivePricePerSeat,
-                  }),
-                ],
-              }),
-            ],
-          }),
-        ],
-      }),
+        Skeletons.Box.Y({
+          kids: [
+            Skeletons.Box.X({
+              className: `${pfx}-breakdown-item ${pfx}-breakdown-items ${pfx}-breakdown-effective-price-per-seat `,
+              kids: [
+                Skeletons.Button.Icon({
+                  className: `${pfx}-breakdown-icon`,
+                  ico: "raw-trending-up",
+                }),
+                Skeletons.Box.Y({
+                  className: `${pfx}-breakdown-label-container`,
+                  kids: [
+                    Skeletons.Note({
+                      className: `${pfx}-breakdown-label`,
+                      content: LOCALE.EFFECTIVE_PRICE_PER_SEAT,
+                    }),
+                    Skeletons.Note({
+                      className: `${pfx}-breakdown-value-effective-price-per-seat`,
+                      content: summary.effectivePricePerSeat,
+                    }),
+                  ],
+                }),
+              ],
+            }),
+          ],
+        }),
+      ] : []),
       Skeletons.Button.Label({
         label: LOCALE.PROCEED_TO_CHECKOUT,
         className: `${pfx}-checkout-button`,
@@ -358,7 +363,8 @@ function rightPanelContent(ui) {
               }),
             ],
           }),
-          Skeletons.Box.X({
+          // Dropped for unlimited-member plans — see the left panel.
+          summary.effectivePricePerSeat ? Skeletons.Box.X({
             className: `${pfx}-breakdown-item ${pfx}-breakdown-items ${pfx}-breakdown-effective-price-per-seat`,
             kids: [
               Skeletons.Button.Icon({
@@ -379,8 +385,8 @@ function rightPanelContent(ui) {
                 ],
               }),
             ],
-          }),
-        ],
+          }) : null,
+        ].filter(Boolean),
       }),
       Skeletons.Button.Label({
         label: LOCALE.PROCEED_TO_CHECKOUT,
