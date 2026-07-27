@@ -21,7 +21,9 @@ Reset between cases, in the browser console:
 | 6 | Click **Open workspace** | The step-1 workspace opens; cutout wraps the whole workspace window; coach shows the "This is your workspace" text with **Back** and **Next** |
 | 7 | Click **Next** | Cutout narrows to the **+ New** pill; coach says to click it |
 | 8 | Click **+ New** | Cutout narrows to **From device**; the other dropdown rows are greyed and unclickable |
-| 9 | Click **From device**, pick a file | OS picker opens; on upload the congrats modal appears |
+| 9 | Click **From device**, pick a file | OS picker opens; on upload the workspace window closes by itself and the congrats modal appears over the desk at Home |
+| 9a | Same, but with a SECOND workspace already open in another tab | Only the step-1 workspace closes; the other tab survives and the sidebar keeps its highlight |
+| 9b | Legacy step 3 (no stored workspace) → upload from the topbar | Congrats appears; nothing is closed, because the flow never opened anything |
 | 10 | **Back** at sub-steps 6/7/8 | Returns to the step 3 card; the workspace stays open |
 | 11 | Click the dimmed area at any sub-step | "Don't drop now" modal; Continue resumes the sub-step |
 | 12 | Reload while on step 3 | Resumes on the step 3 card (NOT step 1), still the **Open workspace** variant |

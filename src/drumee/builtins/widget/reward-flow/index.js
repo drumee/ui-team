@@ -238,6 +238,30 @@ class __reward_flow extends LetcBox {
     if (this._uploadGuide) this._uploadGuide.stop();
   }
 
+  /**
+   * Close the workspace the flow opened in Step 3, as congrats appears.
+   *
+   * Drives the window's OWN close service rather than calling
+   * Desk.onWorkspaceClosed() or clearing headlessLayer directly: window_folder
+   * counts the surviving workspace tabs first and only tears the desk back down
+   * to "no workspace open" (breadcrumb, sidebar tree, layer) when this was the
+   * last one. A user who already had other workspaces open keeps them.
+   *
+   * No-ops on the legacy Step 3 path, which has no _workspace — there the user
+   * uploaded from the desk topbar and nothing was opened on their behalf.
+   */
+  _closeStep3Workspace() {
+    if (!this._workspace || typeof Wm === "undefined") return;
+    if (typeof Wm._findWorkspaceWindow !== "function") return;
+    const pane = Wm._findWorkspaceWindow(this._workspace.hub_id);
+    if (!pane || (pane.isDestroyed && pane.isDestroyed())) return;
+    if (typeof pane.onUiEvent !== "function") return;
+    // `cmd` is never dereferenced on this path: folder/index.js resolves the
+    // service from args first (`args.service || cmd.service || cmd.mget(...)`),
+    // and the base handler reads only `this`.
+    pane.onUiEvent({}, { service: _e.close });
+  }
+
   /** Give up on a workspace window that never appeared and fall back to the
    *  legacy Step 3 rather than stranding the user on a dead card. */
   _armOpenTimer() {
@@ -577,6 +601,9 @@ class __reward_flow extends LetcBox {
     if (this._step !== "step3_waiting" && this._step !== "step3_guide") return;
     this._stopUploadGuide();
     this._clearOpenTimer();
+    // The reward is claimed, so hand the desk back at Home rather than leaving
+    // the user to dismiss a workspace the flow walked them into.
+    this._closeStep3Workspace();
     this._step = "congrats";
     // Re-render BEFORE opening the modal. stop() only clears the coach; the
     // cutout and the full-viewport __guide-scrim stay in the markup, and a
