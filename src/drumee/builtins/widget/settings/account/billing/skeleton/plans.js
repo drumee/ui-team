@@ -120,6 +120,29 @@ function getOptions(ui, cycle = "monthly") {
 }
 
 /**
+ * Is this card the caller's actual subscription — the plan AND the billing
+ * cycle the cards are currently priced in?
+ *
+ * Matching on the plan alone made a Team-monthly subscriber's Team card read
+ * "Your current plan" on the Yearly tab too, so the $319/year offer beside it
+ * was inert: the card could not be clicked and the checkout tab is closed to a
+ * live subscription. One helper, used by the CTA and by both layouts' current-
+ * card styling, so they cannot disagree about what "current" means.
+ * @param {Object} ui - UI instance
+ * @param {string} opt - plan key
+ * @returns {boolean}
+ */
+function isCurrentSubscription(ui, opt) {
+  if ((ui.currentPlanName || "free") !== opt) return false;
+  // Free has no cycle, and without a subscription row there is no cycle to
+  // compare against — the plan match is the whole answer.
+  if (opt === "free" || !ui._subscription || !ui._selectedCycle) return true;
+  const subPeriod = /^year/.test(String(ui._subscription.period || ""))
+    ? "year" : "month";
+  return ui._selectedCycle() === subPeriod;
+}
+
+/**
  * The "Popular" highlight is an upsell cue aimed at users below Team. Once the
  * user sits on a higher tier the Team card must not carry the active/focused
  * look — only the current plan's card does. The badge chip itself stays; only
@@ -210,10 +233,14 @@ function priceHeader(ui, fig, option, isCurrent) {
  * @returns {Object} Skeletons component
  */
 function ctaButton(ui, fig, opt, option) {
-  const { buttonTitle, buttonKind } = option;
-  // Mark the caller's active plan: pill-style "Your current plan" instead of a
-  // CTA (design: the Free card shows the pill while the user is on Free).
-  const isCurrent = (ui.currentPlanName || "free") === opt;
+  const { buttonKind } = option;
+  let { buttonTitle } = option;
+  const isCurrent = isCurrentSubscription(ui, opt);
+  if (!isCurrent && (ui.currentPlanName || "free") === opt) {
+    // Same plan, other rhythm: say what the click does.
+    buttonTitle = (LOCALE.PLAN_CHANGE_TITLE_CYCLE || "Switch to {0} billing")
+      .format(ui._selectedCycle() === "year" ? LOCALE.YEARLY : LOCALE.MONTHLY);
+  }
 
   // Billing is owner-managed: inside an org (domain_id > 1) only the OWNER may
   // change the plan. Without this the CTA looked live for every member and only
@@ -295,7 +322,7 @@ function ctaButton(ui, fig, opt, option) {
 function item(ui, opt, option) {
   const { buttonTitle, buttonKind, subText, features, badge } = option;
   const fig = `${ui.fig.family}__plan`;
-  const isCurrent = (ui.currentPlanName || "free") === opt;
+  const isCurrent = isCurrentSubscription(ui, opt);
 
   const buttonBtn = ctaButton(ui, fig, opt, option);
 
@@ -418,7 +445,7 @@ function comparisonTable(ui, options) {
         Skeletons.Box.Y({
           className: `${fig}-cell ${fig}-plan ${fig}-col ${fig}-col-${k}`,
           kids: [
-            priceHeader(ui, `${ui.fig.family}__plan`, cols[i], (ui.currentPlanName || "free") === k),
+            priceHeader(ui, `${ui.fig.family}__plan`, cols[i], isCurrentSubscription(ui, k)),
             ctaButton(ui, `${ui.fig.family}__plan`, k, cols[i]),
             cols[i].subText
               ? Skeletons.Note({ className: `${fig}-tagline`, content: cols[i].subText })
