@@ -102,6 +102,10 @@ class __reward_flow extends LetcBox {
     this._dropReturnStep = null;
     this._inviteSucceeded = false;
     this._guideDropOpen = false;
+    // Furthest card step already reported to the server this session — see
+    // _trackStep. Not persisted: re-posting a step after a reload is harmless
+    // (the server keeps the furthest one) and losing one is not.
+    this._trackedStep = null;
     // Only trust a persisted latch when RESUMING a run that already reached
     // Step 2. Landing on Step 1 means this is a fresh walkthrough, so whatever
     // an earlier — abandoned — run invited says nothing about this one; a key
@@ -136,6 +140,9 @@ class __reward_flow extends LetcBox {
     this._captureHost();
     this._portalToBody();
     this._render();
+    // Mounting IS the "started" signal: the widget only exists when isEligible()
+    // found the campaign marker, so nothing else has to gate this.
+    this._trackStep(baseStep(this._step));
   }
 
   /**
@@ -457,6 +464,54 @@ class __reward_flow extends LetcBox {
     });
   }
 
+  // ───────── funnel tracking ─────────
+
+  /**
+   * Report progress to SERVICE.reward.track (server-team service/private/reward).
+   *
+   * Fire-and-forget in every sense: the flow is a UI walkthrough and a tracking
+   * outage must never stall it or surface an error to the user, so failures are
+   * swallowed and nothing awaits the response. The server advances status/step
+   * by rank, so a duplicated or late post is harmless.
+   *
+   * Skipped for a ?reward=1 run: that one was forced past the eligibility gate
+   * for testing, and it already declines to latch reward_flow_done for the same
+   * reason (see _finish). Letting it write would put team accounts in the
+   * campaign funnel.
+   *
+   * @param {String} status "started" | "dropped" | "done"
+   * @param {String} [step] defaults to the current card step
+   */
+  _track(status, step) {
+    if (this._forced) return;
+    if (typeof SERVICE === "undefined" || !SERVICE.reward || !SERVICE.reward.track) return;
+    try {
+      this.postService(SERVICE.reward.track, {
+        hub_id: Visitor.id,
+        status,
+        step: step || baseStep(this._step),
+        campaign: CAMPAIGN,
+      }).catch(() => {});
+    } catch (e) {
+      /* tracking must never break the flow */
+    }
+  }
+
+  /**
+   * Report reaching a card step, once per step.
+   *
+   * Deduped because _goto fires for the transient states too (step2_waiting,
+   * step1_guide …), which all share a base step — without this, opening the
+   * invite popup and coming back would post "step2" three times over. Only the
+   * card steps are reported; anything else is a decoration on one of them.
+   */
+  _trackStep(base) {
+    if (!STEPS.includes(base)) return;
+    if (this._trackedStep === base) return;
+    this._trackedStep = base;
+    this._track("started", base);
+  }
+
   // ───────── skeleton accessors ─────────
 
   getStep() { return this._step; }
@@ -546,6 +601,7 @@ class __reward_flow extends LetcBox {
   _goto(step) {
     this._step = step;
     lsSet(KEY_STEP, step);
+    this._trackStep(baseStep(step));
     // While the invite popup is open (step2_waiting), tint its wrapper-modal
     // backdrop to match the flow's own dim instead of the default frosted glass.
     this._markInviteOverlay(step === "step2_waiting");
@@ -648,6 +704,9 @@ class __reward_flow extends LetcBox {
     if (this._step !== "step3_waiting" && this._step !== "step3_guide") return;
     this._stopUploadGuide();
     this._clearOpenTimer();
+    // The upload IS the claim — report it before any of the teardown below, so
+    // a failure while closing the workspace still leaves the funnel correct.
+    this._track("done", "step3");
     // The reward is claimed, so hand the desk back at Home rather than leaving
     // the user to dismiss a workspace the flow walked them into.
     this._closeStep3Workspace();
@@ -939,7 +998,15 @@ class __reward_flow extends LetcBox {
         return;
 
       case "reward-drop-leave":
+        // "Drop anyway" is the only place the user says outright that they are
+        // abandoning the flow, so it is the only place `dropped` is written.
+        // Closing the tab mid-flow leaves them at `started`, which is the
+        // honest reading: they never told us either way.
+        this._track("dropped");
+        return this._finish();
+
       case "reward-finish":
+        // Congrats' "Go to dashboard" — onUploadDone already reported `done`.
         return this._finish();
 
       default:
