@@ -9,26 +9,41 @@
   pointer-events: none !important;
 }
 
-// Step 2 marks the wrapper-modal hosting the invite popup (see index.js
-// _markInviteOverlay) so its backdrop matches the flow's own dim (--overlay-bg)
-// instead of the app's frosted-glass overlay. Global (not nested) because it
-// lands on desk chrome the reward flow does not own; !important to out-cascade
-// the glass-overlay mixin. Removed when the invite closes.
-.window-manager__wrapper-modal[data-reward-overlay="1"],
-.window-manager__wrapper-modal[data-reward-overlay="1"][data-overlay="blur"] {
-  background-color: var(--overlay-bg, rgba(0, 0, 0, 0.4)) !important;
+// The reward flow marks any wrapper-modal it owns (see index.js _openModal and
+// _markInviteOverlay) so the app's frosted-glass overlay gives way to the
+// flow's own flat dim. Global (not nested) because it lands on desk chrome the
+// reward flow does not own; !important to out-cascade the glass-overlay mixin.
+// Removed when the modal closes.
+.window-manager__wrapper-modal[data-reward-overlay],
+.window-manager__wrapper-modal[data-reward-overlay][data-overlay="blur"] {
   backdrop-filter: none !important;
   -webkit-backdrop-filter: none !important;
 }
 
 // glass-overlay also stacks a blurred ::before layer (blur(60px)); neutralise it
-// too, otherwise the backdrop stays frosted despite the flat colour above.
-.window-manager__wrapper-modal[data-reward-overlay="1"]::before,
-.window-manager__wrapper-modal[data-reward-overlay="1"][data-overlay="blur"]::before {
+// too, otherwise the backdrop stays frosted despite the flat colour below.
+.window-manager__wrapper-modal[data-reward-overlay]::before,
+.window-manager__wrapper-modal[data-reward-overlay][data-overlay="blur"]::before {
   content: none !important;
   backdrop-filter: none !important;
   -webkit-backdrop-filter: none !important;
   background: transparent !important;
+}
+
+// "1" — this modal supplies the dim itself: the Step 2 invite popup and the
+// "Don't drop now" modal, both of which sit over a flow state whose own
+// vignette is transparent or absent.
+.window-manager__wrapper-modal[data-reward-overlay="1"],
+.window-manager__wrapper-modal[data-reward-overlay="1"][data-overlay="blur"] {
+  background-color: var(--overlay-bg, rgba(0, 0, 0, 0.4)) !important;
+}
+
+// "bare" — the flow root is already painting a full-viewport vignette behind
+// this modal (congrats). A second layer of the same colour here would just
+// double the darkness, so contribute none.
+.window-manager__wrapper-modal[data-reward-overlay="bare"],
+.window-manager__wrapper-modal[data-reward-overlay="bare"][data-overlay="blur"] {
+  background-color: transparent !important;
 }
 
 // Brand accent — same design-system tokens migrate-gdrive-popup uses.
@@ -70,14 +85,13 @@ $success-soft: rgba(46, 179, 122, 0.14);
     z-index: 1000000;
   }
 
-  // Congrats is hosted in the wrapper-modal, and the flow itself has nothing
-  // left to paint. Take the whole layer out rather than trusting it to be
-  // empty: reaching congrats from a walkthrough means the root was at
-  // z-index 1000000 with a pointer-events:auto scrim, which greyed the
-  // confirmation out and swallowed its button. The skeleton already renders no
-  // children here (see skeleton/index.js) — this guarantees it.
+  // Congrats must never inherit the guiding lift: at 1000000 the root outranks
+  // the wrapper-modal hosting the confirmation, and the walkthrough's
+  // pointer-events:auto scrim would grey it out and swallow its button. The
+  // skeleton already drops to a plain root here (see skeleton/index.js); this
+  // guarantees it even if a stale attribute survived a re-render.
   &__root[data-step="congrats"] {
-    display: none;
+    z-index: 10020;
   }
 
 

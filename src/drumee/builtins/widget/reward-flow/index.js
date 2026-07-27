@@ -584,7 +584,9 @@ class __reward_flow extends LetcBox {
     // them would grey the confirmation out and eat its button. Deliberately not
     // _goto: "congrats" must not be persisted as a resumable step.
     this._render();
-    if (!this._openModal(congratsModal(this))) this._finish();
+    // "bare": the re-render above leaves a full-viewport vignette behind the
+    // modal, so the wrapper-modal must not stack a second dim on top of it.
+    if (!this._openModal(congratsModal(this), "bare")) this._finish();
   }
 
   /** An invitation was sent successfully. The invite popup closes right after
@@ -680,16 +682,20 @@ class __reward_flow extends LetcBox {
    * @returns {boolean} false when there is no modal host to render into —
    *   callers decide whether that is fatal for their step.
    */
-  _openModal(tree) {
+  _openModal(tree, overlay = "1") {
     if (typeof Wm === "undefined" || !Wm.__wrapperModal) return false;
     Wm.__wrapperModal.feed(tree);
     Wm.__wrapperModal.el.dataset.state = "open";
     Wm.__wrapperModal.el.dataset.overlay = "blur";
-    // Align the drop/congrats backdrop with the flow's own dim (--overlay-bg)
-    // instead of the app's frosted-glass blur, so these reward-flow modals read
-    // as part of the same overlay as the vignette/spotlight (same marker Step 2
-    // uses for the invite popup — see _markInviteOverlay).
-    Wm.__wrapperModal.el.dataset.rewardOverlay = "1";
+    // Align the backdrop with the flow's own dim (--overlay-bg) instead of the
+    // app's frosted-glass blur, so these modals read as part of the same
+    // overlay as the vignette/spotlight (same marker Step 2 uses for the invite
+    // popup — see _markInviteOverlay).
+    //
+    // "bare" when the flow root is ALREADY painting a full-viewport vignette
+    // behind the modal (congrats): the glass still has to go, but a second dim
+    // of the same colour would just double the darkness. See the skin.
+    Wm.__wrapperModal.el.dataset.rewardOverlay = overlay;
     this._modalOpen = true;
     return true;
   }

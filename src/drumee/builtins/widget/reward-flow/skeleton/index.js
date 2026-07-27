@@ -23,18 +23,24 @@ module.exports = function (ui) {
   const { baseStep, isWaiting, isGuiding } = require("../steps");
   const step = ui.getStep();
 
-  // Congrats renders NOTHING of its own. The modal lives in Wm's wrapper-modal
-  // (--z-index-modal, 100000); a guiding root sits at 1000000 and its
-  // full-viewport __guide-scrim is pointer-events:auto, so leaving the
-  // walkthrough's markup in place would grey the confirmation out and swallow
-  // its button. The root's own pointer-events:none makes this inert, and the
-  // wrapper-modal supplies the backdrop via data-reward-overlay.
+  // Congrats keeps only the vignette. It must NOT stay guiding: that root sits
+  // at z-index 1000000 against the wrapper-modal's 100000, and its
+  // pointer-events:auto __guide-scrim would grey the confirmation out and
+  // swallow its button. Dropping to the plain root puts the vignette under the
+  // modal but over everything else — and because the root is position:fixed and
+  // portaled to document.body, that dim is genuinely full-viewport: sidebar,
+  // topbar and any open dropdown included. The wrapper-modal contributes no
+  // backdrop of its own here (see index.js _openModal's "bare" mode), so the
+  // dim stays one layer deep.
+  //
+  // No `service` on it: this is a terminal state, so a click should do nothing
+  // rather than raise "Don't drop now".
   if (step === "congrats") {
     return Skeletons.Box.Y({
       className: `${pfx}__root`,
       dataset: { step, waiting: "0", guiding: "0", cutout: "0" },
       debug: __filename,
-      kids: [],
+      kids: [Skeletons.Box.Y({ className: `${pfx}__vignette` })],
     });
   }
 
