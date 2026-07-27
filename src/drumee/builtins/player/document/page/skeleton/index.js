@@ -13,10 +13,14 @@ const __player_page = function(_ui_) {
       id : `${_ui_._id}-text-layer`
     }
   });
+  // The text layer must be mounted alongside the canvas, not merely built: the
+  // canvas is a bitmap with no text nodes in it, so this overlay is the only
+  // thing that makes the page selectable/copyable. It is filled in by the
+  // widget's _buildTextLayer once the raster size is known.
   const a = Skeletons.Box.Y({
     className :`${_ui_.fig.family}__canvas-wrapper`,
     sys_pn  : "canvas-wrapper",
-    kids : [canvas]});
+    kids : [canvas, textLayer]});
 
   return a;
 };

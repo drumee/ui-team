@@ -22,30 +22,55 @@
   // stretch on its own — center it here. Without this it sits flush left
   // whenever the raster is narrower than the wrapper (a page smaller than the
   // rest of the document, or a capped raster on a very wide window).
+  // Also the containing block for the absolutely positioned text layer.
   &__canvas-wrapper {
+    position: relative;
     width: 100%;
     height: auto;
     align-items: center;
   }
 
+  // Transparent, selectable stand-in for the text baked into the canvas bitmap.
+  // The widget positions and sizes this per raster; only geometry that must not
+  // depend on JS lives here. Glyphs stay invisible, so what the user sees is the
+  // browser's selection highlight sitting exactly over the rendered text.
   &__text-layer {
     position: absolute;
     left: 0;
     top: 0;
-    right: 0;
-    bottom: 0;
+    // Clips in the layer's own unrotated space, i.e. to the page rect.
     overflow: hidden;
-    opacity: 0.3;
-    line-height: 1.0;
-    z-index: 100;
+    transform-origin: 50% 50%;
+    line-height: 1;
+    // A generic family on purpose: each run's stretch is computed from its
+    // measured width, so a webfont still swapping in would be measured wrong.
+    font-family: sans-serif;
+    // Only the line-break elements inherit this — every span carries its own
+    // size. Zero keeps those breaks from generating hundreds of pixels of
+    // in-flow line boxes per page for nothing.
+    font-size: 0;
+    color: transparent;
+    cursor: text;
+    // Own the pointer so a drag can start in the margin next to a paragraph.
+    // Events still bubble to the player, so nothing upstream loses its clicks.
+    user-select: text;
+    -webkit-user-select: text;
+    z-index: 20;
 
     span {
-      user-select: text;
+      position: absolute;
+      white-space: pre;
+      // The widget stretches each run horizontally to the width PDFium
+      // reported; anchor that scale to the run's own left edge.
+      transform-origin: 0 0;
+    }
 
-      &::selection {
-        color: transparent;
-        background: yellow;
-      }
+    ::selection {
+      color: transparent;
+      // Solid first as the fallback for engines without color-mix — still a
+      // legible highlight, just heavier than the translucent version.
+      background: var(--primary-500);
+      background: color-mix(in srgb, var(--primary-500) 35%, transparent);
     }
   }
 
