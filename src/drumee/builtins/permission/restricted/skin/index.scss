@@ -383,9 +383,14 @@
       background-color: rgba(29, 138, 234, 0.08);
     }
 
+    // Same hue and saturation as the base panel's #1d8aea, darkened to clear
+    // WCAG AA: that colour reads 3.11:1 against this row's blended background
+    // (rgba(29,138,234,.12) over the white menu = #e4f1fc), short of the 4.5:1
+    // normal text needs at 12px. #1065a2 is the same hsl(205, 82%) at 35%
+    // lightness and measures 5.37:1.
     &[data-state="1"] {
       background-color: rgba(29, 138, 234, 0.12);
-      color: #1d8aea;
+      color: #1065a2;
       font-weight: 500;
     }
 

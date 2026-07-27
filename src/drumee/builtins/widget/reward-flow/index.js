@@ -651,7 +651,7 @@ class __reward_flow extends LetcBox {
         // confirmation's own Close/✕, which is how Step 2 is COMPLETED, not
         // abandoned. Everything else on this host is the backdrop.
         const t = e.target;
-        if (t?.closest && t.closest(STEP2_SURFACES)) return;
+        if (t?.closest?.(STEP2_SURFACES)) return;
         e.stopPropagation();
         this._openDropGuard();
       };
@@ -976,10 +976,8 @@ class __reward_flow extends LetcBox {
    *  it is ever the root, since the rule matches on the class either way. */
   _markRootDrop(on) {
     const root =
-      (this.el?.querySelector
-        && this.el.querySelector(`.${this.fig.family}__root`))
-      || this.el;
-    if (!root || !root.dataset) return;
+      this.el?.querySelector?.(`.${this.fig.family}__root`) || this.el;
+    if (!root?.dataset) return;
     if (on) root.dataset.drop = "1";
     else delete root.dataset.drop;
   }

@@ -124,8 +124,8 @@ class __permission_restricted extends DrumeeMFS {
   }
 
   _getInviteEmail(cmd) {
-    const data = (cmd?.getData && cmd.getData()) || {};
-    const entry = this.getPart && this.getPart("invite-email");
+    const data = cmd?.getData?.() || {};
+    const entry = this.getPart?.("invite-email");
     return String(data.email || entry?.getValue?.() || "").trim();
   }
 
@@ -133,9 +133,9 @@ class __permission_restricted extends DrumeeMFS {
    *  the way the base panel does — errors belong at the field, not in a modal
    *  the user has to dismiss before fixing the address. */
   _setInviteError(reason) {
-    const wrapper = this.getPart && this.getPart("invite-error");
-    const note = this.getPart && this.getPart("invite-error-message");
-    const entry = this.getPart && this.getPart("invite-email");
+    const wrapper = this.getPart?.("invite-error");
+    const note = this.getPart?.("invite-error-message");
+    const entry = this.getPart?.("invite-email");
     if (wrapper?.el) wrapper.el.dataset.state = reason ? _a.open : _a.closed;
     if (note?.set) note.set({ content: reason || "" });
     if (reason) {
@@ -304,8 +304,8 @@ class __permission_restricted extends DrumeeMFS {
 
     const privilege = this._inviteRole?.privilege || _K.privilege.write;
     const btn = cmd?.el;
-    if (btn?.getAttribute("data-pending") === "1") return;
-    if (btn) btn.setAttribute("data-pending", "1");
+    if (btn?.dataset.pending === "1") return;
+    if (btn) btn.dataset.pending = "1";
 
     return this.postService(SERVICE.hub.invite, {
       hub_id: this.mget(_a.hub_id),
@@ -353,7 +353,7 @@ class __permission_restricted extends DrumeeMFS {
       })
       .catch((e) => Wm.alert(e.reason || e.error || LOCALE.TRY_AGAIN))
       .finally(() => {
-        if (btn) btn.removeAttribute("data-pending");
+        if (btn) delete btn.dataset.pending;
       });
   }
 
