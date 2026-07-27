@@ -126,6 +126,11 @@ class RewardUploadGuide extends GuideCore {
       // Only the "folder" beat needs an explicit advance: every other sub-step
       // is released by the user doing the real action.
       showNext: sub === "folder",
+      // That same beat asks the user to READ, not to click anything, so it dims
+      // the whole screen and shows only the coach. Cutting the workspace window
+      // out instead would leave it fully lit — and since it fills the viewport,
+      // nothing would be dimmed at all.
+      hole: sub !== "folder",
     };
   }
 

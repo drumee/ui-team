@@ -87,7 +87,11 @@ class GuideCore {
   _resolveSub() { return null; }
   /** @returns {Element|null} */
   _targetEl() { return null; }
-  /** @returns {{text: string, showBack: boolean, showNext: boolean}} */
+  /** `hole: false` dims the whole viewport instead of cutting the target out —
+   *  for a sub-step that only asks the user to READ, where keeping a control
+   *  operable would be meaningless.
+   *  @returns {{text: string, showBack: boolean, showNext: boolean,
+   *             hole?: boolean}} */
   _coachFor() { return { text: "", showBack: true, showNext: false }; }
   /** @returns {boolean} true = handled, false = the orchestrator should exit. */
   back() { return false; }
@@ -253,15 +257,24 @@ class GuideCore {
     const rect = el.getBoundingClientRect();
     if (!rect.width || !rect.height) return;
     const coach = this._coachFor(this._sub);
-    const sig = [
-      this._sub,
-      Math.round(rect.left), Math.round(rect.top),
-      Math.round(rect.width), Math.round(rect.height),
+    const hole = coach.hole !== false;
+    // Without a hole nothing about the paint depends on the target's box, so
+    // keep the rect OUT of the signature — otherwise the window settling into
+    // place would repaint (and flicker) the coach for no visible gain. The
+    // target is still measured above: it is what tells us the surface has
+    // actually mounted.
+    const sig = (hole
+      ? [
+        this._sub,
+        Math.round(rect.left), Math.round(rect.top),
+        Math.round(rect.width), Math.round(rect.height),
+      ]
+      : [this._sub, "nohole"])
       // The coach text can change without the target moving — Step 1's perm
       // phase swaps wording when a confirmation lands on top — so it is part of
-      // the signature.
-      coach.text,
-    ].join(":");
+      // the signature either way.
+      .concat(coach.text)
+      .join(":");
     if (sig === this._lastSig) return;
     this._lastSig = sig;
     // Mirror the target's own rounding so the cutout hugs it instead of
@@ -273,6 +286,7 @@ class GuideCore {
       text: coach.text,
       showBack: coach.showBack,
       showNext: coach.showNext,
+      hole,
       radius,
     });
   }

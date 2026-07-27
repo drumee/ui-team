@@ -316,23 +316,42 @@ class __reward_flow extends LetcBox {
    */
   spotlight(rect, opt = {}) {
     if (!this.el) return;
-    const { text, showBack = true, showNext = false, radius = "" } = opt;
+    const {
+      text, showBack = true, showNext = false, radius = "", hole = true,
+    } = opt;
     const cx = rect.left + rect.width / 2;
-    // Rectangular cutout for every sub-step: clear the target's rect and dim
-    // only the rest — no highlight ring. The box-shadow cutout does the dimming
-    // (see skin __cutout). The cutout matches the target's box and rounding
-    // EXACTLY: padding it out would leak an undimmed ring of background around
-    // the target, and a mismatched radius would show bright corners.
-    this.el.style.setProperty("--cut-x", `${rect.left}px`);
-    this.el.style.setProperty("--cut-y", `${rect.top}px`);
-    this.el.style.setProperty("--cut-w", `${rect.width}px`);
-    this.el.style.setProperty("--cut-h", `${rect.height}px`);
-    this.el.style.setProperty("--cut-radius", radius || "4px");
+    if (hole === false) {
+      // Dim EVERYTHING, spotlight nothing. A zero-size cutout still spreads its
+      // 100vmax box-shadow over the whole viewport (see skin __cutout), and the
+      // guide-scrim's clip-path hole collapses with it so every click is caught.
+      // For a sub-step that only asks the user to read: cutting the surface out
+      // would leave it fully lit — and when that surface is a workspace window
+      // filling the screen, nothing would be dimmed at all.
+      this.el.style.setProperty("--cut-x", "50vw");
+      this.el.style.setProperty("--cut-y", "50vh");
+      this.el.style.setProperty("--cut-w", "0px");
+      this.el.style.setProperty("--cut-h", "0px");
+      this.el.style.setProperty("--cut-radius", "0px");
+    } else {
+      // Rectangular cutout: clear the target's rect and dim only the rest — no
+      // highlight ring. The box-shadow cutout does the dimming (see skin
+      // __cutout). It matches the target's box and rounding EXACTLY: padding it
+      // out would leak an undimmed ring of background around the target, and a
+      // mismatched radius would show bright corners.
+      this.el.style.setProperty("--cut-x", `${rect.left}px`);
+      this.el.style.setProperty("--cut-y", `${rect.top}px`);
+      this.el.style.setProperty("--cut-w", `${rect.width}px`);
+      this.el.style.setProperty("--cut-h", `${rect.height}px`);
+      this.el.style.setProperty("--cut-radius", radius || "4px");
+    }
     // No text → cutout only, no coach. Used when the spotlighted surface already
     // carries its own message and dismiss button (the invite-sent confirmation),
     // where a coach beneath it would just repeat it as a second stray card.
     if (!text) return this.clearSpotlight();
-    const anchor = this._coachAnchor(rect, cx);
+    // Nothing is spotlighted → there is no target to sit beside, so centre it.
+    const anchor = hole === false
+      ? this._coachCenter()
+      : this._coachAnchor(rect, cx);
     this.ensurePart("guide-callout").then((p) => {
       if (!p) return;
       p.feed(
@@ -356,6 +375,27 @@ class __reward_flow extends LetcBox {
    * panel — or, when the panel is effectively full-width, pins just under the
    * topbar. This is what fixes the coach being clipped off the top edge.
    */
+  /**
+   * Centre the coach in the viewport. Used when nothing is spotlighted (see
+   * spotlight's `hole: false`): with the whole screen dimmed there is no target
+   * to sit beside, so the callout becomes the only thing on screen.
+   */
+  _coachCenter() {
+    const win = typeof window !== "undefined" ? window : null;
+    const vw = (win && win.innerWidth) || 1280;
+    const vh = (win && win.innerHeight) || 800;
+    const CH = 156;   // approx coach height — same figure _coachAnchor uses
+    const TOP = 64;   // keep clear of the ~52px topbar
+    // `left` is the coach's CENTRE: the skin translates it -50% on X.
+    return {
+      side: "below",
+      style: {
+        left: `${vw / 2}px`,
+        top: `${Math.max(TOP, (vh - CH) / 2)}px`,
+      },
+    };
+  }
+
   _coachAnchor(rect, cx) {
     const win = typeof window !== "undefined" ? window : null;
     const vw = (win && win.innerWidth) || 1280;
