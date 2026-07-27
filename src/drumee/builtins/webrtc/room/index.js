@@ -24,6 +24,9 @@ class __webrtc_room extends __interact {
       // no user permission). NOT for a blocked mic or camera — that is
       // `mediaDenied`, which mediaErrorMessage() replaces with the real cause.
       permissionDenied: LOCALE.WEAK_PRIVILEGE,
+      // The join request never reached the server, or never came back. Nothing
+      // is wrong with the user's rights, so do not blame their privilege.
+      unreachable: LOCALE.CONNECTION_LOST,
       mediaDenied: LOCALE.DEVICES_PERMISSION_DENIED.format(
         `${LOCALE.MICROPHONE.toLowerCase()} / ${LOCALE.CAMERA.toLowerCase()}`,
       ),
@@ -133,7 +136,6 @@ class __webrtc_room extends __interact {
         break;
       case "nop":
         this.stateMessage(s);
-        break;
         break;
       default:
         this.stateMessage(s);
@@ -740,7 +742,17 @@ class __webrtc_room extends __interact {
     };
 
     let c = await this.postService(SERVICE.conference.join, opt);
-    if (!c || !c.user || !c.user.permission) {
+    /**
+     * A request that never completed resolves undefined: doRequest routes
+     * network failures through onServerComplain without throwing. That is a
+     * dead connection, not a rights problem, and reporting it as a weak
+     * privilege sent users hunting for permissions they had all along.
+     */
+    if (!c) {
+      this.stateMachine("unreachable");
+      return null;
+    }
+    if (!c.user || !c.user.permission) {
       this.stateMachine("permissionDenied");
       return null;
     }

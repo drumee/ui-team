@@ -18,6 +18,8 @@ const W3CWebSocket = require("websocket").w3cwebsocket;
 const WEBSOCKET_ERROR = "websocket:error";
 const WEBSOCKET_MESSAGE = "websocket:message";
 const RECONNECT_INTERVAL = 5000;
+/** How long a pending handshake blocks a new one before it is retried anyway */
+const CONNECT_TIMEOUT = 60000;
 
 window.W3CWebSocket = W3CWebSocket;
 let TIMESTAMP = new Date().getTime();
@@ -70,6 +72,7 @@ class __router_websocket extends LetcBox {
     RADIO_NETWORK.trigger(_e.websocketReady, this);
     this.reconnectTimer = RECONNECT_INTERVAL;
     this._reconnect_count = 0;
+    this._connecting = 0;
     this.keepAlive();
     window.addEventListener("online", this.onLinkUp);
     window.addEventListener("offline", this.onLinkDown);
@@ -157,14 +160,46 @@ class __router_websocket extends LetcBox {
   resetSocket(client) {
     this.socketBound = 0;
     if (this.socket) {
-      if (this.socket.readyState === this.socket.OPEN) {
-        this.socket.close();
+      const previous = this.socket;
+      /**
+       * Detach before closing. onerror and onclose were left attached, so a
+       * socket we had already abandoned still queued its own reconnect.
+       */
+      previous.onopen = null;
+      previous.onclose = null;
+      previous.onerror = null;
+      previous.onmessage = null;
+      /**
+       * A socket still CONNECTING used to be dropped without close(): it went
+       * on to complete its handshake and stayed open until the tab was closed.
+       */
+      if (
+        previous.readyState === previous.CONNECTING ||
+        previous.readyState === previous.OPEN
+      ) {
+        try {
+          previous.close();
+        } catch (e) {
+          this.warn("Failed to close the previous socket", e);
+        }
       }
-      this.socket.onopen = null;
-      this.socket.onclose = null;
       this.socket = null;
     }
     if (client) this.socket = client;
+  }
+
+  /**
+   * Sole owner of this.timer. Cancels whatever is already queued so a single
+   * dropped socket can never schedule more than one reconnect.
+   */
+  scheduleReconnect(delay) {
+    if (this.timer) clearTimeout(this.timer);
+    this.timer = setTimeout(() => {
+      this.timer = null;
+      this.restart().catch((e) => {
+        this.warn("Reconnection attempt failed", e);
+      });
+    }, delay == null ? Visitor.timeout(this.reconnectTimer) : delay);
   }
 
   /**
@@ -191,7 +226,7 @@ class __router_websocket extends LetcBox {
   _bind(client) {
     this.resetSocket(client);
     this._reconnect_count++;
-    return new Promise(async (resolve, reject) => {
+    return new Promise((resolve, reject) => {
       if (!client) {
         reject({ error: "got undefined socket" });
         this.warn("ERROR:166 - got undefined socket");
@@ -250,12 +285,13 @@ class __router_websocket extends LetcBox {
         this.warn("Websocket encounted error", e);
         this.trigger(_e.error, "connect_error");
         this.socketBound = 0;
+        /**
+         * A failed connection always fires close right after error, and onclose
+         * is what schedules the reconnect. Scheduling here too meant every
+         * single drop opened two sockets.
+         */
         if (client.readyState !== client.OPEN) {
           this.reconnectTimer = parseInt(this.reconnectTimer * 3);
-          this.timer = setTimeout(
-            this.connect.bind(this),
-            Visitor.timeout(this.reconnectTimer)
-          );
         }
       };
 
@@ -268,10 +304,7 @@ class __router_websocket extends LetcBox {
         this.warn("WebSocket CLOSE !", e);
         RADIO_NETWORK.trigger(_e.offline, this);
         this.reconnectTimer = Visitor.timeout(RECONNECT_INTERVAL);
-        this.timer = setTimeout(
-          this.restart.bind(this),
-          Visitor.timeout(this.reconnectTimer)
-        );
+        this.scheduleReconnect();
       };
     });
   }
@@ -281,8 +314,8 @@ class __router_websocket extends LetcBox {
    * @param {*} reconnecting
    * @returns
    */
-  connect() {
-    return new Promise(async (resolve, reject) => {
+  connect(force = 0) {
+    return new Promise((resolve, reject) => {
       const { endpoint, main_domain } = bootstrap();
       if (!endpoint || !main_domain) {
         return resolve(0);
@@ -291,20 +324,41 @@ class __router_websocket extends LetcBox {
         this.warn("Too many reconnections failed. Giving up");
         return resolve(0);
       }
-      if (this.timer) {
+      /**
+       * authn is asynchronous. Without this guard every queued attempt issued
+       * its own request and each one opened its own socket. The deadline keeps
+       * a stalled request from blocking reconnects for good.
+       */
+      if (
+        !force &&
+        this._connecting &&
+        new Date().getTime() - this._connecting < CONNECT_TIMEOUT
+      ) {
         this.warn("Already connection pending> Skipped");
+        return resolve(0);
+      }
+      if (this.timer) {
+        clearTimeout(this.timer);
         this.timer = null;
       }
+      this._connecting = new Date().getTime();
       this.postService(SERVICE.bootstrap.authn).then((r) => {
+        this._connecting = 0;
         if (r.otp_key) {
           Visitor.set({ otp_key: r.otp_key });
         }
         let url = this.url(r);
         this._bind(new W3CWebSocket(url, _a.service)).then(() => { resolve(1) }).catch(() => { resolve(0) });
       }).catch((e) => {
+        this._connecting = 0;
         this.warn("ERROR:292 - failed to connect websocket", e)
-        let url = this.url({});
-        this._bind(new W3CWebSocket(url, _a.service)).then(() => { resolve(1) }).catch(() => { resolve(0) });
+        /**
+         * Opening a socket without the otak we just failed to obtain only
+         * yields a connection the server has to reject, which closes and asks
+         * for yet another one. Wait and retry the handshake instead.
+         */
+        this.scheduleReconnect();
+        resolve(0);
       })
     })
   }
@@ -316,14 +370,19 @@ class __router_websocket extends LetcBox {
    */
   restart(force = 0) {
     if (force) this._reconnect_count = 0;
-    return new Promise(async (resolve, reject) => {
+    return new Promise((resolve, reject) => {
       if (!force && this.isOk()) return resolve();
-      let o = await this.connect()
-      this.debug("AAAA:318", o)
-      if (o) {
-        return resolve()
-      }
-      return reject()
+      /**
+       * An async executor swallows a rejection from connect() and leaves this
+       * promise pending for good, so settle it explicitly instead.
+       */
+      this.connect(force).then((o) => {
+        this.debug("AAAA:318", o)
+        if (o) {
+          return resolve()
+        }
+        return reject()
+      }).catch(reject)
     })
   }
 
