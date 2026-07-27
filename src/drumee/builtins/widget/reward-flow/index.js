@@ -22,6 +22,7 @@
  * docs/superpowers/specs/2026-07-23-reward-onboarding-flow-design.md
  */
 const { dropModal, congratsModal } = require("./skeleton/modal");
+const { STEPS, baseStep, isWaiting } = require("./steps");
 
 const CAMPAIGN = "free-storage";
 const KEY_UTM = "drumee_utm";
@@ -31,8 +32,6 @@ const KEY_STEP = "reward_step";
 // Step 2 has nothing left to ask for. Persisted alongside the step so a reload
 // mid-flow doesn't send them back to the invite popup.
 const KEY_INVITED = "reward_invited";
-
-const STEPS = ["step1", "step2", "step3"];
 
 // The live topbar control each step points at. The cutout is laid over it and
 // the card anchored beneath it (see _applyStepTarget).
@@ -77,9 +76,11 @@ class __reward_flow extends LetcBox {
     super.initialize(opt);
     this.declareHandlers();
 
-    // Resume where the user left off. Waiting states resume as their base
-    // step: the uploader/invite popup they were handed off to is long gone.
-    const stored = (lsGet(KEY_STEP) || "").replace("_waiting", "");
+    // Resume where the user left off. baseStep strips BOTH _waiting and
+    // _guide: the uploader / invite popup / walkthrough the user was handed off
+    // to is long gone after a reload, so every transient state resumes as its
+    // card step.
+    const stored = baseStep(lsGet(KEY_STEP));
     this._step = STEPS.includes(stored) ? stored : "step1";
     this._modalOpen = false;
     this._dropReturnStep = null;
@@ -358,7 +359,7 @@ class __reward_flow extends LetcBox {
     if (!this.el) return;
     // Resolved from the BASE step, so entering a waiting state keeps the cutout
     // and the card exactly where they were instead of snapping to the fallback.
-    const base = this._step.replace("_waiting", "");
+    const base = baseStep(this._step);
     // A Step 2 already satisfied in Step 1 points at nothing: its card just
     // offers Continue, so it is centred like Step 1 (see skin __anchor).
     const sel = base === "step2" && this._inviteDone ? null : STEP_TARGET[base];
@@ -431,7 +432,7 @@ class __reward_flow extends LetcBox {
     else delete ds.rewardOverlay;
   }
 
-  _isWaiting() { return this._step.endsWith("_waiting"); }
+  _isWaiting() { return isWaiting(this._step); }
 
   // ───────── external completion signals ─────────
 
@@ -701,7 +702,7 @@ class __reward_flow extends LetcBox {
           this._stopGuide();
           return this._goto("step1");
         }
-        const base = this._step.replace("_waiting", "");
+        const base = baseStep(this._step);
         if (this._isWaiting()) return this._goto(base);
         const prev = STEPS[STEPS.indexOf(base) - 1];
         if (prev) this._goto(prev);
