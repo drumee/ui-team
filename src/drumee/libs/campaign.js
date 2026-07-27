@@ -43,16 +43,16 @@ const MAX_LEN = 64;
  */
 function captureUtm() {
   // Guarded like the other libs/ globals (see libs/billing): a lib must not
-  // assume bootstrap has run, and this one promises never to throw.
-  const args = (typeof Visitor !== "undefined" && Visitor && Visitor.parseModuleArgs
-    ? Visitor.parseModuleArgs()
-    : null) || {};
+  // assume bootstrap has run, and this one promises never to throw. The typeof
+  // test has to stay in front of the optional chain — `Visitor?.x` still throws
+  // a ReferenceError when Visitor was never declared at all.
+  const args = (typeof Visitor !== "undefined" && Visitor?.parseModuleArgs?.()) || {};
   let search = null;
   try { search = new URLSearchParams(location.search); } catch (e) { /* no URL API */ }
 
   let utm = {};
   for (const k of PARAMS) {
-    const v = args[k] || (search && search.get(k)) || "";
+    const v = args[k] || search?.get(k) || "";
     if (v) utm[k] = String(v).trim().slice(0, MAX_LEN);
   }
 

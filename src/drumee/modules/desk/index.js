@@ -2292,9 +2292,6 @@ class desk_module extends LetcBox {
         // this.__wrapperPopup.clear();
         return Backbone.history.navigate(_K.module.desk);
 
-      case "close-popup":
-        return;
-
       case "open-settings":
         return this.loadOverlay("window_wallpaper_settings");
 
