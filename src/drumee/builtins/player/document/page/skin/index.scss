@@ -45,10 +45,6 @@
     // A generic family on purpose: each run's stretch is computed from its
     // measured width, so a webfont still swapping in would be measured wrong.
     font-family: sans-serif;
-    // Only the line-break elements inherit this — every span carries its own
-    // size. Zero keeps those breaks from generating hundreds of pixels of
-    // in-flow line boxes per page for nothing.
-    font-size: 0;
     color: transparent;
     cursor: text;
     // Own the pointer so a drag can start in the margin next to a paragraph.

@@ -25,12 +25,18 @@ const CHAR_CR = 13;
 /**
  * Pull the page's text out of PDFium as positioned runs.
  *
- * Returns `{ rotation, items: [{ text, left, top, width, height, endOfLine }] }`
- * where the geometry is normalized to `[0..1]` over the page with ALL rotation
- * undone, and `rotation` is the page's own /Rotate in degrees. Keeping it
- * unit-less and rotation-free is what lets one extraction serve every later
- * re-raster: the caller multiplies by whatever CSS size the canvas currently has
- * and spins the layer by `rotation` plus the user's own rotation.
+ * Returns `{ rotation, aspect, items: [{ text, left, top, width, height,
+ * endOfLine }] }` where the geometry is normalized to `[0..1]` over the page with
+ * ALL rotation undone, `rotation` is the page's own /Rotate in degrees and
+ * `aspect` is the un-rotated page's height/width. Keeping it unit-less and
+ * rotation-free is what lets one extraction serve every later re-raster.
+ *
+ * One item per WORD, not per line. A line-long item would have to rely on the
+ * browser to distribute characters inside it, and browser font metrics don't
+ * match the PDF's own glyph placement — the width can be forced to match while
+ * the characters inside drift, which puts the selection highlight several
+ * characters away from the text it appears to cover. A word is short enough that
+ * the residual drift is invisible.
  */
 function extractPageText(pdfium, pagePtr) {
   const textPtr = pdfium.FPDFText_LoadPage(pagePtr);
@@ -123,19 +129,27 @@ function extractPageText(pdfium, pagePtr) {
         if (!sameLine) {
           flush(true);
         } else if (gap > size * 0.6 || gap < -size) {
-          // A wide gap is a column/tab break, not a word break. Close the run
-          // but keep a space so copied text doesn't glue the two sides together.
-          if (!blank) run.chars.push(' ');
+          // A wide gap is a column/tab break, not a word break. Close the run,
+          // keeping a space so the copied text doesn't glue the two sides
+          // together — the PDF expressed that separation as coordinates rather
+          // than as a space character.
+          if (!run.spaced) run.chars.push(' ');
+          flush(false);
+        } else if (run.spaced && !blank) {
+          // The run already carries its trailing whitespace, so this character
+          // begins the next word. One span per word is what keeps the highlight
+          // on top of the glyphs.
           flush(false);
         }
       }
 
       if (!run) {
         if (blank) continue; // never open a run on whitespace
-        run = { chars: [], left, top, right, bottom };
+        run = { chars: [], left, top, right, bottom, spaced: false };
       }
 
       run.chars.push(ch);
+      if (blank) run.spaced = true;
       run.left = Math.min(run.left, left);
       run.right = Math.max(run.right, right);
       run.top = Math.max(run.top, top);       // page space is y-up
@@ -148,7 +162,15 @@ function extractPageText(pdfium, pagePtr) {
     pdfium.FPDFText_ClosePage(textPtr);
   }
 
-  return { items, rotation: quarter * 90 };
+  // GetPageWidthF/HeightF report the DISPLAYED size, so a quarter turn has to be
+  // undone here too for the aspect to describe the space the items live in.
+  const dispW = pdfium.FPDF_GetPageWidthF(pagePtr);
+  const dispH = pdfium.FPDF_GetPageHeightF(pagePtr);
+  const aspect = (quarter === 1 || quarter === 3)
+    ? (dispH ? dispW / dispH : 1)
+    : (dispW ? dispH / dispW : 1);
+
+  return { items, rotation: quarter * 90, aspect };
 }
 
 export async function initializePdfium() {

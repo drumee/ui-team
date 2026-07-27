@@ -1,5 +1,12 @@
 require('./skin');
 // const { AnnotationMode, TextLayer } = require("pdfjs-dist");
+
+// Width, in px, of the fixed space the selectable-text overlay is laid out in.
+// Zoom is then a single scale() on the overlay instead of a reposition of every
+// word. Large enough that the smallest body text still lands near 20 px, where
+// the browser's own glyph metrics are stable enough to fit each word against.
+const REFERENCE_WIDTH = 1000;
+
 class __player_page extends LetcBox {
 
   /**
@@ -148,10 +155,9 @@ class __player_page extends LetcBox {
     this._textSpansPromise = null;
     this._textLayerEl = null;
     this._textSpans = null;
-    this._textItems = null;
-    this._spanEmWidth = null;
     this._layoutKey = null;
     this._textRotation = 0;
+    this._refHeight = 0;
   }
 
   /**
@@ -163,17 +169,24 @@ class __player_page extends LetcBox {
    * each becomes an absolutely positioned span whose glyphs are invisible, so all
    * the user ever sees is the browser's own selection highlight.
    *
-   * The spans are built ONCE and then only re-positioned (see _layoutTextLayer).
-   * Rebuilding them per raster would collapse any selection the user is holding,
-   * because a selection is anchored to the very text nodes that get replaced.
+   * The spans are built and positioned ONCE, in a fixed reference space
+   * REFERENCE_WIDTH px wide. Zoom is then a single `scale()` on the overlay
+   * itself, so a resize costs three style writes per page no matter how many
+   * words it holds — that is what makes per-word spans affordable. The glyphs are
+   * transparent, so scaling them costs nothing in fidelity; only geometry
+   * matters, and geometry scales exactly.
+   *
+   * Never rebuilt on resize, either: a selection is anchored to the very text
+   * nodes a rebuild would replace, so rebuilding would drop whatever the user is
+   * holding mid-drag.
    *
    * Memoized on the promise rather than the result: several rasters can finish
    * while the first extraction is still in flight, and only one of them may build
    * a set of spans.
    *
    * Built with createElement rather than Skeletons on purpose: this is measured
-   * per-glyph geometry, not UI, and a Marionette view per run would mean hundreds
-   * of widgets per page.
+   * per-glyph geometry, not UI, and a Marionette view per word would mean
+   * thousands of widgets per page.
    */
   _ensureTextSpans() {
     if (this._textSpansPromise) return this._textSpansPromise;
@@ -189,13 +202,21 @@ class __player_page extends LetcBox {
       // to overlay, and nothing to retry either — the answer is cached.
       if (!text || !text.items.length) return false;
 
+      const refW = REFERENCE_WIDTH;
+      const refH = refW * (text.aspect || 1);
+
       const fragment = document.createDocumentFragment();
       const spans = [];
       for (const item of text.items) {
         const span = document.createElement('span');
         span.textContent = item.text;
+        span.style.left = `${item.left * refW}px`;
+        span.style.top = `${item.top * refH}px`;
+        // Font size from the run's own box height keeps the selection band
+        // exactly as tall as the line it covers.
+        span.style.fontSize = `${item.height * refH}px`;
         fragment.appendChild(span);
-        spans.push(span);
+        spans.push([span, item.width * refW]);
         if (item.endOfLine) {
           // Absolutely positioned spans alone don't reliably produce newlines in
           // the clipboard; an explicit break does.
@@ -203,14 +224,17 @@ class __player_page extends LetcBox {
         }
       }
       layer.el.replaceChildren(fragment);
+      layer.el.style.width = `${refW}px`;
+      layer.el.style.height = `${refH}px`;
 
       this._textLayerEl = layer.el;
-      this._textItems = text.items;
       this._textSpans = spans;
       this._textRotation = text.rotation || 0;
-      // Calibrate and place in the same synchronous run as the DOM insert, so no
-      // frame can ever paint the spans at their calibration size.
-      this._calibrateSpans();
+      this._refHeight = refH;
+      this._escapeContextmenuOnSelection(layer);
+      // Fit and place in the same synchronous run as the DOM insert, so no frame
+      // can paint the spans before they are stretched and scaled.
+      this._fitSpans();
       this._layoutTextLayer();
       return true;
     })();
@@ -218,50 +242,70 @@ class __player_page extends LetcBox {
   }
 
   /**
-   * Measure every run's natural width once, at a fixed reference font size.
+   * Let a right-click on selected text reach the browser's own menu.
    *
-   * Text advance is linear in font size, so a single measurement per run is
-   * enough to derive its horizontal stretch at any later zoom by arithmetic.
-   * That is what keeps resizing free of forced layouts — and it is steadier than
-   * re-measuring, which returns slightly different rounding at each size and
-   * makes the selection highlight shimmer as the page is dragged.
-   *
-   * A fixed reference size rather than the current one, because the first layout
-   * can land while the player is still narrow, where per-glyph hinting error is
-   * proportionally large enough to skew every later derived width.
+   * ui-core suppresses the native menu everywhere so windows can offer their own,
+   * which left Ctrl+C as the only way to copy. `escapeContextmenu` is ui-core's
+   * documented opt-out; defining it as a GETTER means the choice is made at
+   * click time — with a selection the user gets the native Copy, and with nothing
+   * selected the page keeps the app's own context menu.
    */
-  _calibrateSpans() {
-    const REFERENCE_PX = 100;
-    for (const span of this._textSpans) {
-      // getBoundingClientRect reports the TRANSFORMED width, so any stretch from
-      // an earlier layout has to come off before measuring.
-      span.style.transform = '';
-      span.style.fontSize = `${REFERENCE_PX}px`;
+  _escapeContextmenuOnSelection(layer) {
+    Object.defineProperty(layer, 'escapeContextmenu', {
+      configurable: true,
+      get: () => {
+        const selection = window.getSelection();
+        const el = this._textLayerEl;
+        if (!el || !selection || selection.isCollapsed) return 0;
+        if (!selection.toString().trim()) return 0;
+        // Only when the selection actually involves THIS page's text. A selection
+        // living elsewhere in the app must not take the app's own menu away from
+        // the page; intersectsNode also covers a selection dragged across
+        // several pages, which intersects each overlay it passes through.
+        for (let i = 0; i < selection.rangeCount; i++) {
+          if (selection.getRangeAt(i).intersectsNode(el)) return 1;
+        }
+        return 0;
+      },
+    });
+  }
+
+  /**
+   * Stretch every word to the width PDFium reported for it.
+   *
+   * The browser lays each word out in its own font, which is not the font the PDF
+   * was drawn with, so the natural width is close but never equal. Forcing it to
+   * match puts the highlight's edges on the glyph edges. Done once, in reference
+   * space — the stretch factor is scale-invariant, so zoom never invalidates it.
+   */
+  _fitSpans() {
+    const spans = this._textSpans;
+    // Measured with the overlay unscaled: getBoundingClientRect reports the
+    // TRANSFORMED width, so an ancestor scale would be baked into every ratio.
+    this._textLayerEl.style.transform = 'none';
+    for (const [span] of spans) span.style.transform = '';
+    // One forced layout for the whole page, once in its lifetime.
+    const natural = spans.map(([span]) => span.getBoundingClientRect().width);
+    for (let i = 0; i < spans.length; i++) {
+      const [span, target] = spans[i];
+      if (!natural[i] || !target) continue;
+      span.style.transform = `scaleX(${target / natural[i]})`;
     }
-    // One forced layout for the whole batch, once in this page's lifetime.
-    this._spanEmWidth = this._textSpans.map(
-      (span) => span.getBoundingClientRect().width / REFERENCE_PX
-    );
     this._layoutKey = null;
   }
 
   /**
-   * Position the overlay over the current raster.
+   * Fit the overlay onto the current raster.
    *
-   * Synchronous, and writes styles without ever reading layout back, so it costs
-   * no reflow and can run on every build() without stuttering the resize.
-   *
-   * The spans are laid out in UNROTATED page space and the overlay as a whole is
-   * rotated onto the canvas: one transform instead of one per span, and rotated
-   * pages stay on the same code path.
+   * Three style writes on one element, no layout reads: the words keep their
+   * reference-space positions and the whole overlay is scaled and rotated onto
+   * the canvas. Rotating the overlay rather than each word also keeps pages with
+   * an intrinsic /Rotate on the same code path.
    */
   _layoutTextLayer() {
-    const spans = this._textSpans;
-    const items = this._textItems;
-    const emWidth = this._spanEmWidth;
     const viewport = this._viewport;
     const el = this._textLayerEl;
-    if (!spans || !el || !emWidth || !viewport) return;
+    if (!this._textSpans || !el || !viewport) return;
     if (!viewport.width || !viewport.height) return;
     if (!el.isConnected) {
       // The skeleton was re-fed under us; drop the stale nodes and let the next
@@ -278,39 +322,23 @@ class __player_page extends LetcBox {
     // viewport is the canvas' CSS size, already rotated. The overlay is laid out
     // unrotated, so for a quarter turn its axes are the other way round.
     const layerW = rotated ? viewport.height : viewport.width;
-    const layerH = rotated ? viewport.width : viewport.height;
     const wrapperW = this.__canvasWrapper.$el.width() || layerW;
+    const refW = REFERENCE_WIDTH;
+    const refH = this._refHeight;
 
-    // Nothing moved — skip several hundred style writes. build() is driven by a
-    // ResizeObserver that also fires for height-only changes.
-    const key = `${layerW}:${layerH}:${rotation}:${wrapperW}`;
+    // Nothing moved — build() is driven by a ResizeObserver that also fires for
+    // height-only changes.
+    const key = `${layerW}:${rotation}:${wrapperW}:${viewport.height}`;
     if (key === this._layoutKey) return;
     this._layoutKey = key;
 
-    // Place the unrotated overlay so its centre coincides with the canvas
-    // centre, then spin it about that centre — the canvas is itself centred in
-    // the wrapper, so the two stay on one axis at any raster width.
-    el.style.width = `${layerW}px`;
-    el.style.height = `${layerH}px`;
-    el.style.left = `${(wrapperW - layerW) / 2}px`;
-    el.style.top = `${(viewport.height - layerH) / 2}px`;
-    el.style.transform = rotation ? `rotate(${rotation}deg)` : '';
-
-    for (let i = 0; i < spans.length; i++) {
-      const item = items[i];
-      const span = spans[i];
-      // Font size from the run's own box height keeps the selection band exactly
-      // as tall as the line it covers.
-      const fontSize = item.height * layerH;
-      span.style.left = `${item.left * layerW}px`;
-      span.style.top = `${item.top * layerH}px`;
-      span.style.fontSize = `${fontSize}px`;
-      // Stretch the run to the width PDFium reported, so mid-word selection
-      // lands on the character the user is actually pointing at.
-      const natural = emWidth[i] * fontSize;
-      const target = item.width * layerW;
-      span.style.transform = natural && target ? `scaleX(${target / natural})` : '';
-    }
+    // Place the reference-space overlay so its centre coincides with the canvas
+    // centre, then scale and spin it about that centre — the canvas is itself
+    // centred in the wrapper, so the two stay on one axis at any raster width.
+    // Uniform scale and rotation commute, so their order here doesn't matter.
+    el.style.left = `${(wrapperW - refW) / 2}px`;
+    el.style.top = `${(viewport.height - refH) / 2}px`;
+    el.style.transform = `rotate(${rotation}deg) scale(${layerW / refW})`;
   }
 
 
