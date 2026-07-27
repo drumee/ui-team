@@ -148,138 +148,258 @@
 
   // ── Sections ──────────────────────────────────────────────────
   // Side padding lives here rather than on the scroller, per the base panel
-  // (__settings-action-actions / -invite-section / -members-section). The 24px
-  // between them is the body's gap, not a margin of their own.
+  // (__settings-action-invite-section / -members-section). The 24px between
+  // them is the body's gap, not a margin of their own.
+  //
+  // Overflow stays visible on the members section and everything down to the
+  // row: the role popover is an absolutely positioned descendant that has to
+  // escape its row's box.
   &__invite-section,
-  &__matrix-section {
+  &__members-section {
+    display: flex;
+    flex-direction: column;
     width: 100%;
     padding: 0 24px;
     box-sizing: border-box;
   }
 
   &__invite-section {
-    display: flex;
-    flex-direction: column;
     gap: 12px;
   }
 
-  // Base panel's section titles (__settings-action-section-title): 12px / 600.
-  // Weight set outright, for the reason given on __title.
-  &__section-label {
+  &__members-section {
+    gap: 16px;
+    overflow: visible;
+  }
+
+  // Base panel's __settings-action-section-title. $weight goes THROUGH the
+  // mixin — which drops it (see __title) — deliberately: the base's own rule
+  // drops it the same way, so both panels inherit the same weight from their
+  // context. Declaring 600 outright here would render this panel bolder than
+  // the one it is matching.
+  &__section-title {
     @include drumee.typo(
       $size: 12px,
       $line: 18px,
+      $weight: 600,
       $color: var(--normal-fg-10)
     );
-    font-weight: 600;
   }
 
-  // ── Invite row (email + role dropdown) ───────────────────────
-  &__invite-row {
-    align-items: center;
-    background-color: var(--normal-bg-100);
-    border-radius: 8px;
-    box-sizing: border-box;
+  // ── Invite row ────────────────────────────────────────────────
+  &__invite-input-row {
     display: flex;
-    gap: 8px;
-    padding: 4px 4px 4px 14px;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    position: relative;
+    z-index: 1200;
     width: 100%;
+    min-height: 46px;
+    padding: 12px;
+    box-sizing: border-box;
+    border-radius: 4px;
+    background: #ffffff;
+    overflow: visible;
   }
 
-  &__email-input {
-    flex: 1;
+  &__invite-entry {
+    flex: 1 1 auto;
     min-width: 0;
 
-    input,
-    .entry-area {
-      background: transparent;
-      border: none;
-      color: var(--normal-fg-10);
-      font-size: 14px;
-      font-weight: 400;
-      line-height: 20px;
-      outline: none;
+    input {
       width: 100%;
+      padding: 0;
+      border: 0;
+      background: transparent;
+      outline: none;
+      @include drumee.typo(
+        $size: 12px,
+        $line: 17px,
+        $weight: 400,
+        $color: #0b0a21
+      );
 
       &::placeholder {
-        color: var(--neutral-500);
+        color: #aeaeb2;
       }
     }
   }
 
-  // ── Invite role dropdown ───────────────────────────────────────
-  &__role-dropdown {
-    flex-shrink: 0;
+  // Inline email-validation message, directly under the invite input row.
+  // Toggled via data-state (see index.js _setInviteError) so it takes no
+  // vertical space — and adds no section gap — while there is nothing to show.
+  &__invite-error {
+    &[data-state="closed"] {
+      display: none;
+    }
+
+    &[data-state="open"] {
+      display: flex;
+    }
   }
 
-  // Inline dropdown trigger — same brand color scheme as the CTA
-  // (primary-50 → primary-40 hover); size stays compact.
-  &__role-trigger {
-    align-items: center;
-    background-color: var(--primary-50);
-    border-radius: 6px;
-    cursor: pointer;
-    display: flex;
-    gap: 6px;
-    padding: 8px 10px;
-    transition: background-color 120ms ease;
-    white-space: nowrap;
+  &__invite-error-message {
+    @include drumee.typo(
+      $size: 12px,
+      $line: 16px,
+      $weight: 500,
+      $color: var(--red-500)
+    );
+    padding: 0 4px;
+  }
 
-    &:hover {
-      background-color: var(--primary-40);
+  &__send-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    min-height: 36px;
+    padding: 8px 24px;
+    box-sizing: border-box;
+    border-radius: 4px;
+    background: var(--primary-50);
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+    @include drumee.typo(
+      $size: 14px,
+      $line: 20px,
+      $weight: 600,
+      $color: var(--white)
+    );
+
+    &[data-pending="1"] {
+      cursor: progress;
+      pointer-events: none;
+      background: #5b54d1;
+
+      &::after {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: -100%;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(
+          90deg,
+          transparent 0%,
+          rgba(255, 255, 255, 0.25) 50%,
+          transparent 100%
+        );
+        animation: permission-restricted__send-button-shimmer 1.1s ease-in-out
+          infinite;
+      }
     }
+  }
+
+  // ── Role pill + its popover ───────────────────────────────────
+  // Wrapper around the KIND.menu.topic root — position:relative so the items
+  // wrapper anchors to the trigger, overflow:visible so the popover can leave
+  // its row, and the menu right-aligned so it grows LEFT into the panel rather
+  // than past the dock's clipped right edge.
+  &__role-dropdown {
+    position: relative;
+    overflow: visible;
+
+    .menu-topic-items__wrapper {
+      right: 0;
+      left: auto;
+      z-index: 9999;
+    }
+
+    // The framework sets overflow:hidden INLINE on that wrapper to hide the
+    // pre-rendered items while closed (the closed wrapper is zero-height, so
+    // un-clipping it globally would reveal every closed menu). The OPEN state
+    // needs visible, or the hover description card — which hangs outside the
+    // wrapper's box — is clipped away entirely.
+    .menu-topic-items__wrapper[data-state="open"] {
+      overflow: visible !important;
+    }
+  }
+
+  &__role-select {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex: 0 0 88px;
+    width: 88px;
+    min-height: 22px;
+    padding: 4px 4px 4px 8px;
+    box-sizing: border-box;
+    border-radius: 4px;
+    background: var(--overlay-bg-05);
+    color: var(--normal-fg-20);
+    cursor: pointer;
   }
 
   &__role-label {
-    color: var(--primary-10);
-    font-size: 13px;
-    font-weight: 500;
-    line-height: 20px;
+    min-width: 0;
+    @include drumee.typo(
+      $size: 10px,
+      $line: 14px,
+      $weight: 400,
+      $color: var(--normal-fg-20)
+    );
+    @include drumee.overflow-text;
   }
 
-  &__role-chevron {
-    flex-shrink: 0;
-
-    svg {
-      color: var(--primary-10);
-      height: 14px;
-      width: 14px;
-    }
+  // Read-only role for the self row: the server rejects self-mutation, so the
+  // dropdown and the remove button give way to plain text.
+  &__role-readonly {
+    flex: 0 0 88px;
+    padding: 4px 8px;
+    cursor: default;
+    background: transparent;
   }
 
   &__role-menu {
-    background-color: var(--normal-bg-90);
-    border: 1px solid var(--neutral-200);
-    border-radius: var(--corner-radius-2);
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+    background-color: var(--default-bg, #ffffff);
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    border-radius: 6px;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.18);
     min-width: 130px;
-    // The hover description card sits OUTSIDE the menu box — don't clip it.
-    overflow: visible;
     padding: 4px;
   }
 
+  // Selected state is a background highlight, no radio dot (keeps the menu
+  // narrow enough to stay inside the panel).
   &__role-option {
     align-items: center;
-    border-radius: var(--corner-radius-1);
     cursor: pointer;
-    display: flex;
-    justify-content: space-between;
-    padding: 9px 12px;
-    position: relative;
+    border-radius: 4px;
+    padding: 8px 12px;
     transition: background-color 120ms ease;
+    white-space: nowrap;
+    position: relative;
+    @include drumee.typo(
+      $size: 12px,
+      $line: 16px,
+      $weight: 400,
+      $color: var(--default-text-color)
+    );
+
+    &:hover {
+      background-color: rgba(29, 138, 234, 0.08);
+    }
+
+    &[data-state="1"] {
+      background-color: rgba(29, 138, 234, 0.12);
+      color: #1d8aea;
+      font-weight: 500;
+    }
 
     // Hover description ("Can only View", …) injected by the framework
-    // `tooltips` prop — a small card on the RIGHT of the hovered row,
-    // vertically centered. max-width keeps ~4-5 words per line so long
-    // descriptions wrap to two lines (user decision 2026-07-20).
+    // `tooltips` prop. On the LEFT of the hovered row: the right side is
+    // off-viewport, the dock hugging the window edge.
     .role-option-tooltip {
       position: absolute;
-      left: calc(100% + 10px);
       top: 50%;
       transform: translateY(-50%);
+      right: calc(100% + 8px);
       white-space: normal;
       width: max-content;
-      max-width: 180px;
+      max-width: 172px;
       pointer-events: none;
       padding: 6px 10px;
       border-radius: 6px;
@@ -291,129 +411,162 @@
       box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18);
       z-index: 100000;
     }
-
-    &[data-state="1"] {
-      background-color: var(--normal-bg-100);
-
-      .option-radio {
-        border-color: var(--primary-40);
-        box-shadow:
-          inset 0 0 0 4px var(--normal-bg-90),
-          inset 0 0 0 8px var(--primary-40);
-      }
-    }
-
-    &:hover {
-      background-color: var(--normal-bg-100);
-    }
   }
 
-  &__role-option-label {
-    color: var(--normal-fg-10);
-    font-size: 14px;
-    font-weight: 400;
-    line-height: 20px;
-  }
-
-  &__role-option-radio {
-    border: 2px solid var(--neutral-400);
-    border-radius: 50%;
-    flex-shrink: 0;
-    height: 14px;
-    width: 14px;
-  }
-
-  // Primary CTA — matches window-secure-share__button.submit ("Get link"):
-  // primary-50 fill → primary-40 on hover, 14px/600 white, spacer-3/spacer-6
-  // padding, corner-radius-3.
-  &__send-btn {
+  // ── Member rows ───────────────────────────────────────────────
+  &__member-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
     width: 100%;
-    box-sizing: border-box;
+    position: relative;
+    overflow: visible;
+  }
+
+  &__member-info,
+  &__member-actions {
+    display: flex;
+    align-items: center;
+  }
+
+  &__member-info {
+    flex: 1 1 auto;
+    min-width: 0;
+    gap: 12px;
+  }
+
+  &__member-actions {
+    flex: 0 0 auto;
+    gap: 4px;
+    overflow: visible;
+  }
+
+  &__avatar {
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: var(--spacer-3);
-    padding: var(--spacer-3) var(--spacer-6);
-    border-radius: var(--corner-radius-3);
-    background-color: var(--primary-50);
-    cursor: pointer;
-    transition: background-color 120ms ease;
-    @include drumee.typo($size: 14px, $line: 20px, $weight: 600, $color: var(--white));
+    flex: 0 0 32px;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    overflow: hidden;
+    background: #e8e8ed;
 
-    &:hover {
-      background-color: var(--primary-40);
+    // Fallback initials when UserProfile has no photo. Depth beats ui-core's
+    // .user-profile__initiales rule.
+    .user-profile__initiales .note-content {
+      color: #0b0a21;
     }
   }
 
-  // ── Permissions matrix section ────────────────────────────────
-  // 16px label-to-list, matching the base panel's members section (the invite
-  // section above sits at 12px, as its counterpart there does).
-  &__matrix-section {
+  &__member-name {
+    min-width: 0;
+    @include drumee.typo(
+      $size: 12px,
+      $line: 18px,
+      $weight: 600,
+      $color: #0b0a21
+    );
+    @include drumee.overflow-text;
+  }
+
+  &__member-remove,
+  &__role-caret {
     display: flex;
-    flex-direction: column;
-    gap: 16px;
+    align-items: center;
+    justify-content: center;
     flex: 0 0 auto;
-  }
-
-  // ── Member list ───────────────────────────────────────────────
-  &__list {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-    width: 100%;
-  }
-
-  &__content {
-    display: flex;
-    flex-direction: column;
-    width: 100%;
-  }
-
-  &__role-overlay {
-    position: absolute;
-  }
-
-  // Scoped under .permission-restricted to avoid leaking onto other
-  // menu_topic dropdowns (notably the topbar Add-new). Positioning only —
-  // the role-menu provides its own background, so no white outer frame
-  // and no leftover sliver after the close animation.
-  .menu-topic-items__wrapper[data-direction="down"] {
-    top: 100%;
-    right: 0;
-    margin-top: 4px;
-    background: transparent;
     padding: 0;
-    border: none;
+    color: currentColor;
 
-    &[data-state="closed"] {
-      visibility: hidden;
-      pointer-events: none;
+    svg * {
+      fill: currentColor;
     }
   }
 
-  .menu-topic-items {
-    background: transparent;
-    padding: 0;
-    border: none;
+  &__role-caret {
+    width: 12px;
+    height: 12px;
+
+    svg {
+      width: 12px;
+      height: 12px;
+    }
   }
 
-  .select-invite-role {
+  &__member-remove {
+    width: 21px;
+    height: 22px;
+    color: #d74e49;
+
+    svg {
+      width: 13.33px;
+      height: 15px;
+    }
+  }
+
+  &__members-empty {
+    @include drumee.typo(
+      $size: 12px,
+      $line: 18px,
+      $weight: 400,
+      $color: var(--normal-fg-20)
+    );
+  }
+}
+
+@keyframes permission-restricted__send-button-shimmer {
+  from {
+    transform: translateX(0);
+  }
+
+  to {
+    transform: translateX(200%);
+  }
+}
+
+// Dark-mode overrides, the base panel's own block remapped onto this prefix
+// (window/folder/skin __settings-action-* → permission-restricted__*). The
+// section rules above carry that panel's light hexes verbatim so the two match
+// in light; these carry its dark values so they match in dark too. The frame
+// rules further up already read from the tokens this block would set, so they
+// need nothing here.
+html[data-theme="dark"] {
+  .permission-restricted {
+    &__section-title,
+    &__member-name {
+      color: var(--normal-fg-10);
+    }
+
+    &__invite-input-row {
+      background: var(--normal-bg-elevated);
+    }
+
+    &__invite-entry input {
+      color: var(--normal-fg-10);
+
+      &::placeholder {
+        color: var(--normal-fg-50);
+      }
+    }
+
     &__role-menu {
-      gap: var(--spacer-4);
+      background-color: var(--normal-bg-elevated);
+      border-color: var(--border-default);
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.5);
     }
 
     &__role-option {
-      padding: var(--spacer-2) var(--spacer-4);
-      border-radius: var(--corner-radius-1);
-      cursor: pointer;
-      &[data-state="1"] {
-        background-color: var(--primary-40);
-        &:hover {
-          background-color: var(--primary-40);
-        }
-      }
+      color: var(--normal-fg-10);
+
       &:hover {
-        background-color: var(--primary-40);
+        background-color: var(--hover-bg-40);
+      }
+
+      &[data-state="1"] {
+        background-color: var(--active-item-bg);
+        color: var(--normal-fg-800);
       }
     }
   }
