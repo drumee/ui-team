@@ -112,7 +112,28 @@ class settings_billing extends LetcBox {
     // sub, whose row is gone.
     this._isCanceling = !!(sub && sub.status === "canceled" && this._periodEnd > now);
     this._hasPaidSub = !!(sub && sub.subscription_id);
+    // Live subscription = nothing left to buy self-serve. The tier ladder is
+    // free < team < (business | sovereign = sales-led), so a Team subscriber
+    // has no higher self-serve tier to reach and no reason to re-buy the one
+    // they hold. "Live" includes the PENDING-CANCEL window: it mirrors as
+    // 'canceled' but Stripe still holds an active subscription carrying
+    // cancel_at_period_end, so buying now would run two paid subscriptions at
+    // once. That caller resumes (the banner offers it); only once the paid
+    // period lapses may they buy again.
+    this._hasActiveSub =
+      !!(sub && /^(active|trialing)$/.test(sub.status || "")) || this._isCanceling;
     return sub;
+  }
+
+  /**
+   * May the Checkout tab be entered at all? False once a subscription is
+   * live: the server refuses such a checkout (ALREADY_SUBSCRIBED), and
+   * without this the tab walked the user through a purchase flow that could
+   * only dead-end -- or, before the server guard, charge them twice.
+   * @returns {boolean}
+   */
+  _checkoutTabAllowed() {
+    return this._mayCheckout() && !this._hasActiveSub;
   }
 
   // Human-readable consequence list for the cancel-confirm modal.
@@ -785,6 +806,27 @@ class settings_billing extends LetcBox {
       .then((data) => {
         const { url, status } = data || {};
         if (url) { window.location.assign(url); return; } // full-page redirect to hosted Checkout
+        // The server refuses a purchase while a subscription is live. Say what
+        // actually applies instead of the generic failure: nothing to buy, or
+        // "that's a cycle change, not a new purchase". Re-sync so the tab and
+        // the banner reflect the subscription the server just told us about.
+        if (status === "ALREADY_SUBSCRIBED" ||
+            status === "USE_SUBSCRIPTION_UPDATE" ||
+            status === "PENDING_CANCEL_RESUME_INSTEAD") {
+          if (Wm && Wm.alert) {
+            Wm.alert(
+              status === "ALREADY_SUBSCRIBED" ? LOCALE.ALREADY_SUBSCRIBED
+              : status === "PENDING_CANCEL_RESUME_INSTEAD" ? LOCALE.RESUME_INSTEAD_OF_BUYING
+              : LOCALE.CHANGE_CYCLE_VIA_PORTAL);
+          }
+          this._loadSubscription().then(() => {
+            if (this.isDestroyed && this.isDestroyed()) return;
+            this.state.currentTab = TAB_MONTHLY;
+            this.tab = TAB_MONTHLY;
+            this.renderContent();
+          });
+          return;
+        }
         if (status === "NOT_ORG_OWNER" && Wm && Wm.alert) Wm.alert(LOCALE.NOT_ORG_OWNER);
         else if (status && status !== "OK" && Wm && Wm.alert) Wm.alert(this._orgIdentError(status));
       })
@@ -1158,11 +1200,16 @@ class settings_billing extends LetcBox {
           // Defense in depth behind the disabled card CTA: a stale render or a
           // deep link must not reach a checkout that can only dead-end.
           if (Wm && Wm.alert) Wm.alert(LOCALE.ONLY_OWNER_CAN_CHANGE_PLAN);
-        } else if (planValue === "free" || planValue === "team") {
-          // Team is the only self-serve tier now. The old Pro<->Team switch
-          // confirmations went with the B2C Pro plan: there is no longer a
-          // personal subscription for a Team purchase to supersede.
-          this._enterCheckoutFor(planValue);
+        } else if (planValue === "free") {
+          // Free is the floor: reaching it from a paid plan is a CANCEL, not a
+          // purchase. Sending it to checkout asked the user to "buy" a $0 plan
+          // they already fall back to, and on the server that is a NO_PRICE
+          // dead end. With no subscription there is simply nothing to do.
+          if (this._hasPaidSub || this._isPaidByQuota()) this._confirmCancel();
+        } else if (planValue === "team") {
+          // Team is the only self-serve tier. Already on it (and paying) means
+          // there is nothing to buy -- see _checkoutTabAllowed.
+          if (this._checkoutTabAllowed()) this._enterCheckoutFor(planValue);
         }
         return false;
       }
@@ -1175,6 +1222,10 @@ class settings_billing extends LetcBox {
         this._updateRightPanelContent()
         break;
       case "checkout":
+        // The tab is not rendered while a subscription is live, but a stale
+        // render or a queued click can still land here -- refuse rather than
+        // walking into a checkout the server will reject.
+        if (!this._checkoutTabAllowed()) return false;
         if (this.state.currentTab !== TAB_CHECKOUT) {
           this.state.currentTab = TAB_CHECKOUT;
           this.tab = TAB_CHECKOUT;
