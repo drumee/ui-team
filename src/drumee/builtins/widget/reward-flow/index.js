@@ -12,6 +12,10 @@
  *   step2_waiting  → the real invite popup is open; onInvitationSent() advances
  *   step3          → "Upload" fires the desk's _e.upload service
  *   step3_waiting  → the real uploader is open; RADIO_MEDIA _e.uploaded advances
+ *   step3_guide    → the walkthrough inside the workspace created in Step 1. It
+ *                    outlives the upload: _e.uploaded moves it onto its
+ *                    "uploading" and "files" beats (see guide-upload), and the
+ *                    Next on the last one advances
  *   congrats       → modal, then the flow latches itself off for good
  *
  * A drop modal intercepts clicks on the vignette during the active steps.
@@ -736,11 +740,39 @@ class __reward_flow extends LetcBox {
     this._goto("step2");
   }
 
-  /** A file upload completed — the LAST step. Only while step 3 is waiting.
-   *  The uploader is the OS file picker plus a progress window, so nothing else
-   *  is holding the shared modal host: congrats can open straight away. */
+  /**
+   * A file upload completed — the LAST step. Only while step 3 is waiting.
+   *
+   * On the GUIDED path this is not the end: the walkthrough has two beats left,
+   * spotlighting the upload in progress and then the files panel it landed in
+   * (see guide-upload). Finishing here instead would tear the workspace down in
+   * the same frame the first file arrived, so the user never sees the thing the
+   * whole step was for. The guide's last Next comes back through
+   * onUploadGuideComplete.
+   *
+   * The legacy path has no workspace window and no files panel to point at, so
+   * it still completes on the signal.
+   */
   onUploadDone() {
     if (this._step !== "step3_waiting" && this._step !== "step3_guide") return;
+    if (this._step === "step3_guide" && this._uploadGuide) {
+      this._uploadGuide.onUploaded();
+      return;
+    }
+    this._completeStep3();
+  }
+
+  /** The Step 3 walkthrough's final beat was dismissed — the user has seen
+   *  their files. Called by the guide's Next on the "files" sub-step. */
+  onUploadGuideComplete() {
+    if (this._step !== "step3_guide") return;
+    this._completeStep3();
+  }
+
+  /** Claim the reward and show congrats. The uploader is the OS file picker
+   *  plus a progress window, so nothing else is holding the shared modal host
+   *  by now. */
+  _completeStep3() {
     this._stopUploadGuide();
     this._clearOpenTimer();
     // The upload IS the claim — report it before any of the teardown below, so
@@ -1033,8 +1065,9 @@ class __reward_flow extends LetcBox {
         return;
 
       case "reward-guide-next":
-        // Step 3's "folder" beat has no real action to observe, so its coach
-        // carries a Next.
+        // Step 3's read-only beats carry a Next, having no real action to
+        // observe: "folder" (this is your workspace) walks on to "+ New", and
+        // "files" (here is what you uploaded) ends the walkthrough.
         if (this._uploadGuide) this._uploadGuide.onNext();
         return;
 
