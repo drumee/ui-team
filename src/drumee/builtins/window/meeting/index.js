@@ -150,7 +150,15 @@ class __window_meeting extends __room {
     try {
       room = await this.join();
       if (!room || !room.user) {
-        this.stateMachine("permissionDenied");
+        /**
+         * join() has already reported the accurate reason: "unreachable" when
+         * the request never came back, "permissionDenied" when the server
+         * genuinely refused. Overwriting it here is what told users their
+         * privilege was insufficient every time the connection dropped.
+         */
+        if (this.state !== "unreachable") {
+          this.stateMachine("permissionDenied");
+        }
         return;
       }
       // sendRoomInfo doesn't forward the host record to non-host clients;
