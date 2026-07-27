@@ -24,17 +24,16 @@
 const { dropModal, congratsModal } = require("./skeleton/modal");
 const { STEPS, baseStep, isWaiting, isGuiding } = require("./steps");
 const { readDescriptor } = require("./workspace");
-// Per-user run state — see storage.js. Split out so it is testable under Node.
+// Mid-run scratch state — see storage.js. Eligibility and the resume point are
+// the server's (reward.get_state); only these two keys are still local.
 const {
-  KEY_DONE, KEY_STEP, KEY_INVITED, KEY_WORKSPACE,
-  lsGet, runGet, runSet, runDel, migrateLegacyDone,
+  KEY_INVITED, KEY_WORKSPACE, runGet, runSet, runDel, purgeLegacyKeys,
 } = require("./storage");
 
-// Must match the utm_campaign that analytics-server puts on the claim-reward
-// email CTA (service/index.js _rewardCtaLink). The marker reaches localStorage
-// via libs/campaign captureUtm(), called from the welcome and desk routers.
+// Recorded on every funnel post so the row says which campaign it belongs to.
+// Must match the utm_campaign analytics-server puts on the claim-reward email
+// CTA (service/index.js _rewardCtaLink).
 const CAMPAIGN = "free-storage";
-const KEY_UTM = "drumee_utm";
 
 // How long "Open workspace" waits for the workspace window before giving up and
 // dropping Step 3 to its legacy topbar-upload variant. Loading is a fetch plus
@@ -53,38 +52,24 @@ class __reward_flow extends LetcBox {
     require("./skin");
   }
 
-  /**
-   * Campaign gate. Safe to call before the widget kind is even loaded.
-   * @returns {boolean} true when this browser arrived from the campaign email
-   *   and has not yet finished (or abandoned) the flow.
-   */
-  static isEligible() {
-    // Fold any pre-scoping latch into this user's own key before reading it,
-    // so an earlier completion is neither lost nor inherited by everyone else.
-    migrateLegacyDone();
-    if (runGet(KEY_DONE) === "1") return false;
-    let utm;
-    try {
-      utm = JSON.parse(lsGet(KEY_UTM) || "{}");
-    } catch (e) {
-      return false;
-    }
-    return utm?.utm_campaign === CAMPAIGN;
-  }
-
   initialize(opt = {}) {
     super.initialize(opt);
     this.declareHandlers();
+    // One-off tidy of the keys this widget used to own before eligibility moved
+    // to the server. Harmless if there are none.
+    purgeLegacyKeys();
 
     // A ?reward=1 run was forced past the eligibility gate for testing. It must
     // not latch itself off on exit — see _finish.
     this._forced = !!opt.forced;
 
-    // Resume where the user left off. baseStep strips BOTH _waiting and
-    // _guide: the uploader / invite popup / walkthrough the user was handed off
-    // to is long gone after a reload, so every transient state resumes as its
-    // card step.
-    const stored = baseStep(runGet(KEY_STEP));
+    // Resume point comes from the SERVER (reward.get_state -> reward_claim.step,
+    // fed in by the desk gate), so a user who wandered off mid-walkthrough picks
+    // up where they were even on a different device. baseStep still strips both
+    // _waiting and _guide: the uploader / invite popup / walkthrough they were
+    // handed off to is long gone, so every transient state resumes as its card
+    // step.
+    const stored = baseStep(opt.step);
     this._step = STEPS.includes(stored) ? stored : "step1";
     this._modalOpen = false;
     this._dropReturnStep = null;
@@ -128,8 +113,8 @@ class __reward_flow extends LetcBox {
     this._captureHost();
     this._portalToBody();
     this._render();
-    // Mounting IS the "started" signal: the widget only exists when isEligible()
-    // found the campaign marker, so nothing else has to gate this.
+    // Mounting IS the "started" signal: the desk only feeds this widget once
+    // reward.get_state has said yes, so nothing else has to gate it.
     this._trackStep(baseStep(this._step));
   }
 
@@ -585,10 +570,11 @@ class __reward_flow extends LetcBox {
     anchor.style.transform = "translateX(-50%)";
   }
 
-  /** Move to `step`, persist it and re-render. */
+  /** Move to `step`, report it and re-render. The step is persisted SERVER-side
+   *  by _trackStep below (reward_claim.step), which is also where a resume on
+   *  another device reads it from — nothing about the position is kept locally. */
   _goto(step) {
     this._step = step;
-    runSet(KEY_STEP, step);
     this._trackStep(baseStep(step));
     // While the invite popup is open (step2_waiting), tint its wrapper-modal
     // backdrop to match the flow's own dim instead of the default frosted glass.
@@ -866,15 +852,15 @@ class __reward_flow extends LetcBox {
 
   /**
    * Final exit — from "Drop anyway" or "Go to dashboard". Never shown again,
-   * EXCEPT for a ?reward=1 run: that one was forced past the eligibility gate
-   * for testing, and latching it would write reward_flow_done into the tester's
-   * browser and permanently suppress the real campaign arrival for them. The
-   * per-run progress keys are still cleared either way, so a forced run leaves
-   * nothing behind to resume from.
+   * "Never again" is now the SERVER's record, not a local latch: the terminal
+   * status written by _track (done / dropped) is what makes the next
+   * reward.get_state answer no. A ?reward=1 run reports nothing at all (see
+   * _track), so it still cannot mask a real campaign arrival for the tester.
+   *
+   * Only the two mid-run scratch keys are cleared here — they describe THIS
+   * walkthrough and mean nothing once it ends.
    */
   _finish() {
-    if (!this._forced) runSet(KEY_DONE, "1");
-    runDel(KEY_STEP);
     runDel(KEY_INVITED);
     runDel(KEY_WORKSPACE);
     this._closeModal();

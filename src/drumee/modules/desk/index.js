@@ -1286,10 +1286,12 @@ class desk_module extends LetcBox {
 
   /**
    * Reward onboarding flow (Figma 3275:236091). Runs AFTER the 5-step
-   * tutorial, and only for users who arrived from the campaign email —
-   * `reward_flow.isEligible()` reads the utm the signup plugin persisted.
-   * `?reward=1` forces it for local testing; the forced run is not latched,
-   * so it stays repeatable and cannot mask a real campaign run.
+   * tutorial, and only for users the SERVER says are owed a run —
+   * `reward.get_state` reads yp.reward_claim, which analytics-server seeds when
+   * the campaign mail is accepted. Being mailed is therefore the entitlement,
+   * and it follows the user across devices instead of living in one browser.
+   * `?reward=1` forces it for local testing; a forced run reports nothing, so
+   * it stays repeatable and cannot mask a real campaign run.
    */
   async _maybeStartRewardFlow() {
     const forced = !!Visitor.parseModuleArgs().reward;
@@ -1302,24 +1304,42 @@ class desk_module extends LetcBox {
     // this latch, never on the gap between them.
     if (this._rewardFlowInFlight) return;
     this._rewardFlowInFlight = true;
-    let Flow;
     try {
       await Kind.waitFor("reward_flow");
-      Flow = Kind.get("reward_flow");
     } catch (e) {
       this._rewardFlowInFlight = false;
       return;
     }
-    if (!forced && !(Flow && Flow.isEligible && Flow.isEligible())) {
-      this._rewardFlowInFlight = false;
-      return;
+    // Eligibility is the SERVER's answer, not the browser's. It used to be a
+    // localStorage latch, which made "has this user finished" a property of the
+    // machine: it did not follow them to another device, it grew a key per user
+    // on a shared browser, and clearing yp.reward_claim could not reset it.
+    // reward.get_state reads that row, so a re-send genuinely re-arms someone.
+    let step = "";
+    if (!forced) {
+      let state;
+      try {
+        state = await this.fetchService(SERVICE.reward.get_state, { hub_id: Visitor.id });
+      } catch (e) {
+        // The gate is the only thing standing between a user and an overlay
+        // that takes over their screen, so an unreachable server must mean NO.
+        this._rewardFlowInFlight = false;
+        return;
+      }
+      if (!state || !state.eligible) {
+        this._rewardFlowInFlight = false;
+        return;
+      }
+      // Resume point, so a user who wandered off mid-walkthrough picks up where
+      // they were — on whatever device they come back on.
+      step = state.step || "";
     }
     this.ensurePart("overlay").then((p) => {
       // Hand `forced` to the widget so a ?reward=1 test run can decline to
       // latch itself off — without it the flow cannot tell a dev poking at the
       // screen from a real campaign arrival, and the docblock's "cannot mask a
       // real campaign run" promise above is not kept.
-      p.feed({ kind: "reward_flow", uiHandler: [this], forced: forced ? 1 : 0 });
+      p.feed({ kind: "reward_flow", uiHandler: [this], forced: forced ? 1 : 0, step });
       this._rewardFlow = p.children.last();
       this._rewardFlow.once(_e.destroy, () => {
         this._rewardFlow = null;
