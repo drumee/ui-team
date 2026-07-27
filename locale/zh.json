@@ -2235,6 +2235,8 @@
   "REWARD_FLOW_GUIDE_FOLDER": "这是你的工作区。你在这里上传的内容都会与团队共享。",
   "REWARD_FLOW_GUIDE_NEW": "点击“+ 新建”添加你的第一个文件。",
   "REWARD_FLOW_GUIDE_FROM_DEVICE": "选择“从设备”来选取文件。",
+  "REWARD_FLOW_GUIDE_UPLOADING": "正在上传你的文件，请稍候。",
+  "REWARD_FLOW_GUIDE_FILES": "你的文件都在这里，安全地存放在工作区中。",
   "REWARD_FLOW_STEP3_TITLE": "第 3 步：上传你的第一个文件",
   "REWARD_FLOW_STEP3_DESC": "上传任意文件，立即激活你的存储空间。",
   "REWARD_FLOW_CONTINUE": "继续",

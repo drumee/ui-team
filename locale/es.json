@@ -2240,6 +2240,8 @@
   "REWARD_FLOW_GUIDE_FOLDER": "Este es tu espacio de trabajo. Todo lo que subas aquí se queda con tu equipo.",
   "REWARD_FLOW_GUIDE_NEW": "Haz clic en «+ Nuevo» para añadir tu primer archivo.",
   "REWARD_FLOW_GUIDE_FROM_DEVICE": "Elige «Desde el dispositivo» para seleccionar un archivo.",
+  "REWARD_FLOW_GUIDE_UPLOADING": "Subiendo tus archivos: un momento.",
+  "REWARD_FLOW_GUIDE_FILES": "Aquí están tus archivos, a salvo en tu espacio de trabajo.",
   "REWARD_FLOW_STEP3_TITLE": "Paso 3: Sube tu primer archivo",
   "REWARD_FLOW_STEP3_DESC": "Sube cualquier archivo y activa tu almacenamiento al instante.",
   "REWARD_FLOW_CONTINUE": "Continuar",
