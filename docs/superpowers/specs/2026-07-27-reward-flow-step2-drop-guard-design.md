@@ -108,11 +108,29 @@ raising it never triggers a re-render.
 
 ### Teardown
 
-`_finish()` must now also clear the invite popup, or "Drop anyway" leaves it
-orphaned on screen after the flow is gone. Clearing it fires the desk's destroy
-hook → `onInvitePopupClosed()`, which would try to `_goto("step2")` mid-teardown.
-`_finish` therefore sets a `_finishing` latch that `onInvitePopupClosed` returns
-on.
+`_finish()` must take down every surface the flow handed the user to, or "Drop
+anyway" leaves one orphaned on screen after the flow is gone —
+`_closeHandoffSurfaces()`, gated on the step so an exit from congrats cannot
+shut something the user opened for themselves:
+
+| step | surface | host |
+|---|---|---|
+| `step1_guide` | create form, `permission_restricted` | wrapper-modal |
+| `step1_guide` | `window_secure_share` (external branch) | window pool |
+| `step2_waiting` | invite popup, invite-sent confirmation | wrapper-modal |
+
+An emptied wrapper-modal left at `data-state="open"` is worse than untidy: it is
+an invisible full-viewport blocker over the desk. It is closed, not just
+cleared.
+
+Two ordering constraints:
+
+- the walkthrough is stopped **before** its surfaces are cleared. Its observer
+  would otherwise read the permission panel vanishing as the user having closed
+  it and complete Step 1 on a flow that is already leaving.
+- clearing the invite popup fires the desk's destroy hook →
+  `onInvitePopupClosed()`, which would `_goto("step2")` mid-teardown, so
+  `_finish` sets a `_finishing` latch that it returns on.
 
 ## Testing
 

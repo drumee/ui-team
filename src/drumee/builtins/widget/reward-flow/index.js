@@ -995,32 +995,70 @@ class __reward_flow extends LetcBox {
    * walkthrough and mean nothing once it ends.
    */
   _finish() {
-    // Latched BEFORE the popup below is cleared: clearing it fires the desk's
-    // destroy hook, which calls straight back into onInvitePopupClosed — and
-    // that would read step2_waiting and _goto("step2"), re-rendering a flow
-    // that is on its way out.
+    // Latched BEFORE the surfaces below are cleared: clearing the invite popup
+    // fires the desk's destroy hook, which calls straight back into
+    // onInvitePopupClosed — and that would read step2_waiting and
+    // _goto("step2"), re-rendering a flow that is on its way out.
     this._finishing = true;
     runDel(KEY_INVITED);
     runDel(KEY_WORKSPACE);
     this._closeModal();
-    this._closeInvitePopup();
+    // Stop the walkthrough BEFORE tearing its surfaces down: its observer would
+    // otherwise read the permission panel vanishing as the user having closed
+    // it, and "complete" Step 1 on a flow that is already leaving.
     this._unbind();
+    this._closeHandoffSurfaces();
     this.softDestroy();
   }
 
-  /** Take whatever Step 2 put in the wrapper-modal down with us — the invite
-   *  popup, or the confirmation that replaced it. Reached when "Drop anyway" is
-   *  pressed on the step2_waiting guard: neither is ours, but both are there on
-   *  the flow's behalf, so leaving one behind would strand it on a desk whose
-   *  flow no longer exists. No-op on every other exit — by then the
-   *  wrapper-modal holds our own modal, or nothing. */
-  _closeInvitePopup() {
-    if (this._step !== "step2_waiting") return;
-    if (typeof Wm === "undefined" || !Wm.__wrapperModal) return;
-    Wm.__wrapperModal.clear();
-    if (Wm.__wrapperModal.el?.dataset) {
-      Wm.__wrapperModal.el.dataset.state = "closed";
-      delete Wm.__wrapperModal.el.dataset.rewardOverlay;
+  /**
+   * Take down the surfaces the flow HANDED THE USER TO, on the way out.
+   *
+   * Reached from "Drop anyway". None of them is ours — they are other widgets,
+   * opened because the walkthrough walked the user into them — but that is
+   * exactly why they cannot be left behind: they strand on a desk whose flow no
+   * longer exists, with nothing left to close them. For the wrapper-modal it is
+   * worse than untidy. Clearing its content without closing it, or leaving it
+   * open with content nobody owns, both leave a full-viewport host over the
+   * desk; emptied and still `data-state="open"` it is an invisible blocker.
+   *
+   * Gated on the step, so an exit from anywhere else — congrats' own button —
+   * cannot reach in and shut something the user opened for themselves.
+   */
+  _closeHandoffSurfaces() {
+    const guided = this._step === "step1_guide";
+    if (!guided && this._step !== "step2_waiting") return;
+    // The shared wrapper-modal. At these two steps whatever sits in it is
+    // there because of us: Step 1's create form or its follow-up permission
+    // panel (media_form feeds `permission_restricted` into this same host), or
+    // Step 2's invite popup and the confirmation that replaces it.
+    if (typeof Wm !== "undefined" && Wm.__wrapperModal) {
+      Wm.__wrapperModal.clear();
+      if (Wm.__wrapperModal.el?.dataset) {
+        Wm.__wrapperModal.el.dataset.state = "closed";
+        delete Wm.__wrapperModal.el.dataset.rewardOverlay;
+      }
+    }
+    // The perm phase's OTHER branch. An external ("share") workspace opens the
+    // secure-share dock as a real WINDOW (media_form → Wm.launch), not into the
+    // wrapper-modal, so clearing that host above does not touch it. Same
+    // sub-step, same abandonment, same orphan.
+    if (guided) this._closeSecureShare();
+  }
+
+  /** Close the secure-share dock the Step 1 create step may have launched.
+   *  Driven through the window's own close service, like _closeStep3Workspace,
+   *  so it unregisters from the pool instead of just leaving the DOM. During
+   *  the walkthrough the flow owns the screen, so any such window is the one
+   *  that step just opened. */
+  _closeSecureShare() {
+    if (typeof Wm === "undefined" || typeof Wm.getItemsByKind !== "function") {
+      return;
+    }
+    const wins = Wm.getItemsByKind("window_secure_share") || [];
+    for (const w of wins) {
+      if (!w || w.isDestroyed?.() || typeof w.onUiEvent !== "function") continue;
+      w.onUiEvent({}, { service: _e.close });
     }
   }
 
