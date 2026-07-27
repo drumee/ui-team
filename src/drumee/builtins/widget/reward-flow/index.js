@@ -375,9 +375,13 @@ class __reward_flow extends LetcBox {
     // Resolved from the BASE step, so entering a waiting state keeps the cutout
     // and the card exactly where they were instead of snapping to the fallback.
     const base = baseStep(this._step);
-    // A Step 2 already satisfied in Step 1 points at nothing: its card just
-    // offers Continue, so it is centred like Step 1 (see skin __anchor).
-    const sel = base === "step2" && this._inviteDone ? null : STEP_TARGET[base];
+    // Two variants point at nothing and are centred like Step 1 (see skin
+    // __anchor): a Step 2 already satisfied in Step 1, and a Step 3 that will
+    // guide the user inside the workspace rather than at the desk topbar.
+    const notarget =
+      (base === "step2" && this._inviteDone) ||
+      (base === "step3" && !!this._workspace);
+    const sel = notarget ? null : STEP_TARGET[base];
     const anchor = this.el.querySelector(`.${this.fig.family}__anchor`);
     if (!sel) {
       // Steps with no topbar target (step 1) are centred by the stylesheet.
@@ -716,6 +720,16 @@ class __reward_flow extends LetcBox {
         // Step 2's Continue, shown only when the user already invited someone
         // from the Step 1 permission panel. Nothing to open — just move on.
         this._goto("step3");
+        return;
+
+      case "reward-open-workspace":
+        // Guided Step 3: reopen the workspace created in Step 1 so the upload
+        // lands there. loadWorkspace is the same entry point the sidebar rows
+        // use; it resolves the root and mounts the workspace pane.
+        if (!this._workspace) return;
+        if (typeof Wm !== "undefined" && typeof Wm.loadWorkspace === "function") {
+          Wm.loadWorkspace({ ...this._workspace });
+        }
         return;
 
       case "reward-upload":

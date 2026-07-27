@@ -65,6 +65,20 @@ const STEP2_SATISFIED = {
   primaryService: "reward-invite-done",
 };
 
+/**
+ * Step 3 when Step 1 left us a workspace to reopen: instead of pointing at the
+ * desk topbar's Upload button — which drops the file wherever the desk happens
+ * to point, usually Home — the card opens that workspace and the walkthrough
+ * takes over inside it. Overlays the step3 entry above; index, icon, title and
+ * Back are inherited.
+ */
+const STEP3_GUIDED = {
+  desc: () => LOCALE.REWARD_FLOW_STEP3_GUIDED_DESC
+    || "Open the workspace you just created and upload your first file into it.",
+  primaryLabel: () => LOCALE.REWARD_FLOW_OPEN_WORKSPACE || "Open workspace",
+  primaryService: "reward-open-workspace",
+};
+
 const WAITING_HINT = {
   step1_waiting: () => LOCALE.REWARD_FLOW_WAITING_WORKSPACE
     || "Waiting for your workspace…",
@@ -75,20 +89,35 @@ const WAITING_HINT = {
 };
 
 /**
+ * The step's config, with any active variant overlaid. One source of truth for
+ * the card body, the primary button and the cutout's service, so they can never
+ * disagree about which variant is showing.
+ */
+function configFor(step, ui) {
+  const base = String(step).replace(/_(waiting|guide)$/, "");
+  const cfg = STEPS[base];
+  if (!cfg) return null;
+  if (base === "step2" && ui && ui.inviteSatisfied && ui.inviteSatisfied()) {
+    return { ...cfg, ...STEP2_SATISFIED };
+  }
+  if (base === "step3" && ui && ui.hasStep1Workspace && ui.hasStep1Workspace()) {
+    return { ...cfg, ...STEP3_GUIDED };
+  }
+  return cfg;
+}
+
+/**
  * The service a step's primary button fires ("reward-invite" / "reward-upload",
- * or "reward-invite-done" for an already-satisfied Step 2). Exposed so the
- * cutout laid over that step's topbar control can fire the SAME service —
+ * or a variant's "reward-invite-done" / "reward-open-workspace"). Exposed so
+ * the cutout laid over that step's topbar control can fire the SAME service —
  * clicking the spotlighted Invite/Upload button then behaves exactly like
- * clicking the card's button, from one source of truth. `ui` is optional; pass
- * it so the satisfied Step 2 resolves correctly.
+ * clicking the card's button. `ui` is optional; pass it so variants resolve.
  */
 function primaryServiceFor(step, ui) {
-  const base = String(step).replace("_waiting", "");
-  if (base === "step2" && ui && ui.inviteSatisfied && ui.inviteSatisfied()) {
-    return STEP2_SATISFIED.primaryService;
-  }
-  const cfg = STEPS[base];
-  return cfg && cfg.primaryService;
+  const cfg = configFor(step, ui);
+  // undefined, never null: this lands in a skeleton `service:` key, and an
+  // explicit null is not the same as an absent property to the framework.
+  return cfg ? cfg.primaryService : undefined;
 }
 
 module.exports = function stepCard(ui) {
@@ -96,11 +125,7 @@ module.exports = function stepCard(ui) {
   const step = ui.getStep();
   const waiting = step.endsWith("_waiting");
   const base = waiting ? step.replace("_waiting", "") : step;
-  const satisfied =
-    base === "step2" && ui.inviteSatisfied && ui.inviteSatisfied();
-  const cfg = satisfied
-    ? { ...STEPS[base], ...STEP2_SATISFIED }
-    : STEPS[base];
+  const cfg = configFor(base, ui);
 
   const progress = Skeletons.Box.X({
     className: `${pfx}__progress`,
@@ -160,3 +185,4 @@ module.exports = function stepCard(ui) {
 };
 
 module.exports.primaryServiceFor = primaryServiceFor;
+module.exports.configFor = configFor;

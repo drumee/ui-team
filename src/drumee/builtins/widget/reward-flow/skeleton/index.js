@@ -28,11 +28,16 @@ module.exports = function (ui) {
   // Kept through the waiting state too, so the overlay and the card's position
   // don't change underneath the user the moment they start an upload — only the
   // cutout's interactivity does (see below and the stylesheet).
-  // Except a Step 2 already satisfied during Step 1: its card offers a plain
-  // Continue, so there is no topbar control to spotlight and the card is
-  // centred like Step 1 (data-notarget, see skin __anchor).
+  // Two variants point at no topbar control at all and are centred like Step 1
+  // (data-notarget, see skin __anchor):
+  //   - a Step 2 already satisfied during Step 1 → its card offers Continue
+  //   - a Step 3 with a workspace to reopen      → its card offers Open
+  //     workspace, and the upload control it eventually points at lives INSIDE
+  //     that workspace, not on the desk topbar.
   const satisfied = base === "step2" && ui.inviteSatisfied && ui.inviteSatisfied();
-  const targeted = (base === "step2" || base === "step3") && !satisfied;
+  const guided = base === "step3" && ui.hasStep1Workspace && ui.hasStep1Workspace();
+  const notarget = satisfied || guided;
+  const targeted = (base === "step2" || base === "step3") && !notarget;
 
   const kids = [];
 
@@ -108,7 +113,7 @@ module.exports = function (ui) {
     kids.push(
       Skeletons.Box.Y({
         className: `${pfx}__anchor`,
-        dataset: { step: base, notarget: satisfied ? "1" : "0" },
+        dataset: { step: base, notarget: notarget ? "1" : "0" },
         kids: [stepCard(ui)],
       }),
     );
