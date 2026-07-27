@@ -43,8 +43,12 @@ function filter(ui) {
  */
 function header(ui) {
   const fig = `${ui.fig.family}-storage__header`;
-  const { storage } = Visitor.quota();
-  const use_rate = (100 * Visitor.diskUsed()) / storage;
+  // See settings/account/skeleton/storage.js: the allowance arrives as `disk`
+  // from the get_quota FUNCTION and only as `storage` from the procedure, so
+  // read whichever this deployment sends.
+  const q = Visitor.quota() || {};
+  const storage = q.storage != null ? q.storage : q.disk;
+  const use_rate = storage ? (100 * Visitor.diskUsed()) / storage : 0;
   return Skeletons.Box.Y({
     className: `${fig}-content`,
     kids: [
