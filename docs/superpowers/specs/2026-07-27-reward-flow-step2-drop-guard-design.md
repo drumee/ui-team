@@ -32,14 +32,26 @@ raises "Don't drop now".
 The popup's own ✕ is untouched: it still closes the popup and re-arms the Step 2
 card, no guard. Only the backdrop gesture is new.
 
-The guard covers the popup and nothing else that passes through the same host.
-After a successful send the popup is replaced by the invite-sent toast while the
-step is *still* `step2_waiting` (`_awaitToastDismissed` holds there until the
-user dismisses it) — the user has already done what Step 2 asked, so closing
-that confirmation is not abandonment. The listener therefore fires only while
-`.invite-popup__container` is actually in the host, and `onInvitationSent`
-unhooks it outright to cover the window between the send landing and the popup
-going.
+### The invite-sent confirmation
+
+A successful send replaces the popup with the confirmation card
+(`window_info`) in the same wrapper-modal, and the step stays `step2_waiting`
+until the user closes it — that close is what advances to Step 3.
+
+Step 2 guards that phase exactly as **Step 1's perm phase** does. There, the
+same confirmation replaces the permission panel, `__guide-scrim` keeps catching
+clicks around it, and closing it calls `_complete()` → Step 2 (see `guide.js`
+`_resolveSub` / `_coachFor`). So here too:
+
+- a click **on** the confirmation — including its Close/✕ — is the user
+  completing Step 2, never abandonment, and raises nothing;
+- a click **beside** it is the same abandon gesture as beside the popup, and
+  raises "Don't drop now";
+- closing it continues to Step 3, unchanged.
+
+Both surfaces are therefore named together (`STEP2_SURFACES`), and the guard is
+armed for as long as either is on screen. When neither is, the host is showing
+somebody else's business and there is nothing to abandon.
 
 ## Design
 
@@ -113,6 +125,7 @@ walkthrough:
 3. **Continue** → guard gone, popup still there, email still typed.
 4. Re-raise it and press **Drop anyway** → popup and flow both gone, desk usable.
 5. The popup's ✕ still returns to the Step 2 card with no guard.
-6. Send a real invitation → the success toast appears; its Close/✕ dismisses it
-   and moves to Step 3 with no guard in between.
+6. Send a real invitation → the confirmation appears. Clicking beside it raises
+   the guard; **Continue** hands it back; its own Close/✕ raises nothing and
+   moves the flow to Step 3.
 7. Step 1's walkthrough guard still behaves (the rename touches it).

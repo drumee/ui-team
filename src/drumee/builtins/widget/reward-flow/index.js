@@ -40,6 +40,16 @@ const CAMPAIGN = "free-storage";
 // a mount; anything past this is a failure, not slowness.
 const OPEN_WORKSPACE_TIMEOUT_MS = 4000;
 
+// The surfaces Step 2 hands the user to, both fed into the shared
+// wrapper-modal in turn: the invite popup, then the invite-sent confirmation
+// that REPLACES it on a successful send (invite-popup's Wm.alert → window_info).
+// A click on either is the user working; a click beside them is the abandon
+// gesture the flow guards. Mirrors Step 1's perm phase, which spotlights the
+// same two surfaces in the same order (see guide.js SEL.permPanels/windowInfo).
+const INVITE_POPUP = ".invite-popup__container";
+const INVITE_TOAST = ".window-info__ui, .window-info__main";
+const STEP2_SURFACES = `${INVITE_POPUP}, ${INVITE_TOAST}`;
+
 // The live topbar control each step points at. The cutout is laid over it and
 // the card anchored beneath it (see _applyStepTarget).
 const STEP_TARGET = {
@@ -629,17 +639,15 @@ class __reward_flow extends LetcBox {
         // The guard once it is up (it renders in our own root, but a click that
         // started there must never re-open it).
         if (this._dropGuardOpen) return;
-        // Only the popup is guarded, not whatever else passes through this
-        // shared host. After a successful send the popup is REPLACED by the
-        // invite-sent toast while the step is still step2_waiting (see
-        // _awaitToastDismissed) — the user has done what Step 2 asked, so
-        // dismissing that confirmation is not abandonment and must not be
-        // guarded. No popup on screen, no guard.
-        if (!this._inviteBackdropHost?.querySelector(".invite-popup__container")) {
-          return;
-        }
+        // Nothing of ours on screen — the popup has gone and no confirmation
+        // took its place, so this host is showing somebody else's business and
+        // there is nothing here to abandon.
+        if (!this._inviteBackdropHost?.querySelector(STEP2_SURFACES)) return;
+        // A click ON either surface is the user working — including the
+        // confirmation's own Close/✕, which is how Step 2 is COMPLETED, not
+        // abandoned. Everything else on this host is the backdrop.
         const t = e.target;
-        if (t?.closest && t.closest(".invite-popup__container")) return;
+        if (t?.closest && t.closest(STEP2_SURFACES)) return;
         e.stopPropagation();
         this._openDropGuard();
       };
@@ -759,12 +767,11 @@ class __reward_flow extends LetcBox {
   onInvitationSent() {
     if (this._step !== "step2_waiting") return;
     this._inviteSucceeded = true;
-    // Step 2 has been satisfied, so there is nothing left to guard: the popup is
-    // closing and the toast that takes its place in the same host is a
-    // confirmation, not something to hold the user in front of. Dropped here as
-    // well as by the has-a-popup test in the listener, so the window between the
-    // send landing and the popup actually going is covered too.
-    this._watchInviteBackdrop(false);
+    // The backdrop guard stays armed across the handover to the confirmation:
+    // Step 2 is not finished until that card is closed, which is what advances
+    // to Step 3 (see onInvitePopupClosed → _awaitToastDismissed). Step 1's perm
+    // phase reads the same way — its scrim keeps guarding while the window_info
+    // is spotlighted, and closing it completes the step.
   }
 
   /** The invite popup closed. Two cases:
@@ -811,7 +818,7 @@ class __reward_flow extends LetcBox {
     if (!host || typeof MutationObserver === "undefined") {
       return advance(); // nothing to watch → don't strand the flow
     }
-    const TOAST = ".window-info__ui, .window-info__main";
+    const TOAST = INVITE_TOAST;
     let seen = false;
     const check = () => {
       if (host.querySelector(TOAST)) {
@@ -969,9 +976,10 @@ class __reward_flow extends LetcBox {
     this.softDestroy();
   }
 
-  /** Take the invite popup down with us. Reached when "Drop anyway" is pressed
-   *  on the step2_waiting guard: the popup is not ours, but it was opened on
-   *  the flow's behalf, so leaving it behind would strand it on a desk whose
+  /** Take whatever Step 2 put in the wrapper-modal down with us — the invite
+   *  popup, or the confirmation that replaced it. Reached when "Drop anyway" is
+   *  pressed on the step2_waiting guard: neither is ours, but both are there on
+   *  the flow's behalf, so leaving one behind would strand it on a desk whose
    *  flow no longer exists. No-op on every other exit — by then the
    *  wrapper-modal holds our own modal, or nothing. */
   _closeInvitePopup() {
