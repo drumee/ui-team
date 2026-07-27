@@ -43,8 +43,14 @@ function filter(ui) {
  */
 function header(ui) {
   const fig = `${ui.fig.family}-storage__header`;
-  const { storage } = Visitor.quota();
-  const use_rate = 100 * Visitor.diskUsed() / storage;
+  // `storage` is the alias; `disk` is the key the quota row is actually stored
+  // under. desk.get_env is fed by the get_quota FUNCTION, which returned only
+  // the latter — so this read undefined, the total rendered "0 B" and the bar
+  // got width:NaN%. The server now emits both, but production trails the
+  // schema, so take whichever is present rather than depending on the rollout.
+  const q = Visitor.quota() || {};
+  const storage = q.storage != null ? q.storage : q.disk;
+  const use_rate = storage ? 100 * Visitor.diskUsed() / storage : 0;
   return Skeletons.Box.Y({
     className: `${fig}-content`,
     kids: [

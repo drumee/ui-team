@@ -182,7 +182,10 @@ class __account_data extends DrumeeMFS {
     let { quota, usage } = data;
     if (quota) Visitor.set({ quota });
     if (usage) Visitor.set({ disk_usage: usage });
-    let max = Visitor.quota("storage");
+    // `storage` is an alias the get_quota PROCEDURE adds; the FUNCTION that
+    // feeds desk.get_env sends the underlying `disk`. Fall back so this works
+    // against a deployment whose schema has not caught up.
+    let max = Visitor.quota("storage") || Visitor.quota("disk");
     let details = [];
     let du = Visitor.diskUsage();
     for (let k in du) {
