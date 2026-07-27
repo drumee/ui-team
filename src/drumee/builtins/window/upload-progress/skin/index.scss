@@ -32,7 +32,8 @@
     height: 280px;
     min-height: 64px;
     background: var(--normal-bg-90);
-    border-radius: var(--corner-radius-6, 16px);
+    border-radius: var(--corner-radius-3);
+    border: 1px solid var(--border-default);
     box-shadow: 0 1px 11px rgba(0, 0, 0, 0.13);
     // Must match the layer's z-index (desk/wm/skin/index.scss
     // `.upload-progress-layer`) — both read the same custom property, so the
@@ -141,7 +142,7 @@
   // Base panel's __settings-action-title.
   &__title {
     @include drumee.typo(
-      $size: 18px,
+      $size: 14px,
       $line: 24px,
       $weight: 600,
       $color: var(--normal-fg-10)
