@@ -53,14 +53,24 @@ function billing_tabs_trigger(ui) {
   const fig = ui.fig.family;
   const figTrigger = `${fig}__tabs-trigger`;
 
+  // The Checkout tab only exists while there is something to buy. Once a
+  // subscription is live the caller is already on the only self-serve tier
+  // (free < team < business|sovereign, the last two sales-led), so the tab
+  // would walk them into a purchase the server now refuses outright
+  // (ALREADY_SUBSCRIBED). Cancel / resume live in the banner above, and a
+  // month<->year switch is a subscription update, not a new checkout.
+  const kids = [
+    item(ui, {content:LOCALE.MONTHLY, discountRate:0, pos:0, service:"select-plan"}),
+    item(ui, {content:LOCALE.YEARLY, discountRate:15, pos:1, service:"select-plan"}),
+  ];
+  if (!ui._checkoutTabAllowed || ui._checkoutTabAllowed()) {
+    kids.push(item(ui, {content:LOCALE.CHECKOUT, discountRate:0, pos:2, service:"checkout"}));
+  }
+
   return Skeletons.Box.X({
     className: `${figTrigger}-main`,
     sys_pn: `${fig}__tabs-trigger`,
-    kids: [
-      item(ui, {content:LOCALE.MONTHLY, discountRate:0, pos:0, service:"select-plan"}),
-      item(ui, {content:LOCALE.YEARLY, discountRate:15, pos:1, service:"select-plan"}),
-      item(ui, {content:LOCALE.CHECKOUT, discountRate:0, pos:2, service:"checkout"})
-    ],
+    kids,
   });
 }
 
