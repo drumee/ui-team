@@ -626,9 +626,18 @@ class __reward_flow extends LetcBox {
       if (this._onInviteBackdrop || !host) return;
       this._inviteBackdropHost = host;
       this._onInviteBackdrop = (e) => {
-        // The popup itself, and the guard once it is up (it renders in our own
-        // root, but a click that started there must never re-open it).
+        // The guard once it is up (it renders in our own root, but a click that
+        // started there must never re-open it).
         if (this._dropGuardOpen) return;
+        // Only the popup is guarded, not whatever else passes through this
+        // shared host. After a successful send the popup is REPLACED by the
+        // invite-sent toast while the step is still step2_waiting (see
+        // _awaitToastDismissed) — the user has done what Step 2 asked, so
+        // dismissing that confirmation is not abandonment and must not be
+        // guarded. No popup on screen, no guard.
+        if (!this._inviteBackdropHost?.querySelector(".invite-popup__container")) {
+          return;
+        }
         const t = e.target;
         if (t?.closest && t.closest(".invite-popup__container")) return;
         e.stopPropagation();
@@ -750,6 +759,12 @@ class __reward_flow extends LetcBox {
   onInvitationSent() {
     if (this._step !== "step2_waiting") return;
     this._inviteSucceeded = true;
+    // Step 2 has been satisfied, so there is nothing left to guard: the popup is
+    // closing and the toast that takes its place in the same host is a
+    // confirmation, not something to hold the user in front of. Dropped here as
+    // well as by the has-a-popup test in the listener, so the window between the
+    // send landing and the popup actually going is covered too.
+    this._watchInviteBackdrop(false);
   }
 
   /** The invite popup closed. Two cases:

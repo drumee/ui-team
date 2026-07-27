@@ -32,6 +32,15 @@ raises "Don't drop now".
 The popup's own ✕ is untouched: it still closes the popup and re-arms the Step 2
 card, no guard. Only the backdrop gesture is new.
 
+The guard covers the popup and nothing else that passes through the same host.
+After a successful send the popup is replaced by the invite-sent toast while the
+step is *still* `step2_waiting` (`_awaitToastDismissed` holds there until the
+user dismisses it) — the user has already done what Step 2 asked, so closing
+that confirmation is not abandonment. The listener therefore fires only while
+`.invite-popup__container` is actually in the host, and `onInvitationSent`
+unhooks it outright to cover the window between the send landing and the popup
+going.
+
 ## Design
 
 ### Trigger — a listener on the host, not a rendered scrim
@@ -104,4 +113,6 @@ walkthrough:
 3. **Continue** → guard gone, popup still there, email still typed.
 4. Re-raise it and press **Drop anyway** → popup and flow both gone, desk usable.
 5. The popup's ✕ still returns to the Step 2 card with no guard.
-6. Step 1's walkthrough guard still behaves (the rename touches it).
+6. Send a real invitation → the success toast appears; its Close/✕ dismisses it
+   and moves to Step 3 with no guard in between.
+7. Step 1's walkthrough guard still behaves (the rename touches it).
