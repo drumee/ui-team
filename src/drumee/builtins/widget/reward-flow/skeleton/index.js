@@ -67,17 +67,27 @@ function guideKids(ui, pfx) {
       sys_pn: "guide-callout",
       partHandler: ui,
     }),
-    // Host for the "Don't drop now" modal DURING the walkthrough. It lives in
-    // the flow's own root — not Wm.__wrapperModal — so opening it never
-    // clobbers the guided create-form / permission panel that occupy that
-    // wrapper-modal on the form/perm sub-steps. Inert until the orchestrator
-    // feeds the drop modal into it (see _openGuideDrop).
-    Skeletons.Box.Y({
-      className: `${pfx}__guide-modal`,
-      sys_pn: "guide-modal",
-      partHandler: ui,
-    }),
+    dropHost(ui, pfx),
   ];
+}
+
+/**
+ * Host for the "Don't drop now" modal, for the states that cannot use
+ * Wm.__wrapperModal. It lives in the flow's own root, so opening it never
+ * clobbers whatever occupies that wrapper-modal: the guided create-form /
+ * permission panel during the walkthrough, and the invite popup on
+ * step2_waiting — feeding it there would replace the popup and throw away the
+ * emails the user has typed.
+ *
+ * Inert until the orchestrator feeds the drop modal into it (see
+ * _openDropGuard).
+ */
+function dropHost(ui, pfx) {
+  return Skeletons.Box.Y({
+    className: `${pfx}__drop-modal`,
+    sys_pn: "drop-modal",
+    partHandler: ui,
+  });
 }
 
 /**
@@ -126,6 +136,11 @@ function cardKids(ui, pfx, { base, waiting, targeted, notarget }) {
       dataset: { step: base, notarget: notarget ? "1" : "0" },
       kids: [stepCard(ui)],
     }),
+    // step2_waiting raises its guard here rather than in the wrapper-modal,
+    // which the invite popup owns. Rendered on every card state — it costs an
+    // inert box and keeps the host in the markup wherever the orchestrator may
+    // reach for it.
+    dropHost(ui, pfx),
   );
   return kids;
 }

@@ -12,6 +12,10 @@
  *   step2_waiting  → the real invite popup is open; onInvitationSent() advances
  *   step3          → "Upload" fires the desk's _e.upload service
  *   step3_waiting  → the real uploader is open; RADIO_MEDIA _e.uploaded advances
+ *   step3_guide    → the walkthrough inside the workspace created in Step 1. It
+ *                    outlives the upload: _e.uploaded moves it onto its
+ *                    "uploading" and "files" beats (see guide-upload), and the
+ *                    Next on the last one advances
  *   congrats       → modal, then the flow latches itself off for good
  *
  * A drop modal intercepts clicks on the vignette during the active steps.
@@ -39,6 +43,16 @@ const CAMPAIGN = "free-storage";
 // dropping Step 3 to its legacy topbar-upload variant. Loading is a fetch plus
 // a mount; anything past this is a failure, not slowness.
 const OPEN_WORKSPACE_TIMEOUT_MS = 4000;
+
+// The surfaces Step 2 hands the user to, both fed into the shared
+// wrapper-modal in turn: the invite popup, then the invite-sent confirmation
+// that REPLACES it on a successful send (invite-popup's Wm.alert → window_info).
+// A click on either is the user working; a click beside them is the abandon
+// gesture the flow guards. Mirrors Step 1's perm phase, which spotlights the
+// same two surfaces in the same order (see guide.js SEL.permPanels/windowInfo).
+const INVITE_POPUP = ".invite-popup__container";
+const INVITE_TOAST = ".window-info__ui, .window-info__main";
+const STEP2_SURFACES = `${INVITE_POPUP}, ${INVITE_TOAST}`;
 
 // The live topbar control each step points at. The cutout is laid over it and
 // the card anchored beneath it (see _applyStepTarget).
@@ -74,7 +88,7 @@ class __reward_flow extends LetcBox {
     this._modalOpen = false;
     this._dropReturnStep = null;
     this._inviteSucceeded = false;
-    this._guideDropOpen = false;
+    this._dropGuardOpen = false;
     // Furthest card step already reported to the server this session — see
     // _trackStep. Not persisted: re-posting a step after a reload is harmless
     // (the server keeps the furthest one) and losing one is not.
@@ -186,6 +200,7 @@ class __reward_flow extends LetcBox {
     this._clearOpenTimer();
     this._stopToastWatch();
     this._restoreHost();
+    this._watchInviteBackdrop(false);
     this._markInviteOverlay(false);
   }
 
@@ -425,7 +440,7 @@ class __reward_flow extends LetcBox {
 
   /** Remove the coach callout. feed(null) does NOT empty a part — prepareData
    *  wraps null into [null], so the coach would be left on screen. Reset the
-   *  collection instead (same rationale as _closeGuideDrop). */
+   *  collection instead (same rationale as _closeDropGuard). */
   clearSpotlight() {
     this.ensurePart("guide-callout").then((p) => {
       if (!p) return;
@@ -577,8 +592,10 @@ class __reward_flow extends LetcBox {
     this._step = step;
     this._trackStep(baseStep(step));
     // While the invite popup is open (step2_waiting), tint its wrapper-modal
-    // backdrop to match the flow's own dim instead of the default frosted glass.
+    // backdrop to match the flow's own dim instead of the default frosted glass,
+    // and guard the dim against a stray click abandoning the flow.
     this._markInviteOverlay(step === "step2_waiting");
+    this._watchInviteBackdrop(step === "step2_waiting");
     this._render();
   }
 
@@ -595,6 +612,58 @@ class __reward_flow extends LetcBox {
     const ds = Wm.__wrapperModal.el.dataset;
     if (on) ds.rewardOverlay = "1";
     else delete ds.rewardOverlay;
+  }
+
+  /**
+   * Guard the dimmed area around the invite popup (step2_waiting).
+   *
+   * Every other surface of the flow already asks "Don't drop now" before it is
+   * abandoned — the vignette on an active step, __guide-scrim during the
+   * walkthrough. This sub-step had nothing: our own vignette is transparent and
+   * click-through so the user can operate the popup, and the wrapper-modal
+   * hosting it carries no click service, so clicking beside the popup did
+   * nothing at all.
+   *
+   * A listener on the HOST rather than a scrim of our own: the popup owns that
+   * wrapper-modal at z 100000, so anything we rendered would have to be lifted
+   * above it AND punched with a hole tracking the popup's rect (the --cut-*
+   * dance Step 1 does). Asking `closest` whether the click landed in the popup
+   * is exact by construction and measures nothing.
+   *
+   * Capture phase, so the guard lands before any handler inside the
+   * wrapper-modal gets to act on the same click.
+   */
+  _watchInviteBackdrop(on) {
+    const host =
+      (typeof Wm !== "undefined" && Wm.__wrapperModal?.el) || null;
+    if (on) {
+      if (this._onInviteBackdrop || !host) return;
+      this._inviteBackdropHost = host;
+      this._onInviteBackdrop = (e) => {
+        // The guard once it is up (it renders in our own root, but a click that
+        // started there must never re-open it).
+        if (this._dropGuardOpen) return;
+        // Nothing of ours on screen — the popup has gone and no confirmation
+        // took its place, so this host is showing somebody else's business and
+        // there is nothing here to abandon.
+        if (!this._inviteBackdropHost?.querySelector(STEP2_SURFACES)) return;
+        // A click ON either surface is the user working — including the
+        // confirmation's own Close/✕, which is how Step 2 is COMPLETED, not
+        // abandoned. Everything else on this host is the backdrop.
+        const t = e.target;
+        if (t?.closest?.(STEP2_SURFACES)) return;
+        e.stopPropagation();
+        this._openDropGuard();
+      };
+      host.addEventListener("click", this._onInviteBackdrop, true);
+      return;
+    }
+    if (!this._onInviteBackdrop) return;
+    this._inviteBackdropHost?.removeEventListener(
+      "click", this._onInviteBackdrop, true,
+    );
+    this._onInviteBackdrop = null;
+    this._inviteBackdropHost = null;
   }
 
   _isWaiting() { return isWaiting(this._step); }
@@ -671,11 +740,39 @@ class __reward_flow extends LetcBox {
     this._goto("step2");
   }
 
-  /** A file upload completed — the LAST step. Only while step 3 is waiting.
-   *  The uploader is the OS file picker plus a progress window, so nothing else
-   *  is holding the shared modal host: congrats can open straight away. */
+  /**
+   * A file upload completed — the LAST step. Only while step 3 is waiting.
+   *
+   * On the GUIDED path this is not the end: the walkthrough has two beats left,
+   * spotlighting the upload in progress and then the files panel it landed in
+   * (see guide-upload). Finishing here instead would tear the workspace down in
+   * the same frame the first file arrived, so the user never sees the thing the
+   * whole step was for. The guide's last Next comes back through
+   * onUploadGuideComplete.
+   *
+   * The legacy path has no workspace window and no files panel to point at, so
+   * it still completes on the signal.
+   */
   onUploadDone() {
     if (this._step !== "step3_waiting" && this._step !== "step3_guide") return;
+    if (this._step === "step3_guide" && this._uploadGuide) {
+      this._uploadGuide.onUploaded();
+      return;
+    }
+    this._completeStep3();
+  }
+
+  /** The Step 3 walkthrough's final beat was dismissed — the user has seen
+   *  their files. Called by the guide's Next on the "files" sub-step. */
+  onUploadGuideComplete() {
+    if (this._step !== "step3_guide") return;
+    this._completeStep3();
+  }
+
+  /** Claim the reward and show congrats. The uploader is the OS file picker
+   *  plus a progress window, so nothing else is holding the shared modal host
+   *  by now. */
+  _completeStep3() {
     this._stopUploadGuide();
     this._clearOpenTimer();
     // The upload IS the claim — report it before any of the teardown below, so
@@ -702,12 +799,19 @@ class __reward_flow extends LetcBox {
   onInvitationSent() {
     if (this._step !== "step2_waiting") return;
     this._inviteSucceeded = true;
+    // The backdrop guard stays armed across the handover to the confirmation:
+    // Step 2 is not finished until that card is closed, which is what advances
+    // to Step 3 (see onInvitePopupClosed → _awaitToastDismissed). Step 1's perm
+    // phase reads the same way — its scrim keeps guarding while the window_info
+    // is spotlighted, and closing it completes the step.
   }
 
   /** The invite popup closed. Two cases:
    *  - it closed because the send succeeded → advance to step 3 (upload);
    *  - it closed without sending → re-arm step 2 so the user can retry. */
   onInvitePopupClosed() {
+    // We are the ones closing it, on the way out (see _finish).
+    if (this._finishing) return;
     if (this._inviteSucceeded) {
       this._inviteSucceeded = false;
       // The success toast (invite-popup's Wm.alert notice) is about to take the
@@ -746,7 +850,7 @@ class __reward_flow extends LetcBox {
     if (!host || typeof MutationObserver === "undefined") {
       return advance(); // nothing to watch → don't strand the flow
     }
-    const TOAST = ".window-info__ui, .window-info__main";
+    const TOAST = INVITE_TOAST;
     let seen = false;
     const check = () => {
       if (host.querySelector(TOAST)) {
@@ -818,13 +922,26 @@ class __reward_flow extends LetcBox {
     this._modalOpen = false;
   }
 
-  /** Open the "Don't drop now" modal DURING the Step 1 walkthrough. Rendered
-   *  into the flow's own `guide-modal` part (not Wm.__wrapperModal), so the
-   *  guided create-form / permission panel underneath is left untouched — a
-   *  "Continue" simply closes this and the guide resumes. */
-  _openGuideDrop() {
-    this._guideDropOpen = true;
-    this.ensurePart("guide-modal").then((p) => {
+  /**
+   * Open the "Don't drop now" modal into the flow's OWN `drop-modal` part
+   * rather than Wm.__wrapperModal, for the two states where something else
+   * already occupies that wrapper-modal:
+   *   - the Step 1 walkthrough (guided create-form / permission panel),
+   *   - step2_waiting (the invite popup) — feeding the wrapper-modal there
+   *     would replace the popup and discard the emails the user typed, which is
+   *     precisely what a "Continue" has to preserve.
+   * Either way "Continue" just closes this and what was underneath resumes
+   * untouched.
+   *
+   * The root sits below the wrapper-modal (z 10020 vs 100000), so lift it while
+   * the guard is up or the modal paints UNDER the very surface it is guarding.
+   * Set imperatively, like the --cut-* vars: raising the guard must not
+   * re-render the flow.
+   */
+  _openDropGuard() {
+    this._dropGuardOpen = true;
+    this._markRootDrop(true);
+    this.ensurePart("drop-modal").then((p) => {
       if (!p) return;
       // Feed first, then flag open — the modal opts its own pointer events back
       // in (see skin __modal), so it stays clickable regardless; data-open only
@@ -835,9 +952,10 @@ class __reward_flow extends LetcBox {
     });
   }
 
-  _closeGuideDrop() {
-    this._guideDropOpen = false;
-    this.ensurePart("guide-modal").then((p) => {
+  _closeDropGuard() {
+    this._dropGuardOpen = false;
+    this._markRootDrop(false);
+    this.ensurePart("drop-modal").then((p) => {
       if (!p) return;
       // feed(null) does NOT empty a part: prepareData wraps null into [null], so
       // the modal is left in place. Reset the collection to actually remove it.
@@ -848,6 +966,20 @@ class __reward_flow extends LetcBox {
       }
       if (p.el?.dataset) delete p.el.dataset.open;
     });
+  }
+
+  /** Flag the flow ROOT while the in-root guard is up — the z-index lift is
+   *  keyed off `__root[data-drop]` (the lift has to sit on the root: it owns
+   *  the flow's stacking context, so no z-index on the host inside it can
+   *  escape the wrapper-modal above). The skeleton's root box is fed as a child
+   *  of our element; falling back to the element itself keeps this working if
+   *  it is ever the root, since the rule matches on the class either way. */
+  _markRootDrop(on) {
+    const root =
+      this.el?.querySelector?.(`.${this.fig.family}__root`) || this.el;
+    if (!root?.dataset) return;
+    if (on) root.dataset.drop = "1";
+    else delete root.dataset.drop;
   }
 
   /**
@@ -861,11 +993,71 @@ class __reward_flow extends LetcBox {
    * walkthrough and mean nothing once it ends.
    */
   _finish() {
+    // Latched BEFORE the surfaces below are cleared: clearing the invite popup
+    // fires the desk's destroy hook, which calls straight back into
+    // onInvitePopupClosed — and that would read step2_waiting and
+    // _goto("step2"), re-rendering a flow that is on its way out.
+    this._finishing = true;
     runDel(KEY_INVITED);
     runDel(KEY_WORKSPACE);
     this._closeModal();
+    // Stop the walkthrough BEFORE tearing its surfaces down: its observer would
+    // otherwise read the permission panel vanishing as the user having closed
+    // it, and "complete" Step 1 on a flow that is already leaving.
     this._unbind();
+    this._closeHandoffSurfaces();
     this.softDestroy();
+  }
+
+  /**
+   * Take down the surfaces the flow HANDED THE USER TO, on the way out.
+   *
+   * Reached from "Drop anyway". None of them is ours — they are other widgets,
+   * opened because the walkthrough walked the user into them — but that is
+   * exactly why they cannot be left behind: they strand on a desk whose flow no
+   * longer exists, with nothing left to close them. For the wrapper-modal it is
+   * worse than untidy. Clearing its content without closing it, or leaving it
+   * open with content nobody owns, both leave a full-viewport host over the
+   * desk; emptied and still `data-state="open"` it is an invisible blocker.
+   *
+   * Gated on the step, so an exit from anywhere else — congrats' own button —
+   * cannot reach in and shut something the user opened for themselves.
+   */
+  _closeHandoffSurfaces() {
+    const guided = this._step === "step1_guide";
+    if (!guided && this._step !== "step2_waiting") return;
+    // The shared wrapper-modal. At these two steps whatever sits in it is
+    // there because of us: Step 1's create form or its follow-up permission
+    // panel (media_form feeds `permission_restricted` into this same host), or
+    // Step 2's invite popup and the confirmation that replaces it.
+    if (typeof Wm !== "undefined" && Wm.__wrapperModal) {
+      Wm.__wrapperModal.clear();
+      if (Wm.__wrapperModal.el?.dataset) {
+        Wm.__wrapperModal.el.dataset.state = "closed";
+        delete Wm.__wrapperModal.el.dataset.rewardOverlay;
+      }
+    }
+    // The perm phase's OTHER branch. An external ("share") workspace opens the
+    // secure-share dock as a real WINDOW (media_form → Wm.launch), not into the
+    // wrapper-modal, so clearing that host above does not touch it. Same
+    // sub-step, same abandonment, same orphan.
+    if (guided) this._closeSecureShare();
+  }
+
+  /** Close the secure-share dock the Step 1 create step may have launched.
+   *  Driven through the window's own close service, like _closeStep3Workspace,
+   *  so it unregisters from the pool instead of just leaving the DOM. During
+   *  the walkthrough the flow owns the screen, so any such window is the one
+   *  that step just opened. */
+  _closeSecureShare() {
+    if (typeof Wm === "undefined" || typeof Wm.getItemsByKind !== "function") {
+      return;
+    }
+    const wins = Wm.getItemsByKind("window_secure_share") || [];
+    for (const w of wins) {
+      if (!w || w.isDestroyed?.() || typeof w.onUiEvent !== "function") continue;
+      w.onUiEvent({}, { service: _e.close });
+    }
   }
 
   // ───────── event routing ─────────
@@ -909,8 +1101,9 @@ class __reward_flow extends LetcBox {
         return;
 
       case "reward-guide-next":
-        // Step 3's "folder" beat has no real action to observe, so its coach
-        // carries a Next.
+        // Step 3's read-only beats carry a Next, having no real action to
+        // observe: "folder" (this is your workspace) walks on to "+ New", and
+        // "files" (here is what you uploaded) ends the walkthrough.
         if (this._uploadGuide) this._uploadGuide.onNext();
         return;
 
@@ -946,13 +1139,15 @@ class __reward_flow extends LetcBox {
 
       case "reward-vignette-click":
         // Inert while the user is being handed off to a real surface, or when a
-        // drop modal is already up.
-        if (this._isWaiting() || this._modalOpen || this._guideDropOpen) return;
+        // drop modal is already up. A waiting step is not unguarded, though:
+        // step2_waiting raises the same guard from the invite popup's own
+        // backdrop (see _watchInviteBackdrop).
+        if (this._isWaiting() || this._modalOpen || this._dropGuardOpen) return;
         // During either walkthrough the dimmed frame (__guide-scrim) fires this
         // too: guard the walkthrough without tearing it down or touching the
         // wrapper-modal that may hold the create-form.
         if (isGuiding(this._step)) {
-          this._openGuideDrop();
+          this._openDropGuard();
           return;
         }
         this._dropReturnStep = this._step;
@@ -960,10 +1155,12 @@ class __reward_flow extends LetcBox {
         return;
 
       case "reward-drop-stay":
-        // In the walkthrough the drop modal lives in our own root; closing it
-        // just resumes the guide (nothing was torn down).
-        if (this._guideDropOpen) {
-          this._closeGuideDrop();
+        // In the walkthrough — and on step2_waiting — the guard lives in our
+        // own root, so closing it just hands the user back what was underneath:
+        // the guide resumes, or the invite popup is still there with whatever
+        // they had typed. Nothing was torn down.
+        if (this._dropGuardOpen) {
+          this._closeDropGuard();
           return;
         }
         this._closeModal();
