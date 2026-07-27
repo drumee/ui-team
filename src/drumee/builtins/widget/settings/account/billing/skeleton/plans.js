@@ -18,10 +18,10 @@ function getOptions(ui, cycle = "monthly") {
   const isYear = cycle === "yearly";
   const money = (n) => ui._money(n);
   const period = isYear ? "year" : "month";
-  // Team is the only self-serve tier, so it is the only one with a Stripe
-  // price to read. Business and Sovereign are sales-led: their amounts are
-  // published figures, shown so the ladder reads as a ladder, with a
-  // "Contact sales" CTA instead of checkout — hence the literal fallbacks.
+  // Team and Business are the self-serve tiers (July 2026 final table made
+  // Business purchasable), so both read their Stripe price from the catalog.
+  // Sovereign stays sales-led: its amount is the published figure, shown so
+  // the ladder reads as a ladder, with a sales CTA instead of checkout.
   const teamPrice = money(ui._catPrice("team", period));
   const businessPrice = money(
     ui._catPrice("business", period) ?? (isYear ? 1089 : 99),
@@ -32,8 +32,11 @@ function getOptions(ui, cycle = "monthly") {
   const perYear = LOCALE.PER_YEAR;
   const per = isYear ? perYear : perMonth;
 
-  // Transcribed row-for-row from tmp/THE FINAL TABLE — Publish This.md.
-  // Same rows, same order, every card: the table IS the spec.
+  // Transcribed row-for-row from "3. THE FINAL TABLE — Publish This" in
+  // tmp/Drumee Pricing Structure - 072026.md. Same rows, same order, every
+  // card: the table IS the spec. (The July 2026 revision dropped the Data
+  // control row and added Upgrade trigger — the behavioural cue for when to
+  // move up a tier.)
   const rows = (col) => [
     { label: LOCALE.FEAT_DEPLOYMENT, value: col.deployment },
     { label: LOCALE.FEAT_WORKSPACES, value: col.workspaces },
@@ -47,7 +50,7 @@ function getOptions(ui, cycle = "monthly") {
     { label: LOCALE.FEAT_API_ACCESS, value: col.api || "", included: col.api !== false, tick: true },
     { label: LOCALE.FEAT_SSO_SAML, value: "", included: col.sso, tick: true },
     { label: LOCALE.FEAT_SUPPORT, value: col.support },
-    { label: LOCALE.FEAT_DATA_CONTROL, value: col.data },
+    { label: LOCALE.FEAT_UPGRADE_TRIGGER, value: col.trigger },
   ];
 
   return {
@@ -62,10 +65,10 @@ function getOptions(ui, cycle = "monthly") {
         deployment: LOCALE.SAAS, workspaces: "1", members: LOCALE.ONE_SOLO, storage: "5 GB",
         permissions: LOCALE.NONE, history: LOCALE.NONE, guest: false,
         admin: false, api: false, sso: false,
-        support: LOCALE.SUPPORT_COMMUNITY, data: LOCALE.TRUST_DRUMEE,
+        support: LOCALE.SUPPORT_COMMUNITY, trigger: LOCALE.TRIGGER_FREE,
       }),
     },
-    // The entry paid tier, and the only one that reaches Stripe Checkout.
+    // The entry paid tier.
     team: {
       title: LOCALE.TEAM,
       priceAmount: teamPrice,
@@ -78,21 +81,23 @@ function getOptions(ui, cycle = "monthly") {
         deployment: LOCALE.SAAS, workspaces: "1", members: LOCALE.UP_TO_10, storage: "100 GB",
         permissions: LOCALE.GRANULAR_ROLE_BASED, history: LOCALE.DAYS_30, guest: true,
         admin: "", api: false, sso: false,
-        support: LOCALE.SUPPORT_EMAIL, data: LOCALE.TRUST_DRUMEE,
+        support: LOCALE.SUPPORT_EMAIL, trigger: LOCALE.TRIGGER_TEAM,
       }),
     },
+    // Self-serve since the July 2026 final table: checks out (or switches the
+    // live subscription) like Team instead of pointing at sales.
     business: {
       title: LOCALE.BUSINESS,
       priceAmount: businessPrice,
       pricePeriod: per,
-      buttonTitle: LOCALE.CTA_TALK_TO_SALES,
+      buttonTitle: LOCALE.CTA_START_BUSINESS,
       buttonKind: "dark",
       subText: LOCALE.PLAN_BUSINESS_DESC,
       features: rows({
         deployment: LOCALE.SAAS, workspaces: LOCALE.MULTIPLE, members: LOCALE.UNLIMITED, storage: "1 TB",
         permissions: LOCALE.GRANULAR_AUDIT, history: LOCALE.ONE_YEAR, guest: true,
         admin: LOCALE.PLUS_AUDIT_LOGS, api: "", sso: true,
-        support: LOCALE.SUPPORT_PRIORITY_SLA, data: LOCALE.TRUST_DRUMEE,
+        support: LOCALE.SUPPORT_PRIORITY_SLA, trigger: LOCALE.TRIGGER_BUSINESS,
       }),
     },
     sovereign: {
@@ -108,7 +113,7 @@ function getOptions(ui, cycle = "monthly") {
         storage: LOCALE.YOUR_INFRASTRUCTURE,
         permissions: LOCALE.FULL_ACL, history: LOCALE.UNLIMITED, guest: true,
         admin: LOCALE.PLUS_SDK, api: LOCALE.PLUS_SDK, sso: true,
-        support: LOCALE.SUPPORT_DEDICATED_SLA, data: LOCALE.ZERO_TRUST,
+        support: LOCALE.SUPPORT_DEDICATED_SLA, trigger: LOCALE.TRIGGER_SOVEREIGN,
       }),
     },
   };
@@ -442,8 +447,9 @@ function comparisonTable(ui, options) {
 
 /**
  * Create plans content layout with 4 plan items (Free, Team, Business,
- * Sovereign). Only Team reaches Stripe Checkout; Business and Sovereign are
- * sales-led and their CTA opens the contact-sales notice instead.
+ * Sovereign). Team and Business reach Stripe Checkout (or switch the live
+ * subscription in place); Sovereign is sales-led and its CTA opens the
+ * contact-sales mail instead.
  * @param {Object} ui - UI instance
  * @param {string} cycle - Billing cycle (monthly or yearly)
  * @returns {Object} Skeletons component

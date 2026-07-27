@@ -220,6 +220,72 @@ class settings_billing extends LetcBox {
     this.fetchPlanData();
   }
 
+  // Switch the LIVE subscription to another plan (Team <-> Business) after an
+  // explicit confirm. This is the client of payment.change_plan: a price swap
+  // on the existing Stripe subscription — never a second checkout, which the
+  // server refuses to protect against double-billing. The billing interval is
+  // kept as-is on purpose: a plan switch must not silently change when the
+  // caller is charged.
+  async _confirmPlanChange(targetPlan) {
+    const sub = this._subscription || {};
+    const period = /^year/.test(String(sub.period || "")) ? "year" : "month";
+    const price = this._money(this._catPrice(targetPlan, period));
+    const per = period === "year" ? LOCALE.PER_YEAR : LOCALE.PER_MONTH;
+    const planTitle = targetPlan === "business" ? LOCALE.BUSINESS : LOCALE.TEAM;
+    // Ladder: free < team < business. Only the wording changes — the server
+    // call is the same either way.
+    const up = targetPlan === "business";
+    const ok = await Wm.confirm({
+      title: (up
+        ? (LOCALE.PLAN_CHANGE_TITLE_UPGRADE || "Upgrade to {0}")
+        : (LOCALE.PLAN_CHANGE_TITLE_DOWNGRADE || "Downgrade to {0}")).format(planTitle),
+      message: (up
+        ? (LOCALE.PLAN_CHANGE_CONFIRM_UPGRADE || "Switch your subscription to {0} at {1}{2}? The unused time on your current plan is credited and the difference is charged now.")
+        : (LOCALE.PLAN_CHANGE_CONFIRM_DOWNGRADE || "Switch your subscription to {0} at {1}{2}? The unused time on your current plan becomes a credit on your next payments.")
+      ).format(planTitle, price, per),
+      confirm: LOCALE.CONFIRM || "Confirm",
+      cancel: LOCALE.CANCEL || "Cancel",
+      cancel_type: "secondary",
+      mode: "hbf",
+    }).then(() => true).catch(() => false);
+    if (!ok) return;
+    const data = await this.postService(SERVICE.payment.change_plan, {
+      hub_id: Visitor.id, plan: targetPlan, period,
+    }).catch(() => null);
+    const status = (data && data.status) || "";
+    if (status !== "OK" && status !== "NOTHING_TO_CHANGE") {
+      if (Wm && Wm.alert) Wm.alert(LOCALE.SOMETHING_WENT_WRONG);
+      return;
+    }
+    // Optimistic flip from the endpoint's return; the webhook then re-mirrors
+    // the subscription and re-applies quota (Visitor.quota catches up via the
+    // payment.plan_updated WS refresh / the next re-sync).
+    if (this._subscription) {
+      this._subscription.plan = data.plan || targetPlan;
+      this._subscription.status = data.subscription_status || "active";
+      this._subscription.period_end = data.period_end || this._subscription.period_end;
+    }
+    this._isCanceling = false;
+    this._hasActiveSub = true;
+    this.currentPlanName = targetPlan;
+    if (typeof Butler !== "undefined" && Butler.say) {
+      Butler.say((LOCALE.PLAN_CHANGE_DONE || "Your subscription is now on the {0} plan.").format(planTitle));
+    }
+    // renderContent NOW, full re-sync LATER. fetchPlanData recomputes
+    // currentPlanName from Visitor.quota(), and the subscription mirror is
+    // rewritten by the webhook — both still carry the OLD plan for the first
+    // second or two, so an immediate re-fetch would flip the cards back. The
+    // optimistic state above is newer; converge once the webhook has landed.
+    this.renderContent();
+    setTimeout(() => {
+      if (this.isDestroyed && this.isDestroyed()) return;
+      this._loadSubscription().then(() => {
+        if (this.isDestroyed && this.isDestroyed()) return;
+        this.fetchPlanData();
+      });
+    }, 4000);
+  }
+
   /**
    * Return view mode for widget
    * @returns {string} Grid view mode
@@ -759,9 +825,11 @@ class settings_billing extends LetcBox {
     // only declares WHAT to buy. plan 'team' => org (per-seat) checkout.
     const checkout = this.state.checkout || {};
     const plan = checkout.selectedPlan || "team";
-    // Team is an ORGANISATION plan; it is also the only self-serve tier left,
-    // so 'org' is the only paid entity_type that reaches checkout.
-    const entity_type = plan === "team" ? "org" : "user";
+    // Team and Business are both ORGANISATION plans (yp.plan entity_type
+    // 'org'), so 'org' is the only paid entity_type that reaches checkout.
+    // Sending 'user' for business would trip the server's
+    // PLAN_ENTITY_MISMATCH refusal.
+    const entity_type = plan === "team" || plan === "business" ? "org" : "user";
     const period = checkout.billingCycle === "yearly" ? "year" : "month";
     // No seats, no bundle. Every plan is flat since the 2026-07 rebuild: Team
     // is $29 for 100 GB and up to 10 members, so the seat count is a cap, not
@@ -808,22 +876,24 @@ class settings_billing extends LetcBox {
         if (url) { window.location.assign(url); return; } // full-page redirect to hosted Checkout
         // The server refuses a purchase while a subscription is live. Say what
         // actually applies instead of the generic failure: nothing to buy, or
-        // "that's a cycle change, not a new purchase". Re-sync so the tab and
-        // the banner reflect the subscription the server just told us about.
+        // resume. Re-sync so the tab and the banner reflect the subscription
+        // the server just told us about. USE_SUBSCRIPTION_UPDATE is the
+        // plan/cycle-switch case: since payment.change_plan exists it is no
+        // longer a dead end — offer the in-place switch right away.
         if (status === "ALREADY_SUBSCRIBED" ||
             status === "USE_SUBSCRIPTION_UPDATE" ||
             status === "PENDING_CANCEL_RESUME_INSTEAD") {
-          if (Wm && Wm.alert) {
+          if (status !== "USE_SUBSCRIPTION_UPDATE" && Wm && Wm.alert) {
             Wm.alert(
               status === "ALREADY_SUBSCRIBED" ? LOCALE.ALREADY_SUBSCRIBED
-              : status === "PENDING_CANCEL_RESUME_INSTEAD" ? LOCALE.RESUME_INSTEAD_OF_BUYING
-              : LOCALE.CHANGE_CYCLE_VIA_PORTAL);
+              : LOCALE.RESUME_INSTEAD_OF_BUYING);
           }
           this._loadSubscription().then(() => {
             if (this.isDestroyed && this.isDestroyed()) return;
             this.state.currentTab = TAB_MONTHLY;
             this.tab = TAB_MONTHLY;
             this.renderContent();
+            if (status === "USE_SUBSCRIPTION_UPDATE") this._confirmPlanChange(plan);
           });
           return;
         }
@@ -1187,12 +1257,13 @@ class settings_billing extends LetcBox {
 
       case "select-plan-button": {
         const planValue = this._getValueFromCmd(cmd, args);
-        // Business and Sovereign are sales-led since the 2026-07 pricing
-        // rebuild — they carry no Stripe price, so there is no checkout to
-        // enter and sending them there would dead-end on NO_PRICE. Point the
-        // caller at sales instead. ('enterprise' is the retired name for the
-        // same idea, matched so a stale card cannot fall through.)
-        if (/^(business|sovereign|enterprise)$/.test(planValue)) {
+        // Sovereign stays sales-led — it is a self-hosted deployment, not a
+        // Stripe product, so there is no checkout to enter. ('enterprise' is
+        // the retired name for the same idea, matched so a stale card cannot
+        // fall through.) Business became self-serve with the July 2026 final
+        // pricing table: it checks out like Team when nothing is live, and
+        // switches the existing subscription in place otherwise.
+        if (/^(sovereign|enterprise)$/.test(planValue)) {
           // Hand the conversation over instead of reciting the address: open
           // the mail client with the plan already in the subject.
           this._openSalesMail(planValue);
@@ -1206,10 +1277,13 @@ class settings_billing extends LetcBox {
           // they already fall back to, and on the server that is a NO_PRICE
           // dead end. With no subscription there is simply nothing to do.
           if (this._hasPaidSub || this._isPaidByQuota()) this._confirmCancel();
-        } else if (planValue === "team") {
-          // Team is the only self-serve tier. Already on it (and paying) means
-          // there is nothing to buy -- see _checkoutTabAllowed.
-          if (this._checkoutTabAllowed()) this._enterCheckoutFor(planValue);
+        } else if (planValue === "team" || planValue === "business") {
+          // A live subscription means the click is a plan SWITCH, not a
+          // purchase: the server refuses a second checkout (double-billing),
+          // so the price is swapped on the existing subscription instead
+          // (payment.change_plan). With nothing live it is a normal checkout.
+          if (this._hasActiveSub) this._confirmPlanChange(planValue);
+          else if (this._checkoutTabAllowed()) this._enterCheckoutFor(planValue);
         }
         return false;
       }
@@ -1235,7 +1309,7 @@ class settings_billing extends LetcBox {
 
       case "select-checkout-plan":
         const plan = this._getValueFromCmd(cmd, args);
-        if (plan === "free" || plan === "team") {
+        if (/^(free|team|business)$/.test(plan)) {
           // Storage and seats are fixed per plan now (flat pricing), so they
           // are read straight off the plan rather than nudged per branch.
           this.state.checkout.selectedPlan = plan;
