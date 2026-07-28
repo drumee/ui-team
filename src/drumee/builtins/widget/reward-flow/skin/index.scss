@@ -355,6 +355,13 @@ $success-soft: rgba(46, 179, 122, 0.14);
 
   &__root[data-waiting="1"] &__anchor { opacity: 0.92; }
 
+  // The invite-sent confirmation has taken the panel's place: it is a card of
+  // its own, centred on the same screen, carrying the same news and its own
+  // Close. Ours behind it repeated the step just completed and left a stray
+  // Back sticking out from under it. The dim and the cutout stay — the hole is
+  // on the confirmation by then — so the flow still owns the screen around it.
+  &__root[data-toast="1"] &__anchor { display: none; }
+
   // …except over the permission panel, where the card is one of only two things
   // meant to sit clear of the dim (the panel is the other). Fading it there
   // reads as "disabled" against a surface the user is actively working, and the

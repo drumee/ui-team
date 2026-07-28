@@ -196,6 +196,11 @@ module.exports = function (ui) {
       // it, so our dim covers that layer (and the topbar and sidebar beside it)
       // and the card lands above the dim instead of behind it.
       overModal: panel ? "1" : "0",
+      // …and step the card aside while the invite-sent confirmation stands in
+      // that panel's place: it is a card of its own, saying the same thing.
+      // Normally set imperatively (see _markInviteToast); declared here too so
+      // a re-render while it is up does not bring the card back.
+      toast: panel && ui.inviteToastOpen?.() ? "1" : "0",
     },
     debug: __filename,
     kids: guiding

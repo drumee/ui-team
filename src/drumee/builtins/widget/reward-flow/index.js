@@ -107,6 +107,9 @@ class __reward_flow extends LetcBox {
     // …and an invitation really went out from it, which is what separates
     // closing that panel as "done" from closing it as Back.
     this._inviteSent = false;
+    // …and its confirmation is standing in the panel's place, which hides the
+    // card behind it (see _markInviteToast).
+    this._inviteToastOpen = false;
     // Furthest card step already reported to the server this session — see
     // _trackStep. Not persisted: re-posting a step after a reload is harmless
     // (the server keeps the furthest one) and losing one is not.
@@ -853,6 +856,7 @@ class __reward_flow extends LetcBox {
       const sent = this._inviteSent;
       this._invitePanelOpen = false;
       this._inviteSent = false;
+      this._markInviteToast(false);
       // Deferred a microtask for the same reason as _awaitToastDismissed: the
       // observer fires DURING the panel's removal unwind, so let that settle
       // before rendering the next step over the same host — which the rewind
@@ -872,6 +876,9 @@ class __reward_flow extends LetcBox {
     }
     this._panelObs = new MutationObserver(() => {
       if (!onScreen()) return advance();
+      // The panel gone with something still up means the invite-sent
+      // confirmation has replaced it — step aside for it.
+      this._markInviteToast(!document.querySelector(INVITE_PANEL));
       // Still there — keep the hole on it. The panel mounts, animates in and
       // reflows as the permissions list grows, and the cutout is the only
       // reason it reads clear of the dim, so a stale rect is a visible hole in
@@ -916,6 +923,7 @@ class __reward_flow extends LetcBox {
     this._stopPanelWatch();
     this._invitePanelOpen = false;
     this._inviteSent = false;
+    this._markInviteToast(false);
     this._goto("step1_guide");
     this._startGuide("form");
     this.triggerHandlers({ service: "new-workspace" });
@@ -938,6 +946,36 @@ class __reward_flow extends LetcBox {
    *  invite popup. Read by the skeleton: the panel is the surface in play, so
    *  the card points at no topbar control and lifts clear of the modal. */
   invitePanelOpen() { return !!this._invitePanelOpen; }
+
+  /** True while the invite-sent confirmation stands in the panel's place. Read
+   *  by the skeleton so a re-render keeps the card hidden. */
+  inviteToastOpen() { return !!this._inviteToastOpen; }
+
+  /**
+   * Step the card aside while the invite-sent confirmation is up.
+   *
+   * That confirmation is a card in its own right — brand header, its own
+   * message, its own Close — centred on the same screen. Ours behind it
+   * restates a step the user has just completed and leaves a second, unrelated
+   * Back sticking out from under it. The dim and the cutout stay: the hole is
+   * on the confirmation by then (see _applyStepTarget), so the flow still owns
+   * the screen around it.
+   *
+   * Marked on the root imperatively, like the drop guard's lift, so showing or
+   * hiding the card never re-renders the flow — a re-render here would restart
+   * the card's entry animation and empty the part the drop guard lives in. The
+   * skeleton reads the same flag, so a re-render from elsewhere agrees.
+   */
+  _markInviteToast(on) {
+    const next = !!on;
+    if (this._inviteToastOpen === next) return;   // observer fires constantly
+    this._inviteToastOpen = next;
+    const root =
+      this.el?.querySelector?.(`.${this.fig.family}__root`) || this.el;
+    if (!root?.dataset) return;
+    if (next) root.dataset.toast = "1";
+    else delete root.dataset.toast;
+  }
 
   /** Forget everything the Step 1 walkthrough established. It belongs to a
    *  single run: Step 3 must open the workspace THIS run created, not one an
