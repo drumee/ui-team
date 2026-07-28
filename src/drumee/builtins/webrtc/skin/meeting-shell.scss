@@ -1929,7 +1929,9 @@
     );
     white-space: nowrap;
     overflow: hidden;
+    max-width: 80px;
     text-overflow: ellipsis;
+    max-width: 80px;
   }
 
   // The Figma bar shows only the title + controls: hide the wired-but-unshown
