@@ -14,10 +14,10 @@
  *                    (onInvitePanel); or the invite popup opened from the card,
  *                    where onInvitationSent() advances. Either way the step is
  *                    completed by an invitation actually going out: closing the
- *                    panel without sending one is a Back to the step2 card
- *                    (_awaitPanelClosed). Every other Step 1 outcome —
- *                    personal, external/secure-share — lands on the step2 card
- *                    first.
+ *                    panel without sending one rewinds to step1_guide with the
+ *                    create form re-opened (_awaitPanelClosed →
+ *                    _resumeCreateForm). Every other Step 1 outcome — personal,
+ *                    external/secure-share — lands on the step2 card first.
  *   step3          → "Upload" fires the desk's _e.upload service
  *   step3_waiting  → the real uploader is open; RADIO_MEDIA _e.uploaded advances
  *   step3_guide    → the walkthrough inside the workspace created in Step 1. It
@@ -224,7 +224,9 @@ class __reward_flow extends LetcBox {
   /** Lazily build and start the guide. `./guide` is required lazily so the
    *  orchestrator stays requirable (and unit-testable) under Node — the guide
    *  no-ops when there is no DOM. */
-  _startGuide() {
+  /** @param {String} [pinAt] sub-step to hold until its surface is on screen —
+   *  for a resume that re-opens that surface itself (see _resumeCreateForm). */
+  _startGuide(pinAt) {
     // Each walkthrough run establishes its own workspace. Back → Continue
     // restarts Step 1 and the user may pick a different workspace type this
     // time, so the previous attempt's result must not carry over.
@@ -233,6 +235,9 @@ class __reward_flow extends LetcBox {
       const RewardGuide = require("./guide");
       this._guide = new RewardGuide(this);
     }
+    // Before start(), which reconciles once as it comes up: the pin is what
+    // that first pass reads, so setting it after would be too late.
+    if (pinAt) this._guide.pinAt(pinAt);
     this._guide.start();
   }
 
@@ -787,10 +792,10 @@ class __reward_flow extends LetcBox {
    * Two outcomes, decided by whether an invitation was actually sent:
    *   sent    → Step 2 is done; the confirmation that REPLACED the panel is
    *             dismissed and the flow moves to Step 3.
-   *   closed  → the panel's own X is a Back: nothing was asked for and nothing
-   *             was given, so the flow returns to the Step 2 card, where
-   *             "Invite member" opens the popup instead. Exactly what the
-   *             card's own Back does (see reward-back).
+   *   closed  → the panel's own X is a Back, and Back from here means the
+   *             sub-step BEFORE it: Step 1's create-workspace form, re-opened
+   *             for the user (_resumeCreateForm). Exactly what the card's own
+   *             Back does (see reward-back).
    *
    * The success signal is permission_restricted's "invitation:sent" broadcast,
    * not the presence of a confirmation: a FAILED invite raises a window_info
@@ -812,10 +817,12 @@ class __reward_flow extends LetcBox {
       this._inviteSent = false;
       // Deferred a microtask for the same reason as _awaitToastDismissed: the
       // observer fires DURING the panel's removal unwind, so let that settle
-      // before rendering the next step over the same host.
+      // before rendering the next step over the same host — which the rewind
+      // below feeds the create form straight back into.
       Promise.resolve().then(() => {
         if (this.isDestroyed?.()) return;
-        this._goto(sent ? "step3" : "step2");
+        if (sent) return this._goto("step3");
+        this._resumeCreateForm();
       });
     };
     const onScreen = () =>
@@ -842,6 +849,38 @@ class __reward_flow extends LetcBox {
       this._panelObs.disconnect();
       this._panelObs = null;
     }
+  }
+
+  /**
+   * Rewind from the permission panel to the sub-step before it: Step 1's
+   * create-workspace form, back on screen.
+   *
+   * Both ways out of the panel that are not "invitation sent" land here — its
+   * own X and the card's Back — so they behave identically.
+   *
+   * The form is re-opened for the user rather than waiting for them to walk
+   * the topbar again, through the desk's own "new-workspace" service. That
+   * service does both halves of the job in one go: it clears the shared
+   * wrapper-modal, taking the panel with it when it is still there (the Back
+   * route), and feeds the create form into the same host.
+   *
+   * The guide is pinned to "form" BEFORE it starts, so the reconcile it runs
+   * on startup — in the gap where the panel has gone and the form has not yet
+   * mounted — cannot drop the walkthrough back to the Add-new button and flash
+   * a spotlight there.
+   *
+   * NOTE: the workspace created before the panel opened is left behind, on the
+   * server and in the sidebar. Only this run's memory of it is dropped
+   * (_startGuide → _resetGuideResults), so Step 3 opens whichever workspace the
+   * user creates from here.
+   */
+  _resumeCreateForm() {
+    this._stopPanelWatch();
+    this._invitePanelOpen = false;
+    this._inviteSent = false;
+    this._goto("step1_guide");
+    this._startGuide("form");
+    this.triggerHandlers({ service: "new-workspace" });
   }
 
   /**
@@ -1259,18 +1298,12 @@ class __reward_flow extends LetcBox {
           return this._goto("step1");
         }
         if (this._invitePanelOpen) {
-          // Back out of the permission panel: the workspace exists, so there is
-          // no rewinding past it — this only says "not from here". Stop
-          // watching the panel (its close must not then be read as an outcome),
-          // close it, and fall back to the plain Step 2 card, whose Invite
-          // button opens the popup instead. The panel's own X takes the same
-          // route by a different road: it closes the panel, and a close with
-          // nothing sent IS this (see _awaitPanelClosed).
-          this._stopPanelWatch();
-          this._invitePanelOpen = false;
-          this._inviteSent = false;
-          this._clearWrapperModal();
-          return this._goto("step2");
+          // Back out of the permission panel to the sub-step before it, Step 1's
+          // create form. _resumeCreateForm closes the panel on the way (the
+          // service it drives clears the host first), and the panel's own X
+          // arrives at the same place from the other side: a close with nothing
+          // sent IS this (see _awaitPanelClosed).
+          return this._resumeCreateForm();
         }
         if (this._step === "step3_guide") {
           // The Step 3 guide has no step-back (see guide-upload): Back leaves

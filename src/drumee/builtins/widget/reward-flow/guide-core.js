@@ -242,6 +242,12 @@ class GuideCore {
     }, PIN_TIMEOUT_MS);
   }
 
+  /** Public form of _pin, for when the ORCHESTRATOR is the one putting a
+   *  surface back on screen and needs the guide held there until it lands —
+   *  the same job back()'s internal pins do for its own transitions. Must be
+   *  set before start(), which reconciles as it comes up. */
+  pinAt(sub) { this._pin(sub); }
+
   _unpin() {
     this._pinned = null;
     if (this._pinTimer) {
