@@ -144,25 +144,11 @@ class drumee_router extends LetcBox {
     if (data) {
       Visitor.respawn(data);
     }
-    let { nid, hub_id, color } = Visitor.wallpaper() || {};
     require("./skin/themes/light");
     require("./skin/themes/dark");
     // Display mode (light/dark/system) — single source of truth. Applies the
     // stored preference and wires the OS listener when set to "system".
     require("./theme").initTheme();
-    return;
-    this._wallpaper = '';
-    if (color && color.primary) {
-      this.el.style.background = '';
-      this.el.style.backgroundColor = color.primary;
-    } else if (nid && hub_id) {
-      this._wallpaper = _a.image;
-      this.el.style.backgroundColor = 'transparent';
-      this.ensurePart('wallpaper').then((p) => {
-        p.feed({ nid, hub_id, kind: 'drumee_background' });
-      })
-    }
-
   }
 
   /**

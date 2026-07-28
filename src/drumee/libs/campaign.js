@@ -23,7 +23,9 @@
  */
 
 const KEY = "drumee_utm";
-const PARAMS = ["utm_source", "utm_medium", "utm_campaign"];
+// A Set: this is read as a membership test far more often than it is iterated,
+// and insertion order is preserved, so the `for ... of` below is unaffected.
+const PARAMS = new Set(["utm_source", "utm_medium", "utm_campaign"]);
 // Long enough for any real campaign name, short enough that a crafted link
 // cannot bloat localStorage.
 const MAX_LEN = 64;
@@ -116,7 +118,7 @@ function stripCampaignParams() {
   if (typeof history === "undefined" || !history.replaceState) return;
   try {
     const drop = (qs) =>
-      qs.split("&").filter((p) => p && !PARAMS.includes(p.split("=")[0])).join("&");
+      qs.split("&").filter((p) => p && !PARAMS.has(p.split("=")[0])).join("&");
 
     const hash = location.hash || "";
     const qi = hash.indexOf("?");
@@ -135,7 +137,13 @@ function stripCampaignParams() {
 
     if (nextHash === hash && nextSearch === search) return;
     history.replaceState(null, "", `${location.pathname}${nextSearch}${nextHash}`);
-  } catch (e) { /* tidying the URL must never break navigation */ }
+  } catch (e) {
+    // Recoverable, and deliberately not rethrown: this runs inside the router's
+    // boot and route, so a throw here would break navigation itself. The marker
+    // is already stored by the caller, so the only cost of failing to tidy the
+    // URL is that a later load of the same address counts as a fresh arrival.
+    console.warn("[campaign] could not strip the campaign params from the URL", e);
+  }
 }
 
 /**
@@ -177,7 +185,13 @@ function campaignArrival(consume) {
   try {
     v = sessionStorage.getItem(ARRIVAL_KEY) || "";
     if (v && consume) sessionStorage.removeItem(ARRIVAL_KEY);
-  } catch (e) { /* private mode */ }
+  } catch (e) {
+    // sessionStorage is unavailable (private mode) or the read was refused.
+    // Recovering as "no arrival" is the safe answer rather than a rethrow: the
+    // caller is a gate, and it should stay shut rather than open on a guess.
+    console.warn("[campaign] sessionStorage unreadable, treating as no arrival", e);
+    v = "";
+  }
   return v;
 }
 
