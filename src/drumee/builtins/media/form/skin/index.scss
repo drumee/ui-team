@@ -3,10 +3,11 @@
 .form-folder {
   &__ui {
     width: 360px;
-    border-radius: var(--corner-radius-4);
+    border-radius: var(--corner-radius-3);
     background-color: var(--normal-bg-90);
     box-shadow: 0px 1px 11px 0px rgba(0, 0, 0, 0.13);
     overflow: hidden;
+    border: 1px solid var(--border-default);
   }
 
   &__main {
