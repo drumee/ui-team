@@ -5,6 +5,14 @@ import PDFIUM_WASM_URL from '@embedpdf/pdfium/pdfium.wasm';
 
 let pdfiumInstance;
 
+// Upper bound on one page's RGBA bitmap, in pixels (16 MP ≈ 64 MB).
+// A maximized page on a 4K display at devicePixelRatio 2 asks for a ~7700 px
+// wide raster — tens of megapixels per page, which exhausts the wasm heap and
+// exceeds Safari's canvas area limit, so the render fails outright. Capping the
+// buffer (never the CSS size) keeps the page filling its container and costs
+// only a little sharpness on very large screens.
+const MAX_RASTER_PIXELS = 16e6;
+
 export async function initializePdfium() {
   const { init, DEFAULT_PDFIUM_WASM_URL } = await import('@embedpdf/pdfium');
   if (pdfiumInstance) return pdfiumInstance;
@@ -61,6 +69,7 @@ export async function loadPdfDocument(pdfData) {
 
   // Get page count
   const pageCount = pdfium.FPDF_GetPageCount(docPtr);
+
   // Return an object with document info and rendering capabilities
   return {
     hasPassword: false,
@@ -74,13 +83,15 @@ export async function loadPdfDocument(pdfData) {
     // Get the current page count (useful if pages are added/removed)
     getPageCount: () => pdfium.FPDF_GetPageCount(docPtr),
 
+
     // Render a specific page to a canvas
     renderPage: async (
       pageIndex,
       scale = 1.0,
       rotation = 0,
       canvas,
-      dpr = (typeof window !== 'undefined' && window.devicePixelRatio) || 1.0
+      dpr = (typeof window !== 'undefined' && window.devicePixelRatio) || 1.0,
+      fitWidth = 0
     ) => {
       // Check if the page index is valid
       if (pageIndex < 0 || pageIndex >= pageCount) {
@@ -97,8 +108,28 @@ export async function loadPdfDocument(pdfData) {
         // Get the page dimensions
         const width = pdfium.FPDF_GetPageWidthF(pagePtr);
         const height = pdfium.FPDF_GetPageHeightF(pagePtr);
-        // Calculate the scaled dimensions with device pixel ratio
-        const effectiveScale = scale * dpr;
+
+        // `fitWidth` (CSS px) asks for a page that ends up exactly that wide.
+        // Deriving the scale from THIS page's own dimensions is what makes a
+        // mixed-size document render uniformly: the caller only knows the first
+        // page's size, so a shared scale renders every differently-sized page at
+        // a different on-screen width. Rotation swaps which dimension faces the
+        // container, so measure the one that will become the displayed width.
+        const rotated = rotation === 90 || rotation === 270;
+        const naturalWidth = rotated ? height : width;
+        let cssScale = scale;
+        if (fitWidth > 0 && naturalWidth > 0) {
+          cssScale = fitWidth / naturalWidth;
+        }
+
+        // Clamp the DPR, not the CSS scale: the page must still be laid out at
+        // the requested width, it just gets rasterized at fewer device pixels.
+        let effectiveDpr = dpr;
+        const pixels = width * cssScale * height * cssScale * dpr * dpr;
+        if (pixels > MAX_RASTER_PIXELS) {
+          effectiveDpr = dpr * Math.sqrt(MAX_RASTER_PIXELS / pixels);
+        }
+        const effectiveScale = cssScale * effectiveDpr;
         let scaledWidth = Math.floor(width * effectiveScale);
         let scaledHeight = Math.floor(height * effectiveScale);
 
@@ -123,8 +154,8 @@ export async function loadPdfDocument(pdfData) {
 
         try {
           // Set canvas CSS dimensions for proper display
-          canvas.style.width = `${scaledWidth / dpr}px`;
-          canvas.style.height = `${scaledHeight / dpr}px`;
+          canvas.style.width = `${scaledWidth / effectiveDpr}px`;
+          canvas.style.height = `${scaledHeight / effectiveDpr}px`;
 
           // Set actual canvas buffer size
           canvas.width = scaledWidth;
@@ -177,8 +208,8 @@ export async function loadPdfDocument(pdfData) {
 
           // Return the dimensions adjusted for DPR
           return {
-            width: scaledWidth / dpr,
-            height: scaledHeight / dpr
+            width: scaledWidth / effectiveDpr,
+            height: scaledHeight / effectiveDpr
           };
         } finally {
           // Clean up bitmap

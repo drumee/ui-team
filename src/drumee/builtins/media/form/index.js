@@ -92,7 +92,20 @@ class __form_folder extends LetcBox {
           // Fire it (flagged personal) so listeners — e.g. the reward-flow
           // Step 1 guide — can react; this type has no follow-up permission
           // panel, so the flag tells them to finish rather than wait for one.
-          RADIO_BROADCAST.trigger("workspace:refresh", { personal: 1 });
+          // The descriptor lets listeners REOPEN this workspace later (the
+          // reward flow's Step 3 does). A personal workspace is a home-root
+          // folder, not a hub, so it takes the same shape the sidebar builds
+          // for a folder row: the user's own hub_id plus the folder's own nid.
+          // Passing a hub home_id here would reopen Home instead.
+          RADIO_BROADCAST.trigger("workspace:refresh", {
+            personal: 1,
+            workspace: {
+              hub_id: Visitor.id,
+              nid: created.nid || created.id,
+              area: _a.personal,
+              filename,
+            },
+          });
         })
         .finally(() => {
           this._pending = 0;
@@ -121,7 +134,17 @@ class __form_folder extends LetcBox {
           this._setNameError(LOCALE[hub.error] || hub.reason || hub.error);
           return;
         }
-        RADIO_BROADCAST.trigger("workspace:refresh");
+        // See the personal branch above — same descriptor, hub shape. nid is
+        // the workspace ROOT node (actual_home_id); a hub's own `nid` is the
+        // hub/0 placeholder and would not open the workspace.
+        RADIO_BROADCAST.trigger("workspace:refresh", {
+          workspace: {
+            hub_id: hub.hub_id || hub.id,
+            nid: hub.actual_home_id || hub.home_id,
+            area: hub.area || area,
+            filename,
+          },
+        });
         const closeForm = () => {
           if (this.parent && _.isFunction(this.parent.clear)) {
             return this.parent.clear();

@@ -1,74 +1,94 @@
 @use "sass:meta";
 @use "mixins/drumee";
 
+// Upload-progress card, restyled onto the folder Settings panel's base
+// (window-folder__settings-action-panel), the same base the workspace-members
+// panel was moved onto: the --normal-bg-90 surface, a pinned 65px header with a
+// --border-default divider, one scrolling body with hidden scrollbars, and rows
+// as 4px-radius tiles on --overlay-bg-05 instead of hairline-separated bands.
+//
+// Two things are deliberately NOT the base's. It stays a floating card, so it
+// keeps its fixed bottom-right placement, its rounding and its collapse
+// behaviour — the base is a full-height flush dock. And its vertical rhythm is
+// 12px where the base uses 24px: the base fills a window's height, this card is
+// 280px tall, and 48px of padding would leave barely two rows visible.
+//
+// Colors now come from the runtime tokens, so the card follows the theme. It
+// used to reach for --neutral-900 / --primary-500 / --success-500 / --error-500;
+// the last two are defined nowhere in the app (see the note that was already on
+// __progress-canceled), so those rules were silently running on their
+// hard-coded fallbacks, and the fixed --neutral-* palette does not change
+// between themes — which is why this card stayed light in dark mode.
 .window-upload-progress {
   &__ui {
     position: fixed !important;
     bottom: 130px; // Aligned with dock launcher
     right: 24px;
-    width: 330px;
+    // 360px is the base panel's measure, which is what makes its 24px side
+    // padding leave the same 312px content column.
+    width: 360px;
     min-width: 250px;
     max-width: calc(100vw - 48px);
     height: 280px;
     min-height: 64px;
-    background: var(--white, #fff);
-    border-radius: var(--corner-radius-6, 16px);
-    box-shadow: 0 4px 12px rgba(34, 39, 50, 0.12);
+    background: var(--normal-bg-90);
+    border-radius: var(--corner-radius-3);
+    border: 1px solid var(--border-default);
+    box-shadow: 0 1px 11px rgba(0, 0, 0, 0.13);
     // Must match the layer's z-index (desk/wm/skin/index.scss
     // `.upload-progress-layer`) — both read the same custom property, so the
     // fallbacks have to agree or the two disagree wherever the property is
     // unset. Above every window layer; see that file for the trade-off.
     z-index: var(--z-index-upload-progress, 50002);
     overflow: hidden;
-    border: 1px solid var(--default-border-notification, rgba(221, 223, 228, 0.5));
     transition: height 0.2s ease;
-    
+
     // Handle expand state on root element
     &[data-expanded="0"] {
       height: auto !important;
       min-height: 64px !important;
       max-height: 64px !important;
-      
+
       .window-upload-progress__body {
         display: none !important;
       }
-      
+
       .window-upload-progress__footer {
         display: none !important;
       }
-      
+
       .window-upload-progress__header {
         border-bottom: none;
       }
     }
-    
+
     &[data-expanded="1"] {
       height: 280px !important;
       min-height: 280px;
       max-height: none;
     }
   }
-  
+
   // Expand/collapse state on container
   &__container {
     &[data-expanded="0"] {
       .window-upload-progress__body {
         display: none !important;
       }
-      
+
       .window-upload-progress__footer {
         display: none !important;
       }
-      
+
       .window-upload-progress__collapse {
         transform: rotate(0deg);
       }
-      
+
       .window-upload-progress__header {
         border-bottom: none;
       }
     }
-    
+
     &[data-expanded="1"] {
       .window-upload-progress__collapse {
         transform: rotate(180deg);
@@ -81,17 +101,19 @@
     flex-direction: column;
     width: 100%;
     height: 100%;
-    background: var(--white, #fff);
+    background: var(--normal-bg-90);
   }
 
-  // Header
+  // ── Header (pinned, with divider) ─────────────────────────────
+  // Base panel's __settings-action-header geometry.
   &__header {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 16px 20px;
-    border-bottom: 1px solid var(--default-border-notification, rgba(221, 223, 228, 0.5));
-    min-height: 64px;
+    flex: 0 0 auto;
+    min-height: 65px;
+    padding: 16px 24px 17px;
+    border-bottom: 1px solid var(--border-default);
   }
 
   &__header-left {
@@ -109,68 +131,32 @@
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
-    
+
     &-svg {
       width: 32px;
       height: 32px;
-      color: var(--primary-500, #6366f1);
+      color: var(--primary-50);
     }
   }
 
+  // Base panel's __settings-action-title.
   &__title {
-    @include drumee.typo("body", "medium");
-    color: var(--neutral-900, #222732);
-    font-weight: 600;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-
-  &__collapse-wrapper {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-    cursor: pointer;
-  }
-
-  &__collapse {
-    display: flex;
-    width: auto;
-    height: auto;
-    padding: 8px;
-    justify-content: center;
-    align-items: center;
-    gap: 0;
-    border-radius: 1000px;
-    background: var(--neutral-200, #EBECF0);
-    flex-shrink: 0;
-    color: var(--neutral-400, #9ca3af);
-    transition: transform 0.2s ease, background-color 0.2s ease;
-    
-    &:hover {
-      color: var(--neutral-600, #4b5563);
-      background: var(--neutral-300, #d1d5db);
-    }
-    
-    // Icon inside button - smaller size
-    svg,
-    .icon {
-      width: 10px;
-      height: 10px;
-      padding: 0;
-      margin: 0;
-      rotate: -90deg;
-      flex-shrink: 0;
-    }
+    @include drumee.typo(
+      $size: 14px,
+      $line: 24px,
+      $weight: 600,
+      $color: var(--normal-fg-10)
+    );
+    @include drumee.overflow-text;
   }
 
   &__header-actions {
     align-items: center;
-    gap: 8px;
+    gap: 12px;
     flex-shrink: 0;
   }
 
+  &__collapse-wrapper,
   &__close-wrapper {
     align-items: center;
     justify-content: center;
@@ -178,88 +164,119 @@
     cursor: pointer;
   }
 
-  // Close (X) button — same round chip as collapse, no rotation
+  // Bare icons in the header, like the base panel's __settings-action-close —
+  // the grey round chips these sat in were the only pill-shaped controls in
+  // either panel.
+  &__collapse,
   &__close-btn {
     display: flex;
-    padding: 8px;
-    justify-content: center;
     align-items: center;
-    border-radius: 1000px;
-    background: var(--neutral-200, #EBECF0);
-    color: var(--neutral-400, #9ca3af);
+    justify-content: center;
+    width: 16px;
+    height: 16px;
+    padding: 0;
+    background: transparent;
+    color: var(--normal-fg-10);
     flex-shrink: 0;
-    transition: transform 0.1s ease, background-color 0.2s ease, color 0.2s ease;
+    transition: transform 0.2s ease, color 0.2s ease;
 
     &:hover {
-      color: var(--neutral-600, #4b5563);
-      background: var(--neutral-300, #d1d5db);
+      color: var(--normal-fg-20);
+      background: transparent;
     }
-
-    &:active { transform: scale(0.95); }
 
     svg,
     .icon {
-      width: 10px;
-      height: 10px;
+      width: 12px;
+      height: 12px;
       padding: 0;
       margin: 0;
       flex-shrink: 0;
     }
   }
 
-  // Body
+  &__collapse svg,
+  &__collapse .icon {
+    rotate: -90deg;
+  }
+
+  &__close-btn:active {
+    transform: scale(0.95);
+  }
+
+  // ── Body ──────────────────────────────────────────────────────
+  // The single scroller, per the base's __settings-action-scroll: the sections
+  // inside carry the side padding, and the scrollbar is hidden.
   &__body {
-    flex: 1;
+    flex: 1 1 auto;
+    min-height: 0;
     overflow-y: auto;
     overflow-x: hidden;
-    max-height: 400px;
+
+    scrollbar-width: none;
+
+    -ms-overflow-style: none;
+
+    &::-webkit-scrollbar {
+      display: none;
+    }
   }
 
-  &__file-list {
+  &__aggregate,
+  &__file-list,
+  &__staging-list {
+    width: 100%;
+    padding: 0 24px;
+  }
+
+  &__file-list,
+  &__staging-list {
     display: flex;
     flex-direction: column;
-    gap: 0;
-    padding: 8px 0;
+    gap: 4px;
+    padding-top: 12px;
+    padding-bottom: 12px;
   }
 
-  // File item
+  // ── File rows ─────────────────────────────────────────────────
+  // The base's __settings-action-item treatment — a tinted 4px tile — rather
+  // than full-bleed bands separated by hairlines. Height stays fixed so a queue
+  // of rows reads as one rhythm whatever the file names do.
   &__file-item {
-    padding: 8px 16px;
+    padding: 8px 12px;
     display: flex;
     flex-direction: column;
     gap: 2px;
-    border-bottom: 1px solid var(--default-border-notification, rgba(221, 223, 228, 0.3));
+    border-radius: 4px;
+    background: var(--overlay-bg-05);
+    color: var(--normal-fg-10);
     width: 100%;
     min-height: 64px;
     max-height: 64px;
     overflow: hidden;
-    
-    &:last-child {
-      border-bottom: none;
-    }
-    
+
     &[data-status="completed"] {
       cursor: pointer;
-      
+
       &:hover {
-        background-color: var(--neutral-50, #f9fafb);
+        background-color: var(--hover-bg-40);
       }
-      
+
       // Hide progress bar when completed
       .window-upload-progress__file-item-progress-wrapper {
         display: none !important;
       }
-      
+
       // Hide cancel button when completed (should already be hidden by skeleton, but ensure it)
       .window-upload-progress__file-item-cancel {
         display: none !important;
       }
     }
-    
+
     &[data-status="error"] {
       opacity: 0.6;
     }
-    
+
     &[data-status="uploading"] {
       // Hide check icon when uploading
       .window-upload-progress__file-item-check {
@@ -276,14 +293,14 @@
     min-width: 0;
     width: 100%;
     height: 40px;
-    
+
     // Ensure file info can shrink and truncate
     > :nth-child(2) {
       min-width: 0;
       flex: 1;
       overflow: hidden;
     }
-    
+
     // Ensure cancel button and checkmark align to the right
     > :last-child {
       margin-left: auto;
@@ -291,6 +308,8 @@
     }
   }
 
+  // 32px, like the base's member avatar — the other 32px round-ish glyph in
+  // that column.
   &__file-item-icon {
     display: flex;
     align-items: center;
@@ -298,13 +317,13 @@
     width: 32px;
     height: 32px;
     flex-shrink: 0;
-    color: var(--neutral-400, #9ca3af);
+    color: var(--normal-fg-20);
   }
 
   &__file-item-info {
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    gap: 2px;
     min-width: 0;
     flex: 1;
     overflow: hidden;
@@ -320,14 +339,19 @@
     overflow: hidden;
   }
 
-  &__file-item-name {
-    @include drumee.typo("body", "small");
-    color: var(--neutral-900, #222732);
-    font-weight: 600; // Bold as per design
+  // Base panel's __settings-action-member-name.
+  &__file-item-name,
+  &__progress-name,
+  &__staging-name {
+    @include drumee.typo(
+      $size: 12px,
+      $line: 18px,
+      $weight: 600,
+      $color: var(--normal-fg-10)
+    );
     display: block;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    min-width: 0;
+    @include drumee.overflow-text;
   }
 
   &__file-item-meta {
@@ -336,20 +360,24 @@
     gap: 8px;
   }
 
+  // Base panel's __settings-action-role-label — the secondary line everywhere.
+  &__file-item-separator,
+  &__file-item-speed,
+  &__file-item-size,
+  &__estimated-time,
+  &__progress-count,
+  &__progress-more,
+  &__agg-text {
+    @include drumee.typo(
+      $size: 10px,
+      $line: 14px,
+      $weight: 400,
+      $color: var(--normal-fg-20)
+    );
+  }
+
   &__file-item-separator {
-    @include drumee.typo("caption", "small");
-    color: var(--neutral-500, #6b7280);
     margin: 0 2px;
-  }
-
-  &__file-item-speed {
-    @include drumee.typo("caption", "small");
-    color: var(--neutral-500, #6b7280);
-  }
-
-  &__file-item-size {
-    @include drumee.typo("caption", "small");
-    color: var(--neutral-500, #6b7280);
   }
 
   &__file-item-actions {
@@ -361,29 +389,29 @@
     min-width: 24px;
   }
 
+  // Squared to the base's 4px, on the app's theme-aware error colour. The pill
+  // radius and the undefined --error-500 both went with the old look.
   &__file-item-cancel {
-    @include drumee.typo("body", "small");
-    color: var(--error-500, #ef4444);
+    @include drumee.typo($size: 10px, $line: 14px, $weight: 500);
+    color: var(--default-text-error);
     cursor: pointer;
-    background: rgba(239, 68, 68, 0.12) !important; // 20% tint
+    background: rgba(234, 77, 68, 0.12) !important;
     border: none !important;
-    padding: 6px 10px !important;
+    padding: 4px 8px !important;
     min-width: 0;
     height: auto;
-    line-height: 1.2;
-    border-radius: 999px !important;
+    border-radius: 4px !important;
     box-shadow: none !important;
     appearance: none;
-    font-weight: 500;
     flex-shrink: 0;
     white-space: nowrap;
-    display: inline-block;
+    display: inline-flex;
     align-items: center;
     justify-content: center;
-    transition: color 0.2s ease;
-    text-align: right;
+    transition: background-color 0.2s ease;
+    text-align: center;
 
-    // Ensure text stays centered inside pill
+    // Ensure text stays centered inside the tile
     span,
     section,
     .label {
@@ -393,32 +421,30 @@
       width: 100%;
       height: 100%;
     }
-    
+
     &:hover {
-      color: var(--error-600, #dc2626);
-      text-decoration: underline;
-    }
-    
-    &:active {
-      color: var(--error-700, #b91c1c);
+      background: rgba(234, 77, 68, 0.2) !important;
     }
   }
 
-  &__file-item-check {
+  &__file-item-check,
+  &__progress-check {
     display: inline-flex;
     align-items: center;
     justify-content: center;
     flex-shrink: 0;
     width: 20px;
     height: 20px;
-    color: var(--success-500, #10b981);
-    
+    color: var(--green-400);
+  }
+
+  &__file-item-check {
     &-svg {
       width: 20px;
       height: 20px;
       flex-shrink: 0;
       color: inherit;
-      
+
       svg {
         width: 100%;
         height: 100%;
@@ -433,25 +459,35 @@
     }
   }
 
-  // Progress bar
-  &__file-item-progress-wrapper {
+  // checked-circle is a self-coloured filled icon (green circle + cut-out tick);
+  // do NOT force fill/stroke or the tick blob-fills. Just size it.
+  &__progress-check svg {
     width: 100%;
-    margin-top: 8px;
+    height: 100%;
     display: block;
   }
 
-  &__file-item-progress-bar {
+  // ── Progress bars ─────────────────────────────────────────────
+  &__file-item-progress-wrapper {
+    width: 100%;
+    margin-top: 6px;
+    display: block;
+  }
+
+  &__file-item-progress-bar,
+  &__agg-bar {
     width: 100%;
     height: 4px;
-    background-color: var(--neutral-200, #e5e7eb);
+    background-color: var(--normal-bg-80);
     border-radius: 2px;
     overflow: hidden;
   }
 
-  &__file-item-progress-fill {
+  &__file-item-progress-fill,
+  &__agg-fill {
     height: 100%;
     width: 0%;
-    background-color: var(--primary-500, #6366f1);
+    background-color: var(--primary-50);
     border-radius: 2px;
     transition: width 0.3s ease;
     min-width: 0;
@@ -460,66 +496,65 @@
     flex: none !important;
   }
 
-  // Footer
+  // ── Footer ────────────────────────────────────────────────────
+  // Mirrors the header's divider and side padding so the card reads as one box.
   &__footer {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 12px 20px;
-    border-top: 1px solid var(--default-border-notification, rgba(221, 223, 228, 0.5));
+    flex: 0 0 auto;
+    gap: 12px;
+    padding: 12px 24px;
+    border-top: 1px solid var(--border-default);
     min-height: 48px;
-  }
-
-  &__estimated-time {
-    @include drumee.typo("caption", "small");
-    color: var(--neutral-500, #6b7280);
-  }
-
-  &__cancel-all {
-    @include drumee.typo("body", "small");
-    color: var(--error-500, #ef4444);
-    cursor: pointer;
-    background: none;
-    border: none;
-    padding: 0;
-    font-weight: 500;
-    transition: color 0.2s ease, text-decoration 0.2s ease;
-    
-    &:hover {
-      color: var(--error-600, #dc2626);
-      text-decoration: underline;
-    }
-    
-    &:active {
-      color: var(--error-700, #b91c1c);
-      transform: scale(0.98);
-    }
-  }
-
-  &__close {
-    @include drumee.typo("body", "small");
-    color: var(--primary-500, #6366f1);
-    cursor: pointer;
-    background: none;
-    border: none;
-    padding: 0;
-    font-weight: 500;
-    transition: color 0.2s ease, text-decoration 0.2s ease, transform 0.1s ease;
-    
-    &:hover {
-      color: var(--primary-600, #4f46e5);
-      text-decoration: underline;
-      transform: translateY(-1px);
-    }
-    
-    &:active {
-      color: var(--primary-700, #4338ca);
-      transform: translateY(0) scale(0.98);
-    }
   }
 
   &__footer-spacer {
     flex: 1;
+  }
+
+  // The base's __settings-action-send-button, sized down to a footer action
+  // (that one is a full-width section CTA).
+  &__close {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 8px 16px;
+    border-radius: 4px;
+    background: var(--primary-50);
+    border: none;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: background-color 0.2s ease;
+    @include drumee.typo(
+      $size: 12px,
+      $line: 16px,
+      $weight: 600,
+      $color: var(--white)
+    );
+
+    &:hover {
+      background: var(--primary-40);
+    }
+  }
+
+  &__cancel-all,
+  &__progress-retry,
+  &__staging-remove {
+    @include drumee.typo($size: 12px, $line: 16px, $weight: 500);
+    cursor: pointer;
+    background: none;
+    border: none;
+    padding: 0;
+    transition: color 0.2s ease;
+  }
+
+  &__cancel-all {
+    color: var(--default-text-error);
+
+    &:hover {
+      text-decoration: underline;
+    }
   }
 
   // ── Bundle-upload phase toggle ────────────────────────────────────────────
@@ -530,28 +565,47 @@
   &__container[data-phase="staging"]  &__file-list  { display: none; }
 
   // Staging action bar
-  &__staging-actions { gap: 8px; align-items: center; padding: 8px; }
+  &__staging-actions {
+    gap: 8px;
+    align-items: center;
+    padding: 12px 24px 0;
+  }
 
-  // Staging / progress action buttons
+  // Staging / progress action buttons — the base's item tile, as buttons.
   &__add-files,
   &__add-folder,
   &__upload-all,
   &__clear-bundle {
+    @include drumee.typo(
+      $size: 12px,
+      $line: 16px,
+      $weight: 600,
+      $color: var(--normal-fg-10)
+    );
     cursor: pointer;
-    padding: 4px 10px;
-    border-radius: 6px;
+    padding: 8px 12px;
+    border-radius: 4px;
+    background: var(--overlay-bg-05);
+    transition: background-color 0.2s ease;
+
+    &:hover {
+      background: var(--hover-bg-40);
+    }
   }
 
-  // Scrollable lists
-  &__staging-list,
-  &__file-list { max-height: 180px; overflow: auto; }
-
   // Row layout (Box.X rows — do NOT add display:flex / flex-direction)
+  // Same tile as __file-item; the body above is the only scroller, so these
+  // no longer carry a max-height of their own.
   &__staging-row,
   &__progress-row {
     justify-content: space-between;
     align-items: center;
-    padding: 2px 8px;
+    gap: 10px;
+    width: 100%;
+    padding: 8px 12px;
+    border-radius: 4px;
+    background: var(--overlay-bg-05);
+    color: var(--normal-fg-10);
   }
 
   // Folder name emphasis
@@ -559,55 +613,32 @@
 
   // Depth indentation
   &__staging-row[data-depth="1"],
-  &__progress-row[data-depth="1"] { padding-left: 20px; }
+  &__progress-row[data-depth="1"] { margin-left: 20px; }
 
   &__staging-row[data-depth="2"],
-  &__progress-row[data-depth="2"] { padding-left: 32px; }
-
-  // Aggregate progress bar
-  &__agg-bar {
-    height: 3px;
-    background: #E5E5E5;
-    border-radius: 2px;
-    overflow: hidden;
-  }
-
-  &__agg-fill {
-    height: 3px;
-    width: 0;
-    background: #FA8540;
-    transition: width .2s ease;
-  }
+  &__progress-row[data-depth="2"] { margin-left: 32px; }
 
   &__agg-text {
-    font-size: 12px;
-    opacity: .8;
-    padding: 4px 8px;
+    padding: 4px 0;
   }
 
   // Error state for progress rows
-  &__progress-row[data-status="error"] &__progress-state { color: #d33; }
+  &__progress-row[data-status="error"] &__progress-state {
+    color: var(--default-text-error);
+  }
 
   &__progress-retry {
-    cursor: pointer;
-    color: #FA8540;
-    font-size: 12px;
+    color: var(--primary-50);
     margin-left: 8px;
+
     &:hover { text-decoration: underline; }
   }
 
-  // ── Top-level bundle progress rows (Google-Drive style) ───────────────────
-  &__progress-row {
-    padding: 10px 16px;
-    gap: 10px;
-    border-bottom: 1px solid var(--default-border-notification, rgba(221, 223, 228, 0.3));
-    &:last-child { border-bottom: none; }
+  // Finished rows are clickable (focus the file/folder in the workspace).
+  &__progress-row[data-clickable="1"] {
+    cursor: pointer;
 
-    // Finished rows are clickable (focus the file/folder in the workspace).
-    &[data-clickable="1"] {
-      cursor: pointer;
-      &:hover { background: var(--neutral-50, #f9fafb); }
-    }
+    &:hover { background: var(--hover-bg-40); }
   }
 
   &__progress-left  { align-items: center; gap: 10px; min-width: 0; flex: 1; overflow: hidden; }
@@ -618,30 +649,7 @@
     align-items: center;
     justify-content: center;
     width: 24px; height: 24px; flex-shrink: 0;
-    color: var(--neutral-400, #9ca3af);
-    svg { width: 100%; height: 100%; display: block; }
-  }
-
-  &__progress-name {
-    @include drumee.typo("body", "small");
-    color: var(--neutral-900, #222732);
-    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-  }
-
-  &__progress-count {
-    @include drumee.typo("caption", "small");
-    color: var(--neutral-500, #6b7280);
-    white-space: nowrap;
-  }
-
-  &__progress-check {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 20px; height: 20px; flex-shrink: 0;
-    color: var(--success-500, #10b981);
-    // checked-circle is a self-coloured filled icon (green circle + cut-out tick);
-    // do NOT force fill/stroke or the tick blob-fills. Just size it.
+    color: var(--normal-fg-20);
     svg { width: 100%; height: 100%; display: block; }
   }
 
@@ -654,10 +662,7 @@
     align-items: center;
     justify-content: center;
     width: 20px; height: 20px; flex-shrink: 0;
-    // --default-text-error is the theme-aware error colour used elsewhere in
-    // the app; the neighbouring rules here reach for --success-500 /
-    // --neutral-200, which are not defined anywhere and silently fall back.
-    color: var(--default-text-error, #ef4444);
+    color: var(--default-text-error);
 
     svg {
       width: 100%; height: 100%; display: block;
@@ -669,23 +674,24 @@
 
   &__progress-spinner {
     width: 18px; height: 18px; flex-shrink: 0;
-    border: 2px solid var(--neutral-200, #e5e7eb);
-    border-top-color: var(--primary-500, #6366f1);
+    border: 2px solid var(--normal-bg-80);
+    border-top-color: var(--primary-50);
     border-radius: 50%;
     animation: window-upload-progress-spin 0.8s linear infinite;
   }
 
   &__progress-more {
-    @include drumee.typo("caption", "small");
-    color: var(--neutral-500, #6b7280);
-    padding: 8px 16px;
+    padding: 8px 0;
   }
 
-  // Remove button
-  &__staging-remove { cursor: pointer; opacity: .6; }
+  &__staging-remove {
+    color: var(--normal-fg-20);
+    opacity: .6;
+
+    &:hover { opacity: 1; }
+  }
 }
 
 @keyframes window-upload-progress-spin {
   to { transform: rotate(360deg); }
 }
-

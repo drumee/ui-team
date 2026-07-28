@@ -15,12 +15,9 @@
  *
  * Back steps backwards through these; see back().
  *
- * Advancement is driven by observing the live DOM, not by intercepting clicks:
- * a single MutationObserver calls _reconcile(), which reads what is actually
- * on screen and re-points the spotlight at the correct sub-step. That makes
- * every off-path case self-healing — close the dropdown and it re-guides to
- * the Add button; cancel the form and it re-guides from the top — without any
- * per-event handlers.
+ * The reconcile engine — observer, debounce, backward grace, pin, spotlight
+ * dedup, sibling greying — lives in guide-core.js. This class supplies only the
+ * selector table, the sub-step decision, and Step 1's perm phase.
  *
  * The orchestrator tells the guide when the workspace was created (via
  * RADIO_BROADCAST "workspace:refresh" → onWorkspaceCreated). From there the
@@ -28,10 +25,8 @@
  * back ui.onGuideComplete() to advance to Step 2. (A Personal workspace opens
  * no panel; the orchestrator completes that case directly and never enters the
  * perm phase.)
- *
- * All DOM work is guarded on `typeof document` so the module stays requirable
- * (and the orchestrator stays unit-testable) under Node.
  */
+const { GuideCore, hasDom, visible, firstVisible } = require("./guide-core");
 
 // Live-desk selectors. Kept here as the single source of truth for what the
 // guide reaches into — if the topbar/form markup moves, this is the one place
@@ -59,42 +54,10 @@ const SEL = {
   windowInfo: ".window-info__ui",
 };
 
-const DISABLED_CLASS = "reward-guide-disabled";
-const RECONCILE_DEBOUNCE_MS = 30;
 // Safety net for the perm phase: team/share always open a panel, but if one
 // never appears (unexpected), don't wedge the guide — complete after this.
 const PERM_TIMEOUT_MS = 2500;
-// How long Back may hold the guide on a sub-step while its surface animates in.
-const PIN_TIMEOUT_MS = 1200;
-// Sub-step order. Moving forward applies at once; moving backward waits (see
-// _reconcile) because it is nearly always just the gap between one surface
-// closing and the next opening.
 const ORDER = { add: 1, menu: 2, form: 3, perm: 4 };
-const BACKWARD_GRACE_MS = 500;
-
-function hasDom() {
-  return typeof document !== "undefined" && !!document.querySelector;
-}
-
-/**
- * Truly on screen right now. offsetParent is NOT enough: the topbar dropdown
- * renders its items at mount and merely toggles `visibility:hidden` when closed
- * (see topbar.scss `.menu-topic-items__wrapper`), which offsetParent can't see —
- * and it is also null for the position:fixed modal that hosts the form, which
- * we DO want to treat as visible. So:
- *   - getClientRects().length === 0  → display:none or detached  (not visible)
- *   - computed visibility === hidden → the closed dropdown         (not visible)
- * Everything else, including position:fixed, is visible.
- */
-function visible(el) {
-  if (!el || typeof el.getClientRects !== "function") return false;
-  if (el.getClientRects().length === 0) return false;
-  if (typeof getComputedStyle === "function") {
-    const s = getComputedStyle(el);
-    if (s && (s.visibility === "hidden" || s.display === "none")) return false;
-  }
-  return true;
-}
 
 function tooltipFor(sub) {
   switch (sub) {
@@ -105,8 +68,8 @@ function tooltipFor(sub) {
     case "form":
       return LOCALE.REWARD_FLOW_GUIDE_FORM
         || "Pick a workspace type, name it, and click Create.";
-    case "perm":
-      return LOCALE.REWARD_FLOW_GUIDE_PERM || "Close to continue";
+    // "perm" is not handled here — the perm phase goes through permText(), which
+    // picks the internal/external wording, or shows no coach at all.
     default:
       return "";
   }
@@ -114,12 +77,9 @@ function tooltipFor(sub) {
 
 /** Perm-phase instruction — one uniform line (no separate heading), specific to
  *  the branch: internal (permission_restricted) vs external (secure_share).
- *  Once a confirmation (window_info) sits on top — e.g. "The invitation was sent
- *  successfully" after inviting a member to an internal workspace — the branch
- *  advice is stale: the invite has already been sent and the panel behind is
- *  unreachable, so the only thing left to do is close the notice. */
+ *  Not consulted once a confirmation (window_info) sits on top — that card
+ *  speaks for itself, so _coachFor spotlights it with no coach at all. */
 function permText() {
-  if (firstVisible(SEL.windowInfo)) return tooltipFor("perm");
   if (firstVisible(SEL.permShare)) {
     return LOCALE.REWARD_FLOW_GUIDE_PERM_EXTERNAL
       || "Open to share externally with your clients. Close to continue";
@@ -128,34 +88,24 @@ function permText() {
     || "Add team members or Close to continue";
 }
 
-/** First matching element that is actually on screen, else null. */
-function firstVisible(selector) {
-  if (!hasDom()) return null;
-  const els = document.querySelectorAll(selector);
-  for (let i = 0; i < els.length; i++) {
-    if (visible(els[i])) return els[i];
-  }
-  return null;
-}
-
-class RewardGuide {
+class RewardGuide extends GuideCore {
   constructor(ui) {
-    this._ui = ui;              // the reward_flow orchestrator
-    this._sub = null;           // "add" | "menu" | "form" | "perm" | null
-    this._observer = null;
-    this._reconcileTimer = null;
-    this._onResize = null;
-    this._lastSig = null;       // last painted spotlight signature (dedup)
+    super(ui);
+    this.SEL = SEL;
+    this.ORDER = ORDER;
+    this.DISABLE_SUB = "menu";
+    this._resetState();
+  }
+
+  _resetState() {
     this._created = false;      // workspace created → perm phase active
     this._permSeen = false;     // the permission panel has appeared at least once
     this._infoSeen = false;     // the window_info confirmation has appeared
     this._completed = false;    // guard: onGuideComplete fired once
-    this._permTimer = null;
-    this._pinned = null;        // Back transition in flight → hold this sub-step
-    this._pinTimer = null;
-    this._backwardTimer = null; // grace before accepting a backward sub-step
-    this._reconcile = this._reconcile.bind(this);
-    this._scheduleReconcile = this._scheduleReconcile.bind(this);
+    if (this._permTimer) {
+      clearTimeout(this._permTimer);
+      this._permTimer = null;
+    }
   }
 
   /**
@@ -171,84 +121,17 @@ class RewardGuide {
     this._reconcile();
   }
 
-  /** Begin guiding. No-op (safe) when there is no DOM. */
-  start() {
-    if (!hasDom()) return;
-    if (this._observer) return; // already running
-    this._observer = new MutationObserver(this._scheduleReconcile);
-    this._observer.observe(document.body, {
-      childList: true,
-      subtree: true,
-      attributes: true,
-      attributeFilter: ["data-state", "class", "style"],
-    });
-    this._onResize = () => this._position();
-    window.addEventListener("resize", this._onResize, { passive: true });
-    this._sub = null;
-    // Fresh run (the guide instance is reused across Back → Continue): clear the
-    // perm-phase flags so a prior completion can't short-circuit this one.
-    this._created = false;
-    this._permSeen = false;
-    this._infoSeen = false;
-    this._completed = false;
-    this._reconcile();
-  }
-
-  /** Tear everything down: observer, listeners, disabled siblings, spotlight. */
-  stop() {
-    if (this._observer) {
-      this._observer.disconnect();
-      this._observer = null;
-    }
-    if (this._reconcileTimer) {
-      clearTimeout(this._reconcileTimer);
-      this._reconcileTimer = null;
-    }
-    if (this._permTimer) {
-      clearTimeout(this._permTimer);
-      this._permTimer = null;
-    }
-    if (this._onResize && typeof window !== "undefined") {
-      window.removeEventListener("resize", this._onResize);
-      this._onResize = null;
-    }
-    this._unpin();
-    this._clearBackward();
-    this._enableOthers();
-    this._sub = null;
-    this._lastSig = null;
-    this._created = false;
-    this._permSeen = false;
-    this._infoSeen = false;
-    this._clearSpot();
-  }
-
-  // ───────── reconciliation ─────────
-
-  _scheduleReconcile() {
-    if (this._reconcileTimer) return;
-    this._reconcileTimer = setTimeout(() => {
-      this._reconcileTimer = null;
-      this._reconcile();
-    }, RECONCILE_DEBOUNCE_MS);
-  }
-
   /**
-   * Read the live DOM and make the spotlight match reality. Idempotent.
-   * `force` accepts a backward move without the grace delay (used when a pinned
-   * transition has landed, or when the grace has already elapsed).
+   * Post-creation: spotlight the follow-up panel(s), complete when the user has
+   * closed the relevant one. Two panel kinds can appear:
+   *   - the permission panel (permission_restricted / secure_share)
+   *   - a window_info confirmation popped ON TOP after an action inside it
+   *     (e.g. sending an invitation), which stays until closed.
+   * The window_info takes priority: once it has been shown and then closed, the
+   * step is done — the permission panel may still be open behind it, and
+   * closing the confirmation is what advances to Step 2.
    */
-  _reconcile(force) {
-    if (!hasDom() || !this._observer) return;
-
-    // Post-creation: spotlight the follow-up panel(s), complete when the user
-    // has closed the relevant one. Two panel kinds can appear:
-    //   - the permission panel (permission_restricted / secure_share)
-    //   - a window_info confirmation popped ON TOP after an action inside it
-    //     (e.g. sending an invitation), which stays until closed.
-    // The window_info takes priority: once it has been shown and then closed,
-    // the step is done — the permission panel may still be open behind it, and
-    // the user's request is that closing the confirmation advances to Step 2.
+  _resolveSub() {
     if (this._created) {
       const info = firstVisible(SEL.windowInfo);
       const perm = firstVisible(SEL.permPanels);
@@ -261,74 +144,31 @@ class RewardGuide {
           clearTimeout(this._permTimer);
           this._permTimer = null;
         }
-        this._setSub("perm");
-        this._position();
-        return;
+        return "perm";
       }
       // Nothing visible now. Panels open a tick after their trigger, so only
       // treat "gone" as done once we have actually seen one close:
       //   - window_info was shown and dismissed  → done (panel may linger), or
       //   - the permission panel was shown and closed with no confirmation.
       if (this._infoSeen || this._permSeen) this._complete();
-      return;
+      return null;
     }
 
+    // Innermost surface wins: the form covers the dropdown, which covers the
+    // Add-new button.
+    if (visible(document.querySelector(SEL.form))) return "form";
+    if (visible(document.querySelector(SEL.wsItem))) return "menu";
+    return "add";
+  }
+
+  _pinReady() {
     const formVisible = visible(document.querySelector(SEL.form));
     const menuVisible = visible(document.querySelector(SEL.wsItem));
-
-    // A Back transition is in flight: hold this sub-step until its surface is
-    // actually on screen, so the animating gap doesn't report an earlier one.
-    if (this._pinned) {
-      const ready =
-        (this._pinned === "menu" && menuVisible) ||
-        (this._pinned === "form" && formVisible) ||
-        (this._pinned === "add" && !formVisible && !menuVisible);
-      if (!ready) return;
-      this._unpin();
-      // The pinned target is what we asked for — take it without the grace.
-      force = true;
-    }
-
-    const sub = formVisible ? "form" : menuVisible ? "menu" : "add";
-
-    // Forward moves apply at once. A backward one is nearly always the gap
-    // between one surface closing and the next opening — clicking "Workspace"
-    // shuts the dropdown a beat before the form mounts, and reconciling that
-    // instant would bounce the cutout back to the Add-new button on the way to
-    // the form. Hold it briefly instead: if the next surface shows up, that
-    // forward move lands immediately and cancels this; if nothing does, the
-    // grace elapses and we accept the backward move.
-    if (!force && ORDER[sub] < ORDER[this._sub]) {
-      this._scheduleBackward();
-      return;
-    }
-    this._clearBackward();
-    this._setSub(sub);
-    this._position();
-  }
-
-  _scheduleBackward() {
-    if (this._backwardTimer) return;
-    this._backwardTimer = setTimeout(() => {
-      this._backwardTimer = null;
-      this._reconcile(true);
-    }, BACKWARD_GRACE_MS);
-  }
-
-  _clearBackward() {
-    if (this._backwardTimer) {
-      clearTimeout(this._backwardTimer);
-      this._backwardTimer = null;
-    }
-  }
-
-  /** Switch the active sub-step, running the menu-disable side effects. */
-  _setSub(sub) {
-    if (sub === this._sub) return;
-    // Leaving "menu" for anywhere else must restore the siblings we dimmed.
-    if (this._sub === "menu") this._enableOthers();
-    this._sub = sub;
-    if (sub === "menu") this._disableOthers();
+    return (
+      (this._pinned === "menu" && menuVisible) ||
+      (this._pinned === "form" && formVisible) ||
+      (this._pinned === "add" && !formVisible && !menuVisible)
+    );
   }
 
   _targetEl() {
@@ -343,6 +183,23 @@ class RewardGuide {
       case "add": return document.querySelector(SEL.addBtn);
       default: return null;
     }
+  }
+
+  _coachFor(sub) {
+    if (sub === "perm") {
+      // The invite-sent confirmation carries its own message and Close button,
+      // so spotlight it bare: an empty text tells the orchestrator to paint the
+      // cutout without a coach, which would otherwise sit under the notice
+      // repeating it as a second, stray drumee card.
+      const bare = !!firstVisible(SEL.windowInfo);
+      // No Back in the perm phase: the workspace already exists, so retreating
+      // to the Step 1 card would be a lie. The user closes the panel to
+      // continue.
+      return { text: bare ? "" : permText(), showBack: false, showNext: false };
+    }
+    // Step 1 has no Next anywhere: every sub-step is released by the user doing
+    // the real action.
+    return { text: tooltipFor(sub), showBack: true, showNext: false };
   }
 
   /**
@@ -392,86 +249,12 @@ class RewardGuide {
     }
   }
 
-  /**
-   * Hold the guide on `sub` until that sub-step's surface actually appears.
-   * Back's transitions animate (the dropdown only becomes visible when its open
-   * animation completes), so without this the reconcile fired in the gap would
-   * report the earlier sub-step. Self-releases after PIN_TIMEOUT_MS so a
-   * surface that never shows can't wedge the guide.
-   */
-  _pin(sub) {
-    this._pinned = sub;
-    if (this._pinTimer) clearTimeout(this._pinTimer);
-    this._pinTimer = setTimeout(() => {
-      this._unpin();
-      this._reconcile();
-    }, PIN_TIMEOUT_MS);
-  }
-
-  _unpin() {
-    this._pinned = null;
-    if (this._pinTimer) {
-      clearTimeout(this._pinTimer);
-      this._pinTimer = null;
-    }
-  }
-
   /** Perm phase done (panel closed, or safety timeout) → advance to Step 2. */
   _complete() {
     if (this._completed) return;
     this._completed = true;
-    if (this._ui && typeof this._ui.onGuideComplete === "function") {
+    if (typeof this._ui?.onGuideComplete === "function") {
       this._ui.onGuideComplete();
-    }
-  }
-
-  /** Measure the current sub-step's target and paint the spotlight + tooltip.
-   *  Deduped: the body-wide observer fires on unrelated desk activity (chat,
-   *  badges), so only actually repaint when the target's position/size or the
-   *  sub-step changed — otherwise the coach tooltip flickers on every mutation. */
-  _position() {
-    if (!hasDom() || !this._sub) return;
-    const el = this._targetEl();
-    if (!visible(el)) return;
-    const rect = el.getBoundingClientRect();
-    if (!rect.width || !rect.height) return;
-    const sig = [
-      this._sub,
-      Math.round(rect.left), Math.round(rect.top),
-      Math.round(rect.width), Math.round(rect.height),
-    ].join(":");
-    if (sig === this._lastSig) return;
-    this._lastSig = sig;
-    // Mirror the target's own rounding so the cutout hugs it instead of
-    // overshooting rounded corners with square ones.
-    const radius =
-      (typeof getComputedStyle === "function" &&
-        getComputedStyle(el).borderRadius) || "";
-    // No Back in the perm phase: the workspace already exists, so retreating to
-    // the Step 1 card would be a lie. The user closes the panel to continue.
-    const text = this._sub === "perm" ? permText() : tooltipFor(this._sub);
-    this._ui.spotlight(rect, text, this._sub !== "perm", radius);
-  }
-
-  // ───────── foreign-DOM sibling disabling ─────────
-
-  _disableOthers() {
-    if (!hasDom()) return;
-    document.querySelectorAll(SEL.otherItems).forEach((el) => {
-      el.classList.add(DISABLED_CLASS);
-    });
-  }
-
-  _enableOthers() {
-    if (!hasDom()) return;
-    document.querySelectorAll("." + DISABLED_CLASS).forEach((el) => {
-      el.classList.remove(DISABLED_CLASS);
-    });
-  }
-
-  _clearSpot() {
-    if (this._ui && typeof this._ui.clearSpotlight === "function") {
-      this._ui.clearSpotlight();
     }
   }
 }

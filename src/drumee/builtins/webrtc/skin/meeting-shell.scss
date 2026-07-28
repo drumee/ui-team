@@ -13,6 +13,34 @@
 @use "builtins/webrtc/skin/remote" as *;
 @use "mixins/drumee";
 
+// Chat + Participants fold into the "more" overflow menu.
+//
+// The "more" trigger must appear if and ONLY if those two are hidden, so the
+// hide and the show live in one block rather than two rules kept in step by
+// hand. Two different breakpoints include this — window width (data-narrow)
+// and stage width (@container meeting-stage, which shrinks when the 420px chat
+// panel opens) — and neither can drift from the other.
+//
+// !important on every declaration, for the same reason the host-label hide
+// further down needs it: ui-styles/container.css ships
+// `.drumee-widget[data-flow=y] { display: flex }` (and the -box/-flow=x twin) at
+// specificity 0,2,0. The chat wrap is a Box.X and the "more" trigger is a
+// menu.topic carrying `flow: y`, so BOTH match it. Without !important the
+// @container call site — which can only reach 0,2,0, since @container adds no
+// specificity — merely ties with the framework rule and is decided by stylesheet
+// order. Do not "clean these up".
+@mixin meeting-overflow-fold($pfx) {
+  .#{$pfx}__in-topbar-chat-wrap,
+  .#{$pfx}__ctrl-btn.people,
+  .#{$pfx}__in-topbar-divider {
+    display: none !important;
+  }
+
+  .#{$pfx}__more-menu {
+    display: flex !important;
+  }
+}
+
 @mixin meeting-shell($chat: true, $pfx: "window-meeting") {
   @include webrtc-ui;
   @include webrtc-topbar;
@@ -430,7 +458,12 @@
   // responsive(); the window can be small on a large viewport so @media can't
   // catch it). Google-Meet-style graceful shrink. ──────────────────────────
   @if $chat {
-  &__ui[data-narrow="1"] &__chat-panel {
+  // data-panel-overlay is set below CHAT_AUTO_CLOSE_W (950px) in
+  // window/meeting/index.js responsive() — a strict superset of data-narrow
+  // (640px). The panel auto-collapses at that same width, so this styles the
+  // case where the user opens it BY HAND on a small window: full-bleed overlay
+  // rather than a 420px column that would leave the stage a sliver.
+  &__ui[data-panel-overlay="1"] &__chat-panel {
     // Side panel becomes a full-width overlay instead of a fixed 340px column
     // that crushes the video stage.
     position: absolute;
@@ -450,14 +483,12 @@
   }
   }
 
-  // Narrow window: drop the secondary reactions/fullscreen buttons so the
-  // primary controls (hand, chat, people, camera, mic, screen, leave) fit.
+  // Narrow window: fold chat + people into the "more" overflow menu so the
+  // primary controls (hand, reactions, fullscreen, camera, mic, screen, leave)
+  // still fit. Reactions and fullscreen stay in the bar; only the two controls
+  // the overflow menu can stand in for are dropped.
   &__ui[data-narrow="1"] {
-    .#{$pfx}__reactions-menu,
-    .#{$pfx}__resize-menu,
-    .#{$pfx}__in-topbar-divider {
-      display: none;
-    }
+    @include meeting-overflow-fold($pfx);
   }
 
   &__ui[data-compact="1"] {
@@ -698,16 +729,17 @@
     }
   }
 
-  // Stage column squeezed: drop the secondary buttons first, then collapse the
-  // leave button to icon-only. NB: `meeting-stage` is the stage column ALONE
-  // (the 420px chat panel is a flex sibling outside it), so this width is the
-  // space left AFTER the panel — keep the threshold low enough that simply
-  // opening the panel doesn't hide reactions on a normal-width window.
+  // Stage column squeezed: same fold, measured on the stage instead of the
+  // window. NB: `meeting-stage` is the stage column ALONE (the 420px chat panel
+  // is a flex sibling outside it), so this width is the space left AFTER the
+  // panel — a wide window with the panel open lands here.
+  //
+  // The &__ui nesting is load-bearing, not cosmetic: it supplies the specificity
+  // the mixin's single-class selectors need to beat the base rule (see the
+  // mixin's own note).
   @container meeting-stage (max-width: 480px) {
-    &__reactions-menu,
-    &__resize-menu,
-    &__in-topbar-divider {
-      display: none;
+    &__ui {
+      @include meeting-overflow-fold($pfx);
     }
   }
 
@@ -876,12 +908,14 @@
     animation: window-meeting-party-toast 4s ease-out forwards;
   }
 
-  // Narrow layout turns the chat/people panel into a full-width overlay at
+  // Overlay layout turns the chat/people panel into a full-width overlay at
   // z:140 — far below this layer, so a toast would float over the conversation.
   // Suppress while it is open (wide layout keeps the panel in its own column,
-  // clear of the bottom-left corner, so toasts stay).
+  // clear of the bottom-left corner, so toasts stay). Tracks data-panel-overlay
+  // rather than data-narrow so it covers the whole overlay range, not just
+  // below 640.
   @if $chat {
-    &__ui[data-narrow="1"] &__chat-panel[data-open="1"] ~ &__party-toasts {
+    &__ui[data-panel-overlay="1"] &__chat-panel[data-open="1"] ~ &__party-toasts {
       display: none;
     }
 
@@ -1000,6 +1034,75 @@
   }
 
   &__resize-item {
+    display: flex;
+    box-sizing: border-box;
+    align-items: center;
+    gap: 8px;
+    padding: 8px;
+    border-radius: 8px;
+    cursor: pointer;
+    color: var(--primary-purple-100, #0b0a21);
+    transition: background 0.12s ease;
+
+    svg {
+      width: 17px;
+      height: 17px;
+      flex-shrink: 0;
+      fill: currentColor;
+    }
+
+    .note-content {
+      @include drumee.typo(
+        $size: 12px,
+        $line: 17px,
+        $weight: 400,
+        $color: #0b0a21
+      );
+      white-space: nowrap;
+
+      section {
+        white-space: nowrap;
+      }
+    }
+
+    &:hover {
+      background: rgba(0, 0, 0, 0.05);
+    }
+  }
+
+  // ── "More" overflow dropdown ───────────────────────────────────────────
+  // Hidden in the wide bar (chat + people are shown directly there); the
+  // data-narrow rule above flips it to flex at the same breakpoint that hides
+  // them, so exactly one of the two presentations is ever visible.
+  &__more-menu {
+    // !important: this is a menu.topic with `flow: y`, so it renders as
+    // .drumee-widget[data-flow="y"], which container.css gives display:flex at
+    // 0,2,0 — a plain single-class hide (0,1,0) loses and the trigger would sit
+    // in the wide bar alongside the chat + people buttons it exists to replace.
+    display: none !important;
+    position: relative;
+    flex-shrink: 0;
+
+    .menu-topic-trigger {
+      display: flex;
+      align-items: center;
+    }
+
+    .menu-topic-items {
+      background: #ffffff;
+      border-radius: 8px;
+      box-shadow: 0 1px 11px rgba(0, 0, 0, 0.13);
+      z-index: 300;
+    }
+  }
+
+  &__more-items {
+    width: 180px;
+    padding: 12px;
+    gap: 0;
+  }
+
+  &__more-item {
     display: flex;
     box-sizing: border-box;
     align-items: center;
@@ -1827,6 +1930,30 @@
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+  }
+
+  // Responsive title. The bar already tightens at these same stage widths
+  // (padding/gap at 700, controls folding into "more" at 480), so the title —
+  // the one element that can yield space without losing a control — gives way
+  // in step with them rather than on a breakpoint of its own.
+  //
+  // Both rules repeat the base selector so they stay at its 0,2,0 specificity
+  // and win on source order alone; they MUST stay below the base rule. Nesting
+  // them inside the existing 700/480 blocks higher up the file would put them
+  // ahead of it and they would silently lose.
+  @container meeting-stage (max-width: 700px) {
+    &__in-topbar-brand &__in-topbar-title {
+      max-width: 60px;
+    }
+  }
+
+  // Smallest stage: the control cluster needs every pixel, and the brand logo
+  // still identifies the window, so drop the title text entirely. Kept in the
+  // DOM (display, not removal) — ensurePart("call-title") still resolves.
+  @container meeting-stage (max-width: 480px) {
+    &__in-topbar-brand &__in-topbar-title {
+      display: none;
+    }
   }
 
   // The Figma bar shows only the title + controls: hide the wired-but-unshown

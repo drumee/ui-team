@@ -320,6 +320,13 @@ class __window_folder extends mfsInteract {
   initialize(opt) {
     this.isFolder = 1;
     super.initialize(opt);
+    // `data-visible` is derived from privilege. Keep it in sync even when a
+    // caller updates the model outside the explicit navigation/live-role paths.
+    this.listenTo(
+      this.model,
+      `change:${_a.privilege}`,
+      this.syncNewCtrlVisibility,
+    );
     // Bind uploadFile for the meeting description's inline image paste/drop
     // (mfsInteract doesn't provide it — same pattern as the tasks widget).
     if (!this.uploadFile) {
@@ -485,6 +492,13 @@ class __window_folder extends mfsInteract {
       this._launchMeetingStandalone();
     } else if (initialTab && initialTab !== "files") {
       this.ensurePart("folder-view").then(() => this.showFolderTab(initialTab));
+    }
+    // Launched by "Link to task tracker" from outside a folder window. Consumed
+    // once, so a later remount doesn't reopen the draft out of the blue.
+    const taskFiles = this.mget("link_task_files");
+    if (taskFiles && taskFiles.length) {
+      this.mset("link_task_files", null);
+      this.ensurePart("folder-view").then(() => this.linkFilesToTask(taskFiles));
     }
     // Gate the chat panel to the viewer's current role on open (a view-only
     // member sees the "need permission" info card instead of the conversation);
@@ -3081,6 +3095,11 @@ class __window_folder extends mfsInteract {
   // data-thread="open" → 3-column grid), and hydrate the header with the file's
   // real name + vignette. The middle #General chat is untouched.
   _openFileThreadPanel(fileNid, fileLabel, replyData) {
+    // No chat access → no thread to open. Feeding the panel would mount a chat
+    // widget that fetches and renders the conversation behind the CSS gate.
+    if (!this._privilegeGrantsChat(this.mget(_a.privilege))) {
+      return Promise.resolve();
+    }
     const nid = `${fileNid}`;
     return this.ensurePart("file-thread-panel").then((panel) => {
       if (!panel || !panel.el || (panel.isDestroyed && panel.isDestroyed()))
@@ -3232,6 +3251,13 @@ class __window_folder extends mfsInteract {
   // (_populateThreadRail). Resolves to a plain item array; never rejects (a
   // failed/absent fetch yields [] so callers still render General + Download).
   _fetchThreadList() {
+    // A member without chat access must not read the thread list. The CSS gate
+    // only obscures it; not asking for it in the first place is what keeps the
+    // filenames off their screen (they are conversation content too, and some
+    // are named after things the member cannot otherwise see).
+    if (!this._privilegeGrantsChat(this.mget(_a.privilege))) {
+      return Promise.resolve([]);
+    }
     const hub_id = this.mget(_a.actual_hub_id) || this.mget(_a.hub_id);
     const folder_nid = this.mget(_a.nid);
     const svc =
@@ -3372,6 +3398,30 @@ class __window_folder extends mfsInteract {
     });
   }
 
+  // "Organize → Link to task tracker" on one or more files: show the Task tab
+  // and open a new task draft with those files already attached. Mirrors
+  // openTaskDeepLink — showFolderTab returns early when the tab is already
+  // active, so the scope has to be re-asserted for the mounted case.
+  linkFilesToTask(nodes) {
+    const files = (Array.isArray(nodes) ? nodes : [nodes]).filter(Boolean);
+    if (!files.length) return;
+    const mounted = this._taskPanelMounted;
+    const shown = this.showFolderTab(_a.task);
+    if (mounted) this.scopeTasksToFolder();
+    return Promise.resolve(shown)
+      .then(() => this._taskPanel || this.ensurePart("folder-task-panel"))
+      .then((p) => {
+        this._taskPanel = p;
+        if (
+          p &&
+          !(p.isDestroyed && p.isDestroyed()) &&
+          _.isFunction(p.openTaskWithFiles)
+        ) {
+          p.openTaskWithFiles(files);
+        }
+      });
+  }
+
   // Deep link from a task mention/assignment notification on a window that is
   // ALREADY open: show the Task tab and open that task's detail. The mount-time
   // `open_task_id` (read in the tasks panel's initialize) only ever fires on a
@@ -3444,7 +3494,10 @@ class __window_folder extends mfsInteract {
   }
 
   showFolderTab(tab) {
-    if (this.activeTab === tab) return;
+    if (this.activeTab === tab) {
+      this.syncNewCtrlVisibility();
+      return;
+    }
     const prevTab = this.activeTab;
     this.activeTab = tab;
     this.$el.find(".window-folder__tab-bar-item").attr("data-state", 0);
@@ -3874,8 +3927,12 @@ class __window_folder extends mfsInteract {
     if (privilege == null) return;
     // A user may have several workspace windows open — only react to our own.
     if (hub_id && hub_id !== this.mget(_a.hub_id)) return;
-    // No-op when unchanged: avoids a needless topbar flicker.
-    if (Number(this.mget(_a.privilege)) === Number(privilege)) return;
+    // A repeated payload should not rebuild the topbar, but it can still repair
+    // derived chrome left stale by an earlier lifecycle transition.
+    if (Number(this.mget(_a.privilege)) === Number(privilege)) {
+      this.syncNewCtrlVisibility();
+      return;
+    }
     this.mset(_a.privilege, Number(privilege));
     // Re-feed the header (not the topbar container) so the header element and
     // its drag/raise wiring survive; only the topbar child rebuilds with the
@@ -3893,6 +3950,15 @@ class __window_folder extends mfsInteract {
       .then(() => { this._suppressRaise = 0; });
     this.refreshBreadcrumbsUI();
     this._syncChatGate();
+    // Losing chat access with a thread already open leaves its conversation
+    // mounted behind the gate — tear it down (feed [] unbinds the widget's WS,
+    // so no new messages arrive either) and drop the rail's cached rows so a
+    // re-render cannot repaint the thread list from memory.
+    if (!this._privilegeGrantsChat(this.mget(_a.privilege))) {
+      this._closeFileThreadPanel();
+      this._threadRailItems = [];
+      this._populateThreadRail();
+    }
     // The [+ New] button lives on the tab bar, NOT in the topbar re-fed above,
     // so the re-feed does not reach it. Sync it explicitly, or an admin's
     // demotion leaves a working create/upload menu on a view-only member's
@@ -3918,7 +3984,16 @@ class __window_folder extends mfsInteract {
     const gated = this._privilegeGrantsChat(this.mget(_a.privilege)) ? 0 : 1;
     // Attribute is data-chat_gated (underscore): the skeleton sets it via
     // dataset:{chat_gated}, which the framework renders literally as data-${k}.
-    this.$el.find(".window__chat-panel").attr("data-chat_gated", gated);
+    //
+    // The thread rail and the file-thread side panel are SIBLINGS of the chat
+    // panel in the Chat-tab grid (their own columns), not descendants — gating
+    // only .window__chat-panel left a downgraded member able to read the file
+    // thread list and, on opening one, its whole conversation. Flag all three.
+    this.$el
+      .find(
+        ".window__chat-panel, .window__file-thread-panel, .window__thread-rail",
+      )
+      .attr("data-chat_gated", gated);
   }
 
   // Gate the merged "+ New" button (upload / create / gdrive-import) on BOTH
@@ -3932,6 +4007,7 @@ class __window_folder extends mfsInteract {
   //   - open             → onPartReady("new-ctrl")
   //   - opened w/o a priv → _healChatPrivilege, once the real value resolves
   //   - tab switch       → showFolderTab
+  //   - model priv change → initialize's change:privilege listener
   //   - live role change → _applyLivePrivilege (admin changed our role)
   //   - walk in          → updateTopbar (a subfolder may grant other rights)
   //   - walk back        → _restoreNavState (so may an ancestor)
@@ -3944,7 +4020,17 @@ class __window_folder extends mfsInteract {
     const onFiles = (this.activeTab || "files") === "files";
     // canUpload() returns the masked bitmask (truthy number), not a boolean.
     const mayCreate = !!(this.canUpload && this.canUpload());
-    newCtrl.el.dataset.visible = onFiles && mayCreate ? "1" : "0";
+    const visible = onFiles && mayCreate ? 1 : 0;
+
+    // ui-core registers sys_pn parts during onBeforeRender, before its onRender
+    // reapplies the skeleton's original dataset. Persist the derived value on
+    // the part model as well as the element, otherwise first mount is reset to
+    // the safe skeleton default (0) immediately after this callback returns.
+    const dataset = (newCtrl.mget && newCtrl.mget(_a.dataset)) || {};
+    if (newCtrl.mset) {
+      newCtrl.mset(_a.dataset, { ...dataset, visible });
+    }
+    newCtrl.el.dataset.visible = `${visible}`;
   }
 
   // Resolve the viewer's real privilege for this node when the window opened

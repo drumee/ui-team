@@ -989,13 +989,18 @@ const make = function (ui) {
     });
 
     // Comments: flat feed (a re-feedable part) + an @-mention composer.
-    // Activity header: title + All / Comments / History tabs. Tabs are
-    // visual-only for now (no history backend) — "All" reads as active and the
-    // comment feed below is the populated content.
-    const activityTab = (label, active, icon) =>
+    // Activity header: title + All / Comments / History tabs, which re-feed the
+    // list part below.
+    const currentTab = ui.getActivityTab ? ui.getActivityTab() : "all";
+    const activityTab = (tab, label, icon) =>
       Skeletons.Box.X({
         className: `${pfx}__activity-tab`,
-        dataset: { active: active ? 1 : 0 },
+        // dataset alone is dropped at render — attrOpt carries the initial value.
+        attrOpt: { "data-active": tab === currentTab ? "1" : "0", "data-tab": tab },
+        bubble: 0,
+        service: "activity-tab",
+        activityTab: tab,
+        uiHandler: [ui],
         kids: [
           icon
             ? Skeletons.Image.Svg({
@@ -1023,9 +1028,9 @@ const make = function (ui) {
             Skeletons.Box.X({
               className: `${pfx}__activity-tabs`,
               kids: [
-                activityTab(LOCALE.ALL, true),
-                activityTab(LOCALE.COMMENTS, false, "message"),
-                activityTab(LOCALE.HISTORY, false, "apps-clock"),
+                activityTab("all", LOCALE.ALL),
+                activityTab("comments", LOCALE.COMMENTS, "message"),
+                activityTab("history", LOCALE.HISTORY, "apps-clock"),
               ],
             }),
           ],
@@ -1072,8 +1077,9 @@ const make = function (ui) {
       ],
     });
 
-    // Footer: a Cancel link (closes the panel, discarding edits) beside the
-    // primary Update button. The header X mirrors Cancel.
+    // Footer: Cancel (closes the panel, discarding edits) beside the primary
+    // Update; the header X mirrors Cancel. Sits as the panel's last row, not in
+    // the metadata column — there it scrolled away with the fields.
     const actions = Skeletons.Box.X({
       className: `${pfx}__detail-actions`,
       kids: [
@@ -1170,11 +1176,11 @@ const make = function (ui) {
                     assigneeRow,
                     reporterRow,
                     dueRow,
-                    actions,
                   ].filter(Boolean),
                 }),
               ],
             }),
+            actions,
             dropOverlay(ui),
             // Floating full emoji picker for the comment "…" more button, fed
             // on demand (assets/emojis) and positioned below the react bar —
@@ -2086,8 +2092,62 @@ function mentionField(ui, scope, opt = {}) {
         },
       }),
       mentionDropdown(ui, scope),
+      linkPrompt(ui, scope),
     ],
   });
+}
+
+// Ctrl+K target: an empty caret-anchored shell, filled and positioned by the
+// panel (_openLinkPrompt) exactly like the mention dropdown above it.
+function linkPrompt(ui, scope) {
+  const pfx = ui.fig.family;
+  return Skeletons.Box.Y({
+    className: `${pfx}__link-prompt`,
+    sys_pn: `${scope}-link`,
+    partHandler: ui,
+    // dataset is dropped at render unless attrOpt is also set — use attrOpt.
+    attrOpt: { "data-open": "0" },
+    bubble: 0,
+    kids: [],
+  });
+}
+
+// Body of the link prompt. The panel wires the input and the buttons natively
+// (data-act), so no service round-trip while the caret is parked in the
+// editor. "Remove" only appears when the caret sits in an existing link.
+function buildLinkPromptContent(ui, opt = {}) {
+  const pfx = ui.fig.family;
+  const btn = (act, label, mod) =>
+    Skeletons.Note({
+      className: `${pfx}__link-prompt-btn${mod ? ` ${pfx}__link-prompt-btn--${mod}` : ""}`,
+      content: label,
+      attrOpt: { "data-act": act },
+      bubble: 0,
+    });
+  return [
+    // A bare <input>, not Skeletons.Entry: the panel wires this element the
+    // instant feed() returns, and Entry builds its input in its own render
+    // pass — plus its Enter/commit handling would race the prompt's own.
+    Skeletons.Element({
+      tagName: "input",
+      className: `${pfx}__link-prompt-input`,
+      flow: "none",
+      attrOpt: {
+        type: "url",
+        spellcheck: "false",
+        placeholder: LOCALE.TASK_LINK_PLACEHOLDER,
+        value: opt.url || "",
+      },
+    }),
+    Skeletons.Box.X({
+      className: `${pfx}__link-prompt-actions`,
+      kids: [
+        opt.url ? btn("remove", LOCALE.REMOVE) : null,
+        btn("cancel", LOCALE.CANCEL),
+        btn("apply", LOCALE.APPLY, "primary"),
+      ].filter(Boolean),
+    }),
+  ];
 }
 
 function commentTimeAgo(ts) {
@@ -2130,12 +2190,16 @@ function groupReactions(reactions) {
 
 function buildCommentListContent(ui) {
   const pfx = ui.fig.family;
-  const comments = ui.getComments() || [];
-  if (!comments.length) {
+  // Activity tab: "comments" hides the change log, "history" hides the comment
+  // threads, "all" interleaves both by time.
+  const tab = ui.getActivityTab ? ui.getActivityTab() : "all";
+  const comments = tab === "history" ? [] : ui.getComments() || [];
+  const history = tab === "comments" ? [] : ui.getTaskHistory() || [];
+  if (!comments.length && !history.length) {
     return [
       Skeletons.Note({
         className: `${pfx}__comments-empty`,
-        content: LOCALE.NO_COMMENTS,
+        content: tab === "history" ? LOCALE.TASK_NO_HISTORY : LOCALE.NO_COMMENTS,
       }),
     ];
   }
@@ -2339,6 +2403,10 @@ function buildCommentListContent(ui) {
               tagName: "div",
               className: `${pfx}__comment-body`,
               flow: "none",
+              // Let the browser's own menu open on a comment — otherwise the
+              // engine hands contextmenu to the nearest ancestor offering one,
+              // taking "Copy link address" off a link in the body.
+              escapeContextmenu: 1,
               attrOpt: { "data-comment-id": c.id },
             }),
             // Reaction chips + action icons share one horizontal footer row.
@@ -2429,10 +2497,57 @@ function buildCommentListContent(ui) {
       ].filter(Boolean),
     });
 
+  // One change-log line: who, what, when. Project Health names the task after
+  // the verb; here that is redundant, so the two verbs that read as a fragment
+  // without it use their standalone form.
+  const verbs = {
+    create: LOCALE.TASK_ACT_CREATE,
+    update: LOCALE.TASK_ACT_UPDATE,
+    status: LOCALE.TASK_ACT_STATUS,
+    complete: LOCALE.TASK_ACT_COMPLETE,
+    assignee: LOCALE.TASK_ACT_ASSIGNEE,
+    link_file: LOCALE.TASK_ACT_LINKED_FILES,
+    comment: LOCALE.TASK_ACT_COMMENTED,
+  };
+  const historyBlock = (r) => {
+    const m = ui.getMember(r.actor_uid) || {};
+    return Skeletons.Box.X({
+      className: `${pfx}__history-row`,
+      kids: [
+        Skeletons.UserProfile({
+          className: `${pfx}__history-avatar`,
+          id: r.actor_uid,
+          firstname: m.firstname,
+          lastname: m.lastname,
+          auto_color: 1,
+          live_status: 0,
+        }),
+        Skeletons.Box.X({
+          className: `${pfx}__history-text`,
+          kids: [
+            Skeletons.Note({
+              className: `${pfx}__history-actor`,
+              content: fullName(m) || r.actor_uid,
+            }),
+            Skeletons.Note({
+              className: `${pfx}__history-verb`,
+              content: verbs[r.action] || verbs.update,
+            }),
+          ],
+        }),
+        Skeletons.Note({
+          className: `${pfx}__history-time`,
+          content: commentTimeAgo(r.ctime),
+        }),
+      ],
+    });
+  };
+
   // Each root + its replies (+ the open composer) form one thread group. The
   // replies live in their own container so a continuous vertical spine (the
   // container's left border, styled in the skin) can connect them to the root,
-  // with a curved elbow branching into each reply.
+  // with a curved elbow branching into each reply. Timestamped so threads and
+  // change-log lines can be merged in order.
   const out = [];
   roots.forEach((root) => {
     const showComposer = replyingToRootId === String(root.id);
@@ -2458,15 +2573,20 @@ function buildCommentListContent(ui) {
         }),
       );
     }
-    out.push(
-      Skeletons.Box.Y({
+    out.push({
+      ts: Number(root.ctime) || 0,
+      node: Skeletons.Box.Y({
         className: `${pfx}__comment-thread`,
         attrOpt: { "data-has-replies": replyKids.length ? "1" : "0" },
         kids: threadKids,
       }),
-    );
+    });
   });
-  return out;
+  history.forEach((r) =>
+    out.push({ ts: Number(r.ctime) || 0, node: historyBlock(r) }),
+  );
+  // Oldest first: comments arrive ASC, the activity proc newest-first.
+  return out.sort((a, b) => a.ts - b.ts).map((e) => e.node);
 }
 
 function buildMentionItemsContent(ui, members) {
@@ -2824,6 +2944,7 @@ make.buildFileSearchDropdownContent = buildFileSearchDropdownContent;
 make.buildAssigneeChips = buildAssigneeChips;
 make.buildAssigneeSuggestions = buildAssigneeSuggestions;
 make.buildMentionItemsContent = buildMentionItemsContent;
+make.buildLinkPromptContent = buildLinkPromptContent;
 make.buildCommentListContent = buildCommentListContent;
 make.buildPendingListContent = buildPendingListContent;
 make.buildAttachmentRowsContent = buildAttachmentRowsContent;

@@ -19,6 +19,7 @@ require("builtins/contextmenu/skin/index.scss");
 require("./skin");
 
 const { getModule, moduleName } = require('./modules');
+const { captureCampaignArrival } = require('libs/campaign');
 
 class drumee_router extends LetcBox {
   constructor(...args) {
@@ -41,6 +42,10 @@ class drumee_router extends LetcBox {
     this._origin = {};
     this._mainBarreShown = false;
     this.declareHandlers();
+    // Cold arrival on a campaign link. Recorded before ANY module resolves: the
+    // signin plugin replaces the hash wholesale with "#/welcome/signin", so the
+    // markers are gone by the time a module could look for them.
+    captureCampaignArrival();
     localStorage.main_domain = bootstrap().main_domain;
     this._buffer = [];
     this._loaded = {
@@ -139,25 +144,11 @@ class drumee_router extends LetcBox {
     if (data) {
       Visitor.respawn(data);
     }
-    let { nid, hub_id, color } = Visitor.wallpaper() || {};
     require("./skin/themes/light");
     require("./skin/themes/dark");
     // Display mode (light/dark/system) — single source of truth. Applies the
     // stored preference and wires the OS listener when set to "system".
     require("./theme").initTheme();
-    return;
-    this._wallpaper = '';
-    if (color && color.primary) {
-      this.el.style.background = '';
-      this.el.style.backgroundColor = color.primary;
-    } else if (nid && hub_id) {
-      this._wallpaper = _a.image;
-      this.el.style.backgroundColor = 'transparent';
-      this.ensurePart('wallpaper').then((p) => {
-        p.feed({ nid, hub_id, kind: 'drumee_background' });
-      })
-    }
-
   }
 
   /**
@@ -381,6 +372,12 @@ class drumee_router extends LetcBox {
    * 
    */
   route() {
+    // Warm arrival: clicking the CTA in a tab that already has the app running
+    // is a same-document navigation, so only hashchange fires and initialize()
+    // never runs again. Capturing at boot alone missed that entirely — which is
+    // the usual case, since the recipient is normally already on a Drumee page.
+    // A no-op when the URL carries no campaign params.
+    captureCampaignArrival();
     let page = /^\/.*(.+)\.htm?/;
     if (page.test(location.pathname) || page.test(Host.get(_a.homepage))) {
       this.loadBootstrap();

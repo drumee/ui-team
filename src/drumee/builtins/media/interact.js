@@ -692,8 +692,7 @@ class __media_interact extends media_core {
         return this.warn("move handler not implemented for this media");
 
       case "link-to-task-tracker":
-        // Reserved for B.4 task tracker integration.
-        return this.warn("link-to-task-tracker not yet implemented");
+        return this.linkToTaskTracker();
 
       case _a.duplicate:
         let opt = {
@@ -1042,6 +1041,59 @@ class __media_interact extends media_core {
         uiHandler: [this],
       });
     });
+  }
+
+  /**
+   * "Organize → Link to task tracker": open the Task tab of the folder window
+   * holding these files and start a new task with them already attached.
+   * Acts on the whole selection when there is one, like Move does.
+   */
+  linkToTaskTracker() {
+    const selected = (Wm.getGlobalSelection && Wm.getGlobalSelection()) || [];
+    const picked = selected.length ? selected : [this];
+    // Plain attributes, not widgets: rows can re-render while the Task tab
+    // mounts, and a launch payload must not carry widget references. Just the
+    // fields the panel reads. Hubs/folders aren't attachable.
+    const nodes = picked
+      .filter((n) => n && !n.isHubOrFolder && typeof n.mget === "function")
+      .map((n) => ({
+        nid: n.mget(_a.nid),
+        hub_id: n.mget(_a.hub_id),
+        filename: n.mget(_a.filename),
+        extension: n.mget(_a.extension),
+        filetype: n.mget(_a.filetype),
+        mimetype: n.mget(_a.mimetype),
+        capability: n.mget("capability"),
+        metadata: n.mget("metadata"),
+      }))
+      .filter((a) => a.nid);
+    if (!nodes.length) return;
+
+    const host = this.getParentByKind && this.getParentByKind("window_folder");
+    if (host && typeof host.linkFilesToTask === "function") {
+      return host.linkFilesToTask(nodes);
+    }
+    // Browsed outside a folder window (desk grid, search results): raise the
+    // window on the holding folder, or launch it carrying the files.
+    const hub_id = this.mget(_a.hub_id);
+    const open = (Wm.getItemsByKind("window_folder") || []).find(
+      (w) =>
+        !w.isDestroyed() &&
+        w.mget(_a.hub_id) == hub_id &&
+        typeof w.linkFilesToTask === "function",
+    );
+    if (open) {
+      open.raise();
+      return open.linkFilesToTask(nodes);
+    }
+    const item = Wm.getWindowPreset(this);
+    item.kind = "window_folder";
+    item.nid = this.mget(_a.pid) || item.nid;
+    item.wm_unique_id = `window_folder-${item.nid}`;
+    // A window that isn't mounted has nothing to call — it reads this as it
+    // comes up (folder/index.js).
+    item.link_task_files = nodes;
+    return Wm.launch(item, { explicit: 1, singleton: 1 });
   }
 
   /**

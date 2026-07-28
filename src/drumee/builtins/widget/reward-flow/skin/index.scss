@@ -9,26 +9,41 @@
   pointer-events: none !important;
 }
 
-// Step 3 marks the wrapper-modal hosting the invite popup (see index.js
-// _markInviteOverlay) so its backdrop matches the flow's own dim (--overlay-bg)
-// instead of the app's frosted-glass overlay. Global (not nested) because it
-// lands on desk chrome the reward flow does not own; !important to out-cascade
-// the glass-overlay mixin. Removed when the invite closes.
-.window-manager__wrapper-modal[data-reward-overlay="1"],
-.window-manager__wrapper-modal[data-reward-overlay="1"][data-overlay="blur"] {
-  background-color: var(--overlay-bg, rgba(0, 0, 0, 0.4)) !important;
+// The reward flow marks any wrapper-modal it owns (see index.js _openModal and
+// _markInviteOverlay) so the app's frosted-glass overlay gives way to the
+// flow's own flat dim. Global (not nested) because it lands on desk chrome the
+// reward flow does not own; !important to out-cascade the glass-overlay mixin.
+// Removed when the modal closes.
+.window-manager__wrapper-modal[data-reward-overlay],
+.window-manager__wrapper-modal[data-reward-overlay][data-overlay="blur"] {
   backdrop-filter: none !important;
   -webkit-backdrop-filter: none !important;
 }
 
 // glass-overlay also stacks a blurred ::before layer (blur(60px)); neutralise it
-// too, otherwise the backdrop stays frosted despite the flat colour above.
-.window-manager__wrapper-modal[data-reward-overlay="1"]::before,
-.window-manager__wrapper-modal[data-reward-overlay="1"][data-overlay="blur"]::before {
+// too, otherwise the backdrop stays frosted despite the flat colour below.
+.window-manager__wrapper-modal[data-reward-overlay]::before,
+.window-manager__wrapper-modal[data-reward-overlay][data-overlay="blur"]::before {
   content: none !important;
   backdrop-filter: none !important;
   -webkit-backdrop-filter: none !important;
   background: transparent !important;
+}
+
+// "1" — this modal supplies the dim itself: the Step 2 invite popup and the
+// "Don't drop now" modal, both of which sit over a flow state whose own
+// vignette is transparent or absent.
+.window-manager__wrapper-modal[data-reward-overlay="1"],
+.window-manager__wrapper-modal[data-reward-overlay="1"][data-overlay="blur"] {
+  background-color: var(--overlay-bg, rgba(0, 0, 0, 0.4)) !important;
+}
+
+// "bare" — the flow root is already painting a full-viewport vignette behind
+// this modal (congrats). A second layer of the same colour here would just
+// double the darkness, so contribute none.
+.window-manager__wrapper-modal[data-reward-overlay="bare"],
+.window-manager__wrapper-modal[data-reward-overlay="bare"][data-overlay="blur"] {
+  background-color: transparent !important;
 }
 
 // Brand accent — same design-system tokens migrate-gdrive-popup uses.
@@ -61,12 +76,36 @@ $success-soft: rgba(46, 179, 122, 0.14);
     pointer-events: none;   // only the vignette / card / coach opt back in
   }
 
+  // States that coexist with an OPEN workspace window — the guided Step 3 card
+  // and congrats, both reached with the step-1 workspace on screen. 10020 is
+  // above the bare desk, but nowhere near a window: `.window__ui[data-state=1]`
+  // is 10000 and the layer hosting the focused window goes to 50001 (see
+  // desk/wm/skin and skin/vars/z-index.scss), so at 10020 the workspace and its
+  // "+ New" dropdown paint straight over the dim. Sit just under
+  // --z-index-modal instead: above every desk layer including preview (80000),
+  // still below the wrapper-modal that hosts the congrats card.
+  &__root[data-over-window="1"] {
+    z-index: calc(var(--z-index-modal, 100000) - 1);
+  }
+
   // While guiding, the walkthrough targets the workspace form and internal
   // permission panel, which live in that wrapper-modal at --z-index-modal
   // (100000). Lift the whole flow above it so the coach is clickable and the
   // cutout dims that layer too. Guiding only, so the drop/congrats modals stay
-  // above the active/waiting states.
+  // above the active/waiting states. Declared last so it outranks the
+  // over-window lift above at equal specificity.
   &__root[data-guiding="1"] {
+    z-index: 1000000;
+  }
+
+  // The in-root "Don't drop now" guard is up. It guards surfaces that live in
+  // the wrapper-modal (--z-index-modal, 100000) — the guided create-form, the
+  // Step 2 invite popup — and the root owns the flow's stacking context, so no
+  // z-index on the host inside it can climb over them on its own. Lift the root
+  // for as long as the guard is showing; set imperatively by _markRootDrop, so
+  // raising the guard never re-renders the flow. Last, so it wins over both
+  // lifts above at equal specificity.
+  &__root[data-drop="1"] {
     z-index: 1000000;
   }
 
@@ -137,11 +176,12 @@ $success-soft: rgba(46, 179, 122, 0.14);
     pointer-events: none;
   }
 
-  // Host for the "Don't drop now" modal shown during the walkthrough. Inert
-  // until populated; then it dims the whole layer and centres the modal above
-  // the coach so only it is interactive (the guided surfaces stay untouched
-  // underneath — see index.js _openGuideDrop).
-  &__guide-modal {
+  // Host for the "Don't drop now" modal in the states that cannot use the
+  // wrapper-modal — the walkthrough, and step2_waiting with the invite popup in
+  // it. Inert until populated; then it dims the whole layer and centres the
+  // modal above the coach so only it is interactive (whatever it guards stays
+  // untouched underneath — see index.js _openDropGuard).
+  &__drop-modal {
     position: fixed;
     inset: 0;
     z-index: 10030;
@@ -200,8 +240,15 @@ $success-soft: rgba(46, 179, 122, 0.14);
 
   &__coach-footer {
     width: 100%;
-    justify-content: flex-end;
+    // Back left, Next right when both are present. A lone button keeps the
+    // right-aligned look this replaced (see the :only-child rule below).
+    justify-content: space-between;
+    gap: 8px;
     padding-top: 2px;
+  }
+
+  &__coach-footer > *:only-child {
+    margin-left: auto;
   }
 
   // Back styled as window-confirm's secondary button.
@@ -223,6 +270,27 @@ $success-soft: rgba(46, 179, 122, 0.14);
     transition: background-color 120ms ease;
 
     &:hover { background-color: var(--normal-bg-80); }
+  }
+
+  // Primary twin of __coach-back. Same metrics so the pair reads as one row.
+  &__coach-next {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 84px;
+    height: 34px;
+    padding: 0 14px;
+    border-radius: var(--corner-radius-2, 8px);
+    font-size: 13px;
+    font-weight: 600;
+    color: #fff;
+    background-color: $accent;
+    border: 1px solid $accent;
+    cursor: pointer;
+    user-select: none;
+    transition: filter 120ms ease;
+
+    &:hover { filter: brightness(1.08); }
   }
 
   &__anchor {
@@ -252,6 +320,20 @@ $success-soft: rgba(46, 179, 122, 0.14);
       top: 96px;
       left: 50%;
       transform: translateX(-50%);
+      align-items: center;
+    }
+
+    // Any step with no control to point at — a Step 2 whose invite was already
+    // satisfied in Step 1, or a Step 3 that opens the workspace instead of the
+    // topbar uploader. _applyStepTarget leaves their inline placement cleared,
+    // so centre them like Step 1. Keyed on data-notarget alone, NOT on the step:
+    // scoping it to step2 left the guided Step 3 card falling through to the
+    // 96px topbar fallback above, pinned under a control it does not point at.
+    // Declared last so it wins over that rule at equal specificity.
+    &[data-notarget="1"] {
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
       align-items: center;
     }
   }
@@ -413,40 +495,30 @@ $success-soft: rgba(46, 179, 122, 0.14);
   // ───────── modals (fed into Wm.__wrapperModal) ─────────
   // Fed into Wm.__wrapperModal, outside the .reward-flow root — so it can't
   // inherit the root's font and declares it here.
+  // The modals ARE step cards — skeleton/modal.js gives them the __card class
+  // and the card's __title / __desc / __footer / __chip inside, so the shell,
+  // type scale and buttons come from one place instead of a parallel set of
+  // rules kept in sync by hand. Only what being fed OUTSIDE the flow root
+  // requires is declared here.
   &__modal {
+    // Fed into Wm.__wrapperModal, so it cannot inherit the root's font.
     font-family: var(--font-main);
     // Opt pointer events back in on the modal ITSELF (the root is pe:none, like
     // the coach does). When shown during the walkthrough it lives inside the
     // pe:none guide layer, so without this its buttons never receive clicks.
     pointer-events: auto;
-    width: 440px;
-    box-sizing: border-box;
-    padding: 40px;
-    gap: 20px;
-    align-items: center;
-    text-align: center;
-    border-radius: 6px;
-    background-color: var(--normal-bg);
   }
 
-  &__modal-ico {
-    width: 60px;
-    height: 60px;
-    border-radius: 50%;
-    align-items: center;
-    justify-content: center;
-
-    &--brand { background-color: transparent; }
-    // Figma 3275:236467 — soft-green disc (Overlay/green #3DDE8C @ 15%).
-    &--success { background-color: rgba(61, 222, 140, 0.15); }
+  // Congrats' success tick sits on the step card's own chip, tinted green
+  // instead of the flow's accent. Figma 3275:236467 — Overlay/green #3DDE8C
+  // at 15%.
+  &__chip--success {
+    background-color: $success-soft;
   }
 
-  &__modal-ico-svg { width: 40px; height: 40px; }
-  // Green check-circle (Signal/Success). checked-circle.svg carries its own
-  // green fill, but set currentColor too in case the pipeline inlines it.
-  &__modal-ico--success &__modal-ico-svg {
-    width: 36px;
-    height: 36px;
+  // checked-circle.svg carries its own green fill, but set currentColor too in
+  // case the pipeline inlines it.
+  &__chip--success &__chip-ico {
     color: var(--green-400, #10b667);
   }
 
@@ -458,57 +530,32 @@ $success-soft: rgba(46, 179, 122, 0.14);
     gap: 8px;
   }
 
+  // Scaled with the shell above: a 40/24 lockup was sized for the old 440px
+  // modal and reads top-heavy beside an 18px title in a 340px card.
   &__modal-brand-logo {
-    width: 40px;
-    height: 40px;
+    width: 32px;
+    height: 32px;
     color: var(--primary-50);
   }
 
   &__modal-brand-name {
-    font-size: 24px;
+    font-size: 20px;
     font-weight: 700;
     line-height: 1;
     color: var(--normal-fg);
   }
 
-  &__modal-title {
-    // Figma H6 — Geist SemiBold 24 / line-height 1.1.
-    font-size: 24px;
-    line-height: 1.1;
-    font-weight: 700;
-    color: var(--normal-fg);
-  }
-
-  &__modal-desc {
-    font-size: 18px;
-    line-height: 1.4;
-    color: var(--normal-fg);
-  }
-
-  // Congrats copy — Figma Large Body (18px), centred, wrapping so the accent
-  // prize phrase can sit on its own line.
+  // Congrats copy — the three segments each carry __desc for their type, and
+  // wrap so the accent prize phrase can sit on its own line.
   &__congrats-copy {
     flex-wrap: wrap;
     justify-content: center;
     gap: 0 5px;
   }
 
-  &__congrats-seg {
-    font-size: 18px;
-    line-height: 1.4;
-    color: var(--normal-fg);
-  }
-
   &__congrats-prize {
     font-weight: 600;
     color: $accent;
-  }
-
-  &__modal-footer {
-    width: 100%;
-    gap: 12px;
-    margin-top: 12px;
-    justify-content: space-between;
   }
 
   // Respect a reduced-motion preference: keep the step change instant.
@@ -530,6 +577,9 @@ $success-soft: rgba(46, 179, 122, 0.14);
     }
 
     &__card { width: 100%; }
+    // A modal carries BOTH classes, so this must stay AFTER __card to win at
+    // equal specificity: it is centred in the wrapper-modal rather than in an
+    // anchor, so it needs its own gutter instead of filling the parent.
     &__modal { width: calc(100vw - 32px); }
   }
 }

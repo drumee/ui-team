@@ -10,26 +10,33 @@
 /** Shared modal shell: header → title → description block → footer buttons.
  *  `header` is the top block: either the branded drumee logo (drop modal) or a
  *  single status icon (congrats). Passing it pre-built keeps this shell generic.
+ *
+ *  It IS a step card — same `__card` class, same `__title` / `__desc` /
+ *  `__footer` inside. These are the last screens of the flow the cards run, so
+ *  they take the card's shell, type scale and buttons by reusing them rather
+ *  than by a parallel `__modal-*` stylesheet somebody has to keep in sync.
+ *  `__modal` adds only what being fed OUTSIDE the flow root requires (its own
+ *  font, and pointer events back on).
  */
 function shell(ui, { header, title, body, footer }) {
   const pfx = ui.fig.family;
   return Skeletons.Box.Y({
-    className: `${pfx}__modal`,
+    className: `${pfx}__card ${pfx}__modal`,
     kids: [
       header,
-      Skeletons.Note({ className: `${pfx}__modal-title`, content: title }),
+      Skeletons.Note({ className: `${pfx}__title`, content: title }),
       body,
-      Skeletons.Box.X({ className: `${pfx}__modal-footer`, kids: footer }),
+      Skeletons.Box.X({ className: `${pfx}__footer`, kids: footer }),
     ],
   });
 }
 
-/** A single circular status icon (congrats' success check). */
+/** A single status icon (congrats' success check), in the step card's chip. */
 function iconHeader(ui, { ico, icoClass }) {
   const pfx = ui.fig.family;
   return Skeletons.Box.Y({
-    className: `${pfx}__modal-ico ${icoClass}`,
-    kids: [Skeletons.Image.Svg({ className: `${pfx}__modal-ico-svg`, ico })],
+    className: `${pfx}__chip ${icoClass}`,
+    kids: [Skeletons.Image.Svg({ className: `${pfx}__chip-ico`, ico })],
   });
 }
 
@@ -51,7 +58,7 @@ function dropModal(ui) {
     header: brandHeader(ui),
     title: LOCALE.REWARD_FLOW_DROP_TITLE || "Don't drop now",
     body: Skeletons.Note({
-      className: `${pfx}__modal-desc`,
+      className: `${pfx}__desc`,
       content: LOCALE.REWARD_FLOW_DROP_DESC || "You are super close to the reward.",
     }),
     footer: [
@@ -79,29 +86,30 @@ function congratsModal(ui) {
     className: `${pfx}__congrats-copy`,
     kids: [
       Skeletons.Note({
-        className: `${pfx}__congrats-seg`,
+        className: `${pfx}__desc ${pfx}__congrats-seg`,
         content: LOCALE.REWARD_FLOW_CONGRATS_LEAD
           || "You've successfully claimed your",
       }),
       Skeletons.Note({
-        className: `${pfx}__congrats-seg ${pfx}__congrats-prize`,
+        className: `${pfx}__desc ${pfx}__congrats-seg ${pfx}__congrats-prize`,
         content: LOCALE.REWARD_FLOW_CONGRATS_PRIZE
           || "5 years of unlimited storage!",
       }),
       Skeletons.Note({
-        className: `${pfx}__congrats-seg`,
+        className: `${pfx}__desc ${pfx}__congrats-seg`,
         content: LOCALE.REWARD_FLOW_CONGRATS_TAIL || "Welcome to Drumee.",
       }),
     ],
   });
 
   return shell(ui, {
-    // Figma 3275:236468 — a green outline check-circle in a soft-green disc.
-    // checked-circle.svg is that outline glyph (apps-check-circle is a filled
-    // disc that reads as a dark blob at this size).
+    // Figma 3275:236468 — a green outline check-circle on a soft-green
+    // ground. checked-circle.svg is that outline glyph (apps-check-circle is a
+    // filled disc that reads as a dark blob at this size). The ground is the
+    // step card's own chip, tinted green.
     header: iconHeader(ui, {
       ico: "checked-circle",
-      icoClass: `${pfx}__modal-ico--success`,
+      icoClass: `${pfx}__chip--success`,
     }),
     title: LOCALE.REWARD_FLOW_CONGRATS_TITLE || "Congratulations!",
     body,

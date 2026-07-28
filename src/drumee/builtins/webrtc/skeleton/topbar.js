@@ -231,6 +231,47 @@ module.exports = function (_ui_) {
     }),
   };
 
+  // Overflow menu for the controls the narrow layout drops. Chat and
+  // Participants are hidden from the bar below the data-narrow breakpoint (see
+  // meeting-shell.scss) and reachable here instead; this trigger is itself
+  // hidden until then, so the wide bar is unchanged. Items dispatch the SAME
+  // services as the real buttons (_a.chat / show-people), so the room wiring in
+  // window/meeting/index.js needs no new cases.
+  const moreItem = (ico, label, service) =>
+    Skeletons.Button.Label({
+      className: `${pfx}__more-item`,
+      ico,
+      label,
+      labelClass: `${pfx}__more-item-label`,
+      service,
+      uiHandler: [_ui_],
+    });
+
+  // P2P connect calls have no chat / people controls at all, so the overflow
+  // menu would be empty — omit the whole trigger rather than ship a dead button.
+  const moreBtn = isP2P
+    ? null
+    : {
+        kind: KIND.menu.topic,
+        className: `${pfx}__more-menu`,
+        flow: _a.y,
+        opening: _e.click,
+        persistence: _a.once,
+        offsetY: 8,
+        trigger: Skeletons.Button.Svg({
+          ico: "more",
+          className: `${pfx}__ctrl-btn more`,
+          attrOpt: { "data-tip": LOCALE.MORE || "More" },
+        }),
+        items: Skeletons.Box.Y({
+          className: `${pfx}__more-items`,
+          kids: [
+            moreItem("meet-chat-dots", LOCALE.CHAT, _a.chat),
+            moreItem("meet-users", LOCALE.PARTICIPANTS, "show-people"),
+          ],
+        }),
+      };
+
   const divider = Skeletons.Note({ className: `${pfx}__in-topbar-divider` });
 
   // Camera pill: toggle + device caret + video-input picker (twin of the mic
@@ -339,6 +380,8 @@ module.exports = function (_ui_) {
           reactionsBtn,
           isP2P ? null : chatWrap,
           isP2P ? null : peopleBtn,
+          // Stands in for chat + people once those are hidden (data-narrow).
+          moreBtn,
           fullscreenBtn,
           divider,
           cameraPill,
