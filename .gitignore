@@ -35,3 +35,6 @@ _bmad-output/
 desk-current.png
 .tmp-*/*
 /tmp-*
+# Playwright screenshots taken while verifying UI work
+plans-after.png
+.playwright-mcp/
