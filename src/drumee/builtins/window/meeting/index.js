@@ -168,11 +168,11 @@ class __window_meeting extends __room {
     if (this._resizeObserver || !this.el || typeof ResizeObserver !== "function")
       return;
     this._resizeObserver = new ResizeObserver(() => {
-      if (this.isDestroyed && this.isDestroyed()) return;
+      if (this.isDestroyed?.()) return;
       // Same guard as _resize: while a presenter video is fullscreen the
       // browser owns geometry, and re-flowing can kick it straight back out.
       if (document.fullscreenElement) return;
-      this.responsive((this.el && this.el.dataset.mode) || "normal");
+      this.responsive(this.el?.dataset.mode || "normal");
     });
     this._resizeObserver.observe(this.el);
   }
