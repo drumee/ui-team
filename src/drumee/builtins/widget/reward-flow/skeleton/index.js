@@ -160,17 +160,22 @@ module.exports = function (ui) {
   // Kept through the waiting state too, so the overlay and the card's position
   // don't change underneath the user the moment they start an upload — only the
   // cutout's interactivity does (see targetCutout and the stylesheet).
-  // One variant points at no topbar control at all and is centred like Step 1
-  // (data-notarget, see skin __anchor): a Step 3 with a workspace to reopen —
-  // its card offers Open workspace, and the upload control it eventually points
-  // at lives INSIDE that workspace, not on the desk topbar.
+  // Two variants hang their card off no topbar control and are centred like
+  // Step 1 (data-notarget, see skin __anchor):
+  //   - a Step 2 served by the permission panel → the spotlight is the panel
+  //     itself, a tall right-hand rail with nothing to hang a card under
+  //   - a Step 3 with a workspace to reopen      → its card offers Open
+  //     workspace, and the upload control it eventually points at lives INSIDE
+  //     that workspace, not on the desk topbar.
+  const panel = base === "step2" && ui.invitePanelOpen?.();
   const guided = base === "step3" && ui.hasStep1Workspace?.();
-  const notarget = guided;
-  // Never while guiding: Step 2 reached as the permission panel (step2_guide)
-  // has a base step with a topbar control, but the walkthrough owns the cutout
-  // there — data-cutout="1" would also make it swallow clicks (see the skin).
+  const notarget = panel || guided;
+  // The cutout is what dims: it clears one target and shadows everything else.
+  // Steps 2/3 point it at their topbar control; the panel Step 2 points it at
+  // the panel (_applyStepTarget), which is also how that state's dim reaches
+  // the whole viewport instead of just the desk's wm-container.
   const targeted =
-    !guiding && (base === "step2" || base === "step3") && !notarget;
+    panel || ((base === "step2" || base === "step3") && !notarget);
 
   return Skeletons.Box.Y({
     className: `${pfx}__root`,
@@ -186,6 +191,11 @@ module.exports = function (ui) {
       // the walkthrough). Windows outrank the flow's default layer, so this
       // asks the skin to lift the root clear of them.
       overWindow: guided ? "1" : "0",
+      // The panel Step 2 hands the user to lives in the wrapper-modal, which
+      // the desk lifts to --z-index-modal. Ask the skin to lift the root over
+      // it, so our dim covers that layer (and the topbar and sidebar beside it)
+      // and the card lands above the dim instead of behind it.
+      overModal: panel ? "1" : "0",
     },
     debug: __filename,
     kids: guiding

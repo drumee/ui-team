@@ -13,11 +13,12 @@
  *             that opens for internal (permission-restricted) / external
  *             (window-secure-share) workspaces → user closes it → done
  *
- * The internal branch of that last sub-step is Step 2, not Step 1: it is the
- * panel that invites members. The guide hands the flow over to it as soon as
- * the panel is on screen (_checkInvitePanel) and keeps guiding; closing it
- * completes Step 2 rather than Step 1. Nothing else about the walkthrough
- * changes, and the external branch is untouched.
+ * The INTERNAL branch of that last sub-step belongs to Step 2, not Step 1: it
+ * is the panel that invites members. So the guide does not walk it at all — it
+ * hands the flow over the moment that panel appears (_checkInvitePanel) and
+ * the orchestrator takes it from there, showing the Step 2 card while the user
+ * works the panel. Only the external (secure-share) branch still runs the perm
+ * phase through to _complete.
  *
  * Back steps backwards through these; see back().
  *
@@ -28,9 +29,9 @@
  * The orchestrator tells the guide when the workspace was created (via
  * RADIO_BROADCAST "workspace:refresh" → onWorkspaceCreated). From there the
  * guide waits for the permission panel to appear and then be closed, and calls
- * back ui.onGuideComplete(), which advances to whatever follows the step the
- * walkthrough is running as. (A Personal workspace opens no panel; the
- * orchestrator completes that case directly and never enters the perm phase.)
+ * back ui.onGuideComplete() to advance to Step 2. (A Personal workspace opens
+ * no panel; the orchestrator completes that case directly and never enters the
+ * perm phase.)
  */
 const { GuideCore, hasDom, visible, firstVisible } = require("./guide-core");
 
@@ -173,18 +174,18 @@ class RewardGuide extends GuideCore {
   }
 
   /**
-   * Hand the perm phase over to Step 2 the first time the INTERNAL (team) panel
-   * is on screen: inviting members is what Step 2 asks for, so the flow counts
-   * this panel as Step 2 rather than as a tail of Step 1 (see index.js
-   * onInvitePanel). The walkthrough is unaffected — it keeps running, only the
-   * step name changes.
+   * Hand the flow over to Step 2 the first time the INTERNAL (team) panel is on
+   * screen: inviting members is what Step 2 asks for, so that panel is Step 2's
+   * surface, not a tail of Step 1 (see index.js onInvitePanel). The orchestrator
+   * stops this guide as it takes over, which is why nothing here has to unwind:
+   * stop() resets every flag.
    *
-   * Latched, because the confirmation raised by sending an invitation REPLACES
-   * the panel in the wrapper-modal: from then on only window_info is visible,
-   * and this must not read that as "no longer the internal branch".
+   * Latched all the same — a reconcile can land between the handover and the
+   * teardown, and the invitation's confirmation REPLACES the panel in the
+   * wrapper-modal, so a second call must not fire.
    *
-   * The external branch never matches this selector and so never fires: it ends
-   * Step 1 the way it always did.
+   * The external branch never matches this selector and so never fires: it runs
+   * the perm phase to completion the way it always did.
    */
   _checkInvitePanel() {
     if (this._invitePanel) return;
@@ -281,8 +282,9 @@ class RewardGuide extends GuideCore {
     }
   }
 
-  /** Perm phase done (panel closed, or safety timeout) → the orchestrator
-   *  advances: Step 3 when this ran as Step 2 (internal panel), else Step 2. */
+  /** Perm phase done (panel closed, or safety timeout) → advance to Step 2.
+   *  Reached by the external branch only: the internal one left this guide when
+   *  its panel appeared (_checkInvitePanel). */
   _complete() {
     if (this._completed) return;
     this._completed = true;
