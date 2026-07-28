@@ -141,6 +141,12 @@ class settings_billing extends LetcBox {
    * @returns {boolean}
    */
   _checkoutTabAllowed() {
+    // A replacement in progress is the one case where a live subscriber may
+    // reach checkout: they accepted the warning, and the server admits them on
+    // the supersede flag.
+    if (this.state && this.state.checkout && this.state.checkout.supersede) {
+      return this._mayCheckout();
+    }
     return this._mayCheckout() && !this._hasActiveSub;
   }
 
@@ -267,9 +273,16 @@ class settings_billing extends LetcBox {
     }
     // Always state the ceiling being moved to, even when today's usage fits:
     // the buyer is choosing a smaller workspace, not just a smaller bill.
+    //
+    // Written the way the plan cards write it. capGB/capSeats are the internal
+    // sentinels (1000, 100000), so printed raw this said "1000 GB of storage
+    // and up to 100000 members" where the card beside it says "1 TB" and
+    // "Unlimited".
+    const storageLabel = capGB >= 1000 ? `${capGB / 1000} TB` : `${capGB} GB`;
+    const seatsLabel = capSeats >= 100000 ? LOCALE.UNLIMITED : `${capSeats}`;
     lines.push((LOCALE.DOWNGRADE_NEW_LIMITS
-      || "This plan includes {0} GB of storage and up to {1} members.")
-      .format(capGB, capSeats));
+      || "This plan includes {0} of storage and up to {1} members.")
+      .format(storageLabel, seatsLabel));
     return lines.join("\n\n");
   }
 
@@ -279,6 +292,62 @@ class settings_billing extends LetcBox {
     const cycle = (this.state && this.state.plansTab && this.state.plansTab.cycle)
       || (this.state.currentTab === TAB_YEARLY ? "yearly" : "monthly");
     return /^year/.test(cycle) ? "year" : "month";
+  }
+
+  // Replacing the plan the caller already holds: warn, then send them through
+  // checkout to pay for the new one.
+  //
+  // The alternative — swapping the price on the live subscription in place
+  // (payment.change_plan, still used by the USE_SUBSCRIPTION_UPDATE path) —
+  // takes the prorated difference off the card on file with no payment step at
+  // all. Product wants the change to go through checkout, so the buyer sees
+  // what they are paying, which means the old subscription has to end: two
+  // subscriptions on one customer is a double charge.
+  //
+  // Hence the warning. `supersede` then travels with the checkout, and the
+  // webhook cancels the replaced subscription the moment the new one is paid —
+  // neither half is safe without the other.
+  async _confirmReplacePlan(targetPlan) {
+    const current = this.currentPlanName || "";
+    const currentTitle = current === "business" ? LOCALE.BUSINESS
+      : current === "team" ? LOCALE.TEAM
+      : current === "sovereign" ? LOCALE.SOVEREIGN
+      : LOCALE.FREE;
+    const targetTitle = targetPlan === "business" ? LOCALE.BUSINESS : LOCALE.TEAM;
+    const when = this._periodEnd ? Dayjs(this._periodEnd * 1000).format("MMM D, YYYY") : "";
+
+    const lines = [
+      (LOCALE.PLAN_REPLACE_WARNING
+        || "Your current {0} plan ends as soon as the new one is paid — you lose the time already paid for on it.")
+        .format(currentTitle),
+    ];
+    if (when) {
+      lines.push((LOCALE.PLAN_REPLACE_PAID_UNTIL
+        || "It is paid until {0}; that remaining time is not refunded or carried over.").format(when));
+    }
+    // Only when the move actually lowers the ceiling. Telling someone
+    // upgrading to Business what Business "includes" as if it were a loss
+    // reads as a warning about the thing they are buying.
+    const rank = { free: 0, team: 1, business: 2, sovereign: 3 };
+    if ((rank[targetPlan] ?? 0) < (rank[current] ?? 0)) {
+      lines.push(this._downgradeConsequences(targetPlan));
+    }
+
+    const ok = await Wm.confirm({
+      title: (LOCALE.PLAN_REPLACE_TITLE || "Change to {0}?").format(targetTitle),
+      message: lines.filter(Boolean).join("\n\n"),
+      confirm: LOCALE.PLAN_REPLACE_CONFIRM || "Continue to payment",
+      confirm_type: "danger",
+      cancel: LOCALE.CANCEL || "Cancel",
+      cancel_type: "secondary",
+      mode: "hbf",
+    }).then(() => true).catch(() => false);
+    if (!ok) return;
+
+    // Carry the intent into checkout: _proceedToCheckout reads it and the
+    // server lifts the already-subscribed refusal only for this case.
+    this.state.checkout.supersede = 1;
+    this._enterCheckoutFor(targetPlan);
   }
 
   // Switch the LIVE subscription to another plan and/or billing cycle after an
@@ -1040,6 +1109,10 @@ class settings_billing extends LetcBox {
     // returns 403 PERMISSION_DENIED. Send the caller's own hub so the owner
     // check resolves correctly (verified: missing hub_id -> 403, present -> 200).
     const payload = { hub_id: Visitor.id, entity_type, plan, period };
+    // Set by _confirmReplacePlan after the caller accepted losing their current
+    // plan. Without it the server refuses a live subscriber, which is the guard
+    // against an accidental second subscription.
+    if (checkout.supersede) payload.supersede = 1;
     // TEAM bootstrap: the payer is still on the default domain — the org
     // name + subdomain were collected in the checkout form; validate the
     // ident server-side BEFORE the Stripe redirect (product decision: prompt
@@ -1459,6 +1532,9 @@ class settings_billing extends LetcBox {
     let service = args.service || cmd.mget(_a.service);
     switch (service) {
       case "select-plan":
+        // Switching to the plans view abandons a replacement in progress, so
+        // the flag cannot leak into an unrelated purchase later.
+        if (this.state.checkout) delete this.state.checkout.supersede;
         return this.handleSelectPlan(cmd);
 
       case "select-plan-button": {
@@ -1494,7 +1570,7 @@ class settings_billing extends LetcBox {
           // rather than silently keeping the old one and charging a price the
           // card never displayed.
           if (this._hasActiveSub) {
-            this._confirmPlanChange(planValue, this._selectedCycle());
+            this._confirmReplacePlan(planValue);
           } else if (this._checkoutTabAllowed()) {
             this._enterCheckoutFor(planValue);
           }
