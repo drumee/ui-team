@@ -1273,8 +1273,10 @@
     container-name: billing-plans;
   }
 
-  &-wide { width: 100%; }
-  &-narrow { width: 100%; display: none !important; }
+  // The cards are the only layout now (Figma 2769-213751 removed the
+  // comparison table), so this is simply the plans row — it is no longer
+  // hidden by default waiting for a container query to reveal it.
+  &-narrow { width: 100%; }
 }
 
 .settings-billing__compare {
@@ -1393,22 +1395,6 @@
   }
 }
 
-// 164px of label + four columns that need ~150px each to stay legible, plus
-// gaps and padding, is about 800. Below that the table stops being comparable
-// and the stacked cards read better.
-@container billing-plans (max-width: 820px) {
-  .settings-billing__plans-wide { display: none !important; }
-  .settings-billing__plans-narrow { display: flex !important; }
-}
-
-// Fallback for engines without container queries: approximate the same point
-// from the viewport, allowing for the settings sidebar.
-@supports not (container-type: inline-size) {
-  @media screen and (max-width: 980px) {
-    .settings-billing__plans-wide { display: none !important; }
-    .settings-billing__plans-narrow { display: flex !important; }
-  }
-}
 
 // Header type inside the comparison table.
 //
