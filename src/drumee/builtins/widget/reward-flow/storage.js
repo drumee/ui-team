@@ -15,23 +15,24 @@
  * device, it grew one key per user on a shared machine, and clearing the table
  * could not reset it.
  *
- * What is left is genuinely local: two scratch values describing the
- * walkthrough currently in progress. They are meaningless once it ends, they
- * are deleted at _finish, and storing them server-side would need columns for
- * no benefit. They stay namespaced per user so two people on one browser cannot
- * read each other's half-finished run.
+ * What is left is genuinely local: one scratch value describing the walkthrough
+ * currently in progress. It is meaningless once that ends, it is deleted at
+ * _finish, and storing it server-side would need a column for no benefit. It
+ * stays namespaced per user so two people on one browser cannot read each
+ * other's half-finished run.
  */
 
-// Latched when the user invites a member from the Step 1 permission panel, so
-// Step 2 has nothing left to ask for.
-const KEY_INVITED = "reward_invited";
 // The workspace created in Step 1. Step 3 reopens it.
 const KEY_WORKSPACE = "reward_workspace";
 
-/** Keys this widget used to own before eligibility moved to the server. Purged
- *  on mount so a browser that ran the old build does not keep one dead
- *  `reward_flow_done:<uid>` per user forever. */
-const LEGACY_PREFIXES = ["reward_flow_done", "reward_step", "reward_utm_owner"];
+/** Keys this widget used to own and no longer writes — eligibility, which moved
+ *  to the server, and `reward_invited`, the latch that let Step 2 offer a plain
+ *  Continue before the permission panel itself became Step 2. Purged on mount
+ *  so a browser that ran an older build does not keep one dead key per user
+ *  forever. */
+const LEGACY_PREFIXES = [
+  "reward_flow_done", "reward_step", "reward_utm_owner", "reward_invited",
+];
 
 /** localStorage is unavailable in private mode — never let it break the desk. */
 function lsGet(key) {
@@ -82,7 +83,7 @@ function purgeLegacyKeys() {
 }
 
 module.exports = {
-  KEY_INVITED, KEY_WORKSPACE, LEGACY_PREFIXES,
+  KEY_WORKSPACE, LEGACY_PREFIXES,
   lsGet, lsSet, lsDel,
   userScoped, runGet, runSet, runDel, purgeLegacyKeys,
 };

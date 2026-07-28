@@ -5,10 +5,14 @@
  * Storage" marketing email:
  *
  *   step1          → "your workspace is ready", informational
- *   step2          → "Invite member" fires the desk's "invite-member" service.
- *                    If the user ALREADY invited someone from the Step 1
- *                    permission panel, this becomes a plain "Continue" that
- *                    goes straight to step3 (see onPanelInvitation).
+ *   step1_guide    → the walkthrough that creates the workspace (see guide.js)
+ *   step2_guide    → the INTERNAL (team) permission panel that walkthrough ends
+ *                    on IS Step 2: it is where members are invited, so the flow
+ *                    counts it as Step 2 rather than as a tail of Step 1 (see
+ *                    onInvitePanel). Closing it goes straight to step3. Every
+ *                    other Step 1 outcome — personal, external/secure-share —
+ *                    still lands on the step2 card below.
+ *   step2          → "Invite member" fires the desk's "invite-member" service
  *   step2_waiting  → the real invite popup is open; onInvitationSent() advances
  *   step3          → "Upload" fires the desk's _e.upload service
  *   step3_waiting  → the real uploader is open; RADIO_MEDIA _e.uploaded advances
@@ -29,9 +33,9 @@ const { dropModal, congratsModal } = require("./skeleton/modal");
 const { STEPS, baseStep, isWaiting, isGuiding } = require("./steps");
 const { readDescriptor } = require("./workspace");
 // Mid-run scratch state — see storage.js. Eligibility and the resume point are
-// the server's (reward.get_state); only these two keys are still local.
+// the server's (reward.get_state); only this one key is still local.
 const {
-  KEY_INVITED, KEY_WORKSPACE, runGet, runSet, runDel, purgeLegacyKeys,
+  KEY_WORKSPACE, runGet, runSet, runDel, purgeLegacyKeys,
 } = require("./storage");
 
 // Recorded on every funnel post so the row says which campaign it belongs to.
@@ -93,14 +97,9 @@ class __reward_flow extends LetcBox {
     // _trackStep. Not persisted: re-posting a step after a reload is harmless
     // (the server keeps the furthest one) and losing one is not.
     this._trackedStep = null;
-    // Only trust a persisted latch when RESUMING a run that already reached
-    // Step 2. Landing on Step 1 means this is a fresh walkthrough, so whatever
-    // an earlier — abandoned — run invited says nothing about this one; a key
-    // left behind by that run would otherwise pre-answer Step 2 forever.
-    this._inviteDone = this._step !== "step1" && runGet(KEY_INVITED) === "1";
-    if (!this._inviteDone) runDel(KEY_INVITED);
-    // Same reasoning: a descriptor left by an abandoned run must not pre-answer
-    // this one. A run that starts at Step 1 will create its own workspace.
+    // A descriptor left by an abandoned run must not pre-answer this one: only
+    // trust it when RESUMING a run that already reached Step 2. A run that
+    // starts at Step 1 will create its own workspace.
     this._workspace =
       this._step !== "step1" ? readDescriptor(runGet(KEY_WORKSPACE)) : null;
     if (!this._workspace) runDel(KEY_WORKSPACE);
@@ -114,12 +113,8 @@ class __reward_flow extends LetcBox {
     // — the completion signal that advances step 1, mirroring the invite signal
     // for step 2 and the upload signal for step 3.
     this._onWorkspaceRefresh = (payload) => this.onWorkspaceCreated(payload);
-    // permission_restricted broadcasts this when a member is really invited
-    // from the Step 1 permission panel — see onPanelInvitation.
-    this._onPanelInvitation = () => this.onPanelInvitation();
     if (typeof RADIO_BROADCAST !== "undefined") {
       RADIO_BROADCAST.on("workspace:refresh", this._onWorkspaceRefresh);
-      RADIO_BROADCAST.on("invitation:sent", this._onPanelInvitation);
     }
   }
 
@@ -187,10 +182,6 @@ class __reward_flow extends LetcBox {
       RADIO_BROADCAST.off("workspace:refresh", this._onWorkspaceRefresh);
       this._onWorkspaceRefresh = null;
     }
-    if (this._onPanelInvitation && typeof RADIO_BROADCAST !== "undefined") {
-      RADIO_BROADCAST.off("invitation:sent", this._onPanelInvitation);
-      this._onPanelInvitation = null;
-    }
     if (this._onStepResize && typeof window !== "undefined") {
       window.removeEventListener("resize", this._onStepResize);
       this._onStepResize = null;
@@ -210,9 +201,9 @@ class __reward_flow extends LetcBox {
    *  orchestrator stays requirable (and unit-testable) under Node — the guide
    *  no-ops when there is no DOM. */
   _startGuide() {
-    // Each walkthrough run answers Step 2 for itself. Back → Continue restarts
-    // Step 1 and the user may pick a different workspace type this time, so the
-    // previous attempt's answer must not carry over.
+    // Each walkthrough run establishes its own workspace. Back → Continue
+    // restarts Step 1 and the user may pick a different workspace type this
+    // time, so the previous attempt's result must not carry over.
     this._resetGuideResults();
     if (!this._guide) {
       const RewardGuide = require("./guide");
@@ -531,15 +522,18 @@ class __reward_flow extends LetcBox {
 
   _applyStepTarget() {
     if (!this.el) return;
+    // A walkthrough drives the --cut-* vars itself, aiming them at whatever it
+    // is spotlighting. Step 2 reached as the permission panel (step2_guide) has
+    // a base step WITH a topbar target, so without this the card placement
+    // below would yank the cutout onto the Invite button mid-walkthrough.
+    if (isGuiding(this._step)) return;
     // Resolved from the BASE step, so entering a waiting state keeps the cutout
     // and the card exactly where they were instead of snapping to the fallback.
     const base = baseStep(this._step);
-    // Two variants point at nothing and are centred like Step 1 (see skin
-    // __anchor): a Step 2 already satisfied in Step 1, and a Step 3 that will
-    // guide the user inside the workspace rather than at the desk topbar.
-    const notarget =
-      (base === "step2" && this._inviteDone) ||
-      (base === "step3" && !!this._workspace);
+    // One variant points at nothing and is centred like Step 1 (see skin
+    // __anchor): a Step 3 that will guide the user inside the workspace rather
+    // than at the desk topbar.
+    const notarget = base === "step3" && !!this._workspace;
     const sel = notarget ? null : STEP_TARGET[base];
     const anchor = this.el.querySelector(`.${this.fig.family}__anchor`);
     if (!sel) {
@@ -668,6 +662,18 @@ class __reward_flow extends LetcBox {
 
   _isWaiting() { return isWaiting(this._step); }
 
+  /**
+   * True while the Step 1 walkthrough owns the screen.
+   *
+   * It spans TWO card steps now: the internal permission panel it ends on is
+   * Step 2 (see onInvitePanel), so it runs as "step1_guide" and then as
+   * "step2_guide" without ever stopping. Every gate that used to compare
+   * against "step1_guide" alone goes through this.
+   */
+  _inCreateGuide() {
+    return this._step === "step1_guide" || this._step === "step2_guide";
+  }
+
   // ───────── external completion signals ─────────
 
   /**
@@ -697,47 +703,57 @@ class __reward_flow extends LetcBox {
   }
 
   /**
-   * A member was invited from the Step 1 permission panel (permission_restricted
-   * broadcasts "invitation:sent"). Only counted DURING the walkthrough: an
-   * invitation sent later, from the topbar or a settings panel, is not what
-   * Step 2 is asking for.
+   * The walkthrough reached the INTERNAL (team) permission panel — the surface
+   * that invites members. That IS what Step 2 asks for, so the flow counts the
+   * panel as Step 2 instead of trailing Step 1 and then asking for the same
+   * thing again on a card: the step is reported as "step2", and closing the
+   * panel goes straight to Step 3 (see onGuideComplete).
    *
-   * Latching this makes Step 2 offer a plain Continue instead of re-opening the
-   * invite popup — the user has already done the thing it asks for.
+   * The walkthrough itself carries on untouched — same guide, same observer,
+   * same coach; only the step name it runs under changes, which is why this is
+   * "step2_guide" rather than a card state.
+   *
+   * The external (secure-share) branch is NOT this: it opens a share dock, not
+   * an invite panel, so it stays inside Step 1 and lands on the Step 2 card
+   * with its Invite button, exactly as before.
    */
-  onPanelInvitation() {
+  onInvitePanel() {
     if (this._step !== "step1_guide") return;
-    this._inviteDone = true;
-    runSet(KEY_INVITED, "1");
+    // The re-render inside _goto re-creates the flow's own parts, and the
+    // "Don't drop now" guard lives in one of them. Put it back if the user
+    // happened to have it up when the panel landed: emptied, it would vanish
+    // while _dropGuardOpen stayed latched, leaving the vignette inert with no
+    // way to answer the question. The coach needs no such care — the guide
+    // repaints it into the fresh part as this reconcile finishes.
+    const guard = this._dropGuardOpen;
+    this._goto("step2_guide");
+    if (guard) this._openDropGuard();
   }
 
   /** Forget everything the Step 1 walkthrough established. It belongs to a
-   *  single run: the user may pick a different workspace type this time, so
-   *  Step 2 must re-earn its Continue (only permission_restricted, i.e.
-   *  internal/team, ever sets that latch — personal, external/secure-share and
-   *  internal-with-no-invite must all reach Step 2 with an Invite button), and
-   *  Step 3 must open the workspace THIS run created. */
+   *  single run: Step 3 must open the workspace THIS run created, not one an
+   *  earlier, abandoned run left behind. */
   _resetGuideResults() {
-    this._inviteDone = false;
-    runDel(KEY_INVITED);
     this._workspace = null;
     runDel(KEY_WORKSPACE);
   }
-
-  /** True when Step 2's invite was already satisfied during Step 1. Read by the
-   *  step card (Continue instead of Invite) and by the skeleton, which then
-   *  drops the topbar cutout — there is no control left to point at. */
-  inviteSatisfied() { return !!this._inviteDone; }
 
   /** True when Step 1 handed us a workspace to reopen. Read by the step card
    *  and the skeleton to pick the guided Step 3 over the legacy one. */
   hasStep1Workspace() { return !!this._workspace; }
 
-  /** The guide finished its perm phase (permission panel closed) → Step 2. */
+  /**
+   * The guide finished its perm phase (permission panel closed).
+   *
+   * Where that lands depends on which step the walkthrough was running as: the
+   * internal panel WAS Step 2, so its close completes Step 2 and moves on to
+   * Step 3. Every other branch ends Step 1 and hands over to the Step 2 card.
+   */
   onGuideComplete() {
-    if (this._step !== "step1_guide") return;
+    if (!this._inCreateGuide()) return;
+    const next = this._step === "step2_guide" ? "step3" : "step2";
     this._stopGuide();
-    this._goto("step2");
+    this._goto(next);
   }
 
   /**
@@ -998,7 +1014,6 @@ class __reward_flow extends LetcBox {
     // onInvitePopupClosed — and that would read step2_waiting and
     // _goto("step2"), re-rendering a flow that is on its way out.
     this._finishing = true;
-    runDel(KEY_INVITED);
     runDel(KEY_WORKSPACE);
     this._closeModal();
     // Stop the walkthrough BEFORE tearing its surfaces down: its observer would
@@ -1024,7 +1039,9 @@ class __reward_flow extends LetcBox {
    * cannot reach in and shut something the user opened for themselves.
    */
   _closeHandoffSurfaces() {
-    const guided = this._step === "step1_guide";
+    // Both walkthrough steps: the internal permission panel runs as
+    // step2_guide, and it sits in that same wrapper-modal.
+    const guided = this._inCreateGuide();
     if (!guided && this._step !== "step2_waiting") return;
     // The shared wrapper-modal. At these two steps whatever sits in it is
     // there because of us: Step 1's create form or its follow-up permission
@@ -1070,7 +1087,7 @@ class __reward_flow extends LetcBox {
         // the real desk chrome (Add new → Workspace item → the form) and lets
         // the user create the workspace themselves. onWorkspaceCreated ends it.
         // Inert if already waiting or guiding.
-        if (this._isWaiting() || this._step === "step1_guide") return;
+        if (this._isWaiting() || isGuiding(this._step)) return;
         this._goto("step1_guide");
         this._startGuide();
         return;
@@ -1079,12 +1096,6 @@ class __reward_flow extends LetcBox {
         this._goto("step2_waiting");
         // Reaches modules/desk -> _openInvitePopup().
         this.triggerHandlers({ service: "invite-member" });
-        return;
-
-      case "reward-invite-done":
-        // Step 2's Continue, shown only when the user already invited someone
-        // from the Step 1 permission panel. Nothing to open — just move on.
-        this._goto("step3");
         return;
 
       case "reward-open-workspace":
@@ -1118,7 +1129,13 @@ class __reward_flow extends LetcBox {
         // form it closes the form so the guide reconciles to the Add-new
         // button). Only when there is nothing earlier does it tear the guide
         // down and return to the Step 1 card.
-        if (this._step === "step1_guide") {
+        // Both steps the create-walkthrough runs as: the guide answers first
+        // and only an unhandled Back — i.e. one from its first sub-step, which
+        // is always step1_guide — drops out to the Step 1 card. In the perm
+        // phase it swallows Back outright (the workspace already exists), which
+        // is what keeps step2_guide from falling through to the generic rewind
+        // below and abandoning a walkthrough that is still on screen.
+        if (this._inCreateGuide()) {
           if (this._guide?.back()) return;
           this._stopGuide();
           return this._goto("step1");

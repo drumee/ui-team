@@ -13,6 +13,12 @@
  *             that opens for internal (permission-restricted) / external
  *             (window-secure-share) workspaces → user closes it → done
  *
+ * The internal branch of that last sub-step is Step 2, not Step 1: it is the
+ * panel that invites members. The guide hands the flow over to it as soon as
+ * the panel is on screen (_checkInvitePanel) and keeps guiding; closing it
+ * completes Step 2 rather than Step 1. Nothing else about the walkthrough
+ * changes, and the external branch is untouched.
+ *
  * Back steps backwards through these; see back().
  *
  * The reconcile engine — observer, debounce, backward grace, pin, spotlight
@@ -22,9 +28,9 @@
  * The orchestrator tells the guide when the workspace was created (via
  * RADIO_BROADCAST "workspace:refresh" → onWorkspaceCreated). From there the
  * guide waits for the permission panel to appear and then be closed, and calls
- * back ui.onGuideComplete() to advance to Step 2. (A Personal workspace opens
- * no panel; the orchestrator completes that case directly and never enters the
- * perm phase.)
+ * back ui.onGuideComplete(), which advances to whatever follows the step the
+ * walkthrough is running as. (A Personal workspace opens no panel; the
+ * orchestrator completes that case directly and never enters the perm phase.)
  */
 const { GuideCore, hasDom, visible, firstVisible } = require("./guide-core");
 
@@ -45,6 +51,9 @@ const SEL = {
   permPanels: ".permission-restricted__main, .window-secure-share__main",
   // External (share) branch only — used to pick the perm-phase coach text.
   permShare: ".window-secure-share__main",
+  // Internal (team) branch only. This panel is where members are invited, so
+  // the flow counts it as Step 2 — see the handoff in _resolveSub.
+  permInternal: ".permission-restricted__main",
   // The confirmation shown after an action inside those panels — e.g. sending
   // an invitation in permission_restricted pops Wm.alert → window_info, which
   // REPLACES the panel in the wrapper-modal. Spotlight the card ROOT (__ui) —
@@ -101,6 +110,7 @@ class RewardGuide extends GuideCore {
     this._created = false;      // workspace created → perm phase active
     this._permSeen = false;     // the permission panel has appeared at least once
     this._infoSeen = false;     // the window_info confirmation has appeared
+    this._invitePanel = false;  // the INTERNAL panel was seen → running as Step 2
     this._completed = false;    // guard: onGuideComplete fired once
     if (this._permTimer) {
       clearTimeout(this._permTimer);
@@ -144,6 +154,7 @@ class RewardGuide extends GuideCore {
           clearTimeout(this._permTimer);
           this._permTimer = null;
         }
+        this._checkInvitePanel();
         return "perm";
       }
       // Nothing visible now. Panels open a tick after their trigger, so only
@@ -159,6 +170,27 @@ class RewardGuide extends GuideCore {
     if (visible(document.querySelector(SEL.form))) return "form";
     if (visible(document.querySelector(SEL.wsItem))) return "menu";
     return "add";
+  }
+
+  /**
+   * Hand the perm phase over to Step 2 the first time the INTERNAL (team) panel
+   * is on screen: inviting members is what Step 2 asks for, so the flow counts
+   * this panel as Step 2 rather than as a tail of Step 1 (see index.js
+   * onInvitePanel). The walkthrough is unaffected — it keeps running, only the
+   * step name changes.
+   *
+   * Latched, because the confirmation raised by sending an invitation REPLACES
+   * the panel in the wrapper-modal: from then on only window_info is visible,
+   * and this must not read that as "no longer the internal branch".
+   *
+   * The external branch never matches this selector and so never fires: it ends
+   * Step 1 the way it always did.
+   */
+  _checkInvitePanel() {
+    if (this._invitePanel) return;
+    if (!firstVisible(SEL.permInternal)) return;
+    this._invitePanel = true;
+    if (typeof this._ui?.onInvitePanel === "function") this._ui.onInvitePanel();
   }
 
   _pinReady() {
@@ -249,7 +281,8 @@ class RewardGuide extends GuideCore {
     }
   }
 
-  /** Perm phase done (panel closed, or safety timeout) → advance to Step 2. */
+  /** Perm phase done (panel closed, or safety timeout) → the orchestrator
+   *  advances: Step 3 when this ran as Step 2 (internal panel), else Step 2. */
   _complete() {
     if (this._completed) return;
     this._completed = true;

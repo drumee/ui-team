@@ -2246,7 +2246,6 @@
   "REWARD_FLOW_STEP1_DESC": "Configura tu primer espacio de trabajo para empezar.",
   "REWARD_FLOW_STEP2_TITLE": "Paso 2: Invita a un compañero",
   "REWARD_FLOW_STEP2_DESC": "Haz clic en Invitar y añade al menos 1 miembro. ¡La colaboración real empieza ahora!",
-  "REWARD_FLOW_STEP2_DONE_DESC": "Ya has invitado a un miembro en el panel de permisos en el paso 1.",
   "REWARD_FLOW_STEP3_GUIDED_DESC": "Abre el espacio de trabajo que acabas de crear y sube tu primer archivo.",
   "REWARD_FLOW_OPEN_WORKSPACE": "Abrir espacio de trabajo",
   "REWARD_FLOW_NEXT": "Siguiente",

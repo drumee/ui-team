@@ -160,16 +160,17 @@ module.exports = function (ui) {
   // Kept through the waiting state too, so the overlay and the card's position
   // don't change underneath the user the moment they start an upload — only the
   // cutout's interactivity does (see targetCutout and the stylesheet).
-  // Two variants point at no topbar control at all and are centred like Step 1
-  // (data-notarget, see skin __anchor):
-  //   - a Step 2 already satisfied during Step 1 → its card offers Continue
-  //   - a Step 3 with a workspace to reopen      → its card offers Open
-  //     workspace, and the upload control it eventually points at lives INSIDE
-  //     that workspace, not on the desk topbar.
-  const satisfied = base === "step2" && ui.inviteSatisfied?.();
+  // One variant points at no topbar control at all and is centred like Step 1
+  // (data-notarget, see skin __anchor): a Step 3 with a workspace to reopen —
+  // its card offers Open workspace, and the upload control it eventually points
+  // at lives INSIDE that workspace, not on the desk topbar.
   const guided = base === "step3" && ui.hasStep1Workspace?.();
-  const notarget = satisfied || guided;
-  const targeted = (base === "step2" || base === "step3") && !notarget;
+  const notarget = guided;
+  // Never while guiding: Step 2 reached as the permission panel (step2_guide)
+  // has a base step with a topbar control, but the walkthrough owns the cutout
+  // there — data-cutout="1" would also make it swallow clicks (see the skin).
+  const targeted =
+    !guiding && (base === "step2" || base === "step3") && !notarget;
 
   return Skeletons.Box.Y({
     className: `${pfx}__root`,

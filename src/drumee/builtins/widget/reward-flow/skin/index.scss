@@ -323,9 +323,9 @@ $success-soft: rgba(46, 179, 122, 0.14);
       align-items: center;
     }
 
-    // Any step with no control to point at — a Step 2 whose invite was already
-    // satisfied in Step 1, or a Step 3 that opens the workspace instead of the
-    // topbar uploader. _applyStepTarget leaves their inline placement cleared,
+    // Any step with no control to point at — a Step 3 that opens the workspace
+    // instead of the topbar uploader. _applyStepTarget leaves its inline
+    // placement cleared,
     // so centre them like Step 1. Keyed on data-notarget alone, NOT on the step:
     // scoping it to step2 left the guided Step 3 card falling through to the
     // 96px topbar fallback above, pinned under a control it does not point at.
