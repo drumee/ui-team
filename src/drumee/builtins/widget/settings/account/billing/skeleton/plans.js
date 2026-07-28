@@ -430,7 +430,14 @@ function billing_content(ui, cycle = "monthly") {
   return Skeletons.Box.Y({
     className: `${fig}-main`,
     kids: [
-      Skeletons.Box.G({
+      // Box.X, not Box.G. The row's SCSS is written in flex terms — `flex-wrap:
+      // wrap` on the row and `flex: 1 1 260px` on each card, narrowing to
+      // `1 1 100%` under 620px. Box.G renders `display: grid`, where none of
+      // that applies: with no grid-template the four cards fall into a single
+      // column. It only ever looked right because the container query that
+      // revealed this layout also forced `display: flex !important`; removing
+      // that query took the flex context with it.
+      Skeletons.Box.X({
         className: `${fig}-narrow`,
         kids: [
           item(ui, "free", options.free),
