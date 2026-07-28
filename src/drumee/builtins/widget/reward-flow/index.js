@@ -706,6 +706,19 @@ class __reward_flow extends LetcBox {
         // abandoned. Everything else on this host is the backdrop.
         const t = e.target;
         if (t?.closest?.(STEP2_SURFACES)) return;
+        // …everything except our own card, which the backdrop can cover: this
+        // host is full-viewport, and whether it lands above or below the flow
+        // depends on how the desk resolves its stacking (see the skin's
+        // over-modal lift). Where it lands above, the card is visible but every
+        // click on it arrives HERE instead, so the Back the user is looking at
+        // does nothing and the abandon guard answers for it. Route the click by
+        // geometry to the control they aimed at.
+        const onCard = this._cardHit(e);
+        if (onCard) {
+          e.stopPropagation();
+          if (onCard === "back") this.onUiEvent({}, { service: "reward-back" });
+          return;
+        }
         e.stopPropagation();
         this._openDropGuard();
       };
@@ -721,6 +734,31 @@ class __reward_flow extends LetcBox {
   }
 
   _isWaiting() { return isWaiting(this._step); }
+
+  /**
+   * Where a backdrop click landed relative to the step card, by geometry.
+   *
+   * The card is ours and is on screen; a click inside it is never an abandon
+   * gesture, whichever layer actually received the event. Used only by the
+   * backdrop guard, to keep a covered card operable — see _watchInviteBackdrop.
+   *
+   * @returns {"back"|"card"|null} "back" for the Back button, "card" elsewhere
+   *   on the card, null when the click missed it (the real backdrop).
+   */
+  _cardHit(e) {
+    if (!this.el || typeof this.el.querySelector !== "function") return null;
+    const pfx = this.fig.family;
+    const inside = (sel) => {
+      const el = this.el.querySelector(sel);
+      if (!el || typeof el.getBoundingClientRect !== "function") return false;
+      const r = el.getBoundingClientRect();
+      if (!r.width || !r.height) return false;
+      return e.clientX >= r.left && e.clientX <= r.right
+        && e.clientY >= r.top && e.clientY <= r.bottom;
+    };
+    if (!inside(`.${pfx}__card`)) return null;
+    return inside(`.${pfx}__btn--ghost`) ? "back" : "card";
+  }
 
   // ───────── external completion signals ─────────
 
