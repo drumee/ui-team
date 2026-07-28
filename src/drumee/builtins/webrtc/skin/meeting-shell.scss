@@ -1929,9 +1929,32 @@
     );
     white-space: nowrap;
     overflow: hidden;
-    max-width: 80px;
     text-overflow: ellipsis;
     max-width: 80px;
+  }
+
+  // Responsive title. The bar already tightens at these same stage widths
+  // (padding/gap at 700, controls folding into "more" at 480), so the title —
+  // the one element that can yield space without losing a control — gives way
+  // in step with them rather than on a breakpoint of its own.
+  //
+  // Both rules repeat the base selector so they stay at its 0,2,0 specificity
+  // and win on source order alone; they MUST stay below the base rule. Nesting
+  // them inside the existing 700/480 blocks higher up the file would put them
+  // ahead of it and they would silently lose.
+  @container meeting-stage (max-width: 700px) {
+    &__in-topbar-brand &__in-topbar-title {
+      max-width: 60px;
+    }
+  }
+
+  // Smallest stage: the control cluster needs every pixel, and the brand logo
+  // still identifies the window, so drop the title text entirely. Kept in the
+  // DOM (display, not removal) — ensurePart("call-title") still resolves.
+  @container meeting-stage (max-width: 480px) {
+    &__in-topbar-brand &__in-topbar-title {
+      display: none;
+    }
   }
 
   // The Figma bar shows only the title + controls: hide the wired-but-unshown
