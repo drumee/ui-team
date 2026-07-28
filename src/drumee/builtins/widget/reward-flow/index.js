@@ -11,11 +11,13 @@
  *                    ways in: the INTERNAL (team) permission panel the
  *                    walkthrough ends on, which IS Step 2 — it is where members
  *                    are invited — so Step 1 hands straight over to it
- *                    (onInvitePanel) and closing it advances to step3
- *                    (_awaitPanelClosed); or the invite popup opened from the
- *                    card, where onInvitationSent() advances. Every other Step 1
- *                    outcome — personal, external/secure-share — lands on the
- *                    step2 card first.
+ *                    (onInvitePanel); or the invite popup opened from the card,
+ *                    where onInvitationSent() advances. Either way the step is
+ *                    completed by an invitation actually going out: closing the
+ *                    panel without sending one is a Back to the step2 card
+ *                    (_awaitPanelClosed). Every other Step 1 outcome —
+ *                    personal, external/secure-share — lands on the step2 card
+ *                    first.
  *   step3          → "Upload" fires the desk's _e.upload service
  *   step3_waiting  → the real uploader is open; RADIO_MEDIA _e.uploaded advances
  *   step3_guide    → the walkthrough inside the workspace created in Step 1. It
@@ -102,6 +104,9 @@ class __reward_flow extends LetcBox {
     // the invite popup — see onInvitePanel. Never restored on resume: the panel
     // is long gone by then, so a reload resumes on the plain Step 2 card.
     this._invitePanelOpen = false;
+    // …and an invitation really went out from it, which is what separates
+    // closing that panel as "done" from closing it as Back.
+    this._inviteSent = false;
     // Furthest card step already reported to the server this session — see
     // _trackStep. Not persisted: re-posting a step after a reload is harmless
     // (the server keeps the furthest one) and losing one is not.
@@ -122,8 +127,13 @@ class __reward_flow extends LetcBox {
     // — the completion signal that advances step 1, mirroring the invite signal
     // for step 2 and the upload signal for step 3.
     this._onWorkspaceRefresh = (payload) => this.onWorkspaceCreated(payload);
+    // permission_restricted broadcasts this when a member is really invited
+    // from the panel. It is what tells a closed panel apart from a completed
+    // one — see _awaitPanelClosed.
+    this._onPanelInvitation = () => this.onPanelInvitation();
     if (typeof RADIO_BROADCAST !== "undefined") {
       RADIO_BROADCAST.on("workspace:refresh", this._onWorkspaceRefresh);
+      RADIO_BROADCAST.on("invitation:sent", this._onPanelInvitation);
     }
   }
 
@@ -190,6 +200,10 @@ class __reward_flow extends LetcBox {
     if (this._onWorkspaceRefresh && typeof RADIO_BROADCAST !== "undefined") {
       RADIO_BROADCAST.off("workspace:refresh", this._onWorkspaceRefresh);
       this._onWorkspaceRefresh = null;
+    }
+    if (this._onPanelInvitation && typeof RADIO_BROADCAST !== "undefined") {
+      RADIO_BROADCAST.off("invitation:sent", this._onPanelInvitation);
+      this._onPanelInvitation = null;
     }
     if (this._onStepResize && typeof window !== "undefined") {
       window.removeEventListener("resize", this._onStepResize);
@@ -573,7 +587,11 @@ class __reward_flow extends LetcBox {
       anchor.style.right = "";
       anchor.style.transform = "";
     }
-    const sel = onPanel ? INVITE_PANEL : (notarget ? null : STEP_TARGET[base]);
+    // PANEL_SURFACES, not the panel alone: sending an invitation replaces the
+    // panel with its confirmation, and querySelector then returns whichever is
+    // actually there — so the hole follows the surface instead of staying
+    // behind on the rect of one that has gone.
+    const sel = onPanel ? PANEL_SURFACES : (notarget ? null : STEP_TARGET[base]);
     if (!sel) return;
     const el = document.querySelector(sel);
     if (!el || typeof el.getBoundingClientRect !== "function") return;
@@ -746,6 +764,7 @@ class __reward_flow extends LetcBox {
   onInvitePanel() {
     if (this._step !== "step1_guide") return;
     this._invitePanelOpen = true;
+    this._inviteSent = false;
     // Stop the walkthrough BEFORE re-rendering: stop() clears the coach through
     // the `guide-callout` part, which the card layout below does not have.
     this._stopGuide();
@@ -760,18 +779,23 @@ class __reward_flow extends LetcBox {
   }
 
   /**
-   * Hold Step 2 until the permission panel is gone, then move on to Step 3.
+   * Hold Step 2 while the user works the permission panel, and act on what they
+   * do with it. Nothing reports this panel to us — the desk reports the invite
+   * popup for itself (onInvitePopupClosed) but not this — so observe it, the
+   * same way _awaitToastDismissed watches for a confirmation to be dismissed.
    *
-   * The panel closing is Step 2's completion signal, the role
-   * onInvitePopupClosed plays for the invite popup — but that one is reported
-   * by the desk, which owns the popup, and nothing reports this one. So observe
-   * it going, the same way _awaitToastDismissed watches for the confirmation to
-   * be dismissed.
+   * Two outcomes, decided by whether an invitation was actually sent:
+   *   sent    → Step 2 is done; the confirmation that REPLACED the panel is
+   *             dismissed and the flow moves to Step 3.
+   *   closed  → the panel's own X is a Back: nothing was asked for and nothing
+   *             was given, so the flow returns to the Step 2 card, where
+   *             "Invite member" opens the popup instead. Exactly what the
+   *             card's own Back does (see reward-back).
    *
-   * The confirmation counts as the panel still being up: sending an invitation
-   * REPLACES the panel with it in that host, and closing it is the last thing
-   * Step 2 asks for. Both swaps happen in one synchronous feed, so the observer
-   * never sees the gap between them.
+   * The success signal is permission_restricted's "invitation:sent" broadcast,
+   * not the presence of a confirmation: a FAILED invite raises a window_info
+   * of its own (Wm.alert on the error path), so sniffing for one would read a
+   * failure as a completed step.
    *
    * Watches the DOCUMENT, not the wrapper-modal the panel happens to be in
    * today: pinning the host would make a panel opened anywhere else either
@@ -783,13 +807,15 @@ class __reward_flow extends LetcBox {
   _awaitPanelClosed() {
     const advance = () => {
       this._stopPanelWatch();
+      const sent = this._inviteSent;
       this._invitePanelOpen = false;
+      this._inviteSent = false;
       // Deferred a microtask for the same reason as _awaitToastDismissed: the
       // observer fires DURING the panel's removal unwind, so let that settle
       // before rendering the next step over the same host.
       Promise.resolve().then(() => {
         if (this.isDestroyed?.()) return;
-        this._goto("step3");
+        this._goto(sent ? "step3" : "step2");
       });
     };
     const onScreen = () =>
@@ -816,6 +842,19 @@ class __reward_flow extends LetcBox {
       this._panelObs.disconnect();
       this._panelObs = null;
     }
+  }
+
+  /**
+   * A member was really invited from the permission panel. Latched only while
+   * that panel is serving Step 2: an invitation sent later, from the topbar or
+   * a settings panel, is not this step being completed.
+   *
+   * This is what makes closing the panel mean two different things — Step 2
+   * done, or a plain Back (see _awaitPanelClosed).
+   */
+  onPanelInvitation() {
+    if (!this._invitePanelOpen) return;
+    this._inviteSent = true;
   }
 
   /** True while Step 2 is being served by the permission panel rather than the
@@ -1222,11 +1261,14 @@ class __reward_flow extends LetcBox {
         if (this._invitePanelOpen) {
           // Back out of the permission panel: the workspace exists, so there is
           // no rewinding past it — this only says "not from here". Stop
-          // watching the panel (its close must no longer advance the flow),
+          // watching the panel (its close must not then be read as an outcome),
           // close it, and fall back to the plain Step 2 card, whose Invite
-          // button opens the popup instead.
+          // button opens the popup instead. The panel's own X takes the same
+          // route by a different road: it closes the panel, and a close with
+          // nothing sent IS this (see _awaitPanelClosed).
           this._stopPanelWatch();
           this._invitePanelOpen = false;
+          this._inviteSent = false;
           this._clearWrapperModal();
           return this._goto("step2");
         }
