@@ -155,6 +155,11 @@ function meetingSidePanel(_ui_) {
             send_icon: "raw-send-chat",
             attach_icon: "chat-link-simple",
             sys_pn: "meeting-chat-widget",
+            // partHandler is what registers the widget as an addressable part;
+            // sys_pn alone is not enough. Needed so the meeting can reach the
+            // instance via ensurePart and subscribe to "message-received" for
+            // the unread badge (see _bindChatUnread).
+            partHandler: [_ui_],
           },
         ],
       }),
