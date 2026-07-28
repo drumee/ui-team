@@ -514,6 +514,26 @@ $success-soft: rgba(46, 179, 122, 0.14);
     }
   }
 
+  // Back on the permission-panel Step 2, where it is the card's ONLY control:
+  // there is no primary button beside it to carry the eye, and the card sits
+  // clear of the dim next to a live panel. The ghost lockup — #65656c on
+  // #f2f2f7, no border — reads as a disabled label there, so the button gets
+  // tried once and written off as inert. Give it the same treatment as the
+  // coach's Back, this widget's established clickable secondary: full-contrast
+  // label, a real border, and hover/active states that answer the pointer.
+  &__root[data-over-modal="1"] &__btn--ghost {
+    color: var(--normal-fg);
+    background-color: var(--normal-bg);
+    border: 1px solid var(--border-default);
+    box-shadow: 0 1px 2px rgba(11, 10, 33, 0.06);
+
+    &:hover { background-color: var(--normal-bg-90); }
+    &:active {
+      background-color: var(--normal-bg-80);
+      box-shadow: none;
+    }
+  }
+
   // ───────── modals (fed into Wm.__wrapperModal) ─────────
   // Fed into Wm.__wrapperModal, outside the .reward-flow root — so it can't
   // inherit the root's font and declares it here.
