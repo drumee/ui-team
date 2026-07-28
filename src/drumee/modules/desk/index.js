@@ -1,7 +1,7 @@
 require("welcome/skin");
 require("builtins/window/confirm/skin");
 const { canUpgradePlan, billingAvailable, needsAdminConsoleUpgrade } = require("libs/billing");
-const { captureUtm } = require("libs/campaign");
+const { captureUtm, campaignArrival } = require("libs/campaign");
 
 class desk_module extends LetcBox {
   constructor(...args) {
@@ -1319,6 +1319,19 @@ class desk_module extends LetcBox {
     if (!forced) {
       let state;
       try {
+        // Turn an invitation into an entitlement. Being mailed is not enough —
+        // the user has to have followed the CTA — and the click happens while
+        // they are signed OUT, so the router stashes it in sessionStorage and it
+        // rides through the login reload to here, where there is finally a uid
+        // to attribute it to. Awaited before get_state so the row is already
+        // 'clicked' when we ask; only consumed once the server has it.
+        if (campaignArrival()) {
+          await this.postService(SERVICE.reward.track, {
+            hub_id: Visitor.id,
+            status: "clicked",
+          });
+          campaignArrival(true);
+        }
         state = await this.fetchService(SERVICE.reward.get_state, { hub_id: Visitor.id });
       } catch (e) {
         // The gate is the only thing standing between a user and an overlay

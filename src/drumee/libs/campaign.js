@@ -41,20 +41,33 @@ const MAX_LEN = 64;
  *
  * @returns {Object} the markers now in force, `{}` when none were ever seen
  */
-function captureUtm() {
-  // Guarded like the other libs/ globals (see libs/billing): a lib must not
-  // assume bootstrap has run, and this one promises never to throw. The typeof
-  // test has to stay in front of the optional chain — `Visitor?.x` still throws
-  // a ReferenceError when Visitor was never declared at all.
+/**
+ * The markers on THIS navigation's URL, and nothing else.
+ *
+ * Kept separate from captureUtm's stored fallback: "what campaign has this
+ * browser ever seen" and "did this particular arrival come from a campaign
+ * link" are different questions, and only the URL can answer the second.
+ *
+ * Guarded like the other libs/ globals (see libs/billing): a lib must not
+ * assume bootstrap has run, and this one promises never to throw. The typeof
+ * test has to stay in front of the optional chain — `Visitor?.x` still throws
+ * a ReferenceError when Visitor was never declared at all.
+ */
+function readUrlMarkers() {
   const args = (typeof Visitor !== "undefined" && Visitor?.parseModuleArgs?.()) || {};
   let search = null;
   try { search = new URLSearchParams(location.search); } catch (e) { /* no URL API */ }
 
-  let utm = {};
+  const utm = {};
   for (const k of PARAMS) {
     const v = args[k] || search?.get(k) || "";
     if (v) utm[k] = String(v).trim().slice(0, MAX_LEN);
   }
+  return utm;
+}
+
+function captureUtm() {
+  let utm = readUrlMarkers();
 
   try {
     if (Object.keys(utm).length) {
@@ -70,4 +83,102 @@ function captureUtm() {
   return utm;
 }
 
-module.exports = { captureUtm };
+/**
+ * Session-scoped proof that THIS visit arrived on a campaign link.
+ *
+ * Separate from the localStorage marker above, and deliberately so. That one is
+ * attribution — which campaign this browser last saw, kept indefinitely. This
+ * one answers a narrower question the reward gate needs: did the user actually
+ * follow the CTA on the way in? Being on the recipient list is an invitation;
+ * clicking is the entitlement.
+ *
+ * sessionStorage is the right shelf for it. It survives the FULL PAGE RELOAD
+ * that signing in triggers — the same reason welcome/index.js relays
+ * drumee_secure_share_return and drumee_hubDeepLink through it — but it dies
+ * with the tab, so it cannot accumulate one key per user, leak to the next
+ * person to sign in, or go quietly stale the way a localStorage latch does.
+ */
+const ARRIVAL_KEY = "drumee_campaign_arrival";
+
+/**
+ * Take the campaign params back out of the URL once they have been recorded.
+ *
+ * Without this the address bar keeps them for the life of the tab, and since
+ * every boot and every route re-reads the URL, a plain reload — or a restored
+ * session, or signing in again — looks exactly like a fresh click. That is how
+ * a user who never touched the CTA ended up being handed the flow.
+ *
+ * replaceState, not assignment: it rewrites the URL WITHOUT firing hashchange,
+ * so tidying up cannot kick off another routing pass. Only the utm keys are
+ * removed; any other deep-link args on the hash are left exactly as they were.
+ */
+function stripCampaignParams() {
+  if (typeof history === "undefined" || !history.replaceState) return;
+  try {
+    const drop = (qs) =>
+      qs.split("&").filter((p) => p && !PARAMS.includes(p.split("=")[0])).join("&");
+
+    const hash = location.hash || "";
+    const qi = hash.indexOf("?");
+    let nextHash = hash;
+    if (qi >= 0) {
+      const kept = drop(hash.slice(qi + 1));
+      nextHash = kept ? `${hash.slice(0, qi)}?${kept}` : hash.slice(0, qi);
+    }
+
+    const search = location.search || "";
+    let nextSearch = search;
+    if (search.length > 1) {
+      const kept = drop(search.slice(1));
+      nextSearch = kept ? `?${kept}` : "";
+    }
+
+    if (nextHash === hash && nextSearch === search) return;
+    history.replaceState(null, "", `${location.pathname}${nextSearch}${nextHash}`);
+  } catch (e) { /* tidying the URL must never break navigation */ }
+}
+
+/**
+ * Record the campaign this visit arrived on, if any.
+ *
+ * Must run BEFORE anything can rewrite the hash — the signin plugin replaces it
+ * wholesale with "#/welcome/signin" and would erase the markers.
+ *
+ * Called from the router BOTH at boot and on every route: a click that lands in
+ * a tab where the app is already running is a same-document navigation, so only
+ * hashchange fires and initialize() never runs again. Capturing at boot alone
+ * silently missed exactly that case — the commonest one, since the recipient is
+ * usually already sitting on a Drumee page. Routing from a module is no better:
+ * it is skipped when the module is already mounted and only route() re-runs.
+ *
+ * Reads the URL DIRECTLY rather than going through captureUtm, whose stored
+ * fallback is right for attribution and wrong here: it would make every later
+ * page load look like a fresh click, and a browser still holding someone else's
+ * stored campaign would manufacture a click for whoever signed in next.
+ */
+function captureCampaignArrival() {
+  const campaign = readUrlMarkers().utm_campaign;
+  if (!campaign) return;
+  try {
+    sessionStorage.setItem(ARRIVAL_KEY, campaign);
+  } catch (e) { /* private mode — the gate simply will not open */ }
+  // Consume the URL itself, so this arrival is counted once and not re-counted
+  // on every subsequent load of the same address.
+  stripCampaignParams();
+}
+
+/**
+ * Read the arrival marker, optionally consuming it.
+ * @param {Boolean} [consume] remove it, once it has been recorded server-side
+ * @returns {String} the campaign arrived on, "" when this visit did not
+ */
+function campaignArrival(consume) {
+  let v = "";
+  try {
+    v = sessionStorage.getItem(ARRIVAL_KEY) || "";
+    if (v && consume) sessionStorage.removeItem(ARRIVAL_KEY);
+  } catch (e) { /* private mode */ }
+  return v;
+}
+
+module.exports = { captureUtm, captureCampaignArrival, campaignArrival, ARRIVAL_KEY };
