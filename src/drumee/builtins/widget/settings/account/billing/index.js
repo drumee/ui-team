@@ -502,11 +502,27 @@ class settings_billing extends LetcBox {
    */
   fetchPlanData() {
     try {
-      // Get current plan from Visitor.quota()
-      // Structure: {plan: 'free', organization: 0, seat: 0, storage: 20000000000}
+      // Quota carries the entitlement figures (seats, storage, cycle).
       let { total_seat, plan = "free", billing_cycle = "monthly", storage } = Visitor.quota() || {}
-      // Get plan name from quota.plan (primary source)
-      const planName = (plan || "free").toLowerCase();
+      // ...but NOT the authoritative plan name. Visitor.quota() is a client
+      // cache refreshed only when the payment.plan_updated WS event lands and
+      // calls Visitor.respawn. The subscription mirror, by contrast, is read
+      // straight from the server by _loadSubscription.
+      //
+      // Reading the plan from the cache made a plan change appear to undo
+      // itself: the confirm flipped the cards optimistically, _awaitPlanSync
+      // then polled the MIRROR until it showed the new plan — and handed over
+      // to this method, which read the stale CACHE and put the old plan back.
+      // Server said business, the page said team. Prefer the mirror whenever
+      // there is a live subscription row; quota stays the source for everyone
+      // else (a free account has no mirror row at all).
+      const mirrored = String((this._subscription || {}).plan || "");
+      const planName = (mirrored || plan || "free").toLowerCase();
+      if (mirrored) {
+        const p = String((this._subscription || {}).period || "");
+        if (/^year/.test(p)) billing_cycle = "yearly";
+        else if (/^month/.test(p)) billing_cycle = "monthly";
+      }
       // Get period from plan_detail if available, default to monthly
 
       // Normalise quota.plan onto a card key. Legacy hand-granted rows carry
