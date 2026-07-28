@@ -32,26 +32,20 @@ function getOptions(ui, cycle = "monthly") {
   const perYear = LOCALE.PER_YEAR;
   const per = isYear ? perYear : perMonth;
 
-  // Transcribed row-for-row from "3. THE FINAL TABLE — Publish This" in
-  // tmp/Drumee Pricing Structure - 072026.md. Same rows, same order, every
-  // card: the table IS the spec. (The July 2026 revision dropped the Data
-  // control row and added Upgrade trigger — the behavioural cue for when to
-  // move up a tier.)
-  const rows = (col) => [
-    { label: LOCALE.FEAT_DEPLOYMENT, value: col.deployment },
-    { label: LOCALE.FEAT_WORKSPACES, value: col.workspaces },
-    { label: LOCALE.FEAT_MEMBERS, value: col.members },
-    { label: LOCALE.FEAT_STORAGE, value: col.storage },
-    { label: LOCALE.FEAT_FILES_CHAT, value: "", tick: true },
-    { label: LOCALE.FEAT_PERMISSIONS, value: col.permissions, included: col.permissions !== LOCALE.NONE },
-    { label: LOCALE.FEAT_VERSION_HISTORY, value: col.history, included: col.history !== LOCALE.NONE },
-    { label: LOCALE.FEAT_GUEST_ACCESS, value: "", included: col.guest, tick: true },
-    { label: LOCALE.FEAT_ADMIN_PANEL, value: col.admin || "", included: col.admin !== false, tick: true },
-    { label: LOCALE.FEAT_API_ACCESS, value: col.api || "", included: col.api !== false, tick: true },
-    { label: LOCALE.FEAT_SSO_SAML, value: "", included: col.sso, tick: true },
-    { label: LOCALE.FEAT_SUPPORT, value: col.support },
-    { label: LOCALE.FEAT_UPGRADE_TRIGGER, value: col.trigger },
-  ];
+  // One row per feature the plan ACTUALLY includes, value first and bold, the
+  // noun after it in regular weight — "100 GB storage", "Up to 10 member".
+  // Follows Figma 2769-213751.
+  //
+  // This replaced a fixed 13-row template rendered identically on all four
+  // cards, with the rows a plan lacked struck through. That shape existed to
+  // serve the side-by-side comparison table; once the label column goes away
+  // (the cards are the only layout now) repeating every label four times and
+  // padding the cheap plans with crossed-out lines is just noise — Free showed
+  // nine strikethroughs for four real features.
+  //
+  // A row is { value, label }. `label` is optional: rows the design writes as a
+  // single bold phrase ("Guest access", "SSO / SAML") carry only a value.
+  const row = (value, label) => ({ value, label });
 
   return {
     free: {
@@ -61,12 +55,12 @@ function getOptions(ui, cycle = "monthly") {
       buttonTitle: LOCALE.CTA_START_FREE,
       buttonKind: "secondary",
       subText: LOCALE.PLAN_FREE_DESC,
-      features: rows({
-        deployment: LOCALE.SAAS, workspaces: "1", members: LOCALE.ONE_SOLO, storage: "5 GB",
-        permissions: LOCALE.NONE, history: LOCALE.NONE, guest: false,
-        admin: false, api: false, sso: false,
-        support: LOCALE.SUPPORT_COMMUNITY, trigger: LOCALE.TRIGGER_FREE,
-      }),
+      features: [
+        row("1", LOCALE.FEAT_UNIT_WORKSPACE),
+        row(LOCALE.ONE_SOLO, LOCALE.FEAT_UNIT_MEMBER),
+        row("5 GB", LOCALE.FEAT_UNIT_STORAGE),
+        row(LOCALE.SUPPORT_COMMUNITY, LOCALE.FEAT_UNIT_SUPPORT),
+      ],
     },
     // The entry paid tier.
     team: {
@@ -77,12 +71,16 @@ function getOptions(ui, cycle = "monthly") {
       buttonKind: "primary",
       badge: 1,
       subText: LOCALE.PLAN_TEAM_DESC,
-      features: rows({
-        deployment: LOCALE.SAAS, workspaces: "1", members: LOCALE.UP_TO_10, storage: "100 GB",
-        permissions: LOCALE.GRANULAR_ROLE_BASED, history: LOCALE.DAYS_30, guest: true,
-        admin: "", api: false, sso: false,
-        support: LOCALE.SUPPORT_EMAIL, trigger: LOCALE.TRIGGER_TEAM,
-      }),
+      features: [
+        row("1", LOCALE.FEAT_UNIT_WORKSPACE),
+        row(LOCALE.UP_TO_10, LOCALE.FEAT_UNIT_MEMBER),
+        row("100 GB", LOCALE.FEAT_UNIT_STORAGE),
+        row(LOCALE.GRANULAR, LOCALE.FEAT_UNIT_PERMISSIONS),
+        row(LOCALE.DAYS_30, LOCALE.FEAT_UNIT_VERSION_HISTORY),
+        row(LOCALE.FEAT_GUEST_ACCESS),
+        row(LOCALE.FEAT_ADMIN_PANEL),
+        row(LOCALE.SUPPORT_EMAIL, LOCALE.FEAT_UNIT_SUPPORT),
+      ],
     },
     // Self-serve since the July 2026 final table: checks out (or switches the
     // live subscription) like Team instead of pointing at sales.
@@ -93,12 +91,18 @@ function getOptions(ui, cycle = "monthly") {
       buttonTitle: LOCALE.CTA_START_BUSINESS,
       buttonKind: "dark",
       subText: LOCALE.PLAN_BUSINESS_DESC,
-      features: rows({
-        deployment: LOCALE.SAAS, workspaces: LOCALE.MULTIPLE, members: LOCALE.UNLIMITED, storage: "1 TB",
-        permissions: LOCALE.GRANULAR_AUDIT, history: LOCALE.ONE_YEAR, guest: true,
-        admin: LOCALE.PLUS_AUDIT_LOGS, api: "", sso: true,
-        support: LOCALE.SUPPORT_PRIORITY_SLA, trigger: LOCALE.TRIGGER_BUSINESS,
-      }),
+      features: [
+        row(LOCALE.MULTIPLE, LOCALE.FEAT_UNIT_WORKSPACES),
+        row(LOCALE.UNLIMITED, LOCALE.FEAT_UNIT_MEMBER),
+        row("1 TB", LOCALE.FEAT_UNIT_STORAGE),
+        row(LOCALE.GRANULAR_AUDIT, LOCALE.FEAT_UNIT_PERMISSIONS),
+        row(LOCALE.ONE_YEAR, LOCALE.FEAT_UNIT_VERSION_HISTORY),
+        row(LOCALE.FEAT_GUEST_ACCESS),
+        row(LOCALE.FEAT_ADMIN_PANEL_AUDIT),
+        row(LOCALE.FEAT_API_ACCESS),
+        row(LOCALE.FEAT_SSO_SAML),
+        row(LOCALE.SUPPORT_PRIORITY_SLA, LOCALE.FEAT_UNIT_SUPPORT),
+      ],
     },
     sovereign: {
       title: LOCALE.SOVEREIGN,
@@ -108,13 +112,18 @@ function getOptions(ui, cycle = "monthly") {
       buttonTitle: LOCALE.CTA_GET_SOVEREIGN_NODE,
       buttonKind: "dark",
       subText: LOCALE.PLAN_SOVEREIGN_DESC,
-      features: rows({
-        deployment: LOCALE.SELF_HOSTED, workspaces: LOCALE.FULL_OS, members: LOCALE.UNLIMITED,
-        storage: LOCALE.YOUR_INFRASTRUCTURE,
-        permissions: LOCALE.FULL_ACL, history: LOCALE.UNLIMITED, guest: true,
-        admin: LOCALE.PLUS_SDK, api: LOCALE.PLUS_SDK, sso: true,
-        support: LOCALE.SUPPORT_DEDICATED_SLA, trigger: LOCALE.TRIGGER_SOVEREIGN,
-      }),
+      features: [
+        row(LOCALE.FULL_OS, LOCALE.FEAT_UNIT_WORKSPACES),
+        row(LOCALE.UNLIMITED, LOCALE.FEAT_UNIT_MEMBER),
+        row(LOCALE.YOUR_INFRASTRUCTURE, LOCALE.FEAT_UNIT_STORAGE),
+        row(LOCALE.FULL_ACL, LOCALE.FEAT_UNIT_PERMISSIONS),
+        row(LOCALE.UNLIMITED, LOCALE.FEAT_UNIT_VERSION_HISTORY),
+        row(LOCALE.FEAT_GUEST_ACCESS),
+        row(LOCALE.FEAT_ADMIN_PANEL_SDK),
+        row(LOCALE.FEAT_API_ACCESS_SDK),
+        row(LOCALE.FEAT_SSO_SAML),
+        row(LOCALE.SUPPORT_DEDICATED_SLA, LOCALE.FEAT_UNIT_SUPPORT),
+      ],
     },
   };
 }
@@ -352,33 +361,30 @@ function item(ui, opt, option) {
     ? Skeletons.Note({ className: `${fig}-subtext`, content: subText })
     : null;
 
-  // One row per row of the published pricing table, in the table's order, on
-  // every card — that is what makes the four cards comparable. Rows the plan
-  // does NOT get are shown struck through rather than dropped: a buyer needs
-  // to see where a tier stops, and silently omitting them hid exactly that.
+  // Value first and bold, the noun after it in regular weight — the reading
+  // order of the design ("100 GB storage"), and the reason -feature-main is the
+  // 600-weight class while -feature-sub is 400. Rows written as one bold phrase
+  // ("Guest access") carry no label and render just the value.
   //
-  // Label first, value second (the table reads "Storage | 5 GB"). The previous
-  // value-first order worked for quantities but broke everything else —
-  // "SaaS Deployment", "Trust Drumee Data control", "Your infrastructure
-  // storage".
+  // Every row is an entitlement now, so the tick is unconditional; there is no
+  // excluded/struck-through state left to render.
   const featureItems = features.map((f) => {
-    const feature = typeof f === "string" ? { label: f, value: "", included: true } : f;
-    const { label, value } = feature;
-    const included = feature.included !== false;
+    const feature = typeof f === "string" ? { value: f } : f;
+    const { value, label } = feature;
 
     return Skeletons.Box.X({
-      className: `${fig}-feature ${included ? "" : "excluded"}`,
+      className: `${fig}-feature`,
       kids: [
         Skeletons.Image.Svg({
-          ico: included ? "available" : "cross",
+          ico: "available",
           className: `${fig}-feature-icon`,
         }),
         Skeletons.Box.X({
           className: `${fig}-feature-text`,
           kids: [
-            Skeletons.Note({ className: `${fig}-feature-sub`, content: label }),
-            value
-              ? Skeletons.Note({ className: `${fig}-feature-main`, content: value })
+            Skeletons.Note({ className: `${fig}-feature-main`, content: value }),
+            label
+              ? Skeletons.Note({ className: `${fig}-feature-sub`, content: label })
               : null,
           ].filter(Boolean),
         }),
@@ -403,102 +409,16 @@ function item(ui, opt, option) {
 }
 
 /**
- * One cell of the comparison table.
+ * Plans view: the four cards, side by side and each self-contained.
  *
- * A tick-only row (Files + folder chat, Guest access, SSO/SAML) renders just
- * the mark — repeating the feature name in all four columns is what the label
- * column exists to avoid. Rows carrying a value show the value next to the
- * mark, and a row the plan does not get shows a cross, so the eye can run down
- * a column and see where the tier stops.
- * @param {Object} ui - UI instance
- * @param {string} fig - BEM prefix
- * @param {Object} cell - { value, included }
- * @returns {Object} Skeletons component
- */
-function compareCell(ui, fig, cell, colKey) {
-  const included = cell.included !== false;
-  // The mark carries meaning only where the table itself uses one. On a value
-  // row the value IS the answer, so a leading tick beside "SaaS" or "Trust
-  // Drumee" is pure noise — it was on every row and made the columns hard to
-  // scan. A cross always shows, though: that is how a column tells you where
-  // the tier stops.
-  const showMark = cell.tick || !included;
-  return Skeletons.Box.X({
-    className: `${fig}-cell ${fig}-value ${fig}-col ${fig}-col-${colKey} ${included ? "" : "excluded"}`,
-    kids: [
-      showMark
-        ? Skeletons.Image.Svg({
-            ico: included ? "available" : "cross",
-            className: `${fig}-mark`,
-          })
-        : null,
-      cell.value
-        ? Skeletons.Note({ className: `${fig}-text`, content: cell.value })
-        : null,
-    ].filter(Boolean),
-  });
-}
-
-/**
- * Desktop layout: a real comparison table — a leading label column plus one
- * column per plan, so the four offers line up on the same rows and can be read
- * across. The stacked cards repeat every label four times, which is fine on a
- * phone (one column at a time) but makes comparison hard on a wide screen.
+ * There used to be a second, wide layout as well — a comparison table with a
+ * leading label column and one column per plan — rendered alongside the cards
+ * with a container query picking one. Figma 2769-213751 drops it: the labels
+ * live inside each card now, so the same shape serves every width and the
+ * feature names are never separated from the plan they belong to.
  *
- * Both layouts are built from the SAME getOptions data, in the same row order,
- * so they can never disagree about what a plan includes.
- * @param {Object} ui - UI instance
- * @param {Object} options - keyed plan options
- * @returns {Object} Skeletons component
- */
-function comparisonTable(ui, options) {
-  const fig = `${ui.fig.family}__compare`;
-  const keys = ["free", "team", "business", "sovereign"];
-  const cols = keys.map((k) => options[k]);
-  const labels = cols[0].features.map((f) => f.label);
-
-  // Header: an empty corner over the label column, then each plan's price
-  // header and its CTA.
-  const header = Skeletons.Box.X({
-    className: `${fig}-row ${fig}-header`,
-    kids: [
-      Skeletons.Box.Y({ className: `${fig}-cell ${fig}-label ${fig}-corner` }),
-      ...keys.map((k, i) =>
-        Skeletons.Box.Y({
-          className: `${fig}-cell ${fig}-plan ${fig}-col ${fig}-col-${k}`,
-          kids: [
-            priceHeader(ui, `${ui.fig.family}__plan`, cols[i], isCurrentSubscription(ui, k)),
-            ctaButton(ui, `${ui.fig.family}__plan`, k, cols[i]),
-            cols[i].subText
-              ? Skeletons.Note({ className: `${fig}-tagline`, content: cols[i].subText })
-              : null,
-          ].filter(Boolean),
-        })
-      ),
-    ],
-  });
-
-  const body = labels.map((label, i) =>
-    Skeletons.Box.X({
-      className: `${fig}-row`,
-      kids: [
-        Skeletons.Box.Y({
-          className: `${fig}-cell ${fig}-label`,
-          kids: [Skeletons.Note({ className: `${fig}-label-text`, content: label })],
-        }),
-        ...cols.map((c, ci) => compareCell(ui, fig, c.features[i], keys[ci])),
-      ],
-    })
-  );
-
-  return Skeletons.Box.Y({ className: `${fig}-main`, kids: [header, ...body] });
-}
-
-/**
- * Create plans content layout with 4 plan items (Free, Team, Business,
- * Sovereign). Team and Business reach Stripe Checkout (or switch the live
- * subscription in place); Sovereign is sales-led and its CTA opens the
- * contact-sales mail instead.
+ * Box.G wraps: four across when there is room, folding to two and then one as
+ * the container narrows (see skin/index.scss, .settings-billing__plans-narrow).
  * @param {Object} ui - UI instance
  * @param {string} cycle - Billing cycle (monthly or yearly)
  * @returns {Object} Skeletons component
@@ -507,23 +427,9 @@ function billing_content(ui, cycle = "monthly") {
   const fig = `${ui.fig.family}__plans`;
   const options = getOptions(ui, cycle);
 
-  // BOTH layouts are rendered and CSS picks one, deliberately.
-  //
-  // The previous cut branched on Visitor.isMobile(), which reads the DEVICE
-  // (user agent) rather than the window: a desktop browser narrowed to 500px
-  // still got the 1079px-wide table, and nothing reflowed on resize because
-  // the choice was frozen at render time. A width media query is the only
-  // thing that actually tracks the viewport.
-  //
-  // Narrow screens keep the stacked cards — one plan at a time, every row
-  // labelled in place, the only readable shape when the columns won't fit.
   return Skeletons.Box.Y({
     className: `${fig}-main`,
     kids: [
-      Skeletons.Box.Y({
-        className: `${fig}-wide`,
-        kids: [comparisonTable(ui, options)],
-      }),
       Skeletons.Box.G({
         className: `${fig}-narrow`,
         kids: [
