@@ -2113,6 +2113,11 @@ class __widget_chat extends LetcBox {
       this._newMsgCount++;
       this.__buttonScroll.el.dataset.count = this._newMsgCount;
       this.__list.append(data);
+      // Genuinely new inbound message — own posts return above via the echoId /
+      // message_id branches, so hosts can treat this as "someone else wrote".
+      // Purely additive: hosts that don't listen are unaffected. The meeting
+      // window uses it to light its unread badge while the chat pane is hidden.
+      this.trigger("message-received", data);
       // RADIO_BROADCAST.trigger('activity:notify', {type:"chat", ...data});
       return;
     }

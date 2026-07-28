@@ -5,6 +5,11 @@ const __room = require("builtins/webrtc/room/jitsi");
 const PARTY_TOAST_MAX = 3;
 // Matches the window-meeting-party-toast fade-out tail.
 const PARTY_TOAST_MS = 4000;
+// Below this window width the 420px side panel and the video stage can no
+// longer share the row, so the panel auto-collapses (see _applyChatAutoClose)
+// and switches to full-bleed overlay mode when opened by hand
+// (data-panel-overlay in webrtc/skin/meeting-shell.scss).
+const CHAT_AUTO_CLOSE_W = 950;
 
 class __window_meeting extends __room {
   /**
@@ -105,8 +110,77 @@ class __window_meeting extends __room {
     if (!this.el || !this.$el) return;
     const w = this.$el.width() || this.el.offsetWidth || 0;
     if (!w) return;
-    this.el.dataset.narrow = w < 640 ? "1" : "0";
-    this.el.dataset.compact = w < 520 ? "1" : "0";
+    // The ResizeObserver, _resize, fitScreenSize, change_size and
+    // _applyWindowGeometry all funnel here, often for the same size — skip the
+    // redundant dataset writes. _applyChatAutoClose still runs every time: it
+    // is edge-triggered on its own state, and the panel does not exist yet on
+    // the first call of the mount sequence (responsive() runs once before the
+    // skeleton is fed and again straight after, at the same width), so gating
+    // it on a width CHANGE would drop the initial collapse entirely.
+    if (this._lastWidth !== w) {
+      this._lastWidth = w;
+      this.el.dataset.narrow = w < 640 ? "1" : "0";
+      this.el.dataset.compact = w < 520 ? "1" : "0";
+      // Panel switches to a full-bleed overlay at the same width it auto-closes,
+      // so a manual open below the threshold doesn't crush the stage into a
+      // sliver. Superset of data-narrow, which keeps its own job (dropping the
+      // secondary topbar controls).
+      this.el.dataset.panelOverlay = w < CHAT_AUTO_CLOSE_W ? "1" : "0";
+    }
+    this._applyChatAutoClose(w);
+  }
+
+  // Collapse the side panel when the window gets too small to hold both it and
+  // the stage, and bring it back when there's room again.
+  //
+  // Edge-triggered, NOT level-triggered: we act only on the crossing, never on
+  // every observation while small. That's what lets a manual open below the
+  // threshold survive — the topbar Chat button opens the panel as an overlay
+  // and no further resize tick slams it shut, because no new crossing occurred.
+  //
+  // `_chatAutoClosed` records that WE closed it, so widening restores it. Any
+  // user-initiated open/close clears the flag (see _setChatOpen), meaning a
+  // deliberate close while narrow stays closed on the way back up.
+  _applyChatAutoClose(w) {
+    const panel = this._chatPanelEl();
+    if (!panel) return;
+    const small = w < CHAT_AUTO_CLOSE_W;
+    const wasSmall = this._chatSmall;
+    this._chatSmall = small;
+    if (small === wasSmall) return;
+    if (small) {
+      if (panel.dataset.open === "1") {
+        this._chatAutoClosed = 1;
+        this._setChatOpen(false, { auto: 1 });
+      }
+    } else if (this._chatAutoClosed) {
+      this._chatAutoClosed = 0;
+      this._setChatOpen(true, { auto: 1 });
+    }
+  }
+
+  // Single source of truth for the size-driven layout. _resize only fires while
+  // dragging the window's own jQuery-UI handles, which misses the cases users
+  // actually hit: the browser viewport resizing (the WM clamps windows down in
+  // window/manager.js without notifying them) and embedded meetings whose host
+  // pane changes size. Observing the root element catches all of them.
+  _bindResizeObserver() {
+    if (this._resizeObserver || !this.el || typeof ResizeObserver !== "function")
+      return;
+    this._resizeObserver = new ResizeObserver(() => {
+      if (this.isDestroyed?.()) return;
+      // Same guard as _resize: while a presenter video is fullscreen the
+      // browser owns geometry, and re-flowing can kick it straight back out.
+      if (document.fullscreenElement) return;
+      this.responsive(this.el?.dataset.mode || "normal");
+    });
+    this._resizeObserver.observe(this.el);
+  }
+
+  _unbindResizeObserver() {
+    if (!this._resizeObserver) return;
+    this._resizeObserver.disconnect();
+    this._resizeObserver = null;
   }
 
   /**
@@ -124,6 +198,7 @@ class __window_meeting extends __room {
   async onDomRefresh() {
     this.raise();
     this._initIdleControls();
+    this._bindResizeObserver();
     // Standalone (Wm pool) calls must float via the base window's absolute
     // positioning; embedded meetings (folder tab) stay relative/fill-parent.
     if (this.el) this.el.dataset.standalone = this.mget("standalone") ? "1" : "0";
@@ -173,6 +248,7 @@ class __window_meeting extends __room {
       this.feed(require("./skeleton")(this, room.user));
       await this.prepareConference(room);
       this.responsive();
+      this._bindChatUnread();
       this.ensurePart("commands").then((p) => {
         p.el.show();
       });
@@ -251,6 +327,7 @@ class __window_meeting extends __room {
 
   onBeforeDestroy() {
     clearTimeout(this._idleTimer);
+    this._unbindResizeObserver();
     // Cancel any pending hand-raise auto-clear timers so they can't fire after
     // teardown.
     if (this._handTimers) {
@@ -724,16 +801,64 @@ class __window_meeting extends __room {
     return this.el && this.el.querySelector(`.${this.fig.family}__chat-panel`);
   }
 
-  _setChatOpen(open) {
+  // `opts.auto` marks the call as coming from _applyChatAutoClose. Anything
+  // else is the user acting on the panel (topbar Chat/People, the close X, a
+  // tab switch), which retires any pending auto-restore — their choice outlives
+  // ours, so widening the window won't undo a deliberate close.
+  _setChatOpen(open, opts = {}) {
     const panel = this._chatPanelEl();
     if (!panel) return;
+    if (!opts.auto) this._chatAutoClosed = 0;
     panel.dataset.open = open ? "1" : "0";
-    if (open) {
-      const badge = this.el.querySelector(
-        `.${this.fig.family}__in-topbar-chat-badge`,
-      );
-      if (badge) badge.dataset.state = 0;
-    }
+    // Opening the panel only clears the pane you actually land on — a chat
+    // message shouldn't be marked seen because you opened Participants.
+    if (open) this._clearUnreadForTab(panel.dataset.tab);
+  }
+
+  // Unread-chat badge on the topbar chat button. NB: that button is hidden once
+  // the narrow layout folds chat into the "more" menu, so while narrow an
+  // unread message has no visible indicator — the "more" dot that used to
+  // mirror it was removed deliberately.
+  _setChatUnread(on) {
+    if (!this.el) return;
+    this._chatUnread = !!on;
+    const badge = this.el.querySelector(
+      `.${this.fig.family}__in-topbar-chat-badge`,
+    );
+    if (badge) badge.dataset.state = on ? "1" : "0";
+  }
+
+  // True only when the Chat pane is actually on screen — the panel must be open
+  // AND showing the chat tab. An open panel sitting on Participants does not
+  // count, otherwise messages would be marked read while never displayed.
+  _chatPaneVisible() {
+    const panel = this._chatPanelEl();
+    return (
+      !!panel && panel.dataset.open === "1" && panel.dataset.tab === "chat"
+    );
+  }
+
+  // Light the unread badge when a message lands while the chat pane is hidden.
+  // Skipped on rooms with no side panel (DMZ) — ensurePart would never resolve
+  // there, leaving a dangling part-ready listener.
+  _bindChatUnread() {
+    if (this._chatUnreadBound || !this._chatPanelEl()) return;
+    this._chatUnreadBound = 1;
+    this.ensurePart("meeting-chat-widget")
+      .then((w) => {
+        if (!w) return;
+        // listenTo (not on) so the subscription dies with the window.
+        this.listenTo(w, "message-received", () => {
+          if (!this._chatPaneVisible()) this._setChatUnread(true);
+        });
+      })
+      .catch(() => {});
+  }
+
+  // Clears only the source belonging to the pane being shown. Landing on
+  // Participants must NOT clear chat — those messages were never displayed.
+  _clearUnreadForTab(tab) {
+    if (tab !== "participants") this._setChatUnread(false);
   }
 
   // Topbar chat button: open the side panel on the Chat tab, or collapse it if
