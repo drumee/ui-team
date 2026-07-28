@@ -3,6 +3,7 @@ const { filesize, fitBoxes } = require("@drumee/ui-essentials")
 const { TweenMax, Expo } = require("@drumee/ui-core/vendor");
 const PlayerInteract = require('player/interact');
 const { loadPdfDocument, getCurrentPdfiumDocumentBlob } = require('./pdfium-wrapper')
+const { openSelectionDocument } = require('./selection')
 const { applyLivePrivilege, hasWriteBit } = require('window/live-privilege');
 const WS_EVENT = "ws:event";
 const EDITOR_READY_FALLBACK_MS = 2500;
@@ -116,6 +117,12 @@ class __player_document extends PlayerInteract {
       super.onBeforeDestroy()
     }
 
+    if (this._selectionDocument) {
+      // A promise, so a window closed mid-boot still releases the document once
+      // the engine finishes with it.
+      this._selectionDocument.then((d) => d && d.close()).catch(() => { });
+      this._selectionDocument = null;
+    }
     if (this.pdfDocument) {
       this.pdfDocument.close()
     }
@@ -192,6 +199,16 @@ class __player_document extends PlayerInteract {
       window.addEventListener('beforeunload', () => {
         pdfDocument.close();
       });
+      // Text selection runs on @embedpdf/plugin-selection, which needs its own
+      // engine handle on the same bytes. Deliberately NOT awaited: booting that
+      // engine means dynamic imports and a wasm fetch, and the page render must
+      // never wait on it. Pages await this promise themselves, so they pick the
+      // document up whenever it lands (or never, if it resolves null).
+      if (!pdfDocument.hasPassword) {
+        this._selectionDocument = openSelectionDocument(
+          `${this.fig.family}-${this.cid}`, pdfData, this.el,
+        );
+      }
       return pdfDocument;
     } catch (e) {
       this.message('')
@@ -288,6 +305,7 @@ class __player_document extends PlayerInteract {
         pageHeight: this.pageHeight,
         uiHandler: [this],
         pageIndex: i,
+        selectionDocument: this._selectionDocument || null,
         attribute: {
           id: `page-${i}`
         },

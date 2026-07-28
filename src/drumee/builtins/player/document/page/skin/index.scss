@@ -22,7 +22,7 @@
   // stretch on its own — center it here. Without this it sits flush left
   // whenever the raster is narrower than the wrapper (a page smaller than the
   // rest of the document, or a capped raster on a very wide window).
-  // Also the containing block for the absolutely positioned text layer.
+  // Also the containing block for the absolutely positioned selection layers.
   &__canvas-wrapper {
     position: relative;
     width: 100%;
@@ -30,44 +30,57 @@
     align-items: center;
   }
 
-  // Transparent, selectable stand-in for the text baked into the canvas bitmap.
-  // The widget positions and sizes this per raster; only geometry that must not
-  // depend on JS lives here. Glyphs stay invisible, so what the user sees is the
-  // browser's selection highlight sitting exactly over the rendered text.
-  &__text-layer {
+  // Pointer surface for text selection: covers the displayed page box, and the
+  // widget derives page coordinates from its bounding rect. No text lives here —
+  // selection geometry comes from PDFium via @embedpdf/plugin-selection.
+  &__selection {
     position: absolute;
     left: 0;
     top: 0;
-    // Clips in the layer's own unrotated space, i.e. to the page rect.
+    cursor: text;
+    // The plugin drives selection from pointer events, so the browser's own text
+    // selection must not also kick in and fight it.
+    user-select: none;
+    -webkit-user-select: none;
+    z-index: 20;
+  }
+
+  // Highlight rectangles, laid out in un-rotated page space and rotated as a
+  // whole so PDFium's rects need no per-rect transform. Never a pointer target —
+  // that is the layer above.
+  &__selection-rects {
+    position: absolute;
+    left: 0;
+    top: 0;
     overflow: hidden;
     transform-origin: 50% 50%;
-    line-height: 1;
-    // A generic family on purpose: each run's stretch is computed from its
-    // measured width, so a webfont still swapping in would be measured wrong.
-    font-family: sans-serif;
-    color: transparent;
-    cursor: text;
-    // Own the pointer so a drag can start in the margin next to a paragraph.
-    // Events still bubble to the player, so nothing upstream loses its clicks.
-    user-select: text;
-    -webkit-user-select: text;
-    z-index: 20;
+    pointer-events: none;
+    z-index: 21;
+  }
 
-    span {
-      position: absolute;
-      white-space: pre;
-      // The widget stretches each run horizontally to the width PDFium
-      // reported; anchor that scale to the run's own left edge.
-      transform-origin: 0 0;
-    }
+  &__selection-group {
+    position: absolute;
+    pointer-events: none;
+  }
 
-    ::selection {
-      color: transparent;
-      // Solid first as the fallback for engines without color-mix — still a
-      // legible highlight, just heavier than the translucent version.
-      background: var(--primary-500);
-      background: color-mix(in srgb, var(--primary-500) 35%, transparent);
-    }
+  // Translucent, and deliberately NOT mix-blend-mode.
+  //
+  // The glyphs are pixels in the canvas below, so this highlight can only ever be
+  // painted ON TOP of the text. An opaque fill with `mix-blend-mode: multiply`
+  // covered it: `__selection-rects` is positioned with a z-index, which forms a
+  // stacking context, and mix-blend-mode only blends within its nearest one — so
+  // the multiply had no backdrop and became a no-op. Don't reintroduce a blend
+  // mode without first removing that isolation.
+  //
+  // Plain alpha needs no backdrop, and unlike multiply (which only darkens, so it
+  // vanishes on a dark page) stays visible either way. It is safe here only
+  // because PDFium's per-line rects never overlap, so nothing stacks.
+  &__selection-rect {
+    position: absolute;
+    // 40%: a clear band against unselected paper (1.56:1) while the worst text
+    // case in the band — white text over a dark fill — still holds 5.3:1, above
+    // the 4.5:1 AA floor. Going past ~45% drops that under AA.
+    background: color-mix(in srgb, var(--gray-500) 40%, transparent);
   }
 
   .image-viewer {
@@ -81,5 +94,25 @@
     min-height: 80px;
     width: 100%;
 
+  }
+}
+
+// Right-click Copy for a PDF selection. Appended to <body>, not to the page, so
+// it is never clipped by the player or displaced by a re-raster — hence a
+// top-level selector rather than one nested under .player-page.
+.player-page__copy-menu {
+  position: fixed;
+  z-index: 100000;
+  padding: 6px 14px;
+  border-radius: 4px;
+  cursor: pointer;
+  user-select: none;
+  background: var(--gray-white);
+  color: var(--gray-900);
+  border: 1px solid var(--gray-300);
+  box-shadow: 0 2px 8px rgb(0 0 0 / 18%);
+
+  &:hover {
+    background: var(--gray-100);
   }
 }

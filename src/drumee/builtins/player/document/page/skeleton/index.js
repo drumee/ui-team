@@ -1,4 +1,5 @@
 const __player_page = function(_ui_) {
+  const pfx = _ui_.fig.family;
   const canvas = Skeletons.Element({
     tagName : 'canvas',
     sys_pn  : 'canvas',
@@ -6,21 +7,30 @@ const __player_page = function(_ui_) {
       id : `${_ui_._id}-canvas`
     }
   });
-  const textLayer = Skeletons.Element({
-    className :`${_ui_.fig.family}__text-layer textLayer`,
-    sys_pn  : 'text-layer',
+
+  // Pointer surface for selection: covers the rendered page box exactly, since
+  // page coordinates come from its bounding rect. The highlight rects are NOT its
+  // children — they live in `selection-rects`, which is laid out in unrotated page
+  // space and rotated as a whole so PDFium's rects can be used as-is.
+  const selection = Skeletons.Element({
+    className : `${pfx}__selection`,
+    sys_pn    : 'selection',
     attrOpt   : {
-      id : `${_ui_._id}-text-layer`
+      id : `${_ui_._id}-selection`
     }
   });
-  // The text layer must be mounted alongside the canvas, not merely built: the
-  // canvas is a bitmap with no text nodes in it, so this overlay is the only
-  // thing that makes the page selectable/copyable. It is filled in by the
-  // widget's _buildTextLayer once the raster size is known.
+  const rects = Skeletons.Element({
+    className : `${pfx}__selection-rects`,
+    sys_pn    : 'selection-rects',
+    attrOpt   : {
+      id : `${_ui_._id}-selection-rects`
+    }
+  });
+
   const a = Skeletons.Box.Y({
-    className :`${_ui_.fig.family}__canvas-wrapper`,
+    className :`${pfx}__canvas-wrapper`,
     sys_pn  : "canvas-wrapper",
-    kids : [canvas, textLayer]});
+    kids : [canvas, selection, rects]});
 
   return a;
 };

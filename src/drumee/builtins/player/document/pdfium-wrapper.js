@@ -13,166 +13,6 @@ let pdfiumInstance;
 // only a little sharpness on very large screens.
 const MAX_RASTER_PIXELS = 16e6;
 
-// Virtual device box used to normalize extracted text geometry.
-// FPDF_PageToDevice reports whole device pixels, so a deliberately huge device
-// keeps the rounding error at 1/TEXT_DEVICE_UNITS of the page — far under one
-// screen pixel at any zoom the player can reach.
-const TEXT_DEVICE_UNITS = 100000;
-
-const CHAR_LF = 10;
-const CHAR_CR = 13;
-
-/**
- * Pull the page's text out of PDFium as positioned runs.
- *
- * Returns `{ rotation, aspect, items: [{ text, left, top, width, height,
- * endOfLine }] }` where the geometry is normalized to `[0..1]` over the page with
- * ALL rotation undone, `rotation` is the page's own /Rotate in degrees and
- * `aspect` is the un-rotated page's height/width. Keeping it unit-less and
- * rotation-free is what lets one extraction serve every later re-raster.
- *
- * One item per WORD, not per line. A line-long item would have to rely on the
- * browser to distribute characters inside it, and browser font metrics don't
- * match the PDF's own glyph placement — the width can be forced to match while
- * the characters inside drift, which puts the selection highlight several
- * characters away from the text it appears to cover. A word is short enough that
- * the residual drift is invisible.
- */
-function extractPageText(pdfium, pagePtr) {
-  const textPtr = pdfium.FPDFText_LoadPage(pagePtr);
-  if (!textPtr) return null;
-
-  const { malloc, free } = pdfium.pdfium.wasmExports;
-  const { getValue } = pdfium.pdfium;
-  const rectPtr = malloc(16); // FS_RECTF — 4 floats: left, top, right, bottom
-  const devPtr = malloc(8);   // two ints — FPDF_PageToDevice out-params
-
-  // A page's own /Rotate is cancelled out here and handed back to the caller to
-  // apply as one CSS rotation on the layer. Left in, every run on such a page
-  // would be a tall narrow box holding horizontally laid-out text — selectable,
-  // but with the characters in the wrong places inside the line.
-  const quarter = ((pdfium.FPDFPage_GetRotation(pagePtr) || 0) % 4 + 4) % 4;
-  const unrotate = (4 - quarter) % 4;
-
-  // Page-space point → normalized position on the un-rotated page. This goes
-  // through PDFium's own page→device transform rather than dividing by the page
-  // box, because that transform is also what the renderer uses: a document with
-  // an offset CropBox stays aligned with the bitmap instead of drifting by the
-  // crop origin.
-  const toNorm = (px, py) => {
-    pdfium.FPDF_PageToDevice(
-      pagePtr, 0, 0, TEXT_DEVICE_UNITS, TEXT_DEVICE_UNITS, unrotate, px, py, devPtr, devPtr + 4
-    );
-    return [
-      getValue(devPtr, 'i32') / TEXT_DEVICE_UNITS,
-      getValue(devPtr + 4, 'i32') / TEXT_DEVICE_UNITS,
-    ];
-  };
-
-  const items = [];
-  let run = null;
-
-  const flush = (endOfLine) => {
-    if (!run) return;
-    const text = run.chars.join('');
-    if (text.trim()) {
-      const [u0, v0] = toNorm(run.left, run.top);
-      const [u1, v1] = toNorm(run.right, run.bottom);
-      items.push({
-        text,
-        left: Math.min(u0, u1),
-        top: Math.min(v0, v1),
-        width: Math.abs(u1 - u0),
-        height: Math.abs(v1 - v0),
-        endOfLine: !!endOfLine,
-      });
-    } else if (endOfLine && items.length) {
-      // Whitespace-only run — drop the span but keep the line break it carried,
-      // otherwise the copied text loses a newline.
-      items[items.length - 1].endOfLine = true;
-    }
-    run = null;
-  };
-
-  try {
-    const count = pdfium.FPDFText_CountChars(textPtr);
-    for (let i = 0; i < count; i++) {
-      const code = pdfium.FPDFText_GetUnicode(textPtr, i);
-      if (code === CHAR_LF || code === CHAR_CR) {
-        flush(true);
-        continue;
-      }
-      // 0 is an unmapped glyph (no ToUnicode entry); anything outside the
-      // Unicode range would make fromCodePoint throw.
-      if (!code || code > 0x10ffff) continue;
-      if (!pdfium.FPDFText_GetLooseCharBox(textPtr, i, rectPtr)) continue;
-
-      // Loose boxes (not tight ones) because they carry the font's ascent and
-      // descent, so a run's box matches the line band a user expects to see
-      // highlighted rather than hugging the ink.
-      const left = getValue(rectPtr, 'float');
-      const top = getValue(rectPtr + 4, 'float');
-      const right = getValue(rectPtr + 8, 'float');
-      const bottom = getValue(rectPtr + 12, 'float');
-
-      const ch = String.fromCodePoint(code);
-      const blank = !ch.trim();
-
-      // Grouping happens in PAGE space, which is the space the text actually
-      // runs in — a page with an intrinsic /Rotate has its lines along page-x
-      // even though they read vertically on screen.
-      if (run) {
-        const size = Math.max(run.top - run.bottom, 1);
-        const sameLine = Math.abs(top - run.top) <= size * 0.5
-          && Math.abs(bottom - run.bottom) <= size * 0.5;
-        const gap = left - run.right;
-        if (!sameLine) {
-          flush(true);
-        } else if (gap > size * 0.6 || gap < -size) {
-          // A wide gap is a column/tab break, not a word break. Close the run,
-          // keeping a space so the copied text doesn't glue the two sides
-          // together — the PDF expressed that separation as coordinates rather
-          // than as a space character.
-          if (!run.spaced) run.chars.push(' ');
-          flush(false);
-        } else if (run.spaced && !blank) {
-          // The run already carries its trailing whitespace, so this character
-          // begins the next word. One span per word is what keeps the highlight
-          // on top of the glyphs.
-          flush(false);
-        }
-      }
-
-      if (!run) {
-        if (blank) continue; // never open a run on whitespace
-        run = { chars: [], left, top, right, bottom, spaced: false };
-      }
-
-      run.chars.push(ch);
-      if (blank) run.spaced = true;
-      run.left = Math.min(run.left, left);
-      run.right = Math.max(run.right, right);
-      run.top = Math.max(run.top, top);       // page space is y-up
-      run.bottom = Math.min(run.bottom, bottom);
-    }
-    flush(true);
-  } finally {
-    free(rectPtr);
-    free(devPtr);
-    pdfium.FPDFText_ClosePage(textPtr);
-  }
-
-  // GetPageWidthF/HeightF report the DISPLAYED size, so a quarter turn has to be
-  // undone here too for the aspect to describe the space the items live in.
-  const dispW = pdfium.FPDF_GetPageWidthF(pagePtr);
-  const dispH = pdfium.FPDF_GetPageHeightF(pagePtr);
-  const aspect = (quarter === 1 || quarter === 3)
-    ? (dispH ? dispW / dispH : 1)
-    : (dispW ? dispH / dispW : 1);
-
-  return { items, rotation: quarter * 90, aspect };
-}
-
 export async function initializePdfium() {
   const { init, DEFAULT_PDFIUM_WASM_URL } = await import('@embedpdf/pdfium');
   if (pdfiumInstance) return pdfiumInstance;
@@ -220,7 +60,6 @@ export async function loadPdfDocument(pdfData) {
         pageCount: 0,
         close: () => { }, // No-op since no document was loaded
         getPageCount: () => 0,
-        getPageText: async () => null,
         renderPage: async () => { throw new Error('Document is password protected'); }
       };
     }
@@ -231,18 +70,12 @@ export async function loadPdfDocument(pdfData) {
   // Get page count
   const pageCount = pdfium.FPDF_GetPageCount(docPtr);
 
-  // Extracted text geometry, keyed by page index. It is normalized and
-  // rotation-free, so it survives every zoom/resize re-raster — text extraction
-  // costs about as much as a render and must not be repeated per resize.
-  const textCache = new Map();
-
   // Return an object with document info and rendering capabilities
   return {
     hasPassword: false,
     pageCount,
     // Close the document and free resources
     close: () => {
-      textCache.clear();
       pdfium.FPDF_CloseDocument(docPtr);
       pdfium.pdfium.wasmExports.free(filePtr);
     },
@@ -250,28 +83,6 @@ export async function loadPdfDocument(pdfData) {
     // Get the current page count (useful if pages are added/removed)
     getPageCount: () => pdfium.FPDF_GetPageCount(docPtr),
 
-    /**
-     * Positioned text runs for one page, or `null` when the page carries no
-     * extractable text (a scanned image, for instance). Cached per page.
-     */
-    getPageText: async (pageIndex) => {
-      if (pageIndex < 0 || pageIndex >= pageCount) return null;
-      if (textCache.has(pageIndex)) return textCache.get(pageIndex);
-
-      const pagePtr = pdfium.FPDF_LoadPage(docPtr, pageIndex);
-      if (!pagePtr) return null;
-      let result = null;
-      try {
-        result = extractPageText(pdfium, pagePtr);
-      } catch (e) {
-        // A broken text tree must not take the page render down with it.
-        result = null;
-      } finally {
-        pdfium.FPDF_ClosePage(pagePtr);
-      }
-      textCache.set(pageIndex, result);
-      return result;
-    },
 
     // Render a specific page to a canvas
     renderPage: async (
