@@ -805,45 +805,10 @@ class __player_document extends PlayerInteract {
     this._editorOrigin = new URL(url).origin;
     this._editorReady = false;
     this._onEditorMessage = (e) => {
+      if (this._editorReady) return;
+      if (this._editorOrigin && e.origin !== this._editorOrigin) return;
       const data = e.data;
       const ev = (data && (data.event || data.type)) || data;
-      // Origin check before acting on anything. Logged when it rejects one of OUR
-      // messages — otherwise an origin mismatch looks exactly like the message never
-      // having been sent, which is impossible to tell apart from the top frame.
-      if (this._editorOrigin && e.origin !== this._editorOrigin) {
-        if (ev === 'drumee:requestEditRights') {
-          this.warn('[dmz] edit-rights message REJECTED on origin:', e.origin, '!==', this._editorOrigin);
-        }
-        return;
-      }
-      // A share recipient clicked "Edit document" inside the read-only editor.
-      // OnlyOffice only offers that control when the marketplace euroffice template
-      // registers onRequestEditRights, which it does solely for a read-only SHARE
-      // request — so this can only arrive for a recipient who cannot already edit.
-      // Route it into the wired dmz-request-edit gate (→ wm → sharebox), which shows
-      // sign-up for an anonymous viewer and Request Access for a signed-in
-      // non-member. Checked BEFORE the _editorReady short-circuit below, because the
-      // click always happens after the document has finished loading.
-      //
-      // Emits 'dmz-request-download', NOT 'dmz-request-edit': the wm and the sharebox
-      // only handle the former ('dmz-request-edit' is handled by THIS class, for the
-      // header button whose uiHandler is the player). Triggering the edit name here
-      // would travel up to the wm, match no case, and silently do nothing.
-      if (ev === 'drumee:requestEditRights') {
-        // Breadcrumb: proves the editor page's message crossed the frame boundary and
-        // passed the origin check. Without it, a silent failure is indistinguishable
-        // from the message never being sent (iframe logs are hidden whenever DevTools
-        // is filtered to the top frame).
-        this.warn('[dmz] editor requested edit rights → opening the share gate');
-        // The editor page posts to both window.top and window.parent (either can be
-        // the wrong target depending on nesting), so the same click can arrive twice.
-        // Collapse repeats inside 500ms to a single dialog.
-        const now = Date.now();
-        if (this._lastEditRightsAt && (now - this._lastEditRightsAt) < 500) return;
-        this._lastEditRightsAt = now;
-        return this.triggerHandlers({ service: 'dmz-request-download' });
-      }
-      if (this._editorReady) return;
       if (EDITOR_READY_EVENTS.has(ev)) {
         this._hideEditorProgress();
       }
