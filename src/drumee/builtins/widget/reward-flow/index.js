@@ -369,13 +369,13 @@ class __reward_flow extends LetcBox {
    *
    * @param {DOMRect} rect
    * @param {{text: string, showBack?: boolean, showNext?: boolean,
-   *          nextDisabled?: boolean, radius?: string}} opt
+   *          nextDisabled?: boolean, above?: boolean, radius?: string}} opt
    */
   spotlight(rect, opt = {}) {
     if (!this.el) return;
     const {
       text, showBack = true, showNext = false, nextDisabled = false,
-      radius = "", hole = true,
+      above = false, radius = "", hole = true,
     } = opt;
     const cx = rect.left + rect.width / 2;
     if (hole === false) {
@@ -409,7 +409,7 @@ class __reward_flow extends LetcBox {
     // Nothing is spotlighted → there is no target to sit beside, so centre it.
     const anchor = hole === false
       ? this._coachCenter()
-      : this._coachAnchor(rect, cx);
+      : this._coachAnchor(rect, cx, above);
     this.ensurePart("guide-callout").then((p) => {
       if (!p) return;
       p.feed(
@@ -455,7 +455,12 @@ class __reward_flow extends LetcBox {
     };
   }
 
-  _coachAnchor(rect, cx) {
+  /**
+   * @param {Boolean} [prefAbove] put the coach ABOVE the target when there is
+   *   room, instead of the default "below if it fits". For a target the coach
+   *   must not sit under or over — the bottom-docked upload-progress window.
+   */
+  _coachAnchor(rect, cx, prefAbove = false) {
     const win = typeof window !== "undefined" ? window : null;
     const vw = win?.innerWidth || 1280;
     const vh = win?.innerHeight || 800;
@@ -484,12 +489,14 @@ class __reward_flow extends LetcBox {
       return { side: "below", style: { left: `${clampX(cx)}px`, top: `${TOP}px` } };
     }
 
-    // Small target: below if it fits, else above, else clamped.
+    // Small target: below if it fits, else above, else clamped — unless the
+    // caller asked for above, which then wins whenever it fits.
     const below = rect.bottom + M;
     const above = rect.top - M - CH;
     let top;
     let side;
-    if (below + CH + M <= vh) { top = below; side = "below"; }
+    if (prefAbove && above >= TOP) { top = above; side = "above"; }
+    else if (below + CH + M <= vh) { top = below; side = "below"; }
     else if (above >= TOP) { top = above; side = "above"; }
     else { top = TOP; side = "below"; }
     return { side, style: { left: `${clampX(cx)}px`, top: `${clampY(top)}px` } };

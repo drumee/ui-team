@@ -181,7 +181,13 @@ class RewardUploadGuide extends GuideCore {
 
   _targetEl() {
     switch (this._sub) {
-      case "files": return firstVisible(SEL.filesPanel);
+      // While the batch is still going up, spotlight the PROGRESS WINDOW rather
+      // than the panel: it is what the user is waiting on, it is what their
+      // remaining files are in, and the cutout can only clear one thing at a
+      // time. It hands over to the panel as the last file lands.
+      case "files":
+        return (this._uploadPending() && firstVisible(SEL.uploader))
+          || firstVisible(SEL.filesPanel);
       case "uploading": return firstVisible(SEL.uploader);
       case "device": return firstVisible(SEL.fromDevice);
       case "new": return firstVisible(SEL.newCtrl);
@@ -196,6 +202,9 @@ class RewardUploadGuide extends GuideCore {
     // uploaded. Same reasoning as Step 1's perm phase, which drops Back once the
     // workspace exists.
     const done = sub === "uploading" || sub === "files";
+    // The last beat, with the batch still going up — the sub-step that
+    // spotlights the progress window instead of the panel (see _targetEl).
+    const pending = sub === "files" && this._uploadPending();
     return {
       text: tooltipFor(sub),
       // Back is offered up to the picker — until then it exits to the Step 3
@@ -209,7 +218,12 @@ class RewardUploadGuide extends GuideCore {
       // there tears the workspace down (congrats closes it) with files still
       // going up into it. Shown-but-disabled rather than hidden, so the way out
       // stays where the user is already looking for it.
-      nextDisabled: sub === "files" && this._uploadPending(),
+      nextDisabled: pending,
+      // Sit the callout ABOVE that progress window. It is docked bottom-right,
+      // so the default "below if it fits" tucks the coach into the corner under
+      // it, and when it does not fit the coach lands over the very rows the user
+      // is watching tick along.
+      above: pending,
       // "folder" alone dims the whole screen and shows only the coach: cutting
       // the workspace window out would leave it fully lit, and since it fills
       // the viewport nothing would be dimmed at all. Every other beat — the

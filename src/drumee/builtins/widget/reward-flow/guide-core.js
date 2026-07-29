@@ -302,6 +302,7 @@ class GuideCore {
       showBack: coach.showBack,
       showNext: coach.showNext,
       nextDisabled: coach.nextDisabled,
+      above: coach.above,
       hole,
       radius,
     });
