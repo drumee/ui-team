@@ -68,10 +68,6 @@ class settings_billing extends LetcBox {
       document.removeEventListener("visibilitychange", this._onVisibility);
       this._onVisibility = null;
     }
-    if (this._planSyncTimer) {
-      clearTimeout(this._planSyncTimer);
-      this._planSyncTimer = null;
-    }
   }
 
   onWsMessage(service, data, options = {}) {
@@ -298,11 +294,11 @@ class settings_billing extends LetcBox {
   // checkout to pay for the new one.
   //
   // The alternative — swapping the price on the live subscription in place
-  // (payment.change_plan, still used by the USE_SUBSCRIPTION_UPDATE path) —
-  // takes the prorated difference off the card on file with no payment step at
-  // all. Product wants the change to go through checkout, so the buyer sees
-  // what they are paying, which means the old subscription has to end: two
-  // subscriptions on one customer is a double charge.
+  // (payment.change_plan) — took the prorated difference off the card on file
+  // with no payment step at all; its client was removed 2026-07-29. Every
+  // change goes through checkout so the buyer sees what they are paying,
+  // which means the old subscription has to end: two subscriptions on one
+  // customer is a double charge.
   //
   // Hence the warning. `supersede` then travels with the checkout, and the
   // webhook cancels the replaced subscription the moment the new one is paid —
@@ -329,7 +325,8 @@ class settings_billing extends LetcBox {
     //    paid end, the new one starts right after (server: trial_end).
     //  - other plan, other cycle → immediate replacement, copy naming both
     //    cycles so "canceled immediately" is unambiguous.
-    //  - other plan, same cycle  → the original replacement warning.
+    //  - other plan, same cycle  → immediate replacement, upgrade/downgrade
+    //    copy ("gain instant access" / "lose access to {plan}-only features").
     const samePlan = targetPlan === currentRaw;
     const cycleWord = (p) => (p === "year" ? (LOCALE.YEARLY || "Yearly") : (LOCALE.MONTHLY || "Monthly"));
     const per = period === "year" ? (LOCALE.PER_YEAR || "/year") : (LOCALE.PER_MONTH || "/month");
@@ -361,23 +358,27 @@ class settings_billing extends LetcBox {
         .format(targetTitle, cycleWord(period));
       message = lines.filter(Boolean).join("\n\n");
     } else {
-      const lines = [
-        (LOCALE.PLAN_REPLACE_WARNING
-          || "Your current {0} plan ends as soon as the new one is paid — you lose the time already paid for on it.")
-          .format(currentTitle),
-      ];
-      if (when) {
-        lines.push((LOCALE.PLAN_REPLACE_PAID_UNTIL
-          || "It is paid until {0}; that remaining time is not refunded or carried over.").format(when));
+      // Same cycle, different plan (product copy 2026-07-29). Both prices are
+      // quoted — "for $X/month or $Y/year" — because the plan card the user
+      // clicked sells the plan, not a cycle; the checkout tab still lets them
+      // pick either before paying.
+      const down = (rank[targetPlan] ?? 0) < (rank[current] ?? 0);
+      const mPrice = this._money(this._catPrice(targetPlan, "month"));
+      const yPrice = this._money(this._catPrice(targetPlan, "year"));
+      if (down) {
+        title = (LOCALE.PLAN_DOWNGRADE_TITLE || "Downgrade to {0}").format(targetTitle);
+        message = [
+          (LOCALE.PLAN_DOWNGRADE_MSG
+            || "Switch to the {0} plan for {1}/month or {2}/year?\n\nYour {3} plan will be canceled immediately, and any remaining subscription time will not be carried over. You'll immediately switch to the {0} plan and lose access to {3}-only features.")
+            .format(targetTitle, mPrice, yPrice, currentTitle),
+          this._downgradeConsequences(targetPlan),
+        ].filter(Boolean).join("\n\n");
+      } else {
+        title = (LOCALE.PLAN_UPGRADE_TITLE || "Upgrade to {0}").format(targetTitle);
+        message = (LOCALE.PLAN_UPGRADE_MSG
+          || "Switch your subscription to {0} at {1}/month or {2}/year?\n\nYour {3} plan will be canceled immediately, and any remaining subscription time will not be carried over. You'll gain instant access to all {0} plan features.")
+          .format(targetTitle, mPrice, yPrice, currentTitle);
       }
-      // Only when the move actually lowers the ceiling. Telling someone
-      // upgrading to Business what Business "includes" as if it were a loss
-      // reads as a warning about the thing they are buying.
-      if ((rank[targetPlan] ?? 0) < (rank[current] ?? 0)) {
-        lines.push(this._downgradeConsequences(targetPlan));
-      }
-      title = (LOCALE.PLAN_REPLACE_TITLE || "Change to {0}?").format(targetTitle);
-      message = lines.filter(Boolean).join("\n\n");
     }
 
     const ok = await Wm.confirm({
@@ -401,166 +402,11 @@ class settings_billing extends LetcBox {
     this._enterCheckoutFor(targetPlan);
   }
 
-  // Switch the LIVE subscription to another plan and/or billing cycle after an
-  // explicit confirm. This is the client of payment.change_plan: a price swap
-  // on the existing Stripe subscription — never a second checkout, which the
-  // server refuses to protect against double-billing.
-  //
-  // targetPeriod is the cycle the caller CHOSE ('month'|'year'); it defaults to
-  // the current one. It has to be a parameter: the server answers
-  // USE_SUBSCRIPTION_UPDATE for a cycle switch as well as a plan switch, and
-  // deriving the period from the current subscription there silently dropped
-  // the very change the user had just configured.
-  async _confirmPlanChange(targetPlan, targetPeriod) {
-    const sub = this._subscription || {};
-    const current = /^year/.test(String(sub.period || "")) ? "year" : "month";
-    const period = /^(month|year)$/.test(targetPeriod || "") ? targetPeriod : current;
-    const price = this._money(this._catPrice(targetPlan, period));
-    const per = period === "year" ? LOCALE.PER_YEAR : LOCALE.PER_MONTH;
-    const planTitle = targetPlan === "business" ? LOCALE.BUSINESS : LOCALE.TEAM;
-    // The RAW subscription plan, not the display mapping. fetchPlanData maps
-    // the retired 'pro'/'drumee plus' rows onto 'team' so the cards mark the
-    // right one current, but a pro holder clicking Team is changing plan, not
-    // rhythm — reading currentPlanName here told them "Switch to Monthly
-    // billing" for a move between two different products.
-    const currentPlan = String(sub.plan || "") || this.currentPlanName || "";
-    // Three shapes, because they are three different decisions: same plan on a
-    // different rhythm, a bigger plan, a smaller one. Calling a cycle switch
-    // "Downgrade to Team" (which is what deriving up/down from the plan name
-    // alone did) describes something that isn't happening.
-    const cycleOnly = targetPlan === currentPlan;
-    const up = !cycleOnly && targetPlan === "business";
-    let title;
-    let message;
-    if (cycleOnly) {
-      title = (LOCALE.PLAN_CHANGE_TITLE_CYCLE || "Switch to {0} billing")
-        .format(period === "year" ? LOCALE.YEARLY : LOCALE.MONTHLY);
-      message = (LOCALE.PLAN_CHANGE_CONFIRM_CYCLE
-        || "Bill {0} at {1}{2} from today? The unused time on your current cycle is credited against it.")
-        .format(period === "year" ? LOCALE.YEARLY : LOCALE.MONTHLY, price, per);
-    } else if (up) {
-      title = (LOCALE.PLAN_CHANGE_TITLE_UPGRADE || "Upgrade to {0}").format(planTitle);
-      message = (LOCALE.PLAN_CHANGE_CONFIRM_UPGRADE
-        || "Switch your subscription to {0} at {1}{2}? The unused time on your current plan is credited and the difference is charged now.")
-        .format(planTitle, price, per);
-    } else {
-      title = (LOCALE.PLAN_CHANGE_TITLE_DOWNGRADE || "Downgrade to {0}").format(planTitle);
-      message = [
-        (LOCALE.PLAN_CHANGE_CONFIRM_DOWNGRADE
-          || "Switch your subscription to {0} at {1}{2}? The unused time on your current plan becomes a credit on your next payments.")
-          .format(planTitle, price, per),
-        this._downgradeConsequences(targetPlan),
-      ].filter(Boolean).join("\n\n");
-    }
-    const ok = await Wm.confirm({
-      title,
-      message,
-      confirm: LOCALE.CONFIRM || "Confirm",
-      ...(up || cycleOnly ? {} : { confirm_type: "danger" }),
-      cancel: LOCALE.CANCEL || "Cancel",
-      cancel_type: "secondary",
-      mode: "hbf",
-    }).then(() => true).catch(() => false);
-    if (!ok) return;
-    const data = await this.postService(SERVICE.payment.change_plan, {
-      hub_id: Visitor.id, plan: targetPlan, period,
-    }).catch(() => null);
-    const status = (data && data.status) || "";
-    if (status === "NOTHING_TO_CHANGE") {
-      // The subscription is already exactly this. Claiming success here (the
-      // first cut did) told users a switch had happened when nothing had.
-      if (Wm && Wm.alert) Wm.alert(LOCALE.ALREADY_SUBSCRIBED);
-      this._loadSubscription().then(() => {
-        if (this.isDestroyed && this.isDestroyed()) return;
-        this.fetchPlanData();
-      });
-      return;
-    }
-    if (status === "PLAN_ENTITY_MISMATCH") {
-      // This subscription's entity kind cannot hold the target plan — a legacy
-      // personal Pro reaching for an org plan. It is not a dead end: checkout()
-      // admits exactly this case as a supersede purchase, and the webhook ends
-      // the old subscription once the new one is paid. Take them there rather
-      // than naming a tab that is hidden while a subscription is live.
-      if (Wm && Wm.alert) Wm.alert(LOCALE.PLAN_SWITCH_VIA_CHECKOUT);
-      this._enterCheckoutFor(targetPlan);
-      return;
-    }
-    if (status !== "OK") {
-      if (Wm && Wm.alert) {
-        Wm.alert(
-          // The bank wants the cardholder: retrying changes nothing, so say
-          // what does — a different card, via Manage billing.
-          status === "PAYMENT_ACTION_REQUIRED" ? LOCALE.PAYMENT_ACTION_REQUIRED
-            : status === "NO_SUBSCRIPTION" ? LOCALE.NO_ACTIVE_SUBSCRIPTION
-            : LOCALE.SOMETHING_WENT_WRONG);
-      }
-      return;
-    }
-    // Optimistic flip from the endpoint's return; the webhook then re-mirrors
-    // the subscription and re-applies quota (Visitor.quota catches up via the
-    // payment.plan_updated WS refresh / the next re-sync).
-    if (this._subscription) {
-      this._subscription.plan = data.plan || targetPlan;
-      this._subscription.period = data.period || period;
-      this._subscription.status = data.subscription_status || "active";
-      this._subscription.period_end = data.period_end || this._subscription.period_end;
-    }
-    this._isCanceling = false;
-    this._hasActiveSub = true;
-    this.currentPlanName = targetPlan;
-    if (typeof Butler !== "undefined" && Butler.say) {
-      Butler.say(cycleOnly
-        ? (LOCALE.CYCLE_CHANGE_DONE || "Your billing cycle has been updated.")
-        : (LOCALE.PLAN_CHANGE_DONE || "Your subscription is now on the {0} plan.").format(planTitle));
-    }
-    // Repaint from the optimistic state NOW, converge on the server LATER.
-    // fetchPlanData recomputes currentPlanName from Visitor.quota(), and the
-    // subscription mirror is rewritten by the webhook — both still carry the
-    // OLD plan until that webhook lands, so repainting from them would flip
-    // the cards back to the plan the user just left.
-    this.renderContent();
-    this._awaitPlanSync(targetPlan, period);
-  }
-
-  // Wait for the webhook to catch up, then repaint from server truth.
-  //
-  // A single fixed delay was wrong in both directions: too early and it
-  // overwrites the (newer) optimistic state with pre-webhook data; too late
-  // and the screen sits on an unverified claim. Poll the mirror instead and
-  // repaint when it agrees — or when the attempts run out, so a webhook that
-  // never arrives still reconciles rather than leaving the UI asserting a
-  // change forever. The WS payment.plan_updated handler does the same repaint
-  // and usually wins the race; this is the fallback for a missed event.
-  _awaitPlanSync(expected, expectedPeriod, tries = 10) {
-    // A generation counter, because clearTimeout only cancels a PENDING timer:
-    // once the callback has fired it is awaiting the fetch, and a second plan
-    // change started in that window would be silently dropped by the first
-    // chain's recursion. Whoever bumps the counter last owns the poll.
-    const gen = (this._planSyncGen = (this._planSyncGen || 0) + 1);
-    if (this._planSyncTimer) clearTimeout(this._planSyncTimer);
-    this._planSyncTimer = setTimeout(() => {
-      this._planSyncTimer = null;
-      if (this.isDestroyed && this.isDestroyed()) return;
-      this._loadSubscription().then(() => {
-        if (this.isDestroyed && this.isDestroyed()) return;
-        if (gen !== this._planSyncGen) return; // superseded by a newer change
-        const sub = this._subscription || {};
-        // Period as well as plan: a month<->year switch leaves the plan
-        // unchanged, so matching on the plan alone declared victory on the
-        // first poll and repainted from the still-stale mirror — exactly the
-        // revert this method exists to avoid.
-        const planOk = String(sub.plan || "") === expected;
-        const periodOk = !expectedPeriod
-          || (/^year/.test(String(sub.period || "")) ? "year" : "month") === expectedPeriod;
-        if ((planOk && periodOk) || tries <= 1) {
-          this.fetchPlanData();
-          return;
-        }
-        this._awaitPlanSync(expected, expectedPeriod, tries - 1);
-      });
-    }, 3000);
-  }
+  // _confirmPlanChange (the payment.change_plan client — an in-place price
+  // swap that billed the card on file with NO payment step) was removed
+  // 2026-07-29: product decided every plan change goes through checkout, so
+  // the user always sees and confirms the charge. The server endpoint stays
+  // for the Billing Portal, but nothing in this widget calls it any more.
 
   /**
    * Return view mode for widget
@@ -630,10 +476,9 @@ class settings_billing extends LetcBox {
       // straight from the server by _loadSubscription.
       //
       // Reading the plan from the cache made a plan change appear to undo
-      // itself: the confirm flipped the cards optimistically, _awaitPlanSync
-      // then polled the MIRROR until it showed the new plan — and handed over
-      // to this method, which read the stale CACHE and put the old plan back.
-      // Server said business, the page said team. Prefer the mirror whenever
+      // itself: the WS re-sync repainted from the still-stale CACHE and put
+      // the old plan back — server said business, the page said team. Prefer
+      // the mirror whenever
       // there is a live subscription row; quota stays the source for everyone
       // else (a free account has no mirror row at all).
       const mirrored = String((this._subscription || {}).plan || "");
@@ -1234,9 +1079,11 @@ class settings_billing extends LetcBox {
         // The server refuses a purchase while a subscription is live. Say what
         // actually applies instead of the generic failure: nothing to buy, or
         // resume. Re-sync so the tab and the banner reflect the subscription
-        // the server just told us about. USE_SUBSCRIPTION_UPDATE is the
-        // plan/cycle-switch case: since payment.change_plan exists it is no
-        // longer a dead end — offer the in-place switch right away.
+        // the server just told us about. USE_SUBSCRIPTION_UPDATE means a live
+        // subscriber reached checkout WITHOUT the supersede confirmation (a
+        // deep link or a stale render — the plan cards always confirm first):
+        // route them into the same warning + checkout flow instead of the
+        // removed in-place swap, which changed the plan with no payment step.
         if (status === "ALREADY_SUBSCRIBED" ||
             status === "USE_SUBSCRIPTION_UPDATE" ||
             status === "SUBSCRIPTION_PAST_DUE" ||
@@ -1252,11 +1099,10 @@ class settings_billing extends LetcBox {
             this.state.currentTab = TAB_MONTHLY;
             this.tab = TAB_MONTHLY;
             this.renderContent();
-            // Carry the cycle the checkout form was on: the server answers
-            // USE_SUBSCRIPTION_UPDATE for a cycle switch too, and dropping it
-            // here turned "Team yearly" into a no-op reported as success.
+            // Carry the cycle the checkout form was on so "Team yearly"
+            // doesn't silently become a no-op.
             if (status === "USE_SUBSCRIPTION_UPDATE") {
-              this._confirmPlanChange(plan, period);
+              this._confirmReplacePlan(plan, period);
             }
           });
           return;
@@ -1645,10 +1491,10 @@ class settings_billing extends LetcBox {
           // dead end. With no subscription there is simply nothing to do.
           if (this._hasPaidSub || this._isPaidByQuota()) this._confirmCancel();
         } else if (planValue === "team" || planValue === "business") {
-          // A live subscription means the click is a plan SWITCH, not a
-          // purchase: the server refuses a second checkout (double-billing),
-          // so the price is swapped on the existing subscription instead
-          // (payment.change_plan). With nothing live it is a normal checkout.
+          // A live subscription means the click is a plan SWITCH: warn
+          // (supersede) and route through checkout — the buyer always sees
+          // and confirms the charge. With nothing live it is a normal
+          // checkout.
           //
           // The card shows the price for the cycle the Monthly/Yearly tab is
           // on, so that cycle is part of what was clicked — pass it through

@@ -2282,5 +2282,9 @@
   "REWARD_FLOW_GO_DASHBOARD": "Volver al inicio",
   "PLAN_SWITCH_CYCLE_TITLE": "Cambiar a {0} {1}",
   "PLAN_SWITCH_DEFER_MSG": "¿Cambiar al plan {0} {1} por {2}{3}?\n\nTu suscripción {0} {4} actual seguirá activa hasta el final de su período de facturación. Tu suscripción {1} se añadirá y comenzará inmediatamente después de que expire tu plan {4}.",
-  "PLAN_SWITCH_NOW_MSG": "¿Cambiar al plan {0} {1} por {2}{3}?\n\nTu suscripción {4} {5} actual se cancelará de inmediato y el tiempo restante no se conservará. Tu plan {0} {1} comenzará de inmediato."
+  "PLAN_SWITCH_NOW_MSG": "¿Cambiar al plan {0} {1} por {2}{3}?\n\nTu suscripción {4} {5} actual se cancelará de inmediato y el tiempo restante no se conservará. Tu plan {0} {1} comenzará de inmediato.",
+  "PLAN_UPGRADE_TITLE": "Mejorar a {0}",
+  "PLAN_UPGRADE_MSG": "¿Cambiar tu suscripción a {0} por {1}/mes o {2}/año?\n\nTu plan {3} se cancelará de inmediato y el tiempo restante no se conservará. Obtendrás acceso instantáneo a todas las funciones del plan {0}.",
+  "PLAN_DOWNGRADE_TITLE": "Bajar a {0}",
+  "PLAN_DOWNGRADE_MSG": "¿Cambiar al plan {0} por {1}/mes o {2}/año?\n\nTu plan {3} se cancelará de inmediato y el tiempo restante no se conservará. Cambiarás inmediatamente al plan {0} y perderás el acceso a las funciones exclusivas de {3}."
 }
