@@ -97,12 +97,16 @@ class __push_manager extends winman {
       case SERVICE.conference.leave:
         // Other party left the call. Close P2P call windows only (window_connect).
         // Team meeting windows (window_folder) stay open — only the host ending
-        // the meeting should close them.
+        // the meeting should close them. They do, however, have to drop the peer
+        // who left: a socket that dies abruptly never reaches Jitsi's presence
+        // timeout in any useful time, so the participant lingered as a ghost.
         Visitor.muteSound();
         for (let c of this.getItemsByAttr(_a.room_id, data.room_id)) {
           if (c && (typeof c.isDestroyed !== 'function' || !c.isDestroyed())) {
             if (c.mget && c.mget(_a.kind) === 'window_connect') {
               c.goodbye();
+            } else if (typeof c.onPeerSocketDropped === 'function') {
+              c.onPeerSocketDropped(data);
             }
           }
         }

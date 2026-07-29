@@ -641,6 +641,40 @@ class __window_meeting extends __room {
     this._refreshMember(drumate_id);
   }
 
+  // A peer's socket went away (conference.leave — either a clean exit or the
+  // push router releasing a dropped connection). Until now the roster and the
+  // tile grid only reacted to Jitsi USER_LEFT, which for an abruptly dropped
+  // mobile can lag by minutes or never arrive at all, leaving a ghost
+  // participant behind. Drumee knows within one watchdog tick, so act on it.
+  //
+  // Routed through the normal onUserLeft path so tile teardown, hand-raise,
+  // presenting and spotlight cleanup all behave exactly as a normal leave.
+  onPeerSocketDropped(data = {}) {
+    const uid = data.uid != null ? data.uid : data.drumate_id;
+    if (uid == null || !this.endpoints) return;
+    const key = String(uid);
+    for (const pid of Object.keys(this.endpoints)) {
+      const ep = this.endpoints[pid];
+      if (!ep || (typeof ep.isDestroyed === "function" && ep.isDestroyed())) continue;
+      if (String(ep.mget && ep.mget(_a.uid)) !== key) continue;
+      this.onUserLeft(pid);
+      // Drop the map entry so a late Jitsi USER_LEFT for the same participant
+      // hits onUserLeft's `if (!endpoint) return` instead of calling goodbye()
+      // on an already-destroyed tile.
+      delete this.endpoints[pid];
+      return;
+    }
+    // No tile for them (joined without media, or already torn down) — the
+    // roster entry can still be stale, so clear it on its own.
+    if (this._memberCallStates && this._memberCallStates.has(key)) {
+      this._memberCallStates.delete(key);
+      if (this._memberHandRaised) this._memberHandRaised.delete(key);
+      if (this._memberPresenting) this._memberPresenting.delete(key);
+      if (this._clearHandTimer) this._clearHandTimer(key);
+      this._refreshMember(uid);
+    }
+  }
+
   // When a participant leaves, clear their call/hand/presenting state so the
   // dashboard card flips back from "Joined" to a callable "Call" button (and
   // drops any stale hand-raise / presenting badges). Map the participant id to
