@@ -221,14 +221,33 @@ class __editor_markdown extends __player {
       // Only the note's own text field — never a toolbar button or the window chrome.
       const t = e && e.target;
       if (!t || !/^(TEXTAREA|INPUT)$/.test(t.tagName || '')) return;
-      // Only ONE popup per editor session, and only for keys that actually mean
-      // "I am editing" — navigation, selection and copy must stay usable for a
-      // view-only recipient who is legitimately reading.
-      if (this._dmzEditGated || !_isEditIntentKey(e)) return;
+      // Only for keys that actually mean "I am editing" — navigation, selection and
+      // copy must stay usable for a view-only recipient who is legitimately reading.
+      if (!_isEditIntentKey(e)) return;
+      // Re-arm every time: the recipient must get the same answer whenever they try
+      // to edit, so dismissing the popup and typing again has to bring it back. What
+      // we must NOT do is re-fire while it is already on screen (a burst of keys, or
+      // a held key, would otherwise re-feed the overlay repeatedly), so skip while
+      // the sharebox's overlay is open — it re-arms itself when they close it.
+      // Compared against _a.open (what the sharebox writes) plus the literal, since
+      // dataset values are always strings and _a resolves keys at runtime.
+      const ov = desk.__signupOverlay;
+      const ovMode = ov && ov.el && ov.el.dataset ? ov.el.dataset.mode : null;
+      if (ovMode && (ovMode === _a.open || ovMode === 'open')) {
+        e.preventDefault();
+        return;
+      }
+      // Backstop for the case where that overlay cannot be inspected: never fire more
+      // than once per 800ms, so a fast typist still sees exactly one dialog.
+      const now = Date.now();
+      if (this._dmzEditGatedAt && (now - this._dmzEditGatedAt) < 800) {
+        e.preventDefault();
+        return;
+      }
       if (!desk._gateInteraction(
         desk.havePermission(_K.permission.write, desk.mget(_a.privilege))
       )) return;
-      this._dmzEditGated = 1;
+      this._dmzEditGatedAt = now;
       e.preventDefault();
     }, true);
   }
