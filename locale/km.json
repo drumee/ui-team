@@ -1968,6 +1968,7 @@
   "SECURE_SHARE_SIGNUP_REQUIRED_TITLE": "Sign up required",
   "SECURE_SHARE_SIGN_UP_BTN": "Sign up",
   "SECURE_SHARE_LIMITED_ACCESS": "អ្នកមានសិទ្ធិចូលប្រើប្រាស់កម្រិតមានកំណត់សម្រាប់ការចែករំលែកនេះ។",
+  "SECURE_SHARE_LINK_LIMITED_NOTICE": "តំណនេះផ្តល់សិទ្ធិចូលប្រើកម្រិតមានកំណត់។ សិទ្ធិចូលប្រើផ្ទាល់ខ្លួនរបស់អ្នកលើកន្លែងធ្វើការនេះមិនផ្លាស់ប្តូរទេ។",
   "SECURE_SHARE_REQUEST_ACCESS": "សំណើសុំសិទ្ធ",
   "SECURE_SHARE_SEND_REQUEST": "ផ្ញើសំណើ",
   "SECURE_SHARE_CONVERSATION": "ការសន្ទនា",

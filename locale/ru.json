@@ -1968,6 +1968,7 @@
   "SECURE_SHARE_SIGNUP_REQUIRED_TITLE": "Требуется регистрация",
   "SECURE_SHARE_SIGN_UP_BTN": "Зарегистрироваться",
   "SECURE_SHARE_LIMITED_ACCESS": "У вас ограниченный доступ к этому ресурсу.",
+  "SECURE_SHARE_LINK_LIMITED_NOTICE": "Эта ссылка даёт ограниченный доступ. Ваш собственный доступ к рабочему пространству не изменился.",
   "SECURE_SHARE_REQUEST_ACCESS": "Запросить доступ",
   "SECURE_SHARE_SEND_REQUEST": "Отправить запрос",
   "SECURE_SHARE_CONVERSATION": "Беседа",

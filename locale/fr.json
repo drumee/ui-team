@@ -1969,6 +1969,7 @@
   "SECURE_SHARE_SIGNUP_REQUIRED_TITLE": "Inscription requise",
   "SECURE_SHARE_SIGN_UP_BTN": "S'inscrire",
   "SECURE_SHARE_LIMITED_ACCESS": "Vous avez un accès limité à ce partage.",
+  "SECURE_SHARE_LINK_LIMITED_NOTICE": "Ce lien donne un accès limité. Votre propre accès à cet espace de travail est inchangé.",
   "SECURE_SHARE_REQUEST_ACCESS": "Demander l’accès",
   "SECURE_SHARE_SEND_REQUEST": "Envoyer la demande",
   "SECURE_SHARE_CONVERSATION": "Conversation",

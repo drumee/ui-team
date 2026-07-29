@@ -2412,6 +2412,7 @@
   "SECURE_SHARE_SIGNUP_REQUIRED_TITLE": "Sign up required",
   "SECURE_SHARE_SIGN_UP_BTN": "Sign up",
   "SECURE_SHARE_LIMITED_ACCESS": "You have limited access to this share.",
+  "SECURE_SHARE_LINK_LIMITED_NOTICE": "This link gives limited access. Your own access to this workspace is unchanged.",
   "SECURE_SHARE_REQUEST_ACCESS": "Request Access",
   "SECURE_SHARE_SEND_REQUEST": "Send request",
   "SECURE_SHARE_CONVERSATION": "Conversation",

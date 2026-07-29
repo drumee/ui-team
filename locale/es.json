@@ -1973,6 +1973,7 @@
   "SECURE_SHARE_SIGNUP_REQUIRED_TITLE": "Registro requerido",
   "SECURE_SHARE_SIGN_UP_BTN": "Registrarse",
   "SECURE_SHARE_LIMITED_ACCESS": "Tienes acceso limitado a este recurso compartido.",
+  "SECURE_SHARE_LINK_LIMITED_NOTICE": "Este enlace ofrece acceso limitado. Tu propio acceso a este espacio de trabajo no cambia.",
   "SECURE_SHARE_REQUEST_ACCESS": "Solicitar acceso",
   "SECURE_SHARE_SEND_REQUEST": "Enviar solicitud",
   "SECURE_SHARE_CONVERSATION": "Conversación",
