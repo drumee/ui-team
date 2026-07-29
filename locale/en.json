@@ -2722,5 +2722,7 @@
   "PLAN_UPGRADE_MSG": "Switch your subscription to {0} at {1}/month or {2}/year?\n\nYour {3} plan will be canceled immediately, and any remaining subscription time will not be carried over. You'll gain instant access to all {0} plan features.",
   "PLAN_DOWNGRADE_TITLE": "Downgrade to {0}",
   "PLAN_DOWNGRADE_MSG": "Switch to the {0} plan for {1}/month or {2}/year?\n\nYour {3} plan will be canceled immediately, and any remaining subscription time will not be carried over. You'll immediately switch to the {0} plan and lose access to {3}-only features.",
-  "TWO_MONTHS_FREE": "2 months free"
+  "TWO_MONTHS_FREE": "2 months free",
+  "ADMIN_ACCESS_REQUIRED": "Admin access required",
+  "ADMIN_ACCESS_REQUIRED_DESC": "Your plan already includes the Admin Console, but it is limited to organization owners and workspace admins. Ask your organization owner to grant you admin rights."
 }
