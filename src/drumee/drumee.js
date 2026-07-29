@@ -27,9 +27,23 @@ class Drumee extends Marionette.Application {
   }
 
   /**
-   * 
+   *
    */
   onStart() {
+    // Arriving from an OAuth provider leaves that provider's SPENT consent
+    // page as the history entry directly behind the app — Google answers a
+    // navigation back to it with "400 malformed, should not be retried".
+    // Push one buffer entry (same URL) so the first Back lands on the app
+    // again instead of that dead page. One entry only — a second Back still
+    // leaves, deliberately; this just absorbs the accidental one (trackpad
+    // swipe while editing a document, reported 2026-07-29). The CSS
+    // overscroll-behavior guard blocks the gesture itself; this covers the
+    // browser Back button and any UA that ignores overscroll-behavior.
+    try {
+      if (/accounts\.google\.com|appleid\.apple\.com/.test(document.referrer || "")) {
+        history.pushState(history.state, "", location.href);
+      }
+    } catch (e) { /* history API unavailable — nothing to guard */ }
     xhRequest(`yp.get_env`).then((r) => {
       if (!r || r.__status != 200 || r.response?.error) {
         return this.failover(r.response);
