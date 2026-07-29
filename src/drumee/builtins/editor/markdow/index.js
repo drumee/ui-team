@@ -5,6 +5,23 @@ const printJS = require("print-js");
 
 const REMINDER_ID = 'reminder_id';
 
+// Keys that mean "I am trying to change this text", used by _wireDmzEditGate to
+// decide whether a keystroke on a READONLY textarea is an edit attempt worth
+// gating. Deliberately narrow: arrows / Home / End / PageUp / PageDown / Tab /
+// Escape / F-keys / bare modifiers, and Ctrl-C / Ctrl-A / Ctrl-F, are all things a
+// view-only recipient legitimately does while READING, so they must never pop a
+// dialog. Ctrl/Cmd-V and Ctrl/Cmd-X are edit intent even though the key itself is
+// not printable; every other Ctrl/Cmd combo is not.
+const EDIT_INTENT_KEYS = new Set(['Enter', 'Backspace', 'Delete']);
+function _isEditIntentKey(e) {
+  if (!e) return false;
+  if (e.ctrlKey || e.metaKey) return /^[vx]$/i.test(e.key || '');
+  if (e.altKey) return false;
+  // A one-character key is a printable insert (letter, digit, punctuation, space).
+  if (typeof e.key === 'string' && e.key.length === 1) return true;
+  return EDIT_INTENT_KEYS.has(e.key);
+}
+
 
 require("./skin");
 require("./skin/viewer");
@@ -142,6 +159,7 @@ class __editor_markdown extends __player {
         this.viewerId = `${this.mget(_a.widgetId)}-viewer`;
         this.editorId = `${this.mget(_a.widgetId)}-editor`;
         child.feed(require('./skeleton/content')(this))
+        this._wireDmzEditGate();
         break;
       case 'pin':
         if (!this.media || this.mget(REMINDER_ID)) return;
@@ -167,6 +185,71 @@ class __editor_markdown extends __player {
       default:
         super.onPartReady(child, pn);
     }
+  }
+
+  /**
+   * Share recipient who cannot actually write → gate the FIRST edit keystroke.
+   *
+   * skeleton/content.js renders the textarea `readonly` when !canUpload(), and a
+   * readonly field never fires an input/value-change event — which is why the
+   * existing `text-input` service could not see the attempt and the recipient got
+   * NO feedback at all when they typed. `readonly` (unlike `disabled`) still emits
+   * keydown, so gate there. Delegates the decision to the share's own gate, so the
+   * outcome matches every other beyond-grant action: anonymous → sign-up overlay,
+   * signed-in without the edit grant → Request Access, creator or a recipient who
+   * really holds the grant → returns false and they type normally.
+   *
+   * Scoped to a DMZ share via this.target.isDmz (the same marker the save path
+   * uses), so a desk note editor never installs the listener at all.
+   *
+   * Listens on the widget ROOT in the capture phase rather than on the Entry part.
+   * The Entry in skeleton/content.js carries a `sys_pn` but no `partHandler`, so
+   * whether onPartReady('editor') fires at all depends on the implicit handler walk
+   * — a dependency this gate does not need. this.el exists by the time the content
+   * part is ready, keydown from the field bubbles to it, and capture runs before any
+   * handler the field itself may have.
+   */
+  _wireDmzEditGate() {
+    if (this._dmzEditGateWired) return;
+    if (!this.target || !this.target.isDmz) return;
+    if (typeof this.target.mget !== 'function') return;
+    const desk = this.target.mget('desk');
+    if (!desk || typeof desk._gateInteraction !== 'function') return;
+    if (!this.el || typeof this.el.addEventListener !== 'function') return;
+    this._dmzEditGateWired = 1;
+    this.el.addEventListener('keydown', (e) => {
+      // Only the note's own text field — never a toolbar button or the window chrome.
+      const t = e && e.target;
+      if (!t || !/^(TEXTAREA|INPUT)$/.test(t.tagName || '')) return;
+      // Only for keys that actually mean "I am editing" — navigation, selection and
+      // copy must stay usable for a view-only recipient who is legitimately reading.
+      if (!_isEditIntentKey(e)) return;
+      // Re-arm every time: the recipient must get the same answer whenever they try
+      // to edit, so dismissing the popup and typing again has to bring it back. What
+      // we must NOT do is re-fire while it is already on screen (a burst of keys, or
+      // a held key, would otherwise re-feed the overlay repeatedly), so skip while
+      // the sharebox's overlay is open — it re-arms itself when they close it.
+      // Compared against _a.open (what the sharebox writes) plus the literal, since
+      // dataset values are always strings and _a resolves keys at runtime.
+      const ov = desk.__signupOverlay;
+      const ovMode = ov && ov.el && ov.el.dataset ? ov.el.dataset.mode : null;
+      if (ovMode && (ovMode === _a.open || ovMode === 'open')) {
+        e.preventDefault();
+        return;
+      }
+      // Backstop for the case where that overlay cannot be inspected: never fire more
+      // than once per 800ms, so a fast typist still sees exactly one dialog.
+      const now = Date.now();
+      if (this._dmzEditGatedAt && (now - this._dmzEditGatedAt) < 800) {
+        e.preventDefault();
+        return;
+      }
+      if (!desk._gateInteraction(
+        desk.havePermission(_K.permission.write, desk.mget(_a.privilege))
+      )) return;
+      this._dmzEditGatedAt = now;
+      e.preventDefault();
+    }, true);
   }
 
   /**
@@ -378,14 +461,18 @@ class __editor_markdown extends __player {
         // Send the destination folder as `p` so the ACL authorizes against the shared
         // folder where the grant applies (mirrors make_dir, which passes the parent as nid).
         if (!opt.nid) opt.p = opt.pid;
-        // An anonymous (creator-bound) session reports a writable CLIENT privilege —
-        // so the textarea is editable and the editor's canUpload() passes — but the
-        // server's read-only ceiling blocks the write, so the save silently no-ops
-        // (edit → save → reopen → nothing). Route anonymous editors to the sign-up
-        // gate instead, mirroring the create-note / create-folder gate in the sharebox.
+        // A recipient who cannot actually write must not reach the server: an anonymous
+        // (creator-bound) session reports a writable CLIENT privilege — so the textarea
+        // is editable and canUpload() passes — but the server's read-only ceiling blocks
+        // the write and the save silently no-ops (edit → save → reopen → nothing). The
+        // same silence hit a SIGNED-IN recipient without the edit grant, who got no
+        // feedback at all. Route both through the share's own gate: anonymous → sign-up,
+        // signed-in without the grant → Request Access, creator / granted recipient →
+        // proceed (returns false). Backstop for the keydown gate wired in
+        // _wireDmzEditGate, which a mouse/context-menu paste can bypass.
         const desk = this.target.mget('desk');
-        if (desk && !desk.mget('is_authenticated')) {
-          if (desk.showSignupRequiredOverlay) desk.showSignupRequiredOverlay();
+        if (desk && typeof desk._gateInteraction === 'function' &&
+          desk._gateInteraction(desk.havePermission(_K.permission.write, desk.mget(_a.privilege)))) {
           return;
         }
         // No "save to your Deck" fallback in a share: a recipient has no deck, and the

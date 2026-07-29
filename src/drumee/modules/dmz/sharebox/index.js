@@ -849,6 +849,18 @@ class __dmz_sharebox extends LetcBox {
     // window/skeleton/toolkit via _dmzShareWithoutChat(); gated on uiRouter.isDmz()
     // there, so it only ever affects this recipient session, never the desk.
     if (window.uiRouter) window.uiRouter._dmzShareCanChat = !!this.mget('can_chat');
+    // Publish whether THIS VIEWER can really edit, for the document player's header
+    // (player/document/skeleton/menu.js). It cannot decide from the node privilege
+    // alone: that is the LINK's cap, pinned by dmz/wm getWindowPreset, so a can_edit
+    // link reads "writable" even for an anonymous opener whom the editor then forces
+    // read-only — leaving them with a read-only editor and no way to ask for access.
+    // Mirrors the editor's own rule (marketplace euroffice: canEdit AND an
+    // authenticated identity, either a signed-in recipient or the verified owner);
+    // is_owner already implies is_authenticated, so this single test covers both.
+    if (window.uiRouter) {
+      window.uiRouter._dmzShareViewerCanEdit =
+        !!(this.mget('is_authenticated') && this.mget('can_edit'));
+    }
     this.__content.feed(this.deskSkeleton(this))
     if (this.__actionButtons) {
       this.__actionButtons.el.dataset.mode = _a.open;

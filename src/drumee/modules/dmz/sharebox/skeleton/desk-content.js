@@ -214,33 +214,57 @@ function dmzSplitBody(ui) {
 function __skl_dmz_sharebox_desk_content(_ui_) {
   const topbar    = dmzTopbar(_ui_);
   const privilege = _ui_.mget(_a.privilege) || 0;
-  // Figma flow: the "limited access → Request Access" banner is for SIGNED-IN
-  // non-members. An anonymous visitor instead meets a sign-up/login gate when
-  // they attempt an action beyond their grant (chat/edit), so they get no banner.
-  //  • anonymous = NOT authenticated → exclude them here (they meet the sign-up gate
-  //    on action instead). Keyed on is_authenticated, NOT is_guest: the server returns
-  //    is_guest=false for public shares (guest session bound to the creator), so an
-  //    anonymous public viewer would otherwise wrongly get the "request access" banner.
-  //  • exclude the share's own creator (viewer `uid` === `creator_id`; distinct
-  //    server columns).
-  //  • exclude real workspace MEMBERS (server `is_member`) — they already have
-  //    standing access, so the guest "request access" banner doesn't apply.
-  //  • only when the grant is below full access (privilege < write).
-  const isAnonymous = !_ui_.mget('is_authenticated');
-  const isOwner     = !!_ui_.mget('creator_id') && (_ui_.mget('uid') === _ui_.mget('creator_id'));
-  const isMember    = !!_ui_.mget('is_member');
-  const showBanner  = !!_ui_.mget('is_secure') && !isAnonymous && !isMember && (privilege < _K.privilege.write) && !isOwner;
+  // The "limited access → Request Access" banner. It originally showed ONLY to
+  // signed-in non-members: members were excluded as already having standing access,
+  // and anonymous viewers were excluded because they meet the sign-up gate on action.
+  // Both exclusions are gone — see below. It still only appears when the grant is
+  // below full access (privilege < write).
+  //
+  // A LINK IS ITS OWN PERMISSION DOMAIN (Duy 2026-07-29). Whoever opens it is capped
+  // by the link's level in this view — a member on a view-only link can only view
+  // here, independently of the rights their membership gives them elsewhere. So both
+  // the notice AND the request follow the LINK, not the viewer's other access: the
+  // person who controls this domain is the link's creator, which makes "request more
+  // access" a coherent ask even for a member, and it keeps the recipient UI honest
+  // instead of looking like broken permissions.
+  //  • MEMBERS are included (they used to be excluded, so they saw nothing at all).
+  //  • ANONYMOUS viewers are included too. Clicking through routes them to the
+  //    sign-up overlay rather than the request popup (sharebox onUiEvent
+  //    'open-request-access' keys on is_authenticated), which is the same funnel
+  //    chat and edit already use — nothing is granted on that path.
+  //  • The CREATOR is the one exception: they would be requesting access from
+  //    themselves. They still get the notice (useful when previewing their own
+  //    link — it is what recipients see) but no action.
+  // ⚠️ Use the SERVER's is_owner, which already requires an authenticated identity.
+  // Do NOT derive ownership from `uid === creator_id` alone: a PUBLIC link binds the
+  // ANONYMOUS guest session to the creator, so that comparison is true for anonymous
+  // viewers too — they would be treated as the creator and lose the action. That is
+  // the exact trap _gateInteraction documents ("an anonymous viewer ALSO has
+  // uid === creator_id"). Falls back to the guarded comparison only if the server
+  // field is absent, so an older payload still cannot mistake anonymous for the owner.
+  const isOwner    = _ui_.mget('is_owner') != null
+    ? !!_ui_.mget('is_owner')
+    : (!!_ui_.mget('is_authenticated') && !!_ui_.mget('creator_id')
+       && _ui_.mget('uid') === _ui_.mget('creator_id'));
+  const isCapped   = !!_ui_.mget('is_secure') && (privilege < _K.privilege.write);
+  const showBanner = isCapped;
+  const canRequest = isCapped && !isOwner;
 
   const limitedBanner = showBanner ? Skeletons.Box.X({
     className : `${_ui_.fig.family}__limited-access-banner`,
     kids      : [
-      Skeletons.Note({ className: `${_ui_.fig.family}__limited-access-text`, content: LOCALE.SECURE_SHARE_LIMITED_ACCESS }),
       Skeletons.Note({
+        className : `${_ui_.fig.family}__limited-access-text`,
+        content   : canRequest
+          ? LOCALE.SECURE_SHARE_LIMITED_ACCESS
+          : LOCALE.SECURE_SHARE_LINK_LIMITED_NOTICE,
+      }),
+      canRequest ? Skeletons.Note({
         className : `${_ui_.fig.family}__limited-access-btn`,
         content   : LOCALE.SECURE_SHARE_REQUEST_ACCESS,
         service   : 'open-request-access',
         uiHandler : [_ui_],
-      }),
+      }) : null,
     ]
   }) : null;
 

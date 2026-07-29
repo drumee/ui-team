@@ -13,6 +13,22 @@ function tooltip(ui, content) {
 // other action is a plain icon button.
 const PRIMARY_SERVICES = ["download-pdf", "preview", "print", _a.edit];
 
+// Can THIS VIEWER really edit the office doc, i.e. will the editor open writable?
+// ui.canUpload() alone cannot answer it: that reads the node privilege, which
+// dmz/wm getWindowPreset pins to the LINK's cap — so a can_edit link looks writable
+// even to an anonymous opener, whom the editor then forces read-only. They ended up
+// in a read-only editor with no Request-edit action at all. The sharebox publishes
+// the viewer-aware answer on loadDeskContent (is_authenticated AND can_edit, which
+// mirrors the editor's own rule). If that flag is absent — boot race, or any
+// non-share session — fall back to the previous canUpload() test so behaviour is
+// unchanged rather than guessed.
+function _dmzViewerCanEdit(ui) {
+  const r = (typeof window !== "undefined") && window.uiRouter;
+  const flag = r && r._dmzShareViewerCanEdit;
+  if (typeof flag === "boolean") return flag;
+  return !!(ui && typeof ui.canUpload === "function" && ui.canUpload());
+}
+
 function action(ui, { service, ico, tip, state, icons, sys_pn }) {
   const a = {
     ico,
@@ -83,13 +99,13 @@ module.exports = function (ui) {
     }
   } else if (
     Visitor.inDmz &&
-    !ui.canUpload() &&
+    !_dmzViewerCanEdit(ui) &&
     Platform.get("doc_editor") &&
     EDITABLE.includes((ui.mget(_a.ext) || "").toLowerCase())
   ) {
-    // Secure-share recipient WITHOUT an edit grant: the editor is read-only. Offer a
-    // "Request edit" action that opens the share's request-access popup (reusing the
-    // already-wired dmz-request-download gate → sharebox → Request Access / sign-up).
+    // Secure-share recipient the editor will force READ-ONLY: offer a "Request edit"
+    // action that opens the share's request-access popup (reusing the already-wired
+    // dmz-request-download gate → sharebox → Request Access / sign-up).
     actions.push(
       action(ui, {
         service: "dmz-request-edit",
