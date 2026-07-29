@@ -235,7 +235,17 @@ function __skl_dmz_sharebox_desk_content(_ui_) {
   //  • The CREATOR is the one exception: they would be requesting access from
   //    themselves. They still get the notice (useful when previewing their own
   //    link — it is what recipients see) but no action.
-  const isOwner    = !!_ui_.mget('creator_id') && (_ui_.mget('uid') === _ui_.mget('creator_id'));
+  // ⚠️ Use the SERVER's is_owner, which already requires an authenticated identity.
+  // Do NOT derive ownership from `uid === creator_id` alone: a PUBLIC link binds the
+  // ANONYMOUS guest session to the creator, so that comparison is true for anonymous
+  // viewers too — they would be treated as the creator and lose the action. That is
+  // the exact trap _gateInteraction documents ("an anonymous viewer ALSO has
+  // uid === creator_id"). Falls back to the guarded comparison only if the server
+  // field is absent, so an older payload still cannot mistake anonymous for the owner.
+  const isOwner    = _ui_.mget('is_owner') != null
+    ? !!_ui_.mget('is_owner')
+    : (!!_ui_.mget('is_authenticated') && !!_ui_.mget('creator_id')
+       && _ui_.mget('uid') === _ui_.mget('creator_id'));
   const isCapped   = !!_ui_.mget('is_secure') && (privilege < _K.privilege.write);
   const showBanner = isCapped;
   const canRequest = isCapped && !isOwner;
