@@ -130,10 +130,11 @@
     &-header {
       position: relative;
       width: 100%;
-      // 164px left ~68px of dead air between the title and the price
-      // (space-between does the distribution); product asked for 40% less
-      // of that gap (2026-07-29) → 164 − 0.4×68 ≈ 136.
-      min-height: 116px;
+      // Was 164px, which left ~68px of dead air between the title and the
+      // price (space-between does the distribution). Product first asked for
+      // 40% less (136), then hand-tuned it to 80 — content-height plus
+      // padding, no filler at all (2026-07-29).
+      min-height: 80px;
       padding: var(--spacer-4);
       border-radius: var(--corner-radius-5); // 16px
       background-color: var(--tertiary-grey-20);
