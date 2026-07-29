@@ -130,7 +130,10 @@
     &-header {
       position: relative;
       width: 100%;
-      min-height: 164px;
+      // 164px left ~68px of dead air between the title and the price
+      // (space-between does the distribution); product asked for 40% less
+      // of that gap (2026-07-29) → 164 − 0.4×68 ≈ 136.
+      min-height: 116px;
       padding: var(--spacer-4);
       border-radius: var(--corner-radius-5); // 16px
       background-color: var(--tertiary-grey-20);

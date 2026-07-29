@@ -1752,7 +1752,7 @@
   "AUDIT_RISK_DESC": "Mainly involving external folder sharing.",
   "AUDIT_STORAGE_DESC": "Total data logged in last 30 days.",
   "UNLOCK_ACTIVITY_INSIGHTS": "Unlock Activity Insights",
-  "UNLOCK_ACTIVITY_DESC": "Detailed tracking, login forensics, and system-wide event streams are only available on the Enterprise Premium tier. Gain full transparency into your workspace history.",
+  "UNLOCK_ACTIVITY_DESC": "详细跟踪与审计日志自 Business 套餐起即包含。升级以全面掌握工作区历史。",
   "UPGRADE_YOUR_PLAN": "Upgrade your plan",
   "EXTERNAL_GUEST_ACTIVITY": "External Guest Activity",
   "EXTERNAL_GUEST_ACTIVITY_DESC": "Secure-share opens by people outside your organization.",
@@ -1853,7 +1853,7 @@
   "AVAILABLE_LC": "available",
   "UPGRADE_TO_INCREASE_CAPACITY": "Upgrade to increase capacity.",
   "UNLOCK_ADMIN_CONSOLE": "Unlock Admin Console",
-  "UNLOCK_ADMIN_DESC": "Workspace administration — member roles, permissions and storage controls — is part of the Enterprise Premium tier. Upgrade to manage your organization end-to-end.",
+  "UNLOCK_ADMIN_DESC": "管理控制台自 Team 套餐起即包含。打开它需要所有者或工作区管理员权限——请联系您的组织所有者，或从 Free 升级开始使用。",
 
   "ONBOARDING_WHAT_SHOULD_WE_CALL_YOU": "我们应该怎么称呼你？",
   "ONBOARDING_WHAT_KIND_OF_WORK": "你好 {0}，你从事什么工作？",
