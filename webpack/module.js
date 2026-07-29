@@ -23,6 +23,10 @@ module.exports = function (basedir) {
             sassOptions: {
               sourceMap: true,
               sourceMapEmbed: true,
+              // Sass prepends a BOM to compressed output containing non-ASCII;
+              // style-loader injects it glued to the first selector, which kills
+              // the :root{--font-*} block. Never emit @charset/BOM.
+              charset: false,
               includePaths: [
                 resolve(basedir, drumee_path, 'skin'),
                 resolve(basedir, 'node_modules')
