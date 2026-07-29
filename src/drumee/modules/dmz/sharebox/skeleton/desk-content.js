@@ -221,26 +221,45 @@ function __skl_dmz_sharebox_desk_content(_ui_) {
   //    on action instead). Keyed on is_authenticated, NOT is_guest: the server returns
   //    is_guest=false for public shares (guest session bound to the creator), so an
   //    anonymous public viewer would otherwise wrongly get the "request access" banner.
-  //  • exclude the share's own creator (viewer `uid` === `creator_id`; distinct
-  //    server columns).
-  //  • exclude real workspace MEMBERS (server `is_member`) — they already have
-  //    standing access, so the guest "request access" banner doesn't apply.
   //  • only when the grant is below full access (privilege < write).
+  //
+  // The NOTICE follows the LINK, the ACTION follows the viewer (Duy 2026-07-29).
+  // A real member — or the creator previewing their own link — is capped by the link
+  // in THIS view only; their own access to the content is untouched. They used to see
+  // nothing at all, which made a view-only link look like broken permissions, so they
+  // now get the notice too. What they must NOT get is the Request-access action: it
+  // sends a request to the link's creator for approval, which is meaningless for
+  // someone who already holds the rights (and would stack a redundant node grant on
+  // top of their membership if approved). Their route is their own workspace, or —
+  // for a member whose membership is itself limited — their workspace admin, never
+  // the link's creator. Anonymous viewers stay excluded entirely: they meet the
+  // sign-up/login gate on action instead, and Request-access needs an identity to
+  // request with. Keyed on is_authenticated, NOT is_guest (the server returns
+  // is_guest=false for public shares, so an anonymous viewer would slip through).
   const isAnonymous = !_ui_.mget('is_authenticated');
   const isOwner     = !!_ui_.mget('creator_id') && (_ui_.mget('uid') === _ui_.mget('creator_id'));
   const isMember    = !!_ui_.mget('is_member');
-  const showBanner  = !!_ui_.mget('is_secure') && !isAnonymous && !isMember && (privilege < _K.privilege.write) && !isOwner;
+  // Standing access = another way in that the link cannot take away.
+  const hasStanding = isMember || isOwner;
+  const isCapped    = !!_ui_.mget('is_secure') && !isAnonymous && (privilege < _K.privilege.write);
+  const showBanner  = isCapped;
+  const canRequest  = isCapped && !hasStanding;
 
   const limitedBanner = showBanner ? Skeletons.Box.X({
     className : `${_ui_.fig.family}__limited-access-banner`,
     kids      : [
-      Skeletons.Note({ className: `${_ui_.fig.family}__limited-access-text`, content: LOCALE.SECURE_SHARE_LIMITED_ACCESS }),
       Skeletons.Note({
+        className : `${_ui_.fig.family}__limited-access-text`,
+        content   : canRequest
+          ? LOCALE.SECURE_SHARE_LIMITED_ACCESS
+          : LOCALE.SECURE_SHARE_LINK_LIMITED_NOTICE,
+      }),
+      canRequest ? Skeletons.Note({
         className : `${_ui_.fig.family}__limited-access-btn`,
         content   : LOCALE.SECURE_SHARE_REQUEST_ACCESS,
         service   : 'open-request-access',
         uiHandler : [_ui_],
-      }),
+      }) : null,
     ]
   }) : null;
 
