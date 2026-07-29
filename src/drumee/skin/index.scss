@@ -14,6 +14,19 @@ body {
   visibility: visible;
 }
 
+html,
+body {
+  // Kill the two-finger horizontal-swipe "Back" gesture. The desk is a
+  // single-page app whose hash rarely changes, so the history entry BEHIND it
+  // is whatever the user arrived from — after a Google sign-in that is
+  // Google's spent OAuth consent page, which answers "400 malformed, should
+  // not be retried" when navigated back to. One accidental trackpad swipe
+  // while editing a document threw users onto that page (reported
+  // 2026-07-29). Deliberate Back via the browser button still works, and
+  // drumee.js pushes one buffer entry after an OAuth arrival for that case.
+  overscroll-behavior-x: none;
+}
+
 
 #--router {
   .wrapper.gateway {
