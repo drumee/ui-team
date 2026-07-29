@@ -924,6 +924,8 @@
   "SHAREBOX_VALIDITY_EXPIRE": "La validité de cette boîte de partage a expiré.",
   "SHAREBOX_VALIDITY_EXPIRE_DESC": "La validité de cette boîte de partage a expiré. <br> Veuillez redéfinir la validité avant d'envoyer la notification.",
   "UNLIMITED": "Illimitée",
+  "UPLOADS_PAUSED": "Envois suspendus",
+  "OVER_QUOTA_BY": "Vous dépassez de %s votre limite de %s. Vos fichiers sont conservés — libérez de l'espace pour envoyer à nouveau.",
   "SET_VALIDITY": "Régler",
   "ONLY_ALPHANUMERIC_AND_SPECIAL_ALLOWED": "Uniquement alphanumérique et - _ . @ sont autorisés",
   "ALREADY_HAVE_ACCOUNT": "J’ai déjà un compte ?",

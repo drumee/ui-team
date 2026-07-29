@@ -924,6 +924,8 @@
   "SHAREBOX_VALIDITY_EXPIRE": "此共享框的有效期已过期。",
   "SHAREBOX_VALIDITY_EXPIRE_DESC": "此共享框的有效期已过期。 <br> 请在发送通知前重新设置有效期。",
   "UNLIMITED": "无限",
+  "UPLOADS_PAUSED": "上传已暂停",
+  "OVER_QUOTA_BY": "您已超出配额 %s（配额 %s）。您的文件仍然安全 — 请释放空间以继续上传。",
   "SET_VALIDITY": "设置有效期",
   "ONLY_ALPHANUMERIC_AND_SPECIAL_ALLOWED": "只有字母数字和 - _ 。 @ 被允许",
   "ALREADY_HAVE_ACCOUNT": "已经有一个帐户？",

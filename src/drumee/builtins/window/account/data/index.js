@@ -203,10 +203,24 @@ class __account_data extends DrumeeMFS {
       })
     }
 
+    // `used` is NO LONGER CLAMPED to `max`.
+    //
+    // It used to be, so a user storing 14 GB against a 5 GB allowance was shown
+    // a tidy "5 GB / 5 GB" at 100% — which reads as "exactly full" when the
+    // truth is "9 GB over, and uploads are refused". That is the screen someone
+    // lands on to work out why an upload just failed, and it told them nothing
+    // was wrong.
+    //
+    // Being over quota is not a rare state: the 20 GB -> 5 GB free migration
+    // (schemas 2026-07-24-migrate-free-to-new-allowance.sql) deliberately
+    // GRANDFATHERED accounts already above the new allowance, so those users are
+    // over it today. Claim-reward terms lapsing five years out land in the same
+    // place. Both deserve an honest number.
     let used = Visitor.diskUsed();
-    if (used > max) used = max;
-    let available = max - used;
-    if (available < 0) available = 0;
+    let over = !unlimited && max > 0 && used > max;
+    // Still floored at 0 — a negative slice is meaningless — but no longer
+    // capped, so the chart and the total can show the real figure.
+    let available = Math.max(0, max - used);
     let details_chart;
     if (details.length) {
       details_chart = {
@@ -237,10 +251,12 @@ class __account_data extends DrumeeMFS {
 
     // On an unlimited entitlement there is no "available" to plot against: the
     // slice would be the whole circle and what the user actually stores would
-    // be a hairline. The pie becomes the used breakdown alone.
-    let content = unlimited ? [] : [{
+    // be a hairline. Over quota there is no available space either — a slice of
+    // `max - used` would be negative. Both cases drop the slice and leave the
+    // pie as the used breakdown alone.
+    let content = (unlimited || over) ? [] : [{
       label: LOCALE.SPACE_AVAILABLE,
-      value: max - used,
+      value: available,
       color: colorFromName(LOCALE.SPACE_AVAILABLE),
     }];
     if (used) {
@@ -271,9 +287,12 @@ class __account_data extends DrumeeMFS {
         location: "pie-center"
       }
     };
+    // Over quota, the total says so rather than reading as a coincidence that
+    // used and max happen to match.
     this.__totalSize.set({
       content: `${LOCALE.DATA_USAGE} ${filesize(used)}/${
         unlimited ? (LOCALE.UNLIMITED || "Unlimited") : filesize(max)}`
+        + (over ? ` — ${LOCALE.UPLOADS_PAUSED || "uploads paused"}` : "")
     });
 
 
