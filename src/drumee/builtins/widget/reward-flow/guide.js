@@ -13,6 +13,13 @@
  *             that opens for internal (permission-restricted) / external
  *             (window-secure-share) workspaces → user closes it → done
  *
+ * The INTERNAL branch of that last sub-step belongs to Step 2, not Step 1: it
+ * is the panel that invites members. So the guide does not walk it at all — it
+ * hands the flow over the moment that panel appears (_checkInvitePanel) and
+ * the orchestrator takes it from there, showing the Step 2 card while the user
+ * works the panel. Only the external (secure-share) branch still runs the perm
+ * phase through to _complete.
+ *
  * Back steps backwards through these; see back().
  *
  * The reconcile engine — observer, debounce, backward grace, pin, spotlight
@@ -45,6 +52,9 @@ const SEL = {
   permPanels: ".permission-restricted__main, .window-secure-share__main",
   // External (share) branch only — used to pick the perm-phase coach text.
   permShare: ".window-secure-share__main",
+  // Internal (team) branch only. This panel is where members are invited, so
+  // the flow counts it as Step 2 — see the handoff in _resolveSub.
+  permInternal: ".permission-restricted__main",
   // The confirmation shown after an action inside those panels — e.g. sending
   // an invitation in permission_restricted pops Wm.alert → window_info, which
   // REPLACES the panel in the wrapper-modal. Spotlight the card ROOT (__ui) —
@@ -56,7 +66,18 @@ const SEL = {
 
 // Safety net for the perm phase: team/share always open a panel, but if one
 // never appears (unexpected), don't wedge the guide — complete after this.
+//
+// Two budgets, because the branches arrive by completely different routes and
+// one budget cannot serve both. The internal panel is FED into the shared
+// wrapper-modal in the same tick as the broadcast that starts this phase
+// (media_form → parent.feed), so it is there almost immediately. The external
+// dock is a WINDOW opened with Wm.launch on a LAZILY IMPORTED kind (seeds.js
+// window_secure_share → dynamic import): its chunk has to be fetched and
+// mounted before anything matches. On the short budget the phase could
+// complete first — Step 1 ended, the flow moved on to Step 2, and the dock
+// arrived to no spotlight and no coach at all.
 const PERM_TIMEOUT_MS = 2500;
+const PERM_TIMEOUT_WINDOW_MS = 20000;
 const ORDER = { add: 1, menu: 2, form: 3, perm: 4 };
 
 function tooltipFor(sub) {
@@ -101,6 +122,7 @@ class RewardGuide extends GuideCore {
     this._created = false;      // workspace created → perm phase active
     this._permSeen = false;     // the permission panel has appeared at least once
     this._infoSeen = false;     // the window_info confirmation has appeared
+    this._invitePanel = false;  // the INTERNAL panel was seen → running as Step 2
     this._completed = false;    // guard: onGuideComplete fired once
     if (this._permTimer) {
       clearTimeout(this._permTimer);
@@ -112,12 +134,22 @@ class RewardGuide extends GuideCore {
    * The workspace was created (team/share). Enter the perm phase: wait for the
    * follow-up permission panel to appear, spotlight it, and complete once the
    * user closes it. Called by the orchestrator from workspace:refresh.
+   *
+   * @param {String} [area] the new workspace's area as the server echoed it
+   *   back — "private" for internal/team, "share" for external. It picks the
+   *   safety budget (see the two constants). ONLY "private" takes the short
+   *   one: an area we do not recognise waits the long budget, since the cost of
+   *   waiting too long is a late advance, while the cost of waiting too little
+   *   is the sub-step never being shown at all.
    */
-  onWorkspaceCreated() {
+  onWorkspaceCreated(area) {
     this._created = true;
     this._permSeen = false;
     if (!hasDom()) return;  // Node/tests: the caller drives completion directly.
-    this._permTimer = setTimeout(() => this._complete(), PERM_TIMEOUT_MS);
+    const ms = String(area || "") === "private"
+      ? PERM_TIMEOUT_MS
+      : PERM_TIMEOUT_WINDOW_MS;
+    this._permTimer = setTimeout(() => this._complete(), ms);
     this._reconcile();
   }
 
@@ -144,6 +176,7 @@ class RewardGuide extends GuideCore {
           clearTimeout(this._permTimer);
           this._permTimer = null;
         }
+        this._checkInvitePanel();
         return "perm";
       }
       // Nothing visible now. Panels open a tick after their trigger, so only
@@ -159,6 +192,27 @@ class RewardGuide extends GuideCore {
     if (visible(document.querySelector(SEL.form))) return "form";
     if (visible(document.querySelector(SEL.wsItem))) return "menu";
     return "add";
+  }
+
+  /**
+   * Hand the flow over to Step 2 the first time the INTERNAL (team) panel is on
+   * screen: inviting members is what Step 2 asks for, so that panel is Step 2's
+   * surface, not a tail of Step 1 (see index.js onInvitePanel). The orchestrator
+   * stops this guide as it takes over, which is why nothing here has to unwind:
+   * stop() resets every flag.
+   *
+   * Latched all the same — a reconcile can land between the handover and the
+   * teardown, and the invitation's confirmation REPLACES the panel in the
+   * wrapper-modal, so a second call must not fire.
+   *
+   * The external branch never matches this selector and so never fires: it runs
+   * the perm phase to completion the way it always did.
+   */
+  _checkInvitePanel() {
+    if (this._invitePanel) return;
+    if (!firstVisible(SEL.permInternal)) return;
+    this._invitePanel = true;
+    if (typeof this._ui?.onInvitePanel === "function") this._ui.onInvitePanel();
   }
 
   _pinReady() {
@@ -249,7 +303,9 @@ class RewardGuide extends GuideCore {
     }
   }
 
-  /** Perm phase done (panel closed, or safety timeout) → advance to Step 2. */
+  /** Perm phase done (panel closed, or safety timeout) → advance to Step 2.
+   *  Reached by the external branch only: the internal one left this guide when
+   *  its panel appeared (_checkInvitePanel). */
   _complete() {
     if (this._completed) return;
     this._completed = true;

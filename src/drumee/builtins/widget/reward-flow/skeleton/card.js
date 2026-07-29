@@ -53,19 +53,6 @@ const STEPS = {
 };
 
 /**
- * Step 2 when the user already invited a member from the Step 1 permission
- * panel: the ask is met, so the card explains why and offers a plain Continue
- * to Step 3 instead of re-opening the invite popup. Overlays the step2 entry
- * above — everything it does not name (index, icon, title, Back) is inherited.
- */
-const STEP2_SATISFIED = {
-  desc: () => LOCALE.REWARD_FLOW_STEP2_DONE_DESC
-    || "You've already invited a member in the permission panel at step 1.",
-  primaryLabel: () => LOCALE.REWARD_FLOW_CONTINUE || "Continue",
-  primaryService: "reward-invite-done",
-};
-
-/**
  * Step 3 when Step 1 left us a workspace to reopen: instead of pointing at the
  * desk topbar's Upload button — which drops the file wherever the desk happens
  * to point, usually Home — the card opens that workspace and the walkthrough
@@ -97,9 +84,6 @@ function configFor(step, ui) {
   const base = String(step).replace(/_(waiting|guide)$/, "");
   const cfg = STEPS[base];
   if (!cfg) return null;
-  if (base === "step2" && ui?.inviteSatisfied?.()) {
-    return { ...cfg, ...STEP2_SATISFIED };
-  }
   if (base === "step3" && ui?.hasStep1Workspace?.()) {
     return { ...cfg, ...STEP3_GUIDED };
   }
@@ -108,7 +92,7 @@ function configFor(step, ui) {
 
 /**
  * The service a step's primary button fires ("reward-invite" / "reward-upload",
- * or a variant's "reward-invite-done" / "reward-open-workspace"). Exposed so
+ * or the guided Step 3's "reward-open-workspace"). Exposed so
  * the cutout laid over that step's topbar control can fire the SAME service —
  * clicking the spotlighted Invite/Upload button then behaves exactly like
  * clicking the card's button. `ui` is optional; pass it so variants resolve.

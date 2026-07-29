@@ -37,7 +37,8 @@ function congratsRoot(pfx, step) {
   return Skeletons.Box.Y({
     className: `${pfx}__root`,
     dataset: {
-      step, waiting: "0", guiding: "0", cutout: "0", overWindow: "1",
+      // Kebab-case — see the note on the main root's dataset below.
+      step, waiting: "0", guiding: "0", cutout: "0", "over-window": "1",
     },
     debug: __filename,
     kids: [Skeletons.Box.Y({ className: `${pfx}__vignette` })],
@@ -160,16 +161,29 @@ module.exports = function (ui) {
   // Kept through the waiting state too, so the overlay and the card's position
   // don't change underneath the user the moment they start an upload — only the
   // cutout's interactivity does (see targetCutout and the stylesheet).
-  // Two variants point at no topbar control at all and are centred like Step 1
-  // (data-notarget, see skin __anchor):
-  //   - a Step 2 already satisfied during Step 1 → its card offers Continue
+  // Two variants hang their card off no topbar control and are centred like
+  // Step 1 (data-notarget, see skin __anchor):
+  //   - a Step 2 served by the permission panel → the spotlight is the panel
+  //     itself, a tall right-hand rail with nothing to hang a card under
   //   - a Step 3 with a workspace to reopen      → its card offers Open
   //     workspace, and the upload control it eventually points at lives INSIDE
   //     that workspace, not on the desk topbar.
-  const satisfied = base === "step2" && ui.inviteSatisfied?.();
+  const panel = base === "step2" && ui.invitePanelOpen?.();
   const guided = base === "step3" && ui.hasStep1Workspace?.();
-  const notarget = satisfied || guided;
-  const targeted = (base === "step2" || base === "step3") && !notarget;
+  const notarget = panel || guided;
+  // Step 2 handed the user to a surface in the shared wrapper-modal — the
+  // permission panel or the invite popup. Both need the root lifted clear of
+  // that modal: it is the only way our dim reaches the topbar and sidebar (the
+  // modal's own backdrop covers just the desk's wm-container, which is what
+  // made the desk read darker than the chrome beside it), and the only way the
+  // card lands above the dim rather than behind it.
+  const onModal = base === "step2" && waiting;
+  // The cutout is what dims: it clears one target and shadows everything else.
+  // Steps 2/3 point it at their topbar control; the panel Step 2 points it at
+  // the panel (_applyStepTarget), which is also how that state's dim reaches
+  // the whole viewport instead of just the desk's wm-container.
+  const targeted =
+    panel || ((base === "step2" || base === "step3") && !notarget);
 
   return Skeletons.Box.Y({
     className: `${pfx}__root`,
@@ -180,11 +194,27 @@ module.exports = function (ui) {
       // Tells the stylesheet the cutout is doing the dimming, so the flat
       // vignette must go transparent (it stays for the drop-modal click).
       cutout: targeted ? "1" : "0",
+      // KEBAB-CASE, not camelCase: the framework writes these with
+      // setAttribute(`data-${k}`) and does NOT convert (letc.js), so `overModal`
+      // would land as `data-overmodal` — HTML lowercases attribute names — and
+      // every `[data-over-modal]` rule in the skin would silently never match.
+      //
       // The guided Step 3 card is the one card state reached with a workspace
       // WINDOW on screen (the user may have opened it, then pressed Back out of
       // the walkthrough). Windows outrank the flow's default layer, so this
       // asks the skin to lift the root clear of them.
-      overWindow: guided ? "1" : "0",
+      "over-window": guided ? "1" : "0",
+      // Lift the root over the wrapper-modal holding this step's surface.
+      "over-modal": onModal ? "1" : "0",
+      // Only the permission-panel route: it alone gets the brand-filled Back,
+      // being a card whose single control stands beside a full-height panel.
+      "on-panel": panel ? "1" : "0",
+      // …and step the card aside while the invite-sent confirmation stands in
+      // that surface's place — either route's, the panel's or the popup's: it is
+      // a card of its own, saying the same thing. Normally set imperatively (see
+      // _markInviteToast); declared here too so a re-render while it is up does
+      // not bring the card back.
+      toast: onModal && ui.inviteToastOpen?.() ? "1" : "0",
     },
     debug: __filename,
     kids: guiding

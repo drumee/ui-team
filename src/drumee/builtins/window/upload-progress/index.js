@@ -1020,7 +1020,19 @@ class __window_upload_progress extends __window_core {
   /**
    * Cancel all uploads
    */
-  cancelAll() {
+  /**
+   * Cancel every in-flight upload.
+   *
+   * @param {{close?: boolean}} [opt] `close: true` also dismisses the window.
+   *   That is the header X's route — it cancels AND closes, which is its only
+   *   job while an upload is running. The footer's "Cancel all" leaves the
+   *   window standing: its cancelled rows are the record of what just happened
+   *   to the user's files, and dismissing them half a second later leaves
+   *   nothing to read. There is still a way out — the footer flips to "Close"
+   *   as soon as nothing is uploading (see _refreshFooter).
+   */
+  cancelAll(opt = {}) {
+    const close = !!(opt && opt.close);
     if (this._bundleMode && this._jobs && this._jobs.length) {
       for (const job of this._jobs) {
         if (job && job.cancel) job.cancel();
@@ -1029,11 +1041,10 @@ class __window_upload_progress extends __window_core {
       this._uploading = false;
       this._renderAggregate();
       this._renderProgressList();
-      // Dismiss the popup after cancelling — the X, footer "Close" and
-      // "Cancel all" all route here, and this bundle-mode path used to return
-      // without ever calling goodbye(), so none of them could close the window
-      // (the non-bundle path below already closes via the delayed goodbye).
-      _.delay(() => this.goodbye(), 500);
+      // Dismiss the popup after cancelling, for the callers that asked to close
+      // — the header X. This bundle-mode path used to return without ever
+      // calling goodbye(), so the X could not close the window at all.
+      if (close) _.delay(() => this.goodbye(), 500);
       return;
     }
     if (this._job && this._job.cancel) this._job.cancel();
@@ -1076,10 +1087,12 @@ class __window_upload_progress extends __window_core {
     
     this._refreshUI();
 
-    // Close window after delay
-    _.delay(() => {
-      this.goodbye();
-    }, 500);
+    // Close window after delay — only for the caller that asked to (the X).
+    if (close) {
+      _.delay(() => {
+        this.goodbye();
+      }, 500);
+    }
   }
 
   /**
@@ -1342,9 +1355,19 @@ class __window_upload_progress extends __window_core {
    * Arm the 5s auto-dismiss once uploads settle (nothing left 'uploading').
    * Works for both legacy (_uploadItems) and bundle drag-drop paths.
    * A new upload or manual toggle cancels the countdown.
+   *
+   * "Settled" is not the same as "went well": a cancelled or errored batch is
+   * settled too, and dismissing THAT on a timer throws away the only account of
+   * what happened — including the Retry button an errored row offers, which is
+   * useless if it disappears five seconds after appearing. A batch that ended
+   * badly waits for the user to dismiss it.
    */
   _maybeArmAutoMinimize() {
     if (!this._isUploadSettled() || !this._hasTrackedUploads() || !this._isExpanded) {
+      this._cancelAutoMinimize();
+      return;
+    }
+    if (this._hasUnhappyEntry()) {
       this._cancelAutoMinimize();
       return;
     }
@@ -1354,6 +1377,26 @@ class __window_upload_progress extends __window_core {
       if (this.isDestroyed && this.isDestroyed()) return;
       if (this._isUploadSettled() && this._isExpanded) this.goodbye();
     }, 5000);
+  }
+
+  /**
+   * Did anything in this batch fail or get cancelled?
+   *
+   * Covers both models the window drives: the legacy flat list, and the bundle
+   * tree, whose folder rows roll their subtree up already (_entryDisplayStatus
+   * reports "error"/"canceled" for a folder holding one).
+   */
+  _hasUnhappyEntry() {
+    if (this._bundleMode) {
+      for (const e of this._bundle || []) {
+        const st = this._entryDisplayStatus(e);
+        if (st === "error" || st === "canceled") return true;
+      }
+      return false;
+    }
+    return (this._uploadItems || []).some(
+      (i) => i.status === "error" || i.status === "cancelled",
+    );
   }
 
   /**
@@ -2316,7 +2359,12 @@ class __window_upload_progress extends __window_core {
         return this.toggleExpand();
 
       case "cancel-all":
+        // Footer: cancel and stay, so the user can see what was cancelled.
         return this.cancelAll();
+
+      case "cancel-close":
+        // Header X: cancel and dismiss.
+        return this.cancelAll({ close: true });
 
       case "cancel-upload":
         // Try to get fileName from various sources
