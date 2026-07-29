@@ -1547,7 +1547,18 @@ class __reward_flow extends LetcBox {
         const base = baseStep(this._step);
         if (this._isWaiting()) return this._goto(base);
         const prev = STEPS[STEPS.indexOf(base) - 1];
-        if (prev) this._goto(prev);
+        if (!prev) return;
+        // Stepping out of Step 3 takes the workspace with it. The flow opened
+        // that window itself ("Open workspace"), and Step 2 is about inviting
+        // someone from the DESK — its card anchors to the desk topbar and its
+        // invite popup opens over it, both of which a workspace window covers.
+        // Leaving it up also strands the user's own way back: the card they land
+        // on offers "Open workspace" for a workspace already open.
+        //
+        // No-op on the legacy Step 3, which never opened one. The descriptor is
+        // kept, so coming forward again reopens the same workspace.
+        if (base === "step3") this._closeStep3Workspace();
+        this._goto(prev);
         return;
       }
 
