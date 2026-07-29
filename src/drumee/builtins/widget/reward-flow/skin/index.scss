@@ -524,19 +524,27 @@ $success-soft: rgba(46, 179, 122, 0.14);
   // Back on the permission-panel Step 2, where it is the card's ONLY control:
   // there is no primary button beside it to carry the eye, and the card sits
   // clear of the dim next to a live panel. The ghost lockup — #65656c on
-  // #f2f2f7, no border — reads as a disabled label there, so the button gets
-  // tried once and written off as inert. Give it the same treatment as the
-  // coach's Back, this widget's established clickable secondary: full-contrast
-  // label, a real border, and hover/active states that answer the pointer.
+  // #f2f2f7, no border — read as a disabled label there, so the button got
+  // tried once and written off as inert. Promote it to the brand fill instead:
+  // being the only thing to press, it is this card's primary action.
+  //
+  // --primary-40 (#5950ff) is the brand purple, so the label goes white —
+  // --normal-fg on that fill is unreadable in light theme and invisible in
+  // dark. Hover/active deepen to --primary-50 (#433cc5) rather than lightening,
+  // matching how the flow's own primary buttons move under the pointer.
   &__root[data-over-modal="1"] &__btn--ghost {
-    color: var(--normal-fg);
-    background-color: var(--normal-bg);
-    border: 1px solid var(--border-default);
+    color: #fff;
+    background-color: var(--primary-40);
+    border: 1px solid var(--primary-40);
     box-shadow: 0 1px 2px rgba(11, 10, 33, 0.06);
 
-    &:hover { background-color: var(--normal-bg-90); }
+    &:hover {
+      background-color: var(--primary-50);
+      border-color: var(--primary-50);
+    }
     &:active {
-      background-color: var(--normal-bg-80);
+      background-color: var(--primary-50);
+      border-color: var(--primary-50);
       box-shadow: none;
     }
   }
