@@ -1,0 +1,153 @@
+@use "mixins/drumee";
+
+// Transient top-right notification for meeting pushes (room.scheduled invite,
+// room.reminder heads-up + starting-now). Three flavours off one block, keyed
+// by data-variant: invite | soon | now.
+//
+// Colours come from the theme tokens (router/skin/themes/{light,dark}.scss) so
+// the card follows the app theme — it used to be a hardcoded near-black panel
+// that looked pasted on in light mode. Only the per-variant accents are literal,
+// because they carry meaning (urgency) rather than surface.
+.desk-meeting-toast {
+  position: fixed;
+  right: 24px;
+  z-index: 100000;
+  box-sizing: border-box;
+  width: 340px;
+  max-width: calc(100vw - 32px);
+  padding: 14px;
+  gap: 12px;
+  border-radius: 12px;
+  background: var(--normal-bg-elevated, #ffffff);
+  border: 1px solid var(--border-default, #e5e5ea);
+  box-shadow: 0 16px 40px rgba(11, 10, 33, 0.18);
+  cursor: default;
+  animation: desk-meeting-toast-in 180ms ease-out both;
+
+  // Accent rail — the one element that carries the urgency of the variant.
+  &::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 12px;
+    bottom: 12px;
+    width: 3px;
+    border-radius: 0 3px 3px 0;
+    background: var(--primary-40, #5950ff);
+  }
+
+  &[data-variant="now"]::before {
+    background: #29a56c;
+  }
+
+  &[data-variant="soon"]::before {
+    background: #d97f36;
+  }
+
+  &__icon {
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: rgba(89, 80, 255, 0.14);
+
+    svg {
+      width: 18px;
+      height: 18px;
+      fill: var(--primary-40, #5950ff);
+    }
+  }
+
+  &[data-variant="now"] &__icon {
+    background: rgba(41, 165, 108, 0.14);
+
+    svg {
+      fill: #29a56c;
+    }
+  }
+
+  &[data-variant="soon"] &__icon {
+    background: rgba(217, 127, 54, 0.14);
+
+    svg {
+      fill: #d97f36;
+    }
+  }
+
+  // Middle column: takes the leftover width so long titles ellipsize instead of
+  // pushing the close button out of the card.
+  &__body {
+    flex: 1 1 auto;
+    min-width: 0;
+    gap: 2px;
+  }
+
+  &__title {
+    @include drumee.typo($size: 14px, $line: 20px, $color: var(--normal-fg, #0b0a21));
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  &__status {
+    @include drumee.typo($size: 12px, $line: 17px, $color: var(--normal-fg-50, #84848c));
+  }
+
+  &__actions {
+    margin-top: 10px;
+    gap: 8px;
+    align-items: center;
+  }
+
+  &__join {
+    align-items: center;
+    justify-content: center;
+    padding: 6px 16px;
+    border-radius: 6px;
+    background: var(--primary-40, #5950ff);
+    cursor: pointer;
+    @include drumee.typo($size: 13px, $line: 18px, $color: #ffffff);
+    font-weight: 600;
+
+    &:hover {
+      opacity: 0.9;
+    }
+  }
+
+  &__close {
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    border-radius: 4px;
+    cursor: pointer;
+    opacity: 0.45;
+
+    svg {
+      width: 10px;
+      height: 10px;
+      fill: var(--normal-fg, #0b0a21);
+    }
+
+    &:hover {
+      opacity: 1;
+      background: var(--hover-bg-40, rgba(0, 0, 0, 0.06));
+    }
+  }
+}
+
+@keyframes desk-meeting-toast-in {
+  from {
+    opacity: 0;
+    transform: translateX(16px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}

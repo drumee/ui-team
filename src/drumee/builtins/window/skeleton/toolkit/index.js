@@ -281,6 +281,14 @@ export function gridFilesBrowser(ui) {
   if (ui.mget(_a.itemsOpt)) {
     opt = { ...opt, ...ui.mget(_a.itemsOpt) };
   }
+  // A scheduled meeting is stored as an MFS node (room.book → category
+  // 'schedule') in the workspace home dir, so it lands in this listing with no
+  // content and no viewer — rows that can't be opened. Never list them, not
+  // even under showHidden, which is about dotfiles.
+  // mfs_show_node_by aliases the column as `m.category AS ftype`; other list
+  // sources pass it through unaliased, so both keys are checked.
+  const skip = { ftype: "schedule", category: "schedule" };
+  if (!localStorage.getItem("showHidden")) skip.filename = /^\./;
   const list = Skeletons.List.Smart({
     className: `${pfx}__icons-list`,
     innerClass: `${pfx}__icons-scroll`,
@@ -293,17 +301,12 @@ export function gridFilesBrowser(ui) {
     spinnerWait: 1500,
     spinner: true,
     itemsOpt: opt,
-    skip: {
-      filename: /^\./,
-    },
+    skip,
     vendorOpt: Preset.List.Orange_e,
     api: function (x) {
       return ui.getCurrentApi();
     },
   });
-  if (localStorage.getItem("showHidden")) {
-    delete list.skip;
-  }
 
   return list;
 }

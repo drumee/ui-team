@@ -52,7 +52,10 @@ class __push_manager extends winman {
    * @param {*} options
    * @returns
    */
-  onWsMessage(service, data, options = {}) {
+  // `data` defaults to {}: a push carrying no `model` used to arrive here as
+  // undefined and throw on `data.socket_id` before any case ran, so one
+  // malformed sender killed the whole dispatch.
+  onWsMessage(service, data = {}, options = {}) {
     let items = [];
     let sender = options.sender;
     this.verbose("[60]onWsMessage:", options.service, data.socket_id, data, options);
@@ -134,6 +137,15 @@ class __push_manager extends winman {
         return Wm.choice(LOCALE.YOU_HAVE_BEEN_KICK_OUT.format(organization), LOCALE.GOT_IT).then(() => {
           location.reload()
         })
+
+      // An admin removed us from a workspace (hub.delete_contributor). The
+      // server also sends media.remove, which only drops the sidebar row: any
+      // window still open on that workspace stayed fully live, so the user kept
+      // browsing and creating there until a request finally failed the ACL with
+      // a 403 that the panels report as "a network error". Lock it out on the
+      // spot instead, and say who did it.
+      case "hub.member_removed":
+        return this.onWorkspaceAccessRevoked(data);
       // case SERVICE.adminpanel.mimic_new:
       //   return this.loadMimicNew(data);
 
@@ -172,73 +184,166 @@ class __push_manager extends winman {
   }
 
   /**
-   * Transient top-right toast for a meeting invite (room.scheduled push):
-   * appends a Skeletons node to the WM layer, auto-dismisses after ~6s (or on
-   * click). Not a modal; the notification-sidebar entry is a separate follow-up.
+   * We have just been removed from a workspace, while possibly still sitting in
+   * it. Freeze and blur everything bound to that workspace immediately, tell the
+   * user who removed them, and close those windows on acknowledgement.
+   *
+   * The blur is stamped straight onto the windows rather than left to the modal's
+   * own glass backdrop: `choice` has to dynamic-import window_choice first, and
+   * the workspace must not stay usable for those frames.
+   *
+   * @param {Object} data { hub_id, name, removed_by }
+   */
+  onWorkspaceAccessRevoked(data = {}) {
+    const hub_id = data.hub_id;
+    if (!hub_id) return;
+    // A workspace can hold several open windows, and each removal is announced
+    // once per socket — never stack modals for the same workspace.
+    if (!this._revokedHubs) this._revokedHubs = new Set();
+    if (this._revokedHubs.has(hub_id)) return;
+    this._revokedHubs.add(hub_id);
+
+    const windows = this._windowsOnHub(hub_id);
+    for (let w of windows) {
+      if (w.el) w.el.dataset.revoked = 1;
+    }
+
+    const by = data.removed_by || LOCALE.ADMINISTRATOR;
+    return Wm.choice(
+      LOCALE.WORKSPACE_ACCESS_REVOKED.format(by),
+      LOCALE.GOT_IT,
+    ).then(() => {
+      // Closing the top-level window destroys its children, so anything already
+      // gone by the time we reach it is skipped.
+      for (let w of windows) {
+        if (typeof w.isDestroyed === "function" && w.isDestroyed()) continue;
+        if (typeof w.goodbye !== "function") continue;
+        w.goodbye();
+      }
+      this._revokedHubs.delete(hub_id);
+      // A sidebar-opened workspace also owns desk chrome (breadcrumb, sidebar
+      // tree). Closing the last one has to hand the desk back to its
+      // no-workspace state, exactly as the window's own close button does
+      // (window/folder onUiEvent "close").
+      if (!this._hasOpenWorkspace() && typeof Desk !== "undefined" && Desk) {
+        Desk.onWorkspaceClosed();
+      }
+    });
+  }
+
+  /**
+   * Is any sidebar-opened (headless) workspace still on screen?
+   *
+   * @returns {boolean}
+   */
+  _hasOpenWorkspace() {
+    const layer = this.headlessLayer;
+    if (!layer || !layer.children) return false;
+    for (let c of Array.from(layer.children.toArray())) {
+      if (!c || c.isDestroyed()) continue;
+      if (c.mget(_a.kind) !== "window_folder") continue;
+      if (!c.mget(_a.headless)) continue;
+      return true;
+    }
+    return false;
+  }
+
+  /**
+   * Top-level windows currently bound to a workspace. Only the window layers are
+   * walked — a sidebar-opened workspace lives in headlessLayer, a floating one in
+   * windowsLayer — so this can never reach desk chrome that happens to carry the
+   * same hub_id.
+   *
+   * @param {string} hub_id
+   * @returns {Array} live window instances
+   */
+  _windowsOnHub(hub_id) {
+    const found = [];
+    for (let layer of [this.headlessLayer, this.windowsLayer]) {
+      if (!layer || !layer.children) continue;
+      for (let w of Array.from(layer.children.toArray())) {
+        if (!w || typeof w.mget !== "function") continue;
+        if (typeof w.isDestroyed === "function" && w.isDestroyed()) continue;
+        if (w.mget(_a.hub_id) !== hub_id) continue;
+        found.push(w);
+      }
+    }
+    return found;
+  }
+
+  /**
+   * Transient top-right toast for a meeting push. Three flavours:
+   *
+   *   invite — room.scheduled: someone put you on a meeting.
+   *   soon   — room.reminder with lead_min > 0: heads-up N minutes ahead.
+   *            Notify only, no Join: the room isn't open yet, so a Join button
+   *            would drop the user into an empty call.
+   *   now    — room.reminder with lead_min 0: it's starting, offers Join.
+   *
+   * Layout is icon | (title + status [+ actions]) | close, styled from
+   * skin/meeting-toast.scss via data-variant.
    */
   _showMeetingToast(data = {}, opt = {}) {
     try {
-      const isReminder = !!opt.reminder;
       const layer = Wm && Wm.windowsLayer;
       if (!layer || !layer.append) return;
+      // Minutes-ahead comes from the worker; anything > 0 is the heads-up.
+      const leadMin = Number(data.lead_min) || 0;
+      const variant = !opt.reminder ? "invite" : leadMin > 0 ? "soon" : "now";
 
-      let kids;
-      if (isReminder) {
-        // "<title>" / "Your meeting is starting now" + a Join button.
-        kids = [
-          Skeletons.Note({
-            content: data.title || LOCALE.MEETING,
-            styleOpt: { "font-size": "14px", "line-height": "20px", "font-weight": "600", color: "#ffffff" },
-          }),
-          Skeletons.Note({
-            content: LOCALE.MEETING_STARTING_NOW,
-            styleOpt: { "font-size": "12px", "line-height": "17px", color: "rgba(255,255,255,0.75)", "margin-top": "2px" },
-          }),
-          Skeletons.Note({
-            className: "desk-meeting-toast__join",
-            content: LOCALE.JOIN_MEETING,
-            styleOpt: {
-              "margin-top": "10px", "align-self": "flex-start", padding: "6px 16px",
-              "border-radius": "6px", background: "#5950ff", color: "#ffffff",
-              "font-size": "13px", "font-weight": "600", cursor: "pointer",
-            },
-          }),
-        ];
+      const heading = data.title || LOCALE.MEETING;
+      let ico = "calendar";
+      let status = "";
+
+      if (variant === "now") {
+        ico = "video-camera";
+        status = LOCALE.MEETING_STARTING_NOW;
+      } else if (variant === "soon") {
+        ico = "clock";
+        status = LOCALE.MEETING_STARTS_IN_MIN.format(leadMin);
       } else {
-        const from = data.from || "";
-        const line = data.title
-          ? `${LOCALE.X_INVITED_YOU_TO_MEETING.format(from)} — ${data.title}`
-          : LOCALE.X_INVITED_YOU_TO_MEETING.format(from);
-        kids = [
-          Skeletons.Note({
-            content: line,
-            styleOpt: { "font-size": "14px", "line-height": "20px", color: "#ffffff" },
+        status = LOCALE.X_INVITED_YOU_TO_MEETING.format(data.from || "");
+      }
+
+      const body = [
+        Skeletons.Note({ className: "desk-meeting-toast__title", content: heading }),
+        Skeletons.Note({ className: "desk-meeting-toast__status", content: status }),
+      ];
+      // Join only once the meeting has actually started.
+      if (variant === "now") {
+        body.push(
+          Skeletons.Box.X({
+            className: "desk-meeting-toast__actions",
+            kids: [
+              Skeletons.Note({
+                className: "desk-meeting-toast__join",
+                content: LOCALE.JOIN_MEETING,
+              }),
+            ],
           }),
-        ];
+        );
       }
 
       // Stack toasts down the right edge so several don't overlap.
       this._meetingToastN = (this._meetingToastN || 0) + 1;
       const idx = this._meetingToastN;
       const toast = layer.append(
-        Skeletons.Box.Y({
+        Skeletons.Box.X({
           className: "desk-meeting-toast",
-          service: "dismiss-meeting-toast",
-          uiHandler: [this],
-          styleOpt: {
-            position: "fixed",
-            top: `${72 + ((idx - 1) % 4) * 96}px`,
-            right: "24px",
-            "z-index": 100000,
-            "max-width": "320px",
-            padding: "14px 16px",
-            "border-radius": "10px",
-            background: "#0b0a21",
-            color: "#ffffff",
-            "box-shadow": "0 10px 30px rgba(0, 0, 0, 0.25)",
-            cursor: "pointer",
-          },
-          kids,
+          attrOpt: { "data-variant": variant },
+          styleOpt: { top: `${72 + ((idx - 1) % 4) * 104}px` },
+          kids: [
+            Skeletons.Box.Y({
+              className: "desk-meeting-toast__icon",
+              kids: [Skeletons.Image.Svg({ ico })],
+            }),
+            Skeletons.Box.Y({ className: "desk-meeting-toast__body", kids: body }),
+            Skeletons.Button.Svg({
+              className: "desk-meeting-toast__close",
+              ico: _a.cross,
+              tooltips: LOCALE.CLOSE,
+            }),
+          ],
         }),
       );
       const kill = () => {
@@ -249,9 +354,10 @@ class __push_manager extends winman {
           }
         } catch (e) {}
       };
-      // Reminder: the Join button joins the meeting (and dismisses); clicking
-      // elsewhere on the toast just dismisses. stopPropagation keeps the two apart.
-      if (isReminder && toast && toast.el) {
+      if (toast && toast.el) {
+        // Join joins and dismisses; the ✕ only dismisses. Clicking the card
+        // body does nothing now — it used to dismiss on any click, which ate
+        // the Join press often enough to be worth separating.
         const joinEl = toast.el.querySelector(".desk-meeting-toast__join");
         if (joinEl) {
           joinEl.addEventListener("click", (e) => {
@@ -260,10 +366,17 @@ class __push_manager extends winman {
             kill();
           });
         }
+        const closeEl = toast.el.querySelector(".desk-meeting-toast__close");
+        if (closeEl) {
+          closeEl.addEventListener("click", (e) => {
+            e.stopPropagation();
+            kill();
+          });
+        }
       }
-      // Click-to-dismiss + auto-dismiss (reminders linger longer).
-      if (toast && toast.el) toast.el.addEventListener("click", kill, { once: true });
-      setTimeout(kill, isReminder ? 15000 : 6000);
+      // Auto-dismiss: the actionable "now" toast lingers, the informational
+      // ones clear quickly.
+      setTimeout(kill, variant === "now" ? 20000 : 8000);
     } catch (e) {
       this.warn && this.warn("meeting toast failed", e);
     }

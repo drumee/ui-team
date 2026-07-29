@@ -96,6 +96,13 @@
   // Entry/EntryBox wrap the native control — keep it transparent so it inherits
   // the grey container above rather than double-boxing.
   &__meeting-modal-input {
+    // Submit blocked on a missing title (the server would otherwise substitute
+    // its "<name> scheduled a meeting" boilerplate). Point at the field the
+    // warning line is talking about.
+    &[data-error="1"] {
+      box-shadow: inset 0 0 0 1px var(--default-bg-alert, #e5484d);
+    }
+
     input,
     textarea {
       width: 100%;
@@ -515,20 +522,26 @@
     align-items: center;
     padding-top: 16px;
     border-top: 1px solid rgba(0, 0, 0, 0.06);
-    gap: 12px;
+    gap: 8px;
     justify-content: flex-end;
   }
 
+  // Four actions (Delete / Cancel / Join / Update) have to sit on one 536px
+  // content row. At 14px with 24px of side padding they summed past 590px and
+  // spilled out of the card, so the type and padding are tightened and the
+  // labels are kept on one line — the narrow-window rule below still wraps them
+  // when the folder window itself is small.
   &__meeting-modal-btn {
     display: flex;
     align-items: center;
     justify-content: center;
     box-sizing: border-box;
-    height: 40px;
-    padding: 0 24px;
+    height: 38px;
+    padding: 0 14px;
     border-radius: 6px;
     cursor: pointer;
-    @include drumee.typo($size: 14px, $line: 20px, $weight: 600, $color: #ffffff);
+    white-space: nowrap;
+    @include drumee.typo($size: 13px, $line: 18px, $weight: 600, $color: #ffffff);
 
     &.primary {
       background: var(--primary-50, #433cc5);
@@ -543,6 +556,14 @@
     &.ghost {
       background: rgba(89, 80, 255, 0.1);
       color: var(--primary-40, #5950ff);
+    }
+
+    // Dismiss the dialog without saving — outlined, no fill, so it never reads
+    // as one of the two confirm actions next to it.
+    &.neutral {
+      background: transparent;
+      border: 1px solid var(--grey-70, #84848c);
+      color: #0b0a21;
     }
 
     &:hover {
