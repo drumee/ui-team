@@ -307,37 +307,84 @@ class settings_billing extends LetcBox {
   // Hence the warning. `supersede` then travels with the checkout, and the
   // webhook cancels the replaced subscription the moment the new one is paid —
   // neither half is safe without the other.
-  async _confirmReplacePlan(targetPlan) {
+  async _confirmReplacePlan(targetPlan, targetPeriod) {
+    const sub = this._subscription || {};
+    // The RAW subscription plan for the cycle comparison (a legacy 'pro' row
+    // maps onto 'team' for display but is a different product); the display
+    // name for the copy.
     const current = this.currentPlanName || "";
+    const currentRaw = String(sub.plan || "") || current;
+    const currentPeriod = /^year/.test(String(sub.period || "")) ? "year" : "month";
+    const period = /^(month|year)$/.test(targetPeriod || "") ? targetPeriod : this._selectedCycle();
     const currentTitle = current === "business" ? LOCALE.BUSINESS
       : current === "team" ? LOCALE.TEAM
       : current === "sovereign" ? LOCALE.SOVEREIGN
       : LOCALE.FREE;
     const targetTitle = targetPlan === "business" ? LOCALE.BUSINESS : LOCALE.TEAM;
     const when = this._periodEnd ? Dayjs(this._periodEnd * 1000).format("MMM D, YYYY") : "";
-
-    const lines = [
-      (LOCALE.PLAN_REPLACE_WARNING
-        || "Your current {0} plan ends as soon as the new one is paid — you lose the time already paid for on it.")
-        .format(currentTitle),
-    ];
-    if (when) {
-      lines.push((LOCALE.PLAN_REPLACE_PAID_UNTIL
-        || "It is paid until {0}; that remaining time is not refunded or carried over.").format(when));
-    }
-    // Only when the move actually lowers the ceiling. Telling someone
-    // upgrading to Business what Business "includes" as if it were a loss
-    // reads as a warning about the thing they are buying.
     const rank = { free: 0, team: 1, business: 2, sovereign: 3 };
-    if ((rank[targetPlan] ?? 0) < (rank[current] ?? 0)) {
-      lines.push(this._downgradeConsequences(targetPlan));
+
+    // Three shapes for three different situations (product spec 2026-07-29):
+    //  - same plan, other cycle  → DEFERRED: the current cycle runs to its
+    //    paid end, the new one starts right after (server: trial_end).
+    //  - other plan, other cycle → immediate replacement, copy naming both
+    //    cycles so "canceled immediately" is unambiguous.
+    //  - other plan, same cycle  → the original replacement warning.
+    const samePlan = targetPlan === currentRaw;
+    const cycleWord = (p) => (p === "year" ? (LOCALE.YEARLY || "Yearly") : (LOCALE.MONTHLY || "Monthly"));
+    const per = period === "year" ? (LOCALE.PER_YEAR || "/year") : (LOCALE.PER_MONTH || "/month");
+    const price = this._money(this._catPrice(targetPlan, period));
+
+    let title;
+    let message;
+    let confirm_type = "danger";
+    if (samePlan && period === currentPeriod) return; // already exactly this
+    if (samePlan) {
+      title = (LOCALE.PLAN_SWITCH_CYCLE_TITLE || "Switch to {0} {1}")
+        .format(targetTitle, cycleWord(period));
+      message = (LOCALE.PLAN_SWITCH_DEFER_MSG
+        || "Switch to the {0} {1} plan for {2}{3}?\n\nYour current {0} {4} subscription will remain active until the end of its billing period. Your {1} subscription will be added and will begin immediately after your {4} plan expires.")
+        .format(targetTitle, cycleWord(period), price, per, cycleWord(currentPeriod));
+      // Nothing is lost on this path — the danger styling would warn about a
+      // consequence that does not exist.
+      confirm_type = "";
+    } else if (period !== currentPeriod) {
+      const lines = [
+        (LOCALE.PLAN_SWITCH_NOW_MSG
+          || "Switch to the {0} {1} plan for {2}{3}?\n\nYour current {4} {5} subscription will be canceled immediately, and any remaining subscription time will not be carried over. Your {0} {1} plan will start right away.")
+          .format(targetTitle, cycleWord(period), price, per, currentTitle, cycleWord(currentPeriod)),
+      ];
+      if ((rank[targetPlan] ?? 0) < (rank[current] ?? 0)) {
+        lines.push(this._downgradeConsequences(targetPlan));
+      }
+      title = (LOCALE.PLAN_SWITCH_CYCLE_TITLE || "Switch to {0} {1}")
+        .format(targetTitle, cycleWord(period));
+      message = lines.filter(Boolean).join("\n\n");
+    } else {
+      const lines = [
+        (LOCALE.PLAN_REPLACE_WARNING
+          || "Your current {0} plan ends as soon as the new one is paid — you lose the time already paid for on it.")
+          .format(currentTitle),
+      ];
+      if (when) {
+        lines.push((LOCALE.PLAN_REPLACE_PAID_UNTIL
+          || "It is paid until {0}; that remaining time is not refunded or carried over.").format(when));
+      }
+      // Only when the move actually lowers the ceiling. Telling someone
+      // upgrading to Business what Business "includes" as if it were a loss
+      // reads as a warning about the thing they are buying.
+      if ((rank[targetPlan] ?? 0) < (rank[current] ?? 0)) {
+        lines.push(this._downgradeConsequences(targetPlan));
+      }
+      title = (LOCALE.PLAN_REPLACE_TITLE || "Change to {0}?").format(targetTitle);
+      message = lines.filter(Boolean).join("\n\n");
     }
 
     const ok = await Wm.confirm({
-      title: (LOCALE.PLAN_REPLACE_TITLE || "Change to {0}?").format(targetTitle),
-      message: lines.filter(Boolean).join("\n\n"),
+      title,
+      message,
       confirm: LOCALE.PLAN_REPLACE_CONFIRM || "Continue to payment",
-      confirm_type: "danger",
+      ...(confirm_type ? { confirm_type } : {}),
       cancel: LOCALE.CANCEL || "Cancel",
       cancel_type: "secondary",
       mode: "hbf",
@@ -345,8 +392,12 @@ class settings_billing extends LetcBox {
     if (!ok) return;
 
     // Carry the intent into checkout: _proceedToCheckout reads it and the
-    // server lifts the already-subscribed refusal only for this case.
+    // server lifts the already-subscribed refusal only for this case. The
+    // cycle the caller accepted presets the checkout selector; defer itself
+    // is re-derived at proceed time from plan+cycle, so flipping the selector
+    // afterwards cannot carry a stale deferral.
     this.state.checkout.supersede = 1;
+    this.state.checkout.billingCycle = period === "year" ? "yearly" : "monthly";
     this._enterCheckoutFor(targetPlan);
   }
 
@@ -1128,7 +1179,25 @@ class settings_billing extends LetcBox {
     // Set by _confirmReplacePlan after the caller accepted losing their current
     // plan. Without it the server refuses a live subscriber, which is the guard
     // against an accidental second subscription.
-    if (checkout.supersede) payload.supersede = 1;
+    if (checkout.supersede) {
+      const sub = this._subscription || {};
+      const curPlan = String(sub.plan || "");
+      const curPeriod = /^year/.test(String(sub.period || "")) ? "year" : "month";
+      // The checkout tab lets the caller flip plan and cycle after the popup,
+      // so the intent is derived HERE, from what is actually being bought:
+      //  - the exact subscription they already hold → nothing to buy (without
+      //    this, supersede would waive the server's ALREADY_SUBSCRIBED refusal
+      //    and mint a duplicate);
+      //  - same plan on the other cycle → deferred switch (the server starts
+      //    the new subscription when the current one expires);
+      //  - a different plan → immediate replacement.
+      if (plan === curPlan && period === curPeriod) {
+        if (Wm && Wm.alert) Wm.alert(LOCALE.ALREADY_SUBSCRIBED);
+        return;
+      }
+      payload.supersede = 1;
+      if (plan === curPlan && period !== curPeriod) payload.defer = 1;
+    }
     // TEAM bootstrap: the payer is still on the default domain — the org
     // name + subdomain were collected in the checkout form; validate the
     // ident server-side BEFORE the Stripe redirect (product decision: prompt
@@ -1586,7 +1655,7 @@ class settings_billing extends LetcBox {
           // rather than silently keeping the old one and charging a price the
           // card never displayed.
           if (this._hasActiveSub) {
-            this._confirmReplacePlan(planValue);
+            this._confirmReplacePlan(planValue, this._selectedCycle());
           } else if (this._checkoutTabAllowed()) {
             this._enterCheckoutFor(planValue);
           }
