@@ -15,13 +15,25 @@ const AREA_LABELS = {
 // folder depth: nested subfolders open as plain desk folder windows that lose the
 // share's caps, so per-window gating doesn't reach them — but the recipient's
 // whole session is one share with fixed caps, so this session-global is correct
-// at any depth. Gated on uiRouter.isDmz() (the boot area), so it can NEVER be true
-// in a normal desk session → desk folders are completely unaffected. The flag is
-// published by the DMZ sharebox on loadDeskContent(); `=== false` means we only
-// hide when chat is explicitly not granted (unknown/undefined → show, safe default).
-function _dmzShareWithoutChat() {
+// at any depth. The flag is published by the DMZ sharebox on loadDeskContent();
+// `=== false` means we only hide when chat is explicitly not granted
+// (unknown/undefined → show, safe default).
+// ⚠️ The uiRouter.isDmz() this used to gate on is ALWAYS FALSE in production —
+// it tests bootstrap().area, and intEnv() (src/drumee/api.js) builds the env with
+// no `area` key at all (yp.get_env exposes area only under `hub`). So this helper
+// never returned true on prod: the chat tab AND the conversation panel both stayed
+// mounted inside nested subfolders of a share that grants no chat, which is exactly
+// the "chat visible before permission" exposure the callers exist to prevent. It was
+// masked at the share root, where the sharebox passes opt.chat === false explicitly.
+// Now gated on the structural predicate instead (same one the posting gates use).
+// `_dmzShareCanChat` is published from exactly ONE place — dmz/sharebox/index.js
+// loadDeskContent(), as `!!this.mget('can_chat')` — so `=== false` can only mean the
+// sharebox declared this share has no chat grant. Unset/undefined (boot race, or any
+// desk session) → false → chat SHOWN, i.e. the pre-existing safe default.
+function _dmzShareWithoutChat(ui) {
+  if (!_inDmzShare(ui)) return false;
   const r = (typeof window !== "undefined") && window.uiRouter;
-  return !!(r && typeof r.isDmz === "function" && r.isDmz() && r._dmzShareCanChat === false);
+  return !!(r && r._dmzShareCanChat === false);
 }
 
 // True in a DMZ share view: the sharebox itself, OR a NESTED window/folder opened
@@ -108,7 +120,7 @@ export function tabBar(ui, opt = {}) {
   // chat tab is unchanged. _dmzShareWithoutChat() additionally hides it inside nested
   // recipient subfolders (which lose opt.chat). Personal-area folders keep the chat
   // tab — the folder team chat is identical across all areas.
-  if (opt.chat === false || _dmzShareWithoutChat()) {
+  if (opt.chat === false || _dmzShareWithoutChat(ui)) {
     chat_label = "";
     chat_tab = "";
   }
@@ -1171,7 +1183,7 @@ export function folderFilesView(ui) {
       : filesContainer(ui);
   // Recipient subfolder of a no-chat share → files only (no conversation panel).
   // Personal-area folders keep the chat panel — folder chat is identical across areas.
-  if (_dmzShareWithoutChat()) return [files];
+  if (_dmzShareWithoutChat(ui)) return [files];
   // [files, splitter, rail, chat, file-thread panel] — the resize gutter sits
   // BETWEEN files and chat so grid auto-placement lays it out as the middle
   // column in the Files view (files | gutter | chat); rail + panel flank the
