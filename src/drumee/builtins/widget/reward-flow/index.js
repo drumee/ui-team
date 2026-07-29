@@ -56,6 +56,14 @@ const OPEN_WORKSPACE_TIMEOUT_MS = 4000;
 // _trackStepTarget). Sized to outlast the slowest entrance a target has: the
 // permission panel's half-second slide, plus the tick before it starts.
 const TARGET_SETTLE_MS = 900;
+// How long Step 2 waits for a permission panel it asked to be REOPENED (the
+// rewind from Step 3). Its kind is lazily imported, so the chunk has to be
+// fetched before anything mounts; past this the flow gives up on it and shows
+// the plain Step 2 card. Generous for the same reason as the guide's own
+// window budget — the cost of waiting too long is a late card, the cost of
+// waiting too little is a step the user never asked to leave.
+const PANEL_OPEN_TIMEOUT_MS = 8000;
+
 // How long it will WAIT for a target that has not appeared yet. The surfaces
 // Step 2 spotlights are lazily imported kinds — the invite popup goes through
 // Kind.waitFor("invite_popup") before it is even fed — so the chunk fetch can
@@ -1010,8 +1018,14 @@ class __reward_flow extends LetcBox {
    * today: pinning the host would make a panel opened anywhere else either
    * hang the step forever (no mutations on the watched host) or end it on the
    * first unrelated one. The guides observe document.body for the same reason.
-   * No safety timer — the panel is on screen when this is armed, so its
-   * absence can only mean the user closed it.
+   *
+   * Armed from two places, and only one of them has the panel on screen
+   * already: Step 1's walkthrough hands over with it up, while the rewind from
+   * Step 3 has just asked for it and its kind is lazily imported. So absence is
+   * only read as a close once the panel has actually been SEEN — otherwise the
+   * second caller would advance on the frame it armed, reading "not yet" as
+   * "already closed". A panel that never turns up falls back to the Step 2 card
+   * rather than waiting for good.
    */
   _awaitPanelClosed() {
     const advance = () => {
@@ -1030,15 +1044,31 @@ class __reward_flow extends LetcBox {
         this._resumeCreateForm();
       });
     };
+    // The panel was asked for but never arrived (its chunk failed, say). Land on
+    // the Step 2 card instead of waiting on it for good — and NOT through
+    // advance(), whose "nothing was sent" branch would rewind all the way to
+    // Step 1's create form over a panel the user never even saw.
+    const giveUpOnPanel = () => {
+      this._stopPanelWatch();
+      this._invitePanelOpen = false;
+      this._inviteSent = false;
+      this._markInviteToast(false);
+      Promise.resolve().then(() => {
+        if (this.isDestroyed?.()) return;
+        this._goto("step2");
+      });
+    };
     const onScreen = () =>
       typeof document !== "undefined" && !!document.querySelector(PANEL_SURFACES);
-    if (typeof MutationObserver === "undefined" || !onScreen()) {
-      // Nothing to watch, or it went as we armed → don't strand the user on a
-      // step that can then never end.
+    if (typeof MutationObserver === "undefined") {
+      // Nothing to watch with → don't strand the user on a step that can then
+      // never end.
       return advance();
     }
+    let seen = onScreen();
     this._panelObs = new MutationObserver(() => {
-      if (!onScreen()) return advance();
+      if (!onScreen()) return seen ? advance() : undefined;
+      seen = true;
       // The panel gone with something still up means the invite-sent
       // confirmation has replaced it — step aside for it.
       this._markInviteToast(!document.querySelector(INVITE_PANEL));
@@ -1050,6 +1080,9 @@ class __reward_flow extends LetcBox {
       this._trackStepTarget();
     });
     this._panelObs.observe(document.body, { childList: true, subtree: true });
+    if (!seen) {
+      this._panelOpenTimer = setTimeout(giveUpOnPanel, PANEL_OPEN_TIMEOUT_MS);
+    }
   }
 
   _stopPanelWatch() {
@@ -1057,6 +1090,58 @@ class __reward_flow extends LetcBox {
       this._panelObs.disconnect();
       this._panelObs = null;
     }
+    if (this._panelOpenTimer) {
+      clearTimeout(this._panelOpenTimer);
+      this._panelOpenTimer = null;
+    }
+  }
+
+  /**
+   * Put Step 2 back on the permission panel of the workspace this run created.
+   *
+   * Reached by stepping back out of Step 3. For a workspace made through the
+   * INTERNAL branch, Step 2 was never the desk's Invite button — it was that
+   * workspace's own members panel — so going back to a card pointing at the
+   * topbar would send the user somewhere they have never been. Reopen the panel
+   * instead, on the same workspace, and let Step 2 resume exactly where it was.
+   *
+   * The panel takes a hub_id and nothing else it cannot do without (its media is
+   * optional), so the descriptor this run has been carrying since Step 1 is
+   * enough to bring it back.
+   *
+   * @returns {Boolean} false when this run has no internal workspace to go back
+   *   to — an external or personal one, or a reload that lost the descriptor —
+   *   leaving the plain Step 2 card in charge.
+   */
+  _reopenInvitePanel() {
+    const ws = this._workspace;
+    if (!ws || String(ws.area) !== "private") return false;
+    if (typeof Wm === "undefined" || typeof Wm.__wrapperModal?.feed !== "function") {
+      return false;
+    }
+    // Same shape media_form feeds on the create path: a view wrapping the hub
+    // row, which the panel copies its properties from. Optional — the panel
+    // fetches its members from hub_id alone — so a missing Backbone is not fatal.
+    const media = typeof Backbone !== "undefined"
+      ? new Backbone.View({ model: new Backbone.Model({ ...ws }) })
+      : null;
+    Wm.__wrapperModal.feed({
+      kind: "permission_restricted",
+      hub_id: ws.hub_id,
+      ...(media ? { media } : {}),
+      source: this,
+      persistence: _a.once,
+    });
+    if (Wm.__wrapperModal.el?.dataset) {
+      Wm.__wrapperModal.el.dataset.state = "open";
+    }
+    this._invitePanelOpen = true;
+    this._inviteSent = false;
+    this._goto("step2_waiting");
+    // Its kind is lazily imported, so it is not in the DOM yet — the watcher
+    // waits for it before treating its absence as a close (see _awaitPanelClosed).
+    this._awaitPanelClosed();
+    return true;
   }
 
   /**
@@ -1598,7 +1683,12 @@ class __reward_flow extends LetcBox {
         //
         // No-op on the legacy Step 3, which never opened one. The descriptor is
         // kept, so coming forward again reopens the same workspace.
-        if (base === "step3") this._closeStep3Workspace();
+        if (base === "step3") {
+          this._closeStep3Workspace();
+          // An internal workspace's Step 2 was its members panel, not the
+          // desk's Invite button — go back to THAT (it handles its own _goto).
+          if (this._reopenInvitePanel()) return;
+        }
         this._goto(prev);
         return;
       }
