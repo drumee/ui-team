@@ -62,6 +62,62 @@ export function breadcrumbs(ui, opt) {
   });
 }
 
+function fileViewToggle(ui) {
+  const cnTopbar = `${ui.fig.family}-topbar`;
+  const viewSegment = (mode, ico) =>
+    Skeletons.Box.X({
+      className: `${cnTopbar}__view-toggle-seg ${cnTopbar}__view-toggle-seg--${mode}`,
+      kidsOpt: { active: 0 },
+      kids: [
+        Skeletons.Image.Svg({
+          ico: "account_check",
+          className: `${cnTopbar}__view-toggle-check`,
+        }),
+        Skeletons.Image.Svg({
+          ico,
+          className: `${cnTopbar}__view-toggle-glyph`,
+        }),
+      ],
+    });
+
+  return Skeletons.Box.X({
+    className: `${cnTopbar}__view-toggle`,
+    service: "toggle-files-layout",
+    sys_pn: "view-ctrl",
+    dataset: {
+      state: ui.getViewMode && ui.getViewMode() === _a.row ? 1 : 0,
+      visible: 1,
+    },
+    uiHandler: [ui],
+    kidsOpt: { active: 0 },
+    kids: [
+      viewSegment("list", "view-list"),
+      viewSegment("grid", "view-grid"),
+    ],
+  });
+}
+
+function fileNewControl(ui) {
+  const cnTopbar = `${ui.fig.family}-topbar`;
+  return Skeletons.Box.X({
+    className: `${cnTopbar}__new-ctrl`,
+    sys_pn: "new-ctrl",
+    partHandler: ui,
+    // Resolve write permission after mount; starting hidden prevents a flash
+    // for viewers who cannot upload or create files.
+    dataset: { visible: 0 },
+    kids: [newMenu(ui)],
+  });
+}
+
+function fileFilterControls(ui) {
+  const cnTopbar = `${ui.fig.family}-topbar`;
+  return Skeletons.Box.X({
+    className: `${cnTopbar}__file-controls`,
+    kids: [fileNewControl(ui), fileViewToggle(ui)],
+  });
+}
+
 /**
  * Tab bar with Files, Chat, Task buttons (and optional Meeting).
  *
@@ -207,93 +263,13 @@ export function tabBar(ui, opt = {}) {
   // folder window's toggle-task-filter / task-filter-state handlers remain but
   // are simply no longer wired to a button here.
 
-  // File view toggle — a segmented pill with two halves: list (row) and grid.
-  // Both halves always render; the half matching the wrapper's data-state is
-  // the active view (light-blue fill + a checkmark next to its glyph). Grid is
-  // the default (data-state "0"/unset); list is active at data-state "1" (row
-  // view). Clicks bubble (kidsOpt active:0) to the wrapper's
-  // "toggle-files-layout" service, which flips the state via cmd.changeState().
-  // Folder-only: the styling lives in the folder skin, keyed on the
-  // `window-folder-topbar` class prefix.
-  //
-  // Shown only on the Files tab (data-visible toggled by showFolderTab); Files
-  // is the default tab, so it renders visible. The layout toggle is irrelevant
-  // on the Chat/Task/Meeting tabs.
-  const cnTopbar = `${ui.fig.family}-topbar`;
-  const viewSegment = (mode, ico) =>
-    Skeletons.Box.X({
-      className: `${cnTopbar}__view-toggle-seg ${cnTopbar}__view-toggle-seg--${mode}`,
-      kidsOpt: { active: 0 },
-      kids: [
-        Skeletons.Image.Svg({
-          ico: "account_check",
-          className: `${cnTopbar}__view-toggle-check`,
-        }),
-        Skeletons.Image.Svg({
-          ico,
-          className: `${cnTopbar}__view-toggle-glyph`,
-        }),
-      ],
-    });
-  // The view toggle is shown for the folder window and the DMZ share grid
-  // (both render a media grid that supports a grid ↔ row layout).
-  const showViewToggle = isFolder || ui.fig.family === "dmz-sharebox";
-  const splitBtn = showViewToggle
-    ? Skeletons.Box.X({
-        className: `${cnTopbar}__view-toggle`,
-        service: "toggle-files-layout",
-        sys_pn: "view-ctrl",
-        // Explicit data-state (not the `state` prop) guarantees the attribute
-        // is present on first render so the correct half is highlighted
-        // immediately; grid is the CSS default, so only row/list (state 1)
-        // needs it.
-        dataset: {
-          state: ui.getViewMode && ui.getViewMode() === _a.row ? 1 : 0,
-          // Files is the default active tab, so the toggle starts visible.
-          visible: 1,
-        },
-        uiHandler: [ui],
-        kidsOpt: { active: 0 },
-        kids: [
-          viewSegment("list", "view-list"),
-          viewSegment("grid", "view-grid"),
-        ],
-      })
-    : "";
+  // The folder's New + layout controls now live in its file filter row. Keep
+  // the shared DMZ layout toggle here because DMZ does not render that row.
+  const splitBtn =
+    !isFolder && ui.fig.family === "dmz-sharebox"
+      ? fileViewToggle(ui)
+      : "";
 
-  // Merged "+ New" button (folder Files tab only) — replaces the old header
-  // Upload + Add-new buttons. Folder-only; write-permission gating happens at
-  // RUNTIME via data-visible, not here.
-  //
-  // Why the element always exists for a folder window instead of being gated on
-  // canUpload() like the old header buttons were: this factory runs once, from
-  // `this.skeleton = require('./skeleton')(this)` in folder/index.js — a line
-  // that executes BEFORE the window seeds its privilege from the launching
-  // trigger. canUpload() would read an undefined privilege and evaluate 0, so
-  // an Edit member got no button at all. Worse, a build-time gate can never
-  // answer a live role change (hub.set_privilege) or a walk into a subfolder
-  // with different rights: the node is either in the tree or it isn't.
-  //
-  // Rendering it unconditionally and letting syncNewCtrlVisibility() own
-  // data-visible makes one runtime read the single source of truth for all
-  // three cases. Same mechanism the view toggle already uses (view-ctrl).
-  const newBtn = isFolder
-    ? Skeletons.Box.X({
-        className: `${cnTopbar}__new-ctrl`,
-        sys_pn: "new-ctrl",
-        // Make the owner explicit: window_folder resolves the safe default
-        // against the live permission and persists it through first render.
-        partHandler: ui,
-        // Start hidden: the window calls syncNewCtrlVisibility() once the part
-        // mounts, by which time the real privilege is known. Defaulting to 1
-        // would flash the button at view-only members on every open.
-        dataset: { visible: 0 },
-        kids: [newMenu(ui)],
-      })
-    : "";
-
-  // Tab bar lays out as flex space-between: the tab items group on the left,
-  // the [+New] + view-toggle controls on the right.
   return Skeletons.Box.X({
     className: `${cnRoot}-wrapper ${ui.fig.family}__tab-bar-wrapper`,
     dataset: isFolder ? { area: ui.mget(_a.area) } : {},
@@ -302,7 +278,6 @@ export function tabBar(ui, opt = {}) {
         className: `${cnRoot}-tabs ${ui.fig.family}__tab-bar-tabs`,
         kids,
       }),
-      newBtn,
       splitBtn,
     ],
   });
@@ -883,23 +858,23 @@ export function fileTypeFilterBar(ui) {
     { label: "Images", value: "image" },
     { label: "Other", value: "other" },
   ];
-  let dataset = ui.mget(_a.area);
+  const filterTabs = tabs.map((tab, index) =>
+    button(ui, {
+      label: tab.label,
+      className: `${ui.fig.family}__filter-tab`,
+      service: "filter-by-type",
+      state: index === 0 ? 1 : 0,
+      radiotoggle: `media-filter-${ui._id}`,
+      value: tab.value,
+      dataset: { area: ui.mget(_a.area) },
+    }),
+  );
   return Skeletons.Box.X({
     className: `${ui.fig.family}__filter-bar`,
     sys_pn: "file-type-filter",
     partHandler: ui,
     dataset: { area: ui.mget(_a.area) },
-    kids: tabs.map((tab, index) =>
-      button(ui, {
-        label: tab.label,
-        className: `${ui.fig.family}__filter-tab`,
-        service: "filter-by-type",
-        state: index === 0 ? 1 : 0,
-        radiotoggle: `media-filter-${ui._id}`,
-        value: tab.value,
-        dataset: { area: ui.mget(_a.area) },
-      }),
-    ),
+    kids: [...filterTabs, fileFilterControls(ui)],
   });
 }
 
@@ -1240,16 +1215,10 @@ export function windowHeader(ui, topbar) {
 
 /**
  * Merged "+ New" menu for the folder window Files tab (replaces the separate
- * header Upload + Add-new buttons). A single flat `menu_topic` with a divider
- * splitting two groups:
- *   Import  → From device (_e.upload) · Migrate from Google Drive
- *   Create  → Workspace · Note · Document · Spreadsheet · Presentation
- *
- * Flat (not a nested flyout submenu) on purpose: the menu widget wraps its
- * items in an overflow:hidden box and only supports vertical (down/up)
- * direction, so a right-side flyout would be clipped and has no precedent in
- * this codebase. A divider conveys the same Import-vs-Create grouping with one
- * click to every item.
+ * header Upload + Add-new buttons). The outer `menu_topic` owns import actions
+ * and a plain nested Box flyout owns create actions. Keeping one menu widget
+ * preserves its outside-click lifecycle while matching the cascading menu used
+ * elsewhere in the app.
  *
  * Kept separate from `newFileMenu` (still used by team/sharebox/dmz windows) so
  * those callers are untouched.
@@ -1306,69 +1275,83 @@ export function newMenu(ui, opt = {}) {
     }),
   ];
 
-  const divider = Skeletons.Note({
-    className: `${cnDropdown}__divider`,
-    active: 0,
-  });
-
-  // Create group mirrors the historical newFileMenu items; the Folder entry is
-  // relabelled "Workspace" but keeps the `add-folder` service (adaptive: creates
-  // a hub at the workspace root, a sub-folder otherwise).
+  // Create rows keep the historical folder services and filenames. Only their
+  // presentation moves into the right-side flyout.
   const createRows = [
     row({
       service: "add-folder",
-      ico: "folder-header",
-      content: LOCALE.WORKSPACE,
+      ico: "addmenu-folder",
+      content: LOCALE.FOLDER,
       area: ui.mget(_a.area) || _a.personal,
-      className: `${cnItem}--add-folder`,
+      className: `${cnItem}--add-folder ${cnDropdown}__submenu-item`,
     }),
     row({
       service: "add-note",
-      ico: "raw-note",
+      ico: "addmenu-note",
       content: LOCALE.NOTE,
-      className: `${cnItem}--add-note white`,
+      className: `${cnItem}--add-note ${cnDropdown}__submenu-item`,
     }),
     row({
       service: "new-document",
       name: "document.docx",
-      ico: "raw-documents_word",
+      ico: "addmenu-document",
       content: LOCALE.DOCUMENT,
-      className: `${cnItem}--document white`,
+      className: `${cnItem}--document ${cnDropdown}__submenu-item`,
     }),
     row({
       service: "new-document",
       name: "spreadsheet.xlsx",
-      ico: "raw-documents_excel",
+      ico: "addmenu-spreadsheet",
       content: LOCALE.SPREADSHEET,
-      className: `${cnItem}--spreadsheet white`,
+      className: `${cnItem}--spreadsheet ${cnDropdown}__submenu-item`,
     }),
     row({
       service: "new-document",
       name: "presentation.pptx",
-      ico: "raw-documents_powerpoint",
+      ico: "addmenu-presentation",
       content: LOCALE.PRESENTATION,
-      className: `${cnItem}--presentation white`,
+      className: `${cnItem}--presentation ${cnDropdown}__submenu-item`,
     }),
   ];
 
-  const items = Skeletons.Box.Y({
-    className: `${cnDropdown}__items`,
-    kids: [...importRows, divider, ...createRows],
+  const createGroup = Skeletons.Box.X({
+    className: `${cnItem} ${cnItem}--create-group`,
+    sys_pn: "new-create-group",
+    partHandler: ui,
+    uiHandler: [ui],
+    service: "toggle-new-create-menu",
+    dataset: { submenu: _a.closed },
+    kidsOpt: { active: 0 },
+    kids: [
+      Skeletons.Note({
+        content: "+",
+        active: 0,
+        className: `${cnDropdown}__create-symbol`,
+      }),
+      Skeletons.Note({
+        content: LOCALE.ADD_NEW,
+        active: 0,
+        className: `${cnDropdown}__name`,
+      }),
+      Skeletons.Box.Y({
+        active: 0,
+        className: `${cnDropdown}__create-submenu`,
+        kids: createRows,
+      }),
+    ],
   });
 
-  // Trigger is a plain Note (single text node), NOT Button.Label: Button.Label
-  // always renders an icon slot beside the label, and with no `ico` that empty
-  // slot still reserves width (global `.window-button__label-button svg{width:14px}`),
-  // pushing the text off-centre in the pill. A Note has no slot, so the text
-  // centres cleanly.
-  // "+" is a text glyph, not an SVG icon: the plus-header sprite (and every
-  // other plus icon here) is a heavy filled plus; as a character its stroke
-  // weight follows the label font-weight — light, matching "New" (same trick
-  // the topbar minimize "−" uses). LOCALE.NEW supplies the word; "+ " is a
-  // symbol prefix, not translatable copy.
-  const trigger = Skeletons.Note({
+  const items = Skeletons.Box.Y({
+    className: `${cnDropdown}__items`,
+    kids: [...importRows, createGroup],
+  });
+
+  // Use the same dedicated add glyph as the desk topbar so the plus has stable
+  // proportions and weight independent of the translated label's font.
+  const trigger = Skeletons.Button.Label({
+    ico: "topbar-add",
     className: `${cnWindowButton}__label-button primary`,
-    content: `+ ${LOCALE.NEW}`,
+    label: LOCALE.NEW,
     uiHandler: ui,
     partHandler: ui,
   });
@@ -1378,7 +1361,13 @@ export function newMenu(ui, opt = {}) {
     className: `${cnDropdown}__wrapper`,
     flow: _a.y,
     opening: _e.click,
-    persistence: _a.none,
+    // The parent row must be clickable without dismissing the outer panel.
+    // Folder leaf handlers close the ancestor menu explicitly.
+    persistence: _a.always,
+    callback: () => {
+      const group = ui.getPart && ui.getPart("new-create-group");
+      if (group && group.el) group.el.dataset.submenu = _a.closed;
+    },
     trigger,
     items,
   };

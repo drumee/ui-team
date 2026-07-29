@@ -1021,22 +1021,27 @@ class desk_module extends LetcBox {
     });
   }
 
-  /**
-   * Change the add type depending of the context
-   * @returns
-   */
-  _updateAddmenu(data = {}) {
-    this.ensurePart("addmenu").then((p) => {
-      let item = p.__items.children.first();
-      if (data.filetype && data.filetype === _a.hub) {
-        item.setLabel(LOCALE.FOLDER);
-      } else {
-        item.setLabel(LOCALE.WORKSPACE);
-      }
-    });
+  /** Keep the topbar actions enabled when the breadcrumb context changes. */
+  _updateAddmenu() {
     this.ensurePart("action-cluster").then((p) => {
       p.setState(1);
     });
+  }
+
+  closeDeskNewMenu(cmd) {
+    const menu = cmd && cmd.getParentByKind?.(KIND.menu.topic);
+    if (!menu) return;
+    const group = menu.el?.querySelector(
+      ".desk-module-topbar__new-menu-create-group",
+    );
+    if (group) group.dataset.submenu = _a.closed;
+    if (menu.changeState) menu.changeState(0);
+  }
+
+  toggleDeskNewCreateMenu(cmd) {
+    if (!cmd || !cmd.el) return;
+    cmd.el.dataset.submenu =
+      cmd.el.dataset.submenu === _a.open ? _a.closed : _a.open;
   }
 
   /**
@@ -2084,7 +2089,27 @@ class desk_module extends LetcBox {
         return this.loadDefault();
 
       case _e.upload:
+        this.closeDeskNewMenu(cmd);
         return Wm.handleUpload();
+
+      case "toggle-desk-new-create-menu":
+        return this.toggleDeskNewCreateMenu(cmd);
+
+      case "launch-gdrive-migration": {
+        this.closeDeskNewMenu(cmd);
+        const workspace = (Wm && Wm._curWorkspace) || {};
+        return Kind.waitFor("migrate_gdrive_popup").then(() => {
+          Wm.launch(
+            {
+              kind: "migrate_gdrive_popup",
+              hub_id: workspace.hub_id || Visitor.id,
+              nid: workspace.nid || Visitor.get(_a.home_id),
+              wm_unique_id: "migrate_gdrive_popup",
+            },
+            { explicit: 1, singleton: 1 },
+          );
+        });
+      }
 
       case _e.download:
         return Wm.download();
@@ -2262,9 +2287,11 @@ class desk_module extends LetcBox {
         return;
 
       case "new-workspace":
+        this.closeDeskNewMenu(cmd);
         return Wm.onUiEvent(cmd, { ...args, service: "new-workspace" });
 
       case "new-note":
+        this.closeDeskNewMenu(cmd);
         Wm.windowsLayer.append({
           kind: "editor_markdown",
           uiHandler: [this],
@@ -2274,6 +2301,7 @@ class desk_module extends LetcBox {
       case "new-document":
       case "new-spreadsheet":
       case "new-presentation":
+        this.closeDeskNewMenu(cmd);
         Wm.newDocument(cmd);
         // this._hideAddMenu();
         return;
@@ -2288,7 +2316,16 @@ class desk_module extends LetcBox {
       case "reward-set-add-menu":
         return this.ensurePart("addmenu").then((p) => {
           if (!p || !_.isFunction(p.changeState)) return;
-          if (!args.open) return p.changeState(false);
+          const setCreateMenuState = (state) => {
+            const group = p.el?.querySelector(
+              ".desk-module-topbar__new-menu-create-group",
+            );
+            if (group) group.dataset.submenu = state;
+          };
+          if (!args.open) {
+            setCreateMenuState(_a.closed);
+            return p.changeState(false);
+          }
 
           // Opening this menu programmatically can't rely on changeState alone:
           //   - _openItems() early-returns on a truthy `isOpen`, and `isOpen` is
@@ -2310,6 +2347,14 @@ class desk_module extends LetcBox {
           if (p.model && _.isFunction(p.model.set)) p.model.set(_a.state, 0);
           p.changeState(true);
           if (p.el && p.el.dataset) p.el.dataset.state = 1;
+          setCreateMenuState(_a.open);
+        });
+
+      case "reward-set-new-create-menu":
+        return this.ensurePart("desk-new-create-group").then((p) => {
+          if (p && p.el) {
+            p.el.dataset.submenu = args.open ? _a.open : _a.closed;
+          }
         });
 
       // Relayed to the reward flow: it opened this popup through the

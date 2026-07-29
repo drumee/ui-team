@@ -66,7 +66,7 @@ if (s.uploading) return "uploading";
 
 The `null` is deliberate. If the panel is not on screen — the user flipped to
 another tab of the window — the guide HOLDS instead of falling through, because
-rewinding a finished walkthrough to "click + New" would be nonsense. It resolves
+rewinding a finished walkthrough to "click New" would be nonsense. It resolves
 the moment they come back.
 
 `uploaded` is a latch set by `onUploaded()`, not a DOM read: nothing on screen

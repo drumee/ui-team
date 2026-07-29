@@ -120,7 +120,13 @@ class GuideCore {
       // data-visible: the workspace window's "+ New" pill renders hidden until
       // syncNewCtrlVisibility() resolves the real privilege, and that flip is
       // the only mutation announcing it.
-      attributeFilter: ["data-state", "class", "style", "data-visible"],
+      attributeFilter: [
+        "data-state",
+        "data-submenu",
+        "class",
+        "style",
+        "data-visible",
+      ],
     });
     this._onResize = () => this._position();
     window.addEventListener("resize", this._onResize, { passive: true });

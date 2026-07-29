@@ -1208,9 +1208,29 @@ class __window_folder extends mfsInteract {
     });
   }
 
+  closeNewMenu(cmd) {
+    const menu = cmd && cmd.getParentByKind?.(KIND.menu.topic);
+    if (!menu) return;
+    const group = menu.el?.querySelector(
+      ".window-button__dropdown-menu__item--create-group",
+    );
+    if (group) group.dataset.submenu = _a.closed;
+    if (menu.changeState) menu.changeState(0);
+  }
+
+  toggleNewCreateMenu(cmd) {
+    if (!cmd || !cmd.el) return;
+    cmd.el.dataset.submenu =
+      cmd.el.dataset.submenu === _a.open ? _a.closed : _a.open;
+  }
+
   onUiEvent(cmd, args = {}) {
     const service = args.service || cmd.service || cmd.mget(_a.service);
     switch (service) {
+      case _e.upload:
+        this.closeNewMenu(cmd);
+        return super.onUiEvent(cmd, args);
+
       case _a.info:
         return this.showInfo();
 
@@ -1221,13 +1241,18 @@ class __window_folder extends mfsInteract {
         return this.switchShowFolderSettings(cmd);
 
       case "add-folder":
+        this.closeNewMenu(cmd);
         return this.openCreateFolderDialog();
 
       case "add-note":
+        this.closeNewMenu(cmd);
         return Wm.windowsLayer.append({
           kind: "editor_markdown",
           uiHandler: [this],
         });
+
+      case "toggle-new-create-menu":
+        return this.toggleNewCreateMenu(cmd);
 
       case "launch-gdrive-migration":
         // "Migrate from Google Drive" row of the merged "+ New" menu. Opens the
@@ -1236,6 +1261,7 @@ class __window_folder extends mfsInteract {
         // the multi-folder-windows fix) prevents a duplicate popup on re-click.
         // hub_id/nid target THIS folder window (import lands in the open
         // workspace), falling back to the visitor home like settings does.
+        this.closeNewMenu(cmd);
         return Kind.waitFor("migrate_gdrive_popup").then(() => {
           Wm.launch(
             {
@@ -1252,6 +1278,7 @@ class __window_folder extends mfsInteract {
         });
 
       case "new-document":
+        this.closeNewMenu(cmd);
         return this.newDocument(cmd);
 
       case "create-folder-submit":
@@ -3611,12 +3638,12 @@ class __window_folder extends mfsInteract {
     if (this._taskFilterBtn && this._taskFilterBtn.el) {
       this._taskFilterBtn.el.dataset.visible = tab === _a.task ? "1" : "0";
     }
-    // The list/grid view toggle shares the tab line but only applies to Files.
+    // The list/grid view toggle lives in the Files filter row.
     const viewCtrl = this.getPart("view-ctrl");
     if (viewCtrl && viewCtrl.el) {
       viewCtrl.el.dataset.visible = tab === "files" ? "1" : "0";
     }
-    // The merged "+ New" button also lives on the tab line but only operates on
+    // The merged "+ New" button also lives in that row and only operates on
     // Files (upload / create / gdrive-import) — hide it off the Files tab so it
     // can't be mistaken for a Chat/Task/Meeting action.
     this.syncNewCtrlVisibility();
@@ -4097,11 +4124,10 @@ class __window_folder extends mfsInteract {
   // Gate the merged "+ New" button (upload / create / gdrive-import) on BOTH
   // the active tab and the viewer's current write permission.
   //
-  // The button is always in the tree (see skeleton/toolkit tabBar) because the
-  // skeleton is built before the window knows its privilege, and because a
-  // build-time gate cannot react to anything afterwards. Every source of truth
-  // for "may this viewer create things here?" therefore converges on this one
-  // runtime read of mget(privilege):
+  // The Files filter row renders before the window knows its privilege, and a
+  // build-time gate cannot react to later role or navigation changes. Every
+  // source of truth for "may this viewer create things here?" therefore
+  // converges on this runtime read of mget(privilege):
   //   - open             → onPartReady("new-ctrl")
   //   - opened w/o a priv → _healChatPrivilege, once the real value resolves
   //   - tab switch       → showFolderTab

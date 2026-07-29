@@ -4,7 +4,7 @@
  * Walks the user through the REAL desk chrome to create a workspace, rather
  * than opening the form programmatically:
  *
- *   1 add   → spotlight the topbar "Add new" button       → user clicks it
+ *   1 add   → spotlight the topbar "New" button           → user clicks it
  *   2 menu  → spotlight the "Workspace" dropdown item,    → user clicks it
  *             grey-out + disable the sibling items
  *   3 form  → spotlight the create-workspace modal         → user submits it
@@ -40,6 +40,7 @@ const { GuideCore, hasDom, visible, firstVisible } = require("./guide-core");
 // to update.
 const SEL = {
   addBtn: ".desk-module-topbar__new-workspace-btn",
+  createItem: ".desk-module-topbar__new-menu-create-group",
   wsItem: ".desk-module-topbar__add-menu-item.ico-workspace",
   otherItems: ".desk-module-topbar__add-menu-item:not(.ico-workspace)",
   form: ".form-folder__main",
@@ -83,7 +84,7 @@ const ORDER = { add: 1, menu: 2, form: 3, perm: 4 };
 function tooltipFor(sub) {
   switch (sub) {
     case "add":
-      return LOCALE.REWARD_FLOW_GUIDE_ADD || 'Click “Add new” to get started.';
+      return LOCALE.REWARD_FLOW_GUIDE_ADD || 'Click “New” to get started.';
     case "menu":
       return LOCALE.REWARD_FLOW_GUIDE_MENU || 'Choose “Workspace” from the menu.';
     case "form":
@@ -124,6 +125,7 @@ class RewardGuide extends GuideCore {
     this._infoSeen = false;     // the window_info confirmation has appeared
     this._invitePanel = false;  // the INTERNAL panel was seen → running as Step 2
     this._completed = false;    // guard: onGuideComplete fired once
+    this._expandingCreate = false;
     if (this._permTimer) {
       clearTimeout(this._permTimer);
       this._permTimer = null;
@@ -187,10 +189,26 @@ class RewardGuide extends GuideCore {
       return null;
     }
 
-    // Innermost surface wins: the form covers the dropdown, which covers the
-    // Add-new button.
+    // Innermost surface wins: the form covers the dropdown, which covers New.
     if (visible(document.querySelector(SEL.form))) return "form";
-    if (visible(document.querySelector(SEL.wsItem))) return "menu";
+    if (visible(document.querySelector(SEL.wsItem))) {
+      this._expandingCreate = false;
+      return "menu";
+    }
+
+    // The merged New control adds one visual grouping level before Workspace.
+    // During the existing two-step reward walkthrough, expand that create
+    // group as soon as the user opens New so the Workspace target becomes
+    // visible without adding another coach step.
+    const createItem = firstVisible(SEL.createItem);
+    if (createItem && createItem.dataset.submenu !== "open") {
+      if (!this._expandingCreate) {
+        this._expandingCreate = true;
+        this._ui.setNewCreateMenu(true);
+      }
+      return null;
+    }
+    this._expandingCreate = false;
     return "add";
   }
 

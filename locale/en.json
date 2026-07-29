@@ -2701,7 +2701,7 @@
   "REWARD_FLOW_WAITING_WORKSPACE": "Waiting for your workspace…",
   "REWARD_FLOW_WAITING_UPLOAD": "Waiting for your first upload…",
   "REWARD_FLOW_WAITING_INVITE": "Waiting for your first invitation…",
-  "REWARD_FLOW_GUIDE_ADD": "Click “Add new” to get started.",
+  "REWARD_FLOW_GUIDE_ADD": "Click “New” to get started.",
   "REWARD_FLOW_GUIDE_MENU": "Choose “Workspace” from the menu.",
   "REWARD_FLOW_GUIDE_FORM": "Pick a workspace type, name it, and click Create.",
   "REWARD_FLOW_GUIDE_PERM": "Close to continue",

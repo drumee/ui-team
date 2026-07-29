@@ -115,7 +115,7 @@ const POPUP_OVERFLOW = [
 // the card anchored beneath it (see _applyStepTarget).
 const STEP_TARGET = {
   step2: ".desk-module-topbar__invite-btn",
-  step3: ".desk-module-topbar__upload-btn",
+  step3: ".desk-module-topbar__new-workspace-btn",
 };
 
 class __reward_flow extends LetcBox {
@@ -409,6 +409,14 @@ class __reward_flow extends LetcBox {
   /** Open/close the topbar Add-new dropdown (the desk owns the `addmenu` part). */
   setAddMenu(open) {
     this.triggerHandlers({ service: "reward-set-add-menu", open: !!open });
+  }
+
+  /** Expand/collapse the create flyout inside the merged topbar New menu. */
+  setNewCreateMenu(open) {
+    this.triggerHandlers({
+      service: "reward-set-new-create-menu",
+      open: !!open,
+    });
   }
 
   /**
@@ -1775,7 +1783,7 @@ class __reward_flow extends LetcBox {
     switch (service) {
       case "reward-continue":
         // step1's primary action: start the guided walkthrough that spotlights
-        // the real desk chrome (Add new → Workspace item → the form) and lets
+        // the real desk chrome (New → Workspace item → the form) and lets
         // the user create the workspace themselves. onWorkspaceCreated ends it.
         // Inert if already waiting or guiding.
         if (this._isWaiting() || this._step === "step1_guide") return;
