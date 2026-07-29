@@ -787,7 +787,11 @@ class __reward_flow extends LetcBox {
       this._goto("step2");
       return;
     }
-    if (this._guide) this._guide.onWorkspaceCreated();
+    // The area picks the guide's safety budget for the follow-up surface: the
+    // external branch's is a lazily imported window and needs far longer than
+    // the internal branch's panel. Passed even when the descriptor was
+    // unusable (undefined → the guide waits the long budget).
+    if (this._guide) this._guide.onWorkspaceCreated(ws?.area);
     else this.onGuideComplete();
   }
 

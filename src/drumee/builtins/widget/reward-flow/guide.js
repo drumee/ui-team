@@ -66,7 +66,18 @@ const SEL = {
 
 // Safety net for the perm phase: team/share always open a panel, but if one
 // never appears (unexpected), don't wedge the guide — complete after this.
+//
+// Two budgets, because the branches arrive by completely different routes and
+// one budget cannot serve both. The internal panel is FED into the shared
+// wrapper-modal in the same tick as the broadcast that starts this phase
+// (media_form → parent.feed), so it is there almost immediately. The external
+// dock is a WINDOW opened with Wm.launch on a LAZILY IMPORTED kind (seeds.js
+// window_secure_share → dynamic import): its chunk has to be fetched and
+// mounted before anything matches. On the short budget the phase could
+// complete first — Step 1 ended, the flow moved on to Step 2, and the dock
+// arrived to no spotlight and no coach at all.
 const PERM_TIMEOUT_MS = 2500;
+const PERM_TIMEOUT_WINDOW_MS = 20000;
 const ORDER = { add: 1, menu: 2, form: 3, perm: 4 };
 
 function tooltipFor(sub) {
@@ -123,12 +134,22 @@ class RewardGuide extends GuideCore {
    * The workspace was created (team/share). Enter the perm phase: wait for the
    * follow-up permission panel to appear, spotlight it, and complete once the
    * user closes it. Called by the orchestrator from workspace:refresh.
+   *
+   * @param {String} [area] the new workspace's area as the server echoed it
+   *   back — "private" for internal/team, "share" for external. It picks the
+   *   safety budget (see the two constants). ONLY "private" takes the short
+   *   one: an area we do not recognise waits the long budget, since the cost of
+   *   waiting too long is a late advance, while the cost of waiting too little
+   *   is the sub-step never being shown at all.
    */
-  onWorkspaceCreated() {
+  onWorkspaceCreated(area) {
     this._created = true;
     this._permSeen = false;
     if (!hasDom()) return;  // Node/tests: the caller drives completion directly.
-    this._permTimer = setTimeout(() => this._complete(), PERM_TIMEOUT_MS);
+    const ms = String(area || "") === "private"
+      ? PERM_TIMEOUT_MS
+      : PERM_TIMEOUT_WINDOW_MS;
+    this._permTimer = setTimeout(() => this._complete(), ms);
     this._reconcile();
   }
 
