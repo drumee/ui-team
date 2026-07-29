@@ -186,6 +186,12 @@ class __account_data extends DrumeeMFS {
     // feeds desk.get_env sends the underlying `disk`. Fall back so this works
     // against a deployment whose schema has not caught up.
     let max = Visitor.quota("storage") || Visitor.quota("disk");
+    // Unlimited entitlement — the claim-reward prize (5 years). $.disk still
+    // carries the BIGINT sentinel so the arithmetic below stays safe, but it
+    // must not reach the screen: the available/used pie would be a 100% slice
+    // with an invisible sliver, and the total would read "9.22 EB".
+    const _q = Visitor.quota() || {};
+    const unlimited = _q.unlimited === true || _q.unlimited === 1 || _q.unlimited === "1";
     let details = [];
     let du = Visitor.diskUsage();
     for (let k in du) {
@@ -229,7 +235,10 @@ class __account_data extends DrumeeMFS {
     }
 
 
-    let content = [{
+    // On an unlimited entitlement there is no "available" to plot against: the
+    // slice would be the whole circle and what the user actually stores would
+    // be a hairline. The pie becomes the used breakdown alone.
+    let content = unlimited ? [] : [{
       label: LOCALE.SPACE_AVAILABLE,
       value: max - used,
       color: colorFromName(LOCALE.SPACE_AVAILABLE),
@@ -263,7 +272,8 @@ class __account_data extends DrumeeMFS {
       }
     };
     this.__totalSize.set({
-      content: `${LOCALE.DATA_USAGE} ${filesize(used)}/${filesize(max)}`
+      content: `${LOCALE.DATA_USAGE} ${filesize(used)}/${
+        unlimited ? (LOCALE.UNLIMITED || "Unlimited") : filesize(max)}`
     });
 
 

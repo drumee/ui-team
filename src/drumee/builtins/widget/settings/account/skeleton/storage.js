@@ -50,7 +50,13 @@ function header(ui) {
   // schema, so take whichever is present rather than depending on the rollout.
   const q = Visitor.quota() || {};
   const storage = q.storage != null ? q.storage : q.disk;
-  const use_rate = storage ? 100 * Visitor.diskUsed() / storage : 0;
+  // Unlimited entitlement — the claim-reward prize (5 years). The row still
+  // carries $.disk at the BIGINT sentinel so nothing downstream divides by
+  // zero, but that number must never be SHOWN: filesize() renders it as
+  // "9.22 EB" and the bar sits at a permanent 0%, which reads as a bug rather
+  // than as a prize.
+  const unlimited = q.unlimited === true || q.unlimited === 1 || q.unlimited === "1";
+  const use_rate = !unlimited && storage ? 100 * Visitor.diskUsed() / storage : 0;
   return Skeletons.Box.Y({
     className: `${fig}-content`,
     kids: [
@@ -67,18 +73,25 @@ function header(ui) {
           }),
           Skeletons.Element({
             className: `available text `,
-            content: `/${filesize(storage)}`,
+            content: unlimited
+              ? `/${LOCALE.UNLIMITED || "Unlimited"}`
+              : `/${filesize(storage)}`,
           }),
-          Skeletons.Element({
+          // Nothing to upgrade TO on an unlimited entitlement, and offering it
+          // to someone who just won five years of storage reads as a dark
+          // pattern.
+          ...(unlimited ? [] : [Skeletons.Element({
             className: `upgrade text `,
             page: 1,
             // service: "upgrade-plan",
             service: `load-page`,
             content: LOCALE.UPGRADE_PLAN,
-          }),
+          })]),
         ]
       }),
-      Skeletons.Box.X({
+      // The bar is a share-of-allowance readout and there is no allowance to
+      // take a share of, so it is dropped rather than pinned at 0%.
+      ...(unlimited ? [] : [Skeletons.Box.X({
         className: `${fig}-progress-container`,
         kids: [
           Skeletons.Element({
@@ -88,7 +101,7 @@ function header(ui) {
             }
           }),
         ]
-      }),
+      })]),
       filter(ui),
     ]
   })

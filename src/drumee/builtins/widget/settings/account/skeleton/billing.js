@@ -48,7 +48,12 @@ function header(ui) {
   // read whichever this deployment sends.
   const q = Visitor.quota() || {};
   const storage = q.storage != null ? q.storage : q.disk;
-  const use_rate = storage ? (100 * Visitor.diskUsed()) / storage : 0;
+  // Unlimited entitlement (claim-reward prize). Same treatment as
+  // settings/account/skeleton/storage.js: $.disk holds the BIGINT sentinel so
+  // arithmetic stays safe, but showing it renders "9.22 EB" next to a bar
+  // frozen at 0%.
+  const unlimited = q.unlimited === true || q.unlimited === 1 || q.unlimited === "1";
+  const use_rate = !unlimited && storage ? (100 * Visitor.diskUsed()) / storage : 0;
   return Skeletons.Box.Y({
     className: `${fig}-content`,
     kids: [
@@ -65,7 +70,9 @@ function header(ui) {
           }),
           Skeletons.Element({
             className: `available text `,
-            content: `/${filesize(storage)}`,
+            content: unlimited
+              ? `/${LOCALE.UNLIMITED || "Unlimited"}`
+              : `/${filesize(storage)}`,
           }),
           Skeletons.Element({
             className: `upgrade text `,
@@ -74,7 +81,9 @@ function header(ui) {
           }),
         ],
       }),
-      Skeletons.Box.X({
+      // Dropped on an unlimited entitlement: a share-of-allowance bar has no
+      // allowance to divide by, and 0% forever reads as broken.
+      ...(unlimited ? [] : [Skeletons.Box.X({
         className: `${fig}-progress-container`,
         kids: [
           Skeletons.Element({
@@ -84,7 +93,7 @@ function header(ui) {
             },
           }),
         ],
-      }),
+      })]),
       filter(ui),
     ],
   });
