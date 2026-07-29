@@ -30,9 +30,10 @@
   background: transparent !important;
 }
 
-// "1" — this modal supplies the dim itself: the Step 2 invite popup and the
-// "Don't drop now" modal, both of which sit over a flow state whose own
-// vignette is transparent or absent.
+// "1" — this modal supplies the dim itself, for a flow state whose own vignette
+// is transparent or absent. _openModal's default, though nothing passes it
+// today: the "Don't drop now" guard used to, and moved to the flow's own root
+// so its dim could reach the desk chrome this host never covers.
 .window-manager__wrapper-modal[data-reward-overlay="1"],
 .window-manager__wrapper-modal[data-reward-overlay="1"][data-overlay="blur"] {
   background-color: var(--overlay-bg, rgba(0, 0, 0, 0.4)) !important;

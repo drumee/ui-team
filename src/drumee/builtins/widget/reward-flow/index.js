@@ -34,7 +34,7 @@
  * docs/superpowers/specs/2026-07-23-reward-onboarding-flow-design.md
  */
 const { dropModal, congratsModal } = require("./skeleton/modal");
-const { STEPS, baseStep, isWaiting, isGuiding } = require("./steps");
+const { STEPS, baseStep, isWaiting } = require("./steps");
 const { readDescriptor } = require("./workspace");
 // The guides' own visibility test, reused for the popup's dropdowns: presence in
 // the DOM is not enough for something that is `visibility: hidden` until opened.
@@ -135,7 +135,6 @@ class __reward_flow extends LetcBox {
     const stored = baseStep(opt.step);
     this._step = STEPS.includes(stored) ? stored : "step1";
     this._modalOpen = false;
-    this._dropReturnStep = null;
     this._inviteSucceeded = false;
     this._dropGuardOpen = false;
     // Step 2 is being served by the permission panel Step 1 ended on, not by
@@ -1775,35 +1774,22 @@ class __reward_flow extends LetcBox {
         // step2_waiting raises the same guard from the invite popup's own
         // backdrop (see _watchInviteBackdrop).
         if (this._isWaiting() || this._modalOpen || this._dropGuardOpen) return;
-        // During either walkthrough the dimmed frame (__guide-scrim) fires this
-        // too: guard the walkthrough without tearing it down or touching the
-        // wrapper-modal that may hold the create-form.
-        if (isGuiding(this._step)) {
-          this._openDropGuard();
-          return;
-        }
-        this._dropReturnStep = this._step;
-        // Mark the root WITHOUT lifting it: this guard lives in the
-        // wrapper-modal, already above us, and its backdrop is now the only dim
-        // (see _markRootDrop). Lifting here would raise the card over it.
-        this._markRootDrop(true);
-        this._openModal(dropModal(this));
+        // EVERY state raises the same guard, the one in our own root — the
+        // walkthroughs, whose __guide-scrim fires this, and the card steps
+        // alike. It is position:fixed and the root lifts above the desk, so its
+        // dim covers the sidebar and the topbar as well as the work area. The
+        // wrapper-modal's backdrop cannot: that host is absolutely positioned
+        // inside the desk's wm-container, which is what left the chrome bright
+        // beside a dimmed grid on the card steps.
+        this._openDropGuard();
         return;
 
       case "reward-drop-stay":
-        // In the walkthrough — and on step2_waiting — the guard lives in our
-        // own root, so closing it just hands the user back what was underneath:
-        // the guide resumes, or the invite popup is still there with whatever
-        // they had typed. Nothing was torn down.
-        if (this._dropGuardOpen) {
-          this._closeDropGuard();
-          return;
-        }
-        this._closeModal();
-        // The flow's own dim comes back with it.
-        this._markRootDrop(false);
-        if (this._dropReturnStep) this._goto(this._dropReturnStep);
-        this._dropReturnStep = null;
+        // The guard lives in our own root, so closing it just hands the user
+        // back what was underneath: the card, the guide mid-walkthrough, or the
+        // invite popup with whatever they had typed. Nothing was torn down, so
+        // there is nothing to restore.
+        this._closeDropGuard();
         return;
 
       case "reward-drop-leave":
