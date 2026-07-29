@@ -1620,6 +1620,16 @@ class __reward_flow extends LetcBox {
    * cannot reach in and shut something the user opened for themselves.
    */
   _closeHandoffSurfaces() {
+    // The workspace the flow opened for Step 3. "Drop anyway" is an exit like
+    // any other, and this window is as much the flow's doing as the surfaces
+    // below — the user did not open it, the card's "Open workspace" did — so
+    // leaving it behind strands it on a desk whose flow no longer exists. Both
+    // other ways out of Step 3 already take it with them: congrats
+    // (_completeStep3) and Back (see the reward-back case).
+    //
+    // Scoped to Step 3, where that window is the one on screen, and a no-op on
+    // the legacy path, which never opened one.
+    if (baseStep(this._step) === "step3") this._closeStep3Workspace();
     const guided = this._step === "step1_guide";
     if (!guided && this._step !== "step2_waiting") return;
     // The shared wrapper-modal. At these two steps whatever sits in it is
