@@ -214,36 +214,31 @@ function dmzSplitBody(ui) {
 function __skl_dmz_sharebox_desk_content(_ui_) {
   const topbar    = dmzTopbar(_ui_);
   const privilege = _ui_.mget(_a.privilege) || 0;
-  // Figma flow: the "limited access → Request Access" banner is for SIGNED-IN
-  // non-members. An anonymous visitor instead meets a sign-up/login gate when
-  // they attempt an action beyond their grant (chat/edit), so they get no banner.
-  //  • anonymous = NOT authenticated → exclude them here (they meet the sign-up gate
-  //    on action instead). Keyed on is_authenticated, NOT is_guest: the server returns
-  //    is_guest=false for public shares (guest session bound to the creator), so an
-  //    anonymous public viewer would otherwise wrongly get the "request access" banner.
-  //  • only when the grant is below full access (privilege < write).
+  // The "limited access → Request Access" banner. It originally showed ONLY to
+  // signed-in non-members: members were excluded as already having standing access,
+  // and anonymous viewers were excluded because they meet the sign-up gate on action.
+  // Both exclusions are gone — see below. It still only appears when the grant is
+  // below full access (privilege < write).
   //
-  // The NOTICE follows the LINK, the ACTION follows the viewer (Duy 2026-07-29).
-  // A real member — or the creator previewing their own link — is capped by the link
-  // in THIS view only; their own access to the content is untouched. They used to see
-  // nothing at all, which made a view-only link look like broken permissions, so they
-  // now get the notice too. What they must NOT get is the Request-access action: it
-  // sends a request to the link's creator for approval, which is meaningless for
-  // someone who already holds the rights (and would stack a redundant node grant on
-  // top of their membership if approved). Their route is their own workspace, or —
-  // for a member whose membership is itself limited — their workspace admin, never
-  // the link's creator. Anonymous viewers stay excluded entirely: they meet the
-  // sign-up/login gate on action instead, and Request-access needs an identity to
-  // request with. Keyed on is_authenticated, NOT is_guest (the server returns
-  // is_guest=false for public shares, so an anonymous viewer would slip through).
-  const isAnonymous = !_ui_.mget('is_authenticated');
-  const isOwner     = !!_ui_.mget('creator_id') && (_ui_.mget('uid') === _ui_.mget('creator_id'));
-  const isMember    = !!_ui_.mget('is_member');
-  // Standing access = another way in that the link cannot take away.
-  const hasStanding = isMember || isOwner;
-  const isCapped    = !!_ui_.mget('is_secure') && !isAnonymous && (privilege < _K.privilege.write);
-  const showBanner  = isCapped;
-  const canRequest  = isCapped && !hasStanding;
+  // A LINK IS ITS OWN PERMISSION DOMAIN (Duy 2026-07-29). Whoever opens it is capped
+  // by the link's level in this view — a member on a view-only link can only view
+  // here, independently of the rights their membership gives them elsewhere. So both
+  // the notice AND the request follow the LINK, not the viewer's other access: the
+  // person who controls this domain is the link's creator, which makes "request more
+  // access" a coherent ask even for a member, and it keeps the recipient UI honest
+  // instead of looking like broken permissions.
+  //  • MEMBERS are included (they used to be excluded, so they saw nothing at all).
+  //  • ANONYMOUS viewers are included too. Clicking through routes them to the
+  //    sign-up overlay rather than the request popup (sharebox onUiEvent
+  //    'open-request-access' keys on is_authenticated), which is the same funnel
+  //    chat and edit already use — nothing is granted on that path.
+  //  • The CREATOR is the one exception: they would be requesting access from
+  //    themselves. They still get the notice (useful when previewing their own
+  //    link — it is what recipients see) but no action.
+  const isOwner    = !!_ui_.mget('creator_id') && (_ui_.mget('uid') === _ui_.mget('creator_id'));
+  const isCapped   = !!_ui_.mget('is_secure') && (privilege < _K.privilege.write);
+  const showBanner = isCapped;
+  const canRequest = isCapped && !isOwner;
 
   const limitedBanner = showBanner ? Skeletons.Box.X({
     className : `${_ui_.fig.family}__limited-access-banner`,
