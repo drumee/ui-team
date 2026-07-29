@@ -171,6 +171,13 @@ module.exports = function (ui) {
   const panel = base === "step2" && ui.invitePanelOpen?.();
   const guided = base === "step3" && ui.hasStep1Workspace?.();
   const notarget = panel || guided;
+  // Step 2 handed the user to a surface in the shared wrapper-modal — the
+  // permission panel or the invite popup. Both need the root lifted clear of
+  // that modal: it is the only way our dim reaches the topbar and sidebar (the
+  // modal's own backdrop covers just the desk's wm-container, which is what
+  // made the desk read darker than the chrome beside it), and the only way the
+  // card lands above the dim rather than behind it.
+  const onModal = base === "step2" && waiting;
   // The cutout is what dims: it clears one target and shadows everything else.
   // Steps 2/3 point it at their topbar control; the panel Step 2 points it at
   // the panel (_applyStepTarget), which is also how that state's dim reaches
@@ -197,11 +204,11 @@ module.exports = function (ui) {
       // the walkthrough). Windows outrank the flow's default layer, so this
       // asks the skin to lift the root clear of them.
       "over-window": guided ? "1" : "0",
-      // The panel Step 2 hands the user to lives in the wrapper-modal, which
-      // the desk lifts to --z-index-modal. Ask the skin to lift the root over
-      // it, so our dim covers that layer (and the topbar and sidebar beside it)
-      // and the card lands above the dim instead of behind it.
-      "over-modal": panel ? "1" : "0",
+      // Lift the root over the wrapper-modal holding this step's surface.
+      "over-modal": onModal ? "1" : "0",
+      // Only the permission-panel route: it alone gets the brand-filled Back,
+      // being a card whose single control stands beside a full-height panel.
+      "on-panel": panel ? "1" : "0",
       // …and step the card aside while the invite-sent confirmation stands in
       // that panel's place: it is a card of its own, saying the same thing.
       // Normally set imperatively (see _markInviteToast); declared here too so

@@ -69,6 +69,10 @@ const STEP2_SURFACES = `${INVITE_POPUP}, ${INVITE_PANEL}, ${INVITE_TOAST}`;
 // What Step 2 waits on while the user works the permission panel: the panel
 // itself, or the confirmation that replaced it. Both gone = the step is done.
 const PANEL_SURFACES = `${INVITE_PANEL}, ${INVITE_TOAST}`;
+// The same pair for the other route in: the invite popup, and the confirmation
+// that replaces it on a successful send. This is what the cutout spotlights
+// while that route is waiting — see _applyStepTarget.
+const POPUP_SURFACES = `${INVITE_POPUP}, ${INVITE_TOAST}`;
 
 // The live topbar control each step points at. The cutout is laid over it and
 // the card anchored beneath it (see _applyStepTarget).
@@ -617,18 +621,37 @@ class __reward_flow extends LetcBox {
     // Resolved from the BASE step, so entering a waiting state keeps the cutout
     // and the card exactly where they were instead of snapping to the fallback.
     const base = baseStep(this._step);
-    // Step 2 served by the permission panel spotlights the PANEL — it is the
-    // surface in play, and cutting it out is also what makes the dim cover the
-    // whole viewport: the box-shadow around the hole is painted by our root,
-    // which is portaled to document.body and lifted over the wrapper-modal, so
-    // it reaches the topbar and sidebar that the modal's own backdrop (confined
-    // to the desk's wm-container) never covered.
+    const waiting = this._isWaiting();
+    // Step 2 served by the permission panel rather than the invite popup.
     const onPanel = base === "step2" && this._invitePanelOpen;
-    // Anchored to nothing and centred like Step 1 (see skin __anchor): the
-    // panel Step 2 above — its spotlight is a tall right-hand rail, not
-    // something to hang a card under — and a Step 3 that will guide the user
-    // inside the workspace rather than at the desk topbar.
+
+    // WHERE THE HOLE GOES. On a waiting Step 2 it is the surface the user was
+    // handed to — the invite popup, or the permission panel — and NOT the
+    // topbar control that opened it: that control is behind a modal by then, so
+    // a hole over it lights up a corner of the topbar for no reason while the
+    // surface the user is actually working sits in the dim. Both are given as a
+    // surface PAIR, because a successful send replaces either with its
+    // confirmation and querySelector then returns whichever is really there —
+    // so the hole follows the surface instead of staying on a rect that has
+    // gone. Every other step spotlights its own topbar control.
+    //
+    // Cutting the surface out is also what makes the dim uniform: the shadow
+    // around the hole is painted by our root, which is portaled to
+    // document.body and lifted clear of the wrapper-modal, so it covers the
+    // topbar and sidebar too — neither of which the modal's own backdrop
+    // reaches, it being confined to the desk's wm-container.
+    // A step that hangs its card off no topbar control also spotlights no
+    // topbar control: the panel Step 2, whose surface is handled above, and a
+    // Step 3 that will guide the user inside the workspace rather than at the
+    // desk topbar. Both are centred by the stylesheet (see skin __anchor).
     const notarget = onPanel || (base === "step3" && !!this._workspace);
+    const spot = base === "step2" && waiting
+      ? (onPanel ? PANEL_SURFACES : POPUP_SURFACES)
+      : (notarget ? null : STEP_TARGET[base]);
+
+    // WHERE THE CARD HANGS. A waiting Step 2 keeps its card under the control it
+    // came from even though the hole has moved away — the card must not jump the
+    // moment the popup opens.
     const anchor = this.el.querySelector(`.${this.fig.family}__anchor`);
     if (notarget && anchor?.style) {
       // Centred by the stylesheet. Clear any inline placement left over from a
@@ -639,39 +662,48 @@ class __reward_flow extends LetcBox {
       anchor.style.right = "";
       anchor.style.transform = "";
     }
-    // PANEL_SURFACES, not the panel alone: sending an invitation replaces the
-    // panel with its confirmation, and querySelector then returns whichever is
-    // actually there — so the hole follows the surface instead of staying
-    // behind on the rect of one that has gone.
-    const sel = onPanel ? PANEL_SURFACES : (notarget ? null : STEP_TARGET[base]);
-    if (!sel) return;
-    const el = document.querySelector(sel);
-    if (!el || typeof el.getBoundingClientRect !== "function") return;
-    const rect = el.getBoundingClientRect();
-    if (!rect.width || !rect.height) return;
 
-    // Cutout hugs the target exactly, mirroring its own rounding.
-    const radius =
-      (typeof getComputedStyle === "function" && getComputedStyle(el).borderRadius) || "";
-    this.el.style.setProperty("--cut-x", `${rect.left}px`);
-    this.el.style.setProperty("--cut-y", `${rect.top}px`);
-    this.el.style.setProperty("--cut-w", `${rect.width}px`);
-    this.el.style.setProperty("--cut-h", `${rect.height}px`);
-    this.el.style.setProperty("--cut-radius", radius || "8px");
+    const spotEl = spot ? document.querySelector(spot) : null;
+    const rect = spotEl?.getBoundingClientRect ? spotEl.getBoundingClientRect() : null;
+    if (rect && rect.width && rect.height) {
+      // Cutout hugs the target exactly, mirroring its own rounding.
+      const radius =
+        (typeof getComputedStyle === "function" && getComputedStyle(spotEl).borderRadius) || "";
+      this.el.style.setProperty("--cut-x", `${rect.left}px`);
+      this.el.style.setProperty("--cut-y", `${rect.top}px`);
+      this.el.style.setProperty("--cut-w", `${rect.width}px`);
+      this.el.style.setProperty("--cut-h", `${rect.height}px`);
+      this.el.style.setProperty("--cut-radius", radius || "8px");
+    } else if (spot) {
+      // Expected a surface and it is not on screen yet (the popup opens a tick
+      // after the click). Collapse the hole rather than leaving the last one
+      // behind — that stale hole would be the topbar control we just moved off.
+      // A zero-size cutout still spreads its 100vmax shadow over the whole
+      // viewport, so the dim simply stays whole (same trick as spotlight's
+      // `hole: false`).
+      this.el.style.setProperty("--cut-x", "50vw");
+      this.el.style.setProperty("--cut-y", "50vh");
+      this.el.style.setProperty("--cut-w", "0px");
+      this.el.style.setProperty("--cut-h", "0px");
+      this.el.style.setProperty("--cut-radius", "0px");
+    }
 
-    // Centred states are done: the cutout is the whole job there.
-    if (notarget) return;
-    // Card sits under the control, centred on it and kept on screen.
-    if (!anchor || !anchor.style) return;
+    // Centred states have no card placement to do.
+    if (notarget || !anchor?.style) return;
+    // The card hangs under its topbar control — measured separately from the
+    // hole above, which on a waiting Step 2 is somewhere else entirely.
+    const ctrl = STEP_TARGET[base] && document.querySelector(STEP_TARGET[base]);
+    const cr = ctrl?.getBoundingClientRect ? ctrl.getBoundingClientRect() : null;
+    if (!cr || !cr.width || !cr.height) return;
     const vw = (typeof window !== "undefined" && window.innerWidth) || 1280;
     const vh = (typeof window !== "undefined" && window.innerHeight) || 800;
     const M = 12;
     const CARD_W = 340;
     const CARD_H = 340;
     const half = CARD_W / 2;
-    const cx = rect.left + rect.width / 2;
+    const cx = cr.left + cr.width / 2;
     const left = Math.min(Math.max(cx, M + half), vw - M - half);
-    const top = Math.min(Math.max(rect.bottom + 16, 64), vh - CARD_H - M);
+    const top = Math.min(Math.max(cr.bottom + 16, 64), vh - CARD_H - M);
     anchor.style.left = `${left}px`;
     anchor.style.top = `${top}px`;
     anchor.style.right = "auto";
@@ -686,13 +718,13 @@ class __reward_flow extends LetcBox {
     this._trackStep(baseStep(step));
     // While a real Step 2 surface is open (step2_waiting), take the default
     // frosted glass off its wrapper-modal and guard the backdrop against a
-    // stray click abandoning the flow. The invite popup gets the flow's flat
-    // dim; the permission panel gets "bare", because there our own cutout is
-    // already dimming the whole viewport around it and a second layer of the
-    // same colour would just double it.
-    this._markInviteOverlay(
-      step === "step2_waiting" && (this._invitePanelOpen ? "bare" : "1"),
-    );
+    // stray click abandoning the flow.
+    //
+    // "bare" for both routes: our own cutout is dimming the whole viewport
+    // around the surface, and a second layer of the same colour on top of the
+    // part of the screen that modal happens to cover is exactly what made the
+    // desk read darker than the topbar and sidebar beside it.
+    this._markInviteOverlay(step === "step2_waiting" && "bare");
     this._watchInviteBackdrop(step === "step2_waiting");
     this._render();
   }

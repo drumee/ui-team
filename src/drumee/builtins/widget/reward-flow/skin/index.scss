@@ -88,16 +88,17 @@ $success-soft: rgba(46, 179, 122, 0.14);
     z-index: calc(var(--z-index-modal, 100000) - 1);
   }
 
-  // Step 2 served by the permission panel. That panel sits in the wrapper-modal
-  // at --z-index-modal (100000), and the flow supplies the dim itself here — a
-  // cutout over the panel, so everything around it is shadowed and the panel
-  // reads clear. Both jobs need the root ABOVE the modal:
+  // A waiting Step 2 — the user is working a surface in the shared
+  // wrapper-modal, either the permission panel or the invite popup. That modal
+  // sits at --z-index-modal (100000), and the flow supplies the dim itself
+  // here: a cutout over the surface, so everything around it is shadowed and
+  // the surface reads clear. Both jobs need the root ABOVE the modal:
   //   - the dim must cover the modal's layer, and reach the topbar and sidebar
   //     the modal's own backdrop never did (it is absolutely positioned inside
   //     the desk's wm-container; our root is fixed and portaled to body);
   //   - at 10020 the card would paint behind the modal and every click on it
   //     would land on the backdrop instead of the card.
-  // The panel stays fully operable through the hole: in a waiting state the
+  // The surface stays fully operable through the hole: in a waiting state the
   // vignette and the cutout are both pointer-events:none.
   &__root[data-over-modal="1"] {
     z-index: 1000000;
@@ -362,10 +363,10 @@ $success-soft: rgba(46, 179, 122, 0.14);
   // on the confirmation by then — so the flow still owns the screen around it.
   &__root[data-toast="1"] &__anchor { display: none; }
 
-  // …except over the permission panel, where the card is one of only two things
-  // meant to sit clear of the dim (the panel is the other). Fading it there
-  // reads as "disabled" against a surface the user is actively working, and the
-  // dimmed desk showing through it is exactly what the cutout is avoiding.
+  // …except on a waiting Step 2, where the card is one of only two things meant
+  // to sit clear of the dim (the surface in the modal is the other). Fading it
+  // there reads as "disabled" against a surface the user is actively working,
+  // and the dimmed desk showing through it is exactly what the cutout avoids.
   // Declared after, so it wins at equal specificity.
   &__root[data-over-modal="1"] &__anchor { opacity: 1; }
 
@@ -532,7 +533,7 @@ $success-soft: rgba(46, 179, 122, 0.14);
   // --normal-fg on that fill is unreadable in light theme and invisible in
   // dark. Hover/active deepen to --primary-50 (#433cc5) rather than lightening,
   // matching how the flow's own primary buttons move under the pointer.
-  &__root[data-over-modal="1"] &__btn--ghost {
+  &__root[data-on-panel="1"] &__btn--ghost {
     color: #fff;
     background-color: var(--primary-40);
     border: 1px solid var(--primary-40);
