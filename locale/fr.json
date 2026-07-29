@@ -2272,5 +2272,8 @@
   "REWARD_FLOW_CONGRATS_LEAD": "Vous avez bien réclamé vos",
   "REWARD_FLOW_CONGRATS_PRIZE": "5 ans de stockage illimité !",
   "REWARD_FLOW_CONGRATS_TAIL": "Bienvenue sur Drumee.",
-  "REWARD_FLOW_GO_DASHBOARD": "Retour à l'accueil"
+  "REWARD_FLOW_GO_DASHBOARD": "Retour à l'accueil",
+  "PLAN_SWITCH_CYCLE_TITLE": "Passer à {0} {1}",
+  "PLAN_SWITCH_DEFER_MSG": "Passer au forfait {0} {1} pour {2}{3} ?\n\nVotre abonnement {0} {4} actuel reste actif jusqu'à la fin de sa période de facturation. Votre abonnement {1} sera ajouté et commencera dès l'expiration de votre forfait {4}.",
+  "PLAN_SWITCH_NOW_MSG": "Passer au forfait {0} {1} pour {2}{3} ?\n\nVotre abonnement {4} {5} actuel sera annulé immédiatement et le temps restant ne sera pas reporté. Votre forfait {0} {1} démarrera aussitôt."
 }

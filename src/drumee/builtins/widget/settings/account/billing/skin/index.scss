@@ -370,8 +370,11 @@
     justify-content: space-between;
     gap: var(--spacer-4);
     margin-top: var(--spacer-4);
-    padding: 16px 16px 16px 24px;
-    border-radius: 16px;
+    // 2026-07-29: the banner dwarfed the rest of the page (18px title in a
+    // 16/24 padding box against 14px card text) — bring its type and box in
+    // line with the plan cards.
+    padding: 10px 12px 10px 16px;
+    border-radius: 12px;
     background: var(--tertiary-grey-20);
 
     &-text {
@@ -380,13 +383,13 @@
 
     &-title {
       font-weight: 600;
-      font-size: 18px;
-      line-height: 24px;
+      font-size: 14px;
+      line-height: 22px;
       color: var(--tertiary-grey-100); // Grey/black #000000
     }
 
     &-desc {
-      font-size: 16px;
+      font-size: 13px;
       line-height: 1.4;
       color: var(--primary-purple-100); // Primary/100 #0b0a21
     }
@@ -399,8 +402,12 @@
 
     &-cancel {
       color: var(--error-500);
-      font-weight: 600;
-      font-size: 13px;
+      // Same face as the banner title (it rendered one step smaller and
+      // bolder than everything beside it, which read as a glitch, not a
+      // choice): 14/22 at 500, the page's control size.
+      font-weight: 500;
+      font-size: 14px;
+      line-height: 22px;
       padding: 8px 16px;
       border-radius: 8px;
 
@@ -410,14 +417,15 @@
     }
 
     // Figma 3050-96156: Resume Subscription CTA is primary-50 (#433cc5) —
-    // was the unrelated legacy --primary-500 (#b251fb) purple.
+    // was the unrelated legacy --primary-500 (#b251fb) purple. Sized with the
+    // slimmed banner.
     &-resume {
       color: var(--white);
       background: var(--primary-50);
       font-weight: 600;
-      font-size: 16px;
-      line-height: 24px;
-      padding: 12px 24px;
+      font-size: 14px;
+      line-height: 22px;
+      padding: 10px 20px;
       border-radius: 4px;
 
       &:hover {
@@ -431,12 +439,6 @@
       margin-top: var(--spacer-5);
       gap: var(--spacer-5);
       padding: var(--spacer-5);
-    }
-
-    &-header {
-      font-weight: 600;
-      font-size: 20px;
-      color: var(--neutral-900);
     }
 
     &-title {
@@ -473,18 +475,22 @@
       }
     }
 
-    // "Manage billing" → Stripe portal: plain text hyperlink, matching the
-    // revamp primary (same hue as the current-plan highlight).
+    // "Manage billing" → Stripe portal. 2026-07-29: promoted from a plain
+    // hyperlink in the banner to the footer slot where "Additional seat
+    // pricing" used to sit, boxed like the banner's Resume CTA.
     &-manage-billing {
       align-self: flex-start;
       cursor: pointer;
-      text-decoration: underline;
-      text-underline-offset: 2px;
-      color: var(--primary-50);
-      font-weight: 500;
+      color: var(--white);
+      background: var(--primary-50);
+      font-weight: 600;
+      font-size: 14px;
+      line-height: 22px;
+      padding: 10px 20px;
+      border-radius: 4px;
 
       &:hover {
-        color: var(--primary-60);
+        background: var(--primary-90);
       }
     }
   }
