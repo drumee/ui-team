@@ -159,11 +159,7 @@ class __editor_markdown extends __player {
         this.viewerId = `${this.mget(_a.widgetId)}-viewer`;
         this.editorId = `${this.mget(_a.widgetId)}-editor`;
         child.feed(require('./skeleton/content')(this))
-        break;
-      case 'editor':
-        // Keep the framework's own handling, then wire the share edit gate on top.
-        super.onPartReady(child, pn);
-        this._wireDmzEditGate(child);
+        this._wireDmzEditGate();
         break;
       case 'pin':
         if (!this.media || this.mget(REMINDER_ID)) return;
@@ -205,14 +201,26 @@ class __editor_markdown extends __player {
    *
    * Scoped to a DMZ share via this.target.isDmz (the same marker the save path
    * uses), so a desk note editor never installs the listener at all.
+   *
+   * Listens on the widget ROOT in the capture phase rather than on the Entry part.
+   * The Entry in skeleton/content.js carries a `sys_pn` but no `partHandler`, so
+   * whether onPartReady('editor') fires at all depends on the implicit handler walk
+   * — a dependency this gate does not need. this.el exists by the time the content
+   * part is ready, keydown from the field bubbles to it, and capture runs before any
+   * handler the field itself may have.
    */
-  _wireDmzEditGate(part) {
+  _wireDmzEditGate() {
+    if (this._dmzEditGateWired) return;
     if (!this.target || !this.target.isDmz) return;
+    if (typeof this.target.mget !== 'function') return;
     const desk = this.target.mget('desk');
     if (!desk || typeof desk._gateInteraction !== 'function') return;
-    const field = part && part.el && part.el.querySelector('textarea, input');
-    if (!field) return;
-    field.addEventListener('keydown', (e) => {
+    if (!this.el || typeof this.el.addEventListener !== 'function') return;
+    this._dmzEditGateWired = 1;
+    this.el.addEventListener('keydown', (e) => {
+      // Only the note's own text field — never a toolbar button or the window chrome.
+      const t = e && e.target;
+      if (!t || !/^(TEXTAREA|INPUT)$/.test(t.tagName || '')) return;
       // Only ONE popup per editor session, and only for keys that actually mean
       // "I am editing" — navigation, selection and copy must stay usable for a
       // view-only recipient who is legitimately reading.
@@ -222,7 +230,7 @@ class __editor_markdown extends __player {
       )) return;
       this._dmzEditGated = 1;
       e.preventDefault();
-    });
+    }, true);
   }
 
   /**
