@@ -2289,5 +2289,8 @@
   "PLAN_DOWNGRADE_MSG": "¿Cambiar al plan {0} por {1}/mes o {2}/año?\n\nTu plan {3} se cancelará de inmediato y el tiempo restante no se conservará. Cambiarás inmediatamente al plan {0} y perderás el acceso a las funciones exclusivas de {3}.",
   "TWO_MONTHS_FREE": "2 meses gratis",
   "ADMIN_ACCESS_REQUIRED": "Se requiere acceso de administrador",
-  "ADMIN_ACCESS_REQUIRED_DESC": "Tu plan ya incluye la consola de administración, pero está limitada a propietarios de la organización y administradores del espacio. Pide a tu propietario que te conceda permisos de administrador."
+  "ADMIN_ACCESS_REQUIRED_DESC": "Tu plan ya incluye la consola de administración, pero está limitada a propietarios de la organización y administradores del espacio. Pide a tu propietario que te conceda permisos de administrador.",
+  "ASK_ADMIN_LINK": "Pedir al propietario de la organización →",
+  "ADMIN_REQUEST_SENT": "Tu solicitud fue enviada al propietario de la organización.",
+  "ADMIN_REQUEST_NO_OWNER": "Esta organización no tiene una cuenta de propietario a la que notificar — contacta directamente con tu administrador."
 }

@@ -2285,5 +2285,8 @@
   "PLAN_DOWNGRADE_MSG": "Passer au forfait {0} pour {1}/mois ou {2}/an ?\n\nVotre forfait {3} sera annulé immédiatement et le temps restant ne sera pas reporté. Vous passerez aussitôt au forfait {0} et perdrez l'accès aux fonctionnalités réservées à {3}.",
   "TWO_MONTHS_FREE": "2 mois offerts",
   "ADMIN_ACCESS_REQUIRED": "Accès administrateur requis",
-  "ADMIN_ACCESS_REQUIRED_DESC": "Votre forfait inclut déjà la console d'administration, mais elle est réservée aux propriétaires d'organisation et aux administrateurs d'espace. Demandez à votre propriétaire d'organisation de vous accorder les droits d'administration."
+  "ADMIN_ACCESS_REQUIRED_DESC": "Votre forfait inclut déjà la console d'administration, mais elle est réservée aux propriétaires d'organisation et aux administrateurs d'espace. Demandez à votre propriétaire d'organisation de vous accorder les droits d'administration.",
+  "ASK_ADMIN_LINK": "Demander au propriétaire de l'organisation →",
+  "ADMIN_REQUEST_SENT": "Votre demande a été envoyée au propriétaire de l'organisation.",
+  "ADMIN_REQUEST_NO_OWNER": "Cette organisation n'a pas de compte propriétaire à notifier — contactez directement votre administrateur."
 }
