@@ -2684,6 +2684,7 @@
   "REWARD_FLOW_GUIDE_FOLDER": "This is your workspace. Everything you upload here stays with your team.",
   "REWARD_FLOW_GUIDE_NEW": "Click “+ New” to add your first file.",
   "REWARD_FLOW_GUIDE_FROM_DEVICE": "Choose “From device” to pick a file.",
+  "REWARD_FLOW_GUIDE_UPLOAD_FAILED": "Some files didn't upload. Retry them in the list to carry on.",
   "REWARD_FLOW_GUIDE_UPLOADING": "Uploading your files — hang on a moment.",
   "REWARD_FLOW_GUIDE_FILES": "Here are your files, safe in your workspace.",
   "REWARD_FLOW_STEP3_TITLE": "Step 3: Upload your first file",

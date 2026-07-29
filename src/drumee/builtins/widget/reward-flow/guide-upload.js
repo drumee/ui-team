@@ -49,6 +49,14 @@ const SEL = {
   // The upload-progress window, which mounts as soon as the picker hands its
   // files over. Root (__ui) again, for the same reason as `folder`.
   uploader: ".window-upload-progress__ui",
+  // A row of that window that did NOT make it: the Retry affordance an errored
+  // file gets, or the warning glyph a cancelled one gets instead (see its
+  // _buildProgressRow). Read from the DOM rather than latched off
+  // RADIO_MEDIA "upload:error", because the DOM is the state that CHANGES: a
+  // retry that succeeds turns the row into a tick and the failure is simply
+  // gone, where a latch would have to guess when to clear itself.
+  failed:
+    ".window-upload-progress__progress-retry, .window-upload-progress__progress-canceled",
   // The workspace's file listing — the grid and the row view build the same
   // class (see window/skeleton/toolkit filesContainer /
   // folderFilesRowContainer), so this points at whichever the user is in.
@@ -88,6 +96,14 @@ function resolveSub(s) {
   // tick. The coach's Next button is what releases it.
   if (s.nextPressed && s.newCtrl) return "new";
   return "folder";
+}
+
+/** Shown on the two upload beats while a file in the batch has failed. Says why
+ *  the walkthrough has stopped and where the fix is — the Retry buttons are in
+ *  the progress window, which is what those beats spotlight. */
+function failedText() {
+  return LOCALE.REWARD_FLOW_GUIDE_UPLOAD_FAILED
+    || "Some files didn't upload. Retry them in the list to carry on.";
 }
 
 function tooltipFor(sub) {
@@ -137,9 +153,10 @@ class RewardUploadGuide extends GuideCore {
    */
   onNext() {
     if (this._sub === "files") {
-      // Files still going up — the button is rendered disabled (see _coachFor),
-      // so this only catches an activation that reached us another way.
-      if (this._uploadPending()) return;
+      // Files still going up, or one of them failed — the button is rendered
+      // disabled (see _coachFor), so this only catches an activation that
+      // reached us another way.
+      if (this._uploadPending() || this._uploadFailed()) return;
       if (typeof this._ui?.onUploadGuideComplete === "function") {
         this._ui.onUploadGuideComplete();
       }
@@ -166,6 +183,18 @@ class RewardUploadGuide extends GuideCore {
    */
   _uploadPending() {
     return !!firstVisible(SEL.uploader);
+  }
+
+  /**
+   * At least one file in the batch did not make it, and the user has not
+   * resolved it yet.
+   *
+   * Live, not latched: it goes false on its own when a retry lands or when the
+   * user closes the progress window on it, so the walkthrough can never be
+   * wedged by a failure it has no way to clear.
+   */
+  _uploadFailed() {
+    return !!firstVisible(SEL.failed);
   }
 
   _resolveSub() {
@@ -201,8 +230,14 @@ class RewardUploadGuide extends GuideCore {
     // The last beat, with the batch still going up — the sub-step that
     // spotlights the progress window instead of the panel (see _targetEl).
     const pending = sub === "files" && this._uploadPending();
+    // A file in the batch failed and the user has not dealt with it. Both upload
+    // beats say so, since both are looking at the window that holds the Retry.
+    const failed = (sub === "uploading" || sub === "files") && this._uploadFailed();
     return {
-      text: tooltipFor(sub),
+      // The failure replaces the beat's own line: "hang on a moment" is wrong
+      // once nothing is coming, and "safe in your workspace" is wrong about
+      // files that never arrived.
+      text: failed ? failedText() : tooltipFor(sub),
       // EVERY beat offers Back. It exits the walkthrough to the Step 3 card
       // with the workspace left open (the orchestrator's reward-back), which is
       // a way out of all five — including the two that used to withhold it
@@ -216,11 +251,12 @@ class RewardUploadGuide extends GuideCore {
       // sub-step is released by the user doing the real action. "files" is the
       // last one, so its Next ends the walkthrough (see onNext).
       showNext: sub === "folder" || sub === "files",
-      // …but not yet, while the batch is still uploading. Ending the walkthrough
-      // there tears the workspace down (congrats closes it) with files still
-      // going up into it. Shown-but-disabled rather than hidden, so the way out
-      // stays where the user is already looking for it.
-      nextDisabled: pending,
+      // …but not yet, while the batch is still uploading — ending the
+      // walkthrough there tears the workspace down (congrats closes it) with
+      // files still going up into it — nor while one of them has failed, which
+      // is not the step this beat claims it is. Shown-but-disabled rather than
+      // hidden, so the way out stays where the user is already looking for it.
+      nextDisabled: pending || failed,
       // Sit the callout ABOVE that progress window. It is docked bottom-right,
       // so the default "below if it fits" tucks the coach into the corner under
       // it, and when it does not fit the coach lands over the very rows the user
