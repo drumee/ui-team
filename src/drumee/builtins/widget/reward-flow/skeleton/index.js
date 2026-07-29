@@ -37,7 +37,8 @@ function congratsRoot(pfx, step) {
   return Skeletons.Box.Y({
     className: `${pfx}__root`,
     dataset: {
-      step, waiting: "0", guiding: "0", cutout: "0", overWindow: "1",
+      // Kebab-case — see the note on the main root's dataset below.
+      step, waiting: "0", guiding: "0", cutout: "0", "over-window": "1",
     },
     debug: __filename,
     kids: [Skeletons.Box.Y({ className: `${pfx}__vignette` })],
@@ -186,16 +187,21 @@ module.exports = function (ui) {
       // Tells the stylesheet the cutout is doing the dimming, so the flat
       // vignette must go transparent (it stays for the drop-modal click).
       cutout: targeted ? "1" : "0",
+      // KEBAB-CASE, not camelCase: the framework writes these with
+      // setAttribute(`data-${k}`) and does NOT convert (letc.js), so `overModal`
+      // would land as `data-overmodal` — HTML lowercases attribute names — and
+      // every `[data-over-modal]` rule in the skin would silently never match.
+      //
       // The guided Step 3 card is the one card state reached with a workspace
       // WINDOW on screen (the user may have opened it, then pressed Back out of
       // the walkthrough). Windows outrank the flow's default layer, so this
       // asks the skin to lift the root clear of them.
-      overWindow: guided ? "1" : "0",
+      "over-window": guided ? "1" : "0",
       // The panel Step 2 hands the user to lives in the wrapper-modal, which
       // the desk lifts to --z-index-modal. Ask the skin to lift the root over
       // it, so our dim covers that layer (and the topbar and sidebar beside it)
       // and the card lands above the dim instead of behind it.
-      overModal: panel ? "1" : "0",
+      "over-modal": panel ? "1" : "0",
       // …and step the card aside while the invite-sent confirmation stands in
       // that panel's place: it is a card of its own, saying the same thing.
       // Normally set imperatively (see _markInviteToast); declared here too so
