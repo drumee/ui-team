@@ -1756,7 +1756,7 @@
   "AUDIT_RISK_DESC": "Mainly involving external folder sharing.",
   "AUDIT_STORAGE_DESC": "Total data logged in last 30 days.",
   "UNLOCK_ACTIVITY_INSIGHTS": "Unlock Activity Insights",
-  "UNLOCK_ACTIVITY_DESC": "Detailed tracking, login forensics, and system-wide event streams are only available on the Enterprise Premium tier. Gain full transparency into your workspace history.",
+  "UNLOCK_ACTIVITY_DESC": "ការតាមដានលម្អិត និងកំណត់ហេតុសវនកម្មរួមបញ្ចូលចាប់ពីគម្រោង Business។ ដំឡើងគម្រោងដើម្បីទទួលបានតម្លាភាពពេញលេញនៃប្រវត្តិ workspace របស់អ្នក។",
   "UPGRADE_YOUR_PLAN": "Upgrade your plan",
   "EXTERNAL_GUEST_ACTIVITY": "External Guest Activity",
   "EXTERNAL_GUEST_ACTIVITY_DESC": "Secure-share opens by people outside your organization.",
@@ -1857,7 +1857,7 @@
   "AVAILABLE_LC": "available",
   "UPGRADE_TO_INCREASE_CAPACITY": "Upgrade to increase capacity.",
   "UNLOCK_ADMIN_CONSOLE": "Unlock Admin Console",
-  "UNLOCK_ADMIN_DESC": "Workspace administration — member roles, permissions and storage controls — is part of the Enterprise Premium tier. Upgrade to manage your organization end-to-end.",
+  "UNLOCK_ADMIN_DESC": "ផ្ទាំងគ្រប់គ្រងរួមបញ្ចូលចាប់ពីគម្រោង Team។ អ្នកត្រូវការសិទ្ធិម្ចាស់ ឬអ្នកគ្រប់គ្រង workspace ដើម្បីបើកវា — សូមសួរម្ចាស់អង្គភាពរបស់អ្នក ឬដំឡើងពី Free ដើម្បីចាប់ផ្ដើម។",
 
   "ONBOARDING_WHAT_SHOULD_WE_CALL_YOU": "តើយើងគួរហៅអ្នកថាអ្វី?",
   "ONBOARDING_WHAT_KIND_OF_WORK": "សួស្តី {0} តើអ្នកធ្វើការអ្វី?",

@@ -1757,7 +1757,7 @@
   "AUDIT_RISK_DESC": "Mainly involving external folder sharing.",
   "AUDIT_STORAGE_DESC": "Total data logged in last 30 days.",
   "UNLOCK_ACTIVITY_INSIGHTS": "Unlock Activity Insights",
-  "UNLOCK_ACTIVITY_DESC": "Detailed tracking, login forensics, and system-wide event streams are only available on the Enterprise Premium tier. Gain full transparency into your workspace history.",
+  "UNLOCK_ACTIVITY_DESC": "Le suivi détaillé et les journaux d'audit sont inclus à partir du forfait Business. Passez au niveau supérieur pour une transparence totale sur l'historique de votre espace.",
   "UPGRADE_YOUR_PLAN": "Upgrade your plan",
   "EXTERNAL_GUEST_ACTIVITY": "External Guest Activity",
   "EXTERNAL_GUEST_ACTIVITY_DESC": "Secure-share opens by people outside your organization.",
@@ -1858,7 +1858,7 @@
   "AVAILABLE_LC": "available",
   "UPGRADE_TO_INCREASE_CAPACITY": "Upgrade to increase capacity.",
   "UNLOCK_ADMIN_CONSOLE": "Unlock Admin Console",
-  "UNLOCK_ADMIN_DESC": "Workspace administration — member roles, permissions and storage controls — is part of the Enterprise Premium tier. Upgrade to manage your organization end-to-end.",
+  "UNLOCK_ADMIN_DESC": "La console d'administration est incluse dès le forfait Team. Il faut des droits de propriétaire ou d'administrateur d'espace pour l'ouvrir — demandez au propriétaire de votre organisation, ou passez du forfait Free pour commencer.",
 
   "ONBOARDING_WHAT_SHOULD_WE_CALL_YOU": "Comment devons-nous vous appeler ?",
   "ONBOARDING_WHAT_KIND_OF_WORK": "Bonjour {0}, quel type de travail faites-vous ?",
