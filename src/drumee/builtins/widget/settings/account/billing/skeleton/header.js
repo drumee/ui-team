@@ -1,22 +1,10 @@
-/**
- * What paying yearly actually saves, to one decimal, from the Team prices in
- * the server catalog. Product decision 2026-07-29: the badge states the real
- * figure — with yearly at 11 × monthly that is 8.3%, matching the checkout
- * tab's "1 month free" — rather than the Figma 16.5%, which would have
- * required dropping the yearly prices to 10 × monthly on both Stripe
- * accounts. Returns 0 when it cannot be computed — the badge is then not
- * rendered at all, which is better than a figure nobody checked.
- * @param {Object} ui - UI instance
- * @returns {number}
- */
-function yearlySaving(ui) {
-  const month = Number(ui._catPrice("team", "month")) || 0;
-  const year = Number(ui._catPrice("team", "year")) || 0;
-  if (!month || !year) return 0;
-  const full = month * 12;
-  if (year >= full) return 0;
-  return Math.round(((full - year) / full) * 1000) / 10;
-}
+// Product copy (pricing table 2026-07-29): yearly is 10 x monthly — two
+// months free — and the badge states the table's published figure, 16.5%.
+// (The exact arithmetic is 2/12 = 16.7%; the copy under-promises by 0.2pt,
+// which is the safe direction.) The Stripe yearly prices were moved to
+// 10 x monthly ($290/$990) the same day, so the figure is no longer a claim
+// the checkout contradicts.
+const YEARLY_SAVING = 16.5;
 
 /**
  * Create tab item for header (Monthly, Yearly, Checkout)
@@ -81,7 +69,7 @@ function billing_tabs_trigger(ui) {
   // month<->year switch is a subscription update, not a new checkout.
   const kids = [
     item(ui, {content:LOCALE.MONTHLY, discountRate:0, pos:0, service:"select-plan"}),
-    item(ui, {content:LOCALE.YEARLY, discountRate:yearlySaving(ui), pos:1, service:"select-plan"}),
+    item(ui, {content:LOCALE.YEARLY, discountRate:YEARLY_SAVING, pos:1, service:"select-plan"}),
   ];
   if (!ui._checkoutTabAllowed || ui._checkoutTabAllowed()) {
     kids.push(item(ui, {content:LOCALE.CHECKOUT, discountRate:0, pos:2, service:"checkout"}));

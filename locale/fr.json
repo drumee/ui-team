@@ -2279,5 +2279,6 @@
   "PLAN_UPGRADE_TITLE": "Passer à {0}",
   "PLAN_UPGRADE_MSG": "Passer votre abonnement à {0} pour {1}/mois ou {2}/an ?\n\nVotre forfait {3} sera annulé immédiatement et le temps restant ne sera pas reporté. Vous aurez instantanément accès à toutes les fonctionnalités du forfait {0}.",
   "PLAN_DOWNGRADE_TITLE": "Rétrograder vers {0}",
-  "PLAN_DOWNGRADE_MSG": "Passer au forfait {0} pour {1}/mois ou {2}/an ?\n\nVotre forfait {3} sera annulé immédiatement et le temps restant ne sera pas reporté. Vous passerez aussitôt au forfait {0} et perdrez l'accès aux fonctionnalités réservées à {3}."
+  "PLAN_DOWNGRADE_MSG": "Passer au forfait {0} pour {1}/mois ou {2}/an ?\n\nVotre forfait {3} sera annulé immédiatement et le temps restant ne sera pas reporté. Vous passerez aussitôt au forfait {0} et perdrez l'accès aux fonctionnalités réservées à {3}.",
+  "TWO_MONTHS_FREE": "2 mois offerts"
 }
