@@ -70,11 +70,18 @@ analytics-server              server-team reward.get_state   reward.track
   procedure: both callers want one number, `await_func` unwraps a scalar, and a
   `CALL`'s own SELECT comes back as a raw multi-resultset that does not parse
   into a row.
-- **`reward_claim_track.sql`** — gains `_limit INT`. On a `'done'` request from
-  a row that does not already hold a slot: `GET_LOCK('reward_slot', 5)` → count
-  → award, or write `'missed'` when at the limit. Failing to *take* the lock
-  refuses the award — under contention the only answers are "wait" and "no", and
-  granting on timeout is the over-award the lock exists to prevent.
+- **`reward_claim_track.sql`** — **signature unchanged**. On a `'done'` request
+  from a row that does not already hold a slot: `GET_LOCK('reward_slot', 5)` →
+  count → award, or write `'missed'` when at the limit. Failing to *take* the
+  lock refuses the award — under contention the only answers are "wait" and
+  "no", and granting on timeout is the over-award the lock exists to prevent.
+  The limit is read from `sys_conf.reward_conf -> $.slots` **inside the proc**.
+  It was briefly a parameter, which coupled the schema to a server deploy —
+  every runtime still on the previous build failed with "Incorrect number of
+  arguments" the moment the proc required it. Caught on stage, where three
+  runtimes call it. The value is regexp-tested before casting: `CAST('abc' AS
+  SIGNED)` raises under strict mode and would abort a completion the user had
+  earned, so a malformed or zero setting falls back to 100.
 - **`reward_claim_emailed.sql`** — `'missed'` joins `'done'`/`'dropped'` in the
   re-arm set, so raising the limit and re-sending re-opens the flow for the
   people who were turned away.
@@ -88,8 +95,11 @@ analytics-server              server-team reward.get_state   reward.track
 - `get_state` returns **`capped`**: eligible, but every slot is gone. `step` is
   blanked — a capped run has nothing to resume into. **Capped outranks resume**,
   which is what keeps the refusal path rare.
-- `track` passes the limit and returns **`granted`**, read back with
-  `await_query` (the proc's trailing SELECT does not parse into a row).
+- `track` returns **`granted`**, read back with `await_query` (the proc's
+  trailing SELECT does not parse into a row). It does *not* pass a limit — the
+  proc owns that, so schema and server deploy independently. `_slotLimit()`
+  survives only for the gate's capped check, where a disagreement can at worst
+  offer a flow the completion then refuses, which the sold-out screen handles.
 - A DB failure in the slot count answers *full*: everywhere else in this service
   the safe default is already "no reward".
 
@@ -136,7 +146,16 @@ Applied to a scratch DB and exercised:
   slots still 3. A `missed` user re-armed → back to `emailed`, and wins a slot
   once the limit is raised.
 
-Schema applied to the live `yp` (the reward procs were absent there entirely).
+Config handling: a missing key, a non-JSON `conf_value`, a missing `$.slots`, a
+non-numeric one, `0` and a negative all fall back to 100. A real `{"slots": 2}`
+caps at 2.
+
+Applied to the local `yp` (where the reward procs were absent entirely) and to
+stage via `ssh huan@drumee.in`, after checking the deployed procs for drift —
+there was none — and backing them up to `~/schema-backups/`. Smoke-tested on
+stage through the 4-argument call the deployed runtimes actually make, then the
+test row was deleted; the one real funnel row was untouched.
+
 Both stylesheets compile; the sold-out card was rendered headless beside congrats
 to confirm identical geometry.
 
