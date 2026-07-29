@@ -2925,6 +2925,25 @@ class __widget_chat extends LetcBox {
         }
         break;
       }
+
+      // A meeting ended: channel.meeting_end flipped the start card's row
+      // metadata (meeting_status='ended') and the server echoes the updated
+      // message row to every hub socket. Without this case nothing consumed it,
+      // so an already-rendered card kept offering "Join meeting" until the chat
+      // was reloaded — the meeting looked live forever. Pushing the new metadata
+      // into the item's model fires chat-item._onDataChanged → the card
+      // re-renders as "Meeting ended". Literal string alongside SERVICE.* for
+      // deploy-skew safety (same pattern as the typing cases): a literal only —
+      // SERVICE.channel.meeting_end can be undefined against an older server,
+      // and `case undefined` would swallow every service-less message.
+      case "channel.meeting_end": {
+        if (!data || !data.message_id) break;
+        var endedItem =
+          this.__list &&
+          this.__list.getItemsByAttr("message_id", data.message_id)[0];
+        if (endedItem) endedItem.mset(_a.metadata, data.metadata || {});
+        break;
+      }
     }
   }
 

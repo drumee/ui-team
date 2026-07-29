@@ -938,6 +938,22 @@ class ___widget_chatItem extends LetcBox {
       return;
     }
 
+    // (1.6) Meeting-start card "Join meeting" — same trap as the file-thread
+    // card above: the button lives in raw markup inside a framework
+    // Skeletons.Element bubble whose bubble-phase onclick (__handleClick →
+    // getService) stopImmediatePropagation's AND debounces for ~300ms, so most
+    // clicks never reached the outer onclick (dispatchUiEvent). That is the
+    // "have to click Join several times" report. Capture beats it;
+    // _joinMeeting's guard dedupes the rare bubble re-fire.
+    const joinBtn =
+      target.closest && target.closest('[data-service="join-meeting"]');
+    if (joinBtn) {
+      this._joinMeeting(joinBtn);
+      e.stopPropagation();
+      e.preventDefault();
+      return;
+    }
+
     // (2) Selection mode.
     const chatRoot =
       this.el.closest &&
@@ -982,64 +998,14 @@ class ___widget_chatItem extends LetcBox {
         return;
 
       case "join-meeting": {
+        // Fallback only — the reliable path is the capture handler
+        // (_handleSelectionClick → _joinMeeting). _joinMeeting's guard makes a
+        // double-fire a no-op.
         const target =
           e &&
           e.target.closest &&
           e.target.closest('[data-service="join-meeting"]');
-        if (!target) return;
-        if (this._joiningMeeting) return; // debounce rapid clicks
-        const hub_id = target.dataset.hub_id;
-        const nid = target.dataset.nid || hub_id;
-        if (!hub_id) return;
-        this._joiningMeeting = true;
-        setTimeout(() => {
-          this._joiningMeeting = false;
-        }, 800);
-
-        // Reuse the folder window the user is already in (or any open one for
-        // the same hub) — but actually JOIN the live room. showFolderTab
-        // ("meeting") only renders the schedule calendar, so members of a
-        // shared folder who clicked Join with the folder open got a tab
-        // switch instead of the call — and a dead click once already on the
-        // meeting tab. _launchMeetingInPanel is re-click safe: it raises the
-        // existing call window (with an "already in a call" alert) when one
-        // is open, and debounces via _launchingMeeting.
-        const joinVia = (folder) => {
-          if (folder.raise) folder.raise();
-          if (typeof folder._launchMeetingInPanel === "function") {
-            folder._launchMeetingInPanel();
-          } else if (folder.showFolderTab) {
-            folder.showFolderTab("meeting"); // legacy fallback
-          }
-        };
-        const ownFolder =
-          this.getParentByKind && this.getParentByKind("window_folder");
-        if (ownFolder && ownFolder.mget(_a.hub_id) == hub_id) {
-          joinVia(ownFolder);
-          return;
-        }
-
-        // Otherwise reuse any open folder window for the same hub/nid, or open
-        // a new one. wm_unique_id prevents duplicates piling up on re-clicks.
-        const existing = (
-          (Wm.getItemsByKind && Wm.getItemsByKind("window_folder")) ||
-          []
-        ).find((w) => !w.isDestroyed() && w.mget(_a.hub_id) == hub_id);
-        if (existing) {
-          joinVia(existing);
-          return;
-        }
-
-        Wm.launch(
-          {
-            kind: "window_folder",
-            hub_id,
-            nid,
-            activeTab: "meeting",
-            wm_unique_id: `window_folder-${hub_id}-${nid}`,
-          },
-          { explicit: 1, singleton: 1 },
-        );
+        this._joinMeeting(target);
         return;
       }
 
@@ -1057,6 +1023,79 @@ class ___widget_chatItem extends LetcBox {
       }
     }
     return false;
+  }
+
+  /**
+   * Join the live meeting advertised by a meeting-start card. Called from the
+   * capture-phase click handler (primary, click-reliable) and the bubble
+   * dispatchUiEvent case (fallback) — the guard dedupes the two firing for one
+   * click, and blocks the burst of re-clicks the old dead-click behaviour
+   * trained users into.
+   *
+   * The button is painted as busy on the spot: joining a room takes seconds
+   * (folder window + media devices + conference bind), and with no feedback the
+   * card looked broken, so people clicked it again and again.
+   * @param {HTMLElement} target the [data-service="join-meeting"] button
+   */
+  _joinMeeting(target) {
+    if (!target || !target.dataset) return;
+    if (this._joiningMeeting) return; // dedupe capture + bubble, and rapid clicks
+    const hub_id = target.dataset.hub_id;
+    const nid = target.dataset.nid || hub_id;
+    if (!hub_id) return;
+    this._joiningMeeting = true;
+    // Long enough to cover a cold folder-window boot, short enough that leaving
+    // and rejoining straight away still works.
+    setTimeout(() => {
+      this._joiningMeeting = false;
+      if (target.isConnected) target.dataset.joining = "0";
+    }, 2500);
+    target.dataset.joining = "1";
+
+    // Reuse the folder window the user is already in (or any open one for
+    // the same hub) — but actually JOIN the live room. showFolderTab
+    // ("meeting") only renders the schedule calendar, so members of a
+    // shared folder who clicked Join with the folder open got a tab
+    // switch instead of the call — and a dead click once already on the
+    // meeting tab. _launchMeetingInPanel is re-click safe: it raises the
+    // existing call window (with an "already in a call" alert) when one
+    // is open, and debounces via _launchingMeeting.
+    const joinVia = (folder) => {
+      if (folder.raise) folder.raise();
+      if (typeof folder._launchMeetingInPanel === "function") {
+        folder._launchMeetingInPanel();
+      } else if (folder.showFolderTab) {
+        folder.showFolderTab("meeting"); // legacy fallback
+      }
+    };
+    const ownFolder =
+      this.getParentByKind && this.getParentByKind("window_folder");
+    if (ownFolder && ownFolder.mget(_a.hub_id) == hub_id) {
+      joinVia(ownFolder);
+      return;
+    }
+
+    // Otherwise reuse any open folder window for the same hub/nid, or open
+    // a new one. wm_unique_id prevents duplicates piling up on re-clicks.
+    const existing = (
+      (Wm.getItemsByKind && Wm.getItemsByKind("window_folder")) ||
+      []
+    ).find((w) => !w.isDestroyed() && w.mget(_a.hub_id) == hub_id);
+    if (existing) {
+      joinVia(existing);
+      return;
+    }
+
+    Wm.launch(
+      {
+        kind: "window_folder",
+        hub_id,
+        nid,
+        activeTab: "meeting",
+        wm_unique_id: `window_folder-${hub_id}-${nid}`,
+      },
+      { explicit: 1, singleton: 1 },
+    );
   }
 
   /**
