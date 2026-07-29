@@ -2718,5 +2718,8 @@
   "PLAN_DOWNGRADE_MSG": "Switch to the {0} plan for {1}/month or {2}/year?\n\nYour {3} plan will be canceled immediately, and any remaining subscription time will not be carried over. You'll immediately switch to the {0} plan and lose access to {3}-only features.",
   "TWO_MONTHS_FREE": "2 months free",
   "ADMIN_ACCESS_REQUIRED": "Admin access required",
-  "ADMIN_ACCESS_REQUIRED_DESC": "Your plan already includes the Admin Console, but it is limited to organization owners and workspace admins. Ask your organization owner to grant you admin rights."
+  "ADMIN_ACCESS_REQUIRED_DESC": "Your plan already includes the Admin Console, but it is limited to organization owners and workspace admins. Ask your organization owner to grant you admin rights.",
+  "ASK_ADMIN_LINK": "Ask your organization owner →",
+  "ADMIN_REQUEST_SENT": "Your request was sent to the organization owner.",
+  "ADMIN_REQUEST_NO_OWNER": "This organization has no owner account to notify — contact your administrator directly."
 }
