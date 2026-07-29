@@ -233,6 +233,7 @@ class __reward_flow extends LetcBox {
     this._stopToastWatch();
     this._stopPanelWatch();
     this._stopTargetTrack();
+    this._stopStepTargetWatch();
     this._restoreHost();
     this._watchInviteBackdrop(false);
     this._markInviteOverlay(false);
@@ -587,10 +588,50 @@ class __reward_flow extends LetcBox {
   _positionStepTarget() {
     if (typeof document === "undefined" || typeof requestAnimationFrame !== "function") return;
     this._trackStepTarget();
+    this._watchStepTarget();
     if (!this._onStepResize && typeof window !== "undefined") {
       this._onStepResize = () => this._applyStepTarget();
       window.addEventListener("resize", this._onStepResize, { passive: true });
     }
+  }
+
+  /**
+   * Keep the cutout on its target while the DESK moves underneath it.
+   *
+   * The frame loop below only covers the moment a step renders. The desk
+   * relayouts later for reasons of its own, and one of them is caused by this
+   * very flow: stepping back out of Step 3 closes the workspace, which rebuilds
+   * the topbar — moving the Invite button that Step 2 spotlights. A hole
+   * measured before that lands on whatever has since slid into its place, which
+   * is how Step 2 ended up cutting out the topbar's Upload button.
+   *
+   * childList only, and coalesced to one measurement per frame: watching
+   * attributes would pick up the inline --cut-* writes this makes itself, and
+   * the desk mutates constantly (chat, badges), so the coalescing is what keeps
+   * a busy desk from turning into a measurement per mutation.
+   */
+  _watchStepTarget() {
+    if (this._targetObs || typeof MutationObserver === "undefined") return;
+    if (!document.body) return;
+    this._targetObs = new MutationObserver(() => {
+      if (this._targetTick) return;
+      this._targetTick = requestAnimationFrame(() => {
+        this._targetTick = null;
+        if (this.el) this._applyStepTarget();
+      });
+    });
+    this._targetObs.observe(document.body, { childList: true, subtree: true });
+  }
+
+  _stopStepTargetWatch() {
+    if (this._targetObs) {
+      this._targetObs.disconnect();
+      this._targetObs = null;
+    }
+    if (this._targetTick && typeof cancelAnimationFrame === "function") {
+      cancelAnimationFrame(this._targetTick);
+    }
+    this._targetTick = null;
   }
 
   /**
