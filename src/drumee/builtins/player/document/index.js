@@ -823,6 +823,12 @@ class __player_document extends PlayerInteract {
       // header button whose uiHandler is the player). Triggering the edit name here
       // would travel up to the wm, match no case, and silently do nothing.
       if (ev === 'drumee:requestEditRights') {
+        // The editor page posts to both window.top and window.parent (either can be
+        // the wrong target depending on nesting), so the same click can arrive twice.
+        // Collapse repeats inside 500ms to a single dialog.
+        const now = Date.now();
+        if (this._lastEditRightsAt && (now - this._lastEditRightsAt) < 500) return;
+        this._lastEditRightsAt = now;
         return this.triggerHandlers({ service: 'dmz-request-download' });
       }
       if (this._editorReady) return;
