@@ -1433,6 +1433,26 @@ class __reward_flow extends LetcBox {
     if (guided) this._closeSecureShare();
   }
 
+  /**
+   * Close the upload-progress window.
+   *
+   * Driven through the window's own close service, like _closeSecureShare and
+   * _closeStep3Workspace, so it unregisters from the pool instead of just
+   * leaving the DOM. Called when Step 3's walkthrough rewinds off a failed
+   * upload: those failed rows are what the guide reads as "still failing", so
+   * the window has to go for the rewind to land anywhere.
+   */
+  closeUploadProgress() {
+    if (typeof Wm === "undefined" || typeof Wm.getItemsByKind !== "function") {
+      return;
+    }
+    const wins = Wm.getItemsByKind("window_upload_progress") || [];
+    for (const w of wins) {
+      if (!w || w.isDestroyed?.() || typeof w.onUiEvent !== "function") continue;
+      w.onUiEvent({}, { service: _e.close });
+    }
+  }
+
   /** Close the secure-share dock the Step 1 create step may have launched.
    *  Driven through the window's own close service, like _closeStep3Workspace,
    *  so it unregisters from the pool instead of just leaving the DOM. During
@@ -1515,8 +1535,11 @@ class __reward_flow extends LetcBox {
           return this._resumeCreateForm();
         }
         if (this._step === "step3_guide") {
-          // The Step 3 guide has no step-back (see guide-upload): Back leaves
-          // the walkthrough for the card, workspace still open.
+          // One beat has a step-back of its own: a failed upload rewinds to the
+          // "+ New" pill so the user can try again (see guide-upload's back()).
+          // Everywhere else Back leaves the walkthrough for the card, workspace
+          // still open.
+          if (this._uploadGuide?.back()) return;
           this._stopUploadGuide();
           this._clearOpenTimer();
           return this._goto("step3");

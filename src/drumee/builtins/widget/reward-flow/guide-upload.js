@@ -20,13 +20,13 @@
  * workspace away in the same frame the first file landed in it — the user never
  * saw the thing the whole walkthrough was for.
  *
- * Every beat offers Back, and it does the same thing on all five: exits the
- * walkthrough to the Step 3 card, workspace left open. Deliberately simpler than
- * Step 1's step-back, which walks its sub-steps in reverse by driving the desk's
- * addmenu part through the orchestrator: the equivalent here means reaching into
- * window_folder's `new-ctrl` part, and there is nothing destructive to undo.
- * The orchestrator does that directly in its `reward-back` case and never
- * consults back(), so this guide just inherits GuideCore's, which returns false.
+ * Every beat offers Back. On four of the five it exits the walkthrough to the
+ * Step 3 card, workspace left open — deliberately simpler than Step 1's
+ * step-back, which walks its sub-steps in reverse, because there is nothing
+ * destructive to undo here. The exception is a beat reporting a FAILED upload:
+ * there Back rewinds to the "+ New" beat so the user can try the upload again,
+ * which the card cannot offer them without replaying the whole walkthrough. See
+ * back(), which the orchestrator consults first for exactly that case.
  */
 const { GuideCore, firstVisible } = require("./guide-core");
 
@@ -195,6 +195,44 @@ class RewardUploadGuide extends GuideCore {
    */
   _uploadFailed() {
     return !!firstVisible(SEL.failed);
+  }
+
+  /**
+   * Back, on a beat reporting a failed upload: rewind to the "+ New" beat so the
+   * user can start the upload again, instead of dropping out to the Step 3 card
+   * the way Back does everywhere else in this walkthrough.
+   *
+   * It is the one beat with somewhere better to go. The card only repeats "open
+   * the workspace and upload a file", which is what they were trying to do, and
+   * getting back here from there means walking the whole walkthrough again.
+   *
+   * Three things have to be undone for the reconcile to land on "new": the
+   * progress window has to go (its rows ARE the failure, and while it is up
+   * resolveSub reports "uploading"), the landed-upload latch has to clear, and
+   * the "read this" beat has to stay behind us. Pinned meanwhile, because the
+   * window does not close in the same tick — see _pinReady.
+   *
+   * @returns {boolean} true when it handled the Back; false leaves the
+   *   orchestrator's exit-to-card in charge, as on every other beat.
+   */
+  back() {
+    if (!this._uploadFailed()) return false;
+    this._uploaded = false;
+    this._nextPressed = true;
+    this._pin("new");
+    if (typeof this._ui?.closeUploadProgress === "function") {
+      this._ui.closeUploadProgress();
+    }
+    return true;
+  }
+
+  /** The pinned "new" is ready once the progress window has actually gone and
+   *  the pill is on screen. Without this the pin would release on the very next
+   *  reconcile, while that window is still up, and resolveSub would report
+   *  "uploading" again — straight back to the failure the user just left. */
+  _pinReady() {
+    if (this._pinned !== "new") return true;
+    return !this._uploadPending() && !!firstVisible(SEL.newCtrl);
   }
 
   _resolveSub() {
