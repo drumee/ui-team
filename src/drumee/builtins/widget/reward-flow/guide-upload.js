@@ -20,9 +20,10 @@
  * workspace away in the same frame the first file landed in it — the user never
  * saw the thing the whole walkthrough was for.
  *
- * Back exits the walkthrough to the Step 3 card and leaves the workspace open.
- * Deliberately simpler than Step 1's step-back, which drives the desk's addmenu
- * part through the orchestrator: the equivalent here means reaching into
+ * Every beat offers Back, and it does the same thing on all five: exits the
+ * walkthrough to the Step 3 card, workspace left open. Deliberately simpler than
+ * Step 1's step-back, which walks its sub-steps in reverse by driving the desk's
+ * addmenu part through the orchestrator: the equivalent here means reaching into
  * window_folder's `new-ctrl` part, and there is nothing destructive to undo.
  * The orchestrator does that directly in its `reward-back` case and never
  * consults back(), so this guide just inherits GuideCore's, which returns false.
@@ -197,19 +198,20 @@ class RewardUploadGuide extends GuideCore {
   }
 
   _coachFor(sub) {
-    // Once files are in flight there is nothing to go back TO: Back exits to the
-    // Step 3 card, which asks the user to upload something they have already
-    // uploaded. Same reasoning as Step 1's perm phase, which drops Back once the
-    // workspace exists.
-    const done = sub === "uploading" || sub === "files";
     // The last beat, with the batch still going up — the sub-step that
     // spotlights the progress window instead of the panel (see _targetEl).
     const pending = sub === "files" && this._uploadPending();
     return {
       text: tooltipFor(sub),
-      // Back is offered up to the picker — until then it exits to the Step 3
-      // card, which is a truthful place to land: nothing has been created yet.
-      showBack: !done,
+      // EVERY beat offers Back. It exits the walkthrough to the Step 3 card
+      // with the workspace left open (the orchestrator's reward-back), which is
+      // a way out of all five — including the two that used to withhold it
+      // because the upload had already happened by then. Nothing about those
+      // beats is undone by leaving: the files stay uploaded, the card offers
+      // "Open workspace" again, and re-entering restarts the walkthrough from
+      // the top. A beat the user cannot leave is worse than one that lands them
+      // somewhere slightly ahead of themselves.
+      showBack: true,
       // Beats that ask the user to READ need an explicit advance; every other
       // sub-step is released by the user doing the real action. "files" is the
       // last one, so its Next ends the walkthrough (see onNext).
