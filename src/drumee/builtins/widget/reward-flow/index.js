@@ -1521,7 +1521,7 @@ class __reward_flow extends LetcBox {
    */
   _openDropGuard() {
     this._dropGuardOpen = true;
-    this._markRootDrop(true);
+    this._markRootDrop(true, { lift: true });
     this.ensurePart("drop-modal").then((p) => {
       if (!p) return;
       // Feed first, then flag open — the modal opts its own pointer events back
@@ -1549,18 +1549,35 @@ class __reward_flow extends LetcBox {
     });
   }
 
-  /** Flag the flow ROOT while the in-root guard is up — the z-index lift is
-   *  keyed off `__root[data-drop]` (the lift has to sit on the root: it owns
-   *  the flow's stacking context, so no z-index on the host inside it can
-   *  escape the wrapper-modal above). The skeleton's root box is fed as a child
-   *  of our element; falling back to the element itself keeps this working if
-   *  it is ever the root, since the rule matches on the class either way. */
-  _markRootDrop(on) {
+  /**
+   * Flag the flow ROOT while a "Don't drop now" guard is up.
+   *
+   * `data-drop` turns the flow's own dim off, because the guard's backdrop is
+   * now supplying one and two of them are not one colour (see the skin). Both
+   * guards set it — the one in our own root and the one fed into the
+   * wrapper-modal.
+   *
+   * `lift` additionally raises the root, and ONLY the in-root guard asks for it:
+   * that guard renders inside our stacking context, so it cannot climb over the
+   * wrapper-modal it is guarding on its own. The other guard IS in that
+   * wrapper-modal, so lifting the root there would put the flow's own card over
+   * the modal asking about it.
+   *
+   * The skeleton's root box is fed as a child of our element; falling back to
+   * the element itself keeps this working if it is ever the root, since the
+   * rules match on the class either way.
+   */
+  _markRootDrop(on, { lift = false } = {}) {
     const root =
       this.el?.querySelector?.(`.${this.fig.family}__root`) || this.el;
     if (!root?.dataset) return;
-    if (on) root.dataset.drop = "1";
-    else delete root.dataset.drop;
+    if (on) {
+      root.dataset.drop = "1";
+      if (lift) root.dataset.dropLift = "1";
+      return;
+    }
+    delete root.dataset.drop;
+    delete root.dataset.dropLift;
   }
 
   /**
@@ -1766,6 +1783,10 @@ class __reward_flow extends LetcBox {
           return;
         }
         this._dropReturnStep = this._step;
+        // Mark the root WITHOUT lifting it: this guard lives in the
+        // wrapper-modal, already above us, and its backdrop is now the only dim
+        // (see _markRootDrop). Lifting here would raise the card over it.
+        this._markRootDrop(true);
         this._openModal(dropModal(this));
         return;
 
@@ -1779,6 +1800,8 @@ class __reward_flow extends LetcBox {
           return;
         }
         this._closeModal();
+        // The flow's own dim comes back with it.
+        this._markRootDrop(false);
         if (this._dropReturnStep) this._goto(this._dropReturnStep);
         this._dropReturnStep = null;
         return;

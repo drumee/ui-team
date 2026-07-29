@@ -114,16 +114,28 @@ $success-soft: rgba(46, 179, 122, 0.14);
     z-index: 1000000;
   }
 
-  // The in-root "Don't drop now" guard is up. It guards surfaces that live in
+  // The IN-ROOT "Don't drop now" guard is up. It guards surfaces that live in
   // the wrapper-modal (--z-index-modal, 100000) — the guided create-form, the
   // Step 2 invite popup — and the root owns the flow's stacking context, so no
   // z-index on the host inside it can climb over them on its own. Lift the root
   // for as long as the guard is showing; set imperatively by _markRootDrop, so
   // raising the guard never re-renders the flow. Last, so it wins over both
   // lifts above at equal specificity.
-  &__root[data-drop="1"] {
+  //
+  // Only the in-root guard lifts. The other one is fed into the wrapper-modal
+  // itself (see _openModal), which is already above us — lifting the root there
+  // would put the flow's own card OVER the modal asking about it.
+  &__root[data-drop-lift="1"] {
     z-index: 1000000;
   }
+
+  // …and while EITHER guard is up, it supplies the only dim: the modal's own
+  // backdrop. The flow's goes off, because two stacked dims are not one colour —
+  // everywhere the flow's does not reach reads a shade lighter than the rest,
+  // which is the hole its cutout punches and the card it paints behind. That is
+  // the two-tone overlay this replaces.
+  &__root[data-drop="1"] &__vignette { background-color: transparent; }
+  &__root[data-drop="1"] &__cutout { box-shadow: none; }
 
 
   &__vignette {
@@ -543,7 +555,13 @@ $success-soft: rgba(46, 179, 122, 0.14);
   // --normal-fg on that fill is unreadable in light theme and invisible in
   // dark. Hover/active deepen to --primary-50 (#433cc5) rather than lightening,
   // matching how the flow's own primary buttons move under the pointer.
-  &__root[data-on-panel="1"] &__btn--ghost {
+  // Scoped through __anchor, which wraps the STEP CARD and nothing else. The
+  // "Don't drop now" guard is a step card too (skeleton/modal reuses these very
+  // classes) and renders in this same root, so a rule on __btn--ghost alone
+  // turned its "Drop anyway" brand-purple as well — two primary-looking buttons
+  // side by side, on the one screen that needs its two answers to look
+  // different.
+  &__root[data-on-panel="1"] &__anchor &__btn--ghost {
     color: #fff;
     background-color: var(--primary-40);
     border: 1px solid var(--primary-40);
