@@ -805,10 +805,27 @@ class __player_document extends PlayerInteract {
     this._editorOrigin = new URL(url).origin;
     this._editorReady = false;
     this._onEditorMessage = (e) => {
-      if (this._editorReady) return;
+      // Origin check FIRST for every message we act on.
       if (this._editorOrigin && e.origin !== this._editorOrigin) return;
       const data = e.data;
       const ev = (data && (data.event || data.type)) || data;
+      // A share recipient clicked "Edit document" inside the read-only editor.
+      // OnlyOffice only offers that control when the marketplace euroffice template
+      // registers onRequestEditRights, which it does solely for a read-only SHARE
+      // request — so this can only arrive for a recipient who cannot already edit.
+      // Route it into the wired dmz-request-edit gate (→ wm → sharebox), which shows
+      // sign-up for an anonymous viewer and Request Access for a signed-in
+      // non-member. Checked BEFORE the _editorReady short-circuit below, because the
+      // click always happens after the document has finished loading.
+      //
+      // Emits 'dmz-request-download', NOT 'dmz-request-edit': the wm and the sharebox
+      // only handle the former ('dmz-request-edit' is handled by THIS class, for the
+      // header button whose uiHandler is the player). Triggering the edit name here
+      // would travel up to the wm, match no case, and silently do nothing.
+      if (ev === 'drumee:requestEditRights') {
+        return this.triggerHandlers({ service: 'dmz-request-download' });
+      }
+      if (this._editorReady) return;
       if (EDITOR_READY_EVENTS.has(ev)) {
         this._hideEditorProgress();
       }
