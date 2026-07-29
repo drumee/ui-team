@@ -24,9 +24,9 @@ function getOptions(ui, cycle = "monthly") {
   // the ladder reads as a ladder, with a sales CTA instead of checkout.
   const teamPrice = money(ui._catPrice("team", period));
   const businessPrice = money(
-    ui._catPrice("business", period) ?? (isYear ? 1089 : 99),
+    ui._catPrice("business", period) ?? (isYear ? 990 : 99),
   );
-  const sovereignPrice = money(isYear ? 5489 : 499);
+  const sovereignPrice = money(isYear ? 4990 : 499); // yearly = 10x monthly, two months free
 
   const perMonth = LOCALE.PER_MONTH;
   const perYear = LOCALE.PER_YEAR;

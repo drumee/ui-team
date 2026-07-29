@@ -777,11 +777,12 @@ class settings_billing extends LetcBox {
       return row && row.amount != null ? Number(row.amount) / 100 : null;
     };
     const planPrices = {
-      // Yearly is 11 x monthly (one month free). Only team has a Stripe price
-      // to read; business is sales-led, so its figure is the published one.
+      // Yearly is 10 x monthly — two months free (product decision
+      // 2026-07-29). The catalog above is the truth; these are offline
+      // fallbacks only.
       free: { monthly: 0, yearly: 0 },
-      team: { monthly: catPrice("team", "monthly") ?? 29, yearly: catPrice("team", "yearly") ?? 319 },
-      business: { monthly: catPrice("business", "monthly") ?? 99, yearly: catPrice("business", "yearly") ?? 1089 },
+      team: { monthly: catPrice("team", "monthly") ?? 29, yearly: catPrice("team", "yearly") ?? 290 },
+      business: { monthly: catPrice("business", "monthly") ?? 99, yearly: catPrice("business", "yearly") ?? 990 },
     };
 
     const basePrice = planPrices[selectedPlan]?.[billingCycle] || 0;
@@ -855,12 +856,12 @@ class settings_billing extends LetcBox {
     );
     if (row && row.amount != null) return Number(row.amount) / 100;
     // Offline fallbacks only — the catalog above is the truth. Yearly is
-    // 11 x monthly (one month free). Business is sales-led so it never has a
-    // Stripe row; its figure is the published one. The retired B2C entries
-    // (pro, pro_seat, storage_*) are gone with the plans themselves.
+    // 10 x monthly — two months free (product decision 2026-07-29). The
+    // retired B2C entries (pro, pro_seat, storage_*) are gone with the
+    // plans themselves.
     const fb = {
-      team: { month: 29, year: 319 },
-      business: { month: 99, year: 1089 },
+      team: { month: 29, year: 290 },
+      business: { month: 99, year: 990 },
     };
     return (fb[code] && fb[code][period]) || 0;
   }
@@ -929,20 +930,29 @@ class settings_billing extends LetcBox {
     const planName = String(plan || "").replace(/^./, (c) => c.toUpperCase());
     const subject = (LOCALE.MAIL_SALES_SUBJECT || "Drumee {0} plan enquiry")
       .format(planName);
+    // mailto: NEVER throws — a machine with no mail client just does
+    // nothing, silently (reported 2026-07-29: "click ... không mở email").
+    // The only observable difference is focus: a mail app taking over blurs
+    // this window. Fire the mailto, and if we still own the focus a moment
+    // later, show the address instead so the path is never a dead end.
+    let handed_off = false;
+    const onBlur = () => { handed_off = true; };
+    try { window.addEventListener("blur", onBlur, { once: true }); } catch (e) { /* old UA */ }
     try {
       window.location.assign(
         `mailto:${to}?subject=${encodeURIComponent(subject)}`
       );
-    } catch (e) {
-      // No mail handler registered: fall back to showing the address so the
-      // path is never a dead end.
+    } catch (e) { /* fall through to the address fallback */ }
+    setTimeout(() => {
+      try { window.removeEventListener("blur", onBlur); } catch (e) { /* noop */ }
+      if (handed_off || document.visibilityState === "hidden") return;
       if (Wm && Wm.alert) {
         Wm.alert(
           (LOCALE.CONTACT_SALES_VIA || "Please contact our sales team via {0}")
             .format(to)
         );
       }
-    }
+    }, 1200);
   }
 
   _orgIdentError(status) {

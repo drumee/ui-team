@@ -137,7 +137,7 @@ function checkout(ui) {
           }),
           pillBar(ui, [
             { content: LOCALE.MONTHLY, state: billingCycle === "monthly" ? 1 : 0, service: "select-billing-cycle", value: "monthly", radio: `checkout-billing-cycle-${ui._id}` },
-            { content: `${LOCALE.YEARLY} - `, discount: LOCALE.ONE_MONTH_FREE, state: billingCycle === "yearly" ? 1 : 0, service: "select-billing-cycle", value: "yearly", radio: `checkout-billing-cycle-${ui._id}` },
+            { content: `${LOCALE.YEARLY} - `, discount: LOCALE.TWO_MONTHS_FREE || "2 months free", state: billingCycle === "yearly" ? 1 : 0, service: "select-billing-cycle", value: "yearly", radio: `checkout-billing-cycle-${ui._id}` },
           ]),
         ],
       }),
