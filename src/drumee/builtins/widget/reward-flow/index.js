@@ -1213,6 +1213,7 @@ class __reward_flow extends LetcBox {
    *  it to show (seen) before treating its absence as "closed". */
   _awaitToastDismissed(done) {
     const advance = () => {
+      this._markInviteToast(false);
       // The observer fires DURING the toast's removal unwind; defer a microtask
       // so that collection reset settles before we touch the same host.
       Promise.resolve().then(() => {
@@ -1230,6 +1231,16 @@ class __reward_flow extends LetcBox {
     let seen = false;
     const check = () => {
       if (host.querySelector(TOAST)) {
+        if (!seen) {
+          // The confirmation has taken the popup's place in this host. Treat it
+          // exactly as the panel route treats its own: step the card aside (it
+          // restates a step just completed, and leaves a stray Back beside a
+          // card that has its own Close), and move the hole onto it — the popup
+          // it replaced is gone, so a hole left on that rect lights up empty
+          // space and dims the confirmation itself.
+          this._markInviteToast(true);
+          this._trackStepTarget();
+        }
         seen = true;
         return;
       }

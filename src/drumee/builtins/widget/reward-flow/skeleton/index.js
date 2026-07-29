@@ -210,10 +210,11 @@ module.exports = function (ui) {
       // being a card whose single control stands beside a full-height panel.
       "on-panel": panel ? "1" : "0",
       // …and step the card aside while the invite-sent confirmation stands in
-      // that panel's place: it is a card of its own, saying the same thing.
-      // Normally set imperatively (see _markInviteToast); declared here too so
-      // a re-render while it is up does not bring the card back.
-      toast: panel && ui.inviteToastOpen?.() ? "1" : "0",
+      // that surface's place — either route's, the panel's or the popup's: it is
+      // a card of its own, saying the same thing. Normally set imperatively (see
+      // _markInviteToast); declared here too so a re-render while it is up does
+      // not bring the card back.
+      toast: onModal && ui.inviteToastOpen?.() ? "1" : "0",
     },
     debug: __filename,
     kids: guiding
