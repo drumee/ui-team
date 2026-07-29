@@ -56,6 +56,7 @@ function initialize() {
   // its table from the locale entry bundle, not from here.
   const { createSafeObject } = require("@drumee/ui-essentials");
   window.LOCALE = createSafeObject(require("locale/en.json"));
+  require("locale/declare-lang")('en');
 
   let nodes = __parse();
   for (let node of nodes) {
