@@ -54,6 +54,10 @@ $accent: var(--primary-purple-40);
 $accent-strong: var(--primary-purple-50);
 $accent-soft: rgba(89, 80, 255, 0.12);
 $success-soft: rgba(46, 179, 122, 0.14);
+// The sold-out notice's chip. Neutral on purpose: nothing the user did went
+// wrong, so it must not read as an error, and it must not read as the success
+// green either — this is the one terminal screen that is NOT a win.
+$info-soft: rgba(120, 128, 148, 0.14);
 
 .reward-flow {
   // Every text element in the flow uses the app font. Set on the root so the
@@ -607,6 +611,15 @@ $success-soft: rgba(46, 179, 122, 0.14);
   // case the pipeline inlines it.
   &__chip--success &__chip-ico {
     color: var(--green-400, #10b667);
+  }
+
+  // The sold-out notice's chip — congrats' twin in shape, neutral in colour.
+  &__chip--info {
+    background-color: $info-soft;
+  }
+
+  &__chip--info &__chip-ico {
+    color: var(--grey-60, #6b7280);
   }
 
   // Branded drumee logo + wordmark header (drop modal) — same lockup as the
