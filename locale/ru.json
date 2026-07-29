@@ -798,6 +798,7 @@
   "DISMISS": "Скрыть",
   "MEETING_STARTED": "Встреча началась",
   "X_STARTED_MEETING_IN": "{0} начал(а) встречу в {1}",
+  "X_STARTED_A_MEETING": "{0} начал встречу",
   "IN_THE_MEETING": "На встрече",
   "NOT_IN_THE_MEETING": "Не на встрече",
   "INVITE_PEOPLE": "Пригласить участников",

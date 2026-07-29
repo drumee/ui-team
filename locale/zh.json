@@ -799,6 +799,7 @@
   "DISMISS": "忽略",
   "MEETING_STARTED": "会议已开始",
   "X_STARTED_MEETING_IN": "{0} 在 {1} 发起了会议",
+  "X_STARTED_A_MEETING": "{0} 发起了一场会议",
   "IN_THE_MEETING": "在会议中",
   "NOT_IN_THE_MEETING": "不在会议中",
   "INVITE_PEOPLE": "邀请他人",

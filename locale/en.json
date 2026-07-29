@@ -972,6 +972,7 @@
   "DISMISS": "Dismiss",
   "MEETING_STARTED": "Meeting Started",
   "X_STARTED_MEETING_IN": "{0} started a meeting in {1}",
+  "X_STARTED_A_MEETING": "{0} started a meeting",
   "SEE_CHAT_THREADS": "See chat threads",
   "CHAT_THREADS": "Chat threads",
   "VIEW_CHAT_THREADS": "View chat threads",

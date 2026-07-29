@@ -1239,6 +1239,7 @@
   "DISMISS": "Descartar",
   "MEETING_STARTED": "Reunión iniciada",
   "X_STARTED_MEETING_IN": "{0} inició una reunión en {1}",
+  "X_STARTED_A_MEETING": "{0} inició una reunión",
   "CALL": "Llamar",
   "IN_THE_MEETING": "En la reunión",
   "NOT_IN_THE_MEETING": "Fuera de la reunión",

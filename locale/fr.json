@@ -799,6 +799,7 @@
   "DISMISS": "Ignorer",
   "MEETING_STARTED": "Réunion démarrée",
   "X_STARTED_MEETING_IN": "{0} a démarré une réunion dans {1}",
+  "X_STARTED_A_MEETING": "{0} a démarré une réunion",
   "IN_THE_MEETING": "Dans la réunion",
   "NOT_IN_THE_MEETING": "Absent de la réunion",
   "INVITE_PEOPLE": "Inviter des personnes",

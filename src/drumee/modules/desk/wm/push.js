@@ -521,7 +521,10 @@ class __push_manager extends winman {
     // same shell the caller sees, rather than a detached window_meeting.
     const { details, uid, username } = data;
     const folderNid = data.nid || (details && (details.nid || details.actual_home_id)) || data.room_id;
-    const folderName = (details && details.filename) || data.filename || "";
+    // details is empty for a meeting (mfs_node_attr(room_id) runs against the
+    // hub's own db, but a hub node lives in its owner's db), so hub_name is the
+    // reliable source for the workspace name here.
+    const folderName = (details && details.filename) || data.filename || data.hub_name || "";
     const folderArea = (details && details.area) || data.area;
     const respawn = {
       kind: "window_folder",
@@ -535,9 +538,13 @@ class __push_manager extends winman {
     };
     let message = LOCALE.FIRST_PARTICIPANTS_ARRIVED;
     let title = `${LOCALE.MEETING}`;
-    if (username && details) {
-      message = LOCALE.X_HAS_JOINED_MEETING.format(username, details.filename);
-      title = `${LOCALE.MEETING} ${details.filename}`;
+    // Guarded on folderName, not on `details`: details is an empty object here
+    // for a meeting, which is truthy, so this used to interpolate "undefined"
+    // into both the toast and the browser notification title. With no name to
+    // show it keeps the generic default rather than naming the wrong thing.
+    if (username && folderName) {
+      message = LOCALE.X_HAS_JOINED_MEETING.format(username, folderName);
+      title = `${LOCALE.MEETING} ${folderName}`;
     }
     let peerData = {
       ...data,
