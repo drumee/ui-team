@@ -1292,6 +1292,10 @@ class desk_module extends LetcBox {
    * and it follows the user across devices instead of living in one browser.
    * `?reward=1` forces it for local testing; a forced run reports nothing, so
    * it stays repeatable and cannot mask a real campaign run.
+   *
+   * The campaign is capped at a fixed number of rewarded users. Once they are
+   * gone the gate answers `capped`, and the flow mounts to say so instead of
+   * walking anyone through a reward that no longer exists.
    */
   async _maybeStartRewardFlow() {
     const forced = !!Visitor.parseModuleArgs().reward;
@@ -1316,6 +1320,12 @@ class desk_module extends LetcBox {
     // on a shared browser, and clearing yp.reward_claim could not reset it.
     // reward.get_state reads that row, so a re-send genuinely re-arms someone.
     let step = "";
+    // All of the campaign's limited slots are taken. The flow still mounts —
+    // for its sold-out notice, not for a walkthrough. Being told is the point:
+    // these users were mailed a promise, so silence would read as the offer
+    // never having existed. Users who were never mailed stay ineligible and
+    // still see nothing.
+    let capped = false;
     if (!forced) {
       let state;
       try {
@@ -1343,8 +1353,11 @@ class desk_module extends LetcBox {
         this._rewardFlowInFlight = false;
         return;
       }
+      capped = !!state.capped;
       // Resume point, so a user who wandered off mid-walkthrough picks up where
-      // they were — on whatever device they come back on.
+      // they were — on whatever device they come back on. Empty for a capped
+      // run: the server blanks it, because a sold-out notice has nothing to
+      // resume into.
       step = state.step || "";
     }
     this.ensurePart("overlay").then((p) => {
@@ -1352,7 +1365,10 @@ class desk_module extends LetcBox {
       // latch itself off — without it the flow cannot tell a dev poking at the
       // screen from a real campaign arrival, and the docblock's "cannot mask a
       // real campaign run" promise above is not kept.
-      p.feed({ kind: "reward_flow", uiHandler: [this], forced: forced ? 1 : 0, step });
+      p.feed({
+        kind: "reward_flow", uiHandler: [this],
+        forced: forced ? 1 : 0, capped: capped ? 1 : 0, step,
+      });
       this._rewardFlow = p.children.last();
       this._rewardFlow.once(_e.destroy, () => {
         this._rewardFlow = null;

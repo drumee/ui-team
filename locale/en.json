@@ -2713,6 +2713,8 @@
   "REWARD_FLOW_CONGRATS_PRIZE": "5 years of unlimited storage!",
   "REWARD_FLOW_CONGRATS_TAIL": "Welcome to Drumee.",
   "REWARD_FLOW_GO_DASHBOARD": "Back to home",
+  "REWARD_FLOW_SOLDOUT_TITLE": "All spots are taken",
+  "REWARD_FLOW_SOLDOUT_DESC": "This reward was limited to 100 people, and they have all claimed it. Everything you set up is yours to keep.",
   "PLAN_SWITCH_CYCLE_TITLE": "Switch to {0} {1}",
   "PLAN_SWITCH_DEFER_MSG": "Switch to the {0} {1} plan for {2}{3}?\n\nYour current {0} {4} subscription will remain active until the end of its billing period. Your {1} subscription will be added and will begin immediately after your {4} plan expires.",
   "PLAN_SWITCH_NOW_MSG": "Switch to the {0} {1} plan for {2}{3}?\n\nYour current {4} {5} subscription will be canceled immediately, and any remaining subscription time will not be carried over. Your {0} {1} plan will start right away.",

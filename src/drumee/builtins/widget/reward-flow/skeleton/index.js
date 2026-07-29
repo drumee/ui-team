@@ -1,8 +1,12 @@
 /**
  * Reward flow root — Figma frames 3275:236194 / 3275:236307 / 3275:236397.
  *
- * A fixed full-viewport layer. It has three visual modes, keyed off the root's
+ * A fixed full-viewport layer. It has four visual modes, keyed off the root's
  * data-* attributes (see skin/index.scss):
+ *
+ *   terminal     (step "congrats" or "soldout")
+ *     the vignette alone, inert, with the closing modal fed into the shared
+ *     wrapper-modal on top of it.
  *
  *   active step  (data-waiting="0", data-guiding="0")
  *     the vignette is opaque and clickable — clicking it asks "Don't drop now"
@@ -20,7 +24,7 @@ const stepCard = require("./card");
 const { baseStep, isWaiting, isGuiding } = require("../steps");
 
 /**
- * Congrats keeps only the vignette. It must NOT stay guiding: that root sits at
+ * The two terminal screens keep only the vignette. It must NOT stay guiding: that root sits at
  * z-index 1000000 against the wrapper-modal's 100000, and its
  * pointer-events:auto __guide-scrim would grey the confirmation out and swallow
  * its button. A plain root puts the vignette under the modal and over
@@ -30,10 +34,14 @@ const { baseStep, isWaiting, isGuiding } = require("../steps");
  * wrapper-modal contributes no backdrop of its own here (index.js _openModal's
  * "bare" mode), so the dim stays one layer deep.
  *
- * No `service` on it: this is a terminal state, so a click should do nothing
- * rather than raise "Don't drop now".
+ * No `service` on it: these are terminal states, so a click should do nothing
+ * rather than raise "Don't drop now" — there is nothing left to drop out of.
+ * That matters more for the sold-out notice than for congrats: a capped run
+ * mounts straight into it, so the vignette is the FIRST thing the user meets,
+ * and offering to talk them out of leaving a flow they were never given would
+ * be nonsense.
  */
-function congratsRoot(pfx, step) {
+function terminalRoot(pfx, step) {
   return Skeletons.Box.Y({
     className: `${pfx}__root`,
     dataset: {
@@ -150,7 +158,7 @@ module.exports = function (ui) {
   const pfx = ui.fig.family;
   const step = ui.getStep();
 
-  if (step === "congrats") return congratsRoot(pfx, step);
+  if (step === "congrats" || step === "soldout") return terminalRoot(pfx, step);
 
   const waiting = isWaiting(step);
   // Both walkthroughs render the same way: cutout + scrim + coach, no card.

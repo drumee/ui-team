@@ -25,15 +25,23 @@
  *                    "uploading" and "files" beats (see guide-upload), and the
  *                    Next on the last one advances
  *   congrats       → modal, then the flow latches itself off for good
+ *   soldout        → modal, same shape as congrats: the campaign's limited
+ *                    slots are gone. Reached without a walkthrough at all when
+ *                    the gate says so (opt.capped), or from step 3 when the
+ *                    server refuses the claim (_completeStep3)
  *
  * A drop modal intercepts clicks on the vignette during the active steps.
  * The progress bar tracks the CURRENT step (step N lights N segments), so Back
  * rewinds it too.
  *
- * UI-only: nothing is granted server-side. See
- * docs/superpowers/specs/2026-07-23-reward-onboarding-flow-design.md
+ * The storage itself is still granted out of band, but WHETHER a user is owed
+ * it is the server's: yp.reward_claim holds the funnel, and the campaign is
+ * capped at a fixed number of rewarded users — the widget asks for a slot on
+ * completion and shows congrats or the sold-out notice depending on the answer.
+ * See docs/superpowers/specs/2026-07-23-reward-onboarding-flow-design.md and
+ * docs/superpowers/specs/2026-07-29-reward-slot-cap-design.md
  */
-const { dropModal, congratsModal } = require("./skeleton/modal");
+const { dropModal, congratsModal, soldOutModal } = require("./skeleton/modal");
 const { STEPS, baseStep, isWaiting } = require("./steps");
 const { readDescriptor } = require("./workspace");
 // The guides' own visibility test, reused for the popup's dropdowns: presence in
@@ -126,6 +134,13 @@ class __reward_flow extends LetcBox {
     // not latch itself off on exit — see _finish.
     this._forced = !!opt.forced;
 
+    // The campaign's limited slots are all taken (reward.get_state -> capped).
+    // The user was invited, so they are TOLD rather than shown nothing: this
+    // run has no walkthrough at all, just the sold-out notice. Checked before
+    // the resume below because a capped run has nothing to resume into — the
+    // server blanks `step` for exactly that reason.
+    this._capped = !!opt.capped;
+
     // Resume point comes from the SERVER (reward.get_state -> reward_claim.step,
     // fed in by the desk gate), so a user who wandered off mid-walkthrough picks
     // up where they were even on a different device. baseStep still strips both
@@ -133,7 +148,9 @@ class __reward_flow extends LetcBox {
     // handed off to is long gone, so every transient state resumes as its card
     // step.
     const stored = baseStep(opt.step);
-    this._step = STEPS.includes(stored) ? stored : "step1";
+    this._step = this._capped
+      ? "soldout"
+      : (STEPS.includes(stored) ? stored : "step1");
     this._modalOpen = false;
     this._inviteSucceeded = false;
     this._dropGuardOpen = false;
@@ -154,8 +171,11 @@ class __reward_flow extends LetcBox {
     // A descriptor left by an abandoned run must not pre-answer this one: only
     // trust it when RESUMING a run that already reached Step 2. A run that
     // starts at Step 1 will create its own workspace.
+    // …and a capped run never resumes anything, so it has no use for one either.
     this._workspace =
-      this._step !== "step1" ? readDescriptor(runGet(KEY_WORKSPACE)) : null;
+      !this._capped && this._step !== "step1"
+        ? readDescriptor(runGet(KEY_WORKSPACE))
+        : null;
     if (!this._workspace) runDel(KEY_WORKSPACE);
 
     this._onUploaded = () => this.onUploadDone();
@@ -181,6 +201,11 @@ class __reward_flow extends LetcBox {
     this._captureHost();
     this._portalToBody();
     this._render();
+    // A capped run is not a run: there is no walkthrough to start, so posting
+    // "started" would put a user who was never offered the flow into the middle
+    // of the funnel. It reports nothing until the notice is dismissed, which is
+    // what writes the terminal 'missed'.
+    if (this._capped) return this._openSoldOut();
     // Mounting IS the "started" signal: the desk only feeds this widget once
     // reward.get_state has said yes, so nothing else has to gate it.
     this._trackStep(baseStep(this._step));
@@ -544,31 +569,41 @@ class __reward_flow extends LetcBox {
   /**
    * Report progress to SERVICE.reward.track (server-team service/private/reward).
    *
-   * Fire-and-forget in every sense: the flow is a UI walkthrough and a tracking
-   * outage must never stall it or surface an error to the user, so failures are
-   * swallowed and nothing awaits the response. The server advances status/step
-   * by rank, so a duplicated or late post is harmless.
+   * Fire-and-forget for every caller but one: the flow is a UI walkthrough and
+   * a tracking outage must never stall it or surface an error to the user, so
+   * failures are swallowed. The server advances status/step by rank, so a
+   * duplicated or late post is harmless.
+   *
+   * The exception is "done", which is a REQUEST for one of the campaign's
+   * limited slots rather than a report — _completeStep3 waits on the answer.
+   * The promise is returned for it; every other caller ignores it and behaves
+   * exactly as before.
    *
    * Skipped for a ?reward=1 run: that one was forced past the eligibility gate
    * for testing, and it already declines to latch reward_flow_done for the same
    * reason (see _finish). Letting it write would put team accounts in the
-   * campaign funnel.
+   * campaign funnel — and would burn a real slot on a test.
    *
-   * @param {String} status "started" | "dropped" | "done"
+   * @param {String} status "started" | "dropped" | "done" | "missed"
    * @param {String} [step] defaults to the current card step
+   * @returns {Promise<Object|null>} the service's answer, or null when nothing
+   *   was posted or the post failed
    */
   _track(status, step) {
-    if (this._forced) return;
-    if (typeof SERVICE === "undefined" || !SERVICE.reward || !SERVICE.reward.track) return;
+    if (this._forced) return Promise.resolve(null);
+    if (typeof SERVICE === "undefined" || !SERVICE.reward || !SERVICE.reward.track) {
+      return Promise.resolve(null);
+    }
     try {
-      this.postService(SERVICE.reward.track, {
+      return this.postService(SERVICE.reward.track, {
         hub_id: Visitor.id,
         status,
         step: step || baseStep(this._step),
         campaign: CAMPAIGN,
-      }).catch(() => {});
+      }).catch(() => null);
     } catch (e) {
       /* tracking must never break the flow */
+      return Promise.resolve(null);
     }
   }
 
@@ -1338,28 +1373,81 @@ class __reward_flow extends LetcBox {
     this._completeStep3();
   }
 
-  /** Claim the reward and show congrats. The uploader is the OS file picker
-   *  plus a progress window, so nothing else is holding the shared modal host
-   *  by now. */
+  /** Claim the reward and show congrats — or the sold-out notice, when the last
+   *  slot went to someone else while this user was walking through the flow.
+   *  The uploader is the OS file picker plus a progress window, so nothing else
+   *  is holding the shared modal host by now. */
   _completeStep3() {
     this._stopUploadGuide();
     this._clearOpenTimer();
     // The upload IS the claim — report it before any of the teardown below, so
     // a failure while closing the workspace still leaves the funnel correct.
-    this._track("done", "step3");
+    //
+    // This one post is AWAITED, alone among the flow's tracking calls, because
+    // it is not a report: the campaign has a fixed number of slots and the
+    // server decides whether this user got one. Only it can — two people
+    // finishing together would both count 99 in their own browser.
+    const claim = this._track("done", "step3");
     // The reward is claimed, so hand the desk back at Home rather than leaving
-    // the user to dismiss a workspace the flow walked them into.
+    // the user to dismiss a workspace the flow walked them into. Done straight
+    // away rather than after the answer: the workspace has to close either way,
+    // and leaving it open for a round trip would show the user a desk mid-
+    // teardown.
     this._closeStep3Workspace();
-    this._step = "congrats";
-    // Re-render BEFORE opening the modal. stop() only clears the coach; the
-    // cutout and the full-viewport __guide-scrim stay in the markup, and a
-    // guiding root outranks the wrapper-modal that hosts congrats — leaving
-    // them would grey the confirmation out and eat its button. Deliberately not
-    // _goto: "congrats" must not be persisted as a resumable step.
-    this._render();
-    // "bare": the re-render above leaves a full-viewport vignette behind the
-    // modal, so the wrapper-modal must not stack a second dim on top of it.
-    if (!this._openModal(congratsModal(this), "bare")) this._finish();
+    claim.then((res) => {
+      if (this.isDestroyed?.()) return;
+      // No answer means no evidence, and the likeliest truth is that they won:
+      // the gate turned capped users away before Step 1, so a user who reached
+      // Step 3 was inside the cap when they started. Refusing on silence would
+      // take the reward off someone for OUR outage. If the post never landed
+      // the row is still 'started', so a later visit finds them capped at the
+      // gate and tells them then. A ?reward=1 run lands here too — it posts
+      // nothing, and a tester must still see congrats.
+      if (res && res.granted === 0) return this._openSoldOut();
+      this._step = "congrats";
+      // Re-render BEFORE opening the modal. stop() only clears the coach; the
+      // cutout and the full-viewport __guide-scrim stay in the markup, and a
+      // guiding root outranks the wrapper-modal that hosts congrats — leaving
+      // them would grey the confirmation out and eat its button. Deliberately
+      // not _goto: "congrats" must not be persisted as a resumable step.
+      this._render();
+      // "bare": the re-render above leaves a full-viewport vignette behind the
+      // modal, so the wrapper-modal must not stack a second dim on top of it.
+      if (!this._openModal(congratsModal(this), "bare")) this._finish();
+    });
+  }
+
+  /**
+   * Show the sold-out notice and stop.
+   *
+   * Both routes end here — the gate's capped verdict, which mounts straight
+   * into it, and a completion the server refused. It is congrats' twin in every
+   * mechanical respect (terminal step, same re-render-then-"bare"-modal dance,
+   * same fallback when there is no modal host), because it is the same kind of
+   * screen: the last thing the flow says before it leaves.
+   */
+  _openSoldOut() {
+    // A capped mount has already rendered this exact root — initialize set the
+    // step and onDomRefresh drew it — so only the step-3 route needs the
+    // re-render, and feeding an identical tree twice would just flicker.
+    if (this._step !== "soldout") {
+      this._step = "soldout";
+      this._render();
+    }
+    if (!this._openModal(soldOutModal(this), "bare")) this._dismissSoldOut();
+  }
+
+  /**
+   * The user acknowledged the notice — write the terminal 'missed' and go.
+   *
+   * This is what stops the screen coming back on every login: 'missed' is not
+   * in the set that opens the flow, so the next reward.get_state answers no.
+   * Posted on DISMISSAL rather than on display so a user who never saw it —
+   * closed the tab, no modal host — is still eligible to be told next time.
+   */
+  _dismissSoldOut() {
+    this._track("missed");
+    this._finish();
   }
 
   /** An invitation was sent successfully. The invite popup closes right after
@@ -1580,10 +1668,10 @@ class __reward_flow extends LetcBox {
   }
 
   /**
-   * Final exit — from "Drop anyway" or "Go to dashboard". Never shown again,
-   * "Never again" is now the SERVER's record, not a local latch: the terminal
-   * status written by _track (done / dropped) is what makes the next
-   * reward.get_state answer no. A ?reward=1 run reports nothing at all (see
+   * Final exit — from "Drop anyway", "Go to dashboard", or the sold-out
+   * notice's dismiss. Never shown again, "Never again" is now the SERVER's
+   * record, not a local latch: the terminal status written by _track (done /
+   * dropped / missed) is what makes the next reward.get_state answer no. A ?reward=1 run reports nothing at all (see
    * _track), so it still cannot mask a real campaign arrival for the tester.
    *
    * Only the two mid-run scratch keys are cleared here — they describe THIS
@@ -1813,6 +1901,11 @@ class __reward_flow extends LetcBox {
       case "reward-finish":
         // Congrats' "Go to dashboard" — onUploadDone already reported `done`.
         return this._finish();
+
+      case "reward-soldout-dismiss":
+        // The sold-out notice's only button. Unlike congrats it still has a
+        // post to make: 'missed' is what keeps the notice from reappearing.
+        return this._dismissSoldOut();
 
       default:
         if (super.onUiEvent) super.onUiEvent(cmd, args);
