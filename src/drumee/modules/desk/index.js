@@ -59,6 +59,18 @@ class desk_module extends LetcBox {
     // open the full-page billing screen without a direct module reference.
     this._openBillingPage = () => this.openBillingPage();
     RADIO_BROADCAST.on("desk:open-billing-page", this._openBillingPage);
+    // The topbar action cluster (Add new / Upload / Search / Invite) is
+    // hidden while the admin console or Settings page is up (state 0, set in
+    // _showPanel) and restored by loadHome/togglePanel — but OPENING A
+    // WORKSPACE from one of those pages goes through the window manager and
+    // touched neither, leaving the topbar dead over a file view (reported
+    // 2026-07-29: "top bar của workspace bị freeze"). The wm broadcasts
+    // workspace:focus whenever a hub window opens or takes focus — restore
+    // the cluster on it.
+    this._restoreTopbarActions = () => {
+      this.ensurePart("action-cluster").then((p) => p && p.setState(1));
+    };
+    RADIO_BROADCAST.on("workspace:focus", this._restoreTopbarActions);
     setTimeout(this.lazyClasses, 5000);
 
     // Chrome-style folder tabs in the desk topbar. One tab per open
