@@ -52,10 +52,16 @@ const CAMPAIGN = "free-storage";
 // a mount; anything past this is a failure, not slowness.
 const OPEN_WORKSPACE_TIMEOUT_MS = 4000;
 
-// How long the cutout keeps following its target after a step renders (see
+// How long the cutout keeps following its target once it is on screen (see
 // _trackStepTarget). Sized to outlast the slowest entrance a target has: the
 // permission panel's half-second slide, plus the tick before it starts.
 const TARGET_SETTLE_MS = 900;
+// How long it will WAIT for a target that has not appeared yet. The surfaces
+// Step 2 spotlights are lazily imported kinds — the invite popup goes through
+// Kind.waitFor("invite_popup") before it is even fed — so the chunk fetch can
+// outlast any settle window, and a fixed one left the hole collapsed and the
+// popup sitting in the dim.
+const TARGET_WAIT_MS = 8000;
 
 // The surfaces Step 2 hands the user to, all fed into the shared wrapper-modal:
 // the internal permission panel Step 1 ends on (onInvitePanel) OR the invite
@@ -592,19 +598,37 @@ class __reward_flow extends LetcBox {
    * So re-apply every frame for a window long enough to outlast that slide,
    * rather than trying to detect when it ends: transitionend does not fire for
    * a panel that was already in place, and the target can also be moved by
-   * something with no event at all. Cheap — one getBoundingClientRect per frame
-   * on one element, for under a second, and only while a step is settling.
+   * something with no event at all.
+   *
+   * It also has to WAIT for a target that is not there yet, which is the other
+   * half of the same problem: Step 2's surfaces are lazily imported kinds, so
+   * the popup can be fed a second or more after the click that asked for it.
+   * The settle window restarts the moment the target appears, so a late arrival
+   * is followed in exactly like a prompt one.
+   *
+   * Cheap either way — one getBoundingClientRect per frame on one element,
+   * bounded, and only while a step is still resolving where its hole goes.
    */
   _trackStepTarget() {
     if (typeof requestAnimationFrame !== "function") return;
     this._stopTargetTrack();
-    const until = Date.now() + TARGET_SETTLE_MS;
+    const giveUp = Date.now() + TARGET_WAIT_MS;
+    let until = Date.now() + TARGET_SETTLE_MS;
+    let arrived = false;
     const frame = () => {
       this._targetRaf = null;
       if (!this.el) return;
-      this._applyStepTarget();
-      if (Date.now() >= until) return;
-      this._targetRaf = requestAnimationFrame(frame);
+      const found = this._applyStepTarget();
+      const now = Date.now();
+      if (found && !arrived) {
+        // Just landed: give it a fresh settle window so its entrance is
+        // followed, however late it was.
+        arrived = true;
+        until = now + TARGET_SETTLE_MS;
+      }
+      if (now < until || (!found && now < giveUp)) {
+        this._targetRaf = requestAnimationFrame(frame);
+      }
     };
     this._targetRaf = requestAnimationFrame(frame);
   }
@@ -616,8 +640,14 @@ class __reward_flow extends LetcBox {
     this._targetRaf = null;
   }
 
+  /**
+   * @returns {Boolean} false while a target this step EXPECTS is not on screen,
+   *   so _trackStepTarget knows to keep waiting for it. True once the hole is
+   *   painted, and true for the steps that spotlight nothing at all — there is
+   *   nothing to wait for there.
+   */
   _applyStepTarget() {
-    if (!this.el) return;
+    if (!this.el) return true;
     // Resolved from the BASE step, so entering a waiting state keeps the cutout
     // and the card exactly where they were instead of snapping to the fallback.
     const base = baseStep(this._step);
@@ -665,7 +695,9 @@ class __reward_flow extends LetcBox {
 
     const spotEl = spot ? document.querySelector(spot) : null;
     const rect = spotEl?.getBoundingClientRect ? spotEl.getBoundingClientRect() : null;
+    let found = !spot;   // nothing expected → nothing to wait for
     if (rect && rect.width && rect.height) {
+      found = true;
       // Cutout hugs the target exactly, mirroring its own rounding.
       const radius =
         (typeof getComputedStyle === "function" && getComputedStyle(spotEl).borderRadius) || "";
@@ -689,12 +721,12 @@ class __reward_flow extends LetcBox {
     }
 
     // Centred states have no card placement to do.
-    if (notarget || !anchor?.style) return;
+    if (notarget || !anchor?.style) return found;
     // The card hangs under its topbar control — measured separately from the
     // hole above, which on a waiting Step 2 is somewhere else entirely.
     const ctrl = STEP_TARGET[base] && document.querySelector(STEP_TARGET[base]);
     const cr = ctrl?.getBoundingClientRect ? ctrl.getBoundingClientRect() : null;
-    if (!cr || !cr.width || !cr.height) return;
+    if (!cr || !cr.width || !cr.height) return found;
     const vw = (typeof window !== "undefined" && window.innerWidth) || 1280;
     const vh = (typeof window !== "undefined" && window.innerHeight) || 800;
     const M = 12;
@@ -708,6 +740,7 @@ class __reward_flow extends LetcBox {
     anchor.style.top = `${top}px`;
     anchor.style.right = "auto";
     anchor.style.transform = "translateX(-50%)";
+    return found;
   }
 
   /** Move to `step`, report it and re-render. The step is persisted SERVER-side
