@@ -36,6 +36,9 @@
 const { dropModal, congratsModal } = require("./skeleton/modal");
 const { STEPS, baseStep, isWaiting, isGuiding } = require("./steps");
 const { readDescriptor } = require("./workspace");
+// The guides' own visibility test, reused for the popup's dropdowns: presence in
+// the DOM is not enough for something that is `visibility: hidden` until opened.
+const { visible: onScreen } = require("./guide-core");
 // Mid-run scratch state — see storage.js. Eligibility and the resume point are
 // the server's (reward.get_state); only this one key is still local.
 const {
@@ -87,6 +90,18 @@ const PANEL_SURFACES = `${INVITE_PANEL}, ${INVITE_TOAST}`;
 // that replaces it on a successful send. This is what the cutout spotlights
 // while that route is waiting — see _applyStepTarget.
 const POPUP_SURFACES = `${INVITE_POPUP}, ${INVITE_TOAST}`;
+
+// The popup's own dropdowns, which are absolutely positioned and hang PAST its
+// bottom edge (see its skin: `position: absolute; top: calc(100% + 4px)` with a
+// max-height of its own). A hole cut to the popup alone leaves an open list half
+// lit and half in the dim, so the hole takes them in — see _unionOverflow. Each
+// is `visibility: hidden` until `data-state="1"`, so presence is not enough:
+// they have to be measured for real visibility.
+const POPUP_OVERFLOW = [
+  ".invite-popup__suggestions",            // email suggestions
+  ".invite-popup__workspace-suggestions",  // "Search workspace to add"
+  ".invite-popup__role-options",           // the per-row role menu
+].join(", ");
 
 // The live topbar control each step points at. The cutout is laid over it and
 // the card anchored beneath it (see _applyStepTarget).
@@ -613,10 +628,14 @@ class __reward_flow extends LetcBox {
    * measured before that lands on whatever has since slid into its place, which
    * is how Step 2 ended up cutting out the topbar's Upload button.
    *
-   * childList only, and coalesced to one measurement per frame: watching
-   * attributes would pick up the inline --cut-* writes this makes itself, and
-   * the desk mutates constantly (chat, badges), so the coalescing is what keeps
-   * a busy desk from turning into a measurement per mutation.
+   * Attributes are watched through a FILTER, never wholesale: the invite popup
+   * opens its dropdowns by flipping `data-state`, with no DOM change to see, so
+   * childList alone would miss the moment the hole needs to grow around one.
+   * `style` is deliberately not in the filter — that is where this writes the
+   * --cut-* vars itself, and watching it would feed straight back.
+   *
+   * Coalesced to one measurement per frame, because the desk mutates constantly
+   * (chat, badges) and this must not turn into a measurement per mutation.
    */
   _watchStepTarget() {
     if (this._targetObs || typeof MutationObserver === "undefined") return;
@@ -628,7 +647,12 @@ class __reward_flow extends LetcBox {
         if (this.el) this._applyStepTarget();
       });
     });
-    this._targetObs.observe(document.body, { childList: true, subtree: true });
+    this._targetObs.observe(document.body, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: ["data-state", "class", "data-visible"],
+    });
   }
 
   _stopStepTargetWatch() {
@@ -699,6 +723,36 @@ class __reward_flow extends LetcBox {
   }
 
   /**
+   * Grow `rect` to take in any of the invite popup's dropdowns that are open.
+   *
+   * Those lists are absolutely positioned and hang past the popup's bottom edge,
+   * so a hole cut to the popup alone leaves an open one half lit and half in the
+   * dim — which is what the "Search workspace to add" list looked like. The
+   * cutout has exactly one hole, so it takes the bounding box of the two: they
+   * are flush against each other, so the box stays tight.
+   *
+   * @param {DOMRect} rect the popup's own box
+   * @returns {{left, top, right, bottom, width, height}} the box to cut
+   */
+  _unionOverflow(rect) {
+    if (typeof document === "undefined" || !document.querySelectorAll) return rect;
+    let out = rect;
+    for (const el of document.querySelectorAll(POPUP_OVERFLOW)) {
+      // They exist in the DOM closed, merely `visibility: hidden` — which still
+      // measures — so ask whether they are really on screen.
+      if (!onScreen(el)) continue;
+      const r = el.getBoundingClientRect();
+      if (!r.width || !r.height) continue;
+      const left = Math.min(out.left, r.left);
+      const top = Math.min(out.top, r.top);
+      const right = Math.max(out.right, r.right);
+      const bottom = Math.max(out.bottom, r.bottom);
+      out = { left, top, right, bottom, width: right - left, height: bottom - top };
+    }
+    return out;
+  }
+
+  /**
    * @returns {Boolean} false while a target this step EXPECTS is not on screen,
    *   so _trackStepTarget knows to keep waiting for it. True once the hole is
    *   painted, and true for the steps that spotlight nothing at all — there is
@@ -756,13 +810,18 @@ class __reward_flow extends LetcBox {
     let found = !spot;   // nothing expected → nothing to wait for
     if (rect && rect.width && rect.height) {
       found = true;
+      // On the popup route the hole grows to take in whichever of its dropdowns
+      // is open, which hang outside its box.
+      const box = base === "step2" && waiting && !onPanel
+        ? this._unionOverflow(rect)
+        : rect;
       // Cutout hugs the target exactly, mirroring its own rounding.
       const radius =
         (typeof getComputedStyle === "function" && getComputedStyle(spotEl).borderRadius) || "";
-      this.el.style.setProperty("--cut-x", `${rect.left}px`);
-      this.el.style.setProperty("--cut-y", `${rect.top}px`);
-      this.el.style.setProperty("--cut-w", `${rect.width}px`);
-      this.el.style.setProperty("--cut-h", `${rect.height}px`);
+      this.el.style.setProperty("--cut-x", `${box.left}px`);
+      this.el.style.setProperty("--cut-y", `${box.top}px`);
+      this.el.style.setProperty("--cut-w", `${box.width}px`);
+      this.el.style.setProperty("--cut-h", `${box.height}px`);
       this.el.style.setProperty("--cut-radius", radius || "8px");
     } else if (spot) {
       // Expected a surface and it is not on screen yet (the popup opens a tick
