@@ -208,6 +208,14 @@ class __push_manager extends winman {
       if (w.el) w.el.dataset.revoked = 1;
     }
 
+    // Both decided BEFORE anything closes: goodbye() is animated, so
+    // isDestroyed() is still false right after the call and a post-hoc check
+    // would count a pane we just closed as surviving.
+    const closing = new Set(windows);
+    const workspaces = this._openWorkspaces();
+    const closingWorkspace = workspaces.some((w) => closing.has(w));
+    const keepsWorkspace = workspaces.some((w) => !closing.has(w));
+
     const by = data.removed_by || LOCALE.ADMINISTRATOR;
     return Wm.choice(
       LOCALE.WORKSPACE_ACCESS_REVOKED.format(by),
@@ -224,28 +232,34 @@ class __push_manager extends winman {
       // A sidebar-opened workspace also owns desk chrome (breadcrumb, sidebar
       // tree). Closing the last one has to hand the desk back to its
       // no-workspace state, exactly as the window's own close button does
-      // (window/folder onUiEvent "close").
-      if (!this._hasOpenWorkspace() && typeof Desk !== "undefined" && Desk) {
+      // (window/folder onUiEvent "close"). With another workspace tab still up,
+      // that tab keeps the chrome — resetting would clear ITS sidebar highlight.
+      if (
+        closingWorkspace &&
+        !keepsWorkspace &&
+        typeof Desk !== "undefined" &&
+        Desk
+      ) {
         Desk.onWorkspaceClosed();
       }
     });
   }
 
   /**
-   * Is any sidebar-opened (headless) workspace still on screen?
+   * Sidebar-opened (headless) workspace panes currently on screen.
    *
-   * @returns {boolean}
+   * @returns {Array}
    */
-  _hasOpenWorkspace() {
+  _openWorkspaces() {
     const layer = this.headlessLayer;
-    if (!layer || !layer.children) return false;
-    for (let c of Array.from(layer.children.toArray())) {
-      if (!c || c.isDestroyed()) continue;
-      if (c.mget(_a.kind) !== "window_folder") continue;
-      if (!c.mget(_a.headless)) continue;
-      return true;
-    }
-    return false;
+    if (!layer || !layer.children) return [];
+    return Array.from(layer.children.toArray()).filter(
+      (c) =>
+        c &&
+        !c.isDestroyed() &&
+        c.mget(_a.kind) === "window_folder" &&
+        c.mget(_a.headless),
+    );
   }
 
   /**
@@ -264,7 +278,9 @@ class __push_manager extends winman {
       for (let w of Array.from(layer.children.toArray())) {
         if (!w || typeof w.mget !== "function") continue;
         if (typeof w.isDestroyed === "function" && w.isDestroyed()) continue;
-        if (w.mget(_a.hub_id) !== hub_id) continue;
+        // Compared as strings, like _findWorkspaceWindow's loose match: a type
+        // mismatch here would silently leave the workspace unlocked.
+        if (`${w.mget(_a.hub_id)}` !== `${hub_id}`) continue;
         found.push(w);
       }
     }

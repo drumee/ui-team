@@ -1662,14 +1662,37 @@ class __tasks_panel extends LetcBox {
   }
 
   onWsMessage(svc, data, options = {}) {
-    // The WS dispatcher passes the service name as the FIRST arg — switch on it
-    // directly. Reading it from `options` (usually {}) silently skips every case
-    // and kills live task/comment refresh (framework-invariants.md §7).
-    switch (svc) {
+    // Server-side pushes built with `payload(data, { service })` reach the
+    // browser as a `live.update` envelope whose FIRST arg is that envelope name
+    // — the real service travels in `options.service` (router/push/index.js sets
+    // `payload.service = "live.update"` when the sender left it unset). Switching
+    // on the first arg alone matched nothing, so no peer's change ever refreshed
+    // this panel. Read options.service first and keep the first arg as the
+    // fallback for senders that do label the frame themselves.
+    const service = (options && options.service) || svc;
+    // A user in several workspaces hears every workspace's pushes on the same
+    // socket. Task rows carry no hub_id, so this only filters the payloads that
+    // do name one (e.g. the workspace-wide unassign announcement) — it can't
+    // silence a legitimate task event.
+    if (data && data.hub_id && `${data.hub_id}` !== `${this._hubId}`) {
+      if (super.onWsMessage) super.onWsMessage(svc, data, options);
+      return;
+    }
+    switch (service) {
+      case SERVICE.task.update_assignee:
+        // Assignees changed — the workspace member list may have changed with
+        // them (hub.delete_contributor unassigns the member it removes and
+        // announces it on this service), so re-read it too or the pickers keep
+        // offering somebody who is no longer here.
+        Promise.all([
+          this._loadTasks(),
+          this._loadActivity(),
+          this._loadMembers(),
+        ]).then(() => this._render());
+        return;
       case SERVICE.task.create:
       case SERVICE.task.update:
       case SERVICE.task.update_status:
-      case SERVICE.task.update_assignee:
       case SERVICE.task.delete:
       case SERVICE.task.link_label:
       case SERVICE.task.unlink_label:
@@ -1897,9 +1920,20 @@ class __tasks_panel extends LetcBox {
         hub_id: this._hubId,
         type: "all",
       });
-      this._members = Array.isArray(rows) ? rows : [];
+      // Never trade a good roster for a bad answer. This runs again mid-session
+      // (a peer's assignee change re-reads it), and a transient failure used to
+      // blank the list — which would now also strip every assignee off the
+      // board, since getKnownAssignees resolves against it. A live workspace
+      // always has at least the viewer in it, so an empty answer is either the
+      // first load or a failure; in both cases keeping what we had is correct.
+      if (Array.isArray(rows) && rows.length) {
+        this._members = rows;
+        this._membersLoaded = true;
+      } else if (!this._membersLoaded) {
+        this._members = Array.isArray(rows) ? rows : [];
+      }
     } catch (err) {
-      this._members = [];
+      if (!this._membersLoaded) this._members = [];
     }
   }
 
@@ -2468,11 +2502,9 @@ class __tasks_panel extends LetcBox {
           duration_on: !!task.start_date,
           status: task.status || "todo",
           priority: task.priority || "medium",
-          assignees: Array.isArray(task.assignee_uids)
-            ? task.assignee_uids.slice()
-            : task.assignee_uid
-              ? [task.assignee_uid]
-              : [],
+          // Ex-members are dropped here too: the draft is what Update posts
+          // back, so a stale uid would otherwise be re-asserted on save.
+          assignees: this.getKnownAssignees(task).slice(),
           labels: Array.isArray(task.label_ids) ? task.label_ids.slice() : [],
           // Files picked but not yet uploaded/linked — _commitDetail processes
           // these (upload missing nids, then link_file) on Update.
@@ -5038,6 +5070,35 @@ class __tasks_panel extends LetcBox {
   }
   getMember(uid) {
     return this._members.find((m) => m.id === uid || m.uid === uid) || null;
+  }
+
+  /**
+   * A task's assignees, minus anybody who is no longer a member of this
+   * workspace.
+   *
+   * Removing a member now clears their assignments server-side
+   * (hub.delete_contributor), but rows written before that fix are still out
+   * there, and a uid with no member behind it has no name, avatar or initials to
+   * render — the chip fell back to printing the raw uid, which read as a
+   * mangled name. Treat such a uid as gone so the task reads as unassigned.
+   *
+   * Passing the uids straight through while the member list is unknown (fetch
+   * still in flight or failed) keeps a transient failure from blanking every
+   * assignee on the board.
+   *
+   * @param {Object|Array} taskOrUids task row, or a uid array
+   * @returns {Array} uids that still resolve to a member
+   */
+  getKnownAssignees(taskOrUids) {
+    const uids = Array.isArray(taskOrUids)
+      ? taskOrUids
+      : Array.isArray(taskOrUids && taskOrUids.assignee_uids)
+        ? taskOrUids.assignee_uids
+        : taskOrUids && taskOrUids.assignee_uid
+          ? [taskOrUids.assignee_uid]
+          : [];
+    if (!this._membersLoaded) return uids;
+    return uids.filter((uid) => !!this.getMember(uid));
   }
 
   getFilterUids() {
