@@ -24,6 +24,23 @@ function _dmzShareWithoutChat() {
   return !!(r && typeof r.isDmz === "function" && r.isDmz() && r._dmzShareCanChat === false);
 }
 
+// True in a DMZ share view: the sharebox itself, OR a NESTED window/folder opened
+// from a share (dmz/wm getWindowPreset pins the share token onto every window it
+// launches, at every nesting level, so the token is the reliable marker one or more
+// layers deep). Same expression the chatPanel/fileThreadPanel posting gates below
+// already use — deliberately NOT uiRouter.isDmz(), which reads bootstrap().area: the
+// env served on the share host carries no top-level `area` (only hub.area), so that
+// test is always false and would silently never fire. A normal desk folder window
+// has no share token, so desk/team/sharebox windows are unaffected — the Meeting tab
+// is already gated on this very signal (`meeting: !ui.mget(_a.token)`).
+function _inDmzShare(ui) {
+  if (!ui || !ui.fig) return false;
+  if (ui.fig.family === "dmz-sharebox") return true;
+  // Defensive: a throw here would take down the whole tab bar render.
+  return ui.fig.family === "window-folder" &&
+         typeof ui.mget === "function" && !!ui.mget(_a.token);
+}
+
 export function breadcrumbs(ui, opt) {
   return Skeletons.Wrapper.X({
     debug: __filename,
@@ -96,6 +113,33 @@ export function tabBar(ui, opt = {}) {
     chat_tab = "";
   }
 
+  let task_tab = folderTab({
+    ico: "app-task",
+    label: LOCALE.TASK || "Tasks",
+    service: "tab-task",
+    state: 0,
+    tab: _a.task,
+  });
+  let task_label = Skeletons.Button.Label({
+    className: `${cnRoot}-item ${ui.fig.family}__tab-bar-item`,
+    label: LOCALE.TASK,
+    ico: "list",
+    service: "tab-task",
+    state: 0,
+    dataset: { tab: _a.task },
+    uiHandler: [ui],
+  });
+
+  // A shared link carries files (and optionally a conversation) — never a task
+  // board, and the DMZ mounts no task panel: dmzSplitBody only ever builds the
+  // files + conversation panels while the skin hides BOTH for data-view="task",
+  // so the tab opened a blank body. Drop it in every share view, at every folder
+  // depth. Desk/team/sharebox windows keep it (_inDmzShare is false there).
+  if (_inDmzShare(ui)) {
+    task_label = "";
+    task_tab = "";
+  }
+
   const kids = useEmojiTabs
     ? [
         folderTab({
@@ -106,13 +150,7 @@ export function tabBar(ui, opt = {}) {
           tab: "files",
         }),
         chat_tab,
-        folderTab({
-          ico: "app-task",
-          label: LOCALE.TASK || "Tasks",
-          service: "tab-task",
-          state: 0,
-          tab: _a.task,
-        }),
+        task_tab,
       ]
     : [
         Skeletons.Button.Label({
@@ -125,15 +163,7 @@ export function tabBar(ui, opt = {}) {
           uiHandler: [ui],
         }),
         chat_label,
-        Skeletons.Button.Label({
-          className: `${cnRoot}-item ${ui.fig.family}__tab-bar-item`,
-          label: LOCALE.TASK,
-          ico: "list",
-          service: "tab-task",
-          state: 0,
-          dataset: { tab: _a.task },
-          uiHandler: [ui],
-        }),
+        task_label,
       ];
 
   if (opt.meeting) {
