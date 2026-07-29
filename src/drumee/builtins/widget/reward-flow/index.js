@@ -52,6 +52,11 @@ const CAMPAIGN = "free-storage";
 // a mount; anything past this is a failure, not slowness.
 const OPEN_WORKSPACE_TIMEOUT_MS = 4000;
 
+// How long the cutout keeps following its target after a step renders (see
+// _trackStepTarget). Sized to outlast the slowest entrance a target has: the
+// permission panel's half-second slide, plus the tick before it starts.
+const TARGET_SETTLE_MS = 900;
+
 // The surfaces Step 2 hands the user to, all fed into the shared wrapper-modal:
 // the internal permission panel Step 1 ends on (onInvitePanel) OR the invite
 // popup, then the invite-sent confirmation that REPLACES either of them on a
@@ -217,6 +222,7 @@ class __reward_flow extends LetcBox {
     this._clearOpenTimer();
     this._stopToastWatch();
     this._stopPanelWatch();
+    this._stopTargetTrack();
     this._restoreHost();
     this._watchInviteBackdrop(false);
     this._markInviteOverlay(false);
@@ -561,11 +567,49 @@ class __reward_flow extends LetcBox {
    */
   _positionStepTarget() {
     if (typeof document === "undefined" || typeof requestAnimationFrame !== "function") return;
-    requestAnimationFrame(() => this._applyStepTarget());
+    this._trackStepTarget();
     if (!this._onStepResize && typeof window !== "undefined") {
       this._onStepResize = () => this._applyStepTarget();
       window.addEventListener("resize", this._onStepResize, { passive: true });
     }
+  }
+
+  /**
+   * Follow the cutout's target while it is still moving.
+   *
+   * One measurement is not enough for a target that animates into place. The
+   * permission panel is the case that proved it: it starts fully off-screen and
+   * slides in over half a second (`right: -360px` → `0` with `transition: right
+   * .5s`, see its skin). A CSS transition emits no DOM mutations, so nothing
+   * asks us to measure again — the hole keeps whatever position the panel had
+   * on the one frame we looked, which left half the panel dimmed and a bright
+   * band of desk beside it.
+   *
+   * So re-apply every frame for a window long enough to outlast that slide,
+   * rather than trying to detect when it ends: transitionend does not fire for
+   * a panel that was already in place, and the target can also be moved by
+   * something with no event at all. Cheap — one getBoundingClientRect per frame
+   * on one element, for under a second, and only while a step is settling.
+   */
+  _trackStepTarget() {
+    if (typeof requestAnimationFrame !== "function") return;
+    this._stopTargetTrack();
+    const until = Date.now() + TARGET_SETTLE_MS;
+    const frame = () => {
+      this._targetRaf = null;
+      if (!this.el) return;
+      this._applyStepTarget();
+      if (Date.now() >= until) return;
+      this._targetRaf = requestAnimationFrame(frame);
+    };
+    this._targetRaf = requestAnimationFrame(frame);
+  }
+
+  _stopTargetTrack() {
+    if (this._targetRaf && typeof cancelAnimationFrame === "function") {
+      cancelAnimationFrame(this._targetRaf);
+    }
+    this._targetRaf = null;
   }
 
   _applyStepTarget() {
@@ -883,12 +927,12 @@ class __reward_flow extends LetcBox {
       // The panel gone with something still up means the invite-sent
       // confirmation has replaced it — step aside for it.
       this._markInviteToast(!document.querySelector(INVITE_PANEL));
-      // Still there — keep the hole on it. The panel mounts, animates in and
-      // reflows as the permissions list grows, and the cutout is the only
-      // reason it reads clear of the dim, so a stale rect is a visible hole in
-      // the wrong place. Safe against feedback: the cutout is driven through
-      // inline CSS vars and this watches childList only, not attributes.
-      this._applyStepTarget();
+      // Still there — keep the hole on it. TRACK rather than measure once: this
+      // fires when the panel is inserted, which is before it has slid into
+      // place, and again when the confirmation replaces it. Both arrive
+      // animating. Safe against feedback: the cutout is driven through inline
+      // CSS vars and this watches childList only, not attributes.
+      this._trackStepTarget();
     });
     this._panelObs.observe(document.body, { childList: true, subtree: true });
   }
