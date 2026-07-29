@@ -30,8 +30,13 @@
 
   &__actions-cluster {
     &[data-state="0"] {
-      opacity: 0.45;
-      pointer-events: none;
+      // Hidden outright, not dimmed (2026-07-29): the admin console and
+      // Settings pages set state 0 on this cluster, and a greyed-out,
+      // dead Add new / Search / Invite row read as broken UI. None of
+      // those actions mean anything on those pages, so remove them.
+      // !important — Box children are forced display:flex inline by the
+      // framework.
+      display: none !important;
     }
   }
 
