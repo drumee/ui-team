@@ -88,9 +88,10 @@ class GuideCore {
   _targetEl() { return null; }
   /** `hole: false` dims the whole viewport instead of cutting the target out —
    *  for a sub-step that only asks the user to READ, where keeping a control
-   *  operable would be meaningless.
+   *  operable would be meaningless. `nextDisabled` shows the Next but refuses
+   *  it, for a beat that is not ready to be left yet.
    *  @returns {{text: string, showBack: boolean, showNext: boolean,
-   *             hole?: boolean}} */
+   *             nextDisabled?: boolean, hole?: boolean}} */
   _coachFor() { return { text: "", showBack: true, showNext: false }; }
   /** @returns {boolean} true = handled, false = the orchestrator should exit. */
   back() { return false; }
@@ -283,8 +284,11 @@ class GuideCore {
       : [this._sub, "nohole"])
       // The coach text can change without the target moving — Step 1's perm
       // phase swaps wording when a confirmation lands on top — so it is part of
-      // the signature either way.
-      .concat(coach.text)
+      // the signature either way. So can its Next: Step 3's last beat keeps that
+      // button disabled until the batch finishes uploading, and nothing else
+      // about the paint changes when it finally enables, so without this the
+      // dedup would leave it disabled for good.
+      .concat(coach.text, coach.nextDisabled ? "off" : "on")
       .join(":");
     if (sig === this._lastSig) return;
     this._lastSig = sig;
@@ -297,6 +301,7 @@ class GuideCore {
       text: coach.text,
       showBack: coach.showBack,
       showNext: coach.showNext,
+      nextDisabled: coach.nextDisabled,
       hole,
       radius,
     });

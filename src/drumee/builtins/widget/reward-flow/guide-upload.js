@@ -136,6 +136,9 @@ class RewardUploadGuide extends GuideCore {
    */
   onNext() {
     if (this._sub === "files") {
+      // Files still going up — the button is rendered disabled (see _coachFor),
+      // so this only catches an activation that reached us another way.
+      if (this._uploadPending()) return;
       if (typeof this._ui?.onUploadGuideComplete === "function") {
         this._ui.onUploadGuideComplete();
       }
@@ -151,6 +154,17 @@ class RewardUploadGuide extends GuideCore {
   onUploaded() {
     this._uploaded = true;
     this._reconcile();
+  }
+
+  /**
+   * Files are still going up.
+   *
+   * `_e.uploaded` fires per FILE, so the "files" beat is reached as soon as the
+   * first one lands — with the rest still in flight and the progress window
+   * still on screen. That window going is what says the batch is done.
+   */
+  _uploadPending() {
+    return !!firstVisible(SEL.uploader);
   }
 
   _resolveSub() {
@@ -191,6 +205,11 @@ class RewardUploadGuide extends GuideCore {
       // sub-step is released by the user doing the real action. "files" is the
       // last one, so its Next ends the walkthrough (see onNext).
       showNext: sub === "folder" || sub === "files",
+      // …but not yet, while the batch is still uploading. Ending the walkthrough
+      // there tears the workspace down (congrats closes it) with files still
+      // going up into it. Shown-but-disabled rather than hidden, so the way out
+      // stays where the user is already looking for it.
+      nextDisabled: sub === "files" && this._uploadPending(),
       // "folder" alone dims the whole screen and shows only the coach: cutting
       // the workspace window out would leave it fully lit, and since it fills
       // the viewport nothing would be dimmed at all. Every other beat — the

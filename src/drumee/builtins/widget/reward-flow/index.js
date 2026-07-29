@@ -369,12 +369,13 @@ class __reward_flow extends LetcBox {
    *
    * @param {DOMRect} rect
    * @param {{text: string, showBack?: boolean, showNext?: boolean,
-   *          radius?: string}} opt
+   *          nextDisabled?: boolean, radius?: string}} opt
    */
   spotlight(rect, opt = {}) {
     if (!this.el) return;
     const {
-      text, showBack = true, showNext = false, radius = "", hole = true,
+      text, showBack = true, showNext = false, nextDisabled = false,
+      radius = "", hole = true,
     } = opt;
     const cx = rect.left + rect.width / 2;
     if (hole === false) {
@@ -418,6 +419,7 @@ class __reward_flow extends LetcBox {
           side: anchor.side,
           showBack,
           showNext,
+          nextDisabled,
         }),
       );
     });
