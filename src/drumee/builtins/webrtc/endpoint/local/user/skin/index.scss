@@ -27,9 +27,16 @@
   }
 
   &__avatar {
+    // Overlay the tile, exactly like the remote tile does (endpoint/remote/user
+    // skin). As an IN-FLOW item of the center-aligned column `__main` it shared
+    // the main axis with its siblings (the presenter-screen element, which gains
+    // a box while sharing), so a 100%-tall avatar got pushed off-centre as soon
+    // as any sibling took height — your own avatar sat higher than everyone
+    // else's. inset:0 pins it to the tile so its content is always centred.
+    position: absolute;
+    inset: 0;
     height: 100%;
     width: 100%;
-    position: relative;
     z-index: 1;
     justify-content: center;
     align-content: center;
@@ -47,8 +54,10 @@
     }
 
     .user-profile__ui {
-      width: min(60cqmin, 200px);
-      height: min(60cqmin, 200px);
+      // Same circle as the remote tiles (was 200px): a bigger avatar for
+      // yourself than for everyone else read as a misaligned row of tiles.
+      width: min(60cqmin, 180px);
+      height: min(60cqmin, 180px);
       max-width: calc(100% - 24px);
       max-height: calc(100% - 64px);
       flex: none;
