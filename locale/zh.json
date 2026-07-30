@@ -1652,6 +1652,7 @@
   "FORMER_MEMBER": "前成员",
   "WORKSPACE_ACCESS_REVOKED": "您已无法访问此工作区，因为 {0} 已将您移除。",
   "WORKSPACE_ACCESS_REVOKED_TITLE": "工作区访问权限已移除",
+  "WORKSPACE_ACCESS_REVOKED_NAMED": "您已无法访问 {0}，因为 {1} 已将您移除。",
   "UNASSIGNED": "未分配",
   "LABELS": "标签",
   "NO_LABELS": "暂无标签",

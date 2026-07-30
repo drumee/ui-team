@@ -235,7 +235,7 @@ class __push_manager extends winman {
     });
 
     const by = data.removed_by || LOCALE.ADMINISTRATOR;
-    const workspace = data.name || data.filename || data.hubname || "";
+    const workspace = this._revokedWorkspaceName(hub_id, data);
     return Wm.info({
       kind: "window_info",
       mode: "bf",
@@ -254,6 +254,34 @@ class __push_manager extends winman {
     });
   }
 
+  /**
+   * Display name of the workspace we have just been removed from.
+   *
+   * The push carries one, but the server falls back to the hub id when the hub
+   * profile has no name, and an id in the notice reads as gibberish. Reject a
+   * name that IS the id, and ask the windows we are about to close instead —
+   * they were opened on that workspace and carry its real name. Answers "" when
+   * nothing usable turns up, which the notice phrases around.
+   *
+   * @param {string} hub_id
+   * @param {Object} data push payload
+   * @returns {string}
+   */
+  _revokedWorkspaceName(hub_id, data = {}) {
+    const pushed = data.name || data.hubname || "";
+    if (pushed && `${pushed}` !== `${hub_id}`) return `${pushed}`;
+    for (let w of this._windowsOnHub(hub_id)) {
+      if (!w || typeof w.mget !== "function") continue;
+      // `hub_name` only — the folder window keeps the WORKSPACE's name there
+      // (the breadcrumb sync writes it on every path row), while `filename` is
+      // whatever subfolder or file that window happens to be showing. Naming
+      // the wrong thing is worse than not naming it.
+      const n = w.mget("hub_name");
+      if (n && `${n}` !== `${hub_id}`) return `${n}`;
+    }
+    return "";
+  }
+
   _workspaceRevokedNoticeBody(ui, opt = {}) {
     const fig = ui.fig.family;
     const workspace = String(opt.workspace || "").trim();
@@ -262,9 +290,13 @@ class __push_manager extends winman {
     // the card would have shown the literal "WORKSPACE_ACCESS_REVOKED_TITLE".
     // The key is defined in every locale instead.
     const title = LOCALE.WORKSPACE_ACCESS_REVOKED_TITLE;
-    const message = LOCALE.WORKSPACE_ACCESS_REVOKED.format(
-      opt.by || LOCALE.ADMINISTRATOR,
-    );
+    const by = opt.by || LOCALE.ADMINISTRATOR;
+    // The workspace belongs INSIDE the sentence — on its own line it read as a
+    // stray label (and as a raw id whenever the name failed to resolve). When
+    // no name is available the unnamed wording still reads correctly.
+    const message = workspace
+      ? LOCALE.WORKSPACE_ACCESS_REVOKED_NAMED.format(workspace, by)
+      : LOCALE.WORKSPACE_ACCESS_REVOKED.format(by);
 
     return Skeletons.Box.Y({
       className: `${fig}__revoked`,
@@ -282,12 +314,6 @@ class __push_manager extends winman {
           className: `${fig}__revoked-title`,
           content: title,
         }),
-        workspace
-          ? Skeletons.Note({
-              className: `${fig}__revoked-workspace`,
-              content: workspace,
-            })
-          : null,
         Skeletons.Note({
           className: `${fig}__revoked-message`,
           content: message,

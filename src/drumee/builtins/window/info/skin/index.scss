@@ -369,24 +369,8 @@
     );
   }
 
-  .window-info__revoked-workspace {
-    max-width: 100%;
-    min-height: 30px;
-    padding: 5px 10px;
-    border-radius: var(--corner-radius-2, 8px);
-    background: var(--normal-bg-100);
-    border: 1px solid var(--border-default, rgba(0, 0, 0, 0.06));
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    @include drumee.typo(
-      $weight: 600,
-      $size: 13px,
-      $line: 18px,
-      $color: var(--normal-fg-10)
-    );
-  }
-
+  // The workspace name is part of the sentence below, not a chip of its own —
+  // standing alone it read as a stray label rather than a name.
   .window-info__revoked-message {
     width: 100%;
     margin: 0 0 2px;

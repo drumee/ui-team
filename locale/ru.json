@@ -1652,6 +1652,7 @@
   "FORMER_MEMBER": "Бывший участник",
   "WORKSPACE_ACCESS_REVOKED": "У вас больше нет доступа к этому рабочему пространству: {0} удалил(а) вас из него.",
   "WORKSPACE_ACCESS_REVOKED_TITLE": "Доступ к рабочему пространству отозван",
+  "WORKSPACE_ACCESS_REVOKED_NAMED": "У вас больше нет доступа к {0}: вас удалил(а) {1}.",
   "UNASSIGNED": "Не назначено",
   "LABELS": "Метки",
   "NO_LABELS": "Пока нет меток",

@@ -1667,6 +1667,7 @@
   "FORMER_MEMBER": "Former member",
   "WORKSPACE_ACCESS_REVOKED": "You can no longer access this workspace, for you have been removed by {0}.",
   "WORKSPACE_ACCESS_REVOKED_TITLE": "Workspace access removed",
+  "WORKSPACE_ACCESS_REVOKED_NAMED": "You can no longer access {0}, for you have been removed by {1}.",
   "UNASSIGNED": "Unassigned",
   "LABELS": "Labels",
   "NO_LABELS": "No labels yet",

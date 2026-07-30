@@ -1653,6 +1653,7 @@
   "FORMER_MEMBER": "Ancien membre",
   "WORKSPACE_ACCESS_REVOKED": "Vous n'avez plus accès à cet espace de travail, car {0} vous en a retiré.",
   "WORKSPACE_ACCESS_REVOKED_TITLE": "Accès à l'espace de travail retiré",
+  "WORKSPACE_ACCESS_REVOKED_NAMED": "Vous n'avez plus accès à {0}, car vous en avez été retiré par {1}.",
   "UNASSIGNED": "Non assigné",
   "LABELS": "Étiquettes",
   "NO_LABELS": "Aucune étiquette",
