@@ -556,8 +556,25 @@ class __migrate_gdrive_popup extends LetcBox {
     } catch (e) { /* noop */ }
   }
 
+  _installCancelDelegate() {
+    if (this._cancelDelegate || !this.el) return;
+    // pointerup, not click: the poll's re-feed can replace the button
+    // BETWEEN mousedown and mouseup, and the browser only fires click when
+    // both land on the SAME element — which is exactly why the button felt
+    // dead. pointerup always fires on whatever is under the pointer.
+    this._cancelDelegate = (e) => {
+      const btn = e.target && e.target.closest
+        && e.target.closest(`.${this.fig.family}__primary-btn--cancel-job`);
+      if (!btn || btn.dataset.disabled) return;
+      e.stopPropagation();
+      this._cancelJob();
+    };
+    this.el.addEventListener('pointerup', this._cancelDelegate, true);
+  }
+
   _startPolling() {
     this._stopPolling();
+    this._installCancelDelegate();
     const tick = async () => {
       if (!this._jobId) return;
       try {
@@ -566,13 +583,20 @@ class __migrate_gdrive_popup extends LetcBox {
           job_id: this._jobId,
         });
         if (!r) return;
+        const sig = [r.status, r.processed_files, r.total_files,
+          r.errors_count, r.current_filename].join('|');
+        const changed = sig !== this._lastPollSig;
+        this._lastPollSig = sig;
         this._jobSnap = r;
         this._trackFileLog(r);
         if (['done', 'failed', 'cancelled'].includes(r.status)) {
           this._stopPolling();
           this._state = r.status;
+          this._cancelRequested = 0;
         }
-        this._render();
+        // Re-feeding identical content every 2s replaced the Cancel button
+        // element for nothing, eating clicks. Only paint real changes.
+        if (changed) this._render();
       } catch (e) {
         this.warn('[migrate-gdrive] get_status failed', e);
       }
@@ -707,13 +731,20 @@ class __migrate_gdrive_popup extends LetcBox {
   }
 
   async _cancelJob() {
-    if (!this._jobId) return;
+    if (!this._jobId || this._cancelRequested) return;
+    // Immediate feedback: the button flips to "Cancelling…" on the next
+    // render (and every 2s poll re-render keeps it), so the click visibly
+    // took even though the worker needs a moment to notice the flag.
+    this._cancelRequested = 1;
+    this._render();
     try {
       await this.postService('google_drive.cancel', {
         hub_id: Visitor.id, job_id: this._jobId,
       });
     } catch (e) {
       this.warn('[migrate-gdrive] cancel failed', e);
+      this._cancelRequested = 0;
+      this._render();
     }
   }
 
