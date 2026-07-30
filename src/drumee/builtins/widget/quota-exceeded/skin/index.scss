@@ -12,14 +12,21 @@
     width: 100%;
   }
 
+  /* The HOST centres this — .window-manager__wrapper-modal[data-state="open"]
+     is a full-viewport flex container with align/justify center, and supplies
+     the backdrop via data-overlay="blur". So the card sets its own size and
+     lift and nothing else; positioning it here as well would fight the host. */
   &__card {
     align-items: center;
     text-align: center;
     gap: 12px;
     padding: 28px 24px;
+    width: 100%;
     max-width: 380px;
-    background: var(--surface, #fff);
+    background: var(--normal-bg, #fff);
     border-radius: 12px;
+    /* Reads as lifted off the blurred backdrop rather than pasted onto it. */
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
     font-family: var(--font-family, inherit);
 
     /* Inline: the host panel owns the surface, the width and the padding, so
@@ -35,6 +42,7 @@
       max-width: none;
       background: transparent;
       border-radius: 0;
+      box-shadow: none;
     }
   }
 
@@ -60,7 +68,7 @@
     width: 30px;
     height: 30px;
     flex: 0 0 30px;
-    color: var(--primary-600, #433cc5);
+    color: var(--primary-40, var(--primary-400));
     fill: currentColor;
   }
 
@@ -131,9 +139,15 @@
     color: var(--text-primary, #0b0a21);
     background: var(--surface-2, #f2f2f7);
 
+    /* --primary-40 as asked. It is NOT defined by @drumee/ui-styles, whose
+       scale runs 50, 100, 200 ... 950 with no 40 step, and an undefined custom
+       property with no fallback computes to rgba(0,0,0,0) — a transparent
+       button with white text on it. The fallback keeps the token as the
+       primary source (it wins the moment it is defined) while making sure the
+       button is visible today. Drop the fallback once --primary-40 exists. */
     &--primary {
-      background: var(--primary-600, #433cc5);
-      color: #fff;
+      background: var(--primary-40, var(--primary-400));
+      color: var(--white, #fff);
     }
   }
 

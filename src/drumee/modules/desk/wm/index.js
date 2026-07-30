@@ -248,6 +248,35 @@ class __window_manager extends push {
         used: opt.used,
         cap: opt.cap,
       });
+      // feed() alone does NOT make this a modal. The host is only a
+      // full-viewport centring flex container while data-state="open" (see
+      // wm/skin __wrapper-modal), and only paints a backdrop with
+      // data-overlay="blur". Without them the card rendered unpositioned in a
+      // plain white block with the desk fully visible behind it — which is
+      // exactly what it did. Same two lines reward-flow's _openModal sets.
+      if (p.el) {
+        p.el.dataset.state = "open";
+        p.el.dataset.overlay = "blur";
+      }
+    });
+  }
+
+  /**
+   * Take the quota card down.
+   *
+   * Clearing the content is NOT enough: with the tree gone but
+   * data-state="open" still set, the host stays a full-viewport invisible
+   * blocker over the desk and nothing is clickable. reward-flow hit this and
+   * documents it; the state has to come off with the content.
+   */
+  closeQuotaExceeded() {
+    return this.ensurePart("wrapper-modal").then((p) => {
+      if (!p) return;
+      if (p.clear) p.clear();
+      if (p.el) {
+        p.el.dataset.state = "";
+        p.el.dataset.overlay = "";
+      }
     });
   }
 

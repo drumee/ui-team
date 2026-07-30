@@ -41,7 +41,10 @@ class __quota_exceeded extends LetcBox {
     const service = (cmd && cmd.mget && cmd.mget("service")) || args.service;
     if (service === "quota-exceeded-close") {
       // Only meaningful in the modal host; inline never renders a Close.
-      Wm.ensurePart("wrapper-modal").then((p) => p && p.clear());
+      // Wm.closeQuotaExceeded, not a bare clear(): emptying the host while it
+      // still carries data-state="open" leaves a full-viewport invisible
+      // blocker over the desk.
+      if (typeof Wm !== "undefined" && Wm.closeQuotaExceeded) Wm.closeQuotaExceeded();
       return;
     }
     this.triggerHandlers(args);
