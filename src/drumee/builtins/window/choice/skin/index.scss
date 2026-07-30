@@ -1,196 +1,205 @@
-@use 'mixins/drumee';
+@use "mixins/drumee.scss";
+@use "skin/lib/button" as *;
 
+// Styled on window/info: same 500px card, drumee-logo header, left-aligned
+// 14/20 body text and right-aligned secondary/primary action row. Card chrome
+// (radius, border, shadow) comes from info's [data-variant="notice"] form, which
+// is its standalone-card look — but NOT that variant's position:fixed centering,
+// since choice is fed into Wm.__wrapperModal, which already positions it.
 .window-choice {
   &__ui {
-    background-color: var(--default-bg);
-    border-radius: var(--border-radius);
-    padding: 20px;
-    width: auto;
-    height: auto;
-    max-height: 100%;
+    // Info's card: fixed 500px that shrinks to fit, height following content.
+    // Replaces the old 490x300 minimum and the data-maxsize clamps.
+    width: 500px;
     max-width: 100%;
-    min-height: 300px;
-    min-width: 490px;
+    min-width: unset;
+    min-height: 0;
+    height: auto;
     overflow: hidden;
     position: absolute;
-    justify-content: flex-start;
-    align-items: center;
+    background-color: var(--normal-bg-90);
+    padding: 20px 24px 24px;
+    border-radius: var(--corner-radius-4, 16px);
+    border: 1px solid var(--border-default, rgba(0, 0, 0, 0.05));
+    box-shadow: 0 14px 42px rgba(11, 10, 33, 0.16);
 
-    &[data-type="confirm"] {
-      background-color: var(--default-bg);
-      border-radius: var(--border-radius);
-      padding: 20px;
-      width: auto;
-      height: auto;
-      max-height: 100%;
-      max-width: 100%;
-      min-height: 300px;
-      min-width: 490px;
-      overflow: hidden;
-      position: absolute;
-    }
-
-    &[data-maxsize="1"] {
-      max-height: 400px;
-      max-width: 600px;
-      background-color: var(--default-bg);
-
-    }
-
-    &[data-maxsize="0"] {
-      max-height: 400px;
-      max-width: 560px;
-      background-color: var(--default-bg);
-
+    &[data-device="mobile"] {
+      min-width: unset !important;
+      width: calc(100vw - 32px) !important;
+      max-width: 340px;
     }
   }
 
   &__main {
-    height: 100%;
     width: 100%;
+    min-height: 0;
+    padding: 0;
+    gap: 16px;
+  }
+
+  .gradient-start-badge {
+    stop-color: var(--primary-300);
+  }
+
+  .gradient-end-badge {
+    stop-color: var(--primary-500);
+  }
+
+  // ── Header: logo left, X close right ────────────────────────────────────────
+  &__header {
+    width: 100%;
+    padding: 0;
   }
 
   &__topbar {
-    height: 40px;
+    width: 100%;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: space-between;
+    position: relative;
     opacity: 1 !important;
-    width: 100%;
   }
 
-  &__body {
-    align-content: center;
-    flex: 1;
-    height: 100%;
-    justify-content: center;
-    padding: 0 10px;
-    width: 100%;
-  }
+  &__logo {
+    align-items: end;
+    gap: var(--spacer-2);
 
-  &-topbar {
-    &__container {
-      border-bottom: 1px solid transparent;
-      border-radius: var(--default-border-radius-top);
-      flex: 1;
+    &-ico {
+      width: 40px;
+      height: 40px;
+      color: var(--primary-50);
     }
 
-    &__control {
-      height: 100%;
-      position: absolute;
-      right: 0;
-
-      .icon {
-        color: var(--egrey-b6);
-        margin: 10px;
-        opacity: 0.5;
-      }
+    &-text {
+      font-weight: bold;
+      font-size: 24px;
+      // Explicit rather than inherited: this element has no coloured ancestor
+      // inside the card, so without this it falls back to black and is
+      // unreadable on the dark surface. (window/info leaves it inherited.)
+      color: var(--normal-fg);
     }
   }
 
-  &__title {
-    align-content: center;
-    justify-content: center;
-    text-align: center;
-    width: 100%;
-    @include drumee.typo($size: 16px, $line: 25px, $color: var(--default-text-color));
+  &__close {
+    width: 28px;
+    height: 28px;
+    padding: 4px;
+    flex-shrink: 0;
+    cursor: pointer;
+    color: var(--normal-fg-10);
+    margin-left: auto;
+    border-radius: 6px;
+    transition: background-color 120ms ease;
 
-    & .name {
-      top: 24px;
-      @include drumee.typo($size: 22px, $line: 26px, $color: var(--default-text-alert)); // $window-choice-default-title-color);
+    svg {
+      width: 18px;
+      height: 18px;
     }
+
+    &:hover {
+      background-color: rgba(0, 0, 0, 0.04);
+    }
+  }
+
+  // ── Message ─────────────────────────────────────────────────────────────────
+  &__container {
+    width: 100%;
+    height: auto;
+    min-height: 0;
+    justify-content: flex-start;
+    align-items: flex-start;
   }
 
   &__message {
-    //text-align: center;
-    justify-content: center;
-    padding: 31px 10px 5px; //5px 10px 5px 10px;
-    margin: 0 auto;
-    @include drumee.typo($weight: 300, $size: 16px, $line: 26px, $color: var(--default-text-color));
+    display: block;
+    width: 100%;
+    padding: 0;
+    margin: 0;
+    text-align: left;
+    word-wrap: break-word;
+    @include drumee.typo(
+      $weight: 400,
+      $size: 14px,
+      $line: 20px,
+      $color: var(--normal-fg)
+    );
 
-    &.trash {
-      width: 50px;
-      margin: 10px 0;
-      @include drumee.typo($weight: 300, $size: 16px, $line: 26px, $color: violet);
-    }
-
-    &.delete-team {
-      max-width: 450px;
-    }
-  }
-
-  @media (max-width: var(--medium-width)) {
-    &__message {
-      margin: 0 26px;
+    p {
+      text-align: left;
+      margin: 0;
     }
   }
+
+  // ── Action row ──────────────────────────────────────────────────────────────
+  @include common-button;
 
   &__buttons {
-    align-content: center;
-    height: 110px;
-    justify-content: center;
-    padding-top: 25px;
     width: 100%;
-    font-size: 16px;
-    line-height: 18px;
-
-    .button {
-      align-content: center;
-      align-items: center;
-      cursor: pointer;
-      height: 35px;
-      justify-content: center;
-      text-align: center;
-      width: 115px;
-      margin: 0 3%;
-    }
-
-    &.intro-popup .button {
-      height: 56px;
-      width: 200px;
-    }
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+    margin: 0;
   }
 
-  &__button.first {
-    border: 1px solid var(--btn-rollback-border);
-    color: var(--btn-rollback-text);
-    border-radius: var(--corner-radius-max);
+  &__button-main {
+    opacity: 1;
+    height: 36px;
+    width: auto;
+    min-width: 88px;
+    padding: 0 16px;
+    gap: var(--spacer-4);
+    border-radius: var(--corner-radius-2, 8px);
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    transition:
+      background-color 120ms ease,
+      border-color 120ms ease,
+      color 120ms ease;
+    @include drumee.typo($size: 14px, $line: 20px, $weight: 600);
 
-    &:hover {
-      border: 2px solid var(--primary-500);
-      color: var(--primary-500);
+    // Label span inherits the button's text colour (the shared common-button
+    // rules can otherwise leave it grey).
+    .window-choice__button.btn {
+      color: inherit;
     }
 
-    &.forbiden {
-      height: 32px; //35px;
-      margin-left: 0;
-      width: 90px;
+    &.secondary {
+      background-color: transparent !important;
+      border: 1px solid var(--neutral-300, rgba(0, 0, 0, 0.12));
+      color: var(--normal-fg-10);
+
+      &:hover {
+        background-color: var(--normal-bg-100) !important;
+      }
     }
 
+    &.primary {
+      background-color: var(--primary-50, #433cc5) !important;
+      border: 0;
+      color: #fff;
+
+      &:hover {
+        background-color: var(--primary-40, #5950ff) !important;
+      }
+    }
+  }
+}
+
+// Dark-mode override, mirroring window/info's: the base body colour resolves
+// through --normal-fg, but the close glyph and secondary label need the lighter
+// lavender so they stay legible on the dark card.
+html[data-theme="dark"] .window-choice {
+  &__message {
+    color: var(--normal-fg-10);
   }
 
-  &__button.normal {
-    background-color: var(--btn-commit-background);
-    border: 0px;
-    background-color: var(--primary-500);
-    color: var(--white);
-    border-radius: var(--corner-radius-max);
-
-    &:hover {
-      background-color: var(--primary-600);
-    }
-
-    &.large {
-      min-width: 115px;
-      padding: 0 10px;
-      width: auto;
-    }
+  &__close:hover {
+    background-color: rgba(255, 255, 255, 0.08);
   }
 
-  &__button.danger {
-    background-color: var(--btn-caution-background);
-    border: 0px;
-    color: var(--btn-caution-text);
-
-    &:hover {
-      background-color: var(--btn-caution-background-hover);
-    }
+  &__button-main.secondary {
+    border-color: rgba(255, 255, 255, 0.16);
+    color: var(--normal-fg-10);
   }
 }

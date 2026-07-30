@@ -58,10 +58,19 @@ class ___window_choice extends mfsInteract {
    */
   ask(message, questions) {
     this.el.dataset.state = _a.open;
+    this._questions = questions;
     this.feed(require('./skeleton')(this, message, questions));
     const a = new Promise((resolve, reject) => {
       this.once(_a.selection, (a, b) => {
-        let { choice, content } = this._choice.model.toJSON();
+        // The buttons come from the shared button() toolkit (see
+        // skeleton/footer.js), which forwards `value` but not an arbitrary
+        // `choice` field — so the 1-based index rides on `value`. `choice` stays
+        // as a fallback for any caller feeding its own button skeletons, and the
+        // label is read back off the questions list rather than the widget,
+        // whose text lives on an inner span.
+        const m = this._choice.model.toJSON();
+        const choice = Number(m.choice != null ? m.choice : m.value) || 0;
+        const content = (this._questions || [])[choice - 1];
         resolve({ choice, content })
         this.goodbye()
       })
