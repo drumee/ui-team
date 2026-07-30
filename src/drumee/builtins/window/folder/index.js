@@ -2023,6 +2023,19 @@ class __window_folder extends mfsInteract {
     return hub_id ? { hub_id } : {};
   }
 
+  // room.list answers with the raw stored-procedure result, and the server's
+  // row unwrapping collapses a SINGLE-row result set into a bare object — an
+  // array only when the range holds two or more meetings. Reading that object
+  // as "not a list" emptied the calendar, so deleting one of two meetings made
+  // the survivor vanish too, while the meeting (and its start-time reminder)
+  // stayed alive server-side: the toast still fired for a meeting no longer on
+  // screen. Normalize every shape to a list of rows here.
+  _asMeetingRows(rows) {
+    if (Array.isArray(rows)) return rows.filter((r) => r && r.id);
+    if (rows && typeof rows === "object" && rows.id) return [rows];
+    return [];
+  }
+
   // Fetch the hub's scheduled meetings for the visible range into this._meetings.
   // Resolves (never rejects) so callers can re-feed regardless.
   _fetchMeetings() {
@@ -2033,7 +2046,7 @@ class __window_folder extends mfsInteract {
     return Promise.resolve()
       .then(() => this.fetchService(svc, { stime, etime, ...this._meetingScope() }))
       .then((rows) => {
-        this._meetings = Array.isArray(rows) ? rows : [];
+        this._meetings = this._asMeetingRows(rows);
       })
       .catch(() => {
         this._meetings = this._meetings || [];
@@ -2565,6 +2578,16 @@ class __window_folder extends mfsInteract {
     if (el) el.textContent = txt || "";
   }
 
+  // Did a room.* call actually go through? A rejected call does NOT reject the
+  // promise here: a 4xx is swallowed by the window's onServerComplain and
+  // resolves as `undefined`, and a 200 carrying `error` resolves with the error
+  // payload. Both used to run the success branch, so a refused edit/delete
+  // (room.update / room.remove answer NOT_MEETING_OWNER to anyone but the
+  // organizer) closed the modal as if it had been saved or deleted.
+  _mmSucceeded(res) {
+    return !!res && typeof res === "object" && !res.error;
+  }
+
   submitMeetingModal() {
     if (this._mmSubmitting) return;
     const form = this._readMeetingForm();
@@ -2593,6 +2616,7 @@ class __window_folder extends mfsInteract {
     };
     const fail = () => {
       this._mmSubmitting = 0;
+      this._mmBanner(LOCALE.MEETING_SAVE_FAILED);
     };
 
     if (nid) {
@@ -2608,7 +2632,10 @@ class __window_folder extends mfsInteract {
         etime: form.etime,
         recur: form.recur,
         attendees: form.attendees,
-      }).then(() => {
+      }).then((res) => {
+        // Keep the dialog open on a refusal instead of reporting a save that
+        // never happened — the calendar would snap back on the next fetch.
+        if (!this._mmSucceeded(res)) return fail();
         this._upsertLocalMeeting(nid, form);
         done();
       }, fail);
@@ -2627,6 +2654,7 @@ class __window_folder extends mfsInteract {
       recur: form.recur,
     })
       .then((node) => {
+        if (!this._mmSucceeded(node)) return fail();
         createdNid = node && (node.id || node.nid);
         if (createdNid && form.attendees.length) {
           return this.fetchService((SERVICE.room && SERVICE.room.update) || "room.update", {
@@ -2638,6 +2666,10 @@ class __window_folder extends mfsInteract {
         }
       })
       .then(() => {
+        // book() refused: the first stage already reported it and cleared the
+        // submitting flag — don't close the dialog on top of that message.
+        // Anything else keeps the previous behaviour (close + refresh).
+        if (!this._mmSubmitting) return;
         if (createdNid) {
           this._upsertLocalMeeting(createdNid, form);
           // Jump the calendar to the new meeting's week so it's visible even if
@@ -2652,13 +2684,19 @@ class __window_folder extends mfsInteract {
   deleteMeetingModal() {
     const nid = this._mmEditNid;
     if (!nid) return this.closeMeetingModal();
+    const fail = () => this._mmBanner(LOCALE.MEETING_DELETE_FAILED);
     return this.postService((SERVICE.room && SERVICE.room.remove) || "room.remove", {
       nid,
       ...this._meetingScope(),
-    }).then(() => {
+    }).then((res) => {
+      // room.remove answers NOT_MEETING_OWNER to anyone but the organizer.
+      // Closing regardless announced a deletion that never happened — the
+      // meeting came back on the next fetch, and its start-time reminder still
+      // fired. Say so and keep the dialog open instead.
+      if (!this._mmSucceeded(res)) return fail();
       this.closeMeetingModal();
       this._refreshSchedule();
-    });
+    }, fail);
   }
 
   /**
