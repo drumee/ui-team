@@ -1906,7 +1906,26 @@ class __window_upload_progress extends __window_core {
 
     const total = this._bundleEntry.countSize(entries);
     if (typeof Visitor.diskFree === "function" && total > Visitor.diskFree()) {
-      Butler.say(LOCALE.QUOTA_EXCEEDED || "Not enough space for this upload");
+      // Was a Butler.say() toast, which said the upload was refused and then
+      // disappeared. This one stays until dismissed and carries the way out.
+      //
+      // The client-side pre-check, so the numbers are the client's: what the
+      // user is storing now and what their plan allows. `used` is left to the
+      // widget rather than guessed here — Visitor.diskFree() is remaining
+      // space, and subtracting it from the allowance to reconstruct "used"
+      // would produce a figure that quietly disagrees with the storage screen
+      // whenever the cached quota is stale.
+      const q = (Visitor.quota && Visitor.quota()) || {};
+      Wm.openQuotaExceeded({
+        limit: "storage",
+        used: typeof Visitor.diskUsed === "function" ? Visitor.diskUsed() : null,
+        cap: q.storage != null ? q.storage : q.disk,
+      });
+      // Take the progress window down with it. Nothing is going to upload, so
+      // leaving it behind stranded it at "Uploading 0 Files" — a live-looking
+      // panel reporting work that was refused before it began, sitting next to
+      // a card explaining the refusal.
+      this.cancelAll({ close: true });
       return;
     }
 
@@ -2489,6 +2508,26 @@ class __window_upload_progress extends __window_core {
 }
 
 __window_upload_progress.initClass();
+
+/**
+ * Cancel and dismiss the progress window because the server refused on quota.
+ *
+ * For callers that are not the window itself — media/core.js raises the
+ * quota-exceeded card from onServerComplain, and the uploads behind it are
+ * already doomed: every remaining one will be refused for the same reason.
+ * Leaving the panel up shows a progress bar for work that cannot finish.
+ *
+ * No-op when no window is open, so the caller never has to check.
+ */
+__window_upload_progress.dismissForQuota = function () {
+  if (typeof window === "undefined" || !window.Wm) return;
+  const open = window.Wm.getItemsByKind &&
+    window.Wm.getItemsByKind("window_upload_progress");
+  if (!open || !open.length) return;
+  for (const w of open) {
+    if (w && !w.isDestroyed() && w.cancelAll) w.cancelAll({ close: true });
+  }
+};
 
 // Cache promise to prevent multiple window creation (singleton pattern)
 let _pendingPromise = null;

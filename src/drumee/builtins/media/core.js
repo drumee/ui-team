@@ -2409,7 +2409,26 @@ class __media_core extends DrumeeMFS {
   onServerComplain(res) {
     this.warn("onServerComplain[2109]", res)
     if (res.error == "limit_exceeded") {
-      Wm.alert(LOCALE.QUOTA_EXCEEDED);
+      // Was Wm.alert(LOCALE.QUOTA_EXCEEDED): a bare "Your quota has been
+      // exceeded" with an OK button and nowhere to go. The card names the
+      // limit and, for anyone who can act on it, offers the billing screen.
+      // Figures come from the server's own refusal where it sent them, so the
+      // card states the numbers the SERVER measured rather than a client-side
+      // estimate that may disagree with the decision the user just hit.
+      Wm.openQuotaExceeded({
+        limit: "storage",
+        used: res.used,
+        cap: res.limit != null ? res.limit : res.storage,
+      });
+      // Every upload still queued behind this one will be refused for the same
+      // reason, so the progress window is reporting work that cannot finish.
+      // Required lazily: media/core is loaded on paths that never touch the
+      // uploader, and a top-level require would pull the whole window in.
+      try {
+        require("builtins/window/upload-progress").dismissForQuota();
+      } catch (e) {
+        /* uploader not loaded on this path — nothing to dismiss */
+      }
       this.goodbye();
     }
   }

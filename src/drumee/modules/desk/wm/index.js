@@ -222,6 +222,67 @@ class __window_manager extends push {
     });
   }
 
+  /**
+   * Show the quota-exceeded card in the shared modal.
+   *
+   * One helper so every limit reaches the user the same way. Before this each
+   * site raised its own bare alert, which is why the product could tell someone
+   * they were blocked in four different tones and never once offer the billing
+   * screen sitting in the sidebar.
+   *
+   * The widget decides its own copy from `limit`, and whether to show the
+   * upgrade button at all from canUpgradePlan() — callers pass what happened,
+   * never what to render.
+   *
+   * @param {Object} opt
+   * @param {String} opt.limit "storage" | "workspace" | "seat"
+   * @param {Number} [opt.used] bytes, storage only
+   * @param {Number} [opt.cap]  bytes, storage only
+   */
+  openQuotaExceeded(opt = {}) {
+    return this.ensurePart("wrapper-modal").then((p) => {
+      if (!p) return;
+      p.feed({
+        kind: "quota_exceeded",
+        limit: opt.limit || "storage",
+        used: opt.used,
+        cap: opt.cap,
+      });
+      // data-state="open" is what makes the host a full-viewport centring flex
+      // container (see wm/skin __wrapper-modal). feed() alone does not: without
+      // it the card renders unpositioned in a plain block with the desk behind.
+      //
+      // NO BACKDROP. data-overlay is cleared to "none" rather than left unset,
+      // because this host is SHARED — reward-flow and the create-folder dialog
+      // both open it with data-overlay="blur", and an attribute one of them
+      // left behind would dim the desk behind this card without anything here
+      // asking for it. Explicitly off, not merely not-on.
+      if (p.el) {
+        p.el.dataset.state = "open";
+        p.el.dataset.overlay = "none";
+      }
+    });
+  }
+
+  /**
+   * Take the quota card down.
+   *
+   * Clearing the content is NOT enough: with the tree gone but
+   * data-state="open" still set, the host stays a full-viewport invisible
+   * blocker over the desk and nothing is clickable. reward-flow hit this and
+   * documents it; the state has to come off with the content.
+   */
+  closeQuotaExceeded() {
+    return this.ensurePart("wrapper-modal").then((p) => {
+      if (!p) return;
+      if (p.clear) p.clear();
+      if (p.el) {
+        p.el.dataset.state = "";
+        p.el.dataset.overlay = "";
+      }
+    });
+  }
+
   openCreateFolderDialog() {
     this.ensurePart("wrapper-modal").then((p) => {
       p.feed(

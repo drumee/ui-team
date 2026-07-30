@@ -461,6 +461,9 @@ module.exports = {
   invite_popup: function () {
     return import("./builtins/widget/invite-popup/index");
   },
+  quota_exceeded: function () {
+    return import("./builtins/widget/quota-exceeded/index");
+  },
   widget_suggest_contact_item: function () {
     return import("./builtins/window/sharebox/widget/suggest-contact-item");
   },
