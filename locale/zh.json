@@ -2290,6 +2290,8 @@
   "ASK_ADMIN_LINK": "向组织所有者申请 →",
   "ADMIN_REQUEST_SENT": "您的申请已发送给组织所有者。",
   "ADMIN_REQUEST_NO_OWNER": "该组织没有可通知的所有者账号——请直接联系您的管理员。",
+  "ADMIN_REQUEST_SENDING": "正在发送请求…",
+  "ADMIN_REQUEST_SENT_SHORT": "请求已发送 ✓",
   "MIGRATE_GDRIVE_SOURCE_REVOKED": "Drumee 已无法访问所选的 Google Drive 文件夹。请恢复共享（或重新选择）后重试。",
   "MIGRATE_GDRIVE_ACCESS_REVOKED": "所选文件夹的 Google Drive 访问权限在迁移过程中被移除，迁移已停止。请恢复共享后重试。",
   "CYCLE_STARTS_ON": "您的{0}计费将于 {1} 开始",
