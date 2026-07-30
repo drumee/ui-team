@@ -502,6 +502,11 @@ module.exports = function (ui) {
     // by a later Google *login* writing a login-client token over the row).
     // "Try again" would re-fail immediately; the user must re-authorize Drive.
     const needsReconnect = isFailed && snap.failed_reason === 'NEEDS_RECONNECT';
+    // ACCESS_REVOKED = the folder's share was removed DURING the run; the
+    // worker's access sentinel stopped the job (2026-07-29). Distinct from
+    // NEEDS_RECONNECT: the OAuth grant is fine, only the item is gone —
+    // "Try again" is the right CTA once sharing is restored.
+    const accessRevoked = isFailed && snap.failed_reason === 'ACCESS_REVOKED';
     // Summary per Figma 1645:86388/86966: base sentence + errors fragment,
     // the fragment turning red when > 0.
     const summaryBase = (LOCALE.MIGRATE_GDRIVE_SUMMARY_BASE || 'Imported {0} files in {1} folders.')
@@ -659,7 +664,9 @@ module.exports = function (ui) {
             dataset: { kind: 'error' },
             content: needsReconnect
               ? (LOCALE.MIGRATE_GDRIVE_NEEDS_RECONNECT || 'Your Google Drive access expired. Connect again to continue.')
-              : String(snap.failed_reason),
+              : accessRevoked
+                ? (LOCALE.MIGRATE_GDRIVE_ACCESS_REVOKED || 'Google Drive access to the selected folder was removed during the migration, so it was stopped. Restore sharing and try again.')
+                : String(snap.failed_reason),
           }) : null,
           errorList,
           Skeletons.Box.X({

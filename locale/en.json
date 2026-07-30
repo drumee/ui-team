@@ -2729,5 +2729,7 @@
   "ADMIN_ACCESS_REQUIRED_DESC": "Your plan already includes the Admin Console, but it is limited to organization owners and workspace admins. Ask your organization owner to grant you admin rights.",
   "ASK_ADMIN_LINK": "Ask your organization owner →",
   "ADMIN_REQUEST_SENT": "Your request was sent to the organization owner.",
-  "ADMIN_REQUEST_NO_OWNER": "This organization has no owner account to notify — contact your administrator directly."
+  "ADMIN_REQUEST_NO_OWNER": "This organization has no owner account to notify — contact your administrator directly.",
+  "MIGRATE_GDRIVE_SOURCE_REVOKED": "Drumee no longer has access to the selected folder on Google Drive. Restore sharing (or pick it again), then retry.",
+  "MIGRATE_GDRIVE_ACCESS_REVOKED": "Google Drive access to the selected folder was removed during the migration, so it was stopped. Restore sharing and try again."
 }
