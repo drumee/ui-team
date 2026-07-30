@@ -2151,16 +2151,18 @@ class desk_module extends LetcBox {
 
       case "toggle-inbox":
       case "toggle-chat":
-        // Sidebar re-click on the active item keeps the layout open
-        // (openOnly) — closing goes through the panel's own close paths.
-        return this.togglePanel("chat_p2p", "chat-panel", true);
+        return this.togglePanel("chat_p2p", "chat-panel");
 
       case "toggle-contacts":
         RADIO_BROADCAST.trigger("breadcrumb:context", {
           filename: LOCALE.CONTACTS,
         });
-        return this.togglePanel("address_book", "chat-panel", true);
+        return this.togglePanel("address_book", "chat-panel");
 
+      // Product spec 2026-07-30 — sidebar click behaviour:
+      //   toggle    : notification bell, inbox/chat, contacts, trash
+      //   open-only : settings, billing (openBillingPage), admin console,
+      //               home (loadHome), user menu (fires toggle-settings)
       case "toggle-settings":
         RADIO_BROADCAST.trigger("breadcrumb:context", {
           filename: LOCALE.SETTINGS,
@@ -2199,11 +2201,6 @@ class desk_module extends LetcBox {
         RADIO_BROADCAST.trigger("breadcrumb:context", {
           filename: LOCALE.TRASH,
         });
-        return this.togglePanel("panel_trash", "trash-panel", true);
-
-      // The trash topbar X — the one caller that still needs the close
-      // half of the old toggle (the sidebar item above is open-only now).
-      case "close-trash":
         return this.togglePanel("panel_trash", "trash-panel");
 
       // Every billing entry point (sidebar "Upgrade plan", Settings "Manage
