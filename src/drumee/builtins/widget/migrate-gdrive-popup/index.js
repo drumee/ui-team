@@ -527,7 +527,14 @@ class __migrate_gdrive_popup extends LetcBox {
       });
     } catch (e) {
       this.warn('[migrate-gdrive] start_migration failed', e);
-      Wm.alert((e && (e.reason || e.error || e.message)) || (LOCALE.TRY_AGAIN || 'Try again'));
+      const raw = (e && (e.reason || e.error || e.message)) || '';
+      // The server pre-flights the source with the user's own token and
+      // refuses a start whose share was already revoked on Google's side —
+      // say that in words, not as a raw status code.
+      Wm.alert(/SOURCE_ACCESS_REVOKED/.test(raw)
+        ? (LOCALE.MIGRATE_GDRIVE_SOURCE_REVOKED
+          || 'Drumee no longer has access to the selected folder on Google Drive. Restore sharing (or pick it again), then retry.')
+        : raw || (LOCALE.TRY_AGAIN || 'Try again'));
       this._starting = 0;
       return;
     }

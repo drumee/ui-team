@@ -2290,5 +2290,7 @@
   "ADMIN_ACCESS_REQUIRED_DESC": "Tu plan ya incluye la consola de administración, pero está limitada a propietarios de la organización y administradores del espacio. Pide a tu propietario que te conceda permisos de administrador.",
   "ASK_ADMIN_LINK": "Pedir al propietario de la organización →",
   "ADMIN_REQUEST_SENT": "Tu solicitud fue enviada al propietario de la organización.",
-  "ADMIN_REQUEST_NO_OWNER": "Esta organización no tiene una cuenta de propietario a la que notificar — contacta directamente con tu administrador."
+  "ADMIN_REQUEST_NO_OWNER": "Esta organización no tiene una cuenta de propietario a la que notificar — contacta directamente con tu administrador.",
+  "MIGRATE_GDRIVE_SOURCE_REVOKED": "Drumee ya no tiene acceso a la carpeta seleccionada en Google Drive. Restablece el uso compartido (o selecciónala de nuevo) y vuelve a intentarlo.",
+  "MIGRATE_GDRIVE_ACCESS_REVOKED": "El acceso de Google Drive a la carpeta seleccionada se retiró durante la migración, por lo que se detuvo. Restablece el uso compartido y vuelve a intentarlo."
 }

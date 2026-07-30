@@ -2285,5 +2285,7 @@
   "ADMIN_ACCESS_REQUIRED_DESC": "您的套餐已包含管理控制台，但仅限组织所有者和工作区管理员使用。请联系您的组织所有者为您授予管理员权限。",
   "ASK_ADMIN_LINK": "向组织所有者申请 →",
   "ADMIN_REQUEST_SENT": "您的申请已发送给组织所有者。",
-  "ADMIN_REQUEST_NO_OWNER": "该组织没有可通知的所有者账号——请直接联系您的管理员。"
+  "ADMIN_REQUEST_NO_OWNER": "该组织没有可通知的所有者账号——请直接联系您的管理员。",
+  "MIGRATE_GDRIVE_SOURCE_REVOKED": "Drumee 已无法访问所选的 Google Drive 文件夹。请恢复共享（或重新选择）后重试。",
+  "MIGRATE_GDRIVE_ACCESS_REVOKED": "所选文件夹的 Google Drive 访问权限在迁移过程中被移除，迁移已停止。请恢复共享后重试。"
 }
