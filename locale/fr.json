@@ -1548,6 +1548,7 @@
   "TASK_TITLE": "Titre de la tâche",
   "DUE_DATE": "Date d'échéance",
   "DROP_TASKS_HERE": "Déposez les tâches ici",
+  "SELECT_DATE": "Sélectionnez la date",
   "SELECT_START_DATE": "Sélectionnez la date de début",
   "SELECT_END_DATE": "Sélectionnez la date de fin",
   "DURATION_DAY": "jour",

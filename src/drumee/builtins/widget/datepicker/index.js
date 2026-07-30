@@ -33,6 +33,9 @@ class __datepicker extends LetcBox {
     this._input.className = this.mget(_a.innerClass) || "";
     this._input.name = this.mget(_a.name);
     this._input.type = "text";
+    // flatpickr copies this onto its altInput, so an unset picker reads as
+    // "Select date" instead of an unexplained blank field.
+    this._input.placeholder = this.mget(_a.placeholder) || "";
     this.el.appendChild(this._input);
 
     const isRange = !!this.mget("ranges");
@@ -80,12 +83,20 @@ class __datepicker extends LetcBox {
             defaultDate: this.mget(_a.value) || [],
           }
         : {
-            // No explicit value → today, as a Date. It must NOT be a
-            // preformatted string: consumers override `dateFormat` via
-            // vendorOpt (e.g. "Y-m-d"), and flatpickr parses `defaultDate`
-            // with that format. A string in another format matches no token
-            // and silently falls back to Jan 1 of the current year.
-            defaultDate: this.mget(_a.value) || new Date(),
+            // A `value` that is present but empty means "start with nothing
+            // selected" — an unset field (a task with no due date, a
+            // recurrence with no end) must not silently adopt today the moment
+            // the picker mounts, because consumers read the input back as the
+            // user's choice. Only a caller that passes no `value` at all still
+            // gets today.
+            // When a value IS given it must NOT be a preformatted string in a
+            // foreign format: consumers override `dateFormat` via vendorOpt
+            // (e.g. "Y-m-d") and flatpickr parses `defaultDate` with that
+            // format — a mismatch matches no token and silently falls back to
+            // Jan 1 of the current year.
+            defaultDate: this.model.has(_a.value)
+              ? this.mget(_a.value) || null
+              : new Date(),
           }),
       ...this.mget(_a.vendorOpt),
     };

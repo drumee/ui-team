@@ -417,6 +417,10 @@ class __window_folder extends mfsInteract {
       clearTimeout(this._chatSearchTimer);
       this._chatSearchTimer = null;
     }
+    if (this._mmInviteeBlurTimer) {
+      clearTimeout(this._mmInviteeBlurTimer);
+      this._mmInviteeBlurTimer = null;
+    }
     this._stopAwaitMeetingReady();
     this._unbindThreadMenuOutside();
     this._unbindViewportReframe();
@@ -1572,7 +1576,10 @@ class __window_folder extends mfsInteract {
 
       // Fired by the invitee search Entry's `watch` on every keystroke.
       case "mm-invitee-typed":
-        return this._filterInvitees((args && args.value) || "");
+        return this._filterInvitees((args && args.value) || "", { open: true });
+
+      case "mm-toggle-invitee-list":
+        return this._toggleInviteeList();
 
       case "mm-add-invitee":
         return this._addInvitee(cmd);
@@ -2150,6 +2157,9 @@ class __window_folder extends mfsInteract {
           wrapper.el.setAttribute("data-variant", "meeting");
         }
         wrapper.feed(require("./skeleton/meeting-modal")(this, { meeting: prefill }));
+        // Focus/blur wiring for the invitee combobox (delegated on the wrapper,
+        // installed once — the wrapper element outlives each modal).
+        this._installInviteeFocus();
         // Re-run the free/busy check when the time changes, and once on open
         // (edit mode arrives with attendees + a time already set).
         const root = wrapper.el;
@@ -2188,6 +2198,10 @@ class __window_folder extends mfsInteract {
   }
 
   closeMeetingModal() {
+    if (this._mmInviteeBlurTimer) {
+      clearTimeout(this._mmInviteeBlurTimer);
+      this._mmInviteeBlurTimer = null;
+    }
     this._mmAttendees = [];
     this._mmRecur = { freq: "none", until: "" };
     this._mmEditNid = null;
@@ -2208,15 +2222,78 @@ class __window_folder extends mfsInteract {
     part.feed(require("./skeleton/meeting-modal").inviteesChips(this, pfx));
   }
 
-  // Live-filter the member pool by the typed query into the suggestions dropdown
-  // (empty query clears it).
-  _filterInvitees(query) {
+  // Feed the suggestions dropdown: an empty query now lists every member, so
+  // `opt.open` decides whether it is shown (focus / typing / caret). Omitted,
+  // the current open state is preserved — removing a chip must re-feed the rows
+  // without popping a list the user had dismissed.
+  _filterInvitees(query, opt = {}) {
     const part = this.getPart && this.getPart("mm-invitees-suggestions");
     if (!part) return;
     const pfx = `${this.fig.family}__meeting-modal`;
     const rows = require("./skeleton/meeting-modal").inviteesSuggestions(this, pfx, query);
+    const open =
+      opt.open != null
+        ? !!opt.open
+        : !!(part.el && part.el.dataset.open === "1");
     part.feed(rows);
-    if (part.el) part.el.dataset.open = rows.length ? 1 : 0;
+    if (part.el) part.el.dataset.open = open && rows.length ? 1 : 0;
+  }
+
+  // Caret click: same list as focusing the field, but also dismisses it.
+  _toggleInviteeList() {
+    const part = this.getPart && this.getPart("mm-invitees-suggestions");
+    const open = !!(part && part.el && part.el.dataset.open === "1");
+    if (this._mmInviteeBlurTimer) {
+      clearTimeout(this._mmInviteeBlurTimer);
+      this._mmInviteeBlurTimer = null;
+    }
+    const input = this._mmSearchInput();
+    if (open) {
+      if (input) input.blur();
+      if (part && part.el) part.el.dataset.open = 0;
+      if (part) part.feed([]);
+      return;
+    }
+    if (input) input.focus();
+    return this._filterInvitees(input ? input.value : "", { open: true });
+  }
+
+  // Focus opens the member list, blur closes it. Delegated on the dialog
+  // wrapper: the Entry builds its <input> lazily and rebuilds it on re-feed, so
+  // a listener bound to the input itself would be dropped. The close is
+  // deferred because clicking a suggestion row blurs the input first.
+  _installInviteeFocus() {
+    const root = this.dialogWrapper && this.dialogWrapper.el;
+    if (!root || this._mmInviteeFocusInstalled) return;
+    this._mmInviteeFocusInstalled = true;
+
+    const isSearchInput = (t) =>
+      t && t.matches && t.matches('[name="mm-invitee-search"]');
+
+    root.addEventListener("focusin", (e) => {
+      if (!isSearchInput(e.target)) return;
+      if (this._mmInviteeBlurTimer) {
+        clearTimeout(this._mmInviteeBlurTimer);
+        this._mmInviteeBlurTimer = null;
+      }
+      this._filterInvitees(e.target.value || "", { open: true });
+    });
+
+    root.addEventListener("focusout", (e) => {
+      if (!isSearchInput(e.target)) return;
+      if (this._mmInviteeBlurTimer) clearTimeout(this._mmInviteeBlurTimer);
+      this._mmInviteeBlurTimer = setTimeout(() => {
+        this._mmInviteeBlurTimer = null;
+        const active =
+          typeof document !== "undefined" ? document.activeElement : null;
+        // _addInvitee refocuses the field for the next pick — keep it open.
+        if (isSearchInput(active)) return;
+        const part = this.getPart && this.getPart("mm-invitees-suggestions");
+        if (!part) return;
+        part.feed([]);
+        if (part.el) part.el.dataset.open = 0;
+      }, 200);
+    });
   }
 
   _mmSearchInput() {
@@ -2295,7 +2372,8 @@ class __window_folder extends mfsInteract {
         // away instead of having to click back into it.
         search.focus();
       }
-      this._filterInvitees("");
+      // Field keeps focus, so keep the list open on the remaining members.
+      this._filterInvitees("", { open: true });
       this._reFeedInviteeChips();
       this._checkAvailability();
     });

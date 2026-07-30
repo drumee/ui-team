@@ -1560,6 +1560,7 @@
   "ADD_TASK": "+ Add",
   "TASK_TITLE": "Task title",
   "DUE_DATE": "Due date",
+  "SELECT_DATE": "Select date",
   "SELECT_START_DATE": "Select start date",
   "SELECT_END_DATE": "Select end date",
   "DURATION_DAY": "day",

@@ -175,6 +175,7 @@ class __tasks_panel extends LetcBox {
     this._closeCommentReactionsPicker();
     if (this._fileSearchTimer) clearTimeout(this._fileSearchTimer);
     if (this._fileSearchBlurTimer) clearTimeout(this._fileSearchBlurTimer);
+    if (this._assigneeBlurTimer) clearTimeout(this._assigneeBlurTimer);
     if (this._filterKwTimer) clearTimeout(this._filterKwTimer);
     if (
       this._mediaDroppableInstalled &&
@@ -1041,15 +1042,26 @@ class __tasks_panel extends LetcBox {
         }
         return;
 
-      case "create-assignee":
+      case "create-assignee": {
         if (this._createDefaults) {
+          const before = (this._createDefaults.assignees || []).length;
           this._createDefaults.assignees = this._toggleAssignee(
             this._createDefaults.assignees,
             trigger.mget("memberUid"),
           );
-          this._applyAssigneeChange("create-assignee", this._createDefaults.assignees);
+          this._applyAssigneeChange(
+            "create-assignee",
+            this._createDefaults.assignees,
+            this._createDefaults.assignees.length > before,
+          );
         }
         return;
+      }
+
+      case "toggle-assignee-list":
+        return this._toggleAssigneeList(
+          trigger.mget("assigneeScope") === "detail" ? "detail" : "create",
+        );
 
       case "create-toggle-label":
         if (this._createDefaults) {
@@ -1169,15 +1181,21 @@ class __tasks_panel extends LetcBox {
         }
         return;
 
-      case "set-assignee":
+      case "set-assignee": {
         if (this._detailDraft) {
+          const before = (this._detailDraft.assignees || []).length;
           this._detailDraft.assignees = this._toggleAssignee(
             this._detailDraft.assignees,
             trigger.mget("memberUid"),
           );
-          this._applyAssigneeChange("detail-assignee", this._detailDraft.assignees);
+          this._applyAssigneeChange(
+            "detail-assignee",
+            this._detailDraft.assignees,
+            this._detailDraft.assignees.length > before,
+          );
         }
         return;
+      }
 
       case "toggle-task-label":
         if (this._detailDraft) {
@@ -1536,19 +1554,94 @@ class __tasks_panel extends LetcBox {
     if (super.onPartReady) super.onPartReady(child, pn);
   }
 
-  // Assignee type-to-search (create modal + detail panel). Delegated on the
-  // persistent root because the Entry is rebuilt on every _render(), so a
-  // per-input listener would be lost.
+  // Assignee combobox (create modal + detail panel): focusing the field lists
+  // every member, typing filters that list. Delegated on the persistent root
+  // because the Entry is rebuilt on every _render(), so a per-input listener
+  // would be lost.
   _installAssigneeSearch() {
     if (this._assigneeSearchInstalled || !this.el) return;
     this._assigneeSearchInstalled = true;
+
+    // Entry renders an inner <input name="assignee-search-{scope}">.
+    const isSearchInput = (t) =>
+      t && t.matches && t.matches('input[name^="assignee-search-"]');
+    const scopeOf = (t) => String(t.name || "").slice("assignee-search-".length);
+
     this.el.addEventListener("input", (e) => {
-      const t = e.target;
-      // Entry renders an inner <input name="assignee-search-{scope}">.
-      if (!t || !t.matches || !t.matches('input[name^="assignee-search-"]'))
-        return;
-      const scope = String(t.name || "").slice("assignee-search-".length);
-      this._filterAssignees(scope, t.value);
+      if (!isSearchInput(e.target)) return;
+      this._filterAssignees(scopeOf(e.target), e.target.value, { open: true });
+    });
+
+    // Focus opens the dropdown — an empty query now means "every member".
+    this.el.addEventListener("focusin", (e) => {
+      if (!isSearchInput(e.target)) return;
+      if (this._assigneeBlurTimer) {
+        clearTimeout(this._assigneeBlurTimer);
+        this._assigneeBlurTimer = null;
+      }
+      this._filterAssignees(scopeOf(e.target), e.target.value, { open: true });
+    });
+
+    // Deferred close: clicking a suggestion row blurs the input first, so
+    // tearing the list down synchronously would swallow the pick.
+    this.el.addEventListener("focusout", (e) => {
+      if (!isSearchInput(e.target)) return;
+      const scope = scopeOf(e.target);
+      if (this._assigneeBlurTimer) clearTimeout(this._assigneeBlurTimer);
+      this._assigneeBlurTimer = setTimeout(() => {
+        this._assigneeBlurTimer = null;
+        const active =
+          typeof document !== "undefined" ? document.activeElement : null;
+        // A pick refocuses the field (multi-assign) — keep the list open then.
+        if (isSearchInput(active)) return;
+        this._closeAssigneeList(scope);
+      }, 200);
+    });
+  }
+
+  // The suggestions box of one scope. Both scopes render the same class, so
+  // resolve it inside the owning card.
+  _assigneeListEl(scope) {
+    const root =
+      this.el &&
+      this.el.querySelector(
+        scope === "create"
+          ? ".tasks-panel__create-modal"
+          : ".tasks-panel__detail-panel",
+      );
+    return root ? root.querySelector(".tasks-panel__assignee-suggestions") : null;
+  }
+
+  _closeAssigneeList(scope) {
+    this.ensurePart(`${scope}-assignee-suggestions`)
+      .then((part) => {
+        if (!part || part.isDestroyed?.()) return;
+        part.feed([]);
+        if (part.el) part.el.dataset.open = "0";
+      })
+      .catch(() => {
+        /* not mounted yet */
+      });
+  }
+
+  // Caret click: same list as focus, but also usable to dismiss it.
+  _toggleAssigneeList(scope) {
+    const list = this._assigneeListEl(scope);
+    const open = !!(list && list.dataset.open === "1");
+    if (this._assigneeBlurTimer) {
+      clearTimeout(this._assigneeBlurTimer);
+      this._assigneeBlurTimer = null;
+    }
+    const input = this._assigneeSearchInput(scope);
+    if (open) {
+      if (input) input.blur();
+      return this._closeAssigneeList(scope);
+    }
+    // focus() fires focusin, which opens the list; feed it directly too so a
+    // detached/unfocusable input still gets a dropdown.
+    if (input) input.focus();
+    return this._filterAssignees(scope, input ? input.value : "", {
+      open: true,
     });
   }
 
@@ -1569,18 +1662,24 @@ class __tasks_panel extends LetcBox {
   }
 
   // Feed the suggestion dropdown for one scope; an empty result set closes it.
-  _filterAssignees(scope, query) {
+  // `opt.open` forces the dropdown open (focus / typing / caret); omitted, the
+  // current open state is preserved — a chip removal must re-feed the rows
+  // without popping a list the user had closed.
+  _filterAssignees(scope, query, opt = {}) {
     const rows = require("./skeleton").buildAssigneeSuggestions(
       this,
       query,
       this._assigneeSelection(scope),
       this._assigneeScopeService(scope),
     );
+    const list = this._assigneeListEl(scope);
+    const open =
+      opt.open != null ? !!opt.open : !!(list && list.dataset.open === "1");
     this.ensurePart(`${scope}-assignee-suggestions`)
       .then((part) => {
         if (!part || part.isDestroyed?.()) return;
         part.feed(rows);
-        if (part.el) part.el.dataset.open = rows.length ? "1" : "0";
+        if (part.el) part.el.dataset.open = open && rows.length ? "1" : "0";
       })
       .catch(() => {
         /* not mounted yet */
@@ -3914,10 +4013,12 @@ class __tasks_panel extends LetcBox {
     return list;
   }
 
-  // Reflect the current assignee set in place: re-feed the chips row, clear the
-  // search box and close the dropdown (the picked member must leave it).
-  // `kind` is "create-assignee" | "detail-assignee".
-  _applyAssigneeChange(kind, assignees) {
+  // Reflect the current assignee set in place: re-feed the chips row and the
+  // suggestions (the picked member must leave them), and clear the query.
+  // `kind` is "create-assignee" | "detail-assignee". `picked` = a member was
+  // just added, so keep the field focused for the next pick; a chip removal
+  // leaves focus (and the dropdown's open state) alone.
+  _applyAssigneeChange(kind, assignees, picked = false) {
     if (!this.el) return;
     const scope = kind === "create-assignee" ? "create" : "detail";
     this.ensurePart(`${scope}-assignee-chips`)
@@ -3935,8 +4036,13 @@ class __tasks_panel extends LetcBox {
         /* not mounted yet */
       });
     const input = this._assigneeSearchInput(scope);
-    if (input) input.value = "";
-    this._filterAssignees(scope, "");
+    if (input) {
+      input.value = "";
+      // Keep the caret in the field so the next member can be picked or typed
+      // straight away — and so the deferred blur close leaves the list open.
+      if (picked) input.focus();
+    }
+    this._filterAssignees(scope, "", picked ? { open: true } : {});
   }
 
   // ── @-mention (contenteditable description editor) ─────────────

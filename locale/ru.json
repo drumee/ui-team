@@ -1548,6 +1548,7 @@
   "TASK_TITLE": "Название задачи",
   "DUE_DATE": "Срок выполнения",
   "DROP_TASKS_HERE": "Перетащите задачи сюда",
+  "SELECT_DATE": "Выберите дату",
   "SELECT_START_DATE": "Выберите дату начала",
   "SELECT_END_DATE": "Выберите дату окончания",
   "DURATION_DAY": "день",

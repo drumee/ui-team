@@ -1548,6 +1548,7 @@
   "TASK_TITLE": "任务标题",
   "DUE_DATE": "截止日期",
   "DROP_TASKS_HERE": "将任务拖到此处",
+  "SELECT_DATE": "选择日期",
   "SELECT_START_DATE": "选择开始日期",
   "SELECT_END_DATE": "选择结束日期",
   "DURATION_DAY": "天",

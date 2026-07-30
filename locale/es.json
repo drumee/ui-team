@@ -1545,6 +1545,7 @@
   "TASK_TITLE": "Título de la tarea",
   "DUE_DATE": "Fecha de vencimiento",
   "DROP_TASKS_HERE": "Suelta las tareas aquí",
+  "SELECT_DATE": "Selecciona la fecha",
   "SELECT_START_DATE": "Selecciona la fecha de inicio",
   "SELECT_END_DATE": "Selecciona la fecha de fin",
   "DURATION_DAY": "día",

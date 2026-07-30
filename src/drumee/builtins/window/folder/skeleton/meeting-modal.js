@@ -61,10 +61,10 @@ function inviteeSuggestion(ui, pfx, member) {
 }
 
 // Members matching `query`, excluding already-selected. Exported for live
-// re-feed from _filterInvitees. Empty query → no suggestions (nothing shown).
+// re-feed from _filterInvitees. An empty query lists every remaining member
+// (the dropdown half of the combobox) — the container scrolls, so no cap.
 function inviteesSuggestions(ui, pfx, query) {
   const q = String(query || "").trim().toLowerCase();
-  if (!q) return [];
   // String-compared: the pool and the chips come from different sources, and a
   // number/string mismatch would re-offer an already-invited member.
   const chosen = new Set((ui._mmAttendees || []).map((a) => String(a.uid || a)));
@@ -73,10 +73,10 @@ function inviteesSuggestions(ui, pfx, query) {
     .filter((m) => {
       const uid = m.uid || m.id;
       if (!uid || chosen.has(String(uid))) return false;
+      if (!q) return true;
       return memberName(m).toLowerCase().includes(q) ||
         String(m.email || "").toLowerCase().includes(q);
     })
-    .slice(0, 8)
     .map((m) => inviteeSuggestion(ui, pfx, m));
 }
 
@@ -116,7 +116,16 @@ function recurRow(ui, pfx) {
             innerClass: `${pfx}-date-inner`,
             name: "mm-until",
             value: recur.until || "",
-            vendorOpt: { dateFormat: "Y-m-d", altInput: true, altFormat: "d/m/Y", appendTo: document.body },
+            placeholder: LOCALE.SELECT_DATE,
+            vendorOpt: {
+              dateFormat: "Y-m-d",
+              altInput: true,
+              altFormat: "d/m/Y",
+              // No end date yet → leave it empty; seeding today would read back
+              // as "recurs until today", i.e. not at all.
+              defaultDate: recur.until || null,
+              appendTo: document.body,
+            },
             uiHandler: [ui],
           },
         ],
@@ -300,8 +309,9 @@ module.exports = function meetingModal(ui, opt = {}) {
     uiHandler: [ui],
   };
 
-  // Type-to-search invitees: an underline field holding removable chips + a
-  // search input, with a suggestion dropdown fed live by _filterInvitees.
+  // Invitee combobox: an underline field holding removable chips + a search
+  // input, with a suggestion dropdown fed live by _filterInvitees. Focusing the
+  // input (or clicking the caret) lists every member; typing filters that list.
   const invitees = Skeletons.Box.Y({
     className: `${pfx}-invitees`,
     kids: [
@@ -326,6 +336,14 @@ module.exports = function meetingModal(ui, opt = {}) {
             bubble: 0,
             uiHandler: [ui],
             partHandler: ui,
+          }),
+          // Visible affordance that the whole member list is one click away.
+          Skeletons.Button.Svg({
+            className: `${pfx}-invitees-caret`,
+            ico: "apps-caret-down",
+            bubble: 0,
+            service: "mm-toggle-invitee-list",
+            uiHandler: [ui],
           }),
         ],
       }),

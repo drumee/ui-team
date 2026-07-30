@@ -388,7 +388,34 @@
     }
   }
 
-  // Suggestion dropdown — shown only when there are matches (data-open="1").
+  // Opens the same member list as focusing the field (combobox affordance).
+  &__meeting-modal-invitees-caret {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+    cursor: pointer;
+    overflow: hidden;
+    font-size: 0;
+    color: var(--grey-70, #84848c);
+
+    svg {
+      width: 10px;
+      height: 10px;
+      display: block;
+      // The sprite strips the source fill, so it must come from CSS.
+      fill: currentColor;
+    }
+
+    &:hover {
+      color: var(--primary-50, #433cc5);
+    }
+  }
+
+  // Suggestion dropdown — shown while the field is engaged and there is at
+  // least one match (data-open="1").
   &__meeting-modal-invitees-suggestions {
     position: absolute;
     top: 100%;
