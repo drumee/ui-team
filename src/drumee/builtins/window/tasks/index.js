@@ -1018,7 +1018,8 @@ class __tasks_panel extends LetcBox {
         this._createDefaults = null;
         this._pickerOpen = null;
         this._resetFileSearch();
-        return this._render();
+        this._dismissOverlayNow("create-backdrop");
+        return this._renderDeferred();
 
       case "create-status":
         if (this._createDefaults) {
@@ -1233,7 +1234,8 @@ class __tasks_panel extends LetcBox {
         this._reactPickerFor = null;
         this._closeCommentReactionsPicker();
         this._resetFileSearch();
-        return this._render();
+        this._dismissOverlayNow("detail-backdrop");
+        return this._renderDeferred();
 
       case "open-detail":
         return this._openDetail(trigger.mget("taskId"));
@@ -4855,6 +4857,17 @@ class __tasks_panel extends LetcBox {
   // shows a veil + spinner over the current view), let that frame PAINT (double
   // rAF), then run the full render and clear the flag. The attribute lives on
   // this.el, which feed() never replaces, so the veil survives until cleared.
+  // Close an overlay (task detail / create modal) INSTANTLY: hide its DOM
+  // this frame, then rebuild the board deferred. The overlay is only truly
+  // removed by the full re-feed, which on a busy board takes long enough
+  // that the X felt stuck (tester 2026-07-30: click close → delay → popup
+  // finally disappears).
+  _dismissOverlayNow(cls) {
+    if (!this.el) return;
+    const el = this.el.querySelector(`.${this.fig.family}__${cls}`);
+    if (el) el.style.display = "none";
+  }
+
   _renderDeferred() {
     if (this.isDestroyed && this.isDestroyed()) return;
     if (this.el) this.el.dataset.viewLoading = 1;
