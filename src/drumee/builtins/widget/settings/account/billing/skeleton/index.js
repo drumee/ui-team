@@ -128,8 +128,17 @@ function subscriptionBanner(ui) {
         className: `${fig}-title`,
         // Renew date comes from the async mirror; until it lands, announce
         // the current plan instead of rendering an empty date.
+        //
+        // 'trialing' here is a DEFERRED CYCLE SWITCH, not a product trial:
+        // the new cycle's subscription idles (Stripe trial) until the old
+        // cycle's paid time lapses, and period_end is the day it starts
+        // billing. Saying "renews on" for a plan that has not started read
+        // as a bug (tester 2026-07-30).
         content: when
-          ? (LOCALE.SUBSCRIPTION_RENEWS_ON || "Your subscription renews on {0}").format(when)
+          ? ((ui._subscription && ui._subscription.status === "trialing")
+            ? (LOCALE.CYCLE_STARTS_ON || "Your {0} billing starts on {1}")
+              .format(/^year/.test(String(ui._subscription.period || "")) ? (LOCALE.YEARLY || "Yearly") : (LOCALE.MONTHLY || "Monthly"), when)
+            : (LOCALE.SUBSCRIPTION_RENEWS_ON || "Your subscription renews on {0}").format(when))
           : (LOCALE.CURRENT_PLAN_BANNER || "You are on the {0} plan").format(planLabel),
       }),
       Skeletons.Note({

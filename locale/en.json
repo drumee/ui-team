@@ -2731,5 +2731,7 @@
   "ADMIN_REQUEST_SENT": "Your request was sent to the organization owner.",
   "ADMIN_REQUEST_NO_OWNER": "This organization has no owner account to notify — contact your administrator directly.",
   "MIGRATE_GDRIVE_SOURCE_REVOKED": "Drumee no longer has access to the selected folder on Google Drive. Restore sharing (or pick it again), then retry.",
-  "MIGRATE_GDRIVE_ACCESS_REVOKED": "Google Drive access to the selected folder was removed during the migration, so it was stopped. Restore sharing and try again."
+  "MIGRATE_GDRIVE_ACCESS_REVOKED": "Google Drive access to the selected folder was removed during the migration, so it was stopped. Restore sharing and try again.",
+  "CYCLE_STARTS_ON": "Your {0} billing starts on {1}",
+  "PLAN_SWITCH_DEFER_CREDIT": "The payment page will show this as “{0} days free” — that is the remaining time already paid for on your current {1} plan, credited to you. Nothing is charged today; the {2} price starts when it runs out."
 }
