@@ -7,6 +7,32 @@
  * a surface of its own — so it drops the card chrome and the centring rather
  * than drawing a second panel inside the first.
  */
+/* FULL-VIEWPORT OVERLAY.
+ *
+ * The shared host is `position: absolute`, so its `inset: 0` resolves against
+ * .desk-module__wm-container — the work area only. The sidebar and the topbar
+ * sat outside the backdrop: sharp, un-dimmed and still clickable, while a
+ * supposedly modal card was open over the middle of the screen.
+ *
+ * `fixed` is safe here. `position: fixed` falls back to behaving like absolute
+ * if any ancestor establishes a containing block (transform, filter,
+ * perspective, will-change, contain) — none do: the only transform in the desk
+ * skin is on a sidebar slide-out, which is not an ancestor of the wm container.
+ *
+ * SCOPED with :has() to this widget. Making the shared host fixed outright
+ * would change confirm(), alert(), the create-folder dialog and the
+ * reward-flow modals in one go — none of which asked for it.
+ *
+ * The z-index matches what desk/skin already lifts an open modal to, so the
+ * overlay clears the sidebar and topbar it now covers rather than sliding
+ * under them.
+ */
+.window-manager__wrapper-modal[data-state="open"]:has(.quota-exceeded__ui) {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-index-modal, 100000);
+}
+
 .quota-exceeded {
   &__ui {
     width: 100%;
@@ -43,7 +69,7 @@
     width: min(380px, calc(100vw - 32px));
     box-sizing: border-box;
     background: var(--normal-bg, #fff);
-    border-radius: 12px;
+    border-radius: 8px;
     /* Reads as lifted off the blurred backdrop rather than pasted onto it. */
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
     font-family: var(--font-family, inherit);
@@ -110,12 +136,14 @@
     background: var(--warning-100, #fdf3e3);
     color: var(--warning-600, #e8a13c);
 
-    /* app-unlimited is 30x14, not square — sized to its own ratio so it is not
-       letterboxed into half the chip. `fill` for the same reason as the brand
-       logo above: bare sprite paths default to black, not currentColor. */
+    /* Square, matching the `storage copy` glyph's 14x14 viewBox. This was
+       22x10 while the chip carried the 30x14 infinity mark; leaving that in
+       place would letterbox a square icon into under half its height.
+       `fill` for the same reason as the brand logo above: bare sprite paths
+       default to black, not currentColor. */
     svg {
-      width: 22px;
-      height: 10px;
+      width: 20px;
+      height: 20px;
       fill: currentColor;
     }
   }
@@ -150,7 +178,7 @@
 
   &__btn {
     padding: 9px 18px;
-    border-radius: 8px;
+    border-radius: 4px;
     font-size: 13px;
     font-weight: 500;
     cursor: pointer;

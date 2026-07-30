@@ -139,7 +139,7 @@ module.exports = function (ui, opt = {}) {
   kids.push(
     Skeletons.Box.Y({
       className: `${fig}__chip`,
-      kids: [Skeletons.Image.Svg({ className: `${fig}__chip-ico`, ico: "app-unlimited" })],
+      kids: [Skeletons.Image.Svg({ className: `${fig}__chip-ico`, ico: "storage copy" })],
     }),
     Skeletons.Note({ className: `${fig}__title`, content: spec.title() }),
     Skeletons.Note({ className: `${fig}__desc`, content: spec.body(opt) })
