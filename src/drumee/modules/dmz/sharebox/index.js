@@ -1262,11 +1262,15 @@ class __dmz_sharebox extends LetcBox {
     if (!data.is_secure && data.dmz_expiry == _a.expired) {
       status = 'TICKET_EXPIRED';
     }
+    // No case sets btnService: the popup defaults to 'close-popup'. These all used
+    // to pass 'redirect-to-home', which in the dmz module did NOT redirect — it
+    // opened a mailto: composer — so "OK" popped the visitor's mail client on
+    // every one of these screens. (The welcome module's same-named service is a
+    // real redirect and is untouched.)
     switch (status) {
       case 'INACTIVE_TICKET':
       case 'TICKET_EXPIRED':
         opt.content = LOCALE.LINK_EXPIRES
-        opt.btnService = 'redirect-to-home'
         break
 
       case "INVALID_CREDENTIAL":
@@ -1274,25 +1278,21 @@ class __dmz_sharebox extends LetcBox {
 
       case 'TICKET_REVOKED':
         opt.content = LOCALE.SECURE_SHARE_REVOKED
-        opt.btnService = 'redirect-to-home'
         break
 
       case 'WRONG_TICKET':
       case 'TICKET_INVALID':
         opt.content = LOCALE.INVALID_LINK
-        opt.btnService = 'redirect-to-home'
         break
 
       case 'EMAIL_EXIST':
         opt.content = LOCALE.EMAIL_EXIST_SIGN_CONTINUE
-        opt.btnService = 'redirect-to-home'
         break
 
       // Logged in as an account that is not on the share's allow-list — this link
       // is restricted to a specific email; the recipient must sign in as that one.
       case 'EMAIL_MISMATCH':
         opt.content = LOCALE.SECURE_SHARE_EMAIL_BLOCKED
-        opt.btnService = 'redirect-to-home'
         break
 
       default:
