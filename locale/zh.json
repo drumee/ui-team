@@ -2287,5 +2287,7 @@
   "ADMIN_REQUEST_SENT": "您的申请已发送给组织所有者。",
   "ADMIN_REQUEST_NO_OWNER": "该组织没有可通知的所有者账号——请直接联系您的管理员。",
   "MIGRATE_GDRIVE_SOURCE_REVOKED": "Drumee 已无法访问所选的 Google Drive 文件夹。请恢复共享（或重新选择）后重试。",
-  "MIGRATE_GDRIVE_ACCESS_REVOKED": "所选文件夹的 Google Drive 访问权限在迁移过程中被移除，迁移已停止。请恢复共享后重试。"
+  "MIGRATE_GDRIVE_ACCESS_REVOKED": "所选文件夹的 Google Drive 访问权限在迁移过程中被移除，迁移已停止。请恢复共享后重试。",
+  "CYCLE_STARTS_ON": "您的{0}计费将于 {1} 开始",
+  "PLAN_SWITCH_DEFER_CREDIT": "付款页面会将其显示为“免费 {0} 天”——那是您当前{1}套餐已付费的剩余时间，已计入您的账户。今天不会扣款；{2}价格将在其用完后开始。"
 }
