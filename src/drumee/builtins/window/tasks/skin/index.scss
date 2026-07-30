@@ -5661,6 +5661,14 @@
         background: var(--normal-bg-90, #f7f7fa);
       }
     }
+
+    // Same as the assignee/invitee rows: the ROW carries the service, while the
+    // icon and the filename are widgets whose own onclick stopPropagation()s
+    // before dispatching — with no uiHandler of their own, a click on the
+    // filename died there and only the padding linked the file.
+    > * {
+      pointer-events: none;
+    }
   }
 
   &__file-result-ico {
