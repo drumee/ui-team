@@ -15,58 +15,121 @@
         top: 0;
         width: 100vw;
         height: 100vh;
-        background-color: rgba(0, 0, 0, 0.14)
+        background-color: rgba(0, 0, 0, 0.14);
+        align-items: center;
+        justify-content: center;
       }
     }
   }
 
+  // Status card (link revoked / expired / invalid / email already registered /
+  // email not allowed / error), fed by Dmz.say().
+  //
+  // Matches the other secure-share popups — sharebox request-sent /
+  // request-access / signup-required. Those live under .dmz-sharebox, which is
+  // where the --sb-* design tokens are declared; this card is in the sibling
+  // dmz-router subtree and cannot see them, so the values are mirrored below
+  // under popup-local names. SOURCE OF TRUTH =
+  // modules/dmz/sharebox/skin/index.scss (--sb-white / --sb-text / --sb-cta /
+  // --sb-card-shadow / --sb-font-body); keep them in step. Local names, not the
+  // --sb-* ones, so this can never shadow a token inside the sharebox subtree.
+  //
+  // Light-only on purpose: the whole share landing page hardcodes its light
+  // surfaces the same way, so a visitor with the dark theme must not get a dark
+  // popup on a light page.
   &-popup {
     &__container {
-      min-height: 380px;
-      width: 600px;
-      border-radius: var(--border-radius); //4px;
+      --dmz-popup-surface: #ffffff;
+      --dmz-popup-text: #0b0a21;
+      --dmz-popup-cta: #433cc5;
+      --dmz-popup-shadow: 0 1px 11px 0 rgba(0, 0, 0, 0.13);
+      --dmz-popup-font: "Geist", system-ui, -apple-system, "Segoe UI", sans-serif;
+
+      background-color: var(--dmz-popup-surface);
+      border-radius: 12px;
+      box-shadow: var(--dmz-popup-shadow);
+      gap: 24px;
       margin: auto;
-      background-color: var(--default-bg);
-      box-shadow: var(--shadow-popup); //0 5px 8px 1px rgba(63,79,117,0.13), 0 6px 16px 0 rgba(86,65,113,0.08), 0 2px 14px 0 rgba(194,185,203,0);
+      max-width: calc(100vw - 64px);
+      padding: 40px 48px;
+      width: 480px;
     }
 
-    &__footer {
-      height: 100%;
-      max-height: 120px;
-      padding: 5px;
-      width: 100%;
+    // Brand lockup (mark + "drumee" wordmark), rendered only when the caller
+    // sets opt.logo — today just the revoked card. The sprite is 160x40 with
+    // preserveAspectRatio="xMidYMid meet", so this 4:1 box shows it whole and
+    // undistorted, and it stays well inside the card's 384px content width.
+    // Its paths already carry #433CC5; the fill below only takes effect if the
+    // icon is ever re-exported as currentColor.
+    &__logo {
+      flex-shrink: 0;
+      height: 32px;
+      width: 128px;
+
+      svg {
+        fill: var(--dmz-popup-cta);
+        height: 100%;
+        width: 100%;
+      }
     }
 
     &__message {
-      @include drumee.typo($color: var(--default-text-color), $size: 18px, $line: 28px); //$line: 24px$size: 20px,
-      align-items: center;
-      height: 100%;
-      justify-content: center;
+      // typo() emits size/line/colour only — it never sets font-weight, and for
+      // $weight: 600 it sets no font-family either. Both are declared after it
+      // (a 400/500/700 branch would otherwise overwrite the family).
+      @include drumee.typo($color: var(--dmz-popup-text), $size: 18px, $line: 26px);
+      font-family: var(--dmz-popup-font);
+      font-weight: 600;
+      margin: 0;
+      text-align: center;
       width: 100%;
-      max-width: 343px;
-      margin-left: auto;
-      margin-right: auto;
-      max-height: 160px; //120px;
+      // Even line lengths and no lone trailing word. `balance` wins where it is
+      // supported; `pretty` covers the engines that only have that one. Both are
+      // ignored safely by older engines, which fall back to normal wrapping.
+      text-wrap: pretty;
+      text-wrap: balance;
+
+      // Note renders its text into an inner wrapper (`inner note-content`),
+      // which has to carry the centring too — same guard window-confirm uses.
+      .note-content,
+      .inner,
+      p {
+        margin: 0;
+        text-align: center;
+        width: 100%;
+      }
+    }
+
+    &__footer {
+      width: 100%;
     }
 
     &__button {
-      @include drumee.typo($color: var(--default-text-reverse), $size: 18px, $line: 21px, $weight: 300);
+      background-color: var(--dmz-popup-cta);
+      border-radius: 4px;
+      cursor: pointer;
+      min-width: 120px;
+      padding: 12px 24px;
+      text-align: center;
+      white-space: nowrap;
+      @include drumee.typo($color: #ffffff, $size: 14px, $line: 20px);
+      font-family: var(--dmz-popup-font);
+      font-weight: 600;
+      transition: filter 120ms ease;
 
-      &.go {
-        @include drumee.typo($color: var(--btn-rollback-text), $size: 16px, $line: 21px);
-        border: 1px solid var(--btn-rollback-border); //var(--white-f6);
-        //  box-shadow: 0 4px 6px 1px rgba(63,79,117,0.13), 0 0 11px 0 rgba(86,65,113,0.08), 0 0 10px 0 rgba(194,185,203,0);
-        color: var(--btn-rollback-text); //var(--egrey-89);
-        cursor: pointer;
-        height: 32px; //36px;
-        width: 90px; //160px;
-        border-radius: var(--border-radius);
-
-        &:hover {
-          border: 2px solid var(--btn-rollback-border-hover);
-          color: var(--btn-rollback-text-hover);
-        }
+      &:hover {
+        filter: brightness(1.08);
       }
+    }
+  }
+}
+
+@media (max-width: 650px) {
+  .dmz-router-popup {
+    &__container {
+      max-width: calc(100vw - 32px);
+      padding: 32px 24px;
+      width: calc(100vw - 32px);
     }
   }
 }
