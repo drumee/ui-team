@@ -2323,6 +2323,16 @@
     &:hover {
       background: var(--hover-bg-40, rgba(89, 80, 255, 0.08));
     }
+
+    // The ROW carries the service; the avatar and name inside it are widgets of
+    // their own, and every widget gets an onclick that stopPropagation()s before
+    // dispatching. With no uiHandler — and no parent chain to resolve one, these
+    // rows being fed dynamically — a click on the name died in that child
+    // handler, so only the bare padding beside the name selected the member.
+    // Let clicks fall through to the row, which does carry the handler.
+    > * {
+      pointer-events: none;
+    }
   }
 
   &__assignee-option-avatar {
