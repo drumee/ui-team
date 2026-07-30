@@ -6,6 +6,7 @@
  * rule; this file is only the shell and the two service handlers.
  */
 const skeleton = require("./skeleton");
+const { canUpgradePlan } = require("libs/billing");
 
 class __quota_exceeded extends LetcBox {
   static initClass() {
@@ -28,17 +29,9 @@ class __quota_exceeded extends LetcBox {
     );
   }
 
-  /**
-   * `upgrade-plan` is NOT handled here — it is deliberately allowed to bubble.
-   *
-   * The desk owns that route (modules/desk `case "upgrade-plan"` ->
-   * openBillingPage), and every other entry point in the product reaches the
-   * billing screen the same way. Catching it here to navigate ourselves would
-   * be a second implementation of the same journey, free to drift from the one
-   * the sidebar uses — and it would bypass the desk's own canUpgradePlan guard.
-   */
   async onUiEvent(cmd, args = {}) {
     const service = (cmd && cmd.mget && cmd.mget("service")) || args.service;
+
     if (service === "quota-exceeded-close") {
       // Only meaningful in the modal host; inline never renders a Close.
       // Wm.closeQuotaExceeded, not a bare clear(): emptying the host while it
@@ -47,6 +40,39 @@ class __quota_exceeded extends LetcBox {
       if (typeof Wm !== "undefined" && Wm.closeQuotaExceeded) Wm.closeQuotaExceeded();
       return;
     }
+
+    /**
+     * "See plans" — the same journey the sidebar's Upgrade plan entry takes.
+     *
+     * That entry is built with `uiHandler: [ui]` where ui is the DESK, so its
+     * click lands directly on the desk's `case "upgrade-plan"`. This button
+     * cannot do that: its handler is this widget, and the widget is mounted
+     * inside Wm's wrapper-modal — so the event was left to bubble and reached
+     * either Wm or nothing at all, depending on where the card was hosted.
+     * Inline, in the members panel or the create-workspace form, "nothing at
+     * all" is the likely answer, and the button silently did nothing.
+     *
+     * Handled explicitly instead, ending at the SAME place both existing
+     * routes converge on: the sidebar hits desk.openBillingPage() directly,
+     * Wm.upgradePlage() broadcasts desk:open-billing-page, and the desk
+     * listens for that broadcast and calls the very same method. Using the
+     * broadcast works from any host, which is what this widget needs.
+     *
+     * canUpgradePlan() is re-checked to match the desk's own guard on that
+     * case. The button is only rendered when it passes, so this is defence in
+     * depth against a stale card left open across a plan change — the same
+     * reason the desk guards a route its own sidebar already gates.
+     */
+    if (service === "upgrade-plan") {
+      if (!canUpgradePlan()) return;
+      // Take the card down first. It is a full-viewport host: left open it
+      // would sit over the billing page it just navigated to, and go on
+      // swallowing every click on it.
+      if (typeof Wm !== "undefined" && Wm.closeQuotaExceeded) Wm.closeQuotaExceeded();
+      RADIO_BROADCAST.trigger("desk:open-billing-page");
+      return;
+    }
+
     this.triggerHandlers(args);
   }
 }
