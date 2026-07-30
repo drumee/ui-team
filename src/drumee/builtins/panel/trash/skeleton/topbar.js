@@ -14,7 +14,7 @@ module.exports = function (ui) {
       Skeletons.Image.Svg({
         ico: 'cross',
         className: `${pfx}__header-icon`,
-        service: "toggle-trash",
+        service: "close-trash",
         uiHandler: [Desk]
       }),
     ],

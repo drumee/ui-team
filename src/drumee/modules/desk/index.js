@@ -2151,13 +2151,15 @@ class desk_module extends LetcBox {
 
       case "toggle-inbox":
       case "toggle-chat":
-        return this.togglePanel("chat_p2p", "chat-panel");
+        // Sidebar re-click on the active item keeps the layout open
+        // (openOnly) — closing goes through the panel's own close paths.
+        return this.togglePanel("chat_p2p", "chat-panel", true);
 
       case "toggle-contacts":
         RADIO_BROADCAST.trigger("breadcrumb:context", {
           filename: LOCALE.CONTACTS,
         });
-        return this.togglePanel("address_book", "chat-panel");
+        return this.togglePanel("address_book", "chat-panel", true);
 
       case "toggle-settings":
         RADIO_BROADCAST.trigger("breadcrumb:context", {
@@ -2166,7 +2168,7 @@ class desk_module extends LetcBox {
         // Open-only — clicking Settings (sidebar) or the bottom Profile
         // item never closes the panel; the close icon inside Settings
         // handles closing.
-        return this.togglePanel("settings_main", "settings-main-slot");
+        return this.togglePanel("settings_main", "settings-main-slot", true);
 
       case "toggle-apps": {
         // Personal plans (free / pro / legacy advanced — yp.plan entity_type=user)
@@ -2185,11 +2187,11 @@ class desk_module extends LetcBox {
           filename: LOCALE.ADMIN_CONSOLE,
         });
         if (Kind.get("apps_main")) {
-          return this.togglePanel("apps_main", "settings-main-slot");
+          return this.togglePanel("apps_main", "settings-main-slot", true);
         }
         return Kind.loadPlugin({ name: "admin-console", kind: "apps_main" })
           .then(() => Kind.waitFor("apps_main"))
-          .then(() => this.togglePanel("apps_main", "settings-main-slot"))
+          .then(() => this.togglePanel("apps_main", "settings-main-slot", true))
           .catch((e) => this.warn && this.warn("admin-console load failed", e));
       }
 
@@ -2197,6 +2199,11 @@ class desk_module extends LetcBox {
         RADIO_BROADCAST.trigger("breadcrumb:context", {
           filename: LOCALE.TRASH,
         });
+        return this.togglePanel("panel_trash", "trash-panel", true);
+
+      // The trash topbar X — the one caller that still needs the close
+      // half of the old toggle (the sidebar item above is open-only now).
+      case "close-trash":
         return this.togglePanel("panel_trash", "trash-panel");
 
       // Every billing entry point (sidebar "Upgrade plan", Settings "Manage
