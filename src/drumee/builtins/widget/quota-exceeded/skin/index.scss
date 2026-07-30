@@ -38,6 +38,39 @@
     }
   }
 
+  /* Brand lockup, modal only — same pair and proportions as the reward-flow
+     modals so the two read as one product. Baseline-aligned rather than
+     centred: the wordmark's cap-height should sit on the mark's foot, which
+     center alignment floats it above. */
+  &__brand {
+    flex-direction: row;
+    align-items: flex-end;
+    justify-content: center;
+    gap: 8px;
+    margin-bottom: 4px;
+  }
+
+  /* fill, not just color. The sprite build strips the source icons' own fill
+     attributes and emits the paths bare — but SVG's INITIAL fill is `black`,
+     not `currentColor`, so a bare path paints black until something sets fill
+     explicitly. Setting only `color` left both glyphs black while reporting
+     the right colour in getComputedStyle().color, which is exactly how it went
+     unnoticed. currentColor then picks the value up from `color` below. */
+  &__brand-logo {
+    width: 30px;
+    height: 30px;
+    flex: 0 0 30px;
+    color: var(--primary-600, #433cc5);
+    fill: currentColor;
+  }
+
+  &__brand-name {
+    font-size: 19px;
+    font-weight: 700;
+    line-height: 1;
+    color: var(--text-primary, #0b0a21);
+  }
+
   &__chip {
     align-items: center;
     justify-content: center;
@@ -51,10 +84,12 @@
     color: var(--warning-600, #e8a13c);
 
     /* app-unlimited is 30x14, not square — sized to its own ratio so it is not
-       letterboxed into half the chip. */
+       letterboxed into half the chip. `fill` for the same reason as the brand
+       logo above: bare sprite paths default to black, not currentColor. */
     svg {
       width: 22px;
       height: 10px;
+      fill: currentColor;
     }
   }
 

@@ -48,4 +48,10 @@ class __quota_exceeded extends LetcBox {
   }
 }
 
+// MUST be called, not just defined. `static initClass()` is not a framework
+// hook — @drumee/ui-core's own widgets (and invite-popup, reward-flow here)
+// invoke it explicitly at module bottom, and that call is the only thing that
+// requires the skin. Without it the class loaded fine and rendered completely
+// unstyled: a full-size SVG and the buttons run together as plain text.
+__quota_exceeded.initClass();
 module.exports = __quota_exceeded;

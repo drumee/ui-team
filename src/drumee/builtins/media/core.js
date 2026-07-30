@@ -2420,6 +2420,15 @@ class __media_core extends DrumeeMFS {
         used: res.used,
         cap: res.limit != null ? res.limit : res.storage,
       });
+      // Every upload still queued behind this one will be refused for the same
+      // reason, so the progress window is reporting work that cannot finish.
+      // Required lazily: media/core is loaded on paths that never touch the
+      // uploader, and a top-level require would pull the whole window in.
+      try {
+        require("builtins/window/upload-progress").dismissForQuota();
+      } catch (e) {
+        /* uploader not loaded on this path — nothing to dismiss */
+      }
       this.goodbye();
     }
   }

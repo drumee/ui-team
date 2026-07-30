@@ -1921,6 +1921,11 @@ class __window_upload_progress extends __window_core {
         used: typeof Visitor.diskUsed === "function" ? Visitor.diskUsed() : null,
         cap: q.storage != null ? q.storage : q.disk,
       });
+      // Take the progress window down with it. Nothing is going to upload, so
+      // leaving it behind stranded it at "Uploading 0 Files" — a live-looking
+      // panel reporting work that was refused before it began, sitting next to
+      // a card explaining the refusal.
+      this.cancelAll({ close: true });
       return;
     }
 
@@ -2503,6 +2508,26 @@ class __window_upload_progress extends __window_core {
 }
 
 __window_upload_progress.initClass();
+
+/**
+ * Cancel and dismiss the progress window because the server refused on quota.
+ *
+ * For callers that are not the window itself — media/core.js raises the
+ * quota-exceeded card from onServerComplain, and the uploads behind it are
+ * already doomed: every remaining one will be refused for the same reason.
+ * Leaving the panel up shows a progress bar for work that cannot finish.
+ *
+ * No-op when no window is open, so the caller never has to check.
+ */
+__window_upload_progress.dismissForQuota = function () {
+  if (typeof window === "undefined" || !window.Wm) return;
+  const open = window.Wm.getItemsByKind &&
+    window.Wm.getItemsByKind("window_upload_progress");
+  if (!open || !open.length) return;
+  for (const w of open) {
+    if (w && !w.isDestroyed() && w.cancelAll) w.cancelAll({ close: true });
+  }
+};
 
 // Cache promise to prevent multiple window creation (singleton pattern)
 let _pendingPromise = null;

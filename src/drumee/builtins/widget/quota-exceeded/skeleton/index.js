@@ -115,14 +115,35 @@ module.exports = function (ui, opt = {}) {
   const canUpgrade = canUpgradePlan();
   const closing = closingLine(canUpgrade, spec);
 
-  const kids = [
+  const kids = [];
+
+  // Brand lockup — the same logo-and-wordmark pair the reward-flow modals use
+  // (see reward-flow/skeleton/modal.js brandHeader), so the two modals read as
+  // the same product rather than two designs.
+  //
+  // Modal only. Inline this sits inside a panel the user opened from within
+  // the app, already surrounded by Drumee chrome, where a second wordmark is
+  // just noise.
+  if (!opt.inline) {
+    kids.push(
+      Skeletons.Box.X({
+        className: `${fig}__brand`,
+        kids: [
+          Skeletons.Image.Svg({ className: `${fig}__brand-logo`, ico: "logo-upload" }),
+          Skeletons.Note({ className: `${fig}__brand-name`, content: "drumee" }),
+        ],
+      })
+    );
+  }
+
+  kids.push(
     Skeletons.Box.Y({
       className: `${fig}__chip`,
       kids: [Skeletons.Image.Svg({ className: `${fig}__chip-ico`, ico: "app-unlimited" })],
     }),
     Skeletons.Note({ className: `${fig}__title`, content: spec.title() }),
-    Skeletons.Note({ className: `${fig}__desc`, content: spec.body(opt) }),
-  ];
+    Skeletons.Note({ className: `${fig}__desc`, content: spec.body(opt) })
+  );
 
   if (closing) {
     kids.push(Skeletons.Note({ className: `${fig}__desc ${fig}__desc--muted`, content: closing }));
