@@ -2588,6 +2588,34 @@ class __window_folder extends mfsInteract {
     return !!res && typeof res === "object" && !res.error;
   }
 
+  // The failure reason never reaches the caller — handleResponse throws the
+  // response, and the base class's onServerComplain swallows it — so keep the
+  // last one here. Purely a record: the base behaviour (quota → upgrade) still
+  // runs, for this call and every other service this window makes.
+  onServerComplain(xhr) {
+    this._lastServiceError = xhr;
+    if (super.onServerComplain) return super.onServerComplain(xhr);
+  }
+
+  // Why the meeting call failed, in the modal's words. Only a 400 from the
+  // meeting endpoints themselves is the service refusing us — that is
+  // NOT_MEETING_OWNER, the one rejection room.book/update/remove raise. Being
+  // offline, a 5xx, or a route that isn't deployed must NOT be reported as an
+  // ownership problem, and neither must the free/busy probe, which fires on
+  // the very same click (the time field blurs) and would otherwise speak for
+  // the save. Everything else gets the neutral "try again".
+  _mmFailureMessage(action) {
+    const e = this._lastServiceError;
+    const status = e && (e.status || e.error_code);
+    const url = (e && e.url) || "";
+    if (status == 400 && /room\.(book|update|remove)/.test(url)) {
+      return LOCALE.MEETING_NOT_OWNER;
+    }
+    return action === "delete"
+      ? LOCALE.MEETING_DELETE_FAILED
+      : LOCALE.MEETING_SAVE_FAILED;
+  }
+
   submitMeetingModal() {
     if (this._mmSubmitting) return;
     const form = this._readMeetingForm();
@@ -2608,6 +2636,8 @@ class __window_folder extends mfsInteract {
     this._mmBanner("");
     this._mmMarkTitleError(0);
     this._mmSubmitting = 1;
+    // Stale reason from an earlier call must not colour this one's message.
+    this._lastServiceError = null;
     const nid = this._mmEditNid;
     const done = () => {
       this._mmSubmitting = 0;
@@ -2616,7 +2646,7 @@ class __window_folder extends mfsInteract {
     };
     const fail = () => {
       this._mmSubmitting = 0;
-      this._mmBanner(LOCALE.MEETING_SAVE_FAILED);
+      this._mmBanner(this._mmFailureMessage("save"));
     };
 
     if (nid) {
@@ -2684,7 +2714,9 @@ class __window_folder extends mfsInteract {
   deleteMeetingModal() {
     const nid = this._mmEditNid;
     if (!nid) return this.closeMeetingModal();
-    const fail = () => this._mmBanner(LOCALE.MEETING_DELETE_FAILED);
+    const fail = () => this._mmBanner(this._mmFailureMessage("delete"));
+    // Stale reason from an earlier call must not colour this one's message.
+    this._lastServiceError = null;
     return this.postService((SERVICE.room && SERVICE.room.remove) || "room.remove", {
       nid,
       ...this._meetingScope(),
