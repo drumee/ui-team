@@ -332,6 +332,72 @@
     );
   }
 
+  .window-info__revoked {
+    width: 100%;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .window-info__revoked-icon {
+    width: 44px;
+    height: 44px;
+    align-items: center;
+    justify-content: center;
+    border-radius: 12px;
+    color: var(--primary-50, #433cc5);
+    background: color-mix(in srgb, var(--primary-50, #433cc5) 10%, transparent);
+  }
+
+  .window-info__revoked-icon-svg {
+    width: 22px;
+    height: 22px;
+
+    svg {
+      width: 22px;
+      height: 22px;
+    }
+  }
+
+  .window-info__revoked-title {
+    width: 100%;
+    margin-top: 2px;
+    @include drumee.typo(
+      $weight: 600,
+      $size: 18px,
+      $line: 24px,
+      $color: var(--normal-fg-10)
+    );
+  }
+
+  .window-info__revoked-workspace {
+    max-width: 100%;
+    min-height: 30px;
+    padding: 5px 10px;
+    border-radius: var(--corner-radius-2, 8px);
+    background: var(--normal-bg-100);
+    border: 1px solid var(--border-default, rgba(0, 0, 0, 0.06));
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    @include drumee.typo(
+      $weight: 600,
+      $size: 13px,
+      $line: 18px,
+      $color: var(--normal-fg-10)
+    );
+  }
+
+  .window-info__revoked-message {
+    width: 100%;
+    margin: 0 0 2px;
+    @include drumee.typo(
+      $weight: 400,
+      $size: 14px,
+      $line: 20px,
+      $color: var(--normal-fg)
+    );
+  }
+
   // Right-aligned action row with confirm-style buttons. The base
   // `__button-main` pins a flat grey background with !important, so the
   // secondary/primary backgrounds here must also be !important to win.

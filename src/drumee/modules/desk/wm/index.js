@@ -1876,6 +1876,9 @@ class __window_manager extends push {
         this.ensurePart("wrapper-modal").then((p) => p.clear());
         return this.upgradePlage(cmd);
 
+      case "workspace-access-revoked-ack":
+        return this.acknowledgeWorkspaceAccessRevoked(cmd);
+
       case _e.launch:
         return this.launch(args, { explicit: 1, singleton: 1 });
 

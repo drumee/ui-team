@@ -84,9 +84,30 @@ class ___window_switchcall extends mfsInteract {
     }
     if (this.sameCall(data, opt)) return;
     if (this.sameRoom(data, opt)) return;
+    // One accept per popup. The window this opens takes a moment to build, and
+    // without a latch an impatient second click opened a second call window.
+    // Latched here, AFTER the two guards: neither of them opens anything, so
+    // latching before them dead-ended the popup — picking Audio on a call
+    // already in progress consumed the only accept, and the Video button next
+    // to it then did nothing at all.
+    if (this._accepted) return;
+    this._accepted = 1;
     if (this.currentRoom) {
       this.currentRoom.$el.hide();
       this.currentRoom.goodbye();
+    }
+    // Wm.addWindow has no dedup of its own, so joining a meeting whose folder
+    // window is already open used to stack a second one. Reuse it and join the
+    // live room on it — the same path the activity panel's Join takes.
+    const hub_id = data && data.hub_id;
+    if (hub_id && data.kind === "window_folder") {
+      const open = ((Wm.getItemsByKind && Wm.getItemsByKind("window_folder")) || [])
+        .find((w) => !w.isDestroyed() && w.mget(_a.hub_id) == hub_id);
+      if (open && typeof open._launchMeetingInPanel === "function") {
+        if (open.raise) open.raise();
+        open._launchMeetingInPanel();
+        return;
+      }
     }
     Wm.addWindow({ ...data, ...opt });
   }
