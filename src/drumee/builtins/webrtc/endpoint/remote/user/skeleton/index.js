@@ -12,14 +12,25 @@ const __skl_stream_remote = function (_ui_) {
     nameState = 0;
   }
 
+  // The profile widget derives BOTH the initials and the fallback colour from
+  // firstname/lastname. Feeding the whole display name in as `firstname` (the
+  // only thing a Jitsi participant carries) made initiales() fall back to
+  // "<first letter twice>" — "John Doe" rendered "JJ" in a purple circle in the
+  // tile while the People panel and the chat, which get the real name parts,
+  // rendered "JD" in a different colour for the same person. Split the display
+  // name so every surface agrees. Mirrors endpoint/local/user/skeleton.
+  const [unameFirst, ...unameRest] = String(uname || '').trim().split(/[\s,]+/);
+  const firstname = _ui_.mget(_a.firstname) || unameFirst || '';
+  const lastname = _ui_.mget(_a.lastname) || unameRest.join(' ') || '';
+
   const avatar = {
     kind: KIND.profile,
     id: _ui_.mget(_a.uid),
     type: 'thumb',
     active: 0,
     className: 'no-online-status',
-    firstname: _ui_.mget(_a.firstname) || uname,
-    lastname: _ui_.mget(_a.lastname) || ''
+    firstname,
+    lastname
   };
 
   const topActions = Skeletons.Box.X({

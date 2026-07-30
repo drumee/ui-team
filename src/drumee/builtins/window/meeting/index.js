@@ -350,8 +350,13 @@ class __window_meeting extends __room {
         });
       } catch (e) { }
     }
-    // Host-only: flip the single start card to "ended" in place.
-    if (this._isHost) this._endMeetingCard();
+    // Flip the single start card to "ended" in place. Host on the way out, and
+    // ALSO whoever happens to be the last person in the room: the host may have
+    // dropped without its teardown running (tab closed, refresh, crash, network
+    // loss), and until someone flipped the card the chat kept offering "Join
+    // meeting" for a room nobody was in. Both paths funnel through
+    // _endMeetingCard, which is idempotent.
+    if (this._isHost || this._isLastParticipant()) this._endMeetingCard();
     if (super.onBeforeDestroy) super.onBeforeDestroy();
   }
 
@@ -419,25 +424,108 @@ class __window_meeting extends __room {
   }
 
   /**
-   * Flip the meeting's start card to "ended" (no second card). Chains on the
-   * start POST so it still works when the meeting ends before that POST resolves;
-   * fire-and-forget, the closure outlives the window teardown in onBeforeDestroy.
+   * Am I the only one left in the conference? Jitsi's participant list holds the
+   * REMOTE peers only, so an empty list means the local user is the last person
+   * in the room and the meeting is over once this window closes. Falls back to
+   * the endpoint map (kept in lockstep by onRemoteUserJoined / onUserLeft) when
+   * the room object is already gone at teardown time.
+   * @returns {Boolean}
+   */
+  _isLastParticipant() {
+    try {
+      if (this.room && _.isFunction(this.room.getParticipantCount)) {
+        return this.room.getParticipantCount() <= 1;
+      }
+      if (this.room && _.isFunction(this.room.getParticipants)) {
+        return (this.room.getParticipants() || []).length === 0;
+      }
+    } catch (e) { /* room already disposed — fall through */ }
+    const live = Object.keys(this.endpoints || {}).filter((id) => {
+      const ep = this.endpoints[id];
+      return ep && (!ep.isDestroyed || !ep.isDestroyed());
+    });
+    return live.length === 0;
+  }
+
+  /**
+   * Flip the meeting's start card to "ended" (no second card). The host chains
+   * on its own start POST so this still works when the meeting ends before that
+   * POST resolves; any other participant (host gone without a clean teardown)
+   * resolves the still-live card out of the room's chat history instead.
+   * Fire-and-forget: the closure outlives the window teardown in onBeforeDestroy.
    */
   _endMeetingCard() {
-    if (!this._meetingCardPost) return;
+    if (this._meetingCardEnded) return;
+    this._meetingCardEnded = 1;
+    if (this.mget(_a.area) === _a.dmz) return;
     const hub_id = this.mget(_a.hub_id);
     const nid = this.mget(_a.nid) || this.mget(_a.actual_home_id);
     if (!hub_id || !nid) return;
     const service =
       (SERVICE.channel && SERVICE.channel.meeting_end) || "channel.meeting_end";
-    this._meetingCardPost.then((message_id) => {
+    const flip = (message_id) => {
       if (!message_id) return;
       try {
         this.postService({ service, hub_id, nid, message_id });
       } catch (e) {
         if (this.warn) this.warn("Failed to end meeting card", e);
       }
-    });
+    };
+    // This window posted the card (host) → we already know its id.
+    if (this._meetingCardPost) return void this._meetingCardPost.then(flip);
+    this._findLiveMeetingCardId(hub_id, nid).then(flip);
+  }
+
+  /**
+   * Newest still-live `[[MEETING:start:…]]` card for this room — the message a
+   * departing participant has to flip when the host never did. Resolves to null
+   * when there is nothing to flip (already ended, or no card at all); never
+   * rejects, since this runs on a teardown path.
+   * @returns {Promise<String|null>}
+   */
+  _findLiveMeetingCardId(hub_id, nid) {
+    const svc =
+      (SERVICE.channel && SERVICE.channel.messages) || "channel.messages";
+    return Promise.resolve()
+      .then(() => this.fetchService({ service: svc, hub_id, nid, order: "desc" }))
+      .then((rows) => {
+        if (!Array.isArray(rows)) return null;
+        const room_id = `${this.mget(_a.room_id) || nid}`;
+        for (const r of rows) {
+          const m =
+            r &&
+            typeof r.message === "string" &&
+            r.message.match(/^\[\[MEETING:start:([\s\S]*)\]\]$/);
+          if (!m) continue;
+          let payload = {};
+          try {
+            payload = JSON.parse(m[1]);
+          } catch (e) {
+            payload = {};
+          }
+          // Another room's card in the same channel — keep looking.
+          if (
+            payload.room_id != null &&
+            `${payload.room_id}` !== room_id &&
+            `${payload.nid || ""}` !== `${nid}`
+          ) {
+            continue;
+          }
+          let md = r.metadata;
+          if (typeof md === "string") {
+            try {
+              md = JSON.parse(md);
+            } catch (e) {
+              md = null;
+            }
+          }
+          // Newest card for this room is already ended → nothing to do.
+          if (md && md.meeting_status === "ended") return null;
+          return r.message_id || null;
+        }
+        return null;
+      })
+      .catch(() => null);
   }
 
   /**
@@ -551,6 +639,40 @@ class __window_meeting extends __room {
     if (!this._memberCallStates) this._memberCallStates = new Map();
     this._memberCallStates.set(String(drumate_id), "joined");
     this._refreshMember(drumate_id);
+  }
+
+  // A peer's socket went away (conference.leave — either a clean exit or the
+  // push router releasing a dropped connection). Until now the roster and the
+  // tile grid only reacted to Jitsi USER_LEFT, which for an abruptly dropped
+  // mobile can lag by minutes or never arrive at all, leaving a ghost
+  // participant behind. Drumee knows within one watchdog tick, so act on it.
+  //
+  // Routed through the normal onUserLeft path so tile teardown, hand-raise,
+  // presenting and spotlight cleanup all behave exactly as a normal leave.
+  onPeerSocketDropped(data = {}) {
+    const uid = data.uid != null ? data.uid : data.drumate_id;
+    if (uid == null || !this.endpoints) return;
+    const key = String(uid);
+    for (const pid of Object.keys(this.endpoints)) {
+      const ep = this.endpoints[pid];
+      if (!ep || (typeof ep.isDestroyed === "function" && ep.isDestroyed())) continue;
+      if (String(ep.mget && ep.mget(_a.uid)) !== key) continue;
+      this.onUserLeft(pid);
+      // Drop the map entry so a late Jitsi USER_LEFT for the same participant
+      // hits onUserLeft's `if (!endpoint) return` instead of calling goodbye()
+      // on an already-destroyed tile.
+      delete this.endpoints[pid];
+      return;
+    }
+    // No tile for them (joined without media, or already torn down) — the
+    // roster entry can still be stale, so clear it on its own.
+    if (this._memberCallStates && this._memberCallStates.has(key)) {
+      this._memberCallStates.delete(key);
+      if (this._memberHandRaised) this._memberHandRaised.delete(key);
+      if (this._memberPresenting) this._memberPresenting.delete(key);
+      if (this._clearHandTimer) this._clearHandTimer(key);
+      this._refreshMember(uid);
+    }
   }
 
   // When a participant leaves, clear their call/hand/presenting state so the

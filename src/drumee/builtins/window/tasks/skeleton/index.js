@@ -117,12 +117,19 @@ const make = function (ui) {
     }
   };
 
+  // Never falls back to the uid: a member the workspace can no longer resolve
+  // has no name, and a bare 16-char id in a name slot reads as a corrupted name.
   const fullName = (m) => {
     if (!m) return "";
     const first = m.firstname || "";
     const last = m.lastname || "";
-    return (first + " " + last).trim() || m.email || m.id || m.uid || "";
+    return (first + " " + last).trim() || m.email || "";
   };
+
+  // Name for a slot that must stay attributed even when the person has left:
+  // task reporter, comment author, history actor. Their rows are history and
+  // can't be blanked, so an unresolvable uid is labelled for what it is.
+  const authorName = (m) => fullName(m) || LOCALE.FORMER_MEMBER;
 
   const priorityOf = (key) =>
     priorities.find((p) => p.key === key) || priorities[1];
@@ -169,11 +176,8 @@ const make = function (ui) {
   const assigneeAvatar = (task) => {
     // Multi-assignee: overlapping avatars (up to 3) then a "+N" chip — sits
     // bottom-right of the card meta row (matches Figma 2021:117822).
-    const uids = Array.isArray(task.assignee_uids)
-      ? task.assignee_uids
-      : task.assignee_uid
-        ? [task.assignee_uid]
-        : [];
+    // Ex-members are filtered out — they have no profile left to draw.
+    const uids = ui.getKnownAssignees(task);
     if (!uids.length) return null;
     const MAX = 3;
     const shown = uids.slice(0, MAX);
@@ -805,9 +809,7 @@ const make = function (ui) {
     const dPriority = dDraft.priority || detail.priority || "medium";
     const dAssignees = Array.isArray(dDraft.assignees)
       ? dDraft.assignees
-      : Array.isArray(detail.assignee_uids)
-        ? detail.assignee_uids
-        : [];
+      : ui.getKnownAssignees(detail);
     const dLabels = Array.isArray(dDraft.labels)
       ? dDraft.labels
       : detail.label_ids || [];
@@ -938,7 +940,7 @@ const make = function (ui) {
                 }),
                 Skeletons.Note({
                   className: `${pfx}__detail-reporter-name`,
-                  content: fullName(reporter) || detail.created_by,
+                  content: authorName(reporter),
                 }),
               ],
             }),
@@ -1449,7 +1451,7 @@ const make = function (ui) {
             }),
             Skeletons.Note({
               className: `${pfx}__detail-reporter-name`,
-              content: fullName(createReporter) || Visitor.id,
+              content: authorName(createReporter),
             }),
           ],
         }),
@@ -1932,22 +1934,24 @@ const make = function (ui) {
   });
 };
 
+// Never falls back to the uid: an unresolved member has no name, and a bare
+// 16-char id rendered in a name slot reads as a corrupted name rather than as
+// the "no longer here" it actually means.
 const memberLabel = (m) =>
   m.fullname ||
   [m.firstname, m.lastname].filter(Boolean).join(" ").trim() ||
   m.email ||
-  String(m.id || m.uid || "");
+  "";
 
 // Selected assignees as removable chips. Exported so the panel can re-feed
 // just the chips row after a pick/removal.
 function buildAssigneeChips(ui, assignees, service) {
   const pfx = ui.fig.family;
   // Accept an array of uids (multi-assignee); tolerate a single uid/null.
-  const uids = Array.isArray(assignees)
-    ? assignees
-    : assignees
-      ? [assignees]
-      : [];
+  // An ex-member gets no chip at all — there is nothing left to label it with.
+  const uids = ui.getKnownAssignees(
+    Array.isArray(assignees) ? assignees : assignees ? [assignees] : [],
+  );
   return uids.map((uid) => {
     const m = ui.getMember(uid) || {};
     return Skeletons.Box.X({
@@ -1964,7 +1968,7 @@ function buildAssigneeChips(ui, assignees, service) {
         }),
         Skeletons.Note({
           className: `${pfx}__assignee-chip-name`,
-          content: memberLabel(m) || String(uid),
+          content: memberLabel(m),
         }),
         // ✕ toggles this member back out of the set.
         Skeletons.Button.Svg({
@@ -2208,6 +2212,10 @@ function buildCommentListContent(ui) {
   const pickerFor = ui.getReactPickerFor();
   const fullName = (m) =>
     [m.firstname, m.lastname].filter(Boolean).join(" ").trim() || m.email || "";
+  // Comments and history rows must stay attributed even once their author has
+  // left the workspace, and an unresolvable uid has no name to show — label it
+  // rather than leaving the slot blank (or printing the raw uid).
+  const authorName = (m) => fullName(m) || LOCALE.FORMER_MEMBER;
 
   // Existing reactions shown as emoji+count chips (null when a comment has none).
   const reactBar = (c) => {
@@ -2338,7 +2346,7 @@ function buildCommentListContent(ui) {
       kids: [
         Skeletons.Note({
           className: `${pfx}__comment-author`,
-          content: fullName(m) || c.author_uid,
+          content: authorName(m),
         }),
         Skeletons.Note({
           className: `${pfx}__comment-time`,
@@ -2465,10 +2473,9 @@ function buildCommentListContent(ui) {
         replyingToChild
           ? Skeletons.Note({
               className: `${pfx}__comment-replying-to`,
-              content: `${LOCALE.REPLYING_TO || "Replying to"} ${
-                fullName(ui.getMember(replyTarget.author_uid) || {}) ||
-                replyTarget.author_uid
-              }`,
+              content: `${LOCALE.REPLYING_TO || "Replying to"} ${authorName(
+                ui.getMember(replyTarget.author_uid) || {},
+              )}`,
             })
           : null,
         Skeletons.Box.X({
@@ -2527,7 +2534,7 @@ function buildCommentListContent(ui) {
           kids: [
             Skeletons.Note({
               className: `${pfx}__history-actor`,
-              content: fullName(m) || r.actor_uid,
+              content: authorName(m),
             }),
             Skeletons.Note({
               className: `${pfx}__history-verb`,

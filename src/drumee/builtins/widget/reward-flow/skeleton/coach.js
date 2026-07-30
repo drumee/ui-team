@@ -16,7 +16,7 @@
  */
 module.exports = function coach(
   ui,
-  { text, style, side, showBack = true, showNext = false },
+  { text, style, side, showBack = true, showNext = false, nextDisabled = false },
 ) {
   const pfx = ui.fig.family;
   const kids = [
@@ -41,15 +41,22 @@ module.exports = function coach(
         }),
       );
     }
-    // Only Step 3's "folder" beat carries a Next: it is the one sub-step with
-    // no real action to perform, so nothing else would ever advance it.
+    // Only Step 3's read-only beats carry a Next: they are the sub-steps with no
+    // real action to perform, so nothing else would ever advance them.
     if (showNext) {
       footerKids.push(
         Skeletons.Note({
           className: `${pfx}__coach-next`,
+          // Disabled means it is on screen but refuses the click, for a beat
+          // that is not ready to be left — Step 3's last one, while files are
+          // still going up. The service is withheld rather than filtered later,
+          // so the click cannot reach the flow at all; the dataset drives the
+          // look (see the skin).
+          dataset: { disabled: nextDisabled ? "1" : "0" },
           content: LOCALE.REWARD_FLOW_NEXT || "Next",
-          service: "reward-guide-next",
-          uiHandler: [ui],
+          ...(nextDisabled
+            ? {}
+            : { service: "reward-guide-next", uiHandler: [ui] }),
         }),
       );
     }

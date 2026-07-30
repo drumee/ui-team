@@ -46,6 +46,16 @@
         opacity: 0.4;
       }
     }
+
+    // Access to this window's workspace was revoked while it was open (see
+    // desk/wm/push.js onWorkspaceAccessRevoked). Blur it out and stop taking
+    // input right away: everything in it is about to fail the server's ACL, so
+    // the user must not keep typing into it while the notice loads.
+    &[data-revoked="1"] {
+      filter: blur(6px);
+      pointer-events: none;
+      user-select: none;
+    }
   }
 
   &__content-row {

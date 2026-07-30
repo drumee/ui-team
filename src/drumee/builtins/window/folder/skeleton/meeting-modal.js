@@ -65,12 +65,14 @@ function inviteeSuggestion(ui, pfx, member) {
 function inviteesSuggestions(ui, pfx, query) {
   const q = String(query || "").trim().toLowerCase();
   if (!q) return [];
-  const chosen = new Set((ui._mmAttendees || []).map((a) => a.uid || a));
+  // String-compared: the pool and the chips come from different sources, and a
+  // number/string mismatch would re-offer an already-invited member.
+  const chosen = new Set((ui._mmAttendees || []).map((a) => String(a.uid || a)));
   const members = Array.isArray(ui._hubMembers) ? ui._hubMembers : [];
   return members
     .filter((m) => {
       const uid = m.uid || m.id;
-      if (chosen.has(uid)) return false;
+      if (!uid || chosen.has(String(uid))) return false;
       return memberName(m).toLowerCase().includes(q) ||
         String(m.email || "").toLowerCase().includes(q);
     })
@@ -293,6 +295,8 @@ module.exports = function meetingModal(ui, opt = {}) {
       altFormat: "d/m/Y",
       appendTo: document.body,
     },
+    // Moving the meeting re-runs the invitees' free/busy check.
+    service: "mm-recheck-availability",
     uiHandler: [ui],
   };
 
@@ -310,11 +314,15 @@ module.exports = function meetingModal(ui, opt = {}) {
             partHandler: ui,
             kids: inviteesChips(ui, pfx),
           }),
+          // `watch`, not a hand-attached DOM listener: the Entry rebuilds its
+          // <input> on reload and re-arms `watch` itself, where an external
+          // listener would be silently dropped.
           Skeletons.Entry({
             className: `${pfx}-invitees-search`,
             sys_pn: "mm-invitees-search",
             name: "mm-invitee-search",
             placeholder: LOCALE.SEARCH_MEMBER,
+            watch: "mm-invitee-typed",
             bubble: 0,
             uiHandler: [ui],
             partHandler: ui,
@@ -343,36 +351,42 @@ module.exports = function meetingModal(ui, opt = {}) {
     kids: recurRow(ui, pfx),
   });
 
-  // Non-creators get Join only: room.update / room.remove reject them with
-  // NOT_MEETING_OWNER, so showing Update/Delete would only produce an error.
-  const canEdit = ui.canEditMeeting(m);
+  // Ownership is enforced server-side (room.update / room.remove answer
+  // NOT_MEETING_OWNER), so the actions are always offered. Gating them on a
+  // client-side creator check stranded the organizer with a Join-only dialog
+  // whenever the recorded uid didn't line up with Visitor.id.
+  const cancelBtn = () =>
+    Skeletons.Note({
+      className: `${pfx}-btn neutral`,
+      content: LOCALE.CANCEL,
+      service: "close-meeting-modal",
+      uiHandler: [ui],
+    });
 
   const footerKids = isEdit
     ? [
-        canEdit
-          ? Skeletons.Note({
-              className: `${pfx}-btn danger`,
-              content: LOCALE.DELETE_SCHEDULE,
-              service: "meeting-modal-delete",
-              uiHandler: [ui],
-            })
-          : null,
+        Skeletons.Note({
+          className: `${pfx}-btn danger`,
+          content: LOCALE.DELETE_SCHEDULE,
+          service: "meeting-modal-delete",
+          uiHandler: [ui],
+        }),
+        cancelBtn(),
         Skeletons.Note({
           className: `${pfx}-btn ghost`,
           content: LOCALE.JOIN_MEETING,
           service: "join-meeting",
           uiHandler: [ui],
         }),
-        canEdit
-          ? Skeletons.Note({
-              className: `${pfx}-btn primary`,
-              content: LOCALE.UPDATE_SCHEDULE,
-              service: "meeting-modal-submit",
-              uiHandler: [ui],
-            })
-          : null,
-      ].filter(Boolean)
+        Skeletons.Note({
+          className: `${pfx}-btn primary`,
+          content: LOCALE.UPDATE_SCHEDULE,
+          service: "meeting-modal-submit",
+          uiHandler: [ui],
+        }),
+      ]
     : [
+        cancelBtn(),
         Skeletons.Note({
           className: `${pfx}-btn primary`,
           content: LOCALE.SCHEDULE,

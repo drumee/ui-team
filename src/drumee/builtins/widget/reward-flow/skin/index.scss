@@ -30,9 +30,10 @@
   background: transparent !important;
 }
 
-// "1" — this modal supplies the dim itself: the Step 2 invite popup and the
-// "Don't drop now" modal, both of which sit over a flow state whose own
-// vignette is transparent or absent.
+// "1" — this modal supplies the dim itself, for a flow state whose own vignette
+// is transparent or absent. _openModal's default, though nothing passes it
+// today: the "Don't drop now" guard used to, and moved to the flow's own root
+// so its dim could reach the desk chrome this host never covers.
 .window-manager__wrapper-modal[data-reward-overlay="1"],
 .window-manager__wrapper-modal[data-reward-overlay="1"][data-overlay="blur"] {
   background-color: var(--overlay-bg, rgba(0, 0, 0, 0.4)) !important;
@@ -53,6 +54,10 @@ $accent: var(--primary-purple-40);
 $accent-strong: var(--primary-purple-50);
 $accent-soft: rgba(89, 80, 255, 0.12);
 $success-soft: rgba(46, 179, 122, 0.14);
+// The sold-out notice's chip. Neutral on purpose: nothing the user did went
+// wrong, so it must not read as an error, and it must not read as the success
+// green either — this is the one terminal screen that is NOT a win.
+$info-soft: rgba(120, 128, 148, 0.14);
 
 .reward-flow {
   // Every text element in the flow uses the app font. Set on the root so the
@@ -88,6 +93,22 @@ $success-soft: rgba(46, 179, 122, 0.14);
     z-index: calc(var(--z-index-modal, 100000) - 1);
   }
 
+  // A waiting Step 2 — the user is working a surface in the shared
+  // wrapper-modal, either the permission panel or the invite popup. That modal
+  // sits at --z-index-modal (100000), and the flow supplies the dim itself
+  // here: a cutout over the surface, so everything around it is shadowed and
+  // the surface reads clear. Both jobs need the root ABOVE the modal:
+  //   - the dim must cover the modal's layer, and reach the topbar and sidebar
+  //     the modal's own backdrop never did (it is absolutely positioned inside
+  //     the desk's wm-container; our root is fixed and portaled to body);
+  //   - at 10020 the card would paint behind the modal and every click on it
+  //     would land on the backdrop instead of the card.
+  // The surface stays fully operable through the hole: in a waiting state the
+  // vignette and the cutout are both pointer-events:none.
+  &__root[data-over-modal="1"] {
+    z-index: 1000000;
+  }
+
   // While guiding, the walkthrough targets the workspace form and internal
   // permission panel, which live in that wrapper-modal at --z-index-modal
   // (100000). Lift the whole flow above it so the coach is clickable and the
@@ -98,16 +119,28 @@ $success-soft: rgba(46, 179, 122, 0.14);
     z-index: 1000000;
   }
 
-  // The in-root "Don't drop now" guard is up. It guards surfaces that live in
+  // The IN-ROOT "Don't drop now" guard is up. It guards surfaces that live in
   // the wrapper-modal (--z-index-modal, 100000) — the guided create-form, the
   // Step 2 invite popup — and the root owns the flow's stacking context, so no
   // z-index on the host inside it can climb over them on its own. Lift the root
   // for as long as the guard is showing; set imperatively by _markRootDrop, so
   // raising the guard never re-renders the flow. Last, so it wins over both
   // lifts above at equal specificity.
-  &__root[data-drop="1"] {
+  //
+  // Only the in-root guard lifts. The other one is fed into the wrapper-modal
+  // itself (see _openModal), which is already above us — lifting the root there
+  // would put the flow's own card OVER the modal asking about it.
+  &__root[data-drop-lift="1"] {
     z-index: 1000000;
   }
+
+  // …and while EITHER guard is up, it supplies the only dim: the modal's own
+  // backdrop. The flow's goes off, because two stacked dims are not one colour —
+  // everywhere the flow's does not reach reads a shade lighter than the rest,
+  // which is the hole its cutout punches and the card it paints behind. That is
+  // the two-tone overlay this replaces.
+  &__root[data-drop="1"] &__vignette { background-color: transparent; }
+  &__root[data-drop="1"] &__cutout { box-shadow: none; }
 
 
   &__vignette {
@@ -139,7 +172,7 @@ $success-soft: rgba(46, 179, 122, 0.14);
     height: var(--cut-h, 0);
     // Mirrors the spotlighted target's own rounding (set with the --cut-* vars)
     // so the cutout hugs it exactly.
-    border-radius: var(--cut-radius, 4px);
+    border-radius:  4px;
     pointer-events: none;
     box-shadow: 0 0 0 100vmax var(--overlay-bg, rgba(0, 0, 0, 0.4));
     transition: left 200ms ease, top 200ms ease, width 200ms ease,
@@ -291,6 +324,16 @@ $success-soft: rgba(46, 179, 122, 0.14);
     transition: filter 120ms ease;
 
     &:hover { filter: brightness(1.08); }
+
+    // Not ready to be left yet — Step 3's last beat holds this until the batch
+    // has finished uploading. Kept in place and legible rather than hidden, so
+    // the way out does not move once it enables; inert to the pointer so the
+    // hover lift cannot suggest otherwise.
+    &[data-disabled="1"] {
+      opacity: 0.45;
+      cursor: default;
+      pointer-events: none;
+    }
   }
 
   &__anchor {
@@ -323,9 +366,9 @@ $success-soft: rgba(46, 179, 122, 0.14);
       align-items: center;
     }
 
-    // Any step with no control to point at — a Step 2 whose invite was already
-    // satisfied in Step 1, or a Step 3 that opens the workspace instead of the
-    // topbar uploader. _applyStepTarget leaves their inline placement cleared,
+    // Any step with no control to point at — a Step 3 that opens the workspace
+    // instead of the topbar uploader. _applyStepTarget leaves its inline
+    // placement cleared,
     // so centre them like Step 1. Keyed on data-notarget alone, NOT on the step:
     // scoping it to step2 left the guided Step 3 card falling through to the
     // 96px topbar fallback above, pinned under a control it does not point at.
@@ -339,6 +382,20 @@ $success-soft: rgba(46, 179, 122, 0.14);
   }
 
   &__root[data-waiting="1"] &__anchor { opacity: 0.92; }
+
+  // The invite-sent confirmation has taken the panel's place: it is a card of
+  // its own, centred on the same screen, carrying the same news and its own
+  // Close. Ours behind it repeated the step just completed and left a stray
+  // Back sticking out from under it. The dim and the cutout stay — the hole is
+  // on the confirmation by then — so the flow still owns the screen around it.
+  &__root[data-toast="1"] &__anchor { display: none; }
+
+  // …except on a waiting Step 2, where the card is one of only two things meant
+  // to sit clear of the dim (the surface in the modal is the other). Fading it
+  // there reads as "disabled" against a surface the user is actively working,
+  // and the dimmed desk showing through it is exactly what the cutout avoids.
+  // Declared after, so it wins at equal specificity.
+  &__root[data-over-modal="1"] &__anchor { opacity: 1; }
 
   // Steps 2/3 dim via the cutout over their topbar control, so the flat scrim
   // must go transparent — it stays in place (and clickable) purely to catch the
@@ -492,6 +549,40 @@ $success-soft: rgba(46, 179, 122, 0.14);
     }
   }
 
+  // Back on the permission-panel Step 2, where it is the card's ONLY control:
+  // there is no primary button beside it to carry the eye, and the card sits
+  // clear of the dim next to a live panel. The ghost lockup — #65656c on
+  // #f2f2f7, no border — read as a disabled label there, so the button got
+  // tried once and written off as inert. Promote it to the brand fill instead:
+  // being the only thing to press, it is this card's primary action.
+  //
+  // --primary-40 (#5950ff) is the brand purple, so the label goes white —
+  // --normal-fg on that fill is unreadable in light theme and invisible in
+  // dark. Hover/active deepen to --primary-50 (#433cc5) rather than lightening,
+  // matching how the flow's own primary buttons move under the pointer.
+  // Scoped through __anchor, which wraps the STEP CARD and nothing else. The
+  // "Don't drop now" guard is a step card too (skeleton/modal reuses these very
+  // classes) and renders in this same root, so a rule on __btn--ghost alone
+  // turned its "Drop anyway" brand-purple as well — two primary-looking buttons
+  // side by side, on the one screen that needs its two answers to look
+  // different.
+  &__root[data-on-panel="1"] &__anchor &__btn--ghost {
+    color: #fff;
+    background-color: var(--primary-40);
+    border: 1px solid var(--primary-40);
+    box-shadow: 0 1px 2px rgba(11, 10, 33, 0.06);
+
+    &:hover {
+      background-color: var(--primary-50);
+      border-color: var(--primary-50);
+    }
+    &:active {
+      background-color: var(--primary-50);
+      border-color: var(--primary-50);
+      box-shadow: none;
+    }
+  }
+
   // ───────── modals (fed into Wm.__wrapperModal) ─────────
   // Fed into Wm.__wrapperModal, outside the .reward-flow root — so it can't
   // inherit the root's font and declares it here.
@@ -520,6 +611,15 @@ $success-soft: rgba(46, 179, 122, 0.14);
   // case the pipeline inlines it.
   &__chip--success &__chip-ico {
     color: var(--green-400, #10b667);
+  }
+
+  // The sold-out notice's chip — congrats' twin in shape, neutral in colour.
+  &__chip--info {
+    background-color: $info-soft;
+  }
+
+  &__chip--info &__chip-ico {
+    color: var(--grey-60, #6b7280);
   }
 
   // Branded drumee logo + wordmark header (drop modal) — same lockup as the

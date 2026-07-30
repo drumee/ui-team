@@ -1021,22 +1021,27 @@ class desk_module extends LetcBox {
     });
   }
 
-  /**
-   * Change the add type depending of the context
-   * @returns
-   */
-  _updateAddmenu(data = {}) {
-    this.ensurePart("addmenu").then((p) => {
-      let item = p.__items.children.first();
-      if (data.filetype && data.filetype === _a.hub) {
-        item.setLabel(LOCALE.FOLDER);
-      } else {
-        item.setLabel(LOCALE.WORKSPACE);
-      }
-    });
+  /** Keep the topbar actions enabled when the breadcrumb context changes. */
+  _updateAddmenu() {
     this.ensurePart("action-cluster").then((p) => {
       p.setState(1);
     });
+  }
+
+  closeDeskNewMenu(cmd) {
+    const menu = cmd && cmd.getParentByKind?.(KIND.menu.topic);
+    if (!menu) return;
+    const group = menu.el?.querySelector(
+      ".desk-module-topbar__new-menu-create-group",
+    );
+    if (group) group.dataset.submenu = _a.closed;
+    if (menu.changeState) menu.changeState(0);
+  }
+
+  toggleDeskNewCreateMenu(cmd) {
+    if (!cmd || !cmd.el) return;
+    cmd.el.dataset.submenu =
+      cmd.el.dataset.submenu === _a.open ? _a.closed : _a.open;
   }
 
   /**
@@ -1304,6 +1309,10 @@ class desk_module extends LetcBox {
    * and it follows the user across devices instead of living in one browser.
    * `?reward=1` forces it for local testing; a forced run reports nothing, so
    * it stays repeatable and cannot mask a real campaign run.
+   *
+   * The campaign is capped at a fixed number of rewarded users. Once they are
+   * gone the gate answers `capped`, and the flow mounts to say so instead of
+   * walking anyone through a reward that no longer exists.
    */
   async _maybeStartRewardFlow() {
     const forced = !!Visitor.parseModuleArgs().reward;
@@ -1328,6 +1337,12 @@ class desk_module extends LetcBox {
     // on a shared browser, and clearing yp.reward_claim could not reset it.
     // reward.get_state reads that row, so a re-send genuinely re-arms someone.
     let step = "";
+    // All of the campaign's limited slots are taken. The flow still mounts —
+    // for its sold-out notice, not for a walkthrough. Being told is the point:
+    // these users were mailed a promise, so silence would read as the offer
+    // never having existed. Users who were never mailed stay ineligible and
+    // still see nothing.
+    let capped = false;
     if (!forced) {
       let state;
       try {
@@ -1355,8 +1370,11 @@ class desk_module extends LetcBox {
         this._rewardFlowInFlight = false;
         return;
       }
+      capped = !!state.capped;
       // Resume point, so a user who wandered off mid-walkthrough picks up where
-      // they were — on whatever device they come back on.
+      // they were — on whatever device they come back on. Empty for a capped
+      // run: the server blanks it, because a sold-out notice has nothing to
+      // resume into.
       step = state.step || "";
     }
     this.ensurePart("overlay").then((p) => {
@@ -1364,7 +1382,10 @@ class desk_module extends LetcBox {
       // latch itself off — without it the flow cannot tell a dev poking at the
       // screen from a real campaign arrival, and the docblock's "cannot mask a
       // real campaign run" promise above is not kept.
-      p.feed({ kind: "reward_flow", uiHandler: [this], forced: forced ? 1 : 0, step });
+      p.feed({
+        kind: "reward_flow", uiHandler: [this],
+        forced: forced ? 1 : 0, capped: capped ? 1 : 0, step,
+      });
       this._rewardFlow = p.children.last();
       this._rewardFlow.once(_e.destroy, () => {
         this._rewardFlow = null;
@@ -2068,7 +2089,27 @@ class desk_module extends LetcBox {
         return this.loadDefault();
 
       case _e.upload:
+        this.closeDeskNewMenu(cmd);
         return Wm.handleUpload();
+
+      case "toggle-desk-new-create-menu":
+        return this.toggleDeskNewCreateMenu(cmd);
+
+      case "launch-gdrive-migration": {
+        this.closeDeskNewMenu(cmd);
+        const workspace = (Wm && Wm._curWorkspace) || {};
+        return Kind.waitFor("migrate_gdrive_popup").then(() => {
+          Wm.launch(
+            {
+              kind: "migrate_gdrive_popup",
+              hub_id: workspace.hub_id || Visitor.id,
+              nid: workspace.nid || Visitor.get(_a.home_id),
+              wm_unique_id: "migrate_gdrive_popup",
+            },
+            { explicit: 1, singleton: 1 },
+          );
+        });
+      }
 
       case _e.download:
         return Wm.download();
@@ -2246,9 +2287,11 @@ class desk_module extends LetcBox {
         return;
 
       case "new-workspace":
+        this.closeDeskNewMenu(cmd);
         return Wm.onUiEvent(cmd, { ...args, service: "new-workspace" });
 
       case "new-note":
+        this.closeDeskNewMenu(cmd);
         Wm.windowsLayer.append({
           kind: "editor_markdown",
           uiHandler: [this],
@@ -2258,6 +2301,7 @@ class desk_module extends LetcBox {
       case "new-document":
       case "new-spreadsheet":
       case "new-presentation":
+        this.closeDeskNewMenu(cmd);
         Wm.newDocument(cmd);
         // this._hideAddMenu();
         return;
@@ -2272,7 +2316,16 @@ class desk_module extends LetcBox {
       case "reward-set-add-menu":
         return this.ensurePart("addmenu").then((p) => {
           if (!p || !_.isFunction(p.changeState)) return;
-          if (!args.open) return p.changeState(false);
+          const setCreateMenuState = (state) => {
+            const group = p.el?.querySelector(
+              ".desk-module-topbar__new-menu-create-group",
+            );
+            if (group) group.dataset.submenu = state;
+          };
+          if (!args.open) {
+            setCreateMenuState(_a.closed);
+            return p.changeState(false);
+          }
 
           // Opening this menu programmatically can't rely on changeState alone:
           //   - _openItems() early-returns on a truthy `isOpen`, and `isOpen` is
@@ -2294,6 +2347,14 @@ class desk_module extends LetcBox {
           if (p.model && _.isFunction(p.model.set)) p.model.set(_a.state, 0);
           p.changeState(true);
           if (p.el && p.el.dataset) p.el.dataset.state = 1;
+          setCreateMenuState(_a.open);
+        });
+
+      case "reward-set-new-create-menu":
+        return this.ensurePart("desk-new-create-group").then((p) => {
+          if (p && p.el) {
+            p.el.dataset.submenu = args.open ? _a.open : _a.closed;
+          }
         });
 
       // Relayed to the reward flow: it opened this popup through the

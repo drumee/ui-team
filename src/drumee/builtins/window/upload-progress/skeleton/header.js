@@ -48,10 +48,12 @@ module.exports = function header(ui) {
               }),
             ]
           }),
-          // Close (X) — cancels the upload and dismisses the popup
+          // Close (X) — cancels the upload AND dismisses the popup. Its own
+          // service, not the footer's "cancel-all": that one now leaves the
+          // window standing so its cancelled rows can be read (see cancelAll).
           Skeletons.Box.X({
             className: `${pfx}__close-wrapper`,
-            service: "cancel-all",
+            service: "cancel-close",
             uiHandler: [ui],
             kids: [
               Skeletons.Button.Svg({

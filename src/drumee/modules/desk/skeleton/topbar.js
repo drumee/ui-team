@@ -1,6 +1,6 @@
 /**
  * Topbar — left to right:
- * breadcrumb | [add-new | upload | search | invite]
+ * breadcrumb | [new | search | invite]
  */
 
 const addMenuItem = (pfx, ui, ico, label, service, name, opts = {}) =>
@@ -21,6 +21,136 @@ const addItems = (pfx, ui) => [
   addMenuItem(pfx, ui, "addmenu-spreadsheet", LOCALE.SPREADSHEET || "Spreadsheet", "new-spreadsheet", "spreadsheet.xlsx", { iconClass: "ico-spreadsheet" }),
   addMenuItem(pfx, ui, "addmenu-presentation", LOCALE.PRESENTATION || "Presentation", "new-presentation", "presentation.pptx", { iconClass: "ico-presentation" }),
 ];
+
+const newMenuRow = (pfx, ui, {
+  ico,
+  label,
+  service,
+  name,
+  className = "",
+  highlight = 0,
+}) => Skeletons.Box.X({
+  className: `${pfx}__new-menu-item ${className}`,
+  uiHandler: [ui],
+  service,
+  name,
+  dataset: { highlight },
+  kidsOpt: { active: 0 },
+  kids: [
+    Skeletons.Button.Svg({
+      ico,
+      active: 0,
+      className: `${pfx}__new-menu-icon`,
+    }),
+    Skeletons.Note({
+      content: label,
+      active: 0,
+      className: `${pfx}__new-menu-name`,
+    }),
+  ],
+});
+
+const deskNewMenu = (pfx, ui) => {
+  const createItems = [
+    newMenuRow(pfx, ui, {
+      ico: "addmenu-folder",
+      label: LOCALE.WORKSPACE || "Workspace",
+      service: "new-workspace",
+      className: `${pfx}__add-menu-item ${pfx}__new-menu-submenu-item ico-workspace`,
+    }),
+    newMenuRow(pfx, ui, {
+      ico: "addmenu-note",
+      label: LOCALE.NOTE || "Note",
+      service: "new-note",
+      className: `${pfx}__add-menu-item ${pfx}__new-menu-submenu-item ico-note`,
+    }),
+    newMenuRow(pfx, ui, {
+      ico: "addmenu-document",
+      label: LOCALE.DOCUMENT || "Document",
+      service: "new-document",
+      name: "document.docx",
+      className: `${pfx}__add-menu-item ${pfx}__new-menu-submenu-item ico-document`,
+    }),
+    newMenuRow(pfx, ui, {
+      ico: "addmenu-spreadsheet",
+      label: LOCALE.SPREADSHEET || "Spreadsheet",
+      service: "new-spreadsheet",
+      name: "spreadsheet.xlsx",
+      className: `${pfx}__add-menu-item ${pfx}__new-menu-submenu-item ico-spreadsheet`,
+    }),
+    newMenuRow(pfx, ui, {
+      ico: "addmenu-presentation",
+      label: LOCALE.PRESENTATION || "Presentation",
+      service: "new-presentation",
+      name: "presentation.pptx",
+      className: `${pfx}__add-menu-item ${pfx}__new-menu-submenu-item ico-presentation`,
+    }),
+  ];
+
+  const createGroup = Skeletons.Box.X({
+    className: `${pfx}__new-menu-item ${pfx}__new-menu-create-group`,
+    sys_pn: "desk-new-create-group",
+    partHandler: ui,
+    uiHandler: [ui],
+    service: "toggle-desk-new-create-menu",
+    dataset: { submenu: _a.closed },
+    kidsOpt: { active: 0 },
+    kids: [
+      Skeletons.Note({
+        content: "+",
+        active: 0,
+        className: `${pfx}__new-menu-create-symbol`,
+      }),
+      Skeletons.Note({
+        content: LOCALE.ADD_NEW || "Add new",
+        active: 0,
+        className: `${pfx}__new-menu-name`,
+      }),
+      Skeletons.Box.Y({
+        active: 0,
+        className: `${pfx}__new-menu-create-submenu`,
+        kids: createItems,
+      }),
+    ],
+  });
+
+  return Skeletons.Menu({
+    className: `${pfx}__add-wrapper`,
+    direction: _a.down,
+    duration: 0.01,
+    opening: _e.click,
+    persistence: _a.always,
+    sys_pn: "addmenu",
+    partHandler: [ui],
+    callback: () => {
+      const group = ui.getPart && ui.getPart("desk-new-create-group");
+      if (group && group.el) group.el.dataset.submenu = _a.closed;
+    },
+    trigger: Skeletons.Button.Label({
+      ico: "topbar-add",
+      className: `${pfx}__new-workspace-btn`,
+      label: LOCALE.NEW || "New",
+    }),
+    items: Skeletons.Box.Y({
+      className: `${pfx}__new-menu-items`,
+      kids: [
+        newMenuRow(pfx, ui, {
+          ico: "app-upload",
+          label: LOCALE.FROM_DEVICE || "From device",
+          service: _e.upload,
+          className: `${pfx}__new-menu-item--from-device`,
+        }),
+        newMenuRow(pfx, ui, {
+          ico: "logo-google",
+          label: LOCALE.MIGRATE_GDRIVE_TITLE || "Migrate from Google Drive",
+          service: "launch-gdrive-migration",
+          className: `${pfx}__new-menu-item--gdrive`,
+        }),
+        createGroup,
+      ],
+    }),
+  });
+};
 
 module.exports = function (ui) {
   const pfx = `${ui.fig.family}-topbar`;
@@ -53,27 +183,7 @@ module.exports = function (ui) {
         className: `${pfx}__actions-cluster`,
         sys_pn :"action-cluster",
         kids: [
-          Skeletons.Menu({
-            className: `${pfx}__add-wrapper`,
-            direction: _a.down,
-            opening: _e.click,
-            persistence: _a.once,
-            sys_pn: "addmenu",
-            partHandler: [ui],
-            trigger: Skeletons.Button.Label({
-              ico: "topbar-add",
-              className: `${pfx}__new-workspace-btn`,
-              label: LOCALE.ADD_NEW || "Add new",
-            }),
-            items: addItems(pfx, ui),
-          }),
-          Skeletons.Button.Label({
-            ico: "app-upload",
-            className: `${pfx}__upload-btn`,
-            label: LOCALE.UPLOAD,
-            service: _e.upload,
-            uiHandler: [ui],
-          }),
+          deskNewMenu(pfx, ui),
 
           // Search bar + suggestions
           Skeletons.Box.Y({

@@ -806,6 +806,15 @@
       background: var(--grey-20, #f2f2f7);
     }
   }
+
+  // Joining is slow (folder window + camera/mic + conference bind). Without
+  // feedback the button read as dead and users clicked it repeatedly, which is
+  // exactly what the click guard now swallows — so say it out loud instead.
+  &[data-joining="1"] {
+    pointer-events: none;
+    opacity: 0.65;
+    cursor: progress;
+  }
 }
 
 .widget-chatItem__meeting-card-btn-ico {

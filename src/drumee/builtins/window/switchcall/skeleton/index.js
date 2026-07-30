@@ -14,8 +14,15 @@ const __skl_window_switchcall = function (_ui_) {
     byline = LOCALE.INCOMING_CALL || "";
   } else {
     title = LOCALE.MEETING_STARTED;
-    const folder = (data.details && data.details.filename) || data.filename || "";
-    byline = LOCALE.X_STARTED_MEETING_IN.format(name, folder);
+    // `details` is mfs_node_attr(room_id) taken against the hub's own db, but a
+    // hub node lives in its owner's db — so for a meeting it comes back empty
+    // and details.filename is undefined. hub_name carries the workspace name.
+    const folder =
+      (data.details && data.details.filename) || data.filename || data.hub_name || "";
+    // Never render a dangling "started a meeting in " with nothing after it.
+    byline = folder
+      ? LOCALE.X_STARTED_MEETING_IN.format(name, folder)
+      : LOCALE.X_STARTED_A_MEETING.format(name);
   }
 
   const closeBtn = Skeletons.Button.Svg({

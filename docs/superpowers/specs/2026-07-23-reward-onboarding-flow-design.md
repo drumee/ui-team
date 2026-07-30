@@ -68,6 +68,11 @@ These are deliberate and were agreed during design:
 2. **Waiting states are added.** Figma shows no state between "user clicks
    Upload" and "file has landed". The flow needs one, because the user must be
    able to reach the uploader and the invite popup — see *State machine* below.
+3. **The desk topbar now opens through a merged `New` cascade.** The outer
+   menu exposes `From device`, `Migrate from Google Drive`, and `Add new`, and
+   `Add new` expands to `Workspace`, `Note`, `Document`, `Spreadsheet`, and
+   `Presentation`. Step 1 auto-expands that nested create flyout so the guided
+   walkthrough starts on the current desktop path.
 
 ## Existing code this builds on
 
@@ -78,7 +83,7 @@ These are deliberate and were agreed during design:
 | `invite_popup` widget | `src/drumee/builtins/widget/invite-popup/` | Step 3's modal — opened by kind, not modified |
 | `Wm.__wrapperModal` + `dataset.overlay = "blur"` | used by `invite-popup` and `desk/index.js:2162` | Drop and congrats modals |
 | `Visitor.parseModuleArgs()` | `src/drumee/modules/desk/index.js:1167` | Dev override param |
-| `_e.upload` service on the topbar | `src/drumee/modules/desk/skeleton/topbar.js:74` | Step 2's arrow target and the action its button fires |
+| `desk topbar New cascade` | `src/drumee/modules/desk/skeleton/topbar.js` | Outer `New` control exposes `From device`, `Migrate from Google Drive`, and `Add new`; the nested create flyout keeps `Workspace` first. Step 2 still fires the same `_e.upload` action through that path. |
 
 ## Architecture
 
@@ -175,10 +180,11 @@ trapped.
 step 3 to step 2 does not require re-uploading, and *Continue* returns straight
 to step 3. The progress bar reflects `_furthest`, so it never rewinds.
 
-**Step 2 target:** the topbar upload control in the current workspace. The
-step's *Upload* button fires the same `_e.upload` service the topbar fires, and
-the arrow points at that control. Any `_e.uploaded` broadcast completes the
-step, including one from a drag-drop the user did instead.
+**Step 2 target:** the merged topbar `New` control. The step's *Upload* button
+still fires `_e.upload` directly, while the arrow uses `New` as the live topbar
+anchor now that the standalone Upload button no longer exists. Any
+`_e.uploaded` broadcast completes the step, including one from a drag-drop the
+user did instead.
 
 **Waiting states must not block the app.** On entering `step2_waiting` or
 `step3_waiting` the root gets `data-waiting="1"`: the vignette fades to
@@ -203,7 +209,7 @@ expose would be guesswork.
   through `url-loader`.
 - **Anchoring** — steps 2 and 3 position top-right, absolute within the desk
   overlay. The arrow points at that step's target control: upward to the topbar
-  upload control on step 2, and at the invite control on step 3. Exact offsets
+  `New` control on step 2, and at the invite control on step 3. Exact offsets
   and rotation are taken from the Figma frames at build time rather than fixed
   here.
 

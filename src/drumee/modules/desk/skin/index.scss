@@ -14,6 +14,7 @@ html {
 @include meta.load-css("desk/intro-popup");
 @include meta.load-css("dialog");
 @include meta.load-css("sidebar");
+@include meta.load-css("meeting-toast");
 
 .desk-module {
   &__ui {

@@ -6,10 +6,12 @@ Supersedes the Step 3 section of `2026-07-23-reward-onboarding-flow-design.md`
 
 ## Problem
 
-Step 3 currently spotlights the desk topbar's Upload button and waits for any
-upload. The file lands wherever the desk context happens to point — usually
-Home, not the workspace the user just created in Step 1. The step teaches
-nothing about where files live.
+The legacy Step 3 path originally spotlighted the desk topbar's standalone
+Upload button and waited for any upload. The merged topbar now uses `New` as
+that spotlight anchor while the card still dispatches `_e.upload` directly.
+The file lands wherever the desk context happens to point — usually Home, not
+the workspace the user just created in Step 1. The step teaches nothing about
+where files live.
 
 Step 3 becomes a guided walkthrough, modelled on the Step 1 walkthrough: it
 reopens the Step 1 workspace and walks the user to the upload control *inside*
@@ -142,7 +144,7 @@ Applied when `base === "step3" && ui.hasStep1Workspace()`.
 
 `skeleton/index.js`: `targeted` excludes a guided step 3, exactly as it already
 excludes a satisfied step 2 — so no cutout is rendered over
-`.desk-module-topbar__upload-btn` and the anchor gets `data-notarget="1"`,
+`.desk-module-topbar__new-workspace-btn` and the anchor gets `data-notarget="1"`,
 centring the card via the existing skin rule.
 
 `_applyStepTarget()` resolves no target for a guided step 3, same branch as the
@@ -157,7 +159,7 @@ everywhere, so its coach is unchanged.
 ## Why `folder` needs a Next button
 
 Every other sub-step in both walkthroughs advances because a surface *appears*
-— the dropdown opens, the form mounts. The `+ New` pill is already on screen the
+— the dropdown opens, the form mounts. The folder `New` pill is already on screen the
 moment the workspace window renders, so a purely DOM-driven `_resolveSub()`
 would resolve `new` in the same tick as `folder` and the "this is your
 workspace" beat would never be seen.
@@ -168,8 +170,9 @@ sub-step in either guide with a Next.
 
 ## Fallback
 
-Step 3 runs its legacy behaviour — cutout on `.desk-module-topbar__upload-btn`,
-`Upload` primary button, `step3_waiting` — when
+Step 3 runs its legacy behaviour — cutout on
+`.desk-module-topbar__new-workspace-btn`, `Upload` primary button,
+`step3_waiting` — when
 `localStorage.reward_workspace` is absent or unparseable. That covers:
 
 - a page reloaded straight into step 3 in a browser that never stored one
@@ -228,7 +231,7 @@ resume point since the workspace window is long gone.
 | `REWARD_FLOW_OPEN_WORKSPACE` | Open workspace |
 | `REWARD_FLOW_STEP3_GUIDED_DESC` | Open the workspace you just created and upload your first file into it. |
 | `REWARD_FLOW_GUIDE_FOLDER` | This is your workspace. Everything you upload here stays with your team. |
-| `REWARD_FLOW_GUIDE_NEW` | Click "+ New" to add your first file. |
+| `REWARD_FLOW_GUIDE_NEW` | Click "New" to add your first file. |
 | `REWARD_FLOW_GUIDE_FROM_DEVICE` | Choose "From device" to pick a file. |
 | `REWARD_FLOW_NEXT` | Next |
 
@@ -246,7 +249,7 @@ Manual test matrix for whoever runs it against a real instance:
 3. personal workspace → same, folder opens the personal folder not Home
 4. reload at step 3 → card is the guided variant (descriptor persisted)
 5. `localStorage.removeItem("reward_workspace")` then reload at step 3 → legacy
-   variant with the topbar cutout
+   variant with the cutout anchored to the topbar `New` control
 6. Back at each sub-step → returns to the step 3 card, workspace stays open
 7. Step 1 walkthrough end to end, unchanged (guide-core regression check)
 

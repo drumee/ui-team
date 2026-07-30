@@ -1208,9 +1208,29 @@ class __window_folder extends mfsInteract {
     });
   }
 
+  closeNewMenu(cmd) {
+    const menu = cmd && cmd.getParentByKind?.(KIND.menu.topic);
+    if (!menu) return;
+    const group = menu.el?.querySelector(
+      ".window-button__dropdown-menu__item--create-group",
+    );
+    if (group) group.dataset.submenu = _a.closed;
+    if (menu.changeState) menu.changeState(0);
+  }
+
+  toggleNewCreateMenu(cmd) {
+    if (!cmd || !cmd.el) return;
+    cmd.el.dataset.submenu =
+      cmd.el.dataset.submenu === _a.open ? _a.closed : _a.open;
+  }
+
   onUiEvent(cmd, args = {}) {
     const service = args.service || cmd.service || cmd.mget(_a.service);
     switch (service) {
+      case _e.upload:
+        this.closeNewMenu(cmd);
+        return super.onUiEvent(cmd, args);
+
       case _a.info:
         return this.showInfo();
 
@@ -1221,13 +1241,18 @@ class __window_folder extends mfsInteract {
         return this.switchShowFolderSettings(cmd);
 
       case "add-folder":
+        this.closeNewMenu(cmd);
         return this.openCreateFolderDialog();
 
       case "add-note":
+        this.closeNewMenu(cmd);
         return Wm.windowsLayer.append({
           kind: "editor_markdown",
           uiHandler: [this],
         });
+
+      case "toggle-new-create-menu":
+        return this.toggleNewCreateMenu(cmd);
 
       case "launch-gdrive-migration":
         // "Migrate from Google Drive" row of the merged "+ New" menu. Opens the
@@ -1236,6 +1261,7 @@ class __window_folder extends mfsInteract {
         // the multi-folder-windows fix) prevents a duplicate popup on re-click.
         // hub_id/nid target THIS folder window (import lands in the open
         // workspace), falling back to the visitor home like settings does.
+        this.closeNewMenu(cmd);
         return Kind.waitFor("migrate_gdrive_popup").then(() => {
           Wm.launch(
             {
@@ -1252,6 +1278,7 @@ class __window_folder extends mfsInteract {
         });
 
       case "new-document":
+        this.closeNewMenu(cmd);
         return this.newDocument(cmd);
 
       case "create-folder-submit":
@@ -1543,6 +1570,10 @@ class __window_folder extends mfsInteract {
       case "close-meeting-modal":
         return this.closeMeetingModal();
 
+      // Fired by the invitee search Entry's `watch` on every keystroke.
+      case "mm-invitee-typed":
+        return this._filterInvitees((args && args.value) || "");
+
       case "mm-add-invitee":
         return this._addInvitee(cmd);
 
@@ -1554,6 +1585,10 @@ class __window_folder extends mfsInteract {
 
       case "mm-set-ampm":
         return this._setMeetingAmpm(cmd);
+
+      // The meeting date changed — refresh the invitees' free/busy state.
+      case "mm-recheck-availability":
+        return this._checkAvailability();
 
       case "meeting-modal-submit":
         return this.submitMeetingModal();
@@ -1969,6 +2004,18 @@ class __window_folder extends mfsInteract {
     return { stime: s.unix(), etime: e.unix() };
   }
 
+  // The workspace every room.* call must be scoped to. Without an explicit
+  // hub_id the server resolves the hub from the request hostname
+  // (session._initHub), which for the SPA is always the bootstrap endpoint —
+  // so every workspace read and wrote the same calendar.
+  // A fragment, not a bare value: fetchService puts plain scalars straight into
+  // the query string, so an undefined hub_id would ship as the string
+  // "undefined" and resolve to the default hub.
+  _meetingScope() {
+    const hub_id = this.mget(_a.actual_hub_id) || this.mget(_a.hub_id);
+    return hub_id ? { hub_id } : {};
+  }
+
   // Fetch the hub's scheduled meetings for the visible range into this._meetings.
   // Resolves (never rejects) so callers can re-feed regardless.
   _fetchMeetings() {
@@ -1977,7 +2024,7 @@ class __window_folder extends mfsInteract {
     const svc = (SERVICE.room && SERVICE.room.list) || "room.list";
     const { stime, etime } = this._meetingRange();
     return Promise.resolve()
-      .then(() => this.fetchService(svc, { stime, etime }))
+      .then(() => this.fetchService(svc, { stime, etime, ...this._meetingScope() }))
       .then((rows) => {
         this._meetings = Array.isArray(rows) ? rows : [];
       })
@@ -2054,14 +2101,6 @@ class __window_folder extends mfsInteract {
     return { uid, name, avatar: member.avatar || "default", isMe: false };
   }
 
-  // Only the creator may edit or delete — room.update/room.remove reject anyone
-  // else with NOT_MEETING_OWNER. Meetings with no recorded creator stay open to
-  // everyone, matching the server's back-compat rule.
-  canEditMeeting(m) {
-    const uid = m && m.created_by;
-    return !uid || String(uid) === String(Visitor.id);
-  }
-
   openMeetingModal(opt = {}) {
     let prefill = this._prefillMeeting(opt.meeting);
     // Create-at-slot (clicking an empty weekly cell): synthesize a create-mode
@@ -2092,8 +2131,10 @@ class __window_folder extends mfsInteract {
     this._mmCreatedBy = prefill ? prefill.created_by : null;
     this._mmBusy = {};
     // Fetch the workspace member pool first so the invitee chips can render.
-    const hubId = this.mget(_a.actual_hub_id) || this.mget(_a.hub_id);
-    const loadMembers = this.fetchService(SERVICE.hub.get_members_by_type, { type: "all", hub_id: hubId })
+    const loadMembers = this.fetchService(SERVICE.hub.get_members_by_type, {
+      type: "all",
+      ...this._meetingScope(),
+    })
       .then((rows) => {
         this._hubMembers = Array.isArray(rows) ? rows : [];
       })
@@ -2113,18 +2154,11 @@ class __window_folder extends mfsInteract {
         // (edit mode arrives with attendees + a time already set).
         const root = wrapper.el;
         if (root) {
-          ["mm-date", "mm-stime", "mm-etime"].forEach((nm) => {
-            const el = root.querySelector(`[name="${nm}"]`);
-            if (el) el.addEventListener("change", () => this._checkAvailability());
-          });
-          // Type-to-search invitees: filter the member pool live as the user types.
-          const inviteeSearch = root.querySelector('[name="mm-invitee-search"]');
-          if (inviteeSearch) {
-            inviteeSearch.addEventListener("input", () =>
-              this._filterInvitees(inviteeSearch.value),
-            );
-          }
-          // Custom time picker: keep the hidden HH:mm in sync with the Hour/Minute
+          // The date field and the invitee search build their <input> lazily,
+          // so they can't be listened to here — both route through the skeleton
+          // instead (service "mm-recheck-availability" / watch
+          // "mm-invitee-typed"). The time pickers are plain Elements and are
+          // wired directly: keep the hidden HH:mm in sync with the Hour/Minute
           // boxes; pad + recheck availability on blur.
           ["stime", "etime"].forEach((which) => {
             root
@@ -2242,31 +2276,46 @@ class __window_folder extends mfsInteract {
   }
 
   // Add a searched member to the invitee set; clear the search box + dropdown.
+  // The teardown is deferred: clearing the dropdown destroys `cmd` itself (the
+  // suggestion row currently dispatching this click), and tearing it down
+  // mid-dispatch aborted the rest of the click handling.
   _addInvitee(cmd) {
     const uid = cmd && ((cmd.mget && cmd.mget("uid")) || (cmd.el && cmd.el.dataset.uid));
     if (!uid) return;
     const name = (cmd.mget && cmd.mget("uname")) || "";
     this._mmAttendees = this._mmAttendees || [];
-    if (!this._mmAttendees.some((a) => (a.uid || a) === uid)) {
+    if (!this._mmAttendees.some((a) => String(a.uid || a) === String(uid))) {
       this._mmAttendees.push({ uid, name });
     }
-    const search = this._mmSearchInput();
-    if (search) search.value = "";
-    this._filterInvitees("");
-    this._reFeedInviteeChips();
-    this._checkAvailability();
+    _.defer(() => {
+      const search = this._mmSearchInput();
+      if (search) {
+        search.value = "";
+        // Keep the caret in the field so the next name can be typed straight
+        // away instead of having to click back into it.
+        search.focus();
+      }
+      this._filterInvitees("");
+      this._reFeedInviteeChips();
+      this._checkAvailability();
+    });
   }
 
   // Remove an invitee chip; re-run the current query so the member reappears as
-  // a suggestion if it still matches.
+  // a suggestion if it still matches. Deferred for the same reason as _addInvitee
+  // — the re-feed destroys the chip whose ✕ is dispatching this click.
   _removeInvitee(cmd) {
     const uid = cmd && ((cmd.mget && cmd.mget("uid")) || (cmd.el && cmd.el.dataset.uid));
     if (!uid) return;
-    this._mmAttendees = (this._mmAttendees || []).filter((a) => (a.uid || a) !== uid);
-    this._reFeedInviteeChips();
-    const search = this._mmSearchInput();
-    this._filterInvitees(search ? search.value : "");
-    this._checkAvailability();
+    this._mmAttendees = (this._mmAttendees || []).filter(
+      (a) => String(a.uid || a) !== String(uid),
+    );
+    _.defer(() => {
+      this._reFeedInviteeChips();
+      const search = this._mmSearchInput();
+      this._filterInvitees(search ? search.value : "");
+      this._checkAvailability();
+    });
   }
 
   // Free/busy (Tier 1, workspace-scoped): ask the server which invitees already
@@ -2299,6 +2348,7 @@ class __window_folder extends mfsInteract {
     return this.fetchService(svc, {
       stime,
       etime,
+      ...this._meetingScope(),
       attendees: this._mmAttendees,
       nid: this._mmEditNid || undefined,
     })
@@ -2418,10 +2468,44 @@ class __window_folder extends mfsInteract {
     else this._meetings.push(row);
   }
 
+  // Outline the Title field while its "required" warning is up.
+  _mmMarkTitleError(on) {
+    const root = this.dialogWrapper && this.dialogWrapper.el;
+    const el =
+      root &&
+      root.querySelector(`.${this.fig.family}__meeting-modal-input.title`);
+    if (el) el.dataset.error = on ? "1" : "0";
+  }
+
+  // Inline warning line inside the schedule modal (shared with the free/busy
+  // banner — it is the modal's one messaging surface).
+  _mmBanner(txt) {
+    const root = this.dialogWrapper && this.dialogWrapper.el;
+    const el =
+      root &&
+      root.querySelector(`.${this.fig.family}__meeting-modal-availability`);
+    if (el) el.textContent = txt || "";
+  }
+
   submitMeetingModal() {
     if (this._mmSubmitting) return;
     const form = this._readMeetingForm();
     if (!form) return; // no date → do nothing (field stays open)
+    // An empty title does NOT create an untitled meeting: room.book substitutes
+    // the localized "<name> scheduled a meeting" headline, so the calendar (and
+    // every recurring occurrence of it) showed that boilerplate instead of what
+    // the organizer thought they had entered. Ask for a title instead of
+    // silently inventing one.
+    if (!form.title) {
+      this._mmBanner(LOCALE.MEETING_TITLE_REQUIRED);
+      this._mmMarkTitleError(1);
+      const root = this.dialogWrapper && this.dialogWrapper.el;
+      const input = root && root.querySelector('[name="mm-title"]');
+      if (input && input.focus) input.focus();
+      return;
+    }
+    this._mmBanner("");
+    this._mmMarkTitleError(0);
     this._mmSubmitting = 1;
     const nid = this._mmEditNid;
     const done = () => {
@@ -2438,6 +2522,7 @@ class __window_folder extends mfsInteract {
       return this.fetchService((SERVICE.room && SERVICE.room.update) || "room.update", {
         flag: "all",
         nid,
+        ...this._meetingScope(),
         title: form.title,
         message: form.message,
         date: form.date,
@@ -2455,6 +2540,7 @@ class __window_folder extends mfsInteract {
     // via update "member" (which notifies them in-app).
     let createdNid = null;
     return this.fetchService((SERVICE.room && SERVICE.room.book) || "room.book", {
+      ...this._meetingScope(),
       title: form.title,
       message: form.message,
       date: form.date,
@@ -2468,6 +2554,7 @@ class __window_folder extends mfsInteract {
           return this.fetchService((SERVICE.room && SERVICE.room.update) || "room.update", {
             flag: "member",
             nid: createdNid,
+            ...this._meetingScope(),
             attendees: form.attendees,
           });
         }
@@ -2487,7 +2574,10 @@ class __window_folder extends mfsInteract {
   deleteMeetingModal() {
     const nid = this._mmEditNid;
     if (!nid) return this.closeMeetingModal();
-    return this.postService((SERVICE.room && SERVICE.room.remove) || "room.remove", { nid }).then(() => {
+    return this.postService((SERVICE.room && SERVICE.room.remove) || "room.remove", {
+      nid,
+      ...this._meetingScope(),
+    }).then(() => {
       this.closeMeetingModal();
       this._refreshSchedule();
     });
@@ -2686,7 +2776,14 @@ class __window_folder extends mfsInteract {
         for (const r of rows) {
           const p = this._parseMeetingSentinel(r && r.message);
           if (!p || !this._meetingMsgForMyRoom(p.payload)) continue;
-          this._setMeetingActive(p.action === "start");
+          // A finished meeting no longer posts a second `end` message: the ONE
+          // start card is flipped in place (channel.meeting_end → row metadata
+          // meeting_status='ended'). Reading only the sentinel therefore
+          // reported every past meeting as live, so the button stayed on "Join
+          // meeting" forever. The row's status wins over the sentinel verb.
+          this._setMeetingActive(
+            p.action === "start" && !this._meetingRowEnded(r),
+          );
           return;
         }
         this._setMeetingActive(false);
@@ -2694,11 +2791,39 @@ class __window_folder extends mfsInteract {
       .catch(() => {});
   }
 
+  // Has this message row been flipped to "meeting ended" (channel.meeting_end)?
+  // The flag lives in the ROW metadata, not in the sentinel payload.
+  _meetingRowEnded(row) {
+    let md = row && row.metadata;
+    if (typeof md === "string") {
+      try {
+        md = JSON.parse(md);
+      } catch (e) {
+        md = null;
+      }
+    }
+    return !!(md && md.meeting_status === "ended");
+  }
+
   // Live channel traffic — react only to this room's meeting.start/end sentinels
   // and ignore everything else (this window also receives unrelated live posts).
   onWsMessage(service, data, options = {}) {
     const svc = options.service || service;
     const postSvc = (SERVICE.channel && SERVICE.channel.post) || "channel.post";
+    // The meeting-ended flip is echoed to the whole hub as its own service, and
+    // nothing here consumed it: the Start button kept offering "Join meeting"
+    // after the last participant had left, until the window was reopened.
+    if (svc === "channel.meeting_end") {
+      if (!data) return;
+      if (`${data.hub_id || ""}` !== `${this.mget(_a.hub_id) || ""}`) return;
+      const ended = this._parseMeetingSentinel(data.message);
+      if (!ended) return;
+      const p2 = Object.assign({}, ended.payload);
+      if (data.nid != null && p2.nid == null) p2.nid = data.nid;
+      if (!this._meetingMsgForMyRoom(p2)) return;
+      this._setMeetingActive(false);
+      return;
+    }
     if (svc !== postSvc || !data) return;
     if (`${data.hub_id || ""}` !== `${this.mget(_a.hub_id) || ""}`) return;
     const p = this._parseMeetingSentinel(data.message);
@@ -2707,7 +2832,7 @@ class __window_folder extends mfsInteract {
     if (data.room_id != null && payload.room_id == null) payload.room_id = data.room_id;
     if (data.nid != null && payload.nid == null) payload.nid = data.nid;
     if (!this._meetingMsgForMyRoom(payload)) return;
-    this._setMeetingActive(p.action === "start");
+    this._setMeetingActive(p.action === "start" && !this._meetingRowEnded(data));
   }
 
   // Show the Start button spinning until the meeting window actually mounts,
@@ -3513,12 +3638,12 @@ class __window_folder extends mfsInteract {
     if (this._taskFilterBtn && this._taskFilterBtn.el) {
       this._taskFilterBtn.el.dataset.visible = tab === _a.task ? "1" : "0";
     }
-    // The list/grid view toggle shares the tab line but only applies to Files.
+    // The list/grid view toggle lives in the Files filter row.
     const viewCtrl = this.getPart("view-ctrl");
     if (viewCtrl && viewCtrl.el) {
       viewCtrl.el.dataset.visible = tab === "files" ? "1" : "0";
     }
-    // The merged "+ New" button also lives on the tab line but only operates on
+    // The merged "+ New" button also lives in that row and only operates on
     // Files (upload / create / gdrive-import) — hide it off the Files tab so it
     // can't be mistaken for a Chat/Task/Meeting action.
     this.syncNewCtrlVisibility();
@@ -3999,11 +4124,10 @@ class __window_folder extends mfsInteract {
   // Gate the merged "+ New" button (upload / create / gdrive-import) on BOTH
   // the active tab and the viewer's current write permission.
   //
-  // The button is always in the tree (see skeleton/toolkit tabBar) because the
-  // skeleton is built before the window knows its privilege, and because a
-  // build-time gate cannot react to anything afterwards. Every source of truth
-  // for "may this viewer create things here?" therefore converges on this one
-  // runtime read of mget(privilege):
+  // The Files filter row renders before the window knows its privilege, and a
+  // build-time gate cannot react to later role or navigation changes. Every
+  // source of truth for "may this viewer create things here?" therefore
+  // converges on this runtime read of mget(privilege):
   //   - open             → onPartReady("new-ctrl")
   //   - opened w/o a priv → _healChatPrivilege, once the real value resolves
   //   - tab switch       → showFolderTab

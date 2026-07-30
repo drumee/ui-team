@@ -306,11 +306,15 @@
       flex-shrink: 0;
     }
 
-    // Merged "+ New" control — lives on the Files tab-bar next to the view
-    // toggle (not in the header). Reuses the well-tested dropdown chain that
-    // the old header Add-new button used. Height matches the adjacent view
-    // toggle (28px); width hugs the "New" label. Hidden off the Files tab via
-    // data-visible (toggled by showFolderTab, same as view-ctrl).
+    &__file-controls {
+      align-items: center;
+      gap: 8px;
+      flex: 0 0 auto;
+      margin-left: auto;
+    }
+
+    // Merged "+ New" control — lives at the end of the Files filter row next
+    // to the view toggle, immediately before the Team Chat column.
     &__new-ctrl {
       position: relative;
       overflow: visible;
@@ -347,38 +351,59 @@
       }
 
       .window-button__label-button {
-        // Fixed height matching the view toggle's OUTER box (28px content + 2px
-        // border = 30px) so both pills share top/bottom edges, independent of
-        // any parent height. box-sizing:border-box keeps 30px total.
+        // Match the compact action in the folder toolbar while allowing longer
+        // translations to grow beyond the reference's minimum width.
         height: 30px;
         min-height: 30px;
-        // Soft primary tint: light lavender fill (Primary/10) with an indigo
-        // label (Primary/50) instead of the heavier solid fill + black text —
-        // reads calmer while still standing out as the primary action. Hex
-        // literals (not var(--primary-*)) on purpose: that token has a
-        // duplicate :root def that resolves to the wrong shade.
-        background-color: #e4e3ff; // Primary/10
-        border-radius: 999px; // pill, matches the adjacent view toggle
-        padding: 0 18px; // roomier horizontal padding
+        min-width: 82px;
+        padding: 0 14px;
+        background-color: #b2adfa;
+        border: 0;
+        border-radius: 8px;
+        box-shadow: none;
         font-family: "Inter", sans-serif;
-        // The "+" is part of the label text now (no SVG icon), so its stroke
-        // weight follows this font-weight — matching the "New" text as the user
-        // asked, instead of the heavy filled plus glyph.
         font-weight: 500;
-        font-size: 13px;
-        line-height: 1;
-        color: #433cc5; // Primary/50
+        font-size: 14px;
+        line-height: 16px;
+        color: #0b0a20;
         cursor: pointer;
         white-space: nowrap;
         display: flex;
         align-items: center;
         justify-content: center;
-        text-align: center; // centre the "+ New" text node inside the pill
+        gap: 6px;
+        text-align: center;
         box-sizing: border-box;
+        transition:
+          background-color 0.15s ease,
+          color 0.15s ease;
+
+        .svg-wrapper,
+        .drumee-svg,
+        svg {
+          width: 14px;
+          height: 14px;
+          flex: 0 0 14px;
+          color: currentColor;
+          fill: currentColor;
+        }
+
+        .label {
+          font-weight: 500;
+        }
 
         &:hover {
-          background-color: #bebbff; // Primary/20 — a touch deeper on hover
-          color: #2d2a6a; // Primary/80
+          background-color: #a7a2f0;
+        }
+
+        &:active {
+          background-color: #9d98e6;
+        }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        .window-button__label-button {
+          transition: none;
         }
       }
 
@@ -393,7 +418,13 @@
         right: 0;
         z-index: 1000;
         width: max-content;
-        min-width: 200px;
+        min-width: 242px;
+      }
+
+      // ui-core writes overflow:hidden inline on this wrapper. The cascade is
+      // allowed to escape only while this folder-local menu is open.
+      .menu-topic-items__wrapper[data-state="open"] {
+        overflow: visible !important;
       }
 
       .menu-topic-items,
@@ -410,7 +441,7 @@
         // inline overflow:hidden (set by the menu widget). min-width is the
         // floor for short menus.
         width: max-content;
-        min-width: 200px;
+        min-width: 242px;
         display: flex;
         flex-direction: column;
         gap: 2px;
@@ -437,6 +468,7 @@
         font-weight: 500;
         color: var(--normal-fg-10);
         white-space: nowrap;
+        box-sizing: border-box;
 
         &:hover {
           background-color: var(--normal-bg-90);
@@ -449,13 +481,106 @@
         }
       }
 
-      // Divider between the Import group (From device / Migrate GDrive) and the
-      // Create group (Workspace / Note / Document / …) in the "+ New" menu.
-      .window-button__dropdown-menu__divider {
-        height: 1px;
-        margin: 4px 6px;
-        background-color: var(--border-muted, rgba(0, 0, 0, 0.12));
+      .window-button__dropdown-menu__name {
+        flex: 1;
       }
+
+      .window-button__dropdown-menu__icon {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 20px;
+        height: 20px;
+        flex: 0 0 20px;
+      }
+
+      .window-button__dropdown-menu__item--create-group {
+        position: relative;
+      }
+
+      .window-button__dropdown-menu__create-symbol {
+        width: 20px;
+        height: 20px;
+        flex: 0 0 20px;
+        align-items: center;
+        justify-content: center;
+        font-family: "Inter", sans-serif;
+        font-size: 25px;
+        font-weight: 400;
+        line-height: 20px;
+        text-align: center;
+        color: #0b0a20;
+      }
+
+      // The controls now sit at the Files/Team Chat boundary, leaving enough
+      // space for this cascade to open right like the reference. The 8px
+      // overlap keeps a pointer bridge between the two menu sections.
+      .window-button__dropdown-menu__create-submenu {
+        display: none;
+        position: absolute;
+        top: -8px;
+        left: calc(100% - 8px);
+        right: auto;
+        z-index: 2;
+        width: max-content;
+        min-width: 200px;
+        padding: 8px;
+        gap: 2px;
+        align-items: stretch;
+        background-color: var(--normal-bg-elevated, #fff);
+        border-radius: 6px;
+        box-shadow:
+          0 4px 6px -4px rgba(0, 0, 0, 0.1),
+          0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        box-sizing: border-box;
+      }
+
+      .window-button__dropdown-menu__item--create-group:hover
+        > .window-button__dropdown-menu__create-submenu,
+      .window-button__dropdown-menu__item--create-group[data-submenu="open"]
+        > .window-button__dropdown-menu__create-submenu {
+        display: flex;
+      }
+
+      // Outside-click closes ui-core's panel directly. Until its open callback
+      // resets data-submenu, keep any stale click state hidden throughout the
+      // next opening animation (the menu root becomes data-state=1 at the same
+      // moment the callback runs).
+      .window-button__dropdown-menu__wrapper:not([data-state="1"])
+        .window-button__dropdown-menu__create-submenu {
+        display: none !important;
+      }
+
+      .window-button__dropdown-menu__submenu-item {
+        width: 100%;
+        min-height: 34px;
+      }
+
+      .window-button__dropdown-menu__item--add-folder svg {
+        fill: #5950ff;
+        color: #5950ff;
+      }
+
+      .window-button__dropdown-menu__item--add-note svg {
+        fill: #e8a13b;
+        color: #e8a13b;
+      }
+
+      .window-button__dropdown-menu__item--document svg {
+        fill: #847eff;
+        color: #847eff;
+      }
+
+      .window-button__dropdown-menu__item--spreadsheet svg {
+        fill: #54b684;
+        color: #54b684;
+      }
+
+      .window-button__dropdown-menu__item--presentation svg {
+        fill: #ffa8dc;
+        color: #ffa8dc;
+      }
+
     }
 
     &__control-icon {
@@ -485,20 +610,21 @@
       }
     }
 
-    // File view toggle — segmented pill (list | grid). Both halves always
-    // render; the half matching the wrapper's data-state is the active view:
-    // a light-blue fill, dark-blue glyphs and a revealed checkmark. Grid is the
+    // File view toggle — compact segmented control (list | grid). Grid is the
     // default (data-state "0"/unset); list is active at data-state "1" (row).
     &__view-toggle {
       display: inline-flex;
       align-items: stretch;
-      height: 28px;
-      flex-shrink: 0;
-      border: 1px solid var(--border-default, #d6d6dc);
-      border-radius: 999px;
-      background: var(--normal-bg-elevated, #fff);
+      width: 60px;
+      height: 30px;
+      flex: 0 0 60px;
+      border: 0;
+      border-radius: 8px;
+      background-color: #fff;
+      box-shadow: none;
       overflow: hidden;
       cursor: pointer;
+      box-sizing: border-box;
 
       // Shown only on the Files tab (data-visible toggled by showFolderTab).
       &[data-visible="0"] {
@@ -510,16 +636,26 @@
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      gap: 5px;
-      padding: 0 12px;
-      color: var(--normal-fg-10);
+      width: 30px;
+      height: 30px;
+      flex: 0 0 30px;
+      gap: 0;
+      padding: 0;
+      border: 0;
+      background-color: #fff;
+      color: #65656c;
+      box-shadow: none;
+      box-sizing: border-box;
       transition:
-        background 0.15s,
-        color 0.15s;
+        background-color 0.15s ease,
+        color 0.15s ease;
 
-      // Divider between the two halves.
-      & + & {
-        border-left: 1px solid var(--border-default, #d6d6dc);
+      &:hover {
+        background-color: #ecebfe;
+      }
+
+      &:active {
+        background-color: #9d98e6;
       }
 
       svg {
@@ -528,16 +664,14 @@
     }
 
     &__view-toggle-glyph {
-      width: 16px;
-      height: 16px;
-      flex-shrink: 0;
-    }
-
-    // Checkmark — hidden by default, revealed only on the active half.
-    &__view-toggle-check {
       width: 14px;
       height: 14px;
       flex-shrink: 0;
+    }
+
+    // The shared Skeleton retains this glyph for DMZ; the folder presentation
+    // uses the segment fill alone to communicate selection.
+    &__view-toggle-check {
       display: none;
     }
 
@@ -546,17 +680,28 @@
       .window-folder-topbar__view-toggle-seg--list,
     &__view-toggle:not([data-state="1"])
       .window-folder-topbar__view-toggle-seg--grid {
-      background: var(--view-toggle-active-bg, #cfe3fb);
-      color: var(--view-toggle-active-fg, #2b5c9e);
+      background-color: #b2adfa;
+      color: #65656c;
     }
 
     &__view-toggle[data-state="1"]
-      .window-folder-topbar__view-toggle-seg--list
-      .window-folder-topbar__view-toggle-check,
+      .window-folder-topbar__view-toggle-seg--list:hover,
     &__view-toggle:not([data-state="1"])
-      .window-folder-topbar__view-toggle-seg--grid
-      .window-folder-topbar__view-toggle-check {
-      display: block;
+      .window-folder-topbar__view-toggle-seg--grid:hover {
+      background-color: #a7a2f0;
+    }
+
+    &__view-toggle[data-state="1"]
+      .window-folder-topbar__view-toggle-seg--list:active,
+    &__view-toggle:not([data-state="1"])
+      .window-folder-topbar__view-toggle-seg--grid:active {
+      background-color: #9d98e6;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      &__view-toggle-seg {
+        transition: none;
+      }
     }
 
     // Minimize control — thin Unicode minus glyph (U+2212), not the
@@ -2029,6 +2174,18 @@
   .window__files-panel {
     border-radius: 0;
     background: var(--normal-bg-90);
+  }
+
+  // The New cascade now starts inside the Files column. Lift that column above
+  // Team Chat and release its clipping only while the menu is open, so the
+  // right-opening submenu can cross the column boundary without affecting the
+  // file grid's normal scroll/overflow behavior.
+  &__files-panel:has(
+      .window-button__dropdown-menu__wrapper[data-state="1"]
+    ) {
+    position: relative;
+    z-index: 101;
+    overflow: visible;
   }
 
   .window__files-panel .window__icons-list {

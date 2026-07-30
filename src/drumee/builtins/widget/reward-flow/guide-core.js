@@ -88,9 +88,10 @@ class GuideCore {
   _targetEl() { return null; }
   /** `hole: false` dims the whole viewport instead of cutting the target out —
    *  for a sub-step that only asks the user to READ, where keeping a control
-   *  operable would be meaningless.
+   *  operable would be meaningless. `nextDisabled` shows the Next but refuses
+   *  it, for a beat that is not ready to be left yet.
    *  @returns {{text: string, showBack: boolean, showNext: boolean,
-   *             hole?: boolean}} */
+   *             nextDisabled?: boolean, hole?: boolean}} */
   _coachFor() { return { text: "", showBack: true, showNext: false }; }
   /** @returns {boolean} true = handled, false = the orchestrator should exit. */
   back() { return false; }
@@ -119,7 +120,13 @@ class GuideCore {
       // data-visible: the workspace window's "+ New" pill renders hidden until
       // syncNewCtrlVisibility() resolves the real privilege, and that flip is
       // the only mutation announcing it.
-      attributeFilter: ["data-state", "class", "style", "data-visible"],
+      attributeFilter: [
+        "data-state",
+        "data-submenu",
+        "class",
+        "style",
+        "data-visible",
+      ],
     });
     this._onResize = () => this._position();
     window.addEventListener("resize", this._onResize, { passive: true });
@@ -242,6 +249,12 @@ class GuideCore {
     }, PIN_TIMEOUT_MS);
   }
 
+  /** Public form of _pin, for when the ORCHESTRATOR is the one putting a
+   *  surface back on screen and needs the guide held there until it lands —
+   *  the same job back()'s internal pins do for its own transitions. Must be
+   *  set before start(), which reconciles as it comes up. */
+  pinAt(sub) { this._pin(sub); }
+
   _unpin() {
     this._pinned = null;
     if (this._pinTimer) {
@@ -277,8 +290,11 @@ class GuideCore {
       : [this._sub, "nohole"])
       // The coach text can change without the target moving — Step 1's perm
       // phase swaps wording when a confirmation lands on top — so it is part of
-      // the signature either way.
-      .concat(coach.text)
+      // the signature either way. So can its Next: Step 3's last beat keeps that
+      // button disabled until the batch finishes uploading, and nothing else
+      // about the paint changes when it finally enables, so without this the
+      // dedup would leave it disabled for good.
+      .concat(coach.text, coach.nextDisabled ? "off" : "on")
       .join(":");
     if (sig === this._lastSig) return;
     this._lastSig = sig;
@@ -291,6 +307,8 @@ class GuideCore {
       text: coach.text,
       showBack: coach.showBack,
       showNext: coach.showNext,
+      nextDisabled: coach.nextDisabled,
+      above: coach.above,
       hole,
       radius,
     });

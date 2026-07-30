@@ -42,7 +42,8 @@ module.exports = function (ui) {
   tasks.forEach((t) => {
     if (byStatus[t.status] != null) byStatus[t.status]++;
     if (byPriority[t.priority] != null) byPriority[t.priority]++;
-    const uids = assigneeUids(t);
+    // Ex-members don't count as assignees — their tasks are unassigned now.
+    const uids = assigneeUids(t, ui);
     if (!uids.length) unassigned++;
     else uids.forEach((u) => (byAssignee[u] = (byAssignee[u] || 0) + 1));
     if (!ui.isDoneStatus(t.status) && t.due_date && isOverdue(t.due_date)) overdue++;
@@ -286,7 +287,9 @@ module.exports = function (ui) {
   const activity = ui.getActivity ? ui.getActivity() : [];
   const activityRows = activity.map((r) => {
     const m = ui.getMember(r.actor_uid) || {};
-    const name = fullName(m) || r.actor_uid;
+    // An actor who has since left the workspace no longer resolves to a name;
+    // the activity row stays, labelled for what they are.
+    const name = fullName(m) || LOCALE.FORMER_MEMBER;
     const meta = r.meta || {};
     const title = r.task_title || meta.title || "";
     const pm = priorityMeta(ui, r.task_priority);
@@ -445,12 +448,23 @@ module.exports = function (ui) {
     seenUids.add(uid);
     work.push({ uid, m, count: byAssignee[uid] || 0 });
   });
-  // Defensive: an assignee uid not in the member list (e.g. a removed member
-  // still on tasks) is still surfaced so their tasks aren't silently hidden.
+  // Defensive: an assignee uid that DOES resolve to a member but isn't in the
+  // roster row set is still surfaced so their tasks aren't silently hidden.
+  //
+  // A uid with no member behind it can only get this far when the member list
+  // itself is unknown (assigneeUids has already folded ex-members into
+  // `unassigned` otherwise). There is no name to head a row with, so count it
+  // as unassigned rather than drawing a nameless row — either way the chart
+  // must still add up to the same number of assignments.
   Object.keys(byAssignee).forEach((uid) => {
     if (seenUids.has(String(uid))) return;
+    const m = ui.getMember(uid);
+    if (!m) {
+      unassigned += byAssignee[uid];
+      return;
+    }
     seenUids.add(String(uid));
-    work.push({ uid, m: ui.getMember(uid) || {}, count: byAssignee[uid] });
+    work.push({ uid, m, count: byAssignee[uid] });
   });
   work.sort((a, b) => b.count - a.count);
   // Normalised to the busiest row so the chart spans the whole track; the count
@@ -505,7 +519,7 @@ module.exports = function (ui) {
         auto_color: 1,
         live_status: 0,
       }),
-      fullName(e.m) || e.uid,
+      fullName(e.m),
       e.count,
     ),
   );

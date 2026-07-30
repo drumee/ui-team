@@ -1,4 +1,10 @@
 const { createSafeObject } = require("@drumee/ui-essentials");
+
+// This bundle owns the string table, so it owns the language the document
+// declares. Runs at bundle-execution time, before the load event — see
+// ./declare-lang.
+require('./declare-lang')('en');
+
 window.WARNING = require('lex/warning');
 window.ERROR = require('lex/error');
 window._K = require('lex/constants');

@@ -125,4 +125,51 @@ function congratsModal(ui) {
   });
 }
 
-module.exports = { dropModal, congratsModal };
+/**
+ * The reward is gone — all of the campaign's limited slots are taken.
+ *
+ * Reached two ways, and it reads the same in both because the outcome is the
+ * same: the gate turned an invited user away before the walkthrough started
+ * (reward.get_state -> capped), or they finished while the last slot went to
+ * someone else and the server refused the claim (reward.track -> granted=0).
+ *
+ * Congrats' twin, deliberately: same shell, same chip, one button. What it must
+ * NOT do is apologise its way into a promise we cannot keep — there is no
+ * waitlist and no second batch to offer — so it says what happened, and leaves.
+ * The workspace, the invitation and the upload the user made along the way are
+ * all real and all stay; nothing is taken back.
+ */
+function soldOutModal(ui) {
+  const pfx = ui.fig.family;
+  return shell(ui, {
+    // The neutral information chip rather than congrats' green check: this is
+    // news, not a failure, and nothing the user did went wrong.
+    //
+    // ctxmenu-info.svg is the outline info glyph and the only one in the sprite
+    // drawn with fill="currentColor", so the chip's colour actually reaches it.
+    // info.svg is a filled disc with a baked-in near-black fill, which reads as
+    // a dark blob at this size — the same reason congrats uses checked-circle
+    // rather than apps-check-circle.
+    header: iconHeader(ui, {
+      ico: "ctxmenu-info",
+      icoClass: `${pfx}__chip--info`,
+    }),
+    title: LOCALE.REWARD_FLOW_SOLDOUT_TITLE || "All spots are taken",
+    body: Skeletons.Note({
+      className: `${pfx}__desc`,
+      content: LOCALE.REWARD_FLOW_SOLDOUT_DESC
+        || "This reward was limited to 100 people, and they have all claimed it. Everything you set up is yours to keep.",
+    }),
+    footer: [
+      Skeletons.Note({
+        className: `${pfx}__btn ${pfx}__btn--primary`,
+        dataset: { solo: "1" },
+        content: LOCALE.REWARD_FLOW_GO_DASHBOARD || "Back to home",
+        service: "reward-soldout-dismiss",
+        uiHandler: [ui],
+      }),
+    ],
+  });
+}
+
+module.exports = { dropModal, congratsModal, soldOutModal };

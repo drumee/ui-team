@@ -200,7 +200,7 @@ module.exports = function (ui) {
   // Assignee cell — overlapping 32px avatars + "+N" chip; an "unassigned"
   // badge when nobody is assigned.
   const assigneeCell = (t) => {
-    const uids = assigneeUids(t);
+    const uids = assigneeUids(t, ui);
     if (!uids.length)
       return Skeletons.Box.X({
         className: `${pfx}__list-cell ${pfx}__list-assignee-cell`,
