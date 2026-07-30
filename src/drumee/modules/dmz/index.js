@@ -100,15 +100,13 @@ class __dmz_router extends LetcBox {
       case _a.hide:
         return this.getItemsByKind('window_downloader')[0].el.hide();
 
-      case 'redirect-to-home':
-        let subject = LOCALE.INVALID_LINK;
-        let body = location.href
-        subject = encodeURIComponent(subject);
-        body = encodeURIComponent(body);
-        var mailToLink = `mailto:?subject=${subject}&body=${body}`;
-        window.location.href = mailToLink;
-        this.getPart('wrapper-modal').clear();
-        return
+      // 'redirect-to-home' removed 2026-07-30. Despite the name it never
+      // redirected here — it opened a mailto: composer (subject = INVALID_LINK,
+      // body = the current URL), so the "OK" button on every share status popup
+      // launched the visitor's mail client. Its only callers were the six
+      // statuses in dmz/sharebox handleInfoStatus(), which now fall through to
+      // the popup's 'close-popup' default. The identically-named service in the
+      // welcome module is a genuine redirect and is NOT affected.
     }
   }
 
