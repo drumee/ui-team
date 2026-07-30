@@ -342,6 +342,18 @@ class settings_billing extends LetcBox {
       message = (LOCALE.PLAN_SWITCH_DEFER_MSG
         || "Switch to the {0} {1} plan for {2}{3}?\n\nYour current {0} {4} subscription will remain active until the end of its billing period. Your {1} subscription will be added and will begin immediately after your {4} plan expires.")
         .format(targetTitle, cycleWord(period), price, per, cycleWord(currentPeriod));
+      // Stripe's hosted page renders the deferral as "{N} days free" — its
+      // own fixed trial copy. Without this note that read as a mystery gift
+      // (tester 2026-07-30: "21 days free"/"364 days free" — is that
+      // credited?). Yes: it is exactly the time already paid for on the
+      // current cycle; say so before they see it.
+      const daysLeft = this._periodEnd
+        ? Math.max(0, Math.ceil((this._periodEnd * 1000 - Date.now()) / 86400000)) : 0;
+      if (daysLeft) {
+        message += "\n\n" + (LOCALE.PLAN_SWITCH_DEFER_CREDIT
+          || "The payment page will show this as \u201c{0} days free\u201d — that is the remaining time already paid for on your current {1} plan, credited to you. Nothing is charged today; the {2} price starts when it runs out.")
+          .format(daysLeft, cycleWord(currentPeriod), cycleWord(period));
+      }
       // Nothing is lost on this path — the danger styling would warn about a
       // consequence that does not exist.
       confirm_type = "";
