@@ -55,6 +55,24 @@
       width: 480px;
     }
 
+    // Brand lockup (mark + "drumee" wordmark), rendered only when the caller
+    // sets opt.logo — today just the revoked card. The sprite is 160x40 with
+    // preserveAspectRatio="xMidYMid meet", so this 4:1 box shows it whole and
+    // undistorted, and it stays well inside the card's 384px content width.
+    // Its paths already carry #433CC5; the fill below only takes effect if the
+    // icon is ever re-exported as currentColor.
+    &__logo {
+      flex-shrink: 0;
+      height: 32px;
+      width: 128px;
+
+      svg {
+        fill: var(--dmz-popup-cta);
+        height: 100%;
+        width: 100%;
+      }
+    }
+
     &__message {
       // typo() emits size/line/colour only — it never sets font-weight, and for
       // $weight: 600 it sets no font-family either. Both are declared after it

@@ -37,6 +37,18 @@ function __skl_dmz_popup_message (_ui_, opt) {
     className : `${popupFig}__container u-jc-center u-ai-center`,
     debug     : __filename, 
     kids: [
+      // Brand lockup, opt-in via opt.logo — set ONLY by the revoked status, so
+      // every other status keeps the card exactly as it is. raw-logo-drumee-full
+      // is the mark AND the "drumee" wordmark in ONE sprite (viewBox 160x40), so
+      // the name needs no text node and no new asset. Its paths carry the
+      // #433CC5 brand purple themselves, and the symbol is
+      // preserveAspectRatio="xMidYMid meet" so it scales to the card without
+      // ever distorting. A null kid is dropped by ui-core's validChild.
+      opt.logo ? Skeletons.Image.Svg({
+        ico       : 'raw-logo-drumee-full',
+        className : `${popupFig}__logo`
+      }) : null,
+
       Skeletons.Note({
         className : `${popupFig}__message`,
         content

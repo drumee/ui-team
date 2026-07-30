@@ -1278,6 +1278,8 @@ class __dmz_sharebox extends LetcBox {
 
       case 'TICKET_REVOKED':
         opt.content = LOCALE.SECURE_SHARE_REVOKED
+        // Brand lockup on the revoked card only (Duy 2026-07-30).
+        opt.logo = 1
         break
 
       case 'WRONG_TICKET':
