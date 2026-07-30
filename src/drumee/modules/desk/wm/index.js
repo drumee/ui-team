@@ -248,15 +248,18 @@ class __window_manager extends push {
         used: opt.used,
         cap: opt.cap,
       });
-      // feed() alone does NOT make this a modal. The host is only a
-      // full-viewport centring flex container while data-state="open" (see
-      // wm/skin __wrapper-modal), and only paints a backdrop with
-      // data-overlay="blur". Without them the card rendered unpositioned in a
-      // plain white block with the desk fully visible behind it — which is
-      // exactly what it did. Same two lines reward-flow's _openModal sets.
+      // data-state="open" is what makes the host a full-viewport centring flex
+      // container (see wm/skin __wrapper-modal). feed() alone does not: without
+      // it the card renders unpositioned in a plain block with the desk behind.
+      //
+      // NO BACKDROP. data-overlay is cleared to "none" rather than left unset,
+      // because this host is SHARED — reward-flow and the create-folder dialog
+      // both open it with data-overlay="blur", and an attribute one of them
+      // left behind would dim the desk behind this card without anything here
+      // asking for it. Explicitly off, not merely not-on.
       if (p.el) {
         p.el.dataset.state = "open";
-        p.el.dataset.overlay = "blur";
+        p.el.dataset.overlay = "none";
       }
     });
   }

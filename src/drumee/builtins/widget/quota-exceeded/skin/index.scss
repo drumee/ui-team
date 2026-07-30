@@ -7,25 +7,32 @@
  * a surface of its own — so it drops the card chrome and the centring rather
  * than drawing a second panel inside the first.
  */
-/* FULL-VIEWPORT OVERLAY.
+/* CENTRED ON THE VIEWPORT, WITH NO BACKDROP.
  *
- * The shared host is `position: absolute`, so its `inset: 0` resolves against
- * .desk-module__wm-container — the work area only. The sidebar and the topbar
- * sat outside the backdrop: sharp, un-dimmed and still clickable, while a
- * supposedly modal card was open over the middle of the screen.
+ * There is deliberately no dim and no blur — the host is left at its default
+ * `background: transparent; backdrop-filter: none`, and openQuotaExceeded
+ * clears data-overlay to "none" so a value left behind by another modal on
+ * this shared host cannot reintroduce one.
  *
- * `fixed` is safe here. `position: fixed` falls back to behaving like absolute
- * if any ancestor establishes a containing block (transform, filter,
- * perspective, will-change, contain) — none do: the only transform in the desk
- * skin is on a sidebar slide-out, which is not an ancestor of the wm container.
+ * `fixed` is still needed, and now only for POSITION: the shared host is
+ * `position: absolute`, so its `inset: 0` resolves against
+ * .desk-module__wm-container — the work area. Centring in that box puts the
+ * card off-centre on screen, low and right of true centre, because the sidebar
+ * and topbar are outside it.
  *
- * SCOPED with :has() to this widget. Making the shared host fixed outright
- * would change confirm(), alert(), the create-folder dialog and the
- * reward-flow modals in one go — none of which asked for it.
+ * Safe to use: `position: fixed` degrades to absolute if any ancestor
+ * establishes a containing block (transform, filter, perspective, will-change,
+ * contain) — none do. The only transform in the desk skin is on a sidebar
+ * slide-out, which is not an ancestor of the wm container.
  *
- * The z-index matches what desk/skin already lifts an open modal to, so the
- * overlay clears the sidebar and topbar it now covers rather than sliding
- * under them.
+ * SCOPED with :has() to this widget. Changing the shared host outright would
+ * move confirm(), alert(), the create-folder dialog and every reward-flow
+ * modal at once, none of which asked for it.
+ *
+ * NOTE: the host still spans the viewport, so it continues to swallow clicks
+ * while open — modal behaviour, minus the visual cue that used to explain it.
+ * If the desk should stay usable behind the card, this rule wants
+ * `pointer-events: none` with `auto` restored on .quota-exceeded__card.
  */
 .window-manager__wrapper-modal[data-state="open"]:has(.quota-exceeded__ui) {
   position: fixed;
@@ -136,14 +143,15 @@
     background: var(--warning-100, #fdf3e3);
     color: var(--warning-600, #e8a13c);
 
-    /* Square, matching the `storage copy` glyph's 14x14 viewBox. This was
-       22x10 while the chip carried the 30x14 infinity mark; leaving that in
-       place would letterbox a square icon into under half its height.
+    /* Matches the `app-storage` glyph's 24x22 viewBox. Sized to the icon in
+       use rather than left at a previous one's ratio: the chip has already
+       carried a 30x14 infinity mark and a 14x14 square, and each time a
+       stale width/height silently letterboxed the new glyph.
        `fill` for the same reason as the brand logo above: bare sprite paths
        default to black, not currentColor. */
     svg {
       width: 20px;
-      height: 20px;
+      height: 18px;
       fill: currentColor;
     }
   }
