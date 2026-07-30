@@ -116,6 +116,18 @@ module.exports = function (ui) {
         sys_pn: "name-error",
         content: "",
       }),
+      // Slot for the quota-exceeded block. Empty for every other outcome.
+      //
+      // A separate slot rather than reusing name-error: that one is a Note, so
+      // it can only hold a sentence, and the workspace limit is not a problem
+      // with the NAME the user typed. Putting "you have used all your
+      // workspaces" under the field, in the field's error style, would read as
+      // "that name is invalid" — which is why this sits below it with its own
+      // presentation and its own way out.
+      Skeletons.Box.Y({
+        className: `${pfx}__quota-slot`,
+        sys_pn: "quota-slot",
+      }),
     ],
   });
 

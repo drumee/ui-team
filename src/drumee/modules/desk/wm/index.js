@@ -222,6 +222,35 @@ class __window_manager extends push {
     });
   }
 
+  /**
+   * Show the quota-exceeded card in the shared modal.
+   *
+   * One helper so every limit reaches the user the same way. Before this each
+   * site raised its own bare alert, which is why the product could tell someone
+   * they were blocked in four different tones and never once offer the billing
+   * screen sitting in the sidebar.
+   *
+   * The widget decides its own copy from `limit`, and whether to show the
+   * upgrade button at all from canUpgradePlan() — callers pass what happened,
+   * never what to render.
+   *
+   * @param {Object} opt
+   * @param {String} opt.limit "storage" | "workspace" | "seat"
+   * @param {Number} [opt.used] bytes, storage only
+   * @param {Number} [opt.cap]  bytes, storage only
+   */
+  openQuotaExceeded(opt = {}) {
+    return this.ensurePart("wrapper-modal").then((p) => {
+      if (!p) return;
+      p.feed({
+        kind: "quota_exceeded",
+        limit: opt.limit || "storage",
+        used: opt.used,
+        cap: opt.cap,
+      });
+    });
+  }
+
   openCreateFolderDialog() {
     this.ensurePart("wrapper-modal").then((p) => {
       p.feed(

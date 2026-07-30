@@ -1906,7 +1906,21 @@ class __window_upload_progress extends __window_core {
 
     const total = this._bundleEntry.countSize(entries);
     if (typeof Visitor.diskFree === "function" && total > Visitor.diskFree()) {
-      Butler.say(LOCALE.QUOTA_EXCEEDED || "Not enough space for this upload");
+      // Was a Butler.say() toast, which said the upload was refused and then
+      // disappeared. This one stays until dismissed and carries the way out.
+      //
+      // The client-side pre-check, so the numbers are the client's: what the
+      // user is storing now and what their plan allows. `used` is left to the
+      // widget rather than guessed here — Visitor.diskFree() is remaining
+      // space, and subtracting it from the allowance to reconstruct "used"
+      // would produce a figure that quietly disagrees with the storage screen
+      // whenever the cached quota is stale.
+      const q = (Visitor.quota && Visitor.quota()) || {};
+      Wm.openQuotaExceeded({
+        limit: "storage",
+        used: typeof Visitor.diskUsed === "function" ? Visitor.diskUsed() : null,
+        cap: q.storage != null ? q.storage : q.disk,
+      });
       return;
     }
 

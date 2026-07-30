@@ -1,0 +1,110 @@
+/**
+ * Quota-exceeded block.
+ *
+ * Two hosts, one look: `__card` is the modal face (its own surface, centred,
+ * fed into Wm's wrapper-modal, which supplies the backdrop) and
+ * `__card--inline` is the same content sitting inside a panel that already has
+ * a surface of its own — so it drops the card chrome and the centring rather
+ * than drawing a second panel inside the first.
+ */
+.quota-exceeded {
+  &__ui {
+    width: 100%;
+  }
+
+  &__card {
+    align-items: center;
+    text-align: center;
+    gap: 12px;
+    padding: 28px 24px;
+    max-width: 380px;
+    background: var(--surface, #fff);
+    border-radius: 12px;
+    font-family: var(--font-family, inherit);
+
+    /* Inline: the host panel owns the surface, the width and the padding, so
+       everything that would draw a card is unset. Left-aligned because it now
+       sits in a column of left-aligned form content, and a centred block in
+       that context reads as a separate thing rather than a message about the
+       field above it. */
+    &--inline {
+      align-items: flex-start;
+      text-align: left;
+      gap: 8px;
+      padding: 12px 0 4px;
+      max-width: none;
+      background: transparent;
+      border-radius: 0;
+    }
+  }
+
+  &__chip {
+    align-items: center;
+    justify-content: center;
+    width: 48px;
+    height: 48px;
+    flex: 0 0 48px;
+    border-radius: 24px;
+    /* Amber, not red: hitting a limit is a state to resolve, not an error the
+       user made. Red is for things that went wrong. */
+    background: var(--warning-100, #fdf3e3);
+    color: var(--warning-600, #e8a13c);
+
+    /* app-unlimited is 30x14, not square — sized to its own ratio so it is not
+       letterboxed into half the chip. */
+    svg {
+      width: 22px;
+      height: 10px;
+    }
+  }
+
+  /* The chip is decoration on a message that already says everything in words.
+     Inline, where vertical space is a form's to spend, it goes. */
+  &__card--inline &__chip {
+    display: none;
+  }
+
+  &__title {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text-primary, #0b0a21);
+  }
+
+  &__desc {
+    font-size: 13px;
+    line-height: 1.5;
+    color: var(--text-secondary, #65656c);
+
+    &--muted {
+      color: var(--text-tertiary, #8b8b93);
+    }
+  }
+
+  &__footer {
+    gap: 8px;
+    margin-top: 4px;
+    align-items: center;
+  }
+
+  &__btn {
+    padding: 9px 18px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    white-space: nowrap;
+    color: var(--text-primary, #0b0a21);
+    background: var(--surface-2, #f2f2f7);
+
+    &--primary {
+      background: var(--primary-600, #433cc5);
+      color: #fff;
+    }
+  }
+
+  /* Inline has no Close, so the single button should not stretch to fill a
+     row it no longer shares. */
+  &__card--inline &__footer {
+    margin-top: 8px;
+  }
+}
