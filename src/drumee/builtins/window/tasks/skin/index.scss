@@ -2893,6 +2893,15 @@
     );
   }
 
+  &__detail-reporter-time {
+    font-size: 12px;
+    line-height: 1.2;
+    color: var(--normal-fg-30, rgba(11, 10, 33, 0.55));
+    margin-left: 8px;
+    white-space: nowrap;
+    align-self: center;
+  }
+
   &__comment-body {
     display: block;
     min-width: 0;
@@ -2900,7 +2909,18 @@
     white-space: pre-wrap;
     word-break: break-word;
     overflow-wrap: anywhere; // break long unbroken strings / URLs
-    user-select: text; // a comment is there to be read and copied out of
+    // A comment is there to be read and copied out of. !important + the
+    // descendant rule below, because ancestors (window chrome, drag zones)
+    // and the editor-reused chips both carry user-select:none — tester
+    // 2026-07-30 could neither drag-select nor right-click-copy.
+    user-select: text !important;
+    -webkit-user-select: text !important;
+    cursor: text;
+
+    * {
+      user-select: text !important;
+      -webkit-user-select: text !important;
+    }
     @include drumee.typo(
       $size: 14px,
       $weight: 400,
