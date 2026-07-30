@@ -12,6 +12,23 @@
     width: 100%;
   }
 
+  /* CENTRING BELONGS HERE, not on the card.
+     The flex item inside the wrapper-modal is the widget ROOT (__ui), not
+     __card — the host feeds a widget, and the widget mounts its own root. So
+     the host's align/justify centre __ui, which is width:100%, and the card
+     then sits at the left of it. That is the whole "card is pinned left" bug,
+     and it is invisible unless the harness includes this wrapper: testing the
+     card directly inside the host centres fine and proves nothing.
+     Measured off-centre by 386px in a 1200px viewport before this rule.
+     Scoped to the modal host so the inline face, which must stay in the
+     document flow of its panel, is untouched. */
+  .window-manager__wrapper-modal &__ui {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+  }
+
   /* The HOST centres this — .window-manager__wrapper-modal[data-state="open"]
      is a full-viewport flex container with align/justify center, and supplies
      the backdrop via data-overlay="blur". So the card sets its own size and
@@ -21,8 +38,10 @@
     text-align: center;
     gap: 12px;
     padding: 28px 24px;
-    width: 100%;
-    max-width: 380px;
+    /* A definite width, with a gutter on narrow viewports. Not width:100% —
+       as a flex item that fills the cross axis and lands at the start edge. */
+    width: min(380px, calc(100vw - 32px));
+    box-sizing: border-box;
     background: var(--normal-bg, #fff);
     border-radius: 12px;
     /* Reads as lifted off the blurred backdrop rather than pasted onto it. */
