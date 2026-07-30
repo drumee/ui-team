@@ -2294,5 +2294,6 @@
   "MIGRATE_GDRIVE_SOURCE_REVOKED": "Drumee n'a plus accès au dossier sélectionné sur Google Drive. Rétablissez le partage (ou sélectionnez-le à nouveau), puis réessayez.",
   "MIGRATE_GDRIVE_ACCESS_REVOKED": "L'accès Google Drive au dossier sélectionné a été retiré pendant la migration ; elle a donc été arrêtée. Rétablissez le partage et réessayez.",
   "CYCLE_STARTS_ON": "Votre facturation {0} commence le {1}",
-  "PLAN_SWITCH_DEFER_CREDIT": "La page de paiement l'affichera comme « {0} jours gratuits » — c'est le temps restant déjà payé sur votre forfait {1} actuel, qui vous est crédité. Rien n'est débité aujourd'hui ; le tarif {2} démarre à son expiration."
+  "PLAN_SWITCH_DEFER_CREDIT": "La page de paiement l'affichera comme « {0} jours gratuits » — c'est le temps restant déjà payé sur votre forfait {1} actuel, qui vous est crédité. Rien n'est débité aujourd'hui ; le tarif {2} démarre à son expiration.",
+  "MIGRATE_GDRIVE_CANCELLING": "Annulation…"
 }

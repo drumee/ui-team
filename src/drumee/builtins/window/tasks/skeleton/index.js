@@ -942,7 +942,18 @@ const make = function (ui) {
                   className: `${pfx}__detail-reporter-name`,
                   content: authorName(reporter),
                 }),
-              ],
+                // Creation time, small, right of the name (product ask
+                // 2026-07-30). task.ctime is set server-side at create and
+                // immutable, like created_by above. Absolute date, not
+                // fromNow(): the reporter row is provenance, and "3 weeks
+                // ago" decays while a date stays checkable.
+                detail.ctime
+                  ? Skeletons.Note({
+                      className: `${pfx}__detail-reporter-time`,
+                      content: Dayjs.unix(Number(detail.ctime)).format("MMM D, YYYY HH:mm"),
+                    })
+                  : null,
+              ].filter(Boolean),
             }),
           ],
         })

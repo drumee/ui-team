@@ -486,8 +486,16 @@ module.exports = function (ui) {
           className: `${pfx}__footer`,
           kids: [
             Skeletons.Note({
-              className: `${pfx}__primary-btn ${pfx}__primary-btn--full`,
-              content: LOCALE.MIGRATE_GDRIVE_CANCEL_JOB,
+              // --cancel-job also anchors the widget's root pointerup
+              // delegate: the 2s status poll re-feeds this whole screen, so
+              // the button ELEMENT is replaced mid-click and the engine's
+              // per-element click never completes (tester 2026-07-30:
+              // "không ấn được cancel"). The delegate survives re-renders.
+              className: `${pfx}__primary-btn ${pfx}__primary-btn--full ${pfx}__primary-btn--cancel-job`,
+              dataset: ui._cancelRequested ? { disabled: 1 } : undefined,
+              content: ui._cancelRequested
+                ? (LOCALE.MIGRATE_GDRIVE_CANCELLING || 'Cancelling…')
+                : (LOCALE.MIGRATE_GDRIVE_CANCEL_JOB || 'Cancel migration'),
               service: 'gdrive-cancel', uiHandler: [ui],
             }),
           ],
