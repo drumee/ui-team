@@ -96,6 +96,11 @@ class settings_billing extends LetcBox {
   // Fetch the caller's subscription mirror and derive the pending-cancel flags
   // the banner + cancel/resume actions read. A hard cancel removes the mirror
   // row → _subscription null → no banner (workspace already on Free).
+  //
+  // LAUNCH30 (no Stripe): when quota says Team but there is no subscription
+  // mirror, ask promo.get_state — a claimed_active trial drives the same
+  // banner + Cancel plan path via promo.cancel (immediate end), not
+  // payment.cancel_subscription (which would 404 as NO_SUBSCRIPTION).
   async _loadSubscription() {
     const raw = await this.fetchService(SERVICE.payment.subscription_status, { hub_id: Visitor.id })
       .catch(() => null);
@@ -104,6 +109,9 @@ class settings_billing extends LetcBox {
     // exactly the case that used to walk into a dead end.
     this._canBuy = raw && typeof raw.can_buy === "boolean" ? raw.can_buy : null;
     this._subscription = raw && raw.subscription_id ? raw : null;
+    // member_count is enriched on subscription_status even when there is no
+    // Stripe mirror (LAUNCH30 org) — keep it for cancel-consequence copy.
+    this._memberCount = ~~(raw && raw.member_count);
     const sub = this._subscription;
     const now = Math.floor(Date.now() / 1000);
     this._periodEnd = (sub && Number(sub.period_end)) || 0;
@@ -112,6 +120,7 @@ class settings_billing extends LetcBox {
     // sub, whose row is gone.
     this._isCanceling = !!(sub && sub.status === "canceled" && this._periodEnd > now);
     this._hasPaidSub = !!(sub && sub.subscription_id);
+    this._isPromoTrial = false;
     // Live subscription = nothing left to buy self-serve. The tier ladder is
     // free < team < (business | sovereign = sales-led), so a Team subscriber
     // has no higher self-serve tier to reach and no reason to re-buy the one
@@ -126,6 +135,19 @@ class settings_billing extends LetcBox {
     // in-place switch (which the server accepts while past_due) instead.
     this._hasActiveSub =
       !!(sub && /^(active|trialing|past_due)$/.test(sub.status || "")) || this._isCanceling;
+
+    if (!this._hasPaidSub && this._isPaidByQuota()) {
+      try {
+        const promo = await this.fetchService(SERVICE.promo.get_state, { hub_id: Visitor.id });
+        if (promo && promo.state === "claimed_active") {
+          this._isPromoTrial = true;
+          this._periodEnd = Number(promo.trial_ends_at) || this._periodEnd;
+          // Treat the free trial as a live entitlement for checkout gating —
+          // same as a paid Team sub: don't offer a second self-serve buy.
+          this._hasActiveSub = true;
+        }
+      } catch (e) { /* promo module optional / offline */ }
+    }
     return sub;
   }
 
@@ -150,8 +172,18 @@ class settings_billing extends LetcBox {
   _cancelConsequences() {
     const sub = this._subscription || {};
     const lines = [];
-    const when = this._periodEnd ? Dayjs(this._periodEnd * 1000).format("MMM D, YYYY") : "";
-    lines.push((LOCALE.CANCEL_KEEP_UNTIL || "You'll keep your current plan until {0}. After that your workspace returns to the Free plan (20 GB).").format(when));
+    if (this._isPromoTrial) {
+      // LAUNCH30: no card, no renew — Cancel ends Team immediately (same
+      // revert the expiry worker runs). Soft cancel-at-period-end would be a
+      // no-op: the trial already stops on trial_ends_at with nothing to bill.
+      lines.push(
+        LOCALE.PROMO_CANCEL_IMMEDIATE
+          || "Your free Team trial will end immediately. Your workspace returns to the Free plan right away — no card was ever charged.",
+      );
+    } else {
+      const when = this._periodEnd ? Dayjs(this._periodEnd * 1000).format("MMM D, YYYY") : "";
+      lines.push((LOCALE.CANCEL_KEEP_UNTIL || "You'll keep your current plan until {0}. After that your workspace returns to the Free plan (20 GB).").format(when));
+    }
     // Over-the-free-limit warning (Free = 20 GB, decimal).
     const usedBytes = (Visitor.diskUsed && Visitor.diskUsed()) || 0;
     if (usedBytes > 20000000000) {
@@ -165,8 +197,10 @@ class settings_billing extends LetcBox {
     // member_count, not `seats`: the latter is the plan's member CAP copied out
     // of quota, so on Business it announced that 100000 member seats were about
     // to be removed. The count is what the owner actually loses.
-    const seats = parseInt(sub.member_count, 10) || 0;
-    if (sub.entity_type === "org" && seats > 0) {
+    // Promo trials are always org-scoped (org_provision); use member_count
+    // from the subscription_status enrichment when present, else skip.
+    const seats = parseInt(sub.member_count, 10) || this._memberCount || 0;
+    if ((sub.entity_type === "org" || this._isPromoTrial) && seats > 0) {
       lines.push((LOCALE.CANCEL_TEAM_SEATS || "Your team's {0} member seats will be removed and each member drops to their own Free plan.").format(seats));
     }
     return lines.join("\n\n");
@@ -184,7 +218,8 @@ class settings_billing extends LetcBox {
   }
 
   async _confirmCancel() {
-    if ((!this._hasPaidSub && !this._isPaidByQuota()) || this._isCanceling) return;
+    if ((!this._hasPaidSub && !this._isPaidByQuota() && !this._isPromoTrial) || this._isCanceling) return;
+    if (this._isPromoTrial) return this._confirmCancelPromo();
     const ok = await Wm.confirm({
       title: LOCALE.CANCEL_SUBSCRIPTION || "Cancel subscription",
       message: this._cancelConsequences(),
@@ -210,6 +245,40 @@ class settings_billing extends LetcBox {
     this._isCanceling = true;
     if (typeof Butler !== "undefined" && Butler.say) Butler.say(LOCALE.SUBSCRIPTION_CANCELED_TOAST || "Your plan will be canceled at the end of the period.");
     this.fetchPlanData();
+  }
+
+  // LAUNCH30 Cancel plan — ends the free trial immediately (no Stripe).
+  async _confirmCancelPromo() {
+    const ok = await Wm.confirm({
+      title: LOCALE.PROMO_CANCEL_TITLE || "End free trial",
+      message: this._cancelConsequences(),
+      confirm: LOCALE.PROMO_CANCEL_CONFIRM || "End trial",
+      confirm_type: "danger",
+      cancel: LOCALE.KEEP_PLAN || "Keep plan",
+      cancel_type: "secondary",
+      mode: "hbf",
+    }).then(() => true).catch(() => false);
+    if (!ok) return;
+    const res = await this.postService(SERVICE.promo.cancel, { hub_id: Visitor.id }).catch(() => null);
+    const data = (res && res.data) || res || {};
+    const status = data.status || (res && res.status);
+    if (status !== "OK") {
+      if (Wm && Wm.alert) Wm.alert(LOCALE.SOMETHING_WENT_WRONG);
+      return;
+    }
+    this._isPromoTrial = false;
+    this._hasActiveSub = false;
+    this._periodEnd = 0;
+    // Refresh Visitor.quota immediately so the current-plan card flips to
+    // Free without waiting on the payment.plan_updated WS fan-out.
+    if (typeof Visitor !== "undefined" && Visitor.respawn) {
+      Visitor.respawn({ plan: "free", quota: data.quota });
+    }
+    if (typeof Butler !== "undefined" && Butler.say) {
+      Butler.say(LOCALE.PROMO_TRIAL_ENDED_TOAST || "Your free trial has ended. You're back on the Free plan.");
+    }
+    await this._loadSubscription();
+    if (!this.isDestroyed()) this.fetchPlanData();
   }
 
   async _resumeSubscription() {

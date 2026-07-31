@@ -354,6 +354,39 @@ class desk_module extends LetcBox {
     });
     await this.ensurePart("wrapper-popup");
     this.trigger(_e.ready);
+    // LAUNCH30 "Start exploring now" reloads so org_provision's domain move
+    // is picked up by get_env; then open Admin Console (+ Invite via
+    // apps-main's own sessionStorage flag).
+    this._maybeOpenPromoAdminAfterClaim();
+  }
+
+  /**
+   * After promo-launch30 explore → location.reload(), open Admin Console.
+   * Invite panel is opened by apps-main from drumee_promo_open_invite.
+   */
+  _maybeOpenPromoAdminAfterClaim() {
+    let open = false;
+    try {
+      open = sessionStorage.getItem("drumee_promo_open_admin") === "1";
+      if (open) sessionStorage.removeItem("drumee_promo_open_admin");
+    } catch (e) {
+      return;
+    }
+    if (!open) return;
+    // Don't fight desk-state restore back to Home.
+    this._restoreInFlight = false;
+    setTimeout(() => {
+      if (this.isDestroyed && this.isDestroyed()) return;
+      this.onUiEvent(
+        {
+          mget: (k) => (k === _a.service || k === "service" ? "toggle-apps" : null),
+          get(k) {
+            return this.mget(k);
+          },
+        },
+        { service: "toggle-apps" },
+      );
+    }, 400);
   }
 
   // ── [Reload] keep the desk where the user left it across a browser reload ──

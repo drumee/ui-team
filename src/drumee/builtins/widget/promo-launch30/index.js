@@ -77,9 +77,47 @@ class __promo_launch30 extends LetcBox {
 
   // ───────── persistence ─────────
 
+  // ACL is scope:hub / src:owner (same as payment.*) — hub_id must be the
+  // caller's personal hub. Omitting it yields PERMISSION_DENIED 403 before
+  // the worker ever runs (reproduced 2026-07-31 against promo.claim).
+  _hubId() {
+    return this.mget(_a.hub_id) || Visitor.id;
+  }
+
   _markSeen() {
-    return this.postService(SERVICE.promo.dismiss, { surface: this._surface })
-      .catch((e) => this.warn && this.warn("[promo-launch30] dismiss failed", e));
+    return this.postService(SERVICE.promo.dismiss, {
+      hub_id: this._hubId(),
+      surface: this._surface,
+    }).catch((e) => this.warn && this.warn("[promo-launch30] dismiss failed", e));
+  }
+
+  /**
+   * org_provision moves the payer onto a new domain + Team quota. Bootstrap
+   * globals (Visitor.quota / domain_id, Organization) stay frozen on Free
+   * until refreshed — Desk's Admin Console gate (needsAdminConsoleUpgrade)
+   * then short-circuits to the Unlock upsell until a full page reload.
+   * Mirror init_globals from yp.get_env; fall back to the claim payload quota.
+   */
+  async _refreshSessionAfterClaim(data = {}) {
+    try {
+      const env = await this.fetchService(SERVICE.yp.get_env, { hub_id: Visitor.id });
+      if (env && env.user) {
+        if (typeof Visitor !== "undefined" && Visitor.respawn) Visitor.respawn(env.user);
+        else if (typeof Visitor !== "undefined" && Visitor.set) Visitor.set(env.user);
+        if (env.organization && typeof Organization !== "undefined" && Organization.set) {
+          Organization.set(env.organization);
+        }
+        if (env.hub && typeof Host !== "undefined" && Host.set) {
+          Host.set(env.hub);
+        }
+        return;
+      }
+    } catch (e) {
+      this.warn && this.warn("[promo-launch30] get_env after claim failed", e);
+    }
+    if (data.quota && typeof Visitor !== "undefined" && Visitor.respawn) {
+      Visitor.respawn({ plan: "team", quota: data.quota });
+    }
   }
 
   _claim() {
@@ -87,13 +125,24 @@ class __promo_launch30 extends LetcBox {
     this._claiming = true;
     this._render();
     const sourceSurface = this._surface === "billing" ? "billing_modal" : "home";
-    return this.postService(SERVICE.promo.claim, { source_surface: sourceSurface })
-      .then((res) => {
+    return this.postService(SERVICE.promo.claim, {
+      hub_id: this._hubId(),
+      source_surface: sourceSurface,
+    })
+      .then(async (res) => {
         // Absent/falsy status must NOT read as success — an ACL denial, a
         // network hiccup, or any unexpected response shape all come back
         // without a clean "OK" and must never silently advance to the
         // welcome screen (found during manual test 2026-07-31: a DENIED
         // response left no entitlement granted, yet the UI moved on).
+        if (res && (res.error || res.error_code === 403 || res.status === 403)) {
+          this._claiming = false;
+          this._render();
+          if (Wm && Wm.alert) {
+            Wm.alert(LOCALE.SOMETHING_WENT_WRONG || "Something went wrong. Please try again.");
+          }
+          return;
+        }
         const data = (res && res.data) || res || {};
         const status = data.status || (res && res.status);
         if (status !== "OK") {
@@ -109,6 +158,7 @@ class __promo_launch30 extends LetcBox {
           return;
         }
         this._trialEndsAt = data.trial_ends_at || null;
+        await this._refreshSessionAfterClaim(data);
         this._claiming = false;
         this._state = "welcome";
         this._render();
@@ -128,6 +178,24 @@ class __promo_launch30 extends LetcBox {
     else this.softDestroy();
   }
 
+  /**
+   * D2: land on Admin Console → Members with Invite open. org_provision
+   * rewrote domain/vhost — same stale-bootstrap problem billing solves with
+   * a full reload on payment.org_provisioned. Flags survive the reload;
+   * Desk opens Admin, apps-main opens Invite.
+   *
+   * triggerHandlers(toggle-apps) is a no-op here: Wm.launch does not wire
+   * uiHandler to Desk, so the service never reached the sidebar handler.
+   */
+  _exploreAfterClaim() {
+    try {
+      sessionStorage.setItem("drumee_promo_open_invite", "1");
+      sessionStorage.setItem("drumee_promo_open_admin", "1");
+    } catch (e) { /* private mode */ }
+    this._close();
+    window.location.reload();
+  }
+
   // ───────── event routing ─────────
 
   onUiEvent(cmd, args = {}) {
@@ -141,14 +209,7 @@ class __promo_launch30 extends LetcBox {
         return this._claim();
 
       case "promo-explore":
-        // D2 (design doc, 2026-07-30): land on Admin Console -> Members with
-        // the Invite panel already open — the trial is worthless until a
-        // second person joins. One-shot flag apps-main reads on mount and
-        // clears; decoupled from the toggle-apps case so no core desk change
-        // is needed to carry the intent across the plugin boundary.
-        try { sessionStorage.setItem("drumee_promo_open_invite", "1"); } catch (e) { /* private mode */ }
-        this.triggerHandlers({ service: "toggle-apps" });
-        return this._close();
+        return this._exploreAfterClaim();
 
       case "promo-later":
         return this._close();
