@@ -2348,5 +2348,7 @@
   "PROMO_LATER_CTA": "以后再说",
   "SEATS_TO_FILL": "您还有 {0} 个空位待填补。",
   "SEATS_TO_FILL_SUB": "团队因团队而运作。邀请他人加入您的工作区。",
+  "PROMO_POSITION_LINE": "您是第 #{0} 位申领此优惠的用户。",
+  "PROMO_OFFER_ENDS": "截止于 {0}。",
   "MIGRATE_GDRIVE_CANCELLING": "正在取消…"
 }

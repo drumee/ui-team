@@ -183,4 +183,14 @@
     color: var(--normal-fg-50, #8a8aa3);
     margin-top: 11px;
   }
+
+  &__posline {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--normal-fg-50, #4a4a68);
+    background: rgba(79, 70, 229, 0.06);
+    border-radius: 10px;
+    padding: 10px 12px;
+    margin-bottom: 8px;
+  }
 }

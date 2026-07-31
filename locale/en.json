@@ -2788,5 +2788,7 @@
   "PROMO_LATER_CTA": "Maybe later",
   "SEATS_TO_FILL": "You have {0} seats to fill.",
   "SEATS_TO_FILL_SUB": "Team works when there's a team. Invite someone to your workspace.",
+  "PROMO_POSITION_LINE": "You're #{0} to claim this offer.",
+  "PROMO_OFFER_ENDS": "Ends {0}.",
   "MIGRATE_GDRIVE_CANCELLING": "Cancelling…"
 }

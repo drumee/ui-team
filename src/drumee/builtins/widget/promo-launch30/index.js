@@ -27,6 +27,10 @@ class __promo_launch30 extends LetcBox {
     this._state = opt.state === "welcome" ? "welcome" : "offer";
     this._claiming = false;
     this._trialEndsAt = opt.trial_ends_at || null;
+    // Seeded position + campaign end date (product decisions 2026-07-31,
+    // D1/D3) — both server-computed, never invented client-side.
+    this._position = opt.position || null;
+    this._campaignEndsAt = opt.campaign_ends_at || null;
   }
 
   /** Wm.launch({singleton:1}) reuses the instance and calls .raise(). */
@@ -68,6 +72,8 @@ class __promo_launch30 extends LetcBox {
   getSurface() { return this._surface; }
   isClaiming() { return this._claiming; }
   getTrialEndsAt() { return this._trialEndsAt; }
+  getPosition() { return this._position; }
+  getCampaignEndsAt() { return this._campaignEndsAt; }
 
   // ───────── persistence ─────────
 
