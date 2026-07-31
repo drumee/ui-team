@@ -2790,6 +2790,8 @@
   "SEATS_TO_FILL_SUB": "Team works when there's a team. Invite someone to your workspace.",
   "PROMO_POSITION_LINE": "You're #{0} to claim this offer.",
   "PROMO_OFFER_ENDS": "Ends {0}.",
+  "PROMO_PILL_TITLE": "Your free month of Team is still yours to claim.",
+  "PROMO_PILL_CTA": "Claim now",
   "PROMO_TRIAL_ENDS_ON": "Your free trial ends on {0}",
   "PROMO_CANCEL_TITLE": "End free trial",
   "PROMO_CANCEL_CONFIRM": "End trial",

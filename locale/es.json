@@ -2355,5 +2355,7 @@
   "SEATS_TO_FILL_SUB": "Un equipo funciona cuando hay equipo. Invita a alguien a tu espacio de trabajo.",
   "PROMO_POSITION_LINE": "Eres el n.º {0} en reclamar esta oferta.",
   "PROMO_OFFER_ENDS": "Termina el {0}.",
+  "PROMO_PILL_TITLE": "Tu mes gratis de Team todavía está disponible para reclamar.",
+  "PROMO_PILL_CTA": "Reclamar ahora",
   "MIGRATE_GDRIVE_CANCELLING": "Cancelando…"
 }

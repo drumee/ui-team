@@ -2351,5 +2351,7 @@
   "SEATS_TO_FILL_SUB": "Une équipe, ça se construit à plusieurs. Invitez quelqu'un dans votre espace de travail.",
   "PROMO_POSITION_LINE": "Vous êtes le n°{0} à réclamer cette offre.",
   "PROMO_OFFER_ENDS": "Se termine le {0}.",
+  "PROMO_PILL_TITLE": "Votre mois gratuit de Team est toujours à réclamer.",
+  "PROMO_PILL_CTA": "Réclamer maintenant",
   "MIGRATE_GDRIVE_CANCELLING": "Annulation…"
 }
