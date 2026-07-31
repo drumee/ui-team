@@ -2327,5 +2327,7 @@
   "PROMO_LATER_CTA": "Plus tard",
   "SEATS_TO_FILL": "Il vous reste {0} places à pourvoir.",
   "SEATS_TO_FILL_SUB": "Une équipe, ça se construit à plusieurs. Invitez quelqu'un dans votre espace de travail.",
+  "PROMO_POSITION_LINE": "Vous êtes le n°{0} à réclamer cette offre.",
+  "PROMO_OFFER_ENDS": "Se termine le {0}.",
   "MIGRATE_GDRIVE_CANCELLING": "Annulation…"
 }

@@ -1426,6 +1426,8 @@ class desk_module extends LetcBox {
         kind: "promo_launch30",
         surface,
         state: "offer",
+        position: state.position,
+        campaign_ends_at: state.campaign_ends_at,
         hub_id: Visitor.id,
         wm_unique_id: "promo_launch30",
       }, { explicit: 1, singleton: 1 });

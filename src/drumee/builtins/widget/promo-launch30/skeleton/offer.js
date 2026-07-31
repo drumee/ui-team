@@ -1,7 +1,9 @@
-// Modal A — the offer. Design doc 2026-07-30 copy deck, minus the scarcity
-// chip / position line / campaign end date: those need a business decision
-// (real vs seeded inventory, campaign cap + end date) this build does not
-// have, and showing an invented number would be worse than not showing one.
+// Modal A — the offer. Design doc 2026-07-30 copy deck. Position (D1,
+// 2026-07-31) is a SEEDED number, not real inventory — no "N spots left"
+// claim, which the doc's own D1 discussion flags as a deceptive-practice
+// risk (EU UCP Directive) for a brand sold on trust. Campaign end date (D3)
+// is a fixed Founder-set constant (server/promo.js CAMPAIGN_ENDS_AT), not
+// configurable. No claim pill / deeplink / lifecycle emails — out of scope.
 const BENEFITS = [
   {
     title: () => LOCALE.PROMO_BENEFIT_STORAGE_TITLE || "100 GB storage",
@@ -24,6 +26,9 @@ const BENEFITS = [
 module.exports = function (ui) {
   const pfx = ui.fig.family;
   const claiming = ui.isClaiming();
+  const position = ui.getPosition();
+  const campaignEndsAt = ui.getCampaignEndsAt();
+  const endDate = campaignEndsAt ? Dayjs.unix(campaignEndsAt).format("MMM D, YYYY") : "";
 
   return Skeletons.Box.Y({
     className: `${pfx}__card`,
@@ -63,6 +68,12 @@ module.exports = function (ui) {
           }),
         ),
       }),
+      position
+        ? Skeletons.Note({
+            className: `${pfx}__posline`,
+            content: (LOCALE.PROMO_POSITION_LINE || "You're #{0} to claim this offer.").format(position),
+          })
+        : null,
       Skeletons.Box.X({
         className: `${pfx}__cta${claiming ? ` ${pfx}__cta--busy` : ""}`,
         service: claiming ? null : "promo-claim",
@@ -78,8 +89,10 @@ module.exports = function (ui) {
       }),
       Skeletons.Note({
         className: `${pfx}__fineprint`,
-        content: LOCALE.PROMO_NO_CARD || "No credit card required.",
+        content: endDate
+          ? `${LOCALE.PROMO_NO_CARD || "No credit card required."} ${(LOCALE.PROMO_OFFER_ENDS || "Ends {0}.").format(endDate)}`
+          : (LOCALE.PROMO_NO_CARD || "No credit card required."),
       }),
-    ],
+    ].filter(Boolean),
   });
 };
