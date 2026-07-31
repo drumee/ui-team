@@ -1239,6 +1239,10 @@ class desk_module extends LetcBox {
           }, 2000);
         }
         return;
+
+      case "desk-tutorial":
+        this._chainRewardFlowAfterTutorial(child);
+        return;
     }
   }
 
@@ -1327,12 +1331,19 @@ class desk_module extends LetcBox {
   }
 
   /**
-   *
+   * `p.feed(...)` immediately followed by `p.children.last()` is NOT
+   * reliable when `p` is a nested part (as opposed to `this`) — it raced
+   * and returned a stale/undefined reference in testing (2026-07-31),
+   * so `_chainRewardFlowAfterTutorial` fell through to its "no tutorial"
+   * branch and fired the reward+promo check immediately, stacking the
+   * LAUNCH30 modal on top of an in-progress tutorial (step 1/5, tester
+   * feedback #1). `sys_pn` + `partHandler` -> `onPartReady` is the
+   * framework's own reliable hand-off for a just-rendered child; use it
+   * instead of leaning on the feed() return value.
    */
   _showTutorial() {
     this.ensurePart("overlay").then((p) => {
-      p.feed({ kind: "desk_tutorial" });
-      this._chainRewardFlowAfterTutorial(p.children.last());
+      p.feed({ kind: "desk_tutorial", sys_pn: "desk-tutorial", partHandler: this });
     });
   }
 
@@ -1437,7 +1448,20 @@ class desk_module extends LetcBox {
    * promo_launch30_mark_seen). Safe to call unconditionally from any surface;
    * this is what makes it safe to chain after the reward flow above.
    *
+   * Also drives Modal B ("Welcome to Team"): the claim flow moves the payer
+   * to a brand-new org domain and an automatic redirect follows almost
+   * immediately — too fast for the claiming page to reliably show Modal B
+   * and wait for a click (tester feedback 2026-07-31 #2). So the claiming
+   * page no longer tries; instead, the FIRST home mount on the new domain
+   * lands here, sees claimed_active + welcome_seen=false, and shows it once.
+   * Billing.js reuses the returned state to decide whether to render its
+   * own persistent "claim pill" for an already-seen, still-unclaimed offer
+   * (tester feedback 2026-07-31 #3) — one fetch, two callers.
+   *
    * @param {string} surface  'home' | 'billing'
+   * @returns {Promise<object|undefined>} the fetched promo state, or
+   *   undefined if a concurrent call was already in flight or the fetch
+   *   failed.
    */
   async _maybeShowPromoLaunch30(surface) {
     if (this._promoLaunch30InFlight) return;
@@ -1449,21 +1473,40 @@ class desk_module extends LetcBox {
       } catch (e) {
         return;
       }
-      if (!state || state.state !== "eligible_unseen") return;
-      try {
-        await Kind.waitFor("promo_launch30");
-      } catch (e) {
-        return;
+      if (!state) return;
+      if (state.state === "eligible_unseen") {
+        try {
+          await Kind.waitFor("promo_launch30");
+        } catch (e) {
+          return state;
+        }
+        Wm.launch({
+          kind: "promo_launch30",
+          surface,
+          state: "offer",
+          position: state.position,
+          campaign_ends_at: state.campaign_ends_at,
+          hub_id: Visitor.id,
+          wm_unique_id: "promo_launch30",
+        }, { explicit: 1, singleton: 1 });
+        return state;
       }
-      Wm.launch({
-        kind: "promo_launch30",
-        surface,
-        state: "offer",
-        position: state.position,
-        campaign_ends_at: state.campaign_ends_at,
-        hub_id: Visitor.id,
-        wm_unique_id: "promo_launch30",
-      }, { explicit: 1, singleton: 1 });
+      if (surface === "home" && state.state === "claimed_active" && !state.welcome_seen) {
+        try {
+          await Kind.waitFor("promo_launch30");
+        } catch (e) {
+          return state;
+        }
+        Wm.launch({
+          kind: "promo_launch30",
+          surface,
+          state: "welcome",
+          trial_ends_at: state.trial_ends_at,
+          hub_id: Visitor.id,
+          wm_unique_id: "promo_launch30",
+        }, { explicit: 1, singleton: 1 });
+      }
+      return state;
     } finally {
       this._promoLaunch30InFlight = false;
     }
