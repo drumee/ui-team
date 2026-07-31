@@ -1,6 +1,14 @@
-// LAUNCH30 promo modal — design doc 2026-07-30 (Modal A "offer" / Modal B
-// "welcome"). Indigo palette matches the design handoff exactly
-// (--indigo:#4F46E5 / --indigo-pale:#E4E2FF / --indigo-tint:#F2F1FF).
+// LAUNCH30 promo modal (Modal A "offer" / Modal B "welcome").
+//
+// Colours come from the Drumee design system, NOT from the original design
+// handoff's own indigo ramp: that handoff shipped a generic #4F46E5 /
+// #E4E2FF / #F2F1FF palette plus invented greys (#14142b, #8a8aa3,
+// #4a4a68), none of which are Drumee tokens — it read as a foreign product
+// bolted onto the desk. Brand primary is --primary-50 (#433cc5, the same
+// value as --area-personal), and every surface/foreground here now uses the
+// theme-aware --normal-* tokens so the modal follows light/dark like the
+// rest of the app instead of being pinned to a light-only palette.
+//
 // Portalled to <body> like rating-survey-popup — fixed + high z-index wins
 // over the desk chrome regardless of where Wm mounts the widget.
 .promo-launch30 {
@@ -8,7 +16,7 @@
     position: fixed;
     inset: 0;
     z-index: 99998;
-    font-family: var(--font-main, sans-serif);
+    font-family: var(--font-main);
   }
 
   &__backdrop {
@@ -17,8 +25,8 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 20px;
-    background: rgba(20, 20, 43, 0.42);
+    padding: var(--spacer-6);
+    background: var(--overlay-bg);
     backdrop-filter: blur(2px);
   }
 
@@ -27,8 +35,8 @@
     width: min(400px, 100%);
     max-height: 100%;
     overflow-y: auto;
-    background: var(--normal-bg-100, #ffffff);
-    border-radius: 22px;
+    background: var(--normal-bg-elevated);
+    border-radius: var(--corner-radius-6);
     padding: 26px;
     box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25), 0 1px 5.5px rgba(0, 0, 0, 0.13);
   }
@@ -40,7 +48,7 @@
     width: 26px;
     height: 26px;
     border-radius: 50%;
-    background: #f2f2f7;
+    background: var(--normal-bg-90);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -49,19 +57,19 @@
     svg {
       width: 11px;
       height: 11px;
-      fill: #8a8aa3;
-      stroke: #8a8aa3;
+      fill: var(--normal-fg-50);
+      stroke: var(--normal-fg-50);
     }
 
     &:hover {
-      background: #e8e8ef;
+      background: var(--normal-bg-80);
     }
   }
 
   &__confetti {
     font-size: 30px;
     line-height: 1;
-    margin-bottom: 6px;
+    margin-bottom: var(--spacer-3);
   }
 
   &__title {
@@ -69,24 +77,24 @@
     line-height: 1.25;
     font-weight: 600;
     letter-spacing: -0.03em;
-    color: var(--normal-fg-800, #14142b);
+    color: var(--normal-fg-800);
   }
 
   &__lead {
     font-size: 13px;
     line-height: 1.6;
-    color: var(--normal-fg-50, #4a4a68);
+    color: var(--normal-fg-20);
     margin-top: 9px;
   }
 
   &__benefits {
     list-style: none;
-    margin: 16px 0;
-    gap: 10px;
+    margin: var(--spacer-5) 0;
+    gap: var(--spacer-4);
   }
 
   &__benefit-row {
-    gap: 10px;
+    gap: var(--spacer-4);
     align-items: flex-start;
   }
 
@@ -99,8 +107,8 @@
     svg {
       width: 19px;
       height: 19px;
-      fill: #4f46e5;
-      stroke: #4f46e5;
+      fill: var(--primary-50);
+      stroke: var(--primary-50);
     }
   }
 
@@ -110,8 +118,8 @@
     flex-shrink: 0;
     margin-top: 1px;
     border-radius: 50%;
-    background: #f2f1ff;
-    color: #4f46e5;
+    background: var(--primary-10);
+    color: var(--primary-50);
     font-size: 11px;
     font-weight: 700;
     display: flex;
@@ -128,32 +136,32 @@
     font-size: 12.5px;
     line-height: 1.45;
     font-weight: 600;
-    color: var(--normal-fg-800, #14142b);
+    color: var(--normal-fg-800);
   }
 
   &__benefit-sub {
     font-size: 11.5px;
     line-height: 1.4;
-    color: var(--normal-fg-50, #8a8aa3);
+    color: var(--normal-fg-50);
   }
 
   &__cta-stack {
-    gap: 8px;
-    margin-top: 4px;
+    gap: var(--spacer-3);
+    margin-top: var(--spacer-2);
   }
 
   &__cta {
     width: 100%;
     justify-content: center;
     align-items: center;
-    padding: 12px;
-    border-radius: 999px;
-    background: #4f46e5;
+    padding: var(--spacer-4);
+    border-radius: var(--corner-radius-max);
+    background: var(--primary-50);
     cursor: pointer;
-    transition: filter 0.15s ease, opacity 0.15s ease;
+    transition: background 0.15s ease, opacity 0.15s ease;
 
     &:hover {
-      filter: brightness(0.94);
+      background: var(--primary-60);
     }
 
     &--busy {
@@ -162,11 +170,18 @@
       pointer-events: none;
     }
 
+    // Secondary action: brand tint fill with brand-dark label. Stays the
+    // light tint in both themes (it sits on the elevated card, paired with
+    // the solid primary CTA above it).
     &--ghost {
-      background: #e4e2ff;
+      background: var(--primary-10);
+
+      &:hover {
+        background: var(--primary-20);
+      }
 
       .promo-launch30__cta-label {
-        color: #332ca8;
+        color: var(--primary-70);
       }
     }
   }
@@ -174,23 +189,23 @@
   &__cta-label {
     font-size: 13.5px;
     font-weight: 600;
-    color: #ffffff;
+    color: var(--white);
   }
 
   &__fineprint {
     text-align: center;
     font-size: 11px;
-    color: var(--normal-fg-50, #8a8aa3);
+    color: var(--normal-fg-50);
     margin-top: 11px;
   }
 
   &__posline {
     font-size: 12px;
     font-weight: 500;
-    color: var(--normal-fg-50, #4a4a68);
-    background: rgba(79, 70, 229, 0.06);
-    border-radius: 10px;
-    padding: 10px 12px;
-    margin-bottom: 8px;
+    color: var(--normal-fg-20);
+    background: var(--primary-10);
+    border-radius: var(--corner-radius-3);
+    padding: var(--spacer-4) var(--spacer-4);
+    margin-bottom: var(--spacer-3);
   }
 }
