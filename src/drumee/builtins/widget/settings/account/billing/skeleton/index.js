@@ -121,6 +121,29 @@ function subscriptionBanner(ui) {
     });
   }
 
+  // LAUNCH30 free trial — no Stripe renew. Banner names the trial end date
+  // and Cancel ends it immediately via promo.cancel (not cancel_subscription).
+  if (ui._isPromoTrial) {
+    return Skeletons.Box.X({
+      className: `${fig} ${fig}--active ${fig}--promo`,
+      kids: [
+        Skeletons.Note({
+          className: `${fig}-title`,
+          content: when
+            ? (LOCALE.PROMO_TRIAL_ENDS_ON || "Your free trial ends on {0}").format(when)
+            : (LOCALE.CURRENT_PLAN_BANNER || "You are on the {0} plan").format(planLabel),
+        }),
+        Skeletons.Note({
+          className: `${fig}-action ${fig}-cancel`,
+          content: LOCALE.PROMO_CANCEL_CONFIRM || LOCALE.CANCEL_PLAN || "End trial",
+          service: "cancel-subscription",
+          uiHandler: [ui],
+          bubble: false,
+        }),
+      ].filter(Boolean),
+    });
+  }
+
   return Skeletons.Box.X({
     className: `${fig} ${fig}--active`,
     kids: [

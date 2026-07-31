@@ -70,6 +70,7 @@ module.exports = function (ui) {
             kids: [
               Skeletons.Note({
                 className: `${pfx}__cta-label`,
+                active: 0,
                 content: LOCALE.PROMO_EXPLORE_CTA || "Start exploring now",
               }),
             ],
@@ -81,6 +82,7 @@ module.exports = function (ui) {
             kids: [
               Skeletons.Note({
                 className: `${pfx}__cta-label`,
+                active: 0,
                 content: LOCALE.PROMO_LATER_CTA || "Maybe later",
               }),
             ],
