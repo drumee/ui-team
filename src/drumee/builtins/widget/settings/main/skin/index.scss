@@ -678,6 +678,19 @@
     transition: background 0.2s ease;
     align-items: center;
     justify-content: flex-start;
+    position: relative;
+
+    // The visible pill is only 40×20 — a fiddly target. Enlarge the *clickable*
+    // area to ~64×44 (meets the 44px touch-target guideline) with a transparent
+    // inset-negative overlay, without touching the pill's look or the layout
+    // (the overlay is absolutely positioned, so it adds no box). A click on the
+    // pseudo-element resolves to the toggle element, so the switch's existing
+    // click service still fires — anywhere on/around the pill now toggles.
+    &::before {
+      content: "";
+      position: absolute;
+      inset: -12px;
+    }
 
     &-knob {
       width: 16px;
@@ -686,6 +699,11 @@
       background: var(--white);
       box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
       transition: transform 0.2s ease;
+      // The knob is transformed (creates its own stacking context) so it paints
+      // above the ::before hit overlay — a click landing on the white knob would
+      // otherwise miss the toggle's click target. Make it click-through so every
+      // pixel of the switch, knob included, forwards to the track's service.
+      pointer-events: none;
     }
 
     &[data-state="1"] {
