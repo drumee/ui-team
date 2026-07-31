@@ -116,6 +116,21 @@ function getActivityMeta(ui, data) {
     };
   }
 
+  if (data.event === 'media.workspace_move') {
+    const destination = parseJson(data.dest, {});
+    const destinationName = destination.hub_name
+      || destination.workspace_name
+      || ui.mget('destination_hub_name')
+      || LOCALE.WORKSPACE;
+    return {
+      before: ui.isFolder() ? 'moved folder ' : 'moved file ',
+      label: name,
+      after: ` to ${destinationName}`,
+      colorClass: 'mention',
+      badge: 'mention',
+    };
+  }
+
   switch (ui.mget(_a.category)) {
     case 'hub_invite':
       // Never fall back to `name` for hub_invite — that resolver chains

@@ -1124,6 +1124,7 @@ class __panel_activity extends LetcBox {
       case "contact.delete_contact":
       case "media.remove":
       case "media.new":
+      case "media.workspace_move":
       // Task @-mention (server task._notifyMentions pushes options.service='task.mention').
       // Same debounced refresh as the chat/channel mention path — refreshActivity now
       // also pulls channel.list_notifications, where task mentions live.

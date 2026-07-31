@@ -73,7 +73,19 @@ class __activity_item extends LetcBox {
     require('./skin');
     super.initialize(opt);
     this.declareHandlers();
-    if (opt.dest?.nid) {
+    if (opt.event === 'media.workspace_move') {
+      const source = parseJson(opt.src, {});
+      const destination = parseJson(opt.dest, {});
+      // The changelog belongs to the source workspace, while `dest` describes
+      // a folder the recipient may not be allowed to open. Keep the source node
+      // as the row target and retain destination data for the renderer.
+      this.mset({
+        ...source,
+        source_hub_id: opt.hub_id,
+        destination_hub_id: destination.hub_id,
+        destination_hub_name: destination.hub_name || destination.workspace_name,
+      });
+    } else if (opt.dest?.nid) {
       this.mset(opt.dest)
     } else if (opt.src?.nid) {
       this.mset(opt.src)
@@ -81,8 +93,8 @@ class __activity_item extends LetcBox {
     let category = getCategory(opt);
     let sender = getSender(opt);
     let autho_id = getAuthorId(opt)
-    if (category === _a.media && opt.id) {
-      this.mset({ changelog_id: opt.id, item_type: 'mfs' })
+    if ((category === _a.media || opt.event === 'media.workspace_move') && (opt.id || opt.key_id)) {
+      this.mset({ changelog_id: opt.id || opt.key_id, item_type: 'mfs' })
     }
 
     // item_type routes the dismiss handler — DO NOT use the inferred
@@ -96,7 +108,9 @@ class __activity_item extends LetcBox {
     // 'contact'); route its dismiss through contact_activity_dismiss (the
     // 'contact_invite' branch of _dismissActivity, keyed by the row id) so it
     // persists via dismissed_at instead of falling back to the mfs path.
-    const item_type = opt.category
+    const item_type = opt.event === 'media.workspace_move'
+      ? 'mfs'
+      : opt.category
       || (opt.event === 'hub.invite_received' ? 'hub_invite'
         : opt.event === 'task_assigned' ? 'contact_invite'
         : opt.event === 'task_mention' ? 'contact_invite'
@@ -328,6 +342,13 @@ class __activity_item extends LetcBox {
       if (tTask) tHash += `&open_task_id=${tTask}`;
       location.hash = tHash + `&ts=${ts}`;
       this.triggerHandlers({ service: 'dismiss-activity', hub_id: tHub, item_type, item_key, changelog_id });
+      this.triggerHandlers({ service: 'close-activity-panel' });
+      return;
+    }
+    if (this.mget('event') === 'media.workspace_move') {
+      const sourceHubId = this.mget('source_hub_id') || hub_id;
+      location.hash = `#/desk/wm/open/?hub_id=${sourceHubId}&nid=0&filetype=folder&pid=0&ts=${ts}`;
+      this.triggerHandlers({ service: 'dismiss-activity', hub_id: sourceHubId, item_type, changelog_id });
       this.triggerHandlers({ service: 'close-activity-panel' });
       return;
     }
