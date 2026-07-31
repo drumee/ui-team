@@ -176,6 +176,55 @@ function subscriptionBanner(ui) {
 }
 
 /**
+ * LAUNCH30 persistent reminder (design doc 2026-07-30, tester feedback
+ * 2026-07-31 #3: "don't spam the popup — a small pill lives here instead").
+ * Shown once the full offer modal has been seen on ANY surface but the
+ * account still hasn't claimed and the campaign is still live — get_state's
+ * "eligible_seen". ui._promoState is the SAME answer
+ * Desk._maybeShowPromoLaunch30 already fetched on this page's mount (see
+ * billing/index.js onDomRefresh) — no extra round trip. "Claim now"
+ * re-opens Modal A directly (a deliberate re-entry, not the automatic
+ * first-time show).
+ * @param {Object} ui - UI instance
+ * @returns {Object|null} Skeletons component
+ */
+function claimPill(ui) {
+  const promo = ui._promoState;
+  if (!promo || promo.state !== "eligible_seen") return null;
+  const fig = `${ui.fig.family}__promo-pill`;
+  const endDate = promo.campaign_ends_at
+    ? Dayjs.unix(promo.campaign_ends_at).format("MMM D, YYYY")
+    : "";
+  return Skeletons.Box.X({
+    className: fig,
+    kids: [
+      Skeletons.Box.Y({
+        className: `${fig}-text`,
+        kids: [
+          Skeletons.Note({
+            className: `${fig}-title`,
+            content: LOCALE.PROMO_PILL_TITLE || "Your free month of Team is still yours to claim.",
+          }),
+          endDate
+            ? Skeletons.Note({
+                className: `${fig}-sub`,
+                content: (LOCALE.PROMO_OFFER_ENDS || "Ends {0}.").format(endDate),
+              })
+            : null,
+        ].filter(Boolean),
+      }),
+      Skeletons.Note({
+        className: `${fig}-cta`,
+        content: LOCALE.PROMO_PILL_CTA || "Claim now",
+        service: "promo-pill-claim",
+        uiHandler: [ui],
+        bubble: false,
+      }),
+    ],
+  });
+}
+
+/**
  * Create main billing layout with header tabs and content container. Renders a
  * full-page title (opt.page), a popup shell (opt.popup), or headerless (the
  * settings_account tab).
@@ -199,6 +248,7 @@ function billing(ui) {
       ui._page ? pageHeader(ui) : null,
       header,
       subscriptionBanner(ui),
+      claimPill(ui),
       contentWrapper,
     ].filter(Boolean),
   });

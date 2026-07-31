@@ -531,8 +531,13 @@ class settings_billing extends LetcBox {
     // LAUNCH30 (design doc 2026-07-30) trigger B: "Opens Billing page".
     // Self-gated server-side (SERVICE.promo.get_state) — safe to call
     // unconditionally on every mount, including a re-render after tab focus.
+    // The returned state is reused by the skeleton's claimPill(): once the
+    // full modal has been seen anywhere (any surface) but not claimed, this
+    // page keeps a small persistent reminder instead of re-showing the
+    // modal (tester feedback 2026-07-31 #3) — one fetch, two callers.
+    this._promoState = null;
     if (typeof Desk !== "undefined" && Desk && Desk._maybeShowPromoLaunch30) {
-      Desk._maybeShowPromoLaunch30("billing");
+      this._promoState = (await Desk._maybeShowPromoLaunch30("billing")) || null;
     }
     // Re-sync the subscription when the tab regains focus — covers a return
     // from the Stripe Billing Portal (a full-page redirect back to the desk
@@ -1698,7 +1703,37 @@ class settings_billing extends LetcBox {
         this.triggerHandlers({ service: "billing-close" });
         return false;
 
+      case "promo-pill-claim":
+        // Re-open the full offer (Modal A) from the persistent reminder
+        // pill — a deliberate re-entry the user asked for, so it bypasses
+        // the eligible_unseen gate in Desk._maybeShowPromoLaunch30 (which
+        // only auto-shows the FIRST time) and launches directly.
+        this._reopenPromoOffer();
+        return false;
+
     }
+  }
+
+  /**
+   * See onUiEvent "promo-pill-claim" above.
+   */
+  async _reopenPromoOffer() {
+    const promo = this._promoState;
+    if (!promo) return;
+    try {
+      await Kind.waitFor("promo_launch30");
+    } catch (e) {
+      return;
+    }
+    Wm.launch({
+      kind: "promo_launch30",
+      surface: "billing",
+      state: "offer",
+      position: promo.position,
+      campaign_ends_at: promo.campaign_ends_at,
+      hub_id: Visitor.id,
+      wm_unique_id: "promo_launch30",
+    }, { explicit: 1, singleton: 1 });
   }
 }
 

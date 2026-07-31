@@ -438,6 +438,53 @@
     }
   }
 
+  // LAUNCH30 persistent reminder (tester feedback 2026-07-31 #3) — same box
+  // shape as __sub-banner, kept visually distinct with the promo's own
+  // primary-purple accent so it doesn't read as a real subscription status.
+  &__promo-pill {
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--spacer-4);
+    margin-top: var(--spacer-4);
+    padding: 10px 12px 10px 16px;
+    border-radius: 12px;
+    background: var(--primary-10);
+
+    &-text {
+      gap: 2px;
+    }
+
+    &-title {
+      font-weight: 600;
+      font-size: 14px;
+      line-height: 22px;
+      color: var(--tertiary-grey-100);
+    }
+
+    &-sub {
+      font-size: 12.5px;
+      line-height: 1.4;
+      color: var(--primary-purple-100);
+    }
+
+    &-cta {
+      flex-shrink: 0;
+      cursor: pointer;
+      white-space: nowrap;
+      color: var(--white);
+      background: var(--primary-50);
+      font-weight: 600;
+      font-size: 14px;
+      line-height: 22px;
+      padding: 10px 20px;
+      border-radius: 4px;
+
+      &:hover {
+        background: var(--primary-90);
+      }
+    }
+  }
+
   &__footer {
     &-main {
       margin-top: var(--spacer-5);

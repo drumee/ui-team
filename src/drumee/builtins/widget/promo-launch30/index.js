@@ -45,6 +45,11 @@ class __promo_launch30 extends LetcBox {
   onDomRefresh() {
     this._portalToBody();
     this._render();
+    // Show-once: mark the surface seen as soon as the modal actually
+    // renders, not only on an explicit X-dismiss (tester feedback
+    // 2026-07-31 #3 — the full modal must never re-appear once shown,
+    // whether the user closes it, claims, or just navigates away).
+    this._markSeen();
   }
 
   onBeforeDestroy() {
@@ -84,10 +89,16 @@ class __promo_launch30 extends LetcBox {
     return this.mget(_a.hub_id) || Visitor.id;
   }
 
+  // 'welcome' (Modal B) is its own one-shot surface, distinct from the
+  // home/billing surface the widget was launched with — see
+  // promo_launch30_mark_seen / welcome_seen_at.
   _markSeen() {
+    if (this._seenMarked) return Promise.resolve();
+    this._seenMarked = true;
+    const surface = this._state === "welcome" ? "welcome" : this._surface;
     return this.postService(SERVICE.promo.dismiss, {
       hub_id: this._hubId(),
-      surface: this._surface,
+      surface,
     }).catch((e) => this.warn && this.warn("[promo-launch30] dismiss failed", e));
   }
 
@@ -158,10 +169,17 @@ class __promo_launch30 extends LetcBox {
           return;
         }
         this._trialEndsAt = data.trial_ends_at || null;
+        // Do NOT flip to "welcome" and re-render here. org_provision moved
+        // this session onto a brand-new org domain, and refreshing the
+        // session below is closely followed by an automatic redirect this
+        // widget does not control the timing of — one that reliably wins
+        // the race against showing Modal B and waiting for a click (tester
+        // feedback 2026-07-31 #2: modal flashed, then the page went blank
+        // mid-navigation). Leave the busy "Setting up your workspace…"
+        // state showing through that redirect instead; Modal B shows
+        // itself once, server-flag-gated, on the new domain's first home
+        // mount (see Desk._maybeShowPromoLaunch30).
         await this._refreshSessionAfterClaim(data);
-        this._claiming = false;
-        this._state = "welcome";
-        this._render();
       })
       .catch((e) => {
         this._claiming = false;
