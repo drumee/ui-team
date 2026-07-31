@@ -79,8 +79,11 @@ module.exports = function (ui) {
         service: claiming ? null : "promo-claim",
         uiHandler: [ui],
         kids: [
+          // active: 0 — label is click-through so the parent Box receives
+          // promo-claim (nested Note otherwise swallows the click).
           Skeletons.Note({
             className: `${pfx}__cta-label`,
+            active: 0,
             content: claiming
               ? (LOCALE.PROMO_CLAIMING || "Setting up your workspace…")
               : (LOCALE.PROMO_CLAIM_CTA || "Unlock My Free Month"),

@@ -2790,5 +2790,10 @@
   "SEATS_TO_FILL_SUB": "Team works when there's a team. Invite someone to your workspace.",
   "PROMO_POSITION_LINE": "You're #{0} to claim this offer.",
   "PROMO_OFFER_ENDS": "Ends {0}.",
+  "PROMO_TRIAL_ENDS_ON": "Your free trial ends on {0}",
+  "PROMO_CANCEL_TITLE": "End free trial",
+  "PROMO_CANCEL_CONFIRM": "End trial",
+  "PROMO_CANCEL_IMMEDIATE": "Your free Team trial will end immediately. Your workspace returns to the Free plan right away — no card was ever charged.",
+  "PROMO_TRIAL_ENDED_TOAST": "Your free trial has ended. You're back on the Free plan.",
   "MIGRATE_GDRIVE_CANCELLING": "Cancelling…"
 }

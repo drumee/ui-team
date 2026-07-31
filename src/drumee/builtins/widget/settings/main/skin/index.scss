@@ -488,10 +488,15 @@
       }
     }
 
+    // Email value shares the flex text column (min-width:0) — never hard-cap
+    // at 150px (that clipped addresses like launch30configtest@e…). Ellipsis
+    // only when the row truly runs out of space next to the Change button.
     &-row.email-row {
       .settings-main__inner-description {
-        max-width: 150px;
+        max-width: 100%;
         overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
       }
     }
   }
