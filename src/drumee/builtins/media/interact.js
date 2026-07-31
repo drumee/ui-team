@@ -1317,6 +1317,10 @@ class __media_interact extends media_core {
     }).then((result) => {
       const { destination, destinations, items } = result;
       const targetDestinations = destinations || [destination];
+      // A true cross-workspace move needs one destination. The move dialog can
+      // intentionally select several destinations, which is a copy-to-many
+      // operation followed by source removal; keep that legacy flow unchanged.
+      const isSingleDestinationMove = targetDestinations.length === 1;
 
       const moveItem = (item) => {
         const nid = item.mget ? item.mget(_a.nid) : item.nid;
@@ -1338,11 +1342,14 @@ class __media_interact extends media_core {
         };
 
         const moveToDestination = (dest) => resolvePid(dest).then((pid) => {
+          const movingAcrossWorkspaces = isCrossHub(dest) && isSingleDestinationMove;
           const payload = isCrossHub(dest) ? {
-            service: SERVICE.media.copy,
+            service: movingAcrossWorkspaces
+              ? ((SERVICE.media && SERVICE.media.workspace_move) || 'media.workspace_move')
+              : SERVICE.media.copy,
             nid,
             pid,
-            action: _a.copy,
+            action: movingAcrossWorkspaces ? _a.move : _a.copy,
             hub_id: itemHubId,
             recipient_id: dest.hub_id,
             notify: 1,
@@ -1362,7 +1369,7 @@ class __media_interact extends media_core {
         });
 
         return Promise.all(targetDestinations.map(moveToDestination)).then(() => {
-          if (!crossHubDestinations.length) return;
+          if (!crossHubDestinations.length || isSingleDestinationMove) return;
           return this.postService({
             service: SERVICE.media.trash,
             nid: [{ nid, hub_id: itemHubId }],

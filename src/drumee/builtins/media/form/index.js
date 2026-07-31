@@ -41,6 +41,25 @@ class __form_folder extends LetcBox {
     }
   }
 
+  /**
+   * Render the quota-exceeded block into the form's own slot.
+   *
+   * Inline rather than the shared modal: the user is part-way through a form
+   * they typed a name into, and throwing a modal over it would take the form
+   * away to explain why the form refused. The block sits under the field and
+   * the form stays exactly as they left it.
+   *
+   * The widget works out its own copy and whether the upgrade button belongs
+   * there; this only says which limit was hit.
+   */
+  _showQuotaBlock() {
+    if (!this.ensurePart) return;
+    this.ensurePart("quota-slot").then((p) => {
+      if (!p) return;
+      p.feed({ kind: "quota_exceeded", limit: "workspace", inline: 1 });
+    });
+  }
+
   // Inline "required" message shown directly under the name input
   // (.form-folder__input-error) instead of a modal alert. Pass a falsy msg to
   // clear it; falls back to Wm.alert if the part isn't mounted.
@@ -131,6 +150,17 @@ class __form_folder extends LetcBox {
         // of rejecting; surface it inline and keep the form open for retry.
         if (hub && (hub.error || hub.error_code)) {
           this._pending = 0;
+          // A quota refusal is not a problem with what the user typed, so it
+          // does not go in the field's error line. check_quota answers
+          // QUOTA_EXCEEDED with a `reason` naming the area
+          // (_private_hub_limit_reached / _share_hub_limit_reached) — a string
+          // that has no translation in ANY locale file, so the old branch
+          // rendered either the generic quota sentence or the raw key.
+          if (hub.error === "QUOTA_EXCEEDED" || /_hub_limit_reached$/.test(hub.reason || "")) {
+            this._setNameError(null);
+            this._showQuotaBlock();
+            return;
+          }
           this._setNameError(LOCALE[hub.error] || hub.reason || hub.error);
           return;
         }

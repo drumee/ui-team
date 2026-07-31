@@ -2268,7 +2268,33 @@
     }
   }
 
-  // Shown only when the query has matches (data-open="1").
+  // Opens the same member list as focusing the field (combobox affordance).
+  &__assignee-caret {
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+    cursor: pointer;
+    overflow: hidden;
+    font-size: 0;
+    color: var(--normal-fg-30, #84848c);
+
+    svg {
+      width: 10px;
+      height: 10px;
+      display: block;
+      // The sprite strips the source fill, so it must come from CSS.
+      fill: currentColor;
+    }
+
+    &:hover {
+      color: var(--active-border, #433cc5);
+    }
+  }
+
+  // Shown while the field is engaged and there is at least one match
+  // (data-open="1").
   &__assignee-suggestions {
     position: absolute;
     top: 100%;
@@ -2296,6 +2322,16 @@
 
     &:hover {
       background: var(--hover-bg-40, rgba(89, 80, 255, 0.08));
+    }
+
+    // The ROW carries the service; the avatar and name inside it are widgets of
+    // their own, and every widget gets an onclick that stopPropagation()s before
+    // dispatching. With no uiHandler — and no parent chain to resolve one, these
+    // rows being fed dynamically — a click on the name died in that child
+    // handler, so only the bare padding beside the name selected the member.
+    // Let clicks fall through to the row, which does carry the handler.
+    > * {
+      pointer-events: none;
     }
   }
 
@@ -5624,6 +5660,14 @@
       &:hover {
         background: var(--normal-bg-90, #f7f7fa);
       }
+    }
+
+    // Same as the assignee/invitee rows: the ROW carries the service, while the
+    // icon and the filename are widgets whose own onclick stopPropagation()s
+    // before dispatching — with no uiHandler of their own, a click on the
+    // filename died there and only the padding linked the file.
+    > * {
+      pointer-events: none;
     }
   }
 

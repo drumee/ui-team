@@ -1,0 +1,214 @@
+/**
+ * Quota-exceeded block.
+ *
+ * Two hosts, one look: `__card` is the modal face (its own surface, centred,
+ * fed into Wm's wrapper-modal, which supplies the backdrop) and
+ * `__card--inline` is the same content sitting inside a panel that already has
+ * a surface of its own — so it drops the card chrome and the centring rather
+ * than drawing a second panel inside the first.
+ */
+/* CENTRED ON THE VIEWPORT, WITH NO BACKDROP.
+ *
+ * There is deliberately no dim and no blur — the host is left at its default
+ * `background: transparent; backdrop-filter: none`, and openQuotaExceeded
+ * clears data-overlay to "none" so a value left behind by another modal on
+ * this shared host cannot reintroduce one.
+ *
+ * `fixed` is still needed, and now only for POSITION: the shared host is
+ * `position: absolute`, so its `inset: 0` resolves against
+ * .desk-module__wm-container — the work area. Centring in that box puts the
+ * card off-centre on screen, low and right of true centre, because the sidebar
+ * and topbar are outside it.
+ *
+ * Safe to use: `position: fixed` degrades to absolute if any ancestor
+ * establishes a containing block (transform, filter, perspective, will-change,
+ * contain) — none do. The only transform in the desk skin is on a sidebar
+ * slide-out, which is not an ancestor of the wm container.
+ *
+ * SCOPED with :has() to this widget. Changing the shared host outright would
+ * move confirm(), alert(), the create-folder dialog and every reward-flow
+ * modal at once, none of which asked for it.
+ *
+ * NOTE: the host still spans the viewport, so it continues to swallow clicks
+ * while open — modal behaviour, minus the visual cue that used to explain it.
+ * If the desk should stay usable behind the card, this rule wants
+ * `pointer-events: none` with `auto` restored on .quota-exceeded__card.
+ */
+.window-manager__wrapper-modal[data-state="open"]:has(.quota-exceeded__ui) {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-index-modal, 100000);
+}
+
+.quota-exceeded {
+  &__ui {
+    width: 100%;
+  }
+
+  /* CENTRING BELONGS HERE, not on the card.
+     The flex item inside the wrapper-modal is the widget ROOT (__ui), not
+     __card — the host feeds a widget, and the widget mounts its own root. So
+     the host's align/justify centre __ui, which is width:100%, and the card
+     then sits at the left of it. That is the whole "card is pinned left" bug,
+     and it is invisible unless the harness includes this wrapper: testing the
+     card directly inside the host centres fine and proves nothing.
+     Measured off-centre by 386px in a 1200px viewport before this rule.
+     Scoped to the modal host so the inline face, which must stay in the
+     document flow of its panel, is untouched. */
+  .window-manager__wrapper-modal &__ui {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+  }
+
+  /* The HOST centres this — .window-manager__wrapper-modal[data-state="open"]
+     is a full-viewport flex container with align/justify center, and supplies
+     the backdrop via data-overlay="blur". So the card sets its own size and
+     lift and nothing else; positioning it here as well would fight the host. */
+  &__card {
+    align-items: center;
+    text-align: center;
+    gap: 12px;
+    padding: 28px 24px;
+    /* A definite width, with a gutter on narrow viewports. Not width:100% —
+       as a flex item that fills the cross axis and lands at the start edge. */
+    width: min(380px, calc(100vw - 32px));
+    box-sizing: border-box;
+    background: var(--normal-bg, #fff);
+    border-radius: 8px;
+    /* Reads as lifted off the blurred backdrop rather than pasted onto it. */
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
+    font-family: var(--font-family, inherit);
+
+    /* Inline: the host panel owns the surface, the width and the padding, so
+       everything that would draw a card is unset. Left-aligned because it now
+       sits in a column of left-aligned form content, and a centred block in
+       that context reads as a separate thing rather than a message about the
+       field above it. */
+    &--inline {
+      align-items: flex-start;
+      text-align: left;
+      gap: 8px;
+      padding: 12px 0 4px;
+      max-width: none;
+      background: transparent;
+      border-radius: 0;
+      box-shadow: none;
+    }
+  }
+
+  /* Brand lockup, modal only — same pair and proportions as the reward-flow
+     modals so the two read as one product. Baseline-aligned rather than
+     centred: the wordmark's cap-height should sit on the mark's foot, which
+     center alignment floats it above. */
+  &__brand {
+    flex-direction: row;
+    align-items: flex-end;
+    justify-content: center;
+    gap: 8px;
+    margin-bottom: 4px;
+  }
+
+  /* fill, not just color. The sprite build strips the source icons' own fill
+     attributes and emits the paths bare — but SVG's INITIAL fill is `black`,
+     not `currentColor`, so a bare path paints black until something sets fill
+     explicitly. Setting only `color` left both glyphs black while reporting
+     the right colour in getComputedStyle().color, which is exactly how it went
+     unnoticed. currentColor then picks the value up from `color` below. */
+  &__brand-logo {
+    width: 30px;
+    height: 30px;
+    flex: 0 0 30px;
+    color: var(--primary-40, var(--primary-400));
+    fill: currentColor;
+  }
+
+  &__brand-name {
+    font-size: 19px;
+    font-weight: 700;
+    line-height: 1;
+    color: var(--text-primary, #0b0a21);
+  }
+
+  &__chip {
+    align-items: center;
+    justify-content: center;
+    width: 48px;
+    height: 48px;
+    flex: 0 0 48px;
+    border-radius: 24px;
+    /* Amber, not red: hitting a limit is a state to resolve, not an error the
+       user made. Red is for things that went wrong. */
+    background: var(--warning-100, #fdf3e3);
+    color: var(--warning-600, #e8a13c);
+
+    /* Matches the `app-storage` glyph's 24x22 viewBox. Sized to the icon in
+       use rather than left at a previous one's ratio: the chip has already
+       carried a 30x14 infinity mark and a 14x14 square, and each time a
+       stale width/height silently letterboxed the new glyph.
+       `fill` for the same reason as the brand logo above: bare sprite paths
+       default to black, not currentColor. */
+    svg {
+      width: 20px;
+      height: 18px;
+      fill: currentColor;
+    }
+  }
+
+  /* The chip is decoration on a message that already says everything in words.
+     Inline, where vertical space is a form's to spend, it goes. */
+  &__card--inline &__chip {
+    display: none;
+  }
+
+  &__title {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text-primary, #0b0a21);
+  }
+
+  &__desc {
+    font-size: 13px;
+    line-height: 1.5;
+    color: var(--text-secondary, #65656c);
+
+    &--muted {
+      color: var(--text-tertiary, #8b8b93);
+    }
+  }
+
+  &__footer {
+    gap: 8px;
+    margin-top: 4px;
+    align-items: center;
+  }
+
+  &__btn {
+    padding: 9px 18px;
+    border-radius: 4px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    white-space: nowrap;
+    color: var(--text-primary, #0b0a21);
+    background: var(--surface-2, #f2f2f7);
+
+    /* --primary-40 as asked. It is NOT defined by @drumee/ui-styles, whose
+       scale runs 50, 100, 200 ... 950 with no 40 step, and an undefined custom
+       property with no fallback computes to rgba(0,0,0,0) — a transparent
+       button with white text on it. The fallback keeps the token as the
+       primary source (it wins the moment it is defined) while making sure the
+       button is visible today. Drop the fallback once --primary-40 exists. */
+    &--primary {
+      background: var(--primary-40, var(--primary-400));
+      color: var(--white, #fff);
+    }
+  }
+
+  /* Inline has no Close, so the single button should not stretch to fill a
+     row it no longer shares. */
+  &__card--inline &__footer {
+    margin-top: 8px;
+  }
+}

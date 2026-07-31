@@ -332,6 +332,56 @@
     );
   }
 
+  .window-info__revoked {
+    width: 100%;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .window-info__revoked-icon {
+    width: 44px;
+    height: 44px;
+    align-items: center;
+    justify-content: center;
+    border-radius: 12px;
+    color: var(--primary-50, #433cc5);
+    background: color-mix(in srgb, var(--primary-50, #433cc5) 10%, transparent);
+  }
+
+  .window-info__revoked-icon-svg {
+    width: 22px;
+    height: 22px;
+
+    svg {
+      width: 22px;
+      height: 22px;
+    }
+  }
+
+  .window-info__revoked-title {
+    width: 100%;
+    margin-top: 2px;
+    @include drumee.typo(
+      $weight: 600,
+      $size: 18px,
+      $line: 24px,
+      $color: var(--normal-fg-10)
+    );
+  }
+
+  // The workspace name is part of the sentence below, not a chip of its own —
+  // standing alone it read as a stray label rather than a name.
+  .window-info__revoked-message {
+    width: 100%;
+    margin: 0 0 2px;
+    @include drumee.typo(
+      $weight: 400,
+      $size: 14px,
+      $line: 20px,
+      $color: var(--normal-fg)
+    );
+  }
+
   // Right-aligned action row with confirm-style buttons. The base
   // `__button-main` pins a flat grey background with !important, so the
   // secondary/primary backgrounds here must also be !important to win.

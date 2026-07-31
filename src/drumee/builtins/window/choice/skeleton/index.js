@@ -1,15 +1,20 @@
+// Assembled like window/info's skeleton: a __header wrapper around the
+// logo/close __topbar, then the message __container, then the action row.
+//
+// Default mode drops the old "c" flag — it selected the minimize/zoom control of
+// the previous header, which the drumee-logo topbar replaces.
 module.exports = function (ui, message, questions) {
-  let mode = ui.mget(_a.mode) || "hbfc";
-  const pfx = `${ui.fig.group}-choice`;
+  const fig = ui.fig.family; // window-choice
+  const mode = ui.mget(_a.mode) || "hbf";
   const header = Skeletons.Box.X({
-    className: `${pfx}__topbar ${ui.fig.group}__topbar`,
-    kids: [require('./header')(ui)]
+    className: `${fig}__header ${ui.fig.group}__header`,
+    kids: [require('./topbar')(ui)]
   });
-  message = message || ui.megt(_a.message)
+  message = message || ui.mget(_a.message);
   const m = new RegExp(`[${mode}]`);
 
   const a = Skeletons.Box.Y({
-    className: `${pfx}__main ${ui.fig.group}__modal`,
+    className: `${fig}__main ${ui.fig.group}__main drive-popup`,
     radio: _a.parent,
     debug: __filename,
     kids: []
@@ -25,4 +30,3 @@ module.exports = function (ui, message, questions) {
   }
   return a;
 };
-;

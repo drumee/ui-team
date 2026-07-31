@@ -269,26 +269,27 @@
       $color: var(--white)
     );
 
+    // In flight (index.js sets data-pending on the clicked element and deletes
+    // it in its finally, so this covers both success and failure).
+    // pointer-events:none is the actual disable; the spinner is the signal.
     &[data-pending="1"] {
       cursor: progress;
       pointer-events: none;
       background: #5b54d1;
+      gap: 8px;
 
-      &::after {
+      // Ring spinner, same convention as window/upload-progress and
+      // widget/chat-export. It renders as a flex sibling of the Note's
+      // .note-content, so the label stays put and the pair centers together.
+      &::before {
         content: "";
-        position: absolute;
-        top: 0;
-        left: -100%;
-        width: 100%;
-        height: 100%;
-        background: linear-gradient(
-          90deg,
-          transparent 0%,
-          rgba(255, 255, 255, 0.25) 50%,
-          transparent 100%
-        );
-        animation: permission-restricted__send-button-shimmer 1.1s ease-in-out
-          infinite;
+        width: 14px;
+        height: 14px;
+        flex-shrink: 0;
+        border: 2px solid rgba(255, 255, 255, 0.35);
+        border-top-color: var(--white);
+        border-radius: 50%;
+        animation: permission-restricted__send-button-spin 0.7s linear infinite;
       }
     }
   }
@@ -521,13 +522,9 @@
   }
 }
 
-@keyframes permission-restricted__send-button-shimmer {
-  from {
-    transform: translateX(0);
-  }
-
+@keyframes permission-restricted__send-button-spin {
   to {
-    transform: translateX(200%);
+    transform: rotate(360deg);
   }
 }
 

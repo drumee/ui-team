@@ -562,8 +562,11 @@ const make = function (ui) {
     });
 
   // Assignee control — same interaction as the meeting-schedule invitee field:
-  // chips + inline search, suggestions fed live by _filterAssignees. No
-  // always-on member list. `scope` is "create" | "detail".
+  // chips + inline search, suggestions fed live by _filterAssignees. It is a
+  // combobox, not a search-only field: focusing the input (or clicking the
+  // caret) lists every member, and typing filters that same list — so the set
+  // stays browsable for people who don't know who they're looking for.
+  // `scope` is "create" | "detail".
   const assigneeSearchField = (selectedUids, scope) => {
     const selected = Array.isArray(selectedUids)
       ? selectedUids.map(String)
@@ -591,6 +594,16 @@ const make = function (ui) {
               require: "any",
               bubble: 0,
               uiHandler: [ui],
+            }),
+            // Visible affordance that a full member list is one click away —
+            // focusing the input opens the same list.
+            Skeletons.Button.Svg({
+              className: `${pfx}__assignee-caret`,
+              ico: "apps-caret-down",
+              bubble: 0,
+              service: "toggle-assignee-list",
+              uiHandler: [ui],
+              assigneeScope: scope,
             }),
           ],
         }),
@@ -1995,19 +2008,20 @@ function buildAssigneeChips(ui, assignees, service) {
   });
 }
 
-// Members matching `query`, minus the already-selected ones. Empty query → no
-// suggestions: nothing shows until the user types.
+// Members matching `query`, minus the already-selected ones. An empty query
+// lists every remaining member (the dropdown half of the combobox) — the
+// container scrolls, so no result cap is needed.
 function buildAssigneeSuggestions(ui, query, selected, service) {
   const pfx = ui.fig.family;
   const q = String(query || "")
     .trim()
     .toLowerCase();
-  if (!q) return [];
   const chosen = new Set((selected || []).map(String));
   return (ui.getMembers() || [])
     .filter((m) => {
       const uid = String(m.id || m.uid || "");
       if (!uid || chosen.has(uid)) return false;
+      if (!q) return true;
       return (
         memberLabel(m).toLowerCase().includes(q) ||
         String(m.email || "")
@@ -2015,7 +2029,6 @@ function buildAssigneeSuggestions(ui, query, selected, service) {
           .includes(q)
       );
     })
-    .slice(0, 8)
     .map((m) => {
       const uid = String(m.id || m.uid);
       return Skeletons.Box.X({
@@ -2868,6 +2881,7 @@ function buildDueSectionContent(ui, scope = "detail") {
         innerClass: `${pfx}__due-input-inner`,
         name: "due_range",
         ranges: true,
+        placeholder: LOCALE.SELECT_START_DATE,
         // Seed [start, end]; a lone due_date opens the range at that day.
         value: [draft.start_date, draft.due_date].filter(Boolean),
         service: "task-input-changed",
@@ -2888,6 +2902,9 @@ function buildDueSectionContent(ui, scope = "detail") {
         className: `${pfx}__due-input`,
         innerClass: `${pfx}__due-input-inner`,
         name: "due_date",
+        placeholder: LOCALE.SELECT_DATE,
+        // Empty (not today): a new task has no due date until one is picked —
+        // the widget reads an explicit empty `value` as "nothing selected".
         value: draft.due_date || "",
         service: "task-input-changed",
         uiHandler: [ui],
@@ -2897,6 +2914,11 @@ function buildDueSectionContent(ui, scope = "detail") {
           dateFormat: "Y-m-d",
           altInput: true,
           altFormat: "d/m/Y",
+          // Spelled out (vendorOpt wins over the widget's own default): an
+          // unset due date stays unset. The panel reads this input back on
+          // commit, so a picker that seeded itself with today would silently
+          // stamp every new task with its creation date.
+          defaultDate: draft.due_date || null,
           minDate,
           appendTo: document.body,
           position: positionDueCalendarLeft,

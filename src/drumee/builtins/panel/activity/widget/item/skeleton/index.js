@@ -101,6 +101,16 @@ function getActivityMeta(ui, data) {
     };
   }
 
+  if (data.event === 'task_column_change') {
+    return {
+      before: data.task_action === 'created' ? 'created task ' : 'moved task ',
+      label: data.task_title || name,
+      after: '',
+      colorClass: 'mention',
+      badge: 'mention',
+    };
+  }
+
   // 2c. Task @-mention ("{author} mentioned you in {task}"). Like task_assigned
   // it is a contact_activity row (category resolves to 'contact'); without this
   // branch a feed-sourced task_mention would fall into the contact branch and
@@ -111,6 +121,21 @@ function getActivityMeta(ui, data) {
       before: LOCALE.TASK_MENTION_ACTION || 'mentioned you in ',
       label: data.task_title || name,
       after: '',
+      colorClass: 'mention',
+      badge: 'mention',
+    };
+  }
+
+  if (data.event === 'media.workspace_move') {
+    const destination = parseJson(data.dest, {});
+    const destinationName = destination.hub_name
+      || destination.workspace_name
+      || ui.mget('destination_hub_name')
+      || LOCALE.WORKSPACE;
+    return {
+      before: ui.isFolder() ? 'moved folder ' : 'moved file ',
+      label: name,
+      after: ` to ${destinationName}`,
       colorClass: 'mention',
       badge: 'mention',
     };

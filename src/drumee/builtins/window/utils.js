@@ -928,6 +928,7 @@ class __window_mfs extends DrumeeMFS {
 
       case SERVICE.media.relocate:
       case SERVICE.media.move:
+      case "media.workspace_move":
         if (echoId) {
           src.echoId = echoId;
           dest.echoId = echoId;

@@ -162,6 +162,7 @@ class __workspace_item extends LetcBox {
     }
     if (
       service !== "media.new" &&
+      service !== "media.workspace_move" &&
       service !== "media.remove" &&
       service !== "media.rename"
     ) {
@@ -174,6 +175,7 @@ class __workspace_item extends LetcBox {
     if (!this._expanded || !this._childrenLoaded) return;
     switch (service) {
       case "media.new":
+      case "media.workspace_move":
         return this._addFolder(data);
       case "media.remove":
         return this._removeFolder(data);

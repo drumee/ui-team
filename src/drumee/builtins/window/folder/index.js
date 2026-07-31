@@ -417,6 +417,10 @@ class __window_folder extends mfsInteract {
       clearTimeout(this._chatSearchTimer);
       this._chatSearchTimer = null;
     }
+    if (this._mmInviteeBlurTimer) {
+      clearTimeout(this._mmInviteeBlurTimer);
+      this._mmInviteeBlurTimer = null;
+    }
     this._stopAwaitMeetingReady();
     this._unbindThreadMenuOutside();
     this._unbindViewportReframe();
@@ -1572,7 +1576,10 @@ class __window_folder extends mfsInteract {
 
       // Fired by the invitee search Entry's `watch` on every keystroke.
       case "mm-invitee-typed":
-        return this._filterInvitees((args && args.value) || "");
+        return this._filterInvitees((args && args.value) || "", { open: true });
+
+      case "mm-toggle-invitee-list":
+        return this._toggleInviteeList();
 
       case "mm-add-invitee":
         return this._addInvitee(cmd);
@@ -2016,6 +2023,19 @@ class __window_folder extends mfsInteract {
     return hub_id ? { hub_id } : {};
   }
 
+  // room.list answers with the raw stored-procedure result, and the server's
+  // row unwrapping collapses a SINGLE-row result set into a bare object — an
+  // array only when the range holds two or more meetings. Reading that object
+  // as "not a list" emptied the calendar, so deleting one of two meetings made
+  // the survivor vanish too, while the meeting (and its start-time reminder)
+  // stayed alive server-side: the toast still fired for a meeting no longer on
+  // screen. Normalize every shape to a list of rows here.
+  _asMeetingRows(rows) {
+    if (Array.isArray(rows)) return rows.filter((r) => r && r.id);
+    if (rows && typeof rows === "object" && rows.id) return [rows];
+    return [];
+  }
+
   // Fetch the hub's scheduled meetings for the visible range into this._meetings.
   // Resolves (never rejects) so callers can re-feed regardless.
   _fetchMeetings() {
@@ -2026,7 +2046,7 @@ class __window_folder extends mfsInteract {
     return Promise.resolve()
       .then(() => this.fetchService(svc, { stime, etime, ...this._meetingScope() }))
       .then((rows) => {
-        this._meetings = Array.isArray(rows) ? rows : [];
+        this._meetings = this._asMeetingRows(rows);
       })
       .catch(() => {
         this._meetings = this._meetings || [];
@@ -2150,6 +2170,9 @@ class __window_folder extends mfsInteract {
           wrapper.el.setAttribute("data-variant", "meeting");
         }
         wrapper.feed(require("./skeleton/meeting-modal")(this, { meeting: prefill }));
+        // Focus/blur wiring for the invitee combobox (delegated on the wrapper,
+        // installed once — the wrapper element outlives each modal).
+        this._installInviteeFocus();
         // Re-run the free/busy check when the time changes, and once on open
         // (edit mode arrives with attendees + a time already set).
         const root = wrapper.el;
@@ -2188,6 +2211,10 @@ class __window_folder extends mfsInteract {
   }
 
   closeMeetingModal() {
+    if (this._mmInviteeBlurTimer) {
+      clearTimeout(this._mmInviteeBlurTimer);
+      this._mmInviteeBlurTimer = null;
+    }
     this._mmAttendees = [];
     this._mmRecur = { freq: "none", until: "" };
     this._mmEditNid = null;
@@ -2208,15 +2235,78 @@ class __window_folder extends mfsInteract {
     part.feed(require("./skeleton/meeting-modal").inviteesChips(this, pfx));
   }
 
-  // Live-filter the member pool by the typed query into the suggestions dropdown
-  // (empty query clears it).
-  _filterInvitees(query) {
+  // Feed the suggestions dropdown: an empty query now lists every member, so
+  // `opt.open` decides whether it is shown (focus / typing / caret). Omitted,
+  // the current open state is preserved — removing a chip must re-feed the rows
+  // without popping a list the user had dismissed.
+  _filterInvitees(query, opt = {}) {
     const part = this.getPart && this.getPart("mm-invitees-suggestions");
     if (!part) return;
     const pfx = `${this.fig.family}__meeting-modal`;
     const rows = require("./skeleton/meeting-modal").inviteesSuggestions(this, pfx, query);
+    const open =
+      opt.open != null
+        ? !!opt.open
+        : !!(part.el && part.el.dataset.open === "1");
     part.feed(rows);
-    if (part.el) part.el.dataset.open = rows.length ? 1 : 0;
+    if (part.el) part.el.dataset.open = open && rows.length ? 1 : 0;
+  }
+
+  // Caret click: same list as focusing the field, but also dismisses it.
+  _toggleInviteeList() {
+    const part = this.getPart && this.getPart("mm-invitees-suggestions");
+    const open = !!(part && part.el && part.el.dataset.open === "1");
+    if (this._mmInviteeBlurTimer) {
+      clearTimeout(this._mmInviteeBlurTimer);
+      this._mmInviteeBlurTimer = null;
+    }
+    const input = this._mmSearchInput();
+    if (open) {
+      if (input) input.blur();
+      if (part && part.el) part.el.dataset.open = 0;
+      if (part) part.feed([]);
+      return;
+    }
+    if (input) input.focus();
+    return this._filterInvitees(input ? input.value : "", { open: true });
+  }
+
+  // Focus opens the member list, blur closes it. Delegated on the dialog
+  // wrapper: the Entry builds its <input> lazily and rebuilds it on re-feed, so
+  // a listener bound to the input itself would be dropped. The close is
+  // deferred because clicking a suggestion row blurs the input first.
+  _installInviteeFocus() {
+    const root = this.dialogWrapper && this.dialogWrapper.el;
+    if (!root || this._mmInviteeFocusInstalled) return;
+    this._mmInviteeFocusInstalled = true;
+
+    const isSearchInput = (t) =>
+      t && t.matches && t.matches('[name="mm-invitee-search"]');
+
+    root.addEventListener("focusin", (e) => {
+      if (!isSearchInput(e.target)) return;
+      if (this._mmInviteeBlurTimer) {
+        clearTimeout(this._mmInviteeBlurTimer);
+        this._mmInviteeBlurTimer = null;
+      }
+      this._filterInvitees(e.target.value || "", { open: true });
+    });
+
+    root.addEventListener("focusout", (e) => {
+      if (!isSearchInput(e.target)) return;
+      if (this._mmInviteeBlurTimer) clearTimeout(this._mmInviteeBlurTimer);
+      this._mmInviteeBlurTimer = setTimeout(() => {
+        this._mmInviteeBlurTimer = null;
+        const active =
+          typeof document !== "undefined" ? document.activeElement : null;
+        // _addInvitee refocuses the field for the next pick — keep it open.
+        if (isSearchInput(active)) return;
+        const part = this.getPart && this.getPart("mm-invitees-suggestions");
+        if (!part) return;
+        part.feed([]);
+        if (part.el) part.el.dataset.open = 0;
+      }, 200);
+    });
   }
 
   _mmSearchInput() {
@@ -2295,7 +2385,8 @@ class __window_folder extends mfsInteract {
         // away instead of having to click back into it.
         search.focus();
       }
-      this._filterInvitees("");
+      // Field keeps focus, so keep the list open on the remaining members.
+      this._filterInvitees("", { open: true });
       this._reFeedInviteeChips();
       this._checkAvailability();
     });
@@ -2487,6 +2578,44 @@ class __window_folder extends mfsInteract {
     if (el) el.textContent = txt || "";
   }
 
+  // Did a room.* call actually go through? A rejected call does NOT reject the
+  // promise here: a 4xx is swallowed by the window's onServerComplain and
+  // resolves as `undefined`, and a 200 carrying `error` resolves with the error
+  // payload. Both used to run the success branch, so a refused edit/delete
+  // (room.update / room.remove answer NOT_MEETING_OWNER to anyone but the
+  // organizer) closed the modal as if it had been saved or deleted.
+  _mmSucceeded(res) {
+    return !!res && typeof res === "object" && !res.error;
+  }
+
+  // The failure reason never reaches the caller — handleResponse throws the
+  // response, and the base class's onServerComplain swallows it — so keep the
+  // last one here. Purely a record: the base behaviour (quota → upgrade) still
+  // runs, for this call and every other service this window makes.
+  onServerComplain(xhr) {
+    this._lastServiceError = xhr;
+    if (super.onServerComplain) return super.onServerComplain(xhr);
+  }
+
+  // Why the meeting call failed, in the modal's words. Only a 400 from the
+  // meeting endpoints themselves is the service refusing us — that is
+  // NOT_MEETING_OWNER, the one rejection room.book/update/remove raise. Being
+  // offline, a 5xx, or a route that isn't deployed must NOT be reported as an
+  // ownership problem, and neither must the free/busy probe, which fires on
+  // the very same click (the time field blurs) and would otherwise speak for
+  // the save. Everything else gets the neutral "try again".
+  _mmFailureMessage(action) {
+    const e = this._lastServiceError;
+    const status = e && (e.status || e.error_code);
+    const url = (e && e.url) || "";
+    if (status == 400 && /room\.(book|update|remove)/.test(url)) {
+      return LOCALE.MEETING_NOT_OWNER;
+    }
+    return action === "delete"
+      ? LOCALE.MEETING_DELETE_FAILED
+      : LOCALE.MEETING_SAVE_FAILED;
+  }
+
   submitMeetingModal() {
     if (this._mmSubmitting) return;
     const form = this._readMeetingForm();
@@ -2507,6 +2636,8 @@ class __window_folder extends mfsInteract {
     this._mmBanner("");
     this._mmMarkTitleError(0);
     this._mmSubmitting = 1;
+    // Stale reason from an earlier call must not colour this one's message.
+    this._lastServiceError = null;
     const nid = this._mmEditNid;
     const done = () => {
       this._mmSubmitting = 0;
@@ -2515,6 +2646,7 @@ class __window_folder extends mfsInteract {
     };
     const fail = () => {
       this._mmSubmitting = 0;
+      this._mmBanner(this._mmFailureMessage("save"));
     };
 
     if (nid) {
@@ -2530,7 +2662,10 @@ class __window_folder extends mfsInteract {
         etime: form.etime,
         recur: form.recur,
         attendees: form.attendees,
-      }).then(() => {
+      }).then((res) => {
+        // Keep the dialog open on a refusal instead of reporting a save that
+        // never happened — the calendar would snap back on the next fetch.
+        if (!this._mmSucceeded(res)) return fail();
         this._upsertLocalMeeting(nid, form);
         done();
       }, fail);
@@ -2549,6 +2684,7 @@ class __window_folder extends mfsInteract {
       recur: form.recur,
     })
       .then((node) => {
+        if (!this._mmSucceeded(node)) return fail();
         createdNid = node && (node.id || node.nid);
         if (createdNid && form.attendees.length) {
           return this.fetchService((SERVICE.room && SERVICE.room.update) || "room.update", {
@@ -2560,6 +2696,10 @@ class __window_folder extends mfsInteract {
         }
       })
       .then(() => {
+        // book() refused: the first stage already reported it and cleared the
+        // submitting flag — don't close the dialog on top of that message.
+        // Anything else keeps the previous behaviour (close + refresh).
+        if (!this._mmSubmitting) return;
         if (createdNid) {
           this._upsertLocalMeeting(createdNid, form);
           // Jump the calendar to the new meeting's week so it's visible even if
@@ -2574,13 +2714,21 @@ class __window_folder extends mfsInteract {
   deleteMeetingModal() {
     const nid = this._mmEditNid;
     if (!nid) return this.closeMeetingModal();
+    const fail = () => this._mmBanner(this._mmFailureMessage("delete"));
+    // Stale reason from an earlier call must not colour this one's message.
+    this._lastServiceError = null;
     return this.postService((SERVICE.room && SERVICE.room.remove) || "room.remove", {
       nid,
       ...this._meetingScope(),
-    }).then(() => {
+    }).then((res) => {
+      // room.remove answers NOT_MEETING_OWNER to anyone but the organizer.
+      // Closing regardless announced a deletion that never happened — the
+      // meeting came back on the next fetch, and its start-time reminder still
+      // fired. Say so and keep the dialog open instead.
+      if (!this._mmSucceeded(res)) return fail();
       this.closeMeetingModal();
       this._refreshSchedule();
-    });
+    }, fail);
   }
 
   /**
