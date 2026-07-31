@@ -451,9 +451,9 @@
     z-index: 5;
     width: min(360px, calc(100% - 32px));
     padding: 14px 16px;
-    border-radius: 16px;
-    background: var(--white, #ffffff);
-    box-shadow: 0 12px 28px -8px rgba(20, 20, 43, 0.18), 0 2px 8px rgba(20, 20, 43, 0.08);
+    border-radius: var(--corner-radius-5);
+    background: var(--normal-bg-elevated);
+    box-shadow: 0 12px 28px -8px rgba(0, 0, 0, 0.18), 0 2px 8px rgba(0, 0, 0, 0.08);
 
     &-close {
       // Straddles the card's corner border (design mockup) rather than
@@ -464,8 +464,8 @@
       width: 22px;
       height: 22px;
       border-radius: 50%;
-      background: #f2f2f7;
-      border: 1px solid var(--white, #ffffff);
+      background: var(--normal-bg-90);
+      border: 1px solid var(--normal-bg-elevated);
       display: flex;
       align-items: center;
       justify-content: center;
@@ -474,12 +474,12 @@
       svg {
         width: 9px;
         height: 9px;
-        fill: #8a8aa3;
-        stroke: #8a8aa3;
+        fill: var(--normal-fg-50);
+        stroke: var(--normal-fg-50);
       }
 
       &:hover {
-        background: #e8e8ef;
+        background: var(--normal-bg-80);
       }
     }
 
@@ -499,13 +499,13 @@
       font-weight: 600;
       font-size: 14px;
       line-height: 1.4;
-      color: var(--tertiary-grey-100);
+      color: var(--normal-fg-800);
     }
 
     &-sub {
       font-size: 12.5px;
       line-height: 1.4;
-      color: var(--normal-fg-50, #8a8aa3);
+      color: var(--normal-fg-50);
     }
 
     &-cta {
@@ -518,10 +518,12 @@
       font-size: 13.5px;
       line-height: 1.4;
       padding: 10px 18px;
-      border-radius: 999px;
+      border-radius: var(--corner-radius-max);
 
+      // --primary-60, matching the modal's own CTA hover: the same brand
+      // ramp step, so the pill and the modal it opens read as one feature.
       &:hover {
-        background: var(--primary-90);
+        background: var(--primary-60);
       }
     }
   }
