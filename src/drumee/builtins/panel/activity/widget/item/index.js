@@ -113,6 +113,7 @@ class __activity_item extends LetcBox {
       : opt.category
       || (opt.event === 'hub.invite_received' ? 'hub_invite'
         : opt.event === 'task_assigned' ? 'contact_invite'
+        : opt.event === 'task_column_change' ? 'contact_invite'
         : opt.event === 'task_mention' ? 'contact_invite'
         : 'mfs');
     const item_key = `${item_type}:${opt.id || opt.hub_id || opt.drumate_id || opt.key_id || ''}`;
@@ -310,12 +311,9 @@ class __activity_item extends LetcBox {
       this._dispatchService(cmd, args)
       return;
     }
-    // Task assignment: a task_assigned row's category resolves to 'contact', so
-    // without this it would route to the address book. Open the task's folder on
-    // its Task tab (workspace root when the task is unscoped / task_nid is 0),
-    // then mark it read (contact_activity_dismiss via the contact_invite branch)
-    // and close the panel — mirroring the media/teamchat rows.
-    if (this.mget('event') === 'task_assigned') {
+    // Task assignment and watched-column notifications are contact_activity
+    // rows. Open the task's folder on its Task tab, then dismiss the event.
+    if (['task_assigned', 'task_column_change'].includes(this.mget('event'))) {
       const tHub = this.mget('task_hub_id') || hub_id;
       const tNidRaw = this.mget('task_nid');
       const tNid = (tNidRaw != null && `${tNidRaw}` !== '0') ? tNidRaw : 0;
