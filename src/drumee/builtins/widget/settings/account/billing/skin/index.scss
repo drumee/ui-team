@@ -13,6 +13,8 @@
   &__main {
     width: 100%;
     gap: var(--spacer-2);
+    // Containing block for __promo-pill's floating position (Box.Z).
+    position: relative;
   }
 
   // Measure the space the billing content actually gets, not the window: this
@@ -438,33 +440,72 @@
     }
   }
 
-  // LAUNCH30 persistent reminder (tester feedback 2026-07-31 #3) — same box
-  // shape as __sub-banner, kept visually distinct with the promo's own
-  // primary-purple accent so it doesn't read as a real subscription status.
+  // LAUNCH30 persistent reminder (tester feedback 2026-07-31 #3) — a
+  // FLOATING card, top-right (design mockup), not an in-flow banner: it
+  // must never shift the plan cards below it, and it sits over the
+  // Monthly/Yearly toggle rather than pushing it down.
   &__promo-pill {
-    align-items: center;
-    justify-content: space-between;
-    gap: var(--spacer-4);
-    margin-top: var(--spacer-4);
-    padding: 10px 12px 10px 16px;
-    border-radius: 12px;
-    background: var(--primary-10);
+    position: absolute;
+    top: 8px;
+    right: 0;
+    z-index: 5;
+    width: min(360px, calc(100% - 32px));
+    padding: 14px 16px;
+    border-radius: 16px;
+    background: var(--white, #ffffff);
+    box-shadow: 0 12px 28px -8px rgba(20, 20, 43, 0.18), 0 2px 8px rgba(20, 20, 43, 0.08);
+
+    &-close {
+      // Straddles the card's corner border (design mockup) rather than
+      // sitting inset inside the padding.
+      position: absolute;
+      top: -8px;
+      right: -8px;
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: #f2f2f7;
+      border: 1px solid var(--white, #ffffff);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+
+      svg {
+        width: 9px;
+        height: 9px;
+        fill: #8a8aa3;
+        stroke: #8a8aa3;
+      }
+
+      &:hover {
+        background: #e8e8ef;
+      }
+    }
+
+    &-row {
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--spacer-4);
+      padding-right: 22px; // clears the close button
+    }
 
     &-text {
       gap: 2px;
+      min-width: 0;
     }
 
     &-title {
       font-weight: 600;
       font-size: 14px;
-      line-height: 22px;
+      line-height: 1.4;
       color: var(--tertiary-grey-100);
     }
 
     &-sub {
       font-size: 12.5px;
       line-height: 1.4;
-      color: var(--primary-purple-100);
+      color: var(--normal-fg-50, #8a8aa3);
     }
 
     &-cta {
@@ -474,10 +515,10 @@
       color: var(--white);
       background: var(--primary-50);
       font-weight: 600;
-      font-size: 14px;
-      line-height: 22px;
-      padding: 10px 20px;
-      border-radius: 4px;
+      font-size: 13.5px;
+      line-height: 1.4;
+      padding: 10px 18px;
+      border-radius: 999px;
 
       &:hover {
         background: var(--primary-90);
