@@ -191,17 +191,30 @@ function attachSubmitSpinner(host, api) {
     otp.postService = function (service, ...rest) {
       // Resend (and any non-verify POST) keeps the stock behaviour.
       if (service !== api) return post(service, ...rest);
+      // Single-submit guard. dtk_otp.checkForm() has no in-flight lock and is
+      // re-entrant (it re-fires on every digit keydown and on paste), so a full
+      // set of boxes can POST the verify twice. For consume-once APIs like
+      // delete_account the first POST clears the secret server-side, so the
+      // second comes back INVALID_CODE — surfacing "wrong code" even though the
+      // account was just deleted by the first POST. Swallow re-entrant submits:
+      // return a promise that never settles so the duplicate shows neither
+      // success nor error; the first submit's result is the only one that acts.
+      if (this._otpGateSubmitInFlight) return new Promise(() => {});
+      this._otpGateSubmitInFlight = true;
       if (this.el) this.el.dataset.submitting = "1";
       let p;
       try {
         p = post(service, ...rest);
       } catch (e) {
+        this._otpGateSubmitInFlight = false;
         if (this.el) this.el.dataset.submitting = "0";
         throw e;
       }
       return Promise.resolve(p).finally(() => {
         // On success the modal is torn down; on a rejected code dtk_otp clears
-        // the boxes for re-entry — either way the inputs unlock here.
+        // the boxes for re-entry — either way the inputs unlock and the next
+        // deliberate attempt is allowed through.
+        this._otpGateSubmitInFlight = false;
         if (this.el) this.el.dataset.submitting = "0";
       });
     };
