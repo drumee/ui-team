@@ -178,47 +178,63 @@ function subscriptionBanner(ui) {
 /**
  * LAUNCH30 persistent reminder (design doc 2026-07-30, tester feedback
  * 2026-07-31 #3: "don't spam the popup — a small pill lives here instead").
- * Shown once the full offer modal has been seen on ANY surface but the
- * account still hasn't claimed and the campaign is still live — get_state's
- * "eligible_seen". ui._promoState is the SAME answer
- * Desk._maybeShowPromoLaunch30 already fetched on this page's mount (see
- * billing/index.js onDomRefresh) — no extra round trip. "Claim now"
- * re-opens Modal A directly (a deliberate re-entry, not the automatic
- * first-time show).
+ * Floating card, top-right of the page (design mockup) — NOT an in-flow
+ * banner, so it never shifts the plan cards below it. Shown once the full
+ * offer modal has been seen on ANY surface but the account still hasn't
+ * claimed and the campaign is still live — get_state's "eligible_seen".
+ * ui._promoState is the SAME answer Desk._maybeShowPromoLaunch30 already
+ * fetched on this page's mount (see billing/index.js onDomRefresh) — no
+ * extra round trip. "Claim now" re-opens Modal A directly (a deliberate
+ * re-entry, not the automatic first-time show). The close X only hides the
+ * card for this page view (ui._promoPillDismissed, a local render flag) —
+ * the offer itself already lives here until claimed or the campaign ends
+ * (design doc's own "recovered state" note), so dismissing the card is not
+ * another server-tracked "seen" surface.
  * @param {Object} ui - UI instance
  * @returns {Object|null} Skeletons component
  */
 function claimPill(ui) {
   const promo = ui._promoState;
-  if (!promo || promo.state !== "eligible_seen") return null;
+  if (!promo || promo.state !== "eligible_seen" || ui._promoPillDismissed) return null;
   const fig = `${ui.fig.family}__promo-pill`;
   const endDate = promo.campaign_ends_at
     ? Dayjs.unix(promo.campaign_ends_at).format("MMM D, YYYY")
     : "";
-  return Skeletons.Box.X({
+  return Skeletons.Box.Z({
     className: fig,
     kids: [
-      Skeletons.Box.Y({
-        className: `${fig}-text`,
-        kids: [
-          Skeletons.Note({
-            className: `${fig}-title`,
-            content: LOCALE.PROMO_PILL_TITLE || "Your free month of Team is still yours to claim.",
-          }),
-          endDate
-            ? Skeletons.Note({
-                className: `${fig}-sub`,
-                content: (LOCALE.PROMO_OFFER_ENDS || "Ends {0}.").format(endDate),
-              })
-            : null,
-        ].filter(Boolean),
-      }),
-      Skeletons.Note({
-        className: `${fig}-cta`,
-        content: LOCALE.PROMO_PILL_CTA || "Claim now",
-        service: "promo-pill-claim",
+      Skeletons.Button.Svg({
+        className: `${fig}-close`,
+        ico: "cross",
+        service: "promo-pill-dismiss",
         uiHandler: [ui],
-        bubble: false,
+      }),
+      Skeletons.Box.X({
+        className: `${fig}-row`,
+        kids: [
+          Skeletons.Box.Y({
+            className: `${fig}-text`,
+            kids: [
+              Skeletons.Note({
+                className: `${fig}-title`,
+                content: LOCALE.PROMO_PILL_TITLE || "Your free month of Team is still yours to claim.",
+              }),
+              endDate
+                ? Skeletons.Note({
+                    className: `${fig}-sub`,
+                    content: (LOCALE.PROMO_OFFER_ENDS || "Ends {0}.").format(endDate),
+                  })
+                : null,
+            ].filter(Boolean),
+          }),
+          Skeletons.Note({
+            className: `${fig}-cta`,
+            content: LOCALE.PROMO_PILL_CTA || "Claim now",
+            service: "promo-pill-claim",
+            uiHandler: [ui],
+            bubble: false,
+          }),
+        ],
       }),
     ],
   });

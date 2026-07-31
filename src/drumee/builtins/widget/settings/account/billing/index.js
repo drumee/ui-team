@@ -1711,6 +1711,15 @@ class settings_billing extends LetcBox {
         this._reopenPromoOffer();
         return false;
 
+      case "promo-pill-dismiss":
+        // Hides the card for THIS page view only — the offer itself is
+        // already "seen" (server-side) and stays live here until claimed
+        // or the campaign ends (design doc), so there is no server call:
+        // the next visit to this page re-renders the card.
+        this._promoPillDismissed = true;
+        this.feed(require("./skeleton").default(this));
+        return false;
+
     }
   }
 
