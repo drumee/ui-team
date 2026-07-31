@@ -239,6 +239,9 @@ module.exports = {
   rating_survey_popup: function () {
     return import("./builtins/widget/rating-survey-popup");
   },
+  promo_launch30: function () {
+    return import("./builtins/widget/promo-launch30");
+  },
   reward_flow: function () {
     return import("./builtins/widget/reward-flow");
   },

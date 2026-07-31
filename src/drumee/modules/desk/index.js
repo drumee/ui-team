@@ -1198,9 +1198,11 @@ class desk_module extends LetcBox {
           }, 2000);
         } else {
           // No tutorial this session — the reward flow gates itself, so it is
-          // safe to always ask.
+          // safe to always ask. LAUNCH30 chains after it (both self-gate on
+          // the server; showing them at once would stack two full-screen
+          // popups over a user who is eligible for both).
           setTimeout(() => {
-            this._maybeStartRewardFlow();
+            this._maybeStartRewardFlow().then(() => this._maybeShowPromoLaunch30("home"));
           }, 2000);
         }
         return;
@@ -1395,16 +1397,56 @@ class desk_module extends LetcBox {
   }
 
   /**
+   * LAUNCH30 — "Start your 1-month Team Plan today". Design doc 2026-07-30.
+   * Self-gates on the server (SERVICE.promo.get_state): eligible only on
+   * Free, never claimed, not already inside another organisation, and not
+   * already shown on this surface (a server flag, never localStorage — see
+   * promo_launch30_mark_seen). Safe to call unconditionally from any surface;
+   * this is what makes it safe to chain after the reward flow above.
+   *
+   * @param {string} surface  'home' | 'billing'
+   */
+  async _maybeShowPromoLaunch30(surface) {
+    if (this._promoLaunch30InFlight) return;
+    this._promoLaunch30InFlight = true;
+    try {
+      let state;
+      try {
+        state = await this.fetchService(SERVICE.promo.get_state, { hub_id: Visitor.id });
+      } catch (e) {
+        return;
+      }
+      if (!state || state.state !== "eligible_unseen") return;
+      try {
+        await Kind.waitFor("promo_launch30");
+      } catch (e) {
+        return;
+      }
+      Wm.launch({
+        kind: "promo_launch30",
+        surface,
+        state: "offer",
+        hub_id: Visitor.id,
+        wm_unique_id: "promo_launch30",
+      }, { explicit: 1, singleton: 1 });
+    } finally {
+      this._promoLaunch30InFlight = false;
+    }
+  }
+
+  /**
    * The tutorial owns the screen while it runs, so the reward flow waits for
    * it to tear down. When there is no tutorial (already seen, or not
    * triggered) this starts the flow straight away.
    */
   _chainRewardFlowAfterTutorial(tutorial) {
     if (tutorial && _.isFunction(tutorial.once)) {
-      tutorial.once(_e.destroy, () => this._maybeStartRewardFlow());
+      tutorial.once(_e.destroy, () => {
+        this._maybeStartRewardFlow().then(() => this._maybeShowPromoLaunch30("home"));
+      });
       return;
     }
-    this._maybeStartRewardFlow();
+    this._maybeStartRewardFlow().then(() => this._maybeShowPromoLaunch30("home"));
   }
 
   /**

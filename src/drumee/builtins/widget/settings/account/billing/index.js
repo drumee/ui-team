@@ -459,6 +459,12 @@ class settings_billing extends LetcBox {
       this._loadSubscription(),
     ]);
     this._catalog = catalog;
+    // LAUNCH30 (design doc 2026-07-30) trigger B: "Opens Billing page".
+    // Self-gated server-side (SERVICE.promo.get_state) — safe to call
+    // unconditionally on every mount, including a re-render after tab focus.
+    if (typeof Desk !== "undefined" && Desk && Desk._maybeShowPromoLaunch30) {
+      Desk._maybeShowPromoLaunch30("billing");
+    }
     // Re-sync the subscription when the tab regains focus — covers a return
     // from the Stripe Billing Portal (a full-page redirect back to the desk
     // root, so this widget re-mounts) and any change made in another tab.
