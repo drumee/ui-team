@@ -282,16 +282,21 @@ class __window_secure_share extends mfsInteract {
       // postService resolves undefined on a transport failure (it routes through
       // onServerComplain rather than throwing), so treat anything that is not an
       // explicit OK as "did not persist".
-      stored = (res && res.status === 'OK') ? Number(res.notify_on_open) : undefined;
+      stored = res?.status === 'OK' ? Number(res.notify_on_open) : undefined;
     } catch (e) {
-      stored = undefined;
+      // stored stays undefined → treated as "did not persist" below.
+      this.warn('[secure_share] set_notify_on_open failed:', e && e.message);
     }
     // A newer click superseded this one — its own response owns the switch.
     if (seq !== this._notifySeq) return;
     if (stored === intended) return;
     // Show the truth: the server's value when it gave one, otherwise the state
     // from before this click (we already flipped it above).
-    this._notifyOnOpen = (stored === 1) ? true : (stored === 0 ? false : !this._notifyOnOpen);
+    let truth;
+    if (stored === 1)      truth = true;
+    else if (stored === 0) truth = false;
+    else                   truth = !this._notifyOnOpen;
+    this._notifyOnOpen = truth;
     const toggle = this.el.querySelector(`.${this.fig.family}__notify-row .${this.fig.family}__toggle`);
     if (toggle) toggle.dataset.on = this._notifyOnOpen ? 'yes' : '';
     Butler.say(LOCALE.SOMETHING_WENT_WRONG);
