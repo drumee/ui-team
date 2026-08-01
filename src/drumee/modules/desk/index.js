@@ -352,10 +352,6 @@ class desk_module extends LetcBox {
       this._restoreInFlight = false;
       this.warn && this.warn("[Reload] restore failed", e);
     });
-    // Guest join hand-off: offer to open the workspace the user was invited to.
-    // MUST stay above the wrapper-popup await — see the note there; everything
-    // past it is unreachable.
-    this._maybeOfferInvitedWorkspace();
     await this.ensurePart("wrapper-popup");
     this.trigger(_e.ready);
     // LAUNCH30 "Start exploring now" reloads so org_provision's domain move
@@ -382,14 +378,29 @@ class desk_module extends LetcBox {
   _maybeOfferInvitedWorkspace() {
     let intent = null;
     try {
-      const raw = sessionStorage.getItem("drumee_guest_join");
+      // localStorage, not session: the email-and-password signup sends the user
+      // out to their mail client and back through a NEW TAB on the verify link,
+      // which a session-scoped key does not survive. Same shape as the signup
+      // router's captureRef (drumee_ref), which persists across that flow for
+      // the same reason. sessionStorage is still read so an intent armed by the
+      // previous build is not stranded.
+      const raw =
+        localStorage.getItem("drumee_guest_join") ||
+        sessionStorage.getItem("drumee_guest_join");
       if (!raw) return;
+      localStorage.removeItem("drumee_guest_join");
       sessionStorage.removeItem("drumee_guest_join");
       intent = JSON.parse(raw);
     } catch (e) {
       return;
     }
     if (!intent || !intent.hub_id) return;
+    // Outliving the session means it can also outlive the user's interest. A
+    // signup that stalls at the verify email for days should not open with a
+    // workspace prompt; the invite itself is unaffected, it stays in the
+    // activity list either way. Undated intents (previous build) are honoured.
+    const AGE_LIMIT = 7 * 24 * 3600 * 1000;
+    if (intent.ts && Date.now() - Number(intent.ts) > AGE_LIMIT) return;
     this._restoreInFlight = false;
     const workspace = (intent.name || "").trim();
     const message = workspace
@@ -1310,7 +1321,7 @@ class desk_module extends LetcBox {
           // the server; showing them at once would stack two full-screen
           // popups over a user who is eligible for both).
           setTimeout(() => {
-            this._maybeStartRewardFlow().then(() => this._maybeShowPromoLaunch30("home"));
+            this._afterHomeSettled();
           }, 2000);
         }
         return;
@@ -1592,14 +1603,35 @@ class desk_module extends LetcBox {
    * it to tear down. When there is no tutorial (already seen, or not
    * triggered) this starts the flow straight away.
    */
+  /**
+   * Everything that waits until Home has finished settling.
+   *
+   * Onboarding and the tutorial both end by running this chain, and so does a
+   * plain login where neither happens — it was written out three times, which
+   * is why the guest-join prompt is appended HERE rather than at each site.
+   *
+   * Order matters and is the existing one: reward flow, then LAUNCH30, then the
+   * invited-workspace prompt. Both of the first two are full-screen and
+   * self-gating; the prompt is a small dialog and goes last so it never stacks
+   * on top of them.
+   *
+   * @returns {Promise}
+   */
+  _afterHomeSettled() {
+    return this._maybeStartRewardFlow()
+      .then(() => this._maybeShowPromoLaunch30("home"))
+      .then(() => this._maybeOfferInvitedWorkspace())
+      .catch((e) => this.warn && this.warn("[home] post-ready chain failed", e));
+  }
+
   _chainRewardFlowAfterTutorial(tutorial) {
     if (tutorial && _.isFunction(tutorial.once)) {
       tutorial.once(_e.destroy, () => {
-        this._maybeStartRewardFlow().then(() => this._maybeShowPromoLaunch30("home"));
+        this._afterHomeSettled();
       });
       return;
     }
-    this._maybeStartRewardFlow().then(() => this._maybeShowPromoLaunch30("home"));
+    this._afterHomeSettled();
   }
 
   /**
