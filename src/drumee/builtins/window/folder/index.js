@@ -422,6 +422,7 @@ class __window_folder extends mfsInteract {
       this._mmInviteeBlurTimer = null;
     }
     this._stopAwaitMeetingReady();
+    this._ftTeardown();
     this._unbindThreadMenuOutside();
     this._unbindViewportReframe();
     if (!this.mget(_a.headless) && window.Wm && Wm.$el) {
@@ -1230,7 +1231,15 @@ class __window_folder extends mfsInteract {
 
   onUiEvent(cmd, args = {}) {
     const service = args.service || cmd.service || cmd.mget(_a.service);
+    // File-thread access revocation: while a revoked thread is still on screen
+    // (before OK / the 5-second timeout), refuse every action that would act on
+    // it. The CSS blur is cosmetic — this is the guard. See file-thread-access.js.
+    if (this._ftRevoked && this._ftIsRevokedService(service)) return;
     switch (service) {
+      // OK on the revocation notice — same finalizer the timeout uses.
+      case "file-thread-revoked-ack":
+        return this._finalizeRevokedFileThread();
+
       case _e.upload:
         this.closeNewMenu(cmd);
         return super.onUiEvent(cmd, args);
@@ -3046,6 +3055,11 @@ class __window_folder extends mfsInteract {
   }
 
   scopeChatToFile(fileNid, fileLabel, opts = {}) {
+    // Programmatic entry point — reached from chat-item cards, Wm.launch, and
+    // the thread rail as well as onUiEvent, so the revocation guard has to be
+    // here too. Opening (or re-opening) a revoked thread is refused; clearing
+    // the scope (falsy nid) is exactly what the finalizer does and must pass.
+    if (fileNid && this._ftIsFileRevoked(fileNid)) return Promise.resolve();
     // Full (wide) Chat tab: the file thread lives in the docked RIGHT panel; the
     // middle chat always stays #General (Figma 2331-46821). Files tab — and the
     // compact Chat tab — scope the single chat IN PLACE (no room for a column).
@@ -3311,9 +3325,13 @@ class __window_folder extends mfsInteract {
     const svc =
       (SERVICE.channel && SERVICE.channel.file_thread_info) ||
       "channel.file_thread_info";
+    // Capture the access generation: a revoke/recovery landing while this is in
+    // flight must not let the response repaint the header it just tore down.
+    const generation = this._ftThreadRequestGeneration();
     this.fetchService({ service: svc, hub_id, file_nid: fileNid }, { async: 1 })
       .then((info) => {
         if (!info || !bar.el || (bar.isDestroyed && bar.isDestroyed())) return;
+        if (generation !== this._ftThreadRequestGeneration()) return;
         // Header may have switched back to folder, or to a different file, while
         // the fetch was in flight.
         if (bar.el.dataset.scope !== "file") return;
@@ -3351,9 +3369,13 @@ class __window_folder extends mfsInteract {
     const svc =
       (SERVICE.channel && SERVICE.channel.file_thread_info) ||
       "channel.file_thread_info";
+    const generation = this._ftThreadRequestGeneration();
     this.fetchService({ service: svc, hub_id, file_nid: fileNid }, { async: 1 })
       .then((info) => {
         if (!info || !slot.el || (slot.isDestroyed && slot.isDestroyed())) return;
+        // A revoke/recovery superseded this hydrate — do not restore the cached
+        // filetype ("Open file →" would launch a player for a gone file).
+        if (generation !== this._ftThreadRequestGeneration()) return;
         if (slot.el.dataset.open !== "1") return;
         if (slot.el.dataset.ftNid !== `${fileNid}`) return;
         this._ftFiletype = `${info.filetype || info.category || ""}`;
@@ -3431,10 +3453,13 @@ class __window_folder extends mfsInteract {
     const svc =
       (SERVICE.channel && SERVICE.channel.file_thread_info) ||
       "channel.file_thread_info";
+    const generation = this._ftThreadRequestGeneration();
     this.fetchService({ service: svc, hub_id, file_nid: fileNid }, { async: 1 })
       .then((info) => {
         if (!info || !panel.el || (panel.isDestroyed && panel.isDestroyed()))
           return;
+        // A revoke/recovery superseded this hydrate while it was in flight.
+        if (generation !== this._ftThreadRequestGeneration()) return;
         // Panel may have closed, or re-scoped to a different file, while the
         // fetch was in flight — bail so we never paint stale info into the
         // current card.
@@ -3498,11 +3523,15 @@ class __window_folder extends mfsInteract {
       this._threadMenuPart = menu;
       if (menu.el.dataset.open === "1") return this._closeThreadMenu();
 
+      // Access generation at request time — a revoke/recovery landing mid-fetch
+      // invalidates this response, whether it succeeded or failed.
+      const generation = this._ftThreadRequestGeneration();
       const render = (items, scopedNid) => {
         // The fetch (and ensurePart) resolve async — bail if the window or the
         // menu part was destroyed meanwhile, so we never feed/flag a dead node
         // or re-bind a document listener on it.
         if (this.isDestroyed && this.isDestroyed()) return;
+        if (generation !== this._ftThreadRequestGeneration()) return;
         if (!menu.el || (menu.isDestroyed && menu.isDestroyed())) return;
         menu.feed(
           require("./skeleton/thread-menu")(this, { items, scopedNid }),
@@ -3558,6 +3587,10 @@ class __window_folder extends mfsInteract {
     // cannot overwrite the rail with wrong-folder rows (last-writer-wins on
     // rapid navigation). Mirrors chat/index.js's nid recheck after async.
     const folderNid = `${this.mget(_a.nid)}`;
+    // Access generation at request time. Folder identity alone is not enough:
+    // a revoke or recovery for the SAME folder must also invalidate an older
+    // in-flight rail response, or a delayed success repaints the removed thread.
+    const generation = this._ftThreadRequestGeneration();
     return this.ensurePart("thread-rail").then((rail) => {
       if (!rail || !rail.el || (rail.isDestroyed && rail.isDestroyed())) return;
       this._threadRailPart = rail;
@@ -3568,6 +3601,7 @@ class __window_folder extends mfsInteract {
           if (!rail.el || (rail.isDestroyed && rail.isDestroyed())) return;
           // Folder changed mid-fetch → discard this stale response.
           if (`${this.mget(_a.nid)}` !== folderNid) return;
+          if (generation !== this._ftThreadRequestGeneration()) return;
           this._threadRailItems = items;
           rail.feed(
             require("./skeleton/thread-menu")(this, {
@@ -3741,6 +3775,9 @@ class __window_folder extends mfsInteract {
       }
     }
     super.updateTopbar(m);
+    // Navigation invalidates every in-flight thread-list / hydrate response for
+    // the folder we are leaving (shared generation with revoke/recovery).
+    this._ftBumpThreadRequests();
     // Navigating to another folder drops any open file thread → fall back to the
     // folder ("# General") chat so the panel and header follow the new folder
     // (resets scopedFileNid + the file-thread header before re-scoping below).
@@ -4170,6 +4207,15 @@ class __window_folder extends mfsInteract {
   handleWsEvent(args = {}) {
     const { data, options } = args || {};
     const svc = options && options.service;
+    // File-thread access lifecycle (see ./file-thread-access.js). Handled FIRST
+    // and before super: the base handler removes the file from the grid, and
+    // the thread must already be frozen by then — otherwise the window repaints
+    // around a scope the viewer can no longer read.
+    if (svc === "channel.file_thread_access_changed") {
+      this.onFileThreadAccessChanged(data || {});
+      // Fall through to super: this event carries no grid row, so the base
+      // handler no-ops, but keeping the call preserves its bookkeeping.
+    }
     if (svc === SERVICE.hub.set_privilege) {
       this._applyLivePrivilege(data || {});
     }
@@ -4776,5 +4822,9 @@ class __window_folder extends mfsInteract {
 
 // Rich meeting-description editor methods (@-mention, /-file, inline images).
 Object.assign(__window_folder.prototype, require("./meeting-desc-editor"));
+
+// File-thread access revocation / recovery lifecycle (proactive freeze, single
+// revocation notice, idempotent teardown back to # General, recovery refresh).
+Object.assign(__window_folder.prototype, require("./file-thread-access"));
 
 module.exports = __window_folder;

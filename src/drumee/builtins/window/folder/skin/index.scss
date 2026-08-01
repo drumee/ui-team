@@ -3872,6 +3872,35 @@ html[data-theme="dark"] {
     user-select: none;
   }
 
+  // File-thread access revoked (file deleted or moved out of the workspace by
+  // another member) — see window/folder/file-thread-access.js. The window
+  // carries data-ft-revoked="<nid>" from the instant the event lands until the
+  // teardown returns it to # General, so the dead thread reads as inert while
+  // the notice is up.
+  //
+  // Cosmetic ONLY. The real guards are the widget-level freeze
+  // (widget/chat freezeFileScope) and the onUiEvent refusals — a blur cannot
+  // stop a keyboard send, a queued retry, or a programmatic service call.
+  .window__file-thread-panel[data-ft_revoked="1"] {
+    filter: blur(4px);
+    pointer-events: none;
+    user-select: none;
+  }
+
+  // In-place (Files-tab) file thread: the same window hosts # General, so blur
+  // the conversation and its info card rather than the whole column.
+  // Attribute is data-ft-revoked (hyphen) — that is what `el.dataset.ftRevoked`
+  // renders to; the panel flag above is written as a literal underscore key.
+  &[data-ft-revoked] {
+    .window__chat-info-slot[data-open="1"],
+    .window__chat-panel .widget-chat__messages,
+    .window__chat-panel .widget-chat__messenger-wrapper {
+      filter: blur(4px);
+      pointer-events: none;
+      user-select: none;
+    }
+  }
+
   .window__chat-gate-logo {
     align-items: end;
     gap: 8px;
