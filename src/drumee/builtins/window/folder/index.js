@@ -4145,27 +4145,7 @@ class __window_folder extends mfsInteract {
       // local state (hub.get_members_by_type can return stale data on
       // immediate read-after-write).
       raw.privilege = nextRole.privilege;
-      if (this.dialogWrapper) {
-        // The initial mount in switchShowFolderSettings attaches a
-        // once(destroy) handler on the panel that flips isShowSettings
-        // to false. An in-place re-feed destroys that old child and
-        // would trip the handler — detach it first, then re-attach an
-        // identical handler to the freshly mounted child so the close
-        // button keeps working.
-        const oldChild = this.dialogWrapper.children?.last?.();
-        if (oldChild) oldChild.off(_e.destroy);
-        this.dialogWrapper.feed(
-          require("./skeleton/settings-action-panel")(this),
-        );
-        this.isShowSettings = true;
-        const newChild = this.dialogWrapper.children?.last?.();
-        if (newChild) {
-          newChild.once(_e.destroy, () => {
-            this.isShowSettings = false;
-            this.unselect();
-          });
-        }
-      }
+      this._refeedFolderMembersPanel();
       this._showNoticeToast(LOCALE.ROLE_UPDATED_SUCCESSFULLY || "Role updated.");
     } catch (e) {
       Wm.alert(e?.reason || e?.error || LOCALE.TRY_AGAIN);
@@ -4189,10 +4169,39 @@ class __window_folder extends mfsInteract {
   //    it is NOT inside the re-fed header — syncNewCtrlVisibility covers it.
   handleWsEvent(args = {}) {
     const { data, options } = args || {};
-    if (options && options.service === SERVICE.hub.set_privilege) {
+    const svc = options && options.service;
+    if (svc === SERVICE.hub.set_privilege) {
       this._applyLivePrivilege(data || {});
     }
+    // A member joined this workspace (invite redeemed via token, resolved on
+    // signup, or granted directly by another admin). The permission matrix
+    // reads hub_get_members_by_type, which only returns real permission rows —
+    // so until the join lands there is no row to show, and nothing repaints it
+    // once there is. Refetch instead of leaving the admin looking at a member
+    // list missing the person they just invited. _refreshFolderMembers
+    // self-guards on the panel being open, so this is a no-op when closed.
+    else if (svc === "hub.member_joined") {
+      this._onMemberJoined(data || {});
+    }
     return super.handleWsEvent(args);
+  }
+
+  // Server-side handler: server-team/service/lib/notify-member-joined.js.
+  // Broadcasts { hub_id, uid } to every online member of the hub (the joiner's
+  // own sockets included — see _onMemberJoined's echo guard for why).
+  _onMemberJoined(data = {}) {
+    // The server cannot exclude our own sockets (entity_sockets' exclude arg
+    // splices JSON straight into `s.id NOT IN (...)` and user_sockets returns
+    // rows, not bare ids), so the joiner receives its own echo. Drop it here.
+    // uid may be null for admin-driven multi-adds (invite_with_roles) — then
+    // nobody is guarded, which is correct: the acting admin has the matrix open.
+    if (data.uid && data.uid === Visitor.id) return;
+    // Several folder windows can be open at once — only the one on this hub
+    // refetches. Use actualNode() (what _refreshFolderMembers reads) rather
+    // than mget(_a.hub_id), which differs for symlink/cross-hub nodes.
+    const mine = this.actualNode() || {};
+    if (data.hub_id && mine.hub_id && data.hub_id !== mine.hub_id) return;
+    this._refreshFolderMembers();
   }
 
   _applyLivePrivilege(data = {}) {
@@ -4483,7 +4492,16 @@ class __window_folder extends mfsInteract {
         Wm.alert(res.reason || res.error || LOCALE.TRY_AGAIN);
         return;
       }
-      await this._refreshFolderMembers();
+      // Optimistic local removal: hub.get_members_by_type returns stale data
+      // on immediate read-after-write (see set_privilege above), so splicing B
+      // out of the cached list and re-rendering from local state is both
+      // faster and correct — a refetch right after the POST would still see B.
+      this._folderMembers = (this._folderMembers || []).filter(
+        (r) =>
+          String(r.entity_id || r.drumate_id || r.id || "") !==
+          String(memberId),
+      );
+      this._refeedFolderMembersPanel();
       this._showNoticeToast(LOCALE.MEMBER_REMOVED_SUCCESSFULLY || "Member removed.");
     } catch (e) {
       Wm.alert(e?.reason || e?.error || LOCALE.TRY_AGAIN);
@@ -4526,6 +4544,30 @@ class __window_folder extends mfsInteract {
       row.surname,
       row.email,
     );
+  }
+
+  // Re-render the Folder settings matrix from this._folderMembers WITHOUT a
+  // server refetch. Used after optimistic local mutations (role change, member
+  // removal) where hub.get_members_by_type would return stale read-after-write
+  // data. Mirrors the close-button wiring from switchShowFolderSettings: an
+  // in-place feed destroys the old panel child, which would trip its
+  // once(_e.destroy) handler and flip isShowSettings off — detach it first,
+  // then re-attach an identical handler to the freshly mounted child.
+  _refeedFolderMembersPanel() {
+    if (!this.dialogWrapper) return;
+    const oldChild = this.dialogWrapper.children?.last?.();
+    if (oldChild) oldChild.off(_e.destroy);
+    this.dialogWrapper.feed(
+      require("./skeleton/settings-action-panel")(this),
+    );
+    this.isShowSettings = true;
+    const newChild = this.dialogWrapper.children?.last?.();
+    if (newChild) {
+      newChild.once(_e.destroy, () => {
+        this.isShowSettings = false;
+        this.unselect();
+      });
+    }
   }
 
   async _refreshFolderMembers() {
