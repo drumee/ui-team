@@ -352,14 +352,16 @@ class desk_module extends LetcBox {
       this._restoreInFlight = false;
       this.warn && this.warn("[Reload] restore failed", e);
     });
+    // Guest join hand-off: offer to open the workspace the user was invited to.
+    // MUST stay above the wrapper-popup await — see the note there; everything
+    // past it is unreachable.
+    this._maybeOfferInvitedWorkspace();
     await this.ensurePart("wrapper-popup");
     this.trigger(_e.ready);
     // LAUNCH30 "Start exploring now" reloads so org_provision's domain move
     // is picked up by get_env; then open Admin Console (+ Invite via
     // apps-main's own sessionStorage flag).
     this._maybeOpenPromoAdminAfterClaim();
-    // Guest join hand-off: offer to open the workspace the user was invited to.
-    this._maybeOfferInvitedWorkspace();
   }
 
   /**
@@ -393,9 +395,21 @@ class desk_module extends LetcBox {
     const message = workspace
       ? (LOCALE.GUEST_JOIN_OPEN_WORKSPACE_MSG || "You can now open the workspace you were invited to: %s").replace("%s", workspace)
       : (LOCALE.GUEST_JOIN_OPEN_WORKSPACE_MSG_PLAIN || "You can now open the workspace you were invited to.");
-    setTimeout(() => {
+    // Wm may not exist yet — loadDefault can run before window.Wm is assigned
+    // (see the cold-boot note further down this file). Bailing here would lose
+    // the prompt for good, since the key has already been consumed, so wait for
+    // it instead and give up only after a few seconds.
+    let waited = 0;
+    const show = () => {
       if (this.isDestroyed && this.isDestroyed()) return;
-      if (!window.Wm || !Wm.info) return;
+      if (!window.Wm || !Wm.info) {
+        waited += 200;
+        if (waited > 6000) {
+          this.warn && this.warn("[guest-join] Wm never became available");
+          return;
+        }
+        return setTimeout(show, 200);
+      }
       this._invitedHubId = intent.hub_id;
       Wm.info({
         variant: "notice",
@@ -417,7 +431,8 @@ class desk_module extends LetcBox {
           },
         ],
       });
-    }, 400);
+    };
+    setTimeout(show, 400);
   }
 
   /**
