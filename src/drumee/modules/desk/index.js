@@ -1315,6 +1315,21 @@ class desk_module extends LetcBox {
           setTimeout(() => {
             this._showTutorial();
           }, 2000);
+          // Safety net. In this branch the ONLY route to _afterHomeSettled is
+          // the "desk-tutorial" part becoming ready, so if desk_tutorial fails
+          // to mount — kind not loaded, widget throws, part never signals —
+          // nothing runs for the whole session: no reward flow, no LAUNCH30,
+          // and no invited-workspace prompt. A signup always takes this branch,
+          // which is why the prompt was missing after OAuth sign-up while an
+          // ordinary sign-in (the else below) worked.
+          //
+          // Cleared as soon as the tutorial does report in, so the normal path
+          // is untouched and the chain still waits for the tutorial to finish.
+          clearTimeout(this._homeSettledFallback);
+          this._homeSettledFallback = setTimeout(() => {
+            this.warn && this.warn("[home] tutorial never mounted; settling anyway");
+            this._afterHomeSettled();
+          }, 20000);
         } else {
           // No tutorial this session — the reward flow gates itself, so it is
           // safe to always ask. LAUNCH30 chains after it (both self-gate on
@@ -1327,6 +1342,9 @@ class desk_module extends LetcBox {
         return;
 
       case "desk-tutorial":
+        // The tutorial exists and owns the hand-off from here.
+        clearTimeout(this._homeSettledFallback);
+        this._homeSettledFallback = null;
         this._chainRewardFlowAfterTutorial(child);
         return;
     }
@@ -1618,6 +1636,13 @@ class desk_module extends LetcBox {
    * @returns {Promise}
    */
   _afterHomeSettled() {
+    // Once per session. There are now four ways in — no-tutorial, after the
+    // tutorial, the tutorial-never-mounted fallback, and a re-fed module — and
+    // running the chain twice would ask the reward flow to mount twice and
+    // could show the invite dialog again.
+    if (this._homeSettledDone) return Promise.resolve();
+    this._homeSettledDone = true;
+    clearTimeout(this._homeSettledFallback);
     return this._maybeStartRewardFlow()
       .then(() => this._maybeShowPromoLaunch30("home"))
       .then(() => this._waitForHomePopups())
