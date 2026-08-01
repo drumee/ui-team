@@ -361,6 +361,92 @@ class desk_module extends LetcBox {
   }
 
   /**
+   * After a guest signs in from a shared-workspace landing page, offer to open
+   * the workspace they were invited to.
+   *
+   * The signin plugin writes drumee_guest_join before it leaves for the form
+   * (see signin_guest._armJoinIntent); this reads it once, here, because Home
+   * is the first point where Wm exists and the desk has settled.
+   *
+   * Consumed unconditionally — read and removed in the same breath, whether or
+   * not the dialog ends up shown — so a stale key can never re-prompt on the
+   * next load. No key means a normal sign-in, and nothing happens.
+   *
+   * Mirrors _maybeOpenPromoAdminAfterClaim above, including standing down
+   * _restoreInFlight so desk-state restore does not race the dialog.
+   */
+  _maybeOfferInvitedWorkspace() {
+    let intent = null;
+    try {
+      // localStorage, not session: the email-and-password signup sends the user
+      // out to their mail client and back through a NEW TAB on the verify link,
+      // which a session-scoped key does not survive. Same shape as the signup
+      // router's captureRef (drumee_ref), which persists across that flow for
+      // the same reason. sessionStorage is still read so an intent armed by the
+      // previous build is not stranded.
+      const raw =
+        localStorage.getItem("drumee_guest_join") ||
+        sessionStorage.getItem("drumee_guest_join");
+      if (!raw) return;
+      localStorage.removeItem("drumee_guest_join");
+      sessionStorage.removeItem("drumee_guest_join");
+      intent = JSON.parse(raw);
+    } catch (e) {
+      return;
+    }
+    if (!intent || !intent.hub_id) return;
+    // Outliving the session means it can also outlive the user's interest. A
+    // signup that stalls at the verify email for days should not open with a
+    // workspace prompt; the invite itself is unaffected, it stays in the
+    // activity list either way. Undated intents (previous build) are honoured.
+    const AGE_LIMIT = 7 * 24 * 3600 * 1000;
+    if (intent.ts && Date.now() - Number(intent.ts) > AGE_LIMIT) return;
+    this._restoreInFlight = false;
+    const workspace = (intent.name || "").trim();
+    const message = workspace
+      ? (LOCALE.GUEST_JOIN_OPEN_WORKSPACE_MSG || "You can now open the workspace you were invited to: %s").replace("%s", workspace)
+      : (LOCALE.GUEST_JOIN_OPEN_WORKSPACE_MSG_PLAIN || "You can now open the workspace you were invited to.");
+    // Wm may not exist yet — loadDefault can run before window.Wm is assigned
+    // (see the cold-boot note further down this file). Bailing here would lose
+    // the prompt for good, since the key has already been consumed, so wait for
+    // it instead and give up only after a few seconds.
+    let waited = 0;
+    const show = () => {
+      if (this.isDestroyed && this.isDestroyed()) return;
+      if (!window.Wm || !Wm.info) {
+        waited += 200;
+        if (waited > 6000) {
+          this.warn && this.warn("[guest-join] Wm never became available");
+          return;
+        }
+        return setTimeout(show, 200);
+      }
+      this._invitedHubId = intent.hub_id;
+      Wm.info({
+        variant: "notice",
+        message,
+        // Tags this window_info so the Open handler closes THIS dialog and not
+        // some other notice that happens to be up.
+        guest_join: 1,
+        actions: [
+          {
+            label: LOCALE.OPEN_WORKSPACE || "Open Workspace",
+            priority: "primary",
+            service: "guest-join-open-workspace",
+            uiHandler: this,
+          },
+          {
+            label: LOCALE.CLOSE || "Close",
+            priority: "secondary",
+            service: _e.close,
+          },
+        ],
+      });
+    };
+    setTimeout(show, 400);
+  }
+
+  /**
    * After promo-launch30 explore → location.reload(), open Admin Console.
    * Invite panel is opened by apps-main from drumee_promo_open_invite.
    */
@@ -1229,18 +1315,36 @@ class desk_module extends LetcBox {
           setTimeout(() => {
             this._showTutorial();
           }, 2000);
+          // Safety net. In this branch the ONLY route to _afterHomeSettled is
+          // the "desk-tutorial" part becoming ready, so if desk_tutorial fails
+          // to mount — kind not loaded, widget throws, part never signals —
+          // nothing runs for the whole session: no reward flow, no LAUNCH30,
+          // and no invited-workspace prompt. A signup always takes this branch,
+          // which is why the prompt was missing after OAuth sign-up while an
+          // ordinary sign-in (the else below) worked.
+          //
+          // Cleared as soon as the tutorial does report in, so the normal path
+          // is untouched and the chain still waits for the tutorial to finish.
+          clearTimeout(this._homeSettledFallback);
+          this._homeSettledFallback = setTimeout(() => {
+            this.warn && this.warn("[home] tutorial never mounted; settling anyway");
+            this._afterHomeSettled();
+          }, 20000);
         } else {
           // No tutorial this session — the reward flow gates itself, so it is
           // safe to always ask. LAUNCH30 chains after it (both self-gate on
           // the server; showing them at once would stack two full-screen
           // popups over a user who is eligible for both).
           setTimeout(() => {
-            this._maybeStartRewardFlow().then(() => this._maybeShowPromoLaunch30("home"));
+            this._afterHomeSettled();
           }, 2000);
         }
         return;
 
       case "desk-tutorial":
+        // The tutorial exists and owns the hand-off from here.
+        clearTimeout(this._homeSettledFallback);
+        this._homeSettledFallback = null;
         this._chainRewardFlowAfterTutorial(child);
         return;
     }
@@ -1517,14 +1621,95 @@ class desk_module extends LetcBox {
    * it to tear down. When there is no tutorial (already seen, or not
    * triggered) this starts the flow straight away.
    */
+  /**
+   * Everything that waits until Home has finished settling.
+   *
+   * Onboarding and the tutorial both end by running this chain, and so does a
+   * plain login where neither happens — it was written out three times, which
+   * is why the guest-join prompt is appended HERE rather than at each site.
+   *
+   * Order matters and is the existing one: reward flow, then LAUNCH30, then the
+   * invited-workspace prompt. Both of the first two are full-screen and
+   * self-gating; the prompt is a small dialog and goes last so it never stacks
+   * on top of them.
+   *
+   * @returns {Promise}
+   */
+  _afterHomeSettled() {
+    // Once per session. There are now four ways in — no-tutorial, after the
+    // tutorial, the tutorial-never-mounted fallback, and a re-fed module — and
+    // running the chain twice would ask the reward flow to mount twice and
+    // could show the invite dialog again.
+    if (this._homeSettledDone) return Promise.resolve();
+    this._homeSettledDone = true;
+    clearTimeout(this._homeSettledFallback);
+    return this._maybeStartRewardFlow()
+      .then(() => this._maybeShowPromoLaunch30("home"))
+      .then(() => this._waitForHomePopups())
+      .then((clear) => (clear ? this._maybeOfferInvitedWorkspace() : undefined))
+      .catch((e) => this.warn && this.warn("[home] post-ready chain failed", e));
+  }
+
+  /**
+   * Resolve once the reward flow and the LAUNCH30 popup are off the screen.
+   *
+   * Neither of those methods waits for its own UI: _maybeStartRewardFlow ends
+   * on an un-awaited ensurePart("overlay").then(mount), and
+   * _maybeShowPromoLaunch30 ends on Wm.launch. Both promises therefore settle
+   * while their window is still opening, which is why the invited-workspace
+   * dialog was appearing on top of the reward flow instead of after it.
+   *
+   * So the screen is polled rather than the promises trusted. The first pass is
+   * held back past a settle window, because checking immediately would find
+   * nothing mounted YET and fire underneath the flow that is about to appear —
+   * the same mistake in a different disguise.
+   *
+   * @returns {Promise<boolean>} false if something was still up at the ceiling,
+   *   in which case the caller skips: the intent stays in storage and is
+   *   offered on the next login rather than being stacked on a live overlay.
+   */
+  _waitForHomePopups() {
+    const SETTLE = 2000;
+    const STEP = 250;
+    const LIMIT = 10 * 60 * 1000;
+    const busy = () => {
+      if (this._rewardFlowInFlight || this._promoLaunch30InFlight) return true;
+      if (this._rewardFlow && !(this._rewardFlow.isDestroyed && this._rewardFlow.isDestroyed())) {
+        return true;
+      }
+      try {
+        const promo =
+          (window.Wm && Wm.getItemsByKind && Wm.getItemsByKind("promo_launch30")) || [];
+        if (promo.some((w) => w && !(w.isDestroyed && w.isDestroyed()))) return true;
+      } catch (e) {
+        // Wm not answering — treat as clear rather than waiting forever.
+      }
+      return false;
+    };
+    return new Promise((resolve) => {
+      let waited = 0;
+      const tick = () => {
+        if (this.isDestroyed && this.isDestroyed()) return resolve(false);
+        waited += STEP;
+        if (waited >= SETTLE && !busy()) return resolve(true);
+        if (waited >= LIMIT) {
+          this.warn && this.warn("[home] popups still up; deferring the invite prompt");
+          return resolve(false);
+        }
+        setTimeout(tick, STEP);
+      };
+      setTimeout(tick, STEP);
+    });
+  }
+
   _chainRewardFlowAfterTutorial(tutorial) {
     if (tutorial && _.isFunction(tutorial.once)) {
       tutorial.once(_e.destroy, () => {
-        this._maybeStartRewardFlow().then(() => this._maybeShowPromoLaunch30("home"));
+        this._afterHomeSettled();
       });
       return;
     }
-    this._maybeStartRewardFlow().then(() => this._maybeShowPromoLaunch30("home"));
+    this._afterHomeSettled();
   }
 
   /**
@@ -2161,6 +2346,31 @@ class desk_module extends LetcBox {
       this._maybeDismissMobileDrawer(service);
     }
     switch (service) {
+      // "Open Workspace" on the post-sign-in guest-join dialog. Opens the hub
+      // exactly as clicking the "<name> invited you to <workspace>" activity
+      // row does — panel/activity/widget/item/index.js, case hub_invite — by
+      // handing Wm.route() the same deep link, rather than reaching for
+      // loadWorkspace directly and re-deriving what that route already does.
+      //
+      // The hub comes off the field set when the dialog was armed, NOT off the
+      // button's dataset: toolkit's button() does not pass attrOpt, so an
+      // action's `dataset` never reaches the element (see
+      // wm/push.js acknowledgeWorkspaceAccessRevoked, which documents the same
+      // trap and reads the model to work around it). One dialog is armed at a
+      // time, so a field is unambiguous and cannot go missing.
+      case "guest-join-open-workspace": {
+        const hub_id = this._invitedHubId;
+        this._invitedHubId = null;
+        for (let modal of (this.getItemsByKind && this.getItemsByKind("window_info")) || []) {
+          if (modal && modal.mget && modal.mget("guest_join") && modal.goodbye) modal.goodbye();
+        }
+        if (hub_id) {
+          location.hash =
+            `#/desk/wm/open/?hub_id=${hub_id}&nid=0&filetype=folder&pid=0&ts=${Date.now()}`;
+        }
+        return;
+      }
+
       case "focus-folder-tab": {
         const cid = cmd.mget && cmd.mget("wincid");
         const entry = cid && this._openFolders.get(cid);
