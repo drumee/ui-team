@@ -358,6 +358,66 @@ class desk_module extends LetcBox {
     // is picked up by get_env; then open Admin Console (+ Invite via
     // apps-main's own sessionStorage flag).
     this._maybeOpenPromoAdminAfterClaim();
+    // Guest join hand-off: offer to open the workspace the user was invited to.
+    this._maybeOfferInvitedWorkspace();
+  }
+
+  /**
+   * After a guest signs in from a shared-workspace landing page, offer to open
+   * the workspace they were invited to.
+   *
+   * The signin plugin writes drumee_guest_join before it leaves for the form
+   * (see signin_guest._armJoinIntent); this reads it once, here, because Home
+   * is the first point where Wm exists and the desk has settled.
+   *
+   * Consumed unconditionally — read and removed in the same breath, whether or
+   * not the dialog ends up shown — so a stale key can never re-prompt on the
+   * next load. No key means a normal sign-in, and nothing happens.
+   *
+   * Mirrors _maybeOpenPromoAdminAfterClaim above, including standing down
+   * _restoreInFlight so desk-state restore does not race the dialog.
+   */
+  _maybeOfferInvitedWorkspace() {
+    let intent = null;
+    try {
+      const raw = sessionStorage.getItem("drumee_guest_join");
+      if (!raw) return;
+      sessionStorage.removeItem("drumee_guest_join");
+      intent = JSON.parse(raw);
+    } catch (e) {
+      return;
+    }
+    if (!intent || !intent.hub_id) return;
+    this._restoreInFlight = false;
+    const workspace = (intent.name || "").trim();
+    const message = workspace
+      ? (LOCALE.GUEST_JOIN_OPEN_WORKSPACE_MSG || "You can now open the workspace you were invited to: %s").replace("%s", workspace)
+      : (LOCALE.GUEST_JOIN_OPEN_WORKSPACE_MSG_PLAIN || "You can now open the workspace you were invited to.");
+    setTimeout(() => {
+      if (this.isDestroyed && this.isDestroyed()) return;
+      if (!window.Wm || !Wm.info) return;
+      this._invitedHubId = intent.hub_id;
+      Wm.info({
+        variant: "notice",
+        message,
+        // Tags this window_info so the Open handler closes THIS dialog and not
+        // some other notice that happens to be up.
+        guest_join: 1,
+        actions: [
+          {
+            label: LOCALE.OPEN_WORKSPACE || "Open Workspace",
+            priority: "primary",
+            service: "guest-join-open-workspace",
+            uiHandler: this,
+          },
+          {
+            label: LOCALE.CLOSE || "Close",
+            priority: "secondary",
+            service: _e.close,
+          },
+        ],
+      });
+    }, 400);
   }
 
   /**
@@ -2161,6 +2221,31 @@ class desk_module extends LetcBox {
       this._maybeDismissMobileDrawer(service);
     }
     switch (service) {
+      // "Open Workspace" on the post-sign-in guest-join dialog. Opens the hub
+      // exactly as clicking the "<name> invited you to <workspace>" activity
+      // row does — panel/activity/widget/item/index.js, case hub_invite — by
+      // handing Wm.route() the same deep link, rather than reaching for
+      // loadWorkspace directly and re-deriving what that route already does.
+      //
+      // The hub comes off the field set when the dialog was armed, NOT off the
+      // button's dataset: toolkit's button() does not pass attrOpt, so an
+      // action's `dataset` never reaches the element (see
+      // wm/push.js acknowledgeWorkspaceAccessRevoked, which documents the same
+      // trap and reads the model to work around it). One dialog is armed at a
+      // time, so a field is unambiguous and cannot go missing.
+      case "guest-join-open-workspace": {
+        const hub_id = this._invitedHubId;
+        this._invitedHubId = null;
+        for (let modal of (this.getItemsByKind && this.getItemsByKind("window_info")) || []) {
+          if (modal && modal.mget && modal.mget("guest_join") && modal.goodbye) modal.goodbye();
+        }
+        if (hub_id) {
+          location.hash =
+            `#/desk/wm/open/?hub_id=${hub_id}&nid=0&filetype=folder&pid=0&ts=${Date.now()}`;
+        }
+        return;
+      }
+
       case "focus-folder-tab": {
         const cid = cmd.mget && cmd.mget("wincid");
         const entry = cid && this._openFolders.get(cid);
