@@ -1620,8 +1620,61 @@ class desk_module extends LetcBox {
   _afterHomeSettled() {
     return this._maybeStartRewardFlow()
       .then(() => this._maybeShowPromoLaunch30("home"))
-      .then(() => this._maybeOfferInvitedWorkspace())
+      .then(() => this._waitForHomePopups())
+      .then((clear) => (clear ? this._maybeOfferInvitedWorkspace() : undefined))
       .catch((e) => this.warn && this.warn("[home] post-ready chain failed", e));
+  }
+
+  /**
+   * Resolve once the reward flow and the LAUNCH30 popup are off the screen.
+   *
+   * Neither of those methods waits for its own UI: _maybeStartRewardFlow ends
+   * on an un-awaited ensurePart("overlay").then(mount), and
+   * _maybeShowPromoLaunch30 ends on Wm.launch. Both promises therefore settle
+   * while their window is still opening, which is why the invited-workspace
+   * dialog was appearing on top of the reward flow instead of after it.
+   *
+   * So the screen is polled rather than the promises trusted. The first pass is
+   * held back past a settle window, because checking immediately would find
+   * nothing mounted YET and fire underneath the flow that is about to appear —
+   * the same mistake in a different disguise.
+   *
+   * @returns {Promise<boolean>} false if something was still up at the ceiling,
+   *   in which case the caller skips: the intent stays in storage and is
+   *   offered on the next login rather than being stacked on a live overlay.
+   */
+  _waitForHomePopups() {
+    const SETTLE = 2000;
+    const STEP = 250;
+    const LIMIT = 10 * 60 * 1000;
+    const busy = () => {
+      if (this._rewardFlowInFlight || this._promoLaunch30InFlight) return true;
+      if (this._rewardFlow && !(this._rewardFlow.isDestroyed && this._rewardFlow.isDestroyed())) {
+        return true;
+      }
+      try {
+        const promo =
+          (window.Wm && Wm.getItemsByKind && Wm.getItemsByKind("promo_launch30")) || [];
+        if (promo.some((w) => w && !(w.isDestroyed && w.isDestroyed()))) return true;
+      } catch (e) {
+        // Wm not answering — treat as clear rather than waiting forever.
+      }
+      return false;
+    };
+    return new Promise((resolve) => {
+      let waited = 0;
+      const tick = () => {
+        if (this.isDestroyed && this.isDestroyed()) return resolve(false);
+        waited += STEP;
+        if (waited >= SETTLE && !busy()) return resolve(true);
+        if (waited >= LIMIT) {
+          this.warn && this.warn("[home] popups still up; deferring the invite prompt");
+          return resolve(false);
+        }
+        setTimeout(tick, STEP);
+      };
+      setTimeout(tick, STEP);
+    });
   }
 
   _chainRewardFlowAfterTutorial(tutorial) {
