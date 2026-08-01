@@ -31,6 +31,8 @@ class __window_secure_share extends mfsInteract {
     this._customExpiryDays = 0;
     this._expiryOn         = false;
     this._notifyOnOpen     = true;   // notify the sender when a recipient opens (default ON)
+    this._createdToken     = null;   // token of the link generated in this panel session
+    this._notifySeq        = 0;      // guards out-of-order notify_on_open responses
     // v2: Recipients mode is MULTI-select — download/chat/edit are independent
     // capabilities, not a hierarchy. can_view is the implicit baseline (empty set).
     this._capabilities     = new Set();
@@ -253,6 +255,51 @@ class __window_secure_share extends mfsInteract {
     // Scope to the notify row — there are two `__toggle` elements in the panel.
     const toggle = this.el.querySelector(`.${pfx}__notify-row .${pfx}__toggle`);
     if (toggle) toggle.dataset.on = this._notifyOnOpen ? 'yes' : '';
+    // The flip above stays local and instant, and still seeds the NEXT create.
+    // But this row sits BELOW the Get-link button, so once a link exists the
+    // preference belongs to THAT link and has to be persisted: notify_on_open
+    // used to be create-time only, so turning the toggle off after pressing
+    // Get link changed nothing and the sender kept being notified.
+    if (this._createdToken) this._persistNotifyOnOpen(this._createdToken);
+  }
+
+  /**
+   * Persist the notify-on-open preference for a link that already exists.
+   * Reverts the switch when the server did not store what we asked for, so the
+   * panel can never show "off" while the sender is still being notified — that
+   * mismatch is the whole bug. Fire-and-forget: the toggle already moved.
+   */
+  async _persistNotifyOnOpen(token) {
+    const intended = this._notifyOnOpen ? 1 : 0;
+    const seq      = ++this._notifySeq;
+    let stored;
+    try {
+      const res = await this.postService(SERVICE.secure_share.set_notify_on_open, {
+        token,
+        hub_id         : this.mget(_a.hub_id),
+        notify_on_open : intended,
+      });
+      // postService resolves undefined on a transport failure (it routes through
+      // onServerComplain rather than throwing), so treat anything that is not an
+      // explicit OK as "did not persist".
+      stored = res?.status === 'OK' ? Number(res.notify_on_open) : undefined;
+    } catch (e) {
+      // stored stays undefined → treated as "did not persist" below.
+      this.warn('[secure_share] set_notify_on_open failed:', e && e.message);
+    }
+    // A newer click superseded this one — its own response owns the switch.
+    if (seq !== this._notifySeq) return;
+    if (stored === intended) return;
+    // Show the truth: the server's value when it gave one, otherwise the state
+    // from before this click (we already flipped it above).
+    let truth;
+    if (stored === 1)      truth = true;
+    else if (stored === 0) truth = false;
+    else                   truth = !this._notifyOnOpen;
+    this._notifyOnOpen = truth;
+    const toggle = this.el.querySelector(`.${this.fig.family}__notify-row .${this.fig.family}__toggle`);
+    if (toggle) toggle.dataset.on = this._notifyOnOpen ? 'yes' : '';
+    Butler.say(LOCALE.SOMETHING_WENT_WRONG);
   }
 
   // Custom expiry via the range calendar. The picker reports the span between
@@ -626,6 +673,10 @@ class __window_secure_share extends mfsInteract {
 
     if (data && data.link) {
       this.mset({ link: data.link });
+      // Remember which link this panel just generated: the notify toggle below
+      // the Get-link button belongs to THAT link. Captured outside the
+      // _linkResult guard so it is set even if the result row is absent.
+      this._createdToken = data.id || data.token || null;
       if (this._linkResult) {
         const pfx   = this.fig.family;
         const token = data.id || data.token;
@@ -708,8 +759,10 @@ class __window_secure_share extends mfsInteract {
     });
     if (this._customExpiry) this._customExpiry.el.dataset.mode = _a.closed;
 
-    // Reset notify-on-open → ON (default)
+    // Reset notify-on-open → ON (default). Drop the tracked link too, so the
+    // reset toggle seeds the next create instead of writing to the old link.
     this._notifyOnOpen = true;
+    this._createdToken = null;
     const notifyToggle = this.el.querySelector(`.${pfx}__notify-row .${pfx}__toggle`);
     if (notifyToggle) notifyToggle.dataset.on = 'yes';
   }
@@ -732,6 +785,9 @@ class __window_secure_share extends mfsInteract {
     // Figma revoke → disable: the generated-link row collapses and "Get link"
     // reappears. Harmless when revoking from a share-list row (already closed).
     if (this._linkResult) this._linkResult.el.dataset.mode = _a.closed;
+    // Stop tracking a link that no longer exists, so the notify toggle goes back
+    // to seeding the next create rather than writing to a revoked token.
+    if (this._createdToken && this._createdToken === token) this._createdToken = null;
     this._loadShares();
     this._loadAccessEvents();
   }

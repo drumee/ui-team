@@ -160,6 +160,7 @@
     "list": "secure_share.list",
     "revoke": "secure_share.revoke",
     "delete": "secure_share.delete",
+    "set_notify_on_open": "secure_share.set_notify_on_open",
     "respond_to_access_request": "secure_share.respond_to_access_request"
   },
   "reward_hub": {
