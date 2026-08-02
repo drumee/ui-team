@@ -5,7 +5,7 @@
     &__main {
       background: var(--normal-bg-80);
       border-bottom: none;
-      border-radius: var(--corner-radius-5) var(--corner-radius-5) 0 0;
+      border-radius: var(--corner-radius-2) var(--corner-radius-2) 0 0;
       cursor: pointer;
       width: 100%;
       color: var(--normal-fg-10);
@@ -23,7 +23,7 @@
         align-items: center;
         padding: 0;
         @include drumee.typo(
-          $size: 20px,
+          $size: 16px,
           $line: 24px,
           $weight: 300,
           $color: var(--multimedia-default-text-title)
