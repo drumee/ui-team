@@ -2346,5 +2346,11 @@
   "GUEST_JOIN_OPEN_WORKSPACE_MSG_PLAIN": "您现在可以打开受邀加入的工作区。",
   "PREPARING_INVITED_WORKSPACE": "正在准备您的工作区…",
   "ROTATE": "旋转",
-  "MOVE_RESIZE": "移动和调整大小"
+  "MOVE_RESIZE": "移动和调整大小",
+  "TASK_REMOVED": "该任务已被删除，您无法再访问。",
+  "TASK_REMOVED_BY": "该任务已被 {0} 删除，您无法再访问。",
+  "TASK_BOARD_REMOVED": "该任务所在的看板已被删除，您无法再访问。",
+  "TASK_BOARD_REMOVED_BY": "该任务所在的看板已被 {0} 删除，您无法再访问。",
+  "TASK_BOARD_MOVED": "该任务所在的看板已被删除，任务已移至“{0}”。",
+  "TASK_BOARD_MOVED_BY": "该任务所在的看板已被 {0} 删除，任务已移至“{1}”。"
 }

@@ -2517,5 +2517,11 @@
   "GUEST_JOIN_OPEN_WORKSPACE_MSG_PLAIN": "You can now open the workspace you were invited to.",
   "PREPARING_INVITED_WORKSPACE": "Preparing your workspace…",
   "ROTATE": "Rotate",
-  "MOVE_RESIZE": "Move & Resize"
+  "MOVE_RESIZE": "Move & Resize",
+  "TASK_REMOVED": "You can no longer access this task item because it has been removed.",
+  "TASK_REMOVED_BY": "You can no longer access this task item because it has been removed by {0}.",
+  "TASK_BOARD_REMOVED": "You can no longer access this task item because its board has been removed.",
+  "TASK_BOARD_REMOVED_BY": "You can no longer access this task item because its board has been removed by {0}.",
+  "TASK_BOARD_MOVED": "The board this task item was on has been removed. The task has been moved to “{0}”.",
+  "TASK_BOARD_MOVED_BY": "The board this task item was on has been removed by {0}. The task has been moved to “{1}”."
 }

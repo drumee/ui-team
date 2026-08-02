@@ -2347,5 +2347,11 @@
   "GUEST_JOIN_OPEN_WORKSPACE_MSG_PLAIN": "Vous pouvez maintenant ouvrir l'espace de travail auquel vous avez été invité.",
   "PREPARING_INVITED_WORKSPACE": "Préparation de votre espace de travail…",
   "ROTATE": "Pivoter",
-  "MOVE_RESIZE": "Déplacer et redimensionner"
+  "MOVE_RESIZE": "Déplacer et redimensionner",
+  "TASK_REMOVED": "Vous ne pouvez plus accéder à cette tâche car elle a été supprimée.",
+  "TASK_REMOVED_BY": "Vous ne pouvez plus accéder à cette tâche car elle a été supprimée par {0}.",
+  "TASK_BOARD_REMOVED": "Vous ne pouvez plus accéder à cette tâche car son tableau a été supprimé.",
+  "TASK_BOARD_REMOVED_BY": "Vous ne pouvez plus accéder à cette tâche car son tableau a été supprimé par {0}.",
+  "TASK_BOARD_MOVED": "Le tableau de cette tâche a été supprimé. La tâche a été déplacée vers « {0} ».",
+  "TASK_BOARD_MOVED_BY": "Le tableau de cette tâche a été supprimé par {0}. La tâche a été déplacée vers « {1} »."
 }

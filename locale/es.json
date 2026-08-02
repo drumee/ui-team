@@ -2347,5 +2347,11 @@
   "GUEST_JOIN_OPEN_WORKSPACE_MSG_PLAIN": "Ya puedes abrir el espacio de trabajo al que te invitaron.",
   "PREPARING_INVITED_WORKSPACE": "Preparando tu espacio de trabajo…",
   "ROTATE": "Rotate",
-  "MOVE_RESIZE": "Move & Resize"
+  "MOVE_RESIZE": "Move & Resize",
+  "TASK_REMOVED": "Ya no puedes acceder a esta tarea porque ha sido eliminada.",
+  "TASK_REMOVED_BY": "Ya no puedes acceder a esta tarea porque {0} la ha eliminado.",
+  "TASK_BOARD_REMOVED": "Ya no puedes acceder a esta tarea porque su tablero ha sido eliminado.",
+  "TASK_BOARD_REMOVED_BY": "Ya no puedes acceder a esta tarea porque {0} ha eliminado su tablero.",
+  "TASK_BOARD_MOVED": "El tablero de esta tarea ha sido eliminado. La tarea se ha movido a «{0}».",
+  "TASK_BOARD_MOVED_BY": "{0} ha eliminado el tablero de esta tarea. La tarea se ha movido a «{1}»."
 }
