@@ -432,7 +432,6 @@ class desk_module extends LetcBox {
         return setTimeout(show, 200);
       }
       this._invitedHubId = intent.hub_id;
-      this._invitedHubName = workspace;
       Wm.info({
         variant: "notice",
         message,
@@ -2359,15 +2358,21 @@ class desk_module extends LetcBox {
     }
     switch (service) {
       // "Open Workspace" on the post-sign-in invited-workspace dialog. Opens the
-      // headless workspace pane, exactly as clicking the workspace in the sidebar
-      // does (workspace-list -> Wm.loadWorkspace), so the invitee lands INSIDE the
-      // workspace with the desk grid showing its contents.
+      // hub exactly as clicking the "<name> invited you to <workspace>" activity
+      // row does — panel/activity/widget/item/index.js, case hub_invite — by
+      // handing Wm.route() the same deep link, rather than reaching for
+      // loadWorkspace directly and re-deriving what that route already does.
       //
-      // Deliberately not the #/desk/wm/open/ deep link this used to set, which is
-      // what the "<name> invited you to <workspace>" activity row does: that route
-      // launches a floating folder window on the hub root instead of taking over
-      // the grid. For someone arriving from an invite for the first time, being put
-      // in the workspace beats being handed a popup of it.
+      // Do NOT "simplify" this to Wm.loadWorkspace({hub_id}). That was tried and
+      // reverted: loadWorkspace mounts the workspace as a HEADLESS pane, and a
+      // headless folder topbar deliberately drops the zoom and minimize chrome
+      // (folder/skeleton/topbar.js — `headless ? "" : zoomMenu(ui)`), so the
+      // window opened from this dialog lost its zoom control. This route launches
+      // a normal popup window_folder, which keeps the full chrome.
+      //
+      // nid=0 is required, not decorative: it is the server's "this hub's root"
+      // value, and openFileLocation would otherwise fetch media.attributes with an
+      // undefined nid — see Wm._rootNid for what that costs.
       //
       // The hub comes off the field set when the dialog was armed, NOT off the
       // button's dataset: toolkit's button() does not pass attrOpt, so an
@@ -2377,17 +2382,13 @@ class desk_module extends LetcBox {
       // time, so a field is unambiguous and cannot go missing.
       case "guest-join-open-workspace": {
         const hub_id = this._invitedHubId;
-        const hub_name = this._invitedHubName;
         this._invitedHubId = null;
-        this._invitedHubName = null;
         for (let modal of (this.getItemsByKind && this.getItemsByKind("window_info")) || []) {
           if (modal && modal.mget && modal.mget("guest_join") && modal.goodbye) modal.goodbye();
         }
         if (hub_id) {
-          // filename seeds the pane's title and root crumb synchronously, so it
-          // opens already named instead of waiting on get_path (loadWorkspace
-          // reads filename / name / hub_name / workspace_name).
-          Wm.loadWorkspace(hub_name ? { hub_id, filename: hub_name } : { hub_id });
+          location.hash =
+            `#/desk/wm/open/?hub_id=${hub_id}&nid=0&filetype=folder&pid=0&ts=${Date.now()}`;
         }
         return;
       }

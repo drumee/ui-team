@@ -3,8 +3,8 @@
  *
  * Armed by the welcome module when a URL names a workspace (`?hub_id=…&name=…` —
  * the workspace-invite email's CTA is exactly that link), consumed by the desk once
- * Home has settled, which asks "Open Workspace / Cancel" and, on confirm, calls
- * Wm.loadWorkspace(). See
+ * Home has settled, which asks "Open Workspace / Cancel" and, on confirm, opens the
+ * hub through the #/desk/wm/open/ deep link. See
  * docs/superpowers/specs/2026-08-02-invite-cta-skip-guest-landing-design.md.
  *
  * The desk owns the consumption, NOT desk/wm's boot path, so the prompt inherits
