@@ -1963,6 +1963,7 @@
   "SECURE_SHARE_PERMISSION_LEVEL": "Уровень доступа",
   "SECURE_SHARE_PUBLIC": "Публичный",
   "SECURE_SHARE_RECIPIENTS": "получателей",
+  "SECURE_SHARE_ANY_EMAIL": "Anyone with an email",
   "SECURE_SHARE_REQUIRE_EMAIL": "Требовать e-mail для просмотра",
   "SECURE_SHARE_REQUIRE_PASSWORD": "Добавить защиту паролем",
   "SECURE_SHARE_SHARED_BY_PREFIX": "Поделился",

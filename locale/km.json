@@ -1963,6 +1963,7 @@
   "SECURE_SHARE_PERMISSION_LEVEL": "Permission level",
   "SECURE_SHARE_PUBLIC": "Public",
   "SECURE_SHARE_RECIPIENTS": "recipients",
+  "SECURE_SHARE_ANY_EMAIL": "Anyone with an email",
   "SECURE_SHARE_REQUIRE_EMAIL": "Require email to view",
   "SECURE_SHARE_REQUIRE_PASSWORD": "Add password protection",
   "SECURE_SHARE_SHARED_BY_PREFIX": "Share by",

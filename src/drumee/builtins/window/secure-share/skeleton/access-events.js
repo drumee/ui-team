@@ -16,7 +16,19 @@
 
 // Who a link admits, from the v2 allowed_emails array; legacy rows fall back to
 // recipient_email. A "@domain" entry admits anyone at that domain.
-const __linkLabel = function(row) {
+//
+// A link that requires an email WITHOUT an allow-list ("require email to view",
+// any address) has an empty allowed_emails — exactly like a genuinely public
+// link — so it used to fall through and read "Public link" even after someone
+// had identified themselves. `opens` carries the visits, whose recipient_email
+// is the address the viewer actually typed, so such a link is labelled with its
+// real audience instead.
+//
+// The openers are used ONLY when the link requires an email. On a public link a
+// signed-in viewer is also recorded with their account address (dmz.js falls
+// back to it), and showing that would wrongly present an open link as belonging
+// to one person.
+const __linkLabel = function(row, opens) {
   let emails = null;
   try {
     emails = row.allowed_emails
@@ -35,6 +47,18 @@ const __linkLabel = function(row) {
     return `${pretty[0]} +${pretty.length - 1}`;
   }
   if (row.recipient_email) return row.recipient_email;
+  if (row.require_email) {
+    // Deduplicate: the same person re-opening produces several visits.
+    const seen = [];
+    (Array.isArray(opens) ? opens : []).forEach((o) => {
+      const e = String((o && o.recipient_email) || '').trim();
+      if (e && seen.indexOf(e) === -1) seen.push(e);
+    });
+    if (seen.length === 1) return seen[0];
+    if (seen.length > 1)   return `${seen[0]} +${seen.length - 1}`;
+    // Nobody has identified themselves yet — say what the link admits.
+    return LOCALE.SECURE_SHARE_ANY_EMAIL;
+  }
   return LOCALE.SECURE_SHARE_PUBLIC_LINK;
 };
 
@@ -86,7 +110,7 @@ const __skl_secure_share_access_events = function(_ui_, links, eventsByToken) {
           className : `${pfx}__events-cell col-email`,
           kids      : [
             Skeletons.Image.Svg({ className: `${pfx}__events-link-icon`, ico: 'apps-link-simple' }),
-            Skeletons.Note({ className: `${pfx}__events-email`, content: __linkLabel(row) })
+            Skeletons.Note({ className: `${pfx}__events-email`, content: __linkLabel(row, opens) })
           ]
         }),
         Skeletons.Note({ className: `${pfx}__events-cell col-time`,     content: timeStr }),
