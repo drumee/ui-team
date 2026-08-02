@@ -402,6 +402,9 @@ class __window_manager extends push {
    * Accepts any of actual_home_id / home_id / nid / id as the root directory
    * id; falls back to a media.attributes fetch when none is set.
    * No-ops when the same hub_id+nid is already active.
+   *
+   * A caller that knows only the hub (a deep link, a message hit) must reach the
+   * fetch below with nid ZERO, not with nid unset — see _rootNid.
    */
   loadWorkspace(workspace) {
     const data = workspace.model ? workspace.model.toJSON() : workspace || {};
@@ -486,10 +489,15 @@ class __window_manager extends push {
       // loadWorkspaceNode uses. Without this, switching workspace can leave the
       // topbar breadcrumb stale (e.g. stuck on a Settings/Contacts section).
       this.updateBreadcrumb({ ...data, service: "change-workspace" }, this);
-      this.fetchService(SERVICE.media.get_path, { nid, hub_id }).then(
-        (data) => {
-          if (_.isEmpty(data)) return;
-          cur.refreshBreadcrumbsUI(data);
+      // data.nid (what media.attributes RESOLVED), not the outer nid: a caller that
+      // knew only the hub left that undefined, and get_path would be asked for the
+      // path of "undefined" — the same defect as the fetch above, and it left the
+      // breadcrumb stuck on the previous screen. openWorkspaceFolder already does
+      // it this way (attrs.nid || nid).
+      this.fetchService(SERVICE.media.get_path, { nid: data.nid || nid, hub_id }).then(
+        (path) => {
+          if (_.isEmpty(path)) return;
+          cur.refreshBreadcrumbsUI(path);
         },
       );
     };
@@ -507,8 +515,10 @@ class __window_manager extends push {
       home_id: nid,
     });
 
-    // Data provided by the trigger may not be reliable enough. Get fresh one
-    this.fetchService(SERVICE.media.attributes, { hub_id, nid })
+    // Data provided by the trigger may not be reliable enough. Get fresh one.
+    // _rootNid, not the raw nid: a caller that knows only the hub leaves nid unset,
+    // and fetchService would put the literal string "undefined" on the query.
+    this.fetchService(SERVICE.media.attributes, { hub_id, nid: this._rootNid(nid) })
       .then((attrs) => {
         const resolved =
           attrs && (attrs.actual_home_id || attrs.home_id || attrs.nid);
@@ -532,6 +542,30 @@ class __window_manager extends push {
         this.warn("loadWorkspace: get_attributes failed", e);
         this._releaseWorkspaceContext(hub_id, nid);
       });
+  }
+
+  /**
+   * The nid to ASK media.attributes for when the caller may not know one.
+   *
+   * Zero is not a cosmetic default, it is the server's own "give me this hub's
+   * root" value: the ACL maps nid ''/0/-1/-2/-3 onto the hub's home_id before
+   * resolving the node (server-core lib/acl.js check_env), which is also why every
+   * workspace deep link in this app is written `nid=0` (desk/index.js, activity
+   * rows).
+   *
+   * Leaving nid unset is NOT equivalent, and that is the bug this exists to stop:
+   * fetchService builds a GET query with `encodeURI(v)` per key, so an undefined
+   * nid arrives as the four-character string "undefined". That matches no root
+   * shortcut and no node — mfs_access_node returns zero rows — so the request
+   * resolves nothing and the workspace silently never opens ("loadWorkspace:
+   * cannot resolve workspace root"). A caller with only a hub_id, such as the
+   * workspace-invite deep link or a message hit, hits exactly that.
+   *
+   * @param {String|Number} [nid]
+   * @returns {String|Number} nid, or 0 when there is none to send
+   */
+  _rootNid(nid) {
+    return nid == null || nid === "" ? 0 : nid;
   }
 
   // Clear _curWorkspace only if it still points at the given workspace —
