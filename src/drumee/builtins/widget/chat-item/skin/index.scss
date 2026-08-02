@@ -980,6 +980,20 @@
   user-select: none;
 }
 
+// Pending / unavailable card: rendered with data-ft_available="0" and only
+// promoted to "1" once file_thread_info authoritatively confirms the thread
+// exists and the file is still readable (chat-item _hydrateFileThreadCard); a
+// revocation flips it back. Cosmetic only — _openFileThread enforces the flag,
+// because pointer-events cannot stop a keyboard-driven or synthetic click.
+.widget-chatItem__file-thread-card[data-ft_available="0"] {
+  cursor: default;
+  opacity: 0.55;
+
+  .widget-chatItem__ftc-open {
+    visibility: hidden;
+  }
+}
+
 .widget-chatItem__ftc-badge {
   flex: 0 0 36px;
   width: 36px;

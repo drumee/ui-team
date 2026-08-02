@@ -2,6 +2,9 @@ require("./skin");
 const { copyToClipboard } = require("@drumee/ui-essentials");
 const { TweenLite, gsap } = require("@drumee/ui-core/vendor");
 const push = require("./push");
+// "Open this workspace once signed in" — armed by the welcome module from
+// ?hub_id= (the workspace-invite CTA), consumed on boot below.
+const hubDeepLink = require("libs/hub-deep-link");
 // Same channel the websocket dispatcher triggers on Wm — windows and the
 // sidebar workspace list subscribe to it (window/utils.js, workspace-list).
 const WS_EVENT = "ws:event";
@@ -399,6 +402,9 @@ class __window_manager extends push {
    * Accepts any of actual_home_id / home_id / nid / id as the root directory
    * id; falls back to a media.attributes fetch when none is set.
    * No-ops when the same hub_id+nid is already active.
+   *
+   * A caller that knows only the hub (a deep link, a message hit) must reach the
+   * fetch below with nid ZERO, not with nid unset — see _rootNid.
    */
   loadWorkspace(workspace) {
     const data = workspace.model ? workspace.model.toJSON() : workspace || {};
@@ -483,10 +489,15 @@ class __window_manager extends push {
       // loadWorkspaceNode uses. Without this, switching workspace can leave the
       // topbar breadcrumb stale (e.g. stuck on a Settings/Contacts section).
       this.updateBreadcrumb({ ...data, service: "change-workspace" }, this);
-      this.fetchService(SERVICE.media.get_path, { nid, hub_id }).then(
-        (data) => {
-          if (_.isEmpty(data)) return;
-          cur.refreshBreadcrumbsUI(data);
+      // data.nid (what media.attributes RESOLVED), not the outer nid: a caller that
+      // knew only the hub left that undefined, and get_path would be asked for the
+      // path of "undefined" — the same defect as the fetch above, and it left the
+      // breadcrumb stuck on the previous screen. openWorkspaceFolder already does
+      // it this way (attrs.nid || nid).
+      this.fetchService(SERVICE.media.get_path, { nid: data.nid || nid, hub_id }).then(
+        (path) => {
+          if (_.isEmpty(path)) return;
+          cur.refreshBreadcrumbsUI(path);
         },
       );
     };
@@ -504,8 +515,10 @@ class __window_manager extends push {
       home_id: nid,
     });
 
-    // Data provided by the trigger may not be reliable enough. Get fresh one
-    this.fetchService(SERVICE.media.attributes, { hub_id, nid })
+    // Data provided by the trigger may not be reliable enough. Get fresh one.
+    // _rootNid, not the raw nid: a caller that knows only the hub leaves nid unset,
+    // and fetchService would put the literal string "undefined" on the query.
+    this.fetchService(SERVICE.media.attributes, { hub_id, nid: this._rootNid(nid) })
       .then((attrs) => {
         const resolved =
           attrs && (attrs.actual_home_id || attrs.home_id || attrs.nid);
@@ -529,6 +542,30 @@ class __window_manager extends push {
         this.warn("loadWorkspace: get_attributes failed", e);
         this._releaseWorkspaceContext(hub_id, nid);
       });
+  }
+
+  /**
+   * The nid to ASK media.attributes for when the caller may not know one.
+   *
+   * Zero is not a cosmetic default, it is the server's own "give me this hub's
+   * root" value: the ACL maps nid ''/0/-1/-2/-3 onto the hub's home_id before
+   * resolving the node (server-core lib/acl.js check_env), which is also why every
+   * workspace deep link in this app is written `nid=0` (desk/index.js, activity
+   * rows).
+   *
+   * Leaving nid unset is NOT equivalent, and that is the bug this exists to stop:
+   * fetchService builds a GET query with `encodeURI(v)` per key, so an undefined
+   * nid arrives as the four-character string "undefined". That matches no root
+   * shortcut and no node — mfs_access_node returns zero rows — so the request
+   * resolves nothing and the workspace silently never opens ("loadWorkspace:
+   * cannot resolve workspace root"). A caller with only a hub_id, such as the
+   * workspace-invite deep link or a message hit, hits exactly that.
+   *
+   * @param {String|Number} [nid]
+   * @returns {String|Number} nid, or 0 when there is none to send
+   */
+  _rootNid(nid) {
+    return nid == null || nid === "" ? 0 : nid;
   }
 
   // Clear _curWorkspace only if it still points at the given workspace —
@@ -1082,20 +1119,29 @@ class __window_manager extends push {
     const _ssReturn = sessionStorage.getItem('drumee_secure_share_return');
     if (_ssReturn) {
       sessionStorage.removeItem('drumee_secure_share_return');
-      sessionStorage.removeItem('drumee_hubDeepLink');
+      // clear(), not a single removeItem: the intent now lives on two shelves
+      // (libs/hub-deep-link) and a secure-share return must beat both.
+      hubDeepLink.clear();
       location.href = _ssReturn;
       return;
     }
     this.feed(require("./skeleton")(this));
     // Capture hub_id synchronously before any async ops so hash changes cannot lose it.
-    // Falls back to sessionStorage set by welcome module for the not-logged-in flow.
+    //
+    // ONLY the explicit hash form opens immediately: #/desk/wm/hub?hub_id=… is an
+    // in-app navigation the user just made (accept_invite lands here), so asking
+    // them to confirm would be asking twice. An intent ARMED by the welcome module
+    // is deliberately left alone for desk's _maybeOfferInvitedWorkspace to consume
+    // once Home has settled — it prompts "Open Workspace / Cancel" first, and it
+    // waits out the full-screen reward / LAUNCH30 popups that this boot path
+    // cannot see.
     const _path = Visitor.parseModule() || [];
     const _args = Visitor.parseModuleArgs() || {};
-    const _hubId = (_path[2] === _a.hub && _args.hub_id)
-      ? _args.hub_id
-      : sessionStorage.getItem('drumee_hubDeepLink');
+    const _hubId = (_path[2] === _a.hub && _args.hub_id) ? _args.hub_id : '';
     if (_hubId) {
-      sessionStorage.removeItem('drumee_hubDeepLink');
+      // Opening it now settles any armed intent for the same visit, so the prompt
+      // does not follow up about a workspace already on screen.
+      hubDeepLink.clear();
       this.ensurePart('headless-layer').then(() => {
         this.loadWorkspace({ hub_id: _hubId });
       });

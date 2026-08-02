@@ -96,6 +96,13 @@ class __widget_chat extends LetcBox {
     // folder/file no longer exists; cleared when the user navigates to a
     // different scope (setScopedFileNid/setScopedFolderNid).
     this._scopeFrozen = null;
+    // Proactive hard freeze (file-thread access revocation): set by the owning
+    // folder window BEFORE any popup, when the server announces the scoped file
+    // left the workspace. Unlike _scopeFrozen — which is reactive, set only
+    // after a post came back SCOPE_GONE — this one is silent and blocks every
+    // action path, not just sends. Keyed by scope so an unrelated scope stays
+    // usable; see _isScopeHardFrozen.
+    this._hardFrozenScopes = null;
     const area = this.mget(_a.area) || this.mget(_a.type);
     if (area === _a.personal || area === _a.privateRoom) {
       this.hubId = Visitor.id;
@@ -963,6 +970,12 @@ class __widget_chat extends LetcBox {
       args = {};
     }
     const service = args.service || cmd.get(_a.service) || cmd.get(_a.name);
+    // Proactive hard freeze: the scoped file is gone from the workspace, so
+    // every path that would write to (or upload into) its thread is refused
+    // here, where they all converge. Read-only interactions — scrolling,
+    // copying text, closing the reply box — stay available so the user can
+    // still read what is on screen until the window returns to General.
+    if (this.isScopeHardFrozen() && this._isBlockedWhileFrozen(service)) return;
     switch (service) {
       case "react":
         return this._sendReaction(args);
@@ -1778,6 +1791,85 @@ class __widget_chat extends LetcBox {
     return this.scopedFileNid || this.getScopedNid() || "";
   }
 
+  // ── Proactive hard freeze (file-thread access revocation) ───────────────
+  // Public, SILENT freeze/unfreeze used by the folder window the instant the
+  // server announces the scoped file was deleted or moved out of the hub. It
+  // must run synchronously, BEFORE the warning popup renders, so no keyboard,
+  // queued, attachment, or programmatic send can slip through the gap between
+  // the event and the user acknowledging it.
+  //
+  // Deliberately distinct from _freezeScope: that one is the reactive
+  // SCOPE_GONE path and shows CHAT_SCOPE_MOVED. Here the folder window owns
+  // the single user-facing message, so this shows nothing at all.
+  freezeFileScope(fileNid) {
+    const key = `${fileNid || ""}`;
+    if (!key) return;
+    if (!this._hardFrozenScopes) this._hardFrozenScopes = {};
+    this._hardFrozenScopes[key] = 1;
+    // Drop any queued sends for the dead scope: they can only come back
+    // SCOPE_GONE, and draining here keeps their optimistic bubbles from
+    // sitting in a thread that is about to be torn down.
+    if (_.isArray(this.queue)) {
+      this.queue = this.queue.filter((queued) => {
+        if (`${queued._scopeKey || ""}` !== key) return true;
+        this._removeOptimistic(queued.echoId);
+        return false;
+      });
+    }
+    // Same data-attribute the scope chip and SCOPE_GONE path already use — no
+    // second CSS mechanism (chat/skin/index.scss [data-scoped-hidden="1"]).
+    this.ensurePart("chat-footer")
+      .then((footer) => {
+        if (footer && footer.el) footer.el.dataset.scopedHidden = "1";
+      })
+      .catch(() => { });
+  }
+
+  unfreezeFileScope(fileNid) {
+    const key = `${fileNid || ""}`;
+    if (!key || !this._hardFrozenScopes) return;
+    delete this._hardFrozenScopes[key];
+    // Only restore the composer when the CURRENT scope is the one released —
+    // the widget may already have moved on to another (still frozen) thread.
+    if (this._currentScopeKey() !== key) return;
+    if (this._scopeFrozen === key) return; // reactive freeze still owns it
+    this.ensurePart("chat-footer")
+      .then((footer) => {
+        if (footer && footer.el) footer.el.dataset.scopedHidden = "0";
+      })
+      .catch(() => { });
+  }
+
+  // True when the scope the widget is currently showing has been hard-frozen.
+  // Every action path (send, reply, react, attachment, open-file) consults this.
+  isScopeHardFrozen() {
+    const key = this._currentScopeKey();
+    return !!(key && this._hardFrozenScopes && this._hardFrozenScopes[key]);
+  }
+
+  // onUiEvent services refused while the current scope is hard-frozen: anything
+  // that writes to the thread, uploads into it, or stages content for a send.
+  // Built lazily — _e.* are runtime globals, not available at module load.
+  _isBlockedWhileFrozen(service) {
+    if (!service) return false;
+    if (!this._frozenBlockedServices) {
+      this._frozenBlockedServices = {
+        react: 1,
+        [_e.upload]: 1,
+        [_e.send]: 1,
+        [_e.commit]: 1,
+        [_e.reply]: 1,
+        "attach-from-desk": 1,
+        "pick-desk-file": 1,
+        "remove-upload": 1,
+        "mention-select": 1,
+        "delete-for-me": 1,
+        "delete-for-all": 1,
+      };
+    }
+    return !!this._frozenBlockedServices[service];
+  }
+
   // File-thread mode = a per-file chat thread is open (scopedFileNid set).
   // Distinct from folder scope (scopedNid): folder scope filters the hub chat to
   // one folder; file-thread mode is a separate chat thread backed by the
@@ -1906,6 +1998,11 @@ class __widget_chat extends LetcBox {
    * @returns
    */
   sendMessage(args = {}) {
+    // Proactive hard freeze: the server already told us this file left the
+    // workspace. Refuse before anything else — this covers Enter, the send
+    // button, and programmatic sends alike, and stays silent because the
+    // folder window owns the single revocation notice.
+    if (this.isScopeHardFrozen()) return;
     // SCOPE_GONE freeze (plan chat-scope-cross-hub-move phase 3): once a post
     // to this exact scope has reported the folder/file no longer exists, stop
     // accepting new sends into it silently — no repeat popup, no queue growth.
@@ -2130,6 +2227,20 @@ class __widget_chat extends LetcBox {
   postMessageAPI() {
     let api = this.queue.shift();
     if (!api) return;
+    // Proactive hard freeze: a send queued (or re-queued for retry) before the
+    // revocation event landed must not reach the server for a scope we already
+    // know is gone. Drop it silently — freezeFileScope drained the queue, but a
+    // send already shifted out, or unshifted back by the retry path, can still
+    // arrive here.
+    const queuedScope = `${api._scopeKey || ""}`;
+    if (
+      queuedScope &&
+      this._hardFrozenScopes &&
+      this._hardFrozenScopes[queuedScope]
+    ) {
+      this._removeOptimistic(api.echoId);
+      return;
+    }
     let tmp = {
       kind: this.itemKind(),
       ...api,

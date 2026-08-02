@@ -69,6 +69,16 @@ class ___widget_chatItem extends LetcBox {
     const ftId = md._file_thread_id || this.mget("file_thread_id");
     const fileNid = md._file_nid || this.mget("file_nid");
     if (!ftId && !fileNid) return;
+    // The server already resolved this card as unreachable (file trashed, moved
+    // out of the hub, or not readable by this viewer) and kept it in the
+    // conversation as a history marker. Render it inert from the stored
+    // snapshot: asking file_thread_info again can only fail the same way, and
+    // its failure would leave the card nameless.
+    if (Number(md._file_thread_unavailable) === 1) {
+      return this._applyUnavailableFileThreadCard(
+        md._file_thread_last_filename,
+      );
+    }
     // The chat-item model has no hub_id of its own — without it the request
     // goes out as hub_id=undefined and the server answers 403. Resolve it
     // robustly: uiHandler may be a single widget OR an array ([ui]); the
@@ -95,7 +105,9 @@ class ___widget_chatItem extends LetcBox {
         file_nid: fileNid || "",
       });
     } catch (e) {
-      return; /* best-effort hydration */
+      // Best-effort hydration — but the card stays disabled. A failed fetch is
+      // NOT proof of access, and NOT_FOUND / NO_PERMISSION arrive this way too.
+      return;
     }
     if (!info) return;
     // The card body renders asynchronously (feed → message-content), so the
@@ -110,8 +122,23 @@ class ___widget_chatItem extends LetcBox {
       // Filename is the card's primary text (Figma 2216-170414) — no leading
       // middot (that belonged to the old "X started a file chat ·").
       nameEl.textContent = info.user_filename || info.filename || "";
-      if (info.media_status && info.media_status !== "active") {
+      const unavailable =
+        Number(info.exists_thread) !== 1 ||
+        (info.media_status && info.media_status !== "active");
+      if (unavailable) {
         this.$el.addClass("ftc-unavailable");
+        this._setFileThreadCardAvailable(0);
+      } else {
+        // Authoritative confirmation: the thread exists and the file is still
+        // readable by this viewer, so the card becomes clickable. A later
+        // revocation flips this back to "0" (window/folder/file-thread-access).
+        //
+        // Drop the unavailable styling too: this method re-runs after a
+        // restore, and leaving the class behind kept the filename struck
+        // through on a card that was working again — it only cleared on a full
+        // reload, because nothing else ever removed it.
+        this.$el.removeClass("ftc-unavailable");
+        this._setFileThreadCardAvailable(1);
       }
       // Swap the paperclip badge for the file's vignette thumbnail (image/
       // vector files only; others keep the icon).
@@ -129,6 +156,39 @@ class ___widget_chatItem extends LetcBox {
       }
     };
     apply(20);
+  }
+
+  // Paint a card the server flagged unavailable: the file's last known name (or
+  // a generic label when the server had none to give — e.g. a file that is
+  // still live but unreadable to this viewer, which leaves no trash row), and
+  // the greyed-out, non-clickable state. Shares the same retry-until-mounted
+  // approach as the normal hydrate: the card body feeds asynchronously.
+  _applyUnavailableFileThreadCard(lastFilename) {
+    const label = `${lastFilename || ""}`.trim();
+    const apply = (tries) => {
+      const nameEl = this.el && this.el.querySelector(`#ftc-name-${this._id}`);
+      if (!nameEl) {
+        if (tries > 0) setTimeout(() => apply(tries - 1), 60);
+        return;
+      }
+      nameEl.textContent = label || LOCALE.FILE_NO_LONGER_AVAILABLE;
+      this.$el.addClass("ftc-unavailable");
+      this._setFileThreadCardAvailable(0);
+    };
+    apply(20);
+  }
+
+  // Flip the card's availability flag. The flag — not a CSS class — is what
+  // _openFileThread checks, so a disabled card cannot be opened by a click that
+  // slips past styling.
+  _setFileThreadCardAvailable(available) {
+    const card =
+      this.el &&
+      this.el.querySelector('[data-service="open-file-thread"]');
+    // dataset keeps the underscore as-is (only `-x` is camel-cased), so this is
+    // the same attribute the template rendered — same convention as the
+    // neighbouring data-file_nid reads.
+    if (card) card.dataset.ft_available = available ? "1" : "0";
   }
 
   /**
@@ -1108,6 +1168,12 @@ class ___widget_chatItem extends LetcBox {
    */
   _openFileThread(target) {
     if (!target || !target.dataset) return;
+    // The card is pending/disabled until file_thread_info authoritatively
+    // confirms the thread exists AND this viewer may still read the file, and
+    // it is flipped back off the moment access is revoked. Enforced here — in
+    // the capture-phase path every click funnels through — because CSS cannot
+    // stop a click, and a stale card would otherwise mount a dead thread.
+    if (target.dataset.ft_available !== "1") return;
     if (this._openingFileThread) return; // dedupe capture + bubble for one click
     const file_nid = target.dataset.file_nid;
     if (!file_nid) return;

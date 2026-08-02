@@ -52,8 +52,14 @@ module.exports = function (m) {
 
   // Badge starts as a paperclip; _hydrateFileThreadCard swaps in the file's
   // vignette thumbnail (background-image) for image/vector files.
+  // data-ft_available starts at "0": the card is NOT clickable until
+  // _hydrateFileThreadCard gets an authoritative file_thread_info confirming the
+  // thread exists and this viewer may still read the file. NOT_FOUND,
+  // NO_PERMISSION, a failed fetch, and a live revocation all leave it at "0".
+  // _openFileThread enforces the flag — this attribute is not a CSS-only hint.
   return `<div class="${fig}__file-thread-card"
         data-service="open-file-thread"
+        data-ft_available="0"
         data-file_nid="${fileNid}"
         data-file_thread_id="${ftId}">
     <div class="${fig}__ftc-badge" id="ftc-badge-${m.widgetId}">

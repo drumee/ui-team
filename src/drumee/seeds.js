@@ -314,6 +314,9 @@ module.exports = {
   settings_main: function () {
     return import("widget/settings/main");
   },
+  help_main: function () {
+    return import("widget/help/main");
+  },
   settings_delete_account: function () {
     return import("widget/settings/delete-account");
   },

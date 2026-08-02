@@ -251,11 +251,65 @@
     opacity: 0.75;
     @include drumee.typo($weight: 400, $size: 13px, $line: 18px, $color: var(--normal-fg));
   }
+
+  // ── Indeterminate loader ──────────────────────────────────────────────────
+  // A message-only notice that says "working on it" with no progress to report,
+  // used by the desk while it waits to offer an invited workspace
+  // (desk/index.js _showInvitedWorkspaceLoader). Indeterminate on purpose: the
+  // wait is "until Home settles", which has no measurable fraction — unlike
+  // __dl-progress above, which fakes one because a download has a size.
+  // Left-aligned, not centred: the notice variant forces
+  // `__container .note-reader { width: 100% }`, so the label fills the row and
+  // there is nothing for justify-content to distribute. Left also matches how the
+  // prompt that replaces this loader renders its own message.
+  &__loader {
+    width: 100%;
+    gap: 16px;
+    // Holds the ring on the text baseline's centre line.
+    align-items: center;
+  }
+
+  &__loader-spinner {
+    flex: 0 0 auto;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    // Three-quarter ring: the transparent quadrant is what reads as motion.
+    border: 2px solid var(--normal-bg-80, #e6e6ef);
+    border-top-color: var(--primary-50, #433cc5);
+    animation: window-info-loader-spin 0.7s linear infinite;
+  }
+
+  // Width and text-align come from the variant's `.note-reader` rule; this only
+  // has to match its type scale.
+  &__loader-label {
+    @include drumee.typo($weight: 500, $size: 14px, $line: 20px, $color: var(--normal-fg));
+  }
 }
 
 @keyframes dl-progress-ease {
   from { width: 0; }
   to   { width: 90%; }
+}
+
+@keyframes window-info-loader-spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+// The loader must never animate for someone who asked for stillness; the ring
+// still reads as a "busy" glyph without turning.
+@media (prefers-reduced-motion: reduce) {
+  .window-info__loader-spinner {
+    animation: none;
+  }
+}
+
+// While a full-screen flow (reward, LAUNCH30) is up, the loader steps aside
+// rather than unmounting — remounting would lose its place in the windows pool
+// and flicker each time the flow toggles. Kept in the DOM, taken off the screen.
+.window-info__ui[data-guest-join-loading="1"][data-busy="1"] {
+  display: none !important;
 }
 
 // ── "notice" variant ────────────────────────────────────────────────────────
