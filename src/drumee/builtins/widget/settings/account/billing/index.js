@@ -165,6 +165,11 @@ class settings_billing extends LetcBox {
     if (this.state && this.state.checkout && this.state.checkout.supersede) {
       return this._mayCheckout();
     }
+    // LAUNCH30 trial has no Stripe subscription. Checkout must stay open so
+    // the user can convert with an MKT outreach partner code (trial + % off).
+    if (this._isPromoTrial && !this._hasPaidSub) {
+      return this._mayCheckout();
+    }
     return this._mayCheckout() && !this._hasActiveSub;
   }
 
@@ -684,6 +689,9 @@ class settings_billing extends LetcBox {
       case `${this.fig.family}__checkout-org-ident-input`:
         this.__orgIdentInput = child;
         break;
+      case `${this.fig.family}__checkout-promo-code-input`:
+        this.__promoCodeInput = child;
+        break;
         // case `${this.fig.family}__checkout-storage-input`:
         //   this._setupInputChangeListener(child, "storage");
         //   this._restoreInputFocus(child, "storage");
@@ -1047,7 +1055,9 @@ class settings_billing extends LetcBox {
     }, 1200);
   }
 
-  _orgIdentError(status) {
+  // `data` is the whole checkout response, optional — only
+  // COUPON_PLAN_MISMATCH needs it (to name the plan the code is locked to).
+  _orgIdentError(status, data = {}) {
     // Inside an organisation these two stop meaning what they say and start
     // meaning "you are not this org's BILLING owner".
     //
@@ -1069,6 +1079,42 @@ class settings_billing extends LetcBox {
       case "IDENT_NOT_AVAILABLE": return LOCALE.ORG_IDENT_TAKEN;
       case "ALREADY_IN_OTHER_DOMAIN": return LOCALE.ORG_ALREADY_IN_DOMAIN;
       case "ORG_IDENT_REQUIRED": return LOCALE.ORG_IDENT_REQUIRED;
+      case "CODE_NOT_FOUND":
+      case "COUPON_INVALID":
+        return LOCALE.PROMO_CODE_INVALID || "This promo code is not valid.";
+      case "CODE_INACTIVE":
+        return LOCALE.PROMO_CODE_INACTIVE || "This promo code is no longer active.";
+      case "CODE_EXPIRED":
+        return LOCALE.PROMO_CODE_EXPIRED || "This promo code has expired.";
+      case "CODE_EXHAUSTED":
+        return LOCALE.PROMO_CODE_EXHAUSTED || "This promo code has reached its usage limit.";
+      case "EMAIL_ALREADY_USED":
+        return LOCALE.PROMO_CODE_EMAIL_USED
+          || "This email has already used a partner promo code.";
+      case "COUPON_WITH_ACTIVE_SUB":
+        return LOCALE.PROMO_CODE_ACTIVE_SUB
+          || "Promo codes apply to new paid subscriptions only.";
+      case "PROMO_WITH_DEFER":
+        return LOCALE.PROMO_CODE_WITH_DEFER
+          || "Promo codes cannot be combined with a deferred billing-cycle switch.";
+      case "COUPON_PLAN_UNSUPPORTED":
+        return LOCALE.PROMO_CODE_PLAN
+          || "This promo code applies to Team or Business plans only.";
+      // Code is targeted at ONE plan and this is not it. Naming that plan
+      // turns a dead end into an instruction — the user can switch to it.
+      case "COUPON_PLAN_MISMATCH": {
+        const scope = String(data && data.plan_scope || "").trim();
+        if (!scope) {
+          return LOCALE.PROMO_CODE_PLAN
+            || "This promo code does not apply to the selected plan.";
+        }
+        const named = scope.charAt(0).toUpperCase() + scope.slice(1);
+        return (LOCALE.PROMO_CODE_PLAN_ONLY
+          || "This promo code can only be used on the {0} plan.").format(named);
+      }
+      case "COUPON_STRIPE_FAILED":
+        return LOCALE.PROMO_CODE_FAILED
+          || "Could not apply this promo code. Please try again.";
       default: return LOCALE.SOMETHING_WENT_WRONG;
     }
   }
@@ -1174,6 +1220,16 @@ class settings_billing extends LetcBox {
       payload.ident = v.ident;
       payload.org_name = org_name;
     }
+    // Optional MKT outreach partner code (Iris/Theo…). Empty = no coupon.
+    const promo_code = String(
+      (this.__promoCodeInput && this.__promoCodeInput.getValue
+        && this.__promoCodeInput.getValue())
+      || (checkout.promoCode) || "",
+    ).trim();
+    if (promo_code) {
+      checkout.promoCode = promo_code;
+      payload.promo_code = promo_code;
+    }
     this.postService(SERVICE.payment.checkout, payload)
       .then((data) => {
         const { url, status } = data || {};
@@ -1210,7 +1266,7 @@ class settings_billing extends LetcBox {
           return;
         }
         if (status === "NOT_ORG_OWNER" && Wm && Wm.alert) Wm.alert(LOCALE.NOT_ORG_OWNER);
-        else if (status && status !== "OK" && Wm && Wm.alert) Wm.alert(this._orgIdentError(status));
+        else if (status && status !== "OK" && Wm && Wm.alert) Wm.alert(this._orgIdentError(status, data));
       })
       .catch((e) => {
         this.warn("Got backend error [_proceedToCheckout]:", e);

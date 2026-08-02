@@ -1757,6 +1757,12 @@
 // fitting side by side, stack them. The summary also drops its sticky pinning
 // — once it sits under the form there is nothing left to scroll past, and a
 // stuck panel would just hover over the page.
+.settings-billing__checkout-promo {
+  width: 100%;
+  margin-top: var(--spacer-4, 16px);
+  margin-bottom: var(--spacer-2, 8px);
+}
+
 @container billing-content (max-width: 900px) {
   .settings-billing__checkout-left,
   .settings-billing__checkout-right {

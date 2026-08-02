@@ -265,6 +265,7 @@ function checkout(ui) {
           ],
         }),
       ] : []),
+      promoCodeSection(ui),
       Skeletons.Button.Label({
         label: LOCALE.PROCEED_TO_CHECKOUT,
         className: `${pfx}-checkout-button`,
@@ -281,6 +282,30 @@ function checkout(ui) {
   return Skeletons.Box.X({
     className: `${pfx}-main`,
     kids: [leftPanel, rightPanel],
+  });
+}
+
+/**
+ * Optional MKT outreach partner code (Iris/Theo…). Applied at Stripe Checkout
+ * as trial + repeating % off — not the LAUNCH30 free-month claim flow.
+ */
+function promoCodeSection(ui) {
+  const fig = `${ui.fig.family}__checkout`;
+  const pfx = fig;
+  const checkout = ui.state?.checkout || {};
+  return Skeletons.Box.Y({
+    className: `${pfx}-promo`,
+    kids: [
+      entry(ui, {
+        label: LOCALE.PROMO_CODE_LABEL || "Promo code",
+        name: "promo_code",
+        type: "text",
+        placeholder: LOCALE.PROMO_CODE_PLACEHOLDER || "Enter partner code",
+        value: checkout.promoCode || "",
+        sys_pn: `${pfx}-promo-code-input`,
+        interactive: 1,
+      }),
+    ],
   });
 }
 
@@ -388,6 +413,7 @@ function rightPanelContent(ui) {
           }) : null,
         ].filter(Boolean),
       }),
+      promoCodeSection(ui),
       Skeletons.Button.Label({
         label: LOCALE.PROCEED_TO_CHECKOUT,
         className: `${pfx}-checkout-button`,
@@ -403,4 +429,4 @@ function rightPanelContent(ui) {
 }
 
 export default checkout;
-export { rightPanelContent };
+export { rightPanelContent, promoCodeSection };
