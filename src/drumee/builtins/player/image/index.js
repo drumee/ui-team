@@ -4,7 +4,30 @@ require('../skin');
 require('./skin');
 
 const { TweenMax, Cubic } = require("@drumee/ui-core/vendor");
+const snap = require('builtins/window/snap');
+// Required directly, NOT read off `this.contextmenuSkeleton`: players set
+// that property to the string "a" (player/interact.js) to suppress their
+// right-click menu, so calling it would throw.
+const contextmenuSkeleton = require('builtins/contextmenu/skeleton');
 const __core = require('player/interact');
+
+// Gear-menu rows that act on the node rather than on the player. The MFS
+// view the player was opened from implements all of them, so they are
+// forwarded verbatim (see `_delegate`). Kept as an explicit allow-list:
+// a catch-all would also swallow the player's own chrome events (raise,
+// close, minimize) on their way to the base class.
+const DELEGATED_SERVICES = [
+  _e.copy,
+  _e.remove,
+  _a.chat,
+  'direct-rename',
+  'chat-threads',
+  'download-file-chat',
+  'secure-share',
+  'designation-link',
+  'direct-url',
+];
+
 class __player_image extends __core {
 
 
@@ -66,8 +89,196 @@ class __player_image extends __core {
   }
 
   /**
-   * 
-   * @returns 
+   * Gear-menu / right-click contents, in Figma order (3228:280002):
+   *
+   *   copy · download · print · rotate ▸ | rename · chat threads ▸ |
+   *   share · get info · designation link | delete
+   *
+   * Rows that act on the node itself are only offered when we still have a
+   * handle on the source MFS view (`this.media`) to forward them to — a
+   * player opened straight from a share link has none.
+   */
+  contextmenuItems() {
+    const media = this.media;
+    const editable = !!media && !Visitor.inDmz && !!this.canUpload();
+    const sections = [];
+
+    const first = [];
+    if (media && !Visitor.inDmz) first.push(_a.copy);
+    if (Visitor.inDmz || this.canDownload()) first.push(_a.download, 'print');
+    if (editable && media.imgCapable && media.imgCapable()) first.push('rotate');
+    if (first.length) sections.push(first);
+
+    const naming = [];
+    if (editable) naming.push(_a.rename);
+    if (media && !Visitor.inDmz) naming.push('seeChatThreads');
+    if (naming.length) sections.push(naming);
+
+    const details = [];
+    if (editable) {
+      switch (this.mget(_a.area)) {
+        case _a.share: details.push('secureShare'); break;
+        case _a.private: details.push('designationLink'); break;
+        case _a.public: details.push('directUrl'); break;
+      }
+    }
+    details.push(_a.info);
+    sections.push(details);
+
+    if (media && media.canRemove && media.canRemove()) sections.push([_a.trash]);
+
+    const items = [];
+    sections.forEach((s, i) => {
+      if (i) items.push(_a.separator);
+      items.push(...s);
+    });
+    return items;
+  }
+
+  /**
+   * Open the file menu under the gear button.
+   *
+   * Reuses the real contextmenu builder rather than a bespoke panel: same
+   * markup, same skin, same submenu behaviour. `drumeeDialog` is the global
+   * overlay layer the right-click path also feeds, so only one menu can be
+   * open at a time and clicking away dismisses it.
+   *
+   * The builder is the required module, not `this.contextmenuSkeleton` —
+   * players park the string "a" there to suppress their right-click menu
+   * (player/interact.js), which this gear button deliberately bypasses.
+   */
+  _openFileMenu(cmd) {
+    const anchor = cmd && cmd.el;
+    if (!anchor || !window.drumeeDialog || drumeeDialog.isDestroyed()) return;
+    const r = anchor.getBoundingClientRect();
+    const kids = contextmenuSkeleton(this, cmd, {});
+    if (_.isEmpty(kids)) return;
+    drumeeDialog.feed(Skeletons.Box.Y({
+      volatility: 4,
+      className: `drumee-contextmenu ${this.fig.family}`,
+      kids: [kids],
+      uiHandler: [this],
+      style: { left: r.left, top: r.bottom + 4, zIndex: 100000 },
+    }));
+    // Same viewport clamp the right-click path applies: the menu is only
+    // measurable once fed, so correct the placement afterwards.
+    const menu = drumeeDialog.children.last();
+    if (!menu) return;
+    const w = menu.$el.width();
+    const h = menu.$el.height();
+    if (r.left + w > window.innerWidth) {
+      menu.el.style.left = `${Math.max(0, r.right - w)}px`;
+    }
+    if (r.bottom + 4 + h > window.innerHeight) {
+      menu.el.style.top = `${Math.max(0, r.top - h - 4)}px`;
+    }
+  }
+
+  /**
+   * Forward a menu row this player doesn't own to the source MFS view,
+   * which implements the whole file-action vocabulary already. Returns
+   * false when there's nothing to forward to, so the caller can fall
+   * through to the base class rather than swallow the event.
+   */
+  _delegate(cmd, args) {
+    const media = this.media;
+    if (!media || media.isDestroyed() || !_.isFunction(media.onUiEvent)) {
+      return false;
+    }
+    media.onUiEvent(cmd, args);
+    return true;
+  }
+
+  /**
+   * Print the image currently on screen. The inherited `case "print"` calls
+   * `printPdf()`, which exists nowhere in the tree — for an image the
+   * browser's own print of the full-resolution slide is both simpler and
+   * correct. The frame is detached once the dialog is dismissed.
+   */
+  _printImage() {
+    const { high } = this.getImageUrls();
+    if (!high) return;
+    const frame = document.createElement('iframe');
+    frame.setAttribute('aria-hidden', 'true');
+    frame.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0;';
+    let torn = 0;
+    const done = () => {
+      if (torn) return;
+      torn = 1;
+      if (frame.parentNode) frame.parentNode.removeChild(frame);
+    };
+
+    document.body.appendChild(frame);
+    const win = frame.contentWindow;
+    const doc = win && win.document;
+    if (!doc) return done();
+
+    // Write the document ourselves rather than waiting on frame.onload —
+    // that fires for the initial about:blank, before this content exists.
+    doc.open();
+    doc.write(
+      '<!doctype html><html><head><style>' +
+      'html,body{margin:0;padding:0}' +
+      'img{max-width:100%;max-height:100vh;display:block;margin:0 auto}' +
+      '@page{margin:10mm}' +
+      '</style></head><body></body></html>'
+    );
+    doc.close();
+
+    let fired = 0;
+    const fire = () => {
+      // A cached image can be `complete` before onload is wired, so both
+      // paths race to call this — print exactly once.
+      if (fired) return;
+      fired = 1;
+      try {
+        win.focus();
+        win.print();
+      } catch (e) {
+        this.warn('[print] failed', e);
+      }
+      // No reliable cross-browser "print dialog closed" event; a delayed
+      // teardown is the conventional compromise.
+      setTimeout(done, 1000);
+    };
+
+    const img = doc.createElement('img');
+    img.onload = fire;
+    img.onerror = () => {
+      this.warn(`[print] image failed to load: ${high}`);
+      done();
+    };
+    img.src = high;
+    doc.body.appendChild(img);
+    // Cached images can complete before the handler is attached.
+    if (img.complete && img.naturalWidth) fire();
+    // Nothing came back at all — don't leave the frame parked in the DOM.
+    setTimeout(done, 20000);
+  }
+
+  /**
+   * Geometry the "center" preset restores to — the centered canvas
+   * `display()` computed for this image. Falls back to the current box if
+   * the player was never sized that way (mobile, pinned window).
+   */
+  _defaultBounds() {
+    return this._naturalBounds || snap.snapshotBounds(this);
+  }
+
+  /**
+   * Show or hide the header's save-rotation button. Figma has no such
+   * button, so it stays out of the resting header and only appears while
+   * a client-side rotation is waiting to be pushed to the server.
+   */
+  _syncRotationPending() {
+    const btn = this.__saveRotationButton;
+    if (!btn || btn.isDestroyed()) return;
+    btn.el.dataset.pending = this._hasPendingRotation() ? 1 : 0;
+  }
+
+  /**
+   *
+   * @returns
    */
   loadSiblings() {
     return this.fetchService(SERVICE.media.get_by_type, {
@@ -211,17 +422,82 @@ class __player_image extends __core {
         return this._rotate(resolved);
       }
 
+      // Parent row of the Rotate submenu — hover opens the children, the
+      // row itself does nothing.
+      case "rotate-menu":
+        return;
+
       case "save-rotation":
         return this._saveRotation();
 
       case 'info':
         return this._showInfo();
 
+      // "Get info" — the contextmenu row emits `_e.settings`, not "info".
+      // Prefer the file's own properties panel (what the row means
+      // everywhere else); fall back to the player's inline overlay when
+      // the player has no source view to ask.
+      case _e.settings:
+        if (this._delegate(cmd)) return;
+        return this._showInfo();
+
       case 'close-player':
         return this.goodbye();
 
+      case 'open-file-menu':
+        return this._openFileMenu(cmd);
+
+      case 'print':
+        if (this._dmzGateDownload()) return;
+        return this._printImage();
+
+      case 'window-zoom':
+        snap.toggleZoom(this, this._snapOpt());
+        // toggleZoom is a toggle: a second click restores, which is the
+        // "center" preset visually.
+        return this._markSnapPreset(this._zoomed ? 'full' : 'center');
+
+      case 'window-tile-left':
+        snap.tileToSide(this, 'left', this._snapOpt());
+        return this._markSnapPreset('left');
+
+      case 'window-tile-right':
+        snap.tileToSide(this, 'right', this._snapOpt());
+        return this._markSnapPreset('right');
+
+      case 'window-reframe':
+        snap.reframe(this, this._defaultBounds(), this._snapOpt());
+        return this._markSnapPreset('center');
+
       default:
+        // Gear-menu rows that act on the node itself go to the source MFS
+        // view; everything else is player chrome and belongs to the base.
+        if (DELEGATED_SERVICES.includes(service) && this._delegate(cmd)) return;
         return super.onUiEvent(cmd);
+    }
+  }
+
+  /**
+   * Snap minimums for this window. The player's skeleton floors at 250px,
+   * far below the folder window's 760×480 default, so a half-tile is free
+   * to be genuinely half.
+   */
+  _snapOpt() {
+    return { minWidth: 250, minHeight: 250 };
+  }
+
+  /**
+   * Light up the Move & Resize preset the window now sits in. Dragging or
+   * resizing by hand doesn't clear it — the folder window's zoom menu has
+   * the same characteristic, and tracking every geometry change to undo a
+   * highlight is not worth the listener.
+   */
+  _markSnapPreset(preset) {
+    for (const name of ['full', 'left', 'right', 'center']) {
+      const part = this[`__snap${name.charAt(0).toUpperCase()}${name.slice(1)}`];
+      if (part && !part.isDestroyed()) {
+        part.el.dataset.active = name === preset ? 1 : 0;
+      }
     }
   }
 
@@ -262,6 +538,7 @@ class __player_image extends __core {
     this._displayRotation = (this._displayRotation || 0) + angle;
     this._pendingRotation = (this._pendingRotation || 0) + angle;
     this._animateRotation(this._displayRotation);
+    this._syncRotationPending();
   }
 
   /**
@@ -383,9 +660,11 @@ class __player_image extends __core {
     const angle = ((this._pendingRotation || 0) % 360 + 360) % 360;
     if (angle === 0) {
       this._pendingRotation = 0;
+      this._syncRotationPending();
       return;
     }
     this._pendingRotation = 0;
+    this._syncRotationPending();
     this._rotateInflight = true;
     const { nid, hub_id } = this.actualNode();
     this.postService({
@@ -426,6 +705,7 @@ class __player_image extends __core {
       this._displayRotation = (this._displayRotation || 0) - angle;
       this._pendingRotation = (this._pendingRotation || 0) + angle;
       this._animateRotation(this._displayRotation);
+      this._syncRotationPending();
       this._rotateInflight = false;
     });
   }
@@ -541,6 +821,10 @@ class __player_image extends __core {
    *  
    */
   _play(init) {
+    // Commit any unsaved rotation BEFORE the model moves to the next slide.
+    // `_flushRotate` reads nid/hub_id off `actualNode()`, so flushing after
+    // the switch would persist this image's angle against its neighbour.
+    if (this._hasPendingRotation()) this._flushRotate();
     if (this._isPlaying == null) {
       this._currentSlide++;
     }
@@ -554,8 +838,10 @@ class __player_image extends __core {
     this._isPlaying = 1;
     // Switching slides — drop any leftover rotation state from the previous image.
     this._displayRotation = 0;
+    this._pendingRotation = 0;
     this._consumeRotationOnNextLoad = 0;
     this._resetRotationStyles();
+    this._syncRotationPending();
     this.__sliderContent.reload(urls);
   }
 
@@ -708,6 +994,13 @@ class __player_image extends __core {
     this.size = { width, height };
     this._pos = { top, left };
     this.anti_overlap(this._pos);
+    // The geometry the "center" Move & Resize preset restores to.
+    this._naturalBounds = {
+      left: Math.round(this._pos.left),
+      top: Math.round(this._pos.top),
+      width: Math.round(width),
+      height: Math.round(height),
+    };
 
     if (this._isPlaying) {
       // Keep `alpha: 1` here too: `_play()` can flip `_isPlaying` before the

@@ -2344,5 +2344,7 @@
   "MIGRATE_GDRIVE_CANCELLING": "Annulation…",
   "OPEN_WORKSPACE": "Ouvrir l'espace de travail",
   "GUEST_JOIN_OPEN_WORKSPACE_MSG": "Vous pouvez maintenant ouvrir l'espace de travail auquel vous avez été invité : %s",
-  "GUEST_JOIN_OPEN_WORKSPACE_MSG_PLAIN": "Vous pouvez maintenant ouvrir l'espace de travail auquel vous avez été invité."
+  "GUEST_JOIN_OPEN_WORKSPACE_MSG_PLAIN": "Vous pouvez maintenant ouvrir l'espace de travail auquel vous avez été invité.",
+  "ROTATE": "Pivoter",
+  "MOVE_RESIZE": "Déplacer et redimensionner"
 }

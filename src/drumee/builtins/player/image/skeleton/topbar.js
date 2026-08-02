@@ -1,69 +1,87 @@
+// ==================================================================== *
+//   Copyright Xialia.com  2011-2026
+//   FILE : builtins/player/image/skeleton/topbar
+//   TYPE : Skeleton
+// ==================================================================== *
+
+/**
+ * Image-player header — Figma "file player/action" (3228:280002).
+ *
+ * Left: the file-type tile + filename. Right: gear (opens the file's
+ * context menu), expand (Move & Resize), close.
+ *
+ * The download / rotate buttons that used to sit in this row now live in
+ * the gear menu. The save-rotation button is the one exception: it stays
+ * in the header so a pending rotation can be committed explicitly, but
+ * the skin hides it until `data-pending="1"` is set (see `_rotate` in the
+ * player), so the resting header matches the design.
+ */
+
 module.exports = function (ui, size) {
   size = size || ui.size;
-  const name = Skeletons.Note({
-    className: `${ui.fig.group}__title mr-11`,
-    sys_pn: "player-title",
-    content: ui.model.get(_a.filename),
+
+  const identity = Skeletons.Box.X({
+    className: `${ui.fig.family}-topbar__identity`,
     service: _e.raise,
     uiHandler: ui,
+    kids: [
+      Skeletons.Box.X({
+        className: `${ui.fig.family}-topbar__filetype`,
+        kidsOpt: { active: 0 },
+        kids: [
+          Skeletons.Image.Svg({
+            ico: "bg-image",
+            className: `${ui.fig.family}-topbar__filetype-icon`,
+          }),
+        ],
+      }),
+      Skeletons.Note({
+        className: `${ui.fig.group}__title`,
+        sys_pn: "player-title",
+        content: ui.model.get(_a.filename),
+        service: _e.raise,
+        uiHandler: ui,
+      }),
+    ],
   });
 
-  const downloadIcon = Skeletons.Button.Svg({
-    ico: "download",
-    sys_pn: "download-button",
-    className: "icon link ",
-    service: _e.download,
-    uiHandler: ui,
-  });
-
-  const rotateLeftIcon = Skeletons.Button.Svg({
-    ico: "desktop_rotate",
-    sys_pn: "rotate-left-button",
-    className: "icon rotate-left",
-    service: _e.rotate,
-    value: -90,
-    uiHandler: ui,
-  });
-
-  const rotateRightIcon = Skeletons.Button.Svg({
-    ico: "desktop_rotate",
-    sys_pn: "rotate-right-button",
-    className: "icon link ",
-    service: _e.rotate,
-    value: 90,
-    uiHandler: ui,
-  });
-
+  // Only meaningful while a client-side rotation is waiting to be pushed
+  // to the server; the skin keeps it out of the flow until then.
   const saveRotationIcon = Skeletons.Button.Svg({
     ico: "checked-circle",
     sys_pn: "save-rotation-button",
     className: "icon save-rotation",
     service: "save-rotation",
     uiHandler: ui,
+    dataset: { pending: 0 },
   });
 
-  let actionIcons = Skeletons.Box.X({
-    className: `${ui.fig.group}-topbar__icon-wrapper`,
-    kids: [],
+  const gear = Skeletons.Button.Svg({
+    ico: "folder-settings",
+    sys_pn: "ctrl-gear",
+    className: "icon gear",
+    service: "open-file-menu",
+    uiHandler: ui,
   });
-  // Inside a DMZ share, always show download and gate the click (sign-up /
-  // Request Access) in the player's onUiEvent. OUTSIDE DMZ, keep the original
-  // permission check so a view-only/no-download user doesn't get a usable button.
-  if (Visitor.inDmz || ui.canDownload()) actionIcons.kids.unshift(downloadIcon);
 
-  if (ui.canUpload() && ui.media && ui.media.imgCapable()) {
-    actionIcons.kids.push(rotateLeftIcon, rotateRightIcon, saveRotationIcon);
-  }
-  actionIcons.kids.push(require("../../skeleton/control")(ui));
+  // NOT `ctrl-close`: the slider's fullscreen action bar already claims
+  // that part name on the same handler (see skeleton/slider.js).
+  const close = Skeletons.Button.Svg({
+    ico: "cross",
+    sys_pn: "ctrl-close-window",
+    className: "icon close",
+    service: "close-player",
+    uiHandler: ui,
+  });
 
-  const dl = Skeletons.Box.X({
-    className: `${ui.fig.group}-topbar__action`,
+  const actions = Skeletons.Box.X({
+    className: `${ui.fig.family}-topbar__actions`,
     sys_pn: "commands",
-    kids: [actionIcons],
+    kids: [saveRotationIcon, gear, require("./move-resize")(ui), close],
   });
 
   return Skeletons.Box.X({
-    className: `${ui.fig.group}__header container u-jc-sb`,
+    className: `${ui.fig.group}__header container u-jc-sb ${ui.fig.family}-topbar`,
     debug: __filename,
     sys_pn: "topbar",
     justify: _a.right,
@@ -72,7 +90,7 @@ module.exports = function (ui, size) {
         className: `${ui.fig.group}__header main u-ai-center`,
         service: _e.raise,
         uiHandler: ui,
-        kids: [name, dl],
+        kids: [identity, actions],
       }),
     ],
   });

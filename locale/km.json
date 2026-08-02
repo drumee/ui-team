@@ -2343,5 +2343,7 @@
   "MIGRATE_GDRIVE_CANCELLING": "កំពុងបោះបង់…",
   "OPEN_WORKSPACE": "បើកកន្លែងធ្វើការ",
   "GUEST_JOIN_OPEN_WORKSPACE_MSG": "ឥឡូវនេះអ្នកអាចបើកកន្លែងធ្វើការដែលអ្នកត្រូវបានអញ្ជើញ៖ %s",
-  "GUEST_JOIN_OPEN_WORKSPACE_MSG_PLAIN": "ឥឡូវនេះអ្នកអាចបើកកន្លែងធ្វើការដែលអ្នកត្រូវបានអញ្ជើញ។"
+  "GUEST_JOIN_OPEN_WORKSPACE_MSG_PLAIN": "ឥឡូវនេះអ្នកអាចបើកកន្លែងធ្វើការដែលអ្នកត្រូវបានអញ្ជើញ។",
+  "ROTATE": "បង្វិល",
+  "MOVE_RESIZE": "ផ្លាស់ទី និងប្តូរទំហំ"
 }

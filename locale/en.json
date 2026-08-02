@@ -2514,5 +2514,7 @@
   "MIGRATE_GDRIVE_CANCELLING": "Cancelling…",
   "OPEN_WORKSPACE": "Open Workspace",
   "GUEST_JOIN_OPEN_WORKSPACE_MSG": "You can now open the workspace you were invited to: %s",
-  "GUEST_JOIN_OPEN_WORKSPACE_MSG_PLAIN": "You can now open the workspace you were invited to."
+  "GUEST_JOIN_OPEN_WORKSPACE_MSG_PLAIN": "You can now open the workspace you were invited to.",
+  "ROTATE": "Rotate",
+  "MOVE_RESIZE": "Move & Resize"
 }
