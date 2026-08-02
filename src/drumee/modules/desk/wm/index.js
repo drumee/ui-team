@@ -1127,17 +1127,20 @@ class __window_manager extends push {
     }
     this.feed(require("./skeleton")(this));
     // Capture hub_id synchronously before any async ops so hash changes cannot lose it.
-    // Falls back to the intent the welcome module armed for the not-logged-in flow —
-    // which is how the workspace-invite email's CTA opens the invited workspace with
-    // no prompt and no extra click.
+    //
+    // ONLY the explicit hash form opens immediately: #/desk/wm/hub?hub_id=… is an
+    // in-app navigation the user just made (accept_invite lands here), so asking
+    // them to confirm would be asking twice. An intent ARMED by the welcome module
+    // is deliberately left alone for desk's _maybeOfferInvitedWorkspace to consume
+    // once Home has settled — it prompts "Open Workspace / Cancel" first, and it
+    // waits out the full-screen reward / LAUNCH30 popups that this boot path
+    // cannot see.
     const _path = Visitor.parseModule() || [];
     const _args = Visitor.parseModuleArgs() || {};
-    const _hubId = (_path[2] === _a.hub && _args.hub_id)
-      ? _args.hub_id
-      : hubDeepLink.consume();
+    const _hubId = (_path[2] === _a.hub && _args.hub_id) ? _args.hub_id : '';
     if (_hubId) {
-      // The hash form above does not consume, so clear here too — otherwise an
-      // armed intent would survive and re-open on the next load.
+      // Opening it now settles any armed intent for the same visit, so the prompt
+      // does not follow up about a workspace already on screen.
       hubDeepLink.clear();
       this.ensurePart('headless-layer').then(() => {
         this.loadWorkspace({ hub_id: _hubId });

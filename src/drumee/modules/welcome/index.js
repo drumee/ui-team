@@ -59,9 +59,19 @@ class __welcome_router extends LetcBox {
     //
     // arm() writes the session key this always used PLUS a dated localStorage
     // fallback, so a sign-up that finishes in the tab the verification link opened
-    // still opens the workspace. See libs/hub-deep-link.
+    // still gets the offer. See libs/hub-deep-link.
+    //
+    // `name` is display copy for the prompt's message. parseModuleArgs does NOT
+    // decode (see _secureShareReturnTarget above), so the workspace name arrives
+    // percent-encoded and has to be decoded here.
     if (args.hub_id && !_ssReturn) {
-      armHubDeepLink(args.hub_id);
+      let _hubName = '';
+      try {
+        _hubName = decodeURIComponent(args.name || '');
+      } catch (e) {
+        _hubName = args.name || '';
+      }
+      armHubDeepLink(args.hub_id, _hubName);
     }
     this.route();
   }

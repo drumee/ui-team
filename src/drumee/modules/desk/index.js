@@ -388,13 +388,22 @@ class desk_module extends LetcBox {
       const raw =
         localStorage.getItem("drumee_guest_join") ||
         sessionStorage.getItem("drumee_guest_join");
-      if (!raw) return;
-      localStorage.removeItem("drumee_guest_join");
-      sessionStorage.removeItem("drumee_guest_join");
-      intent = JSON.parse(raw);
+      if (raw) {
+        localStorage.removeItem("drumee_guest_join");
+        sessionStorage.removeItem("drumee_guest_join");
+        intent = JSON.parse(raw);
+      }
     } catch (e) {
-      return;
+      // Unreadable storage or malformed JSON. Fall through rather than return:
+      // the hub-deep-link intent below is a separate key with its own error
+      // handling, and a corrupt guest_join value must not suppress it.
+      intent = null;
     }
+    // The workspace-invite CTA arms this one instead (?hub_id=&name= -> welcome ->
+    // libs/hub-deep-link). Checked second so a guest-landing intent, which is the
+    // older and more specific signal, still wins if both somehow exist. Its own
+    // age guard lives in the lib.
+    if (!intent || !intent.hub_id) intent = hubDeepLink.consume();
     if (!intent || !intent.hub_id) return;
     // Outliving the session means it can also outlive the user's interest. A
     // signup that stalls at the verify email for days should not open with a
@@ -423,6 +432,7 @@ class desk_module extends LetcBox {
         return setTimeout(show, 200);
       }
       this._invitedHubId = intent.hub_id;
+      this._invitedHubName = workspace;
       Wm.info({
         variant: "notice",
         message,
@@ -437,7 +447,7 @@ class desk_module extends LetcBox {
             uiHandler: this,
           },
           {
-            label: LOCALE.CLOSE || "Close",
+            label: LOCALE.CANCEL || "Cancel",
             priority: "secondary",
             service: _e.close,
           },
@@ -2348,11 +2358,16 @@ class desk_module extends LetcBox {
       this._maybeDismissMobileDrawer(service);
     }
     switch (service) {
-      // "Open Workspace" on the post-sign-in guest-join dialog. Opens the hub
-      // exactly as clicking the "<name> invited you to <workspace>" activity
-      // row does — panel/activity/widget/item/index.js, case hub_invite — by
-      // handing Wm.route() the same deep link, rather than reaching for
-      // loadWorkspace directly and re-deriving what that route already does.
+      // "Open Workspace" on the post-sign-in invited-workspace dialog. Opens the
+      // headless workspace pane, exactly as clicking the workspace in the sidebar
+      // does (workspace-list -> Wm.loadWorkspace), so the invitee lands INSIDE the
+      // workspace with the desk grid showing its contents.
+      //
+      // Deliberately not the #/desk/wm/open/ deep link this used to set, which is
+      // what the "<name> invited you to <workspace>" activity row does: that route
+      // launches a floating folder window on the hub root instead of taking over
+      // the grid. For someone arriving from an invite for the first time, being put
+      // in the workspace beats being handed a popup of it.
       //
       // The hub comes off the field set when the dialog was armed, NOT off the
       // button's dataset: toolkit's button() does not pass attrOpt, so an
@@ -2362,13 +2377,17 @@ class desk_module extends LetcBox {
       // time, so a field is unambiguous and cannot go missing.
       case "guest-join-open-workspace": {
         const hub_id = this._invitedHubId;
+        const hub_name = this._invitedHubName;
         this._invitedHubId = null;
+        this._invitedHubName = null;
         for (let modal of (this.getItemsByKind && this.getItemsByKind("window_info")) || []) {
           if (modal && modal.mget && modal.mget("guest_join") && modal.goodbye) modal.goodbye();
         }
         if (hub_id) {
-          location.hash =
-            `#/desk/wm/open/?hub_id=${hub_id}&nid=0&filetype=folder&pid=0&ts=${Date.now()}`;
+          // filename seeds the pane's title and root crumb synchronously, so it
+          // opens already named instead of waiting on get_path (loadWorkspace
+          // reads filename / name / hub_name / workspace_name).
+          Wm.loadWorkspace(hub_name ? { hub_id, filename: hub_name } : { hub_id });
         }
         return;
       }
