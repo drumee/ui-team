@@ -27,7 +27,7 @@
     border-radius: var(--corner-radius-1);
     box-sizing: border-box;
     gap: var(--spacer-2);
-    padding: var(--spacer-2);
+    padding: var(--spacer-3);
     // The submenu below is positioned against THIS row. `.drumee-box`
     // already supplies it globally; pinned here so the offsets don't
     // silently depend on that.
@@ -83,6 +83,23 @@
       min-width: 0;
       padding: var(--spacer-3);
       width: max-content;
+
+      // That 8px offset is dead space for `:hover`. The submenu only stays
+      // open while the pointer is inside the parent row's subtree, so
+      // crossing the gap on the way over drops the hover and the panel
+      // disappears before the pointer arrives. Bridge it with an invisible
+      // strip that BELONGS to the submenu — hovering the strip still counts
+      // as hovering the row. Spans the submenu's full height, so a diagonal
+      // approach works too. Same trick as the Move & Resize panel
+      // (skin/topbar.scss).
+      &:before {
+        bottom: 0;
+        content: "";
+        left: calc(var(--spacer-3) * -1);
+        position: absolute;
+        top: 0;
+        width: var(--spacer-3);
+      }
 
       .contextmenu-item {
         border-radius: var(--corner-radius-1);
