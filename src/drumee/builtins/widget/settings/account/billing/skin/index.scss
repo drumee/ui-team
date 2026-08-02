@@ -1761,6 +1761,126 @@
   width: 100%;
   margin-top: var(--spacer-4, 16px);
   margin-bottom: var(--spacer-2, 8px);
+  gap: var(--spacer-2, 8px);
+
+  &-label {
+    @include drumee.typo(
+      $size: 14px,
+      $line: 22px,
+      $weight: 600,
+      $color: var(--neutral-900)
+    );
+  }
+
+  &-row {
+    align-items: stretch;
+    gap: var(--spacer-3, 12px);
+    width: 100%;
+    min-height: 48px;
+  }
+
+  &-input {
+    flex: 1 1 auto;
+    min-width: 0;
+    height: 48px;
+    box-sizing: border-box;
+    border-radius: var(--corner-radius-4, 8px);
+    padding: 0 var(--spacer-3, 12px);
+    border: 1px solid var(--neutral-200);
+    background-color: var(--white);
+    display: flex !important;
+    align-items: center;
+    flex-flow: row nowrap;
+
+    // Entry paints an inner input; force it to fill and center the value.
+    > *,
+    .drumee-entry-input,
+    input {
+      flex: 1 1 auto;
+      width: 100%;
+      height: 100%;
+      min-height: 0;
+      border: none;
+      background: transparent;
+      padding: 0;
+      margin: 0;
+      box-sizing: border-box;
+    }
+
+    input {
+      line-height: 46px;
+    }
+  }
+
+  // Text CTA — stretch to the same 48px row height; text dead-center.
+  &-apply {
+    flex: 0 0 auto;
+    align-self: stretch;
+    display: inline-flex !important;
+    align-items: center;
+    justify-content: center;
+    min-height: 48px;
+    padding: 0 var(--spacer-4, 16px);
+    margin: 0;
+    white-space: nowrap;
+    cursor: pointer;
+    border-radius: var(--corner-radius-4, 8px);
+    box-sizing: border-box;
+    @include drumee.typo(
+      $size: 14px,
+      $line: 20px,
+      $weight: 600,
+      $color: var(--primary-50, #433cc5)
+    );
+
+    &:hover {
+      background-color: var(--primary-95, rgba(67, 60, 197, 0.06));
+    }
+
+    &.is-applied {
+      color: var(--normal-fg-50, #6b7280);
+      font-weight: 500;
+
+      &:hover {
+        background-color: var(--neutral-100, rgba(0, 0, 0, 0.04));
+      }
+    }
+  }
+
+  &-error {
+    color: var(--color-danger, #c0392b);
+    font-size: 13px;
+  }
+
+  &-applied {
+    color: var(--color-success, #1f8a4c);
+    font-size: 13px;
+  }
+}
+
+.settings-billing__checkout-total-price {
+  &.has-promo {
+    align-items: baseline;
+    gap: var(--spacer-2, 8px);
+  }
+
+  &-original {
+    text-decoration: line-through;
+    opacity: 0.55;
+    font-size: 0.85em;
+  }
+}
+
+.settings-billing__checkout-breakdown-discount {
+  .settings-billing__checkout-breakdown-value {
+    color: var(--color-success, #1f8a4c);
+  }
+}
+
+.settings-billing__checkout-promo-trial-note {
+  margin: 0 0 var(--spacer-3, 12px);
+  font-size: 13px;
+  opacity: 0.85;
 }
 
 @container billing-content (max-width: 900px) {

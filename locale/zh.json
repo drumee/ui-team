@@ -2349,5 +2349,8 @@
   "PROMO_CODE_WITH_DEFER": "Promo codes cannot be combined with a deferred billing-cycle switch.",
   "PROMO_CODE_PLAN": "This promo code applies to Team or Business plans only.",
   "PROMO_CODE_PLAN_ONLY": "此优惠码仅可用于 {0} 方案。",
-  "PROMO_CODE_FAILED": "Could not apply this promo code. Please try again."
+  "PROMO_CODE_FAILED": "Could not apply this promo code. Please try again.",
+  "PROMO_CODE_APPLIED": "已应用代码 {0}",
+  "PROMO_CODE_DISCOUNT": "优惠（{0}% 折扣）",
+  "PROMO_CODE_TRIAL_NOTE": "免费 {0} 天，之后 {1}/{2}"
 }

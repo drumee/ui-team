@@ -2349,5 +2349,8 @@
   "PROMO_CODE_WITH_DEFER": "Promo codes cannot be combined with a deferred billing-cycle switch.",
   "PROMO_CODE_PLAN": "This promo code applies to Team or Business plans only.",
   "PROMO_CODE_PLAN_ONLY": "កូដប្រូម៉ូសិននេះអាចប្រើបានតែលើគម្រោង {0} ប៉ុណ្ណោះ។",
-  "PROMO_CODE_FAILED": "Could not apply this promo code. Please try again."
+  "PROMO_CODE_FAILED": "Could not apply this promo code. Please try again.",
+  "PROMO_CODE_APPLIED": "បានអនុវត្តលេខកូដ {0}",
+  "PROMO_CODE_DISCOUNT": "ប្រូម៉ូ (−{0}%)",
+  "PROMO_CODE_TRIAL_NOTE": "ឥតគិតថ្លៃ {0} ថ្ងៃ បន្ទាប់មក {1}/{2}"
 }

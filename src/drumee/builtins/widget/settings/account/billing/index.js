@@ -906,10 +906,25 @@ class settings_billing extends LetcBox {
     // per-seat line where a per-seat price is not a thing.
     const seats = baseSeats;
     const unlimitedSeats = seats >= 100000;
+
+    // Applied MKT promo code (payment.preview_coupon). percent_off comes off
+    // the recurring price; trial_days is a free period BEFORE the first
+    // charge, so it does not change the amount — it is surfaced as a note.
+    // Preview only: Stripe recomputes the real invoice at checkout.
+    const promo = checkout.promo || null;
+    const pct = promo ? (parseInt(promo.percent_off, 10) || 0) : 0;
+    const discountAmount = pct > 0 ? (basePrice * pct) / 100 : 0;
+    const finalPrice = Math.max(0, basePrice - discountAmount);
+
     return {
       basePrice: formatCurrency(basePrice),
       bundlePrice: formatCurrency(0),
-      totalPrice: formatCurrency(basePrice),
+      totalPrice: formatCurrency(finalPrice),
+      // Only set when a discount actually applies, so the skeleton can show
+      // the struck-through original without a special case for "no promo".
+      originalPrice: discountAmount > 0 ? formatCurrency(basePrice) : "",
+      discountAmount: discountAmount > 0 ? formatCurrency(discountAmount) : "",
+      promo,
       period,
       seats: unlimitedSeats ? LOCALE.UNLIMITED : `${seats}`,
       totalStorage: baseStorage >= 1000
@@ -917,7 +932,7 @@ class settings_billing extends LetcBox {
         : `${baseStorage} GB`,
       effectivePricePerSeat: unlimitedSeats
         ? ""
-        : formatCurrency(seats > 0 ? basePrice / seats : basePrice),
+        : formatCurrency(seats > 0 ? finalPrice / seats : finalPrice),
       selectedPlan,
       billingCycle,
       extraSeats: 0,
@@ -1113,10 +1128,88 @@ class settings_billing extends LetcBox {
           || "This promo code can only be used on the {0} plan.").format(named);
       }
       case "COUPON_STRIPE_FAILED":
+      case "OFFER_INVALID":
+      case "ARGS_INVALID":
+      case "COUPON_EMAIL_REQUIRED":
         return LOCALE.PROMO_CODE_FAILED
           || "Could not apply this promo code. Please try again.";
       default: return LOCALE.SOMETHING_WENT_WRONG;
     }
+  }
+
+  /**
+   * Drop a previewed promo. keepCode=true clears the applied offer but leaves
+   * the typed string so Remove → retype is not needed; false also wipes the
+   * field (plan change).
+   */
+  _clearPromoPreview(keepCode) {
+    const checkout = this.state.checkout || (this.state.checkout = {});
+    delete checkout.promo;
+    delete checkout.promoError;
+    if (!keepCode) checkout.promoCode = "";
+  }
+
+  /**
+   * Apply (preview) the typed partner code against payment.preview_coupon.
+   * Updates the right-panel total without reserving a redemption — the real
+   * reserve still happens on Proceed to Checkout.
+   */
+  async _applyPromoCode() {
+    const checkout = this.state.checkout || (this.state.checkout = {});
+    const code = String(
+      (this.__promoCodeInput && this.__promoCodeInput.getValue
+        && this.__promoCodeInput.getValue())
+      || checkout.promoCode || "",
+    ).trim();
+    checkout.promoCode = code;
+    delete checkout.promo;
+    delete checkout.promoError;
+
+    if (!code) {
+      checkout.promoError = LOCALE.PROMO_CODE_INVALID
+        || "This promo code is not valid.";
+      this.updateRightPanel();
+      return;
+    }
+
+    const plan = checkout.selectedPlan || "team";
+    if (!/^(team|business)$/.test(plan)) {
+      checkout.promoError = LOCALE.PROMO_CODE_PLAN
+        || "This promo code applies to Team or Business plans only.";
+      this.updateRightPanel();
+      return;
+    }
+
+    const res = await this.postService(SERVICE.payment.preview_coupon, {
+      promo_code: code,
+      plan,
+      hub_id: Visitor.id,
+    }).catch(() => null);
+
+    const data = res || {};
+    if (data.status && data.status !== "OK") {
+      checkout.promoError = this._orgIdentError(data.status, data);
+      this.updateRightPanel();
+      return;
+    }
+    if (!data.code) {
+      checkout.promoError = LOCALE.PROMO_CODE_FAILED
+        || "Could not apply this promo code. Please try again.";
+      this.updateRightPanel();
+      return;
+    }
+
+    checkout.promo = {
+      code: data.code,
+      partner: data.partner || "",
+      kind: data.kind || "",
+      plan_scope: data.plan_scope || "all",
+      percent_off: parseInt(data.percent_off, 10) || 0,
+      trial_days: parseInt(data.trial_days, 10) || 0,
+      duration_months: parseInt(data.duration_months, 10) || 0,
+    };
+    checkout.promoCode = data.code;
+    this.updateRightPanel();
   }
 
   // True when the caller currently pays for a PERSONAL Pro subscription (so
@@ -1221,8 +1314,11 @@ class settings_billing extends LetcBox {
       payload.org_name = org_name;
     }
     // Optional MKT outreach partner code (Iris/Theo…). Empty = no coupon.
+    // Prefer the Applied preview code so a disabled field / stale input
+    // cannot silently drop the offer the shopper just confirmed in the UI.
     const promo_code = String(
-      (this.__promoCodeInput && this.__promoCodeInput.getValue
+      (checkout.promo && checkout.promo.code)
+      || (this.__promoCodeInput && this.__promoCodeInput.getValue
         && this.__promoCodeInput.getValue())
       || (checkout.promoCode) || "",
     ).trim();
@@ -1694,6 +1790,9 @@ class settings_billing extends LetcBox {
           this.state.checkout.selectedPlan = plan;
           this.state.checkout.storage = this.storage[plan] || 0;
           this.state.checkout.seats = this.seats[plan] || 0;
+          // Plan-scoped codes may no longer match — drop the preview so the
+          // shopper re-Applies against the plan they are actually buying.
+          this._clearPromoPreview(false);
           this.renderContent();
         }
         return false;
@@ -1702,8 +1801,19 @@ class settings_billing extends LetcBox {
         const cycle = this._getValueFromCmd(cmd, args);
         if (cycle === "monthly" || cycle === "yearly") {
           this.state.checkout.billingCycle = cycle;
+          // Keep the applied promo — percent_off still applies; only the
+          // catalog base changes. Re-render so the discounted total updates.
           this.renderContent();
         }
+        return false;
+
+      case "apply-promo-code":
+        this._applyPromoCode();
+        return false;
+
+      case "remove-promo-code":
+        this._clearPromoPreview(true);
+        this.updateRightPanel();
         return false;
 
       case "select-bundle":

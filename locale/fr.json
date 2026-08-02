@@ -2350,5 +2350,8 @@
   "PROMO_CODE_WITH_DEFER": "Les codes promo ne peuvent pas être combinés avec un changement de cycle différé.",
   "PROMO_CODE_PLAN": "Ce code promo s'applique uniquement aux plans Team ou Business.",
   "PROMO_CODE_PLAN_ONLY": "Ce code promo est utilisable uniquement sur le forfait {0}.",
-  "PROMO_CODE_FAILED": "Impossible d'appliquer ce code promo. Veuillez réessayer."
+  "PROMO_CODE_FAILED": "Impossible d'appliquer ce code promo. Veuillez réessayer.",
+  "PROMO_CODE_APPLIED": "Code {0} appliqué",
+  "PROMO_CODE_DISCOUNT": "Promo (−{0}%)",
+  "PROMO_CODE_TRIAL_NOTE": "{0} jours gratuits, puis {1}/{2}"
 }

@@ -286,26 +286,73 @@ function checkout(ui) {
 }
 
 /**
- * Optional MKT outreach partner code (Iris/Theo…). Applied at Stripe Checkout
- * as trial + repeating % off — not the LAUNCH30 free-month claim flow.
+ * Optional MKT outreach partner code (Iris/Theo…). Preview via Apply
+ * (payment.preview_coupon) updates the summary price; the real reserve
+ * still happens on Proceed to Checkout — not the LAUNCH30 free-month flow.
  */
 function promoCodeSection(ui) {
   const fig = `${ui.fig.family}__checkout`;
   const pfx = fig;
   const checkout = ui.state?.checkout || {};
+  const promo = checkout.promo || null;
+  const promoError = checkout.promoError || "";
+  const applied = !!(promo && promo.code);
+
+  // Label sits ABOVE the row. Putting it inside entry() next to Apply made
+  // the button flex-end against the whole (label+input) block and look
+  // vertically off — Apply/Remove must line up with the field only.
   return Skeletons.Box.Y({
     className: `${pfx}-promo`,
     kids: [
-      entry(ui, {
-        label: LOCALE.PROMO_CODE_LABEL || "Promo code",
-        name: "promo_code",
-        type: "text",
-        placeholder: LOCALE.PROMO_CODE_PLACEHOLDER || "Enter partner code",
-        value: checkout.promoCode || "",
-        sys_pn: `${pfx}-promo-code-input`,
-        interactive: 1,
+      Skeletons.Note({
+        className: `${pfx}-promo-label`,
+        content: LOCALE.PROMO_CODE_LABEL || "Promo code",
       }),
-    ],
+      Skeletons.Box.X({
+        className: `${pfx}-promo-row`,
+        kids: [
+          Skeletons.Entry({
+            className: `${pfx}-promo-input`,
+            name: "promo_code",
+            formItem: "promo_code",
+            type: "text",
+            placeholder: LOCALE.PROMO_CODE_PLACEHOLDER || "Enter partner code",
+            value: checkout.promoCode || "",
+            sys_pn: `${pfx}-promo-code-input`,
+            partHandler: [ui],
+            uiHandler: [ui],
+            interactive: applied ? 0 : 1,
+            readonly: applied ? 1 : 0,
+            mode: applied ? _a.commit : _a.interactive,
+            service: _a.input,
+            state: 0,
+          }),
+          Skeletons.Note({
+            className: `${pfx}-promo-apply${applied ? " is-applied" : ""}`,
+            content: applied
+              ? (LOCALE.REMOVE || "Remove")
+              : (LOCALE.APPLY || "Apply"),
+            service: applied ? "remove-promo-code" : "apply-promo-code",
+            uiHandler: [ui],
+            bubble: false,
+          }),
+        ],
+      }),
+      promoError
+        ? Skeletons.Note({
+            className: `${pfx}-promo-error`,
+            content: promoError,
+          })
+        : null,
+      applied
+        ? Skeletons.Note({
+            className: `${pfx}-promo-applied`,
+            content: (LOCALE.PROMO_CODE_APPLIED || "Code {0} applied").format(
+              promo.code,
+            ),
+          })
+        : null,
+    ].filter(Boolean),
   });
 }
 
@@ -321,6 +368,10 @@ function rightPanelContent(ui) {
   const summary = ui.calculateCheckoutSummary();
   const isFreePlan = ui.state?.checkout?.selectedPlan === "free";
 
+  const promo = summary.promo || null;
+  const hasDiscount = !!(summary.discountAmount);
+  const trialDays = promo ? (parseInt(promo.trial_days, 10) || 0) : 0;
+
   return Skeletons.Box.Y({
     className: `${pfx}-right`,
     sys_pn: `${pfx}-right-panel`,
@@ -330,8 +381,14 @@ function rightPanelContent(ui) {
         content: LOCALE.TOTAL_OUTCOME,
       }),
       Skeletons.Box.X({
-        className: `${pfx}-total-price`,
+        className: `${pfx}-total-price${hasDiscount ? " has-promo" : ""}`,
         kids: [
+          hasDiscount
+            ? Skeletons.Note({
+                className: `${pfx}-total-price-original`,
+                content: summary.originalPrice,
+              })
+            : null,
           Skeletons.Note({
             className: `${pfx}-total-price-amount`,
             content: summary.totalPrice,
@@ -340,8 +397,19 @@ function rightPanelContent(ui) {
             className: `${pfx}-total-price-period`,
             content: `/${summary.period}`,
           }),
-        ],
+        ].filter(Boolean),
       }),
+      trialDays > 0
+        ? Skeletons.Note({
+            className: `${pfx}-promo-trial-note`,
+            content: (LOCALE.PROMO_CODE_TRIAL_NOTE
+              || "{0} days free, then {1}/{2}").format(
+              String(trialDays),
+              summary.totalPrice,
+              summary.period,
+            ),
+          })
+        : null,
       Skeletons.Box.Y({
         className: `${pfx}-breakdown`,
         kids: [
@@ -358,6 +426,24 @@ function rightPanelContent(ui) {
               }),
             ],
           }),
+          hasDiscount
+            ? Skeletons.Box.X({
+                className: `${pfx}-breakdown-item ${pfx}-breakdown-discount`,
+                kids: [
+                  Skeletons.Note({
+                    className: `${pfx}-breakdown-label`,
+                    content: (LOCALE.PROMO_CODE_DISCOUNT
+                      || "Promo ({0}% off)").format(
+                      String(promo.percent_off || 0),
+                    ),
+                  }),
+                  Skeletons.Note({
+                    className: `${pfx}-breakdown-value`,
+                    content: `−${summary.discountAmount}`,
+                  }),
+                ],
+              })
+            : null,
           Skeletons.Box.X({
             className: `${pfx}-breakdown-item`,
             kids: [
@@ -424,7 +510,7 @@ function rightPanelContent(ui) {
         state: isFreePlan ? 0 : 1,
         dataset: isFreePlan ? { disabled: 1 } : undefined,
       }),
-    ],
+    ].filter(Boolean),
   });
 }
 
