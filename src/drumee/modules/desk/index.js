@@ -2,6 +2,7 @@ require("welcome/skin");
 require("builtins/window/confirm/skin");
 const { canUpgradePlan, billingAvailable, needsAdminConsoleUpgrade } = require("libs/billing");
 const { captureUtm, campaignArrival } = require("libs/campaign");
+const hubDeepLink = require("libs/hub-deep-link");
 
 class desk_module extends LetcBox {
   constructor(...args) {
@@ -704,10 +705,11 @@ class desk_module extends LetcBox {
    */
   _hasDeepLink() {
     try {
-      if (
-        sessionStorage.getItem("drumee_hubDeepLink") ||
-        sessionStorage.getItem("drumee_secure_share_return")
-      ) {
+      // has(), not a raw getItem: an armed workspace intent now also has a dated
+      // localStorage copy (libs/hub-deep-link), and desk-state restore must stand
+      // down for that one too or it races the workspace about to open.
+      if (hubDeepLink.has()) return true;
+      if (sessionStorage.getItem("drumee_secure_share_return")) {
         return true;
       }
     } catch (e) {

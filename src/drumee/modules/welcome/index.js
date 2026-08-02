@@ -1,5 +1,6 @@
 
 const { captureUtm } = require('libs/campaign');
+const { arm: armHubDeepLink } = require('libs/hub-deep-link');
 
 /**
  * Class representing the Welcome module.
@@ -50,12 +51,17 @@ class __welcome_router extends LetcBox {
       if (window.uiRouter) window.uiRouter._secureShareReturn = _ssReturn;
       RADIO_BROADCAST.once('user:signed:in', () => { location.href = _ssReturn; });
     }
-    // Honour a workspace deep-link (hub-invite email #/welcome/hub?hub_id=…) so the
-    // desk opens that workspace after auth. Skip it for a secure-share return: the
-    // recipient usually isn't a member of the share's hub (opening it 403s), and the
-    // share-return redirect above takes precedence.
+    // Honour a workspace deep-link (the workspace-invite email's CTA is
+    // #/welcome/signin?hub_id=…) so the desk opens that workspace after auth, with
+    // no further click. Skip it for a secure-share return: the recipient usually
+    // isn't a member of the share's hub (opening it 403s), and the share-return
+    // redirect above takes precedence.
+    //
+    // arm() writes the session key this always used PLUS a dated localStorage
+    // fallback, so a sign-up that finishes in the tab the verification link opened
+    // still opens the workspace. See libs/hub-deep-link.
     if (args.hub_id && !_ssReturn) {
-      sessionStorage.setItem('drumee_hubDeepLink', args.hub_id);
+      armHubDeepLink(args.hub_id);
     }
     this.route();
   }

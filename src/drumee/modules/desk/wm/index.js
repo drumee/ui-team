@@ -2,6 +2,9 @@ require("./skin");
 const { copyToClipboard } = require("@drumee/ui-essentials");
 const { TweenLite, gsap } = require("@drumee/ui-core/vendor");
 const push = require("./push");
+// "Open this workspace once signed in" — armed by the welcome module from
+// ?hub_id= (the workspace-invite CTA), consumed on boot below.
+const hubDeepLink = require("libs/hub-deep-link");
 // Same channel the websocket dispatcher triggers on Wm — windows and the
 // sidebar workspace list subscribe to it (window/utils.js, workspace-list).
 const WS_EVENT = "ws:event";
@@ -1082,20 +1085,26 @@ class __window_manager extends push {
     const _ssReturn = sessionStorage.getItem('drumee_secure_share_return');
     if (_ssReturn) {
       sessionStorage.removeItem('drumee_secure_share_return');
-      sessionStorage.removeItem('drumee_hubDeepLink');
+      // clear(), not a single removeItem: the intent now lives on two shelves
+      // (libs/hub-deep-link) and a secure-share return must beat both.
+      hubDeepLink.clear();
       location.href = _ssReturn;
       return;
     }
     this.feed(require("./skeleton")(this));
     // Capture hub_id synchronously before any async ops so hash changes cannot lose it.
-    // Falls back to sessionStorage set by welcome module for the not-logged-in flow.
+    // Falls back to the intent the welcome module armed for the not-logged-in flow —
+    // which is how the workspace-invite email's CTA opens the invited workspace with
+    // no prompt and no extra click.
     const _path = Visitor.parseModule() || [];
     const _args = Visitor.parseModuleArgs() || {};
     const _hubId = (_path[2] === _a.hub && _args.hub_id)
       ? _args.hub_id
-      : sessionStorage.getItem('drumee_hubDeepLink');
+      : hubDeepLink.consume();
     if (_hubId) {
-      sessionStorage.removeItem('drumee_hubDeepLink');
+      // The hash form above does not consume, so clear here too — otherwise an
+      // armed intent would survive and re-open on the next load.
+      hubDeepLink.clear();
       this.ensurePart('headless-layer').then(() => {
         this.loadWorkspace({ hub_id: _hubId });
       });
