@@ -2353,5 +2353,7 @@
   "PROMO_CODE_FAILED": "No se pudo aplicar este código promocional. Inténtalo de nuevo.",
   "PROMO_CODE_APPLIED": "Código {0} aplicado",
   "PROMO_CODE_DISCOUNT": "Promo (−{0}%)",
+  "PROMO_CODE_AFTER_ONCE": "{0}% de descuento en el primer pago, luego {1}/{2}",
+  "PROMO_CODE_AFTER_N": "{0}% de descuento en los primeros {1} pagos, luego {2}/{3}",
   "PROMO_CODE_TRIAL_NOTE": "{0} días gratis, luego {1}/{2}"
 }

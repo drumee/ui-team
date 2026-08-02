@@ -2352,5 +2352,7 @@
   "PROMO_CODE_FAILED": "Could not apply this promo code. Please try again.",
   "PROMO_CODE_APPLIED": "បានអនុវត្តលេខកូដ {0}",
   "PROMO_CODE_DISCOUNT": "ប្រូម៉ូ (−{0}%)",
+  "PROMO_CODE_AFTER_ONCE": "បញ្ចុះតម្លៃ {0}% លើការទូទាត់ដំបូង បន្ទាប់មក {1}/{2}",
+  "PROMO_CODE_AFTER_N": "បញ្ចុះតម្លៃ {0}% លើការទូទាត់ {1} ដងដំបូង បន្ទាប់មក {2}/{3}",
   "PROMO_CODE_TRIAL_NOTE": "ឥតគិតថ្លៃ {0} ថ្ងៃ បន្ទាប់មក {1}/{2}"
 }

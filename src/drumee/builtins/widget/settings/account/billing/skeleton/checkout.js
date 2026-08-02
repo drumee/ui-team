@@ -145,139 +145,15 @@ function checkout(ui) {
     ],
   });
 
-  const rightPanel = Skeletons.Box.Y({
-    className: `${pfx}-right`,
-    sys_pn: `${pfx}-right-panel`,
-    partHandler: [ui],
-    kids: [
-      Skeletons.Note({
-        className: `${pfx}-total-label`,
-        content: LOCALE.TOTAL_OUTCOME,
-      }),
-      Skeletons.Box.X({
-        className: `${pfx}-total-price`,
-        kids: [
-          Skeletons.Note({
-            className: `${pfx}-total-price-amount`,
-            content: summary.totalPrice,
-          }),
-          Skeletons.Note({
-            className: `${pfx}-total-price-period`,
-            content: `/${summary.period}`,
-          }),
-        ],
-      }),
-
-      Skeletons.Box.X({
-        className: `${pfx}-breakdown`,
-      }),
-
-      Skeletons.Box.Y({
-        className: `${pfx}-breakdown-items`,
-        kids: [
-          Skeletons.Box.X({
-            className: `${pfx}-breakdown-item`,
-            kids: [
-              Skeletons.Note({
-                className: `${pfx}-breakdown-label`,
-                content: LOCALE.BASE_PRICE,
-              }),
-              Skeletons.Note({
-                className: `${pfx}-breakdown-value`,
-                content: summary.basePrice,
-              }),
-            ],
-          }),
-          Skeletons.Box.X({
-            className: `${pfx}-breakdown-item`,
-            kids: [
-              Skeletons.Note({
-                className: `${pfx}-breakdown-label`,
-                content: LOCALE.INCLUDED_SEATS,
-              }),
-              Skeletons.Note({
-                className: `${pfx}-breakdown-value`,
-                content: summary.seats,
-              }),
-            ],
-          }),
-        ],
-      }),
-
-      Skeletons.Box.X({
-        className: `${pfx}-breakdown`,
-      }),
-
-      Skeletons.Box.Y({
-        kids: [
-          Skeletons.Box.X({
-            className: `${pfx}-breakdown-item ${pfx}-breakdown-total-storage`,
-            kids: [
-              Skeletons.Button.Icon({
-                className: `${pfx}-breakdown-icon`,
-                ico: "raw-hard-drive-green",
-              }),
-              Skeletons.Note({
-                className: `${pfx}-breakdown-total-storage-label`,
-                content: LOCALE.TOTAL_STORAGE,
-              }),
-              Skeletons.Note({
-                className: `${pfx}-breakdown-total-storage-value`,
-                content: summary.totalStorage,
-              }),
-            ],
-          }),
-        ],
-      }),
-
-      // A plan with an unlimited member cap has no per-seat price; the summary
-      // returns '' for it, and both the row and its divider drop out rather
-      // than showing an empty line under a label.
-      ...(summary.effectivePricePerSeat ? [
-        Skeletons.Box.X({
-          className: `${pfx}-breakdown`,
-        }),
-
-        Skeletons.Box.Y({
-          kids: [
-            Skeletons.Box.X({
-              className: `${pfx}-breakdown-item ${pfx}-breakdown-items ${pfx}-breakdown-effective-price-per-seat `,
-              kids: [
-                Skeletons.Button.Icon({
-                  className: `${pfx}-breakdown-icon`,
-                  ico: "raw-trending-up",
-                }),
-                Skeletons.Box.Y({
-                  className: `${pfx}-breakdown-label-container`,
-                  kids: [
-                    Skeletons.Note({
-                      className: `${pfx}-breakdown-label`,
-                      content: LOCALE.EFFECTIVE_PRICE_PER_SEAT,
-                    }),
-                    Skeletons.Note({
-                      className: `${pfx}-breakdown-value-effective-price-per-seat`,
-                      content: summary.effectivePricePerSeat,
-                    }),
-                  ],
-                }),
-              ],
-            }),
-          ],
-        }),
-      ] : []),
-      promoCodeSection(ui),
-      Skeletons.Button.Label({
-        label: LOCALE.PROCEED_TO_CHECKOUT,
-        className: `${pfx}-checkout-button`,
-        service: isFreePlan ? null : "proceed-checkout-billing",
-        priority: "primary",
-        uiHandler: [ui],
-        bubble: false,
-        state: isFreePlan ? 0 : 1,
-        dataset: isFreePlan ? { disabled: 1 } : undefined,
-      }),
-    ],
-  });
+  // Single source of truth for the summary column. This used to be a second,
+  // hand-maintained copy of rightPanelContent(): the promo work landed only in
+  // that function, so a FULL re-render (switching billing cycle, re-entering the
+  // tab) painted a summary with the discounted total but none of the lines that
+  // explain it — no struck-through original, no "Promo (N% off)" row, no
+  // "then <full price>" note. The shopper saw a reduced price with nothing
+  // saying it was temporary. One function now serves both the first paint and
+  // every incremental update, so the two cannot drift again.
+  const rightPanel = rightPanelContent(ui);
 
   return Skeletons.Box.X({
     className: `${pfx}-main`,
@@ -372,9 +248,23 @@ function rightPanelContent(ui) {
   const hasDiscount = !!(summary.discountAmount);
   const trialDays = promo ? (parseInt(promo.trial_days, 10) || 0) : 0;
 
+  // How long the % actually lasts. Stripe only ever gets 'once' or
+  // 'repeating' from _ensureStripeCoupon, so a percent discount ALWAYS
+  // ends — showing the reduced figure as the plain total read as the new
+  // forever-price. Counted in PAYMENTS, not months: duration_months is a
+  // month count, so on yearly billing a 3-month coupon covers just the
+  // first invoice, and "first 3 months" would be wrong on that cycle.
+  const discountMonths = promo ? (parseInt(promo.duration_months, 10) || 0) : 0;
+  const discountedCycles = summary.period === "year"
+    ? Math.max(1, Math.floor(discountMonths / 12))
+    : Math.max(1, discountMonths);
+
   return Skeletons.Box.Y({
     className: `${pfx}-right`,
     sys_pn: `${pfx}-right-panel`,
+    // Needed now that checkout() renders the panel through this function:
+    // onPartReady is what caches __rightPanel for the incremental updates.
+    partHandler: [ui],
     kids: [
       Skeletons.Note({
         className: `${pfx}-total-label`,
@@ -408,6 +298,28 @@ function rightPanelContent(ui) {
               summary.totalPrice,
               summary.period,
             ),
+          })
+        : null,
+      // When the discount ends the price goes back up. Saying so is the
+      // difference between an honest quote and one the first full invoice
+      // contradicts.
+      hasDiscount
+        ? Skeletons.Note({
+            className: `${pfx}-promo-after-note`,
+            content: discountedCycles > 1
+              ? (LOCALE.PROMO_CODE_AFTER_N
+                || "{0}% off your first {1} payments, then {2}/{3}").format(
+                String(promo.percent_off || 0),
+                String(discountedCycles),
+                summary.basePrice,
+                summary.period,
+              )
+              : (LOCALE.PROMO_CODE_AFTER_ONCE
+                || "{0}% off your first payment, then {1}/{2}").format(
+                String(promo.percent_off || 0),
+                summary.basePrice,
+                summary.period,
+              ),
           })
         : null,
       Skeletons.Box.Y({

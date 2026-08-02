@@ -2352,5 +2352,7 @@
   "PROMO_CODE_FAILED": "Could not apply this promo code. Please try again.",
   "PROMO_CODE_APPLIED": "Код {0} применён",
   "PROMO_CODE_DISCOUNT": "Промо (−{0}%)",
+  "PROMO_CODE_AFTER_ONCE": "Скидка {0}% на первый платёж, затем {1}/{2}",
+  "PROMO_CODE_AFTER_N": "Скидка {0}% на первые {1} платежей, затем {2}/{3}",
   "PROMO_CODE_TRIAL_NOTE": "{0} дней бесплатно, затем {1}/{2}"
 }

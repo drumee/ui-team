@@ -2524,5 +2524,7 @@
   "PROMO_CODE_FAILED": "Could not apply this promo code. Please try again.",
   "PROMO_CODE_APPLIED": "Code {0} applied",
   "PROMO_CODE_DISCOUNT": "Promo ({0}% off)",
+  "PROMO_CODE_AFTER_ONCE": "{0}% off your first payment, then {1}/{2}",
+  "PROMO_CODE_AFTER_N": "{0}% off your first {1} payments, then {2}/{3}",
   "PROMO_CODE_TRIAL_NOTE": "{0} days free, then {1}/{2}"
 }
