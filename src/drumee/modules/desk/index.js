@@ -362,12 +362,137 @@ class desk_module extends LetcBox {
   }
 
   /**
+   * Is a workspace armed for the prompt, without consuming it?
+   *
+   * Read-only on purpose: the loader must not eat the intent the prompt is going
+   * to need. Both sources are checked, the guest-landing key and the CTA's
+   * hub-deep-link, so the loader appears for exactly the arrivals that end in a
+   * prompt.
+   *
+   * @returns {Boolean}
+   */
+  _hasInvitedWorkspaceIntent() {
+    try {
+      if (
+        localStorage.getItem("drumee_guest_join") ||
+        sessionStorage.getItem("drumee_guest_join")
+      ) {
+        return true;
+      }
+    } catch (e) {
+      /* storage unavailable — fall through to the lib, which handles its own */
+    }
+    return hubDeepLink.has();
+  }
+
+  /** The live loader window, or null. */
+  _invitedWorkspaceLoader() {
+    try {
+      const all = (window.Wm && Wm.getItemsByKind && Wm.getItemsByKind("window_info")) || [];
+      for (const w of all) {
+        if (!w || (w.isDestroyed && w.isDestroyed())) continue;
+        if (w.mget && w.mget("guest_join_loading")) return w;
+      }
+    } catch (e) {
+      /* Wm not answering */
+    }
+    return null;
+  }
+
+  /**
+   * "Preparing your workspace…" — shown while the desk works its way toward the
+   * invited-workspace prompt, so an invitee who just clicked a link in their mail
+   * is told something is happening instead of being handed a bare desk.
+   *
+   * No-op unless a workspace is actually armed, so an ordinary sign-in never sees
+   * it.
+   *
+   * Two things make it safe to raise this BEFORE the reward / LAUNCH30 flows:
+   *
+   *  - it hides itself whenever _homePopupsBusy() says one of them is up (the skin
+   *    hides [data-busy="1"]), so it cannot repeat the stacking bug that put the
+   *    prompt at the end of the chain in the first place. Hidden, not unmounted —
+   *    remounting on every toggle would flicker and lose its place in the pool.
+   *  - `dismiss_after` is a hard backstop. Every path that ends the wait calls
+   *    _hideInvitedWorkspaceLoader, but a loader with no footer cannot be
+   *    dismissed by a button, so it must not be able to outlive its own reason to
+   *    exist even if a new path forgets.
+   *
+   * mode "hb" = header + body, no footer: there is nothing to confirm, and the
+   * header keeps the drumee/✕ bar so it can always be closed by hand.
+   */
+  _showInvitedWorkspaceLoader() {
+    if (this._invitedLoaderShown) return;
+    if (!this._hasInvitedWorkspaceIntent()) return;
+    if (!window.Wm || !Wm.info) return;
+    this._invitedLoaderShown = true;
+    const fig = "window-info";
+    Wm.info({
+      variant: "notice",
+      mode: "hb",
+      guest_join_loading: 1,
+      dismiss_after: 30000,
+      message: [
+        Skeletons.Box.X({
+          className: `${fig}__loader`,
+          kids: [
+            Skeletons.Element({ className: `${fig}__loader-spinner` }),
+            Skeletons.Note({
+              className: `${fig}__loader-label`,
+              content:
+                LOCALE.PREPARING_INVITED_WORKSPACE || "Preparing your workspace…",
+            }),
+          ],
+        }),
+      ],
+    });
+    // Wm.info cannot hand back a handle (window/info/index.js documents why: the
+    // view is built after append returns), so the window is found by its model
+    // flag on each tick. Same 250ms step as _waitForHomePopups, since it is the
+    // same state being watched.
+    //
+    // `seen` is what tells "not built yet" (keep polling) apart from "gone"
+    // (stop): the window can leave without this method being the one to remove
+    // it — the ✕ in its header, or its own dismiss_after — and the interval must
+    // not outlive it, which for a wait that can legitimately last minutes would
+    // otherwise mean minutes of pointless ticking.
+    const STEP = 250;
+    let seen = false;
+    this._invitedLoaderTimer = setInterval(() => {
+      const w = this._invitedWorkspaceLoader();
+      if (!w || !w.el) {
+        if (seen) this._hideInvitedWorkspaceLoader();
+        return;
+      }
+      seen = true;
+      w.el.dataset.guestJoinLoading = "1";
+      w.el.dataset.busy = this._homePopupsBusy() ? "1" : "0";
+    }, STEP);
+  }
+
+  /**
+   * Take the loader down. Idempotent, and called from every path that ends the
+   * wait — the prompt appearing, giving up on Wm, a stale intent, popups that
+   * never cleared, a failure in the chain — because none of those leave anything
+   * else on screen to explain the loader.
+   */
+  _hideInvitedWorkspaceLoader() {
+    if (this._invitedLoaderTimer) {
+      clearInterval(this._invitedLoaderTimer);
+      this._invitedLoaderTimer = null;
+    }
+    const w = this._invitedWorkspaceLoader();
+    if (w && w.goodbye) w.goodbye();
+  }
+
+  /**
    * After a guest signs in from a shared-workspace landing page, offer to open
    * the workspace they were invited to.
    *
    * The signin plugin writes drumee_guest_join before it leaves for the form
    * (see signin_guest._armJoinIntent); this reads it once, here, because Home
-   * is the first point where Wm exists and the desk has settled.
+   * is the first point where Wm exists and the desk has settled. The workspace-
+   * invite CTA arms the same offer through libs/hub-deep-link instead.
    *
    * Consumed unconditionally — read and removed in the same breath, whether or
    * not the dialog ends up shown — so a stale key can never re-prompt on the
@@ -404,13 +529,17 @@ class desk_module extends LetcBox {
     // older and more specific signal, still wins if both somehow exist. Its own
     // age guard lives in the lib.
     if (!intent || !intent.hub_id) intent = hubDeepLink.consume();
-    if (!intent || !intent.hub_id) return;
+    // Every return below takes the loader with it: it promised a prompt, and
+    // these are the paths where there will not be one.
+    if (!intent || !intent.hub_id) return this._hideInvitedWorkspaceLoader();
     // Outliving the session means it can also outlive the user's interest. A
     // signup that stalls at the verify email for days should not open with a
     // workspace prompt; the invite itself is unaffected, it stays in the
     // activity list either way. Undated intents (previous build) are honoured.
     const AGE_LIMIT = 7 * 24 * 3600 * 1000;
-    if (intent.ts && Date.now() - Number(intent.ts) > AGE_LIMIT) return;
+    if (intent.ts && Date.now() - Number(intent.ts) > AGE_LIMIT) {
+      return this._hideInvitedWorkspaceLoader();
+    }
     this._restoreInFlight = false;
     const workspace = (intent.name || "").trim();
     const message = workspace
@@ -422,16 +551,22 @@ class desk_module extends LetcBox {
     // it instead and give up only after a few seconds.
     let waited = 0;
     const show = () => {
-      if (this.isDestroyed && this.isDestroyed()) return;
+      if (this.isDestroyed && this.isDestroyed()) {
+        return this._hideInvitedWorkspaceLoader();
+      }
       if (!window.Wm || !Wm.info) {
         waited += 200;
         if (waited > 6000) {
+          this._hideInvitedWorkspaceLoader();
           this.warn && this.warn("[guest-join] Wm never became available");
           return;
         }
         return setTimeout(show, 200);
       }
       this._invitedHubId = intent.hub_id;
+      // Hand over: the loader comes down as the prompt goes up, so the two are
+      // never on screen together and there is no gap between them.
+      this._hideInvitedWorkspaceLoader();
       Wm.info({
         variant: "notice",
         message,
@@ -1654,11 +1789,25 @@ class desk_module extends LetcBox {
     if (this._homeSettledDone) return Promise.resolve();
     this._homeSettledDone = true;
     clearTimeout(this._homeSettledFallback);
+    // Raised FIRST, before the two full-screen flows, so someone arriving from an
+    // invite link gets an answer for the whole wait rather than a bare desk. It
+    // is a no-op unless a workspace is actually armed, and it hides itself while
+    // either flow is on screen — see _showInvitedWorkspaceLoader.
+    this._showInvitedWorkspaceLoader();
     return this._maybeStartRewardFlow()
       .then(() => this._maybeShowPromoLaunch30("home"))
       .then(() => this._waitForHomePopups())
-      .then((clear) => (clear ? this._maybeOfferInvitedWorkspace() : undefined))
-      .catch((e) => this.warn && this.warn("[home] post-ready chain failed", e));
+      .then((clear) =>
+        clear
+          ? this._maybeOfferInvitedWorkspace()
+          // Popups never cleared inside the limit, so there will be no prompt to
+          // hand the loader over to.
+          : this._hideInvitedWorkspaceLoader(),
+      )
+      .catch((e) => {
+        this._hideInvitedWorkspaceLoader();
+        this.warn && this.warn("[home] post-ready chain failed", e);
+      });
   }
 
   /**
@@ -1679,24 +1828,38 @@ class desk_module extends LetcBox {
    *   in which case the caller skips: the intent stays in storage and is
    *   offered on the next login rather than being stacked on a live overlay.
    */
+  /**
+   * Is a full-screen home flow (reward, LAUNCH30) on screen right now?
+   *
+   * Extracted from _waitForHomePopups' local busy() so the invited-workspace
+   * loader can gate itself on the same answer — one definition, so the loader can
+   * never decide it is safe to show while the wait still thinks otherwise.
+   *
+   * Errs toward "clear": if Wm is not answering, waiting forever is worse than
+   * showing a small dialog a moment early.
+   *
+   * @returns {Boolean}
+   */
+  _homePopupsBusy() {
+    if (this._rewardFlowInFlight || this._promoLaunch30InFlight) return true;
+    if (this._rewardFlow && !(this._rewardFlow.isDestroyed && this._rewardFlow.isDestroyed())) {
+      return true;
+    }
+    try {
+      const promo =
+        (window.Wm && Wm.getItemsByKind && Wm.getItemsByKind("promo_launch30")) || [];
+      if (promo.some((w) => w && !(w.isDestroyed && w.isDestroyed()))) return true;
+    } catch (e) {
+      // Wm not answering — treat as clear rather than waiting forever.
+    }
+    return false;
+  }
+
   _waitForHomePopups() {
     const SETTLE = 2000;
     const STEP = 250;
     const LIMIT = 10 * 60 * 1000;
-    const busy = () => {
-      if (this._rewardFlowInFlight || this._promoLaunch30InFlight) return true;
-      if (this._rewardFlow && !(this._rewardFlow.isDestroyed && this._rewardFlow.isDestroyed())) {
-        return true;
-      }
-      try {
-        const promo =
-          (window.Wm && Wm.getItemsByKind && Wm.getItemsByKind("promo_launch30")) || [];
-        if (promo.some((w) => w && !(w.isDestroyed && w.isDestroyed()))) return true;
-      } catch (e) {
-        // Wm not answering — treat as clear rather than waiting forever.
-      }
-      return false;
-    };
+    const busy = () => this._homePopupsBusy();
     return new Promise((resolve) => {
       let waited = 0;
       const tick = () => {
