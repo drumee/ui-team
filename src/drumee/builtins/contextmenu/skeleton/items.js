@@ -207,6 +207,8 @@ const __button = function (ui, trigger, k) {
 
     preferences: button({ content: LOCALE.PREFERENCES, service: _a.preferences }),
 
+    print: button({ content: LOCALE.PRINT, service: 'print' }),
+
     properties: button({ content: LOCALE.SHOW_PROPERTIES, service: _a.properties }),
 
     qrcode: button({ content: LOCALE.SHOW_QRCODE, service: "show-qrcode" }),
@@ -216,6 +218,46 @@ const __button = function (ui, trigger, k) {
     rename: button({ content: LOCALE.RENAME, service: 'direct-rename' }),
 
     restoreToDesk: button({ content: LOCALE.RESTORE_TO_DESK, service: 'restore-to-desk' }),
+
+    // "Rotate" parent: hover-expand submenu (same pattern as `organize`).
+    // Children carry the angle in `value`, which the image player reads off
+    // the clicked row (see player/image `onUiEvent` case _e.rotate). The
+    // parent row itself is a no-op — the submenu opens on hover via CSS.
+    rotate: Skeletons.Box.X({
+      content: LOCALE.ROTATE,
+      service: 'rotate-menu',
+      kids: [
+        Skeletons.Note({ content: LOCALE.ROTATE, className: `${pfx}__label` }),
+        Skeletons.Note({ content: '›', className: `${pfx}__chevron` }),
+        Skeletons.Box.Y({
+          className: `${pfx}__submenu`,
+          kids: [
+            Skeletons.Box.X({
+              className: `${pfx} submenu-item rotate-left`,
+              service: _e.rotate,
+              value: -90,
+              uiHandler: [ui],
+              kidsOpt: { active: 0 },
+              kids: [
+                Skeletons.Image.Svg({ ico: 'desktop_rotate', className: `${pfx}__icon` }),
+                Skeletons.Note({ content: LOCALE.ROTATE_LEFT, className: `${pfx}__label` }),
+              ],
+            }),
+            Skeletons.Box.X({
+              className: `${pfx} submenu-item rotate-right`,
+              service: _e.rotate,
+              value: 90,
+              uiHandler: [ui],
+              kidsOpt: { active: 0 },
+              kids: [
+                Skeletons.Image.Svg({ ico: 'desktop_rotate', className: `${pfx}__icon` }),
+                Skeletons.Note({ content: LOCALE.ROTATE_RIGHT, className: `${pfx}__label` }),
+              ],
+            }),
+          ],
+        }),
+      ],
+    }),
 
     rotateLeft: button({ content: LOCALE.ROTATE_LEFT, service: _e.rotate, value: -90 }),
 
@@ -282,10 +324,10 @@ const __button = function (ui, trigger, k) {
 
     }
 
-    // organize / seeChatThreads / addNew: already a Box.X submenu; its first kid is the
-    // __label Note. Just prepend the icon when one is mapped.
+    // organize / seeChatThreads / addNew / rotate: already a Box.X submenu; its first
+    // kid is the __label Note. Just prepend the icon when one is mapped.
 
-    if (k === 'organize' || k === 'seeChatThreads' || k === 'addNew') {
+    if (k === 'organize' || k === 'seeChatThreads' || k === 'addNew' || k === 'rotate') {
 
       r.className = cls;
 
