@@ -5,6 +5,10 @@ require('./skin');
 
 const { TweenMax, Cubic } = require("@drumee/ui-core/vendor");
 const snap = require('builtins/window/snap');
+// Required directly, NOT read off `this.contextmenuSkeleton`: players set
+// that property to the string "a" (player/interact.js) to suppress their
+// right-click menu, so calling it would throw.
+const contextmenuSkeleton = require('builtins/contextmenu/skeleton');
 const __core = require('player/interact');
 
 // Gear-menu rows that act on the node rather than on the player. The MFS
@@ -134,16 +138,20 @@ class __player_image extends __core {
   /**
    * Open the file menu under the gear button.
    *
-   * Reuses the real contextmenu rather than a bespoke panel: same markup,
-   * same skin, same submenu behaviour as right-click. `drumeeDialog` is the
-   * global overlay layer the right-click path also feeds, so only one menu
-   * can be open at a time and clicking away dismisses it.
+   * Reuses the real contextmenu builder rather than a bespoke panel: same
+   * markup, same skin, same submenu behaviour. `drumeeDialog` is the global
+   * overlay layer the right-click path also feeds, so only one menu can be
+   * open at a time and clicking away dismisses it.
+   *
+   * The builder is the required module, not `this.contextmenuSkeleton` —
+   * players park the string "a" there to suppress their right-click menu
+   * (player/interact.js), which this gear button deliberately bypasses.
    */
   _openFileMenu(cmd) {
     const anchor = cmd && cmd.el;
     if (!anchor || !window.drumeeDialog || drumeeDialog.isDestroyed()) return;
     const r = anchor.getBoundingClientRect();
-    const kids = this.contextmenuSkeleton(this, cmd, {});
+    const kids = contextmenuSkeleton(this, cmd, {});
     if (_.isEmpty(kids)) return;
     drumeeDialog.feed(Skeletons.Box.Y({
       volatility: 4,
