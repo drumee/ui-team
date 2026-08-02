@@ -30,7 +30,7 @@ module.exports = function (ui, size) {
         kidsOpt: { active: 0 },
         kids: [
           Skeletons.Image.Svg({
-            ico: "image",
+            ico: "bg-image",
             className: `${ui.fig.family}-topbar__filetype-icon`,
           }),
         ],
@@ -57,7 +57,7 @@ module.exports = function (ui, size) {
   });
 
   const gear = Skeletons.Button.Svg({
-    ico: "gear-header",
+    ico: "folder-settings",
     sys_pn: "ctrl-gear",
     className: "icon gear",
     service: "open-file-menu",

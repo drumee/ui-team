@@ -11,7 +11,7 @@
 .player-image {
   // The header owns the top radius so it meets the image flush.
   .player__header {
-    border-radius: var(--corner-radius-3) var(--corner-radius-3) 0 0;
+    border-radius: var(--corner-radius-2) var(--corner-radius-2) 0 0;
 
     &.main {
       background-color: var(--normal-bg-80);
@@ -44,7 +44,7 @@
     }
 
     &__filetype-icon {
-      color: var(--normal-fg-10);
+      color: #71A3F4;
       height: 25.6px;
       width: 25.6px;
 
@@ -74,8 +74,8 @@
         width: 24px;
 
         svg {
-          height: 24px;
-          width: 24px;
+          height: 20px;
+          width: 20px;
         }
 
         &:hover svg {

@@ -34,7 +34,7 @@ const __player_image_move_resize = function (ui) {
     sys_pn: "snap-wrapper",
     kids: [
       Skeletons.Button.Svg({
-        ico: "expand",
+        ico: "desktop_fullview",
         className: `${cn}-trigger icon`,
         sys_pn: "ctrl-expand",
         service: "window-zoom",
