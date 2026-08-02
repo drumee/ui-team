@@ -2345,6 +2345,7 @@
   "OPEN_WORKSPACE": "Abrir espacio de trabajo",
   "GUEST_JOIN_OPEN_WORKSPACE_MSG": "Ya puedes abrir el espacio de trabajo al que te invitaron: %s",
   "GUEST_JOIN_OPEN_WORKSPACE_MSG_PLAIN": "Ya puedes abrir el espacio de trabajo al que te invitaron.",
+  "PREPARING_INVITED_WORKSPACE": "Preparando tu espacio de trabajo…",
   "ROTATE": "Rotate",
   "MOVE_RESIZE": "Move & Resize"
 }
