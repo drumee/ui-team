@@ -399,9 +399,6 @@
     .desk-module-topbar__new-menu-items {
       background-color: var(--normal-bg-elevated, #fff);
       border-radius: 6px;
-      box-shadow:
-        0 4px 6px -4px rgba(0, 0, 0, 0.1),
-        0 10px 15px -3px rgba(0, 0, 0, 0.1);
       padding: 6px;
       width: max-content;
       min-width: 242px;
@@ -409,6 +406,19 @@
       flex-direction: column;
       gap: 2px;
       overflow: visible;
+    }
+
+    // The dropdown surface is .menu-topic-items. The menu widget FEEDS the
+    // `items:` box into it (menu/index.js renderItems -> __items.feed), so
+    // .desk-module-topbar__new-menu-items is a CHILD of that surface, not the
+    // same node — sharing the shadow painted it twice, one nested inside the
+    // other. It belongs to the outer surface alone.
+    .menu-topic-items,
+    .menu-items {
+      box-shadow:
+        0 4px 6px -4px rgba(0, 0, 0, 0.1),
+        0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        border: 1px solid var(--border-default);
     }
 
     .menu-topic-items__wrapper[data-state="closed"],
@@ -495,6 +505,7 @@
       box-shadow:
         0 4px 6px -4px rgba(0, 0, 0, 0.1),
         0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        border: 1px solid var(--border-default);
       box-sizing: border-box;
     }
 
@@ -1000,6 +1011,15 @@ html[data-theme="dark"] {
       .desk-module-topbar__new-menu-items,
       .desk-module-topbar__new-menu-create-submenu {
         background-color: var(--normal-bg-elevated);
+      }
+
+      // Same nesting as the light rule above: __new-menu-items sits INSIDE
+      // .menu-topic-items, so it must not repeat the surface shadow. The
+      // create submenu keeps its own — it flies out beside the parent box
+      // rather than sitting within it.
+      .menu-topic-items,
+      .menu-items,
+      .desk-module-topbar__new-menu-create-submenu {
         box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
       }
 
