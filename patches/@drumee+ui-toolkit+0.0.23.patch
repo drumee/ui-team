@@ -1,0 +1,19 @@
+diff --git a/node_modules/@drumee/ui-toolkit/widgets/otp/index.js b/node_modules/@drumee/ui-toolkit/widgets/otp/index.js
+index f6e7810..c71e16c 100644
+--- a/node_modules/@drumee/ui-toolkit/widgets/otp/index.js
++++ b/node_modules/@drumee/ui-toolkit/widgets/otp/index.js
+@@ -68,6 +68,14 @@ export default class dtk_otp extends dtk_common {
+       const attach = (c) => {
+         const el = this._inputEl(c);
+         if (!el) return;
++        // Advertise numeric intent so mobile pops the number pad and keeps it.
++        // Without this the soft keyboard defaults to the alpha ("abc") layout
++        // and snaps back to it every time focus hops to the next box, making a
++        // digit-only code painful to type. Skip when the charset is alphanumeric.
++        if (this._charset !== 'alphanumeric') {
++          el.setAttribute('inputmode', 'numeric');
++          el.setAttribute('pattern', '[0-9]*');
++        }
+         el.addEventListener('keydown', (e) => this._onDigitKeydown(e, c, p));
+         el.addEventListener('paste', (e) => {
+           e.preventDefault();

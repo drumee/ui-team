@@ -62,6 +62,11 @@ const BUILTIN_META = {
   complete: { label: "STATUS_COMPLETE", seed: "Complete" },
 };
 
+// How long a "a peer changed this out from under you" notice stays up before
+// dismissing itself. Long enough to read mid-typing, short enough not to camp
+// on the screen.
+const PEER_NOTICE_MS = 10000;
+
 // Signal palette (Figma): Success / Info / Warning / Error — must match the
 // skin's [data-priority] pill colors so dots and pills agree everywhere.
 const PRIORITIES = [
@@ -1240,19 +1245,7 @@ class __tasks_panel extends LetcBox {
 
       case "cancel-detail":
       case "close-detail":
-        this._detailId = null;
-        this._detailDraft = null;
-        this._pickerOpen = null;
-        this._comments = [];
-        this._commentDraft = null;
-        this._editingCommentId = null;
-        this._commentEditDraft = null;
-        this._replyingTo = null;
-        this._replyDraft = null;
-        this._reactPickerFor = null;
-        this._closeCommentReactionsPicker();
-        this._resetFileSearch();
-        this._dismissOverlayNow("detail-backdrop");
+        this._closeDetailSilently();
         return this._renderDeferred();
 
       case "open-detail":
@@ -1791,10 +1784,17 @@ class __tasks_panel extends LetcBox {
           this._loadMembers(),
         ]).then(() => this._render());
         return;
+      case SERVICE.task.delete:
+        // Warn BEFORE the reload: once _loadTasks lands, the row this user is
+        // editing is gone and there is nothing left to match the id against.
+        this._onPeerTaskDeleted(data, options);
+        Promise.all([this._loadTasks(), this._loadActivity()]).then(() =>
+          this._render(),
+        );
+        return;
       case SERVICE.task.create:
       case SERVICE.task.update:
       case SERVICE.task.update_status:
-      case SERVICE.task.delete:
       case SERVICE.task.link_label:
       case SERVICE.task.unlink_label:
         Promise.all([this._loadTasks(), this._loadActivity()]).then(() =>
@@ -1812,12 +1812,18 @@ class __tasks_panel extends LetcBox {
         return;
       case SERVICE.task.column_create:
       case SERVICE.task.column_update:
-      case SERVICE.task.column_delete:
-        // A peer changed the board's columns. Deleting a column also moves its
-        // tasks back to 'todo' server-side, so refresh both.
         Promise.all([this._loadColumns(), this._loadTasks()]).then(() =>
           this._render(),
         );
+        return;
+      case SERVICE.task.column_delete:
+        // A peer deleted a board. Its tasks are re-homed server-side, so reload
+        // both lists first — the notice below needs the surviving columns to
+        // tell the user where their open task went.
+        Promise.all([this._loadColumns(), this._loadTasks()]).then(() => {
+          this._onPeerColumnDeleted(data, options);
+          this._render();
+        });
         return;
       case SERVICE.task.comment_create:
       case SERVICE.task.comment_update:
@@ -1838,6 +1844,132 @@ class __tasks_panel extends LetcBox {
       default:
         if (super.onWsMessage) super.onWsMessage(svc, data, options);
     }
+  }
+
+  // Display name of the peer whose change arrived on the socket. Every
+  // broadcast carries its sender (server-essentials `payload()` → options.sender);
+  // an unnamed sender falls back to the impersonal wording rather than printing
+  // a raw uid.
+  _wsActorName(options) {
+    const s = options && options.sender;
+    if (!s) return "";
+    return this._plainText(
+      String(s.fullname || "").trim() ||
+        [s.firstname, s.lastname].filter(Boolean).join(" ").trim(),
+    );
+  }
+
+  // window_info renders its message through innerHTML (that is what lets the
+  // locale strings carry <b>), so anything user-supplied spliced into one — a
+  // display name, a board title — must not be able to open a tag.
+  _plainText(s) {
+    return String(s == null ? "" : s).replace(/[<>]/g, "");
+  }
+
+  // Branded self-dismissing notice. Reuses the window_info "notice" card every
+  // other confirmation in the product uses, so colours, type and alignment come
+  // from one place instead of a bespoke popup. Closes itself after
+  // PEER_NOTICE_MS, or immediately on OK.
+  _notifyPeerChange(message) {
+    if (!message) return;
+    if (typeof Wm === "undefined" || !Wm.info || typeof Kind === "undefined") {
+      return;
+    }
+    const show = () =>
+      Wm.info({
+        message,
+        variant: "notice",
+        dismiss_after: PEER_NOTICE_MS,
+        actions: [{ label: LOCALE.OK, priority: "primary", service: _e.close }],
+      });
+    // Wm.info appends straight into the windows pool without waiting for the
+    // kind to load — unlike Wm.alert, which does wait. Nothing here guarantees
+    // window_info has been imported yet (this panel can be the first thing to
+    // ask for it in a session), and appending an unregistered kind renders the
+    // "snippet not found" fallback instead of the notice. Wait like Wm.alert.
+    Kind.waitFor("window_info").then(show).catch(show);
+  }
+
+  // Tear the detail down without the click path's re-render — callers that
+  // close it in reaction to a peer's change are already re-rendering.
+  _closeDetailSilently() {
+    this._detailId = null;
+    this._detailDraft = null;
+    this._pickerOpen = null;
+    this._comments = [];
+    this._commentDraft = null;
+    this._editingCommentId = null;
+    this._commentEditDraft = null;
+    this._replyingTo = null;
+    this._replyDraft = null;
+    this._reactPickerFor = null;
+    this._closeCommentReactionsPicker();
+    this._resetFileSearch();
+    this._dismissOverlayNow("detail-backdrop");
+  }
+
+  // A peer deleted the task this user has open. Their edits can no longer be
+  // saved — Update would post against a row that no longer exists — so close the
+  // form and say who removed it. Previously the panel just reloaded underneath:
+  // the user kept typing and their task silently disappeared on save.
+  _onPeerTaskDeleted(data, options) {
+    const id = data && (data.id || data.task_id);
+    if (!id) return;
+    if (!this._detailId || String(this._detailId) !== String(id)) return;
+    this._closeDetailSilently();
+    const who = this._wsActorName(options);
+    this._notifyPeerChange(
+      who ? LOCALE.TASK_REMOVED_BY.format(who) : LOCALE.TASK_REMOVED,
+    );
+  }
+
+  // A peer deleted a board (Kanban column) while this user was editing a task
+  // that lived on it. The server re-homes those tasks onto a surviving column,
+  // so the work is NOT lost — but the open draft still carries the dead column
+  // as its status, and saving would post a column that no longer exists. Repoint
+  // the draft, then say what happened. Only when no column survives is the task
+  // genuinely unreachable, and then this behaves like a delete.
+  _onPeerColumnDeleted(data, options) {
+    const key = data && data.id;
+    if (!key) return;
+    const drafts = [];
+    if (this._detailId && this._detailDraft) drafts.push(this._detailDraft);
+    if (this._creating && this._createDefaults)
+      drafts.push(this._createDefaults);
+    const affected = drafts.filter((d) => String(d.status) === String(key));
+    if (!affected.length) return;
+
+    const who = this._wsActorName(options);
+    const cols = this.getColumns() || [];
+    // Where the task ACTUALLY ended up. This runs after _loadTasks(), so the
+    // reloaded row already carries the server's decision — read it rather than
+    // re-deriving one, or Update would post a status change the user never made.
+    // moved_to and "first surviving column" are only fallbacks (the create
+    // modal has no row to read, and an old server sends no moved_to).
+    const moved = this._detailId
+      ? (this._tasks.find((t) => String(t.id) === String(this._detailId)) || {})
+          .status
+      : null;
+    const target =
+      cols.find((c) => String(c.key) === String(moved)) ||
+      cols.find((c) => String(c.key) === String(data.moved_to)) ||
+      cols[0];
+    if (!target) {
+      this._closeDetailSilently();
+      this._notifyPeerChange(
+        who ? LOCALE.TASK_BOARD_REMOVED_BY.format(who) : LOCALE.TASK_BOARD_REMOVED,
+      );
+      return;
+    }
+    affected.forEach((d) => {
+      d.status = target.key;
+    });
+    const where = this._plainText(target.name || target.key);
+    this._notifyPeerChange(
+      who
+        ? LOCALE.TASK_BOARD_MOVED_BY.format(who, where)
+        : LOCALE.TASK_BOARD_MOVED.format(where),
+    );
   }
 
   async _loadTasks() {
@@ -2941,11 +3073,26 @@ class __tasks_panel extends LetcBox {
         id,
         task_id: taskId,
       });
-      this._comments = this._comments.filter((c) => c.id !== id);
-      if (this._editingCommentId === id) {
+      // Deleting a comment takes its replies with it (the server cascades).
+      // Mirror that here instead of only dropping the root — otherwise the
+      // replies stay on screen as orphans, re-rendered as fresh top-level
+      // comments, until the next full reload.
+      const gone = new Set([String(id)]);
+      this._comments.forEach((c) => {
+        if (String(c.parent_id) === String(id)) gone.add(String(c.id));
+      });
+      this._comments = this._comments.filter((c) => !gone.has(String(c.id)));
+      if (gone.has(String(this._editingCommentId))) {
         this._editingCommentId = null;
         this._commentEditDraft = null;
       }
+      // A reply composer open on a comment that just went away has nothing left
+      // to answer.
+      if (gone.has(String(this._replyingTo))) {
+        this._replyingTo = null;
+        this._replyDraft = null;
+      }
+      if (gone.has(String(this._reactPickerFor))) this._reactPickerFor = null;
     } catch (err) {
       console.error("[tasks_panel] comment.delete failed:", err);
     }

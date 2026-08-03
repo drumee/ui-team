@@ -422,6 +422,7 @@ class __window_folder extends mfsInteract {
       this._mmInviteeBlurTimer = null;
     }
     this._stopAwaitMeetingReady();
+    this._ftTeardown();
     this._unbindThreadMenuOutside();
     this._unbindViewportReframe();
     if (!this.mget(_a.headless) && window.Wm && Wm.$el) {
@@ -1230,7 +1231,15 @@ class __window_folder extends mfsInteract {
 
   onUiEvent(cmd, args = {}) {
     const service = args.service || cmd.service || cmd.mget(_a.service);
+    // File-thread access revocation: while a revoked thread is still on screen
+    // (before OK / the 5-second timeout), refuse every action that would act on
+    // it. The CSS blur is cosmetic — this is the guard. See file-thread-access.js.
+    if (this._ftRevoked && this._ftIsRevokedService(service)) return;
     switch (service) {
+      // OK on the revocation notice — same finalizer the timeout uses.
+      case "file-thread-revoked-ack":
+        return this._finalizeRevokedFileThread();
+
       case _e.upload:
         this.closeNewMenu(cmd);
         return super.onUiEvent(cmd, args);
@@ -3046,6 +3055,11 @@ class __window_folder extends mfsInteract {
   }
 
   scopeChatToFile(fileNid, fileLabel, opts = {}) {
+    // Programmatic entry point — reached from chat-item cards, Wm.launch, and
+    // the thread rail as well as onUiEvent, so the revocation guard has to be
+    // here too. Opening (or re-opening) a revoked thread is refused; clearing
+    // the scope (falsy nid) is exactly what the finalizer does and must pass.
+    if (fileNid && this._ftIsFileRevoked(fileNid)) return Promise.resolve();
     // Full (wide) Chat tab: the file thread lives in the docked RIGHT panel; the
     // middle chat always stays #General (Figma 2331-46821). Files tab — and the
     // compact Chat tab — scope the single chat IN PLACE (no room for a column).
@@ -3311,9 +3325,13 @@ class __window_folder extends mfsInteract {
     const svc =
       (SERVICE.channel && SERVICE.channel.file_thread_info) ||
       "channel.file_thread_info";
+    // Capture the access generation: a revoke/recovery landing while this is in
+    // flight must not let the response repaint the header it just tore down.
+    const generation = this._ftThreadRequestGeneration();
     this.fetchService({ service: svc, hub_id, file_nid: fileNid }, { async: 1 })
       .then((info) => {
         if (!info || !bar.el || (bar.isDestroyed && bar.isDestroyed())) return;
+        if (generation !== this._ftThreadRequestGeneration()) return;
         // Header may have switched back to folder, or to a different file, while
         // the fetch was in flight.
         if (bar.el.dataset.scope !== "file") return;
@@ -3351,9 +3369,13 @@ class __window_folder extends mfsInteract {
     const svc =
       (SERVICE.channel && SERVICE.channel.file_thread_info) ||
       "channel.file_thread_info";
+    const generation = this._ftThreadRequestGeneration();
     this.fetchService({ service: svc, hub_id, file_nid: fileNid }, { async: 1 })
       .then((info) => {
         if (!info || !slot.el || (slot.isDestroyed && slot.isDestroyed())) return;
+        // A revoke/recovery superseded this hydrate — do not restore the cached
+        // filetype ("Open file →" would launch a player for a gone file).
+        if (generation !== this._ftThreadRequestGeneration()) return;
         if (slot.el.dataset.open !== "1") return;
         if (slot.el.dataset.ftNid !== `${fileNid}`) return;
         this._ftFiletype = `${info.filetype || info.category || ""}`;
@@ -3431,10 +3453,13 @@ class __window_folder extends mfsInteract {
     const svc =
       (SERVICE.channel && SERVICE.channel.file_thread_info) ||
       "channel.file_thread_info";
+    const generation = this._ftThreadRequestGeneration();
     this.fetchService({ service: svc, hub_id, file_nid: fileNid }, { async: 1 })
       .then((info) => {
         if (!info || !panel.el || (panel.isDestroyed && panel.isDestroyed()))
           return;
+        // A revoke/recovery superseded this hydrate while it was in flight.
+        if (generation !== this._ftThreadRequestGeneration()) return;
         // Panel may have closed, or re-scoped to a different file, while the
         // fetch was in flight — bail so we never paint stale info into the
         // current card.
@@ -3498,11 +3523,15 @@ class __window_folder extends mfsInteract {
       this._threadMenuPart = menu;
       if (menu.el.dataset.open === "1") return this._closeThreadMenu();
 
+      // Access generation at request time — a revoke/recovery landing mid-fetch
+      // invalidates this response, whether it succeeded or failed.
+      const generation = this._ftThreadRequestGeneration();
       const render = (items, scopedNid) => {
         // The fetch (and ensurePart) resolve async — bail if the window or the
         // menu part was destroyed meanwhile, so we never feed/flag a dead node
         // or re-bind a document listener on it.
         if (this.isDestroyed && this.isDestroyed()) return;
+        if (generation !== this._ftThreadRequestGeneration()) return;
         if (!menu.el || (menu.isDestroyed && menu.isDestroyed())) return;
         menu.feed(
           require("./skeleton/thread-menu")(this, { items, scopedNid }),
@@ -3558,6 +3587,10 @@ class __window_folder extends mfsInteract {
     // cannot overwrite the rail with wrong-folder rows (last-writer-wins on
     // rapid navigation). Mirrors chat/index.js's nid recheck after async.
     const folderNid = `${this.mget(_a.nid)}`;
+    // Access generation at request time. Folder identity alone is not enough:
+    // a revoke or recovery for the SAME folder must also invalidate an older
+    // in-flight rail response, or a delayed success repaints the removed thread.
+    const generation = this._ftThreadRequestGeneration();
     return this.ensurePart("thread-rail").then((rail) => {
       if (!rail || !rail.el || (rail.isDestroyed && rail.isDestroyed())) return;
       this._threadRailPart = rail;
@@ -3568,6 +3601,7 @@ class __window_folder extends mfsInteract {
           if (!rail.el || (rail.isDestroyed && rail.isDestroyed())) return;
           // Folder changed mid-fetch → discard this stale response.
           if (`${this.mget(_a.nid)}` !== folderNid) return;
+          if (generation !== this._ftThreadRequestGeneration()) return;
           this._threadRailItems = items;
           rail.feed(
             require("./skeleton/thread-menu")(this, {
@@ -3741,6 +3775,9 @@ class __window_folder extends mfsInteract {
       }
     }
     super.updateTopbar(m);
+    // Navigation invalidates every in-flight thread-list / hydrate response for
+    // the folder we are leaving (shared generation with revoke/recovery).
+    this._ftBumpThreadRequests();
     // Navigating to another folder drops any open file thread → fall back to the
     // folder ("# General") chat so the panel and header follow the new folder
     // (resets scopedFileNid + the file-thread header before re-scoping below).
@@ -4145,27 +4182,7 @@ class __window_folder extends mfsInteract {
       // local state (hub.get_members_by_type can return stale data on
       // immediate read-after-write).
       raw.privilege = nextRole.privilege;
-      if (this.dialogWrapper) {
-        // The initial mount in switchShowFolderSettings attaches a
-        // once(destroy) handler on the panel that flips isShowSettings
-        // to false. An in-place re-feed destroys that old child and
-        // would trip the handler — detach it first, then re-attach an
-        // identical handler to the freshly mounted child so the close
-        // button keeps working.
-        const oldChild = this.dialogWrapper.children?.last?.();
-        if (oldChild) oldChild.off(_e.destroy);
-        this.dialogWrapper.feed(
-          require("./skeleton/settings-action-panel")(this),
-        );
-        this.isShowSettings = true;
-        const newChild = this.dialogWrapper.children?.last?.();
-        if (newChild) {
-          newChild.once(_e.destroy, () => {
-            this.isShowSettings = false;
-            this.unselect();
-          });
-        }
-      }
+      this._refeedFolderMembersPanel();
       this._showNoticeToast(LOCALE.ROLE_UPDATED_SUCCESSFULLY || "Role updated.");
     } catch (e) {
       Wm.alert(e?.reason || e?.error || LOCALE.TRY_AGAIN);
@@ -4189,10 +4206,48 @@ class __window_folder extends mfsInteract {
   //    it is NOT inside the re-fed header — syncNewCtrlVisibility covers it.
   handleWsEvent(args = {}) {
     const { data, options } = args || {};
-    if (options && options.service === SERVICE.hub.set_privilege) {
+    const svc = options && options.service;
+    // File-thread access lifecycle (see ./file-thread-access.js). Handled FIRST
+    // and before super: the base handler removes the file from the grid, and
+    // the thread must already be frozen by then — otherwise the window repaints
+    // around a scope the viewer can no longer read.
+    if (svc === "channel.file_thread_access_changed") {
+      this.onFileThreadAccessChanged(data || {});
+      // Fall through to super: this event carries no grid row, so the base
+      // handler no-ops, but keeping the call preserves its bookkeeping.
+    }
+    if (svc === SERVICE.hub.set_privilege) {
       this._applyLivePrivilege(data || {});
     }
+    // A member joined this workspace (invite redeemed via token, resolved on
+    // signup, or granted directly by another admin). The permission matrix
+    // reads hub_get_members_by_type, which only returns real permission rows —
+    // so until the join lands there is no row to show, and nothing repaints it
+    // once there is. Refetch instead of leaving the admin looking at a member
+    // list missing the person they just invited. _refreshFolderMembers
+    // self-guards on the panel being open, so this is a no-op when closed.
+    else if (svc === "hub.member_joined") {
+      this._onMemberJoined(data || {});
+    }
     return super.handleWsEvent(args);
+  }
+
+  // Server-side handler: server-team/service/lib/notify-member-joined.js.
+  // Broadcasts { hub_id, uid } to every online member of the hub (the joiner's
+  // own sockets included — see _onMemberJoined's echo guard for why).
+  _onMemberJoined(data = {}) {
+    // The server cannot exclude our own sockets (entity_sockets' exclude arg
+    // splices JSON straight into `s.id NOT IN (...)` and user_sockets returns
+    // rows, not bare ids), so the joiner receives its own echo. Drop it here.
+    // uid may be null for admin-driven multi-adds (invite_with_roles) — then
+    // nobody is guarded, which is correct: the acting admin has the matrix open.
+    if (data.uid && data.uid === Visitor.id) return;
+    // Several folder windows can be open at once — only the one on this hub
+    // refetches. Use actualNode() (what _refreshFolderMembers reads) rather
+    // than mget(_a.hub_id), which differs for symlink/cross-hub nodes.
+    const mine = this.actualNode() || {};
+    if (data.hub_id && mine.hub_id && data.hub_id !== mine.hub_id) return;
+    this._refreshFolderMembers();
   }
 
   _applyLivePrivilege(data = {}) {
@@ -4483,7 +4538,16 @@ class __window_folder extends mfsInteract {
         Wm.alert(res.reason || res.error || LOCALE.TRY_AGAIN);
         return;
       }
-      await this._refreshFolderMembers();
+      // Optimistic local removal: hub.get_members_by_type returns stale data
+      // on immediate read-after-write (see set_privilege above), so splicing B
+      // out of the cached list and re-rendering from local state is both
+      // faster and correct — a refetch right after the POST would still see B.
+      this._folderMembers = (this._folderMembers || []).filter(
+        (r) =>
+          String(r.entity_id || r.drumate_id || r.id || "") !==
+          String(memberId),
+      );
+      this._refeedFolderMembersPanel();
       this._showNoticeToast(LOCALE.MEMBER_REMOVED_SUCCESSFULLY || "Member removed.");
     } catch (e) {
       Wm.alert(e?.reason || e?.error || LOCALE.TRY_AGAIN);
@@ -4526,6 +4590,30 @@ class __window_folder extends mfsInteract {
       row.surname,
       row.email,
     );
+  }
+
+  // Re-render the Folder settings matrix from this._folderMembers WITHOUT a
+  // server refetch. Used after optimistic local mutations (role change, member
+  // removal) where hub.get_members_by_type would return stale read-after-write
+  // data. Mirrors the close-button wiring from switchShowFolderSettings: an
+  // in-place feed destroys the old panel child, which would trip its
+  // once(_e.destroy) handler and flip isShowSettings off — detach it first,
+  // then re-attach an identical handler to the freshly mounted child.
+  _refeedFolderMembersPanel() {
+    if (!this.dialogWrapper) return;
+    const oldChild = this.dialogWrapper.children?.last?.();
+    if (oldChild) oldChild.off(_e.destroy);
+    this.dialogWrapper.feed(
+      require("./skeleton/settings-action-panel")(this),
+    );
+    this.isShowSettings = true;
+    const newChild = this.dialogWrapper.children?.last?.();
+    if (newChild) {
+      newChild.once(_e.destroy, () => {
+        this.isShowSettings = false;
+        this.unselect();
+      });
+    }
   }
 
   async _refreshFolderMembers() {
@@ -4734,5 +4822,9 @@ class __window_folder extends mfsInteract {
 
 // Rich meeting-description editor methods (@-mention, /-file, inline images).
 Object.assign(__window_folder.prototype, require("./meeting-desc-editor"));
+
+// File-thread access revocation / recovery lifecycle (proactive freeze, single
+// revocation notice, idempotent teardown back to # General, recovery refresh).
+Object.assign(__window_folder.prototype, require("./file-thread-access"));
 
 module.exports = __window_folder;

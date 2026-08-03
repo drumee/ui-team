@@ -190,21 +190,33 @@ class settings_delete_account extends LetcBox {
   }
 
   async _finalConfirmWithOtp() {
-    const otp = await sendOtp(this);
-    if (!otp) {
-      return this.ensurePart("error-box").then((p) => {
-        p && p.feed(Skeletons.Note({
-          className: `${this.fig.family}__warning-text`,
-          content: LOCALE.UNKNOWN_ERROR,
-        }));
+    // In-flight guard: otp.send is a slow round-trip (SMTP) and the confirm
+    // button isn't disabled while it runs, so a user who clicks "Delete my
+    // account" again (or a duplicate click dispatch) would fire several otp.send
+    // calls — each minting a fresh code — landing multiple codes in one email
+    // thread. Send exactly one per confirm. (The sibling MFA toggle guards the
+    // same way with _mfaInFlight.)
+    if (this._deleteOtpSending) return;
+    this._deleteOtpSending = true;
+    try {
+      const otp = await sendOtp(this);
+      if (!otp) {
+        return this.ensurePart("error-box").then((p) => {
+          p && p.feed(Skeletons.Note({
+            className: `${this.fig.family}__warning-text`,
+            content: LOCALE.UNKNOWN_ERROR,
+          }));
+        });
+      }
+      return openOtpModal(this, {
+        ...otp,
+        api: SERVICE.drumate.delete_account,
+        successService: "delete-account-otp-success",
+        cancelService: "delete-account-otp-cancel",
       });
+    } finally {
+      this._deleteOtpSending = false;
     }
-    return openOtpModal(this, {
-      ...otp,
-      api: SERVICE.drumate.delete_account,
-      successService: "delete-account-otp-success",
-      cancelService: "delete-account-otp-cancel",
-    });
   }
 
   onUiEvent(cmd, args = {}) {

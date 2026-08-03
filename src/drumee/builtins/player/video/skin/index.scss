@@ -38,17 +38,15 @@
       height: 32px;
       padding: 0;
       border-radius: 50%;
-      background-color: rgba(0, 0, 0, 0.55);
       backdrop-filter: blur(4px);
-      color: #ffffff;
+      color: var(--normal-fg-10);
       transition: background-color 0.15s ease;
       cursor: pointer;
 
-      svg, .icon { width: 14px; height: 14px; }
+      svg, .icon { width: 20px; height: 20px; }
 
       &:hover {
-        background-color: rgba(0, 0, 0, 0.75);
-        color: #ffffff;
+        color: var(--normal-fg-20);
       }
     }
   }
@@ -62,12 +60,7 @@
     border-radius: var(--corner-radius-2);
   }
 
-  // Letterbox/pillarbox area outside the <video> — keep dark so the
-  // aspect-ratio bars don't read as a white frame around the video.
-  &__ui,
-  &__main {
-    background-color: var(--multimedia-player-vdo-bg, #000);
-  }
+  
 
   /* OpenPlayer brand alignment */
   .op-player {

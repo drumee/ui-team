@@ -1,4 +1,7 @@
+@use "sass:meta";
 @use "mixins/drumee";
+@include meta.load-css("topbar");
+@include meta.load-css("menu");
 
 .player-image {
   &__ui {
@@ -24,7 +27,9 @@
 
   &__slider-main {
     align-items: center;
-    border-radius: 0 0 var(--spacer-6) var(--spacer-6);
+    // 8px, matching the header's top radius (Figma 3228:280024). These two
+    // used to disagree — 16px on the header, 24px here.
+    border-radius: 0 0 var(--corner-radius-3) var(--corner-radius-3);
     height: 100%;
     justify-content: center;
     width: 100%;

@@ -1,0 +1,788 @@
+// Get help — full-area desk screen (Figma 58004-54589 / 58009-22369 / 58011-23121).
+// Mounted in the desk settings-main-slot like settings_main, so the root
+// fills the slot and the content column owns the scroll.
+
+.help-main {
+  // Colour tokens from the design; names mirror settings/main/skin.
+  $purple-base: #5950ff; // Contact Support link + active chip border
+  $purple-deep: #433cc5; // Scrollbar thumb (Figma "scroll bar")
+  $ink-900: #0b0a21; // Headings, nav labels, questions
+  $ink-600: #65656c; // Placeholders, answers
+  $hairline: rgba(0, 0, 0, 0.05); // Card + input borders, thumb button bg
+  $surface: #f2f2f7; // Video placeholder, inactive chips, active nav row
+
+  // One easing + duration for every state change on this screen, so hovers,
+  // chips, cards and the accordion all feel like the same surface.
+  $ease: cubic-bezier(0.4, 0, 0.2, 1);
+  $fast: 0.15s;
+  $base: 0.22s;
+
+  // Content column is capped at the design's 900px and centred in whatever
+  // space the desk slot gives us, so the page doesn't sprawl on wide screens.
+  $content-max: 900px;
+
+  &__ui {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background: var(--white);
+    font-family: "Geist", system-ui, sans-serif;
+  }
+
+  &__main {
+    width: 100%;
+    height: 100%;
+    align-items: stretch;
+  }
+
+  // Shared scrollbar treatment — the design's 4px purple rail.
+  // Mixins, not %placeholders: @extend may not cross a media query, and the
+  // responsive block below needs the scrollbar on a different element.
+  @mixin thin-scroll {
+    scrollbar-width: thin;
+    scrollbar-color: $purple-deep $hairline;
+
+    &::-webkit-scrollbar {
+      width: 4px;
+      height: 4px;
+    }
+
+    &::-webkit-scrollbar-track {
+      background: $hairline;
+      border-radius: 45px;
+    }
+
+    &::-webkit-scrollbar-thumb {
+      background: $purple-deep;
+      border-radius: 45px;
+    }
+  }
+
+  // Shared focus ring — keyboard users get a visible target on every
+  // clickable Box (none of these are native <button>s).
+  @mixin focus-ring {
+    &:focus-visible {
+      outline: 2px solid $purple-base;
+      outline-offset: 2px;
+    }
+  }
+
+  // ── Left nav column ───────────────────────────────────────
+  &__nav {
+    &-column {
+      @include thin-scroll;
+      width: 320px;
+      flex: 0 0 320px;
+      height: 100%;
+      padding: var(--spacer-5) var(--spacer-6);
+      gap: var(--spacer-4);
+      background: var(--white);
+      border-right: 1px solid $hairline;
+      overflow-y: auto;
+      overscroll-behavior: contain;
+    }
+
+    &-title {
+      font-size: 1.125rem; // 18px
+      font-weight: 600;
+      line-height: 1.5rem;
+      color: $ink-900;
+    }
+
+    &-search {
+      align-items: center;
+      gap: var(--spacer-2);
+      padding: var(--spacer-3);
+      border: 1px solid $hairline;
+      border-radius: 8px;
+      transition:
+        border-color $fast $ease,
+        box-shadow $fast $ease;
+
+      // Lift the border to the accent while the inner input has focus.
+      &:focus-within {
+        border-color: $purple-base;
+        box-shadow: 0 0 0 3px rgba(89, 80, 255, 0.1);
+      }
+
+      &-ico {
+        width: 20px;
+        height: 20px;
+        flex: 0 0 20px;
+        color: $ink-600;
+      }
+
+      &-input {
+        flex: 1 1 auto;
+        min-width: 0;
+
+        input {
+          width: 100%;
+          border: none;
+          outline: none;
+          background: transparent;
+          font-family: inherit;
+          font-size: 0.875rem;
+          line-height: 1.25rem;
+          color: $ink-900;
+
+          &::placeholder {
+            color: $ink-600;
+          }
+        }
+      }
+    }
+
+    &-list {
+      gap: var(--spacer-2);
+    }
+
+    &-item {
+      @include focus-ring;
+      align-items: center;
+      gap: var(--spacer-4);
+      padding: var(--spacer-3);
+      border-radius: 8px;
+      cursor: pointer;
+      background: transparent;
+      transition:
+        background $fast $ease,
+        color $fast $ease;
+
+      &:hover {
+        background: rgba(0, 0, 0, 0.03);
+      }
+
+      &:active {
+        background: rgba(0, 0, 0, 0.06);
+      }
+
+      &[data-active="1"] {
+        background: $surface;
+
+        .help-main__nav-item-label {
+          font-weight: 600;
+        }
+      }
+
+      &-ico {
+        width: 20px;
+        height: 20px;
+        flex: 0 0 20px;
+        color: $ink-900;
+      }
+
+      &-label {
+        font-size: 0.875rem;
+        line-height: 1.25rem;
+        color: $ink-900;
+        // Keep the row height stable when the active weight changes.
+        transition: font-weight $fast $ease;
+      }
+    }
+  }
+
+  // ── Right content column ──────────────────────────────────
+  &__content {
+    @include thin-scroll;
+    flex: 1 1 auto;
+    min-width: 0;
+    height: 100%;
+    padding: var(--spacer-8);
+    gap: var(--spacer-7);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scroll-behavior: smooth;
+    // Centre the capped content block in a wide slot.
+    align-items: center;
+  }
+
+  &__page {
+    width: 100%;
+    max-width: $content-max;
+    gap: var(--spacer-7);
+    // Each page swap fades in rather than snapping.
+    animation: help-main-fade-in $base $ease both;
+
+    &-head {
+      gap: var(--spacer-6);
+    }
+
+    &-title {
+      font-size: 2rem; // 32px
+      font-weight: 600;
+      line-height: 2.1875rem;
+      color: $ink-900;
+    }
+
+    &-intro {
+      max-width: 622px;
+      font-size: 1rem;
+      line-height: 1.375rem;
+      color: var(--black);
+    }
+  }
+
+  // ── Video block ───────────────────────────────────────────
+  &__video {
+    &-frame {
+      @include focus-ring;
+      width: 100%;
+      aspect-ratio: 900 / 506;
+      border-radius: 24px;
+      background: $surface;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      overflow: hidden;
+
+      &:hover .help-main__video-play {
+        transform: scale(1.06);
+        background: rgba(20, 17, 35, 0.55);
+      }
+    }
+
+    &-play {
+      width: 72px;
+      height: 72px;
+      border-radius: 50%;
+      background: rgba(20, 17, 35, 0.4);
+      align-items: center;
+      justify-content: center;
+      transition:
+        transform $base $ease,
+        background $base $ease;
+
+      &-ico {
+        width: 28px;
+        height: 28px;
+        color: var(--white);
+        // Optical centring — a triangle reads left-heavy in a circle.
+        margin-left: 3px;
+      }
+    }
+  }
+
+  // ── Article cards ─────────────────────────────────────────
+  &__article {
+    &-grid {
+      width: 100%;
+      flex-wrap: wrap;
+      gap: var(--spacer-6);
+      align-items: stretch;
+    }
+
+    &-card {
+      @include focus-ring;
+      // Two per row at the design's 900px, wrapping to one when the column
+      // gets narrow. calc keeps the gap out of the 50% basis.
+      flex: 1 1 calc(50% - var(--spacer-6));
+      min-width: 260px;
+      gap: var(--spacer-6);
+      padding: var(--spacer-6);
+      border: 1px solid $hairline;
+      border-radius: 12px;
+      background: var(--white);
+      cursor: pointer;
+      transition:
+        box-shadow $base $ease,
+        border-color $base $ease,
+        transform $base $ease;
+
+      &:hover {
+        border-color: rgba(89, 80, 255, 0.25);
+        box-shadow: 0 4px 16px rgba(11, 10, 33, 0.08);
+        transform: translateY(-2px);
+      }
+
+      &:active {
+        transform: translateY(0);
+        box-shadow: 0 2px 8px rgba(11, 10, 33, 0.06);
+      }
+    }
+
+    &-heading {
+      align-items: center;
+      gap: var(--spacer-3);
+    }
+
+    &-ico {
+      width: 24px;
+      height: 24px;
+      flex: 0 0 24px;
+      color: $ink-900;
+    }
+
+    &-title {
+      font-size: 1.25rem; // 20px
+      font-weight: 600;
+      line-height: 1.375rem;
+      color: $ink-900;
+    }
+
+    &-summary {
+      font-size: 1rem;
+      line-height: 1.375rem;
+      color: var(--black);
+      // Design truncates to a single line; clamp keeps two-line summaries
+      // from breaking the card grid's even rows.
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+  }
+
+  // ── FAQ ───────────────────────────────────────────────────
+  &__faq {
+    &-page {
+      gap: var(--spacer-7);
+    }
+
+    &-controls {
+      width: 100%;
+      gap: var(--spacer-4);
+    }
+
+    &-search {
+      width: 100%;
+      align-items: center;
+      gap: var(--spacer-4);
+      padding: var(--spacer-4);
+      border: 1px solid $hairline;
+      border-radius: 12px;
+      transition:
+        border-color $fast $ease,
+        box-shadow $fast $ease;
+
+      &:focus-within {
+        border-color: $purple-base;
+        box-shadow: 0 0 0 3px rgba(89, 80, 255, 0.1);
+      }
+
+      &-ico {
+        width: 20px;
+        height: 20px;
+        flex: 0 0 20px;
+        color: $ink-600;
+      }
+
+      &-input {
+        flex: 1 1 auto;
+        min-width: 0;
+
+        input {
+          width: 100%;
+          border: none;
+          outline: none;
+          background: transparent;
+          font-family: inherit;
+          font-size: 0.875rem;
+          line-height: 1.25rem;
+          color: $ink-900;
+
+          &::placeholder {
+            color: $ink-600;
+          }
+        }
+      }
+    }
+
+    &-chips {
+      flex-wrap: wrap;
+      gap: var(--spacer-3);
+    }
+
+    &-chip {
+      @include focus-ring;
+      align-items: center;
+      padding: var(--spacer-3) var(--spacer-5);
+      border-radius: 58px;
+      background: $surface;
+      border: 1px solid transparent;
+      cursor: pointer;
+      transition:
+        background $fast $ease,
+        border-color $fast $ease,
+        color $fast $ease;
+
+      &:hover {
+        background: #e8e8f0; // $surface, a step darker
+      }
+
+      &[data-active="1"] {
+        background: rgba(89, 80, 255, 0.1);
+        border-color: $purple-base;
+      }
+
+      &-label {
+        font-size: 0.875rem;
+        line-height: 1.25rem;
+        color: $ink-900;
+        white-space: nowrap;
+      }
+    }
+
+    &-list {
+      width: 100%;
+      gap: var(--spacer-3);
+    }
+
+    &-row {
+      @include focus-ring;
+      width: 100%;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: var(--spacer-7);
+      padding: var(--spacer-5);
+      border: 1px solid $hairline;
+      border-radius: 12px;
+      background: var(--white);
+      cursor: pointer;
+      transition:
+        border-color $fast $ease,
+        box-shadow $fast $ease,
+        background $fast $ease;
+
+      &:hover {
+        border-color: rgba(89, 80, 255, 0.25);
+      }
+
+      // Expanded rows sit slightly proud of the collapsed ones.
+      &[data-open="1"] {
+        box-shadow: 0 4px 16px rgba(11, 10, 33, 0.06);
+
+        .help-main__faq-caret {
+          transform: rotate(180deg);
+        }
+      }
+    }
+
+    &-body {
+      flex: 1 1 auto;
+      min-width: 0;
+      // No gap: the answer is always present, so a gap would leave a
+      // phantom space under the question while collapsed. The answer
+      // animates its own margin instead.
+      gap: 0;
+    }
+
+    &-question {
+      font-size: 1rem;
+      font-weight: 600;
+      line-height: 1.5rem;
+      color: $ink-900;
+    }
+
+    // Always rendered, collapsed by default — see skeleton/faq.js. max-height
+    // is the cap the transition runs against, not the real height; it's set
+    // well above the longest answer so nothing is ever clipped when open.
+    &-answer {
+      font-size: 0.875rem;
+      line-height: 1.25rem;
+      color: $ink-600;
+      max-height: 0;
+      margin-top: 0;
+      opacity: 0;
+      overflow: hidden;
+      transition:
+        max-height $base $ease,
+        margin-top $base $ease,
+        opacity $fast $ease;
+    }
+
+    &-row[data-open="1"] &-answer {
+      max-height: 32rem;
+      margin-top: var(--spacer-3);
+      opacity: 1;
+    }
+
+    &-caret {
+      width: 20px;
+      height: 20px;
+      flex: 0 0 20px;
+      margin-top: 2px;
+      color: var(--black);
+      // One glyph, rotated — swapping up/down icons can't be animated.
+      transition: transform $base $ease;
+    }
+
+    &-empty {
+      padding: var(--spacer-6) 0;
+      font-size: 0.875rem;
+      color: $ink-600;
+      animation: help-main-fade-in $base $ease both;
+    }
+  }
+
+  // ── Feedback / contact footer ─────────────────────────────
+  &__feedback {
+    width: 100%;
+    max-width: $content-max;
+    padding-bottom: var(--spacer-5);
+
+    &-row {
+      width: 100%;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--spacer-6);
+      flex-wrap: wrap;
+    }
+
+    &-helpful,
+    &-support {
+      align-items: center;
+      gap: var(--spacer-4);
+    }
+
+    &-label {
+      font-size: 1rem;
+      line-height: 1.375rem;
+      color: var(--black);
+    }
+
+    &-thumbs,
+    &-support-btns {
+      align-items: center;
+      gap: var(--spacer-3);
+    }
+
+    &-thumb {
+      @include focus-ring;
+      width: 32px;
+      height: 32px;
+      align-items: center;
+      justify-content: center;
+      border-radius: 8px;
+      background: $hairline;
+      cursor: pointer;
+      transition:
+        background $fast $ease,
+        transform $fast $ease;
+
+      &:hover {
+        background: rgba(0, 0, 0, 0.09);
+      }
+
+      &:active {
+        transform: scale(0.92);
+      }
+
+      &[data-active="1"] {
+        background: rgba(89, 80, 255, 0.1);
+
+        .help-main__feedback-thumb-ico {
+          color: $purple-base;
+        }
+      }
+
+      &-ico {
+        width: 16px;
+        height: 16px;
+        color: $ink-600;
+        transition: color $fast $ease;
+      }
+    }
+
+    &-support-link {
+      @include focus-ring;
+      font-size: 1rem;
+      font-weight: 600;
+      line-height: 1.5rem;
+      color: $purple-base;
+      cursor: pointer;
+      border-radius: 4px;
+      transition: opacity $fast $ease;
+
+      &:hover {
+        opacity: 0.75;
+        text-decoration: underline;
+      }
+    }
+
+    &-support-btn {
+      @include focus-ring;
+      width: 32px;
+      height: 32px;
+      align-items: center;
+      justify-content: center;
+      border-radius: 8px;
+      background: rgba(89, 80, 255, 0.1);
+      cursor: pointer;
+      transition:
+        background $fast $ease,
+        transform $fast $ease;
+
+      &:hover {
+        background: rgba(89, 80, 255, 0.18);
+      }
+
+      &:active {
+        transform: scale(0.92);
+      }
+
+      &-ico {
+        width: 16px;
+        height: 16px;
+        color: $purple-base;
+      }
+    }
+  }
+
+  // ── Responsive ────────────────────────────────────────────
+  // Below the design width the 40px gutter is too generous; step it down
+  // before the layout has to stack.
+  @media (max-width: 1280px) {
+    &__content {
+      padding: var(--spacer-7) var(--spacer-6);
+    }
+  }
+
+  // The 320px nav + 900px content stop fitting side by side around here:
+  // stack them and let the whole page scroll as one surface.
+  @media (max-width: 1024px) {
+    &__main {
+      @include thin-scroll;
+      flex-direction: column;
+      overflow-y: auto;
+    }
+
+    &__nav-column {
+      width: 100%;
+      flex: 0 0 auto;
+      height: auto;
+      overflow: visible;
+      border-right: none;
+      border-bottom: 1px solid $hairline;
+    }
+
+    // The nav becomes a horizontal strip once it's a header rather than a
+    // rail, so the three entries don't eat a screenful before the content.
+    &__nav-list {
+      flex-direction: row;
+      flex-wrap: wrap;
+    }
+
+    &__content {
+      height: auto;
+      overflow: visible;
+      padding: var(--spacer-6) var(--spacer-5);
+      align-items: flex-start;
+    }
+  }
+
+  @media (max-width: 768px) {
+    &__page {
+      gap: var(--spacer-6);
+
+      &-title {
+        font-size: 1.5rem; // 24px
+        line-height: 1.875rem;
+      }
+    }
+
+    &__video-frame {
+      border-radius: 16px;
+    }
+
+    &__video-play {
+      width: 56px;
+      height: 56px;
+
+      &-ico {
+        width: 22px;
+        height: 22px;
+      }
+    }
+
+    // One card per row — two columns below this are too cramped to read.
+    &__article-card {
+      flex: 1 1 100%;
+      min-width: 0;
+      padding: var(--spacer-5);
+      gap: var(--spacer-4);
+    }
+
+    &__article-title {
+      font-size: 1.125rem;
+    }
+
+    // Chips scroll sideways instead of stacking into four wrapped rows.
+    &__faq-chips {
+      flex-wrap: nowrap;
+      overflow-x: auto;
+      scrollbar-width: none;
+      padding-bottom: var(--spacer-1);
+
+      &::-webkit-scrollbar {
+        display: none;
+      }
+    }
+
+    &__faq-chip {
+      flex: 0 0 auto;
+    }
+
+    &__faq-row {
+      gap: var(--spacer-4);
+      padding: var(--spacer-4);
+    }
+
+    // Stack the two footer halves so neither is squeezed.
+    &__feedback-row {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: var(--spacer-4);
+    }
+  }
+
+  @media (max-width: 480px) {
+    &__content {
+      padding: var(--spacer-5) var(--spacer-4);
+    }
+
+    &__nav-column {
+      padding: var(--spacer-4);
+    }
+  }
+}
+
+@keyframes help-main-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+// Honour the OS "reduce motion" setting — kill transforms and animations
+// but keep colour changes so hover/active still read.
+@media (prefers-reduced-motion: reduce) {
+  .help-main {
+    &__page,
+    &__faq-empty {
+      animation: none;
+    }
+
+    // Answer still opens/closes, just without the height tween.
+    &__faq-answer {
+      transition: none;
+    }
+
+    &__article-card,
+    &__video-play,
+    &__feedback-thumb,
+    &__feedback-support-btn,
+    &__faq-caret {
+      transition-property: background, border-color, color, box-shadow;
+      transform: none !important;
+    }
+
+    &__content {
+      scroll-behavior: auto;
+    }
+  }
+}
