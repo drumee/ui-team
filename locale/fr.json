@@ -1579,6 +1579,7 @@
   "TASK_VIEW_SUMMARY": "Santé du projet",
   "TASK_VIEW_GANTT": "Gantt",
   "NEW_BOARD": "Nouveau tableau",
+  "TOTAL_WORK_ITEMS": "Total des éléments de travail",
   "BOARD_TITLE": "Titre du tableau",
   "SET_AS_DEFAULT": "Définir par défaut",
   "ADD_NEW_BOARD": "Ajouter un tableau",

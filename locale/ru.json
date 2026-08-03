@@ -1579,6 +1579,7 @@
   "TASK_VIEW_SUMMARY": "Состояние проекта",
   "TASK_VIEW_GANTT": "Гант",
   "NEW_BOARD": "Новая доска",
+  "TOTAL_WORK_ITEMS": "Всего задач",
   "BOARD_TITLE": "Название доски",
   "SET_AS_DEFAULT": "По умолчанию",
   "ADD_NEW_BOARD": "Добавить доску",

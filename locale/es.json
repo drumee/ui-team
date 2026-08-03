@@ -1572,6 +1572,7 @@
   "TASK_VIEW_SUMMARY": "Estado del proyecto",
   "TASK_VIEW_GANTT": "Gantt",
   "NEW_BOARD": "Nuevo tablero",
+  "TOTAL_WORK_ITEMS": "Total de elementos de trabajo",
   "BOARD_TITLE": "Título del tablero",
   "SET_AS_DEFAULT": "Establecer por defecto",
   "ADD_NEW_BOARD": "Añadir tablero",

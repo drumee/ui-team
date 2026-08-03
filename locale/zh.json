@@ -1579,6 +1579,7 @@
   "TASK_VIEW_SUMMARY": "项目健康度",
   "TASK_VIEW_GANTT": "甘特图",
   "NEW_BOARD": "新看板",
+  "TOTAL_WORK_ITEMS": "工作项总数",
   "BOARD_TITLE": "看板标题",
   "SET_AS_DEFAULT": "设为默认",
   "ADD_NEW_BOARD": "添加看板",
