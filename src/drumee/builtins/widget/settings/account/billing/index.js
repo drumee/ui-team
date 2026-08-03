@@ -711,7 +711,6 @@ class settings_billing extends LetcBox {
         //   this._setupInputChangeListener(child, "storage");
         //   this._restoreInputFocus(child, "storage");
         //   this.__storageInput = child;
-        break;
     }
   }
 
