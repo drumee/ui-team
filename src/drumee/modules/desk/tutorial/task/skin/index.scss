@@ -39,8 +39,12 @@
     }
   }
 
+  // The tracker window is the bottom layer of the step: it must stay under the
+  // tutorial callout (.tutorial__s1-tooltip, z-index 10010), which is the thing
+  // the user is actually reading.
   &__main {
     position: relative;
+    z-index: 1;
     flex: 1;
     min-height: 0;
     width: 100%;

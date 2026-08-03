@@ -9,7 +9,12 @@
     transform: translateX(-50%);
     align-items: center;
     pointer-events: all;
-    z-index: 51;
+    // Above any step's content, not merely above the vignette it sits on. The
+    // callout used to win only because the spotlight layer happens to be the
+    // last child of the tutorial layout; a step that declares a stacking order
+    // of its own (the tracker window does — see task/skin __main) would
+    // otherwise be able to draw over the card the user is reading.
+    z-index: 10010;
 
     &[data-direction="east"],
     &[data-direction="west"] {
