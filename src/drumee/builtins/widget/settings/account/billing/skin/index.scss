@@ -528,6 +528,140 @@
     }
   }
 
+  // "Have a partner code?" — direct redeem, shown on the Billing page to a
+  // Free payer only (see redeemBox in skeleton/index.js). Uses the same
+  // brand tokens as the promo modal and claim pill so the three read as one
+  // feature rather than three bolted-on boxes.
+  &__redeem {
+    gap: var(--spacer-2);
+    margin-top: var(--spacer-4);
+    padding: var(--spacer-5);
+    border-radius: var(--corner-radius-4);
+    background: var(--normal-bg-90);
+
+    &-title {
+      font-weight: 600;
+      font-size: 14px;
+      line-height: 22px;
+      color: var(--normal-fg-800);
+    }
+    // Collapsed: one quiet line, no card chrome, so it does not compete
+    // with the plan cards it sits above.
+    &.is-collapsed {
+      padding: var(--spacer-3) var(--spacer-4);
+      background: transparent;
+      border: 1px solid var(--border-default);
+    }
+
+    // Post-redeem: the form is gone, only the confirmation remains, so it
+    // needs the padding the toggle row was providing.
+    &.is-done {
+      padding: var(--spacer-3) var(--spacer-4);
+    }
+
+    &-toggle {
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--spacer-3);
+      cursor: pointer;
+    }
+
+    &-toggle-hint {
+      flex-shrink: 0;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--primary-50);
+    }
+
+
+    &-sub {
+      font-size: 12.5px;
+      line-height: 1.4;
+      color: var(--normal-fg-50);
+    }
+
+    &-pill-bar {
+      gap: var(--spacer-2);
+      margin-top: var(--spacer-3);
+      padding: 3px;
+      border-radius: var(--corner-radius-max);
+      background: var(--normal-bg-80);
+      align-self: flex-start;
+    }
+
+    &-pill-item {
+      cursor: pointer;
+      padding: 6px 18px;
+      border-radius: var(--corner-radius-max);
+      justify-content: center;
+      align-items: center;
+      transition: background 0.15s ease;
+
+      &[data-state="1"] {
+        background: var(--primary-50);
+
+        .settings-billing__redeem-pill-text {
+          color: var(--white);
+        }
+      }
+    }
+
+    &-pill-text {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--normal-fg-20);
+    }
+
+    &-row {
+      gap: var(--spacer-3);
+      align-items: center;
+      margin-top: var(--spacer-3);
+    }
+
+    &-input {
+      flex: 1;
+      min-width: 0;
+    }
+
+    &-cta {
+      flex-shrink: 0;
+      cursor: pointer;
+      white-space: nowrap;
+      color: var(--white);
+      background: var(--primary-50);
+      font-weight: 600;
+      font-size: 13.5px;
+      line-height: 1.4;
+      padding: 10px 20px;
+      border-radius: var(--corner-radius-max);
+
+      &:hover {
+        background: var(--primary-60);
+      }
+
+      &.is-busy {
+        opacity: 0.7;
+        cursor: default;
+        pointer-events: none;
+      }
+    }
+
+    &-error {
+      font-size: 12.5px;
+      line-height: 1.4;
+      color: var(--error);
+      margin-top: var(--spacer-2);
+    }
+
+    &-success {
+      font-size: 12.5px;
+      line-height: 1.4;
+      color: var(--success);
+      margin-top: var(--spacer-2);
+    }
+  }
+
+
   &__footer {
     &-main {
       margin-top: var(--spacer-5);

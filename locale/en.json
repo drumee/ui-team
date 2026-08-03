@@ -2526,5 +2526,13 @@
   "PROMO_CODE_DISCOUNT": "Promo ({0}% off)",
   "PROMO_CODE_AFTER_ONCE": "{0}% off your first payment, then {1}/{2}",
   "PROMO_CODE_AFTER_N": "{0}% off your first {1} payments, then {2}/{3}",
+  "REDEEM_CODE_TITLE": "Have a partner code?",
+  "REDEEM_CODE_SUB": "Redeem it to start your plan — no card required.",
+  "REDEEM_CODE_PLACEHOLDER": "Enter partner code",
+  "REDEEM_CODE_CTA": "Redeem",
+  "REDEEM_CODE_WORKING": "Redeeming…",
+  "REDEEM_CODE_OK": "Code {0} applied.",
+  "REDEEM_CODE_OK_DATED": "Code {0} applied — your {1} plan runs until {2}.",
+  "REDEEM_CODE_NEEDS_CHECKOUT": "This code is a discount — enter it on the Checkout tab instead.",
   "PROMO_CODE_TRIAL_NOTE": "{0} days free, then {1}/{2}"
 }

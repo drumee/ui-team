@@ -2354,5 +2354,13 @@
   "PROMO_CODE_DISCOUNT": "Промо (−{0}%)",
   "PROMO_CODE_AFTER_ONCE": "Скидка {0}% на первый платёж, затем {1}/{2}",
   "PROMO_CODE_AFTER_N": "Скидка {0}% на первые {1} платежей, затем {2}/{3}",
+  "REDEEM_CODE_TITLE": "Есть партнёрский код?",
+  "REDEEM_CODE_SUB": "Активируйте его, чтобы начать — карта не нужна.",
+  "REDEEM_CODE_PLACEHOLDER": "Введите код партнёра",
+  "REDEEM_CODE_CTA": "Активировать",
+  "REDEEM_CODE_WORKING": "Активация…",
+  "REDEEM_CODE_OK": "Код {0} применён.",
+  "REDEEM_CODE_OK_DATED": "Код {0} применён — тариф {1} действует до {2}.",
+  "REDEEM_CODE_NEEDS_CHECKOUT": "Это код скидки — введите его на вкладке оплаты.",
   "PROMO_CODE_TRIAL_NOTE": "{0} дней бесплатно, затем {1}/{2}"
 }

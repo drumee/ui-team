@@ -2354,5 +2354,13 @@
   "PROMO_CODE_DISCOUNT": "优惠（{0}% 折扣）",
   "PROMO_CODE_AFTER_ONCE": "首次付款享 {0}% 折扣，之后为 {1}/{2}",
   "PROMO_CODE_AFTER_N": "前 {1} 次付款享 {0}% 折扣，之后为 {2}/{3}",
+  "REDEEM_CODE_TITLE": "有合作伙伴代码吗？",
+  "REDEEM_CODE_SUB": "兑换即可开通方案 — 无需信用卡。",
+  "REDEEM_CODE_PLACEHOLDER": "输入合作伙伴代码",
+  "REDEEM_CODE_CTA": "兑换",
+  "REDEEM_CODE_WORKING": "兑换中…",
+  "REDEEM_CODE_OK": "代码 {0} 已生效。",
+  "REDEEM_CODE_OK_DATED": "代码 {0} 已生效 — 您的 {1} 方案有效期至 {2}。",
+  "REDEEM_CODE_NEEDS_CHECKOUT": "此代码为折扣码 — 请在结账页面输入。",
   "PROMO_CODE_TRIAL_NOTE": "免费 {0} 天，之后 {1}/{2}"
 }

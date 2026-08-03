@@ -2355,5 +2355,13 @@
   "PROMO_CODE_DISCOUNT": "Promo (−{0}%)",
   "PROMO_CODE_AFTER_ONCE": "{0}% de descuento en el primer pago, luego {1}/{2}",
   "PROMO_CODE_AFTER_N": "{0}% de descuento en los primeros {1} pagos, luego {2}/{3}",
+  "REDEEM_CODE_TITLE": "¿Tienes un código de socio?",
+  "REDEEM_CODE_SUB": "Canjéalo para empezar tu plan — sin tarjeta.",
+  "REDEEM_CODE_PLACEHOLDER": "Introduce el código de socio",
+  "REDEEM_CODE_CTA": "Canjear",
+  "REDEEM_CODE_WORKING": "Canjeando…",
+  "REDEEM_CODE_OK": "Código {0} aplicado.",
+  "REDEEM_CODE_OK_DATED": "Código {0} aplicado — tu plan {1} está activo hasta el {2}.",
+  "REDEEM_CODE_NEEDS_CHECKOUT": "Este código es un descuento — introdúcelo en la pestaña de Pago.",
   "PROMO_CODE_TRIAL_NOTE": "{0} días gratis, luego {1}/{2}"
 }

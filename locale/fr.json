@@ -2355,5 +2355,13 @@
   "PROMO_CODE_DISCOUNT": "Promo (−{0}%)",
   "PROMO_CODE_AFTER_ONCE": "{0} % de réduction sur le premier paiement, puis {1}/{2}",
   "PROMO_CODE_AFTER_N": "{0} % de réduction sur les {1} premiers paiements, puis {2}/{3}",
+  "REDEEM_CODE_TITLE": "Vous avez un code partenaire ?",
+  "REDEEM_CODE_SUB": "Utilisez-le pour démarrer votre forfait — sans carte bancaire.",
+  "REDEEM_CODE_PLACEHOLDER": "Saisissez le code partenaire",
+  "REDEEM_CODE_CTA": "Utiliser",
+  "REDEEM_CODE_WORKING": "Activation…",
+  "REDEEM_CODE_OK": "Code {0} appliqué.",
+  "REDEEM_CODE_OK_DATED": "Code {0} appliqué — votre forfait {1} est actif jusqu'au {2}.",
+  "REDEEM_CODE_NEEDS_CHECKOUT": "Ce code est une réduction — saisissez-le dans l'onglet Paiement.",
   "PROMO_CODE_TRIAL_NOTE": "{0} jours gratuits, puis {1}/{2}"
 }

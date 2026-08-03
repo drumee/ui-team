@@ -692,6 +692,9 @@ class settings_billing extends LetcBox {
       case `${this.fig.family}__checkout-promo-code-input`:
         this.__promoCodeInput = child;
         break;
+      case `${this.fig.family}__redeem-code-input`:
+        this.__redeemCodeInput = child;
+        break;
         // case `${this.fig.family}__checkout-storage-input`:
         //   this._setupInputChangeListener(child, "storage");
         //   this._restoreInputFocus(child, "storage");
@@ -1886,7 +1889,110 @@ class settings_billing extends LetcBox {
         this.feed(require("./skeleton").default(this));
         return false;
 
+      case "redeem-toggle": {
+        const st = this.state.redeem || (this.state.redeem = {});
+        st.open = !st.open;
+        // Collapsing is also how you dismiss a failed attempt — carrying the
+        // old error back into a freshly reopened form would read as if the
+        // new code had already been rejected.
+        if (!st.open) delete st.error;
+        this.feed(require("./skeleton").default(this));
+        return false;
+      }
+
+      case "redeem-select-plan": {
+        const st = this.state.redeem || (this.state.redeem = {});
+        st.plan = cmd.mget(_a.value) || cmd.mget("value") || "team";
+        // A plan-locked code rejected for the previous plan may be fine for
+        // this one — drop the stale verdict rather than leaving it under a
+        // selection it no longer describes.
+        delete st.error;
+        delete st.success;
+        this.feed(require("./skeleton").default(this));
+        return false;
+      }
+
+      case "redeem-code":
+        this._redeemCode();
+        return false;
+
     }
+  }
+
+  /**
+   * Redeem a free-period partner code straight into a plan (promo.redeem) —
+   * no Stripe Checkout, no card. The server grants the entitlement and the
+   * expiry worker reverts it when the free period lapses.
+   *
+   * A code carrying a DISCOUNT is refused here (COUPON_NOT_REDEEMABLE):
+   * there is money to collect, so it belongs on the checkout tab. That case
+   * gets its own message pointing there rather than a flat failure.
+   */
+  async _redeemCode() {
+    const st = this.state.redeem || (this.state.redeem = {});
+    const code = String(
+      (this.__redeemCodeInput && this.__redeemCodeInput.getValue
+        && this.__redeemCodeInput.getValue())
+      || st.code || "",
+    ).trim();
+    st.code = code;
+    delete st.error;
+    delete st.success;
+
+    if (!code) {
+      st.error = LOCALE.PROMO_CODE_INVALID || "This promo code is not valid.";
+      this.feed(require("./skeleton").default(this));
+      return;
+    }
+
+    st.busy = true;
+    this.feed(require("./skeleton").default(this));
+
+    const res = await this.postService(SERVICE.promo.redeem, {
+      hub_id: Visitor.id,
+      promo_code: code,
+      plan: st.plan || "team",
+    }).catch(() => null);
+
+    st.busy = false;
+    const data = res || {};
+
+    if (!data.status || data.status !== "OK") {
+      st.error = data.status === "COUPON_NOT_REDEEMABLE"
+        ? (LOCALE.REDEEM_CODE_NEEDS_CHECKOUT
+          || "This code is a discount — enter it on the Checkout tab instead.")
+        : this._orgIdentError(data.status, data);
+      this.feed(require("./skeleton").default(this));
+      return;
+    }
+
+    // Entitlement is live: refresh the cached plan so the page (and the
+    // sidebar's Admin Console gate) stop showing Free, then re-render.
+    try {
+      if (data.quota && Visitor.respawn) {
+        Visitor.respawn({ plan: data.plan, quota: data.quota });
+      }
+    } catch (e) { /* best-effort — the reload below still corrects it */ }
+
+    // The LAUNCH30 pill was fetched once at render and is now wrong: the
+    // server's _isEligible() already refuses a caller who has left domain 1
+    // or holds a non-free plan, both of which just became true. Without
+    // this the page keeps offering a free month the caller can no longer
+    // claim until they reload.
+    this._promoState = null;
+
+    const until = data.trial_ends_at
+      ? Dayjs.unix(data.trial_ends_at).format("MMM D, YYYY")
+      : "";
+    st.success = until
+      ? (LOCALE.REDEEM_CODE_OK_DATED
+        || "Code {0} applied — your {1} plan runs until {2}.").format(
+        data.code, data.plan, until)
+      : (LOCALE.REDEEM_CODE_OK || "Code {0} applied.").format(data.code);
+    st.code = "";
+
+    await this._loadSubscription().catch(() => null);
+    if (!this.isDestroyed()) this.fetchPlanData();
   }
 
   /**
