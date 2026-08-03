@@ -2238,6 +2238,8 @@
   "FEAT_SSO_SAML": "SSO / SAML",
   "FEAT_UNIT_WORKSPACE": "espacio",
   "FEAT_UNIT_WORKSPACES": "espacios",
+  "FEAT_UNIT_HUB": "hub",
+  "FEAT_UNIT_HUBS": "hubs",
   "FEAT_UNIT_MEMBER": "miembro",
   "FEAT_UNIT_STORAGE": "de almacenamiento",
   "FEAT_UNIT_PERMISSIONS": "permisos",

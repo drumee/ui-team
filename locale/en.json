@@ -2400,6 +2400,8 @@
   "FEAT_SSO_SAML": "SSO / SAML",
   "FEAT_UNIT_WORKSPACE": "workspace",
   "FEAT_UNIT_WORKSPACES": "workspaces",
+  "FEAT_UNIT_HUB": "hub",
+  "FEAT_UNIT_HUBS": "hubs",
   "FEAT_UNIT_MEMBER": "member",
   "FEAT_UNIT_STORAGE": "storage",
   "FEAT_UNIT_PERMISSIONS": "permissions",

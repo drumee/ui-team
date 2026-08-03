@@ -2237,6 +2237,8 @@
   "FEAT_SSO_SAML": "SSO / SAML",
   "FEAT_UNIT_WORKSPACE": "рабочее пространство",
   "FEAT_UNIT_WORKSPACES": "рабочих пространства",
+  "FEAT_UNIT_HUB": "хаб",
+  "FEAT_UNIT_HUBS": "хабы",
   "FEAT_UNIT_MEMBER": "участник",
   "FEAT_UNIT_STORAGE": "хранилища",
   "FEAT_UNIT_PERMISSIONS": "разрешения",

@@ -2237,6 +2237,8 @@
   "FEAT_SSO_SAML": "SSO / SAML",
   "FEAT_UNIT_WORKSPACE": "个工作区",
   "FEAT_UNIT_WORKSPACES": "个工作区",
+  "FEAT_UNIT_HUB": "个 hub",
+  "FEAT_UNIT_HUBS": "hub",
   "FEAT_UNIT_MEMBER": "位成员",
   "FEAT_UNIT_STORAGE": "存储空间",
   "FEAT_UNIT_PERMISSIONS": "权限",
