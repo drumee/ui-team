@@ -2237,6 +2237,8 @@
   "FEAT_SSO_SAML": "SSO / SAML",
   "FEAT_UNIT_WORKSPACE": "កន្លែងធ្វើការ",
   "FEAT_UNIT_WORKSPACES": "កន្លែងធ្វើការ",
+  "FEAT_UNIT_HUB": "មជ្ឈមណ្ឌល",
+  "FEAT_UNIT_HUBS": "មជ្ឈមណ្ឌល",
   "FEAT_UNIT_MEMBER": "សមាជិក",
   "FEAT_UNIT_STORAGE": "ទំហំផ្ទុក",
   "FEAT_UNIT_PERMISSIONS": "សិទ្ធិ",
