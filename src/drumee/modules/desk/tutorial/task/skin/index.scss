@@ -31,7 +31,7 @@
     top: 50%;
     left: 50%;
     border: 1px solid var(--neutral-300);
-    border-radius: var(--corner-radius-5);
+    border-radius: var(--corner-radius-2);
     overflow: hidden;
 
     &[data-aspect="faded"] {
@@ -678,7 +678,7 @@
     padding: 10px;
     border-radius: 8px;
     background: var(--normal-bg);
-    border: 1px solid var(--border-muted);
+    border: 1px solid var(--border-strong);
   }
 
   &__cal-entry-dot {

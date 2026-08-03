@@ -26,8 +26,10 @@ const SCREENS = [
   // clears an ellipse of roughly 650x370, so the board around the card reads
   // as lit rather than just the one card.
   { view: 'board', target: 'board-card', direction: 'west', radius: 520 },
-  // The busiest day of the week strip.
-  { view: 'calendar', target: 'cal-day', direction: 'west' },
+  // The busiest day of the week strip. Same vignette as the board frame
+  // (clear ellipse ~650x370), so the hole is widened past the column's own
+  // rect and the surrounding week reads as lit.
+  { view: 'calendar', target: 'cal-day', direction: 'west', radius: 520 },
   // The selected row's bar. Its own rect is a thin ribbon, so the hole is sized
   // explicitly to take in the surrounding timeline.
   { view: 'gantt', target: 'gantt-bar', direction: 'west', radius: 420 },

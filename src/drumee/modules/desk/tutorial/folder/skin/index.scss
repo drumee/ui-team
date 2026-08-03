@@ -24,7 +24,7 @@
     top: 50%;
     left: 50%;
     border: 1px solid var(--neutral-300);
-    border-radius: var(--corner-radius-5);
+    border-radius: var(--corner-radius-2);
     // Keeps the panels — and any menu hanging out of the file grid — inside
     // the rounded frame.
     overflow: hidden;
@@ -52,7 +52,7 @@
     background: var(--normal-bg-90);
     border-bottom: 1px solid var(--border-muted);
     flex-shrink: 0;
-    border-radius: var(--corner-radius-5) var(--corner-radius-5) 0 0;
+    border-radius: var(--corner-radius-2) var(--corner-radius-2) 0 0;
   }
 
   &__header-left {

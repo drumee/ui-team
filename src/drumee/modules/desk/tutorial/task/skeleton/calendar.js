@@ -32,7 +32,9 @@ function entry(pfx, task) {
       task.desc
         ? Skeletons.Note({ className: `${pfx}__cal-entry-desc`, content: task.desc })
         : null,
-      statusPill(pfx, task.status, { plain: true }),
+      // A filled badge here, tinted by status — the design's calendar entries
+      // carry the colour, unlike the list where the status is plain text.
+      statusPill(pfx, task.status),
     ].filter(Boolean),
   });
 }
