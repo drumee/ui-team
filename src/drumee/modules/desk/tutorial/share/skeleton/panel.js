@@ -34,7 +34,7 @@ const sectionLabel = (pfx, text) =>
 const check = (pfx, on) =>
   Skeletons.Box.Y({
     className: `${pfx}__check${on ? ' on' : ''}`,
-    kids: on ? [Skeletons.Image.Svg({ ico: 'checked', className: `${pfx}__check-icon` })] : [],
+    kids: on ? [Skeletons.Image.Svg({ ico: 'upload-checked', className: `${pfx}__check-icon` })] : [],
   });
 
 const radio = (pfx, on) =>
@@ -88,80 +88,88 @@ function chip(pfx, text) {
   });
 }
 
-/** The controls that appear once Secure Share is the chosen mode. */
+/** An option row: icon, label over hint, and its control on the right. */
+function option(pfx, ico, label, hint, control) {
+  return Skeletons.Box.X({
+    className: `${pfx}__opt`,
+    kids: [
+      ico ? Skeletons.Image.Svg({ ico, className: `${pfx}__opt-icon` }) : null,
+      Skeletons.Box.Y({
+        className: `${pfx}__opt-body`,
+        kids: [
+          Skeletons.Note({ className: `${pfx}__opt-label`, content: label }),
+          hint ? Skeletons.Note({ className: `${pfx}__opt-hint`, content: hint }) : null,
+        ].filter(Boolean),
+      }),
+      control,
+    ].filter(Boolean),
+  });
+}
+
+/**
+ * The controls that appear once Secure Share is the chosen mode.
+ *
+ * The design groups them into two white cards inside the purple-bordered
+ * block — who may open the link, then how it is locked — rather than one flat
+ * stack of rows.
+ */
 function secureControls(pfx) {
   return Skeletons.Box.Y({
     className: `${pfx}__secure-body`,
     kids: [
-      Skeletons.Box.X({
-        className: `${pfx}__opt`,
+      Skeletons.Box.Y({
+        className: `${pfx}__group`,
         kids: [
-          Skeletons.Image.Svg({ ico: 'account_mail', className: `${pfx}__opt-icon` }),
-          Skeletons.Box.Y({
-            className: `${pfx}__opt-body`,
+          option(
+            pfx,
+            'account_mail',
+            LOCALE.REQUIRE_EMAIL_TO_VIEW || 'Require email to view',
+            LOCALE.VIEWER_MUST_ENTER_EMAIL || 'Viewer must enter their email',
+            check(pfx, true),
+          ),
+          Skeletons.Box.X({
+            className: `${pfx}__opt`,
             kids: [
               Skeletons.Note({
-                className: `${pfx}__opt-label`,
-                content: LOCALE.REQUIRE_EMAIL_TO_VIEW || 'Require email to view',
+                className: `${pfx}__opt-label grow`,
+                content: LOCALE.RESTRICT_ACCESS_EMAILS
+                  || 'Restrict access to specific emails or domains',
               }),
-              Skeletons.Note({
-                className: `${pfx}__opt-hint`,
-                content: LOCALE.VIEWER_MUST_ENTER_EMAIL || 'Viewer must enter their email',
-              }),
+              Skeletons.Image.Svg({ ico: 'ctxmenu-info', className: `${pfx}__opt-info` }),
+              toggle(pfx, true),
             ],
           }),
-          check(pfx, true),
-        ],
-      }),
-      Skeletons.Box.X({
-        className: `${pfx}__opt`,
-        kids: [
+          Skeletons.Box.G({
+            className: `${pfx}__chips`,
+            kids: [
+              chip(pfx, 'member@drumee.com'),
+              chip(pfx, 'member@drumee.com'),
+              Skeletons.Note({ className: `${pfx}__chip more`, content: '+3' }),
+            ],
+          }),
           Skeletons.Note({
-            className: `${pfx}__opt-label grow`,
-            content: LOCALE.RESTRICT_ACCESS_EMAILS
-              || 'Restrict access to specific emails or domains',
+            className: `${pfx}__field`,
+            content: LOCALE.ENTER_EMAIL_OR_DOMAIN || 'Enter email or domain and press Enter…',
           }),
-          Skeletons.Image.Svg({ ico: 'ctxmenu-info', className: `${pfx}__opt-info` }),
-          toggle(pfx, true),
         ],
       }),
-      Skeletons.Box.G({
-        className: `${pfx}__chips`,
+      Skeletons.Box.Y({
+        className: `${pfx}__group`,
         kids: [
-          chip(pfx, 'member@drumee.com'),
-          chip(pfx, 'member@drumee.com'),
-          Skeletons.Note({ className: `${pfx}__chip more`, content: '+3' }),
-        ],
-      }),
-      Skeletons.Note({
-        className: `${pfx}__field`,
-        content: LOCALE.ENTER_EMAIL_OR_DOMAIN || 'Enter email or domain and press Enter…',
-      }),
-      Skeletons.Box.X({
-        className: `${pfx}__opt`,
-        kids: [
-          Skeletons.Image.Svg({ ico: 'lock', className: `${pfx}__opt-icon` }),
-          Skeletons.Box.Y({
-            className: `${pfx}__opt-body`,
+          option(
+            pfx,
+            'lock',
+            LOCALE.ADD_PASSWORD_PROTECTION || 'Add password protection',
+            LOCALE.SET_PASSWORD_FOR_ACCESS || 'Set a password for access',
+            check(pfx, true),
+          ),
+          Skeletons.Box.X({
+            className: `${pfx}__field pw`,
             kids: [
-              Skeletons.Note({
-                className: `${pfx}__opt-label`,
-                content: LOCALE.ADD_PASSWORD_PROTECTION || 'Add password protection',
-              }),
-              Skeletons.Note({
-                className: `${pfx}__opt-hint`,
-                content: LOCALE.SET_PASSWORD_FOR_ACCESS || 'Set a password for access',
-              }),
+              Skeletons.Note({ className: `${pfx}__field-value`, content: '123456' }),
+              Skeletons.Image.Svg({ ico: 'ctxmenu-rename', className: `${pfx}__field-icon edit` }),
             ],
           }),
-          check(pfx, true),
-        ],
-      }),
-      Skeletons.Box.X({
-        className: `${pfx}__field pw`,
-        kids: [
-          Skeletons.Note({ className: `${pfx}__field-value`, content: '123456' }),
-          Skeletons.Image.Svg({ ico: 'ctxmenu-rename', className: `${pfx}__field-icon` }),
         ],
       }),
     ],
@@ -257,7 +265,7 @@ function expiry(ui, pfx, link) {
       Skeletons.Box.X({
         className: `${pfx}__cta`,
         kids: [
-          Skeletons.Image.Svg({ ico: 'copylink', className: `${pfx}__cta-icon` }),
+          Skeletons.Image.Svg({ ico: 'apps-link-simple', className: `${pfx}__cta-icon` }),
           Skeletons.Note({
             className: `${pfx}__cta-label`,
             content: LOCALE.GET_LINK || 'Get link',

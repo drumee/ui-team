@@ -438,18 +438,31 @@
   }
 
   // ── Access modes ────────────────────────────────────────────────────────────
+  // Unselected reads as a filled pill; the chosen one is a white card outlined
+  // in brand purple, holding the controls it unfolds.
   &__mode {
     box-sizing: border-box;
-    padding: 10px 12px;
+    padding: 12px;
     gap: 12px;
-    border-radius: 8px;
-    border: 1px solid var(--border-muted);
-    background: var(--normal-bg);
+    border-radius: 12px;
+    border: 1.5px solid transparent;
+    background: var(--normal-bg-90);
 
     &.selected {
       border-color: var(--primary-40, #5950ff);
-      background: #f7f6ff;
+      background: #fbfbff;
     }
+  }
+
+  // The two white cards inside the chosen mode: who may open the link, and
+  // how it is locked.
+  &__group {
+    box-sizing: border-box;
+    gap: 10px;
+    padding: 12px;
+    border-radius: 10px;
+    border: 1px solid var(--border-muted);
+    background: var(--normal-bg);
   }
 
   &__mode-head { align-items: center; gap: 10px; }
@@ -493,7 +506,6 @@
 
   &__secure-body {
     gap: 10px;
-    padding-top: 2px;
   }
 
   // ── Email chips + fields ────────────────────────────────────────────────────
@@ -569,6 +581,8 @@
     height: 13px;
     flex-shrink: 0;
     color: var(--normal-fg-50);
+
+    &.edit { color: var(--primary-40, #5950ff); }
 
     svg { width: 100%; height: 100%; fill: currentColor; }
   }
