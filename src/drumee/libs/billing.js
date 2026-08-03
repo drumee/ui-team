@@ -193,7 +193,16 @@ function isFreeSoloPlan() {
 }
 
 /**
- * Org-member headcount for the Team seat cap.
+ * Seats the org has spoken for, against the Team cap.
+ *
+ * Members already in PLUS invitations still outstanding. Pending has to
+ * count: an invitation can be accepted at any moment, so the seat is
+ * committed the day it is sent. Counting only accepted members meant a Team
+ * org three seats from full could send fifteen invitations — none of them
+ * refused — and land on eighteen members over a cap of ten as they were
+ * redeemed. `member_list_stats` has always reported the two separately
+ * (`total_members` counts privilege rows; `pending_invites` is its own
+ * subquery) and this read nothing but the first.
  *
  * Seat budget = organisation members (`member_add` / Admin create), NOT
  * workspace invites (`hub.invite` / desk invite_popup). Callers must only
@@ -201,24 +210,35 @@ function isFreeSoloPlan() {
  *
  * Shared with admin-console `toolkit/billing` (plugin cannot require host).
  *
- * @param {Object} view - members page (has `_membersTotal` and/or admin.member_stats)
+ * @param {Object} view - members page (has `_membersTotal`/`_pendingInvites` and/or admin.member_stats)
  * @returns {Promise<number|null>} null when unknown (caller decides fail-open/closed)
  */
-async function _orgMemberUsed(view) {
-  const local = view && view._membersTotal;
-  if (local != null && local !== "") {
-    return parseInt(local, 10) || 0;
+async function _orgSeatsUsed(view) {
+  // The local shortcut needs BOTH halves; with only a headcount it would
+  // undercount by exactly the pending invitations this function exists to
+  // include, so fall through to the service rather than answer half.
+  const localMembers = view && view._membersTotal;
+  const localPending = view && view._pendingInvites;
+  if (localMembers != null && localMembers !== ""
+    && localPending != null && localPending !== "") {
+    return (parseInt(localMembers, 10) || 0) + (parseInt(localPending, 10) || 0);
   }
   if (!view || typeof view.fetchService !== "function") return null;
   try {
     const stats = await view.fetchService(SERVICE.admin.member_stats, {});
-    return (
-      parseInt(
-        (stats && (stats.total_members ?? stats.totalMembers)) || 0,
-        10,
-      ) || 0
-    );
+    const members = parseInt(
+      (stats && (stats.total_members ?? stats.totalMembers)) || 0, 10,
+    ) || 0;
+    const pending = parseInt(
+      (stats && (stats.pending_invites ?? stats.pendingInvites)) || 0, 10,
+    ) || 0;
+    return members + pending;
   } catch (e) {
+    // Last resort when member_stats is unreachable: the rendered list. It
+    // shows members only, so this can UNDER-count by the pending invitations
+    // — it exists to avoid a hard block, not to be authoritative. The server
+    // recomputes both halves on every create, so an org cannot slip past the
+    // cap through this path.
     try {
       const list =
         view.getItemsByKind && view.getItemsByKind("widget_members_list")[0];
@@ -245,10 +265,11 @@ async function _orgMemberUsed(view) {
  * Product:
  *  - Free → false here. Free still must not create org members; callers use
  *    `isFreeSoloPlan()` and must NOT show this seat-limit popup.
- *  - Team (e.g. seat=10) → true once org headcount ≥ cap → Upgrade/Cancel card.
+ *  - Team (e.g. seat=10) → true once members + pending invites ≥ cap →
+ *    Upgrade/Cancel card.
  *  - Business / unlimited (seat ≥ 100000) → false.
  *
- * When headcount cannot be read on an Admin members page, fail CLOSED so the
+ * When seat usage cannot be read on an Admin members page, fail CLOSED so the
  * user is not sent into a form that only dies on `member_add`. Server also
  * enforces via `_assertSeatAvailable`.
  *
@@ -265,7 +286,7 @@ async function isOrgSeatLimitReached(view) {
  * Same question as `isOrgSeatLimitReached`, but says WHY it blocked.
  *
  * A boolean cannot distinguish "the plan is genuinely full" from "we could
- * not read the headcount", and the two deserve different words: the first is
+ * not read seat usage", and the two deserve different words: the first is
  * an upsell, the second is a failure. Telling someone with free seats that
  * they must upgrade because `member_stats` timed out is simply wrong.
  *
@@ -286,8 +307,8 @@ async function checkOrgSeatLimit(view) {
   // Business (and similar) use a huge sentinel = unlimited members.
   if (seat >= 100000) return { blocked: false, reason: null };
 
-  const used = await _orgMemberUsed(view);
-  // Unknown headcount on a finite Team cap → still fail closed (the server
+  const used = await _orgSeatsUsed(view);
+  // Unknown seat usage on a finite Team cap → still fail closed (the server
   // would only reject at member_add anyway), but report it as 'unknown' so
   // the caller can say "could not check" instead of "you are out of seats".
   if (used == null) return { blocked: true, reason: 'unknown' };
