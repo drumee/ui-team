@@ -2375,6 +2375,7 @@
   "PREPARING_INVITED_WORKSPACE": "Preparando tu espacio de trabajo…",
   "ROTATE": "Rotate",
   "MOVE_RESIZE": "Move & Resize",
+  "QX_SEAT_CHECK_FAILED": "No se pudo comprobar cuántas plazas están en uso. Inténtalo de nuevo.",
   "QX_SEAT_BODY_FREE": "El plan Free es solo para una persona. Actualice para invitar a otros miembros.",
   "TASK_REMOVED": "Ya no puedes acceder a esta tarea porque ha sido eliminada.",
   "TASK_REMOVED_BY": "Ya no puedes acceder a esta tarea porque {0} la ha eliminado.",

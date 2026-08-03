@@ -250,8 +250,23 @@ async function _orgMemberUsed(view) {
  * @returns {Promise<boolean>}
  */
 async function isOrgSeatLimitReached(view) {
+  return (await checkOrgSeatLimit(view)).blocked;
+}
+
+/**
+ * Same question as `isOrgSeatLimitReached`, but says WHY it blocked.
+ *
+ * A boolean cannot distinguish "the plan is genuinely full" from "we could
+ * not read the headcount", and the two deserve different words: the first is
+ * an upsell, the second is a failure. Telling someone with free seats that
+ * they must upgrade because `member_stats` timed out is simply wrong.
+ *
+ * @param {Object} view - Admin members widget
+ * @returns {Promise<{blocked: boolean, reason: ('cap'|'unknown'|null)}>}
+ */
+async function checkOrgSeatLimit(view) {
   // Free: no Team seat-limit popup (org create is blocked separately).
-  if (isFreeSoloPlan()) return false;
+  if (isFreeSoloPlan()) return { blocked: false, reason: null };
 
   const quota =
     (typeof Visitor !== "undefined" && Visitor && Visitor.quota
@@ -259,14 +274,18 @@ async function isOrgSeatLimitReached(view) {
       : null) || {};
   const seat = parseInt(quota.seat, 10) || 0;
   // Quota not loaded yet, or no finite cap → do not block as Team-full.
-  if (!seat) return false;
+  if (!seat) return { blocked: false, reason: null };
   // Business (and similar) use a huge sentinel = unlimited members.
-  if (seat >= 100000) return false;
+  if (seat >= 100000) return { blocked: false, reason: null };
 
   const used = await _orgMemberUsed(view);
-  // Unknown headcount on a finite Team cap → fail closed (Admin create only).
-  if (used == null) return true;
-  return used >= seat;
+  // Unknown headcount on a finite Team cap → still fail closed (the server
+  // would only reject at member_add anyway), but report it as 'unknown' so
+  // the caller can say "could not check" instead of "you are out of seats".
+  if (used == null) return { blocked: true, reason: 'unknown' };
+  return used >= seat
+    ? { blocked: true, reason: 'cap' }
+    : { blocked: false, reason: null };
 }
 
 /**
@@ -276,6 +295,26 @@ async function isOrgSeatLimitReached(view) {
  * (and a dead Upgrade). Callers still block create when the cap is reached;
  * they simply skip the card when this returns false.
  */
+/**
+ * Free is solo — say so, do not just swallow the click.
+ *
+ * Every Free guard used to `return` with nothing rendered, so Invite and Add
+ * member were buttons that did nothing at all; the only reading available to
+ * the user is "this is broken". The seat card already carries the sentence
+ * for this case (QX_SEAT_BODY_FREE) and it was written for it — it just had
+ * no caller.
+ *
+ * The card degrades on its own for someone who cannot buy: it drops the
+ * Upgrade button and closes with "Ask your workspace owner…" (see
+ * quota-exceeded/skeleton `closingLine`), so it is safe to show to anyone.
+ *
+ * @returns {*} whatever Wm.openQuotaExceeded returns, or undefined
+ */
+function showFreeSoloLimit() {
+  if (typeof Wm === "undefined" || !Wm || !Wm.openQuotaExceeded) return;
+  return Wm.openQuotaExceeded({ limit: "seat", free: 1 });
+}
+
 function canShowSeatLimitPopup() {
   return !!(
     typeof Visitor !== "undefined" &&
@@ -296,5 +335,7 @@ module.exports = {
   isPaidPlan,
   isFreeSoloPlan,
   isOrgSeatLimitReached,
+  checkOrgSeatLimit,
   canShowSeatLimitPopup,
+  showFreeSoloLimit,
 };

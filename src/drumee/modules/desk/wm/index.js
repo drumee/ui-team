@@ -243,11 +243,12 @@ class __window_manager extends push {
    * @param {Number} [opt.cap]  bytes, storage only
    */
   openQuotaExceeded(opt = {}) {
-    // Seat Upgrade card is org-owner only (non-owners cannot act on it).
-    if ((opt.limit || "storage") === "seat") {
-      const { canShowSeatLimitPopup } = require("libs/billing");
-      if (!canShowSeatLimitPopup()) return Promise.resolve();
-    }
+    // No owner gate here. The card already adapts to who is looking: for
+    // anyone who cannot buy it drops the Upgrade button and closes with
+    // "Ask your workspace owner…" (quota-exceeded/skeleton `closingLine`).
+    // Suppressing it instead left a member clicking Invite / Add member and
+    // getting nothing back at all, which reads as a broken button rather
+    // than a plan limit.
     return this.ensurePart("wrapper-modal").then((p) => {
       if (!p) return;
       p.feed({

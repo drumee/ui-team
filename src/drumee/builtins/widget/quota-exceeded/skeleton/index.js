@@ -63,12 +63,22 @@ const LIMITS = {
   },
   seat: {
     title: () => LOCALE.QX_SEAT_TITLE || "Member limit reached",
-    // Team finite cap only. Free never opens this card (invite blocked silently).
-    body: () =>
-      LOCALE.QX_SEAT_BODY ||
-      "You can not invite more members because you have reached limit of team plan. Upgrade to business plan now to invite more members.",
-    makeRoom: () =>
-      LOCALE.QX_ROOM_SEAT || "Remove a member to free a place.",
+    // Two different refusals share this card. Free has no seats at all, so
+    // "you reached the limit of the team plan" would name a plan the caller
+    // is not on; opt.free selects the sentence written for that case.
+    body: (opt = {}) =>
+      opt.free
+        ? (LOCALE.QX_SEAT_BODY_FREE
+          || "The Free plan is for one person only. Upgrade to invite other members.")
+        : (LOCALE.QX_SEAT_BODY
+          || "You can not invite more members because you have reached limit of team plan. Upgrade to business plan now to invite more members."),
+    // Freeing a seat is only a move when seats exist — on Free there is
+    // nothing to remove, the plan itself is the limit.
+    makeRoom: (opt = {}) =>
+      opt.free
+        ? (LOCALE.QX_SEAT_BODY_FREE
+          || "The Free plan is for one person only. Upgrade to invite other members.")
+        : (LOCALE.QX_ROOM_SEAT || "Remove a member to free a place."),
   },
 };
 
@@ -85,7 +95,7 @@ const LIMITS = {
  * user does not. The org case is recognised the same way libs/billing does it,
  * by domain_id, so the two stay in step.
  */
-function closingLine(canUpgrade, spec) {
+function closingLine(canUpgrade, spec, opt = {}) {
   // The button already says what to do; a second sentence repeating it is
   // noise, and the two could disagree.
   if (canUpgrade) return null;
@@ -96,7 +106,7 @@ function closingLine(canUpgrade, spec) {
   }
   // No org to escalate to and no plan to buy — so the only remaining move is
   // making room, which is different for each limit.
-  return spec.makeRoom();
+  return spec.makeRoom(opt);
 }
 
 /**
@@ -114,7 +124,7 @@ module.exports = function (ui, opt = {}) {
   // on top of the first.
   const spec = LIMITS[opt.limit] || LIMITS.storage;
   const canUpgrade = canUpgradePlan();
-  const closing = closingLine(canUpgrade, spec);
+  const closing = closingLine(canUpgrade, spec, opt);
 
   const kids = [];
 

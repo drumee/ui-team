@@ -3015,8 +3015,8 @@ class desk_module extends LetcBox {
     }
     // Free: solo — no invites (silent). Seat cap is org-members only
     // (Admin member_add); hub.invite is not gated by Team seat headcount.
-    const { isFreeSoloPlan } = require("libs/billing");
-    if (isFreeSoloPlan()) return;
+    const { isFreeSoloPlan, showFreeSoloLimit } = require("libs/billing");
+    if (isFreeSoloPlan()) return showFreeSoloLimit();
     return Kind.waitFor("invite_popup").then(() => {
       const ws = (Wm && Wm._curWorkspace) || {};
       Wm.__wrapperModal.feed({

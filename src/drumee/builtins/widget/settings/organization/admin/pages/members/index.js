@@ -314,14 +314,27 @@ class ___members_page extends LetcBox {
   async loadCreateMember(source = null) {
     const {
       isFreeSoloPlan,
-      isOrgSeatLimitReached,
-      canShowSeatLimitPopup,
+      checkOrgSeatLimit,
+      showFreeSoloLimit,
     } = require("libs/billing");
-    // Org-member create only (member_add). Free: silent.
-    // Team-at-cap: seat Upgrade card for org OWNER only; others blocked silently.
-    if (isFreeSoloPlan()) return;
-    if (await isOrgSeatLimitReached(this)) {
-      if (!canShowSeatLimitPopup()) return;
+    // Org-member create only (member_add) — hub.invite is outside this budget.
+    // Every refusal has to SAY something: a bare return leaves the button
+    // looking broken. The card adapts to the viewer on its own (no Upgrade
+    // button, "Ask your workspace owner…" for a non-owner), so it does not
+    // need an owner gate here.
+    if (isFreeSoloPlan()) return showFreeSoloLimit();
+    const seat = await checkOrgSeatLimit(this);
+    if (seat.blocked) {
+      // Could not read the headcount: still refuse (the server would reject
+      // at member_add anyway), but do not claim the plan is full — they may
+      // have seats left and would be told to buy something they already own.
+      if (seat.reason === "unknown") {
+        if (typeof Wm !== "undefined" && Wm.alert) {
+          Wm.alert(LOCALE.QX_SEAT_CHECK_FAILED
+            || "Could not check how many seats are in use. Please try again.");
+        }
+        return;
+      }
       if (typeof Wm !== "undefined" && Wm.openQuotaExceeded) {
         return Wm.openQuotaExceeded({ limit: "seat" });
       }

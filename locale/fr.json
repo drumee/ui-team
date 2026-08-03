@@ -2375,6 +2375,7 @@
   "PREPARING_INVITED_WORKSPACE": "Préparation de votre espace de travail…",
   "ROTATE": "Pivoter",
   "MOVE_RESIZE": "Déplacer et redimensionner",
+  "QX_SEAT_CHECK_FAILED": "Impossible de vérifier le nombre de sièges utilisés. Veuillez réessayer.",
   "QX_SEAT_BODY_FREE": "Le plan Free est réservé à une seule personne. Passez à une offre supérieure pour inviter d'autres membres.",
   "TASK_REMOVED": "Vous ne pouvez plus accéder à cette tâche car elle a été supprimée.",
   "TASK_REMOVED_BY": "Vous ne pouvez plus accéder à cette tâche car elle a été supprimée par {0}.",

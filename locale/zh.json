@@ -2374,6 +2374,7 @@
   "PREPARING_INVITED_WORKSPACE": "正在准备您的工作区…",
   "ROTATE": "旋转",
   "MOVE_RESIZE": "移动和调整大小",
+  "QX_SEAT_CHECK_FAILED": "无法确认已使用的席位数量，请重试。",
   "QX_SEAT_BODY_FREE": "Free 套餐仅限一人使用。请升级以邀请其他成员。",
   "TASK_REMOVED": "该任务已被删除，您无法再访问。",
   "TASK_REMOVED_BY": "该任务已被 {0} 删除，您无法再访问。",

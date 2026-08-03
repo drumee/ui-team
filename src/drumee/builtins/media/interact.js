@@ -1034,8 +1034,8 @@ class __media_interact extends media_core {
       ? this.mget(_a.filename) || this.mget(_a.name) || ""
       : "";
     // Free: solo — no invites (silent). Org seat cap does not apply to hub.invite.
-    const { isFreeSoloPlan } = require("libs/billing");
-    if (isFreeSoloPlan()) return;
+    const { isFreeSoloPlan, showFreeSoloLimit } = require("libs/billing");
+    if (isFreeSoloPlan()) return showFreeSoloLimit();
     return Kind.waitFor("invite_popup").then(() => {
       Wm.__wrapperModal.feed({
         kind: "invite_popup",

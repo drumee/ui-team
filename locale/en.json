@@ -2545,6 +2545,7 @@
   "PREPARING_INVITED_WORKSPACE": "Preparing your workspace…",
   "ROTATE": "Rotate",
   "MOVE_RESIZE": "Move & Resize",
+  "QX_SEAT_CHECK_FAILED": "Could not check how many seats are in use. Please try again.",
   "QX_SEAT_BODY_FREE": "The Free plan is for one person only. Upgrade to invite other members.",
   "TASK_REMOVED": "You can no longer access this task item because it has been removed.",
   "TASK_REMOVED_BY": "You can no longer access this task item because it has been removed by {0}.",
