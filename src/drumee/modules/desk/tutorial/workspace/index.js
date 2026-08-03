@@ -1,16 +1,16 @@
 const BADGES = [
   {
-    badge_text: 'STEP 1/4',
+    badge_text: 'STEP 1/5',
     title: 'This is your Personal Workspace',
     desc: 'Only you can access this workspace. If you want to share, make a copy into the desired workspace.',
   },
   {
-    badge_text: 'STEP 1/4',
+    badge_text: 'STEP 1/5',
     title: 'This is an Internal Workspace',
     desc: 'Restricted to only your internal team.',
   },
   {
-    badge_text: 'STEP 1/4',
+    badge_text: 'STEP 1/5',
     title: 'This is an External Workspace',
     desc: 'Open to share externally with your clients — anyone with the link can view the folder structure and chat without logging in.',
   },

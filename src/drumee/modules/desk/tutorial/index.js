@@ -15,10 +15,10 @@ class tutorial_main extends LetcBox {
         workspaceContent(this, { aspect: "faded" }),
         { kind: 'tutorial_folder', service: "next-step", uiHandler: [this] }
       ],
-      // Step 3 is the meeting room. It used to be the permissions step
-      // ("Set who sees what", tutorial_settings) with the meeting at step 4;
-      // the settings step was retired, so the tour runs four steps. The
-      // widget and its kind registration are still there, just unused.
+      // Step 3 is the meeting room. It used to be the permissions step ("Set
+      // who sees what", tutorial_settings) with the meeting at step 4; that
+      // step was retired, and its widget and kind registration are still on
+      // disk, just unused.
       [
         workspaceContent(this, { aspect: "faded" }),
         { kind: 'tutorial_meeting', service: "next-step", uiHandler: [this] },
@@ -26,6 +26,11 @@ class tutorial_main extends LetcBox {
       [
         workspaceContent(this, { aspect: "faded" }),
         { kind: 'tutorial_task', service: "next-step", uiHandler: [this] },
+      ],
+      // Step 5 — secure share. Three internal screens, like steps 2 and 4.
+      [
+        workspaceContent(this, { aspect: "faded" }),
+        { kind: 'tutorial_share', service: "next-step", uiHandler: [this] },
       ],
     ];
 

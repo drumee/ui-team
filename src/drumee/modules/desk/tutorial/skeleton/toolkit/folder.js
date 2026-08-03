@@ -403,6 +403,7 @@ export function chatPanel(ui, pfx) {
  * @param {Object} ui
  * @param {Function} [rightPanel]
  * @param {Object} [opt] forwarded to filesPanel (e.g. `{menu}`)
+ * @param {String} [opt.badge] access badge for the header (default INTERNAL)
  */
 export function folder(ui, rightPanel, opt = {}) {
   const pfx = ui.fig.family;
@@ -411,7 +412,7 @@ export function folder(ui, rightPanel, opt = {}) {
     className: `${pfx}__main`,
     dataset: { aspect },
     kids: [
-      folderHeader(ui, pfx),
+      folderHeader(ui, pfx, { badge: opt.badge }),
       tabBar(ui, pfx),
       Skeletons.Box.X({
         className: `${pfx}__content`,

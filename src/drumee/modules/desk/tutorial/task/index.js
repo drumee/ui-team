@@ -1,7 +1,7 @@
 const { screen } = require('./skeleton');
 
 const BADGE = {
-  badge_text: 'STEP 4/4',
+  badge_text: 'STEP 4/5',
   title: 'Project tracker in folder',
   desc: `Track tasks, deadlines, and progress without leaving your folder. Every folder has its own project tracker so your team stays aligned on what's happening inside.`,
 };
@@ -10,7 +10,7 @@ const BADGE = {
  * Step 4 walks the five tracker views behind ONE parent step, the same way
  * tutorial_workspace runs its sub-badges and tutorial_folder its three screens:
  * navigation stays inside this widget until the last view, and only then does
- * it hand back to tutorial_main. The badge reads STEP 4/4 throughout.
+ * it hand back to tutorial_main. The badge reads STEP 4/5 throughout.
  *
  * The copy is identical on all five screens because the design repeats one
  * callout across all five frames (Figma 5:75112, 3202:123320, 3202:185373,
@@ -46,9 +46,7 @@ class __tutorial_task extends LetcBox {
   }
 
   async onDomRefresh() {
-    // Re-entered via Back from a later step: resume where we left off. No step
-    // follows Step 4 today, so nothing exercises this in the shipped tour — it
-    // is here so appending a step cannot regress the behaviour.
+    // Re-entered via Back from Step 5: resume on the view we left off on.
     if (this.mget('enter_at_last')) this._screenIndex = SCREENS.length - 1;
     this._showScreen();
   }
@@ -130,7 +128,6 @@ class __tutorial_task extends LetcBox {
       case 'next-step':
         // Only the last view hands the tour back to tutorial_main; the bare
         // triggerHandlers() lets it read this widget's own service attribute.
-        // Step 4 is last, so that completes the tutorial.
         if (this._screenIndex >= SCREENS.length - 1) return this.triggerHandlers();
         this._screenIndex = this._screenIndex + 1;
         return this._showScreen();
