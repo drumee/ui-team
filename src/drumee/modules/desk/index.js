@@ -639,6 +639,7 @@ class desk_module extends LetcBox {
     return {
       "toggle-apps": "sidebar-apps",
       "toggle-settings": "sidebar-settings",
+      "toggle-help": "sidebar-help",
       "upgrade-plan": "sidebar-upgrade",
       "toggle-trash": "sidebar-trash",
       "toggle-contacts": "sidebar-contacts",
@@ -677,6 +678,8 @@ class desk_module extends LetcBox {
           return "toggle-apps";
         case "settings_main":
           return "toggle-settings";
+        case "help_main":
+          return "toggle-help";
         case "settings_billing":
           return "upgrade-plan";
       }
@@ -2219,6 +2222,7 @@ class desk_module extends LetcBox {
         "toggle-trash",
         "toggle-apps",
         "toggle-settings",
+        "toggle-help",
         "new-workspace",
         "invite-member",
         "load-workspace",
@@ -2686,6 +2690,14 @@ class desk_module extends LetcBox {
         // item never closes the panel; the close icon inside Settings
         // handles closing.
         return this.togglePanel("settings_main", "settings-main-slot", true);
+
+      case "toggle-help":
+        // Get help — full-page screen in the same slot as Settings/Billing.
+        // Open-only, matching its sidebar neighbours.
+        RADIO_BROADCAST.trigger("breadcrumb:context", {
+          filename: LOCALE.GET_HELP,
+        });
+        return this.togglePanel("help_main", "settings-main-slot", true);
 
       case "toggle-apps": {
         // Personal plans (free / pro / legacy advanced — yp.plan entity_type=user)

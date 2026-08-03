@@ -739,47 +739,6 @@ class __window_manager extends push {
       })
       .catch((e) => this.warn("loadWorkspace: get_attributes failed", e));
 
-    return;
-
-    const area = data.area || data.workspace_area;
-    // Subfolder ownpath comes from show_node_by (sidebar feeds workspace_item
-    // with the server item; ownpath/filepath is the per-hub path). Required
-    // so drag-drop uploads target THIS subfolder — without it, the destpath
-    // resolved by _getDestination stays at the previous workspace root.
-    const ownpath = data.ownpath || data.filepath || "/";
-    // home_id = workspace root nid (preserved across subfolder navigation) so
-    // makeOptions classifies cross-window drops as MOVE not COPY.
-    const home_id =
-      data.actual_home_id ||
-      data.workspace_nid ||
-      data.home_id ||
-      this.mget(_a.home_id) ||
-      nid;
-    this._curWorkspace = { hub_id, nid, area };
-    this.mset({ hub_id, nid, nodeId: nid, area, ownpath, home_id });
-    this.ensurePart(_a.list).then((l) => {
-      l.setApi({ service: SERVICE.media.show_node_by, hub_id, nid });
-      if (l.collection) l.collection.reset();
-      l.el.style.visibility = "hidden";
-      const scrollEl = l.el.querySelector(".smart-container");
-      if (scrollEl) {
-        scrollEl.dataset.partitioning = 1;
-        scrollEl.style.visibility = "hidden";
-      }
-      l.restart();
-      this._prepareListPartition(l);
-    });
-    this.ensurePart("wrapper-modal").then((p) => p.clear());
-    this.updateBreadcrumb(
-      {
-        ...data,
-        hub_id,
-        nid,
-        area,
-        service: "change-workspace",
-      },
-      this,
-    );
   }
 
   openContent(media, args) {

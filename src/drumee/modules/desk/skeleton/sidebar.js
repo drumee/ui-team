@@ -126,6 +126,17 @@ const createFooter = (ui, username) => {
             "sidebar-upgrade",
           )
         : null,
+      // "Get help" sits above Settings (Figma 58004-54589). Opens the help
+      // screen in the same full-page slot as Settings / Billing.
+      createNavItem(
+        ui,
+        "ph-info",
+        LOCALE.GET_HELP,
+        "toggle-help",
+        "",
+        null,
+        "sidebar-help",
+      ),
       createNavItem(
         ui,
         "sidebar_settings",
