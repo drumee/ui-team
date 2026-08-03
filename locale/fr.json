@@ -2521,5 +2521,10 @@
   "HELP_FAQ_Q_LOGIN_ISSUE": "I can't log in, or my invite link doesn't work — what do I do?",
   "HELP_FAQ_A_LOGIN_ISSUE": "Reach out through the Contact Support links at the bottom of this page.",
   "HELP_FAQ_Q_REPORT_BUG": "Where do I report a bug or request a feature?",
-  "HELP_FAQ_A_REPORT_BUG": "Report bugs and feature requests to Drumee through the Telegram support channel."
+  "HELP_FAQ_A_REPORT_BUG": "Report bugs and feature requests to Drumee through the Telegram support channel.",
+  "PLAN_CHANGE_CONFIRMED": "Changement de formule confirmé",
+  "CYCLE_STARTS_SUBTITLE": "Votre formule {0} démarre le {1}.",
+  "CHARGED_TODAY": "Débité aujourd'hui",
+  "NEXT_CHARGE": "Prochain débit",
+  "NEXT_CHARGE_ON": "{0} le {1}"
 }

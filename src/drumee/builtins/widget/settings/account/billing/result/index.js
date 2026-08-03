@@ -25,7 +25,14 @@ class settings_billing_result extends LetcBox {
       }).catch(() => null);
       if (this._receipt && this._receipt.status === "SESSION_NOT_FOUND") this._receipt = null;
       // A session that never got paid renders the failure shell instead.
-      if (this._receipt && this._receipt.payment_status && this._receipt.payment_status !== "paid") {
+      //
+      // 'no_payment_required' is NOT such a session: Stripe reports it when
+      // the session's total is 0, which is exactly what a deferred cycle
+      // switch produces (the new cycle idles on a trial until the paid period
+      // lapses). Treating it as unpaid showed "Payment Failure!" for a switch
+      // that had gone through — so only a genuinely unpaid session fails here.
+      const ps = this._receipt && this._receipt.payment_status;
+      if (ps && ps !== "paid" && ps !== "no_payment_required") {
         this._result = "cancel";
       }
     }
