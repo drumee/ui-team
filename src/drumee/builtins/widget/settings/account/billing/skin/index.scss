@@ -1854,7 +1854,11 @@
   align-items: stretch;
 
   > * {
-    flex: 1 1 260px;
+    // 200px, was 260: five cards now (Pro joined 2026-08-03). At the page's
+    // ~1280px content width, 5x260 + gaps forced a 4+1 wrap with one card
+    // stranded full-width on its own row; 200 lets all five share the row
+    // and wrap 3+2 -> 2+2+1 as the container narrows.
+    flex: 1 1 200px;
     min-width: 0; // let a flex item shrink below its content width
   }
 
