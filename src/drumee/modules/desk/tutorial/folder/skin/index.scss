@@ -1050,19 +1050,12 @@
   // 8px inset, submenu 200px opening 8px past the menu edge, aligned to its
   // parent row. Metrics follow the real menu (builtins/contextmenu).
 
-  &__ctx-anchor {
-    position: relative;
-    flex: 1;
-    min-height: 0;
-    width: 100%;
-    height: 100%;
-  }
-
+  // Hangs off the tile kebab (.tutorial__grid-more), opening below it and
+  // right-aligned to it — the design's placement.
   &__ctx-menu {
     position: absolute;
-    // Over the file row of the grid, as in the design.
-    left: 190px;
-    top: 268px;
+    top: calc(100% + 6px);
+    right: -4px;
     z-index: 3;
     width: 176px;
     box-sizing: border-box;

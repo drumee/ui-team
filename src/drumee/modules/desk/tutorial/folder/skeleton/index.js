@@ -18,19 +18,14 @@ function threadsScreen(ui) {
 }
 
 /**
- * Screen 3 — same folder view, with the file context menu open.
+ * Screen 3 — same folder view, with a tile's context menu open.
  *
- * The menu is a sibling of the folder body inside a positioned anchor rather
- * than a child of a file tile: the tile is laid out by a wrapping grid, and
- * hanging an absolute panel off it would either clip against the grid's
- * overflow or shift the tiles.
+ * The menu hangs off the kebab on a tile, the way the design opens it. It goes
+ * on a tile in the FIRST grid row: the menu is 343px tall, and opening it from
+ * the second row would run it past the bottom of the folder window.
  */
 function menuScreen(ui) {
-  const pfx = ui.fig.family;
-  return Skeletons.Box.Y({
-    className: `${pfx}__ctx-anchor`,
-    kids: [folder(ui, chatPanel), contextMenu(ui, pfx)],
-  });
+  return folder(ui, chatPanel, { menu: contextMenu });
 }
 
 module.exports = { chatScreen, threadsScreen, menuScreen };

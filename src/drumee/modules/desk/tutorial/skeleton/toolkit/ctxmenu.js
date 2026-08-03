@@ -61,8 +61,9 @@ function submenu(pfx, items) {
 /**
  * @param {Object} ui
  * @param {String} pfx
- * @returns {Object} absolutely-positioned menu; the parent places it over the
- *   file tile it belongs to (see folder/skin `__ctx-anchor`).
+ * @returns {Object} absolutely-positioned menu. It is rendered inside a tile's
+ *   kebab (`tutorial__grid-more`), which is what positions it — see
+ *   folder/skin `__ctx-menu` and toolkit/folder.js `moreButton`.
  */
 export function contextMenu(ui, pfx) {
   const kids = [];

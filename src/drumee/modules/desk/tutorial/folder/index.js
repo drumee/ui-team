@@ -43,12 +43,11 @@ const SCREENS = [
   },
   {
     skeleton: menuScreen,
-    // The "Chat thread" row wrapper, not the whole menu — see ctxmenu.js.
-    target: 'ctx-focus',
-    // Menu (176×343) plus the submenu that hangs 8px past its right edge:
-    // half the diagonal of that union, with the same 40px padding autoRadius
-    // uses. Without it the hole would be sized to the 32px row.
-    radius: 260,
+    // The files panel is lit — its own rect sizes the hole, which takes in the
+    // grid and the menu opened over it — while the callout points at the
+    // "Chat thread" row inside the menu (see ctxmenu.js).
+    target: 'files-panel',
+    anchor: 'ctx-focus',
     direction: 'east',
     badge: {
       badge_text: 'STEP 2/4',

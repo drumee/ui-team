@@ -212,19 +212,57 @@ export function typeFilter(ui, pfx) {
 }
 
 // ── File grid ─────────────────────────────────────────────────────────────────
-export function folderItem(ui, name, opt = {}) {
-  let pfx = ui.fig.group;
+/**
+ * The kebab every tile carries next to its name, as in the design. It is also
+ * the anchor a tile menu hangs from, so it stays positioned even though the
+ * tiles are laid out by a wrapping grid.
+ *
+ * Always keyed on ui.fig.group so folder tiles (group prefix) and file tiles
+ * (family prefix) share one rule — see skin/media.scss.
+ *
+ * @param {Object} ui
+ * @param {Array} [kids] extra children, e.g. a context menu
+ */
+export function moreButton(ui, kids = []) {
+  const p = ui.fig.group;
   return Skeletons.Box.Y({
-    className: `${pfx}__grid-folder`,
-    ...opt,
+    className: `${p}__grid-more`,
     kids: [
-      workspaceIcon(ui, opt.area),
-      Skeletons.Note({ className: `${pfx}__grid-folder-name`, content: name }),
+      Skeletons.Image.Svg({ ico: "meet-dots", className: `${p}__grid-more-icon` }),
+      ...kids,
     ],
   });
 }
 
-export function fileItem(ui, pfx, { name, date, ico }) {
+/**
+ * @param {Object} opt
+ * @param {Boolean} [opt.more] render the kebab next to the name. Off by
+ *   default: the Step 1 workspace cards reuse this and have no kebab.
+ * @param {Object} [opt.menu] menu skeleton to hang under the kebab
+ */
+export function folderItem(ui, name, opt = {}) {
+  let pfx = ui.fig.group;
+  const { more, menu, ...rest } = opt;
+  const label = Skeletons.Note({
+    className: `${pfx}__grid-folder-name`,
+    content: name,
+  });
+  return Skeletons.Box.Y({
+    className: `${pfx}__grid-folder`,
+    ...rest,
+    kids: [
+      workspaceIcon(ui, opt.area),
+      more
+        ? Skeletons.Box.X({
+          className: `${pfx}__grid-name-row`,
+          kids: [label, moreButton(ui, menu ? [menu] : [])],
+        })
+        : label,
+    ],
+  });
+}
+
+export function fileItem(ui, pfx, { name, date, ico }, opt = {}) {
   return Skeletons.Box.Y({
     className: `${pfx}__grid-file`,
     kids: [
@@ -234,21 +272,42 @@ export function fileItem(ui, pfx, { name, date, ico }) {
           Skeletons.Image.Svg({ ico, className: `${pfx}__grid-file-icon` }),
         ],
       }),
-      Skeletons.Note({ className: `${pfx}__grid-file-name`, content: name }),
+      Skeletons.Box.X({
+        className: `${ui.fig.group}__grid-name-row`,
+        kids: [
+          Skeletons.Note({ className: `${pfx}__grid-file-name`, content: name }),
+          moreButton(ui, opt.menu ? [opt.menu] : []),
+        ],
+      }),
       Skeletons.Note({ className: `${pfx}__grid-file-date`, content: date }),
     ],
   });
 }
 
-export function filesPanel(ui, pfx) {
+/**
+ * @param {Object} [opt]
+ * @param {Function} [opt.menu] builder for a tile menu — receives (ui, pfx)
+ * @param {Number} [opt.menuAt] which sub-folder tile owns it (default 2nd, so
+ *   the submenu has room to open to its right)
+ */
+export function filesPanel(ui, pfx, opt = {}) {
+  const { menu = null, menuAt = 1 } = opt;
   return Skeletons.Box.Y({
     className: `${pfx}__files`,
+    // Step 2 / screen 3 lights the whole panel.
+    sys_pn: "files-panel",
+    partHandler: ui,
     kids: [
       typeFilter(ui, pfx),
       Skeletons.Box.G({
         className: `${pfx}__grid`,
         kids: [
-          ...SUB_FOLDERS.map((name) => folderItem(ui, name)),
+          ...SUB_FOLDERS.map((name, i) =>
+            folderItem(ui, name, {
+              more: true,
+              menu: menu && i === menuAt ? menu(ui, pfx) : null,
+            }),
+          ),
           ...FILES.map((f) => fileItem(ui, pfx, f)),
         ],
       }),
@@ -321,7 +380,12 @@ export function chatPanel(ui, pfx) {
 }
 
 // ── Folder root view ──────────────────────────────────────────────────────────
-export function folder(ui, rightPanel) {
+/**
+ * @param {Object} ui
+ * @param {Function} [rightPanel]
+ * @param {Object} [opt] forwarded to filesPanel (e.g. `{menu}`)
+ */
+export function folder(ui, rightPanel, opt = {}) {
   const pfx = ui.fig.family;
   const aspect = ui.mget("aspect") || "normal";
   return Skeletons.Box.Y({
@@ -332,7 +396,7 @@ export function folder(ui, rightPanel) {
       tabBar(ui, pfx),
       Skeletons.Box.X({
         className: `${pfx}__content`,
-        kids: [filesPanel(ui, pfx), rightPanel ? rightPanel(ui, pfx) : null],
+        kids: [filesPanel(ui, pfx, opt), rightPanel ? rightPanel(ui, pfx) : null],
       }),
     ],
   });

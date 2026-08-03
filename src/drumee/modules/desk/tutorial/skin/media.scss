@@ -43,6 +43,41 @@
     text-align: center;
   }
 
+  // Name + kebab. The name keeps the width it had so the tiles do not reflow;
+  // the kebab sits on the tile's right edge, where the design puts it.
+  &__grid-name-row {
+    width: 100%;
+    align-items: center;
+    gap: 2px;
+
+    > :first-child {
+      flex: 1;
+      min-width: 0;
+    }
+  }
+
+  &__grid-more {
+    position: relative;
+    width: 14px;
+    height: 14px;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    color: var(--normal-fg-50);
+  }
+
+  &__grid-more-icon {
+    width: 12px;
+    height: 12px;
+
+    svg {
+      width: 100%;
+      height: 100%;
+      fill: currentColor;
+    }
+  }
+
   &__grid-file {
     align-items: center;
     gap: 6px;
