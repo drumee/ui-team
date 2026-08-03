@@ -218,9 +218,8 @@
     cursor: pointer;
 
     &.active {
-      color: #3c3989;
-      background: #f0efff;
-      font-weight: 600;
+     color: var(--white);
+    background: var(--primary-40);
     }
   }
 

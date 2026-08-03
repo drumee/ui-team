@@ -20,25 +20,20 @@ const BADGE = {
  * the direction the connector leaves the card — `west` throughout, as the
  * design puts the card to the RIGHT of what it marks.
  */
+// `radius` is only the fallback for when the bar cannot be measured — the hole
+// is normally sized by _holeRadius() so the view switcher stays readable on
+// every screen.
 const SCREENS = [
   // The card the design's connector lands on, inside the In Progress column.
-  // The hole is widened past that card's own rect: the design's vignette
-  // clears an ellipse of roughly 650x370, so the board around the card reads
-  // as lit rather than just the one card.
   { view: 'board', target: 'board-card', direction: 'west', radius: 520 },
-  // The busiest day of the week strip. Same vignette as the board frame
-  // (clear ellipse ~650x370), so the hole is widened past the column's own
-  // rect and the surrounding week reads as lit.
+  // The busiest day of the week strip.
   { view: 'calendar', target: 'cal-day', direction: 'west', radius: 520 },
-  // The selected row's bar. Its own rect is a thin ribbon, and this frame's
-  // vignette clears the same ~650x370 as the board's, so the hole is widened to
-  // match the other screens and the timeline around it reads as lit.
+  // The selected row's bar — its own rect is a thin ribbon.
   { view: 'gantt', target: 'gantt-bar', direction: 'west', radius: 520 },
-  // The status cell of the highlighted row. The table is full-width, so the
-  // badge anchors there and the hole is sized to take in the rows around it.
+  // The status cell of the highlighted row; the table itself is full-width.
   { view: 'list', target: 'list-focus', direction: 'west', radius: 420 },
   // Status overview: the donut and its legend.
-  { view: 'health', target: 'health-status', direction: 'west' },
+  { view: 'health', target: 'health-status', direction: 'west', radius: 520 },
 ];
 
 class __tutorial_task extends LetcBox {
@@ -66,6 +61,42 @@ class __tutorial_task extends LetcBox {
   }
 
   /**
+   * Radius that keeps the whole view-switcher bar inside the lit area.
+   *
+   * The hole is a circle centred on the screen's target and is fully clear out
+   * to 55% of its radius (see spotlight/skin). The bar is the window's full
+   * width, so a circle that holds it entirely inside that clear core needs a
+   * radius of ~1200-1600px — on a 1440x1024 stage that stops the vignette
+   * dimming anything at all. COVERAGE places the bar's far corner at 72%
+   * instead: the bar reads end to end while the edges of the window still fade.
+   *
+   * Measured from the DOM rather than tabulated per screen, so it stays right
+   * if the window or the bar changes.
+   *
+   * @param {Element} el the spotlight target
+   * @returns {Number|null} null when the bar cannot be measured
+   */
+  _holeRadius(el) {
+    const COVERAGE = 0.72;
+    if (!el || typeof el.getBoundingClientRect !== 'function') return null;
+    if (!this.el || typeof this.el.querySelector !== 'function') return null;
+    const bar = this.el.querySelector(`.${this.fig.family}__bar`);
+    if (!bar) return null;
+    const t = el.getBoundingClientRect();
+    const b = bar.getBoundingClientRect();
+    if (!t.width || !b.width) return null;
+    const cx = t.left + t.width / 2;
+    const cy = t.top + t.height / 2;
+    const far = Math.max(
+      Math.hypot(b.left - cx, b.top - cy),
+      Math.hypot(b.right - cx, b.top - cy),
+      Math.hypot(b.left - cx, b.bottom - cy),
+      Math.hypot(b.right - cx, b.bottom - cy),
+    );
+    return Math.round(far / COVERAGE);
+  }
+
+  /**
    * Render the current view and move the spotlight onto its target.
    *
    * The part is awaited rather than read straight after `feed`, because the
@@ -87,7 +118,8 @@ class __tutorial_task extends LetcBox {
       // so there is never a dead end to hide it for.
       tooltip: { ...BADGE, variant: 'figma' },
       direction: s.direction,
-      radius: s.radius,
+      // Measured so the whole view switcher stays lit; s.radius is the fallback.
+      radius: this._holeRadius(target.el) || s.radius,
       owner: this,
     });
   }

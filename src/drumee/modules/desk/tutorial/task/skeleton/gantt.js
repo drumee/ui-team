@@ -56,12 +56,7 @@ function bar(ui, pfx, task) {
           kids: [
             Skeletons.Box.Y({
               className: `${pfx}__gt-late-badge`,
-              kids: [
-                Skeletons.Image.Svg({
-                  ico: 'apps-warning',
-                  className: `${pfx}__gt-late-icon`,
-                }),
-              ],
+              
             }),
           ],
         })
@@ -73,13 +68,7 @@ function bar(ui, pfx, task) {
         styleOpt: { left: `${left}%`, width: `${width}%` },
         ...(task.selected ? { sys_pn: 'gantt-bar', partHandler: ui } : {}),
       }),
-      task.selected
-        ? Skeletons.Note({
-          className: `${pfx}__gt-range`,
-          styleOpt: { left: `${pctOf(to + 1)}%` },
-          content: `Jun ${from} - Jun ${to}, 2026`,
-        })
-        : null,
+      
     ].filter(Boolean),
   });
 }
