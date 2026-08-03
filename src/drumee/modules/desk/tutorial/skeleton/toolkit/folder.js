@@ -178,7 +178,7 @@ export function folderHeader(ui, pfx, opt = {}) {
 export function tabBar(ui, pfx, opt = {}) {
   const { active = "files", meeting = false } = opt;
   const tabs = [
-    { key: "files", ico: "apps-folder-card", label: LOCALE.FILES || "Files" },
+    { key: "files", ico: "app-file", label: LOCALE.FILES || "Files" },
     { key: "chat", ico: "apps-chat", label: LOCALE.CHAT || "Chat" },
     { key: "tasks", ico: "app-task", label: LOCALE.TASKS || "Tasks" },
   ];

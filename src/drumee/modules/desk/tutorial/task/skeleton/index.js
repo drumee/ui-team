@@ -11,11 +11,11 @@
 const { folderHeader, tabBar } = require('../../skeleton/toolkit');
 
 const VIEWS = [
-  { key: 'board', label: 'Board', ico: 'apps-desktop', build: require('./board') },
+  { key: 'board', label: 'Board', ico: 'square-split-horizontal', build: require('./board') },
   { key: 'calendar', label: 'Calendar', ico: 'calendar', build: require('./calendar') },
-  { key: 'gantt', label: 'Gantt', ico: 'apps-file-doc', build: require('./gantt') },
-  { key: 'list', label: 'List', ico: 'view-grid', build: require('./list') },
-  { key: 'health', label: 'Project Health', ico: 'apps-network', build: require('./health') },
+  { key: 'gantt', label: 'Gantt', ico: 'app-task-grant', build: require('./gantt') },
+  { key: 'list', label: 'List', ico: 'app-task-list', build: require('./list') },
+  { key: 'health', label: 'Project Health', ico: 'app-task-project-health', build: require('./health') },
 ];
 
 /** Right-hand controls, which differ per view in the design. */

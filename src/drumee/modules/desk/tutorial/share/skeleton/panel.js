@@ -34,7 +34,7 @@ const sectionLabel = (pfx, text) =>
 const check = (pfx, on) =>
   Skeletons.Box.Y({
     className: `${pfx}__check${on ? ' on' : ''}`,
-    kids: on ? [Skeletons.Image.Svg({ ico: 'upload-checked', className: `${pfx}__check-icon` })] : [],
+    kids: on ? [Skeletons.Image.Svg({ ico: 'desktop_check', className: `${pfx}__check-icon` })] : [],
   });
 
 const radio = (pfx, on) =>
@@ -139,7 +139,7 @@ function secureControls(pfx) {
               toggle(pfx, true),
             ],
           }),
-          Skeletons.Box.G({
+          Skeletons.Box.X({
             className: `${pfx}__chips`,
             kids: [
               chip(pfx, 'member@drumee.com'),
@@ -290,7 +290,7 @@ function expiry(ui, pfx, link) {
             Skeletons.Box.X({
               className: `${pfx}__revoke`,
               kids: [
-                Skeletons.Image.Svg({ ico: 'account_cross', className: `${pfx}__revoke-icon` }),
+                Skeletons.Image.Svg({ ico: 'app-ban', className: `${pfx}__revoke-icon` }),
                 Skeletons.Note({
                   className: `${pfx}__revoke-label`,
                   content: LOCALE.REVOKE || 'Revoke',

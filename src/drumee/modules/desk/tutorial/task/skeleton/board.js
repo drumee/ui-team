@@ -28,7 +28,7 @@ function taskCard(ui, pfx, task) {
         ? Skeletons.Note({ className: `${pfx}__card-desc`, content: task.desc })
         : null,
       files.length
-        ? Skeletons.Box.G({
+        ? Skeletons.Box.X({
           className: `${pfx}__card-files`,
           // Two chips per row. The "+n" is not a cell of its own — it rides
           // along in the LAST cell, beside the last filename, so it can never
