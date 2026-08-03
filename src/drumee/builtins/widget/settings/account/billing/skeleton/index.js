@@ -352,6 +352,7 @@ function redeemBox(ui) {
       Skeletons.Box.X({
         className: `${fig}-pill-bar`,
         kids: [
+          planPill("pro", LOCALE.PRO || "Pro"),
           planPill("team", LOCALE.TEAM || "Team"),
           planPill("business", LOCALE.BUSINESS || "Business"),
         ],
