@@ -29,6 +29,22 @@
     background: var(--normal-bg);
   }
 
+  // The shell chrome is normally pushed into the background by the spotlight's
+  // vignette. Step 4 is the exception: its hole has to be wide enough to keep
+  // the tracker's view switcher readable (task/index.js _holeRadius), and at
+  // that radius the clear core reaches past the sidebar, so the vignette stops
+  // dimming it. Dim those two directly while the tracker is on screen — every
+  // design frame shows them held back.
+  //
+  // Keyed on the step's own root rather than a step number, so it follows the
+  // widget wherever it sits in the tour.
+  &__layout:has(.tutorial-task__ui) {
+    .tutorial-main__sb-main,
+    .tutorial-main__tb-topbar {
+      opacity: .45;
+    }
+  }
+
   // ── Sidebar ──────────────────────────────────────────────────────────────
   &__sb-main {
     justify-content: space-between;
