@@ -46,11 +46,16 @@ class settings_billing extends LetcBox {
     // would read as no seats at all.
     this.storage = {
       free: 5,
+      pro: 50,
       team: 100,
       business: 1000
     }
     this.seats = {
       free: 0,
+      // 1, not 0: Pro is personal but NOT solo-locked — seat 0 is what
+      // isFreeSoloPlan() reads as "block every invite", and Pro sells
+      // unlimited guests.
+      pro: 1,
       team: 10,
       business: 100000
     }
@@ -386,13 +391,15 @@ class settings_billing extends LetcBox {
     const currentRaw = String(sub.plan || "") || current;
     const currentPeriod = /^year/.test(String(sub.period || "")) ? "year" : "month";
     const period = /^(month|year)$/.test(targetPeriod || "") ? targetPeriod : this._selectedCycle();
-    const currentTitle = current === "business" ? LOCALE.BUSINESS
-      : current === "team" ? LOCALE.TEAM
-      : current === "sovereign" ? LOCALE.SOVEREIGN
+    const label = (p) => p === "business" ? LOCALE.BUSINESS
+      : p === "team" ? LOCALE.TEAM
+      : p === "pro" ? LOCALE.PRO
+      : p === "sovereign" ? LOCALE.SOVEREIGN
       : LOCALE.FREE;
-    const targetTitle = targetPlan === "business" ? LOCALE.BUSINESS : LOCALE.TEAM;
+    const currentTitle = label(current);
+    const targetTitle = label(targetPlan);
     const when = this._periodEnd ? Dayjs(this._periodEnd * 1000).format("MMM D, YYYY") : "";
-    const rank = { free: 0, team: 1, business: 2, sovereign: 3 };
+    const rank = { free: 0, pro: 1, team: 2, business: 3, sovereign: 4 };
 
     // Three shapes for three different situations (product spec 2026-07-29):
     //  - same plan, other cycle  → DEFERRED: the current cycle runs to its
@@ -599,15 +606,16 @@ class settings_billing extends LetcBox {
       }
       // Get period from plan_detail if available, default to monthly
 
-      // Normalise quota.plan onto a card key. Legacy hand-granted rows carry
-      // free-text names from before the Stripe catalog — 'Pro', 'Drumee Plus'
-      // — and the retired B2C 'pro' tier; the schemas patch moves all of them
-      // onto the Team entitlement, so they must READ as Team here too, or the
-      // banner and the current-plan marking would point at a plan that no
-      // longer exists. Default is 'free', not 'pro': an unknown name must
-      // never imply a paid tier.
+      // Normalise quota.plan onto a card key. 'pro' is FIRST-CLASS again
+      // (2026-08-03 revival — the $5 personal tier); only the legacy
+      // hand-granted 'Drumee Plus' free-text name still reads as Team (the
+      // 2026-07-24 patch rewrote those rows, this is belt-and-braces for a
+      // straggler). Default is 'free', not a paid tier: an unknown name must
+      // never imply an entitlement.
       let mappedPlan = "free";
-      if (/^(team|pro|drumee plus)$/.test(planName)) {
+      if (planName === "pro") {
+        mappedPlan = "pro";
+      } else if (/^(team|drumee plus)$/.test(planName)) {
         mappedPlan = "team";
       } else if (planName === "business") {
         mappedPlan = "business";
@@ -895,6 +903,7 @@ class settings_billing extends LetcBox {
       // 2026-07-29). The catalog above is the truth; these are offline
       // fallbacks only.
       free: { monthly: 0, yearly: 0 },
+      pro: { monthly: catPrice("pro", "monthly") ?? 5, yearly: catPrice("pro", "yearly") ?? 50 },
       team: { monthly: catPrice("team", "monthly") ?? 29, yearly: catPrice("team", "yearly") ?? 290 },
       business: { monthly: catPrice("business", "monthly") ?? 99, yearly: catPrice("business", "yearly") ?? 990 },
     };
@@ -973,7 +982,7 @@ class settings_billing extends LetcBox {
   _catSellable(code) {
     // Until the catalog lands, assume the tiers that were sellable before it
     // did — a blank first paint must not hide the CTA from everyone.
-    if (!this._catalog) return code === "team" || code === "business";
+    if (!this._catalog) return /^(pro|team|business)$/.test(code);
     return (this._catalog || []).some(
       (p) => p.plan_code === code && p.stripe_price_id
     );
@@ -1758,7 +1767,7 @@ class settings_billing extends LetcBox {
           // they already fall back to, and on the server that is a NO_PRICE
           // dead end. With no subscription there is simply nothing to do.
           if (this._hasPaidSub || this._isPaidByQuota()) this._confirmCancel();
-        } else if (planValue === "team" || planValue === "business") {
+        } else if (/^(pro|team|business)$/.test(planValue)) {
           // A live subscription means the click is a plan SWITCH: warn
           // (supersede) and route through checkout — the buyer always sees
           // and confirms the charge. With nothing live it is a normal
@@ -1798,7 +1807,7 @@ class settings_billing extends LetcBox {
 
       case "select-checkout-plan":
         const plan = this._getValueFromCmd(cmd, args);
-        if (/^(free|team|business)$/.test(plan)) {
+        if (/^(free|pro|team|business)$/.test(plan)) {
           // Storage and seats are fixed per plan now (flat pricing), so they
           // are read straight off the plan rather than nudged per branch.
           this.state.checkout.selectedPlan = plan;

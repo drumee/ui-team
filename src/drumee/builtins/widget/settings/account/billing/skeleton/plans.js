@@ -22,6 +22,7 @@ function getOptions(ui, cycle = "monthly") {
   // Business purchasable), so both read their Stripe price from the catalog.
   // Sovereign stays sales-led: its amount is the published figure, shown so
   // the ladder reads as a ladder, with a sales CTA instead of checkout.
+  const proPrice = money(ui._catPrice("pro", period) ?? (isYear ? 50 : 5));
   const teamPrice = money(ui._catPrice("team", period));
   const businessPrice = money(
     ui._catPrice("business", period) ?? (isYear ? 990 : 99),
@@ -62,7 +63,27 @@ function getOptions(ui, cycle = "monthly") {
         row(LOCALE.SUPPORT_COMMUNITY, LOCALE.FEAT_UNIT_SUPPORT),
       ],
     },
-    // The entry paid tier.
+    // Personal paid tier (2026-08-03 pricing table): one person, their
+    // guests, and real sharing. Sits between Free and Team; no org, no
+    // admin console — the card lists what it HAS, per the house style.
+    pro: {
+      title: LOCALE.PRO,
+      priceAmount: proPrice,
+      pricePeriod: per,
+      buttonTitle: LOCALE.CTA_GO_PRO,
+      buttonKind: "primary",
+      subText: LOCALE.PLAN_PRO_DESC,
+      features: [
+        row("1", LOCALE.FEAT_UNIT_HUB),
+        row("1", LOCALE.FEAT_UNIT_MEMBER),
+        row(LOCALE.UNLIMITED, LOCALE.FEAT_UNIT_GUESTS),
+        row("50 GB", LOCALE.FEAT_UNIT_STORAGE),
+        row(LOCALE.FEAT_UNLIMITED_LINKS),
+        row(LOCALE.DAYS_7, LOCALE.FEAT_UNIT_VERSION_HISTORY),
+        row(LOCALE.SUPPORT_COMMUNITY, LOCALE.FEAT_UNIT_SUPPORT),
+      ],
+    },
+    // The entry ORG paid tier.
     team: {
       title: LOCALE.TEAM,
       priceAmount: teamPrice,
@@ -302,7 +323,7 @@ function ctaButton(ui, fig, opt, option) {
         }),
       ],
     });
-  } else if (/^(team|business)$/.test(opt) && ui._catSellable && !ui._catSellable(opt)) {
+  } else if (/^(pro|team|business)$/.test(opt) && ui._catSellable && !ui._catSellable(opt)) {
     // The catalog has no Stripe price for this plan in this environment, so
     // there is nothing to sell: both checkout and change_plan answer NO_PRICE.
     // Say that instead of taking the buyer through a priced confirm dialog to
@@ -445,6 +466,7 @@ function billing_content(ui, cycle = "monthly") {
         className: `${fig}-narrow`,
         kids: [
           item(ui, "free", options.free),
+          item(ui, "pro", options.pro),
           item(ui, "team", options.team),
           item(ui, "business", options.business),
           item(ui, "sovereign", options.sovereign),

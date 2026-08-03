@@ -120,6 +120,7 @@ function checkout(ui) {
           }),
           pillBar(ui, [
             { content: LOCALE.FREE, state: selectedPlan === "free" ? 1 : 0, service: "select-checkout-plan", value: "free", radio: `checkout-plan-${ui._id}` },
+            { content: LOCALE.PRO, state: selectedPlan === "pro" ? 1 : 0, service: "select-checkout-plan", value: "pro", radio: `checkout-plan-${ui._id}` },
             { content: LOCALE.TEAM, state: selectedPlan === "team" ? 1 : 0, service: "select-checkout-plan", value: "team", radio: `checkout-plan-${ui._id}` },
             { content: LOCALE.BUSINESS, state: selectedPlan === "business" ? 1 : 0, service: "select-checkout-plan", value: "business", radio: `checkout-plan-${ui._id}` },
           ]),

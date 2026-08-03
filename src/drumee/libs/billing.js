@@ -111,16 +111,17 @@ function needsAdminConsoleUpgrade(plan) {
   const raw =
     plan != null && String(plan).trim() !== "" ? plan : fromVisitor;
   const name = String(raw || "free").toLowerCase();
-  // Only Free is below the console now. `pro` was the B2C tier; the 2026-07
-  // pricing rebuild retired it and moved every legacy Pro / Drumee Plus row
-  // onto the Team entitlement, so those users DO get the console — keeping
-  // 'pro' here would upsell people who are already entitled.
-  return /^(free|advanced)$/.test(name);
+  // Free AND Pro sit below the console. Pro (2026-08-03 revival) is the
+  // personal tier — no organisation, no admin panel, per the pricing table.
+  // Legacy grandfathered rows are not affected: the 2026-07-24 patch rewrote
+  // every old Pro/Drumee Plus quota row onto Team, so any row still reading
+  // 'pro' is a NEW Pro subscription.
+  return /^(free|advanced|pro)$/.test(name);
 }
 
 /**
  * Normalise whatever sits in `quota.plan` onto one of the four plan keys the
- * product actually has: free | team | business | sovereign.
+ * product actually has: free | pro | team | business | sovereign.
  *
  * Needed because quota.plan is NOT a closed set. Alongside the current codes
  * it still carries the retired B2C tier ('pro') and hand-granted free-text
@@ -139,7 +140,13 @@ function planKey(plan) {
           ? (Visitor.quota() || {}).plan
           : null);
   const name = String(raw || "free").trim().toLowerCase();
-  if (/^(team|pro|drumee plus)$/.test(name)) return "team";
+  // 'pro' is FIRST-CLASS again (2026-08-03 revival: $5 personal tier). The
+  // legacy grandfathering that read pro as Team only exists for rows the
+  // 2026-07-24 patch did not rewrite — and that patch rewrote ALL of them
+  // ('Pro'/'Drumee Plus'/'advanced' → team, unfiltered), so mapping the
+  // string here again would just mislabel every NEW Pro subscriber.
+  if (name === "pro") return "pro";
+  if (/^(team|drumee plus)$/.test(name)) return "team";
   if (name === "business") return "business";
   if (name === "sovereign" || name === "enterprise") return "sovereign";
   return "free";
@@ -154,6 +161,7 @@ function planLabel(plan) {
   return (
     {
       free: LOCALE.FREE,
+      pro: LOCALE.PRO,
       team: LOCALE.TEAM,
       business: LOCALE.BUSINESS,
       sovereign: LOCALE.SOVEREIGN,
