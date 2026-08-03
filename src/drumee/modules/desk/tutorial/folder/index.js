@@ -5,8 +5,8 @@ const { chatScreen, threadsScreen, menuScreen } = require('./skeleton');
  * Step 2 runs three internal screens behind ONE parent step, the same way
  * tutorial_workspace runs its three sub-badges: navigation stays inside this
  * widget until the last screen, and only then does it hand back to
- * tutorial_main. The badge therefore reads STEP 2/5 throughout — the tour is
- * still five steps.
+ * tutorial_main. The badge therefore reads STEP 2/4 throughout — three screens
+ * are still one step of the tour.
  *
  * Each entry owns the body it renders, the part the spotlight points at, and
  * the direction the connector leaves the card.
@@ -22,7 +22,7 @@ const SCREENS = [
     radius: 336,
     direction: 'east',
     badge: {
-      badge_text: 'STEP 2/5',
+      badge_text: 'STEP 2/4',
       title: 'Chat lives in folder',
       desc: 'Chat lives here. Every folder has its own persistent context. Discuss files and tag teammates without leaving your workspace.',
     },
@@ -36,7 +36,7 @@ const SCREENS = [
     anchor: 'thread-card',
     direction: 'east',
     badge: {
-      badge_text: 'STEP 2/5',
+      badge_text: 'STEP 2/4',
       title: 'Chat in threads',
       desc: 'Drop a file, chat in the threads without context loss',
     },
@@ -51,7 +51,7 @@ const SCREENS = [
     radius: 260,
     direction: 'east',
     badge: {
-      badge_text: 'STEP 2/5',
+      badge_text: 'STEP 2/4',
       title: 'View and download chat threads',
       desc: 'View and download whenever you want in one click',
     },

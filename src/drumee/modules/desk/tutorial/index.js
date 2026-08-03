@@ -15,11 +15,10 @@ class tutorial_main extends LetcBox {
         workspaceContent(this, { aspect: "faded" }),
         { kind: 'tutorial_folder', service: "next-step", uiHandler: [this] }
       ],
-      [
-        workspaceContent(this, { aspect: "faded" }),
-        { kind: 'tutorial_folder', aspect: "faded" },
-        { kind: 'tutorial_settings', service: "next-step", uiHandler: [this] }
-      ],
+      // Step 3 is the meeting room. It used to be the permissions step
+      // ("Set who sees what", tutorial_settings) with the meeting at step 4;
+      // the settings step was retired, so the tour runs four steps. The
+      // widget and its kind registration are still there, just unused.
       [
         workspaceContent(this, { aspect: "faded" }),
         { kind: 'tutorial_meeting', service: "next-step", uiHandler: [this] },

@@ -1,3 +1,7 @@
+// RETIRED — no longer part of the tour. The permissions step was dropped when
+// the meeting room took over step 3 (see tutorial/index.js `_widgets`); the
+// widget and its `tutorial_settings` kind are kept so the step can be put back
+// without rebuilding it. Nothing feeds it today.
 const BADGE = {
   badge_text: 'STEP 3/5',
   title: 'Set who sees what',
