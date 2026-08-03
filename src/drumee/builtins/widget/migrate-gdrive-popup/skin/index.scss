@@ -735,7 +735,40 @@ $danger-soft: rgba(246, 81, 75, 0.12);
   &__title-ico--cloud { color: $accent; }
 
   // ───────── whole-folder import (share-to-SA) ─────────
-  &__body--sa { gap: var(--spacer-3); }
+  // Bigger gap than the old --sa body: the two steps are now separate blocks
+  // and need to read as separate blocks, not one continuous list.
+  &__body--sa { gap: var(--spacer-5); }
+
+  &__sa-step { gap: var(--spacer-2); }
+
+  &__sa-step-head {
+    align-items: center;
+    gap: var(--spacer-2);
+  }
+
+  // The number in its own disc, so the eye can count the steps without
+  // reading them — the old screen buried "1." and "2." inside the prose.
+  //
+  // Centred with justify/align, NOT text-align: a Note renders as a flex
+  // container with the text in an inner .note-content, so text-align has
+  // nothing to act on and the digit sat off to one side, unreadable.
+  &__sa-step-badge {
+    flex-shrink: 0;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    align-items: center;
+    justify-content: center;
+    background: $accent;
+    @include drumee.typo($size: 11px, $line: 20px, $color: #fff);
+    // drumee.typo emits no font-weight, so it goes here or the digit renders
+    // at the inherited weight.
+    font-weight: 700;
+  }
+
+  &__sa-step-title {
+    @include drumee.typo($size: 14px, $weight: 600, $line: 20px, $color: var(--normal-fg-10));
+  }
 
   // Big primary CTA on the ready screen — the ONLY import entry point for
   // drive.file users (Picker option removed).
@@ -859,6 +892,12 @@ $danger-soft: rgba(246, 81, 75, 0.12);
   }
 
   &__sa-input-row {
+    // The row is a Box.X inside the step's Box.Y; without this it collapses
+    // to the Entry's intrinsic width and the link field ends up a stub.
+    width: 100%;
+
+    > * { flex: 1 1 auto; min-width: 0; }
+
     input {
       width: 100%;
       padding: var(--spacer-2) var(--spacer-3);

@@ -304,36 +304,57 @@ module.exports = function (ui) {
       SA_BAD_LINK: LOCALE.GDRIVE_SA_BAD_LINK,
       SA_NOT_A_FOLDER: LOCALE.GDRIVE_SA_NOT_A_FOLDER,
     };
+    // Two numbered steps, each a titled block. The old screen ran the step
+    // numbers inline in prose ("1. In Google Drive, share…"), so the two
+    // actions read as one paragraph of instructions with controls scattered
+    // through it — the user could not see at a glance that this is a
+    // do-this-then-that task, or which half they were on.
+    const step = (n, title, kids) => Skeletons.Box.Y({
+      className: `${pfx}__sa-step`,
+      kids: [
+        Skeletons.Box.X({
+          className: `${pfx}__sa-step-head`,
+          kids: [
+            Skeletons.Note({ className: `${pfx}__sa-step-badge`, content: String(n) }),
+            Skeletons.Note({ className: `${pfx}__sa-step-title`, content: title }),
+          ],
+        }),
+        ...kids.filter(Boolean),
+      ],
+    });
+
     body = Skeletons.Box.Y({
       className: `${pfx}__body ${pfx}__body--sa`,
       kids: [
-        Skeletons.Note({ className: `${pfx}__description`, content: LOCALE.GDRIVE_SA_HINT }),
-        Skeletons.Box.X({
-          className: `${pfx}__sa-email-card`,
-          kids: [
-            // Same reason as the link input below: keep the browser's own
-            // menu so the address can be copied with the mouse too.
-            Skeletons.Note({
-              className: `${pfx}__sa-email`,
-              content: email,
-              escapeContextmenu: true,
-            }),
-            Skeletons.Note({
-              className: `${pfx}__sa-copy`,
-              dataset: { partname: 'sa-copy-btn' },
-              content: LOCALE.COPY || 'Copy',
-              service: 'gdrive-sa-copy', uiHandler: [ui],
-            }),
-          ],
-        }),
-        Skeletons.Note({ className: `${pfx}__description`, content: LOCALE.GDRIVE_SA_HINT2 }),
+        step(1, LOCALE.GDRIVE_SA_STEP1_TITLE, [
+          Skeletons.Note({ className: `${pfx}__description`, content: LOCALE.GDRIVE_SA_STEP1_BODY }),
+          Skeletons.Box.X({
+            className: `${pfx}__sa-email-card`,
+            kids: [
+              // Same reason as the link input below: keep the browser's own
+              // menu so the address can be copied with the mouse too.
+              Skeletons.Note({
+                className: `${pfx}__sa-email`,
+                content: email,
+                escapeContextmenu: true,
+              }),
+              Skeletons.Note({
+                className: `${pfx}__sa-copy`,
+                dataset: { partname: 'sa-copy-btn' },
+                content: LOCALE.COPY || 'Copy',
+                service: 'gdrive-sa-copy', uiHandler: [ui],
+              }),
+            ],
+          }),
+        ]),
+        step(2, LOCALE.GDRIVE_SA_STEP2_TITLE, [
         Skeletons.Box.X({
           className: `${pfx}__sa-input-row`,
           dataset: { partname: 'sa-folder-row' },
           kids: [
             Skeletons.Entry({
               className: `${pfx}__sa-input`,
-              placeholder: 'https://drive.google.com/drive/folders/…',
+              placeholder: LOCALE.GDRIVE_SA_LINK_PLACEHOLDER,
               mode: 'commit',
               service: 'gdrive-sa-verify',
               uiHandler: [ui],
@@ -359,6 +380,7 @@ module.exports = function (ui) {
           dataset: { kind: 'error' },
           content: ERR_TEXT[saErr] || LOCALE.GDRIVE_SA_NOT_SHARED,
         }) : null,
+        ]),
         // SA-only: this is the popup's main screen, so there's no "Back"
         // destination — just the full-width primary action.
         Skeletons.Box.X({
@@ -366,7 +388,11 @@ module.exports = function (ui) {
           kids: [
             Skeletons.Note({
               className: `${pfx}__primary-btn ${pfx}__primary-btn--full`,
-              content: saF ? LOCALE.MIGRATE_GDRIVE_START : (LOCALE.GDRIVE_SA_VERIFY_START || 'Verify & import'),
+              // One label for both halves of the action. It used to read
+              // "Verify & import" before a link was checked and "Start
+              // migration" after — narrating our own two-phase implementation
+              // at the user, who only ever asked for one thing.
+              content: LOCALE.GDRIVE_SA_IMPORT_NOW,
               service: 'gdrive-sa-start',
               uiHandler: [ui],
             }),
@@ -717,13 +743,11 @@ module.exports = function (ui) {
       ],
     });
   } else if (state === 'sa') {
-    head = Skeletons.Box.X({
-      className: `${pfx}__header`,
-      kids: [
-        Skeletons.Note({ className: `${pfx}__title`, content: LOCALE.GDRIVE_SA_TITLE || 'Import an entire folder' }),
-        close,
-      ],
-    });
+    // "Import from Google Drive", not "Import a folder or file": name the
+    // source, which is what the user is orienting by. Uses the shared
+    // header() so this screen carries the Drive logo like the others — it
+    // was the one titled header built by hand, and so the one without it.
+    head = header(LOCALE.GDRIVE_SA_HEADER_TITLE);
   } else if (state === 'in-progress') {
     head = Skeletons.Box.X({
       className: `${pfx}__header`,
