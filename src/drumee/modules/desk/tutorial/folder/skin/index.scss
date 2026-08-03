@@ -304,23 +304,6 @@
     opacity: 0.55;
   }
 
-  // The folder art is a media_grid widget, filled per area — `share` resolves
-  // to --area-share (#ffa8dc, pink). In the tour these tiles sit beside the
-  // team-chat panel, so they take the bubble colour instead and the two read
-  // as one thing. Four classes deep to out-specify
-  // `.media-grid__container .folder-shape.share`, whatever the load order.
-  &__folder-item-icon {
-    .media-grid__container .folder-shape {
-      &,
-      &.share,
-      &.private,
-      &.personal,
-      &.public {
-        fill: var(--error, #ff453a);
-      }
-    }
-  }
-
   &__grid-folder-name {
     font-family: var(--font-main);
     font-size: 12px;

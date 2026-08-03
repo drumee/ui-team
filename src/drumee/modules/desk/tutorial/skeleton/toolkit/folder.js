@@ -306,7 +306,14 @@ export function filesPanel(ui, pfx, opt = {}) {
       Skeletons.Box.G({
         className: `${pfx}__grid`,
         kids: [
-          ...(folders ? SUB_FOLDERS.map((name) => folderItem(ui, name, { more: true })) : []),
+          // Private, not share: the folder art is filled per area, and share
+          // resolves to --area-share (pink) while private gives the red that
+          // goes with the INTERNAL folder these tiles live in.
+          ...(folders
+            ? SUB_FOLDERS.map((name) =>
+              folderItem(ui, name, { more: true, area: _a.private }),
+            )
+            : []),
           ...FILES.map((f, i) =>
             fileItem(ui, pfx, f, {
               menu: menu && i === menuAt ? menu(ui, pfx) : null,
