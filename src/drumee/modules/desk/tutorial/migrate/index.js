@@ -74,11 +74,40 @@ class __tutorial_migrate extends LetcBox {
   }
 
   /**
+   * Drop the menu under the topbar's Add-new button.
+   *
+   * The button belongs to the tutorial shell (tutorial/skeleton/topbar.js), not
+   * to this widget, so there is no CSS relationship to lean on and a fixed
+   * offset would drift with the topbar. Measure it instead: left edges aligned,
+   * hanging just below, the way a real menu opens from its trigger.
+   *
+   * No-ops when the button cannot be found, leaving the fallback position in
+   * the stylesheet.
+   */
+  _placeMenu() {
+    const GAP = 8;
+    if (!this.el || typeof this.el.querySelector !== 'function') return;
+    const menu = this.el.querySelector(`.${this.fig.family}__menu`);
+    if (!menu) return;
+    const scope = (this.el.closest && this.el.closest('.tutorial-main__layout')) || document;
+    const btn = scope.querySelector('.tutorial-main__tb-new-workspace-btn');
+    const box = menu.offsetParent || menu.parentElement;
+    if (!btn || !box) return;
+    const b = btn.getBoundingClientRect();
+    const s = box.getBoundingClientRect();
+    if (!b.width) return;
+    menu.style.left = `${b.left - s.left}px`;
+    menu.style.top = `${b.bottom - s.top + GAP}px`;
+    menu.style.right = 'auto';
+  }
+
+  /**
    * Render the current screen and move the spotlight onto its target.
    *
    * The part is awaited rather than read straight after `feed`, because the
    * body is rebuilt on every screen change and only answers once the new DOM
-   * has landed.
+   * has landed. The menu is placed BEFORE the spotlight is told about it, so
+   * the badge measures it where it has come to rest.
    */
   async _showScreen() {
     const s = SCREENS[this._screenIndex];
@@ -88,6 +117,7 @@ class __tutorial_migrate extends LetcBox {
     }
     this.feed(s.skeleton(this));
     const target = await this.ensurePart(s.target);
+    this._placeMenu();
     this.triggerHandlers({
       service: 'spotlight:focus',
       target: target.el,

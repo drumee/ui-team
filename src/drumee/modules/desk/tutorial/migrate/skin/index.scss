@@ -28,10 +28,12 @@
   }
 
   // ── "+ New" menu ────────────────────────────────────────────────────────────
-  // Dropped from the topbar's + New button, which sits at the top right.
+  // Dropped from the topbar's Add-new button. The widget measures that button
+  // and sets left/top at render time (_placeMenu); these are only the fallback
+  // for when it cannot be found.
   &__menu {
     position: absolute;
-    top: 40px;
+    top: 60px;
     right: 40px;
     width: 195px;
     box-sizing: border-box;
