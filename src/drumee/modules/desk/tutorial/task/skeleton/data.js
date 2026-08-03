@@ -11,6 +11,10 @@
  * which is the only one that states every field explicitly.
  */
 
+// A `late` task must have a span that ENDS BEFORE the gantt's today marker
+// (gantt.js TODAY) — the overdue band runs from the bar's end to that line, so
+// a bar reaching today leaves it nowhere to draw.
+//
 // Status keys double as CSS modifiers (see skin: __pill[data-status]).
 const TODO = 'todo';
 const PROGRESS = 'progress';
@@ -41,8 +45,9 @@ export const TASKS = [
     priority: 'low',
     date: 'Jun 09',
     day: 9,
-    span: [7, 9],
+    span: [7, 8],
     people: 1,
+    late: true,
   },
   {
     name: 'Landing Page Wireframe',
@@ -51,7 +56,7 @@ export const TASKS = [
     priority: 'low',
     date: 'Jun 09',
     day: 9,
-    span: [7, 9],
+    span: [7, 8],
     people: 3,
     late: true,
   },
@@ -71,7 +76,7 @@ export const TASKS = [
     status: PROGRESS,
     priority: null,
     day: 10,
-    span: [7, 10],
+    span: [7, 8],
     people: 0,
     late: true,
   },
@@ -115,7 +120,7 @@ export const TASKS = [
     priority: null,
     date: 'Jun 09',
     day: 9,
-    span: [7, 9],
+    span: [7, 8],
     people: 0,
     late: true,
   },
@@ -134,7 +139,7 @@ export const TASKS = [
     priority: null,
     date: 'Jun 09',
     day: 9,
-    span: [7, 9],
+    span: [7, 8],
     people: 0,
     late: true,
   },

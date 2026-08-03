@@ -39,24 +39,39 @@ function taskRow(pfx, task) {
 function bar(ui, pfx, task) {
   const [from, to] = task.span || [FIRST_DAY, FIRST_DAY + 1];
   const left = pctOf(from);
-  const width = Math.max(pctOf(to + 1) - left, 4);
+  const ends = pctOf(to + 1);
+  const width = Math.max(ends - left, 4);
+  // Overdue: a tinted band running from the end of the bar to the today line,
+  // with the badge at its far end — the design does not put the marker on the
+  // bar itself. A bar already past today keeps a stub band so the badge lands
+  // just after it.
+  const lateWidth = task.late ? Math.max(pctOf(TODAY) - ends, 3) : 0;
   return Skeletons.Box.X({
     className: `${pfx}__gt-lane${task.selected ? ' selected' : ''}`,
     kids: [
+      task.late
+        ? Skeletons.Box.X({
+          className: `${pfx}__gt-late`,
+          styleOpt: { left: `${ends}%`, width: `${lateWidth}%` },
+          kids: [
+            Skeletons.Box.Y({
+              className: `${pfx}__gt-late-badge`,
+              kids: [
+                Skeletons.Image.Svg({
+                  ico: 'apps-warning',
+                  className: `${pfx}__gt-late-icon`,
+                }),
+              ],
+            }),
+          ],
+        })
+        : null,
       Skeletons.Box.X({
         className: `${pfx}__gt-bar`,
         // Percentage geometry: the lane is the ruler's width, whatever the
         // window ends up being.
         styleOpt: { left: `${left}%`, width: `${width}%` },
         ...(task.selected ? { sys_pn: 'gantt-bar', partHandler: ui } : {}),
-        kids: [
-          task.late
-            ? Skeletons.Box.Y({
-              className: `${pfx}__gt-late`,
-              kids: [Skeletons.Image.Svg({ ico: 'apps-warning', className: `${pfx}__gt-late-icon` })],
-            })
-            : null,
-        ].filter(Boolean),
       }),
       task.selected
         ? Skeletons.Note({

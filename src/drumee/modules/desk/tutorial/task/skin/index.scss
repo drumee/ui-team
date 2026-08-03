@@ -856,7 +856,7 @@
     top: 0;
     bottom: 0;
     width: 2px;
-    background: #7c74ff;
+    background: #6058fe;
     z-index: 2;
   }
 
@@ -865,35 +865,50 @@
     height: 34px;
     flex-shrink: 0;
 
-    &.selected { background: var(--normal-bg-90); }
+    &.selected { background: #f5f4ff; }
   }
 
+  // The bar washes in from a pale lavender on its start date and saturates
+  // toward the end date, capped on the right only — measured off the design:
+  // #e3e1ff → #6b63ff, 20px tall in a 34px lane.
   &__gt-bar {
     position: absolute;
-    top: 9px;
-    height: 16px;
-    border-radius: 99px;
-    align-items: center;
-    justify-content: flex-end;
-    padding-right: 4px;
+    top: 7px;
+    height: 20px;
     box-sizing: border-box;
-    background: linear-gradient(90deg, #cfcbff 0%, #7c74ff 100%);
+    border-radius: 2px 8px 8px 2px;
+    background: linear-gradient(90deg, #e3e1ff 0%, #6b63ff 100%);
+    z-index: 1;
   }
 
+  // Overdue: a tinted band from the bar's end to the today line, badge at the
+  // far end. Sits under the bar so a stub band cannot cover it.
   &__gt-late {
+    position: absolute;
+    top: 7px;
+    height: 20px;
+    box-sizing: border-box;
+    align-items: center;
+    justify-content: flex-end;
+    padding-right: 5px;
+    border-radius: 0 4px 4px 0;
+    background: #f4dedd;
+  }
+
+  &__gt-late-badge {
     width: 14px;
     height: 14px;
     border-radius: 50%;
     align-items: center;
     justify-content: center;
-    background: #f9e4e3;
+    background: #d74e49;
     flex-shrink: 0;
   }
 
   &__gt-late-icon {
     width: 9px;
     height: 9px;
-    color: var(--error, #ff453a);
+    color: #fff;
 
     svg { width: 100%; height: 100%; fill: currentColor; }
   }

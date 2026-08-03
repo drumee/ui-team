@@ -30,9 +30,10 @@ const SCREENS = [
   // (clear ellipse ~650x370), so the hole is widened past the column's own
   // rect and the surrounding week reads as lit.
   { view: 'calendar', target: 'cal-day', direction: 'west', radius: 520 },
-  // The selected row's bar. Its own rect is a thin ribbon, so the hole is sized
-  // explicitly to take in the surrounding timeline.
-  { view: 'gantt', target: 'gantt-bar', direction: 'west', radius: 420 },
+  // The selected row's bar. Its own rect is a thin ribbon, and this frame's
+  // vignette clears the same ~650x370 as the board's, so the hole is widened to
+  // match the other screens and the timeline around it reads as lit.
+  { view: 'gantt', target: 'gantt-bar', direction: 'west', radius: 520 },
   // The status cell of the highlighted row. The table is full-width, so the
   // badge anchors there and the hole is sized to take in the rows around it.
   { view: 'list', target: 'list-focus', direction: 'west', radius: 420 },
