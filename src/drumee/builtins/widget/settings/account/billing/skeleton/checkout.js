@@ -152,12 +152,13 @@ function checkout(ui) {
   // explain it — no struck-through original, no "Promo (N% off)" row, no
   // "then <full price>" note. The shopper saw a reduced price with nothing
   // saying it was temporary. One function now serves both the first paint and
-  // every incremental update, so the two cannot drift again.
-  const rightPanel = rightPanelContent(ui);
+  // every incremental update, so the two cannot drift again — rightPanel()
+  // wraps it in the root here, _updateRightPanelContent feeds the kids alone.
+  const rightPanelTree = rightPanel(ui);
 
   return Skeletons.Box.X({
     className: `${pfx}-main`,
-    kids: [leftPanel, rightPanel],
+    kids: [leftPanel, rightPanelTree],
   });
 }
 
@@ -262,13 +263,7 @@ function rightPanelContent(ui) {
     ? Math.max(1, Math.floor(discountMonths / 12))
     : Math.max(1, discountMonths);
 
-  return Skeletons.Box.Y({
-    className: `${pfx}-right`,
-    sys_pn: `${pfx}-right-panel`,
-    // Needed now that checkout() renders the panel through this function:
-    // onPartReady is what caches __rightPanel for the incremental updates.
-    partHandler: [ui],
-    kids: [
+  return [
       Skeletons.Note({
         className: `${pfx}-total-label`,
         content: LOCALE.TOTAL_OUTCOME,
@@ -425,9 +420,32 @@ function rightPanelContent(ui) {
         state: isFreePlan ? 0 : 1,
         dataset: isFreePlan ? { disabled: 1 } : undefined,
       }),
-    ].filter(Boolean),
+    ].filter(Boolean);
+}
+
+/**
+ * The panel itself: the root Box plus its content.
+ *
+ * Kept separate from rightPanelContent() on purpose. _updateRightPanelContent
+ * feeds the panel INTO ITSELF — feed() replaces a part's children, so handing
+ * it a root carrying `className: -right` / `sys_pn: -right-panel` produced a
+ * second panel nested in the first, with 24px of padding stacked on 24px. The
+ * visible symptom was the right column narrowing (480 → 405) the moment a
+ * promo code was applied, since the inner copy sizes to its content.
+ *
+ * So: checkout() renders rightPanel() once; every incremental update feeds
+ * rightPanelContent(), which is the children ALONE.
+ */
+function rightPanel(ui) {
+  const pfx = `${ui.fig.family}__checkout`;
+  return Skeletons.Box.Y({
+    className: `${pfx}-right`,
+    sys_pn: `${pfx}-right-panel`,
+    // onPartReady is what caches __rightPanel for the incremental updates.
+    partHandler: [ui],
+    kids: rightPanelContent(ui),
   });
 }
 
 export default checkout;
-export { rightPanelContent, promoCodeSection };
+export { rightPanel, rightPanelContent, promoCodeSection };
