@@ -29,7 +29,8 @@ const SCREENS = [
   },
   {
     skeleton: threadsScreen,
-    target: 'thread-card',
+    // The whole thread panel; its own rect sizes the hole, so no radius here.
+    target: 'thread-panel',
     direction: 'east',
     badge: {
       badge_text: 'STEP 2/5',

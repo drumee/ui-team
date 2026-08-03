@@ -6,7 +6,7 @@
  * off the 1:1 render: thread panel 340px, file-thread card #FFF on #F2F2F7,
  * pink outgoing bubble #FFA8DC, purple accents #B1ADFF / #847EFF.
  *
- * Visual only — no services. The one part that matters is `thread-card`,
+ * Visual only — no services. The one part that matters is `thread-panel`,
  * which the widget hands to the spotlight.
  */
 
@@ -177,10 +177,6 @@ function threadStream(ui, pfx) {
 function threadCard(ui, pfx) {
   return Skeletons.Box.X({
     className: `${pfx}__th-card`,
-    // The badge points at the card, not the whole panel — the Figma connector
-    // lands on its vertical centre.
-    sys_pn: "thread-card",
-    partHandler: ui,
     kids: [
       Skeletons.Box.Y({
         className: `${pfx}__th-card-icon-box`,
@@ -358,6 +354,9 @@ function threadComposer(ui, pfx) {
 export function threadPanel(ui, pfx) {
   return Skeletons.Box.Y({
     className: `${pfx}__th-panel`,
+    // Spotlight target for this screen: the whole thread panel.
+    sys_pn: "thread-panel",
+    partHandler: ui,
     kids: [
       Skeletons.Box.X({
         className: `${pfx}__th-panel-header`,
