@@ -180,7 +180,7 @@ export function tabBar(ui, pfx, opt = {}) {
   const tabs = [
     { key: "files", ico: "apps-folder-card", label: LOCALE.FILES || "Files" },
     { key: "chat", ico: "apps-chat", label: LOCALE.CHAT || "Chat" },
-    { key: "tasks", ico: "checkbox", label: LOCALE.TASKS || "Tasks" },
+    { key: "tasks", ico: "app-task", label: LOCALE.TASKS || "Tasks" },
   ];
   if (meeting) {
     tabs.push({

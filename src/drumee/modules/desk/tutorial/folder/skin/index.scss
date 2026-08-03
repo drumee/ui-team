@@ -184,12 +184,15 @@
   }
 
   // ── Tab bar ─────────────────────────────────────────────────────────────────
+  // Pill tabs, the treatment the tracker step uses (task/skin __tabs): a grey
+  // pill each, the live one marked by an outline in the folder's access colour
+  // rather than by an underline.
   &__tabs {
     width: 100%;
-    height: 40px;
+    height: 44px;
     align-items: center;
     padding: 0 16px;
-    gap: 4px;
+    gap: 8px;
     border-bottom: 1px solid var(--border-muted);
     flex-shrink: 0;
     background: var(--normal-bg);
@@ -199,15 +202,18 @@
     display: inline-flex !important;
     flex-direction: row !important;
     align-items: center !important;
-    height: 40px;
+    height: 30px;
     padding: 0 12px;
     gap: 6px;
+    border-radius: 6px;
     font-size: 13px;
     font-weight: 500;
     color: var(--normal-fg-50);
+    background: var(--normal-bg-90);
     cursor: pointer;
-    border-bottom: 2px solid transparent;
     box-sizing: border-box;
+    // Transparent by default so the active outline does not resize the tab.
+    border: 1px solid transparent;
 
     svg {
       width: 14px;
@@ -223,14 +229,40 @@
     }
 
     &.active {
-      color: var(--primary-50, #5950ff);
-      border-bottom-color: var(--primary-50, #5950ff);
+      color: var(--normal-fg);
+      background: var(--normal-bg-90);
+      // Restricted folder by default; the shared scope below turns it pink.
+      border-color: var(--error, #ff453a);
       font-weight: 600;
+
+      span.label,
+      section.label {
+        font-weight: 600;
+        color: var(--normal-fg);
+      }
     }
 
     &:hover:not(.active) {
       color: var(--normal-fg);
-      background: var(--hover-bg-40);
+    }
+  }
+
+  // ── Shared folder (screen 2) ─────────────────────────────────────────────────
+  // The threads screen's folder is a SHARED one in the design — pink folder,
+  // EXTERNAL badge — so its header and its live tab take the same pink.
+  &__main[data-access="shared"] {
+    .tutorial-folder__header-icon {
+      color: var(--area-share, #ffa8dc);
+    }
+
+    .tutorial-folder__header-restricted {
+      color: #d6479c;
+      background: rgba(255, 168, 220, 0.18);
+      border-color: rgba(255, 168, 220, 0.45);
+    }
+
+    .tutorial-folder__tab.active {
+      border-color: var(--area-share, #ffa8dc);
     }
   }
 

@@ -398,9 +398,12 @@ export function threadsView(ui) {
   const aspect = ui.mget("aspect") || "normal";
   return Skeletons.Box.Y({
     className: `${pfx}__main`,
-    dataset: { aspect },
+    // This screen's folder is a shared one in the design: pink folder, EXTERNAL
+    // badge, and the live tab outlined in the same pink (see folder/skin
+    // `__main[data-access="shared"]`).
+    dataset: { aspect, access: "shared" },
     kids: [
-      folderHeader(ui, pfx),
+      folderHeader(ui, pfx, { badge: LOCALE.EXTERNAL || "EXTERNAL" }),
       tabBar(ui, pfx, { active: "chat", meeting: true }),
       Skeletons.Box.X({
         className: `${pfx}__content`,
