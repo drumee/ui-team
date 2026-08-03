@@ -243,6 +243,12 @@ class __window_manager extends push {
    * @param {Number} [opt.cap]  bytes, storage only
    */
   openQuotaExceeded(opt = {}) {
+    // No owner gate here. The card already adapts to who is looking: for
+    // anyone who cannot buy it drops the Upgrade button and closes with
+    // "Ask your workspace owner…" (quota-exceeded/skeleton `closingLine`).
+    // Suppressing it instead left a member clicking Invite / Add member and
+    // getting nothing back at all, which reads as a broken button rather
+    // than a plan limit.
     return this.ensurePart("wrapper-modal").then((p) => {
       if (!p) return;
       p.feed({
@@ -250,6 +256,11 @@ class __window_manager extends push {
         limit: opt.limit || "storage",
         used: opt.used,
         cap: opt.cap,
+        // Free has no seats at all, so the seat card must not talk about
+        // reaching the Team limit. This list is a whitelist — a flag missing
+        // from it is silently dropped, which is how the Free copy first went
+        // unused.
+        free: opt.free,
       });
       // data-state="open" is what makes the host a full-viewport centring flex
       // container (see wm/skin __wrapper-modal). feed() alone does not: without
@@ -734,47 +745,6 @@ class __window_manager extends push {
       })
       .catch((e) => this.warn("loadWorkspace: get_attributes failed", e));
 
-    return;
-
-    const area = data.area || data.workspace_area;
-    // Subfolder ownpath comes from show_node_by (sidebar feeds workspace_item
-    // with the server item; ownpath/filepath is the per-hub path). Required
-    // so drag-drop uploads target THIS subfolder — without it, the destpath
-    // resolved by _getDestination stays at the previous workspace root.
-    const ownpath = data.ownpath || data.filepath || "/";
-    // home_id = workspace root nid (preserved across subfolder navigation) so
-    // makeOptions classifies cross-window drops as MOVE not COPY.
-    const home_id =
-      data.actual_home_id ||
-      data.workspace_nid ||
-      data.home_id ||
-      this.mget(_a.home_id) ||
-      nid;
-    this._curWorkspace = { hub_id, nid, area };
-    this.mset({ hub_id, nid, nodeId: nid, area, ownpath, home_id });
-    this.ensurePart(_a.list).then((l) => {
-      l.setApi({ service: SERVICE.media.show_node_by, hub_id, nid });
-      if (l.collection) l.collection.reset();
-      l.el.style.visibility = "hidden";
-      const scrollEl = l.el.querySelector(".smart-container");
-      if (scrollEl) {
-        scrollEl.dataset.partitioning = 1;
-        scrollEl.style.visibility = "hidden";
-      }
-      l.restart();
-      this._prepareListPartition(l);
-    });
-    this.ensurePart("wrapper-modal").then((p) => p.clear());
-    this.updateBreadcrumb(
-      {
-        ...data,
-        hub_id,
-        nid,
-        area,
-        service: "change-workspace",
-      },
-      this,
-    );
   }
 
   openContent(media, args) {

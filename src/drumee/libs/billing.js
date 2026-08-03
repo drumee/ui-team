@@ -166,6 +166,166 @@ function isPaidPlan(plan) {
   return planKey(plan) !== "free";
 }
 
+/**
+ * Free plan: solo only — no Admin Console, no member invites.
+ *
+ * Do NOT treat a missing/unloaded `quota.seat` as Free (that would block Team
+ * invites during bootstrap). Require an explicit Free plan name or seat===0.
+ */
+function isFreeSoloPlan() {
+  const quota =
+    (typeof Visitor !== "undefined" && Visitor && Visitor.quota
+      ? Visitor.quota()
+      : null) || {};
+  const plan = quota.plan;
+  if (plan != null && String(plan).trim() !== "" && planKey(plan) === "free") {
+    return true;
+  }
+  return quota.seat === 0 || quota.seat === "0";
+}
+
+/**
+ * Org-member headcount for the Team seat cap.
+ *
+ * Seat budget = organisation members (`member_add` / Admin create), NOT
+ * workspace invites (`hub.invite` / desk invite_popup). Callers must only
+ * use this from Admin org-member flows.
+ *
+ * Shared with admin-console `toolkit/billing` (plugin cannot require host).
+ *
+ * @param {Object} view - members page (has `_membersTotal` and/or admin.member_stats)
+ * @returns {Promise<number|null>} null when unknown (caller decides fail-open/closed)
+ */
+async function _orgMemberUsed(view) {
+  const local = view && view._membersTotal;
+  if (local != null && local !== "") {
+    return parseInt(local, 10) || 0;
+  }
+  if (!view || typeof view.fetchService !== "function") return null;
+  try {
+    const stats = await view.fetchService(SERVICE.admin.member_stats, {});
+    return (
+      parseInt(
+        (stats && (stats.total_members ?? stats.totalMembers)) || 0,
+        10,
+      ) || 0
+    );
+  } catch (e) {
+    try {
+      const list =
+        view.getItemsByKind && view.getItemsByKind("widget_members_list")[0];
+      if (list) {
+        const items =
+          (typeof list.getItems === "function" && (await list.getItems())) ||
+          (list.collection && list.collection.models) ||
+          [];
+        const used = Array.isArray(items) ? items.length : 0;
+        if (used > 0) return used;
+      }
+    } catch (e2) {}
+    return null;
+  }
+}
+
+/**
+ * Team (finite) org-member seat cap reached?
+ *
+ * Use ONLY before Admin org-member create (`loadCreateMember` / member_form).
+ * Do NOT call from desk / media / hub invite_popup — those use hub.invite and
+ * are outside the org seat budget.
+ *
+ * Product:
+ *  - Free → false here. Free still must not create org members; callers use
+ *    `isFreeSoloPlan()` and must NOT show this seat-limit popup.
+ *  - Team (e.g. seat=10) → true once org headcount ≥ cap → Upgrade/Cancel card.
+ *  - Business / unlimited (seat ≥ 100000) → false.
+ *
+ * When headcount cannot be read on an Admin members page, fail CLOSED so the
+ * user is not sent into a form that only dies on `member_add`. Server also
+ * enforces via `_assertSeatAvailable`.
+ *
+ * The Upgrade card itself is owner-only — see `canShowSeatLimitPopup`.
+ *
+ * @param {Object} view - Admin members widget (`_membersTotal` / member_stats)
+ * @returns {Promise<boolean>}
+ */
+async function isOrgSeatLimitReached(view) {
+  return (await checkOrgSeatLimit(view)).blocked;
+}
+
+/**
+ * Same question as `isOrgSeatLimitReached`, but says WHY it blocked.
+ *
+ * A boolean cannot distinguish "the plan is genuinely full" from "we could
+ * not read the headcount", and the two deserve different words: the first is
+ * an upsell, the second is a failure. Telling someone with free seats that
+ * they must upgrade because `member_stats` timed out is simply wrong.
+ *
+ * @param {Object} view - Admin members widget
+ * @returns {Promise<{blocked: boolean, reason: ('cap'|'unknown'|null)}>}
+ */
+async function checkOrgSeatLimit(view) {
+  // Free: no Team seat-limit popup (org create is blocked separately).
+  if (isFreeSoloPlan()) return { blocked: false, reason: null };
+
+  const quota =
+    (typeof Visitor !== "undefined" && Visitor && Visitor.quota
+      ? Visitor.quota()
+      : null) || {};
+  const seat = parseInt(quota.seat, 10) || 0;
+  // Quota not loaded yet, or no finite cap → do not block as Team-full.
+  if (!seat) return { blocked: false, reason: null };
+  // Business (and similar) use a huge sentinel = unlimited members.
+  if (seat >= 100000) return { blocked: false, reason: null };
+
+  const used = await _orgMemberUsed(view);
+  // Unknown headcount on a finite Team cap → still fail closed (the server
+  // would only reject at member_add anyway), but report it as 'unknown' so
+  // the caller can say "could not check" instead of "you are out of seats".
+  if (used == null) return { blocked: true, reason: 'unknown' };
+  return used >= seat
+    ? { blocked: true, reason: 'cap' }
+    : { blocked: false, reason: null };
+}
+
+/**
+ * Seat Upgrade/Cancel card is for the organisation OWNER only.
+ *
+ * Non-owners cannot change the plan — showing them the upsell popup is noise
+ * (and a dead Upgrade). Callers still block create when the cap is reached;
+ * they simply skip the card when this returns false.
+ */
+/**
+ * Free is solo — say so, do not just swallow the click.
+ *
+ * Every Free guard used to `return` with nothing rendered, so Invite and Add
+ * member were buttons that did nothing at all; the only reading available to
+ * the user is "this is broken". The seat card already carries the sentence
+ * for this case (QX_SEAT_BODY_FREE) and it was written for it — it just had
+ * no caller.
+ *
+ * The card degrades on its own for someone who cannot buy: it drops the
+ * Upgrade button and closes with "Ask your workspace owner…" (see
+ * quota-exceeded/skeleton `closingLine`), so it is safe to show to anyone.
+ *
+ * @returns {*} whatever Wm.openQuotaExceeded returns, or undefined
+ */
+function showFreeSoloLimit() {
+  if (typeof Wm === "undefined" || !Wm || !Wm.openQuotaExceeded) return;
+  return Wm.openQuotaExceeded({ limit: "seat", free: 1 });
+}
+
+function canShowSeatLimitPopup() {
+  return !!(
+    typeof Visitor !== "undefined" &&
+    Visitor &&
+    Visitor.domainCan &&
+    typeof _K !== "undefined" &&
+    _K.permission &&
+    Visitor.domainCan(_K.permission.owner)
+  );
+}
+
 module.exports = {
   billingAvailable,
   canUpgradePlan,
@@ -173,4 +333,9 @@ module.exports = {
   planKey,
   planLabel,
   isPaidPlan,
+  isFreeSoloPlan,
+  isOrgSeatLimitReached,
+  checkOrgSeatLimit,
+  canShowSeatLimitPopup,
+  showFreeSoloLimit,
 };
