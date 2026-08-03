@@ -56,8 +56,11 @@
     }
   }
 
+  // Owns its own stacking context: a menu hanging off it has to paint above
+  // the tiles that follow it in the grid, which otherwise cover it.
   &__grid-more {
     position: relative;
+    z-index: 4;
     width: 14px;
     height: 14px;
     flex-shrink: 0;

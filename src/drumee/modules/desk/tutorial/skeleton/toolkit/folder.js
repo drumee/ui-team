@@ -287,11 +287,14 @@ export function fileItem(ui, pfx, { name, date, ico }, opt = {}) {
 /**
  * @param {Object} [opt]
  * @param {Function} [opt.menu] builder for a tile menu — receives (ui, pfx)
- * @param {Number} [opt.menuAt] which sub-folder tile owns it (default 2nd, so
- *   the submenu has room to open to its right)
+ * @param {Number} [opt.menuAt] which FILE tile owns it (default 1 =
+ *   spec_v2.pdf, the one the design opens it from)
+ * @param {Boolean} [opt.folders=true] render the sub-folder row. Screen 3
+ *   turns it off so the files sit on the first row and the 343px menu opens
+ *   with room to spare.
  */
 export function filesPanel(ui, pfx, opt = {}) {
-  const { menu = null, menuAt = 1 } = opt;
+  const { menu = null, menuAt = 1, folders = true } = opt;
   return Skeletons.Box.Y({
     className: `${pfx}__files`,
     // Step 2 / screen 3 lights the whole panel.
@@ -302,13 +305,12 @@ export function filesPanel(ui, pfx, opt = {}) {
       Skeletons.Box.G({
         className: `${pfx}__grid`,
         kids: [
-          ...SUB_FOLDERS.map((name, i) =>
-            folderItem(ui, name, {
-              more: true,
+          ...(folders ? SUB_FOLDERS.map((name) => folderItem(ui, name, { more: true })) : []),
+          ...FILES.map((f, i) =>
+            fileItem(ui, pfx, f, {
               menu: menu && i === menuAt ? menu(ui, pfx) : null,
             }),
           ),
-          ...FILES.map((f) => fileItem(ui, pfx, f)),
         ],
       }),
     ],

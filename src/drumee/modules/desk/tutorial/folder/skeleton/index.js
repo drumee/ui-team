@@ -18,14 +18,14 @@ function threadsScreen(ui) {
 }
 
 /**
- * Screen 3 — same folder view, with a tile's context menu open.
+ * Screen 3 — same folder view, with a file's context menu open.
  *
- * The menu hangs off the kebab on a tile, the way the design opens it. It goes
- * on a tile in the FIRST grid row: the menu is 343px tall, and opening it from
- * the second row would run it past the bottom of the folder window.
+ * The menu hangs off the file's kebab, the way the design opens it. The
+ * sub-folder row is dropped here: the menu is 343px tall, and with the files
+ * pushed to a second row it ran past the bottom of the panel.
  */
 function menuScreen(ui) {
-  return folder(ui, chatPanel, { menu: contextMenu });
+  return folder(ui, chatPanel, { menu: contextMenu, folders: false });
 }
 
 module.exports = { chatScreen, threadsScreen, menuScreen };

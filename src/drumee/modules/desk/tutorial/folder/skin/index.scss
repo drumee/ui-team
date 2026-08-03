@@ -25,6 +25,9 @@
     left: 50%;
     border: 1px solid var(--neutral-300);
     border-radius: var(--corner-radius-5);
+    // Keeps the panels — and any menu hanging out of the file grid — inside
+    // the rounded frame.
+    overflow: hidden;
 
     &[data-aspect="faded"] {
       opacity: .45;
@@ -238,10 +241,12 @@
   }
 
   // ── Files panel ─────────────────────────────────────────────────────────────
+  // Not clipped: a tile menu has to be able to hang past the grid. The window
+  // root clips instead, so nothing escapes the folder frame.
   &__files {
     flex: 1;
     min-height: 0;
-    overflow: hidden;
+    overflow: visible;
   }
 
   // ── Type filter bar ──────────────────────────────────────────────────────────
@@ -1056,12 +1061,14 @@
     position: absolute;
     top: calc(100% + 6px);
     right: -4px;
-    z-index: 3;
+    z-index: 20;
     width: 176px;
     box-sizing: border-box;
     padding: 8px 0;
     border-radius: 8px;
-    background: var(--normal-bg);
+    // Opaque white, not --normal-bg: the tour is a light-mode mock and the
+    // menu has to hide the tiles underneath it.
+    background: #fff;
     box-shadow: 0 1px 11px rgba(0, 0, 0, 0.13);
   }
 
@@ -1123,7 +1130,7 @@
     box-sizing: border-box;
     padding: 8px 0;
     border-radius: 8px;
-    background: var(--normal-bg);
+    background: #fff;
     box-shadow: 0 1px 11px rgba(0, 0, 0, 0.13);
   }
 
