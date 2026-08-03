@@ -6,8 +6,8 @@
  * off the 1:1 render: thread panel 340px, file-thread card #FFF on #F2F2F7,
  * pink outgoing bubble #FFA8DC, purple accents #B1ADFF / #847EFF.
  *
- * Visual only — no services. The one part that matters is `thread-panel`,
- * which the widget hands to the spotlight.
+ * Visual only — no services. Two parts matter: `thread-panel` (what the
+ * spotlight lights) and `thread-card` (what the callout points at).
  */
 
 const { folderHeader, tabBar } = require("./folder");
@@ -177,6 +177,10 @@ function threadStream(ui, pfx) {
 function threadCard(ui, pfx) {
   return Skeletons.Box.X({
     className: `${pfx}__th-card`,
+    // The panel is what gets lit, but the callout points HERE — the design
+    // marks the Drumee_Strategy_Q2 thread card, not the panel's mid-height.
+    sys_pn: "thread-card",
+    partHandler: ui,
     kids: [
       Skeletons.Box.Y({
         className: `${pfx}__th-card-icon-box`,

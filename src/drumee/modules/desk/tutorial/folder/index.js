@@ -29,8 +29,11 @@ const SCREENS = [
   },
   {
     skeleton: threadsScreen,
-    // The whole thread panel; its own rect sizes the hole, so no radius here.
+    // The whole thread panel is lit — its own rect sizes the hole, so no
+    // radius here — but the callout points at the Drumee_Strategy_Q2 card
+    // inside it, as the design does.
     target: 'thread-panel',
+    anchor: 'thread-card',
     direction: 'east',
     badge: {
       badge_text: 'STEP 2/5',
@@ -97,9 +100,12 @@ class __tutorial_folder extends LetcBox {
     }
     this.feed(screen.skeleton(this));
     const target = await this.ensurePart(screen.target);
+    // A screen may light one element and point the callout at another.
+    const anchor = screen.anchor ? await this.ensurePart(screen.anchor) : null;
     this.triggerHandlers({
       service: 'spotlight:focus',
       target: target.el,
+      anchor: anchor && anchor.el,
       // Back is live on all three screens: from the first one it walks out to
       // Step 1, so there is never a dead end to hide it for.
       tooltip: { ...screen.badge, variant: 'figma' },
