@@ -1,7 +1,7 @@
 const { screen } = require('./skeleton');
 
 const BADGE = {
-  badge_text: 'STEP 4/5',
+  badge_text: 'STEP 4/6',
   title: 'Project tracker in folder',
   desc: `Track tasks, deadlines, and progress without leaving your folder. Every folder has its own project tracker so your team stays aligned on what's happening inside.`,
 };

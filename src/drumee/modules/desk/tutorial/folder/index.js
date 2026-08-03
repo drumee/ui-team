@@ -22,7 +22,7 @@ const SCREENS = [
     radius: 336,
     direction: 'east',
     badge: {
-      badge_text: 'STEP 2/5',
+      badge_text: 'STEP 2/6',
       title: 'Chat lives in folder',
       desc: 'Chat lives here. Every folder has its own persistent context. Discuss files and tag teammates without leaving your workspace.',
     },
@@ -36,7 +36,7 @@ const SCREENS = [
     anchor: 'thread-card',
     direction: 'east',
     badge: {
-      badge_text: 'STEP 2/5',
+      badge_text: 'STEP 2/6',
       title: 'Chat in threads',
       desc: 'Drop a file, chat in the threads without context loss',
     },
@@ -50,7 +50,7 @@ const SCREENS = [
     anchor: 'ctx-focus',
     direction: 'east',
     badge: {
-      badge_text: 'STEP 2/5',
+      badge_text: 'STEP 2/6',
       title: 'View and download chat threads',
       desc: 'View and download whenever you want in one click',
     },

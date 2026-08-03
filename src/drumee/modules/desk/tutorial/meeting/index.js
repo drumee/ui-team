@@ -1,5 +1,5 @@
 const BADGE = {
-  badge_text: 'STEP 3/5',
+  badge_text: 'STEP 3/6',
   title: 'Meeting in folder',
   desc: `Every folder has its own meeting space. Start a call directly from the folder you're working in, your files and conversations stay in the same place.`,
 };

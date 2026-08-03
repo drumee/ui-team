@@ -7,8 +7,7 @@ const { modeScreen, secureScreen, linkScreen } = require('./skeleton');
  * tutorial_main, which ends the tour.
  *
  * Figma 3314:86712 (recipient mode), 3314:86722 (secure share set up),
- * 3314:140345 (link issued). Those frames read STEP 5/6; the tour has five
- * steps, so the badge says 5/5.
+ * 3314:140345 (link issued).
  *
  * `direction: 'east'` throughout — the design puts the card to the LEFT of the
  * panel with the connector on the card's right edge.
@@ -20,7 +19,7 @@ const SCREENS = [
     target: 'recipient',
     direction: 'east',
     badge: {
-      badge_text: 'STEP 5/5',
+      badge_text: 'STEP 5/6',
       title: 'Secure share',
       desc: 'Click share and choose recipient mode.',
     },
@@ -31,7 +30,7 @@ const SCREENS = [
     target: 'secure',
     direction: 'east',
     badge: {
-      badge_text: 'STEP 5/5',
+      badge_text: 'STEP 5/6',
       title: 'Secure share',
       desc: 'Choose secure share then set up restricted email and password',
     },
@@ -42,7 +41,7 @@ const SCREENS = [
     target: 'link',
     direction: 'east',
     badge: {
-      badge_text: 'STEP 5/5',
+      badge_text: 'STEP 5/6',
       title: 'Secure share',
       desc: 'Share to external guest and control the access list',
     },
@@ -59,9 +58,7 @@ class __tutorial_share extends LetcBox {
   }
 
   async onDomRefresh() {
-    // Re-entered via Back from a later step: resume where we left off. Step 5
-    // is last today, so nothing exercises this — it is here so appending a step
-    // cannot regress the behaviour.
+    // Re-entered via Back from Step 6: resume on the screen we left off on.
     if (this.mget('enter_at_last')) this._screenIndex = SCREENS.length - 1;
     this._showScreen();
   }
@@ -166,7 +163,6 @@ class __tutorial_share extends LetcBox {
       case 'next-step':
         // Only the last screen hands the tour back to tutorial_main; the bare
         // triggerHandlers() lets it read this widget's own service attribute.
-        // Step 5 is last, so that completes the tutorial.
         if (this._screenIndex >= SCREENS.length - 1) return this.triggerHandlers();
         this._screenIndex = this._screenIndex + 1;
         return this._showScreen();

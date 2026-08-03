@@ -137,6 +137,9 @@ module.exports = {
   tutorial_share: function () {
     return import("./modules/desk/tutorial/share");
   },
+  tutorial_migrate: function () {
+    return import("./modules/desk/tutorial/migrate");
+  },
   tutorial_settings: function () {
     return import("./modules/desk/tutorial/settings");
   },

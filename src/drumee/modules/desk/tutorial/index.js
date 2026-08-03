@@ -32,6 +32,13 @@ class tutorial_main extends LetcBox {
         workspaceContent(this, { aspect: "faded" }),
         { kind: 'tutorial_share', service: "next-step", uiHandler: [this] },
       ],
+      // Step 6 — Google Drive migration. Its menu and dialog sit over the desk,
+      // so the workspace grid behind them is the step's own subject matter and
+      // is NOT faded here.
+      [
+        workspaceContent(this),
+        { kind: 'tutorial_migrate', service: "next-step", uiHandler: [this] },
+      ],
     ];
 
   }
