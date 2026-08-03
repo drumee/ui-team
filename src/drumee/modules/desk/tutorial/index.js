@@ -37,6 +37,30 @@ class tutorial_main extends LetcBox {
   }
 
   /**
+   * The feed payload for a step, optionally with extra attributes merged into
+   * the widget that OWNS the step.
+   *
+   * A step is either a single widget or an array whose LAST entry is the
+   * interactive widget and whose earlier entries are inert faded backdrop
+   * (see `_widgets`). `enter_at_last` therefore has to land on the last entry,
+   * not on the array — steps that run several internal screens (workspace,
+   * folder) read it to resume where they left off.
+   *
+   * @param {Number} i
+   * @param {Object} opt attributes merged into the interactive widget
+   * @returns {Object|Array} feed payload, or undefined past the last step
+   */
+  _widgetAt(i, opt = {}) {
+    const w = this._widgets[i];
+    if (!w) return w;
+    if (_.isArray(w)) {
+      const last = w.length - 1;
+      return w.map((k, n) => (n === last ? { ...k, ...opt } : k));
+    }
+    return { ...w, ...opt };
+  }
+
+  /**
    *
    */
   _nextStep() {
@@ -44,7 +68,7 @@ class tutorial_main extends LetcBox {
     if (this._widgets[this._stepIndex]) {
       this.ensurePart('spotlight').then((s) => s.clear && s.clear());
       this.ensurePart(_a.content).then((p) => {
-        p.feed(this._widgets[this._stepIndex])
+        p.feed(this._widgetAt(this._stepIndex))
       })
     } else {
       this._enterWorkspace();
@@ -58,11 +82,11 @@ class tutorial_main extends LetcBox {
   _prevStep() {
     if (this._stepIndex <= 0) return;
     this._stepIndex--;
-    // The workspace step (index 0) has internal sub-badges; when re-entered via
-    // Back it must land on its LAST badge (where it left off), not the first.
-    const widget = this._stepIndex === 0
-      ? { ...this._widgets[0], enter_at_last: true }
-      : this._widgets[this._stepIndex];
+    // Steps that run internal screens (workspace's sub-badges, folder's three
+    // screens) must land on their LAST screen when re-entered via Back — where
+    // the user left off, not back at the start. Steps without internal screens
+    // ignore the flag.
+    const widget = this._widgetAt(this._stepIndex, { enter_at_last: true });
     this.ensurePart('spotlight').then((s) => s.clear && s.clear());
     this.ensurePart(_a.content).then((p) => {
       p.feed(widget)

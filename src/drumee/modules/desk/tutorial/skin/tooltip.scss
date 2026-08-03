@@ -137,4 +137,123 @@
     height: 0;
   }
 
+  // ── Redesigned callout card (opt-in: tooltipBadge({variant:'figma'})) ──────
+  // Measured from the Step 2 designs (Figma 5:75074 / 3202:3732 / 3202:76934):
+  // card 320×291 with 24px insets, badge at y24, title at y64, footer pinned
+  // at y227, connector 40px from the card edge to the target.
+  //
+  // Scoped to the variant so the steps that were not part of that redesign
+  // keep rendering the card above, unchanged.
+  &__s1-tooltip[data-variant="figma"] {
+
+    .tutorial__s1-card {
+      width: 320px;
+      box-sizing: border-box;
+      min-height: 291px;
+      background: #f2f2f7;
+      border: none;
+      border-radius: 16px;
+      padding: 24px 24px 28px;
+      gap: 16px;
+      box-shadow: 0 1px 11px rgba(0, 0, 0, 0.13);
+    }
+
+    .tutorial__s1-badge {
+      height: 24px;
+      box-sizing: border-box;
+      gap: 8px;
+      padding: 4px 8px;
+      border-radius: 6px;
+      background: rgba(89, 80, 255, 0.1);
+    }
+
+    .tutorial__s1-badge-dot {
+      width: 8px;
+      height: 8px;
+      background: #433cc5;
+    }
+
+    .tutorial__s1-badge-text {
+      font-family: "Geist Mono", monospace;
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.48px;
+      line-height: 1.4;
+      text-transform: uppercase;
+      color: #433cc5;
+    }
+
+    .tutorial__s1-title {
+      font-size: 20px;
+      font-weight: 600;
+      line-height: 1.1;
+      color: #0b0a21;
+    }
+
+    .tutorial__s1-desc {
+      font-size: 14px;
+      font-weight: 400;
+      line-height: 1.4;
+      color: #65656c;
+    }
+
+    // Pinned to the bottom inset, as in the fixed-height design.
+    .tutorial__s1-footer {
+      height: 36px;
+      margin-top: auto;
+    }
+
+    .tutorial__s1-back {
+      font-size: 14px;
+      font-weight: 600;
+      line-height: 20px;
+      color: #65656c;
+
+      &:hover {
+        color: #0b0a21;
+      }
+    }
+
+    .tutorial__s1-next {
+      height: 36px;
+      box-sizing: border-box;
+      justify-content: center;
+      padding: 12px 24px;
+      border-radius: 4px;
+      font-size: 14px;
+      font-weight: 600;
+      line-height: 20px;
+      color: #3c3989;
+      background: #b1adff;
+
+      &:hover {
+        background: #9c97ff;
+      }
+    }
+
+    // 40px from the card edge to the target: 12px GAP (spotlight anchorFor)
+    // + 20px line + 8px dot.
+    .tutorial__s1-connector-dot {
+      width: 8px;
+      height: 8px;
+      background: #b1adff;
+    }
+
+    .tutorial__s1-connector-line {
+      background: #b1adff;
+
+      &[data-direction="east"],
+      &[data-direction="west"] {
+        width: 20px;
+        height: 2px;
+      }
+
+      &[data-direction="north"],
+      &[data-direction="south"] {
+        width: 2px;
+        height: 20px;
+      }
+    }
+  }
+
 }

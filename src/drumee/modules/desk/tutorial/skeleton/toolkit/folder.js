@@ -156,26 +156,38 @@ export function folderHeader(ui, pfx) {
 }
 
 // ── Tab bar ───────────────────────────────────────────────────────────────────
-export function tabBar(ui, pfx) {
+/**
+ * @param {Object} ui
+ * @param {String} pfx
+ * @param {Object} [opt]
+ * @param {String} [opt.active='files'] which tab reads as selected
+ * @param {Boolean} [opt.meeting] append the Meeting tab (Step 2 screens 2-3;
+ *   the Figma for screen 1 predates it, so it stays off by default and the
+ *   other steps keep the exact three-tab bar they render today)
+ */
+export function tabBar(ui, pfx, opt = {}) {
+  const { active = "files", meeting = false } = opt;
+  const tabs = [
+    { key: "files", ico: "apps-folder-card", label: LOCALE.FILES || "Files" },
+    { key: "chat", ico: "apps-chat", label: LOCALE.CHAT || "Chat" },
+    { key: "tasks", ico: "checkbox", label: LOCALE.TASKS || "Tasks" },
+  ];
+  if (meeting) {
+    tabs.push({
+      key: "meeting",
+      ico: "folder-meeting",
+      label: LOCALE.MEETING || "Meeting",
+    });
+  }
   return Skeletons.Box.X({
     className: `${pfx}__tabs`,
-    kids: [
+    kids: tabs.map((t) =>
       Skeletons.Button.Label({
-        ico: "apps-folder-card",
-        className: `${pfx}__tab active`,
-        label: LOCALE.FILES || "Files",
+        ico: t.ico,
+        className: `${pfx}__tab${t.key === active ? " active" : ""}`,
+        label: t.label,
       }),
-      Skeletons.Button.Label({
-        ico: "apps-chat",
-        className: `${pfx}__tab`,
-        label: LOCALE.CHAT || "Chat",
-      }),
-      Skeletons.Button.Label({
-        ico: "checkbox",
-        className: `${pfx}__tab`,
-        label: LOCALE.TASKS || "Tasks",
-      }),
-    ],
+    ),
   });
 }
 
@@ -245,11 +257,14 @@ export function filesPanel(ui, pfx) {
 }
 
 // ── Chat panel ────────────────────────────────────────────────────────────────
-export function chatMessage(pfx, msg) {
+export function chatMessage(pfx, msg, ui) {
   if (!msg.sender) {
+    // The file chip is Step 2 / screen 1's spotlight target — the design points
+    // the callout at it rather than at the panel as a whole.
     return Skeletons.Note({
       className: `${pfx}__chat-link`,
       content: msg.text,
+      ...(ui ? { sys_pn: "chat-link", partHandler: ui } : {}),
     });
   }
   if (msg.sender === "me") {
@@ -289,7 +304,7 @@ export function chatPanel(ui, pfx) {
       }),
       Skeletons.Box.Y({
         className: `${pfx}__chat-messages`,
-        kids: MESSAGES.map((msg) => chatMessage(pfx, msg)),
+        kids: MESSAGES.map((msg) => chatMessage(pfx, msg, ui)),
       }),
       Skeletons.Box.X({
         className: `${pfx}__chat-input-bar`,

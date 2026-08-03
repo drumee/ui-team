@@ -15,8 +15,12 @@ const { fileItem } = require("./folder")
  *   south = connector below card (dot at bottom, points to target below)
  *   east  = connector right of card (dot at right, points to target right)
  *   west  = connector left of card (dot at left, points to target left)
+ * @param {string} [opts.variant] - card look. Unset keeps the card every step
+ *   has always rendered. "figma" is the measured callout card from the Step 2
+ *   designs (320px, filled Next button, Geist Mono badge); it is opt-in so the
+ *   steps that were not part of that redesign stay pixel-identical.
  */
-export function tooltipBadge(ui, { title, desc, badge_text, style, direction = 'north', hide_back = false }) {
+export function tooltipBadge(ui, { title, desc, badge_text, style, direction = 'north', hide_back = false, variant = null }) {
   const fig = ui.fig.family;
   const p = `${ui.fig.group}__s1`;
 
@@ -66,7 +70,11 @@ export function tooltipBadge(ui, { title, desc, badge_text, style, direction = '
             ? Skeletons.Box.Y({ className: `${p}-back-spacer` })
             : Skeletons.Note({
               className: `${p}-back`,
-              content: `← ${LOCALE.BACK || 'Back'}`,
+              // The redesigned card drops the leading arrow (Back is a plain
+              // text button there); the original card keeps it.
+              content: variant === 'figma'
+                ? `${LOCALE.BACK || 'Back'}`
+                : `← ${LOCALE.BACK || 'Back'}`,
               service: 'back-step',
               uiHandler: [ui],
             }),
@@ -86,7 +94,7 @@ export function tooltipBadge(ui, { title, desc, badge_text, style, direction = '
     sys_pn: 'badge-tooltip',
     partHandler: [ui],
     style,
-    dataset: { direction },
+    dataset: variant ? { direction, variant } : { direction },
     kids: isReversed ? [card, connector] : [connector, card],
   });
 };
