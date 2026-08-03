@@ -201,7 +201,10 @@ function promoCodeSection(ui) {
             readonly: applied ? 1 : 0,
             mode: applied ? _a.commit : _a.interactive,
             service: _a.input,
-            state: 0,
+            // NO `state` prop — see the redeem field in skeleton/index.js:
+            // ui-core turns a `state` option into behavior/toggle, whose
+            // onAlsoClick calls mould() → reload() → `el.innerHTML = ''` on
+            // the first keystroke, so the field kept only its first letter.
           }),
           Skeletons.Note({
             className: `${pfx}-promo-apply${applied ? " is-applied" : ""}`,

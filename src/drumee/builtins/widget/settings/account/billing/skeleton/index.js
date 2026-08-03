@@ -371,7 +371,12 @@ function redeemBox(ui) {
             partHandler: [ui],
             uiHandler: [ui],
             interactive: busy ? 0 : 1,
-            state: 0,
+            // NO `state` prop. ui-core maps option names onto behaviors
+            // (addons/backbone/view/behavior.js: `state → behavior/toggle`),
+            // so passing state:0 makes the field a TOGGLE: the first
+            // keystroke runs onAlsoClick → mould() → reload(), which does
+            // `el.innerHTML = ''` and rebuilds the <input>. Focus dies with
+            // the old node, so typing "T_FREE2M" left just "T".
           }),
           Skeletons.Note({
             className: `${fig}-cta${busy ? " is-busy" : ""}`,
