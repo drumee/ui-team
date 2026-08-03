@@ -20,8 +20,12 @@ const { fileItem } = require("./folder")
  *   designs (320px surface, Geist Mono badge); it is opt-in so the steps that
  *   were not part of that redesign stay pixel-identical. Back and Next are
  *   shared by both looks — the buttons are the same on every step.
+ * @param {boolean} [opts.done=false] - label the forward button "Done" instead
+ *   of "Next →". For the last screen of the last step, where pressing it ends
+ *   the tour rather than advancing it; the arrow goes too, as there is nothing
+ *   ahead to point at. The service stays `next-step` — only the wording differs.
  */
-export function tooltipBadge(ui, { title, desc, badge_text, style, direction = 'north', hide_back = false, variant = null }) {
+export function tooltipBadge(ui, { title, desc, badge_text, style, direction = 'north', hide_back = false, variant = null, done = false }) {
   const fig = ui.fig.family;
   const p = `${ui.fig.group}__s1`;
 
@@ -77,7 +81,7 @@ export function tooltipBadge(ui, { title, desc, badge_text, style, direction = '
             }),
           Skeletons.Note({
             className: `${p}-next`,
-            content: `${LOCALE.NEXT || 'Next'} →`,
+            content: done ? (LOCALE.DONE || 'Done') : `${LOCALE.NEXT || 'Next'} →`,
             service: 'next-step',
             uiHandler: [ui],
           }),

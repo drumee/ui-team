@@ -41,6 +41,9 @@ const SCREENS = [
     target: 'verify',
     direction: 'west',
     radius: 420,
+    // Last screen of the last step: this button ends the tour, so it reads
+    // "Done" rather than "Next". (The design still shows "Next →" here.)
+    done: true,
     badge: {
       badge_text: 'STEP 6/6',
       title: 'Google Migrate',
@@ -122,7 +125,7 @@ class __tutorial_migrate extends LetcBox {
       service: 'spotlight:focus',
       target: target.el,
       // Back is live on every screen: from the first it walks out to Step 5.
-      tooltip: { ...s.badge, variant: 'figma' },
+      tooltip: { ...s.badge, variant: 'figma', done: !!s.done },
       direction: s.direction,
       radius: s.radius,
       owner: this,
