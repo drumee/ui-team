@@ -106,7 +106,16 @@ export function workspaceContent(ui, opt = {}) {
 }
 
 // ── Folder header bar ─────────────────────────────────────────────────────────
-export function folderHeader(ui, pfx) {
+/**
+ * @param {Object} ui
+ * @param {String} pfx
+ * @param {Object} [opt]
+ * @param {String} [opt.badge] access badge next to the name. Defaults to
+ *   INTERNAL; the tracker step passes EXTERNAL, since its folder is a shared
+ *   one (see the pink treatment in task/skin).
+ */
+export function folderHeader(ui, pfx, opt = {}) {
+  const badge = opt.badge || LOCALE.INTERNAL || "INTERNAL";
   return Skeletons.Box.X({
     className: `${pfx}__header`,
     sys_pn: "folder-header",
@@ -124,7 +133,7 @@ export function folderHeader(ui, pfx) {
           }),
           Skeletons.Note({
             className: `${pfx}__header-restricted`,
-            content: LOCALE.INTERNAL || "INTERNAL",
+            content: badge,
             sys_pn: "restricted-badge",
           }),
         ],

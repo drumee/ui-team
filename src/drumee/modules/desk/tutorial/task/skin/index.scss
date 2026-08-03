@@ -62,10 +62,12 @@
 
   &__header-left { align-items: center; gap: 8px; }
 
+  // The tracker's folder is a SHARED one in the design, so it takes the share
+  // pink rather than the folder step's restricted red.
   &__header-icon {
     width: 22px;
     height: 22px;
-    color: var(--error, #ff453a);
+    color: var(--area-share, #ffa8dc);
     flex-shrink: 0;
 
     svg { width: 100%; height: 100%; fill: currentColor; }
@@ -78,15 +80,17 @@
     color: var(--normal-fg);
   }
 
+  // EXTERNAL, in the same pink family. The text is a deeper shade than
+  // --area-share so 10px stays legible on the tint.
   &__header-restricted {
     font-family: var(--font-main);
     font-size: 10px;
     font-weight: 700;
     letter-spacing: 0.06em;
     text-transform: uppercase;
-    color: var(--error, #ff453a);
-    background: rgba(255, 69, 58, 0.10);
-    border: 1px solid rgba(255, 69, 58, 0.25);
+    color: #d6479c;
+    background: rgba(255, 168, 220, 0.18);
+    border: 1px solid rgba(255, 168, 220, 0.45);
     border-radius: 4px;
     padding: 2px 7px;
   }
@@ -467,11 +471,22 @@
     align-items: stretch;
   }
 
+  // Each column sits on a wash of its own status colour, as the design does —
+  // the same hues as the header pills, at a fraction of the strength so the
+  // white cards still read as raised.
   &__col {
     flex: 1;
     min-width: 0;
     min-height: 0;
     gap: 12px;
+    box-sizing: border-box;
+    padding: 12px;
+    border-radius: 12px;
+    background: #f7f7f8;
+
+    &[data-status="progress"] { background: #f6f5ff; }
+    &[data-status="review"]   { background: #fff9f2; }
+    &[data-status="done"]     { background: #f4fdf8; }
   }
 
   &__col-head { align-items: center; gap: 10px; flex-shrink: 0; }
@@ -517,7 +532,35 @@
     line-height: 1.4;
   }
 
-  &__card-files { flex-wrap: wrap; gap: 8px; }
+  // Chips hug their filename and wrap, which is what puts two per row and
+  // leaves the trailing "+n" on the second row, as the design shows. They are
+  // allowed to SHRINK though — the shared __chip rule sets flex-shrink: 0, and
+  // a long name would then push the row past the card edge instead of wrapping.
+  &__card-files {
+    flex-wrap: wrap;
+    gap: 4px;
+    width: 100%;
+
+    > .tutorial-task__chip.file {
+      flex: 0 1 auto;
+      min-width: 0;
+      max-width: 100%;
+      // Tighter than the shared chip: two of these plus the "+n" have to fit
+      // one row of a 240px card, which is what the design shows.
+      gap: 5px;
+      padding: 0 7px;
+
+      .tutorial-task__chip-label {
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      &.more {
+        min-width: 0;
+        padding: 0 6px;
+      }
+    }
+  }
 
   &__card-progress {
     height: 4px;

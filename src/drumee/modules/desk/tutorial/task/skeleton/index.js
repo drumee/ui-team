@@ -102,7 +102,9 @@ function screen(ui, key) {
     className: `${pfx}__main`,
     dataset: { aspect, view: view.key },
     kids: [
-      folderHeader(ui, pfx),
+      // The tracker's folder is a shared one in the design — EXTERNAL badge,
+      // pink folder (see task/skin __header-icon / __header-restricted).
+      folderHeader(ui, pfx, { badge: LOCALE.EXTERNAL || 'EXTERNAL' }),
       tabBar(ui, pfx, { active: 'tasks', meeting: true }),
       Skeletons.Box.X({
         className: `${pfx}__bar`,

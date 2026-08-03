@@ -22,7 +22,10 @@ const BADGE = {
  */
 const SCREENS = [
   // The card the design's connector lands on, inside the In Progress column.
-  { view: 'board', target: 'board-card', direction: 'west' },
+  // The hole is widened past that card's own rect: the design's vignette
+  // clears an ellipse of roughly 650x370, so the board around the card reads
+  // as lit rather than just the one card.
+  { view: 'board', target: 'board-card', direction: 'west', radius: 520 },
   // The busiest day of the week strip.
   { view: 'calendar', target: 'cal-day', direction: 'west' },
   // The selected row's bar. Its own rect is a thin ribbon, so the hole is sized
