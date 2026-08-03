@@ -8,12 +8,10 @@ const SUB_FOLDERS = [
 
 // Three tiles. bg_concept.png earns its place: the team-chat panel next to
 // the grid keeps referring to it.
-// `type` lets a step re-map the icon per file type without restating the tiles
-// (see filesPanel's `icons` option).
 const FILES = [
-  { name: "spec_v2.docx", type: "docx", date: "Oct 12, 2023", ico: "addmenu-document" },
-  { name: "spec_v2.pdf", type: "pdf", date: "Oct 12, 2023", ico: "file-pdf" },
-  { name: "bg_concept.png", type: "png", date: "Oct 12, 2023", ico: "image" },
+  { name: "spec_v2.docx", date: "Oct 12, 2023", ico: "app-doc-file" },
+  { name: "spec_v2.pdf", date: "Oct 12, 2023", ico: "app-pdf-file" },
+  { name: "bg_concept.png", date: "Oct 12, 2023", ico: "image" },
 ];
 
 const MESSAGES = [
@@ -240,7 +238,7 @@ export function moreButton(ui, kids = []) {
   return Skeletons.Box.Y({
     className: `${p}__grid-more`,
     kids: [
-      Skeletons.Image.Svg({ ico: "meet-dots", className: `${p}__grid-more-icon` }),
+      Skeletons.Image.Svg({ ico: "apps-dots-vertical", className: `${p}__grid-more-icon` }),
       ...kids,
     ],
   });
@@ -306,11 +304,9 @@ export function fileItem(ui, pfx, { name, date, ico }, opt = {}) {
  *   with room to spare.
  * @param {String} [opt.area=_a.private] area the sub-folder art is filled from.
  *   Step 5 passes _a.share, its folder being a shared one.
- * @param {Object} [opt.icons] icon per file type, e.g. `{ docx: 'app-doc-file' }`.
- *   Types not named here keep the tile's own icon.
  */
 export function filesPanel(ui, pfx, opt = {}) {
-  const { menu = null, menuAt = 1, folders = true, area = _a.private, icons = null } = opt;
+  const { menu = null, menuAt = 1, folders = true, area = _a.private } = opt;
   return Skeletons.Box.Y({
     className: `${pfx}__files`,
     // Step 2 / screen 3 lights the whole panel.
@@ -330,7 +326,7 @@ export function filesPanel(ui, pfx, opt = {}) {
             )
             : []),
           ...FILES.map((f, i) =>
-            fileItem(ui, pfx, icons && icons[f.type] ? { ...f, ico: icons[f.type] } : f, {
+            fileItem(ui, pfx, f, {
               menu: menu && i === menuAt ? menu(ui, pfx) : null,
             }),
           ),

@@ -24,7 +24,6 @@ function window(ui, state) {
         // Shared folder, so the sub-folder tiles take the share fill rather
         // than Step 2's private red.
         area: _a.share,
-        icons: { docx: 'app-doc-file', pdf: 'app-pdf-file' },
       }),
       panel(ui, pfx, state),
     ],
