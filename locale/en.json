@@ -2661,5 +2661,10 @@
   "HELP_FAQ_Q_LOGIN_ISSUE": "I can't log in, or my invite link doesn't work — what do I do?",
   "HELP_FAQ_A_LOGIN_ISSUE": "Reach out through the Contact Support links at the bottom of this page.",
   "HELP_FAQ_Q_REPORT_BUG": "Where do I report a bug or request a feature?",
-  "HELP_FAQ_A_REPORT_BUG": "Report bugs and feature requests to Drumee through the Telegram support channel."
+  "HELP_FAQ_A_REPORT_BUG": "Report bugs and feature requests to Drumee through the Telegram support channel.",
+  "PLAN_CHANGE_CONFIRMED": "Plan change confirmed",
+  "CYCLE_STARTS_SUBTITLE": "Your {0} plan starts on {1}.",
+  "CHARGED_TODAY": "Charged today",
+  "NEXT_CHARGE": "Next charge",
+  "NEXT_CHARGE_ON": "{0} on {1}"
 }
