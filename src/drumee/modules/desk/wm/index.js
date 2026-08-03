@@ -256,6 +256,11 @@ class __window_manager extends push {
         limit: opt.limit || "storage",
         used: opt.used,
         cap: opt.cap,
+        // Free has no seats at all, so the seat card must not talk about
+        // reaching the Team limit. This list is a whitelist — a flag missing
+        // from it is silently dropped, which is how the Free copy first went
+        // unused.
+        free: opt.free,
       });
       // data-state="open" is what makes the host a full-viewport centring flex
       // container (see wm/skin __wrapper-modal). feed() alone does not: without

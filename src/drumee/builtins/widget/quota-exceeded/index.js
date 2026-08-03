@@ -25,6 +25,9 @@ class __quota_exceeded extends LetcBox {
         used: this.mget("used"),
         cap: this.mget("cap"),
         inline: !!this.mget("inline"),
+        // Second whitelist on the same journey (Wm.openQuotaExceeded has the
+        // first). Both have to name a flag or it never reaches the copy.
+        free: !!this.mget("free"),
       })
     );
   }
