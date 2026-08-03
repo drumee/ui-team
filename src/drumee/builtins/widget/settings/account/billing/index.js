@@ -428,15 +428,16 @@ class settings_billing extends LetcBox {
           || "{0}{1} starts when your {2} period ends. Nothing is charged today.")
           .format(price, per, cycleWord(currentPeriod));
       // Stripe's hosted page renders the deferral as "{N} days free" — its
-      // own fixed trial copy. Without this note that read as a mystery gift
-      // (tester 2026-07-30: "21 days free"/"364 days free" — is that
-      // credited?). Yes: it is exactly the time already paid for on the
-      // current cycle; say so before they see it.
+      // own fixed trial copy, which we cannot change. Calling it "free" is
+      // wrong in substance: that time was already PAID FOR on the current
+      // cycle, it is remaining balance, not a gift (tester 2026-07-30: "21
+      // days free"/"364 days free" — is that credited?). So lead with what
+      // it actually is and treat Stripe's wording as the label it is.
       const daysLeft = this._periodEnd
         ? Math.max(0, Math.ceil((this._periodEnd * 1000 - Date.now()) / 86400000)) : 0;
       if (daysLeft) {
         message += "\n\n" + (LOCALE.PLAN_SWITCH_DEFER_CREDIT
-          || "The payment page shows your already-paid time as \u201c{0} days free\u201d.")
+          || "That is your {0} remaining days, already paid for \u2014 the payment page just labels them \u201cfree\u201d.")
           .format(daysLeft);
       }
       // Nothing is lost on this path — the danger styling would warn about a

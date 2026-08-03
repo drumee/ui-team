@@ -2313,7 +2313,7 @@
   "MIGRATE_GDRIVE_ACCESS_REVOKED": "所选文件夹的 Google Drive 访问权限在迁移过程中被移除，迁移已停止。请恢复共享后重试。",
   "CYCLE_STARTS_ON": "您的{0}计费将于 {1} 开始",
   "PLAN_SWITCH_DEFER_MSG_NODATE": "{0}{1} 将在您当前{2}周期结束时开始。今天不会扣款。",
-  "PLAN_SWITCH_DEFER_CREDIT": "付款页面会将您已付费的时间显示为“{0} 天免费”。",
+  "PLAN_SWITCH_DEFER_CREDIT": "这是您已付费的剩余 {0} 天 — 付款页面只是把它们显示为“免费”。",
   "PROMO_OFFER_TITLE": "立即开始您的 1 个月团队计划",
   "PROMO_OFFER_LEAD": "真正的团队所需的一切，免费使用 30 天。",
   "PROMO_BENEFIT_STORAGE_TITLE": "100 GB 存储空间",

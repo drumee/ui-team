@@ -2314,7 +2314,7 @@
   "MIGRATE_GDRIVE_ACCESS_REVOKED": "L'accès Google Drive au dossier sélectionné a été retiré pendant la migration ; elle a donc été arrêtée. Rétablissez le partage et réessayez.",
   "CYCLE_STARTS_ON": "Votre facturation {0} commence le {1}",
   "PLAN_SWITCH_DEFER_MSG_NODATE": "{0}{1} démarre à la fin de votre période {2}. Rien n'est facturé aujourd'hui.",
-  "PLAN_SWITCH_DEFER_CREDIT": "La page de paiement affiche le temps déjà payé comme « {0} jours offerts ».",
+  "PLAN_SWITCH_DEFER_CREDIT": "Ce sont vos {0} jours restants, déjà payés — la page de paiement les affiche simplement comme « offerts ».",
   "PROMO_OFFER_TITLE": "Démarrez votre forfait Team d'1 mois dès aujourd'hui",
   "PROMO_OFFER_LEAD": "Tout ce dont une vraie équipe a besoin, gratuit pendant 30 jours.",
   "PROMO_BENEFIT_STORAGE_TITLE": "100 Go de stockage",
