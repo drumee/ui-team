@@ -321,13 +321,6 @@
     gap: 22px;
   }
 
-  // The panel's content is taller than the window, exactly as in the design
-  // where it scrolls. Screens 1-2 read from the top; the last screen scrolls
-  // down so the link it just issued is on screen. Applied to the first block so
-  // the stack slides under the header rather than over it.
-  &__panel[data-view="link"] .tutorial-share__block:first-child {
-    margin-top: -232px;
-  }
 
   &__block { gap: 10px; flex-shrink: 0; }
 

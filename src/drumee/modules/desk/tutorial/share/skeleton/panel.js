@@ -370,8 +370,9 @@ module.exports = function panel(ui, pfx, opt = {}) {
   return Skeletons.Box.Y({
     className: `${pfx}__panel`,
     // Which part of the panel the screen is looking at. The panel is taller
-    // than the window — as it is in the design, where it scrolls — so the last
-    // screen scrolls down to the link it just issued (see skin __panel[data-view]).
+    // than the window — as it is in the design, where it scrolls — and the
+    // widget scrolls the block into view at render time (_scrollPanelTo).
+    // Kept as a hook for styling and for reading the rendered state.
     dataset: { view: link ? 'link' : secure ? 'secure' : 'mode' },
     kids: [
       Skeletons.Box.X({
