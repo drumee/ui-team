@@ -19,7 +19,13 @@ function window(ui, state) {
     // The share step's folder is a shared one — pink folder, EXTERNAL badge.
     dataset: { aspect, access: 'shared' },
     kids: [
-      folder(ui, chatPanel, { badge: LOCALE.EXTERNAL || 'EXTERNAL' }),
+      folder(ui, chatPanel, {
+        badge: LOCALE.EXTERNAL || 'EXTERNAL',
+        // Shared folder, so the sub-folder tiles take the share fill rather
+        // than Step 2's private red.
+        area: _a.share,
+        icons: { docx: 'app-doc-file', pdf: 'app-pdf-file' },
+      }),
       panel(ui, pfx, state),
     ],
   });

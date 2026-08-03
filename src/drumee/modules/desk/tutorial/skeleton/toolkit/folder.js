@@ -8,10 +8,12 @@ const SUB_FOLDERS = [
 
 // Three tiles. bg_concept.png earns its place: the team-chat panel next to
 // the grid keeps referring to it.
+// `type` lets a step re-map the icon per file type without restating the tiles
+// (see filesPanel's `icons` option).
 const FILES = [
-  { name: "spec_v2.docx", date: "Oct 12, 2023", ico: "addmenu-document" },
-  { name: "spec_v2.pdf", date: "Oct 12, 2023", ico: "file-pdf" },
-  { name: "bg_concept.png", date: "Oct 12, 2023", ico: "image" },
+  { name: "spec_v2.docx", type: "docx", date: "Oct 12, 2023", ico: "addmenu-document" },
+  { name: "spec_v2.pdf", type: "pdf", date: "Oct 12, 2023", ico: "file-pdf" },
+  { name: "bg_concept.png", type: "png", date: "Oct 12, 2023", ico: "image" },
 ];
 
 const MESSAGES = [
@@ -302,9 +304,13 @@ export function fileItem(ui, pfx, { name, date, ico }, opt = {}) {
  * @param {Boolean} [opt.folders=true] render the sub-folder row. Screen 3
  *   turns it off so the files sit on the first row and the 343px menu opens
  *   with room to spare.
+ * @param {String} [opt.area=_a.private] area the sub-folder art is filled from.
+ *   Step 5 passes _a.share, its folder being a shared one.
+ * @param {Object} [opt.icons] icon per file type, e.g. `{ docx: 'app-doc-file' }`.
+ *   Types not named here keep the tile's own icon.
  */
 export function filesPanel(ui, pfx, opt = {}) {
-  const { menu = null, menuAt = 1, folders = true } = opt;
+  const { menu = null, menuAt = 1, folders = true, area = _a.private, icons = null } = opt;
   return Skeletons.Box.Y({
     className: `${pfx}__files`,
     // Step 2 / screen 3 lights the whole panel.
@@ -312,19 +318,19 @@ export function filesPanel(ui, pfx, opt = {}) {
     partHandler: ui,
     kids: [
       typeFilter(ui, pfx),
-      Skeletons.Box.G({
+      Skeletons.Box.X({
         className: `${pfx}__grid`,
         kids: [
-          // Private, not share: the folder art is filled per area, and share
-          // resolves to --area-share (pink) while private gives the red that
-          // goes with the INTERNAL folder these tiles live in.
+          // The folder art is filled per area: private gives the red that goes
+          // with the INTERNAL folder these tiles live in, share resolves to
+          // --area-share (pink). Step 2 keeps the default; Step 5 overrides it.
           ...(folders
             ? SUB_FOLDERS.map((name) =>
-              folderItem(ui, name, { more: true, area: _a.private }),
+              folderItem(ui, name, { more: true, area }),
             )
             : []),
           ...FILES.map((f, i) =>
-            fileItem(ui, pfx, f, {
+            fileItem(ui, pfx, icons && icons[f.type] ? { ...f, ico: icons[f.type] } : f, {
               menu: menu && i === menuAt ? menu(ui, pfx) : null,
             }),
           ),
