@@ -197,38 +197,12 @@
       color: #65656c;
     }
 
-    // Pinned to the bottom inset, as in the fixed-height design.
+    // Only the bottom-pinning is variant-specific — the card is a fixed 291px
+    // and the footer sits on its bottom inset. Back and Next themselves are
+    // deliberately NOT restyled here: they inherit the shared rules above so
+    // the buttons read the same on every step of the tour.
     .tutorial__s1-footer {
-      height: 36px;
       margin-top: auto;
-    }
-
-    .tutorial__s1-back {
-      font-size: 14px;
-      font-weight: 600;
-      line-height: 20px;
-      color: #65656c;
-
-      &:hover {
-        color: #0b0a21;
-      }
-    }
-
-    .tutorial__s1-next {
-      height: 36px;
-      box-sizing: border-box;
-      justify-content: center;
-      padding: 12px 24px;
-      border-radius: 4px;
-      font-size: 14px;
-      font-weight: 600;
-      line-height: 20px;
-      color: #3c3989;
-      background: #b1adff;
-
-      &:hover {
-        background: #9c97ff;
-      }
     }
 
     // 40px from the card edge to the target: 12px GAP (spotlight anchorFor)

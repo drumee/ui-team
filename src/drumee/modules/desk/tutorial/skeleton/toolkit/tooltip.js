@@ -17,8 +17,9 @@ const { fileItem } = require("./folder")
  *   west  = connector left of card (dot at left, points to target left)
  * @param {string} [opts.variant] - card look. Unset keeps the card every step
  *   has always rendered. "figma" is the measured callout card from the Step 2
- *   designs (320px, filled Next button, Geist Mono badge); it is opt-in so the
- *   steps that were not part of that redesign stay pixel-identical.
+ *   designs (320px surface, Geist Mono badge); it is opt-in so the steps that
+ *   were not part of that redesign stay pixel-identical. Back and Next are
+ *   shared by both looks — the buttons are the same on every step.
  */
 export function tooltipBadge(ui, { title, desc, badge_text, style, direction = 'north', hide_back = false, variant = null }) {
   const fig = ui.fig.family;
@@ -70,11 +71,7 @@ export function tooltipBadge(ui, { title, desc, badge_text, style, direction = '
             ? Skeletons.Box.Y({ className: `${p}-back-spacer` })
             : Skeletons.Note({
               className: `${p}-back`,
-              // The redesigned card drops the leading arrow (Back is a plain
-              // text button there); the original card keeps it.
-              content: variant === 'figma'
-                ? `${LOCALE.BACK || 'Back'}`
-                : `← ${LOCALE.BACK || 'Back'}`,
+              content: `← ${LOCALE.BACK || 'Back'}`,
               service: 'back-step',
               uiHandler: [ui],
             }),
