@@ -24,7 +24,10 @@
     top: 50%;
     left: 50%;
     border: 1px solid var(--neutral-300);
-    border-radius: var(--corner-radius-5);
+    border-radius: var(--corner-radius-2);
+    // Keeps the panels — and any menu hanging out of the file grid — inside
+    // the rounded frame.
+    overflow: hidden;
 
     &[data-aspect="faded"] {
       opacity: .45;
@@ -49,7 +52,7 @@
     background: var(--normal-bg-90);
     border-bottom: 1px solid var(--border-muted);
     flex-shrink: 0;
-    border-radius: var(--corner-radius-5) var(--corner-radius-5) 0 0;
+    border-radius: var(--corner-radius-2) var(--corner-radius-2) 0 0;
   }
 
   &__header-left {
@@ -57,10 +60,11 @@
     gap: 8px;
   }
 
+  // Matches the INTERNAL badge beside it rather than the share salmon.
   &__header-icon {
     width: 22px;
     height: 22px;
-    color: var(--share-color, #ff8080);
+    color: var(--error, #ff453a);
     flex-shrink: 0;
 
     svg {
@@ -180,12 +184,15 @@
   }
 
   // ── Tab bar ─────────────────────────────────────────────────────────────────
+  // Pill tabs, the treatment the tracker step uses (task/skin __tabs): a grey
+  // pill each, the live one marked by an outline in the folder's access colour
+  // rather than by an underline.
   &__tabs {
     width: 100%;
-    height: 40px;
+    height: 44px;
     align-items: center;
     padding: 0 16px;
-    gap: 4px;
+    gap: 8px;
     border-bottom: 1px solid var(--border-muted);
     flex-shrink: 0;
     background: var(--normal-bg);
@@ -195,15 +202,18 @@
     display: inline-flex !important;
     flex-direction: row !important;
     align-items: center !important;
-    height: 40px;
+    height: 30px;
     padding: 0 12px;
     gap: 6px;
+    border-radius: 6px;
     font-size: 13px;
     font-weight: 500;
     color: var(--normal-fg-50);
+    background: var(--normal-bg-90);
     cursor: pointer;
-    border-bottom: 2px solid transparent;
     box-sizing: border-box;
+    // Transparent by default so the active outline does not resize the tab.
+    border: 1px solid transparent;
 
     svg {
       width: 14px;
@@ -219,14 +229,40 @@
     }
 
     &.active {
-      color: var(--primary-50, #5950ff);
-      border-bottom-color: var(--primary-50, #5950ff);
+      color: var(--normal-fg);
+      background: var(--normal-bg-90);
+      // Restricted folder by default; the shared scope below turns it pink.
+      border-color: var(--error, #ff453a);
       font-weight: 600;
+
+      span.label,
+      section.label {
+        font-weight: 600;
+        color: var(--normal-fg);
+      }
     }
 
     &:hover:not(.active) {
       color: var(--normal-fg);
-      background: var(--hover-bg-40);
+    }
+  }
+
+  // ── Shared folder (screen 2) ─────────────────────────────────────────────────
+  // The threads screen's folder is a SHARED one in the design — pink folder,
+  // EXTERNAL badge — so its header and its live tab take the same pink.
+  &__main[data-access="shared"] {
+    .tutorial-folder__header-icon {
+      color: var(--area-share, #ffa8dc);
+    }
+
+    .tutorial-folder__header-restricted {
+      color: #d6479c;
+      background: rgba(255, 168, 220, 0.18);
+      border-color: rgba(255, 168, 220, 0.45);
+    }
+
+    .tutorial-folder__tab.active {
+      border-color: var(--area-share, #ffa8dc);
     }
   }
 
@@ -238,10 +274,12 @@
   }
 
   // ── Files panel ─────────────────────────────────────────────────────────────
+  // Not clipped: a tile menu has to be able to hang past the grid. The window
+  // root clips instead, so nothing escapes the folder frame.
   &__files {
     flex: 1;
     min-height: 0;
-    overflow: hidden;
+    overflow: visible;
   }
 
   // ── Type filter bar ──────────────────────────────────────────────────────────
@@ -385,15 +423,23 @@
     gap: 10px;
   }
 
+  // The file chip that opens the thread — Figma 627:77848/627:77849 (Signal/
+  // Restricted red on a 5% wash, full width up to 220px, 12px radius).
+  // Also Step 2 / screen 1's spotlight target.
   &__chat-link {
     align-self: center;
+    box-sizing: border-box;
+    width: 100%;
+    max-width: 220px;
+    padding: 4px 8px;
+    border-radius: 12px;
+    background: rgba(0, 0, 0, 0.05);
     font-family: var(--font-main);
     font-size: 12px;
-    color: var(--normal-fg-30);
-    background: var(--normal-bg-90);
-    border-radius: 8px;
-    padding: 4px 10px;
+    line-height: 1.4;
+    color: var(--restricted, #d65f59);
     text-align: center;
+    justify-content: center;
   }
 
   &__chat-msg {
@@ -473,6 +519,652 @@
       height: 100%;
       fill: currentColor;
     }
+  }
+
+  // ══ Step 2 / screen 2 — Chat tab with a file thread open ═══════════════════
+  // Figma 3202:3732. The app behind the callout is a bitmap in that file, so
+  // these values are measured off the 1:1 render.
+
+  &__th-rail {
+    width: 200px;
+    min-width: 200px;
+    flex-shrink: 0;
+    box-sizing: border-box;
+    padding: 12px 8px;
+    gap: 18px;
+    border-right: 1px solid var(--border-muted);
+    background: var(--normal-bg);
+  }
+
+  &__th-rail-section {
+    gap: 2px;
+  }
+
+  &__th-rail-title {
+    font-family: "Geist Mono", monospace;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    color: var(--normal-fg-50);
+    padding: 0 8px 6px;
+  }
+
+  &__th-rail-channel,
+  &__th-rail-thread {
+    height: 28px;
+    align-items: center;
+    gap: 6px;
+    padding: 0 8px;
+    border-radius: 6px;
+    box-sizing: border-box;
+  }
+
+  &__th-rail-channel {
+    background: var(--normal-bg-90);
+  }
+
+  &__th-rail-hash {
+    font-family: var(--font-main);
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--normal-fg-50);
+  }
+
+  &__th-rail-clip {
+    width: 13px;
+    height: 13px;
+    flex-shrink: 0;
+    color: var(--normal-fg-50);
+
+    svg {
+      width: 100%;
+      height: 100%;
+      fill: currentColor;
+    }
+  }
+
+  &__th-rail-name {
+    flex: 1;
+    min-width: 0;
+    font-family: var(--font-main);
+    font-size: 12px;
+    color: var(--normal-fg);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  &__th-rail-badge {
+    flex-shrink: 0;
+    padding: 1px 6px;
+    border-radius: 99px;
+    background: #ffa8dc;
+    font-family: var(--font-main);
+    font-size: 9px;
+    font-weight: 600;
+    color: #0b0a21;
+  }
+
+  &__th-rail-footer {
+    margin-top: auto;
+    align-items: center;
+    gap: 6px;
+    padding: 0 8px;
+  }
+
+  &__th-rail-footer-label {
+    font-family: var(--font-main);
+    font-size: 11px;
+    color: var(--normal-fg-50);
+  }
+
+  &__th-rail-footer-icon {
+    width: 12px;
+    height: 12px;
+    margin-left: auto;
+    color: var(--normal-fg-50);
+
+    svg {
+      width: 100%;
+      height: 100%;
+      fill: currentColor;
+    }
+  }
+
+  // ── Centre stream ───────────────────────────────────────────────────────────
+  &__th-stream {
+    flex: 1;
+    min-width: 0;
+    min-height: 0;
+    background: var(--normal-bg-90);
+  }
+
+  &__th-stream-header {
+    height: 36px;
+    align-items: center;
+    padding: 0 16px;
+    flex-shrink: 0;
+    border-bottom: 1px solid var(--border-muted);
+  }
+
+  &__th-stream-title {
+    font-family: var(--font-main);
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--normal-fg);
+  }
+
+  &__th-stream-body {
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+    padding: 14px 16px;
+    gap: 14px;
+  }
+
+  &__th-msg {
+    gap: 8px;
+    align-items: flex-start;
+  }
+
+  &__th-msg-avatar {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    background: var(--normal-bg-80, #e5e5ea);
+  }
+
+  &__th-msg-body {
+    flex: 1;
+    min-width: 0;
+    gap: 4px;
+  }
+
+  &__th-msg-sender {
+    font-family: var(--font-main);
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--normal-fg);
+  }
+
+  &__th-msg-bubble {
+    box-sizing: border-box;
+    max-width: 320px;
+    padding: 8px 10px;
+    border-radius: 4px 12px 12px 12px;
+    background: var(--normal-bg);
+    font-family: var(--font-main);
+    font-size: 11px;
+    line-height: 1.4;
+    color: var(--normal-fg);
+  }
+
+  &__th-msg-time {
+    font-family: var(--font-main);
+    font-size: 8px;
+    color: var(--normal-fg-50);
+  }
+
+  &__th-stream-input {
+    margin: 0 16px 12px;
+    padding: 8px 10px;
+    align-items: center;
+    gap: 8px;
+    border-radius: 8px;
+    background: var(--normal-bg);
+    flex-shrink: 0;
+  }
+
+  &__th-stream-placeholder {
+    flex: 1;
+    font-family: var(--font-main);
+    font-size: 11px;
+    color: var(--normal-fg-50);
+  }
+
+  &__th-stream-icon {
+    width: 14px;
+    height: 14px;
+    flex-shrink: 0;
+    color: var(--normal-fg-50);
+
+    svg {
+      width: 100%;
+      height: 100%;
+      fill: currentColor;
+    }
+  }
+
+  // ── Right: the open file thread ─────────────────────────────────────────────
+  &__th-panel {
+    width: 340px;
+    min-width: 340px;
+    flex-shrink: 0;
+    border-left: 1px solid var(--border-muted);
+    background: var(--normal-bg-90);
+  }
+
+  &__th-panel-header {
+    height: 44px;
+    align-items: center;
+    gap: 8px;
+    padding: 0 12px;
+    flex-shrink: 0;
+    box-sizing: border-box;
+    border-bottom: 1px solid var(--border-muted);
+  }
+
+  &__th-panel-clip {
+    width: 14px;
+    height: 14px;
+    flex-shrink: 0;
+    color: #847eff;
+
+    svg {
+      width: 100%;
+      height: 100%;
+      fill: currentColor;
+    }
+  }
+
+  &__th-panel-title {
+    font-family: var(--font-main);
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--normal-fg);
+  }
+
+  &__th-panel-chip {
+    padding: 2px 6px;
+    border-radius: 4px;
+    background: #e5e5ea;
+    font-family: var(--font-main);
+    font-size: 9px;
+    color: var(--normal-fg-50);
+  }
+
+  &__th-panel-close {
+    width: 12px;
+    height: 12px;
+    margin-left: auto;
+    flex-shrink: 0;
+    color: var(--normal-fg-50);
+
+    svg {
+      width: 100%;
+      height: 100%;
+      fill: currentColor;
+    }
+  }
+
+  &__th-panel-body {
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+    padding: 12px;
+    gap: 12px;
+  }
+
+  // Spotlight target for this screen.
+  &__th-card {
+    align-items: center;
+    gap: 10px;
+    padding: 10px;
+    border-radius: 12px;
+    background: var(--normal-bg);
+    flex-shrink: 0;
+  }
+
+  &__th-card-icon-box {
+    width: 32px;
+    height: 32px;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    background: #efeeff;
+  }
+
+  &__th-card-icon {
+    width: 16px;
+    height: 16px;
+    color: #847eff;
+
+    svg {
+      width: 100%;
+      height: 100%;
+      fill: currentColor;
+    }
+  }
+
+  &__th-card-body {
+    flex: 1;
+    min-width: 0;
+    gap: 3px;
+  }
+
+  &__th-card-name {
+    font-family: var(--font-main);
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--normal-fg);
+  }
+
+  &__th-card-meta {
+    align-items: center;
+    gap: 4px;
+  }
+
+  &__th-card-meta-icon {
+    width: 11px;
+    height: 11px;
+    flex-shrink: 0;
+    color: var(--normal-fg-50);
+
+    svg {
+      width: 100%;
+      height: 100%;
+      fill: currentColor;
+    }
+  }
+
+  &__th-card-meta-text,
+  &__th-card-meta-dot {
+    font-family: var(--font-main);
+    font-size: 10px;
+    color: var(--normal-fg-50);
+  }
+
+  &__th-card-open {
+    flex-shrink: 0;
+    align-items: center;
+  }
+
+  &__th-card-open-label {
+    font-family: var(--font-main);
+    font-size: 12px;
+    font-weight: 500;
+    color: #5950ff;
+    white-space: nowrap;
+  }
+
+  &__th-bubble-wrap {
+    align-items: flex-end;
+    gap: 4px;
+    flex-shrink: 0;
+  }
+
+  &__th-bubble {
+    box-sizing: border-box;
+    max-width: 260px;
+    padding: 10px;
+    gap: 8px;
+    border-radius: 16px;
+    background: #ffa8dc;
+  }
+
+  &__th-bubble-text {
+    display: block !important;
+    font-family: var(--font-main);
+    font-size: 12px;
+    line-height: 1.4;
+    color: #0b0a21;
+  }
+
+  &__th-bubble-link {
+    display: inline !important;
+    font-weight: 700;
+    text-decoration: underline;
+  }
+
+  &__th-bubble-rest {
+    display: inline !important;
+  }
+
+  &__th-bubble-file {
+    align-items: center;
+    gap: 8px;
+    padding: 6px 8px;
+    border-radius: 8px;
+    background: var(--normal-bg);
+  }
+
+  &__th-bubble-file-icon-box {
+    width: 26px;
+    height: 26px;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+  }
+
+  &__th-bubble-file-icon {
+    width: 22px;
+    height: 22px;
+
+    svg {
+      width: 100%;
+      height: 100%;
+    }
+  }
+
+  &__th-bubble-file-body {
+    min-width: 0;
+    gap: 1px;
+  }
+
+  &__th-bubble-file-name {
+    font-family: var(--font-main);
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--normal-fg);
+  }
+
+  &__th-bubble-file-meta {
+    font-family: var(--font-main);
+    font-size: 9px;
+    color: var(--normal-fg-50);
+  }
+
+  &__th-bubble-time {
+    font-family: var(--font-main);
+    font-size: 8px;
+    color: var(--normal-fg-50);
+  }
+
+  &__th-composer {
+    margin: 0 12px 12px;
+    padding: 10px;
+    gap: 6px;
+    border-radius: 8px;
+    background: var(--normal-bg);
+    flex-shrink: 0;
+  }
+
+  &__th-composer-reply {
+    align-items: center;
+    gap: 6px;
+  }
+
+  &__th-composer-reply-icon {
+    width: 12px;
+    height: 12px;
+    flex-shrink: 0;
+    color: #5950ff;
+
+    svg {
+      width: 100%;
+      height: 100%;
+      fill: currentColor;
+    }
+  }
+
+  &__th-composer-reply-to {
+    flex: 1;
+    font-family: var(--font-main);
+    font-size: 11px;
+    font-weight: 600;
+    color: #5950ff;
+  }
+
+  &__th-composer-reply-close {
+    width: 10px;
+    height: 10px;
+    flex-shrink: 0;
+    color: var(--normal-fg-50);
+
+    svg {
+      width: 100%;
+      height: 100%;
+      fill: currentColor;
+    }
+  }
+
+  &__th-composer-quote {
+    display: block !important;
+    font-family: var(--font-main);
+    font-size: 9px;
+    color: var(--normal-fg-50);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  &__th-composer-quote-file {
+    display: inline !important;
+    text-decoration: underline;
+  }
+
+  &__th-composer-quote-text {
+    display: inline !important;
+  }
+
+  &__th-composer-input {
+    align-items: center;
+    gap: 8px;
+  }
+
+  &__th-composer-clip {
+    width: 13px;
+    height: 13px;
+    flex-shrink: 0;
+    color: var(--normal-fg-50);
+
+    svg {
+      width: 100%;
+      height: 100%;
+      fill: currentColor;
+    }
+  }
+
+  &__th-composer-draft {
+    flex: 1;
+    min-width: 0;
+    font-family: var(--font-main);
+    font-size: 11px;
+    line-height: 1.4;
+    color: var(--normal-fg-50);
+  }
+
+  &__th-composer-icon {
+    width: 14px;
+    height: 14px;
+    flex-shrink: 0;
+    color: var(--normal-fg-50);
+
+    &.send {
+      color: #5950ff;
+    }
+
+    svg {
+      width: 100%;
+      height: 100%;
+      fill: currentColor;
+    }
+  }
+
+  // ══ Step 2 / screen 3 — file context menu ══════════════════════════════════
+  // Figma 3202:76934. Menu 176px with 32px rows, selected row filled with an
+  // 8px inset, submenu 200px opening 8px past the menu edge, aligned to its
+  // parent row. Metrics follow the real menu (builtins/contextmenu).
+
+  // Hangs off the tile kebab (.tutorial__grid-more), opening below it and
+  // right-aligned to it — the design's placement.
+  &__ctx-menu {
+    position: absolute;
+    top: calc(100% + 6px);
+    right: -4px;
+    z-index: 20;
+    width: 176px;
+    box-sizing: border-box;
+    padding: 8px 0;
+    border-radius: 8px;
+    // Opaque white, not --normal-bg: the tour is a light-mode mock and the
+    // menu has to hide the tiles underneath it.
+    background: #fff;
+    box-shadow: 0 1px 11px rgba(0, 0, 0, 0.13);
+  }
+
+  &__ctx-item-wrap {
+    position: relative;
+    width: 100%;
+  }
+
+  &__ctx-item {
+    height: 32px;
+    align-items: center;
+    gap: 10px;
+    padding: 0 12px;
+    box-sizing: border-box;
+    width: 100%;
+
+    &.selected {
+      width: auto;
+      margin: 0 8px;
+      padding: 0 4px;
+      border-radius: 6px;
+      background: #f2f2f7;
+    }
+  }
+
+  &__ctx-icon {
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+    color: var(--normal-fg);
+
+    svg {
+      width: 100%;
+      height: 100%;
+      fill: currentColor;
+    }
+  }
+
+  &__ctx-label {
+    font-family: var(--font-main);
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--normal-fg);
+    white-space: nowrap;
+  }
+
+  &__ctx-separator {
+    height: 1px;
+    margin: 6px 0;
+    background: var(--border-muted);
+    flex-shrink: 0;
+  }
+
+  &__ctx-submenu {
+    position: absolute;
+    left: calc(100% + 8px);
+    top: -8px;
+    width: 200px;
+    box-sizing: border-box;
+    padding: 8px 0;
+    border-radius: 8px;
+    background: #fff;
+    box-shadow: 0 1px 11px rgba(0, 0, 0, 0.13);
   }
 
   // ── tooltip anchor ──────────────────────────────────────────────────────────────────

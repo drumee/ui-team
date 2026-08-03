@@ -23,6 +23,12 @@ async function waitForStableRect(el) {
   return prev;
 }
 
+// Accepts a raw node, a widget, or a Backbone-ish view.
+function elementOf(t) {
+  if (!t) return null;
+  return t.nodeType ? t : t.el || (t.$el && t.$el[0]);
+}
+
 function anchorFor(rect, direction) {
   const cx = rect.left + rect.width / 2;
   const cy = rect.top + rect.height / 2;
@@ -62,10 +68,21 @@ class __tutorial_spotlight extends LetcBox {
     if (super.onPartReady) super.onPartReady(child, pn);
   }
 
+  /**
+   * @param {Object} args
+   * @param {*} args.target   what the hole is cut around
+   * @param {*} [args.anchor] what the callout points at, when that is not the
+   *   whole target — e.g. a panel is lit but the badge marks one card inside
+   *   it. Defaults to `target`.
+   * @param {Object} [args.tooltip]
+   * @param {String} [args.direction]
+   * @param {Number} [args.radius]
+   * @param {Object} [args.owner]
+   */
   async focus(args = {}) {
-    const { target, tooltip, direction = 'north', radius, owner } = args;
+    const { target, anchor, tooltip, direction = 'north', radius, owner } = args;
     if (!target) return this.clear();
-    const el = target.nodeType ? target : target.el || (target.$el && target.$el[0]);
+    const el = elementOf(target);
     if (!el || typeof el.getBoundingClientRect !== 'function') return;
     const rect = await waitForStableRect(el);
     if (!rect.width || !rect.height) return;
@@ -83,10 +100,14 @@ class __tutorial_spotlight extends LetcBox {
       callout.feed(null);
       return;
     }
+    const anchorEl = anchor ? elementOf(anchor) : null;
+    const anchorRect = anchorEl && anchorEl !== el
+      ? await waitForStableRect(anchorEl)
+      : rect;
     callout.feed(tooltipBadge(owner || this, {
       ...tooltip,
       direction,
-      style: anchorFor(rect, direction),
+      style: anchorFor(anchorRect.width ? anchorRect : rect, direction),
     }));
   }
 
