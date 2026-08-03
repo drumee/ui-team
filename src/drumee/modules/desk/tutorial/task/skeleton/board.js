@@ -30,12 +30,24 @@ function taskCard(ui, pfx, task) {
       files.length
         ? Skeletons.Box.G({
           className: `${pfx}__card-files`,
-          kids: [
-            ...files.map((f) => fileChip(pfx, f)),
-            task.more
-              ? Skeletons.Note({ className: `${pfx}__chip file more`, content: `+${task.more}` })
-              : null,
-          ].filter(Boolean),
+          // Two chips per row. The "+n" is not a cell of its own — it rides
+          // along in the LAST cell, beside the last filename, so it can never
+          // wrap onto a row by itself.
+          kids: files.map((f, i) => {
+            const chip = fileChip(pfx, f);
+            const last = i === files.length - 1;
+            if (!last || !task.more) return chip;
+            return Skeletons.Box.X({
+              className: `${pfx}__card-files-cell`,
+              kids: [
+                chip,
+                Skeletons.Note({
+                  className: `${pfx}__chip file more`,
+                  content: `+${task.more}`,
+                }),
+              ],
+            });
+          }),
         })
         : null,
       task.progress

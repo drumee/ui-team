@@ -172,16 +172,23 @@
     background: var(--normal-bg-90);
     cursor: pointer;
     box-sizing: border-box;
+    // Transparent by default so the active tab's outline does not resize it.
+    border: 1px solid transparent;
 
     svg { width: 14px; height: 14px; fill: currentColor; }
 
     span.label, section.label { font-size: 13px; font-weight: 500; color: inherit; }
 
-    // The tracker tab is the live one on every screen.
+    // The tracker tab is the live one on every screen. The design marks it with
+    // a pink outline — the shared folder's colour — keeping the same grey fill
+    // and dark label as its neighbours, not a pink wash.
     &.active {
-      color: var(--error, #ff453a);
-      background: rgba(255, 69, 58, 0.08);
+      color: var(--normal-fg);
+      background: var(--normal-bg-90);
+      border-color: var(--area-share, #ffa8dc);
       font-weight: 600;
+
+      span.label, section.label { font-weight: 600; color: var(--normal-fg); }
     }
   }
 
@@ -536,19 +543,34 @@
   // leaves the trailing "+n" on the second row, as the design shows. They are
   // allowed to SHRINK though — the shared __chip rule sets flex-shrink: 0, and
   // a long name would then push the row past the card edge instead of wrapping.
+  // A strict two-up grid: every cell is half the card minus the gutter, so each
+  // row holds exactly two items whatever the filenames are. The last cell may
+  // be a wrapper holding the last chip plus the "+n" (see board.js).
   &__card-files {
     flex-wrap: wrap;
     gap: 4px;
     width: 100%;
 
-    > .tutorial-task__chip.file {
-      flex: 0 1 auto;
+    > * {
+      flex: 0 0 calc(50% - 2px);
+      max-width: calc(50% - 2px);
       min-width: 0;
-      max-width: 100%;
-      // Tighter than the shared chip: two of these plus the "+n" have to fit
-      // one row of a 240px card, which is what the design shows.
+    }
+
+    // The cell that carries the trailing "+n": chip shrinks, "+n" never does.
+    &-cell {
+      align-items: center;
+      gap: 4px;
+
+      > .tutorial-task__chip.file { flex: 0 1 auto; min-width: 0; }
+      > .tutorial-task__chip.file.more { flex: 0 0 auto; }
+    }
+
+    .tutorial-task__chip.file {
+      // Tighter than the shared chip: two have to fit half a 240px card.
       gap: 5px;
       padding: 0 7px;
+      max-width: 100%;
 
       .tutorial-task__chip-label {
         overflow: hidden;
