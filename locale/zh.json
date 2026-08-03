@@ -936,7 +936,7 @@
   "QX_WORKSPACE_TITLE": "已达到工作区上限",
   "QX_WORKSPACE_BODY": "您已创建套餐允许的全部工作区。",
   "QX_SEAT_TITLE": "已达到成员上限",
-  "QX_SEAT_BODY": "您的套餐不支持添加更多成员。",
+  "QX_SEAT_BODY": "无法再邀请成员：已达到 Team 套餐上限。请升级到 Business 套餐以邀请更多成员。",
   "QX_ASK_OWNER": "请让工作区所有者查看组织的套餐。",
   "QX_ROOM_STORAGE": "请释放空间以继续。",
   "QX_ROOM_WORKSPACE": "请删除不再需要的工作区，以便创建新的工作区。",
@@ -2346,5 +2346,6 @@
   "GUEST_JOIN_OPEN_WORKSPACE_MSG_PLAIN": "您现在可以打开受邀加入的工作区。",
   "PREPARING_INVITED_WORKSPACE": "正在准备您的工作区…",
   "ROTATE": "旋转",
-  "MOVE_RESIZE": "移动和调整大小"
+  "MOVE_RESIZE": "移动和调整大小",
+  "QX_SEAT_BODY_FREE": "Free 套餐仅限一人使用。请升级以邀请其他成员。"
 }

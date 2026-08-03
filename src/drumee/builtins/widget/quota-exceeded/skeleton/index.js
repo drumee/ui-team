@@ -63,9 +63,10 @@ const LIMITS = {
   },
   seat: {
     title: () => LOCALE.QX_SEAT_TITLE || "Member limit reached",
+    // Team finite cap only. Free never opens this card (invite blocked silently).
     body: () =>
       LOCALE.QX_SEAT_BODY ||
-      "Your plan does not include room for more members.",
+      "You can not invite more members because you have reached limit of team plan. Upgrade to business plan now to invite more members.",
     makeRoom: () =>
       LOCALE.QX_ROOM_SEAT || "Remove a member to free a place.",
   },
@@ -154,11 +155,16 @@ module.exports = function (ui, opt = {}) {
   // storage card) — it bubbles to the desk, which opens the full billing page.
   // Reusing it means no new navigation, and it stays behind the same guard.
   const footer = [];
+  // Seat-limit popups ask for Upgrade / Cancel (product copy). Other limits
+  // keep the older See plans / Close pair.
+  const isSeat = opt.limit === "seat";
   if (canUpgrade) {
     footer.push(
       Skeletons.Note({
         className: `${fig}__btn ${fig}__btn--primary`,
-        content: LOCALE.QX_SEE_PLANS || LOCALE.UPGRADE_PLAN_MENU || "See plans",
+        content: isSeat
+          ? (LOCALE.UPGRADE || "Upgrade")
+          : (LOCALE.QX_SEE_PLANS || LOCALE.UPGRADE_PLAN_MENU || "See plans"),
         service: "upgrade-plan",
         uiHandler: [ui],
       })
@@ -171,7 +177,9 @@ module.exports = function (ui, opt = {}) {
     footer.push(
       Skeletons.Note({
         className: `${fig}__btn`,
-        content: LOCALE.CLOSE || "Close",
+        content: isSeat
+          ? (LOCALE.CANCEL || "Cancel")
+          : (LOCALE.CLOSE || "Close"),
         service: "quota-exceeded-close",
         uiHandler: [ui],
       })

@@ -2993,15 +2993,19 @@ class desk_module extends LetcBox {
     }
   }
 
-  _openInvitePopup(cmd) {
-    if (!Wm || !Wm.__wrapperModal) return;
+  async _openInvitePopup(cmd) {
+    if (typeof Wm === "undefined" || !Wm || !Wm.__wrapperModal) return;
     if (this._invitePopup && !this._invitePopup.isDestroyed()) {
       Wm.__wrapperModal.clear();
       Wm.__wrapperModal.el.dataset.state = "closed";
       this._invitePopup = null;
       return;
     }
-    Kind.waitFor("invite_popup").then(() => {
+    // Free: solo — no invites (silent). Seat cap is org-members only
+    // (Admin member_add); hub.invite is not gated by Team seat headcount.
+    const { isFreeSoloPlan } = require("libs/billing");
+    if (isFreeSoloPlan()) return;
+    return Kind.waitFor("invite_popup").then(() => {
       const ws = (Wm && Wm._curWorkspace) || {};
       Wm.__wrapperModal.feed({
         kind: "invite_popup",

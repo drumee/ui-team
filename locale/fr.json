@@ -936,7 +936,7 @@
   "QX_WORKSPACE_TITLE": "Limite d'espaces de travail atteinte",
   "QX_WORKSPACE_BODY": "Vous avez créé tous les espaces de travail que votre offre autorise.",
   "QX_SEAT_TITLE": "Limite de membres atteinte",
-  "QX_SEAT_BODY": "Votre offre ne permet pas d'ajouter d'autres membres.",
+  "QX_SEAT_BODY": "Vous ne pouvez plus inviter de membres : la limite du plan Team est atteinte. Passez au plan Business pour inviter davantage de membres.",
   "QX_ASK_OWNER": "Demandez au propriétaire de l'espace de revoir l'offre de l'organisation.",
   "QX_ROOM_STORAGE": "Libérez de l'espace pour continuer.",
   "QX_ROOM_WORKSPACE": "Supprimez un espace de travail dont vous n'avez plus besoin pour en créer un autre.",
@@ -2347,5 +2347,6 @@
   "GUEST_JOIN_OPEN_WORKSPACE_MSG_PLAIN": "Vous pouvez maintenant ouvrir l'espace de travail auquel vous avez été invité.",
   "PREPARING_INVITED_WORKSPACE": "Préparation de votre espace de travail…",
   "ROTATE": "Pivoter",
-  "MOVE_RESIZE": "Déplacer et redimensionner"
+  "MOVE_RESIZE": "Déplacer et redimensionner",
+  "QX_SEAT_BODY_FREE": "Le plan Free est réservé à une seule personne. Passez à une offre supérieure pour inviter d'autres membres."
 }

@@ -326,20 +326,26 @@ class ___members_page extends LetcBox {
 
   /**
    * @param {(LetcBox|null)} source
-  */
-  loadCreateMember(source = null) {
-    if (!Visitor.quota().seat) {
-      // Was a bare Note reading "Your quota has been exceeded" — true, and
-      // useless: no indication that the seat count is a PLAN limit, and no way
-      // to reach the screen that changes it. The widget names the limit and
-      // shows the upgrade button only to someone who can actually use it (a
-      // member who is not the org owner is told to ask the owner instead).
-      //
-      // Inline, not the shared modal: this branch already owns a panel the
-      // user opened on purpose, and the message belongs in it.
-      return this.getBranch('member_room').feed(
-        { kind: 'quota_exceeded', limit: 'seat', inline: 1 }
-      );
+   */
+  async loadCreateMember(source = null) {
+    const {
+      isFreeSoloPlan,
+      isOrgSeatLimitReached,
+      canShowSeatLimitPopup,
+    } = require("libs/billing");
+    // Org-member create only (member_add). Free: silent.
+    // Team-at-cap: seat Upgrade card for org OWNER only; others blocked silently.
+    if (isFreeSoloPlan()) return;
+    if (await isOrgSeatLimitReached(this)) {
+      if (!canShowSeatLimitPopup()) return;
+      if (typeof Wm !== "undefined" && Wm.openQuotaExceeded) {
+        return Wm.openQuotaExceeded({ limit: "seat" });
+      }
+      return this.getBranch("member_room").feed({
+        kind: "quota_exceeded",
+        limit: "seat",
+        inline: 1,
+      });
     }
     const memberForm = {
       kind: 'members_room',

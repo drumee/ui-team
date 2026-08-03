@@ -243,6 +243,11 @@ class __window_manager extends push {
    * @param {Number} [opt.cap]  bytes, storage only
    */
   openQuotaExceeded(opt = {}) {
+    // Seat Upgrade card is org-owner only (non-owners cannot act on it).
+    if ((opt.limit || "storage") === "seat") {
+      const { canShowSeatLimitPopup } = require("libs/billing");
+      if (!canShowSeatLimitPopup()) return Promise.resolve();
+    }
     return this.ensurePart("wrapper-modal").then((p) => {
       if (!p) return;
       p.feed({

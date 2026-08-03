@@ -96,9 +96,12 @@ class settings_hub extends DrumeeMFS {
     });
   }
 
-  _openInvitePopup() {
+  async _openInvitePopup() {
     if (typeof Wm === "undefined" || !Wm.__wrapperModal) return;
-    Kind.waitFor("invite_popup").then(() => {
+    // Free: solo — no invites (silent). Org seat cap does not apply to hub.invite.
+    const { isFreeSoloPlan } = require("libs/billing");
+    if (isFreeSoloPlan()) return;
+    return Kind.waitFor("invite_popup").then(() => {
       Wm.__wrapperModal.feed({
         kind: "invite_popup",
         hub_id: this.mget(_a.hub_id),
