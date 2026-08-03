@@ -6,10 +6,11 @@ const SUB_FOLDERS = [
   "Sub-folder v4",
 ];
 
+// Three tiles. bg_concept.png earns its place: the team-chat panel next to
+// the grid keeps referring to it.
 const FILES = [
   { name: "spec_v2.docx", date: "Oct 12, 2023", ico: "addmenu-document" },
   { name: "spec_v2.pdf", date: "Oct 12, 2023", ico: "file-pdf" },
-  { name: "note", date: "Oct 12, 2023", ico: "addmenu-note" },
   { name: "bg_concept.png", date: "Oct 12, 2023", ico: "image" },
 ];
 
