@@ -173,11 +173,18 @@ function priceHeader(ui, fig, option, isCurrent) {
   const { title, priceLabel, priceAmount, pricePeriod, priceText, badge } = option;
 
   const priceKids = [];
-  if (priceLabel) {
-    priceKids.push(
-      Skeletons.Note({ className: `${fig}-price-label`, content: priceLabel }),
-    );
-  }
+  // The label row is rendered on EVERY card, blank where the plan has none.
+  // Only Sovereign carries one ("Start from"), and that single extra line made
+  // its tinted header 97px against 81px on the other three — the boxes did not
+  // line up and neither did the prices. Reserving the row equalises them by
+  // construction, so it survives a change of font size or label; pinning
+  // min-height to today's 97px would silently drift apart again.
+  priceKids.push(
+    Skeletons.Note({
+      className: `${fig}-price-label${priceLabel ? "" : " is-placeholder"}`,
+      content: priceLabel || " ",
+    }),
+  );
   if (priceAmount) {
     priceKids.push(
       Skeletons.Box.X({

@@ -209,6 +209,13 @@
         font-size: 14px;
         line-height: 1.4;
         color: var(--neutral-900);
+
+        // Holds the row open on the cards that have no label, so all four
+        // headers are the same height and the prices sit on one line.
+        // visibility, not display:none — the box has to keep occupying space.
+        &.is-placeholder {
+          visibility: hidden;
+        }
       }
 
       &-row {
