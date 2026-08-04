@@ -152,17 +152,39 @@ function subscriptionBanner(ui) {
         // Renew date comes from the async mirror; until it lands, announce
         // the current plan instead of rendering an empty date.
         //
-        // 'trialing' here is a DEFERRED CYCLE SWITCH, not a product trial:
-        // the new cycle's subscription idles (Stripe trial) until the old
-        // cycle's paid time lapses, and period_end is the day it starts
-        // billing. Saying "renews on" for a plan that has not started read
-        // as a bug (tester 2026-07-30).
-        content: when
-          ? ((ui._subscription && ui._subscription.status === "trialing")
-            ? (LOCALE.CYCLE_STARTS_ON || "Your {0} billing starts on {1}")
-              .format(/^year/.test(String(ui._subscription.period || "")) ? (LOCALE.YEARLY || "Yearly") : (LOCALE.MONTHLY || "Monthly"), when)
-            : (LOCALE.SUBSCRIPTION_RENEWS_ON || "Your subscription renews on {0}").format(when))
-          : (LOCALE.CURRENT_PLAN_BANNER || "You are on the {0} plan").format(planLabel),
+        // Two different ways a cycle switch can be pending, and both must
+        // read as "starts on", never "renews on":
+        //
+        //  - pending_switch: a Stripe subscription SCHEDULE, which is how a
+        //    deferred switch is done now. The subscription itself gives
+        //    nothing away — status stays 'active', price and period end do
+        //    not move — so without this the banner would promise a renewal of
+        //    the plan they are leaving. It carries its own date, the day the
+        //    new price takes over, which is not necessarily period_end.
+        //  - status 'trialing': the older Checkout+trial_end shape, still
+        //    live on subscriptions switched before the change. Not a product
+        //    trial — the new cycle idles until the paid time lapses. Saying
+        //    "renews on" for a plan that has not started read as a bug
+        //    (tester 2026-07-30).
+        content: (() => {
+          const sub = ui._subscription || {};
+          const cycleName = (p) => (/^year/.test(String(p || ""))
+            ? (LOCALE.YEARLY || "Yearly")
+            : (LOCALE.MONTHLY || "Monthly"));
+          const pending = sub.pending_switch;
+          if (pending && pending.starts_at) {
+            return (LOCALE.CYCLE_STARTS_ON || "Your {0} billing starts on {1}")
+              .format(cycleName(pending.period), Dayjs(pending.starts_at * 1000).format("MMM D, YYYY"));
+          }
+          if (!when) {
+            return (LOCALE.CURRENT_PLAN_BANNER || "You are on the {0} plan").format(planLabel);
+          }
+          if (sub.status === "trialing") {
+            return (LOCALE.CYCLE_STARTS_ON || "Your {0} billing starts on {1}")
+              .format(cycleName(sub.period), when);
+          }
+          return (LOCALE.SUBSCRIPTION_RENEWS_ON || "Your subscription renews on {0}").format(when);
+        })(),
       }),
       Skeletons.Note({
         className: `${fig}-action ${fig}-cancel`,

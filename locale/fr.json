@@ -2526,5 +2526,7 @@
   "CYCLE_STARTS_SUBTITLE": "Votre formule {0} démarre le {1}.",
   "CHARGED_TODAY": "Débité aujourd'hui",
   "NEXT_CHARGE": "Prochain débit",
-  "NEXT_CHARGE_ON": "{0} le {1}"
+  "NEXT_CHARGE_ON": "{0} le {1}",
+  "PLAN_CHANGE_FAILED": "Impossible de changer votre cycle de facturation. Veuillez réessayer.",
+  "PLAN_SWITCH_DEFER_KEEP": "Vous conservez vos {0} jours restants sur le cycle actuel — ils sont déjà payés."
 }

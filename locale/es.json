@@ -2526,5 +2526,7 @@
   "CYCLE_STARTS_SUBTITLE": "Tu plan {0} comienza el {1}.",
   "CHARGED_TODAY": "Cobrado hoy",
   "NEXT_CHARGE": "Próximo cobro",
-  "NEXT_CHARGE_ON": "{0} el {1}"
+  "NEXT_CHARGE_ON": "{0} el {1}",
+  "PLAN_CHANGE_FAILED": "No se pudo cambiar tu ciclo de facturación. Inténtalo de nuevo.",
+  "PLAN_SWITCH_DEFER_KEEP": "Conservas tus {0} días restantes del ciclo actual: ya están pagados."
 }
