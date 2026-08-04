@@ -11,13 +11,34 @@ class settings_billing_result extends LetcBox {
     super.initialize(opt);
     // "resume" (Figma 3050-96691): confirmation after a subscription resume —
     // check icon + "Resume Subscription" + a single Done button, no receipt.
-    this._result = /^(success|resume)$/.test(opt.result) ? opt.result : "cancel";
+    // "cycle": a deferred billing-cycle switch applied in place, with no
+    // Checkout session behind it — see onDomRefresh.
+    this._result = /^(success|resume|cycle)$/.test(opt.result) ? opt.result : "cancel";
     this._sessionId = opt.session_id || "";
     this._receipt = null;
   }
 
   async onDomRefresh() {
-    if (this._result === "success" && this._sessionId) {
+    if (this._result === "cycle") {
+      // A deferred cycle switch no longer goes through Stripe Checkout
+      // (payment.change_plan applies it on the live subscription), so there is
+      // no session to fetch — the caller already holds every figure. Shape
+      // them like a receipt so this renders through the same deferred card as
+      // the Checkout path: same words for the same event, whichever route
+      // produced it.
+      this._receipt = {
+        defer: true,
+        plan: this.getOption("plan") || "",
+        period: this.getOption("period") || "",
+        starts_at: this.getOption("starts_at") || 0,
+        upcoming_amount: this.getOption("amount"),
+        currency: this.getOption("currency") || "",
+        // Nothing was taken today, and saying so beats leaving it unsaid —
+        // "nothing charged" is the whole point of a deferred switch.
+        amount_total: 0,
+      };
+      this._result = "success";
+    } else if (this._result === "success" && this._sessionId) {
       // hub_id is REQUIRED (payment.* ACL is scope:hub/src:owner).
       this._receipt = await this.fetchService(SERVICE.payment.checkout_result, {
         hub_id: Visitor.id,

@@ -2666,5 +2666,7 @@
   "CYCLE_STARTS_SUBTITLE": "Your {0} plan starts on {1}.",
   "CHARGED_TODAY": "Charged today",
   "NEXT_CHARGE": "Next charge",
-  "NEXT_CHARGE_ON": "{0} on {1}"
+  "NEXT_CHARGE_ON": "{0} on {1}",
+  "PLAN_CHANGE_FAILED": "Could not change your billing cycle. Please try again.",
+  "PLAN_SWITCH_DEFER_KEEP": "You keep your {0} remaining days on the current cycle — they are already paid for."
 }

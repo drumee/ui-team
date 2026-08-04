@@ -434,17 +434,17 @@ class settings_billing extends LetcBox {
         : (LOCALE.PLAN_SWITCH_DEFER_MSG_NODATE
           || "{0}{1} starts when your {2} period ends. Nothing is charged today.")
           .format(price, per, cycleWord(currentPeriod));
-      // Stripe's hosted page renders the deferral as "{N} days free" — its
-      // own fixed trial copy, which we cannot change. Calling it "free" is
-      // wrong in substance: that time was already PAID FOR on the current
-      // cycle, it is remaining balance, not a gift (tester 2026-07-30: "21
-      // days free"/"364 days free" — is that credited?). So lead with what
-      // it actually is and treat Stripe's wording as the label it is.
+      // This used to carry an apology for Stripe's checkout page, which
+      // showed the deferral as "{N} days free" under a "Start trial" button —
+      // its own fixed trial copy, which could not be reworded (tester
+      // 2026-07-30: "21 days free"/"364 days free" — is that credited?). The
+      // switch no longer goes through checkout, so there is no page left to
+      // explain away; say plainly what the remaining time is.
       const daysLeft = this._periodEnd
         ? Math.max(0, Math.ceil((this._periodEnd * 1000 - Date.now()) / 86400000)) : 0;
       if (daysLeft) {
-        message += "\n\n" + (LOCALE.PLAN_SWITCH_DEFER_CREDIT
-          || "That is your {0} remaining days, already paid for \u2014 the payment page just labels them \u201cfree\u201d.")
+        message += "\n\n" + (LOCALE.PLAN_SWITCH_DEFER_KEEP
+          || "You keep your {0} remaining days on the current cycle \u2014 they are already paid for.")
           .format(daysLeft);
       }
       // Nothing is lost on this path — the danger styling would warn about a
@@ -489,13 +489,29 @@ class settings_billing extends LetcBox {
     const ok = await Wm.confirm({
       title,
       message,
-      confirm: LOCALE.PLAN_REPLACE_CONFIRM || "Continue to payment",
+      // A deferred switch takes no payment, so "Continue to payment" promises
+      // a step that no longer exists.
+      confirm: samePlan
+        ? (LOCALE.CONFIRM || "Confirm")
+        : (LOCALE.PLAN_REPLACE_CONFIRM || "Continue to payment"),
       ...(confirm_type ? { confirm_type } : {}),
       cancel: LOCALE.CANCEL || "Cancel",
       cancel_type: "secondary",
       mode: "hbf",
     }).then(() => true).catch(() => false);
     if (!ok) return;
+
+    // Same plan, other cycle: apply it on the live subscription instead of
+    // sending the caller to Stripe Checkout. There is nothing to collect —
+    // they are an active payer with a card on file, and the new price only
+    // bills when the paid period ends — so a payment page was never needed.
+    //
+    // Routing it through Checkout forced the "no charge now" part to be
+    // modelled as a trial_end, and Stripe renders any trial as "N days free"
+    // under a "Start trial" button. That is its own fixed copy, unchangeable,
+    // and wrong twice over here: the customer is not starting a trial, and
+    // the days it calls free are days they have already paid for.
+    if (samePlan) return this._applyCycleSwitch(targetPlan, period);
 
     // Carry the intent into checkout: _proceedToCheckout reads it and the
     // server lifts the already-subscribed refusal only for this case. The
@@ -505,6 +521,65 @@ class settings_billing extends LetcBox {
     this.state.checkout.supersede = 1;
     this.state.checkout.billingCycle = period === "year" ? "yearly" : "monthly";
     this._enterCheckoutFor(targetPlan);
+  }
+
+  /**
+   * Deferred billing-cycle switch (same plan, other interval), applied on the
+   * live subscription. Charges nothing today; the new price bills when the
+   * paid period ends.
+   *
+   * This is the one plan change that does NOT go through checkout, and the
+   * 2026-07-29 rule it breaks — "every plan change goes through checkout so
+   * the user always sees and confirms the charge" — does not reach it: there
+   * is no charge to see. What the user saw instead was Stripe's trial page
+   * offering "30 days free" and a "Start trial" button for a paid switch.
+   * The confirmation dialog above still states the terms and takes consent.
+   */
+  async _applyCycleSwitch(plan, period) {
+    const r = await this.postService(SERVICE.payment.change_plan, {
+      hub_id: Visitor.id, plan, period, defer: 1,
+    }).catch(() => null);
+
+    if (!r || r.status !== "OK") {
+      // Say which failure it was where the server named one; a bare "try
+      // again" on PAYMENT_ACTION_REQUIRED sends the user round a loop that
+      // cannot succeed without a different card.
+      const code = (r && r.status) || "";
+      const msg = code === "PAYMENT_ACTION_REQUIRED"
+        ? (LOCALE.PAYMENT_ACTION_REQUIRED
+          || "Your bank needs to authorize this change. Please use the billing portal or another card.")
+        : (LOCALE.PLAN_CHANGE_FAILED || "Could not change your billing cycle. Please try again.");
+      if (typeof Wm !== "undefined" && Wm.alert) Wm.alert(msg);
+      return;
+    }
+
+    // Reflect the new cycle before the confirmation card opens, so closing it
+    // does not reveal a stale banner underneath.
+    await this._loadSubscription().catch(() => null);
+
+    // Same shell as the post-Checkout result (and as _resumeSubscription):
+    // Done bubbles billing-result-close to the window manager, which clears
+    // the wrapper. Falls back to a toast if the widget cannot be loaded — the
+    // switch itself has already gone through either way.
+    Kind.waitFor("settings_billing_result").then(() => {
+      Wm.ensurePart("wrapper-modal").then((p) => {
+        p.feed({
+          kind: "settings_billing_result",
+          result: "cycle",
+          plan: r.plan || plan,
+          period: r.period || period,
+          starts_at: r.period_end || 0,
+          amount: r.amount,
+          currency: r.currency,
+          uiHandler: [Wm],
+        });
+      });
+    }).catch(() => {
+      if (typeof Butler !== "undefined" && Butler.say) {
+        Butler.say(LOCALE.PLAN_CHANGE_CONFIRMED || "Plan change confirmed");
+      }
+    });
+    if (!this.isDestroyed()) this.fetchPlanData();
   }
 
   // _confirmPlanChange (the payment.change_plan client — an in-place price
