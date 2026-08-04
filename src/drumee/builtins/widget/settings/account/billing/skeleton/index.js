@@ -85,8 +85,9 @@ function subscriptionBanner(ui) {
   // render the banner from the very first paint and let the renew date fill
   // in once the mirror lands (ticket 2026-07-22).
   const quotaPlan = String(((Visitor.quota && Visitor.quota()) || {}).plan || "").toLowerCase();
-  // Shared with the "Cancel plan" click guard (_isPaidByQuota) so the button
-  // is never rendered clickable without also being armed.
+  // Decides only whether the banner APPEARS. Whether it carries a Cancel
+  // action is a separate question (_hasCancellablePlan, below) — holding a
+  // paid tier and holding a cancellable subscription are not the same thing.
   const paidByQuota = ui._isPaidByQuota ? ui._isPaidByQuota() : /^(pro|team|enterprise)$/.test(quotaPlan);
   if (!ui._hasPaidSub && !paidByQuota) return null;
   const fig = `${ui.fig.family}__sub-banner`;
@@ -165,13 +166,24 @@ function subscriptionBanner(ui) {
             : (LOCALE.SUBSCRIPTION_RENEWS_ON || "Your subscription renews on {0}").format(when))
           : (LOCALE.CURRENT_PLAN_BANNER || "You are on the {0} plan").format(planLabel),
       }),
-      Skeletons.Note({
-        className: `${fig}-action ${fig}-cancel`,
-        content: LOCALE.CANCEL_PLAN || "Cancel plan",
-        service: "cancel-subscription",
-        uiHandler: [ui],
-        bubble: false,
-      }),
+      // Only offer Cancel when something can actually be cancelled. The
+      // banner itself renders off the QUOTA so it appears on first paint,
+      // before the subscription mirror lands — but a quota is not a
+      // subscription. A hand-granted plan, and one whose subscription has
+      // already been terminated (the entitlement is kept until period_end,
+      // the mirror row is not), both read as paid with nothing behind them,
+      // and cancel_subscription answers NO_SUBSCRIPTION. Offering the button
+      // there turned a plan the user cannot cancel into "Something went
+      // wrong" (reported on preview, lexis@drumee.org).
+      ui._hasCancellablePlan && ui._hasCancellablePlan()
+        ? Skeletons.Note({
+          className: `${fig}-action ${fig}-cancel`,
+          content: LOCALE.CANCEL_PLAN || "Cancel plan",
+          service: "cancel-subscription",
+          uiHandler: [ui],
+          bubble: false,
+        })
+        : null,
     ].filter(Boolean),
   });
 }
