@@ -78,8 +78,33 @@ function billing_result(ui) {
     : null;
   const planName = r.plan ? r.plan.replace(/^./, (c) => c.toUpperCase()) : "";
 
+  // A DEFERRED cycle switch bills nothing today — the new cycle idles on a
+  // Stripe trial until the already-paid period lapses. Stripe therefore
+  // reports amount_total 0, and this modal used to present that as
+  // "Payment Success! / Total Payment $0.00" over a $290 switch, which reads
+  // as a failed or free purchase. Name the two amounts instead: what was
+  // taken today (nothing) and what falls due when the plan actually starts.
+  // The billing page banner already branches on the same state.
+  const deferred = ok && !!r.defer;
+  const startsAt = r.starts_at
+    ? Dayjs(Number(r.starts_at) * 1000).format("MMMM D, YYYY")
+    : null;
+  const periodLabel = /^year/.test(String(r.period || ""))
+    ? (LOCALE.YEARLY || "Yearly")
+    : (LOCALE.MONTHLY || "Monthly");
+  const upcoming = money(r.upcoming_amount, r.currency);
+
   const total = money(r.amount_total, r.currency);
   const details = [
+    // Only meaningful while the switch is pending; once it starts, the
+    // billing page is the place that tracks renewals.
+    deferred && upcoming && startsAt
+      ? detailRow(
+        fig,
+        LOCALE.NEXT_CHARGE || "Next charge",
+        (LOCALE.NEXT_CHARGE_ON || "{0} on {1}").format(upcoming, startsAt),
+      )
+      : null,
     detailRow(fig, LOCALE.INVOICE_NUMBER || "Invoice number", r.invoice_number),
     // Figma: success shows "Payment date", failure shows "Payment time" —
     // same field, different label per state.
@@ -99,15 +124,21 @@ function billing_result(ui) {
     }),
     Skeletons.Note({
       className: `${fig}__title`,
-      content: ok
-        ? LOCALE.PAYMENT_SUCCESS_TITLE || "Payment Success!"
-        : LOCALE.PAYMENT_FAILURE_TITLE || "Payment Failure!",
+      // "Payment Success!" is a lie when nothing was paid — a deferred switch
+      // confirms a scheduled change, not a charge.
+      content: deferred
+        ? LOCALE.PLAN_CHANGE_CONFIRMED || "Plan change confirmed"
+        : ok
+          ? LOCALE.PAYMENT_SUCCESS_TITLE || "Payment Success!"
+          : LOCALE.PAYMENT_FAILURE_TITLE || "Payment Failure!",
     }),
     Skeletons.Note({
       className: `${fig}__subtitle`,
-      content: ok
-        ? (LOCALE.PAYMENT_SUCCESS_TEXT || "Upgraded successfully. You are now in {0} plan.").format(planName || LOCALE.TEAM)
-        : LOCALE.PAYMENT_FAILURE_TEXT || "Your payment could not be processed.",
+      content: deferred && startsAt
+        ? (LOCALE.CYCLE_STARTS_SUBTITLE || "Your {0} plan starts on {1}.").format(periodLabel, startsAt)
+        : ok
+          ? (LOCALE.PAYMENT_SUCCESS_TEXT || "Upgraded successfully. You are now in {0} plan.").format(planName || LOCALE.TEAM)
+          : LOCALE.PAYMENT_FAILURE_TEXT || "Your payment could not be processed.",
     }),
   ];
 
@@ -118,7 +149,11 @@ function billing_result(ui) {
         kids: [
           Skeletons.Note({
             className: `${fig}__total-label`,
-            content: LOCALE.TOTAL_PAYMENT || "Total Payment",
+            // The $0 needs a label that explains itself: it is today's
+            // charge, not the price of the plan.
+            content: deferred
+              ? LOCALE.CHARGED_TODAY || "Charged today"
+              : LOCALE.TOTAL_PAYMENT || "Total Payment",
           }),
           Skeletons.Note({ className: `${fig}__total-value`, content: total }),
         ],

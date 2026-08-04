@@ -30,7 +30,7 @@ function articlePage(ui) {
             : null,
         ].filter(Boolean),
       }),
-      videoBlock(ui),
+      videoBlock(ui, data.video),
       articleGrid(ui, data.articles),
     ].filter(Boolean),
   });

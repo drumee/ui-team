@@ -310,20 +310,39 @@ class ___members_page extends LetcBox {
 
   /**
    * @param {(LetcBox|null)} source
-  */
-  loadCreateMember(source = null) {
-    if (!Visitor.quota().seat) {
-      // Was a bare Note reading "Your quota has been exceeded" — true, and
-      // useless: no indication that the seat count is a PLAN limit, and no way
-      // to reach the screen that changes it. The widget names the limit and
-      // shows the upgrade button only to someone who can actually use it (a
-      // member who is not the org owner is told to ask the owner instead).
-      //
-      // Inline, not the shared modal: this branch already owns a panel the
-      // user opened on purpose, and the message belongs in it.
-      return this.getBranch('member_room').feed(
-        { kind: 'quota_exceeded', limit: 'seat', inline: 1 }
-      );
+   */
+  async loadCreateMember(source = null) {
+    const {
+      isFreeSoloPlan,
+      checkOrgSeatLimit,
+      showFreeSoloLimit,
+    } = require("libs/billing");
+    // Org-member create only (member_add) — hub.invite is outside this budget.
+    // Every refusal has to SAY something: a bare return leaves the button
+    // looking broken. The card adapts to the viewer on its own (no Upgrade
+    // button, "Ask your workspace owner…" for a non-owner), so it does not
+    // need an owner gate here.
+    if (isFreeSoloPlan()) return showFreeSoloLimit();
+    const seat = await checkOrgSeatLimit(this);
+    if (seat.blocked) {
+      // Could not read the headcount: still refuse (the server would reject
+      // at member_add anyway), but do not claim the plan is full — they may
+      // have seats left and would be told to buy something they already own.
+      if (seat.reason === "unknown") {
+        if (typeof Wm !== "undefined" && Wm.alert) {
+          Wm.alert(LOCALE.QX_SEAT_CHECK_FAILED
+            || "Could not check how many seats are in use. Please try again.");
+        }
+        return;
+      }
+      if (typeof Wm !== "undefined" && Wm.openQuotaExceeded) {
+        return Wm.openQuotaExceeded({ limit: "seat" });
+      }
+      return this.getBranch("member_room").feed({
+        kind: "quota_exceeded",
+        limit: "seat",
+        inline: 1,
+      });
     }
     const memberForm = {
       kind: 'members_room',

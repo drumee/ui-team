@@ -227,6 +227,7 @@
   &__video {
     &-frame {
       @include focus-ring;
+      position: relative;
       width: 100%;
       aspect-ratio: 900 / 506;
       border-radius: 24px;
@@ -240,6 +241,51 @@
         transform: scale(1.06);
         background: rgba(20, 17, 35, 0.55);
       }
+
+      // No source yet: nothing to play, so drop the pointer affordance and
+      // the hover growth on the badge.
+      &[data-placeholder="1"] {
+        cursor: default;
+
+        .help-main__video-backdrop {
+          filter: blur(18px);
+        }
+
+        .help-main__video-play {
+          background: rgba(20, 17, 35, 0.28);
+        }
+
+        &:hover .help-main__video-play {
+          transform: none;
+          background: rgba(20, 17, 35, 0.28);
+        }
+      }
+    }
+
+    // The surface that gets blurred. A flat fill would look identical blurred
+    // or not, so it carries a soft tinted gradient for the blur to act on.
+    // Scaled up past the frame because blur() fades out at the edges.
+    &-backdrop {
+      // Box.Z does not position itself — the builder only sets flow:none, so
+      // the absolute positioning is declared here (same as settings_main's
+      // avatar overlay).
+      position: absolute;
+      inset: 0;
+      background:
+        radial-gradient(60% 70% at 22% 26%, rgba(89, 80, 255, 0.22), transparent 70%),
+        radial-gradient(55% 65% at 78% 30%, rgba(67, 60, 197, 0.16), transparent 72%),
+        radial-gradient(70% 80% at 50% 100%, rgba(11, 10, 33, 0.12), transparent 68%),
+        $surface;
+      transform: scale(1.15);
+      transition: filter $base $ease;
+    }
+
+    // Badge + label stack, above the backdrop.
+    &-overlay {
+      position: relative;
+      align-items: center;
+      justify-content: center;
+      gap: var(--spacer-4);
     }
 
     &-play {
@@ -260,6 +306,19 @@
         // Optical centring — a triangle reads left-heavy in a circle.
         margin-left: 3px;
       }
+    }
+
+    // Frosted pill so the label stays legible over any backdrop.
+    &-coming-soon {
+      padding: var(--spacer-2) var(--spacer-4);
+      border-radius: 58px;
+      background: rgba(255, 255, 255, 0.72);
+      backdrop-filter: blur(6px);
+      font-size: 0.875rem;
+      font-weight: 600;
+      line-height: 1.25rem;
+      color: $ink-900;
+      white-space: nowrap;
     }
   }
 

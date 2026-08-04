@@ -595,26 +595,44 @@ class __push_manager extends winman {
         // Join joins and dismisses; the ✕ only dismisses. Clicking the card
         // body does nothing now — it used to dismiss on any click, which ate
         // the Join press often enough to be worth separating.
-        const joinEl = toast.el.querySelector(".desk-meeting-toast__join");
-        if (joinEl) {
-          // once:true plus a busy flag: the window being opened takes a moment
-          // to build, and a second click in that gap used to open a second one.
-          joinEl.addEventListener("click", (e) => {
-            e.stopPropagation();
-            joinEl.dataset.busy = "1";
-            this._joinMeetingFromData(data);
-            kill();
-          }, { once: true });
-        }
-        // ✕ and Dismiss both just close the card.
-        toast.el
-          .querySelectorAll(".desk-meeting-toast__close, .desk-meeting-toast__dismiss")
-          .forEach((el) => {
-            el.addEventListener("click", (e) => {
+        //
+        // Delegated from the card in the CAPTURE phase, deliberately. These
+        // controls are rendered widgets, and ui-core gives every widget its own
+        // `el.onclick` at render time (letc/addons/letc.js onRender); that
+        // handler ends in `e.stopImmediatePropagation()`, which drops any
+        // listener added to the SAME element afterwards. Bound straight to the
+        // button, ours was therefore eaten on the first click and only ran on a
+        // second one inside that handler's 300 ms debounce — the buttons needed
+        // a double click. A capture listener on an ancestor runs before the
+        // target's own handler, so a single click always lands.
+        let joining = 0;
+        toast.el.addEventListener(
+          "click",
+          (e) => {
+            const t = e.target;
+            if (!t || !t.closest) return;
+            const joinEl = t.closest(".desk-meeting-toast__join");
+            if (joinEl) {
+              // The window being opened takes a moment to build, and a second
+              // click in that gap used to open a second one.
+              if (joining) return;
+              joining = 1;
+              e.stopPropagation();
+              joinEl.dataset.busy = "1";
+              this._joinMeetingFromData(data);
+              kill();
+              return;
+            }
+            // ✕ and Dismiss both just close the card.
+            if (
+              t.closest(".desk-meeting-toast__close, .desk-meeting-toast__dismiss")
+            ) {
               e.stopPropagation();
               kill();
-            });
-          });
+            }
+          },
+          true,
+        );
       }
       // Auto-dismiss: the actionable "now" toast lingers, the informational
       // ones clear quickly.

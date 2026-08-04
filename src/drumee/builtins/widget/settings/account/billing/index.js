@@ -46,11 +46,16 @@ class settings_billing extends LetcBox {
     // would read as no seats at all.
     this.storage = {
       free: 5,
+      pro: 50,
       team: 100,
       business: 1000
     }
     this.seats = {
       free: 0,
+      // 1, not 0: Pro is personal but NOT solo-locked — seat 0 is what
+      // isFreeSoloPlan() reads as "block every invite", and Pro sells
+      // unlimited guests.
+      pro: 1,
       team: 10,
       business: 100000
     }
@@ -163,6 +168,11 @@ class settings_billing extends LetcBox {
     // reach checkout: they accepted the warning, and the server admits them on
     // the supersede flag.
     if (this.state && this.state.checkout && this.state.checkout.supersede) {
+      return this._mayCheckout();
+    }
+    // LAUNCH30 trial has no Stripe subscription. Checkout must stay open so
+    // the user can convert with an MKT outreach partner code (trial + % off).
+    if (this._isPromoTrial && !this._hasPaidSub) {
       return this._mayCheckout();
     }
     return this._mayCheckout() && !this._hasActiveSub;
@@ -381,13 +391,15 @@ class settings_billing extends LetcBox {
     const currentRaw = String(sub.plan || "") || current;
     const currentPeriod = /^year/.test(String(sub.period || "")) ? "year" : "month";
     const period = /^(month|year)$/.test(targetPeriod || "") ? targetPeriod : this._selectedCycle();
-    const currentTitle = current === "business" ? LOCALE.BUSINESS
-      : current === "team" ? LOCALE.TEAM
-      : current === "sovereign" ? LOCALE.SOVEREIGN
+    const label = (p) => p === "business" ? LOCALE.BUSINESS
+      : p === "team" ? LOCALE.TEAM
+      : p === "pro" ? LOCALE.PRO
+      : p === "sovereign" ? LOCALE.SOVEREIGN
       : LOCALE.FREE;
-    const targetTitle = targetPlan === "business" ? LOCALE.BUSINESS : LOCALE.TEAM;
+    const currentTitle = label(current);
+    const targetTitle = label(targetPlan);
     const when = this._periodEnd ? Dayjs(this._periodEnd * 1000).format("MMM D, YYYY") : "";
-    const rank = { free: 0, team: 1, business: 2, sovereign: 3 };
+    const rank = { free: 0, pro: 1, team: 2, business: 3, sovereign: 4 };
 
     // Three shapes for three different situations (product spec 2026-07-29):
     //  - same plan, other cycle  → DEFERRED: the current cycle runs to its
@@ -405,28 +417,14 @@ class settings_billing extends LetcBox {
     let message;
     let confirm_type = "danger";
     if (samePlan && period === currentPeriod) return; // already exactly this
-    if (samePlan) {
-      title = (LOCALE.PLAN_SWITCH_CYCLE_TITLE || "Switch to {0} {1}")
-        .format(targetTitle, cycleWord(period));
-      message = (LOCALE.PLAN_SWITCH_DEFER_MSG
-        || "Switch to the {0} {1} plan for {2}{3}?\n\nYour current {0} {4} subscription will remain active until the end of its billing period. Your {1} subscription will be added and will begin immediately after your {4} plan expires.")
-        .format(targetTitle, cycleWord(period), price, per, cycleWord(currentPeriod));
-      // Stripe's hosted page renders the deferral as "{N} days free" — its
-      // own fixed trial copy. Without this note that read as a mystery gift
-      // (tester 2026-07-30: "21 days free"/"364 days free" — is that
-      // credited?). Yes: it is exactly the time already paid for on the
-      // current cycle; say so before they see it.
-      const daysLeft = this._periodEnd
-        ? Math.max(0, Math.ceil((this._periodEnd * 1000 - Date.now()) / 86400000)) : 0;
-      if (daysLeft) {
-        message += "\n\n" + (LOCALE.PLAN_SWITCH_DEFER_CREDIT
-          || "The payment page will show this as \u201c{0} days free\u201d — that is the remaining time already paid for on your current {1} plan, credited to you. Nothing is charged today; the {2} price starts when it runs out.")
-          .format(daysLeft, cycleWord(currentPeriod), cycleWord(period));
-      }
-      // Nothing is lost on this path — the danger styling would warn about a
-      // consequence that does not exist.
-      confirm_type = "";
-    } else if (period !== currentPeriod) {
+    // A cycle change is charged like any other plan change: at checkout, now.
+    // It used to be deferred — the new cycle idled on a Stripe trial until the
+    // paid period lapsed — which took no money on the day and so had its own
+    // copy ("Nothing is charged today"). Product moved it back to charging
+    // immediately, so it falls through to the shared immediate wording below,
+    // which already names both cycles and says the remaining time is not
+    // carried over.
+    if (period !== currentPeriod) {
       const lines = [
         (LOCALE.PLAN_SWITCH_NOW_MSG
           || "Switch to the {0} {1} plan for {2}{3}?\n\nYour current {4} {5} subscription will be canceled immediately, and any remaining subscription time will not be carried over. Your {0} {1} plan will start right away.")
@@ -475,9 +473,7 @@ class settings_billing extends LetcBox {
 
     // Carry the intent into checkout: _proceedToCheckout reads it and the
     // server lifts the already-subscribed refusal only for this case. The
-    // cycle the caller accepted presets the checkout selector; defer itself
-    // is re-derived at proceed time from plan+cycle, so flipping the selector
-    // afterwards cannot carry a stale deferral.
+    // cycle the caller accepted presets the checkout selector.
     this.state.checkout.supersede = 1;
     this.state.checkout.billingCycle = period === "year" ? "yearly" : "monthly";
     this._enterCheckoutFor(targetPlan);
@@ -582,15 +578,16 @@ class settings_billing extends LetcBox {
       }
       // Get period from plan_detail if available, default to monthly
 
-      // Normalise quota.plan onto a card key. Legacy hand-granted rows carry
-      // free-text names from before the Stripe catalog — 'Pro', 'Drumee Plus'
-      // — and the retired B2C 'pro' tier; the schemas patch moves all of them
-      // onto the Team entitlement, so they must READ as Team here too, or the
-      // banner and the current-plan marking would point at a plan that no
-      // longer exists. Default is 'free', not 'pro': an unknown name must
-      // never imply a paid tier.
+      // Normalise quota.plan onto a card key. 'pro' is FIRST-CLASS again
+      // (2026-08-03 revival — the $5 personal tier); only the legacy
+      // hand-granted 'Drumee Plus' free-text name still reads as Team (the
+      // 2026-07-24 patch rewrote those rows, this is belt-and-braces for a
+      // straggler). Default is 'free', not a paid tier: an unknown name must
+      // never imply an entitlement.
       let mappedPlan = "free";
-      if (/^(team|pro|drumee plus)$/.test(planName)) {
+      if (planName === "pro") {
+        mappedPlan = "pro";
+      } else if (/^(team|drumee plus)$/.test(planName)) {
         mappedPlan = "team";
       } else if (planName === "business") {
         mappedPlan = "business";
@@ -684,11 +681,16 @@ class settings_billing extends LetcBox {
       case `${this.fig.family}__checkout-org-ident-input`:
         this.__orgIdentInput = child;
         break;
+      case `${this.fig.family}__checkout-promo-code-input`:
+        this.__promoCodeInput = child;
+        break;
+      case `${this.fig.family}__redeem-code-input`:
+        this.__redeemCodeInput = child;
+        break;
         // case `${this.fig.family}__checkout-storage-input`:
         //   this._setupInputChangeListener(child, "storage");
         //   this._restoreInputFocus(child, "storage");
         //   this.__storageInput = child;
-        break;
     }
   }
 
@@ -873,6 +875,7 @@ class settings_billing extends LetcBox {
       // 2026-07-29). The catalog above is the truth; these are offline
       // fallbacks only.
       free: { monthly: 0, yearly: 0 },
+      pro: { monthly: catPrice("pro", "monthly") ?? 5, yearly: catPrice("pro", "yearly") ?? 50 },
       team: { monthly: catPrice("team", "monthly") ?? 29, yearly: catPrice("team", "yearly") ?? 290 },
       business: { monthly: catPrice("business", "monthly") ?? 99, yearly: catPrice("business", "yearly") ?? 990 },
     };
@@ -898,10 +901,25 @@ class settings_billing extends LetcBox {
     // per-seat line where a per-seat price is not a thing.
     const seats = baseSeats;
     const unlimitedSeats = seats >= 100000;
+
+    // Applied MKT promo code (payment.preview_coupon). percent_off comes off
+    // the recurring price; trial_days is a free period BEFORE the first
+    // charge, so it does not change the amount — it is surfaced as a note.
+    // Preview only: Stripe recomputes the real invoice at checkout.
+    const promo = checkout.promo || null;
+    const pct = promo ? (parseInt(promo.percent_off, 10) || 0) : 0;
+    const discountAmount = pct > 0 ? (basePrice * pct) / 100 : 0;
+    const finalPrice = Math.max(0, basePrice - discountAmount);
+
     return {
       basePrice: formatCurrency(basePrice),
       bundlePrice: formatCurrency(0),
-      totalPrice: formatCurrency(basePrice),
+      totalPrice: formatCurrency(finalPrice),
+      // Only set when a discount actually applies, so the skeleton can show
+      // the struck-through original without a special case for "no promo".
+      originalPrice: discountAmount > 0 ? formatCurrency(basePrice) : "",
+      discountAmount: discountAmount > 0 ? formatCurrency(discountAmount) : "",
+      promo,
       period,
       seats: unlimitedSeats ? LOCALE.UNLIMITED : `${seats}`,
       totalStorage: baseStorage >= 1000
@@ -909,7 +927,7 @@ class settings_billing extends LetcBox {
         : `${baseStorage} GB`,
       effectivePricePerSeat: unlimitedSeats
         ? ""
-        : formatCurrency(seats > 0 ? basePrice / seats : basePrice),
+        : formatCurrency(seats > 0 ? finalPrice / seats : finalPrice),
       selectedPlan,
       billingCycle,
       extraSeats: 0,
@@ -936,7 +954,7 @@ class settings_billing extends LetcBox {
   _catSellable(code) {
     // Until the catalog lands, assume the tiers that were sellable before it
     // did — a blank first paint must not hide the CTA from everyone.
-    if (!this._catalog) return code === "team" || code === "business";
+    if (!this._catalog) return /^(pro|team|business)$/.test(code);
     return (this._catalog || []).some(
       (p) => p.plan_code === code && p.stripe_price_id
     );
@@ -1047,7 +1065,9 @@ class settings_billing extends LetcBox {
     }, 1200);
   }
 
-  _orgIdentError(status) {
+  // `data` is the whole checkout response, optional — only
+  // COUPON_PLAN_MISMATCH needs it (to name the plan the code is locked to).
+  _orgIdentError(status, data = {}) {
     // Inside an organisation these two stop meaning what they say and start
     // meaning "you are not this org's BILLING owner".
     //
@@ -1069,8 +1089,122 @@ class settings_billing extends LetcBox {
       case "IDENT_NOT_AVAILABLE": return LOCALE.ORG_IDENT_TAKEN;
       case "ALREADY_IN_OTHER_DOMAIN": return LOCALE.ORG_ALREADY_IN_DOMAIN;
       case "ORG_IDENT_REQUIRED": return LOCALE.ORG_IDENT_REQUIRED;
+      case "CODE_NOT_FOUND":
+      case "COUPON_INVALID":
+        return LOCALE.PROMO_CODE_INVALID || "This promo code is not valid.";
+      case "CODE_INACTIVE":
+        return LOCALE.PROMO_CODE_INACTIVE || "This promo code is no longer active.";
+      case "CODE_EXPIRED":
+        return LOCALE.PROMO_CODE_EXPIRED || "This promo code has expired.";
+      case "CODE_EXHAUSTED":
+        return LOCALE.PROMO_CODE_EXHAUSTED || "This promo code has reached its usage limit.";
+      case "EMAIL_ALREADY_USED":
+        return LOCALE.PROMO_CODE_EMAIL_USED
+          || "This email has already used a partner promo code.";
+      case "COUPON_WITH_ACTIVE_SUB":
+        return LOCALE.PROMO_CODE_ACTIVE_SUB
+          || "Promo codes apply to new paid subscriptions only.";
+      case "PROMO_WITH_DEFER":
+        return LOCALE.PROMO_CODE_WITH_DEFER
+          || "Promo codes cannot be combined with a deferred billing-cycle switch.";
+      case "COUPON_PLAN_UNSUPPORTED":
+        return LOCALE.PROMO_CODE_PLAN
+          || "This promo code applies to Team or Business plans only.";
+      // Code is targeted at ONE plan and this is not it. Naming that plan
+      // turns a dead end into an instruction — the user can switch to it.
+      case "COUPON_PLAN_MISMATCH": {
+        const scope = String(data && data.plan_scope || "").trim();
+        if (!scope) {
+          return LOCALE.PROMO_CODE_PLAN
+            || "This promo code does not apply to the selected plan.";
+        }
+        const named = scope.charAt(0).toUpperCase() + scope.slice(1);
+        return (LOCALE.PROMO_CODE_PLAN_ONLY
+          || "This promo code can only be used on the {0} plan.").format(named);
+      }
+      case "COUPON_STRIPE_FAILED":
+      case "OFFER_INVALID":
+      case "ARGS_INVALID":
+      case "COUPON_EMAIL_REQUIRED":
+        return LOCALE.PROMO_CODE_FAILED
+          || "Could not apply this promo code. Please try again.";
       default: return LOCALE.SOMETHING_WENT_WRONG;
     }
+  }
+
+  /**
+   * Drop a previewed promo. keepCode=true clears the applied offer but leaves
+   * the typed string so Remove → retype is not needed; false also wipes the
+   * field (plan change).
+   */
+  _clearPromoPreview(keepCode) {
+    const checkout = this.state.checkout || (this.state.checkout = {});
+    delete checkout.promo;
+    delete checkout.promoError;
+    if (!keepCode) checkout.promoCode = "";
+  }
+
+  /**
+   * Apply (preview) the typed partner code against payment.preview_coupon.
+   * Updates the right-panel total without reserving a redemption — the real
+   * reserve still happens on Proceed to Checkout.
+   */
+  async _applyPromoCode() {
+    const checkout = this.state.checkout || (this.state.checkout = {});
+    const code = String(
+      (this.__promoCodeInput && this.__promoCodeInput.getValue
+        && this.__promoCodeInput.getValue())
+      || checkout.promoCode || "",
+    ).trim();
+    checkout.promoCode = code;
+    delete checkout.promo;
+    delete checkout.promoError;
+
+    if (!code) {
+      checkout.promoError = LOCALE.PROMO_CODE_INVALID
+        || "This promo code is not valid.";
+      this.updateRightPanel();
+      return;
+    }
+
+    const plan = checkout.selectedPlan || "team";
+    if (!/^(team|business)$/.test(plan)) {
+      checkout.promoError = LOCALE.PROMO_CODE_PLAN
+        || "This promo code applies to Team or Business plans only.";
+      this.updateRightPanel();
+      return;
+    }
+
+    const res = await this.postService(SERVICE.payment.preview_coupon, {
+      promo_code: code,
+      plan,
+      hub_id: Visitor.id,
+    }).catch(() => null);
+
+    const data = res || {};
+    if (data.status && data.status !== "OK") {
+      checkout.promoError = this._orgIdentError(data.status, data);
+      this.updateRightPanel();
+      return;
+    }
+    if (!data.code) {
+      checkout.promoError = LOCALE.PROMO_CODE_FAILED
+        || "Could not apply this promo code. Please try again.";
+      this.updateRightPanel();
+      return;
+    }
+
+    checkout.promo = {
+      code: data.code,
+      partner: data.partner || "",
+      kind: data.kind || "",
+      plan_scope: data.plan_scope || "all",
+      percent_off: parseInt(data.percent_off, 10) || 0,
+      trial_days: parseInt(data.trial_days, 10) || 0,
+      duration_months: parseInt(data.duration_months, 10) || 0,
+    };
+    checkout.promoCode = data.code;
+    this.updateRightPanel();
   }
 
   // True when the caller currently pays for a PERSONAL Pro subscription (so
@@ -1135,15 +1269,13 @@ class settings_billing extends LetcBox {
       //  - the exact subscription they already hold → nothing to buy (without
       //    this, supersede would waive the server's ALREADY_SUBSCRIBED refusal
       //    and mint a duplicate);
-      //  - same plan on the other cycle → deferred switch (the server starts
-      //    the new subscription when the current one expires);
-      //  - a different plan → immediate replacement.
+      //  - anything else (other plan, or the same plan on the other cycle) →
+      //    immediate replacement, charged at checkout.
       if (plan === curPlan && period === curPeriod) {
         if (Wm && Wm.alert) Wm.alert(LOCALE.ALREADY_SUBSCRIBED);
         return;
       }
       payload.supersede = 1;
-      if (plan === curPlan && period !== curPeriod) payload.defer = 1;
     }
     // TEAM bootstrap: the payer is still on the default domain — the org
     // name + subdomain were collected in the checkout form; validate the
@@ -1173,6 +1305,19 @@ class settings_billing extends LetcBox {
       }
       payload.ident = v.ident;
       payload.org_name = org_name;
+    }
+    // Optional MKT outreach partner code (Iris/Theo…). Empty = no coupon.
+    // Prefer the Applied preview code so a disabled field / stale input
+    // cannot silently drop the offer the shopper just confirmed in the UI.
+    const promo_code = String(
+      (checkout.promo && checkout.promo.code)
+      || (this.__promoCodeInput && this.__promoCodeInput.getValue
+        && this.__promoCodeInput.getValue())
+      || (checkout.promoCode) || "",
+    ).trim();
+    if (promo_code) {
+      checkout.promoCode = promo_code;
+      payload.promo_code = promo_code;
     }
     this.postService(SERVICE.payment.checkout, payload)
       .then((data) => {
@@ -1210,7 +1355,7 @@ class settings_billing extends LetcBox {
           return;
         }
         if (status === "NOT_ORG_OWNER" && Wm && Wm.alert) Wm.alert(LOCALE.NOT_ORG_OWNER);
-        else if (status && status !== "OK" && Wm && Wm.alert) Wm.alert(this._orgIdentError(status));
+        else if (status && status !== "OK" && Wm && Wm.alert) Wm.alert(this._orgIdentError(status, data));
       })
       .catch((e) => {
         this.warn("Got backend error [_proceedToCheckout]:", e);
@@ -1592,7 +1737,7 @@ class settings_billing extends LetcBox {
           // they already fall back to, and on the server that is a NO_PRICE
           // dead end. With no subscription there is simply nothing to do.
           if (this._hasPaidSub || this._isPaidByQuota()) this._confirmCancel();
-        } else if (planValue === "team" || planValue === "business") {
+        } else if (/^(pro|team|business)$/.test(planValue)) {
           // A live subscription means the click is a plan SWITCH: warn
           // (supersede) and route through checkout — the buyer always sees
           // and confirms the charge. With nothing live it is a normal
@@ -1632,12 +1777,15 @@ class settings_billing extends LetcBox {
 
       case "select-checkout-plan":
         const plan = this._getValueFromCmd(cmd, args);
-        if (/^(free|team|business)$/.test(plan)) {
+        if (/^(free|pro|team|business)$/.test(plan)) {
           // Storage and seats are fixed per plan now (flat pricing), so they
           // are read straight off the plan rather than nudged per branch.
           this.state.checkout.selectedPlan = plan;
           this.state.checkout.storage = this.storage[plan] || 0;
           this.state.checkout.seats = this.seats[plan] || 0;
+          // Plan-scoped codes may no longer match — drop the preview so the
+          // shopper re-Applies against the plan they are actually buying.
+          this._clearPromoPreview(false);
           this.renderContent();
         }
         return false;
@@ -1646,8 +1794,19 @@ class settings_billing extends LetcBox {
         const cycle = this._getValueFromCmd(cmd, args);
         if (cycle === "monthly" || cycle === "yearly") {
           this.state.checkout.billingCycle = cycle;
+          // Keep the applied promo — percent_off still applies; only the
+          // catalog base changes. Re-render so the discounted total updates.
           this.renderContent();
         }
+        return false;
+
+      case "apply-promo-code":
+        this._applyPromoCode();
+        return false;
+
+      case "remove-promo-code":
+        this._clearPromoPreview(true);
+        this.updateRightPanel();
         return false;
 
       case "select-bundle":
@@ -1720,7 +1879,110 @@ class settings_billing extends LetcBox {
         this.feed(require("./skeleton").default(this));
         return false;
 
+      case "redeem-toggle": {
+        const st = this.state.redeem || (this.state.redeem = {});
+        st.open = !st.open;
+        // Collapsing is also how you dismiss a failed attempt — carrying the
+        // old error back into a freshly reopened form would read as if the
+        // new code had already been rejected.
+        if (!st.open) delete st.error;
+        this.feed(require("./skeleton").default(this));
+        return false;
+      }
+
+      case "redeem-select-plan": {
+        const st = this.state.redeem || (this.state.redeem = {});
+        st.plan = cmd.mget(_a.value) || cmd.mget("value") || "team";
+        // A plan-locked code rejected for the previous plan may be fine for
+        // this one — drop the stale verdict rather than leaving it under a
+        // selection it no longer describes.
+        delete st.error;
+        delete st.success;
+        this.feed(require("./skeleton").default(this));
+        return false;
+      }
+
+      case "redeem-code":
+        this._redeemCode();
+        return false;
+
     }
+  }
+
+  /**
+   * Redeem a free-period partner code straight into a plan (promo.redeem) —
+   * no Stripe Checkout, no card. The server grants the entitlement and the
+   * expiry worker reverts it when the free period lapses.
+   *
+   * A code carrying a DISCOUNT is refused here (COUPON_NOT_REDEEMABLE):
+   * there is money to collect, so it belongs on the checkout tab. That case
+   * gets its own message pointing there rather than a flat failure.
+   */
+  async _redeemCode() {
+    const st = this.state.redeem || (this.state.redeem = {});
+    const code = String(
+      (this.__redeemCodeInput && this.__redeemCodeInput.getValue
+        && this.__redeemCodeInput.getValue())
+      || st.code || "",
+    ).trim();
+    st.code = code;
+    delete st.error;
+    delete st.success;
+
+    if (!code) {
+      st.error = LOCALE.PROMO_CODE_INVALID || "This promo code is not valid.";
+      this.feed(require("./skeleton").default(this));
+      return;
+    }
+
+    st.busy = true;
+    this.feed(require("./skeleton").default(this));
+
+    const res = await this.postService(SERVICE.promo.redeem, {
+      hub_id: Visitor.id,
+      promo_code: code,
+      plan: st.plan || "team",
+    }).catch(() => null);
+
+    st.busy = false;
+    const data = res || {};
+
+    if (!data.status || data.status !== "OK") {
+      st.error = data.status === "COUPON_NOT_REDEEMABLE"
+        ? (LOCALE.REDEEM_CODE_NEEDS_CHECKOUT
+          || "This code is a discount — enter it on the Checkout tab instead.")
+        : this._orgIdentError(data.status, data);
+      this.feed(require("./skeleton").default(this));
+      return;
+    }
+
+    // Entitlement is live: refresh the cached plan so the page (and the
+    // sidebar's Admin Console gate) stop showing Free, then re-render.
+    try {
+      if (data.quota && Visitor.respawn) {
+        Visitor.respawn({ plan: data.plan, quota: data.quota });
+      }
+    } catch (e) { /* best-effort — the reload below still corrects it */ }
+
+    // The LAUNCH30 pill was fetched once at render and is now wrong: the
+    // server's _isEligible() already refuses a caller who has left domain 1
+    // or holds a non-free plan, both of which just became true. Without
+    // this the page keeps offering a free month the caller can no longer
+    // claim until they reload.
+    this._promoState = null;
+
+    const until = data.trial_ends_at
+      ? Dayjs.unix(data.trial_ends_at).format("MMM D, YYYY")
+      : "";
+    st.success = until
+      ? (LOCALE.REDEEM_CODE_OK_DATED
+        || "Code {0} applied — your {1} plan runs until {2}.").format(
+        data.code, data.plan, until)
+      : (LOCALE.REDEEM_CODE_OK || "Code {0} applied.").format(data.code);
+    st.code = "";
+
+    await this._loadSubscription().catch(() => null);
+    if (!this.isDestroyed()) this.fetchPlanData();
   }
 
   /**

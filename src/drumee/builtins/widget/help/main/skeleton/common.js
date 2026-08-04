@@ -4,26 +4,47 @@
  */
 
 /**
- * 16:9 media block. No page carries a video source yet, so this renders the
- * design's grey panel with a centred play badge. Once a real `src` exists the
- * badge becomes the poster overlay and the click starts playback.
+ * 16:9 media block.
+ *
+ * No page carries a video source yet (mock.js has no `video` field), so this
+ * renders the "coming soon" state: a blurred backdrop behind the play badge
+ * and a label, with the frame inert — a play button that starts nothing is a
+ * dead affordance. Give a page `video: { src }` and it becomes a real,
+ * clickable player frame with the backdrop unblurred.
  */
-function videoBlock(ui) {
+function videoBlock(ui, video) {
   const pfx = `${ui.fig.family}__video`;
+  const src = video && video.src;
+
   return Skeletons.Box.Y({
     className: `${pfx}-frame`,
-    service: "help-play-video",
-    uiHandler: [ui],
+    attrOpt: { "data-placeholder": src ? 0 : 1 },
+    service: src ? "help-play-video" : null,
+    uiHandler: src ? [ui] : undefined,
     kidsOpt: { active: 0 },
     kids: [
-      Skeletons.Box.X({
-        className: `${pfx}-play`,
+      // Separate layer so only the backdrop blurs — blurring the frame would
+      // smear the badge and label sitting on top of it.
+      Skeletons.Box.Z({ className: `${pfx}-backdrop` }),
+      Skeletons.Box.Y({
+        className: `${pfx}-overlay`,
         kids: [
-          Skeletons.Image.Svg({
-            ico: "ph-play-fill",
-            className: `${pfx}-play-ico`,
+          Skeletons.Box.X({
+            className: `${pfx}-play`,
+            kids: [
+              Skeletons.Image.Svg({
+                ico: "ph-play-fill",
+                className: `${pfx}-play-ico`,
+              }),
+            ],
           }),
-        ],
+          src
+            ? null
+            : Skeletons.Note({
+                className: `${pfx}-coming-soon`,
+                content: LOCALE.COMING_SOON,
+              }),
+        ].filter(Boolean),
       }),
     ],
   });

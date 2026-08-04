@@ -1,0 +1,758 @@
+@use 'mixins/drumee';
+
+// BEM root: .tutorial-share
+// Step 5 — the folder's secure-share panel (Figma 3314:86712 / 3314:86722 /
+// 3314:140345). Those frames are real vector, so these are the design's own
+// metrics: 450px panel, 24px gutters, 401px blocks, 55px option rows, 36px
+// primary button. Tokens: Primary/40 #5950ff, Signal/Error #d74e49.
+//
+// The folder window behind the panel is the shared toolkit's, rendered with
+// pfx = tutorial-share, so the header/tabs/grid rules mirror the folder step's.
+
+.tutorial-share {
+
+  // ── Root ────────────────────────────────────────────────────────────────────
+  &__ui {
+    position: absolute;
+    flex: 1;
+    min-height: 0;
+    width: 100%;
+    height: 100%;
+    max-width: 1242px;
+    max-height: 700px;
+    transform: translate(-50%, -50%);
+    top: 50%;
+    left: 50%;
+    border: 1px solid var(--neutral-300);
+    border-radius: var(--corner-radius-2, 8px);
+    overflow: hidden;
+
+    &[data-aspect="faded"] {
+      opacity: .45;
+    }
+  }
+
+  // The panel is absolutely placed over the chat rail, which is where the
+  // design slides it in from.
+  &__main {
+    position: relative;
+    flex: 1;
+    min-height: 0;
+    width: 100%;
+    height: 100%;
+    background: var(--normal-bg);
+  }
+
+  // ── Folder chrome (toolkit) ─────────────────────────────────────────────────
+  &__header {
+    width: 100%;
+    box-sizing: border-box;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--spacer-4) var(--spacer-6);
+    background: var(--normal-bg-90);
+    border-bottom: 1px solid var(--border-muted);
+    flex-shrink: 0;
+  }
+
+  &__header-left { align-items: center; gap: 8px; }
+
+  // Shared folder: pink, like the tracker step's.
+  &__header-icon {
+    width: 22px;
+    height: 22px;
+    color: var(--area-share, #ffa8dc);
+    flex-shrink: 0;
+
+    svg { width: 100%; height: 100%; fill: currentColor; }
+  }
+
+  &__header-name {
+    font-family: var(--font-main);
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--normal-fg);
+  }
+
+  &__header-restricted {
+    font-family: var(--font-main);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: #d6479c;
+    background: rgba(255, 168, 220, 0.18);
+    border: 1px solid rgba(255, 168, 220, 0.45);
+    border-radius: 4px;
+    padding: 2px 7px;
+  }
+
+  &__header-actions { align-items: center; gap: 8px; }
+
+  &__header-upload,
+  &__header-add {
+    display: inline-flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    height: 28px;
+    padding: 0 12px;
+    gap: 6px;
+    border-radius: 4px;
+    cursor: pointer;
+    flex-shrink: 0;
+
+    svg { width: 13px; height: 13px; }
+
+    span.label, section.label { font-size: 13px; font-weight: 600; white-space: nowrap; }
+  }
+
+  &__header-upload {
+    background: var(--normal-bg);
+    border: 1px solid var(--border-muted);
+
+    svg { fill: var(--normal-fg); }
+    span.label, section.label { color: var(--normal-fg); }
+  }
+
+  &__header-add {
+    background: #b1adff;
+
+    svg { fill: #0b0a21; }
+    span.label, section.label { color: #0b0a21; }
+  }
+
+  &__header-settings,
+  &__header-close {
+    width: 28px;
+    height: 28px;
+    padding: 6px;
+    border-radius: 4px;
+    color: var(--normal-fg-50);
+    flex-shrink: 0;
+
+    svg { width: 100%; height: 100%; }
+  }
+
+  &__tabs {
+    width: 100%;
+    height: 44px;
+    align-items: center;
+    padding: 0 16px;
+    gap: 8px;
+    border-bottom: 1px solid var(--border-muted);
+    flex-shrink: 0;
+    background: var(--normal-bg);
+  }
+
+  &__tab {
+    display: inline-flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    height: 30px;
+    padding: 0 12px;
+    gap: 6px;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--normal-fg-50);
+    background: var(--normal-bg-90);
+    cursor: pointer;
+    box-sizing: border-box;
+    border: 1px solid transparent;
+
+    svg { width: 14px; height: 14px; fill: currentColor; }
+
+    span.label, section.label { font-size: 13px; font-weight: 500; color: inherit; }
+
+    // Shared folder, so the live tab is outlined in the same pink.
+    &.active {
+      color: var(--normal-fg);
+      border-color: var(--area-share, #ffa8dc);
+      font-weight: 600;
+
+      span.label, section.label { font-weight: 600; color: var(--normal-fg); }
+    }
+  }
+
+  &__content {
+    flex: 1;
+    min-height: 0;
+    width: 100%;
+  }
+
+  &__files {
+    flex: 1;
+    min-height: 0;
+    overflow: visible;
+  }
+
+  &__filter {
+    align-items: center;
+    gap: 4px;
+    padding: 8px 24px 0;
+    border-bottom: 1px solid var(--border-muted);
+    flex-shrink: 0;
+    background-color: var(--normal-bg);
+  }
+
+  &__filter-item {
+    padding: 6px 12px;
+    font-family: var(--font-main);
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--normal-fg-50);
+    border-bottom: 2px solid transparent;
+    box-sizing: border-box;
+
+    &.active {
+      color: var(--primary-40, #5950ff);
+      border-bottom-color: var(--primary-40, #5950ff);
+      font-weight: 600;
+    }
+  }
+
+  &__grid {
+    flex-wrap: wrap;
+    gap: 24px;
+    padding: 24px;
+    flex: 1;
+    min-height: 0;
+    align-content: flex-start;
+    pointer-events: none;
+    overflow: visible;
+  }
+
+  &__grid-file { align-items: center; gap: 6px; width: 110px; opacity: .55; }
+
+  &__grid-file-icon-wrap {
+    width: 80px;
+    height: 80px;
+    border-radius: 8px;
+    background: var(--normal-bg-90);
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  &__grid-file-icon {
+    width: 40px;
+    height: 40px;
+
+    svg { width: 100%; height: 100%; }
+  }
+
+  &__grid-file-name {
+    font-family: var(--font-main);
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--normal-fg);
+    max-width: 110px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    text-align: center;
+  }
+
+  &__grid-file-date {
+    font-family: var(--font-main);
+    font-size: 10px;
+    color: var(--normal-fg-50);
+    text-align: center;
+  }
+
+  // Team chat rail: the panel covers it, so it only has to hold the space.
+  &__chat-panel {
+    width: 450px;
+    min-width: 450px;
+    flex-shrink: 0;
+    border-left: 1px solid var(--border-muted);
+    background: var(--normal-bg);
+  }
+
+  &__chat-header,
+  &__chat-messages,
+  &__chat-input-bar { display: none !important; }
+
+  // ══ Secure share panel ═════════════════════════════════════════════════════
+  &__panel {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: 450px;
+    box-sizing: border-box;
+    background: var(--normal-bg);
+    border-left: 1px solid var(--border-muted);
+    box-shadow: -1px 0 11px rgba(0, 0, 0, 0.08);
+    z-index: 2;
+  }
+
+  &__panel-head {
+    height: 49px;
+    flex-shrink: 0;
+    box-sizing: border-box;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 24px;
+    border-bottom: 1px solid var(--border-muted);
+  }
+
+  &__panel-title {
+    font-family: var(--font-main);
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--normal-fg);
+  }
+
+  &__panel-close {
+    width: 14px;
+    height: 14px;
+    flex-shrink: 0;
+    color: var(--normal-fg-50);
+
+    svg { width: 100%; height: 100%; fill: currentColor; }
+  }
+
+  &__panel-body {
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+    padding: 16px 24px;
+    gap: 22px;
+  }
+
+
+  &__block { gap: 10px; flex-shrink: 0; }
+
+  &__label {
+    font-family: var(--font-main);
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--normal-fg);
+  }
+
+  &__label-row { align-items: center; justify-content: space-between; }
+
+  &__hint {
+    font-family: var(--font-main);
+    font-size: 12px;
+    color: var(--normal-fg-50);
+    line-height: 1.4;
+  }
+
+  &__rows { gap: 8px; }
+
+  // ── Permission rows ─────────────────────────────────────────────────────────
+  &__row {
+    height: 44px;
+    box-sizing: border-box;
+    align-items: center;
+    gap: 10px;
+    padding: 0 12px;
+    border-radius: 8px;
+    border: 1px solid var(--border-muted);
+    background: var(--normal-bg);
+
+    &.selected {
+      border-color: var(--primary-40, #5950ff);
+      background: #f5f4ff;
+    }
+  }
+
+  &__row-icon {
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+    color: var(--normal-fg-50);
+
+    svg { width: 100%; height: 100%; fill: currentColor; }
+  }
+
+  &__row-label {
+    flex: 1;
+    font-family: var(--font-main);
+    font-size: 13px;
+    color: var(--normal-fg);
+  }
+
+  // ── Controls ────────────────────────────────────────────────────────────────
+  &__check {
+    width: 18px;
+    height: 18px;
+    box-sizing: border-box;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    border: 1px solid var(--neutral-300);
+    background: var(--normal-bg);
+
+    &.on {
+      border-color: var(--primary-40, #5950ff);
+      background: var(--primary-40, #5950ff);
+    }
+  }
+
+  &__check-icon {
+    width: 11px;
+    height: 11px;
+    color: #fff;
+
+    svg { width: 100%; height: 100%; fill: currentColor; }
+  }
+
+  &__radio {
+    width: 16px;
+    height: 16px;
+    box-sizing: border-box;
+    flex-shrink: 0;
+    border-radius: 50%;
+    border: 1px solid var(--neutral-300);
+    background: var(--normal-bg);
+
+    &.on {
+      border: 5px solid var(--primary-40, #5950ff);
+    }
+  }
+
+  &__toggle {
+    width: 40px;
+    height: 20px;
+    box-sizing: border-box;
+    flex-shrink: 0;
+    padding: 2px;
+    border-radius: 99px;
+    background: var(--normal-bg-80, #e5e5ea);
+
+    &.on {
+      background: var(--primary-40, #5950ff);
+      align-items: flex-end;
+    }
+  }
+
+  &__toggle-knob {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: #fff;
+  }
+
+  // ── Access modes ────────────────────────────────────────────────────────────
+  // Unselected reads as a filled pill; the chosen one is a white card outlined
+  // in brand purple, holding the controls it unfolds.
+  &__mode {
+    box-sizing: border-box;
+    padding: 12px;
+    gap: 12px;
+    border-radius: 12px;
+    border: 1.5px solid transparent;
+    background: var(--normal-bg-90);
+
+    &.selected {
+      border-color: var(--primary-40, #5950ff);
+      background: var(--primary-10);
+    }
+  }
+
+  // The two white cards inside the chosen mode: who may open the link, and
+  // how it is locked.
+  &__group {
+    box-sizing: border-box;
+    gap: 10px;
+    padding: 12px;
+    border-radius: 10px;
+    border: 1px solid var(--border-muted);
+    background: var(--normal-bg);
+  }
+
+  &__mode-head { align-items: center; gap: 10px; }
+
+  &__opt { align-items: center; gap: 10px; }
+
+  &__opt-icon {
+    width: 15px;
+    height: 15px;
+    flex-shrink: 0;
+    color: var(--normal-fg-50);
+
+    svg { width: 100%; height: 100%; fill: currentColor; }
+  }
+
+  &__opt-info {
+    width: 12px;
+    height: 12px;
+    flex-shrink: 0;
+    color: var(--normal-fg-50);
+
+    svg { width: 100%; height: 100%; fill: currentColor; }
+  }
+
+  &__opt-body { flex: 1; min-width: 0; gap: 2px; }
+
+  &__opt-label {
+    font-family: var(--font-main);
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--normal-fg);
+
+    &.grow { flex: 1; }
+  }
+
+  &__opt-hint {
+    font-family: var(--font-main);
+    font-size: 11px;
+    color: var(--normal-fg-50);
+  }
+
+  &__secure-body {
+    gap: 10px;
+  }
+
+  // ── Email chips + fields ────────────────────────────────────────────────────
+  &__chips { flex-wrap: wrap; gap: 6px; }
+
+  &__chip {
+    height: 24px;
+    box-sizing: border-box;
+    align-items: center;
+    gap: 6px;
+    padding: 0 8px;
+    border-radius: 6px;
+    background: var(--normal-bg-90);
+    flex-shrink: 0;
+
+    &.more {
+      font-family: var(--font-main);
+      font-size: 11px;
+      color: var(--normal-fg-50);
+      line-height: 22px;
+      padding: 0 8px;
+    }
+  }
+
+  &__chip-label {
+    font-family: var(--font-main);
+    font-size: 11px;
+    color: var(--normal-fg);
+  }
+
+  &__chip-x {
+    width: 12px;
+    height: 12px;
+    flex-shrink: 0;
+    color: var(--normal-fg-50);
+
+    svg { width: 100%; height: 100%; fill: currentColor; }
+  }
+
+  &__field {
+    height: 36px;
+    box-sizing: border-box;
+    align-items: center;
+    gap: 8px;
+    padding: 0 12px;
+    border-radius: 8px;
+    border: 1px solid var(--border-muted);
+    background: var(--normal-bg);
+    font-family: var(--font-main);
+    font-size: 12px;
+    color: var(--normal-fg-50);
+    line-height: 34px;
+
+    &.pw,
+    &.link { background: var(--normal-bg-90); line-height: normal; }
+
+    &.link { flex: 1; min-width: 0; }
+  }
+
+  &__field-value {
+    flex: 1;
+    min-width: 0;
+    font-family: var(--font-main);
+    font-size: 12px;
+    color: var(--normal-fg);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  &__field-icon {
+    width: 13px;
+    height: 13px;
+    flex-shrink: 0;
+    color: var(--normal-fg-50);
+
+    &.edit { color: var(--primary-40, #5950ff); }
+
+    svg { width: 100%; height: 100%; fill: currentColor; }
+  }
+
+  // ── Expiry + link ───────────────────────────────────────────────────────────
+  &__segments {
+    height: 33px;
+    box-sizing: border-box;
+    padding: 4px;
+    gap: 0;
+    border-radius: 8px;
+    background: var(--normal-bg-90);
+  }
+
+  &__segment {
+    flex: 1;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    border-radius: 6px;
+
+    &.selected {
+      background: var(--normal-bg);
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+    }
+  }
+
+  &__segment-label {
+    font-family: var(--font-main);
+    font-size: 12px;
+    color: var(--normal-fg);
+  }
+
+  &__segment-icon {
+    width: 11px;
+    height: 11px;
+    color: var(--normal-fg-50);
+
+    svg { width: 100%; height: 100%; fill: currentColor; }
+  }
+
+  &__cta {
+    height: 36px;
+    box-sizing: border-box;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    border-radius: 8px;
+    background: var(--primary-40, #5950ff);
+    cursor: pointer;
+  }
+
+  &__cta-icon {
+    width: 14px;
+    height: 14px;
+    color: #fff;
+
+    svg { width: 100%; height: 100%; fill: currentColor; }
+  }
+
+  &__cta-label {
+    font-family: var(--font-main);
+    font-size: 14px;
+    font-weight: 600;
+    color: #fff;
+  }
+
+  &__link-row { align-items: center; gap: 8px; }
+
+  &__revoke {
+    height: 36px;
+    box-sizing: border-box;
+    align-items: center;
+    gap: 6px;
+    padding: 0 14px;
+    border-radius: 8px;
+    flex-shrink: 0;
+    background: #d74e49;
+    cursor: pointer;
+  }
+
+  &__revoke-icon {
+    width: 13px;
+    height: 13px;
+    color: #fff;
+
+    svg { width: 100%; height: 100%; fill: currentColor; }
+  }
+
+  &__revoke-label {
+    font-family: var(--font-main);
+    font-size: 13px;
+    font-weight: 600;
+    color: #fff;
+  }
+
+  // ── Access log ──────────────────────────────────────────────────────────────
+  &__log {
+    box-sizing: border-box;
+    padding: 12px;
+    gap: 16px;
+    border-radius: 8px;
+    border: 1px solid var(--border-muted);
+    overflow: hidden;
+  }
+
+  &__log-row {
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+
+    &.head .tutorial-share__cell {
+      font-weight: 600;
+      color: var(--normal-fg-50);
+    }
+  }
+
+  &__cell {
+    font-family: var(--font-main);
+    font-size: 10px;
+    color: var(--normal-fg);
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+
+    &[data-col="email"]    { flex: 0 0 125px; }
+    &[data-col="when"]     { flex: 0 0 90px; }
+    &[data-col="duration"] { flex: 0 0 50px; }
+    &[data-col="action"]   { flex: 1; align-items: flex-end; }
+  }
+
+  &__log-avatar {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    background: linear-gradient(140deg, #d9d5f2, #efe7e4);
+  }
+
+  &__log-email {
+    font-family: var(--font-main);
+    font-size: 10px;
+    color: var(--normal-fg);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  &__log-remove {
+    width: 13px;
+    height: 13px;
+    border-radius: 50%;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    border: 1px solid #d74e49;
+    color: #d74e49;
+  }
+
+  &__log-remove-icon {
+    width: 7px;
+    height: 7px;
+
+    svg { width: 100%; height: 100%; fill: currentColor; }
+  }
+
+  // ── tooltip anchor ──────────────────────────────────────────────────────────
+  &__tooltip-anchor {
+    top: 26px;
+    left: -300px;
+  }
+
+}

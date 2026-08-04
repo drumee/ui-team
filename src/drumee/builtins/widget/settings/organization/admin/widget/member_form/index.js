@@ -182,6 +182,25 @@ class ___widget_member_form extends LetcBox {
       orgid: this._source.mget('orgId'),
       ...data
     }).then((res) => {
+      // Team-at-cap → seat Upgrade card (org OWNER only). Free → no seat popup.
+      const status = res && res.status;
+      if (status === "SEAT_LIMIT_REACHED") {
+        const { canShowSeatLimitPopup } = require("libs/billing");
+        if (
+          canShowSeatLimitPopup() &&
+          typeof Wm !== "undefined" &&
+          Wm.openQuotaExceeded
+        ) {
+          Wm.openQuotaExceeded({ limit: "seat" });
+        }
+        return;
+      }
+      if (status === "Invalid plan") return;
+      if (status && status !== _a.active && status !== "ok" && !res.drumate_id) {
+        return this.renderMessage(
+          (LOCALE.INTERNAL_ERROR || "Error") + ` [${status}]`,
+        );
+      }
       let opt = { ...res, service: "member-added" }
       this.triggerHandlers(opt)
     })

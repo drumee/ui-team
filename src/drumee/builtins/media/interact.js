@@ -1019,7 +1019,7 @@ class __media_interact extends media_core {
    * "Share" — open the invite-members popup targeting this node's hub
    * (the per-file/folder shortcut into the invite flow).
    */
-  openInvitePopup() {
+  async openInvitePopup() {
     if (typeof Wm === "undefined" || !Wm.__wrapperModal) return;
     const hub_id =
       (typeof this.getHostId === "function" && this.getHostId()) ||
@@ -1033,6 +1033,9 @@ class __media_interact extends media_core {
     const hub_name = this.isHub
       ? this.mget(_a.filename) || this.mget(_a.name) || ""
       : "";
+    // Free: solo — no invites (silent). Org seat cap does not apply to hub.invite.
+    const { isFreeSoloPlan, showFreeSoloLimit } = require("libs/billing");
+    if (isFreeSoloPlan()) return showFreeSoloLimit();
     return Kind.waitFor("invite_popup").then(() => {
       Wm.__wrapperModal.feed({
         kind: "invite_popup",

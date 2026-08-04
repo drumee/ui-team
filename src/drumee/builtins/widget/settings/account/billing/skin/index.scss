@@ -1,6 +1,45 @@
 @use "sass:meta";
 @use "mixins/drumee";
 
+// The standard Drumee text field, as used by both promo inputs in this
+// widget. Skeletons.Entry paints its own inner <input>, so the box is the
+// wrapper and the inner element has to be flattened into it — otherwise the
+// value sits off-centre with a second, nested border. Kept as one mixin so
+// the checkout field and the redeem field cannot drift apart.
+@mixin drumee-entry-box($height: 48px) {
+  height: $height;
+  box-sizing: border-box;
+  border-radius: var(--corner-radius-4, 8px);
+  padding: 0 var(--spacer-3, 12px);
+  border: 1px solid var(--neutral-200);
+  background-color: var(--white);
+  display: flex !important;
+  align-items: center;
+  flex-flow: row nowrap;
+
+  > *,
+  .drumee-entry-input,
+  input {
+    flex: 1 1 auto;
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+    border: none;
+    background: transparent;
+    padding: 0;
+    margin: 0;
+    box-sizing: border-box;
+  }
+
+  input {
+    line-height: $height - 2px;
+  }
+
+  &:focus-within {
+    border-color: var(--primary-50);
+  }
+}
+
 .settings-billing {
   &__ui {
     width: 100%;
@@ -170,6 +209,13 @@
         font-size: 14px;
         line-height: 1.4;
         color: var(--neutral-900);
+
+        // Holds the row open on the cards that have no label, so all four
+        // headers are the same height and the prices sit on one line.
+        // visibility, not display:none — the box has to keep occupying space.
+        &.is-placeholder {
+          visibility: hidden;
+        }
       }
 
       &-row {
@@ -527,6 +573,150 @@
       }
     }
   }
+
+  // "Have a partner code?" — direct redeem, shown on the Billing page to a
+  // Free payer only (see redeemBox in skeleton/index.js). Uses the same
+  // brand tokens as the promo modal and claim pill so the three read as one
+  // feature rather than three bolted-on boxes.
+  &__redeem {
+    gap: var(--spacer-2);
+    margin-top: var(--spacer-4);
+    padding: var(--spacer-5);
+    border-radius: var(--corner-radius-4);
+    background: var(--normal-bg-90);
+
+    &-title {
+      font-weight: 600;
+      font-size: 14px;
+      line-height: 22px;
+      color: var(--normal-fg-800);
+    }
+    // Collapsed: one quiet line, no card chrome, so it does not compete
+    // with the plan cards it sits above.
+    &.is-collapsed {
+      padding: var(--spacer-3) var(--spacer-4);
+      background: transparent;
+      border: 1px solid var(--border-default);
+    }
+
+    // Post-redeem: the form is gone, only the confirmation remains, so it
+    // needs the padding the toggle row was providing.
+    &.is-done {
+      padding: var(--spacer-3) var(--spacer-4);
+    }
+
+    &-toggle {
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--spacer-3);
+      cursor: pointer;
+    }
+
+    &-toggle-hint {
+      flex-shrink: 0;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--primary-50);
+    }
+
+
+    &-sub {
+      font-size: 12.5px;
+      line-height: 1.4;
+      color: var(--normal-fg-50);
+    }
+
+    &-pill-bar {
+      gap: var(--spacer-2);
+      margin-top: var(--spacer-3);
+      padding: 3px;
+      border-radius: var(--corner-radius-max);
+      background: var(--normal-bg-80);
+      align-self: flex-start;
+    }
+
+    &-pill-item {
+      cursor: pointer;
+      padding: 6px 18px;
+      border-radius: var(--corner-radius-max);
+      justify-content: center;
+      align-items: center;
+      transition: background 0.15s ease;
+
+      &[data-state="1"] {
+        background: var(--primary-50);
+
+        .settings-billing__redeem-pill-text {
+          color: var(--white);
+        }
+      }
+    }
+
+    &-pill-text {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--normal-fg-20);
+    }
+
+    &-row {
+      gap: var(--spacer-3);
+      align-items: stretch;
+      min-height: 48px;
+      margin-top: var(--spacer-3);
+    }
+
+    &-input {
+      flex: 1 1 auto;
+      min-width: 0;
+      @include drumee-entry-box;
+    }
+
+    // Matches the field it sits beside: same 48px box, same radius, so the
+    // pair reads as one control rather than a pill floating next to an input.
+    &-cta {
+      flex: 0 0 auto;
+      align-self: stretch;
+      display: inline-flex !important;
+      align-items: center;
+      justify-content: center;
+      min-height: 48px;
+      box-sizing: border-box;
+      cursor: pointer;
+      white-space: nowrap;
+      color: var(--white);
+      background: var(--primary-50);
+      font-weight: 600;
+      font-size: 13.5px;
+      line-height: 1.4;
+      padding: 0 var(--spacer-5);
+      border-radius: var(--corner-radius-4, 8px);
+
+      &:hover {
+        background: var(--primary-60);
+      }
+
+      &.is-busy {
+        opacity: 0.7;
+        cursor: default;
+        pointer-events: none;
+      }
+    }
+
+    &-error {
+      font-size: 12.5px;
+      line-height: 1.4;
+      color: var(--error);
+      margin-top: var(--spacer-2);
+    }
+
+    &-success {
+      font-size: 12.5px;
+      line-height: 1.4;
+      color: var(--success);
+      margin-top: var(--spacer-2);
+    }
+  }
+
 
   &__footer {
     &-main {
@@ -1664,7 +1854,11 @@
   align-items: stretch;
 
   > * {
-    flex: 1 1 260px;
+    // 200px, was 260: five cards now (Pro joined 2026-08-03). At the page's
+    // ~1280px content width, 5x260 + gaps forced a 4+1 wrap with one card
+    // stranded full-width on its own row; 200 lets all five share the row
+    // and wrap 3+2 -> 2+2+1 as the container narrows.
+    flex: 1 1 200px;
     min-width: 0; // let a flex item shrink below its content width
   }
 
@@ -1757,6 +1951,105 @@
 // fitting side by side, stack them. The summary also drops its sticky pinning
 // — once it sits under the form there is nothing left to scroll past, and a
 // stuck panel would just hover over the page.
+.settings-billing__checkout-promo {
+  width: 100%;
+  margin-top: var(--spacer-4, 16px);
+  margin-bottom: var(--spacer-2, 8px);
+  gap: var(--spacer-2, 8px);
+
+  &-label {
+    @include drumee.typo(
+      $size: 14px,
+      $line: 22px,
+      $weight: 600,
+      $color: var(--neutral-900)
+    );
+  }
+
+  &-row {
+    align-items: stretch;
+    gap: var(--spacer-3, 12px);
+    width: 100%;
+    min-height: 48px;
+  }
+
+  &-input {
+    flex: 1 1 auto;
+    min-width: 0;
+    @include drumee-entry-box;
+  }
+
+  // Text CTA — stretch to the same 48px row height; text dead-center.
+  &-apply {
+    flex: 0 0 auto;
+    align-self: stretch;
+    display: inline-flex !important;
+    align-items: center;
+    justify-content: center;
+    min-height: 48px;
+    padding: 0 var(--spacer-4, 16px);
+    margin: 0;
+    white-space: nowrap;
+    cursor: pointer;
+    border-radius: var(--corner-radius-4, 8px);
+    box-sizing: border-box;
+    @include drumee.typo(
+      $size: 14px,
+      $line: 20px,
+      $weight: 600,
+      $color: var(--primary-50, #433cc5)
+    );
+
+    &:hover {
+      background-color: var(--primary-95, rgba(67, 60, 197, 0.06));
+    }
+
+    &.is-applied {
+      color: var(--normal-fg-50, #6b7280);
+      font-weight: 500;
+
+      &:hover {
+        background-color: var(--neutral-100, rgba(0, 0, 0, 0.04));
+      }
+    }
+  }
+
+  &-error {
+    color: var(--color-danger, #c0392b);
+    font-size: 13px;
+  }
+
+  &-applied {
+    color: var(--color-success, #1f8a4c);
+    font-size: 13px;
+  }
+}
+
+.settings-billing__checkout-total-price {
+  &.has-promo {
+    align-items: baseline;
+    gap: var(--spacer-2, 8px);
+  }
+
+  &-original {
+    text-decoration: line-through;
+    opacity: 0.55;
+    font-size: 0.85em;
+  }
+}
+
+.settings-billing__checkout-breakdown-discount {
+  .settings-billing__checkout-breakdown-value {
+    color: var(--color-success, #1f8a4c);
+  }
+}
+
+.settings-billing__checkout-promo-trial-note {
+  margin: 0 0 var(--spacer-3, 12px);
+  font-size: 13px;
+  opacity: 0.85;
+}
+
 @container billing-content (max-width: 900px) {
   .settings-billing__checkout-left,
   .settings-billing__checkout-right {

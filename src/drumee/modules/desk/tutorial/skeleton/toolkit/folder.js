@@ -6,10 +6,11 @@ const SUB_FOLDERS = [
   "Sub-folder v4",
 ];
 
+// Three tiles. bg_concept.png earns its place: the team-chat panel next to
+// the grid keeps referring to it.
 const FILES = [
-  { name: "spec_v2.docx", date: "Oct 12, 2023", ico: "addmenu-document" },
-  { name: "spec_v2.pdf", date: "Oct 12, 2023", ico: "file-pdf" },
-  { name: "note", date: "Oct 12, 2023", ico: "addmenu-note" },
+  { name: "spec_v2.docx", date: "Oct 12, 2023", ico: "app-doc-file" },
+  { name: "spec_v2.pdf", date: "Oct 12, 2023", ico: "app-pdf-file" },
   { name: "bg_concept.png", date: "Oct 12, 2023", ico: "image" },
 ];
 
@@ -105,7 +106,16 @@ export function workspaceContent(ui, opt = {}) {
 }
 
 // ── Folder header bar ─────────────────────────────────────────────────────────
-export function folderHeader(ui, pfx) {
+/**
+ * @param {Object} ui
+ * @param {String} pfx
+ * @param {Object} [opt]
+ * @param {String} [opt.badge] access badge next to the name. Defaults to
+ *   INTERNAL; the tracker step passes EXTERNAL, since its folder is a shared
+ *   one (see the pink treatment in task/skin).
+ */
+export function folderHeader(ui, pfx, opt = {}) {
+  const badge = opt.badge || LOCALE.INTERNAL || "INTERNAL";
   return Skeletons.Box.X({
     className: `${pfx}__header`,
     sys_pn: "folder-header",
@@ -123,7 +133,7 @@ export function folderHeader(ui, pfx) {
           }),
           Skeletons.Note({
             className: `${pfx}__header-restricted`,
-            content: LOCALE.INTERNAL || "INTERNAL",
+            content: badge,
             sys_pn: "restricted-badge",
           }),
         ],
@@ -156,26 +166,38 @@ export function folderHeader(ui, pfx) {
 }
 
 // ── Tab bar ───────────────────────────────────────────────────────────────────
-export function tabBar(ui, pfx) {
+/**
+ * @param {Object} ui
+ * @param {String} pfx
+ * @param {Object} [opt]
+ * @param {String} [opt.active='files'] which tab reads as selected
+ * @param {Boolean} [opt.meeting] append the Meeting tab (Step 2 screens 2-3;
+ *   the Figma for screen 1 predates it, so it stays off by default and the
+ *   other steps keep the exact three-tab bar they render today)
+ */
+export function tabBar(ui, pfx, opt = {}) {
+  const { active = "files", meeting = false } = opt;
+  const tabs = [
+    { key: "files", ico: "app-file", label: LOCALE.FILES || "Files" },
+    { key: "chat", ico: "apps-chat", label: LOCALE.CHAT || "Chat" },
+    { key: "tasks", ico: "app-task", label: LOCALE.TASKS || "Tasks" },
+  ];
+  if (meeting) {
+    tabs.push({
+      key: "meeting",
+      ico: "folder-meeting",
+      label: LOCALE.MEETING || "Meeting",
+    });
+  }
   return Skeletons.Box.X({
     className: `${pfx}__tabs`,
-    kids: [
+    kids: tabs.map((t) =>
       Skeletons.Button.Label({
-        ico: "apps-folder-card",
-        className: `${pfx}__tab active`,
-        label: LOCALE.FILES || "Files",
+        ico: t.ico,
+        className: `${pfx}__tab${t.key === active ? " active" : ""}`,
+        label: t.label,
       }),
-      Skeletons.Button.Label({
-        ico: "apps-chat",
-        className: `${pfx}__tab`,
-        label: LOCALE.CHAT || "Chat",
-      }),
-      Skeletons.Button.Label({
-        ico: "checkbox",
-        className: `${pfx}__tab`,
-        label: LOCALE.TASKS || "Tasks",
-      }),
-    ],
+    ),
   });
 }
 
@@ -200,19 +222,57 @@ export function typeFilter(ui, pfx) {
 }
 
 // ── File grid ─────────────────────────────────────────────────────────────────
-export function folderItem(ui, name, opt = {}) {
-  let pfx = ui.fig.group;
+/**
+ * The kebab every tile carries next to its name, as in the design. It is also
+ * the anchor a tile menu hangs from, so it stays positioned even though the
+ * tiles are laid out by a wrapping grid.
+ *
+ * Always keyed on ui.fig.group so folder tiles (group prefix) and file tiles
+ * (family prefix) share one rule — see skin/media.scss.
+ *
+ * @param {Object} ui
+ * @param {Array} [kids] extra children, e.g. a context menu
+ */
+export function moreButton(ui, kids = []) {
+  const p = ui.fig.group;
   return Skeletons.Box.Y({
-    className: `${pfx}__grid-folder`,
-    ...opt,
+    className: `${p}__grid-more`,
     kids: [
-      workspaceIcon(ui, opt.area),
-      Skeletons.Note({ className: `${pfx}__grid-folder-name`, content: name }),
+      Skeletons.Image.Svg({ ico: "apps-dots-vertical", className: `${p}__grid-more-icon` }),
+      ...kids,
     ],
   });
 }
 
-export function fileItem(ui, pfx, { name, date, ico }) {
+/**
+ * @param {Object} opt
+ * @param {Boolean} [opt.more] render the kebab next to the name. Off by
+ *   default: the Step 1 workspace cards reuse this and have no kebab.
+ * @param {Object} [opt.menu] menu skeleton to hang under the kebab
+ */
+export function folderItem(ui, name, opt = {}) {
+  let pfx = ui.fig.group;
+  const { more, menu, ...rest } = opt;
+  const label = Skeletons.Note({
+    className: `${pfx}__grid-folder-name`,
+    content: name,
+  });
+  return Skeletons.Box.Y({
+    className: `${pfx}__grid-folder`,
+    ...rest,
+    kids: [
+      workspaceIcon(ui, opt.area),
+      more
+        ? Skeletons.Box.X({
+          className: `${pfx}__grid-name-row`,
+          kids: [label, moreButton(ui, menu ? [menu] : [])],
+        })
+        : label,
+    ],
+  });
+}
+
+export function fileItem(ui, pfx, { name, date, ico }, opt = {}) {
   return Skeletons.Box.Y({
     className: `${pfx}__grid-file`,
     kids: [
@@ -222,22 +282,54 @@ export function fileItem(ui, pfx, { name, date, ico }) {
           Skeletons.Image.Svg({ ico, className: `${pfx}__grid-file-icon` }),
         ],
       }),
-      Skeletons.Note({ className: `${pfx}__grid-file-name`, content: name }),
+      Skeletons.Box.X({
+        className: `${ui.fig.group}__grid-name-row`,
+        kids: [
+          Skeletons.Note({ className: `${pfx}__grid-file-name`, content: name }),
+          moreButton(ui, opt.menu ? [opt.menu] : []),
+        ],
+      }),
       Skeletons.Note({ className: `${pfx}__grid-file-date`, content: date }),
     ],
   });
 }
 
-export function filesPanel(ui, pfx) {
+/**
+ * @param {Object} [opt]
+ * @param {Function} [opt.menu] builder for a tile menu — receives (ui, pfx)
+ * @param {Number} [opt.menuAt] which FILE tile owns it (default 1 =
+ *   spec_v2.pdf, the one the design opens it from)
+ * @param {Boolean} [opt.folders=true] render the sub-folder row. Screen 3
+ *   turns it off so the files sit on the first row and the 343px menu opens
+ *   with room to spare.
+ * @param {String} [opt.area=_a.private] area the sub-folder art is filled from.
+ *   Step 5 passes _a.share, its folder being a shared one.
+ */
+export function filesPanel(ui, pfx, opt = {}) {
+  const { menu = null, menuAt = 1, folders = true, area = _a.private } = opt;
   return Skeletons.Box.Y({
     className: `${pfx}__files`,
+    // Step 2 / screen 3 lights the whole panel.
+    sys_pn: "files-panel",
+    partHandler: ui,
     kids: [
       typeFilter(ui, pfx),
-      Skeletons.Box.G({
+      Skeletons.Box.X({
         className: `${pfx}__grid`,
         kids: [
-          ...SUB_FOLDERS.map((name) => folderItem(ui, name)),
-          ...FILES.map((f) => fileItem(ui, pfx, f)),
+          // The folder art is filled per area: private gives the red that goes
+          // with the INTERNAL folder these tiles live in, share resolves to
+          // --area-share (pink). Step 2 keeps the default; Step 5 overrides it.
+          ...(folders
+            ? SUB_FOLDERS.map((name) =>
+              folderItem(ui, name, { more: true, area }),
+            )
+            : []),
+          ...FILES.map((f, i) =>
+            fileItem(ui, pfx, f, {
+              menu: menu && i === menuAt ? menu(ui, pfx) : null,
+            }),
+          ),
         ],
       }),
     ],
@@ -245,11 +337,14 @@ export function filesPanel(ui, pfx) {
 }
 
 // ── Chat panel ────────────────────────────────────────────────────────────────
-export function chatMessage(pfx, msg) {
+export function chatMessage(pfx, msg, ui) {
   if (!msg.sender) {
+    // The file chip is Step 2 / screen 1's spotlight target — the design points
+    // the callout at it rather than at the panel as a whole.
     return Skeletons.Note({
       className: `${pfx}__chat-link`,
       content: msg.text,
+      ...(ui ? { sys_pn: "chat-link", partHandler: ui } : {}),
     });
   }
   if (msg.sender === "me") {
@@ -289,7 +384,7 @@ export function chatPanel(ui, pfx) {
       }),
       Skeletons.Box.Y({
         className: `${pfx}__chat-messages`,
-        kids: MESSAGES.map((msg) => chatMessage(pfx, msg)),
+        kids: MESSAGES.map((msg) => chatMessage(pfx, msg, ui)),
       }),
       Skeletons.Box.X({
         className: `${pfx}__chat-input-bar`,
@@ -306,18 +401,24 @@ export function chatPanel(ui, pfx) {
 }
 
 // ── Folder root view ──────────────────────────────────────────────────────────
-export function folder(ui, rightPanel) {
+/**
+ * @param {Object} ui
+ * @param {Function} [rightPanel]
+ * @param {Object} [opt] forwarded to filesPanel (e.g. `{menu}`)
+ * @param {String} [opt.badge] access badge for the header (default INTERNAL)
+ */
+export function folder(ui, rightPanel, opt = {}) {
   const pfx = ui.fig.family;
   const aspect = ui.mget("aspect") || "normal";
   return Skeletons.Box.Y({
     className: `${pfx}__main`,
     dataset: { aspect },
     kids: [
-      folderHeader(ui, pfx),
+      folderHeader(ui, pfx, { badge: opt.badge }),
       tabBar(ui, pfx),
       Skeletons.Box.X({
         className: `${pfx}__content`,
-        kids: [filesPanel(ui, pfx), rightPanel ? rightPanel(ui, pfx) : null],
+        kids: [filesPanel(ui, pfx, opt), rightPanel ? rightPanel(ui, pfx) : null],
       }),
     ],
   });

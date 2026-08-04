@@ -22,6 +22,7 @@ function getOptions(ui, cycle = "monthly") {
   // Business purchasable), so both read their Stripe price from the catalog.
   // Sovereign stays sales-led: its amount is the published figure, shown so
   // the ladder reads as a ladder, with a sales CTA instead of checkout.
+  const proPrice = money(ui._catPrice("pro", period) ?? (isYear ? 50 : 5));
   const teamPrice = money(ui._catPrice("team", period));
   const businessPrice = money(
     ui._catPrice("business", period) ?? (isYear ? 990 : 99),
@@ -56,13 +57,33 @@ function getOptions(ui, cycle = "monthly") {
       buttonKind: "secondary",
       subText: LOCALE.PLAN_FREE_DESC,
       features: [
-        row("1", LOCALE.FEAT_UNIT_WORKSPACE),
+        row("1", LOCALE.FEAT_UNIT_HUB),
         row(LOCALE.ONE_SOLO, LOCALE.FEAT_UNIT_MEMBER),
         row("5 GB", LOCALE.FEAT_UNIT_STORAGE),
         row(LOCALE.SUPPORT_COMMUNITY, LOCALE.FEAT_UNIT_SUPPORT),
       ],
     },
-    // The entry paid tier.
+    // Personal paid tier (2026-08-03 pricing table): one person, their
+    // guests, and real sharing. Sits between Free and Team; no org, no
+    // admin console — the card lists what it HAS, per the house style.
+    pro: {
+      title: LOCALE.PRO,
+      priceAmount: proPrice,
+      pricePeriod: per,
+      buttonTitle: LOCALE.CTA_GO_PRO,
+      buttonKind: "primary",
+      subText: LOCALE.PLAN_PRO_DESC,
+      features: [
+        row("1", LOCALE.FEAT_UNIT_HUB),
+        row("1", LOCALE.FEAT_UNIT_MEMBER),
+        row(LOCALE.UNLIMITED, LOCALE.FEAT_UNIT_GUESTS),
+        row("50 GB", LOCALE.FEAT_UNIT_STORAGE),
+        row(LOCALE.FEAT_UNLIMITED_LINKS),
+        row(LOCALE.DAYS_7, LOCALE.FEAT_UNIT_VERSION_HISTORY),
+        row(LOCALE.SUPPORT_COMMUNITY, LOCALE.FEAT_UNIT_SUPPORT),
+      ],
+    },
+    // The entry ORG paid tier.
     team: {
       title: LOCALE.TEAM,
       priceAmount: teamPrice,
@@ -72,10 +93,9 @@ function getOptions(ui, cycle = "monthly") {
       badge: 1,
       subText: LOCALE.PLAN_TEAM_DESC,
       features: [
-        row("1", LOCALE.FEAT_UNIT_WORKSPACE),
+        row("1", LOCALE.FEAT_UNIT_HUB),
         row(LOCALE.UP_TO_10, LOCALE.FEAT_UNIT_MEMBER),
         row("100 GB", LOCALE.FEAT_UNIT_STORAGE),
-        row(LOCALE.GRANULAR, LOCALE.FEAT_UNIT_PERMISSIONS),
         row(LOCALE.DAYS_30, LOCALE.FEAT_UNIT_VERSION_HISTORY),
         row(LOCALE.FEAT_GUEST_ACCESS),
         row(LOCALE.FEAT_ADMIN_PANEL),
@@ -92,10 +112,9 @@ function getOptions(ui, cycle = "monthly") {
       buttonKind: "dark",
       subText: LOCALE.PLAN_BUSINESS_DESC,
       features: [
-        row(LOCALE.MULTIPLE, LOCALE.FEAT_UNIT_WORKSPACES),
+        row(LOCALE.MULTIPLE, LOCALE.FEAT_UNIT_HUBS),
         row(LOCALE.UNLIMITED, LOCALE.FEAT_UNIT_MEMBER),
         row("1 TB", LOCALE.FEAT_UNIT_STORAGE),
-        row(LOCALE.GRANULAR_AUDIT, LOCALE.FEAT_UNIT_PERMISSIONS),
         row(LOCALE.ONE_YEAR, LOCALE.FEAT_UNIT_VERSION_HISTORY),
         row(LOCALE.FEAT_GUEST_ACCESS),
         row(LOCALE.FEAT_ADMIN_PANEL_AUDIT),
@@ -113,10 +132,9 @@ function getOptions(ui, cycle = "monthly") {
       buttonKind: "dark",
       subText: LOCALE.PLAN_SOVEREIGN_DESC,
       features: [
-        row(LOCALE.FULL_OS, LOCALE.FEAT_UNIT_WORKSPACES),
+        row(LOCALE.FULL_OS, LOCALE.FEAT_UNIT_HUBS),
         row(LOCALE.UNLIMITED, LOCALE.FEAT_UNIT_MEMBER),
         row(LOCALE.YOUR_INFRASTRUCTURE, LOCALE.FEAT_UNIT_STORAGE),
-        row(LOCALE.FULL_ACL, LOCALE.FEAT_UNIT_PERMISSIONS),
         row(LOCALE.UNLIMITED, LOCALE.FEAT_UNIT_VERSION_HISTORY),
         row(LOCALE.FEAT_GUEST_ACCESS),
         row(LOCALE.FEAT_ADMIN_PANEL_SDK),
@@ -176,11 +194,18 @@ function priceHeader(ui, fig, option, isCurrent) {
   const { title, priceLabel, priceAmount, pricePeriod, priceText, badge } = option;
 
   const priceKids = [];
-  if (priceLabel) {
-    priceKids.push(
-      Skeletons.Note({ className: `${fig}-price-label`, content: priceLabel }),
-    );
-  }
+  // The label row is rendered on EVERY card, blank where the plan has none.
+  // Only Sovereign carries one ("Start from"), and that single extra line made
+  // its tinted header 97px against 81px on the other three — the boxes did not
+  // line up and neither did the prices. Reserving the row equalises them by
+  // construction, so it survives a change of font size or label; pinning
+  // min-height to today's 97px would silently drift apart again.
+  priceKids.push(
+    Skeletons.Note({
+      className: `${fig}-price-label${priceLabel ? "" : " is-placeholder"}`,
+      content: priceLabel || " ",
+    }),
+  );
   if (priceAmount) {
     priceKids.push(
       Skeletons.Box.X({
@@ -298,7 +323,7 @@ function ctaButton(ui, fig, opt, option) {
         }),
       ],
     });
-  } else if (/^(team|business)$/.test(opt) && ui._catSellable && !ui._catSellable(opt)) {
+  } else if (/^(pro|team|business)$/.test(opt) && ui._catSellable && !ui._catSellable(opt)) {
     // The catalog has no Stripe price for this plan in this environment, so
     // there is nothing to sell: both checkout and change_plan answer NO_PRICE.
     // Say that instead of taking the buyer through a priced confirm dialog to
@@ -441,6 +466,7 @@ function billing_content(ui, cycle = "monthly") {
         className: `${fig}-narrow`,
         kids: [
           item(ui, "free", options.free),
+          item(ui, "pro", options.pro),
           item(ui, "team", options.team),
           item(ui, "business", options.business),
           item(ui, "sovereign", options.sovereign),
