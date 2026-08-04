@@ -966,10 +966,16 @@ class settings_billing extends LetcBox {
     );
     if (row && row.amount != null) return Number(row.amount) / 100;
     // Offline fallbacks only — the catalog above is the truth. Yearly is
-    // 10 x monthly — two months free (product decision 2026-07-29). The
-    // retired B2C entries (pro, pro_seat, storage_*) are gone with the
-    // plans themselves.
+    // 10 x monthly — two months free (product decision 2026-07-29).
+    //
+    // `pro` belongs here again. This map was written when Pro was retired,
+    // and the 2026-08-03 revival added the plan everywhere except this
+    // fallback — so on any deployment whose catalog is not seeded with Stripe
+    // price ids, Pro alone priced at zero while Team and Business read
+    // correctly off their entries. It is not caught by the `?? 5` in the plan
+    // card either: this returns 0, and `??` only falls back on null.
     const fb = {
+      pro: { month: 5, year: 50 },
       team: { month: 29, year: 290 },
       business: { month: 99, year: 990 },
     };
