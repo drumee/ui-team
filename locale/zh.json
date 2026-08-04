@@ -2525,7 +2525,5 @@
   "CYCLE_STARTS_SUBTITLE": "您的{0}套餐将于 {1} 开始。",
   "CHARGED_TODAY": "今日扣款",
   "NEXT_CHARGE": "下次扣款",
-  "NEXT_CHARGE_ON": "{1} 扣款 {0}",
-  "PLAN_CHANGE_FAILED": "无法更改您的计费周期，请重试。",
-  "PLAN_SWITCH_DEFER_KEEP": "您当前周期剩余的 {0} 天将予保留 —— 这些天已经付过费。"
+  "NEXT_CHARGE_ON": "{1} 扣款 {0}"
 }
