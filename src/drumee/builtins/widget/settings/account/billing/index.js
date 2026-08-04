@@ -227,8 +227,23 @@ class settings_billing extends LetcBox {
     return /^(team|business|sovereign|enterprise)$/.test(plan);
   }
 
+  /**
+   * Is there anything to cancel? A quota alone is not.
+   *
+   * `_isPaidByQuota` says the workspace HOLDS a paid tier, which is not the
+   * same as holding a subscription: a plan granted by hand, and a plan whose
+   * subscription was already terminated (the entitlement is kept until
+   * period_end, the mirror row is not), both read as paid with nothing behind
+   * them. payment.cancel_subscription answers NO_SUBSCRIPTION for those, and
+   * the caller got "Something went wrong" for pressing a button that could
+   * never have worked. A LAUNCH30 trial IS cancellable — through promo.cancel.
+   */
+  _hasCancellablePlan() {
+    return !!(this._hasPaidSub || this._isPromoTrial);
+  }
+
   async _confirmCancel() {
-    if ((!this._hasPaidSub && !this._isPaidByQuota() && !this._isPromoTrial) || this._isCanceling) return;
+    if (!this._hasCancellablePlan() || this._isCanceling) return;
     if (this._isPromoTrial) return this._confirmCancelPromo();
     const ok = await Wm.confirm({
       title: LOCALE.CANCEL_SUBSCRIPTION || "Cancel subscription",
@@ -1742,7 +1757,7 @@ class settings_billing extends LetcBox {
           // purchase. Sending it to checkout asked the user to "buy" a $0 plan
           // they already fall back to, and on the server that is a NO_PRICE
           // dead end. With no subscription there is simply nothing to do.
-          if (this._hasPaidSub || this._isPaidByQuota()) this._confirmCancel();
+          if (this._hasCancellablePlan()) this._confirmCancel();
         } else if (/^(pro|team|business)$/.test(planValue)) {
           // A live subscription means the click is a plan SWITCH: warn
           // (supersede) and route through checkout — the buyer always sees
