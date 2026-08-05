@@ -1,6 +1,7 @@
 require("welcome/skin");
 require("builtins/window/confirm/skin");
 const { canUpgradePlan, billingAvailable, needsAdminConsoleUpgrade } = require("libs/billing");
+const billingDeepLink = require("libs/billing-deep-link");
 const { captureUtm, campaignArrival } = require("libs/campaign");
 const hubDeepLink = require("libs/hub-deep-link");
 
@@ -346,19 +347,51 @@ class desk_module extends LetcBox {
     );
     this.feed(require("./skeleton")(this));
     await this.ensurePart("desk-content");
-    // NOTE: keep the restore BEFORE the wrapper-popup await — the current
-    // skeleton has no "wrapper-popup" part, so that promise never resolves
-    // and anything after it is dead code.
     this._restoreDeskState().catch((e) => {
       this._restoreInFlight = false;
       this.warn && this.warn("[Reload] restore failed", e);
     });
-    await this.ensurePart("wrapper-popup");
+    // There used to be an `await this.ensurePart("wrapper-popup")` here, with
+    // a note warning that the skeleton has no such part so the promise never
+    // resolves. The note was right and the await stayed anyway — which made
+    // BOTH lines below dead code. ensurePart has no timeout (ui-core
+    // collection-view): a part that never renders leaves the promise pending
+    // for the life of the desk.
+    //
+    // So `_e.ready` had never fired, and LAUNCH30's "Start exploring now"
+    // never reached the Admin Console: it sets its flags, reloads, and the
+    // reader below was simply never called. Nothing listens for `_e.ready`
+    // today, so letting it fire is inert; the promo handler is the point.
     this.trigger(_e.ready);
     // LAUNCH30 "Start exploring now" reloads so org_provision's domain move
     // is picked up by get_env; then open Admin Console (+ Invite via
     // apps-main's own sessionStorage flag).
     this._maybeOpenPromoAdminAfterClaim();
+  }
+
+  /**
+   * "#/desk/billing" — a shareable link that lands on Billing & subscription.
+   *
+   * Called from two places because there are two ways to arrive. Boot covers
+   * the cold load and the return from sign-in (the intent was stored by the
+   * router before the hash was replaced); route() covers clicking the link in
+   * a tab that already has the desk mounted, where nothing re-boots.
+   *
+   * Gated by canUpgradePlan for the same reason the sidebar's own
+   * "upgrade-plan" is: an install with no payment backend, or a member who is
+   * not the org owner, would land on a page that can only dead-end. A link
+   * anyone can forward is exactly the "stray trigger" that gate was written
+   * for, so it is honoured here rather than trusted.
+   *
+   * @returns {Boolean} whether the billing screen was opened
+   */
+  _maybeOpenBillingDeepLink() {
+    if (!billingDeepLink.consume()) return false;
+    if (!canUpgradePlan()) return false;
+    // Don't let desk-state restore pull the screen back to the remembered one.
+    this._restoreInFlight = false;
+    this.openBillingPage();
+    return true;
   }
 
   /**
@@ -1694,6 +1727,54 @@ class desk_module extends LetcBox {
   }
 
   /**
+   * How long an account works in Drumee before the LAUNCH30 offer appears.
+   *
+   * Five minutes, measured from the home screen settling. Not a cumulative
+   * across-sessions figure — a plain timer in the session that would otherwise
+   * have shown the popup immediately, which is what "let them use it first"
+   * actually needs. Reload before it fires and the wait restarts; the offer is
+   * unchanged and still waiting, so nothing is lost.
+   */
+  static get PROMO_OFFER_DELAY_MS() {
+    return 5 * 60 * 1000;
+  }
+
+  /**
+   * Arm the LAUNCH30 offer for later. Returns at once.
+   *
+   * Re-armed on every home settle, so the timer is cleared first: two
+   * schedules would fire two launches, and Wm's singleton only dedupes what is
+   * already on screen.
+   *
+   * The state fetched now is reused when it fires. It can only go stale by the
+   * user claiming or dismissing in the meantime, and both of those destroy the
+   * eligibility this timer exists to act on. Duplicate windows are Wm's job —
+   * the launch below carries wm_unique_id + singleton, the same protection the
+   * immediate path has always relied on.
+   */
+  _schedulePromoOffer(surface, state) {
+    clearTimeout(this._promoOfferTimer);
+    this._promoOfferTimer = setTimeout(async () => {
+      if (this.isDestroyed && this.isDestroyed()) return;
+      try {
+        await Kind.waitFor("promo_launch30");
+      } catch (e) {
+        return;
+      }
+      if (this.isDestroyed && this.isDestroyed()) return;
+      Wm.launch({
+        kind: "promo_launch30",
+        surface,
+        state: "offer",
+        position: state.position,
+        campaign_ends_at: state.campaign_ends_at,
+        hub_id: Visitor.id,
+        wm_unique_id: "promo_launch30",
+      }, { explicit: 1, singleton: 1 });
+    }, this.constructor.PROMO_OFFER_DELAY_MS);
+  }
+
+  /**
    * LAUNCH30 — "Start your 1-month Team Plan today". Design doc 2026-07-30.
    * Self-gates on the server (SERVICE.promo.get_state): eligible only on
    * Free, never claimed, not already inside another organisation, and not
@@ -1716,7 +1797,8 @@ class desk_module extends LetcBox {
    *   undefined if a concurrent call was already in flight or the fetch
    *   failed.
    */
-  async _maybeShowPromoLaunch30(surface) {
+  async _maybeShowPromoLaunch30(surface, opt = {}) {
+    const defer = !!opt.defer;
     if (this._promoLaunch30InFlight) return;
     this._promoLaunch30InFlight = true;
     try {
@@ -1728,6 +1810,20 @@ class desk_module extends LetcBox {
       }
       if (!state) return;
       if (state.state === "eligible_unseen") {
+        // The OFFER waits until the account has actually used Drumee for a
+        // while. It used to fire the moment the home screen settled — for a
+        // brand-new account that is the instant the tutorial ends, so the
+        // first thing someone saw after being shown around was a full-screen
+        // pitch, before they had opened a single file. Hold it back and let
+        // them work first (PROMO_OFFER_DELAY_MS).
+        //
+        // Deferred, never awaited: _afterHomeSettled chains the
+        // invited-workspace prompt behind this call, and awaiting a
+        // five-minute timer would hold that prompt for five minutes too.
+        if (defer) {
+          this._schedulePromoOffer(surface, state);
+          return state;
+        }
         try {
           await Kind.waitFor("promo_launch30");
         } catch (e) {
@@ -1797,8 +1893,12 @@ class desk_module extends LetcBox {
     // is a no-op unless a workspace is actually armed, and it hides itself while
     // either flow is on screen — see _showInvitedWorkspaceLoader.
     this._showInvitedWorkspaceLoader();
+    // Before the two full-screen flows: the billing link is an explicit
+    // destination the visitor asked for, and letting the reward flow or the
+    // LAUNCH30 offer land on top of it would bury it.
+    this._maybeOpenBillingDeepLink();
     return this._maybeStartRewardFlow()
-      .then(() => this._maybeShowPromoLaunch30("home"))
+      .then(() => this._maybeShowPromoLaunch30("home", { defer: true }))
       .then(() => this._waitForHomePopups())
       .then((clear) =>
         clear
@@ -1905,6 +2005,12 @@ class desk_module extends LetcBox {
     if (args.hasOwnProperty("wm") && window.Wm) {
       return window.Wm.route();
     }
+    // The billing link clicked while the desk is already UP: only hashchange
+    // fires, home has long since settled, and nothing is about to render over
+    // the screen — so open it here and now. On a cold load this stands down
+    // and _afterHomeSettled does it instead, because opening before
+    // loadDefault() only gets Home painted on top (seen on stage).
+    if (this._homeSettledDone && this._maybeOpenBillingDeepLink()) return;
     this._pending = { available: false };
     // The server-side profile.onboarded flag is authoritative: a user who has
     // completed onboarding (persisted via onboarding.update_profile -> onboarded=1)

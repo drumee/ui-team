@@ -30,7 +30,13 @@ const __skl_stream_local = function (_ui_) {
   // produce identical initials + color for the same person on every client.
   const avatar = {
     kind: KIND.profile,
-    id: _ui_.mget('avatar_id') || Visitor.profile().id,
+    // `Visitor.profile().id` is not dependably populated — the rest of the app
+    // uses `Visitor.id` as the canonical local id — and this is the self-view,
+    // so it is unambiguously the local user. Name them explicitly rather than
+    // leaning on a fallback further down the pipeline. No avatar_mtime: the
+    // profile widget reads Visitor's mtime live for the local user, so changing
+    // your own avatar mid-call re-versions this tile immediately.
+    id: _ui_.mget('avatar_id') || _ui_.mget(_a.uid) || Visitor.id,
     type: 'thumb',
     active: 0,
     firstname,
