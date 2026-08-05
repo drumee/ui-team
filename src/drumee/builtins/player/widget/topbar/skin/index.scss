@@ -113,17 +113,24 @@
       position: relative;
     }
 
-    .menu-items__wrapper {
-      overflow: visible;
-      position: absolute;
-      right: 0;
-      top: calc(100% + 8px);
-      z-index: 1000;
-    }
-
+    // The inner items box; it carries a bare `menu-items` of its own.
     .menu-items {
       overflow: visible;
     }
+  }
+
+  // The panel. This class reaches the element via the menu widget's
+  // `itemsClass` option (skeleton/menu.js) — the framework's own name for
+  // it is `menu-topic-items__wrapper`, built from its fig.family, and there
+  // is no bare `menu-items__wrapper` to hook. Without a positioned wrapper
+  // the panel stays in flow inside the 24px-tall action row and lays itself
+  // over the header.
+  &__menu-panel {
+    overflow: visible;
+    position: absolute;
+    right: 0;
+    top: calc(100% + 8px);
+    z-index: 1000;
   }
 
   &__menu-items {
@@ -219,7 +226,6 @@
     border-radius: var(--corner-radius-1);
     box-shadow: 0 1px 11px 0 rgba(0, 0, 0, 0.13);
     box-sizing: border-box;
-    display: none;
     flex-direction: column;
     gap: var(--spacer-2);
     // Submenus open LEFT, not right like the shared contextmenu's do.
@@ -259,10 +265,29 @@
     }
   }
 
-  // One rule, every depth: a row reveals its own immediate submenu.
-  &__menu-item:hover > &__submenu {
-    display: flex;
-  }
+}
+
+// Submenu open/closed, deliberately written at (0,3,0) and (0,4,0).
+//
+// A submenu is a Box.Y, so it matches `.drumee-box[data-flow="y"]` in
+// skin/lib/container.scss — `display: flex` at (0,2,0). A plain
+// `.drumee-topbar__submenu { display: none }` is (0,1,0) and loses, which
+// leaves every submenu permanently open, stacked over the panel. Three
+// classes clear the base; the `:hover` rule then clears the closed rule.
+// This is the same reason the shared contextmenu nests its own rule four
+// deep (builtins/contextmenu/skin/index.scss).
+//
+// `__menu-items` is an ancestor of every row at every depth, so one pair of
+// rules covers the whole recursion.
+.drumee-topbar__menu-items .drumee-topbar__menu-item > .drumee-topbar__submenu {
+  display: none;
+}
+
+.drumee-topbar__menu-items .drumee-topbar__menu-item:hover > .drumee-topbar__submenu {
+  display: flex;
+}
+
+.drumee-topbar {
 
   // ---- Move & Resize ----------------------------------------------------
   // Same interaction shape as the folder window's zoom menu: the trigger

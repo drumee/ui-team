@@ -187,10 +187,29 @@ Level 0 reuses the framework primitive `KIND.menu.topic`
 click-to-open, outside-click dismissal via `RADIO_CLICK`, and stable
 positioning. None of that is reimplemented.
 
+Two things about this primitive bite hard, and both did:
+
+**The wrapper has no generic class.** Its parts are named from its own
+`fig.family`, which is `menu-topic` (`figName` is the class name,
+`__menu_topic`). So the panel wrapper is `menu-topic-items__wrapper` and
+only the inner box carries a bare `menu-items`. There is no
+`menu-items__wrapper` to style. Pass `itemsClass` and style that instead —
+the widget uses `{wcn}__menu-panel`. Miss this and the panel is never
+taken out of flow: it sits inside the 24px action row and lays itself
+across the header.
+
+**`display` needs three classes to stick.** Every Box is a `.drumee-box`,
+and `skin/lib/container.scss` sets `.drumee-box[data-flow="y"] { display:
+flex }` at (0,2,0). A one-class `display: none` loses, so submenus render
+permanently open, stacked over the panel. The open/closed pair is written
+at (0,3,0)/(0,4,0), which is why the shared contextmenu nests its rule
+four deep.
+
 ```js
 Box.X .{family}-topbar__menu
   {
     kind:        KIND.menu.topic,
+    itemsClass:  `${wcn}__menu-panel`,   // the ONLY hook on the wrapper
     flow:        _a.y,
     opening:     _e.click,
     persistence: _a.once,
@@ -388,9 +407,18 @@ mechanically:
   slot order, all preserved `sys_pn` values, four-level submenu
   recursion, separators, `disabled` -> `data-state="disable"`, and
   `value` passthrough all check out.
-- A chromium screenshot of the real compiled skin against the emitted
-  markup, in the light theme, for the resting header, the open gear menu
-  with a submenu, and the Move & Resize panel.
+- A chromium screenshot of the real compiled skin, in the light theme,
+  for the resting header, the closed and hovered gear menu, and the
+  Move & Resize panel.
+
+  The first version of this harness hand-wrote the dropdown markup and
+  guessed the framework's class names, so it rendered a page that could
+  not occur and passed both bugs above. A harness that asserts your own
+  assumptions is worse than none. It now reproduces the real DOM —
+  `menu-topic-items__wrapper`, `menu-topic-items menu-items`,
+  `.drumee-box[data-flow]` — with `skin/lib/container.scss` and
+  `skin/lib/menu.scss` compiled in, and both bugs reproduce in it before
+  the fix and disappear after.
 
 The rest is manual, in the live player:
 

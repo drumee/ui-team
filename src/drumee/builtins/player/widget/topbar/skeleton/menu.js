@@ -126,6 +126,14 @@ const __player_topbar_menu = function (ctx, action) {
       {
         kind: KIND.menu.topic,
         className: `${wcn}__menu-topic ${cn}__menu-topic`,
+        // Lands on the widget's items WRAPPER, which is what has to be
+        // taken out of flow. Do not reach for the framework's own class
+        // instead: the wrapper is named `${fig.family}-items__wrapper`,
+        // i.e. `menu-topic-items__wrapper`, and only the INNER box gets a
+        // bare `menu-items`. Styling `.menu-items__wrapper` matches
+        // nothing, the panel stays in flow inside the 24px action row, and
+        // it lays itself over the header with its submenus out of reach.
+        itemsClass: `${wcn}__menu-panel ${cn}__menu-panel`,
         flow: _a.y,
         opening: _e.click,
         // Default persistence: any row click closes the menu. Parent rows
