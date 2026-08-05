@@ -1,6 +1,7 @@
 require("welcome/skin");
 require("builtins/window/confirm/skin");
 const { canUpgradePlan, billingAvailable, needsAdminConsoleUpgrade } = require("libs/billing");
+const billingDeepLink = require("libs/billing-deep-link");
 const { captureUtm, campaignArrival } = require("libs/campaign");
 const hubDeepLink = require("libs/hub-deep-link");
 
@@ -366,6 +367,31 @@ class desk_module extends LetcBox {
     // is picked up by get_env; then open Admin Console (+ Invite via
     // apps-main's own sessionStorage flag).
     this._maybeOpenPromoAdminAfterClaim();
+  }
+
+  /**
+   * "#/desk/billing" — a shareable link that lands on Billing & subscription.
+   *
+   * Called from two places because there are two ways to arrive. Boot covers
+   * the cold load and the return from sign-in (the intent was stored by the
+   * router before the hash was replaced); route() covers clicking the link in
+   * a tab that already has the desk mounted, where nothing re-boots.
+   *
+   * Gated by canUpgradePlan for the same reason the sidebar's own
+   * "upgrade-plan" is: an install with no payment backend, or a member who is
+   * not the org owner, would land on a page that can only dead-end. A link
+   * anyone can forward is exactly the "stray trigger" that gate was written
+   * for, so it is honoured here rather than trusted.
+   *
+   * @returns {Boolean} whether the billing screen was opened
+   */
+  _maybeOpenBillingDeepLink() {
+    if (!billingDeepLink.consume()) return false;
+    if (!canUpgradePlan()) return false;
+    // Don't let desk-state restore pull the screen back to the remembered one.
+    this._restoreInFlight = false;
+    this.openBillingPage();
+    return true;
   }
 
   /**
@@ -1867,6 +1893,10 @@ class desk_module extends LetcBox {
     // is a no-op unless a workspace is actually armed, and it hides itself while
     // either flow is on screen — see _showInvitedWorkspaceLoader.
     this._showInvitedWorkspaceLoader();
+    // Before the two full-screen flows: the billing link is an explicit
+    // destination the visitor asked for, and letting the reward flow or the
+    // LAUNCH30 offer land on top of it would bury it.
+    this._maybeOpenBillingDeepLink();
     return this._maybeStartRewardFlow()
       .then(() => this._maybeShowPromoLaunch30("home", { defer: true }))
       .then(() => this._waitForHomePopups())
@@ -1975,6 +2005,12 @@ class desk_module extends LetcBox {
     if (args.hasOwnProperty("wm") && window.Wm) {
       return window.Wm.route();
     }
+    // The billing link clicked while the desk is already UP: only hashchange
+    // fires, home has long since settled, and nothing is about to render over
+    // the screen — so open it here and now. On a cold load this stands down
+    // and _afterHomeSettled does it instead, because opening before
+    // loadDefault() only gets Home painted on top (seen on stage).
+    if (this._homeSettledDone && this._maybeOpenBillingDeepLink()) return;
     this._pending = { available: false };
     // The server-side profile.onboarded flag is authoritative: a user who has
     // completed onboarding (persisted via onboarding.update_profile -> onboarded=1)

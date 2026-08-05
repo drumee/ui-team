@@ -17,6 +17,18 @@
 const STYLE = "color: green; font-weight: bold;"
 let bunldes = new Map();
 
+// "#/desk/billing" — record the destination at the earliest point in the app,
+// before anything can navigate.
+//
+// The router already does this for campaign markers, and that is late enough
+// for them: they ride on the query string, which survives. A hash does not.
+// A signed-out visitor on this link is sent to sign in by a FULL page
+// navigation, and the hash is gone by the time the router of the SECOND
+// document runs — measured on stage, where the capture there saw only
+// "#/welcome/signin". Module scope here runs while the original URL is still
+// the original URL, and sessionStorage outlives the navigation.
+require('libs/billing-deep-link').captureFromUrl();
+
 /**
  * 
  */
