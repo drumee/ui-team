@@ -3,6 +3,28 @@ const { workspaceContent } = require("./skeleton/toolkit")
 
 const SVC_OPT = { async: 1 };
 
+// Every step widget is a bare `import()` in seeds.js, so each one is its own
+// webpack chunk with no prefetch hint. Left alone, pressing Next is the moment
+// the chunk is requested: Kind.get() hands back the lazy loader placeholder,
+// which mounts EMPTY, waits on the network, then respawns itself once the module
+// lands (see ui-core letc/kind/loader.js). The user pays a round trip plus a
+// mount-and-rebuild on every step boundary, and the spotlight is left measuring
+// a placeholder while it happens.
+//
+// Kind.waitFor resolves the import and registers the class, after which
+// Kind.get() answers synchronously — no placeholder, no respawn, no fetch. Warm
+// them while step 1 is on screen and being read.
+//
+// Step 1 (tutorial_workspace), the spotlight and media_grid are all pulled in by
+// the shell itself, so they are already on their way and are not listed here.
+const PRELOAD_KINDS = [
+  'tutorial_folder',
+  'tutorial_meeting',
+  'tutorial_task',
+  'tutorial_share',
+  'tutorial_migrate',
+];
+
 class tutorial_main extends LetcBox {
 
   initialize(opt = {}) {
@@ -45,6 +67,22 @@ class tutorial_main extends LetcBox {
 
   onDomRefresh() {
     this.feed(require('./skeleton')(this));
+    this._preloadSteps();
+  }
+
+  /**
+   * Pull the remaining step widgets down in the background so that pressing
+   * Next renders from memory rather than from the network. Fire and forget: a
+   * warm-up that fails costs nothing, because the step still loads on demand
+   * exactly as it does today.
+   */
+  _preloadSteps() {
+    if (typeof Kind === 'undefined' || !_.isFunction(Kind.waitFor)) return;
+    for (const kind of PRELOAD_KINDS) {
+      Promise.resolve(Kind.waitFor(kind)).catch((e) => {
+        this.warn && this.warn(`[tutorial] could not preload ${kind}`, e);
+      });
+    }
   }
 
   /**

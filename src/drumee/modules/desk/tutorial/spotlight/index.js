@@ -1,21 +1,37 @@
 require('./skin');
 const { tooltipBadge } = require('../skeleton/toolkit');
-const { getElStablePosition } = require('@drumee/ui-essentials');
 
 const GAP = 12;
 const MIN_RADIUS = 120;
 const RADIUS_PADDING = 40;
-const STABLE_MAX_TRIES = 10;
+// One frame per sample, so this is also the wall-clock ceiling in frames
+// (~330ms at 60Hz) — the same ceiling the two-RAF version had at half the
+// sample count.
+const STABLE_MAX_TRIES = 20;
 
-// Wait until the element's measured size stops changing across two RAFs.
-// Covers async children (e.g. media_grid icon) that resize the target after
-// it first lands in the DOM — without which the very first focus measures
+function nextFrameRect(el) {
+  return new Promise((resolve) =>
+    requestAnimationFrame(() => resolve(el.getBoundingClientRect())),
+  );
+}
+
+// Wait until the element's measured size stops changing between consecutive
+// frames. Covers async children (e.g. media_grid icon) that resize the target
+// after it first lands in the DOM — without which the very first focus measures
 // a collapsed rect and the tooltip lands off-screen.
+//
+// Sampled once per frame, seeded from a free synchronous read. It used to call
+// getElStablePosition (two RAFs) twice, so an element that had ALREADY settled —
+// which is every screen change after the first, the common case by far — still
+// cost four frames to confirm, and focus() paid that twice when a screen passes
+// an anchor. Measured 118ms per screen change; one frame confirms the same
+// thing. Per-frame sampling also spots a late resize a frame sooner than
+// per-two-frames did, so the case this exists for got quicker too.
 async function waitForStableRect(el) {
-  let prev = await getElStablePosition(el);
+  let prev = el.getBoundingClientRect();
   for (let i = 0; i < STABLE_MAX_TRIES; i++) {
-    const next = await getElStablePosition(el);
-    if (next.width === prev.width && next.height === prev.height && next.width > 0) {
+    const next = await nextFrameRect(el);
+    if (next.width > 0 && next.width === prev.width && next.height === prev.height) {
       return next;
     }
     prev = next;
@@ -84,7 +100,17 @@ class __tutorial_spotlight extends LetcBox {
     if (!target) return this.clear();
     const el = elementOf(target);
     if (!el || typeof el.getBoundingClientRect !== 'function') return;
-    const rect = await waitForStableRect(el);
+
+    // The target rect, the anchor rect and the callout part do not depend on
+    // one another, so they are resolved together. Awaiting them one after the
+    // other put two full settle waits on the critical path of every screen that
+    // passes an anchor, for no reason other than the order they were written in.
+    const anchorEl = anchor ? elementOf(anchor) : null;
+    const [rect, measuredAnchor, callout] = await Promise.all([
+      waitForStableRect(el),
+      anchorEl && anchorEl !== el ? waitForStableRect(anchorEl) : null,
+      this.ensurePart('callout'),
+    ]);
     if (!rect.width || !rect.height) return;
 
     const cx = rect.left + rect.width / 2;
@@ -95,19 +121,15 @@ class __tutorial_spotlight extends LetcBox {
     this.el.style.setProperty('--spot-radius', `${r}px`);
     this.setState(1);
 
-    const callout = await this.ensurePart('callout');
     if (!tooltip) {
       callout.feed(null);
       return;
     }
-    const anchorEl = anchor ? elementOf(anchor) : null;
-    const anchorRect = anchorEl && anchorEl !== el
-      ? await waitForStableRect(anchorEl)
-      : rect;
+    const anchorRect = measuredAnchor && measuredAnchor.width ? measuredAnchor : rect;
     callout.feed(tooltipBadge(owner || this, {
       ...tooltip,
       direction,
-      style: anchorFor(anchorRect.width ? anchorRect : rect, direction),
+      style: anchorFor(anchorRect, direction),
     }));
   }
 
