@@ -58,6 +58,9 @@ function urlWantsBilling() {
     const hash = String(window.location.hash || "");
     return PATH.test(hash) || ARG.test(hash);
   } catch (e) {
+    // Reading location cannot normally throw; if it does, this visit carries
+    // no readable destination and saying so is the only honest answer.
+    console.warn("[billing-deep-link] could not read location", e);
     return false;
   }
 }
@@ -101,7 +104,9 @@ function consume() {
     stored = sessionStorage.getItem(KEY) === "1";
     if (stored) sessionStorage.removeItem(KEY);
   } catch (e) {
-    /* fall through to the url */
+    // Blocked storage. The url is checked below regardless, so a signed-IN
+    // visitor still gets there; only the across-sign-in relay is lost.
+    console.warn("[billing-deep-link] sessionStorage unavailable", e);
   }
   return stored || urlWantsBilling();
 }
