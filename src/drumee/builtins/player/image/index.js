@@ -141,7 +141,7 @@ class __player_image extends __core {
           {
             id: 'rotate-left',
             label: LOCALE.ROTATE_LEFT,
-            icon: 'desktop_rotate',
+            icon: 'app-rotate-left',
             className: 'rotate-left',
             service: _e.rotate,
             value: -90,
@@ -149,7 +149,7 @@ class __player_image extends __core {
           {
             id: 'rotate-right',
             label: LOCALE.ROTATE_RIGHT,
-            icon: 'desktop_rotate',
+            icon: 'app-rotate-right',
             className: 'rotate-right',
             service: _e.rotate,
             value: 90,
