@@ -12,13 +12,19 @@ class __remote_user extends __stream {
     this.participant = opt.participant;
     const displayName = this.participant.getDisplayName();
     try {
-      const { firstname, lastname, uid, username } = opt
+      const { firstname, lastname, uid, username, avatar_mtime } = opt
       this.mset({
         label: displayName || firstname || username || lastname,
         firstname: firstname || displayName,
         lastname,
         uid,
         username: displayName || username || firstname,
+        // Version of THIS peer's avatar, published in their userAttributes.
+        // Threaded into the KIND.profile spec so the avatar URL is versioned by
+        // its owner instead of by the viewer (see webrtc/room/jitsi
+        // broadcastJoining). Undefined until the property arrives, at which
+        // point onPropertyChanged msets it and re-feeds.
+        avatar_mtime,
       });
     } catch (e) {
 
