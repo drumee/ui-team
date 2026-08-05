@@ -703,6 +703,29 @@ class __window_mfs extends DrumeeMFS {
       } else {
         this.iconsList.append(data);
       }
+      // Re-partition, like every other insert path already does.
+      //
+      // An append is not additive at the DOM level: the CollectionView
+      // re-attaches EVERY child straight into .smart-container, so one new
+      // node tips all of them back out of .workspace-section/.folder-section/
+      // .file-section. Measured on a live desk — a single collection add left
+      // 139 tiles as direct children. .smart-container is a flex COLUMN, so
+      // until they are put back each tile is a full-width row: the grid reads
+      // as one column with N rows.
+      //
+      // Every sibling insert repairs that straight away — desk/wm create-folder
+      // and upload-progress' _revealInLayout both call
+      // _partitionFoldersAndFiles right after their append, folder/index.js
+      // schedules its sort. This path appended and did nothing, leaving the
+      // repair entirely to the rAF-debounced MutationObserver, which is why
+      // the collapse looked random and got worse the more files were uploaded.
+      //
+      // It fires for your OWN uploads, not just a peer's: the bundle uploader
+      // never sends an echoId, so the self-echo guard above can never match.
+      if (this.getViewMode && this.getViewMode() !== _a.row
+        && typeof this._partitionFoldersAndFiles === "function") {
+        this._partitionFoldersAndFiles(this.iconsList);
+      }
     }
     this.syncBounds();
   }
