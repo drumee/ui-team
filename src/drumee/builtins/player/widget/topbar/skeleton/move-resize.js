@@ -1,15 +1,15 @@
 // ==================================================================== *
 //   Copyright Xialia.com  2011-2026
-//   FILE : builtins/player/image/skeleton/move-resize
+//   FILE : builtins/player/widget/topbar/skeleton/move-resize
 //   TYPE : Skeleton
 // ==================================================================== *
 
 /**
- * "Move & Resize" — the expand-icon control in the player header.
+ * "Move & Resize" — the expand-icon control in the topbar.
  *
  * Same shape as `zoomMenu()` in window/skeleton/toolkit: clicking the
  * trigger zooms directly, hovering reveals a panel of window presets. The
- * services are the folder window's own vocabulary, so both windows snap
+ * services are the folder window's own vocabulary, so every window snaps
  * through one code path (builtins/window/snap).
  *
  * The four preset glyphs are drawn in CSS (outline box + inner block),
@@ -25,36 +25,42 @@ const PRESETS = [
   { preset: "center", service: "window-reframe" },
 ];
 
-const __player_image_move_resize = function (ui) {
-  const cn = `${ui.fig.family}-topbar__snap`;
+/**
+ * @param {object} ctx     { ui, cn, wcn }
+ * @param {object} action  TopbarAction — only `id`/`triggerPn` are read
+ */
+const __player_topbar_move_resize = function (ctx, action) {
+  const { ui, cn, wcn } = ctx;
+  const snap = `${cn}__snap`;
+  const wsnap = `${wcn}__snap`;
 
   return Skeletons.Box.X({
     debug: __filename,
-    className: `${cn}-wrapper`,
-    sys_pn: "snap-wrapper",
+    className: `${snap}-wrapper ${wsnap}-wrapper`,
+    sys_pn: action.id,
     kids: [
       Skeletons.Button.Svg({
-        ico: "desktop_fullview",
-        className: `${cn}-trigger icon`,
-        sys_pn: "ctrl-expand",
+        ico: action.icon || "desktop_fullview",
+        className: `${snap}-trigger ${wsnap}-trigger icon`,
+        sys_pn: action.triggerPn,
         service: "window-zoom",
         uiHandler: [ui],
         partHandler: ui,
       }),
       Skeletons.Box.Y({
-        className: `${cn}-menu`,
+        className: `${snap}-menu ${wsnap}-menu`,
         sys_pn: "snap-menu",
         kids: [
           Skeletons.Note({
             content: LOCALE.MOVE_RESIZE,
             active: 0,
-            className: `${cn}-label`,
+            className: `${snap}-label ${wsnap}-label`,
           }),
           Skeletons.Box.X({
-            className: `${cn}-presets`,
+            className: `${snap}-presets ${wsnap}-presets`,
             kids: PRESETS.map(({ preset, service }) =>
               Skeletons.Box.X({
-                className: `${cn}-preset`,
+                className: `${snap}-preset ${wsnap}-preset`,
                 sys_pn: `snap-${preset}`,
                 service,
                 uiHandler: [ui],
@@ -65,8 +71,12 @@ const __player_image_move_resize = function (ui) {
                 // `data-preset`.
                 kids: [
                   Skeletons.Box.X({
-                    className: `${cn}-glyph`,
-                    kids: [Skeletons.Element({ className: `${cn}-glyph-fill` })],
+                    className: `${snap}-glyph ${wsnap}-glyph`,
+                    kids: [
+                      Skeletons.Element({
+                        className: `${snap}-glyph-fill ${wsnap}-glyph-fill`,
+                      }),
+                    ],
                   }),
                 ],
               }),
@@ -78,4 +88,4 @@ const __player_image_move_resize = function (ui) {
   });
 };
 
-module.exports = __player_image_move_resize;
+module.exports = __player_topbar_move_resize;

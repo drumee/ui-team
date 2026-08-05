@@ -1,7 +1,6 @@
 @use "sass:meta";
 @use "mixins/drumee";
 @include meta.load-css("topbar");
-@include meta.load-css("menu");
 
 .player-image {
   &__ui {

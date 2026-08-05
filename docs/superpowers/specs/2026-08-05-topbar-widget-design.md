@@ -31,8 +31,9 @@ consumer.
 
 - Migrating `builtins/player/skeleton/topbar.js` (audio, video,
   document, text, vector, stream). Out of scope for this change.
-- Viewport edge-flip for submenus that overflow the right edge. Deferred
-  until a real menu overflows.
+- Viewport edge-flip for submenus. Not needed: the dropdown is pinned to
+  the topbar's right edge, so submenus open inward (leftward) and stay on
+  screen at any depth without measuring anything. See Dropdown.
 - A `LetcBox` subclass. The Topbar is a skeleton factory (see
   Architecture).
 
@@ -222,6 +223,16 @@ contextmenu behaviour users already know. A row with children still
 carries its own `service` (the catalog's `rotate-menu` row is a
 documented no-op), so parent rows remain addressable.
 
+Submenus open **leftward**, unlike the shared contextmenu's. The panel is
+pinned to the topbar's right edge, so its rows sit hard against the
+window edge and a rightward submenu lands off-screen at any window width
+— confirmed in a render harness before the direction was chosen. Opening
+inward is what makes edge-flip logic unnecessary.
+
+`persistence: _a.once` means any row click closes the menu, including a
+click on a parent row. Submenus are opened by hover, so this only costs a
+mis-click.
+
 ## Image player migration
 
 `image/skeleton/topbar.js` collapses to a config block. `move-resize.js`
@@ -312,6 +323,27 @@ Because every service string is preserved, the existing `onUiEvent`
 switch and the `DELEGATED_SERVICES` forwarding in `image/index.js` keep
 working with no edits.
 
+### Bug fixed on the way through
+
+`_syncRotationPending()` reads `this.__saveRotationButton`, but nothing
+ever assigned it — so the save-rotation button's `data-pending` was never
+flipped and the button stayed hidden however much you rotated. The part is
+now captured in `onPartReady` and synced immediately, so it also survives
+the re-feed the rotate path triggers.
+
+### CSS specificity
+
+The bar's geometry is written as
+`.drumee-topbar .drumee-topbar__bar.drumee-topbar__bar` — (0,3,0).
+
+Consumers style their header group by name; the players do it as
+`.player__header.main` (builtins/player/skin/header.scss), which sets its
+own padding at (0,2,0) on this exact element. A plain `.drumee-topbar__bar`
+at (0,1,0) loses that, and the image player's padding regresses. The
+widget cannot know consumer selectors, so it wins on weight. The old
+`.player-image .player__header.main` rule was (0,3,0) too, so this is the
+weight the markup already relied on.
+
 ### Dead code removed
 
 - `image/skeleton/topbar.js` body (replaced by config)
@@ -338,13 +370,29 @@ behaviour is the house standard.
 
 **Hover submenus in the dialog layer.** The old gear menu lived in
 `drumeeDialog` and so escaped any parent `overflow: hidden`. The new one
-is inline in the topbar. The skin must ensure no ancestor clips it;
-`.{group}__header` currently sets `border-radius` but not `overflow`, so
-this should hold — confirm during implementation.
+is inline in the topbar, so the skin asserts `overflow: visible` from the
+wrapper down through `.menu-topic`, `.menu-items__wrapper` and
+`.menu-items`. Confirmed rendering correctly in a static harness; still
+worth a look in the live player, where the window chrome adds ancestors
+the harness does not have.
 
 ## Verification
 
-No test harness covers players in this repo. Verification is manual:
+No test harness covers players in this repo. What was verified
+mechanically:
+
+- `node --check` on all eight changed JS files.
+- Both skins compile standalone (`sass --load-path=src/drumee
+  --load-path=src/drumee/skin`).
+- A stub-globals harness builds the topbar and dumps the skeleton tree:
+  slot order, all preserved `sys_pn` values, four-level submenu
+  recursion, separators, `disabled` -> `data-state="disable"`, and
+  `value` passthrough all check out.
+- A chromium screenshot of the real compiled skin against the emitted
+  markup, in the light theme, for the resting header, the open gear menu
+  with a submenu, and the Move & Resize panel.
+
+The rest is manual, in the live player:
 
 1. Open an image from a workspace. Header renders: tile, filename, gear,
    expand, close. Save-rotation hidden.
