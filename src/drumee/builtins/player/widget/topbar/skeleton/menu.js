@@ -58,7 +58,9 @@ const __row = function (ctx, item, depth) {
     }),
   );
 
-  if (!_.isEmpty(item.children)) {
+  const hasChildren = !_.isEmpty(item.children);
+
+  if (hasChildren) {
     kids.push(
       Skeletons.Note({
         content: "›",
@@ -92,6 +94,14 @@ const __row = function (ctx, item, depth) {
   if (item.service) props.service = item.service;
   if (item.value !== undefined) props.value = item.value;
   if (item.type !== undefined) props.type = item.type;
+
+  // A parent row must not close the menu. The menu widget routes ANY bubble
+  // from the items subtree into `_onItemClicked`, which closes on the
+  // default persistence — so clicking "Rotate" to reach its children shut
+  // the whole dropdown instead. `bubble: 0` stops the bubble after the
+  // row's own handlers have run (letc.js `triggerHandlers`), so leaf rows
+  // still close the menu when one is actually chosen.
+  if (hasChildren) props.bubble = 0;
 
   return Skeletons.Box.X(props);
 };

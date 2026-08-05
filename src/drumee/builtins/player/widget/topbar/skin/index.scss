@@ -126,7 +126,13 @@
   // the panel stays in flow inside the 24px-tall action row and lays itself
   // over the header.
   &__menu-panel {
-    overflow: visible;
+    // `!important` is load-bearing, not defensive. The menu widget writes
+    // `position: absolute; overflow: hidden` INLINE on this element when
+    // the part mounts (ui-core letc/widgets/menu/index.js, case
+    // 'items-wrapper'), and an inline style beats any stylesheet rule. The
+    // hidden overflow clips submenus away entirely — they open outside the
+    // panel — so hovering a parent row appeared to do nothing at all.
+    overflow: visible !important;
     position: absolute;
     right: 0;
     top: calc(100% + 8px);
