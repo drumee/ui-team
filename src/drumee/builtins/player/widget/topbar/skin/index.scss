@@ -234,19 +234,20 @@
     box-sizing: border-box;
     flex-direction: column;
     gap: var(--spacer-2);
-    // Submenus open LEFT, not right like the shared contextmenu's do.
+    // Submenus open RIGHT, matching the shared contextmenu.
     //
-    // The dropdown is pinned to the topbar's right edge (`right: 0` on the
-    // wrapper above), so its rows are already hard against the window edge
-    // — a rightward submenu lands outside the viewport at any window width.
-    // Opening inward keeps every depth on screen without measuring anything,
-    // which is why this widget needs no edge-flip logic.
+    // Note the trade-off this accepts: the dropdown is pinned to the
+    // topbar's right edge, so a submenu opening outward can run past the
+    // window on a narrow viewport or a right-docked player. There is no
+    // edge-flip logic to catch that — see the Risks section of the design
+    // doc. Opening inward avoided it but reads backwards against every
+    // other menu in the app, so outward is the deliberate choice.
     //
-    // The submenu's right edge sits flush with the parent panel's outer
+    // The submenu's left edge sits flush with the parent panel's outer
     // edge: `100%` is the ROW's width and the row is inset by the panel's
     // padding, so add that back. The negative top does the same in the other
     // axis, lining the first submenu row up with its parent.
-    right: calc(100% + var(--spacer-3));
+    left: calc(100% + var(--spacer-3));
     min-height: 0;
     min-width: 0;
     overflow: visible;
@@ -264,8 +265,8 @@
     &:before {
       bottom: 0;
       content: "";
+      left: calc(var(--spacer-3) * -1);
       position: absolute;
-      right: calc(var(--spacer-3) * -1);
       top: 0;
       width: var(--spacer-3);
     }

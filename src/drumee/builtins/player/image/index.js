@@ -121,18 +121,19 @@ class __player_image extends __core {
 
     const first = [];
     if (media && !Visitor.inDmz) {
-      first.push({ id: 'copy', label: LOCALE.COPY, service: _e.copy });
+      first.push({ id: 'copy', label: LOCALE.COPY, icon: 'apps-copy', service: _e.copy });
     }
     if (Visitor.inDmz || this.canDownload()) {
       first.push(
-        { id: 'download', label: LOCALE.DOWNLOAD, service: _e.download },
-        { id: 'print', label: LOCALE.PRINT, service: 'print' },
+        { id: 'download', label: LOCALE.DOWNLOAD, icon: 'app-download', service: _e.download },
+        { id: 'print', label: LOCALE.PRINT, icon: 'app-print', service: 'print' },
       );
     }
     if (editable && media.imgCapable && media.imgCapable()) {
       first.push({
         id: 'rotate',
         label: LOCALE.ROTATE,
+        icon: 'app-rotate',
         // A parent row: the submenu opens on hover, the row itself is a
         // no-op (`case "rotate-menu"` below).
         service: 'rotate-menu',
@@ -160,12 +161,13 @@ class __player_image extends __core {
 
     const naming = [];
     if (editable) {
-      naming.push({ id: 'rename', label: LOCALE.RENAME, service: 'direct-rename' });
+      naming.push({ id: 'rename', label: LOCALE.RENAME, icon: 'app-edit', service: 'direct-rename' });
     }
     if (media && !Visitor.inDmz) {
       naming.push({
         id: 'chat-threads',
         label: LOCALE.CHAT_THREADS,
+        icon: 'file-thread',
         service: 'chat-threads',
         children: [
           { id: 'view-chat-threads', label: LOCALE.VIEW_CHAT_THREADS, service: _a.chat },
@@ -179,23 +181,25 @@ class __player_image extends __core {
     if (editable) {
       switch (this.mget(_a.area)) {
         case _a.share:
-          details.push({ id: 'secure-share', label: LOCALE.SHARE, service: 'secure-share' });
+          details.push({ id: 'secure-share', label: LOCALE.SHARE, icon: 'ctxmenu-share', service: 'secure-share' });
           break;
         case _a.private:
-          details.push({ id: 'designation-link', label: LOCALE.DESIGNATION_LINK, service: 'designation-link' });
+          details.push({ id: 'designation-link', label: LOCALE.DESIGNATION_LINK, icon: 'app-share', service: 'designation-link' });
           break;
         case _a.public:
-          details.push({ id: 'direct-url', label: LOCALE.URL_ADDRESS, service: 'direct-url' });
+          // No icon was specified for this row; `apps-link-simple` is the
+          // closest match in the same family as the rest.
+          details.push({ id: 'direct-url', label: LOCALE.URL_ADDRESS, icon: 'apps-link-simple', service: 'direct-url' });
           break;
       }
     }
     // "Get info" emits `_e.settings`, not "info" — see the switch below.
-    details.push({ id: 'info', label: LOCALE.GET_INFO, service: _e.settings, type: _a.info });
+    details.push({ id: 'info', label: LOCALE.GET_INFO, icon: 'ctxmenu-info', service: _e.settings, type: _a.info });
     sections.push(details);
 
     if (media && media.canRemove && media.canRemove()) {
       sections.push([
-        { id: 'trash', label: LOCALE.MOVE_TO_TRASH, service: _e.remove, className: 'trash' },
+        { id: 'trash', label: LOCALE.MOVE_TO_TRASH, icon: 'chat-action-trash', service: _e.remove, className: 'trash' },
       ]);
     }
 
