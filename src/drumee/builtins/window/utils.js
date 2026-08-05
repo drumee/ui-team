@@ -398,6 +398,11 @@ class __window_mfs extends DrumeeMFS {
     }
     this._partitionSettleTimer = setTimeout(() => {
       this._partitionSettleTimer = null;
+      // Last look before settling — an insert can also slip in between the
+      // partition pass and this timer.
+      if (this._hasUnpartitioned(listPart)) {
+        this._doPartition(listPart);
+      }
       if (this._partitionDebounce) {
         cancelAnimationFrame(this._partitionDebounce);
         this._partitionDebounce = null;
@@ -497,6 +502,19 @@ class __window_mfs extends DrumeeMFS {
             subtree: true,
           });
         }
+        // The observer was DISCONNECTED across _doPartition just above, so it
+        // could not record anything inserted in that window — and a
+        // MutationObserver does not backfill what it missed while detached.
+        // An upload lands its tiles in bursts, so one falling inside that gap
+        // is a matter of timing: it stays a direct child of the flex-column
+        // container and renders as a full-width row. Ten files, ten rows, one
+        // column — intermittently, which is what made it look random.
+        //
+        // Re-check instead of trusting the gap was empty. _doPartition rescans
+        // direct children each call, so a second pass is idempotent and cheap.
+        if (this._hasUnpartitioned(listPart)) {
+          this._doPartition(listPart);
+        }
         if (done) {
           if (this._partitionRetryTimer) {
             clearTimeout(this._partitionRetryTimer);
@@ -549,6 +567,28 @@ class __window_mfs extends DrumeeMFS {
       scrollEl.style.visibility = "visible";
       scrollEl.dataset.partitioning = 0;
     }
+  }
+
+  /**
+   * Items still sitting directly in .smart-container, outside the three
+   * section wrappers.
+   *
+   * These are the ones that render wrong: the container is a flex COLUMN
+   * (see the inline styles at the end of _doPartition), so an unpartitioned
+   * tile becomes a full-width row instead of a grid cell — ten uploads read
+   * as ten rows in one column.
+   */
+  _hasUnpartitioned(listPart) {
+    const scrollEl = listPart && listPart.el
+      && listPart.el.querySelector(".smart-container");
+    if (!scrollEl) return false;
+    return [...scrollEl.children].some(
+      (el) =>
+        el.dataset && el.dataset.filetype &&
+        !el.classList.contains("workspace-section") &&
+        !el.classList.contains("folder-section") &&
+        !el.classList.contains("file-section"),
+    );
   }
 
   _doPartition(listPart) {
