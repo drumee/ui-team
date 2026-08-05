@@ -20,6 +20,7 @@ require("./skin");
 
 const { getModule, moduleName } = require('./modules');
 const { captureCampaignArrival } = require('libs/campaign');
+const billingDeepLink = require('libs/billing-deep-link');
 
 class drumee_router extends LetcBox {
   constructor(...args) {
@@ -46,6 +47,10 @@ class drumee_router extends LetcBox {
     // signin plugin replaces the hash wholesale with "#/welcome/signin", so the
     // markers are gone by the time a module could look for them.
     captureCampaignArrival();
+    // Same reason, same moment: "#/desk/billing" must be remembered before the
+    // signin plugin replaces the hash, or a signed-out visitor loses the
+    // destination the link named.
+    billingDeepLink.captureFromUrl();
     localStorage.main_domain = bootstrap().main_domain;
     this._buffer = [];
     this._loaded = {
@@ -378,6 +383,9 @@ class drumee_router extends LetcBox {
     // the usual case, since the recipient is normally already on a Drumee page.
     // A no-op when the URL carries no campaign params.
     captureCampaignArrival();
+    // Warm arrival for the billing link too — clicking it in a tab that
+    // already runs the app never re-enters initialize().
+    billingDeepLink.captureFromUrl();
     let page = /^\/.*(.+)\.htm?/;
     if (page.test(location.pathname) || page.test(Host.get(_a.homepage))) {
       this.loadBootstrap();
