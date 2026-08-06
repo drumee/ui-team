@@ -1,59 +1,44 @@
 // ==================================================================== *
 //   Copyright Xialia.com  2011-2026
-//   FILE : builtins/player/text/skeleton/topbar
+//   FILE : builtins/player/video/skeleton/topbar
 //   TYPE : Skeleton
 // ==================================================================== *
 
 /**
- * Text-player header — the shared topbar widget, configured.
+ * Video-player header — the shared topbar widget, configured.
  *
- * Two things carry over from the bespoke header:
+ * The video player has no inline actions of its own, so the right side is
+ * just the widget's three defaults. Close is re-pointed at `_e.close`, the
+ * service the base player listens for.
  *
- *   acknowledgement — the save-state note. `index.js` calls `ensurePart`
- *                     on BOTH `acknowledgement` and its container, so the
- *                     pair is passed through as a custom action rather
- *                     than rebuilt.
- *   title           — the filename, or LOCALE.NOTE when there is no
- *                     `media` behind this view (an unsaved note).
- *
- * Save and Print were a bespoke `KIND.menu.topic` dropdown next to the
- * title; they are now rows in the widget's gear menu.
- *
- * The old root carried `sys_pn: _a.topBar`, and no lexicon defines
- * `topBar` — so it resolved to `undefined` and the part was never named.
- * The widget emits the literal "topbar", which is what `setupInteract()`
- * keys on, so this header becomes a drag handle like every other player's.
+ * `${group}__header` is the jQuery-draggable handle wired up in
+ * player/interact.js (`handle: '.${fig.group}__header'`), and the "topbar"
+ * sys_pn is what triggers `setupInteract()` in interact's onPartReady. The
+ * widget emits both, so the window stays draggable by its header.
  */
 
 const Topbar = require("builtins/player/widget/topbar");
 
 /**
- * The gear menu. `save` and `print` are this player's own cases; the file
- * rows are forwarded to the source MFS view and so only appear when there
- * is one — a note has no `media`.
+ * The gear menu. Every row is either forwarded to the source MFS view
+ * (see `DELEGATED_SERVICES` in ../index.js) or handled by the base player,
+ * so nothing here can silently no-op.
+ *
+ * Print and Edit are deliberately absent: the base's "print" calls
+ * `printPdf()`, which means nothing for a video, and there is no editor.
  */
 function menu(ui) {
   const media = ui.media;
+  // The node is editable only when we still have the MFS view to forward
+  // to and the session may write.
   const editable = !!media && !Visitor.inDmz && !!ui.canUpload();
   const sections = [];
-
-  const own = [];
-  if (ui.canUpload()) {
-    own.push({
-      id: "save",
-      label: LOCALE.SAVE_CHANGES,
-      icon: "apps-floppy",
-      service: _a.save,
-    });
-  }
-  own.push({ id: "print", label: LOCALE.PRINT, icon: "app-print", service: "print" });
-  sections.push(own);
 
   const file = [];
   if (media && !Visitor.inDmz) {
     file.push({ id: "copy", label: LOCALE.COPY, icon: "apps-copy", service: _e.copy });
   }
-  if (media && (Visitor.inDmz || ui.canDownload())) {
+  if (Visitor.inDmz || ui.canDownload()) {
     file.push({
       id: "download",
       label: LOCALE.DOWNLOAD,
@@ -61,8 +46,11 @@ function menu(ui) {
       service: _e.download,
     });
   }
+  if (file.length) sections.push(file);
+
+  const naming = [];
   if (editable) {
-    file.push({
+    naming.push({
       id: "rename",
       label: LOCALE.RENAME,
       icon: "app-edit",
@@ -70,7 +58,7 @@ function menu(ui) {
     });
   }
   if (media && !Visitor.inDmz) {
-    file.push({
+    naming.push({
       id: "chat-threads",
       label: LOCALE.CHAT_THREADS,
       icon: "file-thread",
@@ -85,7 +73,7 @@ function menu(ui) {
       ],
     });
   }
-  if (file.length) sections.push(file);
+  if (naming.length) sections.push(naming);
 
   // Sharing is area-dependent: each area exposes the one link flavour that
   // makes sense for it.
@@ -143,38 +131,16 @@ function menu(ui) {
 }
 
 module.exports = function (ui) {
-  const filename = ui.media ? ui.media.mget(_a.filename) : LOCALE.NOTE;
-
   return Topbar(ui, {
     left: {
-      fileTypeIcon: "app-txt-file",
-      title: filename,
-    },
-    right: {
-      before: [
-        {
-          id: "acknowledgement-container",
-          type: "custom",
-          // Rebuilt verbatim: the player awaits both of these parts.
-          component: Skeletons.Box.X({
-            className: `${ui.fig.family}__acknowledgement-container`,
-            sys_pn: "acknowledgement-container",
-            kidsOpt: {
-              radio: _a.on,
-              uiHandler: ui,
-            },
-            kids: [
-              Skeletons.Note({
-                className: `${ui.fig.family}__acknowledgement`,
-                sys_pn: "acknowledgement",
-              }),
-            ],
-          }),
-        },
-      ],
+      fileTypeIcon: "app-video-file",
+      title: ui.mget(_a.filename),
     },
     defaults: {
       "folder-settings": { menu: menu(ui) },
+      // Only the service is overridden. The widget's own `icon close` class
+      // is what the skin sizes and colours; `window-button__icon-button` has
+      // no global styling of its own.
       close: { service: _e.close },
     },
   });

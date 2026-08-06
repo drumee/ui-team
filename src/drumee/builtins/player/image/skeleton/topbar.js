@@ -7,91 +7,40 @@
 /**
  * Image-player header — Figma "file player/action" (3228:280002).
  *
- * Left: the file-type tile + filename. Right: gear (opens the file's
- * context menu), expand (Move & Resize), close.
+ * Layout lives in the shared topbar widget; this file is only the image
+ * player's configuration of it. The widget injects gear, expand and close
+ * itself, so all that is declared here is the identity block, the gear's
+ * menu contents, and the one action the image player adds.
  *
- * The download / rotate buttons that used to sit in this row now live in
- * the gear menu. The save-rotation button is the one exception: it stays
- * in the header so a pending rotation can be committed explicitly, but
- * the skin hides it until `data-pending="1"` is set (see `_rotate` in the
+ * That extra action is save-rotation: it stays in the header so a pending
+ * rotation can be committed explicitly, but the skin keeps it out of the
+ * flow until `data-pending="1"` is set (see `_syncRotationPending` in the
  * player), so the resting header matches the design.
  */
 
-module.exports = function (ui, size) {
-  size = size || ui.size;
+const Topbar = require("builtins/player/widget/topbar");
 
-  const identity = Skeletons.Box.X({
-    className: `${ui.fig.family}-topbar__identity`,
-    service: _e.raise,
-    uiHandler: ui,
-    kids: [
-      Skeletons.Box.X({
-        className: `${ui.fig.family}-topbar__filetype`,
-        kidsOpt: { active: 0 },
-        kids: [
-          Skeletons.Image.Svg({
-            ico: "bg-image",
-            className: `${ui.fig.family}-topbar__filetype-icon`,
-          }),
-        ],
-      }),
-      Skeletons.Note({
-        className: `${ui.fig.group}__title`,
-        sys_pn: "player-title",
-        content: ui.model.get(_a.filename),
-        service: _e.raise,
-        uiHandler: ui,
-      }),
-    ],
-  });
-
-  // Only meaningful while a client-side rotation is waiting to be pushed
-  // to the server; the skin keeps it out of the flow until then.
-  const saveRotationIcon = Skeletons.Button.Svg({
-    ico: "checked-circle",
-    sys_pn: "save-rotation-button",
-    className: "icon save-rotation",
-    service: "save-rotation",
-    uiHandler: ui,
-    dataset: { pending: 0 },
-  });
-
-  const gear = Skeletons.Button.Svg({
-    ico: "folder-settings",
-    sys_pn: "ctrl-gear",
-    className: "icon gear",
-    service: "open-file-menu",
-    uiHandler: ui,
-  });
-
-  // NOT `ctrl-close`: the slider's fullscreen action bar already claims
-  // that part name on the same handler (see skeleton/slider.js).
-  const close = Skeletons.Button.Svg({
-    ico: "cross",
-    sys_pn: "ctrl-close-window",
-    className: "icon close",
-    service: "close-player",
-    uiHandler: ui,
-  });
-
-  const actions = Skeletons.Box.X({
-    className: `${ui.fig.family}-topbar__actions`,
-    sys_pn: "commands",
-    kids: [saveRotationIcon, gear, require("./move-resize")(ui), close],
-  });
-
-  return Skeletons.Box.X({
-    className: `${ui.fig.group}__header container u-jc-sb ${ui.fig.family}-topbar`,
-    debug: __filename,
-    sys_pn: "topbar",
-    justify: _a.right,
-    kids: [
-      Skeletons.Box.X({
-        className: `${ui.fig.group}__header main u-ai-center`,
-        service: _e.raise,
-        uiHandler: ui,
-        kids: [identity, actions],
-      }),
-    ],
+module.exports = function (ui) {
+  return Topbar(ui, {
+    left: {
+      fileTypeIcon: "bg-image",
+      title: ui.model.get(_a.filename),
+    },
+    right: {
+      before: [
+        {
+          id: "save-rotation-button",
+          type: "button",
+          icon: "apps-floppy",
+          className: "icon save-rotation",
+          service: "save-rotation",
+          dataset: { pending: 0 },
+        },
+      ],
+    },
+    defaults: {
+      "folder-settings": { menu: ui.fileMenu() },
+      close: { service: "close-player" },
+    },
   });
 };

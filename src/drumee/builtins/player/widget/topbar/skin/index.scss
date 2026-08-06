@@ -1,0 +1,593 @@
+@use "mixins/drumee";
+
+// The shared topbar widget — layout only.
+//
+// Everything here hangs off `.drumee-topbar`, never off a module's family
+// class, so a PDF or video viewer picks up the same chrome by rendering
+// the widget. Consumers restyle through their own `{family}-topbar__*`
+// hook, which the widget puts on every node alongside these classes.
+//
+// Geometry and tokens come from the image player's Figma header
+// ("file player/action" 3228:280002, Move & Resize popover 3228:280861,
+// gear menu 3228:281238), which is the reference implementation.
+//
+//   header fill #e5e5ea  -> --normal-bg-80
+//   popover fill #f2f2f7 -> --normal-bg-90
+//   text      #0b0a21    -> --normal-fg-10
+//   tile/active fill     -> --overlay-bg-05  (rgba(0,0,0,.05))
+// The bar's own geometry, deliberately written at (0,3,0).
+//
+// A consuming module styles its header group by name — the players do it as
+// `.player__header.main` (builtins/player/skin/header.scss), which sets its
+// own padding at (0,2,0) on this very element. The widget cannot know those
+// selectors, so it wins on weight instead: descendant + doubled class. The
+// player's old header rule was `.player-image .player__header.main`, also
+// (0,3,0), so this is the same weight the markup already relied on.
+.drumee-topbar .drumee-topbar__bar.drumee-topbar__bar {
+  background-color: var(--normal-bg-80);
+  border-radius: var(--corner-radius-2) var(--corner-radius-2) 0 0;
+  box-sizing: border-box;
+  height: 56px;
+  padding: 0 22px;
+
+  &[data-device="mobile"] {
+    padding: 0 var(--spacer-4);
+  }
+}
+
+.drumee-topbar {
+  // The header owns the top radius so it meets the content flush.
+  border-radius: var(--corner-radius-2) var(--corner-radius-2) 0 0;
+
+  // ---- Left: identity ---------------------------------------------------
+  &__identity {
+    align-items: center;
+    gap: var(--spacer-2);
+    min-width: 0;
+    overflow: hidden;
+  }
+
+  &__filetype {
+    align-items: center;
+    background-color: var(--overlay-bg-05);
+    border-radius: var(--corner-radius-2);
+    flex-shrink: 0;
+    height: 32px;
+    justify-content: center;
+    width: 32px;
+  }
+
+  // ---- Inline rename ------------------------------------------------------
+  // The title Note stays in the DOM and is hidden while its editor is up
+  // (topbar/rename.js), so nothing about the Note has to be rebuilt.
+  &__title[data-renaming] {
+    display: none;
+  }
+
+  &__title-input {
+    background-color: var(--normal-bg);
+    border: 1px solid var(--border-default);
+    border-radius: var(--corner-radius-1);
+    box-sizing: border-box;
+    color: var(--normal-fg-10);
+    font-family: var(--font-main);
+    font-size: 16px;
+    line-height: 24px;
+    // Sized to a filename, not to the header. `width` is a preference and
+    // `max-width` the ceiling, so a narrow window shrinks it rather than
+    // pushing the action row off the edge.
+    flex: 0 1 auto;
+    max-width: 100%;
+    min-width: 0;
+    outline: none;
+    padding: 2px var(--spacer-2);
+    width: 260px;
+  }
+
+  &__filetype-icon {
+    color: #71a3f4;
+    height: 25.6px;
+    width: 25.6px;
+
+    svg {
+      display: block;
+      height: 100%;
+      width: 100%;
+    }
+  }
+
+  // ---- Right: actions ---------------------------------------------------
+  &__actions {
+    align-items: center;
+    flex-shrink: 0;
+    gap: var(--spacer-4);
+    height: 24px;
+
+    .icon {
+      align-items: center;
+      background-color: transparent;
+      border-radius: var(--corner-radius-1);
+      color: var(--normal-fg-10);
+      cursor: pointer;
+      display: flex;
+      height: 24px;
+      justify-content: center;
+      padding: 0;
+      width: 24px;
+
+      svg {
+        height: 20px;
+        width: 20px;
+      }
+
+      &:hover svg {
+        color: var(--normal-fg-20);
+      }
+    }
+  }
+
+  // ---- Folder settings: the dropdown ------------------------------------
+  // Hover-only, like the Move & Resize panel below. No framework menu
+  // widget is involved, so there is no state machine, no inline styles to
+  // out-specify, and nothing to clip the submenus.
+  &__menu {
+    align-items: center;
+    flex-shrink: 0;
+    height: 24px;
+    justify-content: center;
+    overflow: visible;
+    position: relative;
+    width: 24px;
+
+    &:hover .drumee-topbar__menu-panel,
+    .drumee-topbar__menu-panel:hover {
+      opacity: 1;
+      pointer-events: auto;
+      transform: translateY(0);
+      visibility: visible;
+    }
+  }
+
+  &__menu-panel {
+    overflow: visible;
+    position: absolute;
+    right: 0;
+    top: calc(100% + 8px);
+    z-index: 1000;
+
+    opacity: 0;
+    pointer-events: none;
+    transform: translateY(-4px);
+    visibility: hidden;
+    // `visibility 0s linear .15s` delays the close so the cursor can cross
+    // the trigger->panel gap without the panel vanishing.
+    transition:
+      opacity 0.15s ease,
+      transform 0.15s ease,
+      visibility 0s linear 0.15s;
+
+    // Invisible bridge across the 8px gap between trigger and panel.
+    &:before {
+      content: "";
+      height: 8px;
+      left: 0;
+      position: absolute;
+      right: 0;
+      top: -8px;
+    }
+  }
+
+  &__menu-items {
+    background-color: var(--normal-bg);
+    border-radius: var(--corner-radius-1);
+    box-shadow: 0 1px 11px 0 rgba(0, 0, 0, 0.13);
+    box-sizing: border-box;
+    gap: var(--spacer-2);
+    overflow: visible;
+    padding: var(--spacer-3);
+    // Fixed rather than min-, so the panel does not grow with a long
+    // filename-derived label.
+    width: 164px;
+  }
+
+  // ---- Overflow -----------------------------------------------------------
+  // `overflow-y: auto` establishes a clipping context whether or not anything
+  // actually overflows, so putting it on a list that owns submenus would clip
+  // them away again — the exact bug the panel's `overflow: visible` fixes.
+  //
+  // So it is applied only where it cannot do that:
+  //
+  //   * a root list that contains NO submenu, guarded by `:has()`. Browsers
+  //     without `:has()` simply don't match and keep today's behaviour, so
+  //     there is no way for this to regress anything.
+  //   * a submenu itself, which owns nothing that needs to escape it.
+  //
+  // A long menu that ALSO has submenus is deliberately left alone: bounding
+  // it needs the panel to flip or reposition, which is JS work, not CSS.
+  // The offset clears the header the panel hangs from, plus a little air.
+  &__menu-items:not(:has(&__submenu)) {
+    max-height: calc(100vh - 96px);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+
+  &__menu-item {
+    align-items: center;
+    border-radius: var(--corner-radius-1);
+    box-sizing: border-box;
+    cursor: pointer;
+    display: flex;
+    flex-direction: row;
+    gap: var(--spacer-2);
+    padding: var(--spacer-3);
+    // Submenus are positioned against their parent row.
+    position: relative;
+    // Labels WRAP rather than run past the panel. The root panel is a fixed
+    // 164px, so a long label ("Download a PDF version") used to push the row
+    // wider than the surface it sits on. Line height comes up from 1 to give
+    // the wrapped lines room to breathe.
+    white-space: normal;
+    width: 100%;
+
+    // The Figma is Geist SemiBold. drumee.typo() only maps 300/400/500/700
+    // onto a font-family and never emits `font-weight`, so 600 has to be
+    // set directly or rows render at 400.
+    @include drumee.typo($color: var(--normal-fg-10), $size: 12px, $line: 1.35);
+    font-weight: 600;
+
+    &:not([data-state="disable"]):hover {
+      background-color: var(--normal-bg-90);
+    }
+
+    &[data-state="disable"] {
+      cursor: not-allowed;
+      opacity: 0.35;
+      pointer-events: none;
+    }
+
+    // Full-bleed hairline inside the panel's inset — the design draws the
+    // divider as a zero-height row.
+    &.separator {
+      background-color: var(--border-default);
+      border-radius: 0;
+      cursor: default;
+      flex-shrink: 0;
+      height: 1px;
+      margin: 0;
+      padding: 0;
+      pointer-events: none;
+    }
+  }
+
+  // Decoration must never be the click target.
+  //
+  // Every LETC view binds its own `onclick` unless `active: 0`, and that
+  // handler calls `e.stopPropagation()` BEFORE dispatching (ui-core
+  // letc/addons/letc.js `__handleClick`). An inner label or glyph therefore
+  // swallows the click and, having no handlers of its own, does nothing —
+  // so only the few pixels of row padding NOT covered by the label were
+  // live. That is the "sometimes the button works" behaviour.
+  //
+  // `kidsOpt: { active: 0 }` is meant to prevent exactly this and does not:
+  // `mergeKidsOptions` reassigns its loop parameter inside a `.map()` and
+  // never writes back, so the option is silently dropped. Taking the
+  // decoration out of hit-testing is independent of that and cannot be
+  // undone by a framework quirk. `:hover` still resolves to the row.
+  //
+  // `__submenu` is deliberately absent: it is a child of its row and must
+  // stay interactive.
+  &__menu-icon,
+  &__menu-label,
+  &__menu-chevron,
+  &__snap-label,
+  &__snap-glyph,
+  &__filetype-icon {
+    pointer-events: none;
+  }
+
+  &__menu-icon {
+    fill: currentColor;
+    flex-shrink: 0;
+    height: 16px;
+    width: 16px;
+
+    svg {
+      display: block;
+      height: 100%;
+      margin: 0;
+      width: 100%;
+    }
+  }
+
+  &__menu-label {
+    flex: 1;
+    // A flex item's floor is its content width unless this is set, which
+    // would keep the label on one line and push the row wide however the
+    // parent is sized. `anywhere` is the fallback for a single unbroken
+    // token — a filename-derived label with no spaces in it.
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+
+  // The Figma uses a 12px CaretRight glyph; ours is a `›` note, so pin it
+  // to the same box and optical size.
+  &__menu-chevron {
+    flex-shrink: 0;
+    font-size: 14px;
+    line-height: 1;
+    margin-left: auto;
+    text-align: center;
+    width: 12px;
+  }
+
+  // ---- Submenus (recursive, any depth) ----------------------------------
+  &__submenu {
+    align-items: stretch;
+    background-color: var(--normal-bg);
+    border-radius: var(--corner-radius-1);
+    box-shadow: 0 1px 11px 0 rgba(0, 0, 0, 0.13);
+    box-sizing: border-box;
+    flex-direction: column;
+    gap: var(--spacer-2);
+    // Submenus open RIGHT, matching the shared contextmenu.
+    //
+    // Note the trade-off this accepts: the dropdown is pinned to the
+    // topbar's right edge, so a submenu opening outward can run past the
+    // window on a narrow viewport or a right-docked player. There is no
+    // edge-flip logic to catch that — see the Risks section of the design
+    // doc. Opening inward avoided it but reads backwards against every
+    // other menu in the app, so outward is the deliberate choice.
+    //
+    // The submenu's left edge sits flush with the parent panel's outer
+    // edge: `100%` is the ROW's width and the row is inset by the panel's
+    // padding, so add that back. The negative top does the same in the other
+    // axis, lining the first submenu row up with its parent.
+    left: calc(100% + var(--spacer-3));
+    min-height: 0;
+    min-width: 0;
+    overflow: visible;
+    padding: var(--spacer-3);
+    position: absolute;
+    top: calc(var(--spacer-3) * -1);
+    // Hugs its content, but only up to a point — without the cap
+    // `max-content` grows to the longest label and never wraps, so a long
+    // row would run off the side instead of breaking.
+    max-width: 220px;
+    width: max-content;
+    z-index: 1;
+
+    // That offset is dead space for `:hover` — the submenu only stays open
+    // while the pointer is inside the parent row's subtree, so crossing the
+    // gap would drop the hover before the pointer arrives. Bridge it with an
+    // invisible strip that BELONGS to the submenu. Spans its full height, so
+    // a diagonal approach works too.
+    &:before {
+      bottom: 0;
+      content: "";
+      left: calc(var(--spacer-3) * -1);
+      position: absolute;
+      top: 0;
+      width: var(--spacer-3);
+    }
+
+    // Opens inward instead, when outward would leave the viewport — set by
+    // topbar/flip.js on hover. The bridge swaps sides with it, or the gap
+    // goes dead and the submenu becomes unreachable.
+    &[data-flip="left"] {
+      left: auto;
+      right: calc(100% + var(--spacer-3));
+
+      &:before {
+        left: auto;
+        right: calc(var(--spacer-3) * -1);
+      }
+    }
+  }
+
+  // NO overflow on submenus, deliberately.
+  //
+  // A leaf submenu looks like it could scroll safely — it owns no nested
+  // submenu to clip. It cannot: `overflow-y: auto` forces the other axis
+  // to compute as `auto` too (CSS only allows `visible` when BOTH axes are
+  // visible), so the box clips horizontally as well and takes the `:before`
+  // bridge with it. The bridge sits at `left: -8px`, outside the box, and
+  // it is the only thing spanning the gap between a row and its submenu.
+  // Without it the gap is dead: hover drops as the pointer crosses, and the
+  // submenu closes before it can be reached.
+  //
+  // So a very long submenu overflows the viewport rather than scrolling.
+  // None is anywhere near that today — the longest has two rows — and an
+  // unreachable submenu is far worse than a tall one.
+}
+
+// Submenu open/closed, deliberately written at (0,3,0) and (0,4,0).
+//
+// A submenu is a Box.Y, so it matches `.drumee-box[data-flow="y"]` in
+// skin/lib/container.scss — `display: flex` at (0,2,0). A plain
+// `.drumee-topbar__submenu { display: none }` is (0,1,0) and loses, which
+// leaves every submenu permanently open, stacked over the panel. Three
+// classes clear the base; the `:hover` rule then clears the closed rule.
+// This is the same reason the shared contextmenu nests its own rule four
+// deep (builtins/contextmenu/skin/index.scss).
+//
+// `__menu-items` is an ancestor of every row at every depth, so one pair of
+// rules covers the whole recursion.
+.drumee-topbar__menu-items .drumee-topbar__menu-item > .drumee-topbar__submenu {
+  display: none;
+}
+
+.drumee-topbar__menu-items .drumee-topbar__menu-item:hover > .drumee-topbar__submenu {
+  display: flex;
+}
+
+.drumee-topbar {
+
+  // ---- Move & Resize ----------------------------------------------------
+  // Same interaction shape as the folder window's zoom menu: the trigger
+  // zooms on click, hover reveals the preset panel.
+  &__snap-wrapper {
+    align-items: center;
+    flex-shrink: 0;
+    height: 24px;
+    justify-content: center;
+    overflow: visible;
+    position: relative;
+    width: 24px;
+
+    &:hover .drumee-topbar__snap-menu,
+    .drumee-topbar__snap-menu:hover {
+      opacity: 1;
+      pointer-events: auto;
+      transform: translateY(0);
+      visibility: visible;
+    }
+  }
+
+  &__snap-trigger {
+    align-items: center;
+    color: var(--normal-fg-10);
+    cursor: pointer;
+    display: flex;
+    height: 24px;
+    justify-content: center;
+    width: 24px;
+
+    svg {
+      height: 24px;
+      width: 24px;
+    }
+
+    &:hover {
+      color: var(--normal-fg-20);
+    }
+  }
+
+  &__snap-menu {
+    align-items: center;
+    background-color: var(--normal-bg-90);
+    border: 1px solid var(--border-default);
+    border-radius: var(--corner-radius-3);
+    gap: var(--spacer-4);
+    padding: 8px 12px 12px;
+    position: absolute;
+    right: -4px;
+    top: calc(100% + 8px);
+    z-index: 1000;
+
+    opacity: 0;
+    pointer-events: none;
+    transform: translateY(-4px);
+    visibility: hidden;
+    // `visibility 0s linear .15s` delays the close so the cursor can cross
+    // the trigger->panel gap without the panel vanishing.
+    transition:
+      opacity 0.15s ease,
+      transform 0.15s ease,
+      visibility 0s linear 0.15s;
+
+    // Invisible bridge across the 8px gap between trigger and panel.
+    &:before {
+      content: "";
+      height: 8px;
+      left: 0;
+      position: absolute;
+      right: 0;
+      top: -8px;
+    }
+  }
+
+  &__snap-label {
+    @include drumee.typo($size: 12px, $line: 1.4, $color: var(--normal-fg-10));
+    text-align: center;
+    white-space: nowrap;
+  }
+
+  &__snap-presets {
+    align-items: center;
+    gap: var(--spacer-4);
+  }
+
+  &__snap-preset {
+    align-items: center;
+    border-radius: var(--corner-radius-1);
+    cursor: pointer;
+    display: flex;
+    flex-shrink: 0;
+    height: 32px;
+    justify-content: center;
+    overflow: hidden;
+    width: 32px;
+
+    &:hover {
+      background-color: var(--primary-20);
+    }
+
+    // The layout the window is already in. Inert: re-picking it is at best a
+    // no-op, and for "full" it is actively wrong — `window-zoom` runs
+    // `snap.toggleZoom`, so clicking the highlighted full preset would
+    // RESTORE the window instead of leaving it maximised.
+    //
+    // `pointer-events: none` keeps the panel open while the cursor is over
+    // this preset: hover falls through to `__snap-presets` and on up to
+    // `__snap-menu`, which is what the open rule matches.
+    &[data-active="1"] {
+      background-color: var(--primary-20);
+      cursor: default;
+      pointer-events: none;
+    }
+
+    // left  — inner block at the start (the base rule below)
+    // right — pushed to the end
+    // full  — spans the box
+    // center— narrower inset block, centred
+    &[data-preset="right"] .drumee-topbar__snap-glyph {
+      justify-content: flex-end;
+    }
+
+    &[data-preset="full"] .drumee-topbar__snap-glyph-fill {
+      width: 100%;
+    }
+
+    &[data-preset="center"] .drumee-topbar__snap-glyph {
+      justify-content: center;
+      padding: 4px;
+    }
+
+    &[data-preset="center"] .drumee-topbar__snap-glyph-fill {
+      width: 100%;
+    }
+  }
+
+  // The preset glyphs are shapes in the Figma, not an icon: a 20x16
+  // outlined box whose inner block moves and resizes per preset.
+  &__snap-glyph {
+    align-items: center;
+    border: 1.5px solid var(--normal-fg-800);
+    border-radius: 1px;
+    box-sizing: border-box;
+    display: flex;
+    height: 16px;
+    padding: 2px;
+    width: 20px;
+  }
+
+  &__snap-glyph-fill {
+    background-color: var(--normal-fg-20);
+    border-radius: 1px;
+    height: 100%;
+    width: 40%;
+  }
+}
+
+@media (max-width: 650px) {
+  // Same weight as the base bar rule above, for the same reason.
+  .drumee-topbar .drumee-topbar__bar.drumee-topbar__bar {
+    height: 48px;
+    padding: 0 var(--spacer-4);
+  }
+
+  // No window management on a full-screen mobile player.
+  .drumee-topbar__snap-wrapper {
+    display: none;
+  }
+}

@@ -5,10 +5,7 @@ require('./skin');
 
 const { TweenMax, Cubic } = require("@drumee/ui-core/vendor");
 const snap = require('builtins/window/snap');
-// Required directly, NOT read off `this.contextmenuSkeleton`: players set
-// that property to the string "a" (player/interact.js) to suppress their
-// right-click menu, so calling it would throw.
-const contextmenuSkeleton = require('builtins/contextmenu/skeleton');
+const renameInline = require('builtins/player/widget/topbar/rename');
 const __core = require('player/interact');
 
 // Gear-menu rows that act on the node rather than on the player. The MFS
@@ -20,7 +17,6 @@ const DELEGATED_SERVICES = [
   _e.copy,
   _e.remove,
   _a.chat,
-  'direct-rename',
   'chat-threads',
   'download-file-chat',
   'secure-share',
@@ -83,13 +79,24 @@ class __player_image extends __core {
       case _a.content:
         /** DO NOT REMOVE */
         break;
+      // `_syncRotationPending` flips `data-pending` on this button, but it
+      // had nothing to flip it on — the part was never captured, so the
+      // save-rotation button stayed hidden however much you rotated. Bind
+      // it here, and sync straight away so a re-feed mid-rotation (the
+      // rotate path re-feeds the skeleton) comes back showing the button.
+      case "save-rotation-button":
+        this.__saveRotationButton = child;
+        this._syncRotationPending();
+        break;
       default:
         super.onPartReady(child, pn);
     }
   }
 
   /**
-   * Gear-menu / right-click contents, in Figma order (3228:280002):
+   * The gear menu, as data for the shared topbar widget.
+   *
+   * Figma order (3228:280002):
    *
    *   copy · download · print · rotate ▸ | rename · chat threads ▸ |
    *   share · get info · designation link | delete
@@ -97,81 +104,111 @@ class __player_image extends __core {
    * Rows that act on the node itself are only offered when we still have a
    * handle on the source MFS view (`this.media`) to forward them to — a
    * player opened straight from a share link has none.
+   *
+   * Every label and service is the one the shared contextmenu catalog uses
+   * (builtins/contextmenu/skeleton/items.js), so the `onUiEvent` switch
+   * below and the `DELEGATED_SERVICES` forwarding keep working unchanged.
+   *
+   * Called while the skeleton is built. `this.media` and the model are set
+   * in `initialize` (player/interact.js), well ahead of the first feed, and
+   * `restart()` rebuilds the skeleton — so the menu tracks permissions the
+   * same way the old click-time builder did.
    */
-  contextmenuItems() {
+  fileMenu() {
     const media = this.media;
     const editable = !!media && !Visitor.inDmz && !!this.canUpload();
     const sections = [];
 
     const first = [];
-    if (media && !Visitor.inDmz) first.push(_a.copy);
-    if (Visitor.inDmz || this.canDownload()) first.push(_a.download, 'print');
-    if (editable && media.imgCapable && media.imgCapable()) first.push('rotate');
+    if (media && !Visitor.inDmz) {
+      first.push({ id: 'copy', label: LOCALE.COPY, icon: 'apps-copy', service: _e.copy });
+    }
+    if (Visitor.inDmz || this.canDownload()) {
+      first.push(
+        { id: 'download', label: LOCALE.DOWNLOAD, icon: 'app-download', service: _e.download },
+        { id: 'print', label: LOCALE.PRINT, icon: 'app-print', service: 'print' },
+      );
+    }
+    if (editable && media.imgCapable && media.imgCapable()) {
+      first.push({
+        id: 'rotate',
+        label: LOCALE.ROTATE,
+        icon: 'app-rotate',
+        // A parent row: the submenu opens on hover, the row itself is a
+        // no-op (`case "rotate-menu"` below).
+        service: 'rotate-menu',
+        children: [
+          {
+            id: 'rotate-left',
+            label: LOCALE.ROTATE_LEFT,
+            icon: 'app-rotate-left',
+            className: 'rotate-left',
+            service: _e.rotate,
+            value: -90,
+          },
+          {
+            id: 'rotate-right',
+            label: LOCALE.ROTATE_RIGHT,
+            icon: 'app-rotate-right',
+            className: 'rotate-right',
+            service: _e.rotate,
+            value: 90,
+          },
+        ],
+      });
+    }
     if (first.length) sections.push(first);
 
     const naming = [];
-    if (editable) naming.push(_a.rename);
-    if (media && !Visitor.inDmz) naming.push('seeChatThreads');
+    if (editable) {
+      naming.push({ id: 'rename', label: LOCALE.RENAME, icon: 'app-edit', service: 'direct-rename' });
+    }
+    if (media && !Visitor.inDmz) {
+      naming.push({
+        id: 'chat-threads',
+        label: LOCALE.CHAT_THREADS,
+        icon: 'file-thread',
+        service: 'chat-threads',
+        children: [
+          { id: 'view-chat-threads', label: LOCALE.VIEW_CHAT_THREADS, service: _a.chat },
+          { id: 'download-file-chat', label: LOCALE.DOWNLOAD_CHAT_THREADS, service: 'download-file-chat' },
+        ],
+      });
+    }
     if (naming.length) sections.push(naming);
 
     const details = [];
     if (editable) {
       switch (this.mget(_a.area)) {
-        case _a.share: details.push('secureShare'); break;
-        case _a.private: details.push('designationLink'); break;
-        case _a.public: details.push('directUrl'); break;
+        case _a.share:
+          details.push({ id: 'secure-share', label: LOCALE.SHARE, icon: 'ctxmenu-share', service: 'secure-share' });
+          break;
+        case _a.private:
+          details.push({ id: 'designation-link', label: LOCALE.DESIGNATION_LINK, icon: 'app-share', service: 'designation-link' });
+          break;
+        case _a.public:
+          // No icon was specified for this row; `apps-link-simple` is the
+          // closest match in the same family as the rest.
+          details.push({ id: 'direct-url', label: LOCALE.URL_ADDRESS, icon: 'apps-link-simple', service: 'direct-url' });
+          break;
       }
     }
-    details.push(_a.info);
+    // "Get info" emits `_e.settings`, not "info" — see the switch below.
+    details.push({ id: 'info', label: LOCALE.GET_INFO, icon: 'ctxmenu-info', service: _e.settings, type: _a.info });
     sections.push(details);
 
-    if (media && media.canRemove && media.canRemove()) sections.push([_a.trash]);
+    if (media && media.canRemove && media.canRemove()) {
+      sections.push([
+        { id: 'trash', label: LOCALE.MOVE_TO_TRASH, icon: 'chat-action-trash', service: _e.remove, className: 'trash' },
+      ]);
+    }
 
     const items = [];
     sections.forEach((s, i) => {
-      if (i) items.push(_a.separator);
+      if (i) items.push({ separator: true });
       items.push(...s);
     });
     return items;
-  }
-
-  /**
-   * Open the file menu under the gear button.
-   *
-   * Reuses the real contextmenu builder rather than a bespoke panel: same
-   * markup, same skin, same submenu behaviour. `drumeeDialog` is the global
-   * overlay layer the right-click path also feeds, so only one menu can be
-   * open at a time and clicking away dismisses it.
-   *
-   * The builder is the required module, not `this.contextmenuSkeleton` —
-   * players park the string "a" there to suppress their right-click menu
-   * (player/interact.js), which this gear button deliberately bypasses.
-   */
-  _openFileMenu(cmd) {
-    const anchor = cmd && cmd.el;
-    if (!anchor || !window.drumeeDialog || drumeeDialog.isDestroyed()) return;
-    const r = anchor.getBoundingClientRect();
-    const kids = contextmenuSkeleton(this, cmd, {});
-    if (_.isEmpty(kids)) return;
-    drumeeDialog.feed(Skeletons.Box.Y({
-      volatility: 4,
-      className: `drumee-contextmenu ${this.fig.family}`,
-      kids: [kids],
-      uiHandler: [this],
-      style: { left: r.left, top: r.bottom + 4, zIndex: 100000 },
-    }));
-    // Same viewport clamp the right-click path applies: the menu is only
-    // measurable once fed, so correct the placement afterwards.
-    const menu = drumeeDialog.children.last();
-    if (!menu) return;
-    const w = menu.$el.width();
-    const h = menu.$el.height();
-    if (r.left + w > window.innerWidth) {
-      menu.el.style.left = `${Math.max(0, r.right - w)}px`;
-    }
-    if (r.bottom + 4 + h > window.innerHeight) {
-      menu.el.style.top = `${Math.max(0, r.top - h - 4)}px`;
-    }
   }
 
   /**
@@ -444,9 +481,6 @@ class __player_image extends __core {
       case 'close-player':
         return this.goodbye();
 
-      case 'open-file-menu':
-        return this._openFileMenu(cmd);
-
       case 'print':
         if (this._dmzGateDownload()) return;
         return this._printImage();
@@ -468,6 +502,12 @@ class __player_image extends __core {
       case 'window-reframe':
         snap.reframe(this, this._defaultBounds(), this._snapOpt());
         return this._markSnapPreset('center');
+
+      // Rename edits the title in place instead of being forwarded: the
+      // MFS view opens its editor on the tile in the folder grid, behind
+      // this player, where nobody can see it.
+      case 'direct-rename':
+        return renameInline(this);
 
       default:
         // Gear-menu rows that act on the node itself go to the source MFS
@@ -506,6 +546,9 @@ class __player_image extends __core {
   */
   _keyUp(e) {
     if (Wm.getActivePlayer() != this) return;
+    // RADIO_KBD is global, so arrow keys typed into the title's rename
+    // editor would page through siblings underneath it.
+    if (this._titleRenaming) return;
 
     switch (e.key) {
       case 'ArrowRight':
