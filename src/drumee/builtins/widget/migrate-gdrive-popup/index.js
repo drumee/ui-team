@@ -184,6 +184,18 @@ class __migrate_gdrive_popup extends LetcBox {
       return;
     }
 
+    // 2b) Downgrade over-limit: migration is OFF while the workspace is over
+    // its plan limits — an import only ADDS bytes. A RUNNING job fell through
+    // to (1) above on purpose (watching + cancelling it makes the overage
+    // smaller); with nothing running, say why and leave instead of offering
+    // an import that the clamp refuses (its get_state 401 used to strand
+    // this popup on the legacy OAuth pane — reported live).
+    if (require('libs/over-limit').isLocked()) {
+      require('libs/over-limit').notifyBlocked('write');
+      this._close();
+      return;
+    }
+
     // 3) No active/unseen job → go straight to the share-to-SA flow.
     // The Google Picker was removed: its iframe needs third-party cookies that
     // Safari blocks by default (and Chrome is dropping), so it can't work
