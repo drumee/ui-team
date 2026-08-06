@@ -133,7 +133,7 @@ function menu(ui) {
 module.exports = function (ui) {
   return Topbar(ui, {
     left: {
-      fileTypeIcon: "video",
+      fileTypeIcon: "app-video-file",
       title: ui.mget(_a.filename),
     },
     defaults: {
