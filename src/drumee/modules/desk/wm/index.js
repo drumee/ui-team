@@ -32,15 +32,8 @@ class __window_manager extends push {
     if (Visitor.canServerImpExp()) {
       exportMenu = [_a.separator, _a.import];
     }
-    // Desk-background right-click mirrors the topbar actions: Create
-    // workspace (media_form modal), + New (same submenu as the topbar
-    // Add-new menu) and Invite (invite-members popup).
-    this.contextmenuItems = [
-      _a.createWorkspace,
-      _a.addNew,
-      _a.separator,
-      _a.inviteMember,
-    ];
+    // Desk-background context menu is resolved by contextmenuItems() below
+    // so it can hide create/invite entries while the org is over-limit.
     this._handelKbdEvents = this._handelKbdEvents.bind(this);
     RADIO_KBD.on(_e.keyup, this._handelKbdEvents);
     /** Preload some most used widget. Do not use await to avoid blocking */
@@ -48,6 +41,22 @@ class __window_manager extends push {
     // Post-Checkout return (?checkout=success|cancel) → payment result modal.
     // Deferred so the wrapper-modal slot exists before we feed it.
     setTimeout(() => this.checkCheckoutReturn(), 1200);
+  }
+
+  /**
+   * Desk-background right-click. Mirrors the topbar actions while the
+   * workspace can write; while over-limit / hard_lock the create + invite
+   * entries are omitted entirely (handlers also call guardWrite — belt and
+   * braces for any other entry that still lands on those services).
+   */
+  contextmenuItems() {
+    if (require("libs/over-limit").isLocked()) return [];
+    return [
+      _a.createWorkspace,
+      _a.addNew,
+      _a.separator,
+      _a.inviteMember,
+    ];
   }
 
   /**
@@ -1899,6 +1908,9 @@ class __window_manager extends push {
         return this.launch(args, { explicit: 1, singleton: 1 });
 
       case "new-workspace":
+        // UI gate before media_form / folder_form — create_hub is clamped
+        // server-side, but the modal itself is already a write affordance.
+        if (require("libs/over-limit").guardWrite("write")) return;
         return this.ensurePart("wrapper-modal").then((p) => {
           p.clear();
           p.el.dataset.state = "open";
@@ -1928,6 +1940,7 @@ class __window_manager extends push {
         });
 
       case "new-sub-folder":
+        if (require("libs/over-limit").guardWrite("write")) return;
         return this.addFolder({
           position: 0,
           area: _a.personal,
@@ -1943,7 +1956,8 @@ class __window_manager extends push {
 
       // Desk-background context menu (+ New submenu / Invite): these are
       // Desk-owned flows — same handlers the topbar buttons hit — so
-      // delegate up instead of duplicating them here.
+      // delegate up instead of duplicating them here. Desk.onUiEvent owns
+      // the over-limit guardWrite for each of these services.
       case "new-note":
       case "new-document":
       case "new-spreadsheet":
@@ -1980,6 +1994,7 @@ class __window_manager extends push {
         return this.open(cmd, cmd._args);
 
       case _e.upload:
+        if (require("libs/over-limit").guardWrite("write")) return;
         return this.handleUpload();
 
       case "export-to-server":

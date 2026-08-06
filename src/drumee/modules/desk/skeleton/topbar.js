@@ -183,7 +183,12 @@ module.exports = function (ui) {
         className: `${pfx}__actions-cluster`,
         sys_pn :"action-cluster",
         kids: [
-          deskNewMenu(pfx, ui),
+          // Downgrade over-limit: creating anything is a write — while the
+          // workspace is read-only the whole "+ New" menu goes, rather than
+          // offering five entries that each end in a server refusal. The
+          // desk re-feeds this part on over-limit:changed, so it comes back
+          // the moment the org is within limits again.
+          ...(require("libs/over-limit").isLocked() ? [] : [deskNewMenu(pfx, ui)]),
 
           // Search bar + suggestions
           Skeletons.Box.Y({
@@ -246,14 +251,17 @@ module.exports = function (ui) {
             ],
           }),
 
-          // Invite button
-          Skeletons.Button.Label({
+          // Invite button — gone while the workspace is over its plan
+          // limits: invites are paused (the seat guard and the REST clamp
+          // both refuse them), and a button that only ever answers with a
+          // refusal toast should not be offered. Same re-feed as "+ New".
+          ...(require("libs/over-limit").isLocked() ? [] : [Skeletons.Button.Label({
             ico: "topbar-invite",
             className: `${pfx}__invite-btn`,
             label: LOCALE.INVITE || "Invite",
             service: "invite-member",
             uiHandler: [ui],
-          }),
+          })]),
 
           // Tablet-only consolidated menu (768px ≤ width < 1024px).
           // Flattened: nesting Skeletons.Menu inside another Menu's `items`
@@ -270,23 +278,27 @@ module.exports = function (ui) {
               ico: "bars",
               className: `${pfx}__more-btn`,
             }),
-            items: [
-              ...addItems(pfx, ui),
-              Skeletons.Button.Label({
-                ico: "app-upload",
-                className: `${pfx}__more-menu-item`,
-                label: LOCALE.UPLOAD,
-                service: _e.upload,
-                uiHandler: [ui],
-              }),
-              Skeletons.Button.Label({
-                ico: "topbar-invite",
-                className: `${pfx}__more-menu-item`,
-                label: LOCALE.INVITE || "Invite",
-                service: "invite-member",
-                uiHandler: [ui],
-              }),
-            ],
+            items: require("libs/over-limit").isLocked()
+              // Read-only: creating, uploading and inviting are all paused —
+              // the consolidated tablet menu keeps nothing actionable.
+              ? []
+              : [
+                ...addItems(pfx, ui),
+                Skeletons.Button.Label({
+                  ico: "app-upload",
+                  className: `${pfx}__more-menu-item`,
+                  label: LOCALE.UPLOAD,
+                  service: _e.upload,
+                  uiHandler: [ui],
+                }),
+                Skeletons.Button.Label({
+                  ico: "topbar-invite",
+                  className: `${pfx}__more-menu-item`,
+                  label: LOCALE.INVITE || "Invite",
+                  service: "invite-member",
+                  uiHandler: [ui],
+                }),
+              ],
           }),
         ],
       }),

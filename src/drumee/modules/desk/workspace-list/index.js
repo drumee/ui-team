@@ -180,6 +180,7 @@ class __desk_workspace extends LetcBox {
         return Wm.openWorkspaceFolder(trigger);
 
       case "new-workspace":
+        if (require("libs/over-limit").guardWrite("write")) return;
         return Wm.launch(
           { kind: "window_manager", service: "new-hub" },
           { explicit: 1, singleton: 1 },

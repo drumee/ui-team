@@ -1021,6 +1021,9 @@ class __media_interact extends media_core {
    */
   async openInvitePopup() {
     if (typeof Wm === "undefined" || !Wm.__wrapperModal) return;
+    // Org over-limit / hard_lock: invites are paused — refuse before the
+    // popup opens (hub.invite is clamped server-side too).
+    if (require("libs/over-limit").guardWrite("invite")) return;
     const hub_id =
       (typeof this.getHostId === "function" && this.getHostId()) ||
       this.mget(_a.hub_id) ||

@@ -1255,10 +1255,12 @@ class __window_folder extends mfsInteract {
 
       case "add-folder":
         this.closeNewMenu(cmd);
+        if (require("libs/over-limit").guardWrite("write")) return;
         return this.openCreateFolderDialog();
 
       case "add-note":
         this.closeNewMenu(cmd);
+        if (require("libs/over-limit").guardWrite("write")) return;
         return Wm.windowsLayer.append({
           kind: "editor_markdown",
           uiHandler: [this],
@@ -1292,6 +1294,9 @@ class __window_folder extends mfsInteract {
 
       case "new-document":
         this.closeNewMenu(cmd);
+        // Inherited newDocument() also guards; keep the early return here so
+        // the folder's own create menu closes cleanly without a spinner.
+        if (require("libs/over-limit").guardWrite("write")) return;
         return this.newDocument(cmd);
 
       case "create-folder-submit":
@@ -4346,7 +4351,10 @@ class __window_folder extends mfsInteract {
     if (!newCtrl || !newCtrl.el) return;
     const onFiles = (this.activeTab || "files") === "files";
     // canUpload() returns the masked bitmask (truthy number), not a boolean.
-    const mayCreate = !!(this.canUpload && this.canUpload());
+    // Over-limit read-only trumps the node privilege: creating adds bytes,
+    // and the REST clamp refuses it regardless of what this node allows.
+    const mayCreate = !!(this.canUpload && this.canUpload())
+      && !require("libs/over-limit").isLocked();
     const visible = onFiles && mayCreate ? 1 : 0;
 
     // ui-core registers sys_pn parts during onBeforeRender, before its onRender

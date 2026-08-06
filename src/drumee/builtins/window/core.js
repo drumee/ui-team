@@ -97,7 +97,11 @@ class __window_core extends __utils {
   contextmenuItems() {
     let items = [];
 
-    if (this.canUpload()) {
+    // Downgrade over-limit: paste/upload/import all ADD bytes and are
+    // refused by the REST clamp anyway — don't offer them. Export stays:
+    // getting data OUT is explicitly preserved in every lock state.
+    const overLimit = require("libs/over-limit").isLocked();
+    if (this.canUpload() && !overLimit) {
       if (Visitor.inDmz) {
         items = [_a.upload];
       } else {
@@ -113,6 +117,8 @@ class __window_core extends __utils {
           ];
         }
       }
+    } else if (overLimit && this.canUpload() && Visitor.canServerImpExp() && !Visitor.inDmz) {
+      items = [_a.export, _a.separator];
     } else {
       if (Visitor.canServerImpExp()) {
         items = [_a.exportHidden, _a.importHidden, _a.separator];
@@ -746,6 +752,11 @@ class __window_core extends __utils {
    */
 
   newDocument(cmd) {
+    // Over-limit / hard_lock: refuse before euroffice.new_doc — the plugin's
+    // own error path surfaces a generic "network error" over the clamp's
+    // OVER_LIMIT_READ_ONLY, which is the wrong message for a lock.
+    if (require("libs/over-limit").guardWrite("write")) return;
+
     // Resolve the editor namespace dynamically from `doc_editor`
     // sysconf (the viewer at player/document/index.js does the same).
     // Hard-coding SERVICE.onlyoffice fails on endpoints where the
@@ -1029,6 +1040,7 @@ class __window_core extends __utils {
         // No opt.media — that branch in editor_markdown.onDomRefresh is
         // for opening an existing file. New-note path uses getCurrentMedia()
         // which reads from `this.target = Wm.getActiveWindow()`.
+        if (require("libs/over-limit").guardWrite("write")) return;
         return Wm.launch(
           { kind: "editor_markdown", uiHandler: [this] },
           { explicit: 1 }

@@ -853,6 +853,11 @@ class settings_main extends LetcBox {
         return this.closeOverlay();
 
       case "launch-gdrive-migration":
+        // Downgrade over-limit: a migration only ADDS bytes, so the feature
+        // is off while the workspace is over its plan limits — refuse with
+        // words here instead of opening a popup whose import can only fail
+        // (the clamp also blocks the google_drive namespace server-side).
+        if (require("libs/over-limit").guardWrite("write")) return;
         // Open the migrate-gdrive popup. singleton:1 + wm_unique_id auto
         // detection (per fix/multi-folder-windows) prevents duplicates.
         return Kind.waitFor("migrate_gdrive_popup").then(() => {

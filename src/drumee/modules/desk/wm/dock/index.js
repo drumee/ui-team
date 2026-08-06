@@ -343,6 +343,7 @@ class __desk_dock extends LetcBox {
         return;
 
       case 'add-note':
+        if (require("libs/over-limit").guardWrite("write")) return;
         let e = Wm.windowsLayer.append({
           kind: 'editor_markdown',
           uiHandler: [this]
@@ -350,6 +351,7 @@ class __desk_dock extends LetcBox {
         return e;
 
         case 'new-document':
+        if (require("libs/over-limit").guardWrite("write")) return;
         return Wm.getActiveWindow().newDocument(cmd);
 
       case 'address-book':

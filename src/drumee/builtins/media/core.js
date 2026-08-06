@@ -199,20 +199,27 @@ class __media_core extends DrumeeMFS {
 
   contextmenuItemsForHub() {
     let fileItems = [];
+    // Over-limit: upload + invite are paused — omit them from the kebab so
+    // the menu doesn't offer actions the REST clamp will refuse.
+    const locked = require("libs/over-limit").isLocked();
     if (this.canOrganize() || this.isMediaOwner()) {
-      fileItems = ['openInWindow', _a.separator, _a.rename, _a.upload, _a.download, _a.separator, _a.info];
-      if (this._canInviteToHub()) {
+      fileItems = ['openInWindow', _a.separator, _a.rename];
+      if (!locked) fileItems.push(_a.upload);
+      fileItems.push(_a.download, _a.separator, _a.info);
+      if (!locked && this._canInviteToHub()) {
         fileItems.push(_a.share)
       }
       fileItems.push(_a.separator, _a.trash)
     } else if (this.canDownload()) {
       fileItems = ['openInWindow', _a.separator, _a.download, _a.separator, _a.info];
-      if (this._canInviteToHub()) fileItems.push(_a.share);
+      if (!locked && this._canInviteToHub()) fileItems.push(_a.share);
       if (this.canRemove()) fileItems.push(_a.trash);
     }
     // for media files in trash
     if (this.mget(_a.status) == _a.deleted) {
-      fileItems = [, _a.separator, _a.restoreToDesk, _a.deletePermanently];
+      // No leading hole: the sparse `[, ...]` was a leftover from a removed
+      // first entry — an `undefined` item the menu had to skip over.
+      fileItems = [_a.separator, _a.restoreToDesk, _a.deletePermanently];
     }
     return fileItems;
   }
