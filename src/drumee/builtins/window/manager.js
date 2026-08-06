@@ -178,6 +178,9 @@ class __window_manager extends mfsInteract {
    *
    */
   handleUpload() {
+    // Don't open the native picker while the org is read-only — every
+    // selected file would then die on OVER_LIMIT_READ_ONLY.
+    if (require("libs/over-limit").guardWrite("write")) return;
     let target = this.getActiveWindow();
     return this.__fileselector.open((e) => {
       if (target && target !== this) target.raise();

@@ -752,6 +752,11 @@ class __window_core extends __utils {
    */
 
   newDocument(cmd) {
+    // Over-limit / hard_lock: refuse before euroffice.new_doc — the plugin's
+    // own error path surfaces a generic "network error" over the clamp's
+    // OVER_LIMIT_READ_ONLY, which is the wrong message for a lock.
+    if (require("libs/over-limit").guardWrite("write")) return;
+
     // Resolve the editor namespace dynamically from `doc_editor`
     // sysconf (the viewer at player/document/index.js does the same).
     // Hard-coding SERVICE.onlyoffice fails on endpoints where the
@@ -1035,6 +1040,7 @@ class __window_core extends __utils {
         // No opt.media — that branch in editor_markdown.onDomRefresh is
         // for opening an existing file. New-note path uses getCurrentMedia()
         // which reads from `this.target = Wm.getActiveWindow()`.
+        if (require("libs/over-limit").guardWrite("write")) return;
         return Wm.launch(
           { kind: "editor_markdown", uiHandler: [this] },
           { explicit: 1 }

@@ -2816,9 +2816,13 @@ class desk_module extends LetcBox {
         }
         return this.loadDefault();
 
-      case _e.upload:
+      case _e.upload: {
         this.closeDeskNewMenu(cmd);
+        // Refuse before the file picker opens — a picker that can only
+        // produce OVER_LIMIT_READ_ONLY is worse than no picker.
+        if (require("libs/over-limit").guardWrite("write")) return;
         return Wm.handleUpload();
+      }
 
       case "toggle-desk-new-create-menu":
         return this.toggleDeskNewCreateMenu(cmd);
@@ -3026,33 +3030,44 @@ class desk_module extends LetcBox {
         Wm.loadWorkspace(cmd);
         return;
 
-      case "new-workspace":
+      case "new-workspace": {
         this.closeDeskNewMenu(cmd);
+        // Create workspace is a write — block at the UI before media_form /
+        // desk.create_hub ever runs (context menu, sidebar, topbar all land
+        // here or on Wm's twin case).
+        if (require("libs/over-limit").guardWrite("write")) return;
         return Wm.onUiEvent(cmd, { ...args, service: "new-workspace" });
+      }
 
-      case "new-note":
+      case "new-note": {
         this.closeDeskNewMenu(cmd);
+        // Note opens a local editor with no round-trip — the REST clamp
+        // never sees it. Gate here so hard-lock / over_limit don't leave
+        // a writable markdown window on a read-only desk.
+        if (require("libs/over-limit").guardWrite("write")) return;
         Wm.windowsLayer.append({
           kind: "editor_markdown",
           uiHandler: [this],
         });
-        // this._hideAddMenu();
         return;
+      }
       case "new-document":
       case "new-spreadsheet":
-      case "new-presentation":
+      case "new-presentation": {
         this.closeDeskNewMenu(cmd);
+        // Office create hits euroffice.new_doc; refuse before the spinner /
+        // "network error" path that the plugin's own error handler shows.
+        if (require("libs/over-limit").guardWrite("write")) return;
         Wm.newDocument(cmd);
-        // this._hideAddMenu();
         return;
+      }
 
       case "invite-member": {
         // Invites are paused while the workspace is over its plan limits —
         // the topbar button is already hidden, but other entry points (member
         // panels, workspace menus) still land here. Answer with words, not a
         // popup whose submit can only be refused.
-        const OverLimit = require("libs/over-limit");
-        if (OverLimit.isLocked()) return OverLimit.notifyBlocked("invite");
+        if (require("libs/over-limit").guardWrite("invite")) return;
         return this._openInvitePopup(cmd);
       }
 

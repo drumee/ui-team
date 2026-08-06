@@ -171,6 +171,21 @@ function notifyBlocked(kind) {
 }
 
 /**
+ * UI choke-point for invite / create / upload. Returns true when the
+ * action must NOT proceed (toast already shown). Call this BEFORE opening
+ * a modal, spawning an editor, or hitting the server — the REST clamp is
+ * the backstop, not the UX.
+ *
+ * @param {"invite"|"write"} [kind="write"]
+ * @returns {boolean}
+ */
+function guardWrite(kind) {
+  if (!isLocked()) return false;
+  notifyBlocked(kind || "write");
+  return true;
+}
+
+/**
  * Surface the server's refusals as words. The REST clamp answers a locked
  * write with 401 `OVER_LIMIT_READ_ONLY:<service>` (or HARD_LOCK_DENIED),
  * but nothing user-visible came of it — the default onServerComplain only
@@ -238,4 +253,5 @@ module.exports = {
   refresh,
   blockedMessage,
   notifyBlocked,
+  guardWrite,
 };

@@ -335,15 +335,13 @@ const createNav = (ui) => {
 // Add new / Upload / Search / Invite as the rows.
 const createActionsNav = (ui) => {
   const fig = getSidebarFig(ui);
-
-  return Skeletons.Box.Y({
-    className: `${fig}__nav`,
-    kids: [
-      createLogoRow(ui),
-
-      Skeletons.Box.Y({
-        className: `${fig}__nav-main`,
-        kids: [
+  // While over-limit the create/upload/invite rows are omitted — same
+  // rule as the topbar. Search stays (read).
+  const locked = require("libs/over-limit").isLocked();
+  const actionKids = [
+    ...(locked
+      ? []
+      : [
           createNavItem(
             ui,
             "app-add",
@@ -362,15 +360,19 @@ const createActionsNav = (ui) => {
             null,
             "mobile-upload",
           ),
-          createNavItem(
-            ui,
-            "app-search",
-            LOCALE.SEARCH || "Search",
-            "search-files",
-            "",
-            null,
-            "mobile-search",
-          ),
+        ]),
+    createNavItem(
+      ui,
+      "app-search",
+      LOCALE.SEARCH || "Search",
+      "search-files",
+      "",
+      null,
+      "mobile-search",
+    ),
+    ...(locked
+      ? []
+      : [
           createNavItem(
             ui,
             "topbar-invite",
@@ -380,7 +382,17 @@ const createActionsNav = (ui) => {
             null,
             "mobile-invite",
           ),
-        ],
+        ]),
+  ];
+
+  return Skeletons.Box.Y({
+    className: `${fig}__nav`,
+    kids: [
+      createLogoRow(ui),
+
+      Skeletons.Box.Y({
+        className: `${fig}__nav-main`,
+        kids: actionKids,
       }),
     ],
   });

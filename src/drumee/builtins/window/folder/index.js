@@ -1255,10 +1255,12 @@ class __window_folder extends mfsInteract {
 
       case "add-folder":
         this.closeNewMenu(cmd);
+        if (require("libs/over-limit").guardWrite("write")) return;
         return this.openCreateFolderDialog();
 
       case "add-note":
         this.closeNewMenu(cmd);
+        if (require("libs/over-limit").guardWrite("write")) return;
         return Wm.windowsLayer.append({
           kind: "editor_markdown",
           uiHandler: [this],
@@ -1292,6 +1294,9 @@ class __window_folder extends mfsInteract {
 
       case "new-document":
         this.closeNewMenu(cmd);
+        // Inherited newDocument() also guards; keep the early return here so
+        // the folder's own create menu closes cleanly without a spinner.
+        if (require("libs/over-limit").guardWrite("write")) return;
         return this.newDocument(cmd);
 
       case "create-folder-submit":
