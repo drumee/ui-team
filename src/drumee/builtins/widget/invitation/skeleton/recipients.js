@@ -1,4 +1,6 @@
 
+const { lookupApi } = require('libs/contact-lookup');
+
 const __recipients_roll = function (ui) {
   const o = { ...Preset.List.Orange_e };
   o.start = _a.bottom;
@@ -13,10 +15,9 @@ const __recipients_roll = function (ui) {
     sys_pn: 'invitation-search',
     service: _e.update,
     className: "inline",
-    api: {
-      service: SERVICE.drumate.my_contacts,
-      hub_id: Visitor.id
-    },
+    // Address-book lookup: matches the typed string against every email a
+    // contact holds, not just their name (libs/contact-lookup).
+    api: lookupApi(),
     contactbook: ui.mget('contactbook'),
     preselect: ui.mget(_a.preselect),
     uiHandler: ui,

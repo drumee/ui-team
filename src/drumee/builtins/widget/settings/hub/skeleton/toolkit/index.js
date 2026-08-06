@@ -339,10 +339,9 @@ export function recipients (ui) {
     sys_pn: 'invitation-search',
     service: _e.update,
     className: "inline",
-    api: {
-      service: SERVICE.drumate.my_contacts,
-      hub_id: Visitor.id
-    },
+    // Address-book lookup: matches the typed string against every email a
+    // contact holds, not just their name (libs/contact-lookup).
+    api: require('libs/contact-lookup').lookupApi(),
     contactbook: ui.mget('contactbook'),
     preselect: ui.mget(_a.preselect),
     uiHandler: ui,

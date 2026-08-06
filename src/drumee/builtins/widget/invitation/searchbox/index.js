@@ -144,11 +144,11 @@ class __invitation_searchbox extends LetcBox {
     if (this.mget(_a.api)) {
       return this.mget(_a.api);
     }
-    let a = {
-      service: SERVICE.drumate.my_contacts,
-      hub_id: Visitor.id,
-      page: 1,
-    };
+    // contact.lookup also matches the typed string against every address in
+    // the address book, so a half-typed email finds its contact; it degrades
+    // to the legacy name-only search when the server lacks the route.
+    const { lookupApi } = require('libs/contact-lookup');
+    const a = lookupApi({ page: 1 });
     if (this.mget('only_drumate') || this.mget('only_drumate') == null) {
       a.only_drumate = 1;
     }
@@ -323,12 +323,10 @@ class __invitation_searchbox extends LetcBox {
       api = this.mget('apiAll')
       if (api.page) { delete api.page }
     } else {
-      api = {
-        service: SERVICE.drumate.my_contacts,
-        value: "%",
-        only_drumate: 1,
-        hub_id: Visitor.id
-      }
+      // "%" = no filter: contact.lookup lists the whole address book (paged),
+      // as my_contacts did.
+      const { lookupApi } = require('libs/contact-lookup');
+      api = lookupApi({ value: "%", only_drumate: 1 });
     }
 
     this.resultsRoll.model.set({

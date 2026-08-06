@@ -1,4 +1,5 @@
 const { roleByValue } = require("../../../builtins/skeleton/toolkit");
+const { attachEmailLookup, fillEntry } = require("libs/contact-lookup");
 
 /**
  * Workspace-members panel (private/team workspaces).
@@ -34,6 +35,14 @@ class __permission_restricted extends DrumeeMFS {
    */
   onDomRefresh() {
     this._render();
+    // Typing in the invite field also searches the address book by email —
+    // matches land in the "invite-suggestions" part (libs/contact-lookup).
+    attachEmailLookup(this, {
+      entryClass: `${this.fig.family}__invite-entry`,
+      listPart: "invite-suggestions",
+      service: "pick-invite-contact",
+      itemClass: `${this.fig.family}__invite-suggestion`,
+    });
     this._loadMembers();
   }
 
@@ -127,6 +136,19 @@ class __permission_restricted extends DrumeeMFS {
     const data = cmd?.getData?.() || {};
     const entry = this.getPart?.("invite-email");
     return String(data.email || entry?.getValue?.() || "").trim();
+  }
+
+  /** A row of the address-book dropdown was clicked: put its address in the
+   *  field, close the list, and drop any stale error. Send stays a separate
+   *  click — picking a contact chooses the address, it does not invite. */
+  _pickInviteContact(cmd) {
+    const email = String(
+      cmd?.mget?.(_a.email) || cmd?.el?.dataset?.email || "",
+    ).trim();
+    if (!email) return;
+    fillEntry(this.getPart?.("invite-email"), email);
+    this._closeEmailLookup?.();
+    this._setInviteError();
   }
 
   /** Show / clear the inline message in the invite-error slot under the input,
@@ -374,6 +396,9 @@ class __permission_restricted extends DrumeeMFS {
 
       case "send-invitation":
         return this._sendInvitation(cmd);
+
+      case "pick-invite-contact":
+        return this._pickInviteContact(cmd);
 
       case "select-invite-role":
         return this._selectInviteRole(cmd);

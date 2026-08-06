@@ -199,6 +199,15 @@ module.exports = function (ui) {
     active: 0,
   });
 
+  // The dropdown floats under the email row instead of sitting in the column:
+  // in flow it pushed the workspace picker and the Send button down every time
+  // a match appeared, so the dialog jumped around while typing. Anchoring
+  // needs a positioned parent, hence this wrapper.
+  const emailField = Skeletons.Box.Y({
+    className: `${pfx}__email-field`,
+    kids: [emailRow, suggestion],
+  });
+
   const emailError = Skeletons.Note({
     className: `${pfx}__field-error`,
     sys_pn: "email-error",
@@ -246,8 +255,7 @@ module.exports = function (ui) {
       header,
       description,
       emailLabel,
-      emailRow,
-      suggestion,
+      emailField,
       emailError,
       workspaceList,
       workspaceError,

@@ -1337,6 +1337,9 @@ class __window_folder extends mfsInteract {
       case "folder-send-invitation":
         return this.sendFolderInvitation(cmd);
 
+      case "folder-pick-invite-contact":
+        return this.pickFolderInviteContact(cmd);
+
       case "folder-remove-member":
         return this.removeFolderMember(cmd);
 
@@ -4067,6 +4070,21 @@ class __window_folder extends mfsInteract {
     return String(data.email || entry?.getValue?.() || "").trim();
   }
 
+  /** A row of the address-book dropdown was clicked: put its address in the
+   *  invite field and close the list. Sending stays a separate click. */
+  pickFolderInviteContact(cmd) {
+    const email = String(
+      cmd?.mget?.(_a.email) || cmd?.el?.dataset?.email || "",
+    ).trim();
+    if (!email) return;
+    require("libs/contact-lookup").fillEntry(
+      this.getPart && this.getPart("invite-email"),
+      email,
+    );
+    this._closeEmailLookup?.();
+    this._setInviteError();
+  }
+
   getFolderRoleOptions() {
     // Shared 4-level list (View → Chat → Edit → Admin) — same source the
     // settings panel and invite popup render from.
@@ -4683,6 +4701,16 @@ class __window_folder extends mfsInteract {
     this.isShowSettings = true;
     this._folderMembers = [];
     this._folderMembersLoaded = false;
+    // Typing in the invite field also searches the address book by email —
+    // matches land in the "invite-suggestions" part (libs/contact-lookup).
+    // Installs once; the listeners are delegated from the window root, so
+    // they survive the panel being re-fed on every member refresh.
+    require("libs/contact-lookup").attachEmailLookup(this, {
+      entryClass: `${this.fig.family}__settings-action-invite-entry`,
+      listPart: "invite-suggestions",
+      service: "folder-pick-invite-contact",
+      itemClass: `${this.fig.family}__settings-action-invite-suggestion`,
+    });
     // Reset invite role to default (Edit) on every open — otherwise a prior
     // session's pick persists silently and the next invite uses the stale
     // privilege even though the trigger label visually shows the default.
