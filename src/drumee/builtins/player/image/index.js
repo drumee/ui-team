@@ -5,6 +5,7 @@ require('./skin');
 
 const { TweenMax, Cubic } = require("@drumee/ui-core/vendor");
 const snap = require('builtins/window/snap');
+const renameInline = require('builtins/player/widget/topbar/rename');
 const __core = require('player/interact');
 
 // Gear-menu rows that act on the node rather than on the player. The MFS
@@ -16,7 +17,6 @@ const DELEGATED_SERVICES = [
   _e.copy,
   _e.remove,
   _a.chat,
-  'direct-rename',
   'chat-threads',
   'download-file-chat',
   'secure-share',
@@ -503,6 +503,12 @@ class __player_image extends __core {
         snap.reframe(this, this._defaultBounds(), this._snapOpt());
         return this._markSnapPreset('center');
 
+      // Rename edits the title in place instead of being forwarded: the
+      // MFS view opens its editor on the tile in the folder grid, behind
+      // this player, where nobody can see it.
+      case 'direct-rename':
+        return renameInline(this);
+
       default:
         // Gear-menu rows that act on the node itself go to the source MFS
         // view; everything else is player chrome and belongs to the base.
@@ -540,6 +546,9 @@ class __player_image extends __core {
   */
   _keyUp(e) {
     if (Wm.getActivePlayer() != this) return;
+    // RADIO_KBD is global, so arrow keys typed into the title's rename
+    // editor would page through siblings underneath it.
+    if (this._titleRenaming) return;
 
     switch (e.key) {
       case 'ArrowRight':

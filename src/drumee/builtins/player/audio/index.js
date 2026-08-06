@@ -2,6 +2,7 @@
 const { fitBoxes } = require("@drumee/ui-essentials")
 const __window_interact_player = require('player/interact');
 const snap = require('builtins/window/snap');
+const renameInline = require('builtins/player/widget/topbar/rename');
 
 // Gear-menu rows that act on the node rather than on the viewer. The MFS
 // view this player was opened from implements all of them, so they are
@@ -12,7 +13,6 @@ const DELEGATED_SERVICES = [
   _e.copy,
   _e.remove,
   _a.chat,
-  'direct-rename',
   'chat-threads',
   'download-file-chat',
   'secure-share',
@@ -261,6 +261,12 @@ class __player_audio extends __window_interact_player {
       case 'window-reframe':
         snap.reframe(this, this._defaultBounds(), this._snapOpt());
         return this._markSnapPreset('center');
+
+      // Rename edits the title in place instead of being forwarded: the
+      // MFS view opens its editor on the tile in the folder grid, behind
+      // this player, where nobody can see it.
+      case 'direct-rename':
+        return renameInline(this);
 
       default:
         // Gear-menu rows that act on the node itself go to the source MFS

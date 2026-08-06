@@ -57,6 +57,33 @@
     width: 32px;
   }
 
+  // ---- Inline rename ------------------------------------------------------
+  // The title Note stays in the DOM and is hidden while its editor is up
+  // (topbar/rename.js), so nothing about the Note has to be rebuilt.
+  &__title[data-renaming] {
+    display: none;
+  }
+
+  &__title-input {
+    background-color: var(--normal-bg);
+    border: 1px solid var(--border-default);
+    border-radius: var(--corner-radius-1);
+    box-sizing: border-box;
+    color: var(--normal-fg-10);
+    font-family: var(--font-main);
+    font-size: 16px;
+    line-height: 24px;
+    // Sized to a filename, not to the header. `width` is a preference and
+    // `max-width` the ceiling, so a narrow window shrinks it rather than
+    // pushing the action row off the edge.
+    flex: 0 1 auto;
+    max-width: 100%;
+    min-width: 0;
+    outline: none;
+    padding: 2px var(--spacer-2);
+    width: 260px;
+  }
+
   &__filetype-icon {
     color: #71a3f4;
     height: 25.6px;
