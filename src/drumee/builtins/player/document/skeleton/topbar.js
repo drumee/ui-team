@@ -57,13 +57,11 @@ function config(ui) {
     },
     defaults: {
       "folder-settings": { menu: actions.menu(ui) },
-      // "center" restores to a windowed default this player does not really
-      // have — it opens at max_size (and maximized outright in edit mode),
-      // so it starts in "full" and that is the preset lit on open.
-      "move-resize": {
-        presets: ["full", "left", "right"],
-        active: "full",
-      },
+      // All four presets. "center" restores to `_defaultBounds()`, which is
+      // the pre-zoom geometry when there is one and the current box
+      // otherwise. The window opens at max_size (maximized outright in edit
+      // mode), so "full" is the preset lit before the user picks.
+      "move-resize": { active: "full" },
       // Only the service is overridden. The widget's own `icon close` class
       // is what the skin sizes and colours; `window-button__icon-button` has
       // no global styling of its own — every rule for it in the tree is
