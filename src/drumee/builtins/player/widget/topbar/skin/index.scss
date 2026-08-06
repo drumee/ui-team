@@ -100,43 +100,54 @@
   }
 
   // ---- Folder settings: the dropdown ------------------------------------
-  // The panel used to live in the global `drumeeDialog` layer, where it
-  // escaped every ancestor's clipping for free. Inline in the topbar it
-  // does not, so `overflow: visible` is asserted the whole way down —
-  // without it the hover submenus are cut off at the panel edge.
+  // Hover-only, like the Move & Resize panel below. No framework menu
+  // widget is involved, so there is no state machine, no inline styles to
+  // out-specify, and nothing to clip the submenus.
   &__menu {
+    align-items: center;
+    flex-shrink: 0;
+    height: 24px;
+    justify-content: center;
     overflow: visible;
     position: relative;
+    width: 24px;
 
-    .menu-topic {
-      overflow: visible;
-      position: relative;
-    }
-
-    // The inner items box; it carries a bare `menu-items` of its own.
-    .menu-items {
-      overflow: visible;
+    &:hover .drumee-topbar__menu-panel,
+    .drumee-topbar__menu-panel:hover {
+      opacity: 1;
+      pointer-events: auto;
+      transform: translateY(0);
+      visibility: visible;
     }
   }
 
-  // The panel. This class reaches the element via the menu widget's
-  // `itemsClass` option (skeleton/menu.js) — the framework's own name for
-  // it is `menu-topic-items__wrapper`, built from its fig.family, and there
-  // is no bare `menu-items__wrapper` to hook. Without a positioned wrapper
-  // the panel stays in flow inside the 24px-tall action row and lays itself
-  // over the header.
   &__menu-panel {
-    // `!important` is load-bearing, not defensive. The menu widget writes
-    // `position: absolute; overflow: hidden` INLINE on this element when
-    // the part mounts (ui-core letc/widgets/menu/index.js, case
-    // 'items-wrapper'), and an inline style beats any stylesheet rule. The
-    // hidden overflow clips submenus away entirely — they open outside the
-    // panel — so hovering a parent row appeared to do nothing at all.
-    overflow: visible !important;
+    overflow: visible;
     position: absolute;
     right: 0;
     top: calc(100% + 8px);
     z-index: 1000;
+
+    opacity: 0;
+    pointer-events: none;
+    transform: translateY(-4px);
+    visibility: hidden;
+    // `visibility 0s linear .15s` delays the close so the cursor can cross
+    // the trigger->panel gap without the panel vanishing.
+    transition:
+      opacity 0.15s ease,
+      transform 0.15s ease,
+      visibility 0s linear 0.15s;
+
+    // Invisible bridge across the 8px gap between trigger and panel.
+    &:before {
+      content: "";
+      height: 8px;
+      left: 0;
+      position: absolute;
+      right: 0;
+      top: -8px;
+    }
   }
 
   &__menu-items {

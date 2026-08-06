@@ -39,12 +39,13 @@ const __player_topbar_move_resize = function (ctx, action) {
     className: `${snap}-wrapper ${wsnap}-wrapper`,
     sys_pn: action.id,
     kids: [
+      // No service: the trigger only reveals the preset panel on hover.
+      // Zooming still happens, from the "full" preset inside the panel,
+      // which emits the same `window-zoom`.
       Skeletons.Button.Svg({
         ico: action.icon || "desktop_fullview",
         className: `${snap}-trigger ${wsnap}-trigger icon`,
         sys_pn: action.triggerPn,
-        service: "window-zoom",
-        uiHandler: [ui],
         partHandler: ui,
       }),
       Skeletons.Box.Y({

@@ -7,19 +7,27 @@
 /**
  * The topbar's dropdown action — a trigger button plus a recursive menu.
  *
- * Level 0 is the framework's own `KIND.menu.topic`
- * (@drumee/ui-core/letc/widgets/menu): it already owns click-to-open,
- * outside-click dismissal via RADIO_CLICK, and placement, so none of that
- * is reimplemented here.
+ * Hover opens it; clicking the trigger does nothing. Every level, root
+ * included, is plain markup revealed by CSS `:hover`, the same mechanism
+ * the Move & Resize panel in this widget already uses.
+ *
+ * This deliberately does NOT use the framework's `KIND.menu.topic`. That
+ * widget is built around click-to-toggle and brings a state machine the
+ * topbar has to fight at every turn: it writes `overflow: hidden` inline
+ * on its wrapper (clipping submenus away), routes any bubble from the
+ * items subtree into a close, gsap-transforms the panel on open/close,
+ * and gates hover behind an `opening` comparison against `_a.flyover` —
+ * a key no lexicon defines, so that branch never reliably runs. A
+ * hover-only menu needs none of it, and one mechanism for both topbar
+ * popovers is easier to reason about than two.
  *
  * Levels 1+ recurse with the pattern the contextmenu already uses
  * (builtins/contextmenu/skeleton/items.js): a row carrying the service,
  * a `›` note, and a nested Box.Y the skin reveals on hover. There is no
  * depth limit — `__row` calls itself.
  *
- * Rows declare `uiHandler: [ui]`, so their services bypass the menu
- * widget and land straight on the consumer's `onUiEvent`. The widget
- * itself never interprets a service.
+ * Rows declare `uiHandler: [ui]`, so their services land straight on the
+ * consumer's `onUiEvent`. The widget never interprets a service.
  */
 
 /**
@@ -95,14 +103,6 @@ const __row = function (ctx, item, depth) {
   if (item.value !== undefined) props.value = item.value;
   if (item.type !== undefined) props.type = item.type;
 
-  // A parent row must not close the menu. The menu widget routes ANY bubble
-  // from the items subtree into `_onItemClicked`, which closes on the
-  // default persistence — so clicking "Rotate" to reach its children shut
-  // the whole dropdown instead. `bubble: 0` stops the bubble after the
-  // row's own handlers have run (letc.js `triggerHandlers`), so leaf rows
-  // still close the menu when one is actually chosen.
-  if (hasChildren) props.bubble = 0;
-
   return Skeletons.Box.X(props);
 };
 
@@ -118,44 +118,29 @@ const __player_topbar_menu = function (ctx, action) {
     return null;
   }
 
+  // The trigger carries no service: the menu is hover-only, and a click on
+  // the icon must do nothing at all.
   const trigger = Skeletons.Button.Svg({
     ico: action.icon,
-    sys_pn: action.triggerPn,
+    sys_pn: action.id,
     className: action.className || "icon",
   });
 
-  const items = Skeletons.Box.Y({
-    className: `${wcn}__menu-items ${cn}__menu-items`,
-    kids: action.menu.map((item) => __row(ctx, item, 0)),
+  const panel = Skeletons.Box.Y({
+    className: `${wcn}__menu-panel ${cn}__menu-panel`,
+    sys_pn: action.panelPn,
+    kids: [
+      Skeletons.Box.Y({
+        className: `${wcn}__menu-items ${cn}__menu-items`,
+        kids: action.menu.map((item) => __row(ctx, item, 0)),
+      }),
+    ],
   });
 
   return Skeletons.Box.X({
     debug: __filename,
     className: `${wcn}__menu ${cn}__menu`,
-    kids: [
-      {
-        kind: KIND.menu.topic,
-        className: `${wcn}__menu-topic ${cn}__menu-topic`,
-        // Lands on the widget's items WRAPPER, which is what has to be
-        // taken out of flow. Do not reach for the framework's own class
-        // instead: the wrapper is named `${fig.family}-items__wrapper`,
-        // i.e. `menu-topic-items__wrapper`, and only the INNER box gets a
-        // bare `menu-items`. Styling `.menu-items__wrapper` matches
-        // nothing, the panel stays in flow inside the 24px action row, and
-        // it lays itself over the header with its submenus out of reach.
-        itemsClass: `${wcn}__menu-panel ${cn}__menu-panel`,
-        flow: _a.y,
-        opening: _e.click,
-        // Default persistence: any row click closes the menu. Parent rows
-        // close it too — submenus are meant to be opened by hover.
-        persistence: _a.once,
-        sys_pn: action.id,
-        service: action.service,
-        trigger,
-        items,
-        offsetY: 8,
-      },
-    ],
+    kids: [trigger, panel],
   });
 };
 
