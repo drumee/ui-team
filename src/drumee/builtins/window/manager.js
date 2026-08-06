@@ -271,6 +271,11 @@ class __window_manager extends mfsInteract {
 
   _canUploadToTarget(target) {
     if (!target) return false;
+    // Downgrade over-limit: the whole workspace is read-only while the org is
+    // over its downgraded plan's limits — the server rejects the upload
+    // anyway (OVER_LIMIT_READ_ONLY), this just refuses at the drop instead of
+    // after the transfer.
+    if (require("libs/over-limit").isLocked()) return false;
     if (target.mget && target.mget(_a.isalink) && !target.isHub) return false;
     const privilege =
       target.mget && (target.mget(_a.privilege) || target.mget(_a.permission));

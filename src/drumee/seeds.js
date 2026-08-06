@@ -248,6 +248,12 @@ module.exports = {
   promo_launch30: function () {
     return import("./builtins/widget/promo-launch30");
   },
+  over_limit_popup: function () {
+    return import("./builtins/widget/over-limit-popup");
+  },
+  over_limit_banner: function () {
+    return import("./builtins/widget/over-limit-banner");
+  },
   reward_flow: function () {
     return import("./builtins/widget/reward-flow");
   },

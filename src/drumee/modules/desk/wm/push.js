@@ -138,6 +138,15 @@ class __push_manager extends winman {
       case "room.reminder":
         return this._showMeetingToast(data, { reminder: 1 });
 
+      // Downgrade over-limit: the server re-evaluates the org after every
+      // plan change and every resolution action (purge, member removal…) and
+      // fans the fresh state out to all members. One setter — libs/over-limit
+      // broadcasts over-limit:changed and the banner/popup/desk re-render
+      // themselves. No reload, exactly like the prototype demands.
+      case "payment.plan_state_changed":
+        require("libs/over-limit").setCurrent(data);
+        return;
+
       case SERVICE.signaling.message:
         if (/pickup|cancel|reject/.test(data.type)) Visitor.muteSound();
         return

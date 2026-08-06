@@ -183,7 +183,12 @@ module.exports = function (ui) {
         className: `${pfx}__actions-cluster`,
         sys_pn :"action-cluster",
         kids: [
-          deskNewMenu(pfx, ui),
+          // Downgrade over-limit: creating anything is a write — while the
+          // workspace is read-only the whole "+ New" menu goes, rather than
+          // offering five entries that each end in a server refusal. The
+          // desk re-feeds this part on over-limit:changed, so it comes back
+          // the moment the org is within limits again.
+          ...(require("libs/over-limit").isLocked() ? [] : [deskNewMenu(pfx, ui)]),
 
           // Search bar + suggestions
           Skeletons.Box.Y({
