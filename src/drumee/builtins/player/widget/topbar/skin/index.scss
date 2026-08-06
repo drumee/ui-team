@@ -369,6 +369,19 @@
       top: 0;
       width: var(--spacer-3);
     }
+
+    // Opens inward instead, when outward would leave the viewport — set by
+    // topbar/flip.js on hover. The bridge swaps sides with it, or the gap
+    // goes dead and the submenu becomes unreachable.
+    &[data-flip="left"] {
+      left: auto;
+      right: calc(100% + var(--spacer-3));
+
+      &:before {
+        left: auto;
+        right: calc(var(--spacer-3) * -1);
+      }
+    }
   }
 
   // NO overflow on submenus, deliberately.

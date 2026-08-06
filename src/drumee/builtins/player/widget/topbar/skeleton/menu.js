@@ -30,6 +30,9 @@
  * consumer's `onUiEvent`. The widget never interprets a service.
  */
 
+// Keeps submenus inside the viewport; see ../flip.js. Idempotent.
+const installFlip = require("../flip");
+
 /**
  * One menu row, and — when the item has children — the submenu hanging
  * off it.
@@ -117,6 +120,8 @@ const __player_topbar_menu = function (ctx, action) {
   if (_.isEmpty(action.menu)) {
     return null;
   }
+
+  installFlip();
 
   // The trigger carries no service: the menu is hover-only, and a click on
   // the icon must do nothing at all.
