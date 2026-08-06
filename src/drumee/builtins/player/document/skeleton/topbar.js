@@ -39,6 +39,13 @@ function config(ui) {
     },
     defaults: {
       "folder-settings": { menu: actions.menu(ui) },
+      // "center" restores to a windowed default this player does not really
+      // have — it opens at max_size (and maximized outright in edit mode),
+      // so it starts in "full" and that is the preset lit on open.
+      "move-resize": {
+        presets: ["full", "left", "right"],
+        active: "full",
+      },
       close: {
         service: _e.close,
         className: "window-button__icon-button",

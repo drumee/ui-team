@@ -27,12 +27,24 @@ const PRESETS = [
 
 /**
  * @param {object} ctx     { ui, cn, wcn }
- * @param {object} action  TopbarAction — only `id`/`triggerPn` are read
+ * @param {object} action  TopbarAction, plus two options of its own:
+ *
+ *   presets  string[]  which presets to offer, in PRESETS order. Omit for
+ *                      all four. A player that cannot honour a layout should
+ *                      leave it out rather than render a dead button.
+ *   active   string    the preset to highlight before the user picks one,
+ *                      i.e. the layout the window opens in. Note that the
+ *                      highlighted preset is deliberately NOT clickable
+ *                      (see the skin), so this must match reality.
  */
 const __player_topbar_move_resize = function (ctx, action) {
   const { ui, cn, wcn } = ctx;
   const snap = `${cn}__snap`;
   const wsnap = `${wcn}__snap`;
+
+  const presets = _.isEmpty(action.presets)
+    ? PRESETS
+    : PRESETS.filter(({ preset }) => action.presets.includes(preset));
 
   return Skeletons.Box.X({
     debug: __filename,
@@ -59,13 +71,13 @@ const __player_topbar_move_resize = function (ctx, action) {
           }),
           Skeletons.Box.X({
             className: `${snap}-presets ${wsnap}-presets`,
-            kids: PRESETS.map(({ preset, service }) =>
+            kids: presets.map(({ preset, service }) =>
               Skeletons.Box.X({
                 className: `${snap}-preset ${wsnap}-preset`,
                 sys_pn: `snap-${preset}`,
                 service,
                 uiHandler: [ui],
-                dataset: { preset },
+                dataset: { preset, active: preset === action.active ? 1 : 0 },
                 kidsOpt: { active: 0 },
                 // The glyph is pure CSS: this Box is the outline, its kid
                 // the inner block whose width/position the skin varies by
