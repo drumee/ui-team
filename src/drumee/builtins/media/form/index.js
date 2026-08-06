@@ -78,6 +78,43 @@ class __form_folder extends LetcBox {
     }
   }
 
+  /**
+   * Report a workspace this form just created, for the analytics Referral
+   * users table (Workspaces column + Activated badge).
+   *
+   * Fired from the form rather than from the server because this is the only
+   * place that knows which of the three types the user picked. `personal` is
+   * not a hub — it is the home-root folder created above — so nothing on the
+   * server side can tell it apart from any other folder afterwards.
+   *
+   * Never awaited and never checked. The callers open a permission panel or
+   * the Manage-access dock immediately after; waiting on an analytics row
+   * would trade a visible delay for a number on an admin dashboard. Guarded on
+   * the service existing so a UI running against an older server quietly does
+   * nothing, and wrapped so a rejected post can never surface as a form error.
+   *
+   * @param {String} type "team" | "share" | "personal"
+   * @param {Object} opt  { wid, area, filename }
+   * @returns {Promise<Object|null>} the service's answer, or null
+   */
+  _trackWorkspace(type, opt = {}) {
+    if (typeof SERVICE === "undefined" || !SERVICE.desk || !SERVICE.desk.track_workspace) {
+      return Promise.resolve(null);
+    }
+    try {
+      return this.postService(SERVICE.desk.track_workspace, {
+        hub_id: Visitor.id,
+        wid: opt.wid,
+        type,
+        area: opt.area,
+        filename: opt.filename,
+      }).catch(() => null);
+    } catch (e) {
+      /* tracking must never break workspace creation */
+      return Promise.resolve(null);
+    }
+  }
+
   _submit() {
     if (this._pending) return;
     const data = this.getData(_a.formItem) || {};
@@ -106,6 +143,19 @@ class __form_folder extends LetcBox {
           // error). Only broadcast on real success, else the reward-flow Step 1
           // guide would advance though nothing was created.
           if (!created || created.error) return;
+          // Counted by the analytics Referral users table. This is the type
+          // that made the tracking service necessary: a personal workspace is
+          // a home-root folder, so it is absent from yp.hub and no amount of
+          // server-side counting can find it.
+          // `type` is a literal, not _a.personal: the ACL declares it required
+          // and enum-checked, so resolving it through the attribute lexicon
+          // would turn a missing key into a silently dropped row. `area` keeps
+          // _a.personal to match the broadcast payload right below.
+          this._trackWorkspace("personal", {
+            wid: created.nid || created.id,
+            area: _a.personal,
+            filename,
+          });
           // Personal is a folder, not a hub, so it takes the create-folder path
           // above and never fires the workspace:refresh that team/share do.
           // Fire it (flagged personal) so listeners — e.g. the reward-flow
@@ -164,6 +214,15 @@ class __form_folder extends LetcBox {
           this._setNameError(LOCALE[hub.error] || hub.reason || hub.error);
           return;
         }
+        // Counted by the analytics Referral users table. `wid` is the hub id,
+        // not actual_home_id: the backfill that seeds this table from yp.hub
+        // keys on hub id, and the two must agree or a backfilled workspace
+        // would be counted twice.
+        this._trackWorkspace(status, {
+          wid: hub.hub_id || hub.id,
+          area: hub.area || area,
+          filename,
+        });
         // See the personal branch above — same descriptor, hub shape. nid is
         // the workspace ROOT node (actual_home_id); a hub's own `nid` is the
         // hub/0 placeholder and would not open the workspace.
