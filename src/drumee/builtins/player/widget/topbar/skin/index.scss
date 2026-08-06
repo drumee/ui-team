@@ -429,9 +429,22 @@
     overflow: hidden;
     width: 32px;
 
-    &:hover,
+    &:hover {
+      background-color: var(--primary-20);
+    }
+
+    // The layout the window is already in. Inert: re-picking it is at best a
+    // no-op, and for "full" it is actively wrong — `window-zoom` runs
+    // `snap.toggleZoom`, so clicking the highlighted full preset would
+    // RESTORE the window instead of leaving it maximised.
+    //
+    // `pointer-events: none` keeps the panel open while the cursor is over
+    // this preset: hover falls through to `__snap-presets` and on up to
+    // `__snap-menu`, which is what the open rule matches.
     &[data-active="1"] {
       background-color: var(--primary-20);
+      cursor: default;
+      pointer-events: none;
     }
 
     // left  — inner block at the start (the base rule below)
