@@ -855,13 +855,6 @@ class __webrtc_room extends __room {
       quota: this.get(_a.quota),
       id: this.room.myUserId(),
       socket_id: Visitor.get(_a.socket_id),
-      // Version of OUR avatar (server bumps entity.mtime via entity_touch on
-      // upload). Peers need it to build a correctly-versioned avatar URL: the
-      // `ts` token in Visitor.avatar() is per-ENTITY, and each client is the
-      // only one that reliably knows its own current value. Without it every
-      // other client keeps requesting the byte-identical URL it already cached
-      // and shows the pre-change avatar.
-      avatar_mtime: Visitor.get(_a.mtime),
       muted,
       mic,
       participant_id: this.room.myUserId()
@@ -994,53 +987,6 @@ class __webrtc_room extends __room {
   notifyParticipantLeft(name) { }
 
   /**
-   * Identity a peer has already published in its `userAttributes` presence
-   * property, for seeding a tile at CREATION time.
-   *
-   * USER_JOINED fires before lib-jitsi-meet processes the presence child nodes
-   * (ChatRoom.onPresence runs processNode only after MUC_MEMBER_JOINED), so for
-   * a peer whose attributes were already in the presence we saw — i.e. everyone
-   * who was in the room before us — the property is readable right here, and
-   * PARTICIPANT_PROPERTY_CHANGED is still to come. For a peer that joins after
-   * us the property is genuinely not set yet and this returns {}; the later
-   * property event fills it in (onPropertyChanged).
-   *
-   * Seeding matters because the tile's avatar is a KIND.profile widget keyed on
-   * `uid`, and Visitor.avatar() falls back to the LOCAL user's id when it gets
-   * no id — so a tile rendered before `uid` is known silently requests the
-   * viewer's OWN avatar for the peer.
-   * @returns {Object}
-   */
-  _participantAttributes(participant) {
-    if (!participant || !_.isFunction(participant.getProperty)) return {};
-    let raw;
-    try {
-      raw = participant.getProperty(_a.userAttributes);
-    } catch (e) {
-      return {};
-    }
-    if (!raw) return {};
-    let data;
-    try {
-      data = JSON.parse(raw);
-    } catch (e) {
-      this.warn("unparsable userAttributes", e);
-      return {};
-    }
-    if (!_.isObject(data)) return {};
-    // Only the identity fields the tile renders from. `id`/`participant_id`/
-    // `socket_id`/`quota` are deliberately excluded: `id` is the model's
-    // collection key and the others are already supplied by the caller.
-    const out = {};
-    for (const k of [
-      _a.uid, _a.firstname, _a.lastname, _a.username, "avatar_mtime", "muted", "mic",
-    ]) {
-      if (data[k] != null) out[k] = data[k];
-    }
-    return out;
-  }
-
-  /**
    * That function is executed when the conference is joined by the remote user
    * this event is triggrered by Jitsi
    */
@@ -1068,11 +1014,7 @@ class __webrtc_room extends __room {
         participant,
         participant_id: id,
         peer: this.peer,
-        quota: this.mget(_a.quota),
-        // Seed uid / name / avatar version when the peer already published them
-        // (see _participantAttributes) so the first paint renders THEIR avatar
-        // rather than requesting ours via Visitor.avatar's id fallback.
-        ...this._participantAttributes(participant),
+        quota: this.mget(_a.quota)
       })
     );
     endpoint = this.__participants.children.last();

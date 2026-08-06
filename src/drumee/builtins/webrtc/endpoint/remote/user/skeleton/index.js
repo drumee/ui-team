@@ -30,19 +30,7 @@ const __skl_stream_remote = function (_ui_) {
     active: 0,
     className: 'no-online-status',
     firstname,
-    lastname,
-    // Version the avatar URL by ITS OWNER's mtime, not the viewer's. Without
-    // this, a peer who changes their avatar produces a byte-identical URL on
-    // every other client, which then serves the pre-change image from the HTTP
-    // cache no matter how often the tile re-renders.
-    avatar_mtime: _ui_.mget("avatar_mtime"),
-    // This tile always belongs to a specific PEER, so the profile widget must
-    // never fall back to the local user when `uid` is still unknown — that is
-    // what made a joining peer's tile flash the viewer's own avatar. `uid` is
-    // undefined only between USER_JOINED and the userAttributes property
-    // arriving (see _participantAttributes / onPropertyChanged); until then the
-    // tile shows initials, and the property event re-feeds this skeleton.
-    strict: 1,
+    lastname
   };
 
   const topActions = Skeletons.Box.X({
