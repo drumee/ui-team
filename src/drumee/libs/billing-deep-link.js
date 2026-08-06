@@ -65,10 +65,41 @@ function urlWantsBilling() {
   }
 }
 
-/** Remember that this visit should end on the billing screen. */
-function arm() {
+/**
+ * Pull the preselect out of the hash's query string, e.g.
+ * `#/desk/billing?plan=pro&cycle=yearly&tab=checkout`. Only the keys actually
+ * present are returned; validating the VALUES is the billing widget's job (this
+ * lib stays dumb so a malformed param can never break the boot). Returns {}
+ * when the link carries no preselect.
+ *
+ * @returns {{plan?:string, cycle?:string, tab?:string}}
+ */
+function parseParams() {
+  const out = {};
   try {
-    sessionStorage.setItem(KEY, "1");
+    const hash = String(window.location.hash || "");
+    const q = hash.indexOf("?");
+    if (q === -1) return out;
+    const usp = new URLSearchParams(hash.slice(q + 1));
+    for (const k of ["plan", "cycle", "tab"]) {
+      const v = usp.get(k);
+      if (v) out[k] = v;
+    }
+  } catch (e) {
+    console.warn("[billing-deep-link] could not parse params", e);
+  }
+  return out;
+}
+
+/**
+ * Remember that this visit should end on the billing screen, with whatever
+ * plan/cycle/tab preselect the link carried.
+ *
+ * @param {Object} [params] preselect from parseParams()
+ */
+function arm(params) {
+  try {
+    sessionStorage.setItem(KEY, JSON.stringify(params || {}));
   } catch (e) {
     // Private mode. The signed-IN case still works — the desk reads the hash
     // as a fallback — so this only costs the signed-out one.
@@ -84,31 +115,34 @@ function arm() {
  */
 function captureFromUrl() {
   if (!urlWantsBilling()) return false;
-  arm();
+  arm(parseParams());
   return true;
 }
 
 /**
- * Take the intent, if there is one. Reading CLEARS it — an intent that is
+ * Take the intent, if there is one. Reading CLEARS the stored copy — an intent
  * acted on twice would reopen billing over whatever the user did next.
  *
- * The url is accepted as a second source so the signed-in case does not
- * depend on storage at all: there, the hash is still intact by the time the
- * desk boots.
+ * The url is accepted as a second source so the signed-in case does not depend
+ * on storage at all: there, the hash is still intact by the time the desk boots.
  *
- * @returns {Boolean} true when this boot should open the billing screen
+ * @returns {Object|null} the preselect object ({plan?,cycle?,tab?}, possibly
+ *   empty) when this boot should open billing, else null. An empty object is
+ *   still truthy, so callers that only test truthiness keep working unchanged.
  */
 function consume() {
-  let stored = false;
   try {
-    stored = sessionStorage.getItem(KEY) === "1";
-    if (stored) sessionStorage.removeItem(KEY);
+    const raw = sessionStorage.getItem(KEY);
+    if (raw != null) {
+      sessionStorage.removeItem(KEY);
+      try { return JSON.parse(raw) || {}; } catch (e) { return {}; }
+    }
   } catch (e) {
     // Blocked storage. The url is checked below regardless, so a signed-IN
     // visitor still gets there; only the across-sign-in relay is lost.
     console.warn("[billing-deep-link] sessionStorage unavailable", e);
   }
-  return stored || urlWantsBilling();
+  return urlWantsBilling() ? parseParams() : null;
 }
 
-module.exports = { arm, consume, captureFromUrl, urlWantsBilling, KEY };
+module.exports = { arm, consume, captureFromUrl, urlWantsBilling, parseParams, KEY };

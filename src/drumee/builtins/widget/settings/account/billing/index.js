@@ -60,6 +60,11 @@ class settings_billing extends LetcBox {
       business: 100000
     }
 
+    // Preselect plan/cycle/tab from a #/desk/billing?plan=&cycle=&tab= deep link
+    // (threaded in via openBillingPage → togglePanel opt). A no-op when the panel
+    // is opened without those params, so every existing entry point is unchanged.
+    this._applyDeepLink(opt);
+
     this.tab = this.state.currentTab;
     // Subscribe to live WS via the framework channel (replaces the leaky
     // Wm.on('ws:event') that never unsubscribed). Dispatcher calls
@@ -176,6 +181,64 @@ class settings_billing extends LetcBox {
       return this._mayCheckout();
     }
     return this._mayCheckout() && !this._hasActiveSub;
+  }
+
+  /**
+   * Apply the #/desk/billing deep-link preselect (opt.plan / opt.cycle /
+   * opt.tab, validated here). This only SEEDS existing state — a panel opened
+   * without these keys is left exactly as before. The checkout tab is opened
+   * optimistically so the common (eligible) case paints straight into checkout;
+   * _settleDeepLinkTab() steps it back down once eligibility is known, so a link
+   * can never dead-end an account that cannot check out.
+   *
+   * @param {Object} [opt] the togglePanel opt bag
+   */
+  _applyDeepLink(opt) {
+    if (!opt) return;
+    const PLAN_KEYS = { free: 1, pro: 1, team: 1, business: 1 };
+    const plan = opt.plan != null && PLAN_KEYS[String(opt.plan).toLowerCase()]
+      ? String(opt.plan).toLowerCase()
+      : null;
+    const c = opt.cycle != null ? String(opt.cycle).toLowerCase() : "";
+    const cycle = /^year/.test(c) ? "yearly" : (/^month/.test(c) ? "monthly" : null);
+    const tab = opt.tab != null ? String(opt.tab).toLowerCase() : "";
+    if (!plan && !cycle && !tab) return;
+
+    if (cycle) {
+      this.state.plansTab.cycle = cycle;
+      this.state.checkout.billingCycle = cycle;
+      // Keep fetchPlanData's first-paint cycle seed from overriding the link.
+      this._cycleSeeded = true;
+      this.state.currentTab = cycle === "yearly" ? TAB_YEARLY : TAB_MONTHLY;
+    }
+    if (plan) {
+      this.state.plansTab.selectedPlan = plan;
+      this.state.checkout.selectedPlan = plan;
+    }
+    // A checkout deep link needs a concrete PAID plan to buy — 'free' has no
+    // checkout. Opening the tab here also keeps fetchPlanData from overwriting
+    // the chosen plan (it only re-seeds the checkout form while NOT on that tab).
+    if (tab === "checkout" && plan && plan !== "free") {
+      this._deepLinkCheckout = true;
+      this.state.currentTab = TAB_CHECKOUT;
+    }
+  }
+
+  /**
+   * A checkout deep link opens the tab before the subscription is known (see
+   * _applyDeepLink). Once it has loaded, honour the same guard the tab bar uses:
+   * an account that cannot check out (already subscribed / upgrades off) falls
+   * back to the plans view on the chosen cycle instead of dead-ending. Runs at
+   * most once.
+   */
+  _settleDeepLinkTab() {
+    if (!this._deepLinkCheckout || this._deepLinkSettled) return;
+    this._deepLinkSettled = true;
+    if (this.state.currentTab === TAB_CHECKOUT && !this._checkoutTabAllowed()) {
+      const cycle = this.state.plansTab.cycle;
+      this.state.currentTab = cycle === "yearly" ? TAB_YEARLY : TAB_MONTHLY;
+      this.tab = this.state.currentTab;
+    }
   }
 
   // Human-readable consequence list for the cancel-confirm modal.
@@ -539,6 +602,10 @@ class settings_billing extends LetcBox {
       this._loadSubscription(),
     ]);
     this._catalog = catalog;
+    // The subscription is now loaded, so checkout eligibility is knowable:
+    // settle any checkout deep link (stepping down to the plans view if this
+    // account can't buy) before the render below.
+    this._settleDeepLinkTab();
     // LAUNCH30 (design doc 2026-07-30) trigger B: "Opens Billing page".
     // Self-gated server-side (SERVICE.promo.get_state) — safe to call
     // unconditionally on every mount, including a re-render after tab focus.
