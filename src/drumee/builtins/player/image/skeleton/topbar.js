@@ -31,7 +31,7 @@ module.exports = function (ui) {
         {
           id: "save-rotation-button",
           type: "button",
-          icon: "checked-circle",
+          icon: "apps-floppy",
           className: "icon save-rotation",
           service: "save-rotation",
           dataset: { pending: 0 },
