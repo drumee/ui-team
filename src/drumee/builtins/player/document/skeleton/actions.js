@@ -146,9 +146,24 @@ module.exports = function (ui) {
 module.exports.menu = function (ui) {
   const isEditing = ui.mget(_a.mode) == _a.edit;
   const ext = (ui.mget(_a.ext) || "").toLowerCase();
+  const media = ui.media;
+  // Same test the image player applies: the node is editable only when we
+  // still have the MFS view to forward to and the session may write.
+  const editable = !!media && !Visitor.inDmz && !!ui.canUpload();
   const sections = [];
 
   const file = [];
+  if (media && !Visitor.inDmz) {
+    file.push({ id: "copy", label: LOCALE.COPY, icon: "apps-copy", service: _e.copy });
+  }
+  if (Visitor.inDmz || ui.canDownload()) {
+    file.push({
+      id: "download",
+      label: LOCALE.DOWNLOAD,
+      icon: "app-download",
+      service: _e.download,
+    });
+  }
   if (ext != _a.pdf && !isEditing) {
     file.push({
       id: "download-pdf",
@@ -161,6 +176,33 @@ module.exports.menu = function (ui) {
     file.push({ id: "print", label: LOCALE.PRINT, icon: "app-print", service: "print" });
   }
   if (file.length) sections.push(file);
+
+  const naming = [];
+  if (editable) {
+    naming.push({
+      id: "rename",
+      label: LOCALE.RENAME,
+      icon: "app-edit",
+      service: "direct-rename",
+    });
+  }
+  if (media && !Visitor.inDmz) {
+    naming.push({
+      id: "chat-threads",
+      label: LOCALE.CHAT_THREADS,
+      icon: "file-thread",
+      service: "chat-threads",
+      children: [
+        { id: "view-chat-threads", label: LOCALE.VIEW_CHAT_THREADS, service: _a.chat },
+        {
+          id: "download-file-chat",
+          label: LOCALE.DOWNLOAD_CHAT_THREADS,
+          service: "download-file-chat",
+        },
+      ],
+    });
+  }
+  if (naming.length) sections.push(naming);
 
   // Edit and Preview are the two directions of the same toggle, so only one
   // of them is ever offered.
@@ -179,10 +221,52 @@ module.exports.menu = function (ui) {
   }
   if (mode.length) sections.push(mode);
 
-  // Handled by the base player, not this class.
-  sections.push([
-    { id: "info", label: LOCALE.GET_INFO, icon: "ctxmenu-info", service: "info" },
-  ]);
+  // Sharing is area-dependent, exactly as in the image player's catalog:
+  // each area exposes the one link flavour that makes sense for it.
+  const details = [];
+  if (editable) {
+    switch (ui.mget(_a.area)) {
+      case _a.share:
+        details.push({
+          id: "secure-share",
+          label: LOCALE.SHARE,
+          icon: "ctxmenu-share",
+          service: "secure-share",
+        });
+        break;
+      case _a.private:
+        details.push({
+          id: "designation-link",
+          label: LOCALE.DESIGNATION_LINK,
+          icon: "app-share",
+          service: "designation-link",
+        });
+        break;
+      case _a.public:
+        details.push({
+          id: "direct-url",
+          label: LOCALE.URL_ADDRESS,
+          icon: "apps-link-simple",
+          service: "direct-url",
+        });
+        break;
+    }
+  }
+  // "info" is handled by the base player, not this class.
+  details.push({ id: "info", label: LOCALE.GET_INFO, icon: "ctxmenu-info", service: "info" });
+  sections.push(details);
+
+  if (media && media.canRemove && media.canRemove()) {
+    sections.push([
+      {
+        id: "trash",
+        label: LOCALE.MOVE_TO_TRASH,
+        icon: "chat-action-trash",
+        service: _e.remove,
+        className: "trash",
+      },
+    ]);
+  }
 
   const items = [];
   sections.forEach((s, i) => {

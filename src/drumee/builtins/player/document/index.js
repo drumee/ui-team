@@ -3,6 +3,23 @@ const { filesize, fitBoxes } = require("@drumee/ui-essentials")
 const { TweenMax, Expo } = require("@drumee/ui-core/vendor");
 const PlayerInteract = require('player/interact');
 const snap = require('builtins/window/snap');
+
+// Gear-menu rows that act on the node rather than on the viewer. The MFS
+// view this player was opened from implements all of them, so they are
+// forwarded verbatim (see `_delegate`). Kept as an explicit allow-list: a
+// catch-all would also swallow the player's own chrome events on their way
+// to the base class.
+const DELEGATED_SERVICES = [
+  _e.copy,
+  _e.remove,
+  _a.chat,
+  'direct-rename',
+  'chat-threads',
+  'download-file-chat',
+  'secure-share',
+  'designation-link',
+  'direct-url',
+];
 const { loadPdfDocument, getCurrentPdfiumDocumentBlob } = require('./pdfium-wrapper')
 const { openSelectionDocument } = require('./selection')
 const { applyLivePrivilege, hasWriteBit } = require('window/live-privilege');
@@ -570,6 +587,21 @@ class __player_document extends PlayerInteract {
   /**
    * 
    */
+  /**
+   * Forward a gear-menu row this player doesn't own to the source MFS view,
+   * which implements the whole file-action vocabulary already. Returns false
+   * when there's nothing to forward to, so the caller can fall through to
+   * the base class rather than swallow the event.
+   */
+  _delegate(cmd, args) {
+    const media = this.media;
+    if (!media || media.isDestroyed() || !_.isFunction(media.onUiEvent)) {
+      return false;
+    }
+    media.onUiEvent(cmd, args);
+    return true;
+  }
+
   /** Window minimums the Move & Resize presets clamp to. */
   _snapOpt() {
     return { minWidth: 300, minHeight: 300 };
@@ -1280,6 +1312,9 @@ class __player_document extends PlayerInteract {
         return this.triggerHandlers({ service: 'dmz-request-download' });
 
       default:
+        // Gear-menu rows that act on the node itself go to the source MFS
+        // view; everything else is player chrome and belongs to the base.
+        if (DELEGATED_SERVICES.includes(service) && this._delegate(cmd)) return;
         return super.onUiEvent(cmd);
     }
   }
