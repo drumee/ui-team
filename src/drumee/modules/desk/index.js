@@ -347,14 +347,21 @@ class desk_module extends LetcBox {
     );
     this.feed(require("./skeleton")(this));
     await this.ensurePart("desk-content");
-    // NOTE: keep the restore BEFORE the wrapper-popup await — the current
-    // skeleton has no "wrapper-popup" part, so that promise never resolves
-    // and anything after it is dead code.
     this._restoreDeskState().catch((e) => {
       this._restoreInFlight = false;
       this.warn && this.warn("[Reload] restore failed", e);
     });
-    await this.ensurePart("wrapper-popup");
+    // There used to be an `await this.ensurePart("wrapper-popup")` here, with
+    // a note warning that the skeleton has no such part so the promise never
+    // resolves. The note was right and the await stayed anyway — which made
+    // BOTH lines below dead code. ensurePart has no timeout (ui-core
+    // collection-view): a part that never renders leaves the promise pending
+    // for the life of the desk.
+    //
+    // So `_e.ready` had never fired, and LAUNCH30's "Start exploring now"
+    // never reached the Admin Console: it sets its flags, reloads, and the
+    // reader below was simply never called. Nothing listens for `_e.ready`
+    // today, so letting it fire is inert; the promo handler is the point.
     this.trigger(_e.ready);
     // LAUNCH30 "Start exploring now" reloads so org_provision's domain move
     // is picked up by get_env; then open Admin Console (+ Invite via
@@ -1721,6 +1728,54 @@ class desk_module extends LetcBox {
   }
 
   /**
+   * How long an account works in Drumee before the LAUNCH30 offer appears.
+   *
+   * Five minutes, measured from the home screen settling. Not a cumulative
+   * across-sessions figure — a plain timer in the session that would otherwise
+   * have shown the popup immediately, which is what "let them use it first"
+   * actually needs. Reload before it fires and the wait restarts; the offer is
+   * unchanged and still waiting, so nothing is lost.
+   */
+  static get PROMO_OFFER_DELAY_MS() {
+    return 5 * 60 * 1000;
+  }
+
+  /**
+   * Arm the LAUNCH30 offer for later. Returns at once.
+   *
+   * Re-armed on every home settle, so the timer is cleared first: two
+   * schedules would fire two launches, and Wm's singleton only dedupes what is
+   * already on screen.
+   *
+   * The state fetched now is reused when it fires. It can only go stale by the
+   * user claiming or dismissing in the meantime, and both of those destroy the
+   * eligibility this timer exists to act on. Duplicate windows are Wm's job —
+   * the launch below carries wm_unique_id + singleton, the same protection the
+   * immediate path has always relied on.
+   */
+  _schedulePromoOffer(surface, state) {
+    clearTimeout(this._promoOfferTimer);
+    this._promoOfferTimer = setTimeout(async () => {
+      if (this.isDestroyed && this.isDestroyed()) return;
+      try {
+        await Kind.waitFor("promo_launch30");
+      } catch (e) {
+        return;
+      }
+      if (this.isDestroyed && this.isDestroyed()) return;
+      Wm.launch({
+        kind: "promo_launch30",
+        surface,
+        state: "offer",
+        position: state.position,
+        campaign_ends_at: state.campaign_ends_at,
+        hub_id: Visitor.id,
+        wm_unique_id: "promo_launch30",
+      }, { explicit: 1, singleton: 1 });
+    }, this.constructor.PROMO_OFFER_DELAY_MS);
+  }
+
+  /**
    * LAUNCH30 — "Start your 1-month Team Plan today". Design doc 2026-07-30.
    * Self-gates on the server (SERVICE.promo.get_state): eligible only on
    * Free, never claimed, not already inside another organisation, and not
@@ -1743,7 +1798,8 @@ class desk_module extends LetcBox {
    *   undefined if a concurrent call was already in flight or the fetch
    *   failed.
    */
-  async _maybeShowPromoLaunch30(surface) {
+  async _maybeShowPromoLaunch30(surface, opt = {}) {
+    const defer = !!opt.defer;
     if (this._promoLaunch30InFlight) return;
     this._promoLaunch30InFlight = true;
     try {
@@ -1755,6 +1811,20 @@ class desk_module extends LetcBox {
       }
       if (!state) return;
       if (state.state === "eligible_unseen") {
+        // The OFFER waits until the account has actually used Drumee for a
+        // while. It used to fire the moment the home screen settled — for a
+        // brand-new account that is the instant the tutorial ends, so the
+        // first thing someone saw after being shown around was a full-screen
+        // pitch, before they had opened a single file. Hold it back and let
+        // them work first (PROMO_OFFER_DELAY_MS).
+        //
+        // Deferred, never awaited: _afterHomeSettled chains the
+        // invited-workspace prompt behind this call, and awaiting a
+        // five-minute timer would hold that prompt for five minutes too.
+        if (defer) {
+          this._schedulePromoOffer(surface, state);
+          return state;
+        }
         try {
           await Kind.waitFor("promo_launch30");
         } catch (e) {
@@ -1829,7 +1899,7 @@ class desk_module extends LetcBox {
     // LAUNCH30 offer land on top of it would bury it.
     this._maybeOpenBillingDeepLink();
     return this._maybeStartRewardFlow()
-      .then(() => this._maybeShowPromoLaunch30("home"))
+      .then(() => this._maybeShowPromoLaunch30("home", { defer: true }))
       .then(() => this._waitForHomePopups())
       .then((clear) =>
         clear
