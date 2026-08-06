@@ -1,3 +1,38 @@
+diff --git a/node_modules/@drumee/ui-core/letc/addons/letc.js b/node_modules/@drumee/ui-core/letc/addons/letc.js
+index be31634..74857a8 100644
+--- a/node_modules/@drumee/ui-core/letc/addons/letc.js
++++ b/node_modules/@drumee/ui-core/letc/addons/letc.js
+@@ -91,7 +91,7 @@ function deviceChanged() {
+ 
+ const Timer = new Map();
+ 
+-let _clickTimestap = timestamp();
++// _clickTimestap moved onto the view instance — see __handleClick.
+ 
+ 
+ /** Common addons */
+@@ -317,10 +317,19 @@ View.prototype.__handleClick = function (e) {
+     }
+   }
+ 
+-  if ((timestamp() - _clickTimestap) < 300) {
++  // Suppress the second `click` of a double-click. Scoped to THIS view:
++  // a double-click always lands on one element, so per-instance state
++  // suppresses it just as well as a shared one did, without a click on
++  // one control silently eating a click on an unrelated control within
++  // 300ms. The counter used to be a module-level global shared by every
++  // view in the app, which made rapid interaction with adjacent buttons
++  // (e.g. the player topbar's Move & Resize presets) drop presses at
++  // random. `undefined` on the first click yields NaN, and `NaN < 300`
++  // is false, so the first click always passes.
++  if ((timestamp() - this._clickTimestap) < 300) {
+     return;
+   }
+-  _clickTimestap = timestamp();
++  this._clickTimestap = timestamp();
+   e.stopPropagation();
+   this.triggerHandlers(e);
+   e.stopImmediatePropagation();
 diff --git a/node_modules/@drumee/ui-core/letc/user.js b/node_modules/@drumee/ui-core/letc/user.js
 index a288e64..4b85937 100644
 --- a/node_modules/@drumee/ui-core/letc/user.js
