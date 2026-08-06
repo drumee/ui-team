@@ -81,53 +81,26 @@ function action(ui, { service, ico, tip, state, icons, sys_pn }) {
 module.exports = function (ui) {
   const actions = [];
 
-  // Header download icon intentionally hidden for docs (product request).
-  // download-as-PDF / print remain; DMZ download gating still lives on those
-  // handlers via _dmzGateDownload() when re-enabled.
+  // Download-as-PDF, Edit and Print are NOT inline any more. In preview mode
+  // they were in the header AND in the gear menu, which is where they now
+  // live alone (see `.menu` below). In edit mode they were already hidden —
+  // they surface the stale server info.pdf, which the server never re-runs —
+  // so dropping them here costs nothing there.
+  //
+  // Header download icon was already intentionally hidden for docs (product
+  // request). DMZ download gating still lives on those handlers via
+  // _dmzGateDownload().
 
-  // While editing an office doc, hide the three actions that surface the stale
-  // server info.pdf (the server never re-runs the conversion on demand):
-  // download-as-PDF, preview and print. They stay in view/preview mode, where the
-  // server PDF equals the displayed doc. Exit edit mode via the window close control.
-  const isEditing = ui.mget(_a.mode) == _a.edit;
-
-  if (ui.mget(_a.ext) != _a.pdf && !isEditing) {
-    actions.push(
-      action(ui, {
-        service: "download-pdf",
-        ico: "app-pdf-file",
-        tip: LOCALE.DOWNLOAD_AS_PDF,
-      }),
-    );
-  }
-
-  if (!Visitor.inDmz && EDITABLE.includes(ui.mget(_a.ext).toLowerCase())) {
-    // No preview toggle while editing — it reloads the stale server render. Only
-    // offer Edit when not already editing.
-    //
-    // Offered regardless of canUpload(): the editor service resolves edit vs
-    // read-only from the privilege server-side, so a view-only member gets the
-    // read-only editor. Without this, a viewer who switched to Preview had no
-    // way back to the editor and was stuck on the PDF render — which is blank
-    // for a file whose preview was never generated.
-    if (!isEditing && Platform.get("doc_editor")) {
-      actions.push(
-        action(ui, {
-          service: _a.edit,
-          ico: "app-edit",
-          tip: ui.canUpload() ? LOCALE.EDIT : LOCALE.OPEN,
-        }),
-      );
-    }
-  } else if (
+  // The one action with no gear-menu equivalent: a secure-share recipient the
+  // editor will force READ-ONLY gets a "Request edit" that opens the share's
+  // request-access popup (reusing the already-wired dmz-request-download gate
+  // → sharebox → Request Access / sign-up).
+  if (
     Visitor.inDmz &&
     !_dmzViewerCanEdit(ui) &&
     Platform.get("doc_editor") &&
     EDITABLE.includes((ui.mget(_a.ext) || "").toLowerCase())
   ) {
-    // Secure-share recipient the editor will force READ-ONLY: offer a "Request edit"
-    // action that opens the share's request-access popup (reusing the already-wired
-    // dmz-request-download gate → sharebox → Request Access / sign-up).
     actions.push(
       action(ui, {
         service: "dmz-request-edit",
@@ -135,12 +108,6 @@ module.exports = function (ui) {
         tip: LOCALE.SECURE_SHARE_REQUEST_ACCESS || LOCALE.EDIT,
       }),
     );
-  }
-
-  // Print stays hidden while editing (same stale-info.pdf reason as above); the
-  // cross-origin office editor has its own Print (#btn-print).
-  if (!isEditing) {
-    actions.push(action(ui, { service: "print", ico: "print", tip: LOCALE.PRINT }));
   }
 
   // Maximize used to be an inline `doc-zoom` button here. It is now the

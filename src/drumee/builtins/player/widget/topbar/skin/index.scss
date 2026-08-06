@@ -163,6 +163,27 @@
     width: 164px;
   }
 
+  // ---- Overflow -----------------------------------------------------------
+  // `overflow-y: auto` establishes a clipping context whether or not anything
+  // actually overflows, so putting it on a list that owns submenus would clip
+  // them away again — the exact bug the panel's `overflow: visible` fixes.
+  //
+  // So it is applied only where it cannot do that:
+  //
+  //   * a root list that contains NO submenu, guarded by `:has()`. Browsers
+  //     without `:has()` simply don't match and keep today's behaviour, so
+  //     there is no way for this to regress anything.
+  //   * a submenu itself, which owns nothing that needs to escape it.
+  //
+  // A long menu that ALSO has submenus is deliberately left alone: bounding
+  // it needs the panel to flip or reposition, which is JS work, not CSS.
+  // The offset clears the header the panel hangs from, plus a little air.
+  &__menu-items:not(:has(&__submenu)) {
+    max-height: calc(100vh - 96px);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+
   &__menu-item {
     align-items: center;
     border-radius: var(--corner-radius-1);
@@ -309,6 +330,15 @@
     }
   }
 
+  // Same guard as the root list, and it MUST come after the `__submenu`
+  // block above, which sets `overflow: visible` and would otherwise win.
+  // A LEAF submenu — one with no nested submenu of its own — owns nothing
+  // that needs to escape it, so it can scroll safely.
+  &__submenu:not(:has(&__submenu)) {
+    max-height: calc(100vh - 96px);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
 }
 
 // Submenu open/closed, deliberately written at (0,3,0) and (0,4,0).
