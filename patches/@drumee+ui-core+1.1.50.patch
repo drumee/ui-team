@@ -1,0 +1,146 @@
+diff --git a/node_modules/@drumee/ui-core/letc/user.js b/node_modules/@drumee/ui-core/letc/user.js
+index a288e64..4b85937 100644
+--- a/node_modules/@drumee/ui-core/letc/user.js
++++ b/node_modules/@drumee/ui-core/letc/user.js
+@@ -621,13 +621,21 @@ class __core_user extends Backbone.Model {
+    * @param {*} id 
+    * @returns 
+    */
+-  avatar(id, type = _a.vignette) {
++  avatar(id, type = _a.vignette, mtime) {
+     const a = this.get(_a.avatar);
+     if (/^http/.test(a)) {
+       return a;
+     }
+     id = id || this.id;
+-    const ts = `${this.get(_a.mtime)}` || "";
++    // `ts` versions the avatar OF `id`, so it has to come from that entity's own
++    // mtime (server bumps entity.mtime via entity_touch on avatar upload).
++    // Reading the local user's mtime unconditionally — the previous behaviour —
++    // is only correct when id IS the local user: for anyone else the token never
++    // moves when they change their avatar, so the URL stays byte-identical and
++    // the browser keeps serving the pre-change image. Callers that know the
++    // owner's mtime now pass it; the local mtime remains the fallback so
++    // call sites that don't are unchanged.
++    const ts = `${mtime != null ? mtime : this.get(_a.mtime)}`;
+     const { endpoint } = bootstrap();
+     let base = `${endpoint}avatar/${id}?type=${type}&ts=${ts}`;
+     return base
+diff --git a/node_modules/@drumee/ui-core/letc/widgets/profile/index.js b/node_modules/@drumee/ui-core/letc/widgets/profile/index.js
+index 13edb44..eda76e5 100644
+--- a/node_modules/@drumee/ui-core/letc/widgets/profile/index.js
++++ b/node_modules/@drumee/ui-core/letc/widgets/profile/index.js
+@@ -16,7 +16,23 @@ class __user_profile extends LetcBox {
+     });
+     this.declareHandlers();
+     let id = opt.id || opt.uid || opt.user_id || opt.drumate_id || opt.entity_id;
+-    this.mset({ id });
++    // `strict`: this widget renders one SPECIFIC other entity, so never
++    // substitute the local user — used by callers whose id arrives
++    // asynchronously (the remote meeting tile, whose uid comes from a Jitsi
++    // presence property). Those must show initials until the id lands.
++    //
++    // Every other caller keeps the long-standing contract that naming no entity
++    // means "the local user" — the sidebar footer avatar and the local meeting
++    // tile both rely on it. That used to be handled implicitly by
++    // Visitor.avatar()'s `id || this.id`; resolve it HERE instead, so the widget
++    // always knows which entity it is rendering and the no-id case can be told
++    // apart from the identity-pending case.
++    const strict = !!opt.strict;
++    if (id == null && !strict) id = Visitor.id;
++    // Version of THIS entity's avatar. Threaded into the URL so the cache token
++    // belongs to the avatar's owner rather than to whoever is looking at it.
++    // Deliberately NOT defaulted for the local user here — see _avatarVersion().
++    this.mset({ id, avatar_mtime: opt.avatar_mtime, strict });
+     if (opt.live_status) {
+       this.updateStatus = this.updateStatus.bind(this);
+       RADIO_BROADCAST.on(_e.peerData, this.updateStatus);
+@@ -52,10 +68,38 @@ class __user_profile extends LetcBox {
+    * 
+    */
+   restart(clearCache) {
+-    if (clearCache) delete __cache[this.mget(_a.id)]
++    if (clearCache) delete __cache[this._avatarKey()]
+     this.onDomRefresh()
+   }
+ 
++  /**
++   * Key for the "this avatar 404s" memo. It includes the avatar VERSION so that
++   * a user who had no avatar and then uploads one is retried: keyed on id alone,
++   * the miss was remembered for the whole session and every later widget for that
++   * id short-circuited straight to initials, so the new avatar could never appear.
++   */
++  _avatarKey() {
++    const v = this._avatarVersion();
++    return `${this.mget(_a.id)}:${v == null ? '' : v}`;
++  }
++
++  /**
++   * Version token for the avatar this widget renders.
++   *
++   * A remote entity's version has to be supplied by whoever knows it (the peer
++   * publishes it in userAttributes). For the LOCAL user we read Visitor's mtime
++   * live rather than capturing it at initialize time: the local user can change
++   * their own avatar while this widget is mounted, and reading it at render time
++   * is what lets the URL *and* the negative-cache key re-version on the spot.
++   */
++  _avatarVersion() {
++    const v = this.mget('avatar_mtime');
++    if (v != null) return v;
++    const id = this.mget(_a.id);
++    if (id != null && `${id}` === `${Visitor.id}`) return Visitor.get(_a.mtime);
++    return null;
++  }
++
+   /**
+    * 
+    * @param {*} src 
+@@ -63,7 +107,7 @@ class __user_profile extends LetcBox {
+    */
+   img() {
+     const imageType = this.mget(_a.type) || _a.vignette
+-    const src = Visitor.avatar(this.mget(_a.id), imageType)
++    const src = Visitor.avatar(this.mget(_a.id), imageType, this._avatarVersion())
+     return `
+       <img class="${this.fig.family}__icon ${this.fig.family}__picture picture" data-flow="x" src="${src}">
+     `
+@@ -168,8 +212,20 @@ class __user_profile extends LetcBox {
+    * 
+    */
+   loadImage() {
++    // Only reachable for a `strict` caller (initialize resolves everyone else to
++    // Visitor.id): the entity is known to be someone specific but its id has not
++    // arrived yet. Show initials and stop — Visitor.avatar() substitutes the
++    // LOCAL user's id when it gets none, so requesting here would render the
++    // VIEWER's own avatar in a peer's slot. Do not memoize: this is a pending
++    // state, not a missing avatar, and the caller re-renders once the id lands.
++    if (this.mget(_a.id) == null) {
++      this.el.dataset.default = 1;
++      this._show('i');
++      return;
++    }
++
+     // Optimization : prevent reload when marked as error
+-    if (__cache[this.mget(_a.id)]) {
++    if (__cache[this._avatarKey()]) {
+       this.el.dataset.default = 1;
+       this._show('i');
+       return;
+@@ -186,7 +242,7 @@ class __user_profile extends LetcBox {
+     };
+ 
+     const imageType = this.mget(_a.type) || _a.vignette
+-    img.src = Visitor.avatar(this.mget(_a.id), imageType);
++    img.src = Visitor.avatar(this.mget(_a.id), imageType, this._avatarVersion());
+   }
+ 
+   /**
+@@ -194,7 +250,7 @@ class __user_profile extends LetcBox {
+    * @param {*} e
+     */
+   _onError(e) {
+-    __cache[this.mget(_a.id)] = 1;
++    __cache[this._avatarKey()] = 1;
+     this.el.dataset.default = 1;
+     return this._show('i');
+   }
