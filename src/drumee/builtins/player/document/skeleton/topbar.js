@@ -64,10 +64,11 @@ function config(ui) {
         presets: ["full", "left", "right"],
         active: "full",
       },
-      close: {
-        service: _e.close,
-        className: "window-button__icon-button",
-      },
+      // Only the service is overridden. The widget's own `icon close` class
+      // is what the skin sizes and colours; `window-button__icon-button` has
+      // no global styling of its own — every rule for it in the tree is
+      // scoped to some other container.
+      close: { service: _e.close },
     },
   };
 }

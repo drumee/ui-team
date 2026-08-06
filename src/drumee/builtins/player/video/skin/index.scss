@@ -28,12 +28,16 @@
 
   // Drag handle. The window is dragged by this header (see
   // player/interact.js `setupInteract`, handle `.player__header`).
-  &-topbar__control {
-    background: transparent;
-    padding: 0;
+  //
+  // The header is now the shared topbar widget, so this treatment moved off
+  // the old `-topbar__control` wrapper — which no longer exists — and onto
+  // the widget's action row. It keeps the video player's round, blurred
+  // buttons, which read against the black video surface where the widget's
+  // flat 24px icons would not.
+  .drumee-topbar__actions {
     cursor: move;
 
-    .window-button__icon-button {
+    .icon {
       width: 32px;
       height: 32px;
       padding: 0;
@@ -43,7 +47,10 @@
       transition: background-color 0.15s ease;
       cursor: pointer;
 
-      svg, .icon { width: 20px; height: 20px; }
+      svg {
+        width: 20px;
+        height: 20px;
+      }
 
       &:hover {
         color: var(--normal-fg-20);
