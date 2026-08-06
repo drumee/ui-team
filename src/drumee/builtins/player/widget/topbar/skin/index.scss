@@ -195,13 +195,17 @@
     padding: var(--spacer-3);
     // Submenus are positioned against their parent row.
     position: relative;
-    white-space: nowrap;
+    // Labels WRAP rather than run past the panel. The root panel is a fixed
+    // 164px, so a long label ("Download a PDF version") used to push the row
+    // wider than the surface it sits on. Line height comes up from 1 to give
+    // the wrapped lines room to breathe.
+    white-space: normal;
     width: 100%;
 
     // The Figma is Geist SemiBold. drumee.typo() only maps 300/400/500/700
     // onto a font-family and never emits `font-weight`, so 600 has to be
     // set directly or rows render at 400.
-    @include drumee.typo($color: var(--normal-fg-10), $size: 12px, $line: 1);
+    @include drumee.typo($color: var(--normal-fg-10), $size: 12px, $line: 1.35);
     font-weight: 600;
 
     &:not([data-state="disable"]):hover {
@@ -270,6 +274,12 @@
 
   &__menu-label {
     flex: 1;
+    // A flex item's floor is its content width unless this is set, which
+    // would keep the label on one line and push the row wide however the
+    // parent is sized. `anywhere` is the fallback for a single unbroken
+    // token — a filename-derived label with no spaces in it.
+    min-width: 0;
+    overflow-wrap: anywhere;
   }
 
   // The Figma uses a 12px CaretRight glyph; ours is a `›` note, so pin it
@@ -312,6 +322,10 @@
     padding: var(--spacer-3);
     position: absolute;
     top: calc(var(--spacer-3) * -1);
+    // Hugs its content, but only up to a point — without the cap
+    // `max-content` grows to the longest label and never wraps, so a long
+    // row would run off the side instead of breaking.
+    max-width: 220px;
     width: max-content;
     z-index: 1;
 
