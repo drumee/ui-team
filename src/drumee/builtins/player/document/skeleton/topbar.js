@@ -16,12 +16,30 @@
 const Topbar = require("builtins/player/widget/topbar");
 const actions = require("./actions");
 
-// The tile glyph follows the file, not the player.
+// The tile glyph follows the file, not the player. Office extensions are
+// grouped by document kind; the two formats that are neither get their own
+// glyph, and anything unrecognised falls back to the document one.
+//
+// Extensions are the editable set (../editable.js) plus the read-only
+// formats this viewer also opens.
+const SPREADSHEET = [
+  "xls", "xlsx", "xlsm", "xltx", "xltm", "xlsb", "ods", "ots", "csv",
+];
+const PRESENTATION = [
+  "ppt", "pptx", "pptm", "potx", "potm", "ppsx", "ppsm", "odp", "otp",
+];
 const TILE_ICON = {
   pdf: "app-pdf-file",
   html: "app-html-file",
   htm: "app-html-file",
 };
+
+function tileIcon(ext) {
+  if (TILE_ICON[ext]) return TILE_ICON[ext];
+  if (SPREADSHEET.includes(ext)) return "app-xls-file";
+  if (PRESENTATION.includes(ext)) return "app-ppt-file";
+  return "app-doc-file";
+}
 
 /**
  * One source of truth, handed to both the full header and the action-row
@@ -31,7 +49,7 @@ function config(ui) {
   const ext = (ui.mget(_a.ext) || "").toLowerCase();
   return {
     left: {
-      fileTypeIcon: TILE_ICON[ext] || "app-doc-file",
+      fileTypeIcon: tileIcon(ext),
       title: ui.model.get(_a.filename),
     },
     right: {
