@@ -143,20 +143,15 @@ module.exports = function (ui) {
     actions.push(action(ui, { service: "print", ico: "print", tip: LOCALE.PRINT }));
   }
 
-  // Maximize → fills the workspace (never the header/sidebar), mirroring the
-  // window-tab zoom. Icon flips per toggle.
-  actions.push(
-    action(ui, {
-      service: "doc-zoom",
-      ico: ui._zoomed ? "desktop_reduce" : "desktop_fullview",
-      tip: LOCALE.MAXIMIZE,
-      state: ui._zoomed ? 1 : 0,
-      icons: ["desktop_fullview", "desktop_reduce"],
-    }),
-  );
+  // Maximize used to be an inline `doc-zoom` button here. It is now the
+  // "full" preset in the widget's Move & Resize panel, which also offers
+  // tiling — two controls that both maximised, differently, was worse than
+  // one. `toggleZoom()` and `case "doc-zoom"` are left in place; nothing in
+  // the header reaches them any more.
 
   // True full screen → browser Fullscreen API on the whole viewer (fills the
-  // monitor). Distinct from the maximize button above.
+  // monitor). Distinct from the Move & Resize presets, which only ever fill
+  // the workspace.
   actions.push(
     action(ui, {
       service: "doc-fullscreen",
@@ -167,4 +162,65 @@ module.exports = function (ui) {
   );
 
   return actions;
+};
+
+/**
+ * The gear menu, as MenuItem data for the widget's folder-settings default.
+ *
+ * Every row maps to a service this player already answers — the four in its
+ * own `onUiEvent` plus "info", which the base class handles
+ * (player/interact.js). `_a.link` is deliberately absent: its case is a bare
+ * `break`, so a "Copy link" row would look live and do nothing.
+ *
+ * Download-as-PDF / Print / Edit repeat the inline buttons. That is
+ * intentional — a menu that omits the primary actions reads as if they are
+ * unavailable — but see the header comment if the inline row should shrink.
+ */
+module.exports.menu = function (ui) {
+  const isEditing = ui.mget(_a.mode) == _a.edit;
+  const ext = (ui.mget(_a.ext) || "").toLowerCase();
+  const sections = [];
+
+  const file = [];
+  if (ext != _a.pdf && !isEditing) {
+    file.push({
+      id: "download-pdf",
+      label: LOCALE.DOWNLOAD_AS_PDF,
+      icon: "app-pdf-file",
+      service: "download-pdf",
+    });
+  }
+  if (!isEditing) {
+    file.push({ id: "print", label: LOCALE.PRINT, icon: "app-print", service: "print" });
+  }
+  if (file.length) sections.push(file);
+
+  // Edit and Preview are the two directions of the same toggle, so only one
+  // of them is ever offered.
+  const mode = [];
+  if (!Visitor.inDmz && Platform.get("doc_editor") && EDITABLE.includes(ext)) {
+    if (isEditing) {
+      mode.push({ id: "preview", label: LOCALE.PREVIEW, icon: "app-file", service: _a.preview });
+    } else {
+      mode.push({
+        id: "edit",
+        label: ui.canUpload() ? LOCALE.EDIT : LOCALE.OPEN,
+        icon: "app-edit",
+        service: _a.edit,
+      });
+    }
+  }
+  if (mode.length) sections.push(mode);
+
+  // Handled by the base player, not this class.
+  sections.push([
+    { id: "info", label: LOCALE.GET_INFO, icon: "ctxmenu-info", service: "info" },
+  ]);
+
+  const items = [];
+  sections.forEach((s, i) => {
+    if (i) items.push({ separator: true });
+    items.push(...s);
+  });
+  return items;
 };

@@ -7,41 +7,38 @@
 /**
  * Document-player header — the shared topbar widget, configured.
  *
- * Two of the widget's three defaults are switched off:
- *
- *   folder-settings — the document player has no gear catalog
- *                     (`contextmenuItems` is just `[_a.link]`).
- *   move-resize     — its presets emit the folder window's snap vocabulary
- *                     (`window-zoom`, `window-tile-*`, `window-reframe`),
- *                     none of which this player handles. It has its own
- *                     `doc-zoom` toggle in the action list instead.
- *
- * Close stays, re-pointed at `_e.close`, which is the service this player's
- * `onUiEvent` actually listens for.
- *
- * No file-type tile: the document header never had one, and adding it here
- * would be a visual change nobody asked for. Pass `left.fileTypeIcon` to
- * turn it on.
+ * All three defaults are on. Close is re-pointed at `_e.close`, which is
+ * the service this player's `onUiEvent` actually listens for; the other two
+ * use the widget's own vocabulary, which `document/index.js` now answers
+ * (the four `window-*` snap services).
  */
 
 const Topbar = require("builtins/player/widget/topbar");
 const actions = require("./actions");
+
+// The tile glyph follows the file, not the player.
+const TILE_ICON = {
+  pdf: "app-pdf-file",
+  html: "app-html-file",
+  htm: "app-html-file",
+};
 
 /**
  * One source of truth, handed to both the full header and the action-row
  * rebuild `updateMenu()` performs.
  */
 function config(ui) {
+  const ext = (ui.mget(_a.ext) || "").toLowerCase();
   return {
     left: {
+      fileTypeIcon: TILE_ICON[ext] || "app-doc-file",
       title: ui.model.get(_a.filename),
     },
     right: {
       before: actions(ui),
     },
     defaults: {
-      "folder-settings": { visible: false },
-      "move-resize": { visible: false },
+      "folder-settings": { menu: actions.menu(ui) },
       close: {
         service: _e.close,
         className: "window-button__icon-button",

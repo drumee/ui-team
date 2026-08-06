@@ -30,10 +30,13 @@ consumer.
 ## Consumers
 
 - **Image player** — all three defaults, plus save-rotation in `before`.
-- **Document player** — `folder-settings` and `move-resize` switched off
-  (no gear catalog; its zoom is `doc-zoom`, not the window snap
-  vocabulary), `close` re-pointed at `_e.close`, and its five conditional
-  actions in `before`.
+- **Document player** — all three defaults, `close` re-pointed at
+  `_e.close`, an ext-derived file-type tile, and its conditional actions
+  in `before`. Adopting the defaults meant teaching it the widget's
+  vocabulary: it now answers the four `window-*` snap services through the
+  same `builtins/window/snap` module the image player and folder window
+  use, and its inline `doc-zoom` button was dropped as a duplicate of the
+  panel's "full" preset.
 
 ## Non-goals
 

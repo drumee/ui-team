@@ -2,6 +2,7 @@
 const { filesize, fitBoxes } = require("@drumee/ui-essentials")
 const { TweenMax, Expo } = require("@drumee/ui-core/vendor");
 const PlayerInteract = require('player/interact');
+const snap = require('builtins/window/snap');
 const { loadPdfDocument, getCurrentPdfiumDocumentBlob } = require('./pdfium-wrapper')
 const { openSelectionDocument } = require('./selection')
 const { applyLivePrivilege, hasWriteBit } = require('window/live-privilege');
@@ -569,6 +570,33 @@ class __player_document extends PlayerInteract {
   /**
    * 
    */
+  /** Window minimums the Move & Resize presets clamp to. */
+  _snapOpt() {
+    return { minWidth: 300, minHeight: 300 };
+  }
+
+  /**
+   * Geometry the "center" preset restores to. Falls back to the current box
+   * when nothing was cached — the same contract the image player uses.
+   */
+  _defaultBounds() {
+    return this._preZoomBounds || snap.snapshotBounds(this);
+  }
+
+  /**
+   * Light up the preset the window now sits in. Dragging or resizing by hand
+   * doesn't clear it; tracking every geometry change to undo a highlight is
+   * not worth the listener.
+   */
+  _markSnapPreset(preset) {
+    for (const name of ['full', 'left', 'right', 'center']) {
+      const part = this[`__snap${name.charAt(0).toUpperCase()}${name.slice(1)}`];
+      if (part && !part.isDestroyed()) {
+        part.el.dataset.active = name === preset ? 1 : 0;
+      }
+    }
+  }
+
   updateMenu() {
     // `commands` is the shared topbar widget's action row — the part the old
     // `doc-actions` box became when this header moved onto the widget.
@@ -1179,6 +1207,31 @@ class __player_document extends PlayerInteract {
 
       case "doc-fullscreen":
         this.toggleFullscreen();
+        break;
+
+      // Move & Resize presets, from the shared topbar widget. Same snap
+      // module and same vocabulary the folder window and the image player
+      // use, so every window snaps through one code path.
+      case "window-zoom":
+        snap.toggleZoom(this, this._snapOpt());
+        // toggleZoom is a toggle: a second call restores, which is the
+        // "center" preset visually.
+        this._markSnapPreset(this._zoomed ? "full" : "center");
+        break;
+
+      case "window-tile-left":
+        snap.tileToSide(this, "left", this._snapOpt());
+        this._markSnapPreset("left");
+        break;
+
+      case "window-tile-right":
+        snap.tileToSide(this, "right", this._snapOpt());
+        this._markSnapPreset("right");
+        break;
+
+      case "window-reframe":
+        snap.reframe(this, this._defaultBounds(), this._snapOpt());
+        this._markSnapPreset("center");
         break;
 
       case 'download-pdf':
