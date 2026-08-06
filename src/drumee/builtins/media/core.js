@@ -217,7 +217,9 @@ class __media_core extends DrumeeMFS {
     }
     // for media files in trash
     if (this.mget(_a.status) == _a.deleted) {
-      fileItems = [, _a.separator, _a.restoreToDesk, _a.deletePermanently];
+      // No leading hole: the sparse `[, ...]` was a leftover from a removed
+      // first entry — an `undefined` item the menu had to skip over.
+      fileItems = [_a.separator, _a.restoreToDesk, _a.deletePermanently];
     }
     return fileItems;
   }

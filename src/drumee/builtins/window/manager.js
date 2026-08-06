@@ -1031,11 +1031,13 @@ class __window_manager extends mfsInteract {
       useKeyEvent: 1,
       style: this.getWindowPosition(c),
       service: "open-node",
-      state: m.get(_a.state),
       trigger: c,
       uiHandler: [this],
       media: c,
       radio: _a.on,
+      // `state: _a.on` is the default; the model's own state (when set)
+      // overrides it right after this object — a second `state:` key here
+      // was dead weight the last one silently won over (no-dupe-keys).
       state: _a.on,
       ...opt,
     };
