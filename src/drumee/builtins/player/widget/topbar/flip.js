@@ -33,6 +33,26 @@ const NEEDED = 220 + 8 + 8;
 
 let installed = 0;
 
+/**
+ * The right edge the submenu must stay inside.
+ *
+ * NOT simply the viewport: a player window may clip its own contents —
+ * `.player-video__ui` sets `overflow: hidden` to keep the video inside the
+ * window's rounded corners — and then the submenu disappears at the
+ * player's edge, well short of the screen. Walk up to the nearest ancestor
+ * that actually clips and use its box; fall back to the viewport when
+ * nothing does.
+ */
+function boundary(el) {
+  for (let n = el.parentElement; n && n !== document.body; n = n.parentElement) {
+    const o = getComputedStyle(n);
+    if (o.overflowX !== "visible" && o.overflowX !== "clip") {
+      return n.getBoundingClientRect().right;
+    }
+  }
+  return window.innerWidth;
+}
+
 function onPointerOver(e) {
   const target = e.target;
   if (!target || !target.closest) return;
@@ -46,7 +66,7 @@ function onPointerOver(e) {
   const r = row.getBoundingClientRect();
   if (!r.width) return;
 
-  if (r.right + NEEDED > window.innerWidth) {
+  if (r.right + NEEDED > boundary(row)) {
     sub.dataset.flip = "left";
   } else {
     delete sub.dataset.flip;
