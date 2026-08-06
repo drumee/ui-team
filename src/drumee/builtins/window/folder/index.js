@@ -4346,7 +4346,10 @@ class __window_folder extends mfsInteract {
     if (!newCtrl || !newCtrl.el) return;
     const onFiles = (this.activeTab || "files") === "files";
     // canUpload() returns the masked bitmask (truthy number), not a boolean.
-    const mayCreate = !!(this.canUpload && this.canUpload());
+    // Over-limit read-only trumps the node privilege: creating adds bytes,
+    // and the REST clamp refuses it regardless of what this node allows.
+    const mayCreate = !!(this.canUpload && this.canUpload())
+      && !require("libs/over-limit").isLocked();
     const visible = onFiles && mayCreate ? 1 : 0;
 
     // ui-core registers sys_pn parts during onBeforeRender, before its onRender

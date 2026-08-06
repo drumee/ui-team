@@ -283,7 +283,13 @@ class __window_manager extends mfsInteract {
   }
 
   _rejectUploadTarget() {
-    this._showUploadDeniedToast(LOCALE.WEAK_PRIVILEGE);
+    // Say the right thing: while over-limit the refusal has nothing to do
+    // with the dropper's privilege, and "insufficient privilege" sends the
+    // user asking an admin for rights nobody can grant.
+    const OverLimit = require("libs/over-limit");
+    this._showUploadDeniedToast(
+      OverLimit.isLocked() ? OverLimit.blockedMessage("write") : LOCALE.WEAK_PRIVILEGE,
+    );
   }
 
   _showUploadDeniedToast(message) {

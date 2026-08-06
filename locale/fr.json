@@ -2546,5 +2546,7 @@
   "OL_BANNER_LOCKED_ADMIN": "Espace de travail verrouillé — résolvez les dépassements pour rétablir l'accès.",
   "OL_BANNER_LOCKED_MEMBER": "Espace de travail verrouillé — seul le propriétaire ou un administrateur peut rétablir l'accès.",
   "OL_BANNER_DAYS_LEFT": "{0} jours restants.",
-  "OL_BANNER_RESOLVED": "De retour dans les limites de votre forfait. Lecture-écriture entièrement rétablie."
+  "OL_BANNER_RESOLVED": "De retour dans les limites de votre forfait. Lecture-écriture entièrement rétablie.",
+  "OL_TOAST_READONLY": "Cet espace de travail est en lecture seule tant qu'il dépasse les limites de son forfait.",
+  "OL_TOAST_INVITE": "Les invitations sont suspendues tant que l'espace de travail dépasse les limites de son forfait."
 }

@@ -97,7 +97,11 @@ class __window_core extends __utils {
   contextmenuItems() {
     let items = [];
 
-    if (this.canUpload()) {
+    // Downgrade over-limit: paste/upload/import all ADD bytes and are
+    // refused by the REST clamp anyway — don't offer them. Export stays:
+    // getting data OUT is explicitly preserved in every lock state.
+    const overLimit = require("libs/over-limit").isLocked();
+    if (this.canUpload() && !overLimit) {
       if (Visitor.inDmz) {
         items = [_a.upload];
       } else {
@@ -113,6 +117,8 @@ class __window_core extends __utils {
           ];
         }
       }
+    } else if (overLimit && this.canUpload() && Visitor.canServerImpExp() && !Visitor.inDmz) {
+      items = [_a.export, _a.separator];
     } else {
       if (Visitor.canServerImpExp()) {
         items = [_a.exportHidden, _a.importHidden, _a.separator];

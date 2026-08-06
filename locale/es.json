@@ -2546,5 +2546,7 @@
   "OL_BANNER_LOCKED_ADMIN": "Espacio de trabajo bloqueado: resuelva los excesos para restaurar el acceso.",
   "OL_BANNER_LOCKED_MEMBER": "Espacio de trabajo bloqueado: solo el propietario o un administrador puede restaurar el acceso.",
   "OL_BANNER_DAYS_LEFT": "Quedan {0} días.",
-  "OL_BANNER_RESOLVED": "De nuevo dentro de los límites de su plan. Lectura y escritura totalmente restauradas."
+  "OL_BANNER_RESOLVED": "De nuevo dentro de los límites de su plan. Lectura y escritura totalmente restauradas.",
+  "OL_TOAST_READONLY": "Este espacio de trabajo es de solo lectura hasta que vuelva a estar dentro de los límites de su plan.",
+  "OL_TOAST_INVITE": "Las invitaciones están en pausa mientras el espacio de trabajo supere los límites de su plan."
 }

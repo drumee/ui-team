@@ -3046,8 +3046,15 @@ class desk_module extends LetcBox {
         // this._hideAddMenu();
         return;
 
-      case "invite-member":
+      case "invite-member": {
+        // Invites are paused while the workspace is over its plan limits —
+        // the topbar button is already hidden, but other entry points (member
+        // panels, workspace menus) still land here. Answer with words, not a
+        // popup whose submit can only be refused.
+        const OverLimit = require("libs/over-limit");
+        if (OverLimit.isLocked()) return OverLimit.notifyBlocked("invite");
         return this._openInvitePopup(cmd);
+      }
 
       // Reward-flow Step 1 walkthrough: open/close the topbar Add-new dropdown
       // on its behalf (the desk owns the `addmenu` part). Used by the guide's

@@ -2714,5 +2714,7 @@
   "OL_BANNER_LOCKED_ADMIN": "Workspace locked — resolve the limits below to restore access.",
   "OL_BANNER_LOCKED_MEMBER": "Workspace locked — only the owner or an admin can restore access.",
   "OL_BANNER_DAYS_LEFT": "{0} days left.",
-  "OL_BANNER_RESOLVED": "Back within your plan limits. Full read-write restored."
+  "OL_BANNER_RESOLVED": "Back within your plan limits. Full read-write restored.",
+  "OL_TOAST_READONLY": "This workspace is read-only until it is back within its plan limits.",
+  "OL_TOAST_INVITE": "Invites are paused while the workspace is over its plan limits."
 }

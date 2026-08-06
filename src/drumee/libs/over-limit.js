@@ -147,6 +147,68 @@ function daysLeft() {
   return Math.max(0, Math.ceil(s / 86400));
 }
 
+/** The message a refused write should carry, by what the user attempted. */
+function blockedMessage(kind) {
+  if (kind === "invite") {
+    return LOCALE.OL_TOAST_INVITE
+      || "Invites are paused while the workspace is over its plan limits.";
+  }
+  return LOCALE.OL_TOAST_READONLY
+    || "This workspace is read-only until it is back within its plan limits.";
+}
+
+// One toast per burst — a multi-file drop or a double-click would otherwise
+// stack the same sentence.
+let _lastToastAt = 0;
+function notifyBlocked(kind) {
+  const now = Date.now();
+  if (now - _lastToastAt < 2500) return;
+  _lastToastAt = now;
+  try {
+    if (typeof Butler !== "undefined" && Butler.say) Butler.say(blockedMessage(kind));
+    else if (typeof Wm !== "undefined" && Wm.alert) Wm.alert(blockedMessage(kind));
+  } catch (e) { /* a toast must never break the action's own error path */ }
+}
+
+/**
+ * Surface the server's refusals as words. The REST clamp answers a locked
+ * write with 401 `OVER_LIMIT_READ_ONLY:<service>` (or HARD_LOCK_DENIED),
+ * but nothing user-visible came of it — the default onServerComplain only
+ * warns to the console, and most widgets bind their copy at construction,
+ * so patching the prototype is bypassed (verified live: Invite while
+ * locked was a button that did nothing).
+ *
+ * The one point every service call passes is fetch itself. The tap scopes
+ * to /svc/ URLs, touches only 401s, and reads a CLONE — attached inside
+ * the wrapper, its handler runs before doRequest's, so the body is still
+ * unconsumed. The original promise is returned untouched; every existing
+ * error path behaves exactly as before, this only adds the words.
+ */
+function _installRefusalTap() {
+  if (typeof window === "undefined" || !window.fetch || window.__olRefusalTap) return;
+  window.__olRefusalTap = 1;
+  const origFetch = window.fetch.bind(window);
+  window.fetch = function (input, init) {
+    const p = origFetch(input, init);
+    try {
+      const url = typeof input === "string" ? input : (input && input.url) || "";
+      if (/\/svc[/?]/.test(url)) {
+        p.then((res) => {
+          if (!res || res.status !== 401) return;
+          res.clone().json().then((j) => {
+            const m = /^(OVER_LIMIT_READ_ONLY|HARD_LOCK_DENIED):(.+)$/.exec(String((j && j.error) || ""));
+            if (m) {
+              notifyBlocked(/^hub\.(invite|invite_with_roles|accept_invite)/.test(m[2]) ? "invite" : "write");
+            }
+          }).catch(() => {});
+        }).catch(() => {});
+      }
+    } catch (e) { /* the tap must never affect the request itself */ }
+    return p;
+  };
+}
+_installRefusalTap();
+
 /**
  * Fresh server evaluation. Any widget with fetchService can host the call;
  * the result feeds setCurrent so every surface updates together.
@@ -174,4 +236,6 @@ module.exports = {
   snoozedForMe,
   daysLeft,
   refresh,
+  blockedMessage,
+  notifyBlocked,
 };
