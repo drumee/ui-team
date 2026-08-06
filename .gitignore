@@ -38,3 +38,4 @@ desk-current.png
 # Playwright screenshots taken while verifying UI work
 plans-after.png
 .playwright-mcp/
+progress/
