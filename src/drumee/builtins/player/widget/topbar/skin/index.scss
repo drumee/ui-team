@@ -371,15 +371,20 @@
     }
   }
 
-  // Same guard as the root list, and it MUST come after the `__submenu`
-  // block above, which sets `overflow: visible` and would otherwise win.
-  // A LEAF submenu — one with no nested submenu of its own — owns nothing
-  // that needs to escape it, so it can scroll safely.
-  &__submenu:not(:has(&__submenu)) {
-    max-height: calc(100vh - 96px);
-    overflow-y: auto;
-    overscroll-behavior: contain;
-  }
+  // NO overflow on submenus, deliberately.
+  //
+  // A leaf submenu looks like it could scroll safely — it owns no nested
+  // submenu to clip. It cannot: `overflow-y: auto` forces the other axis
+  // to compute as `auto` too (CSS only allows `visible` when BOTH axes are
+  // visible), so the box clips horizontally as well and takes the `:before`
+  // bridge with it. The bridge sits at `left: -8px`, outside the box, and
+  // it is the only thing spanning the gap between a row and its submenu.
+  // Without it the gap is dead: hover drops as the pointer crosses, and the
+  // submenu closes before it can be reached.
+  //
+  // So a very long submenu overflows the viewport rather than scrolling.
+  // None is anywhere near that today — the longest has two rows — and an
+  // unreachable submenu is far worse than a tall one.
 }
 
 // Submenu open/closed, deliberately written at (0,3,0) and (0,4,0).
