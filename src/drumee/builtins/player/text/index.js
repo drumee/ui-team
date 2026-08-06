@@ -5,7 +5,25 @@
 const { xhRequest } = require("@drumee/ui-essentials");
 
 const __player = require('player/interact');
+const snap = require('builtins/window/snap');
 const REMINDER_ID = 'reminder_id';
+
+// Gear-menu rows that act on the node rather than on the viewer. The MFS
+// view this player was opened from implements all of them, so they are
+// forwarded verbatim (see `_delegate`). Kept as an explicit allow-list: a
+// catch-all would also swallow the player's own chrome events on their way
+// to the base class.
+const DELEGATED_SERVICES = [
+  _e.copy,
+  _e.remove,
+  _a.chat,
+  'direct-rename',
+  'chat-threads',
+  'download-file-chat',
+  'secure-share',
+  'designation-link',
+  'direct-url',
+];
 
 class __player_text extends __player {
   /**
@@ -204,8 +222,72 @@ class __player_text extends __player {
       }
       case _e.close:
         return this.goodbye();
+
+      // Move & Resize presets, from the shared topbar widget. Same snap
+      // module the folder window and the other players use, so every window
+      // snaps through one code path.
+      case 'window-zoom':
+        snap.toggleZoom(this, this._snapOpt());
+        // toggleZoom is a toggle: a second call restores, which is the
+        // "center" preset visually.
+        return this._markSnapPreset(this._zoomed ? 'full' : 'center');
+
+      case 'window-tile-left':
+        snap.tileToSide(this, 'left', this._snapOpt());
+        return this._markSnapPreset('left');
+
+      case 'window-tile-right':
+        snap.tileToSide(this, 'right', this._snapOpt());
+        return this._markSnapPreset('right');
+
+      case 'window-reframe':
+        snap.reframe(this, this._defaultBounds(), this._snapOpt());
+        return this._markSnapPreset('center');
+
       default:
+        // Gear-menu rows that act on the node itself go to the source MFS
+        // view; everything else is player chrome and belongs to the base.
+        if (DELEGATED_SERVICES.includes(service) && this._delegate(cmd)) return;
         return super.onUiEvent(cmd, args);
+    }
+  }
+
+  /**
+   * Forward a gear-menu row this player doesn't own to the source MFS view,
+   * which implements the whole file-action vocabulary already. Returns false
+   * when there's nothing to forward to — a note has no `media` at all — so
+   * the caller can fall through to the base class rather than swallow it.
+   */
+  _delegate(cmd, args) {
+    const media = this.media;
+    if (!media || media.isDestroyed() || !_.isFunction(media.onUiEvent)) {
+      return false;
+    }
+    media.onUiEvent(cmd, args);
+    return true;
+  }
+
+  /** Window minimums the Move & Resize presets clamp to. */
+  _snapOpt() {
+    return { minWidth: 320, minHeight: 240 };
+  }
+
+  /** Geometry the "center" preset restores to. */
+  _defaultBounds() {
+    return this._preZoomBounds || snap.snapshotBounds(this);
+  }
+
+  /**
+   * Light up the preset the window now sits in. Dragging or resizing by hand
+   * doesn't clear it; tracking every geometry change to undo a highlight is
+   * not worth the listener.
+   */
+  _markSnapPreset(preset) {
+    for (const name of ['full', 'left', 'right', 'center']) {
+      const part = this[`__snap${name.charAt(0).toUpperCase()}${name.slice(1)}`];
+      if (part && !part.isDestroyed()) {
+        part.el.dataset.active = name === preset ? 1 : 0;
+      }
     }
   }
 
