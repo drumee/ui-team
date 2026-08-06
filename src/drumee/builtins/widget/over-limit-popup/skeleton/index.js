@@ -94,6 +94,9 @@ module.exports = function (ui) {
             kids: [
               Skeletons.Note({
                 className: `${fig}__cta-label`,
+                // click-through: without active:0 the Note swallows the click
+                // and the parent Box's service never fires (project rule).
+                active: 0,
                 content: LOCALE.SIGN_OUT || LOCALE.LOGOUT || "Sign out",
               }),
             ],
@@ -144,6 +147,7 @@ module.exports = function (ui) {
         kids: [
           Skeletons.Note({
             className: `${fig}__cta-label`,
+            active: 0,
             content: LOCALE.OL_RESOLVE_NOW || "Resolve now",
           }),
         ],
@@ -160,6 +164,7 @@ module.exports = function (ui) {
           kids: [
             Skeletons.Note({
               className: `${fig}__cta-label`,
+              active: 0,
               content: LOCALE.OL_REMIND_LATER || "Remind me later",
             }),
           ],

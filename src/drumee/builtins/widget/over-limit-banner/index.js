@@ -27,6 +27,13 @@ class __over_limit_banner extends LetcBox {
     this._wasLocked = OverLimit.isLocked();
     this._onStateChanged = this._onStateChanged.bind(this);
     RADIO_BROADCAST.on(OverLimit.CHANGED, this._onStateChanged);
+    // Own WS subscription, deliberately NOT left to the desk wm alone: the
+    // wm's bindWsEvents hangs off desk.get_env + a retry interval and is
+    // routinely unbound after a reconnect (observed live — 37 widgets bound,
+    // Wm not among them). This banner exists exactly while the feature is
+    // active, so it is the reliable receiver; wm/push.js keeps its case as a
+    // second ear and setCurrent is idempotent under duplicates.
+    this.bindEvent(_a.live);
   }
 
   onDomRefresh() {
@@ -36,6 +43,21 @@ class __over_limit_banner extends LetcBox {
   onBeforeDestroy() {
     RADIO_BROADCAST.off(OverLimit.CHANGED, this._onStateChanged);
     clearTimeout(this._lingerTimer);
+    this.unbindEvent(_a.live);
+  }
+
+  /**
+   * Worker/service pushes arrive with the transport key as the FIRST arg
+   * ('live.update') and the app event in options.service — traced live on
+   * stage: {service:'live.update', model:{...}, options:{service:
+   * 'payment.plan_state_changed'}}. Same field wm/push.js switches on.
+   */
+  onWsMessage(service, data = {}, options = {}) {
+    if (options.service === "payment.plan_state_changed") {
+      OverLimit.setCurrent(data);
+      return;
+    }
+    if (super.onWsMessage) super.onWsMessage(service, data, options);
   }
 
   _render() {
