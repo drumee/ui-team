@@ -14,7 +14,11 @@
   // blocking vertical resize. Viewport bounds are enforced in JS.
 
   &__ui {
-    overflow: hidden;
+    // Deliberately NOT `overflow: hidden`, and video was the only player
+    // that set it. It clipped the topbar's gear menu at the window edge —
+    // submenus open outward and simply vanished — while buying nothing:
+    // the video surface is already clipped by `.player__container`, which
+    // carries the bottom corner radius for every player.
     width: 100%;
     height: 100%;
   }
