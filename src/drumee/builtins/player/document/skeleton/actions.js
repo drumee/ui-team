@@ -150,13 +150,21 @@ module.exports.menu = function (ui) {
   // Same test the image player applies: the node is editable only when we
   // still have the MFS view to forward to and the session may write.
   const editable = !!media && !Visitor.inDmz && !!ui.canUpload();
+
+  // The file-level rows — copy, download, rename, chat threads, share,
+  // trash — are preview-mode only. While the office editor is open they
+  // act on a node the editor is actively writing to, and the two would be
+  // racing: renaming or trashing mid-edit, or copying a version the editor
+  // has not flushed yet. Leave the editor first.
+  const onNode = !isEditing && !!media;
+
   const sections = [];
 
   const file = [];
-  if (media && !Visitor.inDmz) {
+  if (onNode && !Visitor.inDmz) {
     file.push({ id: "copy", label: LOCALE.COPY, icon: "apps-copy", service: _e.copy });
   }
-  if (Visitor.inDmz || ui.canDownload()) {
+  if (!isEditing && (Visitor.inDmz || ui.canDownload())) {
     file.push({
       id: "download",
       label: LOCALE.DOWNLOAD,
@@ -178,7 +186,7 @@ module.exports.menu = function (ui) {
   if (file.length) sections.push(file);
 
   const naming = [];
-  if (editable) {
+  if (!isEditing && editable) {
     naming.push({
       id: "rename",
       label: LOCALE.RENAME,
@@ -186,7 +194,7 @@ module.exports.menu = function (ui) {
       service: "direct-rename",
     });
   }
-  if (media && !Visitor.inDmz) {
+  if (onNode && !Visitor.inDmz) {
     naming.push({
       id: "chat-threads",
       label: LOCALE.CHAT_THREADS,
@@ -224,7 +232,7 @@ module.exports.menu = function (ui) {
   // Sharing is area-dependent, exactly as in the image player's catalog:
   // each area exposes the one link flavour that makes sense for it.
   const details = [];
-  if (editable) {
+  if (!isEditing && editable) {
     switch (ui.mget(_a.area)) {
       case _a.share:
         details.push({
@@ -256,7 +264,7 @@ module.exports.menu = function (ui) {
   details.push({ id: "info", label: LOCALE.GET_INFO, icon: "ctxmenu-info", service: "info" });
   sections.push(details);
 
-  if (media && media.canRemove && media.canRemove()) {
+  if (onNode && media.canRemove && media.canRemove()) {
     sections.push([
       {
         id: "trash",
