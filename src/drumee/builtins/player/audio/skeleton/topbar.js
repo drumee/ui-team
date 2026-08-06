@@ -12,10 +12,13 @@
  * block below. The other players title themselves by file because they
  * show exactly one.
  *
- * Download stays inline. It is deliberately always visible — in a DMZ
- * share without the download grant the click is gated (sign-up / Request
- * Access) in the player's onUiEvent rather than hidden — so it is left out
- * of the gear menu to avoid the duplication the document header had.
+ * Download lives in the gear menu, not the header. It is still offered
+ * unconditionally — in a DMZ share without the download grant the click is
+ * gated (sign-up / Request Access) in the player's onUiEvent rather than
+ * the row being hidden.
+ *
+ * Move & Resize is off: this window is a compact transport, and tiling it
+ * to half the screen was never a useful thing to offer.
  */
 
 const Topbar = require("builtins/player/widget/topbar");
@@ -24,9 +27,8 @@ const Topbar = require("builtins/player/widget/topbar");
  * The gear menu. Every row is either forwarded to the source MFS view
  * (see `DELEGATED_SERVICES` in ../index.js) or handled by the base player.
  *
- * Download is absent on purpose (see above). Print and Edit likewise: the
- * base's "print" calls `printPdf()`, meaningless for audio, and there is
- * no editor.
+ * Print and Edit are absent: the base's "print" calls `printPdf()`,
+ * meaningless for audio, and there is no editor.
  */
 function menu(ui) {
   const media = ui.media;
@@ -35,7 +37,16 @@ function menu(ui) {
   const editable = !!media && !Visitor.inDmz && !!ui.canUpload();
   const sections = [];
 
-  const file = [];
+  // Unconditional, unlike the other players' download rows — see the
+  // header comment.
+  const file = [
+    {
+      id: "download-button",
+      label: LOCALE.DOWNLOAD,
+      icon: "app-download",
+      service: _e.download,
+    },
+  ];
   if (media && !Visitor.inDmz) {
     file.push({ id: "copy", label: LOCALE.COPY, icon: "apps-copy", service: _e.copy });
   }
@@ -126,19 +137,9 @@ function __player_audio_topbar(ui) {
       fileTypeIcon: "app-audio-file",
       title: LOCALE.MUSIC_PLAYER,
     },
-    right: {
-      before: [
-        {
-          id: "download-button",
-          type: "button",
-          icon: "download",
-          className: "icon link",
-          service: _e.download,
-        },
-      ],
-    },
     defaults: {
       "folder-settings": { menu: menu(ui) },
+      "move-resize": { visible: false },
       close: { service: _e.close },
     },
   });
