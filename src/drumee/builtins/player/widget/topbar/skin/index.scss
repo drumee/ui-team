@@ -207,6 +207,32 @@
     }
   }
 
+  // Decoration must never be the click target.
+  //
+  // Every LETC view binds its own `onclick` unless `active: 0`, and that
+  // handler calls `e.stopPropagation()` BEFORE dispatching (ui-core
+  // letc/addons/letc.js `__handleClick`). An inner label or glyph therefore
+  // swallows the click and, having no handlers of its own, does nothing —
+  // so only the few pixels of row padding NOT covered by the label were
+  // live. That is the "sometimes the button works" behaviour.
+  //
+  // `kidsOpt: { active: 0 }` is meant to prevent exactly this and does not:
+  // `mergeKidsOptions` reassigns its loop parameter inside a `.map()` and
+  // never writes back, so the option is silently dropped. Taking the
+  // decoration out of hit-testing is independent of that and cannot be
+  // undone by a framework quirk. `:hover` still resolves to the row.
+  //
+  // `__submenu` is deliberately absent: it is a child of its row and must
+  // stay interactive.
+  &__menu-icon,
+  &__menu-label,
+  &__menu-chevron,
+  &__snap-label,
+  &__snap-glyph,
+  &__filetype-icon {
+    pointer-events: none;
+  }
+
   &__menu-icon {
     fill: currentColor;
     flex-shrink: 0;
