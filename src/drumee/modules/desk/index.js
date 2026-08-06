@@ -379,11 +379,12 @@ class desk_module extends LetcBox {
    * @returns {Boolean} whether the billing screen was opened
    */
   _maybeOpenBillingDeepLink() {
-    if (!billingDeepLink.consume()) return false;
+    const preselect = billingDeepLink.consume();
+    if (!preselect) return false;
     if (!canUpgradePlan()) return false;
     // Don't let desk-state restore pull the screen back to the remembered one.
     this._restoreInFlight = false;
-    this.openBillingPage();
+    this.openBillingPage(preselect);
     return true;
   }
 
@@ -2347,12 +2348,16 @@ class desk_module extends LetcBox {
    * storage "Upgrade plan" card) routes here. page:1 makes settings_billing
    * render its full-page layout (big title + tabs + plans + footer).
    */
-  openBillingPage() {
+  openBillingPage(preselect) {
     RADIO_BROADCAST.trigger("breadcrumb:context", {
       filename: LOCALE.BILLING_SUBSCRIPTION,
     });
+    // `preselect` (plan/cycle/tab) rides in from a #/desk/billing deep link; a
+    // plain "Upgrade plan" trigger passes nothing, so the page opens on its
+    // default tab exactly as before.
+    const opt = Object.assign({ page: 1 }, preselect || {});
     return Kind.waitFor("settings_billing").then(() =>
-      this.togglePanel("settings_billing", "settings-main-slot", true, { page: 1 })
+      this.togglePanel("settings_billing", "settings-main-slot", true, opt)
     );
   }
 
