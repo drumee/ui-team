@@ -1,36 +1,49 @@
 @use "mixins/drumee.scss";
 
+// Shared context menu — aligned with the topbar Add-new menu metrics
+// (desk/skin/topbar.scss `.desk-module-topbar__new-menu-*`), which is the
+// Figma twin for the Home desktop right-click (Create workspace / Add new /
+// Invite + submenu). Parent rows and submenu rows share the same icon slot,
+// type, gap and padding so icon/text don't jump in scale between panels.
 .drumee-contextmenu.drumee-box {
   background-color: var(--normal-bg);
-  border-radius: 4px;
+  border-radius: 6px;
   overflow: visible;
   position: absolute;
-  box-shadow: 0 1px 11px 0 rgba(0, 0, 0, 0.13);
-  min-width: 123px;
-  // Vertical padding only: the horizontal inset lives on each item so the
-  // separators and the hover band span the menu edge-to-edge (Drive-like).
-  padding: 8px 0;
-  gap: 4px;
+  box-shadow:
+    0 4px 6px -4px rgba(0, 0, 0, 0.1),
+    0 10px 15px -3px rgba(0, 0, 0, 0.1);
+  border: 1px solid var(--border-default);
+  min-width: 200px;
+  // Inset on every side so the hover pill sits inside the panel (topbar).
+  padding: 6px;
+  gap: 2px;
   font-family: var(--font-main);
-  border: none;
+  box-sizing: border-box;
 
   .contextmenu-item {
     cursor: pointer;
     flex-direction: row;
     align-items: center;
     display: flex;
-    justify-items: center;
+    justify-content: flex-start;
     white-space: nowrap;
     width: 100%;
-    padding: 4px 12px;
-    gap: 4px;
-
-    @include drumee.typo(
-      $color: var(--normal-fg-10),
-      $weight: 600,
-      $size: 12px,
-      $line: 1
-    );
+    box-sizing: border-box;
+    // Beat `.window__contextmenu-item { height: 36px }` (group skin) so
+    // padding + content size the row; min-height keeps the tap target.
+    height: auto;
+    min-height: 36px;
+    padding: 8px 10px;
+    gap: 10px;
+    border-radius: 4px;
+    position: relative;
+    color: var(--normal-fg-10);
+    font-size: 13px;
+    // Set weight explicitly — drumee.typo() does not emit font-weight.
+    // 500 matches topbar `__new-menu-item`.
+    font-weight: 500;
+    line-height: 16px;
 
     &[data-state="disable"] {
       opacity: 0.35;
@@ -51,12 +64,14 @@
 
     &.separator {
       // Section divider. Must CONTRAST with the menu surface: --normal-bg-100
-      // equals --normal-bg in both themes (white/white, #0b0a21/#0b0a21), so
-      // the old line rendered invisible. --border-default reads in both.
+      // equals --normal-bg in both themes, so a bg-100 line was invisible.
       background-color: var(--border-default);
       height: 1px;
+      min-height: 1px;
       flex-shrink: 0;
-      padding: 0px;
+      padding: 0;
+      margin: 4px 0;
+      border-radius: 0;
       cursor: default;
       pointer-events: none;
     }
@@ -65,61 +80,160 @@
       color: var(--red-500);
     }
 
+    // 20×20 slot, 16×16 leaf — same as topbar `__new-menu-icon`.
+    // Icon + label + chevron all share this 20px cross-axis so they sit on
+    // one optical midline (outline sprites otherwise read ~1px high).
     &__icon {
-      width: 16px;
-      height: 16px;
-      flex-shrink: 0;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      align-self: center;
+      width: 20px;
+      height: 20px;
+      flex: 0 0 20px;
       fill: currentColor;
+      color: inherit;
 
-      // The window-group rule (.window__contextmenu-item svg → 20×20 +
-      // margin-right) leaks into these icons, so each sprite rendered at a
-      // different visual size inside the 16px box. Normalize: the inner svg
-      // fills the box exactly (this selector out-specifies the group rule).
+      // Out-specify legacy group rules:
+      //   .window__contextmenu-item svg { 20×20 + margin-right: 5px }
+      //   .contextmenu-item svg { 20×20 + margin-right: 5px }
       svg {
-        width: 100%;
-        height: 100%;
-        margin: 0;
+        width: 16px !important;
+        height: 16px !important;
+        margin: 0 !important;
+        padding: 0;
         display: block;
+        flex-shrink: 0;
       }
     }
 
+    // `topbar-add` is a filled 12×12 plus — at 16px it optically overpowers
+    // the outline addmenu-* icons. Keep the 20px slot, shrink the leaf.
+    &.add-new > .contextmenu-item__icon svg {
+      width: 12px !important;
+      height: 12px !important;
+    }
+
+    // `topbar-invite` is 15×11 — don't stretch it into a square.
+    &.invite-member > .contextmenu-item__icon svg {
+      width: 16px !important;
+      height: 12px !important;
+    }
+
+    // Same brand tints as topbar Add-new (desk/skin/topbar.scss
+    // `__add-menu-item.ico-*`) so submenu glyphs don't read as thin
+    // currentColor outlines next to 13px labels.
+    &.ico-workspace > .contextmenu-item__icon {
+      color: #5950ff;
+      fill: #5950ff;
+    }
+
+    &.ico-note > .contextmenu-item__icon {
+      color: #e8a13b;
+      fill: #e8a13b;
+    }
+
+    &.ico-document > .contextmenu-item__icon {
+      color: #847eff;
+      fill: #847eff;
+    }
+
+    &.ico-spreadsheet > .contextmenu-item__icon {
+      color: #54b684;
+      fill: #54b684;
+    }
+
+    &.ico-presentation > .contextmenu-item__icon {
+      color: #ffa8dc;
+      fill: #ffa8dc;
+    }
+
     &__label {
+      display: inline-flex;
+      align-items: center;
+      align-self: center;
       flex: 1;
+      min-width: 0;
+      height: 20px;
+      font-size: inherit;
+      font-weight: inherit;
+      line-height: 16px;
+      color: inherit;
+
+      // Note widget wraps copy in `.note-content` / `.inner` — pin it to the
+      // same 20px cross-axis as the icon so text doesn't float above/below.
+      .note-content,
+      .inner {
+        display: inline-flex;
+        align-items: center;
+        height: 20px;
+        line-height: 16px;
+        padding: 0;
+        margin: 0;
+      }
     }
 
     &__chevron {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      align-self: center;
+      flex-shrink: 0;
       margin-left: auto;
+      height: 20px;
+      width: 12px;
+      font-size: 14px;
+      line-height: 20px;
+      text-align: center;
     }
 
     &__submenu {
       display: none;
       position: absolute;
-      left: calc(100% - 8px);
-      min-width: 220px;
-      min-height: 84px;
-      // The submenu's className derives from the shared item pfx, so it ALSO
-      // carries `{group}__contextmenu-item` — and per-group ITEM rules like
-      // `.window__contextmenu-item { height: 36px }` clamp the PANEL itself.
-      // Rows then overflow the painted background (visible page-bg stripes
-      // between items once the list is taller than ~2 rows). Force content
-      // sizing; this selector out-specifies the group rule.
+      left: calc(100% - 4px);
+      top: -6px;
+      z-index: 2;
+      min-width: 200px;
+      width: max-content;
+      // Content-sized: the panel must NOT inherit item-row height clamps.
       height: auto;
-      // Same edge-to-edge treatment as the root menu: vertical padding only,
-      // submenu items carry their own horizontal inset (8px 16px below).
-      padding: 8px 0;
-      gap: 4px;
+      min-height: 0;
+      padding: 6px;
+      gap: 2px;
       align-items: stretch;
       flex-direction: column;
-      border-radius: 4px;
+      border-radius: 6px;
       background-color: var(--normal-bg);
-      box-shadow: 0 1px 11px 0 rgba(0, 0, 0, 0.13);
+      box-shadow:
+        0 4px 6px -4px rgba(0, 0, 0, 0.1),
+        0 10px 15px -3px rgba(0, 0, 0, 0.1);
+      border: 1px solid var(--border-default);
+      box-sizing: border-box;
 
+      // Bridge the 4px gap so :hover isn't lost while moving into the panel.
+      &:before {
+        content: "";
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        left: -4px;
+        width: 4px;
+      }
+
+      // Same metrics as parent rows — no second scale for submenu items.
       .contextmenu-item {
         box-sizing: border-box;
-        min-height: 32px;
-        padding: 8px 16px;
+        height: auto;
+        min-height: 36px;
+        padding: 8px 10px;
+        gap: 10px;
         width: 100%;
-        background-color: var(--normal-bg);
+        border-radius: 4px;
+        background-color: transparent;
+        align-items: center;
+        font-size: 13px;
+        font-weight: 500;
+        line-height: 16px;
       }
 
       .contextmenu-item:not([data-state="disable"]):hover {

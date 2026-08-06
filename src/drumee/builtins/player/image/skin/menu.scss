@@ -20,8 +20,10 @@
   gap: var(--spacer-2);
   padding: var(--spacer-3);
   // 164px in the design. Fixed rather than min-, so the panel doesn't
-  // grow with a long filename-derived label.
+  // grow with a long filename-derived label. Reset shared min-width
+  // (200px from builtins/contextmenu/skin) or used width becomes 200.
   width: 164px;
+  min-width: 164px;
 
   .contextmenu-item {
     border-radius: var(--corner-radius-1);
@@ -55,6 +57,12 @@
     &__icon {
       height: 16px;
       width: 16px;
+      flex: 0 0 16px;
+
+      svg {
+        width: 16px;
+        height: 16px;
+      }
     }
 
     // Figma uses a 12px CaretRight glyph; ours is a `›` note, so pin it to
