@@ -570,8 +570,10 @@ class __player_document extends PlayerInteract {
    * 
    */
   updateMenu() {
-    this.ensurePart('doc-actions').then((p) => {
-      p.feed(require('./skeleton/menu')(this).kids)
+    // `commands` is the shared topbar widget's action row — the part the old
+    // `doc-actions` box became when this header moved onto the widget.
+    this.ensurePart('commands').then((p) => {
+      p.feed(require('./skeleton/topbar').actions(this).kids)
     })
   }
 

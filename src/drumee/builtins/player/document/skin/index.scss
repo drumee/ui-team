@@ -57,6 +57,15 @@
     position: relative;
   }
 
+  // The shared topbar widget sizes its action row for 24px icon buttons.
+  // The document actions are taller — the primary ones carry 4px/8px
+  // padding — so let the row take its content's height rather than
+  // overflow a fixed 24px. The tooltips also have to escape the row.
+  .drumee-topbar__actions {
+    height: auto;
+    overflow: visible;
+  }
+
   &__tooltips {
     position: absolute;
     top: calc(100% + 6px);

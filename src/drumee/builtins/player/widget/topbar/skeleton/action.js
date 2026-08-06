@@ -61,6 +61,16 @@ const __player_topbar_action = function (ctx, action) {
       if (action.value !== undefined) props.value = action.value;
       if (!_.isEmpty(dataset)) props.dataset = dataset;
 
+      // Straight pass-throughs to Button.Svg. `icons` + `state` drive the
+      // framework's own two-state icon swap (maximise/restore); `tooltips`
+      // is the hover bubble; `partHandler` registers the button as a part
+      // of the consumer so it can be addressed later.
+      if (action.tooltips) props.tooltips = action.tooltips;
+      if (action.icons) props.icons = action.icons;
+      if (action.state != null) props.state = action.state;
+      if (action.partHandler) props.partHandler = action.partHandler;
+      if (action.style) props.style = action.style;
+
       if (action.label) {
         props.label = action.label;
         return Skeletons.Button.Label(props);

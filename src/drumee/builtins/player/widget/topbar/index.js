@@ -38,20 +38,28 @@ const __actions = require("./skeleton/actions");
 const WIDGET_CN = "drumee-topbar";
 
 /**
- * @param {object} ui      the consuming view — receives every service
+ * @param {object} ui      the consuming view
  * @param {object} config  see the module comment
  */
-const __player_widget_topbar = function (ui, config) {
-  config = config || {};
-
+const __ctx = function (ui, config) {
   const fig = config.fig || ui.fig || {};
-  const ctx = {
+  return {
     ui,
     fig,
     wcn: WIDGET_CN,
     cn: fig.family ? `${fig.family}-topbar` : WIDGET_CN,
     group: fig.group || WIDGET_CN,
   };
+};
+
+/**
+ * @param {object} ui      the consuming view — receives every service
+ * @param {object} config  see the module comment
+ */
+const __player_widget_topbar = function (ui, config) {
+  config = config || {};
+
+  const ctx = __ctx(ui, config);
 
   const kids = [];
   const left = __left(ctx, config.left);
@@ -72,6 +80,17 @@ const __player_widget_topbar = function (ui, config) {
       }),
     ],
   });
+};
+
+/**
+ * Just the right-hand action row, for consumers that refresh their actions
+ * without rebuilding the whole header — feed `.kids` into the `commands`
+ * part. Takes the same config, so a consumer can keep one source of truth
+ * and hand it to both entry points.
+ */
+__player_widget_topbar.actions = function (ui, config) {
+  config = config || {};
+  return __actions(__ctx(ui, config), config.right, config.defaults);
 };
 
 module.exports = __player_widget_topbar;

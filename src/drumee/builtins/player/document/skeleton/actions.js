@@ -1,6 +1,28 @@
+// ==================================================================== *
+//   Copyright Xialia.com  2011-2026
+//   FILE : builtins/player/document/skeleton/actions
+//   TYPE : Skeleton
+// ==================================================================== *
+
+/**
+ * The document player's topbar actions, as data for the shared topbar
+ * widget (builtins/player/widget/topbar).
+ *
+ * These are rendered inline in the header rather than behind a dropdown
+ * trigger, so they stay directly discoverable — the widget's `before`
+ * slot places them ahead of its own defaults.
+ *
+ * Every conditional here is the one the previous skeleton applied; only
+ * the return type changed, from skeletons to TopbarAction descriptors.
+ */
+
 const EDITABLE = require("../editable");
 
 const cnWindowButton = "window-button";
+
+// Download / save-as-PDF / preview / print get the filled (primary) look;
+// every other action is a plain icon button.
+const PRIMARY_SERVICES = ["download-pdf", "preview", "print", _a.edit];
 
 function tooltip(ui, content) {
   return {
@@ -8,10 +30,6 @@ function tooltip(ui, content) {
     content,
   };
 }
-
-// Download / save-as-PDF / preview / print get the filled (primary) look; every
-// other action is a plain icon button.
-const PRIMARY_SERVICES = ["download-pdf", "preview", "print", _a.edit];
 
 // Can THIS VIEWER really edit the office doc, i.e. will the editor open writable?
 // ui.canUpload() alone cannot answer it: that reads the node privilege, which
@@ -23,18 +41,24 @@ const PRIMARY_SERVICES = ["download-pdf", "preview", "print", _a.edit];
 // non-share session — fall back to the previous canUpload() test so behaviour is
 // unchanged rather than guessed.
 function _dmzViewerCanEdit(ui) {
-  const r = (typeof window !== "undefined") && window.uiRouter;
+  const r = typeof window !== "undefined" && window.uiRouter;
   const flag = r && r._dmzShareViewerCanEdit;
   if (typeof flag === "boolean") return flag;
   return !!(ui && typeof ui.canUpload === "function" && ui.canUpload());
 }
 
+/**
+ * One TopbarAction. `id` is only set where the old skeleton set `sys_pn`:
+ * the widget maps `id` onto `sys_pn`, and every named part registers itself
+ * on the player as `__camelCase`, so naming everything would quietly add
+ * properties to a 1200-line class for no gain.
+ */
 function action(ui, { service, ico, tip, state, icons, sys_pn }) {
   const a = {
-    ico,
+    type: "button",
+    icon: ico,
     className: `${cnWindowButton}__icon-button`,
     service,
-    uiHandler: ui,
     tooltips: tooltip(ui, tip),
     style: PRIMARY_SERVICES.includes(service)
       ? {
@@ -48,14 +72,12 @@ function action(ui, { service, ico, tip, state, icons, sys_pn }) {
   if (state != null) a.state = state;
   if (icons) a.icons = icons;
   if (sys_pn) {
-    a.sys_pn = sys_pn;
+    a.id = sys_pn;
     a.partHandler = ui;
   }
-  return Skeletons.Button.Svg(a);
+  return a;
 }
 
-// Flat header toolbar — the document actions are rendered inline in the tab
-// header (no hover/dropdown trigger) so they're directly discoverable.
 module.exports = function (ui) {
   const actions = [];
 
@@ -118,9 +140,7 @@ module.exports = function (ui) {
   // Print stays hidden while editing (same stale-info.pdf reason as above); the
   // cross-origin office editor has its own Print (#btn-print).
   if (!isEditing) {
-    actions.push(
-      action(ui, { service: "print", ico: "print", tip: LOCALE.PRINT }),
-    );
+    actions.push(action(ui, { service: "print", ico: "print", tip: LOCALE.PRINT }));
   }
 
   // Maximize → fills the workspace (never the header/sidebar), mirroring the
@@ -146,11 +166,5 @@ module.exports = function (ui) {
     }),
   );
 
-  return Skeletons.Box.X({
-    debug: __filename,
-    className: `${cnWindowButton}__buttons-wrapper`,
-    sys_pn: "doc-actions",
-    partHandler: ui,
-    kids: [...actions, require("../../skeleton/control")(ui)],
-  });
+  return actions;
 };

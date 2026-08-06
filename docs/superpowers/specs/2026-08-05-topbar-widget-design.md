@@ -27,10 +27,18 @@ consumer.
 - Widget contains zero business logic. Every action's meaning stays in
   the consumer's `onUiEvent`.
 
+## Consumers
+
+- **Image player** — all three defaults, plus save-rotation in `before`.
+- **Document player** — `folder-settings` and `move-resize` switched off
+  (no gear catalog; its zoom is `doc-zoom`, not the window snap
+  vocabulary), `close` re-pointed at `_e.close`, and its five conditional
+  actions in `before`.
+
 ## Non-goals
 
-- Migrating `builtins/player/skeleton/topbar.js` (audio, video,
-  document, text, vector, stream). Out of scope for this change.
+- Migrating `builtins/player/skeleton/topbar.js` (audio, video, text,
+  vector, stream). Out of scope for this change.
 - Viewport edge-flip for submenus. Not needed: the dropdown is pinned to
   the topbar's right edge, so submenus open inward (leftward) and stay on
   screen at any depth without measuring anything. See Dropdown.
@@ -149,8 +157,26 @@ interface TopbarAction {
   value?:     any;               // passed through verbatim
   menu?:      MenuItem[];        // type: "menu" only
   component?: object|Function;   // type: "custom" only
+
+  // Straight pass-throughs to Button.Svg
+  tooltips?:    object;          // hover bubble
+  icons?:       string[];        // two-state icon swap, paired with `state`
+  state?:       number;
+  partHandler?: object;          // register the button as a part
+  style?:       object;
 }
 ```
+
+### Rebuilding just the action row
+
+```js
+Topbar.actions(ui, config)   // -> the `commands` Box.X
+```
+
+For consumers that refresh their actions without rebuilding the header —
+feed `.kids` into the `commands` part. Takes the same config object, so a
+consumer keeps one source of truth and hands it to both entry points. The
+document player's `updateMenu()` uses this.
 
 | `type` | Renders |
 |---|---|
