@@ -53,7 +53,7 @@ function _dmzViewerCanEdit(ui) {
  * on the player as `__camelCase`, so naming everything would quietly add
  * properties to a 1200-line class for no gain.
  */
-function action(ui, { service, ico, tip, state, icons, sys_pn }) {
+function action(ui, { service, ico, tip, state, icons, sys_pn, label, className, dataset }) {
   const a = {
     type: "button",
     icon: ico,
@@ -69,6 +69,9 @@ function action(ui, { service, ico, tip, state, icons, sys_pn }) {
         }
       : { color: "var(--normal-fg-20)" },
   };
+  if (label) a.label = label;
+  if (className) a.className = className;
+  if (dataset) a.dataset = dataset;
   if (state != null) a.state = state;
   if (icons) a.icons = icons;
   if (sys_pn) {
@@ -91,28 +94,26 @@ module.exports = function (ui) {
   // request). DMZ download gating still lives on those handlers via
   // _dmzGateDownload().
 
-  // Edit ⇄ Preview, as a switch in the header rather than a menu row. The
-  // mode is the single most consequential thing about this window, so it is
-  // worth a control that shows the current state at a glance instead of one
-  // buried behind the gear.
+  // Edit ⇄ Preview, as a labelled toggle in the header rather than a menu
+  // row. The label stays "Edit" in both states — it names what the toggle
+  // controls, not what the next click does — and `data-active` carries
+  // whether the editor is currently on, which the skin styles as pressed.
   //
-  // One button, two directions: it always offers the mode you are NOT in.
-  // `state` + `icons` drive the framework's own two-state icon swap, so the
-  // glyph follows the mode without a re-feed.
+  // The service still flips, so one control both enters and leaves edit
+  // mode. `updateMenu()` re-feeds this row on every mode change (it is
+  // already called from preview() and from the editor's onLoad), so the
+  // pressed state follows the mode without extra wiring.
   const isEditing = ui.mget(_a.mode) == _a.edit;
   const ext = (ui.mget(_a.ext) || "").toLowerCase();
   if (!Visitor.inDmz && Platform.get("doc_editor") && EDITABLE.includes(ext)) {
     actions.push(
       action(ui, {
         service: isEditing ? _a.preview : _a.edit,
-        ico: isEditing ? "app-file" : "app-edit",
-        tip: isEditing
-          ? LOCALE.PREVIEW
-          : ui.canUpload()
-            ? LOCALE.EDIT
-            : LOCALE.OPEN,
-        state: isEditing ? 1 : 0,
-        icons: ["app-edit", "app-file"],
+        ico: "app-edit",
+        label: ui.canUpload() ? LOCALE.EDIT : LOCALE.OPEN,
+        tip: isEditing ? LOCALE.PREVIEW : ui.canUpload() ? LOCALE.EDIT : LOCALE.OPEN,
+        className: `${cnWindowButton}__icon-button player-document-topbar__mode`,
+        dataset: { active: isEditing ? 1 : 0 },
         sys_pn: "doc-mode-switch",
       }),
     );

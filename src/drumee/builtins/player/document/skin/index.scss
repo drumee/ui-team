@@ -57,6 +57,43 @@
     position: relative;
   }
 
+  // Edit toggle. The label names what the control is, so it does not change
+  // between states; `data-active` says whether the editor is on, and the
+  // pressed look is what tells the two apart.
+  &-topbar__mode {
+    align-items: center;
+    border-radius: var(--corner-radius-2);
+    color: var(--normal-fg-10);
+    cursor: pointer;
+    display: flex;
+    gap: var(--spacer-2);
+    padding: 4px 10px;
+    white-space: nowrap;
+    @include drumee.typo($size: 12px, $line: 16px, $color: var(--normal-fg-10));
+    // drumee.typo() maps only 300/400/500/700 onto a family and emits no
+    // `font-weight`, so 600 has to be set directly.
+    font-weight: 600;
+
+    svg {
+      height: 16px;
+      width: 16px;
+    }
+
+    &:hover {
+      background-color: var(--overlay-bg-05, rgba(0, 0, 0, 0.05));
+    }
+
+    // Editing: the toggle reads as pressed.
+    &[data-active="1"] {
+      background-color: var(--primary-20, #b1adff);
+      color: var(--normal-fg-10);
+
+      &:hover {
+        background-color: var(--primary-30, #847eff);
+      }
+    }
+  }
+
   // The shared topbar widget sizes its action row for 24px icon buttons.
   // The document actions are taller — the primary ones carry 4px/8px
   // padding — so let the row take its content's height rather than
