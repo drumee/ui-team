@@ -158,6 +158,9 @@ class settings_billing extends LetcBox {
         }
       } catch (e) { /* promo module optional / offline */ }
     }
+    // The flags above are now authoritative — until here a click on a plan
+    // card had to fall back to the synchronous quota signal (_paidPlanSync).
+    this._subLoaded = true;
     return sub;
   }
 
@@ -470,8 +473,11 @@ class settings_billing extends LetcBox {
     const sub = this._subscription || {};
     // The RAW subscription plan for the cycle comparison (a legacy 'pro' row
     // maps onto 'team' for display but is a different product); the display
-    // name for the copy.
-    const current = this.currentPlanName || "";
+    // name for the copy. currentPlanName is set by the async fetchPlanData —
+    // a click that beats it (the _paidPlanSync early-click path) falls back
+    // to the cached quota so the popup ranks upgrade/downgrade correctly.
+    const current = this.currentPlanName
+      || String(((Visitor.quota && Visitor.quota()) || {}).plan || "").toLowerCase();
     const currentRaw = String(sub.plan || "") || current;
     const currentPeriod = /^year/.test(String(sub.period || "")) ? "year" : "month";
     const period = /^(month|year)$/.test(targetPeriod || "") ? targetPeriod : this._selectedCycle();
@@ -1320,14 +1326,18 @@ class settings_billing extends LetcBox {
   // a personal Pro is on the default domain 1), matching the same
   // domain_id <= 1 gate the org-bootstrap checkout uses.
 
-  // True when the caller currently pays for an ORG/Team subscription (so
-  // moving to Pro is a plan SWITCH that ends the Team plan). Guards the
-  // switch-confirm popup. Synchronous — quota is cached, so the guard works
-  // on the very first click, before _loadSubscription() lands.
-  _isPaidTeam() {
+  // True when the caller is on ANY paid plan per the cached quota — the
+  // synchronous stand-in for _hasActiveSub while _loadSubscription() is still
+  // in flight. Guards the switch-confirm popup on the very first click: an
+  // early click used to read _hasActiveSub=undefined and walk a Business org
+  // owner straight into a Pro checkout with no warning — Stripe charged the
+  // $5, the org subscription kept running, and the plan display never changed
+  // (live case, prod 2026-08-06). Quota is a superset of "has a Stripe sub"
+  // (a LAUNCH30 org is paid-by-quota with no sub), which errs on the side of
+  // showing the confirm popup — the safe direction.
+  _paidPlanSync() {
     const quota = (Visitor.quota && Visitor.quota()) || {};
-    const plan = String(quota.plan || "").toLowerCase();
-    return plan === "team" && ~~quota.domain_id > 1;
+    return /^(pro|team|business|sovereign)$/.test(String(quota.plan || "").toLowerCase());
   }
 
   // Switch to the in-app checkout tab pre-selected on a plan. Shared by the
@@ -1851,7 +1861,11 @@ class settings_billing extends LetcBox {
           // on, so that cycle is part of what was clicked — pass it through
           // rather than silently keeping the old one and charging a price the
           // card never displayed.
-          if (this._hasActiveSub) {
+          // _hasActiveSub is filled by the async _loadSubscription(); on a
+          // click that beats it, fall back to the cached quota so a paying
+          // caller still gets the switch warning instead of a raw checkout
+          // that would mint a second subscription (see _paidPlanSync).
+          if (this._hasActiveSub || (!this._subLoaded && this._paidPlanSync())) {
             this._confirmReplacePlan(planValue, this._selectedCycle());
           } else if (this._checkoutTabAllowed()) {
             this._enterCheckoutFor(planValue);
