@@ -791,7 +791,7 @@ class __migrate_gdrive_popup extends LetcBox {
     // took the folder window down with it (reported live). When we share the
     // parent with anyone else, remove only ourselves.
     const p = this.parent;
-    const soleChild = !!(p && p.children && p.children.length === 1);
+    const soleChild = p?.children?.length === 1;
     if (soleChild && _.isFunction(p.clear)) p.clear();
     else if (_.isFunction(this.goodbye)) this.goodbye();
     else this.softDestroy();
