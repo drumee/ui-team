@@ -878,19 +878,33 @@
     white-space: nowrap;
   }
 
-  // column widths shared by header + rows
+  // Column widths, shared by header + rows so the two can never drift apart.
+  //
+  // The three data columns are PROPORTIONAL, in the Figma table's own ratio
+  // (Email 44 / Access Time 34 / Duration 22 of the row once the action column is
+  // out). Previously only Email was elastic while Access Time and Duration sat at
+  // fixed 90px / 50px, so on the 450px panel Email took 63% of the row and the
+  // other two stayed cramped no matter how much space there was — and they could
+  // not grow at all if the panel ever got wider.
+  //
+  // flex-basis 0 makes the grow factors the sole allocator (the content's natural
+  // width stops skewing the split). The min-widths keep Access Time and Duration
+  // legible when the panel is narrow; Email is the only shrinkable column
+  // (min-width 0), so it absorbs the squeeze and ellipsises, which is the right
+  // trade — an address truncates readably, "Jun 12, 10:23 AM" does not.
   &__events-col.col-email,
-  &__events-cell.col-email    { flex: 1; min-width: 0; gap: var(--spacer-2); }
+  &__events-cell.col-email    { flex: 44 1 0; min-width: 0; gap: var(--spacer-2); }
   &__events-col.col-time,
-  &__events-cell.col-time     { width: 90px; flex-shrink: 0; }
+  &__events-cell.col-time     { flex: 34 0 0; min-width: 76px; }
   &__events-col.col-duration,
-  &__events-cell.col-duration { width: 50px; flex-shrink: 0; }
-  // overflow:visible so the revoke button's hover tooltip can escape the cell.
-  // 64px (was 30px): wide enough for the "Revoked" state label as well as the
-  // ⊖ glyph, so neither clips. Header and rows share this rule, so the columns
-  // stay aligned; the email column is flex:1 and simply gives up the 34px.
+  &__events-cell.col-duration { flex: 22 0 0; min-width: 48px; }
+  // Action stays a FIXED 64px and out of the proportional split: it holds either
+  // the ⊖ glyph or the "Revoked" label, both fixed-size, and scaling it would only
+  // add dead space. 64px (was 30px) is what the label needs so neither state
+  // clips. overflow:visible lets the revoke button's hover tooltip escape the cell.
+  // Currently hidden — see SHOW_REVOKE_COLUMN in skeleton/access-events.js.
   &__events-col.col-action,
-  &__events-cell.col-action   { width: 64px; flex-shrink: 0; justify-content: flex-end; text-align: right; overflow: visible; }
+  &__events-cell.col-action   { flex: 0 0 64px; justify-content: flex-end; text-align: right; overflow: visible; }
 
   // Figma: avatar 16px, round.
   &__events-avatar {
