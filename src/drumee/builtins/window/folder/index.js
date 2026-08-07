@@ -1377,15 +1377,24 @@ class __window_folder extends mfsInteract {
         // The window title tracks navigation the same way the nid does
         // (refreshBreadcrumbsUI msets hub_name to the current node's name).
         const destName = this.mget(_a.hub_name) || this.mget(_a.filename) || "";
+        const destHub = this.mget(_a.hub_id) || Visitor.id;
+        const destNidFinal = destNid || Visitor.get(_a.home_id);
         return Kind.waitFor("migrate_gdrive_popup").then(() => {
           Wm.launch(
             {
               kind: "migrate_gdrive_popup",
-              hub_id: this.mget(_a.hub_id) || Visitor.id,
-              nid: destNid || Visitor.get(_a.home_id),
+              hub_id: destHub,
+              nid: destNidFinal,
               destinationName: destName || undefined,
               direct: 1,
-              wm_unique_id: "migrate_gdrive_popup",
+              // Destination-scoped id (same scheme as window_folder-<hub>-<nid>).
+              // A plain shared id made singleton raise() a popup opened from
+              // ANOTHER destination (e.g. Settings after a folder, or folder B
+              // after folder A) with its stale destination — the user would
+              // import into the wrong place. Per-destination ids keep the
+              // no-duplicate guarantee per folder while giving each launch
+              // context its own popup.
+              wm_unique_id: `migrate_gdrive_popup-${destHub}-${destNidFinal}`,
             },
             { explicit: 1, singleton: 1 },
           );
