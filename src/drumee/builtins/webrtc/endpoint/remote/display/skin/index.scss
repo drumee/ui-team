@@ -111,6 +111,43 @@
     }
   }
 
+  // Who is sharing — the same name pill the participant tiles carry
+  // (endpoint/local/user/skin `__uname`), anchored bottom-left of the shared
+  // screen. Absolute like `__fullscreen` above, so both resolve against the
+  // same containing block and sit in opposite corners. Hidden outright when the
+  // presenter's name is unknown, rather than showing an empty pill.
+  // `__uname` already exists in the webrtc-avatar mixin included at the top of
+  // this block (z-index 200000, max-width, base type), so only the pill look and
+  // the anchoring are restated here — exactly what endpoint/local/user/skin does.
+  &__uname {
+    position: absolute;
+    bottom: 10px;
+    left: 10px;
+    box-sizing: border-box;
+    background-color: rgba(20, 17, 35, 0.4);
+    backdrop-filter: blur(5.5px);
+    border-radius: 60px;
+    padding: 6px 12px;
+    overflow: hidden;
+
+    // Identical include to the tile pill so the two read as one system. NB the
+    // shared typo() mixin emits no font-weight (the $weight arg only selects a
+    // font-family branch), so this deliberately inherits the tile's weight —
+    // adding one here would make this label heavier than every other name.
+    @include drumee.typo($size: 12px, $line: 1.4, $weight: 600, $color: #fff);
+
+    &[data-state="0"] {
+      display: none;
+    }
+
+    .note-content {
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      text-align: left;
+    }
+  }
+
   // Loading overlay: shown until the shared-screen video's first frame arrives
   // (the widget hides it on onloadeddata). Covers the black gap while a viewer
   // — especially a late joiner — is preparing the remote presentation.

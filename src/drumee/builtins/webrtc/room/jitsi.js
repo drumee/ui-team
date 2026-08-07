@@ -1313,8 +1313,22 @@ class __webrtc_room extends __room {
       "participant_id",
       opt.participant_id
     )[0];
-    if (presenter) {
-      opt.username = presenter.mget(_a.username);
+    // Name the sharer on the presenter tile (the display skeleton renders it
+    // bottom-left, like the participant tiles do). A REMOTE share resolves from
+    // that peer's own tile. OUR OWN share has no tile to resolve against — the
+    // local user is not in __participants under a participant id — so fall back
+    // to the very identity startPresentation() broadcasts about us in the
+    // START_REMOTE_SCREEN payload, keeping both ends of the call in agreement.
+    // `_presentingLocally` is set by webrtc/screenshare immediately before it
+    // calls us for our own desktop track; anything without that mixin never
+    // renders its own screen here and is unaffected.
+    const uname =
+      (presenter && presenter.mget(_a.username)) ||
+      (this._presentingLocally ? Visitor.fullname() : null);
+    // Assign only when we actually have a name, so the no-name case stays
+    // byte-identical to before (the key simply absent, never a literal "null").
+    if (uname) {
+      opt.username = uname;
     }
     this.__presenter.feed(opt);
     let child = this.__presenter.children.last();

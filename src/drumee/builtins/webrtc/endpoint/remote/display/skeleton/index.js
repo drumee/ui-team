@@ -6,6 +6,12 @@
 
 const __remote_screen = function(_ui_) {
   const id = _ui_.mget("participant_id");
+  // Who is sharing. `label` is resolved in the widget's initialize() from the
+  // firstname / fullname / username it was fed; the room supplies that from the
+  // presenter's participant tile, or from Visitor for our own screen. Rendered
+  // as the same bottom-left name pill the participant tiles use, and hidden via
+  // data-state when we have no name — mirrors endpoint/remote/user/skeleton.
+  const uname = _ui_.mget(_a.label);
   const fullscreen =  Skeletons.Button.Svg({
     className : `${_ui_.fig.family}__fullscreen remote`,
     ico       : "player-fullscreen",
@@ -45,6 +51,14 @@ const __remote_screen = function(_ui_) {
       Skeletons.Box.Y({
         className : `${_ui_.fig.family}__loading`,
         sys_pn    : "screen-loading"
+      }),
+
+      Skeletons.Note({
+        className : `${_ui_.fig.family}__uname`,
+        content   : uname,
+        dataset   : {
+          state : _.isEmpty(uname) ? 0 : 1
+        }
       }),
 
       fullscreen
