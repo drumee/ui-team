@@ -83,6 +83,18 @@ class __window_media_details extends mfsInteract {
       (this._box && this._box.maxHeight) || Infinity,
     );
     const height = Math.max(SIZE.minHeight, Math.min(natural, ceiling));
+
+    // Width is re-applied here, not just in `initialize`. The preset from
+    // `Wm.getWindowPreset` carries `style: getWindowPosition(...)` — the
+    // LAUNCHING window's geometry — and the base applies it during render,
+    // after initialize has run. So a width set at init is overwritten and
+    // the card comes up as wide as whatever opened it.
+    const width = (this._box && this._box.width) || this.size.width || SIZE.width;
+    if (width) {
+      this.size = { ...this.size, width };
+      this.style.set({ width });
+      this.$el.css({ width });
+    }
     this.size = { ...this.size, height };
     this.style.set({ height });
     this.$el.css({ height });

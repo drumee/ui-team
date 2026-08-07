@@ -86,12 +86,21 @@ function place(ui, card) {
     card.constrainTo({ width, maxHeight });
   }
 
-  const height = (card.size && card.size.height) || card.$el.outerHeight() || 0;
+  // Centre on what the card ACTUALLY measures, not on the width we asked
+  // for. If the width could not be applied — the preset's geometry lands
+  // late and has overwritten it before — centring on the request shifts the
+  // card by half the difference, which reads as a lean to the right.
+  const rect = card.el ? card.el.getBoundingClientRect() : null;
+  const actualWidth = Math.round((rect && rect.width) || width);
+  const height = Math.round(
+    (rect && rect.height) || (card.size && card.size.height) || 0,
+  );
+
   const left = Math.max(
     0,
     Math.min(
-      Math.round(hb.left + (hb.width - width) / 2),
-      Math.max(0, window.innerWidth - width),
+      Math.round(hb.left + (hb.width - actualWidth) / 2),
+      Math.max(0, window.innerWidth - actualWidth),
     ),
   );
   const top = Math.max(
