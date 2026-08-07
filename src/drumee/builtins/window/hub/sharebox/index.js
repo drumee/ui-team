@@ -92,6 +92,20 @@ class __window_hub_sharebox extends mfsInteract {
       hub_id: Visitor.id,
       pid: this.mget(_a.nid)
     }).then((data) => {
+      // A sharebox is an `area: share` hub, which is exactly what the
+      // analytics Referral users table counts as a workspace — but this window
+      // does not go through the create-workspace form, so nothing reported it.
+      // The board only picked these up when someone re-ran
+      // backfill_workspace_track by hand; now the column moves as it happens.
+      // Fire-and-forget, after creation succeeded.
+      const hub = _.isArray(data) ? data[0] : data;
+      if (hub && !hub.error) {
+        require("libs/track-workspace").trackWorkspace(this, "share", {
+          wid: hub.hub_id || hub.id,
+          area: hub.area || _a.share,
+          filename: this.formData.name,
+        });
+      }
       this._checkCreation(data);
     }).catch((err) => {
       this.onServerError(err);
