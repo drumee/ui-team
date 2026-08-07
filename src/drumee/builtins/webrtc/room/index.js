@@ -418,7 +418,6 @@ class __webrtc_room extends __interact {
   async displayPresentation(fullscreen) {
     if (fullscreen !== null) {
       if (fullscreen === 1) {
-        console.log(fullscreen, "CHECK_FULLSCREEN_ENTER");
         await document.body.requestFullscreen();
         if (!this.savedGeometry) {
           this.savedGeometry = { ...this.$el.position(), width: this.$el.width(), height: this.$el.height() };
@@ -426,7 +425,6 @@ class __webrtc_room extends __interact {
         setTimeout(() => { this.fitScreenSize("presenter-full") }, 1000);
         return
       } else {
-        console.log(fullscreen, "CHECK_FULLSCREEN_EXIT");
         if (document.fullscreenElement != null)
           if (document.fullscreen) await document.exitFullscreen();
       }
