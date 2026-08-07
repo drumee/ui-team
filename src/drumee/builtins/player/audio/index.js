@@ -2,6 +2,8 @@
 const { fitBoxes } = require("@drumee/ui-essentials")
 const __window_interact_player = require('player/interact');
 const snap = require('builtins/window/snap');
+const details = require('builtins/player/widget/details');
+const share = require('builtins/player/widget/share');
 const renameInline = require('builtins/player/widget/topbar/rename');
 
 // Gear-menu rows that act on the node rather than on the viewer. The MFS
@@ -220,6 +222,16 @@ class __player_audio extends __window_interact_player {
   /**
    * @param {Letc} cmd
   */
+
+  /**
+   * The Details card is a separate WM window, so closing this player would
+   * otherwise leave it orphaned over the desk.
+   */
+  onBeforeDestroy() {
+    details.close(this);
+    if (super.onBeforeDestroy) super.onBeforeDestroy();
+  }
+
   onUiEvent(cmd) {
     const service = cmd.service || cmd.get(_a.service) || cmd.get(_a.name);
     switch (service) {
@@ -239,7 +251,8 @@ class __player_audio extends __window_interact_player {
         return this._pause();
 
       case 'info':
-        return this._showInfo();
+
+        return details.open(this);
 
       // Move & Resize presets, from the shared topbar widget. Same snap
       // module the folder window and the other players use, so every window
@@ -267,6 +280,11 @@ class __player_audio extends __window_interact_player {
       // this player, where nobody can see it.
       case 'direct-rename':
         return renameInline(this);
+
+      // Share: only an external workspace can share a file out; from an
+      // internal one the user is shown what to do instead.
+      case 'secure-share':
+        return share.click(this, cmd);
 
       default:
         // Gear-menu rows that act on the node itself go to the source MFS

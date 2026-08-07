@@ -2,61 +2,88 @@
   background: var(--normal-bg-elevated, #fff);
   border: 1px solid var(--border-default, #d6d6dc);
   border-radius: var(--corner-radius-2);
+  box-shadow: var(--shadow-main);
   overflow: hidden;
 
   &__container {
-    height: 100%;
+    // Sizes to its rows — NOT `height: 100%`. The window is then shrunk to
+    // match in `_fitToContent`; forcing 100% here made `scrollHeight` echo
+    // the window's own height, so the panel could never be measured and a
+    // large empty band sat under the last row.
+    height: auto;
   }
 
   &__header {
     align-items: center;
+    border-bottom: 1px solid var(--border-muted, rgba(0, 0, 0, 0.2));
+    flex-shrink: 0;
     justify-content: space-between;
     padding: var(--spacer-4) var(--spacer-6);
-    border-bottom: 1px solid var(--border-muted, rgba(0, 0, 0, 0.2));
   }
 
   &__title {
+    color: var(--normal-fg-10);
     font-size: 15px;
     font-weight: 600;
-    color: var(--normal-fg-10);
   }
 
   &__close {
+    align-items: center;
+    border-radius: var(--corner-radius-1);
+    color: var(--normal-fg-20);
     cursor: pointer;
-    color: var(--normal-fg-10);
+    display: flex;
+    height: 24px;
+    justify-content: center;
+    width: 24px;
 
     svg {
-      width: 14px;
       height: 14px;
+      width: 14px;
     }
 
     &:hover {
-      color: var(--normal-fg-20);
+      background-color: var(--overlay-bg-05, rgba(0, 0, 0, 0.05));
+      color: var(--normal-fg-10);
     }
   }
 
   &__body {
-    flex: 1;
-    gap: var(--spacer-4);
-    padding: var(--spacer-5) var(--spacer-6);
+    // No `flex: 1`: that stretched the body to fill the window and was half
+    // of the empty band. Rows carry their own rhythm, so no gap either.
+    gap: 0;
     overflow-y: auto;
+    padding: var(--spacer-2) var(--spacer-6) var(--spacer-4);
   }
 
   &__row {
-    justify-content: space-between;
+    align-items: baseline;
     gap: var(--spacer-6);
+    justify-content: space-between;
+    padding: var(--spacer-3) 0;
+
+    // Hairline between rows only — no leading or trailing rule.
+    & + & {
+      border-top: 1px solid var(--border-muted, rgba(0, 0, 0, 0.08));
+    }
   }
 
   &__label {
+    color: var(--normal-fg-20);
     flex-shrink: 0;
     font-size: 13px;
-    color: var(--normal-fg-10);
   }
 
   &__value {
+    color: var(--normal-fg-10);
     font-size: 13px;
-    color: var(--normal-fg-20);
+    font-weight: 500;
+    min-width: 0;
     text-align: right;
-    word-break: break-all;
+    // `break-all` split the mimetype mid-word — "…wordprocessingml.docum /
+    // ent". `anywhere` breaks at sensible points first and only splits a
+    // token when it genuinely cannot fit.
+    overflow-wrap: anywhere;
+    word-break: normal;
   }
 }

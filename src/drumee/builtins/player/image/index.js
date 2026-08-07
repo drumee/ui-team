@@ -5,6 +5,8 @@ require('./skin');
 
 const { TweenMax, Cubic } = require("@drumee/ui-core/vendor");
 const snap = require('builtins/window/snap');
+const details = require('builtins/player/widget/details');
+const share = require('builtins/player/widget/share');
 const renameInline = require('builtins/player/widget/topbar/rename');
 const __core = require('player/interact');
 
@@ -193,8 +195,9 @@ class __player_image extends __core {
           break;
       }
     }
-    // "Get info" emits `_e.settings`, not "info" — see the switch below.
-    details.push({ id: 'info', label: LOCALE.GET_INFO, icon: 'ctxmenu-info', service: _e.settings, type: _a.info });
+    // "info" rather than `_e.settings`: this row is handled by the player
+    // itself now (widget/details), not forwarded to the MFS view.
+    details.push({ id: 'info', label: LOCALE.GET_INFO, icon: 'ctxmenu-info', service: 'info' });
     sections.push(details);
 
     if (media && media.canRemove && media.canRemove()) {
@@ -434,6 +437,16 @@ class __player_image extends __core {
    * 
    * @param {*} cmd 
    */
+
+  /**
+   * The Details card is a separate WM window, so closing this player would
+   * otherwise leave it orphaned over the desk.
+   */
+  onBeforeDestroy() {
+    details.close(this);
+    if (super.onBeforeDestroy) super.onBeforeDestroy();
+  }
+
   onUiEvent(cmd) {
     const service = cmd.service || cmd.get(_a.service) || cmd.get(_a.name);
     switch (service) {
@@ -468,7 +481,8 @@ class __player_image extends __core {
         return this._saveRotation();
 
       case 'info':
-        return this._showInfo();
+
+        return details.open(this);
 
       // "Get info" — the contextmenu row emits `_e.settings`, not "info".
       // Prefer the file's own properties panel (what the row means
@@ -508,6 +522,11 @@ class __player_image extends __core {
       // this player, where nobody can see it.
       case 'direct-rename':
         return renameInline(this);
+
+      // Share: only an external workspace can share a file out; from an
+      // internal one the user is shown what to do instead.
+      case 'secure-share':
+        return share.click(this, cmd);
 
       default:
         // Gear-menu rows that act on the node itself go to the source MFS
