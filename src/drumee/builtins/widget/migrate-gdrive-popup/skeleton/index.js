@@ -326,6 +326,23 @@ module.exports = function (ui) {
     body = Skeletons.Box.Y({
       className: `${pfx}__body ${pfx}__body--sa`,
       kids: [
+        // Destination card — same block the ready pane shows. Matters most
+        // here: the folder-window "+ New" launch targets the folder the user
+        // is standing in, and this line is how they see that before
+        // committing an import into it.
+        Skeletons.Box.X({
+          className: `${pfx}__dest-card`,
+          kids: [
+            Skeletons.Image.Svg({ ico: 'desktop_folder', className: `${pfx}__dest-ico` }),
+            Skeletons.Box.Y({
+              className: `${pfx}__dest-text`,
+              kids: [
+                Skeletons.Note({ className: `${pfx}__field-label`, content: LOCALE.DESTINATION || 'Destination' }),
+                Skeletons.Note({ className: `${pfx}__destination`, content: ui._destinationName }),
+              ],
+            }),
+          ],
+        }),
         step(1, LOCALE.GDRIVE_SA_STEP1_TITLE, [
           Skeletons.Note({ className: `${pfx}__description`, content: LOCALE.GDRIVE_SA_STEP1_BODY }),
           Skeletons.Box.X({
