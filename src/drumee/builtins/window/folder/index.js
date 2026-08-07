@@ -1875,12 +1875,7 @@ class __window_folder extends mfsInteract {
       if (!wrapper || (wrapper.isDestroyed && wrapper.isDestroyed())) return;
       this._chatExportWrapper = wrapper;
 
-      // Clicking the backdrop (not the card) closes the modal.
-      wrapper.el.addEventListener("click", (e) => {
-        if (e.target === wrapper.el) {
-          this._closeChatExportOverlay();
-        }
-      });
+      this._wireChatExportBackdrop(wrapper);
 
       // Feed the export widget into the centering container.
       wrapper.feed({
@@ -1930,11 +1925,7 @@ class __window_folder extends mfsInteract {
       if (!wrapper || (wrapper.isDestroyed && wrapper.isDestroyed())) return;
       this._chatExportWrapper = wrapper;
 
-      wrapper.el.addEventListener("click", (e) => {
-        if (e.target === wrapper.el) {
-          this._closeChatExportOverlay();
-        }
-      });
+      this._wireChatExportBackdrop(wrapper);
 
       wrapper.feed({
         kind: "widget_chat_export",
@@ -1965,6 +1956,27 @@ class __window_folder extends mfsInteract {
     } catch (_) {
       return "hsl(240, 40%, 60%)";
     }
+  }
+
+  /**
+   * Clicking the backdrop (not the card) closes the export modal.
+   *
+   * Assigned, not added: ui-core installs its own `el.onclick` on every widget
+   * at render and that handler ends in `e.stopImmediatePropagation()`, which
+   * drops any listener added to the SAME element afterwards — so an
+   * `addEventListener("click", …)` here only ran on a second click inside the
+   * framework's 300 ms debounce, i.e. the backdrop needed a double click.
+   * Capture does not help when the backdrop IS the event target, and the
+   * wrapper is a bare layout node with no `service`, so replacing its handler
+   * costs nothing. Same idiom as the @-mention dropdown.
+   *
+   * Shared by both openers of the overlay — it used to be copy-pasted twice.
+   */
+  _wireChatExportBackdrop(wrapper) {
+    if (!wrapper || !wrapper.el) return;
+    wrapper.el.onclick = (e) => {
+      if (e.target === wrapper.el) this._closeChatExportOverlay();
+    };
   }
 
   /**
@@ -2375,6 +2387,12 @@ class __window_folder extends mfsInteract {
         ? !!opt.open
         : !!(part.el && part.el.dataset.open === "1");
     part.feed(rows);
+    // A press on a row must not blur the search field, or the 200 ms focusout
+    // teardown fires mid-click and the pick is lost.
+    require("libs/pick-guard").keepListThroughClick(
+      part.el,
+      `.${pfx}-invitee-option`,
+    );
     if (part.el) part.el.dataset.open = open && rows.length ? 1 : 0;
   }
 

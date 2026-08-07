@@ -1,4 +1,5 @@
 const { uploadFile } = require("@drumee/ui-essentials");
+const { keepListThroughClick } = require("libs/pick-guard");
 const {
   markerRe,
   contentTokenRe,
@@ -1672,6 +1673,9 @@ class __tasks_panel extends LetcBox {
       .then((part) => {
         if (!part || part.isDestroyed?.()) return;
         part.feed(rows);
+        // A press on a row must not blur the search field, or the 200 ms
+        // focusout teardown below fires mid-click and the pick is lost.
+        keepListThroughClick(part.el, `.${this.fig.family}__assignee-option`);
         if (part.el) part.el.dataset.open = open && rows.length ? "1" : "0";
       })
       .catch(() => {

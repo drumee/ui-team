@@ -461,6 +461,12 @@ class __window_addressbook extends __window_addressbook_interact {
 
     const searchResult = this.getPart('search-result');
     searchResult.feed(dataOpt);
+    // A press on a result must not blur the search input, or the 200 ms blur
+    // teardown fires mid-click and the pick is lost.
+    require('libs/pick-guard').keepListThroughClick(
+      searchResult.el,
+      '.contact-item',
+    );
     searchResult.el.dataset.state = '1';
     return this.getPart(_a.search).el.dataset.mode = _a.open;
   }

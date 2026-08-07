@@ -22,6 +22,8 @@
  * settings-action panel, and the shared widget/invitation searchbox.
  */
 
+const { keepListThroughClick } = require("libs/pick-guard");
+
 /** The lookup service when the server exposes it, else null. */
 function lookupService() {
   return (SERVICE.contact && SERVICE.contact.lookup) || null;
@@ -235,6 +237,9 @@ function attachEmailLookup(widget, opt = {}) {
             uiHandler: widget,
           }),
         );
+        // A press on a row must not blur the entry, or the 200 ms focusout
+        // close below fires mid-click and the pick is lost.
+        keepListThroughClick(part.el, `.${itemClass}`);
         if (part.el) part.el.dataset.state = rows.length ? 1 : 0;
       })
       .catch(() => {
