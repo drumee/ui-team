@@ -76,19 +76,27 @@ function menu(ui) {
   }
   if (file.length) sections.push(file);
 
-  // Sharing is area-dependent: each area exposes the one link flavour that
-  // makes sense for it.
   const details = [];
+
+  // Share is offered wherever the file lives, as in the Figma
+  // (3228:281742), NOT only from an external workspace. Asking to share an
+  // internal file is a fair thing to try, and `widget/share` answers it:
+  // external hands the row to the MFS view that owns the real flow,
+  // internal explains that an external workspace is needed first. Gating
+  // the row on the area instead would leave that explanation unreachable.
+  if (editable) {
+    details.push({
+      id: "secure-share",
+      label: LOCALE.SHARE,
+      icon: "ctxmenu-share",
+      service: "secure-share",
+    });
+  }
+
+  // The link flavour on top of that is area-dependent. `share` has none of
+  // its own — the Share row above already covers it.
   if (editable) {
     switch (ui.mget(_a.area)) {
-      case _a.share:
-        details.push({
-          id: "secure-share",
-          label: LOCALE.SHARE,
-          icon: "ctxmenu-share",
-          service: "secure-share",
-        });
-        break;
       case _a.private:
         details.push({
           id: "designation-link",

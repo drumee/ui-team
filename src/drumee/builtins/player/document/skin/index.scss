@@ -57,6 +57,69 @@
     position: relative;
   }
 
+  // Edit switch — label + track + sliding knob.
+  //
+  // The label names what the switch governs, so it does not change between
+  // states; `data-active` says whether the editor is on, and the knob's
+  // position is what tells the two apart.
+  &-topbar__mode {
+    align-items: center;
+    cursor: pointer;
+    display: flex;
+    gap: var(--spacer-3);
+    white-space: nowrap;
+
+    // Decoration must never be the click target. Every LETC view binds its
+    // own onclick and that handler stops propagation before dispatching, so
+    // a click landing on the label or the knob would be swallowed there and
+    // never reach the row that carries the service.
+    &-label,
+    &-track,
+    &-knob {
+      pointer-events: none;
+    }
+
+    &-label {
+      @include drumee.typo($size: 12px, $line: 16px, $color: var(--normal-fg-10));
+      // drumee.typo() maps only 300/400/500/700 onto a family and emits no
+      // `font-weight`, so 600 has to be set directly.
+      font-weight: 600;
+    }
+
+    &-track {
+      align-items: center;
+      background-color: var(--normal-fg-40, #a8a8ae);
+      border-radius: 999px;
+      display: flex;
+      flex-shrink: 0;
+      height: 24px;
+      padding: 3px;
+      transition: background-color 0.15s ease;
+      width: 42px;
+    }
+
+    &-knob {
+      background-color: var(--white, #fff);
+      border-radius: 50%;
+      height: 18px;
+      transition: transform 0.15s ease;
+      width: 18px;
+    }
+
+    &:hover &-track {
+      background-color: var(--normal-fg-30, #96969c);
+    }
+
+    // Editing: track lights up and the knob slides right.
+    &[data-active="1"] &-track {
+      background-color: var(--primary-50, #433cc5);
+    }
+
+    &[data-active="1"] &-knob {
+      transform: translateX(18px);
+    }
+  }
+
   // The shared topbar widget sizes its action row for 24px icon buttons.
   // The document actions are taller — the primary ones carry 4px/8px
   // padding — so let the row take its content's height rather than

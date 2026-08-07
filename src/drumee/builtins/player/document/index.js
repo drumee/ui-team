@@ -3,6 +3,8 @@ const { filesize, fitBoxes } = require("@drumee/ui-essentials")
 const { TweenMax, Expo } = require("@drumee/ui-core/vendor");
 const PlayerInteract = require('player/interact');
 const snap = require('builtins/window/snap');
+const details = require('builtins/player/widget/details');
+const share = require('builtins/player/widget/share');
 const renameInline = require('builtins/player/widget/topbar/rename');
 
 // Gear-menu rows that act on the node rather than on the viewer. The MFS
@@ -107,6 +109,9 @@ class __player_document extends PlayerInteract {
    * 
    */
   onBeforeDestroy() {
+    // The Details card is a separate WM window, so closing the player would
+    // otherwise leave it orphaned over the desk.
+    details.close(this);
     if (this.loader && _.isFunction(this.loader.isDestroyed)) {
       this.loader.destroy();
       this.loader = null;
@@ -587,6 +592,7 @@ class __player_document extends PlayerInteract {
   /**
    * 
    */
+
   /**
    * Forward a gear-menu row this player doesn't own to the source MFS view,
    * which implements the whole file-action vocabulary already. Returns false
@@ -1241,6 +1247,17 @@ class __player_document extends PlayerInteract {
         this.toggleFullscreen();
         break;
 
+      // "Get info" — open the node's own properties window, which is what
+      // this row means everywhere else in the app.
+      //
+      // It calls the MFS view's methods directly rather than routing a
+      // service, because falling through to the base is not an option: its
+      // `_showInfo()` reads `this.__wrapperInfo`, and this player's
+      // skeleton has no `wrapper-info` part (its wrapper is `overlay`), so
+      // it throws on an undefined part.
+      case "info":
+        return details.open(this);
+
       // Move & Resize presets, from the shared topbar widget. Same snap
       // module and same vocabulary the folder window and the image player
       // use, so every window snaps through one code path.
@@ -1316,6 +1333,11 @@ class __player_document extends PlayerInteract {
       // this player, where nobody can see it.
       case 'direct-rename':
         return renameInline(this);
+
+      // Share: only an external workspace can share a file out; from an
+      // internal one the user is shown what to do instead.
+      case 'secure-share':
+        return share.click(this, cmd);
 
       default:
         // Gear-menu rows that act on the node itself go to the source MFS

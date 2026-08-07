@@ -53,7 +53,7 @@ function _dmzViewerCanEdit(ui) {
  * on the player as `__camelCase`, so naming everything would quietly add
  * properties to a 1200-line class for no gain.
  */
-function action(ui, { service, ico, tip, state, icons, sys_pn }) {
+function action(ui, { service, ico, tip, state, icons, sys_pn, label, className, dataset }) {
   const a = {
     type: "button",
     icon: ico,
@@ -69,6 +69,9 @@ function action(ui, { service, ico, tip, state, icons, sys_pn }) {
         }
       : { color: "var(--normal-fg-20)" },
   };
+  if (label) a.label = label;
+  if (className) a.className = className;
+  if (dataset) a.dataset = dataset;
   if (state != null) a.state = state;
   if (icons) a.icons = icons;
   if (sys_pn) {
@@ -90,6 +93,46 @@ module.exports = function (ui) {
   // Header download icon was already intentionally hidden for docs (product
   // request). DMZ download gating still lives on those handlers via
   // _dmzGateDownload().
+
+  // Edit ⇄ Preview, as a real switch: a label, a track and a knob that
+  // slides. The label stays "Edit" in both states — it names what the
+  // switch governs, not what the next click does — and `data-active` is
+  // what says whether the editor is on.
+  //
+  // Built as a `custom` action rather than through `action()`, which only
+  // makes Button.Svg / Button.Label; a track-and-knob needs its own markup.
+  //
+  // The service flips, so one control both enters and leaves edit mode.
+  // `updateMenu()` re-feeds this row on every mode change (already called
+  // from preview() and from the editor's onLoad), so the knob follows the
+  // mode without extra wiring.
+  const isEditing = ui.mget(_a.mode) == _a.edit;
+  const ext = (ui.mget(_a.ext) || "").toLowerCase();
+  if (!Visitor.inDmz && Platform.get("doc_editor") && EDITABLE.includes(ext)) {
+    const pfx = `${ui.fig.family}-topbar__mode`;
+    actions.push({
+      id: "doc-mode-switch",
+      type: "custom",
+      component: Skeletons.Box.X({
+        className: pfx,
+        sys_pn: "doc-mode-switch",
+        service: isEditing ? _a.preview : _a.edit,
+        uiHandler: [ui],
+        partHandler: ui,
+        dataset: { active: isEditing ? 1 : 0 },
+        kids: [
+          Skeletons.Note({
+            content: ui.canUpload() ? LOCALE.EDIT : LOCALE.OPEN,
+            className: `${pfx}-label`,
+          }),
+          Skeletons.Box.X({
+            className: `${pfx}-track`,
+            kids: [Skeletons.Element({ className: `${pfx}-knob` })],
+          }),
+        ],
+      }),
+    });
+  }
 
   // The one action with no gear-menu equivalent: a secure-share recipient the
   // editor will force READ-ONLY gets a "Request edit" that opens the share's
@@ -134,14 +177,20 @@ module.exports = function (ui) {
 /**
  * The gear menu, as MenuItem data for the widget's folder-settings default.
  *
- * Every row maps to a service this player already answers — the four in its
+ * Default set, in both modes: Copy, Rename, Chat threads, Share, Get info,
+ * Move to trash.
+ *
+ * Preview mode adds the three export rows on top — Download, Download a PDF
+ * version, Print. They are absent while editing because they serve the
+ * server's info.pdf, which is not re-rendered on demand, so mid-edit they
+ * would hand back a stale document.
+ *
+ * Edit ⇄ Preview is NOT here: it is the switch in the header (see above).
+ *
+ * Every row maps to a service this player already answers — the ones in its
  * own `onUiEvent` plus "info", which the base class handles
  * (player/interact.js). `_a.link` is deliberately absent: its case is a bare
  * `break`, so a "Copy link" row would look live and do nothing.
- *
- * Download-as-PDF / Print / Edit repeat the inline buttons. That is
- * intentional — a menu that omits the primary actions reads as if they are
- * unavailable — but see the header comment if the inline row should shrink.
  */
 module.exports.menu = function (ui) {
   const isEditing = ui.mget(_a.mode) == _a.edit;
@@ -151,42 +200,38 @@ module.exports.menu = function (ui) {
   // still have the MFS view to forward to and the session may write.
   const editable = !!media && !Visitor.inDmz && !!ui.canUpload();
 
-  // The file-level rows — copy, download, rename, chat threads, share,
-  // trash — are preview-mode only. While the office editor is open they
-  // act on a node the editor is actively writing to, and the two would be
-  // racing: renaming or trashing mid-edit, or copying a version the editor
-  // has not flushed yet. Leave the editor first.
-  const onNode = !isEditing && !!media;
-
   const sections = [];
 
-  const file = [];
-  if (onNode && !Visitor.inDmz) {
-    file.push({ id: "copy", label: LOCALE.COPY, icon: "apps-copy", service: _e.copy });
-  }
-  if (!isEditing && (Visitor.inDmz || ui.canDownload())) {
-    file.push({
-      id: "download",
-      label: LOCALE.DOWNLOAD,
-      icon: "app-download",
-      service: _e.download,
-    });
-  }
-  if (ext != _a.pdf && !isEditing) {
-    file.push({
-      id: "download-pdf",
-      label: LOCALE.DOWNLOAD_AS_PDF,
-      icon: "app-pdf-file",
-      service: "download-pdf",
-    });
-  }
+  // Preview-only: exporting the rendered document. See the header comment
+  // for why these are not offered while the editor is open.
+  const exports_ = [];
   if (!isEditing) {
-    file.push({ id: "print", label: LOCALE.PRINT, icon: "app-print", service: "print" });
+    if (Visitor.inDmz || ui.canDownload()) {
+      exports_.push({
+        id: "download",
+        label: LOCALE.DOWNLOAD,
+        icon: "app-download",
+        service: _e.download,
+      });
+    }
+    if (ext != _a.pdf) {
+      exports_.push({
+        id: "download-pdf",
+        label: LOCALE.DOWNLOAD_AS_PDF,
+        icon: "app-pdf-file",
+        service: "download-pdf",
+      });
+    }
+    exports_.push({ id: "print", label: LOCALE.PRINT, icon: "app-print", service: "print" });
   }
-  if (file.length) sections.push(file);
+  if (exports_.length) sections.push(exports_);
 
+  // Copy / Rename / Chat threads read as one block.
   const naming = [];
-  if (!isEditing && editable) {
+  if (media && !Visitor.inDmz) {
+    naming.push({ id: "copy", label: LOCALE.COPY, icon: "apps-copy", service: _e.copy });
+  }
+  if (editable) {
     naming.push({
       id: "rename",
       label: LOCALE.RENAME,
@@ -194,7 +239,7 @@ module.exports.menu = function (ui) {
       service: "direct-rename",
     });
   }
-  if (onNode && !Visitor.inDmz) {
+  if (media && !Visitor.inDmz) {
     naming.push({
       id: "chat-threads",
       label: LOCALE.CHAT_THREADS,
@@ -212,36 +257,25 @@ module.exports.menu = function (ui) {
   }
   if (naming.length) sections.push(naming);
 
-  // Edit and Preview are the two directions of the same toggle, so only one
-  // of them is ever offered.
-  const mode = [];
-  if (!Visitor.inDmz && Platform.get("doc_editor") && EDITABLE.includes(ext)) {
-    if (isEditing) {
-      mode.push({ id: "preview", label: LOCALE.PREVIEW, icon: "app-file", service: _a.preview });
-    } else {
-      mode.push({
-        id: "edit",
-        label: ui.canUpload() ? LOCALE.EDIT : LOCALE.OPEN,
-        icon: "app-edit",
-        service: _a.edit,
-      });
-    }
-  }
-  if (mode.length) sections.push(mode);
-
-  // Sharing is area-dependent, exactly as in the image player's catalog:
-  // each area exposes the one link flavour that makes sense for it.
   const details = [];
-  if (!isEditing && editable) {
+
+  // Share is offered wherever the file lives, as in the Figma; widget/share
+  // decides whether it opens the real flow or explains that an external
+  // workspace is needed first. Gating it on the area would leave that
+  // explanation unreachable.
+  if (editable) {
+    details.push({
+      id: "secure-share",
+      label: LOCALE.SHARE,
+      icon: "ctxmenu-share",
+      service: "secure-share",
+    });
+  }
+
+  // The link flavour on top of that is area-dependent. `share` has none of
+  // its own — the Share row above already covers it.
+  if (editable) {
     switch (ui.mget(_a.area)) {
-      case _a.share:
-        details.push({
-          id: "secure-share",
-          label: LOCALE.SHARE,
-          icon: "ctxmenu-share",
-          service: "secure-share",
-        });
-        break;
       case _a.private:
         details.push({
           id: "designation-link",
@@ -264,7 +298,7 @@ module.exports.menu = function (ui) {
   details.push({ id: "info", label: LOCALE.GET_INFO, icon: "ctxmenu-info", service: "info" });
   sections.push(details);
 
-  if (onNode && media.canRemove && media.canRemove()) {
+  if (media && media.canRemove && media.canRemove()) {
     sections.push([
       {
         id: "trash",

@@ -19,10 +19,10 @@
  * Save and Print were a bespoke `KIND.menu.topic` dropdown next to the
  * title; they are now rows in the widget's gear menu.
  *
- * The old root carried `sys_pn: _a.topBar`, and no lexicon defines
- * `topBar` — so it resolved to `undefined` and the part was never named.
- * The widget emits the literal "topbar", which is what `setupInteract()`
- * keys on, so this header becomes a drag handle like every other player's.
+ * The old root carried `sys_pn: _a.topBar`, which resolves to the string
+ * "topBar" — NOT the "topbar" that `setupInteract()` keys on. The casing
+ * alone meant this header was never a drag handle; the widget emits the
+ * literal "topbar", so now it is, like every other player's.
  */
 
 const Topbar = require("builtins/player/widget/topbar");
