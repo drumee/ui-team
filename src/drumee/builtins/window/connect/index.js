@@ -211,22 +211,10 @@ class __window_connect extends __room {
   }
 
   // Header expand button (Figma CornersOut): native fullscreen on the window
-  // root. Same handler the meeting's resize menu uses — note this is distinct
-  // from `change_size`, which the screen-share path deliberately neuters.
-  _toggleWindowFullscreen() {
-    const doc = document;
-    if (doc.fullscreenElement || doc.webkitFullscreenElement) {
-      (doc.exitFullscreen || doc.webkitExitFullscreen || function () {}).call(doc);
-      return;
-    }
-    const el = this.el;
-    if (!el) return;
-    const req = el.requestFullscreen || el.webkitRequestFullscreen;
-    if (req) {
-      const p = req.call(el);
-      if (p && typeof p.catch === "function") p.catch(() => {});
-    }
-  }
+  // root — `_toggleWindowFullscreen`, shared with the meeting via
+  // builtins/webrtc/window-fullscreen (assigned at the bottom of this file).
+  // Note this is distinct from `change_size`, which the screen-share path
+  // deliberately neuters.
 
 
   /**
@@ -865,6 +853,10 @@ Object.assign(__window_connect.prototype, require("builtins/webrtc/reactions"));
 // Shared in-call screen-share behavior (own screen on stage, tile docking,
 // one-at-a-time lock, fullscreen). Meeting-only hooks it calls are optional.
 Object.assign(__window_connect.prototype, require("builtins/webrtc/screenshare"));
+// Shared window-level fullscreen (also used by window_meeting): snapshots the
+// window geometry on the way in and restores it on the way out, which a bare
+// requestFullscreen() cannot do — see the module header.
+Object.assign(__window_connect.prototype, require("builtins/webrtc/window-fullscreen"));
 
 // __window_connect.initClass();
 module.exports = __window_connect;

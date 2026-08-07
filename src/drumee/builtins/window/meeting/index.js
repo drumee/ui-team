@@ -858,22 +858,11 @@ class __window_meeting extends __room {
    * it's the same persisted conversation as the team window.
    */
   // Topbar expand button: toggle native fullscreen on the meeting window root
-  // so the whole call (stage + side panel) fills the screen. Exits if already
-  // fullscreen. Errors (e.g. gesture/permission) are swallowed — non-fatal.
-  _toggleWindowFullscreen() {
-    const doc = document;
-    if (doc.fullscreenElement || doc.webkitFullscreenElement) {
-      (doc.exitFullscreen || doc.webkitExitFullscreen || function () {}).call(doc);
-      return;
-    }
-    const el = this.el;
-    if (!el) return;
-    const req = el.requestFullscreen || el.webkitRequestFullscreen;
-    if (req) {
-      const p = req.call(el);
-      if (p && typeof p.catch === "function") p.catch(() => {});
-    }
-  }
+  // so the whole call (stage + side panel) fills the screen — via the shared
+  // `_toggleWindowFullscreen` in builtins/webrtc/window-fullscreen (assigned at
+  // the bottom of this file), which also restores the window's own geometry on
+  // exit. Exits if already fullscreen. Errors (gesture/permission) are
+  // swallowed — non-fatal.
 
   // Resize menu → Tile left/right: snap the standalone floating window to the
   // corresponding half of the window-manager content area (free windows are
@@ -902,6 +891,13 @@ class __window_meeting extends __room {
   }
 
   _exitNativeFullscreen() {
+    // Both callers (Tile left/right, Reframe) hand the window a NEW geometry
+    // right after this, so drop any restore queued by _toggleWindowFullscreen —
+    // otherwise it would animate the window back to its pre-fullscreen box a
+    // moment later and undo the size the user just picked.
+    if (typeof this._cancelWindowFullscreenRestore === "function") {
+      this._cancelWindowFullscreenRestore();
+    }
     const doc = document;
     if (doc.fullscreenElement || doc.webkitFullscreenElement) {
       (doc.exitFullscreen || doc.webkitExitFullscreen || function () {}).call(doc);
@@ -1676,6 +1672,11 @@ Object.assign(__window_meeting.prototype, require("builtins/webrtc/reactions"));
 // _clearFloatFocus / _uidForParticipant) stay defined below and are called
 // through optional guards, so meeting behavior is unchanged.
 Object.assign(__window_meeting.prototype, require("builtins/webrtc/screenshare"));
+// Shared window-level fullscreen (also used by window_connect): snapshots the
+// window geometry on the way in and restores it on the way out, which a bare
+// requestFullscreen() cannot do — see the module header. _exitNativeFullscreen
+// cancels that restore for the Tile/Reframe paths.
+Object.assign(__window_meeting.prototype, require("builtins/webrtc/window-fullscreen"));
 
 //__window_meeting.initClass();
 
