@@ -31,6 +31,11 @@ class __migrate_gdrive_popup extends LetcBox {
     this._hub_id = opt.hub_id || Visitor.id;
     this._nid = opt.nid || Visitor.get(_a.home_id);
     this._destinationName = opt.destinationName || LOCALE.MY_HOME || 'My home';
+    // direct=1 (folder-window launch): the import lands IN the destination
+    // folder itself — the user picked it by standing in it. Without it (the
+    // settings / Home / onboarding launches) the importer keeps its
+    // GoogleDriveMigration wrapper so loose files never scatter into a home.
+    this._direct = opt.direct ? 1 : 0;
     this._autoFromOnboarding = !!opt.autoFromOnboarding;
     this._state = 'checking';
     this._jobId = null;
@@ -531,6 +536,7 @@ class __migrate_gdrive_popup extends LetcBox {
       res = await this.postService('google_drive.start_migration', {
         hub_id: this._hub_id,
         nid: this._nid,
+        direct_into: this._direct,
         mode,
         source_folder_id,
         include_shared_drives,
@@ -716,6 +722,7 @@ class __migrate_gdrive_popup extends LetcBox {
       res = await this.postService('google_drive.start_migration', {
         hub_id: this._hub_id,
         nid: this._nid,
+        direct_into: this._direct,
         auth_kind: 'sa',
         sa_folder: this._saFolder.raw || this._saFolder.folder_id,
         conflict_policy: 'skip',
