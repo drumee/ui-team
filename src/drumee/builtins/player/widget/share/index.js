@@ -28,11 +28,15 @@ const { isSharedArea } = require("dmz/sharebox/area");
 const CN = "player-share-restricted";
 
 /**
- * The node's area.
+ * The node's area — `share`, `dmz`, `public`, `private`, `personal`, …
  *
- * `_a.area` is NOT defined in the lexicon — reading through it alone yields
- * undefined, which is why the literal key is the fallback here, exactly as
- * `mget(_a.area) || mget('area')` is used elsewhere in the tree.
+ * `_a` is a `createSafeObject` proxy: a key it does not define resolves to
+ * its own NAME, so `_a.area` is the string "area". Reading through it is
+ * therefore correct and the same as the literal; both are used here only
+ * because the fallback already appears elsewhere in the tree.
+ *
+ * The MFS view is asked first — it is the node, where the player is a view
+ * of it and may not carry the attribute.
  */
 function areaOf(ui) {
   const media = ui.media && !ui.media.isDestroyed() ? ui.media : null;

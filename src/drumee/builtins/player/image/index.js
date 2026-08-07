@@ -195,8 +195,8 @@ class __player_image extends __core {
           break;
       }
     }
-    // A real service string: `_e.settings` is undefined in the lexicon and
-    // only ever matched its case by `switch(undefined)` coincidence.
+    // "info" rather than `_e.settings`: this row is handled by the player
+    // itself now (widget/details), not forwarded to the MFS view.
     details.push({ id: 'info', label: LOCALE.GET_INFO, icon: 'ctxmenu-info', service: 'info' });
     sections.push(details);
 

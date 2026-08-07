@@ -16,8 +16,7 @@
  * topbar has to fight at every turn: it writes `overflow: hidden` inline
  * on its wrapper (clipping submenus away), routes any bubble from the
  * items subtree into a close, gsap-transforms the panel on open/close,
- * and gates hover behind an `opening` comparison against `_a.flyover` —
- * a key no lexicon defines, so that branch never reliably runs. A
+ * and drives hover through its own `opening: flyover` state machine. A
  * hover-only menu needs none of it, and one mechanism for both topbar
  * popovers is easier to reason about than two.
  *

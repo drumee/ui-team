@@ -1250,18 +1250,11 @@ class __player_document extends PlayerInteract {
       // "Get info" — open the node's own properties window, which is what
       // this row means everywhere else in the app.
       //
-      // Two traps here, which is why it calls the MFS view's methods
-      // directly instead of copying the image player's `case _e.settings`
-      // + `_delegate()`:
-      //
-      //   - `_e.settings` and `_a.link` are BOTH undefined in the lexicon,
-      //     so `case _e.settings` is `case undefined` — and `case _a.link`
-      //     already sits above it in this switch with an empty body. It
-      //     would win, and Get info would silently do nothing.
-      //   - falling through to the base is not an option either: its
-      //     `_showInfo()` reads `this.__wrapperInfo`, and this player's
-      //     skeleton has no `wrapper-info` part (its wrapper is `overlay`),
-      //     so it throws on an undefined part.
+      // It calls the MFS view's methods directly rather than routing a
+      // service, because falling through to the base is not an option: its
+      // `_showInfo()` reads `this.__wrapperInfo`, and this player's
+      // skeleton has no `wrapper-info` part (its wrapper is `overlay`), so
+      // it throws on an undefined part.
       case "info":
         return details.open(this);
 

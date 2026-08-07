@@ -17,8 +17,9 @@
  *     asynchronously, so there is no instance to capture at call time.
  *   - `source` never reaches it: the singleton branch of `launch` appends
  *     the raw arg and returns before the `opt.trigger = opt.source` line.
- *   - listening for the card's destruction is out too — `_e.destroy` and
- *     `_e.close` are both undefined in the lexicon.
+ *   - listening for the card's destruction is brittle too: it is a
+ *     singleton the WM reuses, so a handler bound at open time can outlive
+ *     or miss the instance actually on screen.
  *
  * So it is found afterwards by the `wm_unique_id` that
  * `media.openDetailsWindow()` assigns. `close` recomputes that id rather
