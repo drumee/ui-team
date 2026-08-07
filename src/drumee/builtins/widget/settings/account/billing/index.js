@@ -287,7 +287,13 @@ class settings_billing extends LetcBox {
   // still async-false, and clicking it during that window silently no-opped.
   _isPaidByQuota() {
     const plan = String(((Visitor.quota && Visitor.quota()) || {}).plan || "").toLowerCase();
-    return /^(team|business|sovereign|enterprise)$/.test(plan);
+    // `pro` belongs here — it is a paid tier. It was missing for the same
+    // reason the promo gate above was: the plan was revived on 2026-08-03,
+    // after this list was written. The skeleton's own fallback for this
+    // method already counted it (skeleton/index.js paidByQuota), so the two
+    // disagreed and a Pro subscriber's "Cancel plan" banner stayed inert for
+    // the round-trip this method exists to cover.
+    return /^(pro|team|business|sovereign|enterprise)$/.test(plan);
   }
 
   /**
@@ -1197,14 +1203,14 @@ class settings_billing extends LetcBox {
           || "Promo codes cannot be combined with a deferred billing-cycle switch.";
       case "COUPON_PLAN_UNSUPPORTED":
         return LOCALE.PROMO_CODE_PLAN
-          || "This promo code applies to Team or Business plans only.";
+          || "This promo code applies to paid plans only.";
       // Code is targeted at ONE plan and this is not it. Naming that plan
       // turns a dead end into an instruction — the user can switch to it.
       case "COUPON_PLAN_MISMATCH": {
         const scope = String(data && data.plan_scope || "").trim();
         if (!scope) {
           return LOCALE.PROMO_CODE_PLAN
-            || "This promo code does not apply to the selected plan.";
+            || "This promo code applies to paid plans only.";
         }
         const named = scope.charAt(0).toUpperCase() + scope.slice(1);
         return (LOCALE.PROMO_CODE_PLAN_ONLY
@@ -1255,10 +1261,20 @@ class settings_billing extends LetcBox {
       return;
     }
 
+    // Couponable plans, mirroring the server (payment.preview_coupon and
+    // payment.checkout both test /^(pro|team|business)$/). Pro was left out
+    // when it was revived on 2026-08-03: the server and the procs were
+    // updated for it, this gate was not, so an all-plans code typed on a Pro
+    // checkout was refused HERE and never reached preview_coupon.
+    //
+    // This list is about which plans can be BOUGHT with a code at all — the
+    // per-code targeting is plan_scope, and only the server may judge it
+    // (mkt_coupon_validate/reserve/redeem all enforce it). Answering
+    // COUPON_PLAN_MISMATCH locally would guess at data we do not hold.
     const plan = checkout.selectedPlan || "team";
-    if (!/^(team|business)$/.test(plan)) {
+    if (!/^(pro|team|business)$/.test(plan)) {
       checkout.promoError = LOCALE.PROMO_CODE_PLAN
-        || "This promo code applies to Team or Business plans only.";
+        || "This promo code applies to paid plans only.";
       this.updateRightPanel();
       return;
     }
