@@ -79,40 +79,16 @@ class __form_folder extends LetcBox {
   }
 
   /**
-   * Report a workspace this form just created, for the analytics Referral
-   * users table (Workspaces column + Activated badge).
-   *
-   * Fired from the form rather than from the server because this is the only
-   * place that knows which of the three types the user picked. `personal` is
-   * not a hub — it is the home-root folder created above — so nothing on the
-   * server side can tell it apart from any other folder afterwards.
-   *
-   * Never awaited and never checked. The callers open a permission panel or
-   * the Manage-access dock immediately after; waiting on an analytics row
-   * would trade a visible delay for a number on an admin dashboard. Guarded on
-   * the service existing so a UI running against an older server quietly does
-   * nothing, and wrapped so a rejected post can never surface as a form error.
+   * Report a workspace this form just created. See libs/track-workspace —
+   * the sharebox and team windows create hubs the same board counts, so the
+   * reporting lives in one place rather than three.
    *
    * @param {String} type "team" | "share" | "personal"
    * @param {Object} opt  { wid, area, filename }
    * @returns {Promise<Object|null>} the service's answer, or null
    */
   _trackWorkspace(type, opt = {}) {
-    if (typeof SERVICE === "undefined" || !SERVICE.desk || !SERVICE.desk.track_workspace) {
-      return Promise.resolve(null);
-    }
-    try {
-      return this.postService(SERVICE.desk.track_workspace, {
-        hub_id: Visitor.id,
-        wid: opt.wid,
-        type,
-        area: opt.area,
-        filename: opt.filename,
-      }).catch(() => null);
-    } catch (e) {
-      /* tracking must never break workspace creation */
-      return Promise.resolve(null);
-    }
+    return require("libs/track-workspace").trackWorkspace(this, type, opt);
   }
 
   _submit() {

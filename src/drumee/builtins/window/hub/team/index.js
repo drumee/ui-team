@@ -67,6 +67,19 @@ class __window_hub_team extends mfsInteract {
       hub_id: Visitor.id,
       pid: this.mget(_a.nid)
     }).then((data) => {
+      // A team hub is `area: private`, which the analytics Referral users
+      // table counts as a workspace — but this window bypasses the
+      // create-workspace form, so nothing reported it and the board only saw
+      // it when backfill_workspace_track was re-run by hand. Fire-and-forget,
+      // after creation succeeded.
+      const hub = _.isArray(data) ? data[0] : data;
+      if (hub && !hub.error) {
+        require("libs/track-workspace").trackWorkspace(this, "team", {
+          wid: hub.hub_id || hub.id,
+          area: hub.area || _a.private,
+          filename: this._data.name,
+        });
+      }
       this._checkCreation(data);
     }).catch((err) => {
       this.onServerError(err);
