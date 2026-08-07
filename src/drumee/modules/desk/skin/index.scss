@@ -124,7 +124,9 @@ html {
   // A headless workspace pane (full-screen window tab opened from the
   // sidebar) fills the desk body and carries its own window topbar. The
   // home-section topbar is only used on the home grid, so hide it while a
-  // workspace pane is open. Toggled in desk `_syncWorkspaceTopbar`.
+  // workspace pane is open — or while a folder window opened from the home
+  // grid is zoomed, which covers the same area. Toggled in desk
+  // `_syncWorkspaceTopbar`.
   &__topbar[data-headless="1"] {
     display: none;
   }

@@ -99,6 +99,9 @@ class desk_module extends LetcBox {
     this._openWorkspaces = new Set();
     this._onWorkspaceOpen = this._onWorkspaceOpen.bind(this);
     this._onWorkspaceClose = this._onWorkspaceClose.bind(this);
+    // A zoomed folder window claims the desk body the same way a sidebar
+    // workspace pane does — including the header row.
+    this._onFolderZoom = this._onFolderZoom.bind(this);
     this._bindFolderTabs();
 
     // [Reload] Persist desk UI (sidebar screen + workspace + floating
@@ -119,6 +122,7 @@ class desk_module extends LetcBox {
     Wm.$el.on("folder:close", this._onFolderClose);
     Wm.$el.on("workspace:open", this._onWorkspaceOpen);
     Wm.$el.on("workspace:close", this._onWorkspaceClose);
+    Wm.$el.on("folder:zoom", this._onFolderZoom);
     Wm.$el.on(_e.minimize, this._onWmMinimize);
     Wm.$el.on(_e.wake, this._onWmWake);
     this._folderTabsBound = true;
@@ -187,17 +191,39 @@ class desk_module extends LetcBox {
     }
   }
 
+  _onFolderZoom() {
+    this._syncWorkspaceTopbar();
+  }
+
+  /**
+   * Read live off the windows instead of a tracked Set: zoom state also flips
+   * on tile/reframe/destroy, and a stale entry would strand the header hidden.
+   * Minimized windows don't count — they're not on screen.
+   */
+  _hasZoomedFolder() {
+    for (const entry of this._openFolders.values()) {
+      const win = entry && entry.win;
+      if (!win || (win.isDestroyed && win.isDestroyed())) continue;
+      if (entry.minimized || win.mget(_a.minimize)) continue;
+      if (win.mget(_a.headless)) continue;
+      if (win._zoomed) return true;
+    }
+    return false;
+  }
+
   // The home-section topbar is only meaningful on the home grid. A headless
   // workspace pane fills the desk body and brings its own window topbar, so
   // hide the home topbar while any workspace pane is open and restore it once
-  // the last one closes (back to home). With more than one window open the
-  // bar comes back in strip-only mode (data-tabstrip): every non-active
-  // window is fully covered by the active one, so the tab strip is the only
-  // way to reach it — breadcrumb/actions stay hidden (the pane has its own).
+  // the last one closes (back to home). A zoomed folder window (the home-grid
+  // route opens a floating window, not a pane) fills the same area and gets
+  // the same treatment. With more than one window open the bar comes back in
+  // strip-only mode (data-tabstrip): every non-active window is fully covered
+  // by the active one, so the tab strip is the only way to reach it —
+  // breadcrumb/actions stay hidden (the pane has its own).
   _syncWorkspaceTopbar() {
     const part = this.getPart("top-bar");
     if (!part || !part.el) return;
-    if (this._openWorkspaces.size) {
+    if (this._openWorkspaces.size || this._hasZoomedFolder()) {
       part.el.dataset.headless = "1";
       if (this._openFolders.size > 1) {
         part.el.dataset.tabstrip = "1";
@@ -207,6 +233,14 @@ class desk_module extends LetcBox {
     } else {
       delete part.el.dataset.headless;
       delete part.el.dataset.tabstrip;
+    }
+    // Zoomed windows are inline-pixel geometry, so they must re-fit whenever
+    // the header resizes the container. Fire only on an actual change — this
+    // runs on every tab render.
+    const state = `${part.el.dataset.headless || ""}|${part.el.dataset.tabstrip || ""}`;
+    if (state !== this._topbarChromeState) {
+      this._topbarChromeState = state;
+      if (window.Wm && Wm.$el) Wm.$el.trigger("desk:chrome");
     }
   }
 
@@ -331,6 +365,7 @@ class desk_module extends LetcBox {
       Wm.$el.off("folder:close", this._onFolderClose);
       Wm.$el.off("workspace:open", this._onWorkspaceOpen);
       Wm.$el.off("workspace:close", this._onWorkspaceClose);
+      Wm.$el.off("folder:zoom", this._onFolderZoom);
       Wm.$el.off(_e.minimize, this._onWmMinimize);
       Wm.$el.off(_e.wake, this._onWmWake);
       this._folderTabsBound = false;

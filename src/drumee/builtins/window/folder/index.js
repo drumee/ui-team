@@ -91,20 +91,63 @@ class __window_folder extends mfsInteract {
     // which was captured before fullscreen entry.
     const preFsSafe = inFs ? this._preFsBounds : null;
 
-    let target;
+    let restore = null;
     if (this._zoomed && this._preZoomBounds) {
-      target = this._preZoomBounds;
+      restore = this._preZoomBounds;
       this._zoomed = false;
       this._preZoomBounds = null;
     } else {
       this._preZoomBounds = preFsSafe || this._snapshotBounds();
-      const ws = this._workspaceRect();
-      target = { left: 0, top: 0, width: ws.width, height: ws.height };
       this._zoomed = true;
     }
     // CSS hook: zoomed window shows the 6-per-row grid (folder skin).
     this.el.dataset.zoomed = this._zoomed ? 1 : 0;
+    // Must run BEFORE measuring: hiding the desk header grows the
+    // wm-container, and _workspaceRect() has to see the post-toggle height.
+    this._syncDeskChrome();
     // Defer the resize until after fullscreen actually exits (see helper).
+    this._applyBoundsAfterFs(restore || this._zoomTarget());
+  }
+
+  _zoomTarget() {
+    const ws = this._workspaceRect();
+    return { left: 0, top: 0, width: ws.width, height: ws.height };
+  }
+
+  /**
+   * A zoomed window owns the whole desk body, header included — the same deal
+   * a headless workspace pane gets from the sidebar. Desk listens on Wm.$el and
+   * re-runs _syncWorkspaceTopbar, which reads `_zoomed` back off every open
+   * folder window. Headless panes already hide the header via workspace:open.
+   */
+  _syncDeskChrome() {
+    if (this.mget(_a.headless)) return;
+    if (!window.Wm || !Wm.$el) return;
+    this._zoomSyncing = true;
+    Wm.$el.trigger("folder:zoom", this);
+    this._zoomSyncing = false;
+  }
+
+  /**
+   * The header can come back while this window is still zoomed — a second
+   * window flips the bar into strip-only mode — which shrinks the container
+   * under inline-pixel geometry. Skipped during _syncDeskChrome: toggleZoom
+   * applies the new bounds itself right after.
+   */
+  _onDeskChrome() {
+    if (this._zoomSyncing) return;
+    if (!this._zoomed || this.mget(_a.minimize)) return;
+    if (this.isDestroyed && this.isDestroyed()) return;
+    const target = this._zoomTarget();
+    const cur = this._snapshotBounds();
+    if (
+      cur.left === target.left &&
+      cur.top === target.top &&
+      cur.width === target.width &&
+      cur.height === target.height
+    ) {
+      return;
+    }
     this._applyBoundsAfterFs(target);
   }
 
@@ -168,6 +211,20 @@ class __window_folder extends mfsInteract {
     if (window.Wm && Wm.$el) Wm.$el.trigger(_e.wake, this);
   }
 
+  // macOS swaps the first menu row between "Enter"/"Exit Full Screen". The
+  // menu is built once with the topbar, so retitle the label in place.
+  _syncFullscreenLabel() {
+    const label = this.__zoomFsLabel;
+    if (!label || !_.isFunction(label.set)) return;
+    if (label.isDestroyed && label.isDestroyed()) return;
+    label.set({
+      content:
+        document.fullscreenElement === this.el
+          ? LOCALE.EXIT_FULLSCREEN
+          : LOCALE.ENTER_FULL_SCREEN,
+    });
+  }
+
   toggleFullscreen() {
     if (document.fullscreenElement === this.el) {
       document.exitFullscreen();
@@ -176,6 +233,7 @@ class __window_folder extends mfsInteract {
     this._preFsBounds = this._snapshotBounds();
     // One-shot listener handles both menu "Exit Full Screen" and ESC.
     const onChange = () => {
+      this._syncFullscreenLabel();
       if (document.fullscreenElement === this.el) return;
       document.removeEventListener("fullscreenchange", onChange);
       const restore = this._preFsBounds;
@@ -190,6 +248,11 @@ class __window_folder extends mfsInteract {
   }
 
   tileToSide(side) {
+    // Release the header before measuring — same ordering rule as toggleZoom.
+    this._zoomed = false;
+    this._preZoomBounds = null;
+    this.el.dataset.zoomed = 0;
+    this._syncDeskChrome();
     const ws = this._workspaceRect();
     const halfW = Math.floor(ws.width / 2);
     // Left gets the floored half, right gets the remainder, so an odd width
@@ -199,9 +262,6 @@ class __window_folder extends mfsInteract {
     const bounds = side === "right"
       ? { left: halfW, top: 0, width: rightW, height: ws.height }
       : { left: 0, top: 0, width: leftW, height: ws.height };
-    this._zoomed = false;
-    this._preZoomBounds = null;
-    this.el.dataset.zoomed = 0;
     // A half-tile is narrower than the normal window minimum (760) on any
     // workspace < 1520px wide; without this override _applyBounds would clamp
     // both tiles up to 760 and they would overlap. Pass the tile's own width
@@ -212,10 +272,11 @@ class __window_folder extends mfsInteract {
   }
 
   reframeToDefault() {
-    const b = this._defaultBounds();
     this._zoomed = false;
     this._preZoomBounds = null;
     this.el.dataset.zoomed = 0;
+    this._syncDeskChrome();
+    const b = this._defaultBounds();
     this._applyBoundsAfterFs({ left: b.left, top: b.top, width: b.width, height: b.height });
   }
 
@@ -425,6 +486,7 @@ class __window_folder extends mfsInteract {
     this._ftTeardown();
     this._unbindThreadMenuOutside();
     this._unbindViewportReframe();
+    this._unbindDeskChrome();
     if (!this.mget(_a.headless) && window.Wm && Wm.$el) {
       Wm.$el.trigger("folder:close", this);
     } else if (this.mget(_a.headless) && window.Wm && Wm.$el) {
@@ -483,6 +545,7 @@ class __window_folder extends mfsInteract {
     this.setupInteract();
     this.applyDefaultBounds();
     this._bindViewportReframe();
+    this._bindDeskChrome();
     if (!this._raised) this.raise();
     if (this.media && this.media.wait) this.media.wait(0);
     // Honor the launch-time `activeTab` option (e.g. opened from the,
@@ -591,6 +654,23 @@ class __window_folder extends mfsInteract {
     this._viewportReframeBound = false;
     clearTimeout(this._viewportReframeTimer);
     window.removeEventListener("resize", this._onViewportReframe);
+  }
+
+  // Only inline-geometry windows care — headless panes fill their layer via
+  // CSS and track the container already.
+  _bindDeskChrome() {
+    if (this._deskChromeBound) return;
+    if (this.mget(_a.headless)) return;
+    if (!window.Wm || !Wm.$el) return;
+    this._onDeskChrome = this._onDeskChrome.bind(this);
+    Wm.$el.on("desk:chrome", this._onDeskChrome);
+    this._deskChromeBound = true;
+  }
+
+  _unbindDeskChrome() {
+    if (!this._deskChromeBound) return;
+    this._deskChromeBound = false;
+    if (window.Wm && Wm.$el) Wm.$el.off("desk:chrome", this._onDeskChrome);
   }
 
   getChatScrollElement() {
@@ -873,6 +953,11 @@ class __window_folder extends mfsInteract {
   }
 
   onPartReady(child, pn) {
+    if (pn === "zoom-item-fullscreen") {
+      this.__zoomFsLabel = child;
+      this._syncFullscreenLabel();
+      return;
+    }
     if (pn === "folder-view") {
       this.__folderView = child;
       // Restore the user's persisted Files-tab split ratio (default 2:1).
