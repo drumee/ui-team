@@ -2,6 +2,7 @@
 const { fitBoxes } = require("@drumee/ui-essentials")
 const __core = require('player/interact');
 const snap = require('builtins/window/snap');
+const details = require('builtins/player/widget/details');
 const renameInline = require('builtins/player/widget/topbar/rename');
 
 // Gear-menu rows that act on the node rather than on the viewer. The MFS
@@ -178,8 +179,12 @@ class __player_video extends __core {
     }
     hls.loadSource(url);
     hls.attachMedia(video);
+    // Assigned on the INSTANCE, which shadows the prototype's
+    // `onBeforeDestroy` — so the Details card has to be closed from here
+    // too, or it is orphaned for any video that got as far as loading.
     this.onBeforeDestroy = () => {
       hls.stopLoad();
+      details.close(this);
     }
   }
 
@@ -365,6 +370,18 @@ class __player_video extends __core {
    * widget emits, and forwards the gear menu's file rows; anything else
    * still belongs to the base.
    */
+
+  /**
+   * Closes the Details card with the player. Note `loadPlayer` assigns an
+   * instance-level `onBeforeDestroy` that shadows this one, so it closes
+   * the card as well; this covers a player torn down before the video ever
+   * loaded.
+   */
+  onBeforeDestroy() {
+    details.close(this);
+    if (super.onBeforeDestroy) super.onBeforeDestroy();
+  }
+
   onUiEvent(cmd, args = {}) {
     const service = args.service || cmd.model.get(_a.service);
     switch (service) {
@@ -391,6 +408,11 @@ class __player_video extends __core {
       // this player, where nobody can see it.
       case 'direct-rename':
         return renameInline(this);
+
+      // Get info: the node's own properties card, docked under this
+      // player's header and closed with it (widget/details).
+      case 'info':
+        return details.open(this);
 
       default:
         if (DELEGATED_SERVICES.includes(service) && this._delegate(cmd)) return;

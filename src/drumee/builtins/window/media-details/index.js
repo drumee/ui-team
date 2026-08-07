@@ -48,22 +48,41 @@ class __window_media_details extends mfsInteract {
   }
 
   /**
+   * Cap the card to a box its opener supplies — a player passes its own
+   * window, so the card is always smaller than the player it belongs to.
+   * Re-fits immediately, since the width change alters how the rows wrap
+   * and therefore the height they need.
+   */
+  constrainTo(box) {
+    if (!box) return;
+    this._box = box;
+    if (box.width) {
+      this.size = { ...this.size, width: box.width };
+      this.style.set({ width: box.width });
+      this.$el.css({ width: box.width });
+    }
+    this._fitToContent();
+  }
+
+  /**
    * Shrink the window to the height its rows actually need.
    *
    * The skin lets `__container` size to content, so its `scrollHeight` is
-   * the natural height. Clamped to 80% of the viewport so a long location
-   * path cannot produce a window taller than the screen; the body scrolls
-   * past that point.
+   * the natural height. Clamped to the opener's box when there is one, and
+   * to 80% of the viewport otherwise, so a long location path cannot
+   * produce a window taller than its parent or the screen; the body
+   * scrolls past that point.
    */
   _fitToContent() {
     const box = this.el && this.el.querySelector(`.${this.fig.family}__container`);
     if (!box) return;
     const natural = box.scrollHeight;
     if (!natural) return;
-    const height = Math.max(
-      SIZE.minHeight,
-      Math.min(natural, Math.round(window.innerHeight * 0.8)),
+    const ceiling = Math.min(
+      Math.round(window.innerHeight * 0.8),
+      (this._box && this._box.maxHeight) || Infinity,
     );
+    const height = Math.max(SIZE.minHeight, Math.min(natural, ceiling));
     this.size = { ...this.size, height };
     this.style.set({ height });
     this.$el.css({ height });
