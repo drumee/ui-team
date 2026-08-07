@@ -2394,7 +2394,7 @@
   "PROMO_CODE_EMAIL_USED": "This email has already used a partner promo code.",
   "PROMO_CODE_ACTIVE_SUB": "Promo codes apply to new paid subscriptions only.",
   "PROMO_CODE_WITH_DEFER": "Promo codes cannot be combined with a deferred billing-cycle switch.",
-  "PROMO_CODE_PLAN": "This promo code applies to Team or Business plans only.",
+  "PROMO_CODE_PLAN": "Этот промокод действует только для платных тарифов.",
   "PROMO_CODE_PLAN_ONLY": "Этот промокод действует только для тарифа {0}.",
   "PROMO_CODE_FAILED": "Could not apply this promo code. Please try again.",
   "PROMO_CODE_APPLIED": "Код {0} применён",
