@@ -477,7 +477,7 @@ class settings_billing extends LetcBox {
     // a click that beats it (the _paidPlanSync early-click path) falls back
     // to the cached quota so the popup ranks upgrade/downgrade correctly.
     const current = this.currentPlanName
-      || String((Visitor.quota?.() || {}).plan || "").toLowerCase();
+      || String(Visitor.quota?.()?.plan || "").toLowerCase();
     const currentRaw = String(sub.plan || "") || current;
     const currentPeriod = /^year/.test(String(sub.period || "")) ? "year" : "month";
     const period = /^(month|year)$/.test(targetPeriod || "") ? targetPeriod : this._selectedCycle();
