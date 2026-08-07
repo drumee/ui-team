@@ -443,6 +443,89 @@ const make = function (ui) {
       // sync with the single source of truth instead of duplicating hex values.
       styleOpt: { "--col-accent": col.color },
       kids: [
+        // Header + column menu sit OUTSIDE __column-body (the scroller), so the
+        // title / count / actions stay pinned while the cards scroll under them.
+        Skeletons.Box.X({
+          className: `${pfx}__column-header`,
+          // Custom columns are drag-reorderable by their header (built-ins
+          // stay pinned). data-coldrag marks the drag source for _installDnd.
+          attrOpt: col.custom
+            ? { draggable: "true", "data-coldrag": col.key }
+            : undefined,
+          kids: [
+            Skeletons.Box.X({
+              className: `${pfx}__column-title-group`,
+              kids: [
+                Skeletons.Box.X({
+                  className: `${pfx}__column-title-dot-group`,
+                  kids: [
+                    Skeletons.Element({
+                      tagName: "span",
+                      className: `${pfx}__column-dot`,
+                      styleOpt: { background: col.color },
+                    }),
+                    Skeletons.Note({
+                      className: `${pfx}__column-title`,
+                      content: col.name || LOCALE[col.label] || col.key,
+                    }),
+                  ],
+                }),
+                Skeletons.Box.X({
+                  className: `${pfx}__column-count`,
+                  kids: [
+                    Skeletons.Note({
+                      className: `${pfx}__column-count-text`,
+                      content: String((state[col.key] || []).length),
+                    }),
+                  ],
+                }),
+              ],
+            }),
+            // Right-side actions: notification bell (all columns) + the
+            // custom-column "⋯" editor popover (custom columns only).
+            Skeletons.Box.X({
+              className: `${pfx}__col-actions`,
+              kids: [
+                // Bell toggle — off by default; on = notify me of any task
+                // change in this column (Figma 2041-20161).
+                Skeletons.Button.Svg({
+                  className: `${pfx}__col-bell`,
+                  ico: "bell",
+                  bubble: 0,
+                  service: "col-watch-toggle",
+                  uiHandler: [ui],
+                  taskColumn: col.key,
+                  tooltips: { content: LOCALE.NOTIFY_COLUMN, className: `${pfx}__tip` },
+                  attrOpt: {
+                    "data-active": ui.isColumnWatched(col.key) ? "1" : "0",
+                  },
+                }),
+                // The "⋮" popover renames and deletes the column
+                // (task.column_update / column_delete, both `src: write`),
+                // so a view or chat member could open it and type a new name
+                // that silently never persisted. Same right as creating a
+                // task; hiding the trigger closes the popover too, since it
+                // only renders while getColMenuFor() matches.
+                col.custom && mayCreateTask(ui)
+                  ? Skeletons.Note({
+                      className: `${pfx}__col-menu-btn`,
+                      content: "⋮",
+                      bubble: 0,
+                      service: "col-menu",
+                      uiHandler: [ui],
+                      taskColumn: col.key,
+                    })
+                  : null,
+              ].filter(Boolean),
+            }),
+          ].filter(Boolean),
+        }),
+        // Belt: the trigger above is already hidden, but a stale
+        // getColMenuFor() (set before a live role change) must not leave the
+        // rename popover mounted.
+        col.custom && mayCreateTask(ui) && ui.getColMenuFor() === col.key
+          ? columnMenu(col)
+          : null,
         Skeletons.Box.Y({
           className: `${pfx}__column-body`,
           // single-word lowercase key — `dataset.dropcol` works on the DOM
@@ -451,87 +534,6 @@ const make = function (ui) {
           // hyphen-aware mapping which a single token can't satisfy.)
           dataset: { dropcol: col.key },
           kids: [
-            Skeletons.Box.X({
-              className: `${pfx}__column-header`,
-              // Custom columns are drag-reorderable by their header (built-ins
-              // stay pinned). data-coldrag marks the drag source for _installDnd.
-              attrOpt: col.custom
-                ? { draggable: "true", "data-coldrag": col.key }
-                : undefined,
-              kids: [
-                Skeletons.Box.X({
-                  className: `${pfx}__column-title-group`,
-                  kids: [
-                    Skeletons.Box.X({
-                      className: `${pfx}__column-title-dot-group`,
-                      kids: [
-                        Skeletons.Element({
-                          tagName: "span",
-                          className: `${pfx}__column-dot`,
-                          styleOpt: { background: col.color },
-                        }),
-                        Skeletons.Note({
-                          className: `${pfx}__column-title`,
-                          content: col.name || LOCALE[col.label] || col.key,
-                        }),
-                      ],
-                    }),
-                    Skeletons.Box.X({
-                      className: `${pfx}__column-count`,
-                      kids: [
-                        Skeletons.Note({
-                          className: `${pfx}__column-count-text`,
-                          content: String((state[col.key] || []).length),
-                        }),
-                      ],
-                    }),
-                  ],
-                }),
-                // Right-side actions: notification bell (all columns) + the
-                // custom-column "⋯" editor popover (custom columns only).
-                Skeletons.Box.X({
-                  className: `${pfx}__col-actions`,
-                  kids: [
-                    // Bell toggle — off by default; on = notify me of any task
-                    // change in this column (Figma 2041-20161).
-                    Skeletons.Button.Svg({
-                      className: `${pfx}__col-bell`,
-                      ico: "bell",
-                      bubble: 0,
-                      service: "col-watch-toggle",
-                      uiHandler: [ui],
-                      taskColumn: col.key,
-                      tooltips: { content: LOCALE.NOTIFY_COLUMN, className: `${pfx}__tip` },
-                      attrOpt: {
-                        "data-active": ui.isColumnWatched(col.key) ? "1" : "0",
-                      },
-                    }),
-                    // The "⋮" popover renames and deletes the column
-                    // (task.column_update / column_delete, both `src: write`),
-                    // so a view or chat member could open it and type a new name
-                    // that silently never persisted. Same right as creating a
-                    // task; hiding the trigger closes the popover too, since it
-                    // only renders while getColMenuFor() matches.
-                    col.custom && mayCreateTask(ui)
-                      ? Skeletons.Note({
-                          className: `${pfx}__col-menu-btn`,
-                          content: "⋮",
-                          bubble: 0,
-                          service: "col-menu",
-                          uiHandler: [ui],
-                          taskColumn: col.key,
-                        })
-                      : null,
-                  ].filter(Boolean),
-                }),
-              ].filter(Boolean),
-            }),
-            // Belt: the trigger above is already hidden, but a stale
-            // getColMenuFor() (set before a live role change) must not leave the
-            // rename popover mounted.
-            col.custom && mayCreateTask(ui) && ui.getColMenuFor() === col.key
-              ? columnMenu(col)
-              : null,
             ...(state[col.key] || []).map((t) => taskCard(col.key, t)),
             // Empty-state drop hint. Keeps an empty column an obvious, valid
             // drop target. The surgical drag handler (_syncColumn) adds/removes
@@ -545,7 +547,7 @@ const make = function (ui) {
           ].filter(Boolean),
         }),
         addButton(col.key),
-      ],
+      ].filter(Boolean),
     });
 
   // Columns are added via the "New board" modal (add-board), launched from the
@@ -1770,13 +1772,8 @@ const make = function (ui) {
           kids: [
             Skeletons.Image.Svg({ ico: c.ico, className: `${pfx}__filter-cat-ico` }),
             Skeletons.Note({ className: `${pfx}__filter-cat-label`, content: c.label }),
-            Skeletons.Box.X({
-              className: `${pfx}__filter-check`,
-              attrOpt: { "data-active": ui.isFilterDimActive(c.dim) ? "1" : "0" },
-              kids: [
-                Skeletons.Note({ className: `${pfx}__filter-check-mark`, content: "✓" }),
-              ],
-            }),
+            // No checkbox on the parent row — a category isn't itself selectable;
+            // only its value rows are. The head keeps data-active for styling.
             Skeletons.Note({ className: `${pfx}__filter-cat-chev`, content: "›" }),
           ],
         }),

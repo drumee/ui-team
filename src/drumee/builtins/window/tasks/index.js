@@ -236,8 +236,9 @@ class __tasks_panel extends LetcBox {
     );
   }
 
-  // Which filter dimensions currently hold a value (drives the accordion
-  // row's "active" tick). Assignee reads the shared member filter.
+  // Which filter dimensions currently hold a value. Drives `data-active` on the
+  // accordion head, which the skin renders as a brand tint — the parent rows
+  // carry no checkbox. Assignee reads the shared member filter.
   isFilterDimActive(dim) {
     const f = this._filters || {};
     switch (dim) {
@@ -509,7 +510,13 @@ class __tasks_panel extends LetcBox {
     const findColumn = (target) => {
       if (!target || !target.closest) target = target && target.parentElement;
       if (!target || !target.closest) return null;
-      const n = target.closest("[data-dropcol]");
+      let n = target.closest("[data-dropcol]");
+      // The header / add-button sit outside the scroller, so a pointer over
+      // them isn't inside [data-dropcol] — resolve via the column root.
+      if (!n) {
+        const colEl = target.closest(".tasks-panel__column");
+        n = colEl && colEl.querySelector("[data-dropcol]");
+      }
       return n && root.contains(n) ? n : null;
     };
 
@@ -655,9 +662,13 @@ class __tasks_panel extends LetcBox {
       }
       const col = findColumn(e.target);
       // Only clear the highlight when the pointer actually leaves the column
-      // body (relatedTarget outside it) — child→child transitions also fire
+      // (relatedTarget outside it) — child→child transitions also fire
       // dragleave and would otherwise strobe the outline + placeholder.
-      if (col && !col.contains(e.relatedTarget)) {
+      // Scope the containment test to the whole column, not just the scroller:
+      // the header and add-button are SIBLINGS of the body, so a card→header
+      // move would otherwise read as a leave and flicker the outline.
+      const scope = (col && col.closest(".tasks-panel__column")) || col;
+      if (col && scope && !scope.contains(e.relatedTarget)) {
         col.classList.remove("is-drop-target");
         if (this._dropTargetEl === col) this._dropTargetEl = null;
       }
@@ -1049,7 +1060,10 @@ class __tasks_panel extends LetcBox {
   _syncColumn(colBody) {
     if (!colBody) return;
     const count = colBody.querySelectorAll(".tasks-panel__task-card").length;
-    const countEl = colBody.querySelector(".tasks-panel__column-count-text");
+    // The count badge lives in the pinned header, which is a SIBLING of the
+    // scroller — look it up from the column root, not from colBody.
+    const colEl = colBody.closest(".tasks-panel__column") || colBody;
+    const countEl = colEl.querySelector(".tasks-panel__column-count-text");
     if (countEl) countEl.textContent = String(count);
     let empty = colBody.querySelector(".tasks-panel__column-empty");
     if (count === 0 && !empty) {

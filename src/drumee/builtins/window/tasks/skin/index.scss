@@ -213,14 +213,6 @@
   &__member-row[data-active="1"] &__filter-check-mark {
     opacity: 1;
   }
-  // The category-head flag drives its own checkbox off data-active on the box.
-  &__filter-check[data-active="1"] {
-    background: var(--col-primary-50, #433cc5);
-    border-color: var(--col-primary-50, #433cc5);
-  }
-  &__filter-check[data-active="1"] &__filter-check-mark {
-    opacity: 1;
-  }
 
   // ── Multi-dimension filter popup, shared by every view (Figma 2099-50501) ──
   &__filter-picker--list {
@@ -283,11 +275,24 @@
   &__filter-cat-chev {
     flex: 0 0 auto;
     color: var(--normal-fg-40, #84848c);
-    transition: transform 0.15s;
+    transition: transform 0.15s, color 0.12s;
     transform: rotate(0deg);
   }
   &__filter-cat[data-open="1"] &__filter-cat-chev {
     transform: rotate(90deg);
+  }
+
+  // A category holding an active value tints brand — the parent rows have no
+  // checkbox, so this is what tells you which dimensions are filtering while
+  // every category is collapsed. `data-active` comes from isFilterDimActive().
+  // font-weight is set explicitly: drumee.typo()'s $weight is a no-op.
+  &__filter-cat-head[data-active="1"] &__filter-cat-label {
+    font-weight: 600;
+    color: var(--col-primary-40, #5950ff);
+  }
+  &__filter-cat-head[data-active="1"] &__filter-cat-ico,
+  &__filter-cat-head[data-active="1"] &__filter-cat-chev {
+    color: var(--col-primary-40, #5950ff);
   }
 
   // Collapsed by default; max-height (not display) so it works regardless of
@@ -474,11 +479,13 @@
     }
   }
 
+  // Pinned column title bar. It is a direct child of __column (a sibling of the
+  // __column-body scroller), so it stays put while the cards scroll.
   &__column-header {
     align-items: center;
     justify-content: space-between;
     width: 100%;
-    flex-shrink: 0;
+    flex: 0 0 auto;
     margin-bottom: 4px;
 
     // Custom columns are drag-reorderable by their header.
@@ -961,6 +968,8 @@
   }
 
   &__col-menu {
+    // Sits between the pinned header and the scroller — keep its natural height.
+    flex: 0 0 auto;
     gap: 12px;
     padding: 12px;
     box-sizing: border-box;
