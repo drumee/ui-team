@@ -31,8 +31,16 @@ class __window_media_details extends mfsInteract {
     this.declareHandlers();
   }
 
-  /** Centre on the viewport, never off the top-left edge. */
+  /**
+   * Centre on the viewport, never off the top-left edge.
+   *
+   * Skipped once an opener has placed this card itself — the document
+   * player parks it under its header (`_placeDetails`) and sets the flag.
+   * Without this, the re-centre at the end of `_fitToContent` would run on
+   * a later frame and drag the card back to the middle of the screen.
+   */
   _center() {
+    if (this._anchored) return;
     this.style.set({
       left: Math.max(0, Math.round((window.innerWidth - this.size.width) / 2)),
       top: Math.max(0, Math.round((window.innerHeight - this.size.height) / 2)),

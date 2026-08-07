@@ -107,6 +107,9 @@ class __player_document extends PlayerInteract {
    * 
    */
   onBeforeDestroy() {
+    // The Details card is a separate WM window, so closing the player would
+    // otherwise leave it orphaned over the desk.
+    this._closeDetails();
     if (this.loader && _.isFunction(this.loader.isDestroyed)) {
       this.loader.destroy();
       this.loader = null;
@@ -587,6 +590,79 @@ class __player_document extends PlayerInteract {
   /**
    * 
    */
+  /**
+   * Take ownership of the Details card this player just opened: park it
+   * under the header, and close it when the player closes.
+   *
+   * `Wm.launch` returns a boolean and appends to its pool asynchronously,
+   * so there is no handle to capture — the window is found afterwards by
+   * the `wm_unique_id` that `openDetailsWindow` assigns. `source` is not
+   * an option either: the singleton branch of `launch` appends the raw arg
+   * and never reaches the `opt.trigger = opt.source` line.
+   *
+   * Retries for a few frames while the pool appends, then gives up quietly
+   * — the card simply keeps its own centred placement.
+   */
+  _adoptDetails(media, tries = 30) {
+    const nid = media.mget(_a.nid);
+    if (!nid) return;
+    const id = `window_media_details-${nid}`;
+    const card = Wm.getItemsByAttr('wm_unique_id', id)[0];
+    if (!card || card.isDestroyed()) {
+      if (tries > 0) {
+        requestAnimationFrame(() => this._adoptDetails(media, tries - 1));
+      }
+      return;
+    }
+    this._detailsId = id;
+    this._placeDetails(card);
+  }
+
+  /** Park the card just under this player's header, clamped on screen. */
+  _placeDetails(card) {
+    const header =
+      this.el.querySelector(`.${this.fig.group}__header.main`) ||
+      this.el.querySelector(`.${this.fig.group}__header`);
+    const box = (header || this.el).getBoundingClientRect();
+    if (!box.width) return;
+
+    // Stops the card re-centring itself after it measures its own height;
+    // see `_center` in window/media-details.
+    card._anchored = 1;
+
+    const width = (card.size && card.size.width) || card.$el.outerWidth() || 420;
+    const height = (card.size && card.size.height) || card.$el.outerHeight() || 0;
+
+    const left = Math.max(
+      0,
+      Math.min(
+        Math.round(box.left + (box.width - width) / 2),
+        Math.max(0, window.innerWidth - width),
+      ),
+    );
+    const top = Math.max(
+      0,
+      Math.min(
+        Math.round(box.bottom + 8),
+        Math.max(0, window.innerHeight - height),
+      ),
+    );
+
+    card.style.set({ left, top });
+    card.$el.css({ left, top });
+  }
+
+  /** Close the Details card this player opened, if it is still up. */
+  _closeDetails() {
+    const id = this._detailsId;
+    this._detailsId = null;
+    if (!id) return;
+    const card = Wm.getItemsByAttr('wm_unique_id', id)[0];
+    if (card && !card.isDestroyed() && _.isFunction(card.goodbye)) {
+      card.goodbye();
+    }
+  }
+
   /**
    * Forward a gear-menu row this player doesn't own to the source MFS view,
    * which implements the whole file-action vocabulary already. Returns false
@@ -1260,8 +1336,9 @@ class __player_document extends PlayerInteract {
         const media = this.media;
         if (!media || media.isDestroyed()) return;
         if (media.isHubOrFolder) return media.openInfoWindow();
-        if (_.isFunction(media.openDetailsWindow)) return media.openDetailsWindow();
-        return;
+        if (!_.isFunction(media.openDetailsWindow)) return;
+        media.openDetailsWindow();
+        return this._adoptDetails(media);
       }
 
       // Move & Resize presets, from the shared topbar widget. Same snap
