@@ -1,0 +1,115 @@
+@use "mixins/drumee";
+
+// "External File Sharing" modal — Figma 3268:28098, shown when Share is
+// used on a file that is not in an external workspace.
+//
+//   overlay      rgba(255,255,255,.3) + 30px blur   (3264:25771)
+//   card         520px, white, radius 12px, 48px padding
+//   badge        72px circle, rgba(89,80,255,.1)  -> --primary-40 @ 10%
+//   title        Geist SemiBold 32 / 1.1          -> --normal-fg-10
+//   body         Geist Regular 18 / 1.4
+//   button       --primary-50 (#433cc5), radius 4px, 16px/24px padding
+.player-share-restricted {
+  inset: 0;
+  position: fixed;
+  // Above the window manager, which raises players into the high tens of
+  // thousands (see `.player__ui[data-state="1"]`).
+  z-index: 100000;
+
+  &__backdrop {
+    backdrop-filter: blur(30px);
+    background-color: rgba(255, 255, 255, 0.3);
+    inset: 0;
+    position: absolute;
+  }
+
+  &__modal {
+    align-items: center;
+    background-color: var(--normal-bg, #fff);
+    border-radius: var(--corner-radius-4, 12px);
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    gap: 32px;
+    left: 50%;
+    max-width: calc(100vw - 32px);
+    padding: 48px;
+    position: absolute;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    width: 520px;
+    box-shadow:
+      0 7px 10px rgba(0, 0, 0, 0.09),
+      0 40px 80px rgba(0, 0, 0, 0.3);
+  }
+
+  &__badge {
+    align-items: center;
+    background-color: rgba(89, 80, 255, 0.1);
+    border-radius: 100px;
+    display: flex;
+    flex-shrink: 0;
+    height: 72px;
+    justify-content: center;
+    width: 72px;
+  }
+
+  &__badge-icon {
+    color: var(--primary-50, #433cc5);
+    height: 28px;
+    width: 28px;
+  }
+
+  &__heading {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    width: 100%;
+  }
+
+  &__title {
+    margin: 0;
+    text-align: center;
+    @include drumee.typo($size: 32px, $line: 1.1, $color: var(--normal-fg-10));
+    // drumee.typo() maps only 300/400/500/700 onto a family and emits no
+    // `font-weight`, so 600 has to be set directly (same as the topbar).
+    font-weight: 600;
+  }
+
+  &__body {
+    margin: 0;
+    text-align: center;
+    @include drumee.typo($size: 18px, $line: 1.4, $color: var(--normal-fg-10));
+  }
+
+  &__cta {
+    background-color: var(--primary-50, #433cc5);
+    border: none;
+    border-radius: var(--corner-radius-1, 4px);
+    color: var(--white, #fff);
+    cursor: pointer;
+    padding: 16px 24px;
+    width: 100%;
+    @include drumee.typo($size: 16px, $line: 24px, $color: var(--white, #fff));
+    font-weight: 600;
+
+    &:hover {
+      background-color: var(--primary-40, #5950ff);
+    }
+  }
+}
+
+@media (max-width: 650px) {
+  .player-share-restricted__modal {
+    gap: 24px;
+    padding: 32px 24px;
+  }
+
+  .player-share-restricted__title {
+    font-size: 24px;
+  }
+
+  .player-share-restricted__body {
+    font-size: 16px;
+  }
+}

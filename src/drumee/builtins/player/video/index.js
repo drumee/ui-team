@@ -3,6 +3,7 @@ const { fitBoxes } = require("@drumee/ui-essentials")
 const __core = require('player/interact');
 const snap = require('builtins/window/snap');
 const details = require('builtins/player/widget/details');
+const share = require('builtins/player/widget/share');
 const renameInline = require('builtins/player/widget/topbar/rename');
 
 // Gear-menu rows that act on the node rather than on the viewer. The MFS
@@ -408,6 +409,11 @@ class __player_video extends __core {
       // this player, where nobody can see it.
       case 'direct-rename':
         return renameInline(this);
+
+      // Share: only an external workspace can share a file out; from an
+      // internal one the user is shown what to do instead.
+      case 'secure-share':
+        return share.click(this, cmd);
 
       // Get info: the node's own properties card, docked under this
       // player's header and closed with it (widget/details).
