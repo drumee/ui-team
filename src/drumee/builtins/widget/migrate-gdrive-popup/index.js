@@ -784,7 +784,16 @@ class __migrate_gdrive_popup extends LetcBox {
       this.postService('google_drive.ack_result', { hub_id: Visitor.id, job_id: this._jobId })
         .catch(() => {});
     }
-    if (this.parent && _.isFunction(this.parent.clear)) this.parent.clear();
+    // parent.clear() is only right when the parent is a single-widget modal
+    // host (clearing resets its data-state — the stuck-overlay rule). Under
+    // Wm.launch the parent is the shared windowsLayer: clear() there wipes
+    // EVERY open window — closing this popup after a folder-window import
+    // took the folder window down with it (reported live). When we share the
+    // parent with anyone else, remove only ourselves.
+    const p = this.parent;
+    const soleChild = !!(p && p.children && p.children.length === 1);
+    if (soleChild && _.isFunction(p.clear)) p.clear();
+    else if (_.isFunction(this.goodbye)) this.goodbye();
     else this.softDestroy();
   }
 
