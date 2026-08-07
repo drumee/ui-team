@@ -1,137 +1,103 @@
-// Access table of the v2 sharing panel — one row per LINK.
+// Per-access-event table for the v2 "View access list" (Figma 2.2.3):
+// avatar · Email · Access Time · Duration · ⊖. Fed by
+// SERVICE.secure_share.list_access_events — one row per visit, so the same
+// person appears once per open.
 //
-// It used to be one row per access EVENT: the same person appeared once per
-// visit, anonymous hits showed as unactionable "Public" rows, and the ⊖ on a row
-// revoked the whole LINK that visit came through — which other rows were often
-// sharing. Acting on one row silently cut other people while the row itself
-// stayed on screen, so a revoke that had in fact worked read as a no-op.
-//
-// A link is what the sender creates and what revoking acts on, so the link is
-// the row, with its visits counted in the Opens column. Links nobody has opened
-// are listed too — with the event list they had no row at all, so once the
-// shared-links section was hidden they could not be revoked from anywhere.
-//
-// Who opened a given link (and revoking one of them individually) belongs to the
-// per-link popup, which the server already backs via secure_share.revoke_email.
+// This is the ORIGINAL email-keyed log, restored on Lexis's request. It briefly
+// carried one row per LINK instead (Shared with / Last opened / Opens), which
+// matched what revoking actually does — see the archive memory for why that was
+// built and how to bring it back; the SCSS for both layouts is still in skin/.
 
-// Who a link admits, from the v2 allowed_emails array; legacy rows fall back to
-// recipient_email. A "@domain" entry admits anyone at that domain.
+// The Action column is hidden for now: Lexis is redesigning where the revoke
+// affordance lives. The column is kept behind this flag — with its header cell,
+// so header and rows can never disagree on the column count — and the ⊖ is wired
+// to the panel's live revoke path, so flipping this to `true` restores a working
+// button rather than a dead one.
 //
-// A link that requires an email WITHOUT an allow-list ("require email to view",
-// any address) has an empty allowed_emails — exactly like a genuinely public
-// link — so it used to fall through and read "Public link" even after someone
-// had identified themselves. `opens` carries the visits, whose recipient_email
-// is the address the viewer actually typed, so such a link is labelled with its
-// real audience instead.
-//
-// The openers are used ONLY when the link requires an email. On a public link a
-// signed-in viewer is also recorded with their account address (dmz.js falls
-// back to it), and showing that would wrongly present an open link as belonging
-// to one person.
-const __linkLabel = function(row, opens) {
-  let emails = null;
-  try {
-    emails = row.allowed_emails
-      ? (typeof row.allowed_emails === 'string' ? JSON.parse(row.allowed_emails) : row.allowed_emails)
-      : null;
-  } catch (e) {
-    emails = null;
-  }
-  if (Array.isArray(emails) && emails.length) {
-    const pretty = emails
-      .map(e => String(e || '').trim())
-      .filter(Boolean)
-      .map(e => e.startsWith('@') ? `${LOCALE.SECURE_SHARE_ANYONE_AT} ${e}` : e);
-    if (!pretty.length)      return LOCALE.SECURE_SHARE_PUBLIC_LINK;
-    if (pretty.length === 1) return pretty[0];
-    return `${pretty[0]} +${pretty.length - 1}`;
-  }
-  if (row.recipient_email) return row.recipient_email;
-  if (row.require_email) {
-    // Deduplicate: the same person re-opening produces several visits.
-    const seen = [];
-    (Array.isArray(opens) ? opens : []).forEach((o) => {
-      const e = String((o && o.recipient_email) || '').trim();
-      if (e && seen.indexOf(e) === -1) seen.push(e);
-    });
-    if (seen.length === 1) return seen[0];
-    if (seen.length > 1)   return `${seen[0]} +${seen.length - 1}`;
-    // Nobody has identified themselves yet — say what the link admits.
-    return LOCALE.SECURE_SHARE_ANY_EMAIL;
-  }
-  return LOCALE.SECURE_SHARE_PUBLIC_LINK;
+// While it is false a created link can only be revoked from the Get-link result
+// row, in the same session (the SHARED LINKS section stays hidden too). That is a
+// deliberate product decision, not an oversight.
+const SHOW_REVOKE_COLUMN = false;
+
+// Compact "2h 10m" / "45m" / "30s" duration from a second count (matches Figma).
+const __fmtDuration = function(secs) {
+  secs = Math.max(0, parseInt(secs, 10) || 0);
+  const h = Math.floor(secs / 3600);
+  const m = Math.floor((secs % 3600) / 60);
+  if (h && m) return `${h}h ${m}m`;
+  if (h)      return `${h}h`;
+  if (m)      return `${m}m`;
+  return `${secs}s`;
 };
 
-const __skl_secure_share_access_events = function(_ui_, links, eventsByToken) {
+const __skl_secure_share_access_events = function(_ui_, rows) {
   const pfx = _ui_.fig.family;
 
   const header = Skeletons.Box.X({
     className : `${pfx}__events-cols`,
     kids      : [
-      Skeletons.Note({ className: `${pfx}__events-col col-email`,    content: LOCALE.SECURE_SHARE_COL_SHARED_WITH }),
-      Skeletons.Note({ className: `${pfx}__events-col col-time`,     content: LOCALE.SECURE_SHARE_COL_LAST_OPENED }),
-      Skeletons.Note({ className: `${pfx}__events-col col-duration`, content: LOCALE.SECURE_SHARE_COL_OPENS }),
-      Skeletons.Note({ className: `${pfx}__events-col col-action`,   content: LOCALE.SECURE_SHARE_COL_ACTION }),
+      Skeletons.Note({ className: `${pfx}__events-col col-email`,    content: LOCALE.EMAIL }),
+      Skeletons.Note({ className: `${pfx}__events-col col-time`,     content: LOCALE.SECURE_SHARE_COL_ACCESS_TIME }),
+      Skeletons.Note({ className: `${pfx}__events-col col-duration`, content: LOCALE.SECURE_SHARE_COL_DURATION }),
+      ...(SHOW_REVOKE_COLUMN
+        ? [Skeletons.Note({ className: `${pfx}__events-col col-action`, content: LOCALE.SECURE_SHARE_COL_ACTION })]
+        : []),
     ]
   });
 
-  if (!Array.isArray(links) || !links.length) {
+  // Public shares are excluded server-side by secure_share_list_access_events
+  // (it returns events only for gated tokens, plus IDENTIFIED opens of a public
+  // link), so every row here is a real secure-share access — render them all, no
+  // client-side visitor filtering.
+  if (!Array.isArray(rows) || !rows.length) {
     return Skeletons.Box.Y({
       className : `${pfx}__events-table`,
       kids      : [
         header,
-        Skeletons.Note({ className: `${pfx}__events-empty`, content: LOCALE.SECURE_SHARE_NO_SHARES })
+        Skeletons.Note({ className: `${pfx}__events-empty`, content: LOCALE.SECURE_SHARE_NO_ACCESS_EVENTS })
       ]
     });
   }
 
-  const rowKids = links.map((row) => {
-    const token = row.id;
-    const opens = (eventsByToken && eventsByToken[token]) || [];
-    // `status` is computed by secure_share_list (active / revoked / expired).
-    const isActive    = row.status === 'active';
-    const statusLabel = row.revoked_at
-      ? LOCALE.SECURE_SHARE_STATUS_REVOKED
-      : LOCALE.SECURE_SHARE_STATUS_EXPIRED;
-
-    // Last open comes from the visit log; last_accessed on the token can predate
-    // the per-visit events, so prefer the events and fall back to the token.
-    const lastSeen = opens.reduce((max, o) => Math.max(max, o.last_seen_at || 0), 0)
-      || row.last_accessed || 0;
-    const timeStr  = lastSeen
-      ? Dayjs.unix(lastSeen).format('MMM D, h:mm A')
-      : LOCALE.SECURE_SHARE_NEVER_ACCESSED;
+  const rowKids = rows.map((r) => {
+    // The server resolves recipient_email from actor_id for signed-in opens of a
+    // link with no email gate, so an unlabelled row really is an unattributable
+    // one.
+    const email   = r.recipient_email || LOCALE.SECURE_SHARE_PUBLIC;
+    const timeStr = r.entered_at ? Dayjs.unix(r.entered_at).format('MMM D, h:mm A') : '';
+    const durStr  = __fmtDuration(r.duration);
 
     return Skeletons.Box.X({
       className : `${pfx}__events-row`,
-      dataset   : { token },
       kids      : [
         Skeletons.Box.X({
           className : `${pfx}__events-cell col-email`,
           kids      : [
-            Skeletons.Image.Svg({ className: `${pfx}__events-link-icon`, ico: 'apps-link-simple' }),
-            Skeletons.Note({ className: `${pfx}__events-email`, content: __linkLabel(row, opens) })
+            Skeletons.Avatar('default', `${pfx}__events-avatar`, email),
+            Skeletons.Note({ className: `${pfx}__events-email`, content: email })
           ]
         }),
         Skeletons.Note({ className: `${pfx}__events-cell col-time`,     content: timeStr }),
-        Skeletons.Note({ className: `${pfx}__events-cell col-duration`, content: `${opens.length}` }),
-        Skeletons.Box.X({
-          className : `${pfx}__events-cell col-action`,
-          // Only a live link can be revoked; a revoked or expired one reports its
-          // state instead of offering an action that has already been taken.
-          kids      : isActive ? [
-            Skeletons.Box.X({
-              className : `${pfx}__events-revoke-btn button`,
-              service   : 'revoke-secure-share',
-              token     : token,
-              uiHandler : [_ui_],
-              kidsOpt   : { active: 0 },
-              kids      : [Skeletons.Note({ content: LOCALE.SECURE_SHARE_REVOKE })]
-            })
-          ] : [
-            Skeletons.Note({ className: `${pfx}__events-revoked`, content: statusLabel })
-          ]
-        })
+        Skeletons.Note({ className: `${pfx}__events-cell col-duration`, content: durStr }),
+        ...(SHOW_REVOKE_COLUMN ? [
+          Skeletons.Box.X({
+            className : `${pfx}__events-cell col-action`,
+            // ⊖ revokes the share LINK (token) this visit came through, cutting
+            // everyone who used it — same effect, and the same 'revoke-secure-share'
+            // handler, as the Get-link row's Revoke. token_id from the access-event
+            // SP IS the share id secure_share_revoke matches on.
+            kids      : r.token_id ? [
+              Skeletons.Button.Svg({
+                ico       : 'ban',
+                className : `${pfx}__events-revoke`,
+                service   : 'revoke-secure-share',
+                tooltips  : LOCALE.SECURE_SHARE_REVOKE_RECIPIENT,
+                token     : r.token_id,
+                uiHandler : [_ui_],
+              })
+            ] : []
+          })
+        ] : []),
       ]
     });
   });

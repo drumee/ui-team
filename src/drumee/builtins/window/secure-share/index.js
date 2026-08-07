@@ -568,34 +568,26 @@ class __window_secure_share extends mfsInteract {
     if (open) this._loadAccessEvents();
   }
 
-  // The access table is keyed on LINKS, with each link's visits counted next to
-  // it — so it needs both lists: the links themselves (which carries the ones
-  // nobody has opened yet, and each link's status) and the visit log to count and
-  // date them. Fetched together; a failure of either leaves the other usable.
+  // The table is keyed on the ACCESS EVENTS themselves — one row per visit — so
+  // the visit log is the only list it needs. (It was briefly keyed on links, which
+  // additionally fetched secure_share.list for their status and never-opened rows;
+  // see the archive memory before reinstating that.)
   async _loadAccessEvents() {
     if (!this._accessEvents) return;
     const nid    = this.mget(_a.nid);
     const hub_id = this.mget(_a.hub_id);
     const events_skl = require('./skeleton/access-events');
-
-    const [links, events] = await Promise.all([
-      this.postService(SERVICE.secure_share.list, { nid, hub_id }).catch(() => []),
-      this.postService(SERVICE.secure_share.list_access_events, { nid, hub_id }).catch(() => []),
-    ]);
-    const list = Array.isArray(links) ? links : [];
-
-    // Group the visits under the link they came through.
-    const byToken = {};
-    if (Array.isArray(events)) {
-      for (const ev of events) {
-        if (!ev || !ev.token_id) continue;
-        (byToken[ev.token_id] = byToken[ev.token_id] || []).push(ev);
-      }
+    let list = [];
+    try {
+      const rows = await this.postService(SERVICE.secure_share.list_access_events, { nid, hub_id });
+      if (Array.isArray(rows)) list = rows;
+    } catch (e) {
+      list = [];
     }
-
-    this._accessEvents.feed(events_skl(this, list, byToken));
-    // Count in the toggle header is now the number of links, matching the rows
-    // shown. Empty/error → plain label (no "(0)"), like Shared-links.
+    this._accessEvents.feed(events_skl(this, list));
+    // Reflect the access count in the toggle header (e.g. "View access list (12)"),
+    // mirroring the Shared-links label. Count = rows shown = total access events.
+    // Empty/error → plain label (no "(0)"), like Shared-links.
     if (this._accessEventsLabel) {
       this._accessEventsLabel.el.textContent = list.length
         ? `${LOCALE.SECURE_SHARE_VIEW_ACCESS_LIST} (${list.length})`
