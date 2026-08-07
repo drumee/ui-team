@@ -1220,6 +1220,7 @@
   "ALERT_DOWNLOAD": "Download",
   "PENDING_INVITATION": "Pending invitation",
   "INCOMING_CALL": "Incoming call",
+  "DRUMEE_CONNECT": "Drumee connect",
   "OUTGOING_CALL": "Outgoing call",
   "X_SCREEN": "{0} screen",
   "DOING": "In progress",
@@ -2548,5 +2549,7 @@
   "OL_BANNER_DAYS_LEFT": "Quedan {0} días.",
   "OL_BANNER_RESOLVED": "De nuevo dentro de los límites de su plan. Lectura y escritura totalmente restauradas.",
   "OL_TOAST_READONLY": "Este espacio de trabajo es de solo lectura hasta que vuelva a estar dentro de los límites de su plan.",
-  "OL_TOAST_INVITE": "Las invitaciones están en pausa mientras el espacio de trabajo supere los límites de su plan."
+  "OL_TOAST_INVITE": "Las invitaciones están en pausa mientras el espacio de trabajo supere los límites de su plan.",
+  "SHARE_SCREEN": "Compartir pantalla",
+  "STOP_SHARING": "Dejar de compartir"
 }

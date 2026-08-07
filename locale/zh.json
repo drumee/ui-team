@@ -777,6 +777,7 @@
   "ALERT_DOWNLOAD": "下载",
   "PENDING_INVITATION": "待处理的邀请",
   "INCOMING_CALL": "来电",
+  "DRUMEE_CONNECT": "Drumee connect",
   "OUTGOING_CALL": "拨出电话",
   "X_SCREEN": "{0}屏幕",
   "DOING": "进行中",
@@ -2547,5 +2548,7 @@
   "OL_BANNER_DAYS_LEFT": "剩余 {0} 天。",
   "OL_BANNER_RESOLVED": "已恢复到套餐限制以内。完整读写权限已恢复。",
   "OL_TOAST_READONLY": "在恢复到套餐限制以内之前，此工作区为只读。",
-  "OL_TOAST_INVITE": "工作区超出套餐限制期间，邀请功能已暂停。"
+  "OL_TOAST_INVITE": "工作区超出套餐限制期间，邀请功能已暂停。",
+  "SHARE_SCREEN": "共享屏幕",
+  "STOP_SHARING": "停止共享"
 }

@@ -777,6 +777,7 @@
   "ALERT_DOWNLOAD": "Téléchargement",
   "PENDING_INVITATION": "Invitation en attente",
   "INCOMING_CALL": "Appel entrant",
+  "DRUMEE_CONNECT": "Drumee connect",
   "OUTGOING_CALL": "Appel sortant",
   "X_SCREEN": "Ecran de {0}",
   "DOING": "En cours",
@@ -2548,5 +2549,7 @@
   "OL_BANNER_DAYS_LEFT": "{0} jours restants.",
   "OL_BANNER_RESOLVED": "De retour dans les limites de votre forfait. Lecture-écriture entièrement rétablie.",
   "OL_TOAST_READONLY": "Cet espace de travail est en lecture seule tant qu'il dépasse les limites de son forfait.",
-  "OL_TOAST_INVITE": "Les invitations sont suspendues tant que l'espace de travail dépasse les limites de son forfait."
+  "OL_TOAST_INVITE": "Les invitations sont suspendues tant que l'espace de travail dépasse les limites de son forfait.",
+  "SHARE_SCREEN": "Partager l’écran",
+  "STOP_SHARING": "Arrêter le partage"
 }

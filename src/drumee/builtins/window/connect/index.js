@@ -26,19 +26,18 @@ class __window_connect extends __room {
     // floats it as a free window in the Wm pool with a grabbable resize frame.
     this.model.atLeast({ header: 1, resizable: 1 });
     if (typeof this._setSize === "function") {
-      this._setSize({ width: 720, height: 560, minWidth: 480, minHeight: 360 });
+      // Figma frame: 734 × 600.
+      this._setSize({ width: 734, height: 600, minWidth: 480, minHeight: 420 });
     }
     this._state = 0;
     this.declareHandlers();
     this.statusMessages = {
       ...this.statusMessages,
       dial: LOCALE.CALLING,
-      ring: (''.printf(LOCALE.X_IS_CALLING_YOU)),
-      revoke: LOCALE.CALL_CANCELED,
+      ring: LOCALE.INCOMING_CALL,
       offline: (''.printf(LOCALE.X_IS_NOT_ONLINE)),
       pickup: LOCALE.CONNECTING,
       ready: LOCALE.CONNECTING,
-      invite: LOCALE.CALLING,
       cancel: LOCALE.MISSED_CALL,
       leave: LOCALE.CALL_ENDED,
       declined: LOCALE.CALL_DECLINED,
@@ -67,22 +66,11 @@ class __window_connect extends __room {
       if (this.__participants.collection.length > 2) {
         this.stateMessage();
       } else {
-        this.goodbye();
+        // The peer hung up. Show the Figma terminal panel ("Call ended (04:56)")
+        // for a beat instead of the window just vanishing.
+        this.showCallEnded(this.callEndedMessage());
       }
     })
-  }
-
-  /**
-    * 
-    */
-  membersListApi() {
-    return {
-      service: SERVICE.chat.chat_rooms,
-      flag: "contact",
-      tag_id: null,
-      option: _a.active,
-      hub_id: Visitor.get(_a.id)
-    }
   }
 
   /**
@@ -128,6 +116,10 @@ class __window_connect extends __room {
     // has an escape hatch. Mirrors the meeting window's startup lock.
     if (this.el) this.el.dataset.startingUp = "1";
     await super.onDomRefresh();
+    // Seed data-narrow / data-compact / data-short before the pre-call screen
+    // is drawn. _resize only fires once the user drags a handle, so without
+    // this a call opened in an already-small window renders at full size first.
+    if (this.responsive) this.responsive();
     this.verbose("AAAX:204 -- onDomRefresh", this.callee, this.caller);
     if (this.callee) {
       this.stateMachine('dial');
@@ -147,6 +139,93 @@ class __window_connect extends __room {
   async onLocalUserJoined(...args) {
     await super.onLocalUserJoined(...args);
     if (this.el) this.el.dataset.startingUp = "0";
+    // Honour a mic muted on the pre-call screen. The camera preference already
+    // rides `isVideo` into _createStartupTracks, but audio is always acquired,
+    // so muting it has to happen once the track exists.
+    if (this._precallMuted) {
+      this._precallMuted = 0;
+      this.changeLocalAudio(0);
+    }
+  }
+
+  // ── Terminal panel (Figma "get rejected" / call ended) ────────────────────
+  // Replace the live UI with the identity block plus a single outcome line,
+  // then close the window. Used for a declined call and for the peer hanging
+  // up; the local user pressing Leave still closes immediately, since they
+  // already know the outcome.
+  showCallEnded(message, delay = 2200) {
+    if (this.isDestroyed() || this._ending) return;
+    this._ending = 1;
+    Visitor.muteSound();
+    // The 1s elapsed-timer tick writes into the "elapsed-timer" part, which the
+    // ended panel does not carry — stop it before the swap rather than let it
+    // poke at a part that is about to be torn down.
+    if (this._timerInterval) {
+      clearInterval(this._timerInterval);
+      this._timerInterval = null;
+    }
+    // Release camera/mic BEFORE swapping the stage out. The panel lives for a
+    // couple of seconds before goodbye() runs the real teardown, and leaving
+    // live tracks (and the widgets bound to them) behind while their DOM is
+    // gone is how stray jitsi events find destroyed endpoints. Fire-and-forget:
+    // the panel must not wait on track disposal.
+    if (typeof this.unload === "function") {
+      Promise.resolve()
+        .then(() => this.unload())
+        .catch((e) => this.warn("call-ended unload failed", e));
+    }
+    if (this.el) {
+      this.el.dataset.callState = "ended";
+      this.el.dataset.mode = "normal";
+    }
+    try {
+      this.feed(require("./skeleton/ended")(this, this.peer, message));
+    } catch (e) {
+      this.warn("failed to render the call-ended panel", e);
+      this.goodbye();
+      return;
+    }
+    setTimeout(() => {
+      if (!this.isDestroyed()) this.goodbye();
+    }, delay);
+  }
+
+  // "Call ended (04:56)" — the duration is omitted when the call never went
+  // live (nothing to report), leaving the bare "Call ended".
+  callEndedMessage() {
+    const d = this.callDuration();
+    return d ? `${LOCALE.CALL_ENDED} (${d})` : LOCALE.CALL_ENDED;
+  }
+
+  // mm:ss (hh:mm:ss past an hour) since the conference went live, or null if it
+  // never did. _elapsedStart is set by the base room on stateMachine("online").
+  callDuration() {
+    if (!this._elapsedStart) return null;
+    const elapsed = Math.floor((Date.now() - this._elapsedStart) / 1000);
+    if (elapsed < 0) return null;
+    const pad = (n) => String(n).padStart(2, "0");
+    const s = elapsed % 60;
+    const m = Math.floor(elapsed / 60) % 60;
+    const h = Math.floor(elapsed / 3600);
+    return h ? `${pad(h)}:${pad(m)}:${pad(s)}` : `${pad(m)}:${pad(s)}`;
+  }
+
+  // Header expand button (Figma CornersOut): native fullscreen on the window
+  // root. Same handler the meeting's resize menu uses — note this is distinct
+  // from `change_size`, which the screen-share path deliberately neuters.
+  _toggleWindowFullscreen() {
+    const doc = document;
+    if (doc.fullscreenElement || doc.webkitFullscreenElement) {
+      (doc.exitFullscreen || doc.webkitExitFullscreen || function () {}).call(doc);
+      return;
+    }
+    const el = this.el;
+    if (!el) return;
+    const req = el.requestFullscreen || el.webkitRequestFullscreen;
+    if (req) {
+      const p = req.call(el);
+      if (p && typeof p.catch === "function") p.catch(() => {});
+    }
   }
 
 
@@ -263,7 +342,9 @@ class __window_connect extends __room {
         this.beforeLeavingState = _e.cancel;
         callee = this.callee;
         this.feed(require('./skeleton/init')(this, callee));
-        this.statusMessages.dial = `${LOCALE.CALLING} ${callee.display}`;
+        // The callee's name/email now headline the pre-call screen, so the
+        // status line stays the bare "Calling…" the design asks for.
+        this.statusMessages.dial = LOCALE.CALLING;
 
         guest = await this.sendRoomSignaling(SERVICE.conference.invite, {
           guest_id: callee.drumate_id
@@ -289,36 +370,6 @@ class __window_connect extends __room {
         this.mset(guest);
         break;
 
-      case _a.invite:
-        this.prevState = s;
-        if (this.caller) {
-          this.stateMachine("Only host can add new participant");
-          this.warn("AAA:373 -- WRONG STATE. Should not have caller");
-          return;
-        }
-        callee = this.callee;
-        this.statusMessages.invite = `${LOCALE.CALLING} ${callee.display}`;
-        guest = await this.sendRoomSignaling(SERVICE.conference.invite, {
-          guest_id: callee.drumate_id
-        });
-        this.verbose("AAAX:241 -- onDomRefresh", guest, this);
-        if (guest && guest.cross_call) {
-          let msg = LOCALE.X_IS_CALLING_YOU.format(callee.display);
-          this.stateMessage(msg);
-          //Visitor.muteSound();
-          //this.handleCrossCall(guest);
-          return;
-        }
-        if (!guest || guest.offline || !guest.room_id) {
-          this.stateMachine('offline');
-          return;
-        }
-
-        //Visitor.playSound(_K.dialtones.rinback, 10);
-        //this.mset(guest);
-        this.beforeLeavingState = 'terminated';
-        return true;
-
       case 'ring':
         this.prevState = s;
         if (this.callee) {
@@ -329,7 +380,8 @@ class __window_connect extends __room {
         this.beforeLeavingState = _e.reject;
         caller = this.caller;
         this.mset(caller);
-        this.statusMessages.ring = LOCALE.X_IS_CALLING_YOU.format(this.caller.display);
+        // Same as 'dial': the caller's identity is already the headline.
+        this.statusMessages.ring = LOCALE.INCOMING_CALL;
         this.feed(require('./skeleton/init')(this, caller));
         break;
 
@@ -409,29 +461,18 @@ class __window_connect extends __room {
 
       case 'declined':
         this.verbose("AAAX:240 -- CANCEL", this.prevState, this.state, data);
-        if (this.isOnine) {
-          this.stateMessage(s);
-          setTimeout(() => { this.stateMessage(), Visitor.timeout() });
-          await this.sendRoomSignaling(SERVICE.conference.logCall, {
-            event: _e.reject,
-            callee: this.callee
-          });
-          let c = this.__attendees.getItemsByAttr(_a.user_id, this.callee.drumate_id)[0];
-          if (c && c.inviteCancelled) c.inviteCancelled();
-          this.prevState = s;
-          return;
-        }
         Visitor.muteSound();
         await this.sendRoomSignaling(SERVICE.conference.logCall, {
           event: _e.reject,
           callee: this.callee
         });
-        this.stateMessage(s);
         this.beforeLeavingState = _a.none;
-        setTimeout(() => {
-          if (!this.isDestroyed()) this.goodbye();
-        }, 1800);
-        break;
+        // Figma "get rejected": the terminal panel carries the outcome itself,
+        // so skip the trailing stateMessage() — the ended screen has no
+        // message-container part for it to land in.
+        this.prevState = s;
+        this.showCallEnded(LOCALE.CALL_DECLINED);
+        return;
 
       case _e.cancel:
         this.verbose("AAAX:240 -- CANCEL", this.callee);
@@ -444,14 +485,6 @@ class __window_connect extends __room {
           callee: this.callee,
         });
         break;
-
-      case 'revoke':
-        this.verbose("AAAX:240 -- CANCEL", this.callee);
-        this.prevState = s;
-        this.stateMessage(s);
-        await this.sendRoomSignaling(SERVICE.conference.revoke, { callee: this.callee });
-        setTimeout(() => { this.stateMessage(), Visitor.timeout() });
-        return;
 
       case 'terminated':
         await this.sendRoomSignaling(SERVICE.conference.logCall, {
@@ -494,6 +527,36 @@ class __window_connect extends __room {
   change_size(cmd, max_size) {
     const mode = (this.el && this.el.dataset.mode) || "normal";
     if (this.responsive) this.responsive(mode);
+  }
+
+  // Drive the small-size layout off the WINDOW's own box, not the viewport.
+  // The call is a resizable Wm window that can be shrunk to its 480×420 minimum
+  // (or blown up to fullscreen) on a large screen, so `@media` never fires and
+  // the `data-device` the framework stamps only tells us about the viewport.
+  // Flip data-narrow / data-compact / data-short on the root and let the skin
+  // tighten the action row and identity block. Mirrors the meeting window.
+  responsive(m, ui) {
+    if (super.responsive) super.responsive(m, ui);
+    if (!this.el || !this.$el) return;
+    const w = this.$el.width() || this.el.offsetWidth || 0;
+    const h = this.$el.height() || this.el.offsetHeight || 0;
+    if (!w && !h) return;
+    // A drag-resize calls this many times a second — only touch the DOM when a
+    // dimension actually changed.
+    if (this._lastW === w && this._lastH === h) return;
+    this._lastW = w;
+    this._lastH = h;
+    if (w) {
+      // 4 actions × 64px + 3 × 48px gap + 48px padding = 448px, so the full
+      // row only stops fitting below ~470px.
+      this.el.dataset.narrow = w < 560 ? "1" : "0";
+      this.el.dataset.compact = w < 470 ? "1" : "0";
+    }
+    if (h) {
+      // Below this the 120px avatar + name + email + action row stop fitting
+      // between the header and the footer.
+      this.el.dataset.short = h < 520 ? "1" : "0";
+    }
   }
 
   // The base onTrackMuteChange only syncs the top-bar mic pill; the local
@@ -613,15 +676,15 @@ class __window_connect extends __room {
   // spammed mid-flight. Bracketed around the shared base toggles; the finally
   // always clears the flag, even on cancel/failure.
 
-  // The camera / mic controls live inside a .ctrl-pill; the screen share is a
-  // lone .ctrl-btn — flag whichever wraps the clicked control.
+  // Each control is a round __call-action button in the bottom bar, so the
+  // spinner goes straight on the button itself.
   _ctrlLoadingEl(kind) {
     const btn =
       kind === _a.video ? this.__ctrlVideo :
       kind === _a.audio ? this.__ctrlAudio :
       this.__ctrlScreen;
     if (!btn || !btn.el || (btn.isDestroyed && btn.isDestroyed())) return null;
-    return btn.el.closest(`.${this.fig.family}__ctrl-pill`) || btn.el;
+    return btn.el;
   }
 
   _setCtrlLoading(kind, loading) {
@@ -668,6 +731,26 @@ class __window_connect extends __room {
         this.stateMachine(service);
         break;
 
+      // Pre-call mic / camera preferences (Figma: the toggles sit next to
+      // accept/decline before the call connects). No conference exists yet, so
+      // these only record the choice — the camera one rides `isVideo` into
+      // _createStartupTracks, the mic one is applied in onLocalUserJoined.
+      case "precall-audio":
+        this.mset({ audio: cmd.getState() ? 1 : 0 });
+        this.isAudio = !!this.mget(_a.audio);
+        this._precallMuted = this.mget(_a.audio) ? 0 : 1;
+        break;
+
+      case "precall-video":
+        this.mset({ video: cmd.getState() ? 1 : 0 });
+        this.isVideo = !!this.mget(_a.video);
+        break;
+
+      case "toggle-fullscreen":
+        // Header expand button — fullscreen the call window itself.
+        this._toggleWindowFullscreen();
+        break;
+
       case 'remote-left':
         if (args.siblings > 1) {
           this.stateMessage();
@@ -693,24 +776,6 @@ class __window_connect extends __room {
         }
         await this.leaveRoom();
         return;
-
-      case _a.invite:
-        if (this.state == service) return;
-        this.mset({ callee: cmd.getCalleeData() });
-        this.configure();
-        this.stateMachine(service).then((sent) => {
-          if (sent) cmd.inviteSucceeded();
-        })
-        break;
-
-      case "revoke":
-        if (this.state == service) return;
-        this.mset({ callee: cmd.getCalleeData() });
-        this.configure();
-        this.stateMachine(service).then(() => {
-          cmd.inviteCancelled();
-        })
-        break;
 
 
       case "react":
