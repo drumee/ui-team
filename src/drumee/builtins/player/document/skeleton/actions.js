@@ -94,29 +94,44 @@ module.exports = function (ui) {
   // request). DMZ download gating still lives on those handlers via
   // _dmzGateDownload().
 
-  // Edit ⇄ Preview, as a labelled toggle in the header rather than a menu
-  // row. The label stays "Edit" in both states — it names what the toggle
-  // controls, not what the next click does — and `data-active` carries
-  // whether the editor is currently on, which the skin styles as pressed.
+  // Edit ⇄ Preview, as a real switch: a label, a track and a knob that
+  // slides. The label stays "Edit" in both states — it names what the
+  // switch governs, not what the next click does — and `data-active` is
+  // what says whether the editor is on.
   //
-  // The service still flips, so one control both enters and leaves edit
-  // mode. `updateMenu()` re-feeds this row on every mode change (it is
-  // already called from preview() and from the editor's onLoad), so the
-  // pressed state follows the mode without extra wiring.
+  // Built as a `custom` action rather than through `action()`, which only
+  // makes Button.Svg / Button.Label; a track-and-knob needs its own markup.
+  //
+  // The service flips, so one control both enters and leaves edit mode.
+  // `updateMenu()` re-feeds this row on every mode change (already called
+  // from preview() and from the editor's onLoad), so the knob follows the
+  // mode without extra wiring.
   const isEditing = ui.mget(_a.mode) == _a.edit;
   const ext = (ui.mget(_a.ext) || "").toLowerCase();
   if (!Visitor.inDmz && Platform.get("doc_editor") && EDITABLE.includes(ext)) {
-    actions.push(
-      action(ui, {
-        service: isEditing ? _a.preview : _a.edit,
-        ico: "app-edit",
-        label: ui.canUpload() ? LOCALE.EDIT : LOCALE.OPEN,
-        tip: isEditing ? LOCALE.PREVIEW : ui.canUpload() ? LOCALE.EDIT : LOCALE.OPEN,
-        className: `${cnWindowButton}__icon-button player-document-topbar__mode`,
-        dataset: { active: isEditing ? 1 : 0 },
+    const pfx = `${ui.fig.family}-topbar__mode`;
+    actions.push({
+      id: "doc-mode-switch",
+      type: "custom",
+      component: Skeletons.Box.X({
+        className: pfx,
         sys_pn: "doc-mode-switch",
+        service: isEditing ? _a.preview : _a.edit,
+        uiHandler: [ui],
+        partHandler: ui,
+        dataset: { active: isEditing ? 1 : 0 },
+        kids: [
+          Skeletons.Note({
+            content: ui.canUpload() ? LOCALE.EDIT : LOCALE.OPEN,
+            className: `${pfx}-label`,
+          }),
+          Skeletons.Box.X({
+            className: `${pfx}-track`,
+            kids: [Skeletons.Element({ className: `${pfx}-knob` })],
+          }),
+        ],
       }),
-    );
+    });
   }
 
   // The one action with no gear-menu equivalent: a secure-share recipient the

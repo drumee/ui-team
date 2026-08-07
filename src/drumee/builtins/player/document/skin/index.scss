@@ -57,40 +57,66 @@
     position: relative;
   }
 
-  // Edit toggle. The label names what the control is, so it does not change
-  // between states; `data-active` says whether the editor is on, and the
-  // pressed look is what tells the two apart.
+  // Edit switch — label + track + sliding knob.
+  //
+  // The label names what the switch governs, so it does not change between
+  // states; `data-active` says whether the editor is on, and the knob's
+  // position is what tells the two apart.
   &-topbar__mode {
     align-items: center;
-    border-radius: var(--corner-radius-2);
-    color: var(--normal-fg-10);
     cursor: pointer;
     display: flex;
-    gap: var(--spacer-2);
-    padding: 4px 10px;
+    gap: var(--spacer-3);
     white-space: nowrap;
-    @include drumee.typo($size: 12px, $line: 16px, $color: var(--normal-fg-10));
-    // drumee.typo() maps only 300/400/500/700 onto a family and emits no
-    // `font-weight`, so 600 has to be set directly.
-    font-weight: 600;
 
-    svg {
-      height: 16px;
-      width: 16px;
+    // Decoration must never be the click target. Every LETC view binds its
+    // own onclick and that handler stops propagation before dispatching, so
+    // a click landing on the label or the knob would be swallowed there and
+    // never reach the row that carries the service.
+    &-label,
+    &-track,
+    &-knob {
+      pointer-events: none;
     }
 
-    &:hover {
-      background-color: var(--overlay-bg-05, rgba(0, 0, 0, 0.05));
+    &-label {
+      @include drumee.typo($size: 12px, $line: 16px, $color: var(--normal-fg-10));
+      // drumee.typo() maps only 300/400/500/700 onto a family and emits no
+      // `font-weight`, so 600 has to be set directly.
+      font-weight: 600;
     }
 
-    // Editing: the toggle reads as pressed.
-    &[data-active="1"] {
-      background-color: var(--primary-20, #b1adff);
-      color: var(--normal-fg-10);
+    &-track {
+      align-items: center;
+      background-color: var(--normal-fg-40, #a8a8ae);
+      border-radius: 999px;
+      display: flex;
+      flex-shrink: 0;
+      height: 24px;
+      padding: 3px;
+      transition: background-color 0.15s ease;
+      width: 42px;
+    }
 
-      &:hover {
-        background-color: var(--primary-30, #847eff);
-      }
+    &-knob {
+      background-color: var(--white, #fff);
+      border-radius: 50%;
+      height: 18px;
+      transition: transform 0.15s ease;
+      width: 18px;
+    }
+
+    &:hover &-track {
+      background-color: var(--normal-fg-30, #96969c);
+    }
+
+    // Editing: track lights up and the knob slides right.
+    &[data-active="1"] &-track {
+      background-color: var(--primary-50, #433cc5);
+    }
+
+    &[data-active="1"] &-knob {
+      transform: translateX(18px);
     }
   }
 
