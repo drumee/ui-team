@@ -1354,28 +1354,43 @@ class __window_folder extends mfsInteract {
       case "toggle-new-create-menu":
         return this.toggleNewCreateMenu(cmd);
 
-      case "launch-gdrive-migration":
+      case "launch-gdrive-migration": {
         // "Migrate from Google Drive" row of the merged "+ New" menu. Opens the
-        // full migration popup (connect → pick → migrate → progress); the widget
-        // + google_drive.* backend already exist. singleton + wm_unique_id (per
-        // the multi-folder-windows fix) prevents a duplicate popup on re-click.
-        // hub_id/nid target THIS folder window (import lands in the open
-        // workspace), falling back to the visitor home like settings does.
+        // full migration popup; the widget + google_drive.* backend already
+        // exist. singleton + wm_unique_id (per the multi-folder-windows fix)
+        // prevents a duplicate popup on re-click.
+        //
+        // Destination = the directory the user is LOOKING AT, mirroring the
+        // breadcrumb's current-node rule (refreshBreadcrumbsUI): the model nid
+        // follows in-window navigation, and a hub/workspace ROOT window's
+        // active directory is its actual_home_id. The previous order —
+        // actual_home_id first — sent every import to the workspace root even
+        // when the user had navigated into a sub-folder and clicked "+ New"
+        // right there. `direct: 1` tells the importer to land the content in
+        // this folder itself, not in a GoogleDriveMigration wrapper: the user
+        // picked the destination by standing in it.
         this.closeNewMenu(cmd);
+        let destNid = this.mget(_a.nid);
+        if (this.mget(_a.filetype) === _a.hub && this.mget(_a.actual_home_id)) {
+          destNid = this.mget(_a.actual_home_id);
+        }
+        // The window title tracks navigation the same way the nid does
+        // (refreshBreadcrumbsUI msets hub_name to the current node's name).
+        const destName = this.mget(_a.hub_name) || this.mget(_a.filename) || "";
         return Kind.waitFor("migrate_gdrive_popup").then(() => {
           Wm.launch(
             {
               kind: "migrate_gdrive_popup",
               hub_id: this.mget(_a.hub_id) || Visitor.id,
-              nid:
-                this.mget(_a.actual_home_id) ||
-                this.mget(_a.nid) ||
-                Visitor.get(_a.home_id),
+              nid: destNid || Visitor.get(_a.home_id),
+              destinationName: destName || undefined,
+              direct: 1,
               wm_unique_id: "migrate_gdrive_popup",
             },
             { explicit: 1, singleton: 1 },
           );
         });
+      }
 
       case "new-document":
         this.closeNewMenu(cmd);
