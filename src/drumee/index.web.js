@@ -29,6 +29,12 @@ let bunldes = new Map();
 // the original URL, and sessionStorage outlives the navigation.
 require('libs/billing-deep-link').captureFromUrl();
 
+// Google tag (gtag.js). Module scope for the same reason as the capture above:
+// this is the earliest code the app runs, which is as close as a bundle can get
+// to the <head> placement Google asks for. Self-gating — it installs nothing
+// off a drumee.com host. See libs/gtag.
+require('libs/gtag').install();
+
 /**
  * 
  */
