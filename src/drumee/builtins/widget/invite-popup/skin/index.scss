@@ -161,10 +161,24 @@
   }
 
   /* Suggestions dropdown */
+  // Anchor for the floating suggestions list (see skeleton __email-field).
+  &__email-field {
+    position: relative;
+  }
+
   &__suggestions {
+    // Floats over the dialog rather than sitting in the column: in flow it
+    // pushed the workspace row and Send button down on every match, so the
+    // dialog jumped while typing.
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    right: 0;
+    z-index: 20;
     visibility: hidden;
     pointer-events: none;
     background-color: var(--white);
+    border: 1px solid rgba(0, 0, 0, 0.06);
     border-radius: 8px;
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.12);
     max-height: 220px;
@@ -192,6 +206,29 @@
     &[data-state="1"] {
       background-color: var(--default-bg-hover, #f5f5fa);
     }
+  }
+
+  // Name and address are separate elements (the address cannot be bracketed
+  // into the name — Note content is sanitized as innerHTML and <addr> would be
+  // stripped as an unknown tag). The address is the thing being picked, so it
+  // never truncates away: the name yields space first.
+  &__suggestion-item-name {
+    flex: 0 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    // Explicit: drumee.typo's $weight argument emits nothing.
+    font-weight: 500;
+  }
+
+  &__suggestion-item-email {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    @include drumee.typo($size: 12px, $color: var(--normal-fg-50));
   }
 
   /* Workspace + role rows */

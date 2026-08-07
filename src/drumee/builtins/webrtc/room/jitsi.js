@@ -5,6 +5,12 @@ const PARTY_NOTICE_MS = 4000;
 const JitsiMeetJS = require('vendor/lib/jitsi/lib-jitsi-meet.min.js');
 const { events: JEVENTS } = JitsiMeetJS;
 const { fitBoxes } = require("@drumee/ui-essentials")
+const AudioMixerEffect = require("./audio-mixer-effect");
+// localTracks slot for the tab/system audio captured alongside a screen share.
+// Deliberately NOT `audio` (that slot is the microphone) and NOT `desktop` (that
+// is the screen VIDEO track). unload() iterates localTracks, so parking it here
+// also means call teardown disposes it for free.
+const DESKTOP_AUDIO = "desktopAudio";
 
 const __room = require(".");
 
@@ -25,6 +31,7 @@ class __webrtc_room extends __room {
     this.disconnect = this.disconnect.bind(this);
     this.onTrackMuteChange = this.onTrackMuteChange.bind(this);
     this.onLocaAudioStopped = this.onLocaAudioStopped.bind(this);
+    this._onDesktopAudioStopped = this._onDesktopAudioStopped.bind(this);
     this.onPermissionPrompted = this.onPermissionPrompted.bind(this);
     this.onWrongState = this.onWrongState.bind(this);
     this.stopPresentation = this.stopPresentation.bind(this);
@@ -354,18 +361,23 @@ class __webrtc_room extends __room {
             let videoType = track.getVideoType();
             // getDisplayMedia returns a system/tab AUDIO track when the user
             // ticks "share audio" in the screen-share picker. It arrives here as
-            // a plain audio track (getType()==='audio', videoType===null). If it
-            // reached the audio handling below it would park the live mic stream
-            // in idleStreams (only stopped at call teardown), overwrite
-            // localTracks.audio, and replaceTrack(mic, desktopAudio) — cutting
-            // the user's microphone for the rest of the call (never restored,
-            // since stopPresentation only touches the desktop VIDEO track). The
-            // mic is only ever created via a NON-desktop request, so any audio
-            // track from a desktop request is this stray capture audio: drop it
-            // and leave the microphone sender untouched.
+            // a plain audio track (getType()==='audio', videoType===null) —
+            // indistinguishable from the microphone by every test below, which is
+            // why it used to park the live mic in idleStreams, overwrite
+            // localTracks.audio and replaceTrack(mic, desktopAudio), cutting the
+            // user's mic for the rest of the call (never restored, since
+            // stopPresentation only touches tracks whose videoType is 'desktop').
+            // The mic is only ever created via a NON-desktop request, so any
+            // audio track from a desktop request is this capture audio: keep it
+            // OUT of the mic slot and hand it to the mixer, which adds it to the
+            // microphone instead of replacing it.
+            // Never let a mixer problem reject this pass: the .catch below pops a
+            // permission alert and fails the whole track creation, so a bad tab
+            // audio track would take the screen share (or the call) down with it.
+            // Degrading to "no tab audio" is the old behavior and is always safe.
             if (type === _a.audio && devices.includes(_a.desktop)) {
-              try { if (track.dispose) await track.dispose(); }
-              catch (e) { this.warn("drop desktop audio track failed", e); }
+              try { await this._adoptDesktopAudio(track); }
+              catch (e) { this.warn("failed to adopt desktop audio track", e); }
               continue;
             }
             track.addEventListener(
@@ -458,6 +470,13 @@ class __webrtc_room extends __room {
                 }
             }
           }
+          // Runs on EVERY pass, not just the desktop one: a mic recreated
+          // mid-share (mute/unmute, device change) comes back as a plain track,
+          // so the mix has to be re-established or the tab audio goes quiet
+          // while the share is still up. Guarded for the same reason as the
+          // adopt call above — this must never fail a mic/camera pass.
+          try { await this._syncDesktopAudioMix(); }
+          catch (e) { this.warn("desktop audio mix failed", e); }
           this._tracksInitialized = true;
           this.trigger("device:permission:granted");
           resolve(tracks);
@@ -486,6 +505,143 @@ class __webrtc_room extends __room {
           reject(error);
         });
     });
+  }
+
+  /**
+   * Take ownership of the tab/system audio captured alongside a screen share.
+   * Called from inside the serialized track pass, so it must NOT go through the
+   * _releaseDesktopAudio lock wrapper (that would deadlock on _trackOp).
+   */
+  async _adoptDesktopAudio(track) {
+    const current = this.localTracks[DESKTOP_AUDIO];
+    if (current === track) return;
+    // Only one capture audio track can be live at a time; let go of a leftover
+    // before adopting the new one.
+    if (current) await this._doReleaseDesktopAudio();
+    this.localTracks[DESKTOP_AUDIO] = track;
+    // The capture audio can end on its own — Chrome's "Stop sharing" bar, or the
+    // shared tab being closed — without the desktop VIDEO track ending, so it
+    // needs its own end handler rather than relying on stopPresentation.
+    if (track.addEventListener) {
+      track.addEventListener(
+        JEVENTS.track.LOCAL_TRACK_STOPPED,
+        this._onDesktopAudioStopped
+      );
+    }
+  }
+
+  /**
+   * Send the captured tab/system audio to remote peers by mixing it into the
+   * microphone track. Idempotent; safe to call when there is nothing to do.
+   * Runs inside the serialized _trackOp chain — never call it from outside.
+   */
+  async _syncDesktopAudioMix() {
+    const desktopAudio = this.localTracks[DESKTOP_AUDIO];
+    if (!desktopAudio) return;
+    if (desktopAudio.disposed) {
+      // Something else disposed it (e.g. a mic created while it was standing in
+      // as the conference audio track, below). Drop the stale bookkeeping.
+      delete this.localTracks[DESKTOP_AUDIO];
+      this._desktopAudioIsPrimary = false;
+      return;
+    }
+
+    const mic = this.getLocalTrack(_a.audio);
+    // When the capture audio IS the conference audio track (no-mic case below),
+    // getLocalTrack('audio') returns it — never mix a track into itself.
+    if (mic === desktopAudio) return;
+
+    if (!mic) {
+      // No microphone in the call (permission denied, or an audio-less room):
+      // there is nothing to mix into, so send the capture audio as THE audio
+      // track. Allowed — the one-audio-track limit only bites when a track
+      // already exists.
+      if (!this._desktopAudioIsPrimary && this.room && this.room.isJoined()) {
+        try {
+          await this.room.addTrack(desktopAudio);
+          this._desktopAudioIsPrimary = true;
+        } catch (e) {
+          this.warn("failed to send desktop audio as the audio track", e);
+        }
+      }
+      return;
+    }
+
+    if (this._mixedMic === mic) return;
+    try {
+      await mic.setEffect(new AudioMixerEffect(desktopAudio));
+      this._mixedMic = mic;
+    } catch (e) {
+      // Mixing failed: leave the microphone exactly as it was. Losing the tab
+      // audio is the old behavior; losing the mic is the bug being fixed here.
+      this.warn("failed to mix desktop audio into the microphone", e);
+    }
+  }
+
+  /**
+   * Undo _syncDesktopAudioMix and let go of the captured audio. Serialized on
+   * _trackOp like createLocalTracks, so unmixing can't race a concurrent
+   * createLocalTracks/replaceTrack over the single Jingle renegotiation.
+   */
+  _releaseDesktopAudio() {
+    this._trackOp = Promise.resolve(this._trackOp)
+      .catch(() => { })
+      .then(() => this._doReleaseDesktopAudio());
+    return this._trackOp;
+  }
+
+  /**
+   * MUST run whenever the share ends. The absence of exactly this step is what
+   * made the old code cut the microphone permanently: stopPresentation only ever
+   * stopped tracks whose videoType is 'desktop', and capture audio has
+   * videoType === null, so nothing ever undid the mic replacement.
+   */
+  async _doReleaseDesktopAudio() {
+    const desktopAudio = this.localTracks[DESKTOP_AUDIO];
+    delete this.localTracks[DESKTOP_AUDIO];
+
+    const mixedMic = this._mixedMic;
+    this._mixedMic = null;
+    if (mixedMic && !mixedMic.disposed) {
+      try {
+        // Restores the mic's own stream on the same sender. A mute the user
+        // applied while mixing lives on that stream, so it survives.
+        await mixedMic.setEffect(undefined);
+      } catch (e) {
+        this.warn("failed to unmix desktop audio from the microphone", e);
+      }
+    }
+
+    if (!desktopAudio) return;
+    if (desktopAudio.removeEventListener) {
+      desktopAudio.removeEventListener(
+        JEVENTS.track.LOCAL_TRACK_STOPPED,
+        this._onDesktopAudioStopped
+      );
+    }
+    if (this._desktopAudioIsPrimary) {
+      this._desktopAudioIsPrimary = false;
+      try {
+        if (this.room) await this.room.removeTrack(desktopAudio);
+      } catch (e) {
+        this.warn("failed to remove the primary desktop audio track", e);
+      }
+    }
+    try {
+      if (!desktopAudio.disposed) await desktopAudio.dispose();
+    } catch (e) {
+      this.warn("failed to dispose desktop audio track", e);
+    }
+  }
+
+  /**
+   * Capture audio ended by itself (tab closed, or audio dropped from the share
+   * while the video continues). Unmix so the mic returns to plain capture.
+   */
+  _onDesktopAudioStopped() {
+    this._releaseDesktopAudio().catch((e) =>
+      this.warn("desktop audio release failed", e)
+    );
   }
 
   /**
@@ -1157,8 +1313,22 @@ class __webrtc_room extends __room {
       "participant_id",
       opt.participant_id
     )[0];
-    if (presenter) {
-      opt.username = presenter.mget(_a.username);
+    // Name the sharer on the presenter tile (the display skeleton renders it
+    // bottom-left, like the participant tiles do). A REMOTE share resolves from
+    // that peer's own tile. OUR OWN share has no tile to resolve against — the
+    // local user is not in __participants under a participant id — so fall back
+    // to the very identity startPresentation() broadcasts about us in the
+    // START_REMOTE_SCREEN payload, keeping both ends of the call in agreement.
+    // `_presentingLocally` is set by webrtc/screenshare immediately before it
+    // calls us for our own desktop track; anything without that mixin never
+    // renders its own screen here and is unaffected.
+    const uname =
+      (presenter && presenter.mget(_a.username)) ||
+      (this._presentingLocally ? Visitor.fullname() : null);
+    // Assign only when we actually have a name, so the no-name case stays
+    // byte-identical to before (the key simply absent, never a literal "null").
+    if (uname) {
+      opt.username = uname;
     }
     this.__presenter.feed(opt);
     let child = this.__presenter.children.last();
@@ -1250,6 +1420,13 @@ class __webrtc_room extends __room {
    *
    */
   async unload() {
+    // Let go of any captured tab/system audio before the generic dispose loop
+    // below: that loop would dispose it with its LOCAL_TRACK_STOPPED listener
+    // still attached, queueing a release on _trackOp after the room is already
+    // null. Harmless (every step is guarded) but pointless — do it explicitly.
+    try { await this._doReleaseDesktopAudio(); }
+    catch (e) { this.warn("desktop audio release failed on unload", e); }
+
     for (let type in this.localTracks) {
       let t = this.localTracks[type];
       // Drop the persistent mute listener (B2) before disposing. dispose() emits
@@ -1467,6 +1644,10 @@ class __webrtc_room extends __room {
    */
   async stopPresentation(track) {
     this._setService("ctrl-video", _a.settings);
+    // Unmix and drop the captured tab/system audio FIRST — this has to happen
+    // even when the desktop video track is already gone (the early return
+    // below), or the mixer would stay attached to the microphone.
+    await this._releaseDesktopAudio();
     if (!track) {
       track = this.getLocalTrack(_a.desktop);
     }

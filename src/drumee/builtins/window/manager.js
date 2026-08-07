@@ -178,6 +178,9 @@ class __window_manager extends mfsInteract {
    *
    */
   handleUpload() {
+    // Don't open the native picker while the org is read-only — every
+    // selected file would then die on OVER_LIMIT_READ_ONLY.
+    if (require("libs/over-limit").guardWrite("write")) return;
     let target = this.getActiveWindow();
     return this.__fileselector.open((e) => {
       if (target && target !== this) target.raise();
@@ -271,6 +274,11 @@ class __window_manager extends mfsInteract {
 
   _canUploadToTarget(target) {
     if (!target) return false;
+    // Downgrade over-limit: the whole workspace is read-only while the org is
+    // over its downgraded plan's limits — the server rejects the upload
+    // anyway (OVER_LIMIT_READ_ONLY), this just refuses at the drop instead of
+    // after the transfer.
+    if (require("libs/over-limit").isLocked()) return false;
     if (target.mget && target.mget(_a.isalink) && !target.isHub) return false;
     const privilege =
       target.mget && (target.mget(_a.privilege) || target.mget(_a.permission));
@@ -278,7 +286,13 @@ class __window_manager extends mfsInteract {
   }
 
   _rejectUploadTarget() {
-    this._showUploadDeniedToast(LOCALE.WEAK_PRIVILEGE);
+    // Say the right thing: while over-limit the refusal has nothing to do
+    // with the dropper's privilege, and "insufficient privilege" sends the
+    // user asking an admin for rights nobody can grant.
+    const OverLimit = require("libs/over-limit");
+    this._showUploadDeniedToast(
+      OverLimit.isLocked() ? OverLimit.blockedMessage("write") : LOCALE.WEAK_PRIVILEGE,
+    );
   }
 
   _showUploadDeniedToast(message) {
@@ -1017,11 +1031,13 @@ class __window_manager extends mfsInteract {
       useKeyEvent: 1,
       style: this.getWindowPosition(c),
       service: "open-node",
-      state: m.get(_a.state),
       trigger: c,
       uiHandler: [this],
       media: c,
       radio: _a.on,
+      // `state: _a.on` is the default; the model's own state (when set)
+      // overrides it right after this object — a second `state:` key here
+      // was dead weight the last one silently won over (no-dupe-keys).
       state: _a.on,
       ...opt,
     };

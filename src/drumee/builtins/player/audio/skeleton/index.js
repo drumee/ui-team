@@ -8,13 +8,11 @@ function __skl_player_audio(_ui_) {
   const audioFig = `${_ui_.fig.family}`;
   const audioGroup = `${_ui_.fig.group}`;
 
-  const header = Skeletons.Box.X({
-    className : `${audioFig}__header ${audioGroup}__header`,
-    sys_pn    : _a.header,
-    kids      : [
-      require('./topbar').default(_ui_)
-    ]
-  })
+  // The shared topbar widget IS the header — it emits `${group}__header`
+  // and the "topbar" sys_pn itself. The old wrapper is gone: its `header`
+  // part was never looked up, and nesting it would have stacked two
+  // `.player__header` backgrounds.
+  const header = require('./topbar')(_ui_);
 
   const metadata = Skeletons.Box.Y({
     className : `${audioFig}__wrapper metadata`,

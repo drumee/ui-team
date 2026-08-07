@@ -1,62 +1,51 @@
 /**
- * Pre-call layout: header + caller/callee identity + status + accept/decline.
- * Used for both 'dial' (outbound) and 'ring' (inbound) states.
+ * Pre-call screen for the 1:1 "Drumee connect" call, used for both 'dial'
+ * (outbound) and 'ring' (inbound).
+ *
+ * Figma layout, top to bottom:
+ *   window header (title + expand + close)
+ *   centred identity — round 120px avatar, display name, email
+ *   footer — call status ("Calling…" / "Incoming call…") above the round
+ *            call-action buttons
+ *
+ * The status text is the shared `message-container` part, so every
+ * stateMessage() call the room already makes lands in the right place; the
+ * skin keeps it in the footer flow here instead of the in-call overlay.
  */
 const __webrtc_init = function (_ui_, peer) {
   const fig = _ui_.fig.family;
   const grp = _ui_.fig.group;
-  const mode = _ui_.mget(_a.mode) || "";
   peer = peer || {};
 
-  const header = Skeletons.Box.X({
-    className: `${fig}__header ${grp}__header ${mode}`,
-    kids: [require('./topbar')(_ui_)],
-    sys_pn: _a.header,
-    dataset: {
-      header: _ui_.mget(_a.header),
-      area: _ui_.mget(_a.area),
-    },
+  // The header goes straight into __main, with no wrapper. A wrapper carrying
+  // `${grp}__header` would put a SECOND `window__header` (the drag-handle
+  // marker) around the one p2p-header already sets, and gave the pre-call
+  // screen a header box the live screen doesn't have.
+  const header = require("builtins/webrtc/skeleton/p2p-header")(_ui_);
+
+  const stage = Skeletons.Box.Y({
+    className: `${fig}__precall-stage`,
+    kids: [require("./identity")(_ui_, peer)],
   });
 
-  const fname = peer.firstname || '';
-  const lname = peer.lastname || '';
-  const fullname = peer.fullname || `${fname} ${lname}`.trim();
-  const display = peer.display || fullname || LOCALE.CONTACT;
-  const peerId = peer.uid || peer.drumate_id || peer.entity_id || peer.id;
-
-  const avatar = Skeletons.UserProfile({
-    className: `${fig}__avatar ${grp}__avatar`,
-    id: peerId,
-    firstname: fname,
-    lastname: lname,
-    fullname,
-    auto_color: 1,
-  });
-
-  const identity = Skeletons.Box.Y({
-    className: `${fig}__identity`,
+  const footer = Skeletons.Box.Y({
+    className: `${fig}__precall-footer`,
     kids: [
-      avatar,
-      Skeletons.Note({
-        className: `${fig}__caller-name`,
-        content: display,
+      Skeletons.Wrapper.Y({
+        sys_pn: "message-container",
+        className: `${grp}__message-container ${fig}__message-container`,
+        partHandler: [_ui_],
       }),
+      require("./default-commands")(_ui_),
     ],
   });
 
   const body = Skeletons.Box.Y({
     className: `${fig}__body ${grp}__body`,
     sys_pn: _a.content,
-    dataset: { header: _ui_.mget(_a.header) },
-    kids: [
-      identity,
-      Skeletons.Wrapper.Y({
-        sys_pn: "message-container",
-        className: `${grp}__message-container ${fig}__message-container`,
-        partHandler: [_ui_],
-      }),
-      require('./default-commands')(_ui_),
-    ],
+    attrOpt: { "data-header": _ui_.mget(_a.header), "data-phase": "precall" },
+    dataset: { header: _ui_.mget(_a.header), phase: "precall" },
+    kids: [stage, footer],
   });
 
   return Skeletons.Box.Y({

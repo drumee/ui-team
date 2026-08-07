@@ -1489,41 +1489,44 @@ export function visioMenu(ui, opt = {}) {
 }
 
 /**
- * macOS-style zoom menu — icon trigger with a CSS-hover dropdown offering
- * Enter/Exit Full Screen, Zoom, Tile Left/Right, Reframe. Clicking the
- * trigger toggles Zoom directly.
+ * The macOS green traffic-light button, as Chrome renders it on a Mac.
+ * Clicking the dot zooms — macOS has no "Zoom" row, the button IS zoom —
+ * and hovering it drops the Sonoma tiling menu mirrored below.
  *
  * @param {*} ui
  */
 export function zoomMenu(ui) {
   const cnRoot = `${ui.fig.family}-topbar__zoom`;
 
+  // `separator` rows carry no service and render as a hairline (see skin).
   const items = [
     {
-      service: "window-zoom",
-      ico: "desktop_fullview",
-      // Dedicated key (not LOCALE.ZOOM, which labels the Zoom video app) so
-      // this "maximize window" action can be translated independently.
-      content: LOCALE.WINDOW_ZOOM,
-      modifier: "zoom",
+      service: "fullscreen",
+      ico: "mac-enter-fullscreen",
+      content: LOCALE.ENTER_FULL_SCREEN,
+      modifier: "fullscreen",
+      // Named so the window can retitle it on fullscreenchange.
+      pn: "zoom-item-fullscreen",
     },
+    { separator: 1 },
     {
       service: "window-tile-left",
-      ico: "square-split-horizontal",
-      content: LOCALE.TILE_LEFT,
+      ico: "mac-tile-left",
+      content: LOCALE.TILE_WINDOW_LEFT_OF_SCREEN,
       modifier: "tile-left",
     },
     {
       service: "window-tile-right",
-      ico: "square-split-horizontal",
-      content: LOCALE.TILE_RIGHT,
+      ico: "mac-tile-right",
+      content: LOCALE.TILE_WINDOW_RIGHT_OF_SCREEN,
       modifier: "tile-right",
     },
+    { separator: 1 },
     {
       service: "window-reframe",
-      ico: "desktop_reduce",
-      content: LOCALE.REFRAME,
-      modifier: "reframe",
+      ico: "mac-previous-size",
+      content: LOCALE.RETURN_TO_PREVIOUS_SIZE,
+      modifier: "previous-size",
     },
   ];
 
@@ -1531,7 +1534,7 @@ export function zoomMenu(ui) {
     className: `${cnRoot}-wrapper`,
     kids: [
       Skeletons.Button.Svg({
-        ico: "desktop_fullview",
+        ico: "mac-zoom",
         className: `${cnRoot}-trigger`,
         sys_pn: "ctrl-fullscreen",
         service: "window-zoom",
@@ -1540,25 +1543,31 @@ export function zoomMenu(ui) {
       }),
       Skeletons.Box.Y({
         className: `${cnRoot}-menu`,
-        kids: items.map(({ service, ico, content, modifier }) =>
-          Skeletons.Box.X({
-            className: `${cnRoot}-item ${cnRoot}-item--${modifier}`,
-            uiHandler: [ui],
-            service,
-            kidsOpt: { active: 0 },
-            kids: [
-              Skeletons.Button.Svg({
-                ico,
+        kids: items.map(({ service, ico, content, modifier, separator, pn }) =>
+          separator
+            ? Skeletons.Box.X({
+                className: `${cnRoot}-separator`,
                 active: 0,
-                className: `${cnRoot}-item-icon`,
+              })
+            : Skeletons.Box.X({
+                className: `${cnRoot}-item ${cnRoot}-item--${modifier}`,
+                uiHandler: [ui],
+                service,
+                kidsOpt: { active: 0 },
+                kids: [
+                  Skeletons.Button.Svg({
+                    ico,
+                    active: 0,
+                    className: `${cnRoot}-item-icon`,
+                  }),
+                  Skeletons.Note({
+                    content,
+                    active: 0,
+                    className: `${cnRoot}-item-label`,
+                    ...(pn ? { sys_pn: pn, partHandler: ui } : {}),
+                  }),
+                ],
               }),
-              Skeletons.Note({
-                content,
-                active: 0,
-                className: `${cnRoot}-item-label`,
-              }),
-            ],
-          }),
         ),
       }),
     ],

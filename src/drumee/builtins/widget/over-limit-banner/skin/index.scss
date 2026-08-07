@@ -1,0 +1,69 @@
+// Downgrade over-limit lock banner — the strip above the desk topbar.
+// Red wash from the design system's --red-* ramp while locked, green when
+// restored; both faces keep the desk's own typography (var(--font-main)).
+.over-limit-banner {
+  &__ui {
+    width: 100%;
+    font-family: var(--font-main);
+  }
+
+  &__bar {
+    align-items: center;
+    gap: var(--spacer-4);
+    padding: var(--spacer-3) var(--spacer-5);
+    background: var(--red-100);
+    border-bottom: 1px solid var(--red-200);
+
+    &--ok {
+      background: var(--green-100, #e3f6ec);
+      border-bottom-color: var(--green-200, #b5e6cd);
+
+      .over-limit-banner__text {
+        color: var(--green-800, #0b6a45);
+        font-weight: 600;
+      }
+    }
+  }
+
+  &__text {
+    font-size: 12.5px;
+    line-height: 1.45;
+    color: var(--red-700);
+
+    &--strong {
+      font-weight: 600;
+      color: var(--red-800);
+      flex-shrink: 0;
+    }
+  }
+
+  &__days {
+    font-size: 12.5px;
+    font-weight: 500;
+    color: var(--red-700);
+    margin-left: auto;
+    flex-shrink: 0;
+  }
+
+  &__cta {
+    flex-shrink: 0;
+    padding: 6px 14px;
+    border-radius: var(--corner-radius-max);
+    background: var(--red-700);
+    color: var(--white);
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s ease;
+
+    &:hover {
+      background: var(--red-800);
+    }
+  }
+
+  // Without the CTA (plain members) the countdown still hugs the right edge.
+  &__bar--ok &__days,
+  &__bar--ok &__cta {
+    display: none;
+  }
+}

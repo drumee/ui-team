@@ -398,6 +398,11 @@ class __window_mfs extends DrumeeMFS {
     }
     this._partitionSettleTimer = setTimeout(() => {
       this._partitionSettleTimer = null;
+      // Last look before settling — an insert can also slip in between the
+      // partition pass and this timer.
+      if (this._hasUnpartitioned(listPart)) {
+        this._doPartition(listPart);
+      }
       if (this._partitionDebounce) {
         cancelAnimationFrame(this._partitionDebounce);
         this._partitionDebounce = null;
@@ -497,6 +502,19 @@ class __window_mfs extends DrumeeMFS {
             subtree: true,
           });
         }
+        // The observer was DISCONNECTED across _doPartition just above, so it
+        // could not record anything inserted in that window — and a
+        // MutationObserver does not backfill what it missed while detached.
+        // An upload lands its tiles in bursts, so one falling inside that gap
+        // is a matter of timing: it stays a direct child of the flex-column
+        // container and renders as a full-width row. Ten files, ten rows, one
+        // column — intermittently, which is what made it look random.
+        //
+        // Re-check instead of trusting the gap was empty. _doPartition rescans
+        // direct children each call, so a second pass is idempotent and cheap.
+        if (this._hasUnpartitioned(listPart)) {
+          this._doPartition(listPart);
+        }
         if (done) {
           if (this._partitionRetryTimer) {
             clearTimeout(this._partitionRetryTimer);
@@ -549,6 +567,28 @@ class __window_mfs extends DrumeeMFS {
       scrollEl.style.visibility = "visible";
       scrollEl.dataset.partitioning = 0;
     }
+  }
+
+  /**
+   * Items still sitting directly in .smart-container, outside the three
+   * section wrappers.
+   *
+   * These are the ones that render wrong: the container is a flex COLUMN
+   * (see the inline styles at the end of _doPartition), so an unpartitioned
+   * tile becomes a full-width row instead of a grid cell — ten uploads read
+   * as ten rows in one column.
+   */
+  _hasUnpartitioned(listPart) {
+    const scrollEl = listPart && listPart.el
+      && listPart.el.querySelector(".smart-container");
+    if (!scrollEl) return false;
+    return [...scrollEl.children].some(
+      (el) =>
+        el.dataset && el.dataset.filetype &&
+        !el.classList.contains("workspace-section") &&
+        !el.classList.contains("folder-section") &&
+        !el.classList.contains("file-section"),
+    );
   }
 
   _doPartition(listPart) {
@@ -702,6 +742,29 @@ class __window_mfs extends DrumeeMFS {
         this.iconsList.append(data, data.position);
       } else {
         this.iconsList.append(data);
+      }
+      // Re-partition, like every other insert path already does.
+      //
+      // An append is not additive at the DOM level: the CollectionView
+      // re-attaches EVERY child straight into .smart-container, so one new
+      // node tips all of them back out of .workspace-section/.folder-section/
+      // .file-section. Measured on a live desk — a single collection add left
+      // 139 tiles as direct children. .smart-container is a flex COLUMN, so
+      // until they are put back each tile is a full-width row: the grid reads
+      // as one column with N rows.
+      //
+      // Every sibling insert repairs that straight away — desk/wm create-folder
+      // and upload-progress' _revealInLayout both call
+      // _partitionFoldersAndFiles right after their append, folder/index.js
+      // schedules its sort. This path appended and did nothing, leaving the
+      // repair entirely to the rAF-debounced MutationObserver, which is why
+      // the collapse looked random and got worse the more files were uploaded.
+      //
+      // It fires for your OWN uploads, not just a peer's: the bundle uploader
+      // never sends an echoId, so the self-echo guard above can never match.
+      if (this.getViewMode && this.getViewMode() !== _a.row
+        && typeof this._partitionFoldersAndFiles === "function") {
+        this._partitionFoldersAndFiles(this.iconsList);
       }
     }
     this.syncBounds();

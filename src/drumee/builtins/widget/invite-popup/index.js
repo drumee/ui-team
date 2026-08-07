@@ -1,8 +1,9 @@
 /**
  * Invite popup widget
- * Mirrors Figma 316:77288 / 316:77652. Hooks the existing
- * drumate.my_contacts (autocomplete) + hub.add_contributors (invite) APIs.
+ * Mirrors Figma 316:77288 / 316:77652. Hooks the address-book lookup
+ * (libs/contact-lookup → contact.lookup) + hub.invite APIs.
  */
+const { lookupContacts, suggestionRows } = require("libs/contact-lookup");
 const skeletonModule = require("./skeleton");
 const { ROLES, DEFAULT_ROLE_IDS, computePrivilege, summarizeRoles } =
   skeletonModule;
@@ -76,10 +77,34 @@ class __invite_popup extends LetcBox {
       setTimeout(() => this._maybeCloseDropdowns(e.target), 0);
     };
     document.addEventListener("mousedown", this._dismissDropdowns);
+    // A mousedown inside the dropdown means a pick is starting.
+    //
+    // The order of events is mousedown → focusout → mouseup → click. The
+    // focusout handler below used to run mid-pick: it froze the half-typed
+    // address into a chip — rejecting it as invalid, hence the "Please enter
+    // a valid email address" — and cleared the list, destroying the row
+    // before its click could land. `relatedTarget` cannot be used to detect
+    // this: the rows are plain divs, so it is null, and the guard never held.
+    this._onSuggestionDown = (e) => {
+      if (this._suggestionsBox && this._suggestionsBox.el.contains(e.target)) {
+        this._pickingSuggestion = true;
+      }
+    };
+    document.addEventListener("mousedown", this._onSuggestionDown, true);
+    // Released one task after mouseup, i.e. after the click has dispatched.
+    this._onSuggestionUp = () => {
+      if (!this._pickingSuggestion) return;
+      setTimeout(() => {
+        this._pickingSuggestion = false;
+      }, 0);
+    };
+    document.addEventListener("mouseup", this._onSuggestionUp, true);
+
     // focusout bubbles (blur does not) so the listener survives Entry re-renders.
     this._onFocusOut = (e) => {
       const inputEl = this._emailInput?.el.querySelector("input");
       if (!inputEl || e.target !== inputEl) return;
+      if (this._pickingSuggestion) return;
       const next = e.relatedTarget;
       if (
         next &&
@@ -124,6 +149,12 @@ class __invite_popup extends LetcBox {
     }
     if (this._onFocusOut) {
       this.el.removeEventListener("focusout", this._onFocusOut);
+    }
+    if (this._onSuggestionDown) {
+      document.removeEventListener("mousedown", this._onSuggestionDown, true);
+    }
+    if (this._onSuggestionUp) {
+      document.removeEventListener("mouseup", this._onSuggestionUp, true);
     }
   }
 
@@ -212,13 +243,37 @@ class __invite_popup extends LetcBox {
     }
   }
 
+  /**
+   * Run `fn(inputEl)` once an Entry part owns a real <input>.
+   *
+   * onPartReady fires when the Entry itself is mounted, but the <input> is
+   * created later, by the Entry's OWN onDomRefresh (ui-core
+   * widgets/entry/input → `reload()` appends the template and then fires
+   * "input:ready"). So `child.el.querySelector("input")` is null here, and a
+   * listener attached at this point is attached to nothing — which is exactly
+   * why the email autocomplete never fired: no input event, no lookup, no
+   * dropdown, whatever the user typed.
+   *
+   * Bind on the widget's own ready signal rather than on a timeout guess.
+   * The immediate attempt covers a part that is already rendered (re-feed).
+   */
+  _whenInputReady(child, fn) {
+    const attach = () => {
+      const inputEl = child.el && child.el.querySelector("input");
+      if (!inputEl || inputEl.dataset.invitePopupBound === "1") return;
+      inputEl.dataset.invitePopupBound = "1";
+      fn(inputEl);
+    };
+    attach();
+    if (typeof child.on === "function") child.on("input:ready", attach);
+  }
+
   onPartReady(child, pn) {
     if (pn === "email-chips") {
       this._chipsBox = child;
     } else if (pn === "email-input") {
       this._emailInput = child;
-      const inputEl = child.el.querySelector("input");
-      if (inputEl) {
+      this._whenInputReady(child, (inputEl) => {
         inputEl.setAttribute("autocomplete", "off");
         inputEl.addEventListener("input", this._onSearchInput);
         inputEl.addEventListener("keydown", (e) => {
@@ -230,7 +285,7 @@ class __invite_popup extends LetcBox {
             this._removeInvitee(this._invitees.length - 1);
           }
         });
-      }
+      });
     } else if (pn === "suggestions") {
       this._suggestionsBox = child;
     } else if (pn === "email-error") {
@@ -244,9 +299,10 @@ class __invite_popup extends LetcBox {
     } else if (pn.startsWith("workspace-input:")) {
       const idx = pn.split(":")[1];
       this._partRefs.workspaceInputs[idx] = child;
-      const bind = () => {
-        const inputEl = child.el.querySelector("input");
-        if (!inputEl) return;
+      // Same late-<input> problem as the email field; this one used to paper
+      // over it with a 50ms timer. The widget's own "input:ready" is the real
+      // signal, so use it here too.
+      this._whenInputReady(child, (inputEl) => {
         inputEl.addEventListener("input", (e) =>
           this._onWorkspaceInput(idx, e),
         );
@@ -256,9 +312,7 @@ class __invite_popup extends LetcBox {
         inputEl.addEventListener("click", () => {
           this._fetchWorkspaces(idx, inputEl.value.trim());
         });
-      };
-      bind();
-      if (!child.el.querySelector("input")) setTimeout(bind, 50);
+      });
     } else if (pn.startsWith("workspace-suggestions:")) {
       const idx = pn.split(":")[1];
       this._partRefs.workspaceSuggestions[idx] = child;
@@ -297,45 +351,41 @@ class __invite_popup extends LetcBox {
     this._refreshSendState();
   }
 
+  // The typed string is matched against the whole address book — every
+  // address a contact holds, not just their name (see libs/contact-lookup),
+  // so a half-typed email offers the contacts that own it.
   _fetchSuggestions(value) {
     if (this._searchTimer) clearTimeout(this._searchTimer);
-    this._searchTimer = setTimeout(() => {
-      this.fetchService(
-        {
-          service: SERVICE.drumate.my_contacts,
-          status: "paper",
-          value: `${value}%`,
-          filter: this._invitees.map((i) => i.email),
-          hub_id: Visitor.id,
-        },
-        { async: 1 },
-      ).then((data) => {
-        this._showSuggestions(_.isArray(data) ? data : []);
+    // Each keystroke supersedes the one before: a slow answer that comes
+    // back after the user typed on must not repopulate the dropdown.
+    const seq = (this._searchSeq = (this._searchSeq || 0) + 1);
+    this._searchTimer = setTimeout(async () => {
+      const rows = await lookupContacts(this, {
+        value,
+        exclude: this._invitees.map((i) => i.email),
+        limit: 8,
       });
+      if (seq !== this._searchSeq) return;
+      this._showSuggestions(rows);
     }, 250);
   }
 
-  _showSuggestions(data) {
-    this._suggestions = data;
+  // `rows` are normalized lookup rows — self and already-picked addresses
+  // are filtered out upstream.
+  _showSuggestions(rows) {
+    this._suggestions = rows;
     if (!this._suggestionsBox) return;
-    const ownEmail = ((Visitor.profile() || {}).email || "").toLowerCase();
-    const filtered = data.filter(
-      (row) => row.email && row.email.toLowerCase() !== ownEmail,
-    );
-    if (!filtered.length) {
+    if (!rows.length) {
       this._hideSuggestions();
       return;
     }
-    const items = filtered.map((row) => {
-      const fullName =
-        [row.firstname, row.lastname].filter(Boolean).join(" ") || row.email;
-      return Skeletons.Box.X({
-        className: `${this.fig.family}__suggestion-item`,
-        dataset: { email: row.email, uid: row.id || row.uid || "" },
-        service: "pick-suggestion",
-        uiHandler: [this],
-        kids: [Skeletons.Note({ content: `${fullName} <${row.email}>` })],
-      });
+    // Shared renderer: name and address as separate elements. The old
+    // "Name <addr>" string lost the address — Note content is sanitized as
+    // innerHTML, so <addr> was stripped as an unknown tag.
+    const items = suggestionRows(rows, {
+      className: `${this.fig.family}__suggestion-item`,
+      service: "pick-suggestion",
+      uiHandler: this,
     });
     this._suggestionsBox.feed(items);
     this._suggestionsBox.el.dataset.state = 1;

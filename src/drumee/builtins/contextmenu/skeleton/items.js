@@ -2,7 +2,13 @@
 
 const __button = function (ui, trigger, k) {
 
-  const pfx = `${ui.fig.group}__contextmenu-item contextmenu-item`;
+  // Item row classes (group + shared). BEM elements (__icon / __label /
+  // __submenu / __chevron) MUST use the single-token root `contextmenu-item`
+  // — concatenating `${itemCn}__icon` used to produce
+  // `window__contextmenu-item contextmenu-item__icon`, so icons and the
+  // submenu panel incorrectly inherited the item-row class and sizing.
+  const itemCn = `${ui.fig.group}__contextmenu-item contextmenu-item`;
+  const pfx = "contextmenu-item";
 
   // let button = Skeletons.Button.content;
 
@@ -52,13 +58,13 @@ const __button = function (ui, trigger, k) {
           // their own colors). Interaction props live on the Box.X row;
           // kids are inert (active: 0) so clicks resolve to the row.
           kids: [
-            { ico: 'addmenu-folder', label: LOCALE.WORKSPACE, service: 'new-workspace' },
-            { ico: 'addmenu-note', label: LOCALE.NOTE, service: 'new-note' },
-            { ico: 'addmenu-document', label: LOCALE.DOCUMENT, service: 'new-document', name: 'document.docx' },
-            { ico: 'addmenu-spreadsheet', label: LOCALE.SPREADSHEET, service: 'new-spreadsheet', name: 'spreadsheet.xlsx' },
-            { ico: 'addmenu-presentation', label: LOCALE.PRESENTATION, service: 'new-presentation', name: 'presentation.pptx' },
+            { ico: 'addmenu-folder', label: LOCALE.WORKSPACE, service: 'new-workspace', iconClass: 'ico-workspace' },
+            { ico: 'addmenu-note', label: LOCALE.NOTE, service: 'new-note', iconClass: 'ico-note' },
+            { ico: 'addmenu-document', label: LOCALE.DOCUMENT, service: 'new-document', name: 'document.docx', iconClass: 'ico-document' },
+            { ico: 'addmenu-spreadsheet', label: LOCALE.SPREADSHEET, service: 'new-spreadsheet', name: 'spreadsheet.xlsx', iconClass: 'ico-spreadsheet' },
+            { ico: 'addmenu-presentation', label: LOCALE.PRESENTATION, service: 'new-presentation', name: 'presentation.pptx', iconClass: 'ico-presentation' },
           ].map((it) => Skeletons.Box.X({
-            className: `${pfx} submenu-item`,
+            className: `${itemCn} submenu-item ${it.iconClass}`,
             service: it.service,
             name: it.name,
             uiHandler: [ui],
@@ -88,8 +94,8 @@ const __button = function (ui, trigger, k) {
         Skeletons.Box.Y({
           className: `${pfx}__submenu`,
           kids: [
-            button({ content: LOCALE.VIEW_CHAT_THREADS, service: _a.chat, className: `${pfx} submenu-item`, uiHandler: [ui] }),
-            button({ content: LOCALE.DOWNLOAD_CHAT_THREADS, service: 'download-file-chat', className: `${pfx} submenu-item`, uiHandler: [ui] }),
+            button({ content: LOCALE.VIEW_CHAT_THREADS, service: _a.chat, className: `${itemCn} submenu-item`, uiHandler: [ui] }),
+            button({ content: LOCALE.DOWNLOAD_CHAT_THREADS, service: 'download-file-chat', className: `${itemCn} submenu-item`, uiHandler: [ui] }),
           ],
         }),
       ],
@@ -179,7 +185,7 @@ const __button = function (ui, trigger, k) {
 
           kids: [
 
-            button({ content: LOCALE.MOVE, service: 'move', className: `${pfx} submenu-item`, uiHandler: [ui] }),
+            button({ content: LOCALE.MOVE, service: 'move', className: `${itemCn} submenu-item`, uiHandler: [ui] }),
 
             button({
 
@@ -187,7 +193,7 @@ const __button = function (ui, trigger, k) {
 
               service: 'link-to-task-tracker',
 
-              className: `${pfx} submenu-item`,
+              className: `${itemCn} submenu-item`,
 
               uiHandler: [ui],
 
@@ -233,7 +239,7 @@ const __button = function (ui, trigger, k) {
           className: `${pfx}__submenu`,
           kids: [
             Skeletons.Box.X({
-              className: `${pfx} submenu-item rotate-left`,
+              className: `${itemCn} submenu-item rotate-left`,
               service: _e.rotate,
               value: -90,
               uiHandler: [ui],
@@ -244,7 +250,7 @@ const __button = function (ui, trigger, k) {
               ],
             }),
             Skeletons.Box.X({
-              className: `${pfx} submenu-item rotate-right`,
+              className: `${itemCn} submenu-item rotate-right`,
               service: _e.rotate,
               value: 90,
               uiHandler: [ui],
@@ -312,7 +318,7 @@ const __button = function (ui, trigger, k) {
 
     const r = a[k];
 
-    const cls = cn[k] ? `${pfx} ${cn[k]}` : `${pfx}`;
+    const cls = cn[k] ? `${itemCn} ${cn[k]}` : `${itemCn}`;
 
     // separator: a 1px divider — never an icon row.
 

@@ -61,6 +61,15 @@ class desk_module extends LetcBox {
     // open the full-page billing screen without a direct module reference.
     this._openBillingPage = () => this.openBillingPage();
     RADIO_BROADCAST.on("desk:open-billing-page", this._openBillingPage);
+    // Downgrade over-limit (libs/over-limit): the popup and banner raise
+    // these instead of reaching into the desk. open-admin-console reuses the
+    // exact toggle-apps shim the promo's post-claim reload uses.
+    this._openAdminConsole = () => this._toggleAppsShim();
+    this._openOverLimitPopupBound = () => this._openOverLimitPopup();
+    this._onOverLimitChanged = this._onOverLimitChanged.bind(this);
+    RADIO_BROADCAST.on("desk:open-admin-console", this._openAdminConsole);
+    RADIO_BROADCAST.on("desk:open-over-limit-popup", this._openOverLimitPopupBound);
+    RADIO_BROADCAST.on(require("libs/over-limit").CHANGED, this._onOverLimitChanged);
     // The topbar action cluster (Add new / Upload / Search / Invite) is
     // hidden while the admin console or Settings page is up (state 0, set in
     // _showPanel) and restored by loadHome/togglePanel — but OPENING A
@@ -90,6 +99,9 @@ class desk_module extends LetcBox {
     this._openWorkspaces = new Set();
     this._onWorkspaceOpen = this._onWorkspaceOpen.bind(this);
     this._onWorkspaceClose = this._onWorkspaceClose.bind(this);
+    // A zoomed folder window claims the desk body the same way a sidebar
+    // workspace pane does — including the header row.
+    this._onFolderZoom = this._onFolderZoom.bind(this);
     this._bindFolderTabs();
 
     // [Reload] Persist desk UI (sidebar screen + workspace + floating
@@ -110,6 +122,7 @@ class desk_module extends LetcBox {
     Wm.$el.on("folder:close", this._onFolderClose);
     Wm.$el.on("workspace:open", this._onWorkspaceOpen);
     Wm.$el.on("workspace:close", this._onWorkspaceClose);
+    Wm.$el.on("folder:zoom", this._onFolderZoom);
     Wm.$el.on(_e.minimize, this._onWmMinimize);
     Wm.$el.on(_e.wake, this._onWmWake);
     this._folderTabsBound = true;
@@ -178,17 +191,39 @@ class desk_module extends LetcBox {
     }
   }
 
+  _onFolderZoom() {
+    this._syncWorkspaceTopbar();
+  }
+
+  /**
+   * Read live off the windows instead of a tracked Set: zoom state also flips
+   * on tile/reframe/destroy, and a stale entry would strand the header hidden.
+   * Minimized windows don't count — they're not on screen.
+   */
+  _hasZoomedFolder() {
+    for (const entry of this._openFolders.values()) {
+      const win = entry && entry.win;
+      if (!win || (win.isDestroyed && win.isDestroyed())) continue;
+      if (entry.minimized || win.mget(_a.minimize)) continue;
+      if (win.mget(_a.headless)) continue;
+      if (win._zoomed) return true;
+    }
+    return false;
+  }
+
   // The home-section topbar is only meaningful on the home grid. A headless
   // workspace pane fills the desk body and brings its own window topbar, so
   // hide the home topbar while any workspace pane is open and restore it once
-  // the last one closes (back to home). With more than one window open the
-  // bar comes back in strip-only mode (data-tabstrip): every non-active
-  // window is fully covered by the active one, so the tab strip is the only
-  // way to reach it — breadcrumb/actions stay hidden (the pane has its own).
+  // the last one closes (back to home). A zoomed folder window (the home-grid
+  // route opens a floating window, not a pane) fills the same area and gets
+  // the same treatment. With more than one window open the bar comes back in
+  // strip-only mode (data-tabstrip): every non-active window is fully covered
+  // by the active one, so the tab strip is the only way to reach it —
+  // breadcrumb/actions stay hidden (the pane has its own).
   _syncWorkspaceTopbar() {
     const part = this.getPart("top-bar");
     if (!part || !part.el) return;
-    if (this._openWorkspaces.size) {
+    if (this._openWorkspaces.size || this._hasZoomedFolder()) {
       part.el.dataset.headless = "1";
       if (this._openFolders.size > 1) {
         part.el.dataset.tabstrip = "1";
@@ -198,6 +233,14 @@ class desk_module extends LetcBox {
     } else {
       delete part.el.dataset.headless;
       delete part.el.dataset.tabstrip;
+    }
+    // Zoomed windows are inline-pixel geometry, so they must re-fit whenever
+    // the header resizes the container. Fire only on an actual change — this
+    // runs on every tab render.
+    const state = `${part.el.dataset.headless || ""}|${part.el.dataset.tabstrip || ""}`;
+    if (state !== this._topbarChromeState) {
+      this._topbarChromeState = state;
+      if (window.Wm && Wm.$el) Wm.$el.trigger("desk:chrome");
     }
   }
 
@@ -298,6 +341,9 @@ class desk_module extends LetcBox {
       this._restoreClearTimer = null;
     }
     RADIO_BROADCAST.off("desk:open-billing-page", this._openBillingPage);
+    RADIO_BROADCAST.off("desk:open-admin-console", this._openAdminConsole);
+    RADIO_BROADCAST.off("desk:open-over-limit-popup", this._openOverLimitPopupBound);
+    RADIO_BROADCAST.off(require("libs/over-limit").CHANGED, this._onOverLimitChanged);
     RADIO_BROADCAST.off("avatar-changed", this._updateAvatar);
     Visitor.off(_e.change, this._updateAvatar);
     if (this._searchInputEl && this._searchInputHandler) {
@@ -319,6 +365,7 @@ class desk_module extends LetcBox {
       Wm.$el.off("folder:close", this._onFolderClose);
       Wm.$el.off("workspace:open", this._onWorkspaceOpen);
       Wm.$el.off("workspace:close", this._onWorkspaceClose);
+      Wm.$el.off("folder:zoom", this._onFolderZoom);
       Wm.$el.off(_e.minimize, this._onWmMinimize);
       Wm.$el.off(_e.wake, this._onWmWake);
       this._folderTabsBound = false;
@@ -640,18 +687,26 @@ class desk_module extends LetcBox {
     if (!open) return;
     // Don't fight desk-state restore back to Home.
     this._restoreInFlight = false;
-    setTimeout(() => {
-      if (this.isDestroyed && this.isDestroyed()) return;
-      this.onUiEvent(
-        {
-          mget: (k) => (k === _a.service || k === "service" ? "toggle-apps" : null),
-          get(k) {
-            return this.mget(k);
-          },
+    setTimeout(() => this._toggleAppsShim(), 400);
+  }
+
+  /**
+   * Open the Admin Console the way the sidebar item does — a synthetic
+   * toggle-apps command through the desk's own onUiEvent. Shared by the
+   * promo post-claim reload above and the over-limit popup's "Resolve now"
+   * (seats are resolved on the Members page).
+   */
+  _toggleAppsShim() {
+    if (this.isDestroyed && this.isDestroyed()) return;
+    this.onUiEvent(
+      {
+        mget: (k) => (k === _a.service || k === "service" ? "toggle-apps" : null),
+        get(k) {
+          return this.mget(k);
         },
-        { service: "toggle-apps" },
-      );
-    }, 400);
+      },
+      { service: "toggle-apps" },
+    );
   }
 
   // ── [Reload] keep the desk where the user left it across a browser reload ──
@@ -1736,6 +1791,81 @@ class desk_module extends LetcBox {
    * actually needs. Reload before it fires and the wait restarts; the offer is
    * unchanged and still waiting, so nothing is lost.
    */
+  // ── Downgrade over-limit (libs/over-limit) ────────────────────────────────
+
+  /**
+   * Boot-time entry: fresh server evaluation (self-heals drift), then mount
+   * the banner and decide the popup. Runs FIRST in the _afterHomeSettled
+   * chain — a locked workspace outranks promo/reward flows, none of which an
+   * over-limit org is eligible for anyway.
+   *
+   * Popup rules (the prototype's own matrix):
+   *   over_limit + admin  → shown unless snoozed server-side
+   *   over_limit + member → banner only; they can't fix it
+   *   hard_lock  + anyone → forced, non-dismissible (member face is a wall)
+   */
+  async _maybeShowOverLimit() {
+    const OverLimit = require("libs/over-limit");
+    if (!OverLimit.enforcementOn()) return;
+    if (SERVICE.payment && SERVICE.payment.over_limit_state) {
+      await OverLimit.refresh(this);
+    }
+    const c = OverLimit.current();
+    if (!c) return;
+    this._mountOverLimitBanner();
+    if (c.state === "hard_lock") return this._openOverLimitPopup();
+    if (OverLimit.isAdmin() && !OverLimit.snoozedForMe()) {
+      return this._openOverLimitPopup();
+    }
+  }
+
+  /**
+   * Live updates (WS push → libs/over-limit.setCurrent → this): mount the
+   * banner the moment a lock appears mid-session, escalate to the forced
+   * popup when hard_lock lands, and re-feed the topbar so the "+ New"
+   * cluster follows the read-only state both ways.
+   */
+  _onOverLimitChanged() {
+    if (this.isDestroyed && this.isDestroyed()) return;
+    const OverLimit = require("libs/over-limit");
+    if (OverLimit.isLocked()) {
+      this._mountOverLimitBanner();
+      if (OverLimit.isHardLock()) this._openOverLimitPopup();
+    }
+    this.ensurePart("top-bar").then((part) => {
+      if (part && !(part.isDestroyed && part.isDestroyed())) {
+        part.feed(require("./skeleton/topbar")(this));
+      }
+    });
+  }
+
+  /** Once per desk life; the banner hides itself while there is nothing to say. */
+  _mountOverLimitBanner() {
+    if (this._overLimitBannerMounted) return;
+    this._overLimitBannerMounted = true;
+    this.ensurePart("desk-body").then((part) => {
+      if (!part || (part.isDestroyed && part.isDestroyed())) return;
+      part.prepend({ kind: "over_limit_banner" });
+    });
+  }
+
+  async _openOverLimitPopup() {
+    try {
+      await Kind.waitFor("over_limit_popup");
+    } catch (e) {
+      return;
+    }
+    if (this.isDestroyed && this.isDestroyed()) return;
+    Wm.launch(
+      {
+        kind: "over_limit_popup",
+        hub_id: Visitor.id,
+        wm_unique_id: "over_limit_popup",
+      },
+      { explicit: 1, singleton: 1 },
+    );
+  }
+
   static get PROMO_OFFER_DELAY_MS() {
     return 5 * 60 * 1000;
   }
@@ -1898,7 +2028,10 @@ class desk_module extends LetcBox {
     // destination the visitor asked for, and letting the reward flow or the
     // LAUNCH30 offer land on top of it would bury it.
     this._maybeOpenBillingDeepLink();
-    return this._maybeStartRewardFlow()
+    // Over-limit outranks the promo/reward flows: a locked workspace needs
+    // its popup first, and a locked org is not eligible for either promo.
+    return this._maybeShowOverLimit()
+      .then(() => this._maybeStartRewardFlow())
       .then(() => this._maybeShowPromoLaunch30("home", { defer: true }))
       .then(() => this._waitForHomePopups())
       .then((clear) =>
@@ -1953,6 +2086,11 @@ class desk_module extends LetcBox {
       const promo =
         (window.Wm && Wm.getItemsByKind && Wm.getItemsByKind("promo_launch30")) || [];
       if (promo.some((w) => w && !(w.isDestroyed && w.isDestroyed()))) return true;
+      // The over-limit popup is a full-screen flow too — stacking the
+      // invited-workspace dialog on top of a lock notice helps nobody.
+      const ol =
+        (window.Wm && Wm.getItemsByKind && Wm.getItemsByKind("over_limit_popup")) || [];
+      if (ol.some((w) => w && !(w.isDestroyed && w.isDestroyed()))) return true;
     } catch (e) {
       // Wm not answering — treat as clear rather than waiting forever.
     }
@@ -2718,9 +2856,13 @@ class desk_module extends LetcBox {
         }
         return this.loadDefault();
 
-      case _e.upload:
+      case _e.upload: {
         this.closeDeskNewMenu(cmd);
+        // Refuse before the file picker opens — a picker that can only
+        // produce OVER_LIMIT_READ_ONLY is worse than no picker.
+        if (require("libs/over-limit").guardWrite("write")) return;
         return Wm.handleUpload();
+      }
 
       case "toggle-desk-new-create-menu":
         return this.toggleDeskNewCreateMenu(cmd);
@@ -2928,28 +3070,46 @@ class desk_module extends LetcBox {
         Wm.loadWorkspace(cmd);
         return;
 
-      case "new-workspace":
+      case "new-workspace": {
         this.closeDeskNewMenu(cmd);
+        // Create workspace is a write — block at the UI before media_form /
+        // desk.create_hub ever runs (context menu, sidebar, topbar all land
+        // here or on Wm's twin case).
+        if (require("libs/over-limit").guardWrite("write")) return;
         return Wm.onUiEvent(cmd, { ...args, service: "new-workspace" });
+      }
 
-      case "new-note":
+      case "new-note": {
         this.closeDeskNewMenu(cmd);
+        // Note opens a local editor with no round-trip — the REST clamp
+        // never sees it. Gate here so hard-lock / over_limit don't leave
+        // a writable markdown window on a read-only desk.
+        if (require("libs/over-limit").guardWrite("write")) return;
         Wm.windowsLayer.append({
           kind: "editor_markdown",
           uiHandler: [this],
         });
-        // this._hideAddMenu();
         return;
+      }
       case "new-document":
       case "new-spreadsheet":
-      case "new-presentation":
+      case "new-presentation": {
         this.closeDeskNewMenu(cmd);
+        // Office create hits euroffice.new_doc; refuse before the spinner /
+        // "network error" path that the plugin's own error handler shows.
+        if (require("libs/over-limit").guardWrite("write")) return;
         Wm.newDocument(cmd);
-        // this._hideAddMenu();
         return;
+      }
 
-      case "invite-member":
+      case "invite-member": {
+        // Invites are paused while the workspace is over its plan limits —
+        // the topbar button is already hidden, but other entry points (member
+        // panels, workspace menus) still land here. Answer with words, not a
+        // popup whose submit can only be refused.
+        if (require("libs/over-limit").guardWrite("invite")) return;
         return this._openInvitePopup(cmd);
+      }
 
       // Reward-flow Step 1 walkthrough: open/close the topbar Add-new dropdown
       // on its behalf (the desk owns the `addmenu` part). Used by the guide's

@@ -1,29 +1,39 @@
 @use "mixins/drumee";
 @use "builtins/webrtc/skin/meeting-shell" as *;
 
-// Reuse the redesigned meeting shell (top bar + video stage + tiles + floating
-// controls). $chat: false drops the meeting-only chat-panel / widget-chat /
-// in-topbar-chat rules — the 1:1 call has no in-call chat. This also pulls in
-// the shared webrtc-* base styling (ui/topbar/command/attendee/sound-analyzer/
-// remote) that connect used to @include directly.
+// 1:1 "Drumee connect" call window.
+//
+// Reuses the redesigned meeting shell for the live video stage ($chat: false —
+// a 1:1 call has no in-call chat), then re-skins the chrome to the Figma
+// "Drumee connect" design: a plain window header (title + expand + close), a
+// centred identity panel before/after the call, and a bottom bar of round
+// 64px call actions. Everything here is scoped to `.window-connect`, so the
+// team meeting window is untouched.
+//
+// Figma colours that have no token yet are written literally with a comment,
+// matching how meeting-shell.scss handles the same cases:
+//   Grey/80  #29292c — secondary text (email, status, elapsed time)
+//   Overlay/brand      rgba(89, 80, 255, 0.1)
+//   Overlay/red        rgba(255, 106, 101, 0.15)
+//   Overlay/light mode rgba(0, 0, 0, 0.05)
 .window-connect {
   @include meeting-shell($chat: false, $pfx: "window-connect");
 }
 
 .window-connect {
-  // The meeting-shell mixin already makes __ui fill its parent and, when
-  // data-standalone="1" is set (connect/index.js onDomRefresh), float as a
-  // resizable free window in the Wm pool — same pattern as the meeting. Only
-  // the connect-specific chrome remains here; the old fixed 440x480 popup box
-  // (width/height/position:fixed) is gone.
   &__ui {
-    background-color: var(--normal-bg);
+    background-color: #ffffff;
     flex-direction: column;
     display: flex;
     z-index: 100100 !important;
 
+    // Figma: 12px radius, hairline border, "Blur + Shadow Big".
     &[data-standalone="1"] {
-      border: 1px solid var(--border-default);
+      border: 1px solid rgba(0, 0, 0, 0.05);
+      border-radius: var(--corner-radius-4);
+      box-shadow:
+        0 40px 80px rgba(0, 0, 0, 0.3),
+        0 7px 10px rgba(0, 0, 0, 0.09);
     }
 
     // Mobile: fill the viewport instead of a floating frame.
@@ -36,69 +46,451 @@
     }
   }
 
-  &__avatar {
-    &[data-state="open"] {
-      visibility: visible;
-      position: absolute;
-      z-index: 0 !important;
-    }
-  }
-
-  &__header {
-    background-color: var(--connect-header-bg);
-    border-bottom: none;
+  // ── Window header (Figma: "Drumee connect" + CornersOut + X) ─────────────
+  // Rendered by webrtc/skeleton/p2p-header for every call phase, so the chrome
+  // never shifts between the pre-call, live and terminal screens.
+  &__call-header {
+    flex-shrink: 0;
+    box-sizing: border-box;
     width: 100%;
+    padding: var(--spacer-7) var(--spacer-6) 0;
+    justify-content: space-between;
+    align-items: flex-start;
+    background: #ffffff;
+    // The whole bar is the window drag handle (window__header).
+    cursor: move;
+    user-select: none;
     z-index: 1000;
 
-    .media-devices__list {
-      .menu-items {
-        left: 0;
-        background: var(--default-background);
-      }
+    &-title {
+      @include drumee.typo(
+        $size: 18px,
+        $line: 24px,
+        $color: var(--primary-purple-100, #0b0a21)
+      );
+      font-weight: 600;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
 
-    // Equal-size zoom + close icons with comfortable spacing.
-    .window-button__icon-button {
-      gap: 14px;
+    &-actions {
       align-items: center;
+      gap: var(--spacer-3);
+      flex-shrink: 0;
+    }
 
-      .icon,
-      .ctrl-close,
-      .ctrl-sizing {
-        width: 18px;
-        height: 18px;
-        margin: 0;
-        padding: 0;
-        flex-shrink: 0;
-        display: flex;
-        align-items: center;
-        justify-content: center;
+    &-btn {
+      display: flex;
+      box-sizing: border-box;
+      width: 24px;
+      height: 24px;
+      padding: 2px;
+      border-radius: var(--corner-radius-1);
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      cursor: pointer;
+      color: var(--primary-purple-100, #0b0a21);
+      transition: background 0.15s ease;
 
-        svg {
-          width: 100%;
-          height: 100%;
-          display: block;
-        }
+      svg {
+        width: 20px;
+        height: 20px;
+        fill: currentColor;
+      }
+
+      &:hover {
+        background: rgba(0, 0, 0, 0.05);
       }
     }
   }
 
-  // Pre-call body only (dial / ring / pickup): centered avatar + status. The
-  // in-call shell body carries `singleton` and keeps the shared meeting stage
-  // styling (gray, top-aligned, padded) from the mixin.
-  &__body:not(.singleton) {
+  // The pre-call and terminal screens are ONE white panel, like the live one.
+  // Without this the shared meeting-shell `__body` (grey #f2f2f7 stage with
+  // 12px padding) applies, which is what made the header read as a separate
+  // floating white strip over a grey sheet.
+  &__body[data-phase="precall"],
+  &__body[data-phase="ended"] {
+    background-color: #ffffff;
+    padding: 0;
+    gap: 0;
+    min-height: 0;
+  }
+
+  // ── Identity panel (pre-call + terminal) ────────────────────────────────
+  &__precall-stage {
+    flex: 1;
+    min-height: 0;
+    box-sizing: border-box;
+    padding: var(--spacer-8) 0;
     align-items: center;
     justify-content: center;
-    background-color: var(--normal-bg);
-    border-radius: 0 0 var(--corner-radius-5) var(--corner-radius-5);
-    z-index: 100;
-    width: 100%;
-    height: 100%;
+  }
 
-    .core-webrtc__ui {
+  &__identity {
+    align-items: center;
+    justify-content: center;
+    gap: var(--spacer-6);
+  }
+
+  &__identity-text {
+    align-items: center;
+    gap: var(--spacer-2);
+  }
+
+  &__caller-name {
+    @include drumee.typo(
+      $size: 24px,
+      $line: 1.1em,
+      $color: var(--primary-purple-100, #0b0a21)
+    );
+    font-weight: 600;
+    text-align: center;
+    word-break: break-word;
+  }
+
+  &__caller-email {
+    // Figma Grey/80 #29292c — no token for this step of the grey ramp.
+    @include drumee.typo($size: 16px, $line: 1.4em, $color: #29292c);
+    text-align: center;
+    word-break: break-all;
+  }
+
+  // Figma: a 120px CIRCLE. The ROOT must be sized and rounded here — the
+  // profile widget ships `.user-profile__ui { width:40px; height:40px;
+  // border-radius: var(--border-radius-tiny) }`, so rounding only the children
+  // leaves the root's 3px square visible as an outline around the circle.
+  // The pulse marks a call that is still ringing; stopped for offline / ended.
+  &__avatar.user-profile {
+    position: relative;
+    width: 120px;
+    height: 120px;
+    flex-shrink: 0;
+    border-radius: 50%;
+    background: transparent;
+    border: none;
+
+    .user-profile__icon,
+    .user-profile__main,
+    .user-profile__initiales {
       width: 100%;
       height: 100%;
-      max-height: 100%;
+      border-radius: 50%;
+    }
+
+    .user-profile__main {
+      overflow: hidden;
+      animation: drumee-call-pulse 1.6s ease-in-out infinite;
+      justify-content: center;
+      align-items: center;
+
+      img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
+    }
+
+    // `__initiales` is absolutely positioned by the widget — centre the glyphs
+    // over the circle instead of letting them sit at its top-left.
+    .user-profile__initiales {
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .user-profile__initiales .note-content {
+      font-size: 42px;
+      font-weight: 600;
+      margin: 0;
+    }
+
+    // The identity block already says who this is — the presence dot is noise.
+    &[data-online="1"],
+    &[data-online="2"] {
+      &:before {
+        visibility: hidden;
+      }
+    }
+
+    &.user-profile__ui[data-default="1"] svg {
+      fill: var(--default-icon-neutral);
+    }
+  }
+
+  @keyframes drumee-call-pulse {
+    0%,
+    100% {
+      box-shadow: 0 0 0 0 rgba(89, 80, 255, 0.35);
+    }
+    50% {
+      box-shadow: 0 0 0 16px rgba(89, 80, 255, 0);
+    }
+  }
+
+  // ── Pre-call / terminal footer: status line above the action row ─────────
+  &__precall-footer {
+    flex-shrink: 0;
+    box-sizing: border-box;
+    width: 100%;
+    padding: var(--spacer-5) var(--spacer-6) var(--spacer-9);
+    justify-content: flex-end;
+    align-items: center;
+    gap: var(--spacer-7);
+  }
+
+  &__ended-message {
+    // Figma Grey/80 #29292c.
+    @include drumee.typo($size: 16px, $line: 1.4em, $color: #29292c);
+    text-align: center;
+  }
+
+  // ── Call action buttons (Figma "call-action-button") ─────────────────────
+  // 64px circles, 32px glyph, 48px apart. Fill is chosen by data-action +
+  // data-state so the same component covers accept / mic / camera / screen /
+  // hang up in every phase.
+  &__call-action {
+    display: flex;
+    box-sizing: border-box;
+    width: 64px;
+    height: 64px;
+    padding: var(--spacer-5);
+    border-radius: var(--corner-radius-max);
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    cursor: pointer;
+    // Overlay/brand — the resting fill for the toggles.
+    background: rgba(89, 80, 255, 0.1);
+    color: var(--primary-purple-100, #0b0a21);
+    transition:
+      background 0.15s ease,
+      color 0.15s ease,
+      transform 0.1s ease;
+
+    svg {
+      width: 32px;
+      height: 32px;
+      flex-shrink: 0;
+      fill: currentColor;
+    }
+
+    &:hover {
+      background: rgba(89, 80, 255, 0.18);
+    }
+
+    &:active {
+      transform: scale(0.96);
+    }
+
+    // Muted mic / camera off → Overlay/red.
+    &[data-action="mic"][data-state="0"],
+    &[data-action="camera"][data-state="0"] {
+      background: rgba(255, 106, 101, 0.15);
+
+      &:hover {
+        background: rgba(255, 106, 101, 0.24);
+      }
+    }
+
+    // Share screen sits on Overlay/light mode until it goes live.
+    &[data-action="screen"] {
+      background: rgba(0, 0, 0, 0.05);
+
+      &:hover {
+        background: rgba(0, 0, 0, 0.1);
+      }
+
+      &[data-state="1"] {
+        background: rgba(89, 80, 255, 0.18);
+        color: var(--primary-40, #5950ff);
+      }
+
+      // Locked while the peer is presenting (one screen at a time).
+      &[data-disabled="1"] {
+        opacity: 0.4;
+        pointer-events: none;
+        cursor: not-allowed;
+      }
+    }
+
+    &[data-action="accept"] {
+      background: var(--success, #54b684);
+      color: #ffffff;
+
+      &:hover {
+        filter: brightness(1.06);
+        background: var(--success, #54b684);
+      }
+    }
+
+    &[data-action="hangup"] {
+      background: var(--signal-error, #d74e49);
+      color: #ffffff;
+
+      &:hover {
+        filter: brightness(1.06);
+        background: var(--signal-error, #d74e49);
+      }
+    }
+  }
+
+  // Device picker caret: hidden until the control is hovered, so the bar reads
+  // as the Figma design at rest without losing mic / camera selection.
+  &__call-action-slot {
+    position: relative;
+    flex-shrink: 0;
+    align-items: center;
+  }
+
+  &__call-action-caret {
+    position: absolute;
+    right: -2px;
+    bottom: -2px;
+    display: flex;
+    box-sizing: border-box;
+    width: 22px;
+    height: 22px;
+    padding: 3px;
+    border-radius: 50%;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    background: #ffffff;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    color: var(--primary-purple-100, #0b0a21);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.15s ease;
+    z-index: 2;
+
+    svg {
+      width: 12px;
+      height: 12px;
+      fill: currentColor;
+    }
+  }
+
+  &__call-action-slot:hover &__call-action-caret,
+  &__call-action-caret:focus-within {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  // The pickers hang ABOVE their control — the action bar sits at the bottom of
+  // the window. The shared command styling offsets them for the old floating
+  // bar (right: -134px), so re-anchor them over the round button they belong to.
+  &__call-action-slot &__devices-list.audio,
+  &__call-action-slot &__devices-list.video {
+    bottom: calc(100% + 12px);
+    top: auto;
+    left: 50%;
+    right: auto;
+    transform: translateX(-50%);
+    border: 1px solid var(--border-default);
+    z-index: 10;
+
+    &::before {
+      display: none;
+    }
+  }
+
+  &__bg-effects {
+    position: absolute;
+    bottom: calc(100% + 12px);
+    right: calc(100% + 12px);
+    top: auto;
+    left: auto;
+    z-index: 10;
+  }
+
+  // ── Action rows ─────────────────────────────────────────────────────────
+  &__commands {
+    background-color: transparent !important;
+    height: auto;
+    padding: 0;
+    border-radius: 0;
+    align-items: center;
+    justify-content: center;
+    // Never wrap — the row shrinks instead (see the responsive block). Wrapping
+    // would push a second row below the fold in a short window, which has
+    // nothing to scroll.
+    flex-wrap: nowrap;
+    gap: var(--spacer-9); // Figma: 48px between call actions
+  }
+
+  // Pre-call bar: flows inside __precall-footer, not the shared absolute dock.
+  &__commands-container[data-mode="setup"] {
+    position: relative;
+    bottom: auto;
+    height: auto;
+    width: 100%;
+    padding: 0;
+    z-index: 1;
+  }
+
+  // In-call bar: elapsed time above the action row, both in normal flow at the
+  // bottom of the panel (Figma padding 16px 24px 32px, 32px gap).
+  &__commands-container[data-mode="in-call"] {
+    position: relative;
+    bottom: auto;
+    height: auto;
+    width: 100%;
+    // The stage above is flex:1 — without this the controls would be the thing
+    // that gets squeezed when the window is short.
+    flex-shrink: 0;
+    box-sizing: border-box;
+    padding: var(--spacer-5) var(--spacer-6) var(--spacer-7);
+    align-items: center;
+    justify-content: flex-end;
+    gap: var(--spacer-7);
+    background: #ffffff;
+    z-index: 100000;
+  }
+
+  &__call-elapsed {
+    // Figma Grey/80 #29292c.
+    @include drumee.typo($size: 16px, $line: 1.4em, $color: #29292c);
+    font-variant-numeric: tabular-nums;
+    text-align: center;
+  }
+
+  // ── Live stage ──────────────────────────────────────────────────────────
+  // The Figma call panel is white, with the tile grid inset 12px and 16px tile
+  // corners; the shared shell defaults to a grey stage with 8px tiles.
+  &__main--call &__body.singleton {
+    background-color: #ffffff;
+    padding: 0;
+    gap: 0;
+  }
+
+  &__main--call &__endpoints {
+    box-sizing: border-box;
+    padding: var(--spacer-4);
+  }
+
+  .participants-manager__ui {
+    background-color: #ffffff;
+
+    .endpoint-local,
+    .remote-user {
+      border-radius: var(--corner-radius-5);
+    }
+
+    // Figma "meeting frame": the two participants sit SIDE BY SIDE — two
+    // columns, one row. The shared meeting shell stacks a two-person call
+    // vertically (`[data-remote="2"]` → 1 column / 2 rows), which is the team
+    // meeting's intent but not the 1:1 call's.
+    //
+    // Safe to do in plain CSS: participants/index.js CLEARS its inline
+    // gridTemplate* whenever there are <= 2 tiles (the `items <= 2` branch of
+    // responsive()), so nothing inline outranks this. Only 3+ participants get
+    // an inline grid, and a 1:1 call never has them.
+    &[data-mode="normal"][data-remote="2"] {
+      grid-template-columns: 1fr 1fr;
+      grid-template-rows: 1fr;
     }
   }
 
@@ -108,9 +500,6 @@
     }
   }
 
-  // __endpoints / participant-tile grid now comes from the shared meeting shell
-  // (data-mode driven by participants/index.js), matching the meeting stage.
-
   // status.scss (which would have positioned it as an absolute overlay) is never
   // imported, so peer-container flows below the local-user tile and creates a
   // duplicate avatar. Hide it; message-container handles the "Connecting" text.
@@ -118,148 +507,22 @@
     display: none !important;
   }
 
-  &__avatar-container {
-    position: absolute;
-    height: 100%;
-    width: 100%;
-    justify-content: center;
-    align-content: center;
-    align-items: center;
-
-    .user-profile {
-      &[data-online="1"],
-      &[data-online="2"] {
-        &:before {
-          visibility: hidden;
-        }
-      }
-
-      &[data-online="2"] {
-        &:before {
-          visibility: hidden;
-        }
-      }
+  // ── Pre-call / terminal state variants ──────────────────────────────────
+  // Callee unreachable, or the call is over: stop the ringing pulse and mute
+  // the avatar so the panel reads as terminal.
+  &__ui[data-call-state="offline"],
+  &__ui[data-call-state="ended"] {
+    .window-connect__avatar.user-profile .user-profile__main {
+      animation: none;
+      filter: grayscale(1);
+      opacity: 0.55;
     }
   }
 
-  &__avatar.user-profile {
-    &[data-online="1"],
-    &[data-online="2"] {
-      &:before {
-        visibility: hidden;
-      }
-    }
-
-    &[data-online="2"] {
-      &:before {
-        visibility: hidden;
-      }
-    }
-
-    .user-profile__icon {
-      width: 150px;
-      height: 150px;
-    }
-
-    .user-profile__main {
-      justify-content: center;
-      align-items: center;
-
-      img {
-        width: 100%;
-        height: 100%;
-      }
-    }
-
-    .user-profile__initiales {
-      border-radius: 8px;
-
-      .note-content {
-        font-size: 45px;
-        font-weight: bold;
-      }
-    }
-
-    &.user-profile__ui[data-default="1"] svg {
-      fill: var(---default-icon-neutral);
-    }
-  }
-
-  &__uname,
-  &__commands {
-    background-color: var(--connect-transparent-background) !important;
-  }
-
-  &__status {
-    .text {
-      padding: 5px 10px;
-      background-color: var(
-        --connect-transparent-background
-      ); //rgba(0,0,0,0.33);
-      border-radius: var(--border-radius);
-    }
-  }
-
-  &__confirm-container {
-    background-color: var(--normal-bg-90);
-    padding: 0 20px;
-    width: 260px;
-    height: 150px;
-    border-radius: 10px;
-  }
-
-  &__confirm {
-    background-color: transparent;
-    width: 100%;
-    align-items: center;
-    justify-content: center;
-
-    .confirm-message {
-      text-align: center;
-      padding: 0 10px;
-      @include drumee.typo(
-        $size: 14px,
-        $line: 20px,
-        $weight: 400,
-        $color: var(--default-text-color)
-      );
-    }
-
-    .action-btn {
-      @include drumee.typo(
-        $size: 14px,
-        $line: 20px,
-        $weight: 400,
-        $color: var(--default-text-color)
-      );
-      margin-top: 10px;
-
-      .buttons {
-        margin: 5px 10px;
-        border: 1px solid var(--btn-rollback-border); // #bdbdbd;
-        flex: 1;
-        align-items: center;
-        width: 100%;
-        padding: 5px;
-        display: flex;
-        justify-content: center;
-        border-radius: var(--border-radius);
-        height: 32px;
-        @include drumee.typo(
-          $size: 14px,
-          $line: 20px,
-          $color: var(--btn-rollback-text)
-        );
-
-        &:hover {
-          border: 2px solid var(--btn-rollback-border-hover);
-          @include drumee.typo(
-            $size: 14px,
-            $line: 20px,
-            $color: var(--btn-rollback-text)-hover
-          );
-        }
-      }
+  &__ui[data-call-state="offline"] {
+    .window-connect__call-action[data-action="hangup"] {
+      background: rgba(0, 0, 0, 0.05);
+      color: var(--primary-purple-100, #0b0a21);
     }
   }
 
@@ -267,157 +530,11 @@
     position: relative;
   }
 
-  &__identity {
-    align-items: center;
-    justify-content: center;
-    gap: 12px;
-  }
-
-  &__caller-name {
-    @include drumee.typo(
-      $size: 22px,
-      $line: 30px,
-      $weight: 600,
-      $color: var(--default-text-color)
-    );
-    text-align: center;
-    word-break: break-word;
-  }
-
-  &__avatar.user-profile {
-    width: auto;
-    height: auto;
-    position: relative;
-
-    .user-profile__icon {
-      width: 120px;
-      height: 120px;
-    }
-
-    .user-profile__main {
-      width: 120px;
-      height: 120px;
-      border-radius: 8px;
-      overflow: hidden;
-      animation: drumee-call-pulse 1.6s ease-in-out infinite;
-    }
-
-    .user-profile__initiales {
-      width: 120px;
-      height: 120px;
-      border-radius: 8px;
-
-      .note-content {
-        font-size: 42px;
-        font-weight: 600;
-      }
-    }
-  }
-
-  @keyframes drumee-call-pulse {
-    0%,
-    100% {
-      box-shadow: 0 0 0 0 rgba(250, 133, 64, 0.45);
-    }
-    50% {
-      box-shadow: 0 0 0 16px rgba(250, 133, 64, 0);
-    }
-  }
-
-  &__commands-container {
-    bottom: 18px;
-    height: auto;
-    padding: 0 12px;
-
-    .ctrl-button {
-      flex-shrink: 0;
-    }
-  }
-
-  &__commands {
-    background-color: transparent !important;
-    flex-wrap: wrap;
-    justify-content: center;
-    row-gap: 12px;
-  }
-
-  // Pre-call: large prominent circular accept/decline.
-  &__commands-container[data-mode="setup"] {
-    .window-connect__commands {
-      flex-wrap: nowrap;
-    }
-
-    .ctrl-button {
-      width: 56px;
-      height: 56px;
-      padding: 0;
-      border-radius: 50%;
-      margin: 0 12px;
-
-      svg {
-        width: 24px;
-        height: 24px;
-      }
-    }
-  }
-
-  // In-call: compact rounded toggles + leave, centered as one row.
-  &__commands-container[data-mode="in-call"] {
-    .window-connect__commands {
-      gap: 14px;
-      flex-wrap: nowrap;
-    }
-
-    .ctrl-button {
-      width: 44px;
-      height: 44px;
-      padding: 0;
-      border-radius: 12px;
-      margin: 0;
-
-      svg {
-        width: 20px;
-        height: 20px;
-      }
-
-      // Override the shared red `.leave` styling for the 1:1 call window so it
-      // matches the toggle buttons next to it.
-      &.leave {
-        background-color: var(--default-bg);
-        color: var(--multimedia-vdo-icon);
-        fill: currentColor;
-
-        svg {
-          width: 20px;
-          height: 20px;
-        }
-      }
-    }
-  }
-
-  // Narrow window (mobile): shrink command buttons so all controls stay visible.
-  &__ui[data-device="mobile"] {
-    .window-connect__commands-container[data-mode="in-call"] {
-      .window-connect__commands {
-        gap: 10px;
-      }
-      .ctrl-button {
-        width: 40px;
-        height: 40px;
-        border-radius: 10px;
-      }
-    }
-
-    .window-connect__commands-container[data-mode="setup"] .ctrl-button {
-      width: 52px;
-      height: 52px;
-    }
-  }
-
   // Pre-call __main: header + body stacked in a grid.
   &__main {
     display: grid;
     grid-auto-flow: row;
+    grid-template-rows: auto 1fr;
     height: 100%;
     width: 100%;
   }
@@ -431,56 +548,7 @@
     min-height: 0;
   }
 
-  &__main-content {
-    flex-direction: column;
-    height: 100%;
-    width: 100%;
-  }
-
-  &__main-view {
-    height: 100%;
-    width: 100%;
-
-    .user-profile {
-      height: 100%;
-      width: 100%;
-    }
-  }
-
-  &__text {
-    &.local {
-      min-height: 30px;
-      @include drumee.typo(
-        $color: var(--default-text-reverse),
-        $weight: 400,
-        $line: 30px,
-        $size: 16px
-      );
-      justify-content: center;
-    }
-
-    &.status {
-      @include drumee.typo(
-        $color: var(--default-text-color),
-        $line: 30px,
-        $size: 16px
-      );
-    }
-  }
-
-  &__attendees-title {
-    padding: 10px 0 15px 3px;
-    justify-content: center;
-    height: 20px;
-    @include drumee.typo(
-      $color: var(--default-text-title),
-      $line: 14px,
-      $size: 15px
-    );
-  }
-
   &__timer-container {
-    position: absolute;
     position: absolute;
     height: 100%;
     width: 100%;
@@ -492,7 +560,7 @@
       padding: 10px;
       background-color: var(--default-transparent-black);
       margin: 10px;
-      border-radius: var(--border-radius); //3px;
+      border-radius: var(--border-radius);
       @include drumee.typo(
         $color: var(--default-text-reverse),
         $weight: 400,
@@ -501,96 +569,156 @@
       );
     }
 
-    .countdown-timer {
-      &__ui {
-        background-color: #fff;
+    .countdown-timer__ui {
+      background-color: #fff;
 
-        .countdown-timer__counter {
-          padding: 5px 10px;
-        }
+      .countdown-timer__counter {
+        padding: 5px 10px;
       }
     }
   }
 
-  &__list {
-    & .menu-topic-items {
-      &__wrapper {
-        left: 5px;
-      }
+  // ── Responsive ──────────────────────────────────────────────────────────
+  // data-narrow / data-compact / data-short come from connect/index.js
+  // responsive(), measured on the WINDOW box (this is a resizable Wm window, so
+  // @media on the viewport would not fire). data-device is stamped on every
+  // widget root by the framework and reflects the viewport — it is kept in the
+  // narrow group so a phone gets the tighter layout even before any resize.
+  //
+  // Narrow (< 560px) or any mobile viewport: close the 48px gaps.
+  &__ui[data-narrow="1"],
+  &__ui[data-device="mobile"] {
+    .window-connect__commands {
+      gap: var(--spacer-6); // 24px
+    }
 
-      &.menu-items {
-        height: 300px;
-        overflow-y: auto;
-      }
+    .window-connect__call-header {
+      padding: var(--spacer-6) var(--spacer-5) 0;
+    }
+
+    .window-connect__precall-footer {
+      padding: var(--spacer-4) var(--spacer-5) var(--spacer-7);
+      gap: var(--spacer-6);
+    }
+
+    .window-connect__commands-container[data-mode="in-call"] {
+      padding: var(--spacer-4) var(--spacer-5) var(--spacer-6);
+      gap: var(--spacer-6);
     }
   }
 
-  // Offline state: callee is not reachable. Stops the calling pulse,
-  // mutes the avatar visually, and emphasises the "X is not online" message
-  // using the Drumee design system tokens (Signal/Error + Primary/100).
-  &__ui[data-call-state="offline"] {
+  // Compact (< 470px): shrink the buttons themselves — 4 × 52 + 3 × 16 = 256px,
+  // so the row still fits well below the window minimum.
+  &__ui[data-compact="1"] {
+    .window-connect__commands {
+      gap: var(--spacer-5); // 16px
+    }
+
+    .window-connect__call-action {
+      width: 52px;
+      height: 52px;
+      padding: var(--spacer-4);
+
+      svg {
+        width: 26px;
+        height: 26px;
+      }
+    }
+
+    .window-connect__call-header-title {
+      font-size: 16px;
+    }
+  }
+
+  // Short (< 520px tall): the 120px avatar + name + email + action row stop
+  // fitting between header and footer. Shrink the avatar and tighten the
+  // vertical rhythm rather than letting the footer get pushed out of view.
+  &__ui[data-short="1"] {
+    .window-connect__precall-stage {
+      padding: var(--spacer-5) 0;
+    }
+
+    .window-connect__identity {
+      gap: var(--spacer-5);
+    }
+
+    .window-connect__precall-footer {
+      padding: var(--spacer-4) var(--spacer-6) var(--spacer-6);
+      gap: var(--spacer-5);
+    }
+
     .window-connect__avatar.user-profile {
-      .user-profile__main {
-        animation: none;
-        filter: grayscale(1);
-        opacity: 0.55;
+      .user-profile__icon,
+      .user-profile__main,
+      .user-profile__initiales {
+        width: 88px;
+        height: 88px;
+      }
+
+      .user-profile__initiales .note-content {
+        font-size: 32px;
       }
     }
 
     .window-connect__caller-name {
-      color: var(--normal-fg, #0b0a21);
-      opacity: 0.9;
+      font-size: 20px;
     }
 
-    .ctrl-button.line {
-      background-color: var(--normal-bg-90, #f2f2f7);
-      color: var(--normal-fg, #0b0a21);
-      fill: currentColor;
-
-      svg {
-        transform: none;
-      }
+    .window-connect__caller-email {
+      font-size: 14px;
     }
+  }
+
+  // Long names/emails must never widen the window or spill out of it.
+  &__identity-text {
+    max-width: 100%;
+    box-sizing: border-box;
+    padding: 0 var(--spacer-6);
+  }
+
+  // The identity block must be allowed to compress before the footer is.
+  &__precall-stage {
+    min-height: 0;
+    overflow: hidden;
   }
 }
 
-// Control lock — the in-topbar controls are shown but inert during two phases
-// where operating camera/mic/screen/reactions/fullscreen is meaningless:
+// Control lock — the call controls are shown but inert during two phases where
+// operating camera/mic/screen is meaningless:
 //   1. Connecting, before the local user joins the conference —
 //      window/connect/index.js sets data-starting-up="1" on __ui until
 //      onLocalUserJoined.
 //   2. A late joiner catching an in-progress screen share, while the presenter
 //      layout loads — the shared shell sets data-preparing="1" on __shell until
 //      the shared screen's first frame (onRemoteScreenStart).
-// Both dim + block the controls; the Leave button is exempted below so there's
-// always an escape hatch. Mirrors the meeting window's control lock.
-.window-connect__ui[data-starting-up="1"] .window-connect__in-topbar-controls > *,
-.window-connect__shell[data-preparing="1"] .window-connect__in-topbar-controls > * {
+// Both dim + block the controls; the hang-up button is exempted below so
+// there's always an escape hatch.
+//
+// SCOPED TO [data-mode="in-call"] ON PURPOSE. data-starting-up is raised in
+// onDomRefresh — i.e. during dial / ring, while the PRE-CALL row is on screen —
+// and that row shares the __commands class. Without this scope the lock would
+// dim Accept/Decline and make an incoming call unanswerable.
+// Hang up (__leave-btn) is excluded by :not() rather than re-enabled by a
+// later rule — the scoped selector below outranks any short "escape hatch"
+// override, so exclusion is the only reliable way to keep it live.
+.window-connect__ui[data-starting-up="1"]
+  .window-connect__commands-container[data-mode="in-call"]
+  .window-connect__commands
+  > *:not(.window-connect__leave-btn),
+.window-connect__shell[data-preparing="1"]
+  .window-connect__commands-container[data-mode="in-call"]
+  .window-connect__commands
+  > *:not(.window-connect__leave-btn) {
   pointer-events: none;
   opacity: 0.45;
 }
 
-// Escape hatch: Leave stays fully interactive during both locked phases. Same
-// specificity as the rule above but ordered after it, so it wins.
-.window-connect__ui[data-starting-up="1"] .window-connect__leave-btn,
-.window-connect__shell[data-preparing="1"] .window-connect__leave-btn {
-  pointer-events: auto;
-  opacity: 1;
-}
-
 // Control loading — while a camera / mic / screen-share toggle's async work is
-// in flight, window/connect/index.js flags data-loading="1" on the camera or
-// mic pill (or the screen-share button). Block clicks and overlay a spinner on
-// the primary toggle icon (the ".accept" button inside a pill, or the screen
-// button itself), dimming the icon underneath. Reuses the meeting shell's
-// load-spin keyframe (emitted by the meeting-shell mixin include above).
-.window-connect__ctrl-pill[data-loading="1"],
-.window-connect__ctrl-btn.screen[data-loading="1"] {
+// in flight, window/connect/index.js flags data-loading="1" on the control.
+// Block clicks and overlay a spinner, dimming the glyph underneath. Reuses the
+// meeting shell's load-spin keyframe (emitted by the mixin include above).
+.window-connect__call-action[data-loading="1"] {
   pointer-events: none;
-}
-
-.window-connect__ctrl-pill[data-loading="1"] .ctrl-button.accept,
-.window-connect__ctrl-btn.screen[data-loading="1"] {
   position: relative;
 
   svg {
@@ -602,9 +730,9 @@
     position: absolute;
     inset: 0;
     margin: auto;
-    width: 16px;
-    height: 16px;
-    border: 2px solid var(--default-icon-neutral, #89929e);
+    width: 20px;
+    height: 20px;
+    border: 2px solid currentColor;
     border-top-color: transparent;
     border-radius: 50%;
     animation: window-meeting-load-spin 0.8s linear infinite;
@@ -613,10 +741,29 @@
   }
 }
 
-// Center the call status message in the middle of the connect window. Scoped
-// under __ui so it outranks the generic .window__message-container (top:40px)
-// the meeting skin defines globally.
-.window-connect__ui .window-connect__message-container {
+// Pre-call status line ("Calling…" / "Incoming call…" / "X is not online").
+// It flows inside the footer above the action row — NOT the centered overlay
+// the in-call stage uses — so the scope is the pre-call/terminal footer.
+.window-connect__precall-footer .window-connect__message-container {
+  position: static;
+  transform: none;
+  width: 100%;
+  max-width: 100%;
+  padding: 0;
+  background: none;
+  border-radius: 0;
+  align-items: center;
+  pointer-events: none;
+
+  .message-text {
+    // Figma Grey/80 #29292c.
+    @include drumee.typo($size: 16px, $line: 1.4em, $color: #29292c);
+    text-align: center;
+  }
+}
+
+// In-call: the status message stays a floating notice over the video stage.
+.window-connect__ui .window-connect__main--call .window-connect__message-container {
   position: absolute;
   top: 15%;
   left: 50%;

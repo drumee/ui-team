@@ -256,6 +256,16 @@ module.exports = function (ui) {
             }),
           ],
         }),
+        // Address-book matches for the typed string — fed by
+        // attachEmailLookup, hidden by the skin until it has rows.
+        Skeletons.Box.Y({
+          className: `${pfx}__invite-suggestions`,
+          sys_pn: "invite-suggestions",
+          partHandler: ui,
+          dataset: { state: 0 },
+          attrOpt: { "data-state": 0 },
+          active: 0,
+        }),
         // Inline validation message under the input. Hidden by data-state
         // until _setInviteError opens it, so it costs no vertical space (and
         // no section gap) while there is nothing to say.

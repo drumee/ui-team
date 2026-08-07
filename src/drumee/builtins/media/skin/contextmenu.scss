@@ -1,19 +1,15 @@
+// Group-scoped hooks for media context-menu rows.
+// Icon leaf size, gap, padding and type live in
+// builtins/contextmenu/skin/index.scss — do NOT set svg width/height or
+// margin-right here (those rules fight the shared skin).
 .media {
   &__contextmenu {
     &-item {
       width: 100%;
-      height: 36px;
       align-items: center;
-      justify-items: center;
       flex-direction: row;
       display: flex;
       cursor: pointer;
-
-      svg {
-        height: 14px;
-        width: 14px;
-        margin-right: 5px;
-      }
     }
   }
 }

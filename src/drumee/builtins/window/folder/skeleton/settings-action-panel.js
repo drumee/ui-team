@@ -241,6 +241,16 @@ module.exports = function settingsActionPanel(ui) {
               }),
             ],
           }),
+          // Address-book matches for the typed string — fed by
+          // attachEmailLookup, empty (and invisible) until there are rows.
+          Skeletons.Box.Y({
+            className: `${pfx}-invite-suggestions`,
+            sys_pn: "invite-suggestions",
+            partHandler: ui,
+            dataset: { state: 0 },
+            attrOpt: { "data-state": 0 },
+            active: 0,
+          }),
           // Inline validation message rendered directly under the email input.
           // Hidden (data-state=closed) until sendFolderInvitation opens it with
           // a reason and clears it on a valid address — see _setInviteError.

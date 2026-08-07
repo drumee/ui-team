@@ -7,15 +7,16 @@ module.exports = function (_ui_) {
   const pfx = _ui_.fig.family;
   const name = _ui_.mget(_a.name) || _ui_.mget(_a.filename) || "";
 
-  // Carry the full control cluster in the top bar for the team meeting AND the
-  // 1:1 connect window (both use the redesigned meeting shell). Other rooms
-  // (dmz / sharebox) keep the original minimal bar + floating command bar.
+  // The 1:1 connect (P2P) call follows the Figma "Drumee connect" design: its
+  // top bar is only the window header (title + expand + close), and every call
+  // control lives in the bottom action bar (webrtc/skeleton/p2p-commands.js).
+  // Team meetings below are untouched.
+  if (_ui_.service_class === "connect") return require("./p2p-header")(_ui_);
+
+  // Carry the full control cluster in the top bar for the team meeting. Other
+  // rooms (dmz / sharebox) keep the original minimal bar + floating command bar.
   const isTeamMeeting =
-    (_ui_.service_class === "meeting" && _ui_.mget(_a.area) !== _a.dmz) ||
-    _ui_.service_class === "connect";
-  // 1:1 connect (P2P) call: drop the meeting-only controls (hand-raise / chat /
-  // people) and label the leave button "End Call".
-  const isP2P = _ui_.service_class === "connect";
+    _ui_.service_class === "meeting" && _ui_.mget(_a.area) !== _a.dmz;
 
   const brand = Skeletons.Box.X({
     className: `${pfx}__in-topbar-brand`,
@@ -247,30 +248,26 @@ module.exports = function (_ui_) {
       uiHandler: [_ui_],
     });
 
-  // P2P connect calls have no chat / people controls at all, so the overflow
-  // menu would be empty — omit the whole trigger rather than ship a dead button.
-  const moreBtn = isP2P
-    ? null
-    : {
-        kind: KIND.menu.topic,
-        className: `${pfx}__more-menu`,
-        flow: _a.y,
-        opening: _e.click,
-        persistence: _a.once,
-        offsetY: 8,
-        trigger: Skeletons.Button.Svg({
-          ico: "more",
-          className: `${pfx}__ctrl-btn more`,
-          attrOpt: { "data-tip": LOCALE.MORE || "More" },
-        }),
-        items: Skeletons.Box.Y({
-          className: `${pfx}__more-items`,
-          kids: [
-            moreItem("meet-chat-dots", LOCALE.CHAT, _a.chat),
-            moreItem("meet-users", LOCALE.PARTICIPANTS, "show-people"),
-          ],
-        }),
-      };
+  const moreBtn = {
+    kind: KIND.menu.topic,
+    className: `${pfx}__more-menu`,
+    flow: _a.y,
+    opening: _e.click,
+    persistence: _a.once,
+    offsetY: 8,
+    trigger: Skeletons.Button.Svg({
+      ico: "more",
+      className: `${pfx}__ctrl-btn more`,
+      attrOpt: { "data-tip": LOCALE.MORE || "More" },
+    }),
+    items: Skeletons.Box.Y({
+      className: `${pfx}__more-items`,
+      kids: [
+        moreItem("meet-chat-dots", LOCALE.CHAT, _a.chat),
+        moreItem("meet-users", LOCALE.PARTICIPANTS, "show-people"),
+      ],
+    }),
+  };
 
   const divider = Skeletons.Note({ className: `${pfx}__in-topbar-divider` });
 
@@ -356,7 +353,7 @@ module.exports = function (_ui_) {
   const leaveBtn = Skeletons.Button.Label({
     className: `${pfx}__leave-btn`,
     ico: "meet-leave",
-    label: isP2P ? (LOCALE.END_CALL || "End Call") : LOCALE.LEAVE_MEETING,
+    label: LOCALE.LEAVE_MEETING,
     labelClass: `${pfx}__leave-label`,
     sys_pn: "ctrl-line",
     service: _e.close,
@@ -374,12 +371,11 @@ module.exports = function (_ui_) {
       avatars,
       Skeletons.Box.X({
         className: `${pfx}__in-topbar-controls`,
-        // P2P connect calls omit hand-raise / chat / people.
         kids: [
-          isP2P ? null : handWrap,
+          handWrap,
           reactionsBtn,
-          isP2P ? null : chatWrap,
-          isP2P ? null : peopleBtn,
+          chatWrap,
+          peopleBtn,
           // Stands in for chat + people once those are hidden (data-narrow).
           moreBtn,
           fullscreenBtn,
@@ -388,7 +384,7 @@ module.exports = function (_ui_) {
           micPill,
           screenBtn,
           leaveBtn,
-        ].filter(Boolean),
+        ],
       }),
     ],
   });

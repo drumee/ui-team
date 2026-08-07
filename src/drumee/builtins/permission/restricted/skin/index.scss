@@ -226,6 +226,68 @@
     }
   }
 
+  // Address-book matches for the typed address (libs/contact-lookup). Sits in
+  // flow under the input row rather than overlaying it — the panel body
+  // scrolls, which would clip an absolutely-positioned dropdown.
+  &__invite-suggestions {
+    max-height: 180px;
+    overflow-y: auto;
+    border-radius: 4px;
+    background: var(--white);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.12);
+
+    // Closed = out of flow, not merely invisible: this section lays out with
+    // `gap: 12px`, and a zero-height flex item still earns its gap — an empty
+    // box would leave a phantom band under the input. `!important` is needed
+    // to beat the framework's `.box[data-flow="y"] { display: flex }`, which
+    // has the same specificity (see __chips in invite-popup's skin).
+    &[data-state="0"] {
+      display: none !important;
+    }
+  }
+
+  &__invite-suggestion {
+    padding: 8px 12px;
+    cursor: pointer;
+    align-items: center;
+    gap: 8px;
+    @include drumee.typo(
+      $size: 12px,
+      $line: 17px,
+      $weight: 400,
+      $color: var(--normal-fg-10)
+    );
+
+    // Clicks must land on the row, not on the labels inside it.
+    > * {
+      pointer-events: none;
+    }
+
+    &:hover {
+      background-color: var(--default-bg-hover, #f5f5fa);
+    }
+  }
+
+  // Name and address are separate elements — an address bracketed into the
+  // name ("Name <addr>") is stripped by the Note sanitizer. The address is
+  // what gets picked, so the name yields space first.
+  &__invite-suggestion-name {
+    flex: 0 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  &__invite-suggestion-email {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--normal-fg-50);
+  }
+
   // Inline email-validation message, directly under the invite input row.
   // Toggled via data-state (see index.js _setInviteError) so it takes no
   // vertical space — and adds no section gap — while there is nothing to show.
@@ -550,6 +612,19 @@ html[data-theme="dark"] {
 
       &::placeholder {
         color: var(--normal-fg-50);
+      }
+    }
+
+    &__invite-suggestions {
+      background: var(--normal-bg-elevated);
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.5);
+    }
+
+    &__invite-suggestion {
+      color: var(--normal-fg-10);
+
+      &:hover {
+        background-color: var(--hover-bg-40);
       }
     }
 

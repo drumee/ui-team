@@ -1,0 +1,126 @@
+// Downgrade over-limit popup. Same shell mechanics as promo-launch30
+// (portalled to <body>, fixed + high z-index), same Drumee tokens: brand
+// primary --primary-50, theme-aware --normal-* surfaces, --danger-* for the
+// violation rows — the prototype's coral/indigo palette is NOT the design
+// system and is deliberately not used.
+.over-limit-popup {
+  &__ui {
+    position: fixed;
+    inset: 0;
+    z-index: 99998;
+    font-family: var(--font-main);
+  }
+
+  &__backdrop {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--spacer-6);
+    background: var(--overlay-bg);
+    backdrop-filter: blur(2px);
+  }
+
+  &__card {
+    position: relative;
+    width: min(420px, 100%);
+    max-height: 100%;
+    overflow-y: auto;
+    background: var(--normal-bg-elevated);
+    border-radius: var(--corner-radius-6);
+    padding: 26px;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25), 0 1px 5.5px rgba(0, 0, 0, 0.13);
+  }
+
+  &__title {
+    font-size: 21px;
+    line-height: 1.25;
+    font-weight: 600;
+    letter-spacing: -0.03em;
+    color: var(--normal-fg-800);
+  }
+
+  &__lead {
+    font-size: 13px;
+    line-height: 1.6;
+    color: var(--normal-fg-20);
+    margin-top: 9px;
+  }
+
+  // One row per TRUE flag, each with its exact overage number. Red tint from
+  // the design system's --red-* ramp (skin/vars/revamp.scss) — a light wash,
+  // not a solid error fill: a state to resolve, not a mistake made.
+  &__violation {
+    gap: 2px;
+    background: var(--red-100);
+    border: 1px solid var(--red-200);
+    border-radius: var(--corner-radius-3);
+    padding: var(--spacer-4);
+    margin-top: var(--spacer-4);
+  }
+
+  &__violation-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--red-800);
+  }
+
+  &__violation-sub {
+    font-size: 11.5px;
+    line-height: 1.4;
+    color: var(--red-700);
+  }
+
+  &__hint {
+    font-size: 11.5px;
+    line-height: 1.5;
+    color: var(--normal-fg-50);
+    margin-top: var(--spacer-3);
+  }
+
+  &__cta-stack {
+    gap: var(--spacer-3);
+    margin-top: var(--spacer-5);
+  }
+
+  &__cta {
+    width: 100%;
+    justify-content: center;
+    align-items: center;
+    padding: var(--spacer-4);
+    border-radius: var(--corner-radius-max);
+    background: var(--primary-50);
+    cursor: pointer;
+    transition: background 0.15s ease, opacity 0.15s ease;
+
+    &:hover {
+      background: var(--primary-60);
+    }
+
+    &--ghost {
+      background: var(--primary-10);
+
+      &:hover {
+        background: var(--primary-20);
+      }
+
+      .over-limit-popup__cta-label {
+        color: var(--primary-70);
+      }
+    }
+  }
+
+  &__cta-label {
+    font-size: 13.5px;
+    font-weight: 600;
+    color: var(--white);
+  }
+
+  &__fineprint {
+    text-align: center;
+    font-size: 11px;
+    color: var(--normal-fg-50);
+    margin-top: 11px;
+  }
+}

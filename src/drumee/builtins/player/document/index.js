@@ -2,6 +2,24 @@
 const { filesize, fitBoxes } = require("@drumee/ui-essentials")
 const { TweenMax, Expo } = require("@drumee/ui-core/vendor");
 const PlayerInteract = require('player/interact');
+const snap = require('builtins/window/snap');
+const renameInline = require('builtins/player/widget/topbar/rename');
+
+// Gear-menu rows that act on the node rather than on the viewer. The MFS
+// view this player was opened from implements all of them, so they are
+// forwarded verbatim (see `_delegate`). Kept as an explicit allow-list: a
+// catch-all would also swallow the player's own chrome events on their way
+// to the base class.
+const DELEGATED_SERVICES = [
+  _e.copy,
+  _e.remove,
+  _a.chat,
+  'chat-threads',
+  'download-file-chat',
+  'secure-share',
+  'designation-link',
+  'direct-url',
+];
 const { loadPdfDocument, getCurrentPdfiumDocumentBlob } = require('./pdfium-wrapper')
 const { openSelectionDocument } = require('./selection')
 const { applyLivePrivilege, hasWriteBit } = require('window/live-privilege');
@@ -569,9 +587,53 @@ class __player_document extends PlayerInteract {
   /**
    * 
    */
+  /**
+   * Forward a gear-menu row this player doesn't own to the source MFS view,
+   * which implements the whole file-action vocabulary already. Returns false
+   * when there's nothing to forward to, so the caller can fall through to
+   * the base class rather than swallow the event.
+   */
+  _delegate(cmd, args) {
+    const media = this.media;
+    if (!media || media.isDestroyed() || !_.isFunction(media.onUiEvent)) {
+      return false;
+    }
+    media.onUiEvent(cmd, args);
+    return true;
+  }
+
+  /** Window minimums the Move & Resize presets clamp to. */
+  _snapOpt() {
+    return { minWidth: 300, minHeight: 300 };
+  }
+
+  /**
+   * Geometry the "center" preset restores to. Falls back to the current box
+   * when nothing was cached — the same contract the image player uses.
+   */
+  _defaultBounds() {
+    return this._preZoomBounds || snap.snapshotBounds(this);
+  }
+
+  /**
+   * Light up the preset the window now sits in. Dragging or resizing by hand
+   * doesn't clear it; tracking every geometry change to undo a highlight is
+   * not worth the listener.
+   */
+  _markSnapPreset(preset) {
+    for (const name of ['full', 'left', 'right', 'center']) {
+      const part = this[`__snap${name.charAt(0).toUpperCase()}${name.slice(1)}`];
+      if (part && !part.isDestroyed()) {
+        part.el.dataset.active = name === preset ? 1 : 0;
+      }
+    }
+  }
+
   updateMenu() {
-    this.ensurePart('doc-actions').then((p) => {
-      p.feed(require('./skeleton/menu')(this).kids)
+    // `commands` is the shared topbar widget's action row — the part the old
+    // `doc-actions` box became when this header moved onto the widget.
+    this.ensurePart('commands').then((p) => {
+      p.feed(require('./skeleton/topbar').actions(this).kids)
     })
   }
 
@@ -1179,6 +1241,31 @@ class __player_document extends PlayerInteract {
         this.toggleFullscreen();
         break;
 
+      // Move & Resize presets, from the shared topbar widget. Same snap
+      // module and same vocabulary the folder window and the image player
+      // use, so every window snaps through one code path.
+      case "window-zoom":
+        snap.toggleZoom(this, this._snapOpt());
+        // toggleZoom is a toggle: a second call restores, which is the
+        // "center" preset visually.
+        this._markSnapPreset(this._zoomed ? "full" : "center");
+        break;
+
+      case "window-tile-left":
+        snap.tileToSide(this, "left", this._snapOpt());
+        this._markSnapPreset("left");
+        break;
+
+      case "window-tile-right":
+        snap.tileToSide(this, "right", this._snapOpt());
+        this._markSnapPreset("right");
+        break;
+
+      case "window-reframe":
+        snap.reframe(this, this._defaultBounds(), this._snapOpt());
+        this._markSnapPreset("center");
+        break;
+
       case 'download-pdf':
         if (this._dmzGateDownload()) return;
         url = `${bootstrap().serviceUrl}${SERVICE.media.pdf}?nid=${nid}&hub_id=${hub_id}`;
@@ -1224,7 +1311,16 @@ class __player_document extends PlayerInteract {
         // anonymous); the popup is multi-select so they pick "edit".
         return this.triggerHandlers({ service: 'dmz-request-download' });
 
+      // Rename edits the title in place instead of being forwarded: the
+      // MFS view opens its editor on the tile in the folder grid, behind
+      // this player, where nobody can see it.
+      case 'direct-rename':
+        return renameInline(this);
+
       default:
+        // Gear-menu rows that act on the node itself go to the source MFS
+        // view; everything else is player chrome and belongs to the base.
+        if (DELEGATED_SERVICES.includes(service) && this._delegate(cmd)) return;
         return super.onUiEvent(cmd);
     }
   }
