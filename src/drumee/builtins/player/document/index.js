@@ -1241,6 +1241,29 @@ class __player_document extends PlayerInteract {
         this.toggleFullscreen();
         break;
 
+      // "Get info" — open the node's own properties window, which is what
+      // this row means everywhere else in the app.
+      //
+      // Two traps here, which is why it calls the MFS view's methods
+      // directly instead of copying the image player's `case _e.settings`
+      // + `_delegate()`:
+      //
+      //   - `_e.settings` and `_a.link` are BOTH undefined in the lexicon,
+      //     so `case _e.settings` is `case undefined` — and `case _a.link`
+      //     already sits above it in this switch with an empty body. It
+      //     would win, and Get info would silently do nothing.
+      //   - falling through to the base is not an option either: its
+      //     `_showInfo()` reads `this.__wrapperInfo`, and this player's
+      //     skeleton has no `wrapper-info` part (its wrapper is `overlay`),
+      //     so it throws on an undefined part.
+      case "info": {
+        const media = this.media;
+        if (!media || media.isDestroyed()) return;
+        if (media.isHubOrFolder) return media.openInfoWindow();
+        if (_.isFunction(media.openDetailsWindow)) return media.openDetailsWindow();
+        return;
+      }
+
       // Move & Resize presets, from the shared topbar widget. Same snap
       // module and same vocabulary the folder window and the image player
       // use, so every window snaps through one code path.
