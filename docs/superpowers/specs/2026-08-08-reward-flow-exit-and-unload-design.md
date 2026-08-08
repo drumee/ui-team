@@ -256,6 +256,35 @@ access away from someone who already had it.**
 The re-arm set is exactly "statuses not in OPEN, minus `emailed`" —
 `{failed, declined, missed, done}`.
 
+### "Drop anyway" writes two different statuses
+
+Found by testing on stage, after the first combined build was deployed — it
+locked a real tester out of the campaign (row 1213, 2026-08-08 19:07).
+
+Phase 1 gave "Drop anyway" a second job: carry out the reload or Back the user
+asked for. Phase 2 gave it a terminal status. Together, an intercepted F5 —
+which phase 2 exists to protect — ended as `declined`, permanently out of the
+gate's OPEN set.
+
+That inverts the design by information:
+
+| Gesture | What we know | Status | Recoverable |
+|---|---|---|---|
+| Tab close | nothing | `dropped` | yes |
+| F5, intercepted | it is a refresh | `declined` | **no** |
+
+The more we knew the user meant something benign, the harsher the outcome.
+
+So the status follows `_pendingExit`, which is already the exact
+discriminator — set only by `onExitIntent`, cleared by "Continue", null when
+the user raised the card themselves:
+
+- guard raised by the user (vignette, scrim) → `declined`, terminal;
+- guard raised by an intercepted exit → `dropped`, recoverable.
+
+No schema or server change: the proc already accepts `dropped` onto a `started`
+row through the named exception, and `STATUS` already allows both.
+
 ### `beforeunload` gets one owner
 
 Both source branches register it: `exit-guard.js` as its last-resort net, and

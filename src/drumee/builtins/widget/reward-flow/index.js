@@ -629,10 +629,11 @@ class __reward_flow extends LetcBox {
    * reason (see _finish). Letting it write would put team accounts in the
    * campaign funnel — and would burn a real slot on a test.
    *
-   * @param {String} status "started" | "declined" | "done" | "missed".
-   *   NOT "dropped" — that one is only ever written from the pagehide report
-   *   (_beaconDropped), because by then an ordinary post cannot survive the
-   *   unload.
+   * @param {String} status "started" | "dropped" | "declined" | "done" |
+   *   "missed". "dropped" arrives here from an INTERCEPTED exit, where the page
+   *   has not started leaving yet and an ordinary post still works; the
+   *   uncatchable exits report it through _beaconDropped instead, because by
+   *   then nothing but a keepalive request survives.
    * @param {String} [step] defaults to the current card step
    * @returns {Promise<Object|null>} the service's answer, or null when nothing
    *   was posted or the post failed
@@ -2123,16 +2124,31 @@ class __reward_flow extends LetcBox {
         return;
 
       case "reward-drop-leave": {
-        // "Drop anyway" is the only place the user says outright that they do
-        // not want this, so it writes `declined` — TERMINAL, and deliberately
-        // not the `dropped` the pagehide report writes.
+        // WHICH STATUS THIS WRITES DEPENDS ON WHO RAISED THE GUARD, and getting
+        // that wrong locked a real tester out of the campaign (row 1213 on
+        // stage, 2026-08-08).
         //
-        // LEAVING IS NOT REFUSING. A refresh or a closed tab says nothing about
-        // the offer, which is why `dropped` is recoverable and the flow comes
-        // back for them. Pressing this button answers it. While both wrote
-        // `dropped`, making the accidental exit recoverable made this one
-        // non-binding with it: the user declined and was asked again at every
-        // login afterwards.
+        // Three intents reach this one button, and only one of them refuses the
+        // offer:
+        //
+        //   vignette / scrim click  — the user went looking for the way out.
+        //     That is an answer, and it writes `declined`: TERMINAL, so we stop
+        //     asking at every login.
+        //   intercepted F5 / Back   — the user asked to RELOAD or GO BACK, and
+        //     we interrupted them to ask about it. Pressing "Drop anyway" here
+        //     means "yes, do the thing I asked for", not "I do not want the
+        //     reward". It writes the recoverable `dropped`.
+        //
+        // Reporting the second as `declined` inverted the whole design by
+        // information: a closed tab, where we know NOTHING, stayed recoverable,
+        // while an intercepted refresh — where we know exactly what the user
+        // meant, and know it was benign — was terminal. Phase 2 exists to stop
+        // one stray F5 costing someone a prize; routing that same F5 into this
+        // button did it anyway, just with a confirmation on top.
+        //
+        // `_pendingExit` is the discriminator and needs no new state: it is set
+        // only by onExitIntent, cleared by "Continue", and null whenever the
+        // user raised the card themselves.
         //
         // The post is AWAITED here, unlike every other tracking call: this exit
         // can be a RELOAD, and a request still in flight when the page goes is
@@ -2142,7 +2158,7 @@ class __reward_flow extends LetcBox {
         this._leaving = true;
         const exit = this._pendingExit;
         this._pendingExit = null;
-        const post = this._track("declined");
+        const post = this._track(exit ? "dropped" : "declined");
         const settled = Promise.race([
           post,
           new Promise((r) => setTimeout(r, DROP_POST_TIMEOUT_MS)),
