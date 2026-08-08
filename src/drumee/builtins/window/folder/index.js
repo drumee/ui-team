@@ -1354,28 +1354,52 @@ class __window_folder extends mfsInteract {
       case "toggle-new-create-menu":
         return this.toggleNewCreateMenu(cmd);
 
-      case "launch-gdrive-migration":
+      case "launch-gdrive-migration": {
         // "Migrate from Google Drive" row of the merged "+ New" menu. Opens the
-        // full migration popup (connect → pick → migrate → progress); the widget
-        // + google_drive.* backend already exist. singleton + wm_unique_id (per
-        // the multi-folder-windows fix) prevents a duplicate popup on re-click.
-        // hub_id/nid target THIS folder window (import lands in the open
-        // workspace), falling back to the visitor home like settings does.
+        // full migration popup; the widget + google_drive.* backend already
+        // exist. singleton + wm_unique_id (per the multi-folder-windows fix)
+        // prevents a duplicate popup on re-click.
+        //
+        // Destination = the directory the user is LOOKING AT, mirroring the
+        // breadcrumb's current-node rule (refreshBreadcrumbsUI): the model nid
+        // follows in-window navigation, and a hub/workspace ROOT window's
+        // active directory is its actual_home_id. The previous order —
+        // actual_home_id first — sent every import to the workspace root even
+        // when the user had navigated into a sub-folder and clicked "+ New"
+        // right there. `direct: 1` tells the importer to land the content in
+        // this folder itself, not in a GoogleDriveMigration wrapper: the user
+        // picked the destination by standing in it.
         this.closeNewMenu(cmd);
+        let destNid = this.mget(_a.nid);
+        if (this.mget(_a.filetype) === _a.hub && this.mget(_a.actual_home_id)) {
+          destNid = this.mget(_a.actual_home_id);
+        }
+        // The window title tracks navigation the same way the nid does
+        // (refreshBreadcrumbsUI msets hub_name to the current node's name).
+        const destName = this.mget(_a.hub_name) || this.mget(_a.filename) || "";
+        const destHub = this.mget(_a.hub_id) || Visitor.id;
+        const destNidFinal = destNid || Visitor.get(_a.home_id);
         return Kind.waitFor("migrate_gdrive_popup").then(() => {
           Wm.launch(
             {
               kind: "migrate_gdrive_popup",
-              hub_id: this.mget(_a.hub_id) || Visitor.id,
-              nid:
-                this.mget(_a.actual_home_id) ||
-                this.mget(_a.nid) ||
-                Visitor.get(_a.home_id),
-              wm_unique_id: "migrate_gdrive_popup",
+              hub_id: destHub,
+              nid: destNidFinal,
+              destinationName: destName || undefined,
+              direct: 1,
+              // Destination-scoped id (same scheme as window_folder-<hub>-<nid>).
+              // A plain shared id made singleton raise() a popup opened from
+              // ANOTHER destination (e.g. Settings after a folder, or folder B
+              // after folder A) with its stale destination — the user would
+              // import into the wrong place. Per-destination ids keep the
+              // no-duplicate guarantee per folder while giving each launch
+              // context its own popup.
+              wm_unique_id: `migrate_gdrive_popup-${destHub}-${destNidFinal}`,
             },
             { explicit: 1, singleton: 1 },
           );
         });
+      }
 
       case "new-document":
         this.closeNewMenu(cmd);
@@ -1851,12 +1875,7 @@ class __window_folder extends mfsInteract {
       if (!wrapper || (wrapper.isDestroyed && wrapper.isDestroyed())) return;
       this._chatExportWrapper = wrapper;
 
-      // Clicking the backdrop (not the card) closes the modal.
-      wrapper.el.addEventListener("click", (e) => {
-        if (e.target === wrapper.el) {
-          this._closeChatExportOverlay();
-        }
-      });
+      this._wireChatExportBackdrop(wrapper);
 
       // Feed the export widget into the centering container.
       wrapper.feed({
@@ -1906,11 +1925,7 @@ class __window_folder extends mfsInteract {
       if (!wrapper || (wrapper.isDestroyed && wrapper.isDestroyed())) return;
       this._chatExportWrapper = wrapper;
 
-      wrapper.el.addEventListener("click", (e) => {
-        if (e.target === wrapper.el) {
-          this._closeChatExportOverlay();
-        }
-      });
+      this._wireChatExportBackdrop(wrapper);
 
       wrapper.feed({
         kind: "widget_chat_export",
@@ -1941,6 +1956,27 @@ class __window_folder extends mfsInteract {
     } catch (_) {
       return "hsl(240, 40%, 60%)";
     }
+  }
+
+  /**
+   * Clicking the backdrop (not the card) closes the export modal.
+   *
+   * Assigned, not added: ui-core installs its own `el.onclick` on every widget
+   * at render and that handler ends in `e.stopImmediatePropagation()`, which
+   * drops any listener added to the SAME element afterwards — so an
+   * `addEventListener("click", …)` here only ran on a second click inside the
+   * framework's 300 ms debounce, i.e. the backdrop needed a double click.
+   * Capture does not help when the backdrop IS the event target, and the
+   * wrapper is a bare layout node with no `service`, so replacing its handler
+   * costs nothing. Same idiom as the @-mention dropdown.
+   *
+   * Shared by both openers of the overlay — it used to be copy-pasted twice.
+   */
+  _wireChatExportBackdrop(wrapper) {
+    if (!wrapper || !wrapper.el) return;
+    wrapper.el.onclick = (e) => {
+      if (e.target === wrapper.el) this._closeChatExportOverlay();
+    };
   }
 
   /**
@@ -2351,6 +2387,12 @@ class __window_folder extends mfsInteract {
         ? !!opt.open
         : !!(part.el && part.el.dataset.open === "1");
     part.feed(rows);
+    // A press on a row must not blur the search field, or the 200 ms focusout
+    // teardown fires mid-click and the pick is lost.
+    require("libs/pick-guard").keepListThroughClick(
+      part.el,
+      `.${pfx}-invitee-option`,
+    );
     if (part.el) part.el.dataset.open = open && rows.length ? 1 : 0;
   }
 
