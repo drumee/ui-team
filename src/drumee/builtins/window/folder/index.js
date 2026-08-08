@@ -1035,9 +1035,25 @@ class __window_folder extends mfsInteract {
       // filename workspace root takes its name from hub_name). Set `child`
       // DIRECTLY — calling ensurePart for this part here would replay
       // onPartReady and loop forever.
+      //
+      // `child.set()` re-enters this handler: set → mould → render →
+      // onBeforeRender → registerPart → triggerMethod(part:ready) → here. That
+      // recursed ~945 times on every folder open, until the stack overflowed
+      // and mould()'s own try/catch swallowed the RangeError — invisible, but
+      // it burned ~1.2s of main thread and pushed the content listing
+      // (media.show_node_by) from ~0.9s to ~2.2s after the click. Write only
+      // when the title actually differs, and never re-enter.
       const name = this.mget(_a.filename) || this.model.get("hub_name");
+      const shown = child && _.isFunction(child.mget) ? child.mget("content") : null;
+      if (name && String(shown) === String(name)) return; // already painted
+      if (this._namingWindow) return;
       if (name && _.isFunction(child.set)) {
-        child.set({ content: name });
+        this._namingWindow = 1;
+        try {
+          child.set({ content: name });
+        } finally {
+          this._namingWindow = 0;
+        }
       } else if (!name && !this.mget(_a.headless)) {
         // Opened without a seeded name (e.g. openFileLocation revealing a hit
         // in a hub/workspace ROOT — media.attributes carries no display name
@@ -1059,7 +1075,9 @@ class __window_folder extends mfsInteract {
     const hub_id = this.mget(_a.hub_id);
     if (!nid || !hub_id) return;
     this._titleResolving = 1;
-    this.fetchService(SERVICE.media.get_path, { nid, hub_id })
+    // Wm.loadWorkspace is very likely asking for this same path right now —
+    // share its request rather than adding a second one (libs/path-request).
+    require("libs/path-request").getPath(this, { nid, hub_id })
       .then((data) => {
         if (this.isDestroyed && this.isDestroyed()) return;
         if (!_.isEmpty(data)) this.refreshBreadcrumbsUI(data);

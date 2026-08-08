@@ -5,6 +5,9 @@ const push = require("./push");
 // "Open this workspace once signed in" — armed by the welcome module from
 // ?hub_id= (the workspace-invite CTA), consumed on boot below.
 const hubDeepLink = require("libs/hub-deep-link");
+// Shares one in-flight media.get_path with the breadcrumb / folder window when
+// they ask for the same node in the same instant (a folder open does).
+const { getPath } = require("libs/path-request");
 // Same channel the websocket dispatcher triggers on Wm — windows and the
 // sidebar workspace list subscribe to it (window/utils.js, workspace-list).
 const WS_EVENT = "ws:event";
@@ -514,7 +517,7 @@ class __window_manager extends push {
       // path of "undefined" — the same defect as the fetch above, and it left the
       // breadcrumb stuck on the previous screen. openWorkspaceFolder already does
       // it this way (attrs.nid || nid).
-      this.fetchService(SERVICE.media.get_path, { nid: data.nid || nid, hub_id }).then(
+      getPath(this, { nid: data.nid || nid, hub_id }).then(
         (path) => {
           if (_.isEmpty(path)) return;
           cur.refreshBreadcrumbsUI(path);
@@ -738,7 +741,7 @@ class __window_manager extends push {
         // breadcrumb would keep the previous folder's crumbs. Rebuild it from
         // get_path, as loadWorkspace does.
         const deepNid = attrs.nid || nid;
-        this.fetchService(SERVICE.media.get_path, { nid: deepNid, hub_id })
+        getPath(this, { nid: deepNid, hub_id })
           .then((path) => {
             if (_.isEmpty(path)) return;
             if (_.isFunction(currentFolder.refreshBreadcrumbsUI))
