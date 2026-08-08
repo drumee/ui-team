@@ -227,14 +227,49 @@ point a `dropped` row means an accidental exit and converting it would be
 exactly wrong. It is a no-op on this box (`yp.reward_claim` is empty); it exists
 for stage and production.
 
+Measured on stage 2026-08-08 rather than assumed: **1 row** to convert, out of
+173 — emailed 150, failed 17, done 4, dropped 1, started 1, with 4 of the 100
+slots taken. Small, but that one row belongs to a real person who said no.
+
 ## Changes
 
 | Repo | Change |
 |---|---|
-| schemas | `reward_claim_track.sql` — re-ranked `FIELD()` lists, exception clause, docblock; `reward_claim_emailed.sql` — `declined` joins the re-armed set; `reward_claim.sql` — status comment; new dated backfill patch |
+| schemas | `reward_claim_track.sql` — re-ranked `FIELD()` lists, exception clause, docblock; `reward_claim_emailed.sql` — `declined` joins the re-armed set and **`dropped` leaves it**; `reward_claim.sql` — status comment; new dated backfill patch; manifest entries in deploy order |
 | server-team | `reward.js` — `OPEN` gains `dropped`, `STATUS` gains `declined` |
 | ui-team | new `reward-flow/beacon.js`; `_syncUnloadGuard` / `_releaseUnloadGuard` / `_beaconDropped` in `index.js`; "Drop anyway" writes `declined` |
 | analytics-ui | `declined` chip, filter option, and colours in **both** skin entries (`app/skin` and `app/user/skin` state the palette twice — keep them in step) |
+
+### `dropped` leaves the re-arm set
+
+Found during implementation; `feat/reward-unload-guard` has this wrong. Its
+`reward_claim_emailed` keeps `dropped` alongside `done`/`declined`/`missed` in
+the set a fresh send re-arms.
+
+That was right while `dropped` was terminal. It is wrong now: re-arming nulls
+`step`, zeroes `clicked_at` and sets the row to `emailed`, which is **not** in
+the gate's OPEN set. So a re-send would take a dropped user who was already
+eligible and already resuming mid-walkthrough, and demote them to someone who
+must go and find the new mail and click it again. **A re-send must never take
+access away from someone who already had it.**
+
+The re-arm set is exactly "statuses not in OPEN, minus `emailed`" —
+`{failed, declined, missed, done}`.
+
+### `beforeunload` gets one owner
+
+Both source branches register it: `exit-guard.js` as its last-resort net, and
+the unload half for its dialog. Combining them naively gives one browser prompt
+two owners and puts its arming rules in two places.
+
+It stays with `exit-guard.js`, which owns every signal that ASKS the user
+something. The orchestrator's half only reports, on `pagehide`.
+
+The two arming predicates stay separate, though, and that is deliberate:
+`_shouldReportUnload` shares the step test with `armed()` but not
+`_dropGuardOpen`. That flag exists to stop a second F5 replacing the intent
+already on screen; a user who closes the tab while the card is up has still
+left, and their exit is still worth recording.
 
 ## bfcache is not leaving
 
@@ -309,6 +344,33 @@ ran.
 **Phase 2.** Transition matrix against a scratch DB (`utf8mb4_general_ci`,
 stubbed `reward_personal_eligible` / `reward_grant_storage`) covering every
 `(current, posted)` pair — including every terminal-state case, both directions
-of the `started`/`dropped` pair, and `declined` against a later `started`. The
-no-exception variant is run separately to confirm the regression it prevents is
-real.
+of the `started`/`dropped` pair, and `declined` against a later `started`.
+
+Run 2026-08-08: **48 transitions and 12 invariants, 0 failures**, covering the
+exception's named pair, the three refusals it must not fire against, a dropped
+user returning and completing for exactly one slot, the ineligible-user refusal
+consuming no slot, and the cap closing after its last slot.
+
+Two negative controls confirm both changes are load-bearing:
+
+- exception removed → `started + dropped` stays `started`, i.e. `dropped` could
+  never be written at all;
+- old ladder restored → `dropped + started` stays `dropped`, i.e. a returning
+  user reads as "Dropped" forever.
+
+The backfill and the re-arm change are exercised separately against seeded
+rows: the patch converts only the `dropped` row and preserves its `step` and
+`completed_count`, and after it `reward_claim_emailed` re-arms
+`declined`/`done`/`missed` to `emailed` while leaving `dropped` and `started`
+untouched.
+
+**Deployed procs on stage were diffed against the repo before any of this: no
+drift** in `reward_claim_track`, `reward_claim_emailed` or `reward_claim_failed`.
+
+### Still unverified
+
+Nothing has exercised the browser halves for real — the history sentinel, the
+keydown interception, and `fetch(keepalive)` surviving a genuine unload all
+need the manual matrix above, in a browser, on a provisioned account. The
+`?reward=1` path can drive the flow but reports nothing by design, so the
+funnel writes cannot be observed that way.
