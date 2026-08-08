@@ -89,7 +89,7 @@ const PANEL_OPEN_TIMEOUT_MS = 8000;
 // popup sitting in the dim.
 const TARGET_WAIT_MS = 8000;
 
-// How long "Drop anyway" waits for its `dropped` post before leaving anyway.
+// How long "Drop anyway" waits for its status post before leaving anyway.
 // That exit can be a RELOAD, and a request still in flight when the page goes
 // is a request the funnel never sees — so this one post is awaited, alone with
 // the completion claim. Bounded because the cost of waiting is a user staring
@@ -174,7 +174,7 @@ class __reward_flow extends LetcBox {
     // making them ask twice. Null when the guard was raised by a click on the
     // vignette, which is already where the user meant to be.
     this._pendingExit = null;
-    // "Drop anyway" is in flight (its `dropped` post is awaited before the exit
+    // "Drop anyway" is in flight (its status post is awaited before the exit
     // fires), so a second click is ignored rather than finishing twice.
     this._leaving = false;
     // Step 2 is being served by the permission panel Step 1 ended on, not by
@@ -629,10 +629,10 @@ class __reward_flow extends LetcBox {
    * reason (see _finish). Letting it write would put team accounts in the
    * campaign funnel — and would burn a real slot on a test.
    *
-   * @param {String} status "started" | "dropped" | "declined" | "done" |
-   *   "missed". "dropped" arrives here from an INTERCEPTED exit, where the page
+   * @param {String} status "started" | "left" | "dropped" | "done" |
+   *   "missed". "left" arrives here from an INTERCEPTED exit, where the page
    *   has not started leaving yet and an ordinary post still works; the
-   *   uncatchable exits report it through _beaconDropped instead, because by
+   *   uncatchable exits report it through _beaconLeft instead, because by
    *   then nothing but a keepalive request survives.
    * @param {String} [step] defaults to the current card step
    * @returns {Promise<Object|null>} the service's answer, or null when nothing
@@ -693,7 +693,7 @@ class __reward_flow extends LetcBox {
    * F5 does not replace the intent already on screen; it must not disarm the
    * REPORT, because a user who closes the tab while the card is up has still
    * left. `_finishing` is excluded from both: the flow is on its way out under
-   * its own steam, and "Drop anyway" reports `declined` for itself.
+   * its own steam, and "Drop anyway" reports for itself.
    */
   _shouldReportUnload() {
     if (this._forced || this._finishing) return false;
@@ -732,7 +732,7 @@ class __reward_flow extends LetcBox {
         // row saying "gone" for a user who is about to be looking at the flow
         // again.
         if (e && e.persisted) return;
-        this._beaconDropped();
+        this._beaconLeft();
       };
       window.addEventListener("pagehide", this._onPageHide);
       this._unloadBound = true;
@@ -757,17 +757,17 @@ class __reward_flow extends LetcBox {
    * Report the abandon on the way out, through a request the unload cannot
    * cancel (see beacon.js for why postService cannot do this).
    *
-   * `dropped` is NOT terminal any more. yp.reward_claim_track ranks it below
-   * `started` and reward.get_state counts it as OPEN, so this records that the
-   * user left without costing them the reward: they come back, resume from
-   * `step`, and their next `started` post clears the drop by itself. That
+   * `left` is NOT terminal. yp.reward_claim_track ranks it below `started` and
+   * reward.get_state counts it as OPEN, so this records that the user went away
+   * without costing them the reward: they come back, resume from `step`, and
+   * their next `started` post clears it by itself. That
    * matters most for the case this guard exists to catch — a plain refresh,
    * which is indistinguishable from a close at unload time and must not be
    * allowed to forfeit a prize the user is three clicks from claiming.
    *
    * @returns {Boolean} whether a request went out; for tests, not for callers.
    */
-  _beaconDropped() {
+  _beaconLeft() {
     if (this._forced) return false;
     try {
       if (typeof SERVICE === "undefined" || !SERVICE.reward || !SERVICE.reward.track) {
@@ -775,7 +775,7 @@ class __reward_flow extends LetcBox {
       }
       return beaconPost(SERVICE.reward.track, {
         hub_id: Visitor.id,
-        status: "dropped",
+        status: "left",
         step: baseStep(this._step),
         campaign: CAMPAIGN,
       });
@@ -1768,7 +1768,7 @@ class __reward_flow extends LetcBox {
    * getting out of its way.
    *
    * Called after _finish, never before: a reload that fired first would take
-   * the page with it while the `dropped` post was still in flight and the
+   * the page with it while the status post was still in flight and the
    * handed-off surfaces were still open.
    */
   _resumeExit(exit) {
@@ -2132,14 +2132,14 @@ class __reward_flow extends LetcBox {
         // offer:
         //
         //   vignette / scrim click  — the user went looking for the way out.
-        //     That is an answer, and it writes `declined`: TERMINAL, so we stop
+        //     That is an answer, and it writes `dropped`: TERMINAL, so we stop
         //     asking at every login.
         //   intercepted F5 / Back   — the user asked to RELOAD or GO BACK, and
         //     we interrupted them to ask about it. Pressing "Drop anyway" here
         //     means "yes, do the thing I asked for", not "I do not want the
-        //     reward". It writes the recoverable `dropped`.
+        //     reward". It writes the recoverable `left`.
         //
-        // Reporting the second as `declined` inverted the whole design by
+        // Reporting the second as `dropped` inverted the whole design by
         // information: a closed tab, where we know NOTHING, stayed recoverable,
         // while an intercepted refresh — where we know exactly what the user
         // meant, and know it was benign — was terminal. Phase 2 exists to stop
@@ -2158,7 +2158,7 @@ class __reward_flow extends LetcBox {
         this._leaving = true;
         const exit = this._pendingExit;
         this._pendingExit = null;
-        const post = this._track(exit ? "dropped" : "declined");
+        const post = this._track(exit ? "left" : "dropped");
         const settled = Promise.race([
           post,
           new Promise((r) => setTimeout(r, DROP_POST_TIMEOUT_MS)),
