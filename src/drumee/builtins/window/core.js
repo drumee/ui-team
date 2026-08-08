@@ -859,7 +859,14 @@ class __window_core extends __utils {
       .catch((e) => {
         aw.spinner(0);
         this.warn("newDocument: server error", e);
-        Wm.alert(LOCALE.ERROR_NETWORK);
+        // A refusal is not a network failure. media.save / euroffice.new_doc
+        // answer 403 when the viewer lacks the write bit, and reporting that as
+        // "a network error" sent people looking for a connection problem instead
+        // of telling them they lack the right. Anything else keeps the old
+        // message — a 500 or a dead connection must NOT be reported as a
+        // permission problem (the inverse mistake, see webrtc/room/index.js).
+        const status = e && (e.status || e.error_code);
+        Wm.alert(status == 403 ? LOCALE.WEAK_PRIVILEGE : LOCALE.ERROR_NETWORK);
         if (this.onServerError) this.onServerError(e);
       });
   }

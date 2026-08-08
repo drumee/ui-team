@@ -75,7 +75,29 @@ function statusMeta(ui, key) {
   );
 }
 
+/**
+ * May this viewer create tasks / boards here?
+ *
+ * The tasks panel is a LetcBox with no privilege of its own, so the folder
+ * window hands it `may_write` at mount (folder/index.js), derived from the same
+ * canUpload() its "+ New" gate uses. task.create / task.column_create are
+ * `src: write` server-side, so view and chat members are refused there anyway —
+ * this only stops the button being offered.
+ *
+ * Deliberately `!== false`: an absent or unrecognised value behaves exactly as
+ * before, so this can never hide the button from someone whose privilege simply
+ * was not passed down.
+ */
+function mayCreateTask(ui) {
+  try {
+    return ui.mget("may_write") !== false;
+  } catch (e) {
+    return true;
+  }
+}
+
 module.exports = {
+  mayCreateTask,
   PRIORITY_RANK,
   fullName,
   assigneeUids,

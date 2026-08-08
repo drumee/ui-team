@@ -4015,6 +4015,12 @@ class __window_folder extends mfsInteract {
             return view.append({
               kind: "tasks_panel",
               hub_id: this.mget(_a.hub_id),
+              // Creating a task is an EDIT-tier action (task.create is
+              // `src: write`), and the panel is a LetcBox with no privilege of
+              // its own — so hand it this window's answer, the same
+              // canUpload() the "+ New" gate uses. Only an explicit false
+              // hides the add buttons, so any older/absent value stays as-is.
+              may_write: !!(this.canUpload && this.canUpload()),
               // Upload/destination nid: for a hub-level window the working nid
               // is actual_home_id, not the hub_id itself (else media.upload 403).
               nid: destNid,

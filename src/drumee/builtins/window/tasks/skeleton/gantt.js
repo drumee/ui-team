@@ -5,7 +5,7 @@
 // A purple "today" line and a shaded current-period band sit behind the bars.
 //   Figma: 2057-32279 (weeks), 2065-90472 (months), 2365-137835 (body detail).
 // Globals Skeletons/LOCALE/Dayjs are injected at runtime.
-const { priorityMeta } = require("./helpers");
+const { priorityMeta, mayCreateTask } = require("./helpers");
 
 const ASIDE_W = 300; // left task-list width
 const ROW_H = 56; // task row height (aside + track share it)
@@ -283,7 +283,7 @@ module.exports = function (ui) {
         className: `${pfx}__gantt-aside-head`,
         styleOpt: { height: `${HEAD_H}px` },
         kids: [
-          Skeletons.Box.X({
+          !mayCreateTask(ui) ? "" : Skeletons.Box.X({
             className: `${pfx}__gantt-work`,
             bubble: 0,
             service: "add-task",

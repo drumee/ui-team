@@ -529,7 +529,16 @@ module.exports = function meetingSchedule(ui) {
     : active
       ? LOCALE.JOIN_MEETING || "Join meeting"
       : LOCALE.START_A_MEETING;
-  const startBtn = Skeletons.Button.Label({
+  // Starting and scheduling are EDIT-tier actions; JOINING is not. So this
+  // button is dropped only when it would START one — a live meeting (active) or
+  // one we are already in (joined) keeps it, which is exactly what view and chat
+  // are entitled to and mirrors conference_join's own rule (it refuses a start
+  // only when no conference is active for the hub).
+  // canUpload() is the folder window's own write test, the same one
+  // syncNewCtrlVisibility uses; absent → treated as allowed (fail-open).
+  const mayStart =
+    typeof ui.canUpload !== "function" ? true : !!ui.canUpload();
+  const startBtn = (!mayStart && !joined && !active) ? "" : Skeletons.Button.Label({
     className: `${pfx}-sched-start-btn`,
     ico: "meet-camera",
     label: startLabel,
@@ -543,7 +552,9 @@ module.exports = function meetingSchedule(ui) {
   });
 
   // Opens the create modal (skeleton/meeting-modal.js) via open-schedule.
-  const scheduleBtn = Skeletons.Note({
+  // Scheduling always writes a `schedule` node (room.book asks for the write
+  // bit), so unlike Start it has no join-equivalent and simply goes.
+  const scheduleBtn = !mayStart ? "" : Skeletons.Note({
     className: `${pfx}-sched-schedule-btn`,
     content: LOCALE.SCHEDULE,
     service: "open-schedule",

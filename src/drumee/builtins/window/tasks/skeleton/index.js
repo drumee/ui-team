@@ -71,6 +71,7 @@ function buildFileSearchDropdownContent(ui, scope, ctx = {}) {
 }
 
 const { stripMarkers: stripMentionMarkers } = require("../mention-markers");
+const { mayCreateTask } = require("./helpers");
 
 const make = function (ui) {
   const pfx = ui.fig.family;
@@ -357,6 +358,7 @@ const make = function (ui) {
   };
 
   const addButton = (colKey) =>
+    !mayCreateTask(ui) ? "" :
     Skeletons.Box.X({
       className: `${pfx}__add-btn`,
       bubble: 0,
@@ -1851,14 +1853,14 @@ const make = function (ui) {
 
   // Right-side controls (Figma 2040-53814): calendar/gantt granularity when
   // those views are active, then the create buttons, then the shared Filter.
-  const newTaskBtn = Skeletons.Note({
+  const newTaskBtn = !mayCreateTask(ui) ? "" : Skeletons.Note({
     className: `${pfx}__viewbar-new`,
     content: `+ ${LOCALE.NEW_TASK}`,
     bubble: 0,
     service: "add-task",
     uiHandler: [ui],
   });
-  const newBoardBtn = Skeletons.Box.X({
+  const newBoardBtn = !mayCreateTask(ui) ? "" : Skeletons.Box.X({
     className: `${pfx}__viewbar-board`,
     bubble: 0,
     service: "add-board",

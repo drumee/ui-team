@@ -1379,9 +1379,102 @@ class desk_module extends LetcBox {
   }
 
   /** Keep the topbar actions enabled when the breadcrumb context changes. */
+  /**
+   * May the viewer create things in the workspace they are currently in?
+   *
+   * The desk topbar's "+ New" writes into the CURRENT workspace, but the desk
+   * itself holds no privilege — the open workspace window does, and it already
+   * keeps it live (folder/index.js: change:privilege, _applyLivePrivilege,
+   * _healChatPrivilege). So ask that window, which is the same source its own
+   * "+ New" gate (syncNewCtrlVisibility) trusts, instead of caching a second copy.
+   *
+   * FAIL-OPEN in every unknown case — no workspace context (desk home / the
+   * user's own space), no window yet, or an unexpected shape — so this can only
+   * ever remove an option from someone provably lacking write, never block a
+   * member whose privilege we simply could not read.
+   */
+  _curWorkspaceCanWrite() {
+    try {
+      const ws = (window.Wm && Wm._curWorkspace) || null;
+      if (!ws || !ws.hub_id) return true;
+      const win = Wm._findWorkspaceWindow && Wm._findWorkspaceWindow(ws.hub_id);
+      if (!win || typeof win.canUpload !== "function") return true;
+      return !!win.canUpload();
+    } catch (e) {
+      return true;
+    }
+  }
+
+  /**
+   * May the viewer manage the members of the workspace they are currently in?
+   * Same resolution and same fail-open posture as _curWorkspaceCanWrite; the
+   * server asks for the ADMIN bit on hub.invite / set_privilege / delete_contributor,
+   * so view, chat and edit would only ever meet a refusal.
+   *
+   * canAdmin() (the bare admin bit) rather than canManageAccess(), which also
+   * requires area === private and would therefore hide Invite from the owner of
+   * a SHARED workspace.
+   */
+  _curWorkspaceCanManage() {
+    try {
+      const ws = (window.Wm && Wm._curWorkspace) || null;
+      if (!ws || !ws.hub_id) return true;
+      const win = Wm._findWorkspaceWindow && Wm._findWorkspaceWindow(ws.hub_id);
+      if (!win || typeof win.canAdmin !== "function") return true;
+      return !!win.canAdmin();
+    } catch (e) {
+      return true;
+    }
+  }
+
+  /**
+   * Refuse a create/upload the current workspace privilege does not allow, with
+   * words, BEFORE the file picker or editor opens. Returns true when the caller
+   * must stop — same contract as over-limit's guardWrite, so the two read alike
+   * at every call site.
+   *
+   * The server already refuses these (media.upload / make_dir / save ask for the
+   * write bit), so this is not the enforcement — it exists so a view/chat member
+   * is never offered a picker whose result can only be a 403.
+   */
+  _guardWorkspaceWrite() {
+    if (this._curWorkspaceCanWrite()) return false;
+    this._sayWeakPrivilege();
+    return true;
+  }
+
+  /**
+   * The one place this batch says "you don't have the right for that".
+   * Mirrors over-limit's notifyBlocked: Butler first, Wm.alert as the fallback,
+   * and never allowed to throw into the caller's own path.
+   * LOCALE.WEAK_PRIVILEGE already exists in all six locales — no new key.
+   */
+  _sayWeakPrivilege() {
+    try {
+      if (typeof Butler !== "undefined" && Butler.say) Butler.say(LOCALE.WEAK_PRIVILEGE);
+      else if (typeof Wm !== "undefined" && Wm.alert) Wm.alert(LOCALE.WEAK_PRIVILEGE);
+    } catch (e) {
+      /* a toast must never break the caller's own path */
+    }
+  }
+
   _updateAddmenu() {
     this.ensurePart("action-cluster").then((p) => {
       p.setState(1);
+    });
+    // Navigating into (or out of) a workspace can change whether the create /
+    // upload rows apply at all. Re-feed the topbar only when the answer actually
+    // flips, so ordinary folder-to-folder navigation inside one workspace costs
+    // nothing. Same re-feed mechanism _onOverLimitChanged already uses.
+    const may = this._curWorkspaceCanWrite();
+    const manage = this._curWorkspaceCanManage();
+    if (this._addmenuMayWrite === may && this._addmenuMayManage === manage) return;
+    this._addmenuMayWrite = may;
+    this._addmenuMayManage = manage;
+    this.ensurePart("top-bar").then((part) => {
+      if (part && !(part.isDestroyed && part.isDestroyed())) {
+        part.feed(require("./skeleton/topbar")(this));
+      }
     });
   }
 
@@ -2861,6 +2954,10 @@ class desk_module extends LetcBox {
         // Refuse before the file picker opens — a picker that can only
         // produce OVER_LIMIT_READ_ONLY is worse than no picker.
         if (require("libs/over-limit").guardWrite("write")) return;
+        // Same reason, different cause: a view/chat member of the CURRENT
+        // workspace cannot upload into it, and a picker that can only end in a
+        // 403 is worse than no picker.
+        if (this._guardWorkspaceWrite()) return;
         return Wm.handleUpload();
       }
 
@@ -2869,6 +2966,9 @@ class desk_module extends LetcBox {
 
       case "launch-gdrive-migration": {
         this.closeDeskNewMenu(cmd);
+        // A Drive import writes into the current workspace (it lands on the same
+        // upload path), so it needs the same right as "From device".
+        if (this._guardWorkspaceWrite()) return;
         const workspace = (Wm && Wm._curWorkspace) || {};
         return Kind.waitFor("migrate_gdrive_popup").then(() => {
           Wm.launch(
@@ -3085,6 +3185,9 @@ class desk_module extends LetcBox {
         // never sees it. Gate here so hard-lock / over_limit don't leave
         // a writable markdown window on a read-only desk.
         if (require("libs/over-limit").guardWrite("write")) return;
+        // A note is saved into the current workspace (media.save asks for the
+        // write bit), so refuse here rather than open an editor that cannot save.
+        if (this._guardWorkspaceWrite()) return;
         Wm.windowsLayer.append({
           kind: "editor_markdown",
           uiHandler: [this],
@@ -3098,6 +3201,8 @@ class desk_module extends LetcBox {
         // Office create hits euroffice.new_doc; refuse before the spinner /
         // "network error" path that the plugin's own error handler shows.
         if (require("libs/over-limit").guardWrite("write")) return;
+        // Same for a viewer who simply lacks write in this workspace.
+        if (this._guardWorkspaceWrite()) return;
         Wm.newDocument(cmd);
         return;
       }
@@ -3108,6 +3213,12 @@ class desk_module extends LetcBox {
         // panels, workspace menus) still land here. Answer with words, not a
         // popup whose submit can only be refused.
         if (require("libs/over-limit").guardWrite("invite")) return;
+        // Managing members needs the ADMIN bit (hub.invite is `src: admin`), so
+        // refuse with words rather than open a popup whose submit can only 403.
+        if (!this._curWorkspaceCanManage()) {
+          this._sayWeakPrivilege();
+          return;
+        }
         return this._openInvitePopup(cmd);
       }
 

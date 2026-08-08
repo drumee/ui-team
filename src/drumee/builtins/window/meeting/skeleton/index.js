@@ -40,6 +40,24 @@ function meetingSidePanel(_ui_) {
   // desktop it stays open (Figma). The topbar Chat/People buttons still open it.
   const startOpen = !Visitor.isMobile();
 
+  // Chat INSIDE a meeting is the SAME right as workspace chat — this pane posts
+  // through channel.post, which the server now gates on the download bit — so a
+  // view-only member gets the roster without a composer instead of a conversation
+  // every message of which would be refused.
+  //
+  // Scoped to the TEAM-channel case on purpose: a p2p / scheduled room falls back
+  // to the room's own ids (isTeamChannel false) and is not a workspace
+  // conversation, so it is left exactly as it is. DMZ already returned above.
+  //
+  // `permission` is the privilege conference_join resolved for this member
+  // (webrtc/room/index.js msets it from c.user.permission). Absent/unreadable →
+  // treated as allowed, so this can never blank the panel on a missing value.
+  const meetingPriv = Number(_ui_.mget(_a.permission));
+  const mayChat =
+    !isTeamChannel
+    || !Number.isFinite(meetingPriv)
+    || (meetingPriv & _K.permission.download) === _K.permission.download;
+
   const tab = (id, label) =>
     Skeletons.Note({
       className: `${pfx}__chat-tab`,
@@ -64,8 +82,10 @@ function meetingSidePanel(_ui_) {
     // the call stage is what shows first. attrOpt carries the initial data-* to
     // the DOM (bare dataset is dropped at render) — without it the panel mounts
     // with no data-open/data-tab, i.e. closed and tab-less.
-    attrOpt: { "data-open": startOpen ? "1" : "0", "data-tab": "chat" },
-    dataset: { open: startOpen ? 1 : 0, tab: "chat" },
+    // Without the chat right the panel opens on Participants — the only tab
+    // there is — instead of an empty Chat tab.
+    attrOpt: { "data-open": startOpen ? "1" : "0", "data-tab": mayChat ? "chat" : "participants" },
+    dataset: { open: startOpen ? 1 : 0, tab: mayChat ? "chat" : "participants" },
     kids: [
       Skeletons.Box.X({
         className: `${pfx}__chat-header`,
@@ -73,7 +93,7 @@ function meetingSidePanel(_ui_) {
           Skeletons.Box.X({
             className: `${pfx}__chat-tabs`,
             kids: [
-              tab("chat", LOCALE.CHAT),
+              mayChat ? tab("chat", LOCALE.CHAT) : "",
               tab("participants", LOCALE.PARTICIPANTS),
             ],
           }),
@@ -127,8 +147,11 @@ function meetingSidePanel(_ui_) {
           }),
         ],
       }),
-      // Chat pane.
-      Skeletons.Box.Y({
+      // Chat pane. Omitted entirely without the chat right — a mounted composer
+      // whose every send is refused is worse than no composer. Safe to drop:
+      // _bindChatUnread's ensurePart("meeting-chat-widget") simply never
+      // resolves (it has its own .catch), so nothing binds and nothing throws.
+      !mayChat ? "" : Skeletons.Box.Y({
         className: `${pfx}__pane ${pfx}__pane-chat`,
         kids: [
           {

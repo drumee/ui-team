@@ -194,7 +194,12 @@ class __media_core extends DrumeeMFS {
   _canInviteToHub() {
     const area = this.mget(_a.area);
     if (!["dmz", _a.share, _a.private].includes(area)) return false;
-    return this.mget(_a.privilege) & _K.permission.download;
+    // Inviting is member management: hub.invite / add_contributors /
+    // set_privilege are all `src: admin` server-side, so view, chat AND edit
+    // could only ever meet a 403. This used to test the DOWNLOAD bit, which
+    // offered the action to chat and edit members and made the refusal look
+    // like a bug rather than a permission.
+    return this.mget(_a.privilege) & _K.permission.admin;
   }
 
   contextmenuItemsForHub() {
