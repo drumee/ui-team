@@ -52,6 +52,9 @@ const { visible: onScreen } = require("./guide-core");
 const {
   KEY_WORKSPACE, runGet, runSet, runDel, purgeLegacyKeys,
 } = require("./storage");
+// Refresh and Back — the ways out the flow's own surfaces never saw.
+// See exit-guard.js.
+const { ExitGuard, armed: exitArmed } = require("./exit-guard");
 
 // Recorded on every funnel post so the row says which campaign it belongs to.
 // Must match the utm_campaign analytics-server puts on the claim-reward email
@@ -81,6 +84,14 @@ const PANEL_OPEN_TIMEOUT_MS = 8000;
 // outlast any settle window, and a fixed one left the hole collapsed and the
 // popup sitting in the dim.
 const TARGET_WAIT_MS = 8000;
+
+// How long "Drop anyway" waits for its `dropped` post before leaving anyway.
+// That exit can be a RELOAD, and a request still in flight when the page goes
+// is a request the funnel never sees — so this one post is awaited, alone with
+// the completion claim. Bounded because the cost of waiting is a user staring
+// at a guard they have already dismissed: past this, the funnel losing a row is
+// the cheaper failure.
+const DROP_POST_TIMEOUT_MS = 1500;
 
 // The surfaces Step 2 hands the user to, all fed into the shared wrapper-modal:
 // the internal permission panel Step 1 ends on (onInvitePanel) OR the invite
@@ -154,6 +165,14 @@ class __reward_flow extends LetcBox {
     this._modalOpen = false;
     this._inviteSucceeded = false;
     this._dropGuardOpen = false;
+    // What the user was trying to do when the guard went up — a reload, a Back
+    // press — so "Drop anyway" can carry it out instead of discarding it and
+    // making them ask twice. Null when the guard was raised by a click on the
+    // vignette, which is already where the user meant to be.
+    this._pendingExit = null;
+    // "Drop anyway" is in flight (its `dropped` post is awaited before the exit
+    // fires), so a second click is ignored rather than finishing twice.
+    this._leaving = false;
     // Step 2 is being served by the permission panel Step 1 ended on, not by
     // the invite popup — see onInvitePanel. Never restored on resume: the panel
     // is long gone by then, so a reload resumes on the plain Step 2 card.
@@ -195,6 +214,12 @@ class __reward_flow extends LetcBox {
       RADIO_BROADCAST.on("workspace:refresh", this._onWorkspaceRefresh);
       RADIO_BROADCAST.on("invitation:sent", this._onPanelInvitation);
     }
+
+    // Started unconditionally: a capped run is turned away by exitArmed()
+    // below, not by declining to watch, so there is one place that decides when
+    // the guard speaks up.
+    this._exitGuard = new ExitGuard(this);
+    this._exitGuard.start();
   }
 
   onDomRefresh() {
@@ -273,6 +298,9 @@ class __reward_flow extends LetcBox {
     if (this._onStepResize && typeof window !== "undefined") {
       window.removeEventListener("resize", this._onStepResize);
       this._onStepResize = null;
+    }
+    if (this._exitGuard) {
+      this._exitGuard.stop();
     }
     this._stopGuide();
     this._stopUploadGuide();
@@ -1563,6 +1591,62 @@ class __reward_flow extends LetcBox {
     }
   }
 
+  // ───────── leaving the page ─────────
+
+  /**
+   * Is the flow in a state worth guarding? Read by the exit guard before it
+   * acts on ANY of its signals (see exit-guard.js).
+   *
+   * The decision itself is the pure `armed` there, so it can be exercised
+   * without a browser; this only supplies the state it reads.
+   */
+  exitArmed() {
+    if (this.isDestroyed?.()) return false;
+    return exitArmed(this._step, {
+      finishing: this._finishing,
+      guardOpen: this._dropGuardOpen,
+    });
+  }
+
+  /**
+   * The user made a move that would take the page away from the flow — a
+   * refresh keystroke or the Back button. The guard has already stopped it
+   * happening; this is where the flow decides what to say about it.
+   *
+   * Same card as every other abandon gesture, deliberately: "Don't drop now"
+   * asks the same question whether it was raised by a click on the vignette or
+   * by F5, and a second variant would be one more string to translate for no
+   * new information.
+   *
+   * The intent is REMEMBERED so "Drop anyway" can carry it out rather than
+   * discarding it and making the user ask twice.
+   *
+   * @param {{kind: "reload"|"navigate"}} intent
+   */
+  onExitIntent(intent) {
+    if (!this.exitArmed()) return;
+    this._pendingExit = intent || null;
+    this._openDropGuard();
+  }
+
+  /**
+   * Do the thing the user originally asked for, once the flow has finished
+   * getting out of its way.
+   *
+   * Called after _finish, never before: a reload that fired first would take
+   * the page with it while the `dropped` post was still in flight and the
+   * handed-off surfaces were still open.
+   */
+  _resumeExit(exit) {
+    if (!exit || typeof window === "undefined") return;
+    try {
+      if (exit.kind === "reload") return location.reload();
+      if (exit.kind === "navigate") return this._exitGuard?.resumeNavigate();
+    } catch (e) {
+      /* the flow is already gone; a failed exit just leaves the user here */
+    }
+  }
+
   // ───────── modals ─────────
 
   /**
@@ -1895,16 +1979,43 @@ class __reward_flow extends LetcBox {
         // back what was underneath: the card, the guide mid-walkthrough, or the
         // invite popup with whatever they had typed. Nothing was torn down, so
         // there is nothing to restore.
+        //
+        // Whatever raised the guard is cancelled with it — "Continue" means
+        // stay, so a refresh the user has thought better of must not still be
+        // waiting to happen behind the card. The Back trap is re-armed for the
+        // next press (the sentinel was consumed getting here).
+        this._pendingExit = null;
+        this._exitGuard?.rearm();
         this._closeDropGuard();
         return;
 
-      case "reward-drop-leave":
+      case "reward-drop-leave": {
         // "Drop anyway" is the only place the user says outright that they are
         // abandoning the flow, so it is the only place `dropped` is written.
         // Closing the tab mid-flow leaves them at `started`, which is the
-        // honest reading: they never told us either way.
-        this._track("dropped");
-        return this._finish();
+        // honest reading: they never told us either way — and that is still
+        // true of a tab closed past the browser's own dialog, which the exit
+        // guard raises but never reports.
+        //
+        // The post is AWAITED here, unlike every other tracking call: this exit
+        // can be a RELOAD, and a request still in flight when the page goes is
+        // a row the funnel never sees. Bounded by DROP_POST_TIMEOUT_MS so a
+        // hung network cannot strand the user on a guard they have dismissed.
+        if (this._leaving) return;
+        this._leaving = true;
+        const exit = this._pendingExit;
+        this._pendingExit = null;
+        const post = this._track("dropped");
+        const settled = Promise.race([
+          post,
+          new Promise((r) => setTimeout(r, DROP_POST_TIMEOUT_MS)),
+        ]);
+        settled.then(() => {
+          this._finish();
+          this._resumeExit(exit);
+        });
+        return;
+      }
 
       case "reward-finish":
         // Congrats' "Go to dashboard" — onUploadDone already reported `done`.
