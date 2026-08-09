@@ -176,12 +176,18 @@ class __form_folder extends LetcBox {
         // of rejecting; surface it inline and keep the form open for retry.
         if (hub && (hub.error || hub.error_code)) {
           this._pending = 0;
-          // A quota refusal is not a problem with what the user typed, so it
-          // does not go in the field's error line. check_quota answers
-          // QUOTA_EXCEEDED with a `reason` naming the area
-          // (_private_hub_limit_reached / _share_hub_limit_reached) — a string
-          // that has no translation in ANY locale file, so the old branch
-          // rendered either the generic quota sentence or the raw key.
+          // LEGACY PATH. There is no workspace-count limit: the server's
+          // check_quota preproc was removed on 2026-08-08 because it read the
+          // plan's per-area capability flags ($.private_hub etc.) as counts
+          // and refused a second workspace to everyone, paying customers
+          // included. An updated endpoint never sends this any more.
+          //
+          // Kept while endpoints roll out at their own pace: an old service
+          // still answers QUOTA_EXCEEDED with a `reason` naming the area
+          // (_private_hub_limit_reached / _share_hub_limit_reached), which has
+          // no translation in any locale file, so without this branch the code
+          // itself would land in the name field. Remove once no deployment
+          // runs the old service.
           if (hub.error === "QUOTA_EXCEEDED" || /_hub_limit_reached$/.test(hub.reason || "")) {
             this._setNameError(null);
             this._showQuotaBlock();

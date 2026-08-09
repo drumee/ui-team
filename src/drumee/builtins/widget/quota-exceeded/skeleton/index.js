@@ -46,12 +46,18 @@ const LIMITS = {
           "You have used all the storage your plan includes.",
     makeRoom: () => LOCALE.QX_ROOM_STORAGE || "Free up space to continue.",
   },
-  /* Deliberately promises NOTHING about upgrading. Team sells the same
-     private_hub: 1 as Free — only Business lifts it — so "upgrade for more
-     workspaces" would be false for the tier most users would land on. The
-     plans page states each tier's workspace count (Free "1", Team "1",
-     Business "Multiple"), so the button lets them see which one helps rather
-     than this sentence claiming it for them. */
+  /* UNREACHABLE since 2026-08-08 — no plan limits how many workspaces you may
+     create, and the server no longer refuses one (server-team removed the
+     create_hub preproc). Kept only so an endpoint still running the old
+     service renders this card instead of a raw "QUOTA_EXCEEDED" in the name
+     field; delete once every deployment is past that point.
+
+     The note that used to sit here — "Team sells the same private_hub: 1 as
+     Free" — was the misreading that caused the outage: $.private_hub /
+     $.share_hub / $.public_hub are per-area capability flags (free 1/0/0,
+     pro 1/1/0, team 1/1/0, business unset), not workspace counts. Read as
+     counts they say a $29 Team may hold exactly one internal workspace.
+     Don't restore a count from them. */
   workspace: {
     title: () => LOCALE.QX_WORKSPACE_TITLE || "Workspace limit reached",
     body: () =>
