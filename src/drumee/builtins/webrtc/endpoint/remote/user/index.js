@@ -302,21 +302,30 @@ class __remote_user extends __stream {
       }
     });
     this.ensurePart("output").then((s) => {
-      if (track.isMuted()) {
-        track.detach(s.el);
-      } else {
+      // NEVER detach on mute. A peer's shared tab/system audio is mixed INTO
+      // this same single audio track (webrtc/room/audio-mixer-effect.js), because
+      // JitsiConference.addTrack accepts exactly ONE audio track per media type.
+      // The mixer silences only the microphone leg and keeps its mixed output
+      // live, while the remote mute flag is pure signalling (JitsiRemoteTrack
+      // .setMute) — so clearing srcObject here killed the sound of the peer's
+      // SCREEN SHARE along with their mic. A genuinely muted mic simply delivers
+      // silence on the same element, so staying attached costs nothing.
+      // Attaching is guarded because this runs on every mute change (and after
+      // an onPropertyChanged re-feed): without the detach, re-attaching an
+      // element already bound to this track would just stack `containers`.
+      if (!(Array.isArray(track.containers) && track.containers.includes(s.el))) {
         track.attach(s.el);
-        s.el.muted = false;
-        s.el.volume = 1;
-        s.el.oncanplay = (e) => {
-          const p = e.target.play();
-          if (p && p.catch) p.catch(() => { });
-        };
-        const p = s.el.play();
-        if (p && p.catch) p.catch(() => { });
-        this.updateCommandPanel();
-        this._audioReady = true;
       }
+      s.el.muted = false;
+      s.el.volume = 1;
+      s.el.oncanplay = (e) => {
+        const p = e.target.play();
+        if (p && p.catch) p.catch(() => { });
+      };
+      const p = s.el.play();
+      if (p && p.catch) p.catch(() => { });
+      this.updateCommandPanel();
+      this._audioReady = true;
     });
 
   }
