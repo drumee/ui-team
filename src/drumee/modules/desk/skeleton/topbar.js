@@ -14,12 +14,17 @@ const addMenuItem = (pfx, ui, ico, label, service, name, opts = {}) =>
     uiHandler: [ui],
   });
 
-const addItems = (pfx, ui) => [
+// The tablet "more" menu splices these in. Same rule as the "+ New" dropdown:
+// only "Workspace" is account-level and always stays; the four file entries
+// write into the CURRENT workspace and follow its privilege.
+const addItems = (pfx, ui, mayWrite) => [
   addMenuItem(pfx, ui, "addmenu-folder", LOCALE.WORKSPACE || "Workspace", "new-workspace", "", { highlight: 1, iconClass: "ico-workspace" }),
+  ...(!mayWrite ? [] : [
   addMenuItem(pfx, ui, "addmenu-note", LOCALE.NOTE || "Note", "new-note", "", { iconClass: "ico-note" }),
   addMenuItem(pfx, ui, "addmenu-document", LOCALE.DOCUMENT || "Document", "new-document", "document.docx", { iconClass: "ico-document" }),
   addMenuItem(pfx, ui, "addmenu-spreadsheet", LOCALE.SPREADSHEET || "Spreadsheet", "new-spreadsheet", "spreadsheet.xlsx", { iconClass: "ico-spreadsheet" }),
   addMenuItem(pfx, ui, "addmenu-presentation", LOCALE.PRESENTATION || "Presentation", "new-presentation", "presentation.pptx", { iconClass: "ico-presentation" }),
+  ]),
 ];
 
 const newMenuRow = (pfx, ui, {
@@ -50,7 +55,17 @@ const newMenuRow = (pfx, ui, {
   ],
 });
 
-const deskNewMenu = (pfx, ui) => {
+// Everything in this menu EXCEPT "Workspace" writes into the workspace the user
+// is currently in, so it follows their privilege there: view and chat members
+// cannot upload, import, or create files. Creating a NEW WORKSPACE belongs to
+// their own account, not to the workspace they happen to be visiting, so it
+// always stays.
+//
+// `mayWrite` is resolved ONCE per render by the caller and threaded in, so every
+// surface of this topbar necessarily agrees. Desk._updateAddmenu re-feeds the
+// topbar when the answer flips, so the menu follows navigation into and out of a
+// workspace.
+const deskNewMenu = (pfx, ui, mayWrite) => {
   const createItems = [
     newMenuRow(pfx, ui, {
       ico: "addmenu-folder",
@@ -58,6 +73,7 @@ const deskNewMenu = (pfx, ui) => {
       service: "new-workspace",
       className: `${pfx}__add-menu-item ${pfx}__new-menu-submenu-item ico-workspace`,
     }),
+    ...(!mayWrite ? [] : [
     newMenuRow(pfx, ui, {
       ico: "addmenu-note",
       label: LOCALE.NOTE || "Note",
@@ -85,6 +101,7 @@ const deskNewMenu = (pfx, ui) => {
       name: "presentation.pptx",
       className: `${pfx}__add-menu-item ${pfx}__new-menu-submenu-item ico-presentation`,
     }),
+    ]),
   ];
 
   const createGroup = Skeletons.Box.X({
@@ -134,13 +151,16 @@ const deskNewMenu = (pfx, ui) => {
     items: Skeletons.Box.Y({
       className: `${pfx}__new-menu-items`,
       kids: [
-        newMenuRow(pfx, ui, {
+        // Both import rows land on the upload path, so they need write in the
+        // current workspace. "" is dropped by ui-core's validChild, the same
+        // idiom the tab bar uses to blank a tab.
+        !mayWrite ? "" : newMenuRow(pfx, ui, {
           ico: "app-upload",
           label: LOCALE.FROM_DEVICE || "From device",
           service: _e.upload,
           className: `${pfx}__new-menu-item--from-device`,
         }),
-        newMenuRow(pfx, ui, {
+        !mayWrite ? "" : newMenuRow(pfx, ui, {
           ico: "logo-google",
           label: LOCALE.MIGRATE_GDRIVE_TITLE || "Migrate from Google Drive",
           service: "launch-gdrive-migration",
@@ -154,6 +174,14 @@ const deskNewMenu = (pfx, ui) => {
 
 module.exports = function (ui) {
   const pfx = `${ui.fig.family}-topbar`;
+  // Same two questions the "+ New" dropdown asks, resolved once for the whole
+  // topbar: may this viewer create things in the workspace they are in, and may
+  // they manage its members? Both fail open when there is no workspace context
+  // (the user's own desk) or the privilege cannot be read.
+  const mayWrite =
+    typeof ui._curWorkspaceCanWrite === "function" ? ui._curWorkspaceCanWrite() : true;
+  const mayManage =
+    typeof ui._curWorkspaceCanManage === "function" ? ui._curWorkspaceCanManage() : true;
 
   return Skeletons.Box.X({
     debug: __filename,
@@ -188,7 +216,7 @@ module.exports = function (ui) {
           // offering five entries that each end in a server refusal. The
           // desk re-feeds this part on over-limit:changed, so it comes back
           // the moment the org is within limits again.
-          ...(require("libs/over-limit").isLocked() ? [] : [deskNewMenu(pfx, ui)]),
+          ...(require("libs/over-limit").isLocked() ? [] : [deskNewMenu(pfx, ui, mayWrite)]),
 
           // Search bar + suggestions
           Skeletons.Box.Y({
@@ -255,7 +283,10 @@ module.exports = function (ui) {
           // limits: invites are paused (the seat guard and the REST clamp
           // both refuse them), and a button that only ever answers with a
           // refusal toast should not be offered. Same re-feed as "+ New".
-          ...(require("libs/over-limit").isLocked() ? [] : [Skeletons.Button.Label({
+          // Also gone for a member who cannot manage this workspace's members:
+          // hub.invite / set_privilege ask for the ADMIN bit server-side, so
+          // view / chat / edit would only ever meet a refusal.
+          ...(require("libs/over-limit").isLocked() || !mayManage ? [] : [Skeletons.Button.Label({
             ico: "topbar-invite",
             className: `${pfx}__invite-btn`,
             label: LOCALE.INVITE || "Invite",
@@ -283,15 +314,15 @@ module.exports = function (ui) {
               // the consolidated tablet menu keeps nothing actionable.
               ? []
               : [
-                ...addItems(pfx, ui),
-                Skeletons.Button.Label({
+                ...addItems(pfx, ui, mayWrite),
+                !mayWrite ? "" : Skeletons.Button.Label({
                   ico: "app-upload",
                   className: `${pfx}__more-menu-item`,
                   label: LOCALE.UPLOAD,
                   service: _e.upload,
                   uiHandler: [ui],
                 }),
-                Skeletons.Button.Label({
+                !mayManage ? "" : Skeletons.Button.Label({
                   ico: "topbar-invite",
                   className: `${pfx}__more-menu-item`,
                   label: LOCALE.INVITE || "Invite",

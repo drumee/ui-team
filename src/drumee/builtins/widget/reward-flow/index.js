@@ -52,6 +52,13 @@ const { visible: onScreen } = require("./guide-core");
 const {
   KEY_WORKSPACE, runGet, runSet, runDel, purgeLegacyKeys,
 } = require("./storage");
+// Refresh and Back — the ways out the flow's own surfaces never saw.
+// See exit-guard.js.
+const { ExitGuard, armed: exitArmed } = require("./exit-guard");
+// A POST that outlives the document, for the exits the guard above cannot
+// intercept — an ordinary postService is cancelled the moment the page starts
+// unloading. See beacon.js.
+const { beaconPost } = require("./beacon");
 
 // Recorded on every funnel post so the row says which campaign it belongs to.
 // Must match the utm_campaign analytics-server puts on the claim-reward email
@@ -81,6 +88,14 @@ const PANEL_OPEN_TIMEOUT_MS = 8000;
 // outlast any settle window, and a fixed one left the hole collapsed and the
 // popup sitting in the dim.
 const TARGET_WAIT_MS = 8000;
+
+// How long "Drop anyway" waits for its status post before leaving anyway.
+// That exit can be a RELOAD, and a request still in flight when the page goes
+// is a request the funnel never sees — so this one post is awaited, alone with
+// the completion claim. Bounded because the cost of waiting is a user staring
+// at a guard they have already dismissed: past this, the funnel losing a row is
+// the cheaper failure.
+const DROP_POST_TIMEOUT_MS = 1500;
 
 // The surfaces Step 2 hands the user to, all fed into the shared wrapper-modal:
 // the internal permission panel Step 1 ends on (onInvitePanel) OR the invite
@@ -154,6 +169,14 @@ class __reward_flow extends LetcBox {
     this._modalOpen = false;
     this._inviteSucceeded = false;
     this._dropGuardOpen = false;
+    // What the user was trying to do when the guard went up — a reload, a Back
+    // press — so "Drop anyway" can carry it out instead of discarding it and
+    // making them ask twice. Null when the guard was raised by a click on the
+    // vignette, which is already where the user meant to be.
+    this._pendingExit = null;
+    // "Drop anyway" is in flight (its status post is awaited before the exit
+    // fires), so a second click is ignored rather than finishing twice.
+    this._leaving = false;
     // Step 2 is being served by the permission panel Step 1 ended on, not by
     // the invite popup — see onInvitePanel. Never restored on resume: the panel
     // is long gone by then, so a reload resumes on the plain Step 2 card.
@@ -195,6 +218,12 @@ class __reward_flow extends LetcBox {
       RADIO_BROADCAST.on("workspace:refresh", this._onWorkspaceRefresh);
       RADIO_BROADCAST.on("invitation:sent", this._onPanelInvitation);
     }
+
+    // Started unconditionally: a capped run is turned away by exitArmed()
+    // below, not by declining to watch, so there is one place that decides when
+    // the guard speaks up.
+    this._exitGuard = new ExitGuard(this);
+    this._exitGuard.start();
   }
 
   onDomRefresh() {
@@ -274,6 +303,14 @@ class __reward_flow extends LetcBox {
       window.removeEventListener("resize", this._onStepResize);
       this._onStepResize = null;
     }
+    // Both unconditionally, not through their arming predicates: by the time
+    // _unbind runs the flow is leaving whatever its step still says, and either
+    // listener outliving the widget would act on a desk that no longer has a
+    // reward flow on it.
+    if (this._exitGuard) {
+      this._exitGuard.stop();
+    }
+    this._releaseUnloadGuard();
     this._stopGuide();
     this._stopUploadGuide();
     this._clearOpenTimer();
@@ -592,7 +629,11 @@ class __reward_flow extends LetcBox {
    * reason (see _finish). Letting it write would put team accounts in the
    * campaign funnel — and would burn a real slot on a test.
    *
-   * @param {String} status "started" | "dropped" | "done" | "missed"
+   * @param {String} status "started" | "left" | "dropped" | "done" |
+   *   "missed". "left" arrives here from an INTERCEPTED exit, where the page
+   *   has not started leaving yet and an ordinary post still works; the
+   *   uncatchable exits report it through _beaconLeft instead, because by
+   *   then nothing but a keepalive request survives.
    * @param {String} [step] defaults to the current card step
    * @returns {Promise<Object|null>} the service's answer, or null when nothing
    *   was posted or the post failed
@@ -630,6 +671,120 @@ class __reward_flow extends LetcBox {
     this._track("started", base);
   }
 
+  // ───────── leaving the page ─────────
+
+  /**
+   * Should an unreported exit be recorded right now?
+   *
+   * Every ACTIVE step, and nothing else. baseStep strips `_waiting` and
+   * `_guide`, so the handoffs count too — being parked in the invite popup or
+   * the uploader is where users most often wander off, and those are exactly
+   * the runs worth catching.
+   *
+   * `congrats` and `soldout` fall out for free: neither survives baseStep into
+   * STEPS. A user who has already won or already been turned away has no
+   * abandon left to record.
+   *
+   * A ?reward=1 run reports nothing, matching _track — letting it write would
+   * put team accounts in the campaign funnel.
+   *
+   * SHARES ITS STEP TEST with exit-guard's `armed()` but not its flags, and the
+   * difference is deliberate. `_dropGuardOpen` disarms the GUARD, so a second
+   * F5 does not replace the intent already on screen; it must not disarm the
+   * REPORT, because a user who closes the tab while the card is up has still
+   * left. `_finishing` is excluded from both: the flow is on its way out under
+   * its own steam, and "Drop anyway" reports for itself.
+   */
+  _shouldReportUnload() {
+    if (this._forced || this._finishing) return false;
+    return STEPS.includes(baseStep(this._step));
+  }
+
+  /**
+   * Arm or disarm the unload REPORT to match the current step.
+   *
+   * Idempotent, because it is called from both _goto and onDomRefresh and most
+   * calls are no-ops: the listener is only touched when the answer changes.
+   *
+   * ONE EVENT, ONE JOB. `beforeunload` — the half that raises the browser's own
+   * "Leave site?" dialog — belongs to exit-guard.js, which owns every signal
+   * that ASKS the user something. This half only reports, on `pagehide`, and
+   * the split across the two events is what makes "if they confirmed" work with
+   * no state of our own: choosing Stay aborts the navigation and pagehide never
+   * fires, so nothing is written. Choosing Leave lets it through and the report
+   * goes out.
+   *
+   * Registering `beforeunload` here as well — which is what the two designs did
+   * separately — would give one dialog two owners and leave the arming rules
+   * for it in two places.
+   */
+  _syncUnloadGuard() {
+    if (typeof window === "undefined") return;
+    const want = this._shouldReportUnload();
+    if (want === !!this._unloadBound) return;
+
+    if (want) {
+      this._onPageHide = (e) => {
+        // BFCACHE IS NOT LEAVING. A page frozen for the back/forward cache
+        // fires pagehide with persisted=true and may be restored intact,
+        // widget and all — and on restore nothing re-posts `started`, because
+        // _trackedStep still holds it. Reporting a drop here would leave the
+        // row saying "gone" for a user who is about to be looking at the flow
+        // again.
+        if (e && e.persisted) return;
+        this._beaconLeft();
+      };
+      window.addEventListener("pagehide", this._onPageHide);
+      this._unloadBound = true;
+      return;
+    }
+
+    this._releaseUnloadGuard();
+  }
+
+  /** Drop the listener. Separate from _syncUnloadGuard so _unbind can call it
+   *  outright on the way out, without reasoning about the current step. */
+  _releaseUnloadGuard() {
+    if (typeof window === "undefined") return;
+    if (this._onPageHide) {
+      window.removeEventListener("pagehide", this._onPageHide);
+      this._onPageHide = null;
+    }
+    this._unloadBound = false;
+  }
+
+  /**
+   * Report the abandon on the way out, through a request the unload cannot
+   * cancel (see beacon.js for why postService cannot do this).
+   *
+   * `left` is NOT terminal. yp.reward_claim_track ranks it below `started` and
+   * reward.get_state counts it as OPEN, so this records that the user went away
+   * without costing them the reward: they come back, resume from `step`, and
+   * their next `started` post clears it by itself. That
+   * matters most for the case this guard exists to catch — a plain refresh,
+   * which is indistinguishable from a close at unload time and must not be
+   * allowed to forfeit a prize the user is three clicks from claiming.
+   *
+   * @returns {Boolean} whether a request went out; for tests, not for callers.
+   */
+  _beaconLeft() {
+    if (this._forced) return false;
+    try {
+      if (typeof SERVICE === "undefined" || !SERVICE.reward || !SERVICE.reward.track) {
+        return false;
+      }
+      return beaconPost(SERVICE.reward.track, {
+        hub_id: Visitor.id,
+        status: "left",
+        step: baseStep(this._step),
+        campaign: CAMPAIGN,
+      });
+    } catch (e) {
+      /* reporting must never obstruct the unload */
+      return false;
+    }
+  }
+
   // ───────── skeleton accessors ─────────
 
   getStep() { return this._step; }
@@ -638,6 +793,13 @@ class __reward_flow extends LetcBox {
 
   _render() {
     this.feed(require("./skeleton")(this));
+    // Here rather than in _goto, because _goto is not the only way the step
+    // moves: _completeStep3 and _openSoldOut both assign this._step directly
+    // and re-render (deliberately — neither "congrats" nor "soldout" may be
+    // persisted as a resumable step). Arming off the render catches all three,
+    // so reaching a terminal screen always lifts the guard and nobody is
+    // prompted with "Leave site?" on their way out of a flow they finished.
+    this._syncUnloadGuard();
     this._positionStepTarget();
   }
 
@@ -1563,6 +1725,62 @@ class __reward_flow extends LetcBox {
     }
   }
 
+  // ───────── leaving the page ─────────
+
+  /**
+   * Is the flow in a state worth guarding? Read by the exit guard before it
+   * acts on ANY of its signals (see exit-guard.js).
+   *
+   * The decision itself is the pure `armed` there, so it can be exercised
+   * without a browser; this only supplies the state it reads.
+   */
+  exitArmed() {
+    if (this.isDestroyed?.()) return false;
+    return exitArmed(this._step, {
+      finishing: this._finishing,
+      guardOpen: this._dropGuardOpen,
+    });
+  }
+
+  /**
+   * The user made a move that would take the page away from the flow — a
+   * refresh keystroke or the Back button. The guard has already stopped it
+   * happening; this is where the flow decides what to say about it.
+   *
+   * Same card as every other abandon gesture, deliberately: "Don't drop now"
+   * asks the same question whether it was raised by a click on the vignette or
+   * by F5, and a second variant would be one more string to translate for no
+   * new information.
+   *
+   * The intent is REMEMBERED so "Drop anyway" can carry it out rather than
+   * discarding it and making the user ask twice.
+   *
+   * @param {{kind: "reload"|"navigate"}} intent
+   */
+  onExitIntent(intent) {
+    if (!this.exitArmed()) return;
+    this._pendingExit = intent || null;
+    this._openDropGuard();
+  }
+
+  /**
+   * Do the thing the user originally asked for, once the flow has finished
+   * getting out of its way.
+   *
+   * Called after _finish, never before: a reload that fired first would take
+   * the page with it while the status post was still in flight and the
+   * handed-off surfaces were still open.
+   */
+  _resumeExit(exit) {
+    if (!exit || typeof window === "undefined") return;
+    try {
+      if (exit.kind === "reload") return location.reload();
+      if (exit.kind === "navigate") return this._exitGuard?.resumeNavigate();
+    } catch (e) {
+      /* the flow is already gone; a failed exit just leaves the user here */
+    }
+  }
+
   // ───────── modals ─────────
 
   /**
@@ -1895,16 +2113,62 @@ class __reward_flow extends LetcBox {
         // back what was underneath: the card, the guide mid-walkthrough, or the
         // invite popup with whatever they had typed. Nothing was torn down, so
         // there is nothing to restore.
+        //
+        // Whatever raised the guard is cancelled with it — "Continue" means
+        // stay, so a refresh the user has thought better of must not still be
+        // waiting to happen behind the card. The Back trap is re-armed for the
+        // next press (the sentinel was consumed getting here).
+        this._pendingExit = null;
+        this._exitGuard?.rearm();
         this._closeDropGuard();
         return;
 
-      case "reward-drop-leave":
-        // "Drop anyway" is the only place the user says outright that they are
-        // abandoning the flow, so it is the only place `dropped` is written.
-        // Closing the tab mid-flow leaves them at `started`, which is the
-        // honest reading: they never told us either way.
-        this._track("dropped");
-        return this._finish();
+      case "reward-drop-leave": {
+        // WHICH STATUS THIS WRITES DEPENDS ON WHO RAISED THE GUARD, and getting
+        // that wrong locked a real tester out of the campaign (row 1213 on
+        // stage, 2026-08-08).
+        //
+        // Three intents reach this one button, and only one of them refuses the
+        // offer:
+        //
+        //   vignette / scrim click  — the user went looking for the way out.
+        //     That is an answer, and it writes `dropped`: TERMINAL, so we stop
+        //     asking at every login.
+        //   intercepted F5 / Back   — the user asked to RELOAD or GO BACK, and
+        //     we interrupted them to ask about it. Pressing "Drop anyway" here
+        //     means "yes, do the thing I asked for", not "I do not want the
+        //     reward". It writes the recoverable `left`.
+        //
+        // Reporting the second as `dropped` inverted the whole design by
+        // information: a closed tab, where we know NOTHING, stayed recoverable,
+        // while an intercepted refresh — where we know exactly what the user
+        // meant, and know it was benign — was terminal. Phase 2 exists to stop
+        // one stray F5 costing someone a prize; routing that same F5 into this
+        // button did it anyway, just with a confirmation on top.
+        //
+        // `_pendingExit` is the discriminator and needs no new state: it is set
+        // only by onExitIntent, cleared by "Continue", and null whenever the
+        // user raised the card themselves.
+        //
+        // The post is AWAITED here, unlike every other tracking call: this exit
+        // can be a RELOAD, and a request still in flight when the page goes is
+        // a row the funnel never sees. Bounded by DROP_POST_TIMEOUT_MS so a
+        // hung network cannot strand the user on a guard they have dismissed.
+        if (this._leaving) return;
+        this._leaving = true;
+        const exit = this._pendingExit;
+        this._pendingExit = null;
+        const post = this._track(exit ? "left" : "dropped");
+        const settled = Promise.race([
+          post,
+          new Promise((r) => setTimeout(r, DROP_POST_TIMEOUT_MS)),
+        ]);
+        settled.then(() => {
+          this._finish();
+          this._resumeExit(exit);
+        });
+        return;
+      }
 
       case "reward-finish":
         // Congrats' "Go to dashboard" — onUploadDone already reported `done`.

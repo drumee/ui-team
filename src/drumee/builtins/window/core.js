@@ -2,10 +2,11 @@ const CHANGE_RADIO = "change:radio";
 const MEDIA_GRID = "media_grid";
 const MEDIA_ROW = "media_row";
 const EOD = "end:of:data";
+// Rows the listing proc returns per page (pageToLimits in the schemas repo).
+// Used to tell a fully-loaded folder from a partially-loaded one before
+// renumbering ranks — see _syncOrder.
+const PAGE_SIZE = 45;
 const __utils = require("./utils");
-const TIMERS = {
-  reorder: null,
-};
 
 const { TweenLite, TimelineMax, TweenMax } = require("@drumee/ui-core/vendor");
 
@@ -167,14 +168,78 @@ class __window_core extends __utils {
    *
    * @param {*} cb
    */
+  /**
+   * localStorage key holding "this folder is manually arranged", so a
+   * reopened window lists by rank instead of falling back to the mtime
+   * default set in initialize(). Without it the ranks were persisted server
+   * side but never asked for again — the arrangement looked lost.
+   * @returns {String|null}
+   */
+  _arrangedSortKey() {
+    const { nid, hub_id } = this.actualNode ? this.actualNode() : {};
+    if (!nid || !hub_id) return null;
+    return `folder-arranged-${hub_id}-${nid}`;
+  }
+
+  /**
+   * Remember that the user arranged this folder by hand.
+   */
+  _rememberArrangedSort() {
+    const key = this._arrangedSortKey();
+    if (!key) return;
+    try {
+      localStorage.setItem(key, "1");
+    } catch (e) {
+      this.warn("could not persist the arranged-sort preference", e);
+    }
+  }
+
+  /**
+   * Forget the manual arrangement — the user picked an explicit sort, which
+   * takes over from here.
+   */
+  _forgetArrangedSort() {
+    const key = this._arrangedSortKey();
+    if (!key) return;
+    try {
+      localStorage.removeItem(key);
+    } catch (e) {
+      this.warn("could not clear the arranged-sort preference", e);
+    }
+  }
+
+  /**
+   * Whether this folder was arranged by hand before (see above).
+   * @returns {Boolean}
+   */
+  _hasArrangedSort() {
+    const key = this._arrangedSortKey();
+    if (!key) return false;
+    try {
+      return localStorage.getItem(key) === "1";
+    } catch (e) {
+      return false;
+    }
+  }
+
   _syncOrder(cb) {
+    // Consume the arrange request up front: every early return below ends
+    // THIS sync, and a flag left set would make some later, unrelated sync
+    // (an upload, a move-in) switch the window to rank order on its behalf.
+    const manual = this._manualArrange;
+    this._manualArrange = 0;
     if (this.iconsList == null || this.iconsList.isDestroyed()) {
       this.iconsList = this.findPart(_a.list);
     }
     if (!this.iconsList || this.iconsList.isDestroyed() || !this.iconsList.collection) {
       return;
     }
-    if (this.getViewMode() === _a.row) {
+    // Row view historically never persisted an order: it could not express
+    // an insertion slot, so every drop appended and renumbering would have
+    // scrambled the folder. It arranges like the grid now, so an explicit
+    // arrange request persists — anything else (upload, move-in) still does
+    // not, exactly as before.
+    if (this.getViewMode() === _a.row && !manual) {
       return;
     }
     if (!(_K.permission.modify & this.mget(_a.privilege))) {
@@ -185,8 +250,32 @@ class __window_core extends __utils {
     // desc) this would overwrite the whole folder's manual arrangement with
     // the current sort order — for every member — after any routine upload
     // or drop.
+    //
+    // The one exception is the user dragging a tile into an insertion slot:
+    // that IS a request for a manual arrangement, so the window adopts rank
+    // order and the drop survives a reload instead of snapping back. The
+    // flag is set by Wm.insert alone — never by an upload, move-in or paste.
     if (this._currentApi && this._currentApi.name !== _a.rank) {
-      return;
+      if (!manual) {
+        return;
+      }
+      // mfs_reorder only writes the nids we send, and the listing is paged
+      // (45 rows, pageToLimits). With a partially loaded folder the unseen
+      // files would keep their old rank — mostly 0 — and jump to the front
+      // the moment the window switched to rank order. Rearranging stays
+      // view-only there; a full page is the case we can renumber honestly.
+      if (this.iconsList.collection.length >= PAGE_SIZE) {
+        return;
+      }
+      this.setCurrentApi({ name: _a.rank, order: _K.order.ascending });
+      this._rememberArrangedSort();
+    }
+    // A comparator left on the collection (sortContent / the folder window's
+    // alphabetical grid sort) makes Backbone re-sort on every add, which
+    // silently undoes the arrangement we are about to persist. Drop it: from
+    // here the displayed order IS the stored order.
+    if (this.iconsList.collection.comparator) {
+      this.iconsList.collection.comparator = null;
     }
     const list = [];
     let i = 0;
@@ -221,18 +310,22 @@ class __window_core extends __utils {
     if (!Visitor.isOnline()) {
       return;
     }
-    let timeout = 1500;
-    if (TIMERS.reorder) {
-      clearTimeout(TIMERS.reorder);
-      TIMERS.reorder = setTimeout(() => {
-        TIMERS.reorder = null;
-        this._syncOrder(cb);
-      }, timeout);
+    // Only an explicit drag-arrange writes ranks now. The old behaviour —
+    // every insert (upload, move-in, paste, WS echo) scheduling a debounced
+    // renumber — is what made a drop look like it had not been saved: a
+    // later insert's sync would re-send the pre-drop order and overwrite it.
+    if (!this._manualArrange) {
       return;
     }
-    TIMERS.reorder = setTimeout(() => {
+    // Per-window timer. This used to be a module-global, so with two folder
+    // windows open a drop in one cancelled the other's pending sync — the
+    // first window then never ran _syncOrder and its _manualArrange flag
+    // survived to fire on some later, unrelated sync.
+    clearTimeout(this._reorderTimer);
+    this._reorderTimer = setTimeout(() => {
+      this._reorderTimer = null;
       this._syncOrder(cb);
-    }, timeout);
+    }, 400);
   }
 
   /**
@@ -715,6 +808,15 @@ class __window_core extends __utils {
     if (!this.iconsList || this.iconsList.isDestroyed() || !this.iconsList.collection) {
       return;
     }
+    // An automatic sort (no cmd — the folder window's alphabetical grid pass)
+    // must never touch a hand-arranged folder: its comparator would re-order
+    // the collection on every add and wipe the arrangement. An explicit sort
+    // from the UI still wins — the user asked for it — and drops the marker
+    // so the folder stops claiming to be hand-arranged.
+    if (!cmd && this._hasArrangedSort && this._hasArrangedSort()) {
+      return;
+    }
+    if (cmd) this._forgetArrangedSort();
     let order, name;
     if (cmd) {
       name = cmd.model.get(_a.name);
@@ -790,19 +892,10 @@ class __window_core extends __utils {
           Wm.alert(LOCALE.ERROR_NETWORK);
           return;
         }
-        // Per design the new file no longer opens by itself: show the small
-        // bottom-right "file created" card and let the user decide — the
-        // card's click handler (Wm.openCreatedFile) runs the same tile /
-        // node_info open route this method used when it still auto-opened.
-        if (window.Wm && _.isFunction(Wm.notifyFileCreated)) {
-          Wm.notifyFileCreated({
-            nid: data.nid,
-            hub_id: data.hub_id || hub_id,
-            filename: data.filename || data.name || name,
-          });
-          return;
-        }
-        // Legacy fallback (wm without the card, e.g. dmz): open the editor
+        // The new file opens in its editor right away: in a busy folder the
+        // grid gives no cue where the created file landed, so waiting for
+        // the user to find it (the "file created" card flow — infra still in
+        // wm/index.js, currently caller-less) left them lost. Open the editor
         // straight from the response (like the DMZ file-share branch)
         // instead of gating it behind the media.new broadcast + a 500ms
         // poll: a delayed or dropped broadcast used to dead-end the whole
@@ -859,7 +952,14 @@ class __window_core extends __utils {
       .catch((e) => {
         aw.spinner(0);
         this.warn("newDocument: server error", e);
-        Wm.alert(LOCALE.ERROR_NETWORK);
+        // A refusal is not a network failure. media.save / euroffice.new_doc
+        // answer 403 when the viewer lacks the write bit, and reporting that as
+        // "a network error" sent people looking for a connection problem instead
+        // of telling them they lack the right. Anything else keeps the old
+        // message — a 500 or a dead connection must NOT be reported as a
+        // permission problem (the inverse mistake, see webrtc/room/index.js).
+        const status = e && (e.status || e.error_code);
+        Wm.alert(status == 403 ? LOCALE.WEAK_PRIVILEGE : LOCALE.ERROR_NETWORK);
         if (this.onServerError) this.onServerError(e);
       });
   }
@@ -1152,16 +1252,34 @@ class __window_core extends __utils {
           hub_id,
         };
         break;
-      default:
+      default: {
+        // initialize() hard-resets _currentApi to mtime on every open, so a
+        // folder the user had arranged by hand came back in mtime order and
+        // the saved ranks were never asked for. Re-adopt rank here when this
+        // folder carries the arranged marker.
+        let sort = this._currentApi.name;
+        let order = this._currentApi.order;
+        if (sort !== _a.rank && this._hasArrangedSort()) {
+          sort = _a.rank;
+          order = _K.order.ascending;
+          this.setCurrentApi({ name: sort, order });
+        }
+        if (sort === _a.rank && this.iconsList && this.iconsList.collection) {
+          // The server is about to hand back the manual order; a leftover
+          // filename comparator would immediately re-sort it away.
+          this.iconsList.collection.comparator = null;
+        }
         api = {
           service: SERVICE.media.show_node_by,
           page: 1,
           nid,
-          sort: this._currentApi.name,
-          order: this._currentApi.order,
+          sort,
+          order,
           hub_id,
           usePid: this.model.get("usePid"),
         };
+        break;
+      }
     }
     if (this.mget(_a.token)) {
       api.token = this.mget(_a.token);

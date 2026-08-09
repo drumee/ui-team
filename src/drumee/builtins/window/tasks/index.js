@@ -308,6 +308,9 @@ class __tasks_panel extends LetcBox {
   }
 
   async onDomRefresh() {
+    // Before any wiring: refuse task writes this viewer cannot perform, so an
+    // edit says why instead of silently reverting on reopen.
+    this._guardTaskWrites();
     this._installDnd();
     this._installBoardPan();
     this._installMediaDroppable();
@@ -405,9 +408,84 @@ class __tasks_panel extends LetcBox {
     }
   }
 
+  /**
+   * May this viewer change tasks? The folder window hands the panel `may_write`
+   * at mount, derived from its own canUpload(). Shared with the skeleton so the
+   * board's buttons and this guard can never disagree.
+   */
+  _mayWriteTasks() {
+    return require("./skeleton/helpers").mayCreateTask(this);
+  }
+
+  /**
+   * Task mutations, as declared `src: "write"` in acl/task.json. A view (3) or
+   * chat (7) member is refused server-side, so every one of these was a silent
+   * revert: the card moved, the field accepted text, and reopening showed the
+   * old value — which is exactly what Duy reported from the Task tab.
+   *
+   * Guarded at postService rather than per control: there are 43 mutating call
+   * sites across 86 onUiEvent cases, and gating them one by one would certainly
+   * miss some. This is the single point they all pass through.
+   *
+   * Anything NOT listed here (list, comment_list, activity, column_list, the
+   * column_watch_* notification toggles, and every non-task service) is
+   * untouched — fail-open, consistent with the rest of this batch. The server
+   * stays the real gate; this only stops offering a write that cannot land.
+   */
+  static get TASK_MUTATIONS() {
+    return [
+      "task.create", "task.update", "task.update_status", "task.update_assignee",
+      "task.delete", "task.link_file", "task.unlink_file", "task.link_label",
+      "task.unlink_label", "task.comment_create", "task.comment_update",
+      "task.comment_delete", "task.comment_react", "task.column_create",
+      "task.column_update", "task.column_delete", "task.column_reorder",
+    ];
+  }
+
+  /**
+   * Install the mutation guard.
+   *
+   * postService is an OWN INSTANCE PROPERTY, bound in ui-core's box constructor
+   * (`this.postService = postService.bind(this)`) — NOT a prototype method. A
+   * subclass `postService(){}` would therefore be shadowed and never run, and
+   * `super.postService` does not exist at all. So wrap the bound instance
+   * function instead, after super.initialize() has created it.
+   */
+  _guardTaskWrites() {
+    if (this._taskWriteGuardInstalled) return;
+    const original = this.postService;
+    if (typeof original !== "function") return; // nothing to wrap: leave as-is
+    this._taskWriteGuardInstalled = 1;
+    this.postService = (...args) => {
+      try {
+        const a0 = args[0];
+        const name = typeof a0 === "string" ? a0 : (a0 && a0.service) || "";
+        if (
+          this.constructor.TASK_MUTATIONS.includes(`${name}`)
+          && !this._mayWriteTasks()
+        ) {
+          if (typeof Butler !== "undefined" && Butler.say) Butler.say(LOCALE.WEAK_PRIVILEGE);
+          // postService resolves UNDEFINED when a call does not complete, and
+          // every caller here already tolerates that — so refusing this way
+          // reproduces a shape they handle rather than adding a rejection path.
+          return Promise.resolve(undefined);
+        }
+      } catch (e) {
+        /* never let the guard break a legitimate call */
+      }
+      return original(...args);
+    };
+  }
+
   // Delegated drag-and-drop on this.el — survives every _render()'s feed() rebuild.
   _installDnd() {
     if (!this.el || this._dndInstalled) return;
+    // Dragging a card between columns is task.update_status, and reordering a
+    // column header is task.column_reorder — both `src: write`, so the server
+    // refuses them for a view or chat member and the board snapped back. Don't
+    // wire the drag at all rather than let them move a card that cannot land.
+    // One guard here covers dragstart, dragover AND drop together.
+    if (!this._mayWriteTasks()) return;
     this._dndInstalled = true;
     const root = this.el;
 

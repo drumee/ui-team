@@ -1,15 +1,45 @@
+// Each row carries the capability it needs, so the panel offers only what the
+// viewer can actually do. The server already refuses the rest — media.download
+// asks for the download bit; rename / move / trash ask for `src: delete` and
+// duplicate for `src: write`, all the same write-tier bit — so this stops the
+// panel presenting five actions that end in a 403 (which is how a view member
+// could rename a column-like action and see it silently not persist).
+//   "download" -> download bit (view ✗, chat ✓)
+//   "write"    -> write bit    (view ✗, chat ✗, edit ✓)
 const actions = [
-  { service: _e.download, label: LOCALE.DOWNLOAD, ico: "file-download" },
-  { service: "folder-rename", label: LOCALE.RENAME, ico: "apps-pencil-simple" },
-  { service: "folder-organize", label: LOCALE.ORGANIZE, ico: "file-organize" },
-  { service: "folder-duplicate", label: LOCALE.DUPLICATE, ico: "file-copy" },
+  { service: _e.download, label: LOCALE.DOWNLOAD, ico: "file-download", need: "download" },
+  { service: "folder-rename", label: LOCALE.RENAME, ico: "apps-pencil-simple", need: "write" },
+  { service: "folder-organize", label: LOCALE.ORGANIZE, ico: "file-organize", need: "write" },
+  { service: "folder-duplicate", label: LOCALE.DUPLICATE, ico: "file-copy", need: "write" },
   {
     service: "folder-delete",
     label: LOCALE.DELETE,
     ico: "trash-action",
     destructive: 1,
+    need: "write",
   },
 ];
+
+/**
+ * Filter the action rows to what this viewer may actually perform.
+ * canUpload() / canDownload() are the window's own tests (the same ones
+ * syncNewCtrlVisibility and the context menus use). If either is missing the
+ * row is KEPT — fail-open, so an unreadable privilege can never strip actions
+ * from a member who has them.
+ */
+function allowedActions(ui) {
+  const may = (need) => {
+    try {
+      if (need === "download") {
+        return typeof ui.canDownload !== "function" ? true : !!ui.canDownload();
+      }
+      return typeof ui.canUpload !== "function" ? true : !!ui.canUpload();
+    } catch (e) {
+      return true;
+    }
+  };
+  return actions.filter((a) => may(a.need));
+}
 
 // Shared 4-level role list (View → Chat → Edit → Admin, weakest first) +
 // bitmask↔role mapping — single source of truth for every role selector.
@@ -304,7 +334,7 @@ module.exports = function settingsActionPanel(ui) {
         kids: [
           Skeletons.Box.Y({
             className: `${pfx}-actions`,
-            kids: actions.map(({ service, label, ico, destructive }) =>
+            kids: allowedActions(ui).map(({ service, label, ico, destructive }) =>
               Skeletons.Box.X({
                 className: `${pfx}-item${destructive ? " destructive" : ""}`,
                 service,

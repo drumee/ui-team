@@ -194,7 +194,12 @@ class __media_core extends DrumeeMFS {
   _canInviteToHub() {
     const area = this.mget(_a.area);
     if (!["dmz", _a.share, _a.private].includes(area)) return false;
-    return this.mget(_a.privilege) & _K.permission.download;
+    // Inviting is member management: hub.invite / add_contributors /
+    // set_privilege are all `src: admin` server-side, so view, chat AND edit
+    // could only ever meet a 403. This used to test the DOWNLOAD bit, which
+    // offered the action to chat and edit members and made the refusal look
+    // like a bug rather than a permission.
+    return this.mget(_a.privilege) & _K.permission.admin;
   }
 
   contextmenuItemsForHub() {
@@ -637,15 +642,39 @@ class __media_core extends DrumeeMFS {
   }
 
   /**
-   * 
-   * @param {*} side 
+   * Debounced shift request. Called on every drag tick, so it dedupes on the
+   * requested (side, bar) pair: the first tick arms the timer and identical
+   * follow-ups leave it alone — the shift fires 120ms after entering the
+   * zone even while the pointer keeps moving. A DIFFERENT request cancels
+   * the pending one and re-arms. The old version cleared the timer inside
+   * the callback — after it had already fired — so every call stacked one
+   * more live timer and shifts landed twice and late during fast drags.
+   * @param {*} side
+   * @param {*} bar 1 when this tile anchors the insertion indicator
    */
-  delaySelect(side) {
-    const f = () => {
-      clearTimeout(this._timer.select);
-      this.shift(side);
-    };
-    this._timer.select = setTimeout(f, 200);
+  delaySelect(side, bar) {
+    const req = `${side || ""}:${bar ? 1 : 0}`;
+    if (this._shiftReq === req) {
+      return;
+    }
+    this._shiftReq = req;
+    clearTimeout(this._timer.select);
+    this._timer.select = setTimeout(() => {
+      // Applied — drop the dedupe key so a later identical request after an
+      // out-of-band reset (resetMotion) re-arms instead of being swallowed.
+      this._shiftReq = null;
+      this.shift(side, bar);
+    }, 120);
+  }
+
+  /**
+   * Drop any pending delaySelect request without touching the tile's current
+   * position. resetMotion goes through this so a shift armed just before the
+   * drop cannot land after the cleanup pass already ran.
+   */
+  cancelShift() {
+    clearTimeout(this._timer.select);
+    this._shiftReq = null;
   }
 
   /**
@@ -654,6 +683,26 @@ class __media_core extends DrumeeMFS {
    */
   index() {
     return this.mget(_a.rank);
+  }
+
+  /**
+   * Position of this tile inside its list collection — the unit
+   * insertMedia's `position` argument speaks (collection.add {at:...}).
+   * Deliberately NOT index(): that returns the stored rank, which only
+   * matches the displayed order while the window is sorted by rank. Under
+   * the default mtime-desc listing the two are unrelated, so deriving an
+   * insertion slot from rank dropped tiles in the wrong place.
+   * @returns {number}
+   */
+  listIndex() {
+    const c =
+      (this.parent && this.parent.collection) ||
+      (this.model && this.model.collection);
+    if (!c || !_.isFunction(c.indexOf)) {
+      return this.index();
+    }
+    const i = c.indexOf(this.model);
+    return i < 0 ? this.index() : i;
   }
 
   /**

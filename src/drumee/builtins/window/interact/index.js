@@ -490,6 +490,27 @@ class __window_interact extends windowCore {
       && this.getViewMode && this.getViewMode() !== _a.row) {
       this._partitionFoldersAndFiles(this.__list);
     }
+    // Every tile just moved in the DOM, so the cached bboxes the drag logic
+    // reads (seek_insertion, _rowNeighbor) now describe the OLD layout. Left
+    // stale, the next drag compares the pointer against last-render
+    // coordinates and picks the wrong slot — or none at all.
+    //
+    // initBounds() reads $el.offset(), which includes any active shift
+    // transform, so a tile still sliding back from its ±24px insertion slot
+    // would cache a position 24px off — the grid measured correctly only
+    // when the tween happened to be done, which is what made re-dragging
+    // work intermittently. Clear the transforms first, then measure.
+    _.defer(() => {
+      if (!this.__list || this.__list.isDestroyed()) return;
+      this.__list.children.each((c) => {
+        try {
+          // snapToRest kills the slide instantly; a tween still running here
+          // would leave part of the offset in the measurement below.
+          if (_.isFunction(c.snapToRest)) c.snapToRest();
+          if (_.isFunction(c.initBounds)) c.initBounds();
+        } catch (e) { }
+      });
+    });
   }
 
   /**
@@ -518,6 +539,9 @@ class __window_interact extends windowCore {
    * @returns
    */
   resetShift() {
+    // Everything is back at rest, so the shifted bookkeeping must not leak
+    // into the next drag — _releaseShifted would poke destroyed views.
+    this._shifted = [];
     if (this.__list == null || this.__list.isDestroyed()) {
       return;
     }
@@ -692,6 +716,59 @@ class __window_interact extends windowCore {
   }
 
   /**
+   * Send every tile shifted for a previous insertion slot back to rest,
+   * except the ones staying armed for the current slot. The release goes
+   * through delaySelect too: it cancels a still-pending shift on the same
+   * tile, so a fast drag cannot strand tiles in their pushed-aside position.
+   * @param {*} keep tiles that stay shifted for the current slot
+   */
+  _releaseShifted(keep = []) {
+    if (!this._shifted) this._shifted = [];
+    if (!_.isArray(this._shifted)) this._shifted = [this._shifted];
+    for (const s of this._shifted) {
+      if (keep.indexOf(s) >= 0) continue;
+      if (s.isDestroyed && s.isDestroyed()) continue;
+      if (_.isFunction(s.delaySelect)) s.delaySelect();
+    }
+    this._shifted = [];
+  }
+
+  /**
+   * Nearest tile flanking `ref` on one side within the same visual row.
+   * Geometry-based on purpose: _doPartition (window/utils.js) re-appends
+   * tiles into workspace/folder/file sections, so the collection-adjacent
+   * tile is often somewhere else entirely on screen.
+   * @param {*} ref the tile the slot sits against
+   * @param {*} before true for the slot on ref's leading edge
+   * @param {*} moving the dragged tile, never paired with itself
+   * @returns {*} the flanking tile, or null when the slot ends the row
+   */
+  _rowNeighbor(ref, before, moving, isRow) {
+    if (!ref || !ref.bbox) return null;
+    // Row view is a single vertical column, so the neighbour is the tile
+    // directly above/below and there is no same-line test to apply.
+    const sameLine = (c) =>
+      isRow || Math.abs(c.bbox.y - ref.bbox.y) < (ref.bbox.h || 1) / 2;
+    const gap = (c) => {
+      const d = isRow
+        ? (before ? ref.bbox.y - c.bbox.y : c.bbox.y - ref.bbox.y)
+        : (before ? ref.bbox.x - c.bbox.x : c.bbox.x - ref.bbox.x);
+      return d;
+    };
+    let best = null;
+    let bestGap = Infinity;
+    for (const c of this.__list.children.toArray()) {
+      if (c.cid === ref.cid || c.cid === moving.cid || !c.bbox) continue;
+      if (!sameLine(c)) continue;
+      const d = gap(c);
+      if (d <= 0 || d >= bestGap) continue;
+      best = c;
+      bestGap = d;
+    }
+    return best;
+  }
+
+  /**
    *
    * @param {*} moving
    */
@@ -700,75 +777,100 @@ class __window_interact extends windowCore {
     if (!target) {
       return null;
     }
-    if (this.getViewMode() == _a.row) {
-      this.captured.self = moving;
-      this.captured.self.pos = _e.end;
-      return this
-    }
-    const children = this.__list.children;
-    if (moving.selfOverlapped) {
-      return null;
+    const isRow = this.getViewMode() == _a.row;
+    // Still sitting on its OWN slot — nothing to insert. selfOverlapped is
+    // just the raw intersection with the tile's home rect, which is truthy
+    // from the very first pixel of the drag, so it must be measured: bailing
+    // on any overlap at all made a grid drag unable to ever reach the
+    // insertion logic below. Only a mostly-covering overlap counts as "has
+    // not really left home yet".
+    if (moving.selfOverlapped && moving.bbox) {
+      const home = moving.bbox.area ? moving.bbox.area() : 0;
+      const covered = moving.selfOverlapped.area
+        ? moving.selfOverlapped.area()
+        : 0;
+      if (home > 0 && covered / home > 0.5) {
+        // Tiles shifted for a previous slot must not stay pushed aside here.
+        this._releaseShifted();
+        return null;
+      }
     }
     this.captured = {};
-    let last_y = 0;
-    try {
-      last_y = children.last().$el.offset().top;
-    } catch (e) { }
-    let captured = [];
-    for (var c of this.__list.children.toArray()) {
+    // The tile the drag covers the most is the reference; where the cursor
+    // sits across its width decides the intent. The old rule keyed the
+    // decision on overlap ratio alone (<15% = insert, otherwise drop-into),
+    // which left insertion reachable only on a few-px rim between tiles —
+    // and "drop into" a regular file was a dead end anyway (moveIn only
+    // handles folder/hub destinations).
+    let primary = null;
+    let primaryArea = 0;
+    for (const c of this.__list.children.toArray()) {
+      if (c.cid === moving.cid) continue;
       let area = 0;
       try {
         area = c.overlaps(moving.rectangle);
       } catch (e) {
         return this;
       }
-      if (c.cid !== moving.cid && area > 0) {
-        if (area < 0.15) {
-          // Look for multiple overlaps
-          captured.push(c);
-        } else {
-          if (!this._check_icon_sanity(moving, c)) return null;
-          this.captured.over = c;
-          c.shift();
-          return this;
-        }
+      if (area > primaryArea) {
+        primary = c;
+        primaryArea = area;
       }
     }
-    if (!this._shifted) this._shifted = []
-    if (!_.isArray(this._shifted)) this._shifted = [this._shifted]
-    for (var s of this._shifted) {
-      if (s == this.captured.left) continue;
-      if (s == this.captured.right) continue;
-      s.shift();
+    if (!primary) {
+      this._releaseShifted();
+      this.captured.self = moving;
+      this.captured.self.pos = _e.end;
+      this._intercept(null);
+      return this;
     }
-    switch (captured.length) {
-      case 0:
-        this.captured.self = moving;
-        this.captured.self.pos = _e.end;
-        break;
-      case 1:
-        if (captured[0].mget(_a.rank) == 0) {
-          this.captured.right = captured[0];
-          this.captured.right.delaySelect(_a.right);
-        } else {
-          this.captured.left = captured[0];
-          this.captured.left.delaySelect(_a.left);
-        }
-        this._shifted.push(captured[0]);
-        break;
-      case 2:
-        if (captured[0].mget(_a.rank) < captured[1].mget(_a.rank)) {
-          this.captured.left = captured[0];
-          this.captured.right = captured[1];
-        } else {
-          this.captured.left = captured[1];
-          this.captured.right = captured[0];
-        }
-        this.captured.left.delaySelect(_a.left);
-        this.captured.right.delaySelect(_a.right);
-        this._shifted.push(captured[0]);
-        this._shifted.push(captured[1]);
-      default:
+    // Rows stack vertically, tiles flow horizontally: measure along the axis
+    // the list actually advances on, so the same before/after logic serves
+    // both view modes.
+    const r = moving.rectangle;
+    let t = 0.5;
+    if (isRow) {
+      if (primary.bbox && primary.bbox.h) {
+        t = (r.y + r.h / 2 - primary.bbox.y) / primary.bbox.h;
+      }
+    } else if (primary.bbox && primary.bbox.w) {
+      t = (r.x + r.w / 2 - primary.bbox.x) / primary.bbox.w;
+    }
+    // Folders and hubs keep a wide middle drop-into zone; their edges — and
+    // the whole width of a regular file — read as insertion slots.
+    if (primary.isHubOrFolder && t >= 0.3 && t <= 0.7) {
+      this._releaseShifted();
+      if (!this._check_icon_sanity(moving, primary)) return null;
+      this.captured.over = primary;
+      // Through delaySelect so a still-pending edge-zone shift on this same
+      // tile is cancelled instead of firing over the drop-into highlight.
+      primary.delaySelect();
+      return this;
+    }
+    const before = t < (primary.isHubOrFolder ? 0.3 : 0.5);
+    // Pick the tile that VISUALLY flanks the slot, not the collection
+    // neighbour: the grid is re-partitioned into workspace/folder/file
+    // sections (window/utils.js _doPartition), so collection order and
+    // on-screen order diverge — and even within a section the row wraps.
+    // Nearest tile on the chosen side of the same row, by geometry.
+    const paired = this._rowNeighbor(primary, before, moving, isRow);
+    if (before) {
+      this.captured.right = primary;
+      if (paired) this.captured.left = paired;
+    } else {
+      this.captured.left = primary;
+      if (paired) this.captured.right = paired;
+    }
+    this._releaseShifted([this.captured.left, this.captured.right]);
+    if (this.captured.left) {
+      // The indicator bar rides the left tile's trailing edge when one
+      // exists, otherwise the right tile's leading edge (slot at row start).
+      this.captured.left.delaySelect(_a.left, 1);
+      this._shifted.push(this.captured.left);
+    }
+    if (this.captured.right) {
+      this.captured.right.delaySelect(_a.right, this.captured.left ? 0 : 1);
+      this._shifted.push(this.captured.right);
     }
     this._intercept(null);
     return this;

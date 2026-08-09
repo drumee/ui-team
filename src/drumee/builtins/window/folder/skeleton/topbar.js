@@ -84,8 +84,16 @@ const __skl_folder_topbar = function (ui) {
   // topbar icon there is redundant; hide it. isRoot mirrors the window's own
   // root check (folder/index.js curNid / scopeNid logic).
   const isRoot = ui.mget(_a.filetype) === _a.hub && ui.mget(_a.actual_home_id);
+  // Manage Access mints secure-share links, and those links offer can_edit —
+  // so a view or chat member could otherwise share the workspace to themselves
+  // at a higher level than they hold. Gated on the same write bit the server now
+  // enforces in secure_share.create. canUpload() is the window's own test (the
+  // one syncNewCtrlVisibility uses); absent → allowed, so this can only ever
+  // remove the button from someone provably lacking write.
+  const mayManageAccess =
+    typeof ui.canUpload !== "function" ? true : !!ui.canUpload();
   const shareBtn =
-    (!inShare && area === _a.share && isRoot)
+    (!inShare && area === _a.share && isRoot && mayManageAccess)
       ? Skeletons.Button.Svg({
         className: `${cnFolder}__control-icon share`,
         ico: "app-share",

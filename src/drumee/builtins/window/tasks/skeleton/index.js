@@ -71,6 +71,7 @@ function buildFileSearchDropdownContent(ui, scope, ctx = {}) {
 }
 
 const { stripMarkers: stripMentionMarkers } = require("../mention-markers");
+const { mayCreateTask } = require("./helpers");
 
 const make = function (ui) {
   const pfx = ui.fig.family;
@@ -357,6 +358,7 @@ const make = function (ui) {
   };
 
   const addButton = (colKey) =>
+    !mayCreateTask(ui) ? "" :
     Skeletons.Box.X({
       className: `${pfx}__add-btn`,
       bubble: 0,
@@ -504,7 +506,13 @@ const make = function (ui) {
                         "data-active": ui.isColumnWatched(col.key) ? "1" : "0",
                       },
                     }),
-                    col.custom
+                    // The "⋮" popover renames and deletes the column
+                    // (task.column_update / column_delete, both `src: write`),
+                    // so a view or chat member could open it and type a new name
+                    // that silently never persisted. Same right as creating a
+                    // task; hiding the trigger closes the popover too, since it
+                    // only renders while getColMenuFor() matches.
+                    col.custom && mayCreateTask(ui)
                       ? Skeletons.Note({
                           className: `${pfx}__col-menu-btn`,
                           content: "⋮",
@@ -518,7 +526,10 @@ const make = function (ui) {
                 }),
               ].filter(Boolean),
             }),
-            col.custom && ui.getColMenuFor() === col.key
+            // Belt: the trigger above is already hidden, but a stale
+            // getColMenuFor() (set before a live role change) must not leave the
+            // rename popover mounted.
+            col.custom && mayCreateTask(ui) && ui.getColMenuFor() === col.key
               ? columnMenu(col)
               : null,
             ...(state[col.key] || []).map((t) => taskCard(col.key, t)),
@@ -1851,14 +1862,14 @@ const make = function (ui) {
 
   // Right-side controls (Figma 2040-53814): calendar/gantt granularity when
   // those views are active, then the create buttons, then the shared Filter.
-  const newTaskBtn = Skeletons.Note({
+  const newTaskBtn = !mayCreateTask(ui) ? "" : Skeletons.Note({
     className: `${pfx}__viewbar-new`,
     content: `+ ${LOCALE.NEW_TASK}`,
     bubble: 0,
     service: "add-task",
     uiHandler: [ui],
   });
-  const newBoardBtn = Skeletons.Box.X({
+  const newBoardBtn = !mayCreateTask(ui) ? "" : Skeletons.Box.X({
     className: `${pfx}__viewbar-board`,
     bubble: 0,
     service: "add-board",

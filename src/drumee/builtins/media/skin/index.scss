@@ -48,25 +48,35 @@
       height: 12px;
     }
 
-    &[data-shift="top"] {
+    // Row-view insertion indicator: a full-width dashed rule in the opening
+    // the two flanking rows make. Was a 1px hard-coded blue hairline —
+    // effectively invisible while dragging. Dashed to match the grid marker;
+    // a row-height seat was tried and rejected for the same reason as there
+    // (only the two neighbours move, so a full-height opening overran the
+    // rows behind it).
+    &[data-shift="top"],
+    &[data-shift="bottom"] {
       &:after {
         content: " ";
         width: 100%;
-        height: 1px;
-        background-color: blue;
+        height: 0;
+        box-sizing: border-box;
+        border-top: 3px dashed var(--primary-500);
         position: absolute;
-        top: 100%;
+        pointer-events: none;
+        z-index: 120;
+      }
+    }
+
+    &[data-shift="top"] {
+      &:after {
+        top: calc(100% + 2px);
       }
     }
 
     &[data-shift="bottom"] {
       &:after {
-        content: " ";
-        width: 100%;
-        height: 1px;
-        background-color: blue;
-        position: absolute;
-        top: -1px;
+        top: -5px;
       }
     }
   }

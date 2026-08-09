@@ -5,6 +5,9 @@ const push = require("./push");
 // "Open this workspace once signed in" — armed by the welcome module from
 // ?hub_id= (the workspace-invite CTA), consumed on boot below.
 const hubDeepLink = require("libs/hub-deep-link");
+// Shares one in-flight media.get_path with the breadcrumb / folder window when
+// they ask for the same node in the same instant (a folder open does).
+const { getPath } = require("libs/path-request");
 // Same channel the websocket dispatcher triggers on Wm — windows and the
 // sidebar workspace list subscribe to it (window/utils.js, workspace-list).
 const WS_EVENT = "ws:event";
@@ -514,7 +517,7 @@ class __window_manager extends push {
       // path of "undefined" — the same defect as the fetch above, and it left the
       // breadcrumb stuck on the previous screen. openWorkspaceFolder already does
       // it this way (attrs.nid || nid).
-      this.fetchService(SERVICE.media.get_path, { nid: data.nid || nid, hub_id }).then(
+      getPath(this, { nid: data.nid || nid, hub_id }).then(
         (path) => {
           if (_.isEmpty(path)) return;
           cur.refreshBreadcrumbsUI(path);
@@ -738,7 +741,7 @@ class __window_manager extends push {
         // breadcrumb would keep the previous folder's crumbs. Rebuild it from
         // get_path, as loadWorkspace does.
         const deepNid = attrs.nid || nid;
-        this.fetchService(SERVICE.media.get_path, { nid: deepNid, hub_id })
+        getPath(this, { nid: deepNid, hub_id })
           .then((path) => {
             if (_.isEmpty(path)) return;
             if (_.isFunction(currentFolder.refreshBreadcrumbsUI))
@@ -1235,7 +1238,13 @@ class __window_manager extends push {
       return;
     }
     if (this._lastTaget && this._lastTaget != this._target) {
-      if (_.isFunction(this._lastTaget)) this._lastTaget.clearShift();
+      // _lastTaget is a window widget, so the old _.isFunction guard never
+      // passed and tiles in the previous window stayed pushed aside when the
+      // drag crossed into another window. resetShift is the per-window
+      // release (interact/index.js).
+      if (_.isFunction(this._lastTaget.resetShift)) {
+        this._lastTaget.resetShift();
+      }
     }
     this._lastTaget = this._target;
     this.moveAllowed(moving);
@@ -1280,24 +1289,42 @@ class __window_manager extends push {
       return true;
     }
 
+    // Slot positions are collection indexes (insertMedia hands them to
+    // collection.add {at:...}), so they must be read with listIndex() —
+    // index() returns the stored rank, which only tracks the display order
+    // while the window is sorted by rank.
+    //
+    // Rearranging means moving a tile WITHIN its own window. Dragging one in
+    // from elsewhere is a move: it lands in the slot, but it must not flip
+    // the destination to rank order behind the user's back.
+    // getLogicalParent() rather than the raw property: the latter is only
+    // populated lazily by that getter, so it is often still undefined here.
+    const rearranging =
+      _.isFunction(moving.getLogicalParent) &&
+      moving.getLogicalParent() === this._target;
     if (c.left) {
       this.verbose("insert:after", c.left);
       if (this._target.mget(_a.privilege) & _K.permission.modify) {
-        if (moving.index() < c.left.index()) {
-          position = c.left.index();
+        // Dropping a tile that sits BEFORE the slot shifts everything after
+        // it one step left once it is pulled out, so the target index is the
+        // left neighbour's own index rather than the one past it.
+        if (moving.listIndex() < c.left.listIndex()) {
+          position = c.left.listIndex();
         } else {
-          position = c.left.index() + 1;
+          position = c.left.listIndex() + 1;
         }
+        if (rearranging) this._target._manualArrange = 1;
       } else {
         this._target.warning(LOCALE.WEAK_PRIVILEGE);
         return false;
       }
     } else if (c.right) {
-      this.verbose("insert:before", c.right, c.right.index());
-      position = c.right.index();
+      this.verbose("insert:before", c.right, c.right.listIndex());
+      position = c.right.listIndex();
       if (position === 0) {
         position = -1;
       }
+      if (rearranging) this._target._manualArrange = 1;
     } else if (c.self && c.self.intersect(this._target)) {
       if (this._target.cid !== this.cid) {
         this.verbose("insert:another window", c, this._target, this);

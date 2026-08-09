@@ -160,6 +160,48 @@
     &:before { @include grid-cell-fill(var(--grid-selected-bg)); }
   }
 
+  // Insertion indicator while arranging by drag: a vertical bar in the slot
+  // opened by the shifted tiles (grid/index.js sets data-insert on the tile
+  // anchoring the slot). Rides the root's ::after — the :before is taken by
+  // grid-cell-fill above — and moves with the tile's shift transform, so it
+  // sits centered in the widened gap without touching layout or the cached
+  // drag geometry.
+  // Insertion indicator: a dashed vertical marker standing in the opening the
+  // two flanking tiles make. A full tile-sized seat was tried and rejected —
+  // only those two tiles move, so a 120px opening ran over the neighbours
+  // behind it and clipped them. This keeps the dashed language at a width the
+  // 64px opening (--grid-gap + 2×24px shift) can hold cleanly.
+  &[data-insert] {
+    &:after {
+      content: " ";
+      position: absolute;
+      top: 4%;
+      width: 0;
+      height: 88%; // spans the card and its meta row, not just the icon
+      box-sizing: border-box;
+      border-left: 3px dashed var(--primary-500);
+      pointer-events: none;
+      z-index: 120;
+      animation: media-grid-insert-bar 0.15s ease-out;
+      @media (prefers-reduced-motion: reduce) {
+        animation: none;
+      }
+    }
+  }
+
+  // The opening sits on the tile's trailing edge when it shifted left, on its
+  // leading edge when it shifted right (slot at row start). It spans
+  // --grid-gap + 2×SLOT_SHIFT; half the gap plus one shift lands the marker
+  // on its centre (the ::after rides the tile's own transform, so the shift
+  // itself is already accounted for). 1.5px trims half the border width.
+  &[data-insert="left"]:after {
+    right: calc(-1 * var(--grid-gap) / 2 - 24px + 1.5px);
+  }
+
+  &[data-insert="right"]:after {
+    left: calc(-1 * var(--grid-gap) / 2 - 24px + 1.5px);
+  }
+
   .content-preview {
     height: 100%;
     width: 100%;

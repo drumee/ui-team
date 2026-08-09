@@ -3,6 +3,8 @@
  * Listens to RADIO_BROADCAST "breadcrumb:content" emitted by window/core.js
  * whenever the active window navigates, and renders the path.
  * ==================================================================== */
+const { getPath } = require("libs/path-request");
+
 const PROPERTIES = [
   _a.area,
   _a.actual_home_id,
@@ -149,7 +151,9 @@ class __desk_breadcrumb extends LetcBox {
       this.warn("Require node data")
       return;
     }
-    this.fetchService(SERVICE.media.get_path, { nid, hub_id }).then((data) => {
+    // Shared in-flight request: Wm.loadWorkspace asks for this exact path in
+    // the same instant on a folder open (libs/path-request).
+    getPath(this, { nid, hub_id }).then((data) => {
       if (_.isEmpty(data)) return;
       this._buildContent(data)
     })

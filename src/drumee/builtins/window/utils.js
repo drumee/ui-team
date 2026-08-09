@@ -221,6 +221,8 @@ class __window_mfs extends DrumeeMFS {
     if (this._responsive) RADIO_BROADCAST.off(_e.responsive, this._responsive);
     if (this._kbHandler) RADIO_KBD.off(_e.keyup, this._kbHandler);
     Wm.off(WS_EVENT, this.handleWsEvent);
+    // Pending rank sync (window/core.js syncOrder) would run on a dead view.
+    if (this._reorderTimer) clearTimeout(this._reorderTimer);
     if (
       this._partitionObserver ||
       this._partitionDebounce ||
@@ -635,15 +637,40 @@ class __window_mfs extends DrumeeMFS {
       scrollEl.appendChild(fileWrap);
     }
 
+    // Where a tile belongs inside its section is the COLLECTION order.
+    // appendChild alone always dropped a freshly (re)inserted tile at the
+    // end of its section, so a drag-arrange visibly snapped back to the
+    // bottom even though the reorder had already been persisted.
+    // Element → collection position. Ranked by the COLLECTION (the model
+    // order insertMedia wrote into), not by the children container: the
+    // latter iterates in view-creation order, which is exactly what
+    // diverges after an insert-in-the-middle.
+    const rankOf = new Map();
+    const collection = listPart.collection;
+    if (collection && listPart.children && _.isFunction(listPart.children.each)) {
+      listPart.children.each((view) => {
+        if (!view || !view.el || !view.model) return;
+        const i = collection.indexOf(view.model);
+        if (i >= 0) rankOf.set(view.el, i);
+      });
+    }
+    const rank = (el) => {
+      const r = rankOf.get(el);
+      return r == null ? Number.MAX_SAFE_INTEGER : r;
+    };
     items.forEach((item) => {
       const ft = item.dataset?.filetype;
-      if (ft === _a.hub) {
-        workspaceWrap.appendChild(item);
-      } else if (ft === _a.folder) {
-        folderWrap.appendChild(item);
-      } else {
-        fileWrap.appendChild(item);
+      const wrap =
+        ft === _a.hub ? workspaceWrap : ft === _a.folder ? folderWrap : fileWrap;
+      const target = rank(item);
+      let before = null;
+      for (const sibling of wrap.children) {
+        if (rank(sibling) > target) {
+          before = sibling;
+          break;
+        }
       }
+      wrap.insertBefore(item, before);
     });
 
     scrollEl.style.display = "flex";

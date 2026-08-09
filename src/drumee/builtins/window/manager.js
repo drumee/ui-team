@@ -425,11 +425,19 @@ class __window_manager extends mfsInteract {
       target.el.dataset.selected = 1;
       target.el.dataset.over = _a.on;
       if (this._lastTarget == null || this._lastTarget !== target) {
+        // Release the window the drag is LEAVING, then adopt the new one.
+        // This must only run on a target change: selectWindow is called on
+        // every drag tick (Wm.capture), and resetting the current target
+        // here each tick kept cancelling the insertion shift/indicator that
+        // seek_insertion had just armed — tiles could never stay apart.
+        if (
+          this._lastTarget != null &&
+          _.isFunction(this._lastTarget.resetShift)
+        ) {
+          this._lastTarget.resetShift();
+        }
         target.syncBounds();
         this._lastTarget = target;
-      }
-      if (this._lastTarget != null) {
-        this._lastTarget.resetShift();
       }
       if (!target.isDestroyed()) return target;
     }

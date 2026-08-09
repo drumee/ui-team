@@ -1,4 +1,6 @@
 
+const { TweenLite } = require("@drumee/ui-core/vendor");
+
 const MEDIA_TOGGLE = "madia-toggle";
 class __media_row extends DrumeeMediaInteract {
   constructor(...args) {
@@ -118,17 +120,17 @@ class __media_row extends DrumeeMediaInteract {
   // ===========================================================
   shift(side) {
     let y;
-    if (this._animIsActive) {
-      return;
-    }
     switch (side) {
+      // Enough of an opening to read as a gap without overrunning the rows
+      // behind — only these two move. Was ±2px, which barely nudged them and
+      // left nowhere to draw the dashed rule (media/skin/index.scss).
       case _a.left: case _a.top:
-        y = -2;
+        y = -5;
         this.el.dataset.shift = _a.top;
         break;
 
       case _a.right: case _a.bottom:
-        y = 2;
+        y = 5;
         this.el.dataset.shift = _a.bottom;
         break;
 
@@ -137,11 +139,19 @@ class __media_row extends DrumeeMediaInteract {
         y = 0;
     }
     this._shiftY = y;
-    // TweenLite.to(this.$el, .2, {
-    //   y,
-    //   onStart    : this._onStartShifting,
-    //   onComplete : this._onStopShifting
-    // });
+    // The tween was commented out, so data-shift flipped but nothing ever
+    // moved — there was no opening for an insertion seat to sit in. overwrite
+    // kills a conflicting slide instead of letting both run (GSAP default),
+    // which is what strands rows half-shifted.
+    const instant =
+      window.matchMedia &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    TweenLite.to(this.$el, instant ? 0 : .2, {
+      y,
+      overwrite: "auto",
+      onStart: this._onStartShifting,
+      onComplete: this._onStopShifting
+    });
   }
 
   // ===========================================================
@@ -151,7 +161,22 @@ class __media_row extends DrumeeMediaInteract {
     this.el.dataset.over = _a.off;
     this.el.dataset.hover = _a.off;
     this.el.dataset.shift = _a.off;
+    // A shift armed just before the drop must not land after this cleanup.
+    this.cancelShift();
     this.shift();
+  }
+
+  /**
+   * Drop any shift instantly — see the grid counterpart. The re-measure after
+   * a re-render (window/interact syncContent) needs resting positions: mid-
+   * tween $el.offset() still carries part of the slide, and caching that puts
+   * the drag zones beside the rows they belong to.
+   */
+  snapToRest() {
+    this.cancelShift();
+    this.el.dataset.shift = _a.none;
+    this._shiftY = 0;
+    TweenLite.set(this.$el, { y: 0 });
   }
 
   // ===========================================================

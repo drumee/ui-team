@@ -23,6 +23,10 @@ function _vignetteRemember(url, entry) {
 }
 require("./skin");
 const media_core = require("./core");
+const {
+  isMoveResultSuccessful,
+  selectCrossWorkspaceMoveService,
+} = require("./file-thread-move-route");
 const { copyToClipboard } = require("@drumee/ui-essentials")
 class __media_interact extends media_core {
   constructor(...args) {
@@ -209,13 +213,20 @@ class __media_interact extends media_core {
       ox = 0;
       oy = 0;
     }
+    // $el.offset() reports the RENDERED position, shift transform included.
+    // Measuring a tile that is still parked in (or sliding back from) an
+    // insertion slot would bake that offset into the cache and leave the
+    // drag zones sitting beside the tiles they belong to. Subtract whatever
+    // shift is currently applied so bbox always describes the resting seat.
+    const sx = this._shiftX || 0;
+    const sy = this._shiftY || 0;
     this.self = null;
     this.left = null;
     this.right = null;
     this.over = null;
     this.bbox = new Rectangle(
-      o.left + ox,
-      o.top + oy,
+      o.left + ox - sx,
+      o.top + oy - sy,
       this.$el.width(),
       this.$el.height()
     );
@@ -1347,12 +1358,24 @@ class __media_interact extends media_core {
             .catch(() => dest.nid || '0');
         };
 
-        const moveToDestination = (dest) => resolvePid(dest).then((pid) => {
-          const movingAcrossWorkspaces = isCrossHub(dest) && isSingleDestinationMove;
-          const payload = isCrossHub(dest) ? {
-            service: movingAcrossWorkspaces
-              ? ((SERVICE.media && SERVICE.media.workspace_move) || 'media.workspace_move')
-              : SERVICE.media.copy,
+        const moveToDestination = async (dest) => {
+          const pid = await resolvePid(dest);
+          const crossHub = isCrossHub(dest);
+          const movingAcrossWorkspaces = crossHub && isSingleDestinationMove;
+          let service = crossHub ? SERVICE.media.copy : SERVICE.media.move;
+
+          if (movingAcrossWorkspaces) {
+            const infoService = (SERVICE.channel && SERVICE.channel.file_thread_info) ||
+              "channel.file_thread_info";
+            const threadInfo = await this.fetchService(infoService, {
+              hub_id: itemHubId,
+              file_nid: nid,
+            });
+            service = selectCrossWorkspaceMoveService(threadInfo, SERVICE);
+          }
+
+          const payload = crossHub ? {
+            service,
             nid,
             pid,
             action: movingAcrossWorkspaces ? _a.move : _a.copy,
@@ -1371,8 +1394,12 @@ class __media_interact extends media_core {
             notify: 1,
             moved_in: 1,
           };
-          return this.postService(payload).then((data) => data || Promise.reject(data));
-        });
+          const data = await this.postService(payload);
+          if (!isMoveResultSuccessful(service, data, SERVICE)) {
+            return Promise.reject(data);
+          }
+          return data;
+        };
 
         return Promise.all(targetDestinations.map(moveToDestination)).then(() => {
           if (!crossHubDestinations.length || isSingleDestinationMove) return;

@@ -1285,12 +1285,15 @@ export function newMenu(ui, opt = {}) {
       area: ui.mget(_a.area) || _a.personal,
       className: `${cnItem}--add-folder ${cnDropdown}__submenu-item`,
     }),
-    row({
-      service: "add-note",
-      ico: "addmenu-note",
-      content: LOCALE.NOTE,
-      className: `${cnItem}--add-note ${cnDropdown}__submenu-item`,
-    }),
+    // Note is temporarily hidden from this create flyout (2026-08). The
+    // add-note handler (window/core.js) and editor_markdown stay wired —
+    // uncomment this row to restore the option.
+    // row({
+    //   service: "add-note",
+    //   ico: "addmenu-note",
+    //   content: LOCALE.NOTE,
+    //   className: `${cnItem}--add-note ${cnDropdown}__submenu-item`,
+    // }),
     row({
       service: "new-document",
       name: "document.docx",
@@ -1602,7 +1605,12 @@ export function topbarMoreMenu(ui) {
   // only (filetype === hub). Sub-folders already share via their right-click
   // "Share" menu, so this entry is redundant there — keep in sync with topbar.js.
   const isRoot = ui.mget(_a.filetype) === _a.hub && ui.mget(_a.actual_home_id);
-  if (!inShare && area === _a.share && isRoot) {
+  // Same write gate as the inline share icon in folder/skeleton/topbar.js: a
+  // secure-share link can grant can_edit, so a view/chat member must not be able
+  // to mint one for a workspace they only read. Keep the two in sync.
+  const mayManageAccess =
+    typeof ui.canUpload !== "function" ? true : !!ui.canUpload();
+  if (!inShare && area === _a.share && isRoot && mayManageAccess) {
     items.push({
       service: "folder-manage-access",
       ico: "app-share",
