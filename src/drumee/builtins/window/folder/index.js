@@ -1448,6 +1448,14 @@ class __window_folder extends mfsInteract {
         return this.openAdvancedSettings(cmd);
 
       case "folder-manage-access":
+        // Belt for the two hidden entry points (topbar icon + overflow menu):
+        // the panel mints secure-share links that can grant can_edit, and
+        // secure_share.create now refuses without the write bit. Refuse here so
+        // a stale DOM or a deep link cannot open a panel that can only fail.
+        if (this.canUpload && !this.canUpload()) {
+          if (window.Butler && Butler.say) Butler.say(LOCALE.WEAK_PRIVILEGE);
+          return;
+        }
         return this.openManageAccess();
 
       case "folder-rename":
