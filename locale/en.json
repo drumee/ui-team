@@ -2219,6 +2219,7 @@
   "SECURE_SHARE_REQUEST_SENT": "Request sent",
   "SECURE_SHARE_REQUEST_NOTIFIED": "The folder owner has been notified. You'll receive an email once they respond.",
   "SECURE_SHARE_BACK_TO_DRUMEE": "Back to Drumee",
+  "SECURE_SHARE_GO_TO_MY_DESK": "See more",
   "SECURE_SHARE_APPROVE_ACCESS": "Approve Request",
   "SECURE_SHARE_DENY_ACCESS": "Deny",
   "SECURE_SHARE_ACCESS_APPROVED": "Your access request has been approved.",

@@ -2051,6 +2051,7 @@
   "SECURE_SHARE_REQUEST_SENT": "Запрос доступа отправлен",
   "SECURE_SHARE_REQUEST_NOTIFIED": "Владелец получил уведомление и рассмотрит ваш запрос.",
   "SECURE_SHARE_BACK_TO_DRUMEE": "Вернуться в Drumee",
+  "SECURE_SHARE_GO_TO_MY_DESK": "Перейти в мой Drumee",
   "SECURE_SHARE_APPROVE_ACCESS": "Одобрить запрос",
   "SECURE_SHARE_DENY_ACCESS": "Отклонить",
   "SECURE_SHARE_ACCESS_APPROVED": "Ваш запрос доступа одобрен.",

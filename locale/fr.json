@@ -2052,6 +2052,7 @@
   "SECURE_SHARE_REQUEST_SENT": "Demande d’accès envoyée",
   "SECURE_SHARE_REQUEST_NOTIFIED": "Le propriétaire a été notifié et examinera votre demande.",
   "SECURE_SHARE_BACK_TO_DRUMEE": "Retour à Drumee",
+  "SECURE_SHARE_GO_TO_MY_DESK": "Aller à mon Drumee",
   "SECURE_SHARE_APPROVE_ACCESS": "Approuver la demande",
   "SECURE_SHARE_DENY_ACCESS": "Refuser",
   "SECURE_SHARE_ACCESS_APPROVED": "Votre demande d’accès a été approuvée.",
