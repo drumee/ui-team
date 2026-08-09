@@ -213,13 +213,20 @@ class __media_interact extends media_core {
       ox = 0;
       oy = 0;
     }
+    // $el.offset() reports the RENDERED position, shift transform included.
+    // Measuring a tile that is still parked in (or sliding back from) an
+    // insertion slot would bake that offset into the cache and leave the
+    // drag zones sitting beside the tiles they belong to. Subtract whatever
+    // shift is currently applied so bbox always describes the resting seat.
+    const sx = this._shiftX || 0;
+    const sy = this._shiftY || 0;
     this.self = null;
     this.left = null;
     this.right = null;
     this.over = null;
     this.bbox = new Rectangle(
-      o.left + ox,
-      o.top + oy,
+      o.left + ox - sx,
+      o.top + oy - sy,
       this.$el.width(),
       this.$el.height()
     );

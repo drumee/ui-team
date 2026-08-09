@@ -58,3 +58,17 @@
   border-radius: 8px;
   animation: media-highlight-flash 1.2s ease-out 2;
 }
+
+// Drag-arrange insertion bar fade-in (bar itself: skin/index.scss
+// [data-insert]).
+@keyframes media-grid-insert-bar {
+  from {
+    opacity: 0;
+    transform: scaleY(0.6);
+  }
+
+  to {
+    opacity: 1;
+    transform: scaleY(1);
+  }
+}

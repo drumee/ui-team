@@ -2,6 +2,14 @@ const { TweenLite, TimelineMax } = require("@drumee/ui-core/vendor");
 
 const Rectangle = require('rectangle-node');
 
+// Half the opening a drop slot leaves between two tiles. Only the two tiles
+// flanking the slot move — the rest of the row stays put — so this has to
+// stay well under a tile width or the opening overruns the neighbours behind
+// it. A tile-sized (120px) opening did exactly that: it visually clipped the
+// tiles further along the row. Keep in sync with the [data-insert] offsets in
+// skin/index.scss.
+const SLOT_SHIFT = 24;
+
 class __media_grid extends DrumeeMediaInteract {
   constructor(...args) {
     super(...args);
@@ -198,29 +206,45 @@ class __media_grid extends DrumeeMediaInteract {
   }
 
   /**
-   * 
-   * @param {*} side 
+   * Slide the tile aside to open an insertion slot (or back to rest).
+   * ±24px on both slot neighbors plus the 16px --grid-gap ≈ a 64px opening —
+   * wide enough to read as "drop here", unlike the old ±15px nudge. No
+   * _animIsActive early-return anymore: dropping a reset request while the
+   * open-tween was still running is exactly how tiles got stuck aside.
+   * overwrite kills the conflicting tween (GSAP defaults to letting both
+   * run, and the stale one's onComplete would re-measure bounds mid-flight).
+   * @param {*} side
+   * @param {*} bar 1 to anchor the insertion indicator on this tile
    */
-  shift(side) {
+  shift(side, bar) {
     let x;
-    if (this._animIsActive) {
-      return;
-    }
     switch (side) {
       case _a.left:
-        x = -15;
+        x = -SLOT_SHIFT;
         break;
 
       case _a.right:
-        x = 15;
+        x = SLOT_SHIFT;
         break;
 
       default:
         x = 0;
     }
+    if (bar && side) {
+      this.el.dataset.insert = side;
+    } else {
+      this.el.removeAttribute("data-insert");
+    }
+    if (this._shiftX === x) {
+      return this;
+    }
     this._shiftX = x;
-    TweenLite.to(this.$el, .2, {
+    const instant =
+      window.matchMedia &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    TweenLite.to(this.$el, instant ? 0 : .2, {
       x,
+      overwrite: "auto",
       onStart: this._onStartShifting,
       onComplete: this._onStopShifting
     });
@@ -228,12 +252,28 @@ class __media_grid extends DrumeeMediaInteract {
   }
 
   /**
-   * 
+   *
    */
   resetMotion() {
     this.el.dataset.over = _a.off;
     this.el.dataset.hover = _a.off;
+    // A shift armed just before the drop must not land after this cleanup.
+    this.cancelShift();
     this.shift();
+  }
+
+  /**
+   * Drop any shift instantly — no tween, no pending request. The re-measure
+   * after a re-render needs the tile at its resting seat RIGHT NOW: mid-tween
+   * $el.offset() still carries part of the ±24px slide, and caching that put
+   * the drag zones beside their tiles (grid re-drags then worked only when
+   * the tween happened to have finished).
+   */
+  snapToRest() {
+    this.cancelShift();
+    this.el.removeAttribute("data-insert");
+    this._shiftX = 0;
+    TweenLite.set(this.$el, { x: 0 });
   }
 
   /**
@@ -245,12 +285,16 @@ class __media_grid extends DrumeeMediaInteract {
   }
 
   /**
-   * 
-   * @param {*} e 
+   *
+   * @param {*} e
    */
   _onStopShifting(e) {
     this._animIsActive = false;
-    this.initBounds();
+    // Re-measure only at rest. $el.offset() reads the TRANSFORMED position,
+    // so re-initing while pushed aside would bake the ±24px offset into the
+    // cached bbox — the insertion zones (seek_insertion computes them from
+    // bbox) would drift under the cursor and flip sides on their own.
+    if (!this._shiftX) this.initBounds();
   }
 
   /**

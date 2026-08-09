@@ -520,6 +520,13 @@ class __window_folder extends mfsInteract {
 
   _scheduleAlphabeticalGridSort(list = this.iconsList) {
     if (!this._isFolderGridMode()) return;
+    // A hand-arranged folder must not be re-sorted by filename behind the
+    // user's back. sortContent() installs a filename comparator on the
+    // collection, and Backbone then keeps re-applying it on every add — so
+    // a dropped tile snapped back and the saved ranks were overwritten by
+    // the next sync. This is why arranging worked in row view (which never
+    // schedules this sort) but not in grid.
+    if (this._hasArrangedSort && this._hasArrangedSort()) return;
     if (!list || (list.isDestroyed && list.isDestroyed())) return;
     if (this._folderGridSortTimer) clearTimeout(this._folderGridSortTimer);
     this._folderGridSortTimer = setTimeout(() => {
