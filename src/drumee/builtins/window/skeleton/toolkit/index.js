@@ -1285,12 +1285,15 @@ export function newMenu(ui, opt = {}) {
       area: ui.mget(_a.area) || _a.personal,
       className: `${cnItem}--add-folder ${cnDropdown}__submenu-item`,
     }),
-    row({
-      service: "add-note",
-      ico: "addmenu-note",
-      content: LOCALE.NOTE,
-      className: `${cnItem}--add-note ${cnDropdown}__submenu-item`,
-    }),
+    // Note is temporarily hidden from this create flyout (2026-08). The
+    // add-note handler (window/core.js) and editor_markdown stay wired —
+    // uncomment this row to restore the option.
+    // row({
+    //   service: "add-note",
+    //   ico: "addmenu-note",
+    //   content: LOCALE.NOTE,
+    //   className: `${cnItem}--add-note ${cnDropdown}__submenu-item`,
+    // }),
     row({
       service: "new-document",
       name: "document.docx",
