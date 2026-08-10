@@ -94,6 +94,9 @@ jobs:
           echo "changes=$CHANGES" >> "$GITHUB_OUTPUT"
           echo "impact=$IMPACT"   >> "$GITHUB_OUTPUT"
           echo "Building $NEW for stage main UI"
+          # Force @drumee/* to refetch fresh — npm install skips an already
+          # range-satisfying package, postinstall/patch-package included.
+          sudo rm -rf "$REPO_DIR/node_modules/@drumee"
           sudo bash -c "cd '$REPO_DIR' && npm install --no-audit --no-fund"
           sudo bash -c "cd '$REPO_DIR' && npm run deploy -- deploy"
           # reload page server so it serves the new build hash (mirrors container "Start services")
@@ -177,11 +180,11 @@ jobs:
           ssh "$SGP_USER@$SGP_HOST" "sudo docker exec -i $CONTAINER bash -s" <<EOSSH
           set -euo pipefail
           cd $REPO_PATH
-          # Reinstall so package.json range + patch-package (postinstall) take effect.
-          # The container's node_modules is long-lived and otherwise drifts from
-          # package.json (e.g. ui-toolkit stuck at 0.0.20 while it wants ^0.0.22,
-          # leaving the OTP patch unapplied). Lockfile is gitignored so `npm ci`
-          # isn't possible; plain install reconciles the range and re-runs postinstall.
+          # Force @drumee/* to refetch fresh every deploy — npm install (not
+          # npm ci, lockfile is gitignored) skips an already-range-satisfying
+          # package entirely, postinstall/patch-package included, so a
+          # long-lived node_modules here silently keeps patching a stale base.
+          rm -rf "$REPO_PATH/node_modules/@drumee"
           if ! npm install --no-audit --no-fund > $LOG_FILE 2>&1; then
             echo "::error::npm install failed. Tail of log:"
             tail -50 $LOG_FILE

@@ -78,7 +78,7 @@
     "@drumee/ui-core": "^1.1.50",
     "@drumee/ui-essentials": "^1.0.2",
     "@drumee/ui-styles": "^1.0.6",
-    "@drumee/ui-toolkit": "^0.0.23",
+    "@drumee/ui-toolkit": "0.0.23",
     "@embedpdf/core": "2.14.4",
     "@embedpdf/engines": "2.14.4",
     "@embedpdf/pdfium": "2.14.4",
