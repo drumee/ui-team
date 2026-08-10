@@ -10,6 +10,17 @@ const {
   uidsFromText,
 } = require("./mention-markers");
 
+// Mention-editor scopes where a bare Enter posts, and the method it calls. The
+// description editors (create / detail) are deliberately absent: they have no
+// submit action of their own — a description is saved by its panel — so Enter
+// keeps inserting a newline there. Each target re-checks its own draft, so
+// Enter on an empty box is a no-op.
+const COMMENT_SUBMIT_BY_SCOPE = {
+  comment: "_submitComment",
+  "comment-edit": "_saveCommentEdit",
+  "comment-reply": "_submitReply",
+};
+
 // 10-swatch column palette (Figma 2040-106090). Dot/accent color per theme;
 // the skin derives the column tint from the accent (--col-accent) and pill
 // tints from data-theme.
@@ -4804,7 +4815,30 @@ class __tasks_panel extends LetcBox {
       return this._openLinkPrompt(scope);
     }
     const ref = this._mention;
-    if (!ref || ref.scope !== scope) return;
+    const mentionOpen = !!ref && ref.scope === scope;
+    // A bare Enter posts on the comment surfaces; Shift+Enter keeps its newline,
+    // as does any other modifier. Two things must never post: the mention popup,
+    // which owns Enter to pick the highlighted member (handled below), and an IME
+    // composition — there Enter commits the candidate, so posting on it would
+    // send a half-typed word. Matching e.key (not e.code) is deliberate: an IME
+    // reports the commit keystroke as key="Process", which this test skips on its
+    // own; isComposing covers the keydown that ends composition and keyCode 229
+    // is the legacy sentinel for the same thing.
+    if (
+      !mentionOpen &&
+      e.key === "Enter" &&
+      !e.shiftKey &&
+      !e.ctrlKey &&
+      !e.metaKey &&
+      !e.altKey &&
+      !e.isComposing &&
+      e.keyCode !== 229 &&
+      COMMENT_SUBMIT_BY_SCOPE[scope]
+    ) {
+      e.preventDefault();
+      return this[COMMENT_SUBMIT_BY_SCOPE[scope]]();
+    }
+    if (!mentionOpen) return;
     if (e.key === "Escape") {
       e.preventDefault();
       return this._closeMention();
