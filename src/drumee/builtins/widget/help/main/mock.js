@@ -38,11 +38,16 @@ const DOCS = "https://docs.drumee.com";
  * frame (skeleton/common.js) rather than showing a player that cannot load.
  */
 function pageVideo(page) {
+  // Optional: a still from the video, shown on the frame before playback
+  // and handed to the element as its `poster` so the first paint is the
+  // thumbnail rather than black. Without one the frame falls back to its
+  // tinted gradient.
+  const poster = LOCALE[`HELP_${page}_VIDEO_POSTER`] || null;
   const src = LOCALE[`HELP_${page}_VIDEO_URL`];
-  if (src) return { src };
+  if (src) return { src, poster };
   const nid = LOCALE[`HELP_${page}_VIDEO_NID`];
   const hub_id = LOCALE[`HELP_${page}_VIDEO_HUB`];
-  return nid && hub_id ? { nid, hub_id } : null;
+  return nid && hub_id ? { nid, hub_id, poster } : null;
 }
 
 /** Nav entries for the inner Get-help sidebar, in display order. */

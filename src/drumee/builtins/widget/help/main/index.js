@@ -118,6 +118,16 @@ class help_main extends LetcBox {
     return `${this.cid}-help-video`;
   }
 
+  /**
+   * Resolved poster for the current page's video, or null when the install
+   * configured none. Resolved the same way as the video itself, so a poster
+   * can sit beside its file in the static tree.
+   */
+  videoPosterUrl() {
+    const video = this.getVideo();
+    return video && video.poster ? this._staticUrl(video.poster) : null;
+  }
+
   onDomRefresh() {
     this._render();
   }

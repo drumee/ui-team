@@ -38,16 +38,33 @@ function videoBlock(ui, video) {
  */
 function videoPoster(ui, video) {
   const pfx = `${ui.fig.family}__video`;
+  const poster = video ? ui.videoPosterUrl() : null;
 
   return [
     // Separate layer so only the backdrop blurs — blurring the frame would
     // smear the badge and label sitting on top of it.
-    Skeletons.Box.Z({ className: `${pfx}-backdrop` }),
+    //
+    // With a poster configured this same layer carries the thumbnail: the
+    // skin drops the gradient's blow-up and switches to cover, so a still
+    // from the video shows instead of the tinted fallback.
+    Skeletons.Box.Z({
+      className: `${pfx}-backdrop`,
+      attrOpt: poster ? { "data-poster": 1 } : undefined,
+      style: poster ? { backgroundImage: `url("${poster}")` } : undefined,
+    }),
     Skeletons.Box.Y({
       className: `${pfx}-overlay`,
+      // The whole poster has to stay inert, not just the frame's direct
+      // kids. A letc element left active binds its own onclick, and that
+      // handler calls stopPropagation() BEFORE it looks for handlers
+      // (ui-core letc.js __handleClick) — so the badge swallowed the click
+      // and the frame's service never fired. `kidsOpt` only reaches one
+      // level, hence the repeat here and on the badge below.
+      kidsOpt: { active: 0 },
       kids: [
         Skeletons.Box.X({
           className: `${pfx}-play`,
+          kidsOpt: { active: 0 },
           kids: [
             Skeletons.Image.Svg({
               ico: "ph-play-fill",
@@ -80,12 +97,17 @@ function videoPoster(ui, video) {
  */
 function videoPlayer(ui) {
   const pfx = `${ui.fig.family}__video`;
+  const poster = ui.videoPosterUrl();
+  // Carried onto the element too, so the swap from poster to player does
+  // not flash black while the first frame is still being decoded.
+  const attribute = { id: ui.videoElId(), controls: "", playsinline: "" };
+  if (poster) attribute.poster = poster;
 
   return Skeletons.Element({
     tagName: "video",
     className: `${pfx}-el`,
     sys_pn: "help-video-el",
-    attribute: { id: ui.videoElId(), controls: "", playsinline: "" },
+    attribute,
   });
 }
 

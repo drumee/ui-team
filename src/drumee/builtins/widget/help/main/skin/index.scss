@@ -292,6 +292,16 @@
         $surface;
       transform: scale(1.15);
       transition: filter $base $ease;
+
+      // A real thumbnail (background-image set inline by the skeleton) must
+      // sit in the frame exactly: the blow-up above only exists so blur()
+      // does not fade out at the frame's edges, and there is no blur here.
+      &[data-poster="1"] {
+        transform: none;
+        background-size: cover;
+        background-position: center;
+        background-repeat: no-repeat;
+      }
     }
 
     // Badge + label stack, above the backdrop.
