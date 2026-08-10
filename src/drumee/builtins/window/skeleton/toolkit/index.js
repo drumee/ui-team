@@ -1492,86 +1492,81 @@ export function visioMenu(ui, opt = {}) {
 }
 
 /**
- * The macOS green traffic-light button, as Chrome renders it on a Mac.
- * Clicking the dot zooms — macOS has no "Zoom" row, the button IS zoom —
- * and hovering it drops the Sonoma tiling menu mirrored below.
+ * "Move & Resize" — the window's snap control.
+ *
+ * Deliberately the same control the players already show in their topbar
+ * (player/widget/topbar/skeleton/move-resize): hovering the expand icon
+ * reveals a panel of window presets, each emitting one of the four snap
+ * services every window answers through builtins/window/snap. A workspace
+ * window and a document viewer therefore offer window management with the
+ * same glyph, the same panel and the same vocabulary.
+ *
+ * This replaced a macOS green-traffic-light imitation, which looked native
+ * to macOS and foreign to everything else in the app.
+ *
+ * The four preset glyphs are drawn in CSS (outline box + inner block), as
+ * in the Figma, which builds them from plain shapes rather than an icon.
+ * `data-preset` selects the glyph; `data-active` marks the layout the
+ * window is currently in and is stamped live by the window itself — the
+ * active preset is inert (see the skin), so it has to follow reality.
  *
  * @param {*} ui
  */
 export function zoomMenu(ui) {
   const cnRoot = `${ui.fig.family}-topbar__zoom`;
 
-  // `separator` rows carry no service and render as a hairline (see skin).
-  const items = [
-    {
-      service: "fullscreen",
-      ico: "mac-enter-fullscreen",
-      content: LOCALE.ENTER_FULL_SCREEN,
-      modifier: "fullscreen",
-      // Named so the window can retitle it on fullscreenchange.
-      pn: "zoom-item-fullscreen",
-    },
-    { separator: 1 },
-    {
-      service: "window-tile-left",
-      ico: "mac-tile-left",
-      content: LOCALE.TILE_WINDOW_LEFT_OF_SCREEN,
-      modifier: "tile-left",
-    },
-    {
-      service: "window-tile-right",
-      ico: "mac-tile-right",
-      content: LOCALE.TILE_WINDOW_RIGHT_OF_SCREEN,
-      modifier: "tile-right",
-    },
-    { separator: 1 },
-    {
-      service: "window-reframe",
-      ico: "mac-previous-size",
-      content: LOCALE.RETURN_TO_PREVIOUS_SIZE,
-      modifier: "previous-size",
-    },
+  const presets = [
+    { preset: "full", service: "window-zoom" },
+    { preset: "left", service: "window-tile-left" },
+    { preset: "right", service: "window-tile-right" },
+    { preset: "center", service: "window-reframe" },
   ];
 
   return Skeletons.Box.X({
     className: `${cnRoot}-wrapper`,
     kids: [
+      // No service: the trigger only reveals the panel. Maximising is the
+      // "full" preset inside it, so there is exactly one way to do it.
       Skeletons.Button.Svg({
-        ico: "mac-zoom",
+        ico: "desktop_fullview",
         className: `${cnRoot}-trigger`,
-        sys_pn: "ctrl-fullscreen",
-        service: "window-zoom",
-        uiHandler: [ui],
+        sys_pn: "zoom-trigger",
         partHandler: ui,
       }),
       Skeletons.Box.Y({
         className: `${cnRoot}-menu`,
-        kids: items.map(({ service, ico, content, modifier, separator, pn }) =>
-          separator
-            ? Skeletons.Box.X({
-                className: `${cnRoot}-separator`,
-                active: 0,
-              })
-            : Skeletons.Box.X({
-                className: `${cnRoot}-item ${cnRoot}-item--${modifier}`,
-                uiHandler: [ui],
+        kids: [
+          Skeletons.Note({
+            content: LOCALE.MOVE_RESIZE,
+            active: 0,
+            className: `${cnRoot}-label`,
+          }),
+          Skeletons.Box.X({
+            className: `${cnRoot}-presets`,
+            sys_pn: "zoom-presets",
+            partHandler: ui,
+            kids: presets.map(({ preset, service }) =>
+              Skeletons.Box.X({
+                className: `${cnRoot}-preset`,
                 service,
+                uiHandler: [ui],
+                dataset: { preset, active: 0 },
                 kidsOpt: { active: 0 },
+                // The glyph is pure CSS: this Box is the outline, its kid
+                // the inner block whose width/position the skin varies by
+                // `data-preset`.
                 kids: [
-                  Skeletons.Button.Svg({
-                    ico,
-                    active: 0,
-                    className: `${cnRoot}-item-icon`,
-                  }),
-                  Skeletons.Note({
-                    content,
-                    active: 0,
-                    className: `${cnRoot}-item-label`,
-                    ...(pn ? { sys_pn: pn, partHandler: ui } : {}),
+                  Skeletons.Box.X({
+                    className: `${cnRoot}-glyph`,
+                    kids: [
+                      Skeletons.Element({ className: `${cnRoot}-glyph-fill` }),
+                    ],
                   }),
                 ],
               }),
-        ),
+            ),
+          }),
+        ],
       }),
     ],
   });

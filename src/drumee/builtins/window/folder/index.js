@@ -102,6 +102,9 @@ class __window_folder extends mfsInteract {
     }
     // CSS hook: zoomed window shows the 6-per-row grid (folder skin).
     this.el.dataset.zoomed = this._zoomed ? 1 : 0;
+    // Un-zooming restores arbitrary pre-zoom bounds, which match no preset.
+    this._snapMode = this._zoomed ? "full" : null;
+    this._syncSnapPresets();
     // Must run BEFORE measuring: hiding the desk header grows the
     // wm-container, and _workspaceRect() has to see the post-toggle height.
     this._syncDeskChrome();
@@ -211,18 +214,36 @@ class __window_folder extends mfsInteract {
     if (window.Wm && Wm.$el) Wm.$el.trigger(_e.wake, this);
   }
 
-  // macOS swaps the first menu row between "Enter"/"Exit Full Screen". The
-  // menu is built once with the topbar, so retitle the label in place.
-  _syncFullscreenLabel() {
-    const label = this.__zoomFsLabel;
-    if (!label || !_.isFunction(label.set)) return;
-    if (label.isDestroyed && label.isDestroyed()) return;
-    label.set({
-      content:
-        document.fullscreenElement === this.el
-          ? LOCALE.EXIT_FULLSCREEN
-          : LOCALE.ENTER_FULL_SCREEN,
-    });
+  // One inline button drives both directions of fullscreen, so its glyph has
+  // to follow the real state — ESC and the browser's own exit both arrive as
+  // fullscreenchange, not as a click.
+  _syncFullscreenBtn() {
+    const btn = this.__ctrlFullscreen;
+    if (!btn || !btn.el) return;
+    if (btn.isDestroyed && btn.isDestroyed()) return;
+    const isFs = document.fullscreenElement === this.el;
+    if (_.isFunction(btn.setState)) btn.setState(isFs ? 1 : 0);
+    if (_.isFunction(btn.setIcon)) {
+      btn.setIcon(isFs ? "desktop_reduce" : "player-fullscreen");
+    }
+  }
+
+  /**
+   * Mark the Move & Resize preset the window is currently in.
+   *
+   * The active preset is inert (skin: `pointer-events: none`) — re-picking
+   * "full" would run `toggleZoom` and RESTORE the window rather than leave it
+   * maximised — so the stamp must track the real layout instead of being
+   * frozen at whatever the topbar was built with. Cleared to `null` by any
+   * move that lands the window on arbitrary bounds (un-zoom, manual drag is
+   * not tracked), which simply leaves every preset clickable.
+   */
+  _syncSnapPresets() {
+    const host = this.__zoomPresets;
+    if (!host || !host.el) return;
+    for (const el of host.el.querySelectorAll("[data-preset]")) {
+      el.dataset.active = el.dataset.preset === this._snapMode ? 1 : 0;
+    }
   }
 
   toggleFullscreen() {
@@ -231,9 +252,9 @@ class __window_folder extends mfsInteract {
       return;
     }
     this._preFsBounds = this._snapshotBounds();
-    // One-shot listener handles both menu "Exit Full Screen" and ESC.
+    // One-shot listener handles both a second click on the button and ESC.
     const onChange = () => {
-      this._syncFullscreenLabel();
+      this._syncFullscreenBtn();
       if (document.fullscreenElement === this.el) return;
       document.removeEventListener("fullscreenchange", onChange);
       const restore = this._preFsBounds;
@@ -252,6 +273,8 @@ class __window_folder extends mfsInteract {
     this._zoomed = false;
     this._preZoomBounds = null;
     this.el.dataset.zoomed = 0;
+    this._snapMode = side === "right" ? "right" : "left";
+    this._syncSnapPresets();
     this._syncDeskChrome();
     const ws = this._workspaceRect();
     const halfW = Math.floor(ws.width / 2);
@@ -275,6 +298,8 @@ class __window_folder extends mfsInteract {
     this._zoomed = false;
     this._preZoomBounds = null;
     this.el.dataset.zoomed = 0;
+    this._snapMode = "center";
+    this._syncSnapPresets();
     this._syncDeskChrome();
     const b = this._defaultBounds();
     this._applyBoundsAfterFs({ left: b.left, top: b.top, width: b.width, height: b.height });
@@ -960,10 +985,18 @@ class __window_folder extends mfsInteract {
   }
 
   onPartReady(child, pn) {
-    if (pn === "zoom-item-fullscreen") {
-      this.__zoomFsLabel = child;
-      this._syncFullscreenLabel();
-      return;
+    // Neither of these returns: window/core's onPartReady tail wires
+    // `child.onChildBubble` on every part it sees, and the control these two
+    // replace (the old zoom trigger) went through it. Fall through so the
+    // topbar keeps behaving the same on bubble.
+    if (pn === "ctrl-fullscreen") {
+      this.__ctrlFullscreen = child;
+      // The topbar can be rebuilt while the window is already fullscreen.
+      this._syncFullscreenBtn();
+    }
+    if (pn === "zoom-presets") {
+      this.__zoomPresets = child;
+      this._syncSnapPresets();
     }
     if (pn === "folder-view") {
       this.__folderView = child;

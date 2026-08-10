@@ -605,6 +605,14 @@
         stroke: currentColor;
       }
 
+      // The sprite build strips the source fill from `player-fullscreen` /
+      // `desktop_reduce`, so without this the glyph paints the SVG default
+      // black next to its currentColor neighbours.
+      &.fullscreen svg,
+      &.fullscreen use {
+        fill: currentColor;
+      }
+
       .window-folder__control-icon svg {
         transition: transform 0.2s ease;
       }
@@ -728,9 +736,14 @@
       }
     }
 
-    // ── macOS green traffic-light zoom control ────────────────────
-    // The green button Chrome shows on a Mac. Scoped to this one control —
-    // the neighbouring − and × keep the app's own outline chrome.
+    // ── Move & Resize ─────────────────────────────────────────────
+    // The same control the players carry in their own topbar; the rules
+    // below mirror `.drumee-topbar__snap-*`
+    // (player/widget/topbar/skin/index.scss) so a workspace window and a
+    // document viewer are indistinguishable here. Keep the two in step.
+    //
+    // Note the block is still named `zoom` — the wrapper class is what the
+    // ≤700px collapse rule and the topbar skeleton key off.
     &__zoom-wrapper {
       position: relative;
       overflow: visible;
@@ -740,6 +753,8 @@
       align-items: center;
       justify-content: center;
 
+      // Literal class, not a second `&` — inside this block `&` expands to
+      // the whole compound parent, so `& … &` compiles to a dead selector.
       &:hover .window-folder-topbar__zoom-menu,
       .window-folder-topbar__zoom-menu:hover {
         opacity: 1;
@@ -747,182 +762,152 @@
         transform: translateY(0);
         pointer-events: auto;
       }
-
-      // Literal class, not a second `&` — inside this block `&` expands to
-      // the whole compound parent, so `& … &` compiles to a dead selector.
-      &:hover .window-folder-topbar__zoom-trigger svg {
-        opacity: 1;
-      }
     }
 
     &__zoom-trigger {
-      // 12px is the macOS traffic-light diameter; the 20px wrapper keeps the
-      // click target the same size as its neighbours.
-      width: 12px;
-      height: 12px;
+      width: 20px;
+      height: 20px;
       flex-shrink: 0;
       display: flex;
       align-items: center;
       justify-content: center;
-      border-radius: 50%;
-      background-color: #28c840;
-      // A rim rather than a border, so the dot keeps its exact 12px footprint.
-      box-shadow: inset 0 0 0 0.5px rgba(0, 0, 0, 0.12);
-      color: rgba(0, 60, 0, 0.62);
+      color: var(--normal-fg-20, var(--normal-fg-10));
       cursor: pointer;
-      transition: background-color 0.12s ease;
+      transition: color 0.15s ease;
 
       svg {
-        width: 12px;
-        height: 12px;
-        // Hidden at rest — macOS only shows it while the chrome is hovered.
-        opacity: 0;
-        transition: opacity 0.12s ease;
+        width: 20px;
+        height: 20px;
       }
 
-      &:active {
-        background-color: #1faf35;
+      // `desktop_fullview` ships fill-less out of the sprite build, so it
+      // would paint the SVG default black rather than the row's grey.
+      svg,
+      use {
+        fill: currentColor;
       }
-    }
 
-    // An unfocused window greys its traffic lights out. Only an explicit
-    // data-state="0" greys the dot — an unset state stays green, so it can
-    // never get stuck looking disabled if the WM hasn't stamped a state.
-    .window-folder__ui[data-state="0"] &__zoom-trigger {
-      background-color: #d6d6d6;
-      box-shadow: none;
-    }
-
-    .window-folder__ui[data-state="0"]
-      &__zoom-wrapper:hover
-      .window-folder-topbar__zoom-trigger
-      svg {
-      opacity: 0;
+      &:hover {
+        color: var(--normal-fg-10);
+      }
     }
 
     &__zoom-menu {
       position: absolute;
+      // The button sits at the right end of the row, so the panel hangs
+      // from its right edge.
       top: calc(100% + 8px);
-      // The button sits at the right end of the row, so the panel hangs from
-      // its right edge (macOS hangs it from the left of a left-mounted one).
-      right: -6px;
+      right: -4px;
       z-index: 1000;
-      // Fits "Tile Window to Left of Screen" on one line, as macOS does.
-      min-width: 252px;
-      // The horizontal padding is the row inset; separators cancel it.
-      padding: 4px 5px;
-      background-color: rgba(246, 246, 246, 0.82);
-      backdrop-filter: blur(50px) saturate(180%);
-      -webkit-backdrop-filter: blur(50px) saturate(180%);
-      border: 0.5px solid rgba(0, 0, 0, 0.12);
-      border-radius: 6px;
-      box-shadow:
-        0 0 0 0.5px rgba(0, 0, 0, 0.05),
-        0 10px 30px rgba(0, 0, 0, 0.22);
-      // Box.Y already supplies `display: flex; flex-direction: column`.
-      gap: 0;
+      align-items: center;
+      gap: var(--spacer-4);
+      padding: 8px 12px 12px;
+      background-color: var(--normal-bg-90);
+      border: 1px solid var(--border-default);
+      border-radius: var(--corner-radius-3);
 
       opacity: 0;
       visibility: hidden;
       transform: translateY(-4px);
+      pointer-events: none;
       // `visibility 0s linear 0.15s` delays the close so the cursor can
-      // cross the trigger→menu gap without the panel disappearing.
+      // cross the trigger→panel gap without the panel disappearing.
       transition:
         opacity 0.15s ease,
         transform 0.15s ease,
         visibility 0s linear 0.15s;
-      pointer-events: none;
 
       // Invisible strip between trigger and panel — bridges the 8px gap
       // so the cursor doesn't drop out of hover during transit.
       &::before {
         content: "";
         position: absolute;
-        top: -10px;
+        top: -8px;
         left: 0;
         right: 0;
-        height: 10px;
+        height: 8px;
       }
     }
 
-    // macOS waits a beat before dropping the menu, so a click aimed at the
-    // dot doesn't get a panel thrown under the cursor first.
-    &__zoom-wrapper:hover .window-folder-topbar__zoom-menu,
-    .window-folder-topbar__zoom-menu:hover {
-      transition:
-        opacity 0.12s ease 0.3s,
-        transform 0.12s ease 0.3s,
-        visibility 0s linear 0.3s;
+    &__zoom-label {
+      @include drumee.typo($size: 12px, $line: 1.4, $color: var(--normal-fg-10));
+      text-align: center;
+      white-space: nowrap;
     }
 
-    &__zoom-item {
-      // Box.X already supplies `display: flex; flex-direction: row`.
+    &__zoom-presets {
       align-items: center;
-      gap: 8px;
-      padding: 3px 8px;
-      min-height: 22px;
-      border-radius: 4px;
-      cursor: default;
-      font-family: -apple-system, "SF Pro Text", "Geist", system-ui, sans-serif;
-      font-size: 13px;
-      font-weight: 400;
-      line-height: 1.2;
-      color: rgba(0, 0, 0, 0.85);
-      white-space: nowrap;
+      gap: var(--spacer-4);
+    }
+
+    &__zoom-preset {
+      width: 32px;
+      height: 32px;
+      flex-shrink: 0;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      border-radius: var(--corner-radius-1);
+      cursor: pointer;
 
       &:hover {
-        background-color: #0a6cff;
-        color: #fff;
+        background-color: var(--primary-20);
+      }
+
+      // The layout the window is already in. Inert: re-picking it is at best
+      // a no-op, and for "full" it is actively wrong — `window-zoom` runs
+      // toggleZoom, so clicking the highlighted full preset would RESTORE the
+      // window instead of leaving it maximised. The window keeps this stamp
+      // current (folder/index.js `_syncSnapPresets`).
+      //
+      // `pointer-events: none` also keeps the panel open while the cursor is
+      // over this preset: hover falls through to the panel, which is what the
+      // open rule matches.
+      &[data-active="1"] {
+        background-color: var(--primary-20);
+        cursor: default;
+        pointer-events: none;
+      }
+
+      // left  — inner block at the start (the base rule below)
+      // right — pushed to the end
+      // full  — spans the box
+      // center— narrower inset block, centred
+      &[data-preset="right"] .window-folder-topbar__zoom-glyph {
+        justify-content: flex-end;
+      }
+
+      &[data-preset="full"] .window-folder-topbar__zoom-glyph-fill {
+        width: 100%;
+      }
+
+      &[data-preset="center"] .window-folder-topbar__zoom-glyph {
+        justify-content: center;
+        padding: 4px;
+      }
+
+      &[data-preset="center"] .window-folder-topbar__zoom-glyph-fill {
+        width: 100%;
       }
     }
 
-    &__zoom-item-icon {
-      width: 16px;
+    // The preset glyphs are shapes in the Figma, not an icon: a 20x16
+    // outlined box whose inner block moves and resizes per preset.
+    &__zoom-glyph {
+      width: 20px;
       height: 16px;
-      flex-shrink: 0;
-      color: inherit;
-
-      svg {
-        width: 16px;
-        height: 16px;
-      }
+      box-sizing: border-box;
+      align-items: center;
+      padding: 2px;
+      border: 1.5px solid var(--normal-fg-800);
+      border-radius: 1px;
     }
 
-    &__zoom-item-label {
-      flex: 1;
-      color: inherit;
-    }
-
-    // Negative margins cancel the panel's inset so the rule runs edge to edge.
-    &__zoom-separator {
-      height: 1px;
-      flex-shrink: 0;
-      margin: 4px -5px;
-      background-color: rgba(0, 0, 0, 0.12);
-    }
-
-    // Dark appearance. The green dot and blue highlight stay saturated —
-    // macOS keeps both unchanged in dark mode.
-    html[data-theme="dark"] & {
-      &__zoom-menu {
-        background-color: rgba(46, 46, 48, 0.82);
-        border-color: rgba(255, 255, 255, 0.14);
-        box-shadow:
-          0 0 0 0.5px rgba(0, 0, 0, 0.4),
-          0 10px 30px rgba(0, 0, 0, 0.5);
-      }
-
-      &__zoom-item {
-        color: rgba(255, 255, 255, 0.92);
-      }
-
-      &__zoom-separator {
-        background-color: rgba(255, 255, 255, 0.14);
-      }
-    }
-
-    html[data-theme="dark"] .window-folder__ui[data-state="0"] &__zoom-trigger {
-      background-color: #4c4c4c;
+    &__zoom-glyph-fill {
+      width: 40%;
+      height: 100%;
+      background-color: var(--normal-fg-20);
+      border-radius: 1px;
     }
 
     // ── Overflow "More" menu ──────────────────────────────────────
