@@ -20,6 +20,31 @@
 /** Published documentation root that the article cards link into. */
 const DOCS = "https://docs.drumee.com";
 
+/**
+ * Where a page's tutorial video comes from, or null when none is set up.
+ *
+ * Two shapes, both LOCALE-configured so a self-hosted install can point at
+ * its own copy — same approach as HELP_SUPPORT_EMAIL:
+ *
+ *  - `HELP_<PAGE>_VIDEO_NID` + `_HUB` — a file sitting in a Drumee hub. It
+ *    plays through the same HLS route as the in-app player
+ *    (builtins/player/video), so the browser streams segments on demand and
+ *    the server-side transcode means the stored file's codec does not have
+ *    to be one the browser can decode.
+ *  - `HELP_<PAGE>_VIDEO_URL` — a plain file URL, for an install that serves
+ *    the video itself. Wins over the node reference when both are set.
+ *
+ * All three ship empty: with no source the page keeps its "coming soon"
+ * frame (skeleton/common.js) rather than showing a player that cannot load.
+ */
+function pageVideo(page) {
+  const src = LOCALE[`HELP_${page}_VIDEO_URL`];
+  if (src) return { src };
+  const nid = LOCALE[`HELP_${page}_VIDEO_NID`];
+  const hub_id = LOCALE[`HELP_${page}_VIDEO_HUB`];
+  return nid && hub_id ? { nid, hub_id } : null;
+}
+
 /** Nav entries for the inner Get-help sidebar, in display order. */
 function navPages() {
   return [
@@ -29,11 +54,12 @@ function navPages() {
   ];
 }
 
-/** Product tour page: heading, video placeholder and related articles. */
+/** Product tour page: heading, tutorial video and related articles. */
 function productTour() {
   return {
     title: LOCALE.HELP_PRODUCT_TOUR_TITLE,
     intro: null,
+    video: pageVideo("PRODUCT_TOUR"),
     articles: [
       {
         id: "component-definition",
@@ -51,11 +77,12 @@ function productTour() {
   };
 }
 
-/** Self-hosting page: heading, intro, video placeholder and 6 articles. */
+/** Self-hosting page: heading, intro, setup video and 6 articles. */
 function selfHosting() {
   return {
     title: LOCALE.HELP_SELF_HOSTING_TITLE,
     intro: LOCALE.HELP_SELF_HOSTING_INTRO,
+    video: pageVideo("SELF_HOSTING"),
     articles: [
       {
         id: "overview",
