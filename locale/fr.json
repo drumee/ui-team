@@ -2052,6 +2052,7 @@
   "SECURE_SHARE_REQUEST_SENT": "Demande d’accès envoyée",
   "SECURE_SHARE_REQUEST_NOTIFIED": "Le propriétaire a été notifié et examinera votre demande.",
   "SECURE_SHARE_BACK_TO_DRUMEE": "Retour à Drumee",
+  "SECURE_SHARE_GO_TO_MY_DESK": "Aller à mon Drumee",
   "SECURE_SHARE_APPROVE_ACCESS": "Approuver la demande",
   "SECURE_SHARE_DENY_ACCESS": "Refuser",
   "SECURE_SHARE_ACCESS_APPROVED": "Votre demande d’accès a été approuvée.",
@@ -2469,6 +2470,12 @@
   "HELP_SUPPORT_EMAIL": "contact@drumee.org",
   "HELP_SUPPORT_MAIL_SUBJECT": "Drumee support request",
   "HELP_SUPPORT_TELEGRAM_URL": "",
+  "HELP_PRODUCT_TOUR_VIDEO_URL": "videos/help/product-tour-v1.mp4",
+  "HELP_PRODUCT_TOUR_VIDEO_NID": "",
+  "HELP_PRODUCT_TOUR_VIDEO_HUB": "",
+  "HELP_SELF_HOSTING_VIDEO_URL": "videos/help/self-hosting-v1.mp4",
+  "HELP_SELF_HOSTING_VIDEO_NID": "",
+  "HELP_SELF_HOSTING_VIDEO_HUB": "",
   "HELP_FAQ_Q_HUB": "What is a Hub?",
   "HELP_FAQ_A_HUB": "A Hub is a collaborative workspace for a team, project or client. Each Hub keeps its members, content and permissions separate.",
   "HELP_FAQ_Q_ACCOUNT_VS_HUB": "What's the difference between my Account, my Organization, a Hub and a folder?",
@@ -2555,5 +2562,6 @@
   "OL_TOAST_READONLY": "Cet espace de travail est en lecture seule tant qu'il dépasse les limites de son forfait.",
   "OL_TOAST_INVITE": "Les invitations sont suspendues tant que l'espace de travail dépasse les limites de son forfait.",
   "SHARE_SCREEN": "Partager l’écran",
-  "STOP_SHARING": "Arrêter le partage"
+  "STOP_SHARING": "Arrêter le partage",
+  "OL_SEATS_NO_CONSOLE": "Votre offre ne comprend pas la console d'administration. Ouvrez chaque espace de travail et retirez les membres depuis sa propre liste."
 }

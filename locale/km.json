@@ -2051,6 +2051,7 @@
   "SECURE_SHARE_REQUEST_SENT": "បានផ្ញើសំណើសុំសិទ្ធ",
   "SECURE_SHARE_REQUEST_NOTIFIED": "ម្ចាស់ត្រូវបានជូនដំណឹងហើយ ហើយនឹងពិនិត្យសំណើរបស់អ្នក។",
   "SECURE_SHARE_BACK_TO_DRUMEE": "ត្រឡប់ទៅ Drumee",
+  "SECURE_SHARE_GO_TO_MY_DESK": "ទៅកាន់ Drumee របស់ខ្ញុំ",
   "SECURE_SHARE_APPROVE_ACCESS": "អនុម័តសំណើ",
   "SECURE_SHARE_DENY_ACCESS": "បដិសេធ",
   "SECURE_SHARE_ACCESS_APPROVED": "សំណើសុំសិទ្ធរបស់អ្នកត្រូវបានអនុម័ត។",
@@ -2468,6 +2469,12 @@
   "HELP_SUPPORT_EMAIL": "contact@drumee.org",
   "HELP_SUPPORT_MAIL_SUBJECT": "Drumee support request",
   "HELP_SUPPORT_TELEGRAM_URL": "",
+  "HELP_PRODUCT_TOUR_VIDEO_URL": "videos/help/product-tour-v1.mp4",
+  "HELP_PRODUCT_TOUR_VIDEO_NID": "",
+  "HELP_PRODUCT_TOUR_VIDEO_HUB": "",
+  "HELP_SELF_HOSTING_VIDEO_URL": "videos/help/self-hosting-v1.mp4",
+  "HELP_SELF_HOSTING_VIDEO_NID": "",
+  "HELP_SELF_HOSTING_VIDEO_HUB": "",
   "HELP_FAQ_Q_HUB": "What is a Hub?",
   "HELP_FAQ_A_HUB": "A Hub is a collaborative workspace for a team, project or client. Each Hub keeps its members, content and permissions separate.",
   "HELP_FAQ_Q_ACCOUNT_VS_HUB": "What's the difference between my Account, my Organization, a Hub and a folder?",
@@ -2554,5 +2561,6 @@
   "OL_TOAST_READONLY": "កន្លែងធ្វើការនេះអានបានតែប៉ុណ្ណោះ រហូតដល់វាត្រលប់ក្នុងដែនកំណត់គម្រោងវិញ។",
   "OL_TOAST_INVITE": "ការអញ្ជើញត្រូវផ្អាក ខណៈកន្លែងធ្វើការលើសដែនកំណត់គម្រោង។",
   "SHARE_SCREEN": "ចែករំលែកអេក្រង់",
-  "STOP_SHARING": "បញ្ឈប់ការចែករំលែក"
+  "STOP_SHARING": "បញ្ឈប់ការចែករំលែក",
+  "OL_SEATS_NO_CONSOLE": "គម្រោងរបស់អ្នកគ្មានផ្ទាំងគ្រប់គ្រងទេ។ សូមបើកកន្លែងធ្វើការនីមួយៗ ហើយដកសមាជិកចេញពីបញ្ជីសមាជិករបស់វា។"
 }

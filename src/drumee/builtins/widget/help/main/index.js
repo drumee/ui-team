@@ -30,6 +30,11 @@ class help_main extends LetcBox {
     // One debounce timer per search box — a shared timer let one box cancel
     // the other's pending filter.
     this._searchTimers = {};
+    // Set once the poster has been swapped for a real player, so a click
+    // that lands on the playing video does not rebuild it. The hls.js
+    // instance is held so it can be torn down with the element it feeds.
+    this._playing = false;
+    this._hls = null;
   }
 
   /** Nav entries, narrowed by the sidebar search box. */
@@ -93,16 +98,42 @@ class help_main extends LetcBox {
     return this._votes[this._page] || null;
   }
 
+  /**
+   * Video source for the current page, or null when the install configured
+   * none. Whether a source is usable at all is decided once, in mock.js
+   * pageVideo() — this is just the shared accessor, so the frame that gets
+   * drawn (skeleton/common.videoBlock) and the click that starts it
+   * (playVideo) can never disagree about what is playable.
+   */
+  getVideo() {
+    return this.getPageData().video || null;
+  }
+
+  /**
+   * DOM id of the `<video>`, derived from the view's own cid so it stays
+   * unique if this widget is ever mounted twice. Shared by the skeleton that
+   * writes it and the handler that looks the element up.
+   */
+  videoElId() {
+    return `${this.cid}-help-video`;
+  }
+
   onDomRefresh() {
     this._render();
   }
 
   _render() {
+    // Any rebuild of the content column throws the <video> away, so the
+    // player state has to go with it: an hls.js left attached to a detached
+    // element keeps pulling segments, and a stale `_playing` would leave the
+    // play badge of the freshly drawn frame dead to the touch.
+    this._stopVideo();
     this.feed(require("./skeleton").default(this));
   }
 
   /** Re-render only the content column, leaving the nav/search untouched. */
   _renderContent() {
+    this._stopVideo();
     return this.ensurePart("help-content").then((p) => {
       if (p) p.feed(require("./skeleton/content").default(this));
     });
@@ -119,6 +150,105 @@ class help_main extends LetcBox {
     this._faqCategory = "*";
     this._openFaq.clear();
     this._render();
+  }
+
+  /**
+   * Start the page's video.
+   *
+   * The frame is drawn as a poster and the `<video>` is created here, on the
+   * first click, so opening Get help costs no media bytes until someone
+   * actually asks for the video. The native controls sit inside the frame,
+   * so their clicks reach this handler too — `_playing` keeps them from
+   * rebuilding the player out from under the person using it.
+   */
+  playVideo() {
+    if (this._playing || !this.getVideo()) return;
+    this._playing = true;
+    return this.ensurePart("help-video").then((p) => {
+      if (p) return p.feed(require("./skeleton/common").videoPlayer(this));
+      // Nothing was swapped in, so the poster is still there — leaving the
+      // flag set would strand its play badge as a no-op.
+      this._playing = false;
+    });
+  }
+
+  /**
+   * Attach a source to the freshly created `<video>`.
+   *
+   * A Drumee-hosted node streams as HLS over the same `/-/vdo/` route as the
+   * in-app player (builtins/player/video): the browser pulls segments on
+   * demand instead of the whole file, and the server-side transcode means
+   * the stored file's codec does not have to be one the browser can decode.
+   * hls.js drives that everywhere except Safari, which reports no support
+   * because it plays the playlist natively from a plain `src`.
+   */
+  _startVideo(el) {
+    const video = this.getVideo();
+    // A page switch during the waitElement() poll tears the player down
+    // before it ever starts; nothing to attach to in that case.
+    if (!el || !video || !this._playing) return;
+
+    if (video.src) {
+      el.src = this._staticUrl(video.src);
+      return this._play(el);
+    }
+
+    const b = (typeof bootstrap === "function" && bootstrap()) || {};
+    let url = `${b.vdo || ""}${video.nid}/${video.hub_id}/master.m3u8`;
+    if (b.keysel) url = `${url}?keysel=${b.keysel}`;
+
+    // Required lazily, as builtins/player/video does — hls.js is far too
+    // heavy to sit in this widget's chunk for the sake of a click that
+    // usually never happens.
+    const Hls = require("hls.js");
+    if (!Hls.isSupported()) {
+      el.src = url;
+      return this._play(el);
+    }
+    this._hls = new Hls();
+    this._hls.loadSource(url);
+    this._hls.attachMedia(el);
+    this._hls.on(Hls.Events.MANIFEST_PARSED, () => this._play(el));
+  }
+
+  /**
+   * Resolve a configured file source to something the element can load.
+   *
+   * An absolute or root-relative value is used untouched, so a video can be
+   * pointed at any host. A bare path is resolved against this install's own
+   * static base — the same one the welcome wallpaper and the sample CSV use,
+   * and it already ends in a slash — so a self-hosted deployment serves its
+   * own copy instead of reaching back to app.drumee.com.
+   */
+  _staticUrl(src) {
+    if (/^(https?:)?\/\//.test(src) || src.startsWith("/")) return src;
+    const b = (typeof bootstrap === "function" && bootstrap()) || {};
+    return `${b.static || ""}${src}`;
+  }
+
+  /**
+   * play() rejects rather than throws when the browser declines (autoplay
+   * policy, or the element was torn down mid-load). Either way it must not
+   * surface as an unhandled rejection.
+   */
+  _play(el) {
+    const started = el.play();
+    if (started && started.catch) {
+      started.catch((e) => this.warn("help_main: video play refused", e));
+    }
+  }
+
+  /**
+   * Drop the player and fall back to the poster. Safe to call when nothing
+   * is playing, which is why both the page switch and the teardown can call
+   * it unconditionally.
+   */
+  _stopVideo() {
+    if (this._hls) {
+      this._hls.destroy();
+      this._hls = null;
+    }
+    this._playing = false;
   }
 
   /**
@@ -200,6 +330,10 @@ class help_main extends LetcBox {
             if (p) p.feed(require("./skeleton/nav").navList(this));
           });
         });
+      case "help-video-el":
+        // The part being ready does not mean the element is attached yet —
+        // resolve it by id first, same as builtins/player/video does.
+        return this.waitElement(this.videoElId(), (el) => this._startVideo(el));
       case "faq-search":
         return this._wireSearch(child, pn, (v) => {
           this._faqQuery = v;
@@ -230,6 +364,7 @@ class help_main extends LetcBox {
 
   onBeforeDestroy() {
     for (const t of Object.values(this._searchTimers)) clearTimeout(t);
+    this._stopVideo();
     if (super.onBeforeDestroy) super.onBeforeDestroy();
   }
 
@@ -261,9 +396,7 @@ class help_main extends LetcBox {
         return this.openArticle(cmd.mget("article_url"));
 
       case "help-play-video":
-        // Placeholder: mock pages carry no media source (mock.js video.src
-        // is null), so there is nothing to start.
-        return;
+        return this.playVideo();
 
       default:
         return;

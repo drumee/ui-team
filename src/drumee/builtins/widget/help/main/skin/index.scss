@@ -262,6 +262,20 @@
       }
     }
 
+    // The player, once the poster has been swapped out for it. It fills the
+    // frame and inherits its rounded corners (the frame is overflow:hidden),
+    // sitting on a dark fill so a letterboxed video does not show $surface
+    // through the bars. `cursor` is reset here rather than on the frame: the
+    // frame keeps its click service, but the innermost element wins, so a
+    // playing video no longer reads as a button.
+    &-el {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      background: #141123;
+      cursor: default;
+    }
+
     // The surface that gets blurred. A flat fill would look identical blurred
     // or not, so it carries a soft tinted gradient for the blur to act on.
     // Scaled up past the frame because blur() fades out at the edges.

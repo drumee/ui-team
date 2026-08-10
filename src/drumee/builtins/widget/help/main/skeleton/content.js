@@ -30,7 +30,10 @@ function articlePage(ui) {
             : null,
         ].filter(Boolean),
       }),
-      videoBlock(ui, data.video),
+      // Through getVideo(), not data.video directly: the frame drawn here
+      // and the click that starts it read the source the same way, so they
+      // cannot disagree about whether there is anything to play.
+      videoBlock(ui, ui.getVideo()),
       articleGrid(ui, data.articles),
     ].filter(Boolean),
   });

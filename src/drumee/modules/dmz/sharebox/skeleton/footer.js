@@ -80,25 +80,41 @@ function __skl_dmz_sharebox_footer(_ui_) {
       "Join 2,000+ creators curating their best work.",
   });
 
-  // A logged-in recipient already has an account, so don't pitch signup — keep the
-  // footer banner/branding but drop the "Sign Up Free" button.
-  const signupButton = _ui_.mget("is_authenticated") ? null : Skeletons.Box.X({
+  // The banner CTA is the SAME white pill in both auth states — only its
+  // destination and its label differ, so it is built once and branched on those
+  // two values (identical classNames ⇒ no skin change, pixel-identical button).
+  //   anonymous  → "open-signup" : pitch the account (unchanged behaviour).
+  //   logged-in  → "go-to-desk"  : they already have an account, so send them to
+  //                                their OWN Drumee desk instead of a signup page.
+  // `is_authenticated` is the server's flag (dmz.js), set ONLY when the viewer's
+  // own regsid resolves to a real account and captured BEFORE the creator
+  // cookie_touch rebind. Never derive identity here from `uid === creator_id` —
+  // that is also true for an anonymous viewer on a public link.
+  // The two labels are deliberately SEPARATE keys: SIGNUP_FOR_FREE_CTA is the
+  // temporary campaign string (English-only "See more", reverting to "Sign Up
+  // Free" when the campaign ends), so reusing it here would mislabel the desk
+  // button in every other language and break outright at the revert.
+  const isAuthenticated = !!_ui_.mget("is_authenticated");
+
+  const ctaButton = Skeletons.Box.X({
     className: `${footerFig}__signup-btn`,
     sys_pn: "button-wrapper",
-    service: "open-signup",
+    service: isAuthenticated ? "go-to-desk" : "open-signup",
     uiHandler: _ui_,
     kidsOpt: { active: 0 },
     kids: [
       Skeletons.Note({
         className: `${footerFig}__signup-label`,
-        content: LOCALE.SIGNUP_FOR_FREE_CTA || "Sign Up Free",
+        content: isAuthenticated
+          ? LOCALE.SECURE_SHARE_GO_TO_MY_DESK
+          : LOCALE.SIGNUP_FOR_FREE_CTA || "Sign Up Free",
       }),
     ],
   });
 
   const right = Skeletons.Box.X({
     className: `${footerFig}__right`,
-    kids: [subline, signupButton].filter(Boolean),
+    kids: [subline, ctaButton].filter(Boolean),
   });
 
   const banner = Skeletons.Box.X({

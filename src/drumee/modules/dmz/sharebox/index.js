@@ -576,6 +576,27 @@ class __dmz_sharebox extends LetcBox {
         return;
       }
 
+      case 'go-to-desk': {
+        // Footer CTA for a recipient who is ALREADY signed in (footer.js branches
+        // on the server's `is_authenticated`): send them to their own Drumee desk
+        // instead of the signup page.
+        const { main_domain } = bootstrap();
+        // Same shape as go-login/open-signup above, and for the same reasons:
+        // a NEW window on the canonical main domain (the share is served from the
+        // neutral share host / a content vhost, and a same-page hash navigation
+        // would keep this tab's running app and its creator-bound guest session —
+        // the mechanism behind the "auto-logged-in AS THE SENDER" bug), and
+        // location.pathname preserved so it lands on the SAME build ("/-/test/" on
+        // test, "/" in production).
+        // Deliberately carries NO hub_id and NO return_to. Those two exist to send
+        // an ANONYMOUS recipient back to the share after authenticating; this
+        // viewer is already authenticated, and a hub_id deep-link would drive the
+        // desk into the SHARED workspace they are not a member of → 403. The share
+        // tab is left untouched, so they keep reading it.
+        window.open(`${location.protocol}//${main_domain}${location.pathname}${_K.module.desk}`, '_blank');
+        return;
+      }
+
       case _e.upload:
         // Uploading is an edit action → needs the write grant + an identity.
         if (this._gateInteraction(this.havePermission(_K.permission.write, this.mget(_a.privilege)))) return;

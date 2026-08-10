@@ -1,4 +1,5 @@
 const OverLimit = require("libs/over-limit");
+const { needsAdminConsoleUpgrade } = require("libs/billing");
 const { filesize } = require("@drumee/ui-essentials");
 
 /**
@@ -53,6 +54,19 @@ function violationRows(ui, c) {
             content: (LOCALE.OL_SEATS_SUB || "{0} members · {1} limit is {2}")
               .format(c.seats_used, plan, c.seat_limit),
           }),
+          // Free and Pro sit below the Admin Console, and downgrading to one
+          // of them is exactly how an account lands over its seat limit — so
+          // the usual "Resolve now takes you to the members page" is not true
+          // for the very people reading this. Say where the members actually
+          // are instead of sending them to a page their plan does not have.
+          needsAdminConsoleUpgrade()
+            ? Skeletons.Note({
+              className: `${fig}__hint`,
+              content:
+                LOCALE.OL_SEATS_NO_CONSOLE ||
+                "Your plan has no Admin Console. Open each workspace and remove members from its own member list.",
+            })
+            : null,
         ],
       })
     );

@@ -6,47 +6,86 @@
 /**
  * 16:9 media block.
  *
- * No page carries a video source yet (mock.js has no `video` field), so this
- * renders the "coming soon" state: a blurred backdrop behind the play badge
- * and a label, with the frame inert — a play button that starts nothing is a
- * dead affordance. Give a page `video: { src }` and it becomes a real,
- * clickable player frame with the backdrop unblurred.
+ * Nothing media-related is loaded up front: the frame renders as a poster
+ * (backdrop + play badge) and the `<video>` is only created once the badge
+ * is clicked — help_main.playVideo() feeds videoPlayer() into this part. A
+ * page that is opened but never played therefore costs no video bytes.
+ *
+ * `video` is whatever help_main.getVideo() resolved for the page (null when
+ * the install configured no source, see mock.js pageVideo). With no source
+ * the poster keeps its "coming soon" state: the backdrop blurs and the
+ * frame is inert — a play button that starts nothing is a dead affordance.
  */
 function videoBlock(ui, video) {
   const pfx = `${ui.fig.family}__video`;
-  const src = video && video.src;
 
   return Skeletons.Box.Y({
     className: `${pfx}-frame`,
-    attrOpt: { "data-placeholder": src ? 0 : 1 },
-    service: src ? "help-play-video" : null,
-    uiHandler: src ? [ui] : undefined,
+    // Named so playVideo() can swap the poster out for the player without
+    // re-rendering the rest of the page.
+    sys_pn: "help-video",
+    attrOpt: { "data-placeholder": video ? 0 : 1 },
+    service: video ? "help-play-video" : null,
+    uiHandler: video ? [ui] : undefined,
     kidsOpt: { active: 0 },
-    kids: [
-      // Separate layer so only the backdrop blurs — blurring the frame would
-      // smear the badge and label sitting on top of it.
-      Skeletons.Box.Z({ className: `${pfx}-backdrop` }),
-      Skeletons.Box.Y({
-        className: `${pfx}-overlay`,
-        kids: [
-          Skeletons.Box.X({
-            className: `${pfx}-play`,
-            kids: [
-              Skeletons.Image.Svg({
-                ico: "ph-play-fill",
-                className: `${pfx}-play-ico`,
-              }),
-            ],
-          }),
-          src
-            ? null
-            : Skeletons.Note({
-                className: `${pfx}-coming-soon`,
-                content: LOCALE.COMING_SOON,
-              }),
-        ].filter(Boolean),
-      }),
-    ],
+    kids: videoPoster(ui, video),
+  });
+}
+
+/**
+ * What fills the frame before playback starts — and instead of it, when
+ * there is no source to play.
+ */
+function videoPoster(ui, video) {
+  const pfx = `${ui.fig.family}__video`;
+
+  return [
+    // Separate layer so only the backdrop blurs — blurring the frame would
+    // smear the badge and label sitting on top of it.
+    Skeletons.Box.Z({ className: `${pfx}-backdrop` }),
+    Skeletons.Box.Y({
+      className: `${pfx}-overlay`,
+      kids: [
+        Skeletons.Box.X({
+          className: `${pfx}-play`,
+          kids: [
+            Skeletons.Image.Svg({
+              ico: "ph-play-fill",
+              className: `${pfx}-play-ico`,
+            }),
+          ],
+        }),
+        video
+          ? null
+          : Skeletons.Note({
+              className: `${pfx}-coming-soon`,
+              content: LOCALE.COMING_SOON,
+            }),
+      ].filter(Boolean),
+    }),
+  ];
+}
+
+/**
+ * The player, fed into the frame on the first click.
+ *
+ * It deliberately carries no `src`: help_main._startVideo() attaches the
+ * source once the element is in the DOM, because an HLS stream is handed to
+ * the element through hls.js rather than set as an attribute (same as
+ * builtins/player/video).
+ *
+ * The `id` is what lets the widget find the element again — the part being
+ * ready does not mean it has been attached yet, so the source is attached
+ * after a waitElement() on this id rather than off `child.el`.
+ */
+function videoPlayer(ui) {
+  const pfx = `${ui.fig.family}__video`;
+
+  return Skeletons.Element({
+    tagName: "video",
+    className: `${pfx}-el`,
+    sys_pn: "help-video-el",
+    attribute: { id: ui.videoElId(), controls: "", playsinline: "" },
   });
 }
 
@@ -162,4 +201,4 @@ function feedback(ui) {
   });
 }
 
-module.exports = { videoBlock, articleGrid, feedback, feedbackRow };
+module.exports = { videoBlock, videoPlayer, articleGrid, feedback, feedbackRow };

@@ -2051,6 +2051,7 @@
   "SECURE_SHARE_REQUEST_SENT": "访问申请已发送",
   "SECURE_SHARE_REQUEST_NOTIFIED": "所有者已收到通知，将审核您的申请。",
   "SECURE_SHARE_BACK_TO_DRUMEE": "返回 Drumee",
+  "SECURE_SHARE_GO_TO_MY_DESK": "前往我的 Drumee",
   "SECURE_SHARE_APPROVE_ACCESS": "批准申请",
   "SECURE_SHARE_DENY_ACCESS": "拒绝",
   "SECURE_SHARE_ACCESS_APPROVED": "您的访问申请已获批准。",
@@ -2468,6 +2469,12 @@
   "HELP_SUPPORT_EMAIL": "contact@drumee.org",
   "HELP_SUPPORT_MAIL_SUBJECT": "Drumee support request",
   "HELP_SUPPORT_TELEGRAM_URL": "",
+  "HELP_PRODUCT_TOUR_VIDEO_URL": "videos/help/product-tour-v1.mp4",
+  "HELP_PRODUCT_TOUR_VIDEO_NID": "",
+  "HELP_PRODUCT_TOUR_VIDEO_HUB": "",
+  "HELP_SELF_HOSTING_VIDEO_URL": "videos/help/self-hosting-v1.mp4",
+  "HELP_SELF_HOSTING_VIDEO_NID": "",
+  "HELP_SELF_HOSTING_VIDEO_HUB": "",
   "HELP_FAQ_Q_HUB": "What is a Hub?",
   "HELP_FAQ_A_HUB": "A Hub is a collaborative workspace for a team, project or client. Each Hub keeps its members, content and permissions separate.",
   "HELP_FAQ_Q_ACCOUNT_VS_HUB": "What's the difference between my Account, my Organization, a Hub and a folder?",
@@ -2554,5 +2561,6 @@
   "OL_TOAST_READONLY": "在恢复到套餐限制以内之前，此工作区为只读。",
   "OL_TOAST_INVITE": "工作区超出套餐限制期间，邀请功能已暂停。",
   "SHARE_SCREEN": "共享屏幕",
-  "STOP_SHARING": "停止共享"
+  "STOP_SHARING": "停止共享",
+  "OL_SEATS_NO_CONSOLE": "你的套餐不含管理控制台。请逐个打开工作区，在各自的成员列表中移除成员。"
 }
