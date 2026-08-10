@@ -2587,8 +2587,9 @@
 
   // ── Hyperlinks (comment / description bodies and their editors) ───
   // Bare URLs are auto-linked on read-only surfaces; Ctrl+K and pasted rich
-  // links also land here. In an editor the node is contenteditable=false, so
-  // it needs the text cursor back — it sits in a line of editable text.
+  // links also land here. The pointer holds inside an editor too: the node is
+  // contenteditable=false so it is never typed into, and one click on it opens
+  // the link (_makeLinkNode) — a text caret would hide that affordance.
   &__link {
     color: var(--col-primary-40, #5950ff);
     text-decoration: underline;
@@ -2599,10 +2600,6 @@
     &:hover {
       color: var(--col-primary-50, #433cc5);
     }
-  }
-
-  [contenteditable="true"] &__link {
-    cursor: text;
   }
 
   // ── Ctrl+K link prompt ────────────────────────────────────────────
