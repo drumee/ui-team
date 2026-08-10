@@ -728,6 +728,7 @@
   "DOWNLOAD_MY_DATA": "Télécharger mes données",
   "PLEASE_ENTER_THE_CODE": "Veuillez saisir le code.",
   "INVALID_CODE": "Code invalide. Veuillez réessayer.",
+  "TOO_MANY_ATTEMPTS": "Trop de tentatives. Veuillez réessayer dans {0}.",
   "THANK_YOU": "Merci",
   "START_LATER": "Démarrer plus tard",
   "START_NOW": "Démarrer maintenant",

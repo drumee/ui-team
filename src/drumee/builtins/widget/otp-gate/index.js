@@ -15,11 +15,72 @@
 require("./skin");
 
 /**
- * POST otp.send and return { secret, email } once the email is delivered,
- * or null if anything goes wrong. Inline-warn the host widget on failure
- * so the host can surface a user-facing error if it wants.
+ * Same key scheme as @drumee/ui-toolkit's dtk_otp (widgets/otp/index.js
+ * `_lockKey`) — MUST stay in sync with it. Duplicated rather than shared
+ * because dtk_otp is a vendored package (patched via patch-package) and
+ * this file is app code; there's no clean import between the two.
+ * @param {string} api SERVICE.* the OTP will verify against
+ * @returns {string}
  */
-async function sendOtp(widget) {
+function _lockKey(api) {
+  const uid = (typeof Visitor !== "undefined" && Visitor.id) || "anon";
+  return `drumee:otp-lock:${uid}:${api || "otp"}`;
+}
+
+/**
+ * Read the client-side brute-force lock (see dtk_otp) WITHOUT opening the
+ * modal. Returns 0 when unlocked/unknown/storage-unavailable, otherwise
+ * the number of ms remaining.
+ * @param {string} api
+ * @returns {number}
+ */
+function _lockedMsRemaining(api) {
+  try {
+    const raw = window.localStorage.getItem(_lockKey(api));
+    const state = raw ? JSON.parse(raw) : null;
+    const remaining = state && state.lockedUntil ? state.lockedUntil - Date.now() : 0;
+    return remaining > 0 ? remaining : 0;
+  } catch (e) {
+    return 0;
+  }
+}
+
+/**
+ * "9:47" style, matching dtk_otp's in-modal countdown.
+ * @param {number} ms
+ * @returns {string}
+ */
+function _formatCountdown(ms) {
+  const totalSec = Math.max(0, Math.ceil(ms / 1000));
+  const m = Math.floor(totalSec / 60);
+  const s = totalSec % 60;
+  return `${m}:${String(s).padStart(2, "0")}`;
+}
+
+/**
+ * POST otp.send and return { secret, email } once the email is delivered,
+ * `{ locked: true, message }` if the account is still inside a brute-force
+ * lock from a previous attempt (no mail sent — a wasted mint/send the user
+ * can't act on for the next few minutes), or null if anything else goes
+ * wrong. Inline-warn the host widget on failure so it can surface a
+ * user-facing error if it wants.
+ *
+ * @param {Backbone.View} widget
+ * @param {string} [api] the SERVICE.* this OTP will verify against — pass
+ *   the SAME value you're about to hand openOtpModal so the lock check
+ *   lines up with the modal's own (see dtk_otp's _lockKey). Omitting it
+ *   checks the generic 'otp' bucket, which is safe but coarser.
+ */
+async function sendOtp(widget, api) {
+  const remaining = _lockedMsRemaining(api);
+  if (remaining > 0) {
+    return {
+      locked: true,
+      message: (LOCALE.TOO_MANY_ATTEMPTS || "Too many attempts. Please try again in {0}.").format(
+        _formatCountdown(remaining)
+      ),
+    };
+  }
   const profile = Visitor.profile() || {};
   const email = profile.email;
   if (!email) {
@@ -258,7 +319,14 @@ async function resendOtpGate(host, otpWidget) {
   host._otpGateResending = true;
   if (otpWidget.el) otpWidget.el.dataset.resending = "1";
   try {
-    const otp = await sendOtp(host);
+    const api = otpWidget.mget && otpWidget.mget(_a.api);
+    const otp = await sendOtp(host, api);
+    if (otp && otp.locked) {
+      if (typeof otpWidget.displayMessage === "function") {
+        otpWidget.displayMessage(otp.message, 1, 1);
+      }
+      return;
+    }
     if (!otp) {
       if (typeof otpWidget.displayMessage === "function") {
         otpWidget.displayMessage(LOCALE.UNKNOWN_ERROR, 1);

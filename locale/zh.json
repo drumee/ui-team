@@ -728,6 +728,7 @@
   "DOWNLOAD_MY_DATA": "下载我的资料",
   "PLEASE_ENTER_THE_CODE": "请输入验证码。",
   "INVALID_CODE": "无效的代码。 请再试一次。",
+  "TOO_MANY_ATTEMPTS": "尝试次数过多，请在 {0} 后重试。",
   "THANK_YOU": "谢谢",
   "START_LATER": "稍后开始",
   "START_NOW": "现在开始",

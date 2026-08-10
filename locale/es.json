@@ -1171,6 +1171,7 @@
   "DOWNLOAD_MY_DATA": "Download my data",
   "PLEASE_ENTER_THE_CODE": "Please enter the code.",
   "INVALID_CODE": "Invalid code. Please try again.",
+  "TOO_MANY_ATTEMPTS": "Demasiados intentos. Inténtelo de nuevo en {0}.",
   "THANK_YOU": "Thank you",
   "START_LATER": "Start later",
   "START_NOW": "Start now",
