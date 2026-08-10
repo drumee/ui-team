@@ -2721,5 +2721,6 @@
   "OL_BANNER_DAYS_LEFT": "{0} days left.",
   "OL_BANNER_RESOLVED": "Back within your plan limits. Full read-write restored.",
   "OL_TOAST_READONLY": "This workspace is read-only until it is back within its plan limits.",
-  "OL_TOAST_INVITE": "Invites are paused while the workspace is over its plan limits."
+  "OL_TOAST_INVITE": "Invites are paused while the workspace is over its plan limits.",
+  "OL_SEATS_NO_CONSOLE": "Your plan has no Admin Console. Open each workspace and remove members from its own member list."
 }

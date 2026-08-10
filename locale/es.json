@@ -2555,5 +2555,6 @@
   "OL_TOAST_READONLY": "Este espacio de trabajo es de solo lectura hasta que vuelva a estar dentro de los límites de su plan.",
   "OL_TOAST_INVITE": "Las invitaciones están en pausa mientras el espacio de trabajo supere los límites de su plan.",
   "SHARE_SCREEN": "Compartir pantalla",
-  "STOP_SHARING": "Dejar de compartir"
+  "STOP_SHARING": "Dejar de compartir",
+  "OL_SEATS_NO_CONSOLE": "Tu plan no incluye la consola de administración. Abre cada espacio de trabajo y quita a los miembros desde su propia lista."
 }
