@@ -1095,6 +1095,35 @@ class __window_manager extends mfsInteract {
   }
 
   /**
+   * The workspace window inside a pool — identified by KIND, never by
+   * position.
+   *
+   * `pool.children.last()` is not it. This pool IS headlessLayer whenever a
+   * workspace is open, and by design every explicitly launched window lands
+   * here too (launch() -> getWindowsPool().append: a player, a chat window,
+   * the Drive popup...). So the last child is simply whatever the user opened
+   * most recently, and calling a folder method on it throws.
+   *
+   * Observed on production 2026-08-10 as
+   *   TypeError: n.refreshBreadcrumbsUI is not a function   (unhandledrejection)
+   * and reproduced on stage: after opening a workspace and then any explicit
+   * window, headlessLayer holds ["window_folder", "migrate_gdrive_popup"] and
+   * children.last() is the popup, which has no such method.
+   *
+   * @param {*} [pool] defaults to the current windows pool
+   * @returns {Object|null} the last live window_folder, or null
+   */
+  folderWindowIn(pool) {
+    const layer = pool || this.getWindowsPool();
+    if (!layer || !layer.children) return null;
+    const views = layer.children.toArray().filter(
+      (v) => v && !(v.isDestroyed && v.isDestroyed())
+        && v.mget && v.mget(_a.kind) === "window_folder"
+    );
+    return views[views.length - 1] || null;
+  }
+
+  /**
    * Container for the upload-progress floater — always above folder layers,
    * never routed through getWindowsPool() (which targets headlessLayer when open).
    */
