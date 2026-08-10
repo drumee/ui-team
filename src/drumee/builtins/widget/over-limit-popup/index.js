@@ -101,6 +101,27 @@ class __over_limit_popup extends LetcBox {
         return;
       }
 
+      // Storage destinations (see the skeleton's storageDestinations): the
+      // desk owns these screens, so the popup raises the same broadcasts the
+      // sidebar items would and closes — it never navigates by itself.
+      case "over-limit-goto-home":
+        this._close();
+        RADIO_BROADCAST.trigger("desk:open-home");
+        return;
+
+      case "over-limit-goto-trash":
+        this._close();
+        RADIO_BROADCAST.trigger("desk:open-trash");
+        return;
+
+      case "over-limit-goto-storage":
+        this._close();
+        // Land on the tab that breaks usage down per workspace, not on the
+        // console's default Member tab. Guarded in the skeleton too — the
+        // option is not offered where the plan has no console.
+        RADIO_BROADCAST.trigger("desk:open-admin-console", { tab: "storage" });
+        return;
+
       case "over-limit-later":
         // Server-side per-admin snooze; the block itself is untouched and the
         // read-only banner stays. payment.* survives the REST clamp.
