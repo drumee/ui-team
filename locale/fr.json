@@ -2562,5 +2562,6 @@
   "OL_TOAST_READONLY": "Cet espace de travail est en lecture seule tant qu'il dépasse les limites de son forfait.",
   "OL_TOAST_INVITE": "Les invitations sont suspendues tant que l'espace de travail dépasse les limites de son forfait.",
   "SHARE_SCREEN": "Partager l’écran",
-  "STOP_SHARING": "Arrêter le partage"
+  "STOP_SHARING": "Arrêter le partage",
+  "OL_SEATS_NO_CONSOLE": "Votre offre ne comprend pas la console d'administration. Ouvrez chaque espace de travail et retirez les membres depuis sa propre liste."
 }

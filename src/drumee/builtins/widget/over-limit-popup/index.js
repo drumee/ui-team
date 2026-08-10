@@ -19,6 +19,7 @@
  * the popup is open closes it by itself.
  */
 const OverLimit = require("libs/over-limit");
+const { needsAdminConsoleUpgrade } = require("libs/billing");
 
 class __over_limit_popup extends LetcBox {
   static initClass() {
@@ -86,7 +87,15 @@ class __over_limit_popup extends LetcBox {
         // Seats are resolved in the Admin Console members page (existing
         // Remove access flow); storage on Home (existing delete + empty
         // trash). Both flags → seats first, the banner stays for storage.
-        if (c.flags && c.flags.seats) {
+        //
+        // ...but only where that console exists. Free and Pro sit below it
+        // (libs/billing.needsAdminConsoleUpgrade), and downgrading TO one of
+        // them is precisely how an account ends up over its seat limit — so
+        // the one CTA meant to fix the problem was sending exactly the wrong
+        // people to a page their plan does not include. They remove members
+        // workspace by workspace instead; the popup says so next to the seat
+        // row, which is why nothing needs to open here.
+        if (c.flags?.seats && !needsAdminConsoleUpgrade()) {
           RADIO_BROADCAST.trigger("desk:open-admin-console");
         }
         return;
