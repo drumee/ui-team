@@ -16,6 +16,54 @@ function planLabel(plan) {
   return p ? p.charAt(0).toUpperCase() + p.slice(1) : "";
 }
 
+/**
+ * Where somebody can actually go to shed bytes.
+ *
+ * The storage row used to state the overage and stop there: "Resolve now"
+ * navigated for SEATS only, so a storage-only violation closed the popup and
+ * left the reader to find the right screen by themselves (reported
+ * 2026-08-10, "thiếu case storage over").
+ *
+ * Three destinations, because freeing space genuinely takes three different
+ * screens: delete on Home, then EMPTY the trash — deleted files keep counting
+ * until you do, which is what the hint under the rows has always said — and,
+ * where the plan has it, the console's Storage tab, which breaks usage down
+ * per workspace and per user. That last one is dropped for Free/Pro rather
+ * than shown and refused: those plans sit below the console
+ * (libs/billing.needsAdminConsoleUpgrade), the same rule the seat row uses.
+ */
+function storageDestinations(ui, fig) {
+  const opts = [
+    { service: "over-limit-goto-home", label: LOCALE.OL_GOTO_HOME || "Open Home" },
+    { service: "over-limit-goto-trash", label: LOCALE.OL_GOTO_TRASH || "Empty trash" },
+  ];
+  if (!needsAdminConsoleUpgrade()) {
+    opts.push({
+      service: "over-limit-goto-storage",
+      label: LOCALE.OL_GOTO_STORAGE || "Storage console",
+    });
+  }
+  return Skeletons.Box.X({
+    className: `${fig}__destinations`,
+    kids: opts.map((o) =>
+      Skeletons.Box.X({
+        className: `${fig}__destination`,
+        service: o.service,
+        uiHandler: [ui],
+        kids: [
+          Skeletons.Note({
+            className: `${fig}__destination-label`,
+            // click-through: without active:0 the Note swallows the click and
+            // the parent Box's service never fires (project rule).
+            active: 0,
+            content: o.label,
+          }),
+        ],
+      })
+    ),
+  });
+}
+
 function violationRows(ui, c) {
   const fig = ui.fig.family;
   const rows = [];
@@ -35,6 +83,7 @@ function violationRows(ui, c) {
             content: (LOCALE.OL_STORAGE_SUB || "{0} used · {1} limit is {2}")
               .format(filesize(c.disk_used), plan, filesize(c.disk_limit)),
           }),
+          storageDestinations(ui, fig),
         ],
       })
     );

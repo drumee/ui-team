@@ -2562,5 +2562,8 @@
   "OL_TOAST_INVITE": "工作区超出套餐限制期间，邀请功能已暂停。",
   "SHARE_SCREEN": "共享屏幕",
   "STOP_SHARING": "停止共享",
-  "OL_SEATS_NO_CONSOLE": "你的套餐不含管理控制台。请逐个打开工作区，在各自的成员列表中移除成员。"
+  "OL_SEATS_NO_CONSOLE": "你的套餐不含管理控制台。请逐个打开工作区，在各自的成员列表中移除成员。",
+  "OL_GOTO_HOME": "打开主页",
+  "OL_GOTO_TRASH": "清空回收站",
+  "OL_GOTO_STORAGE": "存储控制台"
 }
