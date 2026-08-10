@@ -348,26 +348,23 @@ function accountCredentialsCard(ui) {
     }),
   });
 
-  // OAuth-only users don't have a real password (just a placeholder
-  // UUID set at signup). Hide the password row entirely; once they
-  // add a password via the linked-accounts flow, password_set flips
-  // to 1 and this row reappears.
-  const passwordSet = profile.password_set;
-  const hasPassword = passwordSet === undefined || parseInt(passwordSet) === 1;
-  const passwordRow = hasPassword
-    ? innerItem(ui, {
-        ico: "account_padlock",
-        title: LOCALE.PASSWORD || "Password",
-        description: "•••••••••••••••",
-        className: `${pfx}-row`,
-        trailing: button(ui, {
-          label: LOCALE.EDIT || "Edit",
-          className: `${pfx}-action`,
-          priority: "ghost",
-          service: "edit-password",
-        }),
-      })
-    : null;
+  // Always offered — even for accounts inferred as OAuth-only
+  // (password_set=0): such users may in fact hold a password (linking
+  // Google later does not remove it), and hiding the row made password
+  // management unreachable for them. A genuinely passwordless account
+  // simply fails the current-password check inside the modal.
+  const passwordRow = innerItem(ui, {
+    ico: "account_padlock",
+    title: LOCALE.PASSWORD || "Password",
+    description: "•••••••••••••••",
+    className: `${pfx}-row`,
+    trailing: button(ui, {
+      label: LOCALE.CHANGE || "Change",
+      className: `${pfx}-action`,
+      priority: "ghost",
+      service: "edit-password",
+    }),
+  });
 
   return Skeletons.Box.Y({
     className: `${ui.fig.family}__card ${pfx}-card`,

@@ -1,7 +1,20 @@
+const { sendOtp, openOtpModal } = require("../../otp-gate");
+
 /**
  * Change-password modal opened from the Account Credentials card in
- * settings_main. Two views: the form (current/new/confirm + eye toggles)
- * and a success acknowledgement after the server accepts the change.
+ * settings_main. Two views: the form and a success acknowledgement after
+ * the server accepts the change.
+ *
+ * Verification follows whether the ACCOUNT has ever set a password:
+ *   - password-backed → type the current password (form shows the field);
+ *   - never set one (OAuth signup) → confirm with an email OTP popup, and
+ *     this flow effectively sets the account's first password.
+ *
+ * "Password-backed" = profile.password_set (stamped by signup, password
+ * changes/resets, and self-healed by yp.login on every successful
+ * password login). Accounts predating the flag fall back to OAuth-links
+ * inference: linked provider → treat as OAuth-only until a password
+ * login proves otherwise.
  */
 class settings_change_password extends LetcBox {
   initialize(opt) {
@@ -13,14 +26,48 @@ class settings_change_password extends LetcBox {
     this._values = { current: "", next: "", confirm: "" };
     this._error = "";
     this._submitting = false;
+    // "Log out of other devices" — checked by default: the main reason
+    // to change a password is suspicion that someone else has it.
+    this._logoutOthers = true;
   }
 
-  onDomRefresh() {
+  async onDomRefresh() {
+    await this._resolveUsePassword();
     this.feed(require("./skeleton").default(this));
   }
 
   rerender() {
     this.feed(require("./skeleton").default(this));
+  }
+
+  usePassword() {
+    // Resolved once in onDomRefresh (profile flag, else OAuth inference).
+    return this._usePassword !== false;
+  }
+
+  /**
+   * Mirror of the server's _resolveUsePassword. Visitor.profile()'s
+   * password_set can be missing (legacy accounts) or get wiped by a later
+   * profile refresh, so when it is undefined we resolve from the OAuth
+   * links ourselves instead of trusting settings_main's reconciliation
+   * to have survived.
+   */
+  async _resolveUsePassword() {
+    const passwordSet = (Visitor.profile() || {}).password_set;
+    if (passwordSet !== undefined && passwordSet !== null) {
+      this._usePassword = parseInt(passwordSet) === 1;
+      return;
+    }
+    try {
+      const res = await this.fetchService(SERVICE.drumate.list_oauth_links, {
+        hub_id: Visitor.id,
+      });
+      const links = Array.isArray(res) ? res : (res && res.data) || [];
+      this._usePassword = !(links && links.length > 0);
+    } catch (e) {
+      // Unknown → assume password-backed (matches the legacy fallback).
+      this._usePassword = true;
+    }
   }
 
   _captureValues() {
@@ -39,6 +86,12 @@ class settings_change_password extends LetcBox {
     this.rerender();
   }
 
+  toggleLogoutOthers() {
+    this._captureValues();
+    this._logoutOthers = !this._logoutOthers;
+    this.rerender();
+  }
+
   cancel() {
     this.triggerHandlers({ service: "change-password-cancel" });
     this.goodbye();
@@ -53,12 +106,13 @@ class settings_change_password extends LetcBox {
     if (this._submitting) return;
     this._captureValues();
     const { current, next, confirm } = this._values;
+    const usePassword = this.usePassword();
 
-    if (!current || !next || !confirm) {
+    if ((usePassword && !current) || !next || !confirm) {
       this._error = LOCALE.PASSWORD_FIELDS_REQUIRED;
       return this.rerender();
     }
-    if (next === current) {
+    if (usePassword && next === current) {
       this._error = LOCALE.PASSWORD_SAME_AS_CURRENT;
       return this.rerender();
     }
@@ -75,6 +129,10 @@ class settings_change_password extends LetcBox {
     this._error = "";
     this.rerender();
 
+    // OAuth-only accounts: confirm via email OTP, then the OTP modal posts
+    // change_password itself with {secret, code, new_password}.
+    if (!usePassword) return this._submitWithOtp(next);
+
     let res;
     try {
       res = await this.postService({
@@ -84,6 +142,7 @@ class settings_change_password extends LetcBox {
         hub_id: Visitor.id,
         old_password: current,
         new_password: next,
+        logout_others: this._logoutOthers ? 1 : 0,
       });
     } catch (e) {
       this._submitting = false;
@@ -116,6 +175,42 @@ class settings_change_password extends LetcBox {
     this.rerender();
   }
 
+  async _submitWithOtp(next) {
+    const otp = await sendOtp(this);
+    if (!otp) {
+      this._submitting = false;
+      this._error = LOCALE.UNKNOWN_ERROR;
+      return this.rerender();
+    }
+    return openOtpModal(this, {
+      ...otp,
+      api: SERVICE.drumate.change_password,
+      payload: {
+        new_password: next,
+        logout_others: this._logoutOthers ? 1 : 0,
+      },
+      successService: "change-password-otp-success",
+      cancelService: "change-password-otp-cancel",
+    });
+  }
+
+  _onOtpSuccess(data) {
+    if (data && data.error) {
+      this._submitting = false;
+      this._error =
+        data.error === "INVALID_CODE"
+          ? LOCALE.INVALID_CODE
+          : LOCALE.PASSWORD_CHANGE_FAILED;
+      return this.rerender();
+    }
+    this._step = "success";
+    this._submitting = false;
+    this._values = { current: "", next: "", confirm: "" };
+    // rerender refeeds the root (modal + empty overlay slot), which also
+    // clears the OTP popup.
+    this.rerender();
+  }
+
   onUiEvent(cmd, args = {}) {
     const service = args.service || (cmd && cmd.mget && cmd.mget(_a.service));
     switch (service) {
@@ -125,6 +220,17 @@ class settings_change_password extends LetcBox {
         return this.togglePasswordVisibility("next");
       case "change-password-toggle-confirm":
         return this.togglePasswordVisibility("confirm");
+      case "change-password-toggle-logout":
+        return this.toggleLogoutOthers();
+      case "change-password-otp-success":
+        // args.data is present only on dtk_otp's programmatic success
+        // dispatch — absent on stray clicks bubbling through the modal
+        // (see otp-gate's dispatch note). Never treat a click as success.
+        if (!args || !args.data) return;
+        return this._onOtpSuccess(args.data);
+      case "change-password-otp-cancel":
+        this._submitting = false;
+        return this.rerender();
       case "change-password-cancel":
         return this.cancel();
       case "change-password-submit":

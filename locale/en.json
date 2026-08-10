@@ -163,6 +163,7 @@
   "LOG_IN_TO_SOVEREIGN_WORKSPACE": "Log in to your sovereign workspace",
   "LOGIN": "Log in",
   "LOGOUT": "Logout",
+  "LOG_OUT_OTHER_DEVICES": "Log out of other devices. Choose this if someone else used your account.",
   "LOG_IN": "Log in",
   "MANAGE_ACCESS": "Manage access",
   "MESSAGE": "Message",

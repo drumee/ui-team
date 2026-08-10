@@ -50,16 +50,23 @@ function formView(ui) {
     ],
   });
 
+  // Current-password field only for password-backed accounts; accounts
+  // that never set one verify through the email-OTP popup instead (see
+  // the widget's class docblock).
+  const usePassword = ui.usePassword();
+
   const fields = Skeletons.Box.Y({
     className: `${pfx}__fields`,
     kids: [
-      passwordField(ui, {
-        label: LOCALE.CURRENT_PASSWORD_LABEL,
-        name: "current_password",
-        fieldKey: "current",
-        placeholder: LOCALE.ENTER_YOUR_CURRENT_PASSWORD,
-        value: ui._values.current,
-      }),
+      usePassword
+        ? passwordField(ui, {
+            label: LOCALE.CURRENT_PASSWORD_LABEL,
+            name: "current_password",
+            fieldKey: "current",
+            placeholder: LOCALE.ENTER_YOUR_CURRENT_PASSWORD,
+            value: ui._values.current,
+          })
+        : null,
       passwordField(ui, {
         label: LOCALE.NEW_PASSWORD_LABEL,
         name: "new_password",
@@ -81,6 +88,29 @@ function formView(ui) {
           })
         : null,
     ].filter(Boolean),
+  });
+
+  // "Log out of other devices". Every piece carries the toggle service:
+  // Skeletons children are widgets of their own, so a click on the square
+  // or the label does NOT bubble up to the row — each element must
+  // dispatch the service itself. The tick mark is drawn by the skin
+  // (data-checked) — no sprite dependency.
+  const logoutToggle = { service: "change-password-toggle-logout", uiHandler: [ui] };
+  const logoutRow = Skeletons.Box.X({
+    className: `${pfx}__logout-row`,
+    ...logoutToggle,
+    kids: [
+      Skeletons.Box.X({
+        className: `${pfx}__logout-check`,
+        dataset: { checked: ui._logoutOthers ? 1 : 0 },
+        ...logoutToggle,
+      }),
+      Skeletons.Note({
+        className: `${pfx}__logout-label`,
+        content: LOCALE.LOG_OUT_OTHER_DEVICES,
+        ...logoutToggle,
+      }),
+    ],
   });
 
   const footer = Skeletons.Box.X({
@@ -106,7 +136,7 @@ function formView(ui) {
         kids: [
           Skeletons.Note({
             className: `${pfx}__btn-label`,
-            content: submitting ? LOCALE.UPDATING : LOCALE.UPDATE_PASSWORD,
+            content: submitting ? LOCALE.UPDATING : LOCALE.CHANGE_PASSWORD,
           }),
         ],
       }),
@@ -115,7 +145,7 @@ function formView(ui) {
 
   return Skeletons.Box.Y({
     className: `${pfx}__modal ${pfx}__modal--form`,
-    kids: [header, fields, footer],
+    kids: [header, fields, logoutRow, footer],
   });
 }
 
@@ -177,7 +207,14 @@ function successView(ui) {
 }
 
 function changePasswordRoot(ui) {
-  return ui._step === "success" ? successView(ui) : formView(ui);
+  return [
+    ui._step === "success" ? successView(ui) : formView(ui),
+    // Layered slot for the OTP-gate modal (OAuth-only users).
+    Skeletons.Wrapper.Y({
+      className: `${ui.fig.family}__overlay`,
+      sys_pn: "overlay",
+    }),
+  ];
 }
 
 export default changePasswordRoot;

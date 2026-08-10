@@ -226,6 +226,7 @@
   "OPEN_FOLDER_TO_UPLOAD": "请打开文件夹后再上传",
   "LOGIN": "提问",
   "LOGOUT": "提问",
+  "LOG_OUT_OTHER_DEVICES": "Log out of other devices. Choose this if someone else used your account.",
   "LOG_IN": "登录",
   "MANAGE_ACCESS": "管理访问权限",
   "MESSAGE": "信息",

@@ -226,6 +226,7 @@
   "OPEN_FOLDER_TO_UPLOAD": "Veuillez ouvrir un dossier pour téléverser",
   "LOGIN": "Connexion",
   "LOGOUT": "Déconnecter",
+  "LOG_OUT_OTHER_DEVICES": "Log out of other devices. Choose this if someone else used your account.",
   "LOG_IN": "Connexion",
   "MANAGE_ACCESS": "Gérer les accès",
   "MESSAGE": "Message",

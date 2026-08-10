@@ -250,6 +250,7 @@
   "MULTI_FACTOR_AUTH": "Autenticación multifactor",
   "MFA_TIPS": "MFA requiere un paso de verificación adicional más allá de su contraseña para garantizar que solo usted pueda acceder a su cuenta.",
   "LOGOUT": "Cerrar sesión",
+  "LOG_OUT_OTHER_DEVICES": "Log out of other devices. Choose this if someone else used your account.",
   "LOGOUT_TIPS": "Cierre sesión en este dispositivo para evitar accesos no autorizados. Esto cerrará automáticamente su sesión solo en este dispositivo.",
   "OFF": "Desactivado",
   "ON": "Activada",
