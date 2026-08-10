@@ -57,6 +57,17 @@ class desk_module extends LetcBox {
     RADIO_BROADCAST.on("avatar-changed", this._updateAvatar);
     Visitor.on(_e.change, this._updateAvatar);
     RADIO_BROADCAST.on("activity-update", this._updateActivityBadge, this);
+    // Ctrl/Cmd+Shift+F → search. Registered here, not at bootstrap, so the
+    // capture listener only exists while a desk is alive — both of its targets
+    // (the topbar file search and a chat window's message search) are desk-only,
+    // and a DMZ/share session gets no global key handler at all. Released in
+    // onDestroy.
+    const hotkeys = require("libs/hotkeys");
+    this._searchHotkey = hotkeys.register({
+      name: "desk-search",
+      match: (e) => hotkeys.isCmdShift(e, "f"),
+      run: (e) => this._focusSearch(e),
+    });
     // Cross-plugin / cross-module billing entry (admin-console upsell, Wm) →
     // open the full-page billing screen without a direct module reference.
     this._openBillingPage = () => this.openBillingPage();
@@ -358,6 +369,10 @@ class desk_module extends LetcBox {
     RADIO_BROADCAST.off(require("libs/over-limit").CHANGED, this._onOverLimitChanged);
     RADIO_BROADCAST.off("avatar-changed", this._updateAvatar);
     Visitor.off(_e.change, this._updateAvatar);
+    if (this._searchHotkey) {
+      require("libs/hotkeys").unregister(this._searchHotkey);
+      this._searchHotkey = null;
+    }
     if (this._searchInputEl && this._searchInputHandler) {
       this._searchInputEl.removeEventListener(
         "input",
@@ -3447,6 +3462,58 @@ class desk_module extends LetcBox {
         }
       });
     });
+  }
+
+  // Ctrl/Cmd+Shift+F. Context-sensitive: inside a chat window it opens that
+  // chat's message search, anywhere else it focuses the topbar file search.
+  // Returns false when there is nothing to focus, so the key keeps whatever it
+  // does today rather than being swallowed (libs/hotkeys rule 3).
+  _focusSearch(e) {
+    const chat = this._bigchatFor(e && e.target);
+    if (chat) return this._openChatSearch(chat);
+    if (!this._searchBoxInner || !_.isFunction(this._searchBoxInner.focus)) {
+      return false;
+    }
+    // focusin on the box already opens the suggestions list (see onPartReady).
+    this._searchBoxInner.focus();
+    return true;
+  }
+
+  // The chat window containing `target`, or null. Keyed on focus rather than on
+  // z-order because "search where I am typing" is the predictable rule, and Wm
+  // exposes no notion of a current window. Wm itself is guarded: in a DMZ /
+  // secure-share session window.Wm is the constrained share panel and has no
+  // getItemsByKind (see window/utils.js).
+  _bigchatFor(target) {
+    const wm = window.Wm;
+    if (!wm || !_.isFunction(wm.getItemsByKind)) return null;
+    const node = target && target.nodeType ? target : document.activeElement;
+    if (!node) return null;
+    const open = wm.getItemsByKind("window_bigchat") || [];
+    for (const w of open) {
+      if (w && w.el && _.isFunction(w.el.contains) && w.el.contains(node)) return w;
+    }
+    return null;
+  }
+
+  // Reuses bigchat's own toggle for the OPEN path (it opens and focuses in one
+  // step). When the bar is already open we only focus it — calling the toggle
+  // again would CLOSE it and wipe the query, which is not what a search
+  // shortcut should do. Note the method name is `_toogleSearchBar` in bigchat.
+  _openChatSearch(chat) {
+    if (!_.isFunction(chat.getPart)) return false;
+    const bar = chat.getPart(_a.search);
+    if (bar && bar.el && bar.el.dataset.mode === _a.open) {
+      const input = chat.getPart("search-bar-input");
+      if (input && _.isFunction(input.focus)) {
+        input.focus();
+        return true;
+      }
+      return false;
+    }
+    if (!_.isFunction(chat._toogleSearchBar)) return false;
+    chat._toogleSearchBar();
+    return true;
   }
 
   _getSearchValue(cmd) {
