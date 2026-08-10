@@ -4429,9 +4429,21 @@ class __tasks_panel extends LetcBox {
     a.textContent = label;
     if (editable) {
       a.setAttribute("contenteditable", "false");
-      // While writing, a click places the caret; Ctrl/Cmd+click opens.
+      // A single click opens the link, matching a posted comment's body. Opened
+      // explicitly rather than by the anchor's own default: inside an editing
+      // host the engine suppresses that navigation, which is why Ctrl/Cmd+click
+      // used to be the only thing that worked (and on macOS, not even that).
+      // A modified click is left to the browser so its background-tab /
+      // new-window behaviour is unchanged. The caret is unaffected either way —
+      // it is placed on pointerdown, and this anchor is contenteditable=false
+      // so the caret never sat inside it.
       a.onclick = (ev) => {
-        if (!ev.ctrlKey && !ev.metaKey) ev.preventDefault();
+        if (ev.ctrlKey || ev.metaKey || ev.shiftKey || ev.altKey) return;
+        ev.preventDefault();
+        // mailto: is handed to the mail client; window.open would additionally
+        // leave a blank tab behind. safeUrl admits no other non-http scheme.
+        if (/^mailto:/i.test(href)) window.location.href = href;
+        else window.open(href, "_blank", "noopener");
       };
     }
     return a;
