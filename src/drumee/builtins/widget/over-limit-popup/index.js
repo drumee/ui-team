@@ -95,7 +95,7 @@ class __over_limit_popup extends LetcBox {
         // people to a page their plan does not include. They remove members
         // workspace by workspace instead; the popup says so next to the seat
         // row, which is why nothing needs to open here.
-        if (c.flags && c.flags.seats && !needsAdminConsoleUpgrade()) {
+        if (c.flags?.seats && !needsAdminConsoleUpgrade()) {
           RADIO_BROADCAST.trigger("desk:open-admin-console");
         }
         return;
