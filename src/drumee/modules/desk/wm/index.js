@@ -533,7 +533,7 @@ class __window_manager extends push {
         })
         // Without this the throw above escaped as an unhandledrejection —
         // which is exactly how it reached production unnoticed.
-        .catch((e) => this.warn && this.warn("loadWorkspace: breadcrumb refresh failed", e));
+        .catch((e) => this.warn?.("loadWorkspace: breadcrumb refresh failed", e));
     };
 
     // nid often arrives later via the media.attributes fetch below. The

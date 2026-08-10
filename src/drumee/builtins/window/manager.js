@@ -1115,10 +1115,9 @@ class __window_manager extends mfsInteract {
    */
   folderWindowIn(pool) {
     const layer = pool || this.getWindowsPool();
-    if (!layer || !layer.children) return null;
+    if (!layer?.children) return null;
     const views = layer.children.toArray().filter(
-      (v) => v && !(v.isDestroyed && v.isDestroyed())
-        && v.mget && v.mget(_a.kind) === "window_folder"
+      (v) => v && !v.isDestroyed?.() && v.mget?.(_a.kind) === "window_folder"
     );
     return views[views.length - 1] || null;
   }
