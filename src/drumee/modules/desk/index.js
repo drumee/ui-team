@@ -64,10 +64,20 @@ class desk_module extends LetcBox {
     // Downgrade over-limit (libs/over-limit): the popup and banner raise
     // these instead of reaching into the desk. open-admin-console reuses the
     // exact toggle-apps shim the promo's post-claim reload uses.
-    this._openAdminConsole = () => this._toggleAppsShim();
+    // `arg.tab` lets a caller land on a specific console tab — the storage
+    // overage sends people straight to Storage, where the per-workspace
+    // cleanup lives, instead of dropping them on Member to hunt for it.
+    this._openAdminConsole = (arg) => this._toggleAppsShim(arg && arg.tab);
     this._openOverLimitPopupBound = () => this._openOverLimitPopup();
+    // Storage is resolved on the desk itself, so the popup needs somewhere to
+    // send people: Home to delete, Trash to empty. Same shim shape as the
+    // console — the popup is portalled to <body> and must not reach in here.
+    this._openTrashPanel = () => this._deskServiceShim("toggle-trash");
+    this._openHomeFromPopup = () => this._deskServiceShim(_e.home);
     this._onOverLimitChanged = this._onOverLimitChanged.bind(this);
     RADIO_BROADCAST.on("desk:open-admin-console", this._openAdminConsole);
+    RADIO_BROADCAST.on("desk:open-trash", this._openTrashPanel);
+    RADIO_BROADCAST.on("desk:open-home", this._openHomeFromPopup);
     RADIO_BROADCAST.on("desk:open-over-limit-popup", this._openOverLimitPopupBound);
     RADIO_BROADCAST.on(require("libs/over-limit").CHANGED, this._onOverLimitChanged);
     // The topbar action cluster (Add new / Upload / Search / Invite) is
@@ -342,6 +352,8 @@ class desk_module extends LetcBox {
     }
     RADIO_BROADCAST.off("desk:open-billing-page", this._openBillingPage);
     RADIO_BROADCAST.off("desk:open-admin-console", this._openAdminConsole);
+    RADIO_BROADCAST.off("desk:open-trash", this._openTrashPanel);
+    RADIO_BROADCAST.off("desk:open-home", this._openHomeFromPopup);
     RADIO_BROADCAST.off("desk:open-over-limit-popup", this._openOverLimitPopupBound);
     RADIO_BROADCAST.off(require("libs/over-limit").CHANGED, this._onOverLimitChanged);
     RADIO_BROADCAST.off("avatar-changed", this._updateAvatar);
@@ -696,16 +708,31 @@ class desk_module extends LetcBox {
    * promo post-claim reload above and the over-limit popup's "Resolve now"
    * (seats are resolved on the Members page).
    */
-  _toggleAppsShim() {
+  _toggleAppsShim(tab) {
+    this._deskServiceShim("toggle-apps", tab ? { tab } : undefined);
+  }
+
+  /**
+   * Raise one of the desk's own sidebar services from code.
+   *
+   * The over-limit popup is portalled to <body> and deliberately owns no
+   * reference to the desk, so it broadcasts; this turns the broadcast back
+   * into the exact command the sidebar item would have sent, rather than a
+   * second navigation path that could drift from it.
+   *
+   * @param {String} service  e.g. "toggle-apps", "toggle-trash", _e.home
+   * @param {Object} [args]   extra args merged into the event payload
+   */
+  _deskServiceShim(service, args) {
     if (this.isDestroyed && this.isDestroyed()) return;
     this.onUiEvent(
       {
-        mget: (k) => (k === _a.service || k === "service" ? "toggle-apps" : null),
+        mget: (k) => (k === _a.service || k === "service" ? service : null),
         get(k) {
           return this.mget(k);
         },
       },
-      { service: "toggle-apps" },
+      { service, ...(args || {}) },
     );
   }
 
@@ -3068,12 +3095,18 @@ class desk_module extends LetcBox {
         RADIO_BROADCAST.trigger("breadcrumb:context", {
           filename: LOCALE.ADMIN_CONSOLE,
         });
+        // `tab` rides in from desk:open-admin-console — the storage overage
+        // asks for the Storage tab, where the per-workspace cleanup is. The
+        // plugin validates it against the tabs this role may see and falls
+        // back to its own default, so an unknown value cannot strand anyone.
+        const consoleTab = args && args.tab;
+        const consoleOpt = consoleTab ? { tab: consoleTab } : undefined;
         if (Kind.get("apps_main")) {
-          return this.togglePanel("apps_main", "settings-main-slot", true);
+          return this.togglePanel("apps_main", "settings-main-slot", true, consoleOpt);
         }
         return Kind.loadPlugin({ name: "admin-console", kind: "apps_main" })
           .then(() => Kind.waitFor("apps_main"))
-          .then(() => this.togglePanel("apps_main", "settings-main-slot", true))
+          .then(() => this.togglePanel("apps_main", "settings-main-slot", true, consoleOpt))
           .catch((e) => this.warn && this.warn("admin-console load failed", e));
       }
 
