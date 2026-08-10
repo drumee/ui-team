@@ -67,7 +67,7 @@ class desk_module extends LetcBox {
     // `arg.tab` lets a caller land on a specific console tab — the storage
     // overage sends people straight to Storage, where the per-workspace
     // cleanup lives, instead of dropping them on Member to hunt for it.
-    this._openAdminConsole = (arg) => this._toggleAppsShim(arg && arg.tab);
+    this._openAdminConsole = (arg) => this._toggleAppsShim(arg?.tab);
     this._openOverLimitPopupBound = () => this._openOverLimitPopup();
     // Storage is resolved on the desk itself, so the popup needs somewhere to
     // send people: Home to delete, Trash to empty. Same shim shape as the
@@ -732,7 +732,7 @@ class desk_module extends LetcBox {
           return this.mget(k);
         },
       },
-      { service, ...(args || {}) },
+      { service, ...args },
     );
   }
 
@@ -3099,7 +3099,7 @@ class desk_module extends LetcBox {
         // asks for the Storage tab, where the per-workspace cleanup is. The
         // plugin validates it against the tabs this role may see and falls
         // back to its own default, so an unknown value cannot strand anyone.
-        const consoleTab = args && args.tab;
+        const consoleTab = args?.tab;
         const consoleOpt = consoleTab ? { tab: consoleTab } : undefined;
         if (Kind.get("apps_main")) {
           return this.togglePanel("apps_main", "settings-main-slot", true, consoleOpt);
