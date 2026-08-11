@@ -1,5 +1,6 @@
 /**
- * Google tag (gtag.js) — the Google Ads tag AW-18350168481.
+ * Google tag (gtag.js) — the Google Ads tag AW-18350168481 and the GA4
+ * stream G-JWRXMF6HDP.
  *
  * The document itself is not ours to edit: the app boots into a shell served
  * by the backend, and this repo builds bundles, not HTML (there is no
@@ -31,6 +32,17 @@
  */
 
 const TAG_ID = "AW-18350168481";
+
+// GA4 web stream — the SAME property the drumee.com marketing site reports
+// to, on purpose: one property sees the whole funnel (ad -> landing page ->
+// app -> signup) instead of splitting the session at the domain boundary.
+// Analytics only; TAG_ID above remains the Ads/conversion tag. The gtag.js
+// loader below is shared — one script serves every configured tag.
+//
+// The app routes by location.hash, and GA4 only counts in-app navigation
+// when the property's Enhanced measurement has hash-based page changes
+// enabled — a property-side toggle, not something this file can set.
+const GA4_ID = "G-JWRXMF6HDP";
 const SRC = `https://www.googletagmanager.com/gtag/js?id=${TAG_ID}`;
 
 // drumee.com and every subdomain of it (workspaces are `<ident>.drumee.com`).
@@ -98,6 +110,7 @@ function install() {
   // A real Date — gtag stamps the load time from it; Dayjs is not a substitute.
   window.gtag("js", new Date());
   window.gtag("config", TAG_ID);
+  window.gtag("config", GA4_ID);
 
   const el = document.createElement("script");
   el.async = true;
