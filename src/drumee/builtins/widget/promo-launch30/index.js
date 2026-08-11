@@ -45,6 +45,7 @@ class __promo_launch30 extends LetcBox {
   onDomRefresh() {
     this._portalToBody();
     this._render();
+    this._warmAdminConsole();
     // Show-once: mark the surface seen as soon as the modal actually
     // renders, not only on an explicit X-dismiss (tester feedback
     // 2026-07-31 #3 — the full modal must never re-appear once shown,
@@ -70,6 +71,36 @@ class __promo_launch30 extends LetcBox {
 
   _render() {
     this.feed(require("./skeleton")(this));
+  }
+
+  /**
+   * Fetch the Admin Console bundle while the user is still reading Modal B.
+   *
+   * "Start exploring now" is a click on a button whose destination is a plugin
+   * this document has never loaded — a brand-new org domain, first session.
+   * Measured end to end on stage with a real new account: 3786ms from click to
+   * a visible console, of which 3202ms was ONE chunk,
+   * src_widgets_apps-main_index_js at 1.58 MB (24 chunks, 2.9 MB, fetched 23
+   * at a time, so the concurrency was never the problem — that one file was).
+   *
+   * Nobody clicks instantly: Modal B is four paragraphs and a trial end date.
+   * Spending those seconds on the download turns the click into a cache hit.
+   * The same warm-up is why the second open in a session is already fast.
+   *
+   * Welcome surface only. On the OFFER modal the user has not claimed
+   * anything, may never claim, and on Free has no Admin Console to open —
+   * downloading 2.9 MB at them there would be a cost with no destination.
+   *
+   * Entirely best-effort: no await, failures swallowed. If the bundle is not
+   * there when the click comes, _exploreAfterClaim's broadcast loads it the
+   * normal way, exactly as before.
+   */
+  _warmAdminConsole() {
+    if (this._state !== "welcome") return;
+    try {
+      if (Kind.get("apps_main")) return;
+      Kind.loadPlugin({ name: "admin-console", kind: "apps_main" }).catch(() => {});
+    } catch (e) { /* never let a prefetch break the modal */ }
   }
 
   // ───────── skeleton accessors ─────────
