@@ -191,27 +191,61 @@ class __promo_launch30 extends LetcBox {
       });
   }
 
+  /**
+   * Remove THIS modal, and nothing else.
+   *
+   * `parent.clear()` was wrong: launched with {explicit:1}, this widget is
+   * appended to Wm.getWindowsPool(), which is a SHARED layer — windowsLayer,
+   * or headlessLayer whenever a workspace is open. Measured on stage: with the
+   * Account window open, the promo modal's parent reports children
+   * ["window_account", "promo_launch30"], so clearing the parent took the
+   * user's Account window down with the promo.
+   *
+   * Nothing noticed while "Start exploring now" reloaded the page a moment
+   * later, but "Maybe later" and the X have always closed straight into it.
+   */
   _close() {
-    if (this.parent && _.isFunction(this.parent.clear)) this.parent.clear();
-    else this.softDestroy();
+    this.goodbye();
   }
 
   /**
-   * D2: land on Admin Console → Members with Invite open. org_provision
-   * rewrote domain/vhost — same stale-bootstrap problem billing solves with
-   * a full reload on payment.org_provisioned. Flags survive the reload;
-   * Desk opens Admin, apps-main opens Invite.
+   * D2: land on Admin Console → Members with Invite open.
    *
-   * triggerHandlers(toggle-apps) is a no-op here: Wm.launch does not wire
-   * uiHandler to Desk, so the service never reached the sidebar handler.
+   * This used to set two flags and call location.reload(), on the reasoning
+   * that org_provision had rewritten domain/vhost and the bootstrap globals
+   * were stale. They are not stale by the time anyone can click this button:
+   * Modal B is only ever launched by Desk._maybeShowPromoLaunch30 on a HOME
+   * MOUNT, from promo.get_state reporting claimed_active — i.e. in a document
+   * that booted AFTER the claim, with a get_env that already reflects the new
+   * org. (And a reload could not have fixed a domain move anyway: it re-loads
+   * the same URL, it does not move origin.)
+   *
+   * So the reload bought nothing and cost a full app boot. Measured on stage,
+   * with everything warm in cache, the chain that has to complete before the
+   * console can even begin to open is yp.get_env 305-600ms, bootstrap.authn
+   * 680-827ms, desk.get_env 841-976ms, bootstrap.plugin 1179-1304ms — ~1.3s,
+   * plus the 400ms timer the reload path then waits out in
+   * Desk._maybeOpenPromoAdminAfterClaim, plus the desk skeleton and a restore
+   * pass that sleeps 300ms of its own. Reported by a tester as ~5s to reach
+   * the console.
+   *
+   * The same door the over-limit popup uses is already open and costs none of
+   * that: the broadcast lands on Desk._openAdminConsole -> _toggleAppsShim,
+   * the exact command the sidebar item sends. A broadcast rather than
+   * triggerHandlers because Wm.launch does not wire uiHandler to Desk, which
+   * is what defeated the first attempt at this.
+   *
+   * The invite flag stays — admin-console's apps-main is a separate bundle
+   * with no reference to this widget, and a one-shot key is how it is told to
+   * open the panel. It is read and cleared in _loadMembersTab, which the
+   * "member" tab below guarantees will run.
    */
   _exploreAfterClaim() {
     try {
       sessionStorage.setItem("drumee_promo_open_invite", "1");
-      sessionStorage.setItem("drumee_promo_open_admin", "1");
     } catch (e) { /* private mode */ }
     this._close();
-    window.location.reload();
+    RADIO_BROADCAST.trigger("desk:open-admin-console", { tab: "member" });
   }
 
   // ───────── event routing ─────────
