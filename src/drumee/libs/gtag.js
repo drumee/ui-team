@@ -62,8 +62,11 @@ const TAG_ID = "AW-18350168481";
 const GA4_ID = "G-JWRXMF6HDP";
 
 // One <script> serves every configured id, which is also what keeps this page
-// compliant with Google's "no more than one Google tag per page".
-const SRC = `https://www.googletagmanager.com/gtag/js?id=${TAG_ID}`;
+// compliant with Google's "no more than one Google tag per page". Loaded under
+// the GA4 id, matching drumee.com's own snippet — either id works, and being
+// able to diff the two implementations line for line is worth more than the
+// choice itself.
+const SRC = `https://www.googletagmanager.com/gtag/js?id=${GA4_ID}`;
 
 // drumee.com and every subdomain of it (workspaces are `<ident>.drumee.com`).
 // Anchored both ends: a lookalike host such as `drumee.com.evil.net` must not
@@ -129,8 +132,14 @@ function install() {
 
   // A real Date — gtag stamps the load time from it; Dayjs is not a substitute.
   window.gtag("js", new Date());
+  // Same order and same options as drumee.com's snippet.
+  window.gtag("config", GA4_ID, { send_page_view: false });
   window.gtag("config", TAG_ID);
-  window.gtag("config", GA4_ID);
+  // send_page_view:false suppresses the automatic hit, so the FIRST screen has
+  // to be sent by hand or the session never begins. Everything after it comes
+  // from the router; this is the one the router cannot emit, because install()
+  // runs from module scope of index.web.js, long before a router exists.
+  pageView();
 
   const el = document.createElement("script");
   el.async = true;
@@ -170,4 +179,41 @@ function event(name, params = {}) {
   }
 }
 
-module.exports = { install, event, isEnabled, TAG_ID, GA4_ID };
+// The last screen reported, so the same one is not counted twice.
+let lastPath = null;
+
+/**
+ * Report a screen to GA4.
+ *
+ * `send_page_view: false` is copied from drumee.com deliberately, but it is
+ * only half of what that site does: its router calls trackPageView on every
+ * route (src/lib/analytics.ts). Copying the flag WITHOUT copying the emitter
+ * would mean GA4 receives nothing at all from the app — no page views, no
+ * sessions, no users — which is the opposite of the point. So this exists, and
+ * `router/route()` calls it.
+ *
+ * Why not just leave the automatic hit on: this is a hash router. The
+ * automatic page_view fires once per document, so every screen after the first
+ * would be invisible, and whether the hash counts at all then depends on an
+ * Enhanced Measurement switch in the property rather than on anything in this
+ * repo. Sending them explicitly makes "welcome/signin", "welcome/signup",
+ * "desk" and "desk/billing" distinct screens, which is what a funnel needs.
+ *
+ * Same param shape as the marketing site, so the two feed one report.
+ *
+ * @param {String} [path] defaults to the current pathname + hash
+ * @param {String} [title] defaults to document.title
+ * @returns {Boolean} true when a hit was sent
+ */
+function pageView(path, title) {
+  if (typeof window === "undefined" || typeof window.gtag !== "function") return false;
+  const p = path || `${window.location.pathname}${window.location.hash}`;
+  // route() runs on boot AND on every hashchange, and a few flows call it again
+  // for a URL that has not moved.
+  if (p === lastPath) return false;
+  lastPath = p;
+  event("page_view", { page_path: p, page_title: title || document.title });
+  return true;
+}
+
+module.exports = { install, event, pageView, isEnabled, TAG_ID, GA4_ID };
