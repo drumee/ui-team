@@ -1,6 +1,6 @@
 /**
  * Google tag (gtag.js) — the Google Ads tag AW-18350168481 and the GA4
- * property G-JWRXMF6HDP.
+ * property G-9123HGZ86W.
  *
  * The document itself is not ours to edit: the app boots into a shell served
  * by the backend, and this repo builds bundles, not HTML (there is no
@@ -36,30 +36,23 @@
 const TAG_ID = "AW-18350168481";
 
 /**
- * GA4 — the SAME property the marketing site runs, deliberately.
+ * GA4 — the app's OWN property ("app.drumee.com", G-9123HGZ86W), not the
+ * marketing site's G-JWRXMF6HDP. The split is deliberate: the landing page
+ * is marketing, the app is product, and each team reads its own property
+ * without the other's noise.
  *
- * Until now the app carried the Ads tag and nothing else, so GA4 could see a
- * visitor arrive on drumee.com and then went blind the moment they crossed to
- * app.drumee.com: everything after sign-in was unmeasured, and the journey
- * that ends in a signup was cut in half.
+ * What the split costs: a session cannot span two properties, so GA4 shows
+ * no single funnel from ad click to signup — the visitor "ends" on the
+ * marketing property and "starts" here, even though the `.drumee.com`
+ * cookie itself spans both hosts. Cross-site campaign attribution is
+ * measured where it survives that cut: Google Ads (the AW tag + gclid) and
+ * the backend's profile.utm.
  *
- * Nothing extra is needed to stitch that journey back together, because it was
- * never a cross-domain problem. drumee.com, app.drumee.com and the workspace
- * hosts <ident>.drumee.com share one registrable domain, and GA4's default
- * cookie_domain 'auto' resolves to `.drumee.com` — so the cookie, and with it
- * the session, already spans all three. Confirmed against the live marketing
- * site, which configures no `linker` and does not need one. A second property
- * here, or an explicit cookie_domain, would only break that.
- *
- * NOTE on page_view. Left at its default (on), so the boot hit exists and the
- * session is real. drumee.com passes send_page_view:false because its router
- * emits its own page_view per route (src/lib/analytics.ts); no equivalent
- * route→page mapping exists for a desk, and inventing one is a separate piece
- * of work. If the property's Enhanced Measurement "page changes based on
- * browser history events" turns out to make noise from hash routes, that is a
- * switch in the GA4 property, not a code change here.
+ * page_view is not left to the property: install() passes
+ * send_page_view:false and the router emits explicit screens via pageView()
+ * below — see its comment for why a hash router needs that.
  */
-const GA4_ID = "G-JWRXMF6HDP";
+const GA4_ID = "G-9123HGZ86W";
 
 // One <script> serves every configured id, which is also what keeps this page
 // compliant with Google's "no more than one Google tag per page". Loaded under
