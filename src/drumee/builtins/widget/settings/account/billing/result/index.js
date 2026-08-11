@@ -35,8 +35,47 @@ class settings_billing_result extends LetcBox {
       if (ps && ps !== "paid" && ps !== "no_payment_required") {
         this._result = "cancel";
       }
+      this._reportConversion();
     }
     this.feed(require("./skeleton").default(this));
+  }
+
+  /**
+   * Tell Google Ads a purchase happened.
+   *
+   * Here rather than anywhere else because this is the one place in the client
+   * that knows a Checkout session came back PAID: `wm.checkCheckoutReturn`
+   * only sees ?checkout=success in the URL, which says the browser was
+   * redirected, not that Stripe took the money. The receipt fetched above is
+   * what separates the two, and the guard below re-reads `_result` because the
+   * unpaid case has just rewritten it to "cancel".
+   *
+   * The amount is what was CHARGED TODAY. A deferred switch or an MKT promo
+   * bills 0 now and the real amount later, so those report a conversion worth
+   * 0 -- the action is real, the revenue has not happened yet. The later charge
+   * is collected by webhook with no browser in the loop, so it will never
+   * arrive here; if Ads should instead carry the committed amount, that is
+   * `upcoming_amount` on the same receipt, and it is a reporting decision
+   * rather than a bug.
+   *
+   * Client-side reporting misses whoever closes the tab before the redirect
+   * lands, and whoever blocks the tag. Server-side (Ads Conversions API, off
+   * the Stripe webhook that already runs) is the answer to that, and a much
+   * larger change than this one.
+   */
+  _reportConversion() {
+    if (this._result !== "success") return;
+    const receipt = this._receipt || {};
+    const minor = receipt.amount_total;
+    require("libs/gtag").conversion("purchase", {
+      // Stripe reports minor units; Ads wants major.
+      value: Number.isFinite(minor) ? minor / 100 : 0,
+      currency: String(receipt.currency || "usd").toUpperCase(),
+      // The session id, not the invoice number: it is unique per checkout and
+      // always present on this path, while `invoice_number` is null whenever
+      // Stripe issued no invoice.
+      transaction_id: this._sessionId,
+    });
   }
 
   onUiEvent(cmd, args = {}) {

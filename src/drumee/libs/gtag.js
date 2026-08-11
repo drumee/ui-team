@@ -33,6 +33,38 @@
 const TAG_ID = "AW-18350168481";
 const SRC = `https://www.googletagmanager.com/gtag/js?id=${TAG_ID}`;
 
+/**
+ * Conversion labels, per conversion action.
+ *
+ * A Google Ads conversion is addressed as `AW-18350168481/<label>`, and the
+ * label is minted by the Ads console — Goals > Conversions > the action > Tag
+ * setup > "Install the tag yourself". It is NOT derivable from anything in this
+ * repo, which is why it sits here as data rather than being built at the call
+ * site: one place to fill in, and `conversion()` refuses to guess.
+ *
+ * An empty label means "this action has not been created in Ads yet". That is a
+ * supported state, not a broken one: `conversion()` no-ops and says so in the
+ * console, so this ships and does nothing until the label exists. Nothing
+ * downstream branches on it.
+ */
+const CONVERSION_LABEL = {
+  // Paid Stripe Checkout completed — see billing/result.
+  purchase: "",
+};
+
+// Transactions already reported, so a reload cannot report them twice.
+//
+// The Checkout return URL carries ?checkout=success&session_id=… , and it is an
+// ordinary URL: refresh it, or restore the tab, and the success modal renders
+// again from the same session. Ads dedupes on transaction_id server-side, but
+// only within its own window and only once the hit arrives -- cheaper and more
+// certain to not send the second hit at all.
+//
+// sessionStorage, matching billing-deep-link: the lifetime that matters is the
+// tab that did the checkout. A different tab re-opening the same URL still
+// dedupes on transaction_id at Google's end.
+const SENT_KEY = "drumee_gtagConversions";
+
 // drumee.com and every subdomain of it (workspaces are `<ident>.drumee.com`).
 // Anchored both ends: a lookalike host such as `drumee.com.evil.net` must not
 // match, and neither must `notdrumee.com`.
@@ -137,4 +169,79 @@ function event(name, params = {}) {
   }
 }
 
-module.exports = { install, event, isEnabled, TAG_ID };
+/**
+ * Has this transaction already been reported from this tab?
+ *
+ * Storage itself is the thing most likely to fail here — private mode and
+ * blocked storage both throw on access — and the honest answer to a storage we
+ * cannot read is "not sent". Reporting a conversion twice is a smaller harm
+ * than dropping one, so the failure leans towards sending.
+ *
+ * @param {String} key transaction identity
+ * @returns {Boolean}
+ */
+function alreadySent(key) {
+  try {
+    const raw = window.sessionStorage.getItem(SENT_KEY);
+    return !!raw && JSON.parse(raw).includes(key);
+  } catch (e) {
+    return false;
+  }
+}
+
+/**
+ * Record a transaction as reported. Best effort, by the same reasoning.
+ *
+ * @param {String} key transaction identity
+ */
+function markSent(key) {
+  try {
+    const raw = window.sessionStorage.getItem(SENT_KEY);
+    const seen = raw ? JSON.parse(raw) : [];
+    if (!seen.includes(key)) {
+      seen.push(key);
+      window.sessionStorage.setItem(SENT_KEY, JSON.stringify(seen));
+    }
+  } catch (e) {
+    // Nothing to do: the next reload may re-report, and Ads dedupes on
+    // transaction_id. Never let bookkeeping break the flow being measured.
+  }
+}
+
+/**
+ * Report a Google Ads conversion.
+ *
+ * @param {String} name key into CONVERSION_LABEL, e.g. "purchase"
+ * @param {Object} [params]
+ * @param {Number} [params.value] amount in MAJOR units (dollars, not cents)
+ * @param {String} [params.currency] ISO 4217, upper case
+ * @param {String} [params.transaction_id] unique per transaction; enables the
+ *   dedupe above and Google's own
+ * @returns {Boolean} true when a hit was sent
+ */
+function conversion(name, params = {}) {
+  // Absence of the tag is checked FIRST, and answered in silence. Off a
+  // drumee.com host there is deliberately no tag at all, and someone running
+  // this AGPL software on their own domain should not be told about the state
+  // of our Ads account on every purchase they take.
+  if (typeof window === "undefined" || typeof window.gtag !== "function") return false;
+
+  const label = CONVERSION_LABEL[name];
+  if (!label) {
+    // Loud here, because reaching this line means the tag IS in force and a
+    // real conversion just went unreported -- a configuration gap someone has
+    // to close, not an expected runtime state.
+    console.warn(`[gtag] no Ads label for "${name}" — conversion not reported`);
+    return false;
+  }
+
+  const { transaction_id } = params;
+  const dedupeKey = transaction_id && `${name}:${transaction_id}`;
+  if (dedupeKey && alreadySent(dedupeKey)) return false;
+
+  event("conversion", { send_to: `${TAG_ID}/${label}`, ...params });
+  if (dedupeKey) markSent(dedupeKey);
+  return true;
+}
+
+module.exports = { install, event, conversion, isEnabled, TAG_ID };
