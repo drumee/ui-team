@@ -46,18 +46,27 @@ class settings_change_password extends LetcBox {
   }
 
   /**
-   * Mirror of the server's _resolveUsePassword. Visitor.profile()'s
-   * password_set can be missing (legacy accounts) or get wiped by a later
-   * profile refresh, so when it is undefined we resolve from the OAuth
-   * links ourselves instead of trusting settings_main's reconciliation
-   * to have survived.
+   * Always re-fetch password_set fresh from the server (same yp.hello +
+   * Visitor.respawn pattern as settings_main._refreshVisitorProfile) —
+   * never trust the cached Visitor.profile() carried over from page load.
+   * That cache goes stale the moment the account's password state changes
+   * server-side (e.g. this same modal just set the account's first
+   * password via OTP): without a re-fetch, reopening it in the same tab
+   * would keep reading the pre-change value and re-offer OTP forever.
    */
   async _resolveUsePassword() {
+    try {
+      const data = await this.fetchService(SERVICE.yp.hello, { hub_id: Visitor.id });
+      if (data) Visitor.respawn(data);
+    } catch (e) {
+      this.warn("change-password: profile refresh failed", e);
+    }
     const passwordSet = (Visitor.profile() || {}).password_set;
     if (passwordSet !== undefined && passwordSet !== null) {
       this._usePassword = parseInt(passwordSet) === 1;
       return;
     }
+    // Legacy account predating the flag — infer from OAuth links.
     try {
       const res = await this.fetchService(SERVICE.drumate.list_oauth_links, {
         hub_id: Visitor.id,
@@ -65,7 +74,6 @@ class settings_change_password extends LetcBox {
       const links = Array.isArray(res) ? res : (res && res.data) || [];
       this._usePassword = !(links && links.length > 0);
     } catch (e) {
-      // Unknown → assume password-backed (matches the legacy fallback).
       this._usePassword = true;
     }
   }
