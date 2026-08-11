@@ -1,6 +1,6 @@
 /**
  * Google tag (gtag.js) — the Google Ads tag AW-18350168481 and the GA4
- * stream G-JWRXMF6HDP.
+ * stream G-9123HGZ86W.
  *
  * The document itself is not ours to edit: the app boots into a shell served
  * by the backend, and this repo builds bundles, not HTML (there is no
@@ -33,16 +33,20 @@
 
 const TAG_ID = "AW-18350168481";
 
-// GA4 web stream — the SAME property the drumee.com marketing site reports
-// to, on purpose: one property sees the whole funnel (ad -> landing page ->
-// app -> signup) instead of splitting the session at the domain boundary.
+// GA4 web stream — the app's OWN property ("app.drumee.com"), separate from
+// the drumee.com marketing-site property (G-JWRXMF6HDP) by a deliberate
+// product decision: app usage is product analytics, the landing page is
+// marketing, and each team reads its own property. The cost is a split
+// funnel — a visitor crossing from the landing page into the app starts a
+// new session here — so campaign attribution is measured in Google Ads
+// (the AW tag + gclid) and in the backend's profile.utm, not in GA4.
 // Analytics only; TAG_ID above remains the Ads/conversion tag. The gtag.js
 // loader below is shared — one script serves every configured tag.
 //
 // The app routes by location.hash, and GA4 only counts in-app navigation
 // when the property's Enhanced measurement has hash-based page changes
 // enabled — a property-side toggle, not something this file can set.
-const GA4_ID = "G-JWRXMF6HDP";
+const GA4_ID = "G-9123HGZ86W";
 const SRC = `https://www.googletagmanager.com/gtag/js?id=${TAG_ID}`;
 
 // drumee.com and every subdomain of it (workspaces are `<ident>.drumee.com`).
