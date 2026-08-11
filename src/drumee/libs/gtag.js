@@ -43,9 +43,14 @@ const TAG_ID = "AW-18350168481";
 // Analytics only; TAG_ID above remains the Ads/conversion tag. The gtag.js
 // loader below is shared — one script serves every configured tag.
 //
-// The app routes by location.hash, and GA4 only counts in-app navigation
-// when the property's Enhanced measurement has hash-based page changes
-// enabled — a property-side toggle, not something this file can set.
+// The app routes by location.hash, so the automatic page_view — which fires
+// once per DOCUMENT — would have counted the screen someone landed on and
+// nothing they did afterwards, with the hash counting or not depending on
+// the property's Enhanced measurement toggle for history-based page changes.
+// That is a setting this file cannot see, let alone guarantee, and an app
+// property that cannot see in-app navigation has very little to report. So
+// the automatic hit is off (send_page_view:false below) and the screens are
+// sent explicitly instead — see pageView().
 const GA4_ID = "G-9123HGZ86W";
 const SRC = `https://www.googletagmanager.com/gtag/js?id=${TAG_ID}`;
 
@@ -114,7 +119,13 @@ function install() {
   // A real Date — gtag stamps the load time from it; Dayjs is not a substitute.
   window.gtag("js", new Date());
   window.gtag("config", TAG_ID);
-  window.gtag("config", GA4_ID);
+  window.gtag("config", GA4_ID, { send_page_view: false });
+  // send_page_view:false suppresses the automatic hit, so the FIRST screen has
+  // to be sent by hand or the property never sees a session at all. Everything
+  // after it comes from the router; this is the one the router cannot emit,
+  // because install() runs from module scope of index.web.js, long before a
+  // router exists.
+  pageView();
 
   const el = document.createElement("script");
   el.async = true;
@@ -154,4 +165,38 @@ function event(name, params = {}) {
   }
 }
 
-module.exports = { install, event, isEnabled, TAG_ID };
+// The last screen reported, so the same one is not counted twice.
+let lastPath = null;
+
+/**
+ * Report a screen to GA4.
+ *
+ * `send_page_view: false` on its own measures NOTHING — no page views, no
+ * sessions, no users — so the two belong together and this is the other half.
+ * `router/route()` calls it. drumee.com does the same thing for the same
+ * reason: its config carries send_page_view:false and its router emits a
+ * page_view per route (drumee-landingpage src/lib/analytics.ts). Same param
+ * shape here, so the two implementations read alike even though they now
+ * report to different properties.
+ *
+ * What this buys the app property: "welcome/signin", "welcome/signup", "desk"
+ * and "desk/billing" arrive as distinct screens however the property is
+ * configured, instead of one hit per document plus whatever an Enhanced
+ * measurement toggle happens to be set to.
+ *
+ * @param {String} [path] defaults to the current pathname + hash
+ * @param {String} [title] defaults to document.title
+ * @returns {Boolean} true when a hit was sent
+ */
+function pageView(path, title) {
+  if (typeof window === "undefined" || typeof window.gtag !== "function") return false;
+  const p = path || `${window.location.pathname}${window.location.hash}`;
+  // route() runs on boot AND on every hashchange, and a few flows call it again
+  // for a URL that has not moved.
+  if (p === lastPath) return false;
+  lastPath = p;
+  event("page_view", { page_path: p, page_title: title || document.title });
+  return true;
+}
+
+module.exports = { install, event, pageView, isEnabled, TAG_ID, GA4_ID };

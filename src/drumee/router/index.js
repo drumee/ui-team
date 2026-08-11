@@ -397,6 +397,13 @@ class drumee_router extends LetcBox {
         return;
       }
     }
+    // GA4 screen, reported here rather than automatically: the tag is
+    // configured send_page_view:false, and this is a hash router, so nothing
+    // after the first screen would be counted otherwise. Below the two
+    // redirect branches above on purpose — a bootstrap page or a changeHost is
+    // a URL we are leaving, not one anybody looked at. Deduped and
+    // self-gating; off a drumee.com host it does nothing. See libs/gtag.
+    require('libs/gtag').pageView();
     let name = moduleName();
     const cm = this.currentModule;
     if (cm && !cm.isDestroyed() && cm.mget(_a.name) == name) {
