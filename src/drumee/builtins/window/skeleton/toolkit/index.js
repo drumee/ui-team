@@ -1,4 +1,5 @@
 const { button } = require("../../../skeleton/toolkit/buttons");
+const { isGrouped } = require("./file-group");
 
 const AREA_LABELS = {
   // Personal workspaces are personal-area folders at the home root.
@@ -62,20 +63,55 @@ export function breadcrumbs(ui, opt) {
   });
 }
 
-function fileViewToggle(ui) {
+function fileViewToggle(ui, opt = {}) {
   const cnTopbar = `${ui.fig.family}-topbar`;
+  const modes = opt.modes || [
+    { mode: "list", ico: "view-list" },
+    { mode: "grid", ico: "view-grid" },
+  ];
+  const listMode = ui.getViewMode && ui.getViewMode() === _a.row;
+  const state = opt.namedState
+    ? isGrouped(ui)
+      ? "group"
+      : listMode
+        ? "list"
+        : "grid"
+    : listMode ? 1 : 0;
+  // With three modes the control has to behave as a radio group: pressing a
+  // segment must select THAT mode. Each segment therefore carries the service
+  // and its own `value`, so the handler is told which one was pressed instead of
+  // inferring it. Only the box was clickable before, which is why the two-mode
+  // control could get away with cycling — it had a single alternative.
+  //
+  // `bubble: false` keeps the press on the segment (the box below also declares
+  // the service for the two-mode DMZ control, which still cycles). Pattern
+  // follows the checkout pill bar in widget/settings/account/billing.
   const viewSegment = (mode, ico) =>
     Skeletons.Box.X({
       className: `${cnTopbar}__view-toggle-seg ${cnTopbar}__view-toggle-seg--${mode}`,
+      // The glyphs must stay handler-less either way, so the click reaches
+      // whichever ancestor owns the service (the segment here, the box for DMZ).
       kidsOpt: { active: 0 },
+      ...(opt.namedState
+        ? {
+          service: "toggle-files-layout",
+          value: mode,
+          radio: `file-view-${ui._id}`,
+          state: state === mode ? 1 : 0,
+          bubble: false,
+          uiHandler: [ui],
+        }
+        : {}),
       kids: [
         Skeletons.Image.Svg({
           ico: "account_check",
           className: `${cnTopbar}__view-toggle-check`,
+          active: 0,
         }),
         Skeletons.Image.Svg({
           ico,
           className: `${cnTopbar}__view-toggle-glyph`,
+          active: 0,
         }),
       ],
     });
@@ -85,15 +121,16 @@ function fileViewToggle(ui) {
     service: "toggle-files-layout",
     sys_pn: "view-ctrl",
     dataset: {
-      state: ui.getViewMode && ui.getViewMode() === _a.row ? 1 : 0,
+      state,
       visible: 1,
     },
     uiHandler: [ui],
-    kidsOpt: { active: 0 },
-    kids: [
-      viewSegment("list", "view-list"),
-      viewSegment("grid", "view-grid"),
-    ],
+    // NO kidsOpt when the segments own the service: `active: 0` propagates down
+    // and would leave them handler-less, so every press would bubble to the box
+    // and cycle again — the exact bug this replaced. The two-mode DMZ control
+    // still wants it, because there the box is the only handler.
+    ...(opt.namedState ? {} : { kidsOpt: { active: 0 } }),
+    kids: modes.map(({ mode, ico }) => viewSegment(mode, ico)),
   });
 }
 
@@ -114,7 +151,17 @@ function fileFilterControls(ui) {
   const cnTopbar = `${ui.fig.family}-topbar`;
   return Skeletons.Box.X({
     className: `${cnTopbar}__file-controls`,
-    kids: [fileNewControl(ui), fileViewToggle(ui)],
+    kids: [
+      fileNewControl(ui),
+      fileViewToggle(ui, {
+        namedState: true,
+        modes: [
+          { mode: "group", ico: "view-group" },
+          { mode: "list", ico: "view-list" },
+          { mode: "grid", ico: "view-grid" },
+        ],
+      }),
+    ],
   });
 }
 

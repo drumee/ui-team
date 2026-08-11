@@ -1,4 +1,12 @@
 const mfsInteract = require("../interact");
+const {
+  VIEW_STATES,
+  isGrouped,
+  setGrouped,
+  clearGrouped,
+  groupViewState,
+  nextGroupViewState,
+} = require("../skeleton/toolkit/file-group");
 
 const {
 
@@ -406,6 +414,8 @@ class __window_folder extends mfsInteract {
   initialize(opt) {
     this.isFolder = 1;
     super.initialize(opt);
+    setGrouped(this, true);
+    this.setViewMode(_a.icon, false);
     // `data-visible` is derived from privilege. Keep it in sync even when a
     // caller updates the model outside the explicit navigation/live-role paths.
     this.listenTo(
@@ -495,6 +505,7 @@ class __window_folder extends mfsInteract {
   }
 
   onBeforeDestroy(opt) {
+    clearGrouped(this);
     if (this._folderGridSortTimer) {
       clearTimeout(this._folderGridSortTimer);
       this._folderGridSortTimer = null;
@@ -561,6 +572,15 @@ class __window_folder extends mfsInteract {
   }
 
   onMediaRenamed() {
+    // A rename can change the file's group (.txt → .md), so Group view must
+    // re-bucket even when the scheduled sort bails out. It does bail for a
+    // hand-arranged folder (_hasArrangedSort), which would otherwise leave the
+    // renamed tile in its old group until the next mode switch. Partitioning
+    // alone re-reads the models and never installs a comparator, so the saved
+    // ranks stay intact.
+    if (isGrouped(this) && this._partitionFoldersAndFiles && this.iconsList) {
+      this._partitionFoldersAndFiles(this.iconsList);
+    }
     this._scheduleAlphabeticalGridSort();
   }
 
@@ -1332,15 +1352,36 @@ class __window_folder extends mfsInteract {
   }
 
   toggleFilesLayout(cmd) {
-    const mode =
-      this.getViewMode && this.getViewMode() === _a.row ? _a.icon : _a.row;
-    this.setViewMode(mode);
+    if (window.pointerDragged) return;
+
+    // Each segment reports its own mode, so pressing one selects it directly.
+    // The cycle is kept only as the fallback for a press that carries no mode —
+    // the toggle box itself is still clickable in the gaps between segments.
+    const viewMode = this.getViewMode && this.getViewMode();
+    const picked = cmd && cmd.mget && cmd.mget(_a.value);
+    const state = VIEW_STATES.includes(picked)
+      ? picked
+      : nextGroupViewState(this, viewMode);
+    // Re-pressing the active segment would rebuild the list for nothing, and a
+    // rebuild mid-drag is exactly what the pointerDragged guard above avoids.
+    if (state === groupViewState(this, viewMode)) return;
+    setGrouped(this, state === "group");
+    // Window-local, like the mode chosen in initialize: the folder toggle must
+    // not leak "row" into the process-wide ViewMode default, or the next
+    // Share/Search/Transferbox to open would inherit list view from it.
+    this.setViewMode(state === "list" ? _a.row : _a.icon, false);
+    // The active-segment CSS keys off `data-state` on the toggle BOX, and cmd.el
+    // is now the pressed segment — so resolve the box rather than stamping the
+    // segment. The toolbar is rebuilt below and fileViewToggle recomputes this
+    // from the real state anyway; the write only avoids a flash until then.
+    const toggleBox = cmd?.el?.closest?.(
+      `.${this.fig.family}-topbar__view-toggle`,
+    ) || cmd?.el;
+    if (toggleBox) toggleBox.dataset.state = state;
+
     this.ensurePart(_a.content).then((content) => {
       if (!content || (content.isDestroyed && content.isDestroyed())) return;
-      // setState (Backbone.View) flips data-state on the toggle box; the CSS
-      // swaps the visible glyph. (The old splitBtn used changeState, which only
-      // exists on the svg widget — the box needs setState.)
-      if (mode === _a.row) {
+      if (state === "list") {
         // Keep the file-type filter bar (All/Docs/PDF/Images/Other) in list
         // view too — mirrors the grid branch below and the initial-render
         // folderFilesRowContainer. content/row adds the column header + list.
@@ -1348,11 +1389,9 @@ class __window_folder extends mfsInteract {
           fileTypeFilterBar(this),
           require("../skeleton/content/row")(this),
         ]);
-        cmd?.setState?.(1);
         return;
       }
       content.feed([fileTypeFilterBar(this), gridFilesBrowser(this)]);
-      cmd?.setState?.(0);
     });
   }
 

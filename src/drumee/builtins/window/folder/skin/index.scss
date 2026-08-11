@@ -618,14 +618,13 @@
       }
     }
 
-    // File view toggle — compact segmented control (list | grid). Grid is the
-    // default (data-state "0"/unset); list is active at data-state "1" (row).
+    // File view toggle — compact segmented control (group | list | grid).
     &__view-toggle {
       display: inline-flex;
       align-items: stretch;
-      width: 60px;
+      width: 90px;
       height: 30px;
-      flex: 0 0 60px;
+      flex: 0 0 90px;
       border: 0;
       border-radius: 8px;
       background-color: #fff;
@@ -683,25 +682,30 @@
       display: none;
     }
 
-    // Active half — list when data-state="1", grid otherwise (default).
-    &__view-toggle[data-state="1"]
+    &__view-toggle[data-state="group"]
+      .window-folder-topbar__view-toggle-seg--group,
+    &__view-toggle[data-state="list"]
       .window-folder-topbar__view-toggle-seg--list,
-    &__view-toggle:not([data-state="1"])
+    &__view-toggle[data-state="grid"]
       .window-folder-topbar__view-toggle-seg--grid {
       background-color: #b2adfa;
       color: #65656c;
     }
 
-    &__view-toggle[data-state="1"]
+    &__view-toggle[data-state="group"]
+      .window-folder-topbar__view-toggle-seg--group:hover,
+    &__view-toggle[data-state="list"]
       .window-folder-topbar__view-toggle-seg--list:hover,
-    &__view-toggle:not([data-state="1"])
+    &__view-toggle[data-state="grid"]
       .window-folder-topbar__view-toggle-seg--grid:hover {
       background-color: #a7a2f0;
     }
 
-    &__view-toggle[data-state="1"]
+    &__view-toggle[data-state="group"]
+      .window-folder-topbar__view-toggle-seg--group:active,
+    &__view-toggle[data-state="list"]
       .window-folder-topbar__view-toggle-seg--list:active,
-    &__view-toggle:not([data-state="1"])
+    &__view-toggle[data-state="grid"]
       .window-folder-topbar__view-toggle-seg--grid:active {
       background-color: #9d98e6;
     }
@@ -2476,12 +2480,43 @@
     // later in this file still win via source order.
     .workspace-section,
     .folder-section,
-    .file-section {
+    .file-section,
+    .group-section {
       align-content: start;
       align-items: start;
       justify-items: start;
       grid-template-columns: repeat(auto-fill, minmax(var(--grid-cell-w), 1fr));
       gap: var(--grid-gap);
+    }
+
+    // Mirrors what modules/desk/wm/skin gives the three legacy sections: the
+    // same horizontal padding (so switching Group ↔ Grid does not shift the
+    // tiles), border-box (padding must not widen the section past its panel),
+    // and flex:0 0 auto to override the framework's inline flex-grow on a
+    // plain createElement wrapper. overflow stays visible for card hover.
+    .group-section {
+      display: grid;
+      width: 100%;
+      box-sizing: border-box;
+      padding: 8px var(--grid-padding);
+      flex: 0 0 auto !important;
+      overflow: visible;
+      grid-template-rows: auto;
+      grid-auto-rows: var(--grid-cell-h-file);
+    }
+
+    .group-section[data-group="folder"] {
+      grid-auto-rows: var(--grid-cell-h-folder);
+    }
+
+    .group-section-title {
+      grid-column: 1 / -1;
+      min-width: 0;
+      padding-bottom: 2px;
+      color: var(--tertiary-grey-80);
+      font-size: 14px;
+      font-weight: 600;
+      line-height: 20px;
     }
 
     .workspace-section {
@@ -3551,7 +3586,8 @@
     .window__icons-scroll,
     .window__icons-scroll .workspace-section,
     .window__icons-scroll .folder-section,
-    .window__icons-scroll .file-section {
+    .window__icons-scroll .file-section,
+    .window__icons-scroll .group-section {
       grid-template-columns: repeat(auto-fill, var(--grid-cell-w));
     }
 
@@ -3605,7 +3641,8 @@
     .window__icons-scroll,
     .window__icons-scroll .workspace-section,
     .window__icons-scroll .folder-section,
-    .window__icons-scroll .file-section {
+    .window__icons-scroll .file-section,
+    .window__icons-scroll .group-section {
       grid-template-columns: 1fr 1fr;
     }
 
@@ -3614,7 +3651,8 @@
     // builtins/media/grid/skin/container.scss mobile block. Desktop's
     // 184px row was calibrated for a 120×120 card and overflows when
     // the cell grows, so use minmax(184, auto).
-    .window__icons-scroll .file-section {
+    .window__icons-scroll .file-section,
+    .window__icons-scroll .group-section:not([data-group="folder"]) {
       grid-auto-rows: minmax(var(--grid-cell-h-file), auto);
     }
 

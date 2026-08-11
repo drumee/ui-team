@@ -4,6 +4,7 @@ const { copyToClipboard, timestamp } = require("@drumee/ui-essentials")
 const { TimelineMax } = require("@drumee/ui-core/vendor");
 
 const windowCore = require("../core");
+const { isGrouped } = require("../skeleton/toolkit/file-group");
 class __window_interact extends windowCore {
   constructor(...args) {
     super(...args);
@@ -861,16 +862,24 @@ class __window_interact extends windowCore {
       this.captured.left = primary;
       if (paired) this.captured.right = paired;
     }
-    this._releaseShifted([this.captured.left, this.captured.right]);
-    if (this.captured.left) {
-      // The indicator bar rides the left tile's trailing edge when one
-      // exists, otherwise the right tile's leading edge (slot at row start).
-      this.captured.left.delaySelect(_a.left, 1);
-      this._shifted.push(this.captured.left);
-    }
-    if (this.captured.right) {
-      this.captured.right.delaySelect(_a.right, this.captured.left ? 0 : 1);
-      this._shifted.push(this.captured.right);
+    // Group view never re-arms the flanking tiles below, so nothing may be
+    // kept shifted: `keep` skips the release AND `_shifted` is reset, leaving
+    // those two tiles pushed aside until the delayed clearShift a second later.
+    const grouped = isGrouped(this);
+    this._releaseShifted(
+      grouped ? [] : [this.captured.left, this.captured.right],
+    );
+    if (!grouped) {
+      if (this.captured.left) {
+        // The indicator bar rides the left tile's trailing edge when one
+        // exists, otherwise the right tile's leading edge (slot at row start).
+        this.captured.left.delaySelect(_a.left, 1);
+        this._shifted.push(this.captured.left);
+      }
+      if (this.captured.right) {
+        this.captured.right.delaySelect(_a.right, this.captured.left ? 0 : 1);
+        this._shifted.push(this.captured.right);
+      }
     }
     this._intercept(null);
     return this;

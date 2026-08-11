@@ -8,6 +8,9 @@ const hubDeepLink = require("libs/hub-deep-link");
 // Shares one in-flight media.get_path with the breadcrumb / folder window when
 // they ask for the same node in the same instant (a folder open does).
 const { getPath } = require("libs/path-request");
+const {
+  blocksGroupedArrange,
+} = require("window/skeleton/toolkit/file-group");
 // Same channel the websocket dispatcher triggers on Wm — windows and the
 // sidebar workspace list subscribe to it (window/utils.js, workspace-list).
 const WS_EVENT = "ws:event";
@@ -1316,6 +1319,15 @@ class __window_manager extends push {
     const rearranging =
       _.isFunction(moving.getLogicalParent) &&
       moving.getLogicalParent() === this._target;
+    // Group view is a classified presentation, not a hand-arranged order.
+    // Consume same-window slot drops before any insert branch can mutate rank;
+    // folder drop-in already returned through c.over above, while cross-window
+    // moves keep rearranging=false and continue through the normal path.
+    if (blocksGroupedArrange(this._target, c, rearranging)) {
+      if (this._target._releaseShifted) this._target._releaseShifted();
+      this._target.el.dataset.over = _a.off;
+      return true;
+    }
     if (c.left) {
       this.verbose("insert:after", c.left);
       if (this._target.mget(_a.privilege) & _K.permission.modify) {
