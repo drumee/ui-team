@@ -1,5 +1,6 @@
 /**
- * Google tag (gtag.js) — the Google Ads tag AW-18350168481.
+ * Google tag (gtag.js) — the Google Ads tag AW-18350168481 and the GA4
+ * property G-JWRXMF6HDP.
  *
  * The document itself is not ours to edit: the app boots into a shell served
  * by the backend, and this repo builds bundles, not HTML (there is no
@@ -22,15 +23,46 @@
  * queue provably exists before the library can run, whatever the network does.
  *
  * WHERE IT RUNS — Drumee-operated hosts only, see `TRACKED_HOST`. This is AGPL
- * software that other people deploy on their own domains, and an ad tag
- * compiled into the bundle would otherwise report every one of those
- * deployments to Google under OUR conversion ID: their visitors' traffic
- * leaves their instance, and our Ads reporting fills with conversions no
- * campaign of ours produced. Stage (drumee.in) is excluded by the same rule,
- * which is the point — test signups are not conversions.
+ * software that other people deploy on their own domains, and a tag compiled
+ * into the bundle would otherwise report every one of those deployments to
+ * Google under OUR ids: their visitors' traffic leaves their instance, and our
+ * reporting fills with activity no campaign of ours produced. That guard
+ * matters more with GA4 in the picture than it did with Ads alone — Ads only
+ * hears about conversions, GA4 measures ordinary use of a product whose whole
+ * promise is that your data stays yours. Stage (drumee.in) is excluded by the
+ * same rule, which is the point — test signups are not conversions.
  */
 
 const TAG_ID = "AW-18350168481";
+
+/**
+ * GA4 — the SAME property the marketing site runs, deliberately.
+ *
+ * Until now the app carried the Ads tag and nothing else, so GA4 could see a
+ * visitor arrive on drumee.com and then went blind the moment they crossed to
+ * app.drumee.com: everything after sign-in was unmeasured, and the journey
+ * that ends in a signup was cut in half.
+ *
+ * Nothing extra is needed to stitch that journey back together, because it was
+ * never a cross-domain problem. drumee.com, app.drumee.com and the workspace
+ * hosts <ident>.drumee.com share one registrable domain, and GA4's default
+ * cookie_domain 'auto' resolves to `.drumee.com` — so the cookie, and with it
+ * the session, already spans all three. Confirmed against the live marketing
+ * site, which configures no `linker` and does not need one. A second property
+ * here, or an explicit cookie_domain, would only break that.
+ *
+ * NOTE on page_view. Left at its default (on), so the boot hit exists and the
+ * session is real. drumee.com passes send_page_view:false because its router
+ * emits its own page_view per route (src/lib/analytics.ts); no equivalent
+ * route→page mapping exists for a desk, and inventing one is a separate piece
+ * of work. If the property's Enhanced Measurement "page changes based on
+ * browser history events" turns out to make noise from hash routes, that is a
+ * switch in the GA4 property, not a code change here.
+ */
+const GA4_ID = "G-JWRXMF6HDP";
+
+// One <script> serves every configured id, which is also what keeps this page
+// compliant with Google's "no more than one Google tag per page".
 const SRC = `https://www.googletagmanager.com/gtag/js?id=${TAG_ID}`;
 
 // drumee.com and every subdomain of it (workspaces are `<ident>.drumee.com`).
@@ -98,6 +130,7 @@ function install() {
   // A real Date — gtag stamps the load time from it; Dayjs is not a substitute.
   window.gtag("js", new Date());
   window.gtag("config", TAG_ID);
+  window.gtag("config", GA4_ID);
 
   const el = document.createElement("script");
   el.async = true;
@@ -137,4 +170,4 @@ function event(name, params = {}) {
   }
 }
 
-module.exports = { install, event, isEnabled, TAG_ID };
+module.exports = { install, event, isEnabled, TAG_ID, GA4_ID };
