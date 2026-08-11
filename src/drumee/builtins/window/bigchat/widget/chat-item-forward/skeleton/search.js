@@ -67,6 +67,12 @@ const __skl_chat_item_forward_search = function(_ui_, type) {
     itemsOpt    : { 
       kind         : 'widget_chat_forward_list_item',
       selectedList : _selectedList,
+      // Same rule as the non-search list: gated whenever the source is a
+      // workspace, share-room-only from a P2P chat.
+      ...(_ui_._needsEligibility(type) ? {
+        shareEligibility: _ui_._shareEligibility,
+        eligibilityOwner: _ui_
+      } : {}),
       type,
       service      : 'trigger-search-room-select',
       uiHandler    : [_ui_]
@@ -86,4 +92,4 @@ const __skl_chat_item_forward_search = function(_ui_, type) {
   return a;
 };
 
-module.exports = __skl_chat_item_forward_search;  
+module.exports = __skl_chat_item_forward_search;

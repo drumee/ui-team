@@ -18,6 +18,9 @@ class ___chat_item_forward extends LetcBox {
     this.getContactList = this.getContactList.bind(this);
     this.getShareRoomList = this.getShareRoomList.bind(this);
     this.getRoomSearchApi = this.getRoomSearchApi.bind(this);
+    this._registerShareRoom = this._registerShareRoom.bind(this);
+    this._flushShareEligibility = this._flushShareEligibility.bind(this);
+    this._isShareRoomEligible = this._isShareRoomEligible.bind(this);
   }
 
   initialize(opt) {
@@ -33,6 +36,11 @@ class ___chat_item_forward extends LetcBox {
     this._seletecdContacts = [];
     this._selectedShareRooms = [];
     this._selectedRooms = [];
+    this._shareEligibility = Object.create(null);
+    this._pendingEligibility = new Set();
+    this._eligibilityRows = new Map();
+    this._eligibilityTimer = null;
+    this._eligibilityInFlight = null;
     return this.declareHandlers();
   }
 
@@ -54,6 +62,102 @@ class ___chat_item_forward extends LetcBox {
 // ===========================================================
   onDomRefresh(){
     return this.feed(require('./skeleton')(this));
+  }
+
+// ===========================================================
+//
+// ===========================================================
+  onBeforeDestroy() {
+    if (this._eligibilityTimer) clearTimeout(this._eligibilityTimer);
+    this._eligibilityTimer = null;
+    this._pendingEligibility.clear();
+    this._eligibilityRows.clear();
+    if (super.onBeforeDestroy) return super.onBeforeDestroy();
+  }
+
+// ===========================================================
+// A message read out of a workspace conversation may only be relayed to that
+// workspace's chat members, so BOTH tabs are scored when there is a source
+// workspace. A P2P conversation belongs to no workspace: only share rooms are
+// scored there, and contacts stay selectable.
+//
+// Mirrors the server's own discriminator (chat.js: nodes.hub_id === this.uid):
+// the caller passes its own user ID as msghubID for a P2P chat.
+// ===========================================================
+  _sourceHubId() {
+    const hubId = this._msgHubID;
+    if (!_.isString(hubId) || !hubId) return null;
+    return hubId === Visitor.get(_a.id) ? null : hubId;
+  }
+
+// ===========================================================
+// Which rows need a verdict before they can be selected.
+// ===========================================================
+  _needsEligibility(type) {
+    return this._sourceHubId() ? true : type === _a.shareRoom;
+  }
+
+// ===========================================================
+// SmartList loads each page (and search result) independently. Rows register
+// their IDs here and are resolved in one batch per emitted page, never one
+// request per row. This covers all three callers through their shared picker.
+// ===========================================================
+  _registerShareRoom(row) {
+    const hubId = row && row.mget(_a.id);
+    if (!_.isString(hubId)) return;
+    if (Object.prototype.hasOwnProperty.call(this._shareEligibility, hubId)) return;
+    this._pendingEligibility.add(hubId);
+    if (!this._eligibilityRows.has(hubId)) this._eligibilityRows.set(hubId, new Set());
+    this._eligibilityRows.get(hubId).add(row);
+    if (!this._eligibilityTimer) {
+      this._eligibilityTimer = setTimeout(this._flushShareEligibility, 0);
+    }
+  }
+
+// ===========================================================
+//
+// ===========================================================
+  _flushShareEligibility() {
+    this._eligibilityTimer = null;
+    if (this._eligibilityInFlight || !this._pendingEligibility.size) return;
+    const hubIds = [...this._pendingEligibility].slice(0, 50);
+    for (const hubId of hubIds) this._pendingEligibility.delete(hubId);
+    const service = (SERVICE.chat && SERVICE.chat.forward_eligibility)
+      || 'chat.forward_eligibility';
+    const apply = (result) => {
+      for (const hubId of hubIds) {
+        this._shareEligibility[hubId] = Number(result && result[hubId]) === 1 ? 1 : 0;
+        const rows = this._eligibilityRows.get(hubId) || [];
+        for (const row of rows) {
+          if (row && !(row.isDestroyed && row.isDestroyed())) row.refreshChatEligibility();
+        }
+        this._eligibilityRows.delete(hubId);
+      }
+    };
+    const sourceHubId = this._sourceHubId();
+    this._eligibilityInFlight = this.postService({
+      service,
+      hub_ids: hubIds,
+      ...(sourceHubId ? { source_hub_id: sourceHubId } : {}),
+      hub_id: Visitor.get(_a.id)
+    }, { async: 1 })
+      .then(apply)
+      .catch(() => apply({}))
+      .finally(() => {
+        this._eligibilityInFlight = null;
+        if (this._pendingEligibility.size && !this._eligibilityTimer) {
+          this._eligibilityTimer = setTimeout(this._flushShareEligibility, 0);
+        }
+      });
+  }
+
+// ===========================================================
+// The map is keyed by recipient ID — a hub ID for a share room, a user ID for a
+// contact. Contacts only appear in it when a source workspace scopes the
+// forward; from a P2P chat they are eligible by definition and never queried.
+// ===========================================================
+  _isShareRoomEligible(hubId) {
+    return Number(this._shareEligibility[hubId]) === 1;
   }
 
 // ===========================================================
@@ -98,7 +202,19 @@ class ___chat_item_forward extends LetcBox {
 // 
 // ===========================================================
   forwardMessage(cmd) {
+    // Last filter before the payload. Contacts are filtered too when a source
+    // workspace scopes the forward, since a contact outside it is not a valid
+    // recipient there.
+    this._selectedShareRooms = this._selectedShareRooms.filter(
+      (hubId) => this._isShareRoomEligible(hubId)
+    );
+    if (this._sourceHubId()) {
+      this._seletecdContacts = this._seletecdContacts.filter(
+        (id) => this._isShareRoomEligible(id)
+      );
+    }
     this._selectedRooms = this._seletecdContacts.concat(this._selectedShareRooms);
+    if (!this._selectedRooms.length) return;
     const messageData = {
       hub_id    : this._msgHubID,
       messages  : this._seletecdMessages
@@ -114,7 +230,21 @@ class ___chat_item_forward extends LetcBox {
     const peerId = this.mget(_a.peer_id);
     if (peerId) payload.peer_id = peerId;
 
-    return this.postService(payload).then(() => {
+    return this.postService(payload).then((data) => {
+      if (data && (data.status === 'INVALID_RECIPIENT'
+        || data.status === 'INVALID_SOURCE')) {
+        Wm.alert(LOCALE.FORWARD_REJECTED || LOCALE.TRY_AGAIN);
+        return;
+      }
+      if (data && data.status) {
+        Wm.alert(LOCALE.TRY_AGAIN);
+        return;
+      }
+      if (_.isArray(data) && data[0] && !_.isEmpty(data[0].rejected)) {
+        Wm.alert(LOCALE.FORWARD_REJECTED || LOCALE.TRY_AGAIN);
+        this.closeOverlay(cmd);
+        return;
+      }
       Wm.alert(LOCALE.FORWARD_DONE, 2000);
       this.closeOverlay(cmd);
     }).catch(() => {
@@ -143,9 +273,13 @@ class ___chat_item_forward extends LetcBox {
 // ===========================================================
 // 
 // ===========================================================
-  filterData(data) {
-    let result;
-    return result = data.filter(row => row.selector).map(row => row.selector);
+  filterData(data, type) {
+    const rows = _.isArray(data) ? data : [];
+    const gated = this._needsEligibility(type);
+    return rows
+      .filter((row) => row.selector)
+      .map((row) => row.selector)
+      .filter((id) => !gated || this._isShareRoomEligible(id));
   }
 
 // ===========================================================
@@ -154,8 +288,8 @@ class ___chat_item_forward extends LetcBox {
   triggerRoomSelect(cmd) {
     const data = this.getData(_a.formItem);
 
-    this._seletecdContacts    = this.filterData(data.privateRooms);
-    this._selectedShareRooms  = this.filterData(data.shareRooms);
+    this._seletecdContacts    = this.filterData(data.privateRooms, _a.privateRoom);
+    this._selectedShareRooms  = this.filterData(data.shareRooms, _a.shareRoom);
 
     const roomCount = this._seletecdContacts.length + this._selectedShareRooms.length;
 
@@ -175,12 +309,14 @@ class ___chat_item_forward extends LetcBox {
 // ===========================================================
   _buildForwardButton(count) {
     const fig = this.fig.family;
-    const label = count > 0 ? `${LOCALE.FORWARD}(${count})` : LOCALE.FORWARD;
+    const enabled = count > 0;
+    const label = enabled ? `${LOCALE.FORWARD}(${count})` : LOCALE.FORWARD;
     return Skeletons.Note({
-      className : `${fig}__button-confirm button clickable`,
+      className : `${fig}__button-confirm button${enabled ? ' clickable' : ''}`,
       content   : label,
-      service   : 'forward-message',
-      uiHandler : this
+      service   : enabled ? 'forward-message' : null,
+      dataset   : { disabled: enabled ? 0 : 1 },
+      uiHandler : enabled ? [this] : []
     });
   }
 
@@ -207,7 +343,11 @@ class ___chat_item_forward extends LetcBox {
 // 
 // ===========================================================
   triggerSearchRoomSelect(cmd) {
-    const data = this.getItemsByAttr(_a.id, cmd.source.mget(_a.value))[0];
+    const source = cmd.source || cmd;
+    const id = source.mget(_a.value) || source.mget(_a.id);
+    const data = this.getItemsByAttr(_a.id, id)[0];
+    if (!data || (data.isChatDisabled && data.isChatDisabled())) return;
+    if (!data.__roomItemCheckbox) return;
     data.__roomItemCheckbox.el.click();
     return this.closeSearchResult();
   }
@@ -297,7 +437,9 @@ class ___chat_item_forward extends LetcBox {
   __dispatchRest(service, data, socket) {
     switch (service) {
       case SERVICE.chat.forward:
-        return this.closeOverlay(data);
+        // handleResponse dispatches before postService's promise resolves. Let
+        // forwardMessage inspect INVALID_RECIPIENT before deciding to close.
+        return data;
     }
   }
 }

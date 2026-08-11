@@ -12,6 +12,7 @@ const __skl_chat_forward_list_item = function(_ui_) {
   let displayIcon, displayName;
   const chatFrwdListFig = _ui_.fig.family;
   const type = _ui_.mget(_a.type);
+  const disabled = _ui_.isChatDisabled();
 
   // _a.privateRoom/_a.shareRoom come from createSafeObject proxy and resolve
   // to the camelCase keys 'privateRoom'/'shareRoom' — NOT 'private-room'.
@@ -70,14 +71,26 @@ const __skl_chat_forward_list_item = function(_ui_) {
     state       : _state,
     value       : _ui_.mget(_a.id),
     formItem    : 'selector',
-    service     : _ui_.mget(_a.service) || 'trigger-room-select',
-    uiHandler   : _ui_,
+    service     : disabled ? null : (_ui_.mget(_a.service) || 'trigger-room-select'),
+    uiHandler   : disabled ? [] : [_ui_],
     type        : _ui_.mget(_a.type)
   });
 
   const a = Skeletons.Box.Y({
     className  : `${chatFrwdListFig}__main ${type}`,
     debug      : __filename,
+    dataset    : { disabled: disabled ? 1 : 0 },
+    // className is required, not cosmetic: the framework `tooltips` prop
+    // (letc.js __addTooltips) only injects the node — every position/background
+    // rule comes from the skin. Without a class the card renders unstyled and
+    // is effectively invisible, so the disabled row would explain nothing.
+    tooltips   : disabled
+      ? {
+        content   : _ui_.disabledReason(),
+        className : `${chatFrwdListFig}__tooltip`
+      }
+      : undefined,
+    uiHandler  : disabled ? [] : undefined,
     kids       : [
       Skeletons.Box.Y({
         className  : `${chatFrwdListFig}__container ${type}`,

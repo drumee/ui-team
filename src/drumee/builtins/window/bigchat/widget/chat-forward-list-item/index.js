@@ -5,6 +5,9 @@ class ___chat_forward_list_item extends LetcBox {
     this.onUiEvent = this.onUiEvent.bind(this);
     this.getUserState = this.getUserState.bind(this);
     this.getPresenceText = this.getPresenceText.bind(this);
+    this.isChatDisabled = this.isChatDisabled.bind(this);
+    this.disabledReason = this.disabledReason.bind(this);
+    this.refreshChatEligibility = this.refreshChatEligibility.bind(this);
   }
 
   initialize(opt) {
@@ -12,6 +15,8 @@ class ___chat_forward_list_item extends LetcBox {
     require('./skin');
     super.initialize();
     this.selectedRoomList = this.mget('selectedList') || [];
+    const owner = this.mget('eligibilityOwner');
+    if (owner && owner._registerShareRoom) owner._registerShareRoom(this);
     return this.declareHandlers();
   }
 
@@ -38,6 +43,7 @@ class ___chat_forward_list_item extends LetcBox {
 // 
 // ===========================================================
   onUiEvent(cmd) {
+    if (this.isChatDisabled()) return;
     const service = cmd.get(_a.service) || cmd.get(_a.name);
 
     switch (service) {
@@ -56,6 +62,7 @@ class ___chat_forward_list_item extends LetcBox {
 //
 // ===========================================================
   getUserState() {
+    if (this.isChatDisabled()) return 0;
     let _state = 0;
     const roomId = this.mget(_a.id);
     if ((this.selectedRoomList.length > 0) && (this.selectedRoomList.includes(roomId))) {
@@ -63,6 +70,39 @@ class ___chat_forward_list_item extends LetcBox {
     }
 
     return _state;
+  }
+
+// ===========================================================
+// A row is gated only when the list passed it an eligibility map. The list
+// decides that (see the picker's _needsEligibility): a workspace message scopes
+// BOTH tabs to that workspace's chat members, while a P2P chat scopes only its
+// share rooms and leaves contacts selectable.
+//
+// Absent verdict = disabled: the map is filled in by a batched response, so an
+// unresolved row must not be selectable in the meantime.
+// ===========================================================
+  isChatDisabled() {
+    const eligibility = this.mget('shareEligibility');
+    if (!eligibility) return false;
+    return Number(eligibility[this.mget(_a.id)]) !== 1;
+  }
+
+// ===========================================================
+//
+// ===========================================================
+  disabledReason() {
+    if (!this.isChatDisabled()) return '';
+    return this.mget(_a.type) === _a.shareRoom
+      ? LOCALE.NO_CHAT_PERMISSION
+      : LOCALE.NOT_WORKSPACE_MEMBER;
+  }
+
+// ===========================================================
+// Rebuild only this row after its batched eligibility response arrives.
+// ===========================================================
+  refreshChatEligibility() {
+    if (this.isDestroyed && this.isDestroyed()) return;
+    if (this.el) this.feed(require('./skeleton')(this));
   }
 
 // ===========================================================
