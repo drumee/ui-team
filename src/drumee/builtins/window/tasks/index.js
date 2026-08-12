@@ -4852,6 +4852,37 @@ class __tasks_panel extends LetcBox {
       e.preventDefault();
       return this[COMMENT_SUBMIT_BY_SCOPE[scope]]();
     }
+    // Cmd/Ctrl+Enter inserts a line break. ui-core's RichText already treats a
+    // modified Enter as one (its flag is literally named _enterUsesLineBreak and
+    // includes metaKey) but it only ALLOWS the browser default, and the browser
+    // inserts nothing for a modified Enter — confirmed on Windows/Edge as well as
+    // Lexis's Mac, so this is not a macOS quirk. Shift+Enter is excluded on
+    // purpose: the browser does insert a <br> for that one, and adding a second
+    // here would double the break.
+    if (
+      !mentionOpen &&
+      e.key === "Enter" &&
+      (e.ctrlKey || e.metaKey) &&
+      !e.shiftKey &&
+      !e.altKey &&
+      !e.isComposing &&
+      e.keyCode !== 229
+    ) {
+      e.preventDefault();
+      // execCommand keeps the break on the native undo stack, unlike the manual
+      // range surgery the paste / mention / link paths use. A <br> is what
+      // _serializeEditor maps to "\n", so it round-trips through a save.
+      // insertLineBreak is not in every engine; insertHTML is the fallback, and
+      // if both refuse we are simply back to today's no-op.
+      const el = this._descEditorEl(scope);
+      if (!document.execCommand("insertLineBreak")) {
+        document.execCommand("insertHTML", false, "<br>");
+      }
+      // execCommand fires `input`, which syncs the draft — but sync explicitly so
+      // the break cannot be lost on save if an engine skips that event.
+      if (el) this._onDescInput(scope, el);
+      return;
+    }
     if (!mentionOpen) return;
     if (e.key === "Escape") {
       e.preventDefault();
