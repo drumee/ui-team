@@ -4852,19 +4852,21 @@ class __tasks_panel extends LetcBox {
       e.preventDefault();
       return this[COMMENT_SUBMIT_BY_SCOPE[scope]]();
     }
-    // Cmd/Ctrl+Enter inserts a line break. ui-core's RichText already treats a
-    // modified Enter as one (its flag is literally named _enterUsesLineBreak and
-    // includes metaKey) but it only ALLOWS the browser default, and the browser
-    // inserts nothing for a modified Enter — confirmed on Windows/Edge as well as
-    // Lexis's Mac, so this is not a macOS quirk. Shift+Enter is excluded on
-    // purpose: the browser does insert a <br> for that one, and adding a second
-    // here would double the break.
+    // Cmd/Ctrl/Alt+Enter inserts a line break. ui-core's RichText already treats
+    // any modified Enter as one (its flag is literally named _enterUsesLineBreak
+    // and lists shift/meta/ctrl/alt) but it only ALLOWS the browser default, and
+    // the browser inserts nothing for a modified Enter — confirmed on Windows/Edge
+    // as well as Lexis's Mac, so this is not a macOS quirk. Alt is in the set
+    // because Alt/Option+Enter is the in-cell line break in every spreadsheet
+    // (Excel, Sheets, and the OnlyOffice editor Drumee embeds), so the habit
+    // carries over.
+    // PLAIN Shift+Enter is the one combination left alone: the browser does insert
+    // a <br> for that, and acting here too would double the break. Shift WITH
+    // another modifier still lands here, because the browser inserts nothing then.
     if (
       !mentionOpen &&
       e.key === "Enter" &&
-      (e.ctrlKey || e.metaKey) &&
-      !e.shiftKey &&
-      !e.altKey &&
+      (e.ctrlKey || e.metaKey || e.altKey) &&
       !e.isComposing &&
       e.keyCode !== 229
     ) {
