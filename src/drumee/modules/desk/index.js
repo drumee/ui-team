@@ -685,8 +685,15 @@ class desk_module extends LetcBox {
   }
 
   /**
-   * After promo-launch30 explore → location.reload(), open Admin Console.
-   * Invite panel is opened by apps-main from drumee_promo_open_invite.
+   * Legacy path for promo-launch30's "Start exploring now".
+   *
+   * That button no longer reloads — it broadcasts desk:open-admin-console and
+   * the console opens in place, which is ~1.7s cheaper (see the note on
+   * _exploreAfterClaim). Nothing sets drumee_promo_open_admin any more.
+   *
+   * Kept for one case only: a tab that clicked the button on the previous
+   * build, set the flag, and reloaded into this one. sessionStorage dies with
+   * that tab, so this can be deleted after a deploy cycle.
    */
   _maybeOpenPromoAdminAfterClaim() {
     let open = false;
