@@ -1,5 +1,6 @@
 /**
- * Google tag (gtag.js) — the Google Ads tag AW-18350168481.
+ * Google tag (gtag.js) — the Google Ads tag AW-18350168481 and the GA4
+ * property G-9123HGZ86W.
  *
  * The document itself is not ours to edit: the app boots into a shell served
  * by the backend, and this repo builds bundles, not HTML (there is no
@@ -22,16 +23,43 @@
  * queue provably exists before the library can run, whatever the network does.
  *
  * WHERE IT RUNS — Drumee-operated hosts only, see `TRACKED_HOST`. This is AGPL
- * software that other people deploy on their own domains, and an ad tag
- * compiled into the bundle would otherwise report every one of those
- * deployments to Google under OUR conversion ID: their visitors' traffic
- * leaves their instance, and our Ads reporting fills with conversions no
- * campaign of ours produced. Stage (drumee.in) is excluded by the same rule,
- * which is the point — test signups are not conversions.
+ * software that other people deploy on their own domains, and a tag compiled
+ * into the bundle would otherwise report every one of those deployments to
+ * Google under OUR ids: their visitors' traffic leaves their instance, and our
+ * reporting fills with activity no campaign of ours produced. That guard
+ * matters more with GA4 in the picture than it did with Ads alone — Ads only
+ * hears about conversions, GA4 measures ordinary use of a product whose whole
+ * promise is that your data stays yours. Stage (drumee.in) is excluded by the
+ * same rule, which is the point — test signups are not conversions.
  */
 
 const TAG_ID = "AW-18350168481";
-const SRC = `https://www.googletagmanager.com/gtag/js?id=${TAG_ID}`;
+
+/**
+ * GA4 — the app's OWN property ("app.drumee.com", G-9123HGZ86W), not the
+ * marketing site's G-JWRXMF6HDP. The split is deliberate: the landing page
+ * is marketing, the app is product, and each team reads its own property
+ * without the other's noise.
+ *
+ * What the split costs: a session cannot span two properties, so GA4 shows
+ * no single funnel from ad click to signup — the visitor "ends" on the
+ * marketing property and "starts" here, even though the `.drumee.com`
+ * cookie itself spans both hosts. Cross-site campaign attribution is
+ * measured where it survives that cut: Google Ads (the AW tag + gclid) and
+ * the backend's profile.utm.
+ *
+ * page_view is not left to the property: install() passes
+ * send_page_view:false and the router emits explicit screens via pageView()
+ * below — see its comment for why a hash router needs that.
+ */
+const GA4_ID = "G-9123HGZ86W";
+
+// One <script> serves every configured id, which is also what keeps this page
+// compliant with Google's "no more than one Google tag per page". Loaded under
+// the GA4 id, matching drumee.com's own snippet — either id works, and being
+// able to diff the two implementations line for line is worth more than the
+// choice itself.
+const SRC = `https://www.googletagmanager.com/gtag/js?id=${GA4_ID}`;
 
 // drumee.com and every subdomain of it (workspaces are `<ident>.drumee.com`).
 // Anchored both ends: a lookalike host such as `drumee.com.evil.net` must not
@@ -97,7 +125,14 @@ function install() {
 
   // A real Date — gtag stamps the load time from it; Dayjs is not a substitute.
   window.gtag("js", new Date());
+  // Same order and same options as drumee.com's snippet.
+  window.gtag("config", GA4_ID, { send_page_view: false });
   window.gtag("config", TAG_ID);
+  // send_page_view:false suppresses the automatic hit, so the FIRST screen has
+  // to be sent by hand or the session never begins. Everything after it comes
+  // from the router; this is the one the router cannot emit, because install()
+  // runs from module scope of index.web.js, long before a router exists.
+  pageView();
 
   const el = document.createElement("script");
   el.async = true;
@@ -137,4 +172,41 @@ function event(name, params = {}) {
   }
 }
 
-module.exports = { install, event, isEnabled, TAG_ID };
+// The last screen reported, so the same one is not counted twice.
+let lastPath = null;
+
+/**
+ * Report a screen to GA4.
+ *
+ * `send_page_view: false` is copied from drumee.com deliberately, but it is
+ * only half of what that site does: its router calls trackPageView on every
+ * route (src/lib/analytics.ts). Copying the flag WITHOUT copying the emitter
+ * would mean GA4 receives nothing at all from the app — no page views, no
+ * sessions, no users — which is the opposite of the point. So this exists, and
+ * `router/route()` calls it.
+ *
+ * Why not just leave the automatic hit on: this is a hash router. The
+ * automatic page_view fires once per document, so every screen after the first
+ * would be invisible, and whether the hash counts at all then depends on an
+ * Enhanced Measurement switch in the property rather than on anything in this
+ * repo. Sending them explicitly makes "welcome/signin", "welcome/signup",
+ * "desk" and "desk/billing" distinct screens, which is what a funnel needs.
+ *
+ * Same param shape as the marketing site, so the two feed one report.
+ *
+ * @param {String} [path] defaults to the current pathname + hash
+ * @param {String} [title] defaults to document.title
+ * @returns {Boolean} true when a hit was sent
+ */
+function pageView(path, title) {
+  if (typeof window === "undefined" || typeof window.gtag !== "function") return false;
+  const p = path || `${window.location.pathname}${window.location.hash}`;
+  // route() runs on boot AND on every hashchange, and a few flows call it again
+  // for a URL that has not moved.
+  if (p === lastPath) return false;
+  lastPath = p;
+  event("page_view", { page_path: p, page_title: title || document.title });
+  return true;
+}
+
+module.exports = { install, event, pageView, isEnabled, TAG_ID, GA4_ID };
