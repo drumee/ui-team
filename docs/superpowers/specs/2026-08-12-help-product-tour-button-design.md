@@ -125,6 +125,8 @@ the desk's existing launcher:
 
 ```js
 _startProductTour() {
+  // ...guard: a live desk_tutorial in the overlay means don't re-feed...
+  this._tourReturnsToHelp = true;
   // togglePanel with no openOnly closes the panel: settings-main-slot is not
   // a keep-alive slot, so the child animates out (data-anim="out") and is
   // destroyed 250ms later.
@@ -135,7 +137,7 @@ _startProductTour() {
 
 The help screen must close: the tutorial paints its own mock workspace, so a
 still-mounted Get help screen behind it would show through as a broken
-half-state, and would still be there when the tour finishes.
+half-state.
 
 A guard prevents re-feeding over a tour that is already running (the overlay
 part already holding a live `desk_tutorial` child).
@@ -143,17 +145,62 @@ part already holding a live `desk_tutorial` child).
 Reusing `_showTutorial()` rather than feeding `desk_tutorial` directly keeps
 one launch path for the tour.
 
-## Flagged side effect
+## Return trip — finishing the tour goes back to Get help
+
+Because the screen is closed on the way in, finishing the tour has to put it
+back: the user asked for a tour *from* Get help, so that is where they are
+returned. An automatic post-signup run is unaffected and still leaves the user
+on the desk.
+
+`_tourReturnsToHelp` carries the intent from `_startProductTour()` across to
+`onPartReady("desk-tutorial")` — the only reliable handle on the mounted
+tutorial, for the same reason `_showTutorial()` documents (a `feed()` return
+value races). There, `_chainHelpReturnAfterTutorial(child)` **consumes** the
+flag and, if it was set, hooks the tutorial's completion:
+
+```js
+_chainHelpReturnAfterTutorial(tutorial) {
+  const returns = this._tourReturnsToHelp;
+  this._tourReturnsToHelp = false;
+  if (!returns || !tutorial || !_.isFunction(tutorial.once)) return;
+  tutorial.once(_e.destroy, () => this._openGetHelp());
+}
+```
+
+Consuming the flag at mount rather than in the destroy handler means a later
+automatic run can never inherit a stale intent.
+
+`_e.destroy` is the completion signal: the tutorial ends by calling
+`softDestroy()` from `_enterWorkspace()`, which routes through `selfDestroy()`
+→ `destroy()`. This is the same signal `_chainRewardFlowAfterTutorial` already
+relies on.
+
+### `_openGetHelp()` — shared open path
+
+Opening Get help is factored out of the `toggle-help` case into
+`_openGetHelp()`, now called by both the sidebar entry and the return trip, so
+both land on the same screen with the same breadcrumb. Because the panel is
+destroyed on close, it always re-opens on `help_main`'s default page — Product
+tour, which is the page the button was on.
+
+### Accepted rough edge
+
+`softDestroy` fades for 0.5s and destroys only afterwards, so `destroy` arrives
+once the tour is already off screen: the desk is visible for the moment it takes
+the panel to mount. Left as is — there is no "tour is exiting" signal to open
+the panel earlier, and pre-opening Get help at launch is exactly what the
+close-on-entry exists to avoid.
+
+## Reward flow — a non-issue for this path
 
 `_showTutorial()` passes `partHandler: this`, so `onPartReady("desk-tutorial")`
-fires `_chainRewardFlowAfterTutorial`. A help-initiated tour will therefore run
-the reward / LAUNCH30 check when it ends, not just a post-signup one.
+also fires `_chainRewardFlowAfterTutorial`, which chains `_afterHomeSettled()`
+on tutorial exit.
 
-Accepted rather than worked around. Both gates are server-side and self-gating
-(`reward.get_state` reads `yp.reward_claim`; LAUNCH30 gates itself the same
-way), so an ineligible user sees nothing, and an eligible one seeing the flow
-is correct behaviour. Adding a skip flag would fork the launch path for no
-user-visible gain.
+That is a no-op for a help-initiated tour: `_afterHomeSettled()` returns early
+on `_homeSettledDone`, which is set once per session, and the desk has long
+since settled by the time anyone opens Get help. No reward or LAUNCH30 popup can
+appear on the way back to Get help.
 
 ## Locale
 

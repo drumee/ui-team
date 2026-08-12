@@ -1736,6 +1736,9 @@ class desk_module extends LetcBox {
         clearTimeout(this._homeSettledFallback);
         this._homeSettledFallback = null;
         this._chainRewardFlowAfterTutorial(child);
+        // Only fires for a tour launched from Get help; the automatic
+        // post-signup run leaves the user on the desk as before.
+        this._chainHelpReturnAfterTutorial(child);
         return;
     }
   }
@@ -1848,15 +1851,20 @@ class desk_module extends LetcBox {
    * `?tutorial=1` — so anyone who skipped it had no way back in.
    *
    * Get help has to go first: the tour renders its OWN mock workspace, so a
-   * still-mounted help screen would show through it and would still be sitting
-   * there when the tour finished. settings-main-slot is not a keep-alive slot,
-   * so togglePanel without `openOnly` animates the child out and destroys it.
+   * still-mounted help screen would show through it. settings-main-slot is not a
+   * keep-alive slot, so togglePanel without `openOnly` animates the child out
+   * and destroys it.
    *
    * Goes through _showTutorial() rather than feeding desk_tutorial here, so
-   * both entry points share one launch path. That also means a tour started
-   * from here chains the reward flow on exit (onPartReady "desk-tutorial");
-   * harmless, because that flow gates itself on the server and shows nothing
-   * to a user who is not owed a run.
+   * both entry points share one launch path. The reward flow it chains on exit
+   * is a no-op for this path: _afterHomeSettled() runs once per session and the
+   * desk has long since settled by the time anyone opens Get help.
+   *
+   * Because the screen is closed on the way in, finishing the tour has to put
+   * it back — the user asked for a tour FROM Get help, so that is where they
+   * are returned. `_tourReturnsToHelp` carries that intent across to
+   * onPartReady("desk-tutorial"), which is the only reliable handle on the
+   * mounted tutorial (see _showTutorial on why feed()'s return value is not).
    */
   _startProductTour() {
     // Re-feeding the overlay while a tour is live would throw the user back to
@@ -1874,8 +1882,51 @@ class desk_module extends LetcBox {
     if (running && !running.isDestroyed() && kind === "desk_tutorial") {
       return;
     }
+    this._tourReturnsToHelp = true;
     this.togglePanel("help_main", "settings-main-slot");
     this._showTutorial();
+  }
+
+  /**
+   * Put Get help back when a tour that was started from it finishes.
+   *
+   * The flag is CONSUMED here rather than in the destroy handler: if the
+   * tutorial mounts at all, this is the run it belongs to, and clearing it now
+   * means a later automatic run can never inherit a stale intent. A tour that
+   * fails to mount leaves the flag set, which is why _startProductTour is also
+   * the only thing that sets it — the next click overwrites it truthfully.
+   *
+   * `once` matches _chainRewardFlowAfterTutorial: the tutorial ends by calling
+   * softDestroy() from _enterWorkspace(), so destroy is the completion signal.
+   *
+   * softDestroy fades for 0.5s and only then destroys, so destroy arrives after
+   * the tour is already off screen and the desk shows for the moment it takes
+   * the panel to mount. Left as is: there is no "tour is exiting" signal to
+   * open the panel earlier on, and the alternative — pre-opening Get help at
+   * launch and letting the tour cover it — is what the close-on-entry exists to
+   * avoid, since the tour draws its own mock workspace.
+   */
+  _chainHelpReturnAfterTutorial(tutorial) {
+    const returns = this._tourReturnsToHelp;
+    this._tourReturnsToHelp = false;
+    if (!returns || !tutorial || !_.isFunction(tutorial.once)) return;
+    tutorial.once(_e.destroy, () => this._openGetHelp());
+  }
+
+  /**
+   * Get help — full-page screen in the same slot as Settings/Billing.
+   * Open-only, matching its sidebar neighbours.
+   *
+   * Shared by the sidebar entry (`toggle-help`) and by the return trip after a
+   * product tour, so both land on the same screen with the same breadcrumb.
+   * The panel is destroyed on close, so it always re-opens on help_main's
+   * default page — Product tour, which is the page the button was on.
+   */
+  _openGetHelp() {
+    RADIO_BROADCAST.trigger("breadcrumb:context", {
+      filename: LOCALE.GET_HELP,
+    });
+    return this.togglePanel("help_main", "settings-main-slot", true);
   }
 
   /**
@@ -3141,12 +3192,7 @@ class desk_module extends LetcBox {
         return this.togglePanel("settings_main", "settings-main-slot", true);
 
       case "toggle-help":
-        // Get help — full-page screen in the same slot as Settings/Billing.
-        // Open-only, matching its sidebar neighbours.
-        RADIO_BROADCAST.trigger("breadcrumb:context", {
-          filename: LOCALE.GET_HELP,
-        });
-        return this.togglePanel("help_main", "settings-main-slot", true);
+        return this._openGetHelp();
 
       // "Product Tour" button on the Get help screen.
       case "start-product-tour":

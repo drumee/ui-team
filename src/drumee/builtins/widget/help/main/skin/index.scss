@@ -230,12 +230,13 @@
       position: relative;
       width: 100%;
       aspect-ratio: 900 / 506;
-      border-radius: 24px;
+      border-radius: 12px;
       background: $surface;
       align-items: center;
       justify-content: center;
       cursor: pointer;
       overflow: hidden;
+      border: 1px solid var(--border-default);
 
       &:hover .help-main__video-play {
         transform: scale(1.06);
@@ -360,8 +361,8 @@
     &-btn {
       @include focus-ring;
       padding: var(--spacer-4) var(--spacer-6);
-      border-radius: 58px;
-      background: $purple-base;
+      border-radius: 6px;
+      background: var(--primary-50);
       font-size: 0.9375rem; // 15px
       font-weight: 600;
       line-height: 1.25rem;
@@ -373,7 +374,7 @@
         transform $fast $ease;
 
       &:hover {
-        background: $purple-deep;
+        background: var(--primary-60);
         transform: translateY(-1px);
       }
 
