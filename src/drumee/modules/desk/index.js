@@ -80,7 +80,7 @@ class desk_module extends LetcBox {
       phase: "bubble",
       match: (e) =>
         e.key === "Escape" && !e.defaultPrevented && !hotkeys.inTextEntry(e.target),
-      run: () => this._dismissTransientUi(),
+      run: () => this._onEscape(),
     });
     // Cross-plugin / cross-module billing entry (admin-console upsell, Wm) →
     // open the full-page billing screen without a direct module reference.
@@ -3584,6 +3584,107 @@ class desk_module extends LetcBox {
     if (typeof RADIO_CLICK === "undefined" || !RADIO_CLICK) return false;
     RADIO_CLICK.trigger(_e.click);
     return false;
+  }
+
+  // One Escape peels ONE layer: a live transient layer takes the press, and only
+  // when there is none does a window close. Always reports not-handled so Escape
+  // keeps its browser defaults.
+  _onEscape() {
+    if (this._hasTransientLayer()) {
+      this._dismissTransientUi();
+      return false;
+    }
+    this._closeEscapeWindow();
+    return false;
+  }
+
+  // Is a transient layer live? Deliberately CONSERVATIVE — anything uncertain
+  // answers true, which costs at most one extra Escape press, whereas a false
+  // negative closes a window the user did not mean to close.
+  //
+  //  - RADIO_CLICK's subscriber list is the framework's own bookkeeping: the only
+  //    subscribers are volatility:1/2 views (letc.js onBeforeRender) and open
+  //    `menu` widgets.
+  //  - volatility arms that subscriber on a 500 ms delay, so a just-opened info
+  //    popover is invisible above. Its container is not: `__info-container` is
+  //    used by exactly the four info / file-info popovers and nothing else.
+  //  - a right-click context menu is volatility:4, armed on RADIO_POINTER rather
+  //    than RADIO_CLICK, so it is neither seen nor dismissed by the signal above.
+  //    It is matched by class instead. We do NOT fire RADIO_POINTER to dismiss it:
+  //    window/selection subscribes to the same pointerdown for rubber-band
+  //    select, and a synthetic event would reach that too.
+  _hasTransientLayer() {
+    try {
+      const ev =
+        typeof RADIO_CLICK !== "undefined" && RADIO_CLICK && RADIO_CLICK._events;
+      const subs = ev && ev[_e.click];
+      if (subs && subs.length) return true;
+    } catch (e) {
+      return true;
+    }
+    try {
+      if (document.querySelector('[class*="__info-container"], .drumee-contextmenu')) {
+        return true;
+      }
+    } catch (e) {
+      return true;
+    }
+    return false;
+  }
+
+  // Escape must not double as exit-fullscreen. The browser already owns Escape
+  // there, and both the document player and the webrtc room watch
+  // fullscreenchange — one press must not also destroy the window.
+  _inFullscreen() {
+    return !!(
+      document.fullscreenElement ||
+      document.webkitFullscreenElement ||
+      document.mozFullScreenElement
+    );
+  }
+
+  // Close the window Escape should act on: the one containing focus, else the
+  // topmost by z-index (the same max-zIndex scan the window manager itself uses
+  // in selectWindow). Minimized windows are skipped, and so is any window whose
+  // destruction would drop a live call — `leaveRoom` is defined only on
+  // builtins/webrtc/room/jitsi (meeting, connect, screenshare, litechat) and
+  // room.onBeforeDestroy calls it, so its presence is exactly the signal that
+  // closing would hang up.
+  //
+  // Closing goes through the SAME path as the titlebar X: window/core's
+  // onUiEvent reads `args.service || …`, so passing args never touches `cmd`.
+  _closeEscapeWindow() {
+    if (this._inFullscreen()) return false;
+    const wm = window.Wm;
+    if (!wm || !_.isFunction(wm.getWindowsPool)) return false;
+    let list;
+    try {
+      const pool = wm.getWindowsPool();
+      if (!pool || !pool.children || !_.isFunction(pool.children.toArray)) return false;
+      list = pool.children.toArray();
+    } catch (e) {
+      return false;
+    }
+    const node = document.activeElement;
+    let top = null;
+    let max = -Infinity;
+    let focused = null;
+    for (const w of list) {
+      if (!w || !w.el) continue;
+      if (_.isFunction(w.isDestroyed) && w.isDestroyed()) continue;
+      if (w.mget(_a.minimize)) continue;
+      if (_.isFunction(w.leaveRoom)) continue;
+      if (node && _.isFunction(w.el.contains) && w.el.contains(node)) focused = w;
+      const z = parseInt(w.getActualStyle(_a.zIndex), 10);
+      if (isFinite(z) && z > max) {
+        max = z;
+        top = w;
+      }
+    }
+    const target = focused || top;
+    if (!target || !_.isFunction(target.onUiEvent)) return false;
+    target.onUiEvent(null, { service: _e.close });
+    return true;
   }
 
   // Ctrl/Cmd+Shift+F. Context-sensitive: inside a chat window it opens that
