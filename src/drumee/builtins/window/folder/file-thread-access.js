@@ -81,19 +81,22 @@ module.exports = {
 
     const st = this._ftAccessState(key);
     if (payload.state === "revoked") {
-      // "away" is deliberately NOT "revoked": _ftIsFileRevoked gates every path
-      // that opens a thread, and a thread whose file merely moved must still
-      // open. Recording it as revoked here would leave the conversation listed
-      // but permanently unopenable.
-      st.state = this._ftIsAwayReason(payload.reason) ? "away" : "revoked";
+      // A file that left is locked, not merely frozen: the thread closes back
+      // to General and refuses to reopen until the file returns. Recorded as
+      // "revoked" so _ftIsFileRevoked — which gates every path that opens a
+      // thread — refuses a stale card, rail row, or cross-window launch too.
+      //
+      // move_back clears it through _onFileThreadRestored, which is the only
+      // thing that can: nothing local may unlock a thread the server still
+      // considers away.
+      //
+      // orphaned is different and keeps the frozen-but-readable presentation.
+      // The file was deleted outright, so there is no return, and locking the
+      // thread would put the team's own messages permanently out of reach.
+      st.state = this._ftIsOrphanReason(payload.reason) ? "away" : "revoked";
       st.fileNid = `${payload.file_nid || ""}`;
       st.fileThreadId = `${payload.file_thread_id || ""}`;
-      // Losing access and having the file move away look alike on the wire but
-      // are opposite events. Losing access means this thread is not yours to
-      // read: hide it, warn, return to General. A move means the file went to
-      // another workspace while the conversation stayed here — it is still your
-      // team's discussion, so it stays visible and readable, just frozen.
-      if (this._ftIsAwayReason(payload.reason)) {
+      if (this._ftIsOrphanReason(payload.reason)) {
         return this._onFileThreadMovedAway(payload, key);
       }
       return this._onFileThreadRevoked(payload, key);
@@ -112,11 +115,12 @@ module.exports = {
     }
   },
 
-  // Reasons where the thread survives its file. Anything else is a genuine
-  // access loss and keeps the original hide-and-warn behaviour.
-  _ftIsAwayReason(reason) {
-    const r = `${reason || ""}`;
-    return r === "move_out" || r === "orphaned";
+  // The one reason a thread stays open after losing its file: the file was
+  // deleted, so it is never coming back, and locking the thread would put the
+  // team's own messages permanently out of reach. Everything else — a move
+  // included — locks and returns to General.
+  _ftIsOrphanReason(reason) {
+    return `${reason || ""}` === "orphaned";
   },
 
   // Is this revoked file the one currently mounted, in either presentation?
@@ -174,11 +178,14 @@ module.exports = {
     return this._ftShowRevokedNotice(captured);
   },
 
-  // ── file moved away / deleted ───────────────────────────────────────────
-  // The conversation stays where it was written and stays readable. Only the
-  // file left, so nothing is torn down: no card invalidation, no warning
+  // ── file deleted outright (orphaned) ────────────────────────────────────
+  // The conversation stays where it was written and stays readable. The file is
+  // gone for good, so nothing is torn down: no card invalidation, no warning
   // dialog, no return to General. The thread is frozen against new messages and
-  // its info card is repainted to say where the file went.
+  // its info card is repainted to say the file was deleted.
+  //
+  // A move takes the locked path instead (_onFileThreadRevoked): that file can
+  // come back, and until it does the thread must not be reopened.
   _onFileThreadMovedAway(payload = {}, key) {
     // The rail and the dropdown still list this thread, but its row now needs
     // the frozen presentation, so both are stale.
