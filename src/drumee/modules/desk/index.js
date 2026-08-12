@@ -5,6 +5,11 @@ const billingDeepLink = require("libs/billing-deep-link");
 const { captureUtm, campaignArrival } = require("libs/campaign");
 const hubDeepLink = require("libs/hub-deep-link");
 
+// Widgets that own a modal or panel Escape should close BEFORE the window that
+// hosts it. Opt-in: each implements onEscape() and returns true when it consumed
+// the press. See _closeEscapeModal for why this is an explicit list.
+const ESCAPE_MODAL_KINDS = ["tasks_panel"];
+
 class desk_module extends LetcBox {
   constructor(...args) {
     super(...args);
@@ -3590,11 +3595,43 @@ class desk_module extends LetcBox {
   // when there is none does a window close. Always reports not-handled so Escape
   // keeps its browser defaults.
   _onEscape() {
+    // In fullscreen Escape belongs to the browser — it exits, and we do nothing
+    // else, so one press never has two effects.
+    if (this._inFullscreen()) return false;
     if (this._hasTransientLayer()) {
       this._dismissTransientUi();
       return false;
     }
+    if (this._closeEscapeModal()) return false;
     this._closeEscapeWindow();
+    return false;
+  }
+
+  // A modal/panel closes before the window that hosts it. Opt-in by kind: each
+  // listed widget implements onEscape() and returns true when it consumed the
+  // press. Deliberately an explicit list and NOT a DOM sweep — Skeletons.Wrapper
+  // is used 145 times for ordinary containers (attachment wrappers, overlay
+  // slots), so there is no generic "this is a modal" marker to match on.
+  // The search is bounded to the target window's own subtree, because
+  // getItemsByAttr walks every descendant and the desk tree can be large.
+  _closeEscapeModal() {
+    const w = this._escapeWindowTarget();
+    if (!w || !_.isFunction(w.getItemsByKind)) return false;
+    for (const kind of ESCAPE_MODAL_KINDS) {
+      let items;
+      try {
+        items = w.getItemsByKind(kind) || [];
+      } catch (e) {
+        continue;
+      }
+      for (const it of items) {
+        try {
+          if (it && _.isFunction(it.onEscape) && it.onEscape() === true) return true;
+        } catch (e) {
+          // a broken panel must not block Escape from reaching the window
+        }
+      }
+    }
     return false;
   }
 
@@ -3654,16 +3691,29 @@ class desk_module extends LetcBox {
   // Closing goes through the SAME path as the titlebar X: window/core's
   // onUiEvent reads `args.service || …`, so passing args never touches `cmd`.
   _closeEscapeWindow() {
+    // Redundant with the check in _onEscape, on purpose: this destroys a window,
+    // so it re-asserts the guard rather than trusting its only caller.
     if (this._inFullscreen()) return false;
+    const target = this._escapeWindowTarget();
+    if (!target || !_.isFunction(target.onUiEvent)) return false;
+    target.onUiEvent(null, { service: _e.close });
+    return true;
+  }
+
+  // The window Escape acts on: the one containing focus, else the topmost by
+  // z-index (the same max-zIndex scan the window manager uses in selectWindow).
+  // Minimized and destroyed windows are skipped, and so is any window whose
+  // destruction would drop a live call.
+  _escapeWindowTarget() {
     const wm = window.Wm;
-    if (!wm || !_.isFunction(wm.getWindowsPool)) return false;
+    if (!wm || !_.isFunction(wm.getWindowsPool)) return null;
     let list;
     try {
       const pool = wm.getWindowsPool();
-      if (!pool || !pool.children || !_.isFunction(pool.children.toArray)) return false;
+      if (!pool || !pool.children || !_.isFunction(pool.children.toArray)) return null;
       list = pool.children.toArray();
     } catch (e) {
-      return false;
+      return null;
     }
     const node = document.activeElement;
     let top = null;
@@ -3681,10 +3731,7 @@ class desk_module extends LetcBox {
         top = w;
       }
     }
-    const target = focused || top;
-    if (!target || !_.isFunction(target.onUiEvent)) return false;
-    target.onUiEvent(null, { service: _e.close });
-    return true;
+    return focused || top;
   }
 
   // Ctrl/Cmd+Shift+F. Context-sensitive: inside a chat window it opens that

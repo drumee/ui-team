@@ -4820,6 +4820,27 @@ class __tasks_panel extends LetcBox {
     this._handleEditorMention(editorEl, scope);
   }
 
+  // Escape hook, called by the desk (ESCAPE_MODAL_KINDS) BEFORE it closes the
+  // host window. Returns true when this panel consumed the press. Closing goes
+  // through the same services as the modals' own X / Cancel — onUiEvent reads
+  // `args.service` first, so passing null for the trigger is safe.
+  //
+  // The create modal is checked first: it sits on top of the panel, so it is the
+  // innermost layer. Each service discards its draft exactly as its own X does
+  // (cancel-add clears _createDefaults, close-detail runs _closeDetailSilently)
+  // — Escape adds no new discard path, it just reaches the existing one.
+  onEscape() {
+    if (this._creating) {
+      this.onUiEvent(null, { service: "cancel-add" });
+      return true;
+    }
+    if (this._detailId) {
+      this.onUiEvent(null, { service: "close-detail" });
+      return true;
+    }
+    return false;
+  }
+
   _onDescKeydown(e, scope) {
     // Before the mention guard — Ctrl/Cmd+K works whether or not a mention
     // popup happens to be open.
