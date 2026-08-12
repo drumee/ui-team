@@ -99,17 +99,29 @@ function __skl_welcome_signin_content(ui) {
     kids: [emailField, passwordField, forgotRow, submit, msgBox],
   });
 
-  const divider = Skeletons.Box.X({
-    className: `${contentFig}__divider`,
-    kids: [
-      Skeletons.Box.X({ className: `${contentFig}__divider-line` }),
-      Skeletons.Note({
-        className: `${contentFig}__divider-label`,
-        content: LOCALE.OR,
-      }),
-      Skeletons.Box.X({ className: `${contentFig}__divider-line` }),
-    ],
-  });
+  // Social sign-in is served by the `loby` plugin (acl/google.json,
+  // acl/apple.json -> google.initiate / apple.initiate). Those services reach
+  // the client through Platform.get('services'), so on an install without loby
+  // they are simply absent — and a button that cannot start a flow must not be
+  // shown. Checked per provider: a deployment may register one and not the
+  // other. See ../index.js -> startOauth for the click side of this contract.
+  const hasGoogle = !!(SERVICE.google && SERVICE.google.initiate);
+  const hasApple = !!(SERVICE.apple && SERVICE.apple.initiate);
+  const hasSocial = hasGoogle || hasApple;
+
+  const divider = hasSocial
+    ? Skeletons.Box.X({
+        className: `${contentFig}__divider`,
+        kids: [
+          Skeletons.Box.X({ className: `${contentFig}__divider-line` }),
+          Skeletons.Note({
+            className: `${contentFig}__divider-label`,
+            content: LOCALE.OR,
+          }),
+          Skeletons.Box.X({ className: `${contentFig}__divider-line` }),
+        ],
+      })
+    : "";
 
   const googleButton = Skeletons.Box.X({
     className: `${contentFig}__social-button google`,
@@ -145,10 +157,12 @@ function __skl_welcome_signin_content(ui) {
     ],
   });
 
-  const socialButtons = Skeletons.Box.Y({
-    className: `${contentFig}__social-buttons`,
-    kids: [googleButton, appleButton],
-  });
+  const socialButtons = hasSocial
+    ? Skeletons.Box.Y({
+        className: `${contentFig}__social-buttons`,
+        kids: [hasGoogle ? googleButton : "", hasApple ? appleButton : ""].filter(Boolean),
+      })
+    : "";
 
   // Reconnect mode: re-auth form + social buttons, but no signup/terms footer
   // (a disconnected, already-registered user shouldn't see "Start free").
