@@ -1133,6 +1133,10 @@ export function fileThreadInfoCard(ui, opt = {}) {
               Skeletons.Note({ className: `${grp}__ft-info-time`, content: "" }),
             ],
           }),
+          // Says where the file went once it has left this workspace. Stays
+          // empty — and so renders nothing — for a file that is still here,
+          // which is every ordinary thread.
+          Skeletons.Note({ className: `${grp}__ft-info-status`, content: "" }),
         ],
       }),
     ],

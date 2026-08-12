@@ -2580,5 +2580,9 @@
   "OL_SEATS_NO_CONSOLE": "Votre offre ne comprend pas la console d'administration. Ouvrez chaque espace de travail et retirez les membres depuis sa propre liste.",
   "OL_GOTO_HOME": "Ouvrir l'accueil",
   "OL_GOTO_TRASH": "Vider la corbeille",
-  "OL_GOTO_STORAGE": "Console de stockage"
+  "OL_GOTO_STORAGE": "Console de stockage",
+  "FILE_THREAD_MOVED_TO": "Ce fichier a été déplacé vers {0}. La conversation reste ici, en lecture seule.",
+  "FILE_THREAD_MOVED_AWAY": "Ce fichier a été déplacé vers un autre espace de travail. La conversation reste ici, en lecture seule.",
+  "FILE_THREAD_FILE_DELETED": "Ce fichier a été supprimé. La conversation est conservée pour référence.",
+  "FILE_THREAD_READ_ONLY": "Lecture seule"
 }

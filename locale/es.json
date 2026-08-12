@@ -2580,5 +2580,9 @@
   "OL_SEATS_NO_CONSOLE": "Tu plan no incluye la consola de administración. Abre cada espacio de trabajo y quita a los miembros desde su propia lista.",
   "OL_GOTO_HOME": "Abrir Inicio",
   "OL_GOTO_TRASH": "Vaciar la papelera",
-  "OL_GOTO_STORAGE": "Consola de almacenamiento"
+  "OL_GOTO_STORAGE": "Consola de almacenamiento",
+  "FILE_THREAD_MOVED_TO": "Este archivo se movió a {0}. La conversación permanece aquí, en modo solo lectura.",
+  "FILE_THREAD_MOVED_AWAY": "Este archivo se movió a otro espacio de trabajo. La conversación permanece aquí, en modo solo lectura.",
+  "FILE_THREAD_FILE_DELETED": "Este archivo fue eliminado. La conversación se conserva como referencia.",
+  "FILE_THREAD_READ_ONLY": "Solo lectura"
 }

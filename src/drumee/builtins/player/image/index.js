@@ -879,8 +879,34 @@ class __player_image extends __core {
   }
 
   /**
-   * 
-   *  
+   * The open file moved to another workspace and came back with a new node id
+   * (window/utils followMovedNode already re-pointed the model). Every image URL
+   * is built from that id, so the ones on screen now address a node that no
+   * longer exists — repaint from the model instead of waiting for a reload.
+   *
+   * @param {string} nid the node id the file now has
+   * @param {*} dest the destination attributes from the move event
+   */
+  onMovedNodeFollowed(nid, dest = {}) {
+    // The slide the carousel is showing is a copy of the old attributes; leaving
+    // it stale would make the next prev/next step jump back to the dead id.
+    const current = this.siblingsData[this._currentSlide];
+    if (current && `${current.nid || ""}` !== `${nid}`) {
+      this.siblingsData[this._currentSlide] = {
+        ...current,
+        ...dest,
+        nid,
+        hub_id: dest.actual_hub_id || dest.hub_id || current.hub_id,
+      };
+    }
+    if (!this.__sliderContent) return;
+    const urls = this.getImageUrls(this.siblingsData[this._currentSlide]);
+    this.__sliderContent.reload(urls);
+  }
+
+  /**
+   *
+   *
    */
   _play(init) {
     // Commit any unsaved rotation BEFORE the model moves to the next slide.

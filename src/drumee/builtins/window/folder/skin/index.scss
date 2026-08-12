@@ -4064,6 +4064,45 @@ html[data-theme="dark"] {
     }
   }
 
+  // File moved to another workspace, or deleted while it was there. The
+  // conversation stayed behind and is still the team's to read, so it is NOT
+  // blurred the way a revoked thread is — only the ability to add to it goes
+  // away. Blurring here would hide the very messages the user came back for.
+  //
+  // Cosmetic ONLY, same as the revoked rules above: the real guard is
+  // freezeFileScope on the chat widget.
+  .window__ft-info-card[data-ft_lineage] {
+    .window__ft-info-open {
+      display: none;
+    }
+  }
+
+  .window__ft-info-status {
+    margin-top: 4px;
+    @include drumee.typo(
+      $size: 12px,
+      $line: 1.4,
+      $weight: 400,
+      $color: var(--normal-fg-50, #65656c)
+    );
+  }
+
+  .window__ft-info-card[data-ft_lineage="orphaned"] {
+    .window__ft-info-status {
+      color: var(--error-50, #d92d20);
+    }
+  }
+
+  // Card row in # General for a file that is no longer here: dimmed and not
+  // clickable, but never struck through — the file was not deleted from this
+  // workspace's point of view, it left. The thread behind the row still opens.
+  .widget-chatItem__ui.ftc-away {
+    [data-service="open-file-thread"][data-ft_away] {
+      opacity: 0.6;
+      cursor: default;
+    }
+  }
+
   .window__chat-gate-logo {
     align-items: end;
     gap: 8px;

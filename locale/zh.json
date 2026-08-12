@@ -2579,5 +2579,9 @@
   "OL_SEATS_NO_CONSOLE": "你的套餐不含管理控制台。请逐个打开工作区，在各自的成员列表中移除成员。",
   "OL_GOTO_HOME": "打开主页",
   "OL_GOTO_TRASH": "清空回收站",
-  "OL_GOTO_STORAGE": "存储控制台"
+  "OL_GOTO_STORAGE": "存储控制台",
+  "FILE_THREAD_MOVED_TO": "此文件已移至 {0}。对话保留在此处，仅供查看。",
+  "FILE_THREAD_MOVED_AWAY": "此文件已移至其他工作区。对话保留在此处，仅供查看。",
+  "FILE_THREAD_FILE_DELETED": "此文件已被删除。对话已保留以供参考。",
+  "FILE_THREAD_READ_ONLY": "只读"
 }

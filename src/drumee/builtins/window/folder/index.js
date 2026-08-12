@@ -3549,6 +3549,42 @@ class __window_folder extends mfsInteract {
     const dotEl = q("ft-info-dot");
     if (dotEl) dotEl.textContent = when ? "•" : "";
 
+    // A file that left this workspace takes its media row with it, so name and
+    // type come from the lineage snapshot instead. The conversation is still
+    // here and still readable — the card says where the file went rather than
+    // pretending the thread is broken.
+    const lineage = `${info.lineage_state || ""}`;
+    const away = lineage === "unavailable";
+    const gone = lineage === "orphaned";
+    if ((away || gone) && !name && info.away_file_name && nameEl) {
+      nameEl.textContent = `${info.away_file_name}`;
+    }
+    const statusEl = q("ft-info-status");
+    if (statusEl) {
+      let status = "";
+      if (gone) {
+        status = LOCALE.FILE_THREAD_FILE_DELETED;
+      } else if (away) {
+        const holder = `${info.holder_hub_name || ""}`.trim();
+        status = holder
+          ? LOCALE.FILE_THREAD_MOVED_TO.format(holder)
+          : LOCALE.FILE_THREAD_MOVED_AWAY;
+      }
+      statusEl.textContent = status;
+    }
+    // Stamp the card itself, not rootEl: rootEl is the slot/panel that HOSTS
+    // the card, and the styling selector is `.window__ft-info-card[...]`.
+    // Hiding "Open file →" is not cosmetic — the node id it carries belongs to
+    // another workspace, so the click would resolve nothing.
+    const cardEl = q("ft-info-card");
+    if (cardEl) {
+      if (away || gone) {
+        cardEl.dataset.ft_lineage = lineage;
+      } else {
+        delete cardEl.dataset.ft_lineage;
+      }
+    }
+
     const type = info.filetype || info.category;
     if (type === _a.image || type === _a.vector) {
       this._applyVignette(

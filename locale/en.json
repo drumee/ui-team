@@ -2746,5 +2746,9 @@
   "OL_SEATS_NO_CONSOLE": "Your plan has no Admin Console. Open each workspace and remove members from its own member list.",
   "OL_GOTO_HOME": "Open Home",
   "OL_GOTO_TRASH": "Empty trash",
-  "OL_GOTO_STORAGE": "Storage console"
+  "OL_GOTO_STORAGE": "Storage console",
+  "FILE_THREAD_MOVED_TO": "This file was moved to {0}. The conversation stays here and is read-only.",
+  "FILE_THREAD_MOVED_AWAY": "This file was moved to another workspace. The conversation stays here and is read-only.",
+  "FILE_THREAD_FILE_DELETED": "This file was deleted. The conversation is kept for reference.",
+  "FILE_THREAD_READ_ONLY": "Read-only"
 }
