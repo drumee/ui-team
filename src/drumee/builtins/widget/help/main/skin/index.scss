@@ -346,6 +346,43 @@
     }
   }
 
+  // ── Product tour CTA ──────────────────────────────────────
+  // Sits between the video and the article grid on the Product tour page.
+  // The row exists only to pin the button to the right edge of the capped
+  // content column — the page's own `gap` supplies the spacing above and
+  // below, so nothing is declared here for it.
+  &__tour {
+    &-row {
+      width: 100%;
+      justify-content: flex-end;
+    }
+
+    &-btn {
+      @include focus-ring;
+      padding: var(--spacer-4) var(--spacer-6);
+      border-radius: 58px;
+      background: $purple-base;
+      font-size: 0.9375rem; // 15px
+      font-weight: 600;
+      line-height: 1.25rem;
+      color: var(--white);
+      white-space: nowrap;
+      cursor: pointer;
+      transition:
+        background $fast $ease,
+        transform $fast $ease;
+
+      &:hover {
+        background: $purple-deep;
+        transform: translateY(-1px);
+      }
+
+      &:active {
+        transform: none;
+      }
+    }
+  }
+
   // ── Article cards ─────────────────────────────────────────
   &__article {
     &-grid {
@@ -778,6 +815,17 @@
       }
     }
 
+    // Full width rather than a small pill floated right — same call as the
+    // one-card-per-row rule below.
+    &__tour-row {
+      justify-content: stretch;
+    }
+
+    &__tour-btn {
+      flex: 1 1 100%;
+      text-align: center;
+    }
+
     // One card per row — two columns below this are too cramped to read.
     &__article-card {
       flex: 1 1 100%;
@@ -857,6 +905,7 @@
 
     &__article-card,
     &__video-play,
+    &__tour-btn,
     &__feedback-thumb,
     &__feedback-support-btn,
     &__faq-caret {

@@ -328,6 +328,22 @@ class help_main extends LetcBox {
   }
 
   /**
+   * Start the interactive product tour.
+   *
+   * The tour is the desk's to run, not this screen's: it mounts desk_tutorial
+   * into the desk `overlay` part, and this screen has to be closed on the way
+   * (the tour paints its own mock workspace over the desk). Both belong to
+   * desk_module, so hand off upward rather than reaching across.
+   *
+   * `triggerHandlers` is the route: _loadKind() mounts this widget with
+   * `uiHandler: [desk_module]`, so the desk already receives our events —
+   * exactly how settings_main raises `upgrade-plan`.
+   */
+  startProductTour() {
+    this.triggerHandlers({ service: "start-product-tour" });
+  }
+
+  /**
    * @param {*} child
    * @param {*} pn
    */
@@ -407,6 +423,9 @@ class help_main extends LetcBox {
 
       case "help-play-video":
         return this.playVideo();
+
+      case "help-product-tour":
+        return this.startProductTour();
 
       default:
         return;

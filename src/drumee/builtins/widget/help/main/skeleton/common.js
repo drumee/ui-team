@@ -111,6 +111,34 @@ function videoPlayer(ui) {
   });
 }
 
+/**
+ * Primary CTA that starts the interactive product tour (desk_tutorial).
+ *
+ * Label-only, so a single Note carries the click — same primitive as the
+ * "Contact Support" link below. Nothing is nested inside it, which is why it
+ * needs none of the `kidsOpt: { active: 0 }` inerting the video poster and the
+ * article cards do: there is no inner letc element to swallow the click.
+ *
+ * The row wrapper is what pins the button to the right edge of the content
+ * column, and gives the mobile breakpoint a single element to restyle when the
+ * button goes full width.
+ */
+function tourButton(ui) {
+  const pfx = `${ui.fig.family}__tour`;
+
+  return Skeletons.Box.X({
+    className: `${pfx}-row`,
+    kids: [
+      Skeletons.Note({
+        className: `${pfx}-btn`,
+        content: LOCALE.HELP_START_PRODUCT_TOUR,
+        service: "help-product-tour",
+        uiHandler: [ui],
+      }),
+    ],
+  });
+}
+
 /** One article card: file glyph + title, then the summary line. */
 function articleCard(ui, article) {
   const pfx = `${ui.fig.family}__article`;
@@ -223,4 +251,11 @@ function feedback(ui) {
   });
 }
 
-module.exports = { videoBlock, videoPlayer, articleGrid, feedback, feedbackRow };
+module.exports = {
+  videoBlock,
+  videoPlayer,
+  tourButton,
+  articleGrid,
+  feedback,
+  feedbackRow,
+};

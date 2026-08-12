@@ -1842,6 +1842,43 @@ class desk_module extends LetcBox {
   }
 
   /**
+   * User-initiated run of the 6-step tour, from the "Product Tour" button on
+   * the Get help screen (help_main raises `start-product-tour`). Until this
+   * existed the tour only ran automatically — post-signup, or forced with
+   * `?tutorial=1` — so anyone who skipped it had no way back in.
+   *
+   * Get help has to go first: the tour renders its OWN mock workspace, so a
+   * still-mounted help screen would show through it and would still be sitting
+   * there when the tour finished. settings-main-slot is not a keep-alive slot,
+   * so togglePanel without `openOnly` animates the child out and destroys it.
+   *
+   * Goes through _showTutorial() rather than feeding desk_tutorial here, so
+   * both entry points share one launch path. That also means a tour started
+   * from here chains the reward flow on exit (onPartReady "desk-tutorial");
+   * harmless, because that flow gates itself on the server and shows nothing
+   * to a user who is not owed a run.
+   */
+  _startProductTour() {
+    // Re-feeding the overlay while a tour is live would throw the user back to
+    // step 1, and the help screen can be re-opened over a running tour. The
+    // overlay hosts other things too (reward flow, promo modals), so match on
+    // the kind rather than on "is anything mounted" — and read the dataset as
+    // well as the model, because a kind still being fetched mounts as the
+    // lazy-loader placeholder first (same defensive pair as
+    // _currentScreenService).
+    const overlay = this.getPart && this.getPart("overlay");
+    const running = overlay && overlay.children && overlay.children.last();
+    const kind =
+      (running && running.mget && running.mget(_a.kind)) ||
+      (running && running.el && running.el.dataset && running.el.dataset.kind);
+    if (running && !running.isDestroyed() && kind === "desk_tutorial") {
+      return;
+    }
+    this.togglePanel("help_main", "settings-main-slot");
+    this._showTutorial();
+  }
+
+  /**
    * Reward onboarding flow (Figma 3275:236091). Runs AFTER the 5-step
    * tutorial, and only for users the SERVER says are owed a run —
    * `reward.get_state` reads yp.reward_claim, which analytics-server seeds when
@@ -3110,6 +3147,10 @@ class desk_module extends LetcBox {
           filename: LOCALE.GET_HELP,
         });
         return this.togglePanel("help_main", "settings-main-slot", true);
+
+      // "Product Tour" button on the Get help screen.
+      case "start-product-tour":
+        return this._startProductTour();
 
       case "toggle-apps": {
         // Personal plans (free / pro / legacy advanced — yp.plan entity_type=user)

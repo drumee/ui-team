@@ -1,4 +1,4 @@
-const { videoBlock, articleGrid, feedback } = require("./common");
+const { videoBlock, tourButton, articleGrid, feedback } = require("./common");
 const { faqPage } = require("./faq");
 
 /**
@@ -34,6 +34,10 @@ function articlePage(ui) {
       // and the click that starts it read the source the same way, so they
       // cannot disagree about whether there is anything to play.
       videoBlock(ui, ui.getVideo()),
+      // Product tour only. This layout is shared with Self-hosting, where a
+      // button labelled "Product Tour" under a self-hosting video would read
+      // as a mismatch.
+      ui.getPage() === "product-tour" ? tourButton(ui) : null,
       articleGrid(ui, data.articles),
     ].filter(Boolean),
   });
