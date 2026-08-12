@@ -68,6 +68,20 @@ class desk_module extends LetcBox {
       match: (e) => hotkeys.isCmdShift(e, "f"),
       run: (e) => this._focusSearch(e),
     });
+    // Escape dismisses transient UI. BUBBLE phase, so it yields to every widget
+    // that already answers Escape nearer the user — the share popup, file
+    // rename, and the mention dropdowns all preventDefault on keydown, and
+    // `defaultPrevented` tells us they claimed it. `inTextEntry` yields to the
+    // other family, which answers on KEYUP where defaultPrevented cannot reach:
+    // ui-core's Entry (`_e.cancel` / `removeOnEscape`, e.g. the inline rename),
+    // menu-input, and the chat/task mention popups.
+    this._escHotkey = hotkeys.register({
+      name: "desk-escape",
+      phase: "bubble",
+      match: (e) =>
+        e.key === "Escape" && !e.defaultPrevented && !hotkeys.inTextEntry(e.target),
+      run: () => this._dismissTransientUi(),
+    });
     // Cross-plugin / cross-module billing entry (admin-console upsell, Wm) →
     // open the full-page billing screen without a direct module reference.
     this._openBillingPage = () => this.openBillingPage();
@@ -369,9 +383,12 @@ class desk_module extends LetcBox {
     RADIO_BROADCAST.off(require("libs/over-limit").CHANGED, this._onOverLimitChanged);
     RADIO_BROADCAST.off("avatar-changed", this._updateAvatar);
     Visitor.off(_e.change, this._updateAvatar);
-    if (this._searchHotkey) {
-      require("libs/hotkeys").unregister(this._searchHotkey);
+    if (this._searchHotkey || this._escHotkey) {
+      const hk = require("libs/hotkeys");
+      if (this._searchHotkey) hk.unregister(this._searchHotkey);
+      if (this._escHotkey) hk.unregister(this._escHotkey);
       this._searchHotkey = null;
+      this._escHotkey = null;
     }
     if (this._searchInputEl && this._searchInputHandler) {
       this._searchInputEl.removeEventListener(
@@ -3462,6 +3479,24 @@ class desk_module extends LetcBox {
         }
       });
     });
+  }
+
+  // Escape → dismiss transient UI. Fires the framework's OWN dismiss signal
+  // rather than inventing one: RADIO_CLICK.trigger(_e.click) with NO event makes
+  // every volatility:1/2 view goodbye() (letc.js onBeforeRender short-circuits on
+  // `e == null`) and closes any open menu (menu/index.js _onOutsideClick guards
+  // on `origin != null`, so a null event is safe). media/interact.js already
+  // calls it exactly this way when opening an inline rename, so this is an
+  // established idiom, not a new mechanism.
+  //
+  // Reports NOT handled on purpose, so Escape keeps its browser defaults —
+  // leaving fullscreen, cancelling an IME composition, stopping a load. There is
+  // also no way to know whether anything was actually dismissed (the signal is
+  // fire-and-forget), and claiming a key we may not have used would swallow it.
+  _dismissTransientUi() {
+    if (typeof RADIO_CLICK === "undefined" || !RADIO_CLICK) return false;
+    RADIO_CLICK.trigger(_e.click);
+    return false;
   }
 
   // Ctrl/Cmd+Shift+F. Context-sensitive: inside a chat window it opens that

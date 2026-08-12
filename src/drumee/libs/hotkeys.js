@@ -31,10 +31,23 @@
  *     wrapped and a failure is treated as "not handled".
  */
 
-// Bindings are { match(e) -> bool, run(e) -> bool }. `run` returning false (or
-// throwing) means "I could not act", and the key keeps its default behaviour.
+// Bindings are { name?, phase?, match(e) -> bool, run(e) -> bool }. `run`
+// returning false (or throwing) means "I could not act", and the key keeps its
+// default behaviour.
+//
+// PHASE. `capture` (the default) is right for a shortcut that must win over
+// everything, because the text widgets stop propagation at the target. `bubble`
+// is right for the opposite job — a key that must yield to whatever is nearest
+// the user. Escape is the case in point: six widgets already handle it on
+// keydown and preventDefault (the share popup, file rename, and four mention
+// dropdowns), so a bubble listener runs after them and can read
+// `e.defaultPrevented` to know it was already claimed. That signal is only
+// readable within one event, which is why Escape is matched on keydown even
+// though `window/confirm` answers it on keyup.
 const _bindings = [];
-let _listener = null;
+const _listeners = { capture: null, bubble: null };
+const CAPTURE = "capture";
+const BUBBLE = "bubble";
 
 /**
  * An IME owns the keystroke while it is composing — `key` arrives as "Process"
@@ -56,9 +69,10 @@ function inTextEntry(node) {
   return typeof el.closest === "function" && !!el.closest('[contenteditable="true"]');
 }
 
-function _onKeydown(e) {
+function _dispatch(phase, e) {
   if (!e || isComposing(e)) return;
   for (const b of _bindings) {
+    if ((b.phase === BUBBLE ? BUBBLE : CAPTURE) !== phase) continue;
     let matched = false;
     try {
       matched = !!b.match(e);
@@ -81,6 +95,24 @@ function _onKeydown(e) {
   }
 }
 
+/** One listener per phase, each seeing only its own bindings. */
+function _install(phase) {
+  if (_listeners[phase]) return;
+  const fn = (e) => _dispatch(phase, e);
+  _listeners[phase] = fn;
+  document.addEventListener("keydown", fn, phase === CAPTURE);
+}
+
+function _uninstallIfIdle(phase) {
+  if (!_listeners[phase]) return;
+  const stillUsed = _bindings.some(
+    (b) => (b.phase === BUBBLE ? BUBBLE : CAPTURE) === phase,
+  );
+  if (stillUsed) return;
+  document.removeEventListener("keydown", _listeners[phase], phase === CAPTURE);
+  _listeners[phase] = null;
+}
+
 /**
  * Add a binding. The document listener is installed lazily on the first one.
  *
@@ -100,21 +132,16 @@ function register(binding) {
     if (prev >= 0) _bindings.splice(prev, 1);
   }
   _bindings.push(binding);
-  if (!_listener) {
-    _listener = _onKeydown;
-    document.addEventListener("keydown", _listener, true);
-  }
+  _install(binding.phase === BUBBLE ? BUBBLE : CAPTURE);
   return binding;
 }
 
-/** Remove a binding; the listener is dropped once the last one goes. */
+/** Remove a binding; a phase's listener is dropped once its last one goes. */
 function unregister(binding) {
   const i = _bindings.indexOf(binding);
   if (i >= 0) _bindings.splice(i, 1);
-  if (!_bindings.length && _listener) {
-    document.removeEventListener("keydown", _listener, true);
-    _listener = null;
-  }
+  _uninstallIfIdle(CAPTURE);
+  _uninstallIfIdle(BUBBLE);
 }
 
 /** Ctrl (Windows/Linux) or Cmd (macOS) + Shift + <letter>, and nothing else. */
