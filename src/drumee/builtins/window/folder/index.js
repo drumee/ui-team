@@ -4373,10 +4373,24 @@ class __window_folder extends mfsInteract {
 
     // The option fires its pick straight at this window via uiHandler, so the
     // click never bubbles back to the menu_topic for it to auto-close. Close
-    // it explicitly (animated, widget kept alive) so the dropdown dismisses on
-    // every pick and stays reusable for the next change.
+    // it explicitly, so the dropdown dismisses on every pick and stays
+    // reusable for the next change.
+    //
+    // Instantly, though — NOT changeState(0). That routes into ui-core's
+    // _closeItems, which tweens the items by (items_width + trigger_width)
+    // before _onClosed hides them; for a `down` menu the tween is negative y,
+    // so the box visibly flies UP the screen and only then vanishes. Reported
+    // as "box permission bị bay lên trên hơi khó hiểu" — and it is, because
+    // the motion points away from the row the choice belongs to.
+    //
+    // _onClosed IS the end state that tween is animating towards: it flips the
+    // dataset/state flags and gsap.set()s the transform back to 0. Calling it
+    // directly lands there in one frame, and the menu stays reusable — same
+    // final state, no journey. changeState remains the fallback in case a
+    // future ui-core drops the hook.
     const menu = cmd.getParentByKind?.(KIND.menu.topic);
-    if (menu?.changeState) menu.changeState(0);
+    if (_.isFunction(menu?._onClosed)) menu._onClosed();
+    else if (_.isFunction(menu?.changeState)) menu.changeState(0);
   }
 
   // Menu pick from a member-row role dropdown — confirm and persist the
