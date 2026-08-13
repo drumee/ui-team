@@ -2300,7 +2300,10 @@ function pendingStrip(ui, scope) {
     className: `${pfx}__comment-pending-list`,
     sys_pn: `file-pending-list-${scope}`,
     partHandler: ui,
-    attrOpt: { "data-empty": pending.length ? "0" : "1" },
+    // data-scope is what _setPendingStatus addresses; it must be here as well
+    // as on the fed part, or a strip built by a full render would be invisible
+    // to the surgical status writes.
+    attrOpt: { "data-empty": pending.length ? "0" : "1", "data-scope": scope },
     kids: buildPendingListContent(ui, pending),
   });
 }
@@ -2537,6 +2540,10 @@ function buildCommentListContent(ui) {
                 editorClass: `${pfx}__comment-edit-input`,
                 placeholder: LOCALE.TASK_COMMENT_PLACEHOLDER,
               }),
+              // Files already attached to the comment, shown while editing too:
+              // after a partly-failed save the ones that landed are here, and
+              // only the ones still to retry are in the strip below.
+              commentAttachments(ui, c, isOwn),
               // Files dropped on the row while editing, before they are
               // uploaded and attached on Save.
               pendingStrip(ui, "comment-edit"),
@@ -2560,7 +2567,8 @@ function buildCommentListContent(ui) {
                   }),
                 ],
               }),
-            ],
+              // commentAttachments returns null when there are none.
+            ].filter(Boolean),
           }),
           // Covers this row alone, in place of the panel-wide overlay, which is
           // suppressed for as long as a comment is being edited.
@@ -2905,20 +2913,54 @@ function fileCard(ui, f, opt = {}) {
         localKey: f.localKey,
       });
 
+  // Status belongs to a file that has not landed yet, so only the pending
+  // strip carries it — a committed attachment is, by definition, done. The
+  // states are CSS-driven off data-status (see skin) so a transition is one
+  // attribute write, not a rebuilt card: "downloading" a cross-hub copy still
+  // arriving, "uploading" a save in flight, "error" one that needs retrying.
+  const status = opt.committed ? null : f.status || "queued";
+  const pendingKey = String(f.localKey || f.nid || "");
+  const stateKids =
+    status === "uploading" || status === "downloading"
+      ? [
+          Skeletons.Box.Y({
+            className: `${pfx}__file-pending-spinner`,
+            attrOpt: { title: LOCALE.LOADING || "…" },
+          }),
+        ]
+      : status === "error"
+        ? [
+            Skeletons.Button.Svg({
+              className: `${pfx}__file-pending-retry`,
+              ico: "refresh-view",
+              bubble: 0,
+              service: "retry-pending-file",
+              uiHandler: [ui],
+              pendingKey,
+              tooltips: LOCALE.RETRY || "Retry",
+            }),
+          ]
+        : [];
+
   return Skeletons.Box.Y({
     className: `${pfx}__attachment-row has-preview`,
-    service: openable ? "open-attachment" : null,
-    uiHandler: openable ? [ui] : null,
+    // A row mid-upload must not also be a click target for opening the file.
+    service: openable && status !== "uploading" ? "open-attachment" : null,
+    uiHandler: openable && status !== "uploading" ? [ui] : null,
     fileNid: nid,
+    ...(status ? { attrOpt: { "data-status": status, "data-key": pendingKey } } : {}),
     kids: [
       Skeletons.Box.Y({
         className: `${pfx}__attachment-thumb-box`,
-        kids: [preview],
+        kids: [preview, ...stateKids],
       }),
       Skeletons.Note({
         className: `${pfx}__attachment-name`,
         content: filename,
       }),
+      // Remove stays rendered while uploading so the card does not reflow; the
+      // skin disables it and the handler refuses, since there is no way to
+      // un-upload a file that is already on its way.
       removeBtn,
     ],
   });

@@ -2980,6 +2980,64 @@
     }
   }
 
+  // ── Pending-file states ───────────────────────────────────────────
+  // One attribute (data-status, written per entry by _setPendingStatus) drives
+  // all of it, so a transition costs no re-render. "queued" is the resting
+  // state and deliberately looks like today's card — a file waiting for Save
+  // is the norm, not a condition to flag.
+  &__attachment-row[data-status="downloading"],
+  &__attachment-row[data-status="uploading"] {
+    .tasks-panel__attachment-thumb-box {
+      opacity: 0.45;
+    }
+    // No way to un-upload, so the ✕ reads as unavailable rather than lying.
+    .tasks-panel__attachment-unlink {
+      opacity: 0.3;
+      pointer-events: none;
+    }
+  }
+
+  &__attachment-row[data-status="error"] {
+    border: 1px solid var(--signal-error, #d74e49);
+    border-radius: 8px;
+
+    .tasks-panel__attachment-name {
+      color: var(--signal-error, #d74e49);
+    }
+  }
+
+  // Indeterminate: the upload xhr's progress events are not plumbed through, so
+  // this says "working", not "how far".
+  &__file-pending-spinner {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 18px;
+    height: 18px;
+    margin: -9px 0 0 -9px;
+    border: 2px solid var(--overlay-bg-05, rgba(0, 0, 0, 0.15));
+    border-top-color: var(--accent, #433cc5);
+    border-radius: 50%;
+    animation: tasks-panel-spin 0.7s linear infinite;
+  }
+
+  &__file-pending-retry {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 20px;
+    height: 20px;
+    margin: -10px 0 0 -10px;
+    cursor: pointer;
+    color: var(--signal-error, #d74e49);
+    fill: var(--signal-error, #d74e49);
+  }
+
+  // The spinner and the retry button are positioned against the thumb box.
+  &__attachment-thumb-box {
+    position: relative;
+  }
+
   // Files already attached to a saved comment.
   &__comment-attachments {
     flex-wrap: wrap;

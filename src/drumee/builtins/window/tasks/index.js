@@ -1607,6 +1607,10 @@ class __tasks_panel extends LetcBox {
         return this._saveCommentEdit();
 
       case "comment-cancel":
+        // Files are mid-flight: aborting the XHR would leave a half-uploaded
+        // orphan in the folder, so the editor holds until they settle. It is a
+        // short window, and the strip says which files are the reason.
+        if (this._commentSaving) return;
         this._discardCommentPending(this._commentEditDraft);
         this._editingCommentId = null;
         this._commentEditDraft = null;
@@ -1679,6 +1683,9 @@ class __tasks_panel extends LetcBox {
 
       case "remove-pending-file":
         return this._removePendingFile(trigger);
+
+      case "retry-pending-file":
+        return this._retryPendingFile(trigger);
 
       case _e.upload:
       case "pick-attachment":
@@ -3224,7 +3231,7 @@ class __tasks_panel extends LetcBox {
 
   async _saveCommentEdit() {
     const id = this._editingCommentId;
-    if (!id) return;
+    if (!id || this._commentSaving) return;
     const draft = this._commentEditDraft;
     const body = String((draft && draft.body) || "").trim();
     const pending = (draft && draft.pending_files) || [];
@@ -3242,7 +3249,19 @@ class __tasks_panel extends LetcBox {
       });
       // Files after the body: a rejected edit (not the author any more, comment
       // deleted under us) must not leave attachments behind on it.
-      await this._linkCommentFiles(id, draft, taskId);
+      const res = await this._linkCommentFiles(id, draft, taskId, "comment-edit");
+      // A file that failed to upload or link keeps the editor open, holding
+      // just that file with a retry beside it. Closing would either lose the
+      // file silently or need a second place to report the failure; the body is
+      // already saved either way, so re-saving is harmless.
+      if (res && res.failed) {
+        await this._loadComments(taskId);
+        if (this._detailId === taskId) {
+          this._refreshCommentList();
+          this._refreshPendingList("comment-edit");
+        }
+        return;
+      }
       this._editingCommentId = null;
       this._commentEditDraft = null;
       await this._loadComments(taskId);
@@ -3261,34 +3280,95 @@ class __tasks_panel extends LetcBox {
    * cross-hub copies that _queueCrossHubFiles has already re-uploaded — skip
    * straight to the link.
    */
-  async _linkCommentFiles(commentId, draft, taskId) {
-    const pending = (draft && draft.pending_files) || [];
-    if (!commentId || !pending.length) return;
-    await Promise.all(
+  async _linkCommentFiles(commentId, draft, taskId, scopeKey = "comment-edit") {
+    const pending = ((draft && draft.pending_files) || []).slice();
+    if (!commentId || !pending.length) return { failed: 0, linked: 0 };
+    // Nothing was cancellable before this point and nothing is now: the guard
+    // exists so Save and Cancel can refuse while files are in flight, rather
+    // than aborting an XHR halfway and leaving an orphan in the folder.
+    this._commentSaving = true;
+    const results = await Promise.all(
       pending.map(async (pf) => {
+        this._setPendingStatus(scopeKey, pf, "uploading");
         let nid = pf.nid;
         if (!nid && pf.file) {
           try {
             nid = (await this._uploadPendingFile(pf)).nid;
           } catch (err) {
             console.error("[tasks_panel] comment file upload failed:", err);
-            return;
+            this._setPendingStatus(scopeKey, pf, "error");
+            return { pf, ok: false };
           }
         }
-        if (!nid) return;
-        await this.postService({
-          service: SERVICE.task.comment_link_file,
-          hub_id: this._hubId,
-          comment_id: commentId,
-          task_id: taskId || this._detailId,
-          file_nid: nid,
-        }).catch((err) =>
-          console.error("[tasks_panel] comment.link_file failed:", err),
-        );
+        if (!nid) {
+          this._setPendingStatus(scopeKey, pf, "error");
+          return { pf, ok: false };
+        }
+        try {
+          await this.postService({
+            service: SERVICE.task.comment_link_file,
+            hub_id: this._hubId,
+            comment_id: commentId,
+            task_id: taskId || this._detailId,
+            file_nid: nid,
+          });
+        } catch (err) {
+          console.error("[tasks_panel] comment.link_file failed:", err);
+          // The upload succeeded, so a retry only has to redo the link.
+          pf.nid = nid;
+          this._setPendingStatus(scopeKey, pf, "error");
+          return { pf, ok: false };
+        }
+        return { pf, ok: true };
       }),
     );
-    this._releasePendingPreviews(draft);
-    draft.pending_files = [];
+    this._commentSaving = false;
+
+    // Partial failure keeps the failures — and only the failures — on the
+    // draft, so the user retries those instead of re-dropping everything. The
+    // ones that landed are attachments on the comment now; leaving them in the
+    // strip as well would show the same file twice.
+    const failed = results.filter((r) => !r.ok).map((r) => r.pf);
+    const done = results.filter((r) => r.ok).map((r) => r.pf);
+    done.forEach((pf) => {
+      if (!pf.previewUrl) return;
+      try {
+        URL.revokeObjectURL(pf.previewUrl);
+      } catch (_) {}
+    });
+    draft.pending_files = (draft.pending_files || []).filter((f) =>
+      failed.includes(f),
+    );
+    return { failed: failed.length, linked: done.length };
+  }
+
+  // Retry one failed entry (the ✕ beside it removes instead). The comment it
+  // belongs to is whichever one is open in the editor — a reply that failed
+  // part-way is switched into edit mode on the comment it created, so this one
+  // path covers both.
+  async _retryPendingFile(trigger) {
+    if (this._commentSaving) return;
+    const key = String(trigger.mget("pendingKey") || "");
+    const commentId = this._editingCommentId;
+    const draft = this._commentEditDraft;
+    if (!key || !commentId || !draft) return;
+    const entry = (draft.pending_files || []).find(
+      (f) => this._pendingKey(f) === key,
+    );
+    if (!entry) return;
+    const taskId = this._detailId;
+    // A one-entry draft view so _linkCommentFiles can run unchanged, then fold
+    // the outcome back: dropped from the strip on success, still failed on not.
+    const single = { pending_files: [entry] };
+    const res = await this._linkCommentFiles(commentId, single, taskId, "comment-edit");
+    if (res && res.linked) {
+      draft.pending_files = (draft.pending_files || []).filter(
+        (f) => f !== entry,
+      );
+      await this._loadComments(taskId);
+      if (this._detailId === taskId) this._refreshCommentList();
+    }
+    this._refreshPendingList("comment-edit");
   }
 
   // Detach a file from a saved comment (the ✕ on its attachment card). The
@@ -3414,10 +3494,27 @@ class __tasks_panel extends LetcBox {
       // comes back on the create, and only then can its files be attached.
       const row = Array.isArray(created) ? created[0] : created;
       const newId = row && (row.id || row.comment_id);
-      if (newId) await this._linkCommentFiles(newId, draft, taskId);
-      else this._discardCommentPending(draft);
+      let res = null;
+      if (newId) {
+        res = await this._linkCommentFiles(newId, draft, taskId, "comment-reply");
+      } else {
+        this._discardCommentPending(draft);
+      }
+      const stillFailing = ((draft && draft.pending_files) || []).slice();
       this._replyingTo = null;
       this._replyDraft = null;
+      // The reply itself posted, so its composer is gone — but a file that
+      // failed still needs somewhere to be retried. Open the new comment in
+      // edit mode holding exactly those files: same error+retry surface as a
+      // failed edit, rather than a second one built for replies.
+      if (newId && res && res.failed) {
+        this._editingCommentId = newId;
+        this._commentEditDraft = {
+          body: body,
+          mention_uids: [],
+          pending_files: stillFailing,
+        };
+      }
       await this._loadComments(taskId);
     } catch (err) {
       console.error("[tasks_panel] comment reply failed:", err);
@@ -3973,7 +4070,10 @@ class __tasks_panel extends LetcBox {
     for (const file of files) {
       const { filename, extension } = this._resolveAvailableName(file.name);
       const localKey = `local:${Date.now()}:${i++}:${file.name}`;
-      const entry = { localKey, file, filename, extension };
+      // status drives the strip's appearance: queued until save, then
+      // uploading, then either gone (linked) or error with a retry. Absent is
+      // read as "queued" so older entries render unchanged.
+      const entry = { localKey, file, filename, extension, status: "queued" };
       if (this._isImageExt(extension)) {
         try {
           entry.previewUrl = URL.createObjectURL(file);
@@ -4442,11 +4542,45 @@ class __tasks_panel extends LetcBox {
         if (!list || list.isDestroyed?.()) return;
         const skel = require("./skeleton");
         list.feed(skel.buildPendingListContent(this, pendingFiles));
-        if (list.el) list.el.dataset.empty = pendingFiles.length ? "0" : "1";
+        if (list.el) {
+          list.el.dataset.empty = pendingFiles.length ? "0" : "1";
+          // Lets _setPendingStatus address one scope's cards without matching
+          // the other scope's strip (both are mounted while replying to a
+          // comment that is also being edited).
+          list.el.dataset.scope = scope;
+        }
       })
       .catch(() => {
         /* part not mounted yet */
       });
+  }
+
+  // Stable per-entry key: the local one for a file awaiting upload, the nid for
+  // a node already in the workspace. Addresses an entry's card in the DOM.
+  _pendingKey(f) {
+    return String((f && (f.localKey || f.nid)) || "");
+  }
+
+  /**
+   * Move one entry between statuses.
+   *
+   * A whole-strip re-feed would be correct but destructive: it rebuilds every
+   * sibling card, so a mid-save run of eight files would discard and recreate
+   * all eight nodes on every transition. The visuals are CSS-driven off
+   * data-status, so one attribute write on that entry's own card is enough —
+   * no descriptor rebuild, no sibling churn, nothing for the open editor to
+   * notice.
+   */
+  _setPendingStatus(scopeKey, entry, status) {
+    if (!entry) return;
+    entry.status = status;
+    if (!this.el) return;
+    const pfx = this.fig.family;
+    const card = this.el.querySelector(
+      `[data-scope="${scopeKey}"] ` +
+        `.${pfx}__attachment-row[data-key="${this._pendingKey(entry)}"]`,
+    );
+    if (card) card.dataset.status = status;
   }
 
   _refreshFileSearchDropdown(scope, { preserveScroll = false } = {}) {
@@ -4572,9 +4706,25 @@ class __tasks_panel extends LetcBox {
       seen.add(nid);
 
       // A foreign-hub file can't be linked by nid (this hub 403s on it) — copy
-      // it in via the upload pipeline so it becomes a local attachment.
+      // it in via the upload pipeline so it becomes a local attachment. That
+      // copy is a fetch of the whole file, the only genuinely slow step on any
+      // attach path, and until now it produced NOTHING on screen: the entry
+      // was only created once the bytes had arrived. Stand a placeholder in for
+      // it immediately, which _queueCrossHubFiles then resolves in place.
       const srcHub = attr.hub_id;
       if (srcHub && srcHub !== this._hubId) {
+        const { previewUrl, chartId } = this._attachmentPreview(attr);
+        draft.pending_files.push({
+          localKey: `xhub:${nid}`,
+          crossHubNid: nid,
+          filename: attr.filename || attr.user_filename || "",
+          extension: attr.extension || attr.ext || "",
+          // The foreign hub still serves its own preview, so the placeholder
+          // can show the real thumbnail while the bytes are on the way.
+          previewUrl,
+          iconChartId: chartId,
+          status: "downloading",
+        });
         crossHub.push(attr);
         added++;
         continue;
@@ -4589,6 +4739,8 @@ class __tasks_panel extends LetcBox {
         filetype: attr.filetype || attr.category,
         previewUrl,
         iconChartId: chartId,
+        // Already has a nid, so save only has to link it.
+        status: "queued",
       });
       added++;
     }
@@ -4603,13 +4755,21 @@ class __tasks_panel extends LetcBox {
     return true;
   }
 
-  // Download each foreign-hub file and queue it as an upload into this hub.
+  // Download each foreign-hub file and queue it as an upload into this hub,
+  // swapping the placeholder attachExistingNodes left in the strip for the real
+  // entry as each one lands — so a run of files resolves one by one instead of
+  // all appearing at the end, and a failure stays on screen as an error rather
+  // than disappearing into a console warning.
   async _queueCrossHubFiles(attrs, scope) {
     const draft = this._draftForScope(scope);
     if (!draft) return;
+    const key = this._scopeKey(scope);
     const b = (typeof bootstrap === "function" && bootstrap()) || {};
     const endpoint = b.endpoint || "";
     for (const attr of attrs) {
+      const placeholder = (draft.pending_files || []).find(
+        (f) => f.crossHubNid && String(f.crossHubNid) === String(attr.nid),
+      );
       try {
         const ext = String(attr.ext || attr.extension || "");
         let url = `${endpoint}file/orig/${attr.nid}/${attr.hub_id}`;
@@ -4617,6 +4777,7 @@ class __tasks_panel extends LetcBox {
         const resp = await fetch(url, { credentials: "include" });
         if (!resp.ok) {
           this.warn && this.warn(`cross-hub fetch failed ${resp.status}`, url);
+          this._setPendingStatus(key, placeholder, "error");
           continue;
         }
         const blob = await resp.blob();
@@ -4624,15 +4785,32 @@ class __tasks_panel extends LetcBox {
         const file = new File([blob], name, {
           type: blob.type || attr.mimetype || "",
         });
+        // Stash first (it resolves the filename against the folder), then move
+        // the entry it appended to where the placeholder stood, so the strip
+        // keeps its drop order. Located by identity, not by index: the user can
+        // drop more files while this download is in flight.
+        const before = draft.pending_files.length;
         await this._stashPendingFiles(draft, [file]);
+        const real = draft.pending_files[before];
+        if (real) {
+          const realAt = draft.pending_files.indexOf(real);
+          if (realAt >= 0) draft.pending_files.splice(realAt, 1);
+          const at = placeholder ? draft.pending_files.indexOf(placeholder) : -1;
+          if (at >= 0) draft.pending_files.splice(at, 1, real);
+          else draft.pending_files.push(real); // placeholder was removed meanwhile
+        }
+        this._refreshPendingList(key);
       } catch (e) {
         this.warn && this.warn("cross-hub attach failed", e);
+        this._setPendingStatus(key, placeholder, "error");
       }
     }
-    this._refreshPendingList(this._scopeKey(scope));
+    this._refreshPendingList(key);
   }
 
   _removePendingFile(trigger) {
+    // Same reason as comment-cancel: there is no clean way to un-upload.
+    if (this._commentSaving) return;
     const nid = trigger.mget("fileNid");
     const localKey = trigger.mget("localKey");
     const keep = (f) => {
