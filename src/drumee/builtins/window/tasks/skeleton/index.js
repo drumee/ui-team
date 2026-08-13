@@ -118,20 +118,6 @@ const make = function (ui) {
     }
   };
 
-  // Never falls back to the uid: a member the workspace can no longer resolve
-  // has no name, and a bare 16-char id in a name slot reads as a corrupted name.
-  const fullName = (m) => {
-    if (!m) return "";
-    const first = m.firstname || "";
-    const last = m.lastname || "";
-    return (first + " " + last).trim() || m.email || "";
-  };
-
-  // Name for a slot that must stay attributed even when the person has left:
-  // task reporter, comment author, history actor. Their rows are history and
-  // can't be blanked, so an unresolvable uid is labelled for what it is.
-  const authorName = (m) => fullName(m) || LOCALE.FORMER_MEMBER;
-
   const priorityOf = (key) =>
     priorities.find((p) => p.key === key) || priorities[1];
 
@@ -1056,6 +1042,11 @@ const make = function (ui) {
 
     const commentsSection = Skeletons.Box.Y({
       className: `${pfx}__comments`,
+      // Comments and the change log are two independent parts, each fed only
+      // with its own rows. The active tab hides one or the other in CSS (see
+      // skin) — no content filtering, so switching tabs never rebuilds either
+      // list. dataset alone is dropped at render, hence attrOpt.
+      attrOpt: { "data-tab": currentTab },
       kids: [
         Skeletons.Box.X({
           className: `${pfx}__activity-head`,
@@ -1107,11 +1098,49 @@ const make = function (ui) {
             }),
           ],
         }),
+        // Each list sits in its own section so the caption can live OUTSIDE the
+        // fed part — a comment or history reload replaces only the rows, never
+        // the label. Captions only earn their place on "All", where the two
+        // runs are stacked; the other tabs are already named by the active tab.
         Skeletons.Box.Y({
-          className: `${pfx}__comment-list`,
-          sys_pn: "comment-list",
-          partHandler: ui,
-          kids: buildCommentListContent(ui),
+          className: `${pfx}__activity-section`,
+          attrOpt: {
+            "data-kind": "comments",
+            "data-empty": (ui.getComments() || []).length ? "0" : "1",
+          },
+          kids: [
+            Skeletons.Note({
+              className: `${pfx}__section-label`,
+              content: LOCALE.COMMENTS,
+            }),
+            Skeletons.Box.Y({
+              className: `${pfx}__comment-list`,
+              sys_pn: "comment-list",
+              partHandler: ui,
+              kids: buildCommentListContent(ui),
+            }),
+          ],
+        }),
+        Skeletons.Box.Y({
+          className: `${pfx}__activity-section`,
+          attrOpt: {
+            "data-kind": "history",
+            "data-empty": (ui.getTaskHistory ? ui.getTaskHistory() : []).length
+              ? "0"
+              : "1",
+          },
+          kids: [
+            Skeletons.Note({
+              className: `${pfx}__section-label`,
+              content: LOCALE.HISTORY,
+            }),
+            Skeletons.Box.Y({
+              className: `${pfx}__history-list`,
+              sys_pn: "history-list",
+              partHandler: ui,
+              kids: buildHistoryListContent(ui),
+            }),
+          ],
         }),
       ],
     });
@@ -2224,30 +2253,39 @@ function groupReactions(reactions) {
   return Object.keys(g).map((k) => g[k]);
 }
 
+// Never falls back to the uid: a member the workspace can no longer resolve
+// has no name, and a bare 16-char id in a name slot reads as a corrupted name.
+const fullName = (m) => {
+  if (!m) return "";
+  const first = m.firstname || "";
+  const last = m.lastname || "";
+  return (first + " " + last).trim() || m.email || "";
+};
+
+// Name for a slot that must stay attributed even when the person has left:
+// task reporter, comment author, history actor. Their rows are history and
+// can't be blanked, so an unresolvable uid is labelled for what it is. Module
+// scope because the comment list and the change log are built by separate
+// functions now, and both attribute rows.
+const authorName = (m) => fullName(m) || LOCALE.FORMER_MEMBER;
+
+// Comment threads only. The change log is a separate part
+// (buildHistoryListContent) so a history reload never re-feeds this one, and
+// vice versa; the active tab hides whichever list it excludes in CSS.
 function buildCommentListContent(ui) {
   const pfx = ui.fig.family;
-  // Activity tab: "comments" hides the change log, "history" hides the comment
-  // threads, "all" interleaves both by time.
-  const tab = ui.getActivityTab ? ui.getActivityTab() : "all";
-  const comments = tab === "history" ? [] : ui.getComments() || [];
-  const history = tab === "comments" ? [] : ui.getTaskHistory() || [];
-  if (!comments.length && !history.length) {
+  const comments = ui.getComments() || [];
+  if (!comments.length) {
     return [
       Skeletons.Note({
         className: `${pfx}__comments-empty`,
-        content: tab === "history" ? LOCALE.TASK_NO_HISTORY : LOCALE.NO_COMMENTS,
+        content: LOCALE.NO_COMMENTS,
       }),
     ];
   }
   const editingId = ui.getEditingCommentId();
   const replyingTo = ui.getReplyingTo();
   const pickerFor = ui.getReactPickerFor();
-  const fullName = (m) =>
-    [m.firstname, m.lastname].filter(Boolean).join(" ").trim() || m.email || "";
-  // Comments and history rows must stay attributed even once their author has
-  // left the workspace, and an unresolvable uid has no name to show — label it
-  // rather than leaving the slot blank (or printing the raw uid).
-  const authorName = (m) => fullName(m) || LOCALE.FORMER_MEMBER;
 
   // Existing reactions shown as emoji+count chips (null when a comment has none).
   const reactBar = (c) => {
@@ -2536,57 +2574,11 @@ function buildCommentListContent(ui) {
       ].filter(Boolean),
     });
 
-  // One change-log line: who, what, when. Project Health names the task after
-  // the verb; here that is redundant, so the two verbs that read as a fragment
-  // without it use their standalone form.
-  const verbs = {
-    create: LOCALE.TASK_ACT_CREATE,
-    update: LOCALE.TASK_ACT_UPDATE,
-    status: LOCALE.TASK_ACT_STATUS,
-    complete: LOCALE.TASK_ACT_COMPLETE,
-    assignee: LOCALE.TASK_ACT_ASSIGNEE,
-    link_file: LOCALE.TASK_ACT_LINKED_FILES,
-    comment: LOCALE.TASK_ACT_COMMENTED,
-  };
-  const historyBlock = (r) => {
-    const m = ui.getMember(r.actor_uid) || {};
-    return Skeletons.Box.X({
-      className: `${pfx}__history-row`,
-      kids: [
-        Skeletons.UserProfile({
-          className: `${pfx}__history-avatar`,
-          id: r.actor_uid,
-          firstname: m.firstname,
-          lastname: m.lastname,
-          auto_color: 1,
-          live_status: 0,
-        }),
-        Skeletons.Box.X({
-          className: `${pfx}__history-text`,
-          kids: [
-            Skeletons.Note({
-              className: `${pfx}__history-actor`,
-              content: authorName(m),
-            }),
-            Skeletons.Note({
-              className: `${pfx}__history-verb`,
-              content: verbs[r.action] || verbs.update,
-            }),
-          ],
-        }),
-        Skeletons.Note({
-          className: `${pfx}__history-time`,
-          content: commentTimeAgo(r.ctime),
-        }),
-      ],
-    });
-  };
-
   // Each root + its replies (+ the open composer) form one thread group. The
   // replies live in their own container so a continuous vertical spine (the
   // container's left border, styled in the skin) can connect them to the root,
-  // with a curved elbow branching into each reply. Timestamped so threads and
-  // change-log lines can be merged in order.
+  // with a curved elbow branching into each reply. Timestamped so threads keep
+  // a stable oldest-first order regardless of the order rows arrive in.
   const out = [];
   roots.forEach((root) => {
     const showComposer = replyingToRootId === String(root.id);
@@ -2621,11 +2613,77 @@ function buildCommentListContent(ui) {
       }),
     });
   });
-  history.forEach((r) =>
-    out.push({ ts: Number(r.ctime) || 0, node: historyBlock(r) }),
-  );
-  // Oldest first: comments arrive ASC, the activity proc newest-first.
+  // Oldest first (comments arrive ASC, but don't depend on it).
   return out.sort((a, b) => a.ts - b.ts).map((e) => e.node);
+}
+
+// One change-log line: who, what, when. Project Health names the task after
+// the verb; here that is redundant, so the two verbs that read as a fragment
+// without it use their standalone form.
+const HISTORY_VERBS = {
+  create: "TASK_ACT_CREATE",
+  update: "TASK_ACT_UPDATE",
+  status: "TASK_ACT_STATUS",
+  complete: "TASK_ACT_COMPLETE",
+  assignee: "TASK_ACT_ASSIGNEE",
+  link_file: "TASK_ACT_LINKED_FILES",
+  comment: "TASK_ACT_COMMENTED",
+};
+
+// Change-log rows only — the sibling part of buildCommentListContent above.
+// Fed by _refreshHistoryList when task.activity lands, independently of the
+// comment feed.
+function buildHistoryListContent(ui) {
+  const pfx = ui.fig.family;
+  const history = ui.getTaskHistory ? ui.getTaskHistory() || [] : [];
+  if (!history.length) {
+    return [
+      Skeletons.Note({
+        className: `${pfx}__history-empty`,
+        content: LOCALE.TASK_NO_HISTORY,
+      }),
+    ];
+  }
+  const historyBlock = (r) => {
+    const m = ui.getMember(r.actor_uid) || {};
+    return Skeletons.Box.X({
+      className: `${pfx}__history-row`,
+      kids: [
+        Skeletons.UserProfile({
+          className: `${pfx}__history-avatar`,
+          id: r.actor_uid,
+          firstname: m.firstname,
+          lastname: m.lastname,
+          auto_color: 1,
+          live_status: 0,
+        }),
+        Skeletons.Box.X({
+          className: `${pfx}__history-text`,
+          kids: [
+            Skeletons.Note({
+              className: `${pfx}__history-actor`,
+              content: authorName(m),
+            }),
+            Skeletons.Note({
+              className: `${pfx}__history-verb`,
+              content:
+                LOCALE[HISTORY_VERBS[r.action] || "TASK_ACT_UPDATE"] ||
+                LOCALE.TASK_ACT_UPDATE,
+            }),
+          ],
+        }),
+        Skeletons.Note({
+          className: `${pfx}__history-time`,
+          content: commentTimeAgo(r.ctime),
+        }),
+      ],
+    });
+  };
+  // Oldest first — the activity proc returns newest-first.
+  return history
+    .slice()
+    .sort((a, b) => (Number(a.ctime) || 0) - (Number(b.ctime) || 0))
+    .map(historyBlock);
 }
 
 function buildMentionItemsContent(ui, members) {
@@ -2994,6 +3052,7 @@ make.buildAssigneeSuggestions = buildAssigneeSuggestions;
 make.buildMentionItemsContent = buildMentionItemsContent;
 make.buildLinkPromptContent = buildLinkPromptContent;
 make.buildCommentListContent = buildCommentListContent;
+make.buildHistoryListContent = buildHistoryListContent;
 make.buildPendingListContent = buildPendingListContent;
 make.buildAttachmentRowsContent = buildAttachmentRowsContent;
 make.buildDueSectionContent = buildDueSectionContent;

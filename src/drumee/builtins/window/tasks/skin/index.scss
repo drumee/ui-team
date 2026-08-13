@@ -2825,6 +2825,51 @@
     gap: 12px;
   }
 
+  &__history-list {
+    gap: 12px;
+  }
+
+  &__activity-section {
+    gap: 8px;
+  }
+
+  // Section caption, right-aligned above its list ("Comments" / "History").
+  // Only the "All" tab stacks the two runs and needs them told apart — on the
+  // single-type tabs the active tab is already the label.
+  &__section-label {
+    align-self: flex-start;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    @include drumee.typo(
+      $size: 11px,
+      $weight: 600,
+      $line: 16px,
+      $color: var(--normal-fg-40, #84848c)
+    );
+  }
+
+  &__comments:not([data-tab="all"]) &__section-label {
+    display: none;
+  }
+
+  // Activity tabs are a pure visibility switch over two independently-fed
+  // parts: "all" shows both (comments first, change log below), the other two
+  // hide the section they exclude — caption included. Nothing is re-rendered
+  // on a tab click.
+  &__comments[data-tab="comments"] &__activity-section[data-kind="history"],
+  &__comments[data-tab="history"] &__activity-section[data-kind="comments"] {
+    display: none;
+  }
+
+  // On "all" the two empty states would stack ("No comments yet" + "No
+  // history") under two captions; the comment one already says the task has
+  // nothing on it, so an empty change log drops out entirely there — caption
+  // included, rather than leaving "HISTORY" hanging over a placeholder. On the
+  // History tab it stays: that tab has nothing else to show.
+  &__comments[data-tab="all"] &__activity-section[data-kind="history"][data-empty="1"] {
+    display: none;
+  }
+
   // ── Change-log line (History / All tabs) ──────────────────────────
   // Lighter than a comment row — no card, small avatar, one line — so a run of
   // them reads as a log beside the comment cards.
@@ -2879,7 +2924,8 @@
     );
   }
 
-  &__comments-empty {
+  &__comments-empty,
+  &__history-empty {
     @include drumee.typo(
       $size: 12px,
       $weight: 400,

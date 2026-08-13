@@ -1889,7 +1889,10 @@ class __tasks_panel extends LetcBox {
           this._loadTasks(),
           this._loadActivity(),
           this._loadMembers(),
-        ]).then(() => this._render());
+        ]).then(() => {
+          this._render();
+          this._refreshOpenTaskHistory();
+        });
         return;
       case SERVICE.task.delete:
         // Warn BEFORE the reload: once _loadTasks lands, the row this user is
@@ -1904,14 +1907,18 @@ class __tasks_panel extends LetcBox {
       case SERVICE.task.update_status:
       case SERVICE.task.link_label:
       case SERVICE.task.unlink_label:
-        Promise.all([this._loadTasks(), this._loadActivity()]).then(() =>
-          this._render(),
-        );
+        Promise.all([this._loadTasks(), this._loadActivity()]).then(() => {
+          this._render();
+          this._refreshOpenTaskHistory();
+        });
         return;
       case SERVICE.task.link_file:
       case SERVICE.task.unlink_file:
         if (this._detailId) {
-          this._refreshAttachments(this._detailId).then(() => this._render());
+          this._refreshAttachments(this._detailId).then(() => {
+            this._render();
+            this._refreshOpenTaskHistory();
+          });
         } else if (this._view === "summary") {
           // Health view's activity feed surfaces file links even with no detail open.
           this._loadActivity().then(() => this._render());
@@ -2878,10 +2885,11 @@ class __tasks_panel extends LetcBox {
     this._loadComments(id).then(() => {
       if (this._detailId === id) this._refreshCommentList();
     });
-    // "All" (the default tab) interleaves the change log with the comments, so
-    // it is fetched on open rather than on first switch.
+    // "All" (the default tab) shows the change log below the comments, so it is
+    // fetched on open rather than on first switch. Feeds its own part — the
+    // comment list is untouched by this.
     this._loadTaskHistory(id).then(() => {
-      if (this._detailId === id) this._refreshCommentList();
+      if (this._detailId === id) this._refreshHistoryList();
     });
   }
 
@@ -3428,11 +3436,14 @@ class __tasks_panel extends LetcBox {
 
   // Surgical comment-feed refresh (no full _render) so a peer's WS comment
   // doesn't disturb an in-progress composer. Mirrors _refreshAttachmentsList.
+  // Touches only the comment part — the change log is fed by
+  // _refreshHistoryList below, so neither reload rebuilds the other's rows.
   _refreshCommentList() {
     return this.ensurePart("comment-list")
       .then((p) => {
         if (!p || (p.isDestroyed && p.isDestroyed())) return;
         p.feed(require("./skeleton").buildCommentListContent(this));
+        this._stampSectionEmpty("comments", !(this.getComments() || []).length);
         this._renderCommentBodies();
         // onPartReady doesn't reliably re-fire for surgically-fed parts, so wire
         // the active inline editors explicitly (mirrors _prepopulateInputs).
@@ -3449,6 +3460,42 @@ class __tasks_panel extends LetcBox {
           );
           if (ed) this._initDescEditor(ed, "comment-reply");
         }
+      })
+      .catch(() => {});
+  }
+
+  // The section captions ("Comments" / "History") live outside the fed parts,
+  // so an emptied list would leave its caption hanging over nothing. Mirror the
+  // count onto the section — the skin drops an empty change log, caption
+  // included, on the All tab.
+  _stampSectionEmpty(kind, isEmpty) {
+    if (!this.el) return;
+    const s = this.el.querySelector(
+      `.${this.fig.family}__activity-section[data-kind="${kind}"]`,
+    );
+    if (s) s.dataset.empty = isEmpty ? "1" : "0";
+  }
+
+  // A peer's task change (status, assignee, labels, files…) writes a change-log
+  // row for the task this user may have open. Re-read it and feed the history
+  // part only — the board's own reload/re-render is the caller's business, and
+  // the comment feed is never touched.
+  _refreshOpenTaskHistory() {
+    const id = this._detailId;
+    if (!id) return Promise.resolve();
+    return this._loadTaskHistory(id).then(() => {
+      if (this._detailId === id) this._refreshHistoryList();
+    });
+  }
+
+  // Sibling of _refreshCommentList for the change log. No body rendering and no
+  // editors to rewire — history rows are plain text — so this is just a feed.
+  _refreshHistoryList() {
+    return this.ensurePart("history-list")
+      .then((p) => {
+        if (!p || (p.isDestroyed && p.isDestroyed())) return;
+        p.feed(require("./skeleton").buildHistoryListContent(this));
+        this._stampSectionEmpty("history", !this.getTaskHistory().length);
       })
       .catch(() => {});
   }
@@ -5665,27 +5712,30 @@ class __tasks_panel extends LetcBox {
     return Array.isArray(this._taskActivity) ? this._taskActivity : [];
   }
 
-  // Flips data-active in place and re-feeds only the list part: a full
-  // _render() would rebuild the composer and drop the caret mid-comment.
+  // Pure visibility flip: data-active on the tabs, data-tab on the section (the
+  // skin hides whichever list the tab excludes). Neither list is re-fed — both
+  // already hold their full content — so switching costs no rebuild and can't
+  // drop the caret mid-comment.
   _switchActivityTab(tab) {
     const next = ["all", "comments", "history"].includes(tab) ? tab : "all";
     if (next === this._activityTab) return;
     this._activityTab = next;
     if (this.el) {
-      this.el
-        .querySelectorAll(`.${this.fig.family}__activity-tab`)
-        .forEach((el) => {
-          el.dataset.active = el.dataset.tab === next ? "1" : "0";
-        });
+      const pfx = this.fig.family;
+      this.el.querySelectorAll(`.${pfx}__activity-tab`).forEach((el) => {
+        el.dataset.active = el.dataset.tab === next ? "1" : "0";
+      });
+      const section = this.el.querySelector(`.${pfx}__comments`);
+      if (section) section.dataset.tab = next;
     }
-    this._refreshCommentList();
     // Nothing fetched yet (the open-time load failed or is still in flight) —
-    // try again so History isn't permanently empty.
+    // try again so History isn't permanently empty. Only a genuinely missing
+    // change log costs a request; an already-loaded one is a pure toggle.
     if (next !== "comments" && !this.getTaskHistory().length) {
       const id = this._detailId;
       this._loadTaskHistory(id).then(() => {
         if (this._detailId === id && this.getTaskHistory().length) {
-          this._refreshCommentList();
+          this._refreshHistoryList();
         }
       });
     }
