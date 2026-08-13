@@ -3239,6 +3239,13 @@ class __tasks_panel extends LetcBox {
     // those are the edit.
     if (!body && !pending.length) return; // use delete to remove a comment
     const taskId = this._detailId;
+    // Save covers a comment_update plus every queued file's upload and link, so
+    // it is the slowest thing in this panel and the one most likely to be
+    // clicked twice.
+    const saveBtn =
+      this.el &&
+      this.el.querySelector(`.${this.fig.family}__comment-action--primary`);
+    this._setControlBusy(saveBtn, true, { swapLabel: true });
     try {
       await this.postService({
         service: SERVICE.task.comment_update,
@@ -3267,6 +3274,12 @@ class __tasks_panel extends LetcBox {
       await this._loadComments(taskId);
     } catch (err) {
       console.error("[tasks_panel] comment.update failed:", err);
+    } finally {
+      // finally, not a trailing statement: the partial-failure branch returns
+      // early, and a save that throws must not leave the button spinning
+      // forever. A re-fed row replaces the node anyway — clearing a detached
+      // one is a no-op.
+      this._setControlBusy(saveBtn, false, { swapLabel: true });
     }
     if (this._detailId === taskId) this._refreshCommentList();
   }
@@ -3378,6 +3391,11 @@ class __tasks_panel extends LetcBox {
     const commentId = trigger.mget("commentId");
     const fileNid = trigger.mget("fileNid");
     if (!commentId || !fileNid || !this._detailId) return;
+    // Same treatment as the trash icon: the ✕ spins in place, and a second
+    // click while it does is ignored instead of unlinking twice.
+    const btn = trigger && trigger.el;
+    if (this._isControlBusy(btn)) return;
+    this._setControlBusy(btn, true);
     const taskId = this._detailId;
     try {
       await this.postService({
@@ -3390,6 +3408,8 @@ class __tasks_panel extends LetcBox {
       await this._loadComments(taskId);
     } catch (err) {
       console.error("[tasks_panel] comment.unlink_file failed:", err);
+    } finally {
+      this._setControlBusy(btn, false);
     }
     if (this._detailId === taskId) this._refreshCommentList();
   }
@@ -3417,6 +3437,11 @@ class __tasks_panel extends LetcBox {
   async _deleteComment(trigger) {
     const id = trigger.mget("commentId");
     if (!id || !this._detailId) return;
+    // The trash icon spins in place while the delete round-trips; a second
+    // click on a spinning one is ignored rather than firing a second delete.
+    const btn = trigger && trigger.el;
+    if (this._isControlBusy(btn)) return;
+    this._setControlBusy(btn, true);
     const taskId = this._detailId;
     try {
       await this.postService({
@@ -3447,6 +3472,10 @@ class __tasks_panel extends LetcBox {
       if (gone.has(String(this._reactPickerFor))) this._reactPickerFor = null;
     } catch (err) {
       console.error("[tasks_panel] comment.delete failed:", err);
+    } finally {
+      // On success the row is gone and this is a no-op; on failure the icon has
+      // to stop spinning and become clickable again.
+      this._setControlBusy(btn, false);
     }
     if (this._detailId === taskId) this._refreshCommentList();
   }
@@ -4385,6 +4414,37 @@ class __tasks_panel extends LetcBox {
 
   // Marks the submit button as loading and blocks re-entry in onUiEvent.
   // Surgical DOM tweak — avoids a re-render that would steal input focus.
+  /**
+   * Mark one control busy while its own request is in flight.
+   *
+   * Same data-loading contract as _setSubmitting, and the same spinner in the
+   * skin — but scoped to the element that was clicked, and WITHOUT the
+   * panel-wide _submitting flag. That flag gates commit-task / commit-detail,
+   * and deleting a comment or detaching one of its files has no business
+   * disabling the task's own Update button.
+   *
+   * `swapLabel` is for text buttons (Save), where the label is the only place a
+   * spinner can go; icon buttons hide their glyph and spin in its place, which
+   * the skin handles.
+   */
+  _setControlBusy(el, busy, { swapLabel = false } = {}) {
+    if (!el || !el.dataset) return;
+    if (busy) {
+      el.dataset.loading = "1";
+      if (swapLabel) {
+        el.dataset.label = el.textContent || "";
+        el.textContent = LOCALE.LOADING || "Loading…";
+      }
+      return;
+    }
+    el.dataset.loading = "0";
+    if (swapLabel && el.dataset.label) el.textContent = el.dataset.label;
+  }
+
+  _isControlBusy(el) {
+    return !!(el && el.dataset && el.dataset.loading === "1");
+  }
+
   _setSubmitting(selector, loading) {
     this._submitting = !!loading;
     const btn = this.el?.querySelector(selector);
