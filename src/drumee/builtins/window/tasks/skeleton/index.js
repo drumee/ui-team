@@ -2320,18 +2320,18 @@ const ATTACHMENT_ICONS = {
   jpeg: "bg-image",
   mp4: "app-video-file",
   mp3: "app-audio-file",
-  // The office types the shared map DOES know, but under names that are not in
-  // the sprite any more (raw-documents_word / _excel / _powerpoint) — so they
-  // drew nothing, exactly like the types above. These are the ids the document
-  // player already uses (player/document/skeleton/topbar.js). The legacy
-  // three are here too: same icon, and leaving .doc broken while .docx works
-  // would just be the same bug with a smaller blast radius.
-  doc: "app-doc-file",
-  docx: "app-doc-file",
-  xls: "app-xls-file",
-  xlsx: "app-xls-file",
-  ppt: "app-ppt-file",
-  pptx: "app-ppt-file",
+  // Office types use the RAW sprite (raw-*), which keeps each icon's own
+  // colours — Word blue, Excel green, PowerPoint orange — rather than the
+  // normalized single-colour glyphs used above. Both sprites are loaded
+  // (src/sprite.js), and the same names come out of media/template/map, so a
+  // comment's attachment matches the file icon shown everywhere else.
+  // Legacy extensions map to the same icon as their x-suffixed twin.
+  doc: "raw-documents_word",
+  docx: "raw-documents_word",
+  xls: "raw-documents_excel",
+  xlsx: "raw-documents_excel",
+  ppt: "raw-documents_powerpoint",
+  pptx: "raw-documents_powerpoint",
 };
 
 function attachmentIcon(f) {

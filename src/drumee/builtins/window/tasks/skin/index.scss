@@ -3064,10 +3064,12 @@
     width: 16px;
     height: 16px;
 
-    // Office documents. `fill` as well as `color`: the sprite symbols carry no
-    // fill attribute of their own, so `fill` is the property that actually
-    // paints them — `color` alone would leave them the default black. Both are
-    // set together everywhere else in this skin, for the same reason.
+    // Office documents come from the raw sprite, where every detail path
+    // carries its own colour EXCEPT the page body, which has no fill and would
+    // otherwise take the SVG default of black behind the blue/green/orange
+    // detail. This paints that one path white; the rest of the icon is
+    // untouched. `fill` as well as `color`, since fill is the property those
+    // paths actually read.
     &[data-ext="doc"],
     &[data-ext="docx"],
     &[data-ext="xls"],
