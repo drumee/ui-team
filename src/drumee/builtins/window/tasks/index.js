@@ -3997,7 +3997,16 @@ class __tasks_panel extends LetcBox {
   _pointerScope() {
     const p = this._lastPointer;
     if (!p || Date.now() - p.t > POINTER_TTL) return null;
-    return this._activeUploadScope({ clientX: p.x, clientY: p.y });
+    const e = { clientX: p.x, clientY: p.y };
+    // A dragover event is proof the pointer is over this panel — the browser
+    // only fires it there, which is why _activeUploadScope's task branch can
+    // answer on "is a form open" alone. A REMEMBERED pointer carries no such
+    // proof: it comes from a document-wide mousemove, so it is just as true
+    // while a folder window is being dragged on the far side of the desk.
+    // Without this gate the task branch claimed every jQuery-UI drag on the
+    // page and lit "Drop files to attach" over a panel nobody was near.
+    if (!this._dropPointEl(e)) return null;
+    return this._activeUploadScope(e);
   }
 
   // Last resort: no event, no pointer. A comment being edited owns the drop
