@@ -2320,6 +2320,18 @@ const ATTACHMENT_ICONS = {
   jpeg: "bg-image",
   mp4: "app-video-file",
   mp3: "app-audio-file",
+  // The office types the shared map DOES know, but under names that are not in
+  // the sprite any more (raw-documents_word / _excel / _powerpoint) — so they
+  // drew nothing, exactly like the types above. These are the ids the document
+  // player already uses (player/document/skeleton/topbar.js). The legacy
+  // three are here too: same icon, and leaving .doc broken while .docx works
+  // would just be the same bug with a smaller blast radius.
+  doc: "app-doc-file",
+  docx: "app-doc-file",
+  xls: "app-xls-file",
+  xlsx: "app-xls-file",
+  ppt: "app-ppt-file",
+  pptx: "app-ppt-file",
 };
 
 function attachmentIcon(f) {
@@ -2356,6 +2368,9 @@ function commentAttachments(ui, c, isOwn) {
           Skeletons.Image.Svg({
             ico,
             className: `${pfx}__comment-attachment-ico`,
+            // Lets the skin treat a type differently without the renderer
+            // knowing about colour — see the office rule in the skin.
+            attrOpt: { "data-ext": String(f.extension || "").toLowerCase() },
           }),
           Skeletons.Note({
             className: `${pfx}__comment-attachment-name`,

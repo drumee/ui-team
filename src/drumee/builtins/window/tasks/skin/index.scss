@@ -3063,6 +3063,20 @@
     flex: 0 0 16px;
     width: 16px;
     height: 16px;
+
+    // Office documents. `fill` as well as `color`: the sprite symbols carry no
+    // fill attribute of their own, so `fill` is the property that actually
+    // paints them — `color` alone would leave them the default black. Both are
+    // set together everywhere else in this skin, for the same reason.
+    &[data-ext="doc"],
+    &[data-ext="docx"],
+    &[data-ext="xls"],
+    &[data-ext="xlsx"],
+    &[data-ext="ppt"],
+    &[data-ext="pptx"] {
+      color: var(--white, #ffffff);
+      fill: var(--white, #ffffff);
+    }
   }
 
   &__comment-attachment-name {
