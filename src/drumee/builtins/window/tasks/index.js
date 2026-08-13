@@ -205,8 +205,14 @@ class __tasks_panel extends LetcBox {
         $(this.el).droppable("destroy");
       } catch (_) {}
     }
-    // Release pending-file image-preview blob URLs.
-    for (const draft of [this._createDefaults, this._detailDraft]) {
+    // Release pending-file image-preview blob URLs — the two task forms and
+    // the two comment drafts, which carry their own queued files.
+    for (const draft of [
+      this._createDefaults,
+      this._detailDraft,
+      this._commentEditDraft,
+      this._replyDraft,
+    ]) {
       for (const f of (draft && draft.pending_files) || []) {
         if (f.previewUrl) {
           try {
@@ -387,15 +393,19 @@ class __tasks_panel extends LetcBox {
     $(this.el).droppable({
       tolerance: "pointer",
       greedy: true,
-      over: () => {
-        if (this.canAttachExisting()) this.el.dataset.fileDrag = "1";
+      // The jQuery-UI drag carries no DOM target, so the scope is resolved from
+      // the pointer (see _commentDropTarget) — same three outcomes as the
+      // native file drag: the edited comment, the task form, or nothing.
+      over: (e) => {
+        this._setDragAffordance(this._activeUploadScope(e));
       },
       out: () => {
-        delete this.el.dataset.fileDrag;
+        this._setDragAffordance(null);
       },
       drop: (e, ui) => {
-        delete this.el.dataset.fileDrag;
-        if (!this.canAttachExisting()) return;
+        const scope = this._activeUploadScope(e);
+        this._setDragAffordance(null);
+        if (!scope) return;
         const selection =
           (typeof Wm !== "undefined" &&
             Wm.getGlobalSelection &&
@@ -403,7 +413,7 @@ class __tasks_panel extends LetcBox {
           [];
         const moving = ui && ui.helper && ui.helper.moving;
         const nodes = selection.length ? selection : moving ? [moving] : [];
-        if (nodes.length) this.attachExistingNodes(nodes);
+        if (nodes.length) this.attachExistingNodes(nodes, scope);
       },
     });
   }
@@ -610,11 +620,15 @@ class __tasks_panel extends LetcBox {
       // fires on us. Takes priority over the card-reorder path.
       if (this._isFileDrag(e)) {
         e.preventDefault();
-        const ok = !!this._activeUploadScope();
+        // Three outcomes: onto the comment being edited (its own small
+        // overlay), onto the open task form (the panel-wide overlay), or —
+        // while a comment is being edited and the pointer is elsewhere —
+        // nothing at all, so the two affordances never appear together.
+        const s = this._activeUploadScope(e);
         try {
-          e.dataTransfer.dropEffect = ok ? "copy" : "none";
+          e.dataTransfer.dropEffect = s ? "copy" : "none";
         } catch (_) {}
-        if (ok) root.dataset.fileDrag = "1";
+        this._setDragAffordance(s);
         return;
       }
       const col = findColumn(e.target);
@@ -657,8 +671,22 @@ class __tasks_panel extends LetcBox {
 
     root.addEventListener("dragleave", (e) => {
       if (isOurDrag()) e.stopPropagation();
-      if (root.dataset.fileDrag && !root.contains(e.relatedTarget)) {
-        delete root.dataset.fileDrag;
+      // The panel overlay clears on leaving the panel; the comment overlay on
+      // leaving the comment row it belongs to (a move from the row out onto
+      // the rest of the panel never leaves root, so one test can't cover both).
+      if (
+        (root.dataset.fileDrag || root.dataset.commentFileDrag) &&
+        !root.contains(e.relatedTarget)
+      ) {
+        this._setDragAffordance(null);
+      } else if (
+        root.dataset.commentFileDrag &&
+        // relatedTarget, not target: on dragleave `target` is the element being
+        // left, which is still inside the row — it would keep the overlay lit
+        // for a pointer that has already moved off the comment.
+        !this._commentDropTarget({ target: e.relatedTarget })
+      ) {
+        this._setDragAffordance(null);
       }
       const col = findColumn(e.target);
       // Only clear the highlight when the pointer actually leaves the column
@@ -705,8 +733,12 @@ class __tasks_panel extends LetcBox {
       }
       if (this._isFileDrag(e)) {
         e.preventDefault();
-        delete root.dataset.fileDrag;
-        return this._onFilesDropped(e);
+        // Resolve the scope from the drop event BEFORE clearing the overlays —
+        // _onFilesDropped re-resolves from the same event, so the order only
+        // matters for the flags.
+        const dropped = this._onFilesDropped(e);
+        this._setDragAffordance(null);
+        return dropped;
       }
       const col = findColumn(e.target);
       if (!col) {
@@ -1546,6 +1578,9 @@ class __tasks_panel extends LetcBox {
       case "comment-edit": {
         const cid = trigger.mget("commentId");
         const c = this._comments.find((x) => x.id === cid);
+        // Switching the editor to another comment abandons whatever the
+        // previous one had queued.
+        this._discardCommentPending(this._commentEditDraft);
         this._editingCommentId = cid;
         // Seed the inline editor with the comment's current body + its tags.
         this._commentEditDraft = c
@@ -1558,8 +1593,10 @@ class __tasks_panel extends LetcBox {
         return this._saveCommentEdit();
 
       case "comment-cancel":
+        this._discardCommentPending(this._commentEditDraft);
         this._editingCommentId = null;
         this._commentEditDraft = null;
+        this._setDragAffordance(null);
         return this._refreshCommentList();
 
       case "comment-delete":
@@ -1569,17 +1606,21 @@ class __tasks_panel extends LetcBox {
         // Toggle: clicking Reply on the comment already being answered closes the
         // composer (the redesigned reply pill has no separate Cancel button).
         const cid = trigger.mget("commentId");
+        this._discardCommentPending(this._replyDraft);
         this._replyingTo =
           String(this._replyingTo) === String(cid) ? null : cid;
         this._replyDraft = null;
         this._reactPickerFor = null;
         this._emojiPickerFor = null;
+        this._setDragAffordance(null);
         return this._refreshCommentList();
       }
 
       case "comment-reply-cancel":
+        this._discardCommentPending(this._replyDraft);
         this._replyingTo = null;
         this._replyDraft = null;
+        this._setDragAffordance(null);
         return this._refreshCommentList();
 
       case "comment-reply-submit":
@@ -1609,6 +1650,9 @@ class __tasks_panel extends LetcBox {
 
       case "comment-react-more":
         return this._toggleCommentReactionsPicker(trigger);
+
+      case "comment-unlink-attachment":
+        return this._unlinkCommentAttachment(trigger);
 
       case "file-search-input":
         return this._scheduleFileSearch(trigger);
@@ -2012,11 +2056,14 @@ class __tasks_panel extends LetcBox {
     this._pickerOpen = null;
     this._comments = [];
     this._commentDraft = null;
+    this._discardCommentPending(this._commentEditDraft);
     this._editingCommentId = null;
     this._commentEditDraft = null;
+    this._discardCommentPending(this._replyDraft);
     this._replyingTo = null;
     this._replyDraft = null;
     this._reactPickerFor = null;
+    this._setDragAffordance(null);
     this._closeCommentReactionsPicker();
     this._resetFileSearch();
     this._dismissOverlayNow("detail-backdrop");
@@ -3104,18 +3151,26 @@ class __tasks_panel extends LetcBox {
         hub_id: this._hubId,
         task_id: taskId,
       });
-      // reactions arrives as a JSON array (sometimes a JSON string from the DB).
-      this._comments = (Array.isArray(rows) ? rows : []).map((r) => {
-        let reactions = r.reactions;
-        if (typeof reactions === "string") {
+      // reactions and attachments arrive as JSON arrays (sometimes as JSON
+      // strings from the DB). A server older than task_comment_file sends no
+      // attachments at all — an empty list, not a missing key, so the renderer
+      // has one shape to handle.
+      const jsonList = (v) => {
+        let out = v;
+        if (typeof out === "string") {
           try {
-            reactions = JSON.parse(reactions);
+            out = JSON.parse(out);
           } catch (_) {
-            reactions = [];
+            out = [];
           }
         }
-        return { ...r, reactions: Array.isArray(reactions) ? reactions : [] };
-      });
+        return Array.isArray(out) ? out : [];
+      };
+      this._comments = (Array.isArray(rows) ? rows : []).map((r) => ({
+        ...r,
+        reactions: jsonList(r.reactions),
+        attachments: jsonList(r.attachments),
+      }));
     } catch (err) {
       // Don't silently blank an already-populated feed on a transient failure —
       // that reads to the user as "others' comments disappeared". Log so the
@@ -3158,7 +3213,10 @@ class __tasks_panel extends LetcBox {
     if (!id) return;
     const draft = this._commentEditDraft;
     const body = String((draft && draft.body) || "").trim();
-    if (!body) return; // empty edit is a no-op; use delete to remove
+    const pending = (draft && draft.pending_files) || [];
+    // An empty edit is still a no-op — but not when files were dropped on it:
+    // those are the edit.
+    if (!body && !pending.length) return; // use delete to remove a comment
     const taskId = this._detailId;
     try {
       await this.postService({
@@ -3168,6 +3226,9 @@ class __tasks_panel extends LetcBox {
         body,
         mention_uids: Array.isArray(draft.mention_uids) ? draft.mention_uids : [],
       });
+      // Files after the body: a rejected edit (not the author any more, comment
+      // deleted under us) must not leave attachments behind on it.
+      await this._linkCommentFiles(id, draft, taskId);
       this._editingCommentId = null;
       this._commentEditDraft = null;
       await this._loadComments(taskId);
@@ -3175,6 +3236,88 @@ class __tasks_panel extends LetcBox {
       console.error("[tasks_panel] comment.update failed:", err);
     }
     if (this._detailId === taskId) this._refreshCommentList();
+  }
+
+  /**
+   * Upload whatever the comment's pending list still holds, then attach each
+   * resulting nid to the comment. Mirrors _commitDetail's file loop, but lands
+   * on task_comment_file (the comment) instead of task_file (the task).
+   *
+   * Entries already carrying a nid — dragged workspace nodes, search picks, and
+   * cross-hub copies that _queueCrossHubFiles has already re-uploaded — skip
+   * straight to the link.
+   */
+  async _linkCommentFiles(commentId, draft, taskId) {
+    const pending = (draft && draft.pending_files) || [];
+    if (!commentId || !pending.length) return;
+    await Promise.all(
+      pending.map(async (pf) => {
+        let nid = pf.nid;
+        if (!nid && pf.file) {
+          try {
+            nid = (await this._uploadPendingFile(pf)).nid;
+          } catch (err) {
+            console.error("[tasks_panel] comment file upload failed:", err);
+            return;
+          }
+        }
+        if (!nid) return;
+        await this.postService({
+          service: SERVICE.task.comment_link_file,
+          hub_id: this._hubId,
+          comment_id: commentId,
+          task_id: taskId || this._detailId,
+          file_nid: nid,
+        }).catch((err) =>
+          console.error("[tasks_panel] comment.link_file failed:", err),
+        );
+      }),
+    );
+    this._releasePendingPreviews(draft);
+    draft.pending_files = [];
+  }
+
+  // Detach a file from a saved comment (the ✕ on its attachment card). The
+  // media node stays in the folder — this only drops the link row, exactly as
+  // unlinking a task attachment does.
+  async _unlinkCommentAttachment(trigger) {
+    const commentId = trigger.mget("commentId");
+    const fileNid = trigger.mget("fileNid");
+    if (!commentId || !fileNid || !this._detailId) return;
+    const taskId = this._detailId;
+    try {
+      await this.postService({
+        service: SERVICE.task.comment_unlink_file,
+        hub_id: this._hubId,
+        comment_id: commentId,
+        task_id: taskId,
+        file_nid: fileNid,
+      });
+      await this._loadComments(taskId);
+    } catch (err) {
+      console.error("[tasks_panel] comment.unlink_file failed:", err);
+    }
+    if (this._detailId === taskId) this._refreshCommentList();
+  }
+
+  // Blob URLs minted by _stashPendingFiles for image previews. Dropped files
+  // that never reach a comment (cancel) or that have been linked (save) leak
+  // the object URL otherwise — same discipline as the destroy handler.
+  _releasePendingPreviews(draft) {
+    for (const f of (draft && draft.pending_files) || []) {
+      if (!f.previewUrl) continue;
+      try {
+        URL.revokeObjectURL(f.previewUrl);
+      } catch (_) {}
+    }
+  }
+
+  // Drop a comment draft's queued files without attaching them (edit/reply
+  // cancelled, or the comment they belonged to went away).
+  _discardCommentPending(draft) {
+    if (!draft || !draft.pending_files) return;
+    this._releasePendingPreviews(draft);
+    draft.pending_files = [];
   }
 
   async _deleteComment(trigger) {
@@ -3219,7 +3362,8 @@ class __tasks_panel extends LetcBox {
     if (!clickedId || !this._detailId) return;
     const draft = this._replyDraft;
     const body = String((draft && draft.body) || "").trim();
-    if (!body) return;
+    // Files dropped on the reply composer count as content, same as in an edit.
+    if (!body && !((draft && draft.pending_files) || []).length) return;
     // A reply may target a root or a child. Flatten it to a sibling under the
     // root (parent_id = root) so threads stay 1-level, mirroring the skeleton's
     // orphan fallback (a reply whose parent is gone counts as its own root).
@@ -3243,7 +3387,7 @@ class __tasks_panel extends LetcBox {
     if (replyToUid) mentions.push(replyToUid);
     const taskId = this._detailId;
     try {
-      await this.postService({
+      const created = await this.postService({
         service: SERVICE.task.comment_create,
         hub_id: this._hubId,
         task_id: taskId,
@@ -3252,6 +3396,12 @@ class __tasks_panel extends LetcBox {
         mention_uids: [...new Set(mentions)],
         ...(replyToUid ? { reply_to_uid: replyToUid } : {}),
       });
+      // Unlike an edit, the row doesn't exist until now — the new comment's id
+      // comes back on the create, and only then can its files be attached.
+      const row = Array.isArray(created) ? created[0] : created;
+      const newId = row && (row.id || row.comment_id);
+      if (newId) await this._linkCommentFiles(newId, draft, taskId);
+      else this._discardCommentPending(draft);
       this._replyingTo = null;
       this._replyDraft = null;
       await this._loadComments(taskId);
@@ -3539,15 +3689,144 @@ class __tasks_panel extends LetcBox {
     return Array.from(types).includes("Files");
   }
 
-  // Which draft a dropped/picked file attaches to; null → no task being edited.
-  _activeUploadScope() {
-    if (this._creating && this._createDefaults) return "create";
-    if (this._detailId && this._detailDraft) return "detail";
+  // Single owner of the two drop-overlay flags, so they can never both be lit.
+  // Also remembers the last resolved scope for the positionless callers below
+  // (the folder window's insertMedia arrives after the pointer is gone).
+  _setDragAffordance(s) {
+    const root = this.el;
+    if (!root) return;
+    this._lastDropScope = s && s.scope === "comment" ? s : null;
+    if (s && s.scope === "comment") {
+      delete root.dataset.fileDrag;
+      root.dataset.commentFileDrag = "1";
+      return;
+    }
+    delete root.dataset.commentFileDrag;
+    if (s) root.dataset.fileDrag = "1";
+    else delete root.dataset.fileDrag;
+  }
+
+  // True while a comment is being edited or answered — either state takes the
+  // drop surface over from the task, so a file can only land on that comment.
+  _commentEditActive() {
+    return !!(this.getEditingCommentId() || this.getReplyingTo());
+  }
+
+  // Resolve a drag's position to the comment being edited / answered, or null.
+  // Native drags carry an accurate e.target; the jQuery-UI media drag carries
+  // none, so fall back to the pointer (elementFromPoint costs a layout — only
+  // reached on that path, never on the per-pixel native dragover).
+  _commentDropTarget(e) {
+    if (!this._commentEditActive()) return null;
+    const pfx = this.fig.family;
+    let el = e && e.target;
+    if ((!el || !el.closest) && e && e.clientX != null) {
+      el =
+        (typeof document !== "undefined" &&
+          document.elementFromPoint &&
+          document.elementFromPoint(e.clientX, e.clientY)) ||
+        null;
+    }
+    if (!el || !el.closest) return null;
+
+    const replyingTo = this.getReplyingTo();
+    if (replyingTo && el.closest(`.${pfx}__comment-replybox`)) {
+      const c = this._commentById(replyingTo) || {};
+      return {
+        scope: "comment",
+        kind: "reply",
+        commentId: replyingTo,
+        isReply: !!c.parent_id,
+        parentId: c.parent_id || null,
+      };
+    }
+
+    const editingId = this.getEditingCommentId();
+    if (!editingId) return null;
+    // The edited row is the only one carrying its id while in edit mode; a
+    // reply is the same row nested in __comment-thread-replies.
+    const row = el.closest(`.${pfx}__comment-row[data-comment-id]`);
+    if (!row || String(row.dataset.commentId) !== String(editingId)) return null;
+    const c = this._commentById(editingId) || {};
+    return {
+      scope: "comment",
+      kind: "edit",
+      commentId: editingId,
+      isReply: !!c.parent_id,
+      parentId: c.parent_id || null,
+    };
+  }
+
+  _commentById(id) {
+    return (this._comments || []).find((c) => String(c.id) === String(id));
+  }
+
+  /**
+   * Which draft a dropped file attaches to, given where it was dropped:
+   *   {scope:'comment', kind, commentId, isReply, parentId} — on the comment
+   *     currently being edited or answered
+   *   {scope:'detail'} / {scope:'create'} — the open task form
+   *   null — nothing here accepts it
+   *
+   * While a comment is being edited the comment branch is the ONLY one that
+   * can match: the rest of the panel stops accepting files, so the task-wide
+   * overlay can't compete with the comment's own and a misdrop can't quietly
+   * attach a file to the task instead.
+   */
+  _activeUploadScope(e) {
+    const onComment = this._commentDropTarget(e);
+    if (onComment) return onComment;
+    if (this._commentEditActive()) return null;
+    return this._formUploadScope();
+  }
+
+  // Positionless scope, for callers with no pointer to resolve (the folder
+  // window's insertMedia, the file picker): whichever task form is open.
+  _formUploadScope() {
+    if (this._creating && this._createDefaults) return { scope: "create" };
+    if (this._detailId && this._detailDraft) return { scope: "detail" };
+    return null;
+  }
+
+  // Part/scope key for a resolved scope: "create" | "detail" |
+  // "comment-edit" | "comment-reply". Names the pending-list part it feeds.
+  _scopeKey(s) {
+    if (!s) return null;
+    if (s.scope !== "comment") return s.scope;
+    return s.kind === "reply" ? "comment-reply" : "comment-edit";
+  }
+
+  // The draft object behind a resolved scope, created on demand: a comment can
+  // be answered (or its editor opened) before a single character is typed, and
+  // the draft is only allocated on first input.
+  _draftForScope(s) {
+    return this._draftForKey(this._scopeKey(s), { create: true });
+  }
+
+  // `create` allocates an empty comment draft when there isn't one yet — only
+  // the drop path wants that. Readers (the pending-list refresh, the remove
+  // button) pass nothing and get null, so merely rendering can't conjure a
+  // draft for a comment nobody is editing.
+  _draftForKey(key, { create = false } = {}) {
+    if (key === "create") return this._createDefaults;
+    if (key === "detail") return this._detailDraft;
+    if (key === "comment-edit") {
+      if (create && !this._commentEditDraft) {
+        this._commentEditDraft = { body: "", mention_uids: [] };
+      }
+      return this._commentEditDraft;
+    }
+    if (key === "comment-reply") {
+      if (create && !this._replyDraft) {
+        this._replyDraft = { body: "", mention_uids: [] };
+      }
+      return this._replyDraft;
+    }
     return null;
   }
 
   async _onFilesDropped(e) {
-    const scope = this._activeUploadScope();
+    const scope = this._activeUploadScope(e);
     if (!scope) {
       if (typeof Butler !== "undefined" && Butler.say) {
         Butler.say(LOCALE.WRONG_DROP_AREA);
@@ -3556,10 +3835,10 @@ class __tasks_panel extends LetcBox {
     }
     const files = Array.from((e.dataTransfer && e.dataTransfer.files) || []);
     if (!files.length) return;
-    const draft = scope === "create" ? this._createDefaults : this._detailDraft;
+    const draft = this._draftForScope(scope);
     if (!draft) return;
     await this._stashPendingFiles(draft, files);
-    this._refreshPendingList(scope);
+    this._refreshPendingList(this._scopeKey(scope));
   }
 
   // Queues File objects onto a draft's pending list (picker + drag-drop),
@@ -4030,7 +4309,9 @@ class __tasks_panel extends LetcBox {
   // Surgical update of the file-pending-list part — avoids a full _render()
   // that would steal focus from the title/description inputs.
   _refreshPendingList(scope = "create") {
-    const draft = scope === "create" ? this._createDefaults : this._detailDraft;
+    // Takes the scope KEY, not a resolved scope object: "create" | "detail" |
+    // "comment-edit" | "comment-reply", each naming its own part.
+    const draft = this._draftForKey(scope);
     const pendingFiles = (draft && draft.pending_files) || [];
     const partName = `file-pending-list-${scope}`;
     this.ensurePart(partName)
@@ -4117,17 +4398,24 @@ class __tasks_panel extends LetcBox {
     this._refreshFileSearchDropdown(scope);
   }
 
-  // True when a dragged workspace node can be attached now (a form is open).
+  // True when a dragged workspace node can be attached now (a form is open, or
+  // the pointer is over a comment being edited). Called by the folder window's
+  // insertMedia, which has no pointer left to resolve — hence the remembered
+  // scope from the droppable's `over`.
   canAttachExisting() {
-    return !!this._activeUploadScope();
+    return !!(this._lastDropScope || this._formUploadScope());
   }
 
   // Attach dragged workspace node(s) to the open draft. Same-hub files link by
   // nid; cross-hub files are copied in. Returns true if any node was queued.
-  attachExistingNodes(files) {
-    const scope = this._activeUploadScope();
+  // `resolved` comes from the drop that triggered this; without one (the
+  // folder's insertMedia) fall back to what the last drag resolved, then to
+  // the open task form.
+  attachExistingNodes(files, resolved) {
+    const scope =
+      resolved || this._lastDropScope || this._formUploadScope() || null;
     if (!scope) return false;
-    const draft = scope === "create" ? this._createDefaults : this._detailDraft;
+    const draft = this._draftForScope(scope);
     if (!draft) return false;
 
     const list = Array.isArray(files) ? files : [files];
@@ -4172,16 +4460,20 @@ class __tasks_panel extends LetcBox {
       });
       added++;
     }
+    const key = this._scopeKey(scope);
     if (crossHub.length) this._queueCrossHubFiles(crossHub, scope);
     if (!added) return false;
-    this._refreshPendingList(scope);
-    this._refreshFileSearchDropdown(scope);
+    this._refreshPendingList(key);
+    // Only the task forms carry a file-search dropdown to re-mark as linked.
+    if (key === "create" || key === "detail") {
+      this._refreshFileSearchDropdown(key);
+    }
     return true;
   }
 
   // Download each foreign-hub file and queue it as an upload into this hub.
   async _queueCrossHubFiles(attrs, scope) {
-    const draft = scope === "create" ? this._createDefaults : this._detailDraft;
+    const draft = this._draftForScope(scope);
     if (!draft) return;
     const b = (typeof bootstrap === "function" && bootstrap()) || {};
     const endpoint = b.endpoint || "";
@@ -4205,7 +4497,7 @@ class __tasks_panel extends LetcBox {
         this.warn && this.warn("cross-hub attach failed", e);
       }
     }
-    this._refreshPendingList(scope);
+    this._refreshPendingList(this._scopeKey(scope));
   }
 
   _removePendingFile(trigger) {
@@ -4220,18 +4512,15 @@ class __tasks_panel extends LetcBox {
       }
       return !drop;
     };
-    // Same row template renders in both scopes; filter both drafts and let
+    // Same row template renders in every scope; filter all four drafts and let
     // the surgical refresh skip whichever isn't mounted.
-    if (this._createDefaults?.pending_files) {
-      this._createDefaults.pending_files =
-        this._createDefaults.pending_files.filter(keep);
+    for (const key of ["create", "detail", "comment-edit", "comment-reply"]) {
+      const draft = this._draftForKey(key);
+      if (draft?.pending_files) {
+        draft.pending_files = draft.pending_files.filter(keep);
+      }
+      this._refreshPendingList(key);
     }
-    if (this._detailDraft?.pending_files) {
-      this._detailDraft.pending_files =
-        this._detailDraft.pending_files.filter(keep);
-    }
-    this._refreshPendingList("create");
-    this._refreshPendingList("detail");
     // "Linked" badges in the search dropdown depend on the pending set —
     // refresh both; ensurePart silently no-ops if the part isn't mounted.
     this._refreshFileSearchDropdown("create");
@@ -4396,8 +4685,14 @@ class __tasks_panel extends LetcBox {
           editorSelector: `.${pfx}__detail-panel .${pfx}__comment-edit-input`,
           placeholder: LOCALE.TASK_COMMENT_PLACEHOLDER,
           get: () => (this._commentEditDraft && this._commentEditDraft.body) || "",
+          // Spread, not replace: files dropped on the comment live on this same
+          // draft, and a keystroke must not throw them away.
           set: (text, uids) => {
-            this._commentEditDraft = { body: text, mention_uids: uids };
+            this._commentEditDraft = {
+              ...(this._commentEditDraft || {}),
+              body: text,
+              mention_uids: uids,
+            };
           },
         };
       case "comment-reply":
@@ -4405,8 +4700,13 @@ class __tasks_panel extends LetcBox {
           editorSelector: `.${pfx}__detail-panel .${pfx}__comment-reply-input`,
           placeholder: LOCALE.TASK_COMMENT_PLACEHOLDER,
           get: () => (this._replyDraft && this._replyDraft.body) || "",
+          // Spread for the same reason as comment-edit above.
           set: (text, uids) => {
-            this._replyDraft = { body: text, mention_uids: uids };
+            this._replyDraft = {
+              ...(this._replyDraft || {}),
+              body: text,
+              mention_uids: uids,
+            };
           },
         };
       default:
@@ -5819,6 +6119,14 @@ class __tasks_panel extends LetcBox {
   }
   getReplyingTo() {
     return this._replyingTo;
+  }
+  // Read-only for the skeleton: the two comment drafts carry the files dropped
+  // on them, which the pending strip renders before they are attached.
+  getCommentEditDraft() {
+    return this._commentEditDraft;
+  }
+  getReplyDraft() {
+    return this._replyDraft;
   }
   getReactPickerFor() {
     return this._reactPickerFor;

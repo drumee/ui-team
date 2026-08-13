@@ -11,7 +11,15 @@
   }
 
   // Reveal the "Drop files to attach" overlay while a file is dragged over.
+  // data-file-drag is never set while a comment is being edited — that state
+  // hands the drop surface to the comment (data-comment-file-drag below), so
+  // the two overlays can't appear at once.
   &[data-file-drag="1"] &__drop-overlay {
+    opacity: 1;
+    visibility: visible;
+  }
+
+  &[data-comment-file-drag="1"] &__comment-drop-overlay {
     opacity: 1;
     visibility: visible;
   }
@@ -2934,6 +2942,96 @@
     );
   }
 
+  // Drop affordance covering one comment (edited row / reply composer) instead
+  // of the whole panel. Same colours as __drop-overlay, one size down: no icon,
+  // thinner dash, smaller type — it sits inside a card, not over a modal.
+  &__comment-drop-overlay {
+    position: absolute;
+    inset: 0;
+    z-index: 20;
+    align-items: center;
+    justify-content: center;
+    background: rgba(250, 133, 64, 0.08);
+    border: 1px dashed var(--primary, #fa8540);
+    border-radius: 12px;
+    pointer-events: none;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.12s ease;
+  }
+
+  &__comment-drop-overlay-text {
+    @include drumee.typo(
+      $size: 13px,
+      $weight: 600,
+      $line: 18px,
+      $color: var(--primary, #fa8540)
+    );
+  }
+
+  // Queued files inside an open editor, before Save attaches them.
+  &__comment-pending-list {
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 8px;
+
+    &[data-empty="1"] {
+      display: none;
+    }
+  }
+
+  // Files already attached to a saved comment.
+  &__comment-attachments {
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 8px;
+  }
+
+  &__comment-attachment {
+    align-items: center;
+    gap: 6px;
+    max-width: 100%;
+    padding: 4px 8px;
+    border: 1px solid var(--border-default, rgba(0, 0, 0, 0.1));
+    border-radius: 8px;
+    cursor: pointer;
+
+    &:hover {
+      background: var(--overlay-bg-05, rgba(0, 0, 0, 0.04));
+    }
+  }
+
+  &__comment-attachment-ico {
+    flex: 0 0 16px;
+    width: 16px;
+    height: 16px;
+  }
+
+  &__comment-attachment-name {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    @include drumee.typo(
+      $size: 12px,
+      $weight: 400,
+      $line: 16px,
+      $color: var(--normal-fg-10, #0b0a21)
+    );
+  }
+
+  &__comment-attachment-unlink {
+    flex: 0 0 12px;
+    width: 12px;
+    height: 12px;
+    cursor: pointer;
+    opacity: 0.5;
+
+    &:hover {
+      opacity: 1;
+    }
+  }
+
   // Bordered comment card (Figma Activity: 1px border, radius 12, padding 16).
   &__comment-row {
     gap: 12px;
@@ -2942,6 +3040,8 @@
     padding: 16px;
     border: 1px solid var(--border-default, rgba(0, 0, 0, 0.1));
     border-radius: 12px;
+    // Anchors __comment-drop-overlay to this row while it is being edited.
+    position: relative;
   }
 
   &__comment-avatar {
@@ -3254,6 +3354,9 @@
 
   &__comment-replybox {
     gap: 6px;
+    // Same anchoring as __comment-row: the composer is its own drop target.
+    // (The nested-reply variant above already sets this for its spine elbow.)
+    position: relative;
   }
 
   // Reply composer pill (Figma 2037-14883): a grey rounded field with the

@@ -2269,6 +2269,94 @@ const fullName = (m) => {
 // functions now, and both attribute rows.
 const authorName = (m) => fullName(m) || LOCALE.FORMER_MEMBER;
 
+// Drop affordance for a single comment (edit row / reply composer). Same copy
+// and treatment as the panel-wide __drop-overlay, sized to the row it covers;
+// lit by data-comment-file-drag on the panel root, which _setDragAffordance
+// keeps mutually exclusive with the task-level flag.
+function commentDropOverlay(ui) {
+  const pfx = ui.fig.family;
+  return Skeletons.Box.Y({
+    className: `${pfx}__comment-drop-overlay`,
+    bubble: 0,
+    kids: [
+      Skeletons.Note({
+        className: `${pfx}__comment-drop-overlay-text`,
+        content: LOCALE.DROP_FILES_TO_ATTACH,
+      }),
+    ],
+  });
+}
+
+// Queued-but-not-yet-attached files for a comment being edited or answered.
+// Its own part (file-pending-list-comment-edit / -comment-reply) so a drop can
+// be shown without re-feeding the comment list, which would tear down the
+// editor and the caret with it.
+function pendingStrip(ui, scope) {
+  const pfx = ui.fig.family;
+  const draft =
+    scope === "comment-reply" ? ui.getReplyDraft() : ui.getCommentEditDraft();
+  const pending = (draft && draft.pending_files) || [];
+  return Skeletons.Box.X({
+    className: `${pfx}__comment-pending-list`,
+    sys_pn: `file-pending-list-${scope}`,
+    partHandler: ui,
+    attrOpt: { "data-empty": pending.length ? "0" : "1" },
+    kids: buildPendingListContent(ui, pending),
+  });
+}
+
+// Files already attached to a saved comment (task_comment_file, delivered by
+// task_comment_list). The ✕ detaches the file; the media node stays put.
+function commentAttachments(ui, c, isOwn) {
+  const pfx = ui.fig.family;
+  const files = (c && c.attachments) || [];
+  if (!files.length) return null;
+  return Skeletons.Box.X({
+    className: `${pfx}__comment-attachments`,
+    kids: files.map((f) => {
+      const nid = f.file_nid || f.nid;
+      const name = `${f.filename || ""}${f.extension ? "." + f.extension : ""}`;
+      let ico = f.iconChartId;
+      if (!ico) {
+        try {
+          ico = require("media/template/map")(
+            String(f.extension || "").toLowerCase(),
+          );
+        } catch (_) {}
+      }
+      return Skeletons.Box.X({
+        className: `${pfx}__comment-attachment`,
+        service: nid ? "open-attachment" : null,
+        uiHandler: nid ? [ui] : null,
+        fileNid: nid,
+        kids: [
+          Skeletons.Image.Svg({
+            ico: ico || "attachment",
+            className: `${pfx}__comment-attachment-ico`,
+          }),
+          Skeletons.Note({
+            className: `${pfx}__comment-attachment-name`,
+            content: name,
+          }),
+          // Author-only, like editing or deleting the comment itself — the
+          // server enforces the same rule.
+          isOwn
+            ? Skeletons.Button.Svg({
+                className: `${pfx}__comment-attachment-unlink`,
+                ico: "cross",
+                bubble: 0,
+                service: "comment-unlink-attachment",
+                uiHandler: [ui],
+                commentId: c.id,
+                fileNid: nid,
+              })
+            : null,
+        ].filter(Boolean),
+      });
+    }),
+  });
+}
+
 // Comment threads only. The change log is a separate part
 // (buildHistoryListContent) so a history reload never re-feeds this one, and
 // vice versa; the active tab hides whichever list it excludes in CSS.
@@ -2430,7 +2518,14 @@ function buildCommentListContent(ui) {
     if (editingId && String(editingId) === String(c.id)) {
       return Skeletons.Box.X({
         className: `${pfx}__comment-row`,
-        attrOpt: { "data-reply": isReply ? "1" : "0" },
+        // data-comment-id is what a file drag resolves against: while this row
+        // is being edited it owns the panel's drop surface (see
+        // _commentDropTarget), so a file dropped on it attaches to the comment
+        // rather than to the task.
+        attrOpt: {
+          "data-reply": isReply ? "1" : "0",
+          "data-comment-id": c.id,
+        },
         kids: [
           avatar,
           Skeletons.Box.Y({
@@ -2442,6 +2537,9 @@ function buildCommentListContent(ui) {
                 editorClass: `${pfx}__comment-edit-input`,
                 placeholder: LOCALE.TASK_COMMENT_PLACEHOLDER,
               }),
+              // Files dropped on the row while editing, before they are
+              // uploaded and attached on Save.
+              pendingStrip(ui, "comment-edit"),
               Skeletons.Box.X({
                 className: `${pfx}__comment-actions`,
                 kids: [
@@ -2464,6 +2562,9 @@ function buildCommentListContent(ui) {
               }),
             ],
           }),
+          // Covers this row alone, in place of the panel-wide overlay, which is
+          // suppressed for as long as a comment is being edited.
+          commentDropOverlay(ui),
         ],
       });
     }
@@ -2487,6 +2588,8 @@ function buildCommentListContent(ui) {
               escapeContextmenu: 1,
               attrOpt: { "data-comment-id": c.id },
             }),
+            // Files attached to this comment, between the body and the footer.
+            commentAttachments(ui, c, isOwn),
             // Reaction chips + action icons share one horizontal footer row.
             Skeletons.Box.X({
               className: `${pfx}__comment-footer`,
@@ -2571,6 +2674,11 @@ function buildCommentListContent(ui) {
             }),
           ],
         }),
+        // Files dropped on the composer, attached to the reply once it is sent.
+        pendingStrip(ui, "comment-reply"),
+        // The composer is a drop target in its own right, on the same terms as
+        // an edited row.
+        commentDropOverlay(ui),
       ].filter(Boolean),
     });
 
