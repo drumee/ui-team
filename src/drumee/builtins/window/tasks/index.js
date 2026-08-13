@@ -214,6 +214,10 @@ class __tasks_panel extends LetcBox {
       document.removeEventListener("mousemove", this._pointerTracker, true);
       this._pointerTracker = null;
     }
+    if (this._pointerRelease && typeof document !== "undefined") {
+      document.removeEventListener("mouseup", this._pointerRelease, true);
+      this._pointerRelease = null;
+    }
     // Release pending-file image-preview blob URLs — the two task forms and
     // the two comment drafts, which carry their own queued files.
     for (const draft of [
@@ -3706,6 +3710,11 @@ class __tasks_panel extends LetcBox {
     const root = this.el;
     if (!root) return;
     this._lastDropScope = s && s.scope === "comment" ? s : null;
+    // Keep the pointer-driven sync's change-detection honest: a caller that
+    // sets the affordance directly (dragover, drop, edit-cancel) must not leave
+    // a key behind that makes the next pointer tick a no-op.
+    this._affordanceKey =
+      s && s.scope === "comment" ? `comment:${s.commentId}` : s ? s.scope : "";
     if (s && s.scope === "comment") {
       delete root.dataset.fileDrag;
       root.dataset.commentFileDrag = "1";
@@ -3834,8 +3843,55 @@ class __tasks_panel extends LetcBox {
     if (this._pointerTracker || typeof document === "undefined") return;
     this._pointerTracker = (e) => {
       this._lastPointer = { x: e.clientX, y: e.clientY, t: Date.now() };
+      this._syncDragAffordance();
     };
+    // A jQuery-UI drop or abort ends with no event on this panel at all — the
+    // droppable's `drop` only fires when the pointer is inside it — so the
+    // affordance would stay lit after a drag that ended elsewhere.
+    this._pointerRelease = () => this._setDragAffordance(null);
     document.addEventListener("mousemove", this._pointerTracker, true);
+    document.addEventListener("mouseup", this._pointerRelease, true);
+  }
+
+  /**
+   * Follow the pointer with the drop affordance during an in-app drag.
+   *
+   * jQuery-UI gives this panel no per-move callback. Droppable fires `over`
+   * only on a TRANSITION (droppable.js: `if (!c) return`), i.e. exactly once,
+   * as the pointer crosses INTO the panel — at its edge, nowhere near a
+   * comment, where the scope correctly resolves to null while a comment is
+   * being edited. Nothing fires again as the pointer travels to the row, so an
+   * `over`-driven overlay can never light. The pointer itself is the only
+   * continuous signal, for the media grid and the window-manager route alike.
+   *
+   * Guarded on an actual drag being in flight (jQuery-UI marks its helper
+   * `ui-draggable-dragging`) — otherwise merely moving the mouse across an
+   * edited comment would light the overlay with nothing to drop.
+   */
+  _syncDragAffordance() {
+    if (this._affordanceRaf || typeof requestAnimationFrame !== "function") {
+      return;
+    }
+    this._affordanceRaf = requestAnimationFrame(() => {
+      this._affordanceRaf = 0;
+      const s = this._jqDragActive() ? this._pointerScope() : null;
+      // One DOM write per change, not per frame.
+      const key =
+        s && s.scope === "comment" ? `comment:${s.commentId}` : s ? s.scope : "";
+      if (key === this._affordanceKey) return;
+      this._affordanceKey = key;
+      this._setDragAffordance(s);
+    });
+  }
+
+  // True while a jQuery-UI drag is in flight anywhere on the page. Native HTML5
+  // file drags fire no mousemove at all, so they never reach this and keep
+  // being driven by dragover.
+  _jqDragActive() {
+    return !!(
+      typeof document !== "undefined" &&
+      document.querySelector(".ui-draggable-dragging")
+    );
   }
 
   // Scope for where the pointer last was. A drop always follows a move within
