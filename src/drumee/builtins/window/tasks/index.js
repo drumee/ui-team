@@ -79,6 +79,11 @@ const BUILTIN_META = {
 // on the screen.
 const PEER_NOTICE_MS = 10000;
 
+// How long a remembered pointer position stays usable for resolving a drop
+// that arrives without one (see _pointerScope). A drop follows its last
+// mousemove within a frame or two; anything older is an idle mouse, not a drag.
+const POINTER_TTL = 2000;
+
 // Signal palette (Figma): Success / Info / Warning / Error — must match the
 // skin's [data-priority] pill colors so dots and pills agree everywhere.
 const PRIORITIES = [
@@ -204,6 +209,10 @@ class __tasks_panel extends LetcBox {
       try {
         $(this.el).droppable("destroy");
       } catch (_) {}
+    }
+    if (this._pointerTracker && typeof document !== "undefined") {
+      document.removeEventListener("mousemove", this._pointerTracker, true);
+      this._pointerTracker = null;
     }
     // Release pending-file image-preview blob URLs — the two task forms and
     // the two comment drafts, which carry their own queued files.
@@ -332,6 +341,7 @@ class __tasks_panel extends LetcBox {
     this._installDnd();
     this._installBoardPan();
     this._installMediaDroppable();
+    this._trackPointer();
     this._installFileSearchFocus();
     this._installAssigneeSearch();
     await Promise.all([
@@ -3801,12 +3811,48 @@ class __tasks_panel extends LetcBox {
     return this._formUploadScope();
   }
 
-  // Positionless scope, for callers with no pointer to resolve (the folder
-  // window's insertMedia, the file picker): whichever task form is open.
+  // Whichever task form is open. NOT a drop decision on its own — see
+  // _positionlessScope, which is what callers without a position must use.
   _formUploadScope() {
     if (this._creating && this._createDefaults) return { scope: "create" };
     if (this._detailId && this._detailDraft) return { scope: "detail" };
     return null;
+  }
+
+  /**
+   * Pointer of record for drops that never reach this panel's own handlers.
+   *
+   * The desk routes a window-manager drop straight at the window under it
+   * (desk/wm/index.js: `this._target.insertMedia(files, 0)`), and the folder
+   * window forwards that to attachExistingNodes with no event, no coordinates
+   * and no idea where the pointer was. The jQuery-UI helper lives under
+   * <body>, so its mousemove never bubbles through this panel either —
+   * document is the only place both are visible. Two integers per move, no
+   * layout, and nothing is read from it unless a positionless caller asks.
+   */
+  _trackPointer() {
+    if (this._pointerTracker || typeof document === "undefined") return;
+    this._pointerTracker = (e) => {
+      this._lastPointer = { x: e.clientX, y: e.clientY, t: Date.now() };
+    };
+    document.addEventListener("mousemove", this._pointerTracker, true);
+  }
+
+  // Scope for where the pointer last was. A drop always follows a move within
+  // a frame or two, so anything older than POINTER_TTL is somebody else's
+  // mouse position and is refused rather than guessed from.
+  _pointerScope() {
+    const p = this._lastPointer;
+    if (!p || Date.now() - p.t > POINTER_TTL) return null;
+    return this._activeUploadScope({ clientX: p.x, clientY: p.y });
+  }
+
+  // Last resort: no event, no pointer. A comment being edited owns the drop
+  // surface, and with no position there is nothing to say the drop landed on
+  // it — so nothing attaches, rather than the file quietly becoming a task
+  // attachment behind the open editor.
+  _positionlessScope() {
+    return this._commentEditActive() ? null : this._formUploadScope();
   }
 
   // Part/scope key for a resolved scope: "create" | "detail" |
@@ -4419,22 +4465,31 @@ class __tasks_panel extends LetcBox {
     this._refreshFileSearchDropdown(scope);
   }
 
-  // True when a dragged workspace node can be attached now (a form is open, or
-  // the pointer is over a comment being edited). Called by the folder window's
-  // insertMedia, which has no pointer left to resolve — hence the remembered
-  // scope from the droppable's `over`.
+  // Does this panel CLAIM a dropped workspace node? Claiming is what stops the
+  // folder window from inserting the file into its own body (folder/index.js
+  // insertMedia). It is deliberately not the same question as "where does it
+  // land" — while a comment is being edited and the pointer is elsewhere the
+  // panel still claims the drop, and attachExistingNodes then drops it on the
+  // floor, so the drop is a genuine no-op instead of a surprise file in the
+  // folder.
   canAttachExisting() {
-    return !!(this._lastDropScope || this._formUploadScope());
+    return !!(this._formUploadScope() || this._commentEditActive());
   }
 
   // Attach dragged workspace node(s) to the open draft. Same-hub files link by
   // nid; cross-hub files are copied in. Returns true if any node was queued.
-  // `resolved` comes from the drop that triggered this; without one (the
-  // folder's insertMedia) fall back to what the last drag resolved, then to
-  // the open task form.
+  // `resolved` comes from the drop that triggered this. Without one — the
+  // desk's window-manager route reaches us through the folder's insertMedia,
+  // carrying neither event nor coordinates — fall back to what the last drag
+  // resolved, then to the pointer, and only then to the positionless rule.
+  // Every one of those paths applies the same editing guard, so a drop can
+  // never land on the task while a comment owns the surface.
   attachExistingNodes(files, resolved) {
     const scope =
-      resolved || this._lastDropScope || this._formUploadScope() || null;
+      resolved ||
+      this._lastDropScope ||
+      this._pointerScope() ||
+      this._positionlessScope();
     if (!scope) return false;
     const draft = this._draftForScope(scope);
     if (!draft) return false;
