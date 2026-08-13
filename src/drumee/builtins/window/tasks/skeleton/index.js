@@ -2308,6 +2308,33 @@ function pendingStrip(ui, scope) {
   });
 }
 
+// Icon per file type for a comment's attachment card. media/template/map only
+// knows office/code types and returns the RAW EXTENSION for anything else
+// ("png" → "png"), which is not a sprite id — so the common media types drew a
+// missing icon. These four are named explicitly; everything else still goes
+// through the shared map, now with a real fallback id instead of a made-up one.
+const ATTACHMENT_ICONS = {
+  txt: "app-txt-file",
+  png: "bg-image",
+  jpg: "bg-image",
+  jpeg: "bg-image",
+  mp4: "app-video-file",
+  mp3: "app-audio-file",
+};
+
+function attachmentIcon(f) {
+  if (f && f.iconChartId) return f.iconChartId;
+  const ext = String((f && f.extension) || "").toLowerCase();
+  if (ATTACHMENT_ICONS[ext]) return ATTACHMENT_ICONS[ext];
+  let mapped;
+  try {
+    mapped = require("media/template/map")(ext, "app-file");
+  } catch (_) {
+    /* alias unavailable (tests) — fall through to the generic icon */
+  }
+  return mapped || "app-file";
+}
+
 // Files already attached to a saved comment (task_comment_file, delivered by
 // task_comment_list). The ✕ detaches the file; the media node stays put.
 function commentAttachments(ui, c, isOwn) {
@@ -2319,14 +2346,7 @@ function commentAttachments(ui, c, isOwn) {
     kids: files.map((f) => {
       const nid = f.file_nid || f.nid;
       const name = `${f.filename || ""}${f.extension ? "." + f.extension : ""}`;
-      let ico = f.iconChartId;
-      if (!ico) {
-        try {
-          ico = require("media/template/map")(
-            String(f.extension || "").toLowerCase(),
-          );
-        } catch (_) {}
-      }
+      const ico = attachmentIcon(f);
       return Skeletons.Box.X({
         className: `${pfx}__comment-attachment`,
         service: nid ? "open-attachment" : null,
@@ -2334,7 +2354,7 @@ function commentAttachments(ui, c, isOwn) {
         fileNid: nid,
         kids: [
           Skeletons.Image.Svg({
-            ico: ico || "attachment",
+            ico,
             className: `${pfx}__comment-attachment-ico`,
           }),
           Skeletons.Note({
