@@ -3712,21 +3712,42 @@ class __tasks_panel extends LetcBox {
     return !!(this.getEditingCommentId() || this.getReplyingTo());
   }
 
+  /**
+   * The element under a drag that belongs to THIS panel.
+   *
+   * A native file drag reports an accurate e.target, and taking it costs
+   * nothing — which matters, because dragover fires at pointer rate.
+   *
+   * The in-app media drag does not. jQuery-UI builds a helper, appends it to
+   * <body> (media/interact.js: appendTo: _a.body) and parks it under the
+   * cursor (cursorAt), so the droppable's `over`/`drop` hand us a mouse event
+   * whose target is that helper — an element outside the panel entirely. Both
+   * e.target AND elementFromPoint report the helper, never the row beneath it,
+   * so the pointer STACK is the only thing that can see through it.
+   */
+  _dropPointEl(e) {
+    const root = this.el;
+    const inRoot = (n) => !!(n && root && root.contains(n));
+    const t = e && e.target;
+    if (inRoot(t) && t.closest) return t;
+    if (!e || e.clientX == null || typeof document === "undefined") return null;
+    if (document.elementsFromPoint) {
+      return (
+        (document.elementsFromPoint(e.clientX, e.clientY) || []).find(inRoot) ||
+        null
+      );
+    }
+    const one =
+      document.elementFromPoint &&
+      document.elementFromPoint(e.clientX, e.clientY);
+    return inRoot(one) ? one : null;
+  }
+
   // Resolve a drag's position to the comment being edited / answered, or null.
-  // Native drags carry an accurate e.target; the jQuery-UI media drag carries
-  // none, so fall back to the pointer (elementFromPoint costs a layout — only
-  // reached on that path, never on the per-pixel native dragover).
   _commentDropTarget(e) {
     if (!this._commentEditActive()) return null;
     const pfx = this.fig.family;
-    let el = e && e.target;
-    if ((!el || !el.closest) && e && e.clientX != null) {
-      el =
-        (typeof document !== "undefined" &&
-          document.elementFromPoint &&
-          document.elementFromPoint(e.clientX, e.clientY)) ||
-        null;
-    }
+    const el = this._dropPointEl(e);
     if (!el || !el.closest) return null;
 
     const replyingTo = this.getReplyingTo();
