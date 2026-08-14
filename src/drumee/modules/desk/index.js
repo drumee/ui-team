@@ -2338,13 +2338,27 @@ class desk_module extends LetcBox {
    * self-gating; the prompt is a small dialog and goes last so it never stacks
    * on top of them.
    *
+   * `immediate` says the screen is KNOWN to be clear because a tutorial just
+   * finished on it, which is the one moment the LAUNCH30 offer does not have to
+   * wait out its five-minute hold. Exactly one of the four callers passes it —
+   * see _chainRewardFlowAfterTutorial. The other three cannot: two of them fire
+   * precisely because the tutorial's state could not be established, and the
+   * third is a returning user the hold was written for.
+   *
+   * @param {Object}  [opt]
+   * @param {Boolean} [opt.immediate] show the LAUNCH30 offer without the hold
    * @returns {Promise}
    */
-  _afterHomeSettled() {
+  _afterHomeSettled(opt = {}) {
     // Once per session. There are now four ways in — no-tutorial, after the
     // tutorial, the tutorial-never-mounted fallback, and a re-fed module — and
     // running the chain twice would ask the reward flow to mount twice and
     // could show the invite dialog again.
+    //
+    // Set BEFORE the chain below starts, with no await in between, so a second
+    // caller cannot interleave: a "Product Tour" replayed from Get help runs
+    // the same tutorial-destroy path as a first run and would otherwise reach
+    // the immediate branch long after home settled.
     if (this._homeSettledDone) return Promise.resolve();
     this._homeSettledDone = true;
     clearTimeout(this._homeSettledFallback);
@@ -2361,7 +2375,7 @@ class desk_module extends LetcBox {
     // its popup first, and a locked org is not eligible for either promo.
     return this._maybeShowOverLimit()
       .then(() => this._maybeStartRewardFlow())
-      .then(() => this._maybeShowPromoLaunch30("home", { defer: true }))
+      .then(() => this._maybeShowPromoLaunch30("home", { defer: !opt.immediate }))
       .then(() => this._waitForHomePopups())
       .then((clear) =>
         clear
@@ -2447,10 +2461,27 @@ class desk_module extends LetcBox {
     });
   }
 
+  /**
+   * Hand off to the post-home chain once the tutorial is done with the screen.
+   *
+   * The two branches are NOT interchangeable, and only the first may settle
+   * immediately:
+   *
+   *   once(destroy)  the tutorial ran and has torn itself down. The screen is
+   *                  known clear, and the user has just been walked through
+   *                  the product — the one moment the LAUNCH30 offer is worth
+   *                  showing without its five-minute hold.
+   *   fall-through   we never got a usable handle on the tutorial. That is the
+   *                  p.feed()/children.last() race written up on _showTutorial,
+   *                  and it means the tutorial is very likely ON SCREEN right
+   *                  now. Firing the offer immediately here is the regression a
+   *                  tester reported as Modal A stacked over step 1/5; it stays
+   *                  on the hold, which is what makes that harmless.
+   */
   _chainRewardFlowAfterTutorial(tutorial) {
     if (tutorial && _.isFunction(tutorial.once)) {
       tutorial.once(_e.destroy, () => {
-        this._afterHomeSettled();
+        this._afterHomeSettled({ immediate: 1 });
       });
       return;
     }
