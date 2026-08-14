@@ -50,12 +50,15 @@ class settings_billing extends LetcBox {
       team: 100,
       business: 1000
     }
+    // Member caps, counting the owner — same scale on every tier, and the
+    // same numbers the catalog grants (yp.plan quota.$.seat). Free and Pro
+    // moved off 0/1 in the 2026-08-14 pricing restructure: blocking every
+    // invite on the two entry tiers cut the referral loop exactly where it
+    // starts. Keep in step with the catalog; a number invented here only
+    // changes the label, never what the server allows.
     this.seats = {
-      free: 0,
-      // 1, not 0: Pro is personal but NOT solo-locked — seat 0 is what
-      // isFreeSoloPlan() reads as "block every invite", and Pro sells
-      // unlimited guests.
-      pro: 1,
+      free: 3,
+      pro: 3,
       team: 10,
       business: 100000
     }
