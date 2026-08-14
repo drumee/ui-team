@@ -39,7 +39,7 @@ function lsDel(key) {
  * that nothing reads back.
  */
 function userScoped(key) {
-  const uid = (typeof Visitor !== "undefined" && Visitor && Visitor.id) || "";
+  const uid = (typeof Visitor !== "undefined" && Visitor?.id) || "";
   return uid ? `${key}:${uid}` : key;
 }
 

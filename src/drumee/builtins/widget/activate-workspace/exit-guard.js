@@ -160,9 +160,12 @@ class ExitGuard {
    *  rather than something the app has since pushed over it. */
   _isCurrent() {
     try {
-      return !!(typeof history !== "undefined" && history.state
-        && history.state[SENTINEL]);
+      return !!(typeof history !== "undefined" && history.state?.[SENTINEL]);
     } catch (e) {
+      // Reading history.state throws for the same reasons writing it does — a
+      // sandboxed frame most of all. "Not our entry" is the safe answer: the
+      // popstate handler then treats the pop as somebody else's and stands down,
+      // and stop() declines to hand an entry back it cannot prove is ours.
       return false;
     }
   }
@@ -200,6 +203,23 @@ class ExitGuard {
       history.pushState({ [SENTINEL]: 1 }, "", location.href);
       return true;
     } catch (e) {
+      // WHAT CAN THROW HERE: pushState in a sandboxed frame without
+      // allow-same-origin (a SecurityError), a browser refusing a same-URL push,
+      // or a cross-origin location.href read. history.back() does not throw, but
+      // it goes through the same guard so there is one place to reason about.
+      //
+      // Genuinely ignorable, and the failure is HANDLED rather than lost: `false`
+      // propagates to _push, which then leaves `_sentinel` false, which makes the
+      // popstate handler stand down entirely. The Back trap simply does not exist
+      // in that environment — the keystroke and beforeunload nets are
+      // independent of it and still work. The same false out of stop() means the
+      // entry is not handed back, which costs the user one extra Back press at
+      // worst.
+      //
+      // Reported through the orchestrator when it can take it, because this is
+      // the file whose live behaviour is least certain from reading and a silent
+      // no-Back-trap would be indistinguishable from a working one.
+      this._ui?.warn?.("[activate] history guard unavailable", e);
       return false;
     }
   }

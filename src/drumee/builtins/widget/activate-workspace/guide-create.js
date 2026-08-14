@@ -142,10 +142,15 @@ class ActivateCreateGuide extends GuideCore {
     this._invitePanel = false;  // the INTERNAL panel was seen → it is now Step 2
     this._completed = false;    // guard: onCreateGuideComplete fired once
     this._expandingCreate = false;
-    if (this._permTimer) {
-      clearTimeout(this._permTimer);
-      this._permTimer = null;
-    }
+    this._clearPermTimer();
+  }
+
+  /** Cancel the "no panel ever appeared" safety timer. Called from the reset and
+   *  from the moment a panel IS seen, so it lives in one place. */
+  _clearPermTimer() {
+    if (!this._permTimer) return;
+    clearTimeout(this._permTimer);
+    this._permTimer = null;
   }
 
   /**
@@ -181,31 +186,42 @@ class ActivateCreateGuide extends GuideCore {
    * step is done — the permission panel may still be open behind it, and
    * closing the confirmation is what advances.
    */
+  /**
+   * Two phases, and they share nothing: before the workspace exists this walks
+   * the desk chrome, after it exists it waits on the follow-up panel. Split so
+   * each reads on its own — they were one function only because they are reached
+   * through the same reconcile.
+   */
   _resolveSub() {
-    if (this._created) {
-      const info = firstVisible(SEL.windowInfo);
-      const perm = firstVisible(SEL.permPanels);
-      if (info || perm) {
-        if (info) this._infoSeen = true;
-        else this._permSeen = true;
-        // A panel is up — cancel the "no panel appeared" safety timer so it
-        // can't auto-advance while the user is still reviewing/closing it.
-        if (this._permTimer) {
-          clearTimeout(this._permTimer);
-          this._permTimer = null;
-        }
-        this._checkInvitePanel();
-        return "perm";
-      }
-      // Nothing visible now. Panels open a tick after their trigger, so only
-      // treat "gone" as done once we have actually seen one close:
-      //   - window_info was shown and dismissed  → done (panel may linger), or
-      //   - the permission panel was shown and closed with no confirmation.
-      if (this._infoSeen || this._permSeen) this._complete();
-      return null;
-    }
+    if (this._created) return this._resolvePermSub();
+    return this._resolveChromeSub();
+  }
 
-    // Innermost surface wins: the form covers the dropdown, which covers New.
+  /** The perm phase: wait on the follow-up panel, and on the confirmation that
+   *  can replace it. */
+  _resolvePermSub() {
+    const info = firstVisible(SEL.windowInfo);
+    const perm = firstVisible(SEL.permPanels);
+    if (info || perm) {
+      if (info) this._infoSeen = true;
+      else this._permSeen = true;
+      // A panel is up — cancel the "no panel appeared" safety timer so it can't
+      // auto-advance while the user is still reviewing/closing it.
+      this._clearPermTimer();
+      this._checkInvitePanel();
+      return "perm";
+    }
+    // Nothing visible now. Panels open a tick after their trigger, so only treat
+    // "gone" as done once we have actually seen one close:
+    //   - window_info was shown and dismissed  → done (panel may linger), or
+    //   - the permission panel was shown and closed with no confirmation.
+    if (this._infoSeen || this._permSeen) this._complete();
+    return null;
+  }
+
+  /** Walking the desk chrome to reach the create form. Innermost surface wins:
+   *  the form covers the dropdown, which covers New. */
+  _resolveChromeSub() {
     if (visible(document.querySelector(SEL.form))) return "form";
     if (visible(document.querySelector(SEL.wsItem))) {
       this._expandingCreate = false;

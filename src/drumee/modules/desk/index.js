@@ -2485,10 +2485,7 @@ class desk_module extends LetcBox {
     }
     // The activation walkthrough owns the whole screen for as long as it runs,
     // exactly like the reward flow above it.
-    if (
-      this._activateFlow
-      && !(this._activateFlow.isDestroyed && this._activateFlow.isDestroyed())
-    ) {
+    if (this._activateFlow && !this._activateFlow.isDestroyed?.()) {
       return true;
     }
     try {

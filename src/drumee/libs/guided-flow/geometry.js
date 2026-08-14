@@ -31,7 +31,7 @@ function unionRects(rect, rects = []) {
   let right = rect.right;
   let bottom = rect.bottom;
   for (const r of rects) {
-    if (!r || !r.width || !r.height) continue;
+    if (!r?.width || !r?.height) continue;
     left = Math.min(left, r.left);
     top = Math.min(top, r.top);
     right = Math.max(right, r.right);

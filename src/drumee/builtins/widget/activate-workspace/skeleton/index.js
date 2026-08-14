@@ -119,7 +119,7 @@ function cardKids(ui, pfx, { base, waiting, targeted, notarget }) {
   return kids;
 }
 
-module.exports = function (ui) {
+module.exports = function activateWorkspaceRoot(ui) {
   const pfx = ui.fig.family;
   const step = ui.getStep();
 

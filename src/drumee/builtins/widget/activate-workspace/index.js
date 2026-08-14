@@ -121,6 +121,60 @@ const STEP_TARGET = {
   step3: ".desk-module-topbar__new-workspace-btn",
 };
 
+/**
+ * Does this step hang its card off no topbar control, and therefore spotlight no
+ * topbar control either?
+ *
+ * Two do. The panel Step 2, whose surface IS the spotlight, is a tall right-hand
+ * rail with nothing to hang a card under. And Step 3 always guides the user
+ * inside the workspace rather than at the desk topbar.
+ *
+ * Step 3 is tested on the step alone rather than on the descriptor, so this
+ * agrees with the skeleton by construction: a Step 3 without a workspace is
+ * unreachable (onCreateGuideComplete ends the flow instead), and if it ever were
+ * reached, the two disagreeing would render a cutout with no card placement to
+ * match it. Both are centred by the stylesheet — see skin __anchor.
+ *
+ * @param {String} base card step
+ * @param {Boolean} onPanel Step 2 served by the permission panel
+ * @returns {Boolean}
+ */
+function isCentredStep(base, onPanel) {
+  return !!onPanel || base === "step3";
+}
+
+/**
+ * WHERE THE HOLE GOES for a given step.
+ *
+ * On a waiting Step 2 it is the surface the user was handed to — the invite popup,
+ * or the permission panel — and NOT the topbar control that opened it: that
+ * control is behind a modal by then, so a hole over it lights up a corner of the
+ * topbar for no reason while the surface the user is actually working sits in the
+ * dim. Both are given as a surface PAIR, because a successful send replaces
+ * either with its confirmation and querySelector then returns whichever is really
+ * there — so the hole follows the surface instead of staying on a rect that has
+ * gone.
+ *
+ * Cutting the surface out is also what makes the dim uniform: the shadow around
+ * the hole is painted by the flow's root, which is portaled to document.body and
+ * lifted clear of the wrapper-modal, so it covers the topbar and sidebar too —
+ * neither of which the modal's own backdrop reaches, it being confined to the
+ * desk's wm-container.
+ *
+ * Every other step spotlights its own topbar control, and a centred step
+ * spotlights nothing at all.
+ *
+ * @param {{base: String, waiting: Boolean, onPanel: Boolean, notarget: Boolean}} s
+ * @returns {String|null} a selector, or null when nothing is spotlighted
+ */
+function stepSpotSelector({ base, waiting, onPanel, notarget }) {
+  if (base === "step2" && waiting) {
+    return onPanel ? PANEL_SURFACES : POPUP_SURFACES;
+  }
+  if (notarget) return null;
+  return STEP_TARGET[base] || null;
+}
+
 class __activate_workspace extends LetcBox {
   static initClass() {
     require("./skin");
@@ -722,57 +776,33 @@ class __activate_workspace extends LetcBox {
     const waiting = this._isWaiting();
     // Step 2 served by the permission panel rather than the invite popup.
     const onPanel = base === "step2" && this._invitePanelOpen;
+    const notarget = isCentredStep(base, onPanel);
+    const spot = stepSpotSelector({ base, waiting, onPanel, notarget });
 
-    // WHERE THE HOLE GOES. On a waiting Step 2 it is the surface the user was
-    // handed to — the invite popup, or the permission panel — and NOT the
-    // topbar control that opened it: that control is behind a modal by then, so
-    // a hole over it lights up a corner of the topbar for no reason while the
-    // surface the user is actually working sits in the dim. Both are given as a
-    // surface PAIR, because a successful send replaces either with its
-    // confirmation and querySelector then returns whichever is really there —
-    // so the hole follows the surface instead of staying on a rect that has
-    // gone. Every other step spotlights its own topbar control.
-    //
-    // Cutting the surface out is also what makes the dim uniform: the shadow
-    // around the hole is painted by our root, which is portaled to
-    // document.body and lifted clear of the wrapper-modal, so it covers the
-    // topbar and sidebar too — neither of which the modal's own backdrop
-    // reaches, it being confined to the desk's wm-container.
-    //
-    // A step that hangs its card off no topbar control also spotlights no
-    // topbar control: the panel Step 2, whose surface is handled above, and a
-    // Step 3 that will guide the user inside the workspace rather than at the
-    // desk topbar. Both are centred by the stylesheet (see skin __anchor).
-    // Step 3 always guides inside the workspace, so it never points at a topbar
-    // control. Tested on the step alone rather than on the descriptor, so this
-    // agrees with the skeleton by construction: a Step 3 without one is
-    // unreachable (onCreateGuideComplete ends the flow instead), and if it ever
-    // were reached, the two disagreeing would render a cutout with no card
-    // placement to match it.
-    const notarget = onPanel || base === "step3";
-    const spot = base === "step2" && waiting
-      ? (onPanel ? PANEL_SURFACES : POPUP_SURFACES)
-      : (notarget ? null : STEP_TARGET[base]);
-
-    // WHERE THE CARD HANGS. A waiting Step 2 keeps its card under the control it
-    // came from even though the hole has moved away — the card must not jump the
-    // moment the popup opens.
     const anchor = this.el.querySelector(`.${this.fig.family}__anchor`);
-    if (notarget && anchor?.style) {
-      // Centred by the stylesheet. Clear any inline placement left over from a
-      // step that had a topbar target, otherwise a reused anchor element keeps
-      // the card pinned under the Invite button.
-      anchor.style.left = "";
-      anchor.style.top = "";
-      anchor.style.right = "";
-      anchor.style.transform = "";
-    }
+    if (notarget) this._clearCardPlacement(anchor);
 
+    const found = this._paintStepHole(spot, { base, waiting, onPanel });
+
+    // Centred states have no card placement to do.
+    if (notarget) return found;
+    this._placeCardUnderControl(anchor, base);
+    return found;
+  }
+
+  /**
+   * Lay the hole over whatever `spot` selects, or collapse it when the surface is
+   * not there yet.
+   *
+   * @param {String|null} spot selector, or null when this step spotlights nothing
+   * @param {{base: String, waiting: Boolean, onPanel: Boolean}} ctx
+   * @returns {Boolean} false only while a target this step EXPECTS is missing —
+   *   which is what tells trackStepTarget to keep waiting for it.
+   */
+  _paintStepHole(spot, { base, waiting, onPanel }) {
     const spotEl = spot ? document.querySelector(spot) : null;
-    const rect = spotEl?.getBoundingClientRect ? spotEl.getBoundingClientRect() : null;
-    let found = !spot;   // nothing expected → nothing to wait for
+    const rect = spotEl?.getBoundingClientRect?.() || null;
     if (rect && rect.width && rect.height) {
-      found = true;
       // On the popup route the hole grows to take in whichever of its dropdowns
       // is open, which hang outside its box.
       const box = base === "step2" && waiting && !onPanel
@@ -782,20 +812,40 @@ class __activate_workspace extends LetcBox {
       const radius =
         (typeof getComputedStyle === "function" && getComputedStyle(spotEl).borderRadius) || "";
       this._paintHole(box, radius || "8px");
-    } else if (spot) {
+      return true;
+    }
+    if (spot) {
       // Expected a surface and it is not on screen yet (the popup opens a tick
       // after the click). Collapse the hole rather than leaving the last one
       // behind — that stale hole would be the topbar control we just moved off.
       this._collapseHole();
     }
+    return !spot;   // nothing expected → nothing to wait for
+  }
 
-    // Centred states have no card placement to do.
-    if (notarget || !anchor?.style) return found;
-    // The card hangs under its topbar control — measured separately from the
-    // hole above, which on a waiting Step 2 is somewhere else entirely.
-    const ctrl = STEP_TARGET[base] && document.querySelector(STEP_TARGET[base]);
-    const cr = ctrl?.getBoundingClientRect ? ctrl.getBoundingClientRect() : null;
-    if (!cr || !cr.width || !cr.height) return found;
+  /** Centred by the stylesheet. Clear any inline placement left over from a step
+   *  that had a topbar target, otherwise a reused anchor element keeps the card
+   *  pinned under the Invite button. */
+  _clearCardPlacement(anchor) {
+    if (!anchor?.style) return;
+    anchor.style.left = "";
+    anchor.style.top = "";
+    anchor.style.right = "";
+    anchor.style.transform = "";
+  }
+
+  /**
+   * Hang the card under its topbar control — measured separately from the hole,
+   * which on a waiting Step 2 is somewhere else entirely. A waiting Step 2 keeps
+   * its card under the control it came from even though the hole has moved away:
+   * the card must not jump the moment the popup opens.
+   */
+  _placeCardUnderControl(anchor, base) {
+    if (!anchor?.style) return;
+    const sel = STEP_TARGET[base];
+    const ctrl = sel ? document.querySelector(sel) : null;
+    const cr = ctrl?.getBoundingClientRect?.() || null;
+    if (!cr || !cr.width || !cr.height) return;
     const vw = (typeof window !== "undefined" && window.innerWidth) || 1280;
     const vh = (typeof window !== "undefined" && window.innerHeight) || 800;
     const M = 12;
@@ -809,22 +859,28 @@ class __activate_workspace extends LetcBox {
     anchor.style.top = `${top}px`;
     anchor.style.right = "auto";
     anchor.style.transform = "translateX(-50%)";
-    return found;
   }
 
   /**
    * Mark the shared wrapper-modal that hosts a Step 2 surface so its backdrop
    * follows the flow instead of the app's glass overlay (see the shared skin).
    *
-   * @param {String|false} mode "1" for the flow's flat dim, "bare" when the
-   *   flow root is already painting the dim itself, false to unmark.
+   * @param {"bare"|false} mode "bare" when the flow root is already painting the
+   *   dim itself — the only value this is ever called with — or false to unmark.
+   *   The other value the attribute takes, "1" (this host supplies the dim
+   *   itself), is written by _openModal directly and never comes through here.
    */
   _markInviteOverlay(mode) {
-    if (typeof Wm === "undefined" || !Wm.__wrapperModal || !Wm.__wrapperModal.el) {
+    if (typeof Wm === "undefined" || !Wm.__wrapperModal?.el) {
       return;
     }
     const ds = Wm.__wrapperModal.el.dataset;
-    if (mode) ds.guidedOverlay = mode === true ? "1" : mode;
+    // Was `mode === true ? "1" : mode`, which could never take its first branch:
+    // every caller passes "bare" or false (`step === "step2_waiting" && "bare"`,
+    // or a literal false). Inherited from reward-flow, whose copy has the same
+    // dead branch. Dropped rather than "fixed" to `==` — there was no comparison
+    // to rescue, just a value this function is never given.
+    if (mode) ds.guidedOverlay = mode;
     else delete ds.guidedOverlay;
   }
 
@@ -1345,141 +1401,203 @@ class __activate_workspace extends LetcBox {
       const { isFreeSoloPlan } = require("libs/billing");
       return typeof isFreeSoloPlan === "function" ? !isFreeSoloPlan() : true;
     } catch (e) {
+      // WHAT CAN THROW HERE: the require itself, if libs/billing is ever absent
+      // from a build, and isFreeSoloPlan(), which reads Visitor.quota() and so
+      // depends on the session being loaded.
+      //
+      // Answered "yes, they can invite" — the same direction billing's own
+      // function now fails in for an unknown seat count, and the direction the
+      // docblock above argues for: being wrong this way costs a waiting state the
+      // user leaves with Back or Skip, being wrong the other way withholds a step
+      // from someone entitled to it.
+      //
+      // Logged rather than swallowed, because a broken billing lib quietly
+      // reshaping onboarding is exactly the kind of thing that should be visible
+      // once. This runs at most a few times per session (an invite click).
+      if (this.warn) this.warn("[activate] plan check failed; allowing invite", e);
       return true;
     }
   }
 
   // ───────── event routing ─────────
 
+  /**
+   * Step 1's primary action: start the walkthrough that spotlights the real desk
+   * chrome (New → Workspace item → the form) and lets the user create the
+   * workspace themselves. onWorkspaceCreated ends it.
+   */
+  _onContinue() {
+    if (this._isWaiting() || isGuiding(this._step)) return;
+    this._goto("step1_guide");
+    this._startCreateGuide();
+  }
+
+  /**
+   * Step 2's primary action. The desk owns the popup, so this only asks for it —
+   * unless the plan forbids inviting at all, in which case the desk shows its
+   * limit notice and this stays on the card rather than entering a waiting state
+   * nothing will ever end (see _canInvite).
+   */
+  _onInvite() {
+    this.triggerHandlers({ service: "invite-member" });
+    if (!this._canInvite()) return;
+    this._goto("step2_waiting");
+  }
+
+  /**
+   * Step 2 is the one step of the three a user can be unable to perform.
+   * Skipping is a real answer, so it goes FORWARD, and the progress bar moves
+   * with it.
+   */
+  _onSkipInvite() {
+    if (baseStep(this._step) !== "step2") return;
+    const surfaceOpen = this._isWaiting();
+    this._stopInviteWatch();
+    this._invitePanelOpen = false;
+    this.markInviteToast(false);
+    this._markInviteOverlay(false);
+    // THE STEP MOVES FIRST, and the surface comes down after. Clearing the
+    // wrapper-modal destroys the invite popup, which fires the desk's destroy
+    // hook, which relays straight back into onInvitePopupClosed — and that reads
+    // `step2_waiting` as "closed without sending" and sends the flow back to the
+    // Step 2 card. Ordered this way it finds step3 and stands down. (_finish
+    // latches `_finishing` for the same reason.)
+    this._goto("step3");
+    // Whatever Step 2 opened is in the shared wrapper-modal; skipping past a
+    // surface still on screen would strand it over Step 3.
+    if (surfaceOpen) this.clearWrapperModal();
+  }
+
+  /**
+   * Step 3's primary action. The walkthrough starts either way: the window may
+   * already be open (the user pressed Back out of the walkthrough and came
+   * forward again), and loadWorkspace declining is not a reason to withhold the
+   * guide from a workspace that is on screen. The open timer catches the case
+   * where nothing mounts.
+   */
+  _onOpenWorkspace() {
+    if (!this._openWorkspace()) {
+      // NOTHING LEFT TO OPEN — the workspace was deleted in another tab, or Wm
+      // cannot answer. This used to be a silent no-op, which was survivable
+      // while a click on the dim still offered a way out of the flow. It is not
+      // survivable now: the card's only control would do nothing, no exit is on
+      // offer, and the user would be left on a desk they cannot use. A flow that
+      // cannot be completed has to end.
+      return this._finish();
+    }
+    this._goto("step3_guide");
+    this._startUploadGuide();
+    this._armOpenTimer();
+  }
+
+  /**
+   * SWALLOWED. This used to raise "Leave setup?", which was the flow's own way
+   * out; the flow is force-completed now, so the click lands on the dim and stops
+   * there. The pulse is the whole response — see nudge().
+   *
+   * Fired by the vignette on a card step and by __guide-scrim during a
+   * walkthrough. Both cover the whole viewport, so this is also what catches a
+   * user clicking desk chrome the current step does not point at: the click is
+   * absorbed rather than reaching a desk the flow has taken over.
+   */
+  _onVignetteClick() {
+    if (this._modalOpen) return;
+    this.nudge();
+  }
+
+  // ───────── the four things Back can mean ─────────
+
+  /**
+   * Back means one of four different things depending on where the flow is, and
+   * naming them is what keeps this readable: step back inside a walkthrough,
+   * close the Step 2 surface, or step back a whole card step.
+   */
+  _onBack() {
+    if (this._step === "step1_guide") return this._backOutOfCreateGuide();
+    if (this._step === "step3_guide") return this._backOutOfUploadGuide();
+    // Back out of the permission panel. Closing it is what the panel's own X
+    // does, and both land in the same place — the Step 2 card (see
+    // _awaitPanelClosed). Driving the close rather than jumping there keeps one
+    // exit path instead of two.
+    if (this._invitePanelOpen) return this.clearWrapperModal();
+    return this._backOneStep();
+  }
+
+  /** Inside Step 1's walkthrough, Back steps back one sub-step where it can.
+   *  Only when there is nothing earlier does it tear the walkthrough down and
+   *  return to the card it started from. */
+  _backOutOfCreateGuide() {
+    if (this._createGuide?.back()) return;
+    this._stopCreateGuide();
+    this._goto("step1");
+  }
+
+  /** Inside Step 3's walkthrough, one beat has a step-back of its own: a failed
+   *  upload rewinds to the "+ New" pill so the user can try again (see
+   *  guide-upload's back()). Everywhere else Back leaves the walkthrough for the
+   *  card, workspace still open. */
+  _backOutOfUploadGuide() {
+    if (this._uploadGuide?.back()) return;
+    this._stopUploadGuide();
+    this._clearOpenTimer();
+    this._goto("step3");
+  }
+
+  /**
+   * Back from a card, or out of a waiting state onto its own card.
+   *
+   * Stepping out of Step 3 takes the workspace with it. The flow opened that
+   * window itself, and Step 2 is about inviting someone from the DESK — its card
+   * anchors to the desk topbar and its invite popup opens over it, both of which
+   * a workspace window covers. Leaving it up also strands the user's own way
+   * back: the card they land on offers to open a workspace that is already open.
+   *
+   * The descriptor is kept, so coming forward again reopens the same one.
+   */
+  _backOneStep() {
+    const base = baseStep(this._step);
+    if (this._isWaiting()) return this._goto(base);
+    const prev = STEPS[STEPS.indexOf(base) - 1];
+    if (!prev) return;
+    if (base === "step3") this._closeWorkspace();
+    this._goto(prev);
+  }
+
+  /**
+   * Service dispatch, and nothing else.
+   *
+   * Deliberately a flat table: every case is one call, and what each service
+   * MEANS lives in the method it names. This used to hold all of it inline and
+   * had accumulated the branches of four separate features — the step
+   * transitions, the invite handoff, the Skip, and the exit handling — which is
+   * how one function ended up carrying most of the widget's control flow.
+   */
   onUiEvent(cmd, args = {}) {
     const service = args.service || cmd?.mget?.(_a.service);
     switch (service) {
       case "activate-continue":
-        // Step 1's primary action: start the walkthrough that spotlights the
-        // real desk chrome (New → Workspace item → the form) and lets the user
-        // create the workspace themselves. onWorkspaceCreated ends it.
-        if (this._isWaiting() || isGuiding(this._step)) return;
-        this._goto("step1_guide");
-        this._startCreateGuide();
-        return;
+        return this._onContinue();
 
       case "activate-invite":
-        // Step 2's primary action. The desk owns the popup, so this only asks
-        // for it — unless the plan forbids inviting at all, in which case the
-        // desk shows its limit notice and this stays on the card rather than
-        // entering a waiting state nothing will ever end (see _canInvite).
-        this.triggerHandlers({ service: "invite-member" });
-        if (!this._canInvite()) return;
-        this._goto("step2_waiting");
-        return;
+        return this._onInvite();
 
-      case "activate-skip-invite": {
-        // Step 2 is the one step of the three a user can be unable to perform.
-        // Skipping is a real answer, so it goes FORWARD, and the progress bar
-        // moves with it.
-        if (baseStep(this._step) !== "step2") return;
-        const surfaceOpen = this._isWaiting();
-        this._stopInviteWatch();
-        this._invitePanelOpen = false;
-        this.markInviteToast(false);
-        this._markInviteOverlay(false);
-        // THE STEP MOVES FIRST, and the surface comes down after. Clearing the
-        // wrapper-modal destroys the invite popup, which fires the desk's
-        // destroy hook, which relays straight back into onInvitePopupClosed —
-        // and that reads `step2_waiting` as "closed without sending" and sends
-        // the flow back to the Step 2 card. Ordered this way it finds step3 and
-        // stands down. (_finish latches `_finishing` for the same reason.)
-        this._goto("step3");
-        // Whatever Step 2 opened is in the shared wrapper-modal; skipping past a
-        // surface still on screen would strand it over Step 3.
-        if (surfaceOpen) this.clearWrapperModal();
-        return;
-      }
+      case "activate-skip-invite":
+        return this._onSkipInvite();
 
       case "activate-open-workspace":
-        // Step 3's primary action. The walkthrough starts either way: the
-        // window may already be open (the user pressed Back out of the
-        // walkthrough and came forward again), and loadWorkspace declining is
-        // not a reason to withhold the guide from a workspace that is on
-        // screen. The open timer catches the case where nothing mounts.
-        if (!this._openWorkspace()) {
-          // NOTHING LEFT TO OPEN — the workspace was deleted in another tab, or
-          // Wm cannot answer. This used to be a silent no-op, which was survivable
-          // while a click on the dim still offered a way out of the flow. It is
-          // not survivable now: the card's only control would do nothing, no exit
-          // is on offer, and the user would be left on a desk they cannot use.
-          // A flow that cannot be completed has to end.
-          return this._finish();
-        }
-        this._goto("step3_guide");
-        this._startUploadGuide();
-        this._armOpenTimer();
-        return;
+        return this._onOpenWorkspace();
 
       case "activate-guide-next":
         // Step 3's read-only beats carry a Next, having no real action to
         // observe: "folder" (this is your workspace) walks on to "+ New", and
         // "files" (here is what you uploaded) ends the walkthrough.
-        if (this._uploadGuide) this._uploadGuide.onNext();
-        return;
+        return this._uploadGuide?.onNext();
 
-      case "activate-back": {
-        // Inside a walkthrough, Back steps back one sub-step where it can. Only
-        // when there is nothing earlier does it tear the walkthrough down and
-        // return to the card it started from.
-        if (this._step === "step1_guide") {
-          if (this._createGuide?.back()) return;
-          this._stopCreateGuide();
-          return this._goto("step1");
-        }
-        if (this._step === "step3_guide") {
-          // One beat has a step-back of its own: a failed upload rewinds to the
-          // "+ New" pill so the user can try again (see guide-upload's back()).
-          // Everywhere else Back leaves the walkthrough for the card, workspace
-          // still open.
-          if (this._uploadGuide?.back()) return;
-          this._stopUploadGuide();
-          this._clearOpenTimer();
-          return this._goto("step3");
-        }
-        if (this._invitePanelOpen) {
-          // Back out of the permission panel. Closing it is what the panel's
-          // own X does, and both land in the same place — the Step 2 card (see
-          // _awaitPanelClosed). Driving the close rather than jumping there
-          // keeps one exit path instead of two.
-          this.clearWrapperModal();
-          return;
-        }
-        const base = baseStep(this._step);
-        if (this._isWaiting()) return this._goto(base);
-        const prev = STEPS[STEPS.indexOf(base) - 1];
-        if (!prev) return;
-        // Stepping out of Step 3 takes the workspace with it. The flow opened
-        // that window itself, and Step 2 is about inviting someone from the
-        // DESK — its card anchors to the desk topbar and its invite popup opens
-        // over it, both of which a workspace window covers. Leaving it up also
-        // strands the user's own way back: the card they land on offers to open
-        // a workspace that is already open.
-        //
-        // The descriptor is kept, so coming forward again reopens the same one.
-        if (base === "step3") this._closeWorkspace();
-        this._goto(prev);
-        return;
-      }
+      case "activate-back":
+        return this._onBack();
 
       case "activate-vignette-click":
-        // SWALLOWED. This used to raise "Leave setup?", which was the flow's own
-        // way out; the flow is force-completed now, so the click lands on the
-        // dim and stops there. The pulse is the whole response — see nudge().
-        //
-        // Fired by the vignette on a card step and by __guide-scrim during a
-        // walkthrough. Both cover the whole viewport, so this is also what
-        // catches a user clicking desk chrome the current step does not point
-        // at: the click is absorbed rather than reaching a desk the flow has
-        // taken over.
-        if (this._modalOpen) return;
-        this.nudge();
-        return;
+        return this._onVignetteClick();
 
       case "activate-finish":
         // The closing modal's only button.
