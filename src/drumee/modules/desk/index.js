@@ -2,7 +2,7 @@ require("welcome/skin");
 require("builtins/window/confirm/skin");
 const { canUpgradePlan, billingAvailable, needsAdminConsoleUpgrade } = require("libs/billing");
 const billingDeepLink = require("libs/billing-deep-link");
-const { captureUtm, campaignArrival } = require("libs/campaign");
+const { captureUtm, campaignArrival, REWARD_CAMPAIGN } = require("libs/campaign");
 const hubDeepLink = require("libs/hub-deep-link");
 
 // Widgets that own a modal or panel Escape should close BEFORE the window that
@@ -1992,7 +1992,16 @@ class desk_module extends LetcBox {
         // rides through the login reload to here, where there is finally a uid
         // to attribute it to. Awaited before get_state so the row is already
         // 'clicked' when we ask; only consumed once the server has it.
-        if (campaignArrival()) {
+        //
+        // MATCHED BY NAME, not by truthiness. There is one arrival slot and now
+        // more than one campaign using it, and this runs BEFORE the LAUNCH30
+        // check in the same chain (_afterHomeSettled). A bare `if
+        // (campaignArrival())` therefore did two wrong things to a promo click:
+        // filed it in the reward funnel as a 'clicked' row for an offer the
+        // user was never sent, and consumed the marker, so the promo found
+        // nothing left to read. Anything that is not ours is left untouched for
+        // whoever it belongs to.
+        if (campaignArrival() === REWARD_CAMPAIGN) {
           await this.postService(SERVICE.reward.track, {
             hub_id: Visitor.id,
             status: "clicked",

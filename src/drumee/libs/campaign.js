@@ -23,6 +23,25 @@
  */
 
 const KEY = "drumee_utm";
+
+/**
+ * The campaign names, one definition each.
+ *
+ * They live here rather than beside the flows they belong to because the
+ * ARRIVAL is shared: a single sessionStorage slot holds whichever campaign the
+ * visit came in on, and every consumer has to be able to say "not mine, leave
+ * it alone" (see campaignArrival). A name that only the owning widget can see
+ * makes that check impossible — reward-flow's was module-local, and the desk
+ * gate that had to compare against it settled for a truthiness test instead,
+ * which is precisely how one campaign came to swallow another's arrival.
+ *
+ * Each MUST match the utm_campaign analytics-server puts on that mail's CTA:
+ *   REWARD_CAMPAIGN — service/index.js _rewardCtaLink
+ *   PROMO_CAMPAIGN  — service/index.js _promoCtaLink
+ */
+const REWARD_CAMPAIGN = "free-storage";
+const PROMO_CAMPAIGN = "launch30";
+
 // A Set: this is read as a membership test far more often than it is iterated,
 // and insertion order is preserved, so the `for ... of` below is unaffected.
 const PARAMS = new Set(["utm_source", "utm_medium", "utm_campaign"]);
@@ -195,4 +214,7 @@ function campaignArrival(consume) {
   return v;
 }
 
-module.exports = { captureUtm, captureCampaignArrival, campaignArrival, ARRIVAL_KEY };
+module.exports = {
+  captureUtm, captureCampaignArrival, campaignArrival, ARRIVAL_KEY,
+  REWARD_CAMPAIGN, PROMO_CAMPAIGN,
+};

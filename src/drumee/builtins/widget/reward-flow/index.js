@@ -62,9 +62,10 @@ const { ExitGuard, armed: exitArmed } = require("./exit-guard");
 const { beaconPost } = require("./beacon");
 
 // Recorded on every funnel post so the row says which campaign it belongs to.
-// Must match the utm_campaign analytics-server puts on the claim-reward email
-// CTA (service/index.js _rewardCtaLink).
-const CAMPAIGN = "free-storage";
+// Defined in libs/campaign, not here: the desk has to compare an arrival
+// against this name before consuming it, and a module-local const in a
+// lazily-loaded widget bundle is not reachable from there.
+const { REWARD_CAMPAIGN: CAMPAIGN } = require("libs/campaign");
 
 // How long "Open workspace" waits for the workspace window before giving up and
 // dropping Step 3 to its legacy topbar-upload variant. Loading is a fetch plus
