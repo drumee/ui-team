@@ -1747,6 +1747,12 @@ class desk_module extends LetcBox {
         // The tutorial exists and owns the hand-off from here.
         clearTimeout(this._homeSettledFallback);
         this._homeSettledFallback = null;
+        // Was this the onboarding tour, or a user rewatching it from Get help?
+        // Recorded HERE because the flag that answers it is consumed by
+        // _chainHelpReturnAfterTutorial below, and the activation flow that
+        // needs the answer does not run until the tour is destroyed. See
+        // _maybeStartActivateWorkspace.
+        this._tutorialWasAutomatic = !this._tourReturnsToHelp;
         this._chainRewardFlowAfterTutorial(child);
         // Only fires for a tour launched from Get help; the automatic
         // post-signup run leaves the user on the desk as before.
@@ -2035,6 +2041,64 @@ class desk_module extends LetcBox {
   }
 
   /**
+   * Workspace activation flow (builtins/widget/activate-workspace) — the
+   * practical half of onboarding: the product tour SHOWS the app on a mock
+   * desk, this walks the user through building the real thing, a workspace
+   * with a file in it.
+   *
+   * WHEN IT RUNS. Only after an AUTOMATIC product tour — the post-signup one,
+   * or `?tutorial=1`. That is the whole gate, and it is what makes the flow
+   * one-shot without a latch to store anywhere: the automatic tour happens once
+   * per signup and nothing else re-triggers this. A user who leaves the flow
+   * half-done does not get it again, which is the accepted cost of not keeping
+   * per-user state for it (see the design doc).
+   *
+   * A tour REPLAYED from Get help is deliberately excluded: handing a
+   * months-old account a "create your first workspace" walkthrough because they
+   * rewatched the tour would be nonsense. `_tutorialWasAutomatic` is what tells
+   * the two apart, and it is recorded when the tour MOUNTS — the flag it reads,
+   * `_tourReturnsToHelp`, is consumed by _chainHelpReturnAfterTutorial in that
+   * same onPartReady, so by the time the tour is destroyed and this runs there
+   * is nothing left to read.
+   *
+   * It stays unset when no tour ran at all — a plain login, or the fallback
+   * that settles home when the tour never mounted — which turns this off for
+   * exactly the sessions that were not onboarding anybody.
+   *
+   * NOT ALONGSIDE THE REWARD FLOW. That flow opens with the same
+   * create-workspace walkthrough, and running both back to back would ask the
+   * user to build two workspaces. Reward-flow is the one that wins: it is
+   * campaign-gated, time-limited and has a prize attached, while this one is
+   * evergreen.
+   */
+  _maybeStartActivateWorkspace() {
+    // No automatic product tour this session — nobody is being onboarded.
+    if (!this._tutorialWasAutomatic) return;
+    if (this._activateFlow && !this._activateFlow.isDestroyed()) return;
+    // Reward-flow is on screen or on its way there — see the docblock.
+    if (this._rewardFlowInFlight) return;
+    if (this._rewardFlow && !this._rewardFlow.isDestroyed()) return;
+    // Same synchronous latch as the reward flow's: onPartReady("overlay") can
+    // fire more than once, and the guard above cannot see a mount still pending
+    // past the await below.
+    if (this._activateFlowInFlight) return;
+    this._activateFlowInFlight = true;
+    return Kind.waitFor("activate_workspace")
+      .then(() => this.ensurePart("overlay"))
+      .then((p) => {
+        p.feed({ kind: "activate_workspace", uiHandler: [this] });
+        this._activateFlow = p.children.last();
+        this._activateFlow.once(_e.destroy, () => {
+          this._activateFlow = null;
+        });
+        this._activateFlowInFlight = false;
+      })
+      .catch(() => {
+        this._activateFlowInFlight = false;
+      });
+  }
+
+  /**
    * How long an account works in Drumee before the LAUNCH30 offer appears.
    *
    * Five minutes, measured from the home screen settling. Not a cumulative
@@ -2256,10 +2320,11 @@ class desk_module extends LetcBox {
    * plain login where neither happens — it was written out three times, which
    * is why the guest-join prompt is appended HERE rather than at each site.
    *
-   * Order matters and is the existing one: reward flow, then LAUNCH30, then the
-   * invited-workspace prompt. Both of the first two are full-screen and
-   * self-gating; the prompt is a small dialog and goes last so it never stacks
-   * on top of them.
+   * Order matters: reward flow, then workspace activation, then LAUNCH30, then
+   * the invited-workspace prompt. The first three are full-screen and
+   * self-gating (activation additionally stands down when the reward flow took
+   * the screen — they open with the same walkthrough); the prompt is a small
+   * dialog and goes last so it never stacks on top of them.
    *
    * @returns {Promise}
    */
@@ -2284,6 +2349,10 @@ class desk_module extends LetcBox {
     // its popup first, and a locked org is not eligible for either promo.
     return this._maybeShowOverLimit()
       .then(() => this._maybeStartRewardFlow())
+      // After the reward flow, and skipped entirely when that one mounted: both
+      // open with the same create-workspace walkthrough (see
+      // _maybeStartActivateWorkspace).
+      .then(() => this._maybeStartActivateWorkspace())
       .then(() => this._maybeShowPromoLaunch30("home", { defer: true }))
       .then(() => this._waitForHomePopups())
       .then((clear) =>
@@ -2318,7 +2387,8 @@ class desk_module extends LetcBox {
    *   offered on the next login rather than being stacked on a live overlay.
    */
   /**
-   * Is a full-screen home flow (reward, LAUNCH30) on screen right now?
+   * Is a full-screen home flow (reward, workspace activation, LAUNCH30) on
+   * screen right now?
    *
    * Extracted from _waitForHomePopups' local busy() so the invited-workspace
    * loader can gate itself on the same answer — one definition, so the loader can
@@ -2331,7 +2401,16 @@ class desk_module extends LetcBox {
    */
   _homePopupsBusy() {
     if (this._rewardFlowInFlight || this._promoLaunch30InFlight) return true;
+    if (this._activateFlowInFlight) return true;
     if (this._rewardFlow && !(this._rewardFlow.isDestroyed && this._rewardFlow.isDestroyed())) {
+      return true;
+    }
+    // The activation walkthrough owns the whole screen for as long as it runs,
+    // exactly like the reward flow above it.
+    if (
+      this._activateFlow
+      && !(this._activateFlow.isDestroyed && this._activateFlow.isDestroyed())
+    ) {
       return true;
     }
     try {
@@ -3386,10 +3465,17 @@ class desk_module extends LetcBox {
         return this._openInvitePopup(cmd);
       }
 
-      // Reward-flow Step 1 walkthrough: open/close the topbar Add-new dropdown
-      // on its behalf (the desk owns the `addmenu` part). Used by the guide's
-      // Back to step from the create-modal back to the dropdown, and from the
-      // dropdown back to the Add-new button.
+      // A guided walkthrough (reward-flow's Step 1, activate-workspace's) is
+      // asking the desk to open/close the topbar Add-new dropdown on its behalf
+      // — the desk owns the `addmenu` part. Used by their Back to step from the
+      // create-modal back to the dropdown, and from the dropdown back to the
+      // Add-new button.
+      //
+      // Two names for one case: `reward-*` is the original, kept because
+      // reward-flow still fires it, and `guided-*` is what every flow written
+      // since asks for. Renaming the original would have meant editing a live
+      // campaign widget for cosmetics.
+      case "guided-set-add-menu":
       case "reward-set-add-menu":
         return this.ensurePart("addmenu").then((p) => {
           if (!p || !_.isFunction(p.changeState)) return;
@@ -3427,6 +3513,8 @@ class desk_module extends LetcBox {
           setCreateMenuState(_a.open);
         });
 
+      // Same pair of names, same reason as the case above.
+      case "guided-set-new-create-menu":
       case "reward-set-new-create-menu":
         return this.ensurePart("desk-new-create-group").then((p) => {
           if (p && p.el) {

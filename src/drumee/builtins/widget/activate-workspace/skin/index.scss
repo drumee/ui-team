@@ -1,0 +1,460 @@
+@use "mixins/drumee";
+
+// The greyed-sibling rule (`.guided-flow-disabled`) that both walkthroughs
+// apply to desk chrome ships with the reconcile engine — see
+// libs/guided-flow/skin, required alongside this file by skin/index.js.
+//
+// So do the wrapper-modal rules keyed on [data-guided-overlay], which take the
+// app's frosted glass off a modal host this flow has taken over.
+
+// Brand accent — same design-system tokens the reward flow and
+// migrate-gdrive-popup use. --primary-purple-40 is the brand button colour; it
+// is identical in light and dark themes, so the rgba tints below are theme-safe.
+$accent: var(--primary-purple-40);
+$accent-strong: var(--primary-purple-50);
+$accent-soft: rgba(89, 80, 255, 0.12);
+$success-soft: rgba(46, 179, 122, 0.14);
+
+.activate-workspace {
+  // Every text element in the flow uses the app font. Set on the root so the
+  // card and coach inherit it; the modals are fed into Wm.__wrapperModal
+  // (outside this root) so they declare their own below.
+  font-family: var(--font-main);
+
+  // Icons nested inside clickable Notes must not swallow the click.
+  &__btn > * { pointer-events: none !important; }
+
+  // ───────── shell ─────────
+  // The root is portaled to document.body (see index.js _portalToBody), so
+  // these z-indexes compete at the true document root.
+  &__root {
+    position: fixed;
+    inset: 0;
+    // Above the desk chrome but BELOW the window-manager wrapper-modal
+    // (--z-index-modal, 100000) so the modals fed into it stay on top.
+    z-index: 10020;
+    pointer-events: none;   // only the vignette / card / coach opt back in
+  }
+
+  // States that coexist with an OPEN workspace window — the Step 2 card, and
+  // the closing screen. 10020 is above the bare desk, but nowhere near a
+  // window: `.window__ui[data-state=1]` is 10000 and the layer hosting the
+  // focused window goes to 50001 (see desk/wm/skin and skin/vars/z-index.scss),
+  // so at 10020 the workspace and its "+ New" dropdown paint straight over the
+  // dim. Sit just under --z-index-modal instead: above every desk layer
+  // including preview (80000), still below the wrapper-modal.
+  &__root[data-over-window="1"] {
+    z-index: calc(var(--z-index-modal, 100000) - 1);
+  }
+
+  // While guiding, the Step 1 walkthrough targets the create form, which lives
+  // in that wrapper-modal at --z-index-modal (100000). Lift the whole flow
+  // above it so the coach is clickable and the cutout dims that layer too.
+  // Guiding only, so the modals stay above the card states. Declared last so it
+  // outranks the over-window lift above at equal specificity.
+  &__root[data-guiding="1"] {
+    z-index: 1000000;
+  }
+
+  // The "Leave setup?" guard is up. It guards surfaces that live in the
+  // wrapper-modal (--z-index-modal, 100000) — the guided create form — and the
+  // root owns the flow's stacking context, so no z-index on the host inside it
+  // can climb over them on its own. Lift the root for as long as the guard is
+  // showing; set imperatively by _markRootDrop, so raising the guard never
+  // re-renders the flow. Last, so it wins over both lifts above at equal
+  // specificity.
+  &__root[data-drop="1"] {
+    z-index: 1000000;
+  }
+
+  // …and while the guard is up, it supplies the only dim: the modal host's own
+  // backdrop. The flow's goes off, because two stacked dims are not one colour —
+  // everywhere the flow's does not reach reads a shade lighter than the rest,
+  // which is the hole its cutout punches and the card it paints behind.
+  &__root[data-drop="1"] &__vignette { background-color: transparent; }
+  &__root[data-drop="1"] &__cutout { box-shadow: none; }
+
+  &__vignette {
+    position: absolute;
+    inset: 0;
+    background-color: var(--overlay-bg, rgba(0, 0, 0, 0.4));
+    opacity: 1;
+    pointer-events: auto;
+    transition: opacity 0.2s ease;
+  }
+
+  // Guiding: a rectangular cutout — a transparent box sized to the target whose
+  // huge box-shadow dims everything around it, so the target (topbar button /
+  // dropdown item / form / permission panel / workspace control) reads fully
+  // clear with no highlight ring. Click-through, so the user operates the real
+  // chrome underneath. The guide positions it with the --cut-* vars.
+  &__cutout {
+    position: fixed;
+    left: var(--cut-x, 0);
+    top: var(--cut-y, 0);
+    width: var(--cut-w, 0);
+    height: var(--cut-h, 0);
+    // Mirrors the spotlighted target's own rounding (set with the --cut-* vars)
+    // so the cutout hugs it exactly.
+    border-radius: var(--cut-radius, 4px);
+    pointer-events: none;
+    box-shadow: 0 0 0 100vmax var(--overlay-bg, rgba(0, 0, 0, 0.4));
+    transition: left 200ms ease, top 200ms ease, width 200ms ease,
+      height 200ms ease;
+  }
+
+  // Clickable frame around the spotlight hole. Transparent — the cutout above
+  // provides the dim — but hit-testable everywhere EXCEPT the hole, which is
+  // punched out with the same --cut-* vars the cutout uses (a self-intersecting
+  // polygon = evenodd hole). Clicking the frame asks "Leave setup?"; the
+  // spotlighted target stays clickable through the hole. Sits below the coach
+  // so the coach's own controls win.
+  &__guide-scrim {
+    position: fixed;
+    inset: 0;
+    pointer-events: auto;
+    background: transparent;
+    z-index: 10018;
+    clip-path: polygon(
+      0 0, 100% 0, 100% 100%, 0 100%, 0 0,
+      var(--cut-x, 0) var(--cut-y, 0),
+      var(--cut-x, 0) calc(var(--cut-y, 0) + var(--cut-h, 0)),
+      calc(var(--cut-x, 0) + var(--cut-w, 0)) calc(var(--cut-y, 0) + var(--cut-h, 0)),
+      calc(var(--cut-x, 0) + var(--cut-w, 0)) var(--cut-y, 0),
+      var(--cut-x, 0) var(--cut-y, 0)
+    );
+  }
+
+  // Callout host for the coach tooltip — spans the viewport but never blocks
+  // (the coach itself opts pointer events back in).
+  &__guide-callout {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+  }
+
+  // Host for the "Leave setup?" guard, which cannot use the wrapper-modal while
+  // the walkthrough has the create form in it. Inert until populated; then it
+  // dims the whole layer and centres the modal above the coach so only it is
+  // interactive (whatever it guards stays untouched underneath).
+  &__drop-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 10030;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+
+    &[data-open="1"] {
+      pointer-events: auto;
+      background-color: var(--overlay-bg, rgba(0, 0, 0, 0.4));
+    }
+  }
+
+  // ───────── coach tooltip — styled after window_confirm ─────────
+  &__coach {
+    font-family: var(--font-main);
+    position: fixed;
+    transform: translateX(-50%);
+    box-sizing: border-box;
+    width: 300px;
+    max-width: calc(100vw - 24px);
+    padding: 16px 20px 18px;
+    gap: 12px;
+    border-radius: var(--corner-radius-2);
+    background-color: var(--normal-bg-90);
+    border: 1px solid var(--border-default);
+    box-shadow: 0 14px 42px rgba(11, 10, 33, 0.16);
+    pointer-events: auto;
+    z-index: 10021;
+  }
+
+  // Branded header: drumee cloud + wordmark, mirroring window-confirm's topbar.
+  &__coach-brand {
+    align-items: flex-end;
+    gap: 8px;
+  }
+
+  &__coach-logo {
+    width: 32px;
+    height: 32px;
+    color: var(--primary-50);
+  }
+
+  &__coach-name {
+    font-size: 20px;
+    font-weight: 700;
+    line-height: 1;
+    color: var(--normal-fg);
+  }
+
+  &__coach-text {
+    font-size: 13px;
+    line-height: 1.45;
+    color: var(--normal-fg);
+  }
+
+  &__coach-footer {
+    width: 100%;
+    // Back left, Next right when both are present. A lone button keeps the
+    // right-aligned look (see the :only-child rule below).
+    justify-content: space-between;
+    gap: 8px;
+    padding-top: 2px;
+  }
+
+  &__coach-footer > *:only-child {
+    margin-left: auto;
+  }
+
+  // Back styled as window-confirm's secondary button.
+  &__coach-back {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 84px;
+    height: 34px;
+    padding: 0 14px;
+    border-radius: var(--corner-radius-2, 8px);
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--normal-fg);
+    background-color: var(--normal-bg);
+    border: 1px solid var(--border-default);
+    cursor: pointer;
+    user-select: none;
+    transition: background-color 120ms ease;
+
+    &:hover { background-color: var(--normal-bg-80); }
+  }
+
+  // Primary twin of __coach-back. Same metrics so the pair reads as one row.
+  &__coach-next {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 84px;
+    height: 34px;
+    padding: 0 14px;
+    border-radius: var(--corner-radius-2, 8px);
+    font-size: 13px;
+    font-weight: 600;
+    color: #fff;
+    background-color: $accent;
+    border: 1px solid $accent;
+    cursor: pointer;
+    user-select: none;
+    transition: filter 120ms ease;
+
+    &:hover { filter: brightness(1.08); }
+
+    // Not ready to be left yet — the last upload beat holds this until the
+    // batch has finished. Kept in place and legible rather than hidden, so the
+    // way out does not move once it enables; inert to the pointer so the hover
+    // lift cannot suggest otherwise.
+    &[data-disabled="1"] {
+      opacity: 0.45;
+      cursor: default;
+      pointer-events: none;
+    }
+  }
+
+  // Both cards are centred: neither points at a topbar control, so unlike the
+  // reward flow there is no measured placement and no inline left/top to fall
+  // back from.
+  &__anchor {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    pointer-events: auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  // ───────── card ─────────
+  // Each step change re-feeds the skeleton, so the card is a NEW element and
+  // cannot transition from the old one's position — it would otherwise pop into
+  // place. Fade + settle it in instead.
+  @keyframes activate-workspace-card-in {
+    from {
+      opacity: 0;
+      transform: translateY(-6px) scale(0.98);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  &__card {
+    font-family: var(--font-main);
+    animation: activate-workspace-card-in 220ms ease both;
+    width: 340px;
+    box-sizing: border-box;
+    padding: 24px;
+    gap: 16px;
+    align-items: center;
+    text-align: center;
+    border-radius: 6px;
+    background-color: var(--normal-bg);
+    box-shadow: 0 18px 48px rgba(0, 0, 0, 0.22);
+  }
+
+  &__progress {
+    width: 100%;
+    gap: 8px;
+    justify-content: center;
+  }
+
+  &__progress-seg {
+    height: 4px;
+    flex: 1 1 0;
+    border-radius: 2px;
+    background-color: $accent-soft;
+    transition: background-color 0.2s ease;
+
+    &[data-on="1"] { background-color: $accent; }
+  }
+
+  &__chip {
+    width: 56px;
+    height: 56px;
+    border-radius: 16px;
+    align-items: center;
+    justify-content: center;
+    background-color: $accent-soft;
+  }
+
+  &__chip-ico {
+    width: 26px;
+    height: 26px;
+    color: $accent;
+  }
+
+  &__title {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--normal-fg);
+  }
+
+  &__desc {
+    font-size: 14px;
+    line-height: 1.45;
+    color: var(--normal-fg-20);
+  }
+
+  &__footer {
+    width: 100%;
+    gap: 12px;
+    justify-content: space-between;
+  }
+
+  // ───────── buttons ─────────
+  &__btn {
+    flex: 1 1 0;
+    // Flex-center the label so it sits dead-center regardless of the button's
+    // width (solo full-width primary or half-width paired) — text-align alone
+    // does not center the Note's inline-block content box.
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 11px 16px;
+    border-radius: 4px;
+    font-size: 14px;
+    font-weight: 600;
+    text-align: center;
+    cursor: pointer;
+    user-select: none;
+    transition: background-color 0.15s ease;
+
+    // Solo — full-width and a size up. Both step cards and the closing card
+    // have exactly one button.
+    &[data-solo="1"] {
+      flex: 1 1 100%;
+      font-size: 16px;
+      padding: 12px 24px;
+    }
+
+    &--primary {
+      color: #fff;
+      // Primary/50 (#433cc5); brighten to Primary/40 on hover.
+      background-color: $accent-strong;
+      &:hover { background-color: $accent; }
+    }
+
+    &--ghost {
+      color: var(--normal-fg-20);
+      background-color: var(--normal-bg-90);
+      &:hover { background-color: var(--normal-bg-80); }
+    }
+  }
+
+  // ───────── modals (fed into Wm.__wrapperModal) ─────────
+  // The modals ARE step cards — skeleton/modal.js gives them the __card class
+  // and the card's __title / __desc / __footer / __chip inside, so the shell,
+  // type scale and buttons come from one place instead of a parallel set of
+  // rules kept in sync by hand. Only what being fed OUTSIDE the flow root
+  // requires is declared here.
+  &__modal {
+    // Fed into Wm.__wrapperModal, so it cannot inherit the root's font.
+    font-family: var(--font-main);
+    // Opt pointer events back in on the modal ITSELF (the root is pe:none, like
+    // the coach does). When shown during the walkthrough it lives inside the
+    // pe:none guide layer, so without this its buttons never receive clicks.
+    pointer-events: auto;
+  }
+
+  // The closing card's success tick sits on the step card's own chip, tinted
+  // green instead of the flow's accent.
+  &__chip--success {
+    background-color: $success-soft;
+  }
+
+  // checked-circle.svg carries its own green fill, but set currentColor too in
+  // case the pipeline inlines it.
+  &__chip--success &__chip-ico {
+    color: var(--green-400, #10b667);
+  }
+
+  // Branded drumee logo + wordmark header (the guard) — same lockup as the
+  // coach header, sized for the modal.
+  &__modal-brand {
+    align-items: flex-end;
+    justify-content: center;
+    gap: 8px;
+  }
+
+  &__modal-brand-logo {
+    width: 32px;
+    height: 32px;
+    color: var(--primary-50);
+  }
+
+  &__modal-brand-name {
+    font-size: 20px;
+    font-weight: 700;
+    line-height: 1;
+    color: var(--normal-fg);
+  }
+
+  // Respect a reduced-motion preference: keep the step change instant.
+  @media (prefers-reduced-motion: reduce) {
+    &__card { animation: none; }
+    &__cutout { transition: none; }
+  }
+
+  // ───────── mobile ─────────
+  @media (max-width: 767px) {
+    &__anchor {
+      width: calc(100vw - 32px);
+    }
+
+    &__card { width: 100%; }
+    // A modal carries BOTH classes, so this must stay AFTER __card to win at
+    // equal specificity: it is centred in the wrapper-modal rather than in an
+    // anchor, so it needs its own gutter instead of filling the parent.
+    &__modal { width: calc(100vw - 32px); }
+  }
+}
