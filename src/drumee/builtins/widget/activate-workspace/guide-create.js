@@ -13,12 +13,18 @@
  *             internal (permission-restricted) and external
  *             (window-secure-share) workspaces → user closes it → done
  *
- * ALL THREE WORKSPACE TYPES END THE SAME WAY. reward-flow's version of this
- * guide hands the internal branch over mid-walkthrough, because the permission
- * panel that follows an internal create is where members are invited and that
- * IS its Step 2. Activation's Step 2 is an upload, which no branch of the
- * create can satisfy early, so the panel is simply the last thing to close
- * before Step 1 is over — whichever kind of workspace opened it.
+ * THE THREE WORKSPACE TYPES END DIFFERENTLY, and the difference is which
+ * surface the create opens next:
+ *
+ *   personal  a folder at the home root, not a hub. Nothing opens after it, so
+ *             there is no perm phase at all → Step 2's card.
+ *   internal  opens the permission panel, which is where members are invited —
+ *             so that panel IS Step 2. The guide hands the flow over the moment
+ *             it appears (_checkInvitePanel) and stops; the orchestrator shows
+ *             the Step 2 card beside it and watches it from there.
+ *   external  opens the secure-share dock, which is about sharing rather than
+ *             membership. Not Step 2, so the perm phase runs to completion the
+ *             ordinary way → Step 2's card, whose Invite opens the popup.
  *
  * Back steps backwards through these; see back().
  *
@@ -48,6 +54,9 @@ const SEL = {
   permPanels: ".permission-restricted__main, .window-secure-share__main",
   // External (share) branch only — used to pick the perm-phase coach text.
   permShare: ".window-secure-share__main",
+  // Internal (team) branch only. This panel is where members are invited, so
+  // the flow counts it as Step 2 — see the handoff in _checkInvitePanel.
+  permInternal: ".permission-restricted__main",
   // The confirmation shown after an action inside those panels — e.g. sending
   // an invitation in permission_restricted pops Wm.alert → window_info, which
   // REPLACES the panel in the wrapper-modal. Spotlight the card ROOT (__ui) —
@@ -113,6 +122,7 @@ class ActivateCreateGuide extends GuideCore {
     this._created = false;      // workspace created → perm phase active
     this._permSeen = false;     // the permission panel has appeared at least once
     this._infoSeen = false;     // the window_info confirmation has appeared
+    this._invitePanel = false;  // the INTERNAL panel was seen → it is now Step 2
     this._completed = false;    // guard: onCreateGuideComplete fired once
     this._expandingCreate = false;
     if (this._permTimer) {
@@ -167,6 +177,7 @@ class ActivateCreateGuide extends GuideCore {
           clearTimeout(this._permTimer);
           this._permTimer = null;
         }
+        this._checkInvitePanel();
         return "perm";
       }
       // Nothing visible now. Panels open a tick after their trigger, so only
@@ -197,6 +208,27 @@ class ActivateCreateGuide extends GuideCore {
     }
     this._expandingCreate = false;
     return "add";
+  }
+
+  /**
+   * Hand the flow over to Step 2 the first time the INTERNAL (team) panel is on
+   * screen: inviting members is what Step 2 asks for, so that panel is Step 2's
+   * surface, not a tail of Step 1 (see index.js onInvitePanel). The orchestrator
+   * stops this guide as it takes over, which is why nothing here has to unwind:
+   * stop() resets every flag.
+   *
+   * Latched all the same — a reconcile can land between the handover and the
+   * teardown, and the invitation's confirmation REPLACES the panel in the
+   * wrapper-modal, so a second call must not fire.
+   *
+   * The external branch never matches this selector and so never fires: it runs
+   * the perm phase to completion and lands on the Step 2 card instead.
+   */
+  _checkInvitePanel() {
+    if (this._invitePanel) return;
+    if (!firstVisible(SEL.permInternal)) return;
+    this._invitePanel = true;
+    if (typeof this._ui?.onInvitePanel === "function") this._ui.onInvitePanel();
   }
 
   _pinReady() {

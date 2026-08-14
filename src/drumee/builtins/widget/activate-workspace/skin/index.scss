@@ -36,7 +36,7 @@ $success-soft: rgba(46, 179, 122, 0.14);
     pointer-events: none;   // only the vignette / card / coach opt back in
   }
 
-  // States that coexist with an OPEN workspace window — the Step 2 card, and
+  // States that coexist with an OPEN workspace window — the Step 3 card, and
   // the closing screen. 10020 is above the bare desk, but nowhere near a
   // window: `.window__ui[data-state=1]` is 10000 and the layer hosting the
   // focused window goes to 50001 (see desk/wm/skin and skin/vars/z-index.scss),
@@ -45,6 +45,22 @@ $success-soft: rgba(46, 179, 122, 0.14);
   // including preview (80000), still below the wrapper-modal.
   &__root[data-over-window="1"] {
     z-index: calc(var(--z-index-modal, 100000) - 1);
+  }
+
+  // A waiting Step 2 — the user is working a surface in the shared
+  // wrapper-modal, either the permission panel or the invite popup. That modal
+  // sits at --z-index-modal (100000), and the flow supplies the dim itself here:
+  // a cutout over the surface, so everything around it is shadowed and the
+  // surface reads clear. Both jobs need the root ABOVE the modal:
+  //   - the dim must cover the modal's layer, and reach the topbar and sidebar
+  //     the modal's own backdrop never did (it is absolutely positioned inside
+  //     the desk's wm-container; our root is fixed and portaled to body);
+  //   - at 10020 the card would paint behind the modal and every click on it
+  //     would land on the backdrop instead of the card.
+  // The surface stays fully operable through the hole: in a waiting state the
+  // vignette and the cutout are both pointer-events:none.
+  &__root[data-over-modal="1"] {
+    z-index: 1000000;
   }
 
   // While guiding, the Step 1 walkthrough targets the create form, which lives
@@ -81,6 +97,14 @@ $success-soft: rgba(46, 179, 122, 0.14);
     opacity: 1;
     pointer-events: auto;
     transition: opacity 0.2s ease;
+  }
+
+  // Waiting: the user has been handed off to the real invite popup or members
+  // panel. The scrim fades out and stops intercepting clicks; the card stays
+  // live.
+  &__root[data-waiting="1"] &__vignette {
+    opacity: 0;
+    pointer-events: none;
   }
 
   // Guiding: a rectangular cutout — a transparent box sized to the target whose
@@ -259,18 +283,87 @@ $success-soft: rgba(46, 179, 122, 0.14);
     }
   }
 
-  // Both cards are centred: neither points at a topbar control, so unlike the
-  // reward flow there is no measured placement and no inline left/top to fall
-  // back from.
   &__anchor {
     position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
     pointer-events: auto;
     display: flex;
     flex-direction: column;
     align-items: center;
+    // Eases the move between steps when the anchor element survives the
+    // re-render (Step 2 is placed inline under the topbar Invite button, Steps 1
+    // and 3 are centred by the rules below).
+    transition: left 260ms ease, top 260ms ease;
+
+    // Step 1 is centred — it has no target control to point at.
+    &[data-step="step1"] {
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+    }
+
+    // Step 2 is anchored under the topbar Invite button by _positionStepTarget
+    // (inline left/top). This is only the fallback used until that measurement
+    // lands, or if the control isn't on screen.
+    &[data-step="step2"] {
+      top: 96px;
+      left: 50%;
+      transform: translateX(-50%);
+    }
+
+    // Any step with no control to point at — a Step 2 served by the permission
+    // panel, and Step 3, which guides inside the workspace. _applyStepTarget
+    // leaves their inline placement cleared, so centre them like Step 1. Keyed
+    // on data-notarget alone, NOT on the step: scoping it to step2 left the
+    // Step 3 card falling through to the 96px topbar fallback above, pinned
+    // under a control it does not point at. Declared last so it wins over both
+    // rules above at equal specificity.
+    &[data-notarget="1"] {
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+    }
+  }
+
+  &__root[data-waiting="1"] &__anchor { opacity: 0.92; }
+
+  // The invite-sent confirmation has taken the surface's place: it is a card of
+  // its own, centred on the same screen, carrying the same news and its own
+  // Close. Ours behind it repeats the step just completed and leaves a stray
+  // Back sticking out from under it. The dim and the cutout stay — the hole is
+  // on the confirmation by then — so the flow still owns the screen around it.
+  &__root[data-toast="1"] &__anchor { display: none; }
+
+  // …except on a waiting Step 2, where the card is one of only two things meant
+  // to sit clear of the dim (the surface in the modal is the other). Fading it
+  // there reads as "disabled" against a surface the user is actively working,
+  // and the dimmed desk showing through it is exactly what the cutout avoids.
+  // Declared after, so it wins at equal specificity.
+  &__root[data-over-modal="1"] &__anchor { opacity: 1; }
+
+  // Step 2 dims via the cutout over its topbar control, so the flat scrim must
+  // go transparent — it stays in place (and clickable) purely to catch the
+  // "Leave setup?" click.
+  &__root[data-cutout="1"] &__vignette {
+    background-color: transparent;
+  }
+
+  // On Step 2 the cutout doubles as the spotlighted control's click target (see
+  // skeleton), so it opts pointer events back in. Only the hole itself is
+  // hit-testable — the box-shadow doing the dimming is not — so clicks outside
+  // still fall through to the scrim and its "Leave setup?". The guiding cutout
+  // (data-cutout="0") stays click-through: there the user operates the real
+  // desk chrome underneath.
+  &__root[data-cutout="1"] &__cutout {
+    pointer-events: auto;
+    cursor: pointer;
+  }
+
+  // Waiting: the cutout stays (so the overlay and the highlighted control don't
+  // vanish mid-invite) but stops intercepting — the user is operating the real
+  // popup or panel underneath.
+  &__root[data-waiting="1"] &__cutout {
+    pointer-events: none;
+    cursor: default;
   }
 
   // ───────── card ─────────
@@ -345,10 +438,39 @@ $success-soft: rgba(46, 179, 122, 0.14);
     color: var(--normal-fg-20);
   }
 
+  &__waiting {
+    font-size: 13px;
+    font-style: italic;
+    color: $accent;
+  }
+
   &__footer {
     width: 100%;
     gap: 12px;
     justify-content: space-between;
+  }
+
+  // Step 2's way past. A quiet link under the footer rather than a third button:
+  // it is an escape, not an equal choice, and the step it skips is the only one
+  // a user can be unable to perform (free solo plan, or nobody to invite yet).
+  // Underlined on hover only, so it reads as secondary at rest without being
+  // mistaken for disabled text — the mistake the ghost lockup made on the
+  // panel-route Back below.
+  &__skip {
+    margin-top: -4px;
+    padding: 4px 8px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--normal-fg-20);
+    cursor: pointer;
+    user-select: none;
+    border-radius: 4px;
+    transition: color 120ms ease;
+
+    &:hover {
+      color: var(--normal-fg);
+      text-decoration: underline;
+    }
   }
 
   // ───────── buttons ─────────
@@ -388,6 +510,39 @@ $success-soft: rgba(46, 179, 122, 0.14);
       color: var(--normal-fg-20);
       background-color: var(--normal-bg-90);
       &:hover { background-color: var(--normal-bg-80); }
+    }
+  }
+
+  // Back on the permission-panel Step 2, where the card has no primary button
+  // beside it: the surface the user is working IS the step, so the card's only
+  // controls are Back and Skip. The ghost lockup — muted text on a near-white
+  // fill, no border — reads as a disabled label next to a live panel, which is
+  // how it got tried once and written off as inert in the reward flow. Promote
+  // it to the brand fill instead.
+  //
+  // --primary-40 is the brand purple, so the label goes white — --normal-fg on
+  // that fill is unreadable in light theme and invisible in dark. Hover/active
+  // deepen to --primary-50 rather than lightening, matching how the flow's own
+  // primary buttons move under the pointer. Scoped through __anchor, which wraps
+  // the STEP CARD and nothing else: the "Leave setup?" guard is a step card too
+  // (skeleton/modal reuses these very classes) and renders in this same root, so
+  // a rule on __btn--ghost alone would turn its "Leave setup" brand-purple as
+  // well — two primary-looking buttons side by side, on the one screen that
+  // needs its two answers to look different.
+  &__root[data-on-panel="1"] &__anchor &__btn--ghost {
+    color: #fff;
+    background-color: var(--primary-40);
+    border: 1px solid var(--primary-40);
+    box-shadow: 0 1px 2px rgba(11, 10, 33, 0.06);
+
+    &:hover {
+      background-color: var(--primary-50);
+      border-color: var(--primary-50);
+    }
+    &:active {
+      background-color: var(--primary-50);
+      border-color: var(--primary-50);
+      box-shadow: none;
     }
   }
 
@@ -447,7 +602,14 @@ $success-soft: rgba(46, 179, 122, 0.14);
 
   // ───────── mobile ─────────
   @media (max-width: 767px) {
+    // Centred whatever the step, and whatever _positionStepTarget measured:
+    // there is no room to hang a 340px card under a topbar control on a phone.
+    // !important because that placement is written inline.
     &__anchor {
+      top: 50% !important;
+      left: 50% !important;
+      right: auto !important;
+      transform: translate(-50%, -50%);
       width: calc(100vw - 32px);
     }
 

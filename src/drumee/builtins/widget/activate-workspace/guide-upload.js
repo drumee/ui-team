@@ -1,5 +1,5 @@
 /**
- * Activation Step 2 guide — upload the first file.
+ * Activation Step 3 guide — upload the first file.
  *
  * The user has already reopened the workspace they created in Step 1 (the
  * card's "Open workspace" button → Wm.loadWorkspace). This walks them to the
@@ -21,7 +21,7 @@
  * for.
  *
  * Every beat offers Back. On four of the five it exits the walkthrough to the
- * Step 2 card, workspace left open — deliberately simpler than Step 1's
+ * Step 3 card, workspace left open — deliberately simpler than Step 1's
  * step-back, which walks its sub-steps in reverse, because there is nothing
  * destructive to undo here. The exception is a beat reporting a FAILED upload:
  * there Back rewinds to the "+ New" beat so the user can try the upload again,
@@ -199,7 +199,7 @@ class ActivateUploadGuide extends GuideCore {
 
   /**
    * Back, on a beat reporting a failed upload: rewind to the "+ New" beat so
-   * the user can start the upload again, instead of dropping out to the Step 2
+   * the user can start the upload again, instead of dropping out to the Step 3
    * card the way Back does everywhere else in this walkthrough.
    *
    * It is the one beat with somewhere better to go. The card only repeats "open
@@ -277,7 +277,7 @@ class ActivateUploadGuide extends GuideCore {
       // once nothing is coming, and "safe in your workspace" is wrong about
       // files that never arrived.
       text: failed ? failedText() : tooltipFor(sub),
-      // EVERY beat offers Back. It exits the walkthrough to the Step 2 card
+      // EVERY beat offers Back. It exits the walkthrough to the Step 3 card
       // with the workspace left open (the orchestrator's activate-back), which
       // is a way out of all five. Nothing about those beats is undone by
       // leaving: the files stay uploaded, the card offers "Open workspace"

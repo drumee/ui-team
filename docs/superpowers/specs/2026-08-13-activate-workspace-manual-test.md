@@ -44,46 +44,87 @@ forced one, load `#/desk?tutorial=1` and finish or skip to the end of the tour �
 the flow mounts as the tour is destroyed. That path is case 1 below and is worth
 running at least once, since it is the only one that proves the chaining.
 
+## Step 1 — create the workspace
+
 | # | Case | Expected |
 |---|---|---|
-| 1 | Finish the automatic tour (`?tutorial=1`) | Step 1 card, centred, 1 of 2 progress segments lit, single **Continue** button and no Back |
+| 1 | Finish the automatic tour (`?tutorial=1`) | Step 1 card, centred, 1 of **3** progress segments lit, single **Continue** button and no Back |
 | 1a | Load `?activate=1` on a plain login | Same card, ~2s after home settles |
 | 1b | `Desk.startActivateWorkspace()` in the console | Same card, immediately |
 | 2 | Click **Continue** | Cutout on the topbar **New** button; coach reads "Click New to get started" |
 | 3 | Click **New** | The create flyout expands by itself; cutout narrows to the **Workspace** row; the sibling rows are greyed and unclickable |
 | 4 | Click **Workspace** | Cutout wraps the whole create-workspace card (rounded corners included, no bright band) |
-| 5 | Create a **team** workspace | Permission panel slides in; cutout follows it in as it animates; coach reads "Add team members or Close to continue" with no Back |
-| 6 | Close that panel | Step 2 card, centred, both progress segments lit, button reads **Open workspace** |
-| 7 | Create an **external (share)** workspace instead | Secure-share dock opens (a lazily loaded window — allow several seconds); coach reads the external wording; closing it lands on Step 2 |
-| 8 | Create a **personal** workspace instead | No follow-up panel at all; Step 2 immediately |
-| 9 | Invite a member from the panel at case 5, then close the confirmation | Step 2 — same as closing the panel without inviting. Unlike reward-flow there is no invite step, so sending one changes nothing about where the flow goes |
-| 10 | **Back** at sub-steps 2/3/4 | Steps back one sub-step (form → dropdown → New button); Back at the New button leaves the walkthrough for the Step 1 card |
-| 11 | Click **Open workspace** | The workspace opens; the whole screen dims with no hole; coach reads "This is your workspace" with **Back** and **Next** |
-| 12 | Click **Next** | Cutout narrows to the folder **+ New** pill |
-| 13 | Click **+ New** | Cutout narrows to **From device**; the other dropdown rows are greyed |
-| 14 | Click **From device**, pick a file | OS picker opens; progress window appears with the cutout on it and the coach above it (never over the rows) |
-| 15 | Wait for the upload to finish | Cutout moves to the files panel with the new file visible; coach's **Next** becomes enabled |
-| 16 | Click that **Next** | The workspace closes by itself, the desk is back at Home, and the "Your workspace is ready" modal appears over a single-depth dim |
-| 17 | Click **Back to home** | Everything disappears; desk is usable; no invisible blocker over it (click a sidebar row to confirm) |
-| 18 | Upload several files at once | The last beat is reached on the first file, but **Next** stays disabled and greyed until the whole batch is done |
-| 19 | Cancel or fail one file in the batch | Coach switches to the "Some files didn't upload" line; **Next** disabled |
-| 20 | Press **Back** on that failed beat | Progress window closes and the walkthrough rewinds to the **+ New** pill (not out to the card) |
-| 21 | Retry the failed file successfully instead | Coach returns to the normal wording and **Next** enables — the failure is read live, not latched |
-| 22 | **Back** at any beat of case 11–15 | Leaves the walkthrough for the Step 2 card; the workspace stays open; **Open workspace** re-enters the walkthrough from the top |
-| 23 | Click the dimmed area during either walkthrough | "Leave setup?" modal, above the create form / workspace window; **Continue** resumes exactly where it was, with anything typed in the form intact |
-| 24 | Click the dimmed area on either card | Same modal |
-| 25 | **Leave setup** during the Step 1 walkthrough with the create form open | Form closes with the flow; no leftover full-viewport blocker over the desk |
-| 26 | **Leave setup** during the Step 1 walkthrough on the external branch | The secure-share dock closes too |
-| 27 | **Leave setup** during Step 2 | The workspace window and any progress window close; desk back at Home |
-| 28 | Press **F5** mid-flow | The page reloads with NO "Leave site?" prompt — the flow does not guard the browser — and does not come back. Any workspace already created is still there |
-| 29 | Press the browser **Back** button mid-flow | Navigates normally, no interception |
-| 30 | Delete the Step 1 workspace in another tab, then click **Open workspace** | After ~4 s the flow returns to the Step 2 card so the button can be pressed again (the descriptor is kept — there is no topbar-upload fallback here) |
-| 31 | Reach Step 2 in a workspace where the user is view-only | The **+ New** pill never appears (permission-gated `data-visible`); after ~4 s the flow returns to the Step 2 card |
-| 32 | Replay the tour from **Get help → Product Tour** on an established account | The activation flow does NOT appear when the tour ends |
-| 33 | A campaign user (`?utm_campaign=free-storage`) who is also eligible for the reward flow | Only the reward flow runs; activation stands down entirely |
-| 33a | The same account loaded with `?activate=1` | The opposite: activation runs and the reward flow stands down, so the flag is never swallowed |
-| 34 | Resize the window during either walkthrough | Cutout and coach re-measure and stay on target |
-| 35 | Narrow the viewport below 768px | Card and modal take the mobile gutter and stay centred |
+| 5 | Create a **team** workspace | Step 1 ENDS on the panel: it slides in, the cutout follows it as it animates, and the **Step 2 card** appears beside it — 2 of 3 segments lit, no primary button, "Waiting for your first invitation…", **Back** in brand purple, **Skip for now** beneath |
+| 6 | Create an **external (share)** workspace instead | Secure-share dock opens (a lazily loaded window — allow several seconds); coach reads the external wording with no Back; closing it lands on the Step 2 **card** with its **Invite member** button |
+| 7 | Create a **personal** workspace instead | No follow-up panel at all; Step 2 card immediately |
+| 8 | **Back** at sub-steps 2/3/4 | Steps back one sub-step (form → dropdown → New button); Back at the New button leaves the walkthrough for the Step 1 card |
+| 9 | Back to Step 1, **Continue**, create a *different* workspace type | Steps 2 and 3 both reflect the NEW run. Note the first workspace is left behind — known and accepted, same as reward-flow |
+
+## Step 2, Route A — the permission panel (team workspaces)
+
+Reached from case 5. This panel *is* Step 2, so the card sits beside it rather than in front of it.
+
+| # | Case | Expected |
+|---|---|---|
+| 10 | Invite a member from the panel, then close the confirmation | The card steps aside while the confirmation is up (no stray Back under it), the cutout moves onto the confirmation, and closing it advances to **Step 3** |
+| 11 | Fail an invite from the panel (bad address) | The error notice appears but the step does NOT advance — success is the panel's `invitation:sent` broadcast, not the presence of a notice |
+| 12 | Close the panel with nothing sent | The **Step 2 card** with its **Invite member** button. NOT a rewind to Step 1's create form — that is where reward-flow goes, and this flow deliberately does not |
+| 13 | Press the card's **Back** while the panel is open | The panel closes and lands on the Step 2 card, exactly as case 12 — one exit, two ways of asking for it |
+| 14 | Press **Skip for now** while the panel is open | Panel closes, flow advances to **Step 3**, 3 of 3 segments lit |
+| 15 | Click beside the panel (the dimmed area) | "Leave setup?" modal above the panel; **Continue** leaves the panel exactly as it was |
+| 16 | Click the card's **Back**/**Skip** where the modal backdrop covers the card | Still works — the backdrop guard routes a click by geometry to the control underneath rather than answering with the abandon prompt |
+
+## Step 2, Route B — the invite popup (from the card)
+
+| # | Case | Expected |
+|---|---|---|
+| 17 | On the Step 2 card, click **Invite member** (paid plan) | Cutout moves off the topbar Invite button and onto the popup; the card stays under the topbar button and does not jump; "Waiting for your first invitation…" |
+| 18 | Open one of the popup's dropdowns (email suggestions, workspace search, role menu) | The hole GROWS to take the list in — no half-lit list hanging below the popup |
+| 19 | Send an invitation | Popup closes, confirmation replaces it, card steps aside, cutout follows onto the confirmation; dismissing it advances to **Step 3** |
+| 20 | Close the popup without sending | Back to the Step 2 card, retryable |
+| 21 | Click beside the popup | "Leave setup?"; **Continue** returns to the popup **with the typed emails intact** — the guard renders in the flow's own root, not the popup's host |
+| 22 | **Free-solo account** (fresh signup): click **Invite member** | The desk's plan-limit notice appears and the flow STAYS on the Step 2 card — it must not enter the waiting state for a popup that will never open |
+| 23 | Same account, then **Skip for now** | Advances to Step 3. This is the path most real onboarding users will take |
+| 24 | **Leave setup** while a Step 2 surface is open | The panel/popup closes with the flow; no leftover full-viewport blocker (click a sidebar row to confirm) |
+
+## Step 3 — upload the first file
+
+| # | Case | Expected |
+|---|---|---|
+| 25 | Reach Step 3 by any route | Card centred (not under a topbar control), 3 of 3 segments lit, **Back** + **Open workspace** |
+| 26 | Click **Open workspace** | The workspace opens; the whole screen dims with no hole; coach reads "This is your workspace" with **Back** and **Next** |
+| 27 | Click **Next** | Cutout narrows to the folder **+ New** pill |
+| 28 | Click **+ New** | Cutout narrows to **From device**; the other dropdown rows are greyed |
+| 29 | Click **From device**, pick a file | OS picker opens; progress window appears with the cutout on it and the coach above it (never over the rows) |
+| 30 | Wait for the upload to finish | Cutout moves to the files panel with the new file visible; coach's **Next** becomes enabled |
+| 31 | Click that **Next** | The workspace closes by itself, the desk is back at Home, and the "Your workspace is ready" modal appears over a single-depth dim |
+| 32 | Click **Back to home** | Everything disappears; desk is usable; no invisible blocker over it (click a sidebar row to confirm) |
+| 33 | Upload several files at once | The last beat is reached on the first file, but **Next** stays disabled and greyed until the whole batch is done |
+| 34 | Cancel or fail one file in the batch | Coach switches to the "Some files didn't upload" line; **Next** disabled |
+| 35 | Press **Back** on that failed beat | Progress window closes and the walkthrough rewinds to the **+ New** pill (not out to the card) |
+| 36 | Retry the failed file successfully instead | Coach returns to the normal wording and **Next** enables — the failure is read live, not latched |
+| 37 | **Back** at any beat of cases 26–30 | Leaves the walkthrough for the Step 3 card; the workspace stays open; **Open workspace** re-enters the walkthrough from the top |
+| 38 | **Back** on the Step 3 card | The workspace CLOSES and the flow lands on the Step 2 card, whose invite popup needs the desk topbar visible |
+| 39 | Delete the workspace in another tab, then click **Open workspace** | After ~4 s the flow returns to the Step 3 card so the button can be pressed again (the descriptor is kept — there is no topbar-upload fallback here) |
+| 40 | Reach Step 3 in a workspace where the user is view-only | The **+ New** pill never appears (permission-gated `data-visible`); after ~4 s the flow returns to the Step 3 card |
+
+## Across the whole flow
+
+| # | Case | Expected |
+|---|---|---|
+| 41 | Click the dimmed area during either walkthrough | "Leave setup?" modal, above the create form / workspace window; **Continue** resumes exactly where it was, with anything typed in the form intact |
+| 42 | Click the dimmed area on any card | Same modal |
+| 43 | **Leave setup** during the Step 1 walkthrough with the create form open | Form closes with the flow; no leftover blocker |
+| 44 | **Leave setup** during the Step 1 walkthrough on the external branch | The secure-share dock closes too |
+| 45 | **Leave setup** during Step 3 | The workspace window and any progress window close; desk back at Home |
+| 46 | Press **F5** mid-flow | The page reloads with NO "Leave site?" prompt — the flow does not guard the browser — and does not come back. Any workspace already created is still there |
+| 47 | Press the browser **Back** button mid-flow | Navigates normally, no interception |
+| 48 | Replay the tour from **Get help → Product Tour** on an established account | The activation flow does NOT appear when the tour ends |
+| 49 | A campaign user (`?utm_campaign=free-storage`) also eligible for the reward flow | Only the reward flow runs; activation stands down entirely |
+| 49a | The same account loaded with `?activate=1` | The opposite: activation runs and the reward flow stands down, so the flag is never swallowed |
+| 50 | Resize the window during Step 2 and either walkthrough | Cutout and coach re-measure and stay on target; the Step 2 card follows the topbar Invite button |
+| 51 | Narrow the viewport below 768px | Card and modal take the mobile gutter and stay centred, whatever the step measured |
+| 52 | Reach the closing modal having pressed **Skip for now** | It appears normally — Step 3 is the only step this flow insists on, so a run with no invitation still completes |
 
 ## Regression cases for the shared-lib extraction
 
@@ -107,7 +148,10 @@ walkthroughs need a pass:
 - `guided-flow-steps.test.js` — step-name suffix stripping and
   workspace-descriptor parsing (including the `hub/0` placeholder and junk
   storage).
-- `activate-workspace-upload-beats.test.js` — the Step 2 beat table, including
+- `guided-flow-geometry.test.js` — the union box the cutout uses when Step 2's
+  popup has a dropdown open: below, beside, several at once, zero-size rects
+  ignored, nested rects changing nothing.
+- `activate-workspace-upload-beats.test.js` — the Step 3 beat table, including
   every case that must HOLD rather than rewind.
 
 Everything else in the list above needs a browser, a real workspace and a real

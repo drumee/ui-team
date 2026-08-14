@@ -3573,12 +3573,17 @@ class desk_module extends LetcBox {
           }
         });
 
-      // Relayed to the reward flow: it opened this popup through the
-      // "invite-member" service above, so the popup's uiHandler is the desk,
-      // not the flow.
+      // Relayed to whichever guided flow is running: it opened this popup
+      // through the "invite-member" service above, so the popup's uiHandler is
+      // the desk, not the flow. Both are told — they cannot be on screen
+      // together (activation stands down when the reward flow mounts), so at
+      // most one of these does anything.
       case "invitation-sent":
         if (this._rewardFlow && !this._rewardFlow.isDestroyed()) {
           this._rewardFlow.onInvitationSent();
+        }
+        if (this._activateFlow && !this._activateFlow.isDestroyed()) {
+          this._activateFlow.onInvitationSent();
         }
         return;
 
@@ -3712,8 +3717,14 @@ class desk_module extends LetcBox {
       this._invitePopup = Wm.__wrapperModal.children.last();
       this._invitePopup.once(_e.destroy, () => {
         this._invitePopup = null;
+        // Same pair as the "invitation-sent" relay above: whichever guided flow
+        // asked for this popup needs to know it has gone, and only one of them
+        // can be running.
         if (this._rewardFlow && !this._rewardFlow.isDestroyed()) {
           this._rewardFlow.onInvitePopupClosed();
+        }
+        if (this._activateFlow && !this._activateFlow.isDestroyed()) {
+          this._activateFlow.onInvitePopupClosed();
         }
       });
     });
