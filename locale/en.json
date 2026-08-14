@@ -1383,6 +1383,7 @@
   "FILE": "File",
   "DUPLICATE": "Duplicate",
   "MOVE_TO_TRASH": "Move to trash",
+  "MSG_TRASH_SELECTION": "Move {0} selected items to trash?",
   "GET_INFO": "Get info",
   "PROHIBIT_CHANGE": "Prohibit any change",
   "MUSIC_PLAYER": "Music player",
