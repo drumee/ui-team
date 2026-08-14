@@ -235,9 +235,9 @@ class __activate_workspace extends LetcBox {
    * BEFORE the portal below, while our root is still inside it.
    */
   _captureHost() {
-    if (!this.el || !this.el.closest) return;
+    if (!this.el?.closest) return;
     const host = this.el.closest(".desk-module__overlay");
-    if (!host || !host.style) return;
+    if (!host?.style) return;
     this._host = host;
     this._hostPE = host.style.pointerEvents;
     host.style.pointerEvents = "none";
@@ -262,7 +262,7 @@ class __activate_workspace extends LetcBox {
 
   _restoreHost() {
     const host = this._host;
-    if (!host || !host.style) return;
+    if (!host?.style) return;
     host.style.pointerEvents = this._hostPE || "";
     this._host = null;
   }
@@ -802,7 +802,7 @@ class __activate_workspace extends LetcBox {
   _paintStepHole(spot, { base, waiting, onPanel }) {
     const spotEl = spot ? document.querySelector(spot) : null;
     const rect = spotEl?.getBoundingClientRect?.() || null;
-    if (rect && rect.width && rect.height) {
+    if (rect?.width && rect.height) {
       // On the popup route the hole grows to take in whichever of its dropdowns
       // is open, which hang outside its box.
       const box = base === "step2" && waiting && !onPanel
@@ -845,7 +845,7 @@ class __activate_workspace extends LetcBox {
     const sel = STEP_TARGET[base];
     const ctrl = sel ? document.querySelector(sel) : null;
     const cr = ctrl?.getBoundingClientRect?.() || null;
-    if (!cr || !cr.width || !cr.height) return;
+    if (!cr?.width || !cr.height) return;
     const vw = (typeof window !== "undefined" && window.innerWidth) || 1280;
     const vh = (typeof window !== "undefined" && window.innerHeight) || 800;
     const M = 12;

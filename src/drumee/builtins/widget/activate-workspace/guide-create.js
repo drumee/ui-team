@@ -232,6 +232,11 @@ class ActivateCreateGuide extends GuideCore {
     // Expand that create group as soon as the user opens New so the Workspace
     // target becomes visible without adding another coach step.
     const createItem = firstVisible(SEL.createItem);
+    // NOT an optional chain, and it must not be turned into one. `createItem?.
+    // dataset.submenu !== "open"` reads as the same thing and is not: with no
+    // create item on screen it yields `undefined !== "open"` — TRUE — and the
+    // guide would ask the desk to expand a menu that is not there. The `&&` here
+    // guards a real comparison, not a dereference.
     if (createItem && createItem.dataset.submenu !== "open") {
       if (!this._expandingCreate) {
         this._expandingCreate = true;
