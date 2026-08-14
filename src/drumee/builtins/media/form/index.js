@@ -157,9 +157,20 @@ class __form_folder extends LetcBox {
         });
     }
 
+    // Both hub types end on the SAME follow-up panel — "Who has access"
+    // (permission_restricted), so creating a shared workspace looks like
+    // creating a restricted one. That panel is workspace-MEMBERSHIP, driven
+    // purely by hub_id with no area branch of its own, so it serves a share hub
+    // exactly as it serves a private one.
+    //
+    // Share creation used to open the share-LINK surface instead — the
+    // secure-share v2 "Manage access" dock, and the legacy permission_shared
+    // external-room panel before that. Link minting stays where it belongs: the
+    // in-workspace share icon (folder openManageAccess), which is
+    // privilege-gated. Creation does not open it any more.
     const FLOW = {
       team: { area: "private", post: "permission_restricted" },
-      share: { area: "share", post: "permission_shared" },
+      share: { area: "share", post: "permission_restricted" },
     };
     const { area, post } = FLOW[status] || FLOW.team;
 
@@ -229,45 +240,6 @@ class __form_folder extends LetcBox {
         const mediaShim = new Backbone.View({
           model: new Backbone.Model(hub),
         });
-
-        // Share workspace: open the SAME "Manage access" panel used INSIDE the
-        // workspace (window_secure_share, secure-share v2) instead of the legacy
-        // external-room panel (permission_shared) — the new panel gives editable
-        // per-link permissions + logged-in-recipient recognition, which the old
-        // one could not. Mirrors folder/index.js openManageAccess(): share the
-        // workspace ROOT node = actual_home_id (a hub's real node id; nid is the
-        // hub/0) with a "Manage access" title. There is no host workspace window
-        // here (the create form lives on the desk), so launch the standalone
-        // right-dock panel — it self-positions via _applyRightDock, matching the
-        // right-side dock the old panel showed. The team/private branch below is
-        // unchanged (permission_restricted is workspace-membership, not sharing).
-        if (post === "permission_shared") {
-          const shareNid = hub.actual_home_id || hub.home_id;
-          Wm.launch(
-            {
-              kind         : "window_secure_share",
-              wm_unique_id : `window_secure_share-${shareNid}`,
-              nid          : shareNid,
-              hub_id       : hub.hub_id || hub.id,
-              home_id      : hub.actual_home_id,
-              filetype     : _a.folder,
-              area         : hub.area || _a.share,
-              filename     : hub.filename,
-              name         : hub.filename,
-              privilege    : ~~hub.privilege,
-              manage_access: 1,
-              useKeyEvent  : 1,
-              radio        : _a.on,
-              state        : _a.on,
-              media        : mediaShim,
-              trigger      : mediaShim,
-              source       : this,
-              uiHandler    : [Wm],
-            },
-            { explicit: 1, singleton: 1 },
-          );
-          return closeForm();
-        }
 
         const parent = this.parent;
         if (!parent || !_.isFunction(parent.feed)) return closeForm();
