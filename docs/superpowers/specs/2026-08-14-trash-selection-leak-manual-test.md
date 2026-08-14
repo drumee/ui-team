@@ -1,8 +1,15 @@
-# Trash selection leak + multi-item gate — manual test matrix
+# Trash defects — manual test matrix
 
 **Scope:** `modules/desk/wm/index.js` (`confirmRemoveHub`, `removeMediaSelection`,
-`getMediaSelection`), new `libs/media-selection.js`. Nothing to do with
-activate-workspace — see "Provenance" at the end.
+`getMediaSelection`), `builtins/window/utils.js` (`removeContent`), new
+`libs/media-selection.js`. Three defects, all in the trash path, none of them
+caused by activate-workspace — see "Provenance" at the end.
+
+| Fix | Defect |
+|---|---|
+| 1 | a cancelled workspace delete left the item selected, arming the next trash |
+| 2 | files/folders in a selection were trashed with no confirmation at all |
+| 3 | the window manager deleted **itself** when trashing a workspace it had once been inside |
 
 ## The defect
 
@@ -64,6 +71,46 @@ shift-click others, or drag a marquee.
 | 13 | Select one file plus several **locked** or non-removable items → Move to trash | No gate. Locked/rejected items are only reported, so they must not push a single real trash over the threshold |
 | 14 | Select a folder **containing a workspace** plus a file → Move to trash | Gate (2 items), then the folder's own hubs-inside dialog |
 | 15 | Cancel the gate at case 9, then trash a single file on its own | Works normally, no gate — cancelling the gate leaves no residue |
+
+## Fix 3 — the window manager deleting itself
+
+**Independent of Fix 1 and Fix 2**, and it predates both. `window/utils.js` was
+untouched by `730f550e` (`git log 58e176a7..HEAD -- src/drumee/builtins/window/utils.js`
+is empty) and by every other commit on this branch; the echo `confirmRemoveHub`
+publishes was not modified either. Neither fix could reach it: `removeContent`
+destructures only `{nid, hub_id, filepath}`, so the `state: 1` that
+`media.select()` used to add was never read, and a solo hub trash does not trip
+the new gate (`allowed` is empty, so `needsBulkConfirm` is false and the path is
+byte-identical).
+
+**The mechanism.** `Wm` inherits `removeContent` (manager → interact → core →
+utils) and subscribes to the same `WS_EVENT` bus `confirmRemoveHub` publishes on,
+so it runs for every delete echo. It also carries a `hub_id` and `filepath` in its
+own model — `loadWorkspace` does `this.mset(data)` — and `onWorkspaceClosed` clears
+the headless layer **without** resetting that model. Only `Wm.reload()` does, and
+that runs at mount and on a failed delete, not on close.
+
+So after opening a workspace and closing it, Wm still claims to be inside it, and
+`removeContent`'s "Remove self" branch fires for **Wm itself**: `Wm.goodbye()`
+destroys the desk's work area, leaving `desk-wrapper` holding only its
+`settings-main-slot` child — which is `position:absolute; inset:0; z-index:1500`
+over the container. Hence the report: "`wm-container` replaced by
+`settings-main-slot`".
+
+| # | Case | Expected |
+|---|---|---|
+| 16 | Open a workspace, close it (back to Home), then trash it from the grid | The tile goes, the grid stays. `.desk-module__wm-container` still contains the window manager — inspect it and confirm `window_manager` is present, not just `settings-main-slot`. This is the reported bug |
+| 17 | Same, but never open the workspace first (fresh load → trash it) | Also fine. Wm's `hub_id` is `Visitor.id`, so the self-test never matched — the bug needs a workspace to have been opened at some point in the session |
+| 18 | Open a workspace, stay inside it, delete it from the sidebar workspace list | The workspace window closes (correct — that IS a window of the deleted hub) and the desk returns to Home with the work area intact |
+| 19 | Open workspace A, close it, open workspace B, then trash **A** from the grid | B stays open and usable. Before the fix, Wm's model pointing at either one was enough to kill the whole area |
+| 20 | Repeat 16 for an **external (share)** workspace and a **public** one | Same result. `area` plays no part in the self-test — the `private` in the original report was incidental |
+| 21 | Open a workspace, navigate into a subfolder, close the workspace, then trash a **folder** that was an ancestor of where you were | Work area intact. Same branch, reached by a folder delete rather than a hub delete |
+| 22 | Trash a plain file from the home grid | Unaffected, as before — a file's filepath is not a prefix of Wm's path |
+
+Note while reading that branch: `new RegExp("^" + filepath)` treats the path as a
+pattern, so a workspace or folder named with regex metacharacters (`a+b`, `x(y`)
+matches something other than itself, or throws. Pre-existing, out of scope here,
+and worth its own fix.
 
 ## What is covered automatically
 
