@@ -927,7 +927,37 @@ class __window_mfs extends DrumeeMFS {
       c.goodbye();
     });
 
-    /** Remove self */
+    /** Remove self — but NEVER the window manager.
+     *
+     * Wm inherits this method (manager -> interact -> core -> utils) and
+     * subscribes to the very WS_EVENT bus it publishes on, so it runs this for
+     * every delete echo. It also carries a hub_id and a filepath in its own
+     * model: loadWorkspace does `this.mset(data)` with the workspace's
+     * attributes, and onWorkspaceClosed clears the headless layer WITHOUT
+     * resetting that model — only Wm.reload() does, and it is called at mount and
+     * on a failed delete, not on close.
+     *
+     * So after opening a workspace and closing it, Wm still claims to be inside
+     * it. Trash that workspace from the home grid and all three tests below pass
+     * for Wm itself: the hub_id matches, its filepath is a prefix of Wm's, and
+     * Wm's path is not "/". Wm called goodbye() on itself, destroying the desk's
+     * whole work area — `desk-wrapper` was left holding nothing but its
+     * settings-main-slot child, which is absolutely positioned over the
+     * container, so the desk read as "the window manager was replaced by
+     * Settings".
+     *
+     * The same thing fires for any delete whose filepath is an ancestor of where
+     * Wm is pointing — trashing a folder above the open one, not just a hub.
+     *
+     * Guarded here rather than by resetting Wm's model on close: Wm is not a
+     * window, it is the container windows live in, and no content event should
+     * ever remove it. Whether the model should also be reset on close is a
+     * separate question — other code may rely on it retaining the last workspace.
+     *
+     * Placed AFTER the children pass on purpose: Wm must still drop the deleted
+     * item's tile from the grid, which is what that pass does.
+     */
+    if (typeof Wm !== "undefined" && this === Wm) return;
     let re = new RegExp("^" + filepath);
     let path = this.mget(_a.filepath);
     if (this.mget(_a.hub_id) == hub_id && re.test(path) && path != "/") {

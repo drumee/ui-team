@@ -43,10 +43,10 @@
  */
 const { dropModal, congratsModal, soldOutModal } = require("./skeleton/modal");
 const { STEPS, baseStep, isWaiting } = require("./steps");
-const { readDescriptor } = require("./workspace");
+const { readDescriptor } = require("../../../libs/guided-flow/descriptor");
 // The guides' own visibility test, reused for the popup's dropdowns: presence in
 // the DOM is not enough for something that is `visibility: hidden` until opened.
-const { visible: onScreen } = require("./guide-core");
+const { visible: onScreen } = require("../../../libs/guided-flow/guide-core");
 // Mid-run scratch state — see storage.js. Eligibility and the resume point are
 // the server's (reward.get_state); only this one key is still local.
 const {
@@ -59,6 +59,9 @@ const { ExitGuard, armed: exitArmed } = require("./exit-guard");
 // intercept — an ordinary postService is cancelled the moment the page starts
 // unloading. See beacon.js.
 const { beaconPost } = require("./beacon");
+// Where the coach callout goes — pure geometry, shared with the other guided
+// flows. See libs/guided-flow/anchor.
+const { coachAnchor, coachCenter } = require("../../../libs/guided-flow/anchor");
 
 // Recorded on every funnel post so the row says which campaign it belongs to.
 // Must match the utm_campaign analytics-server puts on the claim-reward email
@@ -501,98 +504,29 @@ class __reward_flow extends LetcBox {
     if (!text) return this.clearSpotlight();
     // Nothing is spotlighted → there is no target to sit beside, so centre it.
     const anchor = hole === false
-      ? this._coachCenter()
-      : this._coachAnchor(rect, cx, above);
+      ? coachCenter()
+      : coachAnchor(rect, cx, { prefAbove: above });
     this.ensurePart("guide-callout").then((p) => {
       if (!p) return;
       p.feed(
-        require("./skeleton/coach")(this, {
+        require("../../../libs/guided-flow/coach")(this, {
           text,
           style: anchor.style,
           side: anchor.side,
           showBack,
           showNext,
           nextDisabled,
+          // This flow's own routing — the shared coach takes no default, so a
+          // click can never land on another widget's services.
+          backService: "reward-back",
+          nextService: "reward-guide-next",
+          // REWARD_FLOW_NEXT is translated in languages where the generic
+          // LOCALE.NEXT is still at its English value, so it is passed rather
+          // than left to the shared default.
+          nextLabel: LOCALE.REWARD_FLOW_NEXT,
         }),
       );
     });
-  }
-
-  /**
-   * Position the coach as a viewport-space {left, top}, always fully on screen
-   * and clear of the topbar. Small targets (add / menu / form) get the coach
-   * just below (or above) them. Tall panels (the perm-phase permission panels /
-   * secure-share dock, which can fill most of the height) can't be cleared
-   * vertically, so the coach drops into the widest empty margin beside the
-   * panel — or, when the panel is effectively full-width, pins just under the
-   * topbar. This is what fixes the coach being clipped off the top edge.
-   */
-  /**
-   * Centre the coach in the viewport. Used when nothing is spotlighted (see
-   * spotlight's `hole: false`): with the whole screen dimmed there is no target
-   * to sit beside, so the callout becomes the only thing on screen.
-   */
-  _coachCenter() {
-    const win = typeof window !== "undefined" ? window : null;
-    const vw = win?.innerWidth || 1280;
-    const vh = win?.innerHeight || 800;
-    const CH = 156;   // approx coach height — same figure _coachAnchor uses
-    const TOP = 64;   // keep clear of the ~52px topbar
-    // `left` is the coach's CENTRE: the skin translates it -50% on X.
-    return {
-      side: "below",
-      style: {
-        left: `${vw / 2}px`,
-        top: `${Math.max(TOP, (vh - CH) / 2)}px`,
-      },
-    };
-  }
-
-  /**
-   * @param {Boolean} [prefAbove] put the coach ABOVE the target when there is
-   *   room, instead of the default "below if it fits". For a target the coach
-   *   must not sit under or over — the bottom-docked upload-progress window.
-   */
-  _coachAnchor(rect, cx, prefAbove = false) {
-    const win = typeof window !== "undefined" ? window : null;
-    const vw = win?.innerWidth || 1280;
-    const vh = win?.innerHeight || 800;
-    const M = 12;       // viewport margin
-    const TOP = 64;     // keep clear of the ~52px topbar
-    const CH = 156;     // approx coach height (brand header + text + button)
-    const CW = 300;     // coach width (see skin __coach)
-    const half = CW / 2;
-    const clampX = (x) => Math.min(Math.max(x, M + half), vw - M - half);
-    const clampY = (y) => Math.min(Math.max(y, TOP), vh - CH - M);
-
-    // Tall panel: place the coach in whichever margin is wide enough, sitting
-    // just OUTSIDE the panel's near edge (not centred in the gap) so it reads as
-    // attached to the panel it points at, vertically centred on the panel.
-    if (rect.height > vh * 0.6) {
-      const leftGap = rect.left;
-      const rightGap = vw - rect.right;
-      const midY = clampY(rect.top + rect.height / 2 - CH / 2);
-      if (leftGap >= CW + 2 * M && leftGap >= rightGap) {
-        return { side: "left", style: { left: `${clampX(rect.left - M - half)}px`, top: `${midY}px` } };
-      }
-      if (rightGap >= CW + 2 * M) {
-        return { side: "right", style: { left: `${clampX(rect.right + M + half)}px`, top: `${midY}px` } };
-      }
-      // Full-width: pin under the topbar, centred on the panel.
-      return { side: "below", style: { left: `${clampX(cx)}px`, top: `${TOP}px` } };
-    }
-
-    // Small target: below if it fits, else above, else clamped — unless the
-    // caller asked for above, which then wins whenever it fits.
-    const below = rect.bottom + M;
-    const above = rect.top - M - CH;
-    let top;
-    let side;
-    if (prefAbove && above >= TOP) { top = above; side = "above"; }
-    else if (below + CH + M <= vh) { top = below; side = "below"; }
-    else if (above >= TOP) { top = above; side = "above"; }
-    else { top = TOP; side = "below"; }
-    return { side, style: { left: `${clampX(cx)}px`, top: `${clampY(top)}px` } };
   }
 
   /** Remove the coach callout. feed(null) does NOT empty a part — prepareData

@@ -1,5 +1,5 @@
 /**
- * Reward-flow Step 3 guide controller.
+ * Activation Step 3 guide — upload the first file.
  *
  * The user has already reopened the workspace they created in Step 1 (the
  * card's "Open workspace" button → Wm.loadWorkspace). This walks them to the
@@ -7,18 +7,18 @@
  * of wherever the desk happened to point:
  *
  *   1 folder    → spotlight the whole workspace window → user reads it, Next
- *   2 new       → spotlight the "+ New" pill          → user clicks it
- *   3 device    → spotlight the "From device" row,    → user clicks it
- *                 grey-out the sibling rows             → OS file picker
+ *   2 new       → spotlight the "+ New" pill           → user clicks it
+ *   3 device    → spotlight the "From device" row,     → user clicks it
+ *                 grey-out the sibling rows              → OS file picker
  *   4 uploading → spotlight the upload-progress window → RADIO_MEDIA
  *                                                        `_e.uploaded`
  *   5 files     → spotlight the workspace's files panel, where what they just
- *                 uploaded now sits  → user reads it, Next → congrats
+ *                 uploaded now sits  → user reads it, Next → the flow ends
  *
- * The last two beats are what the upload turned into: the orchestrator used to
- * jump straight from `_e.uploaded` to the congrats modal, which threw the
- * workspace away in the same frame the first file landed in it — the user never
- * saw the thing the whole walkthrough was for.
+ * The last two beats are what the upload turns into. Ending on `_e.uploaded`
+ * instead would throw the workspace away in the same frame the first file
+ * landed in it — the user would never see the thing the whole walkthrough was
+ * for.
  *
  * Every beat offers Back. On four of the five it exits the walkthrough to the
  * Step 3 card, workspace left open — deliberately simpler than Step 1's
@@ -51,10 +51,10 @@ const SEL = {
   uploader: ".window-upload-progress__ui",
   // A row of that window that did NOT make it: the Retry affordance an errored
   // file gets, or the warning glyph a cancelled one gets instead (see its
-  // _buildProgressRow). Read from the DOM rather than latched off
-  // RADIO_MEDIA "upload:error", because the DOM is the state that CHANGES: a
-  // retry that succeeds turns the row into a tick and the failure is simply
-  // gone, where a latch would have to guess when to clear itself.
+  // _buildProgressRow). Read from the DOM rather than latched off RADIO_MEDIA
+  // "upload:error", because the DOM is the state that CHANGES: a retry that
+  // succeeds turns the row into a tick and the failure is simply gone, where a
+  // latch would have to guess when to clear itself.
   failed:
     ".window-upload-progress__progress-retry, .window-upload-progress__progress-canceled",
   // The workspace's file listing — the grid and the row view build the same
@@ -102,32 +102,32 @@ function resolveSub(s) {
  *  the walkthrough has stopped and where the fix is — the Retry buttons are in
  *  the progress window, which is what those beats spotlight. */
 function failedText() {
-  return LOCALE.REWARD_FLOW_GUIDE_UPLOAD_FAILED
+  return LOCALE.ACTIVATE_WS_GUIDE_UPLOAD_FAILED
     || "Some files didn't upload. Retry them in the list to carry on.";
 }
 
 function tooltipFor(sub) {
   switch (sub) {
     case "folder":
-      return LOCALE.REWARD_FLOW_GUIDE_FOLDER
+      return LOCALE.ACTIVATE_WS_GUIDE_FOLDER
         || "This is your workspace. Everything you upload here stays with your team.";
     case "new":
-      return LOCALE.REWARD_FLOW_GUIDE_NEW || 'Click “+ New” to add your first file.';
+      return LOCALE.ACTIVATE_WS_GUIDE_NEW || 'Click “+ New” to add your first file.';
     case "device":
-      return LOCALE.REWARD_FLOW_GUIDE_FROM_DEVICE
+      return LOCALE.ACTIVATE_WS_GUIDE_FROM_DEVICE
         || 'Choose “From device” to pick a file.';
     case "uploading":
-      return LOCALE.REWARD_FLOW_GUIDE_UPLOADING
+      return LOCALE.ACTIVATE_WS_GUIDE_UPLOADING
         || "Uploading your files — hang on a moment.";
     case "files":
-      return LOCALE.REWARD_FLOW_GUIDE_FILES
+      return LOCALE.ACTIVATE_WS_GUIDE_FILES
         || "Here are your files, safe in your workspace.";
     default:
       return "";
   }
 }
 
-class RewardUploadGuide extends GuideCore {
+class ActivateUploadGuide extends GuideCore {
   constructor(ui) {
     super(ui);
     this.SEL = SEL;
@@ -140,8 +140,8 @@ class RewardUploadGuide extends GuideCore {
     // Released by the coach's Next on the "folder" beat — see resolveSub.
     this._nextPressed = false;
     // Latched by onUploaded: a file has actually landed. Not read from the DOM
-    // because nothing on screen says "an upload succeeded" — the progress window
-    // looks much the same mid-flight as it does when it is done.
+    // because nothing on screen says "an upload succeeded" — the progress
+    // window looks much the same mid-flight as it does when it is done.
     this._uploaded = false;
   }
 
@@ -149,7 +149,7 @@ class RewardUploadGuide extends GuideCore {
    * The coach's Next was clicked. Two beats carry one:
    *   folder → release the "read this" beat and walk on to "+ New";
    *   files  → the walkthrough is over, hand back to the orchestrator for the
-   *            congrats modal. Nothing here to reconcile afterwards.
+   *            closing modal. Nothing here to reconcile afterwards.
    */
   onNext() {
     if (this._sub === "files") {
@@ -198,9 +198,9 @@ class RewardUploadGuide extends GuideCore {
   }
 
   /**
-   * Back, on a beat reporting a failed upload: rewind to the "+ New" beat so the
-   * user can start the upload again, instead of dropping out to the Step 3 card
-   * the way Back does everywhere else in this walkthrough.
+   * Back, on a beat reporting a failed upload: rewind to the "+ New" beat so
+   * the user can start the upload again, instead of dropping out to the Step 3
+   * card the way Back does everywhere else in this walkthrough.
    *
    * It is the one beat with somewhere better to go. The card only repeats "open
    * the workspace and upload a file", which is what they were trying to do, and
@@ -268,8 +268,9 @@ class RewardUploadGuide extends GuideCore {
     // The last beat, with the batch still going up — the sub-step that
     // spotlights the progress window instead of the panel (see _targetEl).
     const pending = sub === "files" && this._uploadPending();
-    // A file in the batch failed and the user has not dealt with it. Both upload
-    // beats say so, since both are looking at the window that holds the Retry.
+    // A file in the batch failed and the user has not dealt with it. Both
+    // upload beats say so, since both are looking at the window that holds the
+    // Retry.
     const failed = (sub === "uploading" || sub === "files") && this._uploadFailed();
     return {
       // The failure replaces the beat's own line: "hang on a moment" is wrong
@@ -277,28 +278,25 @@ class RewardUploadGuide extends GuideCore {
       // files that never arrived.
       text: failed ? failedText() : tooltipFor(sub),
       // EVERY beat offers Back. It exits the walkthrough to the Step 3 card
-      // with the workspace left open (the orchestrator's reward-back), which is
-      // a way out of all five — including the two that used to withhold it
-      // because the upload had already happened by then. Nothing about those
-      // beats is undone by leaving: the files stay uploaded, the card offers
-      // "Open workspace" again, and re-entering restarts the walkthrough from
-      // the top. A beat the user cannot leave is worse than one that lands them
-      // somewhere slightly ahead of themselves.
+      // with the workspace left open (the orchestrator's activate-back), which
+      // is a way out of all five. Nothing about those beats is undone by
+      // leaving: the files stay uploaded, the card offers "Open workspace"
+      // again, and re-entering restarts the walkthrough from the top.
       showBack: true,
       // Beats that ask the user to READ need an explicit advance; every other
       // sub-step is released by the user doing the real action. "files" is the
       // last one, so its Next ends the walkthrough (see onNext).
       showNext: sub === "folder" || sub === "files",
       // …but not yet, while the batch is still uploading — ending the
-      // walkthrough there tears the workspace down (congrats closes it) with
-      // files still going up into it — nor while one of them has failed, which
-      // is not the step this beat claims it is. Shown-but-disabled rather than
-      // hidden, so the way out stays where the user is already looking for it.
+      // walkthrough there closes the workspace with files still going up into
+      // it — nor while one of them has failed, which is not the step this beat
+      // claims it is. Shown-but-disabled rather than hidden, so the way out
+      // stays where the user is already looking for it.
       nextDisabled: pending || failed,
       // Sit the callout ABOVE that progress window. It is docked bottom-right,
       // so the default "below if it fits" tucks the coach into the corner under
-      // it, and when it does not fit the coach lands over the very rows the user
-      // is watching tick along.
+      // it, and when it does not fit the coach lands over the very rows the
+      // user is watching tick along.
       above: pending,
       // "folder" alone dims the whole screen and shows only the coach: cutting
       // the workspace window out would leave it fully lit, and since it fills
@@ -310,4 +308,4 @@ class RewardUploadGuide extends GuideCore {
   }
 }
 
-module.exports = { RewardUploadGuide, resolveSub, SEL, ORDER };
+module.exports = { ActivateUploadGuide, resolveSub, SEL, ORDER };
