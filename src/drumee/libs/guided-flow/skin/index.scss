@@ -1,0 +1,13 @@
+// Foreign-DOM annotation from guide-core's _disableOthers: a walkthrough adds
+// this to the desk chrome it wants greyed out while it holds a surface open
+// (the topbar Add-menu items that are not "Workspace", the upload dropdown rows
+// that are not "From device"), and removes it on teardown.
+//
+// Global, not nested under any flow's family: it lands on desk chrome that no
+// guided flow owns. It ships with the engine so a flow cannot get the class
+// without the rule that styles it — when this lived in reward-flow's own skin,
+// a second consumer of the engine would have greyed nothing at all.
+.guided-flow-disabled {
+  opacity: 0.4 !important;
+  pointer-events: none !important;
+}
