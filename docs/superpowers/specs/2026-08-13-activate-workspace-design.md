@@ -83,9 +83,53 @@ create opens next:
   so that panel IS Step 2. `guide-create` hands the flow over the moment it
   appears (`_checkInvitePanel` → `onInvitePanel`) and stops; the orchestrator
   shows the Step 2 card beside it.
-- **external** — opens the secure-share dock, which is sharing rather than
-  membership. Not Step 2, so the perm phase runs to completion → Step 2's card,
-  whose Invite opens the popup.
+- **external** — the same panel, and therefore the same handoff, via the override
+  below.
+
+### The external override
+
+Left to itself, `media/form` gives an external workspace the secure-share dock
+instead of the members panel: `FLOW.share.post` is `permission_shared`, and the
+submit handler closes the form and `Wm.launch`es `window_secure_share`. That dock
+manages **links**, not membership, so Step 2 had no invite surface to run on and
+external workspaces fell through to the plain Step 2 card and its popup — the one
+route a brand-new free-solo account cannot use at all.
+
+So the form's follow-up is overridden while this flow is on screen:
+
+```
+Desk._createFormOverrides()   →  { post_override: "permission_restricted" }
+  → Wm case "new-workspace"   →  threaded into the media_form skel
+    → media/form _submit()    →  const post = this.mget("post_override") || defaultPost
+```
+
+`media/form` is shared code — the topbar, sidebar, workspace-list, desk context
+menu and reward-flow all create workspaces through it — so this is an **opt-in
+override, not a change to `FLOW`**. With no override its behaviour is
+byte-identical to before. Changing `FLOW.share` directly was the alternative and
+was rejected: it would take the secure-share dock off every workspace creation in
+the app, at the one moment link management matters most for an external
+workspace.
+
+Two consequences worth knowing:
+
+- The override is gated on the flow being **on screen**, not on it being in
+  Step 1. The flow owns the screen for its whole run, so a workspace created
+  while it is up belongs to it either way, and tracking the step in the desk
+  would put a second copy of the widget's state outside the widget.
+- **The dock is still handled, as a fallback.** The sidebar workspace-list creates
+  workspaces through its own dialog (`Wm.launch({kind: "window_manager", service:
+  "new-hub"})`), bypassing the desk service that carries the override. A
+  workspace made that way still opens the dock, so `guide-create` keeps its
+  `window-secure-share` selector, its long perm budget and `_closeSecureShare()`
+  — the guide copes with whatever appeared rather than spotlighting nothing.
+
+An external workspace's follow-up is now the *members* panel, which presents
+roles and privileges and does not show the link permissions that are the point of
+an external workspace. `hub.invite` handles a share hub either way — it varies
+the email body on `isExternalArea(area)` and still calls
+`_ensurePublicShareToken()` — so nothing breaks, but the substitution is a
+product choice, confined here to onboarding.
 
 ### Step 2 — two routes in
 

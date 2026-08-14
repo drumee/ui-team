@@ -22,9 +22,19 @@
  *             so that panel IS Step 2. The guide hands the flow over the moment
  *             it appears (_checkInvitePanel) and stops; the orchestrator shows
  *             the Step 2 card beside it and watches it from there.
- *   external  opens the secure-share dock, which is about sharing rather than
- *             membership. Not Step 2, so the perm phase runs to completion the
- *             ordinary way → Step 2's card, whose Invite opens the popup.
+ *   external  the same members panel, and therefore the same handoff. Left to
+ *             itself the create form would launch the secure-share dock here —
+ *             link management, not membership, so there would be no invite
+ *             surface for Step 2 and the user would fall through to the plain
+ *             card and its popup, the route a free-solo account cannot use. The
+ *             desk overrides the form's follow-up while this flow is on screen
+ *             (`post_override`, see Desk._createFormOverrides), so an external
+ *             workspace reaches Step 2 exactly like a team one.
+ *
+ * The dock is still handled below, as the FALLBACK it now is: a workspace
+ * created through a path that bypasses the desk's own new-workspace service —
+ * the sidebar workspace-list launches its own dialog — gets no override, and the
+ * guide has to cope with whatever appeared rather than spotlighting nothing.
  *
  * Back steps backwards through these; see back().
  *
@@ -64,18 +74,22 @@ const SEL = {
   windowInfo: ".window-info__ui",
 };
 
-// Safety net for the perm phase: team/share always open a panel, but if one
-// never appears (unexpected), don't wedge the guide — complete after this.
+// Safety net for the perm phase: a panel always opens, but if one never appears
+// (unexpected), don't wedge the guide — complete after this.
 //
-// Two budgets, because the branches arrive by completely different routes and
-// one budget cannot serve both. The internal panel is FED into the shared
-// wrapper-modal in the same tick as the broadcast that starts this phase
-// (media_form → parent.feed), so it is there almost immediately. The external
-// dock is a WINDOW opened with Wm.launch on a LAZILY IMPORTED kind (seeds.js
-// window_secure_share → dynamic import): its chunk has to be fetched and
-// mounted before anything matches. On the short budget the phase could complete
-// first — Step 1 ended, the flow moved on, and the dock arrived to no spotlight
-// and no coach at all.
+// Two budgets, because the two ways a surface can arrive are nothing alike. A
+// panel FED into the shared wrapper-modal lands in the same tick as the
+// broadcast that starts this phase (media_form → parent.feed), so it is there
+// almost immediately — which, with the override in place, is now every workspace
+// type this flow creates. The secure-share dock is a WINDOW opened with
+// Wm.launch on a LAZILY IMPORTED kind (seeds.js window_secure_share → dynamic
+// import): its chunk has to be fetched and mounted before anything matches. On
+// the short budget the phase could complete first — Step 1 ended, the flow moved
+// on, and the dock arrived to no spotlight and no coach at all.
+//
+// So the long budget is the FALLBACK budget, kept for the bypass paths described
+// in the docblock. It is still selected by area, because area is the only thing
+// this guide can see: it is not told whether the override was applied.
 const PERM_TIMEOUT_MS = 2500;
 const PERM_TIMEOUT_WINDOW_MS = 20000;
 const ORDER = { add: 1, menu: 2, form: 3, perm: 4 };
@@ -96,10 +110,13 @@ function tooltipFor(sub) {
   }
 }
 
-/** Perm-phase instruction, specific to the branch: internal
- *  (permission_restricted) vs external (secure_share). Not consulted once a
- *  confirmation (window_info) sits on top — that card speaks for itself, so
- *  _coachFor spotlights it with no coach at all. */
+/** Perm-phase instruction, keyed on the SURFACE rather than the workspace type —
+ *  which is the same thing now that an external workspace also gets the members
+ *  panel, and the right thing regardless: the coach describes what is on screen.
+ *  The secure-share wording is therefore only reached on the fallback paths where
+ *  the dock still opens (see the docblock). Not consulted once a confirmation
+ *  (window_info) sits on top — that card speaks for itself, so _coachFor
+ *  spotlights it with no coach at all. */
 function permText() {
   if (firstVisible(SEL.permShare)) {
     return LOCALE.ACTIVATE_WS_GUIDE_PERM_EXTERNAL

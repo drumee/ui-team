@@ -55,7 +55,8 @@ running at least once, since it is the only one that proves the chaining.
 | 3 | Click **New** | The create flyout expands by itself; cutout narrows to the **Workspace** row; the sibling rows are greyed and unclickable |
 | 4 | Click **Workspace** | Cutout wraps the whole create-workspace card (rounded corners included, no bright band) |
 | 5 | Create a **team** workspace | Step 1 ENDS on the panel: it slides in, the cutout follows it as it animates, and the **Step 2 card** appears beside it — 2 of 3 segments lit, no primary button, "Waiting for your first invitation…", **Back** in brand purple, **Skip for now** beneath |
-| 6 | Create an **external (share)** workspace instead | Secure-share dock opens (a lazily loaded window — allow several seconds); coach reads the external wording with no Back; closing it lands on the Step 2 **card** with its **Invite member** button |
+| 6 | Create an **external (share)** workspace instead | The **members panel** opens, NOT the secure-share dock — Step 1 ends on it exactly as case 5 does, and Step 2 runs on it via Route A. This is the `post_override` at work |
+| 6a | Same, but check the dock never appears | No right-dock secure-share panel at any point, not even briefly — the override stops it being launched rather than closing it afterwards |
 | 7 | Create a **personal** workspace instead | No follow-up panel at all; Step 2 card immediately |
 | 8 | **Back** at sub-steps 2/3/4 | Steps back one sub-step (form → dropdown → New button); Back at the New button leaves the walkthrough for the Step 1 card |
 | 9 | Back to Step 1, **Continue**, create a *different* workspace type | Steps 2 and 3 both reflect the NEW run. Note the first workspace is left behind — known and accepted, same as reward-flow |
@@ -121,6 +122,10 @@ Reached from case 5. This panel *is* Step 2, so the card sits beside it rather t
 | 47 | Press the browser **Back** button mid-flow | Navigates normally, no interception |
 | 48 | Replay the tour from **Get help → Product Tour** on an established account | The activation flow does NOT appear when the tour ends |
 | 49 | A campaign user (`?utm_campaign=free-storage`) also eligible for the reward flow | Only the reward flow runs; activation stands down entirely |
+| 49b | **No flow running**: create a share workspace from the topbar New menu | The secure-share dock opens as it always did. The override is opt-in, so every ordinary creation path is untouched |
+| 49c | Same from the sidebar **Add new** | Same — the dock opens |
+| 49d | reward-flow's Step 1 (`?reward=1`) with an external workspace | The dock opens and its own perm phase runs, unchanged. The override is never set for that flow |
+| 49e | With activation running, create a share workspace from the **sidebar workspace-list** rather than the topbar | The dock opens — that path launches its own dialog and bypasses the desk service carrying the override. The guide still spotlights the dock and completes on the long budget; Step 2 falls back to the card |
 | 49a | The same account loaded with `?activate=1` | The opposite: activation runs and the reward flow stands down, so the flag is never swallowed |
 | 50 | Resize the window during Step 2 and either walkthrough | Cutout and coach re-measure and stay on target; the Step 2 card follows the topbar Invite button |
 | 51 | Narrow the viewport below 768px | Card and modal take the mobile gutter and stay centred, whatever the step measured |

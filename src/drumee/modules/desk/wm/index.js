@@ -1975,7 +1975,18 @@ class __window_manager extends push {
                 hub_id: this._curWorkspace.hub_id,
                 nid: this._curWorkspace.nid,
               }
-              : { kind: "media_form" };
+              : {
+                kind: "media_form",
+                // Forwarded, not decided here: the desk sets this when a guided
+                // onboarding flow needs the create form's follow-up surface to
+                // be the members panel rather than the type's default (see
+                // media/form's `post_override`). Omitted entirely when absent,
+                // so the form's own defaults are untouched for every other
+                // caller.
+                ...(args.post_override
+                  ? { post_override: args.post_override }
+                  : {}),
+              };
           p.feed(skel);
           // Reset the wrapper only when the whole dialog chain is gone.
           // media_form chains to permission_* via parent.feed(); collection

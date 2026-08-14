@@ -2048,6 +2048,33 @@ class desk_module extends LetcBox {
   }
 
   /**
+   * Anything the create-workspace form should do differently because a guided
+   * flow is on screen.
+   *
+   * Today one thing, for one flow. activate-workspace's Step 2 invites a
+   * teammate, and it needs Step 1 to end on a surface that can do that. For a
+   * team workspace it already does — the members panel opens in the same
+   * wrapper-modal. For an EXTERNAL one the form launches the secure-share dock
+   * instead, which manages links rather than membership, so the walkthrough had
+   * no invite surface to hand over to and the user fell through to the plain
+   * Step 2 card and its popup — the route a brand-new free-solo account cannot
+   * use at all. Overriding the follow-up gives external workspaces the same
+   * panel route team workspaces get.
+   *
+   * Gated on the flow being ON SCREEN rather than on it being in Step 1
+   * specifically. It owns the screen for its whole run, so a workspace created
+   * while it is up belongs to it either way, and tracking the step here would
+   * put a second copy of that state outside the widget that owns it.
+   *
+   * Returns a spreadable object so the call site reads as "plus whatever a flow
+   * asks for", and stays empty — changing nothing — in every ordinary session.
+   */
+  _createFormOverrides() {
+    if (!this._activateFlow || this._activateFlow.isDestroyed()) return {};
+    return { post_override: "permission_restricted" };
+  }
+
+  /**
    * Workspace activation flow (builtins/widget/activate-workspace) — the
    * practical half of onboarding: the product tour SHOWS the app on a mock
    * desk, this walks the user through building the real thing, a workspace
@@ -3470,7 +3497,11 @@ class desk_module extends LetcBox {
         // desk.create_hub ever runs (context menu, sidebar, topbar all land
         // here or on Wm's twin case).
         if (require("libs/over-limit").guardWrite("write")) return;
-        return Wm.onUiEvent(cmd, { ...args, service: "new-workspace" });
+        return Wm.onUiEvent(cmd, {
+          ...args,
+          service: "new-workspace",
+          ...this._createFormOverrides(),
+        });
       }
 
       case "new-note": {
