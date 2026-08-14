@@ -54,7 +54,7 @@ running at least once, since it is the only one that proves the chaining.
 | 2 | Click **Continue** | Cutout on the topbar **New** button; coach reads "Click New to get started" |
 | 3 | Click **New** | The create flyout expands by itself; cutout narrows to the **Workspace** row; the sibling rows are greyed and unclickable |
 | 4 | Click **Workspace** | Cutout wraps the whole create-workspace card (rounded corners included, no bright band) |
-| 5 | Create a **team** workspace | Step 1 ENDS on the panel: it slides in, the cutout follows it as it animates, and the **Step 2 card** appears beside it — 2 of 3 segments lit, no primary button, "Waiting for your first invitation…", **Back** in brand purple, **Skip for now** beneath |
+| 5 | Create a **team** workspace | Step 1 ENDS on the panel: it slides in, the cutout follows it as it animates, and the **Step 2 card** appears beside it — 2 of 3 segments lit, the step title and description, no primary button, **Back** in brand purple, **Skip for now** beneath. NO "waiting for…" line |
 | 6 | Create an **external (share)** workspace instead | The **members panel** opens, NOT the secure-share dock — Step 1 ends on it exactly as case 5 does, and Step 2 runs on it via Route A. This is the `post_override` at work |
 | 6a | Same, but check the dock never appears | No right-dock secure-share panel at any point, not even briefly — the override stops it being launched rather than closing it afterwards |
 | 7 | Create a **personal** workspace instead | No follow-up panel at all; Step 2 card immediately |
@@ -79,7 +79,7 @@ Reached from case 5. This panel *is* Step 2, so the card sits beside it rather t
 
 | # | Case | Expected |
 |---|---|---|
-| 17 | On the Step 2 card, click **Invite member** (paid plan) | Cutout moves off the topbar Invite button and onto the popup; the card stays under the topbar button and does not jump; "Waiting for your first invitation…" |
+| 17 | On the Step 2 card, click **Invite member** (paid plan) | Cutout moves off the topbar Invite button and onto the popup; the card stays under the topbar button and does not jump; the primary button goes, Back and Skip stay, and NO "waiting for…" line appears |
 | 18 | Open one of the popup's dropdowns (email suggestions, workspace search, role menu) | The hole GROWS to take the list in — no half-lit list hanging below the popup |
 | 19 | Send an invitation | Popup closes, confirmation replaces it, card steps aside, cutout follows onto the confirmation; dismissing it advances to **Step 3** |
 | 20 | Close the popup without sending | Back to the Step 2 card, retryable |
@@ -98,7 +98,7 @@ Reached from case 5. This panel *is* Step 2, so the card sits beside it rather t
 | 28 | Click **+ New** | Cutout narrows to **From device**; the other dropdown rows are greyed |
 | 29 | Click **From device**, pick a file | OS picker opens; progress window appears with the cutout on it and the coach above it (never over the rows) |
 | 30 | Wait for the upload to finish | Cutout moves to the files panel with the new file visible; coach's **Next** becomes enabled |
-| 31 | Click that **Next** | The workspace closes by itself, the desk is back at Home, and the "Your workspace is ready" modal appears over a single-depth dim |
+| 31 | Click that **Next** | The workspace closes by itself, the desk is back at Home, and the closing modal appears over a single-depth dim: green check chip, **Congratulations!**, "You have activated your workspace. Welcome to drumee", one **Back to home** button |
 | 32 | Click **Back to home** | Everything disappears; desk is usable; no invisible blocker over it (click a sidebar row to confirm) |
 | 33 | Upload several files at once | The last beat is reached on the first file, but **Next** stays disabled and greyed until the whole batch is done |
 | 34 | Cancel or fail one file in the batch | Coach switches to the "Some files didn't upload" line; **Next** disabled |
@@ -136,7 +136,7 @@ Reached from case 5. This panel *is* Step 2, so the card sits beside it rather t
 | 49a | The same account loaded with `?activate=1` | The opposite: activation runs and the reward flow stands down, so the flag is never swallowed |
 | 50 | Resize the window during Step 2 and either walkthrough | Cutout and coach re-measure and stay on target; the Step 2 card follows the topbar Invite button |
 | 51 | Narrow the viewport below 768px | Card and modal take the mobile gutter and stay centred, whatever the step measured |
-| 52 | Reach the closing modal having pressed **Skip for now** | It appears normally — Step 3 is the only step this flow insists on, so a run with no invitation still completes |
+| 52 | Reach the closing modal having pressed **Skip for now** | It appears normally, with the same copy — Step 3 is the only step this flow insists on, so a run with no invitation still completes, and the copy deliberately does not claim one was sent |
 
 ## Regression cases for the shared-lib extraction
 

@@ -7,10 +7,21 @@
  * Step 1 has a single full-width primary button and no Back — nothing precedes
  * it. Steps 2 and 3 pair Back with their primary action.
  *
- * The `*_waiting` variants render the same card minus the primary button, plus
- * a hint line: the user has been handed off to a real surface (today only Step 2
- * has one — the invite popup or the members panel). Every waiting state keeps
- * Back, so a user who changes their mind is never trapped.
+ * The `*_waiting` variants render the same card minus the primary button: the
+ * user has been handed off to a real surface (today only Step 2 has one — the
+ * invite popup or the members panel), so the card has nothing to offer until
+ * they are done with it. Every waiting state keeps Back.
+ *
+ * They carried a "Waiting for your first invitation…" line until it was dropped:
+ * the surface the user is working is right there beside the card, so narrating
+ * that the flow is waiting on it told them what they could already see. What is
+ * left still reads as a step in progress — the step title, its description, and
+ * the controls that remain live.
+ *
+ * `ACTIVATE_WS_WAITING_INVITE` and `ACTIVATE_WS_WAITING_UPLOAD` are still defined
+ * in the locale files and are deliberately left there, unreferenced: they cost
+ * nothing, they are already translated, and putting the line back is then a
+ * one-line change here rather than a round trip through seven locale files.
  *
  * STEP 2 ALSO CARRIES A SKIP, in both its variants, and it is the one control
  * this flow has that reward-flow does not. Inviting is the single step of the
@@ -67,19 +78,6 @@ const STEPS = {
 /** The number of segments the progress bar draws — one per card step. Derived
  *  from the table above so adding a step cannot leave the bar behind. */
 const SEGMENTS = Object.keys(STEPS).length;
-
-/**
- * Hint shown while a step is waiting on a surface it handed the user to. Keyed
- * by the full state name, and carrying an entry for every `_waiting` state the
- * flow could ever name — including step3's, which nothing reaches today, since a
- * missing entry here would throw rather than degrade.
- */
-const WAITING_HINT = {
-  step2_waiting: () => LOCALE.ACTIVATE_WS_WAITING_INVITE
-    || "Waiting for your first invitation…",
-  step3_waiting: () => LOCALE.ACTIVATE_WS_WAITING_UPLOAD
-    || "Waiting for your first upload…",
-};
 
 /** The step's config. `step` may carry a `_waiting` or `_guide` suffix; no card
  *  renders in a guide state, but the cutout resolves its service through here,
@@ -154,12 +152,6 @@ module.exports = function stepCard(ui) {
       }),
       Skeletons.Note({ className: `${pfx}__title`, content: cfg.title() }),
       Skeletons.Note({ className: `${pfx}__desc`, content: cfg.desc() }),
-      waiting
-        ? Skeletons.Note({
-          className: `${pfx}__waiting`,
-          content: (WAITING_HINT[step] || (() => ""))(),
-        })
-        : null,
       Skeletons.Box.X({ className: `${pfx}__footer`, kids: footerKids }),
       // Below the footer, in both variants of the step that offers it.
       cfg.skip

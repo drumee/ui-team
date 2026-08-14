@@ -48,11 +48,11 @@ function iconHeader(ui, { ico, icoClass }) {
 /**
  * The closing card.
  *
- * Both steps are done and the workspace has just been handed back at Home, so
- * this is the moment to say what the user now has rather than to congratulate
- * them on finishing a walkthrough. Nothing was granted or claimed here — the
- * workspace and the file are the whole outcome — so the copy points at those
- * and gets out of the way.
+ * Every step is done and the workspace has just been handed back at Home. The
+ * copy congratulates rather than inventories: it deliberately does not list what
+ * the user now has, because with Step 2 skippable that list is not the same for
+ * every run — someone can arrive here having created a workspace and uploaded a
+ * file but never invited anyone.
  */
 function doneModal(ui) {
   const pfx = ui.fig.family;
@@ -65,11 +65,11 @@ function doneModal(ui) {
       ico: "checked-circle",
       icoClass: `${pfx}__chip--success`,
     }),
-    title: LOCALE.ACTIVATE_WS_DONE_TITLE || "Your workspace is ready",
+    title: LOCALE.ACTIVATE_WS_DONE_TITLE || "Congratulations!",
     body: Skeletons.Note({
       className: `${pfx}__desc`,
       content: LOCALE.ACTIVATE_WS_DONE_DESC
-        || "Your first file is safe in your workspace. Invite your team whenever you're ready.",
+        || "You have activated your workspace. Welcome to drumee",
     }),
     footer: [
       Skeletons.Note({

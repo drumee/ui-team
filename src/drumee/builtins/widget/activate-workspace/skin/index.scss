@@ -428,12 +428,6 @@ $success-soft: rgba(46, 179, 122, 0.14);
     color: var(--normal-fg-20);
   }
 
-  &__waiting {
-    font-size: 13px;
-    font-style: italic;
-    color: $accent;
-  }
-
   &__footer {
     width: 100%;
     gap: 12px;

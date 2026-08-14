@@ -356,6 +356,13 @@ much larger change and only worth it for cross-widget reporting.
 **Copy is English-only.** `ACTIVATE_WS_*` keys are added to `locale/en.json`
 only; the other six locales fall back to English until they are translated.
 
+**Two locale keys are defined but unused.** `ACTIVATE_WS_WAITING_INVITE` and
+`ACTIVATE_WS_WAITING_UPLOAD` backed a "waiting for…" line on the `_waiting` card
+variants, dropped because the surface the user is working sits right beside the
+card — the line narrated what they could already see. The keys are left in place
+on purpose: putting the line back is then one line in `skeleton/card.js` rather
+than a round trip through the locale files.
+
 **Step 3 is the only mandatory second step**, because Step 2 carries a Skip. See
 "Step 2 is skippable" above.
 
