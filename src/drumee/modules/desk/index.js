@@ -2238,6 +2238,44 @@ class desk_module extends LetcBox {
           wm_unique_id: "promo_launch30",
         }, { explicit: 1, singleton: 1 });
       }
+      // The trial-ended gate. Unlike the two above it is not one-shot: it
+      // returns on every home mount until `ended_seen` says the owner answered
+      // it, because losing Team without ever being asked is the outcome this
+      // exists to prevent. promoExpiryWorker has already cleared the
+      // entitlement by now, so this reports a completed change rather than
+      // proposing one.
+      if (surface === "home" && state.state === "claimed_expired" && !state.ended_seen) {
+        try {
+          await Kind.waitFor("promo_launch30");
+        } catch (e) {
+          return state;
+        }
+        // Whether Free still fits decides the second screen. Read here rather
+        // than in the widget so the gate opens with the answer already in
+        // hand — a modal that has to fetch before it can respond to a click
+        // is a modal that stalls on the click.
+        // Through libs/over-limit rather than a private fetch: it owns the
+        // enforcement flag, the shared cache and the CHANGED broadcast, so the
+        // banner and this gate stay on one version of the truth. It keeps the
+        // last known state on failure and never invents a lock.
+        let overLimit = null;
+        try {
+          const ol = (await require("libs/over-limit").refresh(this)) || {};
+          const flags = ol.flags || {};
+          if (ol.state && ol.state !== "ok" && (flags.storage || flags.seats)) {
+            overLimit = { storage: flags.storage ? 1 : 0, seats: flags.seats ? 1 : 0 };
+          }
+        } catch (e) { /* unknown -> treat as fitting; the banner still shows */ }
+        Wm.launch({
+          kind: "promo_launch30",
+          surface,
+          state: "ended",
+          trial_ends_at: state.trial_ends_at,
+          over_limit: overLimit,
+          hub_id: Visitor.id,
+          wm_unique_id: "promo_launch30",
+        }, { explicit: 1, singleton: 1 });
+      }
       return state;
     } finally {
       this._promoLaunch30InFlight = false;
