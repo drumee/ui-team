@@ -331,9 +331,25 @@ class __promo_launch30 extends LetcBox {
     this._render();
   }
 
-  /** Straight into the existing over-limit resolution flow. */
+  /**
+   * Into the existing over-limit resolution flow — by whichever door this
+   * plan actually has.
+   *
+   * The Storage console is the natural destination, and it is the one place
+   * this modal must NOT send a lapsed trial by default: the org is on Free by
+   * the time anyone sees this screen, and Free has no Admin Console
+   * (needsAdminConsoleUpgrade sends it to the upsell instead). Offering
+   * "See what's locked" and landing on a paywall is worse than not offering
+   * it. Home is where their files are, and deleting from there is what
+   * actually frees room — the same fallback the over-limit popup uses.
+   */
   _endResolve() {
+    const { needsAdminConsoleUpgrade } = require("libs/billing");
     this._close();
+    if (needsAdminConsoleUpgrade()) {
+      RADIO_BROADCAST.trigger("desk:open-home");
+      return;
+    }
     RADIO_BROADCAST.trigger("desk:open-admin-console", { tab: "storage" });
   }
 
