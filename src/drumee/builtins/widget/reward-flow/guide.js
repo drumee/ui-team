@@ -10,15 +10,17 @@
  *   3 form  → spotlight the create-workspace modal         → user submits it
  *             (form-folder)
  *   4 perm  → optional: after create, spotlight the follow-up permission panel
- *             that opens for internal (permission-restricted) / external
- *             (window-secure-share) workspaces → user closes it → done
+ *             (permission-restricted) that opens for BOTH hub types, internal
+ *             and external alike → user closes it → done
  *
- * The INTERNAL branch of that last sub-step belongs to Step 2, not Step 1: it
- * is the panel that invites members. So the guide does not walk it at all — it
- * hands the flow over the moment that panel appears (_checkInvitePanel) and
- * the orchestrator takes it from there, showing the Step 2 card while the user
- * works the panel. Only the external (secure-share) branch still runs the perm
- * phase through to _complete.
+ * That last sub-step belongs to Step 2, not Step 1: it is the panel that
+ * invites members. So the guide does not walk it at all — it hands the flow
+ * over the moment that panel appears (_checkInvitePanel) and the orchestrator
+ * takes it from there, showing the Step 2 card while the user works the panel.
+ * Since media_form routes team AND share creation to that same panel, the
+ * handover is now the normal path for both, and _complete is left for the cases
+ * that never produce one: the safety timeout, or a secure-share dock opened by
+ * some route other than creation.
  *
  * Back steps backwards through these; see back().
  *
@@ -48,13 +50,18 @@ const SEL = {
   // border-radius and shadow; __main is an inner box with no rounding. Spotlight
   // the card so the cutout wraps exactly what the user sees.
   formCard: ".form-folder__ui",
-  // Follow-up permission panels: internal (team) → permission_restricted fed
-  // into the wrapper-modal; external (share) → window_secure_share window.
+  // Follow-up permission panel. BOTH hub types (team and share) now open
+  // permission_restricted, fed into the wrapper-modal by media_form. The
+  // secure-share selector is kept alongside it: creation no longer opens that
+  // dock, but it is still how a share dock opened any other way would be
+  // spotlighted rather than left dark under the overlay.
   permPanels: ".permission-restricted__main, .window-secure-share__main",
-  // External (share) branch only — used to pick the perm-phase coach text.
+  // A secure-share dock, whatever opened it — used to pick the perm-phase coach
+  // text. No longer reached from creation (see permPanels).
   permShare: ".window-secure-share__main",
-  // Internal (team) branch only. This panel is where members are invited, so
-  // the flow counts it as Step 2 — see the handoff in _resolveSub.
+  // The members panel, reached by team AND share creation. This panel is where
+  // members are invited, so the flow counts it as Step 2 — see the handoff in
+  // _resolveSub.
   permInternal: ".permission-restricted__main",
   // The confirmation shown after an action inside those panels — e.g. sending
   // an invitation in permission_restricted pops Wm.alert → window_info, which
@@ -68,15 +75,21 @@ const SEL = {
 // Safety net for the perm phase: team/share always open a panel, but if one
 // never appears (unexpected), don't wedge the guide — complete after this.
 //
-// Two budgets, because the branches arrive by completely different routes and
-// one budget cannot serve both. The internal panel is FED into the shared
-// wrapper-modal in the same tick as the broadcast that starts this phase
-// (media_form → parent.feed), so it is there almost immediately. The external
-// dock is a WINDOW opened with Wm.launch on a LAZILY IMPORTED kind (seeds.js
-// window_secure_share → dynamic import): its chunk has to be fetched and
-// mounted before anything matches. On the short budget the phase could
-// complete first — Step 1 ended, the flow moved on to Step 2, and the dock
-// arrived to no spotlight and no coach at all.
+// Two budgets. They date from when the branches arrived by completely
+// different routes: the internal panel FED into the shared wrapper-modal in the
+// same tick as the broadcast that starts this phase (media_form →
+// parent.feed), while the external dock was a WINDOW opened with Wm.launch,
+// whose chunk had to be fetched and mounted before anything matched. On the
+// short budget the phase could complete first — Step 1 ended, the flow moved on
+// to Step 2, and the dock arrived to no spotlight and no coach at all.
+//
+// Both hub types now take the wrapper-modal route, so the split no longer
+// tracks a real difference in arrival time. Kept as-is deliberately: the panel
+// kind is lazily imported either way (seeds.js permission_restricted → dynamic
+// import), so the long budget is headroom for a slow chunk fetch, and these are
+// only safety nets — _resolveSub cancels the timer the moment a panel is
+// actually seen. Erring long costs a late advance; erring short costs the
+// sub-step never being shown at all.
 const PERM_TIMEOUT_MS = 2500;
 const PERM_TIMEOUT_WINDOW_MS = 20000;
 const ORDER = { add: 1, menu: 2, form: 3, perm: 4 };
@@ -97,10 +110,13 @@ function tooltipFor(sub) {
   }
 }
 
-/** Perm-phase instruction — one uniform line (no separate heading), specific to
- *  the branch: internal (permission_restricted) vs external (secure_share).
- *  Not consulted once a confirmation (window_info) sits on top — that card
- *  speaks for itself, so _coachFor spotlights it with no coach at all. */
+/** Perm-phase instruction — one uniform line (no separate heading), picked from
+ *  whichever panel is actually on screen: a secure-share dock (external wording)
+ *  vs the members panel (internal wording). Creation reaches only the members
+ *  panel now, for team and share alike, so the external wording is reserved for
+ *  a dock opened some other way. Not consulted once a confirmation
+ *  (window_info) sits on top — that card speaks for itself, so _coachFor
+ *  spotlights it with no coach at all. */
 function permText() {
   if (firstVisible(SEL.permShare)) {
     return LOCALE.REWARD_FLOW_GUIDE_PERM_EXTERNAL
@@ -142,7 +158,9 @@ class RewardGuide extends GuideCore {
    *   safety budget (see the two constants). ONLY "private" takes the short
    *   one: an area we do not recognise waits the long budget, since the cost of
    *   waiting too long is a late advance, while the cost of waiting too little
-   *   is the sub-step never being shown at all.
+   *   is the sub-step never being shown at all. Both areas now open the same
+   *   panel by the same route, so "share" keeping the long budget is headroom
+   *   rather than a different arrival path — see the note on the constants.
    */
   onWorkspaceCreated(area) {
     this._created = true;
@@ -213,8 +231,8 @@ class RewardGuide extends GuideCore {
   }
 
   /**
-   * Hand the flow over to Step 2 the first time the INTERNAL (team) panel is on
-   * screen: inviting members is what Step 2 asks for, so that panel is Step 2's
+   * Hand the flow over to Step 2 the first time the members panel is on screen:
+   * inviting members is what Step 2 asks for, so that panel is Step 2's
    * surface, not a tail of Step 1 (see index.js onInvitePanel). The orchestrator
    * stops this guide as it takes over, which is why nothing here has to unwind:
    * stop() resets every flag.
@@ -223,8 +241,9 @@ class RewardGuide extends GuideCore {
    * teardown, and the invitation's confirmation REPLACES the panel in the
    * wrapper-modal, so a second call must not fire.
    *
-   * The external branch never matches this selector and so never fires: it runs
-   * the perm phase to completion the way it always did.
+   * Fires for BOTH hub types now. External (share) creation used to open a
+   * secure-share dock, which never matched this selector, so it ran the perm
+   * phase to completion instead; media_form now ends it on this same panel.
    */
   _checkInvitePanel() {
     if (this._invitePanel) return;
@@ -322,8 +341,10 @@ class RewardGuide extends GuideCore {
   }
 
   /** Perm phase done (panel closed, or safety timeout) → advance to Step 2.
-   *  Reached by the external branch only: the internal one left this guide when
-   *  its panel appeared (_checkInvitePanel). */
+   *  Normally NOT reached any more: both hub types leave this guide the moment
+   *  the members panel appears (_checkInvitePanel). What is left for it is the
+   *  safety timeout when no panel ever shows, and a secure-share dock opened by
+   *  some route other than creation. */
   _complete() {
     if (this._completed) return;
     this._completed = true;
