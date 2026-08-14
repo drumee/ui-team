@@ -175,21 +175,30 @@ function isPaidPlan(plan) {
 }
 
 /**
- * Free plan: solo only — no Admin Console, no member invites.
+ * Is this account solo-locked — no member invites at all?
  *
- * Do NOT treat a missing/unloaded `quota.seat` as Free (that would block Team
- * invites during bootstrap). Require an explicit Free plan name or seat===0.
+ * Read from the SEAT NUMBER, never from the plan name. It used to return true
+ * for anything named "free", which made the block a property of the label
+ * rather than of the entitlement: the 2026-08-14 pricing restructure gives
+ * Free 3 seats, and a name-keyed test would have kept every Free account
+ * blocked no matter what the catalog said.
+ *
+ * seat is a TOTAL that includes the owner, so "solo" is exactly seat 1 (the
+ * owner and nobody else) or 0 (the old Free value, which doubled as "cannot
+ * invite" before seats were a real number on this tier).
+ *
+ * Do NOT treat a missing / not-yet-loaded seat as solo — that would block Team
+ * invites during bootstrap, before Visitor.quota() has been filled in. Unknown
+ * fails OPEN here; the server refuses anything the client wrongly allows.
  */
 function isFreeSoloPlan() {
   const quota =
     (typeof Visitor !== "undefined" && Visitor && Visitor.quota
       ? Visitor.quota()
       : null) || {};
-  const plan = quota.plan;
-  if (plan != null && String(plan).trim() !== "" && planKey(plan) === "free") {
-    return true;
-  }
-  return quota.seat === 0 || quota.seat === "0";
+  if (quota.seat == null || quota.seat === "") return false;
+  const seat = parseInt(quota.seat, 10);
+  return Number.isFinite(seat) && seat <= 1;
 }
 
 /**
@@ -341,7 +350,11 @@ async function checkOrgSeatLimit(view) {
  */
 function showFreeSoloLimit() {
   if (typeof Wm === "undefined" || !Wm || !Wm.openQuotaExceeded) return;
-  return Wm.openQuotaExceeded({ limit: "seat", free: 1 });
+  // `free` is how many seats are still spendable, and reaching here means
+  // none — the caller only calls this when isFreeSoloPlan() said the account
+  // is solo-locked. It was hard-coded to 1, which read as "you have one left"
+  // on the very screen that refuses to let you spend it.
+  return Wm.openQuotaExceeded({ limit: "seat", free: 0 });
 }
 
 function canShowSeatLimitPopup() {

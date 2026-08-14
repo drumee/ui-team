@@ -2286,6 +2286,7 @@
   "SUPPORT_PRIORITY_SLA": "Priority + SLA",
   "SUPPORT_DEDICATED_SLA": "Dedicated SLA",
   "UP_TO_10": "Up to 10",
+  "UP_TO_3": "Up to 3",
   "FEAT_DEPLOYMENT": "Deployment",
   "FEAT_API_ACCESS": "API access",
   "FEAT_SSO_SAML": "SSO / SAML",

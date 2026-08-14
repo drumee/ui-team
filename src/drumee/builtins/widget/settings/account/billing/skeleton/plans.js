@@ -58,7 +58,9 @@ function getOptions(ui, cycle = "monthly") {
       subText: LOCALE.PLAN_FREE_DESC,
       features: [
         row("1", LOCALE.FEAT_UNIT_HUB),
-        row(LOCALE.ONE_SOLO, LOCALE.FEAT_UNIT_MEMBER),
+        // 3, not "1 (solo)" — the 2026-08-14 restructure opens invites on the
+        // entry tiers. Counts the owner, like every other tier's number.
+        row(LOCALE.UP_TO_3, LOCALE.FEAT_UNIT_MEMBER),
         row("5 GB", LOCALE.FEAT_UNIT_STORAGE),
         row(LOCALE.SUPPORT_COMMUNITY, LOCALE.FEAT_UNIT_SUPPORT),
       ],
@@ -75,7 +77,7 @@ function getOptions(ui, cycle = "monthly") {
       subText: LOCALE.PLAN_PRO_DESC,
       features: [
         row("1", LOCALE.FEAT_UNIT_HUB),
-        row("1", LOCALE.FEAT_UNIT_MEMBER),
+        row(LOCALE.UP_TO_3, LOCALE.FEAT_UNIT_MEMBER),
         row(LOCALE.UNLIMITED, LOCALE.FEAT_UNIT_GUESTS),
         row("50 GB", LOCALE.FEAT_UNIT_STORAGE),
         row(LOCALE.FEAT_UNLIMITED_LINKS),
