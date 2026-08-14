@@ -72,24 +72,6 @@ $success-soft: rgba(46, 179, 122, 0.14);
     z-index: 1000000;
   }
 
-  // The "Leave setup?" guard is up. It guards surfaces that live in the
-  // wrapper-modal (--z-index-modal, 100000) — the guided create form — and the
-  // root owns the flow's stacking context, so no z-index on the host inside it
-  // can climb over them on its own. Lift the root for as long as the guard is
-  // showing; set imperatively by _markRootDrop, so raising the guard never
-  // re-renders the flow. Last, so it wins over both lifts above at equal
-  // specificity.
-  &__root[data-drop="1"] {
-    z-index: 1000000;
-  }
-
-  // …and while the guard is up, it supplies the only dim: the modal host's own
-  // backdrop. The flow's goes off, because two stacked dims are not one colour —
-  // everywhere the flow's does not reach reads a shade lighter than the rest,
-  // which is the hole its cutout punches and the card it paints behind.
-  &__root[data-drop="1"] &__vignette { background-color: transparent; }
-  &__root[data-drop="1"] &__cutout { box-shadow: none; }
-
   &__vignette {
     position: absolute;
     inset: 0;
@@ -130,9 +112,10 @@ $success-soft: rgba(46, 179, 122, 0.14);
   // Clickable frame around the spotlight hole. Transparent — the cutout above
   // provides the dim — but hit-testable everywhere EXCEPT the hole, which is
   // punched out with the same --cut-* vars the cutout uses (a self-intersecting
-  // polygon = evenodd hole). Clicking the frame asks "Leave setup?"; the
-  // spotlighted target stays clickable through the hole. Sits below the coach
-  // so the coach's own controls win.
+  // polygon = evenodd hole). Clicking the frame is ABSORBED — the flow offers no
+  // way out, so it answers with a pulse on the card and nothing else — while the
+  // spotlighted target stays clickable through the hole. Sits below the coach so
+  // the coach's own controls win.
   &__guide-scrim {
     position: fixed;
     inset: 0;
@@ -155,24 +138,6 @@ $success-soft: rgba(46, 179, 122, 0.14);
     position: absolute;
     inset: 0;
     pointer-events: none;
-  }
-
-  // Host for the "Leave setup?" guard, which cannot use the wrapper-modal while
-  // the walkthrough has the create form in it. Inert until populated; then it
-  // dims the whole layer and centres the modal above the coach so only it is
-  // interactive (whatever it guards stays untouched underneath).
-  &__drop-modal {
-    position: fixed;
-    inset: 0;
-    z-index: 10030;
-    align-items: center;
-    justify-content: center;
-    pointer-events: none;
-
-    &[data-open="1"] {
-      pointer-events: auto;
-      background-color: var(--overlay-bg, rgba(0, 0, 0, 0.4));
-    }
   }
 
   // ───────── coach tooltip — styled after window_confirm ─────────
@@ -381,6 +346,23 @@ $success-soft: rgba(46, 179, 122, 0.14);
     }
   }
 
+  // "I saw that, and the answer is no." The flow cannot be left, so a click on
+  // the dim, a Back press and a refresh keystroke all end in nothing happening —
+  // and nothing happening is indistinguishable from a broken page. A short,
+  // small shake is the whole reply: enough to attribute the silence to the flow
+  // rather than to a dead click, without a dialog between the user and the step.
+  //
+  // Deliberately not a colour change or a border flash: this is not an error, and
+  // the user has done nothing wrong.
+  @keyframes activate-workspace-nudge {
+    0%, 100% { transform: translateX(0); }
+    15% { transform: translateX(-6px); }
+    30% { transform: translateX(5px); }
+    45% { transform: translateX(-3px); }
+    60% { transform: translateX(2px); }
+    75% { transform: translateX(-1px); }
+  }
+
   &__card {
     font-family: var(--font-main);
     animation: activate-workspace-card-in 220ms ease both;
@@ -393,6 +375,14 @@ $success-soft: rgba(46, 179, 122, 0.14);
     border-radius: 6px;
     background-color: var(--normal-bg);
     box-shadow: 0 18px 48px rgba(0, 0, 0, 0.22);
+
+    // Set imperatively by nudge() and cleared shortly after, so a second
+    // swallowed gesture pulses again. Overrides the entry animation rather than
+    // composing with it: a card that has just appeared has no swallowed gesture
+    // to acknowledge, so the two never want to run together.
+    &[data-nudge="1"] {
+      animation: activate-workspace-nudge 400ms ease both;
+    }
   }
 
   &__progress {
@@ -573,30 +563,14 @@ $success-soft: rgba(46, 179, 122, 0.14);
     color: var(--green-400, #10b667);
   }
 
-  // Branded drumee logo + wordmark header (the guard) — same lockup as the
-  // coach header, sized for the modal.
-  &__modal-brand {
-    align-items: flex-end;
-    justify-content: center;
-    gap: 8px;
-  }
-
-  &__modal-brand-logo {
-    width: 32px;
-    height: 32px;
-    color: var(--primary-50);
-  }
-
-  &__modal-brand-name {
-    font-size: 20px;
-    font-weight: 700;
-    line-height: 1;
-    color: var(--normal-fg);
-  }
-
-  // Respect a reduced-motion preference: keep the step change instant.
+  // Respect a reduced-motion preference: keep the step change instant. The nudge
+  // goes too, which costs the only acknowledgement a swallowed gesture gets —
+  // accepted, because a shake is exactly the kind of motion this preference is
+  // set to avoid, and the alternative would be inventing a second, static
+  // acknowledgement for one media query.
   @media (prefers-reduced-motion: reduce) {
-    &__card { animation: none; }
+    &__card,
+    &__card[data-nudge="1"] { animation: none; }
     &__cutout { transition: none; }
   }
 

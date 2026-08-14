@@ -1,15 +1,21 @@
 /**
- * Activation flow modals. Both are fed into Wm.__wrapperModal, which supplies
+ * The activation flow's closing card, fed into Wm.__wrapperModal, which supplies
  * the backdrop (flattened to the flow's own dim — see index.js _openModal).
  *
- * Pure functions of `ui` — they read only fig.family and use `ui` as the
+ * One modal, where there were two: the "Leave setup?" abandon guard lived here
+ * until the flow became force-completed, and there is now no state in which it
+ * offers a way out. The `shell` split it shared is kept — it is what stops these
+ * screens growing a parallel `__modal-*` stylesheet — and `iconHeader` is passed
+ * in rather than inlined for the same reason.
+ *
+ * Pure function of `ui` — it reads only fig.family and uses `ui` as the
  * uiHandler so clicks route back to the orchestrator.
  */
 
 /** Shared modal shell: header → title → description → footer buttons.
- *  `header` is the top block: either the branded drumee logo (the guard) or a
- *  single status icon (the closing card). Passing it pre-built keeps this shell
- *  generic.
+ *  `header` is the top block — today always the closing card's status icon, but
+ *  passed in rather than built here, which is what kept this shell generic when
+ *  the abandon guard shared it.
  *
  *  It IS a step card — same `__card` class, same `__title` / `__desc` /
  *  `__footer` inside. These are the last screens of the flow the cards run, so
@@ -36,54 +42,6 @@ function iconHeader(ui, { ico, icoClass }) {
   return Skeletons.Box.Y({
     className: `${pfx}__chip ${icoClass}`,
     kids: [Skeletons.Image.Svg({ className: `${pfx}__chip-ico`, ico })],
-  });
-}
-
-/** Branded drumee logo + wordmark — same lockup as the coach header. */
-function brandHeader(ui) {
-  const pfx = ui.fig.family;
-  return Skeletons.Box.X({
-    className: `${pfx}__modal-brand`,
-    kids: [
-      Skeletons.Image.Svg({ className: `${pfx}__modal-brand-logo`, ico: "logo-upload" }),
-      Skeletons.Note({ className: `${pfx}__modal-brand-name`, content: "drumee" }),
-    ],
-  });
-}
-
-/**
- * The abandon guard, raised by a click on the dimmed backdrop.
- *
- * It asks rather than assumes, because that click is as often a miss as a
- * decision — the walkthrough covers the screen, and the thing the user meant to
- * press is frequently just outside the hole. What it must not do is plead:
- * there is no prize here to talk anyone out of forfeiting, so it states what
- * leaving costs (the walkthrough, nothing else) and lets them go.
- */
-function dropModal(ui) {
-  const pfx = ui.fig.family;
-  return shell(ui, {
-    header: brandHeader(ui),
-    title: LOCALE.ACTIVATE_WS_DROP_TITLE || "Leave setup?",
-    body: Skeletons.Note({
-      className: `${pfx}__desc`,
-      content: LOCALE.ACTIVATE_WS_DROP_DESC
-        || "You can set your workspace up later, but this walkthrough won't come back.",
-    }),
-    footer: [
-      Skeletons.Note({
-        className: `${pfx}__btn ${pfx}__btn--ghost`,
-        content: LOCALE.ACTIVATE_WS_DROP_LEAVE || "Leave setup",
-        service: "activate-drop-leave",
-        uiHandler: [ui],
-      }),
-      Skeletons.Note({
-        className: `${pfx}__btn ${pfx}__btn--primary`,
-        content: LOCALE.ACTIVATE_WS_CONTINUE || "Continue",
-        service: "activate-drop-stay",
-        uiHandler: [ui],
-      }),
-    ],
   });
 }
 
@@ -125,4 +83,4 @@ function doneModal(ui) {
   });
 }
 
-module.exports = { dropModal, doneModal };
+module.exports = { doneModal };

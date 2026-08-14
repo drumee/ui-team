@@ -72,8 +72,8 @@ Reached from case 5. This panel *is* Step 2, so the card sits beside it rather t
 | 12 | Close the panel with nothing sent | The **Step 2 card** with its **Invite member** button. NOT a rewind to Step 1's create form — that is where reward-flow goes, and this flow deliberately does not |
 | 13 | Press the card's **Back** while the panel is open | The panel closes and lands on the Step 2 card, exactly as case 12 — one exit, two ways of asking for it |
 | 14 | Press **Skip for now** while the panel is open | Panel closes, flow advances to **Step 3**, 3 of 3 segments lit |
-| 15 | Click beside the panel (the dimmed area) | "Leave setup?" modal above the panel; **Continue** leaves the panel exactly as it was |
-| 16 | Click the card's **Back**/**Skip** where the modal backdrop covers the card | Still works — the backdrop guard routes a click by geometry to the control underneath rather than answering with the abandon prompt |
+| 15 | Click beside the panel (the dimmed area) | Nothing dismisses. The card pulses once; the panel is exactly as it was |
+| 16 | Click the card's **Back**/**Skip** where the modal backdrop covers the card | Still works — the backdrop listener routes a click by geometry to the control underneath rather than absorbing it. Matters more than it used to: Skip is now the only way past Step 2 for an account that cannot invite |
 
 ## Step 2, Route B — the invite popup (from the card)
 
@@ -83,10 +83,10 @@ Reached from case 5. This panel *is* Step 2, so the card sits beside it rather t
 | 18 | Open one of the popup's dropdowns (email suggestions, workspace search, role menu) | The hole GROWS to take the list in — no half-lit list hanging below the popup |
 | 19 | Send an invitation | Popup closes, confirmation replaces it, card steps aside, cutout follows onto the confirmation; dismissing it advances to **Step 3** |
 | 20 | Close the popup without sending | Back to the Step 2 card, retryable |
-| 21 | Click beside the popup | "Leave setup?"; **Continue** returns to the popup **with the typed emails intact** — the guard renders in the flow's own root, not the popup's host |
+| 21 | Click beside the popup | Nothing dismisses; the card pulses. The popup keeps **the typed emails** — the click is absorbed rather than replacing anything |
 | 22 | **Free-solo account** (fresh signup): click **Invite member** | The desk's plan-limit notice appears and the flow STAYS on the Step 2 card — it must not enter the waiting state for a popup that will never open |
 | 23 | Same account, then **Skip for now** | Advances to Step 3. This is the path most real onboarding users will take |
-| 24 | **Leave setup** while a Step 2 surface is open | The panel/popup closes with the flow; no leftover full-viewport blocker (click a sidebar row to confirm) |
+| 24 | Hammer the backdrop beside the popup ten times | Ten pulses, no dismissal, no drift — the pulse re-arms each press rather than only firing once |
 
 ## Step 3 — upload the first file
 
@@ -106,20 +106,27 @@ Reached from case 5. This panel *is* Step 2, so the card sits beside it rather t
 | 36 | Retry the failed file successfully instead | Coach returns to the normal wording and **Next** enables — the failure is read live, not latched |
 | 37 | **Back** at any beat of cases 26–30 | Leaves the walkthrough for the Step 3 card; the workspace stays open; **Open workspace** re-enters the walkthrough from the top |
 | 38 | **Back** on the Step 3 card | The workspace CLOSES and the flow lands on the Step 2 card, whose invite popup needs the desk topbar visible |
-| 39 | Delete the workspace in another tab, then click **Open workspace** | After ~4 s the flow returns to the Step 3 card so the button can be pressed again (the descriptor is kept — there is no topbar-upload fallback here) |
+| 39 | Delete the workspace in another tab, then click **Open workspace** | The flow ENDS and releases the desk. A card whose only button cannot act would be a trap now that no exit is offered, so a run that cannot be completed stops instead |
+| 39a | Same, but the workspace still exists and merely fails to mount | After ~4 s the flow returns to the Step 3 card so the button can be pressed again (the descriptor is kept — there is no topbar-upload fallback here) |
 | 40 | Reach Step 3 in a workspace where the user is view-only | The **+ New** pill never appears (permission-gated `data-visible`); after ~4 s the flow returns to the Step 3 card |
 
 ## Across the whole flow
 
 | # | Case | Expected |
 |---|---|---|
-| 41 | Click the dimmed area during either walkthrough | "Leave setup?" modal, above the create form / workspace window; **Continue** resumes exactly where it was, with anything typed in the form intact |
-| 42 | Click the dimmed area on any card | Same modal |
-| 43 | **Leave setup** during the Step 1 walkthrough with the create form open | Form closes with the flow; no leftover blocker |
-| 44 | **Leave setup** during the Step 1 walkthrough on the external branch | The secure-share dock closes too |
-| 45 | **Leave setup** during Step 3 | The workspace window and any progress window close; desk back at Home |
-| 46 | Press **F5** mid-flow | The page reloads with NO "Leave site?" prompt — the flow does not guard the browser — and does not come back. Any workspace already created is still there |
-| 47 | Press the browser **Back** button mid-flow | Navigates normally, no interception |
+| 41 | Click the dimmed area during either walkthrough | Absorbed. The card pulses, the create form keeps what was typed, the walkthrough stays on its sub-step. NO modal, no way out |
+| 42 | Click the dimmed area on any card | Same: pulse, nothing else |
+| 43 | Click desk chrome the current step does not point at (sidebar row, another topbar control) | Absorbed by the scrim — the flow owns the screen, so the desk cannot be operated around it |
+| 44 | Press **F5** / **Ctrl+R** / **Cmd+R** mid-flow | The page does NOT reload; the card pulses. Try each modifier combination |
+| 44a | Press **Ctrl+Shift+R** (hard reload) | Also blocked — same intent, same loss |
+| 44b | Type a workspace name containing **r** in the create form | The letter types normally. The guard runs in capture over the whole window, so this is the case that proves it is not eating ordinary keys |
+| 44c | Press **Ctrl+F5** | NOT blocked — the browser keeps that binding. Documented ceiling, not a regression |
+| 45 | Click the browser's **reload button** | NOT blocked, and it triggers case 47's native dialog instead. Nothing in a page can see that control |
+| 46 | Press the browser **Back** button mid-flow | Nothing happens: the URL does not change, the desk is not torn down, the card pulses. Press it repeatedly — the trap re-arms every time |
+| 46a | Press **Forward** after that | Also inert |
+| 46b | Complete the flow, then press **Back** | Normal navigation resumes — the guard hands its history entry back on finish, so the flow does not cost an extra Back press for the rest of the session |
+| 47 | Close the tab, or navigate away via the address bar | The browser's native "Leave site?" dialog appears. Choosing Leave still leaves — this is a deterrent, not a block, and the flow does not come back afterwards |
+| 47a | Same, but before interacting with the page at all | The dialog may NOT appear: browsers ignore `beforeunload` until the user has interacted. Expected |
 | 48 | Replay the tour from **Get help → Product Tour** on an established account | The activation flow does NOT appear when the tour ends |
 | 49 | A campaign user (`?utm_campaign=free-storage`) also eligible for the reward flow | Only the reward flow runs; activation stands down entirely |
 | 49b | **No flow running**: create a share workspace from the topbar New menu | The secure-share dock opens as it always did. The override is opt-in, so every ordinary creation path is untouched |

@@ -270,28 +270,64 @@ campaign funnel or burn one of its limited slots; there is no funnel here, no
 prize and no latch, so nothing about a forced run differs and the widget is
 never told it was forced.
 
-## Exits
+## Exits — the flow is force-completed
 
-The in-app guard is kept: clicking the dimmed backdrop — the vignette on a card,
-`__guide-scrim` during a walkthrough — raises "Leave setup?". That click is as
-often a miss as a decision, since the overlay covers the screen and the thing
-the user meant to press is often just outside the hole.
+**This reverses the earlier decision.** That one rested on "abandoning an
+onboarding walkthrough forfeits nothing, so a soft in-app guard is enough". The
+flow must now be finished, so the premise is gone and the exit surface is closed
+as far as a browser permits.
 
-`ExitGuard` and `beacon.js` are NOT ported. reward-flow traps F5, hijacks the
-Back button and raises the browser's native "Leave site?" dialog because
-abandoning it forfeits a capped prize the user is three clicks from claiming.
-Nothing is forfeit here, so the browser's own controls are left alone: a refresh
-mid-flow lands the user back on their desk with whatever they have already built
-still there. The beacon existed only to post a status the unload would otherwise
-cancel, and there is no status to post.
+**Nothing the flow itself offers.** The "Leave setup?" card is gone — modal,
+copy, locale keys, its part host and its skin. A click on the dim is absorbed and
+answered with a short pulse on the card (`nudge()`), which exists because
+nothing-happening is indistinguishable from a broken page. That absorption also
+does a second job: the vignette and `__guide-scrim` cover the viewport, so
+clicking desk chrome the current step does not point at is caught too, and the
+user cannot operate the desk around the flow.
 
-**Re-confirmed under the three-step shape.** This was decided on "nothing is
-forfeited by leaving an onboarding flow", which reinstating Step 2 does not
-change — if anything a skippable step makes the case stronger. The `step2_waiting`
-state does gain a guard of its own, but an in-app one: the backdrop beside the
-panel or popup raises the same "Leave setup?" card, and routes a click that
-landed on the card underneath to the control the user aimed at rather than
-answering with the prompt.
+**What the browser allows, which is the ceiling** (see `exit-guard.js`):
+
+| Gesture | Handling |
+|---|---|
+| F5 / Ctrl+R / Cmd+R (+Shift) | `keydown` in capture, `preventDefault` — blocked, no prompt |
+| Back / Forward | history sentinel pushed at start and pushed straight back on `popstate` — inert, the router never runs |
+| tab close, address bar, reload button | `beforeunload` → the browser's native dialog. A deterrent, not a block |
+| Ctrl+F5, killed process, OS crash | Out of reach. Nothing in a page sees them |
+
+Two consequences worth being explicit about. `beforeunload` is ignored entirely
+until the user has interacted with the page, so an untouched flow warns about
+nothing. And the guard is armed **unconditionally** rather than per-step, unlike
+reward-flow's — every step here is one the user must not leave, because none of
+them can be resumed.
+
+`beacon.js` stays dropped: there is still no funnel behind this flow, so nothing
+is written on the way out. Exit telemetry would be the obvious way to learn where
+users get stuck now that they cannot leave, and is a decision not yet taken.
+
+**A flow that cannot be left must not be able to dead-end**, which is why two
+states end it rather than stranding the user on an unusable desk: a run with no
+workspace descriptor (`onCreateGuideComplete`), and a Step 3 whose workspace no
+longer opens — previously a silent no-op, survivable only because the dim still
+offered a way out.
+
+One residual trap has no fix short of an escape hatch, and is accepted: **a user
+with no file to upload cannot satisfy Step 3, and can no longer leave either.**
+Step 2's Skip does not help — it advances *to* Step 3.
+
+### Tier 2 — not built
+
+Force-completion here means "hard to abandon in one sitting", not "guaranteed to
+finish". A crash, a killed tab or a user who never returns all get out, and
+nothing re-triggers the flow afterwards: it is chained to a product tour that runs
+once per signup, and no persisted state distinguishes an interrupted run from a
+completed one.
+
+Guaranteeing completion needs a persisted "not yet done" signal — server-side,
+since a client flag dies with the same crash that interrupted the flow — re-checked
+on home load the way `_maybeStartRewardFlow` checks `reward.get_state`, minus the
+slot machinery. It also needs a decision about what "not done" means for a user
+who never started, versus one interrupted mid-flow: they are the same absence of
+state today and would need different handling.
 
 ## What is not here
 
@@ -306,14 +342,14 @@ answering with the prompt.
 
 ## Accepted consequences
 
-**An abandoned run is not retried.** Leaving the flow — through the guard, or by
-reloading — ends it, and nothing brings it back, because nothing re-triggers it
-and no per-user state records that it was missed. This is the direct cost of
-having no server state, and it is a product-visible choice rather than an
-oversight.
+**An interrupted run is not retried.** The flow can no longer be abandoned
+deliberately, but a crash, a killed tab or a confirmed tab-close still ends it —
+and nothing brings it back, because nothing re-triggers it and no per-user state
+records that it was missed. See the Tier 2 note under Exits.
 
 **No activation funnel exists.** How many users finish this flow is currently
-unanswerable. If product wants the number, the smallest honest addition is an
+unanswerable — which matters more now that they cannot leave it: there is no way
+to see where a forced flow strands people. If product wants the number, the smallest honest addition is an
 `{event, step}` log behind a new service; funnel parity with `reward_claim` is a
 much larger change and only worth it for cross-widget reporting.
 

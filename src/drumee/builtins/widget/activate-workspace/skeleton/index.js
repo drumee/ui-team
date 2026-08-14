@@ -3,8 +3,8 @@
  * keyed off the root's data-* attributes (see skin/index.scss):
  *
  *   card     (data-waiting="0", data-guiding="0")
- *            the vignette is opaque and clickable — clicking it asks "Leave
- *            setup?" — and the step card sits on top.
+ *            the vignette is opaque and clickable — it ABSORBS clicks, since the
+ *            flow offers no way out — and the step card sits on top.
  *   waiting  (data-waiting="1") the vignette fades to transparent and
  *            click-through so the user can reach the real invite popup or
  *            members panel; only the card stays interactive.
@@ -20,25 +20,6 @@ const stepCard = require("./card");
 const { baseStep, isWaiting, isGuiding } = require("../../../../libs/guided-flow/steps");
 
 /**
- * Host for the "Leave setup?" guard.
- *
- * It lives in the flow's own root rather than Wm.__wrapperModal, so opening it
- * never clobbers what occupies that wrapper-modal — during the Step 1
- * walkthrough that is the create-workspace form, and on step2_waiting the invite
- * popup, where feeding the guard there would throw away the emails the user has
- * typed.
- *
- * Inert until the orchestrator feeds the modal into it (see _openDropGuard).
- */
-function dropHost(ui, pfx) {
-  return Skeletons.Box.Y({
-    className: `${pfx}__drop-modal`,
-    sys_pn: "drop-modal",
-    partHandler: ui,
-  });
-}
-
-/**
  * The terminal screen keeps only the vignette. It must NOT stay guiding: that
  * root sits at z-index 1000000 against the wrapper-modal's 100000, and its
  * pointer-events:auto __guide-scrim would grey the closing card out and swallow
@@ -48,8 +29,9 @@ function dropHost(ui, pfx) {
  * contributes no backdrop of its own here (index.js _openModal's "bare" mode),
  * so the dim stays one layer deep.
  *
- * No `service` on it: this is a terminal state, so a click should do nothing
- * rather than raise a guard — there is nothing left to leave.
+ * No `service` on it: this is a terminal state, so a click needs neither to be
+ * absorbed nor acknowledged — the flow is over, and the modal's own button is
+ * the only thing left to press.
  */
 function terminalRoot(pfx) {
   return Skeletons.Box.Y({
@@ -71,11 +53,11 @@ function terminalRoot(pfx) {
 function guideKids(ui, pfx) {
   return [
     Skeletons.Box.Y({ className: `${pfx}__cutout` }),
-    // Clickable frame around the spotlight hole: clicking the dimmed area
-    // (anywhere but the spotlighted target) asks "Leave setup?" — the same
-    // guard the vignette gives the cards. The hole is punched with the same
-    // --cut-* vars the cutout uses, so the target stays operable through it
-    // while every other click is caught here.
+    // Clickable frame around the spotlight hole: it absorbs every click on the
+    // dimmed area, which is what stops the user operating desk chrome the step
+    // does not point at. The hole is punched with the same --cut-* vars the
+    // cutout uses, so the spotlighted target stays operable through it while
+    // everything else is caught here and answered with a pulse.
     Skeletons.Box.Y({
       className: `${pfx}__guide-scrim`,
       service: "activate-vignette-click",
@@ -86,7 +68,6 @@ function guideKids(ui, pfx) {
       sys_pn: "guide-callout",
       partHandler: ui,
     }),
-    dropHost(ui, pfx),
   ];
 }
 
@@ -115,8 +96,8 @@ function targetCutout(ui, pfx, base, waiting) {
   });
 }
 
-/** A card state: vignette, the step's cutout when it has one, the card, and the
- *  guard's host. */
+/** A card state: the vignette that dims and absorbs stray clicks, the step's
+ *  cutout when it has one, and the card. */
 function cardKids(ui, pfx, { base, waiting, targeted, notarget }) {
   const kids = [
     Skeletons.Box.Y({
@@ -134,11 +115,6 @@ function cardKids(ui, pfx, { base, waiting, targeted, notarget }) {
       dataset: { step: base, notarget: notarget ? "1" : "0" },
       kids: [stepCard(ui)],
     }),
-    // step2_waiting raises its guard here rather than in the wrapper-modal,
-    // which the invite surface owns. Rendered on every card state — it costs an
-    // inert box and keeps the host in the markup wherever the orchestrator may
-    // reach for it.
-    dropHost(ui, pfx),
   );
   return kids;
 }
@@ -187,7 +163,7 @@ module.exports = function (ui) {
       waiting: waiting ? "1" : "0",
       guiding: guiding ? "1" : "0",
       // Tells the stylesheet the cutout is doing the dimming, so the flat
-      // vignette must go transparent (it stays for the drop-modal click).
+      // vignette must go transparent (it stays clickable, to absorb the click).
       cutout: targeted ? "1" : "0",
       // KEBAB-CASE, not camelCase: the framework writes these with
       // setAttribute(`data-${k}`) and does NOT convert (letc.js), so

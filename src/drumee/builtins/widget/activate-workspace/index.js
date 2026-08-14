@@ -43,21 +43,27 @@
  * onboarding, so the only thing it can cost a user who walks away is the
  * walkthrough itself.
  *
- * That is why there is no exit guard here. reward-flow traps F5, the Back
- * button and the tab close, because abandoning it forfeits a prize the user is
- * three clicks from claiming, and a stray refresh must not do that. Nothing is
- * forfeit here, so the browser's own controls are left alone: a refresh
- * mid-flow simply lands the user back on their desk, with whatever they have
- * already built still there. The one guard kept is the in-app one — clicking
- * the dimmed backdrop asks before tearing the walkthrough down, because that
- * click is as often a miss as a decision.
+ * THE FLOW IS FORCE-COMPLETED. It offers no way out: a click on the dim does
+ * nothing but acknowledge itself, the browser's Back is trapped and pushed
+ * straight back, refresh keystrokes are cancelled, and a tab close raises the
+ * browser's native warning (see exit-guard.js). The only exits are finishing it
+ * and the states where it CANNOT be finished, which end it rather than strand
+ * the user on an unusable desk — see _openWorkspace's caller and
+ * onCreateGuideComplete.
  *
- * And no resume. The flow is one session long: a reload ends it rather than
- * picking it up mid-way, so nothing about it is persisted — not the step, not
- * the workspace. See the design doc,
+ * That ceiling is the browser's, not a choice: the reload button, the address
+ * bar and a killed process are all out of reach, and `beforeunload` is ignored
+ * outright until the user has interacted with the page. Nothing here survives a
+ * crash, and nothing re-triggers the flow afterwards — guaranteeing it is
+ * eventually finished needs persisted state and a re-trigger on the next load,
+ * which is not built (see the design doc's Tier 2 note).
+ *
+ * And no resume. The flow is one session long: nothing about it is persisted —
+ * not the step, not the workspace. See the design doc,
  * docs/superpowers/specs/2026-08-13-activate-workspace-design.md
  */
-const { dropModal, doneModal } = require("./skeleton/modal");
+const { doneModal } = require("./skeleton/modal");
+const { ExitGuard } = require("./exit-guard");
 const {
   baseStep, isWaiting, isGuiding,
 } = require("../../../libs/guided-flow/steps");
@@ -79,6 +85,10 @@ const STEPS = ["step1", "step2", "step3"];
  * mount; anything past this is a failure, not slowness.
  */
 const OPEN_WORKSPACE_TIMEOUT_MS = 4000;
+
+// How long the card's "I saw that" pulse is left armed. A little longer than the
+// animation itself (see the skin), so the attribute never comes off mid-pulse.
+const NUDGE_MS = 500;
 
 // How long the cutout keeps following its target once it is on screen (see
 // _trackStepTarget). Sized to outlast the slowest entrance a target has: the
@@ -122,7 +132,6 @@ class __activate_workspace extends LetcBox {
 
     this._step = "step1";
     this._modalOpen = false;
-    this._dropGuardOpen = false;
     this._inviteSucceeded = false;
     // Step 2 is being served by the permission panel Step 1 ended on, not by
     // the invite popup — see onInvitePanel.
@@ -149,6 +158,12 @@ class __activate_workspace extends LetcBox {
     if (typeof RADIO_BROADCAST !== "undefined") {
       RADIO_BROADCAST.on("workspace:refresh", this._onWorkspaceRefresh);
     }
+
+    // Hold the user here until the flow is finished. Started unconditionally:
+    // every step of this flow is one the user must not leave, so unlike
+    // reward-flow's guard there is no step test to arm it against.
+    this._exitGuard = new ExitGuard(this);
+    this._exitGuard.start();
   }
 
   onDomRefresh() {
@@ -214,6 +229,15 @@ class __activate_workspace extends LetcBox {
     if (this._onStepResize && typeof window !== "undefined") {
       window.removeEventListener("resize", this._onStepResize);
       this._onStepResize = null;
+    }
+    // Unconditionally, not through any arming predicate: by the time _unbind
+    // runs the flow is leaving whatever its step still says, and a guard
+    // outliving the widget would hold a desk that no longer has a flow on it —
+    // with no way for the user to release it.
+    if (this._exitGuard) this._exitGuard.stop();
+    if (this._nudgeTimer) {
+      clearTimeout(this._nudgeTimer);
+      this._nudgeTimer = null;
     }
     this._stopCreateGuide();
     this._stopUploadGuide();
@@ -474,7 +498,7 @@ class __activate_workspace extends LetcBox {
 
   /** Remove the coach callout. feed(null) does NOT empty a part — prepareData
    *  wraps null into [null], so the coach would be left on screen. Reset the
-   *  collection instead (same rationale as _closeDropGuard). */
+   *  collection instead. */
   clearSpotlight() {
     this.ensurePart("guide-callout").then((p) => {
       if (!p) return;
@@ -820,8 +844,8 @@ class __activate_workspace extends LetcBox {
    * `closest` whether the click landed in the popup is exact by construction
    * and measures nothing.
    *
-   * Capture phase, so the guard lands before any handler inside the
-   * wrapper-modal gets to act on the same click.
+   * Capture phase, so this lands before any handler inside the wrapper-modal
+   * gets to act on the same click.
    */
   _watchInviteBackdrop(on) {
     const host =
@@ -830,12 +854,9 @@ class __activate_workspace extends LetcBox {
       if (this._onInviteBackdrop || !host) return;
       this._inviteBackdropHost = host;
       this._onInviteBackdrop = (e) => {
-        // The guard once it is up (it renders in our own root, but a click that
-        // started there must never re-open it).
-        if (this._dropGuardOpen) return;
         // Nothing of ours on screen — the surface has gone and no confirmation
         // took its place, so this host is showing somebody else's business and
-        // there is nothing here to abandon.
+        // this listener has no business answering for it.
         if (!this._inviteBackdropHost?.querySelector(STEP2_SURFACES)) return;
         // A click ON either surface is the user working — including the
         // confirmation's own Close/✕, which is how Step 2 is COMPLETED, not
@@ -847,8 +868,10 @@ class __activate_workspace extends LetcBox {
         // depends on how the desk resolves its stacking (see the skin's
         // over-modal lift). Where it lands above, the card is visible but every
         // click on it arrives HERE instead, so the Back and Skip the user is
-        // looking at do nothing and the abandon guard answers for them. Route
-        // the click by geometry to the control they aimed at.
+        // looking at would do nothing. Route the click by geometry to the
+        // control they aimed at — which matters more now than it did when this
+        // host's other answer was a way out of the flow: Skip is the only way
+        // past Step 2 for an account that cannot invite anyone.
         const onCard = this._cardHit(e);
         if (onCard) {
           e.stopPropagation();
@@ -858,8 +881,10 @@ class __activate_workspace extends LetcBox {
           }
           return;
         }
+        // A real backdrop click. Swallowed, like every other gesture that used to
+        // reach the abandon guard.
         e.stopPropagation();
-        this._openDropGuard();
+        this.nudge();
       };
       host.addEventListener("click", this._onInviteBackdrop, true);
       return;
@@ -1157,83 +1182,64 @@ class __activate_workspace extends LetcBox {
   }
 
   /**
-   * Open the "Leave setup?" guard into the flow's OWN `drop-modal` part rather
-   * than Wm.__wrapperModal, for the two states where something else already
-   * occupies that wrapper-modal:
-   *   - the Step 1 walkthrough (the guided create form),
-   *   - step2_waiting (the invite popup or the permission panel) — feeding the
-   *     wrapper-modal there would replace the surface and discard the emails
-   *     the user typed, which is precisely what a "Continue" has to preserve.
+   * Acknowledge a gesture that was swallowed.
    *
-   * The root sits below the wrapper-modal (z 10020 vs 100000), so lift it while
-   * the guard is up or the guard paints UNDER the very surface it is guarding.
-   * Set imperatively, like the --cut-* vars: raising the guard must not
-   * re-render the flow.
+   * The flow offers no way out, so a click on the dim, a Back press and a
+   * refresh keystroke all end in nothing happening. Nothing happening is
+   * indistinguishable from a broken page, so the card gives a short pulse: it
+   * says "I saw that, and the answer is no" without putting a dialog between the
+   * user and the step they are on.
+   *
+   * Marked on the card imperatively rather than through a re-render, for the same
+   * reason as the --cut-* vars and the toast flag: re-rendering would restart the
+   * card's entry animation and rebuild the parts underneath it. The attribute is
+   * cleared once the animation has had time to run, so a second gesture pulses
+   * again rather than doing nothing (an attribute that is already set restarts no
+   * CSS animation).
    */
-  _openDropGuard() {
-    this._dropGuardOpen = true;
-    this._markRootDrop(true);
-    this.ensurePart("drop-modal").then((p) => {
-      if (!p) return;
-      // Feed first, then flag open — the modal opts its own pointer events back
-      // in (see skin __modal), so it stays clickable regardless; data-open only
-      // drives the host's backdrop dim, and setting it after feed keeps a
-      // re-render from wiping it.
-      p.feed(dropModal(this));
-      if (p.el?.dataset) p.el.dataset.open = "1";
-    });
-  }
-
-  _closeDropGuard() {
-    this._dropGuardOpen = false;
-    this._markRootDrop(false);
-    this.ensurePart("drop-modal").then((p) => {
-      if (!p) return;
-      // feed(null) does NOT empty a part: prepareData wraps null into [null], so
-      // the modal is left in place. Reset the collection to actually remove it.
-      if (typeof p.collection?.reset === "function") {
-        p.collection.reset();
-      } else if (typeof p.feed === "function") {
-        p.feed(null);
-      }
-      if (p.el?.dataset) delete p.el.dataset.open;
-    });
-  }
-
-  /**
-   * Flag the flow ROOT while the guard is up.
-   *
-   * `data-drop` turns the flow's own dim off, because the guard's backdrop is
-   * now supplying one and two of them are not one colour (see the skin), and
-   * lifts the root: the guard renders inside our stacking context, so it cannot
-   * climb over the wrapper-modal it is guarding on its own.
-   *
-   * The skeleton's root box is fed as a child of our element; falling back to
-   * the element itself keeps this working if it is ever the root, since the
-   * rules match on the class either way.
-   */
-  _markRootDrop(on) {
-    const root =
-      this.el?.querySelector?.(`.${this.fig.family}__root`) || this.el;
-    if (!root?.dataset) return;
-    if (on) {
-      root.dataset.drop = "1";
-      return;
+  nudge() {
+    const card = this.el?.querySelector?.(`.${this.fig.family}__card`);
+    if (!card?.dataset) return;
+    if (this._nudgeTimer) {
+      clearTimeout(this._nudgeTimer);
+      this._nudgeTimer = null;
     }
-    delete root.dataset.drop;
+    delete card.dataset.nudge;
+    // Next frame, so the removal above has landed and the animation re-runs.
+    // Without the gap a rapid second press sets an attribute that is already
+    // set, and nothing moves.
+    const arm = () => {
+      if (!this.el || this.isDestroyed?.()) return;
+      card.dataset.nudge = "1";
+      this._nudgeTimer = setTimeout(() => {
+        this._nudgeTimer = null;
+        delete card.dataset.nudge;
+      }, NUDGE_MS);
+    };
+    if (typeof requestAnimationFrame === "function") requestAnimationFrame(arm);
+    else arm();
   }
 
   /**
-   * Final exit — from "Leave setup", or the closing modal's button.
+   * The end of the flow, and the only thing that releases the exit guard.
    *
-   * Nothing is written anywhere. The flow runs once because it is chained to
-   * the end of the product tour and nothing else re-triggers it, so there is no
-   * latch to set; and a user who leaves it has lost nothing that a latch would
-   * need to remember.
+   * Three ways here, and the user asks for exactly one of them:
+   *   - the closing modal's button, after every step is done;
+   *   - a run that cannot be completed, which ends rather than trapping the user
+   *     on an unusable desk (no workspace descriptor at all; a Step 3 workspace
+   *     that no longer opens);
+   *   - the widget being destroyed under it, e.g. a route change taking the desk
+   *     module down.
+   *
+   * Nothing is written anywhere. The flow runs once because it is chained to the
+   * end of the product tour and nothing else re-triggers it, so there is no latch
+   * to set — which also means an interrupted run is gone for good, the same as a
+   * completed one. Closing that gap needs persisted state and a re-trigger; see
+   * the design doc's Tier 2 note.
    */
   _finish() {
-    // Once. Both the guard's "Leave setup" and the closing modal's button land
-    // here, and either can be clicked twice before the teardown below has run.
+    // Once. Several paths land here, and the modal's button can be pressed twice
+    // before the teardown below has run.
     if (this._finishing) return;
     // Latched BEFORE the surfaces are cleared: clearing the invite popup fires
     // the desk's destroy hook, which calls straight back into
@@ -1396,7 +1402,15 @@ class __activate_workspace extends LetcBox {
         // walkthrough and came forward again), and loadWorkspace declining is
         // not a reason to withhold the guide from a workspace that is on
         // screen. The open timer catches the case where nothing mounts.
-        if (!this._openWorkspace()) return;
+        if (!this._openWorkspace()) {
+          // NOTHING LEFT TO OPEN — the workspace was deleted in another tab, or
+          // Wm cannot answer. This used to be a silent no-op, which was survivable
+          // while a click on the dim still offered a way out of the flow. It is
+          // not survivable now: the card's only control would do nothing, no exit
+          // is on offer, and the user would be left on a desk they cannot use.
+          // A flow that cannot be completed has to end.
+          return this._finish();
+        }
         this._goto("step3_guide");
         this._startUploadGuide();
         this._armOpenTimer();
@@ -1454,30 +1468,18 @@ class __activate_workspace extends LetcBox {
       }
 
       case "activate-vignette-click":
-        // Inert while the user is being handed off to a real surface, or when a
-        // modal is already up. A waiting step is not unguarded, though:
-        // step2_waiting raises the same guard from the surface's own backdrop
-        // (see _watchInviteBackdrop).
-        if (this._isWaiting() || this._modalOpen || this._dropGuardOpen) return;
-        // EVERY other state raises the same guard, the one in our own root —
-        // the walkthroughs, whose __guide-scrim fires this, and the card steps
-        // alike. It is position:fixed and the root lifts above the desk, so its
-        // dim covers the sidebar and the topbar as well as the work area.
-        this._openDropGuard();
+        // SWALLOWED. This used to raise "Leave setup?", which was the flow's own
+        // way out; the flow is force-completed now, so the click lands on the
+        // dim and stops there. The pulse is the whole response — see nudge().
+        //
+        // Fired by the vignette on a card step and by __guide-scrim during a
+        // walkthrough. Both cover the whole viewport, so this is also what
+        // catches a user clicking desk chrome the current step does not point
+        // at: the click is absorbed rather than reaching a desk the flow has
+        // taken over.
+        if (this._modalOpen) return;
+        this.nudge();
         return;
-
-      case "activate-drop-stay":
-        // The guard lives in our own root, so closing it just hands the user
-        // back what was underneath: the card, the walkthrough mid-step, or the
-        // invite popup with whatever they had typed. Nothing was torn down, so
-        // there is nothing to restore.
-        this._closeDropGuard();
-        return;
-
-      case "activate-drop-leave":
-        // No status to report and nothing to wait for, so unlike reward-flow's
-        // equivalent this leaves immediately.
-        return this._finish();
 
       case "activate-finish":
         // The closing modal's only button.
