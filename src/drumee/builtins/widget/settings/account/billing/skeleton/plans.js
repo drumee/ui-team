@@ -62,6 +62,13 @@ function getOptions(ui, cycle = "monthly") {
         // entry tiers. Counts the owner, like every other tier's number.
         row(LOCALE.UP_TO_3, LOCALE.FEAT_UNIT_MEMBER),
         row("5 GB", LOCALE.FEAT_UNIT_STORAGE),
+        // NOT ENFORCED YET. The 1-pager's Free/Pro split on task depth and
+        // meeting length is labelled here first, gate to follow. Both under-
+        // promise for now — a Free account actually gets the full tracker and
+        // uncapped meetings — which is the safe direction to be wrong in, and
+        // sets the expectation before anything is taken away.
+        row(LOCALE.FEAT_TASK_BOARD_LIST),
+        row(LOCALE.FEAT_MEET_ADHOC_45),
         row(LOCALE.SUPPORT_COMMUNITY, LOCALE.FEAT_UNIT_SUPPORT),
       ],
     },
@@ -82,6 +89,15 @@ function getOptions(ui, cycle = "monthly") {
         row("50 GB", LOCALE.FEAT_UNIT_STORAGE),
         row(LOCALE.FEAT_UNLIMITED_LINKS),
         row(LOCALE.DAYS_7, LOCALE.FEAT_UNIT_VERSION_HISTORY),
+        // NOT ENFORCED YET — labels ahead of the gate, same as Free above.
+        row(LOCALE.FEAT_TASK_TRACKER_FULL),
+        row(LOCALE.FEAT_MEET_SCHEDULED),
+        // This one OVER-promises, unlike the two above, and is the single line
+        // to pull if that is not wanted before the gate lands: Pro gains the
+        // Admin panel in the 1-pager, but needsAdminConsoleUpgrade() still
+        // sends Pro to the upsell. Until that gate opens, a $5 payer reads
+        // "Admin panel" on the card and cannot open one.
+        row(LOCALE.FEAT_ADMIN_NO_SDK),
         row(LOCALE.SUPPORT_COMMUNITY, LOCALE.FEAT_UNIT_SUPPORT),
       ],
     },
@@ -100,6 +116,9 @@ function getOptions(ui, cycle = "monthly") {
         row("100 GB", LOCALE.FEAT_UNIT_STORAGE),
         row(LOCALE.DAYS_30, LOCALE.FEAT_UNIT_VERSION_HISTORY),
         row(LOCALE.FEAT_GUEST_ACCESS),
+        // NOT ENFORCED YET — labels ahead of the gate, same as Free and Pro.
+        row(LOCALE.FEAT_TASK_TRACKER_FULL),
+        row(LOCALE.FEAT_MEET_SCHEDULED),
         row(LOCALE.FEAT_ADMIN_PANEL),
         row(LOCALE.SUPPORT_EMAIL, LOCALE.FEAT_UNIT_SUPPORT),
       ],
