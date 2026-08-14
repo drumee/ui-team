@@ -1,27 +1,54 @@
 # activate-workspace — manual test matrix
 
-None of this can run on the dev box: it needs a signup that triggers the
-automatic product tour, a real `desk.create_hub`, and a real upload. Run it
-against an instance with a real user.
+None of this can run on the dev box: it needs a real `desk.create_hub` and a
+real upload. Run it against a deployed instance with a real user — e.g.
+`https://drumee.in/-/huan/`.
 
-The flow has no URL force flag of its own and no stored state, so it is reached
-by making the desk run an automatic tour:
+## How to start it by hand
+
+Two ways, and neither needs a fresh signup.
+
+**URL flag**, the counterpart to the reward flow's `?reward=1`:
 
 ```
-#/desk?tutorial=1
+https://drumee.in/-/huan/#/desk?activate=1
 ```
 
-Finish (or skip to the end of) the tour and the activation flow mounts as it is
-destroyed. There is nothing to reset between cases — the flow persists nothing,
-so a reload always starts a fresh session — but note that a reload does NOT
-resume it: relaunch with `?tutorial=1`.
+Give home ~2s to settle and the flow mounts on its own. A `?activate=1` load
+also makes the reward flow stand down, so an account that happens to hold a
+`reward_claim` row still gets THIS walkthrough rather than that one.
 
-Workspaces created along the way are real and are left behind; delete them
-between runs if they get in the way.
+**Console**, for repeat runs without reloading (`window.Desk` is the live desk
+module):
+
+```js
+Desk.startActivateWorkspace()
+```
+
+Callable as often as you like — the flow keeps no state and latches nothing off,
+so each call is a clean run. Bear in mind each run has you create another
+workspace.
+
+A forced run is an ORDINARY run: unlike `?reward=1`, which has to be threaded
+into the widget so a test cannot write to the campaign funnel or burn a limited
+slot, there is nothing here for a test to corrupt, so the widget is never told
+it was forced.
+
+There is nothing to reset between cases — the flow persists nothing. Note a
+reload does NOT resume it: start it again with either method above. Workspaces
+created along the way are real and are left behind; delete them between runs if
+they get in the way.
+
+To exercise the AUTOMATIC trigger (the thing real users get) rather than the
+forced one, load `#/desk?tutorial=1` and finish or skip to the end of the tour —
+the flow mounts as the tour is destroyed. That path is case 1 below and is worth
+running at least once, since it is the only one that proves the chaining.
 
 | # | Case | Expected |
 |---|---|---|
-| 1 | Finish the automatic tour | Step 1 card, centred, 1 of 2 progress segments lit, single **Continue** button and no Back |
+| 1 | Finish the automatic tour (`?tutorial=1`) | Step 1 card, centred, 1 of 2 progress segments lit, single **Continue** button and no Back |
+| 1a | Load `?activate=1` on a plain login | Same card, ~2s after home settles |
+| 1b | `Desk.startActivateWorkspace()` in the console | Same card, immediately |
 | 2 | Click **Continue** | Cutout on the topbar **New** button; coach reads "Click New to get started" |
 | 3 | Click **New** | The create flyout expands by itself; cutout narrows to the **Workspace** row; the sibling rows are greyed and unclickable |
 | 4 | Click **Workspace** | Cutout wraps the whole create-workspace card (rounded corners included, no bright band) |
@@ -54,6 +81,7 @@ between runs if they get in the way.
 | 31 | Reach Step 2 in a workspace where the user is view-only | The **+ New** pill never appears (permission-gated `data-visible`); after ~4 s the flow returns to the Step 2 card |
 | 32 | Replay the tour from **Get help → Product Tour** on an established account | The activation flow does NOT appear when the tour ends |
 | 33 | A campaign user (`?utm_campaign=free-storage`) who is also eligible for the reward flow | Only the reward flow runs; activation stands down entirely |
+| 33a | The same account loaded with `?activate=1` | The opposite: activation runs and the reward flow stands down, so the flag is never swallowed |
 | 34 | Resize the window during either walkthrough | Cutout and coach re-measure and stay on target |
 | 35 | Narrow the viewport below 768px | Card and modal take the mobile gutter and stay centred |
 

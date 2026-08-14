@@ -1961,7 +1961,14 @@ class desk_module extends LetcBox {
    * walking anyone through a reward that no longer exists.
    */
   async _maybeStartRewardFlow() {
-    const forced = !!Visitor.parseModuleArgs().reward;
+    const args = Visitor.parseModuleArgs();
+    const forced = !!args.reward;
+    // `?activate=1` asked for the OTHER walkthrough. Both open by having the
+    // user create a workspace, so this one stands down rather than winning the
+    // race it normally wins and swallowing the flag — a tester on an account
+    // that happens to hold a reward_claim row would otherwise see the reward
+    // flow and conclude activation was broken.
+    if (args.activate) return;
     if (this._rewardFlow && !this._rewardFlow.isDestroyed()) return;
     // Synchronous in-flight latch: onPartReady("overlay") can fire more than
     // once (e.g. re-navigation re-feeding the same module), and the guard
@@ -2070,14 +2077,58 @@ class desk_module extends LetcBox {
    * user to build two workspaces. Reward-flow is the one that wins: it is
    * campaign-gated, time-limited and has a prize attached, while this one is
    * evergreen.
+   *
+   * `?activate=1` forces it for testing, the way `?reward=1` forces the reward
+   * flow — see startActivateWorkspace for why a forced run needs no special
+   * behaviour of its own, unlike a forced reward run.
    */
   _maybeStartActivateWorkspace() {
-    // No automatic product tour this session — nobody is being onboarded.
-    if (!this._tutorialWasAutomatic) return;
-    if (this._activateFlow && !this._activateFlow.isDestroyed()) return;
-    // Reward-flow is on screen or on its way there — see the docblock.
+    // Forced for a test run: skip the onboarding gate, but keep every guard
+    // below that stops two flows fighting over the screen.
+    if (!Visitor.parseModuleArgs().activate) {
+      // No automatic product tour this session — nobody is being onboarded.
+      if (!this._tutorialWasAutomatic) return;
+    }
+    // Reward-flow is on screen or on its way there — see the docblock. It
+    // cannot be both, because a `?activate=1` load makes that flow stand down
+    // (see _maybeStartRewardFlow), but a test run started by hand can land
+    // while it is up.
     if (this._rewardFlowInFlight) return;
     if (this._rewardFlow && !this._rewardFlow.isDestroyed()) return;
+    return this._mountActivateWorkspace();
+  }
+
+  /**
+   * Run the activation walkthrough NOW, whatever the gate would have said.
+   *
+   * The hand-operated entry point, and the counterpart to the reward flow's
+   * `?reward=1`: `window.Desk = this`, so this is callable straight from the
+   * console —
+   *
+   *   Desk.startActivateWorkspace()
+   *
+   * — which is the only way to see the flow without a fresh signup, since its
+   * automatic trigger is the end of a tour that runs once per account. It is
+   * re-callable: the flow keeps no state and latches nothing off, so each call
+   * starts a clean run (and each run creates its own workspace).
+   *
+   * A FORCED RUN IS AN ORDINARY RUN, which is the whole difference from
+   * `?reward=1`. That flag has to be threaded into the reward widget so a test
+   * cannot write to the campaign funnel or burn one of its limited slots. There
+   * is no funnel here, no prize and no latch, so a forced run behaves exactly
+   * like a real one and the widget is never told which it is.
+   *
+   * Bypasses the gate, not the mount latch below: two of these on screen at
+   * once would be a mess whoever asked for it.
+   */
+  startActivateWorkspace() {
+    return this._mountActivateWorkspace();
+  }
+
+  /** Feed the widget into the desk `overlay` part. Shared by the automatic gate
+   *  and the hand-operated entry point above, so both mount it identically. */
+  _mountActivateWorkspace() {
+    if (this._activateFlow && !this._activateFlow.isDestroyed()) return;
     // Same synchronous latch as the reward flow's: onPartReady("overlay") can
     // fire more than once, and the guard above cannot see a mount still pending
     // past the await below.

@@ -140,6 +140,23 @@ and has a prize attached.
 `_homePopupsBusy()` counts this flow, so the invited-workspace dialog cannot
 stack on top of it.
 
+### Starting it by hand
+
+The automatic trigger fires once per account, so testing needs a way in that
+does not require a fresh signup. Two, mirroring `?reward=1`:
+
+- `#/desk?activate=1` — skips the tour gate. Such a load also makes the reward
+  flow stand down, so the flag cannot be swallowed by an account that happens to
+  hold a `reward_claim` row.
+- `Desk.startActivateWorkspace()` — `window.Desk` is the live desk module, so
+  this runs the flow from the console at any time, repeatedly.
+
+A forced run is an ORDINARY run, which is the difference from `?reward=1`. That
+flag has to be threaded into the reward widget so a test cannot write to the
+campaign funnel or burn one of its limited slots; there is no funnel here, no
+prize and no latch, so nothing about a forced run differs and the widget is
+never told it was forced.
+
 ## Exits
 
 The in-app guard is kept: clicking the dimmed backdrop — the vignette on a card,
